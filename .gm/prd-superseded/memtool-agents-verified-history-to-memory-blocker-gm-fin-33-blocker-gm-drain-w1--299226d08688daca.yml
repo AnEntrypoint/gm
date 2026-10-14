@@ -1,0 +1,7 @@
+id: MEMTOOL-AGENTS-VERIFIED-HISTORY-TO-MEMORY-blocker-gm-fin-33-blocker-gm-drain-w1-207
+subject: 'Blocked: MEMTOOL-AGENTS-VERIFIED-HISTORY-TO-MEMORY-blocker-gm-fin-33 cannot close; its target sections are not in AGENTS.md (scoped codesearch shows one inline bullet), so the parent row needs a rescope to docs/verified-incidents.md before any witness'
+status: pending
+blockedBy:
+- MEMTOOL-AGENTS-VERIFIED-HISTORY-TO-MEMORY
+- MEMTOOL-AGENTS-VERIFIED-HISTORY-TO-MEMORY-blocker-gm-fin-33
+session_id: mcp-codemode-31304-1791958748169

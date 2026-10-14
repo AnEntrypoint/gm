@@ -1,0 +1,5 @@
+id: SLAP-PLUGKIT-SCANLITERAL-LEVELS-blocker-gm-2e-fa19b3-w7-02-blocker-gm-drain-w2-400
+subject: 'Blocker: SLAP-PLUGKIT-SCANLITERAL-LEVELS EMIT still needs a CI-witness session'
+body: 'Parent SLAP-PLUGKIT-SCANLITERAL-LEVELS stays pending. Stage SPECIFY ran in gm-drain-w2-400 and re-scoped the parent to rs-plugkit/crates/plugkit-core/src/code_index.rs:5128-6264 (1137 lines), verified by codesearch dispatch 1791965277670-500-bdaa654f1e0aab8e and a Read of the closing brace. EMIT did not run: the witness is cargo build of rs-plugkit, which the local hook blocks, and the live grep-literal dispatch needs the wasm released through CI and runner self-update. Resolution: run EMIT in a session with a CI witness path, against the re-scoped range. Receipt: .gm/receipts/SLAP-PLUGKIT-SCANLITERAL-LEVELS-blocker-gm-2e-fa19b3-w7-02/01-SPECIFY-gm-drain-w2-400.md'
+session_id: gm-drain-w2-400
+status: pending

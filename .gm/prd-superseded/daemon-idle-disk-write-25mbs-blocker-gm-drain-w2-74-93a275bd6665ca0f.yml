@@ -1,0 +1,8 @@
+id: DAEMON-IDLE-DISK-WRITE-25MBS-blocker-gm-drain-w2-74
+subject: 'Blocker for DAEMON-IDLE-DISK-WRITE-25MBS: fix and witness need CI rebuild, daemon restart, and session lease'
+body: 'Row cannot close in session gm-drain-w2-74. Write sites confirmed in agentplug/crates/agentplug-runner/src/daemon.rs (247, 888, 933, 2049, 591, 982, 1417) and daemon/claim_dispatch.rs (524, 559); see .gm/receipts/DAEMON-IDLE-DISK-WRITE-25MBS/01-SPECIFY.md. Unblock by: (1) a lane holding the session lease (gm-ach-20261014-01) or a fresh session to take the walk; (2) a daemon.rs change that skips unchanged-content writes and backs off when idle, built by CI; (3) a live PhysicalDisk witness on the restarted daemon under 2 MB/s over 20 s; (4) confirm test-cf''s ownership of the shared log files. Leader hypothesis H1 (unconditional tmp-then-rename rewrites) is unverified; rival H2 (log appends) needs the daemon-idle-floor witness to separate them.'
+session_id: gm-drain-w2-74
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

@@ -1,0 +1,5 @@
+id: SLAP-PLUGKIT-INDEXCFG-LEVELS-blocker-gm-drain-w2-394
+subject: 'BLOCKER: index_cfg_impl split needs a compiled rs-plugkit witness'
+body: 'Row SLAP-PLUGKIT-INDEXCFG-LEVELS cannot bind a witness in session gm-drain-w2-394. Local cargo is hook-blocked (gm-no-local-cargo-verified-by-ci); the compile witness is CI publish/release after push, and the live code_index witness needs a released runner containing the refactor, from a session other than the editor. Row cites line 2239; function is at code_index.rs:2364-3112 (stale citation). Callers: index_at 2305, index_at_topup 2319, index_with_dead_code 2323, index_cfg 2339, index_topup 2353; the signature must stay stable. Receipts: .gm/receipts/SLAP-PLUGKIT-INDEXCFG-LEVELS/01-SPECIFY.md, 02-PROVE.md. Unblock: land the split on a branch-free main commit only with CI green on the rs-plugkit release build, then witness code_index keys and pass_ms keys from another session. Open mutable: the per-file walk loop (2517-2951) carries shared counters; the split needs an explicit per-file state struct.'
+session_id: gm-drain-w2-394
+status: pending

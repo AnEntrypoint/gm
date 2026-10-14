@@ -1,0 +1,14 @@
+id: BLOCKER-SKILLGM-spool-inname-validation-blocker-gm-drain-w3-75
+subject: 'Blocked: BLOCKER-SKILLGM-spool-inname-validation has no .gm/prd file and the daemon in-file name check it needs is absent in rs-plugkit'
+body: |-
+  Parent row: BLOCKER-SKILLGM-spool-inname-validation (session lean-exec-skillgm-1), pending.
+  SPECIFY: `.gm/prd/BLOCKER-SKILLGM-spool-inname-validation.yml` does not exist (fs_stat not found), so the row names no file.
+  SPECIFY: codesearch for the in-file name check (bare-integer or missing `<session_id>-<N>` prefix rejection, `<parent>-sub<k>` minting) returns zero hits in rs-plugkit/crates; the spool name handling lives in orchestrator/instructions/mod.rs (`read_spool_json`) and prd.rs (`spool_out_completed_ms`) with no such validator.
+  ELIMINATE: the fix is a rs-plugkit Rust change; local cargo is blocked by hook, so PROVE needs a CI-built wasm (`publish / release`) and a witness from another session. Self-witness is refused.
+  Required to close: (1) a `.gm/prd/` file for the row naming the daemon source file, (2) the rs-plugkit validator with a named error, (3) CI-built wasm, (4) cross-session live witness dispatch id, then the skill prose reduction of the claim-key sentence in skills/gm/SKILL.md.
+  Receipt: .gm/receipts/BLOCKER-SKILLGM-spool-inname-validation/01-SPECIFY.md
+session_id: gm-drain-w3-75
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

@@ -1,0 +1,8 @@
+id: DRY-GMMCP-SPAWN-AND-GIT-HELPERS-blocker-gm-drain-w2-99
+subject: 'Blocker for DRY-GMMCP-SPAWN-AND-GIT-HELPERS: gm-mcp surface has an active writer'
+body: 'SPECIFY stage could not clear precondition. gm-mcp submodule (git_status dispatch 1791960479933-500-e8c4f79d9557a96f) holds 12 modified paths including bin/gm-mcp-server.js, src/dispatch.js, src/dev-sync.js, src/self-update.js (staged) and an untracked src/spool-store.js. The row''s edits land on these same files, so running it now would collide with another writer. Unblock: the active writer commits or hands the surface over, then re-run gm-prd row=DRY-GMMCP-SPAWN-AND-GIT-HELPERS. Receipt: .gm/receipts/DRY-GMMCP-SPAWN-AND-GIT-HELPERS/01-SPECIFY.md. Note: src/hidden-spawn.js already exists as the shared spawn helper, so the fold may be partial rather than new.'
+session_id: gm-drain-w2-99
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

@@ -1,0 +1,9 @@
+id: LIVEPLAN-RETIRE-PLUGKIT-SEMVER-VERSION
+title: 'Retire PLUGKIT-SEMVER-VERSION: closes when SET and UPDATE-WITNESS rows close'
+description: 'PLUGKIT-SEMVER-VERSION was deferred as failing INVEST Small and split into PLUGKIT-SEMVER-VERSION-SET and PLUGKIT-SEMVER-UPDATE-WITNESS. The parent plan outlived its task. Closing condition: PLUGKIT-SEMVER-VERSION-SET and PLUGKIT-SEMVER-UPDATE-WITNESS both closed, then PLUGKIT-SEMVER-VERSION is closed as superseded.'
+retires: PLUGKIT-SEMVER-VERSION
+closing_condition: PLUGKIT-SEMVER-VERSION-SET and PLUGKIT-SEMVER-UPDATE-WITNESS both closed
+node: LIVEPLAN
+phase: P1
+status: pending
+session_id: lean-node-LIVEPLAN

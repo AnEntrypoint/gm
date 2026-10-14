@@ -1,0 +1,8 @@
+id: BLOCK-LIQOLOGY-PROPOSAL-TYPE-blocker-gm-drain-w3-25
+subject: 'Blocked: BLOCK-LIQOLOGY-PROPOSAL-TYPE-blocker-gm-drain-w1-19 cannot close: prose cut needs owner-approved rs-plugkit rebuild, liqology C++ witness not runnable'
+body: 'Row BLOCK-LIQOLOGY-PROPOSAL-TYPE-blocker-gm-drain-w1-19, session gm-drain-w3-25. SPECIFY (live): codesearch ''never mutates'' over the tree (dispatch 1791969421476-500-7b455f0bba7db276 scoped to gm-config: 0 hits; full tree: 1791969422822 class search, hits remain at rs-plugkit/crates/plugkit-core/src/orchestrator/instructions/prose/entry-extended.md:74, rs-codeinsight/.gm/next-step.md:154, rs-plugkit mirror at :154). Remaining gates: (1) the rs-plugkit instruction copy is compiled into the lean graph (AGENTS.md lean-graph rule: replacing lean_graph.json needs its own reviewed rebuild with --features slim); the rebuild path needs owner approval, not granted in this session; (2) the liqology witness needs its C++ vcpkg build, not present in this checkout. Neither gate can be closed by this session, so the row stays pending. Unblock: owner approval of the rs-plugkit rebuild and a built liqology binary for the witness.'
+session_id: gm-drain-w3-25
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

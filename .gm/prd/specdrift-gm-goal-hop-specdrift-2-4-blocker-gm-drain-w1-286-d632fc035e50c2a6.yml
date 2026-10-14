@@ -1,0 +1,5 @@
+id: SPECDRIFT-gm-goal-hop-SPECDRIFT-2-4-blocker-gm-drain-w1-286
+subject: 'Blocker: SPECDRIFT-2-4 needs a side-choice and a live daemon-lock probe before it can close'
+body: 'Row SPECDRIFT-gm-goal-hop-SPECDRIFT-2-4 cannot close in session gm-drain-w1-286. SPECIFY receipt: .gm/receipts/SPECDRIFT-gm-goal-hop-SPECDRIFT-2-4/01-SPECIFY.md. Cited lines verified: gm-mcp/AGENTS.md:84 says ''provided its owner lock agrees''; gm-mcp/src/release-bridge.js:325 refuses only when the lock exists and names another pid, so an absent lock passes. Leader hypothesis H1 (code is right, relax AGENTS.md to ''when present'') vs H2 (tighten code to require the lock) is not yet separated: the probe needs a live daemon start to see whether daemon-owner.lock is always written. The row''s deferReason also flags it as created in error under the SPECDRIFT tension-node rule, so the owner must confirm the row is valid before a fix lands. Next action: confirm the row is in scope, run the daemon-start probe, then pick the side and witness it from another session.'
+session_id: gm-drain-w1-286
+status: pending

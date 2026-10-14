@@ -1,0 +1,13 @@
+id: CQS-gm-goal-w4-CQS-1-blocker-gm-drain-w1-59-blocker-gm-drain-w2-71
+subject: 'Blocked: CQS-gm-goal-w4-CQS-1 publish waits on concurrent gm-mcp writer'
+body: |-
+  Row CQS-gm-goal-w4-CQS-1-blocker-gm-drain-w1-59 cannot close in session gm-drain-w2-71.
+  Evidence (dispatch ids): prd-list id lookup 1791960239462-500-16bddc6320670ac3 and 1791960245220-500-144044c4add498cc; git_status clean at gm-mcp/src/dispatch.js 1791960245794-500-c08668074f30833d; git_status of gm-mcp 1791960280746-500-f9a6fc904aaf69b6 shows 11 modified paths, 1 staged (src/self-update.js), 1 untracked (src/spool-store.js) owned by another writer.
+  Own-probe: runnerEnsureInFlight present in gm-mcp/src/dispatch.js (codesearch 12 occurrences); node --test gm-mcp/test/runner-recovery.test.mjs 13 passed 0 failed (local, not a gm witness id).
+  Side effect found: a local node scripts/build.mjs run rewrote bin/gm-mcp-server.js (EOL-only churn); restored with git checkout, nothing else of mine touched.
+  Blocker: a concurrent writer is actively editing gm-mcp/src (dispatch.js, self-update.js, spool-store.js). Finalizing CQS-1 now would commit foreign hunks, and no cross-session witness can bind while the tree is dirty. Next wave: wait for the other writer to land or name its owner, then rebuild bundle via scripts/build.mjs, commit only dispatch.js hunks for CQS-1, then witness from a different session.
+session_id: gm-drain-w2-71
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

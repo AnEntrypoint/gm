@@ -1,0 +1,12 @@
+id: PLUGKIT-SEMVER-UPDATE-WITNESS-blocker-gm-drain-w1-236
+subject: 'Blocked: PLUGKIT-SEMVER-UPDATE-WITNESS cannot close; download.rs sha-drift fix row missing'
+body: |-
+  Blocker for PLUGKIT-SEMVER-UPDATE-WITNESS (session gm-drain-w1-236).
+  Witness status: FAIL, already recorded (.gm/witness-log.md line "PLUGKIT-SEMVER-UPDATE-WITNESS: ... RESULT: FAIL", swap dispatch 1791890969605-500-a6b069bd5496b16e, restore dispatch 1791891428804-500-2306236e1d7e64d9). Receipts 01-08 under .gm/receipts/PLUGKIT-SEMVER-UPDATE-WITNESS/.
+  Root cause (static): agentplug/crates/agentplug-runner/src/download.rs ensure_plugin_installed_via_github returns early when dest exists and installed version equals latest, before the sha256 sidecar is fetched. The Equal-version sha-drift branch in refresh_plugin_if_stale can never download. Secondary: refresh_plugin_if_stale returns Some(latest) on that no-op path, so daemon.rs logs "downloaded+verified" falsely.
+  Missing: no pending row carries the download.rs fix (compare remote sidecar sha with installed_wasm_sha256 before the version short-circuit; return None unless the file changed). The witness cannot pass until that row lands and CI builds it.
+  This session did not re-run the live sideload: it would replace ~/.agentplug/plugins/gm.wasm for every lane on the shared daemon, and the prior run already measured the result.
+  Unblock: file and resolve the download.rs fix row (CI witness, guest/runner rebuild), then re-run the witness from another session.
+  Live witness for this blocker: dispatch 1791958918294-500-8eda24a15da222d8 and 1791958927605-500-b03831ddb5230a06 (read-only sha check).
+session_id: gm-drain-w1-236
+status: pending

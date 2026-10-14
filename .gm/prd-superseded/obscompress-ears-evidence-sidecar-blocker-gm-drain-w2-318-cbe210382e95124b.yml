@@ -1,0 +1,8 @@
+id: OBSCOMPRESS-EARS-EVIDENCE-SIDECAR-blocker-gm-drain-w2-318
+title: 'Blocker for OBSCOMPRESS-EARS-EVIDENCE-SIDECAR: byte-equivalence of EARS-rewrites.json to the pre-split EARS.json cannot be witnessed; no pre-split copy is retained and .gm/lean-walk is gitignored'
+scope:
+- .gm/lean-walk/EARS.json
+- .gm/lean-walk/EARS-rewrites.json
+status: pending
+witness: 'Count and size clauses PASS (dispatch 1791963869409-500-7a165f5bab9ab50: EARS.json 2423 bytes; sidecar 114 rewrites, 19 prd_rewrites). Closing needs a retained pre-split copy of EARS.json or a stated owner decision accepting count-plus-parse as the byte-equivalence witness. Receipts: .gm/receipts/OBSCOMPRESS-EARS-EVIDENCE-SIDECAR/'
+session_id: gm-drain-w2-318

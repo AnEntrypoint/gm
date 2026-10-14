@@ -1,0 +1,5 @@
+id: INVEST-GCONTRACT-MEMORY-KIND-ENUM-blocker-gm-drain-w1-171
+subject: 'Blocker: INVEST-GCONTRACT-MEMORY-KIND-ENUM premise conflicts with source; witness needs CI build and cross-session run'
+body: 'Row INVEST-GCONTRACT-MEMORY-KIND-ENUM asserts memorize-fire kind is a closed enum (user, feedback, project, reference). Source contradicts it: rs-plugkit/crates/plugkit-core/src/orchestrator/instructions/prose/entry-extended.md:46 says kind is a storage tier (code defaults l0/l1) passed through as free text. Receipt: .gm/receipts/INVEST-GCONTRACT-MEMORY-KIND-ENUM/01-SPECIFY.md. Closing requires (a) the row owner to restate the field''s domain (tier vs memory type) and (b) a rs-plugkit change built in CI plus a live memorize-fire witness from another session (local cargo blocked; self-witness refused). Session gm-drain-w1-171.'
+session_id: gm-drain-w1-171
+status: pending

@@ -1,0 +1,5 @@
+id: SLAP-PLUGKIT-INDEXCFG-LEVELS-blocker-gm-drain-w1-270-ci-witness
+subject: 'BLOCKER: SLAP-PLUGKIT-INDEXCFG-LEVELS EMIT blocked, witness needs CI-built wasm'
+body: 'Stage reached: SPECIFY (receipt .gm/receipts/SLAP-PLUGKIT-INDEXCFG-LEVELS-blocker-gm-2e-fa19b3-w7-03/01-SPECIFY.md). EMIT not attempted. Parent row SLAP-PLUGKIT-INDEXCFG-LEVELS stays pending. Cause: its witness needs an rs-plugkit wasm built by CI (publish/release, step Build) because local cargo is hook-blocked, so no witness dispatch id can be produced in this lane. Stale citation: index_cfg_impl is at code_index.rs:2364-3112, not line 2239. Sequencing: the concurrent writer row code-chunks-delete-before-insert-blocks-safe-budget-capping is not in the store, so its order relative to this split is unconfirmed. Next: run the split from a lane that can publish through CI, after the sequencing is confirmed. Session gm-drain-w1-270.'
+session_id: gm-drain-w1-270
+status: pending

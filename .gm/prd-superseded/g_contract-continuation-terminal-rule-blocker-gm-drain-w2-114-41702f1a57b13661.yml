@@ -1,0 +1,7 @@
+id: G_CONTRACT-continuation-terminal-rule-blocker-gm-drain-w2-114
+status: pending
+blockedBy:
+- external
+subject: 'Blocker for G_CONTRACT-continuation-terminal-rule (session gm-drain-w2-114): the terminal transition reply in rs-plugkit/crates/plugkit-core/src/orchestrator/transitions.rs (success path, ~L1271-1300, terminal phase branch) carries no next-dispatch field, so the continuation stop rule (gm-config/prose/entry.md L48-55) is prose-only. Fix needs: (1) Rust edit adding a required next-dispatch field (value Skill gm-continue) on the terminal reply, in the rs-plugkit nested repo; (2) prose edit in gm-config plus vendored copies (rs-plugkit lean_graph.json and instructions/prose); (3) wasm rebuild with --features slim and CI-only verification (local cargo blocked); (4) a live terminal-transition witness from a session other than the writer. Receipt: .gm/receipts/G_CONTRACT-continuation-terminal-rule/01-SPECIFY.md. Hypothesis H1 leader; probe not run because it needs a live walk to terminal.'
+session_id: mcp-codemode-23256-1791960714445
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

@@ -1,0 +1,4 @@
+id: G_CONTRACT-identifier-query-shape-rsplug-copy
+subject: rs-plugkit/crates/plugkit-core/src/orchestrator/instructions/prose/entry.md still restates the identifier classifier pattern and 3-96 bounds at line 194; mirror the gm-config/prose/entry.md fix there through a reviewed rs-plugkit rebuild (include_str), since sync-lean-graph never writes into rs-plugkit.
+session_id: gm-drain-w1-96
+status: pending

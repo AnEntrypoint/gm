@@ -1,0 +1,5 @@
+id: SLAP-PLUGKIT-GITFINALIZE-LEVELS-blocker-gm-drain-w1-266
+subject: 'Blocker for SLAP-PLUGKIT-GITFINALIZE-LEVELS: PROVE and witness need a CI-built wasm guest and a cross-session live dispatch; local cargo is hook-blocked'
+body: 'Row SLAP-PLUGKIT-GITFINALIZE-LEVELS cannot close in session gm-drain-w1-266. (1) PROVE needs `cargo build -p rs-plugkit --target wasm32-wasip1 --features slim`; local cargo is blocked by a hook, so rs-plugkit Rust is verified by CI only (publish / release, step Build). (2) The witness is a live git_finalize dispatch through agentplug-runner with the same keys, which needs a built guest from another session; a self-witness is refused. (3) The row cites git.rs:1792 but git_finalize is at line 3569 (codesearch dispatch 1791959130315-500-97bdb56f9de903d5), so the cite is stale and must be re-scoped with prd-add under the same row id before an executor can start. Receipt: .gm/receipts/SLAP-PLUGKIT-GITFINALIZE-LEVELS/01-SPECIFY.md. Unblock by: a CI-built guest plus a cross-session witness, and the row re-scoped to line 3569.'
+session_id: gm-drain-w1-266
+status: pending

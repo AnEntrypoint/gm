@@ -1,0 +1,5 @@
+id: LIVEPLAN-RETIRE-G-CONTRACT-MEMORY-KIND-ENUM-blocker-gm-drain-w2-280
+subject: 'Blocker: retire row waits on pending INVEST rows (w2-280)'
+body: 'SPECIFY (session gm-drain-w2-280): row LIVEPLAN-RETIRE-G-CONTRACT-MEMORY-KIND-ENUM cannot close in this run. Its closing condition is that INVEST-GCONTRACT-MEMORY-KIND-ENUM and INVEST-GCONTRACT-MEMORY-PROSE-REMOVE are both closed. Checked live: INVEST-GCONTRACT-MEMORY-KIND-ENUM is status pending (session lean-node-INVEST; enum change in rs-plugkit orchestrator, witness memorize-fire kind ''other'' errors, kind ''user'' succeeds; rs-plugkit builds are CI-verified only). INVEST-GCONTRACT-MEMORY-PROSE-REMOVE is status pending and blockedBy external (deleting the four-memory-types sentence at gm-config/prose/entry-extended.md:46 must wait for the enum). Next wave: drain INVEST-GCONTRACT-MEMORY-KIND-ENUM through gm-prd, then INVEST-GCONTRACT-MEMORY-PROSE-REMOVE, then re-run this row with mode=witness-or-full. Original blocker: LIVEPLAN-RETIRE-G-CONTRACT-MEMORY-KIND-ENUM-blocker-gm-prdall-20261014-04-k18 (unchanged, not rescoped).'
+session_id: gm-drain-w2-280
+status: pending

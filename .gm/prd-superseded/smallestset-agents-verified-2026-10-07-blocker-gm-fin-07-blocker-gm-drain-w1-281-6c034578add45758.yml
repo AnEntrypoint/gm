@@ -1,0 +1,6 @@
+id: SMALLESTSET-AGENTS-VERIFIED-2026-10-07-blocker-gm-fin-07-blocker-gm-drain-w1-281-blocker-gm-drain-w2-414
+row: SMALLESTSET-AGENTS-VERIFIED-2026-10-07-blocker-gm-fin-07-blocker-gm-drain-w1-281
+subject: 'Blocker: SMALLESTSET-AGENTS-VERIFIED-2026-10-07-blocker-gm-fin-07-blocker-gm-drain-w1-281 premise stale; AGENTS.md block absent, re-scope of parent required'
+body: 'Row SMALLESTSET-AGENTS-VERIFIED-2026-10-07-blocker-gm-fin-07-blocker-gm-drain-w1-281 cannot close by PROVE. SPECIFY (receipt .gm/receipts/SMALLESTSET-AGENTS-VERIFIED-2026-10-07-blocker-gm-fin-07-blocker-gm-drain-w1-281/01-SPECIFY.md) confirms the blocker''s premise is stale: AGENTS.md has no ''Verified 2026-10-07'' block (codesearch dispatch 1791965732861-500-f3f94e1d37d00ef6, 0 matches). The real block is docs/verified-incidents.md:123 (dispatch 1791965736129-500-e851756cfed9da24). ''slim'' is absent from rs-plugkit/Cargo.toml (dispatch 1791965742582-500-95ec46b06890dde9), so the parent witness path is also stale. The re-scope of the parent SMALLESTSET-AGENTS-VERIFIED-2026-10-07 to docs/verified-incidents.md:123-129, with a witness that names the slim feature at rs-plugkit/crates/plugkit-core/Cargo.toml:13, is a decision for the orchestrator. Unblock: prd-add overwrite:true on SMALLESTSET-AGENTS-VERIFIED-2026-10-07, then rerun this row.'
+session_id: gm-drain-w2-414
+status: pending

@@ -1,0 +1,5 @@
+id: SMALLESTSET-AGENTS-VERIFIED-2026-10-04-blocker-gm-drain-w2-410
+subject: 'Blocked: SMALLESTSET-AGENTS-VERIFIED-2026-10-04 cites AGENTS.md lines 132-215, which do not hold the block'
+body: 'Row SMALLESTSET-AGENTS-VERIFIED-2026-10-04 is stale. AGENTS.md is 135 lines and has no ''Verified 2026-10-04'' section. The only match (codesearch literal, dispatch 1791965715801-500-f38e28d42ecbf4d3) is ./docs/verified-incidents.md:39. Its acceptance (AGENTS.md section bytes drop by >=4000) is unsatisfiable as written. Owner decision needed: re-scope the row to docs/verified-incidents.md (its own README/CHANGELOG destination is then the same file) or close it as already done. Receipt: .gm/receipts/SMALLESTSET-AGENTS-VERIFIED-2026-10-04/01-SPECIFY.md'
+session_id: gm-drain-w2-410
+status: pending

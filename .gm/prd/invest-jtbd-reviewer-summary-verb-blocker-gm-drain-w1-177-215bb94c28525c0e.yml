@@ -1,0 +1,6 @@
+id: INVEST-JTBD-REVIEWER-SUMMARY-VERB-blocker-gm-drain-w1-177
+subject: 'Blocked: INVEST-JTBD-REVIEWER-SUMMARY-VERB has no consumer; verb removed by YAGNI-JTBD-REVIEWER-ONEPASS'
+title: 'Blocked: INVEST-JTBD-REVIEWER-SUMMARY-VERB has no consumer; verb removed by YAGNI-JTBD-REVIEWER-ONEPASS'
+body: 'Row INVEST-JTBD-REVIEWER-SUMMARY-VERB asks for a walk summary verb returning net_lines and gate results. SPECIFY (.gm/receipts/INVEST-JTBD-REVIEWER-SUMMARY-VERB/01-SPECIFY.md) finds no such verb in the tree: codesearch literal net_lines dispatch 1791958527008-500-79160e7f6bd5b8d3 hits only the prd-log text; regex dispatch 1791958533452-500-92dfb573606495f3 finds no verb. The resolved row YAGNI-JTBD-REVIEWER-ONEPASS records the verb as removed for lack of a consumer, with reopen condition: a reviewer workflow names the verb as its input. No such workflow exists in the tree. Closing needs either a named reviewer-workflow consumer (decision owner) or an explicit reversal of the YAGNI removal, then a Rust change in rs-plugkit with a CI-built wasm witness that cannot run in this session. Pending for a human or a reviewer-workflow row to name the consumer.'
+session_id: gm-drain-w1-177
+status: pending

@@ -1,0 +1,8 @@
+id: G_CONTRACT-spool-inflight-atomic-write-blocker-gm-drain-w2-154
+subject: 'Blocker: pin bump for the spool atomic-write prose fix cannot publish; parent main moved and a foreign untracked file blocks pull'
+body: 'Row G_CONTRACT-spool-inflight-atomic-write. SPECIFY found the cited SKILL.md sentence absent (stale citation). The prose was missing the atomic in-file rule, so gm-config/prose/entry.md Spool ABI now states it and cites agentplug/crates/agentplug-runner/src/daemon/claim_dispatch.rs (accepted_spool_request_extensions). That change is on gm-config main at 96a752d (remote tip, verified via gh api contents ?ref=main). Parent pin bump is local commit fb87f2367d, push refused (remote moved to b1157d8). git_pull main refused: skills/agent-memory/references/gm-memory-migration.md is a foreign local change (staged delete plus untracked) that the incoming range would overwrite. Next: a wave owner (not this session) resolves that foreign file, then git_pull main, git_push rev HEAD, bumps gitlink gm-config to 96a752d, and witnesses the entry.md sentence via codesearch. Witness from another session required (self-witness refused).'
+session_id: gm-drain-w2-154
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

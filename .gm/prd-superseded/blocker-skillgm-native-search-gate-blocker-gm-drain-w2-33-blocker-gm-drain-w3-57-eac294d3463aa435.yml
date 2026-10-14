@@ -1,0 +1,8 @@
+id: BLOCKER-SKILLGM-native-search-gate-blocker-gm-drain-w2-33-blocker-gm-drain-w3-57
+subject: 'Blocker for BLOCKER-SKILLGM-native-search-gate-blocker-gm-drain-w2-33: the native-search gate needs the user''s enforcement choice (host hook vs prose-only ban)'
+body: 'Stage reached: SPECIFY (receipt .gm/receipts/BLOCKER-SKILLGM-native-search-gate-blocker-gm-drain-w2-33/03-SPECIFY.md). Cannot close without a user decision: (A) host PreToolUse hook denying Glob/Grep/find/rg, which grants execution authority and needs the user to name it explicitly (gm Section 4); or (B) accept the prose-only ban and record that decision. A spool gate cannot observe host-native Glob/Grep. Unblock: user names A or B; then A needs a hooks/*.js change and a reviewed rs-plugkit rebuild if a spool gate is also wanted, and B closes the parent row with the recorded decision as its witness. Session: gm-drain-w3-57.'
+session_id: gm-drain-w3-57
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

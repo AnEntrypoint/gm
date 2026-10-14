@@ -1,0 +1,8 @@
+id: BLOCKER-SKILLGM-output-cap-constants-blocker-gm-drain-w1-33-blocker-gm-drain-w3-61
+subject: 'Blocked: BLOCKER-SKILLGM-output-cap-constants-blocker-gm-drain-w1-33 cannot close without a CI-built rs-plugkit witness and a gm-config output-cap key'
+body: 'SESSION_ID gm-drain-w3-61. SPECIFY receipt: .gm/receipts/BLOCKER-SKILLGM-output-cap-constants-blocker-gm-drain-w1-33/01-SPECIFY.md. Row acceptance needs (a) a gm-config key per output cap (none exists; literals live at gm-mcp/src/dispatch.js:641, gm-mcp/src/mcp-server.js:173,181, rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs/git.rs:4411,4413,4501,4502), (b) gm-mcp and rs-plugkit reading that key, (c) a verbs.md rewrite, (d) a CI-verified rs-plugkit wasm build with --features slim. Items (b) and (d) cannot be witnessed locally (gm-no-local-cargo-verified-by-ci). Next wave: launch a CI-capable session to land (a) and (c) on main, then the rs-plugkit read with a CI witness dispatch id. Leader H1 is unprobed. Row stays pending.'
+session_id: gm-drain-w3-61
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

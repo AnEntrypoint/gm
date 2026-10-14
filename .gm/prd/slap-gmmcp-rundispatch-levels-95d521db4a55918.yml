@@ -1,0 +1,8 @@
+id: SLAP-GMMCP-RUNDISPATCH-LEVELS
+title: 'SLAP: split gm-mcp runDispatch into validate, publish, poll and shape levels'
+description: 'gm-mcp/src/dispatch.js runDispatch (lines 1166-1361, 196 lines) mixes argument validation, spool publish, the poll loop with its final re-check, and response shaping (timing, resume disclosure, owner_transport) in one function, with readLandedOutFile a closure holding envelope parsing and shaping. Scope: this function only. Change: one named function per level (validateDispatch, publishDispatch, pollForOutcome, shapeLandedOutFile), each reading one level of abstraction, with runDispatch as a short sequence of those calls. Behaviour must not change: every returned YAML string and every timed_out, resume and abort field stays identical. Witness: exec_js line count of runDispatch under 40, and a live gm dispatch (exec_js echo) returns the same fields as before.'
+node: SLAP
+phase: P3
+status: pending
+source: lean-hop-SLAP
+session_id: lean-hop-SLAP

@@ -1,0 +1,6 @@
+id: LIVEPLAN-gm-goal-w3-LIVEPLAN-1-blocker-gm-drain-w2-273
+subject: 'Blocked: LIVEPLAN-gm-goal-w3-LIVEPLAN-1 acceptance is a store-wide sweep of 701 pending rows, not a single witness'
+source: gm-drain-w2-273
+body: 'Row LIVEPLAN-gm-goal-w3-LIVEPLAN-1 cites 276 total and 264 pending. Live count is store_total 727, pending 701 (dispatch 1791963230683-500-30276372a679febb). Both closing-condition rows (INVEST-EARS-DOC-PATHS-EXIST, INVEST-EARS-DOC-NO-REMOVED-VERBS) and the retire row LIVEPLAN-RETIRE-EARS-DOCS-CURRENT-CONCISE are completed (dispatches 1791963219694-500-2c5c8a58f933a094, 1791963224078-500-2a2f431447835b4), so the cited cause is refuted. The remaining acceptance, store holds only the current task, needs a per-row close or retire sweep across 701 rows, each with its own witness. Receipts: .gm/receipts/LIVEPLAN-gm-goal-w3-LIVEPLAN-1/01-SPECIFY.md, 02-PROVE.md. Next step: a multi-wave gm-orchestrate sweep that closes or retires each stale pending row with its own witness.'
+session_id: gm-drain-w2-273
+status: pending

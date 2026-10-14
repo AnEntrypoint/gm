@@ -1,0 +1,5 @@
+id: THINSLICE-PRECEDENCE-ENUM-blocker-gm-drain-w2-448
+subject: 'Blocker for THINSLICE-PRECEDENCE-ENUM: the ordered tier enum cannot be built or witnessed from this session'
+session_id: gm-drain-w2-448
+body: 'Row THINSLICE-PRECEDENCE-ENUM cannot close in this run. SPECIFY receipt: .gm/receipts/THINSLICE-PRECEDENCE-ENUM/01-SPECIFY.md. Tier precedence is control flow in rs-plugkit/crates/plugkit-core/src/config.rs resolve_with (lines 700-754) over enum Tier (lines 35-41), with no ordered constant or rank. Changing it means editing a WASM guest (rs-plugkit AGENTS.md: no local cargo, build and verify are CI only via publish/release), then a rebuilt runner, then a live instruction dispatch in a project with .gm/gm.config.json (absent in C:\dev\gm; needs a scratch project). Next step for a later wave: edit config.rs to add an ordered constant and rank over Tier, name the order in skills/gm/SKILL.md section 0 in the same change, push from rs-plugkit (nested repo, main), bump the gitlink in gm, confirm ci-status, then witness through instruction. Witness must name the leader H1 from SPECIFY; H2 is ruled out only by the ordered constant''s presence.'
+status: pending

@@ -1,0 +1,4 @@
+id: DIJKSTRATEST-GMMCP-STANDING-TESTS
+subject: 'gm-mcp (submodule): nine standing test files under gm-mcp/test (about 250 assertions) plus two probe scripts; re-express each assertion as an exec_js probe against the real boundary, delete the test directory, and drop the npm test script. Related: DEEPMOD-GMMCP-TEST-SUITE-RED-AT-HEAD. Separate repo plus bundle rebuild, so not done in the gm root hop.'
+session_id: lean-hop-DIJKSTRATEST
+status: pending

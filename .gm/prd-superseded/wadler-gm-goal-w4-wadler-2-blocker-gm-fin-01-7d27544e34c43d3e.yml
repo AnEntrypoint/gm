@@ -1,0 +1,5 @@
+id: WADLER-gm-goal-w4-WADLER-2-blocker-gm-fin-01
+subject: 'Blocker for WADLER-gm-goal-w4-WADLER-2: witness needs a rebuilt gm-mcp bundle and a server restart'
+body: 'Blocker for WADLER-gm-goal-w4-WADLER-2 (session gm-fin-01). Stale citation: row cites gm-mcp/src/dispatch.js:1421-1429; live guards are at 1526-1532 (seven) and the daemon_active_projects copy at 1533-1534. EMIT cannot run here: the witness is a live status dispatch on the gm-mcp server, which serves bin/gm-mcp-server.js, so the change needs npm run build (scripts/build.mjs) plus a server restart; neither is available to this worker. Baseline status reply not captured. gm-mcp submodule HEAD is detached at 388109b; main tip unverified. Receipts: .gm/receipts/WADLER-gm-goal-w4-WADLER-2/01-SPECIFY.md, 05-CONC.md, 03-EMIT-BLOCKED.md. Next: a session that can restart gm-mcp captures a baseline status dispatch, edits src/dispatch.js to one typed pick, runs npm run build and verify-build, witnesses the same status keys, commits gm-mcp src and bin together, and bumps the parent gitlink to the gm-mcp main tip.'
+session_id: gm-fin-01
+status: pending

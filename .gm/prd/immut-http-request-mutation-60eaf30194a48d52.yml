@@ -1,0 +1,7 @@
+id: IMMUT-HTTP-REQUEST-MUTATION
+title: 'gm-mcp: normalizeProtocolVersion mutates the shared request object instead of deriving a copy'
+description: 'gm-mcp/src/http-transport.js:38-51 writes req.headers[''mcp-protocol-version''] and req.rawHeaders[i+1] in place. req is owned by Node''s http layer and read by the MCP SDK, so the mutation crosses a boundary. Principle (Okasaki, IMMUT): derive a normalized header view and hand the SDK that copy, leaving the incoming request unchanged. Scope: gm-mcp/src/http-transport.js only, plus gm-mcp/bin rebuild if the bundle is committed from src. Witness: SDK still answers a request whose mcp-protocol-version is unsupported, and the original req.headers value is unchanged after normalization.'
+node: IMMUT
+phase: P3
+session_id: lean-hop-IMMUT
+status: pending

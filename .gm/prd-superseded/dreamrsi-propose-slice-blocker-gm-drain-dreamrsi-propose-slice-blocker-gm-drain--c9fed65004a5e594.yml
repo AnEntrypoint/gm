@@ -1,0 +1,8 @@
+id: DREAMRSI-PROPOSE-SLICE-blocker-gm-drain-DREAMRSI-PROPOSE-SLICE-blocker-gm-drain-w1-75
+subject: 'Blocker for DREAMRSI-PROPOSE-SLICE-blocker-gm-drain-DREAMRSI-PROPOSE-SLICE: propose route missing from orchestrator/mod.rs; closing needs rs-plugkit route edit, slim wasm build and cross-session witness'
+body: 'Stale premise corrected: dream-strategy-propose body exists at rs-plugkit/crates/plugkit-core/src/orchestrator/dream_rsi.rs:757-775 and writes .gm/dream-rsi/<owner>/proposed-strategy.json. Not routed: orchestrator/mod.rs has dream-replay-cycle at :407 and no dream-strategy-propose arm. cargo.exe exists at C:/Users/user/.cargo/bin, but local cargo builds are hook-blocked per memory, so CI is the build witness. Next: add the route arm in mod.rs, build with --features slim via CI, and witness with a live dispatch from a session other than gm-drain-DREAMRSI-PROPOSE-SLICE. Receipt: .gm/receipts/DREAMRSI-PROPOSE-SLICE-blocker-gm-drain-DREAMRSI-PROPOSE-SLICE/01-SPECIFY.md. Hypothesis H1 (route missing) leads; H2 (gates.rs refusal) unseparated.'
+session_id: gm-drain-w1-75
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

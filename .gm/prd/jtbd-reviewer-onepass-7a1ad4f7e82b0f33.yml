@@ -1,0 +1,6 @@
+id: JTBD-REVIEWER-ONEPASS
+title: 'Job: a human reviewer accepts an agent diff in one pass'
+body: 'Hired when: a maintainer must decide whether an agent-authored change is safe to merge. Job: let the reviewer accept or reject the change from the diff, the gate results and the recorded reason, without re-deriving the agent''s reasoning. Not stated anywhere in README, AGENTS.md or SKILL.md: those describe gates for the agent, never the reviewer''s read. Done when a reviewer-facing summary (net line delta, gates passed, witnesses, PRD rows closed) is reachable through one verb and cites only recorded evidence.'
+obligation_kind: discovery
+session_id: lean-node-JTBD
+status: pending

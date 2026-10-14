@@ -1,0 +1,8 @@
+id: DBC-LIBSQL-INERT-TXN-VERBS-blocker-gm-drain-w2-81-blocker-gm-drain-w3-147
+subject: 'Blocked: DBC-LIBSQL-INERT-TXN-VERBS has no live route to the libsql begin verb; witness cannot close'
+body: 'Parent row DBC-LIBSQL-INERT-TXN-VERBS stays pending. Stage SPECIFY (session gm-drain-w3-147) found the row''s premise stale: agentplug-libsql/src/db.rs:726-729 already refuses begin/commit/rollback by name with ok:false, and db.rs:744 inert_verbs is [open, close] only. The row''s acceptance needs a live libsql begin dispatch returning the refusal (leader probe, receipt .gm/receipts/DBC-LIBSQL-INERT-TXN-VERBS-blocker-gm-drain-w2-81/01-SPECIFY.md). That probe cannot run: gm.list filter libsql returns no verb, and the sql_* verbs (sql_open, sql_close, sql_list_dbs, sql_exec, sql_query, sql_smoke, sql_serialize, sql_deserialize) carry no begin; gm.gm({verb:''begin''}) returns unknown_verb (dispatch 1791960376017-500-9ac11c6468ca9a7f). Needed to unblock: a gm route to the libsql plugin begin/commit/rollback verb, or the row rescoped to a source-level witness (a codesearch over db.rs:726-729 binds no live witness and needs owner approval to close). Witness outcome: none. Session gm-drain-w3-147.'
+session_id: gm-drain-w3-147
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

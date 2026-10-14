@@ -1,0 +1,5 @@
+id: GM-GREP-HEAD-LIMIT-FRICTION
+status: pending
+subject: 'gm friction: the grep verb rejects head_limit (unknown_fields), the name the native Grep tool uses for result caps; the verb accepts max_results and limit. Either accept head_limit as an alias of max_results in the grep body parser, or make the unknown-field error name the accepted equivalent. Owner: gm-mcp/src (wrapper) and rs-plugkit grep handler, fixed in c:\dev\gm by a subagent under INVARIANT 2.'
+witness: grep dispatch 1791489512552-500-f57572a185a236bc with body {pattern, output_mode, glob, head_limit:5} returned error_code failed, unknown_fields [head_limit], while the same call with max_results succeeded (dispatch 1791489550862-500-9594dcefb8fad265).
+session_id: lean-hop-NODUPEDOC

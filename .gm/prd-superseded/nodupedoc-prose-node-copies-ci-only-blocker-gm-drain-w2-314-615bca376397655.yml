@@ -1,0 +1,5 @@
+id: NODUPEDOC-PROSE-NODE-COPIES-ci-only-blocker-gm-drain-w2-314
+subject: 'BLOCKER NODUPEDOC-PROSE-NODE-COPIES-ci-only: duplication confirmed (143/143), fix and witness need CI wasm rebuild and a cross-session dispatch'
+body: 'Parent row: NODUPEDOC-PROSE-NODE-COPIES-ci-only (session gm-drain-w2-314). SPECIFY (01) and PROVE (02) receipts: .gm/receipts/NODUPEDOC-PROSE-NODE-COPIES-ci-only/. Leader hypothesis holds: literal dispatch counts the sentence 143 times in gm-config/prose and 143 times in rs-plugkit instructions/prose (exhaustive). Blocked because: (1) the rs-plugkit Rust change in lean_prose.rs and entry.rs is not made; (2) the probe needs a rebuilt wasm, and local cargo is hook-blocked, so CI publish / release Build must run; (3) the witness must come from another session, since self-witness is refused. rs-plugkit has an unrelated uncommitted Cargo.toml version hunk (another writer), which this run does not touch. Next action: a session other than gm-drain-w2-314 makes the rs-plugkit change, lands it on main through CI, then runs a live instruction dispatch showing the sentence once and binds the dispatch id.'
+session_id: gm-drain-w2-314
+status: pending

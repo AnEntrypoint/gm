@@ -1,0 +1,4 @@
+id: PARNAS-gm-goal-w4-PARNAS-2-blocker-gm-fin-20
+subject: 'PARNAS-gm-goal-w4-PARNAS-2 blocked: gm-mcp is a shared surface with a live second writer and a detached, stale HEAD. Evidence: git_status at gm-mcp shows bin/gm-mcp-server.js, src/cli.js, src/http-transport.js and src/index.js modified by another lane (uncommitted); HEAD is detached at 388109b, local main is 17a995d, origin/main is f828fca; git_checkout takes ref not branch. The row''s edits (dispatch.js, bundle-refresh.js, release-bridge.js, self-update.js, transport-guard.js, scripts/transport-guard-witness.mjs, AGENTS.md) would need a bundle rebuild, and bin/gm-mcp-server.js already carries the foreign WIP (DEEPMOD-GMMCP-BUNDLE-CARRIES-WIP). Resolve by: one writer on gm-mcp, commit or park the foreign hunks, move the submodule onto main at origin/main, then run the row. Witness must come from a session other than the resolver.'
+session_id: gm-fin-20
+status: pending

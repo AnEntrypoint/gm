@@ -1,0 +1,4 @@
+id: CONVCOM-gm-goal-w2-CONVCOM-1
+subject: 'CONVCOM: commit subjects on main are not enforced as type(scope): description; 4 of the last 8 subjects have no type prefix and gm-mcp/src has no subject check'
+status: pending
+session_id: gm-goal-w2-CONVCOM

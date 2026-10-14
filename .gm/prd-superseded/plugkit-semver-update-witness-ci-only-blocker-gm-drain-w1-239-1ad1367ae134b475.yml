@@ -1,0 +1,5 @@
+id: PLUGKIT-SEMVER-UPDATE-WITNESS-ci-only-blocker-gm-drain-w1-239
+subject: 'Blocker: PLUGKIT-SEMVER-UPDATE-WITNESS-ci-only cannot close in session gm-drain-w1-239'
+body: 'Row run in session gm-drain-w1-239 (gm-prd, row given as the existing blocker PLUGKIT-SEMVER-UPDATE-WITNESS-ci-only-blocker-gm-prdall-20261014-04-k02). Stage reached: SPECIFY, same ACH as the prior session (H1 download.rs:2153-2159 version short-circuit before sha sidecar fetch; H2 refresh_plugin_if_stale misreport). PROVE cannot separate H1 from H2 in this session: local cargo is blocked by hook, the fix lives in the agentplug submodule, and it needs a CI run, a submodule pin bump, then a live daemon-status re-witness against db42b8dc21646809ca042cc99814539468ccfb56c6315ec5720ce435d10cb0de. Parent PLUGKIT-SEMVER-UPDATE-WITNESS-ci-only stays pending. Unblock: fix download.rs so sha drift is compared before the equal-version return, land via CI, bump pin, re-witness daemon-status.'
+session_id: gm-drain-w1-239
+status: pending

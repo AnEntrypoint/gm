@@ -1,0 +1,5 @@
+id: FUZZ-gm-goal-hop-FUZZ-1-1-blocker-gm-drain-w1-81
+subject: 'Blocker for FUZZ-gm-goal-hop-FUZZ-1-1: fix cannot land while gm-mcp/src/dispatch.js holds foreign WIP'
+body: 'Row FUZZ-gm-goal-hop-FUZZ-1-1 (readDaemonLiveness null-body TypeError) is reproduced live: node probe with .status.json = null THREW TypeError reading pid; controls {"ts":0}, 5, [] ok. Leader H1 confirmed. Fix (guard after the parse try block: if status is not a non-null object return coldProjectLiveness()) is NOT landed because gm-mcp/src/dispatch.js has uncommitted foreign WIP (runnerEnsureInFlight reaper, runDispatch requestNumber) on main, so git_finalize of that file would commit another writer''s hunks. Also bin/gm-mcp-server.js must be rebuilt from src with that WIP (DEEPMOD-GMMCP-BUNDLE-CARRIES-WIP). Unblock: the owner of the gm-mcp dispatch.js WIP commits or discards it; then apply the guard, rebuild the bundle, witness with the node probe above plus a live dispatch, and close the parent row from a second session. Receipts: C:\dev\gm\.gm\receipts\FUZZ-gm-goal-hop-FUZZ-1-1\01-SPECIFY.md and 02-PROVE.md.'
+session_id: gm-drain-w1-81
+status: pending

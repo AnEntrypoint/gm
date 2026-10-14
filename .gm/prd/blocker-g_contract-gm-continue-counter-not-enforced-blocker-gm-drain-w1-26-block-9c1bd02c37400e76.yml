@@ -1,0 +1,8 @@
+id: BLOCKER-G_CONTRACT-gm-continue-counter-not-enforced-blocker-gm-drain-w1-26-blocker-gm-drain-w2-27-blocker-gm-drain-w3-44
+subject: 'Blocker for BLOCKER-G_CONTRACT-gm-continue-counter-not-enforced-blocker-gm-drain-w1-26-blocker-gm-drain-w2-27: counter needs a CI-built rs-plugkit change and a cross-session gm-continue witness'
+blockedBy:
+- external
+body: 'Parent row: BLOCKER-G_CONTRACT-gm-continue-counter-not-enforced-blocker-gm-drain-w1-26-blocker-gm-drain-w2-27 (stays pending). SPECIFY receipt .gm/receipts/BLOCKER-G_CONTRACT-gm-continue-counter-not-enforced-blocker-gm-drain-w1-26-blocker-gm-drain-w2-27/01-SPECIFY.md re-confirmed H1 in session gm-drain-w3-44: codesearch literal gm-continue-count hits only gitignore.rs:16; literal gm-continue hits prose and comments only (dispatches 1791969679683-500-59de35a3891a0e0a, 1791969683733-500-4284a76681e236e6). The fix is Rust in rs-plugkit/crates/plugkit-core (counter in .gm/.gm-continue-count, reset on fresh user prompt, two end outcomes), verified by CI only (publish / release, step Build) because local cargo is hook-blocked. Acceptance needs a live gm-continue witness from a session other than the implementer, which this session cannot provide. Needs: an implementer session that pushes the rs-plugkit commit via gm git verbs, bumps the gm gitlink, reads green CI, and a second session that witnesses a refused third cycle.'
+session_id: gm-drain-w3-44
+status: pending
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

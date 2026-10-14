@@ -1,0 +1,5 @@
+id: WADLER-VALUE-SIGNATURE-WASM-VERBS-blocker-gm-2e-fa19b3-w1-12-blocker-gm-drain-w2-488
+subject: 'Blocker for WADLER-VALUE-SIGNATURE-WASM-VERBS-blocker-gm-2e-fa19b3-w1-12: split is not yet done and PROVE needs CI wasm plus a cross-session witness'
+body: 'Parent row WADLER-VALUE-SIGNATURE-WASM-VERBS-blocker-gm-2e-fa19b3-w1-12 is pending after SPECIFY in session gm-drain-w2-488 (receipt .gm/receipts/WADLER-VALUE-SIGNATURE-WASM-VERBS-blocker-gm-2e-fa19b3-w1-12/01-SPECIFY-gm-drain-w2-488.md). Live count: codesearch literal ''Value)'' in rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs/git.rs gives 62 occurrences (dispatch 1791968095578-500-a69748abe53ec386), against 87 cited in the parent. Next: split WADLER-VALUE-SIGNATURE-WASM-VERBS into per-file rows (git.rs first, then memory.rs, search.rs, verbs.rs), each with one witnessable verb group. PROVE needs a CI wasm build (--features slim) and a witness from another session; no local cargo. Parent row: WADLER-VALUE-SIGNATURE-WASM-VERBS (dispatch 1791968076375-500-198ef7b79abc2ff4).'
+session_id: gm-drain-w2-488
+status: pending

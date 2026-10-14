@@ -1,0 +1,9 @@
+id: G_CONTRACT-spool-claim-key-session-prefix-blocker-gm-drain-w1-111-blocker-gm-drain-w2-152
+subject: 'Blocker for G_CONTRACT-spool-claim-key-session-prefix-blocker-gm-drain-w1-111: the rs-plugkit mint path and the prose edits are not implemented, and no witness can run in this session'
+witness: codesearch parent_session_id literal and SESSION_ID mint search (dispatches 1791961124450-1640, 1791961143681-1658)
+body: 'Row: the row''s own blocker (gm-drain-w1-111) asks for (a) a daemon mint path for subagent SESSION_IDs in rs-plugkit and (b) removal of the parent-derived `<parent_session_id>-sub<k>` rule from prose. SPECIFY (receipt .gm/receipts/G_CONTRACT-spool-claim-key-session-prefix-blocker-gm-drain-w1-111/01-SPECIFY.md, codesearch dispatches 1791961124450-1640 and 1791961143681-1658): cited prose lines are present; subagent.rs:270-291 only reads parent_session_id and mints nothing (leader H1 holds; H2 thin-slice closure rejected). Needed: an rs-plugkit Rust change in orchestrator/subagent.rs, prose edits in gm-config/prose and the rs-plugkit mirror (entry.md:158, lean-p1/p4/p7), a CI-only build with --features slim (local cargo hooked), and a cross-session live spool witness whose dispatch id names the mint path. Not achievable in one gm-prd run here. Parent row stays pending.'
+session_id: gm-drain-w2-152
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

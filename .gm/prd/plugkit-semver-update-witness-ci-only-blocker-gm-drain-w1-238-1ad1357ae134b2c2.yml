@@ -1,0 +1,5 @@
+id: PLUGKIT-SEMVER-UPDATE-WITNESS-ci-only-blocker-gm-drain-w1-238
+subject: 'Blocked: PLUGKIT-SEMVER-UPDATE-WITNESS-ci-only needs a CI runner release and a live daemon witness'
+body: 'Blocker for PLUGKIT-SEMVER-UPDATE-WITNESS-ci-only (session gm-drain-w1-238). The row''s fix (download.rs ensure_plugin_installed_via_github, version short-circuit at lines 2153-2159 before the sha sidecar fetch) is confirmed present in the tree. Its acceptance needs a live daemon witness: loaded_plugin_content_sha256.gm must return to db42b8dc21646809ca042cc99814539468ccfb56c6315ec5720ce435d10cb0de. That requires a CI-built runner release carrying the fix, then a sideload and a daemon poll. Local cargo is blocked by a hook, so PROVE cannot separate H1 (short-circuit) from H2 (daemon.rs:3507 logs success on a no-op). Next step: land the sha-compare fix through CI, then run the live witness in a separate session. Receipts: .gm/receipts/PLUGKIT-SEMVER-UPDATE-WITNESS-ci-only/01-SPECIFY-gm-prdall-20261014-04-k02.md, 02-PROVE-gm-drain-w1-238.md.'
+session_id: gm-drain-w1-238
+status: pending

@@ -1,0 +1,16 @@
+id: CQS-gm-goal-w4-CQS-2-blocker-gm-drain-w2-73
+subject: 'BLOCKER CQS-gm-goal-w4-CQS-2: spill write exists only in dirty tree; HEAD advertises a spill file it never writes'
+body: |-
+  Blocks CQS-gm-goal-w4-CQS-2 (the row of the same id, not this one). Filed by session gm-drain-w2-73 closing row CQS-gm-goal-w4-CQS-2-blocker-gm-drain-w1-60. Hypothesis: the CQS fix is absent from HEAD and present only in the dirty tree. Witness: codesearch literal writeFileSync( in gm-mcp/src/dispatch.js, and git_show HEAD:src/dispatch.js, dispatch 1791960268568-500-45ed97ee2ed356c.
+  Findings (HEAD 78dc783 for gm-mcp, not 6ce6e3e as the prior blocker says):
+  1. capReplyText is pure at HEAD (dispatch.js:303, 1-based). The parent's cited line 277 is stale.
+  2. HEAD has no spill writer at all. REPLY_SPILL_SUFFIX (dispatch.js:643) names the spill path and the reply notice advertises spill_file, but nothing creates the file. The working tree adds the write at dispatch.js:2099 (fs.writeFileSync(spillPath, rendered) before capReplyText at :2100), so the parent CQS fix is real only in the working tree.
+  3. dispatch.js working-tree diff (git_diff, 15905 chars) interleaves a foreign spool-store migration (ACCEPTPORT-SPOOLFS-DISPATCH: claimByLink, claimByCreate, readJsonOrNull, writeTextAtomically and others from src/spool-store.js, which is untracked) with the CQS hunk. A commit of only the CQS hunk needs hunk-level staging by the single writer of that file.
+  4. gm-mcp git_status (dispatch 1791960277367-500-1c752b4a51103f71): 11 modified, 1 staged (src/self-update.js), 1 untracked (src/spool-store.js). Those are other writers' hunks.
+  5. The parent also requires a gm-mcp bundle rebuild matching the src diff; bin/gm-mcp-server.js is modified in the tree.
+  Unblock: the owner of ACCEPTPORT-SPOOLFS-DISPATCH lands its dispatch.js and spool-store.js hunks (or the single writer stages the CQS hunk alone), then rebuild the bundle, then witness: codesearch literal writeFileSync( returns no hit inside capReplyText, and an oversized reply produces a file at spill_file. Session that files this must not be the one that commits foreign hunks.
+session_id: gm-drain-w2-73
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

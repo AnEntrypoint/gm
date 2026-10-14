@@ -1,0 +1,7 @@
+id: G_CONTRACT-memorize-prune-modes-blocker-gm-drain-w1-100
+subject: 'Blocker for G_CONTRACT-memorize-prune-modes: the enum change is a rs-plugkit wasm guest edit needing a CI build and a cross-session witness'
+blockedBy:
+- external
+body: 'Row G_CONTRACT-memorize-prune-modes cannot close in session gm-drain-w1-100. SPECIFY receipt: .gm/receipts/G_CONTRACT-memorize-prune-modes/01-SPECIFY.md (handler memory.rs:1030 and :1089 already branch keys vs query). PROVE receipt: .gm/receipts/G_CONTRACT-memorize-prune-modes/02-PROVE.md. Needed to close: a CI-built rs-plugkit guest carrying the Keys/Query enum (--features slim; local cargo is hook-blocked), a live memorize-prune {query} witness that deletes nothing, and a memorize-prune {key} witness, both from a session other than the author. Prose change in gm-config/prose/entry-extended.md is only worth landing with that witness.'
+session_id: gm-drain-w1-100
+status: pending

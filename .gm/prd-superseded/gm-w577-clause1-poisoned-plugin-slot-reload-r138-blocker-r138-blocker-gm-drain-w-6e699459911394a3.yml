@@ -1,0 +1,14 @@
+id: gm-w577-clause1-poisoned-plugin-slot-reload-r138-blocker-r138-blocker-gm-drain-w2-200
+kind: blocker
+subject: 'BLOCKER gm-w577-clause1-poisoned-plugin-slot-reload-r138-blocker-r138: clause 1 edit site exists in agentplug-host registry.rs (out of scope); clause acceptance missing'
+body: |-
+  Blocker for gm-w577-clause1-poisoned-plugin-slot-reload-r138-blocker-r138, filed by gm-drain-w2-200 (gm-prd run, stages SPECIFY and PROVE).
+
+  Why this blocks: the row's clause 1 acceptance text is not recoverable from this row (its body names no acceptance) and the row's premise "no plugin-slot, evict or reload code exists anywhere" is refuted by the live tree. Existing poisoned-store eviction and empty-slot reload code is in agentplug/crates/agentplug-host/src/registry.rs (fn log_poisoned_store_eviction_event at line 179; calls at 1763, 1946, 2091, 2147 with "slot already empty from a prior eviction, reload did not repopulate it"; evict_every_currently_free_slot_without_blocking_on_busy_ones at 1225). Edit site therefore exists, but in agentplug, which is out of scope for this session, so no change is made here.
+
+  Needed to close: (a) clause 1 acceptance text restored onto the row; (b) an in-scope session allowed to edit agentplug/crates/agentplug-host/src/registry.rs, or an explicit decision that the existing code satisfies the clause, witnessed by a session other than the one that edits.
+
+  Receipts: .gm/receipts/gm-w577-clause1-poisoned-plugin-slot-reload-r138-blocker-r138/01-SPECIFY.md.
+  Evidence dispatch: codesearch literal "log_poisoned_store_eviction_event" over repo (exhaustive, 7 hits in agentplug-host/src/registry.rs), codesearch literal "evict" in registry.rs.
+session_id: gm-drain-w2-200
+status: pending

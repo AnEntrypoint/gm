@@ -1,0 +1,8 @@
+id: BLOCKER-SKILLGM-spool-inname-validation-blocker-gm-drain-w1-37-blocker-gm-drain-w2-43-blocker-gm-drain-w3-77
+status: pending
+subject: 'Blocked: daemon subagent-id mint still absent (codesearch subagent_id in agentplug-runner/src/daemon = 0 hits, dispatch 1791970109272-500-8d6042fb663de47e); row needs CI-built daemon mint, lean-p7 reviewed rebuild and cross-session live witness'
+body: 'Parent row: BLOCKER-SKILLGM-spool-inname-validation-blocker-gm-drain-w1-37-blocker-gm-drain-w2-43, session gm-drain-w3-77. SPECIFY: gap 2 re-verified absent by a live literal codesearch (dispatch 1791970109272-500-8d6042fb663de47e, 0 hits). Gap 1 named quarantine reply exists in source (claim_dispatch.rs:1645,1682 per parent receipt) but has no live witness. Closing needs: (1) daemon mint of parent-sub-k implemented in agentplug/crates/agentplug-runner/src/daemon, (2) CI build of rs-plugkit and agentplug (no local cargo in this session), (3) reviewed rebuild of rs-plugkit lean-p7.md that stops telling agents to derive the id, (4) live spool probe with a bare-integer in-file name returning a named error from another session, (5) SKILL.md claim-key sentence reduced. Parent row stays pending.'
+session_id: gm-drain-w3-77
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

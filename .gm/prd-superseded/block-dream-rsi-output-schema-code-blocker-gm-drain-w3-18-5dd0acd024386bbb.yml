@@ -1,0 +1,8 @@
+id: BLOCK-dream-rsi-output-schema-code-blocker-gm-drain-w3-18
+subject: 'Blocked: BLOCK-dream-rsi-output-schema-code cannot close; live dream-replay returns no DreamRsiResult shape'
+body: 'Blocker for BLOCK-dream-rsi-output-schema-code-blocker-gm-drain-w2-10 (session gm-drain-w3-18). Leader probe H1 (a live dream-replay returns status, part_a, part_b) is refuted. Live fixture built: policy base (1791969461170-500-8d9f02d137c0d4bd), evaluator receipts (1791969461944-500-e8e387032ae42cbb, 1791969463340-500-93b2cd47e00a039b), discovery d1/d2 (1791969465582-500-26cc748e6d070a77, 1791969467965-500-aa84e12fd68a8220), world w1 sealed (1791969469402-500-b3167137c5dae9ae). dream-replay 1791969471137-500-7f86242234b00c14 returned ok:true with baseline_policy_id, rankings, selected_policy_id, improved, and no status/part_a/part_b. DreamRsiResult (dream_rsi.rs:92) has no constructor; the producer row BLOCK-dream-rsi-output-schema-producer-gm-drain-w2-11 must wire one before this witness can pass. Receipts: .gm/receipts/BLOCK-dream-rsi-output-schema-code-blocker-gm-drain-w2-10/01-SPECIFY.md and 02-PROVE.md. No code edited; nothing published.'
+session_id: gm-drain-w3-18
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

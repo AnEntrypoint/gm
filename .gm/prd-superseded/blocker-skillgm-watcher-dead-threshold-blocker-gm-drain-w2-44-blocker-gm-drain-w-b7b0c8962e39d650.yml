@@ -1,0 +1,8 @@
+id: BLOCKER-SKILLGM-watcher-dead-threshold-blocker-gm-drain-w2-44-blocker-gm-drain-w3-82
+subject: 'Blocker for BLOCKER-SKILLGM-watcher-dead-threshold-blocker-gm-drain-w2-44: gm-mcp still dirty under another writer, live heartbeat probe unreachable'
+body: 'Blocks BLOCKER-SKILLGM-watcher-dead-threshold-blocker-gm-drain-w2-44 (row stays pending). SPECIFY receipt: .gm/receipts/BLOCKER-SKILLGM-watcher-dead-threshold-blocker-gm-drain-w2-44/01-SPECIFY.md. Re-verified at dispatch 1791970252059-500-4be5dee2e0f5b70c and 1791970292580-500-756ae3f3e89d2283: the duplicate threshold persists (scripts/triage/runner-status.sh:18 uses 300000 ms; gm-mcp/src/dispatch.js:1422-1423 and gm-mcp/bin/gm-mcp-server.js:177 read GM_MCP_DAEMON_HEARTBEAT_STALE_MS defaulting to 2e4). Still open: (1) gm-mcp is modified in the parent tree (git_status 1791970188415-500-a19625b02433bbb) under another writer, so an owner edit to gm-mcp/src/dispatch.js and the bundle rebuild cannot be made by this session; (2) the leader probe needs a live daemon with a project heartbeat aged 20 s to 300 s, not reachable in this session; (3) runner-status.sh reads /proc and python3, so its witness runs only under Linux or Git Bash. Resolution path: once the gm-mcp writer releases, pick the owner (recommended: the gm-mcp constant is the single source and the script reads the same value via the status file), rebuild the bundle, name the threshold at skills/gm/SKILL.md:63, then witness with a live health dispatch from a second session.'
+session_id: gm-drain-w3-82
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

@@ -1,0 +1,5 @@
+id: SLAP-gm-goal-w4-SLAP-1-blocker-gm-fin-25-blocker-gm-drain-w2-359
+subject: 'Blocked: SLAP-gm-goal-w4-SLAP-1-blocker-gm-fin-25 cannot close; gm-mcp/src/dispatch.js still holds other writers'' uncommitted hunks'
+body: 'Row SLAP-gm-goal-w4-SLAP-1-blocker-gm-fin-25 was carried by session gm-drain-w2-359 through SPECIFY and PROVE. PROVE precondition fails: git_status on gm-mcp (dispatch 1791964441608-500-e33f1b2e8371eda2) lists src/dispatch.js modified, with staged src/self-update.js and untracked src/spool-store.js, and branch main at head a992ae64. Parent row SLAP-gm-goal-w4-SLAP-1 needs dispatch.js free of other lanes'' hunks before an edit. Receipts: .gm/receipts/SLAP-gm-goal-w4-SLAP-1-blocker-gm-fin-25/01-SPECIFY.md and 02-PROVE.md. Unblock when the gm-mcp owner commits or parks the held hunks on main, and the gm-mcp submodule returns to main (it is detached HEAD per the CONC receipt). Then re-run row SLAP-gm-goal-w4-SLAP-1 with a live witness from another session.'
+session_id: gm-drain-w2-359
+status: pending

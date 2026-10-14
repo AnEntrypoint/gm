@@ -1,0 +1,8 @@
+id: DIJKSTRATEST-NOSYNTH-DISKWIDE-blocker-gm-drain-w2-93
+subject: 'Blocker: no-synthetic-test-files cannot be witnessed this session (CI-only wasm build; gate-behaviour decision needed)'
+body: 'Parent row DIJKSTRATEST-NOSYNTH-DISKWIDE. Stages 01-SPECIFY and 02-PROVE written under .gm/receipts/DIJKSTRATEST-NOSYNTH-DISKWIDE/. Source gap confirmed at rs-plugkit/crates/plugkit-core/src/orchestrator/transitions.rs:403-421 (only ?? and A entries inspected); gm-mcp/test/ is tracked (git_log dispatch 1791960459921). Blocked on: (1) the fixed guest must be built in CI and dispatched through agentplug-runner to witness, since local cargo is hook-blocked; (2) decide whether a tracked test file blocks the gate or is reported (transitions.rs:440 says reported), because blocking breaks every gm-mcp walk. Next: choose the behaviour, change transitions.rs and the matching doc in gm-config, push rs-plugkit, bump the gitlink, witness the CI-built wasm.'
+session_id: gm-drain-w2-93
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

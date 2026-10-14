@@ -1,0 +1,5 @@
+id: LLMJUDGE-gm-goal-hop-LLMJUDGE-2-1-blocker-gm-drain-w2-288
+subject: 'Blocker: LLM judge design unfixed; row LLMJUDGE-gm-goal-hop-LLMJUDGE-2-1 cannot close'
+body: 'Blocks LLMJUDGE-gm-goal-hop-LLMJUDGE-2-1. Receipts: .gm/receipts/LLMJUDGE-gm-goal-hop-LLMJUDGE-2-1/01-SPECIFY.md and 02-PROVE.md. Probe: codesearch 1791963386936-500-c95559b67fa76f6a (no judge in gm-mcp/src; only leak-reaper.js verdict fields). Needed before implementation: (1) judge model and invocation path, in-process or via an existing spool verb, no new listening port; (2) per-reply latency and cost budget; (3) whether a judge failure blocks the reply or annotates it; (4) re-anchor stale cites codemode.js:14-15 and :70 (now :14, :18, :258) and mcp-server.js:73 (now :40, :43). Default if not decided: annotate-only, in-process, no new port, judge runs after the reply is built. Then rebuild the gm-mcp bundle and witness with a live dispatch from a session other than gm-goal-hop-LLMJUDGE-2.'
+session_id: gm-drain-w2-288
+status: pending

@@ -1,0 +1,8 @@
+id: BLOCKER-SKILLGM-precedence-enum-blocker-gm-drain-w1-34-blocker-gm-drain-w3-64
+subject: 'Blocked: BLOCKER-SKILLGM-precedence-enum-blocker-gm-drain-w1-34 needs CI-built guest witness and owner scope decision'
+body: 'Parent row BLOCKER-SKILLGM-precedence-enum-blocker-gm-drain-w1-34 cannot close in gm-drain-w3-64. Receipts: .gm/receipts/BLOCKER-SKILLGM-precedence-enum-blocker-gm-drain-w1-34/01-SPECIFY.md and 02-PROVE.md. (1) Scope: owner must rule whether the enum covers the five config tiers only (config.rs:35 Tier) or also live-response and Section 2/3 skill layers. (2) PROVE needs a CI-built rs-plugkit guest (wasm32-wasip1 --features slim) because local cargo is hook-blocked. (3) The witness must be a live resolve reply from a different session than the editor. Next step: owner rules scope, editor lands the enum change through CI, another session witnesses it and calls prd-resolve.'
+session_id: gm-drain-w3-64
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

@@ -1,0 +1,8 @@
+id: DEEPMOD-GMMCP-TEST-SUITE-RED-AT-HEAD-blocker-gm-drain-w2-87-blocker-gm-drain-w3-157
+subject: 'Blocked: DEEPMOD-GMMCP-TEST-SUITE-RED-AT-HEAD-blocker-gm-drain-w2-87 cannot close; no HEAD-pinned witness and no acceptance body'
+body: 'Blocked by gm-drain-w3-157: DEEPMOD-GMMCP-TEST-SUITE-RED-AT-HEAD-blocker-gm-drain-w2-87 cannot close. The parent DEEPMOD-GMMCP-TEST-SUITE-RED-AT-HEAD has no acceptance body or .gm/prd file. Live npm test in gm-mcp exits 0 (dispatch 1791971635418-500-8789493b8c676103), but gm-mcp is dirty (local a992ae64, origin main fd7bb3a1, uncommitted src/bin/test edits), so that pass is not a HEAD witness. Receipt: .gm/receipts/DEEPMOD-GMMCP-TEST-SUITE-RED-AT-HEAD-blocker-gm-drain-w2-87/01-SPECIFY.md. Next: restore the parent acceptance (red at HEAD = npm test exit nonzero in a git archive of origin main fd7bb3a1) and witness that sha read-only.'
+session_id: gm-drain-w3-157
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

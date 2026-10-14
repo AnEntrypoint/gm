@@ -1,0 +1,8 @@
+id: G_CONTRACT-hook-denial-type-blocker-gm-drain-w1-95-blocker-gm-drain-w2-125
+subject: 'Blocked: G_CONTRACT-hook-denial-type-blocker-gm-drain-w1-95 cannot close in session gm-drain-w2-125 (needs CI-built rs-plugkit change and cross-session witness)'
+body: 'Successor blocker for G_CONTRACT-hook-denial-type-blocker-gm-drain-w1-95. Receipt: .gm/receipts/G_CONTRACT-hook-denial-type-blocker-gm-drain-w1-95/01-SPECIFY.md. Leader H1 unchanged (prose throw-based hook API vs loader bool read at transitions.rs:966-1035). Closing needs in order: (a) rs-plugkit Rust typed denial value with instruction field and args-object return rejection, built only by the publish/release CI job (no local cargo); (b) gm-config/prose/entry.md:96 and the vendored orchestrator/instructions/prose/entry.md:134 re-sync via scripts/sync-lean-graph.mjs; (c) gitlink bump after the release, then a live exec_js probe: a throwing hook must yield ExecFailed, a {} return must yield ReturnedFalse. Probe needs a registered hook under hooks/*.js, which is reconfiguration that grants execution authority and needs the owner''s naming. Next wave: owner or a CI-capable lane lands (a) and (b), then runs (c) as a cross-session witness.'
+session_id: gm-drain-w2-125
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

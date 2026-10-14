@@ -1,0 +1,8 @@
+id: BLOCK-SELF-RECONFIG-ANCHOR-TYPE-blocker-gm-drain-w3-36
+subject: 'Blocked: BLOCK-SELF-RECONFIG-ANCHOR-TYPE-blocker-gm-drain-w2-21 cannot close in session gm-drain-w3-36; anchor parse exists in tree, CI build and cross-session witness outstanding'
+body: 'Row BLOCK-SELF-RECONFIG-ANCHOR-TYPE-blocker-gm-drain-w2-21 (parent BLOCK-SELF-RECONFIG-ANCHOR-TYPE-blocker-gm-drain-w1-22) cannot close in session gm-drain-w3-36. SPECIFY receipt: .gm/receipts/BLOCK-SELF-RECONFIG-ANCHOR-TYPE-blocker-gm-drain-w2-21/01-SPECIFY.md. Finding: the parent premise is stale. parse_anchors exists at rs-plugkit/crates/plugkit-core/src/orchestrator/fsm_propose.rs:44 and is called at :146 for kind=prose, enforcing {name, author} with url and extra keys rejected (codesearch dispatch 1791969597184-500-3cc69250d6f96bdf). handle_propose is at :87 (dispatch 1791969600181-500-f4a8c8e7137fd986). Remaining acceptance: the CI-built rs-plugkit wasm must carry this parse (local cargo is blocked by hook, verified by CI only), and the witness must come from a session other than the one that edited it. Next: ci-status on the rs-plugkit publish run for the sha containing fsm_propose.rs, then a cross-session witness dispatch that exercises a kind=prose propose with and without url. Then prd-resolve the parent row with that witness. Parent row stays pending.'
+session_id: gm-drain-w3-36
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

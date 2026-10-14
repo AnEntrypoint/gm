@@ -1,0 +1,8 @@
+id: BLOCK-dream-rsi-walk-acceptance-code-blocker-gm-drain-w3-22
+subject: 'Blocker for BLOCK-dream-rsi-walk-acceptance-code: PROVE still cannot pass in gm-drain-w3-22 (walk-evidence validator not in rs-plugkit; local cargo hook-blocked; CI Build and a cross-session witness required)'
+body: 'Row BLOCK-dream-rsi-walk-acceptance-code stays pending. Re-checked this session: dream_rsi.rs has observe_dispatch and observations.json reads but no applied-walk validator that refuses applied:true when a witness dispatch_id is missing from observations (codesearch literal ''applied'' over orchestrator shows no lean-walk writer). Implementing that Rust edit needs the nested rs-plugkit repo edit plus a CI-built wasm guest (publish / release, step Build), and the witness must come from another session. Neither can run inside gm-drain-w3-22. Prior blocker: BLOCK-dream-rsi-walk-acceptance-code-blocker-gm-drain-w2-12. Receipt: .gm/receipts/BLOCK-dream-rsi-walk-acceptance-code/03-PROVE.md.'
+session_id: gm-drain-w3-22
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

@@ -1,0 +1,5 @@
+id: BLOCK-LIQOLOGY-PROPOSAL-TYPE-blocker-gm-drain-w1-19
+subject: 'Blocker for BLOCK-LIQOLOGY-PROPOSAL-TYPE: code already fixes applied=false, but the prose cut needs a gm-config edit plus a reviewed rs-plugkit rebuild, and the liqology witness needs its C++ build'
+body: 'Row BLOCK-LIQOLOGY-PROPOSAL-TYPE, session gm-drain-w1-19. SPECIFY receipt: .gm/receipts/BLOCK-LIQOLOGY-PROPOSAL-TYPE/01-SPECIFY.md. Evidence: C:\dev\liqology\agentplug-liqology\src\dispatch.cpp:172 sets applied to literal false, and handle_suggest_fsm_update (dispatch.cpp:133-180) has no mutation path. Remaining: (1) cut gm-config/prose/entry-extended.md:74 and the mirrored instruction copies in rs-codeinsight, rs-search and rs-plugkit to the verb name, which requires a gm-config submodule commit and a reviewed rs-plugkit rebuild (AGENTS.md lean-graph rule); (2) a live witness of the liqology verb, which needs its C++ vcpkg build, not run here. Unblock by owner approval of the rebuild path and a liqology build witness.'
+session_id: gm-drain-w1-19
+status: pending

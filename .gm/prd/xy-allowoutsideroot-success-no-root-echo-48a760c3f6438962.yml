@@ -1,0 +1,6 @@
+id: XY-ALLOWOUTSIDEROOT-SUCCESS-NO-ROOT-ECHO
+lane_wait_ms: 240000
+title: allowOutsideRoot success reply does not name the resolved project root
+description: 'Found by XY-ALLOWOUTSIDEROOT-MASKS-WRONG-ROOT (session gm-2e-fa19b3-w1-10). The grant does not re-root a dispatch: from cwd rs-plugkit, a refused read reports root C:\dev\gm\rs-plugkit (dispatch 1791850569252-500-598ef7b534462833) and an opt-in read of C:/dev/gm/AGENTS.md succeeds with no root field (dispatch 1791850572034-500-b7bf1ea5075a8267). A wrong-cwd caller that opts in gets no signal of which root it resolved against. Fix: echo the resolved host root in the fs_read/fs_readdir/fs_stat success reply when allowOutsideRoot was honored. Witness: the same two dispatches; the success reply must carry the root field.'
+status: pending
+session_id: gm-2e-fa19b3-w1-10

@@ -1,0 +1,8 @@
+id: BLOCKER-SKILLGM-output-cap-constants-blocker-gm-drain-w3-59
+subject: 'Blocked: BLOCKER-SKILLGM-output-cap-constants cannot close; caps have no shared constant home and the poll premise is stale'
+body: 'Session gm-drain-w3-59. Receipt: .gm/receipts/BLOCKER-SKILLGM-output-cap-constants/03-PROVE-gm-drain-w3-59.md. Evidence (dispatch ids): git_show 60000 is a bare literal at rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs/git.rs:4411,4413,4501,4502 (1791969972204-500-8dd188f7b1f257e3); fs_read 65536 has no enforcing constant (1791969899940-500-eb70c096475f5554); poll cap 240 s is stale, live ceiling is POLL_TIMEOUT_CEILING_DEFAULT_MS = 600000 at gm-mcp/src/dispatch.js:1330 (1791969921899-500-495d5c9ba3036b19). exec_js 16000 (gm-mcp/src/dispatch.js:641) and git_stash 2000 (rs-plugkit git.rs:6618) are named constants. Owner decision needed: pick the shared home (a gm-config key read by gm-mcp and rs-plugkit). Closing needs an rs-plugkit edit, a CI-built wasm, and a cross-session witness; local cargo is blocked. Correct the row text 240 s to 600000 ms before any witness.'
+session_id: gm-drain-w3-59
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

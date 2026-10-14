@@ -1,0 +1,7 @@
+id: G_CONTRACT-self-reconfig-anchor-shape-blocker-gm-drain-w1-108
+subject: 'Blocker for G_CONTRACT-self-reconfig-anchor-shape: no {name, author} anchor type exists at the fsm-propose-override kind:prose boundary, and the code move is CI-only in rs-plugkit'
+blockedBy:
+- external
+deferReason: 'Row cannot close in one run. SPECIFY/PROVE probe (dispatch 1791958122376-500-94531134b37f8e88, exhaustive, 209 files) found 0 anchor or author types in rs-plugkit/crates/plugkit-core/src/orchestrator, and fsm_propose.rs (dispatch 1791958088634-500-e2f64869a9534e15) parses no anchors. Required: (1) add a typed {name, author} anchor with no url field to rs-plugkit fsm_propose.rs, nested repo commit, CI-verified (local cargo blocked); (2) update gm-config/prose/entry-extended.md:114 and the rs-plugkit instructions/prose copy:116 together to name the type; (3) witness with a live fsm-propose-override kind:prose dispatch accepting a well-formed anchor and refusing a malformed one; (4) bump the rs-plugkit parent gitlink. Blocked on the external dependency the row carries. Receipts: .gm/receipts/G_CONTRACT-self-reconfig-anchor-shape/01-SPECIFY.md and 02-PROVE.md.'
+session_id: mcp-codemode-31304-1791958133251
+status: pending

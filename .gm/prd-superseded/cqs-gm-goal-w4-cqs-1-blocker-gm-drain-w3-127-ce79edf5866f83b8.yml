@@ -1,0 +1,8 @@
+id: CQS-gm-goal-w4-CQS-1-blocker-gm-drain-w3-127
+subject: 'Blocked: CQS-gm-goal-w4-CQS-1 cannot close from session gm-drain-w3-127'
+body: 'Row CQS-gm-goal-w4-CQS-1 is blocked, not failed. Its cited lines are stale: working-tree gm-mcp/src/dispatch.js already has a pure runnerEnsureInFlight (1152-1159) with the reap in reapRunnerEnsureInFlight (1161-1167). HEAD (1186-1199) still mutates. The fix is uncommitted in another writer''s gm-mcp work tree, and the bin/gm-mcp-server.js bundle is a matching uncommitted diff. Close needs: (a) that writer commits gm-mcp on main and rebuilds the bundle, (b) a witness dispatch id from a different session on the committed sha (codesearch literal writeFileSync( plus a span read), (c) the row''s cited lines rewritten to the current spans. Receipts: .gm/receipts/CQS-gm-goal-w4-CQS-1/01-SPECIFY.md, 02-PROVE.md. Parent row stays pending.'
+session_id: gm-drain-w3-127
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

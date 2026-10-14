@@ -1,0 +1,8 @@
+id: DBC-LIBSQL-INERT-TXN-VERBS-blocker-gm-drain-w2-81
+subject: Witness for DBC-LIBSQL-INERT-TXN-VERBS unreachable
+body: 'Row premise is stale: agentplug-libsql/src/db.rs:726-729 already refuses begin/commit/rollback with ok:false, and db.rs:744 lists only open/close as inert. verbs.rs:349 cited line is absent. Closing the row needs a live libsql begin/commit/rollback dispatch returning ok:false. gm.gm({verb:''begin''}) returns unknown_verb (dispatch 1791960376017-500-9ac11c6468ca9a7f), so the libsql verb has no reachable gm entry point. Needed: a route to the libsql plugin verb, or the row rescoped to a source-level witness. Receipt: .gm/receipts/DBC-LIBSQL-INERT-TXN-VERBS/01-SPECIFY.md.'
+session_id: gm-drain-w2-81
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

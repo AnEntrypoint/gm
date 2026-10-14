@@ -1,0 +1,5 @@
+id: THINSLICE-SESSIONID-ALIAS-blocker-gm-drain-w2-450
+subject: 'Blocked: THINSLICE-SESSIONID-ALIAS deletion half needs an rs-plugkit CI rebuild and a second-session witness; three-spelling acceptance already live'
+status: pending
+body: 'SPECIFY (receipt .gm/receipts/THINSLICE-SESSIONID-ALIAS-blocker-gm-drain-w1-304/01-SPECIFY.md) probed SESSION_ID, session_id and sessionId on exec_js on the current build: all three return ok (dispatches 1791967038076-500-a777f955d0e2d794, 1791967040225-500-5d05a2124109994b, 1791967042144-500-1d1834b94a89a666). Remaining: delete the alias sentence at rs-plugkit/crates/plugkit-core/src/orchestrator/instructions/prose/entry.md:150 (wasm-compiled, needs CI rebuild with --features slim), decide dispatch-layer placement (gm-mcp/src/dispatch.js:1073 reads body.SESSION_ID only; a move needs a bundle rebuild), then witness under the three spellings from a second session on the rebuilt build. Next step: a session that can wait on CI runs the rs-plugkit rebuild and the gm-mcp bundle change, then witnesses.'
+session_id: mcp-codemode-9708-1791967058955

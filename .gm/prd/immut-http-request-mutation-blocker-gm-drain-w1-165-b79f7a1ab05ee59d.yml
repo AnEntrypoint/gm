@@ -1,0 +1,5 @@
+id: IMMUT-HTTP-REQUEST-MUTATION-blocker-gm-drain-w1-165
+subject: 'Blocked: IMMUT-HTTP-REQUEST-MUTATION cannot deliver its bundle while gm-mcp holds foreign WIP'
+body: 'Row IMMUT-HTTP-REQUEST-MUTATION (session gm-drain-w1-165) stopped at SPECIFY. Cited code is present and clean: gm-mcp/src/http-transport.js:31-42, sole caller :85. The fix is a derived header view handed to the SDK. Delivery is blocked: AGENTS.md requires a gm-mcp/src change to ship its rebuilt bin/gm-mcp-server.js, and the rebuild would compile foreign uncommitted WIP in src/dispatch.js, src/self-update.js (staged), src/release-bridge.js, src/dev-sync.js and bin/gm-mcp-server.js. Closure needs a single writer on gm-mcp, then a rebuild and a live POST witness against the rebuilt bundle. Receipt: .gm/receipts/IMMUT-HTTP-REQUEST-MUTATION/01-SPECIFY.md. Related: DEEPMOD-GMMCP-BUNDLE-CARRIES-WIP.'
+session_id: gm-drain-w1-165
+status: pending

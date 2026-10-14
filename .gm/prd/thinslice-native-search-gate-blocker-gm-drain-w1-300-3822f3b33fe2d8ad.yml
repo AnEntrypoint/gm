@@ -1,0 +1,5 @@
+id: THINSLICE-NATIVE-SEARCH-GATE-blocker-gm-drain-w1-300
+subject: 'Blocker for THINSLICE-NATIVE-SEARCH-GATE: named gate absent and acceptance not gm-witnessable'
+body: 'Row THINSLICE-NATIVE-SEARCH-GATE cites gate G_CONTRACT-native-search-ban-restated; 0 hits in the tree (dispatch 1791959447658-500-2e56e51f16776e61). Existing G_CONTRACT (gm-config/prose/g_contract.md) is a contract gate, not a ban gate. Probe (dispatches 1791959584323-500-c529f3a854331d7f, 1791959586026-500-b2e060785f935d7b) finds no predicate or hook refusing native Glob/Grep/find/rg/Explore. Acceptance requires a live native Grep refusal, which gm dispatches cannot produce because native Grep is a host tool. Receipts: .gm/receipts/THINSLICE-NATIVE-SEARCH-GATE/01-SPECIFY.md and 02-PROVE.md. Decision needed: either (a) rescope the row to a gm-owned gate (a PreToolUse-style hook owned by the host, or a graph predicate) and re-scope acceptance, or (b) close the row as prose-only with the ban sentence removed from SKILL.md line 70 and lean-p7/p8/p9 witnessed by a prose grep.'
+session_id: gm-drain-w1-300
+status: pending

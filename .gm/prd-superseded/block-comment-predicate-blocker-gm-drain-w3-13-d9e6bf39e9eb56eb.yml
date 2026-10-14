@@ -1,0 +1,8 @@
+id: BLOCK-COMMENT-PREDICATE-blocker-gm-drain-w3-13
+subject: 'Blocker for BLOCK-COMMENT-PREDICATE-blocker-gm-drain-w2-7: comment predicate is unregistered and cannot be proven or witnessed in session gm-drain-w3-13'
+body: 'Session gm-drain-w3-13 re-ran gm-prd on BLOCK-COMMENT-PREDICATE-blocker-gm-drain-w2-7. SPECIFY (receipt .gm/receipts/BLOCK-COMMENT-PREDICATE-blocker-gm-drain-w2-7/01-SPECIFY.md): codesearch shows no comment predicate in predicate_registry.rs. PROVE cannot run locally (cargo hook-blocked; wasm guest verified only by CI publish/release). Closing needs: a reviewed rs-plugkit commit on main registering the predicate with the allowlist (attribute comments, SAFETY rationale, license headers), a CI release, a bump-pins advance of the rs-plugkit gitlink, and a live transition refusing a comment-adding diff, witnessed from another session. Also needs a reviewed rebuild of lean_graph.json (fsm.rs include_str!). Unblock owner: rs-plugkit release lane. Parent row BLOCK-COMMENT-PREDICATE stays pending.'
+session_id: gm-drain-w3-13
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

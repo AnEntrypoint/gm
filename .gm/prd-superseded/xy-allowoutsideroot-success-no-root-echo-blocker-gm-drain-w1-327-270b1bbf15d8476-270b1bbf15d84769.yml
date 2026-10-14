@@ -1,0 +1,5 @@
+id: XY-ALLOWOUTSIDEROOT-SUCCESS-NO-ROOT-ECHO-blocker-gm-drain-w1-327
+title: 'Blocked: XY-ALLOWOUTSIDEROOT-SUCCESS-NO-ROOT-ECHO needs a rs-plugkit guest change, CI release and a cross-session witness'
+description: Row XY-ALLOWOUTSIDEROOT-SUCCESS-NO-ROOT-ECHO is open. SPECIFY (receipts/XY-ALLOWOUTSIDEROOT-SUCCESS-NO-ROOT-ECHO/01-SPECIFY.md) confirms the opt-in fs_read success reply has no root field (probe dispatch 1791959709515-500-20dfcfbbf043ad1d). The fix is a rs-plugkit verbs.rs change in fs_read success paths (lines 889-925) plus CI-built wasm, gitlink bump, and a witness from another session. Local cargo is blocked by hook, so PROVE cannot run here and the row cannot close in session gm-drain-w1-327. Row stays pending.
+session_id: gm-drain-w1-327
+status: pending

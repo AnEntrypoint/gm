@@ -1,0 +1,8 @@
+id: DAEMON-IDLE-DISK-WRITE-25MBS-blocker-gm-drain-w3-133
+subject: 'Blocker for DAEMON-IDLE-DISK-WRITE-25MBS: runner write fix and idle SSD witness cannot close in one gm-prd run'
+body: 'Blocks: DAEMON-IDLE-DISK-WRITE-25MBS (stays pending). Receipt: .gm/receipts/DAEMON-IDLE-DISK-WRITE-25MBS/01-SPECIFY.md. Files: agentplug/crates/agentplug-runner/src/daemon.rs (status write ~2049, tmp-then-rename sites 247, 591, 661, 888, 933, 982, 1417), agentplug/crates/agentplug-runner/src/daemon/claim_dispatch.rs (ledger 524, 559, 2923; staging 3701), agentplug/crates/agentplug-runner/src/main.rs (2388, 2392). Required: (1) gate each idle tick write on changed content (reuse the write_if_changed pattern from rs-plugkit/crates/plugkit-core/src/pkfs.rs:71-76); (2) rotate or rate-limit gm-mcp-server.log; (3) land via CI (no local cargo), pin bump in parent, runner self-update, restart; (4) witness: Disk Write Bytes/sec idle over ~20 s under 2 MB/s on this host. Hypotheses to separate: H1 unchanged-content rewrites on tick (leader), H2 log growth (rival). Coordinate with test-cf: one writer per file, commit as lanmower only, no trailers. Dispatches: 1791971228588-500-9c852b98ce24dcb6, 1791971288942-500-868a3c54b42eb201, 1791971281062-500-f3abf587f5ae8953.'
+session_id: gm-drain-w3-133
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

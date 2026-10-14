@@ -1,0 +1,7 @@
+id: BLOCK-MEMORIZE-PRUNE-ENUM-blocker-gm-drain-w2-17
+status: pending
+blockedBy:
+- external
+subject: 'Blocked: BLOCK-MEMORIZE-PRUNE-ENUM open part (c) needs a gm-config prose reduction of gm-config/prose/entry-extended.md:52 (naming the two memorize-prune variants), a vendored re-sync into rs-plugkit/crates/plugkit-core/src/orchestrator/instructions/prose/, and a CI wasm build. Local cargo is blocked, and the witness must come from a session other than gm-drain-w2-17. Parts (a) and (b) hold at HEAD (memory.rs:902-913 PruneRequest enum; prune_candidates memory.rs:1033-1095 has no removal call). Unblock: run the prose edit and re-sync through CI, then witness from a different session with prd-resolve.'
+session_id: gm-drain-w2-17
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

@@ -1,0 +1,5 @@
+id: DEEPMOD-GMMCP-TEST-SUITE-RED-AT-HEAD-blocker-gm-drain-w1-68
+subject: Deliver requestNumber alias fix in gm-mcp/src/dispatch.js once the shared tree is single-writer
+body: 'Row DEEPMOD-GMMCP-TEST-SUITE-RED-AT-HEAD. Local fix verified: const requestNumber = n added after const n in runDispatch; npm test exit 0 (dispatch 1791957740167-500-2dccab6e96b217a8). Blocked on delivery: gm-mcp/src/dispatch.js, bin/gm-mcp-server.js and others have a concurrent writer (git_status 1791957749063-500-39dfac5a3c214948). Next: after that writer lands or stops, rebuild the bundle, git_finalize only this run''s hunks on main, git_remote check, ci-status, then prd-resolve the row with the witness. Receipts: .gm/receipts/DEEPMOD-GMMCP-TEST-SUITE-RED-AT-HEAD/.'
+session_id: gm-drain-w1-68
+status: pending

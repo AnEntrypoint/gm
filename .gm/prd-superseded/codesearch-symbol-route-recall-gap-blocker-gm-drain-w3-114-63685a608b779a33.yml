@@ -1,0 +1,8 @@
+id: CODESEARCH-SYMBOL-ROUTE-RECALL-GAP-blocker-gm-drain-w3-114
+subject: 'Blocked: CODESEARCH-SYMBOL-ROUTE-RECALL-GAP fix needs an rs-plugkit search.rs change and a CI-built wasm witness from another session'
+body: 'Session gm-drain-w3-114. Measured gap for gate_repeat_escalate_threshold: identifier route (dual) 5 refs in 3 files (dispatch 1791970773910-500-b7a9b7d6d2d46e7); literal exhaustive scan 28 lines in 21 files (dispatch 1791970775614 spill), exhaustive false. codesearch_identifier (rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs/search.rs:2362) returns on the first pass with lines and never runs literal_fallback_scan (search.rs:188). Open: code-only literal delta (H2 docs exclusion). Edit needs rs-plugkit Rust; no local cargo; closing witness needs a CI-built guest run from a session other than gm-2e-fa19b3-w1-09. Receipts: .gm/receipts/CODESEARCH-SYMBOL-ROUTE-RECALL-GAP/01-SPECIFY-ELIMINATE.md. Witness to close: symbol-route reply that omits a literal code hit, and the same query after the fix returning it.'
+session_id: gm-drain-w3-114
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

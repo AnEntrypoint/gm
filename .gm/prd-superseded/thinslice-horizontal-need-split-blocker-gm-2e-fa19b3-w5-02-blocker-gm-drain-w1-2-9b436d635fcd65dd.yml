@@ -1,0 +1,5 @@
+id: THINSLICE-HORIZONTAL-NEED-SPLIT-blocker-gm-2e-fa19b3-w5-02-blocker-gm-drain-w1-299-blocker-gm-drain-w2-442
+subject: 'Blocker: PROVE for THINSLICE-HORIZONTAL-NEED-SPLIT-blocker-gm-2e-fa19b3-w5-02-blocker-gm-drain-w1-299 cannot run; leader probe needs layered rows rewritten first'
+body: 'Row blocker-gm-drain-w1-299 is pending and cannot close in one run. Its own text names leader H1 (the parent split needs multi-run layered-row rewrites before any witnessed change) and the probe needed to separate H1 from H2 (run one need end to end as a single-row close). The probe is not runnable without first rewriting the layered rows to one row per need. SPECIFY receipt: .gm/receipts/THINSLICE-HORIZONTAL-NEED-SPLIT-blocker-gm-2e-fa19b3-w5-02-blocker-gm-drain-w1-299/01-SPECIFY.md. PROVE receipt: .gm/receipts/THINSLICE-HORIZONTAL-NEED-SPLIT-blocker-gm-2e-fa19b3-w5-02-blocker-gm-drain-w1-299/02-PROVE.md. Next: rewrite the parent''s layered rows to one row per need, then run the single-need probe with a CI witness.'
+session_id: gm-drain-w2-442
+status: pending

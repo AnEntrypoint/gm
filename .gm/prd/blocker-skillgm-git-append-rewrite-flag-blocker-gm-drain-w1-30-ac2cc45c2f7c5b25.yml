@@ -1,0 +1,5 @@
+id: BLOCKER-SKILLGM-git-append-rewrite-flag-blocker-gm-drain-w1-30
+subject: 'Blocker for BLOCKER-SKILLGM-git-append-rewrite-flag: row has no .gm/prd file and no change surface'
+body: 'Row BLOCKER-SKILLGM-git-append-rewrite-flag is listed pending with a subject only. .gm/prd/BLOCKER-SKILLGM-git-append-rewrite-flag.yml is absent. The change needs (a) a per-verb append/rewrite flag in rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs/git.rs (no such flag exists today) and (b) skills/gm/SKILL.md section 4 (line 128) to cite it instead of listing operations. The rs-plugkit change is witnessed only through CI (no local cargo). Action: re-scope the parent row with a file list and a witness command, then re-run gm-prd. Receipt: .gm/receipts/BLOCKER-SKILLGM-git-append-rewrite-flag/01-SPECIFY.md. Session gm-drain-w1-30.'
+session_id: gm-drain-w1-30
+status: pending

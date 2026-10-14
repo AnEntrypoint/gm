@@ -1,0 +1,5 @@
+id: BLOCKER-SKILLGM-watcher-dead-threshold-blocker-gm-drain-w1-38
+subject: 'Blocker for BLOCKER-SKILLGM-watcher-dead-threshold: dead-watcher threshold is defined twice with different values'
+body: 'Blocks BLOCKER-SKILLGM-watcher-dead-threshold (row stays pending). Evidence: scripts/triage/runner-status.sh treats heartbeat age < 300000 ms as ALIVE and a status-file response under 300 s as SERVING-STATUS-STALE; gm-mcp/bin/gm-mcp-server.js defaults GM_MCP_DAEMON_HEARTBEAT_STALE_MS to 2e4 (20 s), with a 6e4 future-skew allowance. Required: pick one owner for the threshold, make the other read it, rebuild the gm-mcp bundle if its source changes, then name the threshold in skills/gm/SKILL.md ''Start, never install'' (line 63). Receipt: .gm/receipts/BLOCKER-SKILLGM-watcher-dead-threshold/01-SPECIFY.md. Session gm-drain-w1-38.'
+session_id: gm-drain-w1-38
+status: pending

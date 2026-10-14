@@ -1,0 +1,7 @@
+id: BLOCK-RECALL-INDEX-SINGLE-WRITER-blocker-gm-drain-w2-18-blocker-gm-drain-w3-34
+subject: 'Blocked: BLOCK-RECALL-INDEX-SINGLE-WRITER-blocker-gm-drain-w2-18 cannot close without a CI-built rs-plugkit write-path change and a cross-session witness'
+status: pending
+blockedBy:
+- external
+session_id: gm-drain-w3-34
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

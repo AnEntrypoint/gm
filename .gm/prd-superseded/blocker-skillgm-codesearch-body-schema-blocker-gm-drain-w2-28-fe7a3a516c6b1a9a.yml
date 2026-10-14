@@ -1,0 +1,8 @@
+id: BLOCKER-SKILLGM-codesearch-body-schema-blocker-gm-drain-w2-28
+subject: 'Blocked: BLOCKER-SKILLGM-codesearch-body-schema acceptance unmet; grep body schema not declared in gm-mcp and gm-mcp tree held by other writers'
+body: 'Row BLOCKER-SKILLGM-codesearch-body-schema (session gm-drain-w2-28). Re-probe: describe("grep") returns body_schema.declared=false, so acceptance is unmet. The table is already absent from skills/gm/SKILL.md (line 46 names docs/verbs.md as owner). The served schema is declared in gm-mcp/src/verb-table.js (codesearch block ~line 230-240) and read by gm-mcp/src/codemode.js:164, so the fix lives in gm-mcp, not rs-plugkit as the row names. Fix needs: declare grep body fields in verb-table.js, rebuild the committed bundle, commit gm-mcp on main, bump the parent gitlink, then witness from a session other than gm-drain-w1-28 and gm-drain-w2-28. Blocked because gm-mcp has foreign uncommitted WIP (bin/gm-mcp-server.js, src/dispatch.js, src/http-transport.js, src/index.js, src/release-bridge.js, test/mcp-http-probe.mjs, staged src/self-update.js); a rebuild or commit here would publish another writer''s changes. Receipt: .gm/receipts/BLOCKER-SKILLGM-codesearch-body-schema/03-DECIDE-gm-drain-w2-28.md. Parent row remains pending.'
+session_id: gm-drain-w2-28
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

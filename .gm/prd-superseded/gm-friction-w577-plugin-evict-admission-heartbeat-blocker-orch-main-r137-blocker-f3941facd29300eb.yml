@@ -1,0 +1,13 @@
+id: gm-friction-w577-plugin-evict-admission-heartbeat-blocker-orch-main-r137-blocker-gm-drain-w1-128-blocker-gm-drain-w2-173
+subject: 'Blocker: owner decision on fresh id for w577 three-clause row (gm-drain-w2-173)'
+status: pending
+body: |-
+  Blocker for gm-friction-w577-plugin-evict-admission-heartbeat-blocker-orch-main-r137-blocker-gm-drain-w1-128 (session gm-drain-w2-173), filed by gm-prd after SPECIFY and PROVE.
+
+  Owner decision required: mint a fresh row id for the three w577 clauses (poisoned plugin slot reload, admission retry hint for read-only dispatches, three-line heartbeat format), or explicitly approve re-scoping over completed row gm-friction-w577-plugin-evict-admission-heartbeat (session orch-main-r77, witness selfcheck-idle-evict).
+
+  Witnessed at head fb87f23: id conflict confirmed (prd-list dispatch 1791961389324-500-74852757a24b8d9f). Edit-site dirty state from r137 is no longer present (git_status dispatch 1791961392168-500-3e5290477e376df4: agentplug and skills paths clean).
+
+  Receipts: .gm/receipts/gm-friction-w577-plugin-evict-admission-heartbeat-blocker-orch-main-r137-blocker-gm-drain-w1-128/01-SPECIFY.md and 02-PROVE.md.
+  Outcome: BLOCKED. Parent row stays pending. No edit made in this run because the full clause text and the id decision are not in this run's authority.
+session_id: mcp-codemode-23256-1791961432861

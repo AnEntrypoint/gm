@@ -1,0 +1,5 @@
+id: XY-DREAMRSI-SMALLEST-MODEL-QUALITY-blocker-gm-drain-w2-499
+subject: 'BLOCKED XY-DREAMRSI-SMALLEST-MODEL-QUALITY: witness fields and model selector do not exist'
+body: 'Row witness requires two evidence JSON files with `applied` and `changes` fields. The dream-rsi evidence schema (skills/dream-rsi/SKILL.md, .gm/lean-walk/<NODE>.json) carries `node`, `applied`, `witness` only; no `changes` field exists. This lane has no way to select the smallest versus a larger model for an inference run. Session observations.json presence is unconfirmed (.gm/dream-rsi scan partial). Receipt: .gm/receipts/XY-DREAMRSI-SMALLEST-MODEL-QUALITY/01-SPECIFY.md. Needed to close: define the comparison schema (applied and changes) and a per-run model selector, then re-run both arms. Evidence: prd-list 1791968159510-500-8e735e5c77159e7a; codesearch dispatches 1791968338797-500-218b4e3cdee0173d and the applied-field search in skills/dream-rsi.'
+session_id: gm-drain-w2-499
+status: pending

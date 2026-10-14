@@ -1,0 +1,6 @@
+id: INVARIANTRUN-gm-goal-hop-INVARIANTRUN-3-1-blocker-gm-drain-w1-169-blocker-gm-drain-w2-244
+subject: 'Blocker for INVARIANTRUN-gm-goal-hop-INVARIANTRUN-3-1-blocker-gm-drain-w1-169: witness cannot bind until owner decides HUGHES-gm-goal-hop-HUGHES-2-2 (property test in gm-mcp allowed?). Receipt: .gm/receipts/INVARIANTRUN-gm-goal-hop-INVARIANTRUN-3-1-blocker-gm-drain-w1-169/01-SPECIFY.md'
+status: blocked
+blockedBy:
+- HUGHES-gm-goal-hop-HUGHES-2-2
+session_id: mcp-codemode-23256-1791962774448

@@ -1,0 +1,5 @@
+id: rs-plugkit-local-main-divergence-gm-drain-w2-117
+subject: 'rs-plugkit local main diverged after scope_recommit: reconcile 163f7363 and stranded 05279909 with origin main 9263f758'
+body: 'Local rs-plugkit main holds 163f7363 (another lane, unpushed) and 05279909 (content published as 9263f758 by git_finalize scope_recommit). git_pull origin main is blocked by an uncommitted crates/plugkit-core/Cargo.toml from another writer. Resolve: once that writer commits or stashes Cargo.toml, git_pull {remote:origin, branch:main}, resolve any conflict, then git_push so the lineage lands; verify with git_status (head equals origin main tip, no diverged count) and a ci-status on the new sha. Witness: git_status head_sha equals git_remote-visible origin main tip.'
+session_id: gm-drain-w2-117
+status: pending

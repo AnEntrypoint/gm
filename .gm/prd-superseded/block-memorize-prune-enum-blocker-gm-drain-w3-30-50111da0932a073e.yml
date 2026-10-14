@@ -1,0 +1,7 @@
+id: BLOCK-MEMORIZE-PRUNE-ENUM-blocker-gm-drain-w3-30
+subject: 'Blocked: BLOCK-MEMORIZE-PRUNE-ENUM-blocker-gm-drain-w2-17 open part (c) cannot run in session gm-drain-w3-30. Needs the gm-config/prose/entry-extended.md:52 reduction, a vendored re-sync into rs-plugkit instructions/prose, and a CI wasm build (--features slim), then a witness from a session other than gm-drain-w2-17 and w3-30. Parts (a) and (b) hold at HEAD (memory.rs:902-913, memory.rs:1033-1095). Unblock: run the prose edit and re-sync through CI, then prd-resolve with a cross-session witness.'
+blockedBy:
+- external
+session_id: gm-drain-w3-30
+status: pending
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

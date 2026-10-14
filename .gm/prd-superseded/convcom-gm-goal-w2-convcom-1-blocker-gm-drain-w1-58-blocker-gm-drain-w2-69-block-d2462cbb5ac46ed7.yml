@@ -1,0 +1,8 @@
+id: CONVCOM-gm-goal-w2-CONVCOM-1-blocker-gm-drain-w1-58-blocker-gm-drain-w2-69-blocker-gm-drain-w3-125
+subject: 'BLOCKER: CONVCOM-gm-goal-w2-CONVCOM-1 needs a policy decision and an enforcement point before any subject check can be witnessed'
+body: 'Filed by gm-prd run session gm-drain-w3-125 at PROVE. Receipts: .gm/receipts/CONVCOM-gm-goal-w2-CONVCOM-1-blocker-gm-drain-w1-58-blocker-gm-drain-w2-69/01-SPECIFY.md and 02-PROVE.md. Missing to proceed: (1) the policy. No rule in AGENTS.md requires type(scope): description. gm-config/prose/lean-p5.md:47 requires only a subject of at most 50 characters in imperative mood. The owner must choose either that existing rule (then the acceptance is a 50-character imperative check) or type(scope). (2) The enforcement point. No commit-msg hook or commitlint exists (live codesearch 0 hits). Candidates: a check in rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs/git.rs (builds only in CI per the no-local-cargo rule, so a witness takes a release cycle and a gitlink bump), or a pre-commit check beside scripts/check-staged-secrets.mjs. (3) The acceptance, witnessed by a live dispatch id: a non-conforming subject is refused and a conforming one passes. Default if the owner does not answer: enforce the existing 50-character imperative rule at git_finalize, since it is the only rule the project''s prose states. This row stays pending until (1) is decided; parent CONVCOM-gm-goal-w2-CONVCOM-1 is unchanged.'
+session_id: gm-drain-w3-125
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

@@ -1,0 +1,8 @@
+id: HUGHES-gm-goal-hop-HUGHES-1-1-blocker-gm-drain-w2-217
+subject: 'Blocker for HUGHES-gm-goal-hop-HUGHES-1-1: row cannot be specified or proved'
+body: 'Row HUGHES-gm-goal-hop-HUGHES-1-1 (session gm-goal-hop-HUGHES-1), title: gm-mcp/src has zero property-based checks. Blocked at SPECIFY. (1) prd-list {id} reports status pending with store_total 694, but .gm/prd/HUGHES-gm-goal-hop-HUGHES-1-1.yml does not exist (exec_js existsSync false; directory holds 693 files), and .gm/prd-log.jsonl has zero lines naming the id, so the row body, acceptance and witness command are unreadable. (2) The row title asks for property-based tests in gm-mcp/src, but gm-prd forbids test files and AGENTS.md Synthetic rule forbids test or mock files in delivered paths; the row needs an explicit decision on where a property check may live (a non-delivered harness, or a witness script). Action: reconcile the store against the .gm/prd folder (the row is listed but not on disk) and re-issue the row with its acceptance and witness path. Session gm-drain-w2-217. Dispatch ids: 1791962333704-500-1aec7946df5daf, 1791962352596-500-6f910a477dc1b136, 1791962360527-500-7415032d84d29460.'
+session_id: gm-drain-w2-217
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

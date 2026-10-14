@@ -1,0 +1,5 @@
+id: witness-prd-add-derives-an-id-when-none-is-given-blocker-gm-2e-fa19b3-w1-11-blocker-gm-drain-w1-326
+subject: 'blocker: add a dry_run mode to prd-add so the id-derivation witness runs without persisting a row'
+body: 'Row witness-prd-add-derives-an-id-when-none-is-given-blocker-gm-2e-fa19b3-w1-11 cannot close. prd-add has no dry_run key (only prd_repair.rs has one, lines 38-97). Fix: add a dry_run branch to the prd-add handler in rs-plugkit/crates/plugkit-core/src/orchestrator/prd.rs that returns the derived id and would-be row without writing, mirroring prd_repair.rs. Then rebuild rs-plugkit with --features slim (CI-verified; local cargo is hook-blocked), and witness id-less prd-add with dry_run:true from a different session. Receipts: .gm/receipts/witness-prd-add-derives-an-id-when-none-is-given-blocker-gm-2e-fa19b3-w1-11/02-PROVE.md. Session gm-drain-w1-326.'
+session_id: gm-drain-w1-326
+status: pending

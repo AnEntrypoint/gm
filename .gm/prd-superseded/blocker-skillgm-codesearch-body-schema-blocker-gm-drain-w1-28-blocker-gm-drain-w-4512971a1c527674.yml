@@ -1,0 +1,12 @@
+id: BLOCKER-SKILLGM-codesearch-body-schema-blocker-gm-drain-w1-28-blocker-gm-drain-w2-29-blocker-gm-drain-w3-49
+subject: 'Blocked: grep body edit applied in gm-mcp working tree, uncommitted (concurrent gm-mcp index WIP); witness needs reloaded gm-mcp and a cross-session describe(grep)'
+status: pending
+blockedBy:
+- external
+body: |-
+  Parent row BLOCKER-SKILLGM-codesearch-body-schema-blocker-gm-drain-w1-28-blocker-gm-drain-w2-29 (leader H1: gm-mcp/src/verb-table.js:576 grep unbound).
+  Done: src/verb-table.js:576 now binds CODESEARCH_BODY; bin/gm-mcp-server.js rebuilt (995240 bytes); check-bin-drift clean; check-staged-secrets PASS. Receipts in .gm/receipts/BLOCKER-SKILLGM-codesearch-body-schema-blocker-gm-drain-w1-28-blocker-gm-drain-w2-29/ (01, 03, 09).
+  Blocking: (a) gm-mcp index already carries other writers' staged paths (AGENTS.md, src/self-update.js) and HEAD is a992ae64, so a commit would publish their WIP; (b) after delivery, a running gm-mcp must reload the bundle; describe(grep) must then show body_schema.declared=true from a different session before prd-resolve.
+  Next: the gm-mcp single writer commits only src/verb-table.js and bin/gm-mcp-server.js on main, pushes, ci-status, then bump-pins advances the parent gitlink; a cross-session describe(grep) witness closes the parent row.
+session_id: mcp-codemode-9708-1791969876095
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

@@ -1,0 +1,8 @@
+id: CONVCOM-gm-goal-w2-CONVCOM-1-blocker-gm-drain-w3-123
+subject: 'BLOCKER: CONVCOM-gm-goal-w2-CONVCOM-1 has no acceptance, file or witness; SPECIFY cannot name a file'
+body: 'SPECIFY blocker for CONVCOM-gm-goal-w2-CONVCOM-1 (session gm-drain-w3-123). The row stores a subject only (prd-list dispatches 1791970777264-500-74bbd521e50e285c and 1791970790550-500-7d9ee161146032ae): no acceptance, no file path, no witness, no cause. No .gm/prd yml exists for the id. Prior blockers from gm-drain-w1-58, gm-drain-w2-68 and gm-drain-w2-69 record the same gap and were not re-scoped. Receipt: .gm/receipts/CONVCOM-gm-goal-w2-CONVCOM-1/01-SPECIFY-gm-drain-w3-123.md. Needed to unblock: prd-add under the same id with acceptance and a concrete file path for the commit-subject check (the subject names gm-mcp/src with no file). Executor does not guess a file.'
+session_id: gm-drain-w3-123
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

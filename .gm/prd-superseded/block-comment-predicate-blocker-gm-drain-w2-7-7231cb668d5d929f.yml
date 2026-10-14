@@ -1,0 +1,8 @@
+id: BLOCK-COMMENT-PREDICATE-blocker-gm-drain-w2-7
+subject: 'Blocker for BLOCK-COMMENT-PREDICATE: row cannot close in session gm-drain-w2-7 (PROVE needs a CI-built rs-plugkit wasm, not local cargo)'
+body: 'Re-run of gm-prd on BLOCK-COMMENT-PREDICATE-blocker-gm-drain-w1-15 in session gm-drain-w2-7. SPECIFY: the row is itself a blocker; its prior blocker text stands and was re-read against the tree. PROVE cannot run: local cargo is hook-blocked (memory gm-no-local-cargo-verified-by-ci.md), and the wasm guest is verified only by the CI publish/release job. Closing needs a comment-predicate rs-plugkit commit pushed on main, its CI release, a bump-pins advance of the rs-plugkit gitlink, and a live transition refusing a comment-adding diff. The vendored lean_graph.json (fsm.rs include_str!) also needs a reviewed rebuild per rs-plugkit/AGENTS.md. Allowlist constraint: comments for attributes, SAFETY rationale and license headers must stay allowed. Unblock: implement the predicate in rs-plugkit as a reviewed commit, let the release job run, then witness a live refusal. Receipts: .gm/receipts/BLOCK-COMMENT-PREDICATE/01-SPECIFY.md, 02-PROVE.md.'
+session_id: gm-drain-w2-7
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

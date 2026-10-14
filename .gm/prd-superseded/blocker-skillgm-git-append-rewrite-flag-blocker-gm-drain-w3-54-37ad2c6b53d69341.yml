@@ -1,0 +1,8 @@
+id: BLOCKER-SKILLGM-git-append-rewrite-flag-blocker-gm-drain-w3-54
+subject: 'Blocker for BLOCKER-SKILLGM-git-append-rewrite-flag-blocker-gm-drain-w2-31: parent acceptance, target file and witness undefined; CI-only rs-plugkit verification'
+body: 'SPECIFY (gm-drain-w3-54) cannot advance row BLOCKER-SKILLGM-git-append-rewrite-flag-blocker-gm-drain-w2-31 to ELIMINATE. Open unknowns: (1) acceptance for the per-verb append/rewrite flag (field name, accepted values, verbs covered) is not written in the parent BLOCKER-SKILLGM-git-append-rewrite-flag; (2) the change lands in the nested rs-plugkit repo at rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs/git.rs, which has no such flag; (3) rs-plugkit is verified by CI only (local cargo blocked by hook), so no local live witness exists in-session; (4) publish is a nested rs-plugkit commit then a parent gitlink bump from C:/dev/gm gated on CI. Action: a human or the parent owner writes the acceptance and the CI witness id scheme into .gm/prd/BLOCKER-SKILLGM-git-append-rewrite-flag.yml, then re-runs gm-prd. Receipt: .gm/receipts/BLOCKER-SKILLGM-git-append-rewrite-flag-blocker-gm-drain-w2-31/01-SPECIFY-gm-drain-w3-54.md'
+session_id: gm-drain-w3-54
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

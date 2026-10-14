@@ -1,0 +1,8 @@
+id: CONVCOM-gm-goal-w2-CONVCOM-1-blocker-gm-drain-w1-58-blocker-gm-drain-w2-69
+subject: 'BLOCKER: CONVCOM-gm-goal-w2-CONVCOM-1-blocker-gm-drain-w1-58 has no acceptance, file or witness; the executor cannot name a file'
+body: 'Blocker filed by gm-prd run session gm-drain-w2-69 at SPECIFY (receipt .gm/receipts/CONVCOM-gm-goal-w2-CONVCOM-1-blocker-gm-drain-w1-58/01-SPECIFY.md). Row CONVCOM-gm-goal-w2-CONVCOM-1-blocker-gm-drain-w1-58 is itself a blocker for CONVCOM-gm-goal-w2-CONVCOM-1, which carries only a subject: ''commit subjects on main are not enforced as type(scope): description; 4 of the last 8 subjects have no type prefix and gm-mcp/src has no subject check''. Missing to proceed: (1) the file that enforces the subject check (commit-msg hook, git_finalize validation in rs-plugkit, or a CI step) so the executor can name it; (2) the acceptance: a commit with a non-conforming subject is refused, and a conforming one passes, witnessed by a live dispatch id; (3) the cause or the chosen enforcement point. Without these the row cannot be PROVEN or EMITTED, and no file is guessed. Parent row CONVCOM-gm-goal-w2-CONVCOM-1 is still pending. Resolve by re-scoping the parent with prd-add under the same id (overwrite:true) naming the file and acceptance.'
+session_id: gm-drain-w2-69
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

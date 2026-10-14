@@ -1,0 +1,5 @@
+id: SLAP-PLUGKIT-SCANLITERAL-LEVELS-blocker-gm-drain-w2-399
+subject: 'Blocker SLAP-PLUGKIT-SCANLITERAL-LEVELS: scan_literal split is unwitnessable here and its cited line is stale'
+body: 'Row SLAP-PLUGKIT-SCANLITERAL-LEVELS (session gm-drain-w2-399) cannot close in this session. SPECIFY: the cited fn is at rs-plugkit/crates/plugkit-core/src/code_index.rs:5128 (codesearch dispatch 1791965302022-500-2adb776246b4df42), not 4578 as the row says, so the row cites a stale line. PROVE: the row''s witness is a cargo build of rs-plugkit plus a live grep literal dispatch. Local cargo is blocked by a hook; rs-plugkit wasm is built only by CI (wasm32-wasip1 --features slim, per gm-no-local-cargo-verified-by-ci). Without a build, a refactor of an 852-line function cannot be checked for unchanged output, counts, error_kind or exhaustive values, so no safe edit is made. Unblock: a session with a CI build route, or a row re-scoped to the current line 5128, then a live witness from another session. Blocker is filed; the parent row stays pending.'
+session_id: gm-drain-w2-399
+status: pending

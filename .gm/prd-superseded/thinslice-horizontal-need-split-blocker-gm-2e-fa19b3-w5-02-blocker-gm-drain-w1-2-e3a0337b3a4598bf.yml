@@ -1,0 +1,5 @@
+id: THINSLICE-HORIZONTAL-NEED-SPLIT-blocker-gm-2e-fa19b3-w5-02-blocker-gm-drain-w1-299
+subject: 'Blocker: PROVE cannot separate ACH leader H1 (not closable in one run) from H2 for THINSLICE-HORIZONTAL-NEED-SPLIT-blocker-gm-2e-fa19b3-w5-02'
+status: pending
+body: 'Parent row THINSLICE-HORIZONTAL-NEED-SPLIT-blocker-gm-2e-fa19b3-w5-02 is pending. SPECIFY receipt: .gm/receipts/THINSLICE-HORIZONTAL-NEED-SPLIT-blocker-gm-2e-fa19b3-w5-02/01-SPECIFY.md. Leader H1: the parent split needs multi-run layered-row rewrites (6 needs across 2-5 rows each, 490 store rows, counts stale vs row text) before any witnessed change. Probe needed: run one need end to end to separate H1 from H2 (single-row close). Probe is not runnable in this run without editing the layered rows. Next: rewrite the layered rows to one row per need, then run the single-need probe with a CI witness.'
+session_id: gm-drain-w1-299

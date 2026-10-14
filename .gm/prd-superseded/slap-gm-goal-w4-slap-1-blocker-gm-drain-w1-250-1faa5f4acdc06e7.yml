@@ -1,0 +1,14 @@
+id: SLAP-gm-goal-w4-SLAP-1-blocker-gm-drain-w1-250
+subject: 'Blocked: SLAP-gm-goal-w4-SLAP-1-blocker-gm-fin-25 cannot close; gm-mcp/src/dispatch.js still holds an uncommitted runnerEnsureInFlight hunk'
+body: |-
+  Row SLAP-gm-goal-w4-SLAP-1-blocker-gm-fin-25 (session gm-drain-w1-250) cannot close on a witness.
+
+  Leader hypothesis (SPECIFY, .gm/receipts/SLAP-gm-goal-w4-SLAP-1-blocker-gm-fin-25/01-SPECIFY.md): gm-mcp/src/dispatch.js is still dirty on gm-mcp main, so the parent row SLAP-gm-goal-w4-SLAP-1 stays blocked.
+
+  Live evidence: gm-mcp git_status scoped to src/dispatch.js, dispatch 1791959026134-500-346b31c56adae434, dirty with one modified path. git_diff, dispatch 1791959042171-500-2e0ca0e672442a4b, shows an uncommitted hunk at runnerEnsureInFlight (around line 1186), not authored by this session.
+
+  Unblock: the owning session commits or parks that hunk on gm-mcp main. Then re-run SLAP-gm-goal-w4-SLAP-1 with the row's current line sites (305, 395, 1021, 1126, 1153, 1249, 1262, 1481).
+
+  Witness: none. Not self-witnessed.
+session_id: gm-drain-w1-250
+status: pending

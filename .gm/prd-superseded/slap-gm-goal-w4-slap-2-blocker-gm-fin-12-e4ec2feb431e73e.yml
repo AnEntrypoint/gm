@@ -1,0 +1,5 @@
+id: SLAP-gm-goal-w4-SLAP-2-blocker-gm-fin-12
+subject: 'SLAP-2 blocked: gm-mcp bundle rebuild shares the tree with another writer'
+body: Row SLAP-gm-goal-w4-SLAP-2 needs fileSha256 in gm-mcp/src/self-update.js and two call-site swaps in src/release-bridge.js. The AGENTS bundle rule requires bin/gm-mcp-server.js rebuilt in the same commit, but bin and src/cli.js, dispatch.js, index.js, http-transport.js already carry another writer's uncommitted edits. Patch is in .gm/receipts/SLAP-gm-goal-w4-SLAP-2/03-EMIT.md. Re-apply once that writer commits, then rebuild the bundle and witness through codesearch and a live dispatch.
+session_id: gm-fin-12
+status: pending

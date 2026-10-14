@@ -1,0 +1,6 @@
+id: gm-pool-observe-advertises-held-rows-beyond-heartbeat-blocker-gm-drain-w1-139
+subject: 'BLOCKER gm-pool-observe-advertises-held-rows-beyond-heartbeat: fix needs rs-plugkit Rust change verified by CI and a cross-session witness'
+kind: defect
+body: 'Row gm-pool-observe-advertises-held-rows-beyond-heartbeat cannot close in session gm-drain-w1-139. SPECIFY receipt: .gm/receipts/gm-pool-observe-advertises-held-rows-beyond-heartbeat/01-SPECIFY.md. Leader hypothesis H1 (held set = heartbeat rows + declared body.held, state.rs:38/220). Required: rs-plugkit orchestrator/pool_slots change (exclude every live-held id from candidates, name holding session in candidate_reasons), CI release, gitlink bump, then the H1 probe (pool-observe body.held naming an advertised id) witnessed from another session. Also disclose: one stray pool-observe live=0 dispatch 1791958321783-500-9993aa3e67d00bb7 wrote count_of_record live=0. Kind: defect.'
+session_id: gm-drain-w1-139
+status: pending

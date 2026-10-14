@@ -1,0 +1,8 @@
+id: G_CONTRACT-dream-rsi-walk-acceptance-blocker-gm-drain-w1-89-blocker-gm-drain-w2-116
+subject: 'Blocker for G_CONTRACT-dream-rsi-walk-acceptance-blocker-gm-drain-w1-89 (session gm-drain-w2-116): PROVE precondition fails, no walk-evidence validator exists in rs-plugkit. Regex codesearch lean-walk|rejected_walks|backreferences_verified|applied.*witness over rs-plugkit (dispatch 1791960712369-500-f9e7b3946b9f1902) finds only struct fields at dream_rsi.rs:85,87. Closing needs a Rust validator in rs-plugkit/crates/plugkit-core/src/orchestrator/dream_rsi.rs refusing applied:true when the witness dispatch_id is absent from observations.json, a CI-only build (publish / release, step Build; local cargo hook-blocked), a gitlink bump, and a live witness from another session. Receipt: .gm/receipts/G_CONTRACT-dream-rsi-walk-acceptance-blocker-gm-drain-w1-89/01-SPECIFY.md.'
+blocks: G_CONTRACT-dream-rsi-walk-acceptance
+blockedBy:
+- external
+status: pending
+session_id: mcp-codemode-23256-1791960731298
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

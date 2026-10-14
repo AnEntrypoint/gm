@@ -1,0 +1,5 @@
+id: INVEST-GCONTRACT-MEMORY-KIND-ENUM-blocker-gm-drain-w2-245
+subject: 'BLOCKER INVEST-GCONTRACT-MEMORY-KIND-ENUM: row contract conflicts with served storage-tier kind'
+body: 'Blocks INVEST-GCONTRACT-MEMORY-KIND-ENUM (session gm-drain-w2-245). Receipts: .gm/receipts/INVEST-GCONTRACT-MEMORY-KIND-ENUM/01-SPECIFY.md and 02-PROVE.md. Finding: memorize-fire kind is a storage tier, validated by tencentdb_memory::validate_tier against TIERS [l0, l1] (rs-plugkit/crates/plugkit-core/src/tencentdb_memory.rs:100-112; memorize.rs:31-42), and gm-config/prose/entry-extended.md:46 states kind is a storage tier, not a memory type. The row asks for a closed user/feedback/project/reference enum. Live probes: kind ''other'' refused (dispatch 1791963009947-500-16093f3ce7201e16); kind ''user'' refused (dispatch 1791963005443-500-b8aa08ec2ea539c3), so the row witness half ''kind user succeeds'' fails on current contract. Decision needed from owner: either keep kind as storage tier l0/l1 and rewrite the row witness, or change the contract (TIERS, prose, memo_kind default) as a reviewed change with the prose. No edit made.'
+session_id: gm-drain-w2-245
+status: pending

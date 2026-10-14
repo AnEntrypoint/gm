@@ -1,0 +1,8 @@
+id: CLEANNAME-AGENTPLUG-RUST-blocker-gm-drain-w2-52-blocker-gm-drain-w3-96
+subject: 'BLOCKER CLEANNAME-AGENTPLUG-RUST-blocker-gm-drain-w2-52: CI witness and a free agentplug writer are both required; this session cannot close it'
+body: 'Session gm-drain-w3-96 ran gm-prd on CLEANNAME-AGENTPLUG-RUST-blocker-gm-drain-w2-52. It cannot close here, for three reasons. (1) The witness is per-submodule CI (ci-status on each submodule main sha) plus parent gitlink bumps; local cargo is hook-blocked (rule gm-no-local-cargo-verified-by-ci), so no live witness dispatch id can be produced in this session. (2) Self-witness is refused, and the witness must come from another session after CI lands. (3) Shared surface: git_status scoped to agentplug, agentplug-libsql, agentplug-crux and agentplug-bert shows agentplug already modified (gitlink dirty, head 3f24585) with another writer active, so the agentplug rename would collide with that writer (one writer per submodule). Next step, per submodule and each in its own session with a single writer: apply the parent row CLEANNAME-AGENTPLUG-RUST renames (agentplug-libsql/src/db.rs, agentplug-crux/src/baseline.rs, near_dup.rs, ncd.rs, agentplug-bert/src/embed.rs, agentplug/crates/agentplug-host/src/imports.rs, agentplug-runner/src/main.rs), push to submodule main, ci-status on the sha until green, then bump the parent gitlink to that tip and witness the parent row from a different session. Parent row stays pending until then.'
+session_id: gm-drain-w3-96
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

@@ -1,0 +1,5 @@
+id: G_CONTRACT-codeinsight-complete-flag-blocker-gm-drain-w1-85
+subject: 'Blocked: G_CONTRACT-codeinsight-complete-flag needs a rs-plugkit top-level proof field, a CI-built wasm, a gm-config prose edit and a cross-session witness'
+body: 'Row G_CONTRACT-codeinsight-complete-flag cannot close in session gm-drain-w1-85. Receipts: .gm/receipts/G_CONTRACT-codeinsight-complete-flag/01-SPECIFY.md and 02-PROVE.md. Live probe callers zz_no_such_symbol_probe_9q on a complete index (dispatch 1791957819693-500-9456d72060060237) shows no top-level complete key: only nested codeinsight_index.complete:true. Unresolved: whether a new top-level field (rs-plugkit/crates/plugkit-core/src/code_symbols.rs handle(), lines 2786-2792) is needed, or the prose can cite codeinsight_index.complete as-is (H2). Closing requires: decide H1 vs H2 by design; if H1, a CI-built rs-plugkit change, gm-config/prose/entry.md edit, re-sync of the vendored lean_prose and prose copies in rs-plugkit, and a live witness from another session. Witness must name the leader hypothesis.'
+session_id: gm-drain-w1-85
+status: pending

@@ -1,0 +1,5 @@
+id: PLUGKIT-SEMVER-UPDATE-WITNESS-blocker-gm-prdall-20261014-04-k03-blocker-gm-drain-w2-342
+subject: 'Blocker for PLUGKIT-SEMVER-UPDATE-WITNESS-blocker-gm-prdall-20261014-04-k03: leader probe cannot run in session gm-drain-w2-342; fix PLUGKIT-SEMVER-SHA-DRIFT-FIX unbuilt'
+body: 'Stage reached: PROVE (cannot run). Row PLUGKIT-SEMVER-UPDATE-WITNESS-blocker-gm-prdall-20261014-04-k03 needs a live daemon-status sha after the download.rs fix (PLUGKIT-SEMVER-SHA-DRIFT-FIX) is built in CI and released. Here: no .gm/daemon-status.json (exec_js dispatch 1791964099599-500-dcc4c6f62a513d75), no local cargo, and the fix row is pending. Cited cause verified: download.rs:2093 early return on dest.exists(). Receipts: .gm/receipts/PLUGKIT-SEMVER-UPDATE-WITNESS-blocker-gm-prdall-20261014-04-k03/01-SPECIFY.md and 02-PROVE.md. Close path: land PLUGKIT-SEMVER-SHA-DRIFT-FIX, release through CI, then witness from another session with a sideloaded stale gm.wasm and compare loaded_plugin_content_sha256.gm to the release sha256. Parent row stays pending; no binding.'
+session_id: gm-drain-w2-342
+status: pending

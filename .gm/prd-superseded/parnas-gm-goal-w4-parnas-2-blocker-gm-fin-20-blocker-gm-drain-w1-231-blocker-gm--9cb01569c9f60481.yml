@@ -1,0 +1,5 @@
+id: PARNAS-gm-goal-w4-PARNAS-2-blocker-gm-fin-20-blocker-gm-drain-w1-231-blocker-gm-drain-w2-331
+subject: 'Blocker for PARNAS-gm-goal-w4-PARNAS-2-blocker-gm-fin-20-blocker-gm-drain-w1-231: clearing condition unmet, gm-mcp still has foreign uncommitted, staged and untracked hunks'
+body: 'Stage PROVE blocked for the row PARNAS-gm-goal-w4-PARNAS-2-blocker-gm-fin-20-blocker-gm-drain-w1-231. Its clearing condition (another lane commits or parks the foreign hunks in gm-mcp src/dispatch.js and src/self-update.js, then parent PARNAS-gm-goal-w4-PARNAS-2 runs PROVE with a witness from another session) is unmet. Evidence: git_status on gm-mcp, dispatch 1791963912358-500-5c18a700ad4f78f1, shows 19 modified paths, 1 staged (src/self-update.js), 1 untracked (src/spool-store.js). Parent gitlink dirty per dispatch 1791963888939-500-eb5e3cd75162d83b. Clear by: the owning lane commits or parks those hunks on gm-mcp main. Receipts: .gm/receipts/PARNAS-gm-goal-w4-PARNAS-2-blocker-gm-fin-20-blocker-gm-drain-w1-231/01-SPECIFY.md, 02-BLOCKER.md.'
+session_id: gm-drain-w2-331
+status: pending

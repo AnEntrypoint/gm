@@ -1,0 +1,5 @@
+id: INVEST-JTBD-REVIEWER-SUMMARY-VERB-blocker-gm-drain-w1-177-blocker-gm-drain-w2-251
+subject: 'Blocked: INVEST-JTBD-REVIEWER-SUMMARY-VERB-blocker-gm-drain-w1-177 cannot close; needs a consumer decision and a CI wasm witness'
+body: 'Row INVEST-JTBD-REVIEWER-SUMMARY-VERB-blocker-gm-drain-w1-177 (session gm-drain-w2-251) cannot close. Its acceptance needs a named reviewer-workflow consumer or an explicit reversal of YAGNI-JTBD-REVIEWER-ONEPASS, then a Rust change in rs-plugkit witnessed by a CI-built wasm. Evidence: YAGNI-JTBD-REVIEWER-ONEPASS resolved (dispatch 1791962808664-500-eeb84ba2485c4778) with no edit needed; codesearch literal JTBD-REVIEWER-SUMMARY|net_lines over rs-plugkit 0 hits exhaustive (dispatch 1791962817481-500-961a09c33756c2bb). No reviewer-workflow row in the tree names the verb. Receipt: .gm/receipts/INVEST-JTBD-REVIEWER-SUMMARY-VERB-blocker-gm-drain-w1-177/01-SPECIFY.md. Unblock: a decision owner names the consumer or reverses the YAGNI removal, then a rs-plugkit change and CI wasm witness.'
+session_id: gm-drain-w2-251
+status: pending

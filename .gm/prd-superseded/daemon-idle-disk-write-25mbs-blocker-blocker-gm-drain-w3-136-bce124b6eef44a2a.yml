@@ -1,0 +1,8 @@
+id: DAEMON-IDLE-DISK-WRITE-25MBS-BLOCKER-blocker-gm-drain-w3-136
+subject: 'BLOCKED: idle disk-write attribution needs an elevated kernel trace (gm-drain-w3-136)'
+body: 'Row DAEMON-IDLE-DISK-WRITE-25MBS-BLOCKER-blocker-gm-drain-w2-76 cannot close from a non-elevated session. Its acceptance (attribute idle PhysicalDisk writes below process level, witnessed from another session) needs a kernel disk-I/O trace or Resource Monitor disk view over 60 s, which requires Administrator. Session gm-drain-w3-136 ran IsInRole(Administrator) via `net session` = not elevated (exit 2). Per-process IOWriteBytes reads 0 while PhysicalDisk(_Total) reads 3-13 MB/s, so H1 (system-level writes) and H2 (gm/agentplug writes missed by per-process counters) cannot be separated without elevation. Probe needed, run from an elevated shell: `logman create trace` with the Circular Kernel Context Logger disk I/O provider (or `xperf -on DISKIO`) for 60 s during idle, then map each DiskIO write to its process ID and file path; a write attributed to a gm/agentplug PID or to gm state dirs confirms H2, unattributed or System-process writes confirm H1. Witness: the parsed table with dispatch id, from a session other than the writer. Also: the 28.39 MB/s figure is not reproduced now. Parent receipts: .gm/receipts/DAEMON-IDLE-DISK-WRITE-25MBS-BLOCKER/01-SPECIFY.md, 02-PROVE.md; this session''s receipt 03-SPECIFY.md.'
+session_id: gm-drain-w3-136
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

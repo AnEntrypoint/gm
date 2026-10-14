@@ -1,0 +1,17 @@
+id: gm-pool-observe-advertises-held-rows-beyond-heartbeat
+text: |-
+  pool-observe advertises launch slots for rows that live workers already hold, because its dedupe only sees sessions that wrote a .gm/pool/<session>.live heartbeat file.
+
+  Measured 2026-10-10 (spoint, session orch-main, ceiling 20):
+  - live=18, live_heartbeats=4, live_rows_total=2 -> slots.advertised = [perf-dynamic-quality-governor-60fps-no-pixel-doubling-spoint-orch-b186-u2, perf-foliage-one-frame-disappears-on-change-spoint-orch-b186-u1], both held by live agents a21ecfc8363cc92c4 and ad1945423867c84be. Launching either would put two writers on one surface (L2).
+  - live=18, live_heartbeats=8, live_rows_total=6 -> one advertised slot still named a row held by a live agent; the other named a row whose file surface a live agent on the sibling row already holds.
+  - Recurrence: at live=19 and again at live=17 the single advertised slot was the same held row.
+
+  Cause: dedupe input is the heartbeat file set, not the live-agent set. A wave's briefs that omit or age out the heartbeat step are invisible, so their rows keep being advertised. The heartbeat step is a workaround, not a fix: it makes the symptom smaller, and it cannot cover agents launched before it existed, agents whose heartbeat aged past the freshness bound, or agents from another session.
+
+  Required: pool-observe shall exclude every row held by a live worker (the agent/session ledger and its row binding), not only rows with a fresh heartbeat, and shall say in candidate_reasons which live session holds an advertised id. An advertised slot that names a held row is a correctness defect, not a ranking preference.
+
+  Workaround recorded in skills/gm-orchestrate/SKILL.md (Heartbeat): match each advertised id against live agents' rows before launching; skip a match and take the next unheld candidate.
+kind: defect
+session_id: orch-main
+status: pending

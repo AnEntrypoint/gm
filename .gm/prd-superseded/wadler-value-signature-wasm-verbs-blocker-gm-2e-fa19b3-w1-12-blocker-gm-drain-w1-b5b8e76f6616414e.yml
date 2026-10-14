@@ -1,0 +1,5 @@
+id: WADLER-VALUE-SIGNATURE-WASM-VERBS-blocker-gm-2e-fa19b3-w1-12-blocker-gm-drain-w1-324-blocker-gm-drain-w2-489
+subject: 'Blocker for WADLER-VALUE-SIGNATURE-WASM-VERBS-blocker-gm-2e-fa19b3-w1-12-blocker-gm-drain-w1-324: PRD split cannot close with a runtime witness in session gm-drain-w2-489'
+body: 'Stage reached: SPECIFY (receipt .gm/receipts/WADLER-VALUE-SIGNATURE-WASM-VERBS-blocker-gm-2e-fa19b3-w1-12-blocker-gm-drain-w1-324/01-SPECIFY.md, session gm-drain-w2-489). The row''s acceptance is a PRD split of WADLER-VALUE-SIGNATURE-WASM-VERBS into per-file rows, but the parent blocker (WADLER-VALUE-SIGNATURE-WASM-VERBS-blocker-gm-2e-fa19b3-w1-12) requires typed request structs compiled through CI (--features slim, no local cargo) and a live witness from another session. ELIMINATE and EDIT are not reachable here. Next step for gm-orchestrate: run a cross-session witness after the CI-built rs-plugkit change lands, or re-scope the row to the PRD split alone with a witness that names the new per-file rows. Session: gm-drain-w2-489.'
+session_id: gm-drain-w2-489
+status: pending

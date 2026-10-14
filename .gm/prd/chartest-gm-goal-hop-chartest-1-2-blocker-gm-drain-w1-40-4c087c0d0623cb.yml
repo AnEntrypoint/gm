@@ -1,0 +1,5 @@
+id: CHARTEST-gm-goal-hop-CHARTEST-1-2-blocker-gm-drain-w1-40
+title: 'Blocker for CHARTEST-gm-goal-hop-CHARTEST-1-2: acceptance needs test files that gm-prd forbids'
+body: 'Blocks row CHARTEST-gm-goal-hop-CHARTEST-1-2 (session gm-drain-w1-40). Premise verified: 14 gm-mcp/src modules have zero refs in gm-mcp/test (codesearch dispatch 1791957296395-500-31a1ee52bd21238c). Leader hypothesis H1: the row cannot close because its acceptance requires new test files (node --test witness), and gm-prd Procedure forbids test files (skills/gm-prd/SKILL.md line 24 ''No test files''); AGENTS.md ''Synthetic'' rule forbids test files in delivered paths. Resolution needed: owner decision whether characterization tests (real entry points, not synthetic) are exempt from the no-test-files rule for gm-mcp; if yes, re-scope the row to a gm-mcp submodule delivery with a pin bump. Receipts: .gm/receipts/CHARTEST-gm-goal-hop-CHARTEST-1-2/01-03.'
+session_id: mcp-codemode-31304-1791957321837
+status: pending

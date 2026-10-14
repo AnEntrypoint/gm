@@ -1,0 +1,4 @@
+id: DEEPMOD-GMMCP-TEST-SUITE-RED-AT-HEAD
+title: 'gm-mcp: npm test stops at runner-recovery (status.json without pid), and spool-name, transport and landed-output fail at HEAD too (EPERM on temp rm, 406/transport assertions); the && chain hides the rest'
+status: pending
+session_id: lean-hop-DEEPMOD

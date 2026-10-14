@@ -1,0 +1,8 @@
+id: G_CONTRACT-state-layout-list-blocker-gm-drain-w2-156
+subject: 'Blocked: G_CONTRACT-state-layout-list still has no state_layout module and no cross-session witness reachable from gm-drain-w2-156'
+body: 'Row G_CONTRACT-state-layout-list (parent of G_CONTRACT-state-layout-list-blocker-gm-drain-w1-113). PROVE receipt: .gm/receipts/G_CONTRACT-state-layout-list-blocker-gm-drain-w1-113/02-PROVE.md. Live state: codesearch ''state_layout'' has 0 matches (exhaustive); gm-config/prose/entry.md:102 still carries the inline member list (dispatch 1791961172781-500-a558119630596fad); MANAGED_ENTRIES remains in wasm32-only rs-plugkit/crates/plugkit-core/src/gitignore.rs. Closing needs: (a) a new state_layout.rs in rs-plugkit, buildable only by CI (wasm32-wasip1 --features slim; local cargo blocked by hook), (b) gm-config/prose/entry.md ''State'' citing that module, vendored by reviewed re-sync, and (c) a witness from a session other than the row''s own, through the published guest. This run has no CI build, no publish and no re-sync path, so the refuting witness (ensure_managed_gitignore and instruction(''State'') returning one list from the new module) cannot be produced here. Next action for gm-orchestrate: launch a row that performs (a)+(b) through git_finalize and ci-status, then a witness from a third session.'
+session_id: gm-drain-w2-156
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

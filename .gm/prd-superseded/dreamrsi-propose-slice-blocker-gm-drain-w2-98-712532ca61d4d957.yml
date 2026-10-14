@@ -1,0 +1,8 @@
+id: DREAMRSI-PROPOSE-SLICE-blocker-gm-drain-w2-98
+subject: 'Blocker for DREAMRSI-PROPOSE-SLICE-blocker-gm-drain-w1-74: dream-strategy-propose has no dispatch route in orchestrator/mod.rs; no cross-session witness'
+session_id: gm-drain-w2-98
+body: 'Row DREAMRSI-PROPOSE-SLICE-blocker-gm-drain-w1-74 cannot close in session gm-drain-w2-98. Receipts: .gm/receipts/DREAMRSI-PROPOSE-SLICE-blocker-gm-drain-w1-74/01-SPECIFY.md and 02-PROVE.md. Codesearch dispatch 1791960477288-500-5b2a634b88af8c77 finds the literal dream-strategy-propose only at dream_rsi.rs:757 and :775 (error strings), so no route exists in orchestrator/mod.rs. Closing requires: (1) add the dispatch route for dream-strategy-propose in rs-plugkit orchestrator/mod.rs, routed to handle_strategy_propose (dream_rsi.rs:781), in the nested rs-plugkit repo on main; (2) CI slim build and release, then bump the rs-plugkit gitlink; (3) a live dispatch of dream-strategy-propose through agentplug-runner from a session other than gm-drain-w1-74 and gm-drain-w2-98 that returns the proposal, with active-strategy.json byte-identical before and after. Self-witness is refused, so the row stays pending until that cross-session witness exists.'
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

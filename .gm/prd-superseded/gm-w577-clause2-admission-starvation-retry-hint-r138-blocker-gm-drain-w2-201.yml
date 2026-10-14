@@ -1,0 +1,5 @@
+id: gm-w577-clause2-admission-starvation-retry-hint-r138-blocker-gm-drain-w2-201
+subject: 'Blocked: admission-starvation retry hint has no live witness reachable without starving the shared daemon'
+body: 'Row gm-w577-clause2-admission-starvation-retry-hint-r138 (session gm-drain-w2-201). Source already emits re_dispatch_safe:true for admission-starved (claim_dispatch.rs:2007-2048, caller run_gm_dispatch_to_file:2497) and for tool-queue-starved (claim_dispatch.rs:2288-2323), verb-agnostic. Closing needs a live read-only starvation reply, which requires saturating the shared admission slots; no safe probe exists in this session. Receipt: .gm/receipts/gm-w577-clause2-admission-starvation-retry-hint-r138/01-SPECIFY.md. Needed: owner-approved controlled starvation run or a witness harness that holds admission slots in an isolated project root.'
+session_id: gm-drain-w2-201
+status: pending

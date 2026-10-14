@@ -1,0 +1,8 @@
+id: CONVCOM-gm-goal-w2-CONVCOM-1-blocker-gm-drain-w3-126
+subject: 'BLOCKER: CONVCOM-gm-goal-w2-CONVCOM-1 still lacks acceptance (session gm-drain-w3-126)'
+body: 'Parent row CONVCOM-gm-goal-w2-CONVCOM-1 is now listed by prd-list (subject only: commit subjects on main not enforced as type(scope): description; gm-mcp/src has no subject check). Its .gm/prd file body is still empty, so acceptance is undefined. Proposed defaults for the next wave to adopt, each the most defensible choice: (1) enforcement point: a node script run before commit, like scripts/check-staged-secrets.mjs, that rejects a subject not matching ^[a-z0-9][a-z0-9_./-]*(\([^)]+\))?: .+ ; a gm-mcp check is deferred because gm-mcp carries foreign uncommitted WIP and a bundle rebuild is needed; (2) accepted pattern: the repo''s observed prefixes (skills/gm:, rs-plugkit:, feat(...)); (3) existing history: out of scope, since rewriting pushed subjects needs owner approval (Section 4). Witness needed: the check run on 4 known-bad and 4 known-good subjects from git log, exit codes recorded. Row CONVCOM-gm-goal-w2-CONVCOM-1 stays pending.'
+session_id: gm-drain-w3-126
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

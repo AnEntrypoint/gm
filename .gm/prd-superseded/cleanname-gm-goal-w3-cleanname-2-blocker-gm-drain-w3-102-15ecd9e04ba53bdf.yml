@@ -1,0 +1,5 @@
+id: CLEANNAME-gm-goal-w3-CLEANNAME-2-blocker-gm-drain-w3-102
+subject: 'Blocker for CLEANNAME-gm-goal-w3-CLEANNAME-2: gm-mcp self-update.js rename cannot publish without carrying another lane''s WIP'
+body: 'State at dispatch 1791970472718 (session gm-drain-w3-102). (1) src/self-update.js in gm-mcp working tree holds the leftParts/rightParts rename (staged) plus unstaged foreign WIP (readDigest, versionGuardReason installedBytes/same-build guard); publishing the file publishes that WIP. (2) gm-mcp index holds foreign staged edits to AGENTS.md, bin/gm-mcp-server.js (225 lines) and src/verb-table.js. (3) origin/main of gm-mcp is fd7bb3a, not the c0b1845 cited by blocker w2-55, and local main a992ae6 is not an ancestor of it: a pull/merge across foreign lanes is a collision. (4) bin/gm-mcp-server.js must be rebuilt from HEAD plus the rename only, in a scratch tree, then Git-API-published with src. Unblock: one writer quiesces the gm-mcp lane, then a scratch HEAD+rename build is published via the Git API and ci-status witnessed. Witness dispatch ids on record: 1791960113679, 1791960148256, 1791960192398, 1791960206790.'
+session_id: gm-drain-w3-102
+status: pending

@@ -1,0 +1,5 @@
+id: G_CONTRACT-spool-claim-key-session-prefix-blocker-gm-drain-w2-151
+subject: 'BLOCKER for G_CONTRACT-spool-claim-key-session-prefix: daemon bare-integer in-file name rejection needs a CI-verified agentplug-runner change and a live witness'
+body: 'Blocks G_CONTRACT-spool-claim-key-session-prefix. Receipt: .gm/receipts/G_CONTRACT-spool-claim-key-session-prefix/01-SPECIFY.md. Enforcement point located: agentplug/crates/agentplug-runner/src/daemon/claim_dispatch.rs (in-file name parse, rsplit_once at line 1801); it has no session-prefix check. Needed: (1) claim_dispatch.rs refuses a bare-integer or unprefixed in-file name with a named error; (2) the daemon mints subagent session ids so prose can drop the derivation rule; (3) gm-config/prose/entry.md and skills/gm/SKILL.md keep only the outcome; (4) rs-plugkit reviewed rebuild for lean-graph prose; (5) gm-mcp bundle rebuild if dispatch.js changes. Verification is CI-only (no local cargo). Witness: a live spool write of <N>.txt against the rebuilt daemon must return the named refusal, from a session other than the implementer.'
+session_id: gm-drain-w2-151
+status: pending

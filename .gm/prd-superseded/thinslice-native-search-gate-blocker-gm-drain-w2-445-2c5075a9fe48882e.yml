@@ -1,0 +1,5 @@
+id: THINSLICE-NATIVE-SEARCH-GATE-blocker-gm-drain-w2-445
+subject: 'Blocker for THINSLICE-NATIVE-SEARCH-GATE-blocker-gm-drain-w1-300: owner decision (a) or (b) still required'
+body: 'Session gm-drain-w2-445 re-ran SPECIFY for the blocker row. Premise confirmed: gate G_CONTRACT-native-search-ban-restated is absent (0 hits; g_contract.md is a contract gate). skills/gm/SKILL.md has no ''native'' text (dispatch 1791966982872-500-abc4ff3de97a4d62), so the restatement the parent asks to drop has no target there. The ban lives only as prose in gm-config/prose entry.md:121 and lean-p7/p8/p9 (dispatch 1791966980981-500-a65792f9da9b9e18). Acceptance (a live native Grep refusal) cannot be produced by a gm dispatch. Closing needs an owner choice: (a) rescope the parent to a gm-owned gate (graph predicate or jit hook under fsm.hooks_dir) with new acceptance, or (b) close as prose-only. Both change governing prose, so this run does not choose. Receipt: .gm/receipts/THINSLICE-NATIVE-SEARCH-GATE-blocker-gm-drain-w1-300/01-SPECIFY.md. Parent THINSLICE-NATIVE-SEARCH-GATE stays pending.'
+session_id: gm-drain-w2-445
+status: pending

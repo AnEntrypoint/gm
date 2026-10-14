@@ -1,0 +1,5 @@
+id: SUBAGENT-PROBE-RAW-DUMP-blocker-gm-drain-w1-292
+subject: 'SUBAGENT-PROBE-RAW-DUMP blocked: cited file absent at SPECIFY (session gm-drain-w1-292)'
+body: 'Row SUBAGENT-PROBE-RAW-DUMP cites carry/CLOSE-XY-G2-probe.txt and carry/CLOSE-XY-G2.json. Re-checked in session gm-drain-w1-292: fs_stat not found for both paths (and the .gm/carry/ variants); codesearch literal ''CLOSE-XY-G2'' over .gm returns 0 matches outside the row text, and ''carry'' is not a directory under C:/dev/gm. The row has no acceptance file to replace or delete, so PROVE and EMIT cannot run. Prior blocker SUBAGENT-PROBE-RAW-DUMP-blocker-gm-2e-fa19b3-w3-01 records the same finding. Owner must re-scope the row to an existing file or close it. Files changed: none. Successor: none.'
+session_id: gm-drain-w1-292
+status: pending

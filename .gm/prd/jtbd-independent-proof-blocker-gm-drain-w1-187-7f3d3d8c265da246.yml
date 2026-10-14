@@ -1,0 +1,5 @@
+id: JTBD-INDEPENDENT-PROOF-blocker-gm-drain-w1-187
+subject: 'Blocker for JTBD-INDEPENDENT-PROOF: no independent COMPLETE re-check path exists'
+body: 'Parent row JTBD-INDEPENDENT-PROOF stays pending. SPECIFY receipt: .gm/receipts/JTBD-INDEPENDENT-PROOF/01-SPECIFY.md. Evidence: codesearch dispatch 1791958581004-500-463f2463945b9728 shows the COMPLETE closure gate ci-validated-fresh reads .gm/exec-spool/.ci-validated, which git_finalize writes (agent-authored marker). PROVE cannot pass. Next step: enumerate the 21 closure predicates in gm-config/fsm/predicates.md as marker-based or witness-based (leader probe), then design a witness-replayable re-check path in rs-plugkit and gm-config. Scope too large for one witness in this run.'
+session_id: gm-drain-w1-187
+status: pending

@@ -1,0 +1,5 @@
+id: INVEST-GCONTRACT-MEMORY-KIND-ENUM-blocker-gm-drain-w1-171-blocker-gm-drain-w2-246
+subject: 'Blocker: INVEST-GCONTRACT-MEMORY-KIND-ENUM-blocker-gm-drain-w1-171 refuted on live guest; memorize-fire enum is l0|l1, not user/feedback/project/reference'
+body: 'Row INVEST-GCONTRACT-MEMORY-KIND-ENUM-blocker-gm-drain-w1-171 asserts memorize-fire kind is the enum user/feedback/project/reference. Live probes (session gm-drain-w2-246, no store write): kind ''user'' dispatch 1791963010136-500-1e5c03b38f61c97d and kind ''other'' dispatch 1791963005368-500-3da08d2e7ff22129 are both refused with ''unknown memory kind; accepted tiers: l0, l1''. The enum exists but its domain is l0|l1. Closing needs the row owner to restate the domain as l0|l1 and a witness (kind ''l0'' accepted, ''other'' rejected) from another session. Receipts: .gm/receipts/INVEST-GCONTRACT-MEMORY-KIND-ENUM-blocker-gm-drain-w1-171/02-PROVE.md and 03-DECIDE.md.'
+session_id: gm-drain-w2-246
+status: pending

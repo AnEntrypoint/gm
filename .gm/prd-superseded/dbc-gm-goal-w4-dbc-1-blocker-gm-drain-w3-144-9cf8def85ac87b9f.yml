@@ -1,0 +1,8 @@
+id: DBC-gm-goal-w4-DBC-1-blocker-gm-drain-w3-144
+subject: 'BLOCK DBC-gm-goal-w4-DBC-1: leader is undeclared verb body (H2), fix needs cross-verb body-schema decision and bundle rebuild'
+status: pending
+body: 'Row DBC-gm-goal-w4-DBC-1 is blocked at PROVE by session gm-drain-w3-144. Live probes admitted bogus keys at top level (dispatch 1791971393201-500-61571c59a192628e) and in a codesearch body (dispatch 1791971400837-500-a2615b2547616205); cwd type check refuses. Leader H2: codesearch declares no body schema (gm-mcp/src/verb-bodies.js verbBodySchema declared:false), so refuseUndeclaredBodyKeys (gm-mcp/src/codemode.js) returns early. H1 (top-level zod strip) is rejected for verb-scoped keys. Needed: a separating probe on a declared-body verb (prd-list with a bogus key), then a decision to declare or refuse for undeclared verbs, a gm-mcp src change, a bundle rebuild, and a witness from another session. Receipt: .gm/receipts/DBC-gm-goal-w4-DBC-1/02-ELIMINATE-PROVE.md. Parent row stays pending.'
+session_id: gm-drain-w3-144
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

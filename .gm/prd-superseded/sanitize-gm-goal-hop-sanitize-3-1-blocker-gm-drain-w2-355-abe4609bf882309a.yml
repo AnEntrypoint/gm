@@ -1,0 +1,5 @@
+id: SANITIZE-gm-goal-hop-SANITIZE-3-1-blocker-gm-drain-w2-355
+subject: 'Blocker: SANITIZE-gm-goal-hop-SANITIZE-3-1 acceptance undefined; no sanitize stage spec and no judge to witness'
+body: 'Row SANITIZE-gm-goal-hop-SANITIZE-3-1 cannot close. Its absence claim holds (codesearch sanitize=0 and judge=0 in gm-mcp/src, dispatches 1791964280626-500-1064ded9e0734fe7 and 1791964308067-500-7ebc2a209b347e2c). Its acceptance requires a sanitize stage in gm-mcp/src on the reply path, but (1) the row does not define what the stage removes, and (2) no LLM judge exists to gate, so no live entry point can witness it. Also gm-mcp serves 0.2.45 while 0.2.47 is installed, so a gm-mcp source change needs a bundle rebuild first. Needed: a spec of the sanitize rules, the judge entry point, and a bundle rebuild path. Receipts: .gm/receipts/SANITIZE-gm-goal-hop-SANITIZE-3-1/01-SPECIFY.md and 02-PROVE.md.'
+session_id: gm-drain-w2-355
+status: pending

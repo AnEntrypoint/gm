@@ -1,0 +1,5 @@
+id: G_INDEP-VERIFIER-SESSION-EVIDENCE-blocker-gm-drain-w1-118
+subject: 'Blocked: G_INDEP-VERIFIER-SESSION-EVIDENCE cannot close in session gm-drain-w1-118'
+body: 'Row G_INDEP-VERIFIER-SESSION-EVIDENCE stays pending. SPECIFY and PROVE receipts: .gm/receipts/G_INDEP-VERIFIER-SESSION-EVIDENCE/01-SPECIFY.md and 02-PROVE.md. Findings: the only lean-walk file recording verifier_session_id is .gm/lean-walk/G_INDEP.json:5, and its value equals its own session_id (lean-hop-G_INDEP), so it does not witness independence; no P4 VERIFY-phase evidence file carries the field (codesearch 1791958106955-500-5a345a62f2e2d138). Closing needs: (a) the P4 evidence shape in gm-config/prose/lean-p4.md to require verifier_session_id, (b) an rs-plugkit validator change built in CI only (no local cargo), and (c) a fresh P4 verifier run in a session other than lean-hop-G_INDEP that writes the witness file. Acceptance witness: a P4 hop evidence file whose verifier_session_id differs from its session_id.'
+session_id: gm-drain-w1-118
+status: pending

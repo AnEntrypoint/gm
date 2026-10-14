@@ -1,0 +1,8 @@
+id: BLOCK-MEMORIZE-PRUNE-ENUM-blocker-gm-drain-w3-29
+subject: 'Blocker for BLOCK-MEMORIZE-PRUNE-ENUM: served-prose witness not yet possible; prose reduction landed on gm-config 0e90423 and rs-plugkit d550532 (CI green), runner not reloaded'
+body: 'Acceptance (c) edits landed: gm-config 0e90423c (ci-status 38541456181 success), rs-plugkit d5505327 merge of 8ce0002 (ci-status 38541895703 success), parent gm main 3f24585 with gitlink e3db1669 equal to rs-plugkit remote main. Still open: a witness from a session other than gm-drain-w1-20 and gm-drain-w2-16 showing the served prose with the reduced sentence. instruction dispatch 1791970047983-500-1c76803ba656e6b4 returned update_available null and did not carry the sentence. Unblock: the runner must load the rs-plugkit build that contains d5505327 (a published runner release or update_available naming it), then dispatch instruction for the entry-extended prose and check the single-sentence variants, then prd-resolve BLOCK-MEMORIZE-PRUNE-ENUM with witness_dispatch_id. Receipt: .gm/receipts/BLOCK-MEMORIZE-PRUNE-ENUM-blocker-gm-drain-w2-16/04-EDIT-gm-drain-w3-29.md'
+session_id: gm-drain-w3-29
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

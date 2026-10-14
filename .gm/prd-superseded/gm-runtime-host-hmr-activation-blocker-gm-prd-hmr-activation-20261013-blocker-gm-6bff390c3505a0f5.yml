@@ -1,0 +1,15 @@
+id: gm-runtime-host-hmr-activation-blocker-gm-prd-hmr-activation-20261013-blocker-gm-drain-w1-141
+subject: 'Blocked: gm-prd row gm-runtime-host-hmr-activation-blocker-gm-prd-hmr-activation-20261013 has no SPECIFY target; its named row gm-runtime-host-hmr-activation is absent'
+body: |-
+  gm-prd run session=gm-drain-w1-141 for row=gm-runtime-host-hmr-activation-blocker-gm-prd-hmr-activation-20261013.
+
+  SPECIFY cannot run. The row names gm-runtime-host-hmr-activation, and the requested row is itself a blocker row (subject 'Blocker: PRD row gm-runtime-host-hmr-activation is absent; gm-prd cannot SPECIFY', session gm-prd-hmr-activation-20261013).
+
+  Evidence:
+  - prd-list {id:'gm-runtime-host-hmr-activation'} -> error no PRD row, of 406 rows in .gm/prd/ or the resolved rows in .gm/prd-log.jsonl (dispatch 1791958313100-500-9631a0e03d7f6e5d).
+  - prd-list {id:'gm-runtime-host-hmr-activation-blocker-gm-prd-hmr-activation-20261013'} -> found, pending (dispatch 1791958311335-500-43a1b0aee73f5eca).
+  - codesearch literal 'hmr-activation' (dispatch 1791958321101-500-7acf68f77dffca0f): one hit, scripts/supply-codesearch-resolve-witness.mjs:11, a NAMED_IDS list entry. No source defines the runtime host HMR activation behavior.
+
+  Without a row body, acceptance, or file, there is no leader hypothesis, no ACH matrix and no witness that can bind. Required to unblock: a real row with id gm-runtime-host-hmr-activation (subject, acceptance, file) added with prd-add, or the blocker row retargeted to an existing row.
+session_id: gm-drain-w1-141
+status: pending

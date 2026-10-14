@@ -1,0 +1,8 @@
+id: BLOCK-MEMORIZE-PRUNE-ENUM-blocker-gm-drain-w2-16
+subject: 'Blocker for BLOCK-MEMORIZE-PRUNE-ENUM: acceptance (c) prose reduction needs a gm-config edit, vendored re-sync and CI wasm build'
+body: 'Acceptance (a) and (b) re-verified in session gm-drain-w2-16: PruneRequest enum at rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs/memory.rs:902-951, prune_candidates (memory.rs:1033) has no removal call and is reached only from the Review arm (memory.rs:955). Live query probe dispatch 1791959936798-500-2c1bae4ad22394b3 returned candidates only. Open part (c): gm-config/prose/entry-extended.md:52 still states both variants in one long sentence. Reducing it needs a gm-config edit, a re-sync into rs-plugkit/crates/plugkit-core/src/orchestrator/instructions/prose/ and a CI wasm build (local cargo blocked), then a served-instruction witness from a session other than gm-drain-w1-20 and gm-drain-w2-16. Receipts: .gm/receipts/BLOCK-MEMORIZE-PRUNE-ENUM/03-PROVE.md. Unblock: land the prose reduction through CI, then witness the served prose and prd-resolve BLOCK-MEMORIZE-PRUNE-ENUM.'
+session_id: gm-drain-w2-16
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

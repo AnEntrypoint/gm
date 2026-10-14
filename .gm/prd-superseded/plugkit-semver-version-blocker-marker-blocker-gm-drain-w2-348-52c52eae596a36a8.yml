@@ -1,0 +1,7 @@
+id: PLUGKIT-SEMVER-VERSION-BLOCKER-MARKER-blocker-gm-drain-w2-348
+subject: 'Blocked: PLUGKIT-SEMVER-VERSION-BLOCKER-MARKER-blocker-gm-drain-w1-240 needs an operator to replace ~/.gm-tools/gm-plugkit.version (non-semver "2.0.2576") or a semver gm release'
+status: pending
+blockedBy:
+- external
+body: 'Row PLUGKIT-SEMVER-VERSION-BLOCKER-MARKER-blocker-gm-drain-w1-240 cannot close in session gm-drain-w2-348. Probe (receipt .gm/receipts/PLUGKIT-SEMVER-VERSION-BLOCKER-MARKER-blocker-gm-drain-w1-240/02-PROVE.md, exec_js dispatch 1791964221134-500-d7b59b994d7701c) confirms H1: ~/.gm-tools/gm-plugkit.version is "2.0.2576", non-X.Y.Z, so local_dev_sideload_marker_path treats it as sideload. No repo file sets gm.version. Closing needs an operator to replace that marker outside the repo, or a semver gm release. Then split into PLUGKIT-SEMVER-VERSION-SET and PLUGKIT-SEMVER-UPDATE-WITNESS. Not replaced by this run.'
+session_id: gm-drain-w2-348

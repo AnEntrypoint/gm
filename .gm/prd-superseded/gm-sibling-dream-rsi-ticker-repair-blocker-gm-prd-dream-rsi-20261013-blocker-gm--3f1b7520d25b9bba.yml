@@ -1,0 +1,5 @@
+id: gm-sibling-dream-rsi-ticker-repair-blocker-gm-prd-dream-rsi-20261013-blocker-gm-drain-w1-142
+subject: 'Blocked: gm-prd SPECIFY for row gm-sibling-dream-rsi-ticker-repair-blocker-gm-prd-dream-rsi-20261013 cannot bind a witness because the parent row gm-sibling-dream-rsi-ticker-repair is absent'
+body: 'Session gm-drain-w1-142 ran gm-prd on row gm-sibling-dream-rsi-ticker-repair-blocker-gm-prd-dream-rsi-20261013. Its acceptance (sibling ticker emits a registered replay-cycle verb with valid replay identifiers; live spool witness shows a successful receipt without policy deployment) cites parent row gm-sibling-dream-rsi-ticker-repair. Evidence: prd-list {id:gm-sibling-dream-rsi-ticker-repair} dispatch 1791958321820-500-62079b69b87c2618 returns no row in .gm/prd/ or .gm/prd-log.jsonl. Receipt: .gm/receipts/gm-sibling-dream-rsi-ticker-repair-blocker-gm-prd-dream-rsi-20261013/01-SPECIFY.md. Needed from owner: rescope or restore the parent row id (prd-add with overwrite:true on the intended parent) so a leader hypothesis and witness can be bound. Until then the row stays pending.'
+session_id: gm-drain-w1-142
+status: pending

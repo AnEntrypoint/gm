@@ -1,0 +1,8 @@
+id: WADLER-VALUE-SIGNATURE-DREAMRSI-blocker-gm-drain-w2-482
+node: WADLER
+owner: rs-plugkit/crates/plugkit-core/src/orchestrator/dream_rsi.rs
+phase: P2
+subject: 'Blocker for WADLER-VALUE-SIGNATURE-DREAMRSI: row cannot close in one session (w2 re-run)'
+body: 'Parent row WADLER-VALUE-SIGNATURE-DREAMRSI stays pending. Session gm-drain-w2-482 re-read the row and receipt 01-SPECIFY.md. Stale and blocking facts: (1) row names observation_is_gate_drift_failure, absent from dream_rsi.rs; the real fn is failure_is_gate_drift at :400. (2) veto_reason at :609 is already typed on Strategy, so it is not a &Value input. (3) verify_record(kind, &Value) at :810 has ~12 call sites (878-1590) and needs a typed-struct refactor. (4) The compile proof is CI publish/release only (local cargo hook-blocked). (5) The witness must come from a session other than the editor; prd-resolve refuses self-witness. Needed to close: correct the parent row text to the real fn names and drop veto_reason, assign a separate editing session and a separate witness session, and run a CI build of rs-plugkit --features slim as the compile witness. Duplicates the w1 blocker WADLER-VALUE-SIGNATURE-DREAMRSI-blocker-gm-drain-w1-319, which stays pending.'
+session_id: gm-drain-w2-482
+status: pending

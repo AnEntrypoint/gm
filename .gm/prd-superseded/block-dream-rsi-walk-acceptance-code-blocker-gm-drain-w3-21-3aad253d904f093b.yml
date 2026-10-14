@@ -1,0 +1,7 @@
+id: BLOCK-dream-rsi-walk-acceptance-code-blocker-gm-drain-w3-21
+session_id: mcp-codemode-9708-1791969341817
+status: pending
+subject: 'Blocker for BLOCK-dream-rsi-walk-acceptance-code (run gm-drain-w3-21): ELIMINATE and EDIT cannot run in one session. The validator change needs an rs-plugkit commit on main, a CI-only wasm build (publish / release, step Build; local cargo blocked), a gm rs-plugkit gitlink bump, and a witness from a session other than the editor. Walk record shape is still unresolved (gm-hop SKILL.md). Receipt: .gm/receipts/BLOCK-dream-rsi-walk-acceptance-code-blocker-gm-drain-w1-18/01-SPECIFY.md'
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

@@ -1,0 +1,8 @@
+id: CODESEARCH-SYMBOL-ROUTE-RECALL-GAP-blocker-gm-drain-w1-49-blocker-gm-drain-w3-115
+subject: 'Rust fix for CODESEARCH-SYMBOL-ROUTE-RECALL-GAP unbuilt: edit search.rs and run the CI release, then witness from another session'
+body: 'Parent row CODESEARCH-SYMBOL-ROUTE-RECALL-GAP-blocker-gm-drain-w1-49 cannot close in session gm-drain-w3-115. Live check (dispatch 1791970624094-500-6fc6e0e96f1cecf2): codesearch_identifier at rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs/search.rs:2362 skips the substring pass when the whole-word pass finds a line (search.rs:2407 continue). Fix: run both passes and union the lines, deduplicated by path:line. Blocked on: no local cargo (hook), so the edit can only be checked by the rs-plugkit release run. Next steps, in order: (1) edit search.rs in rs-plugkit on main via gm git verbs; (2) await the publish run and cite its workflow result; (3) bump the gm rs-plugkit gitlink to the new sha; (4) a session other than gm-drain-w3-115 runs a live default codesearch symbol query for gate_repeat_escalate_threshold and must see fsm.rs:69 and fsm.rs:178. Receipt: .gm/receipts/CODESEARCH-SYMBOL-ROUTE-RECALL-GAP-blocker-gm-drain-w1-49/03-ELIMINATE.md.'
+session_id: gm-drain-w3-115
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

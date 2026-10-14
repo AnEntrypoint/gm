@@ -1,0 +1,8 @@
+id: G_CONTRACT-memory-kind-enum-blocker-gm-drain-w2-133
+subject: 'Blocker: G_CONTRACT-memory-kind-enum cited prose line is stale; code enum change is CI-only and tracked under INVEST-GCONTRACT-MEMORY-KIND-ENUM'
+blockedBy:
+- external
+body: "SPECIFY stage (session gm-drain-w2-133) for row G_CONTRACT-memory-kind-enum. Blocked: the row cannot close in this run.\n\nHypothesis H1 (leader): the row's cited prose sentence is stale, and the only live gap is the code gap (memorize-fire kind is free text, not a closed enum). \nHypothesis H2: the cited sentence still exists and only needs deleting.\nEvidence: codesearch literal 'Four memory types' over gm-config (count 0, exhaustive, 174 files) and over rs-plugkit (count 0, exhaustive, 381 files). gm-config/prose/entry-extended.md:46 now reads a different sentence (kind is a storage tier, not a memory type; memorize-fire passes it through as free text, code defaults it to l0 and l1). Rejects H2.\nCode evidence: rs-plugkit/crates/plugkit-core/src/orchestrator/dream_rsi.rs:516 lists memorize-fire in a match; no closed enum for kind found.\nProbe: a closed-enum change in rs-plugkit must be built with --features slim and verified by CI (publish / release, step Build) per the repo memory note; local cargo is blocked by a hook, so no live witness is reachable from this session.\nResult: the sentence is absent (stale citation) and the code change is unwitnessable here. Row stays pending.\nBlocker: the code target is tracked as INVEST-GCONTRACT-MEMORY-KIND-ENUM (pending). This blocker defers to that row; the row's cited prose line must be re-pointed or the row rescoped before it can close."
+session_id: gm-drain-w2-133
+status: pending
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

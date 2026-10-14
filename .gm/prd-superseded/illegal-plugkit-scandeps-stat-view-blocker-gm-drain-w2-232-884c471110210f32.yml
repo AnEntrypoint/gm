@@ -1,0 +1,5 @@
+id: ILLEGAL-PLUGKIT-SCANDEPS-STAT-VIEW-blocker-gm-drain-w2-232
+subject: 'Blocker for ILLEGAL-PLUGKIT-SCANDEPS-STAT-VIEW-blocker-gm-drain-w1-163: PROVE still needs a CI-built rs-plugkit guest and a cross-session witness'
+body: 'PROVE blocked again in session gm-drain-w2-232. SPECIFY re-verified the cited lines (scan_deps.rs:405 and :443 `.get("isDirectory")`, codesearch dispatch 1791962596574-500-2bc0e3235add9ae). PROVE cannot run here: local cargo is hook-blocked (gm-no-local-cargo-verified-by-ci); the witness needs an rs-plugkit commit on main in the nested repo, a parent gitlink bump, a green publish / release Build run, and a dispatch through agentplug-runner on that guest from a different session. Unblock: the parent row ILLEGAL-PLUGKIT-SCANDEPS-STAT-VIEW must be implemented and CI-built by a session that is not this one, then witnessed cross-session. Receipts: .gm/receipts/ILLEGAL-PLUGKIT-SCANDEPS-STAT-VIEW-blocker-gm-drain-w1-163/01-SPECIFY.md and 02-PROVE.md.'
+session_id: gm-drain-w2-232
+status: pending

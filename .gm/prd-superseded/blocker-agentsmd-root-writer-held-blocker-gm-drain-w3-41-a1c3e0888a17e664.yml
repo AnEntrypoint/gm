@@ -1,0 +1,8 @@
+id: BLOCKER-AGENTSMD-ROOT-WRITER-HELD-blocker-gm-drain-w3-41
+subject: 'Blocker for BLOCKER-AGENTSMD-ROOT-WRITER-HELD-blocker-gm-drain-w1-25: edits landed, but AGENTSMD-MOVE-WINDOWLESS-RULE still pending blocks the close'
+body: 'Session gm-drain-w3-41 DECIDE (receipt .gm/receipts/BLOCKER-AGENTSMD-ROOT-WRITER-HELD-blocker-gm-drain-w1-25/03-DECIDE-gm-drain-w3-41.md). The four root AGENTS.md edits are witnessed at HEAD 60eaaf7 with a clean tree: git_status 1791969737762-500-cacd2552b41df626; root windowless pointer at line 102 and agentplug/AGENTS.md rule at 113-118 (1791969734805-500-444d646985e1cc29, 1791969754967-500-503d4c680eb9377e); zero ''## Verified'' sections (1791969757925-500-9e0cf3f7e614498e); zero ensure_current/grounded-replay hits (1791969763732-500-ac909673410afc3d). Sibling rows DEDUP, DREAMRSI-SPLIT and PURGE are completed in the log. Remaining gate: AGENTSMD-MOVE-WINDOWLESS-RULE is still status pending in .gm/prd although its edits are present. Action for the next wave: a session other than lean-hop-AGENTSMD and gm-drain-w3-41 resolves AGENTSMD-MOVE-WINDOWLESS-RULE with a live witness (1791969734805-500-444d646985e1cc29 and 1791969754967-500-503d4c680eb9377e are the evidence), then resolves BLOCKER-AGENTSMD-ROOT-WRITER-HELD-blocker-gm-drain-w1-25 with a witness from a third session. Self-witness is refused, so this session cannot close either row.'
+session_id: gm-drain-w3-41
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

@@ -1,0 +1,5 @@
+id: PBTAGENT-gm-goal-hop-PBTAGENT-3-1-blocker-gm-fin-26-blocker-gm-drain-w1-234
+subject: 'Blocker for PBTAGENT-gm-goal-hop-PBTAGENT-3-1-blocker-gm-fin-26: gm-mcp still carries foreign uncommitted hunks (bin/gm-mcp-server.js, src/dispatch.js, src/release-bridge.js, src/self-update.js staged+modified) at head d6f5987d; singleton.js readStateFile fix cannot deliver src and bundle together and no cross-session witness is reachable from gm-drain-w1-234'
+body: 'Unblock: the owning gm-mcp writer commits or parks its hunks on main; then re-run row PBTAGENT-gm-goal-hop-PBTAGENT-3-1-blocker-gm-fin-26 from EMIT with a witness from a session other than gm-fin-26 and gm-drain-w1-234 (prd-resolve refuses self-witness). Witness shape: a live dispatch that reads readStateFile''s diagnostic on a truncated state file.'
+session_id: gm-drain-w1-234
+status: pending

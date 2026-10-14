@@ -1,0 +1,5 @@
+id: THINSLICE-PRECEDENCE-ENUM-blocker-gm-drain-w1-302
+subject: 'Blocker for THINSLICE-PRECEDENCE-ENUM: ordered tier enum and vendored-tier witness not closable in one run'
+body: 'Source already has Tier enum (rs-plugkit/crates/plugkit-core/src/config.rs:35) without an ordering derive, and skills/gm/SKILL.md section 0 (line 55) names no enum. Closing needs: (1) an rs-plugkit change with ordered variants (PartialOrd/Ord in declaration order) mapped to section 0 tiers, built only by CI (no local cargo); (2) the SKILL.md section 0 edit in the same change; (3) a released runner carrying the change and a project with a vendored override whose live instruction reports project_vendored. Current live instruction for C:/dev/gm reports fsm_graph.tier source_repo (dispatch 1791959570008-500-448fe1aac43e1f07), so the witness is not reachable now. Receipt: .gm/receipts/THINSLICE-PRECEDENCE-ENUM/01-SPECIFY.md. Session gm-drain-w1-302.'
+session_id: gm-drain-w1-302
+status: pending

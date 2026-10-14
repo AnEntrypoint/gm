@@ -1,0 +1,8 @@
+id: CLEANNAME-RS-PLUGKIT-blocker-gm-drain-w2-63
+subject: 'Blocked: CLEANNAME-RS-PLUGKIT cannot close in session gm-drain-w2-63'
+body: 'Parent row CLEANNAME-RS-PLUGKIT stays pending. Blocked at PROVE: (1) rs-plugkit crates/plugkit-core/Cargo.toml is modified by another writer (git_status 1791960197102-500-744cf9fae1b61fc2), so the one-writer precondition fails; (2) 6 of 9 cited code_index.rs lines are stale (re-checked dispatches 1791960180149-500-71661bc93287697a, 1791960181981-500-927bda19365ba320, 1791960183647-500-106638d90ba46704, 1791960185737-500-cd27a2e2a78be071); (3) the witness needs a --features slim wasm build, which local cargo cannot run here (gm-no-local-cargo-verified-by-ci.md), so no witness can bind the row. Receipts: .gm/receipts/CLEANNAME-RS-PLUGKIT/02-PROVE.md. Unblock: re-scope cites by name, wait for the Cargo.toml writer to land, then run the rename through CI and witness it from another session.'
+session_id: gm-drain-w2-63
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

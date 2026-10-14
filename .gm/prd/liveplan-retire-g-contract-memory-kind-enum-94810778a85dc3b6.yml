@@ -1,0 +1,9 @@
+id: LIVEPLAN-RETIRE-G-CONTRACT-MEMORY-KIND-ENUM
+title: 'Retire G_CONTRACT-memory-kind-enum: closes when enum and prose-removal rows close'
+description: 'G_CONTRACT-memory-kind-enum failed INVEST Small and was split into INVEST-GCONTRACT-MEMORY-KIND-ENUM and INVEST-GCONTRACT-MEMORY-PROSE-REMOVE. The parent plan outlived its task. Closing condition: INVEST-GCONTRACT-MEMORY-KIND-ENUM and INVEST-GCONTRACT-MEMORY-PROSE-REMOVE both closed, then G_CONTRACT-memory-kind-enum is closed as superseded.'
+retires: G_CONTRACT-memory-kind-enum
+closing_condition: INVEST-GCONTRACT-MEMORY-KIND-ENUM and INVEST-GCONTRACT-MEMORY-PROSE-REMOVE both closed
+node: LIVEPLAN
+phase: P1
+status: pending
+session_id: lean-node-LIVEPLAN

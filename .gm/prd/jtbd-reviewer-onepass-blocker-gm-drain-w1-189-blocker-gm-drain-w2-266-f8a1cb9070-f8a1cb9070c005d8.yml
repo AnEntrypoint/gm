@@ -1,0 +1,9 @@
+id: JTBD-REVIEWER-ONEPASS-blocker-gm-drain-w1-189-blocker-gm-drain-w2-266
+subject: 'Blocker for JTBD-REVIEWER-ONEPASS-blocker-gm-drain-w1-189: PROVE cannot close, the reviewer summary verb is absent and its rs-plugkit change needs a CI wasm build'
+witness: none
+body: 'Session gm-drain-w2-266, row JTBD-REVIEWER-ONEPASS-blocker-gm-drain-w1-189. SPECIFY (.gm/receipts/JTBD-REVIEWER-ONEPASS-blocker-gm-drain-w1-189/01-SPECIFY.md) leader H1: the verb is absent. Evidence: gm.list filter review returns [] (session gm-drain-w2-266); codesearch reviewer in gm-mcp/src 0 hits (dispatch 1791963097333-500-a0f6dfda1c1bf697); codesearch witness-log in rs-plugkit plugkit-core/src shows only prose, gate and append-only-guard hits, no summary verb (dispatch 1791963248066-500-50e1e2eee2761a27). PROVE needs a new verb in rs-plugkit/crates/plugkit-core (Rust, built only by CI with --features slim, no local cargo), a gm-mcp bundle rebuild, and a witness dispatch from another session. None of these run in this session, so the row cannot bind a witness here. Next action: a design row naming the verb (reviewer summary from prd-log, witness-log, git diff stat, ci-status), then a CI build and a cross-session witness of the leader probe (gm.list shows the verb and it returns net line delta, gates, witnesses, closed rows).'
+session_id: gm-drain-w2-266
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

@@ -1,0 +1,8 @@
+id: DREAMRSI-PROPOSE-SLICE-blocker-gm-drain-w1-74
+subject: 'Blocker for DREAMRSI-PROPOSE-SLICE: verb body exists but is unrouted in mod.rs; no cross-session witness'
+status: pending
+body: 'Row DREAMRSI-PROPOSE-SLICE cannot close in session gm-drain-w1-74. SPECIFY and PROVE receipts: .gm/receipts/DREAMRSI-PROPOSE-SLICE/01-SPECIFY.md and 02-PROVE.md. Correction to the prior blocker: dream-strategy-propose is not absent from source. propose_strategy (dream_rsi.rs:749) and handle_strategy_propose (dream_rsi.rs:781) exist under cfg(wasm32), dispatch 1791957679213-500-97635403649a25d7. The gap is that orchestrator/mod.rs has no route for dream-strategy-propose (only dream-replay-cycle at mod.rs:407, dispatch 1791957665860-500-fb432cdd28afb840). AGENTS.md requires five places per verb, so the route, gates, contract and README rows are still open. A witness needs a rebuilt guest (cargo is on PATH; the release build runs in CI) and a live dispatch from another session, since a self-witness is refused. Owner decision needed: authorize the rs-plugkit route change to be committed to main so the signed release ships it, then a cross-session witness runs the dispatch and the active-strategy.json byte-identity check. Unblocks DREAMRSI-PROPOSE-SLICE when witnessed.'
+session_id: gm-drain-w1-74
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

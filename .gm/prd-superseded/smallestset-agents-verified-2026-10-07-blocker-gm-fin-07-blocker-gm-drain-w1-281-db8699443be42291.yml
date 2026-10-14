@@ -1,0 +1,12 @@
+id: SMALLESTSET-AGENTS-VERIFIED-2026-10-07-blocker-gm-fin-07-blocker-gm-drain-w1-281
+subject: 'SMALLESTSET-AGENTS-VERIFIED-2026-10-07 blocker: cited AGENTS.md block absent, real block at docs/verified-incidents.md:123-129, witness path re-scope needed'
+row: SMALLESTSET-AGENTS-VERIFIED-2026-10-07-blocker-gm-fin-07
+body: |-
+  Row SMALLESTSET-AGENTS-VERIFIED-2026-10-07-blocker-gm-fin-07 cannot close as written. SPECIFY found its premise stale.
+  Findings (dispatch ids): prd-list id=SMALLESTSET-AGENTS-VERIFIED-2026-10-07 dispatch 1791959205811-500-9d7f5d7177e9f5d3 (phase P7, row asks to compact AGENTS.md lines 216-223 'Verified 2026-10-07' block, witness: block <= 5 lines, slim feature in rs-plugkit/Cargo.toml and gm.version in plugin metadata).
+  AGENTS.md is 134-135 lines and has no 'Verified 2026-10-07' block (codesearch literal in AGENTS.md dispatch 1791959211440-500-af6b23a6d211b00a: 0 matches). The block exists only at docs/verified-incidents.md:123-129 (codesearch dispatch 1791959218240-500-287c6dce49cf37c3).
+  The row's witness path is also off: 'slim' is absent from rs-plugkit/Cargo.toml (dispatch 1791959228030-500-54d7dacc0683f532). The feature is declared at rs-plugkit/crates/plugkit-core/Cargo.toml:13 (codesearch dispatch 1791959235706-500-e49e8455f82143af).
+  The block itself states gm.version is non-semver ('local-dev-sideload-body-parse-diagnostic'), so the 'restate the auto-update caveat' clause depends on a live version check not yet run.
+  Decision needed from the orchestrator: re-scope to docs/verified-incidents.md:123-129 (compact to <= 5 lines, witness: codesearch of the compacted block plus the slim feature at crates/plugkit-core/Cargo.toml). Until then this row stays pending. Re-scope with prd-add overwrite:true on the original SMALLESTSET-AGENTS-VERIFIED-2026-10-07 id, not on this blocker.
+session_id: gm-drain-w1-281
+status: pending

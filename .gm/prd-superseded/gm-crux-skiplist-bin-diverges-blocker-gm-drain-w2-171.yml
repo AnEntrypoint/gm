@@ -1,0 +1,6 @@
+id: gm-crux-skiplist-bin-diverges-blocker-gm-drain-w2-171
+subject: 'Blocker for gm-crux-skiplist-bin-diverges-blocker-gm-drain-w1-127: session gm-drain-w2-171 cannot reach a CI wasm rebuild, a submodule commit on agentplug-crux main, or a live crux ingest'
+severity: LOW
+body: 'Parent row: gm-crux-skiplist-bin-diverges-blocker-gm-drain-w1-127 (pending). SPECIFY: the cited line agentplug-crux/src/skiplist.rs:11 still lists "bin" in SKIP_DIRS, so the claim is not stale. PROVE: precondition NOT MET. The edit lives in the agentplug-crux submodule, whose HEAD is detached at 9cbae94 (not on main), so landing it needs a submodule commit on main and a parent gitlink bump. The crux wasm is rebuilt only in CI (local cargo is hook-blocked), so the postcondition (a live crux ingest of c:/dev/gm listing bin/gm-install.js) cannot run here. The leader probe does not run, so it does not separate H1 from H2 live. Receipts: .gm/receipts/gm-crux-skiplist-bin-diverges/01-SPECIFY.md and 02-PROVE.md. Next: a session with CI access moves agentplug-crux to main, commits the "bin" removal, bumps the pin, waits on the CI wasm build, then witnesses via ingest of c:/dev/gm and closes the parent row with prd-resolve citing that dispatch id.'
+session_id: gm-drain-w2-171
+status: pending

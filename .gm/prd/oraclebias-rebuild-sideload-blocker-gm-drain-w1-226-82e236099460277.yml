@@ -1,0 +1,5 @@
+id: ORACLEBIAS-REBUILD-SIDELOAD-blocker-gm-drain-w1-226
+subject: 'Witness ORACLEBIAS-REBUILD-SIDELOAD: served ORACLEBIAS rule needs a walk-reached node witness from another session'
+body: 'Row ORACLEBIAS-REBUILD-SIDELOAD cannot close here. Source (oraclebias.md:5) and both sideloaded wasm (~/.agentplug/plugins/gm.wasm 2026-10-14T06:17Z, ~/.gm-tools/plugkit.wasm 2026-10-13T19:21Z) contain the rule. Remaining: (a) served witness via instruction for the ORACLEBIAS node from a walk reaching it, from a session other than the row''s owner; (b) rs-plugkit rebuild is CI-only (publish / release Build step), local cargo is hook-blocked. Receipts: .gm/receipts/ORACLEBIAS-REBUILD-SIDELOAD/01-SPECIFY.md, 02-PROVE.md. Dispatches: 1791958908225-500-beee8dca38fb1e9a, 1791958930010-500-aed3f22cdc1b8e70.'
+session_id: gm-drain-w1-226
+status: pending

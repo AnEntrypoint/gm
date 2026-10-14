@@ -1,0 +1,5 @@
+id: SMALLESTSET-AGENTS-SIZE-HEADROOM-blocker-gm-drain-w2-408
+subject: 'Blocked: SMALLESTSET-AGENTS-SIZE-HEADROOM still open; AGENTS.md 29594 bytes, 9594 bytes of cuts remain, 2 dependency rows pending'
+body: 'Parent SMALLESTSET-AGENTS-SIZE-HEADROOM closes only at AGENTS.md below 20000 bytes with no Verified-dated heading. Measured this run: 29594 bytes (wc -c, gm-drain-w2-408). Gap 9594 bytes. SMALLESTSET-AGENTS-VERIFIED-2026-09-14 is resolved (prd-log). Still pending: SMALLESTSET-AGENTS-VERIFIED-2026-10-04 (5.3 KB), SMALLESTSET-AGENTS-VERIFIED-2026-10-07 (1.5 KB), and per the parent row -2026-10-05, -2026-10-08, SMALLESTSET-AGENTS-DREAMRSI-SECTION. Next: resolve those rows, each in its own gm-prd run, then re-measure and witness the parent. Receipt: .gm/receipts/SMALLESTSET-AGENTS-SIZE-HEADROOM-blocker-gm-drain-w1-275/01-SPECIFY.md.'
+session_id: gm-drain-w2-408
+status: pending

@@ -1,0 +1,5 @@
+id: G_CONTRACT-hook-denial-type-blocker-gm-drain-w1-95
+subject: 'BLOCKER for G_CONTRACT-hook-denial-type: hook denial typed-error contract cannot be witnessed in this run'
+session_id: gm-drain-w1-95
+body: 'Row G_CONTRACT-hook-denial-type stays pending. SPECIFY receipt: .gm/receipts/G_CONTRACT-hook-denial-type/01-SPECIFY.md. Leader hypothesis H1: gm-config/prose/entry.md (''Hook denials throw, never mutate'') describes a throw-based hook API, but rs-plugkit transitions.rs hook_outcome (lines 966-1035) reads the exec_js result as a bool and treats a throw as ExecFailed (broken hook). Closing needs: (a) a typed denial value with an instruction field and a loader rejection of args-object returns in rs-plugkit (Rust; wasm built only in CI, no local cargo); (b) gm-config prose and vendored orchestrator/instructions/prose/entry.md re-sync; (c) a live witness dispatch through a rebuilt wasm distinguishing a throw from a {} return. Next: owner builds the rs-plugkit change through the publish CI job, bumps the gitlink, then runs the PROVE probe on the live verb.'
+status: pending

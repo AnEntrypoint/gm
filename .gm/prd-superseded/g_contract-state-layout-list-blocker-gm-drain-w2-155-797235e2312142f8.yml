@@ -1,0 +1,8 @@
+id: G_CONTRACT-state-layout-list-blocker-gm-drain-w2-155
+subject: 'Blocker for G_CONTRACT-state-layout-list: no state-layout module exists, and the Rust refactor cannot be proven locally'
+body: 'Row G_CONTRACT-state-layout-list cannot close in session gm-drain-w2-155. Receipts: .gm/receipts/G_CONTRACT-state-layout-list/01-SPECIFY.md and 02-PROVE.md. Precondition fails: codesearch ''state layout'' returns 0 hits, and path constants are literal in about 20 rs-plugkit files (exec-spool, prd-log.jsonl, mutables-log.jsonl, gitignore.rs). Creating the module is a Rust change in rs-plugkit; local cargo is hook-blocked, so proof is CI-only (publish / release, step Build), and the witness must come from another session. Unblock: (a) owner confirms the module name and home (candidate: orchestrator/row_store.rs extended, or a new state_layout.rs); (b) a rs-plugkit session lands the module plus gitignore.rs as a consumer, with CI green; (c) a cross-session witness checks byte-identical paths and unchanged gitignore output; (d) a gm-config/prose/entry.md edit cites the module, via the vendored re-sync.'
+session_id: gm-drain-w2-155
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

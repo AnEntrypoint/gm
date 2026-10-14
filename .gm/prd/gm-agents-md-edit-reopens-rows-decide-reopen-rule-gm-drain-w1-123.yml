@@ -1,0 +1,5 @@
+id: gm-agents-md-edit-reopens-rows-decide-reopen-rule-gm-drain-w1-123
+subject: Decide and land reopen-to-pending for fingerprint-changed rows with no rerunnable witness
+body: 'Source row: gm-agents-md-edit-reopens-rows-blocker-gm-prd-agents-md-20261013. Change reopen_rows_for_changed_paths (rs-plugkit/crates/plugkit-core/src/orchestrator/prd.rs:1866) so a row whose rule_bindings fingerprint changed and whose witness is not rerunnable (no existing scripts/*.mjs|js|cjs) moves back to pending instead of staying completed with state not_rerunnable. Land it on rs-plugkit main only after reconciling its 2 unpushed commits (7d34666, aa3366d) with their owning lane, then bump the gm gitlink. Witness: edit a witnessed AGENTS.md rule in a scratch repo and see the row reopen (dispatch id required). Also run the live witness for 1b75240 (half 1) in the same scratch repo. Hypothesis to refute: the not_rerunnable branch is the only path leaving such a row completed (codesearch shows 3 call sites, all in prd.rs and git.rs).'
+session_id: gm-drain-w1-123
+status: pending

@@ -1,0 +1,5 @@
+id: THINSLICE-HORIZONTAL-NEED-SPLIT-blocker-gm-2e-fa19b3-w5-02-blocker-gm-drain-w2-441
+subject: 'Blocked: THINSLICE-HORIZONTAL-NEED-SPLIT-blocker-gm-2e-fa19b3-w5-02 has no named file, acceptance or witness; PROVE cannot run'
+body: 'Parent row THINSLICE-HORIZONTAL-NEED-SPLIT-blocker-gm-2e-fa19b3-w5-02 (session gm-2e-fa19b3-w5-02) is itself a blocker: it states the six needs need a multi-run plan. gm-prd refuses to guess a file. SPECIFY receipt: .gm/receipts/THINSLICE-HORIZONTAL-NEED-SPLIT-blocker-gm-2e-fa19b3-w5-02/01-SPECIFY.md. To close: (1) split into one row per need, each naming its file and witness command (rs-plugkit verb schema, gm-config type or prose deletion); (2) run each row through gm-prd in its own session with a CI witness. Filed by gm-drain-w2-441.'
+session_id: gm-drain-w2-441
+status: pending

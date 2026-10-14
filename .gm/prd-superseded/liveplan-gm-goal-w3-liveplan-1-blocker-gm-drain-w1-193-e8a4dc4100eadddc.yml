@@ -1,0 +1,5 @@
+id: LIVEPLAN-gm-goal-w3-LIVEPLAN-1-blocker-gm-drain-w1-193
+subject: 'Blocked: LIVEPLAN-gm-goal-w3-LIVEPLAN-1 cannot close in one run'
+body: 'Row acceptance is a store-wide sweep (close or retire stale pending rows, leaving only the current task) over 412 pending rows (prd-list dispatch 1791958620789-500-4119c5196ba20f5f; the witness counts 276/264 are stale). Its closing condition needs INVEST-EARS-DOC-PATHS-EXIST and INVEST-EARS-DOC-NO-REMOVED-VERBS closed, both pending. The row file .gm/prd/LIVEPLAN-gm-goal-w3-LIVEPLAN-1.yml is absent on disk. No closing witness exists and the sweep was not executed. Stage receipt: .gm/receipts/LIVEPLAN-gm-goal-w3-LIVEPLAN-1/01-SPECIFY.md. Needs a retire-wave row that names the keep-list and its per-row witness.'
+session_id: gm-drain-w1-193
+status: pending

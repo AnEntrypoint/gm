@@ -1,0 +1,5 @@
+id: THINSLICE-SESSIONID-ALIAS-blocker-gm-drain-w2-453
+subject: 'Blocker for THINSLICE-SESSIONID-ALIAS: alias sentence persists in rs-plugkit served prose'
+body: 'Blocks THINSLICE-SESSIONID-ALIAS. SPECIFY receipt: .gm/receipts/THINSLICE-SESSIONID-ALIAS/01-SPECIFY.md. The named targets (skills/gm/SKILL.md section 1, gm-config/prose/entry.md) hold no alias sentence (stale). Live probes under session_id, sessionId and SESSION_ID all return ok (dispatches 1791967039452-500-5d76ad36d4b322d6, 1791967041330-500-cf6a85f5dee39ca, 1791967043212-500-1c6b3cf97a27ddb8). The sentence still exists at rs-plugkit/crates/plugkit-core/src/orchestrator/instructions/prose/entry.md line 150. Resolution needs the row re-scoped to that file, with an rs-plugkit rebuild (--features slim) witnessed through CI, before the grep witness can bind honestly.'
+session_id: gm-drain-w2-453
+status: pending

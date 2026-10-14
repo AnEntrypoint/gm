@@ -1,0 +1,9 @@
+id: G_CONTRACT-recall-index-single-writer-blocker-gm-drain-w2-143
+subject: 'Blocked: G_CONTRACT-recall-index-single-writer needs a rs-plugkit single-writer reroute, a CI-built wasm and a cross-session witness'
+priority: normal
+body: 'Row G_CONTRACT-recall-index-single-writer cannot close in session gm-drain-w2-143. Census (codesearch rssearch_vectors, rs-plugkit/crates, exhaustive, dispatch 1791961041201-500-f03ec450a04d72c6): rssearch_vectors::write is reached from orchestrator/memorize.rs:315,:679, memory_md.rs:783 (sync_index), wasm_dispatch/verbs/memory.rs:544; mark_deleted/undelete from memory_md.rs:732,:869,:901,:1049 and memory.rs:890. The single-writer premise is false on current code. Closing needs: (a) a decision whether sync_index is a legitimate reconciler or must route through memorize-fire (mutable), (b) a rs-plugkit reroute built only in CI (publish / release), (c) a witness from another session. Receipt: .gm/receipts/G_CONTRACT-recall-index-single-writer/01-SPECIFY-gm-drain-w2-143.md. Prior blockers for this row (BLOCK-RECALL-INDEX-SINGLE-WRITER-blocker-gm-drain-w2-18) state the same gap.'
+session_id: gm-drain-w2-143
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

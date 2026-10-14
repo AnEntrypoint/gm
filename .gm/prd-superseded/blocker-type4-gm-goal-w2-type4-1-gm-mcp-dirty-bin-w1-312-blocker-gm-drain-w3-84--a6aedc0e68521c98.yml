@@ -1,0 +1,8 @@
+id: BLOCKER-TYPE4-gm-goal-w2-TYPE4-1-gm-mcp-dirty-bin-w1-312-blocker-gm-drain-w3-84
+subject: 'Blocked: gm-mcp rebuild still needs an exclusive tree; PROVE precondition fails (session gm-drain-w3-84)'
+body: 'Parent row: BLOCKER-TYPE4-gm-goal-w2-TYPE4-1-gm-mcp-dirty-bin-w1-312 (blocker session gm-drain-w2-46, open). Witness of current state: git_status dispatch 1791970250295-500-2dedf03538ad755f on C:\dev\gm\gm-mcp returns branch main, dirty: true, 21 modified, 4 staged (AGENTS.md, bin/gm-mcp-server.js, src/self-update.js, src/verb-table.js), 1 untracked (src/spool-store.js). Modified set spans src/bundle-refresh.js, src/bundle-version.js, src/cli.js, src/codemode.js, src/dev-sync.js, and more: foreign-lane writes remain, so the PROVE precondition (exclusive tree) fails and committing bin/gm-mcp-server.js or the TYPE4-1 files would bundle other writers'' hunks. Leader hypothesis (writer contention, not a code defect) is confirmed by this witness. Unblock: the owning lanes commit or park their gm-mcp src edits on main, then rerun the parent row. Not closable in session gm-drain-w3-84.'
+session_id: gm-drain-w3-84
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

@@ -1,0 +1,5 @@
+id: SLAP-gm-goal-w4-SLAP-2-blocker-gm-fin-12-r2
+subject: 'SLAP-2 still blocked: gm-mcp working tree held by another writer (r2 of gm-fin-12)'
+body: 'Re-checked at dispatch 1791959046034-500-c0def8e0f0d179f4 and 1791959041870-500-1f1f424f8b4ecebe. gm-mcp has 9 modified paths and a staged src/self-update.js from another writer; fileSha256 is absent from gm-mcp/src. Row SLAP-gm-goal-w4-SLAP-2 cannot be applied without overwriting that writer''s hunks. Unblock: the gm-mcp writer commits its set (or hands the paths over), then re-apply the patch from .gm/receipts/SLAP-gm-goal-w4-SLAP-2/03-EMIT.md, rebuild bin/gm-mcp-server.js in the same commit, and witness with codesearch plus a live dispatch.'
+session_id: gm-drain-w1-252
+status: pending

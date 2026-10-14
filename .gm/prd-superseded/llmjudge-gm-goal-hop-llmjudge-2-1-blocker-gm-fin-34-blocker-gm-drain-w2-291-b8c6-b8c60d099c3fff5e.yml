@@ -1,0 +1,5 @@
+id: LLMJUDGE-gm-goal-hop-LLMJUDGE-2-1-blocker-gm-fin-34-blocker-gm-drain-w2-291
+subject: 'Blocked: owner must choose the LLM judge design before EMIT (gm-drain-w2-291)'
+body: 'Row LLMJUDGE-gm-goal-hop-LLMJUDGE-2-1-blocker-gm-fin-34 cannot close. SPECIFY receipt: .gm/receipts/LLMJUDGE-gm-goal-hop-LLMJUDGE-2-1-blocker-gm-fin-34/01-SPECIFY.md. Gap confirmed: codesearch regex judge|rubric|llm over gm-mcp/src has 0 matches (dispatch 1791963406321-500-ea0992ba4869de6a). Owner must decide: judge model, call site (in-band per reply or sampled audit), cost and latency budget, and the action on a failing verdict. The witness must be a live dispatch from a session other than gm-fin-34. Unblocks when the owner records those choices; then the parent LLMJUDGE-gm-goal-hop-LLMJUDGE-2-1 proceeds to EMIT.'
+session_id: gm-drain-w2-291
+status: pending

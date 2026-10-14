@@ -1,0 +1,5 @@
+id: PARNAS-gm-goal-w4-PARNAS-2-blocker-gm-drain-w2-329
+subject: 'Blocked: PARNAS-gm-goal-w4-PARNAS-2 still needs gm-mcp dispatch.js, release-bridge.js and self-update.js while foreign WIP holds them'
+body: 'Parent blocker PARNAS-gm-goal-w4-PARNAS-2-blocker-gm-drain-w1-230 re-checked in session gm-drain-w2-329. SPECIFY leader: the premise holds, the parent cannot EMIT without shipping another writer''s uncommitted hunks. Live witness: git_status dispatch 1791963884229-500-ba35e986f2a9bfc on C:\dev\gm\gm-mcp shows modified dispatch.js, src/bundle-refresh.js, src/codemode.js, src/dev-sync.js and others, staged src/self-update.js, untracked src/spool-store.js. Unblock requires the owning writer to commit or release those hunks, or an owner decision to scope PARNAS-2 to new files only. Bundle is also stale (served 0.2.45, installed 0.2.47). Re-run the parent after the gm-mcp tree is clean.'
+session_id: gm-drain-w2-329
+status: pending

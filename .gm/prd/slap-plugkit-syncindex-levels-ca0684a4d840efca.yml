@@ -1,0 +1,8 @@
+id: SLAP-PLUGKIT-SYNCINDEX-LEVELS
+title: 'SLAP: separate memory_md sync_index namespace loop from per-namespace reconciliation'
+description: 'rs-plugkit/crates/plugkit-core/src/memory_md.rs sync_index (line 689, 395 lines) mixes budget resolution, shadow-row recovery, the namespace loop with manifest and corpus scanning, stored-hash reconciliation with deletions, and the converged and partial digest accounting. Scope: this function. Change: a reconcile_namespace function per namespace returning its report and convergence flag, with sync_index owning the budget clock and the loop. Behaviour unchanged: the report JSON keys, :partial digest semantics and budget_ms bounds stay identical. Witness: cargo build of rs-plugkit, then a live memory sync dispatch returning the same report keys.'
+node: SLAP
+phase: P3
+status: pending
+source: lean-hop-SLAP
+session_id: lean-hop-SLAP

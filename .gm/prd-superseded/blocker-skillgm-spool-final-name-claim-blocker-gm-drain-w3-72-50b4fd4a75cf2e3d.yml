@@ -1,0 +1,8 @@
+id: BLOCKER-SKILLGM-spool-final-name-claim-blocker-gm-drain-w3-72
+subject: 'Blocked: spool final-name claim fix still unshipped; needs agentplug claim_dispatch.rs change plus cross-session witness'
+status: pending
+body: 'Parent row BLOCKER-SKILLGM-spool-final-name-claim-blocker-gm-drain-w1-36 (session gm-drain-w3-72). Receipt: .gm/receipts/BLOCKER-SKILLGM-spool-final-name-claim-blocker-gm-drain-w1-36/04-DECIDE.md. claim_dispatch.rs:370-412 still accepts the verb extension and txt and renames whole files; skills/gm/SKILL.md has no temp-then-mv text. Next: locate writer temp suffix via codesearch, fix agentplug claim path on main, push, witness from another session.'
+session_id: gm-drain-w3-72
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

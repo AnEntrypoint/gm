@@ -1,0 +1,5 @@
+id: gm-stale-mcp-bundle-restart-blocker-gm-prd-stale-mcp-20261013-blocker-gm-drain-w1-143
+subject: 'Blocker: gm-prd cannot SPECIFY row gm-stale-mcp-bundle-restart-blocker-gm-prd-stale-mcp-20261013; its parent row gm-stale-mcp-bundle-restart is absent'
+body: 'Session gm-drain-w1-143 ran gm-prd for row gm-stale-mcp-bundle-restart-blocker-gm-prd-stale-mcp-20261013. SPECIFY: prd-list {id:''gm-stale-mcp-bundle-restart''} returns ''no PRD row with id ... of the 407 rows in .gm/prd/ or the resolved rows in .gm/prd-log.jsonl'' (dispatch 1791958348390-500-6ca3f9f028ff6043). codesearch regex for stale-mcp, bundle-restart over C:/dev/gm/gm-mcp returns 0 hits (dispatch 1791958350697-500-db75bfba82e4f45). The target row''s own text says the parent row is absent. A row name absent from .gm/prd/ and the log cannot be resolved, so PROVE/EMIT/COMPLETE cannot run. Outcome: the blocker row stays pending. Needed: either the parent row is re-scoped with prd-add under id gm-stale-mcp-bundle-restart with its acceptance and file, or the blocker is closed by a witness from another session that confirms the parent never existed.'
+session_id: gm-drain-w1-143
+status: pending

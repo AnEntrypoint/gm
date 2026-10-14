@@ -1,0 +1,5 @@
+id: PBTAGENT-gm-goal-hop-PBTAGENT-2-1-blocker-gm-drain-w2-333
+subject: 'Blocked: PBTAGENT-gm-goal-hop-PBTAGENT-2-1 still gated by HUGHES-gm-goal-hop-HUGHES-2-2 (pending, no witness); row PBTAGENT-gm-goal-hop-PBTAGENT-2-1-blocker-gm-drain-w1-232 cannot close'
+body: 'Re-checked in session gm-drain-w2-333. Owner decision HUGHES-gm-goal-hop-HUGHES-2-2 is still status pending with no witness (prd-list dispatch 1791963891560-500-14121d86738176b2). Parent PBTAGENT-gm-goal-hop-PBTAGENT-2-1 is pending with no witness (dispatch 1791963896766-500-96cc7a7b6026108d). Receipt: .gm/receipts/PBTAGENT-gm-goal-hop-PBTAGENT-2-1-blocker-gm-drain-w1-232/01-SPECIFY.md. Unblock: the owner records a decision on HUGHES-gm-goal-hop-HUGHES-2-2 (allow or refuse a generated-input check in gm-mcp). Until then no witness can bind the row.'
+session_id: gm-drain-w2-333
+status: pending

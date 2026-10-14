@@ -1,0 +1,4 @@
+id: DAEMON-IDLE-DISK-WRITE-25MBS-BLOCKER
+subject: 'DAEMON-IDLE-DISK-WRITE-25MBS not met: PhysicalDisk write rate stays ~28 MB/s idle after the agentplug writer fix (agentplug 699bc4c, runner 0.1.223 local build). Measured: before 28.39 MB/s, after 28.39 MB/s over 20 s (Get-Counter PhysicalDisk(_Total) Disk Write Bytes/sec). Per-process write counters attribute under 1 MB/s total to all processes, including agentplug-runner at about 0.06 MB/s, so the daemon''s own file writes are not the measured source. Next: attribute the PhysicalDisk writes below process level (ETW or Resource Monitor disk view) before further writer changes.'
+session_id: lean-exec-daemon-agentplug
+status: pending

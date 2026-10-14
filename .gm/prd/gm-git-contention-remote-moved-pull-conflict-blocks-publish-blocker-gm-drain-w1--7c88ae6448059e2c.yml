@@ -1,0 +1,5 @@
+id: gm-git-contention-remote-moved-pull-conflict-blocks-publish-blocker-gm-drain-w1-129
+subject: 'Blocker: witness for remote_moved plus conflicted pull needs a shared-tree publish that CONC forbids'
+body: 'Parent row: gm-git-contention-remote-moved-pull-conflict-blocks-publish. Session gm-drain-w1-129. Receipts: .gm/receipts/gm-git-contention-remote-moved-pull-conflict-blocks-publish/01-SPECIFY.md and 02-PROVE.md. Blocker: the acceptance witness must drive a lane from a live remote_moved plus conflicted-pull state to a pushed sha. Reproducing that state requires moving origin/main or pushing another writer''s dirty submodule pins (gm-config, gm-mcp, rs-plugkit, agentplug-libsql, rs-codeinsight) and .gm state files, which gm-prd step 5 forbids. Gap confirmed: skills/gm-orchestrate/SKILL.md has no `conflicted` text; line 114 covers only the dirty-tree remote_moved case. Needed to close: a sandboxed remote_moved reproduction (throwaway repo under the scratch directory, not c:/dev/gm) plus the skill edit naming the combined sequence, or a lane with exclusive c:/dev/gm git ownership to drive the live witness.'
+session_id: gm-drain-w1-129
+status: pending

@@ -1,0 +1,12 @@
+id: G_CONTRACT-continuation-terminal-rule-blocker-gm-drain-w1-87
+subject: 'Blocker for G_CONTRACT-continuation-terminal-rule: the terminal reply field is an rs-plugkit change, not closable by a cross-session witness in this run'
+body: |-
+  Row: G_CONTRACT-continuation-terminal-rule. Session gm-drain-w1-87. Receipt: .gm/receipts/G_CONTRACT-continuation-terminal-rule/01-SPECIFY.md.
+
+  SPECIFY: cited prose present at gm-config/prose/entry.md:53 and :55 (dispatches 1791957809133-500-b6b00da93a30fd76, 1791957813610-500-ad808b30723421cd). Vendored copy at rs-plugkit/crates/plugkit-core/src/orchestrator/instructions/prose/entry.md:48.
+
+  Blocked on PROVE: H1 (terminal reply carries no next-dispatch field) cannot be separated from H2 without a live terminal transition reply at phase G_FIXPOINT with prd_pending 0, which this run cannot reach. The acceptance needs an rs-plugkit Rust change to the orchestrator transition reply, built only by CI (local cargo blocked), plus a gm-config prose edit mirrored into the vendored rs-plugkit prose, and a witness from another session.
+
+  What would close it: a live terminal transition reply from a walk in another session, reading whether a next_dispatch field exists; if absent, a reviewed rs-plugkit change and CI release, then witness from a third session.
+session_id: gm-drain-w1-87
+status: pending

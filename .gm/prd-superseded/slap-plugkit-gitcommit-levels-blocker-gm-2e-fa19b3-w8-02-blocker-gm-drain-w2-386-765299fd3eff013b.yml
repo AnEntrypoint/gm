@@ -1,0 +1,5 @@
+id: SLAP-PLUGKIT-GITCOMMIT-LEVELS-blocker-gm-2e-fa19b3-w8-02-blocker-gm-drain-w2-386
+subject: 'blocker: SLAP-PLUGKIT-GITCOMMIT-LEVELS-blocker-gm-2e-fa19b3-w8-02-blocker-gm-drain-w1-265 cannot close in session gm-drain-w2-386'
+body: 'Row SLAP-PLUGKIT-GITCOMMIT-LEVELS-blocker-gm-2e-fa19b3-w8-02-blocker-gm-drain-w1-265 (parent SLAP-PLUGKIT-GITCOMMIT-LEVELS) still cannot reach COMPLETE. Its refactor (CommitArgs in rs-plugkit git.rs git_commit) has not landed: codesearch CommitArgs returns 0 hits. Closing needs: edit git.rs, run the rs-plugkit CI release (local cargo is hook-blocked), bump the parent gitlink on main, then witness git_commit {message:""} and the paths-type-error dispatch from a second session. Receipts: .gm/receipts/SLAP-PLUGKIT-GITCOMMIT-LEVELS-blocker-gm-2e-fa19b3-w8-02-blocker-gm-drain-w1-265/01-SPECIFY.md, 02-PROVE.md, 03-STOP.md, 04-STOP.md.'
+session_id: gm-drain-w2-386
+status: pending

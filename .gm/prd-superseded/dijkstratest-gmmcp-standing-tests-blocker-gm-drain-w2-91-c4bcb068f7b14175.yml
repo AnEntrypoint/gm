@@ -1,0 +1,15 @@
+id: DIJKSTRATEST-GMMCP-STANDING-TESTS-blocker-gm-drain-w2-91
+subject: 'Blocked: DIJKSTRATEST-GMMCP-STANDING-TESTS cannot close in session gm-drain-w2-91'
+body: |-
+  Parent row: DIJKSTRATEST-GMMCP-STANDING-TESTS. Receipts: .gm/receipts/DIJKSTRATEST-GMMCP-STANDING-TESTS/01-SPECIFY.md (w1-71), 02-PROVE.md (this session).
+
+  1. Precondition fails: gm-mcp tree is not exclusive. git_status 1791960412754-500-62a046db653ce995 shows 12 modified, 1 staged, 1 untracked from other writers. Deleting test/ and editing package.json, then rebuilding the committed bundle, would enter their WIP.
+  2. Scope: about 250 assertions across 18 test files must each become an exec_js probe. Not closable in one run. Row count is stale (20 files in test/, not nine plus two).
+  3. No probe has run; the witness must come from another session after the gm-mcp tree is quiet.
+
+  Next: decompose into per-file probe rows (one per test file), then witness each from another session.
+session_id: gm-drain-w2-91
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

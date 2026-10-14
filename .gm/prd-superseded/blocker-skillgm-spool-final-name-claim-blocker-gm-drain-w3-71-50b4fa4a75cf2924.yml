@@ -1,0 +1,7 @@
+id: BLOCKER-SKILLGM-spool-final-name-claim-blocker-gm-drain-w3-71
+subject: 'Blocker for BLOCKER-SKILLGM-spool-final-name-claim: claim_dispatch.rs sweep (daemon/claim_dispatch.rs ~L1620-1650) quarantines non-conforming names in in/<verb>/ instead of ignoring sibling temp names. Change the claim sweep to skip dot-prefixed temp names (e.g. .<N>.<ext>.tmp), rebuild agentplug-runner, witness a live spool dispatch with a temp sibling present, then cut the temp-then-mv rule from skills/gm/spool-adapter.md:17 and skills/gm/docs/verbs.md:33 to the claim outcome.'
+status: pending
+blockedBy:
+- external
+session_id: mcp-codemode-9708-1791970363015
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

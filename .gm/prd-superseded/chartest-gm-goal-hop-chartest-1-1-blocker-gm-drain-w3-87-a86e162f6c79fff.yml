@@ -1,0 +1,8 @@
+id: CHARTEST-gm-goal-hop-CHARTEST-1-1-blocker-gm-drain-w3-87
+subject: 'Blocked: CHARTEST-gm-goal-hop-CHARTEST-1-1 witness needs gm-mcp/test files that no-synthetic-test-files forbids (owner decision)'
+body: 'Session gm-drain-w3-87 ran gm-prd on row CHARTEST-gm-goal-hop-CHARTEST-1-1-blocker-gm-drain-w1-39. That row asks for an owner decision and states its default: no test file is written, row stays blocked. Confirmed here: the parent CHARTEST-gm-goal-hop-CHARTEST-1-1 acceptance is node --test over gm-mcp/test, which needs standing test files, and AGENTS.md Verification falsifies any test file in the delivered paths. Owner choice required: (a) re-scope the parent to a live exec_js characterization run with no standing file, witnessed by the pinned outputs of gm-mcp/src/self-update.js and gm-mcp/src/release-bridge.js, or (b) explicitly lift the no-test-file rule for gm-mcp/test. Until one is chosen, no leader hypothesis can be witnessed without violating the rule. Blocker of: CHARTEST-gm-goal-hop-CHARTEST-1-1-blocker-gm-drain-w1-39.'
+session_id: gm-drain-w3-87
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

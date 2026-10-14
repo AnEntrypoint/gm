@@ -1,0 +1,8 @@
+id: DBC-gm-goal-w4-DBC-1-blocker-gm-drain-w1-63-blocker-gm-drain-w2-79
+subject: 'BLOCKER DBC-gm-goal-w4-DBC-1-blocker-gm-drain-w1-63: codemode declared-body-key fix cannot publish or witness in shared gm-mcp tree'
+body: 'Row DBC-gm-goal-w4-DBC-1-blocker-gm-drain-w1-63 (session gm-drain-w2-79) stopped at CONC and the live witness. Edit in gm-mcp/src/codemode.js (refuseUndeclaredBodyKeys, called from bindings.call after foldVerbArgs) and rebuilt bin/gm-mcp-server.js exist uncommitted. gm-mcp has other writers'' hunks (src/dispatch.js, http-transport.js, index.js, self-update.js, spool-store.js, others), so git_finalize of this run''s files alone is not allowed. Still needed: a single writer to commit codemode.js plus the matching bin/gm-mcp-server.js; restart the live gm-mcp so it runs the new code; cross-session witness from a session other than gm-goal-w4-DBC showing a refused bogus body key and an admitted declared key. Receipt: .gm/receipts/DBC-gm-goal-w4-DBC-1-blocker-gm-drain-w1-63/01-SPECIFY.md.'
+session_id: gm-drain-w2-79
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

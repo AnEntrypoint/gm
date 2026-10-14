@@ -1,0 +1,5 @@
+id: SLAP-PLUGKIT-CHECKDISPATCH-LEVELS-blocker-gm-drain-w1-262
+subject: 'Blocked: SLAP-PLUGKIT-CHECKDISPATCH-LEVELS cannot close in session gm-drain-w1-262'
+body: 'Blocker for SLAP-PLUGKIT-CHECKDISPATCH-LEVELS (row stays pending). SPECIFY passed: check_dispatch is at rs-plugkit/crates/plugkit-core/src/gates.rs:466-774 (row cited line 404, stale). PROVE cannot run: the row witness needs a local cargo build of rs-plugkit (blocked by a local hook; rs-plugkit verifies by CI only) and a live shell git dispatch against a CI-built guest from another session (self-witness refused). Unblock: a CI-built rs-plugkit guest and a cross-session witness dispatch for the denied shell git command, after the three-way split lands. Receipt: .gm/receipts/SLAP-PLUGKIT-CHECKDISPATCH-LEVELS/01-SPECIFY.md.'
+session_id: gm-drain-w1-262
+status: pending

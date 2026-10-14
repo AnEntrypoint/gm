@@ -1,0 +1,9 @@
+id: GM-GREP-HEAD-LIMIT-FRICTION-blocker-gm-drain-w2-183
+subject: 'Witness pending for GM-GREP-HEAD-LIMIT-FRICTION: fix published, release CI in progress, pin and live witness not yet done'
+witness: 'grep with head_limit currently fails: dispatch 1791961572109-500-b32572225ac47d33'
+body: 'Hypothesis H1 (leader, SPECIFY): GREP_ACCEPTED_FIELDS and GREP_LIMIT_FIELDS in rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs/search.rs omit head_limit, so refuse_unknown_fields rejects it. Probe: live grep with head_limit before the fix returned unknown_fields [head_limit] (dispatch 1791961572109-500-b32572225ac47d33); codesearch already aliases head_limit (verb-table.js:226, search.rs:842) so H2 (gm-mcp wrapper strips it) is refuted. Change: head_limit added to both constants. Published: rs-plugkit main 25d8d2cc0f39dcf7768238630f6ff2d68c215797 (dispatch 1791961799313-500-1196b9082d32115a). CI: native-check success; release publish/release in_progress (ci-status dispatch 1791961819261-500-2347ad2a4958fa82). Still open: (1) wait for release, bump gm rs-plugkit gitlink to the published tip, (2) runner must load the new wasm, then live grep with head_limit:5 must succeed (witness dispatch id needed). (3) Local rs-plugkit checkout is diverged (stranded local commit 4b8e4c5 vs remote 25d8d2c, plus out-of-scope commits from another lane on the stranded commit). Not reset here: a reset would discard another lane''s commits; owner must reconcile via git_pull or a reviewed reset.'
+session_id: gm-drain-w2-183
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'
