@@ -52,9 +52,9 @@ Sections: 0 Precedence, 1 Harness (1a supply chain, 1b meta-graph, 1c routing, 1
 
 ## 0. Precedence
 
-Live response (gate denial, residual, `instruction`/`phase-status`, `entry` prose) > project `.gm/` vendored config > config-source repo > compiled default > Section 2 > Section 3. Higher tiers replace lower, never merge. Where this file contradicts served text, served text wins. Report the contradiction in one line. Section 4's world-scope is the sole exception.
+Live response (gate denial, residual, `instruction`/`phase-status`, `entry` prose) outranks every other tier. Higher tiers replace lower, never merge. Where this file contradicts served text, served text wins. Report the contradiction in one line. Section 4's world-scope is the sole exception.
 
-The config-file part of this order is the `Tier` enum (`config::Tier`, `rs-plugkit/crates/plugkit-core/src/config.rs`), whose variants in resolution order are `ProjectVendored`, `ProjectRepoSpec`, `UserRepoSpec`, `ImplicitDefaultRepo`, `BuiltinDefault`. The live-response, Section 2 and Section 3 tiers are skill prose outside that enum.
+The config tiers are the `Tier` enum (`config::Tier`, `rs-plugkit/crates/plugkit-core/src/config.rs`), ordered by declaration, which is resolution order. Section 2 and Section 3 are skill prose below the enum's last variant.
 
 ## 1. Harness
 
