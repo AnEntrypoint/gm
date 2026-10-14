@@ -2,3 +2,4 @@ id: BLOCKER-SKILLGM-spool-inname-validation
 subject: 'Blocker for G_CONTRACT-spool-claim-key-session-prefix: daemon rejects in-file names that are bare integers or lack the <session_id>-<N> prefix with a named error, and mints subagent session ids itself (<parent>-sub<k>); then reduce skills/gm/SKILL.md claim-key sentence to the outcome. Prose stays until this lands.'
 session_id: lean-exec-skillgm-1
 status: pending
+blocked_by: 'BLOCKER-SKILLGM-spool-inname-validation-blocker-gm-drain-w1-37 (open): needs a CI-built agentplug-runner (local cargo hook-blocked) to land the named reply for bare-integer in-file names (claim_dispatch.rs:1645) and the daemon <parent>-sub<k> mint (no source, codesearch -sub{} 0 hits, dispatch 1791975814129-500-712ad214bd249f7d); verb that supplies it: gm git_finalize on agentplug main, then ci-status on that sha, then a live spool dispatch with a bare-integer in-file name.'

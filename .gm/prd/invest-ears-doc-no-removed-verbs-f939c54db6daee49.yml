@@ -1,6 +1,0 @@
-id: INVEST-EARS-DOC-NO-REMOVED-VERBS
-title: 'Docs: no document names a verb the current build does not register'
-description: 'Split from EARS-DOCS-CURRENT-CONCISE. Testable criterion: no document under gm-config/prose, skills/ or README.md names a verb absent from the current build. Verbs in the retired list of docs/verbs.md are the reference set. Witness: a grep for each retired verb name returns zero hits outside docs/verbs.md. Size thresholds are an open decision and stay out of this row.'
-status: completed
-session_id: lean-node-INVEST
-witness: 'exec_js grep over gm-config/prose, skills, README.md excluding skills/gm/docs/verbs.md: zero retired-verb usages (3 remaining hits are the glob body-field alias). Edits: skills/wfgy-method/SKILL.md, skills/polaris-protocol/SKILL.md, skills/wfgy-method/references/honesty-and-provenance.md.'

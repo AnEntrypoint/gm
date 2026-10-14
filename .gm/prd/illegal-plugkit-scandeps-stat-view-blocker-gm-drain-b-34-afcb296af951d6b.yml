@@ -1,0 +1,5 @@
+id: ILLEGAL-PLUGKIT-SCANDEPS-STAT-VIEW-blocker-gm-drain-b-34
+subject: 'Blocked: ILLEGAL-PLUGKIT-SCANDEPS-STAT-VIEW has an unpublished parent gitlink and no independent witness'
+blockedBy: '(1) parent gitlink f5f62c39cb not on origin/main: push refused remote_moved, git_pull refused by another lane''s uncommitted skills/wfgy-method/* (verb to supply: git_status {paths:["skills/wfgy-method"]}, then git_pull {branch:"main"} and git_push {rev:"f5f62c39cb"}); (2) independent live witness of rs-plugkit 068c404e6d from a session other than gm-drain-b-34 (verb to supply: scan_deps {cwd:"C:/dev/gm/gm-mcp"}, pass when filesScanned 68 and nodeModulesPresent true match baseline 1791975978970-500-55b477978c9a553f). Receipts: .gm/receipts/ILLEGAL-PLUGKIT-SCANDEPS-STAT-VIEW/03..06.'
+status: pending
+session_id: gm-drain-b-34

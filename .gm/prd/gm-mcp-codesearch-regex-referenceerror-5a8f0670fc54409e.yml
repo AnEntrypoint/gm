@@ -1,5 +1,0 @@
-id: GM-MCP-CODESEARCH-REGEX-REFERENCEERROR
-subject: 'gm-mcp codesearch regex mode throws ReferenceError: n is not defined'
-body: 'Observed by gm-prd run gm-drain-w3-125. A gm_codemode call with gm.codesearch({query:"commit-msg|conventional commit|type\\(scope\\)|subject check", mode:"regex", path:"C:/dev/gm"}) threw from gm-mcp-server.mjs:182 (hY): ''ReferenceError: n is not defined''. The stdio transport stayed up. The same tool with mode literal and combine or succeeded (dispatch 1791971035123-2328). Fix in c:/dev/gm/gm-mcp/src (the source is the owner, the bundle is rebuilt with it). Witness: the same regex query returns a reply with a dispatch id and no ReferenceError.'
-session_id: gm-drain-w3-125
-status: pending
