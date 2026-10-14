@@ -1,0 +1,4 @@
+id: LIVEPLAN-DRAIN-PENDING-STORE-blocker-gm-drain-b-53
+subject: 'Blocked: LIVEPLAN-DRAIN-PENDING-STORE witness names no current-task set. Missing fact: the enumerated set of current row ids (or a predicate over row session_id/subject) that the 397 pending rows are drained to. Supplying verb: prd-add overwrite:true on LIVEPLAN-DRAIN-PENDING-STORE listing the current ids, then per-row prd-resolve retire witnesses.'
+session_id: gm-drain-b-53
+status: pending

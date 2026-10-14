@@ -3,3 +3,4 @@ subject: 'gm-mcp standing tests cluster D: re-express transport and bundle asser
 body: 'Files: gm-mcp/test/transport.test.mjs (13), bundle-drift.test.mjs (15), http-session-resume.mjs (0 assertions, probe), mcp-http-probe.mjs (0 assertions, probe). Parent DIJKSTRATEST-GMMCP-STANDING-TESTS. Acceptance: each assertion has an exec_js probe against the real boundary witnessed from another session, then the files are removed. bundle-drift needs the bundle rebuild check (scripts/check-bin-drift.mjs). Land serially with A, B, C. Not witnessed in-session.'
 session_id: gm-drain-bounded-51
 status: pending
+blocked_by: 'DIJKSTRATEST-GMMCP-SPLIT-D-blocker-gm-drain-a-46 (cross-session witness for 28 assertions; gm-mcp foreign WIP per CLEANNAME-GMMCP-SRC-blocker-gm-drain-w3-105; siblings A, B, C pending; scripts/check-bin-drift.mjs absent). Receipt: .gm/receipts/DIJKSTRATEST-GMMCP-SPLIT-D/01-SPECIFY.md.'

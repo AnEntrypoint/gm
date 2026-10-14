@@ -1,4 +1,0 @@
-id: BLOCKER-SKILLGM-watcher-dead-threshold
-subject: 'Blocker for G_CONTRACT-watcher-liveness-threshold: the daemon dead-threshold constant and the pid-absence check own the dead-watcher rule; skills/gm/SKILL.md ''Start, never install'' names the status fields and outcome only. Prose stays until this lands.'
-session_id: lean-exec-skillgm-1
-status: pending

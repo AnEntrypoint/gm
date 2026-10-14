@@ -1,5 +1,0 @@
-id: GIT-MERGE-BLANKET-GUARD-UNTRACKED-GM
-subject: 'git_commit during a merge refuses to commit the index: the blanket guard counts untracked .gm runtime files (lanebuild, witness-out, prd-log) as would-stage'
-body: 'Measured 2026-10-14: git_pull main conflicted on gm-config (submodule, merge-base commit missing locally). After git_add gm-config, git_commit with no paths refused with blanket_stage_refused, would_stage_count 51, all untracked .gm/ runtime files. Fix: during MERGE_HEAD, commit exactly the index; never list untracked paths. Witness: reproduce with an untracked file under .gm/ and a staged merge, expect commit of the index only.'
-session_id: gm-ach-20261014-01
-status: pending

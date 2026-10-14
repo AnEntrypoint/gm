@@ -1,5 +1,0 @@
-id: BLOCK-dream-rsi-observation-record-code
-subject: 'The observation record is built as an untyped json! value in rs-plugkit/crates/plugkit-core/src/orchestrator/dream_rsi.rs observe_dispatch (about lines 371-382). Blocked move target: one typed ObservationRecord struct with serde derive, written by the recorder and read by the replay code, so SKILL.md names the file and not the fields.'
-blocks: G_CONTRACT-dream-rsi-observation-record
-session_id: lean-exec-dreamrsi-1
-status: pending

@@ -1,7 +1,0 @@
-id: BLOCK-MEMORIZE-PRUNE-ENUM
-title: 'Blocker: memorize-prune request is an enum of Keys and Query'
-subject: 'gm-config/prose/entry-extended.md ''Memorize'' describes two memorize-prune request variants ({key} removes, {query} returns review-only candidates). Code target: make the prune request an enum in the memory verb handler (rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs/memory.rs) where the Query variant can only return candidates and never remove. Then reduce the prose to naming the two variants.'
-status: pending
-blockedBy:
-- external
-session_id: lean-exec-entryext-1

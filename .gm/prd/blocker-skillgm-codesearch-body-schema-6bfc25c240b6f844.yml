@@ -1,5 +1,0 @@
-id: BLOCKER-SKILLGM-codesearch-body-schema
-subject: 'Blocker for G_CONTRACT-skill-codesearch-body-table: carry codesearch/grep body field enums and defaults in the verb schema served by grep {help:true} (rs-plugkit verb definitions), then delete the table from skills/gm/SKILL.md section 1. Prose stays until this lands.'
-session_id: lean-exec-skillgm-1
-status: pending
-blocked_by: 'BLOCKER-SKILLGM-codesearch-body-schema-blocker-gm-drain-w1-28: grep and codesearch have body_schema.declared=false in gm-mcp (gm-mcp/src/codemode.js:178 reads schema.declared; the declaration is gm-mcp verb-table.js). Fix needs a gm-mcp src edit with bundle rebuild, a submodule commit on main, a gitlink bump, and a live describe("grep") witness from another session. Verb to supply it: gm.describe("grep") after the gm-mcp publish.'

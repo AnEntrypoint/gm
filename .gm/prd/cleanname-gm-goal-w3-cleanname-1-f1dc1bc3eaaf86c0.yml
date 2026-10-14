@@ -1,4 +1,0 @@
-id: CLEANNAME-gm-goal-w3-CLEANNAME-1
-title: 'gm-mcp/src/dispatch.js:1824 `const n = resume_task || nextN(session_id)` and :1209 `const t = setTimeout`: rename to intention-revealing names (sequence, timer)'
-status: pending
-session_id: gm-goal-w3-CLEANNAME

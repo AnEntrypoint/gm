@@ -1,0 +1,5 @@
+id: LLMJUDGE-gm-goal-hop-LLMJUDGE-2-1-blocker-gm-drain-b-58
+subject: 'Blocker for LLMJUDGE-gm-goal-hop-LLMJUDGE-2-1: judge placement and gm-mcp shared-tree collision'
+body: 'Stage EDIT of LLMJUDGE-gm-goal-hop-LLMJUDGE-2-1 cannot run. EDIT blocked. Missing facts: (1) owner choice of judge placement: gm-mcp has no model route (codesearch dispatch 1791976176594-500-47177c621127dfe5, 0 matches), so the LLM judge must be an agent-side jill subagent fed by a reply-capture route that gm-mcp does not expose today; supplying verb: owner decision, then prd-add of that capture verb. (2) gm-mcp working tree holds another writer''s hunks (git_status cwd gm-mcp, dispatch 1791976197031-500-b9690d81c3c01c38: src/dispatch.js, src/http-transport.js, bin/gm-mcp-server.js); already named by open row DBC-gm-goal-w4-DBC-1-blocker-gm-drain-bounded-43; supplying verb: git_status cwd gm-mcp with dirty false. Receipts: .gm/receipts/LLMJUDGE-gm-goal-hop-LLMJUDGE-2-1/02-ELIMINATE.md.'
+session_id: gm-drain-b-58
+status: pending

@@ -5,3 +5,4 @@ status: pending
 blockedBy:
 - external
 deferReason: 'Code move: the proposal type must fix applied=false with no mutation method. Prose left as-is.'
+blocked_by: 'BLOCK-LIQOLOGY-PROPOSAL-TYPE-blocker-gm-drain-w1-19. Missing fact: a reviewed rs-plugkit rebuild (CI publish/release) cutting the mirror line rs-plugkit/crates/plugkit-core/src/orchestrator/instructions/prose/entry-extended.md:74 ("suggest_fsm_update proposes, never mutates"). Code side already holds: liqology dispatch.cpp:172 applied=false, no mutation call. Supplying verb: publish via gm git verbs on rs-plugkit main, then ci-status on the sha.'
