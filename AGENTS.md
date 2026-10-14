@@ -121,7 +121,7 @@ The `gm-mcp` server shall compact every dispatch response before it crosses the 
 
 ## Script and CI rationale (moved from code)
 
-- `scripts/check-pins.sh`: an unpublished pin breaks every fresh recursive clone, so it fetches the pinned sha into a throwaway bare repo.
+- `scripts/triage/check-pins.sh`: an unpublished pin breaks every fresh recursive clone, so it fetches the pinned sha into a throwaway bare repo.
 - `scripts/remote-cmp.mjs`: raw paths once produced `/contents/C:/...` 404s that read as "absent"; 401 and 403 are auth or rate limit, never absence.
 - `scripts/build-graph-page.mjs`: page numbers come from the graph JSON; a broken edge refuses the page before any file is written.
 - `scripts/sweep-config-sync-litter.mjs`: deleting orphaned state is a cache miss, not data loss; `--max-age-days` is opt-in.
