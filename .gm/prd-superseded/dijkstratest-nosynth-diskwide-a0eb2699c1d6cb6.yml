@@ -1,0 +1,4 @@
+id: DIJKSTRATEST-NOSYNTH-DISKWIDE
+subject: rs-plugkit predicate no-synthetic-test-files (predicate_registry.rs, transitions.rs) inspects only the working diff, so a standing test file already in the tree passes the gate unseen (gm-mcp/test/*.test.js is the live case). Extend the predicate to scan tracked files, or add a tree-wide check, then witness it on a tree that contains a known test file.
+session_id: lean-hop-DIJKSTRATEST
+status: pending

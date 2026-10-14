@@ -1,0 +1,4 @@
+id: THINSLICE-GIT-VERB-SIGNATURES
+subject: 'Thin slice for G_CONTRACT-git-verb-signatures: git verb body signatures (git_pull, git_stash, git_stash_pop, git_stash_drop, git_checkout and the rest) are served by the verb schema; the signature list is removed from skills/gm/SKILL.md section 1 in the same change. Witness: a live git_stash dispatch with an unknown field answers unknown_fields and the prose grep for the signatures returns no match.'
+session_id: lean-hop-THINSLICE
+status: pending

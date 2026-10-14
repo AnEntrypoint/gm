@@ -1,0 +1,5 @@
+id: BLOCKER-SKILLGM-session-id-alias-normalize-gm-drain-w3-67
+subject: 'Blocker for BLOCKER-SKILLGM-session-id-alias-normalize: alias-restatement target not located'
+blockedBy: 'Missing fact: a live witness, from a session other than the row owner, that sends the session key at the dispatch envelope under SESSION_ID, session_id and sessionId to a verb that reads it, showing identical normalization at the dispatch layer (rs-plugkit/crates/plugkit-core/src/validation.rs:5 SESSION_ID_BODY_ALIASES, gm-mcp/src/dispatch.js:1055-1059). Supplied by gm.instruction or gm.git_log at envelope level against a CI-built rs-plugkit. Evidence: receipt .gm/receipts/BLOCKER-SKILLGM-session-id-alias-normalize-gm-drain-w3-67/02-PROVE.md; body-level git_log probes (1791975823833-500-e22e688525344c50, 1791975824905-500-bc80fdc5480260f5, 1791975825790-500-a51ddf29888169ae) fail identically and do not separate the hypothesis. Prose restatement remains in gm-config/prose/entry.md lines 65, 108-111, 157. No duplicate blocker filed; open row BLOCKER-SKILLGM-session-id-alias-normalize-blocker-gm-drain-w1-35 names the same fact.'
+session_id: gm-drain-a-21
+status: pending
