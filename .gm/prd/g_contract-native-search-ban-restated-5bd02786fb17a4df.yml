@@ -1,4 +1,0 @@
-id: G_CONTRACT-native-search-ban-restated
-subject: The ban on Glob, Grep, find, rg and Explore for content search is restated in skills/gm/SKILL.md (brick wall header and section 1 runtime-state exception) and gm-config/prose/entry.md 'Inspection routing'. The deviation gate that blocks these tools carries the rule; prose names the gate id and the codesearch verb only.
-session_id: lean-node-G_CONTRACT
-status: pending

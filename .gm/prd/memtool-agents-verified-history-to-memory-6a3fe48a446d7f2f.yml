@@ -1,7 +1,0 @@
-id: MEMTOOL-AGENTS-VERIFIED-HISTORY-TO-MEMORY
-title: 'Server-side memory: move the five dated Verified sections out of AGENTS.md'
-scope:
-- AGENTS.md
-row: 'Step 1: memorize-fire each dated section of AGENTS.md (the 2026-09-14, 2026-10-05, 2026-10-04, 2026-10-07 and 2026-10-08 Verified sections; leave the Dream-RSI section, its code exists) as its own memo, then witness by recall of an exact phrase from each (must return that memo). Step 2, only after step 1 witnesses: delete those five sections from AGENTS.md; keep only a current, non-narrative rule where one still binds (the windowless and config_sync rules already live in Implementation rules, so do not duplicate them). Witness: AGENTS.md byte size drops and grep of ''Verified 20'' returns no matches in AGENTS.md. Do not change any other file.'
-session_id: lean-hop-MEMTOOL
-status: pending

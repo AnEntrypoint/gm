@@ -1,7 +1,0 @@
-id: HUGHES-gm-goal-hop-HUGHES-1-2-blocker-gm-drain-w1-157-blocker-gm-drain-w2-220
-subject: 'Blocker for HUGHES-gm-goal-hop-HUGHES-1-2-blocker-gm-drain-w1-157: fix written (gm-mcp/src/response-compact.js sameJsonValue, bin rebuilt, drift clean, test 31/0) but delivery and cross-session witness are blocked: gm-mcp working tree holds other writers'' uncommitted src hunks that the rebuilt bin embeds (src/codemode.js, src/dispatch.js, src/http-transport.js, src/index.js, README.md). Next: one writer lands or stashes those hunks, then commit response-compact.js and bin/gm-mcp-server.js together via git_finalize, ci-status, and witness from a session other than mcp-codemode-31304-1791958496208. Receipt: .gm/receipts/HUGHES-gm-goal-hop-HUGHES-1-2-blocker-gm-drain-w1-157/03-EMIT.md'
-blockedBy:
-- external
-session_id: gm-drain-w2-220
-status: pending
-deferReason: 'duplicate blocker: the base row already names the same missing fact'
