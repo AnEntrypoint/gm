@@ -1,0 +1,1 @@
+Precondition: skills/*/SKILL.md present. Invariant: description under 500 B. Postcondition: all 10 skills under 500 B. Run: 1791957380218-500-5745afb380a609ae (exit 0). Probe separates H1 from H2 since H2 predicts a value over 500.
