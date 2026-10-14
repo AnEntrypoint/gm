@@ -459,3 +459,9 @@ tick 2 event=refill-gm-fin-18-blocked live=19 2026-10-13T11:29:23.783Z (launched
 
 - ACCEPTPORT-GITADAPTER-DISPATCH witness: codesearch execFileSync|execFile(|spawnSync( on gm-mcp/src/dispatch.js exit 0 RESULT: 0 inline git spawns; adapter import present. UTC 2026-10-14T05:51:18.641Z. dispatch 1791957054791-500-ccc7a5f98f398e7a
 - AGENTSMD-DEDUP-CONFIGSYNC-DEBOUNCE | witness=cited-lines-probe | exit=0 | RESULT: H2 leader, cited lines stale, no edit | UTC=2026-10-14T05:51:21.986Z | dispatch=1791957069312-500-97f0d7545efde88a
+
+2026-10-14T05:51:37.340Z witness=ADRN-gm-goal-w2-ADRN-1 exit=0 RESULT: literal ADR-GMMCP-SELFUPDATE-1 in gm-mcp/AGENTS.md line 106 (1 match, exhaustive); decision option (a) recorded; self-update.js still version-only (filed GMMCP-SELFUPDATE-BUILD-IDENTITY-IMPL); dispatch 1791957069568-500-98881e43e02cbb63 (session gm-drain-w1-5)- AGENTSMD-DREAMRSI-SPLIT-BY-OWNER (session gm-drain-w1-10): root Dream-RSI section absent, owner facts in agentplug/AGENTS.md:39 and rs-plugkit orchestrator AGENTS.md:14-17; exit 0; RESULT: PASS; 2026-10-14T05:51:41Z; dispatch 1791957050904-500-978567f6702afe4e
+
+- ACCEPTPORT-gm-goal-w4-ACCEPTPORT-1: witness codesearch child_process=0 (1791957078337), node:fs=0 (1791957078913), spoolSpawn=2 (1791957080036); exit 0; RESULT: PASS (dispatch.js reaches fs/spawn only via spool-port.js, injected by index.js); UTC 2026-10-14T05:51:59.204Z; dispatch 1791957080036
+- ADVERSARIAL-gm-goal-hop-ADVERSARIAL-1-1 witness: liveSupervisorPid on corrupt supervisor file; live=null, singleton-state-corrupt emitted; exit 0; RESULT: PASS (H1); UTC 2026-10-14T05:52:06.121Z; dispatch 1791957096198-500-f9bdcc254650e523
+- AGENTSMD-PURGE-INCIDENT-SECTIONS | witness: codesearch regex ^## Verified [0-9]{4}- on AGENTS.md | exit 0 | RESULT: count 0 lines, 134 lines read, exhaustive | UTC 2026-10-14 | dispatch 1791957108197-500-642d09ccc18791c7 | session gm-drain-w1-12
