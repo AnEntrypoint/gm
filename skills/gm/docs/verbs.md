@@ -245,7 +245,7 @@ Paged example:
 ```
 
 A reply longer than the cap that `reply_max_chars` reports is spilled to the file named by `spill_file`, with the same range, and the
-notice reports `spill_range: lines 232-244 of <n> (1-based, inclusive)`, `spill_lines`.
+notice reports `spill_range: lines 232-244 of <n> (1-based, inclusive)`, `spill_lines`. While lines remain, the notice also carries `next_range`, a JSON range with `startLine` and `endLine` that `fs_read` takes for the next page.
 Page the rest with the `gm_result` MCP tool on that file.
 
 `fs_write` takes `{"path":"<relative path>","content":"<text>"}`. `data` and `text` are aliases of
@@ -346,7 +346,7 @@ raw_body: "timeoutMs=30000\nconsole.log(process.version)\n"
 
 `exec_js` evaluates its raw body in a separate Node process, delivered on the child's stdin, so the body is never part of its command line and a process-listing query that filters command lines for a marker string cannot match the runner itself. It does not inject the caller's `tools` object, which means the `gm` functions that `gm_codemode` provides. A `.js` scratch file in a repo whose package.json says `"type": "module"` is ESM: give a scratch file that uses `require` the `.cjs` extension. To run a command, use Node's argument-safe API: `const { execFileSync } = require("node:child_process"); return execFileSync("command", ["arg"], { encoding: "utf8" });`.
 
-**Windows `cmd` inside a shell-stem body.** On Windows the `bash`/`sh`/`shell`/`zsh` stems run under MSYS2 git-bash, which rewrites every argument that starts with `/<letter>` into a drive path before the native program ever sees it: `node args.js /c` prints `["C:/"]`. So `cmd /c "node s.js < p.json"` reaches `cmd.exe` with no `/c` switch: `cmd` starts interactive, reads the dispatch's stdin (already drained, because the runner feeds the body in as `bash -c 'eval "$(cat)"'`), hits EOF and exits 0 printing nothing. That is argument rewriting, not a stdin failure: `< p.json` works the moment `cmd` gets its switch. Write `cmd //c "..."` (MSYS collapses `//c` back to `/c`), or `MSYS_NO_PATHCONV=1 cmd /c "..."` on that one line: the variable is presence-tested, so `MSYS_NO_PATHCONV=0` disables conversion too. Never export it over the whole body: it also stops `/tmp/x.js` reaching a native binary as a Windows path. `exec_js` is unaffected: `execFileSync("cmd", ["/c", "node s.js < p.json"])` and a bare `node s.js < p.json` return the same redirected stdin, and so is `powershell`, which is the stem to pick when the work needs cmd syntax.
+**Windows `cmd` inside a shell-stem body.** On Windows the `bash`/`sh`/`shell`/`zsh` stems run under MSYS2 git-bash, which rewrites every argument that starts with `/<letter>` into a drive path before the native program ever sees it: `node args.js /c` prints `["C:/"]`. So `cmd /c "node s.js < p.json"` reaches `cmd.exe` with no `/c` switch: `cmd` starts interactive, reads the dispatch's stdin (already drained, because the runner feeds the body in as `bash -c 'eval "$(cat)"'`), hits EOF and exits 0 printing nothing. That is argument rewriting, not a stdin failure: `< p.json` works the moment `cmd` gets its switch. Write `cmd //c "..."` (MSYS collapses `//c` back to `/c`), or `MSYS_NO_PATHCONV=1 cmd /c "..."` on that one line: the variable only has to be set, so `MSYS_NO_PATHCONV=0` also turns conversion off. Never export it over the whole body: it also stops `/tmp/x.js` reaching a native binary as a Windows path. `exec_js` is unaffected: `execFileSync("cmd", ["/c", "node s.js < p.json"])` and a bare `node s.js < p.json` return the same redirected stdin, and so is `powershell`, which is the stem to pick when the work needs cmd syntax.
 
 At `timeoutMs` expiry the child's whole process tree is killed, the dispatch slot is released, and the reply is `ok: false, timed_out: true, killed: true, error_code: exec_timeout` with `limit_ms` and the partial `stdout`/`stderr`; nothing keeps running afterwards. When `timeout_seconds` is omitted, the MCP wrapper polls for the body's `timeoutMs` budget plus 5 s (never less than 120 s), or for 120 s when the body has no `timeoutMs=` line; an explicit `timeout_seconds` sets the requested polling budget and, when the body carries no `timeoutMs=` line of its own, also raises that native execution limit to the same budget minus 5 s, with that budget capped at the poll ceiling (600000 ms by default), then held between the 300000 ms exec default and the 900000 ms hard ceiling, so a caller asking to wait 400 s is not answered "still in flight" for work the daemon reaped at 300 s. Every MCP call caps applied polling at 600 s, the harness tool-call maximum (`GM_MCP_POLL_TIMEOUT_CEILING_MS` moves it). A polling timeout does not kill the child: it returns the dispatch's `task` id plus `poll_timeout_ceiling_ms`, `poll_timeout_cap_reason`, and for exec verbs `exec_limit_ms` and an `exec_child` sentence naming when the daemon will reap it. Pass that `task` id as `resume_task` to re-poll that dispatch without redispatching.
 
@@ -363,7 +363,7 @@ Output fields (`stdout`, `stderr`, `result`, a structured `result` included) sho
 `git_stash_pop`, `git_stash_drop`, `git_stash_list`, `git_rm`, `git_revert`, `git_reset`,
 `git_cherry_pick`, `git_worktree_add`, `git_worktree_list`, `git_worktree_remove`, `git_worktree_prune`.
 
-Class (query or command): `git_status`, `branch_status`, `git_log`, `git_diff`, `git_show`, `git_poll`, `ci-status` (alias `ci_status`), `git_stash_list`, `git_worktree_list` and `git_remote` are `query`; every other git verb is `command`. `git_remote` takes `{}` and answers `{branch, remotes, upstream}`, inspecting the configured remote URLs and the current branch's upstream without fetching or mutating state.
+Each git verb is `query` or `command`. The query verbs are `git_status`, `branch_status`, `git_log`, `git_diff`, `git_show`, `git_poll`, `ci-status` (alias `ci_status`), `git_stash_list`, `git_worktree_list` and `git_remote` end that list. Every other git verb is `command`. `git_remote` takes `{}` and answers `{branch, remotes, upstream}`, inspecting the configured remote URLs and the current branch's upstream without fetching or mutating state.
 
 `git_pull` performs the ordinary fetch-and-integrate path. `git_stash` shelves (stashes) all work by default, including untracked files, but never the project's own `.gm/` or `.agentplug*` (listed in the receipt's `excluded`), and refuses more than 2000 untracked files (pass `paths:[...]` or `include_untracked:false`). `git_stash_pop` restores a shelf and drops it after a successful restore; a conflicted pop leaves the shelf, and `git_stash_drop` removes it afterwards. `git_stash_list` lists shelves. All stash verbs refuse unknown fields. `git_checkout` switches branch; `git_checkout` with `paths` restores only those paths (pathspecs, git's path patterns) in the working tree from `ref` (default the index), refusing an empty list, a leading `-` or `:`, `..`, an absolute path outside the repo and anything under `.gm/` or `.agentplug*` other than the transient scan-deps and codeinsight-edge caches; its receipt is `{restored, source, output}`. `git_finalize {message}` bundles the add, commit, porcelain gate, push and `ci-status-check` steps; if the build does not serve it, compose the same steps by hand. When another agent shares the worktree, pass `paths:[...]` to `git_commit`/`git_finalize`: only those pathspecs are staged, committed and porcelain-gated. With `rev`, `git_finalize` skips the commit and publishes that ref through `git_push`. `git_push {rev:"<full sha>", allow_foreign_commits:true}` is the sanctioned push of a commit you already made over another writer's uncommitted changes: name the sha of the tip you mean to publish and pass the flag, because `rev:"HEAD"` is symbolic and the gate refuses it (`error_code: gate_denied`, "this push names no commit ... would ship every unpushed commit on main") while any commit on the branch is unpushed. A lane publishing only the commit it just made names that sha, `git_push {rev:"<own sha>"}`, and needs no flag. A push publishes a chain of commits, not one commit: `git_push` sends `git push origin <rev>:<branch>` (`<rev>:refs/heads/<branch>` for a full sha), so `rev` must name a commit and every commit on local `main` the remote lacks ships with it, including a commit another lane authored. On shared linear main that is the intended contract: no refspec publishes a commit without its ancestors, so `rev` names the tip, it never narrows the set. `git_commit` does not publish. Publishing goes through `git_push`, and `git_finalize` publishes by calling it. `git_log` with `paths` keeps only commits touching those pathspecs. `git_diff` scopes the same way. `git_show`: `path` prints that file at the revision (same as `rev: "<rev>:<path>"`); `paths` limits a commit's diff. These three refuse unknown fields, naming `unknown_fields` and `accepted_fields`. `git_status` scopes to `paths`; `summary: true` returns counts by status plus the first `limit` (default 20) `first_paths`, and without `summary`, `limit` caps each status list (default 10), and `truncated` is set when a list overflows.
 
@@ -539,7 +539,7 @@ selects the engine; the rest is the crawl request (URLs and steps).
 | engine | runs | window |
 |---|---|---|
 | `cdp` (default when the first line is absent) | the host drives a real Chrome over the Chrome DevTools Protocol (CDP) through its `crawl_cdp` entry point | **HEADLESS** (`--headless=new`) unless the body has a `headful` line or `GM_CRAWL_CDP_HEADFUL` is set; then **HEADFUL**: a visible browser window |
-| `lightpanda` | the host's warm lightpanda process, through the `lightpanda` plugin's `crawl` verb | **HEADLESS**: no window |
+| `lightpanda` | a headless browser: the host's warm lightpanda process, whose binary comes from `GM_LIGHTPANDA_PATH`, then `PATH`, run through the `lightpanda` plugin's `crawl` verb | **HEADLESS**: no window |
 
 Choose `lightpanda` when no window should appear;
 choose `cdp` with a `headful` line when the page must render in a visible browser.
@@ -600,7 +600,7 @@ An `events` step arms its capture when the call attaches to the shared Chrome, n
 by an earlier step are still collected; the events entry keeps filling until the call ends. `where` keeps
 the events whose dotted field, read out of the event params, contains (`~`), equals (`=`) or differs
 from (`!=`) the value; an absent field never matches. `limit` caps the events kept and counts the
-rest in `dropped`. The CDP domain (the part before the dot) is enabled for you, so `events Debugger.scriptParsed` sends
+rest in `dropped`. The CDP domain (the part before the dot) is enabled for you. An `events` step such as `events Debugger.scriptParsed` sends
 `Debugger.enable`.
 
 ```
@@ -660,12 +660,12 @@ never `session_id`) and `role` (one of `resolver`, `traversal`). A missing or em
 with the list of what is required.
 
 `pool-observe` writes `.gm/pool/` state (the count of record, the spawn ceiling and the held rows). It reports the pool's slot state and the launches it advertises. Its body takes `live`
-(the ListAgents count of running subagents, recorded as the count of record in
-`.gm/pool/count-of-record.json` for 5 minutes), `held` (an array of the row id of every running
-worker, kept for 30 minutes), and `refusal` (the text of a spawn refusal, which records the spawn
-ceiling in `.gm/pool/ceiling.json`). Every field is optional. `limit` caps each displayed list
+(the ListAgents count of running subagents). The count is written to
+`.gm/pool/count-of-record.json`, which keeps it for 5 minutes. `held` is an array of the row id of every running
+worker, which is kept for 30 minutes. `refusal` is the text of a spawn refusal, which records the spawn
+ceiling in `.gm/pool/ceiling.json`. Every field is optional. `limit` caps each displayed list
 (default 12), `rules: true` adds the pool rules to the reply, `blocker_notes: true` adds the open
-rows that carry blocker notes, and `scanned_nodes` records traversal nodes as scanned, which leases
+rows that carry blocker notes, and `scanned_nodes` records traversal nodes as scanned. That scan leases
 each one for 6 hours. A reply carries `floor`, `ceiling`, `count_of_record`, `refill_needed`,
 `launch` (one item per id to launch now, each with `id`, `role` and `reason`), `shortfall`, `unfilled_shortfall`, `sufficient`, `traversal`, and
 a `slots` block with `open_rows`, `live_rows`, `live_rows_unmatched`, `aging_heartbeats`,
