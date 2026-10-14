@@ -1,0 +1,7 @@
+id: G_CONTRACT-liqology-recurrence-threshold
+subject: gm-config/prose/entry-extended.md 'When to dispatch' restates that suggest_fsm_update needs recurrence_count >= 2 at the same {phase, gate}, matching the verb's own validation. Delete the threshold from prose and let the verb's validation error name the rule.
+session_id: lean-node-G_CONTRACT
+status: pending
+blockedBy:
+- external
+deferReason: 'Unverified premise: the row says the threshold matches the verb''s own recurrence_count >= 2 validation, but no tracked rs-plugkit .rs file contains recurrence_count and the liqology source is not in this checkout. Deleting the threshold would remove the only statement of the rule. Verify the validation exists, then delete the parenthetical at entry-extended.md line 80.'
