@@ -1,6 +1,6 @@
 ---
 name: gm-hop
-description: "One traversal hop: a principle or book name and a surface path in, one receipt naming the next principle out. Owns the hop rules; pool rules are defined in gm-orchestrate. Invoke only from gm; do not load directly."
+description: "Use when a gm walk must apply one named principle (book or discipline) to a code surface and move on to the next principle: it applies the principle to every in-scope instance in one pass and returns one receipt naming the next principle, so the traversal advances with witnessed changes or filed PRD rows. Owns the hop rules; pool rules are defined in gm-orchestrate. Invoke only from gm; do not load directly."
 ---
 
 # gm-hop
