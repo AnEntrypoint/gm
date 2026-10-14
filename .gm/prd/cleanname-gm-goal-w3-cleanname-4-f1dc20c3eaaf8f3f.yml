@@ -1,0 +1,4 @@
+id: CLEANNAME-gm-goal-w3-CLEANNAME-4
+title: 'Atomic-write temp path names diverge: tmp, temp, temporary, candidate, tempPath across dispatch.js:359,938, release-bridge.js:73,264,302, singleton.js:192; pick one name for the write-then-rename pattern'
+status: pending
+session_id: gm-goal-w3-CLEANNAME
