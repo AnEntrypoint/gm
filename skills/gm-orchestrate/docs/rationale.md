@@ -1,11 +1,11 @@
 # gm-orchestrate: rationale
 
-Why the rules in `skills/gm-orchestrate/SKILL.md` are shaped the way they are. The rules are imperatives there; this file keeps the reasons. Dated measurements behind them are in `docs/incidents.md`.
+Why the rules in `skills/gm-orchestrate/SKILL.md` are shaped the way they are. The rules are imperatives there; this file keeps the reasons. Dated measurements behind them are in `skills/gm-orchestrate/docs/incidents.md`.
 
 ## Terms and floor
 - The ceiling is found by launching because the harness's refusal text is the only source of truth; a constant drifts as the platform changes.
 - Local HEAD lags remote main constantly, so a "modified" blob is compared against remote before a lane stands down.
-- The floor is `min(10, ceiling)` because the refill floor in the runtime (`rs-plugkit/crates/plugkit-core/src/orchestrator/pool_slots/mod.rs`, capped by `pool_slots/floor.rs`) cannot exceed the ceiling.
+- The floor is `min(10, ceiling)` because the refill floor in the runtime (`rs-plugkit/crates/plugkit-core/src/orchestrator/pool_slots/mod.rs`, capped by `rs-plugkit/crates/plugkit-core/src/orchestrator/pool_slots/floor.rs`) cannot exceed the ceiling.
 - A dip is judged as a mean across ticks, because a single-tick reading hides the time spent under the floor.
 
 ## Node-to-node payloads
