@@ -1,0 +1,6 @@
+id: INVEST-GCONTRACT-MEMORY-KIND-ENUM-blocker-gm-drain-b-41
+subject: 'Blocker: canonical kind set for memorize-fire undecided (tiers l0/l1 in code and entry-extended.md:46 vs user/feedback/project/reference in lean-p7.md:183 and the parent row). Supplying verb: mutable-add + mutable-resolve with the owner''s choice, then the parent row''s acceptance witness (kind user succeeds; kind other errors). Live refusals: dispatches 1791976008863-500-f63b9854e05cba61 and 1791976008245-500-1881d0e780d1929f. Receipts: .gm/receipts/INVEST-GCONTRACT-MEMORY-KIND-ENUM/01-SPECIFY.md, 02-ELIMINATE.md. Parent row INVEST-GCONTRACT-MEMORY-KIND-ENUM stays pending.'
+status: blocked
+blockedBy:
+- INVEST-GCONTRACT-MEMORY-KIND-ENUM
+session_id: gm-drain-b-41

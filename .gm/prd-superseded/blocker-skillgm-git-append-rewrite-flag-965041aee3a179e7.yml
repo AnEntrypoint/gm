@@ -1,0 +1,4 @@
+id: BLOCKER-SKILLGM-git-append-rewrite-flag
+subject: 'Blocker for G_CONTRACT-git-append-rewrite-classification: append vs rewrite becomes a per-verb flag in the git verb registry; skills/gm/SKILL.md section 4 cites the flag instead of listing operations. Prose stays until this lands.'
+session_id: lean-exec-skillgm-1
+status: pending

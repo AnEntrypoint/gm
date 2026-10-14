@@ -1,0 +1,6 @@
+id: G_CONTRACT-git-append-rewrite-classification
+subject: skills/gm/SKILL.md section 4 'Substrate-scoped' lists which git operations are append (commits, pushes, branches, tags, reverts, merges) and which are rewrite (force-push, rebasing pushed commits, branch or ref deletion, remote reset, history rewrite). That classification is a property of the git verb set. Carry it as a per-verb flag in the git verb registry and have prose cite the flag.
+session_id: lean-node-G_CONTRACT
+status: pending
+blocker_notes:
+- 'blocked_by DBC-gm-goal-w4-DBC-1-blocker-gm-drain-bounded-43: gm-mcp/src/dispatch.js holds another writer''s uncommitted hunk (git_status path src/dispatch.js in gm-mcp). A verb-table.js edit needs a bundle rebuild that would bake that hunk in. Unblocks when that writer commits or parks it; witness of unblock: git_status {path:''src/dispatch.js''} in gm-mcp is clean.'
