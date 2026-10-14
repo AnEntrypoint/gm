@@ -64,7 +64,7 @@ Use the migration tool documented in the upstream repo's migration README. New i
 
 ### 4. Migrating gm's own memories into the `tencentdb_backend` store
 
-Import verb, batch script, the 384-dim requirement and the archive option: `references/gm-memory-migration.md`.
+Import verb, batch script, the 384-dim requirement and the archive option: `references/migrate-gm-memories.md`.
 
 ## Verification (do this before declaring setup done)
 
