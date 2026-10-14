@@ -8,7 +8,7 @@ description: "Infer strategy proposals from Dream-RSI observation logs, and meas
 Schedule (set by the caller, not by this skill): run as a background agent on the smallest available model at an interval. The subagent reads files and returns one JSON object. It does not edit files or dispatch verbs.
 
 Inputs:
-- `observations.json` files: `<repo>/.gm/dream-rsi/<session>/observations.json`, each a JSON array of up to the newest 256 records with `dispatch_id`, `verb`, `fingerprint`, `exit_code`, `gate_drift` (bool), `prd_open_count`, `mutable_open_count`, `quality` (0..1), `ts`, `reply_sha256`, and optional `lean_node`. Orchestration verbs and `dream-*` dispatches are not recorded.
+- `observations.json` files: `<repo>/.gm/dream-rsi/<session>/observations.json`, each a JSON array of up to the newest 256 records, serialized from `ObservationRecord` in `rs-plugkit/crates/plugkit-core/src/orchestrator/dream_rsi.rs`. Orchestration verbs and `dream-*` dispatches are not recorded.
 - The gm graph: `skills/dream-rsi/gm-graph.json` (`nodes`, `edges`; node `kind` is `principle`, `gate`, `tension` or `terminal` -- there is no phase node; edge `kind` is `forward` or `backreference`). A node is a book when its `book` is non-empty; `book_index` names each anchor book and the node that carries it.
 - Phase history: `.gm/turn-state.json` `phase_history`.
 - Walk evidence: `.gm/lean-walk/<NODE>.json`, one subagent record per node (`node`, `applied`, `witness`).
