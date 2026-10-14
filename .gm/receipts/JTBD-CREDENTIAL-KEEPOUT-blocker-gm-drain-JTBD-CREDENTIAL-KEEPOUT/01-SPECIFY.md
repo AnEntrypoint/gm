@@ -1,0 +1,3 @@
+# SPECIFY
+
+Row: blocker needs (1) scope decision (diff-only vs history-wide) and (2) push-free witness of the credential gate. Hypothesis H1 (leader): scripts/check-staged-secrets.mjs refuses a credential-shaped string in the staged diff and passes a clean diff. H2: it misses a credential shape. Probe: seeded AWS key and clean file in a scratch repo. Scope: diff-only, the default proposed by YAGNI-JTBD-CREDENTIAL-KEEPOUT and consistent with AGENTS.md ("A history-wide scan is out of scope until ..."). Evidence: .gm/prd-log.jsonl, .gm/mutables-log.jsonl, AGENTS.md. Stage cited: scan_deps not required (no dependency install).
