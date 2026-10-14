@@ -1,4 +1,4 @@
 id: G_CONTRACT-continuation-terminal-rule
-subject: 'gm-config/prose/entry.md ''Continuation invariant'' and ''There is no next session...'' paragraph restate the stop rule: only phase=COMPLETE and prd_pending=0 end the spool chain, and the last dispatch is Skill gm-continue. The terminal transition reply should carry the next required dispatch as a field, so the stop rule is data the reply supplies and prose only names the field.'
-session_id: lean-node-G_CONTRACT
+session_id: gm-drain-b-6
+subject: 'gm-config/prose/entry.md ''Continuation invariant'' and ''There is no next session...'' paragraph restate the stop rule: only phase=COMPLETE and prd_pending=0 end the spool chain, and the last dispatch is Skill gm-continue. The terminal transition reply should carry the next required dispatch as a field, so the stop rule is data the reply supplies and prose only names the field. blocked_by: a CI-built rs-plugkit guest (slim) carrying the terminal reply field, plus a live witness dispatch from a session other than gm-drain-b-6; supplied by the CI release job (publish / release) and a cross-session prd-resolve. Existing open row BLOCKER-SKILLGM-precedence-enum-blocker-gm-drain-w1-34 names the same fact; no duplicate filed. Stage receipt: .gm/receipts/G_CONTRACT-continuation-terminal-rule/01-SPECIFY.md'
 status: pending

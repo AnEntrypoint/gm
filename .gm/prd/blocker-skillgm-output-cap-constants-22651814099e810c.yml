@@ -2,3 +2,4 @@ id: BLOCKER-SKILLGM-output-cap-constants
 subject: 'Blocker for G_CONTRACT-output-cap-constants: each output and budget cap (exec_js 16000 chars, git_show 60000 bytes, git_stash 2000 files, fs_read 65536, poll cap 240 s) is a constant in its verb or config definition; skills/gm/SKILL.md stops repeating the numbers. Prose stays until this lands.'
 session_id: lean-exec-skillgm-1
 status: pending
+blocked_by: 'gm-drain-a-19: (1) a schema decision naming the gm-config key per cap (exec_js 16000, git_show 60000, git_stash 2000, fs_read 65536, poll 240 s) and its owner, supplied by codeinsight callers/impact then prd-add; (2) an rs-plugkit wasm change verifiable only by CI (--features slim), supplied by git_finalize then ci-status on the publish sha; (3) a witness from a second session via that CI run. Receipt: .gm/receipts/BLOCKER-SKILLGM-output-cap-constants/01-SPECIFY.md.'

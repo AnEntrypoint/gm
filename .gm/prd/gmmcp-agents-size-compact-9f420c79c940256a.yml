@@ -1,4 +1,0 @@
-id: GMMCP-AGENTS-SIZE-COMPACT
-subject: gm-mcp/AGENTS.md is 31937 bytes, over the 30000-byte limit in root AGENTS.md. Compact it (fact once, drop stale prose), keeping ADR-GMMCP-SELFUPDATE-1.
-status: pending
-session_id: mcp-codemode-31304-1791957102233

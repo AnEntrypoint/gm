@@ -1,6 +1,0 @@
-id: GUARDANDGO-gm-goal-w2-GUARDANDGO-1
-status: pending
-title: 'Guard-and-go: gm-mcp dispatch.js keeps the silent process-cwd fallback behind GM_MCP_ALLOW_PROCESS_CWD=1 beside the cwd-required guard; decide whether the opt-in stays'
-witness: 1791745716463-500-10b4410e8774054f
-evidence: 'gm-mcp/src/dispatch.js:26-46 resolveDispatchRoot: cwd-required refusal at line 37, old fallback retained at line 33 under GM_MCP_ALLOW_PROCESS_CWD'
-session_id: gm-goal-w2-GUARDANDGO

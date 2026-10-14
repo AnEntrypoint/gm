@@ -1,7 +1,0 @@
-id: G_CONTRACT-memorize-prune-modes
-subject: gm-config/prose/entry-extended.md 'Memorize' says memorize-prune {key} removes, memorize-prune {query} returns review-only candidates, and never a blind similarity removal. Those are two request variants. Make the prune request an enum of Keys and Query, where Query can only return candidates; prose names the two variants.
-session_id: lean-node-G_CONTRACT
-status: pending
-blockedBy:
-- external
-deferReason: 'Code move: prune request must become an enum of Keys and Query in the memory verb handler. Prose left as-is.'
