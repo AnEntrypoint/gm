@@ -1,6 +1,0 @@
-id: LIVEPLAN-gm-goal-w3-LIVEPLAN-1-blocker-gm-drain-b-57
-status: blocked
-blockedBy:
-- LIVEPLAN-gm-goal-w3-LIVEPLAN-1
-subject: 'Blocker for LIVEPLAN-gm-goal-w3-LIVEPLAN-1 (session gm-drain-b-57): the row premise is stale (INVEST-EARS-DOC-PATHS-EXIST and INVEST-EARS-DOC-NO-REMOVED-VERBS are completed per .gm/prd-log.jsonl, not pending) and live pending is 396 of store_total 417, not 264 of 276. Its action, close or retire stale pending rows so the store holds only the current task, has no testable acceptance: current task is undefined and prd-resolve needs a per-row witness. Missing fact: a stale-or-current classification of each pending row, named by the row author, with a witness per classified row. Supplying verb: prd-list {status:pending} for the candidate set, then prd-resolve per row with its witness.'
-session_id: gm-drain-b-57

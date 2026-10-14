@@ -1,7 +1,0 @@
-id: gm-w577-clause1-poisoned-plugin-slot-reload-r138
-subject: A poisoned plugin slot reloads without failing the next dispatch (w577 clause 1)
-text: 'Acceptance: a plugin slot that dies poisoned (a plugin that panicked, aborted or returned an unloadable state) is reloaded on the next dispatch, and that reload does not fail the dispatch that triggered it. Locate the real edit site and make the change; the row is closed on a live witness, not on a diff.'
-status: pending
-kind: friction
-session: orch-main-r138
-session_id: orch-main-r138

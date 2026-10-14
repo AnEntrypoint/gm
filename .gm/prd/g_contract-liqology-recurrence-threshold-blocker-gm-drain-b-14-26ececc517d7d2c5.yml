@@ -1,6 +1,0 @@
-id: G_CONTRACT-liqology-recurrence-threshold-blocker-gm-drain-b-14
-subject: 'Blocked G_CONTRACT-liqology-recurrence-threshold: gm-config submodule commit+push+gitlink bump and a cross-session witness are missing; edit staged in .gm/receipts/G_CONTRACT-liqology-recurrence-threshold/03-EMIT.md'
-blockedBy:
-- external
-session_id: mcp-codemode-25100-1791975906774
-status: pending

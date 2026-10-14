@@ -1,6 +1,0 @@
-id: G_CONTRACT-memory-kind-enum-blocker-gm-drain-G_CONTRACT-memory-kind-enum
-status: pending
-subject: 'Owner decision needed before the closed-enum move: memorize-fire kind is a storage tier, not the four memory types. rs-plugkit memorize.rs:36 and wasm_dispatch/verbs/memory.rs:501 default kind to "l0" (memory.rs:778 defaults to "l1") and pass it to tencentdb_memory::write as a tier. The prose sentence (gm-config/prose/entry-extended.md:46 and the rs-plugkit copy) lists user|feedback|project|reference. Making kind a four-value enum rejects the l0/l1 default and every current caller. Owner must pick: (a) the closed set is the storage tiers (l0, l1, ...) and the prose sentence is rewritten to name them, or (b) the four memory types become a separate field and kind stays a tier. Row stays pending until chosen; INVEST-GCONTRACT-MEMORY-KIND-ENUM is blocked on this choice.'
-blockedBy:
-- owner-decision
-session_id: gm-drain-G_CONTRACT-memory-kind-enum

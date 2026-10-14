@@ -1,4 +1,0 @@
-id: G_CONTRACT-codeinsight-complete-flag
-subject: gm-config/prose/entry.md 'Code intelligence first' says an empty callers reply is proof only when codeinsight_index reports complete:true, and the table repeats the procedure. The reply should carry a typed proof field, so prose cites that field instead of re-deriving when an empty answer is conclusive.
-session_id: lean-node-G_CONTRACT
-status: pending

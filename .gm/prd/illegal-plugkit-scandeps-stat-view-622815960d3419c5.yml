@@ -1,5 +1,0 @@
-SESSION_ID: lean-canary-ILLEGAL
-id: ILLEGAL-PLUGKIT-SCANDEPS-STAT-VIEW
-subject: rs-plugkit scan_deps.rs walk_package reads isDirectory and canonicalPath/mtime_ms by string key from one stat object (lines ~405 and ~443); introduce a typed FsStat view produced once at the host boundary so the walk reads fields, not keys.
-session_id: lean-canary-ILLEGAL
-status: pending
