@@ -1,0 +1,5 @@
+id: INVEST-JTBD-REVIEWER-SUMMARY-VERB-blocker-gm-drain-w2-252
+subject: 'Blocked: INVEST-JTBD-REVIEWER-SUMMARY-VERB has no verb, no recorded gate evidence location and no reachable witness'
+body: 'Row INVEST-JTBD-REVIEWER-SUMMARY-VERB (session gm-drain-w2-252). Receipts 01-SPECIFY.md and 02-PROVE.md under .gm/receipts/INVEST-JTBD-REVIEWER-SUMMARY-VERB/. Findings: no gate or walk-summary verb exists (gm.list filters empty); no net_lines source hit; gate state is in rs-plugkit gates.rs and orchestrator/fsm.rs. Needed before the row can close: (1) confirm where a completed walk persists gate outcomes and net line evidence; (2) decide the verb home: rs-plugkit Rust verb (CI-built wasm, cannot be witnessed locally) or gm-mcp JS verb in gm-mcp/src/mcp-server.js with a rebuilt bundle; (3) witness on a completed walk that the reply lists net_lines and gates, from another session.'
+session_id: gm-drain-w2-252
+status: pending

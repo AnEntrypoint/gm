@@ -1,0 +1,5 @@
+id: PROGDISC-GM-SKILL-BODY-REFERENCE-SPLIT-blocker-gm-drain-w2-349
+subject: 'Blocked: PROGDISC-GM-SKILL-BODY-REFERENCE-SPLIT has no measurable acceptance and stale size premise; prerequisites pending'
+body: 'Row PROGDISC-GM-SKILL-BODY-REFERENCE-SPLIT cannot close in session gm-drain-w2-349. SPECIFY receipt: .gm/receipts/PROGDISC-GM-SKILL-BODY-REFERENCE-SPLIT/01-SPECIFY.md. Measured: skills/gm/SKILL.md is 22536 bytes (fs_stat dispatch 1791964140207-500-d0ddc766f09d7816), not 28.6 KB; section 1 is 6669 bytes per blocker w1-244. The row names no byte target, no references/ file list and no witness command. Prerequisite G_CONTRACT-skill-codesearch-body-table is pending (dispatch 1791964200165-500-56cc0ae845c5dc05). Unblock by: re-scope the row with a measurable acceptance (byte target for SKILL.md, named references/ file list, witness command), close the G_CONTRACT and BLOCKER-SKILLGM rows that move the same text, then re-run gm-prd on the row.'
+session_id: gm-drain-w2-349
+status: pending

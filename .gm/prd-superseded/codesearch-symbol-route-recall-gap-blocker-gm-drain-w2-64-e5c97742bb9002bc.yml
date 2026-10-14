@@ -1,0 +1,8 @@
+id: CODESEARCH-SYMBOL-ROUTE-RECALL-GAP-blocker-gm-drain-w2-64
+subject: 'symbol route drops docs-path hits silently: count and surface them, then witness after rs-plugkit CI release and runner pickup'
+body: 'Blocker for CODESEARCH-SYMBOL-ROUTE-RECALL-GAP (session gm-drain-w2-64). Confirmed cause H2: codesearch_identifier (rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs/search.rs:2362-2467, called at :2612) excludes docs paths unless `docs:true` (codesearch_rank.rs:267, 461) and reports no count. Probe: default 1791960350770-500-91e43bf8c47c70c9 = 5 refs/3 files; docs:true 1791960375756-500-69ca09e2c0524bba = 25 refs/20 files. Literal-scan fallback already exists for the zero-hit case (compact_dual_reply, search.rs:251-337), so no second scan. Needed: in codesearch_identifier, when docs paths were excluded and the docs-included pass has hits, insert the excluded count and the docs=true pointer into the report. Witness: default symbol reply for gate_repeat_escalate_threshold reports docs-excluded count > 0 and docs:true reply unchanged, from a live runner built from the new rs-plugkit commit (pin bumped in parent). Blocked because the Rust edit needs the rs-plugkit CI release and the runner pickup before a live witness exists. Receipts: .gm/receipts/CODESEARCH-SYMBOL-ROUTE-RECALL-GAP/01-SPECIFY.md, 02-PROVE.md.'
+session_id: gm-drain-w2-64
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

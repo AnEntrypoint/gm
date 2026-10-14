@@ -1,0 +1,8 @@
+id: G_CONTRACT-tencentdb-384-precondition-blocker-gm-drain-w2-158
+subject: 'Blocker for G_CONTRACT-tencentdb-384-precondition-blocker-gm-drain-w1-114: the 384 newtype change in rs-plugkit has no local compile proof and needs a cross-session witness'
+body: 'Row G_CONTRACT-tencentdb-384-precondition-blocker-gm-drain-w1-114 cannot close in session gm-drain-w2-158. SPECIFY confirmed the cited lines: rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs/memory.rs:727 (GM_NATIVE_EMBEDDER_FIXED_DIM usize=384), :730 (comparison), :729-740 (reject_if_dest_namespace_dim_not_384, sole caller at :819 tencentdb_memory_import_gm_native_memories_reembedded_384dim). PROVE and EMIT require a Rust edit in the nested rs-plugkit repo that cannot be compiled locally (cargo hook-blocked); the only compile proof is CI (publish / release, step Build). Remaining work: (1) newtype or constructor for the validated 384 dim in memory verbs, (2) replace prose copies in gm-config/prose/entry-extended.md lines 54-64 and skills/agent-memory/SKILL.md line 67 with pointers, (3) rs-plugkit publish with CI green and gm gitlink bump, (4) live witness via agentplug-runner from a session other than the author. Correction: skills/agent-memory/SKILL.md lines 92-95 carry no 384 match, so the citation must be fixed. Row G_CONTRACT-tencentdb-384-precondition-blocker-gm-drain-w1-114 stays pending. Evidence: .gm/receipts/G_CONTRACT-tencentdb-384-precondition/01-SPECIFY.md.'
+session_id: gm-drain-w2-158
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

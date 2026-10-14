@@ -1,0 +1,5 @@
+id: IMMUT-HTTP-REQUEST-MUTATION-blocker-gm-drain-w2-235
+subject: 'blocked: IMMUT-HTTP-REQUEST-MUTATION cannot close: probe does not separate leader; gm-mcp src/http-transport.js has another writer''s uncommitted hunk'
+body: 'Row IMMUT-HTTP-REQUEST-MUTATION (gm-mcp/src/http-transport.js normalizeProtocolVersion mutates req.headers/rawHeaders). Stage receipts: .gm/receipts/IMMUT-HTTP-REQUEST-MUTATION/01-SPECIFY.md and 02-PROVE.md. Blockers: (1) witness needs the original req.headers observed, which is not exported; an HTTP-status probe cannot separate the derived-view leader from the raw-header-read rival; (2) src/http-transport.js and bin/gm-mcp-server.js carry another lane''s uncommitted hunks and gm-mcp has 14 modified files plus a staged self-update.js, so delivery cannot finalize this row''s files alone. Unblock: a sole writer for gm-mcp/src/http-transport.js and bin rebuild, plus an exported derived-view helper so the witness can assert the original headers unchanged.'
+session_id: gm-drain-w2-235
+status: pending

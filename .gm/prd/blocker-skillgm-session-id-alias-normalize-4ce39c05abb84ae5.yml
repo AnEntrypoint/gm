@@ -1,0 +1,4 @@
+id: BLOCKER-SKILLGM-session-id-alias-normalize
+subject: 'Blocker for G_CONTRACT-session-id-alias-spellings: normalize SESSION_ID / session_id / sessionId once in the dispatch layer; delete the per-verb alias restatement from skills/gm/SKILL.md section 1 and gm-config/prose/entry.md. Prose stays until this lands.'
+session_id: lean-exec-skillgm-1
+status: pending

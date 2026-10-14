@@ -1,0 +1,6 @@
+id: JTBD-INDEPENDENT-PROOF-blocker-gm-drain-w2-261
+subject: 'Blocker: no witness-replay re-check path for COMPLETE gate set'
+obligation_kind: discovery
+body: 'Row JTBD-INDEPENDENT-PROOF cannot close. PROVE (.gm/receipts/JTBD-INDEPENDENT-PROOF/02-PROVE-gm-drain-w2-261.md) enumerated 29 predicates in gm-config/fsm/predicates.md: 3 marker-based (ci-validated-fresh, split-context-swept, residual-scan-fired), 10 agent-written store checks, 9 live-git/diff scans, 3 runtime-reported (claim-audit-clean, submodules-clean, idempotent-dispatch-replay-safe), and 4 always-true or substitution. Zero predicates replay a recorded witness_dispatch_id against the repository. Closing requires a new witness-replay re-check verb in rs-plugkit (predicate_registry.rs) and gm-config/fsm/predicates.md, which is a design plus Rust change not closable by one witness. Next step: design the replay predicate and its witness format, then re-run the row.'
+session_id: gm-drain-w2-261
+status: pending

@@ -1,0 +1,9 @@
+SESSION_ID: orch-main-r83
+acceptance: 'Probe row for orch-main-r83: it exists only to give prd-resolve a real id, so a nested witness_binding object can be dispatched at it without touching another lane''s row. Never resolved; closed by deferral at the end of the run.'
+id: scratch-wb-shape-probe-orch-main-r83
+severity: LOW
+status: completed
+subject: 'scratch probe row: gives prd-resolve a real id to exercise the nested witness_binding object shape'
+title: witness_binding shape probe
+session_id: orch-main-r83
+witness: 'probe post-fix: nested witness_binding object must now be refused'

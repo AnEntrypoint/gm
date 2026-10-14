@@ -1,0 +1,5 @@
+id: SLAP-PLUGKIT-SCANLITERAL-LEVELS-blocker-gm-drain-w2-401
+subject: 'Blocked: SLAP-PLUGKIT-SCANLITERAL-LEVELS-blocker-gm-drain-w1-271 cannot close in session gm-drain-w2-401'
+body: 'Row SLAP-PLUGKIT-SCANLITERAL-LEVELS-blocker-gm-drain-w1-271 re-run in gm-drain-w2-401. SPECIFY: cited line 4578 is stale, scan_literal is at code_index.rs:5128 (codesearch dispatch 1791965539619-500-ba72b0c831843cdf). PROVE: the witness needs cargo build of rs-plugkit, which a hook blocks locally, and a live grep-literal dispatch from a CI-built guest, which needs release and runner self-update. No edit made, because an unwitnessed 852-line split would be an unverified change. Next step: re-scope the parent row to code_index.rs:5128, then close it from a CI-built guest in a separate session. Receipt: .gm/receipts/SLAP-PLUGKIT-SCANLITERAL-LEVELS-blocker-gm-drain-w1-271/01-SPECIFY.md.'
+session_id: gm-drain-w2-401
+status: pending

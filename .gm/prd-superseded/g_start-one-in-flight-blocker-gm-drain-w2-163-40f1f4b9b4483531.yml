@@ -1,0 +1,8 @@
+id: G_START-ONE-IN-FLIGHT-blocker-gm-drain-w2-163
+subject: 'Blocker for G_START-ONE-IN-FLIGHT-blocker-gm-drain-w1-119: closing decision needs JTBD and MUT-G_START-FAMILIES; no stored acceptance'
+body: 'Row G_START-ONE-IN-FLIGHT-blocker-gm-drain-w1-119 cannot close in session gm-drain-w2-163. (1) Parent row G_START-ONE-IN-FLIGHT has title only, no acceptance field, and no .gm/prd yml. (2) Closing decision depends on MUT-G_START-FAMILIES (deferred blockedBy external per .gm/lean-walk/G_START.json) and on a JTBD hop naming each family''s job. (3) The count the gate was written against (210 walk, 252 title) differs from the live pending count (371 at dispatch 1791958075462-500-5b68280c6a0b8065), so no count witness binds. Receipts: .gm/receipts/G_START-ONE-IN-FLIGHT-blocker-gm-drain-w1-119/02-PROVE.md and .gm/receipts/G_START-ONE-IN-FLIGHT/01-SPECIFY.md. Unblock by: JTBD hop naming each family''s job, a decision on MUT-G_START-FAMILIES, and a stored acceptance field on G_START-ONE-IN-FLIGHT.'
+session_id: gm-drain-w2-163
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

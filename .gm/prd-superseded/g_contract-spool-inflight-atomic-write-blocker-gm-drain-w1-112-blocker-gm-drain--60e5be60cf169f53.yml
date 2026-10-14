@@ -1,0 +1,7 @@
+id: G_CONTRACT-spool-inflight-atomic-write-blocker-gm-drain-w1-112-blocker-gm-drain-w2-153
+subject: 'Blocker for G_CONTRACT-spool-inflight-atomic-write-blocker-gm-drain-w1-112: PROVE cannot separate leader H2 (cold-sweep quarantines a sibling temp file mid-write) from H1-in-prose without a live daemon cold-sweep pass, which needs a daemon restart (forbidden: another lane''s process) and a CI-built agentplug runner (no local cargo). Fix still needed: named temp suffix or age gate in sweep_unconsumable_spool_files (claim_dispatch.rs:1631-1643, called from daemon.rs:3845), CI build, cross-session live witness. Also the stale cite skills/gm/SKILL.md section 1 should read skills/gm/spool-adapter.md:17. Receipts: .gm/receipts/G_CONTRACT-spool-inflight-atomic-write-blocker-gm-drain-w1-112/01-SPECIFY.md, 02-PROVE.md. Session gm-drain-w2-153.'
+blockedBy:
+- external
+session_id: gm-drain-w2-153
+status: pending
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

@@ -1,0 +1,6 @@
+id: IMMUT-RELEASE-BRIDGE-STATE-blocker-gm-drain-w2-237
+subject: 'Blocked: IMMUT-RELEASE-BRIDGE-STATE cannot close: no binding witness and a foreign hunk in src/release-bridge.js'
+title: 'Blocked: IMMUT-RELEASE-BRIDGE-STATE'
+body: 'Parent row: IMMUT-RELEASE-BRIDGE-STATE. Receipts: .gm/receipts/IMMUT-RELEASE-BRIDGE-STATE/01-03 (w1-166) and 04-DECIDE-gm-drain-w2-237.md. Premise: the in-place mutations at old lines 302-343 are now runReleaseBridge at 371-427. The EMIT edit (let next = state, no mutation of state) is present in gm-mcp/src/release-bridge.js and re-verified (dispatch 1791962693300-500-f927af44d026b76a). Unresolved: (1) the only reachable probe (dry run, checked-recently) does not reach the mutated branches, so H1 vs H2 is unseparated; a witness needs a network-backed swap-branch run, which touches the shared daemon. (2) The uncommitted src/release-bridge.js carries another writer''s runnerAssetName rename (lines 92-97). Delivery requires that writer to land first, and the bundle rebuild would publish it. Next step: owner lands the runnerAssetName hunk or confirms it is safe to include; then a witness that reaches signalDaemonForSwap, or a decision to accept H1 by reading the code, which then binds the row.'
+session_id: gm-drain-w2-237
+status: pending

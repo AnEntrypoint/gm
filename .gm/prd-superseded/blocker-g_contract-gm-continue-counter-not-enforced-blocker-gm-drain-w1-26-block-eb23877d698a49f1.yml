@@ -1,0 +1,8 @@
+id: BLOCKER-G_CONTRACT-gm-continue-counter-not-enforced-blocker-gm-drain-w1-26-blocker-gm-drain-w2-27
+subject: 'Blocker for BLOCKER-G_CONTRACT-gm-continue-counter-not-enforced: rs-plugkit Rust change and CI witness not reachable in session gm-drain-w2-27'
+session_id: gm-drain-w2-27
+body: 'Parent row: BLOCKER-G_CONTRACT-gm-continue-counter-not-enforced-blocker-gm-drain-w1-26 (stays pending). SPECIFY (receipt .gm/receipts/BLOCKER-G_CONTRACT-gm-continue-counter-not-enforced-blocker-gm-drain-w1-26/01-SPECIFY.md) confirmed H1: no counter or end-state logic in rs-plugkit (regex scan dispatch 1791959974756-500-b7de10d83a17fdcb; only gitignore.rs:16 hit). Cannot proceed to PROVE/EMIT: the fix is Rust in rs-plugkit/crates/plugkit-core (gm-continue dispatch state). Local cargo is hook-blocked, so it is verified only by CI (publish / release, step Build). Needs: implement counter in .gm/.gm-continue-count with reset on fresh user prompt, two end outcomes, push rs-plugkit commit via gm git verbs, bump gm gitlink, green CI, then a live gm-continue witness that refuses a third cycle from a different session than the implementer.'
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

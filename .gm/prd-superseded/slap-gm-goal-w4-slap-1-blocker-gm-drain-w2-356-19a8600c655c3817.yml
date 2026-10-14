@@ -1,0 +1,5 @@
+id: SLAP-gm-goal-w4-SLAP-1-blocker-gm-drain-w2-356
+subject: 'BLOCKER for SLAP-gm-goal-w4-SLAP-1: row is stale; cited lines absent in gm-mcp/src/dispatch.js'
+body: 'Row SLAP-gm-goal-w4-SLAP-1 cannot close. SPECIFY (receipt .gm/receipts/SLAP-gm-goal-w4-SLAP-1/01-SPECIFY.md) found: writeFileSync at lines 1044, 1071, 1167, 1179 and readFileSync at 1376 are absent from gm-mcp/src/dispatch.js (2177 lines). Live codesearch regex writeFileSync|readFileSync, dispatch 1791964338534-500-5cd15ac4d0a60f9e, returns writeFileSync only at 395 and 2100 and zero readFileSync hits. Needed to unblock: re-scope the row with its current target lines or the helper''s destination and its acceptance, via prd-add under the same id with overwrite:true. Executor will not guess a file or line set.'
+session_id: gm-drain-w2-356
+status: pending

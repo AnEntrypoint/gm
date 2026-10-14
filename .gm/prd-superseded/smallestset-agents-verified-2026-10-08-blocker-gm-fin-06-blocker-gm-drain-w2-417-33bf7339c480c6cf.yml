@@ -1,0 +1,5 @@
+id: SMALLESTSET-AGENTS-VERIFIED-2026-10-08-blocker-gm-fin-06-blocker-gm-drain-w2-417
+subject: 'Blocker: owner decision needed for git_reset mode=hard (row SMALLESTSET-AGENTS-VERIFIED-2026-10-08-blocker-gm-fin-06)'
+body: 'Parent row: SMALLESTSET-AGENTS-VERIFIED-2026-10-08-blocker-gm-fin-06. SPECIFY (receipt .gm/receipts/SMALLESTSET-AGENTS-VERIFIED-2026-10-08-blocker-gm-fin-06/01-SPECIFY.md) cannot close: the row requires the owner to choose between keeping git_reset mode=hard (align durable rule to source) or refusing hard in rs-plugkit git_reset (code change, owner approval, CI-only witness). No probe separates the two hypotheses; the choice is a product decision. Unblock: owner picks path (a) or (b). Witness cited by parent: codesearch GIT_RESET_MODES in rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs/git.rs (git.rs:7225-7376).'
+session_id: gm-drain-w2-417
+status: pending

@@ -1,0 +1,8 @@
+id: CLEANNAME-AGENTPLUG-RUST-blocker-gm-drain-w2-51
+subject: 'CLEANNAME-AGENTPLUG-RUST-blocker-gm-drain-w1-41 cannot close: no leader hypothesis, stale edit list, multi-submodule CI and pins'
+status: pending
+body: 'Blocks CLEANNAME-AGENTPLUG-RUST-blocker-gm-drain-w1-41 (session gm-drain-w2-51). SPECIFY receipt: .gm/receipts/CLEANNAME-AGENTPLUG-RUST-blocker-gm-drain-w1-41/01-SPECIFY.md. Findings: agentplug-host/src/imports.rs cited 673,1129,1183,1187,1209 are stale (actual 1032,1488,1542,1546,1608); agentplug-runner/src/main.rs:282 stale (actual 295). The refactor asserts no cause, so no leader hypothesis exists and no witness can bind. Next: a leader-free witness definition (e.g. per-crate cargo build and test pass via ci-status), an edit list re-derived by codesearch, one lane per submodule (libsql, crux, bert, agentplug) pushed to main, CI via ci-status, parent pin bump, then a witness from a session other than the editor.'
+session_id: gm-drain-w2-51
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

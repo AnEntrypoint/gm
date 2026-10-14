@@ -1,0 +1,8 @@
+id: BLOCKER-SKILLGM-session-id-alias-normalize-blocker-gm-drain-w2-38-blocker-gm-drain-w3-69
+subject: 'Blocker for BLOCKER-SKILLGM-session-id-alias-normalize-blocker-gm-drain-w2-38: alias normalize needs gm-mcp writer ownership and a second live session witness; not reachable in gm-drain-w3-69'
+status: pending
+blockedBy:
+- external
+body: 'Session gm-drain-w3-69 ran gm-prd for the row. SPECIFY receipt .gm/receipts/BLOCKER-SKILLGM-session-id-alias-normalize-blocker-gm-drain-w2-38/01-SPECIFY-gm-drain-w3-69.md; DECIDE receipt 08-DECIDE-gm-drain-w3-69.md. Needs: (1) a session that owns gm-mcp (dirty in parent at start) to add body.sessionId/session_id alias normalization in gm-mcp/src/dispatch.js explicitBodySessionId, rebuild the bundle, bump BUNDLE_VERSION and push gm-mcp main with the parent pin; (2) a second live session to witness cross-session session_owner_before_this_dispatch. Leader H1 (body aliases unread) unrefuted. No witness dispatch id exists for this run.'
+session_id: mcp-codemode-9708-1791970205562
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

@@ -1,0 +1,8 @@
+id: G_CONTRACT-skill-codesearch-body-table-blocker-gm-drain-w2-149
+subject: 'Independent witness for G_CONTRACT-skill-codesearch-body-table: edit pushed to gm-config 96a752d0, row needs a witness from another session'
+session_id: gm-drain-w2-149
+body: 'Parent row G_CONTRACT-skill-codesearch-body-table is pending. Edit landed on gm-config main at 96a752d028fc6c56e643b505631f0c570b24e7dd (dispatch 1791961218717-500-3de375ad176a157d); CI notify-gm run 38525563240 was pending at dispatch time. Receipts: .gm/receipts/G_CONTRACT-skill-codesearch-body-table/01-SPECIFY.md and 03-EMIT.md. Needed: (1) a witness from a session other than gm-drain-w2-149 that confirms entry.md lines 137-143 name no mode, default or field absent from codesearch {help:true} (dispatch 1791961144364-500-8e80d5ef3f43ae4e); (2) confirm CI run 38525563240 is green; (3) confirm the parent gitlink for gm-config equals 96a752d0 after bump-pins; (4) investigate the ''used to'' codesearch literal anomaly reported at entry.md line 143 (dispatch 1791961173646-500-965adf6f78317c35), since the file text does not contain that phrase. Also SKILL.md section 1 contains no body table, so the subject''s SKILL.md claim is stale and should be closed as such in the witness.'
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

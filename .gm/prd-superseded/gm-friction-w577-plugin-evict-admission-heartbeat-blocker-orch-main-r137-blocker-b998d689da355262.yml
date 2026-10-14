@@ -1,0 +1,14 @@
+id: gm-friction-w577-plugin-evict-admission-heartbeat-blocker-orch-main-r137-blocker-gm-drain-w1-128
+subject: 'Blocker: w577 three-clause row blocked on id conflict and claim-owner decision (gm-drain-w1-128)'
+kind: blocker
+body: |-
+  SPECIFY (gm-drain-w1-128) on row gm-friction-w577-plugin-evict-admission-heartbeat-blocker-orch-main-r137.
+  Row is itself a pending blocker (kind=blocker, session orch-main-r137). Its own two blockers still hold at head 550588c:
+  1. Row id gm-friction-w577-plugin-evict-admission-heartbeat is occupied by completed row r77 (session orch-main-r77, witness selfcheck-idle-evict). Landing the three w577 clauses under it would rescope r77. Needs owner decision: fresh row id for the three clauses, or explicit re-scope approval.
+  2. Edit sites are not claimable by this session: agentplug submodule and skills/gm-orchestrate, skills/gm/docs/verbs.md were dirty under orch-main-r137 at the time of its probe. At 550588c git_status scoped to these paths now reports only rs-plugkit modified (another writer's gitlink state), so the dirty set has moved and must be re-probed by the lane that owns the claim.
+  Stale citations: last_active now at agentplug/crates/agentplug-host/src/registry.rs 1619, 1627, 1725 (codesearch literal last_active, dispatch 1791958208950-500-467bf061e2df4dd8, exhaustive=true). Prior citations 1370/1378/1476 are stale.
+  Hypothesis (falsifiable): the row cannot close in one session because it needs a fresh id and a claimed multi-file surface. Refuted if a single-writer claim on agentplug + skills/gm-orchestrate + skills/gm/docs/verbs.md is granted and a fresh id is minted.
+  Witness of state: git_status dispatch 1791958207753-500-5c32940bbf0860fb.
+  Outcome: BLOCKED. Parent row stays pending. Owner decision required on the row id.
+session_id: gm-drain-w1-128
+status: pending

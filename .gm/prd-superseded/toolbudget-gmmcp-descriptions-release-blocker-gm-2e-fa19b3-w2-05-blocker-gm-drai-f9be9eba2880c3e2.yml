@@ -1,0 +1,5 @@
+id: TOOLBUDGET-GMMCP-DESCRIPTIONS-RELEASE-blocker-gm-2e-fa19b3-w2-05-blocker-gm-drain-w1-308
+subject: gm-mcp working tree still carries foreign uncommitted WIP (10 changed paths incl. staged src/self-update.js, untracked src/spool-store.js); the row's bin rebuild cannot publish without absorbing it
+body: 'Blocks TOOLBUDGET-GMMCP-DESCRIPTIONS-RELEASE-blocker-gm-2e-fa19b3-w2-05. Checked at git_status dispatch 1791959593473-500-9b3d5fde8422b478 (cwd C:\dev\gm\gm-mcp, branch main, head 78dc78307ecb54a57d9dfac1a9a8465e5fe81ed8). Unblock: the other writers commit their gm-mcp hunks (or a bin is rebuilt from committed src/ via the Git API route), then re-run gm-prd on the row. Receipt: C:\dev\gm\.gm\receipts\TOOLBUDGET-GMMCP-DESCRIPTIONS-RELEASE-blocker-gm-2e-fa19b3-w2-05\01-SPECIFY.md'
+session_id: gm-drain-w1-308
+status: pending

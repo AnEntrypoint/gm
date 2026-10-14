@@ -1,0 +1,8 @@
+id: BLOCK-dream-rsi-output-schema-code-blocker-gm-drain-w3-17
+subject: 'Blocker for BLOCK-dream-rsi-output-schema-code-blocker-gm-drain-w1-17 (session gm-drain-w3-17): no producer constructs DreamRsiResult, PartA, PartB or DreamRsiStatus (rs-plugkit/crates/plugkit-core/src/orchestrator/dream_rsi.rs:35-96 are definitions only; codesearch regex zero constructions); the dream-replay handler at dream_rsi.rs:103-311 returns its own reply shape, not the typed result. Closing needs a Rust producer edit in rs-plugkit (local cargo hook-blocked), a CI-built slim wasm, and a live dispatch witness from another session that carries status/part_a/part_b. Probe not run: no producer exists to dispatch.'
+body: 'Row: BLOCK-dream-rsi-output-schema-code. Parent: BLOCK-dream-rsi-output-schema-code (lean-exec-dreamrsi-1). Session: gm-drain-w3-17. Stage reached: SPECIFY (receipt .gm/receipts/BLOCK-dream-rsi-output-schema-code-blocker-gm-drain-w1-17/01-SPECIFY.md). Hypothesis: the output shape is defined but unproduced; the acceptance (a live reply carrying status, part_a, part_b) is unmet. Refuting witness: a live dream-replay or dream-replay-round dispatch whose reply carries status/part_a/part_b after a producer lands. Next: wire a producer in dream_rsi.rs, CI build via publish/release, then witness from a different session. Dispatch ids: codesearch 1791969280211-500-6e7443e9adca44d, codesearch 1791969293139-500-3c32dae6f7cc942f, callers 1791969241149-500-7316f2264b72c22e.'
+session_id: gm-drain-w3-17
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

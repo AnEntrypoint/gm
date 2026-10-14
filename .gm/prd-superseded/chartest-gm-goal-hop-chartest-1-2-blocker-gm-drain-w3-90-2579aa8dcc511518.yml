@@ -1,0 +1,8 @@
+id: CHARTEST-gm-goal-hop-CHARTEST-1-2-blocker-gm-drain-w3-90
+subject: 'BLOCKER CHARTEST-gm-goal-hop-CHARTEST-1-2: row requires standing test files, which the no-synthetic-test-files gate forbids'
+body: 'Blocks row CHARTEST-gm-goal-hop-CHARTEST-1-2 (session gm-drain-w3-90). The row''s need and witness require a new test file per module under gm-mcp/test (node --test over gm-mcp/test passes). gm-config/fsm/predicates.md:19 defines no-synthetic-test-files as true only when the diff adds no *.test.*, *.spec.*, or test/tests/__tests__ path; gm-config/prose/entry-extended.md:112 states No standing test files, ever. Both gate and prose conflict with the row, so the row cannot close as written. Verification must be a live exec_js witness against real code. Decision needed: either (a) rescope the row to exec_js characterization witnesses that create no test file, or (b) a human owner approves an exception to no-synthetic-test-files. Evidence: codesearch dispatch 1791970420684-500-854630a2aa869c9b; prd-list dispatch 1791970405967-500-4e3871ab25344d48.'
+session_id: gm-drain-w3-90
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

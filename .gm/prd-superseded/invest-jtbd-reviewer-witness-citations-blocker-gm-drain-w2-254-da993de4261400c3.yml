@@ -1,0 +1,6 @@
+id: INVEST-JTBD-REVIEWER-WITNESS-CITATIONS-blocker-gm-drain-w2-254
+subject: 'Blocker: INVEST-JTBD-REVIEWER-WITNESS-CITATIONS cannot witness until INVEST-JTBD-REVIEWER-SUMMARY-VERB exists (gm-drain-w2-254)'
+lane_wait_ms: 240000
+body: 'SPECIFY for row INVEST-JTBD-REVIEWER-WITNESS-CITATIONS-blocker-gm-drain-w1-178 (session gm-drain-w2-254) found the cited surface absent. The row names a witness on the reviewer summary reply, which is produced by the verb INVEST-JTBD-REVIEWER-SUMMARY-VERB. That verb is still pending in .gm/prd/ (session lean-node-INVEST). Evidence: gm.list filter ''summar'' returns only git_status (dispatch 1791962843261-500-357ab43db3d2600d is the net_lines codesearch, 0 hits in rs-plugkit; dispatch 1791962854022-500-8a1a05628c9b5e18 is the gate_results scan, 0 hits). Leader hypothesis: the summary verb does not exist yet, so the citation witness cannot bind; probe: gm.list filter ''summar'' names no net_lines verb. PROVE cannot run: the witness needs a completed-walk reply from the summary verb. Unblock: resolve INVEST-JTBD-REVIEWER-SUMMARY-VERB first, then re-run gm-prd on INVEST-JTBD-REVIEWER-WITNESS-CITATIONS.'
+session_id: gm-drain-w2-254
+status: pending

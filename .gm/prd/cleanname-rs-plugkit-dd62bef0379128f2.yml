@@ -1,0 +1,16 @@
+id: CLEANNAME-RS-PLUGKIT
+title: 'rs-plugkit (submodule): intention-revealing names for generic locals in code_index and cache'
+items:
+- crates/plugkit-core/src/code_index.rs:3645 let b = scoring.bm25_b_document_length_normalization -> bm25B or documentLengthNormalization
+- code_index.rs:2281 let r = if root.is_empty() -> resolvedRoot
+- code_index.rs:1887 let p = p.trim_matches('/') -> trimmedPath
+- code_index.rs:1922 let t = line.trim() -> trimmedLine
+- code_index.rs:3584,3589,3619 let m = self.metas... -> meta
+- code_index.rs:620 let v = unpack_to_value_pub(packed) -> unpackedValue
+- code_index.rs:65,1833 let arr -> embeddingArray / chunkArray
+- code_index.rs:1658 let v = embed_text(...) -> queryVector
+- crates/plugkit-core/src/cache.rs:316 let b = row_i64(row, "bytes") -> rowBytes
+witness: cargo build for the wasm guest with --features slim passes and the changed verb is witnessed through agentplug-runner per AGENTS.md; parent pin bumped after the submodule commit
+owner: rs-plugkit writer; one writer per submodule
+session_id: lean-hop-CLEANNAME
+status: pending

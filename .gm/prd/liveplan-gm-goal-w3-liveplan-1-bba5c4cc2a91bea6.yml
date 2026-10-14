@@ -1,0 +1,7 @@
+id: LIVEPLAN-gm-goal-w3-LIVEPLAN-1
+status: pending
+title: 'LIVEPLAN: live-plan store holds 264 pending rows of 276; no retire row has closed its split rows'
+description: 'Witness: prd-list count 276 total, pending 264 (limit-3 listing truncated:true). LIVEPLAN-RETIRE-EARS-DOCS-CURRENT-CONCISE closing_condition needs INVEST-EARS-DOC-PATHS-EXIST and INVEST-EARS-DOC-NO-REMOVED-VERBS closed; both pending. Action: close or retire stale pending rows so the store holds only the current task.'
+session_id: gm-goal-w3-LIVEPLAN
+phase: P1
+node: LIVEPLAN

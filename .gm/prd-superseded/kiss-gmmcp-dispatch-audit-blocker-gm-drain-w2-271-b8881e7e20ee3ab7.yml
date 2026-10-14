@@ -1,0 +1,5 @@
+id: KISS-GMMCP-DISPATCH-AUDIT-blocker-gm-drain-w2-271
+subject: 'Blocked: KISS-GMMCP-DISPATCH-AUDIT cannot close on its witness'
+body: 'Parent: KISS-GMMCP-DISPATCH-AUDIT (pending, unchanged). SPECIFY receipt: .gm/receipts/KISS-GMMCP-DISPATCH-AUDIT/01-SPECIFY.md. Findings: dispatch.js has 117 top-level functions, none unreferenced in-file (only inflightDispatchCount and gmResult have one in-file occurrence, both live via other files). 8 exports have no reference outside dispatch.js (fsReadSpillNote, withGlobFiltersCoerced, ensureAgentLease, leaseSessionsFor, explicitBodySessionId, applySessionLeaseVerdict, reapRunnerEnsureInFlight, awaitDaemonHeartbeat); they are used in-file. Row size premise stale (66,214 bytes in row, 109,337 now). Blocking gap: the branch and option-level probe (per-option caller tracing) is not done, and the row witness (rebuild, verify-build, exec_js exit 0) does not separate the leader hypothesis (excess branches exist) from its rival (none). Needed to unblock: a branch-level enumeration of option bags with caller traces, then a witness that names the leader result.'
+session_id: gm-drain-w2-271
+status: pending

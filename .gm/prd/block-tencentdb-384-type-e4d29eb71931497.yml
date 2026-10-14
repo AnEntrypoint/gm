@@ -1,0 +1,7 @@
+id: BLOCK-TENCENTDB-384-TYPE
+title: 'Blocker: migration destination carries vectors_db_dims as a validated 384 value'
+subject: 'The 384 precondition is restated in gm-config/prose/entry-extended.md (tencentdb-memory-import and migrate script refuse unless dims is 384) and skills/agent-memory/SKILL.md lines 92-95. Code today checks at runtime in rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs/memory.rs (around line 727). Code target: give the destination namespace type a validated dims field so a non-384 destination cannot be constructed; then delete both prose copies to a pointer. The agent-memory copy is outside entry-extended.md and needs its own row.'
+status: pending
+blockedBy:
+- external
+session_id: lean-exec-entryext-1

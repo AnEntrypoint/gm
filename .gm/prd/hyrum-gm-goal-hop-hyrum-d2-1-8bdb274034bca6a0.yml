@@ -1,0 +1,8 @@
+id: HYRUM-gm-goal-hop-HYRUM-d2-1
+status: pending
+title: gm-mcp/src declares no dispatch_id reply contract, yet rs-plugkit prd.rs and served complete.md read it
+text: 'codesearch dispatch_id path gm-mcp/src: 0 occurrences in 18 files (exhaustive, dispatch 1791745412593-297-46a05165aba7cd0a). Readers outside: rs-plugkit/crates/plugkit-core/src/orchestrator/prd.rs:920-922 reads witness_dispatch_id or dispatch_id from the witness body; prd.rs:1181 greps spool out for the id; .gm/instructions/complete.md:17 serves the witness_dispatch_id contract to workers. Producers: rs-plugkit wasm_dispatch/verbs.rs:2629; agentplug-runner daemon/claim_dispatch.rs:475-518. Action: declare the reply field and its consumers in one owning source (gm-mcp README or the spool reply schema), then witness a live codemode reply carrying dispatch_id against that declaration.'
+session_id: gm-goal-hop-HYRUM-d2
+blockedBy:
+- external
+deferReason: 'created in error: HYRUM is a tension node, not a principle; no hop may name it'

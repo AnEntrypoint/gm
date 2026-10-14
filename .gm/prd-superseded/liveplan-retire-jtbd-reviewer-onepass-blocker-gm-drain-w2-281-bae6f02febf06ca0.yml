@@ -1,0 +1,5 @@
+id: LIVEPLAN-RETIRE-JTBD-REVIEWER-ONEPASS-blocker-gm-drain-w2-281
+subject: 'Blocked: LIVEPLAN-RETIRE-JTBD-REVIEWER-ONEPASS-blocker-gm-drain-w1-199 cannot close; prerequisite rows pending'
+body: 'Row LIVEPLAN-RETIRE-JTBD-REVIEWER-ONEPASS-blocker-gm-drain-w1-199 (session gm-drain-w2-281) cannot close. Its closing condition is that INVEST-JTBD-REVIEWER-SUMMARY-VERB and INVEST-JTBD-REVIEWER-WITNESS-CITATIONS are both closed. Live reads (prd-list dispatches 1791963344258-500-a289d73c9a854176 and 1791963345450-500-48e2bd44640d2374) show both pending. No witness can bind the parent until they close. Receipts: .gm/receipts/LIVEPLAN-RETIRE-JTBD-REVIEWER-ONEPASS-blocker-gm-drain-w1-199/01-SPECIFY.md and 02-PROVE.md. Unblock: close INVEST-JTBD-REVIEWER-SUMMARY-VERB and INVEST-JTBD-REVIEWER-WITNESS-CITATIONS with witnesses, then close the parent row.'
+session_id: gm-drain-w2-281
+status: pending

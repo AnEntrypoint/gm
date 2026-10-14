@@ -1,0 +1,15 @@
+id: CHARTEST-gm-goal-hop-CHARTEST-1-1-blocker-gm-drain-w2-47
+title: 'BLOCKER CHARTEST-gm-goal-hop-CHARTEST-1-1: row requires test files; gm-prd forbids test files'
+status: pending
+body: |-
+  Blocker for CHARTEST-gm-goal-hop-CHARTEST-1-1 (session gm-drain-w2-47), filed at SPECIFY.
+
+  Conflict: the row requires characterization test files under gm-mcp/test (node --test), but skills/gm-prd/SKILL.md Procedure states 'No test files.' The row cannot close under gm-prd rules as written.
+
+  SPECIFY evidence: gm-mcp/src/self-update.js (11044 bytes) and gm-mcp/src/release-bridge.js (20431 bytes) exist; gm-mcp/test exists; literal codesearch for 'self-update' and 'release-bridge' over gm-mcp/test returns 0 matches (20 files scanned).
+
+  Needed to unblock: a decision whether a test-only row may add files under gm-mcp/test (overriding 'No test files' for this row), or a re-scope of the row to a non-test witness. Witness plan if allowed: node --test gm-mcp/test passes and pinned outputs match a live run of gm-mcp/src/cli.js self-update-status. Witness would need a live dispatch id.
+session_id: gm-drain-w2-47
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

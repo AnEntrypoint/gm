@@ -1,0 +1,6 @@
+id: THINSLICE-GIT-APPEND-REWRITE-blocker-gm-drain-w2-436
+subject: 'Row THINSLICE-GIT-APPEND-REWRITE cannot close as written. SPECIFY found three stale premises: (1) the witness verb git_reset_head does not exist; the registered verb is git_reset (rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs/git.rs:7313, dispatch table verbs.rs:3169); (2) git_reset has no pushed_commit_refused path; that error_code is only emitted by the amend refusal (git.rs:2228), so the witness cannot answer as stated; (3) skills/gm/SKILL.md has no section 4 append/rewrite enumerated list (section 4 is ''The one sanctioned interruption'', SKILL.md:123; codesearch for rewrite|append returns zero hits). No per-verb append/rewrite flag exists in the git verb registry (gates.rs:145 and mediator.rs:59 hold plain name lists). Needed: re-scope the row to a real witness (git_reset refusal or amend refusal) and a file for the registry flag, or retire it. Local cargo is blocked; the rs-plugkit change needs a CI witness.'
+status: blocked
+blockedBy:
+- THINSLICE-GIT-APPEND-REWRITE
+session_id: mcp-codemode-9708-1791966950861

@@ -1,0 +1,5 @@
+id: LIVEPLAN-RETIRE-PLUGKIT-SEMVER-VERSION-blocker-gm-drain-w2-284
+subject: 'Blocker: LIVEPLAN-RETIRE-PLUGKIT-SEMVER-VERSION still waits on PLUGKIT-SEMVER-UPDATE-WITNESS (pending, lean-node-INVEST)'
+body: 'Row LIVEPLAN-RETIRE-PLUGKIT-SEMVER-VERSION closing_condition requires PLUGKIT-SEMVER-VERSION-SET (completed, witness 1791778543596-500-b4b73bcc410e99f8) and PLUGKIT-SEMVER-UPDATE-WITNESS (status pending as of dispatch 1791963367381-500-e787f036e5c6c60). The second row needs a live daemon witness: sideload a stale gm.wasm, let the auto-updater run, then compare daemon-status.json loaded_plugin_content_sha256.gm to the release wasm sha256 and record that comparison as the witness. Session gm-drain-w2-284 (SPECIFY/PROVE) found the closing condition unmet, so LIVEPLAN-RETIRE cannot be resolved in this run. Unblock: run PLUGKIT-SEMVER-UPDATE-WITNESS from a session other than lean-node-INVEST, then re-run gm-prd on LIVEPLAN-RETIRE-PLUGKIT-SEMVER-VERSION. Receipts: .gm/receipts/LIVEPLAN-RETIRE-PLUGKIT-SEMVER-VERSION-blocker-gm-drain-w1-200/01-SPECIFY.md.'
+session_id: gm-drain-w2-284
+status: pending

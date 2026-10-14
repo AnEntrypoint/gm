@@ -1,0 +1,5 @@
+id: JTBD-RESUME-INTERRUPTED-WALK-blocker-gm-drain-w2-264
+subject: 'Blocker: live witness for interrupted-walk resume cannot run while another session holds the phase lease'
+body: 'Row JTBD-RESUME-INTERRUPTED-WALK cannot close in session gm-drain-w2-264. PROVE probe (dispatch 1791963277952-500-958e8ac5dce61ae7) shows phase state ORACLEBIAS owned by live lease gm-ach-20261014-01 (pid 11964, live: true), session_mismatch true. The acceptance witness (interrupt a walk with one open and one closed row, start a fresh session, observe next dispatch targets only the open row) must drive phase state, which would disturb that live writer. Unresolved: H2 (resume works from disk state alone) untested. Needed: a witness run after gm-ach-20261014-01 releases its lease, or a witness lane with its own isolated .gm state. Receipts: .gm/receipts/JTBD-RESUME-INTERRUPTED-WALK/01-SPECIFY.md, 02-PROVE.md. Also noted: gm-mcp serves 0.2.45 while 0.2.47 is installed.'
+session_id: gm-drain-w2-264
+status: pending

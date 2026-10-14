@@ -1,0 +1,8 @@
+id: COMMITFMT-ENFORCE-50-72-blocker-gm-drain-w3-120
+subject: 'Blocked: COMMITFMT-ENFORCE-50-72 needs a released rs-plugkit git_commit subject/body gate and a non-self live witness'
+body: 'Row COMMITFMT-ENFORCE-50-72 stays pending. Filed by gm-drain-w3-120 after SPECIFY (receipt .gm/receipts/COMMITFMT-ENFORCE-50-72-blocker-gm-drain-w1-50/01-SPECIFY.md). Blocked on external steps: (1) edit wasm_dispatch/verbs/git.rs git_commit to refuse or re-draft subject > 50 and body line > 72; (2) CI build with cargo build -p rs-plugkit --release --target wasm32-wasip1 --features slim (local cargo blocked); (3) rs-plugkit release and parent gitlink bump; (4) witness through agentplug-runner with an over-length subject refused, from a session other than the editor. Witness must cite its dispatch id. Session gm-drain-w3-120.'
+session_id: gm-drain-w3-120
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

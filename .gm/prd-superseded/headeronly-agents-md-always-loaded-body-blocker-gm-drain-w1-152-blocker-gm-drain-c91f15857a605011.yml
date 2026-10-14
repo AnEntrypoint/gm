@@ -1,0 +1,8 @@
+id: HEADERONLY-AGENTS-MD-ALWAYS-LOADED-BODY-blocker-gm-drain-w1-152-blocker-gm-drain-w2-213
+subject: 'Blocker for HEADERONLY-AGENTS-MD-ALWAYS-LOADED-BODY-blocker-gm-drain-w1-152: SPECIFY cannot close without an acceptance predicate and a section-to-destination map'
+body: 'Row HEADERONLY-AGENTS-MD-ALWAYS-LOADED-BODY-blocker-gm-drain-w1-152 is itself a blocker of parent HEADERONLY-AGENTS-MD-ALWAYS-LOADED-BODY. Its file is named (AGENTS.md) and the file exists at 29594 bytes (fs_stat dispatch 1791962124050-500-d7ade279c0819dca); the blocker''s cited 29511 is stale. What is missing: (1) an acceptance witness, e.g. AGENTS.md size below a stated byte count plus codesearch of each moved heading in its destination file; (2) the list of trigger-only sections and their destination SKILL.md or README, which is a judgment the row does not state. Receipt: .gm/receipts/HEADERONLY-AGENTS-MD-ALWAYS-LOADED-BODY-blocker-gm-drain-w1-152/01-SPECIFY.md. Resolution: re-scope the parent with acceptance and a destination map, then run PROVE, EMIT and witness per row.'
+session_id: gm-drain-w2-213
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

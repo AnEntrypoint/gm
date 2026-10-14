@@ -1,0 +1,19 @@
+id: DBC-gm-goal-w4-DBC-1-blocker-gm-drain-w3-141
+subject: 'Blocker: DBC-gm-goal-w4-DBC-1 unknown-key rejection needs a design decision and a submodule bundle witness'
+body: |-
+  Row DBC-gm-goal-w4-DBC-1 cannot close in session gm-drain-w3-141. Stage reached: SPECIFY (ELIMINATE not opened).
+
+  Finding 1: validatedArgs (gm-mcp/src/codemode.js:18-22) uses z.object(tool.inputSchema), which strips unknown keys, but for verb tools foldVerbArgs (codemode.js ~line 60-80) moves every non-envelope key into body before validation. So bogus_field:1 never reaches the zod stripper; it lands in body. The row's stated mechanism is therefore not the sole cause.
+
+  Finding 2: for verbs with no declared body schema (verb-bodies.js verbBodySchema, UNDECLARED_NOTE), refuseUndeclaredBodyKeys returns early, so body keys are passed to the Rust handler unchecked by design. codesearch is in this class, which is why the live check admitted bogus_field.
+
+  Finding 3: the proposed .strict() fix applies to the top level only. Top-level defaults (session_id, cwd) are added only when present in tool.inputSchema (codemode.js ~line 162-163), so a top-level strict check is safe inside codemode, but it does not cover body keys, which is where the live witness fails.
+
+  Needed to close: (a) decide whether the contract is body-field declarations per verb (large: one verb-table body entry per verb) or top-level strict only (small); (b) gm-mcp is a submodule: change gm-mcp/src and rebuild the committed bundle (npm run build) with a BUNDLE_VERSION bump in the same commit, push gm-mcp main, then bump the parent gitlink; (c) a live witness from a second session after the MCP server reloads (self-witness is refused, so the witness session must differ from gm-goal-w4-DBC and gm-drain-w3-141).
+
+  No file was edited and no commit was made in this run. Receipts: .gm/receipts/DBC-gm-goal-w4-DBC-1/01-SPECIFY.md.
+session_id: gm-drain-w3-141
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

@@ -1,0 +1,5 @@
+id: XYPROB-RS-PLUGKIT-GM-UNTRACKED-RESIDUAL
+subject: rs-plugkit/.gm runtime files (codesearch-result-*.json, last-prompt.txt) remain untracked and dirty the submodule pin
+body: 'Witness-driven residual from gm-drain-w1-331. Live probe git_status on C:\dev\gm\rs-plugkit (dispatch 1791959701091-500-76951c3f724df490): changed_paths 5, modified 0, untracked 5 under .gm/. Acceptance: that probe shows 0 untracked .gm/ paths, with a rule (gitignore or writer change) that covers each runtime writer. Parent row XYPROB-runtime-state-in-submodules is already completed (prd-resolve 1791958752048-500-cf15142ec4d15d2b); this row does not reopen it.'
+session_id: gm-drain-w1-331
+status: pending

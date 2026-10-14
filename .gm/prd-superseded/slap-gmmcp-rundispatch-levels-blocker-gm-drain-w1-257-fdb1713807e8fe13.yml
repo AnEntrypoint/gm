@@ -1,0 +1,5 @@
+id: SLAP-GMMCP-RUNDISPATCH-LEVELS-blocker-gm-drain-w1-257
+subject: 'Blocker: SLAP-GMMCP-RUNDISPATCH-LEVELS cannot close in gm-drain-w1-257; shared dirty gm-mcp tree has no single writer'
+body: 'Row SLAP-GMMCP-RUNDISPATCH-LEVELS needs one writer on gm-mcp/src/dispatch.js and bin/gm-mcp-server.js for the split, the BUNDLE_VERSION bump 0.2.41 and rebuild, then check-bin-drift, then a live exec_js echo witness and a list-and-cap test. On the live tree gm git_status shows 9 dirty paths in gm-mcp, including staged src/self-update.js, and blocker gm-fin-10 says gm-fin-11 also edits dispatch.js. Stage 01-SPECIFY receipt: .gm/receipts/SLAP-GMMCP-RUNDISPATCH-LEVELS/01-SPECIFY.md. Needed: serialise the writers on dispatch.js and bin/gm-mcp-server.js, then run the rebuild and the live witness as a single window.'
+session_id: gm-drain-w1-257
+status: pending

@@ -1,0 +1,8 @@
+id: BLOCK-dream-rsi-walk-acceptance-code-blocker-gm-drain-w2-12
+subject: 'Blocker for BLOCK-dream-rsi-walk-acceptance-code: PROVE cannot pass in session gm-drain-w2-12 (no local cargo, CI build and cross-session witness outstanding)'
+body: 'Row BLOCK-dream-rsi-walk-acceptance-code stays pending. Receipts: .gm/receipts/BLOCK-dream-rsi-walk-acceptance-code/01-SPECIFY.md and 02-PROVE.md. SPECIFY confirmed the cited facts: RejectedWalk at dream_rsi.rs:68 and rejected_walks at :87 exist; no applied token in dream_rsi.rs; no lean-walk anywhere under rs-plugkit (codesearch 1791959876878-500-b9bd5d35d6c6ca44, 1791959887352-500-d53547e0afed814c, 1791959886117-500-5fa519258ea49922). The validator needs a rs-plugkit Rust change in the nested repo, a CI-only wasm build (publish / release, step Build; local cargo is hook-blocked), a gitlink bump, and a live witness from another session that refuses an applied:true walk with a missing witness dispatch_id. None of these can run in this session, so no probe separates the leader from its alternatives. Unblock steps are as recorded in BLOCK-dream-rsi-walk-acceptance-code-blocker-gm-drain-w1-18.'
+session_id: gm-drain-w2-12
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

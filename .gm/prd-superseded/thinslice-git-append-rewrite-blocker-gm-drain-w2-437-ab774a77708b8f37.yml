@@ -1,0 +1,5 @@
+id: THINSLICE-GIT-APPEND-REWRITE-blocker-gm-drain-w2-437
+subject: 'Blocker for THINSLICE-GIT-APPEND-REWRITE (session gm-drain-w2-437): witness cannot close; git_reset_head is absent from the guest and no registry flag exists.'
+body: 'SPECIFY (codesearch literal ''git_reset_head'' over rs-plugkit/crates/plugkit-core/src, dispatch 1791966324821-500-59d4a0225599b212): 0 hits in 263 files, exhaustive:true. Dispatch 1791966249681-500-f031a97e9d139a95 (''pushed_commit_refused''): one hit at rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs/git.rs:2228, not a remote-reachability guard on git_reset. Acceptance needs a rs-plugkit Rust change plus a CI-built wasm and a cross-session witness; this session cannot produce either. Same gap as THINSLICE-GIT-APPEND-REWRITE-blocker-gm-drain-w1-296. Next: rs-plugkit change routing git_reset_head with a remote-reachability refusal, CI build, witness from another session.'
+session_id: gm-drain-w2-437
+status: pending

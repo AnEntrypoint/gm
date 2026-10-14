@@ -1,0 +1,5 @@
+id: SLAP-PLUGKIT-GITCOMMIT-LEVELS-blocker-gm-drain-w1-264-blocker-gm-drain-w2-387
+subject: 'BLOCKER for SLAP-PLUGKIT-GITCOMMIT-LEVELS-blocker-gm-drain-w1-264: parent refactor and CI wasm not landed'
+body: 'Blocks SLAP-PLUGKIT-GITCOMMIT-LEVELS-blocker-gm-drain-w1-264. Its witness cannot close in this session. The parent refactor (CommitArgs extraction in rs-plugkit git.rs git_commit) is absent from source (codesearch 0 hits, exhaustive). It needs an rs-plugkit source edit, a release CI wasm build, a parent gitlink bump, then a live git_commit dispatch. Local cargo is hook-blocked. Receipt: .gm/receipts/SLAP-PLUGKIT-GITCOMMIT-LEVELS-blocker-gm-drain-w1-264/01-SPECIFY.md. Stale cite: git_commit is at git.rs:2166-2546, not 1401. Unblock: land the parent refactor on rs-plugkit main, wait for the release CI wasm, bump the gitlink, then witness.'
+session_id: gm-drain-w2-387
+status: pending

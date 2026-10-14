@@ -1,0 +1,4 @@
+id: G_CONTRACT-gm-continue-end-states-counter
+subject: 'skills/gm-continue/SKILL.md restates a bounded state machine in prose: exactly two ways to end, the .gm/.gm-continue-count counter file, at most two dispatches per user turn, and a third cycle surfacing. Move the counter and the two outcomes into the gm-continue dispatch state so the bound is enforced by code; the SKILL.md keeps the outcome names only.'
+session_id: lean-node-G_CONTRACT
+status: pending

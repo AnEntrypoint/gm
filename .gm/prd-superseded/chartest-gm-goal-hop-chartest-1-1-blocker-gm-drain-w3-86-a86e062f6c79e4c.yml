@@ -1,0 +1,8 @@
+id: CHARTEST-gm-goal-hop-CHARTEST-1-1-blocker-gm-drain-w3-86
+subject: 'Blocked: row CHARTEST-gm-goal-hop-CHARTEST-1-1 requires test files, which the no-synthetic-test-files invariant forbids; phase lease held by gm-drain-w2-391'
+body: 'SPECIFY finding. The row asks for characterization tests under gm-mcp/test that pin gm-mcp/src/self-update.js and gm-mcp/src/release-bridge.js. Standing rule (gm Section 3, predicate no-synthetic-test-files, gm-config/fsm/predicates.md): no test files, ever. The row''s acceptance cannot be met without violating that rule, so the row cannot close on a witness. Also phase-status reports session_mismatch:true with session_owner_lease gm-drain-w2-391 (pid 9708, live:true), so this session does not hold the phase. Next step needing a decision: the row''s acceptance must be rescoped to a live-entry-point witness (no test file), or the rule exempted by the owner. Default chosen: keep the row pending, do not write test files, and do not seize the lease from the live owner.'
+session_id: gm-drain-w3-86
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

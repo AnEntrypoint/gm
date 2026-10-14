@@ -1,0 +1,8 @@
+id: G_CONTRACT-gm-continue-end-states-counter-blocker-gm-drain-w2-123
+subject: 'BLOCKER for G_CONTRACT-gm-continue-end-states-counter: rs-plugkit has no gm-continue dispatch state; the counter and outcomes need a Rust path, CI wasm build, publish and a cross-session witness'
+body: 'Session gm-drain-w2-123 re-ran SPECIFY on G_CONTRACT-gm-continue-end-states-counter and confirmed the w1-94 finding: no code owner exists in rs-plugkit for the .gm/.gm-continue-count counter or the two gm-continue outcomes. Only the gitignore literal at plugkit-core/src/gitignore.rs:16 and prose in orchestrator/instructions/prose/*.md match. Closing the row requires (1) a new Rust state path or FSM hook in rs-plugkit that enforces the bound, (2) a `--features slim` wasm build verified by CI, (3) a publish on rs-plugkit main and a gm gitlink pin bump, (4) a live dispatch witness from a separate session showing the third cycle is refused by code, and (5) skills/gm-continue/SKILL.md reduced to outcome names. None of these can complete inside one gm-prd run. Receipt: .gm/receipts/G_CONTRACT-gm-continue-end-states-counter-blocker-gm-drain-w1-94/01-SPECIFY.md. Parent row stays pending.'
+session_id: gm-drain-w2-123
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

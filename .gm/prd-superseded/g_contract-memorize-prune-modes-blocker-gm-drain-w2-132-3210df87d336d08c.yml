@@ -1,0 +1,8 @@
+id: G_CONTRACT-memorize-prune-modes-blocker-gm-drain-w2-132
+subject: 'Blocker: prune Keys/Query enum needs a CI-verified rs-plugkit change and a witness from another session'
+blockedBy:
+- external
+body: 'Row G_CONTRACT-memorize-prune-modes cannot close in session gm-drain-w2-132. SPECIFY (.gm/receipts/G_CONTRACT-memorize-prune-modes/01-SPECIFY.md): the PruneRequest enum (Remove/Review) already exists in rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs/memory.rs:898-961. Residual gap: parse_prune_request (memory.rs:921-935) lets a body with both key/keys and query take Remove and drops query silently. Fixing it is a Rust change in the rs-plugkit nested repo, verified only by CI (no local cargo). Closing it needs the CI run plus a witness from another session. Unblock by: making the parse reject mixed bodies (or split into an explicit mode field), landing via CI, then witnessing with a dispatch from a different session.'
+session_id: gm-drain-w2-132
+status: pending
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

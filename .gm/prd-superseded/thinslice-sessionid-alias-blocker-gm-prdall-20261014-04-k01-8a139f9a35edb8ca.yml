@@ -1,0 +1,5 @@
+id: THINSLICE-SESSIONID-ALIAS-blocker-gm-prdall-20261014-04-k01
+subject: 'Blocker for THINSLICE-SESSIONID-ALIAS: cited alias sentences are absent from skills/gm/SKILL.md and gm-config/prose/entry.md; the normalization half needs a gm-mcp bundle rebuild and a second-session witness'
+body: 'Stage reached: SPECIFY. Receipt: .gm/receipts/THINSLICE-SESSIONID-ALIAS/01-SPECIFY.md. Cited alias sentence not found in either file (stale citation). Dispatch layer reads body.SESSION_ID only (gm-mcp/src/dispatch.js:1073). Closing needs: re-scoped row naming the live file set, a bundle rebuild, and a witness from a session other than gm-prdall-20261014-04-k01.'
+session_id: gm-prdall-20261014-04-k01
+status: pending

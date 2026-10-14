@@ -1,0 +1,7 @@
+id: ORACLEBIAS-REBUILD-SIDELOAD-blocker-gm-prdall-20261014-04-k06
+subject: 'ORACLEBIAS-REBUILD-SIDELOAD cannot close: served ORACLEBIAS node witness not isolated'
+status: pending
+blockedBy:
+- ORACLEBIAS-REBUILD-SIDELOAD
+body: 'Findings: source oraclebias.md (mtime 2026-10-12T23:01Z) carries the rule; ~/.agentplug/plugins/gm.wasm (2026-10-14T05:17Z) and ~/.gm-tools/plugkit.wasm (2026-10-13T19:21Z) both contain the rule bytes, so the stale-sideload hypothesis is refuted. Blocking gap: instruction probe (dispatch 1791956551069-500-710f054b28049b16) returned session_mismatch (owner gm-ach-20261014-01) and the orchestrator root payload, not an ORACLEBIAS-node reply, so no witness isolates the served node text. Required: rerun instruction for the ORACLEBIAS node under SESSION_ID gm-prdall-20261014-04-k06 and confirm the served text contains the rule. Also: the row''s full ACH matrix was not written; gm-prd SPECIFY requires it.'
+session_id: mcp-codemode-31304-1791956571407

@@ -1,0 +1,5 @@
+id: NODUPEDOC-PROSE-NODE-COPIES-blocker-gm-drain-w2-310
+subject: 'Blocker for NODUPEDOC-PROSE-NODE-COPIES: the dedupe is a multi-repo change that cannot be witnessed in this run'
+body: 'Blocks NODUPEDOC-PROSE-NODE-COPIES. SPECIFY (.gm/receipts/NODUPEDOC-PROSE-NODE-COPIES/01-SPECIFY.md) confirmed the duplication: the leave-transition sentence sits in 143 files in gm-config/prose and 143 files in rs-plugkit/crates/plugkit-core/src/orchestrator/instructions/prose (dispatches 1791963583822-500-d81b844236274914, 1791963602151-500-f40fbdcb6d76eef6). The row witness figures (99 and 202) are stale. Closing needs: (1) a rs-plugkit build.rs change so the compiled fallback embeds the gm-config copy, witnessed only by CI because local cargo is hook-blocked; (2) a chosen phase or entry owner for the shared sentence, which changes served walk instructions; (3) a rs-plugkit release and parent gitlink bump. Partial edits would make the two trees drift, so none were made. Next action: an owner decides the shared-sentence owner and approves the rs-plugkit rebuild path, then a witness re-runs with the corrected counts.'
+session_id: gm-drain-w2-310
+status: pending

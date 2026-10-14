@@ -1,0 +1,9 @@
+id: CQS-gm-goal-w4-CQS-1-blocker-gm-drain-w3-129
+subject: 'Blocked: CQS-gm-goal-w4-CQS-1-blocker-gm-drain-w1-59 cannot publish while gm-mcp index is held by another writer'
+title: 'Blocked: CQS-gm-goal-w4-CQS-1 publish waits on gm-mcp index owner'
+description: 'Row CQS-gm-goal-w4-CQS-1-blocker-gm-drain-w1-59 is implemented in gm-mcp/src/dispatch.js (runnerEnsureInFlight, reapRunnerEnsureInFlight present). Blocked by a concurrent writer: gm-mcp index has 4 staged paths (AGENTS.md, bin/gm-mcp-server.js, src/self-update.js, src/verb-table.js), untracked src/spool-store.js, and dispatch.js has a 175-line diff that mixes unrelated hunks. Next: owner of the gm-mcp index commits or parks its work; then isolate this row''s hunks from a git archive of HEAD plus patch, re-run witness, git_finalize {paths:["src/dispatch.js"]} and rebuild the gm-mcp bundle. Witness evidence: scratchpad cqs1/witness-output.txt sha256 d7ea244c... (unverified by dispatch id).'
+status: pending
+blockedBy:
+- external
+session_id: mcp-codemode-9708-1791971126398
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

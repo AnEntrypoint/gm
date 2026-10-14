@@ -1,0 +1,5 @@
+id: SLAP-PLUGKIT-INDEXCFG-LEVELS-blocker-gm-drain-w2-395
+subject: 'BLOCKER: SLAP-PLUGKIT-INDEXCFG-LEVELS split cannot witness in this lane; sequence after code-chunks row'
+body: 'Row SLAP-PLUGKIT-INDEXCFG-LEVELS (split index_cfg_impl into ensure_store, clear_on_dim_mismatch, scan_and_write, orphan_pass) stays open. Citation is stale: index_cfg_impl is at rs-plugkit/crates/plugkit-core/src/code_index.rs:2364-3112 (749 lines), not 2239/733 (callers dispatch 1791965273272-500-16b16fbf5be245, codesearch dispatch 1791965278401-500-d4384277befd1053). The witness needs cargo build plus a live code_index dispatch; local cargo is hook-blocked and rs-plugkit Rust verifies only in CI (publish/release, step Build), so no witness dispatch id exists in this lane. Concurrent writer: row code-chunks-delete-before-insert-blocks-safe-budget-capping edits the same function (~1403/1419/1424). Next: run the split from a CI-publishing lane after that row lands or is ordered first. Receipt: .gm/receipts/SLAP-PLUGKIT-INDEXCFG-LEVELS-blocker-gm-2e-fa19b3-w7-03/01-SPECIFY.md'
+session_id: gm-drain-w2-395
+status: pending

@@ -1,0 +1,8 @@
+id: HUGHES-gm-goal-hop-HUGHES-1-1-blocker-gm-drain-w1-156-blocker-gm-drain-w2-218
+subject: 'Blocked: HUGHES-gm-goal-hop-HUGHES-1-1-blocker-gm-drain-w1-156 needs an owner decision on generated-input checks in gm-mcp'
+body: 'Row HUGHES-gm-goal-hop-HUGHES-1-1-blocker-gm-drain-w1-156 cannot close in session gm-drain-w2-218. Its closing condition is an owner decision on whether a generated-input check may live in gm-mcp and as which file kind (a non-test script vs a test file, which gm-prd forbids, vs a synthetic check, which gm-mcp AGENTS.md bans). No such decision is recorded in the parent row or AGENTS.md. SPECIFY and PROVE receipts: .gm/receipts/HUGHES-gm-goal-hop-HUGHES-1-1-blocker-gm-drain-w1-156/01-SPECIFY.md and 02-PROVE.md. Absence re-confirmed by codesearch dispatch 1791962267482-500-be047fa60776d0d0 (0 matches, exhaustive, 31 files). Same owner decision as HUGHES-gm-goal-hop-HUGHES-2-2. Owner action: decide the file kind, then a fresh session can add the check and witness it.'
+session_id: gm-drain-w2-218
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

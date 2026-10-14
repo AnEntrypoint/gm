@@ -1,0 +1,5 @@
+id: GM-GREP-HEAD-LIMIT-FRICTION-blocker-gm-drain-w1-134
+subject: 'Blocker for GM-GREP-HEAD-LIMIT-FRICTION: grep head_limit fix needs a CI-released rs-plugkit guest and a cross-session witness'
+body: 'Row GM-GREP-HEAD-LIMIT-FRICTION stays pending. Leader hypothesis H1 confirmed by probe: GREP_ACCEPTED_FIELDS (rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs/search.rs:1377) and GREP_LIMIT_FIELDS (search.rs:1838) lack head_limit. Live refusal 1791958260555-500-6743bccb52804baa (unknown_fields [head_limit]); max_results on the same call succeeds 1791958265518-500-633b3fc7e53a7fa7. Fix: add "head_limit" to both lists in search.rs (codesearch already accepts it at :842). Needed to close: rs-plugkit commit on main, CI release build (wasm32-wasip1 --features slim), parent gitlink bump, then a grep head_limit:5 dispatch from another session returning ok:true with max_matches 5. Receipts: .gm/receipts/GM-GREP-HEAD-LIMIT-FRICTION/01-SPECIFY.md and 02-PROVE.md.'
+session_id: gm-drain-w1-134
+status: pending

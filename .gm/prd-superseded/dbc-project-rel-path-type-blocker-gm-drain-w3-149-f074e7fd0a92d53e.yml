@@ -1,0 +1,8 @@
+id: DBC-PROJECT-REL-PATH-TYPE-blocker-gm-drain-w3-149
+subject: 'Blocked: DBC-PROJECT-REL-PATH-TYPE cannot close in gm-drain-w3-149'
+body: 'Row DBC-PROJECT-REL-PATH-TYPE (rs-plugkit verbs.rs:581 path_within_project and the four re-checks at verbs.rs:540-571, git.rs:3803, git.rs:3843, git.rs:4227-4230) needs a Rust edit in the nested rs-plugkit repo. Local cargo is blocked by a hook (memory gm-no-local-cargo-verified-by-ci), so the wasm guest must be rebuilt by CI (--features slim) and the changed verb witnessed through agentplug-runner from another session. This session has no reachable PROVE or cross-session witness. SPECIFY receipt: 1 codesearch hit set confirmed (6 occurrences, 1 file, exhaustive). Blocker is the missing CI-built witness, not an unknown in the code. Next step: a session with a CI build slot takes the ELIMINATE-EDIT-PROVE stages with a cross-session witness.'
+session_id: gm-drain-w3-149
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

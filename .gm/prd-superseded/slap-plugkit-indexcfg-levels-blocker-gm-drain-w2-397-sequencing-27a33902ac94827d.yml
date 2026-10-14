@@ -1,0 +1,5 @@
+id: SLAP-PLUGKIT-INDEXCFG-LEVELS-blocker-gm-drain-w2-397-sequencing
+subject: 'BLOCKER: SLAP-PLUGKIT-INDEXCFG-LEVELS-blocker-gm-drain-w1-270-ci-witness cannot close in lane gm-drain-w2-397'
+body: 'Stage reached: SPECIFY (receipt .gm/receipts/SLAP-PLUGKIT-INDEXCFG-LEVELS-blocker-gm-drain-w1-270-ci-witness/01-SPECIFY.md). PROVE, EMIT not attempted. Parent row SLAP-PLUGKIT-INDEXCFG-LEVELS stays pending. Causes: (1) the witness needs a CI-built rs-plugkit wasm (publish/release, step Build); local cargo is hook-blocked, so no witness dispatch id exists in this lane. (2) The sequencing dependency named by the blocker, code-chunks-delete-before-insert-blocks-safe-budget-capping, is absent from both .gm/prd and .gm/prd-log.jsonl, so its order against this split is unconfirmed. (3) Stale citation: index_cfg_impl is at rs-plugkit/crates/plugkit-core/src/code_index.rs:2364 (codesearch, exhaustive), not line 2239. Next: confirm the sequencing row exists or is retired, then run the split from a lane that can publish through CI and cite its ci-status run.'
+session_id: gm-drain-w2-397
+status: pending

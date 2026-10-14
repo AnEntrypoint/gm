@@ -1,0 +1,11 @@
+id: gm-config-vendored-prose-shadows-config-cache-blocker-gm-drain-w1-126-blocker-gm-drain-w2-169
+session_id: mcp-codemode-23256-1791961342403
+status: pending
+title: 'Blocker: vendored prose shadow witness needs a released runner and the gm-config .vendored.json writer'
+description: 'Row gm-config-vendored-prose-shadows-config-cache-blocker-gm-drain-w1-126 cannot reach PROVE in this session. Two prerequisites are absent on main: (1) the gm-config writer of .gm/instructions/.vendored.json on every vendoring publish (codesearch literal vendored.json over gm-config returns 0 hits); (2) a released rs-plugkit wasm guest with the prose.rs is_unedited_snapshot fix, which only CI builds (local cargo is blocked). Unblock: land the gm-config writer on main, land the prose.rs path on rs-plugkit main, let publish/release pass, bump the gm gitlink, then run gm-prd on gm-config-vendored-prose-shadows-config-cache with its sentinel probe.'
+tags:
+- config
+- prose
+- silent-degradation
+- blocker
+witness_plan: 'After release: instruction dispatch cwd C:/dev/gm serves the cache line, not the vendored line; an edited vendored file shows degraded or an explicit outcome on the wire. Receipts: .gm/receipts/gm-config-vendored-prose-shadows-config-cache-blocker-gm-drain-w1-126/.'

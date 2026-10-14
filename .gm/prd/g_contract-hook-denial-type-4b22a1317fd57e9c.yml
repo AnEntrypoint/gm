@@ -1,0 +1,4 @@
+id: G_CONTRACT-hook-denial-type
+subject: gm-config/prose/entry.md 'Hook denials throw, never mutate' restates a hook API rule (throw an error carrying an imperative instruction; never rewrite args; never exit 1 or write stderr). The denial should be a typed error value with an instruction field, and the hook loader should reject a handler whose return is an args object. Prose names the type.
+session_id: lean-node-G_CONTRACT
+status: pending

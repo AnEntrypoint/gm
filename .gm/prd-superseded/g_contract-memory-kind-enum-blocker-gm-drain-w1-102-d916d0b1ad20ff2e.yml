@@ -1,0 +1,7 @@
+id: G_CONTRACT-memory-kind-enum-blocker-gm-drain-w1-102
+subject: 'Blocker for G_CONTRACT-memory-kind-enum: owner must choose the kind model, and the enum move needs a CI-built witness from another session. Stale premise: entry-extended.md:46 already states kind is a free-text storage tier (l0/l1), and the four-type sentence is absent at HEAD (codesearch 1791957943558-500-c07ca376bffc5cda). Default stated, not applied: kind stays a free-text storage tier. Receipts: .gm/receipts/G_CONTRACT-memory-kind-enum-blocker-gm-drain-G_CONTRACT-memory-kind-enum/. Evidence: memorize.rs:35, memory.rs:501, tencentdb_memory.rs:100 TIERS=[l0,l1].'
+blockedBy:
+- external
+session_id: gm-drain-w1-102
+status: pending
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

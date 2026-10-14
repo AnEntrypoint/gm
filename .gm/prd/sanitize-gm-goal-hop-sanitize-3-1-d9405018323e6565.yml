@@ -1,0 +1,5 @@
+id: SANITIZE-gm-goal-hop-SANITIZE-3-1
+subject: 'Reply text has no sanitizer before a judge reads it: gm-mcp/src has no sanitize step on the reply path'
+description: 'SANITIZE hop over gm-mcp/src, rhetoric from LLMJUDGE. Claim tested: reply text is cleaned before any judge reads it. Result: FAILS. codesearch literal ''sanitize'' over gm-mcp/src (18 files, 4731 lines): 0 matches, dispatch 1791745435241-331-7d1364d677cdf462. ''judge'' also 0 matches in the same scan. The only escape routine, dispatch.js:368-424 (repairedJsonStringLiterals), repairs inbound request JSON string literals, not reply text. response-compact.js cleanResponse/truncateLongText (76-115) only truncates long strings, drops blank values and duplicate rows; it strips no control characters, markup or instruction-like text. Witness read: dispatch 1791745454201-367-c31886a868c614d7. Need: a sanitize stage between the reply and any judge, defined in gm-mcp/src, before an LLM judge is added.'
+status: pending
+session_id: gm-goal-hop-SANITIZE-3

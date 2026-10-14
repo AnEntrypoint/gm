@@ -1,0 +1,5 @@
+id: G_CONTRACT-gate-enforcement-status-prose-rsplugkit-copies-blocker-gm-drain-w2-119
+subject: 'witness pending: rs-plugkit prose copies published, release build and live witness not yet closed'
+body: 'Published rs-plugkit 1c22ff029f9e9f1aa8bb36c11fcde9b9e92e50c2 on main (six prose files: g_contract, g_done, g_indep, g_net, g_start, g_sweep; status sentences removed, matching gm-config af0ec2c7). ci-status: native-check success; release publish/release run 38524898960 still in_progress at dispatch 1791960930068-500-8581d00c7b95f437. Open: (1) local rs-plugkit checkout is diverged at 163f7363 (1 ahead, 1 behind) because crates/plugkit-core/Cargo.toml carries another lane''s uncommitted edit that blocks git_pull; resolve by a path-scoped reland or once that lane commits, then git_pull main and push the merge sha. (2) bump parent gm gitlink for rs-plugkit to 1c22ff02 once release is green. (3) witness: after the release binary is served, dispatch instruction for the g_* gates and confirm no ''refused until predicate'' or ''This is advisory'' text; the witness must come from a session other than gm-drain-w1-92.'
+session_id: gm-drain-w2-119
+status: pending

@@ -1,0 +1,5 @@
+id: PLUGKIT-SEMVER-VERSION-BLOCKER-MARKER-blocker-gm-drain-w1-240
+subject: 'Blocked: PLUGKIT-SEMVER-VERSION-BLOCKER-MARKER needs an external release or operator marker replacement'
+body: 'Row PLUGKIT-SEMVER-VERSION-BLOCKER-MARKER cannot close in session gm-drain-w1-240. Cited code is present (agentplug/crates/agentplug-runner/src/download.rs local_dev_sideload_marker_path, codesearch dispatch 1791958932117-500-5b9025a93312bc44), but the acceptance is an installed-marker replacement outside the repo, which is an operator action or an external semver release, and no in-repo change sets gm.version. Next step: an operator replaces the marker or a semver release lands, then split the row into PLUGKIT-SEMVER-VERSION-SET and PLUGKIT-SEMVER-UPDATE-WITNESS as the row already notes. Receipt: .gm/receipts/PLUGKIT-SEMVER-VERSION-BLOCKER-MARKER/01-SPECIFY.md. Hypothesis H1: external blocker, refuted by no repo-side writer of gm.version.'
+session_id: gm-drain-w1-240
+status: pending

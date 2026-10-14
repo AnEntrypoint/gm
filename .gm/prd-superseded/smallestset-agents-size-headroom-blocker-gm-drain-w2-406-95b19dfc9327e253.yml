@@ -1,0 +1,5 @@
+id: SMALLESTSET-AGENTS-SIZE-HEADROOM-blocker-gm-drain-w2-406
+subject: 'Blocked: SMALLESTSET-AGENTS-SIZE-HEADROOM cannot close in one session'
+body: 'Row SMALLESTSET-AGENTS-SIZE-HEADROOM is pending. AGENTS.md measures 29594 bytes against the below-20000 acceptance (exec_js dispatch 1791965624041-500-1a6483372eab336c). Its six dependency rows are resolved and did not reduce the file. Closing needs about 9.6 KB removed from AGENTS.md into docs/verified-incidents.md and docs/dream-rsi.md, with every falsifier line revalidated against source. The witness must come from a session other than gm-drain-w2-406. Receipt: .gm/receipts/SMALLESTSET-AGENTS-SIZE-HEADROOM/01-SPECIFY-gm-drain-w2-406.md.'
+session_id: gm-drain-w2-406
+status: pending

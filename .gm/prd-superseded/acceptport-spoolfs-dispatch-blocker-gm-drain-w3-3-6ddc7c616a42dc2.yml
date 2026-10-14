@@ -1,0 +1,8 @@
+id: ACCEPTPORT-SPOOLFS-DISPATCH-blocker-gm-drain-w3-3
+subject: 'Blocked: ACCEPTPORT-SPOOLFS-DISPATCH is title-only (no .gm/prd file, no acceptance, no target file, no witness); ACCEPTPORT-SPOOLFS-DISPATCH-blocker-gm-drain-w2-1 cannot reach EDIT or PROVE'
+blockedBy:
+- external
+body: 'Filed by gm-drain-w3-3 at SPECIFY of ACCEPTPORT-SPOOLFS-DISPATCH-blocker-gm-drain-w2-1. Evidence: prd-list {id:ACCEPTPORT-SPOOLFS-DISPATCH} returns the title ''Ports and Adapters: dispatch.js writes spool in-files and reads lock/status files inline with fs; move them behind a spool-store adapter'' and nothing else; fs_stat .gm/prd/ACCEPTPORT-SPOOLFS-DISPATCH.yml returns not found. Without a named file and an acceptance criterion there is no witness that can bind (prd-resolve needs a witness that names the leader hypothesis). Executor did not guess a file. Needed to unblock: re-scope the parent with prd-add id ACCEPTPORT-SPOOLFS-DISPATCH and overwrite:true, naming (a) the file(s) under gm-mcp/src that hold the inline fs calls, (b) the acceptance, e.g. no fs.read/fs.write in gm-mcp/src/dispatch.js outside a spool-store adapter module, and (c) a witness command with its input path resolved per gm-prd witness rules. Then re-run gm-prd on ACCEPTPORT-SPOOLFS-DISPATCH-blocker-gm-drain-w2-1.'
+session_id: gm-drain-w3-3
+status: pending
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

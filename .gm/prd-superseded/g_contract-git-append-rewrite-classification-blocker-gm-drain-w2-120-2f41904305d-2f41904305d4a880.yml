@@ -1,0 +1,12 @@
+id: G_CONTRACT-git-append-rewrite-classification-blocker-gm-drain-w2-120
+subject: 'Blocker: G_CONTRACT-git-append-rewrite-classification has no file, acceptance, leader hypothesis or local probe'
+body: |-
+  Blocker for G_CONTRACT-git-append-rewrite-classification (session gm-drain-w2-120), stopped at SPECIFY.
+  Cited line verified: skills/gm/SKILL.md:128 carries the 'Substrate-scoped' append/rewrite classification (codesearch, exhaustive). Not stale.
+  Missing for the row to run: (1) no file list: the row names no git verb registry file. Codesearch found no registry symbol for git verbs; git verbs are dispatched in rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs/git.rs, and gm-mcp/src/dispatch.js only special-cases git_status. The target file must be named before an executor can edit it. (2) no acceptance or witness command. (3) no leader hypothesis or ACH matrix: the row asserts a design (per-verb flag, prose cites the flag) without a falsifiable check. (4) PROVE needs a rebuilt rs-plugkit wasm (--features slim, CI-built); no local cargo in this session, so the flag cannot be witnessed here.
+  Unblock: re-scope the parent row with prd-add under the same id naming the registry file, the flag field and the probe (for example a live git verb reply carrying the flag), and a witness dispatch from another session on the CI-built guest.
+session_id: gm-drain-w2-120
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

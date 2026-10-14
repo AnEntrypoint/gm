@@ -1,0 +1,5 @@
+id: CHARTEST-gm-goal-hop-CHARTEST-1-1
+session_id: mcp-codemode-9708-1791970421607
+status: pending
+subject: 'CHARTEST: pin gm-mcp self-update and release-bridge behaviour with a live exec_js characterization run before change'
+body: 'Present need: gm-mcp/src/self-update.js and gm-mcp/src/release-bridge.js carry the bundle-replacement and release-trust logic (assertLoadableBundle, assertReleaseAssetUrl, backup to .prev, freeze markers). Rescoped per blocker CHARTEST-gm-goal-hop-CHARTEST-1-1-blocker-gm-drain-w3-89: no standing test file (no-synthetic-test-files, predicates.md:19 is diff-scoped and forbids new test files and test directories). Need: a live exec_js run that imports the real modules and records observable outputs (rejected URLs, loadable-bundle assertion, freeze reasons, .prev backup) as pinned outputs in a receipt under .gm/receipts/. Scope: exec_js run plus receipt only; no src edits, no new test file or test directory. Witness: the exec_js run reproduces the pinned outputs against gm-mcp/src/cli.js self-update-status on the current tree.'

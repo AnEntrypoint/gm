@@ -1,0 +1,8 @@
+id: BLOCK-RECALL-INDEX-SINGLE-WRITER-blocker-gm-drain-w3-31
+subject: 'Blocked: BLOCK-RECALL-INDEX-SINGLE-WRITER has multiple write sites; owner must choose Rust reroute (a) or prose amend (b)'
+blockedBy:
+- external
+body: 'Session gm-drain-w3-31 ran gm-prd on BLOCK-RECALL-INDEX-SINGLE-WRITER. SPECIFY (codesearch literal rssearch_vectors, dispatch 1791969516325-500 family, 46 occurrences in 12 files, exhaustive: true) confirms the multi-writer premise: rssearch_vectors::write is called from orchestrator/memorize.rs:315 and :679, wasm_dispatch/verbs/memory.rs:544 (memorize_with_raw), and memory_md.rs:783, with mark_deleted/undelete at memory_md.rs:732, 869, 901, 1049. memorize-fire is not the sole writer. ELIMINATE and EDIT need a rs-plugkit Rust reroute of every write site through memorize-fire, and VALIDATE/PROVE need a CI-built slim wasm (local cargo is hook-blocked) plus a witness from another session. Owner decision required: (a) Rust reroute of all write sites, or (b) prose amend of gm-config/prose/entry-extended.md:52 and its rs-plugkit copy to describe the real writer set. Row stays pending; no witness was run in this session, so no witness dispatch id is bound.'
+session_id: gm-drain-w3-31
+status: pending
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

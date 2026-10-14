@@ -1,0 +1,5 @@
+id: SUBAGENT-PROBE-RAW-DUMP-blocker-gm-2e-fa19b3-w3-01-blocker-gm-drain-w2-431
+subject: 'SUBAGENT-PROBE-RAW-DUMP row: leader H1 (stale) confirmed by exhaustive probe; owner must close or re-scope'
+body: 'Row SUBAGENT-PROBE-RAW-DUMP-blocker-gm-2e-fa19b3-w3-01-blocker-gm-drain-w1-293 cites carry/CLOSE-XY-G2 artifacts that do not exist. Session gm-drain-w2-431 ran the H1-vs-H2 probe: codesearch literal ''CLOSE-XY-G2'' with path .gm, exhaustive true, 136 files scanned, 0 matches (dispatch 1791966068604-500-f44818bac7630d97). H2 (artifacts under an unnamed path) is refuted for .gm. Leader H1 (row stale) stands. The row''s own text says the owner decides closure as stale or re-scope to a real file; no witness is bound and no resolve is made here. Needed: owner decision on the parent row.'
+session_id: gm-drain-w2-431
+status: pending

@@ -1,0 +1,8 @@
+id: DBC-gm-goal-w4-DBC-1-blocker-gm-drain-w1-63-blocker-gm-drain-w3-142
+subject: 'BLOCKER DBC-gm-goal-w4-DBC-1-blocker-gm-drain-w1-63: served gm-mcp bundle lacks the undeclared-body-key check; bundle rebuild and live reload are blocked by other writers'
+body: 'Row DBC-gm-goal-w4-DBC-1-blocker-gm-drain-w1-63 (session gm-drain-w3-142) cannot close. Evidence: receipts .gm/receipts/DBC-gm-goal-w4-DBC-1-blocker-gm-drain-w1-63/01-SPECIFY.md and 02-ELIMINATE.md. (1) Served bundle 0.2.47 (sha 21e13a42) vs installed 0.2.48 (sha b74592c4); reload did not complete across dispatches 1791971434221, 1791971615723, 1791971647484. (2) refuseUndeclaredBodyKeys exists in gm-mcp/src/codemode.js:65,161 in the working tree only; not on remote main (gh api contents 0 hits); not in bin/gm-mcp-server.js. (3) gm-mcp submodule has other lanes'' staged AGENTS.md and bin/gm-mcp-server.js plus modified src files, so rebuilding and committing there violates one-writer-per-surface. Unblock by: a single writer commits gm-mcp src/codemode.js and rebuilds bin/gm-mcp-server.js with node scripts/build.mjs, pushes to main, bumps the parent pin, restarts the live gm-mcp so served sha matches installed, then the original witness runs from another session.'
+session_id: mcp-codemode-9708-1791971690246
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

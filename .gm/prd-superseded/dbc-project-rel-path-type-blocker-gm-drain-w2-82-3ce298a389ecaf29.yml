@@ -1,0 +1,8 @@
+id: DBC-PROJECT-REL-PATH-TYPE-blocker-gm-drain-w2-82
+subject: 'Blocked: DBC-PROJECT-REL-PATH-TYPE cannot close in session gm-drain-w2-82 (PROVE needs CI-built rs-plugkit wasm and cross-session live witness; row line cites are stale)'
+body: 'Parent row DBC-PROJECT-REL-PATH-TYPE stays pending. SPECIFY receipt: .gm/receipts/DBC-PROJECT-REL-PATH-TYPE/01-SPECIFY.md. Stale cites: path_within_project at verbs.rs:581 (not 540); path_outside_project_message absent; git_worktree_target at git.rs:7386 (not 4227). Leader H1 (single ProjectRelPath constructor) cannot be probed here: rs-plugkit build is CI-only and the closing witness must come from another session. Resolution: refresh row cites, then run the rs-plugkit build in CI and witness codesearch/fs_read rejection parity from a different session.'
+session_id: gm-drain-w2-82
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

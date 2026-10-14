@@ -1,0 +1,5 @@
+id: SLAP-PLUGKIT-GITCOMMIT-LEVELS-blocker-gm-drain-w2-384
+subject: 'Blocked: SLAP-PLUGKIT-GITCOMMIT-LEVELS PROVE cannot close in session gm-drain-w2-384'
+body: 'Parent row: SLAP-PLUGKIT-GITCOMMIT-LEVELS (SLAP: separate git_commit argument extraction from the commit plan). Receipts: .gm/receipts/SLAP-PLUGKIT-GITCOMMIT-LEVELS/01-SPECIFY.md and 02-PROVE.md. SPECIFY: the cited git.rs:1401 is stale; git_commit is at git.rs:2166 with the git_async_entry closure at 2167; intent still matches. PROVE blocked: the witness (cargo build plus a live empty-message git_commit dispatch on the new build) needs a CI-built rs-plugkit wasm, since local cargo is blocked for gm rust changes and a new wasm reaches the daemon only through a CI release. The live probe against the served wasm cannot separate the refactor from the baseline. Unblock: land the CommitArgs extraction in rs-plugkit git.rs (the row''s line citation corrected to git.rs:2166-2167), let CI build and release the wasm, then witness from another session with a live git_commit empty-message dispatch id. Witness outcome: none yet; row stays pending.'
+session_id: gm-drain-w2-384
+status: pending

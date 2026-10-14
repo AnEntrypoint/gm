@@ -1,0 +1,5 @@
+id: WADLER-VALUE-SIGNATURE-WASM-VERBS-blocker-gm-drain-w2-490
+subject: 'Blocked: WADLER-VALUE-SIGNATURE-WASM-VERBS-blocker-gm-drain-w1-323 cannot pass SPECIFY acceptance; parent needs scope and witness'
+body: 'Stage 01-SPECIFY receipt: .gm/receipts/WADLER-VALUE-SIGNATURE-WASM-VERBS-blocker-gm-drain-w1-323/01-SPECIFY.md (session gm-drain-w2-490). Live evidence: codesearch regex ''fn .*: &Value'' over rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs finds 124 signatures (the parent title says about 145). Needed to close the parent: (1) scope, all 124 signatures or git.rs only; (2) acceptance naming the typed request struct fields and what a passing build proves; (3) a witness that binds without a local cargo build, since cargo is hook-blocked and only the CI publish job compiles the wasm-only verbs, and that witness must come from another session. Until (1) and (2) exist, ELIMINATE and EDIT cannot start.'
+session_id: gm-drain-w2-490
+status: pending

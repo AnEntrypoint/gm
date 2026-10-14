@@ -1,0 +1,5 @@
+id: CODESEARCH-TRIPLE-20
+subject: codesearch returns top 20 BM25, top 20 vector and top 20 commits, each with 3 live snippet lines, storing embeddings only
+body: 'Snippets are read live from the tree or git at query time; the db keeps vectors and ids, never snippet text. Witness: one codesearch dispatch returns 20/20/20 with 3-line snippets and the db holds no content column.'
+session_id: gm-invariants-08
+status: pending

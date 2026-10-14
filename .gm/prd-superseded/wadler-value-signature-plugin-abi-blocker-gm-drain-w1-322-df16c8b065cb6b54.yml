@@ -1,0 +1,5 @@
+id: WADLER-VALUE-SIGNATURE-PLUGIN-ABI-blocker-gm-drain-w1-322
+subject: 'WADLER-VALUE-SIGNATURE-PLUGIN-ABI: EMIT needs a CI-verified wasm32 edit and a witness from a session other than its editor'
+body: 'Blocker for row WADLER-VALUE-SIGNATURE-PLUGIN-ABI-blocker-gm-2e-fa19b3-w1-13 (session gm-drain-w1-322). Cause: rs-plugkit/crates/plugkit-core/src/plugin_abi.rs is #![cfg(target_arch = "wasm32")]; local cargo is hook-blocked, so the typed-envelope EMIT (request_envelope 121, ok_response 125, parse_response 154, call 191 still return untyped Value) cannot be compiled or witnessed here. Closing needs: (1) an EMIT edit landed on main through the Git API publish path, (2) the CI publish/release Build step green on that sha, (3) a witness dispatch from a session other than the editor. Receipts: .gm/receipts/WADLER-VALUE-SIGNATURE-PLUGIN-ABI-blocker-gm-2e-fa19b3-w1-13/01-SPECIFY.md. Leader hypothesis: the wasm32-only gate blocks local verification. Callers: request_envelope 1 edge (plugin_abi.rs:192).'
+session_id: gm-drain-w1-322
+status: pending

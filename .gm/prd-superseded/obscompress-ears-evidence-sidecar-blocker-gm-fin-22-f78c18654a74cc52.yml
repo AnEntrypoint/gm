@@ -1,0 +1,6 @@
+id: OBSCOMPRESS-EARS-EVIDENCE-SIDECAR-blocker-gm-fin-22
+subject: 'Blocker for OBSCOMPRESS-EARS-EVIDENCE-SIDECAR: acceptance leg 2 (prior entries byte-equivalent) has no witness. EARS.json count+pointer leg is met (witness dispatch 1791891219629-500-616eb057372c4afb: 2423 bytes, rewrites_count 114, prd_rewrites_count 19, pointer resolves). The pre-split EARS.json with the inline rewrites table is not retained anywhere under .gm, so byte equality cannot be re-derived. Owner decision needed: either restore the pre-split copy as a witness input, or amend the row''s acceptance to count parity plus parse (114 rewrites, 19 prd_rewrites, 0 malformed). Row stays pending until one of these is chosen.'
+status: blocked
+blockedBy:
+- OBSCOMPRESS-EARS-EVIDENCE-SIDECAR
+session_id: gm-fin-22

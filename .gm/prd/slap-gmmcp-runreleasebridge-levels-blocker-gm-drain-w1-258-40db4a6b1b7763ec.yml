@@ -1,0 +1,11 @@
+id: SLAP-GMMCP-RUNRELEASEBRIDGE-LEVELS-blocker-gm-drain-w1-258
+subject: 'Blocker: SLAP-GMMCP-RUNRELEASEBRIDGE-LEVELS needs a witness definition, bundle rebuild and cross-session witness'
+body: |-
+  Blocker for SLAP-GMMCP-RUNRELEASEBRIDGE-LEVELS (session gm-drain-w1-258), filed at SPECIFY.
+  Cited lines are stale: the row cites runReleaseBridge at gm-mcp/src/release-bridge.js lines 292-348; codesearch (dispatch 1791959202334-500-d414db04d5533b93) finds it at line 371, and the function body runs to line 427 (58 lines is the row's own count, which still matches).
+  The row has no acceptance text and no witness beyond its description. Its description asks for a load/persist pair for state plus a policy step that returns the summary; no leader hypothesis for a refactor and no probe that separates it from the current behaviour exists in the row.
+  Closing needs: (a) a characterization witness of runReleaseBridge outcomes (checked-recently, busy, frozen, disabled, checked with runner/guest outcomes) that runs the real entry point with a stubbed network, which is not reachable without a bundle rebuild; (b) a rebuilt bin/gm-mcp-server.js (AGENTS.md rule for gm-mcp/src changes); (c) a cross-session witness, since a self-witness is refused. None of these can be completed inside this run.
+  Evidence: git_status scoped to gm-mcp/src/release-bridge.js is clean at HEAD a501d6c475f7eb1e7b5babfaa837aca90bd6b2d5 (dispatch 1791959211599-500-825aa64fdaf8ed47); fs_read dispatch 1791959206876-500-2cfbefc786d7c93; prd-list dispatch 1791959077922-500-83d205971b0c8bdc.
+  Next step for the next wave: give the row a witness definition (exact outcomes and the entry point), then run the refactor, rebuild the gm-mcp bundle in the same commit, and witness from another session.
+session_id: gm-drain-w1-258
+status: pending

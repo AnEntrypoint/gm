@@ -1,0 +1,8 @@
+id: BLOCK-MEMORIZE-PRUNE-ENUM-blocker-gm-drain-w3-27
+subject: 'Blocked: BLOCK-MEMORIZE-PRUNE-ENUM part (c) prose reduction needs gm-config edit, vendored re-sync and CI wasm witness from another session'
+blockedBy:
+- external
+body: 'Parts (a) enum and (b) review-only Query hold at HEAD (memory.rs:915, 948-955, 1033, 1089). Part (c) requires gm-config/prose/entry-extended.md:52 edit, vendored re-sync into rs-plugkit, and a CI-built rs-plugkit wasm witness from a session other than gm-drain-w3-27. Local cargo blocked. Receipt: .gm/receipts/BLOCK-MEMORIZE-PRUNE-ENUM/01-SPECIFY-gm-drain-w3-27.md. Blocked by: BLOCK-MEMORIZE-PRUNE-ENUM.'
+session_id: gm-drain-w3-27
+status: pending
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

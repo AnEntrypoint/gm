@@ -1,0 +1,5 @@
+id: PARNAS-gm-goal-w4-PARNAS-1-blocker-gm-prdall-20261014-04-k04-blocker-gm-drain-w2-327
+subject: 'Blocker for PARNAS-gm-goal-w4-PARNAS-1-blocker-gm-prdall-20261014-04-k04: resolve condition unmet, gm-mcp WIP still uncommitted'
+session_id: gm-drain-w2-327
+body: 'Row PARNAS-gm-goal-w4-PARNAS-1-blocker-gm-prdall-20261014-04-k04 (session gm-drain-w2-327) cannot close. Its resolve condition is that the owner of the gm-mcp WIP commits or discards it. Witness at 1791963788840-500-9295796e0199adbc: git_status gm-mcp still shows 19 modified paths (src/dispatch.js, bin/gm-mcp-server.js among them), 1 staged (src/self-update.js), 1 untracked (src/spool-store.js). Parent row PARNAS-gm-goal-w4-PARNAS-1 cannot EMIT without editing that file. Also pidAlive is at gm-mcp/src/dispatch.js:935 (dispatch 1791963821794-500-c1e069c6968aeffd), not the cited :857. Action: WIP owner commits or discards, then rerun gm-prd on PARNAS-gm-goal-w4-PARNAS-1. Receipt: .gm/receipts/PARNAS-gm-goal-w4-PARNAS-1-blocker-gm-prdall-20261014-04-k04/01-SPECIFY.md.'
+status: pending

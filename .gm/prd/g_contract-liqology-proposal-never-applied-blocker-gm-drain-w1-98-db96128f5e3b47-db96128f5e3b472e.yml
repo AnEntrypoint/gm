@@ -1,0 +1,11 @@
+id: G_CONTRACT-liqology-proposal-never-applied-blocker-gm-drain-w1-98
+subject: 'Blocker: G_CONTRACT-liqology-proposal-never-applied needs an owner decision (confirmed apply path exists)'
+body: |-
+  Blocker for G_CONTRACT-liqology-proposal-never-applied (original subject kept).
+  Original subject: gm-config/prose/entry-extended.md 'suggest_fsm_update proposes, never mutates' restates a return-type invariant: the proposal body carries applied:false and no apply path exists in the plugin. Make the proposal type have a fixed applied=false and no mutation method, and prose cites only the verb name.
+  Blocking fact: the plugin does have an apply path. rs-plugkit/crates/plugkit-core/src/orchestrator/fsm_propose.rs:262-285 writes the target when user_confirmed:true and returns applied: write_ok, guarded by confirmation_witness for kind=graph (lines 239-254). The row's premise (no apply path exists) is false.
+  Needed: owner decision between H1 (keep the confirmed apply path and correct the prose) and H2 (remove the apply path, fixed applied=false). Either requires an rs-plugkit change, a wasm rebuild and a CI release (no local cargo per gm-no-local-cargo-verified-by-ci), then a gitlink bump, and a live dispatch witness after release.
+  Session: gm-drain-w1-98. Receipt: .gm/receipts/G_CONTRACT-liqology-proposal-never-applied/01-SPECIFY.md.
+  Blocked by: owner decision and rs-plugkit CI release.
+session_id: gm-drain-w1-98
+status: pending

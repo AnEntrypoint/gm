@@ -1,0 +1,5 @@
+id: WADLER-gm-goal-w4-WADLER-1-blocker-gm-drain-w1-316
+subject: 'blocker: WADLER object-guard EMIT blocked by foreign WIP in gm-mcp/src/dispatch.js'
+body: 'Blocker for WADLER-gm-goal-w4-WADLER-1-blocker-gm-2e-fa19b3-w1-15 (session gm-drain-w1-316). SPECIFY done: 21 candidate lines, 22 occurrences, 4 files (codesearch dispatch 1791959620333-500-a741421c07bbf702); receipt .gm/receipts/WADLER-gm-goal-w4-WADLER-1-blocker-gm-2e-fa19b3-w1-15/01-SPECIFY.md. EMIT blocked by CONC: gm-mcp/src/dispatch.js (13 candidates) and bin/gm-mcp-server.js carry another writer''s uncommitted WIP, and src/self-update.js is staged by a foreign lane (git_status 1791959626360-500-c54f489c0e587e8e). Needs: that WIP landed or parked by its owner, then the object-guard edit, bundle rebuild via gm-mcp/scripts/build.mjs in the same commit, and a witness from a session other than the editor. Receipt 02-CONC.md.'
+session_id: gm-drain-w1-316
+status: pending

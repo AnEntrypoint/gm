@@ -1,0 +1,5 @@
+id: JTBD-BACKOUT-WRONG-CHANGE-blocker-gm-drain-w2-256
+subject: 'Blocker: no code path links a transition-revert to the PRD and mutable rows it invalidates'
+body: 'Row JTBD-BACKOUT-WRONG-CHANGE cannot close in session gm-drain-w2-256. SPECIFY found the verbs present: transition-revert (rs-plugkit/crates/plugkit-core/src/orchestrator/mod.rs:395 -> transitions::handle_revert, transitions.rs:1346) and the gate predicates read PRD/mutable state (transitions.rs:50-69, 189, 347-370). handle_revert pops TurnState.phase_history only (rs-plugkit/README.md:89) and does not reopen or flag PRD rows or mutables. Witness needed by the row''s Done-when (a revert that closes-then-reopens a row with a recorded reason) requires a new revert-to-PRD/mutable link in rs-plugkit, which is a Rust change verified only by CI (no local cargo per project memory). Next step: implement the link in rs-plugkit and witness it through agentplug-runner. Leader hypothesis: the missing link is the cause (ACH not required; no cause asserted by the row).'
+session_id: gm-drain-w2-256
+status: pending

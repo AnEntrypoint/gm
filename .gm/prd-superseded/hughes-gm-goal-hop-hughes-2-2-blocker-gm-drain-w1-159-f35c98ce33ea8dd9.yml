@@ -1,0 +1,5 @@
+id: HUGHES-gm-goal-hop-HUGHES-2-2-blocker-gm-drain-w1-159
+subject: 'Owner decision needed: may a property-based test live in gm-mcp (row HUGHES-gm-goal-hop-HUGHES-2-2)'
+body: 'Blocks HUGHES-gm-goal-hop-HUGHES-2-2. The row''s acceptance is an owner decision, not an executable check. SPECIFY (receipt .gm/receipts/HUGHES-gm-goal-hop-HUGHES-2-2/01-SPECIFY.md; codesearch 1791958442873-500-49579a083385df26): 0 quickcheck/property-test matches in gm-mcp, exhaustive. AGENTS.md bans test or mock files in delivered paths and gm-prd forbids test files, so the default is no property test file. Needed from owner: confirm that default, or name a generated-input check against real code paths that is allowed to live in gm-mcp. Witness for the row needs that decision first.'
+session_id: gm-drain-w1-159
+status: pending

@@ -1,0 +1,13 @@
+id: gm-runtime-host-hmr-activation-blocker-gm-drain-w2-192
+subject: 'Blocked: gm-prd row gm-runtime-host-hmr-activation-blocker-gm-prd-hmr-activation-20261013-blocker-gm-drain-w1-141 cannot SPECIFY; its target row gm-runtime-host-hmr-activation does not exist'
+session_id: gm-drain-w2-192
+body: |-
+  Session gm-drain-w2-192 ran gm-prd on row gm-runtime-host-hmr-activation-blocker-gm-prd-hmr-activation-20261013-blocker-gm-drain-w1-141, which is itself a blocker row (session gm-drain-w1-141).
+
+  Evidence:
+  - prd-list {id:'gm-runtime-host-hmr-activation'} -> error_code failed, no PRD row in .gm/prd/ or .gm/prd-log.jsonl (dispatch 1791961853241-500-60145cb9411b6b2f).
+  - prd-list {id:'gm-runtime-host-hmr-activation-blocker-gm-prd-hmr-activation-20261013-blocker-gm-drain-w1-141'} -> pending (dispatch 1791961846608-500-abd35a2a13cdbb60).
+  - codesearch literal 'hmr' (dispatch from this session, exhaustive): hits are component_loader_hmr / component-loader-hmr in gm-mcp/src/verb-table.js:541, rs-plugkit/README.md:57-72, rs-plugkit/crates/plugkit-core/src/orchestrator/component_loader.rs:452 and component_loader_dispatch.rs:115,139. No source defines a 'runtime host HMR activation' behavior, so no leader hypothesis or acceptance can be written.
+
+  Required to unblock: a real row gm-runtime-host-hmr-activation (subject, acceptance, file) added with prd-add, or the blocker retargeted to a row that exists, e.g. component-loader-hmr if that is what was meant. Until then the row cannot resolve and binds no witness.
+status: pending

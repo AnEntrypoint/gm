@@ -1,0 +1,5 @@
+id: WADLER-gm-goal-w4-WADLER-2-blocker-gm-drain-w2-477
+subject: 'Blocker for WADLER-gm-goal-w4-WADLER-2: gm-mcp submodule dirty at 73fe4f4 and witness needs a server restart'
+body: 'Row cites stale dispatch.js:1421-1429; live copies are at 1511-1517 plus daemon_active_projects at 1519. gm-mcp working tree is modified and HEAD is 73fe4f4, not the 388109b recorded by the parent blocker. Witness is a live status dispatch on gm-mcp, which needs npm run build (bin bundle) and a server restart that also serves other lanes. Receipt: .gm/receipts/WADLER-gm-goal-w4-WADLER-2-blocker-gm-fin-01/01-SPECIFY-gm-drain-w2-477.md. Next: a writer owning the gm-mcp dirty hunk captures a baseline status dispatch, applies one typed pick to the 7 typed copies at 1511-1517, runs npm run build, restarts gm-mcp, witnesses the same keys, and bumps the parent gitlink to gm-mcp main.'
+session_id: gm-drain-w2-477
+status: pending

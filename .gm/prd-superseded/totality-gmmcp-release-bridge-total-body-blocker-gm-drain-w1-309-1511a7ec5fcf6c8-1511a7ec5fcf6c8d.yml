@@ -1,0 +1,6 @@
+id: TOTALITY-GMMCP-RELEASE-BRIDGE-TOTAL-BODY-blocker-gm-drain-w1-309
+subject: 'Blocker (SPECIFY): row TOTALITY-GMMCP-RELEASE-BRIDGE-TOTAL-BODY-blocker-gm-2e-fa19b3-w2-03 names no acceptance, so no falsifiable leader hypothesis and no witness can be written. fetchLatestRelease already returns the full release body (gm-mcp/src/release-bridge.js:124-128). Needed: the owner names the ''total body'' defect and its acceptance (MUT-TOTALITY-GMMCP-BODY-SCOPE). Receipt: .gm/receipts/TOTALITY-GMMCP-RELEASE-BRIDGE-TOTAL-BODY-blocker-gm-2e-fa19b3-w2-03/01-SPECIFY.md'
+status: pending
+blockedBy:
+- MUT-TOTALITY-GMMCP-BODY-SCOPE
+session_id: mcp-codemode-31304-1791959632291

@@ -1,0 +1,9 @@
+id: DAEMON-IDLE-DISK-WRITE-25MBS-BLOCKER-blocker-gm-drain-w3-134
+subject: 'Blocked: DAEMON-IDLE-DISK-WRITE-25MBS-BLOCKER still needs elevation for an ETW disk attribution probe'
+witness_hint: elevated ETW disk trace
+body: 'Parent row: DAEMON-IDLE-DISK-WRITE-25MBS-BLOCKER-blocker-gm-drain-w1-62. Session gm-drain-w3-134 ran SPECIFY and PROVE. Elevation check: IsInRole(Administrator)=False, so logman and ETW disk-I/O cannot run. Live non-elevated PhysicalDisk(_Total) Disk Write Bytes/sec: 9.795 and 6.66 MB/s, over the 2 MB/s bound. Leader H3 (writes below process attribution) cannot be separated from H2 (other user processes) without an elevated trace. Closing needs an elevated session or a logman/xperf disk trace charging writes to file and process, plus a 20 s idle witness from another session. Receipt: .gm/receipts/DAEMON-IDLE-DISK-WRITE-25MBS-BLOCKER/03-SPECIFY-gm-drain-w3-134.md. Row stays pending.'
+session_id: gm-drain-w3-134
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

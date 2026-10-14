@@ -1,0 +1,7 @@
+id: G_CONTRACT-liqology-proposal-never-applied
+subject: 'gm-config/prose/entry-extended.md ''suggest_fsm_update proposes, never mutates'' restates a return-type invariant: the proposal body carries applied:false and no apply path exists in the plugin. Make the proposal type have a fixed applied=false and no mutation method, and prose cites only the verb name.'
+session_id: lean-node-G_CONTRACT
+status: pending
+blockedBy:
+- external
+deferReason: 'Code move: the proposal type must fix applied=false with no mutation method. Prose left as-is.'

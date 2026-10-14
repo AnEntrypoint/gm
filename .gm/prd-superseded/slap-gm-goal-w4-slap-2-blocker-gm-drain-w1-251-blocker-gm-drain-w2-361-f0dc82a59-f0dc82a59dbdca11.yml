@@ -1,0 +1,11 @@
+id: SLAP-gm-goal-w4-SLAP-2-blocker-gm-drain-w1-251-blocker-gm-drain-w2-361
+subject: 'Blocked: SLAP-gm-goal-w4-SLAP-2-blocker-gm-drain-w1-251 still cannot deliver. gm-mcp tree still carries other writers'' hunks (20 modified incl. bin/gm-mcp-server.js, staged src/self-update.js, untracked src/spool-store.js). Re-run EMIT once the gm-mcp writer lands or releases them, then witness from another session.'
+body: |-
+  blockedBy: SLAP-gm-goal-w4-SLAP-2-blocker-gm-drain-w1-251
+  session: gm-drain-w2-361
+  receipts: .gm/receipts/SLAP-gm-goal-w4-SLAP-2-blocker-gm-drain-w1-251/ (01-SPECIFY, 02-PROVE, 08-DECIDE)
+  precondition_unmet: clean gm-mcp tree (git_status dispatch 1791964678291-500-5d6e6db96957453d)
+  unblock: other writer releases bin/gm-mcp-server.js and src/self-update.js; re-apply the 03-EMIT patch in .gm/receipts/SLAP-gm-goal-w4-SLAP-2/03-EMIT.md with its bundle rebuild in one commit; witness from a session other than gm-drain-w2-361 (self-witness refused)
+  cause_hypothesis: other writers hold the shared gm-mcp tree; leader hypothesis for the parent row unchanged
+session_id: gm-drain-w2-361
+status: pending

@@ -1,0 +1,7 @@
+id: TOOLBUDGET-GMMCP-DESCRIPTIONS-RELEASE-blocker-gm-2e-fa19b3-w2-05-blocker-gm-drain-w1-308-blocker-gm-drain-w2-458
+status: pending
+blockedBy:
+- TOOLBUDGET-GMMCP-DESCRIPTIONS-RELEASE-blocker-gm-2e-fa19b3-w2-05-blocker-gm-drain-w1-308
+subject: 'PROVE precondition fails: gm-mcp tree still dirty with 21 foreign entries (src/self-update.js MM, untracked src/spool-store.js, staged AGENTS.md); -308 unblock unmet'
+body: 'Blocks TOOLBUDGET-GMMCP-DESCRIPTIONS-RELEASE-blocker-gm-2e-fa19b3-w2-05-blocker-gm-drain-w1-308 at gm-drain-w2-458. Live state: exec_js git status --porcelain in gm-mcp, dispatch 1791967254718-500-ddf90645302340b8. Unblock: the writers of those hunks commit or discard them (or a bin is rebuilt from committed src/ via the Git API route), then re-run gm-prd on -308 and on w2-05. Receipt: .gm/receipts/TOOLBUDGET-GMMCP-DESCRIPTIONS-RELEASE-blocker-gm-2e-fa19b3-w2-05-blocker-gm-drain-w1-308/01-SPECIFY.md'
+session_id: mcp-codemode-9708-1791967275367

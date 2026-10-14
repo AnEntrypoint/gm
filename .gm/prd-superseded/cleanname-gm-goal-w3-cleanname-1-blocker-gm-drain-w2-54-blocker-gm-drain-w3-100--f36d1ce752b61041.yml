@@ -1,0 +1,8 @@
+id: CLEANNAME-gm-goal-w3-CLEANNAME-1-blocker-gm-drain-w2-54-blocker-gm-drain-w3-100
+subject: 'Blocked: CLEANNAME-gm-goal-w3-CLEANNAME-1-blocker-gm-drain-w2-54 cannot close in session gm-drain-w3-100; gm-mcp shared tree holds other writers'' hunks'
+body: 'SPECIFY (orient, run in session gm-drain-w3-100): the row''s parent CLEANNAME-gm-goal-w3-CLEANNAME-1 stays pending. Its rename (const n = resume_task absent from gm-mcp/src/dispatch.js; setTimeout rename) was verified in tree per the parent blocker (npm test PASS, verify-build no drift, dispatch 1791960250492-500-a1dbf82903fb2a5b), but delivery is blocked. Live state at git_status (dispatch 1791970670761-500-bf5d6e70a700f8e3 and 1791970700969-500-cae21b69057b767c): gm-mcp is on main with 21 modified, 4 staged (AGENTS.md, bin/gm-mcp-server.js, src/self-update.js, src/verb-table.js) and 1 untracked (src/spool-store.js), all owned by another writer. src/dispatch.js is modified and is shared with that writer''s hunks. ELIMINATE/EDIT cannot run: editing or committing src/dispatch.js would violate the one-writer-per-surface rule, and stashing or landing foreign hunks is out of scope for this session. Unblock: the owning writer lands or stashes its gm-mcp hunks; then a fresh session finalizes gm-mcp/src/dispatch.js and bin/gm-mcp-server.js on gm-mcp main, bumps the parent gitlink, and witnesses the rename by a cross-session dispatch id. Parent row is not closed here; it stays pending.'
+session_id: gm-drain-w3-100
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

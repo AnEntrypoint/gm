@@ -1,0 +1,8 @@
+id: BLOCKER-SKILLGM-watcher-dead-threshold-blocker-gm-drain-w3-81
+subject: 'Blocker for BLOCKER-SKILLGM-watcher-dead-threshold-blocker-gm-drain-w1-38: no owner chosen and no witness on win32'
+body: 'Blocks BLOCKER-SKILLGM-watcher-dead-threshold-blocker-gm-drain-w1-38 (row stays pending). Session gm-drain-w3-81. Receipt: .gm/receipts/BLOCKER-SKILLGM-watcher-dead-threshold-blocker-gm-drain-w1-38/03-PROVE-gm-drain-w3-81.md. Evidence: scripts/triage/runner-status.sh exits 49 on this host (no python3, reads /proc); the 300000 ms and 300 s windows answer a per-process question while gm-mcp/src/dispatch.js DAEMON_HEARTBEAT_STALE_MS (20 s) answers a per-project sweep question (dispatch.js:1498/1504 say idle projects go stale by design), so making runner-status read the 20 s value would report idle projects DEAD and license a second watcher. Required to close: a Linux CI witness of runner-status.sh (ALIVE, SERVING-STATUS-STALE, DEAD branches), an owner decision for the threshold (SKILL.md:65 text follows it), and a gm-mcp bundle rebuild if dispatch.js changes.'
+session_id: gm-drain-w3-81
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'
