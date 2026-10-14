@@ -1,5 +1,0 @@
-id: G_CONTRACT-admission-trajectory-enum-blocker-gm-drain-w1-84
-subject: 'Blocked: G_CONTRACT-admission-trajectory-enum needs an rs-plugkit enum and a CI-built witness'
-body: 'Row G_CONTRACT-admission-trajectory-enum cannot close in session gm-drain-w1-84. SPECIFY (receipt .gm/receipts/G_CONTRACT-admission-trajectory-enum/01-SPECIFY.md) found the cited gm-config/prose/entry.md lines valid, but no classifier enum or hold predicate exists in rs-plugkit/crates (codesearch 1791957811125-500-aa9ee2cc7847ec4d returned 0 hits). Closing needs a Rust enum and predicate in rs-plugkit, verified only by the CI wasm build (local cargo blocked) and a live dispatch through agentplug-runner against the rebuilt guest. Unblock: run the rs-plugkit build/publish CI for that change, then witness the enum from another session.'
-session_id: gm-drain-w1-84
-status: pending

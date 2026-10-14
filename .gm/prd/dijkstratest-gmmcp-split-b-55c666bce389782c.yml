@@ -1,0 +1,5 @@
+id: DIJKSTRATEST-GMMCP-SPLIT-B
+subject: 'gm-mcp standing tests cluster B: re-express runner and daemon assertions as exec_js probes, then delete the files'
+body: 'Files: gm-mcp/test/daemon-preflight.test.mjs (78), runner-recovery.test.mjs (20), leak-reaper.test.mjs (21), timeout-validation.test.mjs (20). Parent DIJKSTRATEST-GMMCP-STANDING-TESTS. Acceptance: each assertion has an exec_js probe against the real boundary witnessed from another session, then the files are removed. Land serially with A, C, D. runner-recovery''s no-pid case is the DEEPMOD-RUNNER-RECOVERY-NOPID live case, so its probe must separate that hypothesis. Not witnessed in-session.'
+session_id: gm-drain-bounded-51
+status: pending

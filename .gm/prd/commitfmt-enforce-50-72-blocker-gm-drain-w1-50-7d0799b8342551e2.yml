@@ -1,5 +1,0 @@
-id: COMMITFMT-ENFORCE-50-72-blocker-gm-drain-w1-50
-subject: 'Blocked: COMMITFMT-ENFORCE-50-72 needs a released rs-plugkit build with a subject/body gate in git_commit before a live witness'
-body: 'Row COMMITFMT-ENFORCE-50-72 stays pending. Baseline: git.rs:2174 checks only empty message; live probe dispatch 1791957376153-500-d220715b236abd4e with a 120-char subject reached staging (refused pathspec_matches_nothing, not length). Required to close: (1) add subject > 50 and body-line > 72 check in git_commit (wasm_dispatch/verbs/git.rs, before staging) with a re-draft or refusal reason; (2) CI build via cargo build -p rs-plugkit --release --target wasm32-wasip1 --features slim (local cargo blocked); (3) rs-plugkit release, then parent gitlink bump; (4) live witness through agentplug-runner with an over-length subject refused, citing its dispatch id. Receipts: .gm/receipts/COMMITFMT-ENFORCE-50-72/. Session gm-drain-w1-50.'
-session_id: gm-drain-w1-50
-status: pending

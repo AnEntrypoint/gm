@@ -1,5 +1,0 @@
-id: DEEPMOD-RUNNER-RECOVERY-NOPID
-title: 'gm-mcp runner-recovery test fails on HEAD: status.json without pid'
-description: 'gm-mcp/test/runner-recovery.test.mjs test ''a status.json without a pid falls back to the heartbeat'' fails (liveDaemonSweepsProject returns false for a fresh heartbeat with no pid). Reproduced on HEAD copy of gm-mcp/src/dispatch.js, so pre-existing and not caused by the DEEPMOD timeout refactor. Scope: gm-mcp/src/dispatch.js liveDaemonSweepsProject and its test.'
-session_id: lean-hop-DEEPMOD
-status: pending

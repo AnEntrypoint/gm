@@ -8,3 +8,6 @@ body: |-
   Needed: owner decides whether the row is closed as stale or re-scoped to a real file. The row cannot be witnessed as written. Row stays pending; no witness is bound.
 session_id: gm-drain-w1-293
 status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'
