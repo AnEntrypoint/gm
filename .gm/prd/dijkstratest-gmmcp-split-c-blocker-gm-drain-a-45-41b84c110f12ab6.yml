@@ -1,0 +1,8 @@
+id: DIJKSTRATEST-GMMCP-SPLIT-C-blocker-gm-drain-a-45
+subject: 'Blocker for DIJKSTRATEST-GMMCP-SPLIT-C: needs A, B, D resolved and a cross-session witness (prd-resolve witness_dispatch_id from a session other than gm-drain-a-45); SPECIFY only, no edit started'
+blockedBy:
+- DIJKSTRATEST-GMMCP-SPLIT-A
+- DIJKSTRATEST-GMMCP-SPLIT-B
+- DIJKSTRATEST-GMMCP-SPLIT-D
+session_id: gm-drain-a-45
+status: pending

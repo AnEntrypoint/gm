@@ -1,0 +1,6 @@
+id: G_CONTRACT-gate-enforcement-status-prose-rsplugkit-copies-blocker-gm-drain-b-8
+subject: 'Blocked: G_CONTRACT-gate-enforcement-status-prose-rsplugkit-copies. Premise unlocated: commit af0ec2c7 does not resolve in C:/dev/gm (git_show_rev_unresolved, dispatch 1791975718280-500-4204f4a587a1604c); codesearch for ''status'' in rs-plugkit orchestrator/instructions/prose/g_contract.md is 0 hits (dispatch 1791975719986-500-6cec6119e3bb0d20). Missing fact: the commit that removed the status sentences from gm-config/prose (supplied by git_log on the gm-config submodule main). Also needs a --features slim CI rebuild and a witness from another session. Row stays pending.'
+status: blocked
+blockedBy:
+- G_CONTRACT-gate-enforcement-status-prose-rsplugkit-copies
+session_id: gm-drain-b-8

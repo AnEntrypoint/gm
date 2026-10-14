@@ -1,0 +1,7 @@
+id: LIVEPLAN-RETIRE-G-CONTRACT-MEMORY-KIND-ENUM-blocker-gm-drain-b-54
+subject: 'Blocked: LIVEPLAN-RETIRE-G-CONTRACT-MEMORY-KIND-ENUM closing condition unmet. Both children pending: INVEST-GCONTRACT-MEMORY-KIND-ENUM (code gap: memorize-fire kind is free text, not a closed enum in rs-plugkit orchestrator memory handling) and INVEST-GCONTRACT-MEMORY-PROSE-REMOVE (sentence ''Four memory types, nothing else...'' still at gm-config/prose/entry-extended.md:46 and rs-plugkit/crates/plugkit-core/src/orchestrator/instructions/prose/entry-extended.md:46). Supplying fact: prd-resolve INVEST-GCONTRACT-MEMORY-KIND-ENUM with an rs-plugkit commit adding the closed enum plus a live memorize-fire witness (kind other rejected at parse, kind user accepted); then prd-resolve INVEST-GCONTRACT-MEMORY-PROSE-REMOVE; then prd-resolve the row. Local cargo is blocked, so the enum witness must come from CI. SESSION gm-drain-b-54, SPECIFY stage only; no ACH matrix (row asserts no cause).'
+blockedBy:
+- INVEST-GCONTRACT-MEMORY-KIND-ENUM
+- INVEST-GCONTRACT-MEMORY-PROSE-REMOVE
+session_id: gm-drain-b-54
+status: pending
