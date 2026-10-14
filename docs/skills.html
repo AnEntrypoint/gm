@@ -58,7 +58,7 @@ article tbody tr:hover { background: var(--panel-1); }
 <div class="abstract-block">
   <div class="abstract-title">tl;dr</div>
   <div class="abstract-text">
-    gm is a workflow for AI coding agents. It drives an agent through engineering work in a git project: code search, git verbs, recorded memory, and a plan whose rows each close only with recorded evidence. It is for developers who run coding agents such as Claude Code, Cursor, Codex or Gemini. The release ships eleven skills, each a directory under <code>skills/</code> with a <code>SKILL.md</code>: the <code>/gm</code> entry skill, four walk skills and six discipline skills. Install it from the <a href="./distribution.html">distribution page</a>, which also registers the gm MCP server, then type <code>/gm</code> in your coding agent.
+    gm is a workflow for AI coding agents. It drives an agent through engineering work in a git project: code search, git verbs, recorded memory, and a plan whose rows each close only with recorded evidence. It is for developers who run coding agents such as Claude Code, Cursor, Codex or Gemini. The release ships eleven skills, each a directory under <code>skills/</code> with a <code>SKILL.md</code>: the <code>/gm</code> entry skill, four walk skills and six discipline skills. Install it from the <a href="./distribution.html">distribution page</a>. The install also registers the gm MCP server, which serves the verbs. Then type <code>/gm</code> in your coding agent to load the skill.
   </div>
 </div>
 
@@ -66,7 +66,7 @@ article tbody tr:hover { background: var(--panel-1); }
 
 <h2>After you load /gm</h2>
 
-<p>Once <code>/gm</code> is loaded, the agent dispatches <code>instruction</code> to read the prose for the current phase, and <code>phase-status</code> for a state check. The <a href="#orchestrator-verbs">verb list</a> below names the verbs this page documents, and <a href="https://github.com/AnEntrypoint/gm/blob/main/skills/gm/docs/verbs.md">the verb inventory</a> gives each verb's body shape.</p>
+<p>Once <code>/gm</code> is loaded, the agent dispatches verbs. <code>instruction</code> reads the prose for the current phase, and <code>phase-status</code> gives a state check. The <a href="#orchestrator-verbs">verb list</a> below names the verbs this page documents. The <a href="https://github.com/AnEntrypoint/gm/blob/main/skills/gm/docs/verbs.md">verb inventory</a> gives each verb's body shape.</p>
 
 <h2>Terms</h2>
 
