@@ -95,7 +95,7 @@ article tbody tr:hover { background: var(--panel-1); }
     <span class="role">the code structure parser</span>
     <span class="repo"><a href="https://github.com/AnEntrypoint/rs-codeinsight">AnEntrypoint/rs-codeinsight</a></span>
   </div>
-  <p><strong>Job:</strong> a standalone code structure analyzer built on tree-sitter, shipped as a <code>codeinsight</code> command and a library. <code>agentplug-runner</code> fetches a <code>codeinsight</code> plugin binary from the <code>AnEntrypoint/agentplug-codeinsight-bin</code> repository. <code>rs-plugkit</code> answers <code>callers</code> (who calls a symbol) and <code>impact</code> (a walk of the symbol graph from a symbol) queries itself, without linking this crate.</p>
+  <p><strong>Job:</strong> a standalone code structure analyzer built on tree-sitter, shipped as a <code>codeinsight</code> command and a library. The release workflow publishes the <code>codeinsight</code> binary to <code>AnEntrypoint/agentplug-codeinsight-bin</code>, and <code>agentplug-runner</code> fetches that plugin binary from there. <code>rs-plugkit</code> answers <code>callers</code> (who calls a symbol) and <code>impact</code> (a walk of the symbol graph from a symbol) queries itself, without linking this crate.</p>
 </div>
 
 <div class="crate">
@@ -113,7 +113,7 @@ article tbody tr:hover { background: var(--panel-1); }
 
 <h2>Retired repositories</h2>
 
-<p><code>rs-exec</code> and <code>rs-learn</code> are retired. Their repositories are archived, and each one's README names <code>rs-plugkit</code> as its replacement.</p>
+<p>This section lists two retired repositories, <code>rs-exec</code> and <code>rs-learn</code>. It does not list the other retired repositories. Their repositories are archived, and each one's README names <code>rs-plugkit</code> as its replacement.</p>
 
 </article>
 
