@@ -453,3 +453,9 @@ tick 2 event=refill-gm-fin-18-blocked live=19 2026-10-13T11:29:23.783Z (launched
 - 2026-10-13T12:00:10.229Z SPIKE-GMMCP-SELFUPDATE-REVERT witness=windowsHide-site-counts exit=0 RESULT: PASS installed=14 prev=14 release-main=14; git spawn and node --check spawn carry windowsHide:!0 in all three; dispatches 1791892643053-500-a2510de516a1f578 1791892674611-500-9d7830bc49142d75 1791892757767-500-9a627916c545a55b
 - METAMORPH-gm-goal-hop-METAMORPH-4-1 witness: phase-status session gm-goal-hop-METAMORPH-4 vs gm-goal-hop-METAMORPH-4r on C:/dev/gm; diff only in dispatch_id, session_id echo, wire_compacted out path; session_mismatch true both (owner gm-ach-20261014-01 live); RESULT: PASS; UTC 2026-10-14T05:41:19.815Z; dispatch 1791956471912-500-4d270fc66d123bee (pair 1791956471006-500-853afed448de0a43)
 - 2026-10-14T06:00Z ORACLEBIAS-REBUILD-SIDELOAD-ci-only session gm-prdall-20261014-04-k05 RESULT: PASS exit=0 dispatch=1791956484910-500-749019c73e20f481 (served instruction phase ORACLEBIAS contains oraclebias.md prose; rs-plugkit release run 38515604387 success at 2d4c8e71, oraclebias.md blob 00ca26d7 present)
+- 2026-10-14T05:42:48.804Z | METAMORPH-gm-goal-hop-METAMORPH-2-2 | witness: publishSpoolRequest EEXIST probe (gm-mcp/src/dispatch.js) | exit 0 | RESULT: second_publish EEXIST, content_after FIRST, temp_leftovers [] | dispatch 1791956510089-500-13b39fe9eb3524bb
+
+- 2026-10-14T05:50:51.381Z AGENTSMD-RSPLUGKIT-NEAR-LIMIT witness exit 0 RESULT PASS bytes=16154 dispatch 1791957042869-500-26a5eb9c510ec1b
+
+- ACCEPTPORT-GITADAPTER-DISPATCH witness: codesearch execFileSync|execFile(|spawnSync( on gm-mcp/src/dispatch.js exit 0 RESULT: 0 inline git spawns; adapter import present. UTC 2026-10-14T05:51:18.641Z. dispatch 1791957054791-500-ccc7a5f98f398e7a
+- AGENTSMD-DEDUP-CONFIGSYNC-DEBOUNCE | witness=cited-lines-probe | exit=0 | RESULT: H2 leader, cited lines stale, no edit | UTC=2026-10-14T05:51:21.986Z | dispatch=1791957069312-500-97f0d7545efde88a
