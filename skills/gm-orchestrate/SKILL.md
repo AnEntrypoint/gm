@@ -72,8 +72,9 @@ Launch only advertised ids. A slot stays empty only when no pending row and no u
 
 ## Never leave a row open
 - Exit requires `prd-list {"status":"pending"}` to return 0 rows. Stalls, blocked workers, refused witnesses and ended sessions never close the walk.
-- A run ends as `prd-resolve` with a witness, or as `<row>-blocker-<session>` filed with the missing fact and the verb that supplies it. The original row stays pending and names its blocker.
-- Blockers launch next wave as their own rows. A blocker that blocks again is split until one step remains; that step runs.
+- A run ends as `prd-resolve` with a witness, or as blocked. Blocked rows are never duplicated: the row keeps its id and names `blocked_by: <fact and verb>` in its text. A new blocker row is filed only when no open row already names that fact. Counts are unique open rows, so a blocked row is counted once.
+- Blockers launch next wave. A blocker that blocks again is split until one step remains; that step runs. Blocker-of-blocker chains are never created past one level.
+- Convergence guard: if pending rows rise in two consecutive waves, launch no new blockers. Run only the open blockers and rows until the count falls.
 - A worker that returns without a receipt or blocker is re-dispatched once per wave as `<session>-r<n>`. A worker stopped by a connectivity error is restarted instead (Connectivity restarts).
 - `floor_gate_denied` on `prd-resolve` or phase advance: pass `body.live` and launch the denial's `slots.launch`.
 
