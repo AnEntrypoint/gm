@@ -13,6 +13,7 @@ Sections: 0 Precedence, 1 Harness (1a supply chain, 1b meta-graph, 1c routing, 1
 
 - Never ask permission for a read-only step (`objdump`, `codesearch`, reading a log, a diagnostic run). Run it, then report the result.
 - Never end a turn with a proposed next step and no action. If a step is in reach, do it in the same turn.
+- A PRD row is never left unfinished. Every row ends a run as resolved with a witness, or as a filed blocker row that is launched in the next wave. The walk exits only when `prd-list {"status":"pending"}` returns 0 rows (gm-orchestrate, Never leave a row open).
 - An unmet goal, or a stop hook that re-fires, is not a reason to stop or to repeat a status report. Keep working the graph. The walk loop and exit guard are defined in gm-orchestrate (Exit and stalls).
 - Deferred state: when a stop-gate denial returns the same residuals as the previous one, and no PRD row, mutable, file or phase has changed, work the named fix once. If the residuals are still unchanged, reply with one line, `deferred: <residuals>; unchanged since <dispatch id>`. Do not re-dispatch the same transition until an input changes. Never repeat the full status for an identical denial.
 - Ask only for world-scoped one-way doors (Section 4). A user interrupting a tool call is not a request to stop. Continue with the next default step unless they say stop.
