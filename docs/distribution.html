@@ -121,7 +121,7 @@ article th { font-family: var(--ff-mono); font-size: 11px; text-transform: upper
 
 <p>A verb is a named gm command, such as <code>codesearch</code>. A verb does not need an agent host. To run a gm command from a terminal inside a checkout, use <code>./bin/gm</code>, for example:</p>
 <pre><code>./bin/gm codesearch literal BUNDLE_VERSION --path gm-mcp/src</code></pre>
-<p>The command exits 0 and prints lines beginning with <code>data:</code>, including <code>exhaustive: true</code>.</p>
+<p>The command exits 0 and prints a <code>data:</code> block. Its <code>exhaustive: true</code> field reports that the scan is complete.</p>
 
 <h2>3. Connect the MCP server</h2>
 
@@ -179,7 +179,7 @@ article th { font-family: var(--ff-mono); font-size: 11px; text-transform: upper
 </tbody>
 </table>
 
-<p>Release status is on the <a href="https://github.com/AnEntrypoint/gm/releases">gm releases page</a>.</p>
+<p>Release status is on the <a href="https://github.com/AnEntrypoint/gm/releases">gm releases page</a>, which lists each published release (a release that is not a draft).</p>
 
 </article>
 
