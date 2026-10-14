@@ -1,6 +1,6 @@
 {
   "source": "hand-authored in this file; no generator produces it",
-  "node_count": 145,
+  "node_count": 146,
   "nodes": [
     {
       "id": "G_START",
@@ -297,6 +297,14 @@
       "book": "Implementation-Biased Test Generation",
       "author": "LLM test-generation study",
       "provenance": "P4"
+    },
+    {
+      "id": "ACH",
+      "label": "Psychology of Intelligence Analysis - Analysis of Competing Hypotheses",
+      "kind": "principle",
+      "book": "Psychology of Intelligence Analysis",
+      "author": "Richards J. Heuer Jr.",
+      "provenance": "P1"
     },
     {
       "id": "INDEPVER",
@@ -1217,8 +1225,8 @@
       "provenance": "DOCS"
     }
   ],
-  "edge_count": 360,
-  "forward_edges": 224,
+  "edge_count": 362,
+  "forward_edges": 226,
   "backreference_edges": 136,
   "edges": [
     {
@@ -1394,6 +1402,18 @@
       "to": "INDEPVER",
       "kind": "forward",
       "condition": null
+    },
+    {
+      "from": "ORACLEBIAS",
+      "to": "ACH",
+      "kind": "forward",
+      "condition": "the surface asserts a cause, a defect or a fix"
+    },
+    {
+      "from": "ACH",
+      "to": "INDEPVER",
+      "kind": "forward",
+      "condition": "a rival hypothesis was rejected by inconsistency or the leader has a live probe"
     },
     {
       "from": "INDEPVER",
