@@ -1,7 +1,0 @@
-id: G_CONTRACT-self-reconfig-anchor-shape-blocker-gm-drain-w1-108-blocker-gm-drain-w2-145
-subject: 'Remaining steps of G_CONTRACT-self-reconfig-anchor-shape-blocker-gm-drain-w1-108: prose names the {name, author} anchor type (gm-config + rs-plugkit copy) and the rs-plugkit parent gitlink bump'
-blockedBy:
-- external
-deferReason: 'duplicate blocker: the base row already names the same missing fact'
-status: pending
-session_id: gm-drain-w2-145

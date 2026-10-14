@@ -1,6 +1,0 @@
-id: gm-pool-heartbeat-requires-row-key-hop-has-none
-SESSION_ID: orch-main
-subject: pool-observe reports hop heartbeats as malformed because a hop has no row id
-detail: 'Measured 2026-10-11 on spoint: pool-observe dispatch 1791670148569-500-f1feff7fe7ab3ab reported malformed_heartbeats for orch-main-r143.live and orch-main-r154.live with missing=[''row''], while both lanes were live hops on surfaces client/ui and client/xr. The heartbeat format rule (gm-orchestrate Heartbeat) requires exactly three lines session/row/start, but gm-hop workers carry a surface and a principle and no PRD row id, so every hop heartbeat violates the rule and its surface is invisible to the row dedupe (live_rows_unmatched carries surface strings like client/ui and client/xr instead of row ids). Acceptance: a hop heartbeat satisfies the three-line rule -- the row key carries the hop''s own identity (its surface or the row it filed) -- so pool-observe reports no malformed_heartbeats for a live hop and matches hop-held surfaces against advertised rows.'
-session_id: orch-main
-status: pending

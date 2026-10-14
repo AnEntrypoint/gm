@@ -1,7 +1,0 @@
-id: G_CONTRACT-output-cap-constants
-subject: 'Output and budget caps restated as numbers in prose: skills/gm/SKILL.md (exec_js output 16000 chars, git_show 60000 bytes, git_stash 2000 untracked files, fs_read 65536, poll budget cap 240 s) and gm-config/prose/entry-extended.md (.watcher.log rotated at 10MB), entry.md (gate_repeat_escalate_threshold default 3). Each cap is a constant in its verb or config definition; prose should stop repeating the number.'
-session_id: lean-node-G_CONTRACT
-status: pending
-blockedBy:
-- external
-deferReason: 'Cross-file row: the entry-extended.md part (.watcher.log rotated 10MB) needs the cap confirmed as a code constant first; the remaining caps live in skills/gm/SKILL.md and entry.md, which this writer does not own. Prose left as-is.'

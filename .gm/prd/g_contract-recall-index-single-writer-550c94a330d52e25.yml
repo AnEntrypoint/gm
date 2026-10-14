@@ -1,7 +1,0 @@
-id: G_CONTRACT-recall-index-single-writer
-subject: gm-config/prose/entry-extended.md 'Write the recall index only via memorize-fire; surfaces outside it produce memos the index never sees' is a single-writer invariant for .gm/memories and the rssearch index. Code should make memorize-fire the only path that writes the index, so the prose rule has nothing to restate. Delete the prose sentence once the path is enforced.
-session_id: lean-node-G_CONTRACT
-status: pending
-blockedBy:
-- external
-deferReason: 'Code move: memorize-fire must be the only index-writing path before the prose invariant can be deleted. Prose left as-is.'
