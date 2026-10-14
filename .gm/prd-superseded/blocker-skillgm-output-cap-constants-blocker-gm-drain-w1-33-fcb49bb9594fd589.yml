@@ -1,0 +1,5 @@
+id: BLOCKER-SKILLGM-output-cap-constants-blocker-gm-drain-w1-33
+subject: 'Blocker for BLOCKER-SKILLGM-output-cap-constants: no single constant home for the output caps; the verb constants (gm-mcp dispatch.js 16000, response-compact.js 65536, verb-table.js 60000, rs-plugkit git.rs 60000) and docs/verbs.md literals are duplicated. Closing needs a gm-config key per cap read by both gm-mcp and rs-plugkit, a verbs.md rewrite, and a CI-verified rs-plugkit wasm build for the witness. Receipt: .gm/receipts/BLOCKER-SKILLGM-output-cap-constants/01-SPECIFY.md.'
+body: SESSION_ID gm-drain-w1-33. Witness requires rs-plugkit rebuild with --features slim verified by CI (no local cargo). Leader hypothesis H1 (duplicated literals, no constant home) is unprobed. Row stays pending.
+session_id: gm-drain-w1-33
+status: pending

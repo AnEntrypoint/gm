@@ -1,0 +1,8 @@
+id: DRY-GMMCP-SPAWN-AND-GIT-HELPERS-blocker-gm-drain-w2-100
+subject: 'Blocked: DRY-GMMCP-SPAWN-AND-GIT-HELPERS PROVE refused, gm-mcp still holds foreign uncommitted WIP (12 modified, 1 staged, 1 untracked) on dispatch.js and dev-sync.js'
+status: pending
+body: 'Row DRY-GMMCP-SPAWN-AND-GIT-HELPERS, session gm-drain-w2-100, carried from blocker row DRY-GMMCP-SPAWN-AND-GIT-HELPERS-blocker-gm-drain-w1-76. Receipts: .gm/receipts/DRY-GMMCP-SPAWN-AND-GIT-HELPERS-blocker-gm-drain-w1-76/01-SPECIFY.md and 02-PROVE.md. Precondition git -C gm-mcp status clean fails at dispatch 1791960463290-500-79bd16cea217df13. Unblock: when the gm-mcp writer commits or hands the surface over, re-run gm-prd on DRY-GMMCP-SPAWN-AND-GIT-HELPERS; the row closes on that run''s witness dispatch id. Mutable: identify the foreign writer of gm-mcp WIP before any edit.'
+session_id: gm-drain-w2-100
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

@@ -1,0 +1,5 @@
+id: SPECDRIFT-gm-goal-hop-SPECDRIFT-2-1-blocker-gm-drain-w2-418
+subject: 'Blocker: SPECDRIFT row premise absent in gm-mcp/CHANGELOG.md; row created in error'
+body: 'Row SPECDRIFT-gm-goal-hop-SPECDRIFT-2-1 cannot close. SPECIFY found its cited premise absent: gm-mcp/CHANGELOG.md contains no ''hourly'' text (codesearch ''hourly'' in gm-mcp returns only gm-mcp/AGENTS.md:86, which describes the refreshStaleDeployedBundle trigger, a different subsystem). The Unreleased release-bridge entry is at CHANGELOG.md:285, not line 42, and it states no interval. The row''s own deferReason says it was created in error: SPECDRIFT is a tension node, not a principle, so no hop may name it. Witness that would bind: none; a zero-hit codesearch refutes the drift and binds no leader hypothesis. Required action: close the row as stale or delete it from .gm/prd (a human or gm-orchestrate decision).'
+session_id: gm-drain-w2-418
+status: pending

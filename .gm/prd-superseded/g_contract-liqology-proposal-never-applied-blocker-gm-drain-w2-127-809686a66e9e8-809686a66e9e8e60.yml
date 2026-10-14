@@ -1,0 +1,8 @@
+id: G_CONTRACT-liqology-proposal-never-applied-blocker-gm-drain-w2-127
+subject: 'Row premise stale: suggest_fsm_update apply path exists (fsm_propose.rs:336 applied=write_ok, user_confirmed+confirmation_witness at :282/:299); removing it is a rs-plugkit Rust change that needs a CI witness'
+body: 'Blocks G_CONTRACT-liqology-proposal-never-applied. SPECIFY receipt: .gm/receipts/G_CONTRACT-liqology-proposal-never-applied/01-SPECIFY.md. Leader H2 (apply path is intentional, user_confirmed gated). Needs: (1) a decision whether kind=graph/prose apply stays; (2) if removed, a rs-plugkit change in fsm_propose.rs and a CI witness from the publish run, since local cargo is blocked.'
+session_id: gm-drain-w2-127
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

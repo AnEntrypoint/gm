@@ -1,0 +1,4 @@
+id: THINSLICE-PRECEDENCE-ENUM
+subject: 'Thin slice for G_CONTRACT-precedence-tier-order: the resolution tier order (live response, project vendored, config-source repo, compiled default, Section 2, Section 3) becomes an ordered enum in config::resolve; skills/gm/SKILL.md section 0 names the enum in the same change. Witness: a live instruction dispatch in a project with a vendored override reports the vendored tier.'
+session_id: lean-hop-THINSLICE
+status: pending

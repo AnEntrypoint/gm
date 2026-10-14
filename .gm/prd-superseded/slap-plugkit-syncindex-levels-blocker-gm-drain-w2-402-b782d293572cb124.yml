@@ -1,0 +1,5 @@
+id: SLAP-PLUGKIT-SYNCINDEX-LEVELS-blocker-gm-drain-w2-402
+subject: 'Blocker: SLAP-PLUGKIT-SYNCINDEX-LEVELS-blocker-gm-2e-fa19b3-w7-01 cannot close: EMIT needs CI-built rs-plugkit witness'
+body: 'Row SLAP-PLUGKIT-SYNCINDEX-LEVELS-blocker-gm-2e-fa19b3-w7-01 (session gm-drain-w2-402) re-read: still pending. Parent SLAP-PLUGKIT-SYNCINDEX-LEVELS still pending. Tree check at rs-plugkit HEAD 4b8e4c5: sync_index is still at crates/plugkit-core/src/memory_md.rs:695 (file 1254 lines), so EMIT has not landed. EMIT is an unverifiable Rust edit here (local cargo blocked by hook, per memory gm-no-local-cargo-verified-by-ci), and the witness needs a CI-built wasm picked up by the runner. Stages PROVE-EMIT-witness cannot close in this session. Unblock needs one of: (a) an operator-run local build permitting cargo for memory_md.rs, or (b) a CI publish of the refactor followed by a live memory sync dispatch whose report keys match memory_md.rs lines 1079-1096 (re-cite after the refactor). Receipt: .gm/receipts/SLAP-PLUGKIT-SYNCINDEX-LEVELS-blocker-gm-2e-fa19b3-w7-01/02-BLOCKER-gm-drain-w2-402.md'
+session_id: gm-drain-w2-402
+status: pending

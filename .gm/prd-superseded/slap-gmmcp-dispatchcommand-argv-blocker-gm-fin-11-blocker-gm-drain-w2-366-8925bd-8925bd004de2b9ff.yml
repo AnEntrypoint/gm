@@ -1,0 +1,6 @@
+id: SLAP-GMMCP-DISPATCHCOMMAND-ARGV-blocker-gm-fin-11-blocker-gm-drain-w2-366
+status: blocked
+blockedBy:
+- SLAP-GMMCP-RUNDISPATCH-LEVELS
+subject: 'Blocker for SLAP-GMMCP-DISPATCHCOMMAND-ARGV-blocker-gm-fin-11: PROVE precondition fails. gm-mcp tree is not exclusive (19 modified, staged src/self-update.js, untracked src/spool-store.js; bin/gm-mcp-server.js dirty). Sibling SLAP-GMMCP-RUNDISPATCH-LEVELS still pending. Receipt: .gm/receipts/SLAP-GMMCP-DISPATCHCOMMAND-ARGV-blocker-gm-fin-11/01-SPECIFY.md. Unblock: commit RUNDISPATCH-LEVELS gm-mcp src and bin, then apply cli-dispatch-argv.patch and run the row''s build and drift check.'
+session_id: gm-drain-w2-366

@@ -1,0 +1,8 @@
+id: DEEPMOD-GMMCP-TEST-SUITE-RED-AT-HEAD-blocker-gm-drain-w2-87
+subject: 'Blocker for DEEPMOD-GMMCP-TEST-SUITE-RED-AT-HEAD: row acceptance body unreadable and no closing witness reachable in session gm-drain-w2-87'
+body: 'SPECIFY failed. prd-list {"id":"DEEPMOD-GMMCP-TEST-SUITE-RED-AT-HEAD"} returns only the title (npm test stops at runner-recovery on status.json without pid; spool-name, transport and landed-output fail at HEAD with EPERM on temp rm and 406/transport assertions). The row has no .gm/prd file (C:/dev/gm/.gm/prd lists no DEEPMOD-GMMCP entry) and no acceptance or witness text, so there is no acceptance to prove against. Owner session is lean-hop-DEEPMOD. Closing requires editing gm-mcp test-adjacent source and rebuilding the gm-mcp bundle, plus a witness from another session (self-witness refused). Required to unblock: the row body restored with acceptance, a witness command, and a named leader hypothesis per the ACH rule. Session gm-drain-w2-87, dispatch 1791960377457-500-773204d8602e9805.'
+session_id: gm-drain-w2-87
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

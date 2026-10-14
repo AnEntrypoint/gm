@@ -1,0 +1,8 @@
+id: HEADERONLY-AGENTS-MD-ALWAYS-LOADED-BODY-blocker-gm-drain-w2-214
+subject: 'Blocked: HEADERONLY-AGENTS-MD-ALWAYS-LOADED-BODY has no row file, acceptance or witness'
+body: 'Parent row HEADERONLY-AGENTS-MD-ALWAYS-LOADED-BODY (session lean-hop-HEADERONLY) has no .gm/prd/HEADERONLY-AGENTS-MD-ALWAYS-LOADED-BODY.yml file and no acceptance text, cited section list or witness predicate. prd_list {"id"} returns the title only. SPECIFY receipts 01-SPECIFY.md (gm-drain-w1-152) and the w2-214 check found no target. PROVE cannot run: nothing to prove. Unblock by re-scoping the row with prd-add under the same id: name the target AGENTS.md sections, their destination SKILL.md or README paths, the size or content predicate, and a witness command. AGENTS.md is 29594 bytes now (under the 30000 bound). Parent row stays pending.'
+session_id: gm-drain-w2-214
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

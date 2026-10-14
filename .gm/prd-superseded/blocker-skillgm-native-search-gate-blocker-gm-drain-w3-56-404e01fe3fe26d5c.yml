@@ -1,0 +1,8 @@
+id: BLOCKER-SKILLGM-native-search-gate-blocker-gm-drain-w3-56
+subject: 'Blocker for BLOCKER-SKILLGM-native-search-gate-blocker-gm-drain-w2-32: native-search deviation gate still needs a rs-plugkit Rust change verified only by CI rebuild'
+body: 'Row BLOCKER-SKILLGM-native-search-gate-blocker-gm-drain-w2-32 cannot close in gm-drain-w3-56. SPECIFY receipt: .gm/receipts/BLOCKER-SKILLGM-native-search-gate-blocker-gm-drain-w2-32/01-SPECIFY-gm-drain-w3-56.md. Codesearch dispatch 1791969766918-500-268f614919dcd2fd (exhaustive) finds only bash-git-bypass in gates.rs:524/532 and orchestrator/deviations.rs:34; no native-search deviation id exists. Leader H1: add a native-search deviation entry in deviations.rs and a matching gates.rs rule, then CI rebuild (publish / release, Build step), then witness the denial via the live spool from a session other than the editor. H2 (jit hook under fsm.hooks_dir plus generated predicates_reference entry) is unchecked. No local probe separates H1 from H2 because local cargo is blocked. Parent row stays pending.'
+session_id: gm-drain-w3-56
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

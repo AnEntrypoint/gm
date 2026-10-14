@@ -1,0 +1,5 @@
+id: PARNAS-gm-goal-w4-PARNAS-1-blocker-gm-prdall-20261014-04-k04-blocker-gm-drain-w1-229
+subject: 'Blocker for PARNAS-gm-goal-w4-PARNAS-1-blocker-gm-prdall-20261014-04-k04: gm-mcp submodule carries an active uncommitted writer''s WIP (9 modified, 1 staged, 1 untracked)'
+body: 'Stage reached: SPECIFY (receipt .gm/receipts/PARNAS-gm-goal-w4-PARNAS-1-blocker-gm-prdall-20261014-04-k04/01-SPECIFY.md). Evidence: submodule git_status dispatch 1791958862487-500-e871b75688efa2c7 shows gm-mcp dirty on src/dispatch.js (the row''s edit target) plus 8 other modified files, staged src/self-update.js, untracked scripts/session-invariance-witness.mjs, HEAD d6f5987d. Parent-scoped git_status 1791958855924-500-98f2cd6511d9b8b3 reads clean only because the submodule is a gitlink. Also HEAD test baseline is red (DEEPMOD-GMMCP-TESTS-PREEXISTING), so PROVE has no clean baseline. Resolve by: the owner of the gm-mcp WIP commits or discards it on main, then rerun gm-prd on PARNAS-gm-goal-w4-PARNAS-1 (the original row) and on this blocker''s parent row. This run did not discard or commit another writer''s hunks.'
+session_id: gm-drain-w1-229
+status: pending

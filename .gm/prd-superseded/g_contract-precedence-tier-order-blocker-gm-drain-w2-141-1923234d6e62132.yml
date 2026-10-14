@@ -1,0 +1,8 @@
+id: G_CONTRACT-precedence-tier-order-blocker-gm-drain-w2-141
+subject: 'Blocker for G_CONTRACT-precedence-tier-order: enum for config tier order cannot be witnessed this session'
+body: 'Blocked stage: PROVE. Facts: rs-plugkit/crates/plugkit-core/src/config.rs:35 Tier enum has no PartialOrd/Ord or rank (zero hits); precedence is only control flow in resolve_with (config.rs:~685-767). The row chain also names live response, Section 2 and Section 3, which are not members of Tier. Gating: rs-plugkit is a nested repo whose submodule is modified by another writer (git_status 1791961077688-500-91c5cd836c65364f), so this run may not edit it; cargo is hook-blocked and the wasm change is verified only by CI (publish / release, Build), so a witness needs a published rs-plugkit sha, a gitlink bump on main, and a CI run cited from another session. Unblock: a single rs-plugkit owner adds Ord/rank to Tier (or an explicit PRECEDENCE array), SKILL.md Section 0 names that enum, and CI''s Build step plus a live config dispatch show the tier field. Receipts: .gm/receipts/G_CONTRACT-precedence-tier-order/01-SPECIFY.md, 02-PROVE.md.'
+session_id: gm-drain-w2-141
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

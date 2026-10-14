@@ -1,0 +1,6 @@
+id: HUGHES-gm-goal-hop-HUGHES-1-2-blocker-gm-drain-w1-157
+subject: 'Blocker for HUGHES-gm-goal-hop-HUGHES-1-2: fix and rebuilt bundle need a cross-session witness; leader H1 (key-order sensitive comparator at gm-mcp/src/response-compact.js:406-408, caller :531) confirmed by probe dispatch 1791958477396-500-61d77c9f54149cba. Next: replace JSON.stringify equality with an order-insensitive deep equal in src, rebuild bin/gm-mcp-server.js in the same commit, witness from another session via response-compact.test.mjs.'
+status: pending
+blockedBy:
+- HUGHES-gm-goal-hop-HUGHES-1-2
+session_id: mcp-codemode-31304-1791958496208

@@ -1,0 +1,5 @@
+id: ORACLEBIAS-REBUILD-SIDELOAD
+title: Rebuild rs-plugkit and sideload so the compiled oraclebias prose serves the expected-value-from-contract rule
+status: pending
+description: 'prose/oraclebias.md is embedded by include_str! in lean_prose.rs. The edited rule reaches the served P4 ORACLEBIAS node only after rs-plugkit is rebuilt (cargo build -p rs-plugkit --release --target wasm32-wasip1 --features slim) and sideloaded to ~/.agentplug/plugins/gm.wasm and ~/.gm-tools/plugkit.wasm. Witness: instruction verb for the ORACLEBIAS node returns the rule text.'
+session_id: lean-hop-ORACLEBIAS

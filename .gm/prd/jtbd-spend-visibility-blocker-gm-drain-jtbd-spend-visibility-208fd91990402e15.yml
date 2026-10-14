@@ -1,0 +1,6 @@
+id: JTBD-SPEND-VISIBILITY-blocker-gm-drain-JTBD-SPEND-VISIBILITY
+status: pending
+obligation_kind: discovery
+session_id: gm-drain-JTBD-SPEND-VISIBILITY
+title: 'Blocker for JTBD-SPEND-VISIBILITY: owner must name the token source for walk spend'
+body: 'EMIT cannot run. The row asks for per-walk token and dispatch spend split by phase and re-entered phase, read from recorded dispatches. No gm-owned record holds token counts: rs-plugkit, gm-mcp, agentplug, rs-codeinsight and gm-config have no input/output/cache token fields (grep, session gm-drain-JTBD-SPEND-VISIBILITY). Dispatch records hold id, verb, exit and timestamps only. Owner decision needed: (a) read token usage from Claude Code session transcripts (outside gm; needs a path and a join key to dispatch ids), or (b) narrow the row to dispatch counts and wall time per phase, which the existing records can supply once the per-dispatch phase field is confirmed. Receipts: .gm/receipts/JTBD-SPEND-VISIBILITY/01-SPECIFY.md, 02-PROVE.md.'

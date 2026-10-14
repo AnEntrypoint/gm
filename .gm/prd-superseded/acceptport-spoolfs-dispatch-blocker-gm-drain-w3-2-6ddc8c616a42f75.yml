@@ -1,0 +1,8 @@
+id: ACCEPTPORT-SPOOLFS-DISPATCH-blocker-gm-drain-w3-2
+subject: 'Blocked: ACCEPTPORT-SPOOLFS-DISPATCH-blocker-gm-drain-w2-0 cannot close: parent has no acceptance body, file, or witness'
+body: 'Filed by gm-drain-w3-2 at SPECIFY of ACCEPTPORT-SPOOLFS-DISPATCH-blocker-gm-drain-w2-0. Evidence: prd-list {id:ACCEPTPORT-SPOOLFS-DISPATCH} (dispatch 1791969289711-500-7c1a4542ced0f07e) returns the title only, with session lean-hop-ACCEPTPORT and no body; prd-list {id:ACCEPTPORT-SPOOLFS-DISPATCH-blocker-gm-drain-w3-3} (dispatch 1791969302245-500-62ba9b1ab51cc6f6) records the same gap. The row has no named target file, no acceptance criteria beyond its title, and no witness. Per gm-prd, an executor that finds no file files a blocker and never guesses one, so ELIMINATE, EDIT, PROVE and COMPLETE cannot run. Unblock by re-scoping ACCEPTPORT-SPOOLFS-DISPATCH with prd-add (same id, overwrite:true) naming the file(s) to move behind a spool-store adapter, the observable acceptance (for example: no fs write or lock/status read remains in gm-mcp/src/dispatch.js outside the adapter, witnessed by a live spool dispatch), and a witness path. Parent row stays pending.'
+session_id: gm-drain-w3-2
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

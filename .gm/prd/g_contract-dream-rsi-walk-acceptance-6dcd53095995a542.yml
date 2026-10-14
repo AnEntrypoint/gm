@@ -1,0 +1,7 @@
+id: G_CONTRACT-dream-rsi-walk-acceptance
+subject: 'skills/dream-rsi/SKILL.md Part B steps 2-4 state the walk acceptance predicate in prose: a walk is applied only with a witness, and counts only if every witness dispatch_id is in the observation set (failures go to rejected_walks). Move the predicate into the walk-evidence writer or validator so an unverifiable walk cannot be recorded as applied:true.'
+session_id: lean-node-G_CONTRACT
+status: pending
+blockedBy:
+- external
+deferReason: 'SKILL.md Part B steps 2-4 are accurate as the subagent procedure; rs-plugkit has no lean-walk writer or validator (grep lean-walk|rejected_walks|forward_edge_coverage|part_a|backreferences_verified in rs-plugkit: 0 files). Move deferred to BLOCK-dream-rsi-walk-acceptance-code.'

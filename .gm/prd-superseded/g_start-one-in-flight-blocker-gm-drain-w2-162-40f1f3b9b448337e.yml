@@ -1,0 +1,8 @@
+id: G_START-ONE-IN-FLIGHT-blocker-gm-drain-w2-162
+subject: 'SPECIFY blocked: row body unreadable for G_START-ONE-IN-FLIGHT'
+body: 'Row G_START-ONE-IN-FLIGHT is pending in the store (prd-list dispatch 1791961219288-500-ef4ef387a0805ddf) but its only retrievable field is the title: ''G_START gate: 252 pending PRD rows across 50 families (one family per lean node) -- reduce to one in-flight plan: finish or abandon each family, mutable MUT-G_START-FAMILIES decides which''. No .gm/prd/G_START-ONE-IN-FLIGHT.yml exists (Read and codesearch over .gm, dispatch 1791961265421-500-43f33b94da6a51c1 both absent). Acceptance, cited lines and the ACH cause cannot be restated, so PROVE and EMIT have no witnessable target. Also the scope (252 rows across 50 families) is a multi-run drain, not one-row resolution. Unblock: write the row file with explicit acceptance and a witness path, and split by family; mutable MUT-G_START-FAMILIES must decide the families first.'
+session_id: gm-drain-w2-162
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

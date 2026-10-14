@@ -1,0 +1,10 @@
+id: SLAP-GMMCP-RUNRELEASEBRIDGE-LEVELS-blocker-gm-fin-09
+subject: 'Blocker: gm-mcp shared surface held by gm-fin-11 blocks the RUNRELEASEBRIDGE bundle rebuild'
+body: |-
+  Row SLAP-GMMCP-RUNRELEASEBRIDGE-LEVELS could not resolve in gm-fin-09. No edit was made.
+
+  Blocked by the shared gm-mcp surface: gm-fin-11 (row SLAP-GMMCP-DISPATCHCOMMAND-ARGV) holds uncommitted hunks in gm-mcp/src/index.js, src/http-transport.js and bin/gm-mcp-server.js. The row's witness requires the bundle rebuilt from src, which either sweeps in those hunks or overwrites them.
+
+  Plan once the surface is free: edit gm-mcp/src/release-bridge.js runReleaseBridge (now at lines 375-430, not 292-348) into a load/persist pair plus a policy step; rebuild bin/gm-mcp-server.js with node scripts/build.mjs; witness with exec_js line count and a live runReleaseBridge run using GM_MCP_RELEASE_BRIDGE_INTERVAL_MS large so it returns checked-recently without network; commit src and bin together on gm-mcp main.
+session_id: gm-fin-09
+status: pending

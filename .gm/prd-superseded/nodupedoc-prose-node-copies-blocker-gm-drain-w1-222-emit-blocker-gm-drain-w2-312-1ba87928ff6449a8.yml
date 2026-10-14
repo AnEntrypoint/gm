@@ -1,0 +1,10 @@
+id: NODUPEDOC-PROSE-NODE-COPIES-blocker-gm-drain-w1-222-emit-blocker-gm-drain-w2-312
+subject: 'Blocked: EMIT for NODUPEDOC-PROSE-NODE-COPIES cannot close in session gm-drain-w2-312 (286 files, owner choice, wasm CI needed)'
+body: |-
+  Row NODUPEDOC-PROSE-NODE-COPIES-blocker-gm-drain-w1-222-emit cannot close in session gm-drain-w2-312.
+  SPECIFY (receipt .gm/receipts/NODUPEDOC-PROSE-NODE-COPIES-blocker-gm-drain-w1-222-emit/01-SPECIFY.md): the row's witness counts 99/202 are stale. Live counts from dispatches 1791958832647-500-17e01fd95771c051 (gm-config/prose: 143 of 160) and 1791958835385-500-44183ecb2d0b77b6 (rs-plugkit instructions/prose: 143 of 159) give 286 files.
+  Why EMIT cannot run here: (1) the shared-owner choice for the leave-transition sentence is a design decision not yet made; (2) the edit spans 286 prose files in two repos, which must land as reviewed commits; (3) the build-time embed of the config copy into the rs-plugkit compiled fallback changes Rust, and the only proof path is rs-plugkit wasm CI (no local cargo), so the witness cannot bind until a CI run on the carrying commit is green.
+  Unblock: pick the single owner file and restate the witness to 143/143 and 286 total; then land the edit as one commit per repo, and cite the rs-plugkit wasm CI run id as the witness.
+  Witness (restated): codesearch literal exhaustive count of the verbatim leave-transition sentence over gm-config/prose and rs-plugkit/crates/plugkit-core/src/orchestrator/instructions/prose returns 0 after the change, and the rs-plugkit wasm CI run on that commit is green.
+session_id: gm-drain-w2-312
+status: pending

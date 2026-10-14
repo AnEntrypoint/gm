@@ -1,0 +1,5 @@
+id: THINSLICE-SPOOL-ATOMIC-WRITE-blocker-gm-drain-w2-454
+subject: 'Stale clause on THINSLICE-SPOOL-ATOMIC-WRITE: skills/gm/SKILL.md section 1 has no temp-then-mv rule to cut'
+body: 'Blocks THINSLICE-SPOOL-ATOMIC-WRITE. SPECIFY (.gm/receipts/THINSLICE-SPOOL-ATOMIC-WRITE/01-SPECIFY.md): codesearch regex temp|.tmp|rename over skills/gm/SKILL.md (dispatch 1791967894884-500-dace8cf760c2efd9) finds no temp-then-mv rule; the only temp hit is the git-archive temp dir at line 27. Writers already rename atomically (gm-mcp/src/dispatch.js:393, spool-store.js:33-35). Unresolved: the watcher claim filter that should ignore temp names is not yet located. Needed: re-scope the row (drop the SKILL.md cut, or name the rule''s current location) and name the watcher file to change, then witness with a live temp-named dispatch unclaimed and a final-name dispatch claimed.'
+session_id: gm-drain-w2-454
+status: pending

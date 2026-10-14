@@ -1,0 +1,4 @@
+id: BLOCKER-SKILLGM-codesearch-body-schema
+subject: 'Blocker for G_CONTRACT-skill-codesearch-body-table: carry codesearch/grep body field enums and defaults in the verb schema served by grep {help:true} (rs-plugkit verb definitions), then delete the table from skills/gm/SKILL.md section 1. Prose stays until this lands.'
+session_id: lean-exec-skillgm-1
+status: pending

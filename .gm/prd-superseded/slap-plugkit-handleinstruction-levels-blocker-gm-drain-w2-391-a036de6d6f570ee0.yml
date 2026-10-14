@@ -1,0 +1,5 @@
+id: SLAP-PLUGKIT-HANDLEINSTRUCTION-LEVELS-blocker-gm-drain-w2-391
+subject: 'Witness blocked for SLAP-PLUGKIT-HANDLEINSTRUCTION-LEVELS: baseline dispatch 1791851394157-500-e07f1d6e8e7db8f8 is unrecoverable, so reply keys cannot be compared'
+body: 'Parent row: SLAP-PLUGKIT-HANDLEINSTRUCTION-LEVELS-blocker-gm-2e-fa19b3-w7-04 (session gm-drain-w2-391). Release run 38328121672 succeeded. Live witness dispatch 1791965578501-500-86e97567342a7684 (instruction ORACLEBIAS full) returned ok with a reply key set. The baseline dispatch 1791851394157-500-e07f1d6e8e7db8f8 is not found in .gm (codesearch and grep literal, dispatch 1791965624076-500-845ff9cee770168e and 1791965208682-500-f851056598fd709b) and no witness-log or git_log line cites it. Resolution needed: record the baseline reply key set in .gm/witness-log.md (or recapture the pre-edit guest reply) before the parent row can be witnessed. Receipts: .gm/receipts/SLAP-PLUGKIT-HANDLEINSTRUCTION-LEVELS-blocker-gm-2e-fa19b3-w7-04/01-SPECIFY.md and 02-PROVE.md.'
+session_id: gm-drain-w2-391
+status: pending

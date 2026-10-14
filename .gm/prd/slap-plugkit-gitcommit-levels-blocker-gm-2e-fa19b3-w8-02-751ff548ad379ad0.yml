@@ -1,0 +1,7 @@
+id: SLAP-PLUGKIT-GITCOMMIT-LEVELS-blocker-gm-2e-fa19b3-w8-02
+subject: 'blocker: SLAP-PLUGKIT-GITCOMMIT-LEVELS EMIT and witness cannot run in this session'
+status: pending
+node: SLAP
+phase: P3
+body: 'Row SLAP-PLUGKIT-GITCOMMIT-LEVELS (git_commit argument extraction into a CommitArgs struct) stays pending. SPECIFY: row cites git.rs line 1401 (340 lines); the function now sits at git.rs:2166-2546 (380 lines), git_async_entry at 178; the cited line is stale, the function exists. PROVE: characterization witness recorded, git_commit {message:""} live dispatch 1791851379793-500-e385fd20ac98a992 returns error_code failed, error ''message required''. Blocked: the row''s witness needs cargo build of rs-plugkit (local cargo is blocked by hook; CI publish/release Build step is the only compile proof) and a live git_commit dispatch against a rebuilt wasm, which requires a published CI release. No edit was made, so no commit, push or pin bump was made. Resolve by running the CI release for rs-plugkit after the refactor, then witness the empty-message and paths-type-error dispatches.'
+session_id: gm-2e-fa19b3-w8-02

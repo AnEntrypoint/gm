@@ -1,0 +1,8 @@
+id: G_CONTRACT-recall-index-single-writer-blocker-gm-drain-w1-107-blocker-gm-drain-w2-144
+subject: 'Blocked: G_CONTRACT-recall-index-single-writer-blocker-gm-drain-w1-107 needs an owner decision on sync_index and a CI-built cross-session witness'
+body: 'Row G_CONTRACT-recall-index-single-writer-blocker-gm-drain-w1-107 cannot close in session gm-drain-w2-144. SPECIFY receipt: .gm/receipts/G_CONTRACT-recall-index-single-writer-blocker-gm-drain-w1-107/01-SPECIFY.md. Confirmed at HEAD c77ee5f: rssearch_vectors::write is called from orchestrator/memorize.rs:315,679, memory_md.rs:783 (sync_index) and wasm_dispatch/verbs/memory.rs:544 (codesearch 1791961038234-500-9005894eb6e36224). Memorize-fire is therefore not the sole writer. Needed before closure: (a) owner decision whether sync_index is a legitimate reconciliation writer (then restate the prose invariant) or must route through memorize-fire (then reroute memory_md.rs:783 in a reviewed rs-plugkit change); (b) the code change built by CI (local cargo blocked by hook); (c) a witness dispatch from a session other than the row''s own. Self-witness is refused, so this session cannot bind the row.'
+session_id: gm-drain-w2-144
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

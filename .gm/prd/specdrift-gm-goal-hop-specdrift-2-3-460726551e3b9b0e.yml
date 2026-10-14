@@ -1,0 +1,8 @@
+id: SPECDRIFT-gm-goal-hop-SPECDRIFT-2-3
+title: AGENTS.md names a verify-build step that does not exist
+description: gm-mcp/AGENTS.md states verify-build checks the updater parser against BUNDLE_VERSION before byte drift. A literal codesearch for verify-build in gm-mcp returns zero matches (dispatch 1791745487987-420-61f966bbd700d1de). The equivalent check is gm-mcp/scripts/check-bin-drift.mjs (parseBundleVersion against BUNDLE_VERSION). Fix the AGENTS.md name to check-bin-drift.mjs.
+status: pending
+session_id: gm-goal-hop-SPECDRIFT-2
+blockedBy:
+- external
+deferReason: 'created in error: SPECDRIFT is a tension node, not a principle; no hop may name it'

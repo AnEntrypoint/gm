@@ -1,0 +1,8 @@
+id: OBSCOMPRESS-EARS-EVIDENCE-SIDECAR
+title: 'OBSCOMPRESS: move the raw EARS rewrite tables out of .gm/lean-walk/EARS.json into a sidecar so the evidence record stays compact'
+scope:
+- C:/dev/gm/.gm/lean-walk/EARS.json
+- C:/dev/gm/.gm/lean-walk/EARS-rewrites.json
+witness: EARS.json under 4 KB with rewrites/prd_rewrites replaced by a count and a pointer; EARS-rewrites.json parses and holds every prior entry byte-equivalent in content
+session_id: lean-hop-OBSCOMPRESS
+status: pending

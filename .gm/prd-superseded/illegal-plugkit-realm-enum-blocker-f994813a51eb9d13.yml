@@ -1,0 +1,4 @@
+id: ILLEGAL-PLUGKIT-REALM-ENUM-BLOCKER
+title: 'Blocker: rs-plugkit discipline_note::Component.realm is a String used by resolve_key_realm; the closed realm value set must be confirmed from declared_realm before it can become an enum'
+status: pending
+session_id: lean-hop-ILLEGAL

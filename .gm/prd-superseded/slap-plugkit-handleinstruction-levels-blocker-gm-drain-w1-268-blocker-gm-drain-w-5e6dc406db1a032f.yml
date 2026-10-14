@@ -1,0 +1,12 @@
+id: SLAP-PLUGKIT-HANDLEINSTRUCTION-LEVELS-blocker-gm-drain-w1-268-blocker-gm-drain-w2-393
+subject: 'Blocked: SLAP-PLUGKIT-HANDLEINSTRUCTION-LEVELS witness leader probe cannot run here (pre-SLAP guest needs CI build)'
+body: |-
+  Parent: SLAP-PLUGKIT-HANDLEINSTRUCTION-LEVELS-blocker-gm-drain-w1-268 (session gm-drain-w2-393). Receipts: .gm/receipts/SLAP-PLUGKIT-HANDLEINSTRUCTION-LEVELS-blocker-gm-drain-w1-268/01-SPECIFY.md and 02-PROVE.md.
+
+  What is unresolved: the 20 top-level keys present only in instruction-full dispatch 1791959160764-500-640938219205e44b (vs baseline 1791851394157-500-e07f1d6e8e7db8f8) are attributed to neither the SLAP edit (H1, leader) nor intervening commits (H2, next). The probe that separates them is: build the rs-plugkit guest from the pre-SLAP sha of rs-plugkit/crates/plugkit-core/src/orchestrator/instructions/mod.rs, run instruction full, and diff keys against the baseline.
+
+  Why it cannot run in this session: local cargo is hook-blocked; the guest is built only by CI (publish/release, Build step, --features slim). Starting a pre-SLAP CI build and reading its reply is a cross-session step.
+
+  Closing condition: a CI-built pre-SLAP guest whose instruction-full key set is compared to the baseline, witnessed in another session, with its dispatch id bound to the parent row. Parent stays pending until then.
+session_id: gm-drain-w2-393
+status: pending

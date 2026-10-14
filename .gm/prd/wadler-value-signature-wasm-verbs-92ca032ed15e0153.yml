@@ -1,0 +1,7 @@
+id: WADLER-VALUE-SIGNATURE-WASM-VERBS
+node: WADLER
+phase: P2
+status: pending
+title: 'Theorems for Free: wasm_dispatch/verbs (git.rs, memory.rs, search.rs, verbs.rs, about 145 Value-typed signatures) take the request as untyped JSON; each verb needs a typed request struct whose fields the signature names, starting with git.rs'
+owner: rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs
+session_id: lean-hop-WADLER

@@ -1,0 +1,6 @@
+id: witness-prd-add-derives-an-id-when-none-is-given-blocker-gm-2e-fa19b3-w1-11
+subject: 'blocker: no dry-run path witnesses prd-add id derivation live without writing a PRD row'
+notes: 'Row witness-prd-add-derives-an-id-when-none-is-given stays pending. Source evidence: rs-plugkit/crates/plugkit-core/src/orchestrator/prd.rs:708-728 derives the id from subject via slug_from_subject; gm-mcp/src/dispatch.js:848-859 (prdAddIdDiagnostic) passes an id-less body carrying subject/title/name/task/goal/description/notes and refuses only a body with no text. The positive live witness (id-less prd-add with a subject) writes a PRD row that the witnessing session cannot close: prd-resolve refuses a self-witness. codesearch found no dry_run flag in prd.rs. Needed: a dry-run or validate-only mode for prd-add that returns the derived id without persisting, so a witness can run without a residual row.'
+lane_wait_ms: 240000
+session_id: mcp-codemode-19560-1791850873131
+status: pending

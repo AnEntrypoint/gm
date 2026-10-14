@@ -1,0 +1,9 @@
+id: BLOCK-RECALL-INDEX-SINGLE-WRITER-blocker-gm-drain-w2-18
+subject: 'Blocked: BLOCK-RECALL-INDEX-SINGLE-WRITER needs a CI-built rs-plugkit Rust change and a cross-session witness'
+title: 'Blocked: BLOCK-RECALL-INDEX-SINGLE-WRITER needs a CI-built rs-plugkit Rust change and a cross-session witness'
+body: 'Row BLOCK-RECALL-INDEX-SINGLE-WRITER cannot close in session gm-drain-w2-18. SPECIFY (.gm/receipts/BLOCK-RECALL-INDEX-SINGLE-WRITER/01-SPECIFY.md) confirms the multi-writer premise: memorize_with_raw at rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs/memory.rs:483 (prior blocker cited :544, stale) and memory_md.rs writes to rssearch_vectors at lines 732, 783, 869, 901, 1049. Closing needs (a) a Rust change routing every write through memorize-fire, which local cargo cannot build (hook-blocked; CI only), (b) a CI-built wasm to run the leader probe, and (c) a witness from another session, since self-witness is refused. Next step: a CI-verified rs-plugkit change, then a cross-session live witness that proves one writer.'
+session_id: gm-drain-w2-18
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

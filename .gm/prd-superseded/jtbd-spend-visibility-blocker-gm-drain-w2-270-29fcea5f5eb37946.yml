@@ -1,0 +1,5 @@
+id: JTBD-SPEND-VISIBILITY-blocker-gm-drain-w2-270
+subject: 'Blocker: JTBD-SPEND-VISIBILITY still has no witnessable token source; default chosen is option (b) dispatch counts and wall time per phase'
+body: 'Parent JTBD-SPEND-VISIBILITY stays pending. Session gm-drain-w2-270 ran gm-prd on blocker JTBD-SPEND-VISIBILITY-blocker-gm-drain-w1-191. Defaulted option (b): narrow the row to dispatch counts and wall time per phase, derived from gm dispatch records, keeping the measurement gm-owned; option (a) (Claude Code transcripts) is outside gm scope. Closing (b) needs an rs-plugkit or gm-mcp code change plus a CI-built live witness from another session. Receipt: .gm/receipts/JTBD-SPEND-VISIBILITY-blocker-gm-drain-w1-191/01-SPECIFY.md. Stale citations: .gm/receipts/JTBD-SPEND-VISIBILITY/01-SPECIFY.md and 02-PROVE.md do not exist.'
+session_id: gm-drain-w2-270
+status: pending

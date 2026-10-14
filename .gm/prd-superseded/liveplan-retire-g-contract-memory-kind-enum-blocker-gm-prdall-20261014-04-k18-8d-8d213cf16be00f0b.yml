@@ -1,0 +1,5 @@
+id: LIVEPLAN-RETIRE-G-CONTRACT-MEMORY-KIND-ENUM-blocker-gm-prdall-20261014-04-k18
+subject: 'Blocker: retire row waits on two pending INVEST rows'
+body: 'Row LIVEPLAN-RETIRE-G-CONTRACT-MEMORY-KIND-ENUM cannot close in session gm-prdall-20261014-04-k18. Closing condition: INVEST-GCONTRACT-MEMORY-KIND-ENUM and INVEST-GCONTRACT-MEMORY-PROSE-REMOVE both closed. Live witness: prd-list for INVEST-GCONTRACT-MEMORY-KIND-ENUM shows status pending (dispatch 1791956452668-500-888f24249b0adbf4); prd-list for INVEST-GCONTRACT-MEMORY-PROSE-REMOVE shows status pending, blockedBy external (dispatch 1791956452894-500-c5e64605dc2ccf94). The enum row is an rs-plugkit orchestrator change verified only by CI (no local cargo). Unblock: resolve INVEST-GCONTRACT-MEMORY-KIND-ENUM first, then PROSE-REMOVE, then re-run gm-prd on LIVEPLAN-RETIRE-G-CONTRACT-MEMORY-KIND-ENUM.'
+session_id: gm-prdall-20261014-04-k18
+status: pending

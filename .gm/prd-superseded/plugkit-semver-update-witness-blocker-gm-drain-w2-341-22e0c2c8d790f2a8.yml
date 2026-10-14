@@ -1,0 +1,5 @@
+id: PLUGKIT-SEMVER-UPDATE-WITNESS-blocker-gm-drain-w2-341
+subject: 'Blocker for PLUGKIT-SEMVER-UPDATE-WITNESS: PROVE precondition fails, PLUGKIT-SEMVER-SHA-DRIFT-FIX still pending'
+body: 'PROVE: precondition ''PLUGKIT-SEMVER-SHA-DRIFT-FIX landed'' checked by prd-list id=PLUGKIT-SEMVER-SHA-DRIFT-FIX: status pending (session gm-prdall-20261014-04-k03). Fix target agentplug/crates/agentplug-runner/src/download.rs ensure_plugin_installed_via_github early return on dest.exists(). Witness needs a CI-built agentplug-runner and plugkit wasm release, and local cargo is hook-blocked (gm-no-local-cargo-verified-by-ci), so no witness can bind PLUGKIT-SEMVER-UPDATE-WITNESS in session gm-drain-w2-341. Unblock: land PLUGKIT-SEMVER-SHA-DRIFT-FIX, release runner and wasm, then rerun the sideload witness from a session other than the writer. Prior blocker: PLUGKIT-SEMVER-UPDATE-WITNESS-blocker-gm-drain-w1-237. Receipts: .gm/receipts/PLUGKIT-SEMVER-UPDATE-WITNESS-blocker-gm-drain-w1-237/.'
+session_id: gm-drain-w2-341
+status: pending

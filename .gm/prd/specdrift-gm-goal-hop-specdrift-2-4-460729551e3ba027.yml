@@ -1,0 +1,8 @@
+id: SPECDRIFT-gm-goal-hop-SPECDRIFT-2-4
+title: Spec requires the daemon owner lock to agree before a runner signal; code allows an absent lock
+description: gm-mcp/AGENTS.md:78 says the SIGTERM to the daemon proceeds only when its owner lock must agree with daemon-status.json. gm-mcp/src/release-bridge.js signalDaemonForSwap refuses only when the lock exists and names another pid (ownerText && Number(ownerText) !== pid); a missing daemon-owner.lock passes. Either tighten the code to require the lock or relax the AGENTS.md wording to 'when present'.
+status: pending
+session_id: gm-goal-hop-SPECDRIFT-2
+blockedBy:
+- external
+deferReason: 'created in error: SPECDRIFT is a tension node, not a principle; no hop may name it'

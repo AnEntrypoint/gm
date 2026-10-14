@@ -1,0 +1,5 @@
+id: STABLEPREFIX-INSTRUCTION-PAYLOAD-ORDER-blocker-gm-drain-w1-290
+session: gm-drain-w1-290
+subject: 'Witness the STABLEPREFIX-INSTRUCTION-PAYLOAD-ORDER fix from a session other than the one that edits it. Needed: enable serde_json preserve_order in rs-plugkit/crates/plugkit-core/Cargo.toml (line 16 ''serde_json = "1"''), audit serialized-JSON cache keys and hashes for key-order dependence first, let CI build the wasm (--features slim), sideload it, and compare the instruction payload key order against the stable prefix. Leader hypothesis: preserve_order fixes the order. Rival: the literal order is in the instruction builder (rs-plugkit/crates/plugkit-core/src/orchestrator/instructions/mod.rs:686-1230). Evidence: codesearch dispatches 1791959284772-500-fb5f2f4b18eafd23 and 1791959267071-500-b21471d65b083b41 (the zero is not exhaustive). Parent row: STABLEPREFIX-INSTRUCTION-PAYLOAD-ORDER-blocker-gm-2e-fa19b3-w3-04.'
+session_id: mcp-codemode-31304-1791959294319
+status: pending

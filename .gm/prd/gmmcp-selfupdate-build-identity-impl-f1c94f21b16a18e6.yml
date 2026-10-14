@@ -1,0 +1,4 @@
+id: GMMCP-SELFUPDATE-BUILD-IDENTITY-IMPL
+subject: 'Implement ADR-GMMCP-SELFUPDATE-1: gm-mcp/src/self-update.js versionGuardReason compares version strings only (lines 102-113); compare build identity (candidate build stamp and bytes vs installed) so a same-version candidate with a different identity is eligible. Then rebuild the gm-mcp bundle per gm-mcp rule.'
+status: pending
+session_id: mcp-codemode-31304-1791957102233

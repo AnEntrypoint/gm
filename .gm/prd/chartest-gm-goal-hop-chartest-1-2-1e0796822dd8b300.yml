@@ -1,0 +1,5 @@
+id: CHARTEST-gm-goal-hop-CHARTEST-1-2
+status: pending
+session_id: gm-goal-hop-CHARTEST-1
+title: 'CHARTEST: 12 gm-mcp/src modules have no characterization test'
+body: 'Present need: 14 of 18 modules in gm-mcp/src have zero references from gm-mcp/test (codesearch "src/<module>" over gm-mcp/test): bundle-refresh.js, bundle-version.js, cli.js, codemode.js, dev-sync.js, git-adapter.js, index.js, mcp-server.js, paths.js, release-bridge.js, self-update.js, server-log.js, singleton.js, transport-guard.js. Only dispatch.js (6 refs), http-transport.js, response-compact.js and verbs.js (1 each) are pinned. The self-update and release-bridge pair is CHARTEST-gm-goal-hop-CHARTEST-1-1; this row covers the other 12. Need: before any src row that restructures one of these modules runs, add a test file that pins its exported behaviour as it stands. Witness: the per-module codesearch count rises from 0 for each module that gets a row, and node --test over gm-mcp/test passes.'

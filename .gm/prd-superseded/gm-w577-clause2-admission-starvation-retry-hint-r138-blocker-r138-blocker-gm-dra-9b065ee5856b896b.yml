@@ -1,0 +1,5 @@
+id: gm-w577-clause2-admission-starvation-retry-hint-r138-blocker-r138-blocker-gm-drain-w1-147-blocker-gm-drain-w2-204
+subject: 'Blocked: gm-w577-clause2-admission-starvation-retry-hint-r138-blocker-r138-blocker-gm-drain-w1-147 cannot close in gm-drain-w2-204; its edit site is in the agentplug submodule'
+body: 'Blocker for gm-w577-clause2-admission-starvation-retry-hint-r138-blocker-r138-blocker-gm-drain-w1-147 (session gm-drain-w2-204). H1 confirmed: next_dispatch_hint is absent from agentplug/crates/agentplug-runner/src/daemon/claim_dispatch.rs (dispatch 1791961973189-500-cea64908c50d9f52). The starved reply is admission_starved_answer at line 2007, called at line 2497 (dispatch 1791961981064-500-8b2c253f4932daa0). Closing needs an agentplug submodule commit on its remote main, a daemon CI build, and a cross-session witness. Receipt: .gm/receipts/gm-w577-clause2-admission-starvation-retry-hint-r138-blocker-r138-blocker-gm-drain-w1-147/01-SPECIFY.md. Unblock by: the scoped row gm-w577-r138-agentplug-next-dispatch-hint.'
+session_id: gm-drain-w2-204
+status: pending

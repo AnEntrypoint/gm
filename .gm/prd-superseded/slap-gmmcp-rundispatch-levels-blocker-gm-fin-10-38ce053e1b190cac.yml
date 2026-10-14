@@ -1,0 +1,5 @@
+id: SLAP-GMMCP-RUNDISPATCH-LEVELS-blocker-gm-fin-10
+subject: 'Blocker: runDispatch split is uncommitted in shared dirty dispatch.js; needs one writer, bundle rebuild and live witness'
+body: 'Blocker for SLAP-GMMCP-RUNDISPATCH-LEVELS: the runDispatch split (validateDispatch, publishDispatch, pollForOutcome, shapeLandedOutFile, readLandedOutFile, timeoutReply, abortedReply, finalRecheckOrTimeout, withdrawUnclaimedRequest, dispatchYaml) is applied in the working tree of gm-mcp/src/dispatch.js, uncommitted. Old block text was not saved, so it cannot be reverted by splice; the new block is in the scratchpad runDispatch-new.js. Needed before close: (1) one writer window on gm-mcp/src/dispatch.js, since gm-fin-11 and others edit it and HEAD is 1358 lines vs working 2234; (2) rebuild bin/gm-mcp-server.js with a BUNDLE_VERSION bump (0.2.41), then check-bin-drift; (3) live exec_js echo witness through the reloaded bundle, plus list-and-cap test (pre-existing bundle failure). Receipts: .gm/receipts/SLAP-GMMCP-RUNDISPATCH-LEVELS/.'
+session_id: gm-fin-10
+status: pending

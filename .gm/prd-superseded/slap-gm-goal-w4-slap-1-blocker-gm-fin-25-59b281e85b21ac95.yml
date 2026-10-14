@@ -1,0 +1,12 @@
+id: SLAP-gm-goal-w4-SLAP-1-blocker-gm-fin-25
+subject: 'Blocked: SLAP-gm-goal-w4-SLAP-1 needs gm-mcp/src/dispatch.js, which holds uncommitted hunks from other live sessions'
+body: |-
+  Row SLAP-gm-goal-w4-SLAP-1 (extract raw fs lock/status primitives from gm-mcp/src/dispatch.js into one helper) cannot run now.
+
+  Evidence: CONC receipt .gm/receipts/SLAP-gm-goal-w4-SLAP-1/05-CONC.md. gm-mcp submodule git_status (dispatch 1791891159566-500-72c27d4b405e1558) shows src/dispatch.js modified along with 7 other files; live pool sessions gm-fin-08, gm-fin-10, gm-fin-11, gm-fin-12 are editing the SLAP-GMMCP surface.
+
+  Unblock: the owning session(s) commit or park their dispatch.js hunks on main, then re-run SLAP-gm-goal-w4-SLAP-1. Also: the row's cited line numbers (1044, 1071, 1376) are stale; current sites are dispatch.js 305, 395, 1021, 1126, 1153, 1249, 1262, 1481. Also: gm-mcp submodule HEAD is detached, not main.
+
+  Witness: none. Not self-witnessed.
+session_id: gm-fin-25
+status: pending

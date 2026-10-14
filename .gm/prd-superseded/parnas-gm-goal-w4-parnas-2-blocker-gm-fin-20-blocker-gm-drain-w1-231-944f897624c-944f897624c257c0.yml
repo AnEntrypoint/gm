@@ -1,0 +1,5 @@
+id: PARNAS-gm-goal-w4-PARNAS-2-blocker-gm-fin-20-blocker-gm-drain-w1-231
+subject: 'Blocker for PARNAS-gm-goal-w4-PARNAS-2-blocker-gm-fin-20: PARNAS-2 cannot PROVE, gm-mcp has a live second writer on dispatch.js and self-update.js and a dirty gitlink'
+body: 'Stage PROVE blocked. Parent row PARNAS-gm-goal-w4-PARNAS-2 (inflightDispatchCount owner) needs dispatch.js and self-update.js writes; both carry foreign uncommitted/staged hunks (dispatch 1791958866397-500-296025b70fb1d8ae), and C:\dev\gm gitlink for gm-mcp is dirty (dispatch 1791958875807-500-fe20303ee233af3). Premise ''detached HEAD'' is stale (HEAD is main at d6f5987). Clear by: another lane commits or parks the foreign hunks, then the parent row runs and a witness comes from a different session. Receipts: .gm/receipts/PARNAS-gm-goal-w4-PARNAS-2-blocker-gm-fin-20/01-SPECIFY.md, 02-BLOCKER.md.'
+session_id: gm-drain-w1-231
+status: pending

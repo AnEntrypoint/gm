@@ -1,0 +1,5 @@
+id: WADLER-gm-goal-w4-WADLER-1-blocker-gm-drain-w1-315
+subject: 'BLOCKER for WADLER-gm-goal-w4-WADLER-1: CONC fails, gm-mcp dirty foreign hunks on every touched surface'
+body: 'Row WADLER-gm-goal-w4-WADLER-1 cannot EMIT. SPECIFY (receipt .gm/receipts/WADLER-gm-goal-w4-WADLER-1/01-SPECIFY.md): the row''s count is stale, 88 occurrences in 9 files (not 71 in 7), and no isPlainObject exists yet. CONC (05-CONC.md): gm-mcp/src/dispatch.js carries 117 changed lines from another writer, bin/gm-mcp-server.js (the bundle the row must rebuild) carries 220 changed lines, release-bridge.js, http-transport.js, index.js, dev-sync.js are modified, and self-update.js is staged. Editing those files or rebuilding the bundle would commit a foreign writer''s hunks. Unblock: the owning lane commits or parks its gm-mcp hunks on main, then re-run gm-prd on the row. Row stays pending.'
+session_id: gm-drain-w1-315
+status: pending

@@ -1,0 +1,5 @@
+id: TOOLBUDGET-GMMCP-DESCRIPTIONS-RELEASE-blocker-gm-drain-w1-307-blocker-gm-drain-w2-459
+subject: 'Blocked: TOOLBUDGET-GMMCP-DESCRIPTIONS-RELEASE-blocker-gm-drain-w1-307 cannot close: gm-mcp tree has other writers'' hunks'
+body: 'Row TOOLBUDGET-GMMCP-DESCRIPTIONS-RELEASE-blocker-gm-drain-w1-307 (session gm-drain-w2-459) cannot reach PROVE. Witnessed: git_status dispatch 1791967934047-500-2cc666770f3a7a95 on gm-mcp reports dirty: true, 18 modified paths (bin 1, src 12, scripts 2, test 3), 1 staged (src/self-update.js), 1 untracked (src/spool-store.js). Committing bin/gm-mcp-server.js would publish other writers'' hunks, so the descriptions-only commit precondition fails. Parent row TOOLBUDGET-GMMCP-DESCRIPTIONS-RELEASE (session lean-hop-TOOLBUDGET) stays pending. Unblock: owning lanes commit and push their gm-mcp hunks to main; then rebuild bin from the descriptions change only, witness tools/list byte size (11676 -> 4284) through the live gm-mcp, and confirm the ~/.gm-tools bundle sha. Nothing was committed or pushed by this run.'
+session_id: gm-drain-w2-459
+status: pending

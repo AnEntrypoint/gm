@@ -1,0 +1,5 @@
+id: JTBD-REVIEWER-ONEPASS-blocker-gm-drain-w2-265
+subject: 'Blocked: JTBD-REVIEWER-ONEPASS acceptance requires the reviewer summary verb that YAGNI-JTBD-REVIEWER-ONEPASS removed'
+body: 'Row JTBD-REVIEWER-ONEPASS cannot close. Its acceptance is one verb returning a reviewer summary (net line delta, gates, witnesses, PRD rows closed). The resolved row YAGNI-JTBD-REVIEWER-ONEPASS (.gm/prd-log.jsonl) removed that verb as unneeded and says reviewers read git_diff, git_log and prd-list directly. The two are contradictory. Evidence: prd-list dispatch 1791963059122-500-19399a10e4f744a8; gm.list names have no summary verb; codesearch dispatch 1791963108130-500-40b5b6b8763058e6 finds only the YAGNI log line; receipts .gm/receipts/JTBD-REVIEWER-ONEPASS/01-SPECIFY.md and 02-PROVE.md. Owner decision needed: (a) rescope JTBD-REVIEWER-ONEPASS to the existing three-verb read (then witness it), or (b) reopen YAGNI-JTBD-REVIEWER-ONEPASS and build the summary verb (rs-plugkit Rust, CI-built wasm, cross-session witness). Leader hypothesis H1 (deliberate removal).'
+session_id: gm-drain-w2-265
+status: pending

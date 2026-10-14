@@ -1,0 +1,5 @@
+id: PARNAS-gm-goal-w4-PARNAS-1-blocker-gm-prdall-20261014-04-k04
+subject: 'Blocker for PARNAS-gm-goal-w4-PARNAS-1: EMIT blocked, gm-mcp/src/dispatch.js carries another writer''s uncommitted hunks'
+body: 'Row PARNAS-gm-goal-w4-PARNAS-1 (dispatch.js exports pidAlive, daemonNotRunning, readDaemonLiveness, readSpoolDispatchState, ensureAgentLease; importers singleton.js:7, release-bridge.js:8, leak-reaper.js:6, bundle-refresh.js:6, self-update.js:9, transport-guard.js:3). SPECIFY receipt: .gm/receipts/PARNAS-gm-goal-w4-PARNAS-1/01-SPECIFY.md. Stage reached: SPECIFY. Blocker: git_status gm-mcp (1791956499632-500-e4a28401cd600389) shows src/dispatch.js and bin/gm-mcp-server.js modified and uncommitted by another writer; the row''s edit target is that file. Also HEAD test baseline is red (DEEPMOD-GMMCP-TESTS-PREEXISTING), so PROVE has no clean baseline. Cited dispatch.js:857 is stale (pidAlive defined at 938). Resolve by: the owner of the WIP commits or discards it, then rerun gm-prd on this row.'
+session_id: gm-prdall-20261014-04-k04
+status: pending

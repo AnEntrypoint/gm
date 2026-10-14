@@ -1,0 +1,4 @@
+id: HUGHES-gm-goal-hop-HUGHES-1-1
+title: 'gm-mcp/src has zero property-based checks: no generator, shrink or property test over any codec or comparator (codesearch regex generator|shrink|round.?trip|assert over 18 files)'
+status: pending
+session_id: gm-goal-hop-HUGHES-1

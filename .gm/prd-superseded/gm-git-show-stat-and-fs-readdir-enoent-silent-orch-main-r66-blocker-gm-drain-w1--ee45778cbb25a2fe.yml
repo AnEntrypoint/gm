@@ -1,0 +1,12 @@
+id: gm-git-show-stat-and-fs-readdir-enoent-silent-orch-main-r66-blocker-gm-drain-w1-132
+subject: 'Blocked: fs_readdir missing-path reason needs a rebuilt-guest witness; git_show stat is already live-clean'
+severity: LOW
+body: |-
+  Blocker for gm-git-show-stat-and-fs-readdir-enoent-silent-orch-main-r66 (session gm-drain-w1-132).
+  Live state: git_show stat:true already returns the stat block (dispatch 1791958270033-500-6e79d8090c489fca); the cited git_show silence is stale. fs_readdir on a missing path still returns error:'empty', error_code:'failed', next_dispatch_hint:'instruction', with no path or errno (dispatch 1791958274277-500-6cefcd1792460517; code at rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs.rs:1222-1223).
+  Fix needed: verbs.rs fs_readdir null branch names the path and an ENOENT or empty reason. The host returns null with no errno, so the fix needs a decision on whether host_fs_readdir reports the error kind.
+  Cannot close here: no local wasm build (hook-blocked cargo), the fix ships only through CI publish/release, and the witness must be a live dispatch against the rebuilt guest from another session after the parent gitlink bump.
+  Receipts: .gm/receipts/gm-git-show-stat-and-fs-readdir-enoent-silent-orch-main-r66/01-SPECIFY.md, 02-PROVE.md.
+  Next: a CI-capable lane lands the verbs.rs change on rs-plugkit main, bumps the gitlink, and witnesses fs_readdir on a missing relative path.
+session_id: gm-drain-w1-132
+status: pending

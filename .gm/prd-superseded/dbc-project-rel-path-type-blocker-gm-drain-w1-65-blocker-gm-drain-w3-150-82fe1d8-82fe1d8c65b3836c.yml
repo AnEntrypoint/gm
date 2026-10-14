@@ -1,0 +1,16 @@
+id: DBC-PROJECT-REL-PATH-TYPE-blocker-gm-drain-w1-65-blocker-gm-drain-w3-150
+subject: 'Blocked: DBC-PROJECT-REL-PATH-TYPE-blocker-gm-drain-w1-65 cannot close in session gm-drain-w3-150'
+body: |-
+  SPECIFY (session gm-drain-w3-150). Row restated: the parent row DBC-PROJECT-REL-PATH-TYPE (one ProjectRelPath type replacing four ad-hoc relative-path preconditions) cannot close, per blocker DBC-PROJECT-REL-PATH-TYPE-blocker-gm-drain-w1-65.
+  Live reads: prd-list id=DBC-PROJECT-REL-PATH-TYPE-blocker-gm-drain-w1-65 dispatch 1791971357272-500-149009beb295a15a; parent row prd-list id=DBC-PROJECT-REL-PATH-TYPE dispatch 1791971355863-500-f5397a6f1d091f37.
+  Blocker stated unblock: the change is a Rust newtype edit in the rs-plugkit nested repo; local cargo is blocked by repo rule, so the witness is CI-only (publish / release, step Build). The acceptance witness needs a released guest built from a new rs-plugkit commit, and the witness must come from a session other than the editor (self-witness refused).
+  PROVE/EDIT not attempted in this run: a change cannot be witnessed by this session as editor and closer at once, and the guest publish plus gitlink bump needs rs-plugkit push rights and a CI wait this run does not hold.
+  Stale cites (refresh required before the edit): path_within_project and path_outside_project_message at rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs.rs:581-624 and 1059-1060; git_worktree_target at verbs/git.rs:7386 (callers 7422, 7546); the git.rs:3803 and 3843 checks were not re-located.
+  Outcome: cannot close in this run. Blocker filed with prd-add under a new id (not the row's own id). Receipts: 01-SPECIFY.md under .gm/receipts/DBC-PROJECT-REL-PATH-TYPE-blocker-gm-drain-w1-65/.
+
+  Unblock: a session with rs-plugkit push rights publishes the ProjectRelPath newtype through CI, bumps the gitlink, and a different session witnesses the live dispatch. Refresh the cited lines first.
+session_id: gm-drain-w3-150
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

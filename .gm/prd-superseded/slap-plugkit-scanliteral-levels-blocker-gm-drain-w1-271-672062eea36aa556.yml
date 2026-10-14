@@ -1,0 +1,5 @@
+id: SLAP-PLUGKIT-SCANLITERAL-LEVELS-blocker-gm-drain-w1-271
+subject: 'Blocked: SLAP-PLUGKIT-SCANLITERAL-LEVELS cannot close in session gm-drain-w1-271'
+body: 'Row SLAP-PLUGKIT-SCANLITERAL-LEVELS cannot be witnessed here. (1) Cited line 4578 is stale: scan_literal is at code_index.rs:5128 (codesearch dispatch 1791959144261-500-92c7a379ee17470a). (2) The row''s witness needs a cargo build of rs-plugkit; local cargo is blocked by a hook and rs-plugkit''s wasm build is CI-only (wasm32-wasip1 --features slim). (3) PROVE needs a live grep literal dispatch from a CI-built guest and a closing witness from another session, which this session cannot produce. Next step: re-scope the row''s file and line to the current scan_literal (5128), then close it from a CI-built guest in a separate session. Receipt: .gm/receipts/SLAP-PLUGKIT-SCANLITERAL-LEVELS/01-SPECIFY.md.'
+session_id: gm-drain-w1-271
+status: pending

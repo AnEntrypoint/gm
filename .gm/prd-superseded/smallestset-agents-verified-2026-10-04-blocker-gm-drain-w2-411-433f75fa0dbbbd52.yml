@@ -1,0 +1,5 @@
+id: SMALLESTSET-AGENTS-VERIFIED-2026-10-04-blocker-gm-drain-w2-411
+subject: 'Blocked: SMALLESTSET-AGENTS-VERIFIED-2026-10-04 premise absent; owner decision to close as superseded or re-scope'
+body: 'Row SMALLESTSET-AGENTS-VERIFIED-2026-10-04-blocker-gm-drain-w1-279 cannot close. Witnessed in session gm-drain-w2-411: codesearch literal ''Verified 2026-10-04'' on AGENTS.md returns count 0 (exhaustive, 134 lines, dispatch 1791965716758-500-fc3a355d82c73670); fs_stat AGENTS.md size 29594 bytes (dispatch 1791965722266-500-1d8e212a0310adca), so the >= 4000-byte drop acceptance is unmeasurable against an absent section. The dated section was already removed by AGENTSMD-PURGE-INCIDENT-SECTIONS (resolved, witness codesearch ^## Verified [0-9]{4}- count 0). Owner decision needed: close as superseded by AGENTSMD-PURGE-INCIDENT-SECTIONS, or re-scope to a new acceptance on the current AGENTS.md. Session gm-drain-w2-411.'
+session_id: gm-drain-w2-411
+status: pending

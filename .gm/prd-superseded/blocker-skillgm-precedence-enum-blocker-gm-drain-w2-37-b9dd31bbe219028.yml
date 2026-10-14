@@ -1,0 +1,8 @@
+id: BLOCKER-SKILLGM-precedence-enum-blocker-gm-drain-w2-37
+subject: 'PROVE blocked for BLOCKER-SKILLGM-precedence-enum: rank is not observable through any live verb, and the guest needs a CI build'
+body: 'Session gm-drain-w2-37 carried row BLOCKER-SKILLGM-precedence-enum through SPECIFY (receipt .gm/receipts/BLOCKER-SKILLGM-precedence-enum/01-SPECIFY.md, which still holds). PROVE cannot bind a witness here for two reasons. (1) Local cargo is hook-blocked, so the wasm guest can only be built by CI (publish/release, step Build). (2) The acceptance requires a live witness reading the tier order from the built guest, but no verb replies with Tier ordering: resolve_and_report names only the winning tier. Next step, in order: add #[derive(PartialOrd, Ord)] to Tier at rs-plugkit/crates/plugkit-core/src/config.rs:35 (declaration order already equals match order at resolve_with :700); expose the rank in the resolve reply (a field such as tier_rank) in config.rs resolve_and_report and its verb route; push rs-plugkit and bump the parent gitlink; ci-status until the release job is green; then witness with config resolve on a fixture root from a different session and record the reply dispatch id. Hypothesis (falsifiable): the reply tier_rank order equals the declared enum order; refuted by any inversion. Leader hypothesis unchanged from SPECIFY.'
+session_id: gm-drain-w2-37
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

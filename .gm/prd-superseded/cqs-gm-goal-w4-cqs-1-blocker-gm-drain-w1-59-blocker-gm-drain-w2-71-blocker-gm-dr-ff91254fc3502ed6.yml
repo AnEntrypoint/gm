@@ -1,0 +1,8 @@
+id: CQS-gm-goal-w4-CQS-1-blocker-gm-drain-w1-59-blocker-gm-drain-w2-71-blocker-gm-drain-w3-128
+subject: 'Blocked: CQS-gm-goal-w4-CQS-1-blocker-gm-drain-w1-59-blocker-gm-drain-w2-71 still cannot close; gm-mcp tree has an active foreign writer'
+body: 'Row CQS-gm-goal-w4-CQS-1-blocker-gm-drain-w1-59-blocker-gm-drain-w2-71 (session gm-drain-w2-71) asks for a witness-bound publish of CQS-1 after the concurrent gm-mcp writer lands. SPECIFY in session gm-drain-w3-128 finds the condition unchanged and worse. Evidence: git_status gm-mcp dispatch 1791971054897-500-d424a7ac64efcf55 shows 22 changed paths (21 modified, 4 staged incl. src/self-update.js and bin/gm-mcp-server.js, 1 untracked src/spool-store.js), up from 11 modified, 1 staged, 1 untracked at the parent blocker''s evidence. Parent CQS-1 remains pending (prd-list id 1791971048760-500-d8e0f9fb876adc42). Publishing CQS-1 now would commit foreign hunks, which the gm-prd rules forbid, and no cross-session witness can bind on a dirty tree. Next wave: the owner of the gm-mcp writer lands or names itself, then CQS-1 rebuilds the bundle via scripts/build.mjs, commits only its dispatch.js hunks with git_finalize paths, and is witnessed from a session other than gm-drain-w3-128 or gm-drain-w2-71. Stage receipts: none written, since SPECIFY already blocked. Mutable: who owns the gm-mcp writer.'
+session_id: gm-drain-w3-128
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

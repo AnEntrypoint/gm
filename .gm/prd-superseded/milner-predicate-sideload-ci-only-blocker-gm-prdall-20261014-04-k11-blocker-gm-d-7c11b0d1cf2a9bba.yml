@@ -1,0 +1,5 @@
+id: MILNER-PREDICATE-SIDELOAD-ci-only-blocker-gm-prdall-20261014-04-k11-blocker-gm-drain-w1-212-blocker-gm-drain-w2-301
+subject: 'BLOCKER for MILNER-PREDICATE-SIDELOAD-ci-only-blocker-gm-prdall-20261014-04-k11-blocker-gm-drain-w1-212: rs-plugkit HEAD has no CI run; parent witness does not bind HEAD (session gm-drain-w2-301)'
+body: 'Blocked at SPECIFY. ci-status on AnEntrypoint/rs-plugkit bbdc4d83611298df960d47fc2abe3177804b382d: no workflow runs (dispatch 1791963490170-500-776a387bdfc4bcd8). Parent witness CI run 38521082588 covers sha 54a9ab0, which is not an ancestor of bbdc4d8 (dispatch 1791963513248-500-e09d748afe650966), so it cannot bind the row. The parent MILNER-PREDICATE-SIDELOAD-ci-only is already resolved (gm-fin-31). Unblock: owner dispatches release.yml on rs-plugkit main, or pushes a real change, and the CI run id is the witness_dispatch_id. Receipt: .gm/receipts/MILNER-PREDICATE-SIDELOAD-ci-only-blocker-gm-prdall-20261014-04-k11-blocker-gm-drain-w1-212/01-SPECIFY.md. Default taken: row stays pending, not closed on a non-witness.'
+session_id: gm-drain-w2-301
+status: pending

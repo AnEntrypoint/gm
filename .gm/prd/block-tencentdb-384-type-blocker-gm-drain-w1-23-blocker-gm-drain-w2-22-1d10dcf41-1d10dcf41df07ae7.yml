@@ -1,0 +1,8 @@
+id: BLOCK-TENCENTDB-384-TYPE-blocker-gm-drain-w1-23-blocker-gm-drain-w2-22
+subject: 'Blocker for BLOCK-TENCENTDB-384-TYPE-blocker-gm-drain-w1-23: PROVE probe cannot run in this session (needs CI-built rs-plugkit slim)'
+body: 'PROVE stage cannot run here. Leader H1 probe requires a non-384 tencentdb-memory-import dispatch against a rebuilt rs-plugkit (--features slim). Local cargo is hook-blocked, so the probe has no executable witness in this session. Receipts: .gm/receipts/BLOCK-TENCENTDB-384-TYPE-blocker-gm-drain-w1-23/01-SPECIFY.md. Next step for the next wave: land the typed dims change on rs-plugkit main through gm git verbs, cite its CI run, then run the tencentdb-memory-import probe from a session other than gm-drain-w2-22 and resolve BLOCK-TENCENTDB-384-TYPE citing that witness dispatch id. Parent row BLOCK-TENCENTDB-384-TYPE stays pending.'
+session_id: gm-drain-w2-22
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

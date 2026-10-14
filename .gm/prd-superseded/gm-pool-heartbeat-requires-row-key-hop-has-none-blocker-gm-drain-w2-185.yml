@@ -1,0 +1,5 @@
+id: gm-pool-heartbeat-requires-row-key-hop-has-none-blocker-gm-drain-w2-185
+subject: 'Blocked: gm-pool-heartbeat-requires-row-key-hop-has-none clause (c) needs rs-plugkit surface-to-row matching'
+body: 'Row gm-pool-heartbeat-requires-row-key-hop-has-none acceptance (c) requires pool-observe to match hop-held surfaces against advertised rows. Live witness witness 1791961847895-500-fe8e5027f54eb187 shows a hop heartbeat is credited (clauses a, b pass) but its surface lands in slots.live_rows_unmatched (client/ui, rs-plugkit/crates/plugkit-core/src/orchestrator/pool_slots) and is never matched to an advertised row. Fix: rs-plugkit/crates/plugkit-core/src/orchestrator/pool_slots/state.rs reconcile_live_rows, plus a rebuilt wasm (CI only; local cargo blocked). Receipts: .gm/receipts/gm-pool-heartbeat-requires-row-key-hop-has-none/.'
+session_id: gm-drain-w2-185
+status: pending

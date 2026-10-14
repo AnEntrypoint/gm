@@ -1,0 +1,6 @@
+id: NODUPEDOC-PROSE-NODE-COPIES-ci-only-blocker-gm-prdall-20261014-04-k07
+subject: 'Blocker: NODUPEDOC-PROSE-NODE-COPIES-ci-only cannot close in this run'
+witness: CI run of publish / release step Build green on the commit that dedupes the shared sentence, plus a live instruction dispatch showing the sentence served once, citing its dispatch id.
+status: pending
+body: 'Row NODUPEDOC-PROSE-NODE-COPIES-ci-only (parent NODUPEDOC-PROSE-NODE-COPIES stays pending). SPECIFY: cited sentence re-checked live, codesearch literal exhaustive over gm-config/prose = 143 occurrences in 143 files (dispatch 1791956602722-500-a7356f1a29736a50). PROVE: the dedupe changes Rust source (rs-plugkit/crates/plugkit-core/src/orchestrator/instructions/lean_prose.rs, entry.rs include_str! paths). Local cargo is blocked, so the served-instruction witness needs a pushed main commit and a CI run of publish / release (step Build), then a live instruction dispatch citing its id from another session. This run made no edits and pushed nothing. Next: author the Rust and config change as one reviewed commit on main, then CI-witness it from a separate session.'
+session_id: gm-prdall-20261014-04-k07

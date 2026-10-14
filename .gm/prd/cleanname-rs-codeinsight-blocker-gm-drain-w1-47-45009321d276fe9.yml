@@ -1,0 +1,11 @@
+id: CLEANNAME-RS-CODEINSIGHT-blocker-gm-drain-w1-47
+session_id: gm-drain-w1-47
+title: 'BLOCKER CLEANNAME-RS-CODEINSIGHT: cited code absent from rs-codeinsight/src; row is stale'
+status: pending
+items:
+- 'SPECIFY (gm-drain-w1-47): all 19 cited path:line locations checked via fs_read of rs-codeinsight/src/{formatter,analyzer,project,config,scanner}.rs. Most cited lines are past EOF or hold unrelated code (e.g. formatter.rs:278, 463, 467, 471 and config.rs:124 past EOF; project.rs:364 is `let mut depth`; scanner.rs:134 is `}`).'
+- 'codesearch (regex, path rs-codeinsight/src, exhaustive:true, 19 files) for each cited binding: `let c = bytes[i]`, `let v = value.trim()`, `let s = item.trim()`, `let n = name.split`, `let val `, `let f `, `let s `: 0 matches.'
+- 'Conclusion: the row''s line citations and bindings do not exist in the tree, so the row cannot be closed by a rename witness. Needed: re-scope the row against current rs-codeinsight source under the same id, or retire it.'
+- 'Witness constraint: the row''s witness `cargo build`/`cargo test` is not runnable locally (AGENTS.md: local cargo blocked by hook; rs-codeinsight verified by CI only), so the witness must be a ci-status dispatch on the submodule commit.'
+- 'UPDATE (gm-drain-w2-60, receipt .gm/receipts/CLEANNAME-RS-CODEINSIGHT/01-SPECIFY-gm-drain-w2-60.md): the tree changed after the w1-47 read. Eight cited sites now exist under renamed identifiers (short_path, pure_export_labels, base_name, argument_text, current_byte, trimmed_value, trimmed_item); scanner.rs:134 is `if !is_safe {`. Codesearch regex `let (f|s|n|val|c|v) ?[:=]` finds one uncited residual at src/project.rs:464 (`let c = chars.next()?;`). The row''s camelCase targets are not Rust style. Re-scope must use snake_case names and cite the current lines.'
+witness: ci-status on the rs-codeinsight submodule commit after a re-scoped rename lands

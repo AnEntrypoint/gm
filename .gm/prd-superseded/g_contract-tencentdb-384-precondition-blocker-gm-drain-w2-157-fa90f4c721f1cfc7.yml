@@ -1,0 +1,8 @@
+id: G_CONTRACT-tencentdb-384-precondition-blocker-gm-drain-w2-157
+subject: 'Blocked: G_CONTRACT-tencentdb-384-precondition needs a CI-built rs-plugkit type change and a cross-session witness'
+deferReason: 'duplicate blocker: the base row already names the same missing fact'
+body: 'Parent row G_CONTRACT-tencentdb-384-precondition cannot close in session gm-drain-w2-157. SPECIFY receipt: .gm/receipts/G_CONTRACT-tencentdb-384-precondition/01-SPECIFY.md. Findings: the runtime 384 check is at rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs/memory.rs:736 (dispatch 1791961174401-500-93dedae18fe2af4f). The cited vectors_db_dims text is absent from skills/agent-memory/SKILL.md (dispatch 1791961170102-500-d622926495c70f4b), so the prose-deletion half of the acceptance is stale. Moving the check into the destination type needs a rs-plugkit Rust change that only CI can build (slim wasm32-wasip1), and a witness from another session. Next step: rewrite the row''s file list against the current SKILL.md, then land the type change in a CI-verified rs-plugkit commit followed by a cross-session witness. Parent row stays pending.'
+session_id: gm-drain-w2-157
+status: pending
+blockedBy:
+- external

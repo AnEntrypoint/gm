@@ -1,0 +1,8 @@
+id: BLOCKER-SKILLGM-session-id-alias-normalize-blocker-gm-drain-w3-70
+subject: 'Blocked: session-id alias fix cannot publish while gm-mcp holds a foreign uncommitted refactor'
+body: 'Row BLOCKER-SKILLGM-session-id-alias-normalize-blocker-gm-drain-w2-39 cannot close in session gm-drain-w3-70. Hypothesis H1: body {sessionId:X} without SESSION_ID is served under owner X. Source still confirms it: gm-mcp/src/dispatch.js:1055-1058 explicitBodySessionId reads only body.SESSION_ID. Fix tried in working tree (accept SESSION_ID then sessionId, rebuild via npm run build) passed the body-input test and the alias unit check, but was reverted: gm-mcp holds another writer''s uncommitted refactor (19 modified files including src/dispatch.js, bin/gm-mcp-server.js, src/self-update.js, staged src/verb-table.js, untracked src/spool-store.js). Publishing the fix would sweep that WIP in. Parent gm verbs report gm-mcp clean and head 3f24585, while git in the submodule reports head a992ae6 with the dirty tree, so the gm git verbs cannot be trusted for this submodule. Unblock: the owner of the gm-mcp refactor lands or stashes it on main, then the one-line alias fix is applied, bundle rebuilt, and a live witness run from a second session (explicit sessionId body reports owner = that session). Receipt: .gm/receipts/BLOCKER-SKILLGM-session-id-alias-normalize-blocker-gm-drain-w2-39/01-SPECIFY.md'
+session_id: gm-drain-w3-70
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

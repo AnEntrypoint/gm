@@ -1,0 +1,8 @@
+id: HYRUM-gm-goal-hop-HYRUM-d2-1-blocker-gm-drain-w2-226
+subject: 'Blocked: gm-mcp README dispatch_id claim needs a submodule fix and a validity decision on HYRUM-gm-goal-hop-HYRUM-d2-1'
+body: 'Row HYRUM-gm-goal-hop-HYRUM-d2-1-blocker-gm-drain-w1-160 was run in session gm-drain-w2-226 and cannot close without a human or owner decision. SPECIFY witness (codesearch dispatch 1791962390683-500-4812290bd00ae681) confirms gm-mcp/README.md:12 still says dispatch_id is stripped from replies, while live codemode replies carry a top-level dispatch_id (this session''s replies, e.g. 1791962379617-500-f58b0cd2482e9553). The defect is real. The fix is a README edit inside the gm-mcp submodule, which needs a submodule commit on main, a push, and a parent gitlink bump. gm-mcp is already modified in the parent tree (git_status dispatch 1791962393096-500-d68851a8e8bc9c34), so another writer holds that surface and this run does not publish into it. The parent row HYRUM-gm-goal-hop-HYRUM-d2-1 is flagged created-in-error (HYRUM is a tension node, not a principle), so it must be confirmed or retired before any resolution. Decision needed: confirm the parent row and assign the gm-mcp README fix to the surface owner, or retire the row.'
+session_id: gm-drain-w2-226
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

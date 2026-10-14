@@ -1,0 +1,8 @@
+id: G_CONTRACT-admission-trajectory-enum-blocker-gm-drain-w2-108
+subject: 'Blocked: G_CONTRACT-admission-trajectory-enum still has no classifier enum in rs-plugkit (w2 re-check)'
+body: 'Session gm-drain-w2-108 ran gm-prd on G_CONTRACT-admission-trajectory-enum-blocker-gm-drain-w1-84. SPECIFY: the parent row (G_CONTRACT-admission-trajectory-enum, session lean-node-G_CONTRACT) is still pending; its subject asks for a trajectory classifier enum (convergent|flat|divergent|chaotic), a hold-on-non-convergent predicate, and a single-writer |F|=1 bound. codesearch regex ''enum AdmissionTrajectory|TrajectoryClass|hold_predicate'' over rs-plugkit/crates returned 0 hits in 267 files (dispatch 1791960608497-500-7af434dd07795430), so the enum and predicate do not exist. PROVE/EMIT cannot run here: the change is Rust in the nested rs-plugkit repo, local cargo is blocked by hook, and the only build is the rs-plugkit CI wasm job (--features slim). Witness must come from a session other than the author, through agentplug-runner against the rebuilt guest. Next action, in order: (1) implement the enum and predicate in rs-plugkit with a file path named in the row; (2) commit and publish in rs-plugkit on main; (3) wait for the publish/build/wasm runs via ci-status; (4) bump the rs-plugkit gitlink in the parent; (5) witness from another session and prd-resolve the parent row. Prior blocker: G_CONTRACT-admission-trajectory-enum-blocker-gm-drain-w1-84 (same cause).'
+session_id: gm-drain-w2-108
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

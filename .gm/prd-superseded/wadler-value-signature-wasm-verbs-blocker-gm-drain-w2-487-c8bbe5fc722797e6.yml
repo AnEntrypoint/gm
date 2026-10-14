@@ -1,0 +1,6 @@
+id: WADLER-VALUE-SIGNATURE-WASM-VERBS-blocker-gm-drain-w2-487
+subject: 'Blocked: WADLER-VALUE-SIGNATURE-WASM-VERBS has no acceptance, so no PROVE predicate or witness exists'
+status: pending
+blockedBy:
+- WADLER-VALUE-SIGNATURE-WASM-VERBS
+session_id: gm-drain-w2-487

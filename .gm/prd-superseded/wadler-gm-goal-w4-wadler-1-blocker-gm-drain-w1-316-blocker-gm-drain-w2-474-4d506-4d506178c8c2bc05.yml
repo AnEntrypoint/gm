@@ -1,0 +1,5 @@
+id: WADLER-gm-goal-w4-WADLER-1-blocker-gm-drain-w1-316-blocker-gm-drain-w2-474
+subject: 'blocker: WADLER object-guard row cannot close in gm-drain-w2-474 (EMIT not run, witness must be a second session)'
+status: pending
+body: 'Blocker for WADLER-gm-goal-w4-WADLER-1-blocker-gm-drain-w1-316 (session gm-drain-w2-474). Re-check at SPECIFY: the foreign WIP named by the parent blocker is gone (git_status 1791967981759-500-2e75ad239c10f023: gm-mcp/src/dispatch.js, bin/gm-mcp-server.js, gm-mcp/src/self-update.js clean), but ''object-guard'' is absent from gm-mcp/src (codesearch 1791967987475-500-e35ba5e26e3bcac, 0 of 31 files). EMIT still owes: the object-guard edit, the bundle rebuild via gm-mcp/scripts/build.mjs in the same commit, and a witness from a session other than the editor. Receipt .gm/receipts/WADLER-gm-goal-w4-WADLER-1-blocker-gm-drain-w1-316/00-SPECIFY-gm-drain-w2-474.md. Next: a session re-derives the acceptance text from the parent SPECIFY receipt, runs the edit, rebuilds the bundle, and hands the witness to a different session.'
+session_id: gm-drain-w2-474

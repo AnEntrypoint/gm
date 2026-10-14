@@ -1,0 +1,5 @@
+id: THINSLICE-OUTPUT-CAPS-blocker-gm-drain-w1-301
+subject: 'Blocker for THINSLICE-OUTPUT-CAPS: cap constants not in verb definitions for 4 of 5 caps; closing needs a CI-verified rs-plugkit edit and a gm-mcp bundle rebuild'
+body: 'Receipt: .gm/receipts/THINSLICE-OUTPUT-CAPS/01-SPECIFY.md. Found: git_stash 2000 is already GIT_STASH_UNTRACKED_REFUSAL_THRESHOLD (rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs/git.rs:6618). exec_js 16000 is a literal in gm-mcp/src/mcp-server.js:181 and skills/gm/docs/verbs.md:356, no constant. git_show 60000 bytes has no verb cap in tree. fs_read 65536 is literal in orchestrator/task.rs:209,292. poll cap 240 s has no constant. skills/gm/SKILL.md already has no matching numbers; skills/gm/docs/verbs.md still does. Needed: name each cap as a constant in its verb definition (rs-plugkit CI-verified, gm-mcp bundle rebuild), drop numbers from verbs.md, then witness exec_js over 16000 chars with result_file pointer. gm-mcp bundle is stale (serving 0.2.44, installed 0.2.45) during this run.'
+session_id: gm-drain-w1-301
+status: pending

@@ -1,0 +1,6 @@
+id: NODUPEDOC-PROSE-NODE-COPIES-blocker-gm-drain-w2-311
+subject: 'Blocker for NODUPEDOC-PROSE-NODE-COPIES (session gm-drain-w2-311): the duplicate prose tree is a build input (rs-plugkit lean_prose.rs include_str!), so removing it needs a reviewed rs-plugkit build.rs or emit change and lean_graph.json rebuild verified by publish/release CI; no cross-session witness is producible in this run. Live probe (dispatch 1791963693862-500-778ac87bbe605a8d): 143 files in gm-config/prose and 143 in rs-plugkit instructions/prose carry the leave-transition sentence (parent witness says 99, stale). Receipts: .gm/receipts/NODUPEDOC-PROSE-NODE-COPIES-blocker-gm-drain-w1-221/. Next: restate the parent witness as a live count over both trees and assign the rs-plugkit build change to a session that can run CI.'
+blockedBy:
+- NODUPEDOC-PROSE-NODE-COPIES
+session_id: gm-drain-w2-311
+status: pending

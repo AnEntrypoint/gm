@@ -1,0 +1,4 @@
+id: TOOLBUDGET-GMMCP-DESCRIPTIONS-RELEASE-blocker-gm-2e-fa19b3-w2-05
+status: pending
+title: 'Blocker for TOOLBUDGET-GMMCP-DESCRIPTIONS-RELEASE: gm-mcp working bin/gm-mcp-server.js carries uncommitted dispatch.js and self-update.js edits from other writers plus staged cli.js and release-bridge.js hunks; publishing the bin alone would ship unreviewed WIP. Re-run gm-prd after those writers commit, or publish a bin rebuilt from committed src/ via the Git API route.'
+session_id: gm-2e-fa19b3-w2-05

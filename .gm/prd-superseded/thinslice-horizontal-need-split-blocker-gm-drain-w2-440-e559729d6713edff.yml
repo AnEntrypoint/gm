@@ -1,0 +1,9 @@
+id: THINSLICE-HORIZONTAL-NEED-SPLIT-blocker-gm-drain-w2-440
+subject: 'Blocked: THINSLICE-HORIZONTAL-NEED-SPLIT cannot close as written (stale counts, no need list, no closing witness)'
+kind: blocker
+node: THINSLICE
+phase: P1
+lane_wait_ms: 240000
+body: 'Parent row THINSLICE-HORIZONTAL-NEED-SPLIT cannot be witnessed as written. SPECIFY receipt: .gm/receipts/THINSLICE-HORIZONTAL-NEED-SPLIT/01-SPECIFY.md. Findings: (1) the cited 199 pending rows is stale; prd-list reports 837 pending. (2) git-verb-signatures has 0 pending ids, so that cluster claim is stale. (3) The requirement has no need list and no definition of reaches a witnessed verb or file change, so no single witness can prove it closed. Re-scope needed before a witness: supply the need list, the query that defines a need, and a closing witness that is one file change or verb. Until then the parent stays pending.'
+session_id: gm-drain-w2-440
+status: pending

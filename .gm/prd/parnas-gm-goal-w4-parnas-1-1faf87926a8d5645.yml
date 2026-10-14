@@ -1,0 +1,6 @@
+id: PARNAS-gm-goal-w4-PARNAS-1
+title: gm-mcp/src/dispatch.js exports spool, daemon and lease internals that four other modules import
+status: pending
+obligation_kind: discovery
+session_id: gm-goal-w4-PARNAS
+body: 'Information hiding: dispatch.js exports pidAlive (dispatch.js:857), daemonNotRunning (:1499), readDaemonLiveness (:1373), readSpoolDispatchState (:1532), ensureAgentLease (:907) and more; singleton.js:7 imports pidAlive, release-bridge.js:8 imports pidAlive and inflightDispatchCount. Witness: codesearch import in gm-mcp/src, dispatch 1791747209943-500-f4f9d0a9ef8093f2. Action: move liveness and lease decisions behind one owning module interface; keep helpers module-private.'

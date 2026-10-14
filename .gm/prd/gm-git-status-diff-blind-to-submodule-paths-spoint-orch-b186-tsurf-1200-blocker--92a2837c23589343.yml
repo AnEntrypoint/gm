@@ -1,0 +1,8 @@
+id: gm-git-status-diff-blind-to-submodule-paths-spoint-orch-b186-tsurf-1200-blocker-gm-drain-w1-133
+subject: 'BLOCKER: submodule-path git_status/git_diff fix needs rs-plugkit CI release and another-session witness'
+severity: MEDIUM
+status: pending
+surface: rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs/git.rs (git_status, git_diff)
+acceptance: Parent git_status/git_diff scoped to a path inside a submodule either reports that submodule's change or refuses with a submodule-cwd message; witnessed live from a different session after the rs-plugkit release and parent gitlink bump.
+text: 'Row gm-git-status-diff-blind-to-submodule-paths-spoint-orch-b186-tsurf-1200 reproduced live in session gm-drain-w1-133. Parent scoped status 1791958285130 returns dirty:false for rs-plugkit/.gm/last-prompt.txt while submodule direct status 1791958313193 reports it untracked. Raw git in the parent returns the same empty output, so gm is a faithful pass-through; the leader cause is git ignore=dirty with no descent into the submodule (receipts 01-SPECIFY.md and 02-PROVE.md under .gm/receipts/<row>/). Blocked because: (1) the fix is a guest Rust change in rs-plugkit wasm_dispatch/verbs/git.rs, which cannot be built locally (hook) and must go through rs-plugkit CI release and a parent gitlink bump; (2) COMPLETE requires a witness from another session. Next step for a resolver: edit git_status and git_diff to route pathspecs under a .gitmodules path to that submodule''s cwd (or refuse with a submodule message), push to rs-plugkit main, bump the gitlink, then witness from a different session.'
+session_id: gm-drain-w1-133

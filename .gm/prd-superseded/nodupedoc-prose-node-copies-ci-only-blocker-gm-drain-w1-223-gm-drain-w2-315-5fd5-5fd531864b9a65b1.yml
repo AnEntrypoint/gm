@@ -1,0 +1,5 @@
+id: NODUPEDOC-PROSE-NODE-COPIES-ci-only-blocker-gm-drain-w1-223-gm-drain-w2-315
+subject: 'Blocker for NODUPEDOC-PROSE-NODE-COPIES-ci-only: duplication still live (143 hits in gm-config/prose and in rs-plugkit orchestrator prose); closure needs rs-plugkit Rust change in lean_prose.rs and entry.rs, a CI build, and a cross-session live witness'
+status: pending
+body: 'Session gm-drain-w2-315. Re-run of NODUPEDOC-PROSE-NODE-COPIES-ci-only-blocker-gm-drain-w1-223. SPECIFY receipt: .gm/receipts/NODUPEDOC-PROSE-NODE-COPIES-ci-only-blocker-gm-drain-w1-223/01-SPECIFY.md. Counts re-confirmed at codesearch dispatch 1791963651520-500-2a12f378d15fefe9. PROVE cannot run here (no local cargo). Next wave: make the lean_prose.rs and entry.rs change in rs-plugkit (nested repo, main), push, take the CI publish / release Build run id, then witness with a live instruction dispatch from a session other than gm-drain-w2-315 and gm-drain-w1-223.'
+session_id: mcp-codemode-23256-1791963680259

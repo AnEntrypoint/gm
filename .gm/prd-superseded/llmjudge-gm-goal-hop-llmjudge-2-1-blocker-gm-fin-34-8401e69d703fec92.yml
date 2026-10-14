@@ -1,0 +1,5 @@
+id: LLMJUDGE-gm-goal-hop-LLMJUDGE-2-1-blocker-gm-fin-34
+subject: 'Blocker for LLMJUDGE-gm-goal-hop-LLMJUDGE-2-1: LLM judge design needs an owner decision and a cross-session witness'
+body: 'Stages SPECIFY and PROVE ran (receipts .gm/receipts/LLMJUDGE-gm-goal-hop-LLMJUDGE-2-1/01-SPECIFY.md and 02-PROVE.md). The gap holds: codesearch regex judge|rubric|llm over gm-mcp/src has zero hits (dispatch 1791891336208-500-a04ce43bd638480a; the 12 verdict hits are leak-reaper.js only). The row cites stale lines: validatedArgs is codemode.js:18 (not 14-15), failedDispatchResult is mcp-server.js:40 (not 73). EMIT not started. Owner must choose: judge model, call site (in-band per reply or sampled audit), cost and latency budget, and the action on a failing verdict. Witness must be a live dispatch from another session; the row cannot self-witness. Not CI-only: gm-mcp is JS, no cargo build needed.'
+session_id: gm-fin-34
+status: pending

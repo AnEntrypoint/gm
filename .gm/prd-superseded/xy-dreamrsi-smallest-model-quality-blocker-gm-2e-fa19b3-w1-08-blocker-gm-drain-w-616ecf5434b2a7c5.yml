@@ -1,0 +1,5 @@
+id: XY-DREAMRSI-SMALLEST-MODEL-QUALITY-blocker-gm-2e-fa19b3-w1-08-blocker-gm-drain-w2-497
+subject: 'Blocked: row XY-DREAMRSI-SMALLEST-MODEL-QUALITY-blocker-gm-2e-fa19b3-w1-08-blocker-gm-drain-w1-328 needs two EARS subagent hops; session gm-drain-w2-497 has no Agent tool'
+body: 'Row cannot close in session gm-drain-w2-497: the row requires two subagent hops (haiku, sonnet) over skills/dream-rsi/SKILL.md writing .gm/receipts/XY-DREAMRSI-SMALLEST-MODEL-QUALITY/ev-haiku.json and ev-sonnet.json. ToolSearch select:Agent returns no match, so no subagent can be spawned. Same-session self-run is rejected by the row. Receipt: .gm/receipts/XY-DREAMRSI-SMALLEST-MODEL-QUALITY-blocker-gm-2e-fa19b3-w1-08-blocker-gm-drain-w1-328/01-SPECIFY.md. Unblock: run the two EARS hops from a session that has an Agent tool, then prd-resolve XY-DREAMRSI-SMALLEST-MODEL-QUALITY with both dispatch ids. Parent stays pending.'
+session_id: gm-drain-w2-497
+status: pending

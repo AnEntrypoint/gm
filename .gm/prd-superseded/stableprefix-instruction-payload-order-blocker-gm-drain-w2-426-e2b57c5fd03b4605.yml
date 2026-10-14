@@ -1,0 +1,5 @@
+id: STABLEPREFIX-INSTRUCTION-PAYLOAD-ORDER-blocker-gm-drain-w2-426
+subject: 'Blocker for STABLEPREFIX-INSTRUCTION-PAYLOAD-ORDER: PROVE needs a CI-built rs-plugkit wasm and a cross-session witness'
+body: 'Parent row STABLEPREFIX-INSTRUCTION-PAYLOAD-ORDER stays pending. SPECIFY receipt: .gm/receipts/STABLEPREFIX-INSTRUCTION-PAYLOAD-ORDER/01-SPECIFY.md. Leader hypothesis H1 (serde_json preserve_order off in rs-plugkit; handle_instruction at rs-plugkit/crates/plugkit-core/src/orchestrator/instructions/mod.rs:757). The separating probe is a rebuilt slim wasm plus a live instruction dispatch, which needs CI (no local cargo) and a different session to witness. Next wave: run the CI build for a change that enables ordered serialization for the instruction payload, then dispatch instruction from another session and assert the instruction key offset < 200.'
+session_id: gm-drain-w2-426
+status: pending

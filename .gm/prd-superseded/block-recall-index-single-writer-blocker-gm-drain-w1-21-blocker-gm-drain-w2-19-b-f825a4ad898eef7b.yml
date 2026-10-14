@@ -1,0 +1,8 @@
+id: BLOCK-RECALL-INDEX-SINGLE-WRITER-blocker-gm-drain-w1-21-blocker-gm-drain-w2-19-blocker-gm-drain-w3-33
+subject: 'Blocker: single-writer reroute (a) needs CI-built rs-plugkit change and cross-session witness; live probe not reachable in gm-drain-w3-33'
+body: 'Session gm-drain-w3-33 ran gm-prd on BLOCK-RECALL-INDEX-SINGLE-WRITER-blocker-gm-drain-w1-21-blocker-gm-drain-w2-19. SPECIFY receipt: .gm/receipts/BLOCK-RECALL-INDEX-SINGLE-WRITER-blocker-gm-drain-w1-21-blocker-gm-drain-w2-19/01-SPECIFY.md. Codesearch confirms direct rssearch_vectors writers that bypass memorize-fire: wasm_dispatch/verbs/memory.rs:544 (memorize_with_raw write), orchestrator/memorize.rs:315 and :679 (write), memory_md.rs:783 (write). memorize-fire is referenced only in dream_rsi.rs:516 and prose. Acceptance (a) requires a rs-plugkit reroute of these writers through memorize-fire, a CI-only wasm build (local cargo blocked by hook), and a witness from a different session. Option (b) (amend entry-extended.md:52 to sanction memorize as a second writer) drops the single-writer goal, so it is an owner decision and was not taken. Witness outcome: none this session. Next wave needs: owner choice (a) or (b); if (a), a row scoped to the three writer sites with a CI build run id and a cross-session witness dispatch id.'
+session_id: gm-drain-w3-33
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

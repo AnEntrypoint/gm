@@ -1,0 +1,8 @@
+id: SLAP-PLUGKIT-HANDLEINSTRUCTION-LEVELS
+title: 'SLAP: separate handle_instruction body parsing from graph refusal and orchestration'
+description: 'rs-plugkit/crates/plugkit-core/src/orchestrator/instructions/mod.rs handle_instruction (line 514, 500 lines) mixes graph loading and configured-graph refusal, raw-body parsing of phase=, JSON fields and hash aliases into a dozen locals, and the orchestration that follows. Scope: this function. Change: a parse_instruction_request function returning one request struct (session_id, prompt, asserted hashes, mode, detail flags), with handle_instruction reading the struct and orchestrating. Behaviour unchanged: accepted aliases (ih, ph, instruction_hash, known_policy_hash) and the refusal text stay identical. Witness: cargo build of rs-plugkit, then a live instruction dispatch through agentplug-runner returning the same reply keys.'
+node: SLAP
+phase: P3
+status: pending
+source: lean-hop-SLAP
+session_id: lean-hop-SLAP

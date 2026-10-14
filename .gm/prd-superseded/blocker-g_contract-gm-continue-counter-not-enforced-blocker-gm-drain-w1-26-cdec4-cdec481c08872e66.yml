@@ -1,0 +1,5 @@
+id: BLOCKER-G_CONTRACT-gm-continue-counter-not-enforced-blocker-gm-drain-w1-26
+subject: 'Blocker for BLOCKER-G_CONTRACT-gm-continue-counter-not-enforced: counter and end outcomes need a CI-verified rs-plugkit change'
+body: 'The row''s acceptance is that the gm-continue dispatch state implements the .gm/.gm-continue-count counter and the two end outcomes. Evidence (session gm-drain-w1-26): exhaustive literal scans of rs-plugkit for continue_count (dispatch 1791957164684-500-9afe7e2cfd0e3888) and end_states (dispatch 1791957168653-500-100c3a79101ad14c) return 0 hits; gm-continue-count appears only in .gitignore, gitignore.rs and SKILL.md (dispatch 1791957154159-500-a371e4277c48a9e9). The change is Rust in rs-plugkit, built only by CI (local cargo is hook-blocked), so it needs a reviewed rebuild and a live witness that a third gm-continue cycle is refused. Receipts: .gm/receipts/BLOCKER-G_CONTRACT-gm-continue-counter-not-enforced/. Residual to check first: confirm no counter exists under another name (rival H2).'
+session_id: gm-drain-w1-26
+status: pending

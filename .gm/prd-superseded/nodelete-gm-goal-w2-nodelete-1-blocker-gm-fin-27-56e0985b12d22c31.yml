@@ -1,0 +1,5 @@
+id: NODELETE-gm-goal-w2-NODELETE-1-blocker-gm-fin-27
+subject: 'gm-mcp singleton: decide the legacy GM_MCP_HTTP_SINGLETON removal with an external-env risk owner'
+body: 'Blocker for NODELETE-gm-goal-w2-NODELETE-1 (session gm-fin-27). The row''s own decision ("delete if no deployed launcher sets GM_MCP_HTTP_SINGLETON") is not closed by a pool resolver: (a) repo-readable scope shows no launcher setting it (codesearch 1791891254805-500-709f5da8cf2d46cb, partial:true, so not exhaustive), (b) user shell profiles cannot be scanned, and removing the read flips a user who set =0 to singleton-on, (c) the edit spans the gm-mcp submodule plus a rebuilt committed bundle, and its witness must come from another session. Receipts: .gm/receipts/NODELETE-gm-goal-w2-NODELETE-1/01..09. Needed: an owner decision on the external-env risk, then a cross-session witness of the edit set listed in 03-EMIT.'
+session_id: gm-fin-27
+status: pending

@@ -1,0 +1,7 @@
+id: LIVEPLAN-RETIRE-JTBD-REVIEWER-ONEPASS-blocker-gm-prdall-20261014-04-k16
+subject: 'Blocked at SPECIFY: LIVEPLAN-RETIRE-JTBD-REVIEWER-ONEPASS closing condition unmet. Both split rows INVEST-JTBD-REVIEWER-SUMMARY-VERB and INVEST-JTBD-REVIEWER-WITNESS-CITATIONS are status pending (prd-list, dispatches 1791956450309-500-d82098be1b7b2769 and 1791956450659-500-60facd8580e886d4). The parent row cannot be witnessed closed until both close. Unblock: close the two split rows, then re-run gm-prd on the parent.'
+status: blocked
+blockedBy:
+- INVEST-JTBD-REVIEWER-SUMMARY-VERB
+- INVEST-JTBD-REVIEWER-WITNESS-CITATIONS
+session_id: mcp-codemode-31304-1791956460868

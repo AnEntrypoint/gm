@@ -1,0 +1,8 @@
+id: ILLEGAL-PLUGKIT-REALM-ENUM-BLOCKER-blocker-gm-drain-w1-162-blocker-gm-drain-w2-229
+subject: 'Blocked: ILLEGAL-PLUGKIT-REALM-ENUM-BLOCKER-blocker-gm-drain-w1-162 cannot close: parent row absent, realm is optional by design, no enum values to witness'
+status: pending
+body: 'Blocker for ILLEGAL-PLUGKIT-REALM-ENUM-BLOCKER-blocker-gm-drain-w1-162 (session gm-drain-w2-229). Cannot close: parent row ILLEGAL-PLUGKIT-REALM-ENUM is absent from .gm/prd/ and .gm/prd-log.jsonl. Probe (dispatch ids 1791962766111-500-999b98e4e44c9ba1 to 1791962786721-500-df6cd35af1286991) shows 0 of 9 discipline requires.json files present; codesearch ''realm'' under .gm/disciplines has 0 hits. rs-plugkit/README.md:150-157 documents realm as optional (default empty realm), so no enum has values to close over. Witness cannot bind an acceptance without an owner decision: declare realm values and an enum, or retire the enum row. Receipts: .gm/receipts/ILLEGAL-PLUGKIT-REALM-ENUM-BLOCKER-blocker-gm-drain-w1-162/01-SPECIFY.md and 02-PROVE.md.'
+session_id: mcp-codemode-23256-1791962811419
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

@@ -1,0 +1,8 @@
+id: THINSLICE-HORIZONTAL-NEED-SPLIT-blocker-gm-drain-w1-298
+subject: 'Blocker: THINSLICE-HORIZONTAL-NEED-SPLIT cannot close in one gm-prd run'
+kind: blocker
+node: THINSLICE
+phase: P1
+status: pending
+body: 'Row THINSLICE-HORIZONTAL-NEED-SPLIT asks that every pending need gets one row reaching a witnessed verb or file change. Its premise is stale: the row cites 199 pending rows and 72 untitled, but live prd-list {status:pending} reports total 470 and store_total 491 (dispatch 1791959416631-500-e77b551d415be81b). The row''s own text says it is too large for one hop. No single witness binds it: the acceptance needs a per-need decomposition across 470 pending rows, each with its own witness across gm-config prose, skills/gm and rs-plugkit. Hypothesis (leader): the row is a planning umbrella, not a witnessable change; the probe would be an exec_js count of untitled pending rows with no dependent, which is a measurement, not a fix. Next step: split into per-cluster rows (git-verb-signatures, output-cap-constants, tencentdb-config-defaults, recall-index-single-writer, precedence-enum, native-search-gate) each with its own witness, then re-run gm-prd per cluster. Filed by session gm-drain-w1-298. Parent row stays pending.'
+session_id: gm-drain-w1-298

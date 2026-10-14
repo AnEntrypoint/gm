@@ -1,0 +1,8 @@
+id: FUZZ-gm-goal-hop-FUZZ-1-1-blocker-gm-drain-w2-104
+subject: Rebuild gm-mcp bundle with the readDaemonLiveness null guard, then witness and close FUZZ-gm-goal-hop-FUZZ-1-1 from a second session
+description: 'The unblock condition of FUZZ-gm-goal-hop-FUZZ-1-1-blocker-gm-drain-w1-81 holds: gm-mcp/src/dispatch.js is clean on main (head c59161834d025205ff0e05c62ca1d75268ee71c2) and the guard is present at dispatch.js:1456 (if (!status || typeof status !== ''object'') return coldProjectLiveness()). The committed bundle does not carry it: codesearch of coldProjectLiveness over gm-mcp/bin returns zero hits. Next: rebuild the bundle from src (DEEPMOD-GMMCP-BUNDLE-CARRIES-WIP), commit src and bundle together, run the node probe with .status.json = null (must not throw) and a live dispatch witness, then prd-resolve FUZZ-gm-goal-hop-FUZZ-1-1 from a session other than the row''s own.'
+session_id: gm-drain-w2-104
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

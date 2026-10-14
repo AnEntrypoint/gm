@@ -1,0 +1,8 @@
+id: CODESEARCH-SYMBOL-ROUTE-RECALL-GAP-blocker-gm-drain-w1-49-blocker-gm-drain-w2-65-blocker-gm-drain-w3-116
+subject: 'Blocked: symbol-route recall fix still unlanded; cannot close in session gm-drain-w3-116'
+body: 'Parent: CODESEARCH-SYMBOL-ROUTE-RECALL-GAP-blocker-gm-drain-w1-49-blocker-gm-drain-w2-65. Session gm-drain-w3-116 ran SPECIFY and a fresh live witness (codesearch dual, gate_repeat_escalate_threshold, dispatch 1791970785626-500-aa9ba2f43866ca26): 5 references, all in fsm.rs/gates.rs/deviations.rs, and the whole-word pass result returns before the substring pass is merged. Root cause at rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs/search.rs codesearch_identifier (2362-2467): the loop returns the first pass whose identifier_report is Some, so the whole-word pass (non-empty) short-circuits and substring-only hits never join. Fix: merge both passes deduplicated by path:line before identifier_report, and count excluded docs when DOC_EXCLUDE_GLOBS drops paths. Cannot close here: the Rust edit needs a CI-built guest (no local cargo per gm-no-local-cargo-verified-by-ci), then a push on rs-plugkit main via git_finalize, a publish/build run, a gitlink bump, and a witness from a session other than gm-drain-w2-65 showing the fixed guest''s reply. Next wave: an executor edits search.rs, pushes, and waits on the CI publish run.'
+session_id: gm-drain-w3-116
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

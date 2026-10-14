@@ -1,0 +1,8 @@
+id: SLAP-PLUGKIT-GITCOMMIT-LEVELS-blocker-gm-drain-w1-264
+title: 'BLOCKER for SLAP-PLUGKIT-GITCOMMIT-LEVELS: witness needs CI-built rs-plugkit wasm'
+node: SLAP
+phase: P3
+source: gm-prd SPECIFY
+status: pending
+description: 'Blocks SLAP-PLUGKIT-GITCOMMIT-LEVELS. The row''s witness (cargo build plus a live git_commit dispatch with an empty message) cannot run in this session: local cargo builds are hook-blocked, so the wasm must come from the rs-plugkit release CI, then the parent gitlink must bump before a live dispatch can hit it. Stale line cite: git_commit is now at rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs/git.rs:2166 (row said 1401). Receipt: .gm/receipts/SLAP-PLUGKIT-GITCOMMIT-LEVELS/01-SPECIFY.md. Unblock: land the CommitArgs refactor on rs-plugkit main, let publish/release build the wasm, bump the gitlink, then witness with a live git_commit empty-message dispatch.'
+session_id: gm-drain-w1-264

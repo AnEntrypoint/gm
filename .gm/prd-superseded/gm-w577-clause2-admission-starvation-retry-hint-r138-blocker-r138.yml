@@ -1,0 +1,7 @@
+id: gm-w577-clause2-admission-starvation-retry-hint-r138-blocker-r138
+kind: blocker
+session: orch-main-r138
+status: pending
+subject: 'BLOCKER: clause 2 edit site is agentplug claim_dispatch.rs admission_starved_answer (out of scope); no next_dispatch_hint and no read-only discrimination'
+text: 'Holder: agentplug/crates/agentplug-runner/src/daemon/claim_dispatch.rs, admission_starved_answer (error_code emitted at line 1454; log at 1704). Evidence (live, this session): codesearch literal "dispatch_starved_waiting_for_admission" over c:/dev/gm = 3 hits, the only producers being claim_dispatch.rs:1454 and :1704 plus a gm-config witness script that greps the string (dispatch 1791669476922-500-cc58395601eec857); codesearch literal "next_dispatch_hint" in claim_dispatch.rs = 0 occurrences in 2780 lines (dispatch 1791669482680-500-edb6259c999eab74). The starved reply already sets executed:false and re_dispatch_safe:true unconditionally, with the retry hint only inside the human-readable error string: there is no next_dispatch_hint field and no read-only vs mutating discrimination, so the clause''s actual defect is the missing machine-readable hint. Both live in agentplug, OUT OF SCOPE. The rs-plugkit retry hints (floor.rs:28 floor_gate_denied, wait.rs:56 empty-host retryable) are not in the admission path. Filed as a blocker instead of inventing an edit site.'
+session_id: orch-main-r138

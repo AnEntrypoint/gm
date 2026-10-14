@@ -1,0 +1,5 @@
+id: witness-prd-add-derives-an-id-when-none-is-given-blocker-gm-2e-fa19b3-w1-11-blocker-gm-drain-w2-492
+subject: 'blocker: witness-prd-add-derives-an-id-when-none-is-given cannot close in witness mode'
+session_id: gm-drain-w2-492
+body: 'Row witness-prd-add-derives-an-id-when-none-is-given-blocker-gm-2e-fa19b3-w1-11 (session gm-drain-w2-492, mode witness) cannot close. Its acceptance needs a live id-less prd-add witness that persists no residual row. prd.rs has no dry-run or validate-only branch (codesearch dispatch 1791968135044-500-4d580f9987755677), so the witness must write a row that the witnessing session cannot close (prd-resolve-self-witness). Closing it needs a reviewed rs-plugkit change (CI-only build) or a witness from a second session. Receipt: .gm/receipts/witness-prd-add-derives-an-id-when-none-is-given-blocker-gm-2e-fa19b3-w1-11/01-SPECIFY.md. Row stays pending.'
+status: pending

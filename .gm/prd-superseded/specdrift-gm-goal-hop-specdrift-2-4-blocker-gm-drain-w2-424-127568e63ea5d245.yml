@@ -1,0 +1,10 @@
+id: SPECDRIFT-gm-goal-hop-SPECDRIFT-2-4-blocker-gm-drain-w2-424
+subject: 'Blocked: SPECDRIFT-gm-goal-hop-SPECDRIFT-2-4 cannot stage: gm git_add throws ReferenceError'
+body: |-
+  Blocker for SPECDRIFT-gm-goal-hop-SPECDRIFT-2-4 (session gm-drain-w2-424).
+  Leader H1 confirmed: AGENTS.md wording drifted; release-bridge.js:326 refusal is positive-only. Fix applied on disk at gm-mcp/AGENTS.md:81 (docs only, no bundle rebuild).
+  Cannot deliver: gm git_add throws ReferenceError (n is not defined) in the served bundle at gm-mcp-server.mjs:182, so the change cannot be staged, the secret check cannot run, and no commit or ci-status exists.
+  Unblock: fix git_add in gm-mcp/src (bundle rebuild needed, which is held by other lanes' WIP), then re-run this row: stage gm-mcp/AGENTS.md only, run check-staged-secrets, git_finalize, witness, prd-resolve.
+  Residual: gm-mcp submodule has one dirty path, AGENTS.md:81, and the parent gm gitlink for gm-mcp is dirty.
+session_id: gm-drain-w2-424
+status: pending
