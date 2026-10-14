@@ -11,7 +11,9 @@ Pool and publish rules. Rationale: `docs/rationale.md`. Incidents: `docs/inciden
 - `ceiling`: N in a spawn refusal. `live`: ListAgents count. `floor` = min(10, ceiling). `shortfall` = live < floor with independent work open.
 
 ## Parallelism: graph workflows first
-- Default unit of fan-out is a graph workflow (`Workflow` tool, one script per phase). Use as many as the open work needs, in parallel where independent, in sequence where a result feeds the next.
+- Default unit of fan-out is a graph workflow (`Workflow` tool). Use as many as the open work needs, in parallel where independent, in sequence where a result feeds the next.
+- One wave per run. A workflow run never loops over waves. Each run takes at most 60 pending rows, resolves them with `gm-prd` agents (each restarts on a connectivity error, at most 3 times), returns counts `{pending_before, resolved, blocked, failed, new_blockers}` and ends. The caller reads those counts and starts the next run. A run that ends with `pending_after > pending_before` halts new blockers until a merge pass closes the duplicates.
+- A run never exceeds 150 agents. Cap-hit or stalled runs are reported, never relaunched unchanged.
 - Three graphs, each run to exhaustion:
   1. Row drain: `pipeline` over every pending row, one `gm-prd` per row, a `parallel` block per wave, repeat until `prd-list {"status":"pending"}` is 0.
   2. Traversal: `pipeline` over every principle node in `skills/dream-rsi/gm-graph.json`, one `gm-hop` per node per surface, emitting new rows; repeat until every node has a receipt for each surface.
