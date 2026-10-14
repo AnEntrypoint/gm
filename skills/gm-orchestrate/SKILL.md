@@ -75,7 +75,13 @@ Launch only advertised ids. A slot stays empty only when no pending row and no u
 
 ## Shortfall and FAILURE
 - Shortfall with work open: log `FAILURE: <UTC> live=<n> pending=<m>` to `.gm/witness-log.md`, launch to target this turn. Read count and time at check.
-- Two restarts per walk. Repeated shortfall means these rules are wrong: dispatch `instruction`, correct this skill, restart at tick 1. A third repeat files `<row>-blocker-<session>` (`prd-add`) and stops.
+- Two restarts per walk. Repeated shortfall means these rules are wrong: dispatch `instruction`, correct this skill, restart at tick 1. A third repeat files `<row>-blocker-<session>` (`prd-add`) and relaunches that blocker as a row in the next launch; the walk never stops with rows open.
+
+## Never leave a row open
+- Exit requires `prd-list {"status":"pending"}` to return 0 rows. A stall, a blocked worker, a refused witness or a session that ends early never closes the walk.
+- A row ends a run in one of two states only: `prd-resolve` with a witness, or `<row>-blocker-<session>` filed with the missing fact and the verb that would supply it. The original row stays pending with that blocker named in its text.
+- Every blocker is launched in the next wave as its own row (node-first, same ceiling). A blocker that blocks again is split until one step remains; that step is then run, never parked.
+- A worker that returns without a receipt or blocker is a defect: re-dispatch its row with the same session suffix plus `-r<n>`, once per wave.
 - Floor gate denies `prd-resolve` and phase advance (`floor_gate_denied`) while rows are open and count of record is under floor; the denial names pool-observe, slots.launch, refill_needed. Pass `body.live` every call (kept 5 min in `.gm/pool/count-of-record.json`).
 
 ## Starvation
