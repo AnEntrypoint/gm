@@ -1,7 +1,0 @@
-id: LIVEPLAN-RETIRE-JTBD-REVIEWER-ONEPASS-blocker-gm-drain-b-55
-status: blocked
-blockedBy:
-- INVEST-JTBD-REVIEWER-SUMMARY-VERB
-- INVEST-JTBD-REVIEWER-WITNESS-CITATIONS
-subject: 'Blocked: LIVEPLAN-RETIRE-JTBD-REVIEWER-ONEPASS cannot close until INVEST-JTBD-REVIEWER-SUMMARY-VERB and INVEST-JTBD-REVIEWER-WITNESS-CITATIONS both resolve. blocked_by: prd-resolve of both rows from a session other than their own, each with a live witness (the summary verb reply listing net_lines and gates; the reply citing a witness id and a closed PRD row id). Both rows are pending in .gm/prd/ (live read, session gm-drain-b-55). Receipt: .gm/receipts/LIVEPLAN-RETIRE-JTBD-REVIEWER-ONEPASS/01-SPECIFY.md.'
-session_id: mcp-codemode-25100-1791976146282

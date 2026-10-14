@@ -1,5 +1,0 @@
-id: JTBD-REVIEWER-ONEPASS-blocker-gm-drain-b-50
-subject: 'Blocked: JTBD-REVIEWER-ONEPASS needs a reviewer summary verb that YAGNI-JTBD-REVIEWER-ONEPASS resolved as absent'
-status: blocked
-blockedBy: 'A named reviewer-workflow consumer, or an explicit reversal of the resolved YAGNI-JTBD-REVIEWER-ONEPASS (its reopen condition). Supplying verb: prd-add on YAGNI-JTBD-REVIEWER-ONEPASS with overwrite:true after a consumer is named, then a rs-plugkit Rust verb witnessed by a CI-built wasm (cite ci-status of publish / release). Evidence: .gm/receipts/JTBD-REVIEWER-ONEPASS/01-SPECIFY.md; gm.list has no summary verb; codesearch literal review in gm-mcp/src 0 hits (1791976128808-500-1c346281582c4a87); reviewer in rs-plugkit/crates prose only (1791976159868-500-a1e77898f2f71dcd).'
-session_id: gm-drain-b-50
