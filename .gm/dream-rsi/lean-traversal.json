@@ -1,0 +1,52 @@
+{
+ "walks": [
+  {
+   "node": "DIJKSTRATEST",
+   "dispatch_ids": [
+    "1791483815221-500-20d81bbccfd2c757",
+    "1791483706471-500-1f697d139fcb9187",
+    "1791483975840-500-5ddd7dcd4d95e5ba"
+   ],
+   "session": "dream-rsi-lean-graph-1",
+   "note": "The push check with fingerprint 8d6c50ba6bc3cc05 returned exit 1 with gate_drift true, then exit 0 on the same request. The derivation claims presence of push success only, not delivery of a specific sha, and makes no claim of absence of other defects."
+  }
+ ],
+ "backreferences": [],
+ "audit": [
+  {
+   "node": "THINSLICE",
+   "outcome": "SELF_REJECTED",
+   "detail": "The logs record verb, exit code, fingerprint, quality and ts only. None names the files changed, so one commit touching only one layer would produce the same records. Deriving joint change of graph, skill and schedule rests on an unstated assumption."
+  },
+  {
+   "node": "XYPROB",
+   "outcome": "NOT_DERIVED",
+   "detail": "The push retry could read as a re-scope, but both pushes share fingerprint 8d6c50ba6bc3cc05, so the same request was re-run, not re-scoped."
+  },
+  {
+   "node": "SUBAGENT",
+   "outcome": "NOT_DERIVED",
+   "detail": "Overlapping session timestamps could be parallel children, but no parent link or brief is recorded."
+  },
+  {
+   "node": "WHYNOTWHAT",
+   "outcome": "NOT_DERIVED",
+   "detail": "The unverified-walk clauses could read as motivation, but they describe Part B rather than naming a cause."
+  },
+  {
+   "node": "AGENTQA",
+   "outcome": "NOT_DERIVED",
+   "detail": "Exit codes are not replies and the fingerprint meaning is not stated, so the QA claim is not shown."
+  },
+  {
+   "node": "GITSTATE",
+   "outcome": "NOT_DERIVED",
+   "detail": "The git_remote read may have backed a claim, but the records state neither the returned value nor the compared claim."
+  },
+  {
+   "node": "BOUNDEDRETRY",
+   "outcome": "NOT_DERIVED",
+   "detail": "The surfacing step is a person-facing event no log records, and no other failing dispatch shows a retry chain that exhausted its limit."
+  }
+ ]
+}
