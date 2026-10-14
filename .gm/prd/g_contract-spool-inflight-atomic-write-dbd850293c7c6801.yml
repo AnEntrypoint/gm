@@ -1,4 +1,0 @@
-id: G_CONTRACT-spool-inflight-atomic-write
-subject: 'The spool in-file grammar and atomic-write rule are prose in skills/gm/SKILL.md (''write that in-file atomically: body to a sibling temp name, then mv'') and gm-config/prose/entry.md (Spool ABI: in/<lang>/<N>.<ext>, in/<verb>/<N>.txt, out/<verb>-<N>.{out,err}, .inflight claim). The watcher should claim only final names and ignore temp names, so the rule and the path grammar live in the claim code and prose cites the claim result.'
-session_id: lean-node-G_CONTRACT
-status: pending

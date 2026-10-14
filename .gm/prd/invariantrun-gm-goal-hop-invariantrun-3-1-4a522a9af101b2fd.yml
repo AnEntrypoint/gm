@@ -1,5 +1,0 @@
-id: INVARIANTRUN-gm-goal-hop-INVARIANTRUN-3-1
-status: pending
-title: 'INVARIANTRUN on gm-mcp/src: no sequence-level check over successive spool dispatches'
-subject: 'INVARIANTRUN on gm-mcp/src (hop 3, PBTAGENT successor): codesearch literal ''invariant'' and ''sequence'' return 0 hits in 18 files (dispatch 1791745487451-417-4d67dcb68e0007bf and 1791745487752-419-6514f276c3912975). No dispatch-level check of request uniqueness exists: ''dispatch_id'' has 0 hits, and the only ''random'' is the temp-file suffix at gm-mcp/src/dispatch.js:1042. The AGENTS.md unique-session-id rule is unchecked on this surface. Verdict VIOLATED. Owner decision HUGHES-gm-goal-hop-HUGHES-2-2 gates the fix; no edit made this hop. Supersedes nothing; duplicates INVARIANTRUN-gm-goal-hop-INVARIANTRUN-1-1 in substance and waits on the same decision.'
-session_id: gm-goal-hop-INVARIANTRUN-3

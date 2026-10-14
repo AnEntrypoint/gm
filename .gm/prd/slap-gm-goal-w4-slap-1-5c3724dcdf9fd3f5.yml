@@ -1,4 +1,0 @@
-id: SLAP-gm-goal-w4-SLAP-1
-title: 'SLAP: dispatch.js mixes raw fs lock/status primitives (writeFileSync lines 1044, 1071, 1167, 1179; JSON status readFileSync 1376) with spool dispatch orchestration; extract the lock and status primitives to one helper. Witness: codesearch writeFileSync/readFileSync literal, root gm-mcp/src, session gm-goal-w4-SLAP.'
-session_id: gm-goal-w4-SLAP
-status: pending

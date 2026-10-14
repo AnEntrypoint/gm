@@ -1,7 +1,0 @@
-id: gm-w577-clause2-admission-starvation-retry-hint-r138
-subject: Admission starvation returns a retry hint for read-only dispatches (w577 clause 2)
-text: 'Acceptance: when a dispatch starves in the admission gate, the reply carries a retry hint naming the re-dispatch as safe, and it does so for read-only dispatches. Locate the real edit site and make the change; the row is closed on a live witness, not on a diff.'
-status: pending
-kind: friction
-session: orch-main-r138
-session_id: orch-main-r138

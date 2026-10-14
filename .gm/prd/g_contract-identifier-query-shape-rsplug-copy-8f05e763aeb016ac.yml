@@ -1,5 +1,0 @@
-id: G_CONTRACT-identifier-query-shape-rsplug-copy
-session_id: gm-drain-b-12
-subject: rs-plugkit/crates/plugkit-core/src/orchestrator/instructions/prose/entry.md still restates the identifier classifier pattern and 3-96 bounds at line 194; mirror the gm-config/prose/entry.md fix there through a reviewed rs-plugkit rebuild (include_str), since sync-lean-graph never writes into rs-plugkit.
-blockedBy: 'Blocked on: a whole-file re-sync of rs-plugkit/crates/plugkit-core/src/orchestrator/instructions/prose/entry.md from the pinned gm-config commit (the file also drifts at line 192), then a CI-built rs-plugkit (publish/release Build step, --features slim), then a live instruction dispatch from a session other than gm-drain-b-12 as the witness. Local cargo is hook-blocked, so the verb that supplies the build is the CI publish/release run. SPECIFY receipt: .gm/receipts/G_CONTRACT-identifier-query-shape-rsplug-copy/01-SPECIFY.md'
-status: pending
