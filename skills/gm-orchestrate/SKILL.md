@@ -28,7 +28,7 @@ Pool and publish rules. Rationale: `docs/rationale.md`. Incidents: `docs/inciden
 Live under ceiling with independent work open is a shortfall. Log `FAILURE: <UTC> live=<n> pending=<m>` to `.gm/witness-log.md`, then launch to target this turn. Causes, in order:
 1. Lane stopped: one successor per freed slot, never batched. Session-killed lane: relaunch `.gm/pool/<session>.next` or a pending row.
 2. Lane stood down on a modified file: compare the blob with remote `main` first; no comparison, take another slice.
-3. Exclusive lock held (a device, a shared browser lease or any other single-holder resource): run work that does not need it meanwhile.
+3. Browser or GPU lock held: run node-only and non-GPU work meanwhile.
 4. Brief hit `Prompt is too long`: relaunch compact (row, surface, session, one action). Never resume it.
 
 ## Tick
@@ -89,6 +89,7 @@ Trigger: `ECONNRESET`, `ECONNREFUSED` or `server_error`. The row stays open and 
 ## Headroom and leases
 - CPU >= 80% or available memory < 2048 MB pauses launches. Log the cause with the real count and UTC; a pause does not end the turn.
 - Rows that need an exclusive lock wait for it; the pool keeps launching the rest. A lock wait that times out is a failed run.
+- GPU rows wait for the GPU lock; browser rows wait for the browser lease. Neither idles the pool.
 - Browsers are headful (`headless: false`). Each run closes its own browser; never touch the user's Chrome.
 - EADDRINUSE: the witness did not run. Identify the owning process. Never kill another lane's process.
 
