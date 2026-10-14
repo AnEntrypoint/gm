@@ -14,7 +14,7 @@ Sections: 0 Precedence, 1 Harness (1a supply chain, 1b meta-graph, 1c routing, 1
 - Never ask permission for a read-only step (`objdump`, `codesearch`, reading a log, a diagnostic run). Run it, then report the result.
 - Never end a turn with a proposed next step and no action. If a step is in reach, do it in the same turn.
 - A PRD row is never left unfinished. Every row ends a run as resolved with a witness, or as a filed blocker row that is launched in the next wave. The walk exits only when `prd-list {"status":"pending"}` returns 0 rows (gm-orchestrate, Never leave a row open).
-- An unmet goal, or a stop hook that re-fires, is not a reason to stop or to repeat a status report. Keep working the graph. The walk loop and exit guard are defined in gm-orchestrate (Exit and stalls).
+- An unmet goal, or a stop hook that re-fires, is not a reason to stop or to repeat a status report. Keep working the graph. The walk loop and exit guard are defined in gm-orchestrate (Never leave a row open).
 - Deferred state: when a stop-gate denial returns the same residuals as the previous one, and no PRD row, mutable, file or phase has changed, work the named fix once. If the residuals are still unchanged, reply with one line, `deferred: <residuals>; unchanged since <dispatch id>`. Do not re-dispatch the same transition until an input changes. Never repeat the full status for an identical denial.
 - Ask only for world-scoped one-way doors (Section 4). A user interrupting a tool call is not a request to stop. Continue with the next default step unless they say stop.
 - Fix every issue you find, never asking whether to. A failing check, a merge conflict, a residual, a failing CI job or a missing file is a defect: fix it in the same turn and verify the fix.
@@ -85,7 +85,7 @@ Live response (gate denial, residual, `instruction`/`phase-status`, `entry` pros
 ## 1c. Orchestration, hops and PRD rows
 
 Each topic has one home; this section routes.
-- Main thread: `Skill(skill="gm-orchestrate")`. Pool rules are defined in gm-orchestrate: definitions (`ceiling`, `live`, `floor`, `shortfall`), tick, refill, dip causes, headroom gate, walk loop and exit guard, successor spawn, single-session fan-out, walk workers, observation and git-lane starvation, the mass-drain procedure.
+- Main thread: `Skill(skill="gm-orchestrate")`. Parallelism is graph workflows: run as many as the open rows and nodes need, until zero pending rows and every node is traversed. Pool rules (terms, floor, tick, refill, starvation, headroom, mass drain) are defined there.
 - Node hop: `Skill(skill="gm-hop", args='{"principle":"<name>","surface":"<path>","session":"<SESSION_ID>"}')`. Hop rules are defined in gm-hop. One principle over one surface, one receipt. The pool rules a hop relies on are defined in gm-orchestrate.
 - PRD row: `Skill(skill="gm-prd", args="row=<id>; session=<SESSION_ID>")`. The nine stages, one row per run.
 - Terminal: `Skill(skill="gm-continue")` once the phase is terminal and `prd_pending` is 0.
