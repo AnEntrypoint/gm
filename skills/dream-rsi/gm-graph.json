@@ -1,6 +1,6 @@
 {
   "source": "hand-authored in this file; no generator produces it",
-  "node_count": 145,
+  "node_count": 146,
   "nodes": [
     {
       "id": "G_START",
@@ -297,6 +297,14 @@
       "book": "Implementation-Biased Test Generation",
       "author": "LLM test-generation study",
       "provenance": "P4"
+    },
+    {
+      "id": "ACH",
+      "label": "Analysis of Competing Hypotheses - Richards J. Heuer Jr.",
+      "kind": "principle",
+      "book": "Psychology of Intelligence Analysis",
+      "author": "Richards J. Heuer Jr.",
+      "provenance": "P1"
     },
     {
       "id": "INDEPVER",
@@ -1217,8 +1225,8 @@
       "provenance": "DOCS"
     }
   ],
-  "edge_count": 360,
-  "forward_edges": 224,
+  "edge_count": 362,
+  "forward_edges": 226,
   "backreference_edges": 136,
   "edges": [
     {
@@ -1391,6 +1399,18 @@
     },
     {
       "from": "ORACLEBIAS",
+      "to": "INDEPVER",
+      "kind": "forward",
+      "condition": null
+    },
+    {
+      "from": "ORACLEBIAS",
+      "to": "ACH",
+      "kind": "forward",
+      "condition": null
+    },
+    {
+      "from": "ACH",
       "to": "INDEPVER",
       "kind": "forward",
       "condition": null
@@ -3658,6 +3678,11 @@
       "mermaid": "yagni",
       "prose": "emit.md",
       "node": "YAGNI"
+    },
+    {
+      "mermaid": "ach",
+      "prose": "ach.md",
+      "node": "ACH"
     }
   ],
   "entry_points": [

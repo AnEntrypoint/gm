@@ -15,6 +15,7 @@ This hop is one node traversal. Its ledger `launch` and `done` lines are written
 1. Argue `rhetoric`'s open question in one paragraph, or the principle's weakest claim if empty.
 2. List its testable claims: one checkable sentence each, with its test.
 3. `codesearch` every instance a claim governs on the surface. Print cited lines. Drop absent text.
+3a. When the surface asserts a cause, a defect or a fix, run the ACH principle (`gm-config/prose/ach.md`) before step 4: list at least two rival hypotheses, build the `C`/`I`/`N` matrix from dispatch-backed evidence, rank by fewest `I` cells, and name one probe that separates the leader from the next. Step 4 may act only on the leader. A rejected hypothesis gets no edit.
 4. Close what one exact-match Edit closes, if no other writer holds the file (`git_status` with paths). Witness it live and keep the dispatch id. Revert a change that has no live witness.
 5. `prd-add` each other finding as `<principle>-<SESSION_ID>-<n>`, using the full SESSION_ID, never a suffix of it. `prd-list` the id first. `prd-add` refuses an existing id unless the body carries `overwrite:true`, so a refused id takes the next `<n>`. Never send `overwrite` for another session's row. Retire or merge one stale row per row added.
 6. Name the biggest need in one sentence.
@@ -69,6 +70,7 @@ Receipt (120 words max):
 VERDICT: HOLDS | VIOLATED | NOT-APPLICABLE
 PRINCIPLE: <id>; SURFACE: <path>; WITNESS: <audit dispatch id>
 CHANGED: <file, dispatch id> | none
+ACH: <n> hypotheses; leader <id>; rejected <ids>; probe <dispatch id>; flips-on <evidence> | none, no cause asserted
 ROWS: <n>: <ids>
 EMITTED: .gm/lean-walk/<NODE>.json [+1 new node]
 NEED: <one sentence>
