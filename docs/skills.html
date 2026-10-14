@@ -71,6 +71,8 @@ article tbody tr:hover { background: var(--panel-1); }
 <h2>Terms</h2>
 
 <ul>
+  <li><code>/gm</code>: the entry skill, read from <code>skills/gm/SKILL.md</code>. It is the skill, not the MCP server.</li>
+  <li><code>gm MCP server</code>: the server that serves the verbs. An agent calls it through its <code>gm_codemode</code> tool.</li>
   <li><code>walk</code>: one run of the gm state machine that the agent drives to completion on its main thread, through the gm-orchestrate skill.</li>
   <li><code>plan row</code>, also called a PRD row: one entry in the plan. An open row is one file in <code>.gm/prd/</code>. It closes only with recorded <code>witness_evidence</code>.</li>
   <li><code>hop</code>: one traversal of a graph node, performed by one <code>gm-hop</code> subagent.</li>
