@@ -300,7 +300,7 @@
     },
     {
       "id": "ACH",
-      "label": "Analysis of Competing Hypotheses - Richards J. Heuer Jr.",
+      "label": "Psychology of Intelligence Analysis - Analysis of Competing Hypotheses",
       "kind": "principle",
       "book": "Psychology of Intelligence Analysis",
       "author": "Richards J. Heuer Jr.",
@@ -1407,13 +1407,13 @@
       "from": "ORACLEBIAS",
       "to": "ACH",
       "kind": "forward",
-      "condition": null
+      "condition": "the surface asserts a cause, a defect or a fix"
     },
     {
       "from": "ACH",
       "to": "INDEPVER",
       "kind": "forward",
-      "condition": null
+      "condition": "a rival hypothesis was rejected by inconsistency or the leader has a live probe"
     },
     {
       "from": "INDEPVER",
@@ -3678,11 +3678,6 @@
       "mermaid": "yagni",
       "prose": "emit.md",
       "node": "YAGNI"
-    },
-    {
-      "mermaid": "ach",
-      "prose": "ach.md",
-      "node": "ACH"
     }
   ],
   "entry_points": [
