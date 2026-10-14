@@ -61,7 +61,7 @@ Launch only advertised ids. A slot stays empty only when no pending row and no u
 - Count of record is `emitted`: node files written this wave.
 
 ## Heartbeat
-- Every brief first writes `.gm/pool/<session>.live` (three lines: `session`, `row`, `start` ISO-8601 UTC) and deletes it on finish.
+- Every brief first writes `.gm/pool/<session>.live` (three lines: `session`, `row`, `start` ISO-8601 UTC) and deletes it on finish. A hop has no row id, so its `row` line is its surface path (the `surface` in its payload); a surface-only heartbeat is reported as `malformed_heartbeats`.
 - Before launch, skip any id already held by a live row. Refresh the file at every gm call; a file older than 5 minutes is stale.
 
 ## Shortfall and FAILURE
