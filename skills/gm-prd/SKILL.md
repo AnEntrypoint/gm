@@ -9,7 +9,9 @@ One run, one row, one session. Stages run in order, none a subagent. Each writes
 
 ## Procedure
 
-1. SPECIFY: restate the row and acceptance; check each cited line against the tree (absent: stale). Unknowns: `mutable-add`. If the row asserts a cause, write its ACH matrix (`gm-config/prose/ach.md`) into this receipt: at least two hypotheses, evidence as dispatch ids, `C`/`I`/`N` cells, the leader, and its probe.
+1. SPECIFY (orient): restate the row and acceptance; codesearch and codeinsight first (top 20 BM25, top 20 vector, top 20 commits, 3 live snippet lines each; no snippet text stored); check each cited line against the tree (absent: stale). Write the unknowns list with `mutable-add` until the verb is renamed (row `UNKNOWN-VERB-RENAME`).
+1b. ELIMINATE: eliminate each unknown by a live JIT run; a run that reveals a new unknown adds it and goes back to ELIMINATE. EDIT starts only when no unknown is open.
+1c. EDIT then VALIDATE: edit, then validate by JIT runs against the acceptance. A new unknown or failed check returns to ELIMINATE, then EDIT again. If the row asserts a cause, write its ACH matrix (`gm-config/prose/ach.md`) into this receipt: at least two hypotheses, evidence as dispatch ids, `C`/`I`/`N` cells, the leader, and its probe.
 2. PROVE: precondition, invariant, postcondition; run each. The leader's probe runs here first. A probe that does not separate the leader from the next hypothesis is a blocker row, not a pass.
 3. EMIT: exact-match Edit only; witness through the live entry point; keep the dispatch id.
 4. STATE: the change replays idempotently; name the state it owns.

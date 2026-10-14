@@ -16,6 +16,8 @@ Pool and publish rules. Rationale: `docs/rationale.md`. Incidents: `docs/inciden
   1. Row drain: `pipeline` over every pending row, one `gm-prd` per row, a `parallel` block per wave, repeat until `prd-list {"status":"pending"}` is 0.
   2. Traversal: `pipeline` over every principle node in `skills/dream-rsi/gm-graph.json`, one `gm-hop` per node per surface, emitting new rows; repeat until every node has a receipt for each surface.
   3. Audit: a completeness critic lists what the drain and traversal missed; its findings become new rows for graph 1.
+- Priority: drain before make. While pending rows exist, graph 1 takes every free slot. When pending rows fall under 20, graph 2 takes the free slots (computer-science disciplines first) until pending rows reach 20 again.
+- Every traversal subagent nominates its successor from its own outward links, with a one-line rhetoric handed to the successor. It never nominates a node outside its links.
 - Repeat graphs 1-3 until a full cycle adds no rows and resolves none. Stop only then.
 - A wave that resolves 0 rows with pending rows left is a stall: change the brief, then rerun. Never stop on a stall alone.
 - Ceiling and floor still bound live subagents. Launch to ceiling; a freed slot refills in the same turn.
