@@ -8,7 +8,7 @@ description: "Main-thread pool loop for a gm walk that has advertised PRD rows o
 Pool and publish rules. Rationale: `docs/rationale.md`. Incidents: `docs/incidents.md`. Recovery: `docs/recovery.md`.
 
 ## Terms
-- `ceiling`: N in a spawn refusal. `live`: ListAgents count. `floor` = min(10, ceiling). `shortfall` = live < floor with independent work open.
+- `ceiling`: N in a spawn refusal -- a HOST limit on how many agents may exist, never a throughput recommendation and never a memory budget. `live`: ListAgents count. `floor` = min(2, ceiling). `shortfall` = live < floor with independent work open.
 
 ## Parallelism: graph workflows first
 - Default unit of fan-out is a graph workflow (`Workflow` tool). Use as many as the open work needs, in parallel where independent, in sequence where a result feeds the next.
@@ -22,7 +22,7 @@ Pool and publish rules. Rationale: `docs/rationale.md`. Incidents: `docs/inciden
 - Every traversal subagent nominates its successor from its own outward links, with a one-line rhetoric handed to the successor. It never nominates a node outside its links.
 - Repeat graphs 1-3 until a full cycle adds no rows and resolves none. Stop only then.
 - A wave that resolves 0 rows with pending rows left is a stall: change the brief, then rerun. Never stop on a stall alone.
-- Ceiling and floor still bound live subagents. Launch to ceiling; a freed slot refills in the same turn.
+- Ceiling and floor still bound live subagents, and the machine budget (Lane budget) bounds live below them. Launch to the machine budget; a freed slot refills in the same turn.
 
 ## Floor
 - Pending rows open: keep live >= floor. Pass ListAgents count as `body.live` on every `pool-observe` and `transition`.
@@ -95,16 +95,20 @@ Launch only advertised ids. A slot stays empty only when no pending row and no u
 - A mass drop (many at once) follows `docs/recovery.md`, section "Mass API-error drain", with the same restart rule.
 
 ## Headroom and leases
-- CPU >= 80% or available memory < 2048 MB pauses launches. Log the cause with the real count and UTC; a pause does not end the turn.
+- CPU >= 80% or available memory < 4096 MB pauses launches. Log the cause with the real count and UTC; a pause does not end the turn. A thrashed host is only recoverable by reboot, so pause early.
 - Rows that need an exclusive lock wait for it; the pool keeps launching the rest. A lock wait that times out is a failed run.
-- GPU rows wait for the GPU lock; browser rows wait for the browser lease. Neither idles the pool.
+- **One browser or GPU arm at a time, pool-wide.** `gpulock` serialises the ADAPTER only -- never CPU, memory or disk -- so N headless Chromes still contend; serialising the adapter is not serialising the machine, and reading it as machine-wide serialisation is the error that put several GPU arms in flight at once on 2026-10-14. Observed: one lane held the browser lease continuously while others waited 600 s and never got a browser. One browser arm plus one node-only/gpu-free lane is fine; two browser arms are not. Lease held: take node-only work (Never let the pool dip, cause 3), never open a second browser.
 - Browsers are headful (`headless: false`). Each run closes its own browser; never touch the user's Chrome.
 - EADDRINUSE: the witness did not run. Identify the owning process. Never kill another lane's process.
 - Browser-last, cold-start and reload budgets, and minting a focused jit test instead of routing through a suite: defined in gm-prd: Witness economy.
 
-## Lane budget
+## Lane budget (anti-thrashing)
+- **Two failure modes with opposite remedies; never conflate them.** A dropped link (`ECONNRESET`, `ECONNREFUSED`, `server_error`, timeout, no response) is the unreliable connection: the remedy is to RESTART the lane, and lowering concurrency to stop a drain buys nothing and idles the pool. Machine thrashing -- an unresponsive host, memory pressure, lanes parked on a lease -- is load: the remedy is to RUN LESS AT ONCE, and restarting lanes into a thrashing machine makes it worse. A concurrency cap is never the answer to a connection drop, and a restart is never the answer to thrash.
+- **Machine budget: 2-3 concurrent subagents, prefer 2.** `ceiling` (20) is the host's spawn refusal limit, not a throughput recommendation and not a memory budget; it has been misread as capacity and must not be. On 2026-10-14 a C:/dev/spoint walk ran ~10-16 concurrent lanes at 100k-270k tokens each, and the machine became unresponsive from thrashing and needed a reboot. The load that did it: many large contexts at once; several GPU browser arms at once; several extra checkouts, each duplicating `node_modules` junctions and disk I/O and each ending in a consolidation run; and one shared work tree carrying many lanes' uncommitted edits, so every read and publish churned. Two is the default, three the exception; one browser arm plus one node/gpu-free lane is fine.
+- **Thrash is answered by fewer simultaneous lanes, never by a slower lane.** Do not stretch a lane's slice, do not add waits and do not serialize work that was independent to stay under budget: retire lanes. If live exceeds the budget, let slots drain to it rather than launching.
 - **A mass `ECONNRESET` drain is environmental, not a concurrency symptom.** The drops are a dropped connection: lanes have died at 5 and 6 concurrent as well as at 10, so lane count was not the variable. Never present a lane-count ceiling as the remedy, and never lower concurrency to stop a drain -- that buys nothing and idles the pool. The response is to **restart the affected lanes**: same row, resuming from the dead lane's last line so completed work is not redone. Mechanics (resume-by-id, one event per window, back-pressure, recurrence): `docs/recovery.md`, section "Mass API-error drain".
-- **Publish on the first passing witness.** Time-box a lane to its witness: the observed failure mode is a lane that did the work, reached 140k-210k tokens and died without shipping it. Resolve the row, publish, then keep going. An unreliable connection makes this stricter, not looser: it bounds how much finished work one drop can destroy.
+- **Publish on the first passing witness.** Time-box a lane to its witness: the observed failure mode is a lane that did the work, reached 140k-210k tokens and died without shipping it. Resolve the row, publish, then keep going. An unreliable connection makes this stricter, not looser: it bounds how much finished work one drop can destroy. It is also the anti-thrashing rule: a resolved and published lane is memory the machine gets back, while a lane working past its witness holds a large context for nothing.
+- The other two loads have one home each and are not restated here: browser/GPU arms (Headroom and leases), extra checkouts (Shared-tree publish).
 
 ## Fan-out
 - Independent slices (file, row, hop) launch in one block. Slices sharing a surface run in turn.
@@ -114,6 +118,7 @@ Launch only advertised ids. A slot stays empty only when no pending row and no u
 
 ## Shared-tree publish
 Lanes share one work tree and one git lane. Work on `main` only: no worktree, side branch or scratch checkout.
+- **No extra checkouts.** A clean base for measurement or bisect is `git archive <remote sha>` into a temp dir, used read-only and deleted afterwards -- never a second full checkout, worktree or clone, and never publish from it. A second checkout duplicates `node_modules` junctions and disk I/O and ends in a consolidation run; several of them were part of the load that took the machine down on 2026-10-14 (Lane budget).
 - Publish through the Git API: POST blobs; a tree with `base_tree: <remote tip>`; a commit parented on that tip; PATCH `refs/heads/main` with `force` unset; re-read each blob at `?ref=main`.
 - `git_finalize` that refuses to push because a sibling holds a dirty path is redundant when its content is already published. Never reset `refs/heads/main` under running lanes.
 - `remote_moved` on a dirty tree: `git_status {"paths":[...]}`, commit or revert each path in its owning lane, then `git_push {rev:"<sha>"}`.
