@@ -8,8 +8,12 @@ const ORG = "AnEntrypoint";
 const DRY_RUN = process.argv.includes("--dry-run");
 const SKIP_SELF = "gm";
 
+function run(cmd, args, opts = {}) {
+  return execFileSync(cmd, args, { stdio: "pipe", windowsHide: true, ...opts });
+}
+
 function gh(args) {
-  return execFileSync("gh", args, { encoding: "utf8", windowsHide: true });
+  return run("gh", args, { encoding: "utf8" });
 }
 
 function listActiveRepos() {
@@ -20,7 +24,7 @@ function listActiveRepos() {
 }
 
 function cloneShallow(repo, dir) {
-  execFileSync("git", ["clone", "--depth", "1", "--filter=blob:none", `https://github.com/${ORG}/${repo}.git`, dir], { stdio: "pipe", timeout: 300_000, windowsHide: true });
+  run("git", ["clone", "--depth", "1", "--filter=blob:none", `https://github.com/${ORG}/${repo}.git`, dir], { timeout: 300_000 });
 }
 
 function hasGmDir(dir) {
@@ -28,10 +32,10 @@ function hasGmDir(dir) {
 }
 
 function wipeAndPush(repo, dir) {
-  execFileSync("git", ["rm", "-rf", "--quiet", ".gm"], { cwd: dir, stdio: "pipe", windowsHide: true });
-  execFileSync("git", ["commit", "-m", "chore: remove vendored .gm/ state (org-wide gm cleanup)"], { cwd: dir, stdio: "pipe", windowsHide: true });
+  run("git", ["rm", "-rf", "--quiet", ".gm"], { cwd: dir });
+  run("git", ["commit", "-m", "chore: remove vendored .gm/ state (org-wide gm cleanup)"], { cwd: dir });
   if (!DRY_RUN) {
-    execFileSync("git", ["push", "origin", "HEAD"], { cwd: dir, stdio: "pipe", windowsHide: true });
+    run("git", ["push", "origin", "HEAD"], { cwd: dir });
   }
 }
 
