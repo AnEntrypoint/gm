@@ -14,7 +14,8 @@ When the agent starts work, the agent shall first read `SKILLS.md`. When a reque
 4. Resolve in separate skills, each loading the next: orient, unknowns (renamed from mutables), elimination by live JIT runs (new unknowns return here), edit, validation by JIT runs (failures return to elimination).
 5. Publish on main only: merge upstream, commit local work with explicit paths, push, watch CI. A failing job returns to elimination.
 6. Plugkit runs 4 concurrent execution workers. A call over 15 s moves to background and frees its worker. Exclusive resources (browser, GPU) take leases; browsers stay hot per project.
-7. Success means rows always drain and traversal always refills them before they run out.
+7. Connectivity: a subagent stopped by a network or API error is restarted as a fresh subagent for the same row, never resumed, never parked as blocked.
+8. Success means rows always drain and traversal always refills them before they run out.
 
 ## Skill installs
 
