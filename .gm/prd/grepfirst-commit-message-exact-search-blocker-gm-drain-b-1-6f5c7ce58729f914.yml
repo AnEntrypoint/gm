@@ -1,0 +1,5 @@
+id: GREPFIRST-COMMIT-MESSAGE-EXACT-SEARCH-blocker-gm-drain-b-1
+subject: 'Missing fact: git_log has no verbatim message filter (rs-plugkit git.rs git_log allowlist lacks grep); supplied by a rs-plugkit verb change that needs a CI wasm build and a served runner. Witness of gap: dispatch 1791975748327-500-d3ff421f7c245486'
+blockedBy: GREPFIRST-COMMIT-MESSAGE-EXACT-SEARCH
+session_id: gm-drain-b-1
+status: pending
