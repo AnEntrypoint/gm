@@ -1,6 +1,6 @@
 ---
 name: gm-orchestrate
-description: "Main-thread pool loop for a gm walk: observe, launch advertised rows and hops, log, wait, refill, exit. Invoke only from gm; do not load directly. Pool rules and shared-tree publish rules are defined here; hop rules are in gm-hop, PRD-row rules in gm-prd."
+description: "Main-thread pool loop for a gm walk that has advertised PRD rows or hops: it launches them up to the concurrency ceiling, logs, waits, refills freed slots, and exits once every advertised row or hop has a receipt or blocker. Invoke only from gm; do not load directly. Pool rules and shared-tree publish rules are defined here; hop rules are in gm-hop, PRD-row rules in gm-prd."
 ---
 
 # gm-orchestrate
