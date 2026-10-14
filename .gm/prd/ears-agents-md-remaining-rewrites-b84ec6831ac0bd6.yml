@@ -1,4 +1,0 @@
-id: EARS-AGENTS-MD-REMAINING-REWRITES
-text: Apply the remaining falsifiable EARS rewrites in .gm/lean-walk/EARS-rewrites.json to AGENTS.md once its concurrent compaction settles. Most of the 103 falsifiable rewrites do not match current AGENTS.md wording; re-derive each against the live text. Keep AGENTS.md under 30000 bytes and CRLF.
-session_id: lean-canary-EARS
-status: pending

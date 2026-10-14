@@ -1,6 +1,0 @@
-id: G_CONTRACT-hook-denial-type-blocker-gm-drain-b-11
-subject: 'BLOCKER for G_CONTRACT-hook-denial-type (blocked_by it): no hook loader exists in source to reject an args-object handler return. Live evidence: codesearch run_hook zero hits in rs-plugkit (1791975803830-500-5c446090b3548728); ''hook denial'' zero hits in rs-plugkit (1791975809963-500-3604a1f296c7dbce); hooks_dir set in gm-config/gm.config.json:12 but gm-config/hooks absent (1791975821514-500-dfe3b76ccb9e03e9); transitions.rs holds predicate checks only (1791975818895-500-12f0ae2edec49ff0). Missing fact: the hook loader crate::orchestrator::transitions::run_hook named in gm-config/README.md:33 is absent from source. Verb that supplies it: codesearch {query:''run_hook'', mode:''literal''} over the git history (git_log search) to find where the loader lived, or a decision to re-scope the row to a prose-only edit of gm-config/prose/entry.md:96.'
-blockedBy:
-- G_CONTRACT-hook-denial-type
-session_id: gm-drain-b-11
-status: pending

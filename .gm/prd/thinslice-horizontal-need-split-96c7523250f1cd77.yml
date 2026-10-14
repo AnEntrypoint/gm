@@ -1,8 +1,0 @@
-id: THINSLICE-HORIZONTAL-NEED-SPLIT
-title: 'Thin slice: 6 needs are split across 2-3 layer rows (G_CONTRACT / BLOCKER-SKILLGM / THINSLICE / BLOCK) and 72 pending rows have no title and no child'
-requirement: 'Each need gets one row that reaches through to a witnessed verb or file change. Witness from exec_js over .gm/prd.yml (status pending): 199 pending rows, 72 untitled with no dependent row, and 6 same-need clusters: git-verb-signatures, output-cap-constants, tencentdb-config-defaults, recall-index-single-writer, precedence-enum, native-search-gate. Too large for one hop: each resolution needs its own witness, and the rows span gm-config prose, skills/gm and rs-plugkit.'
-kind: blocker
-node: THINSLICE
-phase: P1
-session_id: lean-hop-THINSLICE
-status: pending

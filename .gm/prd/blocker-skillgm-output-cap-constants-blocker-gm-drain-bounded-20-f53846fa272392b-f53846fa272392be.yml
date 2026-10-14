@@ -1,4 +1,0 @@
-id: BLOCKER-SKILLGM-output-cap-constants-blocker-gm-drain-bounded-20
-subject: 'Blocker for BLOCKER-SKILLGM-output-cap-constants: a shared gm-config key schema for each output cap (read by gm-mcp JS and rs-plugkit Rust wasm) is undecided, and the rs-plugkit wasm change is verifiable only by CI (local cargo hook-blocked). Supply via: codeinsight callers/impact on the cap literals, then a schema-decision row, then ci-status on the rs-plugkit publish run after git_finalize in C:/dev/gm/rs-plugkit.'
-status: pending
-session_id: gm-drain-bounded-20

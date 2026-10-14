@@ -1,4 +1,0 @@
-id: TOTALITY-GMMCP-RELEASE-BRIDGE-TOTAL-BODY-blocker-gm-2e-fa19b3-w2-03
-subject: 'Blocker: EMIT/STATE/CONC cannot land the row. gm-mcp/src/release-bridge.js has another lane''s staged and unstaged hunks (freeze -> no-self-update rename, git diff --cached/unstaged, 2026-10-13), so a commit of that path would sweep them; the bundle rebuild and parent pin follow that commit. Row body scope is unnamed (MUT-TOTALITY-GMMCP-BODY-SCOPE).'
-status: pending
-session_id: gm-2e-fa19b3-w2-03
