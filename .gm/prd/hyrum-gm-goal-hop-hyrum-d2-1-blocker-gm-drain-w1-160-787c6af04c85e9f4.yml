@@ -1,5 +1,0 @@
-id: HYRUM-gm-goal-hop-HYRUM-d2-1-blocker-gm-drain-w1-160
-subject: 'Blocked: HYRUM-gm-goal-hop-HYRUM-d2-1 premise refuted and row marked created-in-error'
-body: 'Row HYRUM-gm-goal-hop-HYRUM-d2-1 cannot close in session gm-drain-w1-160. (1) Its deferReason says it was created in error (HYRUM is a tension node, not a principle; no hop may name it), so its validity must be decided before any resolution. (2) Its cited premise ''codesearch dispatch_id in gm-mcp/src: 0 occurrences'' is refuted: dispatch 1791958442267-500-7ef16f5a110c7327 finds 9 occurrences (child-ledger.js, leak-reaper.js, verb-table.js:190). (3) The real defect: gm-mcp/README.md:12 says dispatch_id is stripped from replies, but live codemode replies carry a top-level dispatch_id (witness dispatch 1791958429570-500-d0141afa5068e93a). Fix when the row is kept: correct README.md:12 in the gm-mcp submodule (submodule commit, push to its main, parent gitlink bump), then witness a live reply. Receipt: .gm/receipts/HYRUM-gm-goal-hop-HYRUM-d2-1/01-SPECIFY.md. Decision needed: confirm or retire the row.'
-session_id: gm-drain-w1-160
-status: pending

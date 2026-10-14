@@ -1,8 +1,0 @@
-id: SLAP-PLUGKIT-INDEXCFG-LEVELS
-title: 'SLAP: separate code_index index_cfg_impl schema, digest and timing phases'
-description: 'rs-plugkit/crates/plugkit-core/src/code_index.rs index_cfg_impl (line 2239, 733 lines) mixes libsql schema ensure, kvvec clearing on dimension mismatch, per-phase host timing, digest comparison, chunk writes and orphan scanning in one function, with raw SQL and kv calls at the same level as the pass plan. Scope: this function. Change: one function per pass phase (ensure_store, clear_on_dim_mismatch, scan_and_write, orphan_pass) each returning its timing, and index_cfg_impl composing them. Behaviour unchanged: the returned timing and report keys and full_pass semantics stay identical. Witness: cargo build of rs-plugkit, then a live code_index dispatch returning the same keys.'
-node: SLAP
-phase: P3
-status: pending
-source: lean-hop-SLAP
-session_id: lean-hop-SLAP

@@ -1,5 +1,0 @@
-id: BROWSER-LEASE-HOT-PROFILE
-subject: Browser work takes a per-worker lease, keeps hot browsers per project profile for reuse, and reaps idle ones on a timer
-body: 'One browser at a time per worker lease. Idle hot browsers close after a fixed idle window. Witness: two sequential browser runs in one project reuse the process; a third project gets its own profile.'
-session_id: gm-invariants-08
-status: pending

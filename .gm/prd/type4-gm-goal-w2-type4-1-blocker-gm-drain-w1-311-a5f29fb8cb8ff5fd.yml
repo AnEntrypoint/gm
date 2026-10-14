@@ -1,5 +1,0 @@
-id: TYPE4-gm-goal-w2-TYPE4-1-blocker-gm-drain-w1-311
-subject: 'Blocked: flagValue dedupe in gm-mcp cannot publish with a shared dirty gm-mcp tree'
-body: 'Row TYPE4-gm-goal-w2-TYPE4-1 edits are in the working tree: src/http-transport.js and src/index.js import flagValue from src/argv.js. Witness: exec_js dispatch 1791959638926-500-9e642fcb0a9671c8 (probe output port 9911 host 10.1.2.3; node --check passed). Blocker: gm-mcp has other writers'' uncommitted edits (bin/gm-mcp-server.js, src/dispatch.js, src/self-update.js staged, src/dev-sync.js, src/release-bridge.js, scripts/*, test/mcp-http-probe.mjs, untracked src/spool-store.js). The rebuilt bundle would publish those edits, and a src-only commit breaks the src-plus-bundle rule. Unblock: the owning lane commits its gm-mcp work, then this lane rebuilds the bundle, commits src/http-transport.js, src/index.js and the bundle with explicit paths, and bumps the parent gitlink. Receipts: .gm/receipts/TYPE4-gm-goal-w2-TYPE4-1/01-SPECIFY.md and 02-EMIT-PROVE.md.'
-session_id: gm-drain-w1-311
-status: pending

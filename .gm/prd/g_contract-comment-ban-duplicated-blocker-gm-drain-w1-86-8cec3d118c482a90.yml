@@ -1,5 +1,0 @@
-id: G_CONTRACT-comment-ban-duplicated-blocker-gm-drain-w1-86
-subject: 'Blocker for G_CONTRACT-comment-ban-duplicated: predicate that blocks transitions on added comments needs a rs-plugkit Rust change (CI-only build) and a cross-session witness'
-body: 'Row cannot close in session gm-drain-w1-86. SPECIFY receipt: .gm/receipts/G_CONTRACT-comment-ban-duplicated/01-SPECIFY.md. Cited prose lines are present (entry-extended.md:16, :108). Adding the predicate to predicate_registry.rs and wiring it through lean_graph.json requires a wasm rebuild in CI and a witness from another session, unreachable here. Same cause as BLOCK-COMMENT-PREDICATE-blocker-gm-drain-w1-15. Unblock: add the predicate in rs-plugkit, rebuild with --features slim in CI, then witness from another session.'
-session_id: gm-drain-w1-86
-status: pending

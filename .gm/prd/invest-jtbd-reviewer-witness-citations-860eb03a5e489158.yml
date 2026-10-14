@@ -1,5 +1,0 @@
-id: INVEST-JTBD-REVIEWER-WITNESS-CITATIONS
-title: Reviewer summary cites recorded witnesses and closed PRD rows
-description: 'Split from JTBD-REVIEWER-ONEPASS; depends on INVEST-JTBD-REVIEWER-SUMMARY-VERB. Extend that reply with each recorded witness and each PRD row the walk closed, citing only recorded evidence. Witness: the reply on a completed walk cites at least one witness id and one closed PRD row id.'
-status: pending
-session_id: lean-node-INVEST

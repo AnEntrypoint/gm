@@ -1,5 +1,0 @@
-id: DIJKSTRATEST-GMMCP-STANDING-TESTS
-subject: 'gm-mcp (submodule): nine standing test files under gm-mcp/test (about 250 assertions) plus two probe scripts; re-express each assertion as an exec_js probe against the real boundary, delete the test directory, and drop the npm test script. Related: DEEPMOD-GMMCP-TEST-SUITE-RED-AT-HEAD. Separate repo plus bundle rebuild, so not done in the gm root hop.'
-session_id: lean-hop-DIJKSTRATEST
-status: pending
-blocked_by: 'DIJKSTRATEST-GMMCP-SPLIT-A, -B, -C, -D (exec_js probe re-expression and file removal per cluster, serial on gm-mcp main, each witnessed from another session), then DIJKSTRATEST-GMMCP-SPLIT-FINAL (npm script removal). Receipt: .gm/receipts/DIJKSTRATEST-GMMCP-STANDING-TESTS/01-SPECIFY.md. Live count is 20 files and about 300 assertions, not nine files.'

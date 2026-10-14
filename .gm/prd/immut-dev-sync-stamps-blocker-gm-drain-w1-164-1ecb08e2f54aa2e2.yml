@@ -1,5 +1,0 @@
-id: IMMUT-DEV-SYNC-STAMPS-blocker-gm-drain-w1-164
-subject: 'Blocker for IMMUT-DEV-SYNC-STAMPS: gm-mcp src/dev-sync.js and bin bundle held by another writer'
-body: 'Row IMMUT-DEV-SYNC-STAMPS cannot be edited, witnessed or delivered this session. gm-mcp work tree has another writer''s uncommitted hunks in src/dev-sync.js (syncOne rel->repoName, dispatch 1791958468891-500-d87fa7012d09ed7a), staged src/self-update.js, and modified bin/gm-mcp-server.js. The row fix (derive next stamps object at src/dev-sync.js ~116-121 instead of mutating) plus bundle rebuild needs that surface free. Receipts: .gm/receipts/IMMUT-DEV-SYNC-STAMPS/01-SPECIFY.md, 02-DELIVERY-CHECK.md. Unblock: once the other gm-mcp writer lands, edit lines 116-123 and rebuild the bundle, then witness and prd-resolve IMMUT-DEV-SYNC-STAMPS.'
-session_id: gm-drain-w1-164
-status: pending

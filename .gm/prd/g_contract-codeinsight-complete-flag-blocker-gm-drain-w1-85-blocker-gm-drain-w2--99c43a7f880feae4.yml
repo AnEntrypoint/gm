@@ -1,8 +1,0 @@
-id: G_CONTRACT-codeinsight-complete-flag-blocker-gm-drain-w1-85-blocker-gm-drain-w2-110
-subject: 'Blocked: G_CONTRACT-codeinsight-complete-flag-blocker-gm-drain-w1-85 needs a CI-built rs-plugkit top-level proof field (H1) and a cross-session live witness'
-body: 'Row G_CONTRACT-codeinsight-complete-flag-blocker-gm-drain-w1-85 cannot close in session gm-drain-w2-110. Receipts: .gm/receipts/G_CONTRACT-codeinsight-complete-flag-blocker-gm-drain-w1-85/01-SPECIFY.md and 02-COMPLETE.md. Tree re-check: code_symbols.rs lines 2783 and 2787 write index_current only on the incomplete path (dispatch 1791960646190-500-34add30193dbc634); entry.md:123 present (dispatch 1791960648456-500-feb26e2edd044b18). Leader H1 needs: rs-plugkit handle() change built in CI (wasm, --features slim), gm-config/prose/entry.md edit, vendored lean_prose and prose re-sync in rs-plugkit, runner serving the new build, then a live callers witness from a session other than the author naming H1. Alternative H2 (cite nested codeinsight_index.complete, no Rust change) would not satisfy the leader-witness rule. Next action: decide H1 vs H2 by design in a session with CI access; if H1, run the CI build and bump pipeline, then witness.'
-session_id: gm-drain-w2-110
-status: pending
-blockedBy:
-- external
-deferReason: 'duplicate blocker: the base row already names the same missing fact'

@@ -1,8 +1,0 @@
-id: SLAP-GMMCP-ENSURERUNNER-LEVELS
-title: 'SLAP: separate ensureSpoolRunnerRunning backoff policy from spawn and child bookkeeping'
-description: 'gm-mcp/src/dispatch.js ensureSpoolRunnerRunning (lines 531-585, 52 lines) mixes the decision (liveness, in-flight, interval, boot grace, exponential backoff) with the mechanics (claim locks, spawn with detached and windowsHide, lock file writes, exit and error settlement, unref). Scope: this function and recordRunnerEnsureInflight. Change: a pure decision helper returning whether to spawn, and a separate spawnRunnerDetached helper that owns the child lifecycle. Behaviour unchanged: the backoff ceiling, lock file contents and inflight map semantics stay identical; spawn keeps windowsHide true and stdio ignore. Witness: exec_js line count of ensureSpoolRunnerRunning under 25, and a live gm dispatch that still starts or confirms the daemon.'
-node: SLAP
-phase: P3
-status: pending
-source: lean-hop-SLAP
-session_id: lean-hop-SLAP

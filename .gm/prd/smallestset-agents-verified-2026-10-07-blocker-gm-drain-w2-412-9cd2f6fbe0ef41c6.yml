@@ -1,7 +1,0 @@
-id: SMALLESTSET-AGENTS-VERIFIED-2026-10-07-blocker-gm-drain-w2-412
-title: 'BLOCKER SMALLESTSET-AGENTS-VERIFIED-2026-10-07: cited AGENTS.md block is absent'
-status: pending
-source: gm-prd SPECIFY, receipt .gm/receipts/SMALLESTSET-AGENTS-VERIFIED-2026-10-07/01-SPECIFY.md
-description: 'Row cites AGENTS.md lines 216-223 for the ''Verified 2026-10-07'' plugkit load-path block. AGENTS.md is 134 lines and has no such block (codesearch 1791965704340-500-749c8709732de2c8). The block lives in docs/verified-incidents.md:123-129 (about 2.5 KB, not 1.5 KB). Its gm.version premise (non-semver) is contradicted by docs/verified-incidents.md:128. Decision needed: re-scope the row to docs/verified-incidents.md:123-129 and the <=5-line target, or drop it as stale. The slim feature is real (rs-plugkit/crates/plugkit-core/Cargo.toml:13).'
-witness: Re-scope with prd-add overwrite:true on SMALLESTSET-AGENTS-VERIFIED-2026-10-07, or resolve as stale. Done when the block is at most 5 lines in the file the row names.
-session_id: mcp-codemode-9708-1791965904155

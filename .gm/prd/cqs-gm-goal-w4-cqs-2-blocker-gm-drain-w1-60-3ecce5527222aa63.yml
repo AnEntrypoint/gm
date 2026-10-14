@@ -1,5 +1,0 @@
-id: CQS-gm-goal-w4-CQS-2-blocker-gm-drain-w1-60
-subject: 'BLOCKER CQS-gm-goal-w4-CQS-2: gm-mcp delivery blocked by other writers'
-body: 'Blocks CQS-gm-goal-w4-CQS-2. Finding: the spill write already moved out of capReplyText (gm-mcp/src/dispatch.js:303 has no fs write; caller writes at :2134 before capReplyText). The row''s cited line 277 is stale. Cannot close: gm-mcp is dirty with other writers'' hunks (src/dispatch.js modified, src/self-update.js staged, HEAD 6ce6e3e), so a commit would carry foreign work; and the gm-mcp bundle rebuild is not verified. Unblock: one writer lands gm-mcp src/dispatch.js (only this row''s hunk) and rebuilds the bundle, then a different session witnesses the rebuilt bundle with a live dispatch. Receipt: .gm/receipts/CQS-gm-goal-w4-CQS-2/01-SPECIFY.md. Witness dispatch ids: 1791957434792-500-aaa77289b5c4db1b, 1791957483044-500-2d3e97f785e4d611.'
-session_id: gm-drain-w1-60
-status: pending

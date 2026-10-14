@@ -1,7 +1,0 @@
-id: IMMUT-RELEASE-BRIDGE-STATE
-title: 'gm-mcp: release-bridge mutates a persisted state object in place across three writes'
-description: 'gm-mcp/src/release-bridge.js:302-343 assigns state.pending_signal and then writes state three times (lines 315, 320, 343), each write re-spreading state. Principle (Okasaki, IMMUT): build one next-state value per transition and write it once at each exit, so no caller-visible object is mutated mid-flight. Keep every on-disk field and the ''checked-recently'' return identical. Scope: gm-mcp/src/release-bridge.js only, plus gm-mcp bundle rebuild. Witness: node --check passes, and a dry run with GM_MCP_RELEASE_BRIDGE_INTERVAL_MS set large returns outcome checked-recently with the same state file keys as before.'
-node: IMMUT
-phase: P3
-session_id: lean-hop-IMMUT
-status: pending

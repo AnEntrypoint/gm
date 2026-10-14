@@ -1,8 +1,0 @@
-id: SLAP-PLUGKIT-CHECKDISPATCH-LEVELS
-title: 'SLAP: separate gates check_dispatch await gate from shell-git token detection'
-description: 'rs-plugkit/crates/plugkit-core/src/gates.rs check_dispatch (line 404, 296 lines) mixes the pending-step await gate with its recovery payload, the shell-command git token scan (is_git_token closure and tokenisation), and the per-verb policy branches. Scope: this function. Change: separate functions for the await check, the shell git check, and the policy branch, each returning a GateVerdict, with check_dispatch as their ordered composition. Behaviour unchanged: gate order, deny messages, await_result and pending_step_id fields stay identical. Witness: cargo build of rs-plugkit, then a live dispatch of a shell git command that is denied with the same reason string.'
-node: SLAP
-phase: P3
-status: pending
-source: lean-hop-SLAP
-session_id: lean-hop-SLAP

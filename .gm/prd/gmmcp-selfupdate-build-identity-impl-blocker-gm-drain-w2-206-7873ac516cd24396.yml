@@ -1,7 +1,0 @@
-id: GMMCP-SELFUPDATE-BUILD-IDENTITY-IMPL-blocker-gm-drain-w2-206
-subject: 'Blocked: land ADR-GMMCP-SELFUPDATE-1 guard in gm-mcp without publishing other writers'' hunks'
-status: pending
-blockedBy:
-- GMMCP-SELFUPDATE-BUILD-IDENTITY-IMPL
-body: 'Row GMMCP-SELFUPDATE-BUILD-IDENTITY-IMPL: code is done in the gm-mcp working tree (src/self-update.js versionGuardReason(candidate, installed); src/bundle-version.js 0.2.46; bin/gm-mcp-server.js rebuilt; AGENTS.md ADR status). Witness dispatch 1791962235845-500-4a475ee90f7fc55e, session gm-drain-w2-206. Blockers: (1) gm-mcp tree has other writers'' uncommitted src/bin hunks (dispatch 1791962325357-500-d1efb953aace5e48) and a foreign staged src/self-update.js change (dispatch 1791962339642-500-a06e94f241a6fa2b); committing the bundle would publish their hunks. (2) prd-resolve refuses the witness id as not_recorded in the ledger searched from the root; the witness must be re-run from another session or bound with exit code, sha256, path and ts. Unblock: owner of the other gm-mcp lanes lands or stashes their hunks, then a commit of the four files on main from a HEAD-based build, and a witness from another session. Receipts: .gm/receipts/GMMCP-SELFUPDATE-BUILD-IDENTITY-IMPL/.'
-session_id: mcp-codemode-23256-1791962406176

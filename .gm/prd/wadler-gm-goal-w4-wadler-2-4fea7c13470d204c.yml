@@ -1,5 +1,0 @@
-id: WADLER-gm-goal-w4-WADLER-2
-status: pending
-title: 'gm-mcp/src/dispatch.js: daemon status liveness copies one typeof guard per field'
-body: 'Principle: WADLER. Witness: codesearch literal "typeof " over gm-mcp/src lists dispatch.js:1421-1429 as nine consecutive lines of the form if (typeof status.F === "number") liveness.F = status.F (shared_process boolean, queue_wait_ms, queue_depth, queue_position, claimed_step_count, queued_step_count, gm_processor_capacity, and the daemon_active_projects copy at 1429). Action: derive the liveness copy from one field list with a single typed pick, so the field set is stated once and a new status field cannot be silently dropped. Not edited in this hop: a loop-based rewrite is a multi-line change needing a live status witness.'
-session_id: gm-goal-w4-WADLER

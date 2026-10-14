@@ -1,8 +1,0 @@
-id: SLAP-GMMCP-RUNRELEASEBRIDGE-LEVELS
-title: 'SLAP: separate release-bridge state and lock handling from the reconcile and signal policy'
-description: 'gm-mcp/src/release-bridge.js runDispatch-equivalent runReleaseBridge (lines 292-348, 58 lines) interleaves lock acquire and release, state-file reads and atomic writes, interval gating, network fetches with error capture, daemon signal policy, and diagnostics in one body. Scope: this function. Change: a load/persist pair for state and a separate policy step that returns the summary; runReleaseBridge reads as a short sequence. Behaviour unchanged: outcome strings, state file keys (last_checked_ts, last_runner, last_guest, last_signal, pending_signal) and the stamp-before-network ordering stay identical. Witness: exec_js of the function line count and one live run of runReleaseBridge returning the same outcome shape.'
-node: SLAP
-phase: P3
-status: pending
-source: lean-hop-SLAP
-session_id: lean-hop-SLAP

@@ -1,5 +1,0 @@
-id: G_CONTRACT-gm-continue-end-states-counter-blocker-gm-drain-w1-94
-subject: 'BLOCKER for G_CONTRACT-gm-continue-end-states-counter: no code owner for gm-continue dispatch state in rs-plugkit'
-body: 'Row needs the .gm/.gm-continue-count counter and the two gm-continue outcomes moved into gm-continue dispatch state in rs-plugkit (enforced by code). Codesearch finds no such state (only prose in orchestrator/instructions/prose/*.md and the gitignore entry in plugkit-core/src/gitignore.rs:16). Resolving needs a new Rust state path, a `--features slim` wasm rebuild verified by CI (no local cargo), a publish, and a witness from another session. Receipt: .gm/receipts/G_CONTRACT-gm-continue-end-states-counter/01-SPECIFY.md. Session gm-drain-w1-94.'
-session_id: gm-drain-w1-94
-status: pending

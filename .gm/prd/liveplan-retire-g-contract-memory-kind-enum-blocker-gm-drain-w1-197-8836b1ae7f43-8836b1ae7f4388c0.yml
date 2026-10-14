@@ -1,5 +1,0 @@
-id: LIVEPLAN-RETIRE-G-CONTRACT-MEMORY-KIND-ENUM-blocker-gm-drain-w1-197
-subject: 'Blocker: parent retire row waits on INVEST-GCONTRACT-MEMORY-KIND-ENUM (enum) and INVEST-GCONTRACT-MEMORY-PROSE-REMOVE'
-body: 'Row LIVEPLAN-RETIRE-G-CONTRACT-MEMORY-KIND-ENUM cannot close. Closing condition needs both sibling rows closed; both are pending (prd-list dispatches 1791958638020-500-33a0cfcb84369b54 and 1791958640131-500-1918a2c762cbaa71). The enum row requires a rs-plugkit Rust change (memorize-fire kind closed enum) that is verified only by CI, with no landed change or witness yet. The prose-remove sibling is blockedBy external on the enum row. Receipt: .gm/receipts/LIVEPLAN-RETIRE-G-CONTRACT-MEMORY-KIND-ENUM/01-SPECIFY.md. Note: the cited sentence ''Four memory types'' is already absent from gm-config/prose/entry-extended.md and rs-plugkit prose (codesearch dispatch 1791958693952-500-5a0d6c579d9e454a), so the prose cite is stale. Unblock by landing the enum row, then closing the prose-remove row, then re-running this row.'
-session_id: gm-drain-w1-197
-status: pending

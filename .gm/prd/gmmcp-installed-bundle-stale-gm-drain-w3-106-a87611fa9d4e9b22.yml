@@ -1,8 +1,0 @@
-id: GMMCP-INSTALLED-BUNDLE-STALE-gm-drain-w3-106
-subject: 'gm-mcp: installed ~/.gm-tools/gm-mcp-server.mjs is older than repo bin and throws ReferenceError n on prd-resolve success'
-body: |-
-  Found by gm-drain-w3-106 while resolving CLEANNAME-GMMCP-SRC-blocker-gm-drain-w2-58. Installed copy: 993590 bytes, mtime 2026-10-14T07:32:29Z; repo gm-mcp/bin/gm-mcp-server.js: 995240 bytes, matches fresh build of src (check-bin-drift.mjs exit 0). The installed copy still has a pre-rename 'n' argument in dispatch_wait(...,n,kt) and threw 'n is not defined' on the prd-resolve success path (dispatch 1791970970013-500-... on the prd-resolve retry; the resolve itself was committed at 09:40:57Z). Fix: refresh the installed bundle from the repo bin through the install path and confirm prd-resolve replies on the success path. Witness: fs_stat of ~/.gm-tools/gm-mcp-server.mjs size equals repo bin size, and a prd-resolve success reply with no ReferenceError.
-
-  blocked_by: a committed and pushed gm-mcp bin newer than BUNDLE_VERSION 0.2.49 on main. The installer fetches raw main (0.2.49, identical to the installed copy, dispatch 1791976127842-500-bc55058f390f12e0); the repo bin (0.2.50) is uncommitted beside foreign-writer edits to gm-mcp/src/dispatch.js and src/http-transport.js (dispatch 1791976133765-500-8188e2c28a45041d). Verb that supplies it: git_finalize in gm-mcp by the owner of those paths, then node bin/gm-install.js --mcp-only. Existing open blocker naming this fact: CLEANNAME-GMMCP-SRC-blocker-gm-drain-w3-105 (no duplicate filed). Receipts: .gm/receipts/GMMCP-INSTALLED-BUNDLE-STALE-gm-drain-w3-106/.
-session_id: gm-drain-a-59
-status: pending

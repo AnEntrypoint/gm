@@ -1,5 +1,0 @@
-id: SLAP-PLUGKIT-SCANLITERAL-blocker-gm-drain-w1-272-01
-subject: 'Blocker: SLAP-PLUGKIT-SCANLITERAL-LEVELS-blocker-gm-2e-fa19b3-w7-02 cannot close in one session; re-scope parent to 5128-6264 and run EMIT in a CI-witness session'
-body: 'gm-prd run for row SLAP-PLUGKIT-SCANLITERAL-LEVELS-blocker-gm-2e-fa19b3-w7-02 (session gm-drain-w1-272). SPECIFY confirmed the blocker''s stale-line claim: scan_literal is at rs-plugkit/crates/plugkit-core/src/code_index.rs:5128-6264 (callers dispatch 1791959146436-500-f83c474873ab7968); callers are search.rs:41, 240, 1351, 2117, 2300. The EMIT step needs a CI witness (cargo build is CI-only, the local hook blocks it) and a release plus runner self-update before the live grep-literal dispatch can witness the change. Neither completes in one session, and the witness must come from another session. Resolution: re-scope parent SLAP-PLUGKIT-SCANLITERAL-LEVELS to code_index.rs:5128-6264, then run EMIT in a session with a CI witness path. Receipt: .gm/receipts/SLAP-PLUGKIT-SCANLITERAL-LEVELS-blocker-gm-2e-fa19b3-w7-02/01-SPECIFY-gm-drain-w1-272.md.'
-session_id: gm-drain-w1-272
-status: pending

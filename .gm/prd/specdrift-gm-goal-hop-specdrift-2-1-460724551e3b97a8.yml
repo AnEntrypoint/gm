@@ -1,8 +1,0 @@
-id: SPECDRIFT-gm-goal-hop-SPECDRIFT-2-1
-title: CHANGELOG says the release bridge runs at most hourly; code and AGENTS.md say 10 minutes
-description: 'gm-mcp/CHANGELOG.md:42 (Unreleased, sha256 release bridge entry) states ''at most hourly''. gm-mcp/src/release-bridge.js DEFAULT_INTERVAL_MS = 10 * 60 * 1000 and gm-mcp/AGENTS.md:78 says 10 minutes. Fix: change the changelog line to 10 minutes. Witness: codesearch ''at most hourly'' in gm-mcp.'
-status: pending
-session_id: gm-goal-hop-SPECDRIFT-2
-blockedBy:
-- external
-deferReason: 'created in error: SPECDRIFT is a tension node, not a principle; no hop may name it'

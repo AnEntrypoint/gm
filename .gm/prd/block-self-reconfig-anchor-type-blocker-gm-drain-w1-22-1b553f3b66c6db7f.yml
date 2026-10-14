@@ -1,5 +1,0 @@
-id: BLOCK-SELF-RECONFIG-ANCHOR-TYPE-blocker-gm-drain-w1-22
-subject: 'Blocked: BLOCK-SELF-RECONFIG-ANCHOR-TYPE needs a rs-plugkit fsm_propose.rs anchor type, a CI build and a cross-session witness'
-body: 'Row BLOCK-SELF-RECONFIG-ANCHOR-TYPE cannot close in this run. SPECIFY receipt: .gm/receipts/BLOCK-SELF-RECONFIG-ANCHOR-TYPE/01-SPECIFY.md. Finding: handle_propose in rs-plugkit/crates/plugkit-core/src/orchestrator/fsm_propose.rs (line 49) reads no anchors field, so the {name, author} type with url rejection does not exist (codesearch dispatch 1791957135932-500-97ec94cb973f7248). Next: add the typed anchor parse and url rejection in fsm_propose.rs, publish rs-plugkit, bump the gm gitlink, verify via ci-status, then witness with a live fsm-propose-override dispatch from a different session.'
-session_id: gm-drain-w1-22
-status: pending

@@ -1,5 +1,0 @@
-id: DBC-gm-goal-w4-DBC-1-blocker-gm-drain-bounded-43
-subject: 'gm-mcp push blocked: uncommitted src/dispatch.js (another writer) fails the bin drift gate for ecc084a'
-body: 'Row DBC-gm-goal-w4-DBC-1 is fixed locally: src/codemode.js refuses unknown top-level keys (commit 3529fda, pushed; live witness sha256 d9713e2f4de76150801737ee581f395b13e6fef00d608675f2401fba29df9a3c, bundle 0.2.50). Its version-bump follow-up ecc084a is committed locally and NOT pushed. git_push is refused gate_denied: check-bin-drift reads the checkout, and gm-mcp/src/dispatch.js carries an uncommitted edit (the timeout-reply refactor, 41 deletions) from another writer, so bin/ cannot certify ecc084a. Missing fact: gm-mcp working tree with no uncommitted changes under src/ and bin/. Verb that supplies it: git_finalize {paths:["src/dispatch.js"]} by that dispatch''s owner (or its revert), then git_push on gm-mcp, then ci-status on the pushed sha. Until then CI on main stays red (check-version-bump on 3529fda). Parent gitlink bump follows the pushed tip via bump-pins. Blocks: DBC-gm-goal-w4-DBC-1 stays pending.'
-session_id: gm-drain-bounded-43
-status: pending

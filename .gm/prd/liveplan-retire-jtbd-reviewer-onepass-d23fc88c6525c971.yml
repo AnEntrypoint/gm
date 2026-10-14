@@ -1,9 +1,0 @@
-id: LIVEPLAN-RETIRE-JTBD-REVIEWER-ONEPASS
-title: 'Retire JTBD-REVIEWER-ONEPASS: closes when its summary-verb and citation rows close'
-description: 'JTBD-REVIEWER-ONEPASS failed INVEST Small and was split into INVEST-JTBD-REVIEWER-SUMMARY-VERB and INVEST-JTBD-REVIEWER-WITNESS-CITATIONS. The job statement outlived the task that would have closed it. Closing condition: INVEST-JTBD-REVIEWER-SUMMARY-VERB and INVEST-JTBD-REVIEWER-WITNESS-CITATIONS both closed, then JTBD-REVIEWER-ONEPASS is closed as satisfied.'
-retires: JTBD-REVIEWER-ONEPASS
-closing_condition: INVEST-JTBD-REVIEWER-SUMMARY-VERB and INVEST-JTBD-REVIEWER-WITNESS-CITATIONS both closed
-node: LIVEPLAN
-phase: P1
-status: pending
-session_id: lean-node-LIVEPLAN

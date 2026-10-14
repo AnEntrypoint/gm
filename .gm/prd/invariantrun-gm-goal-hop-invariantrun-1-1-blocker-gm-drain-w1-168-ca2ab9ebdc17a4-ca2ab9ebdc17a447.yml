@@ -1,5 +1,0 @@
-id: INVARIANTRUN-gm-goal-hop-INVARIANTRUN-1-1-blocker-gm-drain-w1-168
-subject: 'Blocked: INVARIANTRUN-gm-goal-hop-INVARIANTRUN-1-1 cannot be edited or delivered while gm-mcp holds foreign uncommitted WIP on src/dispatch.js, bin/gm-mcp-server.js and src/self-update.js (staged)'
-body: 'Row INVARIANTRUN-gm-goal-hop-INVARIANTRUN-1-1 needs a sequence-level check over spool request numbers (gm-mcp/src/dispatch.js nextN, line 360) witnessed live. Premise confirmed: no ''invariant'' or ''unique'' literal in gm-mcp/src (dispatches 1791958472928-500-f62d895b25ae9435, 1791958475637-500-7f9b70279fde3f53). Blocker: gm-mcp git_status (dispatch 1791958490448-500-ad0240392e62d84b) shows 9 modified paths and one staged path owned by another writer, including src/dispatch.js and bin/gm-mcp-server.js, the exact surfaces the edit and its bundle rebuild touch. Delivering would commit foreign hunks, which CONC forbids. Unblock: one writer lands or parks the gm-mcp WIP on main, then the row re-runs SPECIFY and PROVE. Receipt: .gm/receipts/INVARIANTRUN-gm-goal-hop-INVARIANTRUN-1-1/01-SPECIFY.md'
-session_id: gm-drain-w1-168
-status: pending

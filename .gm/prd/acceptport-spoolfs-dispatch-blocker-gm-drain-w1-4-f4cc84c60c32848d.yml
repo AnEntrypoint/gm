@@ -1,5 +1,0 @@
-id: ACCEPTPORT-SPOOLFS-DISPATCH-blocker-gm-drain-w1-4
-subject: 'Blocked: ACCEPTPORT-SPOOLFS-DISPATCH has no readable acceptance or witness'
-body: 'Row ACCEPTPORT-SPOOLFS-DISPATCH (session lean-hop-ACCEPTPORT) is pending with title only: ''Ports and Adapters: dispatch.js writes spool in-files and reads lock/status files inline with fs; move them behind a spool-store adapter''. prd-list {id} and {full:true} return no body, acceptance text, or file path, and .gm/prd/ReadFile reports no such file, so SPECIFY cannot restate acceptance or confirm cited lines. Tree evidence: gm-mcp/src/dispatch.js holds inline fs calls at lines 394, 702, 932, 953, 1020-1026, 1103, 1125, 1150-1169, 1246, 1259, 1488, 2134 (codesearch dispatch 1791957052243-500-ba750a73eebcb7e). No leader hypothesis or witness is defined, so no row can close. Needed: a row body naming acceptance, the adapter target path, and a witness command. Also gm-mcp/src changes require a bundle rebuild (Invariant verification rules). Session gm-drain-w1-4.'
-session_id: gm-drain-w1-4
-status: pending

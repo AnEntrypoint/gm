@@ -1,5 +1,0 @@
-id: MILNER-PREDICATE-SIDELOAD-ci-only-blocker-gm-prdall-20261014-04-k11-blocker-gm-drain-w1-212
-subject: 'BLOCKER for MILNER-PREDICATE-SIDELOAD-ci-only-blocker-gm-prdall-20261014-04-k11: CI witness still unproducible (session gm-drain-w1-212)'
-body: 'SPECIFY re-check (dispatch 1791958762070-500-40d337b72a861c32): ci-status on AnEntrypoint/rs-plugkit sha bbdc4d83611298df960d47fc2abe3177804b382d returns status unknown, no workflow runs (HEAD is an auto-bump [skip ci] commit). The parent blocker stands: closing MILNER-PREDICATE-SIDELOAD-ci-only needs a non-skip rs-plugkit push or workflow_dispatch of release.yml that publishes to AnEntrypoint/plugkit-bin. That is an externally visible publish with no code change to justify it, so it is a world-scoped one-way door (gm Section 4) and was not made. Local cargo is hook-blocked per gm-no-local-cargo-verified-by-ci. Unblock: owner dispatches release.yml on rs-plugkit main or pushes a real change; then rerun gm-prd on MILNER-PREDICATE-SIDELOAD-ci-only with the CI run id as witness_dispatch_id. Default taken: row stays pending, not closed on a non-witness.'
-session_id: gm-drain-w1-212
-status: pending

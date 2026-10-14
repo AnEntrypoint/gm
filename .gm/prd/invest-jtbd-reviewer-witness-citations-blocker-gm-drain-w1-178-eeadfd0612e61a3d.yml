@@ -1,5 +1,0 @@
-id: INVEST-JTBD-REVIEWER-WITNESS-CITATIONS-blocker-gm-drain-w1-178
-subject: 'Blocker: INVEST-JTBD-REVIEWER-WITNESS-CITATIONS cannot close until INVEST-JTBD-REVIEWER-SUMMARY-VERB lands'
-body: 'Row INVEST-JTBD-REVIEWER-WITNESS-CITATIONS extends the reviewer summary reply, but the summary verb it extends is absent. Dependency INVEST-JTBD-REVIEWER-SUMMARY-VERB is pending; gm.list filter ''summar'' returns only git_status; codesearch literal ''net_lines'' in rs-plugkit has 0 hits (dispatch 1791958532426-500-f5636a051670f4f2). Unblock: resolve INVEST-JTBD-REVIEWER-SUMMARY-VERB first (a reply that returns net_lines and gates), then re-run the row. Receipt: .gm/receipts/INVEST-JTBD-REVIEWER-WITNESS-CITATIONS/01-SPECIFY.md. Witness needed later: reply on a completed walk cites a witness id and a closed PRD row id.'
-session_id: gm-drain-w1-178
-status: pending

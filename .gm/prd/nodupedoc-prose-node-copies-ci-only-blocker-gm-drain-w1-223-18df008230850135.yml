@@ -1,6 +1,0 @@
-id: NODUPEDOC-PROSE-NODE-COPIES-ci-only-blocker-gm-drain-w1-223
-subject: 'Blocker for NODUPEDOC-PROSE-NODE-COPIES-ci-only: duplication confirmed (143 hits), closure needs rs-plugkit Rust change plus CI build and cross-session witness'
-witness: CI run of publish / release step Build after the rs-plugkit lean_prose.rs and entry.rs change, plus a live instruction dispatch from another session showing the sentence served once.
-body: 'Session gm-drain-w1-223. SPECIFY confirmed the 143-occurrence count (codesearch dispatch 1791958817334-500-70510469cc877a25). PROVE cannot run here: no local cargo, and the witness must be a CI rs-plugkit wasm build (publish / release, step Build) plus a live instruction dispatch from a different session. Receipt: .gm/receipts/NODUPEDOC-PROSE-NODE-COPIES-ci-only/01-SPECIFY.md. Parent row stays pending; not self-witnessed.'
-session_id: gm-drain-w1-223
-status: pending

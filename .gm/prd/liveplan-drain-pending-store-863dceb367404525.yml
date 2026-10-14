@@ -1,5 +1,0 @@
-id: LIVEPLAN-DRAIN-PENDING-STORE
-subject: 'Drain the live-plan store to the current task: 264 of 276 rows still pending'
-body: 'Follow-up from LIVEPLAN-gm-goal-w3-LIVEPLAN-1-blocker-gm-prdall-20261014-04-k20. Acceptance: the store holds only current, reusable pending work; each stale row is closed with a witness or retired with its closing condition met. Witness: prd-list {status:pending} count drops to the current-task set, with each retire citing a dispatch id.'
-session_id: gm-drain-w2-275
-status: pending

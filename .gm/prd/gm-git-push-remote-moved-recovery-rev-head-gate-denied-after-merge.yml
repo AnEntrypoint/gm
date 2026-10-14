@@ -1,5 +1,0 @@
-id: gm-git-push-remote-moved-recovery-rev-head-gate-denied-after-merge
-subject: git_push remote_moved recovery text says rev HEAD, which the symbolic-HEAD gate refuses after a merge pull
-body: 'Measured 2026-10-14 by session gm-drain-w1-131 on fixture r131-witness-1791958416981. After git_pull merges a diverged remote, the served step ''git_push {rev:"HEAD"}'' (rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs/git.rs remote_moved refusal, ~line 1614) returns gate_denied: ''source_ref HEAD is symbolic ... 2 unnamed commits''. Auto-recovery in the same path succeeds, so the verbatim step is the friction. Acceptance: the remote_moved recovery text names the sha to publish (the head_after of the pull, or the pushed rev) and that verbatim sequence ends with the sha pushed. Witness: diverged fixture with dirty non-overlapping paths; git_pull then the served step 2 text, ending with remote main equal to the local sha, not a gate_denied.'
-session_id: gm-drain-w1-131
-status: pending

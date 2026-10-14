@@ -1,8 +1,0 @@
-id: gm-exec-argv-code-limit-fails-to-spawn
-SESSION_ID: orch-main-r111
-title: exec language branches must not pass caller code on argv (CreateProcess 206)
-file: agentplug/crates/agentplug-host/src/exec_js.rs
-text: 'Acceptance: no exec language branch passes caller code on argv; a 40000-byte body dispatched through the python and the powershell verb runs whole or is refused with an error naming the limit, measured on the live build; bash at 12288 B still behaves as today. Witness by live dispatch, never a test file. Session orch-main-r111.'
-session_id: orch-main-r111
-status: completed
-witness: python 40000B body exit 0 stdout PYHEAD/PYTAIL 100 (was spawn_error os error 206); powershell 40000B exit 0 PSHEAD/PSTAIL 100 dispatch 1791666977822-500-575f968d193d87b3; bash 12288B M0..M23+ZTAIL (was M0..M15) dispatch 1791666977534-500-47aa7539fd1910b8; live build sha d26d337e1a60a40e daemon pid 24220; commit 574c82610b head 0beb855b CI run 38087197663 success

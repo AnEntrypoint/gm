@@ -1,5 +1,0 @@
-id: THINSLICE-SPOOL-ATOMIC-WRITE-blocker-gm-drain-w1-305
-subject: 'Blocked: THINSLICE-SPOOL-ATOMIC-WRITE cannot close in session gm-drain-w1-305'
-body: 'Row THINSLICE-SPOOL-ATOMIC-WRITE (session gm-drain-w1-305) stops at PROVE. (a) The temp-then-mv rule it asks to cut is absent from skills/gm/SKILL.md (codesearch 1791959561560-500-3b1ec74216c2ed2e), so that part is a no-op. (b) The claim fix is in agentplug/crates/agentplug-runner/src/daemon/claim_dispatch.rs (line 404 fs::rename of the whole request file, no sibling-temp filter). It needs a claim-code change, a CI-built runner (no local cargo) and a live temp-name vs final-name witness from a separate session. Leader H1 (claimer ignores name filter) is not separated from H2 here. Receipts: .gm/receipts/THINSLICE-SPOOL-ATOMIC-WRITE/01-SPECIFY.md and 02-PROVE.md. Duplicate of BLOCKER-SKILLGM-spool-final-name-claim (blocker-gm-drain-w1-36).'
-session_id: gm-drain-w1-305
-status: pending

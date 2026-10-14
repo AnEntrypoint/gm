@@ -1,5 +1,0 @@
-id: DREAMRSI-PROPOSE-SLICE-blocker-gm-drain-DREAMRSI-PROPOSE-SLICE
-title: 'Blocker for DREAMRSI-PROPOSE-SLICE: no build, push or live witness available in this run'
-session_id: gm-drain-bounded-55
-body: 'Correction, session gm-drain-bounded-55 (receipts 01-SPECIFY.md, 02-ELIMINATE.md under .gm/receipts/DREAMRSI-PROPOSE-SLICE/). Stale premises: (1) cargo 1.98.1 and wasm32-wasip1 are installed on this host (bash probe, 2026). (2) dream-strategy-propose body exists: handle_strategy_propose at rs-plugkit/crates/plugkit-core/src/orchestrator/dream_rsi.rs:781 (wasm32-gated like all dream_rsi handlers), propose_strategy at :749. Only the route is missing: orchestrator/mod.rs dispatch table (lines 400-407) has no dream-strategy-propose arm. Remaining fact to supply: a slim wasm build (cargo build -p rs-plugkit --release --target wasm32-wasip1 --features slim) plus a live dispatch of dream-strategy-propose through agentplug-runner, then a nested rs-plugkit commit on main and the parent gitlink bump. Verb that supplies it: the one-line route arm plus gm.prd_resolve after the witness dispatch id.'
-status: pending

@@ -1,5 +1,0 @@
-id: gm-w577-r138-agentplug-next-dispatch-hint
-subject: 'agentplug claim_dispatch.rs: add next_dispatch_hint and read-only versus mutating discrimination to the admission-starved reply'
-body: 'File: agentplug/crates/agentplug-runner/src/daemon/claim_dispatch.rs, fn admission_starved_answer (line 2007; called at 2497). Change: the starved reply carries a machine-readable next_dispatch_hint, and distinguishes read-only from mutating verbs. Witness: rebuild the daemon through CI, then dispatch a starved read-only verb and a starved mutating verb from a session other than the author and confirm the hint fields. Leader hypothesis: H1 (hint absent, confirmed by dispatch 1791961973189-500-cea64908c50d9f52). Scope: the agentplug submodule only; land on its remote main, then bump the parent pin.'
-session_id: gm-drain-w2-204
-status: pending

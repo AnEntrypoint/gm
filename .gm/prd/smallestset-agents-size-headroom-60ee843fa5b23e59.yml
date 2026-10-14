@@ -1,9 +1,0 @@
-id: SMALLESTSET-AGENTS-SIZE-HEADROOM
-title: 'SMALLESTSET: bring AGENTS.md under 20 KB so the 30 KB compaction trigger stops being near'
-description: 'Context spend: AGENTS.md is 29511 bytes against the 30 KB limit that triggers a full compaction under the user''s Invariant 3. Measured block bytes: Verified blocks 11950 total, Dream-RSI section 3939. The five Verified blocks and the Dream-RSI section (SMALLESTSET-AGENTS-* rows) are the instances; this row is the aggregate target and closes only when those rows have landed.'
-node: SMALLESTSET
-phase: P7
-session_id: lean-hop-SMALLESTSET
-source: AGENTS.md (whole file)
-witness: exec_js byte count of C:/dev/gm/AGENTS.md. Done when it is below 20000 bytes and every Verified-dated heading is gone. Closes after SMALLESTSET-AGENTS-VERIFIED-2026-09-14, -2026-10-04, -2026-10-05, -2026-10-07, -2026-10-08 and SMALLESTSET-AGENTS-DREAMRSI-SECTION.
-status: pending

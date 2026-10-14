@@ -1,5 +1,0 @@
-id: WADLER-gm-goal-w4-WADLER-1-blocker-gm-2e-fa19b3-w1-15
-subject: 'blocker: WADLER row EMIT/witness not run in gm-2e-fa19b3-w1-15'
-body: 'Row WADLER-gm-goal-w4-WADLER-1 reached SPECIFY only (receipt .gm/receipts/WADLER-gm-goal-w4-WADLER-1/01-SPECIFY.md). Blocked: (1) only object-guard shape lines may be replaced; bare Array.isArray tests stay; candidate count not yet counted. (2) gm-mcp/scripts/build.mjs bundle must be rebuilt in the same commit as the src edit; not run. (3) witness must come from another session; self-witness refused. Next: count candidates by regex over gm-mcp/src, add the shared predicate, rebuild the bundle, then a separate session witnesses it.'
-session_id: gm-2e-fa19b3-w1-15
-status: pending

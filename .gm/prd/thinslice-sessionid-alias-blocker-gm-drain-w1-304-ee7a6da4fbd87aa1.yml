@@ -1,5 +1,0 @@
-id: THINSLICE-SESSIONID-ALIAS-blocker-gm-drain-w1-304
-subject: 'Blocked: THINSLICE-SESSIONID-ALIAS cannot close; its cited alias sentence is stale in skills/gm/SKILL.md and gm-config/prose/entry.md, and the real sentence sits in rs-plugkit'
-body: 'SPECIFY (receipt .gm/receipts/THINSLICE-SESSIONID-ALIAS/01-SPECIFY.md) found no alias sentence in skills/gm/SKILL.md section 1 or gm-config/prose/entry.md. The sentence naming the spellings SESSION_ID, session_id or sessionId is at rs-plugkit/crates/plugkit-core/src/orchestrator/instructions/prose/entry.md:150. That file is include_str!-compiled into the rs-plugkit wasm, so deleting it needs an rs-plugkit rebuild (--features slim, built in CI). The normalization half needs a dispatch-layer change in gm-mcp/src/dispatch.js (today it reads body.SESSION_ID only) plus a bundle rebuild. Closing needs a witness from a second session: a live exec_js dispatch under each of the three spellings returns ok on the rebuilt build. Next step: re-scope the row to the rs-plugkit path and the gm-mcp normalization, then run it through a witness session.'
-session_id: gm-drain-w1-304
-status: pending

@@ -1,5 +1,0 @@
-id: BLOCKER-SKILLGM-spool-inname-validation-blocker-gm-drain-w1-37
-subject: 'Blocker for BLOCKER-SKILLGM-spool-inname-validation: named rejection and daemon subagent-id mint not yet landed'
-body: 'Parent row: BLOCKER-SKILLGM-spool-inname-validation. Stage SPECIFY receipt: .gm/receipts/BLOCKER-SKILLGM-spool-inname-validation/01-SPECIFY.md. Existing prefix check: agentplug/crates/agentplug-runner/src/daemon/claim_dispatch.rs:1944-1964 (session_id_task_mismatch). Gap 1: non-conforming in/ names are quarantined silently at claim_dispatch.rs:1645, with no named reply for bare-integer names. Gap 2: no daemon mint of <parent>-sub<k>; rs-plugkit/crates/plugkit-core/src/orchestrator/instructions/prose/lean-p7.md still tells agents to derive it. Close needs: a CI-verified runner build (local cargo blocked), then a live spool probe with a bare-integer in-file name whose reply is a named error, then the SKILL.md claim-key sentence reduced. Dispatch evidence: 1791957324268-500-5b9d1254813eaac9, 1791957337649-500-c576c1f7b6261268.'
-session_id: gm-drain-w1-37
-status: pending

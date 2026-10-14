@@ -1,5 +1,0 @@
-id: TYPE4-gm-goal-w2-TYPE4-1
-subject: Deduplicate flagValue helper in gm-mcp/src/http-transport.js and index.js
-description: 'http-transport.js:15 and index.js:13 define byte-identical flagValue(name) (argv scan for --name, returns next non-flag token). Witness: codesearch dispatch 1791745727845-500-c5c1f4a0525f20de. Candidate fix: import flagValue from one module, after checking index.js <-> http-transport.js import direction to avoid a cycle.'
-status: pending
-session_id: gm-goal-w2-TYPE4

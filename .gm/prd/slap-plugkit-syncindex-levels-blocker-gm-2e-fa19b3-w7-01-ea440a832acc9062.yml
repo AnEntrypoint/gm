@@ -1,5 +1,0 @@
-id: SLAP-PLUGKIT-SYNCINDEX-LEVELS-blocker-gm-2e-fa19b3-w7-01
-subject: 'Blocker: SLAP-PLUGKIT-SYNCINDEX-LEVELS EMIT and witness cannot run locally'
-status: pending
-body: 'Row SLAP-PLUGKIT-SYNCINDEX-LEVELS stalls at EMIT and witness. Cause: local cargo is blocked by a hook (memory gm-no-local-cargo-verified-by-ci), so the sync_index split cannot be compiled here, and the live witness needs a CI-built rs-plugkit wasm picked up by the runner. Stale cite: sync_index is at memory_md.rs:695-1098 (404 lines), not 689/395. Receipts 01-SPECIFY.md and 02-PROVE.md in .gm/receipts/SLAP-PLUGKIT-SYNCINDEX-LEVELS/. Unblock: run the refactor where cargo is allowed, or publish it through CI and witness with a live memory sync dispatch whose report keys match lines 1079-1096.'
-session_id: gm-2e-fa19b3-w7-01

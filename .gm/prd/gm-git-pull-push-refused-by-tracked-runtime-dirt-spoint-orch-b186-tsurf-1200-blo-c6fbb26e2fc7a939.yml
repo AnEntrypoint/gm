@@ -1,8 +1,0 @@
-id: gm-git-pull-push-refused-by-tracked-runtime-dirt-spoint-orch-b186-tsurf-1200-blocker-gm-drain-w1-130
-subject: 'Blocker: gm-git-pull-push-refused-by-tracked-runtime-dirt-spoint-orch-b186-tsurf-1200 cannot be PROVEd or witnessed in session gm-drain-w1-130'
-surface: rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs/git.rs (git_pull, git_push dirty and overlap gates)
-severity: MEDIUM
-acceptance: A live git_pull {branch:main} and git_push {rev:HEAD} on c:/dev/gm with dirty runtime paths outside the incoming change set succeed, witnessed by a dispatch id from a session other than the row author, against the CI-built wasm; a submodule gitlink conflict is refused before merge state is written.
-body: 'Row parent: gm-git-pull-push-refused-by-tracked-runtime-dirt-spoint-orch-b186-tsurf-1200. Receipts: .gm/receipts/gm-git-pull-push-refused-by-tracked-runtime-dirt-spoint-orch-b186-tsurf-1200/01-SPECIFY.md and 02-PROVE.md. Leader H1 (dirty gate reads full porcelain) is not separated from H2 (overlap rule already present at git.rs ~3375/~3406). Separating them needs a live git_pull/git_push on a shared dirty tree with other lanes writing, which this run cannot do safely, plus a CI-built wasm and a cross-session witness. Next step: a single-writer window (no other lane holds .gm/ or submodule dirt), then run the live probe on the current CI-built guest and witness it from another session.'
-session_id: gm-drain-w1-130
-status: pending

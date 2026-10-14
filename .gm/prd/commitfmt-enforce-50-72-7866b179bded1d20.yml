@@ -1,5 +1,0 @@
-id: COMMITFMT-ENFORCE-50-72
-subject: git_commit has no subject-length or body-wrap enforcement; the 50/72 rule is prose only
-session_id: gm-drain-bounded-39
-body: 'Verified by RULE5072-gm-goal-w2-RULE5072-1 (witness 1791890912865-500-d34a6f1f2b8abc07): wasm_dispatch/verbs/git.rs git_commit (line 2174) refuses only an empty message. The rule lives in orchestrator/instructions/prose/lean-p5.md:41-47 as a self-check the agent must run. Acceptance: git_commit refuses (or re-drafts with a stated reason) a subject over 50 characters, and a body line over 72, with a live witness dispatch. blocked_by: COMMITFMT-ENFORCE-50-72-blocker-gm-drain-bounded-39 (session gm-drain-bounded-39; needs a CI-built rs-plugkit guest and a cross-session witness dispatch id).'
-status: pending

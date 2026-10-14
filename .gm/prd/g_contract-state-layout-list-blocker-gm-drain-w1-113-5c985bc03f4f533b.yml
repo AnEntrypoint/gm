@@ -1,5 +1,0 @@
-id: G_CONTRACT-state-layout-list-blocker-gm-drain-w1-113
-subject: 'Blocked: G_CONTRACT-state-layout-list needs a rs-plugkit Rust module, a CI-only wasm build and a cross-session witness'
-body: 'Row G_CONTRACT-state-layout-list cannot close in session gm-drain-w1-113. SPECIFY receipt: .gm/receipts/G_CONTRACT-state-layout-list/01-SPECIFY.md. The path constants already exist as data in rs-plugkit/crates/plugkit-core/src/gitignore.rs (wasm32-only, MANAGED_ENTRIES and MUST_STAY_TRACKED). Closing needs: (a) a new state-layout module in rs-plugkit, built only by CI (wasm32-wasip1 --features slim; local cargo blocked), (b) gm-config/prose/entry.md ''State'' citing that module, re-synced into rs-plugkit by the reviewed AGENTS.md re-sync, and (c) a live witness from another session through the published guest. Default chosen: new state_layout.rs in plugkit-core, citing by Rust path. Next: a CI-built rs-plugkit release and a cross-session witness dispatch.'
-session_id: gm-drain-w1-113
-status: pending

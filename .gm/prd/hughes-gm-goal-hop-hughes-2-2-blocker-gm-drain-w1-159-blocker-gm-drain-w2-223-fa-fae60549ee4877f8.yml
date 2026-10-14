@@ -1,8 +1,0 @@
-id: HUGHES-gm-goal-hop-HUGHES-2-2-blocker-gm-drain-w1-159-blocker-gm-drain-w2-223
-subject: 'Blocker: owner decision on property test in gm-mcp still unresolved (row HUGHES-gm-goal-hop-HUGHES-2-2-blocker-gm-drain-w1-159)'
-body: 'Row HUGHES-gm-goal-hop-HUGHES-2-2-blocker-gm-drain-w1-159 cannot close: its acceptance is an owner decision (may a generated-input property test live in gm-mcp), and no witness can produce that decision. AGENTS.md bans test or mock files in delivered paths and gm-prd forbids test files, so the default is no property test. SPECIFY receipt: .gm/receipts/HUGHES-gm-goal-hop-HUGHES-2-2-blocker-gm-drain-w1-159/01-SPECIFY.md. Needed from owner: a yes or no on whether a generated-input check against real code paths may live in gm-mcp. Witness: none. Source: gm-drain-w2-223.'
-session_id: gm-drain-w2-223
-status: pending
-blockedBy:
-- external
-deferReason: 'duplicate blocker: the base row already names the same missing fact'

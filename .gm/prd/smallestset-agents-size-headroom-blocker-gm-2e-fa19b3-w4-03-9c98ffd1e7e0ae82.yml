@@ -1,5 +1,0 @@
-id: SMALLESTSET-AGENTS-SIZE-HEADROOM-blocker-gm-2e-fa19b3-w4-03
-subject: 'Blocker: AGENTS.md is 26546 bytes, above the 20000-byte row target; sub-row cited blocks are absent'
-body: 'Witness fails: byte count 26546 >= 20000 (dispatch 1791851214758-500-56bb859ba365e3ef). The 30000-byte invariant holds. Verified-dated headings and the Dream-RSI section are absent from the tree, so the five SMALLESTSET-AGENTS-VERIFIED-* sub-rows and SMALLESTSET-AGENTS-DREAMRSI-SECTION are stale and must be closed as stale. Next: a compaction row that cuts about 6.6 KB from AGENTS.md (candidates: Implementation rules, Verification and delivery, Dated findings) while every named path and verb still resolves. Receipts: .gm/receipts/SMALLESTSET-AGENTS-SIZE-HEADROOM/.'
-session_id: gm-2e-fa19b3-w4-03
-status: pending

@@ -1,5 +1,0 @@
-id: BLOCK-MEMORIZE-PRUNE-ENUM-blocker-gm-drain-w1-20
-subject: 'Blocker for BLOCK-MEMORIZE-PRUNE-ENUM: prose reduction and independent witness not closable in one run'
-body: 'Acceptance (a) and (b) hold at HEAD: rs-plugkit memory.rs:902-913 PruneRequest enum; prune_candidates (memory.rs:1033-1095) has no removal call; live witness dispatch 1791957137367-500-2896b750fb81718f (memorize-prune query) returned mode review and removed nothing. Open part (c): reduce gm-config/prose/entry-extended.md:52 to name the two variants. That needs a gm-config edit, a vendored re-sync into rs-plugkit/crates/plugkit-core/src/orchestrator/instructions/prose/ and a CI wasm build (local cargo blocked), then a witness from a session other than gm-drain-w1-20. Receipts: .gm/receipts/BLOCK-MEMORIZE-PRUNE-ENUM/01-SPECIFY.md, 02-PROVE.md. Unblock: run the gm-config prose edit and re-sync through CI, then witness from another session with prd-resolve.'
-session_id: gm-drain-w1-20
-status: pending

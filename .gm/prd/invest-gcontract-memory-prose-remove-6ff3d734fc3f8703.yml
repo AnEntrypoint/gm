@@ -1,8 +1,0 @@
-id: INVEST-GCONTRACT-MEMORY-PROSE-REMOVE
-title: Delete the four-memory-types sentence from both prose copies
-description: 'Split from G_CONTRACT-memory-kind-enum; depends on INVEST-GCONTRACT-MEMORY-KIND-ENUM so the enum carries the rule before the prose stops stating it. Delete the sentence ''Four memory types, nothing else...'' at gm-config/prose/entry-extended.md:46 and its duplicate at rs-plugkit/crates/plugkit-core/src/orchestrator/instructions/prose/entry-extended.md:46. Witness: grep for ''Four memory types'' returns zero hits.'
-status: pending
-session_id: lean-node-INVEST
-blockedBy:
-- external
-deferReason: 'Ordering: the enum (INVEST-GCONTRACT-MEMORY-KIND-ENUM) must land before the four-memory-types sentence is deleted. Enum not yet done, so the sentence at gm-config/prose/entry-extended.md:46 stays.'

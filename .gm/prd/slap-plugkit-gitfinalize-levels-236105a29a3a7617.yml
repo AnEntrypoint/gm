@@ -1,8 +1,0 @@
-id: SLAP-PLUGKIT-GITFINALIZE-LEVELS
-title: 'SLAP: separate git_finalize push-and-CI composition from response packing'
-description: 'rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs/git.rs git_finalize (line 1792, 547 lines) mixes ref resolution, git_push delegation, push-result unpacking, CI status and validated-marker writes, and the JSON response assembly for several branches in one function. Scope: this function. Change: one helper per branch (publish_isolated_ref, the no-source-ref commit path) returning a typed outcome, with git_finalize selecting and packing. Behaviour unchanged: every response field name and the ok, committed, pushed and reason values stay identical. Witness: cargo build -p rs-plugkit --target wasm32-wasip1 --features slim, then a live git_finalize dispatch through agentplug-runner returning the same keys.'
-node: SLAP
-phase: P3
-status: pending
-source: lean-hop-SLAP
-session_id: lean-hop-SLAP

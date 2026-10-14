@@ -1,5 +1,0 @@
-id: MEMTOOL-AGENTS-VERIFIED-HISTORY-TO-MEMORY-blocker-gm-drain-w1-206
-subject: 'Blocked: MEMTOOL-AGENTS-VERIFIED-HISTORY-TO-MEMORY cites AGENTS.md dated Verified sections that no longer exist'
-body: 'Row premise refuted by the tree at HEAD 091be9e. AGENTS.md (29203 bytes) has no dated Verified 2026-09-14/10-04/10-05/10-07/10-08 sections; the only Verified reference is line 100 citing docs/verified-incidents.md (2026-10-11). The incident sections were purged by commit 66d10b4 (AGENTSMD-PURGE-INCIDENT-SECTIONS) and now live at docs/verified-incidents.md (line 131 ''## Verified 2026-10-08''). Step 1 has no source in AGENTS.md; step 2 deletion is already satisfied. Decision needed from the owner: retire the row, or re-scope it to memorize-fire of docs/verified-incidents.md sections with a fresh scope. Receipt: .gm/receipts/MEMTOOL-AGENTS-VERIFIED-HISTORY-TO-MEMORY/01-SPECIFY.md. Refuting witnesses: fs_stat AGENTS.md; codesearch ''Verified'' over AGENTS.md; git_log AGENTS.md (66d10b4).'
-session_id: gm-drain-w1-206
-status: pending

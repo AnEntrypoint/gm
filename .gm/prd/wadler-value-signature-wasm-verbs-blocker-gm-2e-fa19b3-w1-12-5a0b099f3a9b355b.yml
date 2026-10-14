@@ -1,5 +1,0 @@
-id: WADLER-VALUE-SIGNATURE-WASM-VERBS-blocker-gm-2e-fa19b3-w1-12
-subject: 'Blocker for WADLER-VALUE-SIGNATURE-WASM-VERBS: typed request structs cannot be witnessed in one run'
-body: 'Stage reached: SPECIFY (receipt .gm/receipts/WADLER-VALUE-SIGNATURE-WASM-VERBS/01-SPECIFY.md). git.rs alone has 87 Value-typed signatures (codesearch dispatch 1791850548567-500-9c07677468c64263); the row covers about 145 across git.rs, memory.rs, search.rs, verbs.rs. PROVE through COMPLETE need a wasm build through CI (--features slim) and a live witness through agentplug-runner; no local cargo. Next: split the row into per-file rows (git.rs first) with one witnessable verb group each.'
-session_id: gm-2e-fa19b3-w1-12
-status: pending

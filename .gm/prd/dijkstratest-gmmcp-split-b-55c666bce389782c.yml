@@ -1,7 +1,0 @@
-id: DIJKSTRATEST-GMMCP-SPLIT-B
-subject: 'gm-mcp standing tests cluster B: re-express runner and daemon assertions as exec_js probes, then delete the files'
-body: |-
-  Files: gm-mcp/test/daemon-preflight.test.mjs (78), runner-recovery.test.mjs (20), leak-reaper.test.mjs (21), timeout-validation.test.mjs (20). Parent DIJKSTRATEST-GMMCP-STANDING-TESTS. Acceptance: each assertion has an exec_js probe against the real boundary witnessed from another session, then the files are removed. Land serially with A, C, D. runner-recovery's no-pid case is the DEEPMOD-RUNNER-RECOVERY-NOPID live case, so its probe must separate that hypothesis. Not witnessed in-session.
-  blocked_by (session gm-drain-a-44, receipt .gm/receipts/DIJKSTRATEST-GMMCP-SPLIT-B/01-SPECIFY.md): missing cross-session exec_js witness per assertion (verb: exec_js, run from a session other than this one); gm-mcp delivery gated by the foreign src/dispatch.js hunk and bin drift gate, already named by DBC-gm-goal-w4-DBC-1-blocker-gm-drain-bounded-43 (no duplicate blocker filed).
-session_id: gm-drain-a-44
-status: pending

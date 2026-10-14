@@ -1,8 +1,0 @@
-id: SLAP-PLUGKIT-SCANLITERAL-LEVELS
-title: 'SLAP: separate code_index scan_literal request validation, scope resolution and scan loop'
-description: 'rs-plugkit/crates/plugkit-core/src/code_index.rs scan_literal (lines 5128-6264, 1137 lines; verified 2026-10-14 in session gm-drain-w2-400) mixes pattern and matcher construction, root and scope and glob resolution, the origin decision, and the file walk with per-hit formatting in one function. Scope: this function. Change: a ScanPlan built by one function from the request, and a walk function taking the plan; scan_literal composes them. Behaviour unchanged: the output and counts keys, error_kind values and exhaustive flag stay identical. Witness: cargo build of rs-plugkit, then a live grep literal dispatch over this repo returning the same counts.'
-node: SLAP
-phase: P3
-status: pending
-source: lean-hop-SLAP
-session_id: lean-hop-SLAP

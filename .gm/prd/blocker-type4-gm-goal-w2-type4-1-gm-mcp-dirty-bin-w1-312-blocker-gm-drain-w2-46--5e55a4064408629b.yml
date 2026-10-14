@@ -1,6 +1,0 @@
-id: BLOCKER-TYPE4-gm-goal-w2-TYPE4-1-gm-mcp-dirty-bin-w1-312-blocker-gm-drain-w2-46
-subject: 'Blocked: gm-mcp row cannot reach an exclusive tree; PROVE precondition fails'
-parent: BLOCKER-TYPE4-gm-goal-w2-TYPE4-1-gm-mcp-dirty-bin-w1-312
-body: 'Parent row: BLOCKER-TYPE4-gm-goal-w2-TYPE4-1-gm-mcp-dirty-bin-w1-312 (session gm-drain-w2-46). SPECIFY receipt: .gm/receipts/BLOCKER-TYPE4-gm-goal-w2-TYPE4-1-gm-mcp-dirty-bin-w1-312/01-SPECIFY.md. git_status 1791960068766-500-f4e7535079ad5619 shows foreign-lane writes in gm-mcp: src/dispatch.js, src/dev-sync.js, src/release-bridge.js, src/self-update.js (staged), src/spool-store.js (untracked), scripts/install-hooks.mjs, scripts/measure-wire-size.mjs, test/mcp-http-probe.mjs. Committing bin/gm-mcp-server.js or index.js/http-transport.js from this tree would bundle those hunks, and the one-writer rule forbids it. scripts/build.mjs exists (fs_stat 1791960085080-500-d883eeb0f663ce8d), so the rebuild itself is runnable only once the other lanes release gm-mcp. Unblock: the owning lanes commit or park their gm-mcp src edits, then rerun this row. Leader hypothesis: writer contention, not a code defect.'
-session_id: gm-drain-w2-46
-status: pending

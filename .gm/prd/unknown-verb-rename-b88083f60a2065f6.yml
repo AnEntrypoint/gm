@@ -1,5 +1,0 @@
-id: UNKNOWN-VERB-RENAME
-subject: Rename the mutable verbs and state to unknown across gm-mcp, plugkit and the skills
-body: 'mutable-add, mutable-list and mutable-resolve become unknown-add, unknown-list and unknown-resolve, with aliases kept for one release. Witness: each new verb answers a live dispatch.'
-session_id: gm-invariants-08
-status: pending

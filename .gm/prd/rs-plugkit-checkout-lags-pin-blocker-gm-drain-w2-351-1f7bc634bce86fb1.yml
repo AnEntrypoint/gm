@@ -1,7 +1,0 @@
-id: RS-PLUGKIT-CHECKOUT-LAGS-PIN-blocker-gm-drain-w2-351
-subject: rs-plugkit checkout cannot reach parent pin 480fc431 without discarding another writer's work
-status: pending
-blockedBy:
-- RS-PLUGKIT-CHECKOUT-LAGS-PIN
-body: 'Blocks RS-PLUGKIT-CHECKOUT-LAGS-PIN (session gm-drain-w2-351). Row figures are stale: parent gitlink is 480fc4310f1a5c24822661283d12e0b9bb028fd4 (origin/main tip), not 6457f1cb; local rs-plugkit HEAD is 4b8e4c53 on main, not b68c669. Local main is ahead 7 and behind 12 of origin/main (merge-base 4be7a93e). The 7 ahead commits are unpushed lanmower work and crates/plugkit-core/Cargo.toml is dirty (version 0.1.1652 to 0.1.1651). Moving the checkout to the pin would discard or orphan that work, and a push would publish another lane''s commits. Needed from the owning lane: push or hand off the 7 commits, drop or commit the Cargo.toml change, then the checkout moves to 480fc431. Receipt: .gm/receipts/RS-PLUGKIT-CHECKOUT-LAGS-PIN/01-SPECIFY.md. Evidence: dispatch 1791964195451-500-46ae6cd9a970c584 (rs-plugkit status), 1791964211069-500-ff72bfee4b3325af (parent status), exec_js ahead/behind read 1791964537729-500-743811d1e5a1aea8.'
-session_id: mcp-codemode-23256-1791964568212

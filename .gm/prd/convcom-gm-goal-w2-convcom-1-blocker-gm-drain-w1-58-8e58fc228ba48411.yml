@@ -1,5 +1,0 @@
-id: CONVCOM-gm-goal-w2-CONVCOM-1-blocker-gm-drain-w1-58
-subject: 'BLOCKER: CONVCOM-gm-goal-w2-CONVCOM-1 has no file, acceptance or witness'
-body: 'SPECIFY blocker for CONVCOM-gm-goal-w2-CONVCOM-1 (session gm-drain-w1-58). The row carries only a subject: no acceptance, no file path, no witness, no cause. Checked: codesearch for a commit-subject check in gm-mcp/src (regex ''type\(scope\)'' and ''conventional commit'') returned 0 matches in 30 files; callers git_finalize shows the only edge at rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs.rs:3137 into rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs/git.rs:3569-4290. Enforcing a subject rule needs a decided target (gm git verb in rs-plugkit, or gm-mcp/src with a bundle rebuild), a rule (accepted type list, scope rule, whether pre-existing subjects are grandfathered) and a witness; none is named. Per gm-prd, an executor that finds no file files a blocker and does not guess one. Next step: re-scope the row with prd-add under its own id (overwrite:true) naming file, rule and witness.'
-session_id: gm-drain-w1-58
-status: pending

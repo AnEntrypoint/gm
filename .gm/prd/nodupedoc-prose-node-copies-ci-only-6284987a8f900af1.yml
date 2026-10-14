@@ -1,6 +1,0 @@
-id: NODUPEDOC-PROSE-NODE-COPIES-ci-only
-subject: 'CI-only: NODUPEDOC-PROSE-NODE-COPIES needs an rs-plugkit wasm rebuild witness'
-witness: CI run of the rs-plugkit wasm build (publish / release, step Build) plus a live instruction dispatch showing the shared sentence served once, citing the new dispatch id.
-body: 'Parent row: NODUPEDOC-PROSE-NODE-COPIES (session gm-fin-23, role resolver). Findings from SPECIFY and PROVE: the duplicated sentence "The walk is recorded by the transition that leaves this node." occurs 143 times in gm-config/prose and 143 times in rs-plugkit/crates/plugkit-core/src/orchestrator/instructions/prose (live codesearch, exhaustive). The rs-plugkit copies are compiled in through include_str! in rs-plugkit/crates/plugkit-core/src/orchestrator/instructions/lean_prose.rs and entry.rs, so the deduplicated fallback (the row asks it to embed the config copy at build time) changes Rust source. Verifying the served instruction requires a rebuilt rs-plugkit wasm through agentplug-runner, and local cargo builds are blocked, so the witness is CI-only per gm-prd step 5. Parent stays pending; not self-witnessed.'
-session_id: gm-fin-23
-status: pending

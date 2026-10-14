@@ -1,8 +1,0 @@
-id: SPECDRIFT-gm-goal-hop-SPECDRIFT-2-3-blocker-gm-drain-w1-285-blocker-gm-drain-w2-423
-subject: 'Owner decision needed: retire SPECDRIFT-gm-goal-hop-SPECDRIFT-2-3 (premise refuted, verify-build resolves)'
-body: 'Row gm-drain-w2-423 witnessed the w1-285 blocker. Probe dispatch 1791965894253-500-905def043c42532f finds verify-build in gm-mcp/package.json:16 and gm-mcp/AGENTS.md:79; fs_stat dispatch 1791965898864-500-f715a9b284c8e898 confirms gm-mcp/scripts/check-bin-drift.mjs. The cited defect is absent, so no code edit binds the parent row. The w1-285 body states that the parent row SPECDRIFT-gm-goal-hop-SPECDRIFT-2-3 (created in error, a tension node) needs an owner decision to retire. Receipts: .gm/receipts/SPECDRIFT-gm-goal-hop-SPECDRIFT-2-3-blocker-gm-drain-w1-285/01-SPECIFY.md. Action: owner retires the parent row via prd-resolve or deletion, then this blocker closes on that retirement witness.'
-session_id: gm-drain-w2-423
-status: pending
-blockedBy:
-- external
-deferReason: 'duplicate blocker: the base row already names the same missing fact'

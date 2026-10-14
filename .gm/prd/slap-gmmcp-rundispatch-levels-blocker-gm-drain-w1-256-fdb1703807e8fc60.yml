@@ -1,5 +1,0 @@
-id: SLAP-GMMCP-RUNDISPATCH-LEVELS-blocker-gm-drain-w1-256
-subject: 'Blocked: SLAP-GMMCP-RUNDISPATCH-LEVELS cannot land while gm-mcp/src/dispatch.js holds foreign WIP'
-body: 'Row SLAP-GMMCP-RUNDISPATCH-LEVELS is blocked at PROVE. (1) Cited lines 1166-1361 are stale: runDispatch is at dispatch.js:1963-2210 (about 248 lines, not 196). (2) src/dispatch.js has foreign uncommitted WIP at runnerEnsureInFlight (line 1186, 26 insertions and 27 deletions; git_diff dispatch 1791959068437-500-28ac7a49914de4f3). A publish with paths:[src/dispatch.js] would commit that hunk and break the one-writer rule. (3) The witness needs bin/gm-mcp-server.js rebuilt from the same src, then a live exec_js echo. Unblock: the other writer of gm-mcp/src/dispatch.js lands or parks its WIP, then the row is re-run. Receipts: .gm/receipts/SLAP-GMMCP-RUNDISPATCH-LEVELS/01-SPECIFY.md and 02-PROVE.md.'
-session_id: gm-drain-w1-256
-status: pending
