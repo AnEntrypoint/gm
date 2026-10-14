@@ -1,0 +1,5 @@
+id: DBC-gm-goal-w4-DBC-1-blocker-gm-drain-w1-63
+subject: 'BLOCKER DBC-gm-goal-w4-DBC-1: codemode unknown-key witness does not separate the cause (H1 envelope strip vs H2 undeclared body keys)'
+body: 'Blocks row DBC-gm-goal-w4-DBC-1 (session gm-drain-w1-63). PROVE step: the live bogus_field probe is admitted under both H1 (envelope z.object strips unknown keys, gm-mcp/src/codemode.js:19) and H2 (verb body keys fold into body and are never checked against verbBodySchema, gm-mcp/src/codemode.js:37-50, gm-mcp/src/verb-bodies.js:7-15), so it does not separate the leader H2. Resolve by: (1) add a declared-body-key check for verb calls in codemode.js (refuse keys outside verbBodySchema fields and aliases, keep session_id and cwd defaults), (2) rebuild bin/gm-mcp-server.js with node scripts/build.mjs in the same commit, (3) restart the live gm-mcp so the witness runs new code, (4) witness from a session other than gm-goal-w4-DBC with a refused bogus key and an admitted declared key. Receipt: .gm/receipts/DBC-gm-goal-w4-DBC-1/01-SPECIFY.md.'
+session_id: mcp-codemode-31304-1791957597006
+status: pending

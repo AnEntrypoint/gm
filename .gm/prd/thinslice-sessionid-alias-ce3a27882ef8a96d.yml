@@ -1,0 +1,4 @@
+id: THINSLICE-SESSIONID-ALIAS
+subject: 'Thin slice for G_CONTRACT-session-id-alias-spellings: normalize SESSION_ID, session_id and sessionId once in the dispatch layer and delete the alias sentence from skills/gm/SKILL.md section 1 and gm-config/prose/entry.md in the same change. Witness: a live exec_js dispatch under each spelling returns ok, and a grep for the alias sentence returns no match.'
+session_id: lean-hop-THINSLICE
+status: pending
