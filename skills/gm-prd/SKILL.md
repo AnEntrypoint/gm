@@ -9,8 +9,8 @@ One run, one row, one session. Stages run in order, none a subagent. Each writes
 
 ## Procedure
 
-1. SPECIFY: restate the row and acceptance; check each cited line against the tree (absent: stale). Unknowns: `mutable-add`.
-2. PROVE: precondition, invariant, postcondition; run each.
+1. SPECIFY: restate the row and acceptance; check each cited line against the tree (absent: stale). Unknowns: `mutable-add`. If the row asserts a cause, write its ACH matrix (`gm-config/prose/ach.md`) into this receipt: at least two hypotheses, evidence as dispatch ids, `C`/`I`/`N` cells, the leader, and its probe.
+2. PROVE: precondition, invariant, postcondition; run each. The leader's probe runs here first. A probe that does not separate the leader from the next hypothesis is a blocker row, not a pass.
 3. EMIT: exact-match Edit only; witness through the live entry point; keep the dispatch id.
 4. STATE: the change replays idempotently; name the state it owns.
 5. CONC: list each touched file and other writers' hunks (`git_status` with paths).
@@ -38,3 +38,4 @@ Before that commit, the bake-input re-bake rule is defined in gm-hop: Re-bake in
 - Never let the pool dip: defined in gm-orchestrate: Never let the pool dip.
 - Shared work tree, Git API publish route, redundant-push reporting and collision recovery: defined in gm-orchestrate: Shared-tree publish. Bisect by live runs means re-running the witness against current state, or against a remote blob (`gh api /repos/<owner>/<repo>/contents/<path>?ref=main`) or a `git archive` of a remote sha into a temp dir that is deleted afterwards -- read-only, never published from.
 - Stage receipts are the evidence. A worker's result is the stage reached, the receipt or blocker, files changed and the successor.
+- A row closes only when its witness names the leader hypothesis from SPECIFY. A witness that matches a rejected hypothesis, or that matches every hypothesis, binds no row: file a mutable and keep the row pending.
