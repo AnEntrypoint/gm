@@ -58,7 +58,7 @@ Minimal config in `~/.openclaw/openclaw.json`:
 
 Zero-config works for basic capability. Production tuning groups: `capture`, `extraction`, `pipeline`, `recall`, `persona`, `embedding` -- see the upstream plugin documentation for the full recommended template and failure-mode notes (embedding four-tuple, retention-day gating, etc.).
 
-### 3. Migrating from an older install (v1.x/v0.x -> v2.0.0+)
+### 3. Migrating from an older install (v1.x or v0.x, to v2.0.0+)
 
 Use the migration tool documented in the upstream repo's migration README. New installs skip this.
 
