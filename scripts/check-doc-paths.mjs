@@ -7,6 +7,8 @@ import { fileURLToPath } from 'node:url';
 // Every repository path that the site and docs name must resolve on disk. A path is a
 // backtick or <code> token that starts with a top-level directory or file this repo ships.
 // Exit 1 on any path that does not exist, and print RESULT: PASS otherwise.
+// A bare file name with no directory (specify.md, state.md) is not a repository path and is
+// not checked: it names a served stage, a runtime file or a prose key, never a location here.
 
 const root = process.argv[2]
   ? path.resolve(process.argv[2])
