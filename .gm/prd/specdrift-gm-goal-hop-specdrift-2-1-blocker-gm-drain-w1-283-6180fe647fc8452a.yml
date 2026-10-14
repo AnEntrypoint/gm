@@ -1,5 +1,0 @@
-id: SPECDRIFT-gm-goal-hop-SPECDRIFT-2-1-blocker-gm-drain-w1-283
-subject: Push of gm-mcp CHANGELOG fix refused by bin drift gate (uncommitted src/bin writers)
-body: 'Row SPECDRIFT-gm-goal-hop-SPECDRIFT-2-1 is pending. Fix committed locally in gm-mcp as 988ac4270b834724972146014033e1d329b0ad58 (CHANGELOG.md only; dispatch 1791959369311-500-afe1f72a2d50cb76). git_push refused: gate_denied, check-bin-drift needs HEAD with no uncommitted changes under bin/, src/, build inputs. Other writers hold uncommitted changes there: bin/gm-mcp-server.js, src/dev-sync.js, src/dispatch.js, src/release-bridge.js, src/self-update.js (staged), src/spool-store.js (untracked). Unblock: the owner of those hunks commits or reverts them, then run node scripts/check-bin-drift.mjs (rebuild with npm run build if STALE), then git_push gm-mcp main, then bump the parent gitlink C:\dev\gm\gm-mcp to the pushed tip, then prd-resolve the parent row with the witness dispatch 1791959237489-500-495383f242fc9f5f and 1791959238631-500-25d0a52b0659dfa6. Receipts: C:\dev\gm\.gm\receipts\SPECDRIFT-gm-goal-hop-SPECDRIFT-2-1\'
-session_id: gm-drain-w1-283
-status: pending

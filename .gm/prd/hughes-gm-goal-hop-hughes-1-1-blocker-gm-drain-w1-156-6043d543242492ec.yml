@@ -1,5 +1,0 @@
-id: HUGHES-gm-goal-hop-HUGHES-1-1-blocker-gm-drain-w1-156
-subject: 'Blocked: HUGHES-gm-goal-hop-HUGHES-1-1 cannot close; a property witness needs a test file the rules forbid'
-status: pending
-body: 'Row HUGHES-gm-goal-hop-HUGHES-1-1 (gm-mcp/src has zero property-based checks) cannot close in session gm-drain-w1-156. SPECIFY and PROVE receipts: .gm/receipts/HUGHES-gm-goal-hop-HUGHES-1-1/01-SPECIFY.md and 02-PROVE.md. Absence confirmed by codesearch dispatch 1791958433472-500-6858c80336e3d211 (0 matches over 30 files, exhaustive). A closing witness must be a generated-input check, which is a test file (forbidden by the gm-prd No test files rule) or a synthetic test (banned by gm-mcp AGENTS.md). Needed: an owner decision on whether a generated-input check may live in gm-mcp, and whether it may be a non-test script. Related: HUGHES-gm-goal-hop-HUGHES-2-2 raises the same decision.'
-session_id: gm-drain-w1-156

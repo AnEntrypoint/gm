@@ -1,5 +1,0 @@
-id: BROWSER-LEASE-HOT-PROFILE-blocker-gm-drain-w3-85
-subject: 'Witness BROWSER-LEASE-HOT-PROFILE: run the CI-built runner''s sequential lease witness'
-body: 'Parent row BROWSER-LEASE-HOT-PROFILE. Code landed on agentplug main at 9e9aadf (crawl_lease.rs hot browser + idle reaper, commit c043c211 rebased). Blocker: no live witness yet. Needed: (1) CI green for 9e9aadf (ci-status showed no runs at dispatch 1791971114773-500-e897db7e38181068); (2) runner release containing it, self-updated; (3) live browser_lease_acquire/release twice on one root returns the same chrome_pid, and a third root gets its own profile. Receipts: .gm/receipts/BROWSER-LEASE-HOT-PROFILE/01-SPECIFY.md, 02-EDIT.md. Parent gitlink bump is left to bump-pins.yml.'
-session_id: gm-drain-w3-85
-status: pending

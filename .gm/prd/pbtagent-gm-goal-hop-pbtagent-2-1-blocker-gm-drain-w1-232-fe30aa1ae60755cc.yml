@@ -1,5 +1,0 @@
-id: PBTAGENT-gm-goal-hop-PBTAGENT-2-1-blocker-gm-drain-w1-232
-subject: 'Blocked: PBTAGENT-gm-goal-hop-PBTAGENT-2-1 needs owner decision HUGHES-gm-goal-hop-HUGHES-2-2 before any property test'
-body: 'Row PBTAGENT-gm-goal-hop-PBTAGENT-2-1 cannot close. Its acceptance requires a standing property test file in gm-mcp, which the no-synthetic-test-files predicate refuses. The gating owner decision HUGHES-gm-goal-hop-HUGHES-2-2 is still pending (dispatch 1791958901080-500-9551ffb3a99b31a5). Receipt: .gm/receipts/PBTAGENT-gm-goal-hop-PBTAGENT-2-1/01-SPECIFY.md. Unblock: owner records a decision on HUGHES-gm-goal-hop-HUGHES-2-2; then re-run gm-prd on the row. Row stays pending.'
-session_id: gm-drain-w1-232
-status: pending

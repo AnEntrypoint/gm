@@ -1,5 +1,0 @@
-id: G_CONTRACT-gate-enforcement-status-prose-rsplugkit-copies
-subject: rs-plugkit compiled prose copies still hand-write enforcement status
-body: rs-plugkit/crates/plugkit-core/src/orchestrator/instructions/prose/{g_contract,g_indep,g_done,g_net,g_start,g_sweep}.md still carry the status sentences removed from gm-config/prose in af0ec2c7cf34b2b6823270e711265cb07bbab8c9. Drop the same sentences there, then rebuild rs-plugkit with --features slim and witness the gate prose through agentplug-runner. Witness must come from another session.
-session_id: gm-drain-w1-92
-status: pending

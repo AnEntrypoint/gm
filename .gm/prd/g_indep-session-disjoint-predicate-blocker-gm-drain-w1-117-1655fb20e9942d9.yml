@@ -1,7 +1,0 @@
-id: G_INDEP-SESSION-DISJOINT-PREDICATE-blocker-gm-drain-w1-117
-subject: 'Blocker for G_INDEP-SESSION-DISJOINT-PREDICATE: the row cannot be proven in one run'
-status: blocked
-blockedBy:
-- G_INDEP-SESSION-DISJOINT-PREDICATE
-body: 'Blocks: G_INDEP-SESSION-DISJOINT-PREDICATE (stays pending). Receipt: .gm/receipts/G_INDEP-SESSION-DISJOINT-PREDICATE/01-SPECIFY.md. Causes: (1) ''same chain'' has no data source in code: the implementer session is not carried into the transition, and no chain-to-session ledger exists; the row must define it first. (2) The change is in the nested rs-plugkit repo; the witness needs a CI-built wasm (local cargo is blocked) and a live runner dispatch, so PROVE cannot run in one session. (3) lean-verifier-independent is advisory in lean_graph.json; blocking it needs a reviewed lean graph rebuild (scripts/sync-lean-graph.mjs). (4) Stale citations: transitions.rs:63 is now transitions.rs:163-165; predicate_registry.rs:25 is now :30. Unblock: rewrite the row with a concrete chain key, the rs-plugkit commit path, and the reviewed graph step, then run gm-prd again.'
-session_id: gm-drain-w1-117

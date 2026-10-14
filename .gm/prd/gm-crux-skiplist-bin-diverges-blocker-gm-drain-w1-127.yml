@@ -1,6 +1,0 @@
-id: gm-crux-skiplist-bin-diverges-blocker-gm-drain-w1-127
-subject: 'Blocker for gm-crux-skiplist-bin-diverges: the live witness needs a rebuilt crux wasm and a submodule commit, neither reachable in session gm-drain-w1-127'
-severity: LOW
-body: 'Row: gm-crux-skiplist-bin-diverges. Cause hypothesis H1 (leader): the "bin" entry at agentplug-crux/src/skiplist.rs:11 prunes bin/ in walk.rs ContentIngest. Probe: find_files(c:/dev/gm, ContentIngest) on a crux build without "bin" must list bin/gm-install.js; the current build must not. Blocked: (1) agentplug-crux is a submodule, so the edit needs a commit on its main plus a parent gitlink bump; (2) the crux ingest is a wasm guest, rebuilt only in CI (local cargo is hook-blocked), so no live witness is reachable here. Receipts: .gm/receipts/gm-crux-skiplist-bin-diverges/01-SPECIFY.md and 02-PROVE.md. Evidence dispatches: 1791958157557-500-a059d2053a502c37, 1791958162242-500-a0db3b83fd0f88cc, 1791958168375-500-c9aa902dd9bbb7a8, 1791958169588-500-db51e54b062860fe. Next: a session with CI access lands the submodule change on its main, bumps the pin, and witnesses via ingest of c:/dev/gm.'
-session_id: gm-drain-w1-127
-status: pending

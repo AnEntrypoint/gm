@@ -1,6 +1,0 @@
-id: WADLER-VALUE-SIGNATURE-DREAMRSI-blocker-gm-2e-fa19b3-w1-14
-subject: 'Re-scope WADLER-VALUE-SIGNATURE-DREAMRSI: two cited symbols are stale and the remaining typing needs a CI-verified refactor'
-lane_wait_ms: 240000
-body: 'Blocker from gm-prd SPECIFY on row WADLER-VALUE-SIGNATURE-DREAMRSI (session gm-2e-fa19b3-w1-14). Evidence: codesearch literal observation_is_gate_drift_failure over rs-plugkit returned 0 matches in 371 files (dispatch 1791850722055-500-6726f0b098df2225), so that cite is stale. veto_reason (dream_rsi.rs:541) already takes &Strategy, not &Value, so it is stale too (dispatch 1791850594596-500-4807c8c5eb6cd1ab). The only untyped &Value input in scope is verify_record(kind: &str, record: &Value) at dream_rsi.rs:742, with 12 callers across register_policy, record_discovery, seal, replay_round and evaluate (callers dispatch 1791850563400-500-b0fb8da8cba9781d). Typing it means per-kind record structs and editing those 12 call sites inside a wasm32-only cfg block. Local cargo is blocked, so the change is verifiable only by CI. Next step: re-scope the owner row to verify_record and its record kinds, then run the refactor through CI.'
-session_id: gm-2e-fa19b3-w1-14
-status: pending

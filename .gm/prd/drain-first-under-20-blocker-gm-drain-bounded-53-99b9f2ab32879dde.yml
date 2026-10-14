@@ -1,5 +1,0 @@
-id: DRAIN-FIRST-UNDER-20-blocker-gm-drain-bounded-53
-subject: 'Blocked: DRAIN-FIRST-UNDER-20 needs a live gm-orchestrate pool dispatch at 25 and 12 pending rows'
-body: 'Blocks: DRAIN-FIRST-UNDER-20 (session gm-drain-bounded-53). blocked_by: a live gm-orchestrate pool run, driven by a gm walk main thread (not a subagent), that records slot allocation with 25 pending rows (expect only row slots) and with 12 pending rows (expect traversal slots and a successor nomination from outward links), witnessed from another session. Source rule: skills/gm-orchestrate/SKILL.md line 21. Supplying verb: gm-orchestrate pool loop via gm walk (gm skill Section 1), then codesearch or exec_js over the pool''s dispatch records. SPECIFY receipt: .gm/receipts/DRAIN-FIRST-UNDER-20/01-SPECIFY.md. Slot-allocation code path not yet located (codeinsight callers/impact not run).'
-session_id: gm-drain-bounded-53
-status: pending

@@ -1,5 +1,0 @@
-id: XYPROB-RS-PLUGKIT-GM-UNTRACKED-RESIDUAL-blocker-gm-drain-w2-501
-subject: 'Publish rs-plugkit 58d5498 (.gm untracked-residual rules) and bump parent gitlink: remote moved, clash on crates/plugkit-core/Cargo.toml'
-body: 'Parent row XYPROB-RS-PLUGKIT-GM-UNTRACKED-RESIDUAL stays pending. Live witness (session gm-drain-w2-501-witness, git_status dispatch 1791968633214-500-d4771d2617444b36): untracked 0 at HEAD 58d5498d0cecc6481445624ead652f2725d6e0b2; the .gm rules for codesearch-result-*.json, codesearch-result-*.json.tmp-* and last-prompt.txt are committed on local main. Blocked: git_push rev 58d5498 (dispatch 1791968764606-500-1b004e6df0348bf8) was refused remote_moved; git_pull would overwrite another lane''s uncommitted crates/plugkit-core/Cargo.toml hunk, so it was not run. Local main is 8 commits ahead of origin/main. Parent gitlink still pins 480fc43 (remote main tip 807da8f8 per local ref, possibly stale). Next: a lane owning Cargo.toml commits or reverts it, then git_pull main, git_push rev of the new head_after, then bump the parent rs-plugkit gitlink and check-pins.'
-session_id: gm-drain-w2-501
-status: pending

@@ -1,5 +1,0 @@
-id: GM-GITADD-REFERENCEERROR-gm-drain-w2-424
-subject: gm git_add verb throws ReferenceError n is not defined in the served bundle
-body: 'Repro: gm_codemode gm.git_add({paths:[''AGENTS.md''], cwd:''C:\\dev\\gm\\gm-mcp''}) fails with ReferenceError: n is not defined at file:///C:/Users/user/.gm-tools/gm-mcp-server.mjs:182 (function hY, called from ss, i, Pm.executeToolHandler). Fix in gm-mcp/src (dispatch path for git_add), rebuild the bundle, and witness a staged add. Invariant 2 applies: fix in c:\dev\gm.'
-session_id: gm-drain-w2-424
-status: pending

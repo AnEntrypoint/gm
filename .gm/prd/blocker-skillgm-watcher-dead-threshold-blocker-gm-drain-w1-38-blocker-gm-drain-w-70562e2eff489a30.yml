@@ -1,8 +1,0 @@
-id: BLOCKER-SKILLGM-watcher-dead-threshold-blocker-gm-drain-w1-38-blocker-gm-drain-w2-45
-subject: 'Witness cannot run on the Windows host: runner-status.sh needs python3 and /proc'
-body: 'Row BLOCKER-SKILLGM-watcher-dead-threshold-blocker-gm-drain-w1-38 (session gm-drain-w2-45). Evidence: running scripts/triage/runner-status.sh on C:/dev/gm exits 49 with ''Python was not found'' (Microsoft Store alias for python3), and the script tests liveness with os.path.exists(''/proc/<pid>''), which Windows lacks. So the witness for the dead-threshold fix cannot run here and the threshold edit was reverted, not committed. Receipt: .gm/receipts/BLOCKER-SKILLGM-watcher-dead-threshold-blocker-gm-drain-w1-38/01-SPECIFY.md and witness-runner-status.txt (sha256 adf27d430ca4c636ac731cd04730a3aaf4382fe595f849edd4e4bb70a83e23a5). Required: run the witness on a Linux runner (CI job) or port runner-status.sh to a native Windows check; then apply the named-constant change (ALIVE 300000 ms, SERVING 300 s) and the SKILL.md line 63 threshold naming.'
-session_id: gm-drain-w2-45
-status: pending
-blockedBy:
-- external
-deferReason: 'duplicate blocker: the base row already names the same missing fact'

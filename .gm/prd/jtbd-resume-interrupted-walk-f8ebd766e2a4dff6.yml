@@ -1,6 +1,0 @@
-id: JTBD-RESUME-INTERRUPTED-WALK
-title: 'Job: an interrupted walk resumes in a new session from disk state without re-deciding closed rows'
-obligation_kind: discovery
-body: 'Hired when: a session ends or crashes mid-walk and a later session must continue the same walk. Job: the new session reads .gm/prd.yml, .gm/mutables.yml and the phase state, and continues from the first open row, without re-opening rows already closed or re-asking resolved mutables. Not stated anywhere in README, AGENTS.md or SKILL.md: the stop hook blocks session end on open rows (README ''How it works'', Gates), and gm-continue is named as the post-COMPLETE handoff only, so resumption after an interrupted, non-COMPLETE walk has no stated path. Done when a live witness interrupts a walk with one open row and one closed row, starts a fresh session, and shows the next dispatch targets only the open row.'
-session_id: lean-hop-JTBD
-status: pending

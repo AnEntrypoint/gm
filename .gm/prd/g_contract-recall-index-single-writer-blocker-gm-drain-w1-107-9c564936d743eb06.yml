@@ -1,5 +1,0 @@
-id: G_CONTRACT-recall-index-single-writer-blocker-gm-drain-w1-107
-subject: 'Blocker: recall index single-writer row cannot close in one run (memory_md sync_index is a second writer)'
-body: 'Row G_CONTRACT-recall-index-single-writer stays pending. Stage 01-SPECIFY receipt: .gm/receipts/G_CONTRACT-recall-index-single-writer/01-SPECIFY.md. Findings: rssearch_vectors::write has call sites in orchestrator/memorize.rs:315,679 and memory_md.rs:783 (sync_index reconciliation). memory_md.rs also calls mark_deleted/undelete (732,869,901,1049). The acceptance premise that memorize-fire is the sole writer does not hold; a decision is needed on whether sync_index is a legitimate reconciliation writer or must route through memorize-fire (mutable). Verification requires an rs-plugkit CI-built witness from another session (local cargo blocked). Next: mutable decision on sync_index, then the code move, then a witness from a different session.'
-session_id: gm-drain-w1-107
-status: pending

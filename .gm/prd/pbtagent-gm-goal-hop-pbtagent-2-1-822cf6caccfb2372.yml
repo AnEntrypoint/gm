@@ -1,7 +1,0 @@
-id: PBTAGENT-gm-goal-hop-PBTAGENT-2-1
-surface: gm-mcp/src
-principle: PBTAGENT
-session_id: gm-goal-hop-PBTAGENT-2
-status: pending
-title: 'Agent-written property suite over gm-mcp/src: the open PBTAGENT question is untested and its only route is blocked by an owner decision'
-body: 'Testable claim: an agent-written property suite over gm-mcp/src finds at least one defect that the existing example tests miss. Test: none run yet. Witness of the premise: codesearch literal property, proptest, fast-check over gm-mcp/src (18 files, 4731 lines) returns 0 matches (dispatch 1791745419271-304-114be0cd64d90816). Blocker: AGENTS.md bans synthetic tests and mocks, and whether a generated-input check against real code paths may live in gm-mcp is an owner decision already filed as HUGHES-gm-goal-hop-HUGHES-2-2. Candidate defects a property run would target are already filed: HUGHES-gm-goal-hop-HUGHES-1-2 (key-order-sensitive unchangedByCompaction) and HUGHES-gm-goal-hop-HUGHES-2-1 (silent readSingletonState catch). Action: after the owner decides, write one property over unchangedByCompaction and one over readSingletonState against live code, and witness that the run executes and reports its counts. No change made in this hop.'

@@ -1,5 +1,0 @@
-id: BLOCKER-SKILLGM-spool-final-name-claim-blocker-gm-drain-w1-36
-subject: 'Blocked: BLOCKER-SKILLGM-spool-final-name-claim needs an agentplug claim-code change plus a cross-session live witness; the cited temp-then-mv prose is absent from skills/gm/SKILL.md'
-body: 'Stage receipts: .gm/receipts/BLOCKER-SKILLGM-spool-final-name-claim/01-SPECIFY.md and 02-PROVE.md. Findings: (1) ''temp-then-mv'' is absent from skills/gm/SKILL.md (codesearch dispatch 1791957227816-500-181f0f672dd7bf8), so the cited prose premise is stale. (2) The claim path in agentplug/crates/agentplug-runner/src/daemon/claim_dispatch.rs renames whole request files (line 404) with no sibling-temp-name exclusion. The fix lives in the agentplug submodule and needs a CI-only Rust build plus a witness from another session, neither reachable in session gm-drain-w1-36. Next step: a session with CI access lands the claim filter in agentplug, then the SKILL.md cut is witnessed by a live spool dispatch.'
-session_id: gm-drain-w1-36
-status: pending

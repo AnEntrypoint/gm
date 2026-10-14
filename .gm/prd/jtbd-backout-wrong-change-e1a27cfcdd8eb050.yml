@@ -1,6 +1,0 @@
-id: JTBD-BACKOUT-WRONG-CHANGE
-title: 'Job: back out a wrong change with a recorded reason, keeping PRD and mutable state consistent'
-obligation_kind: discovery
-body: 'Hired when: a walk has committed or transitioned into a wrong change and the user must undo it. Job: revert the change and record why, without leaving PRD rows marked closed for work that no longer exists or mutables resolved against a reverted witness. The verbs exist (transition-revert, git_reset_head refusing pushed commits) but no stated path links a revert to the PRD and mutable rows it invalidates; AGENTS.md covers only git_reset_head and the dedup repair. Done when a live witness closes a row, reverts the transition that closed it, and shows the row reopened or flagged and the revert reason recorded in the evidence. blocked_by: JTBD-BACKOUT-WRONG-CHANGE-blocker-gm-drain-b-47 (missing rs-plugkit revert-to-PRD/mutable link, witnessed through a CI publish then a live transition-revert dispatch).'
-session_id: lean-hop-JTBD
-status: pending

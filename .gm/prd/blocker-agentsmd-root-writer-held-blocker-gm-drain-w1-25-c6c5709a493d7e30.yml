@@ -1,5 +1,0 @@
-id: BLOCKER-AGENTSMD-ROOT-WRITER-HELD-blocker-gm-drain-w1-25
-subject: 'Blocker for BLOCKER-AGENTSMD-ROOT-WRITER-HELD: hold not observable now, closure needs a cross-session root writer'
-body: 'Row BLOCKER-AGENTSMD-ROOT-WRITER-HELD cannot close in session gm-drain-w1-25. SPECIFY (receipt .gm/receipts/BLOCKER-AGENTSMD-ROOT-WRITER-HELD/01-SPECIFY.md) finds the cited hold is not observable: AGENTS.md is clean in git_status (1791957136254-500-4b0498809c12bcd9), no lock owner names it, and its size is 29196 bytes, not the cited 29511. Closing needs a witness from another session that shows a single root writer applied the four AGENTS.md deletions and pointers (AGENTSMD-MOVE-WINDOWLESS-RULE, AGENTSMD-DEDUP-CONFIGSYNC-DEBOUNCE, AGENTSMD-DREAMRSI-SPLIT-BY-OWNER, AGENTSMD-PURGE-INCIDENT-SECTIONS). Self-witness is refused. Resolution: a separate writer session applies those four edits to root AGENTS.md, or the orchestrator confirms the hold released and runs those rows.'
-session_id: gm-drain-w1-25
-status: pending

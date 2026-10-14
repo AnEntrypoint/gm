@@ -1,5 +1,0 @@
-id: DRAIN-FIRST-UNDER-20
-subject: 'Witness the orchestrator rule: drain while rows exist, traverse CS disciplines when pending rows fall under 20'
-body: 'Witness: a run with 25 pending rows launches only row slots; a run with 12 launches traversal slots and a successor nomination from outward links. blocked_by: DRAIN-FIRST-UNDER-20-blocker-gm-drain-bounded-53 (a live gm-orchestrate pool run at 25 and 12 pending rows, from a gm walk main thread, witnessed from another session).'
-session_id: gm-invariants-08
-status: pending

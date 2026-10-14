@@ -1,5 +1,0 @@
-id: PLUGKIT-SEMVER-UPDATE-WITNESS
-title: Witness that the auto-updater replaces a sideloaded plugkit wasm once gm.version is semver
-description: 'Depends on PLUGKIT-SEMVER-VERSION-SET. Sideload a stale gm.wasm, let the updater run, and confirm daemon-status.json loaded_plugin_content_sha256.gm matches the release wasm. Witness: the sha256 comparison from a live daemon, recorded in the row resolution.'
-status: pending
-session_id: lean-node-INVEST

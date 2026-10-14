@@ -1,5 +1,0 @@
-id: NODUPEDOC-AGENTS-DREAMRSI-SECTION
-status: pending
-subject: 'Reference, Never Restate: AGENTS.md section ''Dream-RSI grounded replay'' (about 14 lines) describes the replay mechanism, cycle ticker and dispatch rules that belong to skills/dream-rsi/SKILL.md and the agentplug daemon source. The skill covers observations.json but not active-strategy.json, dreamrsi-replay or the cycle ticker, so the mechanism is also split across two homes. Move the mechanism into the skill (or the daemon source comment owner) and leave AGENTS.md a pointer.'
-witness: 'exec_js: AGENTS.md mentions observations.json and active-strategy.json; skills/dream-rsi/SKILL.md mentions observations.json but not active-strategy.json and not dreamrsi-replay. AGENTS.md''s Dream-RSI section is the only file that names the cycle ticker threshold (20 observations, 15 minutes).'
-session_id: lean-hop-NODUPEDOC

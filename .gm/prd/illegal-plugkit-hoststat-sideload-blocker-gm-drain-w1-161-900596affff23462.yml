@@ -1,5 +1,0 @@
-id: ILLEGAL-PLUGKIT-HOSTSTAT-SIDELOAD-blocker-gm-drain-w1-161
-subject: 'Blocked: ILLEGAL-PLUGKIT-HOSTSTAT-SIDELOAD cannot close in session gm-drain-w1-161'
-body: 'Blocks row ILLEGAL-PLUGKIT-HOSTSTAT-SIDELOAD. Receipts: .gm/receipts/ILLEGAL-PLUGKIT-HOSTSTAT-SIDELOAD/01-SPECIFY.md, 02-PROVE.md. Unmet preconditions: (1) the slim wasm build cannot run locally; memory gm-no-local-cargo-verified-by-ci says local cargo is hook-blocked and rs-plugkit wasm is verified by CI only (publish / release, step Build). The hook is not bypassed. (2) The rs-plugkit submodule change must be committed and pushed to its main before the pin bump; the parent shows rs-plugkit modified (dispatch 1791958452362-500-d282c286690ebcb1) and the submodule''s own state is unverified. (3) The sideload writes live runtime under ~/.agentplug and ~/.gm-tools; it needs a backup first and was not run. Unblock: run the CI build for the slim wasm, push the rs-plugkit commit to main, then rerun the witness (ACH leader H1: host_stat returns no isDirectory for directories; the probe is a live stat of a directory through the sideloaded guest).'
-session_id: gm-drain-w1-161
-status: pending

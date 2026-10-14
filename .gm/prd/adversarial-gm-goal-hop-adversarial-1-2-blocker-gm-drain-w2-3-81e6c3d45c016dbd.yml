@@ -1,7 +1,0 @@
-id: ADVERSARIAL-gm-goal-hop-ADVERSARIAL-1-2-blocker-gm-drain-w2-3
-principle: ADVERSARIAL
-surface: gm-mcp/src
-subject: 'Blocker for ADVERSARIAL-gm-goal-hop-ADVERSARIAL-1-2: row premise ''freeze is the sole out-of-band control'' is refuted by source (self-update.js:206 GM_MCP_SELF_UPDATE=0, :221 localBuildPinReason)'
-body: 'Row cannot close as written. Source at gm-mcp/src/self-update.js:206 and :221 shows two out-of-band controls besides the freeze at :31-45/:215. gm-mcp/AGENTS.md:82 already lists all three. Writing the freeze as sole control would record a false doc line. Owner must choose: (a) doc correction naming the three controls, closing the row with a witness of the AGENTS.md line; or (b) digest from a channel the publisher does not write, a self-update.js design change. Receipts: .gm/receipts/ADVERSARIAL-gm-goal-hop-ADVERSARIAL-1-2/02-PROVE.md, 08-DECIDE.md. Duplicates earlier blocker ADVERSARIAL-gm-goal-hop-ADVERSARIAL-1-2-blocker-gm-drain-w1-7.'
-session_id: gm-drain-w2-3
-status: pending

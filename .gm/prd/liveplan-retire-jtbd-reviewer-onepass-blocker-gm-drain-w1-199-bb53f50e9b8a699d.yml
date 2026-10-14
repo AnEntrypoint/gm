@@ -1,5 +1,0 @@
-id: LIVEPLAN-RETIRE-JTBD-REVIEWER-ONEPASS-blocker-gm-drain-w1-199
-subject: 'Blocked: LIVEPLAN-RETIRE-JTBD-REVIEWER-ONEPASS closing condition unmet'
-body: 'Row LIVEPLAN-RETIRE-JTBD-REVIEWER-ONEPASS closes only when INVEST-JTBD-REVIEWER-SUMMARY-VERB and INVEST-JTBD-REVIEWER-WITNESS-CITATIONS are both closed. Live check (session gm-drain-w1-199): both rows are status pending (prd-list ids as above, dispatch 1791958676240-500-18b4292c30547704 and 1791958677005-500-ef3ab0e4f98670a7). The retire row has no witness of its own to bind, so it cannot resolve. Unblock by resolving INVEST-JTBD-REVIEWER-SUMMARY-VERB (witness: verb reply on a completed walk lists net_lines and gates) then INVEST-JTBD-REVIEWER-WITNESS-CITATIONS (witness: reply cites a witness id and a closed PRD row id), then re-run gm-prd on LIVEPLAN-RETIRE-JTBD-REVIEWER-ONEPASS from another session.'
-session_id: gm-drain-w1-199
-status: pending

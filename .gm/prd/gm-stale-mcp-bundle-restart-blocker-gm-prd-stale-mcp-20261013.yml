@@ -1,5 +1,0 @@
-id: gm-stale-mcp-bundle-restart-blocker-gm-prd-stale-mcp-20261013
-subject: 'Blocker: PRD row gm-stale-mcp-bundle-restart does not exist; gm-prd SPECIFY cannot run'
-description: 'gm-prd row=gm-stale-mcp-bundle-restart session=gm-prd-stale-mcp-20261013. Checked: prd-list {id} returns error ''no PRD row with id gm-stale-mcp-bundle-restart of the 315 rows in .gm/prd/ or the resolved rows in .gm/prd-log.jsonl''. codesearch for ''stale-mcp'', ''bundle-restart'', ''gm-stale'', ''mcp-bundle'' over tracked files and .gm returns 0 hits. Nearest open row by subject: DEEPMOD-GMMCP-BUNDLE-CARRIES-WIP (''gm-mcp: bin/gm-mcp-server.js was rebuilt from src/ including uncommitted dispatch.js, mcp-server.js and untracked git-adapter.js; decide which writer commits the bundle with its src''). Not run: the requested id names a different row. Resolution: owner confirms the intended row id, or re-scopes the row with prd-add under the same id.'
-session_id: gm-prd-stale-mcp-20261013
-status: pending

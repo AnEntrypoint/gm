@@ -1,5 +1,0 @@
-id: G_INDEP-SESSION-DISJOINT-PREDICATE
-title: 'G_INDEP: make lean-verifier-independent check that the verifier session_id is unused in the chain'
-status: pending
-description: 'The predicate lean-verifier-independent (rs-plugkit/crates/plugkit-core/src/orchestrator/transitions.rs:63 via pred_lean_always_true; predicate_registry.rs:25) always returns true. Replace it with a session-disjointness check: refuse the transition to VERIFY when the verifier''s session_id already appears in the dispatch ledger of the same chain (any dispatch made under the implementer''s session). Witness: a live dispatch that reuses an implementer session id is refused; a fresh session id passes.'
-session_id: lean-hop-G_INDEP

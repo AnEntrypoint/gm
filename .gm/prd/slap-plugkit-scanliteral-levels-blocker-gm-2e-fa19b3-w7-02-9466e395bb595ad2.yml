@@ -1,5 +1,0 @@
-id: SLAP-PLUGKIT-SCANLITERAL-LEVELS-blocker-gm-2e-fa19b3-w7-02
-subject: 'Blocker: SLAP-PLUGKIT-SCANLITERAL-LEVELS cannot be emitted or witnessed in one run'
-body: 'Row SLAP-PLUGKIT-SCANLITERAL-LEVELS stays pending. Stage EMIT did not run. (1) Cited line is stale: scan_literal is at rs-plugkit/crates/plugkit-core/src/code_index.rs:4925-5963 (about 1039 lines, not 4578 and 852). Callers: search.rs:41, 237, 1319, 2076, 2259. (2) The witness is `cargo build` of rs-plugkit. Local cargo is blocked by a hook, so the build is CI-only. (3) The live grep-literal dispatch needs the new wasm deployed through release and runner self-update, which cannot finish in this session. (4) The witness must come from another session. Resolution: re-scope the row to its stale line range, then run EMIT in a session that has a CI witness path. Receipts: .gm/receipts/SLAP-PLUGKIT-SCANLITERAL-LEVELS/01-03.'
-session_id: gm-2e-fa19b3-w7-02
-status: pending
