@@ -1,0 +1,6 @@
+id: PARNAS-gm-goal-w4-PARNAS-2-blocker-gm-drain-w2-328
+title: 'Blocker: inflightDispatchCount owner-interface refactor needs bundle rebuild and cross-session witness'
+obligation_kind: discovery
+body: 'Parent row PARNAS-gm-goal-w4-PARNAS-2 cited dispatch.js:15 but the export is at gm-mcp/src/dispatch.js:19 (codesearch literal, exhaustive, 5 consumer files: bundle-refresh.js, release-bridge.js, self-update.js, transport-guard.js; 23 lines). The fix replaces the raw counter export with a verdict function in the owning module and must land with a rebuilt gm-mcp bundle (gm-mcp src and bundle move together). Local build is not available; the bundle is built and verified through CI (ci-status). The row also needs a witness from a session other than gm-goal-w4-PARNAS. Hypothesis: a verdict function removes the shared counter representation from four consumers. Witness that would refute it: a consumer still importing the raw counter after the change. Filed by session gm-drain-w2-328 during SPECIFY; row stays pending.'
+session_id: gm-drain-w2-328
+status: pending

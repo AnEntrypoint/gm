@@ -1,0 +1,5 @@
+id: NODELETE-gm-goal-w2-NODELETE-1-blocker-gm-drain-w2-302
+subject: 'gm-mcp singleton legacy toggle: migration edited, bundle commit blocked by shared-tree writers'
+body: 'Blocks NODELETE-gm-goal-w2-NODELETE-1. Edits in the gm-mcp working tree: src/singleton.js (legacy read deleted; spawn env now GM_MCP_NO_HTTP_SINGLETON=1), src/bundle-refresh.js and test/http-session-resume.mjs (spawn env migrated), AGENTS.md and README.md (names updated). Rebuild and verify-build are clean (bin/gm-mcp-server.js, no drift). Live env check passes (node, 4 toggles). Blocked on delivery: gm-mcp git_status (dispatch 1791963679625-500-4923eae9f5cd4834) shows other writers'' hunks in the same files plus a staged src/self-update.js and an untracked src/spool-store.js, so git_finalize of this run''s files would publish their work. Needed: the other writers land or release those paths, then a witness from a different session (mode=witness) with a gm dispatch id. Receipts: .gm/receipts/NODELETE-gm-goal-w2-NODELETE-1/01..09.'
+session_id: gm-drain-w2-302
+status: pending

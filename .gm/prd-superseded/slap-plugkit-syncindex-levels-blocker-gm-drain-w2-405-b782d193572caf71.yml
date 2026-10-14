@@ -1,0 +1,5 @@
+id: SLAP-PLUGKIT-SYNCINDEX-LEVELS-blocker-gm-drain-w2-405
+subject: 'Blocker: SLAP-PLUGKIT-SYNCINDEX-LEVELS PROVE and witness unreachable in session gm-drain-w2-405'
+status: pending
+body: 'Parent row SLAP-PLUGKIT-SYNCINDEX-LEVELS stays pending. SPECIFY (receipt .gm/receipts/SLAP-PLUGKIT-SYNCINDEX-LEVELS/01-SPECIFY.md) confirms sync_index at rs-plugkit/crates/plugkit-core/src/memory_md.rs:695, not 689. PROVE (02-PROVE.md) cannot pass: local cargo is hook-blocked (memory gm-no-local-cargo-verified-by-ci) and the witness needs a CI-built rs-plugkit wasm (wasm32-wasip1 --features slim) plus a live memory sync dispatch. No EMIT edit was made. Unblock: a CI publish/release build of rs-plugkit carrying the split, then a live memory sync dispatch from another session. Prior blockers w7-01, w1-273, w1-274, w2-404 record the same cause.'
+session_id: mcp-codemode-9708-1791965684750

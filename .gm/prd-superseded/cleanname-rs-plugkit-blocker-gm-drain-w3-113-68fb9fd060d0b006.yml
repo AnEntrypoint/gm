@@ -1,0 +1,8 @@
+id: CLEANNAME-RS-PLUGKIT-blocker-gm-drain-w3-113
+title: 'Blocked: CLEANNAME-RS-PLUGKIT cannot close in session gm-drain-w3-113 (no CI wasm witness, cited lines stale, cross-session witness required)'
+body: 'Row CLEANNAME-RS-PLUGKIT (rs-plugkit rename of generic locals in code_index.rs and cache.rs) cannot reach PROVE or a closing witness from this session. (1) The witness is a wasm guest build with --features slim plus an agentplug-runner witness; local cargo is blocked by the repo hook, so the build proof is CI-only (memory gm-no-local-cargo-verified-by-ci). (2) The closing witness must come from another session; the row''s own session_id is lean-hop-CLEANNAME. (3) Cited line numbers are stale: code_index.rs:3645->3811, :620->647, :1833->1958, :1658->1783, :1887->2012; text matches, lines drifted. Receipt: .gm/receipts/CLEANNAME-RS-PLUGKIT/01-SPECIFY.md. Prior receipt 02-PROVE.md (gm-drain-w2-63) reached the same outcome. Resolution: re-scope the row''s line map, then run the CI wasm build and a cross-session witness.'
+session_id: mcp-codemode-9708-1791970683931
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

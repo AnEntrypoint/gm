@@ -1,0 +1,8 @@
+id: G_CONTRACT-native-search-ban-restated-blocker-gm-drain-w2-137
+subject: 'Blocked: G_CONTRACT-native-search-ban-restated premise refuted; no deviation gate exists in code for the native-search ban'
+body: 'PROVE failed in session gm-drain-w2-137. Precondition (a deviation gate blocks Glob/Grep/find/rg/Explore) is not met: codesearch over rs-plugkit/crates/plugkit-core/src/orchestrator returns only prose (instructions/prose/entry.md:176), dispatch 1791961029431. The ''brick wall'' header cited by the row is absent from skills/gm/SKILL.md (dispatch 1791961023223). Cited prose lines (SKILL.md:70 runtime-state exception, SKILL.md:46 adapters, entry.md:119 Inspection routing) are present. Receipts: .gm/receipts/G_CONTRACT-native-search-ban-restated/01-SPECIFY.md and 02-PROVE.md. Unblock requires owner decision: either add the gate in rs-plugkit (CI-built wasm, cross-session witness) or re-scope the row to prose-only with the gate clause removed.'
+session_id: gm-drain-w2-137
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

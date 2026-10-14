@@ -1,0 +1,8 @@
+id: BLOCK-dream-rsi-output-schema-code-blocker-gm-drain-w2-10
+subject: Witness for BLOCK-dream-rsi-output-schema-code needs a baseline policy and worlds fixture
+body: 'Blocker for BLOCK-dream-rsi-output-schema-code (session gm-drain-w2-10). The row premise (no code) is stale: the typed result struct, DreamRsiResult, and the constants INSUFFICIENT_RECORD_THRESHOLD=20, MAX_PART_A_PROPOSALS=3, MAX_PART_B_PROPOSALS=5 exist at rs-plugkit/crates/plugkit-core/src/orchestrator/dream_rsi.rs on main (HEAD 54a9ab0e00663000ea2ee336d9ae32c7bf7ae8c8, clean). The row cannot close because no live witness yet returns the typed result: dream-replay refuses without a registered baseline_policy_id (dispatch 1791959898041-500-f40c92ddab02b1e7). Next step: register a baseline policy (dream_policy_register) and worlds via the live verbs, then dispatch dream-replay and witness the status/part_a/part_b shape. Receipts: .gm/receipts/BLOCK-dream-rsi-output-schema-code/01-SPECIFY.md and 02-PROVE.md.'
+session_id: gm-drain-w2-10
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

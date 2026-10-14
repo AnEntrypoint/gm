@@ -1,0 +1,5 @@
+id: SLAP-gm-goal-w4-SLAP-2-blocker-gm-fin-12-r2-blocker-gm-drain-w2-363
+subject: 'SLAP-2 still blocked: gm-mcp index held by another writer at drain w2-363'
+body: 'Row SLAP-gm-goal-w4-SLAP-2-blocker-gm-fin-12-r2 re-checked at dispatch 1791964534647-500-3689f7906fcba10c: gm-mcp is branch main with 19 modified paths, 1 staged file (src/self-update.js) and 1 untracked file (src/spool-store.js), all from another writer. Applying the SLAP-2 patch from .gm/receipts/SLAP-gm-goal-w4-SLAP-2/03-EMIT.md would overwrite those hunks, so the row is not applied. The owning session gm-ach-20261014-01 holds a live lease (pid 11964) on the session state. Unblock: that writer commits or hands over its gm-mcp set; then re-apply the patch, rebuild bin/gm-mcp-server.js in the same commit, and witness with codesearch plus a live dispatch. Session gm-drain-w2-363 did not touch the tree. Source row: SLAP-gm-goal-w4-SLAP-2-blocker-gm-fin-12-r2.'
+session_id: gm-drain-w2-363
+status: pending

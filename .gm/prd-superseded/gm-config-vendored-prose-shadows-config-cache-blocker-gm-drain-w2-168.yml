@@ -1,0 +1,5 @@
+id: gm-config-vendored-prose-shadows-config-cache-blocker-gm-drain-w2-168
+subject: 'Blocked: vendored prose shadow fix needs an rs-plugkit CI build and a cross-session witness'
+body: 'Parent row gm-config-vendored-prose-shadows-config-cache. SPECIFY (03-SPECIFY) confirms H1: with no .gm/instructions/.vendored.json record, prose.rs:162 answers LocalOverride and shadows the cache (precondition dispatch 1791961313303-500-86682b10de33fb27). Fix: in rs-plugkit/crates/plugkit-core/src/prose.rs, treat a missing manifest record for a byte-identical snapshot as unedited (fall through to tier2), report an edited file as a non-silent tier, and write .vendored.json on every vendoring publish. Acceptance: the parent row''s three criteria. Witness: a live instruction dispatch from another session against a CI-built guest (publish / release), comparing served prefix to the cache copy. Not closable in session gm-drain-w2-168 (no local cargo; self-witness refused).'
+session_id: gm-drain-w2-168
+status: pending

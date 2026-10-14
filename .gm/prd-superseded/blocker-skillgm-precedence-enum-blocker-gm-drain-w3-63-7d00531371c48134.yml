@@ -1,0 +1,8 @@
+id: BLOCKER-SKILLGM-precedence-enum-blocker-gm-drain-w3-63
+subject: 'Blocker for BLOCKER-SKILLGM-precedence-enum: no live witness for the tier-order enum yet'
+body: 'Row cannot close in gm-drain-w3-63. SPECIFY receipt: .gm/receipts/BLOCKER-SKILLGM-precedence-enum/01-SPECIFY.md. Needed: (1) enum in rs-plugkit/crates/plugkit-core/src/config.rs resolve_with (tier 1 project vendored, tier 2 config-source repo, tier 3 compiled default) for native and wasm; (2) CI-built wasm via publish / release, since local cargo is hook-blocked; (3) rs-plugkit gitlink bump in parent; (4) witness from a session other than lean-exec-skillgm-1 reading the tier order from a live dispatch. Open: U1 no reply exposes the resolved tier per key; session gm-drain-w3-63 is session_mismatch with live lease gm-drain-w2-391. Next: add a read verb or resolution field exposing the tier, then build via CI.'
+session_id: gm-drain-w3-63
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

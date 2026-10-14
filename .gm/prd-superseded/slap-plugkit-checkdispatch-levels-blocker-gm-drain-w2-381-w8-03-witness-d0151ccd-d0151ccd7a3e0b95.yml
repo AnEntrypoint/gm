@@ -1,0 +1,8 @@
+id: SLAP-PLUGKIT-CHECKDISPATCH-LEVELS-blocker-gm-drain-w2-381-w8-03-witness
+subject: 'Blocker for SLAP-PLUGKIT-CHECKDISPATCH-LEVELS-blocker-gm-2e-fa19b3-w8-03: refactor not EMITted and witness not closable from session gm-drain-w2-381'
+blockedBy:
+- SLAP-PLUGKIT-CHECKDISPATCH-LEVELS
+- SLAP-PLUGKIT-CHECKDISPATCH-LEVELS-blocker-gm-2e-fa19b3-w8-03
+body: 'Parent row SLAP-PLUGKIT-CHECKDISPATCH-LEVELS (rs-plugkit gates.rs check_dispatch, lines 466-774) is still unimplemented. Its 01-SPECIFY receipt (session gm-drain-w1-262) records PROVE blocked. This run re-checked the witness path and it does not close. (1) Baseline live shell dispatch 1791964814214-500-85646e741582eefd ran `git status --short` in C:\dev\gm\rs-plugkit and returned exit 0, not a denial, so the row''s acceptance (''a live shell git dispatch denied with the same reason string'') has no stated deny command or expected reason to witness against. (2) Local cargo is hook-blocked (memory gm-no-local-cargo-verified-by-ci); the guest is only built in CI, so no EMIT can be witnessed locally. (3) rs-plugkit/crates/plugkit-core/Cargo.toml carries another writer''s uncommitted change, so a publish there needs that writer''s lane to clear first. Needed to close: a named deny command and reason string from the acceptance owner, a CI build run id for the refactored guest, and a witness from a session other than the implementer. Until then the parent stays pending.'
+session_id: gm-drain-w2-381
+status: pending

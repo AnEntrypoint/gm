@@ -1,0 +1,5 @@
+id: MEMTOOL-AGENTS-VERIFIED-HISTORY-TO-MEMORY-blocker-gm-drain-w2-293
+subject: 'Blocked: MEMTOOL-AGENTS-VERIFIED-HISTORY-TO-MEMORY step 1 has no source; the five dated Verified sections are absent from AGENTS.md'
+session_id: gm-drain-w2-293
+body: 'SPECIFY (session gm-drain-w2-293) at HEAD 66d10b4 and later. Parent row step 1 memorize-fire needs the dated Verified 2026-09-14/10-04/10-05/10-07/10-08 sections of AGENTS.md. A codesearch regex for those dates over AGENTS.md returns zero section headings; the only Verified references are bullets at AGENTS.md lines 100-101 citing docs/verified-incidents.md. Sections were purged by commit 66d10b4 (AGENTSMD-PURGE-INCIDENT-SECTIONS); they live in docs/verified-incidents.md. Step 2 deletion is therefore already satisfied. Step 1 cannot run, and retiring or re-scoping the parent row is an owner decision (sibling blocker -206 says the same). Re-scope option: memorize-fire of docs/verified-incidents.md sections under a fresh row. Not closed; parent row stays pending. Witnesses: codesearch regex over AGENTS.md; git_log AGENTS.md (66d10b4).'
+status: pending

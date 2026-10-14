@@ -1,0 +1,7 @@
+id: gm-w577-clause2-admission-starvation-retry-hint-r138-blocker-gm-drain-w1-146-blocker-gm-drain-w2-202
+kind: friction
+session: gm-drain-w2-202
+subject: 'Blocker: starved-branch live witness not obtained; qualifier decision open (r138 blocker, w2)'
+text: 'Row gm-w577-clause2-admission-starvation-retry-hint-r138-blocker-gm-drain-w1-146 cannot close yet. Probe (receipt .gm/receipts/gm-w577-clause2-admission-starvation-retry-hint-r138-blocker-gm-drain-w1-146/02-PROVE.md): 8 concurrent 25s exec_js dispatches plus a health probe. No dispatch starved; the probe was admitted after 9.9s. The starved answer (claim_dispatch.rs:2007-2048, call site :2497) fires only when a claimed dispatch never enters the admission gate within its bound, so a witness needs sustained saturation beyond that bound. Needed: (a) a witness that exceeds the admission wait bound and reads the starved reply (re_dispatch_safe:true, executed:false) from the spool out-file; or (b) a decision to drop the ''for read-only dispatches'' qualifier, since the hint is emitted unconditionally and is a superset. Default if no answer: (b), then close on the (a) witness when available.'
+session_id: mcp-codemode-23256-1791962221040
+status: pending

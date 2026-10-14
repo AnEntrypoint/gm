@@ -1,0 +1,5 @@
+id: WADLER-VALUE-SIGNATURE-PLUGIN-ABI-blocker-gm-drain-w1-321
+subject: 'WADLER-VALUE-SIGNATURE-PLUGIN-ABI: EMIT blocked, wasm-only edit needs CI build and a second-session witness'
+status: pending
+body: 'PROVE done (receipts/WADLER-VALUE-SIGNATURE-PLUGIN-ABI/02-PROVE.md). No EMIT edit made: rs-plugkit/crates/plugkit-core/src/plugin_abi.rs is #![cfg(target_arch = "wasm32")], local cargo is hook-blocked, and parse_response/call have 15 name-keyed callers that a signature change would break. Next: EMIT typed envelope via the Git API publish path in rs-plugkit, verify CI (publish / release, step Build), then witness from a session other than the editor. Same reason as blocker ...-w1-13, which remains pending.'
+session_id: gm-drain-w1-321

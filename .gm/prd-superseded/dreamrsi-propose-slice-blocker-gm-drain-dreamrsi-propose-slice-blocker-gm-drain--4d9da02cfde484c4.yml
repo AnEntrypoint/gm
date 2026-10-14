@@ -1,0 +1,8 @@
+id: DREAMRSI-PROPOSE-SLICE-blocker-gm-drain-DREAMRSI-PROPOSE-SLICE-blocker-gm-drain-w1-75-blocker-gm-drain-w2-97
+subject: 'Route dream-strategy-propose: add arm, ship five places, CI slim build, release, cross-session witness'
+body: 'SPECIFY and PROVE receipts: .gm/receipts/DREAMRSI-PROPOSE-SLICE-blocker-gm-drain-DREAMRSI-PROPOSE-SLICE-blocker-gm-drain-w1-75/01-SPECIFY.md and 02-PROVE.md. Leader H1 (route missing) confirmed: live dispatch 1791960502937-500-eba710e15169b71f returns unknown_verb. Remaining work: (1) add arm `"dream-strategy-propose" => dream_rsi::handle_strategy_propose(content),` in rs-plugkit/crates/plugkit-core/src/orchestrator/mod.rs near :407; (2) the other four verb places per rs-plugkit/AGENTS.md (wasm_dispatch/verbs.rs route, gates and transitions, parent verb contract, README inventory); (3) CI wasm build with --features slim (local cargo hook-blocked); (4) release, then bump gm rs-plugkit gitlink; (5) witness the verb via live dispatch from a session other than gm-drain-DREAMRSI-PROPOSE-SLICE, expecting ok:true kind strategy-proposal. H2 (gates refusal) remains unseparated until the arm exists.'
+session_id: gm-drain-w2-97
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

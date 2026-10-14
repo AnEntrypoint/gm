@@ -1,0 +1,8 @@
+id: G_CONTRACT-memory-kind-enum-blocker-gm-drain-w2-136
+subject: 'Owner-decision blocker: choose the memory kind model before the G_CONTRACT-memory-kind-enum enum move can run'
+body: 'Carries G_CONTRACT-memory-kind-enum-blocker-gm-drain-w1-102 forward. Premise verified stale at dispatch 1791960973457-500-4072e71a008aecf3: no four-type sentence; kind is a free-text storage tier, TIERS=[l0,l1] at rs-plugkit/crates/plugkit-core/src/tencentdb_memory.rs:100. Default (kind stays free-text) is not changed here. Needed: owner decision on the kind model, then a CI-built witness from another session. blockedBy: owner-decision. Receipt: .gm/receipts/G_CONTRACT-memory-kind-enum-blocker-gm-drain-w1-102/01-SPECIFY.md. session_id: gm-drain-w2-136'
+session_id: gm-drain-w2-136
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

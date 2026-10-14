@@ -1,0 +1,8 @@
+id: GREPFIRST-COMMIT-MESSAGE-EXACT-SEARCH-blocker-gm-drain-w2-208
+subject: 'Blocker for GREPFIRST-COMMIT-MESSAGE-EXACT-SEARCH: no verbatim commit-message search verb; needs rs-plugkit change landed through CI and a cross-session witness'
+body: 'Run gm-drain-w2-208 resolved row GREPFIRST-COMMIT-MESSAGE-EXACT-SEARCH-blocker-gm-drain-w1-149 as blocked. SPECIFY (receipt .gm/receipts/GREPFIRST-COMMIT-MESSAGE-EXACT-SEARCH-blocker-gm-drain-w1-149/01-SPECIFY.md) re-confirmed live: codesearch literal ''git_log'' in rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs/git.rs; git_log is defined at line 4292 and accepts only limit/count/range/ref/rev/path/paths/files, so no commit-message filter exists. Fix: add a message-literal filter to git_log (rs-plugkit wasm_dispatch/verbs/git.rs) or a commit-message literal mode to codesearch. Blocked because this session cannot build locally (cargo hook), CI is the only verifier, and the witness must come from a different session than the implementer. Next: a session with CI access implements the filter, runs publish/release (step Build) green, witnesses by a verbatim phrase present only in commit c34db6d''s message returning that commit, and closes GREPFIRST-COMMIT-MESSAGE-EXACT-SEARCH with that witness dispatch id.'
+session_id: gm-drain-w2-208
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

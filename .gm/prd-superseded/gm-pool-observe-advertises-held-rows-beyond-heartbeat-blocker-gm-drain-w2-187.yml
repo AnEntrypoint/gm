@@ -1,0 +1,5 @@
+id: gm-pool-observe-advertises-held-rows-beyond-heartbeat-blocker-gm-drain-w2-187
+subject: 'Blocked: gm-pool-observe-advertises-held-rows-beyond-heartbeat needs a rs-plugkit change and a cross-session witness'
+body: 'Parent row: gm-pool-observe-advertises-held-rows-beyond-heartbeat. Session gm-drain-w2-187. Receipts: .gm/receipts/gm-pool-observe-advertises-held-rows-beyond-heartbeat/01-SPECIFY.md, 02-PROVE.md. Finding: held input is honored (probe dispatch: held=[XYPROB-RS-PLUGKIT-GM-UNTRACKED-RESIDUAL] removed it from candidates and listed it in live_rows). Remaining gap: a caller omitting body.held still gets held rows advertised, and candidate_reasons does not name the holding session. Closing needs an rs-plugkit/crates/plugkit-core/src/orchestrator/pool_slots change, a CI-built wasm via publish/release, and a witness from another session (self-witness refused). Acceptance: no advertised slot names a row held by a live agent, with candidate_reasons naming the holder.'
+session_id: gm-drain-w2-187
+status: pending

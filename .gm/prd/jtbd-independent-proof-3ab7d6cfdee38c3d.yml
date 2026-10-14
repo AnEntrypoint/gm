@@ -1,0 +1,6 @@
+id: JTBD-INDEPENDENT-PROOF
+title: 'Job: a third party verifies the walk without trusting the agent'
+body: 'Hired when: a team or auditor must rely on a gm walk''s COMPLETE result. Job: prove that verification happened from evidence the agent did not write. README states three gate checks (ci-validated-fresh, app-loads-witnessed, claim-audit-clean) read marker files the agent itself writes and that these depend on honest reporting. No stated job covers an independently checkable proof. Done when a COMPLETE walk can be re-checked by a party holding only the repository and its recorded witnesses, with no marker the agent authored being load-bearing.'
+obligation_kind: discovery
+session_id: lean-node-JTBD
+status: pending

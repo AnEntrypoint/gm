@@ -1,0 +1,5 @@
+id: ILLEGAL-PLUGKIT-SCANDEPS-STAT-VIEW-blocker-gm-drain-w1-163
+subject: 'Blocker for ILLEGAL-PLUGKIT-SCANDEPS-STAT-VIEW: PROVE needs a CI-built rs-plugkit guest and a cross-session witness'
+body: 'PROVE blocked: local cargo is hook-blocked (gm-no-local-cargo-verified-by-ci); the witness needs a CI-built wasm guest from a rs-plugkit main commit and a parent gitlink bump, and a cross-session witness. Receipts: .gm/receipts/ILLEGAL-PLUGKIT-SCANDEPS-STAT-VIEW/01-SPECIFY.md and 02-PROVE.md.'
+session_id: gm-drain-w1-163
+status: pending

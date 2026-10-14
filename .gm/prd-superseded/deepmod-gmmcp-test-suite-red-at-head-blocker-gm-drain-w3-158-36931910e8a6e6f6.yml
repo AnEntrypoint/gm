@@ -1,0 +1,8 @@
+id: DEEPMOD-GMMCP-TEST-SUITE-RED-AT-HEAD-blocker-gm-drain-w3-158
+subject: 'Blocker: DEEPMOD-GMMCP-TEST-SUITE-RED-AT-HEAD cannot be delivered from the shared gm-mcp tree'
+body: 'Row DEEPMOD-GMMCP-TEST-SUITE-RED-AT-HEAD stays pending. Evidence: HEAD a992ae6 (gm-mcp) fails runner-recovery, spool-name, transport, landed-output (dispatch 1791971635079-500-12e28f2c438efa8f). Working tree passes all 16 suites individually (dispatch 1791971614212-500-2f3d0b8f0c45d4a5), and 01-SPECIFY/03-EMIT in receipts show the fix: `const requestNumber = n` alias in gm-mcp/src/dispatch.js runDispatch. Blocker: gm-mcp/src/dispatch.js and about 20 other gm-mcp files carry other live writers'' hunks (dispatch.js rename plus reapRunnerEnsureInFlight; staged verb-table.js, self-update.js). Per gm-orchestrate shared-tree publish, this run must not commit those hunks. Unblock: the owner of the gm-mcp working tree lands the tree (or isolates the alias), then a git_finalize of gm-mcp/src/dispatch.js, a rebuilt bundle, ci-status on the sha, and a witness from a session other than gm-drain-w1-68 and gm-drain-w3-158 closes the row. Witness spec: npm test in gm-mcp exits 0 at the landed HEAD.'
+session_id: gm-drain-w3-158
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

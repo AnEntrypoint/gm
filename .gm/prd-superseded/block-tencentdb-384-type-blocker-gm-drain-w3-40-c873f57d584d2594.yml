@@ -1,0 +1,8 @@
+id: BLOCK-TENCENTDB-384-TYPE-blocker-gm-drain-w3-40
+session_id: mcp-codemode-9708-1791969716608
+subject: 'Blocked: BLOCK-TENCENTDB-384-TYPE PROVE cannot run in gm-drain-w3-40 (needs rs-plugkit edit, CI wasm build and cross-session witness)'
+body: 'Row BLOCK-TENCENTDB-384-TYPE stays pending. Stage receipt: .gm/receipts/BLOCK-TENCENTDB-384-TYPE/03-PROVE-gm-drain-w3-40.md. Leader H1 (the 384 guard is runtime, not typed) re-confirmed at memory.rs:736. The postcondition needs an rs-plugkit edit, a wasm32-wasip1 --features slim build from CI (local cargo is hook-blocked), and a witness from another session (a self-witness is refused). Next: a CI-built witness from a different session, or an owner decision to accept the runtime guard.'
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

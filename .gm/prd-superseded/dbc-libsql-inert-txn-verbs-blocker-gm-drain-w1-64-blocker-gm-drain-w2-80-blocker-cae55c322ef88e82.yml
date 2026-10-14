@@ -1,0 +1,8 @@
+id: DBC-LIBSQL-INERT-TXN-VERBS-blocker-gm-drain-w1-64-blocker-gm-drain-w2-80-blocker-gm-drain-w3-146
+subject: 'BLOCKER: gm-drain-w3-146 cannot close DBC-LIBSQL-INERT-TXN-VERBS-blocker-gm-drain-w1-64-blocker-gm-drain-w2-80; no gm verb reaches libsql begin'
+blockedBy:
+- external
+body: 'Row: DBC-LIBSQL-INERT-TXN-VERBS-blocker-gm-drain-w1-64-blocker-gm-drain-w2-80, session gm-drain-w3-146. Stage reached: SPECIFY (receipt .gm/receipts/DBC-LIBSQL-INERT-TXN-VERBS-blocker-gm-drain-w1-64-blocker-gm-drain-w2-80/01-SPECIFY.md). Evidence: prd-list 1791971279223-500-ce84da1ddf4dac10 and 1791971290671-500-5992e226cd675caf; gm.list filter sql has no begin/commit/rollback verb; gm.list filter begin is empty; codesearch inert_verbs 1791971291526-500-3a5a2daf2fab567 confirms agentplug-libsql/src/db.rs:744 lists only open and close. Closing needs either (a) a new gm verb route to libsql begin (rs-plugkit or gm-mcp source change plus CI-built wasm), or (b) the owner rewriting the parent acceptance to a source-level witness of db.rs:726-729 (needs built wasm; local cargo is hook-blocked). Owner decision needed on acceptance. Row stays pending.'
+session_id: gm-drain-w3-146
+status: pending
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

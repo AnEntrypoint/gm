@@ -1,0 +1,8 @@
+id: COMMITFMT-ENFORCE-50-72-blocker-gm-drain-w2-66-blocker-gm-drain-w3-122
+subject: 'Blocked: COMMITFMT-ENFORCE-50-72-blocker-gm-drain-w2-66 needs a CI-built rs-plugkit width gate and a cross-session witness'
+body: 'Session gm-drain-w3-122. Parent row COMMITFMT-ENFORCE-50-72-blocker-gm-drain-w2-66 is a PROVE blocker. Live check: rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs/git.rs:2166 git_commit is present and has no 72-column width gate (codesearch 1791970854126-500-7c5fc048a5e89e0b). The fix needs: (1) subject>50 and body-line>72 refusal with a reason string in git.rs git_commit (around :2175); (2) push rs-plugkit and let CI build the slim wasm (local cargo is hook-blocked); (3) bump the gm parent gitlink for rs-plugkit; (4) witness from a session other than gm-fin-14 and gm-drain-w3-122 with a live git_commit refused on a 51-char subject and accepted on a 50-char subject, binding the dispatch id. Receipt: .gm/receipts/COMMITFMT-ENFORCE-50-72-blocker-gm-drain-w2-66/01-SPECIFY.md. Owner: next wave session with CI access.'
+session_id: gm-drain-w3-122
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

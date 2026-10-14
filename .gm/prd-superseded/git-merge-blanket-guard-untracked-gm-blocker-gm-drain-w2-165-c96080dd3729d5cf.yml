@@ -1,0 +1,8 @@
+id: GIT-MERGE-BLANKET-GUARD-UNTRACKED-GM-blocker-gm-drain-w2-165
+subject: 'blocker: GIT-MERGE-BLANKET-GUARD-UNTRACKED-GM cannot close: fix pushed to local rs-plugkit only, remote moved, witness not yet live'
+body: 'Parent row: GIT-MERGE-BLANKET-GUARD-UNTRACKED-GM. SPECIFY: git_commit blanket guard (rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs/git.rs, the no-paths branch) calls blanket_stage_would_take, which lists untracked files (ls-files --others). A commit with no paths stages nothing, so the guard refused on untracked .gm files during MERGE_HEAD. Leader hypothesis: the guard fires on untracked entries during a merge. PROVE/EMIT: fix adds !merge_pending to the guard condition; cargo check -p rs-plugkit --offline passes. Committed locally as rs-plugkit ba8d734f6b (dispatch 1791961389698-500-70b104a3f51f03ed). DELIVERY BLOCKED: git_push dispatch 1791961418686-500-4b1b920c540e29f4 refused remote_moved (non-fast-forward on main). Recovery git_pull is refused because crates/plugkit-core/Cargo.toml carries another lane''s uncommitted modification; not touched. WITNESS PENDING: live witness needs the slim wasm built by CI (local cargo builds are hook-blocked) and a witness from a session other than gm-drain-w2-165 that reproduces untracked .gm/ files plus a staged merge and expects an index-only commit. Next: owner of Cargo.toml commits or reverts it, then git_pull main, git_push rev HEAD, cite the CI run, then witness.'
+session_id: gm-drain-w2-165
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

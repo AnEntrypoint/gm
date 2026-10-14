@@ -1,0 +1,7 @@
+id: SLAP-PLUGKIT-INDEXCFG-LEVELS-blocker-gm-drain-w2-396
+subject: 'BLOCKER for SLAP-PLUGKIT-INDEXCFG-LEVELS: PROVE/EMIT cannot run until CI builds rs-plugkit wasm'
+status: pending
+blockedBy:
+- SLAP-PLUGKIT-INDEXCFG-LEVELS
+body: 'Session gm-drain-w2-396 carried row SLAP-PLUGKIT-INDEXCFG-LEVELS-blocker-gm-drain-w1-269 to close. SPECIFY recheck: index_cfg_impl is at rs-plugkit/crates/plugkit-core/src/code_index.rs:2364-3112 (callers dispatch 1791965288950-500-7ad64ca3a9487485). PROVE cannot run: the witness needs a CI-built rs-plugkit wasm (local cargo hook-blocked, gm-no-local-cargo-verified-by-ci) and a live code_index dispatch through agentplug-runner after an rs-plugkit commit on main, a gm gitlink bump, and a green CI run. Unblock: land the phase split as one rs-plugkit commit on main, bump the gm gitlink, wait for CI, then witness: code_index keys and pass_ms keys identical to pre-change. Receipts: .gm/receipts/SLAP-PLUGKIT-INDEXCFG-LEVELS-blocker-gm-drain-w1-269/01-SPECIFY.md, 02-PROVE.md.'
+session_id: mcp-codemode-9708-1791965541643

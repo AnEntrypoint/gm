@@ -1,0 +1,7 @@
+id: PLUGKIT-SEMVER-VERSION-BLOCKER-MARKER
+title: 'Installed gm.version marker is non-semver: replace it outside the repo'
+description: Blocker for PLUGKIT-SEMVER-VERSION. No file in the repo sets gm.version; the live value is the installed marker read by agentplug/crates/agentplug-runner/src/download.rs (local_dev_sideload_marker_path, *.version file under the plugins dir, non-X.Y.Z treated as sideload). Needs an external release that publishes a semver gm version, or an operator replacing the marker. Row also needs splitting into PLUGKIT-SEMVER-VERSION-SET and PLUGKIT-SEMVER-UPDATE-WITNESS (INVEST).
+status: pending
+blockedBy:
+- external
+session_id: exec-PLUGKIT-SEMVER-VERSION

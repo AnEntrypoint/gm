@@ -1,0 +1,8 @@
+id: G_CONTRACT-memorize-prune-modes-blocker-gm-drain-w1-100-blocker-gm-drain-w2-131
+subject: 'Blocker for G_CONTRACT-memorize-prune-modes-blocker-gm-drain-w1-100: the Keys/Query enum still needs a CI-built rs-plugkit guest before its witness can run'
+blockedBy:
+- external
+body: 'Row G_CONTRACT-memorize-prune-modes-blocker-gm-drain-w1-100 cannot close in session gm-drain-w2-131 either. SPECIFY receipt: .gm/receipts/G_CONTRACT-memorize-prune-modes-blocker-gm-drain-w1-100/01-SPECIFY.md. PROVE receipt: 02-PROVE.md in the same folder. Still needed: a rs-plugkit commit that adds the Keys/Query enum to wasm_dispatch/verbs/memory.rs, pushed to main so CI builds the guest (--features slim; local cargo is hook-blocked), then the pin bump into gm, then a live memorize-prune {query} witness that deletes nothing and a memorize-prune {key} witness that removes one entry, both from a session other than the author of the enum commit. Prose in gm-config/prose/entry-extended.md changes only with that witness.'
+session_id: gm-drain-w2-131
+status: pending
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

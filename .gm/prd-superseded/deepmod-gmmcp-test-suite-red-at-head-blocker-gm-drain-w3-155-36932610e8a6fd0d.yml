@@ -1,0 +1,8 @@
+id: DEEPMOD-GMMCP-TEST-SUITE-RED-AT-HEAD-blocker-gm-drain-w3-155
+subject: Witness and deliver the requestNumber fix for DEEPMOD-GMMCP-TEST-SUITE-RED-AT-HEAD; HEAD state unverified and tree is multi-writer
+body: 'Row DEEPMOD-GMMCP-TEST-SUITE-RED-AT-HEAD-blocker-gm-drain-w1-68 cites a local fix ''const requestNumber = n'' that is absent from the working tree (codesearch ''const n ='' in gm-mcp/src/dispatch.js: 0 hits; line 1949 reads ''const requestNumber = sequence''). Working-tree witness: npm test in gm-mcp exits 0, RESULT: PASS, dispatch 1791971549690-500-3125e7729fce7de9 (not a HEAD witness). Remote main gm-mcp/src/dispatch.js line 1970 reads ''const requestNumber = resume_task || nextN(session_id)'' (gh api contents, dispatch 1791971635145-500-5ac597b103d10c30), so the cited alias is not the form on main. The gm-mcp submodule has 21 modified and 4 staged paths plus an untracked file from other writers (git_status 1791971463868-500-3dd96fb2701abfb4); no lane may publish there until it is single-writer. Next: establish HEAD red or green via git archive of the remote main sha into a temp dir, run npm test there read-only, then decide whether the row closes with no delivery needed or a fix must land after the tree is single-writer.'
+session_id: gm-drain-w3-155
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

@@ -1,0 +1,8 @@
+id: BLOCKER-SKILLGM-git-append-rewrite-flag-blocker-gm-drain-w2-30-blocker-gm-drain-w3-53
+subject: 'Blocker for BLOCKER-SKILLGM-git-append-rewrite-flag-blocker-gm-drain-w2-30: append/rewrite flag EDIT blocked on unresolved U1/U2 and gm-mcp bundle rebuild'
+body: 'Row BLOCKER-SKILLGM-git-append-rewrite-flag-blocker-gm-drain-w2-30 (parent BLOCKER-SKILLGM-git-append-rewrite-flag) cannot close in session gm-drain-w3-53. Unknowns not eliminated: U1 whether the wasm guest consumes the git verb registry in gm-mcp/src/verb-table.js; U2 the exact rewrite-class git verb set (git_reset, git_revert, rebase, force-push refspecs). Needed before EDIT: a JIT run that answers U1 (grep rs-plugkit for the verb-table consumer, or a live dispatch) and U2 (enumerate rewrite-class verbs from SKILL.md:128 against verb-table.js), then the field and bundle rebuild, then a witness from a session other than the row''s own. Receipt: .gm/receipts/BLOCKER-SKILLGM-git-append-rewrite-flag-blocker-gm-drain-w2-30/01-SPECIFY.md.'
+session_id: gm-drain-w3-53
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

@@ -1,0 +1,5 @@
+id: SLAP-gm-goal-w4-SLAP-1-blocker-gm-drain-w1-249
+subject: 'SLAP lock/status extraction in gm-mcp: publish blocked by other writers'' uncommitted src hunks in the same bundle'
+body: 'Row SLAP-gm-goal-w4-SLAP-1 is implemented in the gm-mcp working tree (new src/spool-store.js; src/dispatch.js lock and status sites routed through it; bin/gm-mcp-server.js rebuilt). Witness: codesearch regex fs.(writeFileSync|readFileSync|openSync|linkSync|renameSync) on src/dispatch.js, dispatch 1791959255038-500-6f2a032875afdf7a, shows no lock or status primitive left. Blocker: the rebuilt bundle includes uncommitted hunks of other writers in src/dev-sync.js, src/release-bridge.js and the staged src/self-update.js. Publish must wait until those writers land their src, then re-run npm run build and commit src plus bin together. Also needs an independent witness from another session (self-witness refused). Receipts: .gm/receipts/SLAP-gm-goal-w4-SLAP-1/01-SPECIFY.md, 02-PROVE-EMIT-CONC.md. Stale row line citations (1044, 1071, 1167, 1179, 1376) are superseded by current lines 932-1486.'
+session_id: gm-drain-w1-249
+status: pending

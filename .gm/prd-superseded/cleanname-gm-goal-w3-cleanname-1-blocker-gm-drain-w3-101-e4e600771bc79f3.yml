@@ -1,0 +1,7 @@
+id: CLEANNAME-gm-goal-w3-CLEANNAME-1-blocker-gm-drain-w3-101
+session_id: mcp-codemode-9708-1791970617317
+status: pending
+title: 'BLOCKER for CLEANNAME-gm-goal-w3-CLEANNAME-1: the rename (const n -> sequence at dispatch.js:1970 in HEAD; const t -> timer) is present only in the uncommitted gm-mcp submodule working tree (18 modified files, src/dispatch.js carries a spool-store.js extraction by another writer). Committed HEAD still has ''const n = resume_task || nextN'' and the old timer name. Resolve by landing or reverting the owning writer''s gm-mcp refactor on main, then rerun the row: witness = codesearch regex ''const n = resume_task|const t = setTimeout'' zero hits on gm-mcp/src/dispatch.js at the submodule main tip, plus node --check (passed in working tree, dispatch gm-drain-w3-101 Bash check).'
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

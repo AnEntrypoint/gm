@@ -1,0 +1,13 @@
+id: CLEANNAME-gm-goal-w3-CLEANNAME-1-blocker-gm-drain-w2-53
+subject: 'Blocker for CLEANNAME-gm-goal-w3-CLEANNAME-1: stale cites and dirty gm-mcp tree block the rename in session gm-drain-w2-53'
+body: |-
+  Blocker for CLEANNAME-gm-goal-w3-CLEANNAME-1-blocker-gm-drain-w1-42 (session gm-drain-w2-53).
+  SPECIFY: row cites dispatch.js:1824 and :1209. Live codesearch dispatch 1791960110560-500-6ff995b1739ece7 finds `const n = resume_task || nextN(session_id)` at dispatch.js:1934, so the cited line is stale. The setTimeout cite was not re-verified.
+  PROVE precondition fails: git_status dispatch 1791960112704-500-a522cf0c5104caf3 on gm-mcp reports dirty:true, 11 modified paths including src/dispatch.js (the rename target), a staged src/self-update.js and an untracked src/spool-store.js. Another writer holds src/dispatch.js, so a rename cannot land on an exclusive tree.
+  The rename also needs an enumerated call-site probe past dispatch.js:2114 and a rebuilt committed gm-mcp bundle per gm-mcp/AGENTS.md, plus a cross-session witness. None of these ran here.
+  Next: after the gm-mcp tree is clean on main, re-verify the cited lines (dispatch.js:1934 and the setTimeout site), enumerate `n` call sites with codesearch, rename, rebuild the bundle, then witness from another session.
+session_id: gm-drain-w2-53
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

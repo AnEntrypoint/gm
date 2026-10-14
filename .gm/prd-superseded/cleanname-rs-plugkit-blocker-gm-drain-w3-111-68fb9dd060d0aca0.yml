@@ -1,0 +1,8 @@
+id: CLEANNAME-RS-PLUGKIT-blocker-gm-drain-w3-111
+subject: 'Blocker for CLEANNAME-RS-PLUGKIT-blocker-gm-drain-w2-62: no in-session witness for the rs-plugkit parent; cites partly stale'
+session_id: gm-drain-w3-111
+body: 'Row CLEANNAME-RS-PLUGKIT-blocker-gm-drain-w2-62 (session gm-drain-w3-111) reached SPECIFY and cannot close. Its binding needs a witness dispatch id for a changed verb. The parent CLEANNAME-RS-PLUGKIT needs a rs-plugkit edit (intention-revealing local names in code_index.rs and cache.rs) and a CI-run witness (cargo build --features slim, verb witnessed via agentplug-runner), because local cargo is blocked by a hook. Live re-check (gm.codesearch literal): code_index.rs:647 `let v = unpack_to_value_pub(packed)` (parent cite 620 stale); cache.rs:316 matches; code_index.rs `let b = self.scoring...` (parent cite 3645) has no hit. Receipt: C:\dev\gm\.gm\receipts\CLEANNAME-RS-PLUGKIT-blocker-gm-drain-w2-62\01-SPECIFY-gm-drain-w3-111.md. Resolution: push the rs-plugkit rename on main, witness it in CI (publish / release Build step), then the parent closes on that run''s dispatch; or re-scope the parent with corrected cites and CI-only acceptance.'
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

@@ -1,0 +1,7 @@
+id: WADLER-VALUE-SIGNATURE-DREAMRSI
+node: WADLER
+phase: P2
+status: pending
+title: 'Theorems for Free: dream_rsi.rs takes untyped &Value for strategy, observation and record inputs (veto_reason, observation_is_gate_drift_failure, verify_record); give each a typed struct so the signature carries the record contract'
+owner: rs-plugkit/crates/plugkit-core/src/orchestrator/dream_rsi.rs
+session_id: lean-hop-WADLER

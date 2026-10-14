@@ -1,0 +1,5 @@
+id: ORACLEBIAS-REBUILD-SIDELOAD-blocker-gm-drain-w2-320
+subject: 'Blocker for ORACLEBIAS-REBUILD-SIDELOAD: no read-only verb serves the ORACLEBIAS node prose for a witness'
+body: 'Parent row: ORACLEBIAS-REBUILD-SIDELOAD. Sideload content is present: both ~/.gm-tools/plugkit.wasm and ~/.agentplug/plugins/gm.wasm contain the new oraclebias rule text (exec_js dispatch 1791963864474-500-ad38d112fbdf28b4). The row''s acceptance needs a live served read of the ORACLEBIAS node. The instruction verb (phase=ORACLEBIAS, mode readonly: dispatch 1791963905169-500-d001402046104d13) returns orchestrator prose; discipline (dispatch 1791963894067-500-2aefcdf989bd2727) returns empty. Needed: a read-only verb or hop-serve path that returns the node prose by key ORACLEBIAS, or a witness run by another session through the lean-hop walk. Also not run: local cargo rebuild (blocked by hook, CI-verified per AGENTS.md). Receipt: .gm/receipts/ORACLEBIAS-REBUILD-SIDELOAD/01-SPECIFY.md.'
+session_id: gm-drain-w2-320
+status: pending

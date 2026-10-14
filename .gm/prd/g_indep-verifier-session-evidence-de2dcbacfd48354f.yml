@@ -1,0 +1,5 @@
+id: G_INDEP-VERIFIER-SESSION-EVIDENCE
+title: 'G_INDEP: lean-walk evidence records verifier_session_id for every VERIFY-phase verifier'
+status: pending
+description: 'Of the 60-plus .gm/lean-walk/*.json evidence files, none records a verifier identity; only session_id of the implementing hop is present (COMPACT.json, EARS.json). Add a verifier_session_id field to the evidence shape written by lean-p4 verifier dispatches, so the independence rule is witnessable per hop. Witness: a P4 hop evidence file with verifier_session_id distinct from its session_id.'
+session_id: lean-hop-G_INDEP

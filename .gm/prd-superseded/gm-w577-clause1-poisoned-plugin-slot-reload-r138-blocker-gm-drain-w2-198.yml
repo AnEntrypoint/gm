@@ -1,0 +1,7 @@
+id: gm-w577-clause1-poisoned-plugin-slot-reload-r138-blocker-gm-drain-w2-198
+kind: friction
+session: gm-drain-w2-198
+subject: PROVE for poisoned-slot reload (H1 leader) needs a non-local runner witness; no CI witness job exists for it
+status: pending
+body: 'Blocks gm-w577-clause1-poisoned-plugin-slot-reload-r138-blocker-gm-drain-w1-144. Receipts: .gm/receipts/gm-w577-clause1-poisoned-plugin-slot-reload-r138-blocker-gm-drain-w1-144/01-SPECIFY.md and 02-PROVE.md. Needed: a witness job (CI or runner-hosted) that runs a poisoning plugin through the top-level dispatch at agentplug/crates/agentplug-host/src/registry.rs:1806 with the remembered module cleared, then re-dispatches, and prints the reply plus plugin_poisoned_store_recovered and plugin_poisoned_store_evicted events for H1 versus H2 (fail-by-design on first poisoning). Resolve by: a witness dispatch id from a non-local run.'
+session_id: gm-drain-w2-198

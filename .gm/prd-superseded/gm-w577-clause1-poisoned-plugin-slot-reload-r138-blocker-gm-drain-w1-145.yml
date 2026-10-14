@@ -1,0 +1,7 @@
+id: gm-w577-clause1-poisoned-plugin-slot-reload-r138-blocker-gm-drain-w1-145
+kind: blocker
+session: gm-drain-w1-145
+subject: 'BLOCKER: row gm-w577-clause1-poisoned-plugin-slot-reload-r138-blocker-r138 has no in-scope edit site (plugin slot reload is in agentplug, out of scope)'
+text: 'Row blocker-r138 is itself a blocker. SPECIFY re-check in session gm-drain-w1-145: prd-list {id} returns the row as pending (dispatch 1791958348270-500-342a5c226fe08977). codesearch regex poison|evict|reload over agentplug/crates/agentplug-runner/src/daemon returns one hit, only dispatch_handle_with_reload at claim_dispatch.rs:3400 (dispatch 1791958357428-500-5412894d756e0b01), so no poisoned plugin slot or evict logic exists in that directory. Earlier evidence: gm-mcp has 0 poison hits, rs-plugkit has 2 non-plugin hits. Resolving clause 1 needs a change inside agentplug, which is out of scope for this session. Unblock by either widening scope to agentplug/crates/agentplug-runner/src/daemon/ with a stated reproduction for the poisoned slot, or by retiring the clause. Not a witness-closable row in this scope.'
+session_id: gm-drain-w1-145
+status: pending

@@ -1,0 +1,5 @@
+id: JTBD-REVIEWER-ONEPASS-blocker-gm-drain-w1-189
+subject: 'Blocker for JTBD-REVIEWER-ONEPASS: no reviewer summary verb exists; closing needs a CI-built guest and a cross-session witness'
+body: 'Row JTBD-REVIEWER-ONEPASS requires one verb returning a reviewer-facing summary (net line delta, gates passed, witnesses, PRD rows closed) from recorded evidence. SPECIFY probes (receipt .gm/receipts/JTBD-REVIEWER-ONEPASS/01-SPECIFY.md): codesearch ''reviewer'' in gm-mcp/src has 0 hits (dispatch 1791958602204-500-a42514b6ac6e30f0); in rs-plugkit plugkit-core/src only prose hits (dispatch 1791958607874-500-c19c5f8118f27533); gm.list has no such verb. Leader hypothesis: the verb is absent. PROVE needs a rs-plugkit Rust change with a CI wasm build (no local cargo) plus a gm-mcp bundle rebuild, and a witness from another session. Next action: file a design row for the verb in rs-plugkit (name, body shape, evidence sources: prd-log, witness-log, git diff stat, ci-status), then witness it cross-session.'
+session_id: gm-drain-w1-189
+status: pending

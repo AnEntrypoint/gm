@@ -1,0 +1,5 @@
+id: PLUGKIT-SEMVER-UPDATE-WITNESS-ci-only-blocker-gm-prdall-20261014-04-k02
+subject: 'Blocker: PLUGKIT-SEMVER-UPDATE-WITNESS-ci-only cannot close in session gm-prdall-20261014-04-k02'
+body: 'Stage reached: SPECIFY (receipt .gm/receipts/PLUGKIT-SEMVER-UPDATE-WITNESS-ci-only/01-SPECIFY-gm-prdall-20261014-04-k02.md). PROVE/EMIT/witness not run: the fix lives in the agentplug submodule (download.rs:2153-2159, sha check must precede the version short-circuit), needs a CI run (local cargo blocked by hook), a submodule pin bump, and a live daemon-status re-witness against db42b8dc21646809ca042cc99814539468ccfb56c6315ec5720ce435d10cb0de. None of these can run from this session. Parent row stays pending. Cause still unproven: H1 (version short-circuit) vs H2 (refresh_plugin_if_stale misreport) needs the CI probe.'
+session_id: gm-prdall-20261014-04-k02
+status: pending

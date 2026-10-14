@@ -1,0 +1,5 @@
+id: PLUGKIT-SEMVER-VERSION-BLOCKER-MARKER-blocker-gm-drain-w2-347
+title: 'Blocked: PLUGKIT-SEMVER-VERSION-BLOCKER-MARKER premise is stale; no local-dev sideload marker remains and parent is resolved'
+description: 'Row (blockedBy external) asks to replace a non-semver ~/.gm-tools/plugins marker. Live state (dispatches 1791964094308-500-84ed10ab89928129, 1791964229830-500-d767a8b87b94ee2, 1791964384369-500-eb77ccfff78e2cf1): plugins/ is empty, all ~/.gm-tools version files are X.Y.Z, and the parent PLUGKIT-SEMVER-VERSION is completed (1791964063420-500-3e4130d7a7478b63). Nothing to replace. Owner should retire the row (prd-resolve with a witness from another session) or re-scope it as an operator action. Receipt: .gm/receipts/PLUGKIT-SEMVER-VERSION-BLOCKER-MARKER/01-SPECIFY-gm-drain-w2-347.md'
+session_id: gm-drain-w2-347
+status: pending

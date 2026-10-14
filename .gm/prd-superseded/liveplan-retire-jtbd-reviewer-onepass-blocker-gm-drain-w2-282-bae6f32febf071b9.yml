@@ -1,0 +1,5 @@
+id: LIVEPLAN-RETIRE-JTBD-REVIEWER-ONEPASS-blocker-gm-drain-w2-282
+subject: 'Blocked: retirement waits on two pending INVEST rows'
+body: 'Blocker for LIVEPLAN-RETIRE-JTBD-REVIEWER-ONEPASS (session gm-drain-w2-282). SPECIFY: the row''s closing_condition is that INVEST-JTBD-REVIEWER-SUMMARY-VERB and INVEST-JTBD-REVIEWER-WITNESS-CITATIONS are both closed. Live prd-list at dispatch 1791963342936-500-1876648e5e7279ed and 1791963344671-500-dbac2aa67ae51b22 shows both status pending. The row asserts no cause, so no ACH matrix is required. The row cannot close on a witness until its two dependency rows close, and this run may not close them. Unblock by resolving INVEST-JTBD-REVIEWER-SUMMARY-VERB and then INVEST-JTBD-REVIEWER-WITNESS-CITATIONS in other sessions, then witnessing the retirement from a session other than the resolver.'
+session_id: gm-drain-w2-282
+status: pending

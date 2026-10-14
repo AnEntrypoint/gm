@@ -1,0 +1,7 @@
+id: THINSLICE-SESSIONID-ALIAS-blocker-gm-drain-w2-451
+subject: 'Re-scope THINSLICE-SESSIONID-ALIAS: cited alias sentences absent; normalization is an unbuilt dispatch-layer feature'
+status: pending
+blockedBy:
+- THINSLICE-SESSIONID-ALIAS-blocker-gm-prdall-20261014-04-k01
+body: 'Stage reached: SPECIFY (session gm-drain-w2-451). Receipt for the row''s SPECIFY stage: .gm/receipts/THINSLICE-SESSIONID-ALIAS/01-SPECIFY.md. Cited alias sentences are absent from skills/gm/SKILL.md and gm-config/prose/entry.md (codesearch zero for sessionId; the scan was incomplete, 199 gm_state files unsearched, so this is a tracked-tree finding). gm-mcp/src/dispatch.js:1073 reads body.SESSION_ID only, so the normalization half is new behaviour, not a cleanup. Closing needs: a re-scoped row naming the live file set (gm-mcp/src/dispatch.js, rebuilt gm-mcp bundle, CI build), a deliberate choice whether the three spellings should be accepted at all, and a witness from a session other than gm-prdall-20261014-04-k01 showing exec_js ok under each spelling. Not closable in this run. Original row status: see prd-list id THINSLICE-SESSIONID-ALIAS.'
+session_id: mcp-codemode-9708-1791967058913

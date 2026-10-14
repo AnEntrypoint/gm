@@ -1,0 +1,5 @@
+id: SMALLESTSET-AGENTS-SIZE-HEADROOM-blocker-gm-2e-fa19b3-w4-03-blocker-gm-drain-w2-407
+subject: 'Blocker: 9594-byte AGENTS.md compaction needs a multi-stage rewrite and a cross-session witness'
+body: PROVE cannot run in session gm-drain-w2-407. SPECIFY (receipt .gm/receipts/SMALLESTSET-AGENTS-SIZE-HEADROOM-blocker-gm-2e-fa19b3-w4-03/01-SPECIFY.md, pre-existing) re-measured AGENTS.md at 29594 bytes (dispatch 1791965580600-500-4ac1cb9e71751d80), 9594 bytes above the 20000 target. No Verified-dated heading remains; the Verified and Dream-RSI hits are inline citations. Closing the row needs a compaction of at least 9594 bytes from the Implementation rules, Verification and delivery and Dated findings sections, with every kept falsifier path and verb re-resolved by codesearch or fs_stat, then a witness from another session (exec_js byte count below 20000). That is a multi-stage governance rewrite, not one stage run. Parent row SMALLESTSET-AGENTS-SIZE-HEADROOM stays pending; the five stale SMALLESTSET-AGENTS-VERIFIED-* and DREAMRSI-SECTION rows still need closing as stale.
+session_id: gm-drain-w2-407
+status: pending

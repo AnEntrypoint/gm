@@ -1,0 +1,7 @@
+id: DREAMRSI-PROPOSE-SLICE-blocker-gm-drain-w2-95
+subject: 'Blocked: DREAMRSI-PROPOSE-SLICE has its body in dream_rsi.rs (propose_strategy :757, handle_strategy_propose :781) but no dispatch arm in orchestrator/mod.rs, and the live witness needs a CI-built slim wasm. Fix: add "dream-strategy-propose" => dream_rsi::handle_strategy_propose(content), beside the dream-replay-cycle arm at mod.rs:407; then witness through agentplug-runner with active-strategy.json byte-identical before and after. Receipts: .gm/receipts/DREAMRSI-PROPOSE-SLICE/01-SPECIFY.md, 02-PROVE.md. Probe: gm.list() has no dream-strategy-propose.'
+status: pending
+blockedBy:
+- external
+session_id: gm-drain-w2-95
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

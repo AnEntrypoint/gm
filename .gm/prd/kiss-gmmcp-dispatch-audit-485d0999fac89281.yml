@@ -1,0 +1,7 @@
+id: KISS-GMMCP-DISPATCH-AUDIT
+node: KISS
+phase: P3
+status: pending
+title: 'KISS: audit gm-mcp/src/dispatch.js (66,214 bytes, largest gm-mcp source) for layers that exceed the verbs they serve'
+body: 'Present need: gm-mcp/src/dispatch.js is the largest source file in gm-mcp and carries the spool write-and-poll cycle, timeouts, and response handling. A scan of gm-mcp/src found no unreferenced top-level functions, so the excess, if any, is inside live functions (unused option branches, duplicated normalization, aliases with no caller). Need: enumerate each branch and option in dispatch.js, keep the ones a live caller or the documented body contract reaches, and delete the rest. Witness: rebuild the committed bundle (gm-mcp build script), run verify-build, and one live exec_js dispatch through the MCP path returning exit_code 0. Keep: documented verb aliases in docs/verbs.md and the windowsHide spawn rules. Reopen when the audit finds no branch without a caller.'
+session_id: lean-hop-KISS

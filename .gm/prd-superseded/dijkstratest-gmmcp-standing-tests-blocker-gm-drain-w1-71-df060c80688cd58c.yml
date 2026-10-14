@@ -1,0 +1,5 @@
+id: DIJKSTRATEST-GMMCP-STANDING-TESTS-blocker-gm-drain-w1-71
+subject: 'Blocker: DIJKSTRATEST-GMMCP-STANDING-TESTS needs decomposition before any probe can witness it'
+body: 'Parent row DIJKSTRATEST-GMMCP-STANDING-TESTS cannot close in one run. Its scope is 16 node test files (gm-mcp/test, codesearch shows 177 test-token hits across 18 files) that must each be re-expressed as exec_js probes, then gm-mcp/test deleted and the npm test script dropped, in a separate repo followed by a bundle rebuild. Required: split the parent into one row per test file (or per cluster), each with its own probe witness from a different session, then close the parent once all children resolve. Receipt: .gm/receipts/DIJKSTRATEST-GMMCP-STANDING-TESTS/01-SPECIFY.md. Tree evidence: 1791957594654-500-ce94e3d98247edca, 1791957608648-500-d65d501aabac3676, 1791957610035-500-51fa4b19f7723bdf.'
+session_id: gm-drain-w1-71
+status: pending

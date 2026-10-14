@@ -1,0 +1,5 @@
+id: JTBD-RESUME-INTERRUPTED-WALK-blocker-gm-drain-w1-188
+subject: 'Blocked: JTBD-RESUME-INTERRUPTED-WALK needs a live interrupted-walk witness from a second session'
+body: 'Row JTBD-RESUME-INTERRUPTED-WALK cannot close in session gm-drain-w1-188. SPECIFY receipt: .gm/receipts/JTBD-RESUME-INTERRUPTED-WALK/01-SPECIFY.md. Premise confirmed: README.md and AGENTS.md have no resumption text; skills/gm has none for non-COMPLETE resumption. PROVE needs a live interrupted walk (one open row, one closed row), a fresh session, and a dispatch trace showing only the open row is targeted. Leader H1 (undocumented, re-derived state) is not separated from H2 (a code path in rs-plugkit exists but is undocumented) without that run. The probe would interrupt a walk in the shared tree, which disturbs other writers'' open rows, so it must run from a separate session with the row''s witness. Next step: codesearch rs-plugkit for PRD and mutables reads on session start (H2 probe), then the live witness from a second session.'
+session_id: gm-drain-w1-188
+status: pending

@@ -1,0 +1,8 @@
+id: gm-git-pull-push-refused-by-tracked-runtime-dirt-spoint-orch-b186-tsurf-1200
+subject: git_pull and git_push in c:/dev/gm refuse on tracked runtime state that no incoming commit touches, and a submodule gitlink conflict is reported after the merge starts
+acceptance: git_pull {branch:main} and git_push {rev:HEAD} succeed in c:/dev/gm while the dirty paths lie outside the incoming change set (git's own overlap rule), and a submodule gitlink conflict is refused before any merge state is written and names the commit to merge.
+severity: MEDIUM
+status: pending
+surface: the gm git verbs in rs-plugkit (git_pull, git_push auto-recovery, the dirty-tree gate)
+text: 'Measured 2026-10-10 around 12:45-12:55Z. git_push {rev:HEAD} of d408055 was rejected non-fast-forward after a CI autobump; auto_recovery was skipped because porcelain showed .gm/dream-rsi/*/.cycle-state.json, observations.json, .gm/instructions/entry.md and agentplug. Those runtime files change while the daemon runs, so no pull can pass the gate. git_pull {branch:main} then ran past the gate and reported conflicted:true with Failed to merge submodule rs-plugkit (commits don''t follow merge-base); MERGE_HEAD was absent afterwards, and a staged gitlink appeared and later cleared. Related: XYPROB-runtime-state-in-submodules, INVEST-XYPROB-RUNTIME-IGNORE-RS-PLUGKIT. Found by spoint-orch-b186-adv-tsurf-1200.'
+session_id: spoint-orch-b186-adv-tsurf-1200

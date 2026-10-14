@@ -1,0 +1,5 @@
+id: DRAIN-FIRST-UNDER-20
+subject: 'Witness the orchestrator rule: drain while rows exist, traverse CS disciplines when pending rows fall under 20'
+body: 'Witness: a run with 25 pending rows launches only row slots; a run with 12 launches traversal slots and a successor nomination from outward links.'
+session_id: gm-invariants-08
+status: pending

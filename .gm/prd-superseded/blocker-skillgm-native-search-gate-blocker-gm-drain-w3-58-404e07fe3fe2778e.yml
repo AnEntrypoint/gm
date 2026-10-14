@@ -1,0 +1,8 @@
+id: BLOCKER-SKILLGM-native-search-gate-blocker-gm-drain-w3-58
+subject: 'Blocked: BLOCKER-SKILLGM-native-search-gate has no deviation gate id to rely on'
+body: 'SPECIFY finding (session gm-drain-w3-58). No gate in gm-config or rs-plugkit blocks Glob/Grep/find/rg/Explore for content search. Searched gm-config (regex native search|Explore|bash-git-bypass) and rs-plugkit/crates/plugkit-core/src for deviation.<id>: the 17 deviation.* ids are prd-add-no-id, synthetic-test-file, admit-deferral-marker, secret-in-diff, unchecked-panic, hedge-language, graphical-symbol, non-idempotent-replay, spool-poll. deviation.bash-git-bypass appears only as prose in rs-plugkit orchestrator/instructions/prose/entry.md:144 and gm-config/prose/entry.md:106, with no predicate or transition gate in transitions.rs or predicate_registry.rs. Consequence: the row''s first acceptance step (confirm the gate id) has no answer, and making a gate needs a new predicate in rs-plugkit (predicate_registry.rs plus transitions.rs), a CI-built wasm (no local cargo) and a live witness from another session. Trimming SKILL.md restatements before that gate exists would remove the only prose enforcement. Next: a new row to add the predicate (deviation.native-search) in rs-plugkit, gated on CI build, then the prose trim.'
+session_id: gm-drain-w3-58
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

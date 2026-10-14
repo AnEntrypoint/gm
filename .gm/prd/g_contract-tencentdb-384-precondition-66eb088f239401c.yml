@@ -1,0 +1,7 @@
+id: G_CONTRACT-tencentdb-384-precondition
+subject: The rule that migration destinations must have vectors_db_dims exactly 384 is restated in gm-config/prose/entry-extended.md (tencentdb-memory-import and migrate script refuse unless dims is 384) and skills/agent-memory/SKILL.md lines 92-95 (same precondition). Make the destination namespace type carry dims as a validated 384 value so the precondition is in the signature, and delete both prose copies to a pointer.
+session_id: lean-node-G_CONTRACT
+status: pending
+blockedBy:
+- external
+deferReason: 'Code move: destination namespace type must carry dims as a validated 384 value. Today the check is runtime in wasm_dispatch/verbs/memory.rs. Prose left as-is in entry-extended.md and skills/agent-memory/SKILL.md.'

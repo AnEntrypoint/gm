@@ -1,0 +1,5 @@
+id: PLUGKIT-SEMVER-UPDATE-WITNESS-ci-only-blocker-gm-drain-w2-346
+subject: 'Blocker: PLUGKIT-SEMVER-UPDATE-WITNESS-ci-only-blocker-gm-prdall-20261014-04-k02 cannot close in session gm-drain-w2-346'
+status: pending
+body: 'Stage reached: SPECIFY (receipt .gm/receipts/PLUGKIT-SEMVER-UPDATE-WITNESS-ci-only-blocker-gm-prdall-20261014-04-k02/01-SPECIFY-gm-drain-w2-346.md). Parent blocker row PLUGKIT-SEMVER-UPDATE-WITNESS-ci-only-blocker-gm-prdall-20261014-04-k02 is pending. PROVE needs a CI run of agentplug download.rs with a sideloaded stale wasm, a submodule pin bump and a live daemon-status re-witness (loaded_plugin_content_sha256.gm). Session has no CI or pin path. Leader H1 (version short-circuit before sha check) is unproven against H2 (refresh_plugin_if_stale misreport). Next: launch a CI probe that separates H1 from H2, then witness from another session.'
+session_id: gm-drain-w2-346

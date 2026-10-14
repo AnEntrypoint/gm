@@ -1,0 +1,8 @@
+id: BLOCKER-SKILLGM-native-search-gate-blocker-gm-drain-w2-33
+subject: 'Blocker for BLOCKER-SKILLGM-native-search-gate: no deviation gate exists for native search (Glob/Grep/find/rg/Explore)'
+body: 'SPECIFY+PROVE (receipts .gm/receipts/BLOCKER-SKILLGM-native-search-gate/01-SPECIFY.md, 02-PROVE.md). DEVIATION_TABLE (rs-plugkit/crates/plugkit-core/src/orchestrator/deviations.rs, 29 names) and gm-config predicates/gates contain no search gate; the ban is prose only (gm-config/prose/lean-p7.md:19, entry.md:121). Glob/Grep are host-native tools that never reach the spool, so a spool deviation cannot observe them; enforcement needs a host PreToolUse hook (hooks/*.js), which grants execution authority and needs the user''s explicit naming (gm Section 4). Required before SKILL.md trim: user decision on hook vs. accepting prose-only ban; then a reviewed rs-plugkit rebuild if a spool gate is chosen. Witness dispatch ids: codesearch 1791960044615-500-60dd70919b6f91a0, 1791960089327-500-bfe495aff39902b9, 1791960027707-500-*.'
+session_id: gm-drain-w2-33
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

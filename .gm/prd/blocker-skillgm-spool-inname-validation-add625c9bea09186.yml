@@ -1,0 +1,4 @@
+id: BLOCKER-SKILLGM-spool-inname-validation
+subject: 'Blocker for G_CONTRACT-spool-claim-key-session-prefix: daemon rejects in-file names that are bare integers or lack the <session_id>-<N> prefix with a named error, and mints subagent session ids itself (<parent>-sub<k>); then reduce skills/gm/SKILL.md claim-key sentence to the outcome. Prose stays until this lands.'
+session_id: lean-exec-skillgm-1
+status: pending

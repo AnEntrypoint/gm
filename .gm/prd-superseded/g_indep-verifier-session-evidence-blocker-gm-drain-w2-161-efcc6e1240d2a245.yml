@@ -1,0 +1,8 @@
+id: G_INDEP-VERIFIER-SESSION-EVIDENCE-blocker-gm-drain-w2-161
+subject: G_INDEP witness needs a live P4 VERIFY hop evidence file
+body: 'Row G_INDEP-VERIFIER-SESSION-EVIDENCE cannot close in this run. Its witness is a P4 hop evidence file whose verifier_session_id differs from session_id. The shape fix belongs in skills/gm-hop/SKILL.md lines 30-35 (node-file shape has no verifier_session_id). The witness needs a live VERIFY-phase hop to write that file after the shape lands, which is a gm-orchestrate wave, not this run. Receipt: .gm/receipts/G_INDEP-VERIFIER-SESSION-EVIDENCE/01-SPECIFY.md. Leader H1 (shape lacks field). Next: edit the shape, then witness on the next P4 wave.'
+session_id: gm-drain-w2-161
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

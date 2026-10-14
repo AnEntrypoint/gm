@@ -1,0 +1,5 @@
+id: JTBD-INDEPENDENT-PROOF-blocker-gm-drain-w1-187-blocker-gm-drain-w2-262
+subject: 'Blocker for JTBD-INDEPENDENT-PROOF-blocker-gm-drain-w1-187: independent COMPLETE re-check needs a verifier that is not in scope of this row'
+session_id: gm-drain-w2-262
+body: 'gm-prd run gm-drain-w2-262 could not reach PROVE. SPECIFY receipt: .gm/receipts/JTBD-INDEPENDENT-PROOF-blocker-gm-drain-w1-187/01-SPECIFY.md. Cited paths confirmed present (gm-config/fsm/predicates.md, .gm/exec-spool/.ci-validated, parent receipt). ACH leader H1: all closure predicates read agent-written markers or agent-reported store values. Closing it needs a new verifier that re-derives COMPLETE from git state and CI run ids, with its own witness from another session. That is a code change in gm-config/ and rs-plugkit/, so it is filed as a new blocker. Next step: enumerate the 29 predicates in gm-config/fsm/predicates.md (PROVE probe) and scope the verifier as its own row.'
+status: pending

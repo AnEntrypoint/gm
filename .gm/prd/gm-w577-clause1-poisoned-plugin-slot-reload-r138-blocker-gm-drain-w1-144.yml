@@ -1,0 +1,7 @@
+id: gm-w577-clause1-poisoned-plugin-slot-reload-r138-blocker-gm-drain-w1-144
+kind: friction
+session: gm-drain-w1-144
+subject: 'PROVE cannot run: no local agentplug-runner build for poisoned-slot witness (blocks gm-w577-clause1-poisoned-plugin-slot-reload-r138)'
+body: 'Blocks row gm-w577-clause1-poisoned-plugin-slot-reload-r138. SPECIFY receipt: .gm/receipts/gm-w577-clause1-poisoned-plugin-slot-reload-r138/01-SPECIFY.md. Leader hypothesis H1: top-level dispatch at agentplug/crates/agentplug-host/src/registry.rs:1806 passes local=None, so its post-eviction refill (line 2175) relies on the remembered module only. PROVE needs a live run of a poisoning plugin through agentplug-runner with the remembered module cleared. Local cargo builds are hook-blocked (user memory: gm-no-local-cargo-verified-by-ci). Needed: a CI-hosted or runner-hosted witness that prints the dispatch reply and the plugin_poisoned_store_recovered/evicted events for H1 versus H2 (fail-by-design on first poisoning). Resolve by: a witness dispatch id from a non-local run.'
+session_id: gm-drain-w1-144
+status: pending

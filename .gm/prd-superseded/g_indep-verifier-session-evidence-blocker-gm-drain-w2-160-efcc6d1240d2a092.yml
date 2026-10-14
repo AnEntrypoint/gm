@@ -1,0 +1,8 @@
+id: G_INDEP-VERIFIER-SESSION-EVIDENCE-blocker-gm-drain-w2-160
+subject: 'Blocked: G_INDEP-VERIFIER-SESSION-EVIDENCE-blocker-gm-drain-w1-118 cannot close in session gm-drain-w2-160 (needs prose shape edit, CI-built validator, cross-session P4 run)'
+body: 'Blocker row for G_INDEP-VERIFIER-SESSION-EVIDENCE-blocker-gm-drain-w1-118 (parent G_INDEP-VERIFIER-SESSION-EVIDENCE stays pending). Premises re-checked live: codesearch verifier_session_id under .gm/lean-walk (dispatch 1791961225660-500-2263a26da86012e2) shows only the implementer''s own value (G_INDEP.json:5 = lean-hop-G_INDEP). gm-config/prose/lean-p4.md has no verifier_session_id evidence field (dispatch 1791961226948-500-d12d940ba2170b07). Remaining work: (a) lean-p4.md P4 evidence shape requires verifier_session_id, published via gm-config submodule and bump-pins; (b) rs-plugkit validator rejecting verifier_session_id == session_id, CI-built only (wasm --features slim); (c) a fresh P4 verifier run in a session other than lean-hop-G_INDEP writing the witness file. Acceptance witness unchanged: a P4 hop evidence file whose verifier_session_id differs from its session_id. Receipts: .gm/receipts/G_INDEP-VERIFIER-SESSION-EVIDENCE-blocker-gm-drain-w1-118/01-SPECIFY.md and 02-PROVE.md.'
+session_id: gm-drain-w2-160
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

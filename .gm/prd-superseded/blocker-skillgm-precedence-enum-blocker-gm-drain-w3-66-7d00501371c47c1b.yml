@@ -1,0 +1,8 @@
+id: BLOCKER-SKILLGM-precedence-enum-blocker-gm-drain-w3-66
+subject: 'Row BLOCKER-SKILLGM-precedence-enum-blocker-gm-drain-w2-37 cannot close: acceptance conflates config::Tier with skill Section 0 precedence'
+body: 'Session gm-drain-w3-66 ran SPECIFY on the row (receipt .gm/receipts/BLOCKER-SKILLGM-precedence-enum-blocker-gm-drain-w2-37/02-SPECIFY.md). config::Tier (rs-plugkit/crates/plugkit-core/src/config.rs:35, five variants) and the skill Section 0 precedence list (live response > project .gm/ vendored config > config-source repo > compiled default > Section 2 > Section 3) are different orderings over different layers; config::resolve owns only the first. The acceptance asks one enum to name both, so it cannot be witnessed as written. Remaining path (derive PartialOrd/Ord on Tier, expose tier_rank, CI build since local cargo is hook-blocked, witness from another session) only proves the config enum, not the skill section. Decision needed: reshape the acceptance to one of (a) an ordered enum for config::Tier only, or (b) a SKILL.md Section 0 list checked against the served instruction text. Leader hypothesis: the acceptance is unsatisfiable as worded. Probe: a live resolve reply whose tier field enumerates the Section 0 layers in order; refuted by any inversion or any absent layer.'
+session_id: gm-drain-w3-66
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

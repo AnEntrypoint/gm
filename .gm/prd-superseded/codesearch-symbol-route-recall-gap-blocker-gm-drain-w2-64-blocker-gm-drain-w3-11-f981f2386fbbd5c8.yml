@@ -1,0 +1,12 @@
+id: CODESEARCH-SYMBOL-ROUTE-RECALL-GAP-blocker-gm-drain-w2-64-blocker-gm-drain-w3-117
+subject: Land docs-excluded count in codesearch_identifier, then witness after rs-plugkit CI release and runner pickup
+body: |-
+  Blocker for CODESEARCH-SYMBOL-ROUTE-RECALL-GAP-blocker-gm-drain-w2-64 (session gm-drain-w3-117). The row cannot close this run.
+  SPECIFY re-checked on the tree: codesearch_identifier (search.rs:2362-2467, call at :2612) still has no excluded-docs count and no docs=true pointer; no edit present. Evidence dispatch ids: 1791970669226-500-d6f29cdd2fe9d239 (fn and call site), 1791970676649-500-1139718ee80b46ce (docs keys), 1791970704744-500-ca21aaac115c3f16 (excluded_by_rule hits, none in the identifier route).
+  Why blocked: EDIT needs an uncompiled Rust change in rs-plugkit (local cargo is blocked by a hook, so VALIDATE cannot run locally), then a rs-plugkit commit from C:/dev/gm/rs-plugkit, the signed CI release, the parent gitlink bump, and runner pickup before the witness exists. The witness must come from another session, so no in-run witness dispatch id is possible.
+  Unblock: after the rs-plugkit release lands and the parent pin is bumped, run the witness from a live runner: default gate_repeat_escalate_threshold reply reports docs-excluded count > 0, and the docs:true reply is unchanged. Then prd-resolve the parent row.
+session_id: gm-drain-w3-117
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

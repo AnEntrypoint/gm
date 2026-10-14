@@ -1,0 +1,5 @@
+id: JTBD-SPEND-VISIBILITY-blocker-gm-drain-w2-267
+subject: 'Blocker for JTBD-SPEND-VISIBILITY: recorded dispatches lack phase, walk and token fields'
+body: 'Row JTBD-SPEND-VISIBILITY stays pending. PROVE failed its precondition (receipts .gm/receipts/JTBD-SPEND-VISIBILITY/01-SPECIFY.md and 02-PROVE.md). Gaps: (1) the spool record (.gm/exec-spool/out/*.json) holds dispatch_id, verb, admission and data only, with no token count, no phase tag, no walk id and no session_id; (2) no verb reports walk spend (gm.list filter spend|cost|walk|dispatch). Honest unblock path: stamp walk_id, phase and reply/input byte counts on each dispatch record in rs-plugkit (token counts need the model usage the runner receives, a separate source); add the per-walk verb in rs-plugkit with --features slim; rebuild the gm-mcp bundle; witness from a second session. Local cargo is blocked by hook, so the rs-plugkit build is verified by CI only (publish / release, step Build).'
+session_id: gm-drain-w2-267
+status: pending

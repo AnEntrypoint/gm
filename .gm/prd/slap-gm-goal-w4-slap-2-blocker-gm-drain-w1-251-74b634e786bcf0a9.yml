@@ -1,0 +1,6 @@
+id: SLAP-gm-goal-w4-SLAP-2-blocker-gm-drain-w1-251
+session_id: mcp-codemode-31304-1791959097013
+status: pending
+blockedBy:
+- SLAP-gm-goal-w4-SLAP-2
+subject: 'Blocked: SLAP-gm-goal-w4-SLAP-2 cannot deliver. gm-mcp src/release-bridge.js, src/self-update.js and bin/gm-mcp-server.js carry other writers'' uncommitted hunks, so the src change and bundle rebuild cannot land in one clean commit. Re-apply the 03-EMIT patch once the writer releases them, then witness from another session (readFileSync literal absent at release-bridge.js 251/258 and self-update.js 59/133). Receipts: .gm/receipts/SLAP-gm-goal-w4-SLAP-2/09-DECIDE-gm-drain-w1-251.md'

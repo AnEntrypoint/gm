@@ -1,0 +1,5 @@
+id: PROGDISC-GM-SKILL-BODY-REFERENCE-SPLIT-blocker-gm-drain-w1-244
+subject: 'Blocked: PROGDISC-GM-SKILL-BODY-REFERENCE-SPLIT premise is stale and its sequencing rows are pending'
+body: 'Row PROGDISC-GM-SKILL-BODY-REFERENCE-SPLIT cannot close. SPECIFY receipt: .gm/receipts/PROGDISC-GM-SKILL-BODY-REFERENCE-SPLIT/01-SPECIFY.md. Measured: skills/gm/SKILL.md is 22588 bytes (row says 28.6 KB); section 1 Harness is 6669 bytes (row says 14.5 KB). The row names no witness command or size target. It must run after the G_CONTRACT-* and BLOCKER-SKILLGM-* rows that move the same text, which are still pending. Unblock by: re-scope the row with a measurable acceptance (a byte target for SKILL.md and a named references/ file list), then close the pending SKILLGM rows first, then re-run gm-prd on the row.'
+session_id: gm-drain-w1-244
+status: pending

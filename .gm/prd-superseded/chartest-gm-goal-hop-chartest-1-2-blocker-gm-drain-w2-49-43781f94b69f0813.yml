@@ -1,0 +1,8 @@
+id: CHARTEST-gm-goal-hop-CHARTEST-1-2-blocker-gm-drain-w2-49
+subject: 'Blocked: CHARTEST-gm-goal-hop-CHARTEST-1-2 acceptance requires new test files that gm-prd forbids'
+body: 'Session gm-drain-w2-49 ran SPECIFY and PROVE for CHARTEST-gm-goal-hop-CHARTEST-1-2. SPECIFY: the cited premise holds; codesearch literal ''src/bundle-refresh'' over gm-mcp/test returns 0 hits in 20 files (dispatch 1791960101013-500-3da125a3d4bb9d04). PROVE: the row''s acceptance (a characterization test per module, node --test over gm-mcp/test) needs new test files under gm-mcp/test, and the gm-prd rule ''No test files'' and the AGENTS.md synthetic rule forbid them. EMIT cannot run, so the row cannot close with a witness. Needed: an owner decision that characterization tests are permitted for this row, or a re-scope to a non-test witness (for example a codesearch count of exported symbols per module with a recorded baseline). Parent row stays pending. Prior blocker CHARTEST-gm-goal-hop-CHARTEST-1-2-blocker-gm-drain-w1-40 names the same cause.'
+session_id: gm-drain-w2-49
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

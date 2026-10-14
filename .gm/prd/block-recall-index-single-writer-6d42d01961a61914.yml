@@ -1,0 +1,7 @@
+id: BLOCK-RECALL-INDEX-SINGLE-WRITER
+title: 'Blocker: memorize-fire is the only path that writes the recall index'
+subject: 'gm-config/prose/entry-extended.md ''Write the recall index only via memorize-fire'' states a single-writer invariant for .gm/memories and the rssearch index. Code target: make memorize-fire the sole writer path in rs-plugkit memory handling (rs-plugkit/crates/plugkit-core/src/memory_md.rs), so the prose sentence can be deleted from entry-extended.md and its rs-plugkit copy.'
+status: pending
+blockedBy:
+- external
+session_id: lean-exec-entryext-1

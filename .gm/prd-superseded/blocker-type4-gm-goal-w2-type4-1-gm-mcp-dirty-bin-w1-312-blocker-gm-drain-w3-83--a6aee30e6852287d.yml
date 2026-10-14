@@ -1,0 +1,8 @@
+id: BLOCKER-TYPE4-gm-goal-w2-TYPE4-1-gm-mcp-dirty-bin-w1-312-blocker-gm-drain-w3-83
+subject: 'Blocked: gm-mcp index held by another writer (staged bin, self-update, verb-table, AGENTS)'
+status: pending
+body: 'Row BLOCKER-TYPE4-gm-goal-w2-TYPE4-1-gm-mcp-dirty-bin-w1-312 cannot close in session gm-drain-w3-83. Its unblock needs bin/gm-mcp-server.js committed with index.js and http-transport.js (dedupe only, verified dispatch 1791970237189-500-b250af5f6bf66f2d). The gm-mcp index already holds another writer''s staged bin/gm-mcp-server.js (225 lines, dispatch 1791970309792-500-dd5a3bf64d05d69c), staged src/self-update.js, src/verb-table.js and AGENTS.md. Publishing that commit would ship foreign staged work or overwrite its index entry. Unblock: the holder of the gm-mcp index (session gm-drain-w1-312 or its successor) lands or unstages its work, then re-run this row. Receipt: .gm/receipts/BLOCKER-TYPE4-gm-goal-w2-TYPE4-1-gm-mcp-dirty-bin-w1-312/01-SPECIFY.md.'
+session_id: gm-drain-w3-83
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

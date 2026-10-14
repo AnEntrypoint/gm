@@ -1,0 +1,5 @@
+id: PLUGKIT-SEMVER-UPDATE-WITNESS-blocker-gm-drain-w2-339
+subject: 'Blocked: PLUGKIT-SEMVER-UPDATE-WITNESS needs a live gm.wasm sideload under in-flight dispatches'
+body: 'Parent row PLUGKIT-SEMVER-UPDATE-WITNESS stays pending. The witness sideloads a stale gm.wasm into C:/Users/user/.agentplug/plugins while the shared daemon (pid 29436, 29 active projects) holds 4 busy gm dispatches. Swapping the live gm plugin under them is an unsafe shared-daemon action. Next: run when shared_pool_slot gm has no busy-dispatch-in-flight; probe is the poll of daemon-status.json loaded_plugin_content_sha256.gm after the sideload. Receipt: .gm/receipts/PLUGKIT-SEMVER-UPDATE-WITNESS/01-SPECIFY-gm-drain-w2-339.md.'
+session_id: gm-drain-w2-339
+status: pending

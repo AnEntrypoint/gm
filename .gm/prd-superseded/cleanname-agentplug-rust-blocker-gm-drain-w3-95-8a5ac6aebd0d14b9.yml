@@ -1,0 +1,8 @@
+id: CLEANNAME-AGENTPLUG-RUST-blocker-gm-drain-w3-95
+subject: 'CLEANNAME-AGENTPLUG-RUST-blocker-gm-drain-w2-51 cannot close: no leader hypothesis, edit list re-derivation pending, local cargo blocked'
+body: 'Blocks CLEANNAME-AGENTPLUG-RUST-blocker-gm-drain-w2-51 (session gm-drain-w3-95). SPECIFY receipt: .gm/receipts/CLEANNAME-AGENTPLUG-RUST-blocker-gm-drain-w2-51/01-SPECIFY.md. Findings: the refactor asserts no cause, so no leader hypothesis or falsifiable witness exists and the row cannot close under gm-prd. The token CLEANNAME has 0 codesearch matches in agentplug/ (dispatch 1791970404688-500-e5572aed6db5da4e), so the edit list must be re-derived from a real target. Predecessor line citations are stale. Next: restate the refactor as a leader-bearing hypothesis (or retire the row), re-derive edits by codesearch, push one lane per submodule to main with ci-status, bump the parent pin, then witness from a different session.'
+session_id: gm-drain-w3-95
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

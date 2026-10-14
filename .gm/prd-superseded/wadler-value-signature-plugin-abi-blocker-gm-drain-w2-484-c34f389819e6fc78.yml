@@ -1,0 +1,8 @@
+id: WADLER-VALUE-SIGNATURE-PLUGIN-ABI-blocker-gm-drain-w2-484
+subject: 'WADLER-VALUE-SIGNATURE-PLUGIN-ABI EMIT blocked in session gm-drain-w2-484: wasm32-only edit cannot be compiled or witnessed here; needs CI Build and a second-session witness'
+status: pending
+owner: rs-plugkit/crates/plugkit-core/src/plugin_abi.rs
+phase: P2
+node: WADLER
+body: 'Parent row: WADLER-VALUE-SIGNATURE-PLUGIN-ABI-blocker-gm-2e-fa19b3-w1-13 (still pending). Receipt: .gm/receipts/WADLER-VALUE-SIGNATURE-PLUGIN-ABI/02-ELIMINATE.md. Cited lines hold (request_envelope 121, call 192 in rs-plugkit/crates/plugkit-core/src/plugin_abi.rs; dispatch 1791968065354-500-fb5c989226c01a41). Local cargo hook-blocked, so the CI publish/release Build step is the only compile proof. A self-witness is refused. Next: EMIT typed envelope via the Git API publish route in rs-plugkit, then witness from another session.'
+session_id: gm-drain-w2-484

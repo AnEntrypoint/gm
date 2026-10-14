@@ -1,0 +1,5 @@
+id: SLAP-GMMCP-ENSURERUNNER-LEVELS-blocker-gm-drain-w1-255
+subject: 'Blocker: SLAP-GMMCP-ENSURERUNNER-LEVELS target function has another writer''s uncommitted hunks'
+body: 'Row SLAP-GMMCP-ENSURERUNNER-LEVELS cannot close in this run. Target gm-mcp/src/dispatch.js ensureSpoolRunnerRunning is now at lines 1209-1261 (row cites stale 531-585). The gm-mcp working tree holds uncommitted hunks from another writer in that exact function (reapRunnerEnsureInFlight call at line 1217, runnerEnsureInFlight rewrite at 1186), plus requestNumber hunks at 1966-2196, a dirty bin/gm-mcp-server.js bundle, and a staged src/self-update.js. Publishing src/dispatch.js or rebuilding the bundle from the shared tree would ship that work under this row. Unblock: after the other writer lands or releases gm-mcp/src/dispatch.js, re-run the row on a clean base (Git API blob from remote main plus this row''s hunk only, bundle rebuilt from it). Witness unchanged: function under 25 lines, plus a live dispatch that starts or confirms the daemon. Receipts: .gm/receipts/SLAP-GMMCP-ENSURERUNNER-LEVELS/01-SPECIFY.md, 05-CONC.md.'
+session_id: gm-drain-w1-255
+status: pending

@@ -1,0 +1,5 @@
+id: BLOCK-RECALL-INDEX-SINGLE-WRITER-blocker-gm-drain-w1-21
+subject: 'Blocker: BLOCK-RECALL-INDEX-SINGLE-WRITER cannot probe the single-writer leader'
+body: 'Row BLOCK-RECALL-INDEX-SINGLE-WRITER cannot close. SPECIFY receipt .gm/receipts/BLOCK-RECALL-INDEX-SINGLE-WRITER/01-SPECIFY.md shows the `memorize` verb (rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs/memory.rs:544, memorize_with_raw) writes rssearch_vectors directly, without memorize-fire (orchestrator/memorize.rs). memory_md.rs:783 is a second writer inside the md-to-index sync pass. The leader hypothesis H2 (memorize is a second user-facing writer) needs a live probe on a running rs-plugkit wasm, and local cargo builds are blocked (CI-only verification). Resolution needs one of two decisions: (a) route memorize through memorize-fire in rs-plugkit and rebuild in CI, then witness from another session; or (b) amend entry-extended.md:52 to name the sanctioned write verbs (memorize, memorize-fire) instead of memorize-fire alone, which deletes the sentence''s false claim. Pick one, then re-run this row in mode=witness from a different session.'
+session_id: gm-drain-w1-21
+status: pending

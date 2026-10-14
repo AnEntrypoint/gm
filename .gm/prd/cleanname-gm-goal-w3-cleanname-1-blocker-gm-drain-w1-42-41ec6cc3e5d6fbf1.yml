@@ -1,0 +1,5 @@
+id: CLEANNAME-gm-goal-w3-CLEANNAME-1-blocker-gm-drain-w1-42
+subject: 'Blocked: CLEANNAME-gm-goal-w3-CLEANNAME-1 rename needs an enumerated scope probe, bundle rebuild and a cross-session witness'
+body: 'Row CLEANNAME-gm-goal-w3-CLEANNAME-1 cannot close in one run. Cited lines are stale (1824 is now dispatch.js:1970, 1209 is now :1289; identifiers resolve). Renaming `n` in runDispatch touches at least 10 call sites through line 2114 and beyond, unenumerated past 2137. gm-mcp/src edits require the rebuilt committed bundle (AGENTS.md). CLEANNAME-gm-goal-w3-CLEANNAME-4 edits the same dispatch.js lines. Receipt: .gm/receipts/CLEANNAME-gm-goal-w3-CLEANNAME-1/01-SPECIFY.md. Next: serialize behind CLEANNAME-gm-goal-w3-CLEANNAME-4, enumerate n to the end of runDispatch, rebuild the bundle, witness from another session.'
+session_id: gm-drain-w1-42
+status: pending

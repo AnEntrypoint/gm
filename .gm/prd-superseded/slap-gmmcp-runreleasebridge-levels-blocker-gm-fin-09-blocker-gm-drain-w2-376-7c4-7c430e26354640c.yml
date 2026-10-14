@@ -1,0 +1,12 @@
+id: SLAP-GMMCP-RUNRELEASEBRIDGE-LEVELS-blocker-gm-fin-09-blocker-gm-drain-w2-376
+subject: 'Blocked: PROVE precondition fails for SLAP-GMMCP-RUNRELEASEBRIDGE-LEVELS; gm-mcp tree is not exclusive'
+body: |-
+  Session gm-drain-w2-376 ran SPECIFY and PROVE for SLAP-GMMCP-RUNRELEASEBRIDGE-LEVELS-blocker-gm-fin-09 and made no edit. The row's witness rebuilds bin/gm-mcp-server.js from src, which would sweep in other writers' hunks.
+
+  Evidence: git_status on gm-mcp (dispatch 1791964737064-500-84c96b3eee68bd2e) shows branch main, 20 modified paths across src/, bin/, scripts/, test/ and AGENTS.md/README.md, one staged path (src/self-update.js) and one untracked path (src/spool-store.js). Row parent SLAP-GMMCP-RUNRELEASEBRIDGE-LEVELS-blocker-gm-fin-09 cites gm-fin-11 (row SLAP-GMMCP-DISPATCHCOMMAND-ARGV) as the holder of src/index.js, src/http-transport.js and bin/gm-mcp-server.js.
+
+  Unblock condition: the gm-mcp tree is clean or owned by one writer, and gm-mcp/src/release-bridge.js runReleaseBridge (now lines 375-430) is the only edit surface. Then run the parent plan: load/persist pair plus policy step, node scripts/build.mjs, live runReleaseBridge with GM_MCP_RELEASE_BRIDGE_INTERVAL_MS large, commit src and bin together on gm-mcp main.
+
+  Bundle note: the serving bundle is 0.2.45 and 0.2.47 is installed, so a rebuild must start from the installed source state, not the served one.
+session_id: gm-drain-w2-376
+status: pending

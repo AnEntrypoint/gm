@@ -1,0 +1,8 @@
+id: BLOCK-COMMENT-PREDICATE-blocker-gm-drain-w3-11
+subject: 'Blocker for BLOCK-COMMENT-PREDICATE-blocker-gm-drain-w1-15: predicate absent, no witness reachable in session gm-drain-w3-11'
+body: 'Row BLOCK-COMMENT-PREDICATE-blocker-gm-drain-w1-15 is itself a blocker row and cannot close here. SPECIFY (dispatch 1791969128264-500-85a2ff2639392395, codesearch literal ''comment'' over rs-plugkit/crates/plugkit-core/src/orchestrator/predicate_registry.rs): 0 matches; codeinsight outline (dispatch 1791969137115-500-2b7744deadb96b0a): one symbol, generated_predicates_md. The comment predicate does not exist, so there is no edit target. PROVE and the live witness need a pushed rs-plugkit commit, a CI publish/release and bump-pins advancing the parent gitlink; local cargo is hook-blocked per gm-no-local-cargo-verified-by-ci.md. Unblock: add the predicate in rs-plugkit (allowing attribute, SAFETY and license-header comments), run the CI release, bump the gitlink, then witness a live transition refusing a comment-adding diff. Parent: BLOCK-COMMENT-PREDICATE. Receipt: .gm/receipts/BLOCK-COMMENT-PREDICATE-blocker-gm-drain-w1-15/01-SPECIFY.md'
+session_id: gm-drain-w3-11
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

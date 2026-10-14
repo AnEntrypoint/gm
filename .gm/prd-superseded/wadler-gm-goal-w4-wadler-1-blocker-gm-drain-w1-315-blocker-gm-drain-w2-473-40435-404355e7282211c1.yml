@@ -1,0 +1,5 @@
+id: WADLER-gm-goal-w4-WADLER-1-blocker-gm-drain-w1-315-blocker-gm-drain-w2-473
+status: pending
+subject: 'BLOCKER for WADLER-gm-goal-w4-WADLER-1-blocker-gm-drain-w1-315: gm-mcp foreign hunks still uncommitted, owning lane unknown'
+body: 'Row WADLER-gm-goal-w4-WADLER-1-blocker-gm-drain-w1-315 cannot resolve: its witness (gm-mcp status clean on the touched surfaces) is not met. Measured at gm-mcp HEAD a992ae64 (dispatch 1791967977340-500-1d2cf49765b8adfc): 19 files changed, 380 insertions, 344 deletions, including src/dispatch.js, src/codemode.js, src/cli.js, src/response-compact.js, src/http-transport.js, src/release-bridge.js, src/index.js, src/self-update.js (MM), src/singleton.js and bin/gm-mcp-server.js. The owning lane is not identified: runner-status.sh needs python, which is not on PATH. Unblock: the owning gm-mcp lane commits or parks these hunks on main, or the owner is confirmed dead and its hunks are handed over by the orchestrator; then re-run gm-prd on the parent row. Receipts: .gm/receipts/WADLER-gm-goal-w4-WADLER-1-blocker-gm-drain-w1-315/. Row stays pending.'
+session_id: gm-drain-w2-473

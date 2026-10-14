@@ -1,0 +1,7 @@
+id: BLOCK-dream-rsi-walk-acceptance-code-blocker-gm-drain-w3-20
+subject: 'Blocker for BLOCK-dream-rsi-walk-acceptance-code (session gm-drain-w3-20). The row needs a walk-evidence validator in rs-plugkit/crates/plugkit-core/src/orchestrator/dream_rsi.rs wired into a verb. Two gaps stop it closing in this run: (1) no verb route exists, and rs-plugkit/AGENTS.md requires five places to ship together (handler, wasm_dispatch/verbs.rs route, gates and transitions, parent verb contract, README inventory); (2) the witness needs a wasm32-wasip1 --features slim build, local cargo is blocked by a hook, so a live dispatch exists only after the CI publish/release run and a runner bump. Receipt: .gm/receipts/BLOCK-dream-rsi-walk-acceptance-code/01-SPECIFY.md. Next: scope the verb route, then edit dream_rsi.rs and verbs.rs in one change, then witness through the released runner.'
+blockedBy:
+- external
+session_id: gm-drain-w3-20
+status: pending
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

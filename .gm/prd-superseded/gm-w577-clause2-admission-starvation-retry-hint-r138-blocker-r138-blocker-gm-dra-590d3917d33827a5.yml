@@ -1,0 +1,9 @@
+id: gm-w577-clause2-admission-starvation-retry-hint-r138-blocker-r138-blocker-gm-drain-w2-203
+subject: 'Blocked: clause 2 needs an agentplug daemon edit (claim_dispatch.rs admission_starved_answer) that no session here can build or witness; the H1/H2 probe does not separate'
+status: pending
+kind: blocker
+session: gm-drain-w2-203
+blockedBy:
+- gm-w577-clause2-admission-starvation-retry-hint-r138-blocker-r138
+text: 'Parent: gm-w577-clause2-admission-starvation-retry-hint-r138-blocker-r138. Receipts: .gm/receipts/gm-w577-clause2-admission-starvation-retry-hint-r138-blocker-r138/01-SPECIFY.md, 02-PROVE.md, 03-DECIDE.md. Findings: admission_starved_answer (claim_dispatch.rs:2007-2048) sets executed:false and re_dispatch_safe:true unconditionally and has no next_dispatch_hint field; the parent''s cited line 1454 is now 2023. Blocker: (a) the clause needs a Rust edit in agentplug and a CI-built runner reply that carries the field, neither reachable in this session (no local cargo); (b) the leader probe is ambiguous: rs-plugkit carries next_dispatch_hint in its guest error envelope (wasm_dispatch/verbs.rs err_coded_hinted, gates.rs:97), so the hypothesis that the starved path is covered by an rs-plugkit hint is not refuted for the reply path. Unblock by: a session with CI witness access (a) states whether the daemon reply is in scope for the hint, (b) adds next_dispatch_hint and a read-only/mutating discriminator in admission_starved_answer, (c) witnesses a starved dispatch reply via the runner. Witness must come from another session.'
+session_id: gm-drain-w2-203

@@ -1,0 +1,5 @@
+id: SLAP-PLUGKIT-SYNCINDEX-LEVELS-blocker-gm-drain-w2-404
+subject: 'Blocker: SLAP-PLUGKIT-SYNCINDEX-LEVELS-blocker-gm-drain-w1-274 cannot close without a CI-built wasm (session gm-drain-w2-404)'
+body: 'Parent row SLAP-PLUGKIT-SYNCINDEX-LEVELS-blocker-gm-drain-w1-274 re-run in session gm-drain-w2-404. SPECIFY and PROVE pass; the witness needs a rs-plugkit wasm built with the sync_index split (memory_md.rs:695-1098) and a live memory sync dispatch against it. Local cargo is blocked by hook (memory gm-no-local-cargo-verified-by-ci); the wasm is built only by CI (publish / release). No split edit exists yet, so there is nothing to witness. Receipts: .gm/receipts/SLAP-PLUGKIT-SYNCINDEX-LEVELS-blocker-gm-drain-w1-274/01-SPECIFY.md, 02-PROVE.md, 03-DECIDE.md. Unblock: a CI-built rs-plugkit wasm containing the split, then a live memory sync dispatch witnessed by a session other than the editor.'
+session_id: gm-drain-w2-404
+status: pending

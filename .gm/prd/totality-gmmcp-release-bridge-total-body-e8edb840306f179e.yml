@@ -1,0 +1,4 @@
+id: TOTALITY-GMMCP-RELEASE-BRIDGE-TOTAL-BODY
+title: 'gm-mcp (submodule): commit release-bridge fetchLatestRelease total body handling, rebuild bin/gm-mcp-server.js from src, bump parent pin'
+status: pending
+session_id: lean-canary-TOTALITY

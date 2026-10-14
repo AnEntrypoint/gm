@@ -1,0 +1,5 @@
+id: G_CONTRACT-spool-claim-key-session-prefix-blocker-gm-drain-w1-111
+subject: 'Blocker for G_CONTRACT-spool-claim-key-session-prefix: daemon subagent session-id minting and removal of parent-derived sub<k> prose are not implemented'
+body: 'Row needs (a) daemon mints subagent SESSION_IDs itself and (b) prose drops the parent-derived `<parent_session_id>-sub<k>` rule. Thin slice THINSLICE-SPOOL-INNAME covers only in-file bare-integer rejection. Still present: gm-config/prose/entry.md:115, rs-plugkit/crates/plugkit-core/src/orchestrator/instructions/prose/entry.md:158, lean-p1.md:27, lean-p4.md:21, lean-p7.md:17. No mint path in rs-plugkit. Needs an rs-plugkit Rust change, CI-only build with --features slim, and a cross-session live witness. Receipt: .gm/receipts/G_CONTRACT-spool-claim-key-session-prefix/01-SPECIFY.md. Leader H1; H2 (thin slice closes row) rejected.'
+session_id: gm-drain-w1-111
+status: pending

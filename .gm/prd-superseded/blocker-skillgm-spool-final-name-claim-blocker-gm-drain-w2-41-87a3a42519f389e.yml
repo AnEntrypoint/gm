@@ -1,0 +1,15 @@
+id: BLOCKER-SKILLGM-spool-final-name-claim-blocker-gm-drain-w2-41
+subject: 'Blocked: claim-code temp-name exclusion in agentplug needs a CI-built change and a cross-session live witness (row BLOCKER-SKILLGM-spool-final-name-claim-blocker-gm-drain-w1-36)'
+body: |-
+  Parent row: BLOCKER-SKILLGM-spool-final-name-claim-blocker-gm-drain-w1-36 (pending). Its receipts 01-SPECIFY.md and 02-PROVE.md under .gm/receipts/BLOCKER-SKILLGM-spool-final-name-claim/ stand. Session gm-drain-w2-41 ran SPECIFY and PROVE again and reached the same result.
+
+  Findings: (1) 'temp-then-mv' is absent from skills/gm/SKILL.md (codesearch 1791957227816-500-181f0f672dd7bf8), so the cited prose is stale. (2) agentplug/crates/agentplug-runner/src/daemon/claim_dispatch.rs: claim_spool_request_in_place (line 399) renames the whole request (line 404). It gates only on spool_in_file_write_has_settled (line 400) and on is_spool_request_path extension match. accepted_spool_request_extensions (line 377) returns the verb extension plus the universal 'txt', so a temp sibling ending in .txt or the verb extension is claimed. Acceptance (a) is therefore not met by the current code. (3) The writer's temp naming is not located yet.
+
+  Next step, in order: locate the writer's temp suffix (codesearch in gm-mcp/src and rs-plugkit); add a temp-name exclusion in claim_dispatch.rs (agentplug submodule, its own remote, main only); push agentplug and bump the parent gitlink through bump-pins; wait for CI green on the agentplug build (local cargo is blocked, CI-only per gm-no-local-cargo-verified-by-ci); then witness from a session other than gm-drain-w1-36 with a live spool dispatch that writes a temp sibling then the final name and shows only the final name is claimed. Only after that witness, cut the section 1 temp-then-mv rule (acceptance b). Prose stays until then.
+
+  Why blocked here: the fix is in a submodule with a CI-only build, its witness needs a deployed runner, and this session cannot push agentplug or wait on that CI within one run. No witness dispatch exists, so the parent row cannot close.
+session_id: gm-drain-w2-41
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

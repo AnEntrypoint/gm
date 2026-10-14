@@ -1,0 +1,5 @@
+id: gm-git-contention-remote-moved-pull-conflict-blocks-publish-blocker-gm-drain-w2-174
+subject: 'Blocker for gm-git-contention-remote-moved-pull-conflict-blocks-publish: witness needs a cross-session lane, and the publish window is held'
+body: 'Session gm-drain-w2-174 ran SPECIFY (receipt .gm/receipts/gm-git-contention-remote-moved-pull-conflict-blocks-publish/01-SPECIFY.md). The leader is H2: recover_remote_moved exists (gm-mcp/src/verb-table.js:309) but gm-orchestrate SKILL.md:105 covers only the clean-tree remote_moved case and gm-prd SKILL.md:24 names no flag. PROVE needs a live git_push against a moved remote with recover_remote_moved, which requires an exclusive c:/dev/gm publish window. Other lanes hold gm-mcp, rs-plugkit, rs-codeinsight and .gm, so that window is unavailable here. The witness also needs a cross-session lane driven to a pushed sha, and a self-witness is refused. Unblock by: a session that holds no other writers drives a denied lane through recover_remote_moved to a pushed sha, reads ci-status on it, and then the skill edit in gm-orchestrate/gm-prd names the flag and the measured denials.'
+session_id: gm-drain-w2-174
+status: pending

@@ -1,0 +1,7 @@
+id: BLOCKER-SKILLGM-spool-inname-validation-blocker-gm-drain-w2-42
+status: pending
+subject: 'Blocker for BLOCKER-SKILLGM-spool-inname-validation (session gm-drain-w2-42): named rejection for a bad in-file name is present at agentplug/crates/agentplug-runner/src/daemon/claim_dispatch.rs:1956-1964 (expected_prefix check), but the daemon subagent-id mint <parent>-sub<k> has no source (codesearch regex ''-sub|mint'' returns only host dispatch-id mint, no subagent mint). Closing needs a Rust change in agentplug-runner plus a CI-built runner and a live witness from another session; this run has no local cargo and cannot witness. Then reduce skills/gm/SKILL.md claim-key sentence only after the witness lands.'
+session_id: gm-drain-w2-42
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

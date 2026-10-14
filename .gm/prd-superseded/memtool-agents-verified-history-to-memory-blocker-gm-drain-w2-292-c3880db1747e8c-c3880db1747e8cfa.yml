@@ -1,0 +1,7 @@
+id: MEMTOOL-AGENTS-VERIFIED-HISTORY-TO-MEMORY-blocker-gm-drain-w2-292
+title: 'Blocker: MEMTOOL-AGENTS-VERIFIED-HISTORY-TO-MEMORY row is stale; five dated Verified sections absent from AGENTS.md'
+row: 'SPECIFY stage could not run. The row cites five dated Verified sections (2026-09-14, 2026-10-05, 2026-10-04, 2026-10-07, 2026-10-08) in AGENTS.md. None exist: heading regex ''^#+ .*Verified 20'' returns 0 matches (dispatch 1791963410303-500-d838b968ee5661d). Only two inline bullet references to Verified dates remain (lines 100-101; dispatch 1791963434929-500-75bd6e68a2589d12). Commit 66d10b4 (2026-10-13, AGENTS.md compacted) removed the sections before this row was filed. Step 1 has nothing to memorize and Step 2 has nothing to delete, and the acceptance grep ''Verified 20'' already matches. Resolution needed: owner re-scopes or closes the row against current AGENTS.md. Receipt: .gm/receipts/MEMTOOL-AGENTS-VERIFIED-HISTORY-TO-MEMORY/01-SPECIFY.md'
+scope:
+- AGENTS.md
+status: pending
+session_id: gm-drain-w2-292

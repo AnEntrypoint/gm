@@ -1,0 +1,5 @@
+id: ORACLEBIAS-REBUILD-SIDELOAD-blocker-gm-drain-w2-321
+subject: 'Witness ORACLEBIAS-REBUILD-SIDELOAD: no walk-reached ORACLEBIAS node prose for this session; phase owned by live session gm-ach-20261014-01'
+status: pending
+body: 'Blocks ORACLEBIAS-REBUILD-SIDELOAD-blocker-gm-drain-w1-226. The served ORACLEBIAS node prose is not returned to session gm-drain-w2-321 (instruction 1791963847754-500-922d51f1167cc308 served no node prose; session_mismatch true). phase-status 1791963890412-500-f2a7bb27746b8985 shows phase ORACLEBIAS owned by live session gm-ach-20261014-01 (pid 11964). Closing needs a walk under this session that reaches ORACLEBIAS, which requires a transition in that live walk, which is not taken. Separately, the rs-plugkit rebuild is CI-only (publish / release, step Build). Receipt: .gm/receipts/ORACLEBIAS-REBUILD-SIDELOAD-blocker-gm-drain-w1-226/01-WITNESS-ATTEMPT.md. Next: run the witness from a session that owns a walk reaching ORACLEBIAS, or after gm-ach-20261014-01 releases that phase.'
+session_id: gm-drain-w2-321

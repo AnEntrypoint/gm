@@ -1,0 +1,10 @@
+id: METAMORPH-gm-goal-hop-METAMORPH-4-2
+node: METAMORPH
+phase: P4
+session_id: gm-goal-hop-METAMORPH-4
+source: gm-mcp/src/dispatch.js:1819-1824; gm-mcp/src/response-compact.js:151
+title: 'gm-mcp/src has no check over successive dispatches: nothing replays one read-only verb under a relabeled session and compares the normalized replies'
+witness: codesearch found no replay or metamorphic test under gm-mcp/src; the two-session comparison above (dispatch ids 1791745589169-477 vs 1791745589850-478, phase-status 1791745590699-479 vs 1791745591251-480) was run by hand and is not a check
+description: 'Add a gm-mcp check: dispatch health and phase-status under two session ids on one root, strip dispatch_id, session_id echo, timing, now and pid-bearing paths, then assert equality. Run it on every bundle rebuild. Scope: read-only verbs with no live owner lease; a live-owner case needs its own expected divergence (session_mismatch true).'
+acceptance: the check exits 0 on main; a deliberately injected session-dependent field makes it exit 1
+status: pending

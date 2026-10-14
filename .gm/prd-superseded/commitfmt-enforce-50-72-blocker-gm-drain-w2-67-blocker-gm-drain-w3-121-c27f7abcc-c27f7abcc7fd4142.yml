@@ -1,0 +1,8 @@
+id: COMMITFMT-ENFORCE-50-72-blocker-gm-drain-w2-67-blocker-gm-drain-w3-121
+subject: 'Blocked: COMMITFMT-ENFORCE-50-72 w2 blocker still needs an rs-plugkit edit, CI wasm release, gitlink bump and a cross-session witness'
+blockedBy:
+- external
+body: 'Row COMMITFMT-ENFORCE-50-72-blocker-gm-drain-w1-50-blocker-gm-drain-w2-67 (session gm-drain-w3-121) cannot close in this run. SPECIFY evidence: codesearch literal ''subject'' in rs-plugkit git.rs (dispatch 1791970788500-500-85774e0fe197802f) shows no subject-length branch in git_commit. git_status scoped to rs-plugkit (dispatch 1791970794459-500-6327efd7c614df19) reports rs-plugkit modified on main, so another writer holds the surface; this run does not edit git.rs or move the gitlink. Local cargo is blocked by hook, so the CI wasm build cannot run here. Required next, owned by an rs-plugkit writer: (1) add subject>50 and body-line>72 gate in git_commit (wasm_dispatch/verbs/git.rs) before staging; (2) CI build cargo build -p rs-plugkit --release --target wasm32-wasip1 --features slim; (3) rs-plugkit release then gitlink bump on C:/dev/gm main; (4) live witness via agentplug-runner with an over-length subject refused, from a session other than the editor. Receipts: .gm/receipts/COMMITFMT-ENFORCE-50-72-blocker-gm-drain-w1-50/ (01-SPECIFY, 05-CONC, 09-DECIDE).'
+session_id: gm-drain-w3-121
+status: pending
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

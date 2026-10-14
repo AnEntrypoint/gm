@@ -1,0 +1,8 @@
+id: DAEMON-IDLE-DISK-WRITE-25MBS-BLOCKER-blocker-gm-drain-w2-75
+subject: 'Blocked: idle disk write measured 8.226 MB/s, bound 2 MB/s; needs elevated ETW disk attribution and a rebuilt daemon'
+body: 'Receipts: .gm/receipts/DAEMON-IDLE-DISK-WRITE-25MBS-BLOCKER-blocker-gm-drain-w1-62/01-SPECIFY.md and 02-PROVE.md (session gm-drain-w2-75). Re-measured in session gm-drain-w2-75: PhysicalDisk(_Total) write over 10 samples at 2 s, mean 8.226 MB/s, bound 2 MB/s, fails. Session is not elevated, so the leader probe (elevated logman/xperf ETW disk trace charging writes to file path and process, to separate H3 writes below process attribution from H2 other user processes) cannot run. The daemon reports runner_version 0.1.311 while the row names 0.1.223, so a rebuilt and restarted daemon is also required before a cross-session witness. Parent row: DAEMON-IDLE-DISK-WRITE-25MBS. Closing needs: (1) elevated ETW attribution run; (2) rebuilt, restarted daemon; (3) 20 s idle witness from another session under 2 MB/s.'
+session_id: gm-drain-w2-75
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

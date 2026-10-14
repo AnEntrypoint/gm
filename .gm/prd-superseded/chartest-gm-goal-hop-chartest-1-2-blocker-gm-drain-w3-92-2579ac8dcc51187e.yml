@@ -1,0 +1,8 @@
+id: CHARTEST-gm-goal-hop-CHARTEST-1-2-blocker-gm-drain-w3-92
+subject: 'Blocked: CHARTEST-gm-goal-hop-CHARTEST-1-2-blocker-gm-drain-w2-49 cannot close; its only witness is a test file that gm-prd forbids'
+body: 'Session gm-drain-w3-92 ran gm-prd on row CHARTEST-gm-goal-hop-CHARTEST-1-2-blocker-gm-drain-w2-49. SPECIFY: the premise holds; codesearch literal ''src/bundle-refresh'' over gm-mcp/test returns 0 lines in 20 files (dispatch 1791970401287-500-eda3975fa1541369). ELIMINATE and EDIT: none needed, since the parent row''s acceptance is the unchanged characterization-test set. PROVE/EMIT: the parent acceptance (node --test over gm-mcp/test) requires new test files under gm-mcp/test, which gm-prd Rules (''No test files'') and the AGENTS.md synthetic rule forbid. The blocker itself is not a witnessable row. Needed from owner: either permission for characterization tests on this row, or a re-scope of CHARTEST-gm-goal-hop-CHARTEST-1-2 to a non-test witness such as a per-module codesearch export count with a recorded baseline. Parent row CHARTEST-gm-goal-hop-CHARTEST-1-2 stays pending. Prior blockers: CHARTEST-gm-goal-hop-CHARTEST-1-2-blocker-gm-drain-w1-40 and CHARTEST-gm-goal-hop-CHARTEST-1-2-blocker-gm-drain-w2-49 name the same cause.'
+session_id: gm-drain-w3-92
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

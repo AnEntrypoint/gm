@@ -1,0 +1,8 @@
+id: G_CONTRACT-native-search-ban-restated-blocker-gm-drain-w2-138
+subject: 'Blocker: native-search ban has no dispatch-observable gate; row needs owner decision (new predicate or prose-only rescope)'
+body: 'Row G_CONTRACT-native-search-ban-restated-blocker-gm-drain-w1-103 (session gm-drain-w2-138) cannot close on a live witness. Gate predicates (gm-config/fsm/predicates.md) evaluate only the working diff and dispatch audit tuples; host-native Glob, Grep, find, rg and Explore calls produce neither, so no gate id can fire on a Grep call. Probe: codesearch for Glob|Grep|find|rg|Explore over gm-config finds only prose (dispatch 1791960993725-500-5ed1a272de2cfda9); no predicate matches (dispatch 1791961010751-500-9265c24d374bc072). Receipts: .gm/receipts/G_CONTRACT-native-search-ban-restated-blocker-gm-drain-w1-103/01-SPECIFY.md and 02-PROVE.md. Owner decision needed: (a) add a dispatch-observable predicate and gate for the verbs gm itself runs, with the lean graph rebuilt through the reviewed path (rs-plugkit rebuild, CI-verified); or (b) rescope G_CONTRACT-native-search-ban-restated to prose-only and drop the gate acceptance. Witness for (a) must name the new gate id firing on a gm dispatch that the rule forbids. Parent row G_CONTRACT-native-search-ban-restated stays pending.'
+session_id: gm-drain-w2-138
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

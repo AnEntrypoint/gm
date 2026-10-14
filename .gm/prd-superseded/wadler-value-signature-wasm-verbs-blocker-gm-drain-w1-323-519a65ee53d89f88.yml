@@ -1,0 +1,5 @@
+id: WADLER-VALUE-SIGNATURE-WASM-VERBS-blocker-gm-drain-w1-323
+subject: 'Blocked: WADLER-VALUE-SIGNATURE-WASM-VERBS has no acceptance text, no witness predicate, and its verification is CI-only'
+status: pending
+body: 'Row WADLER-VALUE-SIGNATURE-WASM-VERBS carries a title only. Stage SPECIFY receipt: .gm/receipts/WADLER-VALUE-SIGNATURE-WASM-VERBS/01-SPECIFY.md. Needed to close: (1) acceptance defining done for the typed request structs (which verbs, which fields, which of the ~145 signatures are in scope for this row); (2) a witness predicate that a live spool dispatch or CI run can bind; the local cargo build is hook-blocked, so verification is via the nested rs-plugkit publish and a rebuilt slim bundle. Owner dir: rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs (git.rs, memory.rs, search.rs, web.rs).'
+session_id: mcp-codemode-31304-1791959699907

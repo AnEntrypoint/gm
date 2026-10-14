@@ -1,0 +1,5 @@
+id: SUBAGENT-PROBE-RAW-DUMP-blocker-gm-2e-fa19b3-w3-01
+subject: 'SUBAGENT-PROBE-RAW-DUMP blocked: cited file absent at SPECIFY'
+body: 'Row SUBAGENT-PROBE-RAW-DUMP cites carry/CLOSE-XY-G2-probe.txt and CLOSE-XY-G2.json. fs_stat returns not found for carry/CLOSE-XY-G2-probe.txt, carry/CLOSE-XY-G2.json, .gm/carry/CLOSE-XY-G2-probe.txt and .gm/carry/CLOSE-XY-G2.json (dispatches 1791851064843-500-2a669de281bbcf44, 1791851069946-500-3bba8a044e988836, 1791851071336-500-2c6e44e041417c11, 1791851085800-500-3eca68a6cd1ace7). codesearch ''CLOSE-XY-G2'' (dispatch 1791851113888-500-93c0c3e3c4036ee3) matches only the row text in .gm/prd.yml line 530. The cited artifact is stale: the row cannot be executed or witnessed as written. Needed: the owner decides whether the row is closed as stale or re-scoped to a real file.'
+session_id: gm-2e-fa19b3-w3-01
+status: pending

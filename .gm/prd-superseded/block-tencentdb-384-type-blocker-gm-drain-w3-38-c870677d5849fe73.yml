@@ -1,0 +1,8 @@
+id: BLOCK-TENCENTDB-384-TYPE-blocker-gm-drain-w3-38
+subject: 'Blocker for BLOCK-TENCENTDB-384-TYPE: the typed destination change is unwritten and its witness has no cross-session owner'
+body: 'Row gm-drain-w3-38 carried BLOCK-TENCENTDB-384-TYPE-blocker-gm-drain-w1-23 to a decision and did not close it. Evidence: codesearch dispatch 1791969582094-500-c032b19fcba7247c (reject_if_dest_namespace_dim_not_384 defined memory.rs:729, called memory.rs:819); callers dispatch 1791969585481-500-1822c65434d9042c (1 caller). Still open: (1) the rs-plugkit change giving the destination namespace type a validated dims field is not written; local cargo is hook-blocked, so it needs a landed commit and CI (--features slim). (2) The closing witness must name a non-384 destination refused at construction and come from a session other than the editor. Next wave: write the typed-destination change in rs-plugkit on main via gm git verbs, cite its CI run, then witness from a different session. Out of scope: skills/agent-memory/SKILL.md 384 copy (lines 16, 67), which needs its own row.'
+session_id: gm-drain-w3-38
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'
