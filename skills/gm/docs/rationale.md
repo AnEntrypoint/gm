@@ -17,25 +17,11 @@ Companion to `skills/gm/SKILL.md`. The imperatives live in SKILL.md; this file k
 
 ## Section 3: anchors (technique catalogue)
 
-This catalogue lists techniques by purpose. The served prose for each phase names the techniques that phase uses, and that prose is authoritative. Secure is this file's addition, exercised inside whichever phase touches a trust boundary.
+The technique names per phase are not listed here. They are owned by the graph nodes: the lean nodes `gm-config/prose/lean-p1.md` through `lean-p9.md` (LEAN SHAPE, LEAN CONTRACT, LEAN BUILD, LEAN VERIFY, LEAN RECORD, LEAN PRESSURE, LEAN CONTEXT ECONOMY, LEAN TENSIONS, LEAN CONVERGENCE) and one principle file per technique in `gm-config/prose/`. The served prose for each phase is authoritative, and an anchor never overrides a gate.
 
-Take the state's purpose from its served prose. If that prose carries a named-technique catalogue, use it and add nothing. Otherwise draw below only where the state's purpose and this project's substrate match the anchor's domain. No match is expected and normal -- run on Section 2. An anchor never overrides a gate.
+Secure is this file's addition, exercised inside whichever phase touches a trust boundary. A state whose served prose names no technique runs on Section 2. No match is expected and normal.
 
-**Frame** -- XY Problem; Naur; Cynefin (Snowden); Spike Solution (Beck); First Principles; JTBD (Christensen). XY check: restate the stated request and the problem it serves; when they differ, re-scope the row to the real problem before any edit.
-
-**Specify** -- EARS; INVEST; Cockburn Use Cases; Quality Attribute Scenario; MoSCoW; Impact Mapping; Definition of Done.
-
-**Change** -- Mikado Method; small batches (Reinertsen); characterization behaviour (Feathers), witnessed live before the first edit: each touched function's current behaviour is recorded by a live dispatch first, and no edit starts until that record exists; Boy Scout Rule (Martin); Opportunistic Refactoring and Rule of Three (Fowler); Broken Windows (Hunt & Thomas); DRY; Code Smells; Strangler Fig; SOLID; Deep Modules (Ousterhout); SLAP; Chesterton's Fence; Hyrum's Law.
-
-**Verify** -- Boundary Value Analysis and Equivalence Partitioning (Myers) applied by hand to real inputs; property-based and mutation reasoning (Claessen & Hughes; DeMillo) as live exploratory execution; Residuality Theory (O'Reilly); Fallacies of Distributed Computing (Deutsch); Red/Green (Beck) executed live against the running system, where the Red expectation is a witness row recording the output the request implies, written before the Green change; Fagan Inspection re-reading the request's literal words against the live-witnessed behavior, not the fix's own diff; Shewhart and Nelson Rules; Devil's Advocate. No test files, ever (predicate `no-synthetic-test-files`, `gm-config/fsm/predicates.md`).
-
-**Secure** -- Least Privilege and Fail-Safe Defaults (Saltzer & Schroeder); STRIDE; OWASP Top 10; LINDDUN. Credentials are asymmetric: no revert reaches a log or mirror.
-
-**Correct** -- Jidoka and Five Whys (Ohno); Poka-Yoke (Shingo); Circuit Breaker (Nygard); Feynman; Popper.
-
-**Decide and stop** -- Occam's Razor; Last Responsible Moment (Poppendieck), which defers decisions, never work; YAGNI; Second System Effect (Brooks); Hemingway Bridge.
-
-**Disclose** -- BLUF; Minto; ADR (Nygard); MADR; Conventional Commits; 50/72.
+Credentials are asymmetric: no revert reaches a log or mirror. No test files, ever (predicate `no-synthetic-test-files`, `gm-config/fsm/predicates.md`).
 
 ## Autonomy: measurements
 
