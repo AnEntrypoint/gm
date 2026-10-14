@@ -1,0 +1,5 @@
+id: METAMORPH-gm-goal-hop-METAMORPH-4-2-blocker-gm-fin-28
+subject: 'Blocker for METAMORPH-gm-goal-hop-METAMORPH-4-2: witness must come from another session'
+body: Row METAMORPH-gm-goal-hop-METAMORPH-4-2 needs gm-mcp/scripts/<session-invariance>-witness.mjs that replays read-only verbs (health, phase-status) under two session ids on one root, strips dispatch_id, session_id echo, timing, now and pid-bearing paths, and asserts equality; then a deliberately injected session-dependent field must make it exit 1. The check and its injected run are EMIT work. prd-resolve refuses a self-witness, and this session would produce that witness, so the row stays pending until another session runs the witness. Receipts 01-SPECIFY and 02-PROVE are under .gm/receipts/METAMORPH-gm-goal-hop-METAMORPH-4-2/. Scoped gm-mcp src, bin and scripts were clean at head 9acd95b when checked.
+session_id: gm-fin-28
+status: pending

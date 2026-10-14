@@ -1,0 +1,7 @@
+id: gm-w577-clause1-poisoned-plugin-slot-reload-r138-blocker-r138
+kind: blocker
+session: orch-main-r138
+status: pending
+subject: 'BLOCKER: clause 1 has no in-scope edit site -- poisoned plugin slot reload lives in the agentplug host daemon'
+text: 'Holder: agentplug/crates/agentplug-runner/src/daemon/ (plugin slot pool + reload), a submodule declared OUT OF SCOPE for this session. Evidence (live, this session): codesearch literal "poison" over gm-mcp = 0 occurrences in 53 files (dispatch 1791669469293-500-bfe094ab33debc6f); over rs-plugkit = 2 hits, both non-plugins: code_index.rs:4671 Mutex poisoning (Err(poisoned) => poisoned.into_inner()) and orchestrator/instructions/prose/entry-extended.md:52 (memory poisoning prose), dispatch 1791669471286-500-1c2b94eb18a5b2b7. No plugin-slot, evict or reload code exists anywhere in rs-plugkit, gm-mcp, gm-config or skills. The clause cannot be implemented without editing agentplug; filed as a blocker instead of inventing an edit site.'
+session_id: orch-main-r138

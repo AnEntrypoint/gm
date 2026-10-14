@@ -1,0 +1,5 @@
+id: INVEST-GCONTRACT-MEMORY-KIND-ENUM
+title: 'memorize-fire: kind is a closed enum that rejects other values at parse time'
+description: 'Split from G_CONTRACT-memory-kind-enum, which fails INVEST Small (it crosses rs-plugkit code and two prose files). Make memorize-fire''s kind a closed enum (user, feedback, project, reference) in the rs-plugkit orchestrator memory handling, rejecting any other value at parse time. Witness: memorize-fire with kind ''other'' returns a parse error; kind ''user'' succeeds.'
+status: pending
+session_id: lean-node-INVEST

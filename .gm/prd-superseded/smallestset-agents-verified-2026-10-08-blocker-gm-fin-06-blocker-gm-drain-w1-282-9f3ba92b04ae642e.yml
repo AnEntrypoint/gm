@@ -1,0 +1,5 @@
+id: SMALLESTSET-AGENTS-VERIFIED-2026-10-08-blocker-gm-fin-06-blocker-gm-drain-w1-282
+subject: 'Blocker for SMALLESTSET-AGENTS-VERIFIED-2026-10-08-blocker-gm-fin-06: owner approval needed to choose git_reset hard policy'
+session_id: gm-drain-w1-282
+status: pending
+body: 'Row SMALLESTSET-AGENTS-VERIFIED-2026-10-08-blocker-gm-fin-06 cannot close in session gm-drain-w1-282. SPECIFY: cited source confirmed (dispatch 1791959220604-500-1ec3f1642451f918): GIT_RESET_MODES = soft|mixed|hard at git.rs:7225 and hard is accepted by the verb. The row offers two outcomes: keep hard (a doc/rule change, no code) or refuse hard (rs-plugkit code change, CI-only witness). Both pick a policy the owner must decide, and the code path needs owner approval. No witness can bind the row until that decision lands. Unblock: owner picks keep-hard or refuse-hard; then the row''s chosen path is executed and witnessed in another session.'

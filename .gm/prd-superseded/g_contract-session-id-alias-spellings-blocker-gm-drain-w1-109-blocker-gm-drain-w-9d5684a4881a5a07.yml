@@ -1,0 +1,8 @@
+id: G_CONTRACT-session-id-alias-spellings-blocker-gm-drain-w1-109-blocker-gm-drain-w2-148
+subject: 'Blocked: G_CONTRACT-session-id-alias-spellings-blocker-gm-drain-w1-109 cannot close in session gm-drain-w2-148; the dispatch-layer normalization needs an exclusive gm-mcp tree and a cross-session CI-built guest witness'
+body: 'Session gm-drain-w2-148, SPECIFY and PROVE re-verified. Hypothesis H1 (dispatch layer must normalize SESSION_ID / session_id / sessionId) is supported: gm-mcp/src/dispatch.js reads only body.SESSION_ID (line 1056, explicitBodySessionId) and target.session_id (line 1065); codesearch for sessionId in gm-mcp/src has no alias handling (dispatch 1791961069678-500-eb188b62a7c2d68c). The row''s cited lines 1072-1082 and :1966 are stale (now 1056-1065). The SKILL.md half is absent: skills/gm has no ''plugkit rejects'' or alias text (dispatch 1791961075003-500-b62aff08730e8b73). git_status (dispatch 1791961079454-500-884687e6222de5db) shows gm-mcp and rs-plugkit modified by other writers, so the single-writer precondition fails. The closing witness needs a CI-built guest and a live sessionId-only and session_id-only dispatch from a session other than gm-drain-w1-109 and gm-drain-w2-148. Next: after gm-mcp is single-writer, edit dispatch.js to normalize the three spellings once, rebuild the bundle, and witness from another session. Probe for H1 versus H2 remains: one body per spelling, read the reply for session rejection.'
+session_id: gm-drain-w2-148
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

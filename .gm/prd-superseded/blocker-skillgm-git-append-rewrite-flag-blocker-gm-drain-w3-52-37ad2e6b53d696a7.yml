@@ -1,0 +1,8 @@
+id: BLOCKER-SKILLGM-git-append-rewrite-flag-blocker-gm-drain-w3-52
+subject: 'Blocked: BLOCKER-SKILLGM-git-append-rewrite-flag has no .gm/prd file, no file list and no witness command'
+body: 'Row BLOCKER-SKILLGM-git-append-rewrite-flag cannot be executed. The parent is pending with a subject only; .gm/prd/BLOCKER-SKILLGM-git-append-rewrite-flag.yml is absent. Codesearch (dispatch 1791969767846-500-b83dff9b454d716e) finds no append/rewrite flag in rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs/git.rs, and skills/gm/SKILL.md line 128 lists operations inline. The change is a Rust edit witnessed only through CI (no local cargo), so no local witness is possible. Unblock: re-scope the parent with a file list (git.rs and SKILL.md section 4), a witness command, and an acceptance text, then re-run gm-prd. Receipt: .gm/receipts/BLOCKER-SKILLGM-git-append-rewrite-flag-blocker-gm-drain-w1-30/01-SPECIFY.md (session gm-drain-w3-52, receipt in .gm/receipts/BLOCKER-SKILLGM-git-append-rewrite-flag-blocker-gm-drain-w1-30/01-SPECIFY.md).'
+session_id: gm-drain-w3-52
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

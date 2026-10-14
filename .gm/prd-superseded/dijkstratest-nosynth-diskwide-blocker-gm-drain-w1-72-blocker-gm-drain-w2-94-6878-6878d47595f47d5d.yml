@@ -1,0 +1,8 @@
+id: DIJKSTRATEST-NOSYNTH-DISKWIDE-blocker-gm-drain-w1-72-blocker-gm-drain-w2-94
+subject: 'Blocker: DIJKSTRATEST-NOSYNTH-DISKWIDE-blocker-gm-drain-w1-72 cannot close in gm-drain-w2-94 (PROVE needs a live wasm guest witness; scope needs owner decision)'
+body: 'Row: DIJKSTRATEST-NOSYNTH-DISKWIDE-blocker-gm-drain-w1-72 (parent row DIJKSTRATEST-NOSYNTH-DISKWIDE). Session gm-drain-w2-94 re-ran SPECIFY (receipt .gm/receipts/DIJKSTRATEST-NOSYNTH-DISKWIDE/01-SPECIFY.md, leader H1 confirmed on cited lines) and PROVE could not run. Discriminating probe for H1 is a live wasm transition with a tracked test file present; native arm (transitions.rs:446-449) returns true unconditionally, so no native probe separates H1 from H2. Local cargo is refused by PreToolUse hook (memory gm-no-local-cargo-verified-by-ci), so the only witness path is rs-plugkit publish/release Build plus parent gitlink bump. Scope decision is still open: H2 (diff-scoped contract documented at predicates.md:19, lean-p4.md:67, predicate_registry.rs:18) makes tree-wide extension a documented-rule change. Next action: owner picks scope (tree-wide scan vs diff-scoped plus separate tracked-file check); then rs-plugkit change with CI witness through agentplug-runner on a tree containing gm-mcp/test/*.test.*. Row stays pending.'
+session_id: gm-drain-w2-94
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

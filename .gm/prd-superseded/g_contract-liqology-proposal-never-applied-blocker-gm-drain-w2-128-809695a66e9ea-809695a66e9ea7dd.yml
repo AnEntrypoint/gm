@@ -1,0 +1,8 @@
+id: G_CONTRACT-liqology-proposal-never-applied-blocker-gm-drain-w2-128
+subject: 'Blocker: G_CONTRACT-liqology-proposal-never-applied-blocker-gm-drain-w1-98 cannot close in one run (owner decision and rs-plugkit CI release required)'
+body: 'Session gm-drain-w2-128 ran SPECIFY on row G_CONTRACT-liqology-proposal-never-applied-blocker-gm-drain-w1-98. Premise re-checked: codesearch literal ''applied'' in rs-plugkit/crates/plugkit-core/src/orchestrator/fsm_propose.rs returns line 336 ''"applied": write_ok'' and line 299 is the confirmation_witness error; literal ''user_confirmed'' returns line 142 and 245 (if !user_confirmed gate). So the apply path exists, as w1-98 states. Choosing between H1 (keep confirmed apply, correct prose) and H2 (remove apply, fixed applied=false) is an owner decision. Either hypothesis changes rs-plugkit, which requires a CI wasm release (no local cargo per gm-no-local-cargo-verified-by-ci), a gitlink bump, and a live dispatch witness after release. PROVE and COMPLETE cannot run in this session. Row w1-98 stays pending. Blocked by: owner decision (H1 or H2) and rs-plugkit release.'
+session_id: gm-drain-w2-128
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

@@ -1,0 +1,8 @@
+id: G_CONTRACT-comment-ban-duplicated-blocker-gm-drain-w2-111
+subject: 'Blocked: G_CONTRACT-comment-ban-duplicated needs a transition predicate on added comments; PROVE probe needs CI-built rs-plugkit wasm'
+body: 'Row G_CONTRACT-comment-ban-duplicated cannot close in session gm-drain-w2-111. SPECIFY receipt: .gm/receipts/G_CONTRACT-comment-ban-duplicated/01-SPECIFY.md. Leader H1: a registry predicate blocks a transition on added comments. Scan found no such predicate (only comment_audit.rs verb comment-audit). Closure needs a rs-plugkit Rust change (predicate_registry.rs plus a gm-config gate predicate, generated per gm-config rules), a CI-built wasm (no local cargo), and a witness from another session that shows a live transition refusal. Prose duplicate deletion at entry-extended.md:108 and lean-p8.md:29 waits on that predicate.'
+session_id: gm-drain-w2-111
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

@@ -1,0 +1,21 @@
+id: BLOCK-COMMENT-PREDICATE-blocker-gm-drain-w3-12
+subject: 'Blocker for BLOCK-COMMENT-PREDICATE in session gm-drain-w3-12: closing needs a CI-released rs-plugkit predicate and a cross-session witness, neither reachable here'
+body: |-
+  Session gm-drain-w3-12 ran SPECIFY on row BLOCK-COMMENT-PREDICATE-blocker-gm-drain-w2-6. Codesearch of the comment literal in rs-plugkit/crates/plugkit-core/src/orchestrator/predicate_registry.rs: data:
+    case_insensitive: false
+    count: 0 lines, 0 occurrences, 0 files of 1 scanned (44 lines read)
+    exhaustive: true
+    file_source: file
+    file_source_detail: file_source_git
+    files_scanned: 1
+    files_with_matches: 0
+    guest_elapsed_ms: 27
+    hint: >-
+      no line matched "comment" in 1 files scanned (44 lines read): the pattern was matched verbatim
+      as a substring, every character of it, pu
+  The row cannot close here: it needs (1) an rs-plugkit Rust predicate plus transitions.rs pair, (2) a reviewed lean_graph.json gate edit, (3) CI-only wasm verification because local cargo is hook-blocked, (4) a pushed rs-plugkit commit, release and bump-pins gitlink advance, and (5) a witness from another session showing a refused comment-adding transition. Unblock: a session with CI release access lands the rs-plugkit commit, then runs the witness. Parent row kept pending.
+session_id: gm-drain-w3-12
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

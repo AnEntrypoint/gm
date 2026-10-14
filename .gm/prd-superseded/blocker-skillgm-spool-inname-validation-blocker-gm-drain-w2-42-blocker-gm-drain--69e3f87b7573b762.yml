@@ -1,0 +1,8 @@
+id: BLOCKER-SKILLGM-spool-inname-validation-blocker-gm-drain-w2-42-blocker-gm-drain-w3-78
+subject: 'Blocker for BLOCKER-SKILLGM-spool-inname-validation-blocker-gm-drain-w2-42 (session gm-drain-w3-78): closing needs a subagent-id mint change in agentplug-runner plus a CI-built runner and a cross-session witness. codesearch finds no subagent mint source (''-sub'' and ''sub{}'' return zero hits), and this run has no local cargo, so it cannot EDIT, VALIDATE or witness.'
+body: 'Original row must witness the daemon subagent mint <parent>-sub<k>. Next: locate or add the mint under agentplug/crates/agentplug-runner/src/daemon, build in CI, witness from another session, then prd-resolve the original row.'
+session_id: gm-drain-w3-78
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

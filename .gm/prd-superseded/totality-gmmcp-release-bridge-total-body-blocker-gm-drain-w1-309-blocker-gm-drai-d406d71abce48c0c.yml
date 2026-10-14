@@ -1,0 +1,5 @@
+id: TOTALITY-GMMCP-RELEASE-BRIDGE-TOTAL-BODY-blocker-gm-drain-w1-309-blocker-gm-drain-w2-461
+subject: 'Blocker (SPECIFY, gm-drain-w2-461): row TOTALITY-GMMCP-RELEASE-BRIDGE-TOTAL-BODY-blocker-gm-drain-w1-309 names no acceptance, so no falsifiable leader hypothesis and no witness can be written'
+body: 'Stage SPECIFY cannot run: the parent row has no acceptance. Its own subject (blocker-gm-2e-fa19b3-w2-03) asks the owner to name the ''total body'' defect. Evidence: prd-list full read (dispatch 1791967895331-500-e9b7c2f556759186); codesearch MUT-TOTALITY-GMMCP-BODY-SCOPE (dispatch 1791967904733-500-a20789b0976cf6bc) zero hits but exhaustive:false, so not a finding; codesearch fetchLatestRelease (dispatch 1791967911556-500-949242c83d2d803) shows release-bridge.js:119 defines it and :400 calls it. Unblocks when MUT-TOTALITY-GMMCP-BODY-SCOPE is answered with a defect statement and acceptance. Parent stays pending.'
+session_id: gm-drain-w2-461
+status: pending

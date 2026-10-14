@@ -1,0 +1,8 @@
+id: BLOCKER-SKILLGM-watcher-dead-threshold-blocker-gm-drain-w1-38-blocker-gm-drain-w2-45-blocker-gm-drain-w3-80
+subject: Witness for watcher dead-threshold row needs a Linux CI run or a native Windows port of runner-status.sh
+body: 'Row BLOCKER-SKILLGM-watcher-dead-threshold-blocker-gm-drain-w1-38-blocker-gm-drain-w2-45 (session gm-drain-w3-80) cannot close. PROVE (receipt .gm/receipts/BLOCKER-SKILLGM-watcher-dead-threshold-blocker-gm-drain-w1-38-blocker-gm-drain-w2-45/02-PROVE.md): runner-status.sh exits 49 on this win32 host (python3 is the WindowsApps alias; /proc absent). The named-constant edit (ALIVE 300000 ms, SERVING 300 s) is not landed, and SKILL.md threshold text sits at line 65, not 63. Decision needed from the owner: (a) run the witness in a Linux CI job that emits a RESULT line from another session, then apply the constant change; or (b) port the liveness check to a native Windows script with its own witness. Witness must come from a session other than the one that edits.'
+session_id: gm-drain-w3-80
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

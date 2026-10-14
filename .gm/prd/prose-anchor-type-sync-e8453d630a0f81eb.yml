@@ -1,0 +1,5 @@
+id: PROSE-ANCHOR-TYPE-SYNC
+session_id: mcp-codemode-23256-1791960431799
+status: pending
+subject: gm-config/prose/entry-extended.md 'Self-reconfiguration content shape' still describes anchors in prose; once fsm-propose-override enforces {name, author} (rs-plugkit 4be7a93), edit the prose to name the type and re-sync rs-plugkit/crates/plugkit-core/src/orchestrator/instructions/prose/entry-extended.md per the vendoring rule.
+title: 'Follow-up: prose names the anchor type after code lands'

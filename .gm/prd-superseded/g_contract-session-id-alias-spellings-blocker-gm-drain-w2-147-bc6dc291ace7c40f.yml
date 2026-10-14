@@ -1,0 +1,8 @@
+id: G_CONTRACT-session-id-alias-spellings-blocker-gm-drain-w2-147
+subject: 'Blocked: G_CONTRACT-session-id-alias-spellings has no acceptance, no cited file, and its cited ''always accepted'' phrase is absent from skills/gm'
+body: 'Parent row G_CONTRACT-session-id-alias-spellings cannot reach PROVE. The row file .gm/prd/G_CONTRACT-session-id-alias-spellings.yml does not exist and the row carries no acceptance or witness. The cited phrase ''always accepted'' has 0 hits in skills/gm; the real prose is gm-config/prose/entry.md (SESSION_ID section line 108; git_log/git_diff/git_show refusal list line 147). Needed to close: an acceptance body naming the one dispatch-layer normalization point (file and fn), the alias spellings to accept, and the prose files whose restatements are deleted, plus a witness that sends each alias spelling live. Receipt: .gm/receipts/G_CONTRACT-session-id-alias-spellings/01-SPECIFY.md'
+session_id: gm-drain-w2-147
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

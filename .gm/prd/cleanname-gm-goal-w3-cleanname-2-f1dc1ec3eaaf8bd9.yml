@@ -1,0 +1,4 @@
+id: CLEANNAME-gm-goal-w3-CLEANNAME-2
+title: 'gm-mcp/src/self-update.js:91-92 `const a = parts(left)` / `const b = parts(right)`: rename to leftParts and rightParts'
+status: pending
+session_id: gm-goal-w3-CLEANNAME

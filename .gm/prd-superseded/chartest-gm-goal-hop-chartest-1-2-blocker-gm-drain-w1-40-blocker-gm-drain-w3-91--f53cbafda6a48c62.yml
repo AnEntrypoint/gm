@@ -1,0 +1,8 @@
+id: CHARTEST-gm-goal-hop-CHARTEST-1-2-blocker-gm-drain-w1-40-blocker-gm-drain-w3-91
+subject: 'Blocker for blocker CHARTEST-gm-goal-hop-CHARTEST-1-2-blocker-gm-drain-w1-40: owner decision on test-file exemption is required'
+body: 'Row CHARTEST-gm-goal-hop-CHARTEST-1-2-blocker-gm-drain-w1-40 (session gm-drain-w3-91) cannot close on a witness. Its leader hypothesis H1 is confirmed by codesearch: skills/gm-prd/SKILL.md line 26 reads ''No test files'' (dispatch 1791970392746-500-cfab13afa7762322), and AGENTS.md line 95 defines Synthetic tests as forbidden, with the Falsified-by clause naming ''a test or mock file in the delivered paths'' (dispatch 1791970395208-500-4d3821ff6efe496d). Note: the blocker cites skill line 24; the live line is 26. The conflict is a rule decision, not an implementation gap: whether real-entry-point characterization tests for gm-mcp/src (parent row CHARTEST-gm-goal-hop-CHARTEST-1-2) are exempt from the no-test-files rule. No witness can supply that decision, so a self-witness would be fabricated. Owner decision needed: (a) exempt real-entry-point characterization tests in gm-mcp and amend gm-prd and AGENTS.md accordingly, then re-scope the parent row to a gm-mcp submodule delivery with a pin bump; or (b) keep the rule and close the parent row as not-applicable with a recorded reason. Receipts: .gm/receipts/CHARTEST-gm-goal-hop-CHARTEST-1-2-blocker-gm-drain-w1-40/.'
+session_id: gm-drain-w3-91
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

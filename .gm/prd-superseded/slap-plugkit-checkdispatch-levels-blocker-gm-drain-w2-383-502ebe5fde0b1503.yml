@@ -1,0 +1,6 @@
+id: SLAP-PLUGKIT-CHECKDISPATCH-LEVELS-blocker-gm-drain-w2-383
+subject: 'Blocked: SLAP-PLUGKIT-CHECKDISPATCH-LEVELS still unproven in session gm-drain-w2-383; PROVE needs CI-built rs-plugkit guest and cross-session witness'
+status: pending
+blockedBy:
+- SLAP-PLUGKIT-CHECKDISPATCH-LEVELS
+session_id: mcp-codemode-23256-1791964912090

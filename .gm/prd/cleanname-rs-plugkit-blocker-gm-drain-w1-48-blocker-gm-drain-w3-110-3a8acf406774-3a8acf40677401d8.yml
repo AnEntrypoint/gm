@@ -1,0 +1,7 @@
+id: CLEANNAME-RS-PLUGKIT-blocker-gm-drain-w1-48-blocker-gm-drain-w3-110
+status: pending
+blockedBy:
+- external
+subject: 'BLOCKER gm-drain-w1-48: no local wasm build; rename needs a CI-witnessed rs-plugkit commit from another session'
+session_id: mcp-codemode-9708-1791970603131
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

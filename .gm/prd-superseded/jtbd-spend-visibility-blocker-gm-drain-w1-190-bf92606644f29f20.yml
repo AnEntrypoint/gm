@@ -1,0 +1,5 @@
+id: JTBD-SPEND-VISIBILITY-blocker-gm-drain-w1-190
+subject: 'Blocker: JTBD-SPEND-VISIBILITY needs a token recorder and a new verb'
+body: 'Blocks row JTBD-SPEND-VISIBILITY (session gm-drain-w1-190). Done-when: one verb reports per-walk spend split by phase and by re-entered phase, read from recorded dispatches. Finding (receipt .gm/receipts/JTBD-SPEND-VISIBILITY/01-SPECIFY.md): no recorded dispatch carries token usage (gm-mcp/src has no usage field; dream-rsi observations have no cost field), and the wasm guest does not see host token counts. Closing needs (1) a recorder that captures per-dispatch token usage from the host side, (2) a rs-plugkit verb grouping it by walk, phase and re-entered phase, (3) CI-only verification (gm-no-local-cargo-verified-by-ci). Next step: a design decision on the token source (host-reported usage vs reply-byte proxy) before any witness can bind the row. Row stays pending.'
+session_id: gm-drain-w1-190
+status: pending

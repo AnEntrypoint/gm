@@ -1,0 +1,8 @@
+id: BLOCKER-SKILLGM-session-id-alias-normalize-blocker-gm-drain-w3-68
+subject: 'Blocker for BLOCKER-SKILLGM-session-id-alias-normalize-blocker-gm-drain-w1-35: normalize body sessionId/session_id in gm-mcp dispatch needs a free dispatch.js surface, bundle rebuild and cross-session witness'
+body: 'Row BLOCKER-SKILLGM-session-id-alias-normalize-blocker-gm-drain-w1-35 cannot close in gm-drain-w3-68. Receipt: .gm/receipts/BLOCKER-SKILLGM-session-id-alias-normalize-blocker-gm-drain-w1-35/04-PROVE-gm-drain-w3-68.md. Facts: (1) gm-mcp/src/dispatch.js explicitBodySessionId (line 1055) reads body.SESSION_ID only; codesearch dispatch 1791969873527-500-d2cd025cada596fd. (2) gm-mcp/src/dispatch.js carries an uncommitted spool-store.js refactor from another writer (18 gm-mcp files dirty), so the edit needs that lane to commit or release the surface first. (3) Acceptance needs bundle rebuild via gm-mcp/scripts/build.mjs (bin/gm-mcp-server.js) and a live reload. (4) Witness must be cross-session: a second live lease X dispatched with body.sessionId=X must show session_owner_before_this_dispatch=X. Next: after the spool-store lane lands, normalize in one function (SESSION_ID, then sessionId, then session_id), rebuild, witness from a second session, then delete any alias prose found in gm-config/prose/entry.md. Hypothesis to refute: body {sessionId:X} with no top-level session_id is served under owner X.'
+session_id: gm-drain-w3-68
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

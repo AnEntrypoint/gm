@@ -1,0 +1,5 @@
+id: XYPROB-IGNORE-GAP-PUSH-gm-drain-w2-500
+subject: Push rs-plugkit 58d5498 and bump parent gitlink
+body: 'rs-plugkit local main 58d5498 (.gitignore lines 13-14: config-source-cache lock dirs and .gm/.staging-*) is ahead 8 and behind 13 of origin/main; git_pull ff_only and merge both refused. Merge blocked by another lane''s uncommitted crates/plugkit-core/Cargo.toml in the shared tree (not touched). Resolve: land or stash the other writer''s work, git_pull origin main, then git_push rev 58d5498 (or the merge tip), then bump the parent gitlink for rs-plugkit to the remote main tip. File: rs-plugkit/.gitignore. Witness for the ignore rule already bound on XYPROB-IGNORE-GAP-LIVE-gm-drain-w1-330 (dispatch 1791968710046-500-477f8595c7da71b8).'
+session_id: gm-drain-w2-500
+status: pending

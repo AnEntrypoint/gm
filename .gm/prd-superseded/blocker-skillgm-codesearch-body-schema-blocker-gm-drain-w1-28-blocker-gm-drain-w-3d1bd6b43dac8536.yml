@@ -1,0 +1,8 @@
+id: BLOCKER-SKILLGM-codesearch-body-schema-blocker-gm-drain-w1-28-blocker-gm-drain-w2-29
+subject: 'Blocked: grep body schema unserved; the fix needs a gm-mcp bundle rebuild that other writers'' WIP would enter'
+body: 'Row BLOCKER-SKILLGM-codesearch-body-schema-blocker-gm-drain-w1-28 (session gm-drain-w2-29). Leader H1: gm-mcp/src/verb-table.js:576 `{ canonical: ''grep'' }` carries no body binding; live describe(grep) body_schema.declared=false while describe(codesearch) declared=true. Fix is one edit, `{ canonical: ''grep'', body: CODESEARCH_BODY }`. Witness needs a rebuilt committed bin/gm-mcp-server.js, but gm-mcp has other live writers (11 modified, 1 staged src/self-update.js, untracked src/spool-store.js); a rebuild would publish their WIP. Unblock: the gm-mcp writer confirms its tree is single-writer (or commits its WIP), then the one-line edit plus bundle rebuild lands and a cross-session describe(grep) witness closes the row. Receipts: .gm/receipts/BLOCKER-SKILLGM-codesearch-body-schema-blocker-gm-drain-w1-28/01-SPECIFY.md, 02-PROVE.md, 03-CONC.md.'
+session_id: gm-drain-w2-29
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

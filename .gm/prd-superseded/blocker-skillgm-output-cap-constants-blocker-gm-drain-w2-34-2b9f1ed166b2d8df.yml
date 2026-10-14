@@ -1,0 +1,8 @@
+id: BLOCKER-SKILLGM-output-cap-constants-blocker-gm-drain-w2-34
+subject: 'Blocker for BLOCKER-SKILLGM-output-cap-constants (session gm-drain-w2-34): the leader probe cannot run here'
+body: 'Row BLOCKER-SKILLGM-output-cap-constants stays pending. SPECIFY (w1-33 and this session) found the caps duplicated as literals across gm-mcp/src/dispatch.js (16000), gm-mcp/src/response-compact.js (65536), gm-mcp/src/verb-table.js (60000) and rs-plugkit git.rs (60000), with no shared key in gm-config/gm.config.json. The numbers live in skills/gm/docs/verbs.md, not SKILL.md. PROVE is blocked: the single config key read by both gm-mcp and rs-plugkit needs an rs-plugkit rebuild (--features slim) and a CI-only wasm verification, so no live witness can run in this session. Receipts: .gm/receipts/BLOCKER-SKILLGM-output-cap-constants/01-SPECIFY.md and 02-PROVE.md. Next: add the config key, rebase verbs.md onto it, and witness through CI.'
+session_id: gm-drain-w2-34
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

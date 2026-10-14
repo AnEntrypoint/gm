@@ -1,0 +1,5 @@
+id: JTBD-BACKOUT-WRONG-CHANGE-blocker-gm-drain-w1-180
+subject: 'Blocker for JTBD-BACKOUT-WRONG-CHANGE: revert is phase-only, no PRD or mutable reopen and no revert reason exist'
+body: 'Row JTBD-BACKOUT-WRONG-CHANGE cannot close. Source witness: rs-plugkit/crates/plugkit-core/src/orchestrator/state.rs:223-238 revert_last_transition only pops phase_history and writes TurnState; transitions.rs:1340-1348 handle_revert takes no reason; callers dispatch 1791958571847-500-bae08112a932a0c7 shows a single caller. Closing needs new code: a revert reason field, PRD row reopen and mutable invalidation on revert, then a CI-built wasm and a witness from another session. Receipts: .gm/receipts/JTBD-BACKOUT-WRONG-CHANGE/01-SPECIFY.md and 02-PROVE.md.'
+session_id: gm-drain-w1-180
+status: pending

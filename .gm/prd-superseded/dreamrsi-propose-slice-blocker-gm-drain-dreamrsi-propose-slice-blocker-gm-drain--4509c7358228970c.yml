@@ -1,0 +1,13 @@
+id: DREAMRSI-PROPOSE-SLICE-blocker-gm-drain-DREAMRSI-PROPOSE-SLICE-blocker-gm-drain-w2-96
+subject: 'Blocker for DREAMRSI-PROPOSE-SLICE blocker: verb unrouted in mod.rs, owner commit and release decision needed'
+body: |-
+  Blocker for DREAMRSI-PROPOSE-SLICE-blocker-gm-drain-DREAMRSI-PROPOSE-SLICE: the parent DREAMRSI-PROPOSE-SLICE cannot close in session gm-drain-w2-96.
+  Stale premise corrected: the blocker says dream-strategy-propose is absent from source. Codesearch finds its error strings at rs-plugkit/crates/plugkit-core/src/orchestrator/dream_rsi.rs:757 and :775, and automatic_replay is at :687 (not :619). cargo and rustup are now present on the host.
+  Real gap: the verb is not routed in rs-plugkit/crates/plugkit-core/src/orchestrator/mod.rs (0 codesearch hits), and the running plugin does not serve it. Closing it needs a mod.rs dispatch entry, a committed rs-plugkit change on main, a CI release (wasm build with --features slim), and then a live agentplug-runner dispatch from another session that returns the proposal and proves active-strategy.json byte-identity.
+  Owner decision needed: authorize the rs-plugkit commit to main (the original blocker cites 'Do not push'). Until then the parent stays pending.
+  Receipts: .gm/receipts/DREAMRSI-PROPOSE-SLICE-blocker-gm-drain-DREAMRSI-PROPOSE-SLICE/01-SPECIFY.md and 02-PROVE.md. Witness dispatch ids: 1791960462030-500-8532c10e60b50c8e, 1791960478169-500-121b6ddf2bdb2fea, 1791960499995-500-f3b96fe7d30fbc39.
+session_id: gm-drain-w2-96
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

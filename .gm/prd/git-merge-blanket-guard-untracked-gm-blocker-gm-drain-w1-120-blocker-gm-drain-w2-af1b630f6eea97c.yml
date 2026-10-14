@@ -1,0 +1,8 @@
+id: GIT-MERGE-BLANKET-GUARD-UNTRACKED-GM-blocker-gm-drain-w1-120-blocker-gm-drain-w2-164
+subject: 'EMIT blocked: merge_pending exemption for blanket guard needs rs-plugkit Rust change verified by CI only'
+body: 'Row GIT-MERGE-BLANKET-GUARD-UNTRACKED-GM-blocker-gm-drain-w1-120 (session gm-drain-w2-164). PROVE separated the leader: clean staged-merge fixture at scratchpad/fx-h1 (MERGE_HEAD present, s staged, .gm/untracked.txt untracked, zero unstaged tracked dirt) is refused by git_commit with blanket_stage_refused, dispatch 1791961259793-0-65e20c99715c3f4d, would_stage includes prepared index path s. This refutes H3 (unstaged/submodule dirt) as sole cause and is consistent with H1 (rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs/git.rs:2301-2309 guard lacks merge_pending). EMIT needs the fix in git.rs (exempt merge_pending so MERGE_HEAD commits the prepared index; keep gm-state exclusion via GIT_PROTECTED_PATHSPECS), a rs-plugkit rebuild with --features slim, and CI as the only build (no local cargo). Witness on the fixture after the fix must show a commit containing only s. Next: a session with CI access lands the fix and bumps the rs-plugkit gitlink, then witnesses on fx-h1.'
+session_id: gm-drain-w2-164
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

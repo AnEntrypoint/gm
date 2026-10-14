@@ -1,0 +1,4 @@
+id: BLOCKER-SKILLGM-spool-final-name-claim
+subject: 'Blocker for G_CONTRACT-spool-inflight-atomic-write: the watcher claims only final in-file names and ignores sibling temp names, so the atomic-write rule lives in claim code; then cut the temp-then-mv rule from skills/gm/SKILL.md section 1 to the claim outcome. Prose stays until this lands.'
+session_id: lean-exec-skillgm-1
+status: pending

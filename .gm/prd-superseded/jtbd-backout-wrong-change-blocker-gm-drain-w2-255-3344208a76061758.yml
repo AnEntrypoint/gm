@@ -1,0 +1,5 @@
+id: JTBD-BACKOUT-WRONG-CHANGE-blocker-gm-drain-w2-255
+subject: Revert needs a reason field and reopens PRD rows and mutables; new Rust plus CI wasm plus cross-session witness
+body: 'Row JTBD-BACKOUT-WRONG-CHANGE-blocker-gm-drain-w1-180 stays pending. Receipts: .gm/receipts/JTBD-BACKOUT-WRONG-CHANGE-blocker-gm-drain-w1-180/01-SPECIFY.md and 02-PROVE.md. Leader hypothesis H1 confirmed: revert_last_transition (rs-plugkit/crates/plugkit-core/src/orchestrator/state.rs:223-238) and handle_revert (transitions.rs:1340-1348) write only phase state, with no reason and no PRD or mutable reopen. Next run must: (1) add a reason parameter to handle_revert and carry it into revert_last_transition; (2) on revert, reopen the PRD row named by the reason and invalidate mutables; (3) build rs-plugkit with --features slim via CI (local cargo blocked); (4) witness from a session other than the implementer, naming dispatch id.'
+session_id: gm-drain-w2-255
+status: pending

@@ -1,0 +1,8 @@
+id: CLEANNAME-RS-PLUGKIT-blocker-gm-drain-w2-62
+subject: 'Blocker for CLEANNAME-RS-PLUGKIT-blocker-gm-drain-w1-48: CLEANNAME-RS-PLUGKIT cannot close without a CI-built witness; cites stale'
+body: 'Row CLEANNAME-RS-PLUGKIT-blocker-gm-drain-w1-48 (session gm-drain-w2-62) cannot close in this session. Its parent CLEANNAME-RS-PLUGKIT needs `cargo build --features slim` for the wasm guest and an agentplug-runner witness of the changed verb; local cargo is blocked by a hook and rs-plugkit wasm is verified by CI only (publish / release, step Build). A witness from another session is required after an rs-plugkit commit. Cites re-checked: code_index.rs:3645 is now 3811, code_index.rs:620 is now 647, cache.rs:316 matches. Receipt: C:\dev\gm\.gm\receipts\CLEANNAME-RS-PLUGKIT-blocker-gm-drain-w1-48\01-SPECIFY.md. Resolution: a CI-run witness from another session after an rs-plugkit commit, or a re-scope of the parent to CI-witnessed acceptance with corrected cites.'
+session_id: gm-drain-w2-62
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

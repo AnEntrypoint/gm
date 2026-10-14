@@ -1,0 +1,10 @@
+id: SLAP-GMMCP-RUNRELEASEBRIDGE-LEVELS-blocker-gm-drain-w2-375
+subject: 'Blocker: SLAP-GMMCP-RUNRELEASEBRIDGE-LEVELS still has no acceptance or witness definition (gm-drain-w2-375)'
+body: |-
+  Filed by gm-drain-w2-375 running gm-prd on row SLAP-GMMCP-RUNRELEASEBRIDGE-LEVELS-blocker-gm-drain-w1-258.
+  The w1 blocker's closing needs are unchanged: no witness definition, no leader hypothesis or probe, no bundle rebuild, and no cross-session witness.
+  Codesearch dispatch 1791964722547-500-ad7dfc681594897a confirms runReleaseBridge at gm-mcp/src/release-bridge.js:371; callers are gm-mcp/src/index.js lines 9, 60, 75 and release-bridge.js:430.
+  SPECIFY receipt: .gm/receipts/SLAP-GMMCP-RUNRELEASEBRIDGE-LEVELS-blocker-gm-drain-w1-258/01-SPECIFY.md.
+  Next step for the next wave: author a witness definition with exact outcomes and the entry point, then run the refactor, rebuild the gm-mcp bundle in the same commit, and witness from another session.
+session_id: gm-drain-w2-375
+status: pending

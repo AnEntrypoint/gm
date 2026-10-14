@@ -1,0 +1,5 @@
+id: DAEMON-IDLE-DISK-WRITE-25MBS-blocker-gm-drain-w1-61
+subject: 'Blocker for DAEMON-IDLE-DISK-WRITE-25MBS: cannot PROVE the idle-write leader without a rebuilt runner and live PerfMon run'
+body: 'Stage SPECIFY receipt: .gm/receipts/DAEMON-IDLE-DISK-WRITE-25MBS/01-SPECIFY.md. Leader H1 (status heartbeat rewrite per tick, daemon.rs:2049) vs H2 (dispatch-wait and ledger rewrite per idle tick, claim_dispatch.rs:2923/:524). Probe needs a rebuilt agentplug-runner (CI-only build in this session) restarted on the owning machine, then a per-file write count over 60 s idle plus a PerfMon sample under 2 MB/s. Needs: a CI build run id for agentplug-runner and a live witness from a different session.'
+session_id: gm-drain-w1-61
+status: pending

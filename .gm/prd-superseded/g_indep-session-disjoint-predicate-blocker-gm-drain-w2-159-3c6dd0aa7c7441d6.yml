@@ -1,0 +1,6 @@
+id: G_INDEP-SESSION-DISJOINT-PREDICATE-blocker-gm-drain-w2-159
+subject: 'Blocker for G_INDEP-SESSION-DISJOINT-PREDICATE: still not closable; implementer session not named and the gate is advisory in the reviewed graph'
+status: blocked
+blockedBy:
+- G_INDEP-SESSION-DISJOINT-PREDICATE
+session_id: mcp-codemode-23256-1791961309855

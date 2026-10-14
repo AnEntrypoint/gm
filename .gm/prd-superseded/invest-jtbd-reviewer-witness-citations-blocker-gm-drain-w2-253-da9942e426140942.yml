@@ -1,0 +1,5 @@
+id: INVEST-JTBD-REVIEWER-WITNESS-CITATIONS-blocker-gm-drain-w2-253
+subject: 'Blocker: INVEST-JTBD-REVIEWER-WITNESS-CITATIONS cannot close yet'
+body: 'Row INVEST-JTBD-REVIEWER-WITNESS-CITATIONS needs a completed walk reply that cites a witness id and a closed PRD row id. Two blockers. (1) Dependency INVEST-JTBD-REVIEWER-SUMMARY-VERB is still pending and no reviewer summary verb exists in source: codesearch literal net_lines (dispatch 1791963021113-500-de1933f83ecf53ee) matches only a prd-log.jsonl text line. Nothing to witness yet. (2) Session gm-drain-w2-253 does not own the walk: phase-status (dispatch 1791963001348-500-20cddbc85ff915ac) reports session_mismatch with a live lease held by gm-ach-20261014-01 (pid 11964); instruction dispatch 1791962997482 failed with plugin_call_deadline_exceeded. Resolution: land INVEST-JTBD-REVIEWER-SUMMARY-VERB first, then re-run this row under a session that owns the walk or after the lease is released. Witness: the reply on a completed walk cites at least one witness id and one closed PRD row id.'
+session_id: gm-drain-w2-253
+status: pending

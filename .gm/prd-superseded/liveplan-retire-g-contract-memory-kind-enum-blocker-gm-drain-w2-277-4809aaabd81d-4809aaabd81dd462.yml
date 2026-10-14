@@ -1,0 +1,7 @@
+id: LIVEPLAN-RETIRE-G-CONTRACT-MEMORY-KIND-ENUM-blocker-gm-drain-w2-277
+title: 'Blocks LIVEPLAN-RETIRE-G-CONTRACT-MEMORY-KIND-ENUM: enum sub-row unimplemented'
+description: 'Blocks LIVEPLAN-RETIRE-G-CONTRACT-MEMORY-KIND-ENUM (session gm-drain-w2-277). Closing condition needs INVEST-GCONTRACT-MEMORY-KIND-ENUM closed; it is pending and not implemented: rs-plugkit/crates/plugkit-core/src/orchestrator/memorize.rs:38 still treats kind as free text. Its witness (memorize-fire kind ''other'' fails parse) needs a CI-built rs-plugkit wasm, which cannot run locally. INVEST-GCONTRACT-MEMORY-PROSE-REMOVE is pending but its cited sentence is already absent from both prose copies (codesearch 1791963302849-500-6b9d4036cb069abf); it waits on the enum per its deferReason. Receipt: .gm/receipts/LIVEPLAN-RETIRE-G-CONTRACT-MEMORY-KIND-ENUM/01-SPECIFY.md. Unblock: land INVEST-GCONTRACT-MEMORY-KIND-ENUM via rs-plugkit CI, then close PROSE-REMOVE and this row.'
+node: LIVEPLAN
+phase: P1
+session_id: gm-drain-w2-277
+status: pending

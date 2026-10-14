@@ -1,0 +1,5 @@
+id: WADLER-VALUE-SIGNATURE-PLUGIN-ABI-blocker-gm-2e-fa19b3-w1-13
+subject: 'WADLER-VALUE-SIGNATURE-PLUGIN-ABI: EMIT and witness need CI build and a second session'
+body: 'SPECIFY done (receipts/WADLER-VALUE-SIGNATURE-PLUGIN-ABI/01-SPECIFY.md). Cited lines exist: request_envelope 121, ok_response 125, parse_response 154, call 191 in rs-plugkit/crates/plugkit-core/src/plugin_abi.rs. callers: request_envelope 1 (call), ok_response 0 in-crate, parse_response 1 (call), call 15 distinct (name-keyed, includes wasm_dispatch/verbs/git.rs). EMIT is not runnable here: the file is wasm32-only, local cargo is hook-blocked, and the build is verified only in CI (publish / release, step Build). A self-witness is refused, so the row cannot close in this session. Next: EMIT the typed envelope in rs-plugkit via the Git API publish path, then witness it from another session.'
+session_id: gm-2e-fa19b3-w1-13
+status: pending

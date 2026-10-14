@@ -1,0 +1,7 @@
+id: ACCEPTPORT-SPOOLFS-DISPATCH-blocker-gm-drain-w3-0
+subject: 'Blocked: ACCEPTPORT-SPOOLFS-DISPATCH has no acceptance text to witness'
+status: blocked
+blockedBy:
+- ACCEPTPORT-SPOOLFS-DISPATCH
+body: 'SPECIFY (gm-drain-w3-0): .gm/prd/acceptport-spoolfs-dispatch-1cb005bebace7e24.yml holds only id, title, status pending and session_id lean-hop-ACCEPTPORT; no acceptance, witness or body. prd-list {id} returns the same title-only record. The title asks to move dispatch.js spool in-file writes (gm-mcp/src/dispatch.js lines 395-398, 667, 703) and lock/status reads (lines 990, 1041, 1304, 1595, 1625-1626, 2017) behind a spool-store adapter, but no witness can be bound to that without a stated acceptance. Prior blockers ACCEPTPORT-SPOOLFS-DISPATCH-blocker-gm-drain-w1-4 and -w2-0 record the same gap. Needed: a row body with the adapter interface, the files it covers, and a witness command that proves the spool path still works through the live dispatch. No file was edited.'
+session_id: mcp-codemode-9708-1791969233661

@@ -1,0 +1,5 @@
+id: G_START-ONE-IN-FLIGHT-blocker-gm-drain-w1-119
+subject: 'Blocker for G_START-ONE-IN-FLIGHT: no readable acceptance and the backlog count moved'
+body: 'Row G_START-ONE-IN-FLIGHT cannot close in session gm-drain-w1-119. (1) The row body has no acceptance field: prd-list full (dispatch 1791958088100-500-d5eb671eaedf19de) returns only the truncated title, and no .gm/prd/G_START-ONE-IN-FLIGHT.yml exists. (2) The closing decision depends on mutable MUT-G_START-FAMILIES, which .gm/lean-walk/G_START.json records as deferred blockedBy external, and on JTBD naming each family''s job (its next_choice). (3) The count the gate was written against (210 pending in the walk witness; 252 in the title) differs from the live count of 371 pending (dispatch 1791958075462-500-5b68280c6a0b8065), so no count witness can bind. Receipt: .gm/receipts/G_START-ONE-IN-FLIGHT/01-SPECIFY.md. Unblock by: the JTBD hop naming each family''s job, a decision on MUT-G_START-FAMILIES, and a stored acceptance field on the row.'
+session_id: gm-drain-w1-119
+status: pending

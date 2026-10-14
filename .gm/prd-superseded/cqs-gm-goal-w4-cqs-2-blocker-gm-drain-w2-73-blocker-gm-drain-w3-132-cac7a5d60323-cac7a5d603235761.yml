@@ -1,0 +1,13 @@
+id: CQS-gm-goal-w4-CQS-2-blocker-gm-drain-w2-73-blocker-gm-drain-w3-132
+subject: 'BLOCKER CQS-gm-goal-w4-CQS-2: HEAD still never writes the spill file; fix is dirty-tree only and shares dispatch.js with foreign hunks'
+body: |-
+  Blocks CQS-gm-goal-w4-CQS-2-blocker-gm-drain-w2-73 (not this row's own id). Session gm-drain-w3-132.
+
+  Live evidence: git_show HEAD:src/dispatch.js (dispatch 1791971147849-500-46ec194e99041122) has capReplyText at line 303 and no writeFileSync(spillPath. Working tree has it at dispatch.js:2113 (codesearch dispatch 1791971018814-500-88f5fcaa0f0cd8bd). gm-mcp git_status (dispatch 1791971088491-500-c26665591d81e323): HEAD a992ae6, 22 changed paths, staged src/self-update.js and src/verb-table.js, untracked src/spool-store.js, all from other writers (ACCEPTPORT-SPOOLFS-DISPATCH in flight). The parent blocker cites HEAD 78dc783 and line 277; both are stale.
+
+  Unblock: the single writer of gm-mcp/src/dispatch.js lands its hunks (or stages only the CQS hunk at dispatch.js:2113 with the rest excluded), then rebuild the gm-mcp bundle, then witness: codesearch literal writeFileSync( has no hit inside capReplyText at HEAD, and an oversized reply produces a file at spill_file. Receipts: .gm/receipts/CQS-gm-goal-w4-CQS-2-blocker-gm-drain-w2-73/01-SPECIFY.md and 03-EMIT.md.
+session_id: gm-drain-w3-132
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

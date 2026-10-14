@@ -1,0 +1,8 @@
+id: BLOCKER-SKILLGM-git-append-rewrite-flag-blocker-gm-drain-w3-51
+subject: 'Blocker for BLOCKER-SKILLGM-git-append-rewrite-flag: cannot close in one session'
+body: 'Unknowns U1 (registry consumer: gm-mcp verb-table.js vs rs-plugkit guest), U2 (enumerate rewrite-class git verbs), U3 (witness must come from another session; rs-plugkit change needs CI build, no local cargo). Next wave: eliminate U1 and U2 by live codesearch/exec_js, edit gm-mcp/src/verb-table.js and rebuild bundle together, edit skills/gm/SKILL.md section 4 to cite the flag, then witness from a second session. Receipt: .gm/receipts/BLOCKER-SKILLGM-git-append-rewrite-flag/01-SPECIFY.md. Session gm-drain-w3-51.'
+session_id: gm-drain-w3-51
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

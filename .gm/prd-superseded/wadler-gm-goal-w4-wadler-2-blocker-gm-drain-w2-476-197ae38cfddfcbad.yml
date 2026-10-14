@@ -1,0 +1,5 @@
+id: WADLER-gm-goal-w4-WADLER-2-blocker-gm-drain-w2-476
+subject: 'BLOCKER for WADLER-gm-goal-w4-WADLER-2: foreign dispatch.js hunks cleared; typed-pick refactor still unbuilt and unwitnessed'
+body: 'Row: WADLER-gm-goal-w4-WADLER-2. Prior blocker WADLER-gm-goal-w4-WADLER-2-blocker-gm-drain-w1-317 is cleared on the tree: git_status scoped to gm-mcp/src/dispatch.js reports dirty=false at head 73fe4f4 (dispatch 1791967991835-500-3ccb0c4191a08068). The edit was reverted earlier, so nothing is in flight. Still open: re-apply the readDaemonLiveness typed-pick edit (dispatch.js:1507-1519, the per-field typeof copies; parent cites stale lines 1421-1429), run node scripts/build.mjs, witness a live status dispatch before and after with identical liveness fields, then commit via git_finalize on main from a session other than gm-goal-w4-WADLER and gm-drain-w1-317. Receipt: .gm/receipts/WADLER-gm-goal-w4-WADLER-2-blocker-gm-drain-w1-317/01-SPECIFY.md.'
+session_id: gm-drain-w2-476
+status: pending

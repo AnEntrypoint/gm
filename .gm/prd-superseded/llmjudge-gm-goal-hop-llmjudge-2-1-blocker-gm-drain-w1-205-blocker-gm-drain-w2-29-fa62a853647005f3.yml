@@ -1,0 +1,5 @@
+id: LLMJUDGE-gm-goal-hop-LLMJUDGE-2-1-blocker-gm-drain-w1-205-blocker-gm-drain-w2-290
+subject: 'Blocker for LLMJUDGE-gm-goal-hop-LLMJUDGE-2-1-blocker-gm-drain-w1-205: owner decisions still unrecorded; gm-prd cannot close the owner-decision row'
+body: 'gm-prd run gm-drain-w2-290 on row LLMJUDGE-gm-goal-hop-LLMJUDGE-2-1-blocker-gm-drain-w1-205. SPECIFY: the row asks for four owner decisions (judge model, call site, cost and latency budget, failing-verdict action) and the parent row LLMJUDGE-gm-goal-hop-LLMJUDGE-2-1 still reads the gap. Re-checked at 1791963409033-500-2683cc5ef616f610: codesearch regex judge|rubric|llm over gm-mcp/src, 0 matches in 31 files. PROVE cannot run: there is no decision to witness, and inventing a default is refused by the row. Unblock: the owner records the four choices in the parent row; then the blocker row closes on a cross-session witness. Parent and blocker rows stay pending. Receipt: .gm/receipts/LLMJUDGE-gm-goal-hop-LLMJUDGE-2-1-blocker-gm-drain-w1-205/01-SPECIFY.md'
+session_id: gm-drain-w2-290
+status: pending

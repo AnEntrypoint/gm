@@ -1,0 +1,5 @@
+id: NODUPEDOC-AGENTS-DREAMRSI-SECTION-blocker-gm-drain-w2-306
+subject: 'Blocker for NODUPEDOC-AGENTS-DREAMRSI-SECTION: premise stale and acceptance unmet. The 14-line AGENTS.md Dream-RSI replay section no longer exists (AGENTS.md:97 is a rule, AGENTS.md:120 a pointer to docs/dream-rsi.md). The mechanism is owned by docs/dream-rsi.md:25, but skills/dream-rsi/SKILL.md has no pointer or mechanism for active-strategy.json, dreamrsi-replay or dream-replay-cycle. The row witness (AGENTS.md mentions observations.json) is refuted.'
+body: 'Receipt: .gm/receipts/NODUPEDOC-AGENTS-DREAMRSI-SECTION/01-SPECIFY.md. Leader H1: row premise is stale; docs/dream-rsi.md is the owner. Needed decision: rescope the row to docs/dream-rsi.md as owner (AGENTS.md keeps its rule and pointer), or edit skills/dream-rsi/SKILL.md with a pointer and then witness from another session. Witness must come from another session.'
+session_id: gm-drain-w2-306
+status: pending

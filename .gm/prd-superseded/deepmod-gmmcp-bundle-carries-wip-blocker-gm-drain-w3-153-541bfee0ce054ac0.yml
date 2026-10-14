@@ -1,0 +1,8 @@
+id: DEEPMOD-GMMCP-BUNDLE-CARRIES-WIP-blocker-gm-drain-w3-153
+subject: 'gm-mcp WIP commit needs an owner decision: index holds another writer''s staged files and bundle depends on untracked src'
+session_id: gm-drain-w3-153
+body: 'Row DEEPMOD-GMMCP-BUNDLE-CARRIES-WIP cannot close by an honest commit from this session. Evidence: (1) gm-mcp/bin/gm-mcp-server.js matches a fresh build of src (check-bin-drift.mjs exit 0, dispatch 1791971479067-500-57bbe4f23f73e618), so the bundle is consistent with the working tree. (2) The working tree is 14 modified src/bin paths plus untracked src/spool-store.js. src/dispatch.js imports ./spool-store.js, so committing the bundle or dispatch.js without spool-store.js produces a broken tree. Committing bin plus a subset of src would embed uncommitted src changes in the bundle. (3) The index already holds staged AGENTS.md, bin/gm-mcp-server.js, src/self-update.js and src/verb-table.js from another writer (not this session), so committing the index as-is would commit another lane''s in-flight work. Needed: the owning writer (session lean-hop-DEEPMOD) finishes or hands off the gm-mcp WIP, then commits bin plus all src paths in one commit with explicit paths, pushes, and bumps the parent gitlink. Witness for that step: check-bin-drift.mjs exit 0 on the committed tree plus git_show of the pushed sha.'
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

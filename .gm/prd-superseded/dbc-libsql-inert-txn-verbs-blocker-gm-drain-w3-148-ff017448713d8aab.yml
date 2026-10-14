@@ -1,0 +1,8 @@
+id: DBC-LIBSQL-INERT-TXN-VERBS-blocker-gm-drain-w3-148
+subject: 'Blocked: DBC-LIBSQL-INERT-TXN-VERBS premise stale; begin/commit/rollback already refused in source, live witness not reachable'
+body: 'Parent: DBC-LIBSQL-INERT-TXN-VERBS (session gm-drain-w3-148). SPECIFY found the row premise stale: (1) rs-plugkit libsql_wasm.rs has no fn begin/commit/rollback (codesearch ''fn begin'' and ''fn commit'' return no libsql_wasm hit) and no libsql_wasm::(begin|commit|rollback) caller; the cited definitions at libsql_wasm.rs:223-233 are absent. (2) agentplug-libsql/src/db.rs:723-729 already refuses begin/commit/rollback with an explicit ok:false error, so the refuse half of the row is in source. Still open: open/close remain accepted-but-inert (db.rs:722, capabilities inert_verbs at db.rs:744), and the row''s verify step, a live libsql begin dispatch returning the refusal, is not reachable: local cargo is hook-blocked, a CI-built plugin is required, and a live gm verb ''libsql'' dispatch returned no data in this session. Next: owner or CI wave to confirm whether open/close stay as documented no-ops, then a cross-session live witness of libsql begin via the built plugin.'
+session_id: gm-drain-w3-148
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

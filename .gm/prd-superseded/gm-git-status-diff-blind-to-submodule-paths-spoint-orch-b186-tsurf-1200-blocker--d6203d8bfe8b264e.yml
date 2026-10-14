@@ -1,0 +1,8 @@
+id: gm-git-status-diff-blind-to-submodule-paths-spoint-orch-b186-tsurf-1200-blocker-gm-drain-w1-133-blocker-gm-drain-w2-182
+subject: 'BLOCKER: rs-plugkit git_status/git_diff submodule-path fix cannot close in this session (needs CI release, gitlink bump, cross-session witness)'
+severity: MEDIUM
+surface: rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs/git.rs (git_status line 452, git_diff line 4370)
+acceptance: Parent git_status {paths:["rs-plugkit/.gm/last-prompt.txt"]} returns dirty:true or a submodule-cwd refusal; the change is on rs-plugkit main, the parent gitlink points at that main tip, and a different session witnesses it live.
+body: 'Reproduced in gm-drain-w2-182 by dispatch 1791961630627-500-7735507fc02e530b (dirty:false, changed_paths:0 for a submodule-internal path). Receipts: .gm/receipts/gm-git-status-diff-blind-to-submodule-paths-spoint-orch-b186-tsurf-1200-blocker-gm-drain-w1-133/01-SPECIFY.md and 02-PROVE.md. Leader: parent scoped porcelain does not descend into a submodule path. The fix is a Rust edit in rs-plugkit (cargo is hook-blocked locally, so it builds only in CI), then a rs-plugkit main push, the signed release, a parent gitlink bump to that tip, then a witness from a session other than gm-drain-w1-133 and gm-drain-w2-182. Next step for a resolver: take the rs-plugkit writer slot (the submodule is dirty with other lanes'' entries; one writer), edit git_status to route pathspecs under a .gitmodules path to that submodule or refuse with a submodule message, push, bump the gitlink, run ci-status on the release, then witness.'
+session_id: gm-drain-w2-182
+status: pending

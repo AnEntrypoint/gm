@@ -1,0 +1,8 @@
+id: GM-GREP-HEAD-LIMIT-FRICTION-blocker-gm-drain-w2-184
+status: pending
+subject: 'Blocker for GM-GREP-HEAD-LIMIT-FRICTION-blocker-gm-drain-w1-134: the head_limit fix (rs-plugkit 4b8e4c5) is local-only and its push is refused remote_moved'
+body: 'Row GM-GREP-HEAD-LIMIT-FRICTION-blocker-gm-drain-w1-134 stays pending. Cause H1 still holds: GREP_ACCEPTED_FIELDS and GREP_LIMIT_FIELDS in rs-plugkit search.rs need head_limit. The entries are already in the tree at rs-plugkit HEAD 4b8e4c53cea934346244f0645670808baa281a8c (grep dispatch 1791961687173-500-d97d8f02c0770eee). That commit is not on origin; ci-status reports sha_on_remote false. git_push dispatch 1791961845314-500-f2c76b8e96b52339 was refused remote_moved after a CI autobump landed. The recovery git_pull is blocked by an uncommitted crates/plugkit-core/Cargo.toml hunk (0.1.1652 to 0.1.1651) owned by another writer. Unblock: the owning lane commits or reverts that hunk; then git_pull {branch:main}, git_push {rev:<head_after>}, wait for the CI release build (wasm32-wasip1 --features slim) on that sha, bump the parent gitlink to it, and witness grep head_limit:5 from another session for ok:true with max_matches 5. Receipts: .gm/receipts/GM-GREP-HEAD-LIMIT-FRICTION-blocker-gm-drain-w1-134/01-SPECIFY.md and 03-EMIT.md.'
+session_id: gm-drain-w2-184
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

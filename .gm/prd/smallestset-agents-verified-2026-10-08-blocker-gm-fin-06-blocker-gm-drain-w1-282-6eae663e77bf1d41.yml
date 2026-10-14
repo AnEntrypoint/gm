@@ -1,0 +1,5 @@
+id: SMALLESTSET-AGENTS-VERIFIED-2026-10-08-blocker-gm-fin-06-blocker-gm-drain-w1-282-blocker-gm-drain-w2-416
+subject: 'Blocker for SMALLESTSET-AGENTS-VERIFIED-2026-10-08-blocker-gm-fin-06-blocker-gm-drain-w1-282: owner decision on git_reset hard policy still required; no leader probe reachable'
+body: 'Parent row SMALLESTSET-AGENTS-VERIFIED-2026-10-08-blocker-gm-fin-06-blocker-gm-drain-w1-282 cannot close in session gm-drain-w2-416. SPECIFY receipt: .gm/receipts/SMALLESTSET-AGENTS-VERIFIED-2026-10-08-blocker-gm-fin-06-blocker-gm-drain-w1-282/01-SPECIFY.md. The row needs an owner choice between keep-hard (doc/rule change) and refuse-hard (rs-plugkit change with CI-only witness). Unblock: owner picks the policy; then the chosen path is executed and witnessed from another session.'
+session_id: gm-drain-w2-416
+status: pending

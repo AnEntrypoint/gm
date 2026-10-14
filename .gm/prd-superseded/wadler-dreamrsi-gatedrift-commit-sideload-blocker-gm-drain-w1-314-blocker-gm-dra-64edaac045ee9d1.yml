@@ -1,0 +1,5 @@
+id: WADLER-DREAMRSI-GATEDRIFT-COMMIT-SIDELOAD-blocker-gm-drain-w1-314-blocker-gm-drain-w2-467
+subject: 'Blocked: row WADLER-DREAMRSI-GATEDRIFT-COMMIT-SIDELOAD-blocker-gm-drain-w1-314 does not exist'
+body: 'SPECIFY stage cannot run for session gm-drain-w2-467. prd-list {id} on WADLER-DREAMRSI-GATEDRIFT-COMMIT-SIDELOAD-blocker-gm-drain-w1-314 returns no row in .gm/prd/ or .gm/prd-log.jsonl (error_code failed, 890 rows searched). A full scan of pending and all-status listings (861 pending) finds no id containing WADLER, GATEDRIFT or SIDELOAD. Without a row there is no acceptance, file list or witness to prove, so PROVE, EMIT, STATE, CONC, SEC, RES, DECIDE and COMPLETE cannot run. Resolution: the parent row was never filed, or was filed under another id. The orchestrator must re-issue the row via prd-add with its acceptance and file list, or confirm the id is stale. Leader hypothesis: stale or mistyped id from the drain wave. Probe: prd-list {id} on the parent id returned absent, dispatch 1791967890858-500-2b6b0ce667f5b0ab.'
+session_id: gm-drain-w2-467
+status: pending

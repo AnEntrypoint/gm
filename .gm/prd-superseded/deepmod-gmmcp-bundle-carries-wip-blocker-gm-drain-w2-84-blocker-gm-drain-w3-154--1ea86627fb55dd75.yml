@@ -1,0 +1,8 @@
+id: DEEPMOD-GMMCP-BUNDLE-CARRIES-WIP-blocker-gm-drain-w2-84-blocker-gm-drain-w3-154
+subject: 'Blocker for DEEPMOD-GMMCP-BUNDLE-CARRIES-WIP-blocker-gm-drain-w2-84: foreign WIP still in gm-mcp at gm-drain-w3-154'
+body: 'gm-drain-w3-154 ran gm-prd on the row. SPECIFY: the premise holds. gm-mcp still carries foreign hunks: 21 modified paths and 4 staged paths, including src/self-update.js and src/verb-table.js staged by another writer, plus untracked src/spool-store.js (witness: git_status gm-mcp, dispatch 1791971638203-500-d090e1e5df4a4dcb). The parent tree also has rs-plugkit, agentplug, rs-codeinsight and gm-mcp dirty (dispatch 1791971569167-500-f70f05ab212c36f3). PROVE: committing src/dispatch.js, src/spool-store.js, src/bundle-version.js and bin/gm-mcp-server.js alone would ship a bundle that does not match committed src, and committing the full tree would land another lane''s WIP on main. Both are refused. Unblock: the owning lane lands or stashes its gm-mcp hunks (self-update.js, verb-table.js, codemode.js, dev-sync.js, index.js and the rest), then one writer commits the bundle set and bumps the parent gitlink. Receipts: .gm/receipts/DEEPMOD-GMMCP-BUNDLE-CARRIES-WIP-blocker-gm-drain-w2-84/01-SPECIFY-gm-drain-w3-154.md and 02-PROVE-gm-drain-w3-154.md.'
+session_id: gm-drain-w3-154
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

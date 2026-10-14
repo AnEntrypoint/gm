@@ -1,0 +1,16 @@
+id: SPECDRIFT-gm-goal-hop-SPECDRIFT-2-2-blocker-gm-drain-w2-420
+subject: 'SPECDRIFT-gm-goal-hop-SPECDRIFT-2-2 cannot close: premise refuted by existing docs and row is tension-node error'
+body: |-
+  Row SPECDRIFT-gm-goal-hop-SPECDRIFT-2-2 run by session gm-drain-w2-420 (gm-prd, SPECIFY stage).
+
+  Cited lines check against the tree: gm-mcp/src/index.js:58-59 wires handOverToRefreshedBundle; gm-mcp/src/bundle-refresh.js:278 defines handOverToRefreshedBundle and :275 calls process.exit(0); gm-mcp/AGENTS.md:74 states the next-connect rule.
+
+  Premise refuted: the row says the handover is undocumented. gm-mcp/AGENTS.md:84 has the section 'Bundle drift and handover' (line 89: HTTP reloads hand over the socket via handOverToRefreshedBundle; line 90: reloads never cut work). gm-mcp/README.md:54 cross-references that section and :105-113 describes the handover measurement.
+
+  Row's own deferReason: 'created in error: SPECDRIFT is a tension node, not a principle; no hop may name it'. blockedBy: external.
+
+  Blocker: the row cannot close on a witness from this session (self-witness refused, prd-resolve-self-witness). Leader hypothesis (docs already state the handover; row is stale) would need an independent-session witness. Decision for gm-orchestrate: resolve as stale/created-in-error with a witness from another session, or retire the row. No AGENTS.md edit is made by this run.
+
+  Evidence dispatch ids: 1791965751651-500-b760449753b4ff47 (prd-list), 1791965904568-500-ca7cc2a56a1c29ce (codesearch src), 1791965911216-500-b38a5cd96ca8a17e (codesearch AGENTS next connect), 1791965926722-500-dc82af3d18c6d177 (codesearch AGENTS handover), 1791966003359-500-1c383a59efcec0b4 (codesearch README handover).
+session_id: gm-drain-w2-420
+status: pending

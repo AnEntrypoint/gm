@@ -1,0 +1,5 @@
+id: NODUPEDOC-PROSE-NODE-COPIES
+status: pending
+subject: 'Reference, Never Restate: the same node prose exists twice across repos. gm-config/prose/*.md (about 112 files) and rs-plugkit/crates/plugkit-core/src/orchestrator/instructions/prose/*.md hold identical per-node text; 99 files repeat the sentence ''The walk is recorded by the transition that leaves this node.'' (9 more lean-p files repeat ''applied as work, from the lean method''), and the same sentence recurs verbatim in every node file. Move the shared sentence into one phase or entry prose owner and keep one copy of each node body (the compiled fallback should embed the config copy at build time rather than hand-maintain a second tree).'
+witness: 'exec_js over gm-config/prose: 99 node files carry the leave-transition sentence verbatim; grep (case-insensitive, exhaustive) finds 202 matching files across gm-config/prose and rs-plugkit/crates/plugkit-core/src/orchestrator/instructions/prose.'
+session_id: lean-hop-NODUPEDOC

@@ -1,0 +1,8 @@
+id: ILLEGAL-PLUGKIT-REALM-ENUM-BLOCKER-blocker-gm-drain-w2-230
+subject: 'Blocker for ILLEGAL-PLUGKIT-REALM-ENUM-BLOCKER: no closed realm value set is declared in any readable source'
+body: 'Row ILLEGAL-PLUGKIT-REALM-ENUM-BLOCKER cannot close. Its acceptance needs a closed realm value set enumerated from the sources declared_realm reads (rs-plugkit/crates/plugkit-core/src/orchestrator/discipline_note.rs:119, field realm of .gm/disciplines/<d>/requires.json). Evidence: codesearch for realm over gm-config finds 0 matches in 174 files (dispatch 1791962800633-500-f984c6123230aa3a); the .gm/disciplines and ~/.gm/disciplines/default scans find no requires.json (dispatch 1791962785192-500-7d5d977178b159db, 1791962791400-500-97b161ee51cd9464). The leader hypothesis is that the realm set is open and supplied at runtime, so no enum can be derived. To unblock: a human or a design decision must name the closed realm set (or keep String), and then the enum conversion can be scoped. Receipt: .gm/receipts/ILLEGAL-PLUGKIT-REALM-ENUM-BLOCKER/01-SPECIFY.md.'
+session_id: gm-drain-w2-230
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

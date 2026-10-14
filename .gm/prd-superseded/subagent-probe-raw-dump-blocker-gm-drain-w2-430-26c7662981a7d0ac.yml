@@ -1,0 +1,5 @@
+id: SUBAGENT-PROBE-RAW-DUMP-blocker-gm-drain-w2-430
+subject: 'SUBAGENT-PROBE-RAW-DUMP blocked: state lane starved'
+body: 'gm-drain-w2-430 could not run the instruction verb: 3 dispatches reached dispatch_starved_waiting_for_serial_lane (state lane, holders prd-add tasks gm-drain-w2-426/425/429 rotating, lane_wait 120000 then 240000 ms, executed:false each time). Row SUBAGENT-PROBE-RAW-DUMP was not run past SPECIFY. Re-run gm-prd for the row once the state lane drains.'
+session_id: gm-drain-w2-430
+status: pending

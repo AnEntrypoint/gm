@@ -1,0 +1,8 @@
+id: BLOCK-LIQOLOGY-PROPOSAL-TYPE-blocker-gm-drain-w3-26
+subject: 'Blocked: BLOCK-LIQOLOGY-PROPOSAL-TYPE-blocker-gm-drain-w2-15 needs owner approval for the rs-plugkit mirror rebuild and a liqology C++ build witness'
+body: 'Session gm-drain-w3-26. Re-entered blocker BLOCK-LIQOLOGY-PROPOSAL-TYPE-blocker-gm-drain-w2-15. Verified: liqology handler applied=false with no mutation call (src/dispatch.cpp:172, Read); gm-config/prose/entry-extended.md:74 already cut (dispatch 1791969497980-500-8dfe410142ecb54a). Still open: (1) the rs-plugkit mirror at rs-plugkit/crates/plugkit-core/src/orchestrator/instructions/prose/entry-extended.md:74 still restates ''suggest_fsm_update proposes, never mutates''; AGENTS.md requires a reviewed rs-plugkit rebuild for lean-graph changes, which needs owner approval. (2) liqology C++ build witness (vcpkg) not run. Also rs-codeinsight/.gm/next-step.md:154 and rs-search/.gm/next-step.md:154 carry the same restatement (state files). Unblock: owner approves the rs-plugkit rebuild path; then run the liqology build witness with cwd C:\dev\liqology\agentplug-liqology. Receipt: .gm/receipts/BLOCK-LIQOLOGY-PROPOSAL-TYPE-blocker-gm-drain-w2-15/01-SPECIFY.md'
+session_id: gm-drain-w3-26
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

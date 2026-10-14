@@ -1,0 +1,8 @@
+id: gm-git-pull-push-refused-by-tracked-runtime-dirt-spoint-orch-b186-tsurf-1200-blocker-gm-drain-w2-177
+subject: 'Blocker: gm-git-pull-push-refused-by-tracked-runtime-dirt-spoint-orch-b186-tsurf-1200 cannot be witnessed in session gm-drain-w2-177 (live probe mutates a shared tree; needs CI-built wasm)'
+acceptance: A live git_pull {branch:main} and git_push {rev:HEAD} with dirty out-of-set paths succeed against the CI-built wasm, witnessed by a dispatch id from a session other than gm-drain-w1-130, and a submodule gitlink conflict is refused before merge state is written.
+surface: rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs/git.rs (git_pull, git_push dirty and overlap gates)
+severity: MEDIUM
+status: pending
+body: 'Parent row gm-git-pull-push-refused-by-tracked-runtime-dirt-spoint-orch-b186-tsurf-1200. Receipt .gm/receipts/<parent>/03-PROVE.md (written) records source evidence: the push dirty gate is overlap-scoped (git.rs 1399-1405, blocks() ~8334); the bin-drift gate filters porcelain to gate inputs (1407-1412). H1 narrowed to the bin-drift gate; H2 supported by source; not separated by a live witness. Acceptance needs a live git_pull/git_push with dirty out-of-set paths against the CI-built wasm, witnessed by a session other than gm-drain-w1-130. Unblock: run the live probe from a session that holds a single-writer guarantee on the tree, then prd-resolve the parent with that dispatch id.'
+session_id: gm-drain-w2-177

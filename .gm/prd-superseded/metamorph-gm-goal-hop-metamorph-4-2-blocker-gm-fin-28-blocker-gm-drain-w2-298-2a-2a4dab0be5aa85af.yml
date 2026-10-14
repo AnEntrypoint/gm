@@ -1,0 +1,5 @@
+id: METAMORPH-gm-goal-hop-METAMORPH-4-2-blocker-gm-fin-28-blocker-gm-drain-w2-298
+subject: 'Blocker for METAMORPH-gm-goal-hop-METAMORPH-4-2-blocker-gm-fin-28: the session-invariance witness is unauthored and the parent row is unresolved'
+body: 'Parent METAMORPH-gm-goal-hop-METAMORPH-4-2 needs gm-mcp/scripts session-invariance witness (replay health and phase-status under two session ids, normalize, assert equality, injected field must exit 1). codesearch literal ''session-invariance'' in gm-mcp returns 0 hits (dispatch 1791963446213-500-f4fb9292ea03db3d). No EMIT is possible from the stage gate of this row: the script is new code in gm-mcp, a submodule with other writers (git_status 1791963466785-500-84843c0efd75bad1 shows gm-mcp modified). Unblock: author the script in gm-mcp/scripts and bundle it per the gm-mcp src/bundle rule, then witness it in a second session (not gm-fin-28). Receipt: .gm/receipts/METAMORPH-gm-goal-hop-METAMORPH-4-2-blocker-gm-fin-28/01-SPECIFY.md. Probe for H2 (a differently named script exists) not yet run.'
+session_id: gm-drain-w2-298
+status: pending

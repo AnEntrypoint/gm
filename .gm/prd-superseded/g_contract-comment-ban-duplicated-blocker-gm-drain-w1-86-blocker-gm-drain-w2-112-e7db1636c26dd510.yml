@@ -1,0 +1,8 @@
+id: G_CONTRACT-comment-ban-duplicated-blocker-gm-drain-w1-86-blocker-gm-drain-w2-112
+subject: 'Blocked: G_CONTRACT-comment-ban-duplicated-blocker-gm-drain-w1-86 cannot close in gm-drain-w2-112; predicate absent from predicate_registry.rs and PROVE needs a CI-built rs-plugkit wasm plus a cross-session witness'
+body: 'Row cannot close in session gm-drain-w2-112. Receipts: .gm/receipts/G_CONTRACT-comment-ban-duplicated-blocker-gm-drain-w1-86/01-SPECIFY.md and 02-PROVE.md. SPECIFY: cited entry-extended.md lines 16, 108, 110 are present; codesearch dispatch 1791960677757-500-845c44948722a090 finds 0 hits for ''comment'' in predicate_registry.rs, so the predicate is absent. PROVE: local cargo is hook-blocked; the wasm build runs only in CI; the witness must come from another session. Leader probe cannot run, so no row closes. Next: a session with CI access adds the predicate in predicate_registry.rs, wires it through lean_graph.json, and witnesses it from another session.'
+session_id: gm-drain-w2-112
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

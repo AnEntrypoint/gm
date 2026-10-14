@@ -1,0 +1,5 @@
+id: DBC-PROJECT-REL-PATH-TYPE
+title: 'DBC: one ProjectRelPath type replaces four ad-hoc relative-path preconditions'
+status: pending
+description: 'Type-shape obligation. The rule ''path must be relative, inside the project, with no .. segment and no drive colon'' is re-checked at four sites with different wording: verbs.rs:540-545 path_within_project, verbs.rs:547-571 path_outside_project_message, git.rs:3803 empty-path check, git.rs:3843 non-empty and control-character check, and git.rs:4227-4230 git_worktree_target (no leading dash, no .. segment). Change: a single ProjectRelPath newtype whose only constructor enforces the rule and returns one error message, constructed once at each verb boundary. Witness: exec_js live dispatches of codesearch and fs_read with an absolute path, a .. path and an empty path, each returning the same rejection text; plus the rs-plugkit build.'
+session_id: lean-hop-DBC

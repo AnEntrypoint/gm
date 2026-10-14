@@ -1,0 +1,5 @@
+id: LLMJUDGE-gm-goal-hop-LLMJUDGE-2-1-blocker-gm-drain-w1-205
+subject: 'Blocker for LLMJUDGE-gm-goal-hop-LLMJUDGE-2-1: owner decision on judge model, call site, budget and failing-verdict action still absent'
+body: 'SPECIFY receipt .gm/receipts/LLMJUDGE-gm-goal-hop-LLMJUDGE-2-1-blocker-gm-fin-34/01-SPECIFY.md. Gap holds: codesearch regex judge|rubric|llm over gm-mcp/src has 0 hits (dispatch 1791958721911-500-e9731896b97f24a0). The four owner decisions (judge model, call site, cost and latency budget, failing-verdict action) are not recorded in the repo. Not chosen by this run: each changes cost and behaviour, so inventing a default is refused. Unblock: the owner records those four choices in the row; then a cross-session witness (not gm-fin-34) closes LLMJUDGE-gm-goal-hop-LLMJUDGE-2-1. Parent row stays pending.'
+session_id: gm-drain-w1-205
+status: pending

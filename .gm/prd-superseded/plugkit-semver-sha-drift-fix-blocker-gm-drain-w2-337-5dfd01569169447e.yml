@@ -1,0 +1,5 @@
+id: PLUGKIT-SEMVER-SHA-DRIFT-FIX-blocker-gm-drain-w2-337
+subject: 'Blocked: PLUGKIT-SEMVER-SHA-DRIFT-FIX PROVE needs a CI-built agentplug-runner and a cross-session live witness'
+body: 'Parent row: PLUGKIT-SEMVER-SHA-DRIFT-FIX (stays pending). Receipts: .gm/receipts/PLUGKIT-SEMVER-SHA-DRIFT-FIX/01-SPECIFY.md and 02-PROVE-gm-drain-w2-337.md. Leader H1: agentplug/crates/agentplug-runner/src/download.rs:2153-2159 returns early when the installed version string equals the target, so the sha-changed re-fetch at 1887 is a no-op. Refuted premise: refresh_plugin_if_stale Equal branch (1859-1867) already compares sha. Blocked because local cargo is hooked (CI-only verification) and the witness PLUGKIT-SEMVER-UPDATE-WITNESS needs PLUGKIT-SEMVER-VERSION-SET plus a release and a witness from another session. Unblock: land the early-return sha check in CI with a release, then witness from another session. Also: the daemon.rs ''downloaded+verified'' log is false for a no-op Ok(Some) at daemon.rs:3507.'
+session_id: gm-drain-w2-337
+status: pending

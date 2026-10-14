@@ -1,0 +1,15 @@
+id: CHARTEST-gm-goal-hop-CHARTEST-1-1-blocker-gm-drain-w3-88
+subject: 'BLOCKER CHARTEST-gm-goal-hop-CHARTEST-1-1: row requires test files, forbidden by gm-prd and AGENTS.md'
+body: |-
+  Blocker for CHARTEST-gm-goal-hop-CHARTEST-1-1 (via blocker row CHARTEST-gm-goal-hop-CHARTEST-1-1-blocker-gm-drain-w2-47, session gm-drain-w3-88), filed at SPECIFY.
+
+  Conflict: the parent row requires characterization tests under gm-mcp/test (node --test) for gm-mcp/src/self-update.js and gm-mcp/src/release-bridge.js.
+  skills/gm-prd/SKILL.md Procedure says 'No test files.' AGENTS.md Implementation rules name a test or mock in delivered paths as a falsifier.
+  The row cannot close under these rules as written.
+  Decision needed from the owner: (a) an explicit exemption allowing characterization tests outside delivered paths, or (b) re-scope the parent row to a live-entry-point witness with no test file.
+  Receipt: .gm/receipts/CHARTEST-gm-goal-hop-CHARTEST-1-1-blocker-gm-drain-w2-47/01-SPECIFY.md
+session_id: gm-drain-w3-88
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

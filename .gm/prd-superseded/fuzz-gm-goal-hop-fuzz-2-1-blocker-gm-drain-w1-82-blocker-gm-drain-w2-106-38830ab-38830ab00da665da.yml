@@ -1,0 +1,8 @@
+id: FUZZ-gm-goal-hop-FUZZ-2-1-blocker-gm-drain-w1-82-blocker-gm-drain-w2-106
+subject: 'Blocked: SESSION_ID fix cannot be delivered while gm-mcp carries foreign uncommitted WIP'
+body: 'Row FUZZ-gm-goal-hop-FUZZ-2-1-blocker-gm-drain-w1-82 (body.SESSION_ID overrides the session_id argument at gm-mcp/src/dispatch.js:1932, explicitBodySessionId). SPECIFY and PROVE done: ACH leader H1 confirmed by baseline probe dispatch 1791960652809-500-d842165e71274941 (argument gm-drain-w2-106, body.SESSION_ID FUZZ-PROBE-B-106; the out file names FUZZ-PROBE-B-106, so the body key won). Fix drafted as session_id = session_id || explicitBodySessionId(body) and applied, then reverted: git_status in gm-mcp (dispatch 1791960667337-500-1eb13dc7924160fb) shows dispatch.js, bin/gm-mcp-server.js, src/self-update.js (staged) and src/spool-store.js (untracked) carry foreign uncommitted hunks from another writer. Delivery needs the single-writer slot on gm-mcp/src/dispatch.js and bin/gm-mcp-server.js (npm run build, check-bin-drift) before the one-line edit can be committed, and the witness must come from a session other than gm-drain-w1-82 after the bundle reloads. Unblock: owner of the foreign WIP lands or parks it, then re-run the parent row with the one-line edit at dispatch.js:1932.'
+session_id: gm-drain-w2-106
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

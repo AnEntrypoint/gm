@@ -1,0 +1,8 @@
+id: HYRUM-gm-goal-hop-HYRUM-d2-1-blocker-gm-drain-w2-225
+subject: gm-mcp push refused by bin drift gate; README dispatch_id declaration committed locally at a992ae6 but not on origin
+body: 'Row HYRUM-gm-goal-hop-HYRUM-d2-1 (declare dispatch_id reply contract in gm-mcp README) is fixed locally: commit a992ae64f01aab04a9a9bc77113428aae9171273 on gm-mcp main, README.md only. git_push refused twice (dispatch 1791962566684-500-93a9c51e945d3043 via git_finalize, 1791962582663-500-4dc5cfb8870cb328 via git_push) with error_code gate_denied: check-bin-drift requires no uncommitted changes under bin/, src/ or build inputs. Those paths are dirty from another lane, not this row: bin/gm-mcp-server.js, src/bundle-version.js, src/codemode.js, src/dev-sync.js, src/dispatch.js, src/http-transport.js, src/index.js, src/release-bridge.js, src/response-compact.js, src/self-update.js (MM). scripts/check-bin-drift.mjs currently reports no drift against a fresh build. Unblock: the owning lane commits its src change together with the rebuilt bin/gm-mcp-server.js, then git_push rev a992ae64f01aab04a9a9bc77113428aae9171273 (or the merge sha of it). Then re-witness the reply field: a live codemode reply carrying dispatch_id, e.g. 1791962378251-500-96da8a00eabaf6b6, and prd-resolve the parent row. Witness evidence so far: codemode prd-list reply 1791962378251-500-96da8a00eabaf6b6 and codesearch 1791962397519-500-7a0602286a6671d3 show dispatch_id on the wire, matching the corrected README. Parent row stays pending.'
+session_id: gm-drain-w2-225
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

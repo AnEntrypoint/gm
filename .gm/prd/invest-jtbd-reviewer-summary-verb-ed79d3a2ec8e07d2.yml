@@ -1,0 +1,5 @@
+id: INVEST-JTBD-REVIEWER-SUMMARY-VERB
+title: One verb returns a walk's net line delta and gate results
+description: 'Split from JTBD-REVIEWER-ONEPASS, which fails INVEST Small (its done criterion bundles net line delta, gates, witnesses and closed PRD rows). First outcome: one verb returns the net line delta and the gate results for a walk, read from recorded evidence. Witness: the verb reply on a completed walk lists net_lines and gates.'
+status: pending
+session_id: lean-node-INVEST

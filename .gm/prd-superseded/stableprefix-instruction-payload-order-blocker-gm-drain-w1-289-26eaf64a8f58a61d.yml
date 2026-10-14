@@ -1,0 +1,6 @@
+id: STABLEPREFIX-INSTRUCTION-PAYLOAD-ORDER-blocker-gm-drain-w1-289
+subject: 'Blocked: STABLEPREFIX-INSTRUCTION-PAYLOAD-ORDER needs a rebuilt rs-plugkit wasm and a live out-file probe'
+description: 'Blocks STABLEPREFIX-INSTRUCTION-PAYLOAD-ORDER: no reachable witness in this session.'
+body: 'Blocker for STABLEPREFIX-INSTRUCTION-PAYLOAD-ORDER (session gm-drain-w1-289). SPECIFY found the cited code (instructions/mod.rs:757, :1153, :1176) and serde_json = "1" with no preserve_order anywhere in rs-plugkit. PROVE could not run the leader probe: the witness requires a wasm rebuild with --features slim, which local cargo cannot do (hook-blocked; CI-only in publish / release, step Build), followed by a live runner dispatch and out-file read. H1 (serde_json feature) and H2 (serializer reorders keys, not yet read after line 1153) are not separated. Receipts: .gm/receipts/STABLEPREFIX-INSTRUCTION-PAYLOAD-ORDER/01-SPECIFY.md and 02-PROVE.md. Closure needs a CI-released guest built from a commit that enables preserve_order or reorders the payload insert, plus a cross-session live witness of the instruction key offset below 200.'
+session_id: gm-drain-w1-289
+status: pending

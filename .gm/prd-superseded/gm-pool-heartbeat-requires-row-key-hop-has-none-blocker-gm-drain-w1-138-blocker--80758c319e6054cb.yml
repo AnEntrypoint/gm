@@ -1,0 +1,7 @@
+id: gm-pool-heartbeat-requires-row-key-hop-has-none-blocker-gm-drain-w1-138-blocker-gm-drain-w2-186
+subject: 'Blocker: PROVE cannot pass, the Rust clause (reconcile_live_rows in rs-plugkit pool_slots/state.rs) has no local witness and no CI run is cited; the leader probe alone cannot close the row'
+status: pending
+blockedBy:
+- gm-pool-heartbeat-requires-row-key-hop-has-none-blocker-gm-drain-w1-138
+detail: 'Stage PROVE of gm-pool-heartbeat-requires-row-key-hop-has-none-blocker-gm-drain-w1-138 (receipts .gm/receipts/gm-pool-heartbeat-requires-row-key-hop-has-none-blocker-gm-drain-w1-138/02-PROVE.md). Leader H1 (hop heartbeat writes surface, no row key) is not separated from H2 in this session. Probe is runnable now (pool-observe 1791961741152-500-b26fd26466f91977 live=0) but closing the row needs step 3: a Rust change in rs-plugkit pool_slots/state.rs built with --features slim and witnessed by CI and a live pool-observe. Local cargo is blocked by hook. Missing fact: a CI run id for the rs-plugkit change, which needs a delivered rs-plugkit commit first. Verb that supplies it: a gm-prd run that edits gm-config/prose/worker-rules.md section 1 and skills/gm-orchestrate/SKILL.md (the heartbeat line) and the rs-plugkit change, then ci-status on the sha.'
+session_id: gm-drain-w2-186

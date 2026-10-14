@@ -1,0 +1,8 @@
+id: DBC-LIBSQL-INERT-TXN-VERBS-blocker-gm-drain-w1-64-blocker-gm-drain-w2-80
+subject: 'BLOCKER: DBC-LIBSQL-INERT-TXN-VERBS live begin witness has no gm route; row needs owner decision on acceptance'
+status: pending
+blockedBy:
+- external
+body: 'Row: DBC-LIBSQL-INERT-TXN-VERBS-blocker-gm-drain-w1-64, session gm-drain-w2-80. Stages SPECIFY and PROVE receipts at .gm/receipts/DBC-LIBSQL-INERT-TXN-VERBS-blocker-gm-drain-w1-64/01-SPECIFY.md and 02-PROVE.md. Finding: the stale claim is confirmed in source. agentplug-libsql/src/db.rs:726-729 refuses begin/commit/rollback by name with ok:false, and db.rs:744 lists inert_verbs as [open, close] only. Blocking condition: the parent acceptance needs a live libsql begin dispatch returning the refusal, and gm.list({filter:"sql"}) exposes no begin, commit or rollback verb, so the precondition fails here. Closing needs one of: (a) a gm verb route to the libsql plugin begin, or (b) the owner rewriting the parent acceptance to a source-level witness of db.rs:726-729, which then needs a built wasm (local cargo is hook-blocked; CI only). Not closed by this run: no live witness exists and the acceptance is not this run''s to rewrite. Row stays pending.'
+session_id: gm-drain-w2-80
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

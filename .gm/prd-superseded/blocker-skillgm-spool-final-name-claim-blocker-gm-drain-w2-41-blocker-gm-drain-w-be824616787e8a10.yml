@@ -1,0 +1,15 @@
+id: BLOCKER-SKILLGM-spool-final-name-claim-blocker-gm-drain-w2-41-blocker-gm-drain-w3-74
+subject: 'Blocked: final-name claim witness needs a live shared-spool probe; writer temp suffix is .tmp (rejected by claimer)'
+body: |-
+  Parent row: BLOCKER-SKILLGM-spool-final-name-claim-blocker-gm-drain-w2-41 (pending). Receipt: .gm/receipts/BLOCKER-SKILLGM-spool-final-name-claim-blocker-gm-drain-w2-41/01-SPECIFY.md.
+
+  Findings: gm-mcp/src/dispatch.js:393 and spool-store.js:54 write temp siblings ending in .tmp. agentplug claim_dispatch.rs:371-391 accepts only the verb extension and txt, so a .tmp temp is never claimed. Acceptance (a) holds by construction on the writer side; no agentplug edit is indicated.
+
+  What remains: a cross-session live witness (a session other than gm-drain-w1-36, gm-drain-w2-41, gm-drain-w3-74 is not required, only not the parent's own) that writes a .tmp temp then renames to the final name and shows the runner claims only the final name. Needs a deployed runner against the shared spool, and a witness dispatch id. Then cut the temp-then-mv prose (acceptance b).
+
+  Why blocked: this session cannot run a live probe against the shared spool safely within one run, and no witness dispatch exists yet.
+session_id: gm-drain-w3-74
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

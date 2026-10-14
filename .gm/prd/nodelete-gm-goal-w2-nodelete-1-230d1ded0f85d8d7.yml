@@ -1,0 +1,5 @@
+id: NODELETE-gm-goal-w2-NODELETE-1
+status: pending
+title: 'gm-mcp singleton: retire the legacy GM_MCP_HTTP_SINGLETON toggle beside its replacements'
+body: 'Present need: gm-mcp/src/singleton.js httpSingletonEnabled() (lines 43-48) reads three env names: GM_MCP_NO_HTTP_SINGLETON and GM_MCP_HTTP_SINGLETON_OFF (new names) and the legacy GM_MCP_HTTP_SINGLETON, whose old value still disables the singleton. The superseded toggle survives beside its replacements. Need: decide whether any deployed launcher still sets GM_MCP_HTTP_SINGLETON; if none does, delete the legacy read (lines 47-48) and keep the two current names; if one does, migrate it and then delete. Witness: rebuild the committed gm-mcp bundle, verify-build, and one live MCP dispatch with the legacy variable set to off, confirming the singleton stays disabled or enabled as the new names dictate. Evidence: codesearch literal "legacy" on gm-mcp/src, singleton.js:47.'
+session_id: gm-goal-w2-NODELETE

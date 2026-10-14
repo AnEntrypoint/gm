@@ -1,0 +1,5 @@
+id: BLOCK-COMMENT-PREDICATE-blocker-gm-drain-w1-15
+subject: 'Blocker for BLOCK-COMMENT-PREDICATE: no build, live witness or lean-graph gate reachable in session gm-drain-w1-15'
+body: 'Row BLOCK-COMMENT-PREDICATE cannot close in this run. PROVE could not run: local cargo is hook-blocked (memory gm-no-local-cargo-verified-by-ci.md), so the rs-plugkit wasm guest is verified only by CI publish/release. A live witness of a new comment predicate needs a pushed rs-plugkit commit, a release, and bump-pins to advance the parent gitlink, none reachable here. Also EXECUTE/VERIFY gating needs an edit to the vendored lean_graph.json (fsm.rs include_str!) and a reviewed rebuild per AGENTS.md. Allowlist note: rs-plugkit/AGENTS.md permits comments for attributes, SAFETY rationale and license headers, so the predicate must allow those, not ban all comments. Receipts: .gm/receipts/BLOCK-COMMENT-PREDICATE/01-SPECIFY.md, 02-PROVE.md. Unblock: run the CI release from a rs-plugkit commit that adds the predicate, then witness a live transition refusing a comment-adding diff.'
+session_id: gm-drain-w1-15
+status: pending

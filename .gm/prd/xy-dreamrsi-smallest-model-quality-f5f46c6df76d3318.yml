@@ -1,0 +1,5 @@
+id: XY-DREAMRSI-SMALLEST-MODEL-QUALITY
+title: 'XY check: dream-rsi on the smallest model -- cost fixed, but is inference quality the real limit?'
+description: 'Stated request (commit 8ed1253): dream-rsi inference runs as background agents on the smallest model. Possible real problem: the traversal output is poor because of the prompt or the graph, not the model size, so cheapening the model only lowers cost. Check: run one identical lean node through the smallest model and one larger model against the same scope, and compare the evidence files for applied rate and changes accuracy. Witness: both evidence JSON files with their applied and changes fields.'
+session_id: lean-node-XYPROB
+status: pending

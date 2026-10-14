@@ -1,0 +1,5 @@
+id: GIT-MERGE-BLANKET-GUARD-UNTRACKED-GM-blocker-gm-drain-w1-120
+subject: PROVE cannot separate blanket-guard leader H1 (no merge-state exemption) from co-cause H3 (unstaged/submodule dirt); no staged-merge fixture reachable
+status: pending
+body: 'Blocker for row GIT-MERGE-BLANKET-GUARD-UNTRACKED-GM, session gm-drain-w1-120. SPECIFY receipt: .gm/receipts/GIT-MERGE-BLANKET-GUARD-UNTRACKED-GM/01-SPECIFY.md. Leader hypothesis: rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs/git.rs:2301 blanket guard has no merge_pending exemption. Probe dispatch 1791958169711-500-3918c1025cb67f2c refused with 7 paths: untracked .gm/gm.db.lock.owner plus tracked .gm/prd-log.jsonl, .gm/witness-log.md and submodules gm-config, gm-mcp, rs-plugkit, agentplug-libsql. The row''s untracked-only framing is partial. Needed to close: a staged-merge probe in a clean tree (untracked .gm file only), then the fix (merge_pending exemption), a wasm rebuild via CI (cargo is hook-blocked locally), a live witness dispatch on the new build from another session, then prd-resolve.'
+session_id: gm-drain-w1-120

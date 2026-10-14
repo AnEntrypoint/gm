@@ -1,0 +1,16 @@
+id: LIVEPLAN-RETIRE-PLUGKIT-SEMVER-VERSION-blocker-gm-drain-w2-285-20261014
+subject: 'Blocked: download.rs ensure_plugin_installed early return at line 2093 prevents UPDATE-WITNESS'
+body: |-
+  Blocker for LIVEPLAN-RETIRE-PLUGKIT-SEMVER-VERSION (session gm-drain-w2-285, 2026-10-14), gm-prd run.
+
+  SPECIFY: the row closes only when PLUGKIT-SEMVER-VERSION-SET and PLUGKIT-SEMVER-UPDATE-WITNESS both close. Both status checks in this run: SET is not pending (completed per the parent row), UPDATE-WITNESS is pending and has no pending fix row.
+
+  PROVE (live read): agentplug/crates/agentplug-runner/src/download.rs:2093 is `if dest.exists() && explicit_version.is_none() { return Ok(dest); }` inside ensure_plugin_installed (2078-2137). A sideloaded stale gm.wasm therefore returns before any version or build-identity comparison, so the updater never replaces it. The earlier blocker names this as a version-equality early return; the live line is an existence early return, and either form prevents replacement. Callers (codeinsight callers ensure_plugin_installed): daemon.rs:3251, download.rs:1887 refresh_plugin_if_stale, main.rs:70/122/178.
+
+  Witness UPDATE-WITNESS cannot run: it needs (1) a download.rs change that compares build identity (build_info COMMIT and BUILD_TS, not the version string, per AGENTS.md) and replaces a stale sideload, and (2) a live daemon run whose daemon-status.json loaded_plugin_content_sha256.gm equals the release wasm sha256. Neither exists. This run edited nothing in agentplug. Local cargo builds are hook-blocked, so the change is verified by CI only (memory gm-no-local-cargo-verified-by-ci).
+
+  Next (one row, one writer on agentplug): file a fix row for the download.rs guard at line 2093 in agentplug, land it on agentplug main through CI, then re-run UPDATE-WITNESS with a live daemon sha256 witness, then resolve LIVEPLAN-RETIRE-PLUGKIT-SEMVER-VERSION.
+
+  Status: blocked. Row LIVEPLAN-RETIRE-PLUGKIT-SEMVER-VERSION stays pending.
+session_id: gm-drain-w2-285
+status: pending

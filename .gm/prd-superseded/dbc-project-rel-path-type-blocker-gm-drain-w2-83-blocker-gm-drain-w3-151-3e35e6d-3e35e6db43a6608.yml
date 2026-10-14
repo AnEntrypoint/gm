@@ -1,0 +1,9 @@
+id: DBC-PROJECT-REL-PATH-TYPE-blocker-gm-drain-w2-83-blocker-gm-drain-w3-151
+session: gm-drain-w3-151
+subject: 'Blocked: DBC-PROJECT-REL-PATH-TYPE-blocker-gm-drain-w1-65-blocker-gm-drain-w2-83 cannot close in session gm-drain-w3-151'
+body: 'Cited lines refreshed in receipts/DBC-PROJECT-REL-PATH-TYPE-blocker-gm-drain-w1-65-blocker-gm-drain-w2-83/03-SPECIFY.md (dispatch 1791971376167-500-ba8ea8939e78b1f0): path_within_project verbs.rs:581, path_outside_project_message verbs.rs:588, git_worktree_target verbs/git.rs:7386 (callers 7422, 7546). ProjectRelPath does not exist yet (zero hits). Remaining chain, in order, none runnable in one run: (1) add the ProjectRelPath newtype in rs-plugkit/crates/plugkit-core/src/wasm_dispatch and replace the four rule sites; (2) commit and push in the rs-plugkit nested repo on main, with the staged-secrets check; (3) wait for publish / release step Build to go green and check ci-status; (4) bump the rs-plugkit gitlink in the parent gm repo to that sha; (5) run the witness (absolute, ''..'' and empty paths through codesearch and fs_read give identical rejection text) from a session other than gm-drain-w1-65, gm-drain-w2-83 and gm-drain-w3-151 or a session that did not author the edit, then prd-resolve the parent with witness_dispatch_id.'
+session_id: mcp-codemode-9708-1791971411147
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

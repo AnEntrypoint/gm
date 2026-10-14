@@ -1,0 +1,8 @@
+id: SPECDRIFT-gm-goal-hop-SPECDRIFT-2-2
+title: AGENTS.md says a self-update is served from the next connect, not the current process; HTTP mode hands over in-process
+description: 'gm-mcp/AGENTS.md:76 says the new bundle is served from the next connect, not the current process. gm-mcp/src/index.js:47 wires scheduleStaleDeployedBundleChecks to handOverToRefreshedBundle in HTTP mode; gm-mcp/src/bundle-refresh.js spawns a replacement, releases the port and calls process.exit(0) in this process. The handover is undocumented. Decide: document it in AGENTS.md and README, or change the code to match the spec. Witness: fs_read gm-mcp/src/bundle-refresh.js dispatch 1791745504641-439-b84ea4bf6a64ea55.'
+status: pending
+session_id: gm-goal-hop-SPECDRIFT-2
+blockedBy:
+- external
+deferReason: 'created in error: SPECDRIFT is a tension node, not a principle; no hop may name it'

@@ -1,0 +1,10 @@
+id: CLEANNAME-RS-CODEINSIGHT-blocker-gm-drain-w1-47-blocker-gm-drain-w3-108
+subject: 'Blocked: CLEANNAME-RS-CODEINSIGHT-blocker-gm-drain-w1-47 cannot close; cited bindings are renamed and no edit or cross-session ci-status witness is reachable'
+title: 'Blocked: CLEANNAME-RS-CODEINSIGHT-blocker-gm-drain-w1-47 needs a concrete rename target and a cross-session ci-status witness'
+session: gm-drain-w3-108
+body: 'SPECIFY gm-drain-w3-108 (receipt .gm/receipts/CLEANNAME-RS-CODEINSIGHT-blocker-gm-drain-w1-47/01-SPECIFY-gm-drain-w3-108.md). Codesearch shows one residual single-letter binding at rs-codeinsight/src/project.rs:464 (`let c = chars.next()?;`) and no camelCase rename target. The row''s full acceptance is unreadable in prd-list output. Closing requires an rs-codeinsight rename commit on main plus ci-status on that sha from another session; local cargo is blocked by hook. Needed: owner or re-scope of the row with a concrete rename target and a cross-session witness, or retire the row.'
+session_id: gm-drain-w3-108
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

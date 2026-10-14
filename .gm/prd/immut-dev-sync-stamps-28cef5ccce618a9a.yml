@@ -1,0 +1,7 @@
+id: IMMUT-DEV-SYNC-STAMPS
+title: 'gm-mcp: dev-sync mutates the stamps map read from disk before writing it back'
+description: 'gm-mcp/src/dev-sync.js:91-97 reads stamps, assigns stamps[root] = Date.now(), then writes the same object. Principle (Okasaki, IMMUT): write the derived map {...stamps, [root]: now} and leave the read value untouched. Scope: gm-mcp/src/dev-sync.js only, plus gm-mcp bundle rebuild. Witness: after maybeStartDevSync(root) the stamp file holds the new timestamp for root and every other root key is unchanged.'
+node: IMMUT
+phase: P3
+session_id: lean-hop-IMMUT
+status: pending

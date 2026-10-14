@@ -1,0 +1,4 @@
+id: G_CONTRACT-skill-codesearch-body-table
+subject: 'Move the codesearch/grep body field table, mode enums and defaults out of prose: skills/gm/SKILL.md section 1 and gm-config/prose/entry.md (''codesearch has four modes'', ''Body fields for literal/regex'', exclude/glob/output_mode lists) restate a body schema the verb already refuses by field name. Carry the enum values and defaults in the verb schema served by grep {help:true}, and reduce both prose files to naming the verb and the help call.'
+session_id: lean-node-G_CONTRACT
+status: pending

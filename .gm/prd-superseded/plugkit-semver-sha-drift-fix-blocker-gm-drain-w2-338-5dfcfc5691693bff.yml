@@ -1,0 +1,5 @@
+id: PLUGKIT-SEMVER-SHA-DRIFT-FIX-blocker-gm-drain-w2-338
+subject: 'Blocker: PLUGKIT-SEMVER-SHA-DRIFT-FIX (session gm-drain-w2-338) needs an agentplug fix, a release, and a witness from another session'
+body: 'Row PLUGKIT-SEMVER-SHA-DRIFT-FIX cannot close in session gm-drain-w2-338. Stages: SPECIFY re-run against the tree (receipt .gm/receipts/PLUGKIT-SEMVER-SHA-DRIFT-FIX/01-SPECIFY.md): leader H1 holds by source (download.rs:2153 version early return under the sha-changed call at 1887). PROVE cannot run here: the fix needs an exact-match Edit to agentplug/crates/agentplug-runner/src/download.rs, and the only verification is CI (local cargo blocked by hook, gm-no-local-cargo-verified-by-ci). The witness PLUGKIT-SEMVER-UPDATE-WITNESS needs a live daemon on a stale sideload after an agentplug release carrying the fix, and must come from another session. Prior blocker PLUGKIT-SEMVER-SHA-DRIFT-FIX-blocker-gm-drain-w1-235 records the same dependency. Unblock: land the agentplug fix on main, let the release run, then witness from a separate session.'
+session_id: gm-drain-w2-338
+status: pending

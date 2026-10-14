@@ -1,0 +1,5 @@
+id: SPECDRIFT-gm-goal-hop-SPECDRIFT-2-4-blocker-gm-drain-w2-425
+subject: 'Blocker: SPECDRIFT-2-4 side-choice (H1 vs H2) and live daemon-start probe still open after SPECIFY in session gm-drain-w2-425'
+body: 'Row SPECDRIFT-gm-goal-hop-SPECDRIFT-2-4-blocker-gm-drain-w1-286 cannot close in gm-drain-w2-425. SPECIFY receipt: .gm/receipts/SPECDRIFT-gm-goal-hop-SPECDRIFT-2-4-blocker-gm-drain-w1-286/01-SPECIFY.md. Static evidence: agentplug/crates/agentplug-runner/src/daemon.rs:3430 claims daemon-owner.lock at every boot, and :1741 removes it on handoff, so the absent-lock state is reachable (leader H1: relax gm-mcp/AGENTS.md:84 to ''when present''). Still needed: (1) owner decision on H1 vs H2 (a release-bridge safety behavior change); (2) a live daemon-start plus SIGTERM swap probe from a session that does not hold the live lease gm-drain-w2-391. Also deferReason says the row was created in error under the SPECDRIFT tension-node rule, so the owner must confirm validity first. Next action: owner confirms scope, then run the probe from a foreign session and witness the chosen side.'
+session_id: gm-drain-w2-425
+status: pending

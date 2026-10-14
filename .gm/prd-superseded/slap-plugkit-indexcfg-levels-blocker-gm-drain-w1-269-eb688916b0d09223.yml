@@ -1,0 +1,7 @@
+id: SLAP-PLUGKIT-INDEXCFG-LEVELS-blocker-gm-drain-w1-269
+subject: 'BLOCKER for SLAP-PLUGKIT-INDEXCFG-LEVELS: witness needs CI-built rs-plugkit wasm and a live code_index dispatch'
+severity: blocking
+source: gm-prd SLAP-PLUGKIT-INDEXCFG-LEVELS session gm-drain-w1-269
+body: 'Row SLAP-PLUGKIT-INDEXCFG-LEVELS cannot close in session gm-drain-w1-269. Stages SPECIFY done (receipt .gm/receipts/SLAP-PLUGKIT-INDEXCFG-LEVELS/01-SPECIFY.md). Blocked at PROVE/EMIT: (1) the witness requires a rebuilt rs-plugkit wasm, and local cargo builds are hook-blocked (gm-no-local-cargo-verified-by-ci); the build is verified only by CI publish/release step Build. (2) The live code_index dispatch needs that wasm deployed through agentplug-runner, which means an rs-plugkit commit on main, a gitlink bump in gm, and a green CI run. (3) Row citation is stale: index_cfg_impl is at code_index.rs:2364-3112 (749 lines), not line 2239 / 733 lines. Unblock: run the phase split as one rs-plugkit commit on main, bump the gm gitlink, wait for CI, then witness with code_index keys and pass_ms keys identical to pre-change. Row stays pending.'
+session_id: gm-drain-w1-269
+status: pending

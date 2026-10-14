@@ -1,0 +1,5 @@
+id: MEMTOOL-AGENTS-VERIFIED-HISTORY-TO-MEMORY-blocker-gm-fin-33
+subject: 'Blocker: MEMTOOL-AGENTS-VERIFIED-HISTORY-TO-MEMORY is stale; its five dated sections are in docs/verified-incidents.md, not AGENTS.md'
+body: 'Blocked by session gm-fin-33 at SPECIFY. The parent row (scope: AGENTS.md only, "do not change any other file") cites five dated "Verified 20xx" sections in AGENTS.md. At HEAD 9acd95b, AGENTS.md has none of them; its only "Verified" hit is an inline bullet citing docs/verified-incidents.md, Verified 2026-10-11, which the row would still leave matching its "Verified 20" witness. The five sections (2026-09-14 line 5, 2026-10-05 line 25, 2026-10-04 line 39, 2026-10-07 line 123, 2026-10-08 line 131) live in docs/verified-incidents.md. Moving them requires a row whose scope names that file and whose witness drops the inline AGENTS.md bullet. Evidence: codesearch dispatches 1791891354089-500-8c5a35727763e620, 1791891383270-500-7a543aeb60a89807, 1791891402075-500-223f07a800702b57. Receipt: .gm/receipts/MEMTOOL-AGENTS-VERIFIED-HISTORY-TO-MEMORY/01-SPECIFY.md. No file changed, no memo fired.'
+session_id: gm-fin-33
+status: pending

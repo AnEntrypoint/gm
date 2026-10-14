@@ -1,0 +1,8 @@
+id: NODELETE-gm-goal-w2-NODELETE-1-blocker-gm-drain-w1-213-gm-drain-w2-303
+subject: 'Blocked: NODELETE-gm-goal-w2-NODELETE-1-blocker-gm-drain-w1-213 cited lines stale; bundle rebuild needs single-writer gm-mcp'
+body: |-
+  SPECIFY (session gm-drain-w2-303, row NODELETE-gm-goal-w2-NODELETE-1-blocker-gm-drain-w1-213): the cited lines are stale. Live tree: gm-mcp/src/singleton.js:53 reads GM_MCP_NO_HTTP_SINGLETON and GM_MCP_HTTP_SINGLETON_OFF (no bare GM_MCP_HTTP_SINGLETON read remains). singleton.js:159 spawn env already sets GM_MCP_NO_HTTP_SINGLETON:'1'. codesearch literal GM_MCP_HTTP_SINGLETON (exhaustive:false, 1 unreadable file skills/agent-memory/references/gm-memory-migration.md): 4 matches, the only in-src hit is singleton.js:53. gm-mcp/bin/gm-mcp-server.js:148 still carries the name inside the committed bundle, so any src edit needs a bundle rebuild (src+bundle rule).
+  Remaining work: (1) decide whether GM_MCP_HTTP_SINGLETON_OFF is the legacy reader to delete (it is the only remaining legacy-named reader); (2) rebuild gm-mcp bundle from src, which carries the bundle-stale state (installed 0.2.47 vs served 0.2.45); (3) live witness from a session other than gm-drain-w1-213 with GM_MCP_HTTP_SINGLETON=0 and GM_MCP_HTTP_SINGLETON_OFF absent.
+  Blocked: gm-mcp is a dirty submodule under another writer (gm-mcp, rs-plugkit, rs-codeinsight shown modified in parent git_status), so a bundle rebuild would ride foreign hunks. The row's own witness needs a single-writer gm-mcp tree first. Witness dispatch: none yet; the stale-bundle state means the live server answers from 0.2.45 until reload.
+session_id: gm-drain-w2-303
+status: pending
