@@ -1,0 +1,108 @@
+[
+ {
+  "node": "THINSLICE",
+  "fault": "SELF_REJECTED",
+  "detail": "The logs record verb, exit code, fingerprint, quality and ts only. None names the files changed, so one commit touching only one layer would produce the same records. Deriving joint change of graph, skill and schedule rests on an unstated assumption."
+ },
+ {
+  "node": "XYPROB",
+  "verdict": "NOT_DERIVED",
+  "evidence": [
+   "1791483702746-500-d068f83edc923983",
+   "1791483706471-500-1f697d139fcb9187",
+   "1791483815221-500-20d81bbccfd2c757",
+   "1791483975840-500-5ddd7dcd4d95e5ba"
+  ],
+  "derivation": [
+   "Logged records carry no stated problem or scope change."
+  ],
+  "falsification_attempt": "The push retry could read as a re-scope, but both pushes share fingerprint 8d6c50ba6bc3cc05, so the same request was re-run, not re-scoped.",
+  "backreference": null
+ },
+ {
+  "node": "SUBAGENT",
+  "verdict": "NOT_DERIVED",
+  "evidence": [
+   "1791483349985-500-83c56ae0f4587129",
+   "1791483395775-500-690e7a3089806b9f",
+   "1791483699432-500-5fb8b00d47ffda4e",
+   "1791483769857-500-a10289c07a204b13",
+   "1791483702746-500-d068f83edc923983",
+   "1791483975840-500-5ddd7dcd4d95e5ba"
+  ],
+  "derivation": [
+   "No parent link, brief or return payload in any log."
+  ],
+  "falsification_attempt": "Overlapping session timestamps could be parallel children, but no parent link or brief is recorded.",
+  "backreference": null
+ },
+ {
+  "node": "WHYNOTWHAT",
+  "verdict": "NOT_DERIVED",
+  "evidence": [
+   "1791483702746-500-d068f83edc923983"
+  ],
+  "derivation": [
+   "Commit 6652688 message states what changed, not the problem that prompted it."
+  ],
+  "falsification_attempt": "The unverified-walk clauses could read as motivation, but they describe Part B rather than naming a cause.",
+  "backreference": null
+ },
+ {
+  "node": "AGENTQA",
+  "verdict": "NOT_DERIVED",
+  "evidence": [
+   "1791483699432-500-5fb8b00d47ffda4e",
+   "1791483706471-500-1f697d139fcb9187",
+   "1791483975840-500-5ddd7dcd4d95e5ba",
+   "1791483394778-500-167558201be44277"
+  ],
+  "derivation": [
+   "Records show liveness and gate outcomes, not the reply body or the behaviour under test."
+  ],
+  "falsification_attempt": "Exit codes are not replies and the fingerprint meaning is not stated, so the QA claim is not shown.",
+  "backreference": null
+ },
+ {
+  "node": "GITSTATE",
+  "verdict": "NOT_DERIVED",
+  "evidence": [
+   "1791483766022-500-8d67def42b65f0c5",
+   "1791483706471-500-1f697d139fcb9187",
+   "1791483975840-500-5ddd7dcd4d95e5ba"
+  ],
+  "derivation": [
+   "git_remote read is not tied to any recorded claim."
+  ],
+  "falsification_attempt": "The git_remote read may have backed a claim, but the records state neither the returned value nor the compared claim.",
+  "backreference": null
+ },
+ {
+  "node": "DIJKSTRATEST",
+  "verdict": "DERIVED",
+  "evidence": [
+   "1791483815221-500-20d81bbccfd2c757",
+   "1791483706471-500-1f697d139fcb9187",
+   "1791483975840-500-5ddd7dcd4d95e5ba"
+  ],
+  "derivation": [
+   "The push check with fingerprint 8d6c50ba6bc3cc05 returned exit 1 with gate_drift true, then exit 0 on the same request.",
+   "The derivation claims presence of push success only, not delivery of a specific sha, and makes no claim of absence of other defects."
+  ],
+  "falsification_attempt": "A no-op success would still satisfy a presence-only claim, and the derivation disclaims any absence claim, so the counterexample does not falsify it.",
+  "backreference": null
+ },
+ {
+  "node": "BOUNDEDRETRY",
+  "verdict": "NOT_DERIVED",
+  "evidence": [
+   "1791483706471-500-1f697d139fcb9187",
+   "1791483975840-500-5ddd7dcd4d95e5ba"
+  ],
+  "derivation": [
+   "One bounded retry occurred and succeeded. No record shows a surfacing step."
+  ],
+  "falsification_attempt": "The surfacing step is a person-facing event no log records, and no other failing dispatch shows a retry chain that exhausted its limit.",
+  "backreference": null
+ }
+]
