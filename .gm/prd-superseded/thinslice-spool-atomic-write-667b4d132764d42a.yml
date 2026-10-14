@@ -1,0 +1,4 @@
+id: THINSLICE-SPOOL-ATOMIC-WRITE
+subject: 'Thin slice for G_CONTRACT-spool-inflight-atomic-write: the watcher claims only final in-file names and ignores sibling temp names; cut the temp-then-mv rule from skills/gm/SKILL.md section 1 in the same change. Witness: a live dispatch written under a temp name is not claimed and a final-name dispatch is claimed and answered.'
+session_id: lean-hop-THINSLICE
+status: pending

@@ -1,0 +1,7 @@
+id: G_CONTRACT-memory-kind-enum
+subject: 'Move the four-memory-type rule out of prose: gm-config/prose/entry-extended.md:46 (''Four memory types, nothing else: user, feedback, project, reference. Every memorize-fire write is one of these four.'') restates a closed set that the code does not enforce. Make memorize-fire''s kind a closed enum in rs-plugkit (orchestrator memory handling) that rejects any other value at parse time, then delete the sentence from the prose. The duplicate copy at rs-plugkit/crates/plugkit-core/src/orchestrator/instructions/prose/entry-extended.md:46 goes with it.'
+session_id: lean-node-G_CONTRACT
+status: pending
+blockedBy:
+- external
+deferReason: 'Code move: memorize-fire kind must become a closed enum in rs-plugkit before the prose sentence at gm-config/prose/entry-extended.md:46 can go. The code target is already tracked as INVEST-GCONTRACT-MEMORY-KIND-ENUM. Prose left as-is.'

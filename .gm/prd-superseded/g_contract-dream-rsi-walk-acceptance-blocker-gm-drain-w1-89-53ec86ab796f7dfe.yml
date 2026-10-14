@@ -1,0 +1,5 @@
+id: G_CONTRACT-dream-rsi-walk-acceptance-blocker-gm-drain-w1-89
+blocks: G_CONTRACT-dream-rsi-walk-acceptance
+subject: 'Blocker for G_CONTRACT-dream-rsi-walk-acceptance: the walk acceptance predicate does not exist in code. PROVE precondition fails: no validator or writer in rs-plugkit refuses applied:true for a walk whose witness dispatch ids fall outside the observation set (only the struct field rejected_walks at dream_rsi.rs line 87 exists). Receipts: .gm/receipts/G_CONTRACT-dream-rsi-walk-acceptance/01-SPECIFY.md and 02-PROVE.md. Unblock by implementing the validator in rs-plugkit/crates/plugkit-core/src/orchestrator/dream_rsi.rs (tracked by BLOCK-dream-rsi-walk-acceptance-code); a witness is only possible after a CI-built rs-plugkit exposes that verb.'
+session_id: gm-drain-w1-89
+status: pending

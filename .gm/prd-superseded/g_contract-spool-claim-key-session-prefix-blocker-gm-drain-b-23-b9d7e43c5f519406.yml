@@ -1,0 +1,4 @@
+id: G_CONTRACT-spool-claim-key-session-prefix-blocker-gm-drain-b-23
+subject: 'Blocker for G_CONTRACT-spool-claim-key-session-prefix (SPECIFY only, no edit): the rs-plugkit change needs (1) a live probe of whether a bare-integer in-file session name is accepted now, via a spool dispatch witnessed from a second session; (2) a CI-built rs-plugkit wasm with the new rejection and minted subagent ids (local cargo hook-blocked; the publish/release workflow run id is the witness); (3) the rs-plugkit parent gitlink bump on gm main, then ci-status on that sha. Current seams: validation.rs:7 session_id_from_body, dispatch_ledger.rs:89 and gates.rs:157 use contains("-sub"); no claim_key identifier exists in rs-plugkit/crates.'
+session_id: gm-drain-b-23
+status: pending

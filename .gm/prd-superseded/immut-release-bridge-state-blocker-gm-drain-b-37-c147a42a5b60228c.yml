@@ -1,0 +1,5 @@
+id: IMMUT-RELEASE-BRIDGE-STATE-blocker-gm-drain-b-37
+subject: 'Blocked: IMMUT-RELEASE-BRIDGE-STATE premise refuted (0 in-place state assignments; cited lines stale; checkpoint at 441 required). Needs prd-resolve from another session citing dispatch 1791975955559-500-cc5a58ee388238b0, or prd-add overwrite:true to rescope.'
+blockedBy: IMMUT-RELEASE-BRIDGE-STATE
+session_id: gm-drain-b-37
+status: pending

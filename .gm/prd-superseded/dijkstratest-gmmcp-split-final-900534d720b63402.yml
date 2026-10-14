@@ -1,0 +1,9 @@
+id: DIJKSTRATEST-GMMCP-SPLIT-FINAL
+session_id: gm-drain-a-47
+subject: 'gm-mcp: remove the gm-mcp/test directory and the npm test script once clusters A-D have landed'
+blockedBy:
+- DIJKSTRATEST-GMMCP-SPLIT-A
+- DIJKSTRATEST-GMMCP-SPLIT-B
+- DIJKSTRATEST-GMMCP-SPLIT-C
+- DIJKSTRATEST-GMMCP-SPLIT-D
+status: pending
