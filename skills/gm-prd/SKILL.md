@@ -8,6 +8,7 @@ description: "Closes one PRD row through the nine gm stages in one run. Input: r
 One run, one row, one session. Stages run in order, none a subagent. Each writes a create-only receipt `.gm/receipts/<row>/NN-<STAGE>.md`. A stage that cannot run becomes a blocker row, `<row>-blocker-<session>` (`prd-add`), never a skip. Verbs: gm Section 1. This is the PRD-resolution tracker, separate from the node traversal (gm-orchestrate). The row's state is kept on its own receipts; it never changes the frontier count, and a row is not a node.
 
 ## Procedure
+Stages run as separate skills, each loading the next: gm-orient, gm-unknowns, gm-eliminate, gm-edit, gm-validate, gm-publish. Start with `Skill(skill="gm-orient", args="row=<id>; session=<SESSION_ID>")`. The numbered list below is the stage contract each skill implements.
 
 1. SPECIFY (orient): restate the row and acceptance; codesearch and codeinsight first (top 20 BM25, top 20 vector, top 20 commits, 3 live snippet lines each; no snippet text stored); check each cited line against the tree (absent: stale). Write the unknowns list with `mutable-add` until the verb is renamed (row `UNKNOWN-VERB-RENAME`).
 1b. ELIMINATE: eliminate each unknown by a live JIT run; a run that reveals a new unknown adds it and goes back to ELIMINATE. EDIT starts only when no unknown is open.
