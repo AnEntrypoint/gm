@@ -1,0 +1,8 @@
+id: CONVCOM-gm-goal-w2-CONVCOM-1-blocker-gm-drain-w2-68
+subject: 'BLOCKER: CONVCOM-gm-goal-w2-CONVCOM-1 cannot be specified: no file, acceptance or witness (session gm-drain-w2-68)'
+body: 'SPECIFY stage for CONVCOM-gm-goal-w2-CONVCOM-1 (session gm-drain-w2-68) cannot run. Evidence: prd-list id returns subject only (dispatch 1791960209740-500-57fa8a07e754a1d1); .gm/prd/CONVCOM-gm-goal-w2-CONVCOM-1.yml absent; no prd-log.jsonl line for the id. Prior SPECIFY receipt .gm/receipts/CONVCOM-gm-goal-w2-CONVCOM-1/01-SPECIFY.md (session gm-drain-w1-58) already filed blocker CONVCOM-gm-goal-w2-CONVCOM-1-blocker-gm-drain-w1-58 (pending). Needed to close: an acceptance criterion stating the enforcement point (commit-msg hook, gm-mcp verb, or push check), the accepted pattern, and whether existing history is in scope. Row stays pending.'
+session_id: gm-drain-w2-68
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

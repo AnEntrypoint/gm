@@ -1,0 +1,13 @@
+id: G_CONTRACT-continuation-terminal-rule-blocker-gm-drain-w1-87-blocker-gm-drain-w2-113
+subject: 'Blocker for G_CONTRACT-continuation-terminal-rule-blocker-gm-drain-w1-87: terminal transition reply field cannot be probed or witnessed from this run'
+body: |-
+  Row: G_CONTRACT-continuation-terminal-rule-blocker-gm-drain-w1-87. Session gm-drain-w2-113. Receipt: .gm/receipts/G_CONTRACT-continuation-terminal-rule-blocker-gm-drain-w1-87/01-SPECIFY.md.
+
+  Leader H1: the terminal reply at G_FIXPOINT with prd_pending 0 carries no next-dispatch field. Rival H2: it carries one via a path outside orchestrator/transitions.rs. Code scan (dispatch 1791960658298-500-b699e83d46d56504) finds next_dispatch produced only on gate refusal (transitions.rs:1147-1187).
+
+  Needed to close: a live terminal transition reply from a walk in another session, reading whether next_dispatch exists. If absent, a reviewed rs-plugkit change to the transition reply, built by CI, then a gm-config prose edit mirrored to the vendored prose at rs-plugkit/crates/plugkit-core/src/orchestrator/instructions/prose/entry.md:48, then a witness from a third session.
+session_id: gm-drain-w2-113
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

@@ -1,0 +1,5 @@
+id: SLAP-PLUGKIT-HANDLEINSTRUCTION-LEVELS-blocker-gm-drain-w1-267
+subject: 'BLOCKER for SLAP-PLUGKIT-HANDLEINSTRUCTION-LEVELS: cannot close in session gm-drain-w1-267'
+body: 'Row SLAP-PLUGKIT-HANDLEINSTRUCTION-LEVELS stays pending. Blocker: (1) the refactor of rs-plugkit/crates/plugkit-core/src/orchestrator/instructions/mod.rs handle_instruction (now at line 757, not 514) is unverified locally because local cargo builds are hook-blocked; the witness requires a CI build of the wasm guest and a live instruction dispatch through agentplug-runner. (2) prd-resolve refuses a self-witness, so the witness must come from another session after the change lands on main. Next step for gm-orchestrate: a worker that performs the parse_instruction_request extraction on main through gm git verbs, waits for publish / release Build, then a separate session runs the live instruction dispatch and closes the row. Receipt: .gm/receipts/SLAP-PLUGKIT-HANDLEINSTRUCTION-LEVELS/01-SPECIFY.md.'
+session_id: gm-drain-w1-267
+status: pending

@@ -1,0 +1,8 @@
+id: ACCEPTPORT-SPOOLFS-DISPATCH-blocker-gm-drain-w2-1
+status: pending
+subject: 'Blocked: ACCEPTPORT-SPOOLFS-DISPATCH-blocker-gm-drain-w1-4 cannot close: parent row has no acceptance, file or witness'
+body: 'Row ACCEPTPORT-SPOOLFS-DISPATCH-blocker-gm-drain-w1-4 (session gm-drain-w1-4) asks gm-prd to close the blocker on ACCEPTPORT-SPOOLFS-DISPATCH. SPECIFY finds the parent row is title-only (session lean-hop-ACCEPTPORT, title: dispatch.js writes spool in-files and reads lock/status files inline with fs; move them behind a spool-store adapter). prd-list {id} and {full:true} carry no acceptance, cited line, or target file, so there is no witness that can bind. Re-scope needed: the parent must name its file(s), the acceptance (for example no fs.write/fs.read in gm-mcp/src/dispatch.js outside an adapter module), and a witness command. Codesearch on gm-mcp/src (regex fs.(write|read)) was run at SPECIFY; its dispatch id is recorded in the stage receipt. Neither the parent nor this blocker is closed.'
+session_id: gm-drain-w2-1
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

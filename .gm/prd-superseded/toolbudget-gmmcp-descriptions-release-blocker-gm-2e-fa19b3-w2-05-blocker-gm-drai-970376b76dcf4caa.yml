@@ -1,0 +1,4 @@
+id: TOOLBUDGET-GMMCP-DESCRIPTIONS-RELEASE-blocker-gm-2e-fa19b3-w2-05-blocker-gm-drain-w2-457
+status: pending
+title: 'Blocker for TOOLBUDGET-GMMCP-DESCRIPTIONS-RELEASE-blocker-gm-2e-fa19b3-w2-05: gm-mcp shared tree still holds other writers'' WIP (20 modified, src/self-update.js and AGENTS.md staged, src/spool-store.js untracked, bin/gm-mcp-server.js modified). Re-run gm-prd after those writers commit their hunks, then publish the bin rebuilt from committed src/ via the Git API route and verify with ci-status. Evidence: dispatches 1791967061296-500-b9553d1e1ccdb242, 1791967052376-500-1340041d308b2d1d.'
+session_id: gm-drain-w2-457

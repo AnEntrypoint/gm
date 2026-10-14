@@ -1,0 +1,16 @@
+id: SLAP-gm-goal-w4-SLAP-1-blocker-gm-drain-w2-358
+subject: 'Blocked: SLAP-gm-goal-w4-SLAP-1-blocker-gm-drain-w1-250 cannot close; gm-mcp dirty tree is one in-flight multi-file refactor owned by another session'
+body: |-
+  Row SLAP-gm-goal-w4-SLAP-1-blocker-gm-drain-w1-250 (session gm-drain-w2-358) cannot close on a witness.
+
+  Leader hypothesis (SPECIFY, .gm/receipts/SLAP-gm-goal-w4-SLAP-1-blocker-gm-drain-w1-250/01-SPECIFY.md): the unblock is not a single-file commit. gm-mcp/src/dispatch.js carries an uncommitted hunk set that imports ./spool-store.js, and that module is untracked.
+
+  Live evidence: git_status gm-mcp scoped to src/dispatch.js, dispatch 1791964300157-500-515ebf3b1788e5c3 (modified, one path). git_diff, dispatch 1791964387782-500-a21f01f30785fecf (hunks at runnerEnsureInFlight, reapRunnerEnsureInFlight, claimGlobalLauncher, readDaemonLiveness, runDispatch). codesearch claimByLink, dispatch 1791964475253-500-d9d94bdcda6cfb74: spool-store.js line 53 exports it, dispatch.js lines 4 and 1107 consume it. git_status gm-mcp, dispatch 1791964501566-500-bc4ba1c89cc3ec5: 20 changed paths, 1 staged (src/self-update.js), 1 untracked (src/spool-store.js).
+
+  Why not closed here: committing dispatch.js alone breaks main (untracked import). Committing the full set is another session's unverified refactor, and this session has no witness for it. Parking it needs a branch or stash, which is refused.
+
+  Unblock: the owning session lands the whole gm-mcp set as one unit on main (spool-store.js, self-update.js, dispatch.js and the rest), with a witness. Then re-run SLAP-gm-goal-w4-SLAP-1 at its line sites (305, 395, 1021, 1126, 1153, 1249, 1262, 1481).
+
+  Witness: none. Not self-witnessed.
+session_id: gm-drain-w2-358
+status: pending

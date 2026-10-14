@@ -1,0 +1,5 @@
+id: PLUGKIT-WORKER-POOL-4
+subject: plugkit runs 4 concurrent execution workers that take calls from any agent; a call over 15 s moves to background management
+body: 'Tools are stateless and run on any plugin. A call past 15 s releases its worker and is tracked in background. Witness: 5 concurrent sleeps of 20 s all accepted, 4 hold workers, and the 5th runs after one moves to background.'
+session_id: gm-invariants-08
+status: pending

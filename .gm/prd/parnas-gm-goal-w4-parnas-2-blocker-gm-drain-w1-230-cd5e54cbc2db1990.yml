@@ -1,0 +1,5 @@
+id: PARNAS-gm-goal-w4-PARNAS-2-blocker-gm-drain-w1-230
+subject: 'Blocked: PARNAS-gm-goal-w4-PARNAS-2 needs gm-mcp src/dispatch.js, release-bridge.js and self-update.js while another writer holds uncommitted hunks there'
+body: 'Row PARNAS-gm-goal-w4-PARNAS-2 (expose a verdict query for inflightDispatchCount) cannot EMIT. Evidence: git_status dispatch 1791958890078-500-24f738550c13cbca on gm-mcp shows dispatch.js, release-bridge.js, self-update.js modified (self-update.js also staged) by a lane that is not this session. Editing those would ship foreign WIP into the bundle. Live witness of the premise (codesearch dispatch 1791958861103-500-13f232b588fa981) confirms the four-consumer fact. Unblock: the owning writer commits or reverts its gm-mcp hunks on main, then this row re-runs SPECIFY and PROVE. Supersedes nothing; the earlier blocker PARNAS-gm-goal-w4-PARNAS-2-blocker-gm-fin-20 remains the same gate. Receipt: .gm/receipts/PARNAS-gm-goal-w4-PARNAS-2/01-SPECIFY-gm-drain-w1-230.md'
+session_id: gm-drain-w1-230
+status: pending

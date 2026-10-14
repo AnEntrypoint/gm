@@ -1,0 +1,8 @@
+id: BLOCKER-SKILLGM-git-append-rewrite-flag-blocker-gm-drain-w2-31
+subject: 'Blocker for BLOCKER-SKILLGM-git-append-rewrite-flag-blocker-gm-drain-w1-30: parent row has no .gm/prd file, no file list, no witness command'
+body: 'SPECIFY (session gm-drain-w2-31) found the parent row BLOCKER-SKILLGM-git-append-rewrite-flag pending with a subject only and no .gm/prd/<id>.yml file. The change surface is partially known: skills/gm/SKILL.md line 128 cites append/rewrite classification in prose (Section 4); rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs/git.rs has no per-verb append/rewrite flag (codesearch literal ''append'' matches only prd_text_with_missing_blocks_appended at line 1976). Unresolved: acceptance criterion for the flag (field name, accepted values, verbs covered), a local-runnable witness (rs-plugkit is verified by CI only; no local cargo per hook), and the rs-plugkit nested-repo publish plus parent gitlink bump path. Action: re-scope BLOCKER-SKILLGM-git-append-rewrite-flag with a .gm/prd file listing those, then re-run gm-prd. Receipt: .gm/receipts/BLOCKER-SKILLGM-git-append-rewrite-flag-blocker-gm-drain-w1-30/01-SPECIFY.md (parent). This run''s receipt: .gm/receipts/BLOCKER-SKILLGM-git-append-rewrite-flag-blocker-gm-drain-w1-30/01-SPECIFY-gm-drain-w2-31.md'
+session_id: gm-drain-w2-31
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

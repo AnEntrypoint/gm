@@ -1,0 +1,8 @@
+id: G_CONTRACT-precedence-tier-order-blocker-gm-drain-w2-142
+subject: 'Blocker for G_CONTRACT-precedence-tier-order-blocker-gm-drain-w1-105: PROVE needs a CI-built rs-plugkit guest and a cross-session witness; local cargo is hook-blocked, enum shape undecided'
+blockedBy:
+- external
+body: 'SPECIFY: .gm/receipts/G_CONTRACT-precedence-tier-order-blocker-gm-drain-w1-105/01-SPECIFY.md. PROVE receipt: .gm/receipts/G_CONTRACT-precedence-tier-order-blocker-gm-drain-w1-105/02-PROVE.md. Needed: (1) choose the ordered enum shape from the Section 0 layers config::resolve holds (config.rs:700 resolve_with); (2) edit rs-plugkit in its nested repo; (3) CI build with --features slim; (4) witness through agentplug-runner from a session other than gm-drain-w2-142.'
+session_id: mcp-codemode-23256-1791961039599
+status: pending
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

@@ -1,0 +1,8 @@
+id: DAEMON-IDLE-DISK-WRITE-25MBS-BLOCKER-blocker-gm-drain-w2-76
+subject: 'BLOCKED: cannot attribute idle PhysicalDisk writes below process level without elevation (gm-drain-w2-76)'
+body: 'Row DAEMON-IDLE-DISK-WRITE-25MBS-BLOCKER. Leader H1 (system-level writes, not gm/agentplug) cannot be separated from H2 (gm/agentplug writes missed by per-process counters) from a non-elevated session: per-process IOWriteBytes deltas read 0 while the disk reads 2-13 MB/s, and the ETW disk-I/O probe requires elevation. Probe needed: elevated ETW or Resource Monitor disk view over 60 s mapping each write to its process and file. Receipt: .gm/receipts/DAEMON-IDLE-DISK-WRITE-25MBS-BLOCKER/01-SPECIFY.md. Also: the 28.39 MB/s figure is not reproduced now (2-13 MB/s).'
+session_id: gm-drain-w2-76
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

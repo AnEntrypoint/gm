@@ -1,0 +1,13 @@
+id: DEEPMOD-GMMCP-TEST-SUITE-RED-AT-HEAD-blocker-gm-drain-w2-86-blocker-gm-drain-w3-156
+subject: 'Leader refuted: requestNumber alias does not cause HEAD suite RED; delivery blocked by foreign hunks'
+body: |-
+  Row DEEPMOD-GMMCP-TEST-SUITE-RED-AT-HEAD-blocker-gm-drain-w2-86 cannot close in session gm-drain-w3-156. Its leader hypothesis (missing `const requestNumber` alias makes the suite RED at HEAD) is REFUTED.
+  Probe: git archive of HEAD a992ae64f01aab04a9a9bc77113428aae9171273 gm-mcp into a scratch dir, node_modules linked as a junction, `npm test` exit 0 (dispatch 1791971741238-500-402f9410262757fb; 31+13+19+12+... passed, 0 failed). The earlier RED reading (dispatch 1791960461028-500-ca118271a4f14e24) came from an archive with no node_modules: ERR_MODULE_NOT_FOUND for @modelcontextprotocol/sdk in src/http-transport.js (dispatch 1791971655617-500-8f395e2ae4289083). That is an environment artifact of archiving, not a source defect.
+  Codesearch of `requestNumber` in gm-mcp/test and gm-mcp/scripts returns 0 matches (dispatches 1791971556081-500-4d70cd8f13c15b12, 1791971578208-500-6df023a130aaba7c); no test references the alias. The alias exists only in the working-tree diff of gm-mcp/src/dispatch.js (`const requestNumber = sequence`, renamed from `n`), mixed with foreign-writer hunks (imports from ./spool-store.js, which is untracked; staged src/self-update.js; untracked src/spool-store.js).
+  Delivery is blocked: publishing src/dispatch.js alone would import an untracked module and carry foreign hunks. A requestNumber-only commit has no failing test to witness.
+  Next (for a new row, not this one): decide whether the working-tree dispatch.js refactor is wanted at all. If the RED signal is an archive-without-node_modules artifact, fix the scratch-archive recipe in gm-mcp/AGENTS.md or the witness, not dispatch.js. Mutable to record: which test the gm-mcp RED claim came from, if any.
+session_id: gm-drain-w3-156
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

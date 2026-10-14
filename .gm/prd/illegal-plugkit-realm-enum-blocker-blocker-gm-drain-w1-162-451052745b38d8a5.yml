@@ -1,0 +1,5 @@
+id: ILLEGAL-PLUGKIT-REALM-ENUM-BLOCKER-blocker-gm-drain-w1-162
+subject: 'Blocker: no realm value is declared anywhere to close the realm enum over'
+body: 'Row ILLEGAL-PLUGKIT-REALM-ENUM-BLOCKER cannot close: declared_realm (rs-plugkit/crates/plugkit-core/src/orchestrator/discipline_note.rs:119) reads the realm key of .gm/disciplines/<d>/requires.json, and in this tree 0 of 10 discipline directories have a requires.json, so every discipline realm is empty. No tracked file declares a realm value (codesearch dispatches 1791958491256-500-597e3d2100cbb01b, 1791958477255-500-61f6b9c35bd8bd0). Unblock by declaring the realm set in the discipline requires sources (gm-config or the owning gm-state producer), then re-run this row. Receipt: .gm/receipts/ILLEGAL-PLUGKIT-REALM-ENUM-BLOCKER/01-SPECIFY.md. Session gm-drain-w1-162.'
+session_id: gm-drain-w1-162
+status: pending

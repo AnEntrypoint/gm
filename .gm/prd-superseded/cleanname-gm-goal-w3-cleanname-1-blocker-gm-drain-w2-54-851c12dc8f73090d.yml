@@ -1,0 +1,7 @@
+id: CLEANNAME-gm-goal-w3-CLEANNAME-1-blocker-gm-drain-w2-54
+subject: 'Blocked delivery of row CLEANNAME-gm-goal-w3-CLEANNAME-1: gm-mcp/src/dispatch.js has other writers'' hunks (125 lines) plus staged src/self-update.js and untracked src/spool-store.js. Rename (sleep t->timer, runDispatch n->sequence) verified in tree (npm test PASS, verify-build no drift, dispatch 1791960250492-500-a1dbf82903fb2a5b) but cannot be committed without the other lane''s work. Resolve: one writer lands or stashes the other hunks, then finalize gm-mcp/src/dispatch.js and bin/gm-mcp-server.js on gm-mcp main and bump the parent gitlink.'
+status: pending
+session_id: mcp-codemode-23256-1791960275952
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

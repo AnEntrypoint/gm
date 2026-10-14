@@ -1,0 +1,6 @@
+id: SLAP-gm-goal-w4-SLAP-2-blocker-gm-drain-w2-360
+subject: 'SLAP-gm-goal-w4-SLAP-2 cannot deliver: gm-mcp submodule work tree is shared. Edits to src/release-bridge.js (fileSha256 helper at lines 38,252,259) and src/self-update.js (readDigest helper at lines 25,63,231) are applied and witnessed by codesearch 1791965046752-500-44b7540191e22fac and 1791965085598-500-14b1710a4389ee52. Blocking: gm-mcp has 20 modified files, src/self-update.js staged by another writer, and untracked src/spool-store.js; the bundle rebuild (node scripts/build.mjs) embeds those foreign hunks, so committing the bundle would publish them. Unblock: one writer lands the gm-mcp src set and bundle together, then the row re-runs the witness as a different session.'
+status: pending
+blockedBy:
+- SLAP-gm-goal-w4-SLAP-2
+session_id: mcp-codemode-23256-1791965104145

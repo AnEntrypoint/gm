@@ -1,0 +1,7 @@
+id: COMMITFMT-ENFORCE-50-72-blocker-gm-drain-w1-50-blocker-gm-drain-w2-67
+status: pending
+blockedBy:
+- external
+subject: 'Blocked: git_commit subject/body length gate (50/72) not in rs-plugkit; row needs an edit to git.rs, a CI wasm build, a rs-plugkit release, a gitlink bump and a live witness. rs-plugkit has another writer''s dirty state (git_status dispatch 1791960232317-500-7084dbfb76dcba26). Evidence: codesearch literal 72 in git.rs zero hits (dispatch 1791960199270-500-9ad38d8f46aa7feb). Receipts: .gm/receipts/COMMITFMT-ENFORCE-50-72-blocker-gm-drain-w1-50/. Next: an owner of rs-plugkit lands the git_commit length gate, CI builds and releases, the gitlink is bumped on main, then a witness with an over-length subject refused.'
+session_id: gm-drain-w2-67
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

@@ -1,0 +1,8 @@
+id: BLOCKER-SKILLGM-spool-inname-validation-blocker-gm-drain-w1-37-blocker-gm-drain-w3-76
+subject: 'Blocker for BLOCKER-SKILLGM-spool-inname-validation-blocker-gm-drain-w1-37: CI-built runner probe and daemon subagent-id mint still unverified'
+body: 'Parent row: BLOCKER-SKILLGM-spool-inname-validation-blocker-gm-drain-w1-37 (session gm-drain-w1-37). SPECIFY receipt: .gm/receipts/BLOCKER-SKILLGM-spool-inname-validation-blocker-gm-drain-w1-37/01-SPECIFY.md. Gap 1 named reply is present in source at agentplug/crates/agentplug-runner/src/daemon/claim_dispatch.rs:1682 but unverified in a CI-built runner. Gap 2 remains: rs-plugkit/crates/plugkit-core/src/orchestrator/instructions/prose/lean-p7.md:17 and entry.md:158 still derive <parent>-sub<k>, and no daemon mint was located. Close needs: (a) CI-verified runner build with the :1682 reply, (b) live spool probe with a bare-integer in-file name whose reply is a named error, (c) daemon mint of <parent>-sub<k> or prose change, (d) SKILL.md claim-key sentence reduced. Local cargo is blocked by hook, so (a) and (b) need a CI run.'
+session_id: gm-drain-w3-76
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

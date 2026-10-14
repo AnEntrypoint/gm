@@ -1,0 +1,8 @@
+id: CLEANNAME-gm-goal-w3-CLEANNAME-1-blocker-gm-drain-w3-98
+subject: 'Blocked: CLEANNAME-gm-goal-w3-CLEANNAME-1-blocker-gm-drain-w1-42 cannot close; rename already in tree, bundle rebuild and cross-session witness outstanding'
+body: 'Parent CLEANNAME-gm-goal-w3-CLEANNAME-1 premise is stale in the tree. Probes (session gm-drain-w3-98): codesearch literal ''const n = resume_task'' returns 0 hits; codesearch ''nextN'' shows gm-mcp/src/dispatch.js:1948 ''const sequence = resume_task || nextN(session_id)''; codesearch literal ''setTimeout'' shows dispatch.js:1266 ''const timer = setTimeout'', :1305/:1306 ''wakeTimer''/''fallbackTimer''; codesearch regex \bn\b on dispatch.js (exhaustive, 26 lines) shows no bare identifier n, only string-literal matches. Dispatch ids: 1791970487192-500-2120ba737d8747c9, 1791970503264-500-192904555b26add0, 1791970516085-500-9697d03ab737105b. Not closed: the row acceptance requires a rebuilt committed gm-mcp bundle, a parent gitlink bump, and a witness from another session. The gm-mcp rename is uncommitted in the shared tree and CLEANNAME-gm-goal-w3-CLEANNAME-4 (pending) edits the same dispatch.js region, so publishing must serialize behind -4 and needs one writer. Next: confirm gm-mcp git status shows the rename as the only dispatch.js hunk, serialize behind -4, rebuild bundle, publish via git verbs, witness from a session other than gm-drain-w1-42 and gm-goal-w3-CLEANNAME.'
+session_id: gm-drain-w3-98
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

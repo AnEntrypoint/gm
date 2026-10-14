@@ -1,0 +1,8 @@
+id: WADLER-VALUE-SIGNATURE-DREAMRSI-blocker-gm-drain-w1-319
+subject: 'Blocker for WADLER-VALUE-SIGNATURE-DREAMRSI: row cannot close in one session'
+owner: rs-plugkit/crates/plugkit-core/src/orchestrator/dream_rsi.rs
+phase: P2
+node: WADLER
+status: pending
+body: 'Row names observation_is_gate_drift_failure (absent; the real fn is failure_is_gate_drift at dream_rsi.rs:400) and veto_reason (already typed on Strategy at :609). verify_record(&Value) at :810 has ~12 call sites. Closing needs a multi-site typed-struct refactor in rs-plugkit whose compile proof is CI only (local cargo hook-blocked) and whose witness must come from a second session (prd-resolve self-witness refused). Receipt: C:\dev\gm\.gm\receipts\WADLER-VALUE-SIGNATURE-DREAMRSI\01-SPECIFY.md. Needs: row text corrected to the real fn names, and a witness session assigned.'
+session_id: gm-drain-w1-319

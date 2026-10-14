@@ -1,0 +1,8 @@
+id: BLOCK-dream-rsi-output-schema-code-blocker-gm-drain-w3-16
+subject: 'Blocker for BLOCK-dream-rsi-output-schema-code: the producer of DreamRsiResult is missing, and the row subject is stale'
+body: 'Blocks: BLOCK-dream-rsi-output-schema-code. The types and constants exist at rs-plugkit/crates/plugkit-core/src/orchestrator/dream_rsi.rs:30-96, but DreamRsiResult has zero constructors (callers dispatch 1791969426264-500-b180bbba68c8257b). evaluate_worlds (dream_rsi.rs:292-392) emits an ad-hoc {ok, rankings} shape, not the SKILL.md Output shape. Closing needs: a function that maps evaluate_worlds output to DreamRsiResult (with Insufficient below INSUFFICIENT_RECORD_THRESHOLD and proposal caps), a witness reached by a seeded dream-round session, and CI-only verification because local cargo is hook-blocked. Receipt: .gm/receipts/BLOCK-dream-rsi-output-schema-code/01-SPECIFY.md. Session: gm-drain-w3-16.'
+session_id: gm-drain-w3-16
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

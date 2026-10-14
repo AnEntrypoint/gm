@@ -1,0 +1,5 @@
+id: gm-agents-md-edit-reopens-rows-blocker-gm-prd-agents-md-20261013-blocker-gm-drain-w2-166
+subject: 'Blocker for gm-agents-md-edit-reopens-rows-blocker-gm-prd-agents-md-20261013: live probe not run and rs-plugkit publish surface held by another lane'
+body: 'Row: gm-agents-md-edit-reopens-rows-blocker-gm-prd-agents-md-20261013. SPECIFY receipt: .gm/receipts/gm-agents-md-edit-reopens-rows-blocker-gm-prd-agents-md-20261013/01-SPECIFY.md. Leader hypothesis H1: reopen_rows_for_changed_paths (crates/plugkit-core/src/orchestrator/prd.rs:1866) reports not_rerunnable and leaves a prose-witness row completed because no scripts/*.mjs|js|cjs witness is bound. Needed: (a) run the H1 vs H2 probe in a scratch repo with a completed row carrying rule_bindings; (b) implement reopen-to-pending for a fingerprint-changed row with no rerunnable witness; (c) CI witness of the change. Blocked on: rs-plugkit local main carries another lane''s unpushed commits 7d34666, aa3366d and a modified crates/plugkit-core/Cargo.toml; the fix must wait for that lane to push or be recovered on main before a gitlink bump.'
+session_id: gm-drain-w2-166
+status: pending

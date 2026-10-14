@@ -1,0 +1,8 @@
+id: SPECDRIFT-gm-goal-hop-SPECDRIFT-2-2-blocker-gm-drain-w1-284-blocker-gm-drain-w2-421
+subject: 'Blocked: SPECDRIFT-gm-goal-hop-SPECDRIFT-2-2-blocker-gm-drain-w1-284 push still refused; 13 other-writer dirty paths overlap the delta and origin/main is not a fast-forward'
+surface: gm-mcp
+blockedBy:
+- gm-mcp-src-dirty-other-writers
+body: 'Row SPECDRIFT-gm-goal-hop-SPECDRIFT-2-2-blocker-gm-drain-w1-284 (session gm-drain-w2-421) cannot close. SPECIFY: the row''s commit 78dc78307e (gm-mcp, docs: qualify the next-connect reload sentence) is present in local history at gm-mcp main; the git_show of it lists AGENTS.md and README.md, 2 lines each (dispatch 1791966004667-500-78e4100d98a50420). PROVE: git_push origin main in C:/dev/gm/gm-mcp is refused gate_denied (dispatch 1791966037851-500-ca6043d30303030a). dirty_overlapping_delta has 13 paths (AGENTS.md, README.md, bin/gm-mcp-server.js, scripts/install-hooks.mjs, scripts/measure-wire-size.mjs, src/bundle-version.js, src/dev-sync.js, src/dispatch.js, src/release-bridge.js, src/self-update.js, test/http-session-resume.mjs, test/mcp-http-probe.mjs, test/transport.test.mjs); the push is also not a fast-forward of origin/main. git_status (dispatch 1791965911034-500-926b78b8e93c9458) shows 21 changed paths in gm-mcp, incl. staged src/self-update.js and untracked src/spool-store.js, all owned by other writers. Unblock requires the owner of those hunks to commit or revert them, then a pull and git_push. This session does not commit, revert or pull over another writer''s hunks (one writer per surface). Witness that would close the row: git_push origin main ok, then ci-status on sha 78dc78307e or its successor green, with witness_dispatch_id.'
+session_id: gm-drain-w2-421
+status: pending

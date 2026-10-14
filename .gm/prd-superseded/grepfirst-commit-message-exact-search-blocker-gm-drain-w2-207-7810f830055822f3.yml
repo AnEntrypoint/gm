@@ -1,0 +1,8 @@
+id: GREPFIRST-COMMIT-MESSAGE-EXACT-SEARCH-blocker-gm-drain-w2-207
+subject: 'Blocked: GREPFIRST-COMMIT-MESSAGE-EXACT-SEARCH postcondition needs a CI-built rs-plugkit git_log message filter and a cross-session witness'
+body: 'Parent row: GREPFIRST-COMMIT-MESSAGE-EXACT-SEARCH (pending, unchanged). SPECIFY receipt .gm/receipts/GREPFIRST-COMMIT-MESSAGE-EXACT-SEARCH/01-SPECIFY.md; PROVE receipt 02-PROVE.md. Gap confirmed live: git_log rejects ''message'' (dispatch 1791962072743-500-2a6ec21fc4f9bbb5). Blocking step: rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs/git.rs git_log needs an exhaustive verbatim message-substring field, plus prose edits in gm-config/prose/entry.md:135 and lean-p1.md:19 and the rs-plugkit vendored prose mirror. Local cargo is hook-blocked, so the change is verified only by the CI wasm build, and the witness must come from another session (self-witness refused). Next: land the rs-plugkit change through CI, then a cross-session live git_log {message} witness.'
+session_id: gm-drain-w2-207
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

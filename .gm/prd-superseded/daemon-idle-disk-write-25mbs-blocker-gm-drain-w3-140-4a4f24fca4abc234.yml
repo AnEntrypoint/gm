@@ -1,0 +1,8 @@
+id: DAEMON-IDLE-DISK-WRITE-25MBS-blocker-gm-drain-w3-140
+subject: 'PROVE for DAEMON-IDLE-DISK-WRITE-25MBS still blocked: no candidate fix authored, no green agentplug CI build, no owning-machine idle-write probe'
+body: 'Stage PROVE of gm-prd (row DAEMON-IDLE-DISK-WRITE-25MBS-blocker-gm-drain-w2-77, session gm-drain-w3-140) could not run. Blocker DAEMON-IDLE-DISK-WRITE-25MBS-blocker-gm-drain-w2-77 needs (a) a CI build run for agentplug-runner carrying a candidate fix, (b) runner restart on the owning machine, (c) a 60 s idle per-file write count under 2 MB/s, (d) a witness from another session. Findings this session: agentplug main tip 7191e8f has release run 38543883311 and rust-ci run 38543883151 both failure; last green build is a4f12c9 (rust-ci 38531159548). No candidate fix exists in agentplug yet, so H1 (daemon.rs:2049 heartbeat rewrite) and H2 (claim_dispatch.rs:2923/:524) remain unseparated. Next: author the minimal instrument that separates H1 from H2, fix the 7191e8f release/rust-ci failure first so a build can be green, then run the CI build and the owning-machine probe. Receipt: .gm/receipts/DAEMON-IDLE-DISK-WRITE-25MBS-blocker-gm-drain-w2-77/02-PROVE.md'
+session_id: gm-drain-w3-140
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

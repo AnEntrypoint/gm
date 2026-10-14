@@ -1,0 +1,8 @@
+id: CLEANNAME-RS-CODEINSIGHT-blocker-gm-drain-w1-47-blocker-gm-drain-w2-61
+subject: 'Blocked: CLEANNAME-RS-CODEINSIGHT-blocker-gm-drain-w1-47 premise stale; no closing witness from this session'
+body: 'SPECIFY (gm-drain-w2-61): cited rs-codeinsight path:line bindings are absent (codesearch 1791960146937-500-5c52aa9101c68d31: only `let c = chars.next()?` at src/project.rs:464 matches `let [a-z] = `). Receipt: .gm/receipts/CLEANNAME-RS-CODEINSIGHT-blocker-gm-drain-w1-47/01-SPECIFY.md. The live rename targets are carried by parent row CLEANNAME-RS-CODEINSIGHT (corrected list, pending). Closing needs the parent rename landed in rs-codeinsight and ci-status on that submodule commit from a session other than the writer. Local cargo is blocked (AGENTS.md), so no PROVE or self-witness is possible here. Action: resolve the parent row via its CI witness, then retire this blocker against it.'
+session_id: gm-drain-w2-61
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

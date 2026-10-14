@@ -1,0 +1,8 @@
+id: BLOCK-RECALL-INDEX-SINGLE-WRITER-blocker-gm-drain-w1-21-blocker-gm-drain-w2-19
+subject: 'Blocker: single-writer decision (a) Rust reroute or (b) prose amend unresolved; no live probe possible in session'
+status: pending
+blockedBy:
+- external
+body: 'Session gm-drain-w2-19 ran gm-prd on BLOCK-RECALL-INDEX-SINGLE-WRITER-blocker-gm-drain-w1-21. SPECIFY receipt: .gm/receipts/BLOCK-RECALL-INDEX-SINGLE-WRITER-blocker-gm-drain-w1-21/01-SPECIFY.md. Leader H2: memory.rs:544 (memorize_with_raw) and memory_md.rs:783 both write rssearch_vectors without memorize-fire; the probe needs a live rebuilt rs-plugkit wasm, and local cargo is blocked (CI-only). Decision needed: (a) route memorize through memorize-fire in rs-plugkit, rebuild in CI, witness from another session; or (b) amend gm-config/prose/entry-extended.md:52 to name memorize and memorize-fire as sanctioned write verbs, plus a witness that greps the prose. Choose (b) only if the single-writer goal is dropped; (a) is required for the row''s title. Default taken: none this session; the row stays open for the next wave.'
+session_id: mcp-codemode-23256-1791959966063
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

@@ -1,0 +1,5 @@
+id: SPECDRIFT-gm-goal-hop-SPECDRIFT-2-3-blocker-gm-drain-w2-422
+subject: 'Blocked: SPECDRIFT-gm-goal-hop-SPECDRIFT-2-3 premise refuted; verify-build is a real npm script'
+session_id: gm-drain-w2-422
+body: 'SPECIFY ACH: H1 (row) AGENTS.md names a nonexistent verify-build step, fix name to check-bin-drift.mjs. H2 verify-build is the live npm script name in gm-mcp/package.json:16 ("verify-build": "node scripts/check-bin-drift.mjs"), so AGENTS.md wording is correct. Evidence: codesearch dispatch 1791965809328-500-934303869330ef83 (verify-build: package.json:16, .github/workflows/verify.yml:40 ''npm run verify-build'', README.md:314-316, AGENTS.md:79) and codesearch dispatch 1791965889043-500-1eeefb58a52b4cec (check-bin-drift: package.json:16, .githooks/pre-push:3). The row''s claim of zero literal matches for verify-build (dispatch 1791745487987-420-61f966bbd700d1de) is stale. Leader H2 separated by the live codesearch. Row SPECDRIFT-gm-goal-hop-SPECDRIFT-2-3 stays pending: its only fix would make AGENTS.md wrong. Next: owner decides whether to rename the npm script or drop the row; deferReason already marks it created in error.'
+status: pending

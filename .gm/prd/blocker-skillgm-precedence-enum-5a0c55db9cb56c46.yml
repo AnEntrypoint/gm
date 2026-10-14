@@ -1,0 +1,4 @@
+id: BLOCKER-SKILLGM-precedence-enum
+subject: 'Blocker for G_CONTRACT-precedence-tier-order: express the resolution tier order (live response > project vendored > config-source repo > compiled default > Section 2 > Section 3) as an ordered enum in config::resolve; skills/gm/SKILL.md section 0 then names the enum. Prose stays until this lands.'
+session_id: lean-exec-skillgm-1
+status: pending

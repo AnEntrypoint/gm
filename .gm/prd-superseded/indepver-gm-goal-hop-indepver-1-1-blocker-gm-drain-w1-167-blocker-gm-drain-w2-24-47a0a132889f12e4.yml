@@ -1,0 +1,6 @@
+id: INDEPVER-gm-goal-hop-INDEPVER-1-1-blocker-gm-drain-w1-167-blocker-gm-drain-w2-240
+subject: 'BLOCKER for INDEPVER-gm-goal-hop-INDEPVER-1-1-blocker-gm-drain-w1-167: SPECIFY cannot establish acceptance; digest source undecided'
+status: pending
+surface: gm-mcp/src
+body: 'Row INDEPVER-gm-goal-hop-INDEPVER-1-1-blocker-gm-drain-w1-167 cannot close in gm-prd session gm-drain-w2-240. SPECIFY receipt: .gm/receipts/INDEPVER-gm-goal-hop-INDEPVER-1-1-blocker-gm-drain-w1-167/01-SPECIFY.md. Cited gm-mcp/src/self-update.js lines are present (codesearch dispatch 1791962697335-500-a276421a854b3d1e), so the defect claim holds. Blocked by: (1) no digest source chosen among release .sha256 sidecar, signed manifest, or pinned hash; (2) no acceptance criterion on the parent row INDEPVER-gm-goal-hop-INDEPVER-1-1; (3) no ACH leader, since the hypotheses cannot be separated without (1). Unblock needs: the parent row names the digest source and acceptance, then a witness tampers GM_MCP_BUNDLE_URL against a sandbox deployed path and binds a non-self-referential expected digest. Bundle rebuild of gm-mcp/src is required by AGENTS.md before delivery.'
+session_id: gm-drain-w2-240

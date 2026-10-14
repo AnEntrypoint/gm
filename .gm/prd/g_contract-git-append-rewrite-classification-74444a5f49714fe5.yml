@@ -1,0 +1,4 @@
+id: G_CONTRACT-git-append-rewrite-classification
+subject: skills/gm/SKILL.md section 4 'Substrate-scoped' lists which git operations are append (commits, pushes, branches, tags, reverts, merges) and which are rewrite (force-push, rebasing pushed commits, branch or ref deletion, remote reset, history rewrite). That classification is a property of the git verb set. Carry it as a per-verb flag in the git verb registry and have prose cite the flag.
+session_id: lean-node-G_CONTRACT
+status: pending

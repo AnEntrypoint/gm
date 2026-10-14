@@ -1,0 +1,8 @@
+id: DEEPMOD-GMMCP-BUNDLE-CARRIES-WIP-blocker-gm-drain-w2-84
+subject: 'Blocker for DEEPMOD-GMMCP-BUNDLE-CARRIES-WIP: one-writer commit of bin/gm-mcp-server.js with its src cannot land while foreign WIP is in the tree'
+body: |-
+  Row DEEPMOD-GMMCP-BUNDLE-CARRIES-WIP cannot close in session gm-drain-w2-84. The bundle is a build of the whole src/ tree, and that tree holds hunks owned by other writers: src/codemode.js, src/dev-sync.js, src/index.js, src/release-bridge.js, src/http-transport.js, src/self-update.js (staged by another writer), scripts/install-hooks.mjs, scripts/measure-wire-size.mjs, and test/mcp-http-probe.mjs / test/transport.test.mjs. Committing the bundle with only dispatch.js, spool-store.js and bundle-version.js would ship a bundle that does not match committed src, and committing all of it would put another lane's WIP on main.
+
+  Needed to unblock: (1) the owning lane lands or stashes its foreign hunks; (2) one writer then commits src/dispatch.js, src/spool-store.js, src/bundle-version.js (BUNDLE_VERSION bumped from 0.2.45) and bin/gm-mcp-server.js in one commit, then bumps the parent gitlink. Receipts: .gm/receipts/DEEPMOD-GMMCP-BUNDLE-CARRIES-WIP/*-gm-drain-w2-84.md. Witness dispatches: 1791960396460-500-aa0d11c19c1615b7 (bundle drift clean), 1791960458322-500-edb1b93823f1dd50 (trial bump reverted).
+session_id: gm-drain-w2-84
+status: pending

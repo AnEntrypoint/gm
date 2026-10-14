@@ -1,0 +1,5 @@
+id: NODELETE-gm-goal-w2-NODELETE-1-blocker-gm-fin-27-blocker-gm-drain-w1-214-blocker-gm-drain-w2-305
+subject: 'Blocked: owner decision on legacy GM_MCP_HTTP_SINGLETON removal still absent (row NODELETE-gm-goal-w2-NODELETE-1-blocker-gm-fin-27-blocker-gm-drain-w1-214)'
+body: 'Session gm-drain-w2-305 resolved the SPECIFY stage of the parent blocker row. No owner decision is recorded in .gm/prd-log.jsonl or the row file, so the legacy read in gm-mcp/src/singleton.js:57 stays (default). PROVE, EMIT, STATE, CONC, SEC, RES, DECIDE cannot run. Receipt: .gm/receipts/NODELETE-gm-goal-w2-NODELETE-1-blocker-gm-fin-27-blocker-gm-drain-w1-214/01-SPECIFY.md. Unblock by: owner records the external-env risk decision on the parent row; then a session other than the writer edits gm-mcp/src/singleton.js, rebuilds bin/gm-mcp-server.js, and witnesses the removal.'
+session_id: gm-drain-w2-305
+status: pending

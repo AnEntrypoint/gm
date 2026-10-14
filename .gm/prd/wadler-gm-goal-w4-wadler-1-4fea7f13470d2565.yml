@@ -1,0 +1,5 @@
+id: WADLER-gm-goal-w4-WADLER-1
+status: pending
+title: 'gm-mcp/src: 71 hand-written Array.isArray object guards; one shared plain-object predicate'
+body: 'Principle: WADLER (Theorems for Free). Witness: codesearch literal "Array.isArray(" over gm-mcp/src = 71 occurrences in 7 files (dispatch.js 33, response-compact.js 28, cli.js, http-transport.js, mcp-server.js, release-bridge.js, transport-guard.js); codesearch "function isPlainObject" = 0 matches. Repeated shape: typeof X === "object" && !Array.isArray(X), e.g. dispatch.js:81, 106, 141, 161, 168, 530, 767, 1700, 1735. Action: define one isPlainObject(value) in a single module and route the guards through it; the type fact then has one definition and cannot drift between copies. Not edited in this hop: the change spans two files and needs a live gm-mcp bundle rebuild.'
+session_id: gm-goal-w4-WADLER

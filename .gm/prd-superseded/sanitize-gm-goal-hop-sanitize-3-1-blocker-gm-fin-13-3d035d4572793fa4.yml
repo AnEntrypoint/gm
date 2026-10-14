@@ -1,0 +1,5 @@
+id: SANITIZE-gm-goal-hop-SANITIZE-3-1-blocker-gm-fin-13
+subject: 'Blocker for SANITIZE-gm-goal-hop-SANITIZE-3-1: sanitize rules and judge consumer undefined'
+body: 'Row SANITIZE-gm-goal-hop-SANITIZE-3-1 needs a sanitize stage in gm-mcp/src between the reply and any LLM judge. Two decisions are missing, so EMIT is blocked. (1) Content classes to remove: control characters, markup, instruction-like text; the row does not say which. (2) No judge consumes reply text in code: the judge is prose only (rs-plugkit/crates/plugkit-core/src/orchestrator/instructions/prose/llmjudge.md, gm-config/prose/lean-p4.md). Needed from the owner: name the cleaning rules and the judge entry point, or retire the row. Stale cites to fix in the row text: dispatch.js:368-424 is now dispatch.js:448; response-compact.js:76-115 is now response-compact.js:159-230. Receipts: .gm/receipts/SANITIZE-gm-goal-hop-SANITIZE-3-1/01-SPECIFY.md, 02-PROVE.md, 03-EMIT.md. Witness dispatches: 1791890839655-500-6a91102e000cba5b, 1791890856766-500-92cf66ebdd1f7ad5, 1791890853614-500-d1197751f138a06f.'
+session_id: gm-fin-13
+status: pending

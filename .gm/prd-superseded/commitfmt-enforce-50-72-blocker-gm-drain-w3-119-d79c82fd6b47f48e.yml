@@ -1,0 +1,8 @@
+id: COMMITFMT-ENFORCE-50-72-blocker-gm-drain-w3-119
+subject: 'BLOCKER COMMITFMT-ENFORCE-50-72: EDIT and live witness cannot run this session'
+body: 'Blocks row COMMITFMT-ENFORCE-50-72 (stage reached: SPECIFY; receipt .gm/receipts/COMMITFMT-ENFORCE-50-72/01-SPECIFY.md). Premise confirmed: rs-plugkit wasm_dispatch/verbs/git.rs:2174-2176 git_commit refuses only an empty message; no subject or body-wrap check exists. Blockers: (1) the fix is a Rust edit in the nested rs-plugkit repo (plus lean-p5.md:41-47 prose), and local cargo is hook-blocked, so the change is verifiable only by CI release plus a gitlink bump; (2) a live witness dispatch of the new behavior needs that released wasm loaded by the runner, which this session cannot produce; (3) the owner must choose refuse versus re-draft-with-reason, since existing history contains subjects over 50 characters (e.g. ''skills/gm: name the config::Tier enum in section 0 precedence'', 60 chars), and a hard refusal would break auto-bump and submodule flows. Unblock by: decide refuse vs re-draft; implement in git.rs before the subject check; push rs-plugkit to main; bump the parent gitlink; witness with a live git_commit dispatch from a session other than gm-drain-w3-119 that uses a disposable scoped path.'
+session_id: gm-drain-w3-119
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

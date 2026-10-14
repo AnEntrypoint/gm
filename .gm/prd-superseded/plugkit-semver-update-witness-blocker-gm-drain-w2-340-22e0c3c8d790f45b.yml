@@ -1,0 +1,10 @@
+id: PLUGKIT-SEMVER-UPDATE-WITNESS-blocker-gm-drain-w2-340
+subject: 'Blocked: PLUGKIT-SEMVER-UPDATE-WITNESS gated on PLUGKIT-SEMVER-SHA-DRIFT-FIX (pending, unlanded)'
+body: |-
+  Blocker for PLUGKIT-SEMVER-UPDATE-WITNESS (session gm-drain-w2-340, row PLUGKIT-SEMVER-UPDATE-WITNESS-blocker-gm-drain-w1-236).
+  Premise check: the prior blocker's premise 'no pending row carries the download.rs fix' is refuted. PLUGKIT-SEMVER-SHA-DRIFT-FIX exists and is pending (dispatch 1791964089878-500-79e7a409b8d4d532).
+  Tree: agentplug/crates/agentplug-runner/src/download.rs:2093 still returns early on dest.exists() && explicit_version.is_none() (dispatch 1791964096576-500-dfcf08efc4e90b17). The fix is not landed.
+  Closing path: land PLUGKIT-SEMVER-SHA-DRIFT-FIX (exact-match Edit in the agentplug submodule, CI build since local cargo is hook-blocked, submodule pin bump), then run the live daemon witness from another session (loaded_plugin_content_sha256.gm equals the release wasm sha256), then resolve PLUGKIT-SEMVER-UPDATE-WITNESS.
+  Receipt: .gm/receipts/PLUGKIT-SEMVER-UPDATE-WITNESS-blocker-gm-drain-w1-236/01-SPECIFY-gm-drain-w2-340.md
+session_id: gm-drain-w2-340
+status: pending

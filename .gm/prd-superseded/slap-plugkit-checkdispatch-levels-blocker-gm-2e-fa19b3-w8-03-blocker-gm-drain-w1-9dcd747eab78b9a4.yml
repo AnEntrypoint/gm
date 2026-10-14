@@ -1,0 +1,7 @@
+id: SLAP-PLUGKIT-CHECKDISPATCH-LEVELS-blocker-gm-2e-fa19b3-w8-03-blocker-gm-drain-w1-263
+subject: 'Blocker for SLAP-PLUGKIT-CHECKDISPATCH-LEVELS-blocker-gm-2e-fa19b3-w8-03: EMIT and witness cannot close in one session'
+blockedBy:
+- SLAP-PLUGKIT-CHECKDISPATCH-LEVELS-blocker-gm-2e-fa19b3-w8-03
+body: 'Stage PROVE failed for the split of gates.rs check_dispatch (466-774). Leader H1: the change must be built by CI (local cargo hook-blocked, gm-no-local-cargo-verified-by-ci), released, and the runner redeployed before a live shell-git dispatch can witness the refactor; the witness needs a second session. Receipts: .gm/receipts/SLAP-PLUGKIT-CHECKDISPATCH-LEVELS-blocker-gm-2e-fa19b3-w8-03/01-SPECIFY.md and 02-PROVE.md. Unblock: a release cut from rs-plugkit main with the split, then a live shell-git dispatch from a session other than the author''s.'
+session_id: gm-drain-w1-263
+status: pending

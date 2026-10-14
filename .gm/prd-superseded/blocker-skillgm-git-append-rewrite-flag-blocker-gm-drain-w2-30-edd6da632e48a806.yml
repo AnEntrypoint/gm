@@ -1,0 +1,8 @@
+id: BLOCKER-SKILLGM-git-append-rewrite-flag-blocker-gm-drain-w2-30
+subject: 'Blocker for BLOCKER-SKILLGM-git-append-rewrite-flag: flag not yet landed in git verb registry'
+body: 'Row BLOCKER-SKILLGM-git-append-rewrite-flag cannot close in session gm-drain-w2-30. Needed: (1) a per-verb append/rewrite classification field in gm-mcp/src/verb-table.js for the git verbs (git_commit, git_finalize, git_push, git_reset and the rest of the rewrite set in skills/gm/SKILL.md:128), with gm-mcp/src/ and its committed bundle rebuilt together; (2) SKILL.md section 4 (line 128) replaced by a citation of that flag; (3) a live witness, e.g. gm.describe(''git_commit'') showing the field, from a session other than gm-drain-w2-30. Evidence: .gm/receipts/BLOCKER-SKILLGM-git-append-rewrite-flag/01-SPECIFY.md; dispatch 1791960034532-500-88dd138b87921c8e. Also: callers index is busy (lock .gm/gm.db.lock held by pid 29436), so impact/callers evidence is not current and must be refreshed by codeinsight sync before the edit.'
+session_id: gm-drain-w2-30
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

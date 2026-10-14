@@ -1,0 +1,8 @@
+id: G_CONTRACT-hook-denial-type-blocker-gm-drain-w2-124
+subject: 'Blocker for G_CONTRACT-hook-denial-type: hook loader silently coerces a non-bool handler return to ReturnedFalse; witness needs a wasm rebuild and CI-only verification'
+body: 'Parent row: G_CONTRACT-hook-denial-type (session gm-drain-w2-124). Leader H1: rs-plugkit/crates/plugkit-core/src/orchestrator/transitions.rs:1026 maps a non-bool `result` to ReturnedFalse. Denial type already exists (gates.rs:60-75, next_dispatch is the instruction field). Blocked because the probe needs a rebuilt guest (--features slim) and live gate dispatch; local cargo is blocked and wasm edits are verified by CI only. Receipts: .gm/receipts/G_CONTRACT-hook-denial-type/01-SPECIFY.md and 02-PROVE.md. Next: edit transitions.rs to return a typed hook-invalid-return outcome for a non-bool result, let CI publish build the guest, then witness with a live gate dispatch that names the probe.'
+session_id: gm-drain-w2-124
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

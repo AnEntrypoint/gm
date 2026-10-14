@@ -1,0 +1,5 @@
+id: SPECDRIFT-gm-goal-hop-SPECDRIFT-2-1-blocker-gm-drain-w2-419
+subject: 'Blocked: push of gm-mcp 988ac427 refused by bin/src drift gate; other writers hold uncommitted bin/src'
+session_id: gm-drain-w2-419
+body: 'Row SPECDRIFT-gm-goal-hop-SPECDRIFT-2-1-blocker-gm-drain-w1-283 cannot close in session gm-drain-w2-419. Precondition fails: git_status scoped to bin,src (dispatch 1791965900210-500-30903336852f5eea) shows 13 modified, 1 staged (src/self-update.js), 1 untracked (src/spool-store.js). check-bin-drift refuses git_push of 988ac4270b834724972146014033e1d329b0ad58 (CHANGELOG.md only) until those lanes commit or land. Receipts: .gm/receipts/SPECDRIFT-gm-goal-hop-SPECDRIFT-2-1-blocker-gm-drain-w1-283/01-SPECIFY.md and 02-PROVE.md. Unblock: the owning writers of bin/ and src/ in gm-mcp land their hunks on main; then re-run git_push and ci-status for 988ac427 and witness SPECDRIFT-2-1 against it.'
+status: pending

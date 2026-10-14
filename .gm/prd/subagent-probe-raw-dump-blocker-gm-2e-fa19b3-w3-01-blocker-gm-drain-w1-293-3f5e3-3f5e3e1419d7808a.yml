@@ -1,0 +1,10 @@
+id: SUBAGENT-PROBE-RAW-DUMP-blocker-gm-2e-fa19b3-w3-01-blocker-gm-drain-w1-293
+subject: 'SUBAGENT-PROBE-RAW-DUMP blocker: cited CLOSE-XY-G2 artifacts absent at SPECIFY (w3-01 re-run)'
+body: |-
+  SPECIFY stage for row SUBAGENT-PROBE-RAW-DUMP-blocker-gm-2e-fa19b3-w3-01 (session gm-drain-w1-293) cannot run past SPECIFY.
+  Hypotheses: H1 the cited artifacts were removed or never existed (row is stale); H2 they exist under a path the row does not name.
+  Evidence: fs_stat not found for carry/CLOSE-XY-G2-probe.txt, carry/CLOSE-XY-G2.json, .gm/carry/CLOSE-XY-G2-probe.txt, .gm/carry/CLOSE-XY-G2.json (dispatches 1791959311621-500-7a6b1b85318d31c3, 1791959312634-500-720f8ece7c50c807, 1791959313577-500-9002543745565c5b, 1791959314616-500-f3ad0f187ed001ef). codesearch literal CLOSE-XY-G2 over tracked tree and uncovered files: 0 matches (dispatch 1791959327192-500-658f47c7b187906f); gm_state_dir (199 files) not searched.
+  Leader: H1 (stale). Probe needed to separate H1 from H2: codesearch over .gm state with path .gm for CLOSE-XY-G2 (not run here).
+  Needed: owner decides whether the row is closed as stale or re-scoped to a real file. The row cannot be witnessed as written. Row stays pending; no witness is bound.
+session_id: gm-drain-w1-293
+status: pending

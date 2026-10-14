@@ -1,0 +1,15 @@
+id: G_CONTRACT-dream-rsi-walk-acceptance-blocker-gm-drain-w2-115
+subject: 'BLOCK G_CONTRACT-dream-rsi-walk-acceptance: no walk-evidence writer or validator exists to host the acceptance predicate'
+body: |-
+  Blocks row G_CONTRACT-dream-rsi-walk-acceptance (session gm-drain-w2-115, SPECIFY stage).
+
+  Cited lines checked against the tree: skills/dream-rsi/SKILL.md:29-34 (applied:true + witness load and backreferences_verified rule) and :31 (rejected_walks rule) are present as prose. rs-plugkit/crates/plugkit-core/src/orchestrator/dream_rsi.rs:85-94 declares the report fields backreferences_verified, forward_edge_coverage_approx, rejected_walks and part_a. A codesearch for lean-walk writer or validator code in rs-plugkit (regex lean-walk|rejected_walks|forward_edge_coverage|part_a|backreferences_verified) finds only those struct fields; no code reads .gm/lean-walk/<NODE>.json or enforces applied:true against witness dispatch ids.
+
+  Why blocked: the acceptance predicate must move into rs-plugkit code, which is a wasm guest. Local cargo builds are hook-blocked, so verification is CI-only (publish / release, step Build). The row's own deferReason already marks it blockedBy external. This run cannot land the code change or produce a live witness dispatch id for it.
+
+  Next step: a session with rs-plugkit CI access implements the walk-evidence validator in dream_rsi.rs (dispatch-id membership check, failures to rejected_walks), then witnesses it through agentplug-runner. Parent row stays pending until that witness binds.
+session_id: gm-drain-w2-115
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

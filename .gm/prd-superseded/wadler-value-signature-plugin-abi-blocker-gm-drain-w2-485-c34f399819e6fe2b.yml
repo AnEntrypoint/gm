@@ -1,0 +1,5 @@
+id: WADLER-VALUE-SIGNATURE-PLUGIN-ABI-blocker-gm-drain-w2-485
+subject: 'WADLER-VALUE-SIGNATURE-PLUGIN-ABI: PROVE blocked in session gm-drain-w2-485; EMIT needs a CI-built wasm edit and a cross-session witness'
+body: 'Row WADLER-VALUE-SIGNATURE-PLUGIN-ABI-blocker-gm-drain-w1-321 was run again in session gm-drain-w2-485. Stage receipts: .gm/receipts/WADLER-VALUE-SIGNATURE-PLUGIN-ABI-blocker-gm-drain-w1-321/01-SPECIFY.md and 02-PROVE.md. The leader (typed Result envelope in rs-plugkit/crates/plugkit-core/src/plugin_abi.rs) has no probe runnable here: the module is #![cfg(target_arch = "wasm32")], local cargo is hook-blocked, and the only build witness is CI (publish / release, step Build). The envelope change also touches parse_response (call edge plugin_abi.rs:204) and about 15 name-keyed callers. Unblock: an owner or a session with CI access makes the typed envelope edit via the Git API publish path, confirms CI Build green, and a second session (not the editor) witnesses the changed verb. Parent WADLER-VALUE-SIGNATURE-PLUGIN-ABI stays pending.'
+session_id: gm-drain-w2-485
+status: pending

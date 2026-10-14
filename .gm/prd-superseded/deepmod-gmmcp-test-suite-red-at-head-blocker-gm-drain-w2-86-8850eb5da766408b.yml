@@ -1,0 +1,12 @@
+id: DEEPMOD-GMMCP-TEST-SUITE-RED-AT-HEAD-blocker-gm-drain-w2-86
+subject: Deliver requestNumber alias fix in gm-mcp/src/dispatch.js; gm-mcp tree has a concurrent writer
+body: |-
+  Row DEEPMOD-GMMCP-TEST-SUITE-RED-AT-HEAD-blocker-gm-drain-w1-68 cannot close in this run. Leader hypothesis (SPECIFY): gm-mcp HEAD lacks the `const requestNumber` alias in runDispatch, so the suite is RED at HEAD.
+  Evidence: HEAD archive `npm test` exit 1 (dispatch 1791960461028-500-ca118271a4f14e24); working-tree `npm test` exit 0 (dispatch 1791960433933-500-3bfb6cabd9e9f9b4); codesearch `requestNumber` in gm-mcp/src/dispatch.js (dispatch 1791960371469-500-b8138979f0af2406).
+  Blocker on delivery: gm-mcp submodule holds 13 modified paths, 1 staged (src/self-update.js) and 1 untracked (src/spool-store.js) from another writer (git_status 1791960442403-500-52bf269c17b6b3d2). src/dispatch.js is among them, so publishing the fix would carry foreign hunks.
+  Next: when gm-mcp is single-writer, commit only src/dispatch.js carrying the requestNumber fix on main, rebuild the bundle, run npm test in gm-mcp for a witness dispatch id from another session, then prd-resolve DEEPMOD-GMMCP-TEST-SUITE-RED-AT-HEAD-blocker-gm-drain-w1-68.
+session_id: gm-drain-w2-86
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

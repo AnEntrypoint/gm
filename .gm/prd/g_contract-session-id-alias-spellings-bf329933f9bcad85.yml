@@ -1,0 +1,4 @@
+id: G_CONTRACT-session-id-alias-spellings
+subject: The three accepted SESSION_ID spellings (SESSION_ID, session_id, sessionId) are restated in gm-config/prose/entry.md (SESSION_ID section, git_log/git_diff/git_show 'always accepted' list) and skills/gm/SKILL.md ('plugkit rejects empty', alias rule). Normalize the alias set once in the dispatch layer and delete the per-verb prose restatements.
+session_id: lean-node-G_CONTRACT
+status: pending

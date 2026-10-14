@@ -1,0 +1,7 @@
+id: CLEANNAME-gm-goal-w3-CLEANNAME-4-blocker-gm-drain-w2-57-blocker-gm-drain-w3-103
+status: pending
+subject: 'Blocked: gm-mcp temp-name row cannot publish; other writers'' hunks in gm-mcp tree. Next: one gm-mcp writer commits or parks their hunks, then publish spool-store.js and the rebuilt bundle, then witness.'
+blockedBy:
+- external
+session_id: gm-drain-w3-103
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

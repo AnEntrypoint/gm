@@ -1,0 +1,6 @@
+id: CLEANNAME-GMMCP-SRC-blocker-gm-drain-w3-105
+subject: 'Blocker for CLEANNAME-GMMCP-SRC: gm-mcp submodule has foreign uncommitted writers (21 modified, 4 staged, 1 untracked) that already hold most of the renames; the row cites stale lines; remaining open targets are http-session-resume.mjs (r) and mcp-http-probe.mjs (a, r). Needs one writer for gm-mcp/src and test before a rename-only edit can land.'
+status: pending
+blockedBy:
+- CLEANNAME-GMMCP-SRC
+session_id: mcp-codemode-9708-1791970655534

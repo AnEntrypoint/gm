@@ -1,0 +1,9 @@
+id: SMALLESTSET-AGENTS-VERIFIED-2026-10-07
+title: 'SMALLESTSET: compact AGENTS.md ''Verified 2026-10-07'' plugkit load-path block (1.5 KB)'
+description: 'Context spend: the block mixes three current facts (daemon loads ~/.agentplug/plugins/gm.wasm, rebuild with --features slim, sideload is safe with no pin bump) with a stale-version narrative. Keep the three facts as a short Verification-and-delivery bullet; drop the rest. Re-check gm.version: it is a non-semver sideload string today, so the auto-update caveat must be restated against the current value at edit time.'
+node: SMALLESTSET
+phase: P7
+session_id: lean-hop-SMALLESTSET
+source: AGENTS.md line 216-223
+witness: 'Verify at edit time: the slim rebuild command names a real feature in rs-plugkit/Cargo.toml and gm.version in the installed plugin metadata. Done when the block is at most 5 lines.'
+status: pending

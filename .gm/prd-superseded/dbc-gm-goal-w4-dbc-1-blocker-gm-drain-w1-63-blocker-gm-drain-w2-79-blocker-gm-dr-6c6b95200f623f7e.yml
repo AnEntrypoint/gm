@@ -1,0 +1,7 @@
+id: DBC-gm-goal-w4-DBC-1-blocker-gm-drain-w1-63-blocker-gm-drain-w2-79-blocker-gm-drain-w3-143
+subject: 'BLOCKER DBC-gm-goal-w4-DBC-1-blocker-gm-drain-w1-63-blocker-gm-drain-w2-79: codemode declared-body-key fix still cannot land. bin/gm-mcp-server.js is staged by another writer, src/dispatch.js and others hold WIP in the gm-mcp tree, and the live server runs bundle 0.2.47 against 0.2.48 installed. Needs one writer to own the gm-mcp commit, then restart and a cross-session witness. Evidence: .gm/receipts/DBC-gm-goal-w4-DBC-1-blocker-gm-drain-w1-63-blocker-gm-drain-w2-79/01-SPECIFY.md (dispatches 1791971393242-500-8b491c65ed0cb76b, 1791971425133-500-280ffec18bf53da0).'
+blockedBy:
+- external
+session_id: gm-drain-w3-143
+status: pending
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

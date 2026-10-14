@@ -1,0 +1,5 @@
+id: PLUGKIT-SEMVER-SHA-DRIFT-FIX
+subject: Compare remote sidecar sha before the version short-circuit in download.rs
+body: 'File: agentplug/crates/agentplug-runner/src/download.rs (ensure_plugin_installed_via_github early return on dest.exists() with installed version equal; refresh_plugin_if_stale Equal branch). Change: compare the remote sha256 sidecar with installed_wasm_sha256 before the version short-circuit; refresh_plugin_if_stale returns Ok(None) unless the file changed (also fixes the false download log in daemon.rs near the downloaded+verified eprintln). Verification: CI only (local cargo blocked by hook); witness is PLUGKIT-SEMVER-UPDATE-WITNESS re-run after the release. Depends on nothing.'
+session_id: gm-prdall-20261014-04-k03
+status: pending

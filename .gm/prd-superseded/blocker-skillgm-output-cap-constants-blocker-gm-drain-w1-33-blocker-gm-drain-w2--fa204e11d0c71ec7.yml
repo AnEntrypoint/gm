@@ -1,0 +1,8 @@
+id: BLOCKER-SKILLGM-output-cap-constants-blocker-gm-drain-w1-33-blocker-gm-drain-w2-35
+subject: 'Blocker for BLOCKER-SKILLGM-output-cap-constants-blocker-gm-drain-w1-33: PROVE probe cannot run in session gm-drain-w2-35'
+body: 'SESSION_ID gm-drain-w2-35. Row BLOCKER-SKILLGM-output-cap-constants-blocker-gm-drain-w1-33 reached PROVE and its leader probe (H1: a gm-config key per output cap read by both gm-mcp and rs-plugkit) cannot run locally. The key does not exist yet, and verifying it needs an rs-plugkit wasm rebuild with --features slim under CI (no local cargo per gm-no-local-cargo-verified-by-ci). Receipt: .gm/receipts/BLOCKER-SKILLGM-output-cap-constants-blocker-gm-drain-w1-33/02-PROVE.md. Re-run in a session that can dispatch CI for rs-plugkit, after adding the gm-config key, the verbs.md rewrite and the rs-plugkit reader.'
+session_id: gm-drain-w2-35
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

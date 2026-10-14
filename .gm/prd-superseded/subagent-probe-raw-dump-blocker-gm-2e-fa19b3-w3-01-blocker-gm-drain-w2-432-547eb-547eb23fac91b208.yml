@@ -1,0 +1,5 @@
+id: SUBAGENT-PROBE-RAW-DUMP-blocker-gm-2e-fa19b3-w3-01-blocker-gm-drain-w2-432
+subject: 'Blocked: SUBAGENT-PROBE-RAW-DUMP-blocker-gm-2e-fa19b3-w3-01 cites absent carry/CLOSE-XY-G2 artifacts; owner must close as stale or re-scope'
+body: 'Row SUBAGENT-PROBE-RAW-DUMP-blocker-gm-2e-fa19b3-w3-01 cannot reach PROVE. Its cited files carry/CLOSE-XY-G2-probe.txt and carry/CLOSE-XY-G2.json (and .gm/carry/CLOSE-XY-G2.json) are absent: fs_stat dispatches 1791966124387-500-564118580e8b5ff7, 1791966131731-500-4786b57e50f847f9, 1791966142175-500-1f59e94e94fe81c6. Receipt: .gm/receipts/SUBAGENT-PROBE-RAW-DUMP-blocker-gm-2e-fa19b3-w3-01/01-SPECIFY.md. Needed: owner decision to close the parent row as stale or re-scope it to a real file.'
+session_id: gm-drain-w2-432
+status: pending

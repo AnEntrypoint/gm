@@ -1,0 +1,8 @@
+id: gm-git-status-diff-blind-to-submodule-paths-spoint-orch-b186-tsurf-1200
+subject: git_status and git_diff run from c:/dev/gm report dirty:false and an empty diff for an edited file inside the rs-plugkit submodule, so a resolver can conclude its change is missing
+acceptance: git_status {} and git_diff {paths} from c:/dev/gm name a modified path inside a submodule (rs-plugkit/...) with its submodule, or refuse with a message that says the path belongs to a submodule and must be run from that submodule's cwd.
+severity: MEDIUM
+status: pending
+surface: the gm git_status and git_diff verbs (submodule path handling; .gitmodules ignore = dirty on rs-plugkit)
+text: 'Measured by spoint-orch-b186-adv-tsurf-1200 on 2026-10-10 at about 12:35Z: after editing rs-plugkit/crates/plugkit-core/src/orchestrator/pool_slots/traversal.rs, git_status {paths:[...]} and git_diff {paths:[...]} from cwd C:/dev/gm returned changed_paths 0 and an empty diff with no error. The same paths from cwd C:/dev/gm/rs-plugkit showed both files modified. .gitmodules sets ignore = dirty for rs-plugkit, which hides the change from the parent. Found while resolving gm-traversal-surface-state-unreadable-overwrites-leases-spoint-orch-b186-0933.'
+session_id: spoint-orch-b186-adv-tsurf-1200

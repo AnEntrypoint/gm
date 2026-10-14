@@ -1,0 +1,5 @@
+id: GREPFIRST-COMMIT-MESSAGE-EXACT-SEARCH
+status: pending
+title: 'Exact-string search over commit messages: no verb matches a verbatim phrase in history (git_log takes no message filter; codesearch literal scans the tree only), so history lookups fall back to embedding similarity'
+body: 'Witnessed 2026-10-08: codesearch literal for ''standing lean-traversal rules'' (text present only in commit c34db6d''s message) returned 0 matches over 1459 tracked files, exhaustive true. git_log accepts only limit/count/range/ref/rev/path/paths/files (rs-plugkit wasm_dispatch/verbs/git.rs git_log). Done when a verb or a codesearch mode returns every commit whose message contains a verbatim string, exhaustively, in tree-order-like listing, and gm-config/prose/entry.md and rs-plugkit prose ''has this happened before'' paragraph point at it instead of the embedding-only fallback.'
+session_id: lean-hop-GREPFIRST

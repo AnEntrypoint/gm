@@ -1,0 +1,5 @@
+id: ILLEGAL-PLUGKIT-SCANDEPS-STAT-VIEW-blocker-gm-drain-w2-231
+subject: 'Blocker for ILLEGAL-PLUGKIT-SCANDEPS-STAT-VIEW: typed FsStat view needs a CI-built rs-plugkit guest and a cross-session live scan_deps witness'
+body: 'Parent row ILLEGAL-PLUGKIT-SCANDEPS-STAT-VIEW cites scan_deps.rs lines 405, 416, 443, 453, 458 (all present). Closing it needs (a) a typed FsStat view produced once at the host boundary in rs-plugkit/crates/plugkit-core/src/scan_deps.rs, (b) a CI build via cargo build -p rs-plugkit --release --target wasm32-wasip1 --features slim (local cargo is hook-blocked), and (c) a live scan_deps witness dispatch from a session other than gm-drain-w2-231 showing unchanged package count and escapes. None is reachable in session gm-drain-w2-231. Receipts: .gm/receipts/ILLEGAL-PLUGKIT-SCANDEPS-STAT-VIEW/01-SPECIFY.md and 02-PROVE.md. Route: run the Rust change in an rs-plugkit session with CI, then witness from a second session.'
+session_id: gm-drain-w2-231
+status: pending

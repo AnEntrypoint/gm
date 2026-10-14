@@ -1,0 +1,8 @@
+id: CLEANNAME-AGENTPLUG-RUST-blocker-gm-drain-w3-94
+subject: 'CLEANNAME-AGENTPLUG-RUST still blocked: agentplug pin owned by another writer, no local build witness'
+body: 'Row CLEANNAME-AGENTPLUG-RUST (session gm-drain-w3-94) cannot close. Checked: git_status dispatch 1791970560991-500-d7097752f0656ee shows agentplug modified (pin moved off gitlink), so editing agentplug violates the one-writer rule. Local cargo is hook-blocked, so the only build witness is CI (publish / release) on each submodule commit, which this session has not run. The row''s acceptance (cargo build and tests pass, parent pins bumped) needs: (1) the agentplug writer to release its pin; (2) one lane per submodule (libsql db.rs, bert embed.rs, crux baseline.rs, agentplug) landing on main with ci-status green; (3) parent pin bump; (4) a witness from a session other than the editor. Blocks row CLEANNAME-AGENTPLUG-RUST-blocker-gm-drain-w1-41. Witness-economy note: the rename is a cosmetic local rename, so the witness should be CI build plus test on each crate, not a new instrument.'
+session_id: gm-drain-w3-94
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

@@ -1,0 +1,8 @@
+id: LIVEPLAN-RETIRE-PLUGKIT-SEMVER-VERSION-blocker-gm-prdall-20261014-04-k15
+node: LIVEPLAN
+phase: P1
+status: pending
+title: 'Blocked: LIVEPLAN-RETIRE-PLUGKIT-SEMVER-VERSION cannot close until PLUGKIT-SEMVER-UPDATE-WITNESS closes'
+description: 'Row closing condition is PLUGKIT-SEMVER-VERSION-SET and PLUGKIT-SEMVER-UPDATE-WITNESS both closed. SET is completed (witness .gm/witness-log.md 2026-10-12T04:16:13Z gm-version-semver-sideload-clear). UPDATE-WITNESS is pending: the only recorded attempt (witness-log line 447, 2026-10-13T11:42:36Z) RESULT FAIL exit=1, updater early-returns on version equality in download.rs ensure_plugin_installed_via_github; line 449 records the stale gm.wasm incident. Stage SPECIFY reached; PROVE, EMIT and COMPLETE not run because the closing condition is unmet and a stale-wasm sideload is an incident-class action not run in this session. Needed: fix download.rs version-equality early-return, then a live witness per UPDATE-WITNESS (daemon-status loaded_plugin_content_sha256.gm matches release wasm). Then prd-resolve LIVEPLAN-RETIRE-PLUGKIT-SEMVER-VERSION superseding PLUGKIT-SEMVER-VERSION.'
+closing_condition: PLUGKIT-SEMVER-UPDATE-WITNESS closed with a live witness, then LIVEPLAN-RETIRE-PLUGKIT-SEMVER-VERSION resolved.
+session_id: gm-prdall-20261014-04-k15

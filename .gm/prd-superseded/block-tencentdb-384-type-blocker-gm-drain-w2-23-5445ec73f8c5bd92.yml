@@ -1,0 +1,8 @@
+id: BLOCK-TENCENTDB-384-TYPE-blocker-gm-drain-w2-23
+subject: 'PROVE blocked: 384 dims type guard needs a CI-built rs-plugkit wasm and a live witness'
+body: 'Row BLOCK-TENCENTDB-384-TYPE (SPECIFY, receipt .gm/receipts/BLOCK-TENCENTDB-384-TYPE/01-SPECIFY.md) cannot reach PROVE in this session. Premise holds: the 384 check at rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs/memory.rs:729 and :819 is runtime, not type-level. Blocking facts: (1) local cargo builds are hook-blocked, so the change is verified only by the rs-plugkit publish/CI build (wasm32-wasip1 --features slim); (2) the witness must be a live tencentdb-memory-import dispatch with a non-384 destination, observed after that build, from another session; (3) the agent-memory prose copy (skills/agent-memory/SKILL.md 92-95) is outside entry-extended.md and needs its own row. Unblock: file the rs-plugkit change as a row with its CI run as evidence, then witness the rejection from a different session. Session gm-drain-w2-23.'
+session_id: gm-drain-w2-23
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

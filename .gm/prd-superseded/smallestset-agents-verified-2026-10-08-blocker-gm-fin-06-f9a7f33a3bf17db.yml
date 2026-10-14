@@ -1,0 +1,6 @@
+id: SMALLESTSET-AGENTS-VERIFIED-2026-10-08-blocker-gm-fin-06
+title: 'Owner decision: git_reset mode hard is accepted by source, but the durable rule says it is refused'
+description: 'SMALLESTSET (gm-fin-06) found rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs/git.rs git_reset (mode hard or hard:true) runs git reset --hard, and the verb has no pushed-commit or staged-path refusal. The row durable rule said mode:hard is refused. verbs.md and docs/verified-incidents.md now describe the current source. Owner must choose: keep hard reset (no change), or refuse hard in git_reset (rs-plugkit code change, CI-only witness, needs owner approval).'
+witness: codesearch GIT_RESET_MODES and hard branch in rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs/git.rs (git.rs:7225-7376)
+session_id: gm-fin-06
+status: pending

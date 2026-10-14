@@ -1,0 +1,9 @@
+id: PBTAGENT-gm-goal-hop-PBTAGENT-2-1-blocker-gm-fin-18
+subject: 'PBTAGENT-2-1 cannot run: owner decision HUGHES-gm-goal-hop-HUGHES-2-2 is still pending'
+status: blocked
+blockedBy:
+- HUGHES-gm-goal-hop-HUGHES-2-2
+principle: PBTAGENT
+surface: gm-mcp/src
+session_id: mcp-codemode-34608-1791890916228
+body: 'Row PBTAGENT-gm-goal-hop-PBTAGENT-2-1 (session gm-fin-18, role resolver) stopped at PROVE. Its own action says to write the two property checks only after the owner decides whether a generated-input check against real code may live in gm-mcp; that decision row HUGHES-gm-goal-hop-HUGHES-2-2 is still pending (prd-list id, status pending). Stage SPECIFY ran: unchangedByCompaction exists at gm-mcp/src/response-compact.js:406 (called at :531); readSingletonState has no match in gm-mcp/src (cited line is stale). AGENTS.md bans synthetic tests and mocks, so no test was written. Unblock: owner decides HUGHES-2-2; then the parent row runs its action (property over unchangedByCompaction and readSingletonState, or a replacement for the vanished readSingletonState, with a witness that reports its counts).'

@@ -1,0 +1,5 @@
+id: SLAP-GMMCP-RUNDISPATCH-LEVELS-blocker-gm-drain-w2-370
+subject: 'Blocker: runDispatch split absent from tree; delivery blocked by another writer''s dispatch.js hunks and bundle'
+body: 'Blocker for SLAP-GMMCP-RUNDISPATCH-LEVELS (session gm-drain-w2-370). SPECIFY: runDispatch is at gm-mcp/src/dispatch.js:1943-2190 (248 lines); the row''s 1166-1361 cites are stale. No validateDispatch/publishDispatch/pollForOutcome/shapeLandedOutFile symbol exists in gm-mcp/src (codesearch exhaustive, 0 matches), so the split claimed by blocker SLAP-GMMCP-RUNDISPATCH-LEVELS-blocker-gm-fin-10 is not in the tree. CONC: dispatch.js carries another lane''s uncommitted spool-store adoption (77+/98-, imports untracked src/spool-store.js) and bin/gm-mcp-server.js is modified; a path-scoped commit would sweep those hunks. Unblock: one writer owns dispatch.js, lands spool-store.js with it, then the split is applied, the bundle rebuilt (npm run build), and a live gm dispatch witnessed. Receipts: .gm/receipts/SLAP-GMMCP-RUNDISPATCH-LEVELS/01-SPECIFY-gm-drain-w2-370.md, 05-CONC-gm-drain-w2-370.md, 09-COMPLETE-gm-drain-w2-370.md.'
+session_id: gm-drain-w2-370
+status: pending

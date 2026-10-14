@@ -1,0 +1,5 @@
+id: DBC-LIBSQL-INERT-TXN-VERBS-witness-route-gm-drain-w3-145
+subject: 'BLOCKER: libsql begin refusal has no live witness route (gm-drain-w3-145)'
+body: 'Blocks row DBC-LIBSQL-INERT-TXN-VERBS-blocker-gm-drain-w1-64 (run session gm-drain-w3-145). Evidence at SPECIFY/ELIMINATE: agentplug-libsql/src/db.rs:726-729 already refuses begin/commit/rollback by name with ok:false (dispatch 1791971396246-500-582bf27971ef9fbc); db.rs:744 inert_verbs is [open, close] only (dispatch 1791971288954-500-2b551b4fb567115). So the parent''s code-level contract is met; the blocker row''s stated acceptance is stale. The witness that would close DBC-LIBSQL-INERT-TXN-VERBS still needs a live dispatch to the built libsql plugin begin, and no gm verb routes to it (gm.list filter libsql has no begin verb; sql_open, sql_exec, sql_query, sql_smoke carry none). Needed: either a verb route to libsql begin/commit/rollback, or the owner rewriting the parent row to witness db.rs:726-729 through the built wasm. Row stays pending; no witness bound.'
+session_id: gm-drain-w3-145
+status: pending

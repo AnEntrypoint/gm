@@ -1,0 +1,5 @@
+id: XY-DREAMRSI-SMALLEST-MODEL-QUALITY-blocker-gm-drain-w1-329
+subject: 'Blocker for XY-DREAMRSI-SMALLEST-MODEL-QUALITY: the two-model probe cannot run in session gm-drain-w1-329'
+body: 'PROVE stage blocked. Row witness needs one identical lean node run through the smallest model and a larger model, then both .gm/lean-walk/<NODE>.json evidence files compared. Model choice is made by the spawning caller (skills/dream-rsi/SKILL.md:8), and this session has no Agent tool to launch a subagent on a chosen model, so the two runs cannot be produced here. Receipt: .gm/receipts/XY-DREAMRSI-SMALLEST-MODEL-QUALITY/01-SPECIFY.md (ACH matrix H1 model size, H2 prompt/graph, H3 evidence field; all cells N). Closing needs a session that can dispatch two model-pinned subagents on the same node and scope, then a witness naming the leader from SPECIFY. Until then the parent row stays pending.'
+session_id: gm-drain-w1-329
+status: pending

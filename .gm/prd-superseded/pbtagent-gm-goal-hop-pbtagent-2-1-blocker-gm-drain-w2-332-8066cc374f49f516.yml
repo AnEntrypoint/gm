@@ -1,0 +1,5 @@
+id: PBTAGENT-gm-goal-hop-PBTAGENT-2-1-blocker-gm-drain-w2-332
+subject: 'Blocked: PBTAGENT-gm-goal-hop-PBTAGENT-2-1 needs an owner decision on HUGHES-gm-goal-hop-HUGHES-2-2 and its two candidate targets are already resolved'
+body: 'Parent row: PBTAGENT-gm-goal-hop-PBTAGENT-2-1 (stays pending). Session gm-drain-w2-332. Blocker cause: (1) gate HUGHES-gm-goal-hop-HUGHES-2-2 (may a generated-input property check live in gm-mcp; AGENTS.md bans synthetic tests) has no owner decision; (2) gm-prd forbids test files, and a self-witness is refused, so no PROVE can close here; (3) both candidate defects are already resolved: HUGHES-gm-goal-hop-HUGHES-1-2 stale (witness 1791962581548-500-1076c2bbdac054ec), HUGHES-gm-goal-hop-HUGHES-2-1 fixed (witness 1791962696343-500-d53fa6c48e975121). Unblock: owner decides HUGHES-2-2; then a fresh session finds a new live defect candidate (the leader) before any property run; the witness must come from another session and name that leader. Receipts: .gm/receipts/PBTAGENT-gm-goal-hop-PBTAGENT-2-1/01-SPECIFY.md and 02-PROVE.md.'
+session_id: gm-drain-w2-332
+status: pending

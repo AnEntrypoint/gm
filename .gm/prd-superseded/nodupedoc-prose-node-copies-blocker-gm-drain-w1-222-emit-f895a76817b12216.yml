@@ -1,0 +1,5 @@
+id: NODUPEDOC-PROSE-NODE-COPIES-blocker-gm-drain-w1-222-emit
+subject: 'EMIT blocked for NODUPEDOC-PROSE-NODE-COPIES: live count is 143 files in gm-config/prose (of 160) and 143 in rs-plugkit/.../instructions/prose (of 159), 286 total, not 99 / 202. Restate the witness to these counts (dispatch 1791958832647-500-17e01fd95771c051 and 1791958835385-500-44183ecb2d0b77b6), pick the single owner file for the shared sentence, then edit the 286 files across gm-config and rs-plugkit, and land the build-time embed of the config copy into the compiled fallback with a rs-plugkit wasm CI witness (no local cargo). Receipt: .gm/receipts/NODUPEDOC-PROSE-NODE-COPIES-blocker-gm-prdall-20261014-04-k08/01-SPECIFY.md.'
+witness: codesearch literal exhaustive count of the verbatim leave-transition sentence in gm-config/prose and rs-plugkit/crates/plugkit-core/src/orchestrator/instructions/prose returns 0 occurrences after the shared-owner change lands, and rs-plugkit wasm CI is green on the commit that carries it.
+session_id: gm-drain-w1-222
+status: pending

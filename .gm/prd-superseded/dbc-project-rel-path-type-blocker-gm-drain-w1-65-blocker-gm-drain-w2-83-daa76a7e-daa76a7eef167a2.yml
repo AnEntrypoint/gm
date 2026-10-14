@@ -1,0 +1,8 @@
+id: DBC-PROJECT-REL-PATH-TYPE-blocker-gm-drain-w1-65-blocker-gm-drain-w2-83
+subject: 'Blocked: DBC-PROJECT-REL-PATH-TYPE-blocker-gm-drain-w1-65 cannot close in session gm-drain-w2-83'
+body: 'Row DBC-PROJECT-REL-PATH-TYPE-blocker-gm-drain-w1-65 stays pending. SPECIFY (receipt .gm/receipts/DBC-PROJECT-REL-PATH-TYPE-blocker-gm-drain-w1-65/01-SPECIFY.md): path_within_project at verbs.rs:581 matches the row; path_outside_project_message is at verbs.rs:588 and git_worktree_target at verbs/git.rs:7386, drifted from the cited lines. PROVE (02-PROVE.md) is blocked: the change is a Rust edit in the rs-plugkit nested repo, verification is CI-only, and the acceptance witness needs a guest built from a new rs-plugkit commit and must come from another session (self-witness refused). Unblock: refresh the cited lines, make the ProjectRelPath newtype in rs-plugkit, publish through CI (publish / release, step Build), bump the gitlink, then run the live witness from a different session.'
+session_id: gm-drain-w2-83
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

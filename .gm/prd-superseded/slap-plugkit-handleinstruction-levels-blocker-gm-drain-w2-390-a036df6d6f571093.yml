@@ -1,0 +1,5 @@
+id: SLAP-PLUGKIT-HANDLEINSTRUCTION-LEVELS-blocker-gm-drain-w2-390
+subject: 'Blocked: SLAP-PLUGKIT-HANDLEINSTRUCTION-LEVELS PROVE needs a local cargo build or CI-built rs-plugkit wasm plus a live agentplug-runner witness, unreachable in session gm-drain-w2-390; cited line 514 is now 757'
+body: 'Parent row: SLAP-PLUGKIT-HANDLEINSTRUCTION-LEVELS. Stage reached: PROVE (receipts 01-SPECIFY.md, 02-PROVE.md under .gm/receipts/SLAP-PLUGKIT-HANDLEINSTRUCTION-LEVELS/). Blocker: the acceptance witness (cargo build of rs-plugkit, then a live instruction dispatch through agentplug-runner) cannot run in this session because local cargo is hook-blocked and the wasm guest builds only in CI (publish / release, step Build). Stale cite: handle_instruction is at rs-plugkit/crates/plugkit-core/src/orchestrator/instructions/mod.rs:757, not 514 (codesearch 1791965101183-500-f341612482381cd5). Unblock: run the refactor through a session with CI access, or have CI build the changed guest and witness the instruction verb there. Leader H1 (refactor as scoped) is unverified; no source edit was made.'
+session_id: gm-drain-w2-390
+status: pending

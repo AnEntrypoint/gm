@@ -1,0 +1,15 @@
+id: BLOCKER-G_CONTRACT-gm-continue-counter-not-enforced-blocker-gm-drain-w3-45
+subject: 'Blocker for BLOCKER-G_CONTRACT-gm-continue-counter-not-enforced-blocker-gm-drain-w1-26: no located gm-continue enforcing code, end-outcome names undefined, and no CI-built witness'
+body: |-
+  Row acceptance (unchanged, from gm-drain-w1-26): gm-continue dispatch state implements the .gm/.gm-continue-count counter and the two end outcomes, and a third gm-continue cycle is refused, verified by a CI-built rs-plugkit change.
+
+  SPECIFY evidence (session gm-drain-w3-45, receipt .gm/receipts/BLOCKER-G_CONTRACT-gm-continue-counter-not-enforced-blocker-gm-drain-w1-26/01-SPECIFY.md): rs-plugkit has no counter under another name (literal gm-continue-count: 1 hit, gitignore.rs:16 only; regex continue.count|continue_count: same; end_states|end_state|terminal_outcome: 0 hits). Dispatches 1791969660999-500-d1721258d84d09a3, 1791969666269-500-b5b9071d996e0f3c, 1791969673811-500-d55e3365c7a93b93.
+
+  Remaining unknowns: U1 the Rust function that dispatches gm-continue and holds its state (run callers/impact on plugkit-core orchestrator/instructions/mod.rs first); U2 the two end-outcome names, which the row does not specify; U3 local cargo is hook-blocked, so verification is CI-only and the witness is a third gm-continue cycle in another session.
+
+  Next step: resolve U1 and U2 by codeinsight, then record the file in the row (a row that names its file), edit in rs-plugkit on main, publish through the Git API route, and witness through ci-status plus a live cycle from a separate session.
+session_id: gm-drain-w3-45
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

@@ -1,0 +1,5 @@
+id: DREAMRSI-PROPOSE-SLICE
+title: Dream-RSI propose-only strategy verb, thin vertical slice
+body: 'Thinnest end-to-end slice for the propose-only selection layer. Add one propose-only verb dream-strategy-propose in rs-plugkit orchestrator/dream_rsi.rs. It reads the replay from dream_rsi::automatic_replay for the calling session and writes .gm/dream-rsi/<session>/proposed-strategy.json, never active-strategy.json. The cycle tick dream-replay-cycle stays the only unattended caller and does not invoke the verb. Witness: a live spool dispatch of dream-strategy-propose through agentplug-runner returns the proposal, and active-strategy.json is byte-identical before and after. Scope: rs-plugkit/crates/plugkit-core/src/orchestrator/dream_rsi.rs and orchestrator/mod.rs dispatch table.'
+status: pending
+session_id: lean-node-THINSLICE

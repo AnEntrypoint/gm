@@ -1,0 +1,5 @@
+id: FUZZ-gm-goal-hop-FUZZ-1-1
+subject: gm-mcp readDaemonLiveness throws on a .status.json whose JSON is null
+description: 'gm-mcp/src/dispatch.js readDaemonLiveness: the try block guards JSON.parse only. A .status.json containing the JSON literal null parses to null, and the next line reads status.pid, throwing TypeError "Cannot read properties of null (reading pid)". Witness (executed, node on the scratchpad witness.mjs): body null -> THREW TypeError; body {"ts":0} -> OK. Fix shape: return coldProjectLiveness() when the parsed value is not a non-null object. Not yet fixed: no live spool witness was run.'
+status: pending
+session_id: gm-goal-hop-FUZZ-1

@@ -1,0 +1,5 @@
+id: MEMTOOL-AGENTS-VERIFIED-HISTORY-TO-MEMORY-blocker-gm-fin-33-blocker-gm-drain-w2-294
+subject: 'Blocker: re-scope MEMTOOL-AGENTS-VERIFIED-HISTORY-TO-MEMORY to docs/verified-incidents.md before it can close'
+body: 'Filed by gm-drain-w2-294 at SPECIFY of row MEMTOOL-AGENTS-VERIFIED-HISTORY-TO-MEMORY-blocker-gm-fin-33. The staleness claim is confirmed: codesearch 1791963439570-500-72104e16e92102f7 finds only two inline bullets in AGENTS.md (lines 100, 101), and no dated Verified sections. The parent row MEMTOOL-AGENTS-VERIFIED-HISTORY-TO-MEMORY (scope AGENTS.md) cannot witness as written. Remedy: a new row scoped to docs/verified-incidents.md whose memorize-fire and recall witness run first, whose witness drops the inline AGENTS.md bullets, and which closes the parent. Receipt: C:\dev\gm\.gm\receipts\MEMTOOL-AGENTS-VERIFIED-HISTORY-TO-MEMORY-blocker-gm-fin-33\01-SPECIFY.md. No repository file changed, no memo fired.'
+session_id: gm-drain-w2-294
+status: pending

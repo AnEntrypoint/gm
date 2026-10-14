@@ -1,0 +1,17 @@
+id: BLOCKER-SKILLGM-output-cap-constants-blocker-gm-drain-w2-34-blocker-gm-drain-w3-62
+subject: 'Blocker for BLOCKER-SKILLGM-output-cap-constants-blocker-gm-drain-w2-34 (session gm-drain-w3-62): shared cap key needs an owner decision and a CI-only rs-plugkit witness'
+body: |-
+  Row BLOCKER-SKILLGM-output-cap-constants-blocker-gm-drain-w2-34 cannot close in session gm-drain-w3-62; it stays pending.
+
+  SPECIFY (re-run this session, dispatches 1791969853617-500-2c8e0e5bc4c22eec and 1791969857791-500-f5928182c708759d): the caps are still literals. gm-mcp/src/dispatch.js:641 RESULT_CHUNK_MAX_CHARACTERS=16000; dispatch.js:61 DEFAULT_REPLY_MAX_CHARS=24000; response-compact.js:14 FILE_READ_INLINE_MAX default 65536; mcp-server.js:173 and :181 result read limit 16000; rs-plugkit wasm_dispatch/verbs/git.rs:4411-4413 and :4501-4502 diff/stdout cut 60000. No shared key exists in gm-config/gm.config.json. gm-mcp/src and skills/gm/docs/verbs.md are clean in git_status (head 60eaaf7).
+
+  PROVE blocked: the shared key is read by both gm-mcp (JS, locally runnable) and rs-plugkit (Rust, wasm built only in CI with --features slim; local cargo is hook-blocked). The leader probe (a rs-plugkit read of the key) cannot run here, and a witness from this session would be a self-witness (prd-resolve-self-witness).
+
+  Blocked stage: EDIT/PROVE. Owner decisions needed first: (a) which config key name and home, (b) whether gm-mcp lands before rs-plugkit (a half-landed key leaves the two caps disagreeing).
+
+  Next: add the gm-config key, have gm-mcp read it, rebase verbs.md onto it, then rs-plugkit git.rs in a CI-built release; witness from a second session through CI (ci-status on the sha). Receipt: .gm/receipts/BLOCKER-SKILLGM-output-cap-constants-blocker-gm-drain-w2-34/03-SPECIFY.md.
+session_id: gm-drain-w3-62
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

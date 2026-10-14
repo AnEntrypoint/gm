@@ -1,0 +1,6 @@
+id: PARNAS-gm-goal-w4-PARNAS-2
+title: inflightDispatchCount is a shared dispatch counter read by four modules with no owning interface
+status: pending
+obligation_kind: discovery
+session_id: gm-goal-w4-PARNAS
+body: 'Information hiding: dispatch.js:15 exports inflightDispatchCount, imported by bundle-refresh.js:2, self-update.js:9, transport-guard.js:3, release-bridge.js:8. Each consumer assumes the counter representation. Test: codesearch import in gm-mcp/src (witness 1791747209943-500-f4f9d0a9ef8093f2). Action: expose one query function from the owning module that returns a verdict, not the raw counter.'

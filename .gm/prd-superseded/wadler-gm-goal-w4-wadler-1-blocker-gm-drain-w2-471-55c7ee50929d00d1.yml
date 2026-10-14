@@ -1,0 +1,5 @@
+id: WADLER-gm-goal-w4-WADLER-1-blocker-gm-drain-w2-471
+subject: 'BLOCKER WADLER-gm-goal-w4-WADLER-1: CONC stage cannot run; gm-mcp/src files hold another writer''s uncommitted hunks'
+body: 'Blocks row WADLER-gm-goal-w4-WADLER-1 (plain-object predicate replacing 92 Array.isArray guards in gm-mcp/src). Receipts: .gm/receipts/WADLER-gm-goal-w4-WADLER-1/01-SPECIFY.md, 05-CONC.md. Evidence: git status --short gm-mcp shows uncommitted M on src/dispatch.js, codemode.js, cli.js, response-compact.js, http-transport.js, release-bridge.js, index.js, self-update.js (MM), bin/gm-mcp-server.js, and AGENTS.md staged. Editing those files now merges this row into another lane''s in-progress work and cannot be finalized with paths isolated. Unblock: the owning writer commits or parks its gm-mcp hunks on main, then the row re-runs from SPECIFY. Also: row line refs drifted (71 -> 92 occurrences, 7 -> 9 files; dispatch.js:81 -> :85). Null-semantics hazard at dispatch.js:582 (no null guard) needs a per-site equivalence check.'
+session_id: gm-drain-w2-471
+status: pending

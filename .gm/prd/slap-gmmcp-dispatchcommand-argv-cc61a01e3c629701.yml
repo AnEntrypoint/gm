@@ -1,0 +1,8 @@
+id: SLAP-GMMCP-DISPATCHCOMMAND-ARGV
+title: 'SLAP: separate dispatchCommand argv parsing from the gmDispatch call'
+description: 'gm-mcp/src/cli.js dispatchCommand (lines 95-160, 65 lines) mixes argv flag and positional parsing, JSON body parsing with shape checks, the --no-ignore rule, numeric coercion, and the gmDispatch call with output and exit-code mapping. Scope: this function. Change: a parseDispatchArgv helper returning the args object or a usage error, with dispatchCommand reading as parse, dispatch, print. Behaviour unchanged: every usage error message, exit code 2 and 1 mapping, and the session_id and cwd defaults stay identical. Witness: exec_js line count under 25, then a live node gm-mcp-server dispatch of one exec_js echo with --raw.'
+node: SLAP
+phase: P3
+status: pending
+source: lean-hop-SLAP
+session_id: lean-hop-SLAP

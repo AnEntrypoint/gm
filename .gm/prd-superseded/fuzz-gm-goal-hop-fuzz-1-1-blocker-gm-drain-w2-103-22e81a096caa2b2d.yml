@@ -1,0 +1,8 @@
+id: FUZZ-gm-goal-hop-FUZZ-1-1-blocker-gm-drain-w2-103
+subject: Land readDaemonLiveness null-status guard in gm-mcp without publishing foreign WIP
+body: 'Row FUZZ-gm-goal-hop-FUZZ-1-1 (readDaemonLiveness throws on .status.json = null) is fixed in the working tree and witnessed live: dispatch 1791960624698-500-74af2ec7a9767ba0 (null -> OK cold liveness; {"ts":0} unchanged). Edit: gm-mcp/src/dispatch.js after the readStatusJson try block, guard `if (!status || typeof status !== ''object'') return coldProjectLiveness()`. Bundle rebuilt (node scripts/build.mjs); check-bin-drift clean; daemon-preflight 19/19 (dispatch 1791960641726-500-c4ef19c958acd48f). BLOCKED on collision: gm-mcp/src/dispatch.js and bin/gm-mcp-server.js carry another writer''s uncommitted spool-store refactor (src/spool-store.js untracked, src/self-update.js staged; git_status 1791960647186-500-c0544ea042a24b9c). Committing now would break HEAD (dispatch.js imports from untracked spool-store.js). Unblock: the spool-store writer lands its commit first, then re-apply the 2-line guard and re-run the bundle build, then git_finalize gm-mcp paths src/dispatch.js and bin/gm-mcp-server.js, ci-status, and bump the rs-plugkit-style parent gitlink for gm-mcp. Receipts: .gm/receipts/FUZZ-gm-goal-hop-FUZZ-1-1/ 01-08.'
+session_id: gm-drain-w2-103
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

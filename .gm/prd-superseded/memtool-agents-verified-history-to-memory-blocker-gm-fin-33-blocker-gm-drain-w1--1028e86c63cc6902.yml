@@ -1,0 +1,7 @@
+id: MEMTOOL-AGENTS-VERIFIED-HISTORY-TO-MEMORY-blocker-gm-fin-33-blocker-gm-drain-w1-207-blocker-gm-drain-w2-295
+subject: 'Blocked: parent MEMTOOL-AGENTS-VERIFIED-HISTORY-TO-MEMORY still scoped to AGENTS.md; its five dated sections live in docs/verified-incidents.md. Rescope needed before any witness.'
+blockedBy:
+- MEMTOOL-AGENTS-VERIFIED-HISTORY-TO-MEMORY-blocker-gm-fin-33-blocker-gm-drain-w1-207
+body: 'Blocked by session gm-drain-w2-295 at SPECIFY (receipt .gm/receipts/MEMTOOL-AGENTS-VERIFIED-HISTORY-TO-MEMORY-blocker-gm-fin-33-blocker-gm-drain-w1-207/01-SPECIFY.md). Verified: AGENTS.md has no ''## Verified 20xx'' section (codesearch 1791963447986-500-8deffb59e7e28fd9); docs/verified-incidents.md holds the 2026-09-14, 2026-10-04, 2026-10-05, 2026-10-07 and 2026-10-08 sections (codesearch 1791963461494-500-5d565dd618421777). Work needed, as a decision for the owner: rescope MEMTOOL-AGENTS-VERIFIED-HISTORY-TO-MEMORY (prd-add overwrite:true) to scope docs/verified-incidents.md, state which sections to memorize (the 2026-10-09, 10-10 and 10-11 sections are also there and outside the parent''s list), and state what rule stays in AGENTS.md. Then memorize-fire each section and witness by exact-phrase recall before any deletion. Row stays pending until that rescope lands.'
+session_id: gm-drain-w2-295
+status: pending

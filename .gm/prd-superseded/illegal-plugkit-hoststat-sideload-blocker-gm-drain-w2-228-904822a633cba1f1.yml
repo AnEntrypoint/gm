@@ -1,0 +1,9 @@
+id: ILLEGAL-PLUGKIT-HOSTSTAT-SIDELOAD-blocker-gm-drain-w2-228
+subject: 'Blocked: ILLEGAL-PLUGKIT-HOSTSTAT-SIDELOAD still unwitnessed (gm-drain-w2-228)'
+lane_wait_ms: 240000
+body: 'Parent row ILLEGAL-PLUGKIT-HOSTSTAT-SIDELOAD cannot close. Unmet: (1) slim wasm is CI-only (publish / release, step Build); (2) rs-plugkit host_stat change must be committed and pushed to main with ci-status green, the submodule currently has an unrelated dirty crates/plugkit-core/Cargo.toml; (3) back up ~/.agentplug/plugins/gm.wasm and ~/.gm-tools/plugkit.wasm before sideload. Leader H1 (host_stat returns no is_directory) is unwitnessed; source check at host_abi.rs:496 only. Receipts: .gm/receipts/ILLEGAL-PLUGKIT-HOSTSTAT-SIDELOAD-blocker-gm-drain-w1-161/01-03. Unblock: follow the three preconditions in order, then witness H1 with a directory and a file through agentplug-runner.'
+session_id: gm-drain-w2-228
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

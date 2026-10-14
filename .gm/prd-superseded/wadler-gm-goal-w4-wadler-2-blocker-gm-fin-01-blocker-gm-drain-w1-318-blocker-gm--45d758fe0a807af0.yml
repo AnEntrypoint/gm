@@ -1,0 +1,5 @@
+id: WADLER-gm-goal-w4-WADLER-2-blocker-gm-fin-01-blocker-gm-drain-w1-318-blocker-gm-drain-w2-478
+subject: 'Blocked: WADLER-gm-goal-w4-WADLER-2-blocker-gm-fin-01-blocker-gm-drain-w1-318 EMIT and witness need a rebuilt gm-mcp bundle and server restart'
+body: 'Blocker for WADLER-gm-goal-w4-WADLER-2-blocker-gm-fin-01-blocker-gm-drain-w1-318 (session gm-drain-w2-478). SPECIFY: the parent blocker cites gm-mcp/src/dispatch.js 1497-1503, 1458, 1472 and 1526-1532, all stale. Live codesearch (dispatch 1791968008876-500-1aa57c5fb711fe77) places the typeof status guards at 1469, 1472, 1486 and 1511-1517, with the queue-field copy at 1533-1534. EMIT needs npm run build (scripts/build.mjs) for bin/gm-mcp-server.js plus a gm-mcp server restart; this session can do neither, and the bundle is CI-built. The witness needs a live status dispatch against the restarted server, which is the same gate. Next: a session with a CI-built gm-mcp bundle and restart authority re-reads the live lines, applies the typed pick, witnesses the status keys, and closes WADLER-gm-goal-w4-WADLER-2-blocker-gm-fin-01 with that dispatch id.'
+session_id: gm-drain-w2-478
+status: pending

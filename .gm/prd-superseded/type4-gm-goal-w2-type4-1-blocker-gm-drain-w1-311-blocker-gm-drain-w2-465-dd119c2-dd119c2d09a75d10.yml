@@ -1,0 +1,5 @@
+id: TYPE4-gm-goal-w2-TYPE4-1-blocker-gm-drain-w1-311-blocker-gm-drain-w2-465
+subject: 'Blocked: gm-mcp shared dirty tree still blocks flagValue publish for TYPE4-gm-goal-w2-TYPE4-1-blocker-gm-drain-w1-311'
+body: 'Row TYPE4-gm-goal-w2-TYPE4-1-blocker-gm-drain-w1-311 cannot close in session gm-drain-w2-465. Its unblock condition is unmet: gm-mcp still has other writers'' uncommitted hunks (git_status dispatch 1791967913085-500-71d06c90841bb8d7: 20 modified, 2 staged, untracked src/spool-store.js). The flagValue edits are present (codesearch dispatch 1791967920572-500-b4c5a94b8754afd8). Unblock: the owning lane commits its gm-mcp work with explicit paths; then rebuild the bundle, commit src/argv.js, src/http-transport.js, src/index.js and the bundle together, and bump the parent gitlink. Receipt: .gm/receipts/TYPE4-gm-goal-w2-TYPE4-1-blocker-gm-drain-w1-311/01-SPECIFY.md.'
+session_id: gm-drain-w2-465
+status: pending

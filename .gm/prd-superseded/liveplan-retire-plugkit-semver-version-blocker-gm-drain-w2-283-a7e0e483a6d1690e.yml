@@ -1,0 +1,7 @@
+id: LIVEPLAN-RETIRE-PLUGKIT-SEMVER-VERSION-blocker-gm-drain-w2-283
+node: LIVEPLAN
+phase: P1
+status: pending
+title: 'Blocker: UPDATE-WITNESS needs a live sideload witness that this host cannot run'
+description: 'LIVEPLAN-RETIRE-PLUGKIT-SEMVER-VERSION closes when PLUGKIT-SEMVER-VERSION-SET (completed, witness 1791778543596-500-b4b73bcc410e99f8) and PLUGKIT-SEMVER-UPDATE-WITNESS both close. SET is closed. UPDATE-WITNESS is pending and requires sideloading a stale gm.wasm, letting the updater run, and reading daemon-status.json loaded_plugin_content_sha256.gm from a live daemon. Probe dispatch 1791963359867-500-208d71d4258503bf (SPECIFY, read-only) found /config/.agentplug/plugins/gm.version, gm.local-dev-sideload.json and /config/.agentplug/daemon-status.json all ENOENT on this Windows host, so the live daemon state the witness reads is not reachable from this session. Unblock: run UPDATE-WITNESS in a session with the daemon''s /config mount, then resolve the parent row with both witnesses.'
+session_id: gm-drain-w2-283

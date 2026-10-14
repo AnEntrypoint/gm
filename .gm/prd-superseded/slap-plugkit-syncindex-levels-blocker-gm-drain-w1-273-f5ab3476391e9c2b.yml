@@ -1,0 +1,5 @@
+id: SLAP-PLUGKIT-SYNCINDEX-LEVELS-blocker-gm-drain-w1-273
+subject: 'Blocker: SLAP-PLUGKIT-SYNCINDEX-LEVELS-blocker-gm-2e-fa19b3-w7-01 cannot reach PROVE/EMIT/witness in session gm-drain-w1-273'
+body: 'Row SLAP-PLUGKIT-SYNCINDEX-LEVELS-blocker-gm-2e-fa19b3-w7-01 is itself a blocker of SLAP-PLUGKIT-SYNCINDEX-LEVELS. SPECIFY (receipt .gm/receipts/SLAP-PLUGKIT-SYNCINDEX-LEVELS-blocker-gm-2e-fa19b3-w7-01/01-SPECIFY.md) confirmed the cause: the EMIT step is a Rust refactor of rs-plugkit/crates/plugkit-core/src/memory_md.rs sync_index (lines 695-1098, not 689/395), and its witness is a live memory sync dispatch against a CI-built rs-plugkit wasm. Local cargo is blocked by a hook (memory gm-no-local-cargo-verified-by-ci), so no compile proof exists in this session, and no witness dispatch id can be produced without a CI build. Unblock: perform the refactor where cargo is allowed or land it through CI, then witness with a live memory sync dispatch whose report keys match memory_md.rs lines 1079-1096, from a session other than the author. Parent row SLAP-PLUGKIT-SYNCINDEX-LEVELS stays pending.'
+session_id: gm-drain-w1-273
+status: pending

@@ -1,0 +1,7 @@
+id: CLEANNAME-gm-goal-w3-CLEANNAME-4-blocker-gm-drain-w3-104
+subject: 'Blocker for CLEANNAME-gm-goal-w3-CLEANNAME-4: the only remaining divergent write-then-rename temp identifier is candidatePath in gm-mcp/src/self-update.js:196-211 (the other cited tmp/temp/temporary/candidate names are stale or already tempPath). Renaming it to tempPath requires the gm-mcp submodule, which holds about 20 uncommitted modifications plus an untracked src/spool-store.js, and self-update.js is staged and unstaged (MM) by another writer. Editing and committing it now would collide with that writer, and the committed bundle must be rebuilt with scripts/build.mjs and checked with scripts/check-bin-drift.mjs. Unblock by having the owning lane land its gm-mcp work on main, then rename candidatePath to tempPath in self-update.js, rebuild the bundle, witness with codesearch and check-bin-drift, and resolve the row. Receipts: .gm/receipts/CLEANNAME-gm-goal-w3-CLEANNAME-4/01-SPECIFY.md. Dispatch ids: 1791970549515-500-10e670518bdd5bce, 1791970575842-500-cf680891e442a92a, 1791970565916-500-b2dce6f696c8f812.'
+status: pending
+session_id: mcp-codemode-9708-1791970624301
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

@@ -1,0 +1,8 @@
+id: G_CONTRACT-skill-codesearch-body-table-blocker-gm-drain-w1-110-blocker-gm-drain-w2-150
+subject: 'Blocked: G_CONTRACT-skill-codesearch-body-table-blocker-gm-drain-w1-110 cannot close in session gm-drain-w2-150; needs CI wasm rebuild and cross-session witness'
+body: 'Row G_CONTRACT-skill-codesearch-body-table-blocker-gm-drain-w1-110 (session gm-drain-w2-150) cannot close in this run. SPECIFY receipt: .gm/receipts/G_CONTRACT-skill-codesearch-body-table-blocker-gm-drain-w1-110/01-SPECIFY.md. Both cited lines resolve: gm-config/prose/entry.md:137 (codesearch dispatch 1791961111671-500-976aa86ef322e0ec) and rs-plugkit/crates/plugkit-core/src/orchestrator/instructions/prose/entry.md:192 (codesearch dispatch 1791961112703-500-6848fc0fa3da76a2). The served instruction reads the compiled copy when no vendored key exists, so the gm-config edit alone cannot meet the postcondition. Unblock: a reviewed rs-plugkit prose change, a CI-only wasm rebuild with --features slim, and a live instruction witness from another session showing the table gone. Parent row stays pending.'
+session_id: gm-drain-w2-150
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

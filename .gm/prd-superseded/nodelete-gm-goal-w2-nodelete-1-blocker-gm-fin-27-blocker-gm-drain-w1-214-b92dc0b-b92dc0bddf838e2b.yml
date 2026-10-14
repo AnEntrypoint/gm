@@ -1,0 +1,5 @@
+id: NODELETE-gm-goal-w2-NODELETE-1-blocker-gm-fin-27-blocker-gm-drain-w1-214
+subject: 'gm-mcp singleton: legacy GM_MCP_HTTP_SINGLETON read cannot be removed without an external-env owner decision'
+body: 'Blocker for NODELETE-gm-goal-w2-NODELETE-1-blocker-gm-fin-27 (session gm-drain-w1-214). Premise re-verified: the legacy read is live at gm-mcp/src/singleton.js:57 (const legacy = envValue(''GM_MCP_HTTP_SINGLETON'')) and documented as a user-facing opt-out at gm-mcp/README.md:219 and gm-mcp/AGENTS.md:55; codesearch 1791958774660-500-aa01e543dd3df5d7 is exhaustive over gm-mcp. Deleting it flips any user who set GM_MCP_HTTP_SINGLETON=0 to singleton-on, and user shell profiles and deployed launchers outside this repo cannot be audited, so the default is keep the read. Closing the edit needs (1) an owner decision on that external-env risk, (2) the submodule edit plus a rebuilt committed bundle (bin/gm-mcp-server.js), and (3) a cross-session witness. Unblock by: owner records the decision; then a session other than the writer witnesses the removal.'
+session_id: gm-drain-w1-214
+status: pending

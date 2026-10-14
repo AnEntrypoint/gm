@@ -1,0 +1,5 @@
+id: CLEANNAME-AGENTPLUG-RUST-blocker-gm-drain-w1-41
+subject: 'CLEANNAME-AGENTPLUG-RUST blocked: stale cited lines and cross-session witness needed'
+body: 'Blocks CLEANNAME-AGENTPLUG-RUST. SPECIFY receipt: .gm/receipts/CLEANNAME-AGENTPLUG-RUST/01-SPECIFY.md. Findings: agentplug-host/src/imports.rs cited lines 673,1129,1183,1187,1209 are stale (actual 1032,1488,1542,1546,1608); agentplug-runner/src/main.rs:282 is stale (actual 295). Re-derive the full edit list by codesearch of each name before any Edit. Each submodule commit needs CI (local cargo hook-blocked) and the witness must come from a different session than the editor. Next: one lane per submodule (libsql, crux, bert, agentplug), re-scoped list, push to main, CI via ci-status, parent pin bump, then a cross-session witness.'
+session_id: gm-drain-w1-41
+status: pending

@@ -1,0 +1,5 @@
+id: TOTALITY-GMMCP-RELEASE-BRIDGE-TOTAL-BODY-blocker-gm-drain-w2-463
+subject: 'BLOCKER for TOTALITY-GMMCP-RELEASE-BRIDGE-TOTAL-BODY: SPECIFY cannot restate acceptance'
+body: 'SPECIFY stage cannot run for TOTALITY-GMMCP-RELEASE-BRIDGE-TOTAL-BODY. The row file carries id, title, status and session_id only: no acceptance, witness or file list. The title asserts a fetchLatestRelease total-body defect, but codesearch (gm-mcp/src, exhaustive) shows fetchLatestRelease defined at release-bridge.js:119 with body handling already present, so no falsifiable leader hypothesis exists. Unblock: the row owner states the defect, the acceptance witness and the exact files. Receipt: .gm/receipts/TOTALITY-GMMCP-RELEASE-BRIDGE-TOTAL-BODY/01-SPECIFY-gm-drain-w2-463.md. Row stays pending.'
+session_id: gm-drain-w2-463
+status: pending

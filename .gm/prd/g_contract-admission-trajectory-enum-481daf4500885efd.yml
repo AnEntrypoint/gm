@@ -1,0 +1,4 @@
+id: G_CONTRACT-admission-trajectory-enum
+subject: gm-config/prose/entry.md 'Admission Filter' L3 names the trajectory classifier values (convergent|flat|divergent|chaotic) and the hold-on-non-convergent rule, and L2 names the single-writer |F|=1 bound. Make the classifier an enum in code and have prose reference the enum; the hold rule belongs to the filter predicate.
+session_id: lean-node-G_CONTRACT
+status: pending

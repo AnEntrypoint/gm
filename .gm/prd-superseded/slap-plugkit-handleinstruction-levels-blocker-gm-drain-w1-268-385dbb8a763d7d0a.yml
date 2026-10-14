@@ -1,0 +1,16 @@
+id: SLAP-PLUGKIT-HANDLEINSTRUCTION-LEVELS-blocker-gm-drain-w1-268
+subject: 'Witness blocked: SLAP-PLUGKIT-HANDLEINSTRUCTION-LEVELS reply keys differ from baseline 1791851394157-500-e07f1d6e8e7db8f8; attribution to SLAP edit unproven'
+status: pending
+blockedBy:
+- SLAP-PLUGKIT-HANDLEINSTRUCTION-LEVELS
+body: |-
+  Witness for SLAP-PLUGKIT-HANDLEINSTRUCTION-LEVELS ran in session gm-drain-w1-268 (not the row's author session) and did not bind the row.
+
+  Release gate: CI native-check run 38328121431 and release run 38328121672 (publish / plan, bump, release) are all success on rs-plugkit 81744101bbd68e73333a2df5ba68cd31fbf80899 (ci-status dispatch 1791959148157-500-bf0e457d50a6f2f8).
+
+  Witness: instruction full, phase ORACLEBIAS, dispatch 1791959160764-500-640938219205e44b (reply file .gm/exec-spool/out/instruction-gm-drain-w1-268-31304-1791959155134-3572.json). Baseline: dispatch 1791851394157-500-e07f1d6e8e7db8f8 (reply file .gm/exec-spool/out/instruction-gm-2e-fa19b3-w7-04-19560-1791851389829-686.json.reply.txt).
+
+  Result: the phase, instruction_hash (dc3dde78cf1e8dea) and next_phase_hint (INDEPVER) agree, but 20 top-level reply keys are present only in the new reply: await_result, config_repo_unreachable, degraded_reason, fsm_graph_rejected, gm_plugkit_stale, instruction_suppressible_by_asserting_hash, instruction_unchanged, orient_nouns, ready_wave, recall_embed_failed, reply_hash, route_hint, running_tasks, should_residual_scan, stuck_spool, sub_phase, unsupervised_watcher, update_available, wrapper_stale_in_memory, fsm_gates_weaker_than_default. The row's refutation rule is any reply key that differs, so the witness is not a pass. The baseline is a text render and the new reply a JSON file, so part of the gap may be rendering (null and empty values); gm_plugkit_stale is emitted at rs-plugkit/crates/plugkit-core/src/orchestrator/instructions/mod.rs:1204 in the same file the row changed.
+
+  Unknown: whether these keys come from the SLAP edit or from commits between the baseline and this release. Probe needed: rerun the instruction full dispatch on the pre-SLAP commit of instructions/mod.rs (guest built from that sha) and diff keys against the same baseline. Until that probe runs, the row stays pending.
+session_id: gm-drain-w1-268

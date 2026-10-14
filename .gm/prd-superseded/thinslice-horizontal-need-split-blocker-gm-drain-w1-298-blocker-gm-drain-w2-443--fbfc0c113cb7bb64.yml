@@ -1,0 +1,8 @@
+id: THINSLICE-HORIZONTAL-NEED-SPLIT-blocker-gm-drain-w1-298-blocker-gm-drain-w2-443
+kind: blocker
+node: THINSLICE
+phase: P1
+status: pending
+subject: 'Blocker: THINSLICE-HORIZONTAL-NEED-SPLIT-blocker-gm-drain-w1-298 needs the per-cluster split before any witness'
+body: 'Row THINSLICE-HORIZONTAL-NEED-SPLIT-blocker-gm-drain-w1-298 cannot close in one gm-prd run. Its premise is stale: live prd-list {status:pending} total is 850 (store_total 878), not 470. The blocker''s own next step is to split the umbrella THINSLICE-HORIZONTAL-NEED-SPLIT into per-cluster rows (git-verb-signatures, output-cap-constants, tencentdb-config-defaults, recall-index-single-writer, precedence-enum, native-search-gate), each with its own witness, then run gm-prd per cluster. No single witness binds the umbrella. Receipt: .gm/receipts/THINSLICE-HORIZONTAL-NEED-SPLIT-blocker-gm-drain-w1-298/01-SPECIFY.md (dispatch 1791966960465-500-e271883ae7ccc8bd). Parent rows stay pending until the split lands.'
+session_id: gm-drain-w2-443

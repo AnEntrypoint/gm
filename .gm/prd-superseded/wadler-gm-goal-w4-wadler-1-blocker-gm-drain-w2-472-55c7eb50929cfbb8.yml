@@ -1,0 +1,5 @@
+id: WADLER-gm-goal-w4-WADLER-1-blocker-gm-drain-w2-472
+subject: 'blocker: WADLER isPlainObject refactor refuted at null-sensitive sites'
+body: 'Blocks WADLER-gm-goal-w4-WADLER-1-blocker-gm-2e-fa19b3-w1-15. Receipt: .gm/receipts/WADLER-gm-goal-w4-WADLER-1-blocker-gm-2e-fa19b3-w1-15/01-SPECIFY.md. Hypothesis (one predicate, behavior-preserving) refuted: typeof-only guards (dispatch.js:582, 1062; response-compact.js:134; mcp-server.js:29) change behavior for null. Needs per-site null-semantics review, then a predicate variant that keeps null-passing sites, a bundle rebuild (gm-mcp/scripts/build.mjs) in the same commit, and a witness from a session other than gm-2e-fa19b3-w1-15 and gm-drain-w2-472. gm-mcp submodule is currently dirty; one writer must hold it.'
+session_id: gm-drain-w2-472
+status: pending

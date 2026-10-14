@@ -1,0 +1,8 @@
+id: CQS-gm-goal-w4-CQS-2-blocker-gm-drain-w1-60-blocker-gm-drain-w3-131
+subject: 'Blocked: CQS-gm-goal-w4-CQS-2-blocker-gm-drain-w1-60 needs a clean gm-mcp tree for the bundle rebuild and a cross-session witness'
+body: 'Row CQS-gm-goal-w4-CQS-2-blocker-gm-drain-w1-60 cannot close in session gm-drain-w3-131. The src fix is already on HEAD (capReplyText has no write; the caller writes at dispatch.js:2113), and the parent CQS-gm-goal-w4-CQS-2 is completed STALE. The only remaining step is a gm-mcp bundle rebuild (npm run build, scripts/build.mjs) and a cross-session witness of bin/gm-mcp-server.js. The gm-mcp submodule is still dirty with foreign writers'' work (21 modified, 4 staged, 1 untracked, git_status 1791971167120-500-2406c07707f95c19), so a rebuild commit would sweep it in. Unblock: a single writer with a clean gm-mcp tree rebuilds the bundle, bumps the parent pin, and a different session witnesses the live bundle. Receipt: .gm/receipts/CQS-gm-goal-w4-CQS-2-blocker-gm-drain-w1-60/01-SPECIFY.md.'
+session_id: gm-drain-w3-131
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

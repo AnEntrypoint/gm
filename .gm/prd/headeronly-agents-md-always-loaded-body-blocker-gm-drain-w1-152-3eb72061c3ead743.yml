@@ -1,0 +1,4 @@
+id: HEADERONLY-AGENTS-MD-ALWAYS-LOADED-BODY-blocker-gm-drain-w1-152
+subject: 'Blocker for HEADERONLY-AGENTS-MD-ALWAYS-LOADED-BODY: row names no file and no acceptance. Needs a re-scoped row with target AGENTS.md sections, destination SKILL.md/README per section, and a witness predicate (e.g. fs_stat AGENTS.md size below a stated byte count plus codesearch showing each moved heading in its destination). Receipt: .gm/receipts/HEADERONLY-AGENTS-MD-ALWAYS-LOADED-BODY/01-SPECIFY.md. Stale cite: row says 29511 bytes, AGENTS.md is 29196 bytes.'
+status: pending
+session_id: mcp-codemode-31304-1791958417035

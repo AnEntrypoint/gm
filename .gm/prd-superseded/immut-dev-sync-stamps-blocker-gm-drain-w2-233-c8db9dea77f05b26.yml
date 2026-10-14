@@ -1,0 +1,9 @@
+id: IMMUT-DEV-SYNC-STAMPS-blocker-gm-drain-w2-233
+subject: 'Blocker for IMMUT-DEV-SYNC-STAMPS: gm-mcp dev-sync.js, bundle and self-update.js still held by another writer (w2-233 recheck)'
+body: |-
+  Row IMMUT-DEV-SYNC-STAMPS cannot close in session gm-drain-w2-233 (re-checked live, dispatch chain below).
+  Shared surface still held by another writer: gm-mcp/src/dev-sync.js carries an uncommitted hunk in syncOne (rel -> repoName, fast-forward and skip returns; diff dispatch 1791962626193-500-4e993142f6ab9059), gm-mcp/src/self-update.js is staged, and gm-mcp/bin/gm-mcp-server.js is modified (git_status dispatch 1791962627216-500-3ccc8665afe22f4a).
+  The row edit (derive next stamps at src/dev-sync.js lines 116-121, not 91-97: the cited range is stale) plus bundle rebuild (node scripts/build.mjs) would commit or bake that foreign hunk, which violates one writer per surface. Not edited, not built, not finalized.
+  Unblock: after the other gm-mcp writer commits or releases src/dev-sync.js, bin/gm-mcp-server.js and src/self-update.js, apply the derived-object edit, rebuild the bundle, witness that root and '*' keys change while other keys are byte-identical, then prd-resolve. Earlier blocker: IMMUT-DEV-SYNC-STAMPS-blocker-gm-drain-w1-164 (same cause, still pending).
+session_id: gm-drain-w2-233
+status: pending

@@ -1,0 +1,7 @@
+id: SLAP-PLUGKIT-CHECKDISPATCH-LEVELS-blocker-gm-2e-fa19b3-w8-03-blocker-gm-drain-w1-263-blocker-gm-drain-w2-382
+subject: 'Blocker for SLAP-PLUGKIT-CHECKDISPATCH-LEVELS-blocker-gm-2e-fa19b3-w8-03-blocker-gm-drain-w1-263: EMIT and witness need CI build, redeploy and a second session'
+blockedBy:
+- SLAP-PLUGKIT-CHECKDISPATCH-LEVELS-blocker-gm-2e-fa19b3-w8-03-blocker-gm-drain-w1-263
+body: 'Session gm-drain-w2-382 ran gm-prd. SPECIFY: check_dispatch is at rs-plugkit/crates/plugkit-core/src/gates.rs:466 (codesearch 1791964830753-500-f216c5b9c5166e74); parent citation 404 is stale. PROVE: the precondition fails. Local cargo is hook-blocked (gm-no-local-cargo-verified-by-ci), the split is not built, the CI release and runner redeploy have not run, and a closing witness must come from a second session. Receipts: .gm/receipts/SLAP-PLUGKIT-CHECKDISPATCH-LEVELS-blocker-gm-2e-fa19b3-w8-03-blocker-gm-drain-w1-263/01-SPECIFY.md and 02-PROVE.md. Unblock: land the gates.rs split on main, let CI build and release rs-plugkit (--features slim), redeploy the runner, then witness with a live shell-git dispatch from another session.'
+session_id: gm-drain-w2-382
+status: pending

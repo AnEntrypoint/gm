@@ -1,0 +1,23 @@
+id: THINSLICE-OUTPUT-CAPS-blocker-gm-drain-w2-446
+subject: 'Blocker for THINSLICE-OUTPUT-CAPS: exec_js stdout is not capped at 16000 chars; the cited witness is refuted live'
+body: |-
+  Row THINSLICE-OUTPUT-CAPS (session gm-drain-w2-446) cannot close as written.
+
+  Acceptance: an exec_js reply over 16000 chars is truncated with a result_file pointer, and the prose grep for the numbers returns no match.
+
+  Live probes (session gm-drain-w2-446, cwd C:\dev\gm):
+  - exec_js stdout of 17000 chars (dispatch 1791966966794-500-e6a5d85efa3718d9): returned in full, no OUTPUT TRUNCATED marker, reply 17272 chars.
+  - exec_js stdout of 17000 chars as JSON (dispatch 1791966980356-500-cd1896ca8bc104e4): returned in full, no OUTPUT TRUNCATED marker, reply 17285 chars.
+  - exec_js stdout of 30000 chars (reply spilled at 24000 whole-reply cap, spill_file set, reply_truncated true): the whole-reply cap fired, not the 16000 field cap; no result_file pointer.
+
+  Source: gm-mcp/src/dispatch.js:641 RESULT_CHUNK_MAX_CHARACTERS = 16000 governs the result chunk; skills/gm/docs/verbs.md:356 documents a 16000 field cap for stdout/stderr/result. The live stdout path does not enforce it at 17000 chars.
+  Constants: git_show 60000 bytes and git_stash 2000 files are not declared as constants in gm-mcp/src (codesearch hits only in docs and unrelated timeouts); fs_read 65536 is FILE_READ_INLINE_MAX in gm-mcp/src/response-compact.js:14; poll cap 240 s is not found as a literal in gm-mcp/src.
+  Skill prose: skills/gm/SKILL.md carries none of the numbers; skills/gm/docs/verbs.md carries 16000, 2000, 60000, 65536 and 24000.
+
+  Leader hypothesis H1: the 16000 field cap applies only to a structured result field, not stdout. Probe that separates H1 from H2 (cap applies to stdout but was not triggered): a structured result field over 17000 chars through the same verb. Not run in this session.
+  Rival H2: the stdout cap is enforced by a different path that this reply route bypasses. Refuted only by the structured-field probe above.
+  Gate: gm-mcp/src is held by other writers (dirty tree), so any constant move or rebuild cannot be delivered under CONC.
+
+  Next: run the structured-result probe under H1 vs H2, then either re-scope the row to the verified cap (16000 for the result field only) or move the constants and rebuild gm-mcp from an exclusive tree.
+session_id: gm-drain-w2-446
+status: pending

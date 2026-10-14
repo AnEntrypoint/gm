@@ -1,0 +1,5 @@
+id: SLAP-PLUGKIT-SYNCINDEX-LEVELS-blocker-gm-drain-w1-274
+subject: 'Blocker: SLAP-PLUGKIT-SYNCINDEX-LEVELS EMIT and witness cannot run locally (session gm-drain-w1-274)'
+session_id: gm-drain-w1-274
+body: 'Row SLAP-PLUGKIT-SYNCINDEX-LEVELS stays pending. Re-check this session: sync_index is at memory_md.rs:695-1098 (defined_at per callers dispatch 1791959182511-500-39601a496457dd91; two callers in wasm_dispatch/verbs/memory.rs:55 and :62). The row witness needs a compiled rs-plugkit wasm (cargo build wasm32-wasip1 --features slim) and a live memory sync dispatch; local cargo is blocked by a hook (memory gm-no-local-cargo-verified-by-ci), and the wasm is built only by CI (publish / release). The extraction also rewrites closures capturing ns, budget and shadow state, which cannot be compile-checked here. Same blocker as SLAP-PLUGKIT-SYNCINDEX-LEVELS-blocker-gm-2e-fa19b3-w7-01; receipts 01-SPECIFY.md, 02-PROVE.md, 03-BLOCKER.md under .gm/receipts/SLAP-PLUGKIT-SYNCINDEX-LEVELS/. Unblock: a CI-built wasm plus a live memory sync dispatch, witnessed by a session other than the editor.'
+status: pending

@@ -1,0 +1,5 @@
+id: AGENTSMD-MOVE-WINDOWLESS-RULE-blocker-gm-drain-w3-6
+subject: 'Root AGENTS.md windowless rule still unmoved: pointer edit blocked by row scope'
+body: 'Blocker for AGENTSMD-MOVE-WINDOWLESS-RULE (session gm-drain-w3-6). Destination is done: agentplug/AGENTS.md HEAD (submodule main) already holds the windowless rule, prd-list 1791969088624-500-4bfe8de66ed0b882 fs_read 1791969089810-500-27fc4a94711b4430 exec_js 1791969146778-500-64c76332cad69fb9. Still open: root AGENTS.md line 61 must become a one-line pointer to agentplug/AGENTS.md. The parent row forbids editing root this turn because another writer owns it. Next: when that writer releases root AGENTS.md, replace the root rule with a pointer and resolve AGENTSMD-MOVE-WINDOWLESS-RULE with that edit''s witness.'
+session_id: gm-drain-w3-6
+status: pending

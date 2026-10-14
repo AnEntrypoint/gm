@@ -1,0 +1,5 @@
+id: G_CONTRACT-precedence-tier-order-blocker-gm-drain-w1-105
+subject: 'Blocker for G_CONTRACT-precedence-tier-order: ordered enum needs an rs-plugkit change, CI-built wasm guest and a cross-session witness; not closable in session gm-drain-w1-105'
+body: 'SPECIFY receipt: .gm/receipts/G_CONTRACT-precedence-tier-order/01-SPECIFY.md. config.rs has no ordered tier enum (precedence is match order in resolve_with at :700). Tier list in the row mixes layers config::resolve does not hold, so the enum shape needs a decision. PROVE requires a CI-built guest and a witness from another session; local cargo is hook-blocked. Prior blocker: BLOCKER-SKILLGM-precedence-enum-blocker-gm-drain-w1-34. Next: a session with CI access decides the tier set, then lands the enum and the witness.'
+session_id: gm-drain-w1-105
+status: pending

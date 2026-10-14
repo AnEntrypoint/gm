@@ -1,0 +1,8 @@
+id: CLEANNAME-AGENTPLUG-RUST-blocker-gm-drain-w2-52
+subject: 'BLOCKER CLEANNAME-AGENTPLUG-RUST: witness needs CI, not local cargo'
+body: 'Row CLEANNAME-AGENTPLUG-RUST cannot close in session gm-drain-w2-52. SPECIFY passed: all 7 cited files and lines exist (receipt .gm/receipts/CLEANNAME-AGENTPLUG-RUST/01-SPECIFY.md). The row''s witness is cargo build plus tests per submodule, and local cargo builds are blocked by a hook (rule gm-no-local-cargo-verified-by-ci). Closing needs: edits in agentplug-libsql, agentplug-crux, agentplug-bert and agentplug (one writer each), a green CI run per submodule main, then parent gitlink bumps. Next step: run the rename per submodule in its own session, then ci-status on each sha, then bump parents and witness through CI.'
+session_id: gm-drain-w2-52
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

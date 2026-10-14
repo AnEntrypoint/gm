@@ -1,0 +1,16 @@
+id: TOTALITY-GMMCP-RELEASE-BRIDGE-TOTAL-BODY-blocker-gm-drain-w2-462
+subject: 'BLOCKER for TOTALITY-GMMCP-RELEASE-BRIDGE-TOTAL-BODY: SPECIFY cannot restate acceptance; gm-mcp tree held by other writers'
+body: |-
+  SPECIFY cannot restate acceptance for TOTALITY-GMMCP-RELEASE-BRIDGE-TOTAL-BODY (session lean-canary-TOTALITY).
+
+  1. prd-list {id} returns title only: 'gm-mcp (submodule): commit release-bridge fetchLatestRelease total body handling, rebuild bin/gm-mcp-server.js from src, bump parent pin'. No body, acceptance, file list or witness command is stored in .gm/prd/.
+
+  2. The title's 'fetchLatestRelease total body handling' is already present: gm-mcp/src/release-bridge.js:128 carries body handling. The uncommitted diff there (exec_js dispatch 1791967915036-500-5ca31687414c5532) is a cpu->cpuName rename, a fileSha256 helper and a bridge state refactor; no hunk touches fetchLatestRelease.
+
+  3. gm-mcp submodule has other writers' uncommitted hunks (dispatch 1791959629524-500-ccf1257f5c0b6e73 per blocker w1-310) incl. a staged src/self-update.js and untracked src/spool-store.js. Rebuilding bin/gm-mcp-server.js and committing src/release-bridge.js would publish another lane's WIP: collision risk on a shared surface.
+
+  Unblock: the row owner states the acceptance witness, the exact files, and whether the release-bridge.js refactor is the intended change; or the gm-mcp tree is exclusive to this row. Then the bundle rebuild and parent pin bump can run.
+
+  Parent row stays pending. Receipts: .gm/receipts/TOTALITY-GMMCP-RELEASE-BRIDGE-TOTAL-BODY-blocker-gm-drain-w1-310/01-SPECIFY.md
+session_id: gm-drain-w2-462
+status: pending

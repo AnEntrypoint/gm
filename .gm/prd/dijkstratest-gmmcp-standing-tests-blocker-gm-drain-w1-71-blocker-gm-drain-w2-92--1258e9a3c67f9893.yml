@@ -1,0 +1,8 @@
+id: DIJKSTRATEST-GMMCP-STANDING-TESTS-blocker-gm-drain-w1-71-blocker-gm-drain-w2-92
+subject: 'Blocker: decomposition of DIJKSTRATEST-GMMCP-STANDING-TESTS-blocker-gm-drain-w1-71 needs a multi-session wave'
+status: pending
+body: 'SPECIFY for row DIJKSTRATEST-GMMCP-STANDING-TESTS-blocker-gm-drain-w1-71 (session gm-drain-w2-92). The row asks for the parent DIJKSTRATEST-GMMCP-STANDING-TESTS to be split into one row per test file or cluster, each with its own probe witness from a different session, then the parent closed. Tree check: gm-mcp/test exists (fs_stat isDirectory true, dispatch 1791960418142-500-8b21927ac9342470). The row cannot close in this run: its acceptance needs child rows that each resolve through a cross-session witness, and the parent then closes. Decomposition alone is not a witness of this row, and PROVE cannot run a probe for work that has no child row yet. Required next wave: (1) prd-add one child row per test file cluster under the parent, each naming its file and its exec_js probe; (2) run each child in its own session; (3) prd-resolve the parent after all children resolve; (4) separate gm-mcp repo change plus bundle rebuild. Ach: leader hypothesis = the row is a planning blocker (not a code defect); rejected = the test files are still runnable and a probe can witness the row now. Probe to separate them: none run here; decomposition cannot be witnessed by this session without self-witness refusal.'
+session_id: gm-drain-w2-92
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

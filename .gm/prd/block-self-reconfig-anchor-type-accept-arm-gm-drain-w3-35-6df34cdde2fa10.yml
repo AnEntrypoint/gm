@@ -1,0 +1,5 @@
+id: BLOCK-SELF-RECONFIG-ANCHOR-TYPE-accept-arm-gm-drain-w3-35
+subject: 'Blocked: BLOCK-SELF-RECONFIG-ANCHOR-TYPE accept-arm witness needs owner approval'
+body: 'Acceptance 4 of BLOCK-SELF-RECONFIG-ANCHOR-TYPE needs a live fsm-propose-override accept dispatch with a valid {name, author} anchor. The accept arm applies a kind:prose override to served instruction files for every session, so it needs the owner''s go-ahead or a designated disposable key. Reject arm already witnessed at dispatch 1791969558847-500-aea75169ccebe71e; receipt .gm/receipts/BLOCK-SELF-RECONFIG-ANCHOR-TYPE-blocker-gm-drain-w1-22/02-PROVE.md. Also: rs-plugkit crates/plugkit-core/Cargo.toml and vendored prose entry-extended.md are dirty and not owned by this row.'
+session_id: gm-drain-w3-35
+status: pending

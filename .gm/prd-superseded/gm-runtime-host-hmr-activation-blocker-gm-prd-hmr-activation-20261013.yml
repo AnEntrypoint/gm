@@ -1,0 +1,5 @@
+id: gm-runtime-host-hmr-activation-blocker-gm-prd-hmr-activation-20261013
+subject: 'Blocker: PRD row gm-runtime-host-hmr-activation is absent; gm-prd cannot SPECIFY'
+status: pending
+body: 'SPECIFY stage of gm-prd for row=gm-runtime-host-hmr-activation session=gm-prd-hmr-activation-20261013 cannot run. Evidence: prd-list {id} reports no PRD row of 315 rows in .gm/prd/ or the resolved rows in .gm/prd-log.jsonl (dispatch 1791868092726-500-1479870cbac8b8a1). A scan of .gm/prd/*.yml and .gm/prd-log.jsonl for hmr|activation|gm-runtime-host finds no matching row. Requested acceptance (from the operator): the active HMR journal records reload after idle, then a fresh GUI GM tool dispatch reaches an Overview whose GM runtime metric shows the active daemon leaf values. Required to resolve: the row must be created with a file (prd-add under the same id) carrying that acceptance, or the operator must name the existing row id. No row id was invented.'
+session_id: gm-prd-hmr-activation-20261013

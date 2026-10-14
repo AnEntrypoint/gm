@@ -1,0 +1,5 @@
+id: XY-DREAMRSI-SMALLEST-MODEL-QUALITY-blocker-gm-2e-fa19b3-w1-08-blocker-gm-drain-w1-328
+subject: 'Blocked: EMIT for XY-DREAMRSI-SMALLEST-MODEL-QUALITY cannot run in session gm-drain-w1-328 (no subagent-spawning tool; parent row pending)'
+body: 'Row XY-DREAMRSI-SMALLEST-MODEL-QUALITY-blocker-gm-2e-fa19b3-w1-08 needs two EARS hop subagents (haiku, sonnet) over skills/dream-rsi/SKILL.md, which write .gm/receipts/XY-DREAMRSI-SMALLEST-MODEL-QUALITY/ev-haiku.json and ev-sonnet.json. The gm-drain-w1-328 session has no Agent tool, so neither evidence dispatch can start; a same-session self-run is not a two-model comparison and is not accepted. Receipt: .gm/receipts/XY-DREAMRSI-SMALLEST-MODEL-QUALITY-blocker-gm-2e-fa19b3-w1-08/01-SPECIFY.md. Unblock: run the two subagent hops from a session with the Agent tool, then prd-resolve the parent XY-DREAMRSI-SMALLEST-MODEL-QUALITY with both dispatch ids. The parent stays pending.'
+session_id: gm-drain-w1-328
+status: pending

@@ -1,0 +1,8 @@
+id: BLOCK-dream-rsi-walk-acceptance-code-blocker-gm-drain-w2-13
+subject: 'Blocker for BLOCK-dream-rsi-walk-acceptance-code-blocker-gm-drain-w1-18: rs-plugkit validator, CI wasm build and live witness still not run'
+body: 'Parent row BLOCK-dream-rsi-walk-acceptance-code-blocker-gm-drain-w1-18 (session gm-drain-w2-13) reached SPECIFY only. Remaining work, in order: (1) fix the walk record shape from skills/gm-hop/SKILL.md (node, applied, witness); (2) add the walk-evidence validator in rs-plugkit/crates/plugkit-core/src/orchestrator/dream_rsi.rs that refuses applied:true when the witness dispatch_id is absent from observations.json; (3) commit on rs-plugkit main via its nested repo and wait for the publish / release CI Build step (local cargo is hook-blocked); (4) bump the gm rs-plugkit gitlink with a commit on gm main; (5) witness with a live dispatch that refuses an applied:true walk with a missing witness; (6) prd-resolve the parent row with that witness dispatch id. Receipts: .gm/receipts/BLOCK-dream-rsi-walk-acceptance-code-blocker-gm-drain-w1-18/01-SPECIFY.md. Note: the SPECIFY codesearch used literal mode with a pipe, so its zero hit is not evidence of absence; re-run in regex mode first.'
+session_id: gm-drain-w2-13
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

@@ -1,0 +1,8 @@
+id: CLEANNAME-RS-CODEINSIGHT-blocker-gm-drain-w1-47-blocker-gm-drain-w2-61-blocker-gm-drain-w3-109
+subject: 'Blocked: CLEANNAME-RS-CODEINSIGHT-blocker-gm-drain-w1-47-blocker-gm-drain-w2-61 cannot close in gm-drain-w3-109; parent needs re-scope, submodule rename, CI witness from another session'
+body: 'SPECIFY (gm-drain-w3-109): row closes only on a parent resolve. Parent CLEANNAME-RS-CODEINSIGHT is pending and its cited bindings are stale (w2-60 receipt: 8 sites renamed). Live residual: rs-codeinsight/src/project.rs:464 `let c = chars.next()?;` (codesearch regex `let (f|s|n|val|c|v) ?[:=]`, exhaustive, 19 files, 1 hit). rs-codeinsight working tree is clean of source edits (git_status: 12 untracked .gm state paths only). Blockers: (1) parent names camelCase targets (currentByte, trimmedValue) that are not Rust style; parent must be re-scoped to snake_case under the same id first (prd-add overwrite:true). (2) The residual edit is a single-writer submodule change that must publish via the Git API on rs-codeinsight main, then ci-status on that sha, then the parent pin bump. (3) The parent witness must come from a session other than the writer; this session would be writer and witness, so a self-witness is refused. Next action for another session: re-scope the parent to snake_case with project.rs:464 as its only residual, land the rename on rs-codeinsight main, ci-status the sha, bump the parent gitlink, then prd-resolve the parent with that ci-status dispatch id, and retire the blocker chain against it. No PROVE self-witness is possible here (local cargo blocked by AGENTS.md).'
+session_id: gm-drain-w3-109
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

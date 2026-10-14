@@ -1,0 +1,5 @@
+id: DREAMRSI-PROPOSE-SLICE-blocker-gm-drain-DREAMRSI-PROPOSE-SLICE
+title: 'Blocker for DREAMRSI-PROPOSE-SLICE: no build, push or live witness available in this run'
+body: 'Row DREAMRSI-PROPOSE-SLICE (dream-strategy-propose verb) cannot close this run. SPECIFY and PROVE passed: dream_rsi::automatic_replay exists (orchestrator/dream_rsi.rs:619), orchestrator/mod.rs routes dream-replay-cycle at line 406, and dream-strategy-propose is absent from the registered verb list and from source. EMIT is blocked: no cargo or rustup on this host, so the wasm guest cannot be built locally (AGENTS.md build line; builds run in GitHub Actions). The witness needs a live agentplug-runner dispatch of the new verb, which the running plugin 0.1.1585 cannot serve until a release ships it. Delivery is blocked by the run instruction Do not push. Owner decision needed: authorize the rs-plugkit change to be committed and pushed so CI builds and releases it, then a witness from another session runs the live dispatch and the active-strategy.json byte-identity check. Unblocks the parent row when witnessed.'
+session_id: gm-drain-DREAMRSI-PROPOSE-SLICE
+status: pending

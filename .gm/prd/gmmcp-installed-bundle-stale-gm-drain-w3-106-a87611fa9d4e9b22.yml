@@ -1,0 +1,5 @@
+id: GMMCP-INSTALLED-BUNDLE-STALE-gm-drain-w3-106
+subject: 'gm-mcp: installed ~/.gm-tools/gm-mcp-server.mjs is older than repo bin and throws ReferenceError n on prd-resolve success'
+body: 'Found by gm-drain-w3-106 while resolving CLEANNAME-GMMCP-SRC-blocker-gm-drain-w2-58. Installed copy: 993590 bytes, mtime 2026-10-14T07:32:29Z; repo gm-mcp/bin/gm-mcp-server.js: 995240 bytes, matches fresh build of src (check-bin-drift.mjs exit 0). The installed copy still has a pre-rename ''n'' argument in dispatch_wait(...,n,kt) and threw ''n is not defined'' on the prd-resolve success path (dispatch 1791970970013-500-... on the prd-resolve retry; the resolve itself was committed at 09:40:57Z). Fix: refresh the installed bundle from the repo bin through the install path and confirm prd-resolve replies on the success path. Witness: fs_stat of ~/.gm-tools/gm-mcp-server.mjs size equals repo bin size, and a prd-resolve success reply with no ReferenceError.'
+session_id: mcp-codemode-9708-1791971135333
+status: pending

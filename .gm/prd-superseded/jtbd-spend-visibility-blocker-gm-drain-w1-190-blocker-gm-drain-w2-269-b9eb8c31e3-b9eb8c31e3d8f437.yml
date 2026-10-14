@@ -1,0 +1,6 @@
+id: JTBD-SPEND-VISIBILITY-blocker-gm-drain-w1-190-blocker-gm-drain-w2-269
+subject: 'Blocker: JTBD-SPEND-VISIBILITY-blocker-gm-drain-w1-190 needs a design decision on the token source before any build or witness; SPECIFY found no witnessable leader hypothesis (receipt .gm/receipts/JTBD-SPEND-VISIBILITY-blocker-gm-drain-w1-190/01-SPECIFY.md). Unblock: decide host-reported usage vs reply-byte proxy, then build recorder and rs-plugkit verb with CI witness.'
+status: blocked
+blockedBy:
+- JTBD-SPEND-VISIBILITY-blocker-gm-drain-w1-190
+session_id: mcp-codemode-23256-1791963192035

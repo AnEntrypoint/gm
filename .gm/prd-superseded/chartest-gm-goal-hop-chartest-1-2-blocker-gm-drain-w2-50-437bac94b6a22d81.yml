@@ -1,0 +1,8 @@
+id: CHARTEST-gm-goal-hop-CHARTEST-1-2-blocker-gm-drain-w2-50
+subject: 'Blocker for CHARTEST-gm-goal-hop-CHARTEST-1-2: characterization tests cannot close under the no-test-files closure gate (owner policy decision needed)'
+body: 'SESSION gm-drain-w2-50 ran gm-prd SPECIFY and PROVE on row CHARTEST-gm-goal-hop-CHARTEST-1-2. Premise verified: 12 to 14 gm-mcp/src modules lack test references (codesearch 1791957296395-500-31a1ee52bd21238c). The row acceptance requires a standing test file (node --test witness). The closure gate no-synthetic-test-files (gm-config/fsm/graph.json:3627, predicates.md:19, prose/entry-extended.md:112) is false for any diff that adds a test file or test directory, and skills/gm-prd/SKILL.md:24 states No test files. The row cannot close without violating a policy gate. Existing blocker CHARTEST-gm-goal-hop-CHARTEST-1-2-blocker-gm-drain-w1-40 names the same conflict. Decision needed from the owner: whether characterization tests that run real entry points (no mocks) are exempt from the gate for gm-mcp. If yes, the gate and predicates.md change first, then the row is re-scoped to a gm-mcp submodule delivery with a pin bump. Evidence: codesearch dispatch 1791960111646-500-b8e4419a9e4edf8c (gate occurrences), 1791960112982-500-e78ae4f8fecaf48c (skill rule). Witness: none, row stays pending.'
+session_id: gm-drain-w2-50
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

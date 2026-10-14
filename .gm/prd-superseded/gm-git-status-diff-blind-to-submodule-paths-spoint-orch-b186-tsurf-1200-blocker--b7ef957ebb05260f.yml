@@ -1,0 +1,7 @@
+id: gm-git-status-diff-blind-to-submodule-paths-spoint-orch-b186-tsurf-1200-blocker-gm-drain-w2-181
+severity: MEDIUM
+status: pending
+subject: PROVE cannot separate H1 (pathspec into gitlink) from H2 (.gitmodules ignore=dirty) for the git_status/git_diff submodule-path row
+surface: rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs/git.rs git_status (444) and git_diff (4360); .gitmodules ignore = dirty
+text: 'Blocker for row gm-git-status-diff-blind-to-submodule-paths-spoint-orch-b186-tsurf-1200 (session gm-drain-w2-181). SPECIFY receipt: .gm/receipts/gm-git-status-diff-blind-to-submodule-paths-spoint-orch-b186-tsurf-1200/01-SPECIFY.md. Leader H1: git pathspec rs-plugkit/<file> matches no entry in the parent index (single gitlink rs-plugkit), so porcelain is empty; second independent cause H2: .gitmodules ignore=dirty hides content dirt. Probes P1 (1791961552208-500-5197246fb1acf74c), P2 (1791961526189-500-4363479701514272), P3 (1791961560725-500-3b1841afdd09b968), P4 (1791961608091-500-f335f4fe8dddc9e1) do not separate them because the in-submodule file is clean at probe time. Separating probe needs a reversible in-submodule edit and a status with paths [rs-plugkit] and [rs-plugkit/<file>]. Fix needs a Rust change in rs-plugkit (CI-only build, memory gm-no-local-cargo-verified-by-ci), a pin bump, a runner rebuild and a live witness from another session. Not closable in one run.'
+session_id: gm-drain-w2-181

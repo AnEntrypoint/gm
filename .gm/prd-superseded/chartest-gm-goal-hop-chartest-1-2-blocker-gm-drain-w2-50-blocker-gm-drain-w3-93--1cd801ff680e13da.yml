@@ -1,0 +1,8 @@
+id: CHARTEST-gm-goal-hop-CHARTEST-1-2-blocker-gm-drain-w2-50-blocker-gm-drain-w3-93
+subject: 'Blocker for CHARTEST-gm-goal-hop-CHARTEST-1-2-blocker-gm-drain-w2-50: characterization tests refused by no-synthetic-test-files gate (owner policy decision needed)'
+status: pending
+blockedBy:
+- external
+body: 'Blocker for CHARTEST-gm-goal-hop-CHARTEST-1-2-blocker-gm-drain-w2-50 (session gm-drain-w3-93). SPECIFY found the row cannot close: its acceptance (a standing node --test file over gm-mcp/test) is refused by the live closure gate no-synthetic-test-files (gm-config/fsm/graph.json:1544, .gm/instructions/fsm/predicates.md:19) and by the walk rule No test files (.gm/instructions/entry.md:46, CONTRIBUTING.md:14, gm-prd SKILL.md). Witness cannot bind: no test file may be written under the current policy, and a self-witness is refused. Evidence: codesearch literal dispatches 1791970425142-500-c85e30fca2cc3104 (gate) and 1791970440890-500-398e9d8865cba772 (rule); prd-list dispatch 1791970377066-500-d48ca9d76c63b629. Owner decision needed: whether real-entry-point characterization tests for gm-mcp are exempt from the gate. If yes, change the gate and predicates.md first, then re-scope the row to a gm-mcp submodule delivery with a pin bump. Row stays pending.'
+session_id: mcp-codemode-9708-1791970456423
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

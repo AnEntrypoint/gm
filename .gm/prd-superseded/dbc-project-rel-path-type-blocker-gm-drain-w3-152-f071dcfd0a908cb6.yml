@@ -1,0 +1,8 @@
+id: DBC-PROJECT-REL-PATH-TYPE-blocker-gm-drain-w3-152
+status: pending
+subject: 'Blocked: DBC-PROJECT-REL-PATH-TYPE-blocker-gm-drain-w2-82 cannot close in gm-drain-w3-152 (H1 vs H2 probe needs CI-built rs-plugkit and a cross-session witness)'
+body: 'Row DBC-PROJECT-REL-PATH-TYPE-blocker-gm-drain-w2-82 stays pending. SPECIFY receipt: .gm/receipts/DBC-PROJECT-REL-PATH-TYPE-blocker-gm-drain-w2-82/01-SPECIFY.md. Refreshed cites (codesearch 1791971383080-500-90744972c5ecd347): path_within_project verbs.rs:581; rejection wording verbs.rs:611 and :615; ProjectRelPath has zero hits (newtype not started). Unresolved: H1 (single ProjectRelPath constructor) vs H2 (checks agree, wording differs). Separating probe: live codesearch/fs_read with absolute, `..` and empty paths against a CI-built rs-plugkit wasm, witnessed from a session other than the author. Local cargo is hook-blocked, so this session cannot build or run it. Resolution: CI build of rs-plugkit, then the cross-session witness that closes DBC-PROJECT-REL-PATH-TYPE.'
+session_id: gm-drain-w3-152
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

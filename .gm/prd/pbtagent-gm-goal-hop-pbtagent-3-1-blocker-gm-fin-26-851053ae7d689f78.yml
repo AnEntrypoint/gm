@@ -1,0 +1,5 @@
+id: PBTAGENT-gm-goal-hop-PBTAGENT-3-1-blocker-gm-fin-26
+subject: 'Blocker: gm-mcp bundle carries another session''s uncommitted hunks; singleton.js fix cannot deliver src and bundle together'
+body: 'Row PBTAGENT-gm-goal-hop-PBTAGENT-3-1 needs a readStateFile diagnostic in gm-mcp/src/singleton.js (catch ~57-65 returns null silently). Fix requires rebuilding bin/gm-mcp-server.js with the src edit (AGENTS.md: src and bundle deliver together). gm-mcp git_status at head f828fca6 shows bin/gm-mcp-server.js plus 7 src files dirty from another writer (dispatch.js, cli.js, index.js, http-transport.js, release-bridge.js, self-update.js, bundle-version.js). Not overwritten. Unblock: the owning writer commits or parks its gm-mcp hunks, then the row resumes at EMIT. Witness must come from a session other than gm-fin-26 (prd-resolve refuses self-witness); the original witness is a bash dispatch in /config/gm with AGENTPLUG_HOME holding a truncated gm-mcp-http.json.'
+session_id: gm-fin-26
+status: pending

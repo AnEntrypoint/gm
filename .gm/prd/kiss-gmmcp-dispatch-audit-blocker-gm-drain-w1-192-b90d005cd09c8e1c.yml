@@ -1,0 +1,7 @@
+id: KISS-GMMCP-DISPATCH-AUDIT-blocker-gm-drain-w1-192
+node: KISS
+phase: P3
+title: 'BLOCKER: KISS-GMMCP-DISPATCH-AUDIT cannot close in one gm-prd run'
+body: 'Blocks row KISS-GMMCP-DISPATCH-AUDIT. SPECIFY receipt: .gm/receipts/KISS-GMMCP-DISPATCH-AUDIT/01-SPECIFY.md. Probe run (callers applyFsReadRangeFallback, dispatch 1791958715244-500-ab5382450c0bfdc8): 2 distinct caller sites, both in gm-mcp/test/fs-read-range.test.mjs (6 edges) plus runDispatch at dispatch.js:2099, so the probe finds live use for that symbol and does not yet separate H1 (excess exists) from H2 (no excess). Scope: dispatch.js is 2210 lines with 209 top-level matches (50 shown in one codesearch reply); enumerating every branch and option, checking each for a live caller, then deleting the dead ones, rebuilding the bundle, and witnessing through an exec_js dispatch exceeds one run. Not done: callers sweep for the remaining top-level symbols; bundle rebuild; witness. Next: split into per-function-group rows (fs_read range helpers, json repair helpers, spool publish, reply capping) each with its own probe and witness. Witness for the parent stays as the row states; a self-witness from this session is refused, so the parent needs a witness from another session.'
+session_id: gm-drain-w1-192
+status: pending

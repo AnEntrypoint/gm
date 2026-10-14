@@ -1,0 +1,6 @@
+id: JTBD-SPEND-VISIBILITY
+title: 'Job: see what a walk cost in tokens and dispatches'
+body: 'Hired when: a developer or team is deciding whether a gm walk was worth its cost. Job: report the token and dispatch spend of a walk, grouped by phase and by rework, so the cost of iteration is visible. AGENTS.md and the rework prose describe the principle that rework dominates token spend, but no stated job gives the user a measurement of their own spend. Dream-RSI observations record verb, exit code, fingerprint, quality and timestamp only, with no cost field. Done when one verb reports per-walk spend split by phase and by re-entered phase, read from recorded dispatches.'
+obligation_kind: discovery
+session_id: lean-node-JTBD
+status: pending

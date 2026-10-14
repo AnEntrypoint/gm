@@ -1,0 +1,8 @@
+id: G_CONTRACT-gm-continue-end-states-counter-blocker-gm-drain-w2-122
+subject: 'Blocked: G_CONTRACT-gm-continue-end-states-counter needs a code state in rs-plugkit (wasm, CI-only build) before its witness can run'
+body: 'Row G_CONTRACT-gm-continue-end-states-counter (session gm-drain-w2-122) cannot close here. SPECIFY found the counter (.gm/.gm-continue-count) and both outcomes only as prose in skills/gm-continue/SKILL.md:34; no gm-continue dispatch state exists in code (callers total 0; codesearch hits are prose and gitignore only). Enforcing the bound needs a new state in rs-plugkit/crates/plugkit-core/src/orchestrator plus a gm-config FSM graph change that sync-lean-graph.mjs says needs its own reviewed rebuild. PROVE needs a CI-built rs-plugkit wasm dispatched through agentplug-runner; local cargo is blocked by a hook. Unblock: an orchestrator session that owns the rs-plugkit rebuild, or a CI run with the wasm, then re-run this row with mode=witness.'
+session_id: gm-drain-w2-122
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

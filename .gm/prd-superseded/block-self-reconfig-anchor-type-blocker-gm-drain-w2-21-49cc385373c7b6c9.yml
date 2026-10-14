@@ -1,0 +1,8 @@
+id: BLOCK-SELF-RECONFIG-ANCHOR-TYPE-blocker-gm-drain-w2-21
+subject: 'Blocked: BLOCK-SELF-RECONFIG-ANCHOR-TYPE-blocker-gm-drain-w1-22 needs a rs-plugkit anchor parse, CI green and a cross-session witness'
+body: 'Row BLOCK-SELF-RECONFIG-ANCHOR-TYPE-blocker-gm-drain-w1-22 cannot close in session gm-drain-w2-21. SPECIFY receipt: .gm/receipts/BLOCK-SELF-RECONFIG-ANCHOR-TYPE-blocker-gm-drain-w1-22/01-SPECIFY.md. Confirmed: handle_propose at rs-plugkit/crates/plugkit-core/src/orchestrator/fsm_propose.rs:49 has no anchors parse (dispatch 1791959925414-500-a6ee3e940355c684); ''anchors'' appears only in prose files (dispatch 1791959923555-500-2a2cdcb7ede20913). Next: add typed {name, author} anchor parse with url rejection in fsm_propose.rs; publish rs-plugkit from C:/dev/gm/rs-plugkit (local cargo is hook-blocked, CI-verified); bump the gm rs-plugkit gitlink; ci-status green on the sha; witness via a live fsm-propose-override dispatch from a session other than gm-drain-w2-21 (self-witness refused). Witness must name the leader hypothesis H1: anchor type absent from fsm_propose.rs.'
+session_id: gm-drain-w2-21
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

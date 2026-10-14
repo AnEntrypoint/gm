@@ -1,0 +1,5 @@
+id: ORACLEBIAS-REBUILD-SIDELOAD-blocker-gm-drain-w2-322
+subject: 'ORACLEBIAS-REBUILD-SIDELOAD-blocker-gm-prdall-20261014-04-k06 cannot close: instruction probe under its own SESSION_ID still returns session_mismatch (owner gm-ach-20261014-01, live pid 11964)'
+body: 'Blocks row ORACLEBIAS-REBUILD-SIDELOAD-blocker-gm-prdall-20261014-04-k06. Evidence: instruction probes 1791963794553-500-19b52341c83f8a9 (SESSION_ID gm-prdall-20261014-04-k06) and 1791963858662-500-de946e4faf12b8ed (phase ORACLEBIAS) both return the root orchestrator payload with session_mismatch and the same instruction_hash dc3dde78cf1e8dea, so no ORACLEBIAS node text is isolated. Needed: a session that the instruction verb accepts for SESSION_ID gm-prdall-20261014-04-k06 (release or reassign the gm-ach-20261014-01 lease, a lane-owner decision, not forced here), then a witness that the served ORACLEBIAS text contains the oraclebias rule. Receipt: .gm/receipts/ORACLEBIAS-REBUILD-SIDELOAD-blocker-gm-prdall-20261014-04-k06/01-SPECIFY.md'
+session_id: gm-drain-w2-322
+status: pending

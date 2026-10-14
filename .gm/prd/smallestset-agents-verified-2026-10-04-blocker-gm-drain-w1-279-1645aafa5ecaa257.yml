@@ -1,0 +1,5 @@
+id: SMALLESTSET-AGENTS-VERIFIED-2026-10-04-blocker-gm-drain-w1-279
+subject: 'Blocked: SMALLESTSET-AGENTS-VERIFIED-2026-10-04 cited AGENTS.md section is absent'
+body: 'Row SMALLESTSET-AGENTS-VERIFIED-2026-10-04 cites AGENTS.md lines 132-215 (section ''Verified 2026-10-04''). At SPECIFY (receipt .gm/receipts/SMALLESTSET-AGENTS-VERIFIED-2026-10-04/01-SPECIFY.md) AGENTS.md is 134 lines / 29203 bytes and contains no ''Verified 2026-10-04'' heading (codesearch 1791959183628-500-30b9cc6ea11df998). The content already moved to docs/verified-incidents.md line 39 (codesearch 1791959205094-500-46c5413e2dd78059). The acceptance (bytes drop >= 4000 in AGENTS.md) cannot be measured against an absent section, so no witness can bind it honestly. Resolution needed: the owner either closes the row as superseded by AGENTSMD-PURGE-INCIDENT-SECTIONS, or re-scopes it to a new acceptance on the current AGENTS.md. Session gm-drain-w1-279.'
+session_id: gm-drain-w1-279
+status: pending

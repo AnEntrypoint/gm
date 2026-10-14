@@ -1,0 +1,8 @@
+id: BLOCK-TENCENTDB-384-TYPE-blocker-gm-drain-w2-23-blocker-gm-drain-w3-39
+subject: 'PROVE blocked again: 384 dims guard still runtime-only, needs CI-built rs-plugkit wasm and a cross-session witness'
+body: 'Row BLOCK-TENCENTDB-384-TYPE-blocker-gm-drain-w2-23 (SPECIFY, receipt .gm/receipts/BLOCK-TENCENTDB-384-TYPE-blocker-gm-drain-w2-23/01-SPECIFY.md, codesearch dispatch 1791969572408-500-bb496a64d45cbd33) cannot reach PROVE in session gm-drain-w3-39. Premise still holds: reject_if_dest_namespace_dim_not_384 at rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs/memory.rs:729 and call at :819 are runtime Option rejections. Blocking facts: (1) the dims owner type is not yet located (needs codeinsight impact before EDIT); (2) local cargo is hook-blocked, so verification is only the rs-plugkit publish/CI guest build followed by a live witness through agentplug-runner from another session. Unblock: locate the namespace config struct, add a validated dims field, push rs-plugkit main, cite the CI run, and witness from a separate session.'
+session_id: gm-drain-w3-39
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

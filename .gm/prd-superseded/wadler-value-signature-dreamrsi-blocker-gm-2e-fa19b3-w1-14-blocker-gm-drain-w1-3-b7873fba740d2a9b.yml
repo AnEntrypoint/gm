@@ -1,0 +1,5 @@
+id: WADLER-VALUE-SIGNATURE-DREAMRSI-blocker-gm-2e-fa19b3-w1-14-blocker-gm-drain-w1-320
+subject: 'Close WADLER-VALUE-SIGNATURE-DREAMRSI: re-scope owner row to verify_record, then CI-witnessed typed-record refactor'
+body: 'Filed by gm-prd SPECIFY, session gm-drain-w1-320, on blocker row WADLER-VALUE-SIGNATURE-DREAMRSI-blocker-gm-2e-fa19b3-w1-14. Receipt: .gm/receipts/WADLER-VALUE-SIGNATURE-DREAMRSI-blocker-gm-2e-fa19b3-w1-14/01-SPECIFY.md. Tree check: observation_is_gate_drift_failure and veto_reason citations are stale (0 matches; &Strategy). verify_record is at dream_rsi.rs:810 with 12 call sites (codesearch dispatch 1791959653353-500-3aba55e061f6b44b). Blocker: the typed-record refactor touches 12 call sites that may sit in a wasm32-only cfg. Local cargo is blocked, so the only witness is CI, and CI must come from a session other than the owner. Next: re-scope WADLER-VALUE-SIGNATURE-DREAMRSI to verify_record and its record kinds, then run the refactor through rs-plugkit CI and witness from another session.'
+session_id: gm-drain-w1-320
+status: pending

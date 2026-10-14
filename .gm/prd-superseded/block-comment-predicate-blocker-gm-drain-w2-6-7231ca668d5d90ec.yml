@@ -1,0 +1,8 @@
+id: BLOCK-COMMENT-PREDICATE-blocker-gm-drain-w2-6
+subject: 'Blocker for BLOCK-COMMENT-PREDICATE: no PROVE or live witness reachable in session gm-drain-w2-6'
+body: 'Row BLOCK-COMMENT-PREDICATE stays pending. Re-confirmed in session gm-drain-w2-6: no comment predicate in rs-plugkit/crates/plugkit-core/src/orchestrator/predicate_registry.rs (codesearch literal ''comment'' returns 0 hits). Closing needs (1) a rs-plugkit Rust change adding the predicate and its transitions.rs pair, (2) a lean_graph.json gate edit for EXECUTE and VERIFY, which is a reviewed rebuild per rs-plugkit/AGENTS.md, (3) local cargo, which is hook-blocked (memory gm-no-local-cargo-verified-by-ci.md), so the wasm is verified only by CI publish/release, (4) a pushed rs-plugkit commit, a release and a bump-pins advance of the parent gitlink, (5) a cross-session live transition refusing a comment-adding diff. Allowlist requirement: rs-plugkit/AGENTS.md permits comments for attributes, SAFETY rationale and license headers, so the predicate must allow those. Receipts: .gm/receipts/BLOCK-COMMENT-PREDICATE/01-SPECIFY.md, 02-PROVE.md. Unblock: a session with CI release access lands the rs-plugkit commit, then a witness dispatch shows a refused comment-adding transition.'
+session_id: gm-drain-w2-6
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

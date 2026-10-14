@@ -1,0 +1,8 @@
+id: G_CONTRACT-git-append-rewrite-classification-blocker-gm-drain-w2-121
+subject: 'Blocked: per-verb append/rewrite flag absent from rs-plugkit git registry; closing needs rs-plugkit CI release and gitlink bump'
+body: 'Row G_CONTRACT-git-append-rewrite-classification-blocker-gm-drain-w1-93 (session gm-drain-w2-121). SPECIFY evidence: codesearch literal rewrite in rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs/git.rs returns only the amend error string at line 2227 (dispatch 1791960736009-500-94d9acb56c30ae57); GIT_VERBS at rs-plugkit/crates/plugkit-core/src/mediator.rs:39 has no classification (dispatch 1791960737113-500-8ce2112b40949e24). Flag absent. Next: add the append/rewrite flag in rs-plugkit via its CI publish path (local cargo blocked, verified by CI only), bump the parent gitlink, then witness with a live dispatch reading the flag and prd-resolve citing that dispatch id.'
+session_id: gm-drain-w2-121
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

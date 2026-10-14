@@ -1,0 +1,5 @@
+id: G_CONTRACT-skill-codesearch-body-table-blocker-gm-drain-w1-110
+subject: 'Blocked: G_CONTRACT-skill-codesearch-body-table needs an rs-plugkit rebuild for its compiled prose copy'
+body: 'Row G_CONTRACT-skill-codesearch-body-table (session gm-drain-w1-110) cannot close in this run. The verb side holds: codesearch help (dispatch 1791958172772-500-c6429b8d97cffb09) serves the mode enum and defaults. The prose side has two copies of the table sentence: gm-config/prose/entry.md:137-141 and the compiled default rs-plugkit/crates/plugkit-core/src/orchestrator/instructions/prose/entry.md:192 (grep dispatch 1791958184303-500-7b0a8a8795448ce4). The served instruction reads the compiled copy when no vendored key exists, so editing gm-config alone leaves the postcondition unmet and duplicates the fact. Unblock: a reviewed rs-plugkit change to that prose file, a CI-only wasm rebuild with --features slim, and a live instruction witness from another session showing the table gone. Receipts: .gm/receipts/G_CONTRACT-skill-codesearch-body-table/01-SPECIFY.md and 02-PROVE.md. Parent row stays pending.'
+session_id: gm-drain-w1-110
+status: pending

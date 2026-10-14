@@ -1,0 +1,7 @@
+id: NODUPEDOC-AGENTS-DREAMRSI-SECTION-blocker-gm-prdall-20261014-04-k09-blocker-gm-drain-w1-216
+subject: 'Blocker for NODUPEDOC-AGENTS-DREAMRSI-SECTION-blocker-gm-prdall-20261014-04-k09: cannot close this row in one gm-prd run; the parent row NODUPEDOC-AGENTS-DREAMRSI-SECTION needs a rescoped edit to AGENTS.md and skills/dream-rsi/SKILL.md plus a cross-session witness'
+status: pending
+blockedBy:
+- NODUPEDOC-AGENTS-DREAMRSI-SECTION-blocker-gm-prdall-20261014-04-k09
+body: 'Stage reached: SPECIFY (receipt .gm/receipts/NODUPEDOC-AGENTS-DREAMRSI-SECTION-blocker-gm-prdall-20261014-04-k09/01-SPECIFY.md). Premise is stale: the cited ''Dream-RSI grounded replay'' heading is absent; the mechanism is the bullets at AGENTS.md:97 and :120 (dispatch 1791958802846-500-185b11ce9fc6f748). Next: rescope the parent row to those bullets, move the mechanism prose to skills/dream-rsi/SKILL.md, witness with an exact-match exec_js from another session, then prd-resolve the parent. Session gm-drain-w1-216.'
+session_id: mcp-codemode-31304-1791958818975

@@ -1,0 +1,10 @@
+id: SLAP-GMMCP-RUNDISPATCH-LEVELS-blocker-gm-drain-w2-371
+subject: 'Blocked: SLAP-GMMCP-RUNDISPATCH-LEVELS refactor not implemented; foreign WIP blocker is cleared'
+body: |-
+  Blocker of SLAP-GMMCP-RUNDISPATCH-LEVELS, filed by gm-drain-w2-371 on the row SLAP-GMMCP-RUNDISPATCH-LEVELS-blocker-gm-drain-w1-256.
+
+  State at HEAD 9a93309ee5f185fe2e581d0d81f4cc82a89c318a: gm-mcp/src/dispatch.js has no uncommitted changes (git_status dispatch 1791964673575-500-cbef56b352cdebd3), so the foreign-WIP blocker no longer holds. The parent row stays pending because runDispatch is not yet split into validateDispatch, publishDispatch, poll and shape levels. Cited lines 1166-1361 are stale; runDispatch is at dispatch.js 1963-2210. runnerEnsureInFlight is at lines 1152, 1163 and 1183.
+
+  To close: implement the level split in gm-mcp/src/dispatch.js, rebuild the gm-mcp bundle together with the source, witness through the live spool from a session other than the implementer, then prd-resolve the parent row. Receipt: .gm/receipts/SLAP-GMMCP-RUNDISPATCH-LEVELS-blocker-gm-drain-w1-256/01-SPECIFY.md.
+session_id: gm-drain-w2-371
+status: pending

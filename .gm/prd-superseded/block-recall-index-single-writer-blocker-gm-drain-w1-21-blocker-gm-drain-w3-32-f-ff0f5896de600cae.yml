@@ -1,0 +1,8 @@
+id: BLOCK-RECALL-INDEX-SINGLE-WRITER-blocker-gm-drain-w1-21-blocker-gm-drain-w3-32
+subject: 'Owner decision required: BLOCK-RECALL-INDEX-SINGLE-WRITER-blocker-gm-drain-w1-21 cannot close without choosing (a) or (b)'
+body: 'Parent row BLOCK-RECALL-INDEX-SINGLE-WRITER-blocker-gm-drain-w1-21 needs one decision before a witness can close it. Static evidence (session gm-drain-w3-32, dispatch 1791969522363-500-2de743ae5827e517) supports H2: the `memorize` verb (verbs.rs:3125 -> verbs/memory.rs:483 memorize_with_raw) writes rssearch_vectors directly at memory.rs:544, so entry-extended.md:52 (''Write the recall index only via memorize-fire'') is false for memorize; memory_md.rs:783 is a further writer in the md-to-index sync. No live probe was run, because a probe writes durable memory and local cargo cannot rebuild rs-plugkit. Receipt: .gm/receipts/BLOCK-RECALL-INDEX-SINGLE-WRITER-blocker-gm-drain-w1-21/02-ELIMINATE.md. Owner must choose: (a) route memorize through memorize-fire in rs-plugkit and rebuild in CI, or (b) amend entry-extended.md:52 in gm-config and its rs-plugkit mirror to name memorize and memorize-fire as the sanctioned write verbs. After the choice, run the live probe (memorize a unique key, recall it, memorize-prune) in a session other than gm-drain-w1-21, then prd-resolve with the witness dispatch id.'
+session_id: gm-drain-w3-32
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

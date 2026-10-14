@@ -1,0 +1,7 @@
+id: BLOCK-COMMENT-PREDICATE-blocker-gm-drain-w3-10
+subject: 'Blocker for BLOCK-COMMENT-PREDICATE: the comment predicate needs a rs-plugkit Rust change and a CI-built plugkit.wasm witness; no local cargo and no live witness reachable in session gm-drain-w3-10. Stage receipt: .gm/receipts/BLOCK-COMMENT-PREDICATE/01-SPECIFY.md. Unblock by a CI-built guest and a cross-session witness.'
+session_id: gm-drain-w3-10
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

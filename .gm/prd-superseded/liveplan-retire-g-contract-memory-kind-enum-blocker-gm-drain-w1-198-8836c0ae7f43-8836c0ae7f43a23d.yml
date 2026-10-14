@@ -1,0 +1,8 @@
+id: LIVEPLAN-RETIRE-G-CONTRACT-MEMORY-KIND-ENUM-blocker-gm-drain-w1-198
+subject: 'Blocker: retire row cannot close in gm-drain-w1-198; dependencies INVEST-GCONTRACT-MEMORY-KIND-ENUM and INVEST-GCONTRACT-MEMORY-PROSE-REMOVE still pending'
+status: pending
+blockedBy:
+- INVEST-GCONTRACT-MEMORY-KIND-ENUM
+- INVEST-GCONTRACT-MEMORY-PROSE-REMOVE
+body: 'Row LIVEPLAN-RETIRE-G-CONTRACT-MEMORY-KIND-ENUM-blocker-gm-prdall-20261014-04-k18 waits on two open executor rows. Probe (prd-list per id): both report status pending (dispatches 1791958641285-500-1964d5b26a36c987 and 1791958642481-500-794cb682660c39fd). Enum change needs the rs-plugkit wasm rebuild, verified only in CI. Receipts: .gm/receipts/LIVEPLAN-RETIRE-G-CONTRACT-MEMORY-KIND-ENUM-blocker-gm-prdall-20261014-04-k18/. Resume: close INVEST-GCONTRACT-MEMORY-KIND-ENUM with its CI-backed witness, then INVEST-GCONTRACT-MEMORY-PROSE-REMOVE, then re-run gm-prd on LIVEPLAN-RETIRE-G-CONTRACT-MEMORY-KIND-ENUM-blocker-gm-prdall-20261014-04-k18.'
+session_id: gm-drain-w1-198

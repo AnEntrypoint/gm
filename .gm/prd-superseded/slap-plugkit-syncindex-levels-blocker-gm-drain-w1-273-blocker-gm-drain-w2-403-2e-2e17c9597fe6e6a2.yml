@@ -1,0 +1,5 @@
+id: SLAP-PLUGKIT-SYNCINDEX-LEVELS-blocker-gm-drain-w1-273-blocker-gm-drain-w2-403
+subject: 'Blocked: SLAP-PLUGKIT-SYNCINDEX-LEVELS-blocker-gm-drain-w1-273 cannot reach EMIT or a live witness in session gm-drain-w2-403'
+body: 'Row SLAP-PLUGKIT-SYNCINDEX-LEVELS-blocker-gm-drain-w1-273 stalls at PROVE. The EMIT step is the sync_index refactor at rs-plugkit/crates/plugkit-core/src/memory_md.rs:695 (cite confirmed; parent''s 689 is stale). Local cargo is blocked by a hook (memory gm-no-local-cargo-verified-by-ci), so no compile proof is possible here, and the witness needs a CI-built rs-plugkit wasm. Receipt: .gm/receipts/SLAP-PLUGKIT-SYNCINDEX-LEVELS-blocker-gm-drain-w1-273/01-SPECIFY.md. Unblock: land the refactor through CI or from a cargo-enabled session, then witness with a live memory sync dispatch from a session other than the author. Parent rows stay pending.'
+session_id: gm-drain-w2-403
+status: pending

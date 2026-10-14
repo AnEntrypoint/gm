@@ -1,0 +1,13 @@
+id: BLOCKER-G_CONTRACT-gm-continue-counter-not-enforced-blocker-gm-drain-w3-46
+subject: 'Blocker for BLOCKER-G_CONTRACT-gm-continue-counter-not-enforced-blocker-gm-drain-w2-26: the counter needs a CI-built rs-plugkit change and a cross-session witness; gm-drain-w3-46 cannot PROVE locally'
+session_id: gm-drain-w3-46
+body: |-
+  blockedBy: BLOCKER-G_CONTRACT-gm-continue-counter-not-enforced-blocker-gm-drain-w2-26
+
+  SPECIFY (receipt .gm/receipts/BLOCKER-G_CONTRACT-gm-continue-counter-not-enforced-blocker-gm-drain-w2-26/01-SPECIFY.md) confirms the parent claim on the current tree: codesearch literal gm-continue-count dispatch 1791969685383-500-a03ff5c13b65d91 finds only .gitignore:119, rs-plugkit/crates/plugkit-core/src/gitignore.rs:16 (ignore entry) and skills/gm-continue/SKILL.md:34 (prose). No code reads, increments or enforces the two-dispatch-per-turn bound or the two end states.
+
+  Why it cannot close here: the fix is a Rust change in rs-plugkit, verified only by CI (publish / release, step Build; local cargo is blocked by a hook). The witness must come from another session (self-witness refused as prd-resolve-self-witness). Unblock by: (1) implement the counter read/increment/enforcement in rs-plugkit under the gm-continue dispatch in a commit on rs-plugkit main, (2) let CI publish, (3) have a different session run the witness and prd-resolve the parent with its dispatch id.
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

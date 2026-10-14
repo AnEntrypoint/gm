@@ -1,0 +1,5 @@
+id: SMALLESTSET-AGENTS-SIZE-HEADROOM-blocker-gm-drain-w2-409
+subject: 'Blocked: AGENTS.md 20000 B headroom target is not an invariant; 30000 B invariant holds at 29594 B; scope decision needed'
+body: 'SPECIFY+PROVE (gm-drain-w2-409) on row SMALLESTSET-AGENTS-SIZE-HEADROOM-blocker-gm-drain-w1-276. Live fs_stat AGENTS.md size 29594 (dispatch 1791965681812-500-de5d4bf89a4887fc), under the 30000 B invariant. The row''s 20000 B target needs at least 9594 B removed, and every kept rule carries a Falsified-by clause, so reaching it means retiring falsifiers. Not done: AGENTS.md unedited. Decision for the owner: lower the target to the 30000 B invariant (then the row closes on the live size witness), or split a per-section compaction row with its own witness. Receipt: .gm/receipts/SMALLESTSET-AGENTS-SIZE-HEADROOM-blocker-gm-drain-w1-276/01-SPECIFY.md. Witness for the next run: fs_stat AGENTS.md size.'
+session_id: gm-drain-w2-409
+status: pending

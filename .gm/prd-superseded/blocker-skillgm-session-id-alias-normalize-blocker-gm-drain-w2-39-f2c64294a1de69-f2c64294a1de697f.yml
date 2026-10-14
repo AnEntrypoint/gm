@@ -1,0 +1,8 @@
+id: BLOCKER-SKILLGM-session-id-alias-normalize-blocker-gm-drain-w2-39
+subject: 'Blocker for BLOCKER-SKILLGM-session-id-alias-normalize: fix needs gm-mcp/src/dispatch.js and bundle, which another writer holds uncommitted'
+body: 'Row BLOCKER-SKILLGM-session-id-alias-normalize-blocker-gm-drain-w1-35 is blocked, not closed. Leader hypothesis: body {sessionId:X} with no top-level session_id is served under owner X. Source refutes it: gm-mcp/src/dispatch.js:1055-1058 explicitBodySessionId reads only body.SESSION_ID, and runDispatch:1932 folds only that alias. Fix: accept SESSION_ID and sessionId body aliases in explicitBodySessionId, then rebuild bin/gm-mcp-server.js (npm run build in gm-mcp). Blocked because gm-mcp working tree holds another writer''s uncommitted refactor in src/dispatch.js, bin/gm-mcp-server.js and src/spool-store.js (untracked); publishing this change would sweep it in. Unblock: the owner of the gm-mcp refactor lands or stashes it on main, then re-run the row. Live witness still needed from a second session (explicit sessionId body reaches owner X). Receipt: .gm/receipts/BLOCKER-SKILLGM-session-id-alias-normalize-blocker-gm-drain-w1-35/01-SPECIFY.md'
+session_id: gm-drain-w2-39
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

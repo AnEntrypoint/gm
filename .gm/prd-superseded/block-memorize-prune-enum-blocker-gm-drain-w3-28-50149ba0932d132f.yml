@@ -1,0 +1,7 @@
+id: BLOCK-MEMORIZE-PRUNE-ENUM-blocker-gm-drain-w3-28
+subject: 'Blocker for BLOCK-MEMORIZE-PRUNE-ENUM-blocker-gm-drain-w1-20 (session gm-drain-w3-28): open part (c) needs a gm-config prose reduction of gm-config/prose/entry-extended.md:52, a vendored re-sync into rs-plugkit instructions/prose, and a CI-built wasm witness from a session other than gm-drain-w1-20; local cargo is blocked and self-witness is refused.'
+status: pending
+blockedBy:
+- external
+session_id: mcp-codemode-9708-1791969491766
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

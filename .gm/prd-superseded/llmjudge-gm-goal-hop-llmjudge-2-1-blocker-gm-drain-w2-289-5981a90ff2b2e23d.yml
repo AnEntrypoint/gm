@@ -1,0 +1,5 @@
+id: LLMJUDGE-gm-goal-hop-LLMJUDGE-2-1-blocker-gm-drain-w2-289
+subject: 'Blocked: LLMJUDGE-gm-goal-hop-LLMJUDGE-2-1 has no decided judge transport, credential path or verdict schema'
+body: 'Parent row LLMJUDGE-gm-goal-hop-LLMJUDGE-2-1 cannot close. Codesearch dispatch 1791963402085-500-693f4b5c2917e6d8 confirms gm-mcp/src has no judge, rubric, llm, model-client or API-key symbol. Undecided: (1) the process that calls the judge model (gm-mcp direct call or a gm-skill subagent such as jill), (2) its credential source, (3) the verdict schema and failure rule, (4) a per-reply latency budget. Needed from the owner before a source change and bundle rebuild can witness the parent row. Receipt: .gm/receipts/LLMJUDGE-gm-goal-hop-LLMJUDGE-2-1-blocker-gm-drain-w1-204/01-SPECIFY.md. Parent stays pending.'
+session_id: gm-drain-w2-289
+status: pending

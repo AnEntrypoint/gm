@@ -1,0 +1,11 @@
+id: SLAP-PLUGKIT-CHECKDISPATCH-LEVELS-blocker-gm-drain-w2-380
+subject: 'Blocked: SLAP-PLUGKIT-CHECKDISPATCH-LEVELS cannot PROVE locally (CI-only wasm, cross-session witness needed)'
+body: |-
+  Blocker for SLAP-PLUGKIT-CHECKDISPATCH-LEVELS (session gm-drain-w2-380).
+  Stage reached: SPECIFY. PROVE blocked.
+  Cited line is stale: check_dispatch is at rs-plugkit/crates/plugkit-core/src/gates.rs:466 (codesearch literal, dispatch 1791964800824-500-b901d80408093de8), spanning 466-774. Await gate 468-488, shell git scan 490-522.
+  Blocker cause: the witness needs a rs-plugkit wasm build, and local cargo is blocked by a hook (memory gm-no-local-cargo-verified-by-ci). The row's live witness needs a CI-built guest. A self-witness is refused by prd-resolve, and no other session has produced one.
+  Receipts: .gm/receipts/SLAP-PLUGKIT-CHECKDISPATCH-LEVELS/01-SPECIFY.md (from gm-drain-w1-262), 02-PROVE.md (this session).
+  Unblock: a CI-built rs-plugkit guest plus a cross-session live witness for a denied shell git dispatch with identical reason string.
+session_id: gm-drain-w2-380
+status: pending

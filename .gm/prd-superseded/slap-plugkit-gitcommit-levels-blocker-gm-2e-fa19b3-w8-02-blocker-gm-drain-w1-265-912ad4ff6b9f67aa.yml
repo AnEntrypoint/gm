@@ -1,0 +1,5 @@
+id: SLAP-PLUGKIT-GITCOMMIT-LEVELS-blocker-gm-2e-fa19b3-w8-02-blocker-gm-drain-w1-265
+subject: 'blocker: SLAP-PLUGKIT-GITCOMMIT-LEVELS-blocker-gm-2e-fa19b3-w8-02 cannot close in session gm-drain-w1-265'
+body: 'Row SLAP-PLUGKIT-GITCOMMIT-LEVELS-blocker-gm-2e-fa19b3-w8-02 (parent SLAP-PLUGKIT-GITCOMMIT-LEVELS) cannot reach COMPLETE in this run. SPECIFY: git.rs git_commit is at line 2166 (1401 is stale). PROVE: the witness needs a rebuilt rs-plugkit wasm from a CI release (local cargo is hook-blocked), a pin bump, and a live git_commit witness from another session (self-witness refused). No edit was made, so nothing to commit or push. Resolve: run the rs-plugkit CI release after the CommitArgs refactor lands, bump the parent gitlink, then witness the empty-message and paths-type-error dispatches from a second session. Receipts: .gm/receipts/SLAP-PLUGKIT-GITCOMMIT-LEVELS-blocker-gm-2e-fa19b3-w8-02/01-SPECIFY.md, 02-PROVE.md, 03-STOP.md.'
+session_id: gm-drain-w1-265
+status: pending

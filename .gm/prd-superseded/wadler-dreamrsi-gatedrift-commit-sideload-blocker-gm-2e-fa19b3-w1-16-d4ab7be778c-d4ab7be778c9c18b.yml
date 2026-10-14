@@ -1,0 +1,9 @@
+id: WADLER-DREAMRSI-GATEDRIFT-COMMIT-SIDELOAD-blocker-gm-2e-fa19b3-w1-16
+lane_wait_ms: 240000
+node: WADLER
+owner: rs-plugkit/crates/plugkit-core/src/orchestrator/dream_rsi.rs
+status: pending
+title: 'Witness gap: automatic_replay returned no replays and admit_dispatch never ran its veto branch on the typed path'
+parent_row: WADLER-DREAMRSI-GATEDRIFT-COMMIT-SIDELOAD
+evidence: 'Guest source_sha 0ff449501c608f66a58e8105c9f92df41637d493 equals rs-plugkit HEAD and the gm pin (health dispatch 1791850668293). dream-replay-cycle dispatch 1791850752616 answered status deferred reason no-verified-observations, so automatic_replay saw no observations.json for owner session mcp-codemode-19560-1791850675330 and returned null. admit_dispatch returned Allow with no dream_rsi_advisory on codesearch dispatch 1791850548128. Needed: a session with recorded verified dispatches, then a live witness showing a non-null automatic_replay selection and, for the veto branch, a dream_rsi_advisory on a codesearch or exec_js dispatch.'
+session_id: mcp-codemode-19560-1791850885061

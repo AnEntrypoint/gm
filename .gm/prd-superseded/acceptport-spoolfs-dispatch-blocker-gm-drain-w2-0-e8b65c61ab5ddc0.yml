@@ -1,0 +1,8 @@
+id: ACCEPTPORT-SPOOLFS-DISPATCH-blocker-gm-drain-w2-0
+subject: 'BLOCKER ACCEPTPORT-SPOOLFS-DISPATCH: row has no recoverable acceptance body and the port move is partial'
+body: 'SPECIFY (gm-drain-w2-0): (1) .gm/prd/ACCEPTPORT-SPOOLFS-DISPATCH.yml does not exist and prd-list {id} returns title only, so the row''s acceptance text is unavailable; the only acceptance is its title: dispatch.js spool in-file writes and lock/status reads must go behind a spool-store adapter. (2) Current state at HEAD cd6bbe75: gm-mcp/src/spool-store.js and spool-port.js exist and dispatch.js imports spool-store. Inline fs remains in gm-mcp/src/dispatch.js: publishSpoolRequest writeFileSync/linkSync/existsSync/unlinkSync (lines 392-398), validateSpoolFile existsSync/lstatSync/realpathSync (667-672), openSpoolRegularFile openSync (703), ensureAgentLease existsSync (990), plus heartbeat and lease writes. (3) gm-mcp/src edits require a rebuilt committed bundle (AGENTS.md); no verified bundle command was confirmed in this run. (4) Witness must come from a session other than gm-drain-w2-0 (self-witness refused). Needed to close: restore the row body (acceptance and witness command) via prd-add overwrite on the original id by its owner, name the bundle rebuild command, and assign a separate witness session. Status: blocked, row stays pending.'
+session_id: gm-drain-w2-0
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

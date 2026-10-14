@@ -1,0 +1,8 @@
+id: G_CONTRACT-codeinsight-complete-flag-blocker-gm-drain-w2-109
+subject: 'Blocked: G_CONTRACT-codeinsight-complete-flag cannot close in gm-drain-w2-109; the proof flag is ambiguous (codeinsight_index top-level complete:false vs symbols.complete:true) and the typed-field change needs CI wasm plus a cross-session witness'
+body: 'Row G_CONTRACT-codeinsight-complete-flag stays pending. Receipts: .gm/receipts/G_CONTRACT-codeinsight-complete-flag/01-SPECIFY.md, 02-PROVE.md (gm-drain-w1-85), 03-PROVE-gm-drain-w2-109.md. Live witnesses this session: callers dispatch 1791960659619-500-c63d1e5a231c9b33 (nested codeinsight_index.complete:true, no top-level proof field); codeinsight_index dispatch 1791960702512-500-529cd4e499a7d2bc (top-level complete:false, symbols.complete:true). Needed: pick the proof flag and name it in prose, or add a top-level typed field in rs-plugkit code_symbols.rs handle() (lines 2781-2792); CI-built wasm (no local cargo); gm-config/prose/entry.md edit and vendored re-sync; cross-session live witness.'
+session_id: gm-drain-w2-109
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

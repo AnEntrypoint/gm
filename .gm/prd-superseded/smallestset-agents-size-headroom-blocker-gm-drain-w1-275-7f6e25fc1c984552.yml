@@ -1,0 +1,5 @@
+id: SMALLESTSET-AGENTS-SIZE-HEADROOM-blocker-gm-drain-w1-275
+subject: 'Blocked: SMALLESTSET-AGENTS-SIZE-HEADROOM cannot close; dependencies pending and the 20000-byte target is unreachable from the named blocks'
+body: 'Row SMALLESTSET-AGENTS-SIZE-HEADROOM closes only after SMALLESTSET-AGENTS-VERIFIED-2026-09-14, -2026-10-04 and -2026-10-07 resolve (all pending at dispatch 1791959175713 and earlier). Measured AGENTS.md is 29203 bytes (exec_js 1791959177700-500-f08ecab462988e3c). The three pending blocks total about 8.0 KB of cuts (1.2, 5.3, 1.5 KB), leaving about 21.2 KB, above the 20000-byte witness. The aggregate needs a further cut of about 1.2 KB not named by any row. Receipt: .gm/receipts/SMALLESTSET-AGENTS-SIZE-HEADROOM/01-SPECIFY.md. Next: resolve the three pending SMALLESTSET rows, then file a new row for the remaining cut or lower the target.'
+session_id: gm-drain-w1-275
+status: pending

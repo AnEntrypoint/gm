@@ -1,0 +1,7 @@
+id: BLOCKER-G_CONTRACT-gm-continue-counter-not-enforced-blocker-gm-drain-w2-26
+subject: 'Blocker for BLOCKER-G_CONTRACT-gm-continue-counter-not-enforced: counter and end outcomes need a CI-built rs-plugkit change and a cross-session witness; gm-drain-w2-26 cannot PROVE locally'
+status: pending
+blockedBy:
+- external
+session_id: mcp-codemode-23256-1791959965091
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

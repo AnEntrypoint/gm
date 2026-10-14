@@ -1,0 +1,9 @@
+id: CODESEARCH-TRIPLE-20-blocker-gm-drain-w3-118
+subject: 'Blocked: CODESEARCH-TRIPLE-20 snippet budget is 2 lines (SNIPPET_LINES=2), so the 3-line acceptance is refuted'
+body: |-
+  Acceptance: one codesearch dispatch returns 20 BM25, 20 vector and 20 commit hits, each with 3 live snippet lines, and the db holds no content column.
+  Refuted at SPECIFY (receipt .gm/receipts/CODESEARCH-TRIPLE-20/01-SPECIFY.md): rs-plugkit/crates/plugkit-core/src/codesearch_rank.rs:7 sets SNIPPET_LINES = 2, so every snippet carries 2 lines, not 3. Live dispatch 1791970807493-500-ff4acbdd96da0549 shows that constant.
+  Fix surface: change SNIPPET_LINES to 3 in codesearch_rank.rs and verify the per-channel k at wasm_dispatch/verbs/search.rs:2599.
+  Closing needs: a CI-built rs-plugkit wasm (no local cargo) and a live witness dispatch from another session naming 20/20/20 with 3-line snippets.
+session_id: gm-drain-w3-118
+status: pending

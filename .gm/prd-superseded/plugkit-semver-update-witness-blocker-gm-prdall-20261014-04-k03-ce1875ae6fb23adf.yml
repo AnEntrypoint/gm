@@ -1,0 +1,5 @@
+id: PLUGKIT-SEMVER-UPDATE-WITNESS-blocker-gm-prdall-20261014-04-k03
+subject: 'Blocker for PLUGKIT-SEMVER-UPDATE-WITNESS: live witness fails, updater does not replace the sideloaded wasm'
+body: 'Stage reached: DECIDE (witness FAIL). Live probe dispatch 1791956486500-500-ce00a73be888be7e: daemon-status gm sha c5e088f3e88196ef741b2733f77ef16571ed77fe9fb7587d47a07894ee8e5a8e, expected release db42b8dc21646809ca042cc99814539468ccfb56c6315ec5720ce435d10cb0de (gm.build.json 0.1.1634). Prior run 08-DECIDE in .gm/receipts/PLUGKIT-SEMVER-UPDATE-WITNESS/ records the stale sha across 3 polls. Root cause (static): agentplug/crates/agentplug-runner/src/download.rs ensure_plugin_installed_via_github returns early on dest.exists() with a matching version before the sha256 sidecar is fetched, so refresh_plugin_if_stale Equal-version sha-drift never downloads. Needs fix row PLUGKIT-SEMVER-SHA-DRIFT-FIX. Row stays pending; no binding.'
+session_id: gm-prdall-20261014-04-k03
+status: pending

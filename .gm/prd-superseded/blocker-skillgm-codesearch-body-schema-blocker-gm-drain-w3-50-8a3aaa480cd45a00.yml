@@ -1,0 +1,14 @@
+id: BLOCKER-SKILLGM-codesearch-body-schema-blocker-gm-drain-w3-50
+subject: 'Blocked: grep body schema still undeclared; gm-mcp has foreign uncommitted WIP so the verb-table fix and bundle rebuild cannot land from this session'
+body: |-
+  Row BLOCKER-SKILLGM-codesearch-body-schema-blocker-gm-drain-w2-28 (session gm-drain-w3-50).
+  SPECIFY probe: gm.describe("grep") returns body_schema.declared=false, so the row acceptance (grep body fields declared in the served schema) is still unmet.
+  Fix location: gm-mcp/src/verb-table.js (codesearch block) read by gm-mcp/src/codemode.js; requires a committed bundle rebuild and a gm-mcp commit on main, then a parent gitlink bump.
+  Blocked: gm-mcp git_status (dispatch 1791969729868-500-30fbbc320c941596) shows 21 changed paths owned by other writers (20 modified, 2 staged incl. AGENTS.md and src/self-update.js, 1 untracked src/spool-store.js). A bundle rebuild and commit would publish that foreign WIP, which gm-orchestrate forbids.
+  Witness must come from a session other than gm-drain-w1-28, gm-drain-w2-28 and gm-drain-w3-50 after the gm-mcp tree is clean or owned by one writer.
+  Parent row BLOCKER-SKILLGM-codesearch-body-schema remains pending. Receipt: .gm/receipts/BLOCKER-SKILLGM-codesearch-body-schema-blocker-gm-drain-w2-28/.
+session_id: gm-drain-w3-50
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

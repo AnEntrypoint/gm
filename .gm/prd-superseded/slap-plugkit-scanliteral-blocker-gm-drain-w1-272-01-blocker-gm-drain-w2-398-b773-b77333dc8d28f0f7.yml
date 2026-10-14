@@ -1,0 +1,5 @@
+id: SLAP-PLUGKIT-SCANLITERAL-blocker-gm-drain-w1-272-01-blocker-gm-drain-w2-398
+subject: 'Blocker: SLAP-PLUGKIT-SCANLITERAL-blocker-gm-drain-w1-272-01 cannot close in one session; EMIT of SLAP-PLUGKIT-SCANLITERAL-LEVELS needs a CI-witness session with release and runner self-update'
+body: 'gm-prd run for row SLAP-PLUGKIT-SCANLITERAL-blocker-gm-drain-w1-272-01 (session gm-drain-w2-398). SPECIFY (receipt .gm/receipts/SLAP-PLUGKIT-SCANLITERAL-blocker-gm-drain-w1-272-01/01-SPECIFY-gm-drain-w2-398.md) confirmed the stale range 5128-6264 for scan_literal in rs-plugkit/crates/plugkit-core/src/code_index.rs, from prior callers dispatch 1791959146436-500-f83c474873ab7968. EMIT needs an uncompiled ~1100-line Rust refactor (no local cargo), a CI build, a release, and a runner self-update before a live witness. None completes in this session, so PROVE through COMPLETE were not run. Next step: a session with a CI witness path edits code_index.rs:5128-6264 per the parent row SLAP-PLUGKIT-SCANLITERAL-LEVELS, then witnesses through the release and self-update.'
+session_id: gm-drain-w2-398
+status: pending

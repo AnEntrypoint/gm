@@ -1,0 +1,5 @@
+id: CLEANNAME-RS-PLUGKIT-blocker-gm-drain-w1-48
+subject: 'BLOCKER CLEANNAME-RS-PLUGKIT: no local wasm build or witness; row cites are stale'
+body: 'Row CLEANNAME-RS-PLUGKIT cannot be witnessed in this session. Its witness needs a built wasm guest (cargo build --features slim) and an agentplug-runner dispatch; local cargo is blocked by a hook and rs-plugkit wasm changes are verified by CI only (publish / release, step Build). The row''s line cites are stale (code_index.rs 3645/2281/1887/620 now at 3811/2406/2012/647; cache.rs:316 matches). Receipt: C:\dev\gm\.gm\receipts\CLEANNAME-RS-PLUGKIT\01-SPECIFY.md. Resolution needs either a CI-run witness from another session after an rs-plugkit commit, or a row re-scope to CI-witnessed acceptance with corrected cites.'
+session_id: gm-drain-w1-48
+status: pending

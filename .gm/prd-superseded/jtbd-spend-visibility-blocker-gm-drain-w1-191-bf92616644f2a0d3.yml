@@ -1,0 +1,5 @@
+id: JTBD-SPEND-VISIBILITY-blocker-gm-drain-w1-191
+subject: 'Blocker: row JTBD-SPEND-VISIBILITY cannot close until owner picks token source or narrows scope'
+body: 'Row JTBD-SPEND-VISIBILITY (and its blocker JTBD-SPEND-VISIBILITY-blocker-gm-drain-JTBD-SPEND-VISIBILITY) asks for per-walk token spend. No gm-owned record holds token counts; dispatch records hold id, verb, exit and timestamps only (rs-plugkit, gm-mcp, agentplug, rs-codeinsight, gm-config checked). Receipts .gm/receipts/JTBD-SPEND-VISIBILITY/01-SPECIFY.md and 02-PROVE.md named by the row do not exist on disk (stale). Owner decision needed: (a) read token usage from Claude Code session transcripts, outside gm, joined to dispatch ids; or (b) narrow the row to dispatch counts and wall time per phase. No witness can bind the row until one is chosen. Session gm-drain-w1-191, dispatch 1791958595369-500-b200c61b56f4670c.'
+session_id: gm-drain-w1-191
+status: pending

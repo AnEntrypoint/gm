@@ -1,0 +1,7 @@
+id: SLAP-gm-goal-w4-SLAP-2-blocker-gm-fin-12-blocker-gm-drain-w2-362
+subject: 'SLAP-2 still blocked: the gm-mcp bundle sources remain dirty under another writer'
+status: pending
+blockedBy:
+- SLAP-gm-goal-w4-SLAP-2-blocker-gm-fin-12
+body: 'Re-checked at dispatch 1791964560502-500-75ee19b99fbd6a75: bin/gm-mcp-server.js, src/dispatch.js, src/http-transport.js and src/index.js are still modified and uncommitted by another writer. src/release-bridge.js carries an unrelated unstaged hunk (runnerAssetName); src/self-update.js carries a staged compareVersions hunk. The 03-EMIT.md patch is not in HEAD (stale). No commit or bundle rebuild was made, because committing the bundle would include the other writer''s hunks. Unblock: the other writer commits or reverts its bin and src hunks; then re-apply the 03-EMIT.md patch on current state, rebuild bin/gm-mcp-server.js in the same commit, and witness with codesearch for fileSha256 plus a live dispatch. Receipt: .gm/receipts/SLAP-gm-goal-w4-SLAP-2-blocker-gm-fin-12/01-SPECIFY.md.'
+session_id: gm-drain-w2-362

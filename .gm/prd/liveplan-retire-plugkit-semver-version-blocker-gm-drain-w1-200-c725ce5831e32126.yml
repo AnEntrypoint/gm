@@ -1,0 +1,5 @@
+id: LIVEPLAN-RETIRE-PLUGKIT-SEMVER-VERSION-blocker-gm-drain-w1-200
+subject: 'Blocker: LIVEPLAN-RETIRE-PLUGKIT-SEMVER-VERSION cannot close, PLUGKIT-SEMVER-UPDATE-WITNESS still pending'
+body: 'Row LIVEPLAN-RETIRE-PLUGKIT-SEMVER-VERSION closes only when PLUGKIT-SEMVER-VERSION-SET and PLUGKIT-SEMVER-UPDATE-WITNESS are both closed (closing_condition). SPECIFY check at session gm-drain-w1-200 (dispatch 1791958696036-500-bd14dab40dc5e3d5 and 1791958700717-500-a89fe60b63d14312): PLUGKIT-SEMVER-VERSION-SET is status completed with witness 1791778543596-500-b4b73bcc410e99f8 (gm.version 0.1.1585 semver). PLUGKIT-SEMVER-UPDATE-WITNESS is status pending: it needs a live sideload of a stale gm.wasm, an updater run, and a daemon-status.json loaded_plugin_content_sha256.gm comparison. That is an external live-daemon witness, not runnable inside this row. Unblock: resolve PLUGKIT-SEMVER-UPDATE-WITNESS with its live witness, then resolve this row as superseded with prd-resolve. Anomaly: PLUGKIT-SEMVER-VERSION-SET reads status completed while still in .gm/prd/ (not moved to prd-log.jsonl), needs a prd-resolve of its own.'
+session_id: gm-drain-w1-200
+status: pending

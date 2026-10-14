@@ -1,0 +1,5 @@
+id: TOOLBUDGET-GMMCP-DESCRIPTIONS-RELEASE-blocker-gm-drain-w1-307
+subject: 'Blocked: TOOLBUDGET-GMMCP-DESCRIPTIONS-RELEASE needs other gm-mcp writers to land their hunks first'
+body: 'Row TOOLBUDGET-GMMCP-DESCRIPTIONS-RELEASE cannot close from gm-mcp''s shared work tree. Current gm-mcp state (dispatch 1791959600538-500-cd7b6bda333ed5d2 and diff stat 1791959613784-500-1229529ec91c9ae7): 9 modified paths (bin/gm-mcp-server.js 220 lines, src/dispatch.js, src/release-bridge.js, src/dev-sync.js, src/http-transport.js, src/index.js, scripts/*, test/*), 1 staged (src/self-update.js), 1 untracked (src/spool-store.js). The bin diff is not a descriptions-only change, so committing it would publish other writers'' hunks; the row''s REFUTED-BY condition holds. Unblock: the owning lanes commit their hunks first, then rebuild bin from the descriptions change only, then witness tools/list byte size (11676 -> 4284) through the live gm-mcp and confirm ~/.gm-tools bundle sha matches. Witnessed from session gm-drain-w1-307.'
+session_id: gm-drain-w1-307
+status: pending

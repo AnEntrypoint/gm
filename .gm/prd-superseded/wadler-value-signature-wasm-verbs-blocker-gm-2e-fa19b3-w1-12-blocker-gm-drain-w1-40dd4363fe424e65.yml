@@ -1,0 +1,5 @@
+id: WADLER-VALUE-SIGNATURE-WASM-VERBS-blocker-gm-2e-fa19b3-w1-12-blocker-gm-drain-w1-324
+subject: 'Blocker for WADLER-VALUE-SIGNATURE-WASM-VERBS-blocker-gm-2e-fa19b3-w1-12: row is decomposition only, cannot close in one run'
+body: 'Stage reached: SPECIFY (receipt .gm/receipts/WADLER-VALUE-SIGNATURE-WASM-VERBS-blocker-gm-2e-fa19b3-w1-12/01-SPECIFY.md, session gm-drain-w1-324). The row''s next step is to split WADLER-VALUE-SIGNATURE-WASM-VERBS into per-file rows (git.rs first) with one witnessable verb group each; that split is a PRD edit that this run did not perform. Cited count is stale: codesearch dispatch 1791959663784-500-ce34adda274b635c shows 166 Value-typed signatures across git.rs, memory.rs, search.rs, web.rs (not ~145 across git.rs, memory.rs, search.rs, verbs.rs). PROVE through COMPLETE need a CI wasm build (--features slim, no local cargo) and a live agentplug-runner witness per verb group. Unblock: split the parent row into per-file rows, then resolve git.rs first. Parent row WADLER-VALUE-SIGNATURE-WASM-VERBS remains pending.'
+session_id: gm-drain-w1-324
+status: pending

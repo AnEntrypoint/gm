@@ -1,0 +1,8 @@
+id: HUGHES-gm-goal-hop-HUGHES-2-2-blocker-gm-drain-w2-224
+subject: 'BLOCKER HUGHES-gm-goal-hop-HUGHES-2-2: owner decision needed before a property test can close the row'
+body: 'Row HUGHES-gm-goal-hop-HUGHES-2-2 (No property-based test of the no-silent-swallow invariant in gm-mcp) cannot close in this run. SPECIFY: codesearch regex quickchec|fast-check|proptest|property over gm-mcp (79 files scanned, exhaustive) returns only bundle, lockfile and codemode.js property-accessor text; the cited claim (0 generated-input checks) holds. PROVE: no witness can be written without adding a test file, which gm-prd forbids and AGENTS.md bans for synthetic tests; the row''s own Action says the placement is an owner decision. Needed: owner decision whether a generated-input check against real code paths may live in gm-mcp, and if yes, the target entry point for the witness. Session: gm-drain-w2-224. Source row: HUGHES-gm-goal-hop-HUGHES-2-2 stays pending.'
+session_id: gm-drain-w2-224
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

@@ -1,0 +1,7 @@
+id: gm-w577-clause1-poisoned-plugin-slot-reload-r138-blocker-gm-drain-w2-197
+kind: blocker
+session: gm-drain-w2-197
+subject: 'Blocker: no live probe can poison a plugin slot to witness the dispatch-time reload (w577 clause 1)'
+body: 'Row gm-w577-clause1-poisoned-plugin-slot-reload-r138 is blocked. Code path: agentplug/crates/agentplug-host/src/registry.rs:1758-1770 (dispatch refill via refill_evicted_slot) and :341 (try_lock_slot_recovering_from_poison). Leader H1: the refill already reloads on the next dispatch. The discriminating probe (poison a live slot, dispatch once, read the out-file: ok:true with plugin_poisoned_store_recovered versus EvictedOrPoisoned) needs a deliberate in-slot panic. No sanctioned verb injects that, and no test files are allowed. Unblock by adding a gm verb or env-gated fault hook that poisons a named slot in a live runner, or by a human-approved CI-only fault injection. Row stays pending until a live probe binds it.'
+session_id: gm-drain-w2-197
+status: pending

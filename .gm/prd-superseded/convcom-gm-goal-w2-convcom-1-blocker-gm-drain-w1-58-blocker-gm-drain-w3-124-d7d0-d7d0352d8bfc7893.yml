@@ -1,0 +1,8 @@
+id: CONVCOM-gm-goal-w2-CONVCOM-1-blocker-gm-drain-w1-58-blocker-gm-drain-w3-124
+subject: 'BLOCKER: gm-drain-w1-58 blocker row has no file, acceptance or witness; SPECIFY cannot orient'
+body: 'gm-prd run for row CONVCOM-gm-goal-w2-CONVCOM-1-blocker-gm-drain-w1-58 (session gm-drain-w3-124) stopped at SPECIFY. Facts: (1) the target row is itself a blocker with only a subject, no file path, acceptance, witness or cause (prd-list dispatch 1791970820967-500-ae0c0a3c9bcd9f7d). (2) Its parent CONVCOM-gm-goal-w2-CONVCOM-1 has subject only: commit subjects on main are not enforced as type(scope): description; 4 of last 8 subjects lack a type prefix (dispatch 1791970855658-500-7b0e83a01e5dd277). (3) codesearch dispatch threw ReferenceError ''n is not defined'' in gm-mcp-server.mjs bundle (hY at 182:3575), so the orientation search could not run; this is a gm-mcp defect to fix in C:/dev/gm/gm-mcp/src and rebuild the bundle. Needed to proceed: a file path for the commit-subject check (likely a commit-msg hook or git_finalize subject guard in rs-plugkit wasm_dispatch/verbs), an acceptance line, and a witness command.'
+session_id: gm-drain-w3-124
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

@@ -1,0 +1,8 @@
+id: BLOCK-LIQOLOGY-PROPOSAL-TYPE-blocker-gm-drain-w2-15
+subject: 'Blocked: BLOCK-LIQOLOGY-PROPOSAL-TYPE still needs owner approval of the gm-config and rs-plugkit rebuild path and a liqology C++ build witness'
+body: 'Row BLOCK-LIQOLOGY-PROPOSAL-TYPE, session gm-drain-w2-15. Run closed as blocked, not resolved. Attempted: prd-list read of the row (dispatch 1791959904837-500-20c5dc1d5fae55d3) and a codesearch of C:\dev\liqology\agentplug-liqology\src\dispatch.cpp (dispatch 1791959917178-500-4adf5e8de49bd20d) which is refused: outside the gm project root, so the liqology witness cannot be reached from this cwd. Remaining, unchanged from the parent row: (1) cut gm-config/prose/entry-extended.md:74 and the mirrored instruction copies in rs-codeinsight, rs-search and rs-plugkit to the verb name (gm-config submodule commit plus reviewed rs-plugkit rebuild, lean-graph rule); (2) live liqology witness that needs its C++ vcpkg build. Unblock by owner approval of the rebuild path and a liqology build witness run from the liqology project as cwd. Parent code fix applied=false is already in place per the parent receipt.'
+session_id: gm-drain-w2-15
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

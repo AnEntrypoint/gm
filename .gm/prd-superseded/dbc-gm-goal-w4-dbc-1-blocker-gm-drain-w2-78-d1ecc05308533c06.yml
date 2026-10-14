@@ -1,0 +1,8 @@
+id: DBC-gm-goal-w4-DBC-1-blocker-gm-drain-w2-78
+subject: 'BLOCK DBC-gm-goal-w4-DBC-1: unknown-key refusal fix cannot be witnessed in-run'
+body: 'Row DBC-gm-goal-w4-DBC-1 (gm-mcp codemode silently strips unknown argument keys) is blocked at PROVE. Leader H1 (zod default strip at the top-level envelope, gm-mcp/src/codemode.js validatedArgs) is supported by a shell zod probe, but the probe does not separate H1 from H2 (foldVerbArgs folds unknown keys into the verb body, where the body schema may ignore them). Needed: a live probe showing where a verb-scoped bogus key lands, then the fix (reject unknown keys except session_id/cwd defaults), a test on that path (conflicts with the no-test-files rule; decide the witness form), a gm-mcp bundle rebuild, and a witness from another session (self-witness is refused). Receipt: .gm/receipts/DBC-gm-goal-w4-DBC-1/01-SPECIFY.md. Parent row stays pending.'
+session_id: gm-drain-w2-78
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

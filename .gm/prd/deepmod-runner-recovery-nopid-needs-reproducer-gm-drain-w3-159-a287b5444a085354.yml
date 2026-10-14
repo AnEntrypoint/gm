@@ -1,0 +1,5 @@
+id: DEEPMOD-RUNNER-RECOVERY-NOPID-needs-reproducer-gm-drain-w3-159
+subject: 'Blocker for DEEPMOD-RUNNER-RECOVERY-NOPID-blocker-gm-drain-w1-70: no reproducing failure exists to close the premise-refuted row'
+body: 'Row DEEPMOD-RUNNER-RECOVERY-NOPID-blocker-gm-drain-w1-70 asks for a witness that closes a claim that gm-mcp test/runner-recovery.test.mjs fails on HEAD. Re-check dispatch 1791971486156-500-96686db65c597eba (node --test in C:/dev/gm/gm-mcp, working tree) exits 0, matching the prior probes in w1-70. No leader hypothesis survives, so no witness can bind the row without a self-serving closure. Needed from the orchestrator: either name a failing command and its environment that reproduces the failure, or retire DEEPMOD-RUNNER-RECOVERY-NOPID as stale. Receipt: .gm/receipts/DEEPMOD-RUNNER-RECOVERY-NOPID-blocker-gm-drain-w1-70/01-SPECIFY.md.'
+session_id: gm-drain-w3-159
+status: pending

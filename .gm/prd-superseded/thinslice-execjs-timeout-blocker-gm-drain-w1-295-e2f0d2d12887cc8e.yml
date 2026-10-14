@@ -1,0 +1,5 @@
+id: THINSLICE-EXECJS-TIMEOUT-blocker-gm-drain-w1-295
+subject: 'Blocker for THINSLICE-EXECJS-TIMEOUT: typed exec_js timeoutMs not live on served gm-mcp bundle'
+body: 'Row THINSLICE-EXECJS-TIMEOUT cannot close. Typed witness fails on the live server: exec_js {raw_body:''setTimeout(()=>{},60000)'', timeoutMs:1500} ran 60118 ms, timed_out false (dispatches 1791959630032-500-847a74a4ec1a125, 1791959698297-500-7121141ab3a13106). The leading-line form timeoutMs=1500 is enforced (dispatch 1791959701946-500-24e427185b2fec63, exec_timeout, limit_ms 1500). Source already folds the typed field (gm-mcp/src/dispatch.js:1369-1373, 1971-1972; verb-table.js:153-154; skills/gm/SKILL.md:68 names it). Cause: served bundle 0.2.44 (sha 98b22d23f495) lags installed 0.2.45 (sha 86fa4c99e657) and does not reload. Unblock: the gm-mcp server must reload to 0.2.45 (or be restarted from the installed bundle), then re-run the typed witness and the no-field default witness, and resolve the row with that dispatch id. Receipts: .gm/receipts/THINSLICE-EXECJS-TIMEOUT/01-SPECIFY.md, 02-PROVE.md. Session gm-drain-w1-295.'
+session_id: gm-drain-w1-295
+status: pending

@@ -1,0 +1,8 @@
+id: BLOCKER-SKILLGM-watcher-dead-threshold-blocker-gm-drain-w3-79
+subject: 'Blocker for BLOCKER-SKILLGM-watcher-dead-threshold: no single dead-watcher threshold constant exists in code, and the liveness check is Linux-only'
+body: 'SPECIFY (session gm-drain-w3-79, row BLOCKER-SKILLGM-watcher-dead-threshold). Findings with located citations: (1) scripts/triage/runner-status.sh line 14 and line 18 hold the 5-minute (300000 ms / 300 s) freshness window as literals; line 10 tests liveness with os.path.exists(''/proc/<pid>''), which is Linux-only and reports every pid ABSENT on win32 and macOS (gm must stay mac/win/linux compatible). (2) skills/gm/SKILL.md line 65 restates the DEAD / SERVING-STATUS-STALE rule in prose, so the prose and the script are two copies. (3) agentplug/crates/agentplug-runner/src/daemon.rs line 815 GUARD_HEARTBEAT_STALE_MS = 120_000 is a different window for the daemon guard; no 300000 literal exists in agentplug-runner/src (codesearch dispatch 1791970222711-500-38b7cd1ccf0ed8cd, exhaustive). Required to close: one dead-threshold constant owned by agentplug-runner (or read from the status file), a cross-platform pid-alive check, the script reading that constant, and skills/gm/SKILL.md line 65 reduced to a pointer. Closing needs a Rust edit, a CI build, a submodule pin bump, and a witness from a session other than gm-drain-w3-79 (self-witness is refused). None of that is possible inside this run, so the row stays pending behind this blocker.'
+session_id: gm-drain-w3-79
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

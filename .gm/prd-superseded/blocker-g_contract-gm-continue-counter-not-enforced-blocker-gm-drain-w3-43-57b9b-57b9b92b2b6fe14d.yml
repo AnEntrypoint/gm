@@ -1,0 +1,8 @@
+id: BLOCKER-G_CONTRACT-gm-continue-counter-not-enforced-blocker-gm-drain-w3-43
+subject: 'Blocker for BLOCKER-G_CONTRACT-gm-continue-counter-not-enforced (session gm-drain-w3-43): counter enforcement needs an rs-plugkit owner-file change and a CI-built witness'
+blockedBy:
+- external
+body: 'Parent row: BLOCKER-G_CONTRACT-gm-continue-counter-not-enforced. SPECIFY receipt: .gm/receipts/BLOCKER-G_CONTRACT-gm-continue-counter-not-enforced/01-SPECIFY.md. Evidence: codesearch literal ''.gm/.gm-continue-count'' (exhaustive rs-plugkit scope) hits only ignore rules (.gitignore:119, rs-plugkit/crates/plugkit-core/src/gitignore.rs:16) and the prose definition (skills/gm-continue/SKILL.md:34); no code reads, increments or enforces the two-dispatch bound or the two end states. Open unknown U1: the rs-plugkit file owning the gm-continue dispatch cannot be identified by a live run here (no local cargo; guest is CI-built). Open unknown U2: counter location (dispatch state vs .gm/ file) needs owner choice. Unblock: owner picks U2, then a session with CI build access runs ELIMINATE for U1, EDITs the counter, and witnesses from another session.'
+session_id: gm-drain-w3-43
+status: pending
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

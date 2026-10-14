@@ -1,0 +1,8 @@
+id: CLEANNAME-AGENTPLUG-RUST-blocker-gm-drain-w3-97
+subject: 'Blocked: CLEANNAME-AGENTPLUG-RUST cannot close in gm-drain-w3-97 (CI-only cargo witness; agentplug pin dirty under another writer)'
+status: pending
+body: 'Parent row: CLEANNAME-AGENTPLUG-RUST. SPECIFY citations verified at dispatch 1791970424134-500-11473db4df59fd29, 1791970429169-500-f1765e71908fff93, 1791970450885-500-f9bb82463d3dd65b. Blocker 1: its witness is cargo build and test per crate; local cargo is hook-blocked and only CI (publish / release) builds, so no witness is reachable here. Blocker 2: the agentplug submodule is modified (git_status 1791970448482-500-5e3e5a9c7060b078) by another writer; the one-writer rule forbids an edit there from this session. Probe for closure: clean agentplug pin, then a CI witness from another session naming the leader hypothesis (row cannot close here). Receipt: .gm/receipts/CLEANNAME-AGENTPLUG-RUST/01-SPECIFY.md. Owner: one writer per submodule.'
+session_id: gm-drain-w3-97
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

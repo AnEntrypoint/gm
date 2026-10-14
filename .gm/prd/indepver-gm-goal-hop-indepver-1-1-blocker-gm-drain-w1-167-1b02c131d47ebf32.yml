@@ -1,0 +1,5 @@
+id: INDEPVER-gm-goal-hop-INDEPVER-1-1-blocker-gm-drain-w1-167
+subject: 'BLOCKER for INDEPVER-gm-goal-hop-INDEPVER-1-1: row has no body or acceptance; fix needs a digest-source decision and a bundle rebuild'
+body: 'Row INDEPVER-gm-goal-hop-INDEPVER-1-1 is pending with only a title. prd-list {id} returns no body, acceptance or witness definition. Receipt: C:/dev/gm/.gm/receipts/INDEPVER-gm-goal-hop-INDEPVER-1-1/01-SPECIFY.md. Confirmed defect: gm-mcp/src/self-update.js sha256s fetched bytes (line 226) and compares only to the deployed hash, never to an expected digest (codesearch dispatch 1791958483491-500-ac5b3c00df7d0bf9). Unblock needs: the row to name the digest source (release .sha256 sidecar as release-bridge.js uses, a signed manifest, or a pinned hash), the acceptance criterion, and a witness that tampers GM_MCP_BUNDLE_URL against a sandbox deployed path.'
+session_id: gm-drain-w1-167
+status: pending

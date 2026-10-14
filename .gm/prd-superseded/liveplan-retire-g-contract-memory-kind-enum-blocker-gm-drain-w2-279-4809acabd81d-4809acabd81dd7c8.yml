@@ -1,0 +1,5 @@
+id: LIVEPLAN-RETIRE-G-CONTRACT-MEMORY-KIND-ENUM-blocker-gm-drain-w2-279
+subject: 'Blocker: retire row needs INVEST-GCONTRACT-MEMORY-KIND-ENUM executor and PROSE-REMOVE before witness can bind'
+body: 'Row LIVEPLAN-RETIRE-G-CONTRACT-MEMORY-KIND-ENUM-blocker-gm-drain-w1-198 (session gm-drain-w2-279) cannot close: both dependency rows are still pending (dispatches 1791963314974-500-460b98c0ff144688 and 1791963315703-500-1753bede9448b58c). Live code confirms the enum premise has not landed: memorize-fire kind is free text at rs-plugkit/crates/plugkit-core/src/orchestrator/instructions/prose/entry-extended.md:46. Enum change needs a wasm rebuild verified only in CI. Receipt: .gm/receipts/LIVEPLAN-RETIRE-G-CONTRACT-MEMORY-KIND-ENUM-blocker-gm-drain-w1-198/01-SPECIFY.md. Launch INVEST-GCONTRACT-MEMORY-KIND-ENUM first, then PROSE-REMOVE, then re-witness this row.'
+session_id: gm-drain-w2-279
+status: pending

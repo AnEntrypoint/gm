@@ -1,0 +1,7 @@
+id: gm-w577-clause1-poisoned-plugin-slot-reload-r138-blocker-gm-drain-w1-145-blocker-gm-drain-w2-199
+kind: blocker
+session: gm-drain-w2-199
+subject: 'BLOCKER: row gm-w577-clause1-poisoned-plugin-slot-reload-r138-blocker-gm-drain-w1-145 cannot close: no poisoned or evict site in agentplug daemon dir (0 hits), acceptance needs a scope decision'
+body: 'Re-check in session gm-drain-w2-199 (dispatch 1791961904063-500-47d6f9e19a2ef405): codesearch poison|evict over agentplug/crates/agentplug-runner/src/daemon returns 0 matches, exhaustive. The only earlier hit (dispatch_handle_with_reload at claim_dispatch.rs:3400) is a reload dispatch, not a poisoned slot. Leader hypothesis: the clause has no in-scope edit site, so no PROVE, EMIT or witness is reachable. Receipt: .gm/receipts/gm-w577-clause1-poisoned-plugin-slot-reload-r138-blocker-gm-drain-w1-145/01-SPECIFY.md. Unblock by owner decision: widen scope to agentplug/crates/agentplug-runner/src/daemon with a stated reproduction of the poisoned slot, or retire clause 1 of the row.'
+session_id: gm-drain-w2-199
+status: pending

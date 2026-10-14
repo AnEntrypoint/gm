@@ -1,0 +1,8 @@
+id: CODESEARCH-SYMBOL-ROUTE-RECALL-GAP-blocker-gm-drain-w1-49-blocker-gm-drain-w2-65
+subject: 'Symbol-route recall fix not landed: codesearch dual symbol reply still omits substring-only hits (gate_repeat_escalate_threshold)'
+body: 'Parent: CODESEARCH-SYMBOL-ROUTE-RECALL-GAP-blocker-gm-drain-w1-49. Session gm-drain-w2-65 re-ran PROVE. Live guest still returns 5 refs for gate_repeat_escalate_threshold in mode dual on rs-plugkit (dispatch 1791960162299-500-fd863df026dbf339); the substring-only lines are still missing. Fix needed: rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs/search.rs codesearch_identifier (around 2362-2467, the continue at 2407): run the substring pass in addition to the whole-word pass, deduplicated by path:line, and name the excluded-doc count when DOC_EXCLUDE_GLOBS drops paths. Then: push via gm git verbs on rs-plugkit main (rs-plugkit is a nested repo, commit from C:/dev/gm/rs-plugkit), await the publish/build run (no local cargo, CI only), bump the gm rs-plugkit gitlink, and witness from a different session with a live codesearch dispatch returning fsm.rs lines for gate_repeat_escalate_threshold in default symbol mode. Blocked because the Rust edit cannot be built locally and the witness needs a CI-released guest and an independent session.'
+session_id: gm-drain-w2-65
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

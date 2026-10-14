@@ -1,0 +1,5 @@
+id: XY-ALLOWOUTSIDEROOT-SUCCESS-NO-ROOT-ECHO-blocker-gm-drain-w2-495
+subject: 'Blocked: XY-ALLOWOUTSIDEROOT-SUCCESS-NO-ROOT-ECHO PROVE cannot run in session gm-drain-w2-495'
+body: 'Parent row XY-ALLOWOUTSIDEROOT-SUCCESS-NO-ROOT-ECHO-blocker-gm-drain-w1-327 stays pending. SPECIFY receipt (01-SPECIFY.md) confirms the opt-in fs_read success reply omits the root field (probe dispatch 1791959709515-500-20dfcfbbf043ad1d). Closing it needs: (1) rs-plugkit verbs.rs change in fs_read success paths (lines 889-925); (2) local cargo is blocked by hook, so the wasm build runs only in CI (publish / release, step Build) with --features slim; (3) rs-plugkit nested-repo commit on main and parent gitlink bump; (4) live witness dispatch id from a different session (self-witness refused, prd-resolve-self-witness). None of (1) to (4) is reachable from session gm-drain-w2-495, so PROVE cannot separate the leader hypothesis here. Next wave: launch a session that can read CI result and run the fs_read witness against the rebuilt guest, then prd-resolve the parent.'
+session_id: gm-drain-w2-495
+status: pending

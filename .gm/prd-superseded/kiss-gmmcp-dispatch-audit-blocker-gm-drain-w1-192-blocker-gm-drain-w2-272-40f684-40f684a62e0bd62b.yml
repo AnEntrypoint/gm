@@ -1,0 +1,5 @@
+id: KISS-GMMCP-DISPATCH-AUDIT-blocker-gm-drain-w1-192-blocker-gm-drain-w2-272
+subject: 'BLOCKER: KISS-GMMCP-DISPATCH-AUDIT-blocker-gm-drain-w1-192 SPECIFY cannot separate H1 from H2'
+session_id: gm-drain-w2-272
+body: 'Row KISS-GMMCP-DISPATCH-AUDIT-blocker-gm-drain-w1-192 (session gm-drain-w2-272) reached SPECIFY and cannot pass PROVE. Receipt: .gm/receipts/KISS-GMMCP-DISPATCH-AUDIT-blocker-gm-drain-w1-192/01-SPECIFY.md. Cause: the parent KISS-GMMCP-DISPATCH-AUDIT asserts excess branches in gm-mcp/src/dispatch.js. Evidence covers one symbol (applyFsReadRangeFallback, live: 2 test sites plus runDispatch at dispatch.js:2099). H1 (excess exists) and H2 (no excess) are not separated because the other ~209 top-level symbols are unswept. Mutable: run callers/impact over each top-level symbol in dispatch.js and record which have no live caller. Then split the parent into per-group rows (fs_read range helpers, json repair helpers, spool publish, reply capping), each with its own probe and witness. Parent stays pending.'
+status: pending

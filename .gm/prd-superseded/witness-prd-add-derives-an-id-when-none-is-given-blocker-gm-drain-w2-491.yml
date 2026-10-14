@@ -1,0 +1,5 @@
+id: witness-prd-add-derives-an-id-when-none-is-given-blocker-gm-drain-w2-491
+subject: 'blocker: witness-prd-add-derives-an-id-when-none-is-given cannot close (no acceptance text; live witness needs a second session)'
+body: 'Row witness-prd-add-derives-an-id-when-none-is-given has only id, subject and status in .gm/prd/<id>.yml: no acceptance criteria, no witness_plan. SPECIFY found the derivation at rs-plugkit/crates/plugkit-core/src/orchestrator/prd.rs:740-755 (id = provided id, else slug from subject; reject when neither exists; item-<ms> fallback is unreachable behind that guard). A closing witness needs a live prd-add with subject only, which creates a row that the same session cannot resolve (prd-resolve-self-witness). Re-scope the row with acceptance text and a witness owner session, or name a second session to witness it.'
+session_id: gm-drain-w2-491
+status: pending

@@ -1,0 +1,10 @@
+id: ADVERSARIAL-gm-goal-hop-ADVERSARIAL-1-2-blocker-gm-drain-w2-3-blocker-gm-drain-w3-4
+subject: 'Owner decision required: ADVERSARIAL-gm-goal-hop-ADVERSARIAL-1-2-blocker-gm-drain-w2-3 cannot close without choosing doc correction (a) or self-update design change (b)'
+surface: gm-mcp/src
+principle: ADVERSARIAL
+body: 'Row ADVERSARIAL-gm-goal-hop-ADVERSARIAL-1-2-blocker-gm-drain-w2-3 (session gm-drain-w2-3) states its own resolution needs an owner choice. Option (a): doc correction plus a witness of gm-mcp/AGENTS.md (line 80-82 already names the freeze, GM_MCP_SELF_UPDATE=0, and the local-build pin), then close the parent with that witness. Option (b): a self-update.js design change to a digest from a channel the publisher does not write. This run did not choose either option. Evidence: prd-list 1791969080275-500-a85311f36cc05049; codesearch 1791969104272-500-87487be49bf56ab3; receipt .gm/receipts/ADVERSARIAL-gm-goal-hop-ADVERSARIAL-1-2-blocker-gm-drain-w2-3/01-SPECIFY.md. Note: the row cites self-update.js:206 and :221; live GM_MCP_SELF_UPDATE check is at :217, so the line cite is stale. Duplicate of resolved-log blocker ADVERSARIAL-gm-goal-hop-ADVERSARIAL-1-2-blocker-gm-drain-w1-7. Unblock: owner picks (a) or (b) and runs the chosen witness.'
+session_id: gm-drain-w3-4
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

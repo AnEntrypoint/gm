@@ -1,0 +1,8 @@
+id: CLEANNAME-RS-PLUGKIT-blocker-gm-drain-w3-112
+subject: 'Blocked: CLEANNAME-RS-PLUGKIT-blocker-gm-drain-w2-63 cannot close in session gm-drain-w3-112'
+body: 'Parent CLEANNAME-RS-PLUGKIT stays pending. Blocker for CLEANNAME-RS-PLUGKIT-blocker-gm-drain-w2-63. (1) Cargo.toml writer precondition now passes (git_status 1791970624694-500-d6e5c634f9824635, dirty:false). (2) The cite set is stale: 7 of 9 code_index.rs/cache.rs lines moved, one expression absent (live table in .gm/receipts/CLEANNAME-RS-PLUGKIT-blocker-gm-drain-w2-63/01-SPECIFY.md). (3) The witness needs cargo build --features slim, which runs only in CI (gm-no-local-cargo-verified-by-ci.md), and must be witnessed from another session (self-witness refused). Unblock: re-scope the parent cites by name against the current tree via prd-add overwrite:true, then run the rename through CI and witness from another session. Receipts: .gm/receipts/CLEANNAME-RS-PLUGKIT-blocker-gm-drain-w2-63/.'
+session_id: gm-drain-w3-112
+status: pending
+blockedBy:
+- external
+deferReason: 'duplicate blocker: the base row already names the same missing fact'

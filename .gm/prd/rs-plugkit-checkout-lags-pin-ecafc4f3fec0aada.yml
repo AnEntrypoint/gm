@@ -1,0 +1,5 @@
+id: RS-PLUGKIT-CHECKOUT-LAGS-PIN
+subject: rs-plugkit submodule checkout at b68c669 lags the parent pin 6457f1cb
+body: 'Found while closing gm-parent-rs-plugkit-pin-blocked-by-concurrent-conflict (gm-drain-w1-136). git_status of C:/dev/gm/rs-plugkit shows HEAD b68c669, an ancestor of the pin 6457f1cb that the parent records and origin/main points to. Parent reports rs-plugkit modified. Acceptance: checkout of rs-plugkit equals the parent gitlink, git_status of parent shows no rs-plugkit path; witness is that git_status of C:/dev/gm after the checkout. Owner: whichever lane holds rs-plugkit; do not overwrite its untracked .gm files.'
+session_id: gm-drain-w1-136
+status: pending

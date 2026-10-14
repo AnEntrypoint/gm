@@ -1,0 +1,6 @@
+id: WADLER-VALUE-SIGNATURE-DREAMRSI-blocker-gm-drain-w2-479
+subject: 'Blocker for WADLER-VALUE-SIGNATURE-DREAMRSI: typed-record refactor needs a CI-only compile proof and a second-session witness'
+owner: rs-plugkit/crates/plugkit-core/src/orchestrator/dream_rsi.rs
+body: 'Filed by gm-prd SPECIFY, session gm-drain-w2-479, on row WADLER-VALUE-SIGNATURE-DREAMRSI. Tree check (codeinsight callers + codesearch regex, dispatches 1791968019573-500-6de4a0b5d57f2d66 and 1791968021946-500-bfcacd99eb8a6a93): observation_is_gate_drift_failure is absent (real fn is failure_is_gate_drift(result: &Value) at dream_rsi.rs:400); veto_reason already takes &Strategy at :609; verify_record(kind: &str, record: &Value) at :810 has 12 call sites (register_policy, record_discovery x3, seal x3, replay_round x3, evaluate x2). Closing needs a multi-site typed-struct refactor in the nested rs-plugkit repo. Local cargo is hook-blocked, so the compile proof is CI only, and the witness must come from a second session (prd-resolve-self-witness). The row cannot close inside one session. Blocker: file a typed-struct refactor row for verify_record and failure_is_gate_drift, with a CI-verified witness under a separate session.'
+session_id: gm-drain-w2-479
+status: pending

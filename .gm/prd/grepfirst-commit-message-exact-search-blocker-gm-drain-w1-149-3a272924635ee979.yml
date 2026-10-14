@@ -1,0 +1,5 @@
+id: GREPFIRST-COMMIT-MESSAGE-EXACT-SEARCH-blocker-gm-drain-w1-149
+subject: 'Blocker for GREPFIRST-COMMIT-MESSAGE-EXACT-SEARCH: exact commit-message search needs an rs-plugkit change, a CI-built wasm and a cross-session witness'
+body: 'Row GREPFIRST-COMMIT-MESSAGE-EXACT-SEARCH stays pending. Premise confirmed live: rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs/git.rs git_log (line 4292) accepts only limit/count/range/ref/rev/path/paths/files, with no message filter; codesearch literal scans tracked files only (probe count 0 for a phrase present only in commit c34db6d''s message). The fix is a Rust change in rs-plugkit (message-filter field on git_log or a commit-message literal mode in codesearch). Local cargo is blocked by a hook, so the change is verified by CI only, and the witness must come from another session. Receipts: .gm/receipts/GREPFIRST-COMMIT-MESSAGE-EXACT-SEARCH/01-SPECIFY.md and 02-PROVE.md. Next: a session with CI access lands the rs-plugkit change and witnesses it.'
+session_id: gm-drain-w1-149
+status: pending
