@@ -74,7 +74,7 @@ Launch only advertised ids. A slot stays empty only when no pending row and no u
 - Exit requires `prd-list {"status":"pending"}` to return 0 rows. Stalls, blocked workers, refused witnesses and ended sessions never close the walk.
 - A run ends as `prd-resolve` with a witness, or as `<row>-blocker-<session>` filed with the missing fact and the verb that supplies it. The original row stays pending and names its blocker.
 - Blockers launch next wave as their own rows. A blocker that blocks again is split until one step remains; that step runs.
-- A worker that returns without a receipt or blocker is re-dispatched once per wave as `<session>-r<n>`.
+- A worker that returns without a receipt or blocker is re-dispatched once per wave as `<session>-r<n>`. A worker stopped by a connectivity error is restarted instead (Connectivity restarts).
 - `floor_gate_denied` on `prd-resolve` or phase advance: pass `body.live` and launch the denial's `slots.launch`.
 
 ## Starvation
@@ -85,8 +85,11 @@ Launch only advertised ids. A slot stays empty only when no pending row and no u
 - Never preempt an executing holder. Never delete a `.live` file to free a slot.
 - Two starvations of one git verb: `prd-add` the paths and both dispatch ids, then stop git dispatches until a completion drains the queue.
 
-## Mass API-error drain
-Trigger: `ECONNRESET`, `ECONNREFUSED` or `server_error`. The row stays open and the slot is free. Steps: `docs/recovery.md`, section "Mass API-error drain". Never count a dropped agent as live.
+## Connectivity restarts
+- A subagent that stops on a network or API error (`ECONNRESET`, `ECONNREFUSED`, `server_error`, timeout, no response) is restarted, never resumed and never counted as a blocker. Launch a fresh subagent for the same row with session `<session>-r<n>`, in the same turn.
+- Restart with `wait {"ms":30000}` between attempts when the error repeats; keep retrying while the network is intermittent. Each attempt is logged to `.gm/witness-log.md` as `restart <row> <n> <UTC>`.
+- The row stays open and its slot stays held by the restart. Never count a dropped agent as live.
+- A mass drop (many at once) follows `docs/recovery.md`, section "Mass API-error drain", with the same restart rule.
 
 ## Headroom and leases
 - CPU >= 80% or available memory < 2048 MB pauses launches. Log the cause with the real count and UTC; a pause does not end the turn.
@@ -97,8 +100,8 @@ Trigger: `ECONNRESET`, `ECONNREFUSED` or `server_error`. The row stays open and 
 - Browser-last, cold-start and reload budgets, and minting a focused jit test instead of routing through a suite: defined in gm-prd: Witness economy.
 
 ## Lane budget
-- **Concurrency ceiling ~6.** Above it two mass `ECONNRESET` drains dropped 9-16 agents at once. Launch to 6; past that hold the wave and let a completion free the slot.
-- **Publish on the first passing witness.** Time-box a lane to its witness: the observed failure mode is a lane that did the work, reached 140k-210k tokens and died without shipping it. Resolve the row, publish, then keep going.
+- **A mass `ECONNRESET` drain is environmental, not a concurrency symptom.** The drops are a dropped connection: lanes have died at 5 and 6 concurrent as well as at 10, so lane count was not the variable. Never present a lane-count ceiling as the remedy, and never lower concurrency to stop a drain -- that buys nothing and idles the pool. The response is to **restart the affected lanes**: same row, resuming from the dead lane's last line so completed work is not redone. Mechanics (resume-by-id, one event per window, back-pressure, recurrence): `docs/recovery.md`, section "Mass API-error drain".
+- **Publish on the first passing witness.** Time-box a lane to its witness: the observed failure mode is a lane that did the work, reached 140k-210k tokens and died without shipping it. Resolve the row, publish, then keep going. An unreliable connection makes this stricter, not looser: it bounds how much finished work one drop can destroy.
 
 ## Fan-out
 - Independent slices (file, row, hop) launch in one block. Slices sharing a surface run in turn.
