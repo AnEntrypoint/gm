@@ -6,16 +6,18 @@ This repository publishes the `gm-skill` release artifact. The installed `/gm` s
 
 When the agent starts work, the agent shall first read `SKILLS.md`. When a request or an edited file matches a skill's frontmatter description, the agent shall read that `skills/<name>/SKILL.md`. If this file conflicts with the served `instruction` response, project configuration, or the applicable skill, the served response, configuration, or skill shall govern. Falsified by: `fs_stat` on `SKILLS.md` or on `skills/<name>/SKILL.md` returning an error, or a served `instruction` reply that contradicts the applicable skill.
 
-## Core invariants (read first)
+## Core invariants (memorize; checked before every turn ends)
 
-1. Traverse: the gm-graph walk runs continually in free slots. Each node pass produces PRD rows from its discipline and nominates the next node with a one-line rhetoric, chosen from that node's outward links.
-2. Drain first: while pending rows exist, slots drain rows. Under 20 open rows, free slots traverse the computer-science disciplines to create rows.
-3. Orient: codesearch and codeinsight before any edit. Top 20 BM25, top 20 vector and top 20 commits, each with 3 live snippet lines. Store embeddings only, never snippet text.
-4. Resolve in separate skills, each loading the next: orient, unknowns (renamed from mutables), elimination by live JIT runs (new unknowns return here), edit, validation by JIT runs (failures return to elimination).
-5. Publish on main only: merge upstream, commit local work with explicit paths, push, watch CI. A failing job returns to elimination.
-6. Plugkit runs 4 concurrent execution workers. A call over 15 s moves to background and frees its worker. Exclusive resources (browser, GPU) take leases; browsers stay hot per project.
-7. Connectivity: a subagent stopped by a network or API error is restarted as a fresh subagent for the same row, never resumed, never parked as blocked.
-8. Success means rows always drain and traversal always refills them before they run out.
+1. Traverse: the gm-graph walk runs in every free slot. Each node pass files PRD rows from its discipline and nominates the next node from its own outward links, with a one-line rhetoric handed on.
+2. Drain first: while pending rows exist, every free slot drains rows. Under 20 open rows, free slots traverse computer-science disciplines to file rows.
+3. Orient (gm-orient): codesearch and codeinsight before any edit. Top 20 BM25, top 20 vector and top 20 commits, each with 3 live snippet lines. The database stores embeddings and ids only.
+4. Resolve through six skills, each loading the next: gm-orient, gm-unknowns, gm-eliminate (JIT runs; new unknowns return here), gm-edit, gm-validate (JIT runs; failures return to gm-eliminate), gm-publish.
+5. Unknowns are written as `unknown` (renamed from `mutable`). Elimination ends only when none are open.
+6. Publish on main only: merge upstream, commit local work by explicit path, push, read CI. A failing job returns to gm-eliminate.
+7. Plugkit runs 4 concurrent workers. A call over 15 s moves to background and frees its worker. A browser or GPU call takes a lease; browsers stay hot per project.
+8. A subagent stopped by a network or API error is restarted for the same row, never resumed and never parked as blocked.
+9. A row ends resolved with a witness or blocked with a named fact. A blocked row is not duplicated.
+10. Success: rows always drain, and traversal refills them before they run out.
 
 ## Skill installs
 
