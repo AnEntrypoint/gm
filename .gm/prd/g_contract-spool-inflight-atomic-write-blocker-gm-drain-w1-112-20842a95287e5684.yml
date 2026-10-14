@@ -1,0 +1,6 @@
+id: G_CONTRACT-spool-inflight-atomic-write-blocker-gm-drain-w1-112
+status: pending
+blockedBy:
+- G_CONTRACT-spool-inflight-atomic-write
+subject: 'Blocker for G_CONTRACT-spool-inflight-atomic-write: cold-sweep sweep_unconsumable_spool_files (agentplug claim_dispatch.rs:1631-1649, called from daemon.rs:3845) quarantines any non-request file in in/<verb>/, so a sibling temp file mid-write is moved away before its mv. Fix needs a named temp suffix or an age gate in the sweep, an agentplug CI build, and a cross-session live witness. Also: the temp-then-mv sentence is cited at skills/gm/SKILL.md section 1 but lives at skills/gm/spool-adapter.md:17. Receipts: .gm/receipts/G_CONTRACT-spool-inflight-atomic-write/01-SPECIFY.md, 02-PROVE.md. Session gm-drain-w1-112.'
+session_id: mcp-codemode-31304-1791958247568

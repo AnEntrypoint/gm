@@ -1,0 +1,6 @@
+id: XY-ALLOWOUTSIDEROOT-SUCCESS-NO-ROOT-ECHO-blocker-gm-2e-fa19b3-w2-02
+subject: 'EMIT blocked for XY-ALLOWOUTSIDEROOT-SUCCESS-NO-ROOT-ECHO: the fix edits the success replies of fs_read/fs_readdir/fs_stat in rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs.rs to carry a root field when allowOutsideRoot was honored; witnessing it needs a rebuilt slim wasm (CI only, local cargo blocked by hook) published through the rs-plugkit submodule, the parent pin bumped, and the runner sideloaded. None of that ran in this session. Characterization witness before any edit: fs_stat C:/dev/gm/AGENTS.md with allowOutsideRoot:true from cwd rs-plugkit, dispatch 1791851147640-500-cbef0311f642eef7, success reply has no root field (confirms the row''s defect on current build).'
+blockedBy:
+- XY-ALLOWOUTSIDEROOT-SUCCESS-NO-ROOT-ECHO
+status: blocked
+session_id: gm-2e-fa19b3-w2-02
