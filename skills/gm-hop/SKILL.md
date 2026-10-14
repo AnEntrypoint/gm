@@ -41,6 +41,8 @@ Write `.gm/lean-walk/<NODE>.json` (one file per node id; overwrite the node's ow
 
 `.gm/lean-walk/` is gitignored runtime state, so emission costs no commit and no push.
 
+Evidence budget: the node file keeps verdict fields and pointers only. A bulky array (per-line rewrites, per-file match lists) moves to the sibling `.gm/lean-walk/<NODE>-<field>.json`, and the node file names that sibling by path in place of the array. The node file stays under 4 KB; the COMPACT hop's EARS.json went from 38440 bytes to 2357 bytes this way.
+
 ## Rules
 - A receipt is the hop's own. When a hop spawns a successor, its receipt names the child session in `next:` and carries no text from the child. The orchestrator reads each receipt by the session it launched.
 - A row for a principle already filed in this walk by another wave is merged by the orchestrator, not added again. A hop still lists and cites what it filed.
