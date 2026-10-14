@@ -1,8 +1,0 @@
-id: BLOCKER-SKILLGM-output-cap-constants-blocker-gm-drain-w1-33-blocker-gm-drain-w2-35-blocker-gm-drain-w3-60
-subject: 'Blocker for BLOCKER-SKILLGM-output-cap-constants-blocker-gm-drain-w1-33-blocker-gm-drain-w2-35: no CI-capable session; cap key absent in gm-config'
-body: 'SESSION_ID gm-drain-w3-60. Row cannot close in this session. gm-config has no output-cap key (codesearch 1791969871352-500-6fe87e6f206ba424 found 0 hits for 16000, 65536, 60000). Live literals: gm-mcp/src/dispatch.js:641 (16000), gm-mcp/src/mcp-server.js:173,181 (16000), rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs/git.rs:4411,4413,4501,4502 (60000). The 65536 cap named in the parent row is not located in gm-mcp/src. Remaining work: (1) add the shared gm-config key and its reader in gm-mcp and rs-plugkit; (2) rewrite docs/verbs.md to read it; (3) rebuild rs-plugkit wasm with --features slim under CI and dispatch the PROVE probe there, since local cargo is blocked (gm-no-local-cargo-verified-by-ci). Receipt: .gm/receipts/BLOCKER-SKILLGM-output-cap-constants-blocker-gm-drain-w1-33-blocker-gm-drain-w2-35/01-SPECIFY.md. Run in a session with CI dispatch rights for rs-plugkit.'
-session_id: gm-drain-w3-60
-status: pending
-blockedBy:
-- external
-deferReason: 'duplicate blocker: the base row already names the same missing fact'

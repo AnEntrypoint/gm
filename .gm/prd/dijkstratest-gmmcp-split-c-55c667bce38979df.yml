@@ -1,0 +1,5 @@
+id: DIJKSTRATEST-GMMCP-SPLIT-C
+subject: 'gm-mcp standing tests cluster C: re-express list, dispatch, fs-read and spool assertions as exec_js probes, then delete the files'
+body: 'Files: gm-mcp/test/list-and-cap.test.mjs (27), dispatch-wait-row.test.mjs (10), fs-read-range.test.mjs (13), fs-read-mcp-tool.test.mjs (5), spool-name.test.mjs (6), landed-output.test.mjs (3). Parent DIJKSTRATEST-GMMCP-STANDING-TESTS. Acceptance: each assertion has an exec_js probe against the real boundary witnessed from another session, then the files are removed. Land serially with A, B, D. Not witnessed in-session.'
+session_id: gm-drain-bounded-51
+status: pending
