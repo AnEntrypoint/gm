@@ -41,7 +41,7 @@ Use this skill **before** starting any of:
 - Work involving others (code review, collaboration)
 - Theorem work or formal verification
 
-**Excluded**: the agent shall not use this skill on trivial single-step tasks, reflex responses, or simple lookups.
+**Excluded**: the agent shall not use this skill on a task that completes within 2 tool calls and writes no file; a lookup answered by one search or one file read is excluded by this rule.
 
 ## Core Workflow
 
