@@ -122,10 +122,10 @@ decision; the runner guard does not cover it.
 
 ## Verified 2026-10-07 (plugkit wasm load path, rebuild flags, sideload)
 
-- The daemon loads `~/.agentplug/plugins/gm.wasm`, not `~/.gm-tools/plugkit.wasm` (`daemon-status.json` `loaded_plugin_content_sha256.gm` matches the former); a refresh writes both. A swap needs no restart: write a sibling `.tmp`, rename, and the daemon hot-reloads. Back up first.
-- Rebuild with `cargo build -p rs-plugkit --release --target wasm32-wasip1 --features slim`. Without `slim` the bge-small-en-v1.5 weights (133 MB) are embedded and the artifact is 139,690,176 bytes; with it about 5.06 MB.
-- `ensure_plugin_installed` (`agentplug/crates/agentplug-runner/src/download.rs`) never re-verifies an installed wasm; the sha256 sidecar is checked only at download (`download_and_verify`, same file). `~/.gm-tools/plugkit.wasm.sha256` is a local record, not a pin, so a sideloaded build needs no pin bump.
-- `gm.version` is a semver string (`health` `version`, e.g. `0.1.1661`), so the auto-updater's version check is not blocked by a non-semver value.
+- The daemon loads `~/.agentplug/plugins/gm.wasm`. A sideload writes a sibling `.tmp` and renames it over that file (back up first); the daemon hot-reloads, no restart.
+- Rebuild with `cargo build -p rs-plugkit --release --target wasm32-wasip1 --features slim`; without `slim` the artifact embeds 133 MB of bge weights.
+- `ensure_plugin_installed` (`agentplug/crates/agentplug-runner/src/download.rs`) never re-verifies an installed wasm, so a sideload needs no sha256 pin bump.
+- `gm.version` is semver (e.g. `0.1.1662`), so the auto-updater's version check is not blocked.
 
 ## Verified 2026-10-08 (git_commit content filters, amend, moving HEAD)
 
