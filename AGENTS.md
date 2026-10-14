@@ -6,6 +6,16 @@ This repository publishes the `gm-skill` release artifact. The installed `/gm` s
 
 When the agent starts work, the agent shall first read `SKILLS.md`. When a request or an edited file matches a skill's frontmatter description, the agent shall read that `skills/<name>/SKILL.md`. If this file conflicts with the served `instruction` response, project configuration, or the applicable skill, the served response, configuration, or skill shall govern. Falsified by: `fs_stat` on `SKILLS.md` or on `skills/<name>/SKILL.md` returning an error, or a served `instruction` reply that contradicts the applicable skill.
 
+## Core invariants (read first)
+
+1. Traverse: the gm-graph walk runs continually in free slots. Each node pass produces PRD rows from its discipline and nominates the next node with a one-line rhetoric, chosen from that node's outward links.
+2. Drain first: while pending rows exist, slots drain rows. Under 20 open rows, free slots traverse the computer-science disciplines to create rows.
+3. Orient: codesearch and codeinsight before any edit. Top 20 BM25, top 20 vector and top 20 commits, each with 3 live snippet lines. Store embeddings only, never snippet text.
+4. Resolve in separate skills, each loading the next: orient, unknowns (renamed from mutables), elimination by live JIT runs (new unknowns return here), edit, validation by JIT runs (failures return to elimination).
+5. Publish on main only: merge upstream, commit local work with explicit paths, push, watch CI. A failing job returns to elimination.
+6. Plugkit runs 4 concurrent execution workers. A call over 15 s moves to background and frees its worker. Exclusive resources (browser, GPU) take leases; browsers stay hot per project.
+7. Success means rows always drain and traversal always refills them before they run out.
+
 ## Skill installs
 
 An installed skill must be the file it is installed from, or the install must say it is not. `install.sh`, `install.ps1` and `bin/gm-install.js` materialise `~/.claude/skills/<name>` and `~/.agents/skills/<name>` from `<checkout>/skills/` (or `GM_SKILL_SOURCE_DIR`) as a link (a junction on Windows, a symlink elsewhere), so a source edit is served on the next dispatch. With no durable source (the release-tarball route, or a package under npm's npx cache, a `_npx` segment that npm can delete) the install copies, announces it, and records the mode in `<root>/.gm-skill-install-modes`. Against a checkout, a copy is drift even when its contents match.
@@ -119,16 +129,6 @@ The `gm-mcp` server shall compact every dispatch response before it crosses the 
 - Dated runtime findings (daemon heartbeat, sibling imports, runner self-update, wasm sideload, git_commit content filters, amend, reset): `docs/verified-incidents.md`. When a failure touches one of those subsystems, the agent shall read it. Falsified by: a failure in one of those subsystems diagnosed with no read of `docs/verified-incidents.md` in the session.
 - Dream-RSI design, the cycle-boundary trigger and its git lifecycle: `docs/dream-rsi.md`. No daemon tick or scheduled job redeploys a strategy unattended.
 
-## Script and CI rationale (moved from code)
+## Script and CI rationale
 
-- `scripts/triage/check-pins.sh`: an unpublished pin breaks every fresh recursive clone, so it fetches the pinned sha into a throwaway bare repo.
-- `scripts/remote-cmp.mjs`: raw paths once produced `/contents/C:/...` 404s that read as "absent"; 401 and 403 are auth or rate limit, never absence.
-- `scripts/build-graph-page.mjs`: page numbers come from the graph JSON; a broken edge refuses the page before any file is written.
-- `scripts/sweep-config-sync-litter.mjs`: deleting orphaned state is a cache miss, not data loss; `--max-age-days` is opt-in.
-- `gm-mcp/.github/workflows/verify.yml` (workflow name `build-verify`): its name must keep "build". `bump-pins` holds the submodule pin while a release, publish, build or wasm run is non-green, so renaming the workflow silently releases the hold.
-- `.github/workflows/house-clean.yml` keeps only the latest release per `-bin` repo; the installers read only that, so superseded releases have no reader.
-- gm-mcp bundle drift: a running gm-mcp snapshots the bundle it booted from, and reloads only to a provably newer bundle. Handover passes the listening socket over IPC so the port is never closed.
-- Reaper: child-ledger attribution is its safety gate. A process is retired only when every predicate measured true (null means unknown). Browser leases retire only on positive evidence of death, not heartbeat. The runner, http server and supervisor are detached on purpose, so they are never candidates.
-- `gm-mcp/src/ports.js`: probes answer null when unmeasured, never false. Only "nothing listening" licenses retiring a port.
-- Tool aliases (`rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs/git.rs`): `git_reset` takes `ref` or `rev`, and `mode` or `hard`, each pair refused together as `conflicting_fields`; `git_revert` takes `paths` or `ref`. Boolean fields in `gm-mcp/src/verb-table.js` use `booleanLike` (boolean or string), not strict `z.boolean()`.
-- Install bundle host: an unreachable bundle host warns and keeps the deployed bundle (`install.sh`, `bin/gm-install.js`); it never aborts an install that already has one.
+See `docs/script-rationale.md` (rationale for scripts and CI workflows, moved out of this file).
