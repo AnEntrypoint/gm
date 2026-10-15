@@ -22,7 +22,8 @@ Node traversal (gm-hop; `skills/dream-rsi/gm-graph.json`) feeds step 3 only when
 
 ## Parallelism: graph workflows
 - Fan-out unit: a `Workflow` graph. As many as open work needs; parallel where independent, sequential where a result feeds the next.
-- One wave per run; a run never loops over waves. A run takes at most 60 pending rows, resolves them with `gm-prd` agents (connectivity restarts per Connectivity restarts), returns `{pending_before, resolved, blocked, failed, new_blockers}` and ends. `pending_after > pending_before` halts new blockers until a merge pass closes duplicates.
+- Drainage strategy: drain the remaining PRDs in bounded slices, each slice run as its own dynamic `Workflow` graph. Take the first slice of at most 20 pending rows (`prd_list {status:"pending", limit:20}`), run one `gm-prd` per row, return `{pending_before, resolved, blocked, failed, new_blockers}`, then take the next slice from a fresh listing. Refusals and stalls are answered by the next slice, never by stopping. A slice that resolves nothing is re-run once with its blockers split, then the next slice starts.
+- One wave per run; a run never loops over waves. A run takes at most one slice (20 pending rows), resolves them with `gm-prd` agents (connectivity restarts per Connectivity restarts), returns `{pending_before, resolved, blocked, failed, new_blockers}` and ends. `pending_after > pending_before` halts new blockers until a merge pass closes duplicates.
 - A run never exceeds 150 agents. Cap-hit or stalled runs are reported, never relaunched unchanged.
 - Three graphs, each run to exhaustion:
   1. Row drain: `pipeline` over pending rows, one `gm-prd` per row, a `parallel` block per wave; until pending = 0.
