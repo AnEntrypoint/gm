@@ -81,7 +81,7 @@ The dispatch layer arrives with each phase's response: scope-discovery-as-fixed-
 - Main thread: `Skill(skill="gm-orchestrate")`. Parallelism = graph workflows, until zero pending rows and every node traversed.
 - Node hop: `Skill(skill="gm-hop", args='{"principle":"<name>","surface":"<path>","session":"<SESSION_ID>"}')`. One principle, one surface, one receipt.
 - PRD row: `Skill(skill="gm-prd", args="row=<id>; session=<SESSION_ID>")`. Nine stages, one row per run.
-- Terminal: `Skill(skill="gm-continue")` once the phase is terminal and `prd_pending` is 0.
+- Terminal: `Skill(skill="gm-continue")` once the phase is terminal and `prd_pending` is 0. At most two `gm-continue` calls per turn: a turn that has spent both starts the next run instead of calling it again.
 
 ## 1d. Units
 Hop = one principle (a book's discipline) over one surface. PRD row = one run. Both count against gm-orchestrate ticks.
