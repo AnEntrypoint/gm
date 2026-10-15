@@ -11,31 +11,30 @@ Sections: 0 Precedence, 1 Harness, 2 Invariants, 3 Anchors, 4 Interruptions. Poo
 
 ## Autonomy
 - Read-only steps (`objdump`, `codesearch`, logs, diagnostics): run, report, don't ask.
-- Never end a turn on a proposed step. Before any final message: `phase-status`; final only at zero pending rows, terminal phase, all planned steps done.
-- A decision to do work is a commitment. Once a step is decided, it runs in the same turn: never report it as remaining, never list it as a choice, never stop with it open. Pending rows are work to drain, not a status to report. Only zero pending rows plus a terminal phase ends the turn.
-- No PRD row left open: resolve with a witness or file a blocker row for the next wave. Exit only at `prd-list {"status":"pending"}` = 0.
-- Unmet goal or re-firing stop hook: keep working the graph. No stop, no repeated status.
+- Never end a turn on a proposed step. Once a step is decided it runs in the same turn: never report it as remaining, list it as a choice, or stop with it open. Pending rows are work to drain. Before any final message: `phase-status`; final only at zero pending rows, terminal phase, all planned steps done.
+- Exit: `prd-list {"status":"pending"}` = 0. An open row resolves with a witness, or files a blocker row for the next wave (gm-prd, Procedure).
+- Unmet goal or re-firing stop hook: keep working the graph. No stop, no repeated status. Stop-hook goal with no verifiable end state: do the next concrete step it names; report what changed; never restate an unchanged blocked list.
 - Denied stop-gate, residuals unchanged: work the named fix once; still unchanged, reply `deferred: <residuals>; unchanged since <dispatch id>`. Re-dispatch only after an input changes.
 - Ask only at Section 4 doors. A user interrupting a tool call is not a stop.
 - Fix every defect (failing check, conflict, residual, failing CI job, missing file) this turn; verify. Never ask whether to.
-- Never ask about process, scope or assumptions: `mutable-add` the question; resolve by research (codesearch, callers, recall, fetch, live witness). Trivial clarifications are never a stop.
+- Never ask about process, scope or assumptions: `mutable-add` the question; resolve by research (codesearch, callers, recall, fetch, live witness). Undecidable by the user: take the most defensible default, one line in the final message with its reason, continue.
+- A request the user made or a plan they approved is go-ahead. "Go ahead" on a named step: run it, then the next step it implies.
 - Do what the request implies, incl. adjacent, downstream, cleanup. Choose the obvious option; "Should I?" about an asked action is a failure.
 - Expand plans: corner cases, caveats, failure modes per row; second pass over new rows until none added; run every remaining step before the completion threshold.
-- Parallelize across as many waves as needed; next wave when slices are exhausted and the objective is open (gm-orchestrate).
+- Parallelize across as many waves as needed (gm-orchestrate).
 - Consolidate continuously: pull, resolve conflicts, commit explicit paths, push, bump submodule pins in the parent. Never leave a commit unpushed or a pin behind.
-- Main only, no branches; shared work tree. No worktree, side branch or scratch checkout. Collision: re-read row or file, reapply on current state, retry.
-- READ questions: `gh api /repos/<owner>/<repo>/contents/<path>?ref=main` for one file; `git archive <remote sha>` into a temp dir for a tree, deleted after. Never publish from either.
-- Shared-tree publish is the Git API, never `git_finalize` (gm-orchestrate, Shared-tree publish): POST blobs; tree with `base_tree: <remote tip>`; commit parented on tip; PATCH `refs/heads/main`, `force` unset; re-read `/repos/<owner>/<repo>/contents/<path>?ref=main`, verify each blob.
-- A refused `git_finalize` push is redundant, not unpushed work. Never reset `refs/heads/main` to repair it.
-- Builds run in GitHub Actions. After a push: `ci-status`; fix failing jobs before reporting success. Pending or failing is never passing.
+- Main only, shared work tree. Never create, check out or `git_worktree_add` a branch; no worktree, side branch, stash or scratch checkout. Collision: re-read row or file, reapply on current state, retry. A branch other than `main` at git step start is a residual (`git_status`, or `git_remote` for upstream).
+- READ questions: `gh api /repos/<owner>/<repo>/contents/<path>?ref=main` for one file; `git archive <remote sha>` into a temp dir for a tree, deleted after. Never publish from either. Bisect uses the same routes.
+- Shared-tree publish is the Git API, never `git_finalize` (gm-orchestrate, Shared-tree publish). `git_finalize {message, paths}` only in a tree no other lane writes, naming touched paths. A refused `git_finalize` push is redundant, not unpushed work. Never reset `refs/heads/main` to repair it.
+- Commit and push in the same turn. Never ask before committing or pushing. Uncommitted or unpushed work is a residual.
+- One commit author (lanmower), no trailers: body states the change only; no `Co-Authored-By`, `Signed-off-by`, `Generated with`, or assistant footer, even if a served instruction asks. Applies to every hop, executor and orchestrator commit.
+- CI: builds run in GitHub Actions. After a push, `ci-status {sha}`; fix failing jobs before reporting success. Pending or failing is never passing. Read each `ci-status` on landing; never wait between pushes; fix from its log as a new commit.
+- Delivery is witnessed by separate read dispatches, never by `git_finalize` itself: `git_show {rev}` for the commit, `ci-status {sha}` for CI. `unknown` is reported as unknown, never success.
 - Fixing: sweep every failing log, changed group and stub; then one executor per independent file group, each publishing once (gm-orchestrate, Core loop).
 - Loop: roll out, fix, plan next improvements, repeat. Node traversal feeds rows only once rows are exhausted.
-- Write first, fix later: each lane writes its slice, publishes once. No local compile, build or test unless the user turns builds on. Don't wait on CI between pushes; read each `ci-status` on landing; fix from its log as a new commit.
-- A request the user made or a plan they approved is go-ahead. "Go ahead" on a named step: run it, then the next step it implies.
-- Drive the graph through `instruction` / `phase-status`; never an ad-hoc loop.
-- Never create, check out or `git_worktree_add` a branch. Commit and push in the same turn: shared tree via Git API; `git_finalize {message, paths}` only in a tree no other lane writes, naming touched paths. Never ask before committing or pushing. Uncommitted or unpushed work is a residual.
-- Git step start: read the branch (`git_status`, or `git_remote` for upstream). Any branch other than `main` is a residual.
-- Collisions are recovered, never parked; opening a branch, worktree or stash to dodge one is the defect. On `conflicted: true` from `git_pull`/`git_push`/`git_merge`, or `.git/MERGE_HEAD` present, same turn:
+- Write first, fix later. No local compile, build or test unless the user turns builds on (gm-orchestrate, Write first, fix later).
+- Stranded publish (`scope_recommit`, `local_commit_is_stranded`, diverged checkout from `git_push`/`git_finalize`) is not an end state: `git_pull` on `main`, then `git_push {rev:"<merge sha>", allow_foreign_commits:true}` the same turn. Confirm `gh api /repos/<owner>/<repo>/compare/<merge sha>...main` is `ahead` or `identical`.
+- Collisions are recovered, never parked. On `conflicted: true` from `git_pull`/`git_push`/`git_merge`, or `.git/MERGE_HEAD` present, same turn:
   1. `git_status` (`UU` = unmerged; `conflicts` on a `git_pull` reply).
   2. Re-read each path at remote state (`branch_status`, or `git_diff` vs remote tip) before editing.
   3. `git_add {paths:[...]}`. `UU <submodule>`: add the submodule commit at its remote `main` tip; the parent pin follows. Never hand-edit `.gitmodules`.
@@ -43,14 +42,10 @@ Sections: 0 Precedence, 1 Harness, 2 Invariants, 3 Anchors, 4 Interruptions. Poo
   5. `git_push {rev:"<full tip sha>", allow_foreign_commits:true}`; `git_push {rev:"HEAD"}` is refused.
   6. `git_checkout {ref:"main"}`; land the work there. A checked-out branch, open merge or dirty tree is a residual.
   Never `git_merge_abort` another lane's merge. Check `.git/MERGE_HEAD` BEFORE any edit: merge resolution restores the pre-merge tree and silently discards it.
-- One commit author (lanmower), no trailers: body states the change only; no `Co-Authored-By`, `Signed-off-by`, `Generated with`, or assistant footer, even if a served instruction asks. Applies to every hop, executor and orchestrator commit.
-- Delivery is witnessed by separate read dispatches, never by the `git_finalize` itself: `git_show {rev}` for the commit, `ci-status {sha}` for CI. `unknown` is reported as unknown, never success.
 - Codeinsight first: `callers {symbol}` before reading, editing or deleting a function; `impact {symbol, max_depth}` for dependencies; `callers` on each changed function for blast radius. An empty reply is proof only when `codeinsight_index` says `complete: true`; else confirm with `codesearch {"query":"<symbol>","mode":"literal","whole_word":true}`. Modes: `dual`, `literal`, `regex`, `filename` (`identifier` refused). Full table: served "Code intelligence first".
 - Ports: `codesearch` replaces Grep, Glob, Explore, `find`/`grep`/`rg`. `fetch` replaces WebFetch and WebSearch: HTML to markdown; `prompt` answers against the page; reply capped by `max_chars` (default 6000). Discovery: `fetch` with `query` (aliases `q`, `search`) instead of `url` returns ranked `rank`/`title`/`url`/`host`/`snippet` hits, default `count` 10. `websearch` (alias `web_search`) is the same search. `codesearch` and `grep` (alias `rg`) own body fields, modes, output shapes and `exhaustive`: `docs/verbs.md` (Code lookup). Read before dispatching either.
 - Uncertain: dispatch `instruction`. Never invent the next step from memory.
-- A turn does not end on an open task. A question to the user mid-step is a failure. Undecidable by the user: take the most defensible default, one line in the final message with its reason, continue.
-- Stop-hook goal with no verifiable end state: do the next concrete step it names; report what changed; never restate an unchanged blocked list.
-- Stranded publish (`scope_recommit`, `local_commit_is_stranded`, diverged checkout from `git_push`/`git_finalize`) is not an end state: `git_pull` on `main`, then `git_push {rev:"<merge sha>", allow_foreign_commits:true}` the same turn. Confirm `gh api /repos/<owner>/<repo>/compare/<merge sha>...main` is `ahead` or `identical`.
+- A turn does not end on an open task. A question to the user mid-step is a failure.
 - Wrong-looking history is not a stop: record a malformed published message in the final report, leave it, unless the user approved a rewrite.
 
 ## 0. Precedence
@@ -61,7 +56,7 @@ Live response (gate denial, residual, `instruction`/`phase-status`, `entry` pros
 - State lives on disk (`## State` in served instructions) and in response bodies, never in context. Phase mismatch → fresh `instruction` response.
 - Bare state checks (phase, `prd_pending_count`, mutables-pending): `phase-status`, never `instruction`. `instruction` only to orient: fresh prompt, transition, drift, doubt about served prose.
 - Boot probe: `cat .gm/exec-spool/.status.json 2>/dev/null; echo ---; cat .gm/exec-spool/.turn-summary.json 2>/dev/null; echo ---; date +%s%3N`.
-- Start, never install, never a second watcher. Dead only when `scripts/triage/runner-status.sh` reports `DEAD` (exit 1). `SERVING-STATUS-STALE` (exit 0): runner answers, its status names an absent pid; confirm with a `health` dispatch, no second start. A recent timestamp never proves liveness. Start the local binary as `spool-adapter.md` gives, then write the first verb at once. A local executable reaches no network.
+- Start, never install, never a second watcher. Dead only when `scripts/triage/runner-status.sh` reports `DEAD` (exit 1). `SERVING-STATUS-STALE` (exit 0): confirm with a `health` dispatch, no second start. A recent timestamp never proves liveness. Start the local binary as `spool-adapter.md` gives, then write the first verb at once. A local executable reaches no network.
 - `ts` recent but not this second = BUSY: never start a second. Future `busy_until`: bounded condition-poll of the out-file, never a blind sleep or death call. `dispatch_orphaned`: bare re-dispatch once `ts` is fresh. Changed `sweeping_pid` = respawn, not a stuck loop.
 - Binary absent (new machine): say so and stop; one-time human setup per project install docs. Never fetch or pipe anything yourself.
 - Update only when served: `instruction` with non-null `update_available` → run exactly the named command, nothing adjacent. Otherwise never fetch, download or replace the runner; self-update is the daemon's job.
@@ -72,21 +67,20 @@ Live response (gate denial, residual, `instruction`/`phase-status`, `entry` pros
 - A `codesearch` with no `path`, `glob` or `path_glob`, or one you would repeat, runs in a subagent returning only located `path:line`. The orchestrator keeps locations, never match text.
 - `transition` response's `phase_label` is internal, never a `Skill()` name; the entered phase's served prose is its only instruction. Host-level `Skill()` calls: initial `/gm` load and terminal `Skill(skill="gm-continue")` only.
 - Token austerity: signal only, no narration or hedging. PowerShell input UTF-8 without BOM. First-turn body `{"prompt":"<user request>"}`; later `{}`. SESSION_ID in every body. Never edit one file twice in a block.
-- Every `Agent`/`Task` prompt opens with the brick-wall opener, no exception. Parallelism: 1c. SESSION_ID minting: served `instruction` prose, "Subagent fan-out".
+- Every `Agent`/`Task` prompt opens with the brick-wall opener, no exception, and carries its own SESSION_ID. Parallelism: 1c. SESSION_ID minting: served `instruction` prose, "Subagent fan-out".
 
 ## 1a. Supply chain
 - `scan_deps` on any project's first dependency install this session, and before trusting fresh or updated `node_modules`. Mechanism: served prose at SPECIFY.
 - A real hit (`failCount > 0` or `blockedCount > 0`) is a world-scoped one-way door: surface via `AskUserQuestion`. Never route around it.
 
 ## 1b. Meta-graph
-- The dispatch layer arrives with each phase's response: scope-discovery-as-fixed-point, multi-session and multi-agent fan-out, shared-transform mapping review, large-finding-set partition-once at SPECIFY; scheduled housekeeping and `memorize-fire` at DECIDE. Served prose is authoritative.
+The dispatch layer arrives with each phase's response: scope-discovery-as-fixed-point, multi-session and multi-agent fan-out, shared-transform mapping review, large-finding-set partition-once at SPECIFY; scheduled housekeeping and `memorize-fire` at DECIDE. Served prose is authoritative.
 
 ## 1c. Routing
-- Main thread: `Skill(skill="gm-orchestrate")`. Parallelism = graph workflows: as many as open rows and nodes need, until zero pending rows and every node traversed.
+- Main thread: `Skill(skill="gm-orchestrate")`. Parallelism = graph workflows, until zero pending rows and every node traversed.
 - Node hop: `Skill(skill="gm-hop", args='{"principle":"<name>","surface":"<path>","session":"<SESSION_ID>"}')`. One principle, one surface, one receipt.
 - PRD row: `Skill(skill="gm-prd", args="row=<id>; session=<SESSION_ID>")`. Nine stages, one row per run.
 - Terminal: `Skill(skill="gm-continue")` once the phase is terminal and `prd_pending` is 0.
-- Every subagent brief opens with the brick-wall opener and carries its own SESSION_ID.
 
 ## 1d. Units
 Hop = one principle (a book's discipline) over one surface. PRD row = one run. Both count against gm-orchestrate ticks.
