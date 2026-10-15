@@ -18,11 +18,11 @@ Repeat until a full pass adds no work:
 3. **Plan.** End each pass with `prd-add` rows (file ownership, acceptance).
 4. Repeat from 1.
 
-Node traversal (gm-hop; `skills/dream-rsi/gm-graph.json`) feeds step 3 only when `prd-list {"status":"pending"}` = 0 for the pass. It never interrupts rollout or fix.
+Node traversal (gm-hop; `skills/dream-rsi/gm-graph.json`) feeds step 3 only when `prd-list {"status":"pending"}` is under 20 (Parallelism, graph 2). It never interrupts rollout or fix.
 
 ## Parallelism: graph workflows
 - Fan-out unit: a `Workflow` graph. As many as open work needs; parallel where independent, sequential where a result feeds the next.
-- One wave per run; a run never loops over waves. A run takes at most 60 pending rows, resolves them with `gm-prd` agents (restart on connectivity error, at most 3 times), returns `{pending_before, resolved, blocked, failed, new_blockers}` and ends. `pending_after > pending_before` halts new blockers until a merge pass closes duplicates.
+- One wave per run; a run never loops over waves. A run takes at most 60 pending rows, resolves them with `gm-prd` agents (connectivity restarts per Connectivity restarts), returns `{pending_before, resolved, blocked, failed, new_blockers}` and ends. `pending_after > pending_before` halts new blockers until a merge pass closes duplicates.
 - A run never exceeds 150 agents. Cap-hit or stalled runs are reported, never relaunched unchanged.
 - Three graphs, each run to exhaustion:
   1. Row drain: `pipeline` over pending rows, one `gm-prd` per row, a `parallel` block per wave; until pending = 0.
@@ -39,7 +39,7 @@ Node traversal (gm-hop; `skills/dream-rsi/gm-graph.json`) feeds step 3 only when
 - File ownership before launch: each brief names its files. Two lanes never write one file. A shared manifest has one owner; others add only their own directory.
 - Contracts before code: a producer publishes its contract doc as its own commit first; the consumer reads it from remote `main`.
 - Use maintained libraries under permissive licences for solved problems. Pick the simplest correct path a lane finishes in one pass. Split a module across lanes only at a file boundary in the brief.
-- Rewrites of published history: once, at the end, after every lane lands.
+- Rewrites of published history need the owner's approval (gm, Section 4). Lanes append; they never rewrite.
 
 ## Run ledger
 - `.gm/pool/runs.jsonl`: one JSON line per run, append-only; the last line per `run` id is its state.
@@ -158,7 +158,7 @@ One work tree, one git lane. Main only; no worktree, side branch or scratch chec
 - Publish via the Git API: POST blobs; tree with `base_tree: <remote tip>`; commit parented on that tip; PATCH `refs/heads/main`, `force` unset; re-read each blob at `?ref=main` and verify it.
 - `git_finalize` refusing to push over a sibling's dirty path is redundant when its content is already published. Never reset `refs/heads/main` under running lanes.
 - `remote_moved` on a dirty tree: `git_status {"paths":[...]}`, commit or revert each path in its owning lane, then `git_push {rev:"<sha>"}`.
-- `remote_moved` plus conflicted `git_pull` (`conflicted: true`, `MERGE_HEAD` present): `git_merge_abort`, then `git_reset {ref:"origin/main", mode:"mixed"}` (local commit stays in reflog, files stay in the work tree); reapply each lane path on current state; then `git_finalize {message, paths}` for those paths only. Confirm with `git_remote` and `ci-status`.
+- `remote_moved` plus conflicted `git_pull` (`conflicted: true`, `MERGE_HEAD` present): `git_merge_abort` only for a merge this lane opened (gm, Collisions); reapply each lane path on the current remote tip and publish it through the Git API (above). Never `git_reset` `refs/heads/main`. Confirm with `git_remote` and `ci-status`.
 - Collision and commit identity: gm, Autonomy.
 
 ## Editing the skills
