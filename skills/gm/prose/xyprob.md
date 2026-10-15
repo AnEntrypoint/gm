@@ -1,0 +1,11 @@
+# XY Problem
+
+Principle `XYPROB`. Apply "XY Problem" to the work this node stands on. The node is entered from any neighbour that leads here and left to any neighbour it links to; its place in a walk is decided by the work it applies to, not by a bucket.
+
+Claims, each with the walk that falsifies it:
+
+- E1: WHEN a request names a means, THE agent SHALL record the goal the means serves before its first edit. Falsified by a P1 walk whose first edit has no earlier goal row.
+- E2: WHEN the goal and the named means disagree, THE agent SHALL record both as PRD rows before it chooses a solution. Falsified by a walk that picks a solution with no paired goal row.
+- E3: IF the goal cannot be stated without the means, THEN THE agent SHALL record the request as a mutable. Falsified by such a request reaching P2 with no mutable row.
+
+The walk is recorded by the transition that leaves this node.
