@@ -3,15 +3,6 @@ import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
-// Usage: check-graph-traversal.mjs [root]   (default: the gm checkout this script sits in).
-// Traverses the state machine (gm-config/fsm/graph.json) from its initial phase and the hop
-// graph (skills/dream-rsi/gm-graph.json) from its entry points, and checks that:
-//   - every node is reachable, every edge endpoint is a node, and no non-terminal node is a dead end;
-//   - the state machine's terminal phase is reachable and COMPLETE has an edge to it;
-//   - the hop graph's convergence terminal and halt nodes are terminal nodes;
-//   - a node that both graphs declare has the same kind in each (a kind mismatch is a defect).
-// Exit 1 on any failure, and print RESULT: PASS otherwise.
-
 const root = process.argv[2]
   ? path.resolve(process.argv[2])
   : path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -47,50 +38,59 @@ function adjacencyOf(edges) {
   return adjacency;
 }
 
-// State machine.
-const fsmStates = new Map(fsm.states.map((s) => [s.key, s]));
-const fsmAdj = adjacencyOf(fsm.edges);
-for (const e of fsm.edges) {
-  if (!fsmStates.has(e.from)) fail(`fsm: edge from unknown state ${e.from}`);
-  if (!fsmStates.has(e.to)) fail(`fsm: edge to unknown state ${e.to}`);
+function checkStateMachine() {
+  const fsmStates = new Map(fsm.states.map((s) => [s.key, s]));
+  const fsmAdj = adjacencyOf(fsm.edges);
+  for (const e of fsm.edges) {
+    if (!fsmStates.has(e.from)) fail(`fsm: edge from unknown state ${e.from}`);
+    if (!fsmStates.has(e.to)) fail(`fsm: edge to unknown state ${e.to}`);
+  }
+  const initial = fsm.policy.initial_phase;
+  const terminal = fsm.policy.terminal_phase;
+  const fsmReached = reach([initial], fsmAdj);
+  for (const key of fsmStates.keys()) {
+    if (!fsmReached.has(key)) fail(`fsm: ${key} is unreachable from ${initial}`);
+  }
+  if (!fsmReached.has(terminal)) fail(`fsm: terminal ${terminal} is unreachable from ${initial}`);
+  for (const [key, state] of fsmStates) {
+    if (state.kind !== 'terminal' && !fsmAdj.has(key)) fail(`fsm: non-terminal ${key} (${state.kind}) is a dead end`);
+  }
+  if (!(fsmAdj.get('COMPLETE') ?? []).includes(terminal)) fail(`fsm: COMPLETE has no edge to ${terminal}`);
+  return { fsmStates, fsmReached, initial };
 }
-const initial = fsm.policy.initial_phase;
-const terminal = fsm.policy.terminal_phase;
-const fsmReached = reach([initial], fsmAdj);
-for (const key of fsmStates.keys()) {
-  if (!fsmReached.has(key)) fail(`fsm: ${key} is unreachable from ${initial}`);
-}
-if (!fsmReached.has(terminal)) fail(`fsm: terminal ${terminal} is unreachable from ${initial}`);
-for (const [key, state] of fsmStates) {
-  if (state.kind !== 'terminal' && !fsmAdj.has(key)) fail(`fsm: non-terminal ${key} (${state.kind}) is a dead end`);
-}
-if (!(fsmAdj.get('COMPLETE') ?? []).includes(terminal)) fail(`fsm: COMPLETE has no edge to ${terminal}`);
 
-// Hop graph.
-const hopNodes = new Map(hop.nodes.map((n) => [n.id, n]));
-const hopAdj = adjacencyOf(hop.edges);
-for (const e of hop.edges) {
-  if (!hopNodes.has(e.from)) fail(`hop: edge from unknown node ${e.from}`);
-  if (!hopNodes.has(e.to)) fail(`hop: edge to unknown node ${e.to}`);
+function checkHopGraph() {
+  const hopNodes = new Map(hop.nodes.map((n) => [n.id, n]));
+  const hopAdj = adjacencyOf(hop.edges);
+  for (const e of hop.edges) {
+    if (!hopNodes.has(e.from)) fail(`hop: edge from unknown node ${e.from}`);
+    if (!hopNodes.has(e.to)) fail(`hop: edge to unknown node ${e.to}`);
+  }
+  for (const entry of hop.entry_points) {
+    if (!hopNodes.has(entry)) fail(`hop: entry point ${entry} is not a node`);
+    const reached = reach([entry], hopAdj);
+    for (const id of hopNodes.keys()) {
+      if (!reached.has(id)) fail(`hop: ${id} is unreachable from entry ${entry}`);
+    }
+  }
+  for (const name of ['terminal', 'halt']) {
+    const id = hop.convergence[name];
+    if (!hopNodes.has(id)) fail(`hop: convergence.${name} ${id} is not a node`);
+    else if (hopNodes.get(id).kind !== 'terminal') fail(`hop: convergence.${name} ${id} is a ${hopNodes.get(id).kind}, not a terminal`);
+  }
+  return hopNodes;
 }
-for (const entry of hop.entry_points) {
-  if (!hopNodes.has(entry)) fail(`hop: entry point ${entry} is not a node`);
-  const reached = reach([entry], hopAdj);
-  for (const id of hopNodes.keys()) {
-    if (!reached.has(id)) fail(`hop: ${id} is unreachable from entry ${entry}`);
+
+function checkSharedNodeKinds(fsmStates, hopNodes) {
+  for (const [id, node] of hopNodes) {
+    const other = fsmStates.get(id);
+    if (other && other.kind !== node.kind) fail(`kind mismatch for ${id}: state machine says ${other.kind}, hop graph says ${node.kind}`);
   }
 }
-for (const name of ['terminal', 'halt']) {
-  const id = hop.convergence[name];
-  if (!hopNodes.has(id)) fail(`hop: convergence.${name} ${id} is not a node`);
-  else if (hopNodes.get(id).kind !== 'terminal') fail(`hop: convergence.${name} ${id} is a ${hopNodes.get(id).kind}, not a terminal`);
-}
 
-// Shared nodes must agree on kind.
-for (const [id, node] of hopNodes) {
-  const other = fsmStates.get(id);
-  if (other && other.kind !== node.kind) fail(`kind mismatch for ${id}: state machine says ${other.kind}, hop graph says ${node.kind}`);
-}
+const { fsmStates, fsmReached, initial } = checkStateMachine();
+const hopNodes = checkHopGraph();
+checkSharedNodeKinds(fsmStates, hopNodes);
 
 for (const f of failures) console.log(`[FAIL] ${f}`);
 console.log(`traversed the state machine (${fsmReached.size}/${fsmStates.size} reachable from ${initial}) and the hop graph (${hop.entry_points.length} entry point(s), ${hopNodes.size} nodes)`);
