@@ -1,8 +1,4 @@
 #!/usr/bin/env bash
-# One call for the whole picture: watcher health, submodule pins, and the CI state of each
-# release-facing repo on main. Usage: doctor.sh   (run from the gm root). Exit 1 if the watcher
-# is dead or a pin is unpublished. A repo is RED only when the newest run of a workflow on main
-# failed; an older failure that a later run fixed is not reported.
 here=$(cd "$(dirname "$0")" && pwd)
 rc=0
 echo "== watcher"; "$here/runner-status.sh" "$PWD" || rc=1
