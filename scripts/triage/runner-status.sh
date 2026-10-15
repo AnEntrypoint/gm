@@ -9,17 +9,16 @@ age = int(time.time() * 1000) - d.get("ts", 0)
 pid = d.get("pid")
 alive = bool(pid) and os.path.exists(f"/proc/{pid}")
 busy = d.get("busy_until", 0) > time.time() * 1000
-# .status.json is written by one process and can outlive it: a daemon that serves dispatches
-# while the status pid is gone leaves a stale status file. A response written in the last 5
-# minutes proves a live runner answered, so that is not a dead watcher and a second one must not start.
 out_dir = os.path.join(os.path.dirname(sys.argv[1]), "out")
 newest = max((os.path.getmtime(os.path.join(out_dir, n)) for n in os.listdir(out_dir) if n.endswith(".json")), default=0) if os.path.isdir(out_dir) else 0
 out_age = int(time.time() - newest) if newest else None
+RESPONSE_PROVES_LIVE_SECONDS = 300
+responded_recently = out_age is not None and out_age < RESPONSE_PROVES_LIVE_SECONDS
 if alive and age < 300000:
     verdict = "ALIVE"
 elif alive and busy:
     verdict = "BUSY"
-elif not alive and out_age is not None and out_age < 300:
+elif not alive and responded_recently:
     verdict = "SERVING-STATUS-STALE"
 else:
     verdict = "DEAD"
