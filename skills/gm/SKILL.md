@@ -15,7 +15,7 @@ Sections: 0 Precedence, 1 Harness, 2 Invariants, 3 Anchors, 4 Interruptions. Poo
 - A full run executes within one turn. Every turn ends by starting the next turn: its last action launches the next run (background agents, or a dispatch that the next turn consumes). A turn that ends with rows pending and nothing launched is a defect. Before the final message, check the running set and relaunch any lane that finished without its row closed.
 - Exit gate: the software is perfected from every observable perspective, and no further PRD can be conceived. Until then the walk continues: `prd-list {"status":"pending"}` = 0 is necessary, not sufficient. After each drain, run a fresh expansion pass over every observable perspective; new findings become rows; the walk stops only when that pass files nothing. Only the user's explicit stop ends the walk before that gate. An open row resolves with a witness, or files a blocker row for the next wave (gm-prd, Procedure).
 - Unmet goal or re-firing stop hook: keep working the graph. No stop, no repeated status. Stop-hook goal with no verifiable end state: do the next concrete step it names; report what changed; never restate an unchanged blocked list.
-- Denied stop-gate, residuals unchanged: work the named fix once; still unchanged, reply `deferred: <residuals>; unchanged since <dispatch id>`. Re-dispatch only after an input changes. A deferred reply never ends a turn with rows pending: the turn launches the next run (the turn rule above).
+- Denied stop-gate, residuals unchanged: work the named fix once; still unchanged, reply `deferred: <residuals>; unchanged since <dispatch id>`. Re-dispatch only after an input changes.
 - Ask only at Section 4 doors. A user interrupting a tool call is not a stop.
 - Fix every defect (failing check, conflict, residual, failing CI job, missing file) this turn; verify. Never ask whether to.
 - Never ask about process, scope or assumptions: `mutable-add` the question; resolve by research (codesearch, callers, recall, fetch, live witness). Undecidable by the user: take the most defensible default, one line in the final message with its reason, continue.
@@ -32,7 +32,7 @@ Sections: 0 Precedence, 1 Harness, 2 Invariants, 3 Anchors, 4 Interruptions. Poo
 - CI: builds run in GitHub Actions. After a push, `ci-status {sha}`; fix failing jobs before reporting success. Pending or failing is never passing. Read each `ci-status` on landing; never wait between pushes; fix from its log as a new commit.
 - Delivery is witnessed by separate read dispatches, never by `git_finalize` itself: `git_show {rev}` for the commit, `ci-status {sha}` for CI. `unknown` is reported as unknown, never success.
 - Fixing: sweep every failing log, changed group and stub; then one executor per independent file group, each publishing once (gm-orchestrate, Core loop).
-- Loop: roll out, fix, plan next improvements, repeat. Node traversal feeds rows whenever pending rows fall under 20 (gm-orchestrate, Parallelism).
+- Loop: roll out, fix, plan next improvements, repeat. Node traversal feeds rows only once rows are exhausted.
 - Write first, fix later. No local compile, build or test unless the user turns builds on (gm-orchestrate, Write first, fix later).
 - Stranded publish (`scope_recommit`, `local_commit_is_stranded`, diverged checkout from `git_push`/`git_finalize`) is not an end state: `git_pull` on `main`, then `git_push {rev:"<merge sha>", allow_foreign_commits:true}` the same turn. Confirm `gh api /repos/<owner>/<repo>/compare/<merge sha>...main` is `ahead` or `identical`.
 - Collisions are recovered, never parked. On `conflicted: true` from `git_pull`/`git_push`/`git_merge`, or `.git/MERGE_HEAD` present, same turn:
@@ -64,8 +64,6 @@ Live response (gate denial, residual, `instruction`/`phase-status`, `entry` pros
 - The verb set belongs to the running build. Missing out-file never means unavailable; unknown verb → `error_code: unknown_verb` via the normal read cycle. Missing out-file = not finished: check `in/<verb>/<N>.txt.inflight`; while it exists, work runs. Condition-poll it (no blind sleep, no blind re-dispatch); `.status.json` `busy_until` and `queue_depth` show contention. Never conclude "verb unavailable" from silence.
 - No raw `git` via Bash (gated `deviation.bash-git-bypass`). Git body shapes and exec body rules (raw body, `timeoutMs`, ESM and `.cjs` scratch, truncation, MCP polling caps): `docs/verbs.md`.
 - Batch independent dispatches in one tool-call block; one row per `prd-add`/`mutable-add` call. `{"items":[...]}` is rejected.
-- Background run hygiene (measured 2026-10-15: a 24 GB host at 286 MB free, swap exhausted, load 26.9). Every background run script traps its cleanup on `EXIT TERM INT` (`trap sweep EXIT TERM INT`): a cleanup written only at the top of a script does not run when the shell is reaped. One arm per shell, since one reap otherwise costs every arm in it. A reaped shell is not a dead guest: the guest keeps running and consuming, and is swept separately.
-- Sweep orphaned runners by private name before new work, and classify a process by WHAT it is before killing it by age: on a container host a long-lived desktop or supervisor process is not a leak. Before killing anything named like the toolchain's own server, find the pid that actually answers its health endpoint (`curl -s http://127.0.0.1:8787/health`) and never kill that one: the one shared HTTP server every session on the machine rides is identified by the answering pid, never by age or name.
 - Search-ban exception: spool response JSON (`.gm/exec-spool/out/*.json`), `.status.json`, `.turn-summary.json`, this session's tool-output files: `Read` by exact path. `Glob`, `Grep`, `find`, `grep`, `rg` stay off for content search. Sole sanctioned glob: `'.gm/exec-spool/in/**/*.txt'`.
 - A `codesearch` with no `path`, `glob` or `path_glob`, or one you would repeat, runs in a subagent returning only located `path:line`. The orchestrator keeps locations, never match text.
 - `transition` response's `phase_label` is internal, never a `Skill()` name; the entered phase's served prose is its only instruction. Host-level `Skill()` calls: initial `/gm` load and terminal `Skill(skill="gm-continue")` only.
@@ -83,7 +81,7 @@ The dispatch layer arrives with each phase's response: scope-discovery-as-fixed-
 - Main thread: `Skill(skill="gm-orchestrate")`. Parallelism = graph workflows, until zero pending rows and every node traversed.
 - Node hop: `Skill(skill="gm-hop", args='{"principle":"<name>","surface":"<path>","session":"<SESSION_ID>"}')`. One principle, one surface, one receipt.
 - PRD row: `Skill(skill="gm-prd", args="row=<id>; session=<SESSION_ID>")`. Nine stages, one row per run.
-- Terminal: `Skill(skill="gm-continue")` once the phase is terminal and `prd_pending` is 0.
+- Terminal: `Skill(skill="gm-continue")` once the phase is terminal and `prd_pending` is 0. At most two `gm-continue` calls per turn: a turn that has spent both starts the next run instead of calling it again.
 
 ## 1d. Units
 Hop = one principle (a book's discipline) over one surface. PRD row = one run. Both count against gm-orchestrate ticks.
