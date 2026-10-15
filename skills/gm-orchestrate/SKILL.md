@@ -113,6 +113,8 @@ Launch only advertised ids. A slot stays empty only when no pending row and no u
 
 ## Never leave a row open
 - Exit requires `prd-list {"status":"pending"}` = 0. Stalls, blocked workers, refused witnesses and ended sessions never close the walk.
+- Every gm call in every brief passes `cwd: "C:/dev/gm"` (or the row's project root). A call without `cwd` reads another project: a "row not found" or "pending 0" from a brief is a wrong-project defect, not a blocker. Such a row is re-checked with `cwd` before any blocker is filed.
+- A resolver runs every stage of its row in its one run (orient through publish, then prd-resolve). Stopping after one stage with the row open is a defect: the orchestrator re-dispatches the same row once as `<session>-r<n>` with the stage it reached named in the brief, never a fresh orient.
 - A run ends as `prd-resolve` with a witness, or as blocked. A blocked row keeps its id and names `blocked_by: <fact and verb>` in its text. File a new blocker row only when no open row names that fact. Counts are unique open rows.
 - Blockers launch next wave. A blocker that blocks again is split until one step remains; that step runs. Blocker-of-blocker chains are never created past one level.
 - Convergence guard: pending rows rise two waves running → no new blockers; run only open blockers and rows until the count falls.
