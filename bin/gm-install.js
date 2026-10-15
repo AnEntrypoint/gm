@@ -265,12 +265,17 @@ function skillDriftReport(source, roots) {
   for (const root of roots) {
     for (const name of source.names) rows.push({ root, ...checkSkill({ dir: source.dir, name, root }) })
   }
-  const bad = rows.filter(r => r.state === 'DRIFT' || (r.state === 'equal-copy' && !source.disposable))
+  const bad = rows.filter(r => r.state === 'DRIFT' || r.state === 'absent' || (r.state === 'equal-copy' && !source.disposable))
   for (const r of bad) {
+    const where = path.join(r.root, r.name, 'SKILL.md')
+    if (r.state === 'absent') {
+      console.log(`MISSING ${r.name} at ${where}: no installed link or copy; the next dispatch will not serve this skill`)
+      continue
+    }
     const why = r.state === 'DRIFT'
       ? 'contents differ'
       : 'contents match but it is a SEPARATE file, so the next source edit will not reach it'
-    console.log(`DRIFT ${r.name} at ${path.join(r.root, r.name, 'SKILL.md')} (${r.state}): ${why}`)
+    console.log(`DRIFT ${r.name} at ${where} (${r.state}): ${why}`)
   }
   if (bad.length === 0) {
     console.log(source.disposable
