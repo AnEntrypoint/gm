@@ -153,6 +153,13 @@ The canonical search verb: ranked BM25 plus vector retrieval.
 
 A request field `exhaustive: true` only implies `no_ignore`. In a reply, `exhaustive` reports coverage and does not widen the scan.
 Coverage is reported back, and `exhaustive: false` there means the scan stopped early.
+Every exhaustive reply names the corpus it answered on: `file_source` (`git`, `walk` or `file`) with `file_source_detail`,
+and, when git contributed to it, `tracked_files_listed` and `untracked_files_listed`. `nested_worktrees` counts the nested
+worktrees (submodule checkouts) whose untracked files were joined into that corpus, because a file written inside one belongs
+to the nested repository and is not in this worktree's own `git ls-files`. When the listing of one of them fails,
+`nested_worktrees_unlisted: true` and `nested_worktrees_note` say so: those files are then missing from the corpus and a zero
+over it is **not** a finding for them, so re-dispatch with `refresh: true`, or scope `path` to the worktree, before concluding
+a name is absent.
 
 Example:
 
@@ -474,6 +481,8 @@ The `git_worktree_add`, `git_worktree_list` and `git_worktree_remove` verbs serv
 body: {"url":"https://github.com/OpenBW/openbw"}
 body: {"url":"https://example.com/", "prompt":"what license does this project use?"}
 body: {"url":"https://example.com/", "raw":true, "max_chars":200000}
+body: {"url":"https://raw.githubusercontent.com/o/r/main/big.c", "offset":24000, "length":24000}
+body: {"url":"https://raw.githubusercontent.com/o/r/main/big.c", "start_line":800, "end_line":900}
 ```
 
 | body field | does |
@@ -484,13 +493,25 @@ body: {"url":"https://example.com/", "raw":true, "max_chars":200000}
 | `count` | hits returned by a search. Default **10**, ceiling 50; `limit`, `max_results`, `k` and `n` are aliases |
 | `prompt` | answers the question in `prompt` against the converted page and returns the matching passages **instead of** the page. gm holds no outbound model credential, so answering is **extractive**: the passages are verbatim from the page, scored by how much of the prompt they cover, and `answer_mode` is always `"extractive"` |
 | `max_chars` | cap on characters returned. Default **6000**, ceiling 4000000, so one fetch can never dump a 45k-character page into context; the default is small enough to read inline, and a clipped tail names how many characters were dropped |
+| `offset`, `length` | read one **bounded page** of the document instead of its head, so a document longer than the cap is readable end to end. `offset` is a 0-based character offset, `length` the number of characters to return (`len` is an alias); a page defaults to **24000** characters, not 6000, and an explicit `max_chars` still caps it |
+| `start_line`, `end_line`, `lines` | the same paging by line: 1-based and inclusive (aliases `startLine`, `endLine`), or `start_line` plus `lines` (aliases `line_count`, `lineCount`) as a count. Never mix a character key with a line key in one call — that is refused, not silently read as a head read |
 | `answer_max_chars` | cap on a prompt answer. Default 4000 |
 | `raw` | `true` (aliases `full_response`, `fullResponse`) is the escape hatch: the original body, no conversion, no prompt answering. Its default `max_chars` is 1000000 |
 | `method`, `headers`, `body`, `opts`, `timeoutMs` | passed to the transport. `timeoutMs` defaults to 60000, ceiling 600000 |
 
 The reply carries `url`, `status`, `content_type`, `body_chars`, `converted`, `max_chars` and `truncated`, and then either
-`content` (the markdown) or `prompt`, `answer`, `answer_mode`, `answer_chars` and `passages` (one row per passage, with
+`content` (the markdown) or `prompt`, `answer`, `answer_mode`, `answer_status`, `answer_chars` and `passages` (one row per passage, with
 `score` and `matched_terms`). On `fetch`, `help:true` returns its parameter text and sends no request.
+
+A paged read (`offset`/`length`, or `start_line`/`end_line`/`lines`) adds `offset`, `length`, `total_chars`, `has_more` and
+`next_offset`, or `start_line`, `end_line`, `lines`, `total_lines`, `has_more` and `next_start_line`, so the next page is one
+dispatch away; a page is never padded with the `...[+N chars clipped]` tail a clipped whole-document read carries.
+
+`answer_status` is what separates the two ways a prompt answer can be empty, and it is on every prompt reply:
+`matched` (passages were selected), `no_match` (the page has text and none of it scored against the prompt) and
+`empty_source` (the retrieval or the conversion produced no text at all). An `empty_source` reply is **not** a finding that the
+page lacks the answer: it comes back `ok:false` with `error_code: "fetch_empty_source"`, so an empty answer is never
+indistinguishable from a failed retrieval.
 
 `fetch {}` answers `url required (or query, q or search for a web search)`.
 
