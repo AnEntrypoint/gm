@@ -3,12 +3,6 @@ import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
-// Usage: check-doc-paths.mjs [root]   (default: the gm checkout this script sits in).
-// Every repository path that the site and docs name must resolve on disk. A path is a
-// backtick or <code> token that starts with a top-level directory or file this repo ships.
-// Exit 1 on any path that does not exist, and print RESULT: PASS otherwise.
-// A bare file name with no directory (specify.md, state.md) is not a repository path and is
-// not checked: it names a served stage, a runtime file or a prose key, never a location here.
 
 const root = process.argv[2]
   ? path.resolve(process.argv[2])
@@ -21,9 +15,13 @@ const ROOTS = [
   'package.json', 'README.md', 'AGENTS.md', 'SKILLS.md', 'CHANGELOG.md', 'CONTRIBUTING.md',
 ];
 
-// Tokens that are not repository paths: globs, placeholders, runtime-state paths under a
-// project's own .gm/ directory, and the install targets under a user's home directory.
-const SKIP = /[*<>{}]|\.\.\.|^\.gm\/|^~|\/\/|^https?:/;
+const NOT_REPOSITORY_PATH = [
+  /[*<>{}]|\.\.\./,
+  /^\.gm\//,
+  /^~/,
+  /\/\//,
+  /^https?:/,
+];
 
 const files = [];
 const walk = (rel) => {
@@ -38,8 +36,6 @@ const walk = (rel) => {
 for (const rel of ['README.md', 'docs', 'site/content']) walk(rel);
 
 const token = /<code>([^<]+)<\/code>|`([^`\n]+)`/g;
-// A submodule that is not checked out is an empty directory: its paths cannot be verified here,
-// so they are counted as skipped instead of failing the check.
 const submodulePaths = [...fs.readFileSync(path.join(root, '.gitmodules'), 'utf8').matchAll(/^\s*path = (.+)$/gm)]
   .map((m) => m[1].trim());
 const uninitialized = new Set(
@@ -58,7 +54,7 @@ for (const rel of files) {
     for (const m of line.matchAll(token)) {
       const raw = (m[1] ?? m[2]).trim();
       const candidate = raw.replace(/[),.;:]+$/, '').replace(/:\d+$/, '');
-      if (SKIP.test(candidate) || !ROOTS.some((r) => candidate === r || candidate.startsWith(r))) continue;
+      if (NOT_REPOSITORY_PATH.some((re) => re.test(candidate)) || !ROOTS.some((r) => candidate === r || candidate.startsWith(r))) continue;
       if (/\s/.test(candidate)) continue;
       if (isUninitialized(candidate)) {
         skipped.push(`${rel}:${i + 1}: \`${candidate}\``);
