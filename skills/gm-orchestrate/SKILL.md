@@ -107,6 +107,12 @@ Launch only advertised ids. A slot stays empty only when no pending row and no u
 - A worker returning with no receipt or blocker is re-dispatched once per wave as `<session>-r<n>`. A connectivity-stopped worker is restarted (Connectivity restarts).
 - `floor_gate_denied` on `prd-resolve` or phase advance: pass `body.live` and launch the denial's `slots.launch`.
 
+## Decided work lands in the same turn
+- A decision to do more work is executed in that turn. The orchestrator picks the most defensible default, records it as one line in `.gm/witness-log.md`, and runs it. Ending a turn with a decision waiting on the user is a defect.
+- Only a Section 4 door (world-scoped, or one that reaches every session or production) is raised to the user, and it is raised as a final-message question while every other row keeps running. The orchestrator never blocks the whole pool on one.
+- A live lock held by another lane (`store_busy`, `gm.db.lock` owner alive) is never killed or removed by the orchestrator. Default: retry the store call with `wait {"ms":60000}` up to 5 times. Still held after that: every affected row takes the store-free path (`codesearch` literal or filename, `Read` of located paths, `git_*` verbs), records the lock as its named fact, and is re-launched the moment the lock clears. No row waits idle on it.
+- A row whose acceptance needs a live write to shared served state (a prose override, a store row, a witness that changes every session) is run against a disposable key the orchestrator names in its own brief, with the key recorded in the receipt. Only a Section 4 door is not defaulted this way.
+
 ## Starvation
 - `pool-observe` dropped at 120 s with `dispatch_starved_waiting_for_serial_lane`: re-dispatch once, verbatim (never `resume_task`). First read `.gm/exec-spool/.dispatch-wait.json`: position 1 or holder near budget → re-dispatch now; behind a fresh holder → wait; not shrinking → slow holder.
 - Commit ahead of push: wait. A push that waited out its budget keeps its place; re-dispatch once.
