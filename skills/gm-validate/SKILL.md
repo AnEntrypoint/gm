@@ -8,8 +8,8 @@ description: "Verification lane for one PRD row, spawned by the orchestrator aft
 Input: `row=<id>; session=<SESSION_ID>`. Output: `.gm/receipts/<row>/05-validate.md`.
 
 1. Write one expected value per acceptance clause before running anything.
-2. Run each check live. Record the dispatch id and the observed value. A check that matches its expected value passes.
-3. Any failure or new unknown: record it and return `STATUS: fix <check id>` to the orchestrator. The orchestrator spawns a fresh executor for the row; this lane does not run ELIMINATE or EDIT itself.
-4. All checks pass: record the verify receipt and return `STATUS: verified <witness dispatch id>` to the orchestrator. This lane does not load gm-publish or read CI; the orchestrator spawns the CI lane for the same sha.
+2. Run each check live. Record the dispatch id and observed value. A check matching its expected value passes.
+3. Any failure or new unknown: record it, return `STATUS: fix <check id>` to the orchestrator. The orchestrator spawns a fresh executor; this lane never runs ELIMINATE or EDIT itself.
+4. All pass: record the verify receipt, return `STATUS: verified <witness dispatch id>`. This lane does not load gm-publish or read CI; the orchestrator spawns the CI lane for the same sha.
 
-This lane is spawned, never loaded inline by the executor. It runs in its own session (`<parent>-v<k>`) and is the witness for the row, so the executor's session may not witness its own edit.
+Spawned, never loaded inline by the executor. Runs in its own session (`<parent>-v<k>`) as the row's witness; the executor's session may not witness its own edit.
