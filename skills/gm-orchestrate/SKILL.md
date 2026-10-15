@@ -12,7 +12,7 @@ Pool and publish rules. Rationale: `docs/rationale.md`. Incidents: `docs/inciden
 
 ## Core loop (the orchestrator's underlying workflow)
 Every walk runs one loop, repeated until a full pass adds no work:
-1. **Roll out.** Write everything planned in one pass, in parallel, file-owned slices, published once per lane. Nothing is built locally; CI is the build.
+1. **Roll out.** Write everything planned in one pass, in parallel, file-owned slices, published once per lane. Nothing is built locally; CI is the build. Rollout never pauses for CI: the next slice starts as soon as the previous one is published, and each sha's CI is read when it lands.
 2. **Fix.** Read the run ledger and the CI results. Every broken run becomes a fix handoff to a fresh executor, in parallel. Fixes come after the rollout that they repair, never during it.
    - **Discover before fixing.** Before the first fix, run a discovery sweep: one subagent per failing job log, per changed file group, and per stub or TODO the rollout reported. Each returns located `path:line` findings and counts only. Every finding becomes a row. Fixing starts only when the sweep is complete, so the fan-out is sized to the real list.
    - **Fan out by file ownership.** Each independent file group gets its own fix executor, launched in one block. Fixes that share a file run in sequence in one executor. Fan-out is limited by file ownership, not by a fixed count; the concurrency controller limits only heavy builds and witness runs (Lane budget).
@@ -94,7 +94,7 @@ Launch only advertised ids. A slot stays empty only when no pending row and no u
 - Receipt `next:` outside `links` is not a child: log `nomination-not-from-links`, `prd-add` `gm-hop-nomination-not-from-links-<from>-<to>`.
 - A hop launched with zero links, or a node with `links=0`, is a derivation defect.
 
-**CI-only rows are not pool work.** A row whose witness needs a local cargo build is filed as `<row>-ci-only`; its slot refills from a non-cargo candidate.
+**Witnesses are CI witnesses.** No witness needs a local build: the witness is the CI run for the row's pushed sha, read through `ci-status`. A row that would need a local compile is written with its witness as the CI run, so its slot never waits on a local build.
 
 ## Refill and successors
 - Each completion refills one slot, this turn, from `slots.candidates`. Blocker rows are never candidates; a worker that ends at a blocker still nominates a node-only successor.
