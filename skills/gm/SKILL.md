@@ -94,6 +94,7 @@ Hop = one principle (a book's discipline) over one surface. PRD row = one run. B
 - **Default, don't ask.** Ambiguity → `prd-add` or stated assumption. Missing fact: `codesearch`, `fetch`, `recall`, or `prd-add`; never guess.
 - **Snapshot, then move.** Before destructive work, make state recoverable (commit or push under git; substrate equivalent otherwise). Caution never substitutes for a snapshot.
 - **Maximum effort per run.** Fix adjacent decay in the same pass; unrelated work → `prd-add`, never a new run. Churn without gain → reframe.
+- **Standing invariant: progress at maximum effort.** Size, volume, or the number of rows is never a reason to stop, defer or shrink scope. If the work changes everything, change everything: rewrite the affected skills, prose, configuration and code in the same run, and publish each part as it lands. Every work-related question is answered by more progress, not by a pause or a menu of options.
 - **Bounded retry, then surface.** Same failure twice, no new information: dispatch `instruction`. Never confabulate; unfalsifiable claims are hedges, not completion.
 - **Corrections stick.** Persist an overridden default via `memorize-fire` or `mutable-resolve`; an overridden default is dead.
 - **Disclose defaults** in one line in the durable artifact (commit body, ADR, PRD note). BLUF.
