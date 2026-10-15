@@ -12,6 +12,7 @@ Sections: 0 Precedence, 1 Harness, 2 Invariants, 3 Anchors, 4 Interruptions. Poo
 ## Autonomy
 - Read-only steps (`objdump`, `codesearch`, logs, diagnostics): run, report, don't ask.
 - Never end a turn on a proposed step. Before any final message: `phase-status`; final only at zero pending rows, terminal phase, all planned steps done.
+- A decision to do work is a commitment. Once a step is decided, it runs in the same turn: never report it as remaining, never list it as a choice, never stop with it open. Pending rows are work to drain, not a status to report. Only zero pending rows plus a terminal phase ends the turn.
 - No PRD row left open: resolve with a witness or file a blocker row for the next wave. Exit only at `prd-list {"status":"pending"}` = 0.
 - Unmet goal or re-firing stop hook: keep working the graph. No stop, no repeated status.
 - Denied stop-gate, residuals unchanged: work the named fix once; still unchanged, reply `deferred: <residuals>; unchanged since <dispatch id>`. Re-dispatch only after an input changes.
