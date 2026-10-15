@@ -31,12 +31,12 @@ Node traversal (gm-hop; `skills/dream-rsi/gm-graph.json`) feeds step 3 only when
   3. Audit: a completeness critic; findings become rows for graph 1.
 - Drain before make. Pending ≥ 20: graph 1 takes every free slot. Pending < 20: graph 2 takes free slots (computer-science disciplines first) until pending reaches 20.
 - Repeat 1-3 until a full cycle adds and resolves nothing. A wave resolving 0 rows with pending rows left is a stall: change the brief, rerun. Never stop on a stall alone.
-- Ceiling, floor and Lane budget bound live subagents. Refill a freed slot in the same turn.
+- Ceiling and floor bound live subagents (Lane budget). Refill a freed slot in the same turn.
 
 ## Write first, fix later
 - A lane writes its full slice in one pass, publishes once, moves on. Correctness comes from CI logs in a later pass, never mid-write checks.
 - No `cargo`, `go build`, `go vet`, `go test`, witness runs or local compile unless the user turns builds on. The lane reads `ci-status` for its sha on landing. A failing sha becomes a fix slice, never a pause.
-- Writers are light; Lane budget bounds heavy lanes (builds, witness runs), not writers. Many writers may run when each owns separate files.
+- Writers are light; writers are not limited. Only browser arms and per-run servers cause thrash (Lane budget). Many writers may run when each owns separate files.
 - File ownership before launch: each brief names its files. Two lanes never write one file. A shared manifest has one owner; others add only their own directory.
 - Contracts before code: a producer publishes its contract doc as its own commit first; the consumer reads it from remote `main`.
 - Use maintained libraries under permissive licences for solved problems. Pick the simplest correct path a lane finishes in one pass. Split a module across lanes only at a file boundary in the brief.
@@ -127,23 +127,22 @@ Launch only advertised ids. A slot stays empty only when no pending row and no u
 - Mass drop: `docs/recovery.md`, "Mass API-error drain".
 
 ## Headroom and leases
-- Pressure (Lane budget signals) lowers the heavy-lane target and pauses heavy launches until the probe clears. Log cause, real count, UTC; a pause does not end the turn. Back off on the first pressure sample.
+- Browser and server contention: Lane budget. A browser arm that cannot take the lease waits; node-only work continues. Log any wait with its cause and UTC; a wait does not end the turn.
 - Rows needing an exclusive lock wait; the pool launches the rest. A timed-out lock wait is a failed run.
 - One browser or GPU arm at a time, pool-wide; `gpulock` serialises the adapter only. One browser arm plus one node-only lane is fine; two browser arms are not. Lease held: take node-only work; never open a second browser.
 - Browsers are headful (`headless: false`). Each run closes its own; never touch the user's Chrome.
 - EADDRINUSE: the witness did not run. Identify the owning process. Never kill another lane's process.
 - Browser-last, minimal surface, cold-start and reload budgets, focused jit tests, counted units, loud refusals: gm-prd, Witness economy.
 
-## Lane budget (anti-thrashing)
-- Two failure modes, opposite remedies. A dropped link (Connectivity restarts) → RESTART the lane; lowering concurrency to stop a drop idles the pool. Machine thrash (unresponsive host, memory pressure, lanes parked on a lease) → RUN LESS AT ONCE; restarting into thrash makes it worse. A concurrency cap is never the answer to a drop; a restart is never the answer to thrash.
-- Heavy lanes (local build or witness run) are the controlled variable. `ceiling` (20) is a host refusal limit.
-  - Controller: start at target 2 heavy lanes. Every 3 minutes take one probe sample. A window with no pressure and at least one lane waiting for a slot raises target by 1, up to `ceiling`. Any pressure sample lowers it by 1 at once and blocks raising for 10 minutes. Target never exceeds what the probe has held.
-  - Pressure: free RAM under 2048 MB; commit charge over 90%; disk queue length over 2 for 30 s; CPU over 90% for 60 s while lanes wait; or a lane waiting on a lease over 10 minutes. A connectivity drop is never pressure. Only the probe decides.
-  - Probe (Windows): `Get-CimInstance Win32_OperatingSystem` for `FreePhysicalMemory` and `FreeVirtualMemory`/`TotalVirtualMemorySize`; `Get-Counter '\PhysicalDisk(_Total)\Current Disk Queue Length','\Processor(_Total)\% Processor Time' -SampleInterval 1 -MaxSamples 3`. Other platforms: equivalent counters, same five signals.
-  - Record every change and sample to `.gm/pool/concurrency-curve.txt` (UTC, target, live, free MB, commit %, disk queue, CPU). Best level = held longest without pressure.
-- Writers are not heavy: launch freely under Write first, fix later.
-- Thrash is answered by fewer simultaneous lanes, never slower lanes: no stretched slices, added waits or serialized independent work. Over budget: let slots drain rather than launch.
-- A mass `ECONNRESET` drain is environmental: never present a lane-count ceiling as the remedy; restart the lanes on the same row.
+## Lane budget (concurrency and thrash)
+- Concurrency cap: 20 subagents (`ceiling`, the host spawn limit). It is not a throughput target and not a memory or thrash budget. Launch up to it while independent work is open.
+- Thrash has two causes, and only these two:
+  1. Multiple browser arms running at once. On 2026-10-14 several GPU browser arms ran together and the machine became unresponsive at roughly 10-16 lanes, needing a reboot.
+  2. A new server plus bundle booted per run. Per-run servers leaked processes when a run hung.
+- Target setup: one shared, HMR-capable dev server and client. Browser captures and probes attach to it and reuse it (page reload, or an HMR module edit). Never boot a new server and bundle per run.
+- One browser arm at a time, pool-wide. Browser work queues behind `gpulock`. `gpulock` serialises the GPU adapter only: it does not serialise CPU, memory or disk, and it is not a machine-wide limit. Node-only and non-GPU work continues while an arm waits.
+- A dropped connection is answered by restarting the lane (Connectivity restarts). Thrash is answered by fewer browser arms and shared servers. Neither is answered by a concurrency cap.
+- No extra checkouts. `git archive <remote sha>` read-only is the sanctioned clean base (gm, READ questions).
 - Publish on the first passing witness: time-box a lane to its witness, resolve, publish, keep going.
 
 ## Fan-out
