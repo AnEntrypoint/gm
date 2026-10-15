@@ -131,7 +131,7 @@ Launch only advertised ids. A slot stays empty only when no pending row and no u
 - One browser or GPU arm at a time, pool-wide; `gpulock` serialises the adapter only. One browser arm plus one node-only lane is fine; two browser arms are not. Lease held: take node-only work; never open a second browser.
 - Browsers are headful (`headless: false`). Each run closes its own; never touch the user's Chrome.
 - EADDRINUSE: the witness did not run. Identify the owning process. Never kill another lane's process.
-- Browser-last, cold-start, reload budgets, focused jit tests: gm-prd, Witness economy.
+- Browser-last, minimal surface, cold-start and reload budgets, focused jit tests, counted units, loud refusals: gm-prd, Witness economy.
 
 ## Lane budget (anti-thrashing)
 - Two failure modes, opposite remedies. A dropped link (Connectivity restarts) → RESTART the lane; lowering concurrency to stop a drop idles the pool. Machine thrash (unresponsive host, memory pressure, lanes parked on a lease) → RUN LESS AT ONCE; restarting into thrash makes it worse. A concurrency cap is never the answer to a drop; a restart is never the answer to thrash.
@@ -154,6 +154,7 @@ Launch only advertised ids. A slot stays empty only when no pending row and no u
 ## Shared-tree publish
 One work tree, one git lane. Main only; no worktree, side branch or scratch checkout (gm, Autonomy).
 - No extra checkouts. Clean base for measurement or bisect: `git archive` (gm, READ questions).
+- A measurement taken in the shared work tree measures other lanes' uncommitted edits, not the project. Compare against remote `main` by content hash (`GET /contents/<path>?ref=main`, or `git archive <remote sha>`) before calling a difference a regression; local HEAD lags remote and lies. Three false alarms in one day came from work-tree measurements: a "stale bake" whose two files were byte-identical to remote main, a bake pin whose inputs "were identical" and were not, and a 0.1506 m hover that reads 0.0000 m on main.
 - Publish via the Git API: POST blobs; tree with `base_tree: <remote tip>`; commit parented on that tip; PATCH `refs/heads/main`, `force` unset; re-read each blob at `?ref=main` and verify it.
 - `git_finalize` refusing to push over a sibling's dirty path is redundant when its content is already published. Never reset `refs/heads/main` under running lanes.
 - `remote_moved` on a dirty tree: `git_status {"paths":[...]}`, commit or revert each path in its owning lane, then `git_push {rev:"<sha>"}`.
