@@ -10,6 +10,7 @@ Schedule (set by the caller, not by this skill): run as a background agent on th
 Inputs:
 - `observations.json` files: `<repo>/.gm/dream-rsi/<session>/observations.json`, each a JSON array of up to the newest 256 records, serialized from `ObservationRecord` in `rs-plugkit/crates/plugkit-core/src/orchestrator/dream_rsi.rs`. Orchestration verbs and `dream-*` dispatches are not recorded.
 - The gm graph: `skills/dream-rsi/gm-graph.json` (`nodes`, `edges`; node `kind` is `principle`, `gate`, `tension` or `terminal` -- there is no phase node; edge `kind` is `forward` or `backreference`). A node is a book when its `book` is non-empty; `book_index` names each anchor book and the node that carries it.
+- The DADA graph: `skills/dream-rsi/dada-graph.json`, the same node layout as the gm graph (`nodes`, `edges`, `entry_points` = `DADA_START`, `convergence`). It holds the DADA anchor graph: `principle` nodes grouped by `provenance` (`dada:<cluster>`), `tension` nodes for counterpoint edges, and the gate and terminal nodes `DADA_START`, `DADA_G_ROUTE`, `DADA_G_CRITICS`, `DADA_G_NUMBERS`, `DADA_HALT`, `DADA_HOLDS`. Its page is `docs/dada-graph.html` (built from this file by `scripts/build-graph-page.mjs`). Read it with the same rules as the gm graph in Part B and Part C; it is never a phase source.
 - Phase history: `.gm/turn-state.json` `phase_history`.
 - Walk evidence: `.gm/lean-walk/<NODE>.json`, one subagent record per node (`node`, `applied`, `witness`).
 
