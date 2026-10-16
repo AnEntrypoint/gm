@@ -163,17 +163,15 @@ Live witnesses must reflect the current code. Enumerate every cache between the 
 
 A log line that says the fixed code ran is not a witness that the defect is gone. The witness is the primary artifact the bug report named: the live response body, the live file, the live rendered value. Re-run the same diagnostic that found the bug against the same target.
 
-A subagent's or recalled finding is a hypothesis. Before acting on a claimed dead function, junk file or tracking state, run the check that confirms it on the live tree: callers and a codesearch identifier query, Read on the claimed path, git_log or git_show for tracking intent. An overturned premise is re-scoped with prd-add under the same id.
+A subagent's finding or a memory is a hypothesis. Before acting on a claimed dead function, junk file or tracking state, run the check that confirms it on the live tree: callers and a codesearch identifier query, Read on the claimed path, git_log or git_show for tracking intent. An overturned premise is re-scoped with prd-add under the same id.
 
 When a tool cannot produce a witness, the mutable is to make that tool reachable (fix it, replace it, or drive its protocol directly), then witness. Parking the mutable as blocked on an outside party is refused.
 
 No mock, fake or stub stands in for a real dependency. Mock, Fake and Stub classes, hard-coded always-succeed returns and input short-circuits are removed and replaced by real input through real code, and a missing real dependency becomes a row that installs or provisions it. Comment-opening tokens found by the comment sweep are deleted, except directives a tool reads: shebangs, eslint-disable and oxlint-disable, ts-expect-error, ts-ignore, c8 and istanbul ignore, prettier-ignore, and a SAFETY justification in Rust.
 
-## Memorize
+## Memory
 
-A witness that contradicts a recalled memory prunes it on sight: memorize-prune {"key":"<stale key>"} for one hit, or memorize-prune {"query":"<text>"} to list review-only candidates before deleting the chosen keys.
-
-A recurring failure class found by a probe is persisted when confirmed: memorize-fire {"text":"<the class and the probe command that reproduces it>","namespace":"default"}. Memorize the class and its reproducer, never a diff, probe output or passing result, which already live in rows and history.
+A witness that contradicts a memory deletes that memory on sight: remove its file and its MEMORY.md line.
 
 ## Transition
 
