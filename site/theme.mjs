@@ -288,6 +288,8 @@ const renderHtml = ({ site, navItems, page }) => `<!DOCTYPE html>
     #ds-article-host table { display: block; width: 100%; overflow-x: auto; }
     #ds-article-host code { overflow-wrap: anywhere; }
     #ds-article-host .page-jump { margin: 0 0 1.5em; font-size: 0.95em; }
+    #ds-article-host .graph-skeleton { overflow-x: auto; margin: 1.5em 0; }
+    #ds-article-host .graph-skeleton svg { min-width: 760px; display: block; }
     #ds-article-host pre { max-width: 100%; overflow-x: auto; }
     .app-topbar, .app-topbar nav { min-width: 0; max-width: 100%; box-sizing: border-box; }
     .app-topbar nav { flex-wrap: wrap !important; overflow: visible !important; }
