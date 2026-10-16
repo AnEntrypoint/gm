@@ -323,7 +323,7 @@ Agents do not call these verbs for memory. Memory is the flat-file store that `s
 ```
 
 `memorize` writes to that index: `{"text":"<memo>","namespace":"default"}`, or a raw text body.
-`memorize-fire` writes its body as one `.md` file into the memorize inbox (`memorize_inbox` in `rs-plugkit/crates/plugkit-core/src/orchestrator/memorize.rs`), and `memorize-prune`, `memorize-vacuum` and `memorize-retention`
+`memorize-fire` writes its body as one `.md` file into the memorize inbox, and `memorize-prune`, `memorize-vacuum` and `memorize-retention`
 maintain the recall index, and `auto-recall` answers a prompt body with three recall hits.
 
 A `recall` reply carries `hits` (the ranked list), and `vector_hits` (the rows before scoring) only when the body sets `verbose: true`.
