@@ -43,6 +43,102 @@ const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&
 const byIdOrder = (a, b) => a.id.localeCompare(b.id, undefined, { numeric: true })
 const anchorOf = (id) => `node-${id}`
 
+const FIG = { nodeW: 220, nodeH: 62, colGap: 48, rowGap: 22, pad: 16 }
+
+const clip = (text, max) => {
+  const s = String(text ?? '')
+  return s.length > max ? s.slice(0, max - 3) + '...' : s
+}
+
+// Draws the gate skeleton: the entry point, its direct targets, every gate and terminal,
+// and each edge among them. Positions come from the edges, so the figure is derived.
+const skeletonFigure = (graph, byId, edges, slug, title) => {
+  const entryIds = Array.isArray(graph.entry_points) ? graph.entry_points : []
+  const inSet = new Set(entryIds)
+  for (const node of graph.nodes) if (node.kind === 'gate' || node.kind === 'terminal') inSet.add(node.id)
+  const figEdges = edges.filter((edge) => inSet.has(edge.from) && inSet.has(edge.to))
+  if (figEdges.length === 0) return ''
+
+  const hasIncoming = new Set(figEdges.map((edge) => edge.to))
+  const rank = new Map()
+  const queue = []
+  for (const id of inSet) if (!hasIncoming.has(id)) { rank.set(id, 0); queue.push(id) }
+  for (let i = 0; i < queue.length; i++) {
+    const id = queue[i]
+    for (const edge of figEdges) {
+      if (edge.from === id && !rank.has(edge.to)) { rank.set(edge.to, rank.get(id) + 1); queue.push(edge.to) }
+    }
+  }
+  for (const id of inSet) if (!rank.has(id)) rank.set(id, 0)
+
+  const columns = []
+  for (const id of inSet) {
+    const r = rank.get(id)
+    if (!columns[r]) columns[r] = []
+    columns[r].push(id)
+  }
+  for (const column of columns) column.sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
+
+  const position = new Map()
+  columns.forEach((column, r) => column.forEach((id, row) => {
+    position.set(id, { x: FIG.pad + r * (FIG.nodeW + FIG.colGap), y: FIG.pad + row * (FIG.nodeH + FIG.rowGap) })
+  }))
+  const width = FIG.pad * 2 + columns.length * FIG.nodeW + (columns.length - 1) * FIG.colGap
+  const tallest = Math.max(...columns.map((column) => column.length))
+  const hasBackEdge = figEdges.some((edge) => rank.get(edge.to) <= rank.get(edge.from))
+  const height = FIG.pad * 2 + tallest * FIG.nodeH + (tallest - 1) * FIG.rowGap + (hasBackEdge ? 56 : 0)
+  const arrow = `skeleton-arrow-${slug}`
+
+  const edgeSvg = figEdges.map((edge) => {
+    const a = position.get(edge.from)
+    const b = position.get(edge.to)
+    let path
+    let lx
+    let ly
+    if (rank.get(edge.to) > rank.get(edge.from)) {
+      const x1 = a.x + FIG.nodeW
+      const y1 = a.y + FIG.nodeH / 2
+      const x2 = b.x
+      const y2 = b.y + FIG.nodeH / 2
+      path = `M${x1},${y1} L${x2},${y2}`
+      lx = (x1 + x2) / 2
+      ly = (y1 + y2) / 2 - 4
+    } else {
+      const x1 = a.x + FIG.nodeW / 2
+      const y1 = a.y + FIG.nodeH
+      const x2 = b.x + FIG.nodeW / 2
+      const y2 = b.y + FIG.nodeH
+      const dip = Math.max(y1, y2) + 44
+      path = `M${x1},${y1} Q${(x1 + x2) / 2},${dip} ${x2},${y2}`
+      lx = (x1 + x2) / 2
+      ly = dip - 6
+    }
+    return `<path d="${path}" fill="none" stroke="currentColor" marker-end="url(#${arrow})"/>`
+  }).join('\n')
+
+  const nodeSvg = columns.flat().map((id) => {
+    const p = position.get(id)
+    const node = byId.get(id)
+    const dash = node && node.kind === 'terminal' ? ' stroke-dasharray="6 4"' : ''
+    const label = node ? (node.book || node.label) : id
+    return `<rect x="${p.x}" y="${p.y}" width="${FIG.nodeW}" height="${FIG.nodeH}" rx="6" fill="none" stroke="currentColor"${dash}/>` +
+      `<text x="${p.x + 10}" y="${p.y + 24}" font-size="14" font-weight="700" fill="currentColor">${esc(clip(id, 26))}</text>` +
+      `<text x="${p.x + 10}" y="${p.y + 46}" font-size="13" fill="currentColor">${esc(clip(label, 28))}</text>`
+  }).join('\n')
+
+  const summary = figEdges.map((edge) => `${edge.from} to ${edge.to}${edge.condition ? ' when ' + edge.condition : ''}`).join('; ')
+  return `<figure class="graph-skeleton">
+<svg viewBox="0 0 ${width} ${height}" width="100%" role="img" aria-labelledby="skeleton-${slug}-title skeleton-${slug}-desc" xmlns="http://www.w3.org/2000/svg">
+<title id="skeleton-${slug}-title">Gate skeleton of the ${esc(title)}</title>
+<desc id="skeleton-${slug}-desc">${esc(summary)}</desc>
+<defs><marker id="${arrow}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+${edgeSvg}
+${nodeSvg}
+</svg>
+<figcaption>The entry point, every gate and terminal, and each edge among them, drawn from the graph's edges. Dashed boxes are terminals. The entry point's direct targets are listed under Start here.<br>${figEdges.filter((edge) => edge.condition).map((edge) => `${esc(edge.from)} to ${esc(edge.to)} when ${esc(edge.condition)}`).join('; ')}</figcaption>
+</figure>`
+}
+
 const renderGraph = (entry) => {
   const graphPath = path.join(repoRoot, entry.source)
   const pagePath = path.join(repoRoot, entry.page)
@@ -189,9 +285,15 @@ ${bookRows}
 
   const startNode = entryPoints[0]
   const convergence = graph.convergence && typeof graph.convergence === 'object' ? graph.convergence : null
+  const targetList = edges
+    .filter((edge) => edge.from === startNode)
+    .map((edge) => `<a href="#${esc(anchorOf(edge.to))}"><code>${esc(edge.to)}</code></a>${edge.condition ? ' when ' + esc(edge.condition) : ''}`)
+    .join(', ')
   const startHere = startNode
-    ? `<p>The entry point is <a href="#${esc(anchorOf(startNode))}"><code>${esc(startNode)}</code></a>: ${esc(labelOf(startNode))}. Its edges lead to the first principles of the walk, and every gate and terminal is listed under <a href="#gates-and-terminals">Gates and terminals</a>.</p>${convergence ? `\n<p>The walk converges when ${esc(convergence.reached_when)}. Terminal: <code>${esc(convergence.terminal)}</code>. Halt: <code>${esc(convergence.halt)}</code>.</p>` : ''}`
+    ? `<p>The entry point is <a href="#${esc(anchorOf(startNode))}"><code>${esc(startNode)}</code></a>: ${esc(labelOf(startNode))}. Every gate and terminal is listed under <a href="#gates-and-terminals">Gates and terminals</a>.</p>${targetList ? `\n<p>Direct targets of the entry point: ${targetList}.</p>` : ''}${convergence ? `\n<p>The walk converges when ${esc(convergence.reached_when)}. Terminal: <code>${esc(convergence.terminal)}</code>. Halt: <code>${esc(convergence.halt)}</code>.</p>` : ''}`
     : '<p>This graph declares no entry point.</p>'
+
+  const skeletonHtml = skeletonFigure(graph, byId, edges, entry.page.replace(/[^a-zA-Z0-9]+/g, '-').toLowerCase(), entry.title)
 
   const page = `${entry.lede}
 
@@ -226,6 +328,7 @@ ${booksRow}    <tr><td>Edges</td><td>${edges.length}</td></tr>
 
 <h2 id="start-here">Start here</h2>
 ${startHere}
+${skeletonHtml}
 
 <h2 id="concern-index">Concern index</h2>
 <table>
