@@ -198,6 +198,10 @@ ${bookRows}
 
 <p>This page is generated from <code>${entry.source}</code> by <code>scripts/build-graph-page.mjs</code>. Every count on it is derived from that file at build time. The same file is published as <a href="../${entry.api}"><code>${entry.api}</code></a>.</p>
 
+<nav class="page-jump" aria-label="Sections of this page">
+<a href="#start-here">Start here</a> · <a href="#concern-index">Concern index</a> · <a href="#every-node">Every node</a> · <a href="#gates-and-terminals">Gates and terminals</a> · <a href="#every-edge">Every edge</a>
+</nav>
+
 <h2>At a glance</h2>
 <table>
   <caption>Graph size</caption>
@@ -219,10 +223,10 @@ ${booksRow}    <tr><td>Edges</td><td>${edges.length}</td></tr>
   </tbody>
 </table>
 
-<h2>Start here</h2>
+<h2 id="start-here">Start here</h2>
 ${startHere}
 
-<h2>Concern index</h2>
+<h2 id="concern-index">Concern index</h2>
 <table>
   <caption>An index over the same node anchors, not a separate view of them</caption>
   <thead><tr><th>Concern</th><th>Nodes</th><th>Principles</th><th>Tensions</th><th>Other</th><th>Members</th></tr></thead>
@@ -231,7 +235,7 @@ ${phaseRows}
   </tbody>
 </table>
 
-<h2>Every node</h2>
+<h2 id="every-node">Every node</h2>
 <p>${nodes.length} nodes, sorted by id. <strong>Out</strong> names every node this node has an edge to; <strong>In</strong> names every node with an edge to it.</p>
 ${nodeSections}
 
@@ -244,7 +248,7 @@ ${guardRows}
   </tbody>
 </table>
 
-${booksSection}<h2>Every edge</h2>
+${booksSection}<h2 id="every-edge">Every edge</h2>
 <details>
   <summary>Show all ${edges.length} edges</summary>
   <table>
