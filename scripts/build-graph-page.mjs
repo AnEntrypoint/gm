@@ -173,7 +173,7 @@ const renderGraph = (entry) => {
   const edgeRows = edges.map((edge) => `      <tr><td>${nodeLink(edge.from, INDEX)}</td><td>${nodeLink(edge.to, INDEX)}</td><td>${esc(edge.kind)}</td><td>${esc(edge.condition ?? '')}</td></tr>`).join('\n')
 
   const linkCount = edges.length * 2
-  const description = `${entry.subject}, generated from ${entry.source}: ${nodes.length} nodes, ${kindCount('principle')} principles, ${bucketOrder.length} provenance concerns and no phase nodes,${edges.length} edges; every node is its own anchor and links to every node it touches.`
+  const description = `${entry.subject}, generated from ${entry.source}: ${nodes.length} nodes, ${kindCount('principle')} principles, ${bucketOrder.length} provenance concerns and no phase nodes, ${edges.length} edges; every node is its own anchor and links to every node it touches.`
   const booksRow = hasBooks ? `    <tr><td>Books</td><td>${bookIndex.length}</td></tr>\n` : ''
   const booksSection = hasBooks ? `<h2>Books</h2>
 <table>
