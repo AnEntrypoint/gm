@@ -128,6 +128,13 @@ While performing git operations, the agent shall use the gm git verbs, and `git_
 
 The `gm-mcp` server shall compact every dispatch response before it crosses the wire; `gm-mcp/AGENTS.md` records which fields compact, which stay whole, and why. Falsified by: a dispatch reply on the wire that still carries a field `gm-mcp/AGENTS.md` lists as compacted.
 
+## Live validation interfaces
+
+- `node scripts/triage/dispatch-verb.mjs <verb> --cwd <project> --raw <body>` dispatches any spool verb and prints its reply and the latency. It reaches verbs the MCP table does not expose, such as `crawl`. It touches only the local spool.
+- `agentplug-runner selfcheck-update-probes` reads the release channel for the runner, every loaded plugin and the skill manifest, through the daemon's own functions. It stages, installs and writes nothing else.
+- `node <toolsDir>/gm-mcp-server.mjs self-update-status` prints the channel cache: the stored etag, the digest, the time of the last unconditional fetch, and the outcome of the last check. `self-update-now` forces a check.
+- Browser control is witnessed through `crawl` with `session=`, `expect=`, `reload` and `close`. The reply names the tab and logs each step.
+
 ## Dated findings and design
 
 - Dated runtime findings (daemon heartbeat, sibling imports, runner self-update, wasm sideload, git_commit content filters, amend, reset): `docs/verified-incidents.md`. When a failure touches one of those subsystems, the agent shall read it. Falsified by: a failure in one of those subsystems diagnosed with no read of `docs/verified-incidents.md` in the session.
