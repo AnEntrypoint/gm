@@ -151,7 +151,8 @@ const renderGraph = (entry) => {
     const heading = node.book
       ? `<code>${esc(node.id)}</code> ${esc(node.book)}${node.author ? ` <span class="author">${esc(node.author)}</span>` : ''}`
       : `<code>${esc(node.id)}</code> ${esc(node.label)}`
-    return `  <section class="graph-node" id="${esc(anchorOf(node.id))}">
+    const searchText = [node.id, node.label, node.book, node.author, node.kind, node.provenance].filter(Boolean).join(' ').toLowerCase()
+    return `  <section class="graph-node" id="${esc(anchorOf(node.id))}" data-search="${esc(searchText)}">
     <h3>${heading}</h3>
     <p class="graph-node-meta">${esc(node.kind)} · ${phaseCell} · ${out.length} out · ${incomingList.length} in</p>
     <p class="graph-node-edges"><strong>Out</strong> ${edgeRun(out, 'out')}</p>
@@ -237,6 +238,11 @@ ${phaseRows}
 
 <h2 id="every-node">Every node</h2>
 <p>${nodes.length} nodes, sorted by id. <strong>Out</strong> names every node this node has an edge to; <strong>In</strong> names every node with an edge to it.</p>
+<form class="node-filter" role="search" onsubmit="return false">
+  <label for="node-filter-input">Filter the nodes</label>
+  <input id="node-filter-input" type="search" autocomplete="off" placeholder="Id, label, book or author" aria-describedby="node-filter-status">
+  <p id="node-filter-status" role="status">Showing ${nodes.length} of ${nodes.length} nodes.</p>
+</form>
 ${nodeSections}
 
 <h2 id="gates-and-terminals">Gates and terminals</h2>
@@ -259,6 +265,25 @@ ${edgeRows}
     </tbody>
   </table>
 </details>
+<script>
+(() => {
+  const input = document.getElementById('node-filter-input')
+  const status = document.getElementById('node-filter-status')
+  const sections = [...document.querySelectorAll('section.graph-node')]
+  if (!input || !status || sections.length === 0) return
+  const update = () => {
+    const query = input.value.trim().toLowerCase()
+    let shown = 0
+    for (const section of sections) {
+      const hit = query === '' || section.dataset.search.includes(query)
+      section.hidden = !hit
+      if (hit) shown += 1
+    }
+    status.textContent = 'Showing ' + shown + ' of ' + sections.length + ' nodes.'
+  }
+  input.addEventListener('input', update)
+})()
+</script>
 `
 
   for (const node of nodes) {
