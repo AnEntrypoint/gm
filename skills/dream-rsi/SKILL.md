@@ -41,7 +41,7 @@ The goal is to walk every principle-kind gm-graph node and every edge, through r
 The graph is one tree, not nine. Every book is its own node. `book_index` names
 each anchor book and the node that carries it: 43 got a node of their own and 12
 are the same book as a node the lean tree already carried, so they join it there
-rather than duplicating it. Their `provenance` is the prose file that used to own
+rather than duplicating it. Their `provenance` is the prose file that owns
 them, which is where they came from and nothing more: it groups nothing and gates nothing.
 
 Traversal is nonlinear by construction. Every node can be reached, left and
