@@ -573,7 +573,7 @@ selects the engine; the rest is the crawl request (URLs and steps).
 |---|---|---|
 | `cdp` (default when the first line is absent) | the host drives a real Chrome over the Chrome DevTools Protocol (CDP) through its `crawl_cdp` entry point | **HEADFUL** (a visible window), always |
 
-The `cdp` engine always runs **HEADFUL**: a `headless` line is refused with an error. `cdp` is the only crawl engine: `engine=lightpanda` answers `unknown_engine`.
+The `cdp` engine always runs **HEADFUL**: a `headless` line is refused with an error. `cdp` is the only crawl engine.
 
 ```
 raw_body: "engine=cdp\nhttps://example.com/\n"
