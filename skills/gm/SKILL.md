@@ -61,6 +61,7 @@ Live response (gate denial, residual, `instruction`/`phase-status`, `entry` pros
 - `ts` recent but not this second = BUSY: never start a second. Future `busy_until`: bounded condition-poll of the out-file, never a blind sleep or death call. `dispatch_orphaned`: bare re-dispatch once `ts` is fresh. Changed `sweeping_pid` = respawn, not a stuck loop.
 - Binary absent (new machine): say so and stop; one-time human setup per project install docs. Never fetch or pipe anything yourself.
 - Update only when served: `instruction` with non-null `update_available` → run exactly the named command, nothing adjacent. Otherwise never fetch, download or replace the runner; self-update is the daemon's job.
+- The deployed `gm-mcp-server.mjs` is refreshed from upstream on an hourly stamp, so a fix pushed to `AnEntrypoint/gm-mcp` reaches this machine up to an hour later. After pushing one, run `node <toolsDir>/gm-mcp-server.mjs self-update-now` (starts no server, binds no port, signals nothing) and read its `previous -> new` line before concluding the fix landed or did not; `self-update-status` prints the channel state read-only.
 - The verb set belongs to the running build. Missing out-file never means unavailable; unknown verb → `error_code: unknown_verb` via the normal read cycle. Missing out-file = not finished: check `in/<verb>/<N>.txt.inflight`; while it exists, work runs. Condition-poll it (no blind sleep, no blind re-dispatch); `.status.json` `busy_until` and `queue_depth` show contention. Never conclude "verb unavailable" from silence.
 - No raw `git` via Bash (gated `deviation.bash-git-bypass`). Git body shapes and exec body rules (raw body, `timeoutMs`, ESM and `.cjs` scratch, truncation, MCP polling caps): `docs/verbs.md`.
 - Batch independent dispatches in one tool-call block; one row per `prd-add`/`mutable-add` call. `{"items":[...]}` is rejected.
@@ -81,7 +82,7 @@ The dispatch layer arrives with each phase's response: scope-discovery-as-fixed-
 - Main thread: `Skill(skill="gm-orchestrate")`. Parallelism = graph workflows, until zero pending rows and every node traversed.
 - Node hop: `Skill(skill="gm-hop", args='{"principle":"<name>","surface":"<path>","session":"<SESSION_ID>"}')`. One principle, one surface, one receipt.
 - PRD row: `Skill(skill="gm-prd", args="row=<id>; session=<SESSION_ID>")`. Nine stages, one row per run.
-- Terminal: `Skill(skill="gm-continue")` once the phase is terminal and `prd_pending` is 0.
+- Terminal: `Skill(skill="gm-continue")` once the phase is terminal and `prd_pending` is 0. At most two `gm-continue` calls per turn: a turn that has spent both starts the next run instead of calling it again.
 
 ## 1d. Units
 Hop = one principle (a book's discipline) over one surface. PRD row = one run. Both count against gm-orchestrate ticks.
