@@ -91,7 +91,6 @@ The MCP server exposes one tool, `gm_codemode`. Its short JavaScript body calls 
 - `transition` requests a move to a target state.
 - `codesearch` runs ranked search over the project. `grep` runs an exhaustive literal or regex scan, reporting each hit with its path and line.
 - `callers` lists who calls a symbol. `impact` walks upstream callers by default, or callees with `direction` set to `callees`, up to `max_depth`.
-- `recall` and `memorize` search and store project memory.
 - `exec_js` runs code. A leading `timeoutMs=<ms>` line sets its budget, with a default of 300000 ms and a ceiling of 900000 ms.
 
 ### Gates on the git path
@@ -112,8 +111,6 @@ gm reads served prose from three tiers, in order: the project vendored file in `
 
 `.gm/memories/<key>.md` is the durable, per-project memory store, with a lean cache index in `.gm/gm.db`. The generated `.gm/memories/mem-*.md` recall memos are rebuilt from `gm.db` and are not tracked by git. `recall` ranks memories by meaning: each memory is stored with an embedding (a vector that places text by meaning), and the score blends similarity with recency. The recency half-life is 30 days. Embeddings are computed on the machine by the shared `agentplug-bert` plugin.
 
-A project can opt a namespace into the vendored backend through `memory.tencentdb_backend.namespaces`. The backend is off by default: `memory.tencentdb_backend.enabled` is `false` in `gm-config/gm.config.json`.
-
 ## Developing gm itself
 
 The root `.gitmodules` file lists 11 submodules:
@@ -126,7 +123,6 @@ The root `.gitmodules` file lists 11 submodules:
 - `rs-search/`: the reciprocal rank fusion and tokenization library that the `plugkit-core` crate of `rs-plugkit` consumes.
 - `gm-mcp/`: the MCP wrapper and its committed server bundle.
 - `gm-config/`: the default configuration repository. It holds the prose, the graph, the gate hooks and the policy data.
-- `vendor/tencentdb-agent-memory/`: the vendored alternate memory backend.
 
 The gate predicate registry is `rs-plugkit/crates/plugkit-core/src/orchestrator/predicate_registry.rs`. A predicate that a graph names but the registry lacks is refused as `fsm_unknown_predicate`, so the registry is the source of truth. The advisory gates are `lean-contract-only-description` and `lean-verifier-independent`.
 
