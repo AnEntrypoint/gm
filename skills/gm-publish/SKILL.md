@@ -12,3 +12,9 @@ Input: `row=<id>; session=<SESSION_ID>`. Output: `.gm/receipts/<row>/06-publish.
 3. The executor stops here: return `STATUS: handoff <sha>` to the orchestrator.
 4. The CI read is a separate lane the orchestrator spawns for that sha (`<parent>-c<k>`). It makes one `gm_codemode` dispatch: `git_show {rev:sha}`, `ci-status {sha}` for per-job conclusions, and `ci-log {sha, max_lines:40}` for the log text, with the log hashed by `crypto.subtle.digest('SHA-256')` to `log_sha256` after dropping the reply's `dispatch_id:` line, which changes per call. The receipt `06-publish.md` records `log_sha256` beside the sha. Pending or failing is not success. Return `STATUS: ci-green <sha>` when every job is green, or `STATUS: ci-red <sha> <job>` with the failing job's name and log line.
 5. On `ci-red`, the orchestrator spawns a fresh executor for the row with that sha and job as input; it never loads gm-eliminate inline here. Only the orchestrator calls `prd-resolve`, and only when a verifier and a CI lane both report green for the same sha.
+
+## Finish the work
+
+- Finishing the requested work is the goal of every run of this skill. A run that stops with work left undone is incomplete.
+- When an issue blocks a step (a failing check, a fault in a tool or service, a missing input, a network or environment fault), fix it in the same run: retry on a bounded or resumable route, use an alternate route to the same result, repair the fault where it originates, then continue the remaining work.
+- Stop only when the requested work is complete, or when a step is still blocked after every route has been tried. Then report the blocked step, the routes tried, and the evidence for each.
