@@ -59,7 +59,8 @@ Node traversal (gm-hop; `skills/dream-rsi/gm-graph.json`) feeds step 3 only when
 
 ## Floor and dip
 - Pending rows open: keep live ≥ floor. Pass ListAgents count as `body.live` on every `pool-observe` and `transition`.
-- `floor_gate_denied` (live < floor, `open_rows > 0`) is the launch signal, never a retry.
+- `floor_gate_denied` (live < floor, `open_rows > 0`, launchable rows advertised but not launched) is the launch signal, never a retry.
+- `state: supply_exhausted` (ok, no error) on `pool-observe`: no open row is launchable and no traversal node is due. `held_rows` are running and are the only supply: wait for their completion, then re-observe. Never retry-loop.
 - Live under ceiling with independent work open is a shortfall: log `FAILURE: <UTC> live=<n> pending=<m>` to `.gm/witness-log.md`, then launch to target this turn. Causes:
   1. Lane stopped: one successor per freed slot, never batched. Session killed: relaunch `.gm/pool/<session>.next` or a pending row.
   2. Lane stood down on a modified file: compare the blob with remote `main` first; no comparison, take another slice.
@@ -67,7 +68,7 @@ Node traversal (gm-hop; `skills/dream-rsi/gm-graph.json`) feeds step 3 only when
   4. `Prompt is too long`: relaunch compact (row, surface, session, one action). Never resume.
 
 ## Tick
-1. `pool-observe {live, held}`. Take `slots.launch` (node-first, max 32). Empty under shortfall is a defect row.
+1. `pool-observe {live, held}`. Take `slots.launch` (node-first, max 32). Empty under shortfall is a defect row, unless `state` is `supply_exhausted`.
 2. Launch one block, up to ceiling. Rows: `Skill(skill="gm-prd", args="row=<id>; session=<SID>")`. Hops: `Skill(skill="gm-hop", args='{"node":{...},"principle":"<id>","surface":"<path>","session":"<SID>","wave":"<wave>","depth":1,"rhetoric":""}')`. `<SID>` = `<parent>-<k>`, unique. A cause-asserting row or hop runs its ACH step (gm-hop 3a, gm-prd SPECIFY) in the same launch.
 3. Log `launch <id>` to `.gm/pool/ledger-<wave>.txt`, a `launched` line to `.gm/pool/runs.jsonl`, `tick <n> event=<id> live=<count> <UTC>` to `.gm/witness-log.md`.
 4. `wait {"ms":60000}`. Each `done <id>` refills its slot this turn. Re-count live after each launch and completion.

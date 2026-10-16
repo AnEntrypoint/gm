@@ -2,17 +2,17 @@
 
 This is a concern of the method, not a stage of a pipeline: it is entered from whichever node the work reaches it from, and left as soon as what it asks for holds. No concern gates entry to a set of nodes.
 
-SHAPE turns the request into a PRD that covers the whole closure of the request before any contract is written. It orients on the live tree rather than on recalled memory, names every in-spirit row, states each row's pre-conditions, invariants and post-conditions, resolves every grounding unknown with a witness, and types every contract-level or runtime-level unknown for the node that will discharge it. The node exits when no row is unshaped, no grounding unknown is open, and an expansion pass over the rows adds nothing new. The exit runs LIVEPLAN, then the G_CONTRACT gate.
+SHAPE turns the request into a PRD that covers the whole closure of the request before any contract is written. It orients on the live tree rather than on memory, names every in-spirit row, states each row's pre-conditions, invariants and post-conditions, resolves every grounding unknown with a witness, and types every contract-level or runtime-level unknown for the node that will discharge it. The node exits when no row is unshaped, no grounding unknown is open, and an expansion pass over the rows adds nothing new. The exit runs LIVEPLAN, then the G_CONTRACT gate.
 
 Principles in this node are applied as work, from the lean method (AnEntrypoint/lean). Each H3 below carries a principle key, then the attribution exactly as gm-config/fsm/graph.json labels it.
 
 ## Verbs
 
-The node opens at the G_START gate. Dispatch `prd-list` first. When more than one row is in progress, the gate lean-one-task-in-flight refuses entry, and its response names the verb to dispatch next in next_dispatch. Finish or abandon the extra row, then continue. Next dispatch `instruction` with `{"prompt":"<the user request, verbatim>"}`. The response carries orient_nouns and recall_hits. Those hits are baseline for the orient step, not conclusions.
+The node opens at the G_START gate. Dispatch `prd-list` first. When more than one row is in progress, the gate lean-one-task-in-flight refuses entry, and its response names the verb to dispatch next in next_dispatch. Finish or abandon the extra row, then continue. Next dispatch `instruction` with `{"prompt":"<the user request, verbatim>"}`. The response carries orient_nouns. Read MEMORY.md for each noun as a baseline for the orient step, not as a conclusion.
 
 Every spool body carries session_id, and plugkit rejects an empty one. Re-dispatch `instruction` between rows, after any failed dispatch, and on any unfamiliar error. Pass `known_instruction_hash` only from a response you actually received. A match returns an empty prose body with instruction_unchanged true, which means the prose you already hold still applies.
 
-Orient in one message of parallel dispatches: `recall` against each request noun, `codesearch {query}` against each noun (mode dual by default), and `callers {symbol}` for every function or class the request names. A miss is never accepted as absence. Rephrase it as a synonym, a symbol-level identifier query, a path-level query, and a `recall` against the same noun, and record each attempt. A candidate joins the plan only after at least one of these dispatches has explored it.
+Orient in one message of parallel dispatches: read MEMORY.md for each request noun, `codesearch {query}` against each noun (mode dual by default), and `callers {symbol}` for every function or class the request names. A miss is never accepted as absence. Rephrase it as a synonym, a symbol-level identifier query, a path-level query, and a MEMORY.md lookup of the same noun, and record each attempt. A candidate joins the plan only after at least one of these dispatches has explored it.
 
 Choose the verb by the question. `codesearch {query, mode:"literal"}` (or mode "regex") answers every place an exact text appears, in tree order, and its reply is complete only when it says `exhaustive: true`. A single identifier query lists definitions before references. The default `dual` mode ranks results and answers where the code that does X lives. To search a sibling repository, submodule or any other folder, pass `root` (or `projectPath`) with an absolute path. A sibling tree is never read by path. For what calls a symbol, what breaks if it changes, or whether it is dead, dispatch `callers {symbol}`, `impact {symbol, max_depth}`, and `codeinsight {action:"outline", path}`, `{action:"orphans"}` or `{action:"hotspots"}`. An empty callers reply is a lead. It is proof only when `codeinsight_index` reports complete true; otherwise confirm it with the literal identifier query.
 
@@ -60,7 +60,7 @@ State lives on disk as one file per row: `.gm/prd/<id>.yml` and `.gm/mutables/<i
 
 ## Mutables
 
-P1 owns no obligation kind. Every P1 unknown is one of two things. A grounding unknown asks what exists, who calls it, what a service returns, or what a library version exposes. It is discharged inside P1: dispatch the codesearch, callers or recall that answers it, or exec_js against the real service, then resolve the mutable with that output before leaving the node. No grounding-shaped mutable crosses the transition open.
+P1 owns no obligation kind. Every P1 unknown is one of two things. A grounding unknown asks what exists, who calls it, what a service returns, or what a library version exposes. It is discharged inside P1: dispatch the codesearch, callers or a MEMORY.md read that answers it, or exec_js against the real service, then resolve the mutable with that output before leaving the node. No grounding-shaped mutable crosses the transition open.
 
 Any other unknown is a contract property or a runtime property. Record it with `mutable-add {"id":"<kebab-case slug>","status":"unknown","obligation_kind":"<kind>","depends_on":[...]}`, where the kind belongs to the node that will discharge it. A contract property (precondition, invariant, postcondition, resource-bound or type-shape) is typed for CONTRACT. A runtime-safety property (totality, ownership, replay or effect-boundary) or a concurrency property (happens-before, disjointness or contention) is typed for BUILD. The witness field names the codesearch hit, file:line or exec output that made the thing an unknown. An unwitnessed unknown blocks every transition.
 
@@ -146,15 +146,15 @@ The PRD holds rows for this request only. Each completed row closes with prd-res
 
 ## Witness
 
-Each grounding unknown is discharged by a witness that names its source: a codesearch hit with path and line, a callers edge with the calling function and its line, a recall key with its text, or an exec_js output. A row is resolved by `prd-resolve` with witness_evidence that names the command run, its real output, and the file:line it touched. The words "verified", "looks correct", "checked" and "reviewed" alone are rejected as unwitnessed, and the transition refuses them. A row whose evidence is a web source names the URL and the quoted line from the WebFetch result. An expansion row is witnessed by the live exec_js run of its edge case, never by a file.
+Each grounding unknown is discharged by a witness that names its source: a codesearch hit with path and line, a callers edge with the calling function and its line, a memory file with its name and text, or an exec_js output. A row is resolved by `prd-resolve` with witness_evidence that names the command run, its real output, and the file:line it touched. The words "verified", "looks correct", "checked" and "reviewed" alone are rejected as unwitnessed, and the transition refuses them. A row whose evidence is a web source names the URL and the quoted line from the WebFetch result. An expansion row is witnessed by the live exec_js run of its edge case, never by a file.
 
-A finding delegated to a subagent, or recalled from memory, is a hypothesis. Before a row is built on it, one dispatch confirms the premise on the live tree: callers for a claimed zero-caller, codesearch for a claimed name, git_log for a claimed history. An overturned premise re-cuts the row with prd-add on the same id, and the row is never built on the wrong premise.
+A finding delegated to a subagent, or taken from memory, is a hypothesis. Before a row is built on it, one dispatch confirms the premise on the live tree: callers for a claimed zero-caller, codesearch for a claimed name, git_log for a claimed history. An overturned premise re-cuts the row with prd-add on the same id, and the row is never built on the wrong premise.
 
 ## Memorize
 
-Memorize the decisions a subsequent task would otherwise re-derive: the config-fit conclusion, the scan_deps result for the project's dependency set, a module boundary the search exposed, and a rejected alternative together with the witness that rejected it. Each one is `memorize-fire` with a stable key and its witness inline. Do not memorize the search transcript, the raw recall hits, node progress, or the PRD rows, which already live on disk.
+Save an unknown as a memory file only when a later task needs it. Decisions, such as the config-fit conclusion, the scan_deps result and a rejected alternative with its witness, are not memories; the PRD row and the commit hold them. Do not save the search transcript or the raw hits.
 
-When instruction returns a recall hit that a witnessed codesearch contradicts, prune it with `memorize-prune {"key":"<key>"}`. Use `memorize-prune {"query":"<text>"}` to list review candidates, then delete the confirmed ones with `memorize-prune {"keys":[...]}`.
+When a memory file that you read is contradicted by a witnessed codesearch, delete the file and its MEMORY.md line.
 
 ## Transition
 
