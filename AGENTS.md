@@ -25,7 +25,7 @@ An installed skill must be the file it is installed from, or the install must sa
 
 A displaced install is parked under the dotted `<root>/.gm-skill-prelink/` (a plain sibling would be served as a skill), never deleted, because `.gm` state may be live. Deleting needs `--force-link` (bin/gm-install.js) or `GM_SKILL_LINK_FORCE=1`.
 
-MSYS `ln -s` silently copies when symlink creation is refused, so on MINGW/MSYS/CYGWIN only `mklink /J` counts as a link. `install.sh` sets `MSYS_NO_PATHCONV=1` and uses `pwd -P`, since `readlink -f` is not portable. `install.ps1` unlinks links and never recurses into them. `docs/skills.html` describes the rule. `agentplug/crates/agentplug-runner/src/download.rs refresh_installed_skill_md` skips a source-linked install and names a copy install that had drifted. Falsified by: editing `skills/<name>/SKILL.md` and not seeing the edit at `~/.claude/skills/<name>/SKILL.md`, or `node bin/gm-install.js --check-skills` printing `DRIFT`.
+MSYS `ln -s` silently copies when symlink creation is refused, so on MINGW/MSYS/CYGWIN only `mklink /J` counts as a link. `install.sh` sets `MSYS_NO_PATHCONV=1` and uses `pwd -P`, since `readlink -f` is not portable. `install.ps1` unlinks links and never recurses into them. `docs/skills.html` describes the rule. `agentplug/crates/agentplug-runner/src/download.rs refresh_installed_skills` runs every 300 s in the daemon: it fetches `skills/manifest.sha256` from `main` (written by `scripts/build-skill-manifest.mjs`, checked by `skill-release.yml`), re-fetches each changed file, installs new skills into gm-managed copy roots, skips a source-linked install, and parks stale files and retired copies. Falsified by: editing `skills/<name>/SKILL.md` and not seeing the edit at `~/.claude/skills/<name>/SKILL.md`, or `node bin/gm-install.js --check-skills` printing `DRIFT`.
 
 ## Glossary
 
@@ -59,7 +59,7 @@ Authoritative list; `.gitmodules` is ground truth for submodules.
 
 | repo | role |
 | --- | --- |
-| agentplug, agentplug-bert, agentplug-libsql, agentplug-treesitter, agentplug-crux, gm-config, rs-codeinsight, rs-plugkit, rs-search, gm-mcp, vendor/tencentdb-agent-memory | active-dependency (submodule) |
+| agentplug, agentplug-bert, agentplug-libsql, agentplug-treesitter, agentplug-crux, gm-config, rs-codeinsight, rs-plugkit, rs-search, gm-mcp | active-dependency (submodule) |
 | rs-codeinsight, rs-search, rs-plugkit, gm | active-sibling (cascade trigger) |
 | rs-learn, rs-exec, gm-skill, gm-runner-bin, 12 legacy gm-\<platform\> repos | retired-tombstone (archived, README points at rs-plugkit or gm) |
 
@@ -127,6 +127,13 @@ Before a diagnostic override, the agent shall save the original property descrip
 While performing git operations, the agent shall use the gm git verbs, and `git_remote` to inspect remote URLs and the upstream without fetching or mutating state. Before delivery, the agent shall confirm that no residual remains (a pending PRD row, dirty path or unpushed commit), that every parent gitlink equals its submodule's remote `main` tip, and that the remote is verified. Work stays on `main` in every repository this agent touches; no branch holds work in progress. A collision (`conflicted: true`, an unmerged `UU` path, or a `.git/MERGE_HEAD`) is resolved and landed on `main` in the same turn, never parked. An unmerged submodule is resolved by choosing a commit that exists on that submodule's remote and letting the parent pin follow. Falsified by: a repository left on a branch other than `main`, a `.git/MERGE_HEAD` present at the end of a turn, or a `UU` path in `git_status`. When the agent reports completion, the report shall cite a live witness reply. A commit message shall state the change and nothing else, with no attribution trailer (the served skill governs; skills/gm/SKILL.md, Autonomy). Falsified by: a Bash `git` call in place of a gm git verb, a push with no prior `git_remote` reply, or a completion report with no witness reply.
 
 The `gm-mcp` server shall compact every dispatch response before it crosses the wire; `gm-mcp/AGENTS.md` records which fields compact, which stay whole, and why. Falsified by: a dispatch reply on the wire that still carries a field `gm-mcp/AGENTS.md` lists as compacted.
+
+## Live validation interfaces
+
+- `node scripts/triage/dispatch-verb.mjs <verb> --cwd <project> --raw <body>` dispatches any spool verb and prints its reply and the latency. It reaches verbs the MCP table does not expose, such as `crawl`. It touches only the local spool.
+- `agentplug-runner selfcheck-update-probes` reads the release channel for the runner, every loaded plugin and the skill manifest, through the daemon's own functions. It stages, installs and writes nothing else.
+- `node <toolsDir>/gm-mcp-server.mjs self-update-status` prints the channel cache: the stored etag, the digest, the time of the last unconditional fetch, and the outcome of the last check. `self-update-now` forces a check.
+- Browser control is witnessed through `crawl` with `session=`, `expect=`, `reload` and `close`. The reply names the tab and logs each step.
 
 ## Dated findings and design
 

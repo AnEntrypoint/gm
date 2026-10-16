@@ -8,7 +8,7 @@ Two facts that stop most guessing:
 
 1. **Code lookup exists.** `grep` answers "where is this string", `codesearch` answers "where is
    this concept", `fs_read` reads a file or a line range, and `callers`/`callees`/`impact` walk the
-   symbol graph (the call graph that `codeinsight_index` builds). `recall` is memory only: it searches `.gm/memories/*.md`, never the tree.
+   symbol graph (the call graph that `codeinsight_index` builds).
 2. **A directory under `.gm/exec-spool/in/` is not evidence that a verb exists.** The spool creates
    `.gm/exec-spool/in/<verb>/` before dispatch, so an unknown verb leaves a directory behind and
    replies `ok: false`, `error_code: unknown_verb`, and an `error` that begins `unknown verb:`. Retired verbs leave
@@ -310,7 +310,9 @@ the full `deferred_set` lives in the sync report, never in the message.
 
 ## Memory
 
-`recall` and `auto-recall` are `query`; `memorize`, `memorize-fire`, `memorize-prune`, `memorize-vacuum`, `memorize-retention` and `forget` are `command`.
+Agents do not call these verbs for memory. Memory is the flat-file store that `skills/gm/SKILL.md` (Invariants) describes; the verbs stay in the code.
+
+`recall` and `auto-recall` are `query`; `memorize`, `memorize-fire`, `memorize-prune`, `memorize-vacuum` and `memorize-retention` are `command`.
 
 `recall` searches `.gm/memories/*.md` and its derived vector index. Hits are scored as cosine times recency, within the `namespace` the body names.
 
@@ -322,7 +324,7 @@ the full `deferred_set` lives in the sync report, never in the message.
 
 `memorize` writes to that index: `{"text":"<memo>","namespace":"default"}`, or a raw text body.
 `memorize-fire` writes its body as one `.md` file into the memorize inbox (`memorize_inbox` in `rs-plugkit/crates/plugkit-core/src/orchestrator/memorize.rs`), and `memorize-prune`, `memorize-vacuum` and `memorize-retention`
-maintain the recall index, `forget` deletes one `key` from a namespace's key-value store, and `auto-recall` answers a prompt body with three recall hits.
+maintain the recall index, and `auto-recall` answers a prompt body with three recall hits.
 
 A `recall` reply carries `hits` (the ranked list), and `vector_hits` (the rows before scoring) only when the body sets `verbose: true`.
 The gm-mcp response compactor (`gm-mcp/src/response-compact.js`) drops `vector_hits` when every row in it is already in `hits` and names it
@@ -382,7 +384,7 @@ ci-log {"github_repo":"lanmower/oscraft","run_id":38538275222,"step":"state hash
 
 `git_remote` takes `{}` and answers `{branch, remotes, upstream}`. It inspects the configured remote URLs and the current branch's upstream without fetching or mutating state.
 
-`git_pull` performs the ordinary fetch-and-integrate path. `git_stash` shelves (stashes) all work by default, including untracked files, but never the project's own `.gm/` or `.agentplug*` (listed in the receipt's `excluded`), and refuses more than 2000 untracked files (pass `paths:[...]` or `include_untracked:false`). `git_stash_pop` restores a shelf and drops it after a successful restore; a conflicted pop leaves the shelf, and `git_stash_drop` removes it afterwards. `git_stash_list` lists shelves. All stash verbs refuse unknown fields. `git_checkout` switches branch; `git_checkout` with `paths` restores only those paths (pathspecs, git's path patterns) in the working tree from `ref` (default the index), refusing an empty list, a leading `-` or `:`, `..`, an absolute path outside the repo and anything under `.gm/` or `.agentplug*` other than the transient scan-deps and codeinsight-edge caches; its receipt is `{restored, source, output}`. `git_finalize {message}` bundles the add, commit, porcelain gate, push and `ci-status-check` steps; if the build does not serve it, compose the same steps by hand. When another agent shares the worktree, pass `paths:[...]` to `git_commit`/`git_finalize`: only those pathspecs are staged, committed and porcelain-gated. With `rev`, `git_finalize` skips the commit and publishes that ref through `git_push`. `git_push {rev:"<full sha>", allow_foreign_commits:true}` is the sanctioned push of a commit you already made over another writer's uncommitted changes: name the sha of the tip you mean to publish and pass the flag, because `rev:"HEAD"` is symbolic and the gate refuses it (`error_code: gate_denied`, "this push names no commit ... would ship every unpushed commit on main") while any commit on the branch is unpushed. A lane publishing only the commit it just made names that sha, `git_push {rev:"<own sha>"}`, and needs no flag. A push publishes a chain of commits, not one commit: `git_push` sends `git push origin <rev>:<branch>` (`<rev>:refs/heads/<branch>` for a full sha), so `rev` must name a commit and every commit on local `main` the remote lacks ships with it, including a commit another lane authored. On shared linear main that is the intended contract: no refspec publishes a commit without its ancestors, so `rev` names the tip, it never narrows the set. `git_commit` does not publish. Publishing goes through `git_push`, and `git_finalize` publishes by calling it. `git_log` with `paths` keeps only commits touching those pathspecs. `git_diff` scopes the same way. `git_show`: `path` prints that file at the revision (same as `rev: "<rev>:<path>"`); `paths` limits a commit's diff. These three refuse unknown fields, naming `unknown_fields` and `accepted_fields`. `git_status` scopes to `paths`; `summary: true` returns counts by status plus the first `limit` (default 20) `first_paths`, and without `summary`, `limit` caps each status list (default 10), and `truncated` is set when a list overflows.
+`git_pull` performs the ordinary fetch-and-integrate path (a merge, `--no-rebase`, by default). Opt-in body fields: `rebase:true` replays the local commits onto the fetched tip (`--rebase`), and `autostash:true` shelves local changes around the pull (`--autostash`); both default to `false`, so existing callers are unchanged. `git_stash` shelves (stashes) all work by default, including untracked files, but never the project's own `.gm/` or `.agentplug*` (listed in the receipt's `excluded`), and refuses more than 2000 untracked files (pass `paths:[...]` or `include_untracked:false`). `git_stash_pop` restores a shelf and drops it after a successful restore; a conflicted pop leaves the shelf, and `git_stash_drop` removes it afterwards. `git_stash_list` lists shelves. All stash verbs refuse unknown fields. `git_checkout` switches branch; `git_checkout` with `paths` restores only those paths (pathspecs, git's path patterns) in the working tree from `ref` (default the index), refusing an empty list, a leading `-` or `:`, `..`, an absolute path outside the repo and anything under `.gm/` or `.agentplug*` other than the transient scan-deps and codeinsight-edge caches; its receipt is `{restored, source, output}`. `git_finalize {message}` bundles the add, commit, porcelain gate, push and `ci-status-check` steps; if the build does not serve it, compose the same steps by hand. When another agent shares the worktree, pass `paths:[...]` to `git_commit`/`git_finalize`: only those pathspecs are staged, committed and porcelain-gated. With `rev`, `git_finalize` skips the commit and publishes that ref through `git_push`. `git_push {rev:"<full sha>", allow_foreign_commits:true}` is the sanctioned push of a commit you already made over another writer's uncommitted changes: name the sha of the tip you mean to publish and pass the flag, because `rev:"HEAD"` is symbolic and the gate refuses it (`error_code: gate_denied`, "this push names no commit ... would ship every unpushed commit on main") while any commit on the branch is unpushed. A lane publishing only the commit it just made names that sha, `git_push {rev:"<own sha>"}`, and needs no flag. A push publishes a chain of commits, not one commit: `git_push` sends `git push origin <rev>:<branch>` (`<rev>:refs/heads/<branch>` for a full sha), so `rev` must name a commit and every commit on local `main` the remote lacks ships with it, including a commit another lane authored. On shared linear main that is the intended contract: no refspec publishes a commit without its ancestors, so `rev` names the tip, it never narrows the set. `git_commit` does not publish. Publishing goes through `git_push`, and `git_finalize` publishes by calling it. `git_log` with `paths` keeps only commits touching those pathspecs. `git_diff` scopes the same way. `git_show`: `path` prints that file at the revision (same as `rev: "<rev>:<path>"`); `paths` limits a commit's diff. These three refuse unknown fields, naming `unknown_fields` and `accepted_fields`. `git_status` scopes to `paths`; `summary: true` returns counts by status plus the first `limit` (default 20) `first_paths`, and without `summary`, `limit` caps each status list (default 10), and `truncated` is set when a list overflows.
 
 `git_reset` accepts `ref` or `rev` for the target, and `mode` (`mixed` default, `soft`, `hard`) or `hard:true`; `paths`/`files` limit the reset to those paths in the index. Unknown fields are refused. Naming `ref` and `rev` with different values, or `mode` and a conflicting `hard`, refuses with `conflicting_fields`; `paths` require `mode` `mixed` (`accepted_modes_for_paths`); `.gm/` and `.agentplug*` pathspecs are refused as protected. `mode` `hard` runs `git reset --hard` and rewrites the worktree. `git_commit {"amend":true}` rewrites the current commit instead of stacking a child, and refuses when that commit is already published (`pushed_commit_refused`, amend path in `rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs/git.rs`). `git_amend` is that same rewrite as its own verb: it requires `message`, is answered by the `git_commit` handler, and carries the same `pushed_commit_refused` refusal.
 
@@ -569,31 +571,24 @@ selects the engine; the rest is the crawl request (URLs and steps).
 
 | engine | runs | window |
 |---|---|---|
-| `cdp` (default when the first line is absent) | the host drives a real Chrome over the Chrome DevTools Protocol (CDP) through its `crawl_cdp` entry point | **HEADLESS** (`--headless=new`) by default |
-| `lightpanda` | a headless browser: the host's warm lightpanda process, whose binary comes from `GM_LIGHTPANDA_PATH`, then `PATH`, run through the `lightpanda` plugin's `crawl` verb | **HEADLESS**: no window |
+| `cdp` (default when the first line is absent) | the host drives a real Chrome over the Chrome DevTools Protocol (CDP) through its `crawl_cdp` entry point | **HEADFUL** (a visible window), always |
 
-The `cdp` engine runs **HEADFUL** (a visible browser window) when either holds:
-
-- the body has a `headful` line
-- the environment variable `GM_CRAWL_CDP_HEADFUL` is set to any value other than empty, `0`, `false`, `no` or `off`
-
-Choose `lightpanda` when no window should appear. Choose `cdp` when the page must render in a visible browser, using the settings above.
+The `cdp` engine always runs **HEADFUL**: a `headless` line is refused with an error. `cdp` is the only crawl engine: `engine=lightpanda` answers `unknown_engine`.
 
 ```
 raw_body: "engine=cdp\nhttps://example.com/\n"
-raw_body: "engine=lightpanda\nhttps://example.com/\n"
 ```
 
 The `cdp` reply is the host's JSON object, passed through unchanged: `ok`, `engine`, `headless`,
-`stdout`, `stderr`, `exit_code`, `duration_ms`, `timed_out`, `target_id`, `pages` and `error` on a `cdp` reply. The `lightpanda` reply is the plugin's object, passed through. An unknown
-engine answers `ok: false` with `error_code: "unknown_engine"`, naming `cdp` and `lightpanda`.
+`stdout`, `stderr`, `exit_code`, `duration_ms`, `timed_out`, `target_id`, `pages` and `error`. An unknown
+engine answers `ok: false` with `error_code: "unknown_engine"`, naming `cdp`.
 
 The standalone `cdp` verb is removed; `crawl` with `engine=cdp` replaces it. The `cdp` engine serves the whole step grammar,
 including raw `cdp <Domain.method>` commands and event capture.
 
 ### `chrome`: the CDP crawl as a named verb
 
-`chrome` takes the same **plain text body** as `crawl` and runs the same browser steps (listed below) on the `cdp` engine, so the engine line is optional. The `chrome` verb sets no window mode of its own: a `headful` line or `GM_CRAWL_CDP_HEADFUL` selects a visible window, and the window is headless otherwise. The verb answers the same host JSON object.
+`chrome` takes the same **plain text body** as `crawl` and runs the same browser steps (listed below) on the `cdp` engine, so the engine line is optional. The window is always headful. The verb answers the same host JSON object.
 
 ```
 raw_body: "https://example.com/\nsnapshot\n"
@@ -709,7 +704,7 @@ each one for 6 hours. A reply carries `floor`, `ceiling`, `count_of_record`, `re
 `launch` (one item per id to launch now, each with `id`, `role` and `reason`), `shortfall`, `unfilled_shortfall`, `sufficient`, `traversal`, and
 a `slots` block with `open_rows`, `live_rows`, `live_rows_unmatched`, `aging_heartbeats`,
 `candidates`, `candidates_removed`, `launch_filters` and `already_fixed_on_head`. A `live` count under
-the floor while rows are open is refused with `error_code` `floor_gate_denied`. Example body:
+the floor while rows are open is refused with `error_code` `floor_gate_denied` when launchable rows are advertised but not launched. When no open row is launchable and no traversal node is due, the reply is ok with `state` `supply_exhausted`, `held_rows` (running rows, the only supply) and `unlaunchable_open_rows`: wait for the held rows to complete, then re-observe; a retry cannot change the answer. Example body:
 `{"live":4,"held":["<row-id>"]}`.
 
 ## Storage, cache and diagnostics
