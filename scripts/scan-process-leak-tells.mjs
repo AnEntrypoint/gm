@@ -4,7 +4,7 @@ import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from '
 import path from 'node:path'
 
 const BASELINE_PATH = '.process-leak-baseline.json'
-const SKIP_DIRS = new Set(['.git', 'node_modules', 'target', 'dist', 'vendor', 'site', '.gm', 'bin', 'obrowser', 'plugin-cache', 'precompiled'])
+const SKIP_DIRS = new Set(['.git', 'node_modules', 'target', 'dist', 'vendor', 'site', '.gm', 'bin', 'plugin-cache', 'precompiled'])
 const TEXT_EXT = new Set(['.mjs', '.js', '.cjs', '.ts', '.tsx', '.ps1', '.sh', '.py', '.rs'])
 
 const STARTS_LONG_LIVED = [
