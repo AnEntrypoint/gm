@@ -50,7 +50,6 @@ jobs:
           - agentplug-bin
           - agentplug-bert-bin
           - agentplug-crux-bin
-          - agentplug-lightpanda-bin
           - agentplug-codeinsight-bin
           - agentplug-libsql-bin
           - agentplug-treesitter-bin
