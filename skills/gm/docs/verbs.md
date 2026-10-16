@@ -8,7 +8,7 @@ Two facts that stop most guessing:
 
 1. **Code lookup exists.** `grep` answers "where is this string", `codesearch` answers "where is
    this concept", `fs_read` reads a file or a line range, and `callers`/`callees`/`impact` walk the
-   symbol graph (the call graph that `codeinsight_index` builds). `recall` is memory only: it searches `.gm/memories/*.md`, never the tree.
+   symbol graph (the call graph that `codeinsight_index` builds).
 2. **A directory under `.gm/exec-spool/in/` is not evidence that a verb exists.** The spool creates
    `.gm/exec-spool/in/<verb>/` before dispatch, so an unknown verb leaves a directory behind and
    replies `ok: false`, `error_code: unknown_verb`, and an `error` that begins `unknown verb:`. Retired verbs leave
@@ -309,6 +309,8 @@ reply and the refusal carry the counters of the sync pass that ran, as `key=valu
 the full `deferred_set` lives in the sync report, never in the message.
 
 ## Memory
+
+Agents do not call these verbs for memory. Memory is the flat-file store that `skills/gm/SKILL.md` (Invariants) describes; the verbs stay in the code.
 
 `recall` and `auto-recall` are `query`; `memorize`, `memorize-fire`, `memorize-prune`, `memorize-vacuum`, `memorize-retention` and `forget` are `command`.
 
