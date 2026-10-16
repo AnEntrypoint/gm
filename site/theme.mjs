@@ -286,6 +286,7 @@ const renderHtml = ({ site, navItems, page }) => `<!DOCTYPE html>
     #ds-article-host pre { max-width: 100%; overflow-x: auto; }
     .app-topbar, .app-topbar nav { min-width: 0; max-width: 100%; box-sizing: border-box; }
     .app-topbar nav { flex-wrap: wrap !important; overflow: visible !important; }
+    @media (max-width: 640px) { .app-topbar nav { flex-wrap: nowrap !important; overflow-x: auto !important; } }
     .app-topbar nav a { max-width: 100%; overflow-wrap: anywhere; }
   </style>
 </head>
