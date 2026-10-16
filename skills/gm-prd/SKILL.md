@@ -1,11 +1,11 @@
 ---
 name: gm-prd
-description: "Closes one PRD row through the nine gm stages in one run. Input: row=<id>; session=<SESSION_ID>; optional mode=witness. PRD-row rules are defined in this skill."
+description: "Closes one PRD row through the gm stages: an executor edits and hands off, then verifier and CI lanes close it. Input: row=<id>; session=<SESSION_ID>; optional mode=witness. PRD-row rules are defined in this skill."
 ---
 
 # gm-prd
 
-One run, one row, one session. Stages run in order, none a subagent. Each writes a create-only receipt `.gm/receipts/<row>/NN-<STAGE>.md`. A stage that cannot run becomes a blocker row `<row>-blocker-<session>` (`prd-add`), never a skip. Verbs: gm §1. PRD-resolution tracker, separate from node traversal (gm-orchestrate); a row is not a node and never changes the frontier count.
+One row, one session. Stages run in order, none a subagent; the orchestrator spawns the verifier and CI lanes after the executor's handoff. Each writes a create-only receipt `.gm/receipts/<row>/NN-<STAGE>.md`. A stage that cannot run becomes a blocker row `<row>-blocker-<session>` (`prd-add`), never a skip. Verbs: gm §1. PRD-resolution tracker, separate from node traversal (gm-orchestrate); a row is not a node and never changes the frontier count.
 
 ## Procedure
 - A blocker is filed only after gm-eliminate ran a live JIT check on each open unknown and recorded its dispatch id. A missing fact, unresolved unknown or missing row file is not a blocker until those checks fail.
@@ -26,9 +26,9 @@ The executor runs the edit stages only: gm-orient, gm-unknowns, gm-eliminate, gm
 6. SEC: secrets, injection, identity; each check is a run.
 7. RES: failure modes, partial failure included; run each.
 8. DECIDE: check receipts and live witnesses against the row's words, not the diff; check push or CI result.
-9. COMPLETE: `prd-resolve {"id","witness_evidence","witness_dispatch_id"}` once `witness_dispatch_id_verified`. The witness must come from another session; self-witness is refused (`prd-resolve-self-witness`) and the row stays pending.
+9. COMPLETE: the verifier reports its witness; the orchestrator calls `prd-resolve {"id","witness_evidence","witness_dispatch_id"}` once `witness_dispatch_id_verified` and the CI lane is green for the same sha (gm-orchestrate, Verification and CI lanes). The witness must come from another session; self-witness is refused (`prd-resolve-self-witness`) and the row stays pending.
 
-A verifier lane (`mode=witness`) edits nothing and runs PROVE, DECIDE and COMPLETE on the handed-off sha (gm-orchestrate, Verification and CI lanes).
+A verifier lane (`mode=witness`) edits nothing and runs PROVE and DECIDE on the handed-off sha and reports COMPLETE to the orchestrator (gm-orchestrate, Verification and CI lanes).
 
 Delivery: publish this run's files via the Git API route (gm-orchestrate, Shared-tree publish); `git_finalize {message, paths}` only in a tree no other lane writes; then `ci-status` on the sha (gm, CI). A failed witness: causes become mutables; bisect by live runs; fix the survivor; witness again. No test files (gm §3). Never kill another lane's process (gm-orchestrate, Headroom and leases). Bisect uses a live re-run, a remote blob, or a `git archive` of a remote sha (gm, READ questions).
 
@@ -58,7 +58,7 @@ Before that commit, apply the re-bake rule (gm-hop, Re-bake in the same commit).
 - Cold start and reload are a budget. Reuse one warm session across every arm of a run; change conditions by mutating page state (`page.evaluate`), never by reloading. A receipt states how many cold starts and reloads it spent; a witness that cannot say paid more than it knows.
 - Mint the jit test the question needs; do not route the question through the suite. At ELIMINATE and PROVE write the minimal instrument separating the hypotheses: one file, one assertion per measurement. After the run, pin that instrument in the gate or delete it; never grow a general witness to answer one question.
 - A browser is no licence to weaken evidence. When required: adapter pinned, `window.__rendererInfo` asserted, rAF proven off the 16.68 ms grid, contention bar enforced; a contaminated run is published as `RESULT: REFUSED` (exit 3), not as a figure. A number that cannot be quoted costs more than no run.
-- Clean base is `git archive`, never a second checkout. Compare by content hash against remote `main`, never local HEAD: gm-orchestrate, Shared-tree publish. Browser arms and leases: gm-orchestrate, Headroom and leases. Do not open a browser while the lease is held; take gpu-free instrumentation.
+- Clean base is `git archive`, never a second checkout. Compare by content hash against remote `main`, never local HEAD: gm-orchestrate, Shared-tree publish. Browser arms and leases: gm-orchestrate, Headroom and leases. One browser arm pool-wide; `gpulock` serialises the GPU adapter only, not CPU, memory or disk. Thrash causes and the shared-server setup: gm-orchestrate, Lane budget. Do not open a browser while the lease is held; take gpu-free instrumentation.
 - Counted work units beat timings on a contended box: a duration read while lanes thrash is load, not the change. Count what the code does (draws, allocations, instances, files scanned, messages) and compare counts; a timing must clear the contention bar above first.
 - Every instrument is two-sided: force the condition and show the number moves before quoting it. In one day five guards could not fail — a `must` regex that matched nothing, an assert that was a `console.log`, a swallowing catch, a NaN displacement that printed as 0, an audit that scanned zero files and passed. A guard that cannot fail is decoration.
 - Refuse loudly, never plausibly: an unquotable number prints `RESULT: FAIL` or `RESULT: REFUSED` with its diagnostic and exits non-zero. No figure is better than a fabricated one. Write the refutation where the next lane reads it (the witness-log line, or the receipt): a cause refuted and not recorded gets re-chased — one false alarm was refuted four times before it was re-raised.
