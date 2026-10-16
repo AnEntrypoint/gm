@@ -115,3 +115,9 @@ Catalogue: `docs/rationale.md`; use it only as its header says. Served phase pro
 - World-scoped, not overridable by any graph or config. Ask before: deleting anything with no recoverable copy; spending money; anything reaching another person; deploying or changing production; anything with legal, medical, financial or safety consequences for a real person. Sole place this file outranks served prose.
 - Reconfiguration grants execution authority: repointing `.gm/config.source.json` or adding a `hooks/*.js` hook gives the repo this project's authority, including code execution. Ask unless the user named it. Vendoring a graph replaces the previous one wholesale: ask, and state which gates it drops.
 - Side effects ride ordinary actions: auto-deploy on push makes the deployment the one-way door, not the push. Ask at that boundary.
+
+## Finish the work
+
+- Finishing the requested work is the goal of every run of this skill. A run that stops with work left undone is incomplete.
+- When an issue blocks a step (a failing check, a fault in a tool or service, a missing input, a network or environment fault), fix it in the same run: retry on a bounded or resumable route, use an alternate route to the same result, repair the fault where it originates, then continue the remaining work.
+- Stop only when the requested work is complete, or when a step is still blocked after every route has been tried. Then report the blocked step, the routes tried, and the evidence for each.
