@@ -13,7 +13,7 @@ allowed-tools: Read, Write, Bash
 
 Requires a running OpenAI-compatible LLM endpoint for extraction and embedding; Docker or Node.js >= 22.16 for the services.
 
-TencentDB Agent Memory gives an agent team a shared, growing memory instead of starting cold every session. Two ways it relates to gm's own `memorize-fire`/`recall` (see `wfgy-method`/`gm` skills for that): (1) as a fully standalone system (this skill's main content, below) when the ask spans multiple agent frameworks, multiple team members, or needs a human-reviewable panel; (2) as an opt-in storage backend for gm's own memory verbs (`memory.tencentdb_backend` in `gm.config.json`, disabled by default) -- when a namespace is routed to it, gm's `memorize`/`recall`/`memorize-fire`/`memorize-prune` write file-pointer-indexed content compatible with this system's format instead of gm's default 384-dim md-corpus store, with no change to the verb surface an agent calls. Reach for THIS skill's setup instructions (Docker Compose, panel UI) for the standalone deployment; reach for `gm`'s own docs when the ask is just "make gm's memory use the Tencent-compatible backend."
+TencentDB Agent Memory gives an agent team a shared, growing memory instead of starting cold every session. Two ways it relates to gm's own flat-file memory (see the `gm` skill for that): (1) as a fully standalone system (this skill's main content, below) when the ask spans multiple agent frameworks, multiple team members, or needs a human-reviewable panel; (2) as an opt-in storage backend for gm's own memory store (`memory.tencentdb_backend` in `gm.config.json`, disabled by default) -- when a namespace is routed to it, gm's memory store writes file-pointer-indexed content compatible with this system's format instead of gm's default 384-dim md-corpus store, with no change to how an agent reads or writes memory. Reach for THIS skill's setup instructions (Docker Compose, panel UI) for the standalone deployment; reach for `gm`'s own docs when the ask is just "make gm's memory use the Tencent-compatible backend."
 
 ## What it provides
 
@@ -24,10 +24,10 @@ TencentDB Agent Memory gives an agent team a shared, growing memory instead of s
 
 Assets are portable across agent frameworks and shareable across a team -- a new agent or team member can load existing memory instead of relearning from scratch.
 
-## When to use this skill vs. gm's own memory verbs
+## When to use this skill vs. gm's own flat-file memory
 
 - Use `agent-memory`'s standalone setup instructions when: the user explicitly names TencentDB/memory-tencentdb/Memory Hub/team memory, wants memory that survives across *different* agent frameworks or team members (not just this session), wants a Skill library extracted from past conversations, or wants a Wiki/CodeGraph over a codebase.
-- Use gm's own `memorize`/`recall`/`memorize-fire`/`memorize-prune` verbs (default backend, no setup) for this session's own local recall -- and if the user specifically wants gm's memory to be Tencent-format-compatible without running the standalone services, point them at `gm.config.json`'s `memory.tencentdb_backend` block instead of a full standalone install.
+- Use the flat-file memory described in the `gm` skill (no setup) for this session's own local recall. If the user wants gm's own store to be Tencent-format compatible without running the standalone services, point them at `gm.config.json`'s `memory.tencentdb_backend` block instead of a full standalone install.
 
 ## Setup
 

@@ -17,7 +17,7 @@ English describing intent = liability when code encodes it; comments = liability
 
 ## Install
 
-`bun x skills add AnEntrypoint/gm` copies the skill directory into `~/.claude/skills/gm/` (and `~/.agents/skills/gm/`), installed as `/gm`. The `install.sh`/`install.ps1`/`bin/gm-install.js` installers, run beside `skills/` or with `GM_SKILL_SOURCE_DIR` set, place a link instead — junction on Windows, symlink elsewhere — so the installed `SKILL.md` and the checkout's are one file; with no local source they copy and announce it. No npx, no marketplace, no npm registry.
+`bun x skills add AnEntrypoint/gm` copies the skill directory into `~/.claude/skills/gm/` (and `~/.agents/skills/gm/`), installed as `/gm`. The `install.sh`/`install.ps1`/`bin/gm-install.js` installers, run beside `skills/` or with `GM_SKILL_SOURCE_DIR` set, place a link instead (a junction on Windows, a symlink elsewhere) so the installed `SKILL.md` and the checkout's are one file; with no local source they copy and announce it. No npx, no marketplace, no npm registry.
 
 ## Bootstrap
 
@@ -41,40 +41,15 @@ The watcher returns task_id immediately and tails to 30s wall-clock. Short final
 
 Route KV writes to `<cwd>/.gm/disciplines/<ns>/`. `@<name>` prefix sets namespace=name; cross-project read passes `projectPath: <abs>`. Discipline KV routing is resolved by the `discipline` verb; do not hand-build its paths.
 
-## Memorize
+## Memory
 
-`kind` is a storage tier, not a memory type. `memorize-fire` passes it through to the tencentdb memory store, which keeps it as free text; the code defaults it to `l0` (memorize-fire) and `l1` (memory import).
+Memory is one flat file per fact. Save an unknown as a memory only when a later task needs it. Save nothing else as memory.
 
-**Exclusion principle.** Anything derivable from live project state -- code patterns, architecture, paths, git history, prior debugging -- never enters the store. Storing a derivable fact creates a second, driftable source of truth alongside the real one; the live tree always wins that race, so the memo only ever goes stale, never authoritative.
+Write each memory as a file in the harness memory directory, the directory that holds MEMORY.md. The file has frontmatter with the fields name, description and metadata.type. Set metadata.type to unknown. Add one line to MEMORY.md that points to the file.
 
-**Verification before recall.** A memory naming a specific file/function/flag is a claim indexed at write-time, not a claim about present state -- re-verify the named thing still exists before acting on the hit. A recall result is a lead, never a fact.
+To find a memory, read MEMORY.md and open the files it points to. A memory is a lead, not a fact: re-verify any named path, symbol or flag before you act on it. When a witness contradicts a memory, delete the file and its MEMORY.md line.
 
-Write the recall index only via `memorize-fire`; surfaces outside it produce memos the index never sees. Prune bad memory on sight, since a stale or wrong recall hit poisons every future recall: `memorize-prune {keys}` removes the named entries (text + embedding); `memorize-prune {query}` is review-only and returns candidates without removing any.
-
-By default `memorize`/`recall`/`memorize-fire`/`memorize-prune` write markdown files at `.gm/memories/<key>.md` (the durable store) with a lean cache index at `.gm/gm.db`'s `rssearch_vectors` table. A project can opt a namespace into a second, file-pointer-only backend (`memory.tencentdb_backend` in `gm.config.json`) -- its index rows carry only a path pointer plus the embedding, never inline text, and its embedding dimension is independently configurable (not gm's fixed 384-dim model). Same verb surface either way; the backend selection is transparent and config-gated.
-
-**`tencentdb_backend` is a local, schema-compatible storage swap, NOT a live connection to a deployed TencentDB-Agent-Memory stack.** It reads/writes a local libsql table (its table and vector index, inside `memory.tencentdb_backend.data_dir`) with zero HTTP calls to MemoryCore/MemoryHub/Proxy -- there is no code path in rs-plugkit that talks to ports 8420/8424/8096 or any deployed service. The only real capability it changes is storage shape: a project-configurable embedding dimension (`vectors_db_dims`, gm's own default backend is fixed at 384) and index rows that point at a file rather than inlining text. It does NOT give gm access to that project's Chat Memory tiers (L0 conversation -> L1 atom -> L2 scenario -> L3 persona), its extracted Skill library, or its Wiki/CodeGraph -- those live only inside an actually-deployed `agent-memory` stack (Docker Compose, real LLM API credentials, a running proxy that intercepts the coding-agent's own connection) and reaching them is a separate, heavier decision: standing up network services and consuming external LLM credentials is world-scope (Section 4) -- ask before deploying it for a project, never silently.
-
-Four config fields actually read from `gm.config.json`'s `memory.tencentdb_backend` block: `enabled` (bool), `data_dir` (string), `vectors_db_dims` (uint), `namespaces` (array of namespace names routed to this backend -- everything else stays on the default backend regardless of `enabled`). Their defaults and the fixed internal table/index names live in `TencentBackendConfig::default()` and its constants in `rs-plugkit/crates/plugkit-core/src/tencentdb_memory.rs`.
-
-**Relationship to the AGENTS.md-drain ("Every memorize run also drains AGENTS.md"): unaffected, always the default backend.** The drain instruction hardcodes `memorize-fire their substance to the default namespace` -- enabling `tencentdb_backend` for other namespaces never redirects AGENTS.md-drained content there, by design: AGENTS.md governs gm/rs-* itself, never a target project's namespace, so routing its drained substance into a target-project-scoped backend would be exactly the cross-project memory pollution `gm's recall store holds gm/rs-* method/tooling/invariants ONLY` already forbids.
-
-**When to actually enable it for a project:** a real, reachable signal, never a default-on guess -- a project's own `.gm/`/README/CONTRIBUTING already references TencentDB-Agent-Memory or a deployed instance of it, the project's embedding pipeline elsewhere already commits to a non-384 dimension the default backend can't hold, or the user names the need directly. Absent one of those, leave it disabled; flipping it on speculatively fragments a project's memory across two backends for no reachable benefit.
-
-**Migrating existing `.gm/memories/*.md` content into a newly-enabled `tencentdb_backend` namespace once one of those signals fires:** two real, wired mechanisms, both documented in the `agent-memory` skill (`Skill(skill="agent-memory")` for full detail) -- the `tencentdb-memory-import` verb (`{"source_namespace", "dest_namespace", "kind"}`, single dispatch from a live session) and `scripts/migrate-memory-to-tencentdb.mjs` (batch/CLI, also applies a derivable-state discard filter). Both refuse unless the destination namespace's `vectors_db_dims` is exactly 384 (gm's embedder's only output width); default is a one-way copy, `archive_source`/`--archive` opts into moving migrated files out of the live `.gm/memories/` corpus instead of leaving them duplicated.
-
-## Liqology memory-firewall plugin
-
-`agentplug-liqology` (repo `AnEntrypoint/liqology`) is now part of gm's own compiled default capability allowlist for `caller_plugin=="gm"` (`imports.rs`'s `compiled_default_capability_allowlist`, `liqology` alongside `bert`/`libsql`/`treesitter`) -- first-party-adjacent, not a truly external plugin any consuming project needs a `.agentplug/capability-allowlist.json` override to reach. It wraps a real, from-source-vendored FAISS `IndexFlatIP` (compiled for `wasm32-wasip1-threads`, `-fno-exceptions` since this wasi-sdk's prebuilt `libc++abi` lacks a working exception runtime for that triplet) behind five verbs: `record` (embed an interaction's input/output, reinforce FAISS-similar prior entries, decay and prune the rest per a `CostBalancePolicy` -- gm's own `git_commit`/`git_finalize` already call this automatically on every real commit, best-effort, never blocking), `query_relevance`, `prune_report` (a real preview -- what would be evicted under the current policy, without mutating state -- gm's own `residual-scan` already calls this automatically, surfacing a `liqology_stale_memory` finding when meaningful, observability only), `tune_policy`, `capabilities`.
-
-**This is a memory-relevance tool, not a memory store.** It does not replace `memorize`/`recall`/`memorize-fire` -- those remain the only sanctioned write/read surface for gm's own recall index (see Memorize above). `agentplug-liqology` consumes recall activity (via `emit_recall`'s `hit_keys` field, now logged per-entry alongside the existing `n_hits`/`top_score`) and git-commit activity (via `git_commit`/`git_finalize`'s `git_commit`/`git.commit` events, both now carrying a full `sha_full` -- every `emit_event` call already auto-tags its own session's `sess`, so a commit and the recall hits that informed it join on matching `sess` values in `.watcher.log`, no new database table) to infer which memory entries were surfaced-but-never-reflected-in-a-diff (candidates for pruning) versus surfaced-and-reused (candidates for reinforcement).
-
-**When to actually reach for it:** a real, reachable signal, same bar as `tencentdb_backend` above -- the project's own recall corpus has grown large enough that `recall`'s top-k results visibly include stale/irrelevant entries, or the user names the need directly (a request to prune, tune retention, or inspect what memory is/isn't earning its keep). Absent one of those, plain `recall`/`memorize-fire` is sufficient; dispatching a `host_plugin_call("liqology", ...)` speculatively on every turn is the same over-fragmentation `tencentdb_backend`'s own guidance warns against.
-
-**When to dispatch the two on-demand verbs** (`record`/`prune_report` already fire automatically, above -- these two are agent-initiated):
-
-- `query_relevance` -- before making any pruning/retention judgment call by hand, or when a `liqology_stale_memory` residual-scan finding names a count worth actually looking at (which entries, not just how many).
-- `tune_policy` -- when `prune_report`'s `would_evict_ids` consistently disagrees with what the agent independently judges should be retained/pruned (the current `CostBalancePolicy` no longer matches this project's actual usage pattern), not a first-resort tuning knob.
+Do not save a fact that the live tree can answer. The tree wins over a memory.
 
 ## Overridden-setting drift notification
 
@@ -87,10 +62,8 @@ Every `instruction` response carries a `config_changed` array: config sources (p
 Cross-Cutting Memory
 
 * GTD (David Allen) -- the PRD/mutables ledger is the trusted external system; nothing stays in head-memory across a turn.
-* P.A.R.A. Method (Tiago Forte) -- `recall`'s `namespace` field separates active-project facts from cross-project method lessons.
 * Dreyfus Model (Stuart & Hubert Dreyfus) -- named-technique preferences exist so a novice-authored diff and an expert-authored diff converge on the same reviewed shape.
-* PEAA (Martin Fowler) -- the recall store's per-project `.gm/gm.db` (a shared libsql database, memory alongside code/git-history indexes) mirrors PEAA's session-state pattern: memory travels with the repo, not the agent process.
-* Zettelkasten (Niklas Luhmann) -- each `memorize-fire` write is an atomic, independently-retrievable note; `recall` traverses by relevance, not by chronological log.
+* Zettelkasten (Niklas Luhmann) -- each memory file is one atomic, independently retrievable note; MEMORY.md is its index.
 
 ## Constraints
 
@@ -104,11 +77,10 @@ Cross-Cutting Memory
 
 **Names and structure carry meaning; comments do not.** A comment that says what the line does is duplication that must be kept in sync and will not be. When the urge to write one arrives, rename, extract, or restructure instead -- a name, a function boundary, or a small type IS the explanation, and a comment beside one is a second, driftable copy. This includes the paragraph-long rationale comment: explaining a WHY inline is the same violation at greater volume, not an exemption from it, and that explaining urge is the signal a name is doing too little.
 
-Rationale genuinely worth keeping -- the constraint being honoured, the failure mode prevented, the measurement that motivated a non-obvious shape -- goes in the commit message, `AGENTS.md`, or the recall store, where it is durable and searchable, never beside the line it describes. No state-machine gate blocks a transition on a comment in the diff: the gate registry has no comment predicate. Comments are found by the comment sweep (`grep` with `{"mode":"comments"}`) and dispositioned by hand.
+Rationale genuinely worth keeping -- the constraint being honoured, the failure mode prevented, the measurement that motivated a non-obvious shape -- goes in the commit message, `AGENTS.md`, or a memory file, where it is durable and searchable, never beside the line it describes. No state-machine gate blocks a transition on a comment in the diff: the gate registry has no comment predicate. Comments are found by the comment sweep (`grep` with `{"mode":"comments"}`) and dispositioned by hand.
 
 **No standing test files, ever.** The `no-synthetic-test-files` predicate is diff-scoped as predicates.md:19 defines it: it blocks a diff that introduces a test file or test directory, and it does not flag a tracked one. A tracked test file is left byte-identical and reported as tracked. Verification is running the real code path and reading its output through `exec_js`. Do not pull in jest/mocha/vitest/pytest/unittest or any assertion/mocking framework. A mock standing in for real code is the same false-completion class as a hedged `prd-resolve`: it reports a pass that the real path never produced.
 
 ## Self-reconfiguration content shape
 
 Every `fsm-propose-override` proposal of `kind:"prose"` expresses its named-technique content as `body.anchors`, a non-empty array of `Anchor` values. An `Anchor` is `{name, author}`: exactly those two non-empty strings, no `url` or other key; `fsm_propose.rs` parses each entry at the boundary and refuses anything else. Anchors are attributed, not paraphrase. An anchor is a compact reference to a well-known, well-attributed technique from real literature -- "MECE (Barbara Minto)", never "split into groups that don't overlap and cover everything". Where the proposed prose lists more than one anchor and those anchors relate to each other, express the relation as a mermaid graph (`flowchart` with `-.->` edges), not a flat list. Never invent an edge: state only a relation genuinely known from the cited literature (a shared author, a documented dependency, an explicit "see also" in the technique's own source). If the proposal's synthesis surfaces a well-known, well-attributed technique missing from the target phase's existing anchor list, add it with correct attribution rather than leaving the gap unnamed -- and graph it in, don't just append it to a flat list. Never cite an external anchor-catalog website by name or URL; the anchor + author pair is the citation, self-contained regardless of where it was first indexed. This governs every prose-kind self-reconfiguration proposal on every project, not a one-time pass.
-
