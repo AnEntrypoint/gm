@@ -138,7 +138,10 @@ const renderGraph = (entry) => {
     const tensions = members.filter((node) => node.kind === 'tension').length
     const others = members.filter((node) => node.kind !== 'principle' && node.kind !== 'tension').length
     const memberLinks = members.map((node) => nodeLink(node.id, INDEX)).join(', ')
-    return `      <tr><td>${head}</td><td>${members.length}</td><td>${principles}</td><td>${tensions}</td><td>${others}</td><td>${memberLinks || 'none'}</td></tr>`
+    const members_cell = members.length === 0
+      ? 'none'
+      : `<details><summary>Members (${members.length})</summary>${memberLinks}</details>`
+    return `      <tr><td>${head}</td><td>${members.length}</td><td>${principles}</td><td>${tensions}</td><td>${others}</td><td>${members_cell}</td></tr>`
   }).join('\n')
 
   const nodeSections = nodes.map((node) => {
@@ -170,7 +173,7 @@ const renderGraph = (entry) => {
   const edgeRows = edges.map((edge) => `      <tr><td>${nodeLink(edge.from, INDEX)}</td><td>${nodeLink(edge.to, INDEX)}</td><td>${esc(edge.kind)}</td><td>${esc(edge.condition ?? '')}</td></tr>`).join('\n')
 
   const linkCount = edges.length * 2
-  const description = `${entry.subject}, generated from ${entry.source}: ${nodes.length} nodes, ${kindCount('principle')} principles, ${bucketOrder.length} concerns of provenance and no phase nodes, ${edges.length} edges; every node is its own anchor and links to every node it touches.`
+  const description = `${entry.subject}, generated from ${entry.source}: ${nodes.length} nodes, ${kindCount('principle')} principles, ${bucketOrder.length} provenance concerns and no phase nodes,${edges.length} edges; every node is its own anchor and links to every node it touches.`
   const booksRow = hasBooks ? `    <tr><td>Books</td><td>${bookIndex.length}</td></tr>\n` : ''
   const booksSection = hasBooks ? `<h2>Books</h2>
 <table>
@@ -182,6 +185,12 @@ ${bookRows}
 </table>
 
 ` : ''
+
+  const startNode = entryPoints[0]
+  const convergence = graph.convergence && typeof graph.convergence === 'object' ? graph.convergence : null
+  const startHere = startNode
+    ? `<p>The entry point is <a href="#${esc(anchorOf(startNode))}"><code>${esc(startNode)}</code></a>: ${esc(labelOf(startNode))}. Its edges lead to the first principles of the walk, and every gate and terminal is listed under <a href="#gates-and-terminals">Gates and terminals</a>.</p>${convergence ? `\n<p>The walk converges when ${esc(convergence.reached_when)}. Terminal: <code>${esc(convergence.terminal)}</code>. Halt: <code>${esc(convergence.halt)}</code>.</p>` : ''}`
+    : '<p>This graph declares no entry point.</p>'
 
   const page = `${entry.lede}
 
@@ -210,6 +219,9 @@ ${booksRow}    <tr><td>Edges</td><td>${edges.length}</td></tr>
   </tbody>
 </table>
 
+<h2>Start here</h2>
+${startHere}
+
 <h2>Concern index</h2>
 <table>
   <caption>An index over the same node anchors, not a separate view of them</caption>
@@ -223,7 +235,7 @@ ${phaseRows}
 <p>${nodes.length} nodes, sorted by id. <strong>Out</strong> names every node this node has an edge to; <strong>In</strong> names every node with an edge to it.</p>
 ${nodeSections}
 
-<h2>Gates and terminals</h2>
+<h2 id="gates-and-terminals">Gates and terminals</h2>
 <table>
   <caption>${entry.guardCaption}</caption>
   <thead><tr><th>Node</th><th>Kind</th><th>Condition</th><th>Out</th><th>In</th></tr></thead>
