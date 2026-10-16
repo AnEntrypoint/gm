@@ -312,7 +312,7 @@ the full `deferred_set` lives in the sync report, never in the message.
 
 Agents do not call these verbs for memory. Memory is the flat-file store that `skills/gm/SKILL.md` (Invariants) describes; the verbs stay in the code.
 
-`recall` and `auto-recall` are `query`; `memorize`, `memorize-fire`, `memorize-prune`, `memorize-vacuum`, `memorize-retention` and `forget` are `command`.
+`recall` and `auto-recall` are `query`; `memorize`, `memorize-fire`, `memorize-prune`, `memorize-vacuum` and `memorize-retention` are `command`.
 
 `recall` searches `.gm/memories/*.md` and its derived vector index. Hits are scored as cosine times recency, within the `namespace` the body names.
 
@@ -324,7 +324,7 @@ Agents do not call these verbs for memory. Memory is the flat-file store that `s
 
 `memorize` writes to that index: `{"text":"<memo>","namespace":"default"}`, or a raw text body.
 `memorize-fire` writes its body as one `.md` file into the memorize inbox (`memorize_inbox` in `rs-plugkit/crates/plugkit-core/src/orchestrator/memorize.rs`), and `memorize-prune`, `memorize-vacuum` and `memorize-retention`
-maintain the recall index, `forget` deletes one `key` from a namespace's key-value store, and `auto-recall` answers a prompt body with three recall hits.
+maintain the recall index, and `auto-recall` answers a prompt body with three recall hits.
 
 A `recall` reply carries `hits` (the ranked list), and `vector_hits` (the rows before scoring) only when the body sets `verbose: true`.
 The gm-mcp response compactor (`gm-mcp/src/response-compact.js`) drops `vector_hits` when every row in it is already in `hits` and names it
