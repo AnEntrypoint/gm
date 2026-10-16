@@ -5,126 +5,161 @@ description: "Main-thread pool loop for a gm walk that has advertised PRD rows o
 
 # gm-orchestrate
 
-Pool and publish rules. Rationale: `docs/rationale.md`. Incidents: `docs/incidents.md`. Recovery: `docs/recovery.md`.
+Pool and publish rules. Shared rules (autonomy, git identity, CI read, collisions, exit): gm. Recovery: `docs/recovery.md`. Incidents: `docs/incidents.md`.
 
-## Terms
-- `ceiling`: N in a spawn refusal -- a HOST limit on how many agents may exist, never a throughput recommendation and never a memory budget. `live`: ListAgents count. `floor` = min(2, ceiling). `shortfall` = live < floor with independent work open.
+`ceiling` = host spawn limit (N in a refusal), not a throughput target or memory budget. `live` = ListAgents count. `floor` = min(2, ceiling). `shortfall` = live < floor with independent work open.
 
-## Parallelism: graph workflows first
-- Default unit of fan-out is a graph workflow (`Workflow` tool). Use as many as the open work needs, in parallel where independent, in sequence where a result feeds the next.
-- One wave per run. A workflow run never loops over waves. Each run takes at most 60 pending rows, resolves them with `gm-prd` agents (each restarts on a connectivity error, at most 3 times), returns counts `{pending_before, resolved, blocked, failed, new_blockers}` and ends. The caller reads those counts and starts the next run. A run that ends with `pending_after > pending_before` halts new blockers until a merge pass closes the duplicates.
+## Core loop
+Repeat until a full pass adds no work:
+1. **Roll out.** One parallel pass, file-owned slices, each lane published once. Nothing built locally.
+2. **Fix.** Fixes follow the rollout they repair. Each broken run becomes a fix handoff to a fresh executor.
+   - Sweep first: one subagent per failing job log, changed file group, stub/TODO. Each returns located `path:line` and counts only; each finding becomes a row. Fix only after the sweep completes.
+   - One fix executor per independent file group, one block; fixes sharing a file run in sequence in one executor. One commit per group, never per finding.
+3. **Plan.** End each pass with `prd-add` rows (file ownership, acceptance).
+4. Repeat from 1.
+
+Node traversal (gm-hop; `skills/dream-rsi/gm-graph.json`) feeds step 3 only when `prd-list {"status":"pending"}` is under 20 (Parallelism, graph 2). It never interrupts rollout or fix.
+
+## Parallelism: graph workflows
+- Fan-out unit: a `Workflow` graph. As many as open work needs; parallel where independent, sequential where a result feeds the next.
+- Drainage strategy: drain the remaining PRDs in bounded slices, each slice run as its own dynamic `Workflow` graph. Take the first slice of at most 20 pending rows (`prd_list {status:"pending", limit:20}`), run one `gm-prd` per row, return `{pending_before, resolved, blocked, failed, new_blockers}`, then take the next slice from a fresh listing. Refusals and stalls are answered by the next slice, never by stopping. A slice that resolves nothing is re-run once with its blockers split, then the next slice starts.
+- One wave per run; a run never loops over waves. A run takes at most one slice (20 pending rows), resolves them with `gm-prd` agents (connectivity restarts per Connectivity restarts), returns `{pending_before, resolved, blocked, failed, new_blockers}` and ends. `pending_after > pending_before` halts new blockers until a merge pass closes duplicates.
 - A run never exceeds 150 agents. Cap-hit or stalled runs are reported, never relaunched unchanged.
 - Three graphs, each run to exhaustion:
-  1. Row drain: `pipeline` over every pending row, one `gm-prd` per row, a `parallel` block per wave, repeat until `prd-list {"status":"pending"}` is 0.
-  2. Traversal: `pipeline` over every principle node in `skills/dream-rsi/gm-graph.json`, one `gm-hop` per node per surface, emitting new rows; repeat until every node has a receipt for each surface.
-  3. Audit: a completeness critic lists what the drain and traversal missed; its findings become new rows for graph 1.
-- Priority: drain before make. While pending rows exist, graph 1 takes every free slot. When pending rows fall under 20, graph 2 takes the free slots (computer-science disciplines first) until pending rows reach 20 again.
-- Every traversal subagent nominates its successor from its own outward links, with a one-line rhetoric handed to the successor. It never nominates a node outside its links.
-- Repeat graphs 1-3 until a full cycle adds no rows and resolves none. Stop only then.
-- A wave that resolves 0 rows with pending rows left is a stall: change the brief, then rerun. Never stop on a stall alone.
-- Ceiling and floor still bound live subagents, and the machine budget (Lane budget) bounds live below them. Launch to the machine budget; a freed slot refills in the same turn.
+  1. Row drain: `pipeline` over pending rows, one `gm-prd` per row, a `parallel` block per wave; until pending = 0.
+  2. Traversal: `pipeline` over every principle node in `skills/dream-rsi/gm-graph.json`, one `gm-hop` per node per surface, emitting rows; until every node has a receipt per surface.
+  3. Audit: a completeness critic; findings become rows for graph 1.
+- Drain before make. Pending ≥ 20: graph 1 takes every free slot. Pending < 20: graph 2 takes free slots (computer-science disciplines first) until pending reaches 20.
+- Repeat 1-3 until a full cycle adds and resolves nothing. A wave resolving 0 rows with pending rows left is a stall: change the brief, rerun. Never stop on a stall alone.
+- Ceiling and floor bound live subagents (Lane budget). Refill a freed slot in the same turn.
 
-## Floor
-- Pending rows open: keep live >= floor. Pass ListAgents count as `body.live` on every `pool-observe` and `transition`.
+## Write first, fix later
+- A lane writes its full slice in one pass, publishes once, moves on. Correctness comes from CI logs in a later pass, never mid-write checks.
+- No `cargo`, `go build`, `go vet`, `go test`, witness runs or local compile unless the user turns builds on. The lane reads `ci-status` for its sha on landing. A failing sha becomes a fix slice, never a pause.
+- Writers are light; writers are not limited. Only browser arms and per-run servers cause thrash (Lane budget). Many writers may run when each owns separate files.
+- File ownership before launch: each brief names its files. Two lanes never write one file. A shared manifest has one owner; others add only their own directory.
+- Contracts before code: a producer publishes its contract doc as its own commit first; the consumer reads it from remote `main`.
+- Use maintained libraries under permissive licences for solved problems. Pick the simplest correct path a lane finishes in one pass. Split a module across lanes only at a file boundary in the brief.
+- Rewrites of published history need the owner's approval (gm, Section 4). Lanes append; they never rewrite.
+
+## Run ledger
+- `.gm/pool/runs.jsonl`: one JSON line per run, append-only; the last line per `run` id is its state.
+- Fields: `run` (`<parent>-<kind><k>`), `kind` (`exec`, `verify`, `ci`, `fix`, `hop`), `row` or `surface`, `sha` (full, when known), `state` (`launched`, `handoff`, `verified`, `ci-green`, `ci-red`, `fix`, `blocked`, `done`, `stale`), `session`, `started`, `updated` (UTC ISO-8601).
+- Every transition writes its line in the same turn. Never rely on a lane's own log for state.
+- Each tick, before `pool-observe`: outstanding = last state not `done`, `blocked`, `stale`. Closable only when `verify` is `verified` and `ci` is `ci-green` for the same `sha`.
+- Reconcile: outstanding `ci` run → `ci-status {sha}` replaces its conclusion. `exec`/`verify` run whose `.gm/pool/<session>.live` is older than 5 minutes → `stale`, relaunch its row fresh; never count stale as live.
+- A `handoff` with no following `verify` or `ci` run is a defect: spawn the missing lane this tick.
+- Summaries (outstanding, closable, stale, red) are derived each tick, never stored.
+
+## Verification and CI lanes
+- Executor ends `STATUS: handoff <sha>`. Orchestrator spawns, same turn, outside the executor: verifier (`gm-validate` as `mode=witness`, session `<parent>-v<k>`, a session other than the executor's) and CI reader (`gm-publish` steps 3-5, session `<parent>-c<k>`).
+- `STATUS: fix` (verifier) or `STATUS: ci-red` (CI reader) → fresh executor for the same row with the sha and failing check or job. Takes a slot; never inline.
+- Only the orchestrator calls `prd-resolve`, once verifier and CI reader both report green for the same sha. Log each lane result to `.gm/witness-log.md` with its session id.
+- Verification and CI never block the pool.
+
+## Floor and dip
+- Pending rows open: keep live ≥ floor. Pass ListAgents count as `body.live` on every `pool-observe` and `transition`.
 - `floor_gate_denied` (live < floor, `open_rows > 0`) is the launch signal, never a retry.
-
-## Never let the pool dip
-Live under ceiling with independent work open is a shortfall. Log `FAILURE: <UTC> live=<n> pending=<m>` to `.gm/witness-log.md`, then launch to target this turn. Causes, in order:
-1. Lane stopped: one successor per freed slot, never batched. Session-killed lane: relaunch `.gm/pool/<session>.next` or a pending row.
-2. Lane stood down on a modified file: compare the blob with remote `main` first; no comparison, take another slice.
-3. Browser or GPU lock held: run node-only and non-GPU work meanwhile.
-4. Brief hit `Prompt is too long`: relaunch compact (row, surface, session, one action). Never resume it.
+- Live under ceiling with independent work open is a shortfall: log `FAILURE: <UTC> live=<n> pending=<m>` to `.gm/witness-log.md`, then launch to target this turn. Causes:
+  1. Lane stopped: one successor per freed slot, never batched. Session killed: relaunch `.gm/pool/<session>.next` or a pending row.
+  2. Lane stood down on a modified file: compare the blob with remote `main` first; no comparison, take another slice.
+  3. Browser or GPU lock held: run node-only and non-GPU work meanwhile.
+  4. `Prompt is too long`: relaunch compact (row, surface, session, one action). Never resume.
 
 ## Tick
-1. Observe: `pool-observe {live, held}`. Take `slots.launch` (node-first, max 32). Empty under shortfall is a defect row.
+1. `pool-observe {live, held}`. Take `slots.launch` (node-first, max 32). Empty under shortfall is a defect row.
 2. Launch one block, up to ceiling. Rows: `Skill(skill="gm-prd", args="row=<id>; session=<SID>")`. Hops: `Skill(skill="gm-hop", args='{"node":{...},"principle":"<id>","surface":"<path>","session":"<SID>","wave":"<wave>","depth":1,"rhetoric":""}')`. `<SID>` = `<parent>-<k>`, unique. A cause-asserting row or hop runs its ACH step (gm-hop 3a, gm-prd SPECIFY) in the same launch.
-3. Log `launch <id>` to `.gm/pool/ledger-<wave>.txt` and `tick <n> event=<id> live=<count> <UTC>` to `.gm/witness-log.md`.
-4. `wait {"ms":60000}`. Each `done <id>` refills its slot this turn.
-5. Re-count live after each launch and completion.
+3. Log `launch <id>` to `.gm/pool/ledger-<wave>.txt`, a `launched` line to `.gm/pool/runs.jsonl`, `tick <n> event=<id> live=<count> <UTC>` to `.gm/witness-log.md`.
+4. `wait {"ms":60000}`. Each `done <id>` refills its slot this turn. Re-count live after each launch and completion.
 
 Launch only advertised ids. A slot stays empty only when no pending row and no untraversed node remain.
 
 ## Hop payloads
-- A hop is an edge: nominate FROM the node it stands on TO a neighbour in `node.links`.
+- A hop is an edge: nominate FROM its node TO a neighbour in `node.links`.
 - Read `skills/dream-rsi/gm-graph.json` at launch. Never take counts from `node_count` or `edge_count`.
 - `node`: `id`, `label`, `book`, `author`, `kind` from `nodes[]`. `advocate` = `"<author> - <book>"`, or bare `book` when `author` is `unattributed`.
-- `links`: one `{to, guards}` per `edges[]` entry whose `from` is `node.id`, both kinds, sorted by `to`. `guards = []` when `condition` is null, else `[condition]`.
-- Edge whose `to` is not in `nodes[]`: skip it; `prd-add` `gm-graph-dangling-edge-<from>-<to>`.
-- `links: []` nodes are still launched; their receipt says `next: none`.
-- Receipt `next:` outside `links` is not a child: log `nomination-not-from-links`, `prd-add` `gm-hop-nomination-not-from-links-<from>-<to>`.
-- A hop launched with zero links, or a node with `links=0`, is a derivation defect.
-
-**CI-only rows are not pool work.** A row whose witness needs a local cargo build is filed as `<row>-ci-only`; its slot refills from a non-cargo candidate.
+- `links`: one `{to, guards}` per `edges[]` entry with `from` = `node.id`, both kinds, sorted by `to`. `guards = []` when `condition` is null, else `[condition]`.
+- `to` not in `nodes[]`: skip; `prd-add` `gm-graph-dangling-edge-<from>-<to>`. `links: []` still launches; receipt says `next: none`. Zero links on launch is a derivation defect.
+- Receipt `next:` outside `links`: log `nomination-not-from-links`; `prd-add` `gm-hop-nomination-not-from-links-<from>-<to>`.
+- Witnesses are CI witnesses: the row's pushed sha, read through `ci-status`. A row needing a local compile is written with its CI run as witness.
 
 ## Refill and successors
-- Each completion refills one slot, this turn, from `slots.candidates`. Blocker rows are never candidates; a worker that ends at a blocker still nominates a node-only successor.
-- A hop spawns its own successor. The orchestrator spawns one only when a hop returns `next: none`.
-- Candidates empty with rows pending: read `prd-list {status:"pending", limit:<n>}`. Log the empty candidate list as a defect row.
-- Rows resolve faster than the pool refills: pause row-creating hops. Row supply is low: run row-creating hops (`prd-add`) before more resolvers.
-- Node emission: each completed hop writes `.gm/lean-walk/<node.id>.json`. Missing file: `prd-add` `gm-lean-walk-node-emission-missing-<session>` and do not count the node walked.
-- Count of record is `emitted`: node files written this wave.
+- Each completion refills one slot this turn from `slots.candidates`. Blocker rows are never candidates; a worker ending at a blocker nominates a node-only successor.
+- A hop spawns its own successor; the orchestrator spawns one only when a hop returns `next: none`.
+- Candidates empty with rows pending: `prd-list {status:"pending", limit:<n>}`; log the empty list as a defect row.
+- Rows resolve faster than the pool refills: pause row-creating hops. Row supply low: run row-creating hops before more resolvers.
+- Each completed hop writes `.gm/lean-walk/<node.id>.json`. Missing: `prd-add` `gm-lean-walk-node-emission-missing-<session>`; not counted walked. Count of record is `emitted`.
 
 ## Heartbeat
-- Every brief first writes `.gm/pool/<session>.live` (three lines: `session`, `row`, `start` ISO-8601 UTC) and deletes it on finish. A hop has no row id, so its `row` line is its surface path (the `surface` in its payload); a surface-only heartbeat is reported as `malformed_heartbeats`.
-- Before launch, skip any id already held by a live row. Refresh the file at every gm call; a file older than 5 minutes is stale.
+- Every brief first writes `.gm/pool/<session>.live` (`session`, `row`, `start` ISO-8601 UTC; a hop's `row` is its surface path) and deletes it on finish. A surface-only heartbeat is `malformed_heartbeats`.
+- Skip any id held by a live row before launch. Older than 5 minutes = stale.
 
 ## Shortfall and FAILURE
 - Two restarts per walk. Repeated shortfall means these rules are wrong: dispatch `instruction`, correct this skill, restart at tick 1.
 - A third repeat files `<row>-blocker-<session>` and launches the blocker next wave.
 
 ## Never leave a row open
-- Exit requires `prd-list {"status":"pending"}` to return 0 rows. Stalls, blocked workers, refused witnesses and ended sessions never close the walk.
-- A run ends as `prd-resolve` with a witness, or as blocked. Blocked rows are never duplicated: the row keeps its id and names `blocked_by: <fact and verb>` in its text. A new blocker row is filed only when no open row already names that fact. Counts are unique open rows, so a blocked row is counted once.
-- Blockers launch next wave. A blocker that blocks again is split until one step remains; that step runs. Blocker-of-blocker chains are never created past one level.
-- Convergence guard: if pending rows rise in two consecutive waves, launch no new blockers. Run only the open blockers and rows until the count falls.
-- A worker that returns without a receipt or blocker is re-dispatched once per wave as `<session>-r<n>`. A worker stopped by a connectivity error is restarted instead (Connectivity restarts).
+- A run ends as `prd-resolve` with a witness, or as blocked. Stalls, blocked workers, refused witnesses and ended sessions never close the walk.
+- Every gm call in every brief passes `cwd: "C:/dev/gm"` (or the row's project root). A call without `cwd` reads another project: "row not found" or "pending 0" from a brief is a wrong-project defect, not a blocker. Re-check with `cwd` before any blocker is filed.
+- A resolver runs every stage of its row in its one run (orient through publish, then prd-resolve). Stopping after one stage with the row open is a defect: re-dispatch the same row once as `<session>-r<n>` naming the stage reached, never a fresh orient.
+- A blocked row keeps its id and names `blocked_by: <fact and verb>` in its text. File a new blocker row only when no open row names that fact. Counts are unique open rows.
+- Blockers launch next wave. A blocker that blocks again is split until one step remains; that step runs. No blocker-of-blocker past one level.
+- Convergence guard: pending rows rise two waves running → no new blockers; run only open blockers and rows until the count falls.
+- A worker returning with no receipt or blocker is re-dispatched once per wave as `<session>-r<n>`. A connectivity-stopped worker is restarted (Connectivity restarts).
 - `floor_gate_denied` on `prd-resolve` or phase advance: pass `body.live` and launch the denial's `slots.launch`.
 
+## Decided work lands in the same turn
+- A decision to do more work is executed in that turn. The orchestrator picks the most defensible default, records it as one line in `.gm/witness-log.md`, and runs it. Ending a turn with a decision waiting on the user is a defect.
+- Only a Section 4 door (world-scoped, or one that reaches every session or production) is raised to the user, and it is raised as a final-message question while every other row keeps running. The orchestrator never blocks the whole pool on one.
+- A live lock held by another lane (`store_busy`, `gm.db.lock` owner alive) is never killed or removed by the orchestrator. Default: retry the store call with `wait {"ms":60000}` up to 5 times. Still held after that: every affected row takes the store-free path (`codesearch` literal or filename, `Read` of located paths, `git_*` verbs), records the lock as its named fact, and is re-launched the moment the lock clears. No row waits idle on it.
+- A row whose acceptance needs a live write to shared served state (a prose override, a store row, a witness that changes every session) is run against a disposable key the orchestrator names in its own brief, with the key recorded in the receipt. Only a Section 4 door is not defaulted this way.
+
 ## Starvation
-- `pool-observe` dropped at 120 s with `dispatch_starved_waiting_for_serial_lane`: re-dispatch once, verbatim (never `resume_task`).
-- Before re-dispatch, read `.gm/exec-spool/.dispatch-wait.json`. Position 1 or holder near budget: re-dispatch now. Behind a fresh holder: wait. Not shrinking: slow holder.
+- `pool-observe` dropped at 120 s with `dispatch_starved_waiting_for_serial_lane`: re-dispatch once, verbatim (never `resume_task`). First read `.gm/exec-spool/.dispatch-wait.json`: position 1 or holder near budget → re-dispatch now; behind a fresh holder → wait; not shrinking → slow holder.
 - Commit ahead of push: wait. A push that waited out its budget keeps its place; re-dispatch once.
 - `dispatch_orphaned` on a read-only verb: re-dispatch at once. Before re-dispatching `git_commit`, `git_finalize`, `git_push` or `fs_write`, re-read real state.
 - Never preempt an executing holder. Never delete a `.live` file to free a slot.
 - Two starvations of one git verb: `prd-add` the paths and both dispatch ids, then stop git dispatches until a completion drains the queue.
 
 ## Connectivity restarts
-- A subagent that stops on a network or API error (`ECONNRESET`, `ECONNREFUSED`, `server_error`, timeout, no response) is restarted, never resumed and never counted as a blocker. Launch a fresh subagent for the same row with session `<session>-r<n>`, in the same turn.
-- Restart with `wait {"ms":30000}` between attempts when the error repeats; keep retrying while the network is intermittent. Each attempt is logged to `.gm/witness-log.md` as `restart <row> <n> <UTC>`.
-- The row stays open and its slot stays held by the restart. Never count a dropped agent as live.
-- A mass drop (many at once) follows `docs/recovery.md`, section "Mass API-error drain", with the same restart rule.
+- A subagent stopped by `ECONNRESET`, `ECONNREFUSED`, `server_error`, timeout or no response is restarted, never resumed, never a blocker. Fresh subagent, same row, session `<session>-r<n>`, same turn. Row stays open; slot stays held; never count it live.
+- `wait {"ms":30000}` between attempts while the error repeats. Log `restart <row> <n> <UTC>` to `.gm/witness-log.md`.
+- Mass drop: `docs/recovery.md`, "Mass API-error drain".
 
 ## Headroom and leases
-- CPU >= 80% or available memory < 4096 MB pauses launches. Log the cause with the real count and UTC; a pause does not end the turn. A thrashed host is only recoverable by reboot, so pause early.
-- Rows that need an exclusive lock wait for it; the pool keeps launching the rest. A lock wait that times out is a failed run.
-- **One browser or GPU arm at a time, pool-wide.** `gpulock` serialises the ADAPTER only -- never CPU, memory or disk -- so N headless Chromes still contend; serialising the adapter is not serialising the machine, and reading it as machine-wide serialisation is the error that put several GPU arms in flight at once on 2026-10-14. Observed: one lane held the browser lease continuously while others waited 600 s and never got a browser. One browser arm plus one node-only/gpu-free lane is fine; two browser arms are not. Lease held: take node-only work (Never let the pool dip, cause 3), never open a second browser.
-- Browsers are headful (`headless: false`). Each run closes its own browser; never touch the user's Chrome.
+- Browser and server contention: Lane budget. A browser arm that cannot take the lease waits; node-only work continues. Log any wait with its cause and UTC; a wait does not end the turn.
+- Rows needing an exclusive lock wait; the pool launches the rest. A timed-out lock wait is a failed run.
+- One browser or GPU arm at a time, pool-wide; `gpulock` serialises the adapter only. One browser arm plus one node-only lane is fine; two browser arms are not. Lease held: take node-only work; never open a second browser.
+- Browsers are headful (`headless: false`). Each run closes its own; never touch the user's Chrome.
 - EADDRINUSE: the witness did not run. Identify the owning process. Never kill another lane's process.
-- Browser-last, cold-start and reload budgets, and minting a focused jit test instead of routing through a suite: defined in gm-prd: Witness economy.
+- Browser-last, minimal surface, cold-start and reload budgets, focused jit tests, counted units, loud refusals: gm-prd, Witness economy.
 
-## Lane budget (anti-thrashing)
-- **Two failure modes with opposite remedies; never conflate them.** A dropped link (`ECONNRESET`, `ECONNREFUSED`, `server_error`, timeout, no response) is the unreliable connection: the remedy is to RESTART the lane, and lowering concurrency to stop a drain buys nothing and idles the pool. Machine thrashing -- an unresponsive host, memory pressure, lanes parked on a lease -- is load: the remedy is to RUN LESS AT ONCE, and restarting lanes into a thrashing machine makes it worse. A concurrency cap is never the answer to a connection drop, and a restart is never the answer to thrash.
-- **Machine budget: 2-3 concurrent subagents, prefer 2.** `ceiling` (20) is the host's spawn refusal limit, not a throughput recommendation and not a memory budget; it has been misread as capacity and must not be. On 2026-10-14 a C:/dev/spoint walk ran ~10-16 concurrent lanes at 100k-270k tokens each, and the machine became unresponsive from thrashing and needed a reboot. The load that did it: many large contexts at once; several GPU browser arms at once; several extra checkouts, each duplicating `node_modules` junctions and disk I/O and each ending in a consolidation run; and one shared work tree carrying many lanes' uncommitted edits, so every read and publish churned. Two is the default, three the exception; one browser arm plus one node/gpu-free lane is fine.
-- **Thrash is answered by fewer simultaneous lanes, never by a slower lane.** Do not stretch a lane's slice, do not add waits and do not serialize work that was independent to stay under budget: retire lanes. If live exceeds the budget, let slots drain to it rather than launching.
-- **A mass `ECONNRESET` drain is environmental, not a concurrency symptom.** The drops are a dropped connection: lanes have died at 5 and 6 concurrent as well as at 10, so lane count was not the variable. Never present a lane-count ceiling as the remedy, and never lower concurrency to stop a drain -- that buys nothing and idles the pool. The response is to **restart the affected lanes**: same row, resuming from the dead lane's last line so completed work is not redone. Mechanics (resume-by-id, one event per window, back-pressure, recurrence): `docs/recovery.md`, section "Mass API-error drain".
-- **Publish on the first passing witness.** Time-box a lane to its witness: the observed failure mode is a lane that did the work, reached 140k-210k tokens and died without shipping it. Resolve the row, publish, then keep going. An unreliable connection makes this stricter, not looser: it bounds how much finished work one drop can destroy. It is also the anti-thrashing rule: a resolved and published lane is memory the machine gets back, while a lane working past its witness holds a large context for nothing.
-- The other two loads have one home each and are not restated here: browser/GPU arms (Headroom and leases), extra checkouts (Shared-tree publish).
+## Lane budget (concurrency and thrash)
+- Concurrency cap: 20 subagents (`ceiling`, the host spawn limit). It is not a throughput target and not a memory or thrash budget. Launch up to it while independent work is open.
+- Thrash has two causes, and only these two:
+  1. Multiple browser arms running at once. On 2026-10-14 several GPU browser arms ran together and the machine became unresponsive at roughly 10-16 lanes, needing a reboot.
+  2. A new server plus bundle booted per run. Per-run servers leaked processes when a run hung.
+- Target setup: one shared, HMR-capable dev server and client. Browser captures and probes attach to it and reuse it (page reload, or an HMR module edit). Never boot a new server and bundle per run.
+- One browser arm at a time, pool-wide. Browser work queues behind `gpulock`. `gpulock` serialises the GPU adapter only: it does not serialise CPU, memory or disk, and it is not a machine-wide limit. Node-only and non-GPU work continues while an arm waits.
+- A dropped connection is answered by restarting the lane (Connectivity restarts). Thrash is answered by fewer browser arms and shared servers. Neither is answered by a concurrency cap.
+- No extra checkouts. `git archive <remote sha>` read-only is the sanctioned clean base (gm, READ questions).
+- Publish on the first passing witness: time-box a lane to its witness, resolve, publish, keep going.
 
 ## Fan-out
 - Independent slices (file, row, hop) launch in one block. Slices sharing a surface run in turn.
-- Walk workers are gm-prd or gm-hop, never a fork. Each brief opens with gm's brick-wall opener and its own SESSION_ID.
-- Verify a brief's source path exists (`codesearch {mode:"filename"}`) before launch. A wrong path is a blocked slot.
+- Walk workers are gm-prd or gm-hop, never a fork. Each brief opens with the brick-wall opener and its own SESSION_ID (gm §1).
+- Verify a brief's source path (`codesearch {mode:"filename"}`) before launch. A wrong path is a blocked slot.
 - `gm_processor_capacity` queues dispatches beyond it; it is not the subagent count.
 
 ## Shared-tree publish
-Lanes share one work tree and one git lane. Work on `main` only: no worktree, side branch or scratch checkout.
-- **No extra checkouts.** A clean base for measurement or bisect is `git archive <remote sha>` into a temp dir, used read-only and deleted afterwards -- never a second full checkout, worktree or clone, and never publish from it. A second checkout duplicates `node_modules` junctions and disk I/O and ends in a consolidation run; several of them were part of the load that took the machine down on 2026-10-14 (Lane budget).
-- Publish through the Git API: POST blobs; a tree with `base_tree: <remote tip>`; a commit parented on that tip; PATCH `refs/heads/main` with `force` unset; re-read each blob at `?ref=main`.
-- `git_finalize` that refuses to push because a sibling holds a dirty path is redundant when its content is already published. Never reset `refs/heads/main` under running lanes.
+One work tree, one git lane. Main only; no worktree, side branch or scratch checkout (gm, Autonomy).
+- No extra checkouts. Clean base for measurement or bisect: `git archive` (gm, READ questions).
+- A measurement taken in the shared work tree measures other lanes' uncommitted edits, not the project. Compare against remote `main` by content hash (`GET /contents/<path>?ref=main`, or `git archive <remote sha>`) before calling a difference a regression; local HEAD lags remote and lies. Three false alarms in one day came from work-tree measurements: a "stale bake" whose two files were byte-identical to remote main, a bake pin whose inputs "were identical" and were not, and a 0.1506 m hover that reads 0.0000 m on main.
+- Publish via the Git API: POST blobs; tree with `base_tree: <remote tip>`; commit parented on that tip; PATCH `refs/heads/main`, `force` unset; re-read each blob at `?ref=main` and verify it.
+- `git_finalize` refusing to push over a sibling's dirty path is redundant when its content is already published. Never reset `refs/heads/main` under running lanes.
 - `remote_moved` on a dirty tree: `git_status {"paths":[...]}`, commit or revert each path in its owning lane, then `git_push {rev:"<sha>"}`.
-- `remote_moved` plus a conflicted `git_pull` (`conflicted: true`, `MERGE_HEAD` present): `git_merge_abort`, then `git_reset {ref:"origin/main", mode:"mixed"}` (the lane's local commit stays in the reflog and its files stay in the work tree), reapply each lane path on current state, then `git_finalize {message, paths}` for those paths only. It pushes the new sha; confirm with `git_remote` and `ci-status`.
-- Collision: re-read the row or file, reapply on current state, retry.
-- One commit author, no trailers (gm). Bake before commit (gm-hop).
+- `remote_moved` plus conflicted `git_pull` (`conflicted: true`, `MERGE_HEAD` present): `git_merge_abort` only for a merge this lane opened (gm, Collisions); reapply each lane path on the current remote tip and publish it through the Git API (above). Never `git_reset` `refs/heads/main`. Confirm with `git_remote` and `ci-status`.
+- Collision and commit identity: gm, Autonomy.
 
 ## Editing the skills
-Skills under `skills/` are live on the next dispatch. Check `.git/MERGE_HEAD` first. Publish path-scoped, push the full sha, then `ci-status`. Steps: `docs/recovery.md`, section "Editing the skills".
+Skills under `skills/` are live on the next dispatch. Check `.git/MERGE_HEAD` first. Publish path-scoped, push the full sha, then `ci-status`. Steps: `docs/recovery.md`, "Editing the skills".
