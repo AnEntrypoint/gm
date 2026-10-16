@@ -187,6 +187,33 @@ resolve_skill_dir() {
   (cd "$1" 2>/dev/null && pwd -P) || printf '%s' "$1"
 }
 
+# Clears the way for a copy install. A displaced directory is parked under the
+# dotted prelink dir, never deleted; deletion needs GM_SKILL_LINK_FORCE=1.
+clear_release_target() {
+  root="$1"; name="$2"; dest="${root}/${name}"
+  if [ -L "$dest" ]; then
+    rm -f "$dest"
+    return 0
+  fi
+  if [ -d "$dest" ]; then
+    park="${root}/${SKILL_PRELINK_DIR}"
+    mkdir -p "$park"
+    aside="${park}/${name}-$(date +%s)"
+    if mv "$dest" "$aside" 2>/dev/null; then
+      log "parked displaced ${name} at ${aside}"
+      return 0
+    fi
+    if [ "${GM_SKILL_LINK_FORCE:-0}" = "1" ]; then
+      rm -rf "$dest"
+      return 0
+    fi
+    log "REFUSED ${name} -> ${dest}: could not park the existing install; rerun with GM_SKILL_LINK_FORCE=1 to replace it"
+    return 1
+  fi
+  [ -e "$dest" ] && rm -f "$dest"
+  return 0
+}
+
 install_one_skill() {
   src="$1"; name="$2"; root="$3"
   dest="${root}/${name}"
@@ -295,7 +322,10 @@ install_skill() {
     for skill_dir in "${work}/extract/skills"/*/; do
       skill_name="$(basename "$skill_dir")"
       [ -f "${skill_dir}SKILL.md" ] || continue
-      rm -rf "${root}/${skill_name}"
+      if ! clear_release_target "$root" "$skill_name"; then
+        record_skill_mode "$root" "$skill_name" refused "release:${tag}"
+        continue
+      fi
       cp -R "$skill_dir" "${root}/${skill_name}"
       record_skill_mode "$root" "$skill_name" copied "release:${tag}"
       log "WARNING: ${skill_name} -> ${root}/${skill_name} is a COPY with no local source beside this installer; it will not track a checkout -- set GM_SKILL_SOURCE_DIR (or run from a gm checkout) to install it as a link"
