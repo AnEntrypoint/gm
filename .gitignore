@@ -118,6 +118,9 @@ tmp/
 .gm/mutables.absorbed.json
 .gm/.gm-continue-count
 # <<< plugkit managed
+# embedding-generation markers and browser mutable state: derived, regenerated, never tracked
+.gm/.embed-generation.*
+.gm/browser-mutables.yml
 .gm/pw-sock-*/
 
 # agentplug-runner project-local runtime state (kv store, per-project
