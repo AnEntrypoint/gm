@@ -8,7 +8,7 @@ Principles in this node are applied as work, from the lean method (AnEntrypoint/
 
 ## Verbs
 
-A sweep begins with `node-status`, which reports the current node and `prd_pending`. Every sweep reads the open set with `mutable-list` and `prd-list`, and records the counts. The measures of each sweep are recorded with `memorize-fire` only as a dated sweep record, and they are re-derived from the ledger on each sweep rather than supplied from memory. Re-run any witness the regression set names by its exact original dispatch: an `exec_js` run, a `codesearch` literal with its path scope, or a `callers` call. A proxy witness is not accepted in its place.
+A sweep begins with `node-status`, which reports the current node and `prd_pending`. Every sweep reads the open set with `mutable-list` and `prd-list`, and records the counts. The measures of each sweep are not saved as memory; they are re-derived from the ledger on each sweep. Re-run any witness the regression set names by its exact original dispatch: an `exec_js` run, a `codesearch` literal with its path scope, or a `callers` call. A proxy witness is not accepted in its place.
 
 When a sweep's claim depends on a policy or strategy choice, the incumbent is replayed against each challenger with `dream-replay`, over the same recorded worlds. A profile is taken with `exec_js` using `profile:true` to locate a cost, and then a live measurement confirms it. `codeinsight {action:"hotspots"}` and `{action:"orphans"}` answer the cleanup side of the sweep. Resolve each condition with `mutable-resolve {mutable_id, witness_evidence}` or `prd-resolve {id, witness_evidence}`, and resolve a resource-bound mutable with a `measured_value` that is checked against its bound.
 
@@ -132,9 +132,9 @@ A cost that sits at its floor is not improved further. The floor is the minimum 
 
 The node closes at one of its two terminals, and each has its own witness. G_FIXPOINT requires that the measure set of two consecutive sweeps is identical, that the regression set re-ran with every member passing, that `residual-scan` returned an empty result, and that `prd_pending` is zero. G_SURFACE requires the variant values of the last two sweeps, the condition that fired twice, and the ADR row that hands the decision to a person. A generic "converged", "complete" or "all good" is rejected. The terminal reached is the terminal recorded, and no other word stands in for it.
 
-## Memorize
+## Memory
 
-`memorize-fire` records the surfaced ambiguity with the decision a person must make, in the project memory type, so that a resuming session does not sweep it again blind. It records the environment hashes of LEHMAN so that a following comparison has its baseline, and the measure set of a fixed point with its sha. `memorize-prune {key}` removes a recorded sweep or environment entry that the live tree has contradicted. Not memorized: the sweep counts themselves, which are re-derived from the ledger on each sweep, the PRD text (which lives in `.gm/prd/<id>.yml` per row, and in `.gm/prd-log.jsonl` once resolved), and the gate states, which the gates report.
+A surfaced ambiguity is an unknown: record the decision a person must make as one flat file with frontmatter fields name, description and metadata.type (value unknown), with one line in MEMORY.md that points to it, so that a resuming session does not sweep it again blind. The environment hashes of LEHMAN and the measure set of a fixed point with its sha are recorded in the commit that sets them, so that a following comparison has its baseline. A memory that the live tree contradicts is deleted with its MEMORY.md line. Not saved as memory: the sweep counts themselves, which are re-derived from the ledger on each sweep, the PRD text (which lives in `.gm/prd/<id>.yml` per row, and in `.gm/prd-log.jsonl` once resolved), and the gate states, which the gates report.
 
 ## Transition
 
