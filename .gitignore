@@ -118,6 +118,9 @@ tmp/
 .gm/mutables.absorbed.json
 .gm/.gm-continue-count
 # <<< plugkit managed
+# embedding-generation markers and browser mutable state: derived, regenerated, never tracked
+.gm/.embed-generation.*
+.gm/browser-mutables.yml
 .gm/pw-sock-*/
 
 # agentplug-runner project-local runtime state (kv store, per-project
@@ -165,6 +168,8 @@ skills/gm/.gm/
 .gm/dream-rsi/_any-session/
 # Dream-RSI observations are runtime state: each dispatch appends to them, so tracking them rewrote tracked files on every dispatch. History keeps the earlier commits.
 .gm/dream-rsi/
+# audit sweep outputs (paper/verb rewrite proposals) are generated per run, not source
+.gm/audit*/
 
 
 # Chrome crawl profile: extension asset paths exceed the Windows 260-char limit (git status os error 206)
@@ -189,9 +194,6 @@ skills/gm/.gm/
 .gm/config-source-cache-default.stale-*/
 *.sync.json.stale
 
-# Lightpanda browser-engine server runtime (its own serve.log, one per crawl session)
-.gm/lightpanda/
-
 # lean-walk traversal scratch: per-slice traverse/verdict/witness notes, rewritten each walk
 .gm/traversal/
 
@@ -213,4 +215,3 @@ skills/gm/.gm/
 .gm/witness-out/
 .wt-lanewait/
 .wt-thrash/
-obrowser/
