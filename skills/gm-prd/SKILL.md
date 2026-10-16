@@ -63,3 +63,9 @@ Before that commit, apply the re-bake rule (gm-hop, Re-bake in the same commit).
 - Every instrument is two-sided: force the condition and show the number moves before quoting it. In one day five guards could not fail — a `must` regex that matched nothing, an assert that was a `console.log`, a swallowing catch, a NaN displacement that printed as 0, an audit that scanned zero files and passed. A guard that cannot fail is decoration.
 - Refuse loudly, never plausibly: an unquotable number prints `RESULT: FAIL` or `RESULT: REFUSED` with its diagnostic and exits non-zero. No figure is better than a fabricated one. Write the refutation where the next lane reads it (the witness-log line, or the receipt): a cause refuted and not recorded gets re-chased — one false alarm was refuted four times before it was re-raised.
 - A witness that ships is the lane's exit: time-box to the witness, publish on the first passing one (gm-orchestrate, Lane budget).
+
+## Finish the work
+
+- Finishing the requested work is the goal of every run of this skill. A run that stops with work left undone is incomplete.
+- When an issue blocks a step (a failing check, a fault in a tool or service, a missing input, a network or environment fault), fix it in the same run: retry on a bounded or resumable route, use an alternate route to the same result, repair the fault where it originates, then continue the remaining work.
+- Stop only when the requested work is complete, or when a step is still blocked after every route has been tried. Then report the blocked step, the routes tried, and the evidence for each.
