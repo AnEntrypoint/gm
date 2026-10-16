@@ -21,6 +21,9 @@ jobs:
           token: ${{ secrets.PUBLISHER_TOKEN }}
           fetch-depth: 0
 
+      - name: Refuse a stale skill manifest
+        run: node scripts/build-skill-manifest.mjs --check
+
       - name: Auto-bump patch version BEFORE packaging
         id: bump
         shell: bash

@@ -43,6 +43,102 @@ const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&
 const byIdOrder = (a, b) => a.id.localeCompare(b.id, undefined, { numeric: true })
 const anchorOf = (id) => `node-${id}`
 
+const FIG = { nodeW: 220, nodeH: 62, colGap: 48, rowGap: 22, pad: 16 }
+
+const clip = (text, max) => {
+  const s = String(text ?? '')
+  return s.length > max ? s.slice(0, max - 3) + '...' : s
+}
+
+// Draws the gate skeleton: the entry point, its direct targets, every gate and terminal,
+// and each edge among them. Positions come from the edges, so the figure is derived.
+const skeletonFigure = (graph, byId, edges, slug, title) => {
+  const entryIds = Array.isArray(graph.entry_points) ? graph.entry_points : []
+  const inSet = new Set(entryIds)
+  for (const node of graph.nodes) if (node.kind === 'gate' || node.kind === 'terminal') inSet.add(node.id)
+  const figEdges = edges.filter((edge) => inSet.has(edge.from) && inSet.has(edge.to))
+  if (figEdges.length === 0) return ''
+
+  const hasIncoming = new Set(figEdges.map((edge) => edge.to))
+  const rank = new Map()
+  const queue = []
+  for (const id of inSet) if (!hasIncoming.has(id)) { rank.set(id, 0); queue.push(id) }
+  for (let i = 0; i < queue.length; i++) {
+    const id = queue[i]
+    for (const edge of figEdges) {
+      if (edge.from === id && !rank.has(edge.to)) { rank.set(edge.to, rank.get(id) + 1); queue.push(edge.to) }
+    }
+  }
+  for (const id of inSet) if (!rank.has(id)) rank.set(id, 0)
+
+  const columns = []
+  for (const id of inSet) {
+    const r = rank.get(id)
+    if (!columns[r]) columns[r] = []
+    columns[r].push(id)
+  }
+  for (const column of columns) column.sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
+
+  const position = new Map()
+  columns.forEach((column, r) => column.forEach((id, row) => {
+    position.set(id, { x: FIG.pad + r * (FIG.nodeW + FIG.colGap), y: FIG.pad + row * (FIG.nodeH + FIG.rowGap) })
+  }))
+  const width = FIG.pad * 2 + columns.length * FIG.nodeW + (columns.length - 1) * FIG.colGap
+  const tallest = Math.max(...columns.map((column) => column.length))
+  const hasBackEdge = figEdges.some((edge) => rank.get(edge.to) <= rank.get(edge.from))
+  const height = FIG.pad * 2 + tallest * FIG.nodeH + (tallest - 1) * FIG.rowGap + (hasBackEdge ? 56 : 0)
+  const arrow = `skeleton-arrow-${slug}`
+
+  const edgeSvg = figEdges.map((edge) => {
+    const a = position.get(edge.from)
+    const b = position.get(edge.to)
+    let path
+    let lx
+    let ly
+    if (rank.get(edge.to) > rank.get(edge.from)) {
+      const x1 = a.x + FIG.nodeW
+      const y1 = a.y + FIG.nodeH / 2
+      const x2 = b.x
+      const y2 = b.y + FIG.nodeH / 2
+      path = `M${x1},${y1} L${x2},${y2}`
+      lx = (x1 + x2) / 2
+      ly = (y1 + y2) / 2 - 4
+    } else {
+      const x1 = a.x + FIG.nodeW / 2
+      const y1 = a.y + FIG.nodeH
+      const x2 = b.x + FIG.nodeW / 2
+      const y2 = b.y + FIG.nodeH
+      const dip = Math.max(y1, y2) + 44
+      path = `M${x1},${y1} Q${(x1 + x2) / 2},${dip} ${x2},${y2}`
+      lx = (x1 + x2) / 2
+      ly = dip - 6
+    }
+    return `<path d="${path}" fill="none" stroke="currentColor" marker-end="url(#${arrow})"/>`
+  }).join('\n')
+
+  const nodeSvg = columns.flat().map((id) => {
+    const p = position.get(id)
+    const node = byId.get(id)
+    const dash = node && node.kind === 'terminal' ? ' stroke-dasharray="6 4"' : ''
+    const label = node ? (node.book || node.label) : id
+    return `<rect x="${p.x}" y="${p.y}" width="${FIG.nodeW}" height="${FIG.nodeH}" rx="6" fill="none" stroke="currentColor"${dash}/>` +
+      `<text x="${p.x + 10}" y="${p.y + 24}" font-size="14" font-weight="700" fill="currentColor">${esc(clip(id, 26))}</text>` +
+      `<text x="${p.x + 10}" y="${p.y + 46}" font-size="13" fill="currentColor">${esc(clip(label, 28))}</text>`
+  }).join('\n')
+
+  const summary = figEdges.map((edge) => `${edge.from} to ${edge.to}${edge.condition ? ' when ' + edge.condition : ''}`).join('; ')
+  return `<figure class="graph-skeleton">
+<svg viewBox="0 0 ${width} ${height}" width="100%" role="img" aria-labelledby="skeleton-${slug}-title skeleton-${slug}-desc" xmlns="http://www.w3.org/2000/svg">
+<title id="skeleton-${slug}-title">Gate skeleton of the ${esc(title)}</title>
+<desc id="skeleton-${slug}-desc">${esc(summary)}</desc>
+<defs><marker id="${arrow}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+${edgeSvg}
+${nodeSvg}
+</svg>
+<figcaption>The entry point, every gate and terminal, and each edge among them, drawn from the graph's edges. Dashed boxes are terminals. The entry point's direct targets are listed under Start here.<br>${figEdges.filter((edge) => edge.condition).map((edge) => `${esc(edge.from)} to ${esc(edge.to)} when ${esc(edge.condition)}`).join('; ')}</figcaption>
+</figure>`
+}
+
 const renderGraph = (entry) => {
   const graphPath = path.join(repoRoot, entry.source)
   const pagePath = path.join(repoRoot, entry.page)
@@ -138,7 +234,10 @@ const renderGraph = (entry) => {
     const tensions = members.filter((node) => node.kind === 'tension').length
     const others = members.filter((node) => node.kind !== 'principle' && node.kind !== 'tension').length
     const memberLinks = members.map((node) => nodeLink(node.id, INDEX)).join(', ')
-    return `      <tr><td>${head}</td><td>${members.length}</td><td>${principles}</td><td>${tensions}</td><td>${others}</td><td>${memberLinks || 'none'}</td></tr>`
+    const members_cell = members.length === 0
+      ? 'none'
+      : `<details><summary>Members (${members.length})</summary>${memberLinks}</details>`
+    return `      <tr><td>${head}</td><td>${members.length}</td><td>${principles}</td><td>${tensions}</td><td>${others}</td><td>${members_cell}</td></tr>`
   }).join('\n')
 
   const nodeSections = nodes.map((node) => {
@@ -148,7 +247,8 @@ const renderGraph = (entry) => {
     const heading = node.book
       ? `<code>${esc(node.id)}</code> ${esc(node.book)}${node.author ? ` <span class="author">${esc(node.author)}</span>` : ''}`
       : `<code>${esc(node.id)}</code> ${esc(node.label)}`
-    return `  <section class="graph-node" id="${esc(anchorOf(node.id))}">
+    const searchText = [node.id, node.label, node.book, node.author, node.kind, node.provenance].filter(Boolean).join(' ').toLowerCase()
+    return `  <section class="graph-node" id="${esc(anchorOf(node.id))}" data-search="${esc(searchText)}">
     <h3>${heading}</h3>
     <p class="graph-node-meta">${esc(node.kind)} · ${phaseCell} · ${out.length} out · ${incomingList.length} in</p>
     <p class="graph-node-edges"><strong>Out</strong> ${edgeRun(out, 'out')}</p>
@@ -170,7 +270,7 @@ const renderGraph = (entry) => {
   const edgeRows = edges.map((edge) => `      <tr><td>${nodeLink(edge.from, INDEX)}</td><td>${nodeLink(edge.to, INDEX)}</td><td>${esc(edge.kind)}</td><td>${esc(edge.condition ?? '')}</td></tr>`).join('\n')
 
   const linkCount = edges.length * 2
-  const description = `${entry.subject}, generated from ${entry.source}: ${nodes.length} nodes, ${kindCount('principle')} principles, ${bucketOrder.length} concerns of provenance and no phase nodes, ${edges.length} edges; every node is its own anchor and links to every node it touches.`
+  const description = `${entry.subject}, generated from ${entry.source}: ${nodes.length} nodes, ${kindCount('principle')} principles, ${bucketOrder.length} provenance concerns and no phase nodes, ${edges.length} edges; every node is its own anchor and links to every node it touches.`
   const booksRow = hasBooks ? `    <tr><td>Books</td><td>${bookIndex.length}</td></tr>\n` : ''
   const booksSection = hasBooks ? `<h2>Books</h2>
 <table>
@@ -183,11 +283,27 @@ ${bookRows}
 
 ` : ''
 
+  const startNode = entryPoints[0]
+  const convergence = graph.convergence && typeof graph.convergence === 'object' ? graph.convergence : null
+  const targetList = edges
+    .filter((edge) => edge.from === startNode)
+    .map((edge) => `<a href="#${esc(anchorOf(edge.to))}"><code>${esc(edge.to)}</code></a>${edge.condition ? ' when ' + esc(edge.condition) : ''}`)
+    .join(', ')
+  const startHere = startNode
+    ? `<p>The entry point is <a href="#${esc(anchorOf(startNode))}"><code>${esc(startNode)}</code></a>: ${esc(labelOf(startNode))}. Every gate and terminal is listed under <a href="#gates-and-terminals">Gates and terminals</a>.</p>${targetList ? `\n<p>Direct targets of the entry point: ${targetList}.</p>` : ''}${convergence ? `\n<p>The walk converges when ${esc(convergence.reached_when)}. Terminal: <code>${esc(convergence.terminal)}</code>. Halt: <code>${esc(convergence.halt)}</code>.</p>` : ''}`
+    : '<p>This graph declares no entry point.</p>'
+
+  const skeletonHtml = skeletonFigure(graph, byId, edges, entry.page.replace(/[^a-zA-Z0-9]+/g, '-').toLowerCase(), entry.title)
+
   const page = `${entry.lede}
 
 <p>Every node below is its own anchor, listed flat and in full: ${nodes.length} nodes, none of them behind a bucket. Each one names every node it reaches and every node that reaches it, in both directions, so a walk can start anywhere and move node to node. The concern index above the list is provenance, not a gate: it says where each book came from and points at the same anchors.</p>
 
 <p>This page is generated from <code>${entry.source}</code> by <code>scripts/build-graph-page.mjs</code>. Every count on it is derived from that file at build time. The same file is published as <a href="../${entry.api}"><code>${entry.api}</code></a>.</p>
+
+<nav class="page-jump" aria-label="Sections of this page">
+<a href="#start-here">Start here</a> · <a href="#concern-index">Concern index</a> · <a href="#every-node">Every node</a> · <a href="#gates-and-terminals">Gates and terminals</a> · <a href="#every-edge">Every edge</a>
+</nav>
 
 <h2>At a glance</h2>
 <table>
@@ -210,7 +326,11 @@ ${booksRow}    <tr><td>Edges</td><td>${edges.length}</td></tr>
   </tbody>
 </table>
 
-<h2>Concern index</h2>
+<h2 id="start-here">Start here</h2>
+${startHere}
+${skeletonHtml}
+
+<h2 id="concern-index">Concern index</h2>
 <table>
   <caption>An index over the same node anchors, not a separate view of them</caption>
   <thead><tr><th>Concern</th><th>Nodes</th><th>Principles</th><th>Tensions</th><th>Other</th><th>Members</th></tr></thead>
@@ -219,11 +339,16 @@ ${phaseRows}
   </tbody>
 </table>
 
-<h2>Every node</h2>
+<h2 id="every-node">Every node</h2>
 <p>${nodes.length} nodes, sorted by id. <strong>Out</strong> names every node this node has an edge to; <strong>In</strong> names every node with an edge to it.</p>
+<form class="node-filter" role="search" onsubmit="return false">
+  <label for="node-filter-input">Filter the nodes</label>
+  <input id="node-filter-input" type="search" autocomplete="off" placeholder="Id, label, book or author" aria-describedby="node-filter-status">
+  <p id="node-filter-status" role="status">Showing ${nodes.length} of ${nodes.length} nodes.</p>
+</form>
 ${nodeSections}
 
-<h2>Gates and terminals</h2>
+<h2 id="gates-and-terminals">Gates and terminals</h2>
 <table>
   <caption>${entry.guardCaption}</caption>
   <thead><tr><th>Node</th><th>Kind</th><th>Condition</th><th>Out</th><th>In</th></tr></thead>
@@ -232,7 +357,7 @@ ${guardRows}
   </tbody>
 </table>
 
-${booksSection}<h2>Every edge</h2>
+${booksSection}<h2 id="every-edge">Every edge</h2>
 <details>
   <summary>Show all ${edges.length} edges</summary>
   <table>
@@ -243,6 +368,25 @@ ${edgeRows}
     </tbody>
   </table>
 </details>
+<script>
+(() => {
+  const input = document.getElementById('node-filter-input')
+  const status = document.getElementById('node-filter-status')
+  const sections = [...document.querySelectorAll('section.graph-node')]
+  if (!input || !status || sections.length === 0) return
+  const update = () => {
+    const query = input.value.trim().toLowerCase()
+    let shown = 0
+    for (const section of sections) {
+      const hit = query === '' || section.dataset.search.includes(query)
+      section.hidden = !hit
+      if (hit) shown += 1
+    }
+    status.textContent = 'Showing ' + shown + ' of ' + sections.length + ' nodes.'
+  }
+  input.addEventListener('input', update)
+})()
+</script>
 `
 
   for (const node of nodes) {
