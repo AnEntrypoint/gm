@@ -189,9 +189,6 @@ skills/gm/.gm/
 .gm/config-source-cache-default.stale-*/
 *.sync.json.stale
 
-# Lightpanda browser-engine server runtime (its own serve.log, one per crawl session)
-.gm/lightpanda/
-
 # lean-walk traversal scratch: per-slice traverse/verdict/witness notes, rewritten each walk
 .gm/traversal/
 
@@ -213,4 +210,3 @@ skills/gm/.gm/
 .gm/witness-out/
 .wt-lanewait/
 .wt-thrash/
-obrowser/
