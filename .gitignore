@@ -165,6 +165,8 @@ skills/gm/.gm/
 .gm/dream-rsi/_any-session/
 # Dream-RSI observations are runtime state: each dispatch appends to them, so tracking them rewrote tracked files on every dispatch. History keeps the earlier commits.
 .gm/dream-rsi/
+# audit sweep outputs (paper/verb rewrite proposals) are generated per run, not source
+.gm/audit*/
 
 
 # Chrome crawl profile: extension asset paths exceed the Windows 260-char limit (git status os error 206)
