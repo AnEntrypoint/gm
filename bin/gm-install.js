@@ -250,14 +250,32 @@ function sameFile(a, b) {
   }
 }
 
+// Every file the source skill ships is compared, not only SKILL.md: a copy install whose
+// data files (dream-rsi/gm-graph.json, the prose tree) drifted is drift too.
+function listSkillFiles(root, rel = '') {
+  const out = []
+  for (const entry of fs.readdirSync(path.join(root, rel), { withFileTypes: true })) {
+    const next = rel ? path.join(rel, entry.name) : entry.name
+    if (entry.isDirectory()) out.push(...listSkillFiles(root, next))
+    else out.push(next)
+  }
+  return out
+}
+
 function checkSkill({ dir, name, root }) {
-  const src = path.join(dir, name, 'SKILL.md')
-  const dest = path.join(root, name, 'SKILL.md')
-  if (!fs.existsSync(dest)) return { name, state: 'absent' }
-  const a = fs.readFileSync(src)
-  const b = fs.readFileSync(dest)
-  if (sha256Short(a) !== sha256Short(b)) return { name, state: 'DRIFT' }
-  return { name, state: sameFile(src, dest) ? 'same-file' : 'equal-copy' }
+  const srcRoot = path.join(dir, name)
+  const destRoot = path.join(root, name)
+  if (!fs.existsSync(path.join(destRoot, 'SKILL.md'))) return { name, state: 'absent' }
+  for (const rel of listSkillFiles(srcRoot)) {
+    const dest = path.join(destRoot, rel)
+    if (!fs.existsSync(dest)) return { name, state: 'DRIFT', detail: `${rel} is missing` }
+    if (sha256Short(fs.readFileSync(path.join(srcRoot, rel))) !== sha256Short(fs.readFileSync(dest))) {
+      return { name, state: 'DRIFT', detail: rel }
+    }
+  }
+  const srcSkill = path.join(srcRoot, 'SKILL.md')
+  const destSkill = path.join(destRoot, 'SKILL.md')
+  return { name, state: sameFile(srcSkill, destSkill) ? 'same-file' : 'equal-copy' }
 }
 
 function skillDriftReport(source, roots) {
@@ -273,7 +291,7 @@ function skillDriftReport(source, roots) {
       continue
     }
     const why = r.state === 'DRIFT'
-      ? 'contents differ'
+      ? `contents differ${r.detail ? ` (${r.detail})` : ''}`
       : 'contents match but it is a SEPARATE file, so the next source edit will not reach it'
     console.log(`DRIFT ${r.name} at ${where} (${r.state}): ${why}`)
   }
@@ -298,8 +316,7 @@ function installOrCheckSkills() {
   const roots = skillInstallRoots()
   console.log(`gm-skill source: ${source.dir}${source.fromEnv ? ' (GM_SKILL_SOURCE_DIR)' : ''} -- ${source.names.length} skill(s)`)
   if (checkSkills) {
-    skillDriftReport(source, roots)
-    return
+    return skillDriftReport(source, roots)
   }
   for (const root of roots) {
     for (const name of source.names) materialiseSkill({ dir: source.dir, name, root, copyOnly: source.disposable })
@@ -308,8 +325,8 @@ function installOrCheckSkills() {
 }
 
 if (checkSkills) {
-  installOrCheckSkills()
-  process.exit(0)
+  const drift = installOrCheckSkills()
+  process.exit(drift && drift.length > 0 ? 1 : 0)
 }
 
 if (!mcpOnly) {
@@ -325,11 +342,24 @@ function isCurrentEntry(entry, wanted) {
   return entry && entry.command === wanted.command && JSON.stringify(entry.args) === JSON.stringify(wanted.args)
 }
 
+// Returns null when the file is absent, INVALID when it exists but is not JSON. Callers
+// leave an INVALID file untouched: overwriting it would discard the user's other entries.
+const INVALID = Symbol('invalid-json')
+
 function readJson(file) {
+  let text
   try {
-    return JSON.parse(fs.readFileSync(file, 'utf8'))
-  } catch {
-    return null
+    text = fs.readFileSync(file, 'utf8')
+  } catch (err) {
+    if (err.code === 'ENOENT') return null
+    console.log(`WARNING: cannot read ${file} (${err.code || err.message}); leaving it untouched`)
+    return INVALID
+  }
+  try {
+    return JSON.parse(text)
+  } catch (err) {
+    console.log(`WARNING: ${file} is not valid JSON (${err.message}); leaving it untouched`)
+    return INVALID
   }
 }
 
@@ -416,24 +446,36 @@ function registerCodex(configPath) {
     `args = [ ${tomlQuotedString(MCP_BUNDLE_PATH)} ]`,
   ]
 
-  let gmSectionStart = lines.findIndex(line => gmHeaderRe.test(line))
-  let gmSectionEnd = lines.length
-  if (gmSectionStart !== -1) {
-    for (let i = gmSectionStart + 1; i < lines.length; i++) {
-      if (anyHeaderRe.test(lines[i]) && !gmHeaderRe.test(lines[i])) { gmSectionEnd = i; break }
+  // Every gm-owned table (the header and its body up to the next other header) is removed,
+  // and the single wanted block goes where the first one was. A second [mcp_servers.gm]
+  // table elsewhere in the file would otherwise survive.
+  const out = []
+  let inGm = false
+  let placed = false
+  let replaced = 0
+  for (const line of lines) {
+    if (anyHeaderRe.test(line)) {
+      if (gmHeaderRe.test(line)) {
+        inGm = true
+        replaced++
+        if (!placed) { out.push(...wantedLines); placed = true }
+        continue
+      }
+      inGm = false
     }
+    if (!inGm) out.push(line)
+  }
+  if (!placed) {
+    if (out.length && out[out.length - 1] !== '') out.push('')
+    out.push(...wantedLines)
   }
 
-  const newLines = gmSectionStart === -1
-    ? lines.concat(lines[lines.length - 1] === '' ? [] : [''], wantedLines)
-    : lines.slice(0, gmSectionStart).concat(wantedLines, lines.slice(gmSectionEnd))
-
-  const newText = newLines.join('\n')
+  const newText = out.join('\n')
   if (newText !== text) {
     const tmp = `${configPath}.tmp.${process.pid}`
     fs.writeFileSync(tmp, newText)
     fs.renameSync(tmp, configPath)
-    console.log(`registered gm MCP server in ${configPath}${gmSectionStart !== -1 ? ' (replaced existing table)' : ''}`)
+    console.log(`registered gm MCP server in ${configPath}${replaced > 0 ? ` (replaced ${replaced} existing gm table${replaced === 1 ? '' : 's'})` : ''}`)
   }
 }
 
