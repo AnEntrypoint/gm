@@ -571,31 +571,24 @@ selects the engine; the rest is the crawl request (URLs and steps).
 
 | engine | runs | window |
 |---|---|---|
-| `cdp` (default when the first line is absent) | the host drives a real Chrome over the Chrome DevTools Protocol (CDP) through its `crawl_cdp` entry point | **HEADLESS** (`--headless=new`) by default |
-| `lightpanda` | a headless browser: the host's warm lightpanda process, whose binary comes from `GM_LIGHTPANDA_PATH`, then `PATH`, run through the `lightpanda` plugin's `crawl` verb | **HEADLESS**: no window |
+| `cdp` (default when the first line is absent) | the host drives a real Chrome over the Chrome DevTools Protocol (CDP) through its `crawl_cdp` entry point | **HEADFUL** (a visible window), always |
 
-The `cdp` engine runs **HEADFUL** (a visible browser window) when either holds:
-
-- the body has a `headful` line
-- the environment variable `GM_CRAWL_CDP_HEADFUL` is set to any value other than empty, `0`, `false`, `no` or `off`
-
-Choose `lightpanda` when no window should appear. Choose `cdp` when the page must render in a visible browser, using the settings above.
+The `cdp` engine always runs **HEADFUL**: a `headless` line is refused with an error. `cdp` is the only crawl engine: `engine=lightpanda` answers `unknown_engine`.
 
 ```
 raw_body: "engine=cdp\nhttps://example.com/\n"
-raw_body: "engine=lightpanda\nhttps://example.com/\n"
 ```
 
 The `cdp` reply is the host's JSON object, passed through unchanged: `ok`, `engine`, `headless`,
-`stdout`, `stderr`, `exit_code`, `duration_ms`, `timed_out`, `target_id`, `pages` and `error` on a `cdp` reply. The `lightpanda` reply is the plugin's object, passed through. An unknown
-engine answers `ok: false` with `error_code: "unknown_engine"`, naming `cdp` and `lightpanda`.
+`stdout`, `stderr`, `exit_code`, `duration_ms`, `timed_out`, `target_id`, `pages` and `error`. An unknown
+engine answers `ok: false` with `error_code: "unknown_engine"`, naming `cdp`.
 
 The standalone `cdp` verb is removed; `crawl` with `engine=cdp` replaces it. The `cdp` engine serves the whole step grammar,
 including raw `cdp <Domain.method>` commands and event capture.
 
 ### `chrome`: the CDP crawl as a named verb
 
-`chrome` takes the same **plain text body** as `crawl` and runs the same browser steps (listed below) on the `cdp` engine, so the engine line is optional. The `chrome` verb sets no window mode of its own: a `headful` line or `GM_CRAWL_CDP_HEADFUL` selects a visible window, and the window is headless otherwise. The verb answers the same host JSON object.
+`chrome` takes the same **plain text body** as `crawl` and runs the same browser steps (listed below) on the `cdp` engine, so the engine line is optional. The window is always headful. The verb answers the same host JSON object.
 
 ```
 raw_body: "https://example.com/\nsnapshot\n"
