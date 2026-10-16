@@ -185,6 +185,7 @@ else { root.innerHTML = ''; root.appendChild(shell); }
 
 if (page.layout === 'article') {
   document.documentElement.classList.add('article-flow');
+  if (page.wide) document.documentElement.classList.add('article-wide');
   const syncHeaderOffset = () => {
     const chrome = document.querySelector('.app-chrome, .app-topbar, .app-crumb');
     const h = chrome ? chrome.getBoundingClientRect().height : 0;
@@ -277,6 +278,14 @@ const renderHtml = ({ site, navItems, page }) => `<!DOCTYPE html>
     }
     #ds-article-host section { position: relative; }
     #ds-article-host canvas { display: block; width: 100% !important; max-width: 100%; height: 300px !important; max-height: 300px; }
+    html.article-flow:not(.article-wide) .app-main > * { width: 100% !important; max-width: 960px !important; margin-left: auto !important; margin-right: auto !important; box-sizing: border-box; }
+    html.article-flow .lede { max-width: none !important; margin-bottom: 1.25em; }
+    #ds-article-host table { display: block; width: 100%; overflow-x: auto; }
+    #ds-article-host code { overflow-wrap: anywhere; }
+    #ds-article-host pre { max-width: 100%; overflow-x: auto; }
+    .app-topbar, .app-topbar nav { min-width: 0; max-width: 100%; box-sizing: border-box; }
+    .app-topbar nav { flex-wrap: wrap !important; overflow: visible !important; }
+    .app-topbar nav a { max-width: 100%; overflow-wrap: anywhere; }
   </style>
 </head>
 <body>
