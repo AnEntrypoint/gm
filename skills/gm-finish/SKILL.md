@@ -14,3 +14,9 @@ Goal: open PRD rows reach zero. Each slice is one workflow run.
 4. A row ends resolved (witness dispatch id) or blocked. A blocker is filed only after gm-eliminate has run a live check on each unknown and recorded its dispatch id. Owner decisions, CI-only builds and one-way doors are the only exceptions.
 5. After each slice: commit `.gm/prd-log.jsonl` and the archive by explicit path, push to the full sha, read `ci-status`. Resolve a merge conflict in the same turn.
 6. Next slice from the counts. Stop when pending is 0, or when a slice resolves nothing and every remaining row is an owner decision or a CI-only build. Report those rows by id.
+
+## Finish the work
+
+- Finishing the requested work is the goal of every run of this skill. A run that stops with work left undone is incomplete.
+- When an issue blocks a step (a failing check, a fault in a tool or service, a missing input, a network or environment fault), fix it in the same run: retry on a bounded or resumable route, use an alternate route to the same result, repair the fault where it originates, then continue the remaining work.
+- Stop only when the requested work is complete, or when a step is still blocked after every route has been tried. Then report the blocked step, the routes tried, and the evidence for each.
