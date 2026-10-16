@@ -709,7 +709,7 @@ each one for 6 hours. A reply carries `floor`, `ceiling`, `count_of_record`, `re
 `launch` (one item per id to launch now, each with `id`, `role` and `reason`), `shortfall`, `unfilled_shortfall`, `sufficient`, `traversal`, and
 a `slots` block with `open_rows`, `live_rows`, `live_rows_unmatched`, `aging_heartbeats`,
 `candidates`, `candidates_removed`, `launch_filters` and `already_fixed_on_head`. A `live` count under
-the floor while rows are open is refused with `error_code` `floor_gate_denied`. Example body:
+the floor while rows are open is refused with `error_code` `floor_gate_denied` when launchable rows are advertised but not launched. When no open row is launchable and no traversal node is due, the reply is ok with `state` `supply_exhausted`, `held_rows` (running rows, the only supply) and `unlaunchable_open_rows`: wait for the held rows to complete, then re-observe; a retry cannot change the answer. Example body:
 `{"live":4,"held":["<row-id>"]}`.
 
 ## Storage, cache and diagnostics
