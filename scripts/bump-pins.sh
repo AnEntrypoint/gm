@@ -4,13 +4,10 @@ set -uo pipefail
 base="${PIN_REMOTE_BASE:-https://github.com/AnEntrypoint}"
 retries="${PIN_RETRIES:-6}"
 witness="${GITHUB_RUN_ID:-local}"
-targets="rs-plugkit rs-codeinsight rs-search agentplug agentplug-bert agentplug-crux agentplug-libsql agentplug-treesitter gm-config gm-mcp vendor/tencentdb-agent-memory"
+targets="rs-plugkit rs-codeinsight rs-search agentplug agentplug-bert agentplug-crux agentplug-libsql agentplug-treesitter gm-config gm-mcp"
 
 repo_of() {
-  case "$1" in
-    vendor/tencentdb-agent-memory) echo agent-memory ;;
-    *) echo "$1" ;;
-  esac
+  echo "$1"
 }
 
 gate_ok() {

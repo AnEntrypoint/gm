@@ -8,7 +8,7 @@ Two facts that stop most guessing:
 
 1. **Code lookup exists.** `grep` answers "where is this string", `codesearch` answers "where is
    this concept", `fs_read` reads a file or a line range, and `callers`/`callees`/`impact` walk the
-   symbol graph (the call graph that `codeinsight_index` builds). `recall` is memory only: it searches `.gm/memories/*.md`, never the tree.
+   symbol graph (the call graph that `codeinsight_index` builds).
 2. **A directory under `.gm/exec-spool/in/` is not evidence that a verb exists.** The spool creates
    `.gm/exec-spool/in/<verb>/` before dispatch, so an unknown verb leaves a directory behind and
    replies `ok: false`, `error_code: unknown_verb`, and an `error` that begins `unknown verb:`. Retired verbs leave
@@ -310,7 +310,9 @@ the full `deferred_set` lives in the sync report, never in the message.
 
 ## Memory
 
-`recall` and `auto-recall` are `query`; `memorize`, `memorize-fire`, `memorize-prune`, `memorize-vacuum`, `memorize-retention` and `forget` are `command`.
+Agents do not call these verbs for memory. Memory is the flat-file store that `skills/gm/SKILL.md` (Invariants) describes; the verbs stay in the code.
+
+`recall` and `auto-recall` are `query`; `memorize`, `memorize-fire`, `memorize-prune`, `memorize-vacuum` and `memorize-retention` are `command`.
 
 `recall` searches `.gm/memories/*.md` and its derived vector index. Hits are scored as cosine times recency, within the `namespace` the body names.
 
@@ -322,7 +324,7 @@ the full `deferred_set` lives in the sync report, never in the message.
 
 `memorize` writes to that index: `{"text":"<memo>","namespace":"default"}`, or a raw text body.
 `memorize-fire` writes its body as one `.md` file into the memorize inbox (`memorize_inbox` in `rs-plugkit/crates/plugkit-core/src/orchestrator/memorize.rs`), and `memorize-prune`, `memorize-vacuum` and `memorize-retention`
-maintain the recall index, `forget` deletes one `key` from a namespace's key-value store, and `auto-recall` answers a prompt body with three recall hits.
+maintain the recall index, and `auto-recall` answers a prompt body with three recall hits.
 
 A `recall` reply carries `hits` (the ranked list), and `vector_hits` (the rows before scoring) only when the body sets `verbose: true`.
 The gm-mcp response compactor (`gm-mcp/src/response-compact.js`) drops `vector_hits` when every row in it is already in `hits` and names it
@@ -569,31 +571,24 @@ selects the engine; the rest is the crawl request (URLs and steps).
 
 | engine | runs | window |
 |---|---|---|
-| `cdp` (default when the first line is absent) | the host drives a real Chrome over the Chrome DevTools Protocol (CDP) through its `crawl_cdp` entry point | **HEADLESS** (`--headless=new`) by default |
-| `lightpanda` | a headless browser: the host's warm lightpanda process, whose binary comes from `GM_LIGHTPANDA_PATH`, then `PATH`, run through the `lightpanda` plugin's `crawl` verb | **HEADLESS**: no window |
+| `cdp` (default when the first line is absent) | the host drives a real Chrome over the Chrome DevTools Protocol (CDP) through its `crawl_cdp` entry point | **HEADFUL** (a visible window), always |
 
-The `cdp` engine runs **HEADFUL** (a visible browser window) when either holds:
-
-- the body has a `headful` line
-- the environment variable `GM_CRAWL_CDP_HEADFUL` is set to any value other than empty, `0`, `false`, `no` or `off`
-
-Choose `lightpanda` when no window should appear. Choose `cdp` when the page must render in a visible browser, using the settings above.
+The `cdp` engine always runs **HEADFUL**: a `headless` line is refused with an error. `cdp` is the only crawl engine: `engine=lightpanda` answers `unknown_engine`.
 
 ```
 raw_body: "engine=cdp\nhttps://example.com/\n"
-raw_body: "engine=lightpanda\nhttps://example.com/\n"
 ```
 
 The `cdp` reply is the host's JSON object, passed through unchanged: `ok`, `engine`, `headless`,
-`stdout`, `stderr`, `exit_code`, `duration_ms`, `timed_out`, `target_id`, `pages` and `error` on a `cdp` reply. The `lightpanda` reply is the plugin's object, passed through. An unknown
-engine answers `ok: false` with `error_code: "unknown_engine"`, naming `cdp` and `lightpanda`.
+`stdout`, `stderr`, `exit_code`, `duration_ms`, `timed_out`, `target_id`, `pages` and `error`. An unknown
+engine answers `ok: false` with `error_code: "unknown_engine"`, naming `cdp`.
 
 The standalone `cdp` verb is removed; `crawl` with `engine=cdp` replaces it. The `cdp` engine serves the whole step grammar,
 including raw `cdp <Domain.method>` commands and event capture.
 
 ### `chrome`: the CDP crawl as a named verb
 
-`chrome` takes the same **plain text body** as `crawl` and runs the same browser steps (listed below) on the `cdp` engine, so the engine line is optional. The `chrome` verb sets no window mode of its own: a `headful` line or `GM_CRAWL_CDP_HEADFUL` selects a visible window, and the window is headless otherwise. The verb answers the same host JSON object.
+`chrome` takes the same **plain text body** as `crawl` and runs the same browser steps (listed below) on the `cdp` engine, so the engine line is optional. The window is always headful. The verb answers the same host JSON object.
 
 ```
 raw_body: "https://example.com/\nsnapshot\n"

@@ -148,13 +148,13 @@ A generic witness such as "verified", "looks correct" or "reviewed" is rejected 
 
 Process of elimination is the debugging method on every surface. For a hard bug, name the loop before the first hypothesis: one exec_js command that drives the exact reported symptom, is deterministic, and is fast. Run it once, unmodified, before reading code for a theory. Each candidate cause is a mutable, eliminated by a real-input run, and each elimination reveals the next candidate. Iterate until one cause survives. Profile to locate the cost with `opts.profile:true`, then eliminate by live measurement, never by intuition.
 
-## Memorize
+## Memory
 
-Memorize the settled contract facts that a subsequent task would otherwise re-derive: the domain term to type name mapping, the module interface decisions, and each rejected representation with the witness that rejected it. Each is `memorize-fire` with a stable key and its witness inline.
+Save an unknown as a memory file only when a later task needs it. Settled contract facts and rejected representations are not memories. The signatures and the PRD row already hold them.
 
-When a contract change makes a stored memo stale, prune it with `memorize-prune {"key":"<key>"}`. Use `memorize-prune {"query":"<text>"}` to list the review candidates, then delete the confirmed ones with `{"keys":[...]}`.
+When a contract change makes a memory file stale, delete the file and its MEMORY.md line.
 
-Do not memorize the exec output in bulk, intermediate compiler errors, or the contract text itself, which already lives in the signatures.
+Exec output, intermediate compiler errors and contract text are not memories. The signatures already hold the contract text.
 
 ## Transition
 
