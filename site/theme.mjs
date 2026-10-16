@@ -182,6 +182,8 @@ const root = document.getElementById('app');
 if (ds.applyDiff) ds.applyDiff(root, shell);
 else if (ds.mount) ds.mount(root, shell);
 else { root.innerHTML = ''; root.appendChild(shell); }
+const crumbRegion = document.querySelector('.app-crumb');
+if (crumbRegion) { crumbRegion.setAttribute('role', 'region'); crumbRegion.setAttribute('aria-label', 'Page location'); }
 
 if (page.layout === 'article') {
   document.documentElement.classList.add('article-flow');
@@ -279,7 +281,10 @@ const renderHtml = ({ site, navItems, page }) => `<!DOCTYPE html>
     #ds-article-host section { position: relative; }
     #ds-article-host canvas { display: block; width: 100% !important; max-width: 100%; height: 300px !important; max-height: 300px; }
     html.article-flow:not(.article-wide) .app-main > * { width: 100% !important; max-width: 960px !important; margin-left: auto !important; margin-right: auto !important; box-sizing: border-box; }
-    html.article-flow .lede { max-width: none !important; margin-bottom: 1.25em; }
+    html.article-flow .lede { max-width: 66ch !important; margin-bottom: 1.25em; }
+    #ds-article-host p { max-width: 66ch; }
+    html.article-flow [id] { scroll-margin-top: 7rem !important; }
+    #ds-article-host [hidden], html.article-flow [hidden] { display: none !important; }
     #ds-article-host table { display: block; width: 100%; overflow-x: auto; }
     #ds-article-host code { overflow-wrap: anywhere; }
     #ds-article-host .page-jump { margin: 0 0 1.5em; font-size: 0.95em; }
