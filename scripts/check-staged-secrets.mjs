@@ -8,7 +8,7 @@ const RULES = [
   ['slack-token', /\bxox[abprs]-[A-Za-z0-9-]{10,}/],
   ['sk-style-key', /\bsk-[A-Za-z0-9_-]{32,}/],
   ['url-inline-password', /\b[a-z][a-z0-9+.-]*:\/\/[^\s/:@'"]+:([^\s/@'"]{3,})@[^\s'"]+/i],
-  ['assigned-secret-literal', /\b(?:api[_-]?key|secret[_-]?key|access[_-]?token|auth[_-]?token|password)\s*[:=]\s*["'][A-Za-z0-9/+_=.-]{20,}["']/i],
+  ['assigned-secret-literal', /\b(?:api[_-]?key|secret[_-]?key|access[_-]?token|auth[_-]?token|password)\s*[:=]\s*(?:["'][A-Za-z0-9/+_=.-]{20,}["']|[A-Za-z0-9/+_=.-]{20,}(?![A-Za-z0-9/+_=.-]))/i],
 ];
 
 const PLACEHOLDER = /^[$<{%]/;
@@ -31,18 +31,26 @@ let line = 0;
 let added = 0;
 const files = new Set();
 
+// A `+++ ` line is a file header only outside a hunk. Inside a hunk every `+` line is an
+// added line, including one whose content begins with `++`.
+let inHunk = false;
 for (const raw of diff.split('\n')) {
-  if (raw.startsWith('+++ ')) {
+  if (raw.startsWith('diff --git ')) {
+    inHunk = false;
+    continue;
+  }
+  if (!inHunk && raw.startsWith('+++ ')) {
     file = raw.startsWith('+++ b/') ? raw.slice(6) : raw.slice(4);
     files.add(file);
     continue;
   }
   const hunk = /^@@ -\d+(?:,\d+)? \+(\d+)/.exec(raw);
   if (hunk) {
+    inHunk = true;
     line = Number(hunk[1]);
     continue;
   }
-  if (raw.startsWith('+') && !raw.startsWith('+++')) {
+  if (inHunk && raw.startsWith('+')) {
     added++;
     const text = raw.slice(1);
     for (const [rule, re] of RULES) {
