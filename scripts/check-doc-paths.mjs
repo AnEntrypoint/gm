@@ -33,7 +33,8 @@ const walk = (rel) => {
     files.push(rel);
   }
 };
-for (const rel of ['README.md', 'docs', 'site/content']) walk(rel);
+// CHANGELOG.md is not walked: its entries record files that have since been removed.
+for (const rel of ['README.md', 'AGENTS.md', 'SKILLS.md', 'CONTRIBUTING.md', 'docs', 'site/content', 'skills', 'gm-config/prose']) walk(rel);
 
 const token = /<code>([^<]+)<\/code>|`([^`\n]+)`/g;
 const submodulePaths = [...fs.readFileSync(path.join(root, '.gitmodules'), 'utf8').matchAll(/^\s*path = (.+)$/gm)]
@@ -56,6 +57,8 @@ for (const rel of files) {
       const candidate = raw.replace(/[),.;:]+$/, '').replace(/:\d+$/, '');
       if (NOT_REPOSITORY_PATH.some((re) => re.test(candidate)) || !ROOTS.some((r) => candidate === r || candidate.startsWith(r))) continue;
       if (/\s/.test(candidate)) continue;
+      // A skill names its own docs relative to its directory: skills/gm/docs/verbs.md is `docs/verbs.md` there.
+      if (!fs.existsSync(path.join(root, candidate)) && fs.existsSync(path.join(root, path.dirname(rel), candidate))) continue;
       if (isUninitialized(candidate)) {
         skipped.push(`${rel}:${i + 1}: \`${candidate}\``);
         continue;
