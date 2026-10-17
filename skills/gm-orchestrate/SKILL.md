@@ -125,6 +125,7 @@ Launch only advertised ids. A slot stays empty only when no pending row and no u
 ## Connectivity restarts
 - A subagent stopped by `ECONNRESET`, `ECONNREFUSED`, `server_error`, timeout or no response is restarted, never resumed, never a blocker. Fresh subagent, same row, session `<session>-r<n>`, same turn. Row stays open; slot stays held; never count it live.
 - `wait {"ms":30000}` between attempts while the error repeats. Log `restart <row> <n> <UTC>` to `.gm/witness-log.md`.
+- Cap: at most 4 restarts per row (`<session>-r1` to `<session>-r4`). After the 4th failure, the row stops being restarted and files a blocker row naming the last error and its dispatch id, so a dead endpoint cannot hold a slot forever.
 - Mass drop: `docs/recovery.md`, "Mass API-error drain".
 
 ## Headroom and leases
