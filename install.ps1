@@ -117,6 +117,31 @@ function Remove-SkillTarget {
     Remove-Item -LiteralPath $Path -Recurse -Force
 }
 
+# Clears the way for a copy install. A displaced directory is parked under the
+# dotted prelink dir, never deleted; deletion needs GM_SKILL_LINK_FORCE=1.
+function Clear-ReleaseTarget {
+    param([string]$Root, [string]$Name)
+    $dest = Join-Path $Root $Name
+    $item = Get-Item -LiteralPath $dest -Force -ErrorAction SilentlyContinue
+    if (-not $item) { return $true }
+    if ($item.LinkType) { Remove-Item -LiteralPath $dest -Force; return $true }
+    $park = Join-Path $Root $SkillPreLinkDir
+    New-Item -ItemType Directory -Force -Path $park | Out-Null
+    $aside = Join-Path $park "$Name-$([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds())"
+    try {
+        Move-Item -LiteralPath $dest -Destination $aside -Force -ErrorAction Stop
+        Write-Host "parked displaced $Name at $aside"
+        return $true
+    } catch {
+        if ($env:GM_SKILL_LINK_FORCE -eq '1') {
+            Remove-Item -LiteralPath $dest -Recurse -Force
+            return $true
+        }
+        Write-Warning "REFUSED $Name -> ${dest}: could not park the existing install ($($_.Exception.Message)); rerun with GM_SKILL_LINK_FORCE=1 to replace it"
+        return $false
+    }
+}
+
 function Install-OneSkill {
     param([string]$SourceDir, [string]$Name, [string]$Root)
 
@@ -243,7 +268,10 @@ function Install-Skill {
             New-Item -ItemType Directory -Force -Path $root | Out-Null
             Get-ChildItem -Directory (Join-Path $extractDir "skills") | Where-Object { Test-Path (Join-Path $_.FullName "SKILL.md") } | ForEach-Object {
                 $target = Join-Path $root $_.Name
-                Remove-SkillTarget -Path $target
+                if (-not (Clear-ReleaseTarget -Root $root -Name $_.Name)) {
+                    Write-SkillModeLedger -Root $root -Name $_.Name -Mode "refused" -Source "release:$tag"
+                    return
+                }
                 Copy-Item -Recurse -Force $_.FullName $target
                 Write-SkillModeLedger -Root $root -Name $_.Name -Mode "copied" -Source "release:$tag"
                 Write-Warning "$($_.Name) -> ${target} is a COPY with no local source beside this installer; it will not track a checkout -- set GM_SKILL_SOURCE_DIR (or run from a gm checkout) to install it as a link"
