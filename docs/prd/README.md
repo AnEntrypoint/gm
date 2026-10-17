@@ -6,7 +6,7 @@ a live dispatch id or a green CI run for the pushed sha.
 
 | id | title | status |
 | --- | --- | --- |
-| 01 | Decide the loader strategy for the wasip3 port | open |
+| 01 | Decide the loader strategy for the wasip3 port | done: doc-drift run 39056685848 green on 75094860 |
 | 02 | Define the env ABI as a WIT interface | open |
 | 03 | Build the plugkit guest as a wasip3 component | open |
 | 04 | Link components in agentplug-host on wasmtime 46 | open |
