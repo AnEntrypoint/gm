@@ -1,0 +1,46 @@
+// Typed WIT form of the plugkit host `env` ABI (PRD 02).
+//
+// Each function keeps the name of its raw `env` import. Strings and bytes
+// that crossed as (ptr, len) pairs become `string` and `list<u8>`. A packed
+// u64 return (guest-memory pointer and length) becomes `list<u8>`: the host
+// owns the bytes and the component copies them. A u32 or i32 status keeps
+// its width. The source of each import is
+// rs-plugkit/crates/plugkit-core/src/wasm_dispatch/host_abi.rs, plus the
+// extra declarations in embed.rs, code_index.rs and orchestrator/instructions.
+//
+// host_random_fill wrote into a guest pointer. Here it returns the bytes.
+
+package plugkit:env@0.1.0;
+
+interface host {
+    host-cwd: func() -> list<u8>;
+    host-fs-allow-root: func(path: string) -> u32;
+    host-fs-read: func(path: string) -> list<u8>;
+    host-fs-write: func(path: string, data: list<u8>) -> u32;
+    host-fs-cas-write: func(path: string, expected: list<u8>, data: list<u8>) -> u32;
+    host-fs-remove: func(path: string) -> u32;
+    host-fs-readdir: func(path: string) -> list<u8>;
+    host-fs-stat: func(path: string) -> list<u8>;
+    host-fetch: func(url: string, opts: string) -> list<u8>;
+    host-kv-get: func(ns: string, key: string) -> list<u8>;
+    host-kv-put: func(ns: string, key: string, val: list<u8>) -> u32;
+    host-kv-delete: func(ns: string, key: string) -> u32;
+    host-kv-query: func(ns: string, query: string) -> list<u8>;
+    host-vec-search: func(query: string, k: u32) -> list<u8>;
+    host-vec-embed: func(text: string) -> result<list<f32>, s32>;
+    host-exec-js: func(code: string, opts: string) -> list<u8>;
+    host-log: func(level: u32, msg: string) -> u32;
+    host-now-ms: func() -> u64;
+    host-env-get: func(key: string) -> list<u8>;
+    host-random-fill: func(len: u32) -> list<u8>;
+    host-task-proc: func(action: string, params: string) -> list<u8>;
+    host-git: func(args: string, cwd: string) -> list<u8>;
+    host-plugin-call: func(plugin: string, verb: string, body: string) -> list<u8>;
+    crawl-cdp: func(body: string) -> list<u8>;
+}
+
+world plugkit-guest {
+    import host;
+    export dispatch-verb: func(verb: string, body: string) -> list<u8>;
+    export plugkit-version: func() -> string;
+}
