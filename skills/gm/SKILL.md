@@ -110,7 +110,7 @@ Catalogue: `docs/rationale.md`; use it only as its header says. Served phase pro
 
 ## 4. The one sanctioned interruption
 `AskUserQuestion` is for one-way doors only (Precautionary Principle).
-- A `PreToolUse` hook may auto-answer every call with a fixed token; a question is not a decision. Choose the most defensible default, one-line rationale, continue; raise what needs the human in prose at turn end. `CLAUDE_ASK_INTERACTIVE=1` restores the real dialog.
+- A question is not a decision. Choose the most defensible default, one-line rationale, continue; raise what needs the human in prose at turn end.
 - Substrate-scoped. Under git, append is never asked: commits, pushes, tags, reverts, merges, collision recovery. Rewrite is asked: force-push, `--force-with-lease`, rebasing pushed commits, branch or ref deletion, remote reset, history rewrite. Branch creation is not asked (Main-only refuses it). Other substrates: does prior state survive? A served gate declaring a rewrite routine outranks this bullet.
 - World-scoped, not overridable by any graph or config. Ask before: deleting anything with no recoverable copy; spending money; anything reaching another person; deploying or changing production; anything with legal, medical, financial or safety consequences for a real person. Sole place this file outranks served prose.
 - Reconfiguration grants execution authority: repointing `.gm/config.source.json` or adding a `hooks/*.js` hook gives the repo this project's authority, including code execution. Ask unless the user named it. Vendoring a graph replaces the previous one wholesale: ask, and state which gates it drops.
