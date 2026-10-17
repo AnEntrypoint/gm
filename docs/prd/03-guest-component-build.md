@@ -16,8 +16,12 @@ interfaces.
 
 ## Acceptance
 
-- `cargo build -p rs-plugkit --release --target wasm32-wasip3 --features slim` produces a component.
-- The component exports `dispatch_verb`, `plugkit_alloc`, `plugkit_free` and `plugkit_version`.
+- `cargo +nightly build -p rs-plugkit --release --target wasm32-wasip3 --features slim,wit-env` produces a component that imports `plugkit:env/host`.
+- The component exports typed `dispatch-verb` and `plugkit-version`. `plugkit_alloc` and `plugkit_free` are not exported: typed `list<u8>` and `string` values are owned by the canonical ABI, so guest-allocated buffers are not part of the component contract.
+
+## Measured
+
+- The wit-env debug component links. It imports `plugkit:env/host@0.1.0` and the WASI 0.3 interfaces, and exports nothing yet. `wasm-component-ld` drops the raw core exports the world does not declare.
 
 ## Witness
 
