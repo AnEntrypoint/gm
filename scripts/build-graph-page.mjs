@@ -43,7 +43,7 @@ const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&
 const byIdOrder = (a, b) => a.id.localeCompare(b.id, undefined, { numeric: true })
 const anchorOf = (id) => `node-${id}`
 
-const FIG = { nodeW: 220, nodeH: 62, colGap: 48, rowGap: 22, pad: 16 }
+const FIG = { nodeW: 200, nodeH: 62, colGap: 44, rowGap: 22, pad: 16 }
 
 const clip = (text, max) => {
   const s = String(text ?? '')
@@ -121,9 +121,10 @@ const skeletonFigure = (graph, byId, edges, slug, title) => {
     const node = byId.get(id)
     const dash = node && node.kind === 'terminal' ? ' stroke-dasharray="6 4"' : ''
     const label = node ? (node.book || node.label) : id
-    return `<rect x="${p.x}" y="${p.y}" width="${FIG.nodeW}" height="${FIG.nodeH}" rx="6" fill="none" stroke="currentColor"${dash}/>` +
+    return `<g><title>${esc(id + ': ' + label)}</title>` +
+      `<rect x="${p.x}" y="${p.y}" width="${FIG.nodeW}" height="${FIG.nodeH}" rx="6" fill="none" stroke="currentColor"${dash}/>` +
       `<text x="${p.x + 10}" y="${p.y + 24}" font-size="14" font-weight="700" fill="currentColor">${esc(clip(id, 26))}</text>` +
-      `<text x="${p.x + 10}" y="${p.y + 46}" font-size="13" fill="currentColor">${esc(clip(label, 28))}</text>`
+      `<text x="${p.x + 10}" y="${p.y + 46}" font-size="13" fill="currentColor">${esc(clip(label, 28))}</text></g>`
   }).join('\n')
 
   const summary = figEdges.map((edge) => `${edge.from} to ${edge.to}${edge.condition ? ' when ' + edge.condition : ''}`).join('; ')
@@ -208,7 +209,7 @@ const renderGraph = (entry) => {
     fail('graph_unlinked_node', `${unlinked.length} node(s) carry no edge in either direction: ${unlinked.slice(0, 10).map((node) => node.id).join(', ')}`)
   }
 
-  const nodeLink = (id, cls) => `<a class="${cls}" href="#${esc(anchorOf(id))}" title="${esc(titleOf(id))}">${esc(id)}</a>`
+  const nodeLink = (id, cls) => `<a class="${cls}" href="#${esc(anchorOf(id))}" title="${esc(titleOf(id))}" aria-label="${esc(id + ': ' + titleOf(id))}">${esc(id)}</a>`
   const edgeRun = (list, side) => {
     if (!list || list.length === 0) return 'none'
     return list.map((edge) => {
@@ -287,7 +288,7 @@ ${bookRows}
   const convergence = graph.convergence && typeof graph.convergence === 'object' ? graph.convergence : null
   const targetList = edges
     .filter((edge) => edge.from === startNode)
-    .map((edge) => `<a href="#${esc(anchorOf(edge.to))}"><code>${esc(edge.to)}</code></a>${edge.condition ? ' when ' + esc(edge.condition) : ''}`)
+    .map((edge) => `<a href="#${esc(anchorOf(edge.to))}"><code>${esc(edge.to)}</code></a>${edge.condition && edge.condition.length <= 100 ? ' when ' + esc(edge.condition) : ''}`)
     .join(', ')
   const startHere = startNode
     ? `<p>The entry point is <a href="#${esc(anchorOf(startNode))}"><code>${esc(startNode)}</code></a>: ${esc(labelOf(startNode))}. Every gate and terminal is listed under <a href="#gates-and-terminals">Gates and terminals</a>.</p>${targetList ? `\n<p>Direct targets of the entry point: ${targetList}.</p>` : ''}${convergence ? `\n<p>The walk converges when ${esc(convergence.reached_when)}. Terminal: <code>${esc(convergence.terminal)}</code>. Halt: <code>${esc(convergence.halt)}</code>.</p>` : ''}`
@@ -374,17 +375,31 @@ ${edgeRows}
   const status = document.getElementById('node-filter-status')
   const sections = [...document.querySelectorAll('section.graph-node')]
   if (!input || !status || sections.length === 0) return
+  const matches = (section, query) => {
+    const terms = query.trim().toLowerCase().split(/\s+/).filter(Boolean)
+    return terms.every((term) => section.dataset.search.includes(term))
+  }
   const update = () => {
-    const query = input.value.trim().toLowerCase()
     let shown = 0
     for (const section of sections) {
-      const hit = query === '' || section.dataset.search.includes(query)
+      const hit = matches(section, input.value)
       section.hidden = !hit
       if (hit) shown += 1
     }
     status.textContent = 'Showing ' + shown + ' of ' + sections.length + ' nodes.'
   }
+  const reveal = () => {
+    let id = ''
+    try { id = decodeURIComponent(location.hash.slice(1)) } catch (err) { return }
+    const target = id && document.getElementById(id)
+    if (target && target.classList.contains('graph-node') && target.hidden) {
+      input.value = ''
+      update()
+    }
+  }
   input.addEventListener('input', update)
+  window.addEventListener('hashchange', reveal)
+  reveal()
 })()
 </script>
 `
