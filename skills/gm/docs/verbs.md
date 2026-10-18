@@ -778,7 +778,7 @@ Every body field a verb declares, grouped by verb. The contract check (`scripts/
 - `git_push`: `recover_remote_moved`, `allow_foreign_commits`
 - `git_commit`: `allow_whole_index`, `allow_foreign_rows`
 - `git_finalize`: `allow_whole_index`, `untrack`
-- `git_log`: `range`
+- `git_log`: `range`. Commit count is `limit`; `max_count` is its git-native alias, and `limit` wins when both are present (default 10). `count` and `n` are refused as unknown fields.
 - `git_diff`: `range`, `staged`, `stat`
 - `git_show`: `rev`, `ref`, `sha`, `commit`, `stat`, `path`, `paths`, `files`, `offset`, `full`. `full: true` returns the whole blob (no 60000-byte page), and `next_offset` pages the rest.
 - `git_submodule_update`: `recursive`
