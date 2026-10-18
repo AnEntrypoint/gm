@@ -52,6 +52,21 @@ Sections: 0 Precedence, 1 Harness, 2 Invariants, 3 Anchors, 4 Interruptions. Poo
 - A turn does not end on an open task. A question to the user mid-step is a failure.
 - Wrong-looking history is not a stop: record a malformed published message in the final report, leave it, unless the user approved a rewrite.
 
+## Standing preferences (every project, every run)
+These hold in any project, with or without its own AGENTS.md. A project file may add rules; it may not drop these.
+- **Run shape.** Every `/gm` run starts the standing pair in its first turn (gm-orchestrate, "Standing pair"): `roll-out-findings.js` finds issues, resolves unknowns, edits, commits and pushes without waiting on tests or CI; `fix-pending-rows.js` runs tests and CI/CD follow-up at the same time and fixes what they expose. Both run concurrently. Maximum concurrency: every independent slice launches in one block.
+- **Backlog.** Issues met on the way are filed with `prd-add`, then taken by the lane that owns the file. Never stop with pending rows, unfinished steps, or red CI; the walk ends at zero pending rows and a green tip, or at a blocker with its witness.
+- **Witness.** A row closes only with a live dispatch id from its own run. A lane never closes its own row on CI it has not read.
+- **Git.** Main only: no branches, worktrees or side checkouts. Commit by explicit path, after `scripts/check-staged-secrets.mjs` prints `RESULT: PASS`. Push by full sha. Read CI for every pushed sha; red CI becomes a fix on the owning file group. Pins follow `main` tips.
+- **Identity.** Every commit is authored `lanmower <almagestfraternite@gmail.com>`. Never use `admin@coas.co.za`. No attribution or co-author trailers.
+- **Browser.** Use `crawl` / `chrome` with the `cdp` engine only. One browser per project: calls queue on its lease, and the window stays open 15 minutes after the last holder or waiter. Never install or run puppeteer, playwright, chromium or any headless browser.
+- **Transport.** No listening ports and no admin rights. The stdio relay talks to the runner over the spool, on Windows, macOS and Linux alike. Spool writes are atomic (temp name, then rename).
+- **Environment.** No `CLAUDE_*` variables, hooks, settings files or harness-only features: gm works from the skill and its verbs alone.
+- **Tools.** Code questions go to `callers` / `impact` and then `codesearch`. Git and search use gm verbs, not Bash `git`, `grep` or `find`.
+- **Builds.** No local compile, build or test unless the build setting is on. CI runs the builds; the test follow-up reads them.
+- **Dream loop.** Dream-RSI only proposes. Nothing redeploys a strategy unattended.
+- **Judgement.** Never ask about process or scope. Take the most defensible default, state it in one line, and continue. Ask only at a Section 4 door.
+
 ## 0. Precedence
 Live response (gate denial, residual, `instruction`/`phase-status`, `entry` prose) outranks every tier. Higher tiers replace lower, never merge. Served text beats this file; report a contradiction in one line. Sole exception: Section 4 world-scope. Tiers: `Tier` enum (`config::Tier`, `rs-plugkit/crates/plugkit-core/src/config.rs`), declaration order = resolution order. Sections 2-3 sit below its last variant.
 
