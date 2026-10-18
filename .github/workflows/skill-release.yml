@@ -23,7 +23,11 @@ jobs:
           fetch-depth: 0
 
       - name: Refuse a stale skill manifest
-        run: node scripts/build-skill-manifest.mjs --check
+        run: |
+          node scripts/build-skill-manifest.mjs --check || {
+            echo "::error title=Stale skill manifest::skills/manifest.sha256 does not match skills/. Run node scripts/build-skill-manifest.mjs and commit it with the skill change."
+            exit 1
+          }
 
       - name: Auto-bump patch version BEFORE packaging
         id: bump
