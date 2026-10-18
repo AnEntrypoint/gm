@@ -57,12 +57,13 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.PUBLISHER_TOKEN }}
+          SHA: ${{ github.sha }}
         run: |
           set -e
           git config user.name "lanmower"
           git config user.email "657315+lanmower@users.noreply.github.com"
           git config url."https://${GH_TOKEN}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
-          CURRENT=$(node -e "console.log(require('./package.json').version)")
+          CURRENT=$(git show "$SHA:package.json" | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>console.log(JSON.parse(s).version))")
           git fetch origin main --quiet
           MAIN_VER=$(git show origin/main:package.json | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>console.log(JSON.parse(s).version))")
           if [ "$MAIN_VER" != "$CURRENT" ] && [ "$(printf '%s\n%s\n' "$CURRENT" "$MAIN_VER" | sort -V | tail -1)" = "$MAIN_VER" ]; then
