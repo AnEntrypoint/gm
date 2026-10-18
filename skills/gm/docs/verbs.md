@@ -747,3 +747,5 @@ The agentplug daemon, not the gm plugin, handles these:
 Twelve verbs publish their parameter doc: pass `{"help": true}` as the body of `grep`, `codesearch`,
 `fs_read`, `fs_write`, `fs_readdir`, `fs_stat`, `prd-add`, `prd-resolve`, `codeinsight`, `comment-audit`, `git_merge_abort` or `git_worktree` and the reply is
 `{"help": true, "verb": ..., "parameters": "<doc>"}`. Any other verb answers `help` with an error that says no parameter documentation is published for it.
+
+`gm.describe(name)` in `gm_codemode` answers `{name, verb, summary, docs, input_schema, body_schema}`. `summary` is the verb's table description (null when the table has none; `docs` then names the heading to search for). `input_schema` is `{shared: "dispatch_envelope"}` when the verb takes the common dispatch envelope (body, raw_body, session_id, cwd, timeout_seconds and the rest); that schema is returned once by `gm.help().dispatch_envelope`.
