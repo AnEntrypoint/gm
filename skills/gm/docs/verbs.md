@@ -604,7 +604,7 @@ raw_body: "https://example.com/\nsnapshot\n"
 A `cdp` body may open with `session=<name>`, then one step per line. The steps run over the single Chrome that a project root shares.
 
 - `session=<name>` (a crawl session name, not a gm `session_id`; 1-64 letters, digits, `-`, `_`) keeps the tab and the `uid=N` numbers it assigned across calls, in `.gm/crawl-cdp-sessions/<name>.json`. Calls on one crawl session are serialized. A corrupt state file is refused, never reset. `sessionId=<name>` is an alias of `session=<name>`; a body that gives both is refused.
-- The shared Chrome closes when its last lease is released, at the end of the call that holds it. A lease is the hold one call keeps on the shared Chrome. Without `session=`, a call opens its own tab and closes it when it ends.
+- The shared Chrome stays open after its last lease is released. It closes after 15 minutes with no holder or waiter. A lease is the hold one call keeps on the shared Chrome. Without `session=`, a call opens its own tab and closes it when it ends.
 
 | Step | Does |
 |---|---|
