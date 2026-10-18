@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
@@ -6,7 +7,13 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 const root = process.argv[2]
   ? path.resolve(process.argv[2])
   : path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const gmMcpSrc = path.join(root, 'gm-mcp', 'src');
+const gmMcpDir = path.join(root, 'gm-mcp');
+const gmMcpSrc = path.join(gmMcpDir, 'src');
+if (!fs.existsSync(path.join(gmMcpDir, 'node_modules', 'zod'))) {
+  execFileSync(process.platform === 'win32' ? 'npm.cmd' : 'npm',
+    ['ci', '--prefix', gmMcpDir, '--ignore-scripts', '--no-audit', '--no-fund'],
+    { stdio: 'inherit' });
+}
 const { VERB_TABLE } = await import(pathToFileURL(path.join(gmMcpSrc, 'verb-table.js')).href);
 const { verbBodySchema } = await import(pathToFileURL(path.join(gmMcpSrc, 'verb-bodies.js')).href);
 const docs = fs.readFileSync(path.join(root, 'skills', 'gm', 'docs', 'verbs.md'), 'utf8');
