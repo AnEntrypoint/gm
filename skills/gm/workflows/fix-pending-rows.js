@@ -1,105 +1,101 @@
 export const meta = {
   name: 'fix-pending-rows',
-  description: 'Fix open PRD rows concurrently per repo, debug live, follow CI/CD to green, and resolve each row only with a witness',
-  whenToUse: 'Run concurrently with roll-out-findings to drain the PRD backlog',
+  description: 'Run tests and CI/CD follow-up concurrently with rollout, fix what they expose, and resolve rows rollout left open',
+  whenToUse: 'Run concurrently with roll-out-findings at the start of every /gm run',
   phases: [
-    { title: 'Fix', detail: 'one sequential lane per repo; rows inside a repo never run in parallel' },
-    { title: 'Wrap', detail: 'summarise what resolved and what stayed blocked' },
+    { title: 'Scan', detail: 'ci-status for recent pushed shas, plus rows rollout left open' },
+    { title: 'Fix', detail: 'one sequential lane per file group; groups run in parallel' },
+    { title: 'Wrap', detail: 'summarise what went green and what stayed red' },
   ],
 }
 
-const REPOS = ['gm', 'rs-plugkit', 'agentplug', 'gm-mcp']
 const MAX_ROUNDS = 8
 
-const ROWS = {
+const SCAN = {
   type: 'object',
   properties: {
-    rows: {
+    items: {
       type: 'array',
       items: {
         type: 'object',
         properties: {
-          id: { type: 'string' },
+          kind: { type: 'string' },
+          key: { type: 'string' },
           repo: { type: 'string' },
-          subject: { type: 'string' },
           group: { type: 'string' },
+          sha: { type: 'string' },
+          detail: { type: 'string' },
         },
-        required: ['id', 'repo'],
+        required: ['kind', 'key', 'repo', 'group'],
       },
     },
   },
-  required: ['rows'],
+  required: ['items'],
 }
 
 const RESULT = {
   type: 'object',
   properties: {
-    id: { type: 'string' },
+    key: { type: 'string' },
     status: { type: 'string' },
     commit: { type: 'string' },
-    witness_dispatch_id: { type: 'string' },
     ci: { type: 'string' },
     note: { type: 'string' },
   },
-  required: ['id', 'status'],
+  required: ['key', 'status'],
 }
 
-const listPrompt = (skip) => `Use the gm skill for this, with mcp__gm__gm_codemode for every verb; no Bash grep/find/git. cwd /workspace/gm. Session id: fix-list-1018.
+const scanPrompt = (handled) => `Use the gm skill for this, with mcp__gm__gm_codemode for every verb; no Bash grep/find/git. cwd /workspace/gm. Session id: test-scan-1018.
 
-List every OPEN PRD row with prd-list {"status":"pending"}. Skip these ids (already handled this run): ${JSON.stringify(skip)}. For each remaining row, read its description and return {id, repo, subject, group}. repo is the value in its "[repo: ...]" prefix; if there is none, use "gm". group is the primary file the fix edits (a repo-relative path, from the row's path:line, or the nearest file it names); rows that would edit the same file must share one group, so they run in sequence. Return {rows}. Do not edit anything.`
+Find the work for the test and CI/CD follow-up. Do NOT edit or commit anything.
+1. For each repo (gm, rs-plugkit, agentplug, gm-mcp), list its last 30 commits on main and read ci-status for each sha. Each red job is one item: kind "ci", key "<repo>:<sha>:<job>", repo, group = the repo-relative file the failing step names (from ci_log failed_only), sha, detail = the failing step and its error line.
+2. prd-list {"status":"pending"}. Each open row is one item: kind "row", key = the row id, repo from its "[repo: ...]" prefix (default gm), group from its "[group: ...]" prefix, detail = its subject. Skip any key in ${JSON.stringify(handled)}.
+Return {items}.`
 
-const fixPrompt = (row) => `Use the gm skill for this; code questions go to codeinsight (callers/impact) first, then codesearch, and Read only a located path. Use mcp__gm__gm_codemode (load via ToolSearch "select:mcp__gm__gm_codemode") for every verb; no Bash grep/find/git. Session id: fix-${row.id}. cwd /workspace/gm. Read /workspace/gm/AGENTS.md and the AGENTS.md of the repo you edit.
+const fixPrompt = (item) => `Use the gm skill for this; code questions go to codeinsight (callers/impact) first, then codesearch, and Read only a located path. Use mcp__gm__gm_codemode (load via ToolSearch "select:mcp__gm__gm_codemode") for every verb; no Bash grep/find/git. Session id: test-${item.key.replace(/[^A-Za-z0-9]+/g, '-').slice(0, 60)}. cwd /workspace/gm. Read /workspace/gm/AGENTS.md and the AGENTS.md of the repo you edit.
 
-Row: ${row.id} — ${row.subject}. Read it fully with prd-list {"id":"${row.id}"}.
+${item.kind === 'ci'
+  ? `CI job failing on ${item.sha} in ${item.repo}: ${item.detail}. Debug it with ci_log failed_only, fix the cause in ${item.group}, commit by explicit path (subject at most 50 characters, change only, no attribution trailer), git_pull, git_push with the full sha, then ci-status for the new sha. Up to 3 attempts.`
+  : `Open row ${item.key} (repo ${item.repo}, group ${item.group}): ${item.detail}. Rollout left it open. Read it with prd-list {"id":"${item.key}"}, make the minimal fix in ${item.group}, commit by explicit path, git_pull, git_push with the full sha, prove it with a live dispatch, and prd-resolve with that witness. Do NOT wait on CI beyond one ci-status read.`}
 
-Steps:
-1. Reproduce it live first with a dispatch and keep its dispatch id.
-2. Make the minimal fix in its repo (${row.repo}). Fix nothing else; file any other finding with prd-add.
-3. Build when the repo needs it (rs-plugkit: --features slim; if the default CARGO_HOME is unwritable use CARGO_HOME=/tmp/cargo-home-drsi RUSTUP_HOME=/tmp/rustup-drsi).
-4. Witness the fix through a live dispatch and keep that dispatch id.
-5. Run node scripts/check-staged-secrets.mjs from that repo; it must print RESULT: PASS.
-6. Commit by explicit path (subject at most 50 characters, change only, no attribution trailer). git_pull, then git_push with rev set to the full sha.
-7. Watch CI with ci_status for the pushed sha. If a job fails, debug it with ci_log failed_only, fix it, push again. Up to 3 attempts.
-8. Close the row with prd-resolve {id, witness_evidence, witness_dispatch_id} only when the witness passed AND CI is green. Otherwise leave the row open.
+Run no local compile or build unless the build setting is on. Fix nothing else; file any other finding with prd-add.
 
-Return {id, status: "resolved" or "blocked", commit, witness_dispatch_id, ci: "green", "red" or "none", note}. A blocked row gives its exact blocker in note.`
+Return {key: "${item.key}", status: "resolved" or "red" or "blocked", commit, ci: "green", "red" or "none", note}.`
 
-phase('Fix')
+phase('Scan')
 const handled = []
-const resolved = []
-const blocked = []
+const outcomes = []
 for (let round = 1; round <= MAX_ROUNDS; round++) {
-  const listed = await agent(listPrompt(handled), { phase: 'Fix', label: `list round ${round}`, schema: ROWS })
-  const rows = listed && listed.rows ? listed.rows : []
-  if (rows.length === 0) {
-    log(`round ${round}: no open rows left`)
+  const scan = await agent(scanPrompt(handled), { phase: 'Scan', label: `scan round ${round}`, schema: SCAN })
+  const items = scan && scan.items ? scan.items : []
+  if (items.length === 0) {
+    log(`round ${round}: nothing red and no open rows`)
     break
   }
-  log(`round ${round}: ${rows.length} open rows`)
+  log(`round ${round}: ${items.length} items (${items.filter(i => i.kind === 'ci').length} red CI, ${items.filter(i => i.kind === 'row').length} open rows)`)
   const byGroup = {}
-  for (const row of rows) {
-    const key = `${REPOS.includes(row.repo) ? row.repo : 'gm'}:${row.group || row.id}`
+  for (const item of items) {
+    const key = `${item.repo}:${item.group}`
     if (!byGroup[key]) byGroup[key] = []
-    byGroup[key].push(row)
-    handled.push(row.id)
+    byGroup[key].push(item)
+    handled.push(item.key)
   }
-  log(`round ${round}: ${Object.keys(byGroup).length} independent lanes`)
-  const outcomes = await parallel(
+  phase('Fix')
+  const round_ = await parallel(
     Object.keys(byGroup).map(key => async () => {
       const lane = []
-      for (const row of byGroup[key]) {
-        lane.push(await agent(fixPrompt(row), { phase: 'Fix', label: row.id, schema: RESULT }))
+      for (const item of byGroup[key]) {
+        lane.push(await agent(fixPrompt(item), { phase: 'Fix', label: item.key.slice(0, 60), schema: RESULT }))
       }
       return lane
     })
   )
-  for (const result of outcomes.flat().filter(Boolean)) {
-    if (result.status === 'resolved') resolved.push(result)
-    else blocked.push(result)
-  }
-  log(`round ${round} done: ${resolved.length} resolved, ${blocked.length} blocked so far`)
+  for (const r of round_.flat().filter(Boolean)) outcomes.push(r)
+  log(`round ${round} done: ${outcomes.filter(o => o.status === 'resolved' || o.ci === 'green').length} green so far`)
 }
 
 phase('Wrap')
-log(`fix run finished: ${resolved.length} resolved, ${blocked.length} blocked`)
-return { resolved: resolved.map(r => r.id), blocked: blocked.map(r => ({ id: r.id, note: r.note })) }
+const green = outcomes.filter(o => o.status === 'resolved' || o.ci === 'green').map(o => o.key)
+const red = outcomes.filter(o => o.status !== 'resolved' && o.ci !== 'green').map(o => ({ key: o.key, note: o.note }))
+log(`test follow-up: ${green.length} green, ${red.length} still red or blocked`)
+return { green, red }
