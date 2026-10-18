@@ -17,7 +17,7 @@ Ledger `launch` and `done` lines are written by the orchestrator (gm-orchestrate
 3. `codesearch` every instance a claim governs on the surface. Print cited lines. Drop absent text.
 3a. If the surface asserts a cause, defect or fix, run ACH (`gm-config/prose/ach.md`) before step 4: at least two rival hypotheses; a `C`/`I`/`N` matrix from dispatch-backed evidence; rank by fewest `I` cells; one probe separating the leader from the next. Step 4 acts only on the leader. A rejected hypothesis gets no edit.
 4. Close what one exact-match Edit closes, if no other writer holds the file (`git_status` with paths). Witness it live and keep the dispatch id. Revert any change without a live witness.
-5. `prd-add` each other finding as `<principle>-<SESSION_ID>-<n>` using the full SESSION_ID, never a suffix. `prd-list` the id first. `prd-add` refuses an existing id unless `overwrite:true`, so a refused id takes the next `<n>`. Never send `overwrite` for another session's row. Retire or merge one stale row per row added.
+5. `prd-add` each other finding as `<principle>-<SESSION_ID>-<n>` using the full SESSION_ID, never a suffix. `prd-list {"id":"<id>"}` first, never a pending listing. `prd-add` refuses an existing id unless `overwrite:true`, so a refused id takes the next `<n>`. Never send `overwrite` for another session's row. Retire or merge one stale row per row added.
 6. Name the biggest need in one sentence.
 7. Nominate the next node: an eligible link from step 0 whose `to` attacks the need. Every eligible link is nominable regardless of position or history. At `depth` ≥ `max_depth` (default 6): `next: none, depth limit`. Otherwise `next:` names the link's `to` and `depth+1`; `rhetoric` = your `next_choice.why` verbatim (three sentences max). The orchestrator builds the child payload from the private graph, writes `launch <child-session> surface=<surface> row=-` to `.gm/pool/ledger-<wave>.txt`, and spawns the child. The receipt's last act appends `done <session>` to the same ledger, on every verdict.
 
@@ -42,7 +42,7 @@ Write `.gm/lean-walk/<NODE>.json` (overwrite only the node's own file):
 - A receipt is the hop's own. A hop that spawns a successor names the child session in `next:` and carries no child text. The orchestrator reads each receipt by the session it launched.
 - A principle already filed in this walk by another wave is merged by the orchestrator, never added again; the hop still lists and cites what it filed.
 - A hop is one named principle from the book "lean" (AnEntrypoint/lean), applied as work to every in-scope instance in one pass.
-- A hop lists the real pending rows for its surface, records a one-line action per row, nominates its successor from that list, never invents an id.
+- A hop reads the pending rows once at start with `prd-list {"status":"pending"}`, records a one-line action per row, nominates its successor from that list, never invents an id. Before each add it checks only that id (step 5).
 - Every hop runs as its own subagent with its own SESSION_ID. The orchestrator never performs hop work inline; it dispatches and reads the receipt.
 - Choose the next node by project fit and diversity.
 - Back-verify: traversal is unfinished until earlier applied nodes a later change may affect are re-checked.
