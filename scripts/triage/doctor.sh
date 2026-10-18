@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Platform: POSIX shell only (calls the POSIX triage scripts). Run under Git Bash on Windows.
 here=$(cd "$(dirname "$0")" && pwd)
 rc=0
 echo "== watcher"; "$here/runner-status.sh" "$PWD" || rc=1
