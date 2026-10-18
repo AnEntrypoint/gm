@@ -86,6 +86,19 @@ jobs:
       - name: Every repository path the site and docs name resolves
         run: node scripts/check-doc-paths.mjs
 
+  repo-hygiene:
+    needs: changes
+    if: needs.changes.outputs.relevant == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 20
+      - name: AGENTS.md under 30000 bytes, no BOM, no decorative glyphs in prose
+        run: node scripts/check-repo-hygiene.mjs
+
   graph-traversal:
     needs: changes
     if: needs.changes.outputs.relevant == 'true'
