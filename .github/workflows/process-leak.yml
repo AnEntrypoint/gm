@@ -11,6 +11,10 @@ on:
     branches: [main]
     paths-ignore: ['docs/**']
 
+concurrency:
+  group: gm-process-leak-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   gate:
     runs-on: ubuntu-latest
