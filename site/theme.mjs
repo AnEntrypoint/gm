@@ -298,7 +298,7 @@ const renderHtml = ({ site, navItems, page }) => `<!DOCTYPE html>
   </style>
 </head>
 <body>
-  <div id="app"></div>
+  <div id="app"><noscript><main class="ds-prose">${page.articleHtml || ''}</main></noscript></div>
   <script type="application/json" id="__site__">${escapeJson({ site, navItems, page })}</script>
   <script type="module">${CLIENT_SCRIPT}</script>
 </body>

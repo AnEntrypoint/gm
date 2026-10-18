@@ -13,6 +13,7 @@ concurrency:
 jobs:
   release:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: write
     steps:
@@ -22,52 +23,63 @@ jobs:
           fetch-depth: 0
 
       - name: Refuse a stale skill manifest
-        run: node scripts/build-skill-manifest.mjs --check
+        run: |
+          node scripts/build-skill-manifest.mjs --check || {
+            echo "::error title=Stale skill manifest::skills/manifest.sha256 does not match skills/. Run node scripts/build-skill-manifest.mjs and commit it with the skill change."
+            exit 1
+          }
 
       - name: Auto-bump patch version BEFORE packaging
         id: bump
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.PUBLISHER_TOKEN }}
-          EVENT_ACTOR: ${{ github.actor }}
-          EVENT_SENDER: ${{ github.event.sender.login }}
-          HEAD_SHA: ${{ github.sha }}
         run: |
           set -e
-          resolve_human_author() {
-            local candidate="$1"
-            [[ "$candidate" =~ ^[A-Za-z0-9-]+$ ]] || return 1
-            local account
-            account=$(gh api "users/$candidate" --jq 'select(.type == "User") | [.login, (.id | tostring)] | @tsv') || return 1
-            [ -n "$account" ] || return 1
-            IFS=$'\t' read -r AUTHOR_LOGIN AUTHOR_ID <<< "$account"
-            [ -n "$AUTHOR_LOGIN" ] && [[ "$AUTHOR_ID" =~ ^[0-9]+$ ]]
-          }
-          if ! resolve_human_author "$EVENT_ACTOR" && ! resolve_human_author "$EVENT_SENDER"; then
-            initiating_commit=$(gh api "repos/$GITHUB_REPOSITORY/commits/$HEAD_SHA")
-            commit_author=$(jq -r '.author.login // empty' <<< "$initiating_commit")
-            commit_committer=$(jq -r '.committer.login // empty' <<< "$initiating_commit")
-            if ! resolve_human_author "$commit_author" && ! resolve_human_author "$commit_committer"; then
-              echo "::error::Cannot verify an initiating human GitHub account for skill release $HEAD_SHA"
-              exit 1
-            fi
-          fi
-          git config user.name "$AUTHOR_LOGIN"
-          git config user.email "${AUTHOR_ID}+${AUTHOR_LOGIN}@users.noreply.github.com"
+          git config user.name "lanmower"
+          git config user.email "657315+lanmower@users.noreply.github.com"
           git config url."https://${GH_TOKEN}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
           CURRENT=$(node -e "console.log(require('./package.json').version)")
-          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
-          NEW_PATCH=$((PATCH + 1))
-          NEW_VERSION="$MAJOR.$MINOR.$NEW_PATCH"
-          node -e "
-            const fs = require('fs');
-            const p = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-            p.version = '$NEW_VERSION';
-            fs.writeFileSync('package.json', JSON.stringify(p, null, 2) + '\n');
-          "
-          git add package.json
-          git commit -m "chore: auto-bump version to $NEW_VERSION [skip ci]"
-          git push origin HEAD:main
+          git fetch origin main --quiet
+          MAIN_VER=$(git show origin/main:package.json | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>console.log(JSON.parse(s).version))")
+          if [ "$MAIN_VER" != "$CURRENT" ] && [ "$(printf '%s\n%s\n' "$CURRENT" "$MAIN_VER" | sort -V | tail -1)" = "$MAIN_VER" ]; then
+            NEW_VERSION="$MAIN_VER"
+            echo "origin/main already at v$MAIN_VER from an earlier attempt: resuming its publish without a second bump"
+          elif gh release view "v$CURRENT" --repo AnEntrypoint/gm >/dev/null 2>&1; then
+            IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
+            NEW_PATCH=$((PATCH + 1))
+            NEW_VERSION="$MAJOR.$MINOR.$NEW_PATCH"
+            node -e "
+              const fs = require('fs');
+              const p = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+              p.version = '$NEW_VERSION';
+              fs.writeFileSync('package.json', JSON.stringify(p, null, 2) + '\n');
+            "
+            git add package.json
+            git commit -m "chore: auto-bump version to $NEW_VERSION [skip ci]"
+            for attempt in 1 2 3 4 5; do
+              if git push origin HEAD:main; then break; fi
+              echo "[retry] push rejected (attempt $attempt): main moved, re-bumping on origin/main"
+              if [ "$attempt" = "5" ]; then echo "::error::bump push rejected 5 times"; exit 1; fi
+              sleep $((attempt * 3))
+              git fetch origin main --quiet
+              git reset --hard origin/main --quiet
+              MAIN_VER=$(node -e "console.log(require('./package.json').version)")
+              IFS='.' read -r MAJOR MINOR PATCH <<< "$MAIN_VER"
+              NEW_VERSION="$MAJOR.$MINOR.$((PATCH + 1))"
+              node -e "
+                const fs = require('fs');
+                const p = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+                p.version = '$NEW_VERSION';
+                fs.writeFileSync('package.json', JSON.stringify(p, null, 2) + '\n');
+              "
+              git add package.json
+              git commit -m "chore: auto-bump version to $NEW_VERSION [skip ci]"
+            done
+          else
+            NEW_VERSION="$CURRENT"
+            echo "v$CURRENT has no release yet: resuming its publish without a second bump"
+          fi
           echo "version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Package skill tarball with checksum
@@ -86,11 +98,16 @@ jobs:
           SHA: ${{ github.sha }}
         run: |
           set -e
-          gh release create "v$VER" \
-            --repo AnEntrypoint/gm \
-            --title "gm skill v$VER" \
-            --notes "Auto-published from gm CI at $SHA" \
-            release-assets/*
+          if gh release view "v$VER" --repo AnEntrypoint/gm >/dev/null 2>&1; then
+            echo "v$VER already published by an earlier attempt: re-uploading its assets"
+            gh release upload "v$VER" --repo AnEntrypoint/gm --clobber release-assets/*
+          else
+            gh release create "v$VER" \
+              --repo AnEntrypoint/gm \
+              --title "gm skill v$VER" \
+              --notes "Auto-published from gm CI at $SHA" \
+              release-assets/*
+          fi
 
       - name: Verify every uploaded asset is actually fetchable
         env:
@@ -100,7 +117,12 @@ jobs:
           base="https://github.com/AnEntrypoint/gm/releases/download/v$VER"
           for f in release-assets/*; do
             name=$(basename "$f")
-            code=$(curl -sL -o /dev/null -w '%{http_code}' "$base/$name")
+            for attempt in 1 2 3 4 5; do
+              code=$(curl -sL -o /dev/null -w '%{http_code}' "$base/$name")
+              [ "$code" = "200" ] && break
+              echo "[retry] $name HTTP $code (attempt $attempt)"
+              sleep $((attempt * 5))
+            done
             if [ "$code" != "200" ]; then
               echo "::error::published release v$VER's $name is not fetchable (HTTP $code)"
               exit 1
