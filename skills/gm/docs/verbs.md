@@ -718,7 +718,7 @@ Pass the `instruction_hash`/`policy_hash` of the prior `instruction` response ba
 
 `subagent-start` takes `parent_session_id` and `subagent_session_id` (both validated), with optional `cwd` and `slice_id`, and records the subagent's start in `.subagent-ledger.jsonl` in the gm state directory. `subagent-end` takes the same two ids and a `status` of `done` (the default), `failed` or `stopped`. The native build refuses both lifecycle writes with `subagent lifecycle requires the wasm32 host`.
 
-`browser_lease_acquire` and `browser_lease_release` take `agent`, and `browser_lease_status` takes no agent. Acquire waits up to 600 s for the shared browser lease and answers `port`, `chrome_pid` and `lease_file`. A holder whose heartbeat is older than 120 s counts as dead. Release answers the lease state with `released` set to the agent, and status answers the lease state alone.
+`browser_lease_acquire` and `browser_lease_release` take `agent`, with optional `ttl_ms` (lease time-to-live in ms before a silent holder counts as dead) and `wait_ms` (ms to wait for the lease before refusing), and `browser_lease_status` takes no agent. Acquire waits up to 600 s for the shared browser lease and answers `port`, `chrome_pid` and `lease_file`. A holder whose heartbeat is older than 120 s counts as dead. Release answers the lease state with `released` set to the agent, and status answers the lease state alone.
 
 `pool-brief` hands one subagent its brief for one PRD row. Its body takes three non-empty string
 fields: `row` (a PRD row id), `session` (the subagent's SESSION_ID: the key is spelled `session`,
