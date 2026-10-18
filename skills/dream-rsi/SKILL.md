@@ -8,8 +8,8 @@ description: "Infer strategy proposals from Dream-RSI observation logs, and meas
 Schedule (set by the caller, not by this skill): run as a background agent on the smallest available model at an interval. The subagent reads files and returns one JSON object. It does not edit files or dispatch verbs.
 
 Inputs:
-- `observations.json` files: `<repo>/.gm/dream-rsi/<session>/observations.json`, one JSON object per line (a legacy JSON array is also accepted), appended per record and rotated to `observations-archive-<ts>.json` past 256 records, serialized from `ObservationRecord` in `rs-plugkit/crates/plugkit-core/src/orchestrator/dream_rsi.rs`. Orchestration verbs and `dream-*` dispatches are not recorded. A failed record carries `error_code` (the reply's short failure code) or `no_match:true` (a zero-count failure, scored 0.5 and not counted as a failure); a success carries neither.
-- Cycle result: `.gm/dream-rsi/<session>/cycle-result.json` (`cycle_id`, `selection`, `score`, `replay_count`, `ts`), written by the automatic `dream-replay-cycle` boundary.
+- Storage index: `<repo>/.gm/dream-rsi/index.json` (`schema_version`, `files`, `record_kinds`, `fields`), written by the guest on every persist. Read it first and resolve every Dream-RSI file name and record kind from it; the observation log, the cycle result and their fields are described there. Orchestration verbs and `dream-*` dispatches are not recorded. A failed record carries `error_code` (the reply's short failure code) or `no_match:true` (a zero-count failure, scored 0.5 and not counted as a failure); a success carries neither.
+- Cycle result: the `cycle_result` file of each session named in `index.json`, written by the automatic `dream-replay-cycle` boundary.
 - The gm graph: `skills/dream-rsi/gm-graph.json` (`nodes`, `edges`; node `kind` is `principle`, `gate`, `tension` or `terminal` -- there is no phase node; edge `kind` is `forward` or `backreference`). A node is a book when its `book` is non-empty; `book_index` names each anchor book and the node that carries it.
 - The DADA graph: `skills/dream-rsi/dada-graph.json`, the same node layout as the gm graph (`nodes`, `edges`, `entry_points` = `DADA_START`, `convergence`). It holds the DADA anchor graph: `principle` nodes grouped by `provenance` (`dada:<cluster>`), `tension` nodes for counterpoint edges, and the gate and terminal nodes `DADA_START`, `DADA_G_ROUTE`, `DADA_G_CRITICS`, `DADA_G_NUMBERS`, `DADA_HALT`, `DADA_HOLDS`. Its page is `docs/dada-graph.html` (built from this file by `scripts/build-graph-page.mjs`). Read it with the same rules as the gm graph in Part B and Part C; it is never a phase source.
 - Phase history: `.gm/turn-state.json` `phase_history`.
@@ -68,9 +68,9 @@ CI runs it on every push and pull request to main.
 The loop is the one at https://dream-rsi.com/: explore online, append the recorded tree to the history, dream M policy revisions and score each by replay over the whole history, redeploy the winner. The incumbent is always one of the M candidates, so the deployed policy is never worse. Parts A to C read the history; Part D checks that the loop turns.
 
 1. History is the whole project, not one session: count records and sessions across every observation file, and take the newest record `ts`.
-2. Read every `cycle-result.json`. The newest by `ts` is the current cycle.
-3. The loop is `stalled` when the history holds at least `MIN_NEW_OBSERVATIONS` records newer than the current cycle (or no cycle result exists) and the current cycle is older than `COOLDOWN_MS`. The stage that did not run is `cycle_trigger`: no `cycle-result.json` since the threshold was reached.
-4. The cycle result carries no incumbent-versus-challenger flags, so no `improved`, `never_worse` or redeploy check applies here. Redeployment stays a manual act under the normal PRD and evidence gates; this skill never writes `active-strategy.json`.
+2. Read every session's cycle result (the `cycle_result` file in `index.json`). The newest by `ts` is the current cycle.
+3. The loop is `stalled` when the history holds at least `MIN_NEW_OBSERVATIONS` records newer than the current cycle (or no cycle result exists) and the current cycle is older than `COOLDOWN_MS`. The stage that did not run is `cycle_trigger`: no cycle result since the threshold was reached.
+4. The cycle result carries no incumbent-versus-challenger flags, so no `improved`, `never_worse` or redeploy check applies here. Redeployment stays a manual act under the normal PRD and evidence gates; this skill never writes the active strategy.
 
 ## Output
 
@@ -90,13 +90,16 @@ PartD              = { history_records: number, history_sessions: number, newest
 Insufficient       = { status: "insufficient", records: number }   // records < MIN_NEW_OBSERVATIONS
 PartA              = { records: number, per_verb: VerbStat[], proposals: VerbProposal[] }   // proposals <= MAX_PART_A_PROPOSALS
 VerbStat           = { verb: string, count: number, failure_rate: number, gate_drift_rate: number }
-VerbProposal       = { verb: string, change: string, evidence: string, target: string }
+VerbProposal       = { verb: string, change: string, evidence: string, target: string, check: Check }
 PartB              = { traversable_nodes: number, nodes_verified: number, backreference_edges: number,
                        backreferences_verified: number, forward_edge_coverage_approx: number,
                        rejected_walks: RejectedWalk[], proposals: NodeProposal[] }   // proposals <= MAX_PART_B_PROPOSALS
 RejectedWalk       = { node: string, missing_dispatch_ids: string[] }
-NodeProposal       = { node: string, walk_when: string, evidence_that_counts: string }
+NodeProposal       = { node: string, walk_when: string, evidence_that_counts: string, check: Check }
+Check              = { verb: string, body: object, pass: string }   // one dispatch; pass is a predicate over its reply
 ```
+
+A `check` names one dispatch that the history replay or a live witness can run, and a `pass` predicate over its reply (a field and value, or a replay score that beats the incumbent). A proposal with no runnable `check`, or with boilerplate acceptance text in its place, is not filed.
 
 A proposal is evidence-bound planning input. It is deployed only through the normal gate, authorization and evidence gates, never by this skill.
 
