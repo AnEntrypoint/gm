@@ -19,8 +19,9 @@ Inputs:
 1. Read every observation file. Count records. If there are fewer than `INSUFFICIENT_RECORD_THRESHOLD` across all sessions, return an `Insufficient` for Part A.
 2. Per verb, compute count, failure rate (`exit_code != 0`), gate-drift rate, and mean `quality`.
 3. Treat `quality` with caution. Until the scoring fix in rs-plugkit lands, `quality` mostly reflects the open PRD/mutable backlog rather than the dispatch outcome. Rank by failure rate weighted by count, not by `quality`.
-4. Some non-zero exits are valid answers, not failures. A `grep` exit 1 with no matches is a no-match result. The agent shall not propose a change for a verb until its failure exits are shown to be real errors.
-5. For up to `MAX_PART_A_PROPOSALS` candidates, write one proposal with the verb, the change, the counts and rates as evidence, and a measurable target on the same log.
+4. Some non-zero exits are valid answers, not failures. A `grep` exit 1 with no matches is a no-match result. Classify each failure by the record's `error_code` field. A record without one is `unclassified`, because its reply is pruned from `.gm/exec-spool/out` and cannot be recovered. The agent shall not propose a change for a verb until its failure exits are shown to be real errors. A verb whose failures are all unclassified gets no proposal and is counted in `unclassified_failures`.
+5. Read the open rows in `.gm/prd/` and `.gm/prd.yml`. Drop a candidate when an open row already names its verb and the same change.
+6. For up to `MAX_PART_A_PROPOSALS` candidates, write one proposal with the verb, the change, the counts and rates as evidence, and a measurable target on the same log. A change is executable: code, a config value or a verb contract. The paper found that directional prose hints do worse than no hint at equal budget, so a proposal that only adds guidance prose is refused.
 
 ## Part B: gm-graph traversal
 
@@ -34,7 +35,7 @@ The goal is to walk every principle-kind gm-graph node and every edge, through r
    - `nodes_verified` over `traversable_nodes`.
    - `backreferences_verified` over the number of backreference edges, counted only when the `from` node's evidence file has `applied:true` and its `witness` names the edge's condition.
    - Forward-edge coverage approximates a forward edge as covered when both endpoints have verified walks. Say that this is an approximation.
-6. Proposals: up to `MAX_PART_B_PROPOSALS` unwalked nodes, in this priority order: nodes with no verified walk, then backreference edges never fired. For each, give the node id, the condition to walk it on the next real task, and the evidence that would count as a walk.
+6. Proposals: up to `MAX_PART_B_PROPOSALS` unwalked nodes, in this priority order: nodes with no verified walk, then backreference edges never fired. For each, give the node id, the condition to walk it on the next real task, and the evidence that would count as a walk. Skip a node that an open row already proposes.
 
 ## Part C: the discipline tree
 
