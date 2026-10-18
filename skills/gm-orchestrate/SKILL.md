@@ -128,11 +128,12 @@ Launch only advertised ids. A slot stays empty only when no pending row and no u
 - `pool-observe` dropped at 120 s with `dispatch_starved_waiting_for_serial_lane`: re-dispatch once, verbatim (never `resume_task`). First read `.gm/exec-spool/.dispatch-wait.json`: position 1 or holder near budget: re-dispatch now; behind a fresh holder: wait; not shrinking: slow holder.
 - Commit ahead of push: wait. A push that waited out its budget keeps its place; re-dispatch once.
 - `dispatch_orphaned` on a read-only verb: re-dispatch at once. Before re-dispatching `git_commit`, `git_finalize`, `git_push` or `fs_write`, re-read real state.
-- Never preempt an executing holder. Never delete a `.live` file to free a slot.
+- Never preempt an executing holder. Never delete a `.live` file to free a slot, except the stopped worker's own claim under Connectivity restarts.
 - Two starvations of one git verb: `prd-add` the paths and both dispatch ids, then stop git dispatches until a completion drains the queue.
 
 ## Connectivity restarts
 - A subagent stopped by `ECONNRESET`, `ECONNREFUSED`, `server_error`, timeout or no response is restarted, never resumed, never a blocker. Fresh subagent, same row, session `<session>-r<n>`, same turn. Row stays open; slot stays held; never count it live.
+- Claim release before restart: the stopped worker's `.gm/pool/<session>.live` is deleted by the orchestrator once its error reply is read (the error proves it stopped), so the Heartbeat skip rule does not hold the row for 5 minutes. The restart writes its own `.live` under `<session>-r<n>`. Exactly one `.live` per row at any time; no duplicate row is filed for the restart.
 - `wait {"ms":30000}` between attempts while the error repeats. Log `restart <row> <n> <UTC>` to `.gm/witness-log.md`.
 - Cap: at most 4 restarts per row (`<session>-r1` to `<session>-r4`). After the 4th failure, the row stops being restarted and files a blocker row naming the last error and its dispatch id, so a dead endpoint cannot hold a slot forever.
 - Mass drop: `docs/recovery.md`, "Mass API-error drain".
