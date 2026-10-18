@@ -22,4 +22,83 @@ An accepted strategy is the currently selected policy: the incumbent, or a chall
 
 **Git lifecycle: `.gm/dream-rsi/` is gitignored** (see `.gitignore`), because its scratch trees have path names past the Windows 260-character limit and `git status` must not walk them. No session file is tracked: `git ls-files .gm/dream-rsi/` lists none. The session files are small, human-readable JSON with no binary blobs, and they stay untracked, so observations do not sync between clones.
 
-**The cycle-boundary trigger is a periodic tick inside agentplug-runner's own daemon loop, not a GitHub Actions cron.** `spawn_dream_rsi_cycle_ticker` (`agentplug/crates/agentplug-runner/src/daemon.rs`) mirrors the existing `spawn_heartbeat_ticker` pattern: once a minute, per known project root, it counts `.gm/dream-rsi/*/observations.json` records newer than each owner's last verified replay, and writes one `dream-replay-cycle` spool request per owner session (`rs-plugkit/crates/plugkit-core/src/orchestrator/mod.rs` routes it to `dream_cycle::handle`, already live) only after 20 or more new observations (`MIN_NEW_OBSERVATIONS`) have accumulated since the last verified replay AND 15 minutes (`COOLDOWN_MS`) have passed since the previous cycle's reply or deferral, matching the paper's own build-tree-then-dream cycle boundary and never firing on every tick. The daemon-tick path beats a git-push-triggered Actions cron because it observes real cross-session accumulated discovery-tree data on one machine without needing a commit to fire. The trigger dispatches `dream-replay-cycle` only.
+**The cycle-boundary trigger is a periodic tick inside agentplug-runner's own daemon loop, not a GitHub Actions cron.** `spawn_dream_rsi_cycle_ticker` (`agentplug/crates/agentplug-runner/src/daemon.rs`) mirrors the existing `spawn_heartbeat_ticker` pattern: on each periodic tick, per known project root, it counts `.gm/dream-rsi/*/observations.json` records newer than each owner's last verified replay, and writes one `dream-replay-cycle` spool request per owner session (`rs-plugkit/crates/plugkit-core/src/orchestrator/mod.rs` routes it to `dream_cycle::handle`, already live) only after an observation carrying `run_end: true` has landed since the last verified replay (a dispatch sent with `"run_end": true` in its body, which `observe_dispatch` records on that row), or, as a backstop for owners that never send it, after `MIN_NEW_OBSERVATIONS` new observations have accumulated and the newest one is `BACKSTOP_IDLE_MS` old; `COOLDOWN_MS` must also have passed since the previous cycle's reply or deferral, matching the paper's own build-tree-then-dream cycle boundary and never firing on every tick. The daemon-tick path beats a git-push-triggered Actions cron because it observes real cross-session accumulated discovery-tree data on one machine without needing a commit to fire. The trigger dispatches `dream-replay-cycle` only.
+
+## Use cases
+
+Each use case is fully dressed (Cockburn): primary actor, scope, level, stakeholders, preconditions, trigger, main success scenario (MSS), extensions keyed to the MSS step they replace, and guarantees. Every extension names the code path that implements it or the PRD row that will.
+
+### UC-1 Record an observation
+
+- **Primary actor:** the gm dispatch pipeline, acting for the owning session.
+- **Scope:** one project root, one session's `.gm/dream-rsi/<session>/observations.json`.
+- **Level:** subfunction.
+- **Stakeholders:** the replay simulator (needs complete records), the human reviewer (needs an audit trail).
+- **Preconditions:** the dispatch is a real work dispatch. Orchestration bookkeeping and Dream-RSI maintenance dispatches are excluded before recording.
+- **Trigger:** a real work dispatch finishes.
+- **MSS:**
+  1. The pipeline builds the observed dispatch for the finished work.
+  2. `observe_dispatch` (`rs-plugkit/crates/plugkit-core/src/orchestrator/dream_rsi.rs`) appends one JSON line through `pkfs::append`.
+  3. When the body carried `"run_end": true`, the row records it.
+- **Extensions:**
+  - 1a. The dispatch is orchestration or a Dream-RSI maintenance dispatch: nothing is recorded (line 7 of this file).
+  - 2a. The live file holds 256 records: the whole file moves to `observations-archive-<ts>.json` and the newest 32 stay live (`rs-plugkit/crates/plugkit-core/src/orchestrator/AGENTS.md`).
+  - 2b. The append fails: no partial line is left by design of the single append; the failure surfaces in the dispatch reply. Behavior beyond that is filed under PRD row USECASES-pw-hop-USECASES-1018-3 for confirmation.
+- **Guarantees:** a recorded line is never rewritten; concurrent dispatches cannot drop each other's lines; a line exists only for a real work dispatch.
+
+### UC-2 Replay the frozen tree offline
+
+- **Primary actor:** the Dream-RSI cycle (`dream-replay-cycle`, routed to `dream_cycle::handle`).
+- **Scope:** one owner session's discovery tree and its sealed worlds.
+- **Level:** user goal.
+- **Stakeholders:** the human reviewer, the incumbent policy owner, challenger policy authors.
+- **Preconditions:** the owner has at least `MIN_NEW_OBSERVATIONS` new records, or one with `run_end: true`, since its last verified replay.
+- **Trigger:** the periodic tick in `spawn_dream_rsi_cycle_ticker` (`agentplug/crates/agentplug-runner/src/daemon.rs`) decides a cycle boundary.
+- **MSS:**
+  1. The tick checks the cooldown (`COOLDOWN_MS` since the previous reply or deferral) and writes one `dream-replay-cycle` request per owner.
+  2. The handler replays the frozen tree with zero re-execution and a pure disk read.
+  3. Each challenger and the incumbent are scored over the same sealed worlds: quality minus `beta1` times cost plus `beta2` times parallelism, averaged per policy.
+  4. The result is written to `replay-result.json` and `cycle-result.json` in the owner directory.
+- **Extensions:**
+  - 1a. Cooldown has not passed: the tick defers, and no request is written (`agentplug/crates/agentplug-runner/src/daemon.rs`).
+  - 1b. Neither trigger condition holds: no request is written on that tick.
+  - 2a. The cursor rolled off the 256-entry window: the daemon marks `pending-partial-window` (`agentplug/crates/agentplug-runner/src/dream_cycle.rs`), and `cycle-result.json` does not yet carry a partial flag. Filed under PRD row USECASES-pw-hop-USECASES-1018-3; until that row lands, consumers must not treat the replay as covering the lost records.
+  - 2b. A replay that cannot finish: the replay reply reports the failure and the incumbent stays selected.
+- **Guarantees:** the replay performs no re-execution; the incumbent stays selected unless a challenger scores strictly higher; no strategy is deployed by this use case.
+
+### UC-3 Select the policy
+
+- **Primary actor:** the human reviewer or an agent acting on the reviewer's behalf.
+- **Scope:** one owner session's policy choice.
+- **Level:** user goal.
+- **Stakeholders:** the incumbent policy owner, the reviewer, downstream PRD rows.
+- **Preconditions:** `replay-result.json` exists for the owner and is newer than its last selection.
+- **Trigger:** the reviewer reads the replay result before later exploration work.
+- **MSS:**
+  1. The reviewer reads the incumbent score and each challenger score over the same sealed worlds.
+  2. The reviewer selects the incumbent, or a challenger that scored strictly higher.
+  3. The selection is recorded as evidence, not as an execution step.
+- **Extensions:**
+  - 1a. The replay is stale (its newest observation is newer than the replay): the reviewer re-runs UC-2 before selecting.
+  - 2a. No challenger scored strictly higher: the incumbent stays selected.
+  - 2b. A challenger ties the incumbent: the incumbent stays selected (monotonic safety).
+- **Guarantees:** a selection never regresses the incumbent; a replay result is planning input and carries no execution authority.
+
+### UC-4 Redeploy a selected policy
+
+- **Primary actor:** an agent dispatching a state-changing transform under the normal gates.
+- **Scope:** the project's PRD, mutable state, phase and authorization paths.
+- **Level:** user goal.
+- **Stakeholders:** the human reviewer, every session that runs under the deployed policy.
+- **Preconditions:** UC-3 has selected a policy; the dispatch carries the normal authorization evidence.
+- **Trigger:** the reviewer or an agent decides to deploy the selected policy.
+- **MSS:**
+  1. The agent opens a PRD row for the deployment through `prd-*` verbs.
+  2. The agent applies the policy change through `mutable-*` verbs under the phase and authorization gates.
+  3. The metrics that drove selection are re-derived from the dispatch ledger, keyed by dispatch id.
+  4. The row is resolved with a witness dispatch id.
+- **Extensions:**
+  - 2a. A gate refuses the dispatch: the refusal is the result. The agent records the refused dispatch and does not bypass the gate (`skills/gm/SKILL.md`).
+  - 3a. The ledger does not hold the dispatch ids the metrics cite: the metrics are not re-derived and the deployment stays open under its row.
+  - 4a. No witness exists: the row stays open with a named fact.
+- **Guarantees:** no daemon tick or scheduled job redeploys a policy; every deployment has a PRD row and a witness dispatch id.
