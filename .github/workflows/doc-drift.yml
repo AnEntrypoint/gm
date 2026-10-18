@@ -105,3 +105,7 @@ jobs:
         run: |
           cargo audit --file rs-plugkit/Cargo.lock
           cargo audit --file agentplug/Cargo.lock --ignore RUSTSEC-2026-0321
+      - name: Rust crate licenses match the deny.toml allowlist
+        run: |
+          cargo binstall --no-confirm cargo-deny@0.18.4
+          node scripts/check-crate-licenses.mjs
