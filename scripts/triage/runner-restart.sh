@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Platform: POSIX only (uses /proc, setsid). No Windows port; restart the runner by hand on Windows.
 root=${1:-$PWD}
 runner=${AGENTPLUG_RUNNER:-$HOME/.gm-tools/agentplug-runner}
 for p in $(ls /proc | grep -E '^[0-9]+$'); do
