@@ -143,4 +143,4 @@ The `gm-mcp` server shall compact every dispatch response before it crosses the 
 
 ## Script and CI rationale
 
-See `docs/script-rationale.md` (rationale for scripts and CI workflows, moved out of this file).
+See `docs/script-rationale.md` for script and CI rationale.
