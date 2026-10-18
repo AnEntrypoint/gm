@@ -3,8 +3,16 @@ name: discipline-tree
 on:
   push:
     branches: [main]
+    paths:
+      - 'skills/dream-rsi/gm-graph.json'
+      - 'scripts/check-discipline-tree.mjs'
+      - '.github/workflows/discipline-tree.yml'
   pull_request:
     branches: [main]
+    paths:
+      - 'skills/dream-rsi/gm-graph.json'
+      - 'scripts/check-discipline-tree.mjs'
+      - '.github/workflows/discipline-tree.yml'
 
 jobs:
   check:
