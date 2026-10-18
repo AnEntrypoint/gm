@@ -17,7 +17,7 @@ Ledger `launch` and `done` lines are written by the orchestrator (gm-orchestrate
 3. `codesearch` every instance a claim governs on the surface. Print cited lines. Drop absent text.
 3a. If the surface asserts a cause, defect or fix, run ACH (`gm-config/prose/ach.md`) before step 4: at least two rival hypotheses; a `C`/`I`/`N` matrix from dispatch-backed evidence; rank by fewest `I` cells; one probe separating the leader from the next. Step 4 acts only on the leader. A rejected hypothesis gets no edit.
 4. Close what one exact-match Edit closes, if no other writer holds the file (`git_status` with paths). Witness it live and keep the dispatch id. Revert any change without a live witness.
-5. Before each `prd-add`, one `codesearch` over `.gm/prd/` for the finding's cause literal (verb name or file path); on a hit, append the witness to that row when this hop owns it, else cite its id in the receipt, and add nothing. Otherwise `prd-add` the finding as `<principle>-<SESSION_ID>-<n>` using the full SESSION_ID, never a suffix. `prd-list {"id":"<id>"}` first, never a pending listing. `prd-add` refuses an existing id unless `overwrite:true`, so a refused id takes the next `<n>`. Never send `overwrite` for another session's row. Retire or merge one stale row per row added. A discipline whose output is order, rank or choice (PERT, MoSCoW, Pugh, Wardley) files no row of its own: it writes that ordering as `blockedBy` edges or a merged `acceptance_criteria` on the target rows it names, and it never files a plan as a pending row.
+5. Before each `prd-add`, one `codesearch` over `.gm/prd/` for the finding's cause literal (verb name or file path); on a hit, append the witness to that row when this hop owns it, else cite its id in the receipt, and add nothing. Otherwise `prd-add` the finding as `<principle>-<SESSION_ID>-<n>` using the full SESSION_ID, never a suffix. `prd-add` refuses an existing id unless `overwrite:true`, so a refused id takes the next `<n>`. Never send `overwrite` for another session's row. Retire or merge one stale row per row added. A discipline whose output is order, rank or choice (PERT, MoSCoW, Pugh, Wardley) files no row of its own: it writes that ordering as `blockedBy` edges or a merged `acceptance_criteria` on the target rows it names, and it never files a plan as a pending row.
 6. Name the biggest need in one sentence.
 7. Nominate the next node: an eligible link from step 0 whose `to` attacks the need. Every eligible link is nominable regardless of position or history. At `depth` ≥ `max_depth` (default 6): `next: none, depth limit`. Otherwise `next:` names the link's `to` and `depth+1`; `rhetoric` = your `next_choice.why` verbatim (three sentences max). The orchestrator builds the child payload from the private graph, appends `launch <child-session> surface=<surface> row=-` to `.gm/pool/ledger-<wave>.txt`, and spawns the child. The receipt's last act appends `done <session>` to the same ledger, on every verdict. Every ledger and `new-nodes.jsonl` line is an append: `fs_write {"path":"<path>","content":"<line>\n","append":true}`; a whole-file write to these shared logs is refused.
 
@@ -30,8 +30,10 @@ Write `.gm/lean-walk/<NODE>.<SESSION>.json` (keyed by node and owner session, so
 ```
 {node, applied, changes, witness, prd_ids, unknown_ids, next_choice:{to,why},
  links_offered:[<to>, ...], link_taken:<to|null>, session, witness_dispatch_ids:[<dispatch id>, ...],
- verified_by:<session>|null, verified_dispatch_ids:[<dispatch id>, ...]}
+ verified_by:<session>|null, verified_dispatch_ids:[<dispatch id>, ...],
+ findings:[{prd_id, owner, disposition:accept|merge|reject}], inspector:<session>|null}
 ```
+- `findings` lists every PRD row this hop filed or cited, one entry each: `owner` = the session that holds the row, `disposition` = the moderator's verdict (`accept` until the orchestrator writes otherwise). `inspector` names the session that ran the judge check, or `null` when no judge ran.
 - `links_offered` = the `to` of every entry of the payload's `node.links`, verbatim. `link_taken` = the `to` you nominate in `next:`, or `null` at `next: none`; never a third value.
 - `applied:true` only when ≥1 change landed AND `witness` names a dispatch you hold. `witness_dispatch_ids` lists every dispatch id the witness quotes. `skills/dream-rsi/SKILL.md` Part B step 4 rejects the whole record when one is absent from `.gm/dream-rsi/<session>/observations.json`.
 - Independent verification: the hop never witnesses its own edit. Before setting `applied:true`, spawn a verifier subagent with session `<session>-v1` that receives only the change contract (file, expected edit, witness command) and re-runs the witness live. The hop records `verified_by:"<session>-v1"` and the verifier's dispatch ids in `verified_dispatch_ids`. Without a verifier pass, write `applied:false` and `verified_by:null`. `skills/dream-rsi/SKILL.md` Part B step 2 counts a walk only when `verified_by` is a session other than the node's own `session`.
@@ -68,7 +70,7 @@ VERDICT: HOLDS | VIOLATED | NOT-APPLICABLE
 PRINCIPLE: <id>; SURFACE: <path>; WITNESS: <audit dispatch id>
 CHANGED: <file, dispatch id> | none
 ACH: <n> hypotheses; leader <id>; rejected <ids>; probe <dispatch id>; flips-on <evidence> | none, no cause asserted
-ROWS: <n>: <ids>
+ROWS: <n>: <ids>; FINDINGS: <prd_id>=<owner>/<disposition>, inspector <session>|none
 EMITTED: .gm/lean-walk/<NODE>.<SESSION>.json [+1 new node]
 CYCLE: <dream-replay-cycle dispatch id>; status <replayed|deferred, reason>
 NEED: <one sentence>
