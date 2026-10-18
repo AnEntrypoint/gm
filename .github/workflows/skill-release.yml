@@ -36,7 +36,18 @@ jobs:
           git config user.email "657315+lanmower@users.noreply.github.com"
           git add skills/manifest.sha256
           git commit -m "chore: refresh skill manifest [skip ci]"
-          git push origin HEAD:main
+          for attempt in 1 2 3 4 5; do
+            if git push origin HEAD:main; then exit 0; fi
+            echo "[retry] manifest push rejected (attempt $attempt): main moved, rebuilding on origin/main"
+            if [ "$attempt" = "5" ]; then echo "::error::manifest push rejected 5 times"; exit 1; fi
+            sleep $((attempt * 3))
+            git fetch origin main --quiet
+            git reset --hard origin/main --quiet
+            node scripts/build-skill-manifest.mjs
+            if git diff --quiet -- skills/manifest.sha256; then echo "[ok] origin/main already has the current skill manifest"; exit 0; fi
+            git add skills/manifest.sha256
+            git commit -m "chore: refresh skill manifest [skip ci]"
+          done
 
       - name: Auto-bump patch version BEFORE packaging
         id: bump
