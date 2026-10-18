@@ -8,7 +8,8 @@ description: "Infer strategy proposals from Dream-RSI observation logs, and meas
 Schedule (set by the caller, not by this skill): run as a background agent on the smallest available model at an interval. The subagent reads files and returns one JSON object. It does not edit files or dispatch verbs.
 
 Inputs:
-- `observations.json` files: `<repo>/.gm/dream-rsi/<session>/observations.json`, each a JSON array of up to the newest 256 records, serialized from `ObservationRecord` in `rs-plugkit/crates/plugkit-core/src/orchestrator/dream_rsi.rs`. Orchestration verbs and `dream-*` dispatches are not recorded.
+- `observations.json` files: `<repo>/.gm/dream-rsi/<session>/observations.json`, each a JSON array of up to the newest 256 records, serialized from `ObservationRecord` in `rs-plugkit/crates/plugkit-core/src/orchestrator/dream_rsi.rs`. Orchestration verbs and `dream-*` dispatches are not recorded. A failed record carries `error_code` (the reply's short failure code) or `no_match:true` (a zero-count failure, scored 0.5 and not counted as a failure); a success carries neither.
+- Replay results: `.gm/dream-rsi/<session>/replay-result.json` (`baseline_policy_id`, `selected_policy_id`, `baseline_score`, `selected_score`, `improved`, `never_worse`, `rankings`) and `cycle-result.json` (`cycle_id`, `selection`, `score`, `replay_count`, `ts`).
 - The gm graph: `skills/dream-rsi/gm-graph.json` (`nodes`, `edges`; node `kind` is `principle`, `gate`, `tension` or `terminal` -- there is no phase node; edge `kind` is `forward` or `backreference`). A node is a book when its `book` is non-empty; `book_index` names each anchor book and the node that carries it.
 - The DADA graph: `skills/dream-rsi/dada-graph.json`, the same node layout as the gm graph (`nodes`, `edges`, `entry_points` = `DADA_START`, `convergence`). It holds the DADA anchor graph: `principle` nodes grouped by `provenance` (`dada:<cluster>`), `tension` nodes for counterpoint edges, and the gate and terminal nodes `DADA_START`, `DADA_G_ROUTE`, `DADA_G_CRITICS`, `DADA_G_NUMBERS`, `DADA_HALT`, `DADA_HOLDS`. Its page is `docs/dada-graph.html` (built from this file by `scripts/build-graph-page.mjs`). Read it with the same rules as the gm graph in Part B and Part C; it is never a phase source.
 - Phase history: `.gm/turn-state.json` `phase_history`.
@@ -19,7 +20,7 @@ Inputs:
 1. Read every observation file. Count records. If there are fewer than `INSUFFICIENT_RECORD_THRESHOLD` across all sessions, return an `Insufficient` for Part A.
 2. Per verb, compute count, failure rate (`exit_code != 0`), gate-drift rate, and mean `quality`.
 3. Treat `quality` with caution. Until the scoring fix in rs-plugkit lands, `quality` mostly reflects the open PRD/mutable backlog rather than the dispatch outcome. Rank by failure rate weighted by count, not by `quality`.
-4. Some non-zero exits are valid answers, not failures. A `grep` exit 1 with no matches is a no-match result. Classify each failure by the record's `error_code` field. A record without one is `unclassified`, because its reply is pruned from `.gm/exec-spool/out` and cannot be recovered. The agent shall not propose a change for a verb until its failure exits are shown to be real errors. A verb whose failures are all unclassified gets no proposal and is counted in `unclassified_failures`.
+4. Some non-zero exits are valid answers, not failures. A `grep` exit 1 with no matches is a no-match result. Classify each failure by the record's `error_code` field; a `no_match:true` record is an answer, not a failure. A failed record with neither is `unclassified`, because its reply is pruned from `.gm/exec-spool/out` and cannot be recovered. The agent shall not propose a change for a verb until its failure exits are shown to be real errors. A verb whose failures are all unclassified gets no proposal and is counted in `unclassified_failures`.
 5. Read the open rows in `.gm/prd/` and `.gm/prd.yml`. Drop a candidate when an open row already names its verb and the same change.
 6. For up to `MAX_PART_A_PROPOSALS` candidates, write one proposal with the verb, the change, the counts and rates as evidence, and a measurable target on the same log. A change is executable: code, a config value or a verb contract. The paper found that directional prose hints do worse than no hint at equal budget, so a proposal that only adds guidance prose is refused.
 
@@ -65,6 +66,16 @@ isolated nodes, unreachable nodes, dead-end nodes and provenance-partitioned boo
 fails when any of those counts is non-zero. Run it after any edit to the graph;
 CI runs it on every push and pull request to main.
 
+## Part D: the dream loop
+
+The loop is the one at https://dream-rsi.com/: explore online, append the recorded tree to the history, dream M policy revisions and score each by replay over the whole history, redeploy the winner. The incumbent is always one of the M candidates, so the deployed policy is never worse. Parts A to C read the history; Part D checks that the loop turns.
+
+1. History is the whole project, not one session: count records and sessions across every observation file, and take the newest record `ts`.
+2. Read every `replay-result.json` and `cycle-result.json`. The newest by `ts` is the current replay.
+3. The loop is `stalled` when the history holds at least `INSUFFICIENT_RECORD_THRESHOLD` records newer than the current replay (or no replay result exists) and the current replay is older than `CYCLE_COOLDOWN_MS`. Name the stage that did not run: `cycle_trigger` (no `cycle-result.json` since the threshold was reached), `replay` (a cycle ran but wrote no `replay-result.json`) or `redeploy` (a result with `improved:true` has no open row).
+4. A result with `never_worse:false` is a defect: the incumbent was not scored as a candidate. Report it in `defects`.
+5. When the current replay has `improved:true` and `never_worse:true` and no open row names its `selected_policy_id`, propose one row to redeploy it. Redeployment runs through the normal PRD and evidence gates; this skill never writes `active-strategy.json`.
+
 ## Output
 
 Constants:
@@ -72,11 +83,17 @@ Constants:
 - `INSUFFICIENT_RECORD_THRESHOLD = 20`
 - `MAX_PART_A_PROPOSALS = 3`
 - `MAX_PART_B_PROPOSALS = 5`
+- `CYCLE_COOLDOWN_MS = 900000`
 
 Return exactly one `DreamRsiResult`:
 
 ```
-DreamRsiResult     = { status: "proposed", part_a: PartA | Insufficient, part_b: PartB }
+DreamRsiResult     = { status: "proposed", part_a: PartA | Insufficient, part_b: PartB, part_d: PartD }
+PartD              = { history_records: number, history_sessions: number, newest_record_ts: number,
+                       newest_replay_ts: number | null, baseline_policy_id: string | null,
+                       selected_policy_id: string | null, improved: boolean, stalled: boolean,
+                       stalled_stage: "cycle_trigger" | "replay" | "redeploy" | null,
+                       defects: string[], redeploy_proposal: string | null }
 Insufficient       = { status: "insufficient", records: number }   // records < INSUFFICIENT_RECORD_THRESHOLD
 PartA              = { records: number, per_verb: VerbStat[], proposals: VerbProposal[] }   // proposals <= MAX_PART_A_PROPOSALS
 VerbStat           = { verb: string, count: number, failure_rate: number, gate_drift_rate: number }
