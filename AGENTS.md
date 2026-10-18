@@ -34,7 +34,7 @@ MSYS `ln -s` silently copies when symlink creation is refused, so on MINGW/MSYS/
 - **traversal**: the chain of hops within one walk, bounded by the visited set and the depth limit.
 - **node**: a vertex of `skills/dream-rsi/gm-graph.json`. Only principle nodes are visited; gate, terminal, phase and tension nodes are refused.
 - **subagent**: an agent started with the Agent tool.
-- **worker**: a walk-launched subagent that is a hop or a PRD row resolver, with its own SESSION_ID (`skills/gm/SKILL.md` Section 1c, Walk workers).
+- **worker**: a walk-launched subagent that is a hop or a PRD row resolver, with its own SESSION_ID (`skills/gm/SKILL.md` Section 1c, Routing).
 - **slot**: one unit under the concurrency ceiling, held by a launched subagent until it completes. A freed slot is refilled while independent work remains.
 - **row**: one PRD entry, held as pending or resolved. `prd-resolve` closes it with a witness.
 
