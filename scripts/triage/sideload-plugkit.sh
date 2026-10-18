@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Usage: sideload-plugkit.sh [--run <cmd>] [overlay-path ...]
-# Builds rs-plugkit HEAD plus the named overlay paths (rs-plugkit-relative, copied from the
+# Builds rs-plugkit HEAD (origin/main when HEAD lacks it) plus the named overlay paths (rs-plugkit-relative, copied from the
 # working tree) in a per-lane scratch export, so other lanes' uncommitted edits never enter the
 # build. The swap into the daemon runs under the sideload lease (~/.agentplug/sideload.lock,
 # atomic mkdir); the first lease saves the pre-lease wasm to <dest>.release and every lease end
@@ -27,14 +27,15 @@ while [ $# -gt 0 ]; do
 done
 
 git -C "$src" fetch --quiet origin main
+src_ref=HEAD
 if ! git -C "$src" merge-base --is-ancestor origin/main HEAD; then
-  echo "refused: rs-plugkit HEAD $(git -C "$src" rev-parse --short HEAD) does not contain origin/main $(git -C "$src" rev-parse --short origin/main)" >&2
-  exit 1
+  src_ref=origin/main
+  echo "rs-plugkit HEAD $(git -C "$src" rev-parse --short HEAD) lacks origin/main $(git -C "$src" rev-parse --short origin/main); building the origin/main tip" >&2
 fi
 
 rm -rf "$scratch"
 mkdir -p "$scratch"
-git -C "$src" archive HEAD | tar -x -C "$scratch"
+git -C "$src" archive "$src_ref" | tar -x -C "$scratch"
 for p in ${overlay[@]+"${overlay[@]}"}; do
   case "$p" in /*|*..*) echo "refused: overlay path must be relative and inside rs-plugkit: $p" >&2; exit 1 ;; esac
   mkdir -p "$scratch/$(dirname "$p")"
@@ -46,7 +47,7 @@ if [ "${#overlay[@]}" -gt 0 ]; then dirty=true; fi
 (cd "$scratch" && CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$src/target}" cargo build -p rs-plugkit --release --target wasm32-wasip1 --features slim)
 
 built="${CARGO_TARGET_DIR:-$src/target}/wasm32-wasip1/release/rs_plugkit.wasm"
-source_sha=$(git -C "$src" rev-parse HEAD)
+source_sha=$(git -C "$src" rev-parse "$src_ref")
 origin_sha=$(git -C "$src" rev-parse origin/main)
 wasm_sha=$(sha256sum "$built" | cut -d' ' -f1)
 wasm_bytes=$(wc -c < "$built" | tr -d ' ')
