@@ -214,7 +214,7 @@ skills/gm/.gm/
 .gm/receipts/
 
 # runtime lane scratch and a nested repo that is not a project submodule
-.gm/lanebuild/
+.gm/lane-build/
 .gm/witness-out/
 .wt-lanewait/
 .wt-thrash/
