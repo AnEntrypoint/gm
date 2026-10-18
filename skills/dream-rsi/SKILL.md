@@ -29,18 +29,10 @@ Inputs:
 The goal is to walk every principle-kind gm-graph node and every edge, through real work. Each principle node is one hop run by a subagent that advocates that node's discipline at full strength (SKILL.md Section 1d). The hop scope is principle nodes only, the same scope as the gm walk loop (`skills/gm/SKILL.md` Section 1d).
 
 1. Load the graph. Traversable nodes are those whose `kind` is `principle`. Edges are all `edges` entries.
-2. Load walk evidence. A node is walked when any of its visit files `.gm/lean-walk/<NODE>.<SESSION>.json` has `applied:true`, a `witness`, and a `verified_by` session that differs from that file's `session` (the independent verifier lane, `skills/gm-hop/SKILL.md`). A node whose `verified_by` is missing or equal to its `session` is not walked, and is reported in `rejected_walks` with `missing_dispatch_ids: []`. A missing file means no walk yet. `phase_history` (the node keys the runtime recorded) confirms the session reached that node.
-3. Run Part B under its own scorer session id, which must differ from every walk's `session`. Refuse to score any node file whose `session` equals the scorer session: report it in `rejected_walks` with `reason: "self_scored"`. Build the map from `dispatch_id` to its record `session` across `observations.json` and every `observations-archive-*.json`, for the walk sessions only.
-4. Verify each walk. A walk counts only if every `dispatch_id` quoted in its `witness`:
-   - maps in that map to the walk's own `session`; an id from another session fails with `reason: "foreign_dispatch"`;
-   - is confirmed by a reply file under `.gm/exec-spool/out/` whose `dispatch_id` matches and whose sha256 equals the observation's `reply_sha256`;
-   - is not an unobservable verb (`instruction`, `prd-list`, `transition`, `mutable-*`, `dream-*`); a quoted one fails with `reason: "unobservable_verb"` and its verb named.
-
-   An `applied:true` walk also needs at least one quoted write-class id (`git_commit`, `fs_write`, `prd-add`) that passes all three checks. The observation writer is the guest; the spool-out reply is the trusted writer. Report any failure in `rejected_walks` with the missing or failing ids. The agent shall never count a rejected walk.
-5. Coverage:
-   - `nodes_verified` over `traversable_nodes`.
-   - `backreferences_verified` over the number of backreference edges, counted only when the `from` node's evidence file has `applied:true` and its `witness` names the edge's condition.
-   - Forward-edge coverage approximates a forward edge as covered when both endpoints have verified walks. Say that this is an approximation.
+2. Deterministic counts come from code only. Take `traversable_nodes`, `nodes_verified`, `rejected_walks` and `forward_edge_coverage_approx` from the `part_b` of the `dream-replay` reply. The guest writer `derive_part_b` in `rs-plugkit/crates/plugkit-core/src/orchestrator/dream_rsi.rs` is the sole authority for node walks: a node is verified when an observation stamped with its `lean_node` succeeded. Never recount nodes from `.gm/lean-walk/` and never apply a second verified-walk rule; the lean-walk files are read only for step 3.
+3. Backreferences are model-judged, and the output says so. `derive_part_b` writes `backreference_edges` and `backreferences_verified` as 0, so they are not code facts. For each backreference edge whose `from` node is verified by step 2, the model judges one condition: does that node's `.gm/lean-walk/<NODE>.<SESSION>.json` `witness` name the edge's condition, in its own words, with a quoted dispatch id? Count the edge as fired only on yes. Report `backreference_edges` and `backreferences_verified` with `"backreference_judgement": "model-judged"`. The rubric is the only model decision in Part B.
+4. Scoring session. Run Part B under a scorer session id that differs from every walk's `session`. Any lean-walk file whose `session` equals the scorer session is reported in `rejected_walks` with `reason: "self_scored"`.
+5. Forward-edge coverage is the code value from step 2, approximated as covered when both endpoints have verified walks. Say that this is an approximation.
 6. Proposals: up to `MAX_PART_B_PROPOSALS` unwalked nodes, in this priority order: nodes with no verified walk, then backreference edges never fired. For each, give the node id, the condition to walk it on the next real task, and the evidence that would count as a walk. Skip a node that an open row already proposes.
 
 ## Part C: the discipline tree
