@@ -64,6 +64,7 @@ jobs:
           MAIN_VER=$(git show origin/main:package.json | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>console.log(JSON.parse(s).version))")
           if [ "$MAIN_VER" != "$CURRENT" ] && [ "$(printf '%s\n%s\n' "$CURRENT" "$MAIN_VER" | sort -V | tail -1)" = "$MAIN_VER" ]; then
             NEW_VERSION="$MAIN_VER"
+            git reset --hard origin/main --quiet
             echo "origin/main already at v$MAIN_VER from an earlier attempt: resuming its publish without a second bump"
           elif gh release view "v$CURRENT" --repo AnEntrypoint/gm >/dev/null 2>&1; then
             IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
