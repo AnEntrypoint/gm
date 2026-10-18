@@ -7,7 +7,34 @@ on:
     branches: [main]
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      relevant: ${{ steps.paths.outputs.relevant }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+      - id: paths
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          set -u
+          if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
+            echo "relevant=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          if ! changed=$(git diff --name-only "$BASE" HEAD); then
+            echo "relevant=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          if printf '%s\n' "$changed" | grep -Eq '^(docs/|site/|skills/|scripts/|gm-config$|gm-config/|rs-plugkit$|rs-plugkit/|README\.md$|AGENTS\.md$|SKILLS\.md$|CONTRIBUTING\.md$|\.github/workflows/doc-drift\.yml$)'; then
+            echo "relevant=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "relevant=false" >> "$GITHUB_OUTPUT"
+          fi
+
   scan:
+    needs: changes
+    if: needs.changes.outputs.relevant == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
@@ -23,9 +50,63 @@ jobs:
         with:
           node-version: 20
       - run: node scripts/scan-doc-drift.mjs
+
+  doc-counts:
+    needs: changes
+    if: needs.changes.outputs.relevant == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: AnEntrypoint/gm-config
+          path: gm-config
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: AnEntrypoint/rs-plugkit
+          path: rs-plugkit
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 20
       - name: Every graph count in the site and docs matches a graph
         run: node scripts/check-doc-counts.mjs
+
+  doc-paths:
+    needs: changes
+    if: needs.changes.outputs.relevant == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: AnEntrypoint/gm-config
+          path: gm-config
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: AnEntrypoint/rs-plugkit
+          path: rs-plugkit
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 20
       - name: Every repository path the site and docs name resolves
         run: node scripts/check-doc-paths.mjs
+
+  graph-traversal:
+    needs: changes
+    if: needs.changes.outputs.relevant == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: AnEntrypoint/gm-config
+          path: gm-config
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: AnEntrypoint/rs-plugkit
+          path: rs-plugkit
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 20
       - name: Both graphs traverse, and shared nodes agree on kind
         run: node scripts/check-graph-traversal.mjs
