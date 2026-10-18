@@ -1,45 +1,56 @@
 # Decision: loader strategy for the wasip3 port
 
-Records PRD 01 (`docs/prd/01-loader-decision.md`). Rows 02 to 07 cite this record.
+Records PRD 01 (`docs/prd/01-loader-decision.md`) and gm row `wasip3-decide-fallback`.
+Rows 02 to 07 build on this record.
 
 ## Decision
 
 Option B, dual loader. The agentplug host keeps loading the core `env` module that
 the release ships, and loads the wasip3 component alongside it. The loader is
-chosen per artifact by type (PRD 05).
+chosen per artifact by type (PRD 05). Option A (direct cutover) is rejected.
+
+## Evidence (verified 2026-10-18)
+
+- The shipped artifact `rs-plugkit/target/wasm32-wasip1/release/rs_plugkit.wasm`
+  is a core module importing 23 `env` functions and 10 `wasi_snapshot_preview1`
+  functions. `agentplug/crates/agentplug-host/src/imports.rs` defines all 23 `env`
+  functions and links WASI through `wasmtime_wasi::p1::add_to_linker_sync`, so
+  every installed runner loads it today.
+- The wasip3 build `rs-plugkit/target/wasm32-wasip3/release/rs_plugkit.wasm` is
+  also a core module (version word 1, not a component layer). It imports 27 `env`
+  functions, 7 `$root` functions and 16 `wasi:*@0.3.0` interfaces. The 4 `env`
+  names it adds over wasip1 (`__wasm_get_stack_pointer`,
+  `__wasm_set_stack_pointer`, `__wasm_get_tls_base`, `__wasm_set_tls_base`) are
+  stack and TLS intrinsics that component linking satisfies and that the host
+  does not define. The other 23 match the host's existing `env` set.
+- `agentplug/crates` contains no `component::` linker; the host only
+  deserializes core modules (`agentplug/crates/agentplug-host/src/precompiled.rs`).
+  `wasmtime` 46 with default features already carries the component model, so a
+  component linker is an addition, not a dependency change.
 
 ## Reasons
 
-- The release artifact is a wasip1 core module. Every installed runner loads it.
-  Option A (cut over directly) would make every runner that receives the new
-  build unable to load its artifact, with no fallback.
-- The current build already shows why the component path cannot replace the core
-  path yet. The wasip3 guest built with `--features slim` fails at link time with
-  `failed to resolve import env::host_now_ms` and `module requires an import
-  interface named env` (`rs-plugkit`, `cargo +nightly build -p rs-plugkit --release
-  --target wasm32-wasip3 --features slim`). The `env` imports are not WIT
-  interfaces, so the component cannot instantiate until PRD 02 lands.
-- Option B lets PRD 02 to 07 land and be witnessed without changing the artifact
-  that users run today.
+- Option A would leave every runner that receives the new build unable to load
+  its artifact, with no fallback, while the wasip3 output is still an unlinked
+  core module that no host can instantiate.
+- The `env` ABI is not the blocker: the host already provides every real `env`
+  function. The gap is the component step (`wasm-component-ld`, PRD 03) and a
+  WASI 0.3 component linker (PRD 04). Option B lets those land and be witnessed
+  without changing the artifact users run.
 
 ## Rows this changes
 
 - PRD 02: the WIT interface covers the `env` imports for the component only. The
   core path keeps the raw pointer ABI behind its own cfg.
 - PRD 03: `wasm-component-ld` replaces the `rust-lld` override for the component
-  build only.
+  build only, which also absorbs the 4 stack and TLS intrinsics.
 - PRD 04: the component `Linker` sits next to the core linker, and neither replaces
   the other.
-- PRD 05: the runner selects the linker from the artifact type. It does not reject
-  core modules, so Option A's named rejection is not needed.
+- PRD 05: the runner selects the linker from the artifact type (core version word 1
+  versus component layer). It does not reject core modules.
 - PRD 06 and 07: CI and the live witness cover both paths.
 
 ## Cost
 
 Two linkers and an artifact-type check stay in the runner until a later cutover is
 decided on its own record.
-
-## Witness
-
-The failing build log above is the current witness. The record closes when the
-`doc-drift` job on the pushed sha reports success.
