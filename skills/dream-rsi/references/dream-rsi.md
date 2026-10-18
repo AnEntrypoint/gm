@@ -61,9 +61,9 @@ Each use case is fully dressed (Cockburn): primary actor, scope, level, stakehol
   4. The result is written to the owner directory's `cycle_result` file (see `index.json`).
 - **Extensions:**
   - 1a. Cooldown has not passed: the tick defers, and no request is written (`agentplug/crates/agentplug-runner/src/daemon.rs`).
-  - 1b. Neither trigger condition holds: no request is written on that tick.
+  - 1b. Neither trigger condition holds: no request is written on that tick (`agentplug/crates/agentplug-runner/src/daemon.rs`, `spawn_dream_rsi_cycle_ticker`).
   - 2a. The cursor rolled off the 256-entry window: the daemon marks `pending-partial-window` (`agentplug/crates/agentplug-runner/src/dream_cycle.rs`), and the cycle result does not yet carry a partial flag. Filed under PRD row USECASES-pw-hop-USECASES-1018-3; until that row lands, consumers must not treat the replay as covering the lost records.
-  - 2b. A replay that cannot finish: the replay reply reports the failure and the incumbent stays selected.
+  - 2b. A replay that cannot finish: the replay reply reports the failure and the incumbent stays selected (`rs-plugkit/crates/plugkit-core/src/orchestrator/mod.rs`, which routes `dream-replay-cycle` to `dream_cycle::handle`).
 - **Guarantees:** the replay performs no re-execution; the incumbent stays selected unless a challenger scores strictly higher; no strategy is deployed by this use case.
 
 ### UC-3 Select the policy
@@ -80,8 +80,8 @@ Each use case is fully dressed (Cockburn): primary actor, scope, level, stakehol
   3. The selection is recorded as evidence, not as an execution step.
 - **Extensions:**
   - 1a. The replay is stale (its newest observation is newer than the replay): the reviewer re-runs UC-2 before selecting.
-  - 2a. No challenger scored strictly higher: the incumbent stays selected.
-  - 2b. A challenger ties the incumbent: the incumbent stays selected (monotonic safety).
+  - 2a. No challenger scored strictly higher: the incumbent stays selected (`rs-plugkit/crates/plugkit-core/src/orchestrator/dream_rsi.rs`, strict comparison).
+  - 2b. A challenger ties the incumbent: the incumbent stays selected, monotonic safety (`rs-plugkit/crates/plugkit-core/src/orchestrator/dream_rsi.rs`, strict comparison).
 - **Guarantees:** a selection never regresses the incumbent; a replay result is planning input and carries no execution authority.
 
 ### UC-4 Redeploy a selected policy
@@ -99,6 +99,6 @@ Each use case is fully dressed (Cockburn): primary actor, scope, level, stakehol
   4. The row is resolved with a witness dispatch id.
 - **Extensions:**
   - 2a. A gate refuses the dispatch: the refusal is the result. The agent records the refused dispatch and does not bypass the gate (`skills/gm/SKILL.md`).
-  - 3a. The ledger does not hold the dispatch ids the metrics cite: the metrics are not re-derived and the deployment stays open under its row.
-  - 4a. No witness exists: the row stays open with a named fact.
+  - 3a. The ledger does not hold the dispatch ids the metrics cite: the metrics are not re-derived and the deployment stays open under its row (`rs-plugkit/crates/plugkit-core/src/orchestrator/AGENTS.md`, dispatch ledger).
+  - 4a. No witness exists: the row stays open with a named fact (`skills/gm/SKILL.md`, PRD rows).
 - **Guarantees:** no daemon tick or scheduled job redeploys a policy; every deployment has a PRD row and a witness dispatch id.
