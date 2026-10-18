@@ -63,6 +63,8 @@ jobs:
       - run: node scripts/scan-doc-drift.mjs
       - run: npm ci --prefix gm-mcp --no-audit --no-fund --ignore-scripts
       - run: npm audit --omit=dev --audit-level=high --prefix gm-mcp
+      - name: Production npm dependencies carry only allowlisted licenses
+        run: npx --yes license-checker --production --start gm-mcp --onlyAllow "MIT;ISC;Apache-2.0;BSD-2-Clause;BSD-3-Clause;0BSD;Unlicense;CC0-1.0;BlueOak-1.0.0;Python-2.0;CC-BY-4.0"
       - run: node scripts/check-verb-body-contract.mjs
       - name: Every graph count in the site and docs matches a graph
         run: node scripts/check-doc-counts.mjs
@@ -96,7 +98,7 @@ jobs:
       - run: git submodule update --init --depth 1 rs-plugkit agentplug
       - uses: taiki-e/install-action@8cca0918f8471c33515202b73f56ab27f2bed283
         with:
-          tool: cargo-audit
+          tool: cargo-audit@0.21.2
       - name: No vulnerable crate in rs-plugkit or agentplug Cargo.lock
         run: |
           cargo audit --file rs-plugkit/Cargo.lock
