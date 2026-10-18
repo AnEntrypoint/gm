@@ -30,6 +30,10 @@ on:
       - skills/gm/docs/verbs.md
       - gm-mcp/src/**
 
+concurrency:
+  group: gm-contracts-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   consumer-contracts:
     runs-on: ubuntu-latest
