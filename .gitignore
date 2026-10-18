@@ -229,6 +229,7 @@ skills/gm/.gm/
 .gm/crawl-cdp-sessions/
 .gm/fs-append-*.txt
 .gm/fsread-*.txt
-find1-wt*/
+.gm/find*-*/
+find1-*/
 # PRD and mutable logs are runtime state read from disk; never tracked
 .gm/mutables-log.jsonl
