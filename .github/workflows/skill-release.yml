@@ -55,11 +55,22 @@ jobs:
             git commit -m "chore: auto-bump version to $NEW_VERSION [skip ci]"
             for attempt in 1 2 3 4 5; do
               if git push origin HEAD:main; then break; fi
-              echo "[retry] push rejected (attempt $attempt): main moved, rebasing the bump onto it"
+              echo "[retry] push rejected (attempt $attempt): main moved, re-bumping on origin/main"
               if [ "$attempt" = "5" ]; then echo "::error::bump push rejected 5 times"; exit 1; fi
-              git fetch origin main
-              git rebase origin/main
               sleep $((attempt * 3))
+              git fetch origin main --quiet
+              git reset --hard origin/main --quiet
+              MAIN_VER=$(node -e "console.log(require('./package.json').version)")
+              IFS='.' read -r MAJOR MINOR PATCH <<< "$MAIN_VER"
+              NEW_VERSION="$MAJOR.$MINOR.$((PATCH + 1))"
+              node -e "
+                const fs = require('fs');
+                const p = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+                p.version = '$NEW_VERSION';
+                fs.writeFileSync('package.json', JSON.stringify(p, null, 2) + '\n');
+              "
+              git add package.json
+              git commit -m "chore: auto-bump version to $NEW_VERSION [skip ci]"
             done
           else
             NEW_VERSION="$CURRENT"
