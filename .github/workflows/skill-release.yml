@@ -13,6 +13,7 @@ concurrency:
 jobs:
   release:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: write
     steps:
@@ -35,18 +36,23 @@ jobs:
           git config user.email "657315+lanmower@users.noreply.github.com"
           git config url."https://${GH_TOKEN}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
           CURRENT=$(node -e "console.log(require('./package.json').version)")
-          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
-          NEW_PATCH=$((PATCH + 1))
-          NEW_VERSION="$MAJOR.$MINOR.$NEW_PATCH"
-          node -e "
-            const fs = require('fs');
-            const p = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-            p.version = '$NEW_VERSION';
-            fs.writeFileSync('package.json', JSON.stringify(p, null, 2) + '\n');
-          "
-          git add package.json
-          git commit -m "chore: auto-bump version to $NEW_VERSION [skip ci]"
-          git push origin HEAD:main
+          if gh release view "v$CURRENT" --repo AnEntrypoint/gm >/dev/null 2>&1; then
+            IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
+            NEW_PATCH=$((PATCH + 1))
+            NEW_VERSION="$MAJOR.$MINOR.$NEW_PATCH"
+            node -e "
+              const fs = require('fs');
+              const p = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+              p.version = '$NEW_VERSION';
+              fs.writeFileSync('package.json', JSON.stringify(p, null, 2) + '\n');
+            "
+            git add package.json
+            git commit -m "chore: auto-bump version to $NEW_VERSION [skip ci]"
+            git push origin HEAD:main
+          else
+            NEW_VERSION="$CURRENT"
+            echo "v$CURRENT has no release yet: resuming its publish without a second bump"
+          fi
           echo "version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Package skill tarball with checksum
