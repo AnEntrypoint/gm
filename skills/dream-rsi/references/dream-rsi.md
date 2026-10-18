@@ -4,7 +4,7 @@ Design, cycle-boundary trigger and git lifecycle for the Dream-RSI loop. The sta
 
 ## Dream-RSI loop, git lifecycle and cycle trigger (arxiv 2609.14858)
 
-Dream-RSI is a continuous core process, not an opt-in subsystem: every ordinary GM work dispatch records a bounded, session-owned observation automatically into `.gm/dream-rsi/<session>/observations.json` (a flat per-dispatch log whose record fields `skills/dream-rsi/SKILL.md` lists). `dream-replay` and `dream-round` write `replay-result.json` and `dream-replay-cycle` writes `cycle-result.json` in the same directory; their schemas are in `rs-plugkit/crates/plugkit-core/src/orchestrator/AGENTS.md`. Nothing writes `active-strategy.json`, the file the advisory ranking reads: writing it would deploy a strategy unattended. Orchestration bookkeeping and Dream-RSI's own maintenance dispatches are never themselves recorded as outcomes. Only real work dispatches are recorded.
+Dream-RSI is a continuous core process, not an opt-in subsystem: every ordinary GM work dispatch records a bounded, session-owned observation automatically into `.gm/dream-rsi/<session>/observations.json` (a flat per-dispatch log whose record fields `skills/dream-rsi/SKILL.md` lists). `dream-replay-cycle` writes `cycle-result.json` in the same directory; their schemas are in `rs-plugkit/crates/plugkit-core/src/orchestrator/AGENTS.md`. Nothing writes `active-strategy.json`, the file the advisory ranking reads: writing it would deploy a strategy unattended. Orchestration bookkeeping and Dream-RSI's own maintenance dispatches are never themselves recorded as outcomes. Only real work dispatches are recorded.
 
 **Three-stage loop, offline-biased per the paper.** Stages are not verbs: no spool verb is named after a stage. The three stages are:
 
@@ -58,7 +58,7 @@ Each use case is fully dressed (Cockburn): primary actor, scope, level, stakehol
   1. The tick checks the cooldown (`COOLDOWN_MS` since the previous reply or deferral) and writes one `dream-replay-cycle` request per owner.
   2. The handler replays the frozen tree with zero re-execution and a pure disk read.
   3. Each challenger and the incumbent are scored over the same sealed worlds: quality minus `beta1` times cost plus `beta2` times parallelism, averaged per policy.
-  4. The result is written to `replay-result.json` and `cycle-result.json` in the owner directory.
+  4. The result is written to `cycle-result.json` in the owner directory.
 - **Extensions:**
   - 1a. Cooldown has not passed: the tick defers, and no request is written (`agentplug/crates/agentplug-runner/src/daemon.rs`).
   - 1b. Neither trigger condition holds: no request is written on that tick.
@@ -72,7 +72,7 @@ Each use case is fully dressed (Cockburn): primary actor, scope, level, stakehol
 - **Scope:** one owner session's policy choice.
 - **Level:** user goal.
 - **Stakeholders:** the incumbent policy owner, the reviewer, downstream PRD rows.
-- **Preconditions:** `replay-result.json` exists for the owner and is newer than its last selection.
+- **Preconditions:** `cycle-result.json` exists for the owner and is newer than its last selection.
 - **Trigger:** the reviewer reads the replay result before later exploration work.
 - **MSS:**
   1. The reviewer reads the incumbent score and each challenger score over the same sealed worlds.
