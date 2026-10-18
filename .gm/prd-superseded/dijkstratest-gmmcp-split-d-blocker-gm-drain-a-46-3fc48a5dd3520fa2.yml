@@ -1,5 +1,0 @@
-id: DIJKSTRATEST-GMMCP-SPLIT-D-blocker-gm-drain-a-46
-subject: 'Blocked: DIJKSTRATEST-GMMCP-SPLIT-D cannot reach EDIT in session gm-drain-a-46'
-blockedBy: 'DIJKSTRATEST-GMMCP-SPLIT-D. Facts: (1) witness for each of 28 assertions must come from another session (prd-resolve-self-witness); supplied by a separate session running prd-resolve with witness_dispatch_id. (2) gm-mcp submodule dirty with foreign writers (git_status 1791975969071-500-c20f08f27b9834d4), named by CLEANNAME-GMMCP-SRC-blocker-gm-drain-w3-105. (3) siblings A, B, C pending (prd-list 1791975947853-500-136df39590a33aba). (4) scripts/check-bin-drift.mjs absent (codesearch 1791975973260-500-c6fb05dbf6345d39); the bundle check path must be named by a row. Receipt .gm/receipts/DIJKSTRATEST-GMMCP-SPLIT-D/01-SPECIFY.md.'
-session_id: gm-drain-a-46
-status: pending

@@ -1,5 +1,0 @@
-id: BLOCK-dream-rsi-walk-acceptance-code
-subject: 'The dream-rsi walk acceptance predicate (walk applied only with a witness; counts only when every witness dispatch_id is in the observation set; failures to rejected_walks) exists only in SKILL.md Part B. rs-plugkit has no .gm/lean-walk writer or validator. Blocked move target: a walk-evidence validator in rs-plugkit/crates/plugkit-core/src/orchestrator/dream_rsi.rs that refuses to record applied:true when a witness dispatch_id is missing from observations.json.'
-blocks: G_CONTRACT-dream-rsi-walk-acceptance
-session_id: lean-exec-dreamrsi-1
-status: pending

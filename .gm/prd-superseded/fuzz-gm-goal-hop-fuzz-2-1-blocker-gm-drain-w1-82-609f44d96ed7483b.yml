@@ -1,4 +1,0 @@
-id: FUZZ-gm-goal-hop-FUZZ-2-1-blocker-gm-drain-w1-82
-status: pending
-subject: 'Blocker for FUZZ-gm-goal-hop-FUZZ-2-1: SESSION_ID body key reroutes dispatch (dispatch.js:1073 explicitBodySessionId reads body.SESSION_ID and overrides the session_id argument at :1966). Live probe confirmed (dispatch 1791957774908-500-406fa6bffee1f033 answered under FUZZ-PROBE-UPPER; lowercase body.session_id kept the argument, dispatch 1791957775687-500-dc534e59e1e815e0). Fix is a gm-mcp src edit plus bin/gm-mcp-server.js rebuild, but src/dispatch.js and bin/gm-mcp-server.js carry foreign uncommitted WIP (git_status 1791957783463-500-7879a6a695acf7aa), and the witness must come from another session. Cannot close in gm-drain-w1-82 without a shared-surface collision. Needs a single-writer slot on gm-mcp/src/dispatch.js, then a fix plus a cross-session witness.'
-session_id: gm-drain-w1-82

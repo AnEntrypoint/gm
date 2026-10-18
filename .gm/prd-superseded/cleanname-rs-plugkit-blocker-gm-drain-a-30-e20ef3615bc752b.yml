@@ -1,5 +1,0 @@
-id: CLEANNAME-RS-PLUGKIT-blocker-gm-drain-a-30
-status: pending
-subject: 'Blocker: CLEANNAME-RS-PLUGKIT cannot close. Needs a wasm-slim build witness for the rename commit (ci-status on the pushed sha via gm git/ci verbs, or agentplug-runner witness from another session) and a refreshed site list. Row cites stale lines (all shifted, 15 let-arr sites, row names only code_index.rs:65 and :1833; :1833 absent). Receipt: .gm/receipts/CLEANNAME-RS-PLUGKIT/01-SPECIFY.md.'
-blockedBy: []
-session_id: gm-drain-a-30

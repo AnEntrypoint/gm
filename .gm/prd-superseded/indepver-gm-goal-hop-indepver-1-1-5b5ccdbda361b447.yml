@@ -1,6 +1,0 @@
-id: INDEPVER-gm-goal-hop-INDEPVER-1-1
-title: 'INDEPVER: gm-mcp self-update accepts a fetched bundle with no digest or signature check (src/self-update.js:185-196, 224-236); its only checks are shebang, node --check and version guard, all self-referential to the same bytes'
-status: pending
-surface: gm-mcp/src
-principle: INDEPVER
-session_id: gm-goal-hop-INDEPVER-1

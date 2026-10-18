@@ -1,5 +1,0 @@
-id: STABLEPREFIX-INSTRUCTION-PAYLOAD-ORDER-blocker-gm-2e-fa19b3-w3-04
-status: pending
-subject: 'EMIT and witness for STABLEPREFIX-INSTRUCTION-PAYLOAD-ORDER cannot run in this session: fix needs serde_json preserve_order in rs-plugkit/crates/plugkit-core/Cargo.toml (line ''serde_json = "1"''), a CI-built wasm (--features slim, no local cargo), a sideload, and a witness from another session. Precondition confirmed: handle_instruction at rs-plugkit/crates/plugkit-core/src/orchestrator/instructions/mod.rs:686-1230 and the literal preserve_order is absent from rs-plugkit (codesearch exhaustive). Global preserve_order changes key order in every JSON map of the guest, so cache keys and hashes over serialized JSON must be checked before the edit.'
-session: gm-2e-fa19b3-w3-04
-session_id: mcp-codemode-19560-1791851156875
