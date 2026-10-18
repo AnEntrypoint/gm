@@ -55,13 +55,13 @@ Node traversal (gm-hop; `skills/dream-rsi/gm-graph.json`) feeds step 3 only when
 - Fields: `run` (`<parent>-<kind><k>`), `kind` (`exec`, `verify`, `ci`, `fix`, `hop`), `row` or `surface`, `sha` (full, when known), `state` (`launched`, `handoff`, `verified`, `ci-green`, `ci-red`, `fix`, `blocked`, `done`, `stale`), `session`, `started`, `updated` (UTC ISO-8601).
 - Every transition writes its line in the same turn. Never rely on a lane's own log for state.
 - Each tick, before `pool-observe`: outstanding = last state not `done`, `blocked`, `stale`. Closable only when `verify` is `verified` and `ci` is `ci-green` for the same `sha`.
-- Reconcile: outstanding `ci` run → `ci-status {sha}` replaces its conclusion. `exec`/`verify` run whose `.gm/pool/<session>.live` is older than 5 minutes → `stale`, relaunch its row fresh; never count stale as live.
+- Reconcile: outstanding `ci` run: `ci-status {sha}` replaces its conclusion. `exec`/`verify` run whose `.gm/pool/<session>.live` is older than 5 minutes is marked `stale`; relaunch its row fresh; never count stale as live.
 - A `handoff` with no following `verify` or `ci` run is a defect: spawn the missing lane this tick.
 - Summaries (outstanding, closable, stale, red) are derived each tick, never stored.
 
 ## Verification and CI lanes
 - Executor ends `STATUS: handoff <sha>`. Orchestrator spawns, same turn, outside the executor: verifier (`gm-validate` as `mode=witness`, session `<parent>-v<k>`, a session other than the executor's) and CI reader (`gm-publish` steps 3-5, session `<parent>-c<k>`).
-- `STATUS: fix` (verifier) or `STATUS: ci-red` (CI reader) → fresh executor for the same row with the sha and failing check or job. Takes a slot; never inline.
+- `STATUS: fix` (verifier) or `STATUS: ci-red` (CI reader) starts a fresh executor for the same row with the sha and failing check or job. Takes a slot; never inline.
 - Only the orchestrator calls `prd-resolve`, once verifier and CI reader both report green for the same sha. Log each lane result to `.gm/witness-log.md` with its session id.
 - Verification and CI never block the pool.
 
@@ -113,7 +113,7 @@ Launch only advertised ids. A slot stays empty only when no pending row and no u
 - A resolver runs every stage of its row in its one run (orient through publish, then prd-resolve). Stopping after one stage with the row open is a defect: re-dispatch the same row once as `<session>-r<n>` naming the stage reached, never a fresh orient.
 - A blocked row keeps its id and names `blocked_by: <fact and verb>` in its text. File a new blocker row only when no open row names that fact. Counts are unique open rows.
 - Blockers launch next wave. A blocker that blocks again is split until one step remains; that step runs. No blocker-of-blocker past one level.
-- Convergence guard: pending rows rise two waves running → no new blockers; run only open blockers and rows until the count falls.
+- Convergence guard: pending rows rise two waves running: no new blockers; run only open blockers and rows until the count falls.
 - A worker returning with no receipt or blocker is re-dispatched once per wave as `<session>-r<n>`. A connectivity-stopped worker is restarted (Connectivity restarts).
 - `floor_gate_denied` on `prd-resolve` or phase advance: pass `body.live` and launch the denial's `slots.launch`.
 
@@ -124,7 +124,7 @@ Launch only advertised ids. A slot stays empty only when no pending row and no u
 - A row whose acceptance needs a live write to shared served state (a prose override, a store row, a witness that changes every session) is run against a disposable key the orchestrator names in its own brief, with the key recorded in the receipt. Only a Section 4 door is not defaulted this way.
 
 ## Starvation
-- `pool-observe` dropped at 120 s with `dispatch_starved_waiting_for_serial_lane`: re-dispatch once, verbatim (never `resume_task`). First read `.gm/exec-spool/.dispatch-wait.json`: position 1 or holder near budget → re-dispatch now; behind a fresh holder → wait; not shrinking → slow holder.
+- `pool-observe` dropped at 120 s with `dispatch_starved_waiting_for_serial_lane`: re-dispatch once, verbatim (never `resume_task`). First read `.gm/exec-spool/.dispatch-wait.json`: position 1 or holder near budget: re-dispatch now; behind a fresh holder: wait; not shrinking: slow holder.
 - Commit ahead of push: wait. A push that waited out its budget keeps its place; re-dispatch once.
 - `dispatch_orphaned` on a read-only verb: re-dispatch at once. Before re-dispatching `git_commit`, `git_finalize`, `git_push` or `fs_write`, re-read real state.
 - Never preempt an executing holder. Never delete a `.live` file to free a slot.
