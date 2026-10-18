@@ -117,3 +117,17 @@ jobs:
           node-version: 20
       - name: Both graphs traverse, and shared nodes agree on kind
         run: node scripts/check-graph-traversal.mjs
+
+  cargo-audit:
+    needs: changes
+    if: needs.changes.outputs.relevant == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - run: git submodule update --init --depth 1 rs-plugkit agentplug
+      - run: cargo install cargo-audit --locked
+      - name: No vulnerable crate in rs-plugkit or agentplug Cargo.lock
+        run: |
+          cargo audit --file rs-plugkit/Cargo.lock
+          cargo audit --file agentplug/Cargo.lock
