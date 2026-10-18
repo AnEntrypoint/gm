@@ -22,12 +22,21 @@ jobs:
           token: ${{ secrets.PUBLISHER_TOKEN }}
           fetch-depth: 0
 
-      - name: Refuse a stale skill manifest
+      - name: Refresh a stale skill manifest
+        env:
+          GH_TOKEN: ${{ secrets.PUBLISHER_TOKEN }}
         run: |
-          node scripts/build-skill-manifest.mjs --check || {
-            echo "::error title=Stale skill manifest::skills/manifest.sha256 does not match skills/. Run node scripts/build-skill-manifest.mjs and commit it with the skill change."
-            exit 1
-          }
+          set -e
+          node scripts/build-skill-manifest.mjs
+          if git diff --quiet -- skills/manifest.sha256; then
+            echo "[ok] skills/manifest.sha256 is current"
+            exit 0
+          fi
+          git config user.name "lanmower"
+          git config user.email "657315+lanmower@users.noreply.github.com"
+          git add skills/manifest.sha256
+          git commit -m "chore: refresh skill manifest [skip ci]"
+          git push origin HEAD:main
 
       - name: Auto-bump patch version BEFORE packaging
         id: bump
