@@ -13,7 +13,7 @@ Inputs:
 - The gm graph: `skills/dream-rsi/gm-graph.json` (`nodes`, `edges`; node `kind` is `principle`, `gate`, `tension` or `terminal` -- there is no phase node; edge `kind` is `forward` or `backreference`). A node is a book when its `book` is non-empty; `book_index` names each anchor book and the node that carries it.
 - The DADA graph: `skills/dream-rsi/dada-graph.json`, the same node layout as the gm graph (`nodes`, `edges`, `entry_points` = `DADA_START`, `convergence`). It holds the DADA anchor graph: `principle` nodes grouped by `provenance` (`dada:<cluster>`), `tension` nodes for counterpoint edges, and the gate and terminal nodes `DADA_START`, `DADA_G_ROUTE`, `DADA_G_CRITICS`, `DADA_G_NUMBERS`, `DADA_HALT`, `DADA_HOLDS`. Its page is `docs/dada-graph.html` (built from this file by `scripts/build-graph-page.mjs`). Read it with the same rules as the gm graph in Part B and Part C; it is never a phase source.
 - Phase history: `.gm/turn-state.json` `phase_history`.
-- Walk evidence: `.gm/lean-walk/<NODE>.json`, one subagent record per node (`node`, `applied`, `witness`).
+- Walk evidence: `.gm/lean-walk/<NODE>.<SESSION>.json`, one subagent record per node visit (`node`, `applied`, `witness`); every file matching `<NODE>.*.json` is a visit of that node.
 
 ## Part A: verb strategy
 
@@ -29,7 +29,7 @@ Inputs:
 The goal is to walk every principle-kind gm-graph node and every edge, through real work. Each principle node is one hop run by a subagent that advocates that node's discipline at full strength (SKILL.md Section 1d). The hop scope is principle nodes only, the same scope as the gm walk loop (`skills/gm/SKILL.md` Section 1d).
 
 1. Load the graph. Traversable nodes are those whose `kind` is `principle`. Edges are all `edges` entries.
-2. Load walk evidence. A node is walked when its `.gm/lean-walk/<NODE>.json` has `applied:true`, a `witness`, and a `verified_by` session that differs from the node file's `session` (the independent verifier lane, `skills/gm-hop/SKILL.md`). A node whose `verified_by` is missing or equal to its `session` is not walked, and is reported in `rejected_walks` with `missing_dispatch_ids: []`. A missing file means no walk yet. `phase_history` (the node keys the runtime recorded) confirms the session reached that node.
+2. Load walk evidence. A node is walked when any of its visit files `.gm/lean-walk/<NODE>.<SESSION>.json` has `applied:true`, a `witness`, and a `verified_by` session that differs from that file's `session` (the independent verifier lane, `skills/gm-hop/SKILL.md`). A node whose `verified_by` is missing or equal to its `session` is not walked, and is reported in `rejected_walks` with `missing_dispatch_ids: []`. A missing file means no walk yet. `phase_history` (the node keys the runtime recorded) confirms the session reached that node.
 3. Run Part B under its own scorer session id, which must differ from every walk's `session`. Refuse to score any node file whose `session` equals the scorer session: report it in `rejected_walks` with `reason: "self_scored"`. Build the map from `dispatch_id` to its record `session` across `observations.json` and every `observations-archive-*.json`, for the walk sessions only.
 4. Verify each walk. A walk counts only if every `dispatch_id` quoted in its `witness`:
    - maps in that map to the walk's own `session`; an id from another session fails with `reason: "foreign_dispatch"`;

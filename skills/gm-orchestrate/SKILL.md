@@ -98,7 +98,7 @@ Launch only advertised ids. A slot stays empty only when no pending row and no u
 - A hop spawns its own successor; the orchestrator spawns one only when a hop returns `next: none`.
 - Candidates empty with rows pending: `prd-list {status:"pending", limit:<n>}`; log the empty list as a defect row.
 - Rows resolve faster than the pool refills: pause row-creating hops. Row supply low: run row-creating hops before more resolvers.
-- Each completed hop writes `.gm/lean-walk/<node.id>.json`. Missing: `prd-add` `gm-lean-walk-node-emission-missing-<session>`; not counted walked. Count of record is `emitted`.
+- Each completed hop writes `.gm/lean-walk/<node.id>.<session>.json`. Missing: `prd-add` `gm-lean-walk-node-emission-missing-<session>`; not counted walked. Count of record is `emitted`.
 
 ## Heartbeat
 - Every brief first writes `.gm/pool/<session>.live` (`session`, `row`, `start` ISO-8601 UTC; a hop's `row` is its surface path) and deletes it on finish. A surface-only heartbeat is `malformed_heartbeats`.
@@ -141,7 +141,7 @@ Launch only advertised ids. A slot stays empty only when no pending row and no u
 - Browser and server contention: Lane budget. A browser arm that cannot take the lease waits; node-only work continues. Log any wait with its cause and UTC; a wait does not end the turn.
 - Rows needing an exclusive lock wait; the pool launches the rest. A timed-out lock wait is a failed run.
 - One browser or GPU arm at a time, pool-wide; `gpulock` serialises the adapter only. One browser arm plus one node-only lane is fine; two browser arms are not. Lease held: take node-only work; never open a second browser.
-- Browsers are CDP-driven and headful; headless browsers (lightpanda, obrowser, `headless` launches) are removed. Each run closes its own; never touch the user's Chrome.
+- Browsers are CDP-driven and headful. Use the gm browser verbs (`crawl`, `chrome`; `skills/gm/docs/verbs.md`) only. Never install or download puppeteer, playwright, chromium or any browser package or binary, and never launch a headless browser (lightpanda, obrowser, `headless` launches are removed). Each run closes its own; never touch the user's Chrome.
 - EADDRINUSE: the witness did not run. Identify the owning process. Never kill another lane's process.
 - Browser-last, minimal surface, cold-start and reload budgets, focused jit tests, counted units, loud refusals: gm-prd, Witness economy.
 
