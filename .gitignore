@@ -225,10 +225,10 @@ skills/gm/.gm/
 # subagent walk scratch left in the parent tree: find11/find1 walk workspaces, crawl session
 # leases, and fs/fsread probe outputs. Scratch only, never source.
 .gm/find11-*/
+.gm/find*-w*/
 .gm/crawl-cdp-sessions/
 .gm/fs-append-*.txt
 .gm/fsread-*.txt
-find1-wt/
-find1-wt-scratch/
+find1-wt*/
 # PRD and mutable logs are runtime state read from disk; never tracked
 .gm/mutables-log.jsonl
