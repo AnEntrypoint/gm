@@ -9,7 +9,7 @@ Schedule (set by the caller, not by this skill): run as a background agent on th
 
 Inputs:
 - `observations.json` files: `<repo>/.gm/dream-rsi/<session>/observations.json`, one JSON object per line (a legacy JSON array is also accepted), appended per record and rotated to `observations-archive-<ts>.json` past 256 records, serialized from `ObservationRecord` in `rs-plugkit/crates/plugkit-core/src/orchestrator/dream_rsi.rs`. Orchestration verbs and `dream-*` dispatches are not recorded. A failed record carries `error_code` (the reply's short failure code) or `no_match:true` (a zero-count failure, scored 0.5 and not counted as a failure); a success carries neither.
-- Replay results: `.gm/dream-rsi/<session>/replay-result.json` (`baseline_policy_id`, `selected_policy_id`, `baseline_score`, `selected_score`, `improved`, `never_worse`, `rankings`) and `cycle-result.json` (`cycle_id`, `selection`, `score`, `replay_count`, `ts`).
+- Cycle result: `.gm/dream-rsi/<session>/cycle-result.json` (`cycle_id`, `selection`, `score`, `replay_count`, `ts`), written by the automatic `dream-replay-cycle` boundary.
 - The gm graph: `skills/dream-rsi/gm-graph.json` (`nodes`, `edges`; node `kind` is `principle`, `gate`, `tension` or `terminal` -- there is no phase node; edge `kind` is `forward` or `backreference`). A node is a book when its `book` is non-empty; `book_index` names each anchor book and the node that carries it.
 - The DADA graph: `skills/dream-rsi/dada-graph.json`, the same node layout as the gm graph (`nodes`, `edges`, `entry_points` = `DADA_START`, `convergence`). It holds the DADA anchor graph: `principle` nodes grouped by `provenance` (`dada:<cluster>`), `tension` nodes for counterpoint edges, and the gate and terminal nodes `DADA_START`, `DADA_G_ROUTE`, `DADA_G_CRITICS`, `DADA_G_NUMBERS`, `DADA_HALT`, `DADA_HOLDS`. Its page is `docs/dada-graph.html` (built from this file by `scripts/build-graph-page.mjs`). Read it with the same rules as the gm graph in Part B and Part C; it is never a phase source.
 - Phase history: `.gm/turn-state.json` `phase_history`.
@@ -76,10 +76,9 @@ CI runs it on every push and pull request to main.
 The loop is the one at https://dream-rsi.com/: explore online, append the recorded tree to the history, dream M policy revisions and score each by replay over the whole history, redeploy the winner. The incumbent is always one of the M candidates, so the deployed policy is never worse. Parts A to C read the history; Part D checks that the loop turns.
 
 1. History is the whole project, not one session: count records and sessions across every observation file, and take the newest record `ts`.
-2. Read every `replay-result.json` and `cycle-result.json`. The newest by `ts` is the current replay.
-3. The loop is `stalled` when the history holds at least `MIN_NEW_OBSERVATIONS` records newer than the current replay (or no replay result exists) and the current replay is older than `COOLDOWN_MS`. Name the stage that did not run: `cycle_trigger` (no `cycle-result.json` since the threshold was reached), `replay` (a cycle ran but wrote no `replay-result.json`) or `redeploy` (a result with `improved:true` has no open row).
-4. A result with `never_worse:false` is a defect: the incumbent was not scored as a candidate. Report it in `defects`.
-5. When the current replay has `improved:true` and `never_worse:true` and no open row names its `selected_policy_id`, propose one row to redeploy it. Redeployment runs through the normal PRD and evidence gates; this skill never writes `active-strategy.json`.
+2. Read every `cycle-result.json`. The newest by `ts` is the current cycle.
+3. The loop is `stalled` when the history holds at least `MIN_NEW_OBSERVATIONS` records newer than the current cycle (or no cycle result exists) and the current cycle is older than `COOLDOWN_MS`. The stage that did not run is `cycle_trigger`: no `cycle-result.json` since the threshold was reached.
+4. The cycle result carries no incumbent-versus-challenger flags, so no `improved`, `never_worse` or redeploy check applies here. Redeployment stays a manual act under the normal PRD and evidence gates; this skill never writes `active-strategy.json`.
 
 ## Output
 
@@ -94,10 +93,8 @@ Return exactly one `DreamRsiResult`:
 ```
 DreamRsiResult     = { status: "proposed", part_a: PartA | Insufficient, part_b: PartB, part_d: PartD }
 PartD              = { history_records: number, history_sessions: number, newest_record_ts: number,
-                       newest_replay_ts: number | null, baseline_policy_id: string | null,
-                       selected_policy_id: string | null, improved: boolean, stalled: boolean,
-                       stalled_stage: "cycle_trigger" | "replay" | "redeploy" | null,
-                       defects: string[], redeploy_proposal: string | null }
+                       newest_cycle_ts: number | null, stalled: boolean,
+                       stalled_stage: "cycle_trigger" | null, defects: string[] }
 Insufficient       = { status: "insufficient", records: number }   // records < MIN_NEW_OBSERVATIONS
 PartA              = { records: number, per_verb: VerbStat[], proposals: VerbProposal[] }   // proposals <= MAX_PART_A_PROPOSALS
 VerbStat           = { verb: string, count: number, failure_rate: number, gate_drift_rate: number }
