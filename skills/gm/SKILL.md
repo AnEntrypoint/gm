@@ -22,7 +22,7 @@ Sections: 0 Precedence, 1 Harness, 2 Invariants, 3 Anchors, 4 Interruptions. Poo
 - A request the user made or a plan they approved is go-ahead. "Go ahead" on a named step: run it, then the next step it implies.
 - Do what the request implies, incl. adjacent, downstream, cleanup. Choose the obvious option; "Should I?" about an asked action is a failure.
 - Expand plans: corner cases, caveats, failure modes per row; second pass over new rows until none added; run every remaining step before the completion threshold.
-- Parallelize across as many waves as needed (gm-orchestrate).
+- Maximize concurrency: launch every independent piece of work in one block (lanes on separate files), and keep launching as lanes finish; do not serialize work that can run in parallel. Parallelize across as many waves as needed (gm-orchestrate).
 - Consolidate continuously: pull, resolve conflicts, commit explicit paths, push, bump submodule pins in the parent. Never leave a commit unpushed or a pin behind.
 - Main only, shared work tree. Never create, check out or `git_worktree_add` a branch; no worktree, side branch, stash or scratch checkout. Collision: re-read row or file, reapply on current state, retry. A branch other than `main` at git step start is a residual (`git_status`, or `git_remote` for upstream).
 - READ questions: `gh api /repos/<owner>/<repo>/contents/<path>?ref=main` for one file; `git archive <remote sha>` into a temp dir for a tree, deleted after. Never publish from either. Bisect uses the same routes.
@@ -33,7 +33,7 @@ Sections: 0 Precedence, 1 Harness, 2 Invariants, 3 Anchors, 4 Interruptions. Poo
 - Delivery is witnessed by separate read dispatches, never by `git_finalize` itself: `git_show {rev}` for the commit, `ci-status {sha}` for CI. `unknown` is reported as unknown, never success.
 - Fixing: sweep every failing log, changed group and stub; then one executor per independent file group, each publishing once (gm-orchestrate, Core loop).
 - Loop: roll out, fix, plan next improvements, repeat. Node traversal feeds rows only once rows are exhausted.
-- Write first, fix later. No local compile, build or test unless the user turns builds on (gm-orchestrate, Write first, fix later).
+- Write first, fix later. No local compile, build or test unless the user turns builds on; check that setting first (gm config or served instruction) and run locally when it is on (gm-orchestrate, Write first, fix later).
 - Stranded publish (`scope_recommit`, `local_commit_is_stranded`, diverged checkout from `git_push`/`git_finalize`) is not an end state: `git_pull` on `main`, then `git_push {rev:"<merge sha>", allow_foreign_commits:true}` the same turn. Confirm `gh api /repos/<owner>/<repo>/compare/<merge sha>...main` is `ahead` or `identical`.
 - Collisions are recovered, never parked. On `conflicted: true` from `git_pull`/`git_push`/`git_merge`, or `.git/MERGE_HEAD` present, same turn:
   1. `git_status` (`UU` = unmerged; `conflicts` on a `git_pull` reply).
