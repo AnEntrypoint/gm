@@ -1,5 +1,7 @@
 # 02 Define the env ABI as a WIT interface
 
+Builds on the dual-loader decision in `docs/wasip3-loader-decision.md` (Rows this changes, PRD 02): the WIT interface covers the `env` imports for the component only, and the core path keeps the raw pointer ABI.
+
 ## Problem
 
 Plugkit's host imports use raw pointer and length pairs in the `env` module,

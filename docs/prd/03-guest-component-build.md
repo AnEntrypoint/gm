@@ -1,5 +1,7 @@
 # 03 Build the plugkit guest as a wasip3 component
 
+Builds on the dual-loader decision in `docs/wasip3-loader-decision.md` (Rows this changes, PRD 03): `wasm-component-ld` replaces the `rust-lld` override for the component build only and absorbs the 4 stack and TLS intrinsics.
+
 ## Problem
 
 The wasip3 build currently links through `rust-lld` in `wasm-ld` mode, which
