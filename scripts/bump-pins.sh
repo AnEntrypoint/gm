@@ -11,7 +11,7 @@ repo_of() {
 
 gate_ok() {
   local pending
-  pending=$(gh api "repos/AnEntrypoint/$1/actions/runs?head_sha=$2&per_page=100" --jq '[.workflow_runs[] | select(.name != "Deploy GH Pages") | select(.name | test("release|publish|build|wasm"; "i")) | select(.status != "completed" or ((.conclusion // "") | IN("success", "skipped", "neutral") | not))] | length') || return 1
+  pending=$(gh api "repos/AnEntrypoint/$1/actions/runs?head_sha=$2&per_page=100" --jq '[.workflow_runs[] | select(.name != "Deploy GH Pages") | select(.name | test("release|publish|build|wasm"; "i"))] as $m | if ($m | length) == 0 then "none" else ([$m[] | select(.status != "completed" or ((.conclusion // "") | IN("success", "skipped", "neutral") | not))] | length | tostring) end') || return 1
   [ "$pending" = "0" ]
 }
 
