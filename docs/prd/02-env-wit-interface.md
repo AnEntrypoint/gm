@@ -14,12 +14,12 @@ typed WIT values.
 ## Scope
 
 - Write one WIT interface for the 24 `env` functions declared in `host_abi.rs` and the other `env` extern blocks. Strings and bytes become `string` and `list<u8>`. The count is 24, not 27: the slim wasip1 module imports 23 of them.
-- Keep the function names as WIT names. Each raw signature stays, served by an adapter in planned module `wasm_dispatch/wit_env.rs` (not yet created), so call sites do not change. The adapter is the choice over rewriting every call site, because the call sites are about 130 in six files.
+- Keep the function names as WIT names. Each raw signature stays, served by the adapter `wasm_dispatch/wit_env.rs`, so call sites do not change. The adapter is the choice over rewriting every call site, because the call sites are about 130 in six files.
 - Route `host_abi` calls through the adapter under the `wit-env` feature, in `rs-plugkit/crates/plugkit-core/src/wasm_dispatch/host_abi.rs`.
 
 ## Status
 
-The adapter and the WIT file are committed in `rs-plugkit` as `57c6098b` on its `main`, not pushed. The session cannot push to that repository.
+Landed on `rs-plugkit` `main` as `8105452c` (the WIT file `crates/plugkit-core/wit/env.wit`, the adapter `wasm_dispatch/wit_env.rs` behind the `wit-env` feature, and the routing in `host_abi.rs`), merged in `6099c00540`. The `wit-env` build compiles for `wasm32-wasip1`. The wit-env path has no runner witness until PRD 03 to 05 land. The extern blocks in `code_index.rs`, `embed.rs`, `orchestrator/instructions/mod.rs`, `pipeline.rs`, `shared_db.rs` and `vecns.rs` still declare raw `env` imports and are not yet routed through the adapter (filed as a follow-up row).
 
 ## Acceptance
 
