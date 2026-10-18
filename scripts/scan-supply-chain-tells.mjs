@@ -28,7 +28,7 @@ const PATTERNS = [
   {
     name: 'blockchain-derived-c2-lookup',
     re: /eth_getBlockByNumber|eth_getTransactionCount|eth_blockNumber/,
-    why: 'blockchain RPC calls used to derive a C2 address/config are a known dead-drop technique — legitimate web3 code should be an isolated, obviously-named module, not appended to an unrelated build config',
+    why: 'blockchain RPC calls used to derive a C2 address/config are a known dead-drop technique; legitimate web3 code should be an isolated, obviously-named module, not appended to an unrelated build config',
   },
   {
     name: 'ip-from-bytes-decode',
@@ -38,22 +38,22 @@ const PATTERNS = [
   {
     name: 'detached-hidden-spawn',
     re: /spawn\s*\(\s*['"]node['"][\s\S]{0,120}detached\s*:\s*true[\s\S]{0,120}stdio\s*:\s*['"]ignore['"]/,
-    why: 'detached + stdio:ignore + unref() child process launch — runs code that outlives and is invisible to the parent process',
+    why: 'detached + stdio:ignore + unref() child process launch; runs code that outlives and is invisible to the parent process',
   },
   {
     name: 'detached-hidden-spawn-loose',
     re: /detached\s*:\s*true[\s\S]{0,60}(stdio\s*:\s*['"]ignore['"]|windowsHide\s*:\s*true)/,
-    why: 'detached background process with hidden stdio/window — legitimate daemonization exists but is rare in application/build code and should be named and commented',
+    why: 'detached background process with hidden stdio/window; legitimate daemonization exists but is rare in application/build code and should be named and commented',
   },
   {
     name: 'eval-of-network-response',
     re: /eval\s*\(\s*[\w.]*\+?\s*(await\s+)?\w*(fetch|http|https|response|body|payload|res)\w*/i,
-    why: 'eval() fed directly by network response content — remote code execution primitive',
+    why: 'eval() fed directly by network response content; remote code execution primitive',
   },
   {
     name: 'eval-of-decoded-payload',
     re: /\beval\s*\(\s*(await\s+)?(atob|unescape|decodeURIComponent|decodeURI|String\.fromCharCode|Buffer\.from)\s*\(/,
-    why: 'eval() fed directly by an inline decoder (atob, Buffer.from, fromCharCode, unescape, decodeURI) — the encoded-payload shape of a runtime-decoded remote code execution primitive; a variable hop between decoder and eval is not covered by this rule',
+    why: 'eval() fed directly by an inline decoder (atob, Buffer.from, fromCharCode, unescape, decodeURI); the encoded-payload shape of a runtime-decoded remote code execution primitive; a variable hop between decoder and eval is not covered by this rule',
   },
   {
     name: 'xor-decode-helper',
@@ -63,18 +63,18 @@ const PATTERNS = [
   {
     name: 'global-require-module-stash',
     re: /global\.\w+\s*=\s*require\s*;\s*typeof\s+module\s*===\s*['"]object['"]/,
-    why: 'stashing require/module onto global — used so eval()-ed code can access them outside its lexical scope',
+    why: 'stashing require/module onto global; used so eval()-ed code can access them outside its lexical scope',
   },
   {
     name: 'minified-tail-after-normal-code',
     re: /\n[a-z]\.[a-z]\([a-z],[a-z],[a-z]\)/,
-    why: 'single-letter-identifier minified code appearing after normally-formatted source — mixing styles in one file is a strong injection tell',
+    why: 'single-letter-identifier minified code appearing after normally-formatted source; mixing styles in one file is a strong injection tell',
     weak: true,
   },
   {
     name: 'promise-any-rpc-race',
     re: /Promise\.any\(\s*\[?\s*['"]https?:\/\/[^,\]]+,\s*['"]https?:\/\//,
-    why: 'racing multiple public RPC/API endpoints for resilience — common in C2 code designed to survive one endpoint being blocked',
+    why: 'racing multiple public RPC/API endpoints for resilience; common in C2 code designed to survive one endpoint being blocked',
   },
 ]
 
@@ -218,7 +218,7 @@ function scanMinifiedTail(text, filePath) {
         kind: 'pattern',
         name: 'dense-minified-tail-line',
         line: nonBlank.length,
-        why: `final non-blank line is ${lastLen} chars (${Math.round(lastLen / avgLen)}x the file's average line length) and looks like minified code — this is the exact shape of a payload appended to the end of an otherwise normal, readable file`,
+        why: `final non-blank line is ${lastLen} chars (${Math.round(lastLen / avgLen)}x the file's average line length) and looks like minified code; this is the exact shape of a payload appended to the end of an otherwise normal, readable file`,
       })
     }
   }
@@ -232,7 +232,7 @@ function scanEscapedAsciiRun(text, filePath) {
       filePath,
       kind: 'pattern',
       name: 'escaped-ascii-obfuscation',
-      why: '6+ consecutive \\uXXXX escapes decoding to plain ASCII — deliberate string obfuscation to defeat plaintext grep (e.g. \\u0068\\u0074\\u0074\\u0070 = "http")',
+      why: '6+ consecutive \\uXXXX escapes decoding to plain ASCII; deliberate string obfuscation to defeat plaintext grep (e.g. \\u0068\\u0074\\u0074\\u0070 = "http")',
     })
   }
   return findings
@@ -255,7 +255,7 @@ function scanSuspiciousUnicode(text, filePath) {
       name: SUSPICIOUS_UNICODE_MAP.get(codePoint),
       codepoint: '0x' + codePoint.toString(16),
       line,
-      why: 'invisible or confusable Unicode codepoint inside a code file — used to hide code from visual review or disguise an identifier/URL as something else',
+      why: 'invisible or confusable Unicode codepoint inside a code file; used to hide code from visual review or disguise an identifier/URL as something else',
     })
   }
   return findings
@@ -269,7 +269,7 @@ function scanProseTells(text, filePath) {
       filePath,
       kind: 'prose-tell',
       name: 'statistical-ai-prose-signature',
-      why: `ai_probability_score=${report.aiProbabilityScore.toFixed(2)} over ${report.sentenceCount} sentences (burstiness=${report.burstiness.toFixed(1)}, desouro=${report.desouroConstructs}, triplets=${report.tripletStructures}, fluff=${report.rhetoricalFluff}, validation=${report.explicitValidation}) — statistical rhetorical fingerprint of LLM-authored prose (uniform sentence rhythm and/or stock rhetorical constructs and overused vocabulary); a heuristic signal, not proof, for docs that should read as human-reviewed and specific`,
+      why: `ai_probability_score=${report.aiProbabilityScore.toFixed(2)} over ${report.sentenceCount} sentences (burstiness=${report.burstiness.toFixed(1)}, desouro=${report.desouroConstructs}, triplets=${report.tripletStructures}, fluff=${report.rhetoricalFluff}, validation=${report.explicitValidation}); statistical rhetorical fingerprint of LLM-authored prose (uniform sentence rhythm and/or stock rhetorical constructs and overused vocabulary); a heuristic signal, not proof, for docs that should read as human-reviewed and specific`,
     })
   }
   return findings
@@ -314,7 +314,7 @@ function main() {
       filesWithFindings.add(finding.filePath)
       const loc = finding.line ? `:${finding.line}` : ''
       const label = finding.sig || finding.name
-      console.log(`[${finding.kind}] ${finding.filePath}${loc} — ${label}`)
+      console.log(`[${finding.kind}] ${finding.filePath}${loc}: ${label}`)
       console.log(`    ${finding.why}`)
     }
     if ((idx + 1) % 200 === 0) {
