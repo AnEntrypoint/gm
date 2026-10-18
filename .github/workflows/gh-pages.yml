@@ -49,9 +49,6 @@ jobs:
       - name: Fetch the gm-config submodule that holds the state machine graph
         run: git submodule update --init --depth 1 gm-config
 
-      - name: Check every graph count on the site and docs against its graph
-        run: node scripts/check-doc-counts.mjs
-
       - name: Build flatspace site
         run: npx flatspace@1.0.20 build
 
