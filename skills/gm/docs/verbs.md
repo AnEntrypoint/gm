@@ -599,7 +599,7 @@ raw_body: "engine=cdp\nhttps://example.com/\n"
 ```
 
 The `cdp` reply is the host's JSON object, passed through unchanged: `ok`, `engine`, `headless`,
-`stdout`, `stderr`, `exit_code`, `duration_ms`, `timed_out`, `target_id`, `pages` and `error`. An unknown
+`stdout`, `stderr`, `exit_code`, `duration_ms`, `timed_out`, `target_id`, `tab`, `steps`, `pages` and `error`. `steps` holds one record per browser step (`index`, `action`, `tab`, `tab_state`, `url_before`, `url_after`, `closed`), and `tab` holds the target's `targetId`, `state` (`opened` or `reused`) and `url`. An unknown
 engine answers `ok: false` with `error_code: "unknown_engine"`, naming `cdp`.
 
 The standalone `cdp` verb is removed; `crawl` with `engine=cdp` replaces it. The `cdp` engine serves the whole step grammar,
@@ -629,6 +629,7 @@ A `cdp` body may open with `session=<name>`, then one step per line. The steps r
 | `fill=<uid> <value>` | text replaces the value; a select takes an option's value or label; a checkbox or radio takes `true` or `false` |
 | `type=<text>` | key events into the focused element |
 | `press=<key>` | `Enter`, `Tab`, `Escape`, arrows, `Home`, `End`, `F1`-`F12`, `Control+A`, `Control++` |
+| `press_uid=<uid> <key>` | focuses the element at `uid`, then presses `<key>` (same keys as `press`) |
 | `upload=<uid> <path>[;<path>]` | file input |
 | `wait_for=<text>` | until the page shows the text |
 | `reload`, `back`, `forward` | navigate |
@@ -641,6 +642,14 @@ A `cdp` body may open with `session=<name>`, then one step per line. The steps r
 | `eval=<js>` | page script; returns its value |
 | `cdp <Domain.method>` | one raw CDP command; its params are the JSON object on the next line, omitted when the command takes none |
 | `events <Domain.event> [where <field>~<value>] [limit=N]` | collect CDP events, keeping at most N (default 200, at most 10000) |
+
+Working console recipe, filtering page `console.*` calls whose first argument contains `terrain`:
+
+```
+events Runtime.consoleAPICalled where args.0.value~[terrain] limit=200
+```
+
+The `where` filter reads `args.0.value`, so it matches only string and number first arguments. An object first argument has no `value`; match its `args.0.description` instead.
 
 A `cdp` step's reply entry is the CDP command's own result, so `cdp Runtime.evaluate` yields
 `result` and `cdp Page.captureScreenshot` yields `data`. The command runs on the page's CDP session.
