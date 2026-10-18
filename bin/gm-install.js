@@ -107,7 +107,7 @@ function isNpmCacheSource(dir) {
 function resolveLocalSkillSource() {
   const pkgRoot = path.dirname(path.dirname(fileURLToPath(import.meta.url)))
   const override = (process.env.GM_SKILL_SOURCE_DIR || '').trim()
-  const dir = override || path.join(pkgRoot, 'skills')
+  const dir = path.resolve(override || path.join(pkgRoot, 'skills'))
   const names = sourceSkillNames(dir)
   if (names.length === 0) return null
   return { dir, names, fromEnv: Boolean(override), disposable: isNpmCacheSource(dir) }
