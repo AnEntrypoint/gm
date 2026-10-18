@@ -9,6 +9,12 @@ Pool and publish rules. Shared rules (autonomy, git identity, CI read, collision
 
 `ceiling` = host spawn limit (N in a refusal), not a throughput target or memory budget. `live` = ListAgents count. `floor` = min(2, ceiling). `shortfall` = live < floor with independent work open.
 
+## Standing pair (every run)
+Every `/gm` run launches both workflows in the same turn, before any other fan-out, and they run concurrently until both finish:
+- `skills/gm/workflows/roll-out-findings.js` (Workflow `scriptPath`): rolls the lenses across every repo and files each finding as a PRD row. It never edits, commits or pushes.
+- `skills/gm/workflows/fix-pending-rows.js` (Workflow `scriptPath`): lists open rows, runs one sequential lane per repo, debugs each row live, publishes, follows CI to green, and resolves only with a witness. It re-lists until no open row remains or 8 rounds pass.
+Neither run fixes while it rolls out, and neither waits for the other. Rows the rollout files after the fixer's last listing are picked up by relaunching the fixer. The pair replaces the one-wave rule below for these two workflows only.
+
 ## Core loop
 Repeat until a full pass adds no work:
 1. **Roll out.** One parallel pass, file-owned slices, each lane published once. Nothing built locally.
@@ -23,7 +29,7 @@ Node traversal (gm-hop; `skills/dream-rsi/gm-graph.json`) feeds step 3 only when
 ## Parallelism: graph workflows
 - Fan-out unit: a `Workflow` graph. As many as open work needs; parallel where independent, sequential where a result feeds the next.
 - Drainage strategy: drain the remaining PRDs in bounded slices, each slice run as its own dynamic `Workflow` graph. Take the first slice of at most 20 pending rows (`prd_list {status:"pending", limit:20}`), run one `gm-prd` per row, return `{pending_before, resolved, blocked, failed, new_blockers}`, then take the next slice from a fresh listing. Refusals and stalls are answered by the next slice, never by stopping. A slice that resolves nothing is re-run once with its blockers split, then the next slice starts.
-- One wave per run; a run never loops over waves. A run takes at most one slice (20 pending rows), resolves them with `gm-prd` agents (connectivity restarts per Connectivity restarts), returns `{pending_before, resolved, blocked, failed, new_blockers}` and ends. `pending_after > pending_before` halts new blockers until a merge pass closes duplicates.
+- One wave per run, except the standing pair (Standing pair), which loops until its listing is empty. Any other run takes at most one slice (20 pending rows), resolves them with `gm-prd` agents (connectivity restarts per Connectivity restarts), returns `{pending_before, resolved, blocked, failed, new_blockers}` and ends. `pending_after > pending_before` halts new blockers until a merge pass closes duplicates.
 - A run never exceeds 150 agents. Cap-hit or stalled runs are reported, never relaunched unchanged.
 - Three graphs, each run to exhaustion:
   1. Row drain: `pipeline` over pending rows, one `gm-prd` per row, a `parallel` block per wave; until pending = 0.
