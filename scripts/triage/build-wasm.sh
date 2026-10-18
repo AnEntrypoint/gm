@@ -6,7 +6,7 @@
 set -euo pipefail
 
 root=$(cd "$(dirname "$0")/../.." && pwd -P)
-writable() { mkdir -p "$1" 2>/dev/null && [ -w "$1" ]; }
+writable() { mkdir -p "$1" 2>/dev/null && touch "$1/.write-probe.$$" 2>/dev/null && rm -f "$1/.write-probe.$$"; }
 
 cargo_home=${CARGO_HOME:-$HOME/.cargo}
 if ! writable "$cargo_home"; then
@@ -30,7 +30,15 @@ if ! writable "$rustup_home"; then
     echo "build-wasm: $rustup_dir is not writable; running rustup from $CARGO_HOME/bin" >&2
   fi
   rustup show active-toolchain >/dev/null 2>&1 || rustup toolchain install stable --profile minimal >&2
-  rustup target list --installed | grep -qx wasm32-wasip1 || rustup target add wasm32-wasip1 >&2
+fi
+
+if ! rustup target list --installed 2>/dev/null | grep -qx wasm32-wasip1; then
+  if ! rustup target add wasm32-wasip1 >&2; then
+    export RUSTUP_HOME="/tmp/rustup-$(id -u)"
+    echo "build-wasm: target add failed under $rustup_home; retrying with RUSTUP_HOME=$RUSTUP_HOME" >&2
+    [ -d "$RUSTUP_HOME" ] || cp -a "$rustup_home" "$RUSTUP_HOME"
+    rustup target add wasm32-wasip1 >&2
+  fi
 fi
 
 cd "$root/rs-plugkit"
