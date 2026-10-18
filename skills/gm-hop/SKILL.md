@@ -70,6 +70,7 @@ CHANGED: <file, dispatch id> | none
 ACH: <n> hypotheses; leader <id>; rejected <ids>; probe <dispatch id>; flips-on <evidence> | none, no cause asserted
 ROWS: <n>: <ids>
 EMITTED: .gm/lean-walk/<NODE>.json [+1 new node]
+CYCLE: <dream-replay-cycle dispatch id>; status <replayed|deferred, reason>
 NEED: <one sentence>
 next: <id>; depth=<n+1> | none, <reason>
 ```
