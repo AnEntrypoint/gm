@@ -12,7 +12,7 @@ When the agent starts work, the agent shall first read `SKILLS.md`. When a reque
 2. Drain first: while pending rows exist, every free slot drains rows. Under 20 open rows, free slots traverse computer-science disciplines to file rows.
 3. Orient (gm-orient): codesearch and codeinsight before any edit. Top 20 BM25, top 20 vector and top 20 commits, each with 3 live snippet lines. The database stores embeddings and ids only.
 4. Resolve through six skills, each loading the next: gm-orient, gm-unknowns, gm-eliminate (JIT runs; new unknowns return here), gm-edit, gm-validate (JIT runs; failures return to gm-eliminate), gm-publish.
-5. Unknowns are written as `unknown` (renamed from `mutable`). Elimination ends only when none are open.
+5. Unknowns are filed with `mutable-add` (status `unknown` while open) and closed with `mutable-resolve`. Elimination ends only when none are open.
 6. Publish on main only: merge upstream, commit local work by explicit path, push, read CI. A failing job returns to gm-eliminate.
 7. Plugkit runs 4 concurrent workers. A call over 15 s moves to background and frees its worker. A browser or GPU call takes a lease; browsers stay hot per project.
 8. A subagent stopped by a network or API error is restarted for the same row, never resumed and never parked as blocked.
