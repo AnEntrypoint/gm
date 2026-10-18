@@ -11,20 +11,20 @@ Pool and publish rules. Shared rules (autonomy, git identity, CI read, collision
 
 ## Standing pair (every run)
 Every `/gm` run launches both workflows in the same turn, before any other fan-out, and they run concurrently until both finish:
-- `skills/gm/workflows/roll-out-findings.js` (Workflow `scriptPath`): rolls the lenses across every repo and files each finding as a PRD row. It never edits, commits or pushes.
-- `skills/gm/workflows/fix-pending-rows.js` (Workflow `scriptPath`): lists open rows, runs one sequential lane per repo, debugs each row live, publishes, follows CI to green, and resolves only with a witness. It re-lists until no open row remains or 8 rounds pass.
-Neither run fixes while it rolls out, and neither waits for the other. Rows the rollout files after the fixer's last listing are picked up by relaunching the fixer. The pair replaces the one-wave rule below for these two workflows only.
+- `skills/gm/workflows/roll-out-findings.js` (Workflow `scriptPath`): finders across the lenses file each finding as a PRD row with its file group. Then one lane per file group resolves each row's unknowns with live runs, makes the edit, commits by explicit path, pushes, and closes the row with a live witness. Rows that share a file group run in sequence; groups run in parallel. Rollout never waits on tests or CI.
+- `skills/gm/workflows/fix-pending-rows.js` (Workflow `scriptPath`): runs the test and CI/CD follow-up. It reads `ci-status` for the recent pushed shas of every repo, debugs each red job with `ci_log failed_only`, fixes it on the failing file's group, pushes, and re-reads CI. It also resolves rows that rollout left open. It repeats until no red job or open row remains, or 8 rounds pass.
+Both runs share one working tree, so a file group has one writer at a time: the test lane waits for a rollout lane that holds the same file, then takes it. Neither waits for the other. Rows filed after the last listing are picked up by relaunching the pair. The pair replaces the one-wave rule below for these two workflows only.
 
 ## Core loop
 Repeat until a full pass adds no work:
-1. **Roll out.** One parallel pass, file-owned slices, each lane published once. Nothing built locally.
-2. **Fix.** Fixes follow the rollout they repair. Each broken run becomes a fix handoff to a fresh executor.
+1. **Roll out.** Finders file rows; one lane per file group resolves unknowns, edits, publishes and closes its rows. Nothing waits on CI or tests.
+2. **Test and fix, concurrently.** The CI/test follow-up reads every pushed sha. Each red job becomes a fix on its file group, after any rollout lane holding that file finishes its publish.
    - Sweep first: one subagent per failing job log, changed file group, stub/TODO. Each returns located `path:line` and counts only; each finding becomes a row. Fix only after the sweep completes.
-   - One fix executor per independent file group, one block; fixes sharing a file run in sequence in one executor. One commit per group, never per finding.
+   - One fix executor per independent file group; fixes sharing a file run in sequence in one executor. One commit per group, never per finding.
 3. **Plan.** End each pass with `prd-add` rows (file ownership, acceptance).
 4. Repeat from 1.
 
-Node traversal (gm-hop; `skills/dream-rsi/gm-graph.json`) feeds step 3 only when `prd-list {"status":"pending"}` is under 20 (Parallelism, graph 2). It never interrupts rollout or fix.
+Node traversal (gm-hop; `skills/dream-rsi/gm-graph.json`) feeds step 3 only when `prd-list {"status":"pending"}` is under 20 (Parallelism, graph 2). It never interrupts rollout or the test follow-up.
 
 ## Parallelism: graph workflows
 - Fan-out unit: a `Workflow` graph. As many as open work needs; parallel where independent, sequential where a result feeds the next.
@@ -39,11 +39,11 @@ Node traversal (gm-hop; `skills/dream-rsi/gm-graph.json`) feeds step 3 only when
 - Repeat 1-3 until a full cycle adds and resolves nothing. A wave resolving 0 rows with pending rows left is a stall: change the brief, rerun. Never stop on a stall alone.
 - Ceiling and floor bound live subagents (Lane budget). Refill a freed slot in the same turn.
 
-## Write first, fix later
-- Build first, test afterwards: during a build round, each lane publishes its commit without waiting on CI or browser tests. The test, fix, CI and CD phase starts only after the build round has published.
-- Fix afterwards: once the build round is done, sweep every failing CI log, group the failures by cause and file, and dispatch one fix lane per group, each publishing once.
-- Verify separately: a closure needs a witness from a separate verifier session on a green complete tip. Never let an executor close its own row.
-- No `cargo`, `go build`, `go vet`, `go test`, witness runs or local compile unless the user turns builds on. Check that setting first (gm config or served instruction); a local run is allowed when it is on. The lane reads `ci-status` for its sha on landing. A failing sha becomes a fix slice, never a pause.
+## Publish first, test concurrently
+- Publish first: each rollout lane publishes its commit without waiting on CI or browser tests. Tests, CI and CD run in the concurrent test follow-up, never as a gate on rollout.
+- Fix concurrently: the test follow-up sweeps failing CI logs as they appear, groups failures by cause and file, and hands each group to the lane that owns that file, or to a new fix lane when no lane holds it. Only one writer per file group at a time.
+- Witness: a rollout lane closes its own row with a live witness dispatch on its pushed sha. The test follow-up reads CI for that sha; a red job reopens the row with a `prd-add` fix row, which the next pass takes.
+- No `cargo`, `go build`, `go vet`, `go test`, or local compile unless the user turns builds on. Check that setting first (gm config or served instruction); a local run is allowed when it is on. Witnesses are live dispatches, which never wait on CI. The test follow-up reads `ci-status` for each pushed sha. A failing sha becomes a fix slice, never a pause.
 - Writers are light; writers are not limited. Only browser arms and per-run servers cause thrash (Lane budget). Many writers may run when each owns separate files.
 - File ownership before launch: each brief names its files. Two lanes never write one file. A shared manifest has one owner; others add only their own directory.
 - Contracts before code: a producer publishes its contract doc as its own commit first; the consumer reads it from remote `main`.
@@ -62,7 +62,7 @@ Node traversal (gm-hop; `skills/dream-rsi/gm-graph.json`) feeds step 3 only when
 ## Verification and CI lanes
 - Executor ends `STATUS: handoff <sha>`. Orchestrator spawns, same turn, outside the executor: verifier (`gm-validate` as `mode=witness`, session `<parent>-v<k>`, a session other than the executor's) and CI reader (`gm-publish` steps 3-5, session `<parent>-c<k>`).
 - `STATUS: fix` (verifier) or `STATUS: ci-red` (CI reader) starts a fresh executor for the same row with the sha and failing check or job. Takes a slot; never inline.
-- Only the orchestrator calls `prd-resolve`, once verifier and CI reader both report green for the same sha. Log each lane result to `.gm/witness-log.md` with its session id.
+- The rollout lane that made the edit calls `prd-resolve` with its live witness. The test follow-up's CI read for that sha decides whether the row stays closed; a red job reopens it. Log each lane result to `.gm/witness-log.md` with its session id.
 - Verification and CI never block the pool.
 
 ## Floor and dip
