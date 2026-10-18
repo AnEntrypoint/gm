@@ -11,6 +11,9 @@ on:
       - agentplug
       - agentplug/**
       - .github/workflows/contracts.yml
+      - scripts/check-verb-body-contract.mjs
+      - skills/gm/docs/verbs.md
+      - gm-mcp/src/**
   pull_request:
     paths:
       - scripts/check-contracts.mjs
@@ -20,6 +23,9 @@ on:
       - agentplug
       - agentplug/**
       - .github/workflows/contracts.yml
+      - scripts/check-verb-body-contract.mjs
+      - skills/gm/docs/verbs.md
+      - gm-mcp/src/**
 
 jobs:
   consumer-contracts:
@@ -33,3 +39,4 @@ jobs:
         with:
           node-version: 20
       - run: node scripts/check-contracts.mjs
+      - run: node scripts/check-verb-body-contract.mjs
