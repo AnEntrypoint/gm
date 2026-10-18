@@ -62,6 +62,11 @@ accepts `exclude` under the same aliases.
 
 ```
 {"pattern":"<text or regex>"}                    required (unless mode:"comments"); "query" is accepted too
+{"mode":"pattern"}                               default: a pattern with regex metacharacters reads as a regex;
+                                                 "literal" matches verbatim, "regex" always compiles,
+                                                 "comments" sweeps comments; an output shape ("content",
+                                                 "files", "files_with_matches", "count") as mode sets output_mode;
+                                                 "dual"/"filename" are refused with a pointer to codesearch
 {"path":"<dir or file>"}                         narrow the scan to one subtree or one file
 {"glob":"**/*.rs"}                               narrow by path glob; "include"/"path_glob" are aliases
 {"exclude":["vendor/**","test/hardware/**"]}     drop paths by glob: one glob or an array;
@@ -124,7 +129,8 @@ The canonical search verb: ranked BM25 plus vector retrieval.
 
 ```
 {"query":"<text>"}                 required
-{"mode":"dual"}                    "dual" (default): ranked BM25+vector retrieval;
+{"mode":"dual"}                    "dual" (default): ranked BM25+vector retrieval, except a single
+                                   identifier-shaped token (3-96 characters) routes to mode "symbol" (see below);
                                    "literal"/"regex": exhaustive, every match with path:line, no ranking;
                                    "filename": matches paths only
 {"k":10}                           result cap for "dual"; aliases: max_results, maxResults, limit
@@ -140,7 +146,7 @@ The canonical search verb: ranked BM25 plus vector retrieval.
 {"path_glob":"**/*.rs"}            narrow by glob; "glob" is an alias
 {"combine":"phrase"}               "phrase" (default for a multi-word query), "and" (every term on one line),
                                    "or" (ranked union of any term)
-{"case_insensitive":true, "whole_word":true}
+{"case_insensitive":true, "whole_word":true}     literal and regex are case-SENSITIVE by default; "case_insensitive" folds case (alias "ignore_case" in grep); the reply echoes it as `case_insensitive`
 {"refresh":true}                   re-read from disk for the exhaustive modes
 {"no_ignore":true}                               include files .gitignore would hide, in every mode, under the
                                                  rule `grep`'s `no_ignore` entry states above.
@@ -172,7 +178,7 @@ Example:
 Four modes, plus the comment scan (`mode:"comments"`): `dual` ranks; `literal` and `regex` are exhaustive and read the tree directly.
 `filename` matches paths only. An unknown `mode`
 is an error that names the valid set, never a silent `dual`. A `dual` query that is one identifier-shaped
-token (3-96 characters) is answered by an exhaustive whole-word scan. There is no `symbol` mode: it is refused
+token (3-96 characters) is answered by the identifier route: an exhaustive whole-word scan whose reply has `mode: "symbol"`, `definitions` and `references`. A request whose body names `mode: "symbol"` is refused
 and the refusal names the valid set. `k` caps the result count; `0` means unlimited for
 `literal`, `regex` and `filename`, and is refused for `dual`, which is ranked top-k. `verbose: true` returns the
 raw `bm25_hits`, `vector_hits` and `commits` channels.
@@ -312,23 +318,7 @@ the full `deferred_set` lives in the sync report, never in the message.
 
 Agents do not call these verbs for memory. Memory is the flat-file store that `skills/gm/SKILL.md` (Invariants) describes; the verbs stay in the code.
 
-`recall` and `auto-recall` are `query`; `memorize`, `memorize-fire`, `memorize-prune`, `memorize-vacuum` and `memorize-retention` are `command`.
-
-`recall` searches `.gm/memories/*.md` and its derived vector index. Hits are scored as cosine times recency, within the `namespace` the body names.
-
-```
-{"query":"<text>"}        required
-{"limit":8}               row cap
-{"namespace":"default"}   memory namespace
-```
-
-`memorize` writes to that index: `{"text":"<memo>","namespace":"default"}`, or a raw text body.
-`memorize-fire` writes its body as one `.md` file into the memorize inbox, and `memorize-prune`, `memorize-vacuum` and `memorize-retention`
-maintain the recall index, and `auto-recall` answers a prompt body with three recall hits.
-
-A `recall` reply carries `hits` (the ranked list), and `vector_hits` (the rows before scoring) only when the body sets `verbose: true`.
-The gm-mcp response compactor (`gm-mcp/src/response-compact.js`) drops `vector_hits` when every row in it is already in `hits` and names it
-in `wire_compacted.omitted`; pass `{"full_response": true}` to the MCP tool to keep both.
+`recall`, `auto-recall`, `memorize-fire`, `memorize-prune`, `memorize-vacuum` and `memorize-retention` do not resolve in the current build: `gm.describe` fails for each, and rs-plugkit's source holds no dispatch for them. `memorize_continue` is the memory verb that resolves.
 
 ## Filesystem
 
@@ -374,17 +364,24 @@ Query verbs:
 
 Command verbs (every other git verb):
 
-- `git_push`, `git_add`, `git_commit`, `git_amend`, `git_rewrite_authors`, `git_finalize`, `git_fetch`, `git_pull`, `git_init`, `git_branch`, `git_branch_delete`, `git_checkout`, `git_merge`, `git_merge_abort`, `git_stash`, `git_stash_pop`, `git_stash_drop`, `git_rm`, `git_revert`, `git_reset`, `git_cherry_pick`, `git_worktree_add`, `git_worktree_remove`, `git_worktree_prune`
+- `git_push`, `git_add`, `git_commit`, `git_amend`, `git_rewrite_authors`, `git_finalize`, `git_fetch`, `git_pull`, `git_init`, `git_branch`, `git_branch_delete`, `git_checkout`, `git_merge`, `git_merge_abort`, `git_stash`, `git_stash_pop`, `git_stash_drop`, `git_rm`, `git_revert`, `git_reset`, `git_cherry_pick`, `git_submodule_add`, `git_worktree_add`, `git_worktree_remove`, `git_worktree_prune`
 
-`ci-log` reads what a step printed, which `ci-status` cannot answer: it answers a job's text, not its conclusion. Name `run_id` (every `ci-status` job row carries one) or `sha`, optionally `job_id` to read one job instead of the whole run, then filter with `job`, `step` and `pattern` (`mode` is `literal` or `regex`, and `ignore_case` folds all three). Each returned line is split into `{n, job, step, at, text}`, so three jobs' output compares without anyone parsing the `job\tstep\ttimestamp\t` prefix by hand. Default caps are `max_lines` 40 and `max_chars` 8000, so a 1900-line multi-job run is never dumped into context; the reply carries `lines_scanned`, `matched_lines`, `returned_lines`, `truncated` and `truncated_by` so a cap is visible rather than silent. It reads through the `gh` CLI, so an absent or unauthenticated `gh` is a clear `ok: false` naming the reason, never a hang. Inside `gm_codemode`, `max_chars` is the wrapper's whole-reply cap and never reaches the verb, so set the verb's own cap through `body`:
+Single accepted shape for `git_commit` and `git_push`: each key is accepted at the top level or under `body`, and both forms reach the same commit or push path. `git_commit {message, paths?, files?, allow_whole_index?, author_name?, author_email?}`: `message` is the commit subject plus optional body, subject at most 50 characters. `git_push {rev?, remote?, branch?, force?, recover_remote_moved?, allow_foreign_commits?}`: only `rev` is top-level; the other push fields are body-only. `{"message":"..."}` and `{"body":{"message":"..."}}` are the same call; a key named in both takes its value from `body`. A key outside a verb's list is refused, naming the declared fields.
+
+`git_submodule_add {url, path, branch?}` adds a submodule: `git submodule add [-b <branch>] -- <url> <path>`. `url` must be `https://` with a host (no `user:password@`, no whitespace); `path` is relative to the repo root with no `.`, `..` or `.git` segment; `branch` (optional) holds only letters, digits, `.`, `_`, `-`, `/` and does not start with `-`. The same protected-path gate as `git_add` applies to `path`. It stages `.gitmodules` and the gitlink, and answers `{path, url, branch, staged}`. It does not commit: publish with `git_commit` then `git_push`.
+
+`ci-status {sha?|rev?, github_repo?, ignore_workflows?}` answers `run_status` (`success`, `failure`, `pending`, `unknown`, `no_applicable_workflow`), `failing_jobs` as `[{name, workflow, job_id, run_id, log_url}]`, `pending_count` (jobs not yet completed) and `job_counts`; a run that failed with no failing job (a stale in-progress run) is listed under `failing_runs`. Pass a `failing_jobs` entry's `job_id` straight to `ci-log`.
+
+`ci-log` reads what a step printed, which `ci-status` cannot answer: it answers a job's text, not its conclusion. Step names come from the run's job list (GitHub's jobs API, matched by each line's timestamp), since `gh` labels every line `UNKNOWN STEP`; `step_labels.source` says which source named them. `failed_only:true` reads only the failing steps of the failing jobs and answers `failures` as `[{job, job_id, log_url, step, step_number, error_lines, tail?}]`: `error_lines` are the lines matching `##[error]`, `error`, `fatal`, `panicked`, `failed` or `failure` (or `pattern`, when given) with ANSI colour codes stripped, each followed by its next 2 lines, capped by `max_lines`, and a failing step with no such line beyond the generic `##[error]Process completed with exit code` carries its last `tail_lines` (default 10) lines under `tail`. Name `run_id` (every `ci-status` job row carries one) or `sha`, optionally `job_id` to read one job instead of the whole run, then filter with `job`, `step` and `pattern` (`mode` is `literal` or `regex`, and `ignore_case` folds all three). Each returned line is split into `{n, job, step, at, text}`, so three jobs' output compares without anyone parsing the `job\tstep\ttimestamp\t` prefix by hand. Default caps are `max_lines` 40 and `max_chars` 8000, so a 1900-line multi-job run is never dumped into context; the reply carries `lines_scanned`, `matched_lines`, `returned_lines`, `truncated` and `truncated_by` so a cap is visible rather than silent. It reads through the `gh` CLI, so an absent or unauthenticated `gh` is a clear `ok: false` naming the reason, never a hang. Inside `gm_codemode`, `max_chars` is the wrapper's whole-reply cap and never reaches the verb, so set the verb's own cap through `body`:
 
 ```
 ci-log {"github_repo":"lanmower/oscraft","run_id":38538275222,"step":"state hashes","pattern":"sha256"}
+ci-log {"run_id":39101942533,"failed_only":true}
 ```
 
 `git_remote` takes `{}` and answers `{branch, remotes, upstream}`. It inspects the configured remote URLs and the current branch's upstream without fetching or mutating state.
 
-`git_pull` performs the ordinary fetch-and-integrate path (a merge, `--no-rebase`, by default). Opt-in body fields: `rebase:true` replays the local commits onto the fetched tip (`--rebase`), and `autostash:true` shelves local changes around the pull (`--autostash`); both default to `false`, so existing callers are unchanged. `git_stash` shelves (stashes) all work by default, including untracked files, but never the project's own `.gm/` or `.agentplug*` (listed in the receipt's `excluded`), and refuses more than 2000 untracked files (pass `paths:[...]` or `include_untracked:false`). `git_stash_pop` restores a shelf and drops it after a successful restore; a conflicted pop leaves the shelf, and `git_stash_drop` removes it afterwards. `git_stash_list` lists shelves. All stash verbs refuse unknown fields. `git_checkout` switches branch; `git_checkout` with `paths` restores only those paths (pathspecs, git's path patterns) in the working tree from `ref` (default the index), refusing an empty list, a leading `-` or `:`, `..`, an absolute path outside the repo and anything under `.gm/` or `.agentplug*` other than the transient scan-deps and codeinsight-edge caches; its receipt is `{restored, source, output}`. `git_finalize {message}` bundles the add, commit, porcelain gate, push and `ci-status-check` steps; if the build does not serve it, compose the same steps by hand. When another agent shares the worktree, pass `paths:[...]` to `git_commit`/`git_finalize`: only those pathspecs are staged, committed and porcelain-gated. With `rev`, `git_finalize` skips the commit and publishes that ref through `git_push`. `git_push {rev:"<full sha>", allow_foreign_commits:true}` is the sanctioned push of a commit you already made over another writer's uncommitted changes: name the sha of the tip you mean to publish and pass the flag, because `rev:"HEAD"` is symbolic and the gate refuses it (`error_code: gate_denied`, "this push names no commit ... would ship every unpushed commit on main") while any commit on the branch is unpushed. A lane publishing only the commit it just made names that sha, `git_push {rev:"<own sha>"}`, and needs no flag. A push publishes a chain of commits, not one commit: `git_push` sends `git push origin <rev>:<branch>` (`<rev>:refs/heads/<branch>` for a full sha), so `rev` must name a commit and every commit on local `main` the remote lacks ships with it, including a commit another lane authored. On shared linear main that is the intended contract: no refspec publishes a commit without its ancestors, so `rev` names the tip, it never narrows the set. `git_commit` does not publish. Publishing goes through `git_push`, and `git_finalize` publishes by calling it. `git_log` with `paths` keeps only commits touching those pathspecs. `git_diff` scopes the same way. `git_show`: `path` prints that file at the revision (same as `rev: "<rev>:<path>"`); `paths` limits a commit's diff. These three refuse unknown fields, naming `unknown_fields` and `accepted_fields`. `git_status` scopes to `paths`; `summary: true` returns counts by status plus the first `limit` (default 20) `first_paths`, and without `summary`, `limit` caps each status list (default 10), and `truncated` is set when a list overflows.
+`git_pull` performs the ordinary fetch-and-integrate path (a merge, `--no-rebase`, by default). Opt-in body fields: `rebase:true` replays the local commits onto the fetched tip (`--rebase`), and `autostash:true` shelves local changes around the pull (`--autostash`); both default to `false`, so existing callers are unchanged. `git_stash` shelves (stashes) all work by default, including untracked files, but never the project's own `.gm/` or `.agentplug*` (listed in the receipt's `excluded`), and refuses more than 2000 untracked files (pass `paths:[...]` or `include_untracked:false`). `git_stash_pop` restores a shelf and drops it after a successful restore; a conflicted pop leaves the shelf, and `git_stash_drop` removes it afterwards. `git_stash_list` lists shelves. All stash verbs refuse unknown fields. `git_checkout` switches branch; `git_checkout` with `paths` restores only those paths (pathspecs, git's path patterns) in the working tree from `ref` (default the index), refusing an empty list, a leading `-` or `:`, `..`, an absolute path outside the repo and anything under `.gm/` or `.agentplug*` other than the transient scan-deps and codeinsight-edge caches; its receipt is `{restored, source, output}`. `git_finalize {message}` bundles the add, commit, porcelain gate, push and `ci-status-check` steps; if the build does not serve it, compose the same steps by hand. When another agent shares the worktree, pass `paths:[...]` to `git_commit`/`git_finalize`: only those pathspecs are staged, committed and porcelain-gated. With `rev`, `git_finalize` skips the commit and publishes that ref through `git_push`. The sanctioned publish is `git_push {rev:"<sha>"}` naming the commit you made: the full sha or the short sha (`git_push {rev:"d56ebcae"}` is accepted and ships the chain up to that commit). `rev:"HEAD"` is symbolic: it is accepted only when the branch has no unpushed commit, and otherwise refused with `error_code: gate_denied`, listing the unpushed commits. `git_push {rev:"<full sha>", allow_foreign_commits:true}` is the sanctioned push of a commit you already made over another writer's uncommitted changes: name the sha of the tip you mean to publish and pass the flag, because `rev:"HEAD"` is symbolic and the gate refuses it (`error_code: gate_denied`, "this push names no commit ... would ship every unpushed commit on main") while any commit on the branch is unpushed. A lane publishing only the commit it just made names that sha, `git_push {rev:"<own sha>"}`, and needs no flag. A push publishes a chain of commits, not one commit: `git_push` sends `git push origin <rev>:<branch>` (`<rev>:refs/heads/<branch>` for a full sha), so `rev` must name a commit and every commit on local `main` the remote lacks ships with it, including a commit another lane authored. On shared linear main that is the intended contract: no refspec publishes a commit without its ancestors, so `rev` names the tip, it never narrows the set. `git_commit` does not publish. Publishing goes through `git_push`, and `git_finalize` publishes by calling it. `git_log` with `paths` keeps only commits touching those pathspecs; `max_count` (aliases `n`, `limit`, `count`) caps the number of commits. `git_fetch` takes the refspec as `ref` (also `rev` or `refspec`), the first non-blank one naming it; `remote` defaults to `origin`. `git_diff` scopes the same way. `git_show`: `path` prints that file at the revision (same as `rev: "<rev>:<path>"`); `paths` limits a commit's diff; output is paged by `offset`, and the reply carries `total_bytes` and `next_offset` (`null` on the last page), so a long diff is read page by page. These three refuse unknown fields, naming `unknown_fields` and `accepted_fields`. `git_status` scopes to `paths`; `summary: true` returns counts by status plus the first `limit` (default 20) `first_paths`, and without `summary`, `limit` caps each status list (default 10), and `truncated` is set when a list overflows.
 
 `git_rewrite_authors` rewrites the author identity on the commits of local `main` (the range `since..HEAD`, or all of `HEAD` when `since` is absent; `since` is a hex sha of 7 to 64 digits). It refuses any branch other than `main`, a merge in progress and a worktree with changes outside `.gm/`. With `apply` unset it reports the plan; `apply:true` also needs `confirm:"rewrite-pushed-history"`, because the rewrite changes commits that may already be published.
 
@@ -401,7 +398,11 @@ Spill retention: `spill_file` and `eol_spill_file` both use the `git_status-` pr
 `git_status-*.txt` files are kept in `.gm/exec-spool/out/`, and each git_status call that writes a spill
 deletes the older ones. A reply that wrote a spill names this rule in `spill_retention`.
 
-`git_commit` takes `{"message":"<commit message>", "paths":["<path>", ...]}`. `message` is required. `paths` (or `files`) limits the commit to those paths: the commit takes only the named paths and every other staged entry stays staged. Without `paths`, a commit refuses when a blanket stage would sweep other dirty entries (`error_code` `blanket_stage_refused`, with `would_stage_count`); `allow_whole_index:true` accepts the whole index explicitly, and a commit that takes the whole index reports `whole_index_commit` with `staged_paths`. The reply carries `committed`, `sha` and `summary`, plus `excluded` (the pathspecs the commit withheld: `.agentplug*` and each other dirty path the `paths` do not cover; at most 5 shown) with `excluded_count` for the full count, and `excluded_but_dirty` (the withheld dirty entries as `status path` rows, at most 50) with `excluded_but_dirty_count`.
+`git_commit` takes `{"message":"<commit message>", "paths":["<path>", ...]}`. `message` is required. Its subject (the first line) must be 50 characters or fewer; a 51-or-longer subject is refused before the commit runs with a message naming the 50-character limit. `paths` (or `files`) limits the commit to those paths: the commit takes only the named paths and every other staged entry stays staged. Without `paths`, a commit refuses when a blanket stage would sweep other dirty entries (`error_code` `blanket_stage_refused`, with `would_stage_count`); `allow_whole_index:true` accepts the whole index explicitly, and a commit that takes the whole index reports `whole_index_commit` with `staged_paths`. The reply carries `committed`, `sha` and `summary`, plus `excluded` (the pathspecs the commit withheld: `.agentplug*` and each other dirty path the `paths` do not cover; at most 5 shown) with `excluded_count` for the full count, and `excluded_but_dirty` (the withheld dirty entries as `status path` rows, at most 50) with `excluded_but_dirty_count`.
+
+`git_commit {"patch":"<unified diff against HEAD>", "message":"..."}` or `git_commit {"hunks":{"<path>":[<1-based hunk numbers>]}, "message":"..."}` commits only the named hunks, numbered as in `git diff HEAD -- <path>`. Pass exactly one of `patch` or `hunks`; both at once, or either with `paths`, `files`, `add_all`, `amend` or `allow_empty`, is refused. The commit is built in a temporary index, so the work tree is not touched; the reply carries `index_synced` and `index_left_staged` for the real index, and `selected_hunks`. `git_add` stages whole paths only and refuses `hunks`. An unscoped `git_commit` also carries the paths this session staged earlier with `git_add` (recorded under kv namespace `git_add_staged`, still staged) rather than only the blanket index.
+
+Commit identity: `author_name` and `author_email` in the body win over gm config `git.author_name` and `git.author_email`, which win over the built-in default. Each git invocation that writes a commit (`git_commit`, `git_pull`, `git_merge`, `git_cherry_pick`, `git_revert`, reland) passes the identity per invocation as `-c user.*`, `-c author.*` and `-c committer.*`; the repository's own config is neither read nor written.
 
 `git_finalize` takes the same body, `{"message":"<commit message>", "paths":["<path>", ...]}`, and is the form that also pushes. Name `paths` every time: an unscoped `git_finalize` refuses with `error_code` `blanket_stage_refused` and `would_stage_count`, because a blanket commit carries another writer's in-flight edits with it. In a shared work tree it is not the default publish path: it commits locally and then refuses to push while the `push-dirty` scope check (`push_dirty_scope`) blocks, which is the normal state. The refused push leaves a local commit redundant with content already published and widens the gap between local HEAD, the work tree and remote main. Publish through the GitHub Git API instead (create blobs, a tree with `base_tree: <remote tip>`, a commit parented on that tip, PATCH `refs/heads/main` with `force` unset), then re-read `/repos/<owner>/<repo>/contents/<path>?ref=main` and verify each blob. A local commit whose push is refused is redundant, never unpushed work, and never erased by resetting `refs/heads/main` while lanes are running. `git_commit` with no `message` replies `error: message required` and commits nothing.
 
@@ -584,7 +585,7 @@ raw_body: "engine=cdp\nhttps://example.com/\n"
 ```
 
 The `cdp` reply is the host's JSON object, passed through unchanged: `ok`, `engine`, `headless`,
-`stdout`, `stderr`, `exit_code`, `duration_ms`, `timed_out`, `target_id`, `pages` and `error`. An unknown
+`stdout`, `stderr`, `exit_code`, `duration_ms`, `timed_out`, `target_id`, `tab`, `steps`, `pages` and `error`. `steps` holds one record per browser step (`index`, `action`, `tab`, `tab_state`, `url_before`, `url_after`, `closed`), and `tab` holds the target's `targetId`, `state` (`opened` or `reused`) and `url`. An unknown
 engine answers `ok: false` with `error_code: "unknown_engine"`, naming `cdp`.
 
 The standalone `cdp` verb is removed; `crawl` with `engine=cdp` replaces it. The `cdp` engine serves the whole step grammar,
@@ -614,6 +615,7 @@ A `cdp` body may open with `session=<name>`, then one step per line. The steps r
 | `fill=<uid> <value>` | text replaces the value; a select takes an option's value or label; a checkbox or radio takes `true` or `false` |
 | `type=<text>` | key events into the focused element |
 | `press=<key>` | `Enter`, `Tab`, `Escape`, arrows, `Home`, `End`, `F1`-`F12`, `Control+A`, `Control++` |
+| `press_uid=<uid> <key>` | focuses the element at `uid`, then presses `<key>` (same keys as `press`) |
 | `upload=<uid> <path>[;<path>]` | file input |
 | `wait_for=<text>` | until the page shows the text |
 | `reload`, `back`, `forward` | navigate |
@@ -626,6 +628,14 @@ A `cdp` body may open with `session=<name>`, then one step per line. The steps r
 | `eval=<js>` | page script; returns its value |
 | `cdp <Domain.method>` | one raw CDP command; its params are the JSON object on the next line, omitted when the command takes none |
 | `events <Domain.event> [where <field>~<value>] [limit=N]` | collect CDP events, keeping at most N (default 200, at most 10000) |
+
+Working console recipe, filtering page `console.*` calls whose first argument contains `terrain`:
+
+```
+events Runtime.consoleAPICalled where args.0.value~[terrain] limit=200
+```
+
+The `where` filter reads `args.0.value`, so it matches only string and number first arguments. An object first argument has no `value`; match its `args.0.description` instead.
 
 A `cdp` step's reply entry is the CDP command's own result, so `cdp Runtime.evaluate` yields
 `result` and `cdp Page.captureScreenshot` yields `data`. The command runs on the page's CDP session.
@@ -655,9 +665,9 @@ a walk is a graph walk with many distinct paths. The runtime word `phase` is the
 currently stand on: `policy.initial_phase` and `policy.terminal_phase` name two nodes. `skills/dream-rsi/gm-graph.json` is the authored catalogue the walk is measured
 against; its nodes carry a `provenance` field (`null` or a label such as `P1`).
 
-`phase-status`, `comment-audit`, `submodule-check`, `prd-list`, `mutable-list`, `task-list`, `task-output`, `discipline`, `discipline-audit`, `fsm-validate`, `predicates-md`, `capability-resolve`, `memory-namespace-audit`, `calculus-model-check`, `component-loader-hmr`, `dream-replay`, `dream-round` and `pool-brief` are `query`; `instruction`, `transition`, `transition-revert`, `residual-scan`, `claim-audit`, `prd-add`, `prd-resolve`, `prd-defer`, `mutable-add`, `mutable-resolve`, `mutable-defer`, `task-spawn`, `task-stop`, `memorize-backfill`, `memorize-continue`, `discipline-note`, `discipline-check-removal`, `fsm-vendor`, `fsm-propose-override`, `codeinsight-namespace-audit`, `component-loader-reconcile`, `dream-policy-register`, `dream-evaluator-receipt`, `dream-discovery-record`, `dream-world-seal`, `dream-replay-round`, `dream-replay-cycle`, `prd-block`, `prd-repair`, `subagent-start`, `subagent-end`, `browser_lease_acquire` and `browser_lease_release` are `command`; `browser_lease_status` is `query`. `memorize-fire` and `auto-recall` keep the classes given with the memory verbs.
+`phase-status`, `comment-audit`, `submodule-check`, `prd-list`, `mutable-list`, `task-list`, `task-output`, `discipline`, `discipline-audit`, `fsm-validate`, `predicates-md`, `capability-resolve`, `memory-namespace-audit`, `calculus-model-check`, `component-loader-hmr`, `dream-replay`, `dream-round` and `pool-brief` are `query`; `instruction`, `transition`, `transition-revert`, `residual-scan`, `claim-audit`, `prd-add`, `prd-resolve`, `prd-defer`, `mutable-add`, `mutable-resolve`, `mutable-defer`, `task-spawn`, `task-stop`, `memorize-backfill`, `memorize-continue`, `discipline-note`, `discipline-check-removal`, `fsm-vendor`, `fsm-propose-override`, `codeinsight-namespace-audit`, `component-loader-reconcile`, `dream-policy-register`, `dream-evaluator-receipt`, `dream-discovery-record`, `dream-world-seal`, `dream-replay-round`, `dream-replay-cycle`, `prd-block`, `prd-witness-request`, `expansion-audit`, `prd-repair`, `subagent-start`, `subagent-end`, `browser_lease_acquire` and `browser_lease_release` are `command`; `browser_lease_status` is `query`. `memorize-fire` and `auto-recall` keep the classes given with the memory verbs.
 
-`prd-list` brief rows carry the row's text in `title`, clamped to a fixed length. Full rows (`{"id":...}` or
+`prd-add` takes `id`, `subject`, `description`, `acceptance_criteria`, `witness_plan`, `status`, `blockedBy`, `overwrite` and `repair`, at the top level or inside `body` (the same call either way). `description` is the row's long-form prose: it is stored on the row as `description`, never as the dispatch body, so `{"subject":"<intent>","description":"<prose>"}` is the correct shape. `prd-list` brief rows carry the row's text in `title`, clamped to a fixed length. Full rows (`{"id":...}` or
 `{"full":true}`) return the stored row as `prd-add` wrote it. The brief `title` is the row's `title`, or its `subject` when it has no `title`. `status` matches a row's `status` string exactly. A row that `prd-add` writes without a `status` gets `pending`, and `pending` lists the folder rows whose status is `pending`.
 
 The closed statuses are `done`, `complete`, `completed` and `resolved` (the `prd_closed_statuses` policy default). A closed status also reads resolved rows from the log, and `all` returns every open and resolved row. The source defines no `ready` or `blocked` row status, so a filter on either finds only a row whose file holds that exact string.
@@ -693,6 +703,12 @@ the recovery verb. A long idle gap makes orchestrator verbs and state-changing v
 Pass the `instruction_hash`/`policy_hash` of the prior `instruction` response back as `known_instruction_hash`/`known_policy_hash` in the new body. An unchanged match empties the `instruction` field and sets `instruction_unchanged: true`, and the `discipline_policies` field is omitted; a mismatch or first dispatch returns them in full. Send only a hash read from a response you received. The hash check only shrinks the reply. The fields phase, `prd_pending_count`, `mutables_pending_count` and `prd_items` are restated in every reply where `instruction_unchanged` is true.
 
 `prd-block` takes `{"id":"<row id>","note":"<text>"}` and appends the note to the row's `blocker_notes` list in one compare-and-swap write of that row's file. Both fields are required, and an id with no row is refused.
+
+`mutable-add` stamps the dispatch `session_id` on the unknown. Re-adding an id whose open entry belongs to another `row` (or, when either side names no row, another session) is refused as `mutable-add-id-collision` with the owner and a `suggested_id` of `<row>/<id>`; nothing is written. Namespace unknown ids by row, or pass `rescope:true` to replace the open entry deliberately.
+
+`prd-witness-request` takes `{"id":"<row id>","note":"<what to observe>"}`, records `witness_request` (requester session, `ts_ms`, note) on the open row, and answers `executor_session`, `excluded_sessions` and a `verifier_brief` for a gm-prd `mode=witness` lane in a new session. The `prd-resolve-self-witness` refusal names it as `next_verb`. Every witness refusal of `prd-resolve` names the failing field in `field` or `missing_fields`.
+
+`expansion-audit` takes `{"scope":"<what was swept>","rows_added":<n>,"unknowns_added":<n>}` (optional `result`, `note`), derives `result` (`fixed_point` when both counts are zero, else `expanded`; a contradicting `result` is refused), counts the open PRD rows and unknowns live, and appends a hash-chained entry to `.gm/expansion-audit.jsonl`. `verifiable_end_state` is true only for a fixed point with zero open rows and unknowns, so a goal stop cites that entry's `sha256`. `{"list":true,"limit":<n>}` returns `latest` and the last entries.
 
 `prd-repair` reads the PRD file at `path` (default `.gm/prd.yml`) and repairs the YAML faults in it. A file that already parses is left as it is. Otherwise the repair copies the file to `<path>.bak-<ms>` and writes the repaired text back by compare-and-swap. `dry_run:true` reports `would_change`, `rows_after` and `faults` without writing, and `max_passes` (default 16) bounds the repair loop.
 
@@ -747,3 +763,42 @@ The agentplug daemon, not the gm plugin, handles these:
 Twelve verbs publish their parameter doc: pass `{"help": true}` as the body of `grep`, `codesearch`,
 `fs_read`, `fs_write`, `fs_readdir`, `fs_stat`, `prd-add`, `prd-resolve`, `codeinsight`, `comment-audit`, `git_merge_abort` or `git_worktree` and the reply is
 `{"help": true, "verb": ..., "parameters": "<doc>"}`. Any other verb answers `help` with an error that says no parameter documentation is published for it.
+
+`gm.describe(name)` in `gm_codemode` answers `{name, verb, summary, docs, input_schema, body_schema}`. `summary` is the verb's table description (null when the table has none; `docs` then names the heading to search for). `input_schema` is `{shared: "dispatch_envelope"}` when the verb takes the common dispatch envelope (body, raw_body, session_id, cwd, timeout_seconds and the rest); that schema is returned once by `gm.help().dispatch_envelope`.
+
+## Body field index
+
+Every body field a verb declares, grouped by verb. The contract check (`scripts/check-verb-body-contract.mjs`) requires each name to appear here or in a section above.
+
+- `fs_write`: `append`, `allow_empty`
+- `fetch`: `wiki`, `user`, `stars`
+- `websearch` and `web_search`: `wiki`, `user`, `stars`
+- `git_push`: `recover_remote_moved`, `allow_foreign_commits`
+- `git_commit`: `allow_whole_index`, `allow_foreign_rows`
+- `git_finalize`: `allow_whole_index`
+- `git_log`: `range`
+- `git_diff`: `range`, `staged`, `stat`
+- `git_show`: `stat`
+- `git_submodule_update`: `recursive`
+- `git_checkout`: `create`
+- `git_merge`: `ff_only`
+- `git_merge_abort`: `preserve`
+- `git_branch_delete`: `remote_name`
+- `git_rm`: `cached`
+- `git_reset`: `allow_rewrite`
+- `git_pull`: `ff_only`, `rebase`, `autostash`, `user_name`, `user_email`
+- `git_stash`: `include_untracked`
+- `git_init`: `user_name`, `user_email`, `initial_branch`
+- `git_worktree_add`: `create`
+- `git_worktree_remove`: `allow_rewrite`
+- `codeinsight`, `callers`, `callees`, `impact`: `verb`, `max_depth`, `direction`, `through_ambiguous`, `language`
+- `codesearch`: `max_matches`, `max_files`, `whole_word`, `verbatim`
+- `grep`: `max_matches`, `max_files`, `whole_word`, `context`, `include`, `detail`, `columns`, `fixed_strings`, `fixedStrings`
+- `ci_log`: `github_repo`, `failed_only`
+- `exec_js`: `code`
+- `lang`: `code`
+- `task_spawn`: `code`, `permissionMode`
+- `instruction`: `full`
+- `prd_list`: `full`, `brief`
+- `prd_resolve`: `witness_evidence`, `witness_dispatch_id`, `witness_exit_code`, `witness_output_sha256`, `witness_output_path`, `witness_ts`, `resolution`, `commit_sha`, `commit_comment`, `keep_status`
+- `expansion_audit`: `scope`, `rows_added`, `unknowns_added`
