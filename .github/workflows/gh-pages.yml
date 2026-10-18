@@ -36,7 +36,7 @@ jobs:
       - name: Aggregate site platforms data
         working-directory: site
         run: |
-          npm install
+          npm ci
           npm run build
 
       - name: Build graph page from the graph source
@@ -49,7 +49,7 @@ jobs:
         run: node scripts/check-doc-counts.mjs
 
       - name: Build flatspace site
-        run: npx flatspace@latest build
+        run: npx flatspace@1.0.20 build
 
       - name: Verify the graph page is in the build output
         run: test -f dist/graph/index.html && test -f dist/dada-graph/index.html
