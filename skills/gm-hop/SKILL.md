@@ -29,10 +29,12 @@ A hop consumes a surface and EMITS a node. Emission is not optional and not a su
 Write `.gm/lean-walk/<NODE>.json` (overwrite only the node's own file):
 ```
 {node, applied, changes, witness, prd_ids, mutable_ids, next_choice:{to,why},
- links_offered:[<to>, ...], link_taken:<to|null>, session, witness_dispatch_ids:[<dispatch id>, ...]}
+ links_offered:[<to>, ...], link_taken:<to|null>, session, witness_dispatch_ids:[<dispatch id>, ...],
+ verified_by:<session>|null, verified_dispatch_ids:[<dispatch id>, ...]}
 ```
 - `links_offered` = the `to` of every entry of the payload's `node.links`, verbatim. `link_taken` = the `to` you nominate in `next:`, or `null` at `next: none`; never a third value.
 - `applied:true` only when ≥1 change landed AND `witness` names a dispatch you hold. `witness_dispatch_ids` lists every dispatch id the witness quotes. `skills/dream-rsi/SKILL.md` Part B step 4 rejects the whole record when one is absent from `.gm/dream-rsi/<session>/observations.json`.
+- Independent verification: the hop never witnesses its own edit. Before setting `applied:true`, spawn a verifier subagent with session `<session>-v1` that receives only the change contract (file, expected edit, witness command) and re-runs the witness live. The hop records `verified_by:"<session>-v1"` and the verifier's dispatch ids in `verified_dispatch_ids`. Without a verifier pass, write `applied:false` and `verified_by:null`. `skills/dream-rsi/SKILL.md` Part B step 2 counts a walk only when `verified_by` is a session other than the node's own `session`.
 - Stamp `lean_node:"<NODE>"` on your dispatches (read by `rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs.rs`; recorded per observation in `rs-plugkit/crates/plugkit-core/src/orchestrator/dream_rsi.rs`).
 - A discipline the surface demands that is not in `links_offered` is emitted, not dropped: append one JSON line to `.gm/lean-walk/new-nodes.jsonl`: `{id,label,book,author,kind:"principle",proposed_by:<node.id>,session,witness}`. `id` = upper-case slug of the book title. Refuse an `id` already in `nodes[]`; join that node instead. Never edit `skills/dream-rsi/gm-graph.json`; its owner promotes emitted nodes.
 - `.gm/lean-walk/` is gitignored runtime state: no commit, no push.
