@@ -21,6 +21,8 @@ Ledger `launch` and `done` lines are written by the orchestrator (gm-orchestrate
 6. Name the biggest need in one sentence.
 7. Nominate the next node: an eligible link from step 0 whose `to` attacks the need. Every eligible link is nominable regardless of position or history. At `depth` ≥ `max_depth` (default 6): `next: none, depth limit`. Otherwise `next:` names the link's `to` and `depth+1`; `rhetoric` = your `next_choice.why` verbatim (three sentences max). The orchestrator builds the child payload from the private graph, appends `launch <child-session> surface=<surface> row=-` to `.gm/pool/ledger-<wave>.txt`, and spawns the child. The receipt's last act appends `done <session>` to the same ledger, on every verdict. Every ledger and `new-nodes.jsonl` line is an append: `fs_write {"path":"<path>","content":"<line>\n","append":true}`; a whole-file write to these shared logs is refused.
 
+8. Close the hop's own Dream-RSI cycle before the receipt: dispatch `dream-replay-cycle` with `{"session_id":"<session>"}` and record its dispatch id and status (`replayed`, or `deferred` with reason) in the receipt's `CYCLE:` line.
+
 No witnessed change or verified row: `next: none`, with the reason.
 
 ## Node emission
