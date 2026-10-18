@@ -52,6 +52,7 @@ jobs:
         with:
           node-version: 20
       - run: node scripts/scan-doc-drift.mjs
+      - run: node scripts/check-verb-body-contract.mjs
 
   doc-counts:
     needs: changes
