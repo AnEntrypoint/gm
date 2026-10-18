@@ -266,13 +266,16 @@ function checkSkill({ dir, name, root }) {
   const srcRoot = path.join(dir, name)
   const destRoot = path.join(root, name)
   if (!fs.existsSync(path.join(destRoot, 'SKILL.md'))) return { name, state: 'absent' }
-  for (const rel of listSkillFiles(srcRoot)) {
+  const srcFiles = listSkillFiles(srcRoot)
+  for (const rel of srcFiles) {
     const dest = path.join(destRoot, rel)
     if (!fs.existsSync(dest)) return { name, state: 'DRIFT', detail: `${rel} is missing` }
     if (sha256Short(fs.readFileSync(path.join(srcRoot, rel))) !== sha256Short(fs.readFileSync(dest))) {
       return { name, state: 'DRIFT', detail: rel }
     }
   }
+  const stale = listSkillFiles(destRoot).find(rel => !srcFiles.includes(rel))
+  if (stale) return { name, state: 'DRIFT', detail: `${stale} is not in the source` }
   const srcSkill = path.join(srcRoot, 'SKILL.md')
   const destSkill = path.join(destRoot, 'SKILL.md')
   return { name, state: sameFile(srcSkill, destSkill) ? 'same-file' : 'equal-copy' }
