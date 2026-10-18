@@ -34,8 +34,10 @@ Node traversal (gm-hop; `skills/dream-rsi/gm-graph.json`) feeds step 3 only when
 - Ceiling and floor bound live subagents (Lane budget). Refill a freed slot in the same turn.
 
 ## Write first, fix later
-- A lane writes its full slice in one pass, publishes once, moves on. Correctness comes from CI logs in a later pass, never mid-write checks.
-- No `cargo`, `go build`, `go vet`, `go test`, witness runs or local compile unless the user turns builds on. The lane reads `ci-status` for its sha on landing. A failing sha becomes a fix slice, never a pause.
+- Build first, test afterwards: during a build round, each lane publishes its commit without waiting on CI or browser tests. The test, fix, CI and CD phase starts only after the build round has published.
+- Fix afterwards: once the build round is done, sweep every failing CI log, group the failures by cause and file, and dispatch one fix lane per group, each publishing once.
+- Verify separately: a closure needs a witness from a separate verifier session on a green complete tip. Never let an executor close its own row.
+- No `cargo`, `go build`, `go vet`, `go test`, witness runs or local compile unless the user turns builds on. Check that setting first (gm config or served instruction); a local run is allowed when it is on. The lane reads `ci-status` for its sha on landing. A failing sha becomes a fix slice, never a pause.
 - Writers are light; writers are not limited. Only browser arms and per-run servers cause thrash (Lane budget). Many writers may run when each owns separate files.
 - File ownership before launch: each brief names its files. Two lanes never write one file. A shared manifest has one owner; others add only their own directory.
 - Contracts before code: a producer publishes its contract doc as its own commit first; the consumer reads it from remote `main`.
