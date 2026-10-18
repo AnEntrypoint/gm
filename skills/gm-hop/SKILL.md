@@ -28,7 +28,7 @@ A hop consumes a surface and EMITS a node. Emission is not optional and not a su
 
 Write `.gm/lean-walk/<NODE>.<SESSION>.json` (keyed by node and owner session, so parallel visits of one node never overwrite each other; overwrite only this session's file):
 ```
-{node, applied, changes, witness, prd_ids, mutable_ids, next_choice:{to,why},
+{node, applied, changes, witness, prd_ids, unknown_ids, next_choice:{to,why},
  links_offered:[<to>, ...], link_taken:<to|null>, session, witness_dispatch_ids:[<dispatch id>, ...],
  verified_by:<session>|null, verified_dispatch_ids:[<dispatch id>, ...]}
 ```
