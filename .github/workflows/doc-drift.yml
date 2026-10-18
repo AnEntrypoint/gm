@@ -56,6 +56,7 @@ jobs:
         with:
           node-version: 20
       - run: node scripts/scan-doc-drift.mjs
+      - run: npm install --prefix gm-mcp --no-audit --no-fund --ignore-scripts
       - run: node scripts/check-verb-body-contract.mjs
 
   doc-counts:
