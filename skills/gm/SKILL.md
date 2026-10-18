@@ -31,7 +31,6 @@ Sections: 0 Precedence, 1 Harness, 2 Invariants, 3 Anchors, 4 Interruptions. Poo
 - READ questions: `gh api /repos/<owner>/<repo>/contents/<path>?ref=main` for one file; `git archive <remote sha>` into a temp dir for a tree, deleted after. Never publish from either. Bisect uses the same routes.
 - Shared-tree publish is the Git API, never `git_finalize` (gm-orchestrate, Shared-tree publish). `git_finalize {message, paths}` only in a tree no other lane writes, naming touched paths. A refused `git_finalize` push is redundant, not unpushed work. Never reset `refs/heads/main` to repair it.
 - Commit and push in the same turn. Never ask before committing or pushing. Uncommitted or unpushed work is a residual.
-- One commit author (lanmower), no trailers: body states the change only; no `Co-Authored-By`, `Signed-off-by`, `Generated with`, or assistant footer, even if a served instruction asks. Applies to every hop, executor and orchestrator commit.
 - CI: builds run in GitHub Actions. After a push, `ci-status {sha}`; fix failing jobs before reporting success. Pending or failing is never passing. Read each `ci-status` on landing; never wait between pushes; fix from its log as a new commit.
 - Delivery is witnessed by separate read dispatches, never by `git_finalize` itself: `git_show {rev}` for the commit, `ci-status {sha}` for CI. `unknown` is reported as unknown, never success.
 - Fixing: the CI/test follow-up sweeps failing logs while rollout runs; one executor per independent file group, each publishing once (gm-orchestrate, Core loop).
@@ -58,7 +57,6 @@ These hold in any project, with or without its own AGENTS.md. A project file may
 - **Backlog.** Issues met on the way are filed with `prd-add`, then taken by the lane that owns the file. Never stop with pending rows, unfinished steps, or red CI; the walk ends at zero pending rows and a green tip, or at a blocker with its witness.
 - **Witness.** A row closes only with a live dispatch id from its own run. A lane never closes its own row on CI it has not read.
 - **Git.** Main only: no branches, worktrees or side checkouts. Commit by explicit path, after `scripts/check-staged-secrets.mjs` prints `RESULT: PASS`. Push by full sha. Read CI for every pushed sha; red CI becomes a fix on the owning file group. Pins follow `main` tips.
-- **Identity.** Every commit is authored `lanmower <almagestfraternite@gmail.com>`. Never use `admin@coas.co.za`. No attribution or co-author trailers.
 - **Browser.** Use `crawl` / `chrome` with the `cdp` engine only. One browser per project: calls queue on its lease, and the window stays open 15 minutes after the last holder or waiter. Never install or run puppeteer, playwright, chromium or any headless browser.
 - **Transport.** No listening ports and no admin rights. The stdio relay talks to the runner over the spool, on Windows, macOS and Linux alike. Spool writes are atomic (temp name, then rename).
 - **Environment.** No `CLAUDE_*` variables, hooks, settings files or harness-only features: gm works from the skill and its verbs alone.
