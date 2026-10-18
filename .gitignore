@@ -221,3 +221,12 @@ skills/gm/.gm/
 
 # manual prd-log recovery copies: full duplicates of the live chained log, never source
 .gm/prd-log.jsonl.*.bak
+
+# subagent walk scratch left in the parent tree: find11/find1 walk workspaces, crawl session
+# leases, and fs/fsread probe outputs. Scratch only, never source.
+.gm/find11-*/
+.gm/crawl-cdp-sessions/
+.gm/fs-append-*.txt
+.gm/fsread-*.txt
+find1-wt/
+find1-wt-scratch/
