@@ -230,3 +230,5 @@ skills/gm/.gm/
 .gm/fsread-*.txt
 find1-wt/
 find1-wt-scratch/
+# PRD and mutable logs are runtime state read from disk; never tracked
+.gm/mutables-log.jsonl
