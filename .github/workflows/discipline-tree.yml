@@ -17,6 +17,10 @@ on:
       - 'scripts/check-discipline-tree.mjs'
       - '.github/workflows/discipline-tree.yml'
 
+concurrency:
+  group: gm-discipline-tree-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   check:
     runs-on: ubuntu-latest
