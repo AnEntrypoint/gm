@@ -11,13 +11,12 @@ chosen per artifact by type (PRD 05). Option A (direct cutover) is rejected.
 
 ## Evidence (verified 2026-10-18)
 
-- The shipped artifact `rs-plugkit/target/wasm32-wasip1/release/rs_plugkit.wasm`
+- The shipped artifact, the `wasm32-wasip1` release build of `rs_plugkit.wasm`,
   is a core module importing 23 `env` functions and 10 `wasi_snapshot_preview1`
   functions. `agentplug/crates/agentplug-host/src/imports.rs` defines all 23 `env`
   functions and links WASI through `wasmtime_wasi::p1::add_to_linker_sync`, so
   every installed runner loads it today.
-- The wasip3 build `rs-plugkit/target/wasm32-wasip3/release/rs_plugkit.wasm` is
-  also a core module (version word 1, not a component layer). It imports 27 `env`
+- The `wasm32-wasip3` release build of `rs_plugkit.wasm` is also a core module (version word 1, not a component layer). It imports 27 `env`
   functions, 7 `$root` functions and 16 `wasi:*@0.3.0` interfaces. The 4 `env`
   names it adds over wasip1 (`__wasm_get_stack_pointer`,
   `__wasm_set_stack_pointer`, `__wasm_get_tls_base`, `__wasm_set_tls_base`) are
