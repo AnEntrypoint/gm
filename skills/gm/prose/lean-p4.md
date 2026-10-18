@@ -138,7 +138,7 @@ For each gm verb, MCP tool or spool reply the diff changes, the agent dispatches
 
 Handover: Judge verdicts with their judged pairs are handed to SANITIZE so the static analysers gate the final change. cite LLM as a Judge.
 
-The judge is used only where METAMORPH found no relation. It is a separate agent given a rubric derived from the contract and the input and output pair, and it returns a verdict. The witness quotes the judged pair, the rubric and the verdict. A judge that is the implementer or shares its context fires the backreference to INDEPVER and is replaced.
+The judge is used only where METAMORPH found no relation. It is a separate agent given a rubric derived from the contract and the input and output pair. The rubric is one pass or fail per criterion, each with cited evidence; a holistic score is not accepted. When the judge compares two outputs it judges both orderings, and a disagreement between orderings is no verdict. Length is not a criterion. Before a verdict counts, the judge classifies one known-good and one known-bad pair under the same rubric, once per run when the judge shares the author's model; a miss on either pair blocks the verdict. The verdict is owned by the row that cites it and is recorded by the orchestrator. The witness quotes the judged pair, the rubric, the calibration result and the verdict. A judge that is the implementer or shares its context fires the backreference to INDEPVER and is replaced.
 
 ### SANITIZE - Sanitizer and Static Analysis Gate
 
