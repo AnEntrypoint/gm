@@ -44,9 +44,12 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
       - run: git submodule update --init --depth 1 gm-config rs-plugkit
+      - id: gm-mcp-pin
+        run: echo "sha=$(git ls-tree HEAD gm-mcp | awk '{print $3}')" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           repository: AnEntrypoint/gm-mcp
+          ref: ${{ steps.gm-mcp-pin.outputs.sha }}
           path: gm-mcp
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
