@@ -24,4 +24,5 @@ for r in red:
     print(repo, "RED run", r["databaseId"], "(" + r["name"], r["conclusion"] + ",", r["createdAt"] + ")")
 ' "$repo" || echo "$repo CI query failed"
 done
+echo "== dream-rsi walking skeleton"; node "$here/dream-skeleton.mjs" --cwd "$PWD" >/dev/null && echo "skeleton PASS" || { echo "skeleton FAIL"; rc=1; }
 exit $rc
