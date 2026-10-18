@@ -6,7 +6,12 @@ retries="${PIN_RETRIES:-6}"
 witness="${GITHUB_RUN_ID:-local}"
 
 repo_of() {
-  echo "$1"
+  local name url
+  name=$(git config -f .gitmodules --get-regexp '^submodule\..*\.path$' | awk -v p="$1" '$2 == p {sub(/^submodule\./, "", $1); sub(/\.path$/, "", $1); print $1}')
+  url=$(git config -f .gitmodules --get "submodule.$name.url") || return 1
+  url=${url%/}
+  url=${url%.git}
+  echo "${url##*/}"
 }
 
 gate_ok() {
@@ -23,7 +28,7 @@ stage_pins() {
   targets=$(git config -f .gitmodules --get-regexp '^submodule\..*\.path$' | awk '{print $2}')
   [ -n "$targets" ] || { echo "::error::no submodule paths in .gitmodules"; return 1; }
   for path in $targets; do
-    repo=$(repo_of "$path")
+    repo=$(repo_of "$path") || { echo "::error::no .gitmodules url for $path"; return 1; }
     sha=$(git ls-remote "$base/$repo.git" refs/heads/main | awk '{print $1}')
     if [ -z "$sha" ]; then
       echo "::error::no main for $path at $base"
