@@ -19,6 +19,13 @@ rustup_home=${RUSTUP_HOME:-$HOME/.rustup}
 if ! writable "$rustup_home"; then
   export RUSTUP_HOME="/tmp/rustup-$(id -u)"
   echo "build-wasm: RUSTUP_HOME $rustup_home is not writable; using $RUSTUP_HOME" >&2
+  rustup_dir=$(dirname "$(command -v rustup)")
+  if ! writable "$rustup_dir"; then
+    mkdir -p "$CARGO_HOME/bin"
+    cp -f "$(command -v rustup)" "$CARGO_HOME/bin/rustup"
+    export PATH="$CARGO_HOME/bin:$PATH"
+    echo "build-wasm: $rustup_dir is not writable; running rustup from $CARGO_HOME/bin" >&2
+  fi
   rustup show active-toolchain >/dev/null 2>&1 || rustup toolchain install stable --profile minimal >&2
   rustup target list --installed | grep -qx wasm32-wasip1 || rustup target add wasm32-wasip1 >&2
 fi
