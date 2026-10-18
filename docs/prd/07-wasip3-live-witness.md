@@ -1,5 +1,7 @@
 # 07 Witness a wasip3 plugkit verb through agentplug-runner
 
+Builds on the dual-loader decision in `docs/wasip3-loader-decision.md` (Rows this changes, PRD 06 and 07): the live witness covers both the core module path and the component path.
+
 ## Problem
 
 `rs-plugkit/AGENTS.md` requires that a changed verb is witnessed through the

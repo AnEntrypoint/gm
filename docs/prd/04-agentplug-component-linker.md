@@ -1,5 +1,7 @@
 # 04 Link components in agentplug-host on wasmtime 46
 
+Builds on the dual-loader decision in `docs/wasip3-loader-decision.md` (Rows this changes, PRD 04): the component `Linker` sits next to the core linker, and neither replaces the other.
+
 ## Problem
 
 The agentplug host (submodule `agentplug`, pinned at c8af8e5b when this PRD

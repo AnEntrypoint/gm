@@ -1,5 +1,7 @@
 # 05 Select the loader by artifact type in agentplug-runner
 
+Builds on the dual-loader decision in `docs/wasip3-loader-decision.md` (Decision, Option B): the runner selects the linker from the artifact type and does not reject core modules, so the Option A branch below is rejected.
+
 ## Problem
 
 After 04, the runner must choose a loader per artifact: a component goes to the
