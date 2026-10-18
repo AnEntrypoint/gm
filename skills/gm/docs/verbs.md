@@ -325,7 +325,7 @@ Agents do not call these verbs for memory. Memory is the flat-file store that `s
 | verb | body | purpose | kind |
 |---|---|---|---|
 | `fs_read` | `{"path", "startLine"?, "endLine"? (or "start"/"end", "from"/"to", "offset"/"limit", "line"/"lines", "start"/"count"), "max_bytes"?, "allowOutsideRoot"?}` | read a file or a 1-based inclusive line range | query |
-| `fs_write` | `{"path", "content"}` (string or array of lines) | write a file inside the project (replaces; `append: true` appends) | command |
+| `fs_write` | `{"path", "content"}` (string) | write a file inside the project (replaces; `append: true` appends) | command |
 | `fs_readdir` | `{"path"?, "allowOutsideRoot"?}` | list one directory | query |
 | `fs_stat` | `{"path", "allowOutsideRoot"?}` | stat one path | query |
 | `scan_deps` / `scan-deps` | `{}` | supply-chain scan of the dependency tree; `root` or `projectPath` selects the tree and `full: true` forces a full scan | command |
