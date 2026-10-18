@@ -132,10 +132,6 @@ function linkDir(src, dest) {
       fs.symlinkSync(src, dest, 'junction')
       return 'junction'
     } catch {}
-    try {
-      fs.symlinkSync(src, dest, 'dir')
-      return 'symlink'
-    } catch {}
     return null
   }
   try {
