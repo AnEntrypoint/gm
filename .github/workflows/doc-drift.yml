@@ -30,7 +30,7 @@ jobs:
           if ! changed=$(git diff --name-only "$BASE" HEAD); then
             echo "relevant=true" >> "$GITHUB_OUTPUT"; exit 0
           fi
-          if printf '%s\n' "$changed" | grep -Eq '^(docs/|site/|skills/|scripts/|bin/|gm-config$|gm-config/|rs-plugkit$|rs-plugkit/|gm-mcp$|gm-mcp/|agentplug$|agentplug/|package\.json$|README\.md$|AGENTS\.md$|SKILLS\.md$|CONTRIBUTING\.md$|\.github/workflows/doc-drift\.yml$)'; then
+          if printf '%s\n' "$changed" | grep -Eq '^(docs/|site/|skills/|scripts/|bin/|gm-config$|gm-config/|rs-plugkit$|rs-plugkit/|gm-mcp$|gm-mcp/|agentplug$|agentplug/|package\.json$|README\.md$|AGENTS\.md$|SKILLS\.md$|CONTRIBUTING\.md$|\.github/workflows/(doc-drift|bump-pins|skill-release)\.yml$)'; then
             echo "relevant=true" >> "$GITHUB_OUTPUT"
           else
             echo "relevant=false" >> "$GITHUB_OUTPUT"
@@ -101,6 +101,8 @@ jobs:
           node-version: 20
       - name: AGENTS.md under 30000 bytes, no BOM, no decorative glyphs in prose
         run: node scripts/check-repo-hygiene.mjs
+      - name: Every workflow file parses as YAML
+        run: python3 -c "import sys, yaml; [yaml.safe_load(open(p, encoding='utf-8')) for p in sys.argv[1:]]" .github/workflows/*.yml
 
   graph-traversal:
     needs: changes
