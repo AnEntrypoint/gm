@@ -179,6 +179,7 @@ skills/gm/.gm/
 
 # gm lean-walk runtime state (traversal progress and route caches, rebuilt each walk)
 .gm/lean-walk/
+.gm/lane-claims.json
 .gm/lean-walk-v1-readonly/
 .gm/lean-edge-walk.json
 .gm/lean-edge-walk.progress
