@@ -44,7 +44,7 @@ Write `.gm/lean-walk/<NODE>.<SESSION>.json` (keyed by node and owner session, so
 - A receipt is the hop's own. A hop that spawns a successor names the child session in `next:` and carries no child text. The orchestrator reads each receipt by the session it launched.
 - A principle already filed in this walk by another wave is merged by the orchestrator, never added again; the hop still lists and cites what it filed.
 - A hop is one named principle from the book "lean" (AnEntrypoint/lean), applied as work to every in-scope instance in one pass.
-- A hop reads the pending rows once at start with `prd-list {"status":"pending"}`, records a one-line action per row, nominates its successor from that list, never invents an id. Before each add it checks only that id (step 5).
+- A hop reads the pending rows once at start inside one `gm_codemode` body: `prd-list {"status":"pending","limit":<n>}` filtered in code to the ids and subjects matching its principle or cause literal, returned as that list only. It records a one-line action per row, nominates its successor from that list, never invents an id. Before each add it checks only that id (step 5).
 - Every hop runs as its own subagent with its own SESSION_ID. The orchestrator never performs hop work inline; it dispatches and reads the receipt.
 - Choose the next node by project fit and diversity.
 - Back-verify: traversal is unfinished until earlier applied nodes a later change may affect are re-checked.
