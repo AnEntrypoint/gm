@@ -85,7 +85,12 @@ jobs:
           base="https://github.com/AnEntrypoint/gm/releases/download/v$VER"
           for f in release-assets/*; do
             name=$(basename "$f")
-            code=$(curl -sL -o /dev/null -w '%{http_code}' "$base/$name")
+            for attempt in 1 2 3 4 5; do
+              code=$(curl -sL -o /dev/null -w '%{http_code}' "$base/$name")
+              [ "$code" = "200" ] && break
+              echo "[retry] $name HTTP $code (attempt $attempt)"
+              sleep $((attempt * 5))
+            done
             if [ "$code" != "200" ]; then
               echo "::error::published release v$VER's $name is not fetchable (HTTP $code)"
               exit 1
