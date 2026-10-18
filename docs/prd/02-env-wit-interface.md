@@ -12,7 +12,7 @@ typed WIT values.
 ## Scope
 
 - Write one WIT interface for the 24 `env` functions declared in `host_abi.rs` and the other `env` extern blocks. Strings and bytes become `string` and `list<u8>`. The count is 24, not 27: the slim wasip1 module imports 23 of them.
-- Keep the function names as WIT names. Each raw signature stays, served by an adapter in `rs-plugkit/crates/plugkit-core/src/wasm_dispatch/wit_env.rs`, so call sites do not change. The adapter is the choice over rewriting every call site, because the call sites are about 130 in six files.
+- Keep the function names as WIT names. Each raw signature stays, served by an adapter in planned module `wasm_dispatch/wit_env.rs` (not yet created), so call sites do not change. The adapter is the choice over rewriting every call site, because the call sites are about 130 in six files.
 - Route `host_abi` calls through the adapter under the `wit-env` feature, in `rs-plugkit/crates/plugkit-core/src/wasm_dispatch/host_abi.rs`.
 
 ## Status
