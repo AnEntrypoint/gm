@@ -488,8 +488,8 @@ The `git_worktree_add`, `git_worktree_list` and `git_worktree_remove` verbs serv
 body: {"url":"https://github.com/OpenBW/openbw"}
 body: {"url":"https://example.com/", "prompt":"what license does this project use?"}
 body: {"url":"https://example.com/", "raw":true, "max_chars":200000}
-body: {"url":"https://raw.githubusercontent.com/o/r/main/big.c", "offset":24000, "length":24000}
-body: {"url":"https://raw.githubusercontent.com/o/r/main/big.c", "start_line":800, "end_line":900}
+body: {"url":"https://raw.githubusercontent.com/AnEntrypoint/gm/main/README.md", "offset":24000, "length":24000}
+body: {"url":"https://raw.githubusercontent.com/AnEntrypoint/gm/main/README.md", "start_line":800, "end_line":900}
 ```
 
 | body field | does |
