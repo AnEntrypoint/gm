@@ -12,6 +12,7 @@ on:
       - 'docs/api/dada-graph.json'
       - 'scripts/build-graph-page.mjs'
       - 'flatspace.config.mjs'
+      - '.github/workflows/gh-pages.yml'
   workflow_dispatch: {}
 
 concurrency:
