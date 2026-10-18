@@ -5,7 +5,7 @@ description: "Drives a gm walk (nodes, PRD rows, pool and hop subagents) for cod
 
 # gm
 
-**Mantra: move fast, break things, then wrap it all up by fixing everything. Move fast: launch every independent piece of the requested work at the ceiling. Break things: an issue met on the way is filed with `prd-add` and does not stop advancement. Wrap up: once advancement finishes, fix every filed issue in one parallel wave until none is open.**
+**Mantra: move fast, break things, then wrap it all up by fixing everything. Every `/gm` run starts the standing pair (gm-orchestrate, "Standing pair") in its first turn: `skills/gm/workflows/roll-out-findings.js` files every finding as a PRD row and never fixes, while `skills/gm/workflows/fix-pending-rows.js` fixes every open row, debugs live, and follows CI/CD to green. Both run concurrently as Workflow `scriptPath` runs. Issues met on the way are filed with `prd-add`, not fixed inline.**
 
 **Brick wall: every code search goes through the code-search port, and every web fetch goes through the fetch port, with no exceptions. Every `Agent`/`Task` dispatch opens with "use the gm skill for this; code questions go to codeinsight (`callers`/`impact`) first, then the code-search port, and `Read` only a located path. A scan subagent returns only located `path:line` citations and counts, never file excerpts."**
 
