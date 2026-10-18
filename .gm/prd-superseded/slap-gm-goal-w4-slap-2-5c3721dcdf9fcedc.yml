@@ -1,4 +1,0 @@
-id: SLAP-gm-goal-w4-SLAP-2
-title: 'SLAP: release-bridge.js (lines 251, 258) and self-update.js (lines 59, 133) compute sha256 and read wasm/runner bytes inline inside install and update flows; move byte-level read and hash into a helper so each flow stays at one abstraction level. Witness: codesearch readFileSync literal, root gm-mcp/src, session gm-goal-w4-SLAP.'
-session_id: gm-goal-w4-SLAP
-status: pending

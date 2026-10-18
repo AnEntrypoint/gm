@@ -1,4 +1,0 @@
-id: THINSLICE-OUTPUT-CAPS
-subject: 'Thin slice for G_CONTRACT-output-cap-constants: each output and budget cap (exec_js 16000 chars, git_show 60000 bytes, git_stash 2000 files, fs_read 65536, poll cap 240 s) is a constant in its verb definition; skills/gm/SKILL.md drops the numbers in the same change. Witness: an exec_js reply over 16000 chars is truncated with a result_file pointer and the prose grep for the numbers returns no match.'
-session_id: lean-hop-THINSLICE
-status: pending

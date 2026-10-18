@@ -1,6 +1,0 @@
-id: NODUPEDOC-PROSE-NODE-COPIES-blocker-gm-drain-w1-221
-subject: 'Blocker for NODUPEDOC-PROSE-NODE-COPIES: the fix needs a reviewed rs-plugkit rebuild verified by CI, and the row witness counts are stale. Live codesearch (dispatch 1791958810836-500-a77ddbcc1b0127b; probe 1791958845717-500-db06937a3501e7f4): gm-config/prose has 143 files carrying ''The walk is recorded by the transition that leaves this node.'' (row says 99), and rs-plugkit instructions/prose has the same 143 copies, compiled in by include_str! in lean_prose.rs, so the duplicate tree is a build input. Removing it needs a build.rs or emit change in rs-plugkit (AGENTS.md: emit never writes into rs-plugkit, lean_graph.json needs a reviewed rebuild with --features slim), verified only by CI (publish / release). No witness from another session can be produced in this run. Next: restate the witness as a live count over both trees and assign the rs-plugkit build change to a session that can run CI.'
-status: pending
-blockedBy:
-- NODUPEDOC-PROSE-NODE-COPIES
-session_id: mcp-codemode-31304-1791958855600

@@ -1,7 +1,0 @@
-id: G_CONTRACT-comment-ban-duplicated
-subject: gm-config/prose/entry-extended.md 'Names and structure carry meaning; comments do not' and the Token Discipline paragraph ('comments = liability') restate the comment-blocking rule that EXECUTE and VERIFY enforce on the diff. Carry it as the predicate that blocks a transition on added comments, and delete the prose duplicates to a reference.
-session_id: lean-node-G_CONTRACT
-status: pending
-blockedBy:
-- external
-deferReason: 'Code move: no comment-blocking predicate exists in predicate_registry.rs. Prose left as-is.'

@@ -1,4 +1,0 @@
-id: SUBAGENT-PROBE-RAW-DUMP
-title: carry/CLOSE-XY-G2-probe.txt holds 11 spawnSync bash ENOENT errors and no outcome; replace with a compact outcome or delete it after CLOSE-XY-G2.json records the result
-status: pending
-session_id: lean-hop-SUBAGENT
