@@ -62,6 +62,11 @@ accepts `exclude` under the same aliases.
 
 ```
 {"pattern":"<text or regex>"}                    required (unless mode:"comments"); "query" is accepted too
+{"mode":"pattern"}                               default: a pattern with regex metacharacters reads as a regex;
+                                                 "literal" matches verbatim, "regex" always compiles,
+                                                 "comments" sweeps comments; an output shape ("content",
+                                                 "files", "files_with_matches", "count") as mode sets output_mode;
+                                                 "dual"/"filename" are refused with a pointer to codesearch
 {"path":"<dir or file>"}                         narrow the scan to one subtree or one file
 {"glob":"**/*.rs"}                               narrow by path glob; "include"/"path_glob" are aliases
 {"exclude":["vendor/**","test/hardware/**"]}     drop paths by glob: one glob or an array;
@@ -380,10 +385,13 @@ Single accepted shape for `git_commit` and `git_push`: each key is accepted at t
 
 `git_submodule_add {url, path, branch?}` adds a submodule: `git submodule add [-b <branch>] -- <url> <path>`. `url` must be `https://` with a host (no `user:password@`, no whitespace); `path` is relative to the repo root with no `.`, `..` or `.git` segment; `branch` (optional) holds only letters, digits, `.`, `_`, `-`, `/` and does not start with `-`. The same protected-path gate as `git_add` applies to `path`. It stages `.gitmodules` and the gitlink, and answers `{path, url, branch, staged}`. It does not commit: publish with `git_commit` then `git_push`.
 
-`ci-log` reads what a step printed, which `ci-status` cannot answer: it answers a job's text, not its conclusion. Name `run_id` (every `ci-status` job row carries one) or `sha`, optionally `job_id` to read one job instead of the whole run, then filter with `job`, `step` and `pattern` (`mode` is `literal` or `regex`, and `ignore_case` folds all three). Each returned line is split into `{n, job, step, at, text}`, so three jobs' output compares without anyone parsing the `job\tstep\ttimestamp\t` prefix by hand. Default caps are `max_lines` 40 and `max_chars` 8000, so a 1900-line multi-job run is never dumped into context; the reply carries `lines_scanned`, `matched_lines`, `returned_lines`, `truncated` and `truncated_by` so a cap is visible rather than silent. It reads through the `gh` CLI, so an absent or unauthenticated `gh` is a clear `ok: false` naming the reason, never a hang. Inside `gm_codemode`, `max_chars` is the wrapper's whole-reply cap and never reaches the verb, so set the verb's own cap through `body`:
+`ci-status {sha?|rev?, github_repo?, ignore_workflows?}` answers `run_status` (`success`, `failure`, `pending`, `unknown`, `no_applicable_workflow`), `failing_jobs` as `[{name, workflow, job_id, run_id, log_url}]`, `pending_count` (jobs not yet completed) and `job_counts`; a run that failed with no failing job (a stale in-progress run) is listed under `failing_runs`. Pass a `failing_jobs` entry's `job_id` straight to `ci-log`.
+
+`ci-log` reads what a step printed, which `ci-status` cannot answer: it answers a job's text, not its conclusion. Step names come from the run's job list (GitHub's jobs API, matched by each line's timestamp), since `gh` labels every line `UNKNOWN STEP`; `step_labels.source` says which source named them. `failed_only:true` reads only the failing steps of the failing jobs and answers `failures` as `[{job, job_id, log_url, step, step_number, error_lines, tail?}]`: `error_lines` are the lines matching `##[error]`, `error`, `fatal`, `panicked`, `failed` or `failure` (or `pattern`, when given), capped by `max_lines`, and a failing step with no such line carries its last `tail_lines` (default 10) lines under `tail`. Name `run_id` (every `ci-status` job row carries one) or `sha`, optionally `job_id` to read one job instead of the whole run, then filter with `job`, `step` and `pattern` (`mode` is `literal` or `regex`, and `ignore_case` folds all three). Each returned line is split into `{n, job, step, at, text}`, so three jobs' output compares without anyone parsing the `job\tstep\ttimestamp\t` prefix by hand. Default caps are `max_lines` 40 and `max_chars` 8000, so a 1900-line multi-job run is never dumped into context; the reply carries `lines_scanned`, `matched_lines`, `returned_lines`, `truncated` and `truncated_by` so a cap is visible rather than silent. It reads through the `gh` CLI, so an absent or unauthenticated `gh` is a clear `ok: false` naming the reason, never a hang. Inside `gm_codemode`, `max_chars` is the wrapper's whole-reply cap and never reaches the verb, so set the verb's own cap through `body`:
 
 ```
 ci-log {"github_repo":"lanmower/oscraft","run_id":38538275222,"step":"state hashes","pattern":"sha256"}
+ci-log {"run_id":39101942533,"failed_only":true}
 ```
 
 `git_remote` takes `{}` and answers `{branch, remotes, upstream}`. It inspects the configured remote URLs and the current branch's upstream without fetching or mutating state.
@@ -696,6 +704,12 @@ Pass the `instruction_hash`/`policy_hash` of the prior `instruction` response ba
 
 `prd-block` takes `{"id":"<row id>","note":"<text>"}` and appends the note to the row's `blocker_notes` list in one compare-and-swap write of that row's file. Both fields are required, and an id with no row is refused.
 
+`mutable-add` stamps the dispatch `session_id` on the unknown. Re-adding an id whose open entry belongs to another `row` (or, when either side names no row, another session) is refused as `mutable-add-id-collision` with the owner and a `suggested_id` of `<row>/<id>`; nothing is written. Namespace unknown ids by row, or pass `rescope:true` to replace the open entry deliberately.
+
+`prd-witness-request` takes `{"id":"<row id>","note":"<what to observe>"}`, records `witness_request` (requester session, `ts_ms`, note) on the open row, and answers `executor_session`, `excluded_sessions` and a `verifier_brief` for a gm-prd `mode=witness` lane in a new session. The `prd-resolve-self-witness` refusal names it as `next_verb`. Every witness refusal of `prd-resolve` names the failing field in `field` or `missing_fields`.
+
+`expansion-audit` takes `{"scope":"<what was swept>","rows_added":<n>,"unknowns_added":<n>}` (optional `result`, `note`), derives `result` (`fixed_point` when both counts are zero, else `expanded`; a contradicting `result` is refused), counts the open PRD rows and unknowns live, and appends a hash-chained entry to `.gm/expansion-audit.jsonl`. `verifiable_end_state` is true only for a fixed point with zero open rows and unknowns, so a goal stop cites that entry's `sha256`. `{"list":true,"limit":<n>}` returns `latest` and the last entries.
+
 `prd-repair` reads the PRD file at `path` (default `.gm/prd.yml`) and repairs the YAML faults in it. A file that already parses is left as it is. Otherwise the repair copies the file to `<path>.bak-<ms>` and writes the repaired text back by compare-and-swap. `dry_run:true` reports `would_change`, `rows_after` and `faults` without writing, and `max_passes` (default 16) bounds the repair loop.
 
 `dream-round` takes `baseline_policy_id` and `candidate_policy_ids`, evaluates the baseline and each candidate policy over the recorded observations, and returns the rankings sorted by `score`, highest first.
@@ -703,12 +717,6 @@ Pass the `instruction_hash`/`policy_hash` of the prior `instruction` response ba
 `dream-replay-cycle` takes `session_id` (the owner, which must equal the dispatch session) and optional `cycle_id` and `after_dispatch_id`. It replays the owner's newest verified observation and answers `status: replayed`. When nothing verified is new it answers `status: deferred` with `reason` `no-verified-observations` or `no-new-verified-observations`.
 
 `subagent-start` takes `parent_session_id` and `subagent_session_id` (both validated), with optional `cwd` and `slice_id`, and records the subagent's start in `.subagent-ledger.jsonl` in the gm state directory. `subagent-end` takes the same two ids and a `status` of `done` (the default), `failed` or `stopped`. The native build refuses both lifecycle writes with `subagent lifecycle requires the wasm32 host`.
-
-`mutable-add` stamps the dispatch `session_id` on the unknown. Re-adding an id whose open entry belongs to another `row` (or, when either side names no row, another session) is refused as `mutable-add-id-collision` with the owner and a `suggested_id` of `<row>/<id>`; nothing is written. Namespace unknown ids by row, or pass `rescope:true` to replace the open entry deliberately.
-
-`prd-witness-request` takes `{"id":"<row id>","note":"<what to observe>"}`, records `witness_request` (requester session, `ts_ms`, note) on the open row, and answers `executor_session`, `excluded_sessions` and a `verifier_brief` for a gm-prd `mode=witness` lane in a new session. The `prd-resolve-self-witness` refusal names it as `next_verb`. Every witness refusal of `prd-resolve` names the failing field in `field` or `missing_fields`.
-
-`expansion-audit` takes `{"scope":"<what was swept>","rows_added":<n>,"unknowns_added":<n>}` (optional `result`, `note`), derives `result` (`fixed_point` when both counts are zero, else `expanded`; a contradicting `result` is refused), counts the open PRD rows and unknowns live, and appends a hash-chained entry to `.gm/expansion-audit.jsonl`. `verifiable_end_state` is true only for a fixed point with zero open rows and unknowns, so a goal stop cites that entry's `sha256`. `{"list":true,"limit":<n>}` returns `latest` and the last entries.
 
 `browser_lease_acquire` and `browser_lease_release` take `agent`, and `browser_lease_status` takes no agent. Acquire waits up to 600 s for the shared browser lease and answers `port`, `chrome_pid` and `lease_file`. A holder whose heartbeat is older than 120 s counts as dead. Release answers the lease state with `released` set to the agent, and status answers the lease state alone.
 
