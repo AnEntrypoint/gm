@@ -52,6 +52,7 @@ tmp/
 .gm/trajectory-drafts/
 .gm/ingest-drafts/
 .gm/prd-state.json
+.gm/prd-log.jsonl
 .gm/subagent-*.json
 .gm/build-tool-ignores.md
 .gm/last-prompt.txt
