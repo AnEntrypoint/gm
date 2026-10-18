@@ -55,6 +55,8 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: 20
+          cache: npm
+          cache-dependency-path: gm-mcp/package-lock.json
       - run: node scripts/scan-doc-drift.mjs
       - run: npm install --prefix gm-mcp --no-audit --no-fund --ignore-scripts
       - run: node scripts/check-verb-body-contract.mjs
