@@ -11,7 +11,7 @@ const root = process.argv[2]
 const ROOTS = [
   'skills/', 'docs/', 'scripts/', 'bin/', 'site/', 'gm-config/', 'rs-plugkit/', 'gm-mcp/',
   'agentplug/', 'agentplug-libsql/', 'agentplug-treesitter/', 'agentplug-bert/', 'agentplug-crux/',
-  'rs-codeinsight/', 'rs-search/', 'vendor/', '.github/', 'install.sh', 'install.ps1',
+  'rs-codeinsight/', 'rs-search/', '.github/', 'install.sh', 'install.ps1',
   'package.json', 'README.md', 'AGENTS.md', 'SKILLS.md', 'CHANGELOG.md', 'CONTRIBUTING.md',
 ];
 
