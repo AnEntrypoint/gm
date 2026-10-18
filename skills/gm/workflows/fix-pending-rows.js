@@ -22,6 +22,7 @@ const ROWS = {
           id: { type: 'string' },
           repo: { type: 'string' },
           subject: { type: 'string' },
+          group: { type: 'string' },
         },
         required: ['id', 'repo'],
       },
@@ -45,7 +46,7 @@ const RESULT = {
 
 const listPrompt = (skip) => `Use the gm skill for this, with mcp__gm__gm_codemode for every verb; no Bash grep/find/git. cwd /workspace/gm. Session id: fix-list-1018.
 
-List every OPEN PRD row with prd-list {"status":"pending"}. Skip these ids (already handled this run): ${JSON.stringify(skip)}. For each remaining row, read its description and return {id, repo, subject}. repo is the value in its "[repo: ...]" prefix; if there is none, use "gm". Return {rows}. Do not edit anything.`
+List every OPEN PRD row with prd-list {"status":"pending"}. Skip these ids (already handled this run): ${JSON.stringify(skip)}. For each remaining row, read its description and return {id, repo, subject, group}. repo is the value in its "[repo: ...]" prefix; if there is none, use "gm". group is the primary file the fix edits (a repo-relative path, from the row's path:line, or the nearest file it names); rows that would edit the same file must share one group, so they run in sequence. Return {rows}. Do not edit anything.`
 
 const fixPrompt = (row) => `Use the gm skill for this; code questions go to codeinsight (callers/impact) first, then codesearch, and Read only a located path. Use mcp__gm__gm_codemode (load via ToolSearch "select:mcp__gm__gm_codemode") for every verb; no Bash grep/find/git. Session id: fix-${row.id}. cwd /workspace/gm. Read /workspace/gm/AGENTS.md and the AGENTS.md of the repo you edit.
 
@@ -74,19 +75,20 @@ for (let round = 1; round <= MAX_ROUNDS; round++) {
     log(`round ${round}: no open rows left`)
     break
   }
-  log(`round ${round}: ${rows.length} open rows across repos`)
-  const byRepo = {}
+  log(`round ${round}: ${rows.length} open rows`)
+  const byGroup = {}
   for (const row of rows) {
-    const key = REPOS.includes(row.repo) ? row.repo : 'gm'
-    if (!byRepo[key]) byRepo[key] = []
-    byRepo[key].push(row)
+    const key = `${REPOS.includes(row.repo) ? row.repo : 'gm'}:${row.group || row.id}`
+    if (!byGroup[key]) byGroup[key] = []
+    byGroup[key].push(row)
     handled.push(row.id)
   }
+  log(`round ${round}: ${Object.keys(byGroup).length} independent lanes`)
   const outcomes = await parallel(
-    Object.keys(byRepo).map(repo => async () => {
+    Object.keys(byGroup).map(key => async () => {
       const lane = []
-      for (const row of byRepo[repo]) {
-        lane.push(await agent(fixPrompt(row), { phase: 'Fix', label: `${repo}:${row.id}`, schema: RESULT }))
+      for (const row of byGroup[key]) {
+        lane.push(await agent(fixPrompt(row), { phase: 'Fix', label: row.id, schema: RESULT }))
       }
       return lane
     })
