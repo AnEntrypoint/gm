@@ -65,7 +65,7 @@ Authoritative list; `.gitmodules` is ground truth for submodules.
 
 ## gm-config
 
-- `gm-config/` is a submodule. In a fresh checkout it is an empty directory, and `gm-config/gm.config.json` does not resolve, until `git submodule update --init --depth 1 gm-config` runs (README.md, Install).
+- `gm-config/` is a submodule. In a fresh checkout it is an empty directory, and `gm-config/gm.config.json` does not resolve, until the `git_submodule_update` verb with `{"path":"gm-config"}` runs (README.md, Install).
 - `gm-config/gm.config.json` fields carry no inline `_comment` keys; rationale lives here. `version` gates the schema. The file IS the workflow definition that `crate::config::resolve` pulls on the debounce in `sync.debounce_ms` (`shallow` fetch; code default `DEFAULT_DEBOUNCE_MS` in `rs-plugkit/crates/plugkit-core/src/config_sync.rs`). It reproduces stock gm behavior unmodified until edited.
 - `instructions.keys` name per-state prose files under `instructions.dir`, resolved project-vendored first, then this repo's cache, then the compiled default.
 - `fsm.graph` and `fsm.predicates_reference` are the state machine as data. `gates.predicate` shall name only a predicate generated into `predicates_reference` from the same registry the code dispatches on; a condition outside that registry shall use a jit hook under `fsm.hooks_dir` instead.
