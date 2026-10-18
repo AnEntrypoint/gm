@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Platform: POSIX shell only; no Windows port. Run under Git Bash on Windows.
 fetched_by_sha() {
   local tmp rc=1
   tmp=$(mktemp -d) || return 1

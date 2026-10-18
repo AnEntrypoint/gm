@@ -201,3 +201,8 @@ Two nominations in that cycle were title-only and unverified: `trav-edge-check-r
 - Second mechanism, unchanged and still live: a backgrounded child that keeps the runner's stdout or stderr pipe open is adopted as a task and ends with that task's 30-minute deadline, so the redirect in the idiom is part of the contract, not decoration.
 - Witness: dispatch `1791713402860-500-44475da329867bd1` returned at 10:09:59Z having started a background probe writer; dispatch `1791713499562-500-181ddfad4fb41b00` at 10:11:35Z read 79 appended ticks from pid 47497. It was still appending at 10:18:45Z (tick 445) and ran to tick 461, ~9 minutes and five later dispatches after the one that started it, until an explicit `Stop-Process` ended it.
 - The installed runner is a local build of `225200d` plus this fix: `--build-info` reports `release_build: false`, which makes `reconcileRunner` in `gm-mcp/src/release-bridge.js` answer `skipped: local-build`, so no later upstream release silently replaces it. The previous binary is kept as `~/.gm-tools/agentplug-runner.exe.bak-pre-durable-20261011-100752Z`.
+
+## Verified 2026-10-12 (shared work tree, refused pushes)
+
+- Measured in C:/dev/gm (lane a48ac11a): local main `09575d5d` against remote main `538a0c80`, twelve unpushed local commits. Each came from a `git_finalize` that refused to push over ~150 `clashing_paths` while the same content was already published.
+- Each refused push left a local commit redundant with the published one, widening the gap between local HEAD, the work tree and remote main (see skills/gm/docs/rationale.md, Autonomy).
