@@ -26,7 +26,7 @@ Publishing: workers do not commit or push. The parent session publishes every ch
 
 ## Automatic decisions
 
-When an instruction already settles a choice, apply it without asking. Commit identity: use the repository's configured identity; where none is set, use the identity the user approved for authorship (anentrypoint <admin@coas.co.za>) written as repository-local config, never global. Publishing: push every commit and bump every pin in the same delivery. Runner: a restart of agentplug is approved at any time; load a rebuilt plugin through the isolated recipe first, then restart. Ask only for a world-scoped one-way door.
+When an instruction already settles a choice, apply it without asking. Commit identity: use the repository's configured identity; where none is set, use the identity lanmower <almagestfraternite@gmail.com> written as repository-local config, never global. Publishing: push every commit and bump every pin in the same delivery. Runner: a restart of agentplug is approved at any time; load a rebuilt plugin through the isolated recipe first, then restart. Ask only for a world-scoped one-way door.
 
 ## Worker handover
 
