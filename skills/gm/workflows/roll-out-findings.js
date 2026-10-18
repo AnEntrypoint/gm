@@ -20,6 +20,9 @@ const LENSES = [
   'token, CPU, SSD and RAM efficiency of gm replies and state files',
   'cross-platform behaviour on Windows, macOS and Linux, x64 and arm',
   'observability: whether a gm failure can be diagnosed from its reply alone',
+  'iteration wall-clock: tests that are not needed on a change, build caching, CI critical path and job splitting (read workflow run durations with gh)',
+  'CLI debuggability: trace or dispatch ids on every failure, log locations, and one-command reproduction of a failed run',
+  'dependency vulnerability and lockfile integrity: scan_deps replies (blockedCount, failCount, files skipped as too large) on every project, lockfiles present and tracked (gm-mcp/package-lock.json, rs-plugkit/Cargo.lock, agentplug/Cargo.lock), lockfile drift against its manifest, and pinned dependency versions with known advisories',
 ]
 
 const ROWS = {
