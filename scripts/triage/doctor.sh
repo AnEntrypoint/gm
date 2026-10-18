@@ -4,6 +4,8 @@ rc=0
 echo "== watcher"; "$here/runner-status.sh" "$PWD" || rc=1
 echo "== submodule pins"; "$here/check-pins.sh" | grep -v "^ok" || echo "all pins published"
 [ "${PIPESTATUS[0]}" = 0 ] || rc=1
+echo "== AGENTS.md size"; size=$(wc -c < "$PWD/AGENTS.md" | tr -d ' ')
+if [ "$size" -ge 30000 ]; then echo "AGENTS.md $size bytes >= 30000: compile a fresh AGENTS.md (invariant 3)"; rc=1; else echo "AGENTS.md $size bytes"; fi
 echo "== CI on main (newest run of each workflow)"
 for repo in AnEntrypoint/agentplug-crux AnEntrypoint/agentplug AnEntrypoint/gm-mcp AnEntrypoint/rs-plugkit; do
   gh run list -R "$repo" --branch main --status completed --limit 100 --json databaseId,name,workflowDatabaseId,conclusion,createdAt 2>/dev/null | python3 -c '
