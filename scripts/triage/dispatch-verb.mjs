@@ -5,6 +5,9 @@
 // Usage: node scripts/triage/dispatch-verb.mjs <verb> [--cwd <project>] [--raw <text> | --body-file <path>]
 //                                              [--sid <id>] [--timeout-ms <ms>]
 //
+// --sid defaults to the JSON body's session_id, since the spool refuses a task id that does not start
+// with the declared session (session_id_task_mismatch).
+//
 // The body goes to .gm/exec-spool/in/<verb>/<N>.txt, written atomically. The reply is read from
 // out/<verb>-<N>.json once its .ready marker exists. Exit 0 when the reply has ok: true, else 1.
 // Latency (request to reply) is printed to stderr.
@@ -22,7 +25,6 @@ if (!verb || verb.startsWith('--')) {
   process.exit(2);
 }
 const cwd = path.resolve(flag('--cwd', process.cwd()));
-const sid = flag('--sid', 'validate-' + process.pid);
 const timeoutMs = Number(flag('--timeout-ms', '150000'));
 const bodyFile = flag('--body-file', null);
 const raw = bodyFile ? fs.readFileSync(bodyFile, 'utf8') : flag('--raw', null);
@@ -30,6 +32,15 @@ if (raw === null) {
   console.error('dispatch-verb: give --raw <text> or --body-file <path>');
   process.exit(2);
 }
+function bodySessionId(text) {
+  try {
+    const parsed = JSON.parse(text);
+    return typeof parsed?.session_id === 'string' && parsed.session_id ? parsed.session_id : null;
+  } catch {
+    return null;
+  }
+}
+const sid = flag('--sid', bodySessionId(raw) ?? 'validate-' + process.pid);
 
 const spool = path.join(cwd, '.gm', 'exec-spool');
 const inDir = path.join(spool, 'in', verb);

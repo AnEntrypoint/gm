@@ -1,5 +1,0 @@
-id: BLOCK-dream-rsi-output-schema-code
-subject: 'rs-plugkit has no code for the dream-rsi inference result. Blocked move target: a typed result struct (status, part_a, part_b, per_verb, proposals, rejected_walks, forward_edge_coverage_approx) plus constants INSUFFICIENT_RECORD_THRESHOLD=20, MAX_PART_A_PROPOSALS=3, MAX_PART_B_PROPOSALS=5 in rs-plugkit/crates/plugkit-core/src/orchestrator/dream_rsi.rs. SKILL.md Output section restates the shape until that lands.'
-blocks: G_CONTRACT-dream-rsi-output-schema
-session_id: lean-exec-dreamrsi-1
-status: pending

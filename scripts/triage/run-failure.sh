@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Platform: POSIX shell only; no Windows port. Run under Git Bash on Windows.
 repo=$1; run=$2
 [ -n "$repo" ] && [ -n "$run" ] || { echo "usage: run-failure.sh <owner/repo> <run-id>"; exit 2; }
 gh run view "$run" -R "$repo" --json jobs -q '.jobs[] | select(.conclusion=="failure") | .name as $j | .databaseId as $id | (.steps[] | select(.conclusion=="failure") | "\($j) :: step \(.name) (job \($id))")'

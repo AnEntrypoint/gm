@@ -1,1 +1,0 @@
-Witness names H1 (leader). Trigger phrases checked against body triggers: agent-memory (memory hub, team memory, chat memory, skill library, wiki, codegraph), wfgy-method (drift, goes in circles), gm (gm walk, PRD row, pool protocol) all present.

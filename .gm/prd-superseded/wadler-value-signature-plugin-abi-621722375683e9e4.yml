@@ -1,7 +1,0 @@
-id: WADLER-VALUE-SIGNATURE-PLUGIN-ABI
-node: WADLER
-phase: P2
-status: pending
-title: 'Theorems for Free: plugin_abi.rs request_envelope/ok_response/parse_response/call take &Value bodies and return untyped envelopes; type the envelope so the success and failure shape is in the signature'
-owner: rs-plugkit/crates/plugkit-core/src/plugin_abi.rs
-session_id: lean-hop-WADLER
