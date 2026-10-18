@@ -67,7 +67,7 @@ for (const { base, rel } of files) {
       if (/\s/.test(candidate)) continue;
       // A skill names its own docs relative to its directory: skills/gm/docs/verbs.md is `docs/verbs.md` there.
       if (!exists(base, candidate) && fs.existsSync(path.join(base, path.dirname(rel), candidate))) continue;
-      if (isUninitialized(path.relative(root, path.join(base, candidate)))) {
+      if ([path.join(base, candidate), path.join(root, candidate)].some((abs) => isUninitialized(path.relative(root, abs)))) {
         skipped.push(`${where}:${i + 1}: \`${candidate}\``);
         continue;
       }
