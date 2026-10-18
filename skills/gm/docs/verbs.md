@@ -775,7 +775,7 @@ Every body field a verb declares, grouped by verb. The contract check (`scripts/
 - `websearch` and `web_search`: `wiki`, `user`, `stars`
 - `git_push`: `recover_remote_moved`, `allow_foreign_commits`
 - `git_commit`: `allow_whole_index`, `allow_foreign_rows`
-- `git_finalize`: `allow_whole_index`
+- `git_finalize`: `allow_whole_index`, `untrack`
 - `git_log`: `range`
 - `git_diff`: `range`, `staged`, `stat`
 - `git_show`: `stat`
