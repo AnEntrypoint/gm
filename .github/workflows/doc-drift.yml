@@ -98,7 +98,7 @@ jobs:
       - run: git submodule update --init --depth 1 rs-plugkit agentplug
       - uses: taiki-e/install-action@8cca0918f8471c33515202b73f56ab27f2bed283
         with:
-          tool: cargo-audit@0.21.2
+          tool: cargo-audit@0.22.2
       - name: No vulnerable crate in rs-plugkit or agentplug Cargo.lock
         run: |
           cargo audit --file rs-plugkit/Cargo.lock
