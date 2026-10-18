@@ -159,6 +159,7 @@ Launch only advertised ids. A slot stays empty only when no pending row and no u
 ## Fan-out
 - Independent slices (file, row, hop) launch in one block. Slices sharing a surface run in turn.
 - Walk workers are gm-prd or gm-hop, never a fork. Each brief opens with the brick-wall opener and its own SESSION_ID (gm §1).
+- Every brief reads the pending listing inside one `gm_codemode` body: `prd-list {"status":"pending"}` filtered in code to its own ids and subjects, returned as that list only. A brief never pulls the full listing into context.
 - Verify a brief's source path (`codesearch {mode:"filename"}`) before launch. A wrong path is a blocked slot.
 - `gm_processor_capacity` queues dispatches beyond it; it is not the subagent count.
 
