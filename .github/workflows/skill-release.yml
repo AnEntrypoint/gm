@@ -36,7 +36,12 @@ jobs:
           git config user.email "657315+lanmower@users.noreply.github.com"
           git config url."https://${GH_TOKEN}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
           CURRENT=$(node -e "console.log(require('./package.json').version)")
-          if gh release view "v$CURRENT" --repo AnEntrypoint/gm >/dev/null 2>&1; then
+          git fetch origin main --quiet
+          MAIN_VER=$(git show origin/main:package.json | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>console.log(JSON.parse(s).version))")
+          if [ "$MAIN_VER" != "$CURRENT" ] && [ "$(printf '%s\n%s\n' "$CURRENT" "$MAIN_VER" | sort -V | tail -1)" = "$MAIN_VER" ]; then
+            NEW_VERSION="$MAIN_VER"
+            echo "origin/main already at v$MAIN_VER from an earlier attempt: resuming its publish without a second bump"
+          elif gh release view "v$CURRENT" --repo AnEntrypoint/gm >/dev/null 2>&1; then
             IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
             NEW_PATCH=$((PATCH + 1))
             NEW_VERSION="$MAJOR.$MINOR.$NEW_PATCH"
@@ -78,11 +83,16 @@ jobs:
           SHA: ${{ github.sha }}
         run: |
           set -e
-          gh release create "v$VER" \
-            --repo AnEntrypoint/gm \
-            --title "gm skill v$VER" \
-            --notes "Auto-published from gm CI at $SHA" \
-            release-assets/*
+          if gh release view "v$VER" --repo AnEntrypoint/gm >/dev/null 2>&1; then
+            echo "v$VER already published by an earlier attempt: re-uploading its assets"
+            gh release upload "v$VER" --repo AnEntrypoint/gm --clobber release-assets/*
+          else
+            gh release create "v$VER" \
+              --repo AnEntrypoint/gm \
+              --title "gm skill v$VER" \
+              --notes "Auto-published from gm CI at $SHA" \
+              release-assets/*
+          fi
 
       - name: Verify every uploaded asset is actually fetchable
         env:
