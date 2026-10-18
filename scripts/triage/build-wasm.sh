@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Platform: POSIX shell only; no Windows port. Run under Git Bash on Windows.
 # Builds the slim rs-plugkit wasm guest. An unwritable CARGO_HOME or RUSTUP_HOME
 # (a root-owned default) falls back to a per-user /tmp home, since cargo writes its
 # git db and registry cache under CARGO_HOME and rustup installs the target under RUSTUP_HOME.
