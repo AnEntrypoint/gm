@@ -26,7 +26,7 @@ No witnessed change or verified row: `next: none`, with the reason.
 ## Node emission
 A hop consumes a surface and EMITS a node. Emission is not optional and not a summary of the receipt. Write a file of fixed shape on EVERY verdict, including NOT-APPLICABLE.
 
-Write `.gm/lean-walk/<NODE>.json` (overwrite only the node's own file):
+Write `.gm/lean-walk/<NODE>.<SESSION>.json` (keyed by node and owner session, so parallel visits of one node never overwrite each other; overwrite only this session's file):
 ```
 {node, applied, changes, witness, prd_ids, mutable_ids, next_choice:{to,why},
  links_offered:[<to>, ...], link_taken:<to|null>, session, witness_dispatch_ids:[<dispatch id>, ...],
@@ -38,7 +38,7 @@ Write `.gm/lean-walk/<NODE>.json` (overwrite only the node's own file):
 - Stamp `lean_node:"<NODE>"` on your dispatches (read by `rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs.rs`; recorded per observation in `rs-plugkit/crates/plugkit-core/src/orchestrator/dream_rsi.rs`).
 - A discipline the surface demands that is not in `links_offered` is emitted, not dropped: append one JSON line (`fs_write` with `append:true`) to `.gm/lean-walk/new-nodes.jsonl`: `{id,label,book,author,kind:"principle",proposed_by:<node.id>,session,witness}`. `id` = upper-case slug of the book title. Refuse an `id` already in `nodes[]`; join that node instead. Never edit `skills/dream-rsi/gm-graph.json`; its owner promotes emitted nodes.
 - `.gm/lean-walk/` is gitignored runtime state: no commit, no push.
-- Evidence budget: the node file keeps verdict fields and pointers only. A bulky array (per-line rewrites, per-file match lists) moves to `.gm/lean-walk/<NODE>-<field>.json`, named by path in the node file. Node file stays under 4 KB.
+- Evidence budget: the node file keeps verdict fields and pointers only. A bulky array (per-line rewrites, per-file match lists) moves to `.gm/lean-walk/<NODE>-<field>.json`, named by path in the node file. Node file stays under 4 KB. Two visits of one node by different sessions leave two files; neither overwrites the other.
 
 ## Rules
 - A receipt is the hop's own. A hop that spawns a successor names the child session in `next:` and carries no child text. The orchestrator reads each receipt by the session it launched.
@@ -69,7 +69,7 @@ PRINCIPLE: <id>; SURFACE: <path>; WITNESS: <audit dispatch id>
 CHANGED: <file, dispatch id> | none
 ACH: <n> hypotheses; leader <id>; rejected <ids>; probe <dispatch id>; flips-on <evidence> | none, no cause asserted
 ROWS: <n>: <ids>
-EMITTED: .gm/lean-walk/<NODE>.json [+1 new node]
+EMITTED: .gm/lean-walk/<NODE>.<SESSION>.json [+1 new node]
 CYCLE: <dream-replay-cycle dispatch id>; status <replayed|deferred, reason>
 NEED: <one sentence>
 next: <id>; depth=<n+1> | none, <reason>
