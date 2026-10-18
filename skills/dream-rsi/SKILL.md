@@ -70,7 +70,7 @@ The loop is the one at https://dream-rsi.com/: explore online, append the record
 1. History is the whole project, not one session: count records and sessions across every observation file, and take the newest record `ts`.
 2. Read every session's cycle result (the `cycle_result` file in `index.json`). The newest by `ts` is the current cycle.
 3. The loop is `stalled` when the history holds at least `MIN_NEW_OBSERVATIONS` records newer than the current cycle (or no cycle result exists) and the current cycle is older than `COOLDOWN_MS`. The stage that did not run is `cycle_trigger`: no cycle result since the threshold was reached.
-4. The cycle result carries no incumbent-versus-challenger flags, so no `improved`, `never_worse` or redeploy check applies here. Redeployment stays a manual act under the normal PRD and evidence gates; this skill never writes the active strategy.
+4. The cycle result carries the incumbent-versus-challenger fields `selection` (`propose-challenger` or `keep-incumbent`), `improved`, `never_worse`, `baseline_score` and `selected_score`, written by `dream-replay-cycle` (`rs-plugkit/crates/plugkit-core/src/orchestrator/dream_rsi.rs`). Report them as read. Redeployment stays a manual act under the normal PRD and evidence gates; this skill never writes the active strategy.
 
 ## Output
 
@@ -111,4 +111,4 @@ A proposal is evidence-bound planning input. It is deployed only through the nor
 
 ## Design reference
 
-The cycle-boundary trigger, the three-stage loop and the git lifecycle are in [the design reference](references/dream-rsi.md). Load it only when a task changes the loop itself.
+The cycle-boundary trigger, the three-stage loop and the git lifecycle are in [the design reference](references/dream-rsi.md). Load it only when a task changes the loop itself
