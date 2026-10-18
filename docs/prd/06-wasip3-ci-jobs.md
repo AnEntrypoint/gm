@@ -1,5 +1,7 @@
 # 06 Add wasip3 build and link jobs to CI
 
+Builds on the dual-loader decision in `docs/wasip3-loader-decision.md` (Rows this changes, PRD 06 and 07): CI builds and links both the core wasip1 path and the wasip3 component path.
+
 ## Problem
 
 Nothing in CI builds `wasm32-wasip3`. The current CI uses stable Rust, and the
