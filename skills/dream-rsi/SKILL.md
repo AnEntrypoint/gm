@@ -17,9 +17,9 @@ Inputs:
 
 ## Part A: verb strategy
 
-1. Read every observation file. Count records. If there are fewer than `INSUFFICIENT_RECORD_THRESHOLD` across all sessions, return an `Insufficient` for Part A.
+1. Read every observation file. Count records. If there are fewer than `MIN_NEW_OBSERVATIONS` across all sessions, return an `Insufficient` for Part A.
 2. Per verb, compute count, failure rate (`exit_code != 0`), gate-drift rate, and mean `quality`.
-3. Treat `quality` with caution. Until the scoring fix in rs-plugkit lands, `quality` mostly reflects the open PRD/mutable backlog rather than the dispatch outcome. Rank by failure rate weighted by count, not by `quality`.
+3. Treat `quality` with caution. `quality` can reflect the open PRD/mutable backlog rather than the dispatch outcome. Rank by failure rate weighted by count, not by `quality`.
 4. Some non-zero exits are valid answers, not failures. A `grep` exit 1 with no matches is a no-match result. Classify each failure by the record's `error_code` field; a `no_match:true` record is an answer, not a failure. A failed record with neither is `unclassified`, because its reply is pruned from `.gm/exec-spool/out` and cannot be recovered. The agent shall not propose a change for a verb until its failure exits are shown to be real errors. A verb whose failures are all unclassified gets no proposal and is counted in `unclassified_failures`.
 5. Read the open rows in `.gm/prd/` and `.gm/prd.yml`. Drop a candidate when an open row already names its verb and the same change.
 6. For up to `MAX_PART_A_PROPOSALS` candidates, write one proposal with the verb, the change, the counts and rates as evidence, and a measurable target on the same log. A change is executable: code, a config value or a verb contract. The paper found that directional prose hints do worse than no hint at equal budget, so a proposal that only adds guidance prose is refused.
@@ -30,8 +30,13 @@ The goal is to walk every principle-kind gm-graph node and every edge, through r
 
 1. Load the graph. Traversable nodes are those whose `kind` is `principle`. Edges are all `edges` entries.
 2. Load walk evidence. A node is walked when its `.gm/lean-walk/<NODE>.json` has `applied:true`, a `witness`, and a `verified_by` session that differs from the node file's `session` (the independent verifier lane, `skills/gm-hop/SKILL.md`). A node whose `verified_by` is missing or equal to its `session` is not walked, and is reported in `rejected_walks` with `missing_dispatch_ids: []`. A missing file means no walk yet. `phase_history` (the node keys the runtime recorded) confirms the session reached that node.
-3. Run Part B under its own scorer session id, which must differ from every walk's `session`. Refuse to score any node file whose `session` equals the scorer session: report it in `rejected_walks` with `reason: "self_scored"`. Build the set of every `dispatch_id` across the observation files of the walk sessions only.
-4. Verify each walk. A walk counts only if every `dispatch_id` quoted in its `witness` appears in that set, and each id is confirmed by a reply file under `.gm/exec-spool/out/` whose `dispatch_id` matches and whose sha256 equals the observation's `reply_sha256`. The observation writer is the guest; the spool-out reply is the trusted writer, and a witness counts only when the spool-out reply confirms it. Report any failure in `rejected_walks` with the missing ids. The agent shall never count a rejected walk.
+3. Run Part B under its own scorer session id, which must differ from every walk's `session`. Refuse to score any node file whose `session` equals the scorer session: report it in `rejected_walks` with `reason: "self_scored"`. Build the map from `dispatch_id` to its record `session` across `observations.json` and every `observations-archive-*.json`, for the walk sessions only.
+4. Verify each walk. A walk counts only if every `dispatch_id` quoted in its `witness`:
+   - maps in that map to the walk's own `session`; an id from another session fails with `reason: "foreign_dispatch"`;
+   - is confirmed by a reply file under `.gm/exec-spool/out/` whose `dispatch_id` matches and whose sha256 equals the observation's `reply_sha256`;
+   - is not an unobservable verb (`instruction`, `prd-list`, `transition`, `mutable-*`, `dream-*`); a quoted one fails with `reason: "unobservable_verb"` and its verb named.
+
+   An `applied:true` walk also needs at least one quoted write-class id (`git_commit`, `fs_write`, `prd-add`) that passes all three checks. The observation writer is the guest; the spool-out reply is the trusted writer. Report any failure in `rejected_walks` with the missing or failing ids. The agent shall never count a rejected walk.
 5. Coverage:
    - `nodes_verified` over `traversable_nodes`.
    - `backreferences_verified` over the number of backreference edges, counted only when the `from` node's evidence file has `applied:true` and its `witness` names the edge's condition.
@@ -72,7 +77,7 @@ The loop is the one at https://dream-rsi.com/: explore online, append the record
 
 1. History is the whole project, not one session: count records and sessions across every observation file, and take the newest record `ts`.
 2. Read every `replay-result.json` and `cycle-result.json`. The newest by `ts` is the current replay.
-3. The loop is `stalled` when the history holds at least `INSUFFICIENT_RECORD_THRESHOLD` records newer than the current replay (or no replay result exists) and the current replay is older than `CYCLE_COOLDOWN_MS`. Name the stage that did not run: `cycle_trigger` (no `cycle-result.json` since the threshold was reached), `replay` (a cycle ran but wrote no `replay-result.json`) or `redeploy` (a result with `improved:true` has no open row).
+3. The loop is `stalled` when the history holds at least `MIN_NEW_OBSERVATIONS` records newer than the current replay (or no replay result exists) and the current replay is older than `COOLDOWN_MS`. Name the stage that did not run: `cycle_trigger` (no `cycle-result.json` since the threshold was reached), `replay` (a cycle ran but wrote no `replay-result.json`) or `redeploy` (a result with `improved:true` has no open row).
 4. A result with `never_worse:false` is a defect: the incumbent was not scored as a candidate. Report it in `defects`.
 5. When the current replay has `improved:true` and `never_worse:true` and no open row names its `selected_policy_id`, propose one row to redeploy it. Redeployment runs through the normal PRD and evidence gates; this skill never writes `active-strategy.json`.
 
@@ -80,10 +85,9 @@ The loop is the one at https://dream-rsi.com/: explore online, append the record
 
 Constants:
 
-- `INSUFFICIENT_RECORD_THRESHOLD = 20`
+- `MIN_NEW_OBSERVATIONS` and `COOLDOWN_MS` are the cycle-trigger constants in `agentplug/crates/agentplug-runner/src/dream_cycle.rs`; read their values there.
 - `MAX_PART_A_PROPOSALS = 3`
 - `MAX_PART_B_PROPOSALS = 5`
-- `CYCLE_COOLDOWN_MS = 900000`
 
 Return exactly one `DreamRsiResult`:
 
@@ -94,7 +98,7 @@ PartD              = { history_records: number, history_sessions: number, newest
                        selected_policy_id: string | null, improved: boolean, stalled: boolean,
                        stalled_stage: "cycle_trigger" | "replay" | "redeploy" | null,
                        defects: string[], redeploy_proposal: string | null }
-Insufficient       = { status: "insufficient", records: number }   // records < INSUFFICIENT_RECORD_THRESHOLD
+Insufficient       = { status: "insufficient", records: number }   // records < MIN_NEW_OBSERVATIONS
 PartA              = { records: number, per_verb: VerbStat[], proposals: VerbProposal[] }   // proposals <= MAX_PART_A_PROPOSALS
 VerbStat           = { verb: string, count: number, failure_rate: number, gate_drift_rate: number }
 VerbProposal       = { verb: string, change: string, evidence: string, target: string }
