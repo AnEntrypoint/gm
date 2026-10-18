@@ -25,7 +25,7 @@ const TIMEOUT_MS = arg('timeout-ms', 15000);
 function walk(dir, out) {
   for (const name of readdirSync(dir, { withFileTypes: true })) {
     const path = join(dir, name.name);
-    if (name.isDirectory()) walk(path, out);
+    if (name.isDirectory()) { if (name.name !== 'node_modules') walk(path, out); }
     else if (EXTENSIONS.test(name.name)) out.push(path);
   }
   return out;
@@ -69,7 +69,7 @@ async function check(url) {
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     try {
       let status = await probe(url, 'HEAD');
-      if (status === 405 || status === 403 || status === 501) status = await probe(url, 'GET');
+      if (status >= 400) status = await probe(url, 'GET');
       if (status < 400) return { ok: true, status };
       last = status;
       if (!RETRY_STATUS.has(status)) return { ok: false, status };
