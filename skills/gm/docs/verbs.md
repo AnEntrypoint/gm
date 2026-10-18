@@ -778,7 +778,7 @@ Every body field a verb declares, grouped by verb. The contract check (`scripts/
 - `git_finalize`: `allow_whole_index`, `untrack`
 - `git_log`: `range`
 - `git_diff`: `range`, `staged`, `stat`
-- `git_show`: `stat`
+- `git_show`: `rev`, `ref`, `sha`, `commit`, `stat`, `path`, `paths`, `files`, `offset`, `full`. `full: true` returns the whole blob (no 60000-byte page), and `next_offset` pages the rest.
 - `git_submodule_update`: `recursive`
 - `git_checkout`: `create`
 - `git_merge`: `ff_only`
