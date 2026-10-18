@@ -769,3 +769,40 @@ Twelve verbs publish their parameter doc: pass `{"help": true}` as the body of `
 `{"help": true, "verb": ..., "parameters": "<doc>"}`. Any other verb answers `help` with an error that says no parameter documentation is published for it.
 
 `gm.describe(name)` in `gm_codemode` answers `{name, verb, summary, docs, input_schema, body_schema}`. `summary` is the verb's table description (null when the table has none; `docs` then names the heading to search for). `input_schema` is `{shared: "dispatch_envelope"}` when the verb takes the common dispatch envelope (body, raw_body, session_id, cwd, timeout_seconds and the rest); that schema is returned once by `gm.help().dispatch_envelope`.
+
+## Body field index
+
+Every body field a verb declares, grouped by verb. The contract check (`scripts/check-verb-body-contract.mjs`) requires each name to appear here or in a section above.
+
+- `fs_write`: `append`, `allow_empty`
+- `fetch`: `wiki`, `user`, `stars`
+- `websearch` and `web_search`: `wiki`, `user`, `stars`
+- `git_push`: `recover_remote_moved`, `allow_foreign_commits`
+- `git_commit`: `allow_whole_index`, `allow_foreign_rows`
+- `git_finalize`: `allow_whole_index`
+- `git_log`: `range`
+- `git_diff`: `range`, `staged`, `stat`
+- `git_show`: `stat`
+- `git_submodule_update`: `recursive`
+- `git_checkout`: `create`
+- `git_merge`: `ff_only`
+- `git_merge_abort`: `preserve`
+- `git_branch_delete`: `remote_name`
+- `git_rm`: `cached`
+- `git_reset`: `allow_rewrite`
+- `git_pull`: `ff_only`, `rebase`, `autostash`, `user_name`, `user_email`
+- `git_stash`: `include_untracked`
+- `git_init`: `user_name`, `user_email`, `initial_branch`
+- `git_worktree_add`: `create`
+- `git_worktree_remove`: `allow_rewrite`
+- `codeinsight`, `callers`, `callees`, `impact`: `verb`, `max_depth`, `direction`, `through_ambiguous`, `language`
+- `codesearch`: `max_matches`, `max_files`, `whole_word`, `verbatim`
+- `grep`: `max_matches`, `max_files`, `whole_word`, `context`, `include`, `detail`, `columns`, `fixed_strings`, `fixedStrings`
+- `ci_log`: `github_repo`, `failed_only`
+- `exec_js`: `code`
+- `lang`: `code`
+- `task_spawn`: `code`, `permissionMode`
+- `instruction`: `full`
+- `prd_list`: `full`, `brief`
+- `prd_resolve`: `witness_evidence`, `witness_dispatch_id`, `witness_exit_code`, `witness_output_sha256`, `witness_output_path`, `witness_ts`, `resolution`, `commit_sha`, `commit_comment`, `keep_status`
+- `expansion_audit`: `scope`, `rows_added`, `unknowns_added`
