@@ -5,7 +5,7 @@ description: "Drives a gm walk (nodes, PRD rows, pool and hop subagents) for cod
 
 # gm
 
-**Mantra: move fast, break things, then wrap it all up by fixing everything. Every `/gm` run starts the standing pair (gm-orchestrate, "Standing pair") in its first turn: `skills/gm/workflows/roll-out-findings.js` files every finding as a PRD row and never fixes, while `skills/gm/workflows/fix-pending-rows.js` fixes every open row, debugs live, and follows CI/CD to green. Both run concurrently as Workflow `scriptPath` runs. Issues met on the way are filed with `prd-add`, not fixed inline.**
+**Mantra: move fast, break things, then wrap it all up by fixing everything. Every `/gm` run starts the standing pair (gm-orchestrate, "Standing pair") in its first turn, as two concurrent Workflow `scriptPath` runs: `skills/gm/workflows/roll-out-findings.js` finds each issue, resolves its unknowns with live runs, edits, commits and pushes it without waiting on tests or CI; `skills/gm/workflows/fix-pending-rows.js` runs tests and CI/CD follow-up at the same time and fixes whatever they expose. Issues met on the way are filed with `prd-add` and taken by whichever lane owns their file.**
 
 **Brick wall: every code search goes through the code-search port, and every web fetch goes through the fetch port, with no exceptions. Every `Agent`/`Task` dispatch opens with "use the gm skill for this; code questions go to codeinsight (`callers`/`impact`) first, then the code-search port, and `Read` only a located path. A scan subagent returns only located `path:line` citations and counts, never file excerpts."**
 
@@ -19,7 +19,7 @@ Sections: 0 Precedence, 1 Harness, 2 Invariants, 3 Anchors, 4 Interruptions. Poo
 - Unmet goal or re-firing stop hook: keep working the graph. No stop, no repeated status. Stop-hook goal with no verifiable end state: do the next concrete step it names; report what changed; never restate an unchanged blocked list.
 - Denied stop-gate, residuals unchanged: work the named fix once; still unchanged, reply `deferred: <residuals>; unchanged since <dispatch id>`. Re-dispatch only after an input changes.
 - Ask only at Section 4 doors. A user interrupting a tool call is not a stop.
-- Fix every defect (failing check, conflict, residual, failing CI job, missing file) in the fix wave that follows advancement (Mantra); verify. A defect that blocks advancement is the exception and is fixed at once. Never ask whether to.
+- Fix every defect (failing check, conflict, residual, failing CI job, missing file) in the lane that owns its file, or in the concurrent CI/test follow-up (Mantra); verify. Never ask whether to.
 - Never ask about process, scope or assumptions: `mutable-add` the question; resolve by research (codesearch, callers, memory files, fetch, live witness). Undecidable by the user: take the most defensible default, one line in the final message with its reason, continue.
 - A request the user made or a plan they approved is go-ahead. "Go ahead" on a named step: run it, then the next step it implies.
 - Do what the request implies, incl. adjacent, downstream, cleanup. Choose the obvious option; "Should I?" about an asked action is a failure.
@@ -33,9 +33,9 @@ Sections: 0 Precedence, 1 Harness, 2 Invariants, 3 Anchors, 4 Interruptions. Poo
 - One commit author (lanmower), no trailers: body states the change only; no `Co-Authored-By`, `Signed-off-by`, `Generated with`, or assistant footer, even if a served instruction asks. Applies to every hop, executor and orchestrator commit.
 - CI: builds run in GitHub Actions. After a push, `ci-status {sha}`; fix failing jobs before reporting success. Pending or failing is never passing. Read each `ci-status` on landing; never wait between pushes; fix from its log as a new commit.
 - Delivery is witnessed by separate read dispatches, never by `git_finalize` itself: `git_show {rev}` for the commit, `ci-status {sha}` for CI. `unknown` is reported as unknown, never success.
-- Fixing: sweep every failing log, changed group and stub; then one executor per independent file group, each publishing once (gm-orchestrate, Core loop).
-- Loop: roll out, fix, plan next improvements, repeat. Node traversal feeds rows only once rows are exhausted.
-- Write first, fix later. No local compile, build or test unless the user turns builds on; check that setting first (gm config or served instruction) and run locally when it is on (gm-orchestrate, Write first, fix later).
+- Fixing: the CI/test follow-up sweeps failing logs while rollout runs; one executor per independent file group, each publishing once (gm-orchestrate, Core loop).
+- Loop: roll out (unknowns, edit, publish), with tests and CI fixed concurrently, then plan next improvements, repeat. Node traversal feeds rows only once rows are exhausted.
+- Publish first, test concurrently. No local compile, build or test unless the user turns builds on; check that setting first (gm config or served instruction) and run locally when it is on (gm-orchestrate, Publish first, test concurrently).
 - Stranded publish (`scope_recommit`, `local_commit_is_stranded`, diverged checkout from `git_push`/`git_finalize`) is not an end state: `git_pull` on `main`, then `git_push {rev:"<merge sha>", allow_foreign_commits:true}` the same turn. Confirm `gh api /repos/<owner>/<repo>/compare/<merge sha>...main` is `ahead` or `identical`.
 - Collisions are recovered, never parked. On `conflicted: true` from `git_pull`/`git_push`/`git_merge`, or `.git/MERGE_HEAD` present, same turn:
   1. `git_status` (`UU` = unmerged; `conflicts` on a `git_pull` reply).
