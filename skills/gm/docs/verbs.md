@@ -177,7 +177,7 @@ Example:
 Four modes, plus the comment scan (`mode:"comments"`): `dual` ranks; `literal` and `regex` are exhaustive and read the tree directly.
 `filename` matches paths only. An unknown `mode`
 is an error that names the valid set, never a silent `dual`. A `dual` query that is one identifier-shaped
-token (3-96 characters) is answered by an exhaustive whole-word scan. There is no `symbol` mode: it is refused
+token (3-96 characters) is answered by the identifier route: an exhaustive whole-word scan whose reply has `mode: "symbol"`, `definitions` and `references`. A request whose body names `mode: "symbol"` is refused
 and the refusal names the valid set. `k` caps the result count; `0` means unlimited for
 `literal`, `regex` and `filename`, and is refused for `dual`, which is ranked top-k. `verbose: true` returns the
 raw `bm25_hits`, `vector_hits` and `commits` channels.
