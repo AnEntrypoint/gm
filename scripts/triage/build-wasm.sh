@@ -19,6 +19,9 @@ rustup_home=${RUSTUP_HOME:-$HOME/.rustup}
 if ! writable "$rustup_home"; then
   export RUSTUP_HOME="/tmp/rustup-$(id -u)"
   echo "build-wasm: RUSTUP_HOME $rustup_home is not writable; using $RUSTUP_HOME" >&2
+  if [ ! -d "$RUSTUP_HOME" ] && [ -d "$rustup_home" ]; then
+    cp -a "$rustup_home" "$RUSTUP_HOME"
+  fi
   rustup_dir=$(dirname "$(command -v rustup)")
   if ! writable "$rustup_dir"; then
     mkdir -p "$CARGO_HOME/bin"
