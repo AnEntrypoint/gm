@@ -54,6 +54,7 @@ Node traversal (gm-hop; `skills/dream-rsi/gm-graph.json`) feeds step 3 only when
 - `.gm/pool/runs.jsonl`: one JSON line per run, append-only; the last line per `run` id is its state.
 - Fields: `run` (`<parent>-<kind><k>`), `kind` (`exec`, `verify`, `ci`, `fix`, `hop`), `row` or `surface`, `sha` (full, when known), `state` (`launched`, `handoff`, `verified`, `ci-green`, `ci-red`, `fix`, `blocked`, `done`, `stale`), `session`, `started`, `updated` (UTC ISO-8601).
 - Every transition writes its line in the same turn. Never rely on a lane's own log for state.
+- Shared append logs (`.gm/pool/ledger-<wave>.txt`, `.gm/witness-log.md`, `.gm/lean-walk/new-nodes.jsonl`) have many writers: each line goes by `fs_write {"path":"<path>","content":"<line>\n","append":true}`. A whole-file write to these paths is refused (`append_only_rewrite_refused`), so a concurrent lane's line is never dropped.
 - Each tick, before `pool-observe`: outstanding = last state not `done`, `blocked`, `stale`. Closable only when `verify` is `verified` and `ci` is `ci-green` for the same `sha`.
 - Reconcile: outstanding `ci` run: `ci-status {sha}` replaces its conclusion. `exec`/`verify` run whose `.gm/pool/<session>.live` is older than 5 minutes is marked `stale`; relaunch its row fresh; never count stale as live.
 - A `handoff` with no following `verify` or `ci` run is a defect: spawn the missing lane this tick.
@@ -78,7 +79,7 @@ Node traversal (gm-hop; `skills/dream-rsi/gm-graph.json`) feeds step 3 only when
 ## Tick
 1. `pool-observe {live, held}`. Take `slots.launch` (node-first, max 32). Empty under shortfall is a defect row, unless `state` is `supply_exhausted`.
 2. Launch one block, up to ceiling. Rows: `Skill(skill="gm-prd", args="row=<id>; session=<SID>")`. Hops: `Skill(skill="gm-hop", args='{"node":{...},"principle":"<id>","surface":"<path>","session":"<SID>","wave":"<wave>","depth":1,"rhetoric":""}')`. `<SID>` = `<parent>-<k>`, unique. A cause-asserting row or hop runs its ACH step (gm-hop 3a, gm-prd SPECIFY) in the same launch.
-3. Log `launch <id>` to `.gm/pool/ledger-<wave>.txt`, a `launched` line to `.gm/pool/runs.jsonl`, `tick <n> event=<id> live=<count> <UTC>` to `.gm/witness-log.md`.
+3. Append (`fs_write` with `append:true`) `launch <id>` to `.gm/pool/ledger-<wave>.txt`, a `launched` line to `.gm/pool/runs.jsonl`, `tick <n> event=<id> live=<count> <UTC>` to `.gm/witness-log.md`.
 4. `wait {"ms":60000}`. Each `done <id>` refills its slot this turn. Re-count live after each launch and completion.
 
 Launch only advertised ids. A slot stays empty only when no pending row and no untraversed node remain.
