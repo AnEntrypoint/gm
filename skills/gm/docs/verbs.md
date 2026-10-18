@@ -129,7 +129,8 @@ The canonical search verb: ranked BM25 plus vector retrieval.
 
 ```
 {"query":"<text>"}                 required
-{"mode":"dual"}                    "dual" (default): ranked BM25+vector retrieval;
+{"mode":"dual"}                    "dual" (default): ranked BM25+vector retrieval, except a single
+                                   identifier-shaped token (3-96 characters) routes to mode "symbol" (see below);
                                    "literal"/"regex": exhaustive, every match with path:line, no ranking;
                                    "filename": matches paths only
 {"k":10}                           result cap for "dual"; aliases: max_results, maxResults, limit
