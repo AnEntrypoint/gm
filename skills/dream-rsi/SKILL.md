@@ -21,7 +21,7 @@ Inputs:
 2. Per verb, compute count, failure rate (`exit_code != 0`), gate-drift rate, and mean `quality`.
 3. Treat `quality` with caution. `quality` can reflect the open PRD/unknown backlog rather than the dispatch outcome. Rank by failure rate weighted by count, not by `quality`.
 4. Some non-zero exits are valid answers, not failures. A `grep` exit 1 with no matches is a no-match result. Classify each failure by the record's `error_code` field; a `no_match:true` record is an answer, not a failure. A failed record with neither is `unclassified`, because its reply is pruned from `.gm/exec-spool/out` and cannot be recovered. The agent shall not propose a change for a verb until its failure exits are shown to be real errors. A verb whose failures are all unclassified gets no proposal and is counted in `unclassified_failures`.
-5. Read the open rows in `.gm/prd/` and `.gm/prd.yml`. Drop a candidate when an open row already names its verb and the same change.
+5. Read the open rows in `.gm/prd/` (legacy single file `.gm/prd.yml`, read only during migration). Drop a candidate when an open row already names its verb and the same change.
 6. For up to `MAX_PART_A_PROPOSALS` candidates, write one proposal with the verb, the change, the counts and rates as evidence, and a measurable target on the same log. A change is executable: code, a config value or a verb contract. The paper found that directional prose hints do worse than no hint at equal budget, so a proposal that only adds guidance prose is refused.
 
 ## Part B: gm-graph traversal
