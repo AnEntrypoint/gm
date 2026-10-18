@@ -4,7 +4,6 @@ set -uo pipefail
 base="${PIN_REMOTE_BASE:-https://github.com/AnEntrypoint}"
 retries="${PIN_RETRIES:-6}"
 witness="${GITHUB_RUN_ID:-local}"
-targets="rs-plugkit rs-codeinsight rs-search agentplug agentplug-bert agentplug-crux agentplug-libsql agentplug-treesitter gm-config gm-mcp"
 
 repo_of() {
   echo "$1"
@@ -20,6 +19,9 @@ stage_pins() {
   local path repo sha cur
   STAGED=0
   BODY=""
+  local targets
+  targets=$(git config -f .gitmodules --get-regexp '^submodule\..*\.path$' | awk '{print $2}')
+  [ -n "$targets" ] || { echo "::error::no submodule paths in .gitmodules"; return 1; }
   for path in $targets; do
     repo=$(repo_of "$path")
     sha=$(git ls-remote "$base/$repo.git" refs/heads/main | awk '{print $1}')
