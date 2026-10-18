@@ -29,9 +29,9 @@ Inputs:
 The goal is to walk every principle-kind gm-graph node and every edge, through real work. Each principle node is one hop run by a subagent that advocates that node's discipline at full strength (SKILL.md Section 1d). The hop scope is principle nodes only, the same scope as the gm walk loop (`skills/gm/SKILL.md` Section 1d).
 
 1. Load the graph. Traversable nodes are those whose `kind` is `principle`. Edges are all `edges` entries.
-2. Load walk evidence. A node is walked when its `.gm/lean-walk/<NODE>.json` has `applied:true` and a `witness`. A missing file means no walk yet. `phase_history` (the node keys the runtime recorded) confirms the session reached that node.
-3. Build the set of every `dispatch_id` across all observation files.
-4. Verify each walk. A walk counts only if every `dispatch_id` quoted in its `witness` appears in that set. Report any failure in `rejected_walks` with the missing ids. The agent shall never count a rejected walk.
+2. Load walk evidence. A node is walked when its `.gm/lean-walk/<NODE>.json` has `applied:true`, a `witness`, and a `verified_by` session that differs from the node file's `session` (the independent verifier lane, `skills/gm-hop/SKILL.md`). A node whose `verified_by` is missing or equal to its `session` is not walked, and is reported in `rejected_walks` with `missing_dispatch_ids: []`. A missing file means no walk yet. `phase_history` (the node keys the runtime recorded) confirms the session reached that node.
+3. Run Part B under its own scorer session id, which must differ from every walk's `session`. Refuse to score any node file whose `session` equals the scorer session: report it in `rejected_walks` with `reason: "self_scored"`. Build the set of every `dispatch_id` across the observation files of the walk sessions only.
+4. Verify each walk. A walk counts only if every `dispatch_id` quoted in its `witness` appears in that set, and each id is confirmed by a reply file under `.gm/exec-spool/out/` whose `dispatch_id` matches and whose sha256 equals the observation's `reply_sha256`. The observation writer is the guest; the spool-out reply is the trusted writer, and a witness counts only when the spool-out reply confirms it. Report any failure in `rejected_walks` with the missing ids. The agent shall never count a rejected walk.
 5. Coverage:
    - `nodes_verified` over `traversable_nodes`.
    - `backreferences_verified` over the number of backreference edges, counted only when the `from` node's evidence file has `applied:true` and its `witness` names the edge's condition.
