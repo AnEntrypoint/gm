@@ -61,7 +61,7 @@ jobs:
           cache: npm
           cache-dependency-path: gm-mcp/package-lock.json
       - run: node scripts/scan-doc-drift.mjs
-      - run: npm install --prefix gm-mcp --no-audit --no-fund --ignore-scripts
+      - run: npm ci --prefix gm-mcp --no-audit --no-fund --ignore-scripts
       - run: npm audit --omit=dev --audit-level=high --prefix gm-mcp
       - run: node scripts/check-verb-body-contract.mjs
 
