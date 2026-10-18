@@ -33,7 +33,7 @@ function walk(dir, out) {
 
 function collectLinks() {
   const files = [
-    ...SCAN_FILES.map((f) => join(ROOT, f)),
+    ...SCAN_FILES.map((f) => join(ROOT, f)).filter((f) => existsSync(f)),
     ...SCAN_DIRS.filter((d) => existsSync(join(ROOT, d))).flatMap((d) => walk(join(ROOT, d), [])),
   ];
   const sites = new Map();
