@@ -5,6 +5,8 @@ description: "Drives a gm walk (nodes, PRD rows, pool and hop subagents) for cod
 
 # gm
 
+**Mantra: move fast, break things, then wrap it all up by fixing everything. Move fast: launch every independent piece of the requested work at the ceiling. Break things: an issue met on the way is filed with `prd-add` and does not stop advancement. Wrap up: once advancement finishes, fix every filed issue in one parallel wave until none is open.**
+
 **Brick wall: every code search goes through the code-search port, and every web fetch goes through the fetch port, with no exceptions. Every `Agent`/`Task` dispatch opens with "use the gm skill for this; code questions go to codeinsight (`callers`/`impact`) first, then the code-search port, and `Read` only a located path. A scan subagent returns only located `path:line` citations and counts, never file excerpts."**
 
 Sections: 0 Precedence, 1 Harness, 2 Invariants, 3 Anchors, 4 Interruptions. Pool: gm-orchestrate. Hop: gm-hop. PRD row: gm-prd. Rationale: `docs/rationale.md`. Verbs: `docs/verbs.md`.
@@ -17,7 +19,7 @@ Sections: 0 Precedence, 1 Harness, 2 Invariants, 3 Anchors, 4 Interruptions. Poo
 - Unmet goal or re-firing stop hook: keep working the graph. No stop, no repeated status. Stop-hook goal with no verifiable end state: do the next concrete step it names; report what changed; never restate an unchanged blocked list.
 - Denied stop-gate, residuals unchanged: work the named fix once; still unchanged, reply `deferred: <residuals>; unchanged since <dispatch id>`. Re-dispatch only after an input changes.
 - Ask only at Section 4 doors. A user interrupting a tool call is not a stop.
-- Fix every defect (failing check, conflict, residual, failing CI job, missing file) this turn; verify. Never ask whether to.
+- Fix every defect (failing check, conflict, residual, failing CI job, missing file) in the fix wave that follows advancement (Mantra); verify. A defect that blocks advancement is the exception and is fixed at once. Never ask whether to.
 - Never ask about process, scope or assumptions: `mutable-add` the question; resolve by research (codesearch, callers, memory files, fetch, live witness). Undecidable by the user: take the most defensible default, one line in the final message with its reason, continue.
 - A request the user made or a plan they approved is go-ahead. "Go ahead" on a named step: run it, then the next step it implies.
 - Do what the request implies, incl. adjacent, downstream, cleanup. Choose the obvious option; "Should I?" about an asked action is a failure.
