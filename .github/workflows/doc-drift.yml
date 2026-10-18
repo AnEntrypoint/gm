@@ -1,5 +1,8 @@
 name: doc-drift
 
+permissions:
+  contents: read
+
 on:
   push:
     branches: [main]
