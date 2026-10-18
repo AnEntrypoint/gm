@@ -44,6 +44,22 @@ done
 dirty=false
 if [ "${#overlay[@]}" -gt 0 ]; then dirty=true; fi
 
+cargo_home=${CARGO_HOME:-$HOME/.cargo}
+if ! { mkdir -p "$cargo_home" 2>/dev/null && [ -w "$cargo_home" ]; }; then
+  export CARGO_HOME="/tmp/cargo-home-$(id -u)"
+  echo "sideload-plugkit: CARGO_HOME $cargo_home is not writable; using $CARGO_HOME" >&2
+  mkdir -p "$CARGO_HOME"
+fi
+if ! rustup target list --installed 2>/dev/null | grep -qx wasm32-wasip1; then
+  rustup_home=${RUSTUP_HOME:-$HOME/.rustup}
+  export RUSTUP_HOME="/tmp/rustup-$(id -u)"
+  echo "sideload-plugkit: wasm32-wasip1 is not installed under $rustup_home; using $RUSTUP_HOME" >&2
+  if [ ! -d "$RUSTUP_HOME" ] && [ -d "$rustup_home" ]; then
+    cp -a "$rustup_home" "$RUSTUP_HOME"
+  fi
+  rustup target add wasm32-wasip1 >&2
+fi
+
 (cd "$scratch" && CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$src/target}" cargo build -p rs-plugkit --release --target wasm32-wasip1 --features slim)
 
 built="${CARGO_TARGET_DIR:-$src/target}/wasm32-wasip1/release/rs_plugkit.wasm"
