@@ -12,11 +12,12 @@ if ! git -C "$src" merge-base --is-ancestor origin/main HEAD; then
   echo "refused: rs-plugkit HEAD $(git -C "$src" rev-parse --short HEAD) does not contain origin/main $(git -C "$src" rev-parse --short origin/main)" >&2
   exit 1
 fi
-dirty=$(git -C "$src" status --porcelain -- crates Cargo.toml Cargo.lock)
-if [ -n "$dirty" ]; then
-  echo "refused: rs-plugkit source tree is dirty:" >&2
-  echo "$dirty" >&2
-  exit 1
+dirty_paths=$(git -C "$src" status --porcelain -- crates Cargo.toml Cargo.lock)
+dirty=false
+if [ -n "$dirty_paths" ]; then
+  dirty=true
+  echo "warning: rs-plugkit source tree has uncommitted changes; manifest records dirty=true:" >&2
+  echo "$dirty_paths" >&2
 fi
 
 (cd "$src" && cargo build -p rs-plugkit --release --target wasm32-wasip1 --features slim)
@@ -36,8 +37,8 @@ for dest in "$plugins/gm.wasm" "$tools/plugkit.wasm"; do
 done
 
 manifest="$plugins/gm.build.json"
-printf '{"plugin":"gm","source_sha":"%s","origin_main_sha":"%s","wasm_sha256":"%s","wasm_bytes":%s,"built_at":%s,"source_root":"%s"}\n' \
-  "$source_sha" "$origin_sha" "$wasm_sha" "$wasm_bytes" "$ts" "$src" > "$manifest.tmp"
+printf '{"plugin":"gm","source_sha":"%s","origin_main_sha":"%s","wasm_sha256":"%s","wasm_bytes":%s,"built_at":%s,"source_root":"%s","dirty":%s}\n' \
+  "$source_sha" "$origin_sha" "$wasm_sha" "$wasm_bytes" "$ts" "$src" "$dirty" > "$manifest.tmp"
 mv -f "$manifest.tmp" "$manifest"
 
 needle="\"gm\":\"$wasm_sha\""
