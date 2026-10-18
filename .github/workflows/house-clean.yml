@@ -54,7 +54,7 @@ jobs:
           - agentplug-libsql-bin
           - agentplug-treesitter-bin
     steps:
-      - name: Keep only the latest release of AnEntrypoint/${{ matrix.repo }}
+      - name: Keep only the newest non-draft release of AnEntrypoint/${{ matrix.repo }}
         env:
           GH_TOKEN: ${{ secrets.PUBLISHER_TOKEN }}
           REPO: AnEntrypoint/${{ matrix.repo }}
@@ -65,19 +65,23 @@ jobs:
             echo "$REPO does not exist; nothing to prune"
             exit 0
           fi
-          if ! gh api "repos/$REPO/releases/latest" >/dev/null 2>&1; then
+          # Newest first; prereleases count, so an in-flight prerelease is never deleted.
+          tags=$(gh api --paginate "repos/$REPO/releases?per_page=100" --jq '.[] | select(.draft | not) | .tag_name')
+          keep=$(echo "$tags" | sed -n 1p)
+          if [ -z "$keep" ]; then
             echo "$REPO has no published release; nothing to prune"
             exit 0
           fi
-          latest=$(gh api "repos/$REPO/releases/latest" --jq '.tag_name')
-          assets=$(gh api "repos/$REPO/releases/latest" --jq '.assets | length')
+          assets=$(gh api "repos/$REPO/releases/tags/$keep" --jq '.assets | length')
           if [ "$assets" = "0" ]; then
-            echo "::error::latest release $latest of $REPO has no assets; refusing to prune anything"
+            echo "::error::newest release $keep of $REPO has no assets; refusing to prune anything"
             exit 1
           fi
-          gh api --paginate "repos/$REPO/releases?per_page=100" --jq '.[] | select(.draft | not) | .tag_name' | while read -r tag; do
-            if [ "$tag" = "$latest" ]; then continue; fi
+          candidates=$(echo "$tags" | sed 1d)
+          echo "dry run: $REPO keeps $keep; would prune:"
+          echo "$candidates"
+          for tag in $candidates; do
             gh release delete "$tag" --repo "$REPO" --cleanup-tag --yes
             echo "pruned $tag"
           done
-          echo "kept $latest in $REPO"
+          echo "kept $keep in $REPO"
