@@ -1,4 +1,0 @@
-id: JTBD-BACKOUT-WRONG-CHANGE-blocker-gm-drain-b-47
-subject: 'Blocked JTBD-BACKOUT-WRONG-CHANGE: missing revert-to-PRD/mutable link in rs-plugkit transitions.rs (handle_revert pops phase_history only). Supplying verb: edit rs-plugkit orchestrator/transitions.rs, CI publish of rs-plugkit (publish / release, step Build), then live transition-revert dispatch from another session via agentplug-runner. Local cargo is hook-blocked. Evidence: .gm/receipts/JTBD-BACKOUT-WRONG-CHANGE/01-SPECIFY.md. Session gm-drain-b-47.'
-status: pending
-session_id: gm-drain-b-47

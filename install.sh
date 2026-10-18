@@ -32,6 +32,7 @@ detect_asset() {
     MINGW*|MSYS*|CYGWIN*)
       case "$arch" in
         x86_64) echo "agentplug-runner-windows-x64.exe" ;;
+        aarch64|arm64) echo "agentplug-runner-windows-arm64.exe" ;;
         *) echo "" ;;
       esac
       ;;

@@ -1,5 +1,0 @@
-id: gm-pool-heartbeat-requires-row-key-hop-has-none-blocker-gm-drain-w1-138
-status: pending
-subject: 'Blocker: hop heartbeat row key needs prose resync and rs-plugkit matching before the probe can close the row'
-detail: 'Row gm-pool-heartbeat-requires-row-key-hop-has-none is pending. Leader hypothesis H1 (hop writes row: <surface>) is not witnessed: the leader probe needs a live heartbeat in the shared .gm/pool/ dir and was not run (see .gm/receipts/gm-pool-heartbeat-requires-row-key-hop-has-none/02-PROVE.md). Remaining work: (1) probe H1 vs H2 with one row-less and one row:<surface> heartbeat through pool-observe malformed_heartbeats in a quiet pool window; (2) edit gm-config/prose/worker-rules.md section 1 and skills/gm-orchestrate/SKILL.md:72 so a hop writes row: <surface>, then resync rs-plugkit/crates/plugkit-core/src/orchestrator/instructions/prose per AGENTS.md re-sync; (3) match hop-held surface keys against advertised rows in pool_slots/state.rs reconcile_live_rows (H3), rebuilt with --features slim and witnessed through CI and a live pool-observe. Acceptance unchanged from the row.'
-session_id: gm-drain-w1-138

@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Platform: POSIX only (uses /proc). Cross-platform port: scripts/triage/runner-status.mjs.
 root=${1:-$PWD}
 f="$root/.gm/exec-spool/.status.json"
 [ -f "$f" ] || { echo "no status file at $f -- watcher never started here"; exit 2; }

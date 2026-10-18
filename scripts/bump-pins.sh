@@ -4,7 +4,6 @@ set -uo pipefail
 base="${PIN_REMOTE_BASE:-https://github.com/AnEntrypoint}"
 retries="${PIN_RETRIES:-6}"
 witness="${GITHUB_RUN_ID:-local}"
-targets="rs-plugkit rs-codeinsight rs-search agentplug agentplug-bert agentplug-crux agentplug-libsql agentplug-treesitter gm-config gm-mcp"
 
 repo_of() {
   echo "$1"
@@ -12,7 +11,7 @@ repo_of() {
 
 gate_ok() {
   local pending
-  pending=$(gh api "repos/AnEntrypoint/$1/actions/runs?head_sha=$2&per_page=100" --jq '[.workflow_runs[] | select(.name != "Deploy GH Pages") | select(.name | test("release|publish|build|wasm"; "i")) | select(.status != "completed" or ((.conclusion // "") | IN("success", "skipped", "neutral") | not))] | length') || return 1
+  pending=$(gh api "repos/AnEntrypoint/$1/actions/runs?head_sha=$2&per_page=100" --jq '[.workflow_runs[] | select(.name != "Deploy GH Pages") | select(.name | test("release|publish|build|wasm"; "i"))] as $m | if ($m | length) == 0 then "none" else ([$m[] | select(.status != "completed" or ((.conclusion // "") | IN("success", "skipped", "neutral") | not))] | length | tostring) end') || return 1
   [ "$pending" = "0" ]
 }
 
@@ -20,6 +19,9 @@ stage_pins() {
   local path repo sha cur
   STAGED=0
   BODY=""
+  local targets
+  targets=$(git config -f .gitmodules --get-regexp '^submodule\..*\.path$' | awk '{print $2}')
+  [ -n "$targets" ] || { echo "::error::no submodule paths in .gitmodules"; return 1; }
   for path in $targets; do
     repo=$(repo_of "$path")
     sha=$(git ls-remote "$base/$repo.git" refs/heads/main | awk '{print $1}')
@@ -52,7 +54,7 @@ while :; do
     exit 0
   fi
 
-  message="pins: advance $STAGED submodule pin(s) to their main [skip ci]"
+  message="pins: advance $STAGED submodule pin(s) to their main"
   body="${BODY}bump-pins run $witness, attempt $attempt"
   git commit -q -m "$message" -m "$body" || exit 1
 

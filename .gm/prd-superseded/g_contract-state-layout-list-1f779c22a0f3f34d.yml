@@ -1,4 +1,0 @@
-id: G_CONTRACT-state-layout-list
-subject: gm-config/prose/entry.md 'State' lists the cwd/.gm/ members (prd.yml, mutables.yml, exec-spool/{in,out}, gm-fired-<sessionId>, gm.db, memories/*.md, disciplines/<ns>/) and which are tracked. These path constants and the gitignore policy should come from one state-layout module; prose cites the module.
-session_id: lean-node-G_CONTRACT
-status: pending

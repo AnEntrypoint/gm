@@ -17,32 +17,34 @@ Ledger `launch` and `done` lines are written by the orchestrator (gm-orchestrate
 3. `codesearch` every instance a claim governs on the surface. Print cited lines. Drop absent text.
 3a. If the surface asserts a cause, defect or fix, run ACH (`gm-config/prose/ach.md`) before step 4: at least two rival hypotheses; a `C`/`I`/`N` matrix from dispatch-backed evidence; rank by fewest `I` cells; one probe separating the leader from the next. Step 4 acts only on the leader. A rejected hypothesis gets no edit.
 4. Close what one exact-match Edit closes, if no other writer holds the file (`git_status` with paths). Witness it live and keep the dispatch id. Revert any change without a live witness.
-5. `prd-add` each other finding as `<principle>-<SESSION_ID>-<n>` using the full SESSION_ID, never a suffix. `prd-list` the id first. `prd-add` refuses an existing id unless `overwrite:true`, so a refused id takes the next `<n>`. Never send `overwrite` for another session's row. Retire or merge one stale row per row added.
+5. Before each `prd-add`, one `codesearch` over `.gm/prd/` for the finding's cause literal (verb name or file path); on a hit, append the witness to that row when this hop owns it, else cite its id in the receipt, and add nothing. Otherwise `prd-add` the finding as `<principle>-<SESSION_ID>-<n>` using the full SESSION_ID, never a suffix. `prd-list {"id":"<id>"}` first, never a pending listing. `prd-add` refuses an existing id unless `overwrite:true`, so a refused id takes the next `<n>`. Never send `overwrite` for another session's row. Retire or merge one stale row per row added. A discipline whose output is order, rank or choice (PERT, MoSCoW, Pugh, Wardley) files no row of its own: it writes that ordering as `blockedBy` edges or a merged `acceptance_criteria` on the target rows it names, and it never files a plan as a pending row.
 6. Name the biggest need in one sentence.
-7. Nominate the next node: an eligible link from step 0 whose `to` attacks the need. Every eligible link is nominable regardless of position or history. At `depth` ≥ `max_depth` (default 6): `next: none, depth limit`. Otherwise `next:` names the link's `to` and `depth+1`; `rhetoric` = your `next_choice.why` verbatim (three sentences max). The orchestrator builds the child payload from the private graph, writes `launch <child-session> surface=<surface> row=-` to `.gm/pool/ledger-<wave>.txt`, and spawns the child. The receipt's last act appends `done <session>` to the same ledger, on every verdict.
+7. Nominate the next node: an eligible link from step 0 whose `to` attacks the need. Every eligible link is nominable regardless of position or history. At `depth` ≥ `max_depth` (default 6): `next: none, depth limit`. Otherwise `next:` names the link's `to` and `depth+1`; `rhetoric` = your `next_choice.why` verbatim (three sentences max). The orchestrator builds the child payload from the private graph, appends `launch <child-session> surface=<surface> row=-` to `.gm/pool/ledger-<wave>.txt`, and spawns the child. The receipt's last act appends `done <session>` to the same ledger, on every verdict. Every ledger and `new-nodes.jsonl` line is an append: `fs_write {"path":"<path>","content":"<line>\n","append":true}`; a whole-file write to these shared logs is refused.
 
 No witnessed change or verified row: `next: none`, with the reason.
 
 ## Node emission
 A hop consumes a surface and EMITS a node. Emission is not optional and not a summary of the receipt. Write a file of fixed shape on EVERY verdict, including NOT-APPLICABLE.
 
-Write `.gm/lean-walk/<NODE>.json` (overwrite only the node's own file):
+Write `.gm/lean-walk/<NODE>.<SESSION>.json` (keyed by node and owner session, so parallel visits of one node never overwrite each other; overwrite only this session's file):
 ```
-{node, applied, changes, witness, prd_ids, mutable_ids, next_choice:{to,why},
- links_offered:[<to>, ...], link_taken:<to|null>, session, witness_dispatch_ids:[<dispatch id>, ...]}
+{node, applied, changes, witness, prd_ids, unknown_ids, next_choice:{to,why},
+ links_offered:[<to>, ...], link_taken:<to|null>, session, witness_dispatch_ids:[<dispatch id>, ...],
+ verified_by:<session>|null, verified_dispatch_ids:[<dispatch id>, ...]}
 ```
 - `links_offered` = the `to` of every entry of the payload's `node.links`, verbatim. `link_taken` = the `to` you nominate in `next:`, or `null` at `next: none`; never a third value.
 - `applied:true` only when ≥1 change landed AND `witness` names a dispatch you hold. `witness_dispatch_ids` lists every dispatch id the witness quotes. `skills/dream-rsi/SKILL.md` Part B step 4 rejects the whole record when one is absent from `.gm/dream-rsi/<session>/observations.json`.
+- Independent verification: the hop never witnesses its own edit. Before setting `applied:true`, spawn a verifier subagent with session `<session>-v1` that receives only the change contract (file, expected edit, witness command) and re-runs the witness live. The hop records `verified_by:"<session>-v1"` and the verifier's dispatch ids in `verified_dispatch_ids`. Without a verifier pass, write `applied:false` and `verified_by:null`. `skills/dream-rsi/SKILL.md` Part B step 2 counts a walk only when `verified_by` is a session other than the node's own `session`.
 - Stamp `lean_node:"<NODE>"` on your dispatches (read by `rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs.rs`; recorded per observation in `rs-plugkit/crates/plugkit-core/src/orchestrator/dream_rsi.rs`).
-- A discipline the surface demands that is not in `links_offered` is emitted, not dropped: append one JSON line to `.gm/lean-walk/new-nodes.jsonl`: `{id,label,book,author,kind:"principle",proposed_by:<node.id>,session,witness}`. `id` = upper-case slug of the book title. Refuse an `id` already in `nodes[]`; join that node instead. Never edit `skills/dream-rsi/gm-graph.json`; its owner promotes emitted nodes.
+- A discipline the surface demands that is not in `links_offered` is emitted, not dropped: append one JSON line (`fs_write` with `append:true`) to `.gm/lean-walk/new-nodes.jsonl`: `{id,label,book,author,kind:"principle",proposed_by:<node.id>,session,witness}`. `id` = upper-case slug of the book title. Refuse an `id` already in `nodes[]`; join that node instead. Never edit `skills/dream-rsi/gm-graph.json`; its owner promotes emitted nodes.
 - `.gm/lean-walk/` is gitignored runtime state: no commit, no push.
-- Evidence budget: the node file keeps verdict fields and pointers only. A bulky array (per-line rewrites, per-file match lists) moves to `.gm/lean-walk/<NODE>-<field>.json`, named by path in the node file. Node file stays under 4 KB.
+- Evidence budget: the node file keeps verdict fields and pointers only. A bulky array (per-line rewrites, per-file match lists) moves to `.gm/lean-walk/<NODE>-<field>.json`, named by path in the node file. Node file stays under 4 KB. Two visits of one node by different sessions leave two files; neither overwrites the other.
 
 ## Rules
 - A receipt is the hop's own. A hop that spawns a successor names the child session in `next:` and carries no child text. The orchestrator reads each receipt by the session it launched.
 - A principle already filed in this walk by another wave is merged by the orchestrator, never added again; the hop still lists and cites what it filed.
 - A hop is one named principle from the book "lean" (AnEntrypoint/lean), applied as work to every in-scope instance in one pass.
-- A hop lists the real pending rows for its surface, records a one-line action per row, nominates its successor from that list, never invents an id.
+- A hop reads the pending rows once at start inside one `gm_codemode` body: `prd-list {"status":"pending","limit":<n>}` filtered in code to the ids and subjects matching its principle or cause literal, returned as that list only. It records a one-line action per row, nominates its successor from that list, never invents an id. Before each add it checks only that id (step 5).
 - Every hop runs as its own subagent with its own SESSION_ID. The orchestrator never performs hop work inline; it dispatches and reads the receipt.
 - Choose the next node by project fit and diversity.
 - Back-verify: traversal is unfinished until earlier applied nodes a later change may affect are re-checked.
@@ -67,7 +69,8 @@ PRINCIPLE: <id>; SURFACE: <path>; WITNESS: <audit dispatch id>
 CHANGED: <file, dispatch id> | none
 ACH: <n> hypotheses; leader <id>; rejected <ids>; probe <dispatch id>; flips-on <evidence> | none, no cause asserted
 ROWS: <n>: <ids>
-EMITTED: .gm/lean-walk/<NODE>.json [+1 new node]
+EMITTED: .gm/lean-walk/<NODE>.<SESSION>.json [+1 new node]
+CYCLE: <dream-replay-cycle dispatch id>; status <replayed|deferred, reason>
 NEED: <one sentence>
 next: <id>; depth=<n+1> | none, <reason>
 ```

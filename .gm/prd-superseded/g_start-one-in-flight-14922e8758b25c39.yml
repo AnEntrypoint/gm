@@ -1,4 +1,0 @@
-id: G_START-ONE-IN-FLIGHT
-title: 'G_START gate: 252 pending PRD rows across 50 families (one family per lean node) -- reduce to one in-flight plan: finish or abandon each family, mutable MUT-G_START-FAMILIES decides which'
-status: pending
-session_id: hop-G_START

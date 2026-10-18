@@ -1,6 +1,0 @@
-id: G_CONTRACT-spool-claim-key-session-prefix
-subject: 'The spool claim-key rule lives in prose: skills/gm/SKILL.md (''<N> MUST be <session_id>-<N>, never a bare integer'') and gm-config/prose/entry.md (SESSION_ID section: claims keyed by literal (verb, session_id-N), subagent ids derived as <parent_session_id>-sub<k>). The daemon should reject a bare-integer or unprefixed in-file name with a named error and mint subagent session ids itself; prose keeps only the outcome.'
-status: pending
-blockedBy:
-- G_CONTRACT-spool-claim-key-session-prefix-blocker-gm-drain-b-23
-session_id: gm-drain-b-23
