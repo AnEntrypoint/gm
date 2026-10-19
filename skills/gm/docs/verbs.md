@@ -314,6 +314,10 @@ so a pass that does not finish still advances the index and a further pass finis
 reply and the refusal carry the counters of the sync pass that ran, as `key=value` plus at most two deferred file names;
 the full `deferred_set` lives in the sync report, never in the message.
 
+### `code_index`: chunk and embed one file for the code index
+
+`code_index` is the dataflow pipeline `code_index` in `rs-plugkit/crates/plugkit-core/src/dataflow.rs`. Its three steps run in order: `chunk` (plugin `gm`, verb `extract_chunks`, fed from the request fields `path`, `source` and `lang`), `embed_batch` (plugin `bert`, over the chunk bodies), and `cache_write` (plugin `libsql`, verb `upsert_chunks`, which stores the chunks with their embeddings). The chunk step parses through the `treesitter` plugin, so the host links no tree-sitter grammar.
+
 ## Memory
 
 Agents do not call these verbs for memory. Memory is the flat-file store that `skills/gm/SKILL.md` (Invariants) describes; the verbs stay in the code.
@@ -332,7 +336,7 @@ Agents do not call these verbs for memory. Memory is the flat-file store that `s
 
 ## Execution
 
-`exec_js` (aliases `nodejs`, `javascript`, `node`, `js`) and every language stem
+`exec_js` (aliases `nodejs`, `javascript`, `typescript`, `node`, `js`) and every language stem
 `bash`, `sh`, `shell`, `zsh`, `python`, `py`, `powershell`, `ps1`, `ssh`, `go`, `rust`, `c`, `cpp`,
 `java`, `deno`, take a **plain text body**, never a JSON object. Pass the source as `raw_body`. The
 typed `timeoutMs` field is the enforced wall-clock limit for the child, in milliseconds (default
@@ -403,6 +407,8 @@ deletes the older ones. A reply that wrote a spill names this rule in `spill_ret
 `git_commit` takes `{"message":"<commit message>", "paths":["<path>", ...]}`. `message` is required. Its subject (the first line) must be 50 characters or fewer; a 51-or-longer subject is refused before the commit runs with a message naming the 50-character limit. `paths` (or `files`) limits the commit to those paths: the commit takes only the named paths and every other staged entry stays staged. Without `paths`, a commit refuses when a blanket stage would sweep other dirty entries (`error_code` `blanket_stage_refused`, with `would_stage_count`); `allow_whole_index:true` accepts the whole index explicitly, and a commit that takes the whole index reports `whole_index_commit` with `staged_paths`. The reply carries `committed`, `sha` and `summary`, plus `excluded` (the pathspecs the commit withheld: `.agentplug*` and each other dirty path the `paths` do not cover; at most 5 shown) with `excluded_count` for the full count, and `excluded_but_dirty` (the withheld dirty entries as `status path` rows, at most 50) with `excluded_but_dirty_count`.
 
 `git_commit {"patch":"<unified diff against HEAD>", "message":"..."}` or `git_commit {"hunks":{"<path>":[<1-based hunk numbers>]}, "message":"..."}` commits only the named hunks, numbered as in `git diff HEAD -- <path>`. Pass exactly one of `patch` or `hunks`; both at once, or either with `paths`, `files`, `add_all`, `amend` or `allow_empty`, is refused. The commit is built in a temporary index, so the work tree is not touched; the reply carries `index_synced` and `index_left_staged` for the real index, and `selected_hunks`. `git_add` stages whole paths only and refuses `hunks`. An unscoped `git_commit` also carries the paths this session staged earlier with `git_add` (recorded under kv namespace `git_add_staged`, still staged) rather than only the blanket index.
+
+`claim_only:true` on `git_commit` (with a non-empty `paths` array) only claims those paths in `.gm/lane-claims.json` for `SESSION_ID` and does not commit or publish.
 
 Commit identity: the author is the gm config `git.author_name` and `git.author_email`, or the built-in default when unset. A body `author_name` or `author_email` that differs from that identity is refused (`commit_author_override_refusal`), so an agent cannot override the author. Each git invocation that writes a commit (`git_commit`, `git_pull`, `git_merge`, `git_cherry_pick`, `git_revert`, reland) passes the identity per invocation as `-c user.*`, `-c author.*` and `-c committer.*`; the repository's own config is neither read nor written.
 
