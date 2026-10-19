@@ -103,7 +103,38 @@ A hook that blocks a tool call throws an error carrying an imperative instructio
 
 ## Spool ABI
 
-Write `in/<lang>/<N>.<ext>` for language stems, `in/<verb>/<N>.txt` for orchestrator + host verbs. Write each in-file atomically: body to a sibling temp name, then rename it to the final name. The watcher claims only final names with an accepted extension (`accepted_spool_request_extensions` in `agentplug/crates/agentplug-runner/src/daemon/claim_dispatch.rs`), so a temp name is never claimed. The watcher streams `out/<verb>-<N>.{out,err}` and finalizes `out/<verb>-<N>.json` synchronously -- read it once it lands. Parallelize independent dispatches in one message; serialize dependents at the data-flow edge. Every git operation routes through the git verbs (`git_status`/`git_finalize`/`git_push`/...), never a raw `git` shell body (gated `deviation.bash-git-bypass`); route every other capability through its verb.
+Write `in/<lang>/<N>.<ext>` for language stems, `in/<verb>/<N>.txt` for orchestrator + host verbs. Write each in-file atomically: body to a sibling temp name, then rename it to the final name. The watcher claims only final names with an accepted extension (`accepted_spool_request_extensions` in `agentplug/crates/agentplug-runner/src/daemon/claim_dispatch.rs`), so a temp name is never claimed. The watcher streams `out/<verb>-<N>.{out,err}` and finalizes `out/<verb>-<N>.json` synchronously -- read it once it lands. Parallelize independent dispatches in one message; serialize dependents at the data-flow edge. Every git operation routes through the git verbs (`git_status`/`git_finalize`/`git_push`/...), never a raw `git` shell body (gated `deviation.bash-git-bypass`); route every other capability through its verb. Git substitutions:
+
+| Raw git verb | Use instead |
+|---|---|
+| `git status` | `git_status` |
+| `git log` | `git_log` |
+| `git diff` | `git_diff` |
+| `git show` | `git_show` |
+| `git branch` | `git_branch` |
+| `git branch -d` | `git_branch_delete` |
+| `git add` | `git_add` |
+| `git commit` | `git_commit` |
+| `git commit --amend` | `git_amend` |
+| `git add` + `git commit` + `git push` | `git_finalize {message, paths}` |
+| `git push` | `git_push` |
+| `git pull` | `git_pull` |
+| `git fetch` | `git_fetch` |
+| `git remote` | `git_remote` |
+| `git checkout`, `git switch`, `git restore <paths>` | `git_checkout` |
+| `git merge` | `git_merge` |
+| `git merge --abort` | `git_merge_abort` |
+| `git rm` | `git_rm` |
+| `git revert` | `git_revert` |
+| `git reset` | `git_reset` |
+| `git cherry-pick` | `git_cherry_pick` |
+| `git stash` | `git_stash` |
+| `git stash pop` | `git_stash_pop` |
+| `git stash drop` | `git_stash_drop` |
+| `git stash list` | `git_stash_list` |
+| `git init` | `git_init` |
+| `git submodule add` | `git_submodule_add` |
+| `git submodule update` | `git_submodule_update` |
 
 ## SESSION_ID
 
