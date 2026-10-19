@@ -724,6 +724,8 @@ Pass the `instruction_hash`/`policy_hash` of the prior `instruction` response ba
 
 `dream-round` takes `baseline_policy_id` and `candidate_policy_ids`, evaluates the baseline and each candidate policy over the recorded observations, and returns the rankings sorted by `score`, highest first.
 
+`dream-strategy-propose` takes no body fields beyond the envelope. It reads the owner session's newest automatic replay, sets `proposed_selection` from that replay's `selection` (`continue-current-exploration` when none is named), writes `.gm/dream-rsi/<session_id>/proposed-strategy.json` and answers `kind: strategy-proposal` with `owner_session_id`, `proposed_selection`, `replay` and `path`. It only proposes: nothing deploys the selection. The session id must be safe (ASCII letters, digits, `-`, `_` or `.`, at most 256 bytes, never `.` or `..`), and the verb runs only in the wasm guest.
+
 `dream-replay-cycle` takes `session_id` (the owner, which must equal the dispatch session) and optional `cycle_id` and `after_dispatch_id`. It replays the owner's newest verified observation and answers `status: replayed`. When nothing verified is new it answers `status: deferred` with `reason` `no-verified-observations` or `no-new-verified-observations`.
 
 `dream-replay` takes `world_ids` (array of sealed world ids), `baseline_policy_id`, `policy_ids` (array), and `beta1` and `beta2` (non-negative numbers). It refuses a body carrying `worlds`, since worlds are never caller-supplied. Its witness chain, in order, each step naming the field the next step reads:
@@ -770,6 +772,8 @@ the floor while rows are open is refused with `error_code` `floor_gate_denied` w
 `wait {"ms":N}` idles the caller for N milliseconds. It is a `command`, since it dispatches a host `exec_js` call. `ms` takes a positive integer from 1 to 600000 (10 minutes, echoed as `max_ms` in a refusal), so a longer incident wait is one dispatch, not a chain. The body also takes `durationMs` (already milliseconds), or `seconds` (also `secs`, `durationSeconds`, `durationSecs`), scaled by 1000 to milliseconds. A wait that completes replies `completed:true` and `waited_ms:N`. Any other value is refused with `error_code:"invalid_args"` and `max_ms:600000`, and echoes the value as `received` when one is supplied.
 
 `sleep {"ms":N}` shares `wait`'s handler (the orchestrator maps both names to `wait::handle`), so it takes the same body, enforces the same range and returns the same reply and has the same query or command class.
+
+`wait-for-task {"id":"<task id>","timeout_ms":N}` blocks until the background task leaves `running`, then answers its output. `id` is required (`task_id`, or a bare string body, also names it). `timeout_ms` defaults to 100000 and must be an integer from 1 to 100000; at the deadline the reply carries `timed_out: true` instead of the output.
 
 `learn` is retired.
 
