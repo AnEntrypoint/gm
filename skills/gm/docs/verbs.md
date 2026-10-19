@@ -167,6 +167,8 @@ to the nested repository and is not in this worktree's own `git ls-files`. When 
 over it is **not** a finding for them, so re-dispatch with `refresh: true`, or scope `path` to the worktree, before concluding
 a name is absent.
 
+A zero is only exhaustive when the reply says `exhaustive: true`; a root-wide scan over a checkout with stale submodules or unlisted nested worktrees never says so, so scope `path` to the worktree before concluding a name is absent.
+
 Example:
 
 ```
