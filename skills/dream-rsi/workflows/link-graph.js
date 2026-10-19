@@ -1,7 +1,7 @@
 export const meta = {
   name: 'link-graph',
   description: 'Propose inbound handover edges for unreachable graph nodes, judge each one, and apply the accepted edges to the merged graph',
-  whenToUse: 'After the gm and dada graphs are merged, or whenever check-discipline-tree reports unreached nodes',
+  whenToUse: 'After gm-graph.json is merged, or whenever check-discipline-tree reports unreached nodes',
   phases: [
     { title: 'Propose', detail: 'one proposer per cluster links each unreached node from a reachable node' },
     { title: 'Judge', detail: 'one judge per cluster accepts only handovers that read as true' },
