@@ -159,4 +159,59 @@ const [, drainedDuring] = await parallel([
   () => drainLane(),
 ])
 const drainedAfter = await drainLane()
-return { drained: drainedDuring + drainedAfter }
+
+const VALIDATE = {
+  type: 'object',
+  properties: {
+    shas: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          repo: { type: 'string' },
+          sha: { type: 'string' },
+          job: { type: 'string' },
+          group: { type: 'string' },
+          detail: { type: 'string' },
+        },
+        required: ['repo', 'sha'],
+      },
+    },
+  },
+  required: ['shas'],
+}
+
+phase('Validate')
+const scan = await agent(
+  `${GM} Session id: validate-scan. cwd /workspace/gm.
+
+For each repo (gm, rs-plugkit, agentplug, gm-mcp), list the commits pushed to main in the last six hours (git_log) and read ci-status for each sha. Each red job is one item {repo, sha, job, group (the failing file, from ci_log failed_only), detail}. Do NOT edit or commit anything. Return {shas: items}.`,
+  { phase: 'Validate', label: 'validation scan', schema: VALIDATE }
+)
+const red = scan && scan.shas ? scan.shas : []
+log(`validate: ${red.length} red jobs in the committed batch`)
+
+const byFile = {}
+for (const item of red) {
+  const key = `${item.repo}:${item.group || item.sha}`
+  if (!byFile[key]) byFile[key] = []
+  byFile[key].push(item)
+}
+const fixed = await parallel(
+  Object.keys(byFile).map(key => async () => {
+    const lane = []
+    for (const item of byFile[key]) {
+      lane.push(await agent(
+        `${GM} Session id: validate-fix-${item.repo}-${item.sha.slice(0, 8)}. cwd /workspace/gm. Read /workspace/gm/AGENTS.md and the AGENTS.md of the repo you edit.
+
+Red job ${item.job || '(see ci-status)'} on ${item.sha} in ${item.repo}: ${item.detail || ''}. Reproduce it from ci_log failed_only. Fix the cause in ${item.group || 'the failing file'}. Commit by explicit path (subject at most 50 characters, change only, no attribution trailer), after check-staged-secrets prints RESULT: PASS. git_pull, git_push by full sha, then ci-status for the new sha. Up to three attempts. Return {key: "${item.repo}:${item.sha}", status: "resolved" or "blocked", commit, ci: "green" or "red" or "none", note}.`,
+        { phase: 'Validate', label: `fix ${item.repo} ${item.sha.slice(0, 8)}`, schema: RESULT }
+      ))
+    }
+    return lane
+  })
+)
+const outcomes = fixed.flat().filter(Boolean)
+log(`validate done: ${outcomes.filter(o => o.status === 'resolved').length} fixed, ${outcomes.filter(o => o.status !== 'resolved').length} still red`)
+
+return { drained: drainedDuring + drainedAfter, validated: red.length, fixed: outcomes.filter(o => o.status === 'resolved').length }
