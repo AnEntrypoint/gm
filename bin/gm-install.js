@@ -72,9 +72,30 @@ async function vendorMcpBundle() {
   }
   const tmp = `${MCP_BUNDLE_PATH}.tmp.${process.pid}`
   fs.writeFileSync(tmp, body)
-  fs.renameSync(tmp, MCP_BUNDLE_PATH)
+  renameReplacing(tmp, MCP_BUNDLE_PATH)
   const transition = deployedHash ? `stale ${deployedHash} -> ${freshHash}` : `new ${freshHash}`
   console.log(`vendored gm-mcp server -> ${MCP_BUNDLE_PATH} (${body.length} bytes, ${transition}); the bundle then keeps itself current`)
+}
+
+const RENAME_RETRY_CODES = new Set(['EPERM', 'EBUSY', 'EACCES'])
+const RENAME_RETRY_DELAYS_MS = [50, 100, 200, 400, 800, 1600]
+
+// Windows refuses to replace a target a reader or antivirus holds open (EPERM/EBUSY); retry with
+// bounded backoff, then drop the temp file and fail naming the path and the error code.
+function renameReplacing(tmp, dest) {
+  const sleepBuf = new Int32Array(new SharedArrayBuffer(4))
+  for (let attempt = 0; ; attempt++) {
+    try {
+      fs.renameSync(tmp, dest)
+      return
+    } catch (err) {
+      if (!RENAME_RETRY_CODES.has(err.code) || attempt >= RENAME_RETRY_DELAYS_MS.length) {
+        try { fs.rmSync(tmp, { force: true }) } catch {}
+        throw new Error(`rename ${tmp} -> ${dest} failed (${err.code || err.message}) after ${attempt + 1} attempt(s); temp file removed`)
+      }
+      Atomics.wait(sleepBuf, 0, 0, RENAME_RETRY_DELAYS_MS[attempt])
+    }
+  }
 }
 
 function sha256Short(content) {
@@ -192,7 +213,7 @@ function recordMode(root, name, mode, source) {
   lines.push(`${name} ${mode} ${ts} ${source}`)
   const tmp = `${file}.tmp.${process.pid}`
   fs.writeFileSync(tmp, `# gm skill install modes: <name> <linked|copied|refused> <iso-ts> <source>\n${lines.join('\n')}\n`)
-  fs.renameSync(tmp, file)
+  renameReplacing(tmp, file)
 }
 
 function resolvesIntoSource(dir, root, name) {
@@ -377,7 +398,7 @@ function readJson(file) {
 function writeJsonAtomic(file, value) {
   const tmp = `${file}.tmp.${process.pid}`
   fs.writeFileSync(tmp, JSON.stringify(value, null, 2) + '\n')
-  fs.renameSync(tmp, file)
+  renameReplacing(tmp, file)
 }
 
 function needsGmServerUpdate(servers, wanted, create) {
@@ -489,7 +510,7 @@ function registerCodex(configPath) {
   if (newText !== text) {
     const tmp = `${configPath}.tmp.${process.pid}`
     fs.writeFileSync(tmp, newText)
-    fs.renameSync(tmp, configPath)
+    renameReplacing(tmp, configPath)
     console.log(`registered gm MCP server in ${configPath}${replaced > 0 ? ` (replaced ${replaced} existing gm table${replaced === 1 ? '' : 's'})` : ''}`)
   }
 }
