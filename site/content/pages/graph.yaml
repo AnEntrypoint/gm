@@ -1,6 +1,6 @@
 id: graph
 title: graph
-description: "the hop graph, the catalogue of principles that gm-hop walks, generated from skills/dream-rsi/gm-graph.json: 146 nodes, 130 principles, 15 provenance concerns and no phase nodes, 362 edges; every node is its own anchor and links to every node it touches."
+description: "the hop graph, the catalogue of principles that gm-hop walks, generated from skills/dream-rsi/gm-graph.json: 498 nodes, 418 principles, 29 provenance concerns and no phase nodes, 1210 edges; every node is its own anchor and links to every node it touches."
 subtitle: "Each principle, gate and tension in the hop graph, with every edge in both directions."
 layout: article
 source: ../docs/graph.html
