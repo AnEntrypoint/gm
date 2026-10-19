@@ -129,9 +129,11 @@ function samePath(a, b) {
 function linkDir(src, dest) {
   if (IS_WINDOWS) {
     try {
-      fs.symlinkSync(src, dest, 'junction')
+      fs.symlinkSync(path.resolve(src), dest, 'junction')
       return 'junction'
-    } catch {}
+    } catch (err) {
+      console.log(`junction ${dest} => ${src} failed (${err.code || err.message}); copying instead`)
+    }
     return null
   }
   try {
