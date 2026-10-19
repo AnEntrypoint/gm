@@ -7,9 +7,6 @@ on:
       - 'site/**'
       - 'docs/**'
       - 'skills/dream-rsi/gm-graph.json'
-      - 'skills/dream-rsi/dada-graph.json'
-      - 'docs/dada-graph.html'
-      - 'docs/api/dada-graph.json'
       - 'scripts/build-graph-page.mjs'
       - 'flatspace.config.mjs'
       - '.github/workflows/gh-pages.yml'
@@ -53,7 +50,7 @@ jobs:
         run: npx flatspace@1.0.20 build
 
       - name: Verify the graph page is in the build output
-        run: test -f dist/graph/index.html && test -f dist/dada-graph/index.html
+        run: test -f dist/graph/index.html
 
       - name: Copy docs API data into dist
         run: |
