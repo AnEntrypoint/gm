@@ -101,12 +101,16 @@ jobs:
         with:
           tool: cargo-binstall
       - name: Install cargo-audit 0.22.2 from its release binary
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: cargo binstall --no-confirm cargo-audit@0.22.2
       - name: No vulnerable crate in rs-plugkit or agentplug Cargo.lock
         run: |
           cargo audit --file rs-plugkit/Cargo.lock
           cargo audit --file agentplug/Cargo.lock
       - name: Rust crate licenses match the deny.toml allowlist
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           cargo binstall --no-confirm cargo-deny@0.18.4
           node scripts/check-crate-licenses.mjs
