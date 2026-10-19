@@ -11,12 +11,10 @@ const root = process.argv[2]
 const readJson = (rel) => JSON.parse(fs.readFileSync(path.join(root, rel), 'utf8'));
 const fsm = readJson('gm-config/fsm/graph.json');
 const hop = readJson('skills/dream-rsi/gm-graph.json');
-const dada = hop;
 
 const graphs = [
   { label: 'state machine', nodes: fsm.states, edges: fsm.edges, predicates: fsm.gates.length },
   { label: 'hop graph', nodes: hop.nodes, edges: hop.edges },
-  { label: 'DADA graph', nodes: dada.nodes, edges: dada.edges },
 ].map((g) => ({
   predicates: g.predicates ?? null,
   label: g.label,
@@ -33,7 +31,6 @@ const graphs = [
 const labelsFor = {
   'state machine': /state machine|gm-config\/fsm\/graph\.json/i,
   'hop graph': /hop graph|gm-graph\.json/i,
-  'DADA graph': /DADA graph|dada-graph/i,
 };
 const sentenceAround = (line, index) => {
   const starts = [line.lastIndexOf('. ', index), line.lastIndexOf('; ', index)];
@@ -110,7 +107,7 @@ for (const rel of files) {
 }
 
 for (const v of violations) console.log(`[FAIL] ${v}`);
-console.log(`checked ${checked} count claim(s) in ${files.length} file(s) against the state machine, hop and DADA graphs`);
+console.log(`checked ${checked} count claim(s) in ${files.length} file(s) against the state machine and hop graph`);
 if (violations.length) {
   console.log(`RESULT: FAIL (${violations.length} stale count(s))`);
   process.exit(1);
