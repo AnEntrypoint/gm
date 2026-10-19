@@ -11,7 +11,7 @@ gm is a witnessed-execution project: a real command and its real output is worth
 PRs are welcome, but every file in this repo follows a few hard rules that a PR will be reshaped to match rather than merged as-is:
 
 - No comments in shipped code. Self-explanatory naming and structure replace them.
-- No test files, no test suites (`*.test.*`, `*.spec.*`, `test/`, `__tests__/`). Verification is running the real thing and reading the real output.
+- No new test files or test suites in a PR (`*.test.*`, `*.spec.*`, `test/`, `__tests__/`); the existing `gm-mcp/test/` suite stays. Verification is running the real thing and reading the real output.
 - No decorative Unicode or emoji, plain ASCII text only.
 - No stub, placeholder, or mock implementation ships -- a scaffold is acceptable only when it genuinely delegates to real behavior.
 
