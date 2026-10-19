@@ -39,6 +39,7 @@ const DRAIN_ROWS = {
         required: ['id'],
       },
     },
+    error: { type: 'string' },
   },
   required: ['rows'],
 }
@@ -97,7 +98,7 @@ Return {id, status: "resolved" or "blocked", commit, witness_dispatch_id, note}.
 
 const listPrompt = (attempted) => `${GM} Session id: drain-list. cwd ${ROOT}.
 
-List every OPEN PRD row with prd-list {"status":"pending"}. Exclude any row that is blocked (prd-block), and any row whose note names a blocker that has not changed since its last attempt. Skip these ids (already attempted this run): ${JSON.stringify(attempted)}. For each remaining row read its description and return {id, repo, group, subject}: repo from its "[repo: ...]" prefix (default gm), group from its "[group: ...]" prefix (default the row id). Return {rows}. Do not edit anything.`
+List every OPEN PRD row by paging: prd-list {"status":"pending","limit":50,"offset":N} from offset 0, advancing N by 50 until a page returns no rows. Never request more than 50 rows per call: the full list exceeds the tool-result cap and fails. If any page errors, return {rows: [], error: "<the error>"} rather than an empty list. Exclude any row that is blocked (prd-block), and any row whose note names a blocker that has not changed since its last attempt. Skip these ids (already attempted this run): ${JSON.stringify(attempted)}. For each remaining row read its description and return {id, repo, group, subject}: repo from its "[repo: ...]" prefix (default gm), group from its "[group: ...]" prefix (default the row id). Return {rows}. Do not edit anything.`
 
 const fixPrompt = (row) => `${GM} Session id: fix-${row.id}. cwd ${ROOT}. Read ${ROOT}/AGENTS.md and the AGENTS.md of the repo you edit.
 
@@ -162,6 +163,7 @@ const drainLane = async () => {
     round++
     phase('Drain')
     const listed = await agent(listPrompt(attempted), { phase: 'Drain', label: `list ${round}`, schema: DRAIN_ROWS })
+    if (listed && listed.error) log(`drain list ${round} failed: ${listed.error}`)
     const rows = (listed && listed.rows ? listed.rows : []).filter(r => !attempted.includes(r.id))
     if (rows.length === 0) break
     log(`drain round ${round}: ${rows.length} open rows`)
