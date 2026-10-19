@@ -10,21 +10,20 @@ Pool and publish rules. Shared rules (autonomy, git identity, CI read, collision
 `ceiling` = host spawn limit (N in a refusal), not a throughput target or memory budget. `live` = ListAgents count. `floor` = min(2, ceiling). `shortfall` = live < floor with independent work open.
 
 ## Standing pair (every run)
-Every `/gm` run starts one Workflow, `skills/gm/workflows/standing-pair.js`, in its first turn, before any other fan-out. It has two lanes that run concurrently:
-- **Rollout lane:** each round, lenses file findings as PRD rows with their file group, then one lane per file group resolves unknowns with live runs, edits, commits by explicit path, pushes and closes its rows with a live witness. Rounds repeat until a round files nothing. Rollout never waits on tests or CI.
-- **Drain lane:** lists open rows, groups them by file, fixes each with a live witness, publishes, and follows CI for each pushed sha. It works rows as the rollout files them. It ends when its list is empty. A run that closes no row is stalled: the dominant blocker is written to `.gm/witness-log.md`, and the next run waits for that blocker to change. After the rollout finishes, one final drain runs, so rows filed late are closed. No lane spends agents waiting.
-Both lanes write one file group at a time, so the drain lane waits for a rollout lane that holds the same file. There is no agent-count cap; the run ends only when both lanes have nothing left. A row attempted in a run is not retried in that run. The drain lane skips blocked rows, and a blocked row is retried only after its blocker changes. The rollout files a row only when no open row names the same file and symptom.
+Every `/gm` run starts one Workflow, `skills/gm/workflows/standing-pair.js`, in its first turn, before any other fan-out. Three phases, in this order of precedence:
+1. **Drain, concurrently.** Lenses file findings as PRD rows. One lane per file group resolves each row's unknowns with live runs, edits, commits by explicit path, pushes, and closes the row with a live witness. Rows drain as they are filed. Nothing in this phase waits on CI or tests.
+2. **Validate and fix, after commit.** Once a batch of rollout work is committed and pushed, the test and CI follow-up validates that batch: it reads `ci-status` for each pushed sha, debugs red jobs with `ci_log failed_only`, and fixes them on their file groups. Red jobs become rows the next drain takes. Validation never runs on uncommitted work.
+3. **Traverse, when nearly drained.** When open rows fall under 20 and slots are free, node traversal (gm-hop over `skills/dream-rsi/gm-graph.json`) fills those slots, alongside phases 1 and 2. Each hop files its rows with `prd-add`. Traversal never takes a slot that drain or validation needs.
+A row attempted in a run is not retried in that run; a blocked row is retried only after its blocker changes. A run that closes no row is stalled: the dominant blocker is written to `.gm/witness-log.md`, and the next run waits for that blocker to change. There is no agent-count cap. A run ends when no open row, no red sha and no unvisited node remains.
 
 ## Core loop
 Repeat until a full pass adds no work:
-1. **Roll out.** Finders file rows; one lane per file group resolves unknowns, edits, publishes and closes its rows. Nothing waits on CI or tests.
-2. **Test and fix, concurrently.** The CI/test follow-up reads every pushed sha. Each red job becomes a fix on its file group, after any rollout lane holding that file finishes its publish.
+1. **Drain concurrently.** Rollout lanes resolve, commit and publish open rows as they are filed.
+2. **Validate after commit.** The test follow-up validates each committed batch and turns red jobs into fix rows on their file groups.
    - Sweep first: one subagent per failing job log, changed file group, stub/TODO. Each returns located `path:line` and counts only; each finding becomes a row. Fix only after the sweep completes.
    - One fix executor per independent file group; fixes sharing a file run in sequence in one executor. One commit per group, never per finding.
-3. **Plan.** End each pass with `prd-add` rows (file ownership, acceptance).
+3. **Traverse when nearly drained.** At fewer than 20 open rows, graph hops fill free slots and file new rows. They run alongside steps 1 and 2.
 4. Repeat from 1.
-
-Node traversal (gm-hop; `skills/dream-rsi/gm-graph.json`) feeds step 3 only when `prd-list {"status":"pending"}` is under 20 (Parallelism, graph 2). It never interrupts rollout or the test follow-up.
 
 ## Parallelism: graph workflows
 - Fan-out unit: a `Workflow` graph. As many as open work needs; parallel where independent, sequential where a result feeds the next.
@@ -41,7 +40,7 @@ Node traversal (gm-hop; `skills/dream-rsi/gm-graph.json`) feeds step 3 only when
 
 ## Publish first, test concurrently
 - Publish first: each rollout lane publishes its commit without waiting on CI or browser tests. Tests, CI and CD run in the concurrent test follow-up, never as a gate on rollout.
-- Fix concurrently: the test follow-up sweeps failing CI logs as they appear, groups failures by cause and file, and hands each group to the lane that owns that file, or to a new fix lane when no lane holds it. Only one writer per file group at a time.
+- Fix after commit: the test follow-up validates committed batches, groups failures by cause and file, and hands each group to the lane that owns that file, or to a new fix lane when no lane holds it. Only one writer per file group at a time.
 - Witness: a rollout lane closes its own row with a live witness dispatch on its pushed sha. The test follow-up reads CI for that sha; a red job reopens the row with a `prd-add` fix row, which the next pass takes.
 - No `cargo`, `go build`, `go vet`, `go test`, or local compile unless the user turns builds on. Check that setting first (gm config or served instruction); a local run is allowed when it is on. Witnesses are live dispatches, which never wait on CI. The test follow-up reads `ci-status` for each pushed sha. A failing sha becomes a fix slice, never a pause.
 - Writers are light; writers are not limited. Only browser arms and per-run servers cause thrash (Lane budget). Many writers may run when each owns separate files.
