@@ -34,12 +34,11 @@ gate_ok() {
 }
 
 wait_for_tip() {
-  local deadline active
-  deadline=$(( $(date +%s) + ${BUMP_WAIT_SECONDS:-900} ))
+  local active
   while :; do
     active=$(gh api --paginate "repos/AnEntrypoint/$1/actions/runs?head_sha=$2&per_page=100" --jq '.workflow_runs[] | select(.name != "Deploy GH Pages") | select(.status != "completed") | .id' | awk 'END{print NR}') || return 2
     [ "$active" = "0" ] && return 0
-    [ "$(date +%s)" -ge "$deadline" ] && return 1
+    [ "$(date +%s)" -ge "$wait_deadline" ] && return 1
     sleep 20
   done
 }
@@ -61,6 +60,7 @@ newest_green() {
 
 stage_pins() {
   local path repo sha tip reason cur rc
+  wait_deadline=$(( $(date +%s) + ${BUMP_WAIT_SECONDS:-600} ))
   STAGED=0
   BODY=""
   local targets
