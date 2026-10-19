@@ -46,7 +46,7 @@ jobs:
         with:
           submodules: false
       - name: check out only the submodules the contracts read
-        run: git submodule update --init -- rs-plugkit agentplug gm-mcp
+        run: git submodule update --init --depth 1 -- rs-plugkit agentplug gm-mcp
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: 20
