@@ -16,16 +16,6 @@ const GRAPHS = [
     lede: '<p class="lede">The hop graph is the map a hop follows. A <strong>principle</strong> is one discipline from a named book or author. A <strong>hop</strong> applies one principle to one part of the code, then follows an edge to the next principle. <strong>Gates</strong> guard the edges they sit on, and <strong>tensions</strong> stay open until they are resolved. There are no phases: every node is independent, and the walk is a graph walk with many paths. This file is separate from the state machine that enforces the walk, <code>gm-config/fsm/graph.json</code>, which has its own states and gates.</p>',
     guardCaption: 'Gates guard moves; terminals end a walk',
   },
-  {
-    source: 'skills/dream-rsi/dada-graph.json',
-    page: 'docs/dada-graph.html',
-    api: 'docs/api/dada-graph.json',
-    pageSource: 'site/content/pages/dada-graph.yaml',
-    title: 'DADA graph',
-    subject: 'the full DADA graph',
-    lede: '<p class="lede">The DADA graph uses the same node layout as the gm graph. A <strong>principle</strong> is one discipline from a named book or author, a <strong>tension</strong> stays open until it is resolved, <strong>gates</strong> guard the edges they sit on, and <strong>terminals</strong> mark the end nodes. Each edge is <strong>forward</strong> or a <strong>back-reference</strong>, and most edges carry a condition.</p>',
-    guardCaption: 'Gates guard edges; terminals mark the end nodes',
-  },
 ]
 
 const HOPS = 'hop'
