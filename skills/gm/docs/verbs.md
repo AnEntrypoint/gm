@@ -370,13 +370,15 @@ Query verbs:
 
 Command verbs (every other git verb):
 
-- `git_push`, `git_add`, `git_commit`, `git_amend`, `git_rewrite_authors`, `git_finalize`, `git_fetch`, `git_pull`, `git_init`, `git_branch`, `git_branch_delete`, `git_checkout`, `git_merge`, `git_merge_abort`, `git_stash`, `git_stash_pop`, `git_stash_drop`, `git_rm`, `git_revert`, `git_reset`, `git_submodule_add`, `git_worktree_add`, `git_worktree_remove`, `git_worktree_prune`
+- `git_push`, `git_add`, `git_commit`, `git_amend`, `git_rewrite_authors`, `git_finalize`, `git_fetch`, `git_pull`, `git_init`, `git_branch`, `git_branch_delete`, `git_checkout`, `git_merge`, `git_merge_abort`, `git_stash`, `git_stash_pop`, `git_stash_drop`, `git_rm`, `git_revert`, `git_reset`, `git_submodule_add`, `git_submodule_update`, `git_worktree_add`, `git_worktree_remove`, `git_worktree_prune`
 
 Single accepted shape for `git_commit` and `git_push`: each key is accepted at the top level or under `body`, and both forms reach the same commit or push path. `git_commit {message, paths?, files?, allow_whole_index?, author_name?, author_email?}`: `message` is the commit subject plus optional body, subject at most 50 characters. `git_push {rev?, remote?, branch?, force?, recover_remote_moved?, allow_foreign_commits?}`: only `rev` is top-level; the other push fields are body-only. `{"message":"..."}` and `{"body":{"message":"..."}}` are the same call; a key named in both takes its value from `body`. A key outside a verb's list is refused, naming the declared fields.
 
 `git_finalize {message, paths?, files?, allow_whole_index?, untrack?, recover_remote_moved?, source_ref?, rev?, author_name?, author_email?}` stages and commits in one step. `untrack: true` with only tracked `.agentplug*` paths commits their index removal and leaves the files on disk.
 
 `git_submodule_add {url, path, branch?}` adds a submodule: `git submodule add [-b <branch>] -- <url> <path>`. `url` must be `https://` with a host (no `user:password@`, no whitespace); `path` is relative to the repo root with no `.`, `..` or `.git` segment; `branch` (optional) holds only letters, digits, `.`, `_`, `-`, `/` and does not start with `-`. The same protected-path gate as `git_add` applies to `path`. It stages `.gitmodules` and the gitlink, and answers `{path, url, branch, staged}`. It does not commit: publish with `git_commit` then `git_push`.
+
+`git_submodule_update {path, recursive?}` initialises and checks out a submodule at the parent gitlink: `git submodule update --init [--recursive] -- <path>`. `path` is the submodule path relative to the repo root, and `recursive: true` also initialises nested submodules. The same protected-path gate as `git_add` applies to `path`. It moves only the submodule checkout; it does not stage or commit the parent, which already records the gitlink.
 
 `ci-status {sha?|rev?, github_repo?, ignore_workflows?}` answers `run_status` (`success`, `failure`, `pending`, `unknown`, `no_applicable_workflow`), `failing_jobs` as `[{name, workflow, job_id, run_id, log_url}]`, `pending_count` (jobs not yet completed) and `job_counts`; a run that failed with no failing job (a stale in-progress run) is listed under `failing_runs`. Pass a `failing_jobs` entry's `job_id` straight to `ci-log`.
 
