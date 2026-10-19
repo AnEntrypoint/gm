@@ -81,9 +81,10 @@ jobs:
             exit 1
           fi
           candidates=$(echo "$tags" | sed 1d)
-          echo "dry run: $REPO keeps $keep; would prune:"
+          echo "$REPO keeps $keep; pruning:"
           echo "$candidates"
           for tag in $candidates; do
+            echo "deleting $tag"
             gh release delete "$tag" --repo "$REPO" --cleanup-tag --yes
             echo "pruned $tag"
           done
