@@ -48,7 +48,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-      - run: git submodule update --init --depth 1 gm-config rs-plugkit rs-codeinsight rs-search agentplug agentplug-bert agentplug-libsql agentplug-treesitter agentplug-crux
+      - run: git submodule update --init --depth 1 gm-config
       - id: gm-mcp-pin
         run: echo "sha=$(git ls-tree HEAD gm-mcp | awk '{print $3}')" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
