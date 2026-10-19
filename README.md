@@ -109,7 +109,7 @@ gm reads served prose from three tiers, in order: the project vendored file in `
 
 ## Memory
 
-`.gm/memories/<key>.md` is the durable, per-project memory store, with a lean cache index in `.gm/gm.db`. The generated `.gm/memories/mem-*.md` recall memos are rebuilt from `gm.db` and are not tracked by git. `recall` ranks memories by meaning: each memory is stored with an embedding (a vector that places text by meaning), and the score blends similarity with recency. The recency half-life is 30 days. Embeddings are computed on the machine by the shared `agentplug-bert` plugin.
+`.gm/memories/<key>.md` is the durable, per-project memory store, with a lean cache index in `.gm/gm.db`. The generated `.gm/memories/mem-*.md` recall memos are rebuilt from `gm.db` and are not tracked by git. `search_with_recency` (`rs-plugkit/crates/plugkit-core/src/rssearch_vectors.rs`) ranks memories by meaning: each memory is stored with an embedding (a vector that places text by meaning), and the score blends similarity with recency. The recency half-life is 30 days. Embeddings are computed on the machine by the shared `agentplug-bert` plugin.
 
 ## Developing gm itself
 
