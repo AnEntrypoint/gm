@@ -102,6 +102,7 @@ Launch only advertised ids. A slot stays empty only when no pending row and no u
 ## Heartbeat
 - Every brief first writes `.gm/pool/<session>.live` (`session`, `row`, `start` ISO-8601 UTC; a hop's `row` is its surface path) and deletes it on finish. A surface-only heartbeat is `malformed_heartbeats`.
 - Skip any id held by a live row before launch. Older than 5 minutes = stale.
+- A lane silent for 30 minutes must be checked by its output file size and a landed-commit check, then stopped and relaunched narrower if nothing has landed.
 
 ## Shortfall and FAILURE
 - Two restarts per walk. Repeated shortfall means these rules are wrong: dispatch `instruction`, correct this skill, restart at tick 1.
