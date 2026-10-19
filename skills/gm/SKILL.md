@@ -64,7 +64,7 @@ These hold in any project, with or without its own AGENTS.md. A project file may
 - **Git.** Main only: no branches, worktrees or side checkouts. Commit by explicit path, after `scripts/check-staged-secrets.mjs` prints `RESULT: PASS`. Push by full sha. Read CI for every pushed sha; red CI becomes a fix on the owning file group. Every push runs CI, and no push carries `[skip ci]`: pushes are how updates cascade to every machine, so they must run promptly. Local iteration may skip CI only by an explicit local choice, never by default. Pins follow `main` tips.
 - **Browser.** Use `crawl` / `chrome` with the `cdp` engine only. One browser per project: calls queue on its lease, and the window stays open 15 minutes after the last holder or waiter. Never install or run puppeteer, playwright, chromium or any headless browser.
 - **Transport.** No listening ports and no admin rights. The stdio relay talks to the runner over the spool, on Windows, macOS and Linux alike. Spool writes are atomic (temp name, then rename).
-- **Environment.** No `CLAUDE_*` variables, hooks, settings files or harness-only features: gm works from the skill and its verbs alone.
+- **Environment.** No host-specific environment variables, hooks, settings files or harness-only features: gm works from the skill and its verbs alone.
 - **Tools.** Code questions go to `callers` / `impact` and then `codesearch`. Git and search use gm verbs, not Bash `git`, `grep` or `find`.
 - **Builds.** No local compile, build or test unless the build setting is on. CI runs the builds; the test follow-up reads them.
 - **Dream loop.** Dream-RSI only proposes. Nothing redeploys a strategy unattended.
@@ -88,7 +88,7 @@ Live response (gate denial, residual, `instruction`/`phase-status`, `entry` pros
 - Batch independent dispatches in one tool-call block; one row per `prd-add`/`mutable-add` call. `{"items":[...]}` is rejected.
 - Search-ban exception: spool response JSON (`.gm/exec-spool/out/*.json`), `.status.json`, `.turn-summary.json`, this session's tool-output files: `Read` by exact path. `Glob`, `Grep`, `find`, `grep`, `rg` stay off for content search. Sole sanctioned glob: `'.gm/exec-spool/in/**/*.txt'`.
 - A `codesearch` with no `path`, `glob` or `path_glob`, or one you would repeat, runs in a subagent returning only located `path:line`. The orchestrator keeps locations, never match text.
-- `transition` response's `phase_label` is internal, never a `Skill()` name; the entered phase's served prose is its only instruction. Host-level `Skill()` calls: initial `/gm` load and terminal `Skill(skill="gm-continue")` only.
+- `transition` response's `phase_label` is internal, never a skill-load name; the entered phase's served prose is its only instruction. Host-level skill loads: initial `/gm` load and the terminal load of the `gm-continue` skill only.
 - Token austerity: signal only, no narration or hedging. PowerShell input UTF-8 without BOM. First-turn body `{"prompt":"<user request>"}`; later `{}`. SESSION_ID in every body. Never edit one file twice in a block.
 - Every `Agent`/`Task` prompt opens with the brick-wall opener, no exception, and carries its own SESSION_ID. Parallelism: 1c. SESSION_ID minting: served `instruction` prose, "Subagent fan-out".
 
@@ -100,10 +100,10 @@ Live response (gate denial, residual, `instruction`/`phase-status`, `entry` pros
 The dispatch layer arrives with each phase's response: scope-discovery-as-fixed-point, multi-session and multi-agent fan-out, shared-transform mapping review, large-finding-set partition-once at SPECIFY; scheduled housekeeping and memory-file writes for unknowns at DECIDE. Served prose is authoritative.
 
 ## 1c. Routing
-- Main thread: `Skill(skill="gm-orchestrate")`. Parallelism = graph workflows, until zero pending rows and every node traversed.
-- Node hop: `Skill(skill="gm-hop", args='{"principle":"<name>","surface":"<path>","session":"<SESSION_ID>"}')`. One principle, one surface, one receipt.
-- PRD row: `Skill(skill="gm-prd", args="row=<id>; session=<SESSION_ID>")`. Nine stages, one row per run.
-- Terminal: `Skill(skill="gm-continue")` once the phase is terminal and `prd_pending` is 0. At most two `gm-continue` calls per turn: a turn that has spent both starts the next run instead of calling it again.
+- Main thread: the `gm-orchestrate` skill. Parallelism = graph workflows, until zero pending rows and every node traversed.
+- Node hop: the `gm-hop` skill with `{"principle":"<name>","surface":"<path>","session":"<SESSION_ID>"}`. One principle, one surface, one receipt.
+- PRD row: the `gm-prd` skill with `row=<id>; session=<SESSION_ID>`. Nine stages, one row per run.
+- Terminal: the `gm-continue` skill once the phase is terminal and `prd_pending` is 0. At most two `gm-continue` calls per turn: a turn that has spent both starts the next run instead of calling it again.
 
 ## 1d. Units
 Hop = one principle (a book's discipline) over one surface. PRD row = one run. Both count against gm-orchestrate ticks.
