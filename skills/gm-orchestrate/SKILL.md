@@ -154,7 +154,7 @@ Launch only advertised ids. A slot stays empty only when no pending row and no u
 - Target setup: one shared, HMR-capable dev server and client. Browser captures and probes attach to it and reuse it (page reload, or an HMR module edit). Never boot a new server and bundle per run.
 - One browser arm at a time, pool-wide. Browser work queues behind `gpulock`. `gpulock` serialises the GPU adapter only: it does not serialise CPU, memory or disk, and it is not a machine-wide limit. Node-only and non-GPU work continues while an arm waits.
 - A dropped connection is answered by restarting the lane (Connectivity restarts). Thrash is answered by fewer browser arms and shared servers. Neither is answered by a concurrency cap.
-- No extra checkouts. the recursive tree listing `gh api repos/<owner>/<repo>/git/trees/<remote sha>?recursive=1`, read-only, is the sanctioned clean base (gm, READ questions).
+- No extra checkouts. The recursive tree listing `gh api repos/<owner>/<repo>/git/trees/<remote sha>?recursive=1`, read-only, is the sanctioned clean base (gm, READ questions).
 - Publish on the first passing witness: time-box a lane to its witness, resolve, publish, keep going.
 
 ## Fan-out
