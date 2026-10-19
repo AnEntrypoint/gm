@@ -6,7 +6,7 @@ echo "== watcher"; "$here/runner-status.sh" "$PWD" || rc=1
 echo "== submodule pins"; "$here/check-pins.sh" | grep -v "^ok" || echo "all pins published"
 [ "${PIPESTATUS[0]}" = 0 ] || rc=1
 echo "== repo hygiene (AGENTS.md budget, BOM, decorative glyphs)"; node "$here/../check-repo-hygiene.mjs" "$PWD" || rc=1
-echo "== wasm build home (informational; build-wasm.sh falls back to /tmp homes)"
+echo "== wasm build home (informational; build-wasm.sh falls back to OS temp directory homes)"
 ch=${CARGO_HOME:-$HOME/.cargo}
 if mkdir -p "$ch" 2>/dev/null && touch "$ch/.doctor-probe.$$" 2>/dev/null && rm -f "$ch/.doctor-probe.$$"; then echo "CARGO_HOME $ch writable"; else echo "CARGO_HOME $ch not writable: use scripts/triage/build-wasm.sh"; fi
 rustup target list --installed 2>/dev/null | grep -qx wasm32-wasip1 && echo "wasm32-wasip1 installed" || echo "wasm32-wasip1 not installed under default RUSTUP_HOME: build-wasm.sh installs it"

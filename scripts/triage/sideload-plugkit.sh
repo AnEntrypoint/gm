@@ -7,6 +7,7 @@
 # restores it. --run executes <cmd> while the build is live and exits with its status.
 # Env: GM_LANE names the scratch dir (default lane-<pid>); SIDELOAD_LOCK_WAIT_S (default 900).
 set -euo pipefail
+os_tmp=${TMPDIR:-$(dirname "$(mktemp -u)")}
 
 gm_root=$(cd "$(dirname "$0")/../.." && pwd -P)
 src="$gm_root/rs-plugkit"
@@ -52,7 +53,7 @@ if ! { mkdir -p "$cargo_home" 2>/dev/null && [ -w "$cargo_home" ]; }; then
 fi
 if ! rustup target list --installed 2>/dev/null | grep -qx wasm32-wasip1; then
   rustup_home=${RUSTUP_HOME:-$HOME/.rustup}
-  export RUSTUP_HOME="/tmp/rustup-$(id -u)"
+  export RUSTUP_HOME="$os_tmp/rustup-$(id -u)"
   echo "sideload-plugkit: wasm32-wasip1 is not installed under $rustup_home; using $RUSTUP_HOME" >&2
   if [ ! -d "$RUSTUP_HOME" ] && [ -d "$rustup_home" ]; then
     cp -a "$rustup_home" "$RUSTUP_HOME"
