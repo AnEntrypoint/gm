@@ -235,6 +235,7 @@ skills/gm/.gm/
 find1-*/
 # PRD and mutable logs are runtime state read from disk; never tracked
 .gm/mutables-log.jsonl
+.gm/expansion-audit.jsonl
 .gm/agentplug-runner.log
 .gm/hyg-candidate/
 
