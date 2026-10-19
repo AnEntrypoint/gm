@@ -6,6 +6,8 @@ import { resolve } from 'node:path';
 
 const manifests = ['rs-plugkit/Cargo.toml', 'agentplug/Cargo.toml'];
 const failures = [];
+const probe = spawnSync('cargo', ['deny', '--version'], { encoding: 'utf8' });
+if (probe.error || probe.status !== 0) { console.error('cargo-deny is not installed (cargo deny --version exited ' + (probe.status ?? probe.error?.message) + '): install with cargo install cargo-deny'); process.exit(1); }
 for (const manifest of manifests) {
   const run = spawnSync('cargo', ['deny', '--format', 'json', '--manifest-path', manifest, 'check', '--config', resolve('deny.toml'), 'licenses'], { encoding: 'utf8', maxBuffer: 1 << 28 });
   if (run.error) { console.error('cargo-deny did not start: ' + run.error.message); process.exit(1); }
@@ -18,7 +20,7 @@ for (const manifest of manifests) {
     const name = fields.graphs?.[0]?.Krate?.name ?? '(unknown crate)';
     failures.push(manifest + ': ' + name + ': ' + (fields.code ?? 'error') + ': ' + fields.message);
   }
-  if (run.status !== 0 && !(run.stderr || '').includes('"type":"diagnostic"')) failures.push(manifest + ': cargo-deny exited ' + run.status + ' with no diagnostics');
+  if (run.status !== 0 && !(run.stderr || '').includes('"type":"diagnostic"')) failures.push(manifest + ': cargo-deny exited ' + run.status + ' with no diagnostics: ' + (run.stderr || '').split('\n').find(Boolean));
 }
 for (const failure of failures) console.log('FAIL ' + failure);
 console.log(failures.length === 0 ? 'RESULT: PASS' : 'RESULT: FAIL');
