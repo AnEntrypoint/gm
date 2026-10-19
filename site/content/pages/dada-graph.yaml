@@ -1,6 +1,0 @@
-id: dada-graph
-title: DADA graph
-description: "the full DADA graph, generated from skills/dream-rsi/dada-graph.json: 366 nodes, 302 principles, 16 provenance concerns and no phase nodes, 625 edges; every node is its own anchor and links to every node it touches."
-subtitle: "Each principle, gate and tension in the DADA graph, with every edge in both directions."
-layout: article
-source: ../docs/dada-graph.html
