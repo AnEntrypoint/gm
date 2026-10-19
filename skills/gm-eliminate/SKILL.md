@@ -12,7 +12,7 @@ Input: `row=<id>; session=<SESSION_ID>`. Output: `.gm/receipts/<row>/03-eliminat
 3. Mark the unknown known when observed matches expected. If a run reveals a new unknown, record it with `mutable-add` and go on with it next.
 4. An unknown that a probe can answer is never handed to a blocker unprobed. If a check cannot run here, record the exact reason with its dispatch id, then file the blocker.
 5. Repeat until no unknown is open. Then load `gm-edit`.
-   `Skill(skill="gm-edit", args="row=<id>; session=<SESSION_ID>")`
+   the `gm-edit` skill with `row=<id>; session=<SESSION_ID>`
 
 ## Finish the work
 
