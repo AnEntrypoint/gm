@@ -12,7 +12,7 @@ on:
     paths-ignore: ['docs/**']
 
 concurrency:
-  group: gm-process-leak-${{ github.ref }}
+  group: gm-process-leak-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
   cancel-in-progress: true
 
 jobs:

@@ -31,7 +31,7 @@ on:
       - gm-mcp/src/**
 
 concurrency:
-  group: gm-contracts-${{ github.ref }}
+  group: gm-contracts-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
   cancel-in-progress: true
 
 jobs:
