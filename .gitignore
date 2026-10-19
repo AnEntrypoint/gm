@@ -235,3 +235,6 @@ find1-*/
 .gm/mutables-log.jsonl
 .gm/agentplug-runner.log
 .gm/hyg-candidate/
+
+# repro scratch directories: runtime reproduction workspaces, never source
+.gm/repro-1018/
