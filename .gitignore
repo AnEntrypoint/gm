@@ -109,9 +109,9 @@ tmp/
 # per row under .gm/prd/ and .gm/mutables/, so two lanes can never lose each
 # other's row to one whole-file rewrite, and a resolved row's material moves
 # into .gm/prd-log.jsonl / .gm/mutables-log.jsonl, append-only and hash-chained.
-# The row folders are the same transient class as the files they replace; the three
-# chained logs (.gm/prd-log.jsonl, .gm/mutables-log.jsonl, .gm/expansion-audit.jsonl)
-# are the durable record and are NOT ignored.
+# The row folders are the same transient class as the files they replace. The chained
+# logs (.gm/prd-log.jsonl, .gm/mutables-log.jsonl) are local per-machine state and are
+# ignored too (see the .gm/prd-log.jsonl and .gm/mutables-log.jsonl entries below).
 .gm/prd.yml
 .gm/mutables.yml
 .gm/prd/
