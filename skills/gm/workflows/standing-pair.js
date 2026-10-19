@@ -122,7 +122,7 @@ const rolloutLane = async () => {
   return true
 }
 
-const drainLane = async (rolloutDone) => {
+const drainLane = async () => {
   const attempted = []
   let round = 0
   while (true) {
@@ -130,11 +130,7 @@ const drainLane = async (rolloutDone) => {
     phase('Drain')
     const listed = await agent(listPrompt(attempted), { phase: 'Drain', label: `list ${round}`, schema: ROWS })
     const rows = (listed && listed.rows ? listed.rows : []).filter(r => !attempted.includes(r.id))
-    if (rows.length === 0) {
-      if (rolloutDone()) break
-      await agent(waitPrompt, { phase: 'Drain', label: 'wait' })
-      continue
-    }
+    if (rows.length === 0) break
     log(`drain round ${round}: ${rows.length} open rows`)
     const byGroup = {}
     for (const row of rows) {
@@ -155,13 +151,12 @@ const drainLane = async (rolloutDone) => {
   return attempted.length
 }
 
-let rolloutDone = false
-const [, drained] = await parallel([
+const [, drainedDuring] = await parallel([
   async () => {
     await rolloutLane()
-    rolloutDone = true
     return true
   },
-  () => drainLane(() => rolloutDone),
+  () => drainLane(),
 ])
-return { drained }
+const drainedAfter = await drainLane()
+return { drained: drainedDuring + drainedAfter }
