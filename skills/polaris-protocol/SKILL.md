@@ -31,7 +31,7 @@ Discoverable: each node is a standalone `SKILL.md` inside its own `skills/<skill
 
 ## The state machine
 
-A skill tree can behave like a state machine. Each transition is an explicit skill dispatch (modeled on the `gm` skill's `transition`/`Skill(skill=...)` pattern): you do not narrate the next step, you **dispatch** it.
+A skill tree can behave like a state machine. Each transition is an explicit skill dispatch (modeled on the `gm` skill's `transition`/`skill load` pattern): you do not narrate the next step, you **dispatch** it.
 
 ### States
 
@@ -47,14 +47,14 @@ A skill tree can behave like a state machine. Each transition is an explicit ski
 ### Transitions (each is a dispatch)
 
 ```
-UNCOMPILED --Skill(polaris-goal-compiler)--> COMPILED
+UNCOMPILED --load `polaris-goal-compiler`--> COMPILED
 
-COMPILED --complex atom? Skill(fifth-dimension-engine)--> SHOOTING
+COMPILED --complex atom? load `fifth-dimension-engine`--> SHOOTING
 COMPILED --routine atom? execute directly---------------> EXECUTING
 
 SHOOTING --inspect route, then carry it out-----------> EXECUTING
 
-EXECUTING --Skill(wfgy-method) drift + gate check----> VERIFYING
+EXECUTING --load `wfgy-method` drift + gate check----> VERIFYING
 
 VERIFYING --gate pass + claim ceiling honored--------> CLOSED
 VERIFYING --gate fail / drift --> BBCR checkpoint ----> COMPILED (re-compile or re-shoot)
@@ -74,11 +74,11 @@ CLOSED --next atom------------------------------------> COMPILED
 
 ## How to run a task through the tree
 
-1. You are at `UNCOMPILED`. Dispatch `Skill(skill="polaris-goal-compiler")`. It returns atoms, gates, and claim ceilings -> `COMPILED`.
+1. You are at `UNCOMPILED`. Dispatch the `polaris-goal-compiler` skill. It returns atoms, gates, and claim ceilings -> `COMPILED`.
 2. For each active atom: ask "complex or routine?"
    - **Routine** -> execute directly -> `VERIFYING`.
-   - **Complex** -> dispatch `Skill(skill="fifth-dimension-engine")` -> `SHOOTING` -> inspect the route -> `EXECUTING` -> `VERIFYING`.
-3. At `VERIFYING`, dispatch `Skill(skill="wfgy-method")` to check drift and apply the atom's verification gate.
+   - **Complex** -> dispatch the `fifth-dimension-engine` skill -> `SHOOTING` -> inspect the route -> `EXECUTING` -> `VERIFYING`.
+3. At `VERIFYING`, dispatch the `wfgy-method` skill to check drift and apply the atom's verification gate.
    - Pass + claim ceiling honored -> `CLOSED` -> next atom (back to `COMPILED`).
    - Fail or drift -> BBCR checkpoint, re-compile or re-shoot (back to `COMPILED`).
 4. When all atoms are `CLOSED`, the task is done -- and only then may you claim completion.
