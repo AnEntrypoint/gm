@@ -10,7 +10,6 @@ links:
       - { label: Rust crates,       href: "./crates/" }
       - { label: skills,       href: "./skills/" }
       - { label: hop graph,        href: "./graph/" }
-      - { label: DADA graph, href: "./dada-graph/" }
   - label: showcase and links
     group:
       - { label: showcase, href: "./made-with/" }
