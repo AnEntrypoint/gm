@@ -85,8 +85,8 @@ jobs:
           git config user.email "657315+lanmower@users.noreply.github.com"
           release_exists() {
             local err
-            if err=$(gh release view "$1" --repo AnEntrypoint/gm 2>&1 >/dev/null); then return 0; fi
-            if [ "$err" = "release not found" ]; then return 1; fi
+            if err=$(gh api "repos/AnEntrypoint/gm/releases/tags/$1" 2>&1 >/dev/null); then return 0; fi
+            if grep -q 'HTTP 404' <<<"$err"; then return 1; fi
             echo "::error::gh release view $1 failed (not a 404): $err" >&2
             exit 1
           }
@@ -153,8 +153,8 @@ jobs:
           set -e
           release_exists() {
             local err
-            if err=$(gh release view "$1" --repo AnEntrypoint/gm 2>&1 >/dev/null); then return 0; fi
-            if [ "$err" = "release not found" ]; then return 1; fi
+            if err=$(gh api "repos/AnEntrypoint/gm/releases/tags/$1" 2>&1 >/dev/null); then return 0; fi
+            if grep -q 'HTTP 404' <<<"$err"; then return 1; fi
             echo "::error::gh release view $1 failed (not a 404): $err" >&2
             exit 1
           }
