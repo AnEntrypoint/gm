@@ -1,4 +1,6 @@
 # Generated and vendored trees codesearch skips, read in addition to .gitignore.
 # .gm/ and rs-plugkit/.agentplug-kv/ are already dropped by the built-in gm_state_dir rule.
 rs-plugkit/target/
+rs-plugkit/ci-fix-wt/
+rs-plugkit/wasip3-fix-wt/
 vendor/
