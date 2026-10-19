@@ -1,7 +1,7 @@
 export const meta = {
   name: 'link-graph',
   description: 'Propose inbound handover edges for unreachable graph nodes, judge each one, and apply the accepted edges to the merged graph',
-  whenToUse: 'After the gm and dada graphs are merged, or whenever check-discipline-tree reports unreached nodes',
+  whenToUse: 'After gm-graph.json is merged, or whenever check-discipline-tree reports unreached nodes',
   phases: [
     { title: 'Propose', detail: 'one proposer per cluster links each unreached node from a reachable node' },
     { title: 'Judge', detail: 'one judge per cluster accepts only handovers that read as true' },
@@ -9,14 +9,15 @@ export const meta = {
   ],
 }
 
-const GRAPH = '/workspace/gm/skills/dream-rsi/gm-graph.json'
+const ROOT = process.cwd()
+const GRAPH = `${ROOT}/skills/dream-rsi/gm-graph.json`
 const CHECK = 'scripts/check-discipline-tree.mjs'
 const CLUSTERS = [
   'dada:STANCE', 'dada:RULES', 'dada:BREAK', 'dada:EXPRESS', 'dada:SYSTEM', 'dada:CANON', 'dada:CAT',
   'dada:REASON', 'dada:WELCOME', 'dada:CRITICS', 'dada:LENSES', 'dada:PANEL', 'dada:ADAPT', 'dada:AUTONOMY',
 ]
 
-const GM = 'Use the gm skill for this; code questions go to codeinsight (callers/impact) first, then codesearch, and Read only a located path. Use mcp__gm__gm_codemode (load via ToolSearch "select:mcp__gm__gm_codemode") for every verb; no Bash grep/find/git except node.'
+const GM = 'Use the gm skill for this; code questions go to codeinsight (callers/impact) first, then codesearch, and Read only a located path. Use the gm verb tool (gm_codemode, or the spool) for every verb; no Bash grep/find/git except node.'
 
 const EDGES = {
   type: 'object',
@@ -57,13 +58,13 @@ const VERDICTS = {
   required: ['verdicts'],
 }
 
-const proposePrompt = (cluster, retryTargets) => `${GM} Session id: link-propose-${cluster.replace(/[^A-Za-z0-9]+/g, '-')}. cwd /workspace/gm.
+const proposePrompt = (cluster, retryTargets) => `${GM} Session id: link-propose-${cluster.replace(/[^A-Za-z0-9]+/g, '-')}. cwd ${ROOT}.
 
 Read ${GRAPH} with exec_js (node fs, JSON.parse). Compute reachability from its entry_points by breadth-first search over edges. ${retryTargets ? `Only these unreached nodes need a link now: ${JSON.stringify(retryTargets)}.` : `Your unreached nodes are the principle-kind nodes whose provenance is ${cluster} and that the search does not reach.`}
 
 For each such node T, propose ONE inbound edge {from: R, to: T, kind: "forward", condition: C}. R must be a reachable principle node whose discipline genuinely hands over to T's discipline (a method that precedes, feeds or checks T's method). C is the rhetoric: one short handover sentence naming what R hands T and why, in the form "<verb phrase>" such as "checks persuasion with" or "names the target audience for". Both ids must exist in the graph. Do not propose self-edges. Return {edges: [{from, to, condition}]} and nothing else.`
 
-const judgePrompt = (cluster, edges) => `${GM} Session id: link-judge-${cluster.replace(/[^A-Za-z0-9]+/g, '-')}. cwd /workspace/gm.
+const judgePrompt = (cluster, edges) => `${GM} Session id: link-judge-${cluster.replace(/[^A-Za-z0-9]+/g, '-')}. cwd ${ROOT}.
 
 Read the labels of each endpoint in ${GRAPH} with exec_js. For each proposed edge below decide accept true only when: the source discipline genuinely precedes, feeds or checks the target discipline, AND the condition reads as a true handover sentence for that pair. Otherwise accept false with a one-line reason. Be strict: a link that is merely topical is rejected.
 
@@ -71,9 +72,9 @@ Proposed edges: ${JSON.stringify(edges)}
 
 Return {verdicts: [{from, to, accept, reason}]} covering every proposed edge.`
 
-const applyPrompt = (accepted) => `${GM} Session id: link-apply. cwd /workspace/gm.
+const applyPrompt = (accepted) => `${GM} Session id: link-apply. cwd ${ROOT}.
 
-Apply these accepted edges to ${GRAPH} with exec_js (node fs): append each {from, to, kind: "forward", condition} unless an edge with the same from, to and kind already exists; then recount edge_count, forward_edges and backreference_edges. Then run node ${CHECK} from /workspace/gm and report its RESULT line. Do not edit any other file.
+Apply these accepted edges to ${GRAPH} with exec_js (node fs): append each {from, to, kind: "forward", condition} unless an edge with the same from, to and kind already exists; then recount edge_count, forward_edges and backreference_edges. Then run node ${CHECK} from ${ROOT} and report its RESULT line. Do not edit any other file.
 
 Accepted edges: ${JSON.stringify(accepted)}
 

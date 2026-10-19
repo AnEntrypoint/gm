@@ -25,7 +25,7 @@ Through the MCP tool `gm_codemode`, the only tool the server registers. Each ver
 
 ```
 gm_codemode({ "code": "return await gm.codesearch({body: {query: \"kLinkQuantum\", mode: \"literal\", path: \"src\"}})",
-  "cwd": "C:/dev/proj" })
+  "cwd": "<project-root>" })
 ```
 
 Plain-text-body verbs take `raw_body` instead of `body` (see the "Execution" section below).
@@ -35,7 +35,7 @@ read `.gm/exec-spool/out/<verb>-<N>.json`. Make `N` `<session id>-<counter>`, ne
 
 The launch command for the spool watcher (`agentplug-runner spool`) is in `skills/gm/spool-adapter.md`, under its Starting the watcher heading.
 
-`cwd` selects the project. Without `cwd`, gm uses `GM_MCP_DEFAULT_CWD` or `CLAUDE_PROJECT_DIR`, else the process working directory when it is a git root, and refuses with `error: "cwd-required"` otherwise. gm resolves the
+`cwd` selects the project and is passed explicitly on every call. gm resolves the
 project root from it with `git rev-parse --show-toplevel`. A cwd outside any git
 repository is its own root. A body field `git_root_override` pins the root for any verb.
 
@@ -43,7 +43,7 @@ repository is its own root. A body field `git_root_override` pins the root for a
 subcommand, so a plain shell runs a verb without an MCP client or a daemon of its own.
 Search verbs also take a shorter command-line form: `gm codesearch literal <needle> --path <dir> --glob <glob>`. It builds `{"query","mode"}` plus `path`, with `--glob` as `path_glob`. The shorter form exists because a bare mode word such as `literal` is not a dispatch body. It applies to `grep`, `rg`, `codesearch`, `code_search` and `search` only.
 
-Inside `gm_codemode`, `gm.grep` and `gm.codesearch` are the functions on `gm` for the search verbs. `rg`, `code_search` and `search` are not functions on `gm`, and `gm.list()` does not list them.
+Inside `gm_codemode`, `gm.grep` and `gm.codesearch` are the functions on `gm` for the search verbs. `rg` is a served alias of `gm.grep`, and `code_search` and `search` are served aliases of `gm.codesearch`: `gm.list()` lists all five, and `gm.describe` resolves each.
 
 Any argument starting with `{` or `@`, and every non-search invocation, is forwarded untouched, so the launcher never reinterprets a real dispatch. `--cwd`, `--timeout` and `--no-ignore` stay dispatch flags, never body fields. `bin/gm` is exposed for `npm link` as `gm-dispatch`.
 
@@ -234,7 +234,7 @@ returned, `endLine`/`end`/`to` the last line returned, and `limit`/`count`/`line
 an end line. Accepted aliases, resolved in this order (the first pair with a key present wins):
 
 ```
-startLine / endLine     start / end (and start / count)     from / to     offset / limit     line / lines
+startLine / endLine, start_line / end_line     start / end (and start / count)     from / to     offset / limit     line / lines
 ```
 
 The `line` and `lines` aliases name a start line and a line count, as `offset` and `limit` do.
@@ -243,7 +243,7 @@ So `{"startLine":1040,"endLine":1100}` and `{"from":1040,"to":1100}` and `{"offs
 return lines 1040-1100. A request `offset` is the 1-based first line, unlike the 0-based `offset` in a reply. An end line past the last line clamps, and the reply then carries
 `clamped_to_total_lines` plus `end_line_requested`; a start line past the last line is an error naming the
 file's line count, as is a start of 0, an end before the start, or any range on an empty file. A key that
-looks like a range but is not one of these (`start_line`, `endline`, `firstLine`, ...) is refused by name
+looks like a range but is not one of these (`endline`, `firstLine`, ...) is refused by name
 instead of being ignored: unknown range keys never silently return the whole file.
 
 Ranged replies add `total_lines`, `start_line`, `end_line`, `returned_lines`, `has_more_lines`,
@@ -352,7 +352,7 @@ exec_js {"raw_body":"console.log(process.version)\n","timeoutMs":30000}
 
 `exec_js` evaluates its raw body in a separate Node process, delivered on the child's stdin, so the body is never part of its command line and a process-listing query that filters command lines for a marker string cannot match the runner itself. It does not inject the caller's `tools` object, which means the `gm` functions that `gm_codemode` provides. A `.js` scratch file in a repo whose package.json says `"type": "module"` is ESM: give a scratch file that uses `require` the `.cjs` extension. To run a command, use Node's argument-safe API: `const { execFileSync } = require("node:child_process"); return execFileSync("command", ["arg"], { encoding: "utf8" });`.
 
-**Windows `cmd` inside a shell-stem body.** On Windows the `bash`/`sh`/`shell`/`zsh` stems run under MSYS2 git-bash, which rewrites every argument that starts with `/<letter>` into a drive path before the native program ever sees it: `node args.js /c` prints `["C:/"]`. So `cmd /c "node s.js < p.json"` reaches `cmd.exe` with no `/c` switch: `cmd` starts interactive, reads the dispatch's stdin (already drained, because the runner feeds the body in as `bash -c 'eval "$(cat)"'`), hits EOF and exits 0 printing nothing. That is argument rewriting, not a stdin failure: `< p.json` works the moment `cmd` gets its switch. Write `cmd //c "..."` (MSYS collapses `//c` back to `/c`), or `MSYS_NO_PATHCONV=1 cmd /c "..."` on that one line: the variable only has to be set, so `MSYS_NO_PATHCONV=0` also turns conversion off. Never export it over the whole body: it also stops `/tmp/x.js` reaching a native binary as a Windows path. `exec_js` is unaffected: `execFileSync("cmd", ["/c", "node s.js < p.json"])` and a bare `node s.js < p.json` return the same redirected stdin, and so is `powershell`, which is the stem to pick when the work needs cmd syntax.
+**Windows `cmd` inside a shell-stem body.** On Windows the `bash`/`sh`/`shell`/`zsh` stems run under MSYS2 git-bash, which rewrites every argument that starts with `/<letter>` into a drive path before the native program ever sees it: `node args.js /c` prints `["<drive>:/"]`. So `cmd /c "node s.js < p.json"` reaches `cmd.exe` with no `/c` switch: `cmd` starts interactive, reads the dispatch's stdin (already drained, because the runner feeds the body in as `bash -c 'eval "$(cat)"'`), hits EOF and exits 0 printing nothing. That is argument rewriting, not a stdin failure: `< p.json` works the moment `cmd` gets its switch. Write `cmd //c "..."` (MSYS collapses `//c` back to `/c`), or `MSYS_NO_PATHCONV=1 cmd /c "..."` on that one line: the variable only has to be set, so `MSYS_NO_PATHCONV=0` also turns conversion off. Never export it over the whole body: it also stops `<tmp>/x.js` reaching a native binary as a Windows path. `exec_js` is unaffected: `execFileSync("cmd", ["/c", "node s.js < p.json"])` and a bare `node s.js < p.json` return the same redirected stdin, and so is `powershell`, which is the stem to pick when the work needs cmd syntax.
 
 At `timeoutMs` expiry the child's whole process tree is killed, the dispatch slot is released, and the reply is `ok: false, timed_out: true, killed: true, error_code: exec_timeout` with `limit_ms` and the partial `stdout`/`stderr`; nothing keeps running afterwards. When `timeout_seconds` is omitted, the MCP wrapper polls for the body's `timeoutMs` budget plus 5 s (never less than 120 s), or for 120 s when the call sets no typed `timeoutMs`; an explicit `timeout_seconds` sets the requested polling budget and, when the call sets no typed `timeoutMs` of its own, also raises that native execution limit to the same budget minus 5 s, with that budget capped at the poll ceiling (600000 ms by default), then held between the 300000 ms exec default and the 900000 ms hard ceiling, so a caller asking to wait 400 s is not answered "still in flight" for work the daemon reaped at 300 s. Every MCP call caps applied polling at 600 s, the harness tool-call maximum (`GM_MCP_POLL_TIMEOUT_CEILING_MS` moves it). A polling timeout does not kill the child: it returns the dispatch's `task` id plus `poll_timeout_ceiling_ms`, `poll_timeout_cap_reason`, and for exec verbs `exec_limit_ms` and an `exec_child` sentence naming when the daemon will reap it. Pass that `task` id as `resume_task` to re-poll that dispatch without redispatching.
 
@@ -370,7 +370,9 @@ Query verbs:
 
 Command verbs (every other git verb):
 
-- `git_push`, `git_add`, `git_commit`, `git_amend`, `git_rewrite_authors`, `git_finalize`, `git_fetch`, `git_pull`, `git_init`, `git_branch`, `git_branch_delete`, `git_checkout`, `git_merge`, `git_merge_abort`, `git_stash`, `git_stash_pop`, `git_stash_drop`, `git_rm`, `git_revert`, `git_reset`, `git_submodule_add`, `git_submodule_update`, `git_worktree_add`, `git_worktree_remove`, `git_worktree_prune`
+- `git_push`, `git_add`, `git_commit`, `git_amend`, `git_rewrite_authors`, `git_finalize`, `git_fetch`, `git_pull`, `git_init`, `git_branch`, `git_branch_delete`, `git_checkout`, `git_merge`, `git_merge_abort`, `git_stash`, `git_stash_pop`, `git_stash_drop`, `git_rm`, `git_revert`, `git_cherry_pick`, `git_reset`, `git_submodule_add`, `git_submodule_update`, `git_worktree_add`, `git_worktree_remove`, `git_worktree_prune`
+
+`git_cherry_pick {rev}` (alias `ref`, at the top level or under `body`) takes the commit to pick. Without a revision it falls back to its own default or refuses, per `gm.describe`.
 
 Single accepted shape for `git_commit` and `git_push`: each key is accepted at the top level or under `body`, and both forms reach the same commit or push path. `git_commit {message, paths?, files?, allow_whole_index?, author_name?, author_email?}`: `message` is the commit subject plus optional body, subject at most 50 characters. `git_push {rev?, remote?, branch?, force?, recover_remote_moved?, allow_foreign_commits?}`: only `rev` is top-level; the other push fields are body-only. `{"message":"..."}` and `{"body":{"message":"..."}}` are the same call; a key named in both takes its value from `body`. A key outside a verb's list is refused, naming the declared fields.
 
@@ -416,7 +418,7 @@ deletes the older ones. A reply that wrote a spill names this rule in `spill_ret
 
 Commit identity: the author is the gm config `git.author_name` and `git.author_email`, or the built-in default when unset. A body `author_name` or `author_email` that differs from that identity is refused (`commit_author_override_refusal`), so an agent cannot override the author. Each git invocation that writes a commit (`git_commit`, `git_pull`, `git_merge`, `git_cherry_pick`, `git_revert`, reland) passes the identity per invocation as `-c user.*`, `-c author.*` and `-c committer.*`; the repository's own config is neither read nor written.
 
-`git_finalize` takes the same body, `{"message":"<commit message>", "paths":["<path>", ...]}`, and is the form that also pushes. Name `paths` every time: an unscoped `git_finalize` refuses with `error_code` `blanket_stage_refused` and `would_stage_count`, because a blanket commit carries another writer's in-flight edits with it. In a shared work tree it is not the default publish path: it commits locally and then refuses to push while the `push-dirty` scope check (`push_dirty_scope`) blocks, which is the normal state. The refused push leaves a local commit redundant with content already published and widens the gap between local HEAD, the work tree and remote main. Publish through the GitHub Git API instead (create blobs, a tree with `base_tree: <remote tip>`, a commit parented on that tip, PATCH `refs/heads/main` with `force` unset), then re-read `/repos/<owner>/<repo>/contents/<path>?ref=main` and verify each blob. A local commit whose push is refused is redundant, never unpushed work, and never erased by resetting `refs/heads/main` while lanes are running. `git_commit` with no `message` replies `error: message required` and commits nothing.
+`git_finalize` takes the same body, `{"message":"<commit message>", "paths":["<path>", ...]}`, and is the form that also pushes. Name `paths` every time: an unscoped `git_finalize` refuses with `error_code` `blanket_stage_refused` and `would_stage_count`, because a blanket commit carries another writer's in-flight edits with it. In a shared work tree it is not the default publish path: it commits locally and then refuses to push while the `push-dirty` scope check (`push_dirty_scope`) blocks, which is the normal state. The refused push leaves a local commit redundant with content already published and widens the gap between local HEAD, the work tree and remote main. Publish through the GitHub Git API instead (create blobs, a tree with `base_tree: <remote tip>`, a commit parented on that tip, PATCH `refs/heads/main` with `force` unset), then re-read `/repos/<owner>/<repo>/contents/<path>?ref=main` (when its `content` is empty or the file is over 1 MB, fall back to `gh api /repos/<owner>/<repo>/git/blobs/<sha>` with the `sha` from that contents reply) and verify each blob. A local commit whose push is refused is redundant, never unpushed work, and never erased by resetting `refs/heads/main` while lanes are running. `git_commit` with no `message` replies `error: message required` and commits nothing.
 
 `.agentplug*` is runtime state. `git_add`, `git_commit`, `git_finalize` and `git_reset` refuse any add or modify of it, and the refusal carries `reason`. A tracked `.agentplug*` path is untracked with `git_finalize {"untrack":true, "message":"<subject>", "paths":["<path>", ...]}`: every path must name a literal tracked `.agentplug*` entry (no glob, no `..`), and nothing else may be named. The commit removes those entries from the index only (`git rm --cached` semantics; the files stay on disk), built on a temp index so other staged entries are untouched, then pushes. Its reply carries `untracked`, `removed`, `sha`, `work_tree_touched:false` and `push_result`. An untracked or non-`.agentplug*` path is refused with `reason`.
 
@@ -443,22 +445,20 @@ worktree, side branch or scratch checkout to obtain a clean HEAD: every extra tr
 consolidation run (a merge back into the shared tree), and a publish from one merges back into the tree every other lane is writing. In a shared work tree that merge is exactly where lanes sweep each other's uncommitted edits.
 Isolation buys a clean HEAD and costs a merge; recovery is cheaper. A blocked lane re-reads the row
 or file, reapplies the change on current state and retries. A READ question is answered without a
-second checkout: one file with `gh api /repos/<owner>/<repo>/contents/<path>?ref=main`; a whole tree
-with `git archive <remote sha>` into a temp dir, used read-only and deleted afterwards.
+second checkout: one file with `gh api /repos/<owner>/<repo>/contents/<path>?ref=main` (when its `content` is empty or the file is over 1 MB, fall back to `gh api /repos/<owner>/<repo>/git/blobs/<sha>` with the `sha` from that contents reply); a whole tree
+with `gh api repos/<owner>/<repo>/git/trees/<remote sha>?recursive=1`, used read-only.
 
 The `git_worktree_*` verbs below are therefore a LAST RESORT with exactly one legitimate use: a
 read-only reproduction of another commit: bisecting a regression by running the red-capable
 command at a candidate sha, which is removed again with `git_worktree_remove`. Never edit, commit
-or publish from one, and never reach for one to get a clean HEAD. Where that use applies, these four
-are the sanctioned way to do it, and never raw `git worktree` through `bash`:
+or publish from one, and never reach for one to get a clean HEAD. Where that use applies, the detached forms below
+are the sanctioned way to do it, and never raw `git worktree` through `bash`. Branch-creating forms (`create:true` with a branch `ref`) are refused under main-only and are not shown:
 
 ```
-{"path":"C:/dev/proj-sweep","ref":"sweep/comments","create":true}                 git_worktree_add: -b <ref> <path> <HEAD>
-{"path":"/tmp/sweep","ref":"sweep/comments","rev":"5ba0bd4a","create":true}       git_worktree_add: -b <ref> <path> <rev>
-{"path":"/tmp/bisect","rev":"5ba0bd4ae70006e4fa0de8d95984559e7ccdf408"}           git_worktree_add: --detach <path> <rev>
-{"path":"/tmp/bisect","ref":"5ba0bd4a","create":true}                             git_worktree_add: --detach <path> <ref>
-{"path":"C:/dev/proj-sweep"}                                                      git_worktree_add: <path> <HEAD>
-{"path":"C:/dev/proj-sweep"}                                                      git_worktree_remove (force:true to drop a dirty one)
+{"path":"<tmp>/bisect","rev":"5ba0bd4ae70006e4fa0de8d95984559e7ccdf408"}           git_worktree_add: --detach <path> <rev>
+{"path":"<tmp>/bisect","ref":"5ba0bd4a","create":true}                             git_worktree_add: --detach <path> <ref>
+{"path":"<tmp>/proj-sweep"}                                                      git_worktree_add: <path> <HEAD>
+{"path":"<tmp>/proj-sweep"}                                                      git_worktree_remove (force:true to drop a dirty one)
 {}                                                                                git_worktree_list / git_worktree_prune
 ```
 
@@ -677,7 +677,7 @@ a walk is a graph walk with many distinct paths. The runtime word `phase` is the
 currently stand on: `policy.initial_phase` and `policy.terminal_phase` name two nodes. `skills/dream-rsi/gm-graph.json` is the authored catalogue the walk is measured
 against; its nodes carry a `provenance` field (`null` or a label such as `P1`).
 
-`phase-status`, `comment-audit`, `submodule-check`, `prd-list`, `mutable-list`, `task-list`, `task-output`, `discipline`, `discipline-audit`, `fsm-validate`, `predicates-md`, `capability-resolve`, `memory-namespace-audit`, `calculus-model-check`, `component-loader-hmr`, `dream-replay`, `dream-round` and `pool-brief` are `query`; `instruction`, `transition`, `transition-revert`, `residual-scan`, `claim-audit`, `prd-add`, `prd-resolve`, `prd-defer`, `mutable-add`, `mutable-resolve`, `mutable-defer`, `task-spawn`, `task-stop`, `memorize-backfill`, `memorize-continue`, `discipline-note`, `discipline-check-removal`, `fsm-vendor`, `fsm-propose-override`, `codeinsight-namespace-audit`, `component-loader-reconcile`, `dream-policy-register`, `dream-evaluator-receipt`, `dream-discovery-record`, `dream-world-seal`, `dream-replay-round`, `dream-replay-cycle`, `prd-block`, `prd-witness-request`, `expansion-audit`, `prd-repair`, `subagent-start`, `subagent-end`, `browser_lease_acquire` and `browser_lease_release` are `command`; `browser_lease_status` is `query`. `memorize-fire` and `auto-recall` keep the classes given with the memory verbs.
+`phase-status`, `comment-audit`, `submodule-check`, `prd-list`, `mutable-list`, `task-list`, `task-output`, `discipline`, `discipline-audit`, `fsm-validate`, `predicates-md`, `capability-resolve`, `calculus-model-check`, `component-loader-hmr`, `dream-replay`, `dream-round` and `pool-brief` are `query`; `instruction`, `transition`, `transition-revert`, `residual-scan`, `claim-audit`, `prd-add`, `prd-resolve`, `prd-defer`, `mutable-add`, `mutable-resolve`, `mutable-defer`, `task-spawn`, `task-stop`, `memorize-continue`, `discipline-note`, `discipline-check-removal`, `fsm-vendor`, `fsm-propose-override`, `codeinsight-namespace-audit`, `component-loader-reconcile`, `dream-policy-register`, `dream-evaluator-receipt`, `dream-discovery-record`, `dream-world-seal`, `dream-replay-round`, `dream-replay-cycle`, `prd-block`, `prd-witness-request`, `expansion-audit`, `prd-repair`, `subagent-start`, `subagent-end`, `browser_lease_acquire` and `browser_lease_release` are `command`; `browser_lease_status` is `query`. `memorize-fire` and `auto-recall` keep the classes given with the memory verbs.
 
 `prd-add` takes `id`, `subject`, `description`, `acceptance_criteria`, `witness_plan`, `status`, `blockedBy`, `overwrite`, `repair`, `owner` (the accountable lane or session; defaults to the filer's session_id), `disposition` (`open`, `accepted`, `rejected` or `deferred`; a reason belongs in `description`) and `recheck_by` (a session that re-checks the finding; must differ from `owner`), at the top level or inside `body` (the same call either way). `description` is the row's long-form prose: it is stored on the row as `description`, never as the dispatch body, so `{"subject":"<intent>","description":"<prose>"}` is the correct shape. `prd-list` brief rows carry the row's text in `title`, clamped to a fixed length. Full rows (`{"id":...}` or
 `{"full":true}`) return the stored row as `prd-add` wrote it. The brief `title` is the row's `title`, or its `subject` when it has no `title`. `status` matches a row's `status` string exactly. A row that `prd-add` writes without a `status` gets `pending`, and `pending` lists the folder rows whose status is `pending`.
@@ -771,7 +771,7 @@ the floor while rows are open is refused with `error_code` `floor_gate_denied` w
 
 ## Storage, cache and diagnostics
 
-`sql_list_dbs`, `sql_query`, `sql_serialize`, `cache_get`, `cache_stats`, `kv_get`, `kv_query`, `env_get`, `health`, `status`, `dataflow_resolve` and `tencentdb-compat-probe` are `query`; `sql_open`, `sql_close`, `sql_exec`, `sql_smoke`, `sql_deserialize`, `cache_put`, `cache_invalidate`, `kv_put`, `close`, `config_resolve`, `config-sync-now` and `tencentdb-memory-import` are `command`.
+`sql_list_dbs`, `sql_query`, `sql_serialize`, `cache_get`, `cache_stats`, `kv_get`, `kv_query`, `env_get`, `health`, `status` and `dataflow_resolve` are `query`; `sql_open`, `sql_close`, `sql_exec`, `sql_smoke`, `sql_deserialize`, `cache_put`, `cache_invalidate`, `kv_put`, `close`, `config_resolve` and `config-sync-now` are `command`.
 
 `wait {"ms":N}` idles the caller for N milliseconds. It is a `command`, since it dispatches a host `exec_js` call. `ms` takes a positive integer from 1 to 600000 (10 minutes, echoed as `max_ms` in a refusal), so a longer incident wait is one dispatch, not a chain. The body also takes `durationMs` (already milliseconds), or `seconds` (also `secs`, `durationSeconds`, `durationSecs`), scaled by 1000 to milliseconds. A wait that completes replies `completed:true` and `waited_ms:N`. Any other value is refused with `error_code:"invalid_args"` and `max_ms:600000`, and echoes the value as `received` when one is supplied.
 
@@ -794,9 +794,8 @@ The agentplug daemon, not the gm plugin, handles these:
 
 ## Getting a verb's own documentation
 
-Twelve verbs publish their parameter doc: pass `{"help": true}` as the body of `grep`, `codesearch`,
-`fs_read`, `fs_write`, `fs_readdir`, `fs_stat`, `prd-add`, `prd-resolve`, `codeinsight`, `comment-audit`, `git_merge_abort` or `git_worktree` and the reply is
-`{"help": true, "verb": ..., "parameters": "<doc>"}`. Any other verb answers `help` with an error that says no parameter documentation is published for it.
+Three verbs publish their parameter doc: pass `{"help": true}` as the body of `grep` (alias `rg`), `comment-audit` or `git_worktree` and the reply is
+`{"help": true, "verb": ..., "parameters": "<doc>"}`. The other verbs refuse the key as an undeclared body field (`undeclared key help`, naming their declared fields): `codesearch`, `fs_read`, `fs_write`, `fs_stat`, `fs_readdir`, `codeinsight`, `prd-add`, `prd-resolve`, `git_merge_abort`, `git_status` and `git_log`. `ci-status` with `help` answers `error_code: failed`.
 
 `gm.describe(name)` in `gm_codemode` answers `{name, verb, summary, docs, input_schema, body_schema}`. `summary` is the verb's table description (null when the table has none; `docs` then names the heading to search for). `input_schema` is `{shared: "dispatch_envelope"}` when the verb takes the common dispatch envelope (body, raw_body, session_id, cwd, timeout_seconds and the rest); that schema is returned once by `gm.help().dispatch_envelope`.
 
@@ -834,5 +833,5 @@ Every body field a verb declares, grouped by verb. The contract check (`scripts/
 - `task_spawn`: `code`, `permissionMode`
 - `instruction`: `full`
 - `prd_list`: `full`, `brief`
-- `prd_resolve`: `witness_evidence`, `witness_dispatch_id`, `witness_root`, `witness_exit_code`, `witness_output_sha256`, `witness_output_path`, `witness_ts`, `resolution`, `commit_sha`, `commit_comment`, `keep_status`. `witness_root` is the root the witness ran in: an absolute path under /config/tmp or the row's own root, whose `.gm/exec-spool/.dispatch-ledger.json` holds `witness_dispatch_id`; passed through unchanged.
+- `prd_resolve`: `witness_evidence`, `witness_dispatch_id`, `witness_root`, `witness_exit_code`, `witness_output_sha256`, `witness_output_path`, `witness_ts`, `resolution`, `commit_sha`, `commit_comment`, `keep_status`. `witness_root` is the root the witness ran in: an absolute path under the scratch directory or the row's own root, whose `.gm/exec-spool/.dispatch-ledger.json` holds `witness_dispatch_id`; passed through unchanged.
 - `expansion_audit`: `scope`, `rows_added`, `unknowns_added`
