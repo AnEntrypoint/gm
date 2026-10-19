@@ -301,7 +301,7 @@ trusting an empty reply on a checkout whose index has not been built.
 
 `codeinsight` runs `overview` unless its body names an `action` or `mode`. Passing `{"action":"..."}` or
 `{"mode":"..."}` selects any of `overview`, `status`, `sync`, `outline`, `find`, `callers`,
-`callees`, `impact`, `hotspots`, `orphans`. `outline` requires `path`; `find` requires `symbol`.
+`callees`, `impact`, `hotspots`, `orphans`. `outline` requires `path`; `find` requires `symbol`. The body takes no `query` key: a body with `query` is refused as an undeclared key. Text search goes through `codesearch`, not `codeinsight`.
 
 `codeinsight_index` builds the index: `{"root":"<path>"}` (`projectPath` is an alias),
 `{"max_files":500}` (default 500), `{"dead_code":true}`, `{"dead_code_limit":200}` (default 200).
