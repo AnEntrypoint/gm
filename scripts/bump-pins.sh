@@ -71,6 +71,7 @@ while :; do
 
   if git push -q origin HEAD:main; then
     echo "published $(git rev-parse --short HEAD) on attempt $attempt"
+    gh workflow run doc-drift.yml --ref main || echo "::warning::doc-drift dispatch failed; the advanced pins have no doc-drift witness"
     exit 0
   fi
 
