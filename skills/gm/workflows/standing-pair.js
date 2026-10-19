@@ -56,15 +56,16 @@ const RESULT = {
   required: ['id', 'status'],
 }
 
+const ROOT = process.cwd()
 const GM = 'Use the gm skill for this; code questions go to codeinsight (callers/impact) first, then codesearch, and Read only a located path. Use mcp__gm__gm_codemode (load via ToolSearch "select:mcp__gm__gm_codemode") for every verb; no Bash grep/find/git except node.'
 
-const finderPrompt = (lens, tag) => `${GM} Session id: find-${tag}. cwd /workspace/gm.
+const finderPrompt = (lens, tag) => `${GM} Session id: find-${tag}. cwd ${ROOT}.
 
 Lens: ${lens}.
 
-Look across /workspace/gm and its submodules (rs-plugkit, agentplug, gm-mcp) for defects, friction and improvements through this lens. Do NOT edit, commit or push. File one PRD row per finding with prd-add: id "find-${tag}-<short slug>" (prd-list first; skip ids that exist, and file nothing when an open row already names the same file and symptom: add the new evidence to that row instead), subject at most 70 characters, description starting "[repo: <gm|rs-plugkit|agentplug|gm-mcp>] [group: <repo-relative file the fix edits>]", then what is wrong, where (path:line), evidence (dispatch ids), and acceptance a live dispatch can witness. Return {rows: [{id, repo, group, subject}]} for the rows you filed (empty if none).`
+Look across ${ROOT} and its submodules (rs-plugkit, agentplug, gm-mcp) for defects, friction and improvements through this lens. Do NOT edit, commit or push. File one PRD row per finding with prd-add: id "find-${tag}-<short slug>" (prd-list first; skip ids that exist, and file nothing when an open row already names the same file and symptom: add the new evidence to that row instead), subject at most 70 characters, description starting "[repo: <gm|rs-plugkit|agentplug|gm-mcp>] [group: <repo-relative file the fix edits>]", then what is wrong, where (path:line), evidence (dispatch ids), and acceptance a live dispatch can witness. Return {rows: [{id, repo, group, subject}]} for the rows you filed (empty if none).`
 
-const editPrompt = (row) => `${GM} Session id: edit-${row.id}. cwd /workspace/gm. Read /workspace/gm/AGENTS.md and the AGENTS.md of the repo you edit.
+const editPrompt = (row) => `${GM} Session id: edit-${row.id}. cwd ${ROOT}. Read ${ROOT}/AGENTS.md and the AGENTS.md of the repo you edit.
 
 Row ${row.id} (repo ${row.repo}, group ${row.group}). Read it fully with prd-list {"id":"${row.id}"}.
 1. Write the unknowns it depends on and eliminate each with a live run; keep each dispatch id.
@@ -73,11 +74,11 @@ Row ${row.id} (repo ${row.repo}, group ${row.group}). Read it fully with prd-lis
 4. Close the row with prd-resolve {id, witness_evidence, witness_dispatch_id} citing a live dispatch that exercises the edit. Do NOT wait on CI; the drain lane reads CI for your sha.
 Return {id, status: "resolved" or "blocked", commit, witness_dispatch_id, note}. A blocked row names its exact blocker in note.`
 
-const listPrompt = (attempted) => `${GM} Session id: drain-list. cwd /workspace/gm.
+const listPrompt = (attempted) => `${GM} Session id: drain-list. cwd ${ROOT}.
 
 List every OPEN PRD row with prd-list {"status":"pending"}. Exclude any row that is blocked (prd-block), and any row whose note names a blocker that has not changed since its last attempt. Skip these ids (already attempted this run): ${JSON.stringify(attempted)}. For each remaining row read its description and return {id, repo, group, subject}: repo from its "[repo: ...]" prefix (default gm), group from its "[group: ...]" prefix (default the row id). Return {rows}. Do not edit anything.`
 
-const fixPrompt = (row) => `${GM} Session id: fix-${row.id}. cwd /workspace/gm. Read /workspace/gm/AGENTS.md and the AGENTS.md of the repo you edit.
+const fixPrompt = (row) => `${GM} Session id: fix-${row.id}. cwd ${ROOT}. Read ${ROOT}/AGENTS.md and the AGENTS.md of the repo you edit.
 
 Row ${row.id} (repo ${row.repo}, group ${row.group}): ${row.subject}. Read it fully with prd-list {"id":"${row.id}"}.
 1. Reproduce it live with a dispatch; keep the dispatch id.
@@ -183,7 +184,7 @@ const VALIDATE = {
 
 phase('Validate')
 const scan = await agent(
-  `${GM} Session id: validate-scan. cwd /workspace/gm.
+  `${GM} Session id: validate-scan. cwd ${ROOT}.
 
 For each repo (gm, rs-plugkit, agentplug, gm-mcp), list the commits pushed to main in the last six hours (git_log) and read ci-status for each sha. Each red job is one item {repo, sha, job, group (the failing file, from ci_log failed_only), detail}. Do NOT edit or commit anything. Return {shas: items}.`,
   { phase: 'Validate', label: 'validation scan', schema: VALIDATE }
@@ -202,7 +203,7 @@ const fixed = await parallel(
     const lane = []
     for (const item of byFile[key]) {
       lane.push(await agent(
-        `${GM} Session id: validate-fix-${item.repo}-${item.sha.slice(0, 8)}. cwd /workspace/gm. Read /workspace/gm/AGENTS.md and the AGENTS.md of the repo you edit.
+        `${GM} Session id: validate-fix-${item.repo}-${item.sha.slice(0, 8)}. cwd ${ROOT}. Read ${ROOT}/AGENTS.md and the AGENTS.md of the repo you edit.
 
 Red job ${item.job || '(see ci-status)'} on ${item.sha} in ${item.repo}: ${item.detail || ''}. Reproduce it from ci_log failed_only. Fix the cause in ${item.group || 'the failing file'}. Commit by explicit path (subject at most 50 characters, change only, no attribution trailer), after check-staged-secrets prints RESULT: PASS. git_pull, git_push by full sha, then ci-status for the new sha. Up to three attempts. Return {key: "${item.repo}:${item.sha}", status: "resolved" or "blocked", commit, ci: "green" or "red" or "none", note}.`,
         { phase: 'Validate', label: `fix ${item.repo} ${item.sha.slice(0, 8)}`, schema: RESULT }
