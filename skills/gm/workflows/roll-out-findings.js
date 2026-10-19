@@ -9,6 +9,14 @@ export const meta = {
   ],
 }
 
+const AGENT_CAP = 150
+let agentsSpent = 0
+const guarded = (prompt, opts) => {
+  if (agentsSpent >= AGENT_CAP) return Promise.resolve(null)
+  agentsSpent++
+  return agent(prompt, opts)
+}
+
 const LENSES = [
   'CI/CD and release reliability (workflows, bump-pins, skill-release, doc-drift)',
   'git verb correctness and friction (push, pull, commit, hunk scope, identity)',
@@ -64,7 +72,7 @@ Look across /workspace/gm and its submodules (rs-plugkit, agentplug, gm-mcp) for
 
 phase('Find')
 const found = await pipeline(LENSES, (lens, _item, index) =>
-  agent(finderPrompt(lens, index), { phase: 'Find', label: lens.slice(0, 48), schema: ROWS })
+  guarded(finderPrompt(lens, index), { phase: 'Find', label: lens.slice(0, 48), schema: ROWS })
 )
 const rows = found.filter(Boolean).flatMap(r => r.rows)
 log(`find: ${rows.length} rows filed across ${LENSES.length} lenses`)
@@ -93,7 +101,7 @@ const edited = await parallel(
   Object.keys(byGroup).map(key => async () => {
     const lane = []
     for (const row of byGroup[key]) {
-      lane.push(await agent(editPrompt(row), { phase: 'Edit', label: row.id, schema: RESULT }))
+      lane.push(await guarded(editPrompt(row), { phase: 'Edit', label: row.id, schema: RESULT }))
     }
     return lane
   })
