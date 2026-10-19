@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Repo hygiene gate: AGENTS.md byte budget, no UTF-8 BOM in tracked text,
 // and no decorative em-dash or arrow in tracked prose (backtick spans exempt),
-// and no hardcoded absolute path (/tmp, /config/, /workspace/, /home/, C:\) in
+// and no hardcoded absolute path (/tmp, /config/, /workspace/, /home/, C:\ or C:/) in
 // non-comment lines of tracked scripts under scripts/ (comment lines are the allowlist).
 // Usage: node scripts/check-repo-hygiene.mjs [repoRoot]
 // Prints one line per violation and `RESULT: PASS` or `RESULT: FAIL`.
@@ -17,7 +17,7 @@ const BOM = [0xef, 0xbb, 0xbf];
 const DECORATIVE = /[—→]/;
 const SCRIPT = /^scripts\/.*\.(sh|mjs|js|cjs|ps1)$/;
 const COMMENT = /^(#|\/\/|\*|\/\*)/;
-const HARDCODED_PATH = /[\/]tmp\b|[\/]config[\/]|[\/]workspace[\/]|[\/]home[\/]|C:[\\]/;
+const HARDCODED_PATH = /[\/]tmp\b|[\/]config[\/]|[\/]workspace[\/]|[\/]home[\/]|C:[\\/]/;
 
 const violations = [];
 const tracked = execFileSync('git', ['ls-files', '-z'], { cwd: root, maxBuffer: 1 << 26 })
