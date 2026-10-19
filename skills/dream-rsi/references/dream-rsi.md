@@ -44,6 +44,7 @@ Each use case is fully dressed (Cockburn): primary actor, scope, level, stakehol
   - 1a. The dispatch is orchestration or a Dream-RSI maintenance dispatch: nothing is recorded (line 7 of this file).
   - 2a. The live file holds 256 records: the whole file moves to `observations-archive-<ts>.json` and the newest 32 stay live (`rs-plugkit/crates/plugkit-core/src/orchestrator/AGENTS.md`).
   - 2b. The append fails: no partial line is left by design of the single append; the failure surfaces in the dispatch reply. Behavior beyond that is filed under PRD row USECASES-pw-hop-USECASES-1018-3 for confirmation.
+  - 3a. The record carries no active policy id: `ObservationRecord` (`rs-plugkit/crates/plugkit-core/src/orchestrator/dream_rsi.rs`) has no policy field, so a later replay cannot attribute the outcome to a redeployed policy. Filed under PRD row find-1-3-policy-id-observation-field.
 - **Guarantees:** a recorded line is never rewritten; concurrent dispatches cannot drop each other's lines; a line exists only for a real work dispatch.
 
 ### UC-2 Replay the frozen tree offline
@@ -101,4 +102,5 @@ Each use case is fully dressed (Cockburn): primary actor, scope, level, stakehol
   - 2a. A gate refuses the dispatch: the refusal is the result. The agent records the refused dispatch and does not bypass the gate (`skills/gm/SKILL.md`).
   - 3a. The ledger does not hold the dispatch ids the metrics cite: the metrics are not re-derived and the deployment stays open under its row (`rs-plugkit/crates/plugkit-core/src/orchestrator/AGENTS.md`, dispatch ledger).
   - 4a. No witness exists: the row stays open with a named fact (`skills/gm/SKILL.md`, PRD rows).
+  - 4b. The deployed policy id is not written to later observation records, so the outcomes of later dispatches cannot be attributed to the deployment. Filed under PRD row find-1-3-policy-id-observation-field.
 - **Guarantees:** no daemon tick or scheduled job redeploys a policy; every deployment has a PRD row and a witness dispatch id.
