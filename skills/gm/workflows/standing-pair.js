@@ -92,31 +92,31 @@ Return {id, status: "resolved" or "blocked", commit, witness_dispatch_id, ci: "g
 
 const waitPrompt = `${GM} Session id: drain-wait. Call the wait verb with {"ms":60000} and return {}.`
 
+const groupChain = new Map()
+const inGroup = (key, fn) => {
+  const prev = groupChain.get(key) || Promise.resolve()
+  const next = prev.then(fn, fn)
+  groupChain.set(key, next.catch(() => null))
+  return next
+}
+
 const rolloutLane = async () => {
   let round = 0
   let filed = true
   while (filed) {
     round++
     phase('Roll out')
-    const found = await pipeline(LENSES, (lens, _item, index) =>
-      agent(finderPrompt(lens, `${round}-${index}`), { phase: 'Roll out', label: `r${round} ${lens.slice(0, 40)}`, schema: ROWS })
+    const perFinder = await pipeline(
+      LENSES,
+      (lens, _item, index) => agent(finderPrompt(lens, `${round}-${index}`), { phase: 'Roll out', label: `r${round} ${lens.slice(0, 40)}`, schema: ROWS }),
+      (found) => {
+        const rows = found && found.rows ? found.rows : []
+        return Promise.all(rows.map(row => inGroup(`${row.repo}:${row.group}`, () => agent(editPrompt(row), { phase: 'Roll out', label: `edit ${row.id}`, schema: RESULT }))))
+      }
     )
-    const rows = found.filter(Boolean).flatMap(r => r.rows)
-    filed = rows.length > 0
-    log(`roll-out round ${round}: ${rows.length} rows filed`)
-    const byGroup = {}
-    for (const row of rows) {
-      const key = `${row.repo}:${row.group}`
-      if (!byGroup[key]) byGroup[key] = []
-      byGroup[key].push(row)
-    }
-    await parallel(
-      Object.keys(byGroup).map(key => async () => {
-        for (const row of byGroup[key]) {
-          await agent(editPrompt(row), { phase: 'Roll out', label: `edit ${row.id}`, schema: RESULT })
-        }
-      })
-    )
+    const edited = perFinder.filter(Boolean).reduce((n, r) => n + (Array.isArray(r) ? r.length : 0), 0)
+    filed = edited > 0
+    log(`roll-out round ${round}: ${edited} rows filed and edited as their finder reported`)
   }
   log('roll-out finished: a round filed nothing')
   return true
