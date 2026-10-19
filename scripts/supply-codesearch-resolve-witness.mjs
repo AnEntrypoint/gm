@@ -6,7 +6,7 @@ const flags = Object.fromEntries(process.argv.slice(2).map(arg => {
     const match = /^--([a-z-]+)(?:=(.*))?$/.exec(arg)
     return match ? [match[1], match[2] ?? 'true'] : [arg, 'true']
 }))
-const project = flags.project ?? 'C:/dev/freddie'
+const project = flags.project ?? process.cwd()
 const client = flags.client ?? path.join(os.homedir(), '.gm-tools', 'gm-mcp-server.mjs')
 const NAMED_IDS = ['gm-runtime-host-hmr-activation', 'gm-sibling-dream-rsi-ticker-repair', 'gm-stale-mcp-bundle-restart']
 const NESTED_DISPATCH = '1791868129586-500-e8f2275aa165577f'
