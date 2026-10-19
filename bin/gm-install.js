@@ -486,6 +486,11 @@ function registerKnownHostShapes() {
   registerCodex(CODEX_CONFIG_PATH)
 }
 
+function refuseUnverifiedInstall(script) {
+  console.error('gm: ' + script + ' is absent from this package and a remote copy is not pinned to a digest, so it is not run. Install from a checkout that contains ' + script + '.')
+  process.exitCode = 1
+}
+
 function installRunner() {
   const pkgRoot = path.dirname(path.dirname(fileURLToPath(import.meta.url)))
   const installSh = path.join(pkgRoot, 'install.sh')
@@ -493,10 +498,10 @@ function installRunner() {
 
   if (IS_WINDOWS) {
     if (fs.existsSync(installPs1)) return runChild('powershell', ['-ExecutionPolicy', 'Bypass', '-File', installPs1, 'spool'])
-    return runChild('powershell', ['-Command', 'irm https://raw.githubusercontent.com/AnEntrypoint/gm/main/install.ps1 | iex; Main spool'])
+    return refuseUnverifiedInstall('install.ps1')
   }
   if (fs.existsSync(installSh)) return runChild('sh', [installSh, 'spool'])
-  runChild('sh', ['-c', 'curl -fsSL https://raw.githubusercontent.com/AnEntrypoint/gm/main/install.sh | sh -s -- spool'])
+  refuseUnverifiedInstall('install.sh')
 }
 
 await vendorMcpBundle()
