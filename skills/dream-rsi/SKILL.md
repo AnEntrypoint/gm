@@ -43,7 +43,7 @@ rather than duplicating it. Their `provenance` is the prose file that owns
 them, which is where they came from and nothing more: it groups nothing and gates nothing.
 
 Traversal is nonlinear by construction. Every node can be reached, left and
-re-entered. The graph does not give every book an edge to a book of another provenance: 94 of its 418 book nodes have no outgoing edge to a book of another provenance, and 6 of those have no cross-provenance edge in either direction (counted over `gm-graph.json`). Reachability holds regardless: all 498 nodes are reached from the two entry points. There is no `phase` node -- nothing in the graph is a door
+re-entered. Not every book has an edge to a book of another provenance. Reachability holds regardless: every node of `gm-graph.json` is reached from the two entry points. There is no `phase` node -- nothing in the graph is a door
 into a set of nodes.
 
 **The terminal is `G_FIXPOINT`** ("sweep changed nothing"). `G_SURFACE` is the
