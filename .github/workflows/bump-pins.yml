@@ -4,6 +4,17 @@ name: bump-pins
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - 'agentplug'
+      - 'agentplug-bert'
+      - 'agentplug-libsql'
+      - 'agentplug-treesitter'
+      - 'agentplug-crux'
+      - 'gm-config'
+      - 'gm-mcp'
+      - 'rs-codeinsight'
+      - 'rs-plugkit'
+      - 'rs-search'
   repository_dispatch:
     types: [submodule-released]
   schedule:
@@ -32,6 +43,10 @@ jobs:
         run: |
           git config user.name "gm-pin-bot"
           git config user.email "pins@users.noreply.github.com"
+
+      - name: Wait for a burst of submodule pushes to settle
+        if: github.event_name == 'push'
+        run: sleep 300
 
       - name: Advance pins and publish to main
         env:
