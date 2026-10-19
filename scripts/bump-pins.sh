@@ -15,7 +15,13 @@ repo_of() {
 }
 
 gate_ok() {
-  local pending wf
+  local pending wf ok
+  GATE_REASON=""
+  ok=$(gh api "repos/AnEntrypoint/$1/actions/runs?head_sha=$2&per_page=100" --jq '[.workflow_runs[] | select(.conclusion == "success")] | length') || { echo "::error::run query failed for $1 at ${2:0:9}"; return 1; }
+  if [ "$ok" = "0" ]; then
+    GATE_REASON="no successful CI run for this sha"
+    return 1
+  fi
   pending=$(gh api "repos/AnEntrypoint/$1/actions/runs?head_sha=$2&per_page=100" --jq '[.workflow_runs[] | select(.name != "Deploy GH Pages") | select(.name | test("release|publish|build|wasm"; "i"))] as $m | if ($m | length) == 0 then "none" else ([$m[] | select(.status != "completed" or ((.conclusion // "") | IN("success", "skipped", "neutral") | not))] | length | tostring) end') || { echo "::error::gate query failed for $1 at ${2:0:9}"; return 1; }
   if [ "$pending" = "none" ]; then
     wf=$(gh api "repos/AnEntrypoint/$1/actions/workflows" --jq '[.workflows[] | select(.name | test("release|publish|build|wasm"; "i"))] | length') || { echo "::error::workflow query failed for $1"; return 1; }
@@ -40,7 +46,7 @@ stage_pins() {
       return 1
     fi
     if ! gate_ok "$repo" "$sha"; then
-      echo "held $path@${sha:0:9}: a release-path run for it is not green"
+      echo "held $path@${sha:0:9}: ${GATE_REASON:-a release-path run for it is not green}"
       continue
     fi
     cur=$(git ls-tree HEAD -- "$path" | awk '{print $3}')
