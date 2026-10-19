@@ -30,8 +30,8 @@ jobs:
 
       - name: Commit identity for pin bumps
         run: |
-          git config user.name "gm-pin-bot"
-          git config user.email "pins@users.noreply.github.com"
+          git config user.name "lanmower"
+          git config user.email "657315+lanmower@users.noreply.github.com"
 
       - name: Advance pins and publish to main
         env:
