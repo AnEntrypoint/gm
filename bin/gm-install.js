@@ -195,10 +195,20 @@ function recordMode(root, name, mode, source) {
   fs.renameSync(tmp, file)
 }
 
+function resolvesIntoSource(dir, root, name) {
+  const rel = path.relative(fs.realpathSync(dir), path.join(fs.realpathSync(root), name))
+  return rel === '' || (!path.isAbsolute(rel) && rel.split(path.sep)[0] !== '..')
+}
+
 function materialiseSkill({ dir, name, root, copyOnly = false }) {
   const src = path.join(dir, name)
   const dest = path.join(root, name)
   fs.mkdirSync(root, { recursive: true })
+
+  if (resolvesIntoSource(dir, root, name)) {
+    console.log(`REFUSED ${name} -> ${dest}: this install path is the checked-in skill directory ${src} (the install root resolves into the source tree); installs never replace a checked-in skill with a link or a copy -- point the install root outside the checkout`)
+    return { mode: 'refused', status: 'checked-in' }
+  }
 
   if (!copyOnly) {
     const existing = lstatOrNull(dest)
