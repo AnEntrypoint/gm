@@ -13,7 +13,7 @@ A subagent stopping with `API Error: Connection dropped (ECONNRESET)`, `ECONNREF
 
 ## Editing the skills
 Skills under `c:/dev/gm/skills/` are live on the next dispatch after any local edit.
-- Check `.git/MERGE_HEAD` BEFORE editing; if set, defer the edit or abort a merge nobody owns.
+- Check `.git/MERGE_HEAD` BEFORE editing; if set, reconcile that merge per the gm collision rules (gm, Autonomy) in the same turn, then edit. Never abort another lane's merge.
 - After `git_pull` in `c:/dev/gm`, re-read every edited skill and re-apply any clobbered hunk.
 - Publish path-scoped: `git_finalize {paths:[...]}` naming only edited skill files, then `git_push {rev:"<full sha of tip>", allow_foreign_commits:true}`, then `ci-status` on the pushed sha. Never `rev:"HEAD"`; never publish while another lane holds gm's git.
 - Every correction records its motivating measurement: date, verbatim error, counts.
