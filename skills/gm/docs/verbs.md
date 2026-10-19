@@ -838,7 +838,7 @@ Every body field a verb declares, grouped by verb. The contract check (`scripts/
 
 ## Verbs without a dedicated section
 
-Served verbs with no entry elsewhere in this file. Rows are sourced from `gm.describe`; `kind` is `query` or `command`. The remaining served verbs without a row are tracked by a follow-up PRD row.
+Served verbs with no entry elsewhere in this file. Rows are sourced from `gm.describe`; `kind` is `query` or `command`.
 
 | verb | body | purpose | kind |
 |---|---|---|---|
@@ -882,3 +882,72 @@ Served verbs with no entry elsewhere in this file. Rows are sourced from `gm.des
 | `unknown_defer` | none | defer an unknown | command |
 | `dream_policy_register` | none | register a Dream-RSI policy; proposes only, never deploys | command |
 | `dream_evaluator_receipt` | none | record a Dream-RSI evaluator receipt | command |
+| `dream_discovery_record` | undeclared | record a Dream-RSI discovery | command |
+| `dream_world_seal` | undeclared | seal a Dream-RSI world | command |
+| `dream_replay_round` | undeclared | replay one Dream-RSI round | command |
+| `dream_round` | undeclared | run one Dream-RSI round | command |
+| `dream_replay` | undeclared | replay a Dream-RSI run | command |
+| `dream_replay_cycle` | undeclared | replay one Dream-RSI cycle | command |
+| `dream_strategy_propose` | undeclared | propose a Dream-RSI strategy; proposes only, never deploys | command |
+| `discipline_note` | undeclared | record a discipline note | command |
+| `discipline_check_removal` | undeclared | check whether a removal breaks a discipline | query |
+| `discipline_audit` | undeclared | audit the disciplines | query |
+| `capability_resolve` | undeclared | resolve a capability | query |
+| `codeinsight_namespace_audit` | undeclared | audit the codeinsight namespaces | query |
+| `calculus_model_check` | undeclared | model-check the calculus | query |
+| `phase_status` | undeclared | report the current phase and pending row count | query |
+| `session_handover` | `{"session_id"}` | read the handover for a session | query |
+| `wait` | undeclared | wait for a condition | query |
+| `wait_for_task` | undeclared | wait for a task to finish | query |
+| `sleep` | undeclared | sleep for a duration | query |
+| `residual_scan` | undeclared | scan for residuals | query |
+| `claim_audit` | undeclared | audit claims against the evidence | query |
+| `comment_audit` | undeclared | audit comments | query |
+| `submodule_check` | undeclared | check submodule pins | query |
+| `component_loader_reconcile` | undeclared | reconcile the component loader | command |
+| `component_loader_hmr` | undeclared | hot-reload the component loader | command |
+| `prd_add` | `{"id"?, "subject"?, "description"?, "acceptance_criteria"?, "witness_plan"?, "status"?, "blockedBy"?, "overwrite"?, "repair"?, "owner"?, "disposition"?, "recheck_by"?}` | file a PRD row | command |
+| `prd_defer` | undeclared | defer a PRD row | command |
+| `prd_witness_request` | `{"id", "note"?}` | ask a separate verifier session to witness a PRD row | command |
+| `prd_repair` | undeclared | repair PRD row state | command |
+| `task_list` | undeclared | list background tasks | query |
+| `task_stop` | undeclared | stop a background task | command |
+| `task_output` | undeclared | read a background task's output | query |
+| `memorize_continue` | undeclared | record the continuation state | command |
+| `fsm_vendor` | undeclared | vendor an FSM graph into the project | command |
+| `fsm_validate` | undeclared | validate the FSM graph | query |
+| `predicates_md` | undeclared | render the predicates document | query |
+| `fsm_propose_override` | undeclared | propose an FSM gate override; proposes only | command |
+| `health` | undeclared | report gm health | query |
+| `config_resolve` | undeclared | resolve the effective config | query |
+| `config_sync_now` | undeclared | sync the config now | command |
+| `dataflow_resolve` | undeclared | resolve a dataflow | query |
+| `status` | undeclared | report gm status | query |
+| `close` | undeclared | close a session or resource | command |
+| `filter` | undeclared | filter rows or results | query |
+| `cache_get` | undeclared | read a cache entry | query |
+| `cache_put` | undeclared | write a cache entry | command |
+| `cache_invalidate` | undeclared | invalidate cache entries | command |
+| `cache_stats` | undeclared | report cache statistics | query |
+| `chrome` | raw_body | CDP crawl as a named verb: headful window, cdp engine always; same body as crawl | command |
+| `crawl` | raw_body | crawl a page in the project's shared browser (cdp engine) | command |
+| `code_index` | undeclared | build the code index | command |
+| `rg` | `{"query"?, "mode"?, "k"?, "max_matches"?, "max_files"?, "path"?, "glob"?, "exclude"?, "case_insensitive"?, "whole_word"?, "comments_only"?, "refresh"?, "no_ignore"?, "context"?, "output_mode"?}` | alias of `grep`: where is this string | query |
+| `prd_block` | undeclared | block a PRD row, naming its blocker | command |
+| `pool_brief` | undeclared | brief the subagent pool | query |
+| `pool_observe` | `{"live"?, "held"?, "refusal"?}` | record subagent pool observations | command |
+| `subagent_start` | undeclared | record a subagent start | command |
+| `subagent_end` | undeclared | record a subagent end | command |
+| `browser_lease_acquire` | `{"agent", "ttl_ms"?, "wait_ms"?}` | acquire the shared browser lease, waiting up to 600 s; answers port, chrome_pid and lease_file | command |
+| `browser_lease_release` | `{"agent", "ttl_ms"?, "wait_ms"?}` | release the shared browser lease held by the agent | command |
+| `browser_lease_status` | none | read the shared browser lease state | query |
+| `nodejs` | raw_body | run Node.js code through the spool | command |
+| `javascript` | raw_body | run JavaScript through the spool | command |
+| `node` | raw_body | run Node.js code through the spool | command |
+| `js` | raw_body | run JavaScript through the spool | command |
+| `typescript` | raw_body | run TypeScript through the spool | command |
+| `py` | raw_body | run Python code through the spool | command |
+| `sh` | raw_body | run a shell script through the spool | command |
+| `shell` | raw_body | run a shell command through the spool | command |
+| `zsh` | raw_body | run a zsh script through the spool | command |
+| `ps1` | raw_body | run a PowerShell script through the spool | command |
