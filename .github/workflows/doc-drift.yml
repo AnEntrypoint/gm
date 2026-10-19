@@ -64,8 +64,17 @@ jobs:
       - run: node scripts/scan-doc-drift.mjs
       - run: npm ci --prefix gm-mcp --no-audit --no-fund --ignore-scripts
       - run: npm audit --omit=dev --audit-level=high --prefix gm-mcp
+      - id: license-checker-cache
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684
+        with:
+          path: ~/.cache/license-checker
+          key: license-checker-25.0.1-${{ runner.os }}
       - name: Production npm dependencies carry only allowlisted licenses
-        run: npx --yes license-checker@25.0.1 --production --start gm-mcp --onlyAllow "MIT;ISC;Apache-2.0;BSD-2-Clause;BSD-3-Clause;0BSD;Unlicense;CC0-1.0;BlueOak-1.0.0;Python-2.0;CC-BY-4.0"
+        run: |
+          if [ "${{ steps.license-checker-cache.outputs.cache-hit }}" != "true" ]; then
+            npm install --prefix "$HOME/.cache/license-checker" --no-audit --no-fund --ignore-scripts license-checker@25.0.1
+          fi
+          "$HOME/.cache/license-checker/node_modules/.bin/license-checker" --production --start gm-mcp --onlyAllow "MIT;ISC;Apache-2.0;BSD-2-Clause;BSD-3-Clause;0BSD;Unlicense;CC0-1.0;BlueOak-1.0.0;Python-2.0;CC-BY-4.0"
       - run: node scripts/check-verb-body-contract.mjs
       - name: Every graph count in the site and docs matches a graph
         run: node scripts/check-doc-counts.mjs
