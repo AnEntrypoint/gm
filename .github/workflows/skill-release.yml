@@ -75,11 +75,13 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.PUBLISHER_TOKEN }}
           SHA: ${{ github.sha }}
+          GIT_CONFIG_COUNT: "1"
+          GIT_CONFIG_KEY_0: "url.https://x-access-token:${{ secrets.PUBLISHER_TOKEN }}@github.com/.insteadOf"
+          GIT_CONFIG_VALUE_0: "https://github.com/"
         run: |
           set -e
           git config user.name "lanmower"
           git config user.email "657315+lanmower@users.noreply.github.com"
-          git config url."https://${GH_TOKEN}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
           CURRENT=$(git show "$SHA:package.json" | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>console.log(JSON.parse(s).version))")
           git fetch origin main --quiet
           MAIN_VER=$(git show origin/main:package.json | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>console.log(JSON.parse(s).version))")
