@@ -15,20 +15,33 @@ repo_of() {
 }
 
 gate_ok() {
-  local pending wf ok
+  local rows gate_rows open wf ok
   GATE_REASON=""
-  ok=$(gh api --paginate "repos/AnEntrypoint/$1/actions/runs?head_sha=$2&per_page=100" --jq '.workflow_runs[] | select(.name != "Deploy GH Pages") | select(.conclusion == "success") | .id' | awk 'END{print NR}') || { echo "::error::run query failed for $1 at ${2:0:9}" >&2; return 2; }
+  rows=$(gh api --paginate "repos/AnEntrypoint/$1/actions/runs?head_sha=$2&per_page=100" --jq '.workflow_runs[] | select(.name != "Deploy GH Pages") | [.name, .status, (.conclusion // "")] | @tsv') || { echo "::error::run query failed for $1 at ${2:0:9}" >&2; return 2; }
+  ok=$(awk -F'\t' '$3 == "success" {n++} END{print n+0}' <<<"$rows")
   if [ "$ok" = "0" ]; then
     GATE_REASON="no successful CI run for this sha"
     return 1
   fi
-  pending=$(gh api --paginate "repos/AnEntrypoint/$1/actions/runs?head_sha=$2&per_page=100" --jq '.workflow_runs[] | select(.name != "Deploy GH Pages") | select(.name | test("release|publish|build|wasm"; "i")) | if (.status != "completed" or ((.conclusion // "") | IN("success", "skipped", "neutral") | not)) then "open" else "green" end' | awk 'BEGIN{m=0;o=0} {m++; if ($0=="open") o++} END{print (m==0 ? "none" : o)}') || { echo "::error::gate query failed for $1 at ${2:0:9}" >&2; return 2; }
-  if [ "$pending" = "none" ]; then
+  gate_rows=$(awk -F'\t' 'tolower($1) ~ /release|publish|build|wasm/' <<<"$rows")
+  if [ -z "$gate_rows" ]; then
     wf=$(gh api "repos/AnEntrypoint/$1/actions/workflows" --jq '[.workflows[] | select(.name | test("release|publish|build|wasm"; "i"))] | length') || { echo "::error::workflow query failed for $1" >&2; return 2; }
     [ "$wf" = "0" ]
     return
   fi
-  [ "$pending" = "0" ]
+  open=$(awk -F'\t' '$2 != "completed" || ($3 != "success" && $3 != "skipped" && $3 != "neutral") {n++} END{print n+0}' <<<"$gate_rows")
+  [ "$open" = "0" ]
+}
+
+wait_for_tip() {
+  local deadline active
+  deadline=$(( $(date +%s) + ${BUMP_WAIT_SECONDS:-900} ))
+  while :; do
+    active=$(gh api --paginate "repos/AnEntrypoint/$1/actions/runs?head_sha=$2&per_page=100" --jq '.workflow_runs[] | select(.name != "Deploy GH Pages") | select(.status != "completed") | .id' | awk 'END{print NR}') || return 2
+    [ "$active" = "0" ] && return 0
+    [ "$(date +%s)" -ge "$deadline" ] && return 1
+    sleep 20
+  done
 }
 
 newest_green() {
@@ -65,6 +78,18 @@ stage_pins() {
     if [ "$rc" = "2" ]; then
       echo "::error::gate query failed for $repo; $path cannot be judged at ${tip:0:9}" >&2
       return 1
+    fi
+    if [ "$rc" = "1" ]; then
+      wait_for_tip "$repo" "$tip"; rc=$?
+      if [ "$rc" = "2" ]; then
+        echo "::error::run query failed for $repo while waiting on ${tip:0:9}" >&2
+        return 1
+      fi
+      gate_ok "$repo" "$tip"; rc=$?
+      if [ "$rc" = "2" ]; then
+        echo "::error::gate query failed for $repo; $path cannot be judged at ${tip:0:9}" >&2
+        return 1
+      fi
     fi
     if [ "$rc" != "0" ]; then
       reason=${GATE_REASON:-a release-path run for it is not green}
