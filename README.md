@@ -148,7 +148,7 @@ An empty submodule directory is normal. It matters only when you change one of t
 
 A push to `main` that changes `skills/**` starts `.github/workflows/skill-release.yml`. The workflow bumps the patch version in `package.json`, packages the skills into `gm-skill-<version>.tar.gz`, adds a SHA-256 sidecar, and publishes both to a tagged GitHub Release. The release uses no npm registry.
 
-The other workflows in `.github/workflows/` are `bump-pins.yml`, `discipline-tree.yml`, `doc-drift.yml`, `gh-pages.yml` (builds the flatspace site, adds the `docs/api` JSON files and publishes the result to GitHub Pages), `house-clean.yml`, `npx-route.yml` (guards the npx install command) and `process-leak.yml`.
+The other workflows in `.github/workflows/` are `bump-pins.yml`, `contracts.yml` (checks the verb and contract surfaces of `rs-plugkit`, `agentplug` and `gm-mcp`), `discipline-tree.yml`, `doc-drift.yml`, `gh-pages.yml` (builds the flatspace site, adds the `docs/api` JSON files and publishes the result to GitHub Pages), `house-clean.yml`, `link-check.yml` (weekly check that every external link in the README, docs, site and skills answers), `npx-route.yml` (guards the npx install command) and `process-leak.yml`.
 
 The WASM guest, `plugkit-slim.wasm`, is built from `rs-plugkit` and published to the `AnEntrypoint/plugkit-bin` releases. The `agentplug-runner` native host fetches it at runtime. This repository ships the Rust source for it, not the compiled binary.
 
