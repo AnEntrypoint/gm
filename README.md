@@ -101,7 +101,7 @@ Git operations go through gm's git verbs (`git_status`, `git_finalize`, `git_pus
 
 To change gm's prompts or gate text for one project, run `fsm-vendor` in that project. It writes the compiled default prose and gate text into `.gm/instructions/`. A vendored file wins over the configuration repository for the same key, so delete the local file to fall back to the repository.
 
-`gm-config/gm.config.json` sets the sync settings: `sync.debounce_ms` is 15000, so the runner checks the configuration repository at most once every 15 seconds, and `sync.shallow` is true. The default configuration repository is AnEntrypoint/gm-config, the `gm-config/` submodule listed in `.gitmodules`.
+`gm-config/gm.config.json` sets the sync settings: `sync.debounce_ms` is 15000, so the runner checks the configuration repository at most once every 15 seconds. The default configuration repository is AnEntrypoint/gm-config, the `gm-config/` submodule listed in `.gitmodules`.
 
 **A configuration repository controls gm's behavior in the project, including its gate hooks, so point a project's configuration only at a repository you trust.**
 
