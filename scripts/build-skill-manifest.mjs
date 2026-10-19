@@ -10,7 +10,7 @@
 //   node scripts/build-skill-manifest.mjs --check  exit 1 when the committed manifest is stale
 
 import { createHash } from 'node:crypto'
-import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
+import { existsSync, lstatSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { dirname, join, relative, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -22,6 +22,7 @@ const checkOnly = process.argv.includes('--check')
 function walk(dir, out = []) {
   for (const name of readdirSync(dir)) {
     const full = join(dir, name)
+    if (lstatSync(full).isSymbolicLink() && !existsSync(full)) continue
     if (statSync(full).isDirectory()) walk(full, out)
     else out.push(full)
   }
