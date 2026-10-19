@@ -10,10 +10,10 @@ Pool and publish rules. Shared rules (autonomy, git identity, CI read, collision
 `ceiling` = host spawn limit (N in a refusal), not a throughput target or memory budget. `live` = ListAgents count. `floor` = min(2, ceiling). `shortfall` = live < floor with independent work open.
 
 ## Standing pair (every run)
-Every `/gm` run launches both workflows in the same turn, before any other fan-out, and they run concurrently until both finish:
-- `skills/gm/workflows/roll-out-findings.js` (Workflow `scriptPath`): finders across the lenses file each finding as a PRD row with its file group. Then one lane per file group resolves each row's unknowns with live runs, makes the edit, commits by explicit path, pushes, and closes the row with a live witness. Rows that share a file group run in sequence; groups run in parallel. Rollout never waits on tests or CI.
-- `skills/gm/workflows/fix-pending-rows.js` (Workflow `scriptPath`): runs the test and CI/CD follow-up. It reads `ci-status` for the recent pushed shas of every repo, debugs each red job with `ci_log failed_only`, fixes it on the failing file's group, pushes, and re-reads CI. It also resolves rows that rollout left open. It repeats until no red job or open row remains, or 8 rounds pass.
-Both runs share one working tree, so a file group has one writer at a time: the test lane waits for a rollout lane that holds the same file, then takes it. Neither waits for the other. Rows filed after the last listing are picked up by relaunching the pair. The pair replaces the one-wave rule below for these two workflows only.
+Every `/gm` run starts one Workflow, `skills/gm/workflows/standing-pair.js`, in its first turn, before any other fan-out. It has two lanes that run concurrently:
+- **Rollout lane:** each round, lenses file findings as PRD rows with their file group, then one lane per file group resolves unknowns with live runs, edits, commits by explicit path, pushes and closes its rows with a live witness. Rounds repeat until a round files nothing. Rollout never waits on tests or CI.
+- **Drain lane:** lists open rows, groups them by file, fixes each with a live witness, publishes, and follows CI for each pushed sha. It works rows as the rollout files them. When the list is empty and the rollout is still running, it waits one minute and lists again. It ends when the rollout has finished and no open row remains.
+Both lanes write one file group at a time, so the drain lane waits for a rollout lane that holds the same file. There is no agent-count cap; the run ends only when both lanes have nothing left. A row attempted in a run is not retried in that run.
 
 ## Core loop
 Repeat until a full pass adds no work:
