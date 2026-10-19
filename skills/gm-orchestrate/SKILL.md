@@ -30,6 +30,16 @@ Every `/gm` run executes the drain procedure below in its first turn, before any
 
 Every run, however it ends, is followed by the `gm-continue` handoff (gm SKILL.md, Routing), which searches for remaining work and reloads gm when work remains.
 
+### Resumable drain (queue file)
+Durable state: `.gm/drain-list/queue.tsv`, one `id<TAB>state` line per row. States: `pending`, `launched`, `resolved`, `stale`, `real` (premise confirmed live, row still open), `unknown` (no witness obtained), `blocked` (has `blocker_notes`). Any session continues from this file. Where it conflicts with `prd-list`, `prd-list` wins.
+1. **Session start.** Read the file. Each `launched` row came from a prior session: re-check it with `prd-list {"id":"<id>","cwd":"/workspace/gm"}` and set its state to the row's real state (closed resolved or stale, still open with notes, or `pending`). The `pending` rows are the queue.
+2. **Launch.** Mark each unit's rows `launched` before its launch block, so a crash leaves a recoverable marker. Launch `min(free, queued)` units in one block, one unit per row or small file group. `free` is read live (Lane budget), never a number written here. A refused unit goes back to `pending`.
+3. **Refill.** When any unit returns, record its outcome in the file in that same turn (one write per block, covering every outcome in it), then launch the next `pending` unit at once (Launch loop, rule 3).
+4. **Blocked rows.** A `blocked` row is skipped only when this session re-checks its named blocker live and it still holds, with the dispatch id recorded. Otherwise it returns to `pending`.
+5. **Validate.** After each committed batch, `ci-status {sha}` for every pushed sha, before the batch's rows move to `resolved`.
+6. **Measure.** Count peak concurrent units and refills for the session; the final report carries both.
+7. **Session end.** If any row is `pending`, the last call of the session is `Skill(skill="gm-continue")`. Never end with pending rows and nothing launched: relaunch to the cap first, or wait for a completion.
+
 ## Core loop
 Repeat until a full pass adds no work:
 1. **Drain concurrently.** Rollout lanes resolve, commit and publish open rows as they are filed.
