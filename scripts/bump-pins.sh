@@ -31,8 +31,20 @@ gate_ok() {
   [ "$pending" = "0" ]
 }
 
+newest_green() {
+  local candidate
+  for candidate in $(gh api "repos/AnEntrypoint/$1/commits?sha=main&per_page=6" --jq '.[].sha'); do
+    [ "$candidate" = "$2" ] && continue
+    if gate_ok "$1" "$candidate"; then
+      echo "$candidate"
+      return 0
+    fi
+  done
+  return 1
+}
+
 stage_pins() {
-  local path repo sha cur
+  local path repo sha tip reason cur
   STAGED=0
   BODY=""
   local targets
@@ -45,9 +57,14 @@ stage_pins() {
       echo "::error::no main for $path at $base"
       return 1
     fi
-    if ! gate_ok "$repo" "$sha"; then
-      echo "held $path@${sha:0:9}: ${GATE_REASON:-a release-path run for it is not green}"
-      continue
+    tip=$sha
+    if ! gate_ok "$repo" "$tip"; then
+      reason=${GATE_REASON:-a release-path run for it is not green}
+      if ! sha=$(newest_green "$repo" "$tip"); then
+        echo "held $path@${tip:0:9}: $reason"
+        continue
+      fi
+      echo "tip ${tip:0:9} held ($reason); pinning newest green main commit ${sha:0:9}"
     fi
     cur=$(git ls-tree HEAD -- "$path" | awk '{print $3}')
     if [ "$cur" != "$sha" ]; then
