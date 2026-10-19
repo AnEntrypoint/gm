@@ -324,7 +324,7 @@ the full `deferred_set` lives in the sync report, never in the message.
 
 Agents do not call these verbs for memory. Memory is the flat-file store that `skills/gm/SKILL.md` (Invariants) describes; the verbs stay in the code.
 
-`recall`, `auto-recall`, `memorize-fire`, `memorize-prune`, `memorize-vacuum` and `memorize-retention` do not resolve in the current build: `gm.describe` fails for each, and rs-plugkit's source holds no dispatch for them. `memorize-continue` is the memory verb that resolves.
+`recall`, `auto-recall`, `memorize-fire`, `memorize-prune`, `memorize-vacuum` and `memorize-retention` do not resolve in the current build: `gm.describe` fails for each, and rs-plugkit's source holds no dispatch for them. `memorize_continue` is the memory verb that resolves.
 
 ## Filesystem
 
