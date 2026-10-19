@@ -87,7 +87,7 @@ while :; do
     exit 0
   fi
 
-  message="pins: advance $STAGED submodule pin(s) to their main [skip ci]"
+  message="pins: advance $STAGED submodule pin(s) to their main"
   body="${BODY}bump-pins run $witness, attempt $attempt"
   git commit -q -m "$message" -m "$body" || exit 1
 
