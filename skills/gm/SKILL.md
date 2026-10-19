@@ -5,7 +5,7 @@ description: "Drives a gm walk (nodes, PRD rows, pool and hop subagents) for cod
 
 # gm
 
-**Mantra: move fast, break things, then wrap it all up by fixing everything. Every `/gm` run starts the standing pair (gm-orchestrate, "Standing pair") in its first turn, as two concurrent Workflow `scriptPath` runs: `skills/gm/workflows/roll-out-findings.js` finds each issue, resolves its unknowns with live runs, edits, commits and pushes it without waiting on tests or CI; `skills/gm/workflows/fix-pending-rows.js` runs tests and CI/CD follow-up at the same time and fixes whatever they expose. Issues met on the way are filed with `prd-add` and taken by whichever lane owns their file.**
+**Mantra: move fast, break things, then wrap it all up by fixing everything. Every `/gm` run starts the standing pair in its first turn: one Workflow `scriptPath` run, `skills/gm/workflows/standing-pair.js`. Its rollout lane keeps finding issues, filing each as a PRD row, and editing, committing and publishing it, round after round; its drain lane closes open rows at the same time, waiting while the rollout still files. Neither lane waits on the other, and there is no agent-count cap. Issues met on the way are filed with `prd-add`, never fixed inline.**
 
 **Brick wall: every code search goes through the code-search port, and every web fetch goes through the fetch port, with no exceptions. Every `Agent`/`Task` dispatch opens with "use the gm skill for this; code questions go to codeinsight (`callers`/`impact`) first, then the code-search port, and `Read` only a located path. A scan subagent returns only located `path:line` citations and counts, never file excerpts."**
 
@@ -53,7 +53,9 @@ Sections: 0 Precedence, 1 Harness, 2 Invariants, 3 Anchors, 4 Interruptions. Poo
 
 ## Standing preferences (every project, every run)
 These hold in any project, with or without its own AGENTS.md. A project file may add rules; it may not drop these.
-- **Run shape.** Every `/gm` run starts the standing pair in its first turn (gm-orchestrate, "Standing pair"): `roll-out-findings.js` finds issues, resolves unknowns, edits, commits and pushes without waiting on tests or CI; `fix-pending-rows.js` runs tests and CI/CD follow-up at the same time and fixes what they expose. Both run concurrently. Maximum concurrency: every independent slice launches in one block.
+- **Run shape.** Every `/gm` run starts the standing pair in its first turn (gm-orchestrate, "Standing pair"): `standing-pair.js` files rows and edits them while it drains the open backlog, both lanes concurrent, until the rollout files nothing and no row is open.
+- **Retry discipline.** A row attempted in a run is not retried in that run. A blocked row names its blocker in the row, and is attempted again only in a later run after that blocker changes. Repeating a blocked row in every round is a defect.
+- **Runtime state is not tracked.** `.gm/prd-log.jsonl` and `.gm/mutables-log.jsonl` are gitignored runtime state. Publishing never waits on them. Maximum concurrency: every independent slice launches in one block.
 - **Backlog.** Issues met on the way are filed with `prd-add`, then taken by the lane that owns the file. Never stop with pending rows, unfinished steps, or red CI; the walk ends at zero pending rows and a green tip, or at a blocker with its witness.
 - **Witness.** A row closes only with a live dispatch id from its own run. A lane never closes its own row on CI it has not read.
 - **Git.** Main only: no branches, worktrees or side checkouts. Commit by explicit path, after `scripts/check-staged-secrets.mjs` prints `RESULT: PASS`. Push by full sha. Read CI for every pushed sha; red CI becomes a fix on the owning file group. Pins follow `main` tips.
