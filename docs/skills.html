@@ -128,7 +128,7 @@ article tbody tr:hover { background: var(--panel-1); }
 
 <h2>How the skills are installed</h2>
 
-<p>From a checkout, <code>install.sh</code>, <code>install.ps1</code> and <code>bin/gm-install.js</code> link each <code>skills/&lt;name&gt;</code> into <code>~/.claude/skills/&lt;name&gt;</code> and <code>~/.agents/skills/&lt;name&gt;</code>: a symlink on macOS and Linux, a junction on Windows. A source edit is served on the next dispatch. With no durable source, such as the release tarball or an npx cache, the installer copies the skill, announces the copy, and records the mode in <code>&lt;root&gt;/.gm-skill-install-modes</code>.</p>
+<p>From a checkout, <code>install.sh</code>, <code>install.ps1</code> and <code>bin/gm-install.js</code> link each skill folder under <code>skills/</code> into <code>~/.claude/skills/</code> and <code>~/.agents/skills/</code> under the same folder name: a symlink on macOS and Linux, a junction on Windows. A source edit is served on the next dispatch. With no durable source, such as the release tarball or an npx cache, the installer copies the skill, announces the copy, and records the mode in <code>&lt;root&gt;/.gm-skill-install-modes</code>.</p>
 
 <p>An install that must be replaced is parked under the dotted <code>&lt;root&gt;/.gm-skill-prelink/</code> directory and is never deleted. Deleting it needs <code>--force-link</code> in <code>bin/gm-install.js</code>, or <code>GM_SKILL_LINK_FORCE=1</code> in <code>install.sh</code> and <code>install.ps1</code>. On MINGW, MSYS and Cygwin only a junction counts as a link.</p>
 
