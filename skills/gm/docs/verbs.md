@@ -77,7 +77,7 @@ accepts `exclude` under the same aliases.
                                                  and never affects "exhaustive".
 {"output_mode":"content"}                        "content" (default): counts[] ({path,count} per file)
                                                  plus output[] (one "path:line: text" per hit);
-                                                 "files_with_matches"; "count"
+                                                 "files_with_matches" ("files" is accepted as an alias); "count"
 {"detail":true}                                  in "content", answer structured matches[] objects
                                                  instead of output[]
 {"columns":true}                                 keep each hit's column; occurrence_count is omitted
