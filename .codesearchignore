@@ -4,3 +4,4 @@ rs-plugkit/target/
 rs-plugkit/ci-fix-wt/
 rs-plugkit/wasip3-fix-wt/
 vendor/
+gm-mcp/bin/
