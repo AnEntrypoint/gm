@@ -39,13 +39,14 @@ for (const row of VERB_TABLE) {
   }
 }
 
-const { GUEST_ACCEPTED_FIELDS } = await import(pathToFileURL(path.join(gmMcpSrc, 'guest-bodies.js')).href);
+const { GUEST_ACCEPTED_FIELDS, GUEST_ENVELOPE_FIELDS } = await import(pathToFileURL(path.join(gmMcpSrc, 'guest-bodies.js')).href);
+const { DISPATCH_BODY_FIELDS } = await import(pathToFileURL(path.join(gmMcpSrc, 'verb-bodies.js')).href);
 const { runnerVerb } = await import(pathToFileURL(path.join(gmMcpSrc, 'verb-table.js')).href);
 for (const row of VERB_TABLE) {
   if (!row.body?.fields || runnerVerb(row) === 'codesearch') continue;
   const accepted = GUEST_ACCEPTED_FIELDS[runnerVerb(row)];
   if (!accepted) continue;
-  const allowed = new Set(accepted);
+  const allowed = new Set([...accepted, ...GUEST_ENVELOPE_FIELDS, ...Object.keys(DISPATCH_BODY_FIELDS)]);
   for (const [name, spec] of Object.entries(row.body.fields)) {
     const names = [name, ...(spec.aliases ?? [])];
     if (!names.some((n) => allowed.has(n))) failures.push(`${row.canonical}.${name}: declared body field is not accepted by the rs-plugkit handler (silently dropped by verbBodySchema)`);
