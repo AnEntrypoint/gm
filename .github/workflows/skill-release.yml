@@ -31,7 +31,7 @@ jobs:
         run: node scripts/build-skill-manifest.mjs --check
 
   release:
-    if: github.event_name == 'push'
+    if: "${{ github.event_name == 'push' && !startsWith(github.event.head_commit.message, 'chore: auto-bump version') && !startsWith(github.event.head_commit.message, 'chore: refresh skill manifest') }}"
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -55,7 +55,7 @@ jobs:
           git config user.name "lanmower"
           git config user.email "657315+lanmower@users.noreply.github.com"
           git add skills/manifest.sha256
-          git commit -m "chore: refresh skill manifest [skip ci]"
+          git commit -m "chore: refresh skill manifest"
           for attempt in 1 2 3 4 5; do
             if git push origin HEAD:main; then exit 0; fi
             echo "[retry] manifest push rejected (attempt $attempt): main moved, rebuilding on origin/main"
@@ -66,7 +66,7 @@ jobs:
             node scripts/build-skill-manifest.mjs
             if git diff --quiet -- skills/manifest.sha256; then echo "[ok] origin/main already has the current skill manifest"; exit 0; fi
             git add skills/manifest.sha256
-            git commit -m "chore: refresh skill manifest [skip ci]"
+            git commit -m "chore: refresh skill manifest"
           done
 
       - name: Auto-bump patch version BEFORE packaging
@@ -107,7 +107,7 @@ jobs:
               fs.writeFileSync('package.json', JSON.stringify(p, null, 2) + '\n');
             "
             git add package.json
-            git commit -m "chore: auto-bump version to $NEW_VERSION [skip ci]"
+            git commit -m "chore: auto-bump version to $NEW_VERSION"
             for attempt in 1 2 3 4 5; do
               if git push origin HEAD:main; then break; fi
               echo "[retry] push rejected (attempt $attempt): main moved, re-bumping on origin/main"
@@ -125,7 +125,7 @@ jobs:
                 fs.writeFileSync('package.json', JSON.stringify(p, null, 2) + '\n');
               "
               git add package.json
-              git commit -m "chore: auto-bump version to $NEW_VERSION [skip ci]"
+              git commit -m "chore: auto-bump version to $NEW_VERSION"
             done
           else
             NEW_VERSION="$CURRENT"
