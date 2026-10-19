@@ -20,6 +20,8 @@ Stage that temp OUTSIDE `in/`, for example `.gm/exec-spool/.staging/<N>.txt`, an
 
 The sweep is not a poll. It runs on the daemon's cold sweep (`cold_sweep_pending`, set when any project root newly attaches, and then walking every known root) and under `agentplug-runner sweep-spool <root>`. So a temp is taken only when a sweep lands inside the rename window, and a non-conforming file written after a sweep can sit in `in/` with no answer at all. Measured 2026-10-10 in a scratch root: a `.<task>.<pid>.<ts>.tmp` staged in `in/phase-status/` survived 3 s untouched (no quarantine, no answer), then the same file was quarantined as `phase-status__<tmp>` and answered `spool_filename_rejected` the moment `sweep-spool` ran; a conforming `orch-main-r169-sub1-1.txt` beside it was left in place.
 
+The in-file body is flat: `session_id`, `cwd` and the verb's own fields sit at the top level of the JSON, with no `body` wrapper. For example, a codesearch request is `{"session_id":"<id>","cwd":"<project root>","query":"<text>","mode":"literal","path":"skills"}`. Nesting the fields under `body` answers `invalid_args` with `query required`, although `query` was supplied (live witness: dispatch `1792427067827-5000-81b516191688f62c`); the flat form returns data (live witness: dispatch `1792427069207-5000-e3c43bf43a39858d`).
+
 `<N>` is `<session_id>-<N>`, never a bare integer. The daemon keys in-flight claims by literal `(verb, N)` with no per-session partition, so two sessions that pick `1`, `2` and `3` read each other's responses.
 
 ## Starting the watcher
