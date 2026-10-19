@@ -146,6 +146,8 @@ gm.db
 gm.db-wal
 gm.db-shm
 gm.db-journal
+# advisory lock owner record for gm.db (transient, rewritten per store writer)
+.gm/gm.db.lock.owner
 
 # in-process plugkit probe artifact (transient)
 gm-plugkit/.gm/
