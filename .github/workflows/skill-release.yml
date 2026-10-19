@@ -144,7 +144,7 @@ jobs:
           echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
           tar --sort=name --mtime=@0 --owner=0 --group=0 --numeric-owner -cf - skills | gzip -n > "release-assets/gm-skill-$VER.tar.gz"
           cd release-assets
-          sha256sum "gm-skill-$VER.tar.gz" | sed 's/ \*/  /' > "gm-skill-$VER.tar.gz.sha256"
+          sha256sum "gm-skill-$VER.tar.gz" > "gm-skill-$VER.tar.gz.sha256"
 
       - name: Publish release
         env:
@@ -182,7 +182,7 @@ jobs:
               code=$(curl -sL -o /dev/null -w '%{http_code}' "$base/$name" || true)
               [ "$code" = "200" ] && break
               echo "[retry] $name HTTP $code (attempt $attempt)"
-              sleep $((attempt * 5))
+              [ "$attempt" = "5" ] || sleep $((attempt * 5))
             done
             if [ "$code" != "200" ]; then
               echo "::error::published release v$VER's $name is not fetchable (HTTP $code)"
