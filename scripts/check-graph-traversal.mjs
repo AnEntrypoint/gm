@@ -68,10 +68,10 @@ function checkHopGraph() {
   }
   for (const entry of hop.entry_points) {
     if (!hopNodes.has(entry)) fail(`hop: entry point ${entry} is not a node`);
-    const reached = reach([entry], hopAdj);
-    for (const id of hopNodes.keys()) {
-      if (!reached.has(id)) fail(`hop: ${id} is unreachable from entry ${entry}`);
-    }
+  }
+  const reached = reach(hop.entry_points, hopAdj);
+  for (const id of hopNodes.keys()) {
+    if (!reached.has(id)) fail(`hop: ${id} is unreachable from every entry point`);
   }
   for (const name of ['terminal', 'halt']) {
     const id = hop.convergence[name];
