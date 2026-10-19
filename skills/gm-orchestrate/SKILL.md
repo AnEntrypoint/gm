@@ -77,7 +77,7 @@ Repeat until a full pass adds no work:
 
 ## Tick
 1. `pool-observe {live, held}`. Take `slots.launch` (node-first, max 32). Empty under shortfall is a defect row, unless `state` is `supply_exhausted`.
-2. Launch one block, up to ceiling. Rows: `Skill(skill="gm-prd", args="row=<id>; session=<SID>")`. Hops: `Skill(skill="gm-hop", args='{"node":{...},"principle":"<id>","surface":"<path>","session":"<SID>","wave":"<wave>","depth":1,"rhetoric":""}')`. `<SID>` = `<parent>-<k>`, unique. A cause-asserting row or hop runs its ACH step (gm-hop 3a, gm-prd SPECIFY) in the same launch.
+2. Launch one block, up to ceiling. Rows: the `gm-prd` skill with `row=<id>; session=<SID>`. Hops: the `gm-hop` skill with `{"node":{...},"principle":"<id>","surface":"<path>","session":"<SID>","wave":"<wave>","depth":1,"rhetoric":""}`. `<SID>` = `<parent>-<k>`, unique. A cause-asserting row or hop runs its ACH step (gm-hop 3a, gm-prd SPECIFY) in the same launch.
 3. Append (`fs_write` with `append:true`) `launch <id>` to `.gm/pool/ledger-<wave>.txt`, a `launched` line to `.gm/pool/runs.jsonl`, `tick <n> event=<id> live=<count> <UTC>` to `.gm/witness-log.md`.
 4. `wait {"ms":60000}`. Each `done <id>` refills its slot this turn. Re-count live after each launch and completion.
 
@@ -102,6 +102,7 @@ Launch only advertised ids. A slot stays empty only when no pending row and no u
 ## Heartbeat
 - Every brief first writes `.gm/pool/<session>.live` (`session`, `row`, `start` ISO-8601 UTC; a hop's `row` is its surface path) and deletes it on finish. A surface-only heartbeat is `malformed_heartbeats`.
 - Skip any id held by a live row before launch. Older than 5 minutes = stale.
+- A lane silent for 30 minutes must be checked by its output file size and a landed-commit check, then stopped and relaunched narrower if nothing has landed.
 
 ## Shortfall and FAILURE
 - Two restarts per walk. Repeated shortfall means these rules are wrong: dispatch `instruction`, correct this skill, restart at tick 1.
@@ -109,7 +110,7 @@ Launch only advertised ids. A slot stays empty only when no pending row and no u
 
 ## Never leave a row open
 - A run ends as `prd-resolve` with a witness, or as blocked. Stalls, blocked workers, refused witnesses and ended sessions never close the walk.
-- Every gm call in every brief passes `cwd: "C:/dev/gm"` (or the row's project root). A call without `cwd` reads another project: "row not found" or "pending 0" from a brief is a wrong-project defect, not a blocker. Re-check with `cwd` before any blocker is filed.
+- Every gm call in every brief passes `cwd: "<gm-root>"` (or the row's project root). A call without `cwd` reads another project: "row not found" or "pending 0" from a brief is a wrong-project defect, not a blocker. Re-check with `cwd` before any blocker is filed.
 - A resolver runs every stage of its row in its one run (orient through publish, then prd-resolve). Stopping after one stage with the row open is a defect: re-dispatch the same row once as `<session>-r<n>` naming the stage reached, never a fresh orient.
 - A blocked row keeps its id and names `blocked_by: <fact and verb>` in its text. File a new blocker row only when no open row names that fact. Counts are unique open rows.
 - Blockers launch next wave. A blocker that blocks again is split until one step remains; that step runs. No blocker-of-blocker past one level.
@@ -153,7 +154,7 @@ Launch only advertised ids. A slot stays empty only when no pending row and no u
 - Target setup: one shared, HMR-capable dev server and client. Browser captures and probes attach to it and reuse it (page reload, or an HMR module edit). Never boot a new server and bundle per run.
 - One browser arm at a time, pool-wide. Browser work queues behind `gpulock`. `gpulock` serialises the GPU adapter only: it does not serialise CPU, memory or disk, and it is not a machine-wide limit. Node-only and non-GPU work continues while an arm waits.
 - A dropped connection is answered by restarting the lane (Connectivity restarts). Thrash is answered by fewer browser arms and shared servers. Neither is answered by a concurrency cap.
-- No extra checkouts. `git archive <remote sha>` read-only is the sanctioned clean base (gm, READ questions).
+- No extra checkouts. the recursive tree listing `gh api repos/<owner>/<repo>/git/trees/<remote sha>?recursive=1`, read-only, is the sanctioned clean base (gm, READ questions).
 - Publish on the first passing witness: time-box a lane to its witness, resolve, publish, keep going.
 
 ## Fan-out
@@ -165,8 +166,8 @@ Launch only advertised ids. A slot stays empty only when no pending row and no u
 
 ## Shared-tree publish
 One work tree, one git lane. Main only; no worktree, side branch or scratch checkout (gm, Autonomy).
-- No extra checkouts. Clean base for measurement or bisect: `git archive` (gm, READ questions).
-- A measurement taken in the shared work tree measures other lanes' uncommitted edits, not the project. Compare against remote `main` by content hash (`GET /contents/<path>?ref=main`, or `git archive <remote sha>`) before calling a difference a regression; local HEAD lags remote and lies. Three false alarms in one day came from work-tree measurements: a "stale bake" whose two files were byte-identical to remote main, a bake pin whose inputs "were identical" and were not, and a 0.1506 m hover that reads 0.0000 m on main.
+- No extra checkouts. Clean base for measurement or bisect: `gh api repos/<owner>/<repo>/git/trees/<remote sha>?recursive=1` (gm, READ questions).
+- A measurement taken in the shared work tree measures other lanes' uncommitted edits, not the project. Compare against remote `main` by content hash (`GET /contents/<path>?ref=main` (when its `content` is empty or the file is over 1 MB, fall back to `gh api /repos/<owner>/<repo>/git/blobs/<sha>` with the `sha` from that contents reply), or `gh api repos/<owner>/<repo>/git/trees/<remote sha>?recursive=1`) before calling a difference a regression; local HEAD lags remote and lies. Three false alarms in one day came from work-tree measurements: a "stale bake" whose two files were byte-identical to remote main, a bake pin whose inputs "were identical" and were not, and a 0.1506 m hover that reads 0.0000 m on main.
 - Publish via the Git API: POST blobs; tree with `base_tree: <remote tip>`; commit parented on that tip; PATCH `refs/heads/main`, `force` unset; re-read each blob at `?ref=main` and verify it. Then read CI: wait up to 60 s for a `push`-event run on the full sha (`GET /repos/<o>/<r>/actions/runs?head_sha=<full sha>`). If none appears, `POST /repos/<o>/<r>/actions/workflows/<file>/dispatches` with `{"ref":"main"}` for each workflow that declares `workflow_dispatch` on gm main: bump-pins, contracts, discipline-tree, doc-drift, gh-pages, house-clean, link-check, npx-route, process-leak, skill-release (all ten; re-check the list if a workflow is added), then read the runs for that sha again. A dispatch-only run is never a witness for a row whose acceptance names a push-event run: it proves the workflow runs, not that the push triggered it. Such a row stays pending until a push-event run exists on the sha, or the sha is recorded as a residual naming the workflows with no push-event run. A sha with no run after that is a residual, not success. Witnessed case: agentplug a9007880 edited `release.yml` and got only `workflow_dispatch` runs, no `push` run.
 - `git_finalize` refusing to push over a sibling's dirty path is redundant when its content is already published. Never reset `refs/heads/main` under running lanes.
 - `remote_moved` on a dirty tree: `git_status {"paths":[...]}`, commit or revert each path in its owning lane, then `git_push {rev:"<sha>"}`.
