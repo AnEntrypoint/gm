@@ -495,8 +495,8 @@ function installRunner() {
     if (fs.existsSync(installPs1)) return runChild('powershell', ['-ExecutionPolicy', 'Bypass', '-File', installPs1, 'spool'])
     return runChild('powershell', ['-Command', 'irm https://raw.githubusercontent.com/AnEntrypoint/gm/main/install.ps1 | iex; Main spool'])
   }
-  if (fs.existsSync(installSh)) return runChild('sh', [installSh, 'spool'], { shell: IS_WINDOWS })
-  runChild('sh', ['-c', 'curl -fsSL https://raw.githubusercontent.com/AnEntrypoint/gm/main/install.sh | sh -s -- spool'], { shell: IS_WINDOWS })
+  if (fs.existsSync(installSh)) return runChild('sh', [installSh, 'spool'])
+  runChild('sh', ['-c', 'curl -fsSL https://raw.githubusercontent.com/AnEntrypoint/gm/main/install.sh | sh -s -- spool'])
 }
 
 await vendorMcpBundle()
