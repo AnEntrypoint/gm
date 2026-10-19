@@ -10,7 +10,7 @@ Input: `row=<id>; session=<SESSION_ID>`. Output: `.gm/receipts/<row>/02-unknowns
 1. List each fact the row needs that the orient receipt does not prove. One line per unknown. Each line states the question it answers.
 2. Record each unknown with `mutable-add`. Do not open any new unknown in another form.
 3. If the list is empty, load `gm-edit`; otherwise load `gm-eliminate`.
-   `Skill(skill="gm-eliminate", args="row=<id>; session=<SESSION_ID>")`
+   the `gm-eliminate` skill with `row=<id>; session=<SESSION_ID>`
 
 ## Finish the work
 
