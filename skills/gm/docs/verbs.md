@@ -43,7 +43,7 @@ repository is its own root. A body field `git_root_override` pins the root for a
 subcommand, so a plain shell runs a verb without an MCP client or a daemon of its own.
 Search verbs also take a shorter command-line form: `gm codesearch literal <needle> --path <dir> --glob <glob>`. It builds `{"query","mode"}` plus `path`, with `--glob` as `path_glob`. The shorter form exists because a bare mode word such as `literal` is not a dispatch body. It applies to `grep`, `rg`, `codesearch`, `code_search` and `search` only.
 
-Inside `gm_codemode`, the aliases `rg`, `code_search` and `search` are not functions on `gm`. Call `gm.grep` or `gm.codesearch` instead. `gm.rg`, `gm.code_search` and `gm.search` throw `no gm tool named <name>`.
+Inside `gm_codemode`, the aliases `rg` and `code_search` are functions on `gm` that dispatch the same verbs as `gm.grep` and `gm.codesearch`, and `search` is listed by `gm.list()` as well.
 
 Any argument starting with `{` or `@`, and every non-search invocation, is forwarded untouched, so the launcher never reinterprets a real dispatch. `--cwd`, `--timeout` and `--no-ignore` stay dispatch flags, never body fields. `bin/gm` is exposed for `npm link` as `gm-dispatch`.
 
