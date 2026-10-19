@@ -208,7 +208,7 @@ ran. A `regex` query carrying a metacharacter is matched as one regular expressi
 effect on it. Give the result limit as `max_results` or `k`, never both with different values.
 
 `grep` answers the same way as `codesearch`: its reply's `mode` names the reading that ran, and a pattern that will not
-compile is refused with the regex error text rather than an empty result.
+compile is refused with the regex error text rather than an empty result. The grep body does not declare `combine`, `term_combination` or `verbatim`, so each is refused as an undeclared key; the multi-term reading (`combine`) is codesearch's only.
 
 
 ### `fs_read`, `fs_write`, `fs_readdir`, `fs_stat`: read a file or a line range, write a file, list a directory, stat a path
