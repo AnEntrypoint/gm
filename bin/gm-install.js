@@ -416,8 +416,8 @@ function registerClaudeCode() {
 
 function registerOtherHosts() {
   const scopeFlag = global ? ['-g'] : []
-  const launch = `node ${MCP_BUNDLE_PATH}`
-  runChild('npx', ['-y', 'add-mcp', IS_WINDOWS ? `"${launch}"` : launch, '-n', 'gm', ...scopeFlag, '-y'], { shell: IS_WINDOWS })
+  const launch = IS_WINDOWS ? [`"node ${MCP_BUNDLE_PATH}"`] : [process.execPath, '--args', MCP_BUNDLE_PATH]
+  runChild('npx', ['-y', 'add-mcp', ...launch, '-n', 'gm', ...scopeFlag, '-y'], { shell: IS_WINDOWS })
 }
 
 const CURSOR_MCP_PATH = path.join(os.homedir(), '.cursor', 'mcp.json')
