@@ -57,7 +57,7 @@ const RESULT = {
 }
 
 const ROOT = process.cwd()
-const GM = 'Use the gm skill for this; code questions go to codeinsight (callers/impact) first, then codesearch, and Read only a located path. Use mcp__gm__gm_codemode (load via ToolSearch "select:mcp__gm__gm_codemode") for every verb; no Bash grep/find/git except node.'
+const GM = 'Use the gm skill for this; code questions go to codeinsight (callers/impact) first, then codesearch, and Read only a located path. Use the gm verb tool (gm_codemode, or the spool) for every verb; no Bash grep/find/git except node.'
 
 const finderPrompt = (lens, tag) => `${GM} Session id: find-${tag}. cwd ${ROOT}.
 
