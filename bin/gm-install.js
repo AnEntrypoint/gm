@@ -206,11 +206,12 @@ function readLedger(root) {
   return { file, kept }
 }
 
-function recordMode(root, name, mode, source) {
+function recordMode(root, name, mode, source, reason = '') {
   const { file, kept } = readLedger(root)
   const ts = new Date().toISOString()
   const lines = kept.filter(l => l.split(/\s+/)[0] !== name)
-  lines.push(`${name} ${mode} ${ts} ${source}`)
+  const why = reason ? ` reason: ${String(reason).replace(/\s+/g, ' ').trim()}` : ''
+  lines.push(`${name} ${mode} ${ts} ${source}${why}`)
   const tmp = `${file}.tmp.${process.pid}`
   fs.writeFileSync(tmp, `# gm skill install modes: <name> <linked|copied|refused> <iso-ts> <source>\n${lines.join('\n')}\n`)
   renameReplacing(tmp, file)
@@ -248,7 +249,7 @@ function materialiseSkill({ dir, name, root, copyOnly = false }) {
 
   const cleared = clearDest(dest)
   if (cleared.startsWith('refused:')) {
-    recordMode(root, name, 'refused', src)
+    recordMode(root, name, 'refused', src, cleared.slice(8))
     console.log(`REFUSED ${name} -> ${dest}: could not move the existing install aside (${cleared.slice(8)}); it stays a COPY and will drift from ${src} -- rerun with --force-link to replace it`)
     return { mode: 'refused', status: cleared }
   }
