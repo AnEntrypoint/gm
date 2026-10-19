@@ -6,6 +6,30 @@ permissions:
 on:
   push:
     branches: [main]
+    paths:
+      - install.sh
+      - install.ps1
+      - docs/**
+      - site/**
+      - skills/**
+      - .agents/**
+      - scripts/**
+      - bin/**
+      - gm-config
+      - gm-config/**
+      - rs-*
+      - rs-plugkit/**
+      - gm-mcp
+      - gm-mcp/**
+      - agentplug
+      - agentplug-*
+      - agentplug/**
+      - package.json
+      - README.md
+      - AGENTS.md
+      - SKILLS.md
+      - CONTRIBUTING.md
+      - .github/workflows/**
   pull_request:
     branches: [main]
   workflow_dispatch: {}
