@@ -5,5 +5,8 @@ rs-plugkit/ci-fix-wt/
 rs-plugkit/wasip3-fix-wt/
 rs-plugkit/wt-find11-tmp/
 rs-plugkit/ci-fix-wt-status/
+rs-plugkit/wt-find11-push/
+rs-plugkit/wt-ci-status-fix/
+rs-plugkit/wt-config-lock-fix/
 vendor/
 gm-mcp/bin/
