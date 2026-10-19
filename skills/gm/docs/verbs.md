@@ -370,7 +370,7 @@ Query verbs:
 
 Command verbs (every other git verb):
 
-- `git_push`, `git_add`, `git_commit`, `git_amend`, `git_rewrite_authors`, `git_finalize`, `git_fetch`, `git_pull`, `git_init`, `git_branch`, `git_branch_delete`, `git_checkout`, `git_merge`, `git_merge_abort`, `git_stash`, `git_stash_pop`, `git_stash_drop`, `git_rm`, `git_revert`, `git_reset`, `git_cherry_pick`, `git_submodule_add`, `git_worktree_add`, `git_worktree_remove`, `git_worktree_prune`
+- `git_push`, `git_add`, `git_commit`, `git_amend`, `git_rewrite_authors`, `git_finalize`, `git_fetch`, `git_pull`, `git_init`, `git_branch`, `git_branch_delete`, `git_checkout`, `git_merge`, `git_merge_abort`, `git_stash`, `git_stash_pop`, `git_stash_drop`, `git_rm`, `git_revert`, `git_reset`, `git_submodule_add`, `git_worktree_add`, `git_worktree_remove`, `git_worktree_prune`
 
 Single accepted shape for `git_commit` and `git_push`: each key is accepted at the top level or under `body`, and both forms reach the same commit or push path. `git_commit {message, paths?, files?, allow_whole_index?, author_name?, author_email?}`: `message` is the commit subject plus optional body, subject at most 50 characters. `git_push {rev?, remote?, branch?, force?, recover_remote_moved?, allow_foreign_commits?}`: only `rev` is top-level; the other push fields are body-only. `{"message":"..."}` and `{"body":{"message":"..."}}` are the same call; a key named in both takes its value from `body`. A key outside a verb's list is refused, naming the declared fields.
 
