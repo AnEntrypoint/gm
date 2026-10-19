@@ -11,7 +11,7 @@ on:
   workflow_dispatch: {}
 
 concurrency:
-  group: gm-bump-pins-${{ github.sha }}
+  group: gm-bump-pins
   cancel-in-progress: false
 
 permissions:
