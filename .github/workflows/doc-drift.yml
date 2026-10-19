@@ -104,7 +104,7 @@ jobs:
       - name: No vulnerable crate in rs-plugkit or agentplug Cargo.lock
         run: |
           cargo audit --file rs-plugkit/Cargo.lock
-          cargo audit --file agentplug/Cargo.lock --ignore RUSTSEC-2026-0321
+          cargo audit --file agentplug/Cargo.lock
       - name: Rust crate licenses match the deny.toml allowlist
         run: |
           cargo binstall --no-confirm cargo-deny@0.18.4
