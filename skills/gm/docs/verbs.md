@@ -835,3 +835,50 @@ Every body field a verb declares, grouped by verb. The contract check (`scripts/
 - `prd_list`: `full`, `brief`
 - `prd_resolve`: `witness_evidence`, `witness_dispatch_id`, `witness_root`, `witness_exit_code`, `witness_output_sha256`, `witness_output_path`, `witness_ts`, `resolution`, `commit_sha`, `commit_comment`, `keep_status`. `witness_root` is the root the witness ran in: an absolute path under the scratch directory or the row's own root, whose `.gm/exec-spool/.dispatch-ledger.json` holds `witness_dispatch_id`; passed through unchanged.
 - `expansion_audit`: `scope`, `rows_added`, `unknowns_added`
+
+## Verbs without a dedicated section
+
+Served verbs with no entry elsewhere in this file. Rows are sourced from `gm.describe`; `kind` is `query` or `command`. The remaining served verbs without a row are tracked by a follow-up PRD row.
+
+| verb | body | purpose | kind |
+|---|---|---|---|
+| `gm_result` | `{"result_file"?, "root"?, "projectPath"?, "field"?, "offset"?, "limit"?}` | read a bounded page from a spool result named by a truncation notice | query |
+| `gm` | `{"verb"?}` | run one spool verb dispatch and return its result as flat YAML; unknown verbs answer `unknown_verb` | command |
+| `env_get` | none | read one environment variable through the spool | query |
+| `kv_get` | none | read a value from the project key-value store | query |
+| `kv_put` | none | write a value to the project key-value store | command |
+| `kv_query` | none | query the project key-value store | query |
+| `git_worktree` | none | linked checkout by action (`add`, `list`, `remove`); a last resort, see the Git verbs section | command |
+| `sql_open` | none | open a SQL database through the spool | command |
+| `sql_close` | none | close an open SQL database | command |
+| `sql_list_dbs` | none | list open SQL databases | query |
+| `sql_exec` | none | run a SQL statement that changes data | command |
+| `sql_query` | none | run a read-only SQL query | query |
+| `sql_smoke` | none | run the SQL store smoke test | command |
+| `sql_serialize` | none | serialize an open SQL database | query |
+| `sql_deserialize` | none | load a serialized SQL database | command |
+| `codeinsight_index` | none | index state and symbol overview, see the Code lookup section | query |
+| `code_search` | `{"query", "mode"?, "k"?, "max_matches"?, "max_files"?, "timeout_ms"?, "path"?, "root"?, "glob"?, "exclude"?, "combine"?, "output"?, "case_insensitive"?, "whole_word"?, "comments_only"?, "verbatim"?, "docs"?, "refresh"?, "no_ignore"?}` | ranked code search; alias of `codesearch`, see the Code lookup section | query |
+| `discipline` | none | the discipline checklist for the current phase | query |
+| `python` | raw_body | run Python code through the spool | command |
+| `bash` | raw_body | run a shell command through the spool; raw `git` is refused, use the git verbs | command |
+| `powershell` | raw_body | run PowerShell through the spool | command |
+| `ssh` | raw_body | run a command on a remote host through the spool | command |
+| `go` | raw_body | run Go code through the spool | command |
+| `rust` | raw_body | run Rust code through the spool | command |
+| `c` | raw_body | run C code through the spool | command |
+| `cpp` | raw_body | run C++ code through the spool | command |
+| `java` | raw_body | run Java code through the spool | command |
+| `deno` | raw_body | run TypeScript or JavaScript through Deno | command |
+| `transition` | none | advance the phase machine to the named node | command |
+| `transition_revert` | none | revert the last phase transition | command |
+| `mutable_resolve` | none | resolve a mutable item | command |
+| `mutable_add` | none | add a mutable item | command |
+| `mutable_list` | none | list mutable items | query |
+| `mutable_defer` | none | defer a mutable item | command |
+| `unknown_add` | none | add an unknown | command |
+| `unknown_list` | none | list unknowns | query |
+| `unknown_resolve` | none | resolve an unknown | command |
+| `unknown_defer` | none | defer an unknown | command |
+| `dream_policy_register` | none | register a Dream-RSI policy; proposes only, never deploys | command |
+| `dream_evaluator_receipt` | none | record a Dream-RSI evaluator receipt | command |
