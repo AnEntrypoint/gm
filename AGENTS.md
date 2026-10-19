@@ -29,7 +29,7 @@ MSYS `ln -s` silently copies when symlink creation is refused, so on MINGW/MSYS/
 
 ## Glossary
 
-- **walk**: one run of the gm state machine, driven by the walk loop in `skills/gm/SKILL.md` (Section 1c).
+- **walk**: one run of the gm state machine, driven by the pool loop in `skills/gm-orchestrate/SKILL.md` (Core loop).
 - **hop**: one traversal of a principle node by one `gm-hop` subagent (`skills/gm-hop/SKILL.md`). **candidate**: an outgoing edge of the current node. **successor**: the next hop, spawned from a candidate, which receives the handover rhetoric.
 - **traversal**: the chain of hops within one walk, bounded by the visited set and the depth limit.
 - **node**: a vertex of `skills/dream-rsi/gm-graph.json`. Only principle nodes are visited; gate, terminal, phase and tension nodes are refused.
