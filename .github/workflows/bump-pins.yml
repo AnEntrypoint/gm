@@ -4,17 +4,6 @@ name: bump-pins
 on:
   push:
     branches: [main]
-    paths-ignore:
-      - 'agentplug'
-      - 'agentplug-bert'
-      - 'agentplug-libsql'
-      - 'agentplug-treesitter'
-      - 'agentplug-crux'
-      - 'gm-config'
-      - 'gm-mcp'
-      - 'rs-codeinsight'
-      - 'rs-plugkit'
-      - 'rs-search'
   repository_dispatch:
     types: [submodule-released]
   schedule:
