@@ -424,10 +424,14 @@ function registerClaudeCode() {
   syncGmServers(projectConfigPath, projectConfig, [{ servers: projectConfig.mcpServers, label: `${projectConfigPath} mcpServers`, create: !global }], projectServerEntry())
 }
 
+function mcpLaunchArgv() {
+  const quote = s => (IS_WINDOWS ? `"${s}"` : s)
+  return [quote(process.execPath), '--args', quote(MCP_BUNDLE_PATH)]
+}
+
 function registerOtherHosts() {
   const scopeFlag = global ? ['-g'] : []
-  const launch = IS_WINDOWS ? [`"node ${MCP_BUNDLE_PATH}"`] : [process.execPath, '--args', MCP_BUNDLE_PATH]
-  runChild('npx', ['-y', 'add-mcp', ...launch, '-n', 'gm', ...scopeFlag, '-y'], { shell: IS_WINDOWS })
+  runChild('npx', ['-y', 'add-mcp', ...mcpLaunchArgv(), '-n', 'gm', ...scopeFlag, '-y'], { shell: IS_WINDOWS })
 }
 
 const CURSOR_MCP_PATH = path.join(os.homedir(), '.cursor', 'mcp.json')
