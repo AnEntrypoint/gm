@@ -92,7 +92,7 @@ accepts `exclude` under the same aliases.
 {"refresh":true}                                 re-read from disk: walk instead of `git ls-files` (tracked
                                                  plus untracked files git does not ignore), and bypass the
                                                  content cache keyed by file modification time (mtime). An unscoped walk also skips noise
-                                                 and hidden directories, so its file set can be smaller.
+                                                 and hidden directories, so its file set can be smaller. Gitignored trees (target/, weights/) are never listed by the git scan, so a `.codesearchignore` rule over them is witnessed only by a refresh walk.
                                                  "file_source":"disk" and "no_cache":true are aliases.
 {"no_ignore":true}                               include files .gitignore would hide: build output, vendored
                                                  trees, scratch scripts the project never committed, so they
