@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // Usage: node scripts/triage/runner-status.mjs [root]
 // Cross-platform port of runner-status.sh. Reads <root>/.gm/exec-spool/.status.json and prints
-// ALIVE | BUSY | SERVING-STATUS-STALE | DEAD with the same verdict rules; exit 1 only when DEAD.
+// ALIVE | BUSY | SERVING-STATUS-STALE | DEAD with the same verdict rules.
+// Exit codes: 0 for ALIVE, BUSY and SERVING-STATUS-STALE; 1 for DEAD; 2 when no status file exists (no watcher ever started under root).
 import fs from "node:fs";
 import path from "node:path";
 
