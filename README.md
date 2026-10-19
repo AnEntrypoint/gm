@@ -113,7 +113,7 @@ gm reads served prose from three tiers, in order: the project vendored file in `
 
 ## Developing gm itself
 
-The root `.gitmodules` file lists 11 submodules:
+The root `.gitmodules` file lists 10 submodules:
 
 - `rs-plugkit/`: the WASM guest, compiled to WebAssembly. It holds the orchestrator, the gates and the spool dispatch.
 - `agentplug/`: the native host, `agentplug-runner`, which loads the WASM guest.
