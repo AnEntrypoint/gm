@@ -8,13 +8,29 @@ on:
     branches: [main]
     paths:
       - 'skills/**'
+  pull_request:
+    paths:
+      - 'skills/**'
 
 concurrency:
-  group: gm-skill-release
+  group: gm-skill-release-${{ github.event_name }}
   cancel-in-progress: false
 
 jobs:
+  manifest-check:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+
+      - name: Fail when skills/manifest.sha256 is stale
+        run: node scripts/build-skill-manifest.mjs --check
+
   release:
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
