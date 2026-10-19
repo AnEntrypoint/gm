@@ -35,7 +35,7 @@ jobs:
           if ! changed=$(git diff --name-only "$BASE" HEAD); then
             echo "relevant=true" >> "$GITHUB_OUTPUT"; exit 0
           fi
-          if printf '%s\n' "$changed" | grep -Eq '^(install\.sh$|install\.ps1$|docs/|site/|skills/|scripts/|bin/|gm-config$|gm-config/|rs-plugkit$|rs-plugkit/|gm-mcp$|gm-mcp/|agentplug$|agentplug/|package\.json$|README\.md$|AGENTS\.md$|SKILLS\.md$|CONTRIBUTING\.md$|\.github/workflows/[^/]+\.yml$)'; then
+          if printf '%s\n' "$changed" | grep -Eq '^(install\.sh$|install\.ps1$|docs/|site/|skills/|scripts/|bin/|gm-config$|gm-config/|rs-plugkit$|rs-plugkit/|gm-mcp$|gm-mcp/|(agentplug|rs-)[A-Za-z0-9_-]*(/|$)|package\.json$|README\.md$|AGENTS\.md$|SKILLS\.md$|CONTRIBUTING\.md$|\.github/workflows/[^/]+\.yml$)'; then
             echo "relevant=true" >> "$GITHUB_OUTPUT"
           else
             echo "relevant=false" >> "$GITHUB_OUTPUT"
