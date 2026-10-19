@@ -57,6 +57,7 @@ const RESULT = {
 }
 
 const ROOT = process.cwd()
+const DRAIN_FIRST_AT = 20
 const GM = 'Use the gm skill for this; code questions go to codeinsight (callers/impact) first, then codesearch, and Read only a located path. Use the gm verb tool (gm_codemode, or the spool) for every verb; no Bash grep/find/git except node.'
 
 const finderPrompt = (lens, tag) => `${GM} Session id: find-${tag}. cwd ${ROOT}.
@@ -107,6 +108,17 @@ const rolloutLane = async () => {
   while (filed) {
     round++
     phase('Roll out')
+    const COUNT = { type: 'object', properties: { open: { type: 'number' } }, required: ['open'] }
+    const counted = await agent(
+      `${GM} Session id: open-count-${round}. cwd /workspace/gm. Count the open PRD rows with prd-list {"status":"pending","limit":1} and read its total. Return {open: <total>}.`,
+      { phase: 'Roll out', label: `open count r${round}`, schema: COUNT }
+    )
+    const openNow = counted && typeof counted.open === 'number' ? counted.open : 0
+    if (openNow >= DRAIN_FIRST_AT) {
+      log(`roll-out round ${round}: ${openNow} rows open, drain has priority; no new finding this round`)
+      filed = false
+      break
+    }
     const perFinder = await pipeline(
       LENSES,
       (lens, _item, index) => agent(finderPrompt(lens, `${round}-${index}`), { phase: 'Roll out', label: `r${round} ${lens.slice(0, 40)}`, schema: ROWS }),
