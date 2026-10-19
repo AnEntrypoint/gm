@@ -133,7 +133,7 @@ const rolloutLane = async () => {
       `${GM} Session id: open-count-${round}. cwd /workspace/gm. Count the open PRD rows with prd-list {"status":"pending","limit":1} and read its total. Return {open: <total>}.`,
       { phase: 'Roll out', label: `open count r${round}`, schema: COUNT }
     )
-    const openNow = counted && typeof counted.open === 'number' ? counted.open : 0
+    const openNow = counted && typeof counted.open === 'number' ? counted.open : Infinity
     if (openNow >= DRAIN_FIRST_AT) {
       log(`roll-out round ${round}: ${openNow} rows open, drain has priority; no new finding this round`)
       filed = false
