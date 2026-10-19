@@ -35,7 +35,7 @@ read `.gm/exec-spool/out/<verb>-<N>.json`. Make `N` `<session id>-<counter>`, ne
 
 The launch command for the spool watcher (`agentplug-runner spool`) is in `skills/gm/spool-adapter.md`, under its Starting the watcher heading.
 
-`cwd` selects the project. Without `cwd`, gm uses `GM_MCP_DEFAULT_CWD` or `CLAUDE_PROJECT_DIR`, else the process working directory when it is a git root, and refuses with `error: "cwd-required"` otherwise. gm resolves the
+`cwd` selects the project and is passed explicitly on every call. gm resolves the
 project root from it with `git rev-parse --show-toplevel`. A cwd outside any git
 repository is its own root. A body field `git_root_override` pins the root for any verb.
 
@@ -43,7 +43,7 @@ repository is its own root. A body field `git_root_override` pins the root for a
 subcommand, so a plain shell runs a verb without an MCP client or a daemon of its own.
 Search verbs also take a shorter command-line form: `gm codesearch literal <needle> --path <dir> --glob <glob>`. It builds `{"query","mode"}` plus `path`, with `--glob` as `path_glob`. The shorter form exists because a bare mode word such as `literal` is not a dispatch body. It applies to `grep`, `rg`, `codesearch`, `code_search` and `search` only.
 
-Inside `gm_codemode`, `gm.grep` and `gm.codesearch` are the functions on `gm` for the search verbs. `rg`, `code_search` and `search` are not functions on `gm`, and `gm.list()` does not list them.
+Inside `gm_codemode`, `gm.grep` and `gm.codesearch` are the functions on `gm` for the search verbs. `rg` is a served alias of `gm.grep`, and `code_search` and `search` are served aliases of `gm.codesearch`: `gm.list()` lists all five, and `gm.describe` resolves each.
 
 Any argument starting with `{` or `@`, and every non-search invocation, is forwarded untouched, so the launcher never reinterprets a real dispatch. `--cwd`, `--timeout` and `--no-ignore` stay dispatch flags, never body fields. `bin/gm` is exposed for `npm link` as `gm-dispatch`.
 
@@ -234,7 +234,7 @@ returned, `endLine`/`end`/`to` the last line returned, and `limit`/`count`/`line
 an end line. Accepted aliases, resolved in this order (the first pair with a key present wins):
 
 ```
-startLine / endLine     start / end (and start / count)     from / to     offset / limit     line / lines
+startLine / endLine, start_line / end_line     start / end (and start / count)     from / to     offset / limit     line / lines
 ```
 
 The `line` and `lines` aliases name a start line and a line count, as `offset` and `limit` do.
@@ -243,7 +243,7 @@ So `{"startLine":1040,"endLine":1100}` and `{"from":1040,"to":1100}` and `{"offs
 return lines 1040-1100. A request `offset` is the 1-based first line, unlike the 0-based `offset` in a reply. An end line past the last line clamps, and the reply then carries
 `clamped_to_total_lines` plus `end_line_requested`; a start line past the last line is an error naming the
 file's line count, as is a start of 0, an end before the start, or any range on an empty file. A key that
-looks like a range but is not one of these (`start_line`, `endline`, `firstLine`, ...) is refused by name
+looks like a range but is not one of these (`endline`, `firstLine`, ...) is refused by name
 instead of being ignored: unknown range keys never silently return the whole file.
 
 Ranged replies add `total_lines`, `start_line`, `end_line`, `returned_lines`, `has_more_lines`,
@@ -370,7 +370,9 @@ Query verbs:
 
 Command verbs (every other git verb):
 
-- `git_push`, `git_add`, `git_commit`, `git_amend`, `git_rewrite_authors`, `git_finalize`, `git_fetch`, `git_pull`, `git_init`, `git_branch`, `git_branch_delete`, `git_checkout`, `git_merge`, `git_merge_abort`, `git_stash`, `git_stash_pop`, `git_stash_drop`, `git_rm`, `git_revert`, `git_reset`, `git_submodule_add`, `git_submodule_update`, `git_worktree_add`, `git_worktree_remove`, `git_worktree_prune`
+- `git_push`, `git_add`, `git_commit`, `git_amend`, `git_rewrite_authors`, `git_finalize`, `git_fetch`, `git_pull`, `git_init`, `git_branch`, `git_branch_delete`, `git_checkout`, `git_merge`, `git_merge_abort`, `git_stash`, `git_stash_pop`, `git_stash_drop`, `git_rm`, `git_revert`, `git_cherry_pick`, `git_reset`, `git_submodule_add`, `git_submodule_update`, `git_worktree_add`, `git_worktree_remove`, `git_worktree_prune`
+
+`git_cherry_pick {rev}` (alias `ref`, at the top level or under `body`) takes the commit to pick. Without a revision it falls back to its own default or refuses, per `gm.describe`.
 
 Single accepted shape for `git_commit` and `git_push`: each key is accepted at the top level or under `body`, and both forms reach the same commit or push path. `git_commit {message, paths?, files?, allow_whole_index?, author_name?, author_email?}`: `message` is the commit subject plus optional body, subject at most 50 characters. `git_push {rev?, remote?, branch?, force?, recover_remote_moved?, allow_foreign_commits?}`: only `rev` is top-level; the other push fields are body-only. `{"message":"..."}` and `{"body":{"message":"..."}}` are the same call; a key named in both takes its value from `body`. A key outside a verb's list is refused, naming the declared fields.
 
@@ -792,9 +794,8 @@ The agentplug daemon, not the gm plugin, handles these:
 
 ## Getting a verb's own documentation
 
-Twelve verbs publish their parameter doc: pass `{"help": true}` as the body of `grep`, `codesearch`,
-`fs_read`, `fs_write`, `fs_readdir`, `fs_stat`, `prd-add`, `prd-resolve`, `codeinsight`, `comment-audit`, `git_merge_abort` or `git_worktree` and the reply is
-`{"help": true, "verb": ..., "parameters": "<doc>"}`. Any other verb answers `help` with an error that says no parameter documentation is published for it.
+Three verbs publish their parameter doc: pass `{"help": true}` as the body of `grep` (alias `rg`), `comment-audit` or `git_worktree` and the reply is
+`{"help": true, "verb": ..., "parameters": "<doc>"}`. The other verbs refuse the key as an undeclared body field (`undeclared key help`, naming their declared fields): `codesearch`, `fs_read`, `fs_write`, `fs_stat`, `fs_readdir`, `codeinsight`, `prd-add`, `prd-resolve`, `git_merge_abort`, `git_status` and `git_log`. `ci-status` with `help` answers `error_code: failed`.
 
 `gm.describe(name)` in `gm_codemode` answers `{name, verb, summary, docs, input_schema, body_schema}`. `summary` is the verb's table description (null when the table has none; `docs` then names the heading to search for). `input_schema` is `{shared: "dispatch_envelope"}` when the verb takes the common dispatch envelope (body, raw_body, session_id, cwd, timeout_seconds and the rest); that schema is returned once by `gm.help().dispatch_envelope`.
 
