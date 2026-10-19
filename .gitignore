@@ -240,3 +240,4 @@ find1-*/
 
 # repro scratch directories: runtime reproduction workspaces, never source
 .gm/repro-1018/
+.gm/instructions-parked-*/
