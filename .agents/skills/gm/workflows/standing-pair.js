@@ -87,7 +87,7 @@ Row ${row.id} (repo ${row.repo}, group ${row.group}): ${row.subject}. Read it fu
 5. Secrets check from that repo must print RESULT: PASS.
 6. Commit by explicit path (subject at most 50 characters, change only, no attribution trailer). git_pull, then git_push by full sha.
 7. Read CI for that sha with ci-status (gh run list if the probe fails). On a red job, debug with ci_log failed_only, fix, push again; up to 3 attempts.
-8. Close the row with prd-resolve {id, witness_evidence, witness_dispatch_id} only when the witness passed AND CI is green. Otherwise leave it open with the blocker.
+8. Close the row with prd-resolve {id, witness_evidence, witness_dispatch_id} only when the witness passed AND CI is green. Otherwise call prd-block {id, blocker} naming the failing witness or CI job, so the row leaves the pending listing.
 Return {id, status: "resolved" or "blocked", commit, witness_dispatch_id, ci: "green" | "red" | "none", note}.`
 
 const waitPrompt = `${GM} Session id: drain-wait. Call the wait verb with {"ms":60000} and return {}.`
