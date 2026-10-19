@@ -142,7 +142,7 @@ jobs:
           mkdir -p release-assets
           VER="${{ steps.bump.outputs.version }}"
           echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-          tar -czf "release-assets/gm-skill-$VER.tar.gz" skills
+          tar --sort=name --mtime=@0 --owner=0 --group=0 --numeric-owner -cf - skills | gzip -n > "release-assets/gm-skill-$VER.tar.gz"
           cd release-assets
           sha256sum "gm-skill-$VER.tar.gz" | sed 's/ \*/  /' > "gm-skill-$VER.tar.gz.sha256"
 
