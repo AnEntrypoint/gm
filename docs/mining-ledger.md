@@ -1,6 +1,6 @@
 # Mining ledger
 
-Conversation mining covered the last 24 hours of transcripts under the Claude projects directory, split into eight shards: `sub1` through `sub8`. This ledger lists which pending PRD rows cite each shard. The rows are the only source; no per-shard count or file list is recorded in any of them, so none is given here.
+The conversation mining run used the shard range `sub1` through `sub8`. The transcript directories for those shards are not present on disk at audit time, so their launch cannot be witnessed from this checkout. This ledger lists which pending PRD rows cite each shard. The rows are the only source; no per-shard count or file list is recorded in any of them, so none is given here.
 
 Source: pending rows read with `prd-list` (status pending) at the time of this audit. Resolved rows live in `.gm/prd-log.jsonl` and were not searched.
 
