@@ -83,7 +83,7 @@ const fixPrompt = (row) => `${GM} Session id: fix-${row.id}. cwd ${ROOT}. Read $
 Row ${row.id} (repo ${row.repo}, group ${row.group}): ${row.subject}. Read it fully with prd-list {"id":"${row.id}"}.
 1. Reproduce it live with a dispatch; keep the dispatch id.
 2. Make the minimal fix in ${row.group}; file other findings with prd-add.
-3. Build only when the repo needs it and the build setting is on (rs-plugkit: --features slim; if the default CARGO_HOME is unwritable use CARGO_HOME=/tmp/cargo-home-drsi RUSTUP_HOME=/tmp/rustup-drsi).
+3. Build only when the repo needs it and the build setting is on (rs-plugkit: --features slim; if the default CARGO_HOME is unwritable point CARGO_HOME and RUSTUP_HOME at the fixed subdirectories cargo-home-drsi and rustup-drsi under the OS temp directory, os.tmpdir()).
 4. Witness the fix through a live dispatch; keep its id.
 5. Secrets check from that repo must print RESULT: PASS.
 6. Commit by explicit path (subject at most 50 characters, change only, no attribution trailer). git_pull, then git_push by full sha.
