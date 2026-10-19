@@ -19,6 +19,7 @@ permissions:
 
 jobs:
   advance:
+    if: "${{ github.event_name != 'push' || !startsWith(github.event.head_commit.message, 'pins: advance') }}"
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
