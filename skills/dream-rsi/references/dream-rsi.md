@@ -8,7 +8,7 @@ Dream-RSI is a continuous core process, not an opt-in subsystem: every ordinary 
 
 **Three-stage loop, offline-biased per the paper.** Stages are not verbs: no spool verb is named after a stage. The three stages are:
 
-- **Stage 1, online-explore.** Drives real dispatch rounds that grow the discovery tree live. The discovery tree is the set of discovery records, each linked to its parent record by `parent_id`.
+- **Stage 1, online-explore.** Drives real dispatch rounds that grow the discovery tree live. Each round runs the spool verbs `dream-evaluator-receipt` (carrying `parent_id`, the parent discovery id, or none for a root) and then `dream-discovery-record` (`id`, `evaluator_receipt_id`, `policy_id`, `dispatch_id`, `round`), which appends a `dream-discovery-record` line to `.gm/dream-rsi/<session>/discovery.json`. The discovery tree is the set of those records; each record's `parent_id` is copied from its evaluator receipt, not from the discovery-record body.
 - **Stage 2, the replay simulator.** Walks that frozen tree offline, with zero re-execution and a pure disk read, to score challenger exploration policies against the SAME recorded worlds the incumbent already faced. A world is one sealed world, named by its world id, that the replay simulator scores.
 - **Stage 3, policy dreaming.** Samples candidate policy variants for the simulator to score.
 
