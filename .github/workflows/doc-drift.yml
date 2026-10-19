@@ -97,10 +97,19 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
       - run: git submodule update --init --depth 1 rs-plugkit agentplug agentplug-treesitter
+      - id: cargo-tools
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684
+        with:
+          path: |
+            ~/.cargo/bin/cargo-audit
+            ~/.cargo/bin/cargo-deny
+          key: cargo-tools-audit-0.22.2-deny-0.18.4-${{ runner.os }}-${{ runner.arch }}
       - uses: taiki-e/install-action@8cca0918f8471c33515202b73f56ab27f2bed283
+        if: steps.cargo-tools.outputs.cache-hit != 'true'
         with:
           tool: cargo-binstall
       - name: Install cargo-audit 0.22.2 from its release binary
+        if: steps.cargo-tools.outputs.cache-hit != 'true'
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: cargo binstall --no-confirm cargo-audit@0.22.2
@@ -112,7 +121,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
-          cargo binstall --no-confirm cargo-deny@0.18.4
+          if [ "${{ steps.cargo-tools.outputs.cache-hit }}" != "true" ]; then
+            cargo binstall --no-confirm cargo-deny@0.18.4
+          fi
           node scripts/check-crate-licenses.mjs
       - name: Every tracked binary or vendored font carries an allowlisted license
         run: node scripts/check-binary-licenses.mjs
