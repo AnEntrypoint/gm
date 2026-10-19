@@ -11,6 +11,7 @@ on:
   pull_request:
     paths:
       - 'skills/**'
+      - 'scripts/build-skill-manifest.mjs'
 
 concurrency:
   group: gm-skill-release-${{ github.event_name }}
