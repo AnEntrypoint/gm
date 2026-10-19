@@ -46,7 +46,7 @@ if [ "${#overlay[@]}" -gt 0 ]; then dirty=true; fi
 
 cargo_home=${CARGO_HOME:-$HOME/.cargo}
 if ! { mkdir -p "$cargo_home" 2>/dev/null && [ -w "$cargo_home" ]; }; then
-  export CARGO_HOME="/tmp/cargo-home-$(id -u)"
+  export CARGO_HOME="$gm_root/.gm/lane-build/cargo-home-$(id -u)"
   echo "sideload-plugkit: CARGO_HOME $cargo_home is not writable; using $CARGO_HOME" >&2
   mkdir -p "$CARGO_HOME"
 fi
