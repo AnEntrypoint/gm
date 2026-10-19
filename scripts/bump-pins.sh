@@ -16,9 +16,9 @@ repo_of() {
 
 gate_ok() {
   local pending wf
-  pending=$(gh api "repos/AnEntrypoint/$1/actions/runs?head_sha=$2&per_page=100" --jq '[.workflow_runs[] | select(.name != "Deploy GH Pages") | select(.name | test("release|publish|build|wasm"; "i"))] as $m | if ($m | length) == 0 then "none" else ([$m[] | select(.status != "completed" or ((.conclusion // "") | IN("success", "skipped", "neutral") | not))] | length | tostring) end') || { echo "::error::gate query failed for $1 at ${2:0:9}"; exit 1; }
+  pending=$(gh api "repos/AnEntrypoint/$1/actions/runs?head_sha=$2&per_page=100" --jq '[.workflow_runs[] | select(.name != "Deploy GH Pages") | select(.name | test("release|publish|build|wasm"; "i"))] as $m | if ($m | length) == 0 then "none" else ([$m[] | select(.status != "completed" or ((.conclusion // "") | IN("success", "skipped", "neutral") | not))] | length | tostring) end') || { echo "::error::gate query failed for $1 at ${2:0:9}"; return 1; }
   if [ "$pending" = "none" ]; then
-    wf=$(gh api "repos/AnEntrypoint/$1/actions/workflows" --jq '[.workflows[] | select(.name | test("release|publish|build|wasm"; "i"))] | length') || { echo "::error::workflow query failed for $1"; exit 1; }
+    wf=$(gh api "repos/AnEntrypoint/$1/actions/workflows" --jq '[.workflows[] | select(.name | test("release|publish|build|wasm"; "i"))] | length') || { echo "::error::workflow query failed for $1"; return 1; }
     [ "$wf" = "0" ]
     return
   fi
