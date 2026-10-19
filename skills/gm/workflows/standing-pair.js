@@ -76,7 +76,7 @@ const RESULT = {
   required: ['id', 'status'],
 }
 
-const ROOT = '/workspace/gm'
+const ROOT = typeof process !== 'undefined' && process.cwd ? process.cwd() : '.'
 const DRAIN_FIRST_AT = 20
 const GM = 'Use the gm skill for this; code questions go to codeinsight (callers/impact) first, then codesearch, and Read only a located path. Use the gm verb tool (gm_codemode, or the spool) for every verb; no Bash grep/find/git except node.'
 
@@ -130,7 +130,7 @@ const rolloutLane = async () => {
     phase('Roll out')
     const COUNT = { type: 'object', properties: { open: { type: 'number' } }, required: ['open'] }
     const counted = await agent(
-      `${GM} Session id: open-count-${round}. cwd /workspace/gm. Count the open PRD rows with prd-list {"status":"pending","limit":1} and read its total. Return {open: <total>}.`,
+      `${GM} Session id: open-count-${round}. cwd ${ROOT}. Count the open PRD rows with prd-list {"status":"pending","limit":1} and read its total. Return {open: <total>}.`,
       { phase: 'Roll out', label: `open count r${round}`, schema: COUNT }
     )
     const openNow = counted && typeof counted.open === 'number' ? counted.open : Infinity
