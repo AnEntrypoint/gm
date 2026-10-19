@@ -62,7 +62,7 @@ const finderPrompt = (lens, tag) => `${GM} Session id: find-${tag}. cwd /workspa
 
 Lens: ${lens}.
 
-Look across /workspace/gm and its submodules (rs-plugkit, agentplug, gm-mcp) for defects, friction and improvements through this lens. Do NOT edit, commit or push. File one PRD row per finding with prd-add: id "find-${tag}-<short slug>" (prd-list first; skip ids that exist), subject at most 70 characters, description starting "[repo: <gm|rs-plugkit|agentplug|gm-mcp>] [group: <repo-relative file the fix edits>]", then what is wrong, where (path:line), evidence (dispatch ids), and acceptance a live dispatch can witness. Return {rows: [{id, repo, group, subject}]} for the rows you filed (empty if none).`
+Look across /workspace/gm and its submodules (rs-plugkit, agentplug, gm-mcp) for defects, friction and improvements through this lens. Do NOT edit, commit or push. File one PRD row per finding with prd-add: id "find-${tag}-<short slug>" (prd-list first; skip ids that exist, and file nothing when an open row already names the same file and symptom: add the new evidence to that row instead), subject at most 70 characters, description starting "[repo: <gm|rs-plugkit|agentplug|gm-mcp>] [group: <repo-relative file the fix edits>]", then what is wrong, where (path:line), evidence (dispatch ids), and acceptance a live dispatch can witness. Return {rows: [{id, repo, group, subject}]} for the rows you filed (empty if none).`
 
 const editPrompt = (row) => `${GM} Session id: edit-${row.id}. cwd /workspace/gm. Read /workspace/gm/AGENTS.md and the AGENTS.md of the repo you edit.
 
@@ -75,7 +75,7 @@ Return {id, status: "resolved" or "blocked", commit, witness_dispatch_id, note}.
 
 const listPrompt = (attempted) => `${GM} Session id: drain-list. cwd /workspace/gm.
 
-List every OPEN PRD row with prd-list {"status":"pending"}. Skip these ids (already attempted this run): ${JSON.stringify(attempted)}. For each remaining row read its description and return {id, repo, group, subject}: repo from its "[repo: ...]" prefix (default gm), group from its "[group: ...]" prefix (default the row id). Return {rows}. Do not edit anything.`
+List every OPEN PRD row with prd-list {"status":"pending"}. Exclude any row that is blocked (prd-block), and any row whose note names a blocker that has not changed since its last attempt. Skip these ids (already attempted this run): ${JSON.stringify(attempted)}. For each remaining row read its description and return {id, repo, group, subject}: repo from its "[repo: ...]" prefix (default gm), group from its "[group: ...]" prefix (default the row id). Return {rows}. Do not edit anything.`
 
 const fixPrompt = (row) => `${GM} Session id: fix-${row.id}. cwd /workspace/gm. Read /workspace/gm/AGENTS.md and the AGENTS.md of the repo you edit.
 
