@@ -718,6 +718,16 @@ Pass the `instruction_hash`/`policy_hash` of the prior `instruction` response ba
 
 `dream-replay-cycle` takes `session_id` (the owner, which must equal the dispatch session) and optional `cycle_id` and `after_dispatch_id`. It replays the owner's newest verified observation and answers `status: replayed`. When nothing verified is new it answers `status: deferred` with `reason` `no-verified-observations` or `no-new-verified-observations`.
 
+`dream-replay` takes `world_ids` (array of sealed world ids), `baseline_policy_id`, `policy_ids` (array), and `beta1` and `beta2` (non-negative numbers). It refuses a body carrying `worlds`, since worlds are never caller-supplied. Its witness chain, in order, each step naming the field the next step reads:
+
+1. `dream-policy-register` with `policy` (carrying `id`, `roots`, `max_nodes`, optional `max_online_rounds`) and `deployed:true` on the baseline. Its `roots` must be discovery ids that step 4 seals into the world, since replay refuses a root the world did not observe (`asks world for unobserved node`). Deploying a second policy needs an existing replay win over the deployed baseline, so a fixture whose baseline is already deployed runs in a fresh session id.
+2. `dream-evaluator-receipt` with `receipt_id`, `policy_id`, `dispatch_id` (a completed gm dispatch) and the evaluator fields.
+3. `dream-discovery-record` with `id`, `evaluator_receipt_id`, `policy_id`, `dispatch_id` (a completed, successful dispatch), optional `round` (required when the policy caps `max_online_rounds`) and optional `parent_id`.
+4. `dream-world-seal` with `world_id` and `discovery_ids` (array of discovery ids). Each listed discovery must exist, belong to the session, and match its evaluator receipt's `policy_id` and `dispatch_id`, or the seal is refused.
+5. `dream-replay` with the sealed `world_ids` from step 4 and the registered `baseline_policy_id` and `policy_ids`.
+
+Every record is owned by the dispatch session, so the whole chain runs under one session id.
+
 `subagent-start` takes `parent_session_id` and `subagent_session_id` (both validated), with optional `cwd` and `slice_id`, and records the subagent's start in `.subagent-ledger.jsonl` in the gm state directory. `subagent-end` takes the same two ids and a `status` of `done` (the default), `failed` or `stopped`. The native build refuses both lifecycle writes with `subagent lifecycle requires the wasm32 host`.
 
 `browser_lease_acquire` and `browser_lease_release` take `agent`, with optional `ttl_ms` (lease time-to-live in ms before a silent holder counts as dead) and `wait_ms` (ms to wait for the lease before refusing), and `browser_lease_status` takes no agent. Acquire waits up to 600 s for the shared browser lease and answers `port`, `chrome_pid` and `lease_file`. A holder whose heartbeat is older than 120 s counts as dead. Release answers the lease state with `released` set to the agent, and status answers the lease state alone.
