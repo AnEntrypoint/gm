@@ -14,6 +14,7 @@ const URL_RE = /https?:\/\/[^\s<>"'`\]\)]+/g;
 const SKIP_HOST = /^(localhost|127\.0\.0\.1|0\.0\.0\.0|example\.(com|org|net))$/;
 const RETRY_STATUS = new Set([408, 425, 429, 500, 502, 503, 504]);
 const MAX_ATTEMPTS = 3;
+const DEAD_HOST_AFTER = 3;
 
 const arg = (name, fallback) => {
   const hit = process.argv.find((a) => a.startsWith(`--${name}=`));
@@ -64,17 +65,23 @@ async function probe(url, method) {
   return res.status;
 }
 
+const transportFails = new Map();
+
 async function check(url) {
+  const host = new URL(url).hostname;
   let last = 'error';
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    if ((transportFails.get(host) ?? 0) >= DEAD_HOST_AFTER) return { ok: false, status: 'host-unreachable' };
     try {
       let status = await probe(url, 'HEAD');
       if (status >= 400) status = await probe(url, 'GET');
+      transportFails.set(host, 0);
       if (status < 400) return { ok: true, status };
       last = status;
       if (!RETRY_STATUS.has(status)) return { ok: false, status };
     } catch (err) {
       last = err.name === 'TimeoutError' ? 'timeout' : (err.cause?.code ?? err.message);
+      transportFails.set(host, (transportFails.get(host) ?? 0) + 1);
     }
     if (attempt < MAX_ATTEMPTS) await new Promise((r) => setTimeout(r, 1000 * attempt));
   }
