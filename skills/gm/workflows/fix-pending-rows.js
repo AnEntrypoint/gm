@@ -10,6 +10,13 @@ export const meta = {
 }
 
 const MAX_ROUNDS = 8
+const AGENT_CAP = 150
+let agentsSpent = 0
+const guarded = (prompt, opts) => {
+  if (agentsSpent >= AGENT_CAP) return Promise.resolve(null)
+  agentsSpent++
+  return agent(prompt, opts)
+}
 
 const SCAN = {
   type: 'object',
@@ -66,7 +73,11 @@ phase('Scan')
 const handled = []
 const outcomes = []
 for (let round = 1; round <= MAX_ROUNDS; round++) {
-  const scan = await agent(scanPrompt(handled), { phase: 'Scan', label: `scan round ${round}`, schema: SCAN })
+  if (agentsSpent >= AGENT_CAP) {
+    log(`agent cap ${AGENT_CAP} reached; stopping for relaunch`)
+    break
+  }
+  const scan = await guarded(scanPrompt(handled), { phase: 'Scan', label: `scan round ${round}`, schema: SCAN })
   const items = scan && scan.items ? scan.items : []
   if (items.length === 0) {
     log(`round ${round}: nothing red and no open rows`)
@@ -85,7 +96,7 @@ for (let round = 1; round <= MAX_ROUNDS; round++) {
     Object.keys(byGroup).map(key => async () => {
       const lane = []
       for (const item of byGroup[key]) {
-        lane.push(await agent(fixPrompt(item), { phase: 'Fix', label: item.key.slice(0, 60), schema: RESULT }))
+        lane.push(await guarded(fixPrompt(item), { phase: 'Fix', label: item.key.slice(0, 60), schema: RESULT }))
       }
       return lane
     })
