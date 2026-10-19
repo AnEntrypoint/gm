@@ -759,6 +759,10 @@ a `slots` block with `open_rows`, `live_rows`, `live_rows_unmatched`, `aging_hea
 the floor while rows are open is refused with `error_code` `floor_gate_denied` when launchable rows are advertised but not launched. When no open row is launchable and no traversal node is due, the reply is ok with `state` `supply_exhausted`, `held_rows` (running rows, the only supply) and `unlaunchable_open_rows`: wait for the held rows to complete, then re-observe; a retry cannot change the answer. Example body:
 `{"live":4,"held":["<row-id>"]}`.
 
+### `session_handover`: transfer session ownership
+
+`session-handover` (the `session_handover` form is the same verb) makes `body.session_id` the owner of the project session. The envelope session id is not used, so a body without `session_id` is refused and the owner is unchanged. The field also takes the aliases `SESSION_ID` and `sessionId`.
+
 ## Storage, cache and diagnostics
 
 `sql_list_dbs`, `sql_query`, `sql_serialize`, `cache_get`, `cache_stats`, `kv_get`, `kv_query`, `env_get`, `health`, `status`, `dataflow_resolve` and `tencentdb-compat-probe` are `query`; `sql_open`, `sql_close`, `sql_exec`, `sql_smoke`, `sql_deserialize`, `cache_put`, `cache_invalidate`, `kv_put`, `close`, `config_resolve`, `config-sync-now` and `tencentdb-memory-import` are `command`.
