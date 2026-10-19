@@ -7,7 +7,7 @@ on:
   repository_dispatch:
     types: [submodule-released]
   schedule:
-    - cron: '17 * * * *'
+    - cron: '*/10 * * * *'
   workflow_dispatch: {}
 
 concurrency:
@@ -21,7 +21,7 @@ jobs:
   advance:
     if: "${{ github.event_name != 'push' || !startsWith(github.event.head_commit.message, 'pins: advance') }}"
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
