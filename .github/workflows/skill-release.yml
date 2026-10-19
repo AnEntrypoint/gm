@@ -109,7 +109,7 @@ jobs:
               fs.writeFileSync('package.json', JSON.stringify(p, null, 2) + '\n');
             "
             git add package.json
-            git commit -m "chore: auto-bump version to $NEW_VERSION"
+            git commit -m "chore: auto-bump version to $NEW_VERSION [skip ci]"
             for attempt in 1 2 3 4 5; do
               if git push origin HEAD:main; then break; fi
               echo "[retry] push rejected (attempt $attempt): main moved, re-bumping on origin/main"
@@ -127,7 +127,7 @@ jobs:
                 fs.writeFileSync('package.json', JSON.stringify(p, null, 2) + '\n');
               "
               git add package.json
-              git commit -m "chore: auto-bump version to $NEW_VERSION"
+              git commit -m "chore: auto-bump version to $NEW_VERSION [skip ci]"
             done
           else
             NEW_VERSION="$CURRENT"
