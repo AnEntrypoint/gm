@@ -82,6 +82,13 @@ jobs:
           set -e
           git config user.name "lanmower"
           git config user.email "657315+lanmower@users.noreply.github.com"
+          release_exists() {
+            local err
+            if err=$(gh release view "$1" --repo AnEntrypoint/gm 2>&1 >/dev/null); then return 0; fi
+            if [ "$err" = "release not found" ]; then return 1; fi
+            echo "::error::gh release view $1 failed (not a 404): $err" >&2
+            exit 1
+          }
           CURRENT=$(git show "$SHA:package.json" | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>console.log(JSON.parse(s).version))")
           git fetch origin main --quiet
           MAIN_VER=$(git show origin/main:package.json | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>console.log(JSON.parse(s).version))")
@@ -89,7 +96,7 @@ jobs:
             NEW_VERSION="$MAIN_VER"
             git reset --hard origin/main --quiet
             echo "origin/main already at v$MAIN_VER from an earlier attempt: resuming its publish without a second bump"
-          elif gh release view "v$CURRENT" --repo AnEntrypoint/gm >/dev/null 2>&1; then
+          elif release_exists "v$CURRENT"; then
             IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
             NEW_PATCH=$((PATCH + 1))
             NEW_VERSION="$MAJOR.$MINOR.$NEW_PATCH"
@@ -142,7 +149,14 @@ jobs:
           SHA: ${{ github.sha }}
         run: |
           set -e
-          if gh release view "v$VER" --repo AnEntrypoint/gm >/dev/null 2>&1; then
+          release_exists() {
+            local err
+            if err=$(gh release view "$1" --repo AnEntrypoint/gm 2>&1 >/dev/null); then return 0; fi
+            if [ "$err" = "release not found" ]; then return 1; fi
+            echo "::error::gh release view $1 failed (not a 404): $err" >&2
+            exit 1
+          }
+          if release_exists "v$VER"; then
             echo "v$VER already published by an earlier attempt: re-uploading its assets"
             gh release upload "v$VER" --repo AnEntrypoint/gm --clobber release-assets/*
           else
