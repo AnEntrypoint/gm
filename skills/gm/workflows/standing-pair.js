@@ -56,7 +56,7 @@ const RESULT = {
   required: ['id', 'status'],
 }
 
-const ROOT = process.cwd()
+const ROOT = '/workspace/gm'
 const DRAIN_FIRST_AT = 20
 const GM = 'Use the gm skill for this; code questions go to codeinsight (callers/impact) first, then codesearch, and Read only a located path. Use the gm verb tool (gm_codemode, or the spool) for every verb; no Bash grep/find/git except node.'
 
