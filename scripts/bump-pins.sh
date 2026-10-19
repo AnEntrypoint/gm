@@ -17,14 +17,14 @@ repo_of() {
 gate_ok() {
   local pending wf ok
   GATE_REASON=""
-  ok=$(gh api --paginate "repos/AnEntrypoint/$1/actions/runs?head_sha=$2&per_page=100" --jq '.workflow_runs[] | select(.conclusion == "success") | .id' | awk 'END{print NR}') || { echo "::error::run query failed for $1 at ${2:0:9}"; return 1; }
+  ok=$(gh api --paginate "repos/AnEntrypoint/$1/actions/runs?head_sha=$2&per_page=100" --jq '.workflow_runs[] | select(.conclusion == "success") | .id' | awk 'END{print NR}') || { echo "::error::run query failed for $1 at ${2:0:9}" >&2; return 2; }
   if [ "$ok" = "0" ]; then
     GATE_REASON="no successful CI run for this sha"
     return 1
   fi
-  pending=$(gh api --paginate "repos/AnEntrypoint/$1/actions/runs?head_sha=$2&per_page=100" --jq '.workflow_runs[] | select(.name != "Deploy GH Pages") | select(.name | test("release|publish|build|wasm"; "i")) | if (.status != "completed" or ((.conclusion // "") | IN("success", "skipped", "neutral") | not)) then "open" else "green" end' | awk 'BEGIN{m=0;o=0} {m++; if ($0=="open") o++} END{print (m==0 ? "none" : o)}') || { echo "::error::gate query failed for $1 at ${2:0:9}"; return 1; }
+  pending=$(gh api --paginate "repos/AnEntrypoint/$1/actions/runs?head_sha=$2&per_page=100" --jq '.workflow_runs[] | select(.name != "Deploy GH Pages") | select(.name | test("release|publish|build|wasm"; "i")) | if (.status != "completed" or ((.conclusion // "") | IN("success", "skipped", "neutral") | not)) then "open" else "green" end' | awk 'BEGIN{m=0;o=0} {m++; if ($0=="open") o++} END{print (m==0 ? "none" : o)}') || { echo "::error::gate query failed for $1 at ${2:0:9}" >&2; return 2; }
   if [ "$pending" = "none" ]; then
-    wf=$(gh api "repos/AnEntrypoint/$1/actions/workflows" --jq '[.workflows[] | select(.name | test("release|publish|build|wasm"; "i"))] | length') || { echo "::error::workflow query failed for $1"; return 1; }
+    wf=$(gh api "repos/AnEntrypoint/$1/actions/workflows" --jq '[.workflows[] | select(.name | test("release|publish|build|wasm"; "i"))] | length') || { echo "::error::workflow query failed for $1" >&2; return 2; }
     [ "$wf" = "0" ]
     return
   fi
@@ -32,10 +32,13 @@ gate_ok() {
 }
 
 newest_green() {
-  local candidate
-  for candidate in $(gh api "repos/AnEntrypoint/$1/commits?sha=main&per_page=6" --jq '.[].sha'); do
+  local candidate listing rc
+  listing=$(gh api "repos/AnEntrypoint/$1/commits?sha=main&per_page=6" --jq '.[].sha') || { echo "::error::commit listing query failed for $1" >&2; return 2; }
+  for candidate in $listing; do
     [ "$candidate" = "$2" ] && continue
-    if gate_ok "$1" "$candidate"; then
+    gate_ok "$1" "$candidate"; rc=$?
+    [ "$rc" = "2" ] && return 2
+    if [ "$rc" = "0" ]; then
       echo "$candidate"
       return 0
     fi
@@ -44,7 +47,7 @@ newest_green() {
 }
 
 stage_pins() {
-  local path repo sha tip reason cur
+  local path repo sha tip reason cur rc
   STAGED=0
   BODY=""
   local targets
@@ -58,9 +61,19 @@ stage_pins() {
       return 1
     fi
     tip=$sha
-    if ! gate_ok "$repo" "$tip"; then
+    gate_ok "$repo" "$tip"; rc=$?
+    if [ "$rc" = "2" ]; then
+      echo "::error::gate query failed for $repo; $path cannot be judged at ${tip:0:9}" >&2
+      return 1
+    fi
+    if [ "$rc" != "0" ]; then
       reason=${GATE_REASON:-a release-path run for it is not green}
-      if ! sha=$(newest_green "$repo" "$tip"); then
+      sha=$(newest_green "$repo" "$tip"); rc=$?
+      if [ "$rc" = "2" ]; then
+        echo "::error::candidate query failed for $repo; $path held at ${tip:0:9} cannot be re-pinned" >&2
+        return 1
+      fi
+      if [ "$rc" != "0" ]; then
         echo "held $path@${tip:0:9}: $reason"
         continue
       fi
