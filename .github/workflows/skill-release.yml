@@ -162,7 +162,7 @@ jobs:
             gh release create "v$VER" \
               --repo AnEntrypoint/gm \
               --title "gm skill v$VER" \
-              --notes "Auto-published from gm CI at $(git rev-parse HEAD)" \
+              --notes "Auto-published from gm CI at ${{ github.sha }}" \
               release-assets/*
           fi
 
