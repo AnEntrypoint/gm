@@ -11,7 +11,7 @@ const root = process.argv[2]
 const readJson = (rel) => JSON.parse(fs.readFileSync(path.join(root, rel), 'utf8'));
 const fsm = readJson('gm-config/fsm/graph.json');
 const hop = readJson('skills/dream-rsi/gm-graph.json');
-const dada = readJson('skills/dream-rsi/dada-graph.json');
+const dada = hop;
 
 const graphs = [
   { label: 'state machine', nodes: fsm.states, edges: fsm.edges, predicates: fsm.gates.length },
