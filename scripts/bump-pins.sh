@@ -17,7 +17,7 @@ repo_of() {
 gate_ok() {
   local pending wf ok
   GATE_REASON=""
-  ok=$(gh api --paginate "repos/AnEntrypoint/$1/actions/runs?head_sha=$2&per_page=100" --jq '.workflow_runs[] | select(.conclusion == "success") | .id' | awk 'END{print NR}') || { echo "::error::run query failed for $1 at ${2:0:9}" >&2; return 2; }
+  ok=$(gh api --paginate "repos/AnEntrypoint/$1/actions/runs?head_sha=$2&per_page=100" --jq '.workflow_runs[] | select(.name != "Deploy GH Pages") | select(.conclusion == "success") | .id' | awk 'END{print NR}') || { echo "::error::run query failed for $1 at ${2:0:9}" >&2; return 2; }
   if [ "$ok" = "0" ]; then
     GATE_REASON="no successful CI run for this sha"
     return 1
