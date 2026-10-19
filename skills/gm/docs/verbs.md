@@ -51,7 +51,7 @@ Any argument starting with `{` or `@`, and every non-search invocation, is forwa
 
 Every verb in this section is `query` except `codeinsight_index` and `codeinsight` with `action` `sync`, which are `command` (they build or refresh the index).
 
-### `grep` (alias `rg`): where is this string
+### `grep` (dispatch alias `rg`): where is this string
 
 Exhaustive literal or regex scan, one hit per line, or a comment sweep with `mode:"comments"` (no
 `pattern` needed). Use `grep` for "where is symbol X
