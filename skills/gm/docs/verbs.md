@@ -777,6 +777,8 @@ the floor while rows are open is refused with `error_code` `floor_gate_denied` w
 
 `wait-for-task {"id":"<task id>","timeout_ms":N}` blocks until the background task leaves `running`, then answers its output. `id` is required (`task_id`, or a bare string body, also names it). `timeout_ms` defaults to 100000 and must be an integer from 1 to 100000; at the deadline the reply carries `timed_out: true` instead of the output.
 
+`wait_for_task` is the served name of `wait-for-task` (`gm.list` and `gm.describe` report it under that name), so it takes the same body and returns the same reply.
+
 `learn` is retired.
 
 ## Two verbs the native host answers
