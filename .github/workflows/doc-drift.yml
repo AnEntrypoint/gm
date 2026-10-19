@@ -96,7 +96,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-      - run: git submodule update --init --depth 1 rs-plugkit agentplug
+      - run: git submodule update --init --depth 1 rs-plugkit agentplug agentplug-treesitter
       - uses: taiki-e/install-action@8cca0918f8471c33515202b73f56ab27f2bed283
         with:
           tool: cargo-binstall
@@ -114,3 +114,5 @@ jobs:
         run: |
           cargo binstall --no-confirm cargo-deny@0.18.4
           node scripts/check-crate-licenses.mjs
+      - name: Every tracked binary or vendored font carries an allowlisted license
+        run: node scripts/check-binary-licenses.mjs
