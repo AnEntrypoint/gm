@@ -16,7 +16,8 @@ on:
       - .github/workflows/contracts.yml
       - scripts/check-verb-body-contract.mjs
       - skills/gm/docs/verbs.md
-      - gm-mcp/src/**
+      - gm-mcp
+      - gm-mcp/**
   pull_request:
     paths:
       - scripts/check-contracts.mjs
@@ -28,7 +29,8 @@ on:
       - .github/workflows/contracts.yml
       - scripts/check-verb-body-contract.mjs
       - skills/gm/docs/verbs.md
-      - gm-mcp/src/**
+      - gm-mcp
+      - gm-mcp/**
 
 concurrency:
   group: gm-contracts-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
@@ -47,3 +49,8 @@ jobs:
           node-version: 20
       - run: node scripts/check-contracts.mjs
       - run: node scripts/check-verb-body-contract.mjs
+      - name: gm-mcp bin is a fresh build of its src
+        working-directory: gm-mcp
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm run verify-build
