@@ -23,6 +23,26 @@ const LENSES = [
   'CLI debuggability: trace or dispatch ids on every failure, log locations, one-command reproduction',
 ]
 
+const DRAIN_ROWS = {
+  type: 'object',
+  properties: {
+    rows: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          id: { type: 'string' },
+          repo: { type: 'string' },
+          group: { type: 'string' },
+          subject: { type: 'string' },
+        },
+        required: ['id'],
+      },
+    },
+  },
+  required: ['rows'],
+}
+
 const ROWS = {
   type: 'object',
   properties: {
@@ -141,13 +161,13 @@ const drainLane = async () => {
   while (true) {
     round++
     phase('Drain')
-    const listed = await agent(listPrompt(attempted), { phase: 'Drain', label: `list ${round}`, schema: ROWS })
+    const listed = await agent(listPrompt(attempted), { phase: 'Drain', label: `list ${round}`, schema: DRAIN_ROWS })
     const rows = (listed && listed.rows ? listed.rows : []).filter(r => !attempted.includes(r.id))
     if (rows.length === 0) break
     log(`drain round ${round}: ${rows.length} open rows`)
     const byGroup = {}
     for (const row of rows) {
-      const key = `${row.repo}:${row.group}`
+      const key = `${row.repo || 'gm'}:${row.group || row.id}`
       if (!byGroup[key]) byGroup[key] = []
       byGroup[key].push(row)
       attempted.push(row.id)
