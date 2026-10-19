@@ -184,7 +184,7 @@ function clearDest(dest) {
       fs.renameSync(dest, aside)
       return `moved-aside:${aside}`
     } catch (e) {
-      if (!forceLink) return `refused:${e.code || 'EBUSY'}`
+      if (!forceLink) return `refused:${e.code || e.message}`
       fs.rmSync(dest, { recursive: true, force: true })
       return 'deleted'
     }
