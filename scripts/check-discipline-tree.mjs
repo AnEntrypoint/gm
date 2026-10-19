@@ -104,8 +104,9 @@ record('zero-isolated-nodes', true, `0 of ${nodes.length}`);
 console.log(`nodes with no in-edge: ${noIn.length}${entryPoints.size ? ` (entry points exempt: ${[...entryPoints].join(', ')})` : ''}`);
 if (noIn.length) fail('zero-unreached-nodes', named(noIn));
 record('zero-unreached-nodes', true, `0 of ${nodes.length}`);
-console.log(`nodes with no out-edge: ${noOut.length}`);
-if (noOut.length) fail('zero-dead-end-nodes', named(noOut));
+const deadEnds = noOut.filter((n) => n.kind !== 'terminal');
+console.log(`nodes with no out-edge (terminals exempt): ${deadEnds.length}`);
+if (deadEnds.length) fail('zero-dead-end-nodes', named(deadEnds));
 record('zero-dead-end-nodes', true, `0 of ${nodes.length}`);
 
 console.log(`book nodes: ${bookNodes.length}`);
