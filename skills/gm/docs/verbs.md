@@ -25,7 +25,7 @@ Through the MCP tool `gm_codemode`, the only tool the server registers. Each ver
 
 ```
 gm_codemode({ "code": "return await gm.codesearch({body: {query: \"kLinkQuantum\", mode: \"literal\", path: \"src\"}})",
-  "cwd": "C:/dev/proj" })
+  "cwd": "<project-root>" })
 ```
 
 Plain-text-body verbs take `raw_body` instead of `body` (see the "Execution" section below).
@@ -352,7 +352,7 @@ exec_js {"raw_body":"console.log(process.version)\n","timeoutMs":30000}
 
 `exec_js` evaluates its raw body in a separate Node process, delivered on the child's stdin, so the body is never part of its command line and a process-listing query that filters command lines for a marker string cannot match the runner itself. It does not inject the caller's `tools` object, which means the `gm` functions that `gm_codemode` provides. A `.js` scratch file in a repo whose package.json says `"type": "module"` is ESM: give a scratch file that uses `require` the `.cjs` extension. To run a command, use Node's argument-safe API: `const { execFileSync } = require("node:child_process"); return execFileSync("command", ["arg"], { encoding: "utf8" });`.
 
-**Windows `cmd` inside a shell-stem body.** On Windows the `bash`/`sh`/`shell`/`zsh` stems run under MSYS2 git-bash, which rewrites every argument that starts with `/<letter>` into a drive path before the native program ever sees it: `node args.js /c` prints `["C:/"]`. So `cmd /c "node s.js < p.json"` reaches `cmd.exe` with no `/c` switch: `cmd` starts interactive, reads the dispatch's stdin (already drained, because the runner feeds the body in as `bash -c 'eval "$(cat)"'`), hits EOF and exits 0 printing nothing. That is argument rewriting, not a stdin failure: `< p.json` works the moment `cmd` gets its switch. Write `cmd //c "..."` (MSYS collapses `//c` back to `/c`), or `MSYS_NO_PATHCONV=1 cmd /c "..."` on that one line: the variable only has to be set, so `MSYS_NO_PATHCONV=0` also turns conversion off. Never export it over the whole body: it also stops `/tmp/x.js` reaching a native binary as a Windows path. `exec_js` is unaffected: `execFileSync("cmd", ["/c", "node s.js < p.json"])` and a bare `node s.js < p.json` return the same redirected stdin, and so is `powershell`, which is the stem to pick when the work needs cmd syntax.
+**Windows `cmd` inside a shell-stem body.** On Windows the `bash`/`sh`/`shell`/`zsh` stems run under MSYS2 git-bash, which rewrites every argument that starts with `/<letter>` into a drive path before the native program ever sees it: `node args.js /c` prints `["<drive>:/"]`. So `cmd /c "node s.js < p.json"` reaches `cmd.exe` with no `/c` switch: `cmd` starts interactive, reads the dispatch's stdin (already drained, because the runner feeds the body in as `bash -c 'eval "$(cat)"'`), hits EOF and exits 0 printing nothing. That is argument rewriting, not a stdin failure: `< p.json` works the moment `cmd` gets its switch. Write `cmd //c "..."` (MSYS collapses `//c` back to `/c`), or `MSYS_NO_PATHCONV=1 cmd /c "..."` on that one line: the variable only has to be set, so `MSYS_NO_PATHCONV=0` also turns conversion off. Never export it over the whole body: it also stops `<tmp>/x.js` reaching a native binary as a Windows path. `exec_js` is unaffected: `execFileSync("cmd", ["/c", "node s.js < p.json"])` and a bare `node s.js < p.json` return the same redirected stdin, and so is `powershell`, which is the stem to pick when the work needs cmd syntax.
 
 At `timeoutMs` expiry the child's whole process tree is killed, the dispatch slot is released, and the reply is `ok: false, timed_out: true, killed: true, error_code: exec_timeout` with `limit_ms` and the partial `stdout`/`stderr`; nothing keeps running afterwards. When `timeout_seconds` is omitted, the MCP wrapper polls for the body's `timeoutMs` budget plus 5 s (never less than 120 s), or for 120 s when the call sets no typed `timeoutMs`; an explicit `timeout_seconds` sets the requested polling budget and, when the call sets no typed `timeoutMs` of its own, also raises that native execution limit to the same budget minus 5 s, with that budget capped at the poll ceiling (600000 ms by default), then held between the 300000 ms exec default and the 900000 ms hard ceiling, so a caller asking to wait 400 s is not answered "still in flight" for work the daemon reaped at 300 s. Every MCP call caps applied polling at 600 s, the harness tool-call maximum (`GM_MCP_POLL_TIMEOUT_CEILING_MS` moves it). A polling timeout does not kill the child: it returns the dispatch's `task` id plus `poll_timeout_ceiling_ms`, `poll_timeout_cap_reason`, and for exec verbs `exec_limit_ms` and an `exec_child` sentence naming when the daemon will reap it. Pass that `task` id as `resume_task` to re-poll that dispatch without redispatching.
 
@@ -455,10 +455,10 @@ or publish from one, and never reach for one to get a clean HEAD. Where that use
 are the sanctioned way to do it, and never raw `git worktree` through `bash`. Branch-creating forms (`create:true` with a branch `ref`) are refused under main-only and are not shown:
 
 ```
-{"path":"/tmp/bisect","rev":"5ba0bd4ae70006e4fa0de8d95984559e7ccdf408"}           git_worktree_add: --detach <path> <rev>
-{"path":"/tmp/bisect","ref":"5ba0bd4a","create":true}                             git_worktree_add: --detach <path> <ref>
-{"path":"C:/dev/proj-sweep"}                                                      git_worktree_add: <path> <HEAD>
-{"path":"C:/dev/proj-sweep"}                                                      git_worktree_remove (force:true to drop a dirty one)
+{"path":"<tmp>/bisect","rev":"5ba0bd4ae70006e4fa0de8d95984559e7ccdf408"}           git_worktree_add: --detach <path> <rev>
+{"path":"<tmp>/bisect","ref":"5ba0bd4a","create":true}                             git_worktree_add: --detach <path> <ref>
+{"path":"<tmp>/proj-sweep"}                                                      git_worktree_add: <path> <HEAD>
+{"path":"<tmp>/proj-sweep"}                                                      git_worktree_remove (force:true to drop a dirty one)
 {}                                                                                git_worktree_list / git_worktree_prune
 ```
 
@@ -833,5 +833,5 @@ Every body field a verb declares, grouped by verb. The contract check (`scripts/
 - `task_spawn`: `code`, `permissionMode`
 - `instruction`: `full`
 - `prd_list`: `full`, `brief`
-- `prd_resolve`: `witness_evidence`, `witness_dispatch_id`, `witness_root`, `witness_exit_code`, `witness_output_sha256`, `witness_output_path`, `witness_ts`, `resolution`, `commit_sha`, `commit_comment`, `keep_status`. `witness_root` is the root the witness ran in: an absolute path under /config/tmp or the row's own root, whose `.gm/exec-spool/.dispatch-ledger.json` holds `witness_dispatch_id`; passed through unchanged.
+- `prd_resolve`: `witness_evidence`, `witness_dispatch_id`, `witness_root`, `witness_exit_code`, `witness_output_sha256`, `witness_output_path`, `witness_ts`, `resolution`, `commit_sha`, `commit_comment`, `keep_status`. `witness_root` is the root the witness ran in: an absolute path under the scratch directory or the row's own root, whose `.gm/exec-spool/.dispatch-ledger.json` holds `witness_dispatch_id`; passed through unchanged.
 - `expansion_audit`: `scope`, `rows_added`, `unknowns_added`
