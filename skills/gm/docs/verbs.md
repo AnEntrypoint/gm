@@ -714,7 +714,7 @@ Pass the `instruction_hash`/`policy_hash` of the prior `instruction` response ba
 
 `mutable-add` stamps the dispatch `session_id` on the unknown. Re-adding an id whose open entry belongs to another `row` (or, when either side names no row, another session) is refused as `mutable-add-id-collision` with the owner and a `suggested_id` of `<row>/<id>`; nothing is written. Namespace unknown ids by row, or pass `rescope:true` to replace the open entry deliberately.
 
-`unknown-add`, `unknown-list`, `unknown-resolve` and `unknown-defer` are aliases of `mutable-add`, `mutable-list`, `mutable-resolve` and `mutable-defer`, with the same bodies and replies.
+`unknown-add`, `unknown-list`, `unknown-resolve` and `unknown-defer` are aliases of `mutable-add`, `mutable-list`, `mutable-resolve` and `mutable-defer`, with the same bodies and replies. The spool accepts the `unknown-*` names; `gm_codemode` exposes only `gm.mutable_*` as callable names, so `gm.unknown_*` is refused.
 
 `prd-witness-request` takes `{"id":"<row id>","note":"<what to observe>"}`, records `witness_request` (requester session, `ts_ms`, note) on the open row, and answers `executor_session`, `excluded_sessions` and a `verifier_brief` for a gm-prd `mode=witness` lane in a new session. The `prd-resolve-self-witness` refusal names it as `next_verb`. Every witness refusal of `prd-resolve` names the failing field in `field` or `missing_fields`.
 
