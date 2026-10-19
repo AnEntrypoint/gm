@@ -34,10 +34,11 @@ gate_ok() {
 }
 
 wait_for_tip() {
-  local active
+  local runs total active
   while :; do
-    active=$(gh api --paginate "repos/AnEntrypoint/$1/actions/runs?head_sha=$2&per_page=100" --jq '.workflow_runs[] | select(.name != "Deploy GH Pages") | select(.status != "completed") | .id' | awk 'END{print NR}') || return 2
-    [ "$active" = "0" ] && return 0
+    runs=$(gh api --paginate "repos/AnEntrypoint/$1/actions/runs?head_sha=$2&per_page=100" --jq '.workflow_runs[] | select(.name != "Deploy GH Pages") | .status' | awk 'NF {n++; if ($0 != "completed") a++} END{print n+0, a+0}') || return 2
+    read -r total active <<<"$runs"
+    [ "$total" -gt 0 ] && [ "$active" = "0" ] && return 0
     [ "$(date +%s)" -ge "$wait_deadline" ] && return 1
     sleep 20
   done
