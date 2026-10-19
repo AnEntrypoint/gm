@@ -135,10 +135,12 @@ jobs:
           echo "version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Package skill tarball with checksum
+        id: pack
         run: |
           set -e
           mkdir -p release-assets
           VER="${{ steps.bump.outputs.version }}"
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
           tar -czf "release-assets/gm-skill-$VER.tar.gz" skills
           cd release-assets
           sha256sum "gm-skill-$VER.tar.gz" | sed 's/ \*/  /' > "gm-skill-$VER.tar.gz.sha256"
@@ -163,7 +165,7 @@ jobs:
             gh release create "v$VER" \
               --repo AnEntrypoint/gm \
               --title "gm skill v$VER" \
-              --notes "Auto-published from gm CI at ${{ github.sha }}" \
+              --notes "Auto-published from gm CI at ${{ steps.pack.outputs.sha }}" \
               release-assets/*
           fi
 
