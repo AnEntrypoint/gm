@@ -28,7 +28,8 @@ for (const row of VERB_TABLE) {
   verbs += 1;
   for (const [field, spec] of Object.entries(schema.fields)) {
     fields += 1;
-    if (!BODY_TYPES.has(spec.type)) failures.push(`${row.canonical}.${field}: type "${spec.type}" is not a body type`);
+    const parts = String(spec.type).split('|');
+    if (!parts.every((t) => BODY_TYPES.has(t))) failures.push(`${row.canonical}.${field}: type "${spec.type}" is not a body type`);
     if (!docs.includes(`\`${field}\``)) failures.push(`${row.canonical}.${field}: not named in skills/gm/docs/verbs.md`);
   }
   for (const name of schema.required) {
