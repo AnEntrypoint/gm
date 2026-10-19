@@ -95,6 +95,7 @@ tmp/
 .gm/config-source-cache/
 .gm/config-source-cache-default/
 .gm/config-source-cache-default.*.sync.json
+.gm/config-source-cache-default.*.lock/
 .gm/config-source-cache.*.sync.json
 
 # .gm/prd.yml + .gm/mutables.yml: per-dispatch runtime state, rewritten on
