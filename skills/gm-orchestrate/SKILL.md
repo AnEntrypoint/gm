@@ -10,11 +10,16 @@ Pool and publish rules. Shared rules (autonomy, git identity, CI read, collision
 `ceiling` = host spawn limit (N in a refusal), not a throughput target or memory budget. `live` = ListAgents count. `floor` = min(2, ceiling). `shortfall` = live < floor with independent work open.
 
 ## Standing pair (every run)
-Every `/gm` run starts one Workflow, `skills/gm/workflows/standing-pair.js`, in its first turn, before any other fan-out. Three phases, in this order of precedence:
-1. **Drain, concurrently.** Lenses file findings as PRD rows. One lane per file group resolves each row's unknowns with live runs, edits, commits by explicit path, pushes, and closes the row with a live witness. Rows drain as they are filed: each row starts editing the moment its finder reports, and rows on the same file group run in sequence while every other group runs in parallel. Concurrency is set by the open work, never by a fixed number: any free slot with work open is filled in the same turn. Nothing in this phase waits on CI or tests.
-2. **Validate and fix, after commit.** Once a batch of rollout work is committed and pushed, the test and CI follow-up validates that batch: it reads `ci-status` for each pushed sha, debugs red jobs with `ci_log failed_only`, and fixes them on their file groups. Red jobs become rows the next drain takes. Validation never runs on uncommitted work.
-3. **Traverse, when nearly drained.** When open rows fall under 20 and slots are free, node traversal (gm-hop over `skills/dream-rsi/gm-graph.json`) fills those slots, alongside phases 1 and 2. Each hop files its rows with `prd-add`. Traversal never takes a slot that drain or validation needs.
-A row attempted in a run is not retried in that run; a blocked row is retried only after its blocker changes. A run that closes no row is stalled: the dominant blocker is written to `.gm/witness-log.md`, and the next run waits for that blocker to change. There is no agent-count cap. A run ends when no open row, no red sha and no unvisited node remains. Every run, however it ends, is followed by the `gm-continue` handoff (gm SKILL.md, Routing), which searches for remaining work and reloads gm when work remains.
+Every `/gm` run executes the drain procedure below in its first turn, before any other fan-out. The procedure is defined here and run through gm verbs and the harness's own parallel workers (subagents or background tasks). No workflow file or harness-specific runner is needed. Where the harness has no parallel workers, the groups run in sequence through the same loop.
+
+1. **Plan once.** List pending rows in pages of at most 50: `prd-list {"status":"pending","limit":50,"offset":N}` for N = 0, 50, 100, ... until a page returns fewer than 50 rows. Never request the whole list in one call: a full pending list exceeds the tool-result cap and the drain never starts. Group rows by the `[repo:] [group:]` prefix of their description; a row without a prefix forms its own group. Record the plan (groups, row ids) with one append line per group to `.gm/pool/plan-<run>.txt`.
+2. **Drain, in parallel.** Each file group works its rows in order, one writer per file. Different groups run in parallel. The number of parallel groups is whatever the harness allows at that moment, never a fixed number: launch every ready group in one block, and launch another group in the same turn each time one finishes. Where the harness has no parallel workers, run the groups in sequence through this same loop. Each row runs the gm-prd stages (orient through publish, then `prd-resolve` with a live witness). A row attempted in a run is not retried in that run. A row whose attempt ends without a witness is blocked in that same attempt with `prd-block`, naming the blocker.
+3. **Validate per batch.** When a group's commits land, read `ci-status {sha}` for each pushed sha and fix red jobs (`ci_log` with `failed_only`) before that group closes. Do not wait for the whole drain. A red job becomes a fix row on the group's own files, taken by the same group. Validation never runs on uncommitted work.
+4. **Close.** `prd-resolve` with the commit sha as witness. Then remove `.gm/prd/<id>.yml` and `.gm/receipts/<id>/` if they remain. Commit messages carry the row id in the body as `Row: <id>`, so the git log records each finished row.
+5. **Re-plan.** After each round, repeat from step 1 with a fresh paged listing. Stop when a round closes no row, or when the pending backlog is empty.
+6. **Rollout.** Traversal (gm-hop over `skills/dream-rsi/gm-graph.json`) and new-row finding run in free slots only while fewer than 20 rows are open. At 20 or more open rows they wait, and the drain has the slots.
+
+Every run, however it ends, is followed by the `gm-continue` handoff (gm SKILL.md, Routing), which searches for remaining work and reloads gm when work remains.
 
 ## Core loop
 Repeat until a full pass adds no work:
@@ -26,16 +31,16 @@ Repeat until a full pass adds no work:
 4. Repeat from 1.
 
 ## Parallelism: graph workflows
-- Fan-out unit: a `Workflow` graph. As many as open work needs; parallel where independent, sequential where a result feeds the next.
-- Drainage strategy: drain the remaining PRDs in bounded slices, each slice run as its own dynamic `Workflow` graph. Take the first slice of at most 20 pending rows (`prd_list {status:"pending", limit:20}`), run one `gm-prd` per row, return `{pending_before, resolved, blocked, failed, new_blockers}`, then take the next slice from a fresh listing. Refusals and stalls are answered by the next slice, never by stopping. A slice that resolves nothing is re-run once with its blockers split, then the next slice starts.
-- One wave per run, except the standing pair (Standing pair), which loops until its listing is empty. Any other run takes at most one slice (20 pending rows), resolves them with `gm-prd` agents (connectivity restarts per Connectivity restarts), returns `{pending_before, resolved, blocked, failed, new_blockers}` and ends. `pending_after > pending_before` halts new blockers until a merge pass closes duplicates.
+- Fan-out unit: one subagent per row (`gm-prd`) or per hop (`gm-hop`), launched in one block. Rows of one file group run in sequence; groups run in parallel.
+- Each round takes its listing in pages of at most 50 (Standing pair, step 1), never the whole pending list in one call. A round returns `{pending_before, resolved, blocked, failed, new_blockers, peak_parallel}` and the next round starts from a fresh listing. Refusals and stalls are answered by the next round, never by stopping. A group that resolves nothing is re-run once with its blockers split.
+- `pending_after > pending_before` halts new blockers until a merge pass closes duplicates.
 - A run never exceeds 150 agents. Cap-hit or stalled runs are reported, never relaunched unchanged.
-- Three graphs, each run to exhaustion:
-  1. Row drain: `pipeline` over pending rows, one `gm-prd` per row, a `parallel` block per wave; until pending = 0.
-  2. Traversal: `pipeline` over every principle node in `skills/dream-rsi/gm-graph.json`, one `gm-hop` per node per surface, emitting rows; until every node has a receipt per surface.
-  3. Audit: a completeness critic; findings become rows for graph 1.
-- Drain before make. Pending ≥ 20: graph 1 takes every free slot. Pending < 20: graph 2 takes free slots (computer-science disciplines first) until pending reaches 20.
-- Repeat 1-3 until a full cycle adds and resolves nothing. A wave resolving 0 rows with pending rows left is a stall: change the brief, rerun. Never stop on a stall alone.
+- Three loops, each run to exhaustion:
+  1. Row drain: Standing pair steps 1-5, until pending = 0 or a round closes no row.
+  2. Traversal: one `gm-hop` per principle node in `skills/dream-rsi/gm-graph.json` per surface, emitting rows; until every node has a receipt per surface. Runs only while fewer than 20 rows are open.
+  3. Audit: a completeness critic; findings become rows for loop 1.
+- Drain before make. Pending ≥ 20: the drain takes every free slot. Pending < 20: traversal takes free slots (computer-science disciplines first) until pending reaches 20.
+- Repeat 1-3 until a full cycle adds and resolves nothing. A round resolving 0 rows with pending rows left is a stall: change the brief, rerun. Never stop on a stall alone.
 - Ceiling and floor bound live subagents (Lane budget). Refill a freed slot in the same turn.
 
 ## Publish first, test concurrently
