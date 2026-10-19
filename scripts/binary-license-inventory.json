@@ -1,0 +1,7 @@
+{
+  "allow": ["MIT", "ISC", "Apache-2.0", "BSD-2-Clause", "BSD-3-Clause", "0BSD", "Unlicense", "CC0-1.0", "BlueOak-1.0.0", "CC-BY-4.0", "OFL-1.1"],
+  "entries": [
+    {"prefix": "docs/gm-", "licenses": ["MIT"], "source": "project-authored logo rasters, covered by the root LICENSE"},
+    {"prefix": "agentplug-treesitter/src/public/fonts/fa-", "licenses": ["OFL-1.1", "CC-BY-4.0"], "source": "Font Awesome Free 5 webfonts: glyph fonts SIL OFL 1.1, icon artwork CC BY 4.0"}
+  ]
+}
