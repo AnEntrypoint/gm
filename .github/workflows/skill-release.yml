@@ -9,6 +9,7 @@ on:
     branches: [main]
     paths:
       - 'skills/**'
+      - '.github/workflows/skill-release.yml'
   pull_request:
     paths:
       - 'skills/**'
