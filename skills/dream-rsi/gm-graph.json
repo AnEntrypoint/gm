@@ -1,5 +1,5 @@
 {
- "source": "skills/dream-rsi/gm-graph.json (the merged graph, one graph)",
+ "source": "merged: skills/dream-rsi/gm-graph.json + dada-graph.json (one graph)",
  "node_count": 498,
  "nodes": [
   {
