@@ -13,7 +13,7 @@ Pool and publish rules. Shared rules (autonomy, git identity, CI read, collision
 Every `/gm` run starts one Workflow, `skills/gm/workflows/standing-pair.js`, in its first turn, before any other fan-out. It has two lanes that run concurrently:
 - **Rollout lane:** each round, lenses file findings as PRD rows with their file group, then one lane per file group resolves unknowns with live runs, edits, commits by explicit path, pushes and closes its rows with a live witness. Rounds repeat until a round files nothing. Rollout never waits on tests or CI.
 - **Drain lane:** lists open rows, groups them by file, fixes each with a live witness, publishes, and follows CI for each pushed sha. It works rows as the rollout files them. It ends when its list is empty. After the rollout finishes, one final drain runs, so rows filed late are closed. No lane spends agents waiting.
-Both lanes write one file group at a time, so the drain lane waits for a rollout lane that holds the same file. There is no agent-count cap; the run ends only when both lanes have nothing left. A row attempted in a run is not retried in that run.
+Both lanes write one file group at a time, so the drain lane waits for a rollout lane that holds the same file. There is no agent-count cap; the run ends only when both lanes have nothing left. A row attempted in a run is not retried in that run. The drain lane skips blocked rows, and a blocked row is retried only after its blocker changes. The rollout files a row only when no open row names the same file and symptom.
 
 ## Core loop
 Repeat until a full pass adds no work:
