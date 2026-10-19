@@ -31,6 +31,8 @@ for (const row of VERB_TABLE) {
     const parts = String(spec.type).split('|');
     if (!parts.every((t) => BODY_TYPES.has(t))) failures.push(`${row.canonical}.${field}: type "${spec.type}" is not a body type`);
     if (!docs.includes(`\`${field}\``)) failures.push(`${row.canonical}.${field}: not named in skills/gm/docs/verbs.md`);
+    const declaredType = row.body?.fields?.[field]?.type;
+    if (declaredType !== undefined && spec.type !== declaredType) failures.push(`${row.canonical}.${field}: gm.describe type "${spec.type}" differs from verb-table type "${declaredType}"`);
   }
   for (const name of schema.required) {
     if (!(name in schema.fields)) failures.push(`${row.canonical}: required field "${name}" is not in its body schema`);
