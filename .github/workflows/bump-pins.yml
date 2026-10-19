@@ -44,10 +44,6 @@ jobs:
           git config user.name "gm-pin-bot"
           git config user.email "pins@users.noreply.github.com"
 
-      - name: Wait for a burst of submodule pushes to settle
-        if: github.event_name == 'push'
-        run: sleep 300
-
       - name: Advance pins and publish to main
         env:
           GH_TOKEN: ${{ secrets.PUBLISHER_TOKEN }}
