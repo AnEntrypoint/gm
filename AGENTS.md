@@ -139,3 +139,6 @@ The `gm-mcp` server compacts every dispatch response before it crosses the wire;
 - Dated runtime findings (daemon heartbeat, sibling imports, runner self-update, wasm sideload, git_commit content filters, amend, reset) live in `docs/verified-incidents.md`. The agent reads it when a failure touches one of those subsystems. Falsified by: a failure in one of those subsystems diagnosed with no read of that file in the session.
 - Dream-RSI design, the cycle-boundary trigger and its git lifecycle: `skills/dream-rsi/references/dream-rsi.md`.
 - Script and CI rationale: `docs/script-rationale.md`.
+
+## Debugging gm workflows
+- A run that makes no progress is checked first: compare its in-flight agents with the cap and read `.gm/exec-spool/.status.json`. Restart it only with a skill or script change that addresses the cause.
