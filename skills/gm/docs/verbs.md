@@ -449,12 +449,10 @@ with `gh api repos/<owner>/<repo>/git/trees/<remote sha>?recursive=1`, used read
 The `git_worktree_*` verbs below are therefore a LAST RESORT with exactly one legitimate use: a
 read-only reproduction of another commit: bisecting a regression by running the red-capable
 command at a candidate sha, which is removed again with `git_worktree_remove`. Never edit, commit
-or publish from one, and never reach for one to get a clean HEAD. Where that use applies, these four
-are the sanctioned way to do it, and never raw `git worktree` through `bash`:
+or publish from one, and never reach for one to get a clean HEAD. Where that use applies, the detached forms below
+are the sanctioned way to do it, and never raw `git worktree` through `bash`. Branch-creating forms (`create:true` with a branch `ref`) are refused under main-only and are not shown:
 
 ```
-{"path":"C:/dev/proj-sweep","ref":"sweep/comments","create":true}                 git_worktree_add: -b <ref> <path> <HEAD>
-{"path":"/tmp/sweep","ref":"sweep/comments","rev":"5ba0bd4a","create":true}       git_worktree_add: -b <ref> <path> <rev>
 {"path":"/tmp/bisect","rev":"5ba0bd4ae70006e4fa0de8d95984559e7ccdf408"}           git_worktree_add: --detach <path> <rev>
 {"path":"/tmp/bisect","ref":"5ba0bd4a","create":true}                             git_worktree_add: --detach <path> <ref>
 {"path":"C:/dev/proj-sweep"}                                                      git_worktree_add: <path> <HEAD>
