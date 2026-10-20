@@ -121,17 +121,60 @@ function sourceSkillNames(dir) {
   }
 }
 
-function isNpmCacheSource(dir) {
-  return path.resolve(dir).split(/[\\/]+/).includes('_npx')
+// An npm-managed tree (a global node_modules install or an npx cache) is never a skill source:
+// npm can delete or replace it, so the skills come from GitHub instead.
+function isNpmManagedPath(p) {
+  return path.resolve(p).split(/[\\/]+/).some(seg => seg === '_npx' || seg === 'node_modules')
 }
 
 function resolveLocalSkillSource() {
   const pkgRoot = path.dirname(path.dirname(fileURLToPath(import.meta.url)))
   const override = (process.env.GM_SKILL_SOURCE_DIR || '').trim()
   const dir = path.resolve(override || path.join(pkgRoot, 'skills'))
+  if (isNpmManagedPath(dir)) {
+    console.log(`skill source ${dir} is inside an npm-managed tree and is ignored; the skills are fetched from github.com/AnEntrypoint/gm`)
+    return null
+  }
   const names = sourceSkillNames(dir)
   if (names.length === 0) return null
-  return { dir, names, fromEnv: Boolean(override), disposable: isNpmCacheSource(dir) }
+  return { dir, names, fromEnv: Boolean(override), copySource: false }
+}
+
+const GH_SKILL_RAW = 'https://raw.githubusercontent.com/AnEntrypoint/gm/main/skills'
+const GH_SKILL_CACHE = path.join(GM_TOOLS_DIR, 'skills')
+
+async function fetchGhBytes(url) {
+  const response = await fetch(url)
+  if (!response.ok) throw new Error(`HTTP ${response.status} from ${url}`)
+  return Buffer.from(await response.arrayBuffer())
+}
+
+// skills/manifest.sha256 on main (written by scripts/build-skill-manifest.mjs) names every
+// published skill file with its sha256; each file is fetched and verified against its digest
+// before it lands in the gm-managed cache, which then serves as a copy source.
+async function fetchGhSkillSource() {
+  const manifest = (await fetchGhBytes(`${GH_SKILL_RAW}/manifest.sha256`)).toString('utf8')
+  const files = []
+  for (const line of manifest.split('\n')) {
+    const t = line.trim()
+    if (!t || t.startsWith('#')) continue
+    const m = /^([0-9a-f]{64})  ([A-Za-z0-9._-]+)\/([A-Za-z0-9._\/-]+)$/.exec(t)
+    if (!m || m[3].split('/').some(s => s === '' || s === '.' || s === '..')) throw new Error(`unsafe manifest line: ${t}`)
+    files.push({ sha: m[1], rel: `${m[2]}/${m[3]}` })
+  }
+  if (files.length === 0) throw new Error(`${GH_SKILL_RAW}/manifest.sha256 lists no skill files`)
+  for (const { sha, rel } of files) {
+    const bytes = await fetchGhBytes(`${GH_SKILL_RAW}/${rel}`)
+    if (createHash('sha256').update(bytes).digest('hex') !== sha) throw new Error(`sha256 mismatch for ${rel}`)
+    const dest = path.join(GH_SKILL_CACHE, ...rel.split('/'))
+    fs.mkdirSync(path.dirname(dest), { recursive: true })
+    const tmp = `${dest}.tmp.${process.pid}`
+    fs.writeFileSync(tmp, bytes)
+    renameReplacing(tmp, dest)
+  }
+  const names = sourceSkillNames(GH_SKILL_CACHE)
+  if (names.length === 0) throw new Error('the gh skill manifest contains no skill with a SKILL.md')
+  return { dir: GH_SKILL_CACHE, names, fromEnv: false, copySource: true }
 }
 
 function lstatOrNull(p) {
@@ -172,11 +215,7 @@ function copyDir(src, dest) {
 function clearDest(dest) {
   const st = lstatOrNull(dest)
   if (!st) return 'absent'
-  if (st.isSymbolicLink()) {
-    fs.unlinkSync(dest)
-    return 'replaced-link'
-  }
-  if (st.isDirectory()) {
+  if (st.isDirectory() || st.isSymbolicLink()) {
     const park = path.join(path.dirname(dest), SKILL_PRELINK_DIR)
     fs.mkdirSync(park, { recursive: true })
     const aside = path.join(park, `${path.basename(dest)}-${Date.now()}`)
@@ -316,7 +355,7 @@ function skillDriftReport(source, roots) {
   for (const root of roots) {
     for (const name of source.names) rows.push({ root, ...checkSkill({ dir: source.dir, name, root }) })
   }
-  const bad = rows.filter(r => r.state === 'DRIFT' || r.state === 'absent' || (r.state === 'equal-copy' && !source.disposable))
+  const bad = rows.filter(r => r.state === 'DRIFT' || r.state === 'absent' || (r.state === 'equal-copy' && !source.copySource))
   for (const r of bad) {
     const where = path.join(r.root, r.name, 'SKILL.md')
     if (r.state === 'absent') {
@@ -329,41 +368,40 @@ function skillDriftReport(source, roots) {
     console.log(`DRIFT ${r.name} at ${where} (${r.state}): ${why}`)
   }
   if (bad.length === 0) {
-    console.log(source.disposable
+    console.log(source.copySource
       ? `skill check: every installed skill is a current copy of ${source.dir}`
       : 'skill check: every installed skill is the source file')
   }
   return bad
 }
 
-function installOrCheckSkills() {
-  const source = resolveLocalSkillSource()
-  if (!source) {
-    if (checkSkills) {
-      console.log('skill check: no local gm skill source (no ./skills beside this installer, GM_SKILL_SOURCE_DIR unset) -- nothing to compare')
-      return
-    }
-    runChild('npx', ['-y', 'skills', 'add', 'AnEntrypoint/gm', ...(global ? ['-g'] : []), '-y'], { shell: IS_WINDOWS })
-    return
+async function installOrCheckSkills() {
+  let source
+  try {
+    source = resolveLocalSkillSource() ?? await fetchGhSkillSource()
+  } catch (err) {
+    console.error(`gm: cannot obtain the gm skills from github.com/AnEntrypoint/gm (${err.message}); no skill was installed or checked`)
+    process.exitCode = 1
+    return null
   }
   const roots = skillInstallRoots()
-  console.log(`gm-skill source: ${source.dir}${source.fromEnv ? ' (GM_SKILL_SOURCE_DIR)' : ''} -- ${source.names.length} skill(s)`)
+  console.log(`gm-skill source: ${source.dir}${source.fromEnv ? ' (GM_SKILL_SOURCE_DIR)' : source.copySource ? ' (github.com/AnEntrypoint/gm manifest)' : ''} -- ${source.names.length} skill(s)`)
   if (checkSkills) {
     return skillDriftReport(source, roots)
   }
   for (const root of roots) {
-    for (const name of source.names) materialiseSkill({ dir: source.dir, name, root, copyOnly: source.disposable })
+    for (const name of source.names) materialiseSkill({ dir: source.dir, name, root, copyOnly: source.copySource })
   }
-  skillDriftReport(source, roots)
+  return skillDriftReport(source, roots)
 }
 
 if (checkSkills) {
-  const drift = installOrCheckSkills()
-  process.exit(drift && drift.length > 0 ? 1 : 0)
+  const drift = await installOrCheckSkills()
+  process.exit(!drift || drift.length > 0 ? 1 : 0)
 }
 
 if (!mcpOnly) {
-  installOrCheckSkills()
+  await installOrCheckSkills()
   if (skillsOnly) process.exit(0)
 }
 
