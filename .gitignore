@@ -177,10 +177,10 @@ skills/gm/.gm/
 .gm/audit*/
 
 
-# Chrome crawl profile: extension asset paths exceed the Windows 260-char limit (git status os error 206)
-.gm/crawl-profiles/
-# crawl_cdp lease profile, created by agentplug-host crawl_lease.rs at root/.gm/crawl-cdp-profile
-.gm/crawl-cdp-profile/
+# Chrome browser profile: extension asset paths exceed the Windows 260-char limit (git status os error 206)
+.gm/browser-profiles/
+# browser_cdp lease profile, created by agentplug-host browser_lease.rs at root/.gm/browser-cdp-profile
+.gm/browser-cdp-profile/
 
 # gm lean-walk runtime state (traversal progress and route caches, rebuilt each walk)
 .gm/lean-walk/
@@ -225,11 +225,11 @@ skills/gm/.gm/
 # manual prd-log recovery copies: full duplicates of the live chained log, never source
 .gm/prd-log.jsonl.*.bak
 
-# subagent walk scratch left in the parent tree: find11/find1 walk workspaces, crawl session
+# subagent walk scratch left in the parent tree: find11/find1 walk workspaces, browser session
 # leases, and fs/fsread probe outputs. Scratch only, never source.
 .gm/find11-*/
 .gm/find*-w*/
-.gm/crawl-cdp-sessions/
+.gm/browser-cdp-sessions/
 .gm/fs-append-*.txt
 .gm/fsread-*.txt
 .gm/find*-*/
