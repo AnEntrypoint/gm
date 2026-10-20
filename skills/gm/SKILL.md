@@ -9,6 +9,8 @@ description: "Drives a gm walk (nodes, PRD rows, pool and hop subagents) for cod
 
 **Invariant (brick wall): every code search goes through the code-search port, and every web fetch goes through the fetch port, with no exceptions. Every `Agent`/`Task` dispatch opens with "use the gm skill for this; code questions go to codeinsight (`callers`/`impact`) first, then the code-search port, and `Read` only a located path. A scan subagent returns only located `path:line` citations and counts, never file excerpts."**
 
+**Read-only entry.** A request that only reads state (a PRD row or ledger, a phase, a symbol or file location) is answered directly with read verbs (`prd-list`, `phase-status`, `codesearch`, `callers`, `impact`, `fs-read`, `git-status`, `ci-status`) and returns the data. It does not load or run the walk, drain or hop protocol, and it writes nothing. The protocol below applies only when the request changes code or PRD state.
+
 Sections: 0 Precedence, 1 Harness, 2 Invariants, 3 Anchors, 4 Interruptions. Pool: gm-orchestrate. Hop: gm-hop. PRD row: gm-prd. Rationale: `docs/rationale.md`. Verbs: `docs/verbs.md`.
 
 ## Autonomy
