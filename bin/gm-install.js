@@ -158,9 +158,14 @@ async function fetchGhSkillSource() {
   for (const line of manifest.split('\n')) {
     const t = line.trim()
     if (!t || t.startsWith('#')) continue
-    const m = /^([0-9a-f]{64})  ([A-Za-z0-9._-]+)\/([A-Za-z0-9._\/-]+)$/.exec(t)
-    if (!m || m[3].split('/').some(s => s === '' || s === '.' || s === '..')) throw new Error(`unsafe manifest line: ${t}`)
-    files.push({ sha: m[1], rel: `${m[2]}/${m[3]}` })
+    const m = /^([0-9a-f]{64})  (.+)$/.exec(t)
+    if (!m) throw new Error(`malformed manifest line: ${t}`)
+    const rel = m[2]
+    if (!rel.includes('/')) continue
+    if (!/^[A-Za-z0-9._-]+\/[A-Za-z0-9._/-]+$/.test(rel) || rel.split('/').some(s => s === '' || s === '.' || s === '..')) {
+      throw new Error(`unsafe manifest path: ${rel}`)
+    }
+    files.push({ sha: m[1], rel })
   }
   if (files.length === 0) throw new Error(`${GH_SKILL_RAW}/manifest.sha256 lists no skill files`)
   for (const { sha, rel } of files) {
