@@ -824,6 +824,8 @@ the floor while rows are open is refused with `error_code` `floor_gate_denied` w
 
 `wait_for_task` is the served name of `wait-for-task` (`gm.list` and `gm.describe` report it under that name), so it takes the same body and returns the same reply.
 
+`proc-list {"pattern"?,"limit"?}` lists running OS processes whose command line contains `pattern`, up to `limit` (default 100, max 1000), with `pid`, `ppid` and `args`. It never lists its own process chain (the listing process, its parent shells and its children), so a pattern that appears in the dispatch body does not match itself. Query class. `proc-signal {"pid"|"pattern","signal"?,"all"?}` sends `TERM` (default), `INT`, `HUP` or `KILL` to one pid, or to the single process a pattern matches; a pattern matching several processes is refused unless `all` is true, and the own process chain is refused. Command class. The served names are `proc_list` and `proc_signal`.
+
 `learn` is retired.
 
 ## Two verbs the native host answers
