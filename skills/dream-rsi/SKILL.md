@@ -25,7 +25,7 @@ Inputs:
 
 ## Part B: gm-graph traversal
 
-The goal is to walk every principle-kind gm-graph node and every edge, through real work. Each principle node is one hop run by a subagent that advocates that node's discipline at full strength (SKILL.md Section 1d). The hop scope is principle nodes only, the same scope as the gm walk loop (`skills/gm/SKILL.md` Section 1d).
+The goal is to walk every principle-kind gm-graph node and every edge, through real work. Each principle node is one hop run by a subagent that advocates that node's discipline at full strength (SKILL.md Section 1d). The hop scope is principle nodes only, the same scope as the gm walk loop (`skills/gm/SKILL.md` Section 1c).
 
 1. Load the graph. Traversable nodes are those whose `kind` is `principle`. Edges are all `edges` entries.
 2. Deterministic counts come from code only. Take `traversable_nodes`, `nodes_verified`, `rejected_walks` and `forward_edge_coverage_approx` from the `part_b` of the `dream-replay` reply. The guest writer `derive_part_b` in `rs-plugkit/crates/plugkit-core/src/orchestrator/dream_rsi.rs` is the sole authority for node walks: a node is verified when an observation stamped with its `lean_node` succeeded. Never recount nodes from `.gm/lean-walk/` and never apply a second verified-walk rule; the lean-walk files are read only for step 3.
