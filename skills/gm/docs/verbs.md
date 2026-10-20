@@ -460,6 +460,7 @@ are the sanctioned way to do it, and never raw `git worktree` through `bash`. Br
 {"path":"<tmp>/proj-sweep"}                                                      git_worktree_add: <path> <HEAD>
 {"path":"<tmp>/proj-sweep"}                                                      git_worktree_remove (force:true to drop a dirty one)
 {}                                                                                git_worktree_list / git_worktree_prune
+{"base":"<sha>"}                                                                  git_worktree_prune: removes a worktree only when its HEAD is an ancestor of <sha> (default HEAD)
 ```
 
 `rev` (also `commit` or `start_point`) names the commit to land on, and `ref` names a branch, so a
