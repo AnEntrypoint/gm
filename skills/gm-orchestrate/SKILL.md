@@ -172,7 +172,7 @@ Launch only advertised ids. A slot stays empty only when no pending row and no u
 - Browser-last, minimal surface, cold-start and reload budgets, live witnesses in place of new test files, counted units, loud refusals: gm-prd, Witness economy.
 
 ## Lane budget (concurrency and thrash)
-- Concurrency cap: `ceiling`, the harness's live limit, read at run time. It is not a throughput target and not a memory or thrash budget. Launch up to `free` while independent work is open; refill each freed slot.
+- Use as many sessions as the work needs. There is no session budget: launch every independent slice, and refill each freed slot in the same turn. The harness's live limit (`ceiling`, read at run time) is the only ceiling; a refusal at that limit is a wait, never a stop. It is not a throughput target and not a memory or thrash budget.
 - Thrash has two causes, and only these two:
   1. Multiple browser arms running at once. On 2026-10-14 several GPU browser arms ran together and the machine became unresponsive at roughly 10-16 lanes, needing a reboot.
   2. A new server plus bundle booted per run. Per-run servers leaked processes when a run hung.
