@@ -219,8 +219,8 @@ compile is refused with the regex error text rather than an empty result. The gr
 {"path":"<relative path>"}     required, relative and within the project
 {"recursive":true,"max_entries":500}  fs_readdir only: walk subdirectories; each entry is {path, isDirectory, size, mtime_ms}
                                with path relative to the listed directory. "mtime":true alone returns the same
-                               entry objects for one directory. Walks cap at max_entries (default 1000, ceiling 5000),
-                               and a capped reply sets partial_reason "max_entries".
+                               entry objects for one directory. Walks cap at `max_entries` (default 1000, ceiling 5000),
+                               and a capped reply sets partial_reason "max_entries". Fields: `recursive`, `mtime`, `max_entries`.
 {"max_bytes":65536}            cap the returned chunk; "truncated_at_bytes" reports whether it fired.
 {"allowOutsideRoot":true}      opt in to an absolute path outside the project root; required per call.
                                "allow_outside_root" is an alias. A path holding a ".." segment is
