@@ -31,7 +31,7 @@ if (help) {
 
 const PROJECT_LAUNCH_SNIPPET =
   "const bundlePath=require('path').join(require('os').homedir(),'.gm-tools','gm-mcp-server.mjs');" +
-  "if(!require('fs').existsSync(bundlePath)){console.error('gm-mcp bundle missing at '+bundlePath+' -- run: npx github:AnEntrypoint/gm --mcp-only');process.exit(1)}" +
+  "if(!require('fs').existsSync(bundlePath)){console.error('gm-mcp bundle missing at '+bundlePath+' -- run: node bin/gm-install.js --mcp-only from a github.com/AnEntrypoint/gm checkout');process.exit(1)}" +
   "import(require('url').pathToFileURL(bundlePath).href)"
 
 const IS_WINDOWS = process.platform === 'win32'
@@ -308,7 +308,7 @@ function materialiseSkill({ dir, name, root, copyOnly = false }) {
   copyDir(src, dest)
   recordMode(root, name, 'copied', src)
   const why = copyOnly
-    ? 'the source is npm npx cache, which npm can delete or replace'
+    ? 'the source is the github.com/AnEntrypoint/gm manifest copy, not a checkout'
     : 'no junction/symlink available here'
   console.log(`WARNING: ${name} -> ${dest} is a COPY (${why}); it is NOT the file at ${src} and will drift silently -- recorded in ${path.join(root, SKILL_MODE_LEDGER)}`)
   return { mode: 'copied', status: cleared }
@@ -489,16 +489,6 @@ function registerClaudeCode() {
   syncGmServers(projectConfigPath, projectConfig, [{ servers: projectConfig.mcpServers, label: `${projectConfigPath} mcpServers`, create: !global }], projectServerEntry())
 }
 
-function mcpLaunchArgv() {
-  const quote = s => (IS_WINDOWS ? `"${s}"` : s)
-  return [quote(process.execPath), '--args', quote(MCP_BUNDLE_PATH)]
-}
-
-function registerOtherHosts() {
-  const scopeFlag = global ? ['-g'] : []
-  runChild('npx', ['-y', 'add-mcp', ...mcpLaunchArgv(), '-n', 'gm', ...scopeFlag, '-y'], { shell: IS_WINDOWS })
-}
-
 const CURSOR_MCP_PATH = path.join(os.homedir(), '.cursor', 'mcp.json')
 const GEMINI_SETTINGS_PATH = path.join(os.homedir(), '.gemini', 'settings.json')
 const CODEX_CONFIG_PATH = path.join(os.homedir(), '.codex', 'config.toml')
@@ -584,7 +574,6 @@ function installRunner() {
 }
 
 await vendorMcpBundle()
-registerOtherHosts()
 registerKnownHostShapes()
 registerClaudeCode()
 if (!mcpOnly) installRunner()
