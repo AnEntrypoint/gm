@@ -36,7 +36,7 @@ interface host {
     host-task-proc: func(action: string, params: string) -> list<u8>;
     host-git: func(args: string, cwd: string) -> list<u8>;
     host-plugin-call: func(plugin: string, verb: string, body: string) -> list<u8>;
-    crawl-cdp: func(body: string) -> list<u8>;
+    browser-cdp: func(body: string) -> list<u8>;
 }
 
 world env-imports {
