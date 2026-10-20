@@ -743,6 +743,8 @@ truncation or an edit is visible rather than silent. The resolve reply names `fi
 and `row_file_cleared`. After resolution the id is still readable: `prd-list {"id":"<id>"}` reads the log
 and returns the row with `resolved: true`.
 
+**Witness contract (`prd-resolve`).** The body is `{"id":"<row id>","witness_evidence":"<file:line, codesearch hit or exec output specific to the row>","witness_dispatch_id":"<dispatch_id of your own live run>","commit_comment":"<optional one-line note>"}`. `id` is top-level (aliases `prd_id`, `mutable_id`, `item_id`, `slug`, `key`). `witness_evidence` is a required non-empty string. The binding is either `witness_dispatch_id` (a string naming a live dispatch from `.gm/exec-spool/.dispatch-ledger.json`, run under a SESSION_ID distinct from the resolver's) or all four of `witness_exit_code` (integer 0), `witness_output_sha256` (64 lowercase hex characters), `witness_output_path` (string) and `witness_ts` (RFC 3339 string). A refusal names the failing field in `field` or `missing_fields` and lists the same contract in `required_fields`.
+
 **Migration.** The legacy single files `.gm/prd.yml` and `.gm/mutables.yml` are still read and are
 split into the folders on the first write that touches them, after which a marker
 (`.gm/prd.absorbed.json` for PRD rows, `.gm/mutables.absorbed.json` for mutables) lets reads skip them. No row is dropped and no flag day is needed: a
