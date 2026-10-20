@@ -582,16 +582,16 @@ accepts an array or a comma-separated string. The reply carries `query`, `engine
 snippet clamped at 400 characters), plus `prompt`/`answer` when a prompt is given. An empty `results` comes with a
 `note` naming the usual cause, a challenge page, and the two ways past it: `url` or `fetch` on a known URL.
 
-### `crawl`: browse pages through one of two engines
+### `browser`: browse pages through one of two engines
 
-`crawl` takes a plain text body (see Execution). The first line
-selects the engine; the rest is the crawl request (URLs and steps).
+`browser` takes a plain text body (see Execution). The first line
+selects the engine; the rest is the browser request (URLs and steps).
 
 | engine | runs | window |
 |---|---|---|
-| `cdp` (default when the first line is absent) | the host drives a real Chrome over the Chrome DevTools Protocol (CDP) through its `crawl_cdp` entry point | **HEADFUL** (a visible window), always |
+| `cdp` (default when the first line is absent) | the host drives a real Chrome over the Chrome DevTools Protocol (CDP) through its `browser_cdp` entry point | **HEADFUL** (a visible window), always |
 
-The `cdp` engine always runs **HEADFUL**: a `headless` line is refused with an error. `cdp` is the only crawl engine.
+The `cdp` engine always runs **HEADFUL**: a `headless` line is refused with an error. `cdp` is the only browser engine.
 
 ```
 raw_body: "engine=cdp\nhttps://example.com/\n"
@@ -601,12 +601,12 @@ The `cdp` reply is the host's JSON object, passed through unchanged: `ok`, `engi
 `stdout`, `stderr`, `exit_code`, `duration_ms`, `timed_out`, `target_id`, `tab`, `steps`, `pages` and `error`. `steps` holds one record per browser step (`index`, `action`, `tab`, `tab_state`, `url_before`, `url_after`, `closed`), and `tab` holds the target's `targetId`, `state` (`opened` or `reused`) and `url`. An unknown
 engine answers `ok: false` with `error_code: "unknown_engine"`, naming `cdp`.
 
-The standalone `cdp` verb is removed; `crawl` with `engine=cdp` replaces it. The `cdp` engine serves the whole step grammar,
+The standalone `cdp` verb is removed; `browser` with `engine=cdp` replaces it. The `cdp` engine serves the whole step grammar,
 including raw `cdp <Domain.method>` commands and event capture.
 
-### `chrome`: the CDP crawl as a named verb
+### `chrome`: the CDP browser as a named verb
 
-`chrome` takes the same **plain text body** as `crawl` and runs the same browser steps (listed below) on the `cdp` engine, so the engine line is optional. The window is always headful. The verb answers the same host JSON object.
+`chrome` takes the same **plain text body** as `browser` and runs the same browser steps (listed below) on the `cdp` engine, so the engine line is optional. The window is always headful. The verb answers the same host JSON object.
 
 ```
 raw_body: "https://example.com/\nsnapshot\n"
@@ -616,7 +616,7 @@ raw_body: "https://example.com/\nsnapshot\n"
 
 A `cdp` body may open with `session=<name>`, then one step per line. The steps run over the single Chrome that a project root shares.
 
-- `session=<name>` (a crawl session name, not a gm `session_id`; 1-64 letters, digits, `-`, `_`) keeps the tab and the `uid=N` numbers it assigned across calls, in `.gm/crawl-cdp-sessions/<name>.json`. Calls on one crawl session are serialized. A corrupt state file is refused, never reset. `sessionId=<name>` is an alias of `session=<name>`; a body that gives both is refused.
+- `session=<name>` (a browser session name, not a gm `session_id`; 1-64 letters, digits, `-`, `_`) keeps the tab and the `uid=N` numbers it assigned across calls, in `.gm/browser-cdp-sessions/<name>.json`. Calls on one browser session are serialized. A corrupt state file is refused, never reset. `sessionId=<name>` is an alias of `session=<name>`; a body that gives both is refused.
 - The shared Chrome stays open after its last lease is released. It closes after 15 minutes with no holder or waiter. A lease is the hold one call keeps on the shared Chrome. Without `session=`, a call opens its own tab and closes it when it ends.
 
 | Step | Does |
@@ -664,7 +664,7 @@ rest in `dropped`. The CDP domain (the part before the dot) is enabled for you. 
 raw_body: "engine=cdp\nsessionId=example-1\nevents Debugger.scriptParsed where url~example limit=600\ncdp Page.navigate\n{\"url\":\"https://example.com/\"}\nwait 3000\ncdp Runtime.evaluate\n{\"expression\":\"location.href\",\"returnByValue\":true}\n"
 ```
 
-A uid is the number a snapshot printed for an element. It stays with that element across re-snapshots and across calls on the same session. A uid that no snapshot of the crawl session has printed is refused with an error. Console and network capture start when a call attaches to the shared Chrome.
+A uid is the number a snapshot printed for an element. It stays with that element across re-snapshots and across calls on the same session. A uid that no snapshot of the browser session has printed is refused with an error. Console and network capture start when a call attaches to the shared Chrome.
 
 ## Phase machine, PRD rows and pool
 
@@ -930,8 +930,8 @@ Served verbs with no entry elsewhere in this file. Rows are sourced from `gm.des
 | `cache_put` | undeclared | write a cache entry | command |
 | `cache_invalidate` | undeclared | invalidate cache entries | command |
 | `cache_stats` | undeclared | report cache statistics | query |
-| `chrome` | raw_body | CDP crawl as a named verb: headful window, cdp engine always; same body as crawl | command |
-| `crawl` | raw_body | crawl a page in the project's shared browser (cdp engine) | command |
+| `chrome` | raw_body | CDP browser as a named verb: headful window, cdp engine always; same body as browser | command |
+| `browser` | raw_body | browser a page in the project's shared browser (cdp engine) | command |
 | `code_index` | undeclared | build the code index | command |
 | `rg` | `{"query"?, "mode"?, "k"?, "max_matches"?, "max_files"?, "path"?, "glob"?, "exclude"?, "case_insensitive"?, "whole_word"?, "comments_only"?, "refresh"?, "no_ignore"?, "context"?, "output_mode"?}` | alias of `grep`: where is this string | query |
 | `prd_block` | undeclared | block a PRD row, naming its blocker | command |
