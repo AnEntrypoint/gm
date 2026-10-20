@@ -130,7 +130,7 @@ The canonical search verb: ranked BM25 plus vector retrieval.
 ```
 {"query":"<text>"}                 required
 {"mode":"dual"}                    "dual" (default): ranked BM25+vector retrieval, except a single
-                                   identifier-shaped token (3-96 characters) routes to mode "symbol" (see below);
+                                   identifier-shaped token (3-96 characters) routes to mode "symbol" when it matches a line, and to a literal scan labelled mode "literal" when it matches none (see below);
                                    "literal"/"regex": exhaustive, every match with path:line, no ranking;
                                    "filename": matches paths only
 {"k":10}                           result cap for "dual"; aliases: max_results, maxResults, limit
@@ -180,7 +180,7 @@ Example:
 Four modes, plus the comment scan (`mode:"comments"`): `dual` ranks; `literal` and `regex` are exhaustive and read the tree directly.
 `filename` matches paths only. An unknown `mode`
 is an error that names the valid set, never a silent `dual`. A `dual` query that is one identifier-shaped
-token (3-96 characters) is answered by the identifier route: an exhaustive whole-word scan whose reply has `mode: "symbol"`, `definitions` and `references`. A request whose body names `mode: "symbol"` is refused
+token (3-96 characters) is answered by the identifier route: an exhaustive whole-word scan whose reply has `mode: "symbol"`, `definitions` and `references`. When that scan matches no line, the identifier route falls through to the literal exhaustive scan, and the reply has `mode: "literal"` with `exhaustive` as that scan reports it (a path-scoped scan is not exhaustive). A request whose body names `mode: "symbol"` is refused
 and the refusal names the valid set. `k` caps the result count; `0` means unlimited for
 `literal`, `regex` and `filename`, and is refused for `dual`, which is ranked top-k. `verbose: true` returns the
 raw `bm25_hits`, `vector_hits` and `commits` channels.
