@@ -129,10 +129,10 @@ The `gm-mcp` server compacts every dispatch response before it crosses the wire;
 
 ## Live validation interfaces
 
-- `node scripts/triage/dispatch-verb.mjs <verb> --cwd <project> --raw <body>` dispatches any spool verb, including verbs the MCP table does not expose such as `crawl`, and prints the reply and latency. It touches only the local spool.
+- `node scripts/triage/dispatch-verb.mjs <verb> --cwd <project> --raw <body>` dispatches any spool verb, including verbs the MCP table does not expose such as `browser`, and prints the reply and latency. It touches only the local spool.
 - `agentplug-runner selfcheck-update-probes` reads the release channel for the runner, every loaded plugin and the skill manifest, through the daemon's own functions. Its only write is the skill manifest cache.
 - `node <toolsDir>/gm-mcp-server.mjs self-update-status` prints the channel cache: the stored etag, the digest, the time of the last unconditional fetch and the outcome of the last check. `self-update-now` forces a check.
-- Browser control is witnessed through `crawl` with `session=`, `expect=`, `reload` and `close`. The reply names the tab and logs each step.
+- Browser control is witnessed through `browser` with `session=`, `expect=`, `reload` and `close`. The reply names the tab and logs each step.
 
 ## Dated findings and design
 
