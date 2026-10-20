@@ -612,6 +612,42 @@ including raw `cdp <Domain.method>` commands and event capture.
 raw_body: "https://example.com/\nsnapshot\n"
 ```
 
+### Browser state verbs: `browser_list`, `browser_reset`, `session_*`
+
+All take the project root as `cwd`. `browser_list` and `browser_reset` take no body.
+
+- `browser_list`: the browsers the shared lease knows, with their ports and pids.
+- `browser_reset`: closes the shared browser and gives up the lease; the next call launches a fresh browser on the same profile.
+- `session_list`: the browser sessions of the project, with their titles and colours.
+- `session_delete` `{name}`: deletes one session's state. An absent session answers `deleted: false`.
+- `session_update` `{name, title?, color?}`: sets the tab group title and/or colour. Colour is one of `grey`, `blue`, `red`, `yellow`, `green`, `pink`, `purple`, `cyan`, `orange`.
+- `session_reset` `{name}`: removes the session's tab binding, uid map and log cursor. The title and colour are kept.
+
+```
+gm.session_update({name: "shop", color: "blue"}, {cwd: "/path/to/project"})
+```
+
+### Live browser feed: `browser_events`
+
+`browser_events` `{action, session, url?, maxMs?}` runs one long capture on the project's browser lease. `action` is `start`, `status` or `stop`; `maxMs` sets the lifetime (default 900000, ceiling 3600000). Each browser console, exception, log, network and page event is appended as one JSON line to `.gm/browser-events/<session>.jsonl`, with a `seq` that only grows.
+
+While the feed runs, gm-mcp tails that file and pushes each new line to the MCP client as a `notifications/message` with logger `browser`; the level follows the event (`exception` and `error` are `error`, failed or 4xx/5xx network events are `warning`). A client that subscribes to `gm://browser/events/<session>` also gets `notifications/resources/updated` for that URI. `stop` ends the watch. The push runs on the stdio transport only; HTTP clients read the same lines with `browser_events` `status` or from the resource.
+
+### Browser resources
+
+- `gm://browser/api`: markdown listing every browser, session and recorder verb with its body fields, generated from the verb table.
+- `gm://browser/events/{session}`: the newest JSON lines of a feed the server is watching (up to 256 KB).
+
+### Recorder: `recorder_start`, `recorder_stop`, `recorder_events`, `recorder_frame`
+
+- `recorder_start` `{session}` and `recorder_stop` `{session}`: start and stop the action recorder for one session. Limits: 10 active recorders, 20 minutes and 500 MB per recording.
+- `recorder_events` `{session, type?, errors?, exclude?}`: lists recorded events. `type` keeps one kind, `errors` keeps errors only, and `exclude` is a regular expression that drops matching text.
+- `recorder_frame` `{session, eventId}`: the frame recorded for one event id.
+
+### Screenshots in replies
+
+A `browser` or `chrome` request that writes a screenshot (`screenshot=<path>`, `screenshot_full=<path>` or `screenshot_uid=<uid> <path>`) returns the image as image content in the same reply, after the text, so a client shows it inline. Images above 4 MB stay on disk and are not inlined.
+
 ### Browser steps for `engine=cdp`
 
 A `cdp` body may open with `session=<name>`, then one step per line. The steps run over the single Chrome that a project root shares.
