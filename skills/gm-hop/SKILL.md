@@ -55,7 +55,7 @@ Write `.gm/lean-walk/<NODE>.<SESSION>.json` (keyed by node and owner session, so
 - Each confirmed node-only row is `prd-add`ed at once, never batched to the end. A hop with zero rows 15 minutes after its heartbeat start stops and returns a receipt: surfaces scanned, candidates checked, rows logged (0), reason.
 - A NOT-APPLICABLE receipt never deletes `.gm/pool/<session>.next`; only the orchestrator deletes a parked spec, after its relaunch is accepted.
 - A hop creates PRDs; it never executes its own. Merge duplicate outcome rows (`outcome-hop-*`, `cpu-hop-outcome-*`) into the base row; never add them.
-- The receipt names an executed witness (a command, crawl result, codesearch output). A receipt without one is refused.
+- The receipt names an executed witness (a command, browser result, codesearch output). A receipt without one is refused.
 - Instructions to agents: ultra-compact, meaning intact. A hop is one lane, never the pool. Dip causes and counter-instructions: gm-orchestrate, Never let the pool dip.
 - Context budget: a hop dying with `Prompt is too long` is relaunched compact, never resumed (gm-orchestrate, Never let the pool dip, cause 4). The relaunch re-sends principle, surface, depth, `visited` and a three-sentence `rhetoric`, nothing else. Never send the dead hop's transcript or a file body; a spawn passes located `path:line` citations.
 - A hop never dispatches the `gm-continue` skill. That is the parent orchestrator's terminal move. A hop ends on its receipt, plus the parked line when it names a successor.

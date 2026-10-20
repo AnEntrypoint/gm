@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Dispatches one spool verb and prints its reply, for live validation of any verb, including ones the
-// MCP tool table does not expose (crawl, for one). Local spool only: no network, no daemon of its own.
+// MCP tool table does not expose (browser, for one). Local spool only: no network, no daemon of its own.
 //
 // Usage: node scripts/triage/dispatch-verb.mjs <verb> [--cwd <project>] [--raw <text> | --body-file <path>]
 //                                              [--sid <id>] [--timeout-ms <ms>]
