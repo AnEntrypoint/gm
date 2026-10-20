@@ -9,6 +9,8 @@ description: "Drives a gm walk (nodes, PRD rows, pool and hop subagents) for cod
 
 **Invariant (brick wall): every code search goes through the code-search port, and every web fetch goes through the fetch port, with no exceptions. Every `Agent`/`Task` dispatch opens with "use the gm skill for this; code questions go to codeinsight (`callers`/`impact`) first, then the code-search port, and `Read` only a located path. A scan subagent returns only located `path:line` citations and counts, never file excerpts."**
 
+**Read-only entry.** A request that only reads state (a PRD row or ledger, a phase, a symbol or file location) is answered directly with read verbs (`prd-list`, `phase-status`, `codesearch`, `callers`, `impact`, `fs-read`, `git-status`, `ci-status`) and returns the data. It does not load or run the walk, drain or hop protocol, and it writes nothing. The protocol below applies only when the request changes code or PRD state.
+
 Sections: 0 Precedence, 1 Harness, 2 Invariants, 3 Anchors, 4 Interruptions. Pool: gm-orchestrate. Hop: gm-hop. PRD row: gm-prd. Rationale: `docs/rationale.md`. Verbs: `docs/verbs.md`.
 
 ## Autonomy
@@ -48,6 +50,7 @@ Sections: 0 Precedence, 1 Harness, 2 Invariants, 3 Anchors, 4 Interruptions. Poo
   6. `git_checkout {ref:"main"}`; land the work there. A checked-out branch, open merge or dirty tree is a residual.
   Never `git_merge_abort` another lane's merge. Check `.git/MERGE_HEAD` BEFORE any edit: merge resolution restores the pre-merge tree and silently discards it.
 - Codeinsight first: `callers {symbol}` before reading, editing or deleting a function; `impact {symbol, max_depth}` for dependencies; `callers` on each changed function for blast radius. An empty reply is proof only when `codeinsight_index` says `complete: true`; else confirm with `codesearch {"query":"<symbol>","mode":"literal","whole_word":true}`. Modes: `dual`, `literal`, `regex`, `filename` (`identifier` refused). Full table: served "Code intelligence first".
+- Read path: `fs_read {"path","startLine","endLine"}` replaces Read, `sed -n`, `cat`, `head` and `tail` for a file or a 1-based line range; one dispatch returns the bounded excerpt with `start_line`, `end_line` and `total_lines`.
 - Ports: `codesearch` replaces Grep, Glob, Explore, `find`/`grep`/`rg`. `fetch` replaces WebFetch and WebSearch: HTML to markdown; `prompt` answers against the page; reply capped by `max_chars` (default 6000). Discovery: `fetch` with `query` (aliases `q`, `search`) instead of `url` returns ranked `rank`/`title`/`url`/`host`/`snippet` hits, default `count` 10. `websearch` (alias `web_search`) is the same search. `codesearch` and `grep` (alias `rg`) own body fields, modes, output shapes and `exhaustive`: `docs/verbs.md` (Code lookup). Read before dispatching either.
 - Uncertain: dispatch `instruction`. Never invent the next step from memory.
 - A turn does not end on an open task. A question to the user mid-step is a failure.
