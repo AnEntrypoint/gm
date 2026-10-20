@@ -8,13 +8,13 @@ description: "Closes one PRD row through the gm stages: an executor edits and ha
 One row, one session. Stages run in order, none a subagent; the orchestrator spawns the verifier and CI lanes after the executor's handoff. Each writes a create-only receipt `.gm/receipts/<row>/NN-<STAGE>.md`. A stage that is refused first re-reads the state the refusal names, fixes it, and retries once; only a stage still refused for the same cause becomes a blocker row `<row>-blocker-<session>` (`prd-add`) naming the external fact and the action that clears it. Never a skip. Verbs: gm §1. PRD-resolution tracker, separate from node traversal (gm-orchestrate); a row is not a node and never changes the frontier count.
 
 ## Procedure
-- A blocker is filed only after gm-eliminate ran a live JIT check on each open unknown and recorded its dispatch id. A missing fact, unresolved unknown or missing row file is not a blocker until those checks fail.
+- A blocker is filed only after ELIMINATE (step 1b) ran a live JIT check on each open unknown and recorded its dispatch id. A missing fact, unresolved unknown or missing row file is not a blocker until those checks fail.
 - CI builds are not blockers: a CI-only row pushes and reads the GitHub Actions run through `ci-status` (gm, CI).
 - Owner decisions are not blockers: the owner approved every decision that progresses the goals; the row records the decision and runs it.
-- Missing acceptance text is not a blocker: gm-orient derives it.
+- Missing acceptance text is not a blocker: SPECIFY (step 1) derives it.
 - Only a world-scoped one-way door remains a blocker without a check (gm §4).
 
-The executor runs the edit stages only: gm-orient, gm-unknowns, gm-eliminate, gm-edit, then publish of its own commit (gm-publish steps 1-2). It then hands off and ends. Verification (gm-validate, PROVE, witness, DECIDE, COMPLETE) and the CI read (gm-publish steps 3-5) are separate lanes the orchestrator spawns per handoff, never inline (gm-orchestrate, Verification and CI lanes). Start with the `gm-orient` skill with `row=<id>; session=<SESSION_ID>`. Stages 2, 8, 9 belong to the spawned verifier.
+The executor runs the edit stages only: SPECIFY (step 1), ELIMINATE (step 1b), EDIT then VALIDATE (step 1c), then publish of its own commit (Delivery, below). It then hands off and ends. Verification (PROVE, witness, DECIDE, COMPLETE) and the CI read (Delivery, steps 3-5) are separate lanes the orchestrator spawns per handoff, never inline (gm-orchestrate, Verification and CI lanes). Start at SPECIFY (step 1) with `row=<id>; session=<SESSION_ID>`. Stages 2, 8, 9 belong to the spawned verifier.
 
 1. SPECIFY (orient): restate row and acceptance; codesearch with `literal` mode first for every exact string the row names (identifiers, paths, error text), then `dual` mode (top 20 BM25, top 20 vector, top 20 commits, 3 live snippet lines each; no snippet text stored); codeinsight first for any function the row touches. Check each cited line against the tree (absent: stale). Write unknowns with `mutable-add`.
 1b. ELIMINATE: eliminate each unknown by a live JIT run; a run revealing a new unknown adds it and returns to ELIMINATE. EDIT starts only when no unknown is open.
