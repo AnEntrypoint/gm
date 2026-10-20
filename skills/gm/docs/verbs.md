@@ -217,6 +217,10 @@ compile is refused with the regex error text rather than an empty result. The gr
 
 ```
 {"path":"<relative path>"}     required, relative and within the project
+{"recursive":true,"max_entries":500}  fs_readdir only: walk subdirectories; each entry is {path, isDirectory, size, mtime_ms}
+                               with path relative to the listed directory. "mtime":true alone returns the same
+                               entry objects for one directory. Walks cap at `max_entries` (default 1000, ceiling 5000),
+                               and a capped reply sets partial_reason "max_entries". Fields: `recursive`, `mtime`, `max_entries`.
 {"max_bytes":65536}            cap the returned chunk; "truncated_at_bytes" reports whether it fired.
 {"allowOutsideRoot":true}      opt in to an absolute path outside the project root; required per call.
                                "allow_outside_root" is an alias. A path holding a ".." segment is
@@ -739,6 +743,8 @@ truncation or an edit is visible rather than silent. The resolve reply names `fi
 and `row_file_cleared`. After resolution the id is still readable: `prd-list {"id":"<id>"}` reads the log
 and returns the row with `resolved: true`.
 
+**Witness contract (`prd-resolve`).** The body is `{"id":"<row id>","witness_evidence":"<file:line, codesearch hit or exec output specific to the row>","witness_dispatch_id":"<dispatch_id of your own live run>","commit_comment":"<optional one-line note>"}`. `id` is top-level (aliases `prd_id`, `mutable_id`, `item_id`, `slug`, `key`). `witness_evidence` is a required non-empty string. The binding is either `witness_dispatch_id` (a string naming a live dispatch from `.gm/exec-spool/.dispatch-ledger.json`, run under a SESSION_ID distinct from the resolver's) or all four of `witness_exit_code` (integer 0), `witness_output_sha256` (64 lowercase hex characters), `witness_output_path` (string) and `witness_ts` (RFC 3339 string). A refusal names the failing field in `field` or `missing_fields` and lists the same contract in `required_fields`.
+
 **Migration.** The legacy single files `.gm/prd.yml` and `.gm/mutables.yml` are still read and are
 split into the folders on the first write that touches them, after which a marker
 (`.gm/prd.absorbed.json` for PRD rows, `.gm/mutables.absorbed.json` for mutables) lets reads skip them. No row is dropped and no flag day is needed: a
@@ -779,7 +785,7 @@ Pass the `instruction_hash`/`policy_hash` of the prior `instruction` response ba
 
 Every record is owned by the dispatch session, so the whole chain runs under one session id.
 
-`subagent-start` takes `parent_session_id` and `subagent_session_id` (both validated), with optional `cwd` and `slice_id`, and records the subagent's start in `.subagent-ledger.jsonl` in the gm state directory. `subagent-end` takes the same two ids and a `status` of `done` (the default), `failed` or `stopped`. The native build refuses both lifecycle writes with `subagent lifecycle requires the wasm32 host`.
+`subagent-start` takes `parent_session_id` and `subagent_session_id` (both validated), with optional `cwd` and `slice_id`, and records the subagent's start in `.subagent-ledger.jsonl` in the gm state directory. `subagent-end` takes the same two ids and a `status` of `done` (the default), `failed` or `stopped`; `failed` and `stopped` also require a `cause` (at most 500 characters), which is logged on the end row. `subagent-checkpoint` takes the two ids and a `checkpoint` JSON object (at most 8192 bytes, naming the row, stage and receipt to resume from) for an open subagent. `subagent-resume` takes `parent_session_id`, the dead `subagent_session_id` and a `new_subagent_session_id` (`<parent>-...-sub...`): when that subagent ended `failed` or `stopped` with a checkpoint, it starts the successor and answers `resumed_from`, `checkpoint` and `cause`, so the new subagent resumes without a hand-written brief. The native build refuses all lifecycle writes with `subagent lifecycle requires the wasm32 host`.
 
 `browser_lease_acquire` and `browser_lease_release` take `agent`, with optional `ttl_ms` (lease time-to-live in ms before a silent holder counts as dead) and `wait_ms` (ms to wait for the lease before refusing), and `browser_lease_status` takes no agent. Acquire waits up to 600 s for the shared browser lease and answers `port`, `chrome_pid` and `lease_file`. A holder whose heartbeat is older than 120 s counts as dead. Release answers the lease state with `released` set to the agent, and status answers the lease state alone.
 
@@ -817,6 +823,8 @@ the floor while rows are open is refused with `error_code` `floor_gate_denied` w
 `wait-for-task {"id":"<task id>","timeout_ms":N}` blocks until the background task leaves `running`, then answers its output. `id` is required (`task_id`, or a bare string body, also names it). `timeout_ms` defaults to 100000 and must be an integer from 1 to 100000; at the deadline the reply carries `timed_out: true` instead of the output.
 
 `wait_for_task` is the served name of `wait-for-task` (`gm.list` and `gm.describe` report it under that name), so it takes the same body and returns the same reply.
+
+`proc-list {"pattern"?,"limit"?}` lists running OS processes whose command line contains `pattern`, up to `limit` (default 100, max 1000), with `pid`, `ppid` and `args`. It never lists its own process chain (the listing process, its parent shells and its children), so a pattern that appears in the dispatch body does not match itself. Query class. `proc-signal {"pid"|"pattern","signal"?,"all"?}` sends `TERM` (default), `INT`, `HUP` or `KILL` to one pid, or to the single process a pattern matches; a pattern matching several processes is refused unless `all` is true, and the own process chain is refused. Command class. The served names are `proc_list` and `proc_signal`.
 
 `learn` is retired.
 
