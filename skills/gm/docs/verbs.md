@@ -619,9 +619,9 @@ All take the project root as `cwd`. `browser_list` and `browser_reset` take no b
 - `browser_list`: the browsers the shared lease knows, with their ports and pids.
 - `browser_reset`: closes the shared browser and gives up the lease; the next call launches a fresh browser on the same profile.
 - `session_list`: the browser sessions of the project, with their titles and colours.
-- `session_delete` `{name}`: deletes one session's state. An absent session answers `deleted: false`.
-- `session_update` `{name, title?, color?}`: sets the tab group title and/or colour. Colour is one of `grey`, `blue`, `red`, `yellow`, `green`, `pink`, `purple`, `cyan`, `orange`.
-- `session_reset` `{name}`: removes the session's tab binding, uid map and log cursor. The title and colour are kept.
+- `session_delete`: deletes one session's state, given body field `name`. An absent session answers `deleted: false`.
+- `session_update`: sets the tab group title and/or colour, given body field `name` with optional `title` and `color`. Colour is one of `grey`, `blue`, `red`, `yellow`, `green`, `pink`, `purple`, `cyan`, `orange`.
+- `session_reset`: removes the session's tab binding, uid map and log cursor, given body field `name`. The title and colour are kept.
 
 ```
 gm.session_update({name: "shop", color: "blue"}, {cwd: "/path/to/project"})
@@ -642,7 +642,7 @@ While the feed runs, gm-mcp tails that file and pushes each new line to the MCP 
 
 - `recorder_start` `{session}` and `recorder_stop` `{session}`: start and stop the action recorder for one session. Limits: 10 active recorders, 20 minutes and 500 MB per recording.
 - `recorder_events` `{session, type?, errors?, exclude?}`: lists recorded events. `type` keeps one kind, `errors` keeps errors only, and `exclude` is a regular expression that drops matching text.
-- `recorder_frame` `{session, eventId}`: the frame recorded for one event id.
+- `recorder_frame`: the frame recorded for one event id, given body fields `session` and `eventId`.
 
 ### Screenshots in replies
 
