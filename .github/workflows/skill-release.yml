@@ -87,7 +87,11 @@ jobs:
           release_exists() {
             local err
             if err=$(gh api "repos/AnEntrypoint/gm/releases/tags/$1" 2>&1 >/dev/null); then return 0; fi
-            if grep -q 'HTTP 404' <<<"$err"; then return 1; fi
+            if grep -q 'HTTP 404' <<<"$err"; then
+              if gh api "repos/AnEntrypoint/gm" >/dev/null 2>&1; then return 1; fi
+              echo "::error::repository AnEntrypoint/gm is not readable; release $1 cannot be judged absent" >&2
+              exit 1
+            fi
             echo "::error::gh release view $1 failed (not a 404): $err" >&2
             exit 1
           }
@@ -155,7 +159,11 @@ jobs:
           release_exists() {
             local err
             if err=$(gh api "repos/AnEntrypoint/gm/releases/tags/$1" 2>&1 >/dev/null); then return 0; fi
-            if grep -q 'HTTP 404' <<<"$err"; then return 1; fi
+            if grep -q 'HTTP 404' <<<"$err"; then
+              if gh api "repos/AnEntrypoint/gm" >/dev/null 2>&1; then return 1; fi
+              echo "::error::repository AnEntrypoint/gm is not readable; release $1 cannot be judged absent" >&2
+              exit 1
+            fi
             echo "::error::gh release view $1 failed (not a 404): $err" >&2
             exit 1
           }
