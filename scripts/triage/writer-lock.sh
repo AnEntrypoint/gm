@@ -10,7 +10,7 @@
 # atomically with noclobber, so two lanes cannot both take it. quarantine-stale moves the lock to a dated
 # quarantine directory (never deletes) only when no git write runs in the repository and no process names the
 # holder. Output: the result line. Exit 1 when the lock is held by someone else or cannot be released.
-root=${GM_ROOT:-/workspace/gm}
+root=${GM_ROOT:-$(cd "$(dirname "$0")/../.." && pwd)}
 dir="$root/.gm/locks"
 mkdir -p "$dir"
 cmd=$1
