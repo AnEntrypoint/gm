@@ -328,7 +328,7 @@ the full `deferred_set` lives in the sync report, never in the message.
 
 Agents do not call these verbs for memory. Memory is the flat-file store that `skills/gm/SKILL.md` (Invariants) describes; the verbs stay in the code.
 
-`recall`, `auto-recall`, `memorize-fire`, `memorize-prune`, `memorize-vacuum` and `memorize-retention` do not resolve in the current build: `gm.describe` fails for each, and rs-plugkit's source holds no dispatch for them. `memorize_continue` is the memory verb that resolves.
+`recall`, `auto-recall`, `memorize-fire`, `memorize-prune`, `memorize-vacuum` and `memorize-retention` do not resolve in the current build: `gm.describe` fails for each, and rs-plugkit's source holds no dispatch for them. `memorize-continue` is the memory verb that resolves.
 
 ## Filesystem
 
@@ -958,7 +958,7 @@ Served verbs with no entry elsewhere in this file. Rows are sourced from `gm.des
 | `task_list` | undeclared | list background tasks | query |
 | `task_stop` | undeclared | stop a background task | command |
 | `task_output` | undeclared | read a background task's output | query |
-| `memorize_continue` | undeclared | record the continuation state | command |
+| `memorize-continue` | undeclared | record the continuation state | command |
 | `fsm_vendor` | undeclared | vendor an FSM graph into the project | command |
 | `fsm_validate` | undeclared | validate the FSM graph | query |
 | `predicates_md` | undeclared | render the predicates document | query |
