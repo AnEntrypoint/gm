@@ -13,6 +13,16 @@ const RULES = [
 
 const PLACEHOLDER = /^[$<{%]/;
 
+function matchRule(text) {
+  for (const [rule, re] of RULES) {
+    const m = re.exec(text);
+    if (!m) continue;
+    if (rule === 'url-inline-password' && PLACEHOLDER.test(m[1])) continue;
+    return rule;
+  }
+  return null;
+}
+
 let diff;
 try {
   diff = execFileSync('git', ['diff', '--cached', '-U0', '--no-color', '--no-ext-diff', '--text'], {
@@ -73,14 +83,8 @@ for (const raw of diff.split('\n')) {
   }
   if (inHunk && raw.startsWith('+')) {
     added++;
-    const text = raw.slice(1);
-    for (const [rule, re] of RULES) {
-      const m = re.exec(text);
-      if (!m) continue;
-      if (rule === 'url-inline-password' && PLACEHOLDER.test(m[1])) continue;
-      findings.push(`${rule} ${file}:${line}`);
-      break;
-    }
+    const rule = matchRule(raw.slice(1));
+    if (rule) findings.push(`${rule} ${file}:${line}`);
     line++;
   }
 }
