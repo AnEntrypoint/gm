@@ -175,6 +175,7 @@ Each entry is a failure a run has hit, with the handling that cleared it. Apply 
 - The daemon exits 60 s after idle when no project is registered. A bare `daemon` start is not a restart.
 - A dispatch times out and its request sits in `in/<verb>/` as `.inflight` with no live process: it is orphaned. Run `scripts/triage/spool-orphans.sh <repo-root>...` (`--dry-run` first). It moves each orphan to a dated quarantine directory and never deletes; a live request is left alone.
 - A script never hard-codes a checkout or temp path. Roots come from the script's own location (`$(cd "$(dirname "$0")/../.." && pwd)"`) and temp files from `mktemp`. Run `node scripts/check-repo-hygiene.mjs` before publishing a script: the doc-drift job rejects absolute paths in scripts.
+- A probe never sends a push to a live remote. A bogus-sha `git_push` probe sent through the parent spool reached origin main once and was rejected by the remote. Push refusals are witnessed from the code path, or with read-only verbs (`git_remote`, `branch_status`), never with a push.
 - A push refused by a gate is fixed or routed to the owner. A raw `git push` past a refusing gate is a defect, not a fallback. A hook that is not executable (`git ls-files -s .githooks` shows 100644) is a gate that is off: fix the mode, then publish it.
 - A dispatch with a submodule `cwd` gets no reply. Send it to the parent spool with a body `cwd` instead.
 - The runner stays alive while the spool answers nothing: compare `pid` in `.gm/exec-spool/.status.json` with the live process before restarting.
