@@ -22,6 +22,7 @@ try {
   });
 } catch (err) {
   console.log(`REFUSE: git diff --cached failed (${String(err.stderr || err.message).trim()})`);
+  console.log('RESULT: REFUSE (git diff --cached failed)');
   process.exit(2);
 }
 
