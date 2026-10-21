@@ -12,7 +12,7 @@ on:
 
 concurrency:
   group: gm-bump-pins
-  cancel-in-progress: false
+  cancel-in-progress: ${{ github.event_name == 'push' }}
 
 permissions:
   contents: write

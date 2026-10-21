@@ -18,6 +18,10 @@ gate_ok() {
   local rows gate_rows open wf ok
   GATE_REASON=""
   rows=$(gh api --paginate "repos/AnEntrypoint/$1/actions/runs?head_sha=$2&per_page=100" --jq '.workflow_runs[] | select(.name != "Deploy GH Pages") | [.name, .status, (.conclusion // "")] | @tsv') || { echo "::error::run query failed for $1 at ${2:0:9}" >&2; return 2; }
+  if [ -z "$rows" ]; then
+    GATE_REASON="no CI run exists for this sha (no workflow triggered for it; path filters skip docs-only tips)"
+    return 1
+  fi
   ok=$(awk -F'\t' '$3 == "success" {n++} END{print n+0}' <<<"$rows")
   if [ "$ok" = "0" ]; then
     GATE_REASON="no successful CI run for this sha"
@@ -26,8 +30,11 @@ gate_ok() {
   gate_rows=$(awk -F'\t' 'tolower($1) ~ /release|publish|build|wasm/' <<<"$rows")
   if [ -z "$gate_rows" ]; then
     wf=$(gh api "repos/AnEntrypoint/$1/actions/workflows" --jq '[.workflows[] | select(.name | test("release|publish|build|wasm"; "i"))] | length') || { echo "::error::workflow query failed for $1" >&2; return 2; }
-    [ "$wf" = "0" ]
-    return
+    if [ "$wf" = "0" ]; then
+      return 0
+    fi
+    GATE_REASON="no release-path run exists for this sha (its release workflow did not trigger for it)"
+    return 1
   fi
   open=$(awk -F'\t' '$2 != "completed" || ($3 != "success" && $3 != "skipped" && $3 != "neutral") {n++} END{print n+0}' <<<"$gate_rows")
   [ "$open" = "0" ]
