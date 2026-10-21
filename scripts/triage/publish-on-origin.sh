@@ -14,7 +14,7 @@ repo=$1; row=$2; msg=$3; shift 3
 [ $# -ge 1 ] || { echo "usage: publish-on-origin.sh <repo-dir> <row-id> <message> <path>..."; exit 2; }
 cd "$repo" || exit 1
 git fetch -q origin main || { echo "fetch failed"; exit 1; }
-T=$(mktemp -d /tmp/publish.XXXX)
+T=$(mktemp -d)
 trap 'rm -rf "$T"' EXIT
 # PUBLISH_BASE overrides the base of the three-way merge. Use PUBLISH_BASE=origin/main when the lane's copy
 # is a full rewrite of a file whose history it does not share (a merge-base older than the file would make
@@ -56,7 +56,7 @@ sha=$(git commit-tree "$tree" -p origin/main -m "$msg" -m "Row: $row") || exit 1
 unset GIT_INDEX_FILE
 echo "== commit $sha against origin/main"
 git diff --stat origin/main "$sha" -- "$@" | tail -3
-if ! GIT_INDEX_FILE="$T/index" node /workspace/gm/scripts/check-staged-secrets.mjs >"$T/sec.out" 2>&1; then
+if ! GIT_INDEX_FILE="$T/index" node "$(cd "$(dirname "$0")/.." && pwd)/check-staged-secrets.mjs" >"$T/sec.out" 2>&1; then
   tail -1 "$T/sec.out"
   echo "secrets check failed; nothing pushed"
   exit 1
