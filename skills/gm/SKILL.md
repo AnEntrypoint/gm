@@ -159,6 +159,7 @@ Catalogue: `docs/rationale.md`; use it only as its header says. Served phase pro
 - Every repository has its own spool. An orphaned `.inflight` request in any spool (parent, rs-plugkit, gm-mcp) is moved to a dated quarantine directory, never deleted; a live one is left alone. A dispatch whose `cwd` is a submodule is not served, so the parent spool takes it with a body `cwd`.
 - The runner restarts only through `scripts/triage/runner-restart.sh`, which starts the shared daemon, registers the project, and quarantines orphans. The daemon exits 60 s after idle with no project registered, so a bare `daemon` start is not a restart.
 - A friction point met in a run (a stalled verb, a refused witness, an orphaned request, a contradictory rule) is filed as a row and fixed in the same run, not reported as a note.
+- A rs-plugkit guest change is green only when both `native-check` and `wasip3-component` pass. The native check does not compile `verbs/`, so a green native check alone let a wasip3 type error through (commit ccd096e5, repaired by 22370529).
 - Every pushed sha is read through `ci-status` or the Actions API with its full 40-character sha. A sha with no runs is reported as unverified, not green.
 - Every `npx` or `cargo install` tool in a workflow carries an explicit version (`npx --yes <tool>@<version>`), so a CI run cannot pick up an unpinned release.
 - `git_push` takes `rev` at the top level. `remote`, `branch`, `force`, `recover_remote_moved` and `allow_foreign_commits` go in the body.
