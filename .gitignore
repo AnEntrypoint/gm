@@ -52,7 +52,6 @@ tmp/
 .gm/trajectory-drafts/
 .gm/ingest-drafts/
 .gm/prd-state.json
-.gm/prd-log.jsonl
 .gm/subagent-*.json
 .gm/build-tool-ignores.md
 .gm/last-prompt.txt
@@ -111,8 +110,8 @@ tmp/
 # other's row to one whole-file rewrite, and a resolved row's material moves
 # into .gm/prd-log.jsonl / .gm/mutables-log.jsonl, append-only and hash-chained.
 # The row folders are the same transient class as the files they replace. The chained
-# logs (.gm/prd-log.jsonl, .gm/mutables-log.jsonl) are local per-machine state and are
-# ignored too (see the .gm/prd-log.jsonl and .gm/mutables-log.jsonl entries below).
+# logs (.gm/prd-log.jsonl, .gm/mutables-log.jsonl) are authored project state and are
+# never ignored (MUST_STAY_TRACKED in rs-plugkit crates/plugkit-core/src/gitignore.rs).
 .gm/prd.yml
 .gm/mutables.yml
 .gm/prd/
