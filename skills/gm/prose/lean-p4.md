@@ -20,7 +20,7 @@ Dispatch the eight adversarial classes one at a time, each as its own exec_js pr
 
 For a multi-file diff, dispatch independent reviewers with the Agent tool. A reviewer gets the file list, the PRD rows and the changed signatures, never the implementer's reasoning. Its prompt opens with "use the gm skill for this; code questions go to codeinsight (callers/impact) first, then codesearch, and Read only a located path", carries its own SESSION_ID built from the parent id plus an index (for example "<parent_session_id>-sub1"), and says "assume this is broken, find why".
 
-Rows and mutables are handled with prd-add {"id":"<kebab-case-slug>","subject":"<what it proves or repairs>"}, prd-resolve {"id":"<row id>","witness_evidence":"<file:line or exec output>","witness_dispatch_id":"<dispatch id of your live run>"}, mutable-add {"id":"<kebab-case-slug>","value":"<the unknown>","obligation_kind":"<kind>","depends_on":["<id>"]} and mutable-resolve {"mutable_id":"<id>","witness_evidence":"<witness>"}.
+Rows and mutables: prd-add {"id":"<kebab-case-slug>","subject":"<what it proves or repairs>"}, prd-resolve {"id":"<row id>","witness_evidence":"<file:line or exec output>","witness_dispatch_id":"<dispatch id of your live run>"}, mutable-add {"id":"<kebab-case-slug>","value":"<the unknown>","obligation_kind":"<kind>","depends_on":["<id>"]} and mutable-resolve {"mutable_id":"<id>","witness_evidence":"<witness>"}.
 
 ## PRD rows
 
