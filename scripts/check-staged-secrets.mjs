@@ -25,6 +25,20 @@ try {
   process.exit(2);
 }
 
+// A commit that stages a skills/ file must stage skills/manifest.sha256 too, or the
+// installed-skill refresh serves a stale digest list (scripts/build-skill-manifest.mjs).
+const stagedNames = execFileSync('git', ['diff', '--cached', '--name-only', '--no-renames', '-z'], {
+  encoding: 'utf8',
+  maxBuffer: 64 * 1024 * 1024,
+  stdio: ['ignore', 'pipe', 'pipe'],
+}).split('\0').filter(Boolean);
+const skillEdit = stagedNames.find((n) => n.startsWith('skills/') && n !== 'skills/manifest.sha256');
+if (skillEdit && !stagedNames.includes('skills/manifest.sha256')) {
+  console.log(`REFUSE: staged ${skillEdit} without skills/manifest.sha256 (run node scripts/build-skill-manifest.mjs and stage it)`);
+  console.log('RESULT: FAIL (stale skill manifest)');
+  process.exit(1);
+}
+
 const findings = [];
 let file = '(unknown)';
 let line = 0;
