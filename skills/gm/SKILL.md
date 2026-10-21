@@ -177,7 +177,7 @@ Each entry is a failure a run has hit, with the handling that cleared it. Apply 
 - A script never hard-codes a checkout or temp path. Roots come from the script's own location (`$(cd "$(dirname "$0")/../.." && pwd)"`) and temp files from `mktemp`. Run `node scripts/check-repo-hygiene.mjs` before publishing a script: the doc-drift job rejects absolute paths in scripts.
 - A probe never sends a push to a live remote. A bogus-sha `git_push` probe sent through the parent spool reached origin main once and was rejected by the remote. Push refusals are witnessed from the code path, or with read-only verbs (`git_remote`, `branch_status`), never with a push.
 - A push refused by a gate is fixed or routed to the owner. A raw `git push` past a refusing gate is a defect, not a fallback. A hook that is not executable (`git ls-files -s .githooks` shows 100644) is a gate that is off: fix the mode, then publish it.
-- A dispatch with a submodule `cwd` gets no reply. Send it to the parent spool with a body `cwd` instead.
+- A dispatch with a submodule `cwd` gets no reply. Send it to the parent spool with a body `cwd` instead. A plain request left in a submodule spool is never consumed: `scripts/triage/spool-orphans.sh --unserved <minutes> <submodule-root>...` moves those older than the bound to quarantine, never deletes.
 - The runner stays alive while the spool answers nothing: compare `pid` in `.gm/exec-spool/.status.json` with the live process before restarting.
 - A runner store recycled on every pressure check is a threshold defect. Raise `shared_store_recycle_private_mb` in the agentplug source. Do not lower the lane count.
 
