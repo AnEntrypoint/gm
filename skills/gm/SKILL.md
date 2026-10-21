@@ -166,12 +166,15 @@ Catalogue: `docs/rationale.md`; use it only as its header says. Served phase pro
 
 ## When something goes wrong
 
+Every improvement learned while draining goes into the tooling (`scripts/triage`) or this skill in the same run, published with `scripts/triage/publish-on-origin.sh`. A failure that recurs is handled by a tool, not by a note.
+
 Each entry is a failure a run has hit, with the handling that cleared it. Apply the handling, then record the outcome in the row it affects.
 
 ### Runner and spool
 - The runner is DEAD, or the status file names a pid that is gone: run `bash scripts/triage/runner-restart.sh <project>`. It starts the shared daemon, registers the project, and quarantines orphaned requests. Confirm with a `health` dispatch, because `runner-status` can read a stale status file.
 - The daemon exits 60 s after idle when no project is registered. A bare `daemon` start is not a restart.
 - A dispatch times out and its request sits in `in/<verb>/` as `.inflight` with no live process: it is orphaned. Run `scripts/triage/spool-orphans.sh <repo-root>...` (`--dry-run` first). It moves each orphan to a dated quarantine directory and never deletes; a live request is left alone.
+- A push refused by a gate is fixed or routed to the owner. A raw `git push` past a refusing gate is a defect, not a fallback. A hook that is not executable (`git ls-files -s .githooks` shows 100644) is a gate that is off: fix the mode, then publish it.
 - A dispatch with a submodule `cwd` gets no reply. Send it to the parent spool with a body `cwd` instead.
 - The runner stays alive while the spool answers nothing: compare `pid` in `.gm/exec-spool/.status.json` with the live process before restarting.
 - A runner store recycled on every pressure check is a threshold defect. Raise `shared_store_recycle_private_mb` in the agentplug source. Do not lower the lane count.
@@ -180,6 +183,8 @@ Each entry is a failure a run has hit, with the handling that cleared it. Apply 
 - A witness with no `session_id` is not recorded, and `prd-resolve` refuses it as a self-witness. Put `gm_session_id=<id>` on the first line of a plain-text body, or use a JSON verb.
 - After every close, run `scripts/triage/ledger-check.sh <witness dispatch id>`; it must print `in-ledger`. A resolve that answers `dispatch_ledger_unavailable` may still have applied, so confirm the row file is gone as well.
 - A stale close checked on the wrong tree (a HEAD export, not the working tree the gate reads) is unsound. Reopen it with a row that names the tree and the failing gate exit.
+- After every close, run `scripts/triage/close-check.sh <row-id> <witness-id>`; it must print `verified`. A close whose row file remains open did not land.
+- A stale close needs the whole claim refuted. A witness that leaves part of the claim unrun (a concurrent case, a timing case) keeps the row pending and names the part not yet witnessed.
 - A close whose cited dispatch is missing from the ledger refutes nothing. Re-witness it.
 - A probe that writes shared state (a dream policy, a row, a file) runs under a `verify-` session, and the write is cleaned up or recorded. A write verb used as a probe is a side effect: prefer read verbs.
 
@@ -197,6 +202,7 @@ Each entry is a failure a run has hit, with the handling that cleared it. Apply 
 - A launch refused at the concurrency cap: wait for a slot, then retry. Do not ask the user to raise the cap.
 - A shard file overwritten while its lane runs: the lane keeps the ids it started with and reports the change. Shard files are regenerated only between waves, never during one. Build them with `scripts/triage/shards.sh [new-dir]`, which never overwrites an existing directory.
 - A wave that closes no row: the next wave starts by clearing the blocking fact. It does not launch more lanes on the same blocker.
+- Before taking a writer lock, run `scripts/triage/writer-lock.sh check <repo>`. A checkout with uncommitted paths or commits not on origin is not edited by this lane; the lane records the state and verifies read-only.
 - A writer lock: take and release it with `scripts/triage/writer-lock.sh take|release|status <repo> <session>`. A lock whose holder has no live process is quarantined with `scripts/triage/writer-lock.sh quarantine-stale <repo>`, which refuses while a git write runs. Do not wait on a stale lock.
 - Monitors and watchers still ticking after their lane finished: stop them. They produce notifications, not results.
 - A tool call interrupted with an unknown outcome: check the state it would have changed before running it again.
