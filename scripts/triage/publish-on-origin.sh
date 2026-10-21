@@ -10,6 +10,7 @@
 # Pass only the paths the lane edited. PUBLISH_BASE=<ref> sets the merge base (default: merge-base with origin). The diff against origin/main is printed before the push.
 # Exit 0 only when the sha is on origin/main. Exit 1 on any failure; nothing is pushed then.
 set -u
+checker="$(cd "$(dirname "$0")/.." && pwd)/check-staged-secrets.mjs"
 repo=$1; row=$2; msg=$3; shift 3
 [ $# -ge 1 ] || { echo "usage: publish-on-origin.sh <repo-dir> <row-id> <message> <path>..."; exit 2; }
 cd "$repo" || exit 1
@@ -56,7 +57,7 @@ sha=$(git commit-tree "$tree" -p origin/main -m "$msg" -m "Row: $row") || exit 1
 unset GIT_INDEX_FILE
 echo "== commit $sha against origin/main"
 git diff --stat origin/main "$sha" -- "$@" | tail -3
-if ! GIT_INDEX_FILE="$T/index" node "$(cd "$(dirname "$0")/.." && pwd)/check-staged-secrets.mjs" >"$T/sec.out" 2>&1; then
+if ! GIT_INDEX_FILE="$T/index" node "$checker" >"$T/sec.out" 2>&1; then
   tail -1 "$T/sec.out"
   echo "secrets check failed; nothing pushed"
   exit 1
