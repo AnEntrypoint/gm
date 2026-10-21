@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # Usage: scripts/triage/shards.sh [out-dir]
-# Builds drain shard files from the pending row store (<root>/.gm/prd, $GM_ROOT or /workspace/gm). Each row goes
+# Builds drain shard files from the pending row store (<root>/.gm/prd, $GM_ROOT or the gm checkout). Each row goes
 # to the owner its text names (rs-plugkit, gm-mcp, agentplug, ci-scripts, skills-docs, other). Each owner's
 # rows are split into files of 20 ids named <owner>-NN, sorted in byte order. The output directory is new
 # and dated, so no shard list a running lane reads is ever overwritten. Owners with no rows get no file.
 # Output: "<owner>-NN <count>" per shard, then the total. Exit 0.
-root=${GM_ROOT:-/workspace/gm}
-out=${1:-/tmp/drain-$(date -u +%Y%m%dT%H%M%S)}
+root=${GM_ROOT:-$(cd "$(dirname "$0")/../.." && pwd)}
+out=${1:-$root/.gm/drain-shards/$(date -u +%Y%m%dT%H%M%S)}
 [ -e "$out" ] && { echo "exists: $out (choose a new directory)"; exit 1; }
 mkdir -p "$out"
 pairs="$out/.pairs"
