@@ -140,6 +140,9 @@ Catalogue: `docs/rationale.md`; use it only as its header says. Served phase pro
 - A shared checkout is written only by its owner: no builds, staging, reverts or commits of paths the run did not change, and no worktrees under `/tmp`.
 - A friction point met in a run (a stalled verb, a refused witness, an orphaned request, a contradictory rule) is filed as a row and fixed in the same run, not reported as a note.
 - Every pushed sha is read through `ci-status` or the Actions API with its full 40-character sha. A sha with no runs is reported as unverified, not green.
+- Every `npx` or `cargo install` tool in a workflow carries an explicit version (`npx --yes <tool>@<version>`), so a CI run cannot pick up an unpinned release.
+- `git_push` takes `rev` at the top level. `remote`, `branch`, `force`, `recover_remote_moved` and `allow_foreign_commits` go in the body.
+- A row's cited path is resolved in its named repository before any edit. A `pull_blocked_by_local_changes` refusal is reported as a named blocker with its owning paths, never retried in a loop.
 
 ## Finish the work
 
