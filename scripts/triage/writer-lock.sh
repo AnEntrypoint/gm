@@ -6,7 +6,7 @@
 #        scripts/triage/writer-lock.sh check <repo>
 # check reports the checkout before a lane takes the lock: uncommitted paths, and commits not on origin/main.
 # A lane that finds either does not edit that checkout; it records the state and verifies read-only.
-# One writer per checkout. The lock is <root>/.gm/locks/<repo>.writer ($GM_ROOT or /workspace/gm), created
+# One writer per checkout. The lock is <root>/.gm/locks/<repo>.writer ($GM_ROOT or the gm checkout), created
 # atomically with noclobber, so two lanes cannot both take it. quarantine-stale moves the lock to a dated
 # quarantine directory (never deletes) only when no git write runs in the repository and no process names the
 # holder. Output: the result line. Exit 1 when the lock is held by someone else or cannot be released.
