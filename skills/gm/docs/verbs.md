@@ -684,7 +684,7 @@ Every body field a verb declares, grouped by verb. The contract check (`scripts/
 - `lang`: `code`
 - `task_spawn`: `code`, `permissionMode`
 - `instruction`: `full`
-- `prd_list`: `full`, `brief`
+- `prd_list`: `id` (string), `status` (string), `limit` (integer), `offset` (integer), `full` (boolean), `brief` (boolean), `query` (string)
 - `prd_resolve`: `witness_evidence`, `witness_dispatch_id`, `witness_root`, `witness_exit_code`, `witness_output_sha256`, `witness_output_path`, `witness_ts`, `resolution`, `commit_sha`, `commit_comment`, `keep_status`. `witness_root` is the root the witness ran in: an absolute path under the scratch directory or the row's own root, whose `.gm/exec-spool/.dispatch-ledger.json` holds `witness_dispatch_id`; passed through unchanged.
 - `expansion_audit`: `scope`, `rows_added`, `unknowns_added`
 
