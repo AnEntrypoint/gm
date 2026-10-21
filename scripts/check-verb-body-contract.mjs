@@ -29,6 +29,15 @@ const queryNames = new Set();
 for (const m of docs.matchAll(/((?:`[a-z_-]+`(?:,|\s|and)*)+)\s+(?:are|is)\s+`query`/g)) {
   for (const n of m[1].matchAll(/`([a-z_-]+)`/g)) queryNames.add(n[1]);
 }
+// The git section lists its query verbs as a bullet list under "Query verbs:" (not in an "are `query`" sentence).
+const queryListAt = docs.indexOf("Query verbs:");
+if (queryListAt >= 0) {
+  let bullets = false;
+  for (const line of docs.slice(queryListAt).split("\n").slice(1)) {
+    if (line.startsWith("- ")) { bullets = true; for (const n of line.matchAll(/`([a-z_-]+)`/g)) queryNames.add(n[1]); }
+    else if (bullets) break;
+  }
+}
 const indexAt = docs.indexOf('## Body field index');
 if (indexAt < 0) throw new Error('skills/gm/docs/verbs.md has no "## Body field index" section');
 const docTypes = new Map();
