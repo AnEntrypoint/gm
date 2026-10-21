@@ -803,3 +803,10 @@ Served verbs with no entry elsewhere in this file. Rows are sourced from `gm.des
 | `shell` | raw_body | run a shell command through the spool | command |
 | `zsh` | raw_body | run a zsh script through the spool | command |
 | `ps1` | raw_body | run a PowerShell script through the spool | command |
+
+- `git_status`: `path` (string|array), `paths` (string|array), `files` (string|array), `summary` (boolean), `limit` (number), `eol` (boolean)
+- `git_log`: `range` (string), `ref` (string), `rev` (string), `limit` (number), `max_count` (number), `path` (string|array), `paths` (string|array), `files` (string|array)
+- `git_diff`: `range` (string), `ref` (string), `rev` (string), `staged` (any), `stat` (any), `limit` (number), `path` (string|array), `paths` (string|array), `files` (string|array)
+- `git_show`: `rev` (any), `ref` (any), `sha` (any), `commit` (any), `stat` (any), `path` (any), `paths` (any), `files` (any), `offset` (any), `full` (any)
+- `git_remote`: `action` (string), `name` (string), `url` (string)
+- `ci_log`: `run_id` (integer), `job_id` (integer), `sha` (string), `github_repo` (string), `job` (string), `step` (string), `pattern` (string), `mode` (string), `regex` (boolean), `ignore_case` (boolean), `max_lines` (integer), `max_chars` (integer), `failed_only` (boolean), `tail_lines` (integer)
