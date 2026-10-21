@@ -164,6 +164,48 @@ Catalogue: `docs/rationale.md`; use it only as its header says. Served phase pro
 - `git_push` takes `rev` at the top level. `remote`, `branch`, `force`, `recover_remote_moved` and `allow_foreign_commits` go in the body.
 - A row's cited path is resolved in its named repository before any edit. A `pull_blocked_by_local_changes` refusal is reported as a named blocker with its owning paths, never retried in a loop.
 
+## When something goes wrong
+
+Each entry is a failure a run has hit, with the handling that cleared it. Apply the handling, then record the outcome in the row it affects.
+
+### Runner and spool
+- The runner is DEAD, or the status file names a pid that is gone: run `bash scripts/triage/runner-restart.sh <project>`. It starts the shared daemon, registers the project, and quarantines orphaned requests. Confirm with a `health` dispatch, because `runner-status` can read a stale status file.
+- The daemon exits 60 s after idle when no project is registered. A bare `daemon` start is not a restart.
+- A dispatch times out and its request sits in `in/<verb>/` as `.inflight` with no live process: it is orphaned. Move it to a dated quarantine directory, never delete it. Leave a live request alone.
+- A dispatch with a submodule `cwd` gets no reply. Send it to the parent spool with a body `cwd` instead.
+- The runner stays alive while the spool answers nothing: compare `pid` in `.gm/exec-spool/.status.json` with the live process before restarting.
+- A runner store recycled on every pressure check is a threshold defect. Raise `shared_store_recycle_private_mb` in the agentplug source. Do not lower the lane count.
+
+### Witnesses and closes
+- A witness with no `session_id` is not recorded, and `prd-resolve` refuses it as a self-witness. Put `gm_session_id=<id>` on the first line of a plain-text body, or use a JSON verb.
+- After every close, check the ledger: `grep -c <dispatch id> .gm/exec-spool/.dispatch-ledger.json` must return 1. A resolve that answers `dispatch_ledger_unavailable` may still have applied, so confirm the row file is gone and the witness is in the ledger.
+- A stale close checked on the wrong tree (a HEAD export, not the working tree the gate reads) is unsound. Reopen it with a row that names the tree and the failing gate exit.
+- A close whose cited dispatch is missing from the ledger refutes nothing. Re-witness it.
+- A probe that writes shared state (a dream policy, a row, a file) runs under a `verify-` session, and the write is cleaned up or recorded. A write verb used as a probe is a side effect: prefer read verbs.
+
+### Git and shared checkouts
+- The git lane answers slowly or not at all: first look for orphaned `git_push` or `git_pull` requests in the spool (see above). Read-only verifies run in parallel, and writes are serialized.
+- A `pull --rebase` refused on another lane's staged or unstaged changes: if no writer process is live, save their diff as a patch under `.gm/shelved/<stamp>/`, restore the paths from HEAD, and run `git reset --keep origin/main`. If a writer is live, wait. Never reset under a live writer.
+- A commit a lane reports as pushed is checked before it is trusted: `git branch -r --contains <sha>` and `git cherry origin/main <sha>`. If it does not land cleanly, save its patch and port it by hand.
+- A diverged local `main` is repaired by building the commit on `origin/main` in a temporary index (`GIT_INDEX_FILE`), checking it, and pushing the sha: `git push origin <sha>:refs/heads/main`. Local `main` is not reset to fix it.
+- The secrets check's exit status is the gate. Do not pipe it through `tail` before testing `$?`: a failing check was once committed that way. On FAIL, fix the cause and rerun; do not commit.
+- A skill manifest reported stale: rebuild it with `LC_ALL=C` sort order. The default locale sort produces a different order, and the check fails.
+- The bin-drift gate exits 1 with "a src/ file changed after the bundle was built": the fix is a bundle rebuild by the bundle workflow from source, not a local build in the shared checkout.
+
+### Lanes and launches
+- A shard file is absent or empty: do not launch its lane. Rebuild the shard files from the store first.
+- A launch refused at the concurrency cap: wait for a slot, then retry. Do not ask the user to raise the cap.
+- A wave that closes no row: the next wave starts by clearing the blocking fact. It does not launch more lanes on the same blocker.
+- A writer lock whose holder has no live process: quarantine it (see Maximal concurrency strategy). Do not wait on it.
+- Monitors and watchers still ticking after their lane finished: stop them. They produce notifications, not results.
+- A tool call interrupted with an unknown outcome: check the state it would have changed before running it again.
+- The environment was reinstalled (config rewritten, `/tmp` wiped, runner version changed): re-check `daemon-config.json`, rebuild the shard files from the store, and confirm the runner with `health`.
+- `pkill -f <pattern>` can match its own shell and kill it (exit 144). Kill by pid, found through `/proc/<pid>/exe`.
+
+### Reporting
+- A lane report's dispatch ids are checked against the ledger before the report is trusted.
+- A report that says CI is green cites the run id for that full 40-character sha. A sha with no runs is reported as unverified.
+
 ## Finish the work
 
 - Finishing the requested work is the goal of every run. A run that stops with work undone is incomplete. Sessions: as many as the remaining rows need (Autonomy, Sessions).
