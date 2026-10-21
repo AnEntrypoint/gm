@@ -25,6 +25,12 @@ try {
   process.exit(2);
 }
 
+if (diff.trim() === '') {
+  console.log('REFUSE: nothing staged to scan');
+  console.log('RESULT: FAIL (nothing staged; a PASS must certify staged bytes)');
+  process.exit(1);
+}
+
 // A commit that stages a skills/ file must stage skills/manifest.sha256 too, or the
 // installed-skill refresh serves a stale digest list (scripts/build-skill-manifest.mjs).
 const stagedNames = execFileSync('git', ['diff', '--cached', '--name-only', '--no-renames', '-z'], {
