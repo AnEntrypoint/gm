@@ -90,5 +90,5 @@ if (findings.length > 0) {
   process.exit(1);
 }
 
-console.log(`PASS: ${added} staged added line(s) in ${files.size} file(s) scanned, no credential shape found`);
+console.log(`PASS: ${added} staged added line(s) in ${files.size} file(s) scanned against ${RULES.map(([rule]) => rule).join(', ')}`);
 console.log('RESULT: PASS');
