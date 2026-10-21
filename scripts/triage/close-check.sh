@@ -2,8 +2,8 @@
 # Usage: scripts/triage/close-check.sh <row-id> <witness-dispatch-id>
 # Confirms a close landed: the witness is in the dispatch ledger and the row file is gone from .gm/prd.
 # Run after every prd-resolve. Output: "verified" or the failing check. Exit 0 only when both hold.
-# $GM_ROOT overrides /workspace/gm.
-root=${GM_ROOT:-/workspace/gm}
+# $GM_ROOT overrides the gm checkout.
+root=${GM_ROOT:-$(cd "$(dirname "$0")/../.." && pwd)}
 row=$1
 witness=$2
 ok=1
