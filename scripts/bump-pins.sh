@@ -27,9 +27,9 @@ gate_ok() {
     GATE_REASON="no successful CI run for this sha"
     return 1
   fi
-  gate_rows=$(awk -F'\t' 'tolower($1) ~ /release|publish|build|wasm/' <<<"$rows")
+  gate_rows=$(awk -F'\t' 'tolower($1) ~ /release|publish|build|wasm|bundle/' <<<"$rows")
   if [ -z "$gate_rows" ]; then
-    wf=$(gh api "repos/AnEntrypoint/$1/actions/workflows" --jq '[.workflows[] | select(.name | test("release|publish|build|wasm"; "i"))] | length') || { echo "::error::workflow query failed for $1" >&2; return 2; }
+    wf=$(gh api "repos/AnEntrypoint/$1/actions/workflows" --jq '[.workflows[] | select(.name | test("release|publish|build|wasm|bundle"; "i"))] | length') || { echo "::error::workflow query failed for $1" >&2; return 2; }
     if [ "$wf" = "0" ]; then
       return 0
     fi
@@ -111,6 +111,10 @@ stage_pins() {
         continue
       fi
       echo "tip ${tip:0:9} held ($reason); pinning newest green main commit ${sha:0:9}"
+    fi
+    if [ "$repo" = "gm-mcp" ] && ! node scripts/triage/gm-mcp-bin-fresh.mjs "$repo" "$sha"; then
+      echo "held $path@${sha:0:9}: its bin is not a fresh build of its src; previous pin kept"
+      continue
     fi
     cur=$(git ls-tree HEAD -- "$path" | awk '{print $3}')
     if [ "$cur" != "$sha" ]; then
