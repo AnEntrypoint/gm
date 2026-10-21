@@ -108,15 +108,19 @@ if (raw === null) {
 const sid = flag('--sid', bodySessionId(raw) ?? 'validate-' + process.pid);
 // The ledger records a witness's session from the body's session_id only. A --sid alone left it null, and
 // prd-resolve then refused the witness as a self-witness, so a JSON body without session_id gets --sid.
-function withSessionId(text, id) {
+// A plain-text body (bash, exec_js) carries its session as a leading gm_session_id=<id> line, which the guest
+// strips before running the body; an explicit --sid adds that line when the body has none.
+function withSessionId(text, id, explicit) {
+  let parsed = null;
   try {
-    const parsed = JSON.parse(text);
-    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed) && !parsed.session_id) {
-      return JSON.stringify({ ...parsed, session_id: id });
-    }
+    parsed = JSON.parse(text);
   } catch {
-    // not JSON: sent unchanged
+    parsed = null;
   }
+  if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+    return parsed.session_id ? text : JSON.stringify({ ...parsed, session_id: id });
+  }
+  if (explicit && !text.startsWith('gm_session_id=')) return `gm_session_id=${id}\n${text}`;
   return text;
 }
-process.exit(dispatch({ verb, cwd, raw: withSessionId(raw, sid), sid }).ok ? 0 : 1);
+process.exit(dispatch({ verb, cwd, raw: withSessionId(raw, sid, args.includes('--sid')), sid }).ok ? 0 : 1);
