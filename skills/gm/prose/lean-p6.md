@@ -1,32 +1,32 @@
 # LEAN PRESSURE
 
-This is a concern of the method, not a stage of a pipeline: it is entered from whichever node the work reaches it from, and left as soon as what it asks for holds. No concern gates entry to a set of nodes.
+A method concern, not a pipeline stage: entered from any node that reaches it, left once its ask holds. No concern gates entry to a node.
 
-PRESSURE removes what the change did not need. It finds every superseded path, fallback, duplicate, dead function and unreachable entry point the change left behind, deletes each one only after callers, codesearch and a build check prove nothing still depends on it, and keeps the diff net-negative or records why it is not. The node exits when the deletion-completeness check and reachability analysis pass for every removed or superseded symbol, the diff budget holds, and transition to=ADRN is dispatched.
+PRESSURE removes what the change did not need. It finds every superseded path, fallback, duplicate, dead function and unreachable entry point the change left behind, and deletes each one only after callers, codesearch and a build check prove nothing still depends on it, keeping the diff net-negative or recording why not. Exit: the deletion-completeness check and reachability analysis pass for every removed or superseded symbol, the diff budget holds, and transition to=ADRN is dispatched.
 
-Principles in this node are applied as work, from the lean method (AnEntrypoint/lean). Each principle's attribution is the label used in gm-config/fsm/graph.json, given in its heading below.
+Principles are applied as work, from the lean method (AnEntrypoint/lean). Each heading's label is its attribution in gm-config/fsm/graph.json.
 
 ## Verbs
 
-Enter from G_INDEP through gate G_NET (predicate lean-net-negative), after the net-negative gate has passed; the walk then sits at state NODELETE, the node's first node in gm-config/fsm/graph.json. Read the size with git_diff {"stat":true}, then each file's diff with git_diff {"path":"<file>"}, so every added line traces to a row. git_log {"path":"<file>","limit":20} shows the churn on each touched file.
+Enter from G_INDEP through gate G_NET (predicate lean-net-negative), once that gate has passed; the walk then sits at state NODELETE, the node's first node in gm-config/fsm/graph.json. Read the size with git_diff {"stat":true}, then each file with git_diff {"path":"<file>"}, so every added line traces to a row. git_log {"path":"<file>","limit":20} shows churn on each touched file.
 
 For each symbol the change removed or left beside its replacement, prove removal with three checks: callers {"symbol":"<name>","limit":50} returns no edges; codesearch {"query":"<name>","mode":"literal","root":"<absolute project root>"} returns no hit outside history; codeinsight {"action":"orphans"} does not list it. For each removed file, codesearch {"query":"<file path>","mode":"filename","root":"<absolute project root>"} returns no hit.
 
-Fallbacks and duplicates are found with codesearch regex over the changed paths, matching unwrap_or, or_else, fallback, default and catch blocks that return a value. Near-duplicates are found with codesearch {"query":"<signature words>","mode":"dual","root":"<absolute project root>"}, and a candidate pair is confirmed by one exec_js probe that calls both on the same inputs and prints both outputs.
+Fallbacks and duplicates: codesearch regex over the changed paths, matching unwrap_or, or_else, fallback, default and catch blocks that return a value. Near-duplicates: codesearch {"query":"<signature words>","mode":"dual","root":"<absolute project root>"}; a candidate pair is confirmed by one exec_js probe calling both on the same inputs and printing both outputs.
 
-Reachability runs impact {"symbol":"<entry name>","max_depth":6,"direction":"callees"} for each entry point the change touches: the gm verb handler in the dispatch table, the CLI main, or the exported function a consumer calls.
+Reachability: impact {"symbol":"<entry name>","max_depth":6,"direction":"callees"} for each entry point the change touches: the gm verb handler in the dispatch table, the CLI main, or the exported function a consumer calls.
 
-A deletion is made by fs_read {"path":"<file>","offset":<line>,"limit":<count>} to read the exact span, then fs_write {"path":"<file>","content":"<whole file with the span removed>"}. fs_write takes the whole file, so the complete file is read first. Each deletion is verified by exec_js running the project's build check through execFileSync: cargo check for the crate or node --check for the file, with timeoutMs of at least 120000 for a Rust crate. git_status and git_diff {"stat":true} follow each deletion to show the net count and any dirty file. Git runs only through the git_* verbs, never a Bash or PowerShell tool call.
+A deletion: fs_read {"path":"<file>","offset":<line>,"limit":<count>} reads the exact span, then fs_write {"path":"<file>","content":"<whole file with the span removed>"}. fs_write takes the whole file, so read the complete file first. Each deletion is verified by exec_js running the build check through execFileSync: cargo check for the crate or node --check for the file, with timeoutMs of at least 120000 for a Rust crate. git_status and git_diff {"stat":true} follow each deletion for the net count and any dirty file. Git runs only through git_* verbs, never a Bash or PowerShell tool call.
 
-Re-dispatch instruction between deletions, after a failed build check, and whenever a removed symbol turns out to have a caller, since the deletion order matters and this node drifts easily.
+Re-dispatch instruction between deletions, after a failed build check, and whenever a removed symbol turns out to have a caller: deletion order matters and this node drifts easily.
 
 ## PRD rows
 
 A superseded path, fallback, duplicate or dead symbol becomes a row the moment it is spotted: prd-add {"id":"<kebab-case-slug>","subject":"<the symbol or path and what replaces it>"}. Each removal closes with prd-resolve {"id":"<row id>","witness_evidence":"<zero-hit codesearch reply and build output for that symbol>","witness_dispatch_id":"<dispatch id of your live run>"}. Identical witness text across rows is refused, so each row cites its own zero-hit reply.
 
-A removal that cannot yet be proven safe is a row whose subject is the proof it needs, such as "prove the legacy parser has no callers in the crates outside the workspace", and that proof is run with codesearch against the other root. A row is never closed by reasoning that a symbol looks unused.
+A removal not yet provably safe is a row whose subject is the proof it needs, such as "prove the legacy parser has no callers in the crates outside the workspace", run with codesearch against the other root. A row is never closed by reasoning that a symbol looks unused.
 
-The agent never writes deferral wording into a row or a transition note. Wording that moves a removal to another time, another session, another person or a scope exclusion is not admitted. A superseded path is removed in this change, or it is a row that stays open until its removal proof exists.
+Never write deferral wording into a row or transition note: wording that moves a removal to another time, session, person or a scope exclusion is not admitted. A superseded path is removed in this change, or it is a row that stays open until its removal proof exists.
 
 ## Mutables
 
@@ -38,11 +38,11 @@ PRESSURE owns no obligation kind. A mutable is created only when a removal revea
 
 Handover: every path the diff replaced is removed in this change, so the only fallbacks left for GUARDANDGO to classify are those the diff added beside a live path; cite Agents Avoid Deleting Code - Ebrahimi et al.
 
-Fan-out: one subagent per function or branch the diff left in place runs callers on its symbol and searches for call sites of its replacement, each with its own session id (`<parent>-<symbol>`); the slices are independent because each covers one symbol. Canary: a slice that returns no callers reply for its symbol did not run; a subagent that edits any file outside its symbol did off-task work.
+Fan-out: one subagent per function or branch the diff left in place runs callers on its symbol and searches for call sites of its replacement, each with its own session id (`<parent>-<symbol>`); slices are independent because each covers one symbol. Canary: a slice that returns no callers reply for its symbol did not run; a subagent that edits any file outside its symbol did off-task work.
 
 Nominates: {GUARDANDGO}. Backreference: {DELETIONGATE}.
 
-Agents add a new path beside an old one far more often than they remove the old one. Every replacement in the diff is followed by a search for the path it replaced. The agent lists each function or branch whose body the diff left in place, runs callers on it, and removes the old path in the same change once its callers point at the replacement. A call site still pointing at the old path is a row: repoint it, then remove the path. An old path that survives beside the new one fires the backreference to DELETIONGATE.
+Agents add a new path beside an old one far more often than they remove the old one. Follow every replacement in the diff with a search for the path it replaced. List each function or branch whose body the diff left in place, run callers on it, and remove the old path in the same change once its callers point at the replacement. A call site still pointing at the old path is a row: repoint it, then remove the path. An old path surviving beside the new one fires the backreference to DELETIONGATE.
 
 ### GUARDANDGO - Guard-and-Go Fallback Accumulation - Vector Labs
 
@@ -52,7 +52,7 @@ Fan-out: one subagent per changed file runs the codesearch regex for fallback fo
 
 Nominates: {TYPE4}. Backreference: {DELETIONGATE}.
 
-Agents add a fallback whenever a guard fails, so every fallback the diff added is listed by codesearch regex and classified. A fallback returning a named, correct behaviour for a condition the contract allows is kept and cited in its row. A fallback returning a plausible default for a violated precondition, or existing only because the primary path was not fixed, is removed and the primary path is fixed in its place. A fallback beside a path that still exists is removed with that path under DELETIONGATE.
+Agents add a fallback whenever a guard fails, so codesearch regex lists every fallback the diff added, and each is classified. A fallback returning a named, correct behaviour for a condition the contract allows is kept and cited in its row. A fallback returning a plausible default for a violated precondition, or existing only because the primary path was not fixed, is removed and the primary path fixed in its place. A fallback beside a path that still exists is removed with that path under DELETIONGATE.
 
 ### TYPE4 - Type-4 Semantic Clones in Agent Pull Requests
 
@@ -62,7 +62,7 @@ Fan-out: one subagent per new function runs codesearch dual on its signature wor
 
 Nominates: {CHURN}. Backreference: {DRY}.
 
-Two functions with different text and the same contract are clones. For each new function, codesearch dual on its signature words finds candidates with the same input and output types. An exec_js probe calls each pair on the same generated inputs and prints both outputs. A pair that agrees on every input is merged, the survivor keeps the behaviour, and the other is removed with its callers repointed. Two functions that mean the same thing fire the backreference to DRY, and the shared behaviour is written once in the module that owns the concept.
+Two functions with different text and the same contract are clones. For each new function, codesearch dual on its signature words finds candidates with the same input and output types. An exec_js probe calls each pair on the same generated inputs and prints both outputs. A pair that agrees on every input is merged: the survivor keeps the behaviour, and the other is removed with its callers repointed. Two functions that mean the same thing fire the backreference to DRY, and the shared behaviour is written once in the module that owns the concept.
 
 ### CHURN - Rising Churn and Duplication - Harding and Kloster, GitClear
 
@@ -72,7 +72,7 @@ Fan-out: one subagent per touched file runs git_log with limit 20 and codesearch
 
 Nominates: {SLOPDRIFT}. Backreference: {G_NET}.
 
-Churn comes from git_log {"path":"<file>","limit":20} on each touched file. Duplication comes from codesearch literal on the distinctive lines of each new block, which lists every place the block now appears. A block in more than one place, or a region rewritten by several recent commits, is consolidated in this change and the consolidation is a row. A diff that is net-positive again after consolidation fires the backreference to G_NET, and the diff is shrunk until the net count passes.
+Churn comes from git_log {"path":"<file>","limit":20} on each touched file. Duplication comes from codesearch literal on the distinctive lines of each new block, listing every place the block now appears. A block in more than one place, or a region rewritten by several recent commits, is consolidated in this change, and the consolidation is a row. A diff that is net-positive again after consolidation fires the backreference to G_NET, and the diff is shrunk until the net count passes.
 
 ### SLOPDRIFT - Behavioural Drift over Long Trajectories - Orlanski et al.
 
@@ -82,7 +82,7 @@ Fan-out: two subagents run in parallel, one re-running the stateful invariant co
 
 Nominates: {DELETIONGATE}. Backreference: {INVARIANTRUN}.
 
-Behaviour drifts across many small edits. Before the last round of PRESSURE edits, the agent re-runs the stateful invariant command and the red-capable command from G_INDEP through exec_js and compares the output with the output recorded in the rows. Each difference the diff did not intend is a drift finding, which fires the backreference to INVARIANTRUN, and the invariant is re-witnessed against the new behaviour before it is accepted.
+Behaviour drifts across many small edits. Before the last round of PRESSURE edits, re-run the stateful invariant command and the red-capable command from G_INDEP through exec_js, and compare the output with the output recorded in the rows. Each difference the diff did not intend is a drift finding: it fires the backreference to INVARIANTRUN, and the invariant is re-witnessed against the new behaviour before it is accepted.
 
 ### DELETIONGATE - Deletion-Completeness Check
 
@@ -92,7 +92,7 @@ Fan-out: one subagent per removed symbol and one per removed file runs its zero-
 
 Nominates: {REACHABLE}. Backreference: {REACHABLE}.
 
-A deletion is complete only when every reference is gone. For each removed symbol, codesearch literal on its name returns zero hits outside history, callers returns no edges, and the build check passes. For each removed file, codesearch filename on its path returns zero hits, and the build check passes. The row quotes the zero-hit count and the build output. Superseded code still reachable from an entry point fires the backreference to REACHABLE, and the reachable chain is cut at the superseded node.
+A deletion is complete only when every reference is gone. For each removed symbol: codesearch literal on its name returns zero hits outside history, callers returns no edges, and the build check passes. For each removed file: codesearch filename on its path returns zero hits, and the build check passes. The row quotes the zero-hit count and the build output. Superseded code still reachable from an entry point fires the backreference to REACHABLE, and the reachable chain is cut at the superseded node.
 
 ### DIFFBUDGET - Net-Negative Diff Target
 
@@ -102,7 +102,7 @@ Fan-out: one subagent per touched file runs git_diff with its path and matches e
 
 Nominates: {CONVCOM}. Backreference: {DELETIONGATE}.
 
-The change is net-negative when added lines are at most removed lines in git_diff {"stat":true}. Where a change adds lines, each file's additions must trace to a row stating why those lines are the minimum the contract needs, and growth with no row is removed. G_NET applies this at the boundary into G_NET, and the agent applies it again before RECORD, since the sweep re-checks it at G_SWEEP. Growth fires the backreference from G_NET to DIFFBUDGET. An entry point with no caller fires the backreference from REACHABLE to DIFFBUDGET, and that entry point is given its caller or removed under DELETIONGATE.
+The change is net-negative when added lines are at most removed lines in git_diff {"stat":true}. Where a change adds lines, each file's additions must trace to a row stating why those lines are the minimum the contract needs; growth with no row is removed. G_NET applies this at the boundary into G_NET, and the agent applies it again before RECORD, since the sweep re-checks it at G_SWEEP. Growth fires the backreference from G_NET to DIFFBUDGET. An entry point with no caller fires the backreference from REACHABLE to DIFFBUDGET, and that entry point is given its caller or removed under DELETIONGATE.
 
 ### REACHABLE - Reachability Analysis
 
@@ -112,7 +112,7 @@ Fan-out: one subagent per entry point runs impact with max_depth 6 and direction
 
 Nominates: {DIFFBUDGET}. Backreference: {DELETIONGATE}.
 
-Every new function must be reached from an entry point the system calls. impact {"symbol":"<entry>","max_depth":6,"direction":"callees"} is run for each entry point the change touches, and each new symbol must appear in one returned tree. A new symbol that appears in none is dead and is removed. A removed symbol still present in a tree is the DELETIONGATE case: its caller is repointed or the symbol is deleted with its caller.
+Every new function must be reached from an entry point the system calls. Run impact {"symbol":"<entry>","max_depth":6,"direction":"callees"} for each entry point the change touches; each new symbol must appear in one returned tree. A new symbol that appears in none is dead and is removed. A removed symbol still present in a tree is the DELETIONGATE case: its caller is repointed, or the symbol is deleted with its caller.
 
 ### TARPIT - Out of the Tar Pit - Moseley and Marks
 
@@ -122,7 +122,7 @@ Fan-out: one subagent per piece of state the change adds or touches runs codesea
 
 Nominates: {LEANSW}. Backreference: {ILLEGAL}.
 
-Every piece of mutable state the change adds or touches is classified as essential or accidental. State derivable from other state is accidental and is removed, its readers computing the value from the source. Essential state is kept in one place with one writer per surface, confirmed by codesearch literal on the state's name, which must show one writer. State that is accidental because the type does not express the invariant fires the backreference to ILLEGAL, which returns the chain to G_CONTRACT.
+Classify every piece of mutable state the change adds or touches as essential or accidental. State derivable from other state is accidental and is removed; its readers compute the value from the source. Essential state is kept in one place with one writer per surface, confirmed by codesearch literal on the state's name, which must show one writer. State accidental because the type does not express the invariant fires the backreference to ILLEGAL, which returns the chain to G_CONTRACT.
 
 ### LEANSW - A Plea for Lean Software - Niklaus Wirth
 
@@ -132,7 +132,7 @@ Fan-out: one subagent per touched file runs git_diff with its path and checks ea
 
 Nominates: {KOLMOGOROV}. Backreference: {KOLMOGOROV}.
 
-Each file's growth must be explained by a row. git_diff {"path":"<file>"} is read for each touched file and each added line is checked against the stated pre and post conditions of its row. A line serving no stated condition is removed. A file that grew with no row reason fires the backreference to KOLMOGOROV.
+Each file's growth must be explained by a row. Read git_diff {"path":"<file>"} for each touched file and check each added line against the stated pre and post conditions of its row. A line serving no stated condition is removed. A file that grew with no row reason fires the backreference to KOLMOGOROV.
 
 ### KOLMOGOROV - Kolmogorov Complexity - Kolmogorov and Chaitin
 
@@ -142,7 +142,7 @@ Fan-out: one subagent per new module writes its one-sentence description and cou
 
 Nominates: {PARNAS}. Backreference: {DEEPMOD}.
 
-The shortest description of a module measures its size. For each new module or file, the agent writes a one-sentence description and counts the distinct facts it must state. If the description needs more words than the content has distinct facts, the content is compressed: repeated logic is merged, and a module whose description matches its neighbour's is merged into it. A description that exceeds its content fires the backreference to DEEPMOD, and the module is restructured into a deeper module with a narrower interface, a CONTRACT change.
+The shortest description of a module measures its size. For each new module or file, write a one-sentence description and count the distinct facts it must state. If the description needs more words than the content has distinct facts, compress the content: merge repeated logic, and merge a module whose description matches its neighbour's into it. A description that exceeds its content fires the backreference to DEEPMOD, and the module is restructured into a deeper module with a narrower interface, a CONTRACT change.
 
 ## Witness
 
@@ -159,7 +159,7 @@ The last witness before the transition is a build check of the whole crate or pa
 
 ## Memory
 
-Save a memory only for an unknown: the recurring cause of dead code. When a deletion reveals a pattern that will recur, such as a module whose every change leaves a superseded path behind, save it as one flat file with frontmatter fields name, description and metadata.type (value unknown), once the check that catches the pattern is confirmed. Add one line to MEMORY.md that points to the file. A memory that says a path is in use, when the zero-hit check proves it gone, is deleted with its MEMORY.md line.
+Save a memory only for an unknown: the recurring cause of dead code. When a deletion reveals a pattern that will recur, such as a module whose every change leaves a superseded path behind, save it once the check that catches the pattern is confirmed, as one flat file with frontmatter fields name, description and metadata.type (value unknown), and add one line to MEMORY.md that points to it. A memory that says a path is in use, when the zero-hit check proves it gone, is deleted with its MEMORY.md line.
 
 Deleted symbol and file lists live in the commit and the rows. Diff stats live in git. Zero-hit replies live in the rows that cite them. None of them is saved as a memory.
 
@@ -167,7 +167,7 @@ Deleted symbol and file lists live in the commit and the rows. Diff stats live i
 
 The node is entered from G_INDEP through G_NET, the gate for "change closes net-negative, or states why not". Its predicate lean-net-negative is blocking: it passes only when added lines in the working diff against HEAD are at most the removed lines. Enter the walk at state NODELETE only after the G_NET gate passes. A denial names next_dispatch: dispatch it, which removes superseded or duplicated code in this change, then re-dispatch the G_NET transition. The predicate reads no growth reason, so the denial clears by shrinking the diff, not by describing it.
 
-The exit is DIFFBUDGET to CONVCOM, a forward edge with no gate. Dispatch transition {"to":"ADRN"} once every removal has its zero-hit or reachability witness, and the net count passes. The gate lean-contract-recorded is checked at the next boundary, in ADRN, where it refuses until every PRD row is closed and the worktree is clean.
+The exit is DIFFBUDGET to CONVCOM, a forward edge with no gate. Dispatch transition {"to":"ADRN"} once every removal has its zero-hit or reachability witness and the net count passes. The gate lean-contract-recorded is checked at the next boundary, in ADRN, where it refuses until every PRD row is closed and the worktree is clean.
 
 Feedback routes each discovery to the earliest node able to fix it. A net-positive diff that removals cannot shrink returns to G_NET and BUILD, because the grown code must be rebuilt in a smaller shape. A superseded path still reachable is cut under DELETIONGATE here. A new symbol with no entry point is removed here. An accidental state caused by a type that does not express its invariant returns to G_CONTRACT through ILLEGAL. A description that exceeds its content returns to G_CONTRACT through DEEPMOD. Duplicate behaviour is merged in TOTALITY through DRY. A drift finding returns to G_INDEP through INVARIANTRUN, because behaviour is re-witnessed there rather than accepted here.
 
