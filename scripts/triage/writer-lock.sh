@@ -3,6 +3,9 @@
 #        scripts/triage/writer-lock.sh release <repo> <session>
 #        scripts/triage/writer-lock.sh status <repo>
 #        scripts/triage/writer-lock.sh quarantine-stale <repo>
+#        scripts/triage/writer-lock.sh check <repo>
+# check reports the checkout before a lane takes the lock: uncommitted paths, and commits not on origin/main.
+# A lane that finds either does not edit that checkout; it records the state and verifies read-only.
 # One writer per checkout. The lock is <root>/.gm/locks/<repo>.writer ($GM_ROOT or /workspace/gm), created
 # atomically with noclobber, so two lanes cannot both take it. quarantine-stale moves the lock to a dated
 # quarantine directory (never deletes) only when no git write runs in the repository and no process names the
@@ -35,6 +38,15 @@ case "$cmd" in
     ;;
   status)
     cat "$lock" 2>/dev/null || echo "free"
+    ;;
+  check)
+    dir_repo="$root"
+    [ "$repo" = "gm" ] || dir_repo="$root/$repo"
+    git -C "$dir_repo" fetch -q origin main 2>/dev/null
+    dirty=$(git -C "$dir_repo" status --porcelain | grep -v '^ D .gm/dream-rsi' | wc -l)
+    ahead=$(git -C "$dir_repo" rev-list --count origin/main..HEAD 2>/dev/null)
+    echo "$repo: dirty=$dirty ahead=$ahead"
+    [ "$dirty" = 0 ] && [ "$ahead" = 0 ]
     ;;
   quarantine-stale)
     [ -f "$lock" ] || { echo "free"; exit 0; }

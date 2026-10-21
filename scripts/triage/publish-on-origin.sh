@@ -7,7 +7,7 @@
 #   3. when a path under skills/ changed, regenerate skills/manifest.sha256 in byte order;
 #   4. commit-tree on origin/main with "Row: <row-id>"; run the secrets check on that index;
 #   5. push <sha>:refs/heads/main and confirm the sha is an ancestor of origin/main.
-# Pass only the paths the lane edited. The diff against origin/main is printed before the push.
+# Pass only the paths the lane edited. PUBLISH_BASE=<ref> sets the merge base (default: merge-base with origin). The diff against origin/main is printed before the push.
 # Exit 0 only when the sha is on origin/main. Exit 1 on any failure; nothing is pushed then.
 set -u
 repo=$1; row=$2; msg=$3; shift 3
@@ -16,13 +16,18 @@ cd "$repo" || exit 1
 git fetch -q origin main || { echo "fetch failed"; exit 1; }
 T=$(mktemp -d /tmp/publish.XXXX)
 trap 'rm -rf "$T"' EXIT
+# PUBLISH_BASE overrides the base of the three-way merge. Use PUBLISH_BASE=origin/main when the lane's copy
+# is a full rewrite of a file whose history it does not share (a merge-base older than the file would make
+# an add-add conflict).
+base_ref=${PUBLISH_BASE:-$(git merge-base HEAD origin/main)}
 export GIT_INDEX_FILE="$T/index"
 git read-tree origin/main || { echo "read-tree failed"; exit 1; }
 for p in "$@"; do
-  # The lane's change is the diff from its base (local HEAD) to its working tree. It is applied onto
+  # The lane's change is the diff from the merge-base with origin/main to its working tree, so local
+  # commits not yet pushed are included. It is applied onto
   # origin/main with a three-way merge, so newer origin content survives. A conflict refuses the publish.
   if [ -f "$p" ]; then
-    git show "HEAD:$p" > "$T/base" 2>/dev/null || : > "$T/base"
+    git show "$base_ref:$p" > "$T/base" 2>/dev/null || : > "$T/base"
     git show "origin/main:$p" > "$T/theirs" 2>/dev/null || : > "$T/theirs"
     cp "$p" "$T/ours"
     if ! git merge-file -p "$T/ours" "$T/base" "$T/theirs" > "$T/merged"; then
