@@ -130,6 +130,17 @@ Catalogue: `docs/rationale.md`; use it only as its header says. Served phase pro
 
 ## Concurrency and friction
 
+### Maximal concurrency strategy
+
+- Shard by repository owner. A shard holds at most 20 rows from one repository (rs-plugkit, gm-mcp, agentplug, ci-scripts, skills-docs, other). A row goes to the repository of the file its fix edits.
+- Build and count the shard files from the row store before any launch. Launch only shards whose file exists and is non-empty. A lane launched against an absent or empty shard wastes a slot and reports nothing: that is a defect in the launcher, fixed before the next launch.
+- Launch `min(free slots, non-empty shards)` in one block. The harness cap (20 concurrent subagents) is read at run time. A refused launch is queued and retried when a slot frees, on that slot's completion notification. A refusal is never answered by asking the user.
+- Verification fans out freely: read-only dispatches (codesearch, callers, ledger reads, `prd-list`) run in parallel across every lane. Only writes are serialized, by the writer lock below.
+- A lane that finds a writer lock held verifies read-only and moves to the rows of its shard that need no edit. It does not idle while rows remain.
+- A writer lock whose holder has no live process and no in-flight dispatch is stale. The launcher moves it to a dated quarantine directory (never deleted) and records the holder; it does not wait on it.
+- Shards never share a row. Each round's shard set is regenerated from the store after every completion wave, so closed rows drop out and rows filed by lanes join.
+- A row blocked on a served guest or bundle hands its pending witness to the next round, and its lane closes the verify half now. A wave that closes zero rows starts its next round by clearing the blocking fact, not by launching more lanes (Stall rule, above).
+
 - Use as many sessions as are needed. No session budget applies: every independent slice gets its own session, launched in one block up to the harness cap, and a freed slot is refilled in the same turn.
 - Concurrency is maximized, never reduced to fit a resource problem. When RAM, swap, CPU, a process count or a port binds, measure it (`scripts/triage/resources.sh`), find the cause in the owning source, fix it, and keep the lane count at the harness cap. Lowering the lane count is not a fix. A runner store recycled on every pressure check is a threshold defect: the recycle limit must sit above the store's steady footprint, or each recreation re-grows the same memory (700 recycles were observed on 2026-10-21 with a 600 MB limit against a 1.6 GB store).
 - Launch `min(free, queued shards)` in one block, each shard a component group of about 20 rows, and refill each freed slot in the same turn.
