@@ -106,4 +106,17 @@ if (raw === null) {
   process.exit(2);
 }
 const sid = flag('--sid', bodySessionId(raw) ?? 'validate-' + process.pid);
-process.exit(dispatch({ verb, cwd, raw, sid }).ok ? 0 : 1);
+// The ledger records a witness's session from the body's session_id only. A --sid alone left it null, and
+// prd-resolve then refused the witness as a self-witness, so a JSON body without session_id gets --sid.
+function withSessionId(text, id) {
+  try {
+    const parsed = JSON.parse(text);
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed) && !parsed.session_id) {
+      return JSON.stringify({ ...parsed, session_id: id });
+    }
+  } catch {
+    // not JSON: sent unchanged
+  }
+  return text;
+}
+process.exit(dispatch({ verb, cwd, raw: withSessionId(raw, sid), sid }).ok ? 0 : 1);
