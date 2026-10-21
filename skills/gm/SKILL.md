@@ -171,14 +171,14 @@ Each entry is a failure a run has hit, with the handling that cleared it. Apply 
 ### Runner and spool
 - The runner is DEAD, or the status file names a pid that is gone: run `bash scripts/triage/runner-restart.sh <project>`. It starts the shared daemon, registers the project, and quarantines orphaned requests. Confirm with a `health` dispatch, because `runner-status` can read a stale status file.
 - The daemon exits 60 s after idle when no project is registered. A bare `daemon` start is not a restart.
-- A dispatch times out and its request sits in `in/<verb>/` as `.inflight` with no live process: it is orphaned. Move it to a dated quarantine directory, never delete it. Leave a live request alone.
+- A dispatch times out and its request sits in `in/<verb>/` as `.inflight` with no live process: it is orphaned. Run `scripts/triage/spool-orphans.sh <repo-root>...` (`--dry-run` first). It moves each orphan to a dated quarantine directory and never deletes; a live request is left alone.
 - A dispatch with a submodule `cwd` gets no reply. Send it to the parent spool with a body `cwd` instead.
 - The runner stays alive while the spool answers nothing: compare `pid` in `.gm/exec-spool/.status.json` with the live process before restarting.
 - A runner store recycled on every pressure check is a threshold defect. Raise `shared_store_recycle_private_mb` in the agentplug source. Do not lower the lane count.
 
 ### Witnesses and closes
 - A witness with no `session_id` is not recorded, and `prd-resolve` refuses it as a self-witness. Put `gm_session_id=<id>` on the first line of a plain-text body, or use a JSON verb.
-- After every close, check the ledger: `grep -c <dispatch id> .gm/exec-spool/.dispatch-ledger.json` must return 1. A resolve that answers `dispatch_ledger_unavailable` may still have applied, so confirm the row file is gone and the witness is in the ledger.
+- After every close, run `scripts/triage/ledger-check.sh <witness dispatch id>`; it must print `in-ledger`. A resolve that answers `dispatch_ledger_unavailable` may still have applied, so confirm the row file is gone as well.
 - A stale close checked on the wrong tree (a HEAD export, not the working tree the gate reads) is unsound. Reopen it with a row that names the tree and the failing gate exit.
 - A close whose cited dispatch is missing from the ledger refutes nothing. Re-witness it.
 - A probe that writes shared state (a dream policy, a row, a file) runs under a `verify-` session, and the write is cleaned up or recorded. A write verb used as a probe is a side effect: prefer read verbs.
@@ -187,7 +187,7 @@ Each entry is a failure a run has hit, with the handling that cleared it. Apply 
 - The git lane answers slowly or not at all: first look for orphaned `git_push` or `git_pull` requests in the spool (see above). Read-only verifies run in parallel, and writes are serialized.
 - A `pull --rebase` refused on another lane's staged or unstaged changes: if no writer process is live, save their diff as a patch under `.gm/shelved/<stamp>/`, restore the paths from HEAD, and run `git reset --keep origin/main`. If a writer is live, wait. Never reset under a live writer.
 - A commit a lane reports as pushed is checked before it is trusted: `git branch -r --contains <sha>` and `git cherry origin/main <sha>`. If it does not land cleanly, save its patch and port it by hand.
-- A diverged local `main` is repaired by building the commit on `origin/main` in a temporary index (`GIT_INDEX_FILE`), checking it, and pushing the sha: `git push origin <sha>:refs/heads/main`. Local `main` is not reset to fix it.
+- Every publish goes through `scripts/triage/publish-on-origin.sh <repo-dir> <row-id> <message> <paths...>`. It applies only the lane's change onto `origin/main` by three-way merge, so newer origin text survives and a dirty or diverged checkout does not block it. It runs the secrets check, pushes by sha, and confirms the sha is on origin. Local `main` is never reset to fix a publish. `PUBLISH_DRY_RUN=1` builds and checks without pushing.
 - The secrets check's exit status is the gate. Do not pipe it through `tail` before testing `$?`: a failing check was once committed that way. On FAIL, fix the cause and rerun; do not commit.
 - A skill manifest reported stale: rebuild it with `LC_ALL=C` sort order. The default locale sort produces a different order, and the check fails.
 - The bin-drift gate exits 1 with "a src/ file changed after the bundle was built": the fix is a bundle rebuild by the bundle workflow from source, not a local build in the shared checkout.
@@ -195,9 +195,9 @@ Each entry is a failure a run has hit, with the handling that cleared it. Apply 
 ### Lanes and launches
 - A shard file is absent or empty: do not launch its lane. Rebuild the shard files from the store first.
 - A launch refused at the concurrency cap: wait for a slot, then retry. Do not ask the user to raise the cap.
-- A shard file overwritten while its lane runs: the lane keeps the ids it started with and reports the change. Shard files are regenerated only between waves, never during one.
+- A shard file overwritten while its lane runs: the lane keeps the ids it started with and reports the change. Shard files are regenerated only between waves, never during one. Build them with `scripts/triage/shards.sh [new-dir]`, which never overwrites an existing directory.
 - A wave that closes no row: the next wave starts by clearing the blocking fact. It does not launch more lanes on the same blocker.
-- A writer lock whose holder has no live process: quarantine it (see Maximal concurrency strategy). Do not wait on it.
+- A writer lock: take and release it with `scripts/triage/writer-lock.sh take|release|status <repo> <session>`. A lock whose holder has no live process is quarantined with `scripts/triage/writer-lock.sh quarantine-stale <repo>`, which refuses while a git write runs. Do not wait on a stale lock.
 - Monitors and watchers still ticking after their lane finished: stop them. They produce notifications, not results.
 - A tool call interrupted with an unknown outcome: check the state it would have changed before running it again.
 - The environment was reinstalled (config rewritten, `/tmp` wiped, runner version changed): re-check `daemon-config.json`, rebuild the shard files from the store, and confirm the runner with `health`.
