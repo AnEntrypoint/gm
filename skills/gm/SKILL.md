@@ -195,6 +195,7 @@ Each entry is a failure a run has hit, with the handling that cleared it. Apply 
 ### Lanes and launches
 - A shard file is absent or empty: do not launch its lane. Rebuild the shard files from the store first.
 - A launch refused at the concurrency cap: wait for a slot, then retry. Do not ask the user to raise the cap.
+- A shard file overwritten while its lane runs: the lane keeps the ids it started with and reports the change. Shard files are regenerated only between waves, never during one.
 - A wave that closes no row: the next wave starts by clearing the blocking fact. It does not launch more lanes on the same blocker.
 - A writer lock whose holder has no live process: quarantine it (see Maximal concurrency strategy). Do not wait on it.
 - Monitors and watchers still ticking after their lane finished: stop them. They produce notifications, not results.
