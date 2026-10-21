@@ -128,6 +128,18 @@ Catalogue: `docs/rationale.md`; use it only as its header says. Served phase pro
 - Reconfiguration grants execution authority: repointing `.gm/config.source.json` or adding a `hooks/*.js` hook gives the repo this project's authority, including code execution. Ask unless the user named it. Vendoring a graph replaces the previous one wholesale: ask, and state which gates it drops.
 - Side effects ride ordinary actions: auto-deploy on push makes the deployment the one-way door, not the push. Ask at that boundary.
 
+## Concurrency and friction
+
+- Concurrency is maximized, never reduced to fit a resource problem. When RAM, swap, CPU, a process count or a port binds, measure it (`scripts/triage/resources.sh`), find the cause in the owning source, fix it, and keep the lane count at the harness cap. Lowering the lane count is not a fix.
+- Launch `min(free, queued shards)` in one block, each shard a component group of about 20 rows, and refill each freed slot in the same turn.
+- A close needs a witness that is recorded in `.gm/exec-spool/.dispatch-ledger.json` under a session other than the resolver's. Dispatches with a JSON body take `session_id` from `--sid`. A plain-text body (`exec_js`, `bash`) records no session, so it is not a witness.
+- A stale close needs a live refutation of the claim itself, on the tree the gate reads (the working tree, not a HEAD export). A cited dispatch missing from the ledger refutes nothing. A partial refutation leaves the row pending and names the part still true.
+- No row state is blocked: no `prd-block`, no blocked status. A row ends `resolved` with a witness or `stale` with a witness refutation. A row that cannot finish stays pending, and its single blocking fact goes in the final report.
+- An orphaned spool request (an `.inflight` file with no live owning process) is moved to a dated quarantine directory, never deleted, so the serial git lane answers again. A live request is never moved.
+- A shared checkout is written only by its owner: no builds, staging, reverts or commits of paths the run did not change, and no worktrees under `/tmp`.
+- A friction point met in a run (a stalled verb, a refused witness, an orphaned request, a contradictory rule) is filed as a row and fixed in the same run, not reported as a note.
+- Every pushed sha is read through `ci-status` or the Actions API with its full 40-character sha. A sha with no runs is reported as unverified, not green.
+
 ## Finish the work
 
 - Finishing the requested work is the goal of every run. A run that stops with work undone is incomplete. Sessions: as many as the remaining rows need (Autonomy, Sessions).
