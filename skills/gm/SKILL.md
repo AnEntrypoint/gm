@@ -187,6 +187,7 @@ Each entry is a failure a run has hit, with the handling that cleared it. Apply 
 - After every close, run `scripts/triage/ledger-check.sh <witness dispatch id>`; it must print `in-ledger`. A resolve that answers `dispatch_ledger_unavailable` may still have applied, so confirm the row file is gone as well.
 - A stale close checked on the wrong tree (a HEAD export, not the working tree the gate reads) is unsound. Reopen it with a row that names the tree and the failing gate exit.
 - After every close, run `scripts/triage/close-check.sh <row-id> <witness-id>`; it must print `verified`. A close whose row file remains open did not land.
+- A row file is never hand-edited. One broken YAML scalar blocked every PRD write until it was repaired. Record a decision with `prd-witness-request` or `prd-add`, and check that every row file parses after any write.
 - A decision is not a close. Keeping a refusal, choosing a default, or rewording an acceptance text does not resolve a row: a row ends resolved on a witness of its fix, or stale on a witness refuting its claim. A decision that changes what the row asks is sent to the row's owner, and the row stays open.
 - A stale close needs the whole claim refuted. A witness that leaves part of the claim unrun (a concurrent case, a timing case) keeps the row pending and names the part not yet witnessed.
 - A close whose cited dispatch is missing from the ledger refutes nothing. Re-witness it.
