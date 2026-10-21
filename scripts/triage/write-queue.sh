@@ -5,8 +5,8 @@
 # A lane that verifies a row needing an edit in a checkout it cannot write (the writer lock is held, or the
 # checkout is dirty) queues the edit here instead of dropping it. The next writer lane for that repository
 # lists the queue after it takes the lock and works its rows first. One line per row: <row-id><TAB><note>.
-# $GM_ROOT overrides /workspace/gm. Output: the queue or the action taken.
-root=${GM_ROOT:-/workspace/gm}
+# $GM_ROOT overrides the gm checkout. Output: the queue or the action taken.
+root=${GM_ROOT:-$(cd "$(dirname "$0")/../.." && pwd)}
 dir="$root/.gm/queues"
 mkdir -p "$dir"
 cmd=$1
