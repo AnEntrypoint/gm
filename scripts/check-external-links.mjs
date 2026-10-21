@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 // Checks every external http(s) link in README.md, docs/, site/ and skills/.
-// Usage: node scripts/check-external-links.mjs [--concurrency=8] [--timeout-ms=15000]
+// Usage: node scripts/check-external-links.mjs [--concurrency=8] [--timeout-ms=15000] [--deadline-ms=600000]
 // Prints one line per failing link as `file:line  status  url` and exits 1 when any fails.
+// --deadline-ms bounds the whole run: a link not yet started at the deadline fails as `deadline-exceeded`.
+// A probe already in flight can run one more HEAD and GET, so the run ends within deadline + 2 x timeout.
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -22,6 +24,7 @@ const arg = (name, fallback) => {
 };
 const CONCURRENCY = arg('concurrency', 8);
 const TIMEOUT_MS = arg('timeout-ms', 15000);
+const DEADLINE_AT = Date.now() + arg('deadline-ms', 600000);
 
 function walk(dir, out) {
   for (const name of readdirSync(dir, { withFileTypes: true })) {
@@ -71,6 +74,7 @@ async function check(url) {
   const host = new URL(url).hostname;
   let last = 'error';
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    if (Date.now() >= DEADLINE_AT) return { ok: false, status: 'deadline-exceeded' };
     if ((transportFails.get(host) ?? 0) >= DEAD_HOST_AFTER) return { ok: false, status: 'host-unreachable' };
     try {
       let status = await probe(url, 'HEAD');
