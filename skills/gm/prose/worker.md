@@ -1,12 +1,12 @@
 # Pool worker
 
-Heartbeat: write .gm/pool/<session>.live on start, delete it on finish. The file holds exactly three lines:
+Heartbeat: write .gm/pool/<session>.live on start, delete it on finish. It holds exactly three lines:
 
     session: <session>
     row: <row id>
     start: <ISO-8601 UTC>
 
-Pool observation reports a file missing any of these three keys as malformed. Refresh it per worker-rules.md section 1.
+Pool observation reports a file missing any of these three keys as malformed. Refresh per worker-rules.md section 1.
 
 Parameters: row <row>; session <session>; role <role>.
 
