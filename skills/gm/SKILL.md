@@ -209,6 +209,7 @@ Each entry is a failure a run has hit, with the handling that cleared it. Apply 
 - A wave that closes no row: the next wave starts by clearing the blocking fact. It does not launch more lanes on the same blocker.
 - Before taking a writer lock, run `scripts/triage/writer-lock.sh check <repo>`. A checkout with uncommitted paths or commits not on origin is not edited by this lane; the lane records the state and verifies read-only.
 - A row that needs an edit in a checkout this lane cannot write is queued: `scripts/triage/write-queue.sh add <repo> <row-id> "<edit>"`. The next writer lane for that repository lists the queue after it takes the lock and works those rows first, so no edit is rediscovered or dropped. `done` removes a row once its commit lands.
+- A writer lock is quarantined only when its holder has written no dispatch in the last 15 minutes, as well as having no live process. Save any uncommitted patch before quarantining or resetting a checkout.
 - A writer lock: take and release it with `scripts/triage/writer-lock.sh take|release|status <repo> <session>`. A lock whose holder has no live process is quarantined with `scripts/triage/writer-lock.sh quarantine-stale <repo>`, which refuses while a git write runs. Do not wait on a stale lock.
 - Monitors and watchers still ticking after their lane finished: stop them. They produce notifications, not results.
 - A tool call interrupted with an unknown outcome: check the state it would have changed before running it again.
