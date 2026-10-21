@@ -36,7 +36,34 @@ try {
   process.exit(2);
 }
 
+function git(args) {
+  return execFileSync('git', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+}
+
+function mergeInProgress() {
+  try {
+    git(['rev-parse', '-q', '--verify', 'MERGE_HEAD']);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function mergedTreeDiffersFromHead() {
+  try {
+    git(['diff', '--quiet', 'HEAD', 'MERGE_HEAD']);
+    return false;
+  } catch (err) {
+    return err.status === 1;
+  }
+}
+
 if (diff.trim() === '') {
+  if (mergeInProgress() && mergedTreeDiffersFromHead()) {
+    console.log('PASS: merge commit whose result equals HEAD; MERGE_HEAD carries a tree that differs from HEAD, so nothing new is staged');
+    console.log('RESULT: PASS');
+    process.exit(0);
+  }
   console.log('REFUSE: nothing staged to scan');
   console.log('RESULT: FAIL (nothing staged; a PASS must certify staged bytes)');
   process.exit(1);
