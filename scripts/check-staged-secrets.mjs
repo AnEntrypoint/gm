@@ -15,7 +15,7 @@ const PLACEHOLDER = /^[$<{%]/;
 
 let diff;
 try {
-  diff = execFileSync('git', ['diff', '--cached', '-U0', '--no-color', '--no-ext-diff'], {
+  diff = execFileSync('git', ['diff', '--cached', '-U0', '--no-color', '--no-ext-diff', '--text'], {
     encoding: 'utf8',
     maxBuffer: 512 * 1024 * 1024,
     stdio: ['ignore', 'pipe', 'pipe'],
