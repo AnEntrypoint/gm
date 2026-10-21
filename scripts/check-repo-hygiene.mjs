@@ -59,6 +59,22 @@ for (const rel of tracked) {
   });
 }
 
+// Every workflow pins actions/checkout to one SHA, so a drifted pin is caught here.
+const checkoutPins = new Map();
+for (const rel of tracked.filter((r) => /^\.github\/workflows\/.*\.ya?ml$/.test(r))) {
+  readFileSync(path.join(root, rel), 'utf8').split('\n').forEach((line, i) => {
+    const pin = /uses:\s*actions\/checkout@([0-9a-f]{40})\b/.exec(line);
+    if (!pin) return;
+    if (!checkoutPins.has(pin[1])) checkoutPins.set(pin[1], []);
+    checkoutPins.get(pin[1]).push(`${rel}:${i + 1}`);
+  });
+}
+if (checkoutPins.size > 1) {
+  for (const [sha, sites] of checkoutPins) {
+    violations.push(`actions/checkout pinned to ${sha} at ${sites.join(', ')}; every workflow must pin one SHA`);
+  }
+}
+
 for (const v of violations) console.log(v);
 console.log(`checked ${tracked.length} tracked files; AGENTS.md ${agentsBytes} bytes`);
 console.log(violations.length ? 'RESULT: FAIL' : 'RESULT: PASS');
