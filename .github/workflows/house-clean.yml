@@ -4,7 +4,12 @@ name: house-clean
 on:
   schedule:
     - cron: '23 */6 * * *'
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Print the releases that would be pruned and delete nothing'
+        type: boolean
+        default: false
 
 concurrency:
   group: gm-house-clean
@@ -61,6 +66,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.PUBLISHER_TOKEN }}
           REPO: AnEntrypoint/${{ matrix.repo }}
+          DRY_RUN: ${{ inputs.dry_run }}
         shell: bash
         run: |
           set -euo pipefail
@@ -84,6 +90,10 @@ jobs:
           echo "$REPO keeps $keep; pruning:"
           echo "$candidates"
           for tag in $candidates; do
+            if [ "${DRY_RUN:-}" = "true" ]; then
+              echo "would delete $tag (dry_run)"
+              continue
+            fi
             echo "deleting $tag"
             gh release delete "$tag" --repo "$REPO" --cleanup-tag --yes
             echo "pruned $tag"
