@@ -56,7 +56,10 @@ function dispatch({ verb, cwd, raw, sid }) {
   ownerDir(inDir);
   ownerDir(replayDir);
   const ledgerTmp = path.join(replayDir, `.${id}.tmp`);
-  fs.writeFileSync(ledgerTmp, JSON.stringify({ verb, cwd, sid, raw }), { mode: OWNER_FILE_MODE });
+  // A kv_put body carries the stored value, so its replay record keeps a marker and replay refuses it.
+  const redacted = /kv_put/.test(verb);
+  const recorded = redacted ? '[REDACTED: kv_put value not recorded]' : raw;
+  fs.writeFileSync(ledgerTmp, JSON.stringify({ verb, cwd, sid, raw: recorded, redacted }), { mode: OWNER_FILE_MODE });
   fs.renameSync(ledgerTmp, path.join(replayDir, `${id}.json`));
   const tmp = path.join(inDir, `.${id}.tmp`);
   fs.writeFileSync(tmp, raw, { mode: OWNER_FILE_MODE });
@@ -98,6 +101,10 @@ if (verb === 'replay') {
     record = JSON.parse(fs.readFileSync(ledgerPath, 'utf8'));
   } catch {
     console.error(`dispatch-verb: no replay record for ${originalId} at ${ledgerPath} (recorded only for dispatch-verb requests)`);
+    process.exit(1);
+  }
+  if (record.redacted) {
+    console.error(`dispatch-verb: ${originalId} is a ${record.verb} record; its value was not recorded, so it is not replayed`);
     process.exit(1);
   }
   console.error(`dispatch-verb: replaying ${record.verb} ${originalId} in ${record.cwd}`);
