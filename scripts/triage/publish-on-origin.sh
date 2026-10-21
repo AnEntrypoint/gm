@@ -37,6 +37,7 @@ for p in "$@"; do
     fi
     mode=100644; [ -x "$p" ] && mode=100755
     blob=$(git hash-object -w "$T/merged") || exit 1
+    [ -n "$blob" ] || { echo "empty blob sha for $p; nothing pushed"; exit 1; }
     git update-index --add --cacheinfo "$mode,$blob,$p" || exit 1
   else
     git update-index --force-remove "$p" || exit 1
@@ -50,13 +51,26 @@ if printf '%s\n' "$@" | grep -q '^skills/'; then
     echo "$h  $f" >> "$T/manifest"
   done
   blob=$(git hash-object -w "$T/manifest") || exit 1
+  [ -n "$blob" ] || { echo "empty blob sha for skills/manifest.sha256; nothing pushed"; exit 1; }
   git update-index --add --cacheinfo "100644,$blob,skills/manifest.sha256" || exit 1
 fi
 tree=$(git write-tree) || exit 1
 sha=$(git commit-tree "$tree" -p origin/main -m "$msg" -m "Row: $row") || exit 1
 unset GIT_INDEX_FILE
 echo "== commit $sha against origin/main"
-git diff --stat origin/main "$sha" -- "$@" | tail -3
+git diff --stat origin/main "$sha" | tail -3
+# The whole commit must change only the listed paths (plus the derived skills manifest). Anything else refuses.
+unintended=$(git diff --name-only origin/main "$sha" | while IFS= read -r c; do
+  keep=0
+  for p in "$@"; do [ "$c" = "$p" ] && keep=1; done
+  [ "$c" = skills/manifest.sha256 ] && keep=1
+  [ "$keep" = 1 ] || echo "$c"
+done)
+if [ -n "$unintended" ]; then
+  echo "commit changes paths outside the list; nothing pushed:"
+  echo "$unintended"
+  exit 1
+fi
 if ! GIT_INDEX_FILE="$T/index" node "$checker" >"$T/sec.out" 2>&1; then
   tail -1 "$T/sec.out"
   echo "secrets check failed; nothing pushed"
