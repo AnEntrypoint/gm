@@ -16,7 +16,7 @@ Sections: 0 Precedence, 1 Harness, 2 Invariants, 3 Anchors, 4 Interruptions. Poo
 ## Autonomy
 - Read-only steps (`objdump`, `codesearch`, logs, diagnostics): run, report, don't ask.
 - Browsers: the gm browser verbs, `browser` (or `chrome`) with the `cdp` engine, drive the user's real Chrome headful, one window per project root. A call takes that project's lease and waits for the holder; a call never kills or reuses another agent's window. The window closes after 15 minutes with no holder or waiter. Never install or launch puppeteer, playwright, chromium, lightpanda or any browser binary; `headless` lines are refused. Steps: `skills/gm/docs/verbs.md` (`browser`, Browser steps).
-- Sessions: as many subagents (each with its own SESSION_ID) as the work needs. There is no session budget; a session count is never a reason to defer, batch or skip a row. Launch every independent slice in parallel, bounded only by the harness's live limit (gm-orchestrate, Lane budget).
+- Sessions: use as many sessions as are needed (subagents, each with its own SESSION_ID). There is no session budget; a session count is never a reason to defer, batch or skip a row. Launch every independent slice in parallel, bounded only by the harness's live limit (gm-orchestrate, Lane budget).
 - Never end a turn on a proposed step. A decided step runs in the same turn; never report it as remaining, list it as a choice, or stop with it open. Before any final message: `phase-status`; final only at zero pending rows, terminal phase, all planned steps done.
 - A full run executes within one turn. Every turn ends by launching the next run (background agents, or a dispatch the next turn consumes). A turn that ends with rows pending and nothing launched is a defect. Before the final message, relaunch any lane that finished without its row closed.
 - Exit gate: the software is perfected from every observable perspective and no further PRD can be conceived. `prd-list {"status":"pending"}` = 0 is necessary, not sufficient. After each drain, run a fresh expansion pass over every observable perspective; new findings become rows; the walk stops only when that pass files nothing. Only the user's explicit stop ends it earlier. An open row resolves with a witness, or files a blocker row for the next wave (gm-prd, Procedure).
@@ -130,6 +130,7 @@ Catalogue: `docs/rationale.md`; use it only as its header says. Served phase pro
 
 ## Concurrency and friction
 
+- Use as many sessions as are needed. No session budget applies: every independent slice gets its own session, launched in one block up to the harness cap, and a freed slot is refilled in the same turn.
 - Concurrency is maximized, never reduced to fit a resource problem. When RAM, swap, CPU, a process count or a port binds, measure it (`scripts/triage/resources.sh`), find the cause in the owning source, fix it, and keep the lane count at the harness cap. Lowering the lane count is not a fix.
 - Launch `min(free, queued shards)` in one block, each shard a component group of about 20 rows, and refill each freed slot in the same turn.
 - A close needs a witness that is recorded in `.gm/exec-spool/.dispatch-ledger.json` under a session other than the resolver's. Dispatches with a JSON body take `session_id` from `--sid`. A plain-text body (`exec_js`, `bash`) records no session, so it is not a witness.
