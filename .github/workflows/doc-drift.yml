@@ -47,6 +47,11 @@ concurrency:
 
 jobs:
   changes:
+    # Only a pull_request needs this gate. For push and workflow_dispatch the trigger's
+    # own paths filter already decided the run is relevant, and over 32 sampled runs the
+    # job answered relevant=true every time, so it was a 5 s fetch-depth:0 checkout that
+    # never skipped anything. Kept for pull_request, which carries no paths filter.
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     outputs:
@@ -74,7 +79,8 @@ jobs:
 
   doc-checks:
     needs: changes
-    if: needs.changes.outputs.relevant == 'true'
+    # always() so a skipped changes job does not skip the checks on push.
+    if: ${{ always() && (github.event_name != 'pull_request' || needs.changes.outputs.relevant == 'true') }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -113,17 +119,8 @@ jobs:
         run: node scripts/check-doc-paths.mjs
       - name: Both graphs traverse, and shared nodes agree on kind
         run: node scripts/check-graph-traversal.mjs
-
-  repo-hygiene:
-    needs: changes
-    if: needs.changes.outputs.relevant == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
-        with:
-          node-version: 20
+      # Folded in from the repo-hygiene job: its own checkout and setup-node cost 10 s of
+      # its 11 s wall, and these two steps need nothing doc-checks has not already set up.
       - name: AGENTS.md under 30000 bytes, no BOM, no decorative glyphs in prose
         run: node scripts/check-repo-hygiene.mjs
       - name: Every workflow file parses as YAML
@@ -131,7 +128,7 @@ jobs:
 
   cargo-audit:
     needs: changes
-    if: needs.changes.outputs.relevant == 'true'
+    if: ${{ always() && (github.event_name != 'pull_request' || needs.changes.outputs.relevant == 'true') }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
