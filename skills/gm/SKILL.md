@@ -18,7 +18,7 @@ Sections: 0 Precedence, 1 Harness, 2 Invariants, 3 Anchors, 4 Interruptions. Poo
 - Browsers: the gm browser verbs, `browser` (or `chrome`) with the `cdp` engine, drive the user's real Chrome headful, one window per project root. A call takes that project's lease and waits for the holder; a call never kills or reuses another agent's window. The window closes after 15 minutes with no holder or waiter. Never install or launch puppeteer, playwright, chromium, lightpanda or any browser binary; `headless` lines are refused. Steps: `skills/gm/docs/verbs.md` (`browser`, Browser steps).
 - Sessions: use as many sessions as are needed (subagents, each with its own SESSION_ID). There is no session budget; a session count is never a reason to defer, batch or skip a row. Launch every independent slice in parallel, bounded only by the harness's live limit (gm-orchestrate, Lane budget).
 - Never end a turn on a proposed step. A decided step runs in the same turn; never report it as remaining, list it as a choice, or stop with it open. Before any final message: `phase-status`; final only at zero pending rows, terminal phase, all planned steps done.
-- A full run executes within one turn. Every turn ends by launching the next run (background agents, or a dispatch the next turn consumes). A turn that ends with rows pending and nothing launched is a defect. Before the final message, relaunch any lane that finished without its row closed.
+- A run takes as many turns as it needs. This is an invariant: the drain never ends at a turn boundary. A turn ends only once its launched work is running and the next turn resumes from its notification or a state read. A turn that ends with rows pending, nothing running, and no blocking fact recorded is a defect. Before the final message, relaunch any lane that finished without its row closed.
 - Exit gate: the software is perfected from every observable perspective and no further PRD can be conceived. `prd-list {"status":"pending"}` = 0 is necessary, not sufficient. After each drain, run a fresh expansion pass over every observable perspective; new findings become rows; the walk stops only when that pass files nothing. Only the user's explicit stop ends it earlier. An open row resolves with a witness, or files a blocker row for the next wave (gm-prd, Procedure).
 - Unmet goal or re-firing stop hook: keep working the graph. Stop-hook goal with no verifiable end state: do the next concrete step it names, report what changed, and never restate an unchanged blocked list.
 - Denied stop-gate or refused call: re-read the state the refusal names (`git_status`, `.gm/exec-spool/.dispatch-ledger.json`, the row file), fix it, retry once. Refused again with the same cause: work that cause. A `deferred: <residuals>; unchanged since <dispatch id>` reply is allowed only when no fix path remains, naming the external fact and the clearing action.
@@ -130,6 +130,17 @@ Catalogue: `docs/rationale.md`; use it only as its header says. Served phase pro
 
 ## Concurrency and friction
 
+### Maximal concurrency strategy
+
+- Shard by repository owner. A shard holds at most 20 rows from one repository (rs-plugkit, gm-mcp, agentplug, ci-scripts, skills-docs, other). A row goes to the repository of the file its fix edits.
+- Build and count the shard files from the row store before any launch. Launch only shards whose file exists and is non-empty. A lane launched against an absent or empty shard wastes a slot and reports nothing: that is a defect in the launcher, fixed before the next launch.
+- Launch `min(free slots, non-empty shards)` in one block. The harness cap (20 concurrent subagents) is read at run time. A refused launch is queued and retried when a slot frees, on that slot's completion notification. A refusal is never answered by asking the user.
+- Verification fans out freely: read-only dispatches (codesearch, callers, ledger reads, `prd-list`) run in parallel across every lane. Only writes are serialized, by the writer lock below.
+- A lane that finds a writer lock held verifies read-only and moves to the rows of its shard that need no edit. It does not idle while rows remain.
+- A writer lock whose holder has no live process and no in-flight dispatch is stale. The launcher moves it to a dated quarantine directory (never deleted) and records the holder; it does not wait on it.
+- Shards never share a row. Each round's shard set is regenerated from the store after every completion wave, so closed rows drop out and rows filed by lanes join.
+- A row blocked on a served guest or bundle hands its pending witness to the next round, and its lane closes the verify half now. A wave that closes zero rows starts its next round by clearing the blocking fact, not by launching more lanes (Stall rule, above).
+
 - Use as many sessions as are needed. No session budget applies: every independent slice gets its own session, launched in one block up to the harness cap, and a freed slot is refilled in the same turn.
 - Concurrency is maximized, never reduced to fit a resource problem. When RAM, swap, CPU, a process count or a port binds, measure it (`scripts/triage/resources.sh`), find the cause in the owning source, fix it, and keep the lane count at the harness cap. Lowering the lane count is not a fix. A runner store recycled on every pressure check is a threshold defect: the recycle limit must sit above the store's steady footprint, or each recreation re-grows the same memory (700 recycles were observed on 2026-10-21 with a 600 MB limit against a 1.6 GB store).
 - Launch `min(free, queued shards)` in one block, each shard a component group of about 20 rows, and refill each freed slot in the same turn.
@@ -140,11 +151,74 @@ Catalogue: `docs/rationale.md`; use it only as its header says. Served phase pro
 - A shared checkout is written only by its owner: no builds, staging, reverts or commits of paths the run did not change, and no worktrees under `/tmp`.
 - A shared-tree blocker never ends a row. Build the commit on `origin/main` with a temporary index (`GIT_INDEX_FILE` set to a temp file, `read-tree origin/main`, `update-index --cacheinfo` for the row's paths from the row's own commit, `write-tree`, `commit-tree -p origin/main`) and push that sha with `git push origin <sha>:refs/heads/main`. Other lanes' staged and unstaged paths stay untouched, and the row's CI is read on the pushed sha.
 - A row whose fix needs a guest, runner or bundle build is pushed as source. CI builds the release (rs-plugkit `release`, gm-mcp `bundle.yml`) and the runner or bundle picks it up. A local build is never the route, and the row's live witness waits for the served sha to match.
+- A drain round consolidates before it launches. Both shared checkouts sit on origin with no unpushed commit: a local commit whose change origin already has (`git cherry` marks it `-`) is dropped as superseded, and any other is pushed by a temporary index built on origin/main. Local main is never reset.
+- One writer per checkout. A lane that edits a shared checkout (the parent, rs-plugkit, gm-mcp, agentplug) first takes that repository's writer lock: `set -o noclobber; echo "$SESSION_ID" > .gm/locks/<repo>.writer`, removed when its commit lands. A lane that finds the lock held verifies read-only, records the holder, and never edits that checkout. Two lanes never edit one checkout at once, and a lane never edits a file another lane's uncommitted change is on.
+- Wall-clock turnaround is the measure of a round: rows closed per hour, with every slot busy. A free slot while rows are pending is a defect; relaunch it in the turn its completion notification arrives. Never end a round with idle slots and pending rows, and never stop to wait when another unit can run.
+- The goal is to drain all PRDs: every pending row to zero. A round that ends with rows pending starts the next round; the goal is never narrowed, and the user is never asked to narrow or clear it.
+- A shard that closes no row is not relaunched unchanged. Two rounds with zero closes is a stall: the next round starts by clearing its blocking fact (a checkout, a served guest, a runner swap), and a round that closes nothing changes these instructions before it runs again.
+- Every repository has its own spool. An orphaned `.inflight` request in any spool (parent, rs-plugkit, gm-mcp) is moved to a dated quarantine directory, never deleted; a live one is left alone. A dispatch whose `cwd` is a submodule is not served, so the parent spool takes it with a body `cwd`.
+- The runner restarts only through `scripts/triage/runner-restart.sh`, which starts the shared daemon, registers the project, and quarantines orphans. The daemon exits 60 s after idle with no project registered, so a bare `daemon` start is not a restart.
 - A friction point met in a run (a stalled verb, a refused witness, an orphaned request, a contradictory rule) is filed as a row and fixed in the same run, not reported as a note.
+- A rs-plugkit guest change is green only when both `native-check` and `wasip3-component` pass. The native check does not compile `verbs/`, so a green native check alone let a wasip3 type error through (commit ccd096e5, repaired by 22370529).
 - Every pushed sha is read through `ci-status` or the Actions API with its full 40-character sha. A sha with no runs is reported as unverified, not green.
 - Every `npx` or `cargo install` tool in a workflow carries an explicit version (`npx --yes <tool>@<version>`), so a CI run cannot pick up an unpinned release.
 - `git_push` takes `rev` at the top level. `remote`, `branch`, `force`, `recover_remote_moved` and `allow_foreign_commits` go in the body.
 - A row's cited path is resolved in its named repository before any edit. A `pull_blocked_by_local_changes` refusal is reported as a named blocker with its owning paths, never retried in a loop.
+
+## When something goes wrong
+
+Every improvement learned while draining goes into the tooling (`scripts/triage`) or this skill in the same run, published with `scripts/triage/publish-on-origin.sh`. A failure that recurs is handled by a tool, not by a note.
+
+Each entry is a failure a run has hit, with the handling that cleared it. Apply the handling, then record the outcome in the row it affects.
+
+### Runner and spool
+- The runner is DEAD, or the status file names a pid that is gone: run `bash scripts/triage/runner-restart.sh <project>`. It starts the shared daemon, registers the project, and quarantines orphaned requests. Confirm with a `health` dispatch, because `runner-status` can read a stale status file.
+- The daemon exits 60 s after idle when no project is registered. A bare `daemon` start is not a restart.
+- A dispatch times out and its request sits in `in/<verb>/` as `.inflight` with no live process: it is orphaned. Run `scripts/triage/spool-orphans.sh <repo-root>...` (`--dry-run` first). It moves each orphan to a dated quarantine directory and never deletes; a live request is left alone.
+- A script never hard-codes a checkout or temp path. Roots come from the script's own location (`$(cd "$(dirname "$0")/../.." && pwd)"`) and temp files from `mktemp`. Run `node scripts/check-repo-hygiene.mjs` before publishing a script: the doc-drift job rejects absolute paths in scripts.
+- A probe never sends a push to a live remote. A bogus-sha `git_push` probe sent through the parent spool reached origin main once and was rejected by the remote. Push refusals are witnessed from the code path, or with read-only verbs (`git_remote`, `branch_status`), never with a push.
+- A push refused by a gate is fixed or routed to the owner. A raw `git push` past a refusing gate is a defect, not a fallback. A hook that is not executable (`git ls-files -s .githooks` shows 100644) is a gate that is off: fix the mode, then publish it.
+- A dispatch with a submodule `cwd` gets no reply. Send it to the parent spool with a body `cwd` instead. A plain request left in a submodule spool is never consumed: `scripts/triage/spool-orphans.sh --unserved <minutes> <submodule-root>...` moves those older than the bound to quarantine, never deletes.
+- The runner stays alive while the spool answers nothing: compare `pid` in `.gm/exec-spool/.status.json` with the live process before restarting.
+- A runner store recycled on every pressure check is a threshold defect. Raise `shared_store_recycle_private_mb` in the agentplug source. Do not lower the lane count.
+
+### Witnesses and closes
+- A witness with no `session_id` is not recorded, and `prd-resolve` refuses it as a self-witness. Put `gm_session_id=<id>` on the first line of a plain-text body, or use a JSON verb.
+- After every close, run `scripts/triage/ledger-check.sh <witness dispatch id>`; it must print `in-ledger`. A resolve that answers `dispatch_ledger_unavailable` may still have applied, so confirm the row file is gone as well.
+- A stale close checked on the wrong tree (a HEAD export, not the working tree the gate reads) is unsound. Reopen it with a row that names the tree and the failing gate exit.
+- After every close, run `scripts/triage/close-check.sh <row-id> <witness-id>`; it must print `verified`. A close whose row file remains open did not land.
+- A row file is never hand-edited. One broken YAML scalar blocked every PRD write until it was repaired. Record a decision with `prd-witness-request` or `prd-add`, and check that every row file parses after any write.
+- A decision is not a close. Keeping a refusal, choosing a default, or rewording an acceptance text does not resolve a row: a row ends resolved on a witness of its fix, or stale on a witness refuting its claim. A decision that changes what the row asks is sent to the row's owner, and the row stays open.
+- A stale close needs the whole claim refuted. A witness that leaves part of the claim unrun (a concurrent case, a timing case) keeps the row pending and names the part not yet witnessed.
+- A close whose cited dispatch is missing from the ledger refutes nothing. Re-witness it.
+- A probe that writes shared state (a dream policy, a row, a file) runs under a `verify-` session, and the write is cleaned up or recorded. A write verb used as a probe is a side effect: prefer read verbs.
+
+### Git and shared checkouts
+- The git lane answers slowly or not at all: first look for orphaned `git_push` or `git_pull` requests in the spool (see above). Read-only verifies run in parallel, and writes are serialized.
+- A `pull --rebase` refused on another lane's staged or unstaged changes: if no writer process is live, save their diff as a patch under `.gm/shelved/<stamp>/`, restore the paths from HEAD, and run `git reset --keep origin/main`. If a writer is live, wait. Never reset under a live writer.
+- A commit a lane reports as pushed is checked before it is trusted: `git branch -r --contains <sha>` and `git cherry origin/main <sha>`. If it does not land cleanly, save its patch and port it by hand.
+- Every publish goes through `scripts/triage/publish-on-origin.sh <repo-dir> <row-id> <message> <paths...>`. It edits no working tree, so it needs no writer lock. Set `PUBLISH_BASE=origin/main` when the lane's copy rewrites a file whose history it does not share; the default base is the merge-base, which can be older than the file. It applies only the lane's change onto `origin/main` by three-way merge, so newer origin text survives and a dirty or diverged checkout does not block it. It runs the secrets check, pushes by sha, and confirms the sha is on origin. Local `main` is never reset to fix a publish. `PUBLISH_DRY_RUN=1` builds and checks without pushing.
+- The secrets check's exit status is the gate. Do not pipe it through `tail` before testing `$?`: a failing check was once committed that way. On FAIL, fix the cause and rerun; do not commit.
+- A skill manifest reported stale: rebuild it with `LC_ALL=C` sort order. The default locale sort produces a different order, and the check fails.
+- The bin-drift gate exits 1 with "a src/ file changed after the bundle was built": the fix is a bundle rebuild by the bundle workflow from source, not a local build in the shared checkout.
+
+### Lanes and launches
+- A shard file is absent or empty: do not launch its lane. Rebuild the shard files from the store first.
+- A launch refused at the concurrency cap: wait for a slot, then retry. Do not ask the user to raise the cap.
+- A shard file overwritten while its lane runs: the lane keeps the ids it started with and reports the change. Shard files are regenerated only between waves, never during one. Build them with `scripts/triage/shards.sh [new-dir]`, which never overwrites an existing directory.
+- A wave that closes no row: the next wave starts by clearing the blocking fact. It does not launch more lanes on the same blocker.
+- Before taking a writer lock, run `scripts/triage/writer-lock.sh check <repo>`. A checkout with uncommitted paths or commits not on origin is not edited by this lane; the lane records the state and verifies read-only.
+- A row that needs an edit in a checkout this lane cannot write is queued: `scripts/triage/write-queue.sh add <repo> <row-id> "<edit>"`. The next writer lane for that repository lists the queue after it takes the lock and works those rows first, so no edit is rediscovered or dropped. `done` removes a row once its commit lands.
+- A writer lock is quarantined only when its holder has written no dispatch in the last 15 minutes, as well as having no live process. Save any uncommitted patch before quarantining or resetting a checkout.
+- A writer lock: take and release it with `scripts/triage/writer-lock.sh take|release|status <repo> <session>`. A lock whose holder has no live process is quarantined with `scripts/triage/writer-lock.sh quarantine-stale <repo>`, which refuses while a git write runs. Do not wait on a stale lock.
+- Monitors and watchers still ticking after their lane finished: stop them. They produce notifications, not results.
+- A tool call interrupted with an unknown outcome: check the state it would have changed before running it again.
+- The environment was reinstalled (config rewritten, `/tmp` wiped, runner version changed): re-check `daemon-config.json`, rebuild the shard files from the store, and confirm the runner with `health`.
+- `pkill -f <pattern>` can match its own shell and kill it (exit 144). Kill by pid, found through `/proc/<pid>/exe`.
+
+### Reporting
+- A lane report's dispatch ids are checked against the ledger before the report is trusted.
+- A report that says CI is green cites the run id for that full 40-character sha. A sha with no runs is reported as unverified.
 
 ## Finish the work
 
