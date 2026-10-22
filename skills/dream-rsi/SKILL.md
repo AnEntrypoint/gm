@@ -74,7 +74,7 @@ The loop is the one at https://dream-rsi.com/: explore online, append the record
 
 Constants:
 
-- `MIN_NEW_OBSERVATIONS` and `COOLDOWN_MS` are the cycle-trigger constants in `agentplug/crates/agentplug-runner/src/dream_cycle.rs`; read their values there.
+- `MIN_NEW_OBSERVATIONS` and `COOLDOWN_MS` are the cycle-trigger constants in `rs-plugkit/crates/plugkit-core/src/orchestrator/dream_cycle.rs`; read their values there.
 - `MAX_PART_A_PROPOSALS = 3`
 - `MAX_PART_B_PROPOSALS = 5`
 
