@@ -72,9 +72,9 @@ P1 owns no obligation kind. Every P1 unknown is one of two things.
 
 A grounding unknown asks what exists, who calls it, what a service returns, or what a library version exposes. Discharge it inside P1: dispatch the codesearch, callers or MEMORY.md read, or exec_js against the real service, then resolve the mutable with that output before leaving the node. No grounding-shaped mutable crosses the transition open.
 
-Any other unknown is a contract or runtime property. Record it: `mutable-add {"id":"<kebab-case slug>","status":"unknown","obligation_kind":"<kind>","depends_on":[...]}`, kind belonging to the node that discharges it. Contract properties (precondition, invariant, postcondition, resource-bound, type-shape) are typed for CONTRACT. Runtime-safety (totality, ownership, replay, effect-boundary) and concurrency (happens-before, disjointness, contention) properties are typed for BUILD. The witness field names the codesearch hit, file:line or exec output that made it an unknown. An unwitnessed unknown blocks every transition.
+Any other unknown is a contract or runtime property. Record it: `unknown-add {"id":"<kebab-case slug>","status":"unknown","obligation_kind":"<kind>","depends_on":[...]}`, kind belonging to the node that discharges it. Contract properties (precondition, invariant, postcondition, resource-bound, type-shape) are typed for CONTRACT. Runtime-safety (totality, ownership, replay, effect-boundary) and concurrency (happens-before, disjointness, contention) properties are typed for BUILD. The witness field names the codesearch hit, file:line or exec output that made it an unknown. An unwitnessed unknown blocks every transition.
 
-`depends_on` lists ids that must resolve first. mutable-add refuses a cycle and names its path. A mutable may depend on any row in the store, whichever node typed it.
+`depends_on` lists ids that must resolve first. unknown-add refuses a cycle and names its path. A mutable may depend on any row in the store, whichever node typed it.
 
 Two-pass rule: a mutable surviving two genuine resolution attempts without a witness is never tried a third time the same way. Reclassify it as a fresh, differently scoped unknown with a new id, re-cut affected rows with prd-add on their existing ids, and stay in EARS. Reclassification is reshaping, not failure.
 
@@ -102,7 +102,7 @@ Long-horizon work spans sessions: rows and mutables on disk let a fresh session'
 
 A classifiable finding set (compiler errors, lint violations, dependency-bump breakage) comes from one run of its producing command. Group the output by natural boundary (file, crate or module); each group is one row owned by one subagent. Disjoint slices need no coordination. Each subagent verifies its slice by rerunning the classifier scoped to its own files. The global classifier is never rerun mid-fan-out: a rerun wastes the run or lets two agents race to fix one finding.
 
-Every fan-out dispatch states its terminal condition: prd_pending_count 0 against the full discovered scope, not its own slice. A new unknown found mid-dispatch goes into mutable-add or prd-add; scope is never narrowed silently.
+Every fan-out dispatch states its terminal condition: prd_pending_count 0 against the full discovered scope, not its own slice. A new unknown found mid-dispatch goes into unknown-add or prd-add; scope is never narrowed silently.
 
 ## Principles
 

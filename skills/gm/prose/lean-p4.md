@@ -20,7 +20,7 @@ Dispatch the eight adversarial classes one at a time, each as its own exec_js pr
 
 For a multi-file diff, dispatch independent reviewers with the Agent tool. A reviewer gets the file list, the PRD rows and the changed signatures, never the implementer's reasoning. Its prompt opens with "use the gm skill for this; code questions go to codeinsight (callers/impact) first, then codesearch, and Read only a located path", carries its own SESSION_ID built from the parent id plus an index (for example "<parent_session_id>-sub1"), and says "assume this is broken, find why".
 
-Rows and mutables: prd-add {"id":"<kebab-case-slug>","subject":"<what it proves or repairs>"}, prd-resolve {"id":"<row id>","witness_evidence":"<file:line or exec output>","witness_dispatch_id":"<dispatch id of your live run>"}, mutable-add {"id":"<kebab-case-slug>","value":"<the unknown>","obligation_kind":"<kind>","depends_on":["<id>"]} and mutable-resolve {"mutable_id":"<id>","witness_evidence":"<witness>"}.
+Rows and mutables: prd-add {"id":"<kebab-case-slug>","subject":"<what it proves or repairs>"}, prd-resolve {"id":"<row id>","witness_evidence":"<file:line or exec output>","witness_dispatch_id":"<dispatch id of your live run>"}, unknown-add {"id":"<kebab-case-slug>","value":"<the unknown>","obligation_kind":"<kind>","depends_on":["<id>"]} and unknown-resolve {"mutable_id":"<id>","witness_evidence":"<witness>"}.
 
 ## PRD rows
 
@@ -32,7 +32,7 @@ The agent never writes deferral wording into a row or a transition note. Wording
 
 Every SEC and RES obligation is added as a mutable when found, with obligation_kind set to exactly one of: secrets, injection, identity-authority, message-timing (SEC), or exception-model, partial-failure, degradation, crucible (RES). depends_on names every mutable whose proof needs another resolved first; a message-timing proof depends on the identity-authority proof that names who may send the message.
 
-mutable-add refuses a depends_on that closes a cycle and names the cycle path. mutable-resolve refuses while a depends_on id is pending and names it; resolve dependencies first, in order, never around them. The gates sec-obligations-ready and res-obligations-ready refuse on any untyped or blocked pending kind of their family and name the offender.
+unknown-add refuses a depends_on that closes a cycle and names the cycle path. unknown-resolve refuses while a depends_on id is pending and names it; resolve dependencies first, in order, never around them. The gates sec-obligations-ready and res-obligations-ready refuse on any untyped or blocked pending kind of their family and name the offender.
 
 Each resolution's witness names the kind discharged and how. After two genuine failed attempts on one mutable, stop repeating the approach: add a fresh mutable with a new id and a narrower scope that states what the failures revealed, and transition to=EARS if that reshapes the plan. Closure requires mutables-all-resolved, so a pending mutable of any kind blocks it, including kinds owned by other nodes.
 

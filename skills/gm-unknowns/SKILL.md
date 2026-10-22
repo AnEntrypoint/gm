@@ -8,7 +8,7 @@ description: "Second stage of resolving one PRD row: writes the list of unknowns
 Input: `row=<id>; session=<SESSION_ID>`. Output: `.gm/receipts/<row>/02-unknowns.md`.
 
 1. List each fact the row needs that the orient receipt does not prove. One line per unknown. Each line states the question it answers.
-2. Record each unknown with `mutable-add`. Do not open any new unknown in another form.
+2. Record each unknown with `unknown-add`. Do not open any new unknown in another form.
 3. If the list is empty, load `gm-edit`; otherwise load `gm-eliminate`.
    the `gm-eliminate` skill with `row=<id>; session=<SESSION_ID>`
 

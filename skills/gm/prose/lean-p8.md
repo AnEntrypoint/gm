@@ -14,7 +14,7 @@ Use `callers {symbol}` for the consumers of a public symbol the artifact touches
 
 Read history with `git_log` and `git_show`, passing `path` to scope `git_log` to the touched file. A reason that lives only in a commit message is read from that commit. Use `git_diff` with `stat:true` for the size of a change. For a documentation-only commit use `git_finalize {message, paths:[...]}`, or `git_commit` followed by `git_push`, so the commit stages only the documentation paths.
 
-Record each open tension as a mutable with `mutable-add`, resolved with `mutable-resolve {mutable_id, witness_evidence}`. Record each newly spotted need with `prd-add`, closed with `prd-resolve {id, witness_evidence, witness_dispatch_id}`. Read the open set with `mutable-list` and `prd-list`. Before a transition, dispatch `node-status` to confirm the node and the pending count.
+Record each open tension as a mutable with `unknown-add`, resolved with `unknown-resolve {mutable_id, witness_evidence}`. Record each newly spotted need with `prd-add`, closed with `prd-resolve {id, witness_evidence, witness_dispatch_id}`. Read the open set with `mutable-list` and `prd-list`. Before a transition, dispatch `node-status` to confirm the node and the pending count.
 
 Nothing here dispatches Glob, Grep, `find`, a shell `grep`, Bash git or PowerShell. The verbs above are the only surfaces.
 
@@ -26,7 +26,7 @@ A row or transition note here never carries deferral wording (no phrase pushing 
 
 ## Mutables
 
-A tension firing becomes a mutable. The backreference from the sweep into TENSIONS ("a tension fired") creates one with `mutable-add`. It names the artifact, the witness showing the firing (a `file:line` of the comment, a `callers` edge, a `codesearch` hit on the duplicated sentence), and the `obligation_kind` of the node that discharges it. This node owns no obligation kind, so the kind is the owner's: a rule the signature must carry takes `precondition`, a rule that moves into a type takes `type-shape`, and an observable behaviour a consumer depends on takes `postcondition`. Set `depends_on` where a conversion needs another mutable first, such as a rename that must land before the comment it replaces is deleted.
+A tension firing becomes a mutable. The backreference from the sweep into TENSIONS ("a tension fired") creates one with `unknown-add`. It names the artifact, the witness showing the firing (a `file:line` of the comment, a `callers` edge, a `codesearch` hit on the duplicated sentence), and the `obligation_kind` of the node that discharges it. This node owns no obligation kind, so the kind is the owner's: a rule the signature must carry takes `precondition`, a rule that moves into a type takes `type-shape`, and an observable behaviour a consumer depends on takes `postcondition`. Set `depends_on` where a conversion needs another mutable first, such as a rename that must land before the comment it replaces is deleted.
 
 Sweep closure needs zero pending rows. Documentation and comment mutables are resolved before the sweep ends; an open one keeps the sweep from closing. Two-pass rule: a tension mutable that survives two genuine resolution attempts is re-added as a new mutable naming the gap, and the reclassification routes the walk back to G_CONTRACT. A claim that a comment is redundant, or that a document is current, is a hypothesis until a live check confirms it.
 
