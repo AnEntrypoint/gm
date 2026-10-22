@@ -18,7 +18,7 @@ The incumbent policy (the one currently selected) is replayed against every chal
 
 **Deploying a strategy rides the normal paths, never an autonomous trigger.**
 
-An accepted strategy is the currently selected policy: the incumbent, or a challenger that strictly beat the incumbent over the same sealed worlds. A deployment uses the normal PRD (`prd-*` verbs), mutable (`mutable-*` verbs), phase, authorization and evidence paths. No daemon tick or scheduled job redeploys a strategy unattended; redeployment is a dispatch an agent makes under the same gates as any other state-changing transform. Metrics driving selection are re-derived from the dispatch ledger (the guest's `dispatch_ledger` module, keyed by dispatch id) on each replay, never supplied by the model narrating its own progress.
+An accepted strategy is the currently selected policy: the incumbent, or a challenger that strictly beat the incumbent over the same sealed worlds. A deployment uses the normal PRD (`prd-*` verbs), unknown (`unknown-*` verbs), phase, authorization and evidence paths. No daemon tick or scheduled job redeploys a strategy unattended; redeployment is a dispatch an agent makes under the same gates as any other state-changing transform. Metrics driving selection are re-derived from the dispatch ledger (the guest's `dispatch_ledger` module, keyed by dispatch id) on each replay, never supplied by the model narrating its own progress.
 
 **Git lifecycle: `.gm/dream-rsi/` is gitignored** (see `.gitignore`), because its scratch trees have path names past the Windows 260-character limit and `git status` must not walk them. No session file is tracked: `git ls-files .gm/dream-rsi/` lists none. The session files are small, human-readable JSON with no binary blobs, and they stay untracked, so observations do not sync between clones.
 
@@ -63,7 +63,7 @@ Each use case is fully dressed (Cockburn): primary actor, scope, level, stakehol
 - **Extensions:**
   - 1a. Cooldown has not passed: the tick defers, and no request is written (`agentplug/crates/agentplug-runner/src/daemon.rs`).
   - 1b. Neither trigger condition holds: no request is written on that tick (`agentplug/crates/agentplug-runner/src/daemon.rs`, `spawn_dream_rsi_cycle_ticker`).
-  - 2a. The cursor rolled off the 256-entry window: the daemon marks `pending-partial-window` (`rs-plugkit/crates/plugkit-core/src/orchestrator/dream_cycle.rs`), and the cycle result does not yet carry a partial flag. Filed under PRD row USECASES-pw-hop-USECASES-1018-3; until that row lands, consumers must not treat the replay as covering the lost records.
+  - 2a. The cursor rolled off the 256-entry window: the daemon marks `pending-partial-window` (`agentplug/crates/agentplug-runner/src/dream_cycle.rs`), and the cycle result does not yet carry a partial flag. Filed under PRD row USECASES-pw-hop-USECASES-1018-3; until that row lands, consumers must not treat the replay as covering the lost records.
   - 2b. A replay that cannot finish: the replay reply reports the failure and the incumbent stays selected (`rs-plugkit/crates/plugkit-core/src/orchestrator/mod.rs`, which routes `dream-replay-cycle` to `dream_cycle::handle`).
 - **Guarantees:** the replay performs no re-execution; the incumbent stays selected unless a challenger scores strictly higher; no strategy is deployed by this use case.
 
@@ -95,7 +95,7 @@ Each use case is fully dressed (Cockburn): primary actor, scope, level, stakehol
 - **Trigger:** the reviewer or an agent decides to deploy the selected policy.
 - **MSS:**
   1. The agent opens a PRD row for the deployment through `prd-*` verbs.
-  2. The agent applies the policy change through `mutable-*` verbs under the phase and authorization gates.
+  2. The agent applies the policy change through `unknown-*` verbs under the phase and authorization gates.
   3. The metrics that drove selection are re-derived from the dispatch ledger, keyed by dispatch id.
   4. The row is resolved with a witness dispatch id.
 - **Extensions:**
