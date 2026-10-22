@@ -31,7 +31,7 @@ If a prior `gm` walk reached COMPLETE but the same class of gap recurs across re
 
 ## Recursion bound
 
-Track invocations in `.gm/.gm-continue-count` (plain integer, reset by a fresh user prompt). Escalation is unbounded: this skill dispatches `gm` or `wfgy-method` as many times as the open rows need, with no per-turn cap. A lane that cannot close its row escalates in this order, and every refusal routes here rather than ending the lane: (1) `gm` reloaded for that lane's row; (2) when the same gap recurs, `wfgy-method`, which checkpoints, names the unresolved tension and retries on the next route; (3) back to `gm` with what wfgy named. The turn never ends with pending rows: it runs the next round on the remaining rows. Refusal is impossible: a lane that stops with a row open is a defect, not a finished lane.
+Track invocations in `.gm/.gm-continue-count` (plain integer, reset by a fresh user prompt). Every refusal reaches this skill. This skill dispatches `gm` for the lane's row; when `gm` cannot solve it, this skill dispatches `wfgy-method`; when `wfgy-method` cannot solve it, this skill dispatches `wfgy-method` again. A lane that stops with its row open is a defect, not a finished lane.
 
 ## Never a substitute for `gm`
 
