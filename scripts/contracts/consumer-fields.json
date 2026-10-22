@@ -2,9 +2,9 @@
   "version": 1,
   "contracts": [
     {
-      "provider": "rs-plugkit/crates/plugkit-core/src/orchestrator/dream_rsi.rs",
-      "consumer": "agentplug/crates/agentplug-runner/src/dream_cycle.rs",
-      "fields": ["replays[0].dispatch_id"]
+      "provider": "rs-plugkit/crates/plugkit-core/src/orchestrator/dream_cycle.rs",
+      "consumer": "rs-plugkit/crates/plugkit-core/src/orchestrator/dream_rsi.rs",
+      "fields": ["replays"]
     }
   ]
 }
