@@ -77,7 +77,7 @@ article tbody tr:hover { background: var(--panel-1); }
   <li><code>plan row</code>, also called a PRD row: one entry in the plan. An open row is one file in <code>.gm/prd/</code>. It closes only with recorded <code>witness_evidence</code>.</li>
   <li><code>hop</code>: one traversal of a graph node, performed by one <code>gm-hop</code> subagent.</li>
   <li><code>gate</code>: a graph node that checks a condition before the walk moves on. A refused move is a gate denial. The denial names the verb to dispatch next.</li>
-  <li><code>mutable</code>: an open question that the agent records with <code>mutable-add</code> instead of asking the user.</li>
+  <li><code>unknown</code>: an open question that the agent records with <code>unknown-add</code> instead of asking the user.</li>
   <li><code>verb</code>: a named gm operation an agent calls, such as <code>codesearch</code> or <code>instruction</code>.</li>
   <li><code>dispatch</code>: one request an agent sends to run a verb.</li>
 </ul>
@@ -121,6 +121,7 @@ article tbody tr:hover { background: var(--panel-1); }
 <tr><td><code>polaris-protocol</code></td><td>Routes multi-step work to <code>polaris-goal-compiler</code> and <code>fifth-dimension-engine</code>, when a task needs both.</td></tr>
 <tr><td><code>polaris-goal-compiler</code></td><td>Compiles a goal into gated task atoms and claim ceilings.</td></tr>
 <tr><td><code>fifth-dimension-engine</code></td><td>Lifts a complex target into a structured route. Use after polaris-goal-compiler, or when a request is written as shoot + [problem].</td></tr>
+<tr><td><code>agent-memory</code></td><td>Sets up TencentDB Agent Memory for agent teams.</td></tr>
 <tr><td><code>dream-rsi</code></td><td>Proposes strategy changes from observation logs and measures gm-graph coverage. It proposes only and never deploys.</td></tr>
 </tbody>
 </table>
@@ -139,10 +140,10 @@ article tbody tr:hover { background: var(--panel-1); }
 <thead><tr><th>Verb</th><th>Does</th></tr></thead>
 <tbody>
 <tr><td><code>instruction</code></td><td>Serves the prose for the current phase. It is the entry point of the walk.</td></tr>
-<tr><td><code>phase-status</code></td><td>Returns the compact state only: the phase, <code>prd_pending_count</code> and the pending mutables, with no prose.</td></tr>
+<tr><td><code>phase-status</code></td><td>Returns the compact state only: the phase, <code>prd_pending_count</code> and the pending unknowns, with no prose.</td></tr>
 <tr><td><code>transition</code></td><td>Moves the walk to a target node, when the gates on that move allow it.</td></tr>
 <tr><td><code>prd-add</code>, <code>prd-resolve</code>, <code>prd-list</code></td><td>Adds, resolves and lists plan rows. Each open row is one file in <code>.gm/prd/</code> in the project. A resolved row moves to <code>.gm/prd-log.jsonl</code>.</td></tr>
-<tr><td><code>mutable-add</code>, <code>mutable-resolve</code>, <code>mutable-list</code></td><td>Add, resolve and list mutables. Each open mutable is one file in <code>.gm/mutables/</code>. A resolved one moves to <code>.gm/mutables-log.jsonl</code>.</td></tr>
+<tr><td><code>unknown-add</code>, <code>unknown-resolve</code>, <code>unknown-list</code></td><td>Add, resolve and list unknowns. Each open unknown is one file in <code>.gm/unknowns/</code>. A resolved one moves to <code>.gm/unknowns-log.jsonl</code>.</td></tr>
 <tr><td><code>fsm-vendor</code></td><td>Writes the compiled default prose into <code>.gm/instructions/</code>, where a vendored file takes precedence over the config repo's cached prose.</td></tr>
 <tr><td><code>codesearch</code>, <code>grep</code></td><td><code>codesearch</code> is ranked search over the project by default. Its <code>literal</code> and <code>regex</code> modes are exhaustive. <code>grep</code> is an exhaustive literal or regex scan that reports each hit as <code>path:line</code>.</td></tr>
 <tr><td><code>recall</code>, <code>memorize</code></td><td>Search the project's memory files in <code>.gm/memories/</code>, and store a memory.</td></tr>

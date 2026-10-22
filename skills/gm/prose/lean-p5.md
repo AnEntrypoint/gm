@@ -2,7 +2,7 @@
 
 This is a concern of the method, not a stage of a pipeline: it is entered from whichever node the work reaches it from, and left as soon as what it asks for holds. No concern gates entry to a set of nodes.
 
-RECORD makes the verified change durable and explains it to the history. It commits exactly the change the contract describes, with a message that states the change type, the subject and the reason the contract changed; pushes it; watches CI on the pushed sha; and closes the PRD and mutable state so the sweep can judge the artifact whole. The node exits when the commit is pushed, CI is green for that sha, the claim audit and residual scan are clean, every row and mutable is closed, and the contract-satisfied gate G_DONE has passed.
+RECORD makes the verified change durable and explains it to the history. It commits exactly the change the contract describes, with a message that states the change type, the subject and the reason the contract changed; pushes it; watches CI on the pushed sha; and closes the PRD and the open unknowns so the sweep can judge the artifact whole. The node exits when the commit is pushed, CI is green for that sha, the claim audit and residual scan are clean, every row and unknown is closed, and the contract-satisfied gate G_DONE has passed.
 
 Principles in this node are applied as work, from the lean method (AnEntrypoint/lean). Each principle's attribution is the label used in gm-config/fsm/graph.json, given in its heading below.
 
@@ -14,7 +14,7 @@ Commit through the git verbs only. git_finalize {"message":"<message>"} bundles 
 
 After the push, git_log {"limit":1} gives the sha to validate, and ci-status reports the run for that head. On green, write the marker with fs_write {"path":".gm/exec-spool/.ci-validated","content":"{\"head_sha\":\"<that sha>\"}"}. On red, read the failing step, name its cause, fix the cause, and push again.
 
-Before the transition, dispatch claim-audit, then residual-scan as the last write-free verb: residual-scan is one-shot per stop window, and any prd-add, unknown-add or mutable write invalidates its marker. Then dispatch transition {"to":"G_SWEEP"} from ADRN, which starts the sweep that re-walks every node against the whole artifact. Use node-status when the state is in doubt.
+Before the transition, dispatch claim-audit, then residual-scan as the last write-free verb: residual-scan is one-shot per stop window, and any prd-add, unknown-add or unknown write invalidates its marker. Then dispatch transition {"to":"G_SWEEP"} from ADRN, which starts the sweep that re-walks every node against the whole artifact. Use node-status when the state is in doubt.
 
 ## PRD rows
 
@@ -24,11 +24,11 @@ The agent never writes deferral wording into a row or a transition note. Wording
 
 ## Mutables
 
-RECORD owns no obligation kind and creates no mutable. It must still leave no pending mutable, because mutables-all-resolved refuses on any pending row of any kind. Before the closing transition, list pending mutables with mutable-list and resolve each with unknown-resolve {"mutable_id":"<id>","witness_evidence":"<witness>"} only when its witness exists. A mutable without a witness returns the chain to the node that owns its kind, as described under Transition.
+RECORD owns no obligation kind and creates no unknown. It must still leave no pending unknown, because mutables-all-resolved refuses on any pending row of any kind. Before the closing transition, list pending unknowns with unknown-list and resolve each with unknown-resolve {"unknown_id":"<id>","witness_evidence":"<witness>"} only when its witness exists. An unknown without a witness returns the chain to the node that owns its kind, as described under Transition.
 
 ## Housekeeping and memory upkeep run on every finalize
 
-Every git_finalize opens a housekeeping run before the next cover begins. The run sweeps dead code, superseded paths, and PRD and mutable rows left stale by earlier passes, so a later session does not trip over them. It applies the removal checks of PRESSURE to the whole tree on each finalize, not only when a gate fires. Each removal is witnessed by a zero-hit codesearch and a build check. Each stale row is closed with prd-resolve or re-scoped with prd-add on its existing id.
+Every git_finalize opens a housekeeping run before the next cover begins. The run sweeps dead code, superseded paths, and PRD and unknown rows left stale by earlier passes, so a later session does not trip over them. It applies the removal checks of PRESSURE to the whole tree on each finalize, not only when a gate fires. Each removal is witnessed by a zero-hit codesearch and a build check. Each stale row is closed with prd-resolve or re-scoped with prd-add on its existing id.
 
 A correction the user gave that is still open when git_finalize runs is a residual, and it blocks the next cover.
 
