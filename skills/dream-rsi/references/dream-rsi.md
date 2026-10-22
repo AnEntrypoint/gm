@@ -63,7 +63,7 @@ Each use case is fully dressed (Cockburn): primary actor, scope, level, stakehol
 - **Extensions:**
   - 1a. Cooldown has not passed: the tick defers, and no request is written (`agentplug/crates/agentplug-runner/src/daemon.rs`).
   - 1b. Neither trigger condition holds: no request is written on that tick (`agentplug/crates/agentplug-runner/src/daemon.rs`, `spawn_dream_rsi_cycle_ticker`).
-  - 2a. The cursor rolled off the 256-entry window: the daemon marks `pending-partial-window` (`agentplug/crates/agentplug-runner/src/dream_cycle.rs`), and the cycle result does not yet carry a partial flag. Filed under PRD row USECASES-pw-hop-USECASES-1018-3; until that row lands, consumers must not treat the replay as covering the lost records.
+  - 2a. The cursor rolled off the 256-entry window: the daemon marks `pending-partial-window` (`rs-plugkit/crates/plugkit-core/src/orchestrator/dream_cycle.rs`), and the cycle result does not yet carry a partial flag. Filed under PRD row USECASES-pw-hop-USECASES-1018-3; until that row lands, consumers must not treat the replay as covering the lost records.
   - 2b. A replay that cannot finish: the replay reply reports the failure and the incumbent stays selected (`rs-plugkit/crates/plugkit-core/src/orchestrator/mod.rs`, which routes `dream-replay-cycle` to `dream_cycle::handle`).
 - **Guarantees:** the replay performs no re-execution; the incumbent stays selected unless a challenger scores strictly higher; no strategy is deployed by this use case.
 
