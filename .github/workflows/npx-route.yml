@@ -15,6 +15,8 @@ on:
       - bin/**
       - scripts/check-npx-bin.mjs
       - .github/workflows/npx-route.yml
+  schedule:
+    - cron: '17 6 * * *'
   workflow_dispatch: {}
 
 concurrency:
@@ -38,7 +40,7 @@ jobs:
       - name: Fail when npm cannot resolve a bin from package.json
         shell: bash
         run: node scripts/check-npx-bin.mjs
-      - name: Run the real npx install spec (main only)
+      - name: Run the real npx install spec (scheduled and manual runs only)
         shell: bash
-        if: github.ref == 'refs/heads/main'
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         run: node scripts/check-npx-bin.mjs --live
