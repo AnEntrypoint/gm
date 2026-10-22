@@ -56,12 +56,19 @@ function agentplugHome() {
   const over = process.env.AGENTPLUG_HOME?.trim();
   return over ? path.resolve(over) : path.join(os.homedir(), '.agentplug');
 }
-function isProjectRoot(dir) {
+function hasGitMarker(dir) {
   const marker = path.join(dir, '.git');
   try {
     return fs.statSync(marker).isFile() || fs.existsSync(path.join(marker, 'HEAD'));
   } catch {
     return false;
+  }
+}
+// Mirrors agentplug-host project_root: the nearest ancestor-or-self with a git marker, else the directory itself.
+function nearestProjectRoot(dir) {
+  for (let current = dir; ; current = path.dirname(current)) {
+    if (hasGitMarker(current)) return current;
+    if (path.dirname(current) === current) return dir;
   }
 }
 function pidAlive(pid) {
@@ -75,8 +82,9 @@ function pidAlive(pid) {
 }
 function attachDaemonLease(cwd) {
   const root = fs.realpathSync(cwd);
-  if (!isProjectRoot(root)) {
-    console.error(`dispatch-verb: refused ${root}: it is not a project root (no .git file or .git/HEAD), and the shared daemon serves only project roots that hold a lease`);
+  const owner = nearestProjectRoot(root);
+  if (owner !== root) {
+    console.error(`dispatch-verb: refused ${root}: it lies inside the project ${owner}, and the shared daemon would serve ${owner} for a lease on it, not this spool`);
     process.exit(1);
   }
   const leases = path.join(agentplugHome(), 'leases');
