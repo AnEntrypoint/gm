@@ -14,7 +14,7 @@ Commit through the git verbs only. git_finalize {"message":"<message>"} bundles 
 
 After the push, git_log {"limit":1} gives the sha to validate, and ci-status reports the run for that head. On green, write the marker with fs_write {"path":".gm/exec-spool/.ci-validated","content":"{\"head_sha\":\"<that sha>\"}"}. On red, read the failing step, name its cause, fix the cause, and push again.
 
-Before the transition, dispatch claim-audit, then residual-scan as the last write-free verb: residual-scan is one-shot per stop window, and any prd-add, mutable-add or mutable write invalidates its marker. Then dispatch transition {"to":"G_SWEEP"} from ADRN, which starts the sweep that re-walks every node against the whole artifact. Use node-status when the state is in doubt.
+Before the transition, dispatch claim-audit, then residual-scan as the last write-free verb: residual-scan is one-shot per stop window, and any prd-add, unknown-add or mutable write invalidates its marker. Then dispatch transition {"to":"G_SWEEP"} from ADRN, which starts the sweep that re-walks every node against the whole artifact. Use node-status when the state is in doubt.
 
 ## PRD rows
 
@@ -24,7 +24,7 @@ The agent never writes deferral wording into a row or a transition note. Wording
 
 ## Mutables
 
-RECORD owns no obligation kind and creates no mutable. It must still leave no pending mutable, because mutables-all-resolved refuses on any pending row of any kind. Before the closing transition, list pending mutables with mutable-list and resolve each with mutable-resolve {"mutable_id":"<id>","witness_evidence":"<witness>"} only when its witness exists. A mutable without a witness returns the chain to the node that owns its kind, as described under Transition.
+RECORD owns no obligation kind and creates no mutable. It must still leave no pending mutable, because mutables-all-resolved refuses on any pending row of any kind. Before the closing transition, list pending mutables with mutable-list and resolve each with unknown-resolve {"mutable_id":"<id>","witness_evidence":"<witness>"} only when its witness exists. A mutable without a witness returns the chain to the node that owns its kind, as described under Transition.
 
 ## Housekeeping and memory upkeep run on every finalize
 
