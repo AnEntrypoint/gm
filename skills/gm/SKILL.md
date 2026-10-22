@@ -195,6 +195,7 @@ Each entry is a failure a run has hit, with the handling that cleared it. Apply 
 - A decision is not a close. Keeping a refusal, choosing a default, or rewording an acceptance text does not resolve a row: a row ends resolved on a witness of its fix, or stale on a witness refuting its claim. A decision that changes what the row asks is sent to the row's owner, and the row stays open.
 - A stale close needs the whole claim refuted. A witness that leaves part of the claim unrun (a concurrent case, a timing case) keeps the row pending and names the part not yet witnessed.
 - A close whose cited dispatch is missing from the ledger refutes nothing. Re-witness it.
+- A refutation proven by `codesearch` must prove the scan covered the cited path. Report `excluded_by_rule_count` and re-scan any excluded path explicitly: spool `out/` directories are dropped by the noise-dir rule, so a scan of `.gm/exec-spool` silently omits them. A refutation built on a scan that dropped the path is a false negative, not a refutation; re-run it with the path named.
 - A probe that writes shared state (a dream policy, a row, a file) runs under a `verify-` session, and the write is cleaned up or recorded. A write verb used as a probe is a side effect: prefer read verbs.
 
 ### Git and shared checkouts
