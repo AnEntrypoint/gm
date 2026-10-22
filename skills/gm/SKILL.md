@@ -94,7 +94,7 @@ The dispatch layer arrives with each phase's response: scope-discovery-as-fixed-
 - Main thread: `Skill(skill="gm-orchestrate")`. Parallelism = graph workflows, until zero pending rows and every node traversed.
 - Node hop: `Skill(skill="gm-hop", args='{"principle":"<name>","surface":"<path>","session":"<SESSION_ID>"}')`. One principle, one surface, one receipt.
 - PRD row: `Skill(skill="gm-prd", args="row=<id>; session=<SESSION_ID>")`. Nine stages, one row per run.
-- Handoff: every run ends with `Skill(skill="gm-continue")`, after every parallel worker has returned, whether the backlog drained, a run stalled, or a phase reached its terminal state. It searches for remaining work and reloads gm when work remains. Workers cannot call a skill, so the orchestrator makes this call. At most two `gm-continue` calls per turn; a turn that has spent both starts the next run instead.
+- Handoff: every run ends with `Skill(skill="gm-continue")`, after every parallel worker has returned, whether the backlog drained, a run stalled, or a phase reached its terminal state. It searches for remaining work and reloads gm when work remains. Workers cannot call a skill, so the orchestrator makes this call. `gm-continue` calls are unbounded: a lane that cannot close its row escalates through `gm-continue` to `gm` and then `wfgy-method`, as many times as needed. Refusal is impossible; a stop with a row open is a defect.
 - Resumable drain: the backlog state is `.gm/drain-list/queue.tsv` (`id<TAB>state`). Any session resumes from it, re-checking `launched` rows with `prd-list` first. Procedure: gm-orchestrate, "Resumable drain (queue file)".
 
 ## 1d. Units
