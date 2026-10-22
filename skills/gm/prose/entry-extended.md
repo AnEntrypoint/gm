@@ -61,7 +61,7 @@ Every `instruction` response carries a `config_changed` array: config sources (p
 
 Cross-Cutting Memory
 
-* GTD (David Allen): the PRD/mutables ledger is the trusted external system; nothing stays in head-memory across a turn.
+* GTD (David Allen): the PRD/unknowns ledger is the trusted external system; nothing stays in head-memory across a turn.
 * Dreyfus Model (Stuart & Hubert Dreyfus): named-technique preferences exist so a novice-authored diff and an expert-authored diff converge on the same reviewed shape.
 * Zettelkasten (Niklas Luhmann): each memory file is one atomic, independently retrievable note; MEMORY.md is its index.
 

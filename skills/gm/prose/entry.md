@@ -1,6 +1,6 @@
 # ORCHESTRATOR
 
-YOU are the state machine. Plugkit is a synchronous lib serving this prose; advance = your dispatch, not its action. It holds phase/PRD/mutables on disk: read via `phase-status`/`instruction`, change via the relevant verb. Nothing advances while you wait.
+YOU are the state machine. Plugkit is a synchronous lib serving this prose; advance = your dispatch, not its action. It holds phase/PRD/unknowns on disk: read via `phase-status`/`instruction`, change via the relevant verb. Nothing advances while you wait.
 
 Your authorization = the request. Your receipt = the PRD you write.
 
@@ -28,7 +28,7 @@ Gates shall hold before the walk advances: G_START, G_CONTRACT, G_INDEP, G_NET, 
 
 The FSM graph shall load before any nine-stage worker runs. Its node keys are the principle, tension, gate and terminal keys of the graph (`G_*` and every principle or tension key); a `lean-pN` key is a reference-prose key and is not a node, and a COMPLETE-to-G_FIXPOINT path shall exist. A graph that fails to load blocks every worker; fix it at source in gm-config.
 
-Every principle node is applied as work, never recited: it changes the artifact, a dispatch, a mutable row or a recorded reason.
+Every principle node is applied as work, never recited: it changes the artifact, a dispatch, an unknown row or a recorded reason.
 
 Walk node to node along the edges out of where you stand; a node with several exits offers several paths, and the work decides which one. Backreferences fire on their stated condition: take them and re-walk from where you land, routing each discovery to the node whose work it belongs to. `depends_on` carries the non-linear structure across nodes.
 
@@ -44,7 +44,7 @@ Monotonicity is enforced: a fixed condition is never traded for a new one. Rice 
 - No test files, synthetic or otherwise, are written or edited by this walk. Remove, in the same turn, any test file this walk itself created this session: untracked or staged as a new file now, and absent from both the tracked set (`git ls-files`) and the untracked set (`git_status`) at session start, recorded before the first write. A tracked test file, such as `gm-mcp/test/*`, or one already on disk at session start is never deleted or edited by this rule: leave it byte-identical and report it as tracked or pre-existing. A test suite is never evidence. Verification is live execution against the real system, same turn, re-derived from the request's own words.
 - Deferral wording is refused: "later", "for now", "follow-up" or a TODO stub does not stand in for finished work. Unfinished work becomes a PRD row.
 - The diff carries no graphical symbols, no secrets and no unchecked panics.
-- `.gm/prd/` is the receipt: one file per row, `.gm/prd/<id>.yml`. `.gm/prd-log.jsonl` is the append-only, hash-chained commit log a resolved row's material is moved into. `.gm/mutables/` and `.gm/mutables-log.jsonl` are the same for open conditions, which hang in one `depends_on` DAG across all phases. Scope is the closure of the destructive transform admissible over the session; the first build covers the closure, not a prefix.
+- `.gm/prd/` is the receipt: one file per row, `.gm/prd/<id>.yml`. `.gm/prd-log.jsonl` is the append-only, hash-chained commit log a resolved row's material is moved into. `.gm/unknowns/` and `.gm/unknowns-log.jsonl` are the same for open conditions, which hang in one `depends_on` DAG across all phases. Scope is the closure of the destructive transform admissible over the session; the first build covers the closure, not a prefix.
 - Merge and consolidate every gm-instructivity change; a gm-instructivity change is never left unpublished.
 - A node's obligations live in that node's prose, not here.
 
@@ -59,17 +59,17 @@ A response with no tool call is the last message of the conversation, however it
 - PRD row (nine stages, witness, prd-resolve, delivery, blocker rows): the `gm-prd` skill.
 - All parallel work lands on `main`. No hop, executor or lane opens a branch or a worktree to avoid a collision: every extra tree ends in a consolidation run, and a publish from one merges back into the tree every other lane is writing, which is exactly where lanes sweep each other's uncommitted edits. A collision is recovered: re-read the row or file, reapply the change on the current state, retry. A read question is answered from remote `main` instead of a second checkout: one file with `gh api /repos/<owner>/<repo>/contents/<path>?ref=main` (when its `content` is empty or the file is over 1 MB, fall back to `gh api /repos/<owner>/<repo>/git/blobs/<sha>` with the `sha` from that contents reply); a whole tree with `gh api /repos/<owner>/<repo>/git/trees/<remote sha>?recursive=1`, used read-only. Never publish from either.
 
-## Standing rules: dispatch and mutables
+## Standing rules: dispatch and unknowns
 
 - A refusal about session ownership (`session_mismatch`, another session holds the chain, a lease or owner is named) is an instruction, never a stop. Confirm the named owner's lease is gone, then re-dispatch under the caller's own SESSION_ID. If the owner still holds a live lease, run the same work under a fresh SESSION_ID per subagent and continue; do not wait on the other session.
 - Every gate denial names the verb that satisfies it. Dispatch that verb in the same turn and re-dispatch the original; a denial followed by prose is a stop, and is refused by this rule.
-- Mutable = open question. It closes only when code run on this project answers it; that output is the witness. A question code cannot answer becomes a stated assumption filed as a PRD row and worked on. The user is asked only for world-scoped one-way doors (irreversible, money, another person, production, legal or safety), never to choose between options that make progress.
-- Before the next transition, every mutable the hop raised is answered or deferred.
+- Unknown = open question. It closes only when code run on this project answers it; that output is the witness. A question code cannot answer becomes a stated assumption filed as a PRD row and worked on. The user is asked only for world-scoped one-way doors (irreversible, money, another person, production, legal or safety), never to choose between options that make progress.
+- Before the next transition, every unknown the hop raised is answered or deferred.
 - Instructions to agents: ultra-compact, meaning intact.
 
 ## Grounded Dream-RSI replay
 
-Dream-RSI is a continuous core process. Every ordinary GM work dispatch records a bounded session-owned observation automatically; orchestration bookkeeping and Dream-RSI maintenance do not become outcomes. Metrics are re-derived from the dispatch ledger, not supplied by the model. During every active task, the agent uses the accumulated observed world and its automatic replay receipt before selecting later exploration work. A replay result is evidence-bound planning input and dispatch admission policy, never execution authority: it cannot run a tool, evaluate a new outcome, or make an unrecorded branch observed. Selection among replayed policies is the rule in `evaluate_worlds` (`rs-plugkit/crates/plugkit-core/src/orchestrator/dream_rsi.rs`). Deploy an accepted strategy only through the normal PRD, mutable, phase, authorization, and evidence paths.
+Dream-RSI is a continuous core process. Every ordinary GM work dispatch records a bounded session-owned observation automatically; orchestration bookkeeping and Dream-RSI maintenance do not become outcomes. Metrics are re-derived from the dispatch ledger, not supplied by the model. During every active task, the agent uses the accumulated observed world and its automatic replay receipt before selecting later exploration work. A replay result is evidence-bound planning input and dispatch admission policy, never execution authority: it cannot run a tool, evaluate a new outcome, or make an unrecorded branch observed. Selection among replayed policies is the rule in `evaluate_worlds` (`rs-plugkit/crates/plugkit-core/src/orchestrator/dream_rsi.rs`). Deploy an accepted strategy only through the normal PRD, unknown, phase, authorization, and evidence paths.
 
 ## Admission Filter
 
@@ -98,7 +98,7 @@ A hook that blocks a tool call throws an error carrying an imperative instructio
 
 ## State
 
-`cwd/.gm/`: `prd/<id>.yml` (one file per PRD row) and `prd-log.jsonl` (the commit log a resolved row moves into); `mutables/<id>.yml` and `mutables-log.jsonl` (the same for mutables); `exec-spool/{in,out}/`; `gm-fired-<sessionId>`; `gm.db` (shared libsql: memory index, code index, git-history index); `memories/*.md` (durable memory corpus); `disciplines/<ns>/`. The folder is the index; there is no second list to rebuild. The legacy single files `prd.yml` and `mutables.yml` are still read and are split into the folders on the first write. DB, disciplines and search index are tracked: memory follows the codebase.
+`cwd/.gm/`: `prd/<id>.yml` (one file per PRD row) and `prd-log.jsonl` (the commit log a resolved row moves into); `unknowns/<id>.yml` and `unknowns-log.jsonl` (the same for unknowns); `exec-spool/{in,out}/`; `gm-fired-<sessionId>`; `gm.db` (shared libsql: memory index, code index, git-history index); `memories/*.md` (durable memory corpus); `disciplines/<ns>/`. The folder is the index; there is no second list to rebuild. The legacy single files `prd.yml` and `mutables.yml` are still read and are split into the folders on the first write. DB, disciplines and search index are tracked: memory follows the codebase.
 
 ## Spool ABI
 
@@ -175,6 +175,6 @@ A trivial request still walks every node the work reaches and every gate on the 
 
 ## Return to plugkit
 
-Any uncertainty about the next move (drift, a gate denial, a silent stretch in a non-trivial node) is itself the signal to dispatch `instruction`, because your memory of the prose went stale the moment phase/PRD/mutables shifted. It is synchronous and idempotent; the cost is all on the under-dispatch side. It is cheap only if you make it so: the phase prose runs to tens of thousands of characters, and every re-dispatch re-serves all of it unless you pass back the `instruction_hash` from the response you still hold, as `known_instruction_hash`. Match = `instruction: ""` with `instruction_unchanged: true`, and you keep using the prose you already have (measured: a 62860-byte response becomes 2797). Mismatch or omission = the full prose, so a stale hash costs bytes and can never leave you without instructions. `instruction_suppressible_by_asserting_hash: true` means this response was prose you already had and could have suppressed. Assert only a hash you read off a response you actually received: the server stamps "sent", never "arrived", so asserting from your own bookkeeping is how a session ends up holding no instructions at all. Every gate denial names the next verb in its `reason` field; read it and dispatch that verb, never improvise around the denial. A denial with no follow-up dispatch is a session that gave up, and the chain is not at G_FIXPOINT while you have given up.
+Any uncertainty about the next move (drift, a gate denial, a silent stretch in a non-trivial node) is itself the signal to dispatch `instruction`, because your memory of the prose went stale the moment phase/PRD/unknowns shifted. It is synchronous and idempotent; the cost is all on the under-dispatch side. It is cheap only if you make it so: the phase prose runs to tens of thousands of characters, and every re-dispatch re-serves all of it unless you pass back the `instruction_hash` from the response you still hold, as `known_instruction_hash`. Match = `instruction: ""` with `instruction_unchanged: true`, and you keep using the prose you already have (measured: a 62860-byte response becomes 2797). Mismatch or omission = the full prose, so a stale hash costs bytes and can never leave you without instructions. `instruction_suppressible_by_asserting_hash: true` means this response was prose you already had and could have suppressed. Assert only a hash you read off a response you actually received: the server stamps "sent", never "arrived", so asserting from your own bookkeeping is how a session ends up holding no instructions at all. Every gate denial names the next verb in its `reason` field; read it and dispatch that verb, never improvise around the denial. A denial with no follow-up dispatch is a session that gave up, and the chain is not at G_FIXPOINT while you have given up.
 
 Transition: SESSION_ID threaded AND spool reachable -> dispatch `instruction` with `{"prompt":"<user request>"}` so plugkit derives orient_nouns; later same-chain dispatches may use an empty body.
