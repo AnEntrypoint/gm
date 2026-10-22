@@ -35,19 +35,34 @@ function bodySessionId(text) {
   }
 }
 
+// Spool directories are owner-only (0700) and request and replay files are 0600, because a request body
+// can carry session content. An existing directory is tightened too: the daemon may have created it at 0755.
+const OWNER_DIR_MODE = 0o700;
+const OWNER_FILE_MODE = 0o600;
+function ownerDir(dir) {
+  fs.mkdirSync(dir, { recursive: true, mode: OWNER_DIR_MODE });
+  fs.chmodSync(dir, OWNER_DIR_MODE);
+}
+
 function dispatch({ verb, cwd, raw, sid }) {
   const spool = path.join(cwd, '.gm', 'exec-spool');
   const inDir = path.join(spool, 'in', verb);
   const outDir = path.join(spool, 'out');
   const replayDir = path.join(spool, 'replay');
   const id = `${sid}-${process.pid}-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
-  fs.mkdirSync(inDir, { recursive: true });
-  fs.mkdirSync(replayDir, { recursive: true });
+  ownerDir(path.join(cwd, '.gm'));
+  ownerDir(spool);
+  ownerDir(path.join(spool, 'in'));
+  ownerDir(inDir);
+  ownerDir(replayDir);
   const ledgerTmp = path.join(replayDir, `.${id}.tmp`);
-  fs.writeFileSync(ledgerTmp, JSON.stringify({ verb, cwd, sid, raw }));
+  // A kv_put body carries the stored value, so its replay record keeps a marker and replay refuses it.
+  const redacted = /kv_put/.test(verb);
+  const recorded = redacted ? '[REDACTED: kv_put value not recorded]' : raw;
+  fs.writeFileSync(ledgerTmp, JSON.stringify({ verb, cwd, sid, raw: recorded, redacted }), { mode: OWNER_FILE_MODE });
   fs.renameSync(ledgerTmp, path.join(replayDir, `${id}.json`));
   const tmp = path.join(inDir, `.${id}.tmp`);
-  fs.writeFileSync(tmp, raw);
+  fs.writeFileSync(tmp, raw, { mode: OWNER_FILE_MODE });
   const started = Date.now();
   fs.renameSync(tmp, path.join(inDir, `${id}.txt`));
 
@@ -86,6 +101,10 @@ if (verb === 'replay') {
     record = JSON.parse(fs.readFileSync(ledgerPath, 'utf8'));
   } catch {
     console.error(`dispatch-verb: no replay record for ${originalId} at ${ledgerPath} (recorded only for dispatch-verb requests)`);
+    process.exit(1);
+  }
+  if (record.redacted) {
+    console.error(`dispatch-verb: ${originalId} is a ${record.verb} record; its value was not recorded, so it is not replayed`);
     process.exit(1);
   }
   console.error(`dispatch-verb: replaying ${record.verb} ${originalId} in ${record.cwd}`);

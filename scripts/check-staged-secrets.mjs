@@ -13,16 +13,60 @@ const RULES = [
 
 const PLACEHOLDER = /^[$<{%]/;
 
+function matchRule(text) {
+  for (const [rule, re] of RULES) {
+    const m = re.exec(text);
+    if (!m) continue;
+    if (rule === 'url-inline-password' && PLACEHOLDER.test(m[1])) continue;
+    return rule;
+  }
+  return null;
+}
+
 let diff;
 try {
-  diff = execFileSync('git', ['diff', '--cached', '-U0', '--no-color', '--no-ext-diff'], {
+  diff = execFileSync('git', ['diff', '--cached', '-U0', '--no-color', '--no-ext-diff', '--text'], {
     encoding: 'utf8',
     maxBuffer: 512 * 1024 * 1024,
     stdio: ['ignore', 'pipe', 'pipe'],
   });
 } catch (err) {
   console.log(`REFUSE: git diff --cached failed (${String(err.stderr || err.message).trim()})`);
+  console.log('RESULT: REFUSE (git diff --cached failed)');
   process.exit(2);
+}
+
+function git(args) {
+  return execFileSync('git', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+}
+
+function mergeInProgress() {
+  try {
+    git(['rev-parse', '-q', '--verify', 'MERGE_HEAD']);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function mergedTreeDiffersFromHead() {
+  try {
+    git(['diff', '--quiet', 'HEAD', 'MERGE_HEAD']);
+    return false;
+  } catch (err) {
+    return err.status === 1;
+  }
+}
+
+if (diff.trim() === '') {
+  if (mergeInProgress() && mergedTreeDiffersFromHead()) {
+    console.log('PASS: merge commit whose result equals HEAD; MERGE_HEAD carries a tree that differs from HEAD, so nothing new is staged');
+    console.log('RESULT: PASS');
+    process.exit(0);
+  }
+  console.log('REFUSE: nothing staged to scan');
+  console.log('RESULT: FAIL (nothing staged; a PASS must certify staged bytes)');
+  process.exit(1);
 }
 
 // A commit that stages a skills/ file must stage skills/manifest.sha256 too, or the
@@ -66,14 +110,8 @@ for (const raw of diff.split('\n')) {
   }
   if (inHunk && raw.startsWith('+')) {
     added++;
-    const text = raw.slice(1);
-    for (const [rule, re] of RULES) {
-      const m = re.exec(text);
-      if (!m) continue;
-      if (rule === 'url-inline-password' && PLACEHOLDER.test(m[1])) continue;
-      findings.push(`${rule} ${file}:${line}`);
-      break;
-    }
+    const rule = matchRule(raw.slice(1));
+    if (rule) findings.push(`${rule} ${file}:${line}`);
     line++;
   }
 }
@@ -84,5 +122,5 @@ if (findings.length > 0) {
   process.exit(1);
 }
 
-console.log(`PASS: ${added} staged added line(s) in ${files.size} file(s) scanned, no credential shape found`);
+console.log(`PASS: ${added} staged added line(s) in ${files.size} file(s) scanned against ${RULES.map(([rule]) => rule).join(', ')}`);
 console.log('RESULT: PASS');

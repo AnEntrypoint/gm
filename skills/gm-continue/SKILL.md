@@ -31,7 +31,7 @@ If a prior `gm` walk reached COMPLETE but the same class of gap recurs across re
 
 ## Recursion bound
 
-Track invocations in `.gm/.gm-continue-count` (plain integer, reset by a fresh user prompt). This skill dispatches `gm` or `wfgy-method` at most twice per user turn, then reports to the user directly: once to check, and once more only if that check found real work and the resulting `gm` walk needs its own confirming `gm-continue` pass. A third consecutive "nothing new, re-check again" cycle is the stuck-loop signal: surface it, never loop silently.
+Track invocations in `.gm/.gm-continue-count` (plain integer, reset by a fresh user prompt). This skill dispatches `gm` or `wfgy-method` at most twice per user turn. When both are spent, the turn starts the next drain round on the remaining pending rows; it never ends with pending rows and no round running, and a report to the user is not a substitute for a round. A third consecutive "nothing new, re-check again" cycle is the stuck-loop signal: surface it, never loop silently.
 
 ## Never a substitute for `gm`
 
