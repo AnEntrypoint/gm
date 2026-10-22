@@ -107,6 +107,8 @@ say('reply_found', Boolean(reply));
 say('dispatch_waited_ms', Number.isFinite(waited) ? waited : null);
 say('admission_band', reply?.admission_band ?? null);
 say('admission_decision', reply?.admission_decision ?? null);
+say('admission_waited_ms', Number.isFinite(Number(reply?.admission_waited_ms)) ? Number(reply.admission_waited_ms) : null);
+say('guest_duration_ms', Number.isFinite(Number(reply?.duration_ms)) ? Number(reply.duration_ms) : null);
 if (split) for (const [k, v] of Object.entries(split)) say(`split.${k}`, v);
 
 // Dispatches that were recorded inside the wait window shared the queue with this one.
@@ -124,8 +126,14 @@ const residual = split
   : null;
 say('residual_ms', residual);
 
+const guestMs = Number.isFinite(Number(reply?.duration_ms)) ? Number(reply.duration_ms) : null;
 let verdict;
-if (!split && !Number.isFinite(waited)) {
+if (!split && guestMs !== null && guestMs >= 250) {
+  // gm-mcp adds dispatch_waited_ms and dispatch_wait_split client-side, and AGENTS.md there records that a
+  // waited reply carries them only when the call sets full_response:true, so a spool reply legitimately has
+  // neither. The reply's own duration_ms is the guest's execution, which is what the split would call exec_ms.
+  verdict = `no split in the stored reply: gm-mcp adds dispatch_waited_ms and dispatch_wait_split client-side, and only when the call sets full_response:true. The reply's own duration_ms ${guestMs} is guest execution, so the wait is the verb's own work (for git verbs: network round trips to the remote), not admission or queue time; re-dispatch through gm-mcp with full_response:true for the stamped split`;
+} else if (!split && !Number.isFinite(waited)) {
   verdict = 'the reply carries no wait split (no dispatch_waited_ms), so the wait was below the disclosure floor or predates it; nothing here is slow';
 } else if (residual !== null && residual > 1000) {
   const cause = gitLane.length > 0
