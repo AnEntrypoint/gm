@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 // Dispatches one spool verb and prints its reply, for live validation of any verb, including ones the
-// MCP tool table does not expose (browser, for one). Local spool only: no network, no daemon of its own.
+// MCP tool table does not expose (browser, for one). No network and no daemon of its own: the shared daemon
+// serves the spool, and it serves only roots that hold a lease, so a cwd without one gets a pinned lease here
+// (the form agentplug-runner register_project writes) or a refusal at once.
 //
 // Usage: node scripts/triage/dispatch-verb.mjs <verb> [--cwd <project>] [--raw <text> | --body-file <path>]
 //                                              [--sid <id>] [--timeout-ms <ms>]
@@ -15,7 +17,9 @@
 //
 // Each request is also recorded in .gm/exec-spool/replay/<N>.json (verb, cwd, raw body), because the
 // spool consumes its in/ and out/ files. `replay <N>` re-dispatches that record and prints both ids.
+import crypto from 'node:crypto';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 
 const args = process.argv.slice(2);
@@ -44,7 +48,64 @@ function ownerDir(dir) {
   fs.chmodSync(dir, OWNER_DIR_MODE);
 }
 
+// The daemon's lease for a root is <key>.<pid>.lease holding the root path, where <key> is the first 16 hex of
+// sha256(lowercased root) and pid 0 is pinned (LEASE_PINNED_PID in agentplug-runner daemon.rs). A lease for a
+// dead pid is removed by the daemon, so only a pinned one survives this process.
+const LEASE_PINNED_PID = 0;
+function agentplugHome() {
+  const over = process.env.AGENTPLUG_HOME?.trim();
+  return over ? path.resolve(over) : path.join(os.homedir(), '.agentplug');
+}
+function isProjectRoot(dir) {
+  const marker = path.join(dir, '.git');
+  try {
+    return fs.statSync(marker).isFile() || fs.existsSync(path.join(marker, 'HEAD'));
+  } catch {
+    return false;
+  }
+}
+function pidAlive(pid) {
+  if (pid === LEASE_PINNED_PID) return true;
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    return error.code === 'EPERM';
+  }
+}
+function attachDaemonLease(cwd) {
+  const root = fs.realpathSync(cwd);
+  if (!isProjectRoot(root)) {
+    console.error(`dispatch-verb: refused ${root}: it is not a project root (no .git file or .git/HEAD), and the shared daemon serves only project roots that hold a lease`);
+    process.exit(1);
+  }
+  const leases = path.join(agentplugHome(), 'leases');
+  const key = crypto.createHash('sha256').update(root.toLowerCase()).digest('hex').slice(0, 16);
+  const held = fs.existsSync(leases) && fs.readdirSync(leases).some((name) => {
+    const match = /^([0-9a-f]{16})\.(\d+)\.lease$/.exec(name);
+    if (!match || match[1] !== key || !pidAlive(Number(match[2]))) return false;
+    try {
+      return fs.readFileSync(path.join(leases, name), 'utf8').trim() === root;
+    } catch {
+      return false;
+    }
+  });
+  if (held) return;
+  const file = path.join(leases, `${key}.${LEASE_PINNED_PID}.lease`);
+  const tmp = `${file}.${process.pid}.tmp`;
+  try {
+    fs.mkdirSync(leases, { recursive: true, mode: OWNER_DIR_MODE });
+    fs.writeFileSync(tmp, root, { mode: OWNER_FILE_MODE });
+    fs.renameSync(tmp, file);
+  } catch (error) {
+    console.error(`dispatch-verb: refused ${root}: could not write its daemon lease at ${file}: ${error.message}`);
+    process.exit(1);
+  }
+  console.error(`dispatch-verb: attached ${root} with a pinned daemon lease (${file})`);
+}
+
 function dispatch({ verb, cwd, raw, sid }) {
+  attachDaemonLease(cwd);
   const spool = path.join(cwd, '.gm', 'exec-spool');
   const inDir = path.join(spool, 'in', verb);
   const outDir = path.join(spool, 'out');
