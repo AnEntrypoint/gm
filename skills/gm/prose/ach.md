@@ -15,7 +15,7 @@ Output, in the node's receipt:
 - `ACH: <n> hypotheses; leader <id>; rejected <ids>; probe <dispatch id>; flips-on <evidence>`
 
 Rules:
-- A hypothesis the evidence has not yet ruled out stays open; record it as a mutable with `unknown-add`.
+- A hypothesis the evidence has not yet ruled out stays open; record it as an unknown with `unknown-add`.
 - A fix is applied only to the leader. A fix to a rejected hypothesis is refused until its `I` cells are re-derived.
 - The matrix is written before the fix, never reconstructed after the fix to justify it.
 - A matrix with one hypothesis is not ACH; add the alternatives before acting.

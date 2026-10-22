@@ -20,7 +20,7 @@ Choose the verb by the question. `codesearch {query, mode:"literal"}` (or mode "
 
 An answer plausibly on the public web: WebSearch, then at least one targeted WebFetch, before any pause, every time. Ask the user only when that search returns nothing, or the question needs a private credential, a choice among options already surfaced, or authorization for an irreversible action.
 
-Once per project per session, read gm.config.json (absent: every default applies) with the README, CONTRIBUTING and `.gm/` signals. A real signal makes a prd-add row proposing the change. Signals: an embedding pipeline commits to a dimension the fixed 384-dimension default cannot hold; or the user names the need. Repointing `.gm/config.source.json` is a reconfiguration: ask through AskUserQuestion before writing it, unless the user's words named the need. No real signal: move on.
+Once per project per session, read gm.config.json (absent: every default applies) with the README, CONTRIBUTING and `.gm/` signals. A real signal makes a prd-add row proposing the change. Signals: the project references TencentDB Agent Memory or a deployed instance; an embedding pipeline commits to a dimension the fixed 384-dimension default cannot hold; or the user names the need. Repointing `.gm/config.source.json` or flipping a `memory.tencentdb_backend` block is a reconfiguration: ask through AskUserQuestion before writing it, unless the user's words named the need. No real signal: move on.
 
 On the first dependency install of a session, and before trusting cloned or vendored dependency content, dispatch `scan_deps`. Body `{}` scans the project; `{"root":"<relative dir>"}` a subdirectory; `{"root":"<absolute dir>"}` a sibling project. blockedCount or failCount above zero is a real hit: stop, ask the user through AskUserQuestion, and investigate the introducing commit in the dependency's history. Never add exclusions; never retry blindly. warnCount alone is a glance, not a block. nodeModulesTruncated true gets a prd-add row for a standing unbounded sweep.
 
@@ -64,21 +64,21 @@ A row is admitted on witness, not cheapness. An unmeasured optimization claim is
 
 When a row's statement changes, rewrite it with `prd-add` under its existing id; the reply is `rescoped` and the row keeps its position and dependents. Never delete and re-add: that orphans the handle.
 
-State is one file per row: `.gm/prd/<id>.yml` and `.gm/mutables/<id>.yml`; resolved material moves to `.gm/prd-log.jsonl` and `.gm/mutables-log.jsonl`. A fresh session resumes by listing those folders and reading the log, not by replaying memory.
+State is one file per row: `.gm/prd/<id>.yml` and `.gm/unknowns/<id>.yml`; resolved material moves to `.gm/prd-log.jsonl` and `.gm/unknowns-log.jsonl`. A fresh session resumes by listing those folders and reading the log, not by replaying memory.
 
 ## Mutables
 
 P1 owns no obligation kind. Every P1 unknown is one of two things.
 
-A grounding unknown asks what exists, who calls it, what a service returns, or what a library version exposes. Discharge it inside P1: dispatch the codesearch, callers or MEMORY.md read, or exec_js against the real service, then resolve the mutable with that output before leaving the node. No grounding-shaped mutable crosses the transition open.
+A grounding unknown asks what exists, who calls it, what a service returns, or what a library version exposes. Discharge it inside P1: dispatch the codesearch, callers or MEMORY.md read, or exec_js against the real service, then resolve the unknown with that output before leaving the node. No grounding-shaped unknown crosses the transition open.
 
 Any other unknown is a contract or runtime property. Record it: `unknown-add {"id":"<kebab-case slug>","status":"unknown","obligation_kind":"<kind>","depends_on":[...]}`, kind belonging to the node that discharges it. Contract properties (precondition, invariant, postcondition, resource-bound, type-shape) are typed for CONTRACT. Runtime-safety (totality, ownership, replay, effect-boundary) and concurrency (happens-before, disjointness, contention) properties are typed for BUILD. The witness field names the codesearch hit, file:line or exec output that made it an unknown. An unwitnessed unknown blocks every transition.
 
-`depends_on` lists ids that must resolve first. unknown-add refuses a cycle and names its path. A mutable may depend on any row in the store, whichever node typed it.
+`depends_on` lists ids that must resolve first. unknown-add refuses a cycle and names its path. An unknown may depend on any row in the store, whichever node typed it.
 
-Two-pass rule: a mutable surviving two genuine resolution attempts without a witness is never tried a third time the same way. Reclassify it as a fresh, differently scoped unknown with a new id, re-cut affected rows with prd-add on their existing ids, and stay in EARS. Reclassification is reshaping, not failure.
+Two-pass rule: an unknown surviving two genuine resolution attempts without a witness is never tried a third time the same way. Reclassify it as a fresh, differently scoped unknown with a new id, re-cut affected rows with prd-add on their existing ids, and stay in EARS. Reclassification is reshaping, not failure.
 
-Surface divergence: a state differing from the PRD's assumed shape becomes a new mutable with its witness, then resumes. A broken tool blocking a witness channel becomes a mutable whose task is to make the channel reachable: fix the tool, replace it, or drive its lower-level interface directly. Never parked as blocked by something external.
+Surface divergence: a state differing from the PRD's assumed shape becomes a new unknown with its witness, then resumes. A broken tool blocking a witness channel becomes an unknown whose task is to make the channel reachable: fix the tool, replace it, or drive its lower-level interface directly. Never parked as blocked by something external.
 
 ## Supply-chain scan
 
@@ -92,11 +92,11 @@ A failing or blocked hit is a one-way door. Record it as a PRD row and keep the 
 
 ## Scope discovery to a fixed point
 
-Discovery does not stop at the first plan. A closure implying work outside current rows is a scope expansion: prd-add the new rows in the same pass, derive their unknowns as mutables, repeat. The walk leaves this node only after a full sweep adds zero rows and zero mutables. That fixed point is the criterion, not a step count or a sense that coverage is enough.
+Discovery does not stop at the first plan. A closure implying work outside current rows is a scope expansion: prd-add the new rows in the same pass, derive their unknowns as unknowns, repeat. The walk leaves this node only after a full sweep adds zero rows and zero unknowns. That fixed point is the criterion, not a step count or a sense that coverage is enough.
 
 Scope inside the closure is in the walk. Unrelated work becomes a row that waits for its own walk.
 
-Long-horizon work spans sessions: rows and mutables on disk let a fresh session's boot probe resume without replay. A batch independent enough to run unattended is handed to a new session deliberately, not serialized through this one.
+Long-horizon work spans sessions: rows and unknowns on disk let a fresh session's boot probe resume without replay. A batch independent enough to run unattended is handed to a new session deliberately, not serialized through this one.
 
 ## Large finding sets are partitioned once
 
@@ -128,7 +128,7 @@ Write each requirement in one EARS template (ubiquitous, event-driven, state-dri
 
 Handover: Hands rows that pass the independent, negotiable, valuable, estimable, small and testable checks to THINSLICE for vertical cutting; nominated next node: THINSLICE; cite INVEST - Bill Wake.
 
-Check each row for independent, negotiable, valuable, estimable, small and testable. Testable here means the witness plan names the exec_js dispatch that proves it; a row that cannot be proven so is split until it can. A row depending on another task fires the backreference to THINSLICE; record the dependency with depends_on on its mutable or in its pre-condition text.
+Check each row for independent, negotiable, valuable, estimable, small and testable. Testable here means the witness plan names the exec_js dispatch that proves it; a row that cannot be proven so is split until it can. A row depending on another task fires the backreference to THINSLICE; record the dependency with depends_on on its unknown or in its pre-condition text.
 
 ### THINSLICE - Thin Vertical Slice - Alistair Cockburn
 
@@ -140,7 +140,7 @@ Cut each row as a thin vertical slice crossing every layer the behaviour touches
 
 Handover: Hands the spike's printed output and the settled unknowns to YAGNI to cut scope to caller-backed rows; nominated next node: YAGNI; cite Spike Solution - Kent Beck.
 
-Where search cannot settle an unknown, spike it: a throwaway exec_js probe against the real service, run with a named command that is red-capable, deterministic and fast. Timebox: one exec_js dispatch and five minutes wall clock; exceeding the box without settling fires the backreference to LIVEPLAN. The spike's printed output is the mutable's witness. Spike code is never shipped. If the unknown survives, the backreference to LIVEPLAN fires and the plan is re-cut around it.
+Where search cannot settle an unknown, spike it: a throwaway exec_js probe against the real service, run with a named command that is red-capable, deterministic and fast. Timebox: one exec_js dispatch and five minutes wall clock; exceeding the box without settling fires the backreference to LIVEPLAN. The spike's printed output is the unknown's witness. Spike code is never shipped. If the unknown survives, the backreference to LIVEPLAN fires and the plan is re-cut around it.
 
 ### YAGNI - YAGNI - Ron Jeffries
 
@@ -168,7 +168,7 @@ Save an unknown as a memory file only when a later task needs it. Decisions (the
 
 Entry is gated by G_START. The gate lean-one-task-in-flight is blocking; its refusal names a recovery verb in next_dispatch. A repeated identical refusal escalates at gate_repeat_escalate_threshold (default 3). Dispatch the named recovery verb, never the denied transition again.
 
-Exit is `transition to=G_CONTRACT`, dispatched only when every row carries pre-conditions, invariants and post-conditions, every grounding unknown has a witness, every contract-kind mutable is typed, and the last expansion pass added zero rows. The exit path runs LIVEPLAN, then the G_CONTRACT gate (contract is the only durable description, advisory: it records the rule and never refuses), then UBIQ in G_CONTRACT. Before that no second durable description exists: no design document, no plan prose outside `.gm/prd/`, `.gm/mutables/` and their two commit logs. The rows and the types are the description.
+Exit is `transition to=G_CONTRACT`, dispatched only when every row carries pre-conditions, invariants and post-conditions, every grounding unknown has a witness, every contract-kind unknown is typed, and the last expansion pass added zero rows. The exit path runs LIVEPLAN, then the G_CONTRACT gate (contract is the only durable description, advisory: it records the rule and never refuses), then UBIQ in G_CONTRACT. Before that no second durable description exists: no design document, no plan prose outside `.gm/prd/`, `.gm/unknowns/` and their two commit logs. The rows and the types are the description.
 
 Feedback inside the node: XYPROB routes back to JTBD, INVEST to THINSLICE, SPIKE to LIVEPLAN. Each re-cuts rows in place with prd-add on existing ids, then the walk continues here. EARS routes to DBC, a backreference into G_CONTRACT carrying the row id, the earliest node able to make the requirement falsifiable. The backreference from LIVEPLAN to G_START closes a finished task before a new plan opens.
 
