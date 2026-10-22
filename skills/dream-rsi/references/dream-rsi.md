@@ -104,3 +104,14 @@ Each use case is fully dressed (Cockburn): primary actor, scope, level, stakehol
   - 4a. No witness exists: the row stays open with a named fact (`skills/gm/SKILL.md`, PRD rows).
   - 4b. The deployed policy id is not written to later observation records, so the outcomes of later dispatches cannot be attributed to the deployment. Filed under PRD row find-1-3-policy-id-observation-field.
 - **Guarantees:** no daemon tick or scheduled job redeploys a policy; every deployment has a PRD row and a witness dispatch id.
+
+## Minimal sealed-world chain for dream-replay
+
+`dream-replay` takes sealed `world_ids` only and refuses a body carrying `worlds` (`dream-replay accepts sealed world_ids, never caller-supplied worlds`). A single dispatch therefore cannot witness a replay. The witness is the final `dream-replay` dispatch of the chain below, which consumes the sealed worlds. Every record is owned by the dispatch session, so all steps run under one session id. The chain holds three worlds, the minimum that gives `dream-replay` an `order` domain (`PROMOTION_MIN_WORLDS` in `rs-plugkit/crates/plugkit-core/src/orchestrator/dream_rsi.rs`).
+
+1. Three completed dispatches in the session with `exit_code` 0, for example `fs_stat` on three paths. Their dispatch ids are read from `.gm/exec-spool/.dispatch-ledger.json` (`dispatch_id`, `session_id`, `verb`).
+2. `dream-policy-register` with `policy` `{"id":"base-policy","roots":["d-root"],"max_nodes":4}` and `"deployed":true`. The baseline is the session's only deployed policy. Its deployment writes `.gm/dream-rsi/<session>/active-strategy.json` and nothing outside the session directory.
+3. `dream-policy-register` with `policy` `{"id":"chal-policy","roots":["d-root"],"max_nodes":4}` and no `deployed` field.
+4. For each discovery, `dream-evaluator-receipt` with `receipt_id`, `policy_id` `base-policy`, `dispatch_id` (one id from step 1) and `parent_id` when the discovery has a parent, then `dream-discovery-record` with `id` and `evaluator_receipt_id`. The discovery takes its `policy_id`, `dispatch_id` and `parent_id` from its receipt. The chain records `d-root` (no parent), then `d-a` and `d-b` (parent `d-root`).
+5. `dream-world-seal` three times: `w1` over `["d-root","d-a"]`, `w2` over `["d-root","d-b"]`, and `w3` over `["d-root","d-a","d-b"]`. Each world holds the root of both policies, since replay refuses a root the world did not observe.
+6. `dream-replay` with `world_ids` `["w1","w2","w3"]`, `baseline_policy_id` `base-policy`, `policy_ids` `["base-policy","chal-policy"]` (the baseline must be listed in `policy_ids`), `beta1` and `beta2`. The challenger has the same roots and budget as the baseline, so the two scores tie and the reply keeps the incumbent. In the `replay` object of the reply, `selected_policy_id` is `base-policy`, `improved` is false, `promotion_reason` is `below_margin` and `n_observations` is 3.
