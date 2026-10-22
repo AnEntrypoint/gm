@@ -18,7 +18,7 @@ concurrency:
   # 39732961687 logged `published 293dfcef on attempt 1` and was recorded cancelled
   # two seconds later).
   group: gm-bump-pins
-  cancel-in-progress: ${{ github.event_name != 'push' || !startsWith(github.event.head_commit.message, 'pins: advance') }}
+  cancel-in-progress: "${{ github.event_name != 'push' || !startsWith(github.event.head_commit.message, 'pins: advance') }}"
 
 permissions:
   contents: write
