@@ -7,12 +7,16 @@ on:
   repository_dispatch:
     types: [submodule-released]
   schedule:
-    - cron: '*/10 * * * *'
+    - cron: '17 * * * *'
   workflow_dispatch: {}
 
 concurrency:
+  # A newer run supersedes an older one: the script re-reads origin/main on every
+  # attempt, so stale queued work only burns minutes. Measured before this change:
+  # 874 of 1464 run-minutes over 34 h were cancelled runs, and a scheduled run used
+  # to queue behind a running one instead of replacing it.
   group: gm-bump-pins
-  cancel-in-progress: ${{ github.event_name == 'push' }}
+  cancel-in-progress: true
 
 permissions:
   contents: write
