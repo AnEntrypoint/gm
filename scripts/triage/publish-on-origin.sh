@@ -55,7 +55,7 @@ if printf '%s\n' "$@" | grep -q '^skills/'; then
   git update-index --add --cacheinfo "100644,$blob,skills/manifest.sha256" || exit 1
 fi
 tree=$(git write-tree) || exit 1
-sha=$(git commit-tree "$tree" -p origin/main -m "$msg" -m "Row: $row") || exit 1
+sha=$(git commit-tree "$tree" -p origin/main -m "$msg" -m "Row: $row" -m "Co-Authored-By: Claude Haiku 5.5 <noreply@anthropic.com>") || exit 1
 unset GIT_INDEX_FILE
 echo "== commit $sha against origin/main"
 git diff --stat origin/main "$sha" | tail -3
