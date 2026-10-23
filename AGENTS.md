@@ -78,7 +78,7 @@ Falsified by: a `rssearch.table` or `git_commits`/`code_chunks` name containing 
 
 ## Working with gm
 
-- Use the `gm` skill for engineering work and prefer its MCP server. If the MCP server is unavailable, use the spool fallback: write one complete request atomically, prefix every request number with a unique session id, and poll the matching response. While a fresh watcher is busy, never start a second one. A stale or failed runner is a defect in its owning source. Never bypass gm. Falsified by: a second watcher started while `scripts/triage/runner-status.mjs` reports one busy, or a platform-native tool used where a verb exists for the same operation.
+- Use the `gm` skill for engineering work through its MCP server (`gm_codemode`). If that server is unavailable, report it; never write spool files or start or restart the runner by hand. A stale or failed runner is a defect in its owning source. Never bypass gm. Falsified by: a spool file written by hand, a runner started or restarted by hand, or a platform-native tool used where a verb exists for the same operation.
 - Never use `AskUserQuestion` to resolve an ambiguity or gate progress. Choose the most defensible default, state it with a one-line rationale, and continue. A decision that genuinely needs the human is raised in prose at the end of the turn. Falsified by: a turn that blocks on an `AskUserQuestion` reply, or an ambiguity resolved by asking instead of by a stated default.
 - Use no hooks, settings files, environment switches or harness-only features (`PreToolUse` hooks, `CLAUDE_*` variables, permission overrides) that other apps lack. Only the skill and the program (gm and its MCP server) are needed. Falsified by: a hook or `CLAUDE_*` variable referenced by this repo, or a harness-only feature relied on to change behaviour.
 - Use the verbs exposed by the running plugin for search, git, execution, memory and state changes. `skills/gm/docs/verbs.md` is the verb inventory (every name, body shape, and one example each). Falsified by: a Bash `grep`, `find` or `git` call where `codesearch` or a git verb covers the same operation.
@@ -129,9 +129,7 @@ The `gm-mcp` server compacts every dispatch response before it crosses the wire;
 
 ## Live validation interfaces
 
-- `node scripts/triage/dispatch-verb.mjs <verb> --cwd <project> --raw <body>` dispatches any spool verb, including verbs the MCP table does not expose such as `browser`, and prints the reply and latency. It touches only the local spool.
-- `agentplug-runner selfcheck-update-probes` reads the release channel for the runner, every loaded plugin and the skill manifest, through the daemon's own functions. Its only write is the skill manifest cache.
-- `node <toolsDir>/gm-mcp-server.mjs self-update-status` prints the channel cache: the stored etag, the digest, the time of the last unconditional fetch and the outcome of the last check. `self-update-now` forces a check.
+- `gm.<verb>({...})` through `gm_codemode` dispatches any verb `gm.list()` names, including `browser`. `gm.status({cwd})` reports the daemon heartbeat and queue; `gm.health({cwd})` reports the served build.
 - Browser control is witnessed through `browser` with `session=`, `expect=`, `reload` and `close`. The reply names the tab and logs each step.
 
 ## Dated findings and design
