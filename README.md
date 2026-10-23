@@ -54,7 +54,7 @@ Inside a project, run the same script with the argument `spool`, for example `cu
 - **verb**: a command the agent sends to gm, such as `codesearch` or `git_status`.
 - **spool**: the file queue under `.gm/exec-spool/`. A request is a file in `.gm/exec-spool/in/`, and the runner writes the reply to `.gm/exec-spool/out/`.
 - **plan row**: one task, stored as a file at `.gm/prd/<id>.yml`.
-- **mutable**: one open question, stored as a file at `.gm/mutables/<id>.yml`.
+- **unknown**: one open question, stored as a file at `.gm/unknowns/<id>.yml`.
 - **principle**: one discipline, usually from a book or author, that the agent applies to the code, such as Jobs To Be Done (Clayton Christensen).
 - **CI marker**: the file `.gm/exec-spool/.ci-validated`, the marker that the `ci-validated-fresh` predicate reads.
 - **walk**: one run of the gm state machine, driven to COMPLETE.
@@ -75,7 +75,7 @@ You describe a change, the agent works through plan rows, and each step runs a c
 
 The agent sends each move as a `transition` verb, and gm replies with the next instruction or the reason for a refusal.
 
-Each plan row closes only with recorded `witness_evidence`, a string that `prd-resolve` takes beside the row `id`, naming a file:line, codesearch hit or exec output specific to that row. Each mutable, one open question, closes with `mutable-resolve`.
+Each plan row closes only with recorded `witness_evidence`, a string that `prd-resolve` takes beside the row `id`, naming a file:line, codesearch hit or exec output specific to that row. Each unknown, one open question, closes with `unknown-resolve`.
 
 ### The graph
 
@@ -95,7 +95,7 @@ The MCP server exposes one tool, `gm_codemode`. Its short JavaScript body calls 
 
 ### Gates on the git path
 
-Git operations go through gm's git verbs (`git_status`, `git_finalize`, `git_push`, `git_show` and the rest). The CI verbs are `ci-status` (a run's status) and `ci-log` (what that run printed: filtered by job, step and pattern, capped by line and character budgets, each line split into `{n, job, step, at, text}`); `gm.describe` names them `ci_status` and `ci_log`, because the dispatch accepts either spelling. The gates `prd-all-closed`, `mutables-all-resolved`, `residual-scan-fired` and `worktree-clean` refuse the move into COMPLETE while plan rows are open, mutables are unresolved, the residual scan has not run, or the worktree is dirty.
+Git operations go through gm's git verbs (`git_status`, `git_finalize`, `git_push`, `git_show` and the rest). The CI verbs are `ci-status` (a run's status) and `ci-log` (what that run printed: filtered by job, step and pattern, capped by line and character budgets, each line split into `{n, job, step, at, text}`); `gm.describe` names them `ci_status` and `ci_log`, because the dispatch accepts either spelling. The gates `prd-all-closed`, `mutables-all-resolved`, `residual-scan-fired` and `worktree-clean` refuse the move into COMPLETE while plan rows are open, unknowns are unresolved, the residual scan has not run, or the worktree is dirty.
 
 ## Configuration from your own repo
 
