@@ -5,7 +5,7 @@ Every gm operation is a dispatch verb, such as `codesearch` or `fs_read`. This f
 Two facts:
 
 1. **Code lookup exists.** `grep` answers "where is this string", `codesearch` answers "where is this concept", `fs_read` reads a file or a line range, and `callers`/`callees`/`impact` walk the symbol graph built by `codeinsight_index`.
-2. **A directory under `.gm/exec-spool/in/` is not evidence that a verb exists.** The spool creates `.gm/exec-spool/in/<verb>/` before dispatch, so an unknown verb leaves one behind and replies `ok: false`, `error_code: unknown_verb`, and an `error` beginning `unknown verb:`. Retired verbs leave one too. Names seen there but absent from the tables below are not verbs in the current build: `glob`, `fs_glob`, `fs_list`, `fs_delete`, `fs_remove`, `exec`, `exec_bash`, `similarity`, `git_clone`, `kv`, `kill-port`, `learn-debug`, `learn-status`, `submodule_drift_check`. Use `grep` instead of `glob`, `fs_readdir` instead of `fs_list`, and `bash` or `exec_js` with `raw_body` instead of `exec_bash`. There is no delete verb: remove a file inside the project with `exec_js` (`require('fs').rmSync(<relative path>)`).
+2. **A verb is what `gm.list()` names.** A name it does not list replies `ok: false`, `error_code: unknown_verb`, with an `error` beginning `unknown verb:`. Retired verbs reply the same way. Names absent from the tables below are not verbs in the current build: `glob`, `fs_glob`, `fs_list`, `fs_delete`, `fs_remove`, `exec`, `exec_bash`, `similarity`, `git_clone`, `kv`, `kill-port`, `learn-debug`, `learn-status`, `submodule_drift_check`. Use `grep` instead of `glob`, `fs_readdir` instead of `fs_list`, and `bash` or `exec_js` with `raw_body` instead of `exec_bash`. There is no delete verb: remove a file inside the project with `exec_js` (`require('fs').rmSync(<relative path>)`).
 
 ## Dispatching
 
@@ -18,9 +18,7 @@ gm_codemode({ "code": "return await gm.codesearch({body: {query: \"kLinkQuantum\
 
 Plain-text-body verbs take `raw_body` instead of `body` (see Execution).
 
-Via the spool: write the body atomically to `.gm/exec-spool/in/<verb>/<N>.txt`, then read `.gm/exec-spool/out/<verb>-<N>.json`. Make `N` `<session id>-<counter>`, never a bare integer, so two sessions cannot collide.
-
-The spool watcher launch command (`agentplug-runner spool`) is in `skills/gm/spool-adapter.md`, under Starting the watcher.
+Every verb is a `gm.<verb>({...})` call inside `gm_codemode`; the transport is `skills/gm/spool-adapter.md`.
 
 `cwd` selects the project; pass it on every call. gm resolves the root with `git rev-parse --show-toplevel`; a cwd outside any git repository is its own root. The body field `git_root_override` pins the root for any verb.
 
