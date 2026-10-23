@@ -660,6 +660,7 @@ Every body field a verb declares, grouped by verb. The contract check (`scripts/
 - `websearch` and `web_search`: `wiki`, `user`, `stars`
 - `git_push`: `recover_remote_moved`, `allow_foreign_commits`
 - `git_commit`: `allow_whole_index`, `allow_foreign_rows`
+- `git_commit` and `git_push` can fail through the MCP tool with `error_code: failed` and "Maximum call stack size exceeded", landing nothing (observed 2026-10-22 on two projects). The CLI route does the same work: `node /config/.gm-tools/gm-mcp-server.mjs dispatch <verb> --cwd <project> --body '<json>'`. It prints YAML, so read `sha_full: <hex>` rather than a JSON key, and a commit body without `paths` is refused as `blanket_stage_refused`.
 - `git_finalize`: `allow_whole_index`, `untrack`
 - `git_log`: `range`. Commit count is `limit`; `max_count` is its git-native alias, and `limit` wins when both are present (default 10). `count` and `n` are refused as unknown fields.
 - `git_diff`: `range`, `staged`, `stat`
