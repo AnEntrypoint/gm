@@ -128,7 +128,7 @@ The gate predicate registry is `rs-plugkit/crates/plugkit-core/src/orchestrator/
 
 `node bin/gm-install.js` takes `--mcp-only` (repair the MCP registration without reinstalling), `--skills-only`, `--check-skills`, `--force-link`, and `-g` or `--global`.
 
-`gm-mcp/test/` has 25 test files and 2 helper modules, and seven Rust files in `agentplug/` carry tests. The `no-synthetic-test-files` gate covers the diff under work, not the test files listed above.
+`gm-mcp/` ships no test tree. The `no-synthetic-test-files` gate is diff-scoped (`gm-config/fsm/predicates.md`): it refuses a test file or test directory the diff introduces, not one that already exists.
 
 Clone with the submodules:
 
