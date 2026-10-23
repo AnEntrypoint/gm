@@ -5,7 +5,7 @@ description: "Main-thread pool loop for a gm walk that has advertised PRD rows o
 
 # gm-orchestrate
 
-Pool and publish rules. Shared rules (autonomy, git identity, CI read, collisions, exit): gm. Recovery: `docs/recovery.md`. Incidents: `docs/incidents.md`.
+Pool and publish rules. Shared rules (autonomy, git identity, CI read, collisions, exit): gm. Recovery: `docs/recovery.md`.
 
 `ceiling` = the harness's live concurrent-subagent limit, read from its refusal message (`You can run N subagents at once`) or from the harness, never written into this skill. It is the only bound on concurrency: `free` = ceiling - live. `live` = ListAgents count. `floor` = min(2, ceiling). `shortfall` = live < floor with independent work open.
 

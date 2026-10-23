@@ -76,7 +76,7 @@ article tbody tr:hover { background: var(--panel-1); }
     <span class="role">the orchestrator</span>
     <span class="repo"><a href="https://github.com/AnEntrypoint/rs-plugkit">AnEntrypoint/rs-plugkit</a></span>
   </div>
-  <p><strong>Job:</strong> runs gm's workflow state machine and its gates, and answers the verbs (named commands) an agent sends it: workflow verbs (<code>instruction</code>, <code>transition</code>, <code>prd-*</code>, <code>mutable-*</code>) and host verbs (<code>fs_*</code>, <code>exec_js</code>, <code>fetch</code>, the git verbs, and memory). The full list is in <code>skills/gm/docs/verbs.md</code>. Its only crate is <code>plugkit-core</code>. Its release build targets <code>wasm32-wasip1</code> and publishes the WebAssembly module as <code>plugkit-slim.wasm</code>, the build with no baked-in embedding weights.</p>
+  <p><strong>Job:</strong> runs gm's workflow state machine and its gates, and answers the verbs (named commands) an agent sends it: workflow verbs (<code>instruction</code>, <code>transition</code>, <code>prd-*</code>, <code>unknown-*</code>) and host verbs (<code>fs_*</code>, <code>exec_js</code>, <code>fetch</code>, the git verbs, and memory). The full list is in <code>skills/gm/docs/verbs.md</code>. Its only crate is <code>plugkit-core</code>. Its release build targets <code>wasm32-wasip1</code> and publishes the WebAssembly module as <code>plugkit-slim.wasm</code>, the build with no baked-in embedding weights.</p>
   <p>It enforces a workflow graph of 146 states joined by 376 edges, with 26 gate predicates. The enforced copy at <code>rs-plugkit/crates/plugkit-core/src/orchestrator/lean_graph.json</code> has the same counts as the authored graph, <code>gm-config/fsm/graph.json</code>.</p>
 </div>
 

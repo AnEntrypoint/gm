@@ -51,10 +51,14 @@ wait_for_tip() {
     read -r total active <<<"$runs"
     [ "$total" -gt 0 ] && [ "$active" = "0" ] && return 0
     if [ "$total" = "0" ]; then
+      # No run is registered and none is in flight, so waiting cannot make this sha
+      # decidable: a tip whose path filters skipped CI never gains a run. Measured
+      # before this change, the same tips waited the full 600 s and were held anyway.
       [ "$polled" = "1" ] && return 1
+      [ "${BUMP_APPEAR_SECONDS:-0}" = "0" ] && return 1
       [ "$(date +%s)" -ge "$wait_deadline" ] && return 1
       polled=1
-      sleep "${BUMP_APPEAR_SECONDS:-20}"
+      sleep "$BUMP_APPEAR_SECONDS"
       continue
     fi
     [ "$(date +%s)" -ge "$wait_deadline" ] && return 1

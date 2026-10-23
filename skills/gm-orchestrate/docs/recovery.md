@@ -1,6 +1,6 @@
 # gm-orchestrate: recovery procedures
 
-Moved out of SKILL.md to keep it under 15 KB. The trigger conditions and the one-line summaries stay in SKILL.md under "Mass API-error drain" and "Editing the skills"; the step detail is here. Reasons: `skills/gm-orchestrate/docs/rationale.md`. Measurements: `skills/gm-orchestrate/docs/incidents.md`.
+Moved out of SKILL.md to keep it under 15 KB. The trigger conditions and the one-line summaries stay in SKILL.md under "Mass API-error drain" and "Editing the skills"; the step detail is here. Reasons: `skills/gm-orchestrate/docs/rationale.md`. Measurements: `docs/verified-incidents.md`.
 
 ## Mass API-error drain
 A subagent stopping with `API Error: Connection dropped (ECONNRESET)`, `ECONNREFUSED` or `error type: server_error` lost its transport: row stays open, slot free. Both spellings are one class.
