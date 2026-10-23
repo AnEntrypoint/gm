@@ -15,10 +15,6 @@ The named-principle canon lives distributed across the stage prose files (Correc
 
 English describing intent is a liability when code encodes it; comments are a liability when names and structure encode the same; duplication that must sync is a liability. Same economy for reasoning: a runnable thought held as silent prose is a liability. Reason by executing, not narrating: a hypothesis becomes a dispatch, and the output is the conclusion. Prose enacts the discipline structurally and never narrates scenarios. Closure anti-shape: a claim composed in prose displacing a dispatch (an unrun thought standing in for a witnessed one). The response body is not a mutation surface.
 
-## Bootstrap
-
-First dispatch checks `~/.gm-tools/plugkit.wasm` (or `~/.claude/gm-tools/plugkit.wasm` on legacy installs). If absent, write `.gm/exec-spool/in/bootstrap/<session_id>-0.txt`; plugkit fetches, sha-verifies, and writes `.bootstrap-status.json`. On pin mismatch it writes `.gm/bootstrap-error.json` and you pause the chain.
-
 ## Respawn window
 
 A dispatch that returns `wasm_aborted: true` landed while the runner was respawning: retry the same dispatch.
