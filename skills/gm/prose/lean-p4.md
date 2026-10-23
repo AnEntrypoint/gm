@@ -2,7 +2,7 @@
 
 This is a concern of the method, not a stage of a pipeline: it is entered from whichever node the work reaches it from, and left as soon as what it asks for holds. No concern gates entry to a set of nodes.
 
-VERIFY attacks the built change with a verifier that has not read the implementation. It finds every way the change is false by live execution against real inputs, and discharges every SEC and RES obligation with a witness that names the kind discharged. The node exits when the eight adversarial classes each have a live witness, every SEC and RES mutable is resolved, a multi-file diff has an independent review witness, the sanitizer gate is clean, and transition to=G_NET is dispatched.
+VERIFY attacks the built change with a verifier that has not read the implementation. It finds every way the change is false by live execution against real inputs, and discharges every SEC and RES obligation with a witness that names the kind discharged. The node exits when the eight adversarial classes each have a live witness, every SEC and RES unknown is resolved, a multi-file diff has an independent review witness, the sanitizer gate is clean, and transition to=G_NET is dispatched.
 
 Principles in this node are applied as work, from the lean method (AnEntrypoint/lean). Each principle's attribution is the label used in gm-config/fsm/graph.json, given in its heading below.
 
@@ -16,11 +16,11 @@ Shape sweeps use codesearch {"query":"<regex>","mode":"regex","root":"<absolute 
 
 Every live witness is an exec_js dispatch: raw_body is the Node source, and the limit is the typed timeoutMs field, never a header line in the body. The source runs real commands through require("node:child_process").execFileSync(command, args, { encoding: "utf8" }) and prints what it observed. Build checks use the project's own tools, such as execFileSync("cargo", ["check", "-p", "<crate>"]) or execFileSync("node", ["--check", "<file>"]). Never use a Bash or PowerShell tool call for a build, subprocess or process check, and run git only through git_* verbs.
 
-Dispatch the eight adversarial classes one at a time, each as its own exec_js probe, reading each reply before the next. Re-dispatch instruction between mutable resolutions, after a failed exec retry, and whenever an error is unfamiliar.
+Dispatch the eight adversarial classes one at a time, each as its own exec_js probe, reading each reply before the next. Re-dispatch instruction between unknown resolutions, after a failed exec retry, and whenever an error is unfamiliar.
 
 For a multi-file diff, dispatch independent reviewers with the Agent tool. A reviewer gets the file list, the PRD rows and the changed signatures, never the implementer's reasoning. Its prompt opens with "use the gm skill for this; code questions go to codeinsight (callers/impact) first, then codesearch, and Read only a located path", carries its own SESSION_ID built from the parent id plus an index (for example "<parent_session_id>-sub1"), and says "assume this is broken, find why".
 
-Rows and mutables: prd-add {"id":"<kebab-case-slug>","subject":"<what it proves or repairs>"}, prd-resolve {"id":"<row id>","witness_evidence":"<file:line or exec output>","witness_dispatch_id":"<dispatch id of your live run>"}, mutable-add {"id":"<kebab-case-slug>","value":"<the unknown>","obligation_kind":"<kind>","depends_on":["<id>"]} and mutable-resolve {"mutable_id":"<id>","witness_evidence":"<witness>"}.
+Rows and unknowns: prd-add {"id":"<kebab-case-slug>","subject":"<what it proves or repairs>"}, prd-resolve {"id":"<row id>","witness_evidence":"<file:line or exec output>","witness_dispatch_id":"<dispatch id of your live run>"}, unknown-add {"id":"<kebab-case-slug>","value":"<the unknown>","obligation_kind":"<kind>","depends_on":["<id>"]} and unknown-resolve {"unknown_id":"<id>","witness_evidence":"<witness>"}.
 
 ## PRD rows
 
@@ -30,11 +30,11 @@ The agent never writes deferral wording into a row or a transition note. Wording
 
 ## Mutables
 
-Every SEC and RES obligation is added as a mutable when found, with obligation_kind set to exactly one of: secrets, injection, identity-authority, message-timing (SEC), or exception-model, partial-failure, degradation, crucible (RES). depends_on names every mutable whose proof needs another resolved first; a message-timing proof depends on the identity-authority proof that names who may send the message.
+Every SEC and RES obligation is added as an unknown when found, with obligation_kind set to exactly one of: secrets, injection, identity-authority, message-timing (SEC), or exception-model, partial-failure, degradation, crucible (RES). depends_on names every unknown whose proof needs another resolved first; a message-timing proof depends on the identity-authority proof that names who may send the message.
 
-mutable-add refuses a depends_on that closes a cycle and names the cycle path. mutable-resolve refuses while a depends_on id is pending and names it; resolve dependencies first, in order, never around them. The gates sec-obligations-ready and res-obligations-ready refuse on any untyped or blocked pending kind of their family and name the offender.
+unknown-add refuses a depends_on that closes a cycle and names the cycle path. unknown-resolve refuses while a depends_on id is pending and names it; resolve dependencies first, in order, never around them. The gates sec-obligations-ready and res-obligations-ready refuse on any untyped or blocked pending kind of their family and name the offender.
 
-Each resolution's witness names the kind discharged and how. After two genuine failed attempts on one mutable, stop repeating the approach: add a fresh mutable with a new id and a narrower scope that states what the failures revealed, and transition to=EARS if that reshapes the plan. Closure requires mutables-all-resolved, so a pending mutable of any kind blocks it, including kinds owned by other nodes.
+Each resolution's witness names the kind discharged and how. After two genuine failed attempts on one unknown, stop repeating the approach: add a fresh unknown with a new id and a narrower scope that states what the failures revealed, and transition to=EARS if that reshapes the plan. Closure requires mutables-all-resolved, so a pending unknown of any kind blocks it, including kinds owned by other nodes.
 
 ## Security obligations
 
@@ -144,7 +144,7 @@ The judge is used only where METAMORPH found no relation. It is a separate agent
 
 Handover: A passing analyser run is handed to G_NET, the net-negative gate that decides whether the change may leave VERIFY. cite Sanitizer and Static Analysis Gate.
 
-The project's analysers run through execFileSync inside exec_js with warnings treated as failures: cargo clippy with warnings denied for Rust, the project's linter and type checker for JavaScript and TypeScript, and each other language's checker for the languages in the diff. Each finding becomes a row or mutable, is fixed in the code, and is re-run until clean. A lint rule is never disabled to clear a finding. A finding the type system could have prevented fires the backreference to TOTALITY: transition to=TOTALITY and make the partial function total.
+The project's analysers run through execFileSync inside exec_js with warnings treated as failures: cargo clippy with warnings denied for Rust, the project's linter and type checker for JavaScript and TypeScript, and each other language's checker for the languages in the diff. Each finding becomes a row or unknown, is fixed in the code, and is re-run until clean. A lint rule is never disabled to clear a finding. A finding the type system could have prevented fires the backreference to TOTALITY: transition to=TOTALITY and make the partial function total.
 
 ## Witness
 
@@ -165,7 +165,7 @@ A log line that says the fixed code ran is not a witness that the defect is gone
 
 A subagent's finding or a memory is a hypothesis. Before acting on a claimed dead function, junk file or tracking state, run the check that confirms it on the live tree: callers and a codesearch identifier query, Read on the claimed path, git_log or git_show for tracking intent. An overturned premise is re-scoped with prd-add under the same id.
 
-When a tool cannot produce a witness, the mutable is to make that tool reachable (fix it, replace it, or drive its protocol directly), then witness. Parking the mutable as blocked on an outside party is refused.
+When a tool cannot produce a witness, the unknown is to make that tool reachable (fix it, replace it, or drive its protocol directly), then witness. Parking the unknown as blocked on an outside party is refused.
 
 No mock, fake or stub stands in for a real dependency. Mock, Fake and Stub classes, hard-coded always-succeed returns and input short-circuits are removed and replaced by real input through real code, and a missing real dependency becomes a row that installs or provisions it. Comment-opening tokens found by the comment sweep are deleted, except directives a tool reads: shebangs, eslint-disable and oxlint-disable, ts-expect-error, ts-ignore, c8 and istanbul ignore, prettier-ignore, and a SAFETY justification in Rust.
 
@@ -177,7 +177,7 @@ A witness that contradicts a memory deletes that memory on sight: remove its fil
 
 The node is entered from TOTALITY through G_INDEP, the gate for "verifier has not read the implementation". Its predicate lean-verifier-independent is advisory and always passes, so independence is held by dispatching a fresh verifier agent before transition {"to":"G_INDEP"}, not by the gate.
 
-The exit runs SANITIZE to G_NET, the gate for "change closes net-negative, or states why not", whose predicate lean-net-negative is blocking: it passes only when added lines in the working diff are at most the removed lines. Leave with transition {"to":"G_NET"} once every mutable and row of this node is resolved and the net count passes. A denial names next_dispatch; dispatch it first, which removes superseded or duplicated code in the same change, then re-dispatch transition {"to":"G_NET"}. The predicate reads no growth reason, so a growing change is refused until it shrinks.
+The exit runs SANITIZE to G_NET, the gate for "change closes net-negative, or states why not", whose predicate lean-net-negative is blocking: it passes only when added lines in the working diff are at most the removed lines. Leave with transition {"to":"G_NET"} once every unknown and row of this node is resolved and the net count passes. A denial names next_dispatch; dispatch it first, which removes superseded or duplicated code in the same change, then re-dispatch transition {"to":"G_NET"}. The predicate reads no growth reason, so a growing change is refused until it shrinks.
 
 Feedback routes each discovery to the earliest node able to fix it. A gap between spec and code routes to EARS. A boundary or ownership defect routes to G_CONTRACT when the type cannot express the rule (ILLEGAL), and to TOTALITY when the repair is code. A panic, unchecked error or partial-failure repair routes to TOTALITY. A failing invariant or property routes to G_CONTRACT through DBC or ILLEGAL. A sanitizer finding the type system could have prevented routes to TOTALITY. An assertion that mirrors the code routes to G_INDEP for a fresh verifier. Take the graph edge whose label matches the discovery and re-walk from where it lands.
 
