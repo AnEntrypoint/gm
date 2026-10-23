@@ -242,3 +242,6 @@ find1-*/
 # repro scratch directories: runtime reproduction workspaces, never source
 .gm/repro-1018/
 .gm/instructions-parked-*/
+
+# generated install copies of skills/ (served from the checkout by the installer)
+.claude/skills/
