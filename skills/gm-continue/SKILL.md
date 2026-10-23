@@ -16,7 +16,7 @@ No other prose-only stop, no deferring to the user, no partial confirmation. The
 ## What this skill does
 
 1. Read `.gm/exec-spool/.turn-summary.json` for `phase`, `prd_pending`, and the round-trip count (Recursion bound).
-2. Read `.gm/prd/` and `.gm/mutables/` directly, one file per row (`<id>.yml`), for any row marked `blockedBy: [external]`/`[out-of-reach]` or otherwise deferred. That marking is not a closed door; it is remaining work by definition. Re-examine each: still genuinely unreachable this turn, or marked under time/scope pressure when it was solvable? Reachable rows go back into scope by re-`prd-add`ing the existing id (re-scope, never delete-and-re-add).
+2. Read `.gm/prd/` and `.gm/unknowns/` directly, one file per row (`<id>.yml`), for any row marked `blockedBy: [external]`/`[out-of-reach]` or otherwise deferred. That marking is not a closed door; it is remaining work by definition. Re-examine each: still genuinely unreachable this turn, or marked under time/scope pressure when it was solvable? Reachable rows go back into scope by re-`prd-add`ing the existing id (re-scope, never delete-and-re-add).
 3. Fan out `codesearch` + `recall` against the ORIGINAL request's full closure, not memory of what was done: a fresh look, same discipline as `gm`'s PLAN orient.
 3a. Re-read the user's literal words from this turn, then exercise the live system to check shipped behavior against them. No test file, prior PRD `witnessed` mark, or recollection counts as evidence: `prd_pending_count=0` only proves no row is open, and a row resolved in the same pass as its own check can share its misreading. Run the real path the user would use and read its output. Any mismatch is remaining work, `prd-add`'d fresh.
 4. If `.gm/prd/` holds ANY row file (pending, or reopened `external` rows from step 2), that alone is remaining work: dispatch straight away. A row gone from the folder was resolved and moved to `.gm/prd-log.jsonl`; check the log, never the folder, for what was closed.
@@ -31,7 +31,7 @@ If a prior `gm` walk reached COMPLETE but the same class of gap recurs across re
 
 ## Recursion bound
 
-Track invocations in `.gm/.gm-continue-count` (plain integer, reset by a fresh user prompt). This skill dispatches `gm` or `wfgy-method` at most twice per user turn. When both are spent, the turn starts the next drain round on the remaining pending rows; it never ends with pending rows and no round running, and a report to the user is not a substitute for a round. A third consecutive "nothing new, re-check again" cycle is the stuck-loop signal: surface it, never loop silently.
+Track invocations in `.gm/.gm-continue-count` (plain integer, reset by a fresh user prompt). Every refusal reaches this skill. This skill dispatches `gm` for the lane's row; when `gm` cannot solve it, this skill dispatches `wfgy-method`; when `wfgy-method` cannot solve it, this skill dispatches `wfgy-method` again. A lane that stops with its row open is a defect, not a finished lane.
 
 ## Never a substitute for `gm`
 
