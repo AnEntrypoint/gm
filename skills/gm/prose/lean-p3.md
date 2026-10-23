@@ -2,23 +2,23 @@
 
 A method concern, not a pipeline stage: entered from any node that reaches it, left once its request holds. No concern gates entry to nodes.
 
-BUILD writes the source that inhabits the G_CONTRACT signatures. Every new function is total; every resource has exactly one owner; every operation replays to the same state; every concurrent access is ordered by a sync point or provably disjoint. Each property is witnessed live. The node writes only the artifacts the PRD names, verifies each from disk, and exits when every STATE-kind and CONC-kind mutable is resolved, the diff passes the source hygiene predicates, and `transition to=G_INDEP` is dispatched through the G_INDEP gate.
+BUILD writes the source that inhabits the G_CONTRACT signatures. Every new function is total; every resource has exactly one owner; every operation replays to the same state; every concurrent access is ordered by a sync point or provably disjoint. Each property is witnessed live. The node writes only the artifacts the PRD names, verifies each from disk, and exits when every STATE-kind and CONC-kind unknown is resolved, the diff passes the source hygiene predicates, and `transition to=G_INDEP` is dispatched through the G_INDEP gate.
 
 Principles are applied as work, from the lean method (AnEntrypoint/lean). Each H3 carries a principle key, then the attribution exactly as gm-config/fsm/graph.json labels it.
 
 ## Verbs
 
-Re-dispatch `instruction` at the start of each artifact and after any unfamiliar error. Every spool body carries session_id. Write only the artifacts the PRD names: `fs_write {path, content}` performs each mutation, and each write is followed by `fs_read {path}` of the same path; the disk content is the witness. A disk/plan discrepancy goes to root cause, never a blind retry. Any divergence from the PRD's assumed shape is a new mutable and `transition to=EARS`.
+Re-dispatch `instruction` at the start of each artifact and after any unfamiliar error. Every spool body carries session_id. Write only the artifacts the PRD names: `fs_write {path, content}` performs each mutation, and each write is followed by `fs_read {path}` of the same path; the disk content is the witness. A disk/plan discrepancy goes to root cause, never a blind retry. Any divergence from the PRD's assumed shape is a new unknown and `transition to=EARS`.
 
 Before changing a function's signature or behaviour: `callers {symbol}` lists the call sites the edit must keep valid; an unnamed caller is a new unknown. `codesearch {query}` locates a thing; `codeinsight {action:"outline", path}` gives a file's overview. After writes, dispatch `codeinsight_index {}` so the next callers answer reflects the change.
 
 Every build, subprocess, filesystem probe and live witness is an exec_js dispatch (separate Node process, no tools object). Commands with arguments: `require("node:child_process").execFileSync(command, args, { encoding: "utf8" })`. Use `opts.profile:true` to locate cost. Git: `git_diff {stat:true}` for net line change, `git_status` for the worktree, `git_show` for committed content; never through a shell.
 
-Each sweep finding is declared as a typed mutable before resolution: `mutable-add {"id":"<kebab-case slug>","obligation_kind":"<kind>","depends_on":[...],"status":"unknown"}`. Kinds: the STATE kinds (totality, ownership, replay, effect-boundary) and the CONC kinds (happens-before, disjointness, contention). Resolve: `mutable-resolve {"mutable_id":"<id>","witness_evidence":"<live witness>"}`. Resolve rows: `prd-resolve {"id":"<row id>","witness_evidence":"<witness>"}`.
+Each sweep finding is declared as a typed unknown before resolution: `unknown-add {"id":"<kebab-case slug>","obligation_kind":"<kind>","depends_on":[...],"status":"unknown"}`. Kinds: the STATE kinds (totality, ownership, replay, effect-boundary) and the CONC kinds (happens-before, disjointness, contention). Resolve: `unknown-resolve {"unknown_id":"<id>","witness_evidence":"<live witness>"}`. Resolve rows: `prd-resolve {"id":"<row id>","witness_evidence":"<witness>"}`.
 
 The closure narrative goes into the commit message in ADRN form, never the response body. Advance: `transition to=G_INDEP`. Reshaping: `transition to=EARS`. Contract defect: `transition to=G_CONTRACT`.
 
-Route every mutation through the PRD, a mutable or a memo. The audit tuple of each accepted write is its id, witness hash and timestamp.
+Route every mutation through the PRD, an unknown or a memo. The audit tuple of each accepted write is its id, witness hash and timestamp.
 
 ## PRD rows
 
@@ -30,15 +30,15 @@ Pass `commit_comment` on prd-resolve for a row whose resolution deserves a line 
 
 ## Mutables
 
-STATE kinds: totality, ownership, replay, effect-boundary. Each sweep below produces one or more. Each mutable has a dependency DAG entry; its witness is the live exec_js run that discharges it. The state-obligations-ready predicate refuses the transition while any pending STATE-kind row is untyped or blocked, and names the offender.
+STATE kinds: totality, ownership, replay, effect-boundary. Each sweep below produces one or more. Each unknown has a dependency DAG entry; its witness is the live exec_js run that discharges it. The state-obligations-ready predicate refuses the transition while any pending STATE-kind row is untyped or blocked, and names the offender.
 
 CONC kinds: happens-before, disjointness, contention. The conc-obligations-ready predicate tests them the same way. A CONC-kind row may depend on a STATE-kind row (a contention bound presupposes a held ownership invariant). A STATE-kind row may depend on a PROVE-kind row from G_CONTRACT (a replay obligation may presuppose a proven invariant).
 
-Dependency rule: resolve in order. A mutable whose depends_on are all resolved is ready; one with a pending dependency is blocked, so resolve the dependency first. A resolution surfacing a new unknown gets `mutable-add` in the same turn, with its kind and depends_on.
+Dependency rule: resolve in order. An unknown whose depends_on are all resolved is ready; one with a pending dependency is blocked, so resolve the dependency first. A resolution surfacing a new unknown gets `unknown-add` in the same turn, with its kind and depends_on.
 
-Two-pass rule: a mutable surviving two genuine resolution attempts without a witness is reclassified as a fresh unknown with a new id; affected rows are re-cut and the walk reshapes with `transition to=EARS`. A repair attempt failing twice follows the same discipline: change the approach, witness the result, never repeat the identical approach.
+Two-pass rule: an unknown surviving two genuine resolution attempts without a witness is reclassified as a fresh unknown with a new id; affected rows are re-cut and the walk reshapes with `transition to=EARS`. A repair attempt failing twice follows the same discipline: change the approach, witness the result, never repeat the identical approach.
 
-Gate-driven repair: a code repair is an Edit, a disk Read of the touched path, and the same live witness, all inside this node. A finding changing the state model (the ownership or disjointness boundary is wrong) is a new STATE or CONC mutable, and the sweep repeats for the new boundary.
+Gate-driven repair: a code repair is an Edit, a disk Read of the touched path, and the same live witness, all inside this node. A finding changing the state model (the ownership or disjointness boundary is wrong) is a new STATE or CONC unknown, and the sweep repeats for the new boundary.
 
 ## Machine fit
 
@@ -50,7 +50,7 @@ Concurrency and data layout are sized to the machine the code runs on. The commo
 
 Handover: Hands the defined results on every edge input to GUARD, so invalid inputs are rejected at the top of each function; nominated next node: GUARD; cite Total Functional Programming - David Turner.
 
-Every new function returns a defined result on every input path. Feed edge inputs live through exec_js: zero-length, maximum-size, null or undefined, a wrong type where the language allows it, and a boundary-adjacent invalid value. Each run prints a defined result; each is a totality mutable whose printed results are the witness. A partial function escaping its domain fires the backreference to PARSEDV in G_CONTRACT; the domain is repaired at its entry boundary before the function is rebuilt.
+Every new function returns a defined result on every input path. Feed edge inputs live through exec_js: zero-length, maximum-size, null or undefined, a wrong type where the language allows it, and a boundary-adjacent invalid value. Each run prints a defined result; each is a totality unknown whose printed results are the witness. A partial function escaping its domain fires the backreference to PARSEDV in G_CONTRACT; the domain is repaired at its entry boundary before the function is rebuilt.
 
 ### GUARD - Guard Clause - Martin Fowler
 
@@ -80,15 +80,15 @@ Shared data is immutable: an update constructs the next version, and the old ver
 
 Handover: Hands the single-owner resources and their witnesses to DRY, so each fact has one representation; nominated next node: DRY; cite Ownership and Borrowing - Matsakis and Klock.
 
-Every resource the diff takes has exactly one owner. Run the acquire, use and release cycle under exec_js, print the final state, and assert it matches the declared effect. No resource leaks, is closed twice, is used after release, or hides a mutation behind a pure-looking signature. Each is an ownership mutable. When two concurrent accesses touch a shared resource, name the owner; if exactly one cannot be named, restructure the boundary until one can. Sharing across async boundaries is a disjointness mutable: witness is an exec_js run interleaving the writers under a deterministic seed and printing that only the owner's write lands. Where the order of two concurrent accesses matters, order it by an explicit sync point (await, lock, channel, atomic, message boundary) or prove the state disjoint; each such order is a happens-before mutable. TOCTOU is the canonical violation: every single-instance or lock guard is atomic (O_EXCL, atomic rename, compare-and-swap), never check-then-act. A borrow outliving its owner fires the backreference to IMMUT.
+Every resource the diff takes has exactly one owner. Run the acquire, use and release cycle under exec_js, print the final state, and assert it matches the declared effect. No resource leaks, is closed twice, is used after release, or hides a mutation behind a pure-looking signature. Each is an ownership unknown. When two concurrent accesses touch a shared resource, name the owner; if exactly one cannot be named, restructure the boundary until one can. Sharing across async boundaries is a disjointness unknown: witness is an exec_js run interleaving the writers under a deterministic seed and printing that only the owner's write lands. Where the order of two concurrent accesses matters, order it by an explicit sync point (await, lock, channel, atomic, message boundary) or prove the state disjoint; each such order is a happens-before unknown. TOCTOU is the canonical violation: every single-instance or lock guard is atomic (O_EXCL, atomic rename, compare-and-swap), never check-then-act. A borrow outliving its owner fires the backreference to IMMUT.
 
-Contention is bounded here too: every wait has a bound, every retry a cap, every hot lock is held for the shortest section. A path whose cost grows superlinearly with concurrent callers is a defect even when its mean is good. Witness: an exec_js run with N concurrent callers printing the worst case, with the bound and measured worst case as the mutable's measured value.
+Contention is bounded here too: every wait has a bound, every retry a cap, every hot lock is held for the shortest section. A path whose cost grows superlinearly with concurrent callers is a defect even when its mean is good. Witness: an exec_js run with N concurrent callers printing the worst case, with the bound and measured worst case as the unknown's measured value.
 
 ### DRY - Don't Repeat Yourself - Hunt and Thomas
 
 Handover: Hands the merged single definitions to KISS, so the simplest construction that satisfies the contract is written; nominated next node: KISS; cite Don't Repeat Yourself - Hunt and Thomas.
 
-One fact, one representation. Before writing a new function, a literal codesearch for the behaviour's distinctive tokens finds any existing copy; the reuse decision is recorded in the mutable's witness. Two representations of one fact fire the backreference to KOLMOGOROV, which belongs to the pressure node (P6). Functions meaning the same thing are merged, not kept side by side. Witness: the exhaustive codesearch reply showing one definition and its call sites.
+One fact, one representation. Before writing a new function, a literal codesearch for the behaviour's distinctive tokens finds any existing copy; the reuse decision is recorded in the unknown's witness. Two representations of one fact fire the backreference to KOLMOGOROV, which belongs to the pressure node (P6). Functions meaning the same thing are merged, not kept side by side. Witness: the exhaustive codesearch reply showing one definition and its call sites.
 
 ### KISS - KISS - Kelly Johnson
 
@@ -118,7 +118,7 @@ Before the node closes, three diff predicates must hold:
 
 A failing predicate names the offending lines; each is fixed and re-witnessed in this node.
 
-Idempotent-dispatch-replay-safe is checked against the audit tuples of replays. A same-input replay reaching a different outcome is a violation and returns the walk to this node's replay mutable.
+Idempotent-dispatch-replay-safe is checked against the audit tuples of replays. A same-input replay reaching a different outcome is a violation and returns the walk to this node's replay unknown.
 
 ## Memory
 
@@ -126,7 +126,7 @@ Save an unknown as a memory file only when a later task needs it. Decisions, per
 
 ## Transition
 
-The exit is `transition to=G_INDEP`, the lean verification node, dispatched only when every STATE-kind and CONC-kind mutable is resolved and witnessed, every row is resolved, and the three diff predicates hold. The state-obligations-ready and conc-obligations-ready predicates name any pending row they refuse; that row is resolved next.
+The exit is `transition to=G_INDEP`, the lean verification node, dispatched only when every STATE-kind and CONC-kind unknown is resolved and witnessed, every row is resolved, and the three diff predicates hold. The state-obligations-ready and conc-obligations-ready predicates name any pending row they refuse; that row is resolved next.
 
 The edge from KISS runs through the G_INDEP gate (verifier has not read the implementation). The gate predicate is advisory and never refuses, so this node enforces the rule: the verifier is a fresh subagent with its own session_id, given only the contract text (PRD rows and signatures), with no reading of the implementation. A verifier that has read the code inherits its assumptions, and its verdict is discarded.
 

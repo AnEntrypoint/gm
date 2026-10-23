@@ -1,6 +1,6 @@
 # gm-orchestrate: rationale
 
-Why the rules in `skills/gm-orchestrate/SKILL.md` are shaped the way they are. The rules are imperatives there; this file keeps the reasons. Dated measurements behind them are in `skills/gm-orchestrate/docs/incidents.md`.
+Why the rules in `skills/gm-orchestrate/SKILL.md` are shaped the way they are. The rules are imperatives there; this file keeps the reasons. Dated measurements behind them are in `docs/verified-incidents.md`.
 
 ## Terms and floor
 - The ceiling is found by launching because the harness's refusal text is the only source of truth; a constant drifts as the platform changes.
