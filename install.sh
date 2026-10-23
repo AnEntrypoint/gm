@@ -305,8 +305,14 @@ install_skill() {
 
   base="https://github.com/${GM_REPO}/releases/download/${tag}"
   asset="gm-skill-${ver}.tar.gz"
-  fetch "${base}/${asset}" "${work}/${asset}"
-  fetch "${base}/${asset}.sha256" "${work}/${asset}.sha256"
+  # Both files are fetched at once: they are two round trips on one host, and measured
+  # cold they cost ~530 ms each, so serialising them adds a full handshake to the install.
+  fetch "${base}/${asset}" "${work}/${asset}" &
+  fetch_asset=$!
+  fetch "${base}/${asset}.sha256" "${work}/${asset}.sha256" &
+  fetch_sum=$!
+  wait "$fetch_asset" || { log "FATAL: download of ${asset} failed"; exit 1; }
+  wait "$fetch_sum" || { log "FATAL: download of ${asset}.sha256 failed"; exit 1; }
 
   expected=$(awk '{print $1}' "${work}/${asset}.sha256")
   actual=$(sha256_file "${work}/${asset}")
@@ -430,8 +436,13 @@ main() {
   shafile="${dest}.sha256.tmp.$$"
 
   log "downloading ${base}/${asset}"
-  fetch "${base}/${asset}" "$tmp"
-  fetch "${base}/${asset}.sha256" "$shafile"
+  # Two round trips on one host, run together rather than one after the other.
+  fetch "${base}/${asset}" "$tmp" &
+  fetch_asset=$!
+  fetch "${base}/${asset}.sha256" "$shafile" &
+  fetch_sum=$!
+  wait "$fetch_asset" || { log "FATAL: download of ${asset} failed"; exit 1; }
+  wait "$fetch_sum" || { log "FATAL: download of ${asset}.sha256 failed"; exit 1; }
 
   expected=$(awk '{print $1}' "$shafile")
   actual=$(sha256_file "$tmp")

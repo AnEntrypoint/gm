@@ -14,7 +14,7 @@ One row, one session. Stages run in order, none a subagent; the orchestrator spa
 
 The executor runs the edit stages only: SPECIFY (1), ELIMINATE (1b), EDIT then VALIDATE (1c), then publish of its own commit (Delivery), then hands off. Verification (PROVE, witness, DECIDE, COMPLETE) and the CI read (Delivery, steps 3-5) are separate lanes the orchestrator spawns per handoff, never inline (gm-orchestrate, Verification and CI lanes). Start at SPECIFY with `row=<id>; session=<SESSION_ID>`. Stages 2, 8, 9 belong to the verifier.
 
-1. SPECIFY (orient): restate row and acceptance; codesearch `literal` first for every exact string the row names (identifiers, paths, error text), then `dual` (top 20 BM25, top 20 vector, top 20 commits, 3 live snippet lines each; no snippet text stored); codeinsight first for any function the row touches. Check each cited line against the tree (absent: stale). Write unknowns with `mutable-add`.
+1. SPECIFY (orient): restate row and acceptance; codesearch `literal` first for every exact string the row names (identifiers, paths, error text), then `dual` (top 20 BM25, top 20 vector, top 20 commits, 3 live snippet lines each; no snippet text stored); codeinsight first for any function the row touches. Check each cited line against the tree (absent: stale). Write unknowns with `unknown-add`.
 1b. ELIMINATE: eliminate each unknown by a live JIT run; a run revealing a new unknown adds it and returns to ELIMINATE. EDIT starts only when no unknown is open.
 1c. EDIT then VALIDATE: edit, then validate by JIT runs against acceptance. New unknown or failed check: ELIMINATE, then EDIT again. If the row asserts a cause, write its ACH matrix (`gm-config/prose/ach.md`) into this receipt: at least two hypotheses, evidence as dispatch ids, `C`/`I`/`N` cells, the leader, its probe.
 2. PROVE: precondition, invariant, postcondition; run each. The leader's probe runs first; a probe that does not separate the leader from the next hypothesis is a blocker row, not a pass.
@@ -28,7 +28,7 @@ The executor runs the edit stages only: SPECIFY (1), ELIMINATE (1b), EDIT then V
 
 A verifier lane (`mode=witness`) edits nothing: it runs PROVE and DECIDE on the handoff sha and reports COMPLETE.
 
-Delivery: publish via the Git API route (gm-orchestrate, Shared-tree publish); `git_finalize {message, paths}` only in a tree no other lane writes; then `ci-status` on the sha (gm, CI). Before that commit, apply gm-hop's re-bake rule. A failed witness: causes become mutables; bisect by live runs; fix the survivor; witness again. Never kill another lane's process (gm-orchestrate, Headroom and leases). Remote reads: `gh api repos/<owner>/<repo>/git/trees/<sha>?recursive=1` (gm, READ questions).
+Delivery: publish via the Git API route (gm-orchestrate, Shared-tree publish); `git_finalize {message, paths}` only in a tree no other lane writes; then `ci-status` on the sha (gm, CI). Before that commit, apply gm-hop's re-bake rule. A failed witness: causes become unknowns; bisect by live runs; fix the survivor; witness again. Never kill another lane's process (gm-orchestrate, Headroom and leases). Remote reads: `gh api repos/<owner>/<repo>/git/trees/<sha>?recursive=1` (gm, READ questions).
 
 Output: STATUS, ROW, FILES, WITNESS, MUTABLES, DELIVERY.
 
@@ -48,7 +48,7 @@ Output: STATUS, ROW, FILES, WITNESS, MUTABLES, DELIVERY.
 - A reported cause is a claim until an instrument runs it: derive it from a run, never from reading the code. Five successive causes (`transparent` inheritance, missing client file, `side`, un-cleared target, instability) were each refuted by the next run, having been inferred, not executed. ELIMINATE (1b) is where a cause comes from.
 - Localise before theorising: a symptom spans placement, draw, geometry and instrument; test cheapest-layer-first and stop at the layer that moves. A second reading at another layer is no localisation.
 - Bisect before theorising. Where a number changed, bisect to the commit (live re-run, remote blob, or remote tree listing). One step attributed to `terrain-quad-upload` went from 2054 to 6808 when `LOD_STEP` went from 3.6 to 7.2.
-- A row closes only when its witness names the SPECIFY leader hypothesis. A witness matching a rejected hypothesis, or every hypothesis, binds no row: file a mutable and keep the row pending.
+- A row closes only when its witness names the SPECIFY leader hypothesis. A witness matching a rejected hypothesis, or every hypothesis, binds no row: file an unknown and keep the row pending.
 - Premise before edit. Cited lines, functions and causes are hints from an earlier read. Before any EDIT: `git_pull` when a codesearch or codeinsight reply carries `stale_tree` (then re-run the search), and re-read each cited function at the pulled tree. A premise the tree does not show (the named code path, branch or fallback is absent) is neither a blocker nor a fix: record it with the codesearch dispatch ids, close the row as `premise-absent` with that witness, and file any real neighbouring defect with `prd-add`.
 - A narrowed defect keeps its own id: a different defect is a new row naming the original id, never a rewrite of the original's acceptance text.
 
