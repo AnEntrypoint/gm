@@ -318,8 +318,9 @@ function Install-McpServer {
         Invoke-WebRequest -Uri $url -OutFile $tmp -UseBasicParsing
         Move-Item -Force $tmp $dest
         Write-Host "installed gm-mcp server -> $dest"
-        Write-Host "register it (once) with:"
-        Write-Host "  claude mcp remove gm 2>`$null; claude mcp add gm -- node `"$dest`""
+        Write-Host "start the HTTP server and register Claude Code over it (once):"
+        Write-Host "  & `"$dest`" ensure-http"
+        Write-Host "  claude mcp remove gm -s user 2>`$null; claude mcp add --transport http gm http://127.0.0.1:8787/mcp -s user"
     } catch {
         Remove-Item -Force -ErrorAction SilentlyContinue $tmp
         Write-Warning "could not download the gm-mcp server bundle: $($_.Exception.Message) -- the spool protocol still works without it"

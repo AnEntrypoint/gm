@@ -29,11 +29,6 @@ if (help) {
   process.exit(0)
 }
 
-const PROJECT_LAUNCH_SNIPPET =
-  "const bundlePath=require('path').join(require('os').homedir(),'.gm-tools','gm-mcp-server.mjs');" +
-  "if(!require('fs').existsSync(bundlePath)){console.error('gm-mcp bundle missing at '+bundlePath+' -- run: node bin/gm-install.js --mcp-only from a github.com/AnEntrypoint/gm checkout');process.exit(1)}" +
-  "import(require('url').pathToFileURL(bundlePath).href)"
-
 const IS_WINDOWS = process.platform === 'win32'
 
 function runChild(cmd, args, { shell = false } = {}) {
@@ -43,12 +38,25 @@ function runChild(cmd, args, { shell = false } = {}) {
   }
 }
 
-function globalServerEntry() {
+// Claude Code reaches gm over the HTTP server on 127.0.0.1, which reloads a deployed bundle in-process, so a deploy
+// needs no client reconnect. The other JSON hosts keep the stdio launch: their HTTP config shape is not verified here.
+const GM_HTTP_URL = 'http://127.0.0.1:8787/mcp'
+
+function stdioServerEntry() {
   return { command: 'node', args: [MCP_BUNDLE_PATH] }
 }
 
-function projectServerEntry() {
-  return { command: 'node', args: ['-e', PROJECT_LAUNCH_SNIPPET] }
+function claudeServerEntry() {
+  return { type: 'http', url: GM_HTTP_URL }
+}
+
+// Starts the HTTP server and arms its supervisor. Boot persistence is gm-mcp/scripts/install-autostart.mjs, which the
+// installer does not vendor, so a machine that must survive a reboot runs that script once.
+function ensureHttpServer() {
+  const result = spawnSync('node', [MCP_BUNDLE_PATH, 'ensure-http'], { stdio: 'inherit', windowsHide: true })
+  if (result.status !== 0) {
+    console.error(`gm: ensure-http exited ${result.status ?? 'by signal'}; Claude Code reaches gm at ${GM_HTTP_URL} and gets nothing until it runs`)
+  }
 }
 
 async function vendorMcpBundle() {
@@ -483,20 +491,20 @@ function registerClaudeCode() {
     for (const [projectPath, project] of Object.entries(userConfig.projects || {})) {
       targets.push({ servers: project?.mcpServers, label: `${userConfigPath} projects[${projectPath}].mcpServers`, create: false })
     }
-    syncGmServers(userConfigPath, userConfig, targets, globalServerEntry())
+    syncGmServers(userConfigPath, userConfig, targets, claudeServerEntry())
   }
 
   const projectConfigPath = path.join(process.cwd(), '.mcp.json')
   const projectConfig = readJson(projectConfigPath)
   if (!projectConfig) {
     if (global) return
-    writeJsonAtomic(projectConfigPath, { mcpServers: { gm: projectServerEntry() } })
+    writeJsonAtomic(projectConfigPath, { mcpServers: { gm: claudeServerEntry() } })
     console.log(`registered gm MCP server in ${projectConfigPath} (create)`)
     return
   }
   if (typeof projectConfig !== 'object') return
   if (!global) projectConfig.mcpServers ||= {}
-  syncGmServers(projectConfigPath, projectConfig, [{ servers: projectConfig.mcpServers, label: `${projectConfigPath} mcpServers`, create: !global }], projectServerEntry())
+  syncGmServers(projectConfigPath, projectConfig, [{ servers: projectConfig.mcpServers, label: `${projectConfigPath} mcpServers`, create: !global }], claudeServerEntry())
 }
 
 const CURSOR_MCP_PATH = path.join(os.homedir(), '.cursor', 'mcp.json')
@@ -507,7 +515,7 @@ function registerJsonMcpHost(configPath) {
   const config = readJson(configPath)
   if (!config || typeof config !== 'object') return
   config.mcpServers ||= {}
-  syncGmServers(configPath, config, [{ servers: config.mcpServers, label: `${configPath} mcpServers`, create: true }], globalServerEntry())
+  syncGmServers(configPath, config, [{ servers: config.mcpServers, label: `${configPath} mcpServers`, create: true }], stdioServerEntry())
 }
 
 function tomlQuotedString(value) {
@@ -586,5 +594,6 @@ function installRunner() {
 await vendorMcpBundle()
 registerKnownHostShapes()
 registerClaudeCode()
+ensureHttpServer()
 if (!mcpOnly) installRunner()
 console.log(`gm MCP server launches from ${pathToFileURL(MCP_BUNDLE_PATH).href} -- restart the agent host to reconnect`)
