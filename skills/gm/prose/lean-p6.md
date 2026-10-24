@@ -16,7 +16,7 @@ Fallbacks and duplicates: codesearch regex over the changed paths, matching unwr
 
 Reachability: impact {"symbol":"<entry name>","max_depth":6,"direction":"callees"} for each entry point the change touches: the gm verb handler in the dispatch table, the CLI main, or the exported function a consumer calls.
 
-A deletion: fs_read {"path":"<file>","offset":<line>,"limit":<count>} reads the exact span, then fs_write {"path":"<file>","content":"<whole file with the span removed>"}. fs_write takes the whole file, so read the complete file first. Each deletion is verified by exec_js running the build check through execFileSync: cargo check for the crate or node --check for the file, with timeoutMs of at least 120000 for a Rust crate. git_status and git_diff {"stat":true} follow each deletion for the net count and any dirty file. Git runs only through git_* verbs, never a Bash or PowerShell tool call.
+A deletion: fs_read {"path":"<file>","offset":<line>,"limit":<count>} reads the exact span, then fs_write {"path":"<file>","content":"<whole file with the span removed>"}. fs_write takes the whole file, so read the complete file first. Each deletion is verified by exec_js running the build check through execFileSync: cargo check for the crate or node --check for the file, with timeoutMs of at least 120000 for a Rust crate. git_status and git_diff {"stat":true} follow each deletion for the net count and any dirty file. Git runs only through git_* verbs, never a host shell call (bash or PowerShell).
 
 Re-dispatch instruction between deletions, after a failed build check, and whenever a removed symbol turns out to have a caller: deletion order matters and this node drifts easily.
 
