@@ -2,7 +2,7 @@
 name: wfgy-method
 description: "Drift-check step, not a planner: WFGY (Wan Fa Gui Yi) drift control for multi-step agent work. Use when a task risks losing its goal over many steps, or the agent contradicts itself or goes in circles. Does not plan or decompose work (polaris-goal-compiler does that). Distinct from gm-continue, which invokes this skill when a gm walk repeats the same gap."
 license: MIT
-compatibility: "Designed for Claude Code. No external services, embedding models, or network access required for the core discipline."
+compatibility: "Designed for agent hosts. No external services, embedding models, or network access required for the core discipline."
 metadata:
   origin: adapted-from-onestardao-wfgy
   provenance: independent-honest-reimplementation-not-verbatim

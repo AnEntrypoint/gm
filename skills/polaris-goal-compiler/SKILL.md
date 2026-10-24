@@ -2,7 +2,7 @@
 name: polaris-goal-compiler
 description: "Use before complex, multi-step, long-horizon, or high-stakes AI work when no prior plan exists, to compile the goal into gated task atoms and claim ceilings. Does not solve the problem or control drift."
 license: MIT
-compatibility: Upstream Polaris Goal Compiler is released ChatGPT-first (teaser compatibility is ChatGPT only); portability to other assistants, coding agents, and skill systems is a stated design direction, not an officially supported target in the teaser release. This skill is a portable Claude Code adaptation of that protocol.
+compatibility: Upstream Polaris Goal Compiler is released ChatGPT-first (teaser compatibility is ChatGPT only); portability to other assistants, coding agents, and skill systems is a stated design direction, not an officially supported target in the teaser release. This skill is a portable adaptation of that protocol for agent hosts.
 metadata:
   origin: onestardao-wfgy-5.0-polaris-protocol
   provenance: adapted-and-honest-reimplementation-not-verbatim

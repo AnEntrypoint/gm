@@ -17,7 +17,7 @@ const CLUSTERS = [
   'dada:REASON', 'dada:WELCOME', 'dada:CRITICS', 'dada:LENSES', 'dada:PANEL', 'dada:ADAPT', 'dada:AUTONOMY',
 ]
 
-const GM = 'Use the gm skill for this; code questions go to codeinsight (callers/impact) first, then codesearch, and Read only a located path. Use the gm verb tool (gm_codemode, or the spool) for every verb; no Bash grep/find/git except node.'
+const GM = 'Use the gm skill for this; code questions go to codeinsight (callers/impact) first, then codesearch, and fs_read only a located path. Use the gm verb tool (gm_codemode, or the spool) for every verb; no shell grep/find/git except node.'
 
 const EDGES = {
   type: 'object',

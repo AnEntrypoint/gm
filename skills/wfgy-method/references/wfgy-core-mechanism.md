@@ -46,7 +46,7 @@ What survives honestly: the *symptom* this computation is meant to correct (an o
 
 ## The one place real embedding-based computation of deltaS may actually happen
 
-A LangChain/LlamaIndex adapter in the source repo reportedly does real cosine-distance monitoring/logging of retrieval results as an observability layer (found by research but not independently re-verified byte-for-byte). Even there it appears to monitor/log rather than actively reroute the pipeline. This requires an actual embedding model and vector-math library wired in -- outside the scope of a pure prompting-based Claude Code skill, and not something this skill attempts to replicate.
+A LangChain/LlamaIndex adapter in the source repo reportedly does real cosine-distance monitoring/logging of retrieval results as an observability layer (found by research but not independently re-verified byte-for-byte). Even there it appears to monitor/log rather than actively reroute the pipeline. This requires an actual embedding model and vector-math library wired in -- outside the scope of a pure prompting-based agent skill, and not something this skill attempts to replicate.
 
 ## The base engine's self-monitoring loop (distinct from Avatar's later "dual closed-loop" design)
 
