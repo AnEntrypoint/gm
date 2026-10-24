@@ -77,7 +77,7 @@ Live response (gate denial, residual, `instruction`/`phase-status`, `entry` pros
 - Batch independent dispatches in one tool-call block; one row per `prd-add`/`unknown-add` call. `{"items":[...]}` is rejected.
 - Search-ban exception: a spilled reply (`reply_full_chars`, `spill_file`) is read with `gm_result`, or `fs_read` on the exact spill path. The native search tools, `find`, `grep` and `rg` stay off for content search.
 - A `codesearch` with no `path`, `glob` or `path_glob`, or one you would repeat, runs in a subagent returning only located `path:line`. The orchestrator keeps locations, never match text.
-- `transition` response's `phase_label` is internal, never a prompt name; the entered phase's served prose is its only instruction. Prompt reads (`prompts/get`): the initial `gm` prompt load and the `gm-continue` prompt handoff that ends every run, only.
+- `transition` response's `phase_label` is internal, never a prompt name; the entered phase's served prose is its only instruction. Prompt reads (`prompts/get`): the initial `gm` prompt load and the `gm-continue` prompt handoff that ends every run, only. `gm_codemode` exposes no `prompts/get`, so a hop, PRD or orchestrate lane that needs its skill text reads `skills/<name>/SKILL.md` with `fs_read {"path":"skills/<name>/SKILL.md"}`: the same file the prompt serves.
 - Token austerity: signal only, no narration or hedging. PowerShell input UTF-8 without BOM. SESSION_ID in every body. Never edit one file twice in a block.
 - Every subagent prompt opens with the brick-wall opener and carries its own SESSION_ID. Parallelism: 1c. SESSION_ID minting: served `instruction` prose, "Subagent fan-out".
 
