@@ -1,8 +1,11 @@
 {
   "mcpServers": {
     "gm": {
-      "type": "http",
-      "url": "http://127.0.0.1:8787/mcp"
+      "command": "node",
+      "args": [
+        "-e",
+        "const bundlePath=require('path').join(require('os').homedir(),'.gm-tools','gm-mcp-server.mjs');if(!require('fs').existsSync(bundlePath)){console.error('gm-mcp bundle missing at '+bundlePath+' -- run: npx github:AnEntrypoint/gm --mcp-only');process.exit(1)}import(require('url').pathToFileURL(bundlePath).href)"
+      ]
     }
   }
 }

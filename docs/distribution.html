@@ -137,10 +137,7 @@ article th { font-family: var(--ff-mono); font-size: 11px; text-transform: upper
 
 <p>Restart the agent host after a registration change.</p>
 
-<p>The default transport is stdio, a pipe that the agent host owns. A stdio connection does not recover after it drops, so to survive a drop, register the HTTP transport instead, at <code>http://127.0.0.1:8787/mcp</code>, with:</p>
-<pre><code>claude mcp remove gm -s user && claude mcp add --transport http gm http://127.0.0.1:8787/mcp -s user</code></pre>
-
-<p>Start the shared HTTP server, or confirm that one is listening, with <code>node ~/.gm-tools/gm-mcp-server.mjs ensure-http</code>. It starts the server when no listener exists. To run the supervisor alone in the foreground, use <code>node ~/.gm-tools/gm-mcp-server.mjs http-supervise</code>. It probes the server every 15 s and starts it again when it stops answering. Transport details are in the Transport section of <a href="https://github.com/AnEntrypoint/gm-mcp/blob/main/README.md">gm-mcp/README.md</a>.</p>
+<p>The transport is stdio only: a pipe that the agent host owns, with no listening port. gm opens no port on its own, so nothing collides with other services on the machine. A stdio connection does not recover after it drops; run <code>/mcp</code> and reconnect gm after a deploy. Transport details are in the Transport section of <a href="https://github.com/AnEntrypoint/gm-mcp/blob/main/README.md">gm-mcp/README.md</a>.</p>
 
 <h2>4. Check the runner and start the spool</h2>
 

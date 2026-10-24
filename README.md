@@ -16,7 +16,7 @@ npx github:AnEntrypoint/gm -g
 
 It installs the `/gm` skill and registers the MCP server in every detected agent host: Claude Code, Cursor, Gemini CLI and Codex. Drop `-g` to install into the current project only.
 
-**MCP launch.** Claude Code reaches gm over the HTTP server at `http://127.0.0.1:8787/mcp`, which reloads a deployed bundle in-process, so a deploy needs no reconnect. Cursor and Gemini launch the local bundle, `~/.gm-tools/gm-mcp-server.mjs`. No client launches from an npx GitHub spec. A spec re-resolves the package on every connect: measured at 8.2 s warm and 22.2 s cold, against 0.19 s to launch the bundle from disk, which under load can trip Claude Code's 30 s connect timeout ([gm-mcp/README.md](./gm-mcp/README.md)). To repair a registration, run the first command for a global install (`-g`) or the second for the current project:
+**MCP launch.** The MCP server launches from the local bundle, `~/.gm-tools/gm-mcp-server.mjs`, and never from an npx GitHub spec. A spec re-resolves the package on every connect: measured at 8.2 s warm and 22.2 s cold, against 0.19 s to launch the bundle from disk, which under load can trip Claude Code's 30 s connect timeout ([gm-mcp/README.md](./gm-mcp/README.md)). To repair a registration, run the first command for a global install (`-g`) or the second for the current project:
 
 ```
 node bin/gm-install.js -g --mcp-only
