@@ -396,9 +396,8 @@ install_mcp_server() {
   if fetch "$url" "$tmp"; then
     mv -f "$tmp" "$dest"
     log "installed gm-mcp server -> ${dest}"
-    log "start the HTTP server and register Claude Code over it (once):"
-    log "  node \"${dest}\" ensure-http"
-    log "  claude mcp remove gm -s user 2>/dev/null; claude mcp add --transport http gm http://127.0.0.1:8787/mcp -s user"
+    log "register it (once) with:"
+    log "  claude mcp remove gm 2>/dev/null; claude mcp add gm -- node \"${dest}\""
   else
     rm -f "$tmp"
     log "WARN: could not download the gm-mcp server bundle -- the spool protocol still works without it"
