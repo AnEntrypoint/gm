@@ -37,7 +37,7 @@ Route KV writes to `<cwd>/.gm/disciplines/<ns>/`. The `@<name>` prefix sets name
 
 Memory is one flat file per fact. Save an unknown as a memory only when a later task needs it. Save nothing else as memory.
 
-Write each memory as a file in the harness memory directory, the directory that holds MEMORY.md. The file has frontmatter with the fields name, description and metadata.type. Set metadata.type to unknown. Add one line to MEMORY.md that points to the file.
+Write each memory as a file in the project memory directory, the directory that holds MEMORY.md. The file has frontmatter with the fields name, description and metadata.type. Set metadata.type to unknown. Add one line to MEMORY.md that points to the file.
 
 To find a memory, read MEMORY.md and open the files it points to. A memory is a lead, not a fact: re-verify any named path, symbol or flag before you act on it. When a witness contradicts a memory, delete the file and its MEMORY.md line.
 
