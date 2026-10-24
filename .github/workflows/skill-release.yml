@@ -55,7 +55,7 @@ jobs:
             exit 0
           fi
           git config user.name "lanmower"
-          git config user.email "657315+lanmower@users.noreply.github.com"
+          git config user.email "almagestfraternite@gmail.com"
           git add skills/manifest.sha256
           git commit -m "chore: refresh skill manifest"
           for attempt in 1 2 3 4 5; do
@@ -83,7 +83,7 @@ jobs:
         run: |
           set -e
           git config user.name "lanmower"
-          git config user.email "657315+lanmower@users.noreply.github.com"
+          git config user.email "almagestfraternite@gmail.com"
           release_exists() {
             local err
             if err=$(gh api "repos/AnEntrypoint/gm/releases/tags/$1" 2>&1 >/dev/null); then return 0; fi
