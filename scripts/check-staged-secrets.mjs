@@ -23,9 +23,22 @@ function matchRule(text) {
   return null;
 }
 
+const base = process.env.GIT_INDEX_FILE ? 'origin/main' : 'HEAD';
+
+const indexEntries = execFileSync('git', ['ls-files', '--cached', '-z'], {
+  encoding: 'utf8',
+  maxBuffer: 512 * 1024 * 1024,
+  stdio: ['ignore', 'pipe', 'pipe'],
+});
+if (indexEntries === '') {
+  console.log('REFUSE: index has no entries, nothing to certify');
+  console.log('RESULT: FAIL (empty index; a PASS must certify staged bytes)');
+  process.exit(1);
+}
+
 let diff;
 try {
-  diff = execFileSync('git', ['diff', '--cached', '-U0', '--no-color', '--no-ext-diff', '--text'], {
+  diff = execFileSync('git', ['diff', '--cached', '-U0', '--no-color', '--no-ext-diff', '--text', base], {
     encoding: 'utf8',
     maxBuffer: 512 * 1024 * 1024,
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -36,42 +49,15 @@ try {
   process.exit(2);
 }
 
-function git(args) {
-  return execFileSync('git', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
-}
-
-function mergeInProgress() {
-  try {
-    git(['rev-parse', '-q', '--verify', 'MERGE_HEAD']);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function mergedTreeDiffersFromHead() {
-  try {
-    git(['diff', '--quiet', 'HEAD', 'MERGE_HEAD']);
-    return false;
-  } catch (err) {
-    return err.status === 1;
-  }
-}
-
 if (diff.trim() === '') {
-  if (mergeInProgress() && mergedTreeDiffersFromHead()) {
-    console.log('PASS: merge commit whose result equals HEAD; MERGE_HEAD carries a tree that differs from HEAD, so nothing new is staged');
-    console.log('RESULT: PASS');
-    process.exit(0);
-  }
-  console.log('REFUSE: nothing staged to scan');
-  console.log('RESULT: FAIL (nothing staged; a PASS must certify staged bytes)');
+  console.log(`REFUSE: empty index, nothing staged against ${base}`);
+  console.log('RESULT: FAIL (empty index; a PASS must certify staged bytes)');
   process.exit(1);
 }
 
 // A commit that stages a skills/ file must stage skills/manifest.sha256 too, or the
 // installed-skill refresh serves a stale digest list (scripts/build-skill-manifest.mjs).
-const stagedNames = execFileSync('git', ['diff', '--cached', '--name-only', '--no-renames', '-z'], {
+const stagedNames = execFileSync('git', ['diff', '--cached', '--name-only', '--no-renames', '-z', base], {
   encoding: 'utf8',
   maxBuffer: 64 * 1024 * 1024,
   stdio: ['ignore', 'pipe', 'pipe'],
