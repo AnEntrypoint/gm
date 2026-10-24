@@ -8,7 +8,7 @@ const repoRoot = path.dirname(here)
 const CLI = process.env.GM_MCP_CLI || path.join(repoRoot, 'gm-mcp', 'src', 'cli.js')
 
 const GM_MCP_SUBCOMMANDS = new Set([
-  'dispatch', 'ensure-http', 'http-status', 'http-supervise', 'dev-sync',
+  'dispatch', 'http-status', 'dev-sync',
   'pin-local-build', 'unpin-local-build', 'self-update-status',
 ])
 const SEARCH_VERBS = new Set(['grep', 'rg', 'codesearch', 'code_search', 'search'])
