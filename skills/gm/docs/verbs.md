@@ -24,6 +24,8 @@ Every verb is a `gm.<verb>({...})` call inside `gm_codemode`; the transport is `
 
 `bin/gm` is the shell entrypoint: `gm <verb> [flags]` forwards to gm-mcp's `dispatch` subcommand, so a shell runs a verb with no MCP client or daemon. Search verbs also take a shorter form: `gm codesearch literal <needle> --path <dir> --glob <glob>`, which builds `{"query","mode"}` plus `path`, with `--glob` as `path_glob`. It exists because a bare mode word such as `literal` is not a dispatch body. It applies to `grep`, `rg`, `codesearch`, `code_search` and `search` only.
 
+The runner binary is `~/.gm-tools/agentplug-runner` (`agentplug-runner.exe` on Windows), installed by `install.sh` or `install.ps1`; on this host it is `/data/cache/gm/.gm-tools/agentplug-runner`. It is not on PATH, so a bash dispatch calls it by that full path.
+
 Inside `gm_codemode`, `gm.grep` and `gm.codesearch` are the search functions. `rg` aliases `gm.grep`; `code_search` and `search` alias `gm.codesearch`. `gm.list()` lists all five; `gm.describe` resolves each.
 
 Any argument starting with `{` or `@`, and every non-search invocation, is forwarded untouched, so the launcher never reinterprets a dispatch. `--cwd`, `--timeout` and `--no-ignore` stay dispatch flags, never body fields. `npm link` exposes `bin/gm` as `gm-dispatch`.
