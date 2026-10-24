@@ -50,12 +50,30 @@ function claudeServerEntry() {
   return { type: 'http', url: GM_HTTP_URL }
 }
 
-// Starts the HTTP server and arms its supervisor. Boot persistence is gm-mcp/scripts/install-autostart.mjs, which the
-// installer does not vendor, so a machine that must survive a reboot runs that script once.
+// Starts the HTTP server and arms its supervisor.
 function ensureHttpServer() {
   const result = spawnSync('node', [MCP_BUNDLE_PATH, 'ensure-http'], { stdio: 'inherit', windowsHide: true })
   if (result.status !== 0) {
     console.error(`gm: ensure-http exited ${result.status ?? 'by signal'}; Claude Code reaches gm at ${GM_HTTP_URL} and gets nothing until it runs`)
+  }
+}
+
+// Boot persistence for that server (crontab on Linux, launchd on macOS, a scheduled task on Windows) is gm-mcp's
+// scripts/install-autostart.mjs. It is fetched from gm-mcp main, as the bundle is, and run once against this bundle.
+async function installAutostart() {
+  const url = 'https://raw.githubusercontent.com/AnEntrypoint/gm-mcp/main/scripts/install-autostart.mjs'
+  const dest = path.join(GM_TOOLS_DIR, 'install-autostart.mjs')
+  try {
+    const response = await fetch(url)
+    if (!response.ok) throw new Error(`HTTP ${response.status}`)
+    fs.writeFileSync(dest, await response.text())
+  } catch (error) {
+    console.error(`gm: could not fetch install-autostart (${error.message}); the HTTP server will not start after a reboot`)
+    return
+  }
+  const result = spawnSync('node', [dest, '--entry', MCP_BUNDLE_PATH], { stdio: 'inherit', windowsHide: true })
+  if (result.status !== 0) {
+    console.error(`gm: install-autostart exited ${result.status ?? 'by signal'}; the HTTP server will not start after a reboot`)
   }
 }
 
@@ -595,5 +613,6 @@ await vendorMcpBundle()
 registerKnownHostShapes()
 registerClaudeCode()
 ensureHttpServer()
+await installAutostart()
 if (!mcpOnly) installRunner()
 console.log(`gm MCP server launches from ${pathToFileURL(MCP_BUNDLE_PATH).href} -- restart the agent host to reconnect`)
