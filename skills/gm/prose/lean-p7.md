@@ -14,9 +14,9 @@ For overviews and cleanup sweeps, dispatch `codeinsight {action:"outline", path}
 
 Load context through `instruction`. Dispatch it with the prompt when a node begins and whenever held prose may be stale. Pass `known_instruction_hash` set to the `instruction_hash` of the latest response this session received. A match returns `instruction` empty with `instruction_unchanged: true`, and held prose stays in force. A mismatch or omission returns the full prose. Assert only a hash read off a received response, never one from bookkeeping. To read memory, open MEMORY.md, then the files it points to. A memory is a lead, re-witnessed on the live tree before the walk acts on it.
 
-Fanned-out work goes to subagents. Each gets its own SESSION_ID: the parent id plus an index (`<parent_session_id>-sub<k>`), never the parent's literal value. Its prompt opens with: use the gm skill; route code questions to `callers` and `impact` first, then `codesearch`; `Read` only a located path. Then the task content. The reply is a conclusion, the located paths and a witness. Raw output does not return to the parent.
+Fanned-out work goes to subagents. Each gets its own SESSION_ID: the parent id plus an index (`<parent_session_id>-sub<k>`), never the parent's literal value. Its prompt opens with: use the gm skill; route code questions to `callers` and `impact` first, then `codesearch`; `fs_read` only a located path. Then the task content. The reply is a conclusion, the located paths and a witness. Raw output does not return to the parent.
 
-Transitions leave this node only by the backreference edges and the transition named under Transition, always as `transition to=<NODE>`. Nothing here dispatches Glob, Grep, `find`, `grep` from a shell, Bash git or PowerShell. Git goes through `git_*` verbs and execution through `exec_js`.
+Transitions leave this node only by the backreference edges and the transition named under Transition, always as `transition to=<NODE>`. Nothing here dispatches native search or file-read tools, `find`, `grep` from a shell, shell git or PowerShell. Git goes through `git_*` verbs and execution through `exec_js`.
 
 ## PRD rows
 
@@ -52,7 +52,7 @@ Fan-out: each returned path is re-checked as its own parallel slice (`goal-s1-d7
 
 Nominations (set): {REWORK}. Backreferences in from {}; out to {SUBAGENT}.
 
-When reasoning degrades (a dispatch misreads a file read earlier, or a gate denial names something absent from the held prose), the cause is the filled window, not the model. The walk moves the work to a fresh subagent with its own SESSION_ID; the parent receives only located paths and the witness. Backreference CONTEXTROT to SUBAGENT ("quality fell as the window filled") is taken there. Witness: every returned path is re-checked with `codesearch` or `Read` on the live tree before the parent acts on it.
+When reasoning degrades (a dispatch misreads a file read earlier, or a gate denial names something absent from the held prose), the cause is the filled window, not the model. The walk moves the work to a fresh subagent with its own SESSION_ID; the parent receives only located paths and the witness. Backreference CONTEXTROT to SUBAGENT ("quality fell as the window filled") is taken there. Witness: every returned path is re-checked with `codesearch` or `fs_read` on the live tree before the parent acts on it.
 
 ### REWORK - Rework Loops Dominate Token Spend
 
@@ -82,7 +82,7 @@ Fan-out: each candidate skill's header read is an independent slice: one subagen
 
 Nominations (set): {AGENTSMD}. Backreferences in from {}; out to {}.
 
-Check each header against the trigger it claims to predict: a skill's description must name the condition that loads its body. Read each candidate's header lines with a located `Read`; locate candidates with `codesearch` `filename` over the skill directories. Where a body loaded on a condition the header never named, rewrite the header line to state the trigger. Backreference HEADERONLY to AGENTSMD ("the header does not predict the trigger") is taken when a rewrite would not fix the mismatch. Witness: an `instruction` dispatch whose prompt matches the rewritten trigger returns the skill among its hits, and the same prompt before the rewrite did not.
+Check each header against the trigger it claims to predict: a skill's description must name the condition that loads its body. Read each candidate's header lines with a located `fs_read`; locate candidates with `codesearch` `filename` over the skill directories. Where a body loaded on a condition the header never named, rewrite the header line to state the trigger. Backreference HEADERONLY to AGENTSMD ("the header does not predict the trigger") is taken when a rewrite would not fix the mismatch. Witness: an `instruction` dispatch whose prompt matches the rewritten trigger returns the skill among its hits, and the same prompt before the rewrite did not.
 
 ### AGENTSMD - AGENTS.md Hierarchical, Not Encyclopaedic
 
@@ -112,7 +112,7 @@ Fan-out: the subagents are the fan-out. Each independent slice runs with its own
 
 Nominations (set): {COMPACT}. Backreferences in from {CONTEXTROT}; out to {OBSCOMPRESS}.
 
-Fan independent reads, searches and log reads out to subagents whenever the work decomposes into independent slices. Give each its own SESSION_ID and the opener that routes code questions to `callers` and `impact` first, then `codesearch`, permitting `Read` only on a located path. The return contract is a conclusion, the located paths and a witness, never raw output. A single focused edit stays in the parent. Backreference SUBAGENT to OBSCOMPRESS ("the subagent returned raw output") is taken when a reply arrives with raw output. Witness: the byte count of each returned payload, and each claimed path re-checked on the live tree before use.
+Fan independent reads, searches and log reads out to subagents whenever the work decomposes into independent slices. Give each its own SESSION_ID and the opener that routes code questions to `callers` and `impact` first, then `codesearch`, permitting `fs_read` only on a located path. The return contract is a conclusion, the located paths and a witness, never raw output. A single focused edit stays in the parent. Backreference SUBAGENT to OBSCOMPRESS ("the subagent returned raw output") is taken when a reply arrives with raw output. Witness: the byte count of each returned payload, and each claimed path re-checked on the live tree before use.
 
 ### COMPACT - Node-Boundary Compaction
 
