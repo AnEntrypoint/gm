@@ -512,6 +512,7 @@ A `browser` or `chrome` request that writes a screenshot (`screenshot=<path>`, `
 A `cdp` body may open with `session=<name>`, then one step per line. The steps run over the single Chrome that a project root shares.
 
 - `session=<name>` (a browser session name, not a gm `session_id`; 1-64 letters, digits, `-`, `_`) keeps the tab and the `uid=N` numbers it assigned across calls, in `.gm/browser-cdp-sessions/<name>.json`. Calls on one browser session are serialized. A corrupt state file is refused, never reset. `sessionId=<name>` is an alias of `session=<name>`; a body that gives both is refused.
+- `isolated=true` (with `session=<name>`; refused alone) gives that session its own page in a separate browser context under the same Chrome: its own cookies and localStorage, unshared with the shared tab and with other isolated sessions. The page is kept in the session's state file and reused across calls. Without `isolated=true`, a session reuses the shared tab as before, and never takes another session's isolated page. `isolated=false` is the default.
 - The shared Chrome stays open after its last lease is released, and closes after 15 minutes with no holder or waiter. A lease is the hold one call keeps on it. Without `session=`, a call opens its own tab and closes it when it ends.
 
 | Step | Does |
