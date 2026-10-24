@@ -763,6 +763,8 @@ Served verbs with no entry elsewhere in this file. Rows are sourced from `gm.des
 | `component_loader_hmr` | undeclared | hot-reload the component loader | command |
 | `prd_add` | `{"id"?, "subject"?, "description"?, "acceptance_criteria"?, "witness_plan"?, "status"?, "blockedBy"?, "overwrite"?, "repair"?, "owner"?, "disposition"?, "recheck_by"?}` | file a PRD row | command |
 | `prd_defer` | undeclared | defer a PRD row | command |
+| `prd_note` | `{"id", "note", "field"?}` | append a note to an open PRD row under its notes list (or field), without rewriting its other fields; refused with `prd_note_unknown_id` when the row is not open | command |
+| `prd_close` | `{"id", "status": "resolved" or "stale", "resolution", "witness_evidence", "witness_dispatch_id"}` | close an open PRD row: log it to .gm/prd-log.jsonl with resolution, witness and closed_at, then delete its open file under .gm/prd/; the witness dispatch must be in the ledger and not from the closing session | command |
 | `prd_witness_request` | `{"id", "note"?}` | ask a separate verifier session to witness a PRD row | command |
 | `prd_repair` | undeclared | repair PRD row state | command |
 | `task_list` | undeclared | list background tasks | query |
