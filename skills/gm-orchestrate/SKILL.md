@@ -7,10 +7,10 @@ description: "Main-thread pool loop for a gm walk that has advertised PRD rows o
 
 Pool and publish rules. Shared rules (autonomy, git identity, CI read, collisions, exit): gm. Recovery: `docs/recovery.md`.
 
-`ceiling` = the harness's live concurrent-subagent limit, read from its refusal message (`You can run N subagents at once`) or from the harness, never written into this skill. It is the only bound on concurrency: `free` = ceiling - live. `live` = ListAgents count. `floor` = min(2, ceiling). `shortfall` = live < floor with independent work open.
+`ceiling` = the harness's live concurrent-subagent limit, read from its refusal message (`You can run N subagents at once`) or from the harness, never written into this skill. It is the only bound on concurrency: `free` = ceiling - live. `live` = the count of live subagents. `floor` = min(2, ceiling). `shortfall` = live < floor with independent work open.
 
 ## Standing pair (every run)
-Every `/gm` run executes the drain procedure below in its first turn, before any other fan-out, through gm verbs and the harness's own parallel workers (subagents or background tasks). No workflow file or harness-specific runner is needed. Where the harness has no parallel workers, the groups run in sequence through the same loop.
+Every gm run (the `gm` prompt) executes the drain procedure below in its first turn, before any other fan-out, through gm verbs and the harness's own parallel workers (subagents or background tasks). No workflow file or harness-specific runner is needed. Where the harness has no parallel workers, the groups run in sequence through the same loop.
 
 1. **Plan once.** List pending rows in pages of at most 50: `prd-list {"status":"pending","limit":50,"offset":N}` for N = 0, 50, 100, ... until a page returns fewer than 50 rows. Never request the whole list in one call: a full pending list exceeds the tool-result cap and the drain never starts. Group rows by the `[repo:] [group:]` prefix of their description; a row without a prefix forms its own group. Record the plan (units, row ids) with one append line per unit to `.gm/pool/plan-<run>.txt`. Units are split as the Launch loop states.
 2. **Drain, in parallel.** Each unit works its rows in order. Launch at most `free` units in one block (Launch loop, rules 2 and 3). Queue the rest and launch each queued unit in the same turn a slot frees. A refusal ("Concurrent subagent limit reached") means wait for a slot: re-launch that item when a completion frees one, never retry in a loop, never drop it. Agents may edit the same file in parallel: each re-reads the file immediately before its edit and applies its change to the current state, never to a remembered copy. A dirty or diverged checkout is consolidated by the lane that owns it before the row's commit, never worked around. A bundle owns the rows it is given: ownership is never a blocker. Each row runs the gm-prd stages (orient through publish, then `prd-resolve` with a live witness). A row attempted in a run is not retried in that run. There is no blocked state: a row whose attempt ends without a witness keeps its work open, and the next launch does the missing step (edit, build, push, CI, or a live witness from another session). A row whose premise a live read refutes (the named symbol, file, job or sha is absent or already fixed) closes with `prd-resolve {"id":..., "resolution":"stale"}`. Its witness must come from a session other than the resolver's: file the refuting dispatch ids with `prd_witness_request`, then a verifier session runs `gm-prd` with `mode=witness` and resolves. A self-witness is refused (`prd-resolve-self-witness`): witness dispatches use a SESSION_ID distinct from the resolve call's (resolver `drain-<bundle>`, witness `verify-<row>`), and the witness dispatch id must appear in `.gm/exec-spool/.dispatch-ledger.json` before `prd-resolve` is called. A row is never parked: every round re-lists the open rows and every open row is attempted. A row whose fix lives in a submodule first moves that submodule to its remote `main` tip; a dirty or diverged submodule blocks the row with that fact named. Call shapes: `prd-block` takes `note`, `prd-resolve` takes `resolution` (no `note`); one row is read in full with `prd-list {"id":"<row id>","full":true}`.
@@ -39,7 +39,7 @@ Durable state: `.gm/drain-list/queue.tsv`, one `id<TAB>state` line per row. The 
 4. **Blocked rows.** A `blocked` row is skipped only when this session re-checks its named blocker live and it still holds, with the dispatch id recorded. Otherwise it returns to `pending`.
 5. **Validate.** After each committed batch, `ci-status {sha}` for every pushed sha, before the batch's rows move to `resolved`.
 6. **Measure.** Count peak concurrent units and refills for the session; the final report carries both.
-7. **Session end.** If any row is `pending`, the last call of the session is `Skill(skill="gm-continue")`. Never end with pending rows and nothing launched: relaunch to the cap first, or wait for a completion.
+7. **Session end.** If any row is `pending`, the last step of the session is reading the `gm-continue` prompt. Never end with pending rows and nothing launched: relaunch to the cap first, or wait for a completion.
 
 ## Core loop
 Repeat until a full pass adds no work:
@@ -56,7 +56,7 @@ Repeat until a full pass adds no work:
 - `pending_after > pending_before` halts new blockers until a merge pass closes duplicates.
 - No fixed run total: rows and the harness cap bound launches. A cap hit queues the launch and resumes it as slots free. A stalled run is re-briefed, never relaunched unchanged.
 - Three loops, each run to exhaustion: (1) row drain, Standing pair steps 1-5, until pending = 0 or a round closes no row; (2) traversal, one `gm-hop` per principle node in `skills/dream-rsi/gm-graph.json` per surface, emitting rows, until every node has a receipt per surface, running only while fewer than 20 rows are open; (3) audit, a completeness critic whose findings become rows for loop 1.
-- Drain before make. Pending ≥ 20: the drain takes every free slot. Pending < 20: traversal takes free slots (computer-science disciplines first) until pending reaches 20.
+- Drain before make. Pending >= 20: the drain takes every free slot. Pending < 20: traversal takes free slots (computer-science disciplines first) until pending reaches 20.
 - Repeat 1-3 until a full cycle adds and resolves nothing. A round resolving 0 rows with pending rows left is a stall: change the brief, rerun. Never stop on a stall alone.
 - Ceiling and floor bound live subagents (Lane budget). Refill a freed slot in the same turn.
 
@@ -88,7 +88,7 @@ Repeat until a full pass adds no work:
 - Verification and CI never block the pool.
 
 ## Floor and dip
-- Pending rows open: keep live ≥ floor. Pass ListAgents count as `body.live` on every `pool-observe` and `transition`.
+- Pending rows open: keep live >= floor. Pass the live subagent count as `body.live` on every `pool-observe` and `transition`.
 - `floor_gate_denied` (live < floor, `open_rows > 0`, launchable rows advertised but not launched) is the launch signal, never a retry.
 - `state: supply_exhausted` (ok, no error) on `pool-observe`: no open row is launchable and no traversal node is due. `held_rows` are running and are the only supply: wait for their completion, then re-observe. Never retry-loop.
 - Live under ceiling with independent work open is a shortfall: log `FAILURE: <UTC> live=<n> pending=<m>` to `.gm/witness-log.md`, then launch to target this turn. Causes:
@@ -143,7 +143,7 @@ Launch only advertised ids. A slot stays empty only when no pending row and no u
 ## Decided work lands in the same turn
 - A decision to do more work is executed in that turn. The orchestrator picks the most defensible default, records it as one line in `.gm/witness-log.md`, and runs it. Ending a turn with a decision waiting on the user is a defect.
 - Only a Section 4 door (world-scoped, or one that reaches every session or production) is raised to the user, as a final-message question, while every other row keeps running. The orchestrator never blocks the whole pool on one.
-- A live lock held by another lane (`store_busy`, `gm.db.lock` owner alive) is never killed or removed by the orchestrator. Default: retry the store call with `wait {"ms":60000}` up to 5 times. Still held after that: every affected row takes the store-free path (`codesearch` literal or filename, `Read` of located paths, `git_*` verbs), records the lock as its named fact, and is re-launched the moment the lock clears. No row waits idle on it.
+- A live lock held by another lane (`store_busy`, `gm.db.lock` owner alive) is never killed or removed by the orchestrator. Default: retry the store call with `wait {"ms":60000}` up to 5 times. Still held after that: every affected row takes the store-free path (`codesearch` literal or filename, `fs_read` of located paths, `git_*` verbs), records the lock as its named fact, and is re-launched the moment the lock clears. No row waits idle on it.
 - A row whose acceptance needs a live write to shared served state (a prose override, a store row, a witness that changes every session) is run against a disposable key the orchestrator names in its own brief, with the key recorded in the receipt. Only a Section 4 door is not defaulted this way.
 
 ## Starvation
@@ -181,7 +181,7 @@ Launch only advertised ids. A slot stays empty only when no pending row and no u
 
 ## Fan-out
 - Independent slices (file, row, hop) launch in one block. Slices sharing a surface run in turn.
-- Walk workers are gm-prd or gm-hop, never a fork. Each brief opens with the brick-wall opener and its own SESSION_ID (gm §1).
+- Walk workers are gm-prd or gm-hop, never a fork. Each brief opens with the brick-wall opener and its own SESSION_ID (gm section 1).
 - Every brief reads the pending listing inside one `gm_codemode` body: `prd-list {"status":"pending"}` filtered in code to its own ids and subjects, returned as that list only. A brief never pulls the full listing into context.
 - Verify a brief's source path (`codesearch {mode:"filename"}`) before launch. A wrong path is a blocked slot.
 - `gm_processor_capacity` queues dispatches beyond it; it is not the subagent count.
