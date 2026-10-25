@@ -205,6 +205,8 @@ A reply longer than the `reply_max_chars` cap spills to the file named by `spill
 
 `fs_write` takes `{"path":"<relative path>","content":"<text>"}`. `data` and `text` alias `content`; the value may be a JSON string (with `\n` per newline) **or an array of lines**, joined with `\n` plus a trailing newline. A raw, non-JSON body is accepted when its first line is a `path=<relative path>` directive and the rest is the file contents. Append mode runs only when the body sets `append: true`. `.gm/witness-log.md` is a cache with no append-only guard, so a whole-file write replaces it; the other append-only paths (`.gm/lean-walk/new-nodes.jsonl`, `.gm/pool/ledger-<wave>.txt`) refuse a whole-file write with `append_only_rewrite_refused` or `append_only_shrink_refused`, and any other write replaces the file. It returns `{"bytes": <written>}`. A write outside the root is refused even with `allowOutsideRoot`, which widens the read verbs only. `fs_readdir` takes `{"path":"<relative dir>"}` (default `.`). `fs_stat` takes `{"path":"<relative path>"}`.
 
+Exact-line form: `{"path":"<relative path>","startLine":<n>,"endLine":<n>,"replacement":"<text>"}` replaces lines startLine..endLine (1-based, inclusive) with replacement; an empty replacement deletes those lines, and endLine = startLine - 1 inserts replacement before startLine. A trailing newline in replacement is not doubled.
+
 ### `callers`, `callees`, `impact`: who calls a symbol and what a change reaches
 
 Backed by the codeinsight symbol index built by `codeinsight_index`. All three route to one handler and share these fields:
