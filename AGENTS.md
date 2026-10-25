@@ -18,6 +18,7 @@ Start work by reading `SKILLS.md`. On a request or edited file matching a skill'
 8. A subagent stopped by a network or API error is restarted for the same row, never resumed and never parked as blocked.
 9. A row ends resolved with a witness or blocked with a named fact. A blocked row is not duplicated.
 10. Success: rows always drain, and traversal refills them before they run out.
+11. Work on main. Never clone a repository to make a scratch copy, fake worktree or throwaway checkout. Edit the shared checkout on `main` through its gm verbs, or publish with `publish_on_origin` from that checkout. A collision is fixed by recovery (fetch, reapply the change on origin's tip, push), never avoided by cloning. Falsified by: a clone or worktree of a managed repository created outside an explicitly named recovery step.
 
 ## Skill installs
 
