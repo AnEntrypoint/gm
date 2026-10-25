@@ -17,7 +17,7 @@ Every gm run (the `gm` prompt) executes the drain procedure below in its first t
 3. **Validate per batch.** When a group's commits land, read `ci-status {sha}` for each pushed sha; a group closes its rows only after those reads. Do not wait for the whole drain. A red job goes back to the row that owns the failing file (`prd-add` fix row, taken by that row's lane). Validation never runs on uncommitted work.
 4. **Close.** `prd-resolve` with the commit sha as witness. Then remove `.gm/prd/<id>.yml` and `.gm/receipts/<id>/` if they remain. The commit body carries `Row: <id>` on its own line, so the git log records each finished row. A commit stages only its own explicit paths and refuses when other paths are already staged, so it never sweeps in another lane's work. A commit that needs amending is amended once; if the amend does not return, re-read the commit (`git_show`) and never retry it in a loop.
 5. **Re-plan.** After each round, repeat from step 1 with a fresh paged listing. Continue until the pending backlog is empty. A round that closes no row is a stall: change the brief or the blocker's route, then run the next round. A stall never ends the drain, and rows that could not close are retried in the next round.
-6. **Rollout.** Traversal (gm-hop over `skills/dream-rsi/gm-graph.json`) and new-row finding run in free slots only while fewer than 20 rows are open. At 20 or more open rows they wait, and the drain has the slots.
+6. **Rollout.** Traversal (gm-hop over `../dream-rsi/gm-graph.json`) and new-row finding run in free slots only while fewer than 20 rows are open. At 20 or more open rows they wait, and the drain has the slots.
 
 ### Launch loop (binds steps 1, 2 and 6)
 1. **Units.** A unit is one file group's rows, at most N rows, with N set by the orchestrator for the run (never a fixed global number). Units in different file groups are independent and launch together. A unit is never a whole repo. Triage and drain units are per row or per small file group.
@@ -34,7 +34,7 @@ Every run, however it ends, is followed by the `gm-continue` handoff (gm SKILL.m
 
 ### Resumable drain (queue file)
 Durable state: `.gm/drain-list/queue.tsv`, one `id<TAB>state` line per row. The `id` is the PRD row's inner id (the `id:` field in `.gm/prd/<file>.yml`, read with `prd-list {"id":..., "full":true}`), never the file name, which can differ and never matches on lookup. States: `pending`, `launched`, `resolved`, `stale`, `real` (premise confirmed live, row still open), `unknown` (no witness obtained), `blocked` (has `blocker_notes`). Any session continues from this file. Where it conflicts with `prd-list`, `prd-list` wins.
-1. **Session start.** Read the file. Each `launched` row came from a prior session: re-check it with `prd-list {"id":"<id>","cwd":"/workspace/gm"}` and set its state to the row's real state (closed resolved or stale, still open with notes, or `pending`). The `pending` rows are the queue.
+1. **Session start.** Read the file. Each `launched` row came from a prior session: re-check it with `prd-list {"id":"<id>","cwd":"<repo-root>"}` and set its state to the row's real state (closed resolved or stale, still open with notes, or `pending`). The `pending` rows are the queue.
 2. **Launch.** Mark each unit's rows `launched` before its launch block, so a crash leaves a recoverable marker. Launch `min(free, queued)` units in one block, one unit per row or small file group. `free` is read live (Lane budget), never a number written here. A refused unit goes back to `pending`.
 3. **Refill.** When any unit returns, record its outcome in the file in that same turn (one write per block, covering every outcome in it), then launch the next `pending` unit at once (Launch loop, rule 3).
 4. **Blocked rows.** A `blocked` row is skipped only when this session re-checks its named blocker live and it still holds, with the dispatch id recorded. Otherwise it returns to `pending`.
@@ -56,7 +56,7 @@ Repeat until a full pass adds no work:
 - Each round takes its listing in pages of at most 50 (Standing pair, step 1), never the whole pending list in one call. A round returns `{pending_before, resolved, blocked, failed, new_blockers, peak_parallel}` and the next round starts from a fresh listing. Refusals and stalls are answered by the next round, never by stopping. A group that resolves nothing is re-run once with its blockers split.
 - `pending_after > pending_before` halts new blockers until a merge pass closes duplicates.
 - No fixed run total: rows and the harness cap bound launches. A cap hit queues the launch and resumes it as slots free. A stalled run is re-briefed, never relaunched unchanged.
-- Three loops, each run to exhaustion: (1) row drain, Standing pair steps 1-5, until pending = 0 or a round closes no row; (2) traversal, one `gm-hop` per principle node in `skills/dream-rsi/gm-graph.json` per surface, emitting rows, until every node has a receipt per surface, running only while fewer than 20 rows are open; (3) audit, a completeness critic whose findings become rows for loop 1.
+- Three loops, each run to exhaustion: (1) row drain, Standing pair steps 1-5, until pending = 0 or a round closes no row; (2) traversal, one `gm-hop` per principle node in `../dream-rsi/gm-graph.json` per surface, emitting rows, until every node has a receipt per surface, running only while fewer than 20 rows are open; (3) audit, a completeness critic whose findings become rows for loop 1.
 - Drain before make. Pending >= 20: the drain takes every free slot. Pending < 20: traversal takes free slots (computer-science disciplines first) until pending reaches 20.
 - Repeat 1-3 until a full cycle adds and resolves nothing. A round resolving 0 rows with pending rows left is a stall: change the brief, rerun. Never stop on a stall alone.
 - Ceiling and floor bound live subagents (Lane budget). Refill a freed slot in the same turn.
@@ -108,7 +108,7 @@ Launch only advertised ids. A slot stays empty only when no pending row and no u
 
 ## Hop payloads
 - A hop is an edge: nominate FROM its node TO a neighbour in `node.links`.
-- Read `skills/dream-rsi/gm-graph.json` at launch. Never take counts from `node_count` or `edge_count`.
+- Read `../dream-rsi/gm-graph.json` at launch. Never take counts from `node_count` or `edge_count`.
 - `node`: `id`, `label`, `book`, `author`, `kind` from `nodes[]`. `advocate` = `"<author> - <book>"`, or bare `book` when `author` is `unattributed`.
 - `links`: one `{to, guards}` per `edges[]` entry with `from` = `node.id`, both kinds, sorted by `to`. `guards = []` when `condition` is null, else `[condition]`.
 - `to` not in `nodes[]`: skip; `prd-add` `gm-graph-dangling-edge-<from>-<to>`. `links: []` still launches; receipt says `next: none`. Zero links on launch is a derivation defect.
@@ -165,7 +165,7 @@ Launch only advertised ids. A slot stays empty only when no pending row and no u
 - Browser and server contention: Lane budget. A browser arm that cannot take the lease waits; node-only work continues. Log any wait with its cause and UTC; a wait does not end the turn.
 - Rows needing an exclusive lock wait; the pool launches the rest. A timed-out lock wait is a failed run.
 - One browser or GPU arm at a time, pool-wide; `gpulock` serialises the adapter only. One browser arm plus one node-only lane is fine; two browser arms are not. Lease held: take node-only work; never open a second browser.
-- Browsers are CDP-driven and headful. Use the gm browser verbs (`browser`, `chrome`; `skills/gm/docs/verbs.md`) only. Never install or download puppeteer, playwright, chromium or any browser package or binary, and never launch a headless browser (lightpanda, obrowser, `headless` launches are removed). A project's browser opens once and stays open: it closes only after 15 minutes with no lease holder or waiter, so runs never open and close it per call. Never touch the user's Chrome.
+- Browsers are CDP-driven and headful. Use the gm browser verbs (`browser`, `chrome`; `../gm/docs/verbs.md`) only. Never install or download puppeteer, playwright, chromium or any browser package or binary, and never launch a headless browser (lightpanda, obrowser, `headless` launches are removed). A project's browser opens once and stays open: it closes only after 15 minutes with no lease holder or waiter, so runs never open and close it per call. Never touch the user's Chrome.
 - EADDRINUSE: the witness did not run. Identify the owning process. Never kill another lane's process.
 - Browser-last, minimal surface, cold-start and reload budgets, live witnesses in place of new test files, counted units, loud refusals: gm-prd, Witness economy.
 
@@ -201,4 +201,4 @@ One work tree, one git lane. Main only; no worktree, side branch or scratch chec
 Skills under `skills/` are live on the next dispatch. Check `.git/MERGE_HEAD` first. Publish path-scoped, push the full sha, then `ci-status`. Steps: `docs/recovery.md`, "Editing the skills".
 
 ## Finish the work
-The rule in `skills/gm/SKILL.md` (Finish the work) applies to every run of this skill unchanged.
+The rule in `../gm/SKILL.md` (Finish the work) applies to every run of this skill unchanged.

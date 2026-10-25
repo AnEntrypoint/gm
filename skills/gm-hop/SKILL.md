@@ -17,7 +17,7 @@ The orchestrator writes ledger `launch` and `done` lines (gm-orchestrate, Tick),
 1. Argue `rhetoric`'s open question in one paragraph, or the principle's weakest claim if empty.
 2. List testable claims, one checkable sentence each, with its test.
 3. `codesearch` every instance a claim governs on the surface. Print cited lines; drop absent text.
-3a. If the surface asserts a cause, defect or fix, run ACH (`gm-config/prose/ach.md`) first: at least two rival hypotheses, a `C`/`I`/`N` matrix from dispatch-backed evidence, rank by fewest `I` cells, and one probe separating the leader. Step 4 acts only on the leader.
+3a. If the surface asserts a cause, defect or fix, run ACH (`../gm/prose/ach.md`) first: at least two rival hypotheses, a `C`/`I`/`N` matrix from dispatch-backed evidence, rank by fewest `I` cells, and one probe separating the leader. Step 4 acts only on the leader.
 4. Close what one exact-line change written through `fs_write` closes, if no other writer holds the file (`git_status` with paths). Witness it live (keep the dispatch id); revert any change without a live witness.
 5. Before each `prd-add`, `codesearch` `.gm/prd/` for the finding's cause literal (verb name or file path). On a hit, witness that row if this hop owns it, else cite its id; add nothing. Otherwise `prd-add` `<principle>-<SESSION_ID>-<n>` with the full SESSION_ID, never a suffix, and body field `"origin":"traversal"`: `prd-add` refuses a traversal row while 20 or more rows are pending and the refusal names that count (drain first). `prd-add` refuses an existing id unless `overwrite:true`, so a refused id takes the next `<n>`; never send `overwrite` for another session's row. Retire or merge one stale row per row added. The reply's `public_search` block starts that row's reference subagent (gm-prd, stage 0). An order, rank or choice discipline (PERT, MoSCoW, Pugh, Wardley) files no row: it writes that ordering as `blockedBy` edges or a merged `acceptance_criteria` on the target rows.
 6. Name the biggest need in one sentence.
@@ -37,10 +37,10 @@ A hop EMITS a node on EVERY verdict, including NOT-APPLICABLE; a receipt summary
 ```
 - `findings`: every PRD row this hop filed or cited. `owner` is the session holding the row; `disposition` is `accept` until the orchestrator writes otherwise. `inspector` is the judge session, or `null`.
 - `links_offered` = the `to` of every entry of `node.links`, verbatim. `link_taken` = the `to` nominated in `next:`, or `null` at `next: none`.
-- `applied:true` only when >=1 change landed AND `witness` names a dispatch you hold. `witness_dispatch_ids` lists the dispatch ids the witness quotes; `skills/dream-rsi/SKILL.md` Part B step 4 rejects the record if one is absent from `.gm/dream-rsi/<session>/observations.json`.
-- The hop never witnesses its own edit. Before `applied:true`, verifier session `<session>-v1` gets only the change contract (file, expected edit, witness command) and re-runs the witness live; record `verified_by:"<session>-v1"` and its ids. No verifier pass: `applied:false`, `verified_by:null`. `skills/dream-rsi/SKILL.md` Part B step 2 counts a walk only when `verified_by` differs from `session`.
+- `applied:true` only when >=1 change landed AND `witness` names a dispatch you hold. `witness_dispatch_ids` lists the dispatch ids the witness quotes; `../dream-rsi/SKILL.md` Part B step 4 rejects the record if one is absent from `.gm/dream-rsi/<session>/observations.json`.
+- The hop never witnesses its own edit. Before `applied:true`, verifier session `<session>-v1` gets only the change contract (file, expected edit, witness command) and re-runs the witness live; record `verified_by:"<session>-v1"` and its ids. No verifier pass: `applied:false`, `verified_by:null`. `../dream-rsi/SKILL.md` Part B step 2 counts a walk only when `verified_by` differs from `session`.
 - Stamp `lean_node:"<NODE>"` on your dispatches (read by `rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs.rs`; recorded by `rs-plugkit/crates/plugkit-core/src/orchestrator/dream_rsi.rs`).
-- A discipline the surface demands that `links_offered` lacks is emitted, not dropped: `fs_write` with `append:true` adds `{id,label,book,author,kind:"principle",proposed_by:<node.id>,session,witness}` to `.gm/lean-walk/new-nodes.jsonl` (`id` = upper-case slug of the book title). Refuse an `id` already in `nodes[]`; join that node instead. Never edit `skills/dream-rsi/gm-graph.json`; its owner promotes nodes.
+- A discipline the surface demands that `links_offered` lacks is emitted, not dropped: `fs_write` with `append:true` adds `{id,label,book,author,kind:"principle",proposed_by:<node.id>,session,witness}` to `.gm/lean-walk/new-nodes.jsonl` (`id` = upper-case slug of the book title). Refuse an `id` already in `nodes[]`; join that node instead. Never edit `../dream-rsi/gm-graph.json`; its owner promotes nodes.
 - Evidence budget: the node file keeps verdict fields and pointers; a bulky array moves to `.gm/lean-walk/<NODE>-<field>.json`. Under 4 KB. `.gm/lean-walk/` is gitignored: no commit, no push.
 
 ## Rules
@@ -76,4 +76,4 @@ next: <id>; depth=<n+1> | none, <reason>
 
 ## Finish the work
 
-The rule in `skills/gm/SKILL.md` (Finish the work) applies to every hop unchanged.
+The rule in `../gm/SKILL.md` (Finish the work) applies to every hop unchanged.

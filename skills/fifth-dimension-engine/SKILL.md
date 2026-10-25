@@ -144,7 +144,7 @@ See `references/` directory for:
 - `route-structure.md` -- what a route is and how it is structured
 - `research-kernel-extraction.md` -- turning ideas into research kernels
 - `route-inspection-guide.md` -- how to verify and attack a route
-- `skills/polaris-protocol/SKILL.md` -- the Polaris Protocol tree root and state machine
+- `../polaris-protocol/SKILL.md` -- the Polaris Protocol tree root and state machine
 
 ## Finish the work
 
