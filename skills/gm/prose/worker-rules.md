@@ -28,7 +28,7 @@ Read the last block for your row id in the gm store; it decides the state. If th
 ## 4. Execution limits
 
 - Node only, unless the row names a GPU or browser arm and the lock or lease is free.
-- Never use Monitor, ScheduleWakeup, CronCreate, shell sleep or shell grep.
+- Never use a background wait, a scheduled wake-up, a cron job, shell sleep or shell grep.
 - Wait only with gm verbs: the `wait` verb, body `{"ms": N}`, N a positive integer in milliseconds, maximum 60000 per call. Example: `dispatch wait --body '{"ms":3000}'`.
 
 ## 5. Git
@@ -37,10 +37,10 @@ Each worker commits and pushes its own scoped change in the same run; do not wai
 
 - Commit with `git_commit` and explicit `paths` naming only the files this run changed, then push with `git_push {"rev":"HEAD"}`. `git_finalize` with the same `paths` does both in one call. Never commit without `paths`.
 - Leave other lanes' modified or untracked files uncommitted. Read `git_status` first; commit only the paths you changed.
-- Commit as lanmower, the configured git identity, with no trailers (no Co-Authored-By, Claude-Session or generated-by line). The message states the change and why.
+- Commit as lanmower, the configured git identity, with no trailers (no Co-Authored-By, session-id or generated-by line). The message states the change and why.
 - Stay on main. A worker creates no branch or worktree and never amends a pushed commit.
 - Read the pushed commit back with `git_show {"rev":"<sha>"}`, check its CI with `ci-status {"sha":"<sha>","github_repo":"<owner/name>"}`, and report sha and CI state in your return. A pending or unknown CI state is reported as such, never as passing.
-- Raw git in Bash stays forbidden; every git operation goes through a gm git verb.
+- Raw git in the host shell stays forbidden; every git operation goes through a gm git verb.
 
 ## 6. Blockers
 

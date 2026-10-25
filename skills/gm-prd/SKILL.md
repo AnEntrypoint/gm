@@ -5,12 +5,12 @@ description: "Closes one PRD row through the gm stages: an executor edits and ha
 
 # gm-prd
 
-One row, one session. Stages run in order, none a subagent; the orchestrator spawns the verifier and CI lanes after handoff. Each writes a create-only receipt `.gm/receipts/<row>/NN-<STAGE>.md`. A refused stage re-reads the state the refusal names, fixes it, and retries once; only a stage still refused for the same cause becomes a blocker row `<row>-blocker-<session>` (`prd-add`) naming the external fact and clearing action. No skips. Verbs: gm §1. This PRD tracker is separate from node traversal (gm-orchestrate): a row is not a node and never changes the frontier count.
+One row, one session. Stages run in order, none a subagent; the orchestrator spawns the verifier and CI lanes after handoff. Each writes a create-only receipt `.gm/receipts/<row>/NN-<STAGE>.md`. A refused stage re-reads the state the refusal names, fixes it, and retries once; only a stage still refused for the same cause becomes a blocker row `<row>-blocker-<session>` (`prd-add`) naming the external fact and clearing action. No skips. Verbs: gm section 1. This PRD tracker is separate from node traversal (gm-orchestrate): a row is not a node and never changes the frontier count.
 
 ## Procedure
 
 - A blocker is filed only after ELIMINATE (1b) ran a live JIT check on each open unknown and recorded its dispatch id; a missing fact, unresolved unknown or missing row file is no blocker until those checks fail.
-- CI builds are not blockers: a CI-only row pushes and reads the run through `ci-status` (gm, CI). Owner decisions are not blockers: the owner approved every progressing decision, so the row records it and runs it. Missing acceptance text is derived at SPECIFY. Only a world-scoped one-way door is a blocker without a check (gm §4).
+- CI builds are not blockers: a CI-only row pushes and reads the run through `ci-status` (gm, CI). Owner decisions are not blockers: the owner approved every progressing decision, so the row records it and runs it. Missing acceptance text is derived at SPECIFY. Only a world-scoped one-way door is a blocker without a check (gm section 4).
 
 The executor runs the edit stages only: SPECIFY (1), ELIMINATE (1b), EDIT then VALIDATE (1c), then publish of its own commit (Delivery), then hands off. Verification (PROVE, witness, DECIDE, COMPLETE) and the CI read (Delivery, steps 3-5) are separate lanes the orchestrator spawns per handoff, never inline (gm-orchestrate, Verification and CI lanes). Start at SPECIFY with `row=<id>; session=<SESSION_ID>`. Stages 2, 8, 9 belong to the verifier.
 
@@ -18,7 +18,7 @@ The executor runs the edit stages only: SPECIFY (1), ELIMINATE (1b), EDIT then V
 1b. ELIMINATE: eliminate each unknown by a live JIT run; a run revealing a new unknown adds it and returns to ELIMINATE. EDIT starts only when no unknown is open.
 1c. EDIT then VALIDATE: edit, then validate by JIT runs against acceptance. New unknown or failed check: ELIMINATE, then EDIT again. If the row asserts a cause, write its ACH matrix (`gm-config/prose/ach.md`) into this receipt: at least two hypotheses, evidence as dispatch ids, `C`/`I`/`N` cells, the leader, its probe.
 2. PROVE: precondition, invariant, postcondition; run each. The leader's probe runs first; a probe that does not separate the leader from the next hypothesis is a blocker row, not a pass.
-3. EMIT: exact-match Edit only; witness through the live entry point; keep the dispatch id.
+3. EMIT: exact-line change only, written through `fs_write`; witness through the live entry point; keep the dispatch id.
 4. STATE: the change replays idempotently; name the state it owns.
 5. CONC: list each touched file and other writers' hunks (`git_status` with paths).
 6. SEC: secrets, injection, identity; each check is a run.
@@ -35,7 +35,7 @@ Output: STATUS, ROW, FILES, WITNESS, MUTABLES, DELIVERY.
 ## Rules
 
 - Read a row before writing it. `prd-add` on an existing id is refused (`prd-add refused: id '<id>' already exists`) unless the body carries `overwrite:true` (rescope). A witness blocker on an existing row is appended to its text, subject kept; never reuse the row's id for a blocker.
-- At SPECIFY the orchestrator dispatches `scan_deps` and logs its result as a PRD row (gm §1a).
+- At SPECIFY the orchestrator dispatches `scan_deps` and logs its result as a PRD row (gm section 1a).
 - Row ids are real: read pending rows with `prd-list {"status":"pending"}` in one `gm_codemode` body; never invent one. Resolved rows live in `.gm/prd-log.jsonl`; `prd-list {"id":"<id>"}` reads the log before concluding a row never existed.
 - A row is `.gm/prd/<id>.yml`, one file each, human-editable: edit it directly when that is the honest fix. A write is a compare-and-swap of that file alone.
 - Witness outcomes are not PRD rows. Each run appends one line to `.gm/witness-log.md` (witness, exit code, RESULT line, UTC, dispatch id); the parent row closes with `prd-resolve` citing it. `prd-resolve` refuses a witness output sha256 already bound (`prd-resolve-duplicate-witness`): one output closes one row.

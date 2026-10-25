@@ -38,7 +38,7 @@ Dependency rule: resolve in order. An unknown whose depends_on are all resolved 
 
 Two-pass rule: an unknown surviving two genuine resolution attempts without a witness is reclassified as a fresh unknown with a new id; affected rows are re-cut and the walk reshapes with `transition to=EARS`. A repair attempt failing twice follows the same discipline: change the approach, witness the result, never repeat the identical approach.
 
-Gate-driven repair: a code repair is an Edit, a disk Read of the touched path, and the same live witness, all inside this node. A finding changing the state model (the ownership or disjointness boundary is wrong) is a new STATE or CONC unknown, and the sweep repeats for the new boundary.
+Gate-driven repair: a code repair is an exact-line change through `fs_write`, a disk read (`fs_read`) of the touched path, and the same live witness, all inside this node. A finding changing the state model (the ownership or disjointness boundary is wrong) is a new STATE or CONC unknown, and the sweep repeats for the new boundary.
 
 ## Machine fit
 
