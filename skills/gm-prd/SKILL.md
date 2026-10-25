@@ -17,7 +17,7 @@ The executor runs the edit stages only: REFERENCES (0), SPECIFY (1), ELIMINATE (
 0. REFERENCES: the lane that files a row starts its `public_search` subagent from the brief in the `prd-add` reply, in the same turn. This stage waits for that subagent's `prd-references` call: re-read the row with `prd-list {"id":"<row id>","full":true}` and start SPECIFY once it carries a reference or a `none_because`. A row with neither stays pending.
 1. SPECIFY (orient): restate row and acceptance; codesearch `literal` first for every exact string the row names (identifiers, paths, error text), then `dual` (top 20 BM25, top 20 vector, top 20 commits, 3 live snippet lines each; no snippet text stored); codeinsight first for any function the row touches. Check each cited line against the tree (absent: stale). Write unknowns with `unknown-add`.
 1b. ELIMINATE: eliminate each unknown by a live JIT run; a run revealing a new unknown adds it and returns to ELIMINATE. EDIT starts only when no unknown is open.
-1c. EDIT then VALIDATE: edit, then validate by JIT runs against acceptance. New unknown or failed check: ELIMINATE, then EDIT again. If the row asserts a cause, write its ACH matrix (`gm-config/prose/ach.md`) into this receipt: at least two hypotheses, evidence as dispatch ids, `C`/`I`/`N` cells, the leader, its probe.
+1c. EDIT then VALIDATE: edit, then validate by JIT runs against acceptance. New unknown or failed check: ELIMINATE, then EDIT again. If the row asserts a cause, write its ACH matrix (`../gm/prose/ach.md`) into this receipt: at least two hypotheses, evidence as dispatch ids, `C`/`I`/`N` cells, the leader, its probe.
 2. PROVE: precondition, invariant, postcondition; run each. The leader's probe runs first; a probe that does not separate the leader from the next hypothesis is a blocker row, not a pass.
 3. EMIT: exact-line change only, written through `fs_write`; witness through the live entry point; keep the dispatch id.
 4. STATE: the change replays idempotently; name the state it owns.
@@ -68,4 +68,4 @@ Output: STATUS, ROW, FILES, WITNESS, MUTABLES, DELIVERY.
 
 ## Finish the work
 
-The rule in `skills/gm/SKILL.md` (Finish the work) applies to every row unchanged.
+The rule in `../gm/SKILL.md` (Finish the work) applies to every row unchanged.

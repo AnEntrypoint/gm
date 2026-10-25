@@ -18,13 +18,13 @@ gm_codemode({ "code": "return await gm.codesearch({body: {query: \"kLinkQuantum\
 
 Plain-text-body verbs take `raw_body` instead of `body` (see Execution).
 
-Every verb is a `gm.<verb>({...})` call inside `gm_codemode`; the transport is `skills/gm/spool-adapter.md`.
+Every verb is a `gm.<verb>({...})` call inside `gm_codemode`; the transport is `../spool-adapter.md`.
 
 `cwd` selects the project; pass it on every call. gm resolves the root with `git rev-parse --show-toplevel`; a cwd outside any git repository is its own root. The body field `git_root_override` pins the root for any verb.
 
 `bin/gm` is the shell entrypoint: `gm <verb> [flags]` forwards to gm-mcp's `dispatch` subcommand, so a shell runs a verb with no MCP client or daemon. Search verbs also take a shorter form: `gm codesearch literal <needle> --path <dir> --glob <glob>`, which builds `{"query","mode"}` plus `path`, with `--glob` as `path_glob`. It exists because a bare mode word such as `literal` is not a dispatch body. It applies to `grep`, `rg`, `codesearch`, `code_search` and `search` only.
 
-The runner binary is `~/.gm-tools/agentplug-runner` (`agentplug-runner.exe` on Windows), installed by `install.sh` or `install.ps1`; on this host it is `/data/cache/gm/.gm-tools/agentplug-runner`. It is not on PATH, so a bash dispatch calls it by that full path.
+The runner binary is `~/.gm-tools/agentplug-runner` (`agentplug-runner.exe` on Windows), installed by `install.sh` or `install.ps1`. It is not on PATH, so a bash dispatch calls it by that install path.
 
 Inside `gm_codemode`, `gm.grep` and `gm.codesearch` are the search functions. `rg` aliases `gm.grep`; `code_search` and `search` alias `gm.codesearch`. `gm.list()` lists all five; `gm.describe` resolves each.
 
@@ -242,7 +242,7 @@ Every action except `outline` and `sync` drives sync passes to completion before
 
 ## Memory
 
-Agents do not call these verbs for memory; the flat-file store that `skills/gm/SKILL.md` (Invariants) describes is memory. The verbs stay in the code.
+Agents do not call these verbs for memory; the flat-file store that `../SKILL.md` (Invariants) describes is memory. The verbs stay in the code.
 
 `memorize-continue` is the one memory verb that resolves in the current build; the other memory verbs are not registered.
 
@@ -591,7 +591,7 @@ A uid is the number a snapshot printed for an element; it stays with that elemen
 
 These verbs drive the phase machine, dispatched through the same spool.
 
-**The graph is a set of independent nodes, not a sequence of stages.** `gm-config/fsm/graph.json` declares its states (nodes) and edges; `rs-plugkit` compiles its own lean graph, `rs-plugkit/crates/plugkit-core/src/orchestrator/lean_graph.json`, through `include_str!`. A node is a principle, a tension, a gate or a terminal; each has its own prose, keyed by its `prose_key`. An edge's `kind` is `forward` or `backreference`. A node is entered from any neighbour with an edge to it and left along any edge out of it, so a walk is a graph walk with many distinct paths. The runtime word `phase` is the node key you currently stand on; `policy.initial_phase` and `policy.terminal_phase` name two nodes. `skills/dream-rsi/gm-graph.json` is the authored catalogue the walk is measured against; its nodes carry a `provenance` field (`null` or a label such as `P1`).
+**The graph is a set of independent nodes, not a sequence of stages.** `gm-config/fsm/graph.json` declares its states (nodes) and edges; `rs-plugkit` compiles its own lean graph, `rs-plugkit/crates/plugkit-core/src/orchestrator/lean_graph.json`, through `include_str!`. A node is a principle, a tension, a gate or a terminal; each has its own prose, keyed by its `prose_key`. An edge's `kind` is `forward` or `backreference`. A node is entered from any neighbour with an edge to it and left along any edge out of it, so a walk is a graph walk with many distinct paths. The runtime word `phase` is the node key you currently stand on; `policy.initial_phase` and `policy.terminal_phase` name two nodes. `../../dream-rsi/gm-graph.json` is the authored catalogue the walk is measured against; its nodes carry a `provenance` field (`null` or a label such as `P1`).
 
 `phase-status`, `comment-audit`, `submodule-check`, `prd-list`, `unknown-list`, `task-list`, `task-output`, `discipline`, `discipline-audit`, `fsm-validate`, `predicates-md`, `capability-resolve`, `calculus-model-check`, `component-loader-hmr`, `dream-replay`, `dream-round` and `pool-brief` are `query`; `instruction`, `transition`, `transition-revert`, `residual-scan`, `claim-audit`, `prd-add`, `prd-resolve`, `prd-defer`, `unknown-add`, `unknown-resolve`, `unknown-defer`, `task-spawn`, `task-stop`, `memorize-continue`, `discipline-note`, `discipline-check-removal`, `fsm-vendor`, `fsm-propose-override`, `codeinsight-namespace-audit`, `component-loader-reconcile`, `dream-policy-register`, `dream-evaluator-receipt`, `dream-discovery-record`, `dream-world-seal`, `dream-replay-round`, `dream-replay-cycle`, `prd-block`, `prd-witness-request`, `expansion-audit`, `prd-repair`, `subagent-start`, `subagent-end`, `browser_lease_acquire` and `browser_lease_release` are `command`; `browser_lease_status` is `query`.
 `prd-add` takes `id`, `subject`, `description`, `acceptance_criteria`, `witness_plan`, `status`, `blockedBy`, `overwrite`, `repair`, `owner` (the accountable lane or session; defaults to the filer's session_id), `disposition` (`open`, `accepted`, `rejected` or `deferred`; a reason belongs in `description`) and `recheck_by` (a session that re-checks the finding; must differ from `owner`), at the top level or inside `body` (same call either way). `description` is the row's long-form prose, stored on the row as `description`, never as the dispatch body, so `{"subject":"<intent>","description":"<prose>"}` is the correct shape. `prd-list` brief rows carry the row's text in `title`, clamped to a fixed length. Full rows (`{"id":...}` or `{"full":true}`) return the stored row as `prd-add` wrote it. The brief `title` is the row's `title`, or its `subject` when it has none. `status` matches a row's `status` string exactly. A row written without a `status` gets `pending`, and `pending` lists the folder rows whose status is `pending`.
@@ -696,7 +696,7 @@ Every body field a verb declares, grouped by verb. The contract check (`scripts/
 - `websearch` and `web_search`: `wiki`, `user`, `stars`
 - `git_push`: `recover_remote_moved`, `allow_foreign_commits`
 - `git_commit`: `allow_whole_index`, `allow_foreign_rows`
-- `git_commit` and `git_push` can fail through the MCP tool with `error_code: failed` and "Maximum call stack size exceeded", landing nothing (observed 2026-10-22 on two projects). The CLI route does the same work: `node /config/.gm-tools/gm-mcp-server.mjs dispatch <verb> --cwd <project> --body '<json>'`. It prints YAML, so read `sha_full: <hex>` rather than a JSON key, and a commit body without `paths` is refused as `blanket_stage_refused`.
+- `git_commit` and `git_push` can fail through the MCP tool with `error_code: failed` and "Maximum call stack size exceeded", landing nothing (observed 2026-10-22 on two projects). The CLI route does the same work: `node ~/.gm-tools/gm-mcp-server.mjs dispatch <verb> --cwd <project> --body '<json>'`. It prints YAML, so read `sha_full: <hex>` rather than a JSON key, and a commit body without `paths` is refused as `blanket_stage_refused`.
 - `git_finalize`: `allow_whole_index`, `untrack`
 - `git_log`: `range`. Commit count is `limit`; `max_count` is its git-native alias, and `limit` wins when both are present (default 10). `count` and `n` are refused as unknown fields.
 - `git_diff`: `range`, `staged`, `stat`

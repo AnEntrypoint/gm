@@ -146,7 +146,7 @@ See `references/` directory for:
 - `task-atomization.md` -- how to break work into atoms
 - `verification-gates.md` -- designing verification for each stage
 - `claim-ceiling-examples.md` -- what "complete" actually means in different contexts
-- `skills/polaris-protocol/SKILL.md` -- the Polaris Protocol tree root and state machine that wires this skill to Fifth-Dimension Engine and WFGY-Method
+- `../polaris-protocol/SKILL.md` -- the Polaris Protocol tree root and state machine that wires this skill to Fifth-Dimension Engine and WFGY-Method
 
 ## What This Is Not
 

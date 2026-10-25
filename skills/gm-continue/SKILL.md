@@ -11,7 +11,7 @@ This skill has exactly two allowed endings:
 1. Read the `gm` prompt (`prompts/get gm`; where `gm_codemode` exposes no `prompts/get`, `fs_read {"path":"skills/gm/SKILL.md"}` returns the same text), with the remaining PRD rows as its arguments (reachable work found, a reopened `external`/`out-of-reach` row, or the first confirming pass this session). When `gm` reaches COMPLETE again, it calls back into this skill.
 2. Confirm there are no remaining PRD rows and none can be added, by a real witnessed check (steps 2-4 actually run, not assumed).
 
-No other prose-only stop, no deferring to the user, no partial confirmation. The one exception is a world-scoped one-way door (`skills/gm/SKILL.md` Section 4): deleting anything with no recoverable copy, spending money, reaching another person, changing production, or any legal, medical, financial or safety consequence for a real person. Never ask to choose between options that make progress.
+No other prose-only stop, no deferring to the user, no partial confirmation. The one exception is a world-scoped one-way door (`../gm/SKILL.md` Section 4): deleting anything with no recoverable copy, spending money, reaching another person, changing production, or any legal, medical, financial or safety consequence for a real person. Never ask to choose between options that make progress.
 
 ## What this skill does
 
