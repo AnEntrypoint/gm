@@ -28,6 +28,7 @@ Every gm run (the `gm` prompt) executes the drain procedure below in its first t
 6. **Forbidden.** One agent for a repo's whole backlog; running repos one after another; holding a queued unit until another repo finishes; dropping a refused unit.
 7. **Shared files.** Parallel edits to one file are allowed only when each agent re-reads that file right before its edit (step 2).
 8. **Mark-and-launch atomicity.** A queue row is marked `launched` in the same tool-call block that starts its agent, and that agent's brief carries the exact queue id inline. A brief never says "await an id", "use the id below" or "pick the first pending row"; each brief is complete when it is sent. A row that cannot be launched in the block that marks it is returned to `pending` before the block ends. After a launch, the `launch-log.tsv` line names the same id the agent received.
+9. **Reference gate.** The rollout does not launch a row's fix lane until the row has at least one public reference, so fix lanes start from public code, not from memory. A row whose `none_because` names why no public code applies passes the gate (gm-prd, stage 0).
 
 Every run, however it ends, is followed by the `gm-continue` handoff (gm SKILL.md, Routing), which searches for remaining work and reloads gm when work remains.
 
