@@ -550,6 +550,12 @@ The `where` filter reads `args.0.value`, so it matches only string and number fi
 
 A `cdp` step's reply entry is the CDP command's own result, so `cdp Runtime.evaluate` yields `result` and `cdp Page.captureScreenshot` yields `data`. The command runs on the page's CDP session.
 
+Listeners on a DOM node: an `objectId` from an earlier `Runtime.evaluate` is refused by a later `DOMDebugger.getEventListeners` call (`Could not find object`), so never pass one across calls. Put the lookup in one `cdp Runtime.evaluate` with `includeCommandLineAPI` true, whose expression calls `getEventListeners` on the node in the same evaluation:
+
+```
+raw_body: "engine=cdp\nsessionId=example-1\ncdp Runtime.evaluate\n{\"expression\":\"JSON.stringify(Object.keys(getEventListeners(document.querySelector('#minimap'))))\",\"includeCommandLineAPI\":true,\"returnByValue\":true}\n"
+```
+
 An `events` step arms its capture when the call attaches to the shared Chrome, not where the line sits, so events fired by an earlier step are still collected until the call ends. `where` keeps events whose dotted field (read from the event params) contains (`~`), equals (`=`) or differs from (`!=`) the value; an absent field never matches. `limit` caps the events kept and counts the rest in `dropped`. The CDP domain (the part before the dot) is enabled for you: `events Debugger.scriptParsed` sends `Debugger.enable`.
 
 ```
