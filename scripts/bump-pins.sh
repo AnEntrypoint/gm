@@ -15,10 +15,13 @@ repo_of() {
 }
 
 gate_ok() {
-  local rows gate_rows open wf ok
+  local rows gate_rows open wf ok ci
   GATE_REASON=""
-  rows=$(gh api --paginate "repos/AnEntrypoint/$1/actions/runs?head_sha=$2&per_page=100" --jq '.workflow_runs[] | select(.name != "Deploy GH Pages") | [.name, .status, (.conclusion // "")] | @tsv') || { echo "::error::run query failed for $1 at ${2:0:9}" >&2; return 2; }
+  rows=$(gh api --paginate "repos/AnEntrypoint/$1/actions/runs?head_sha=$2&per_page=100" --jq '.workflow_runs[] | select(.name != "Deploy GH Pages" and .name != "notify-gm") | [.name, .status, (.conclusion // "")] | @tsv') || { echo "::error::run query failed for $1 at ${2:0:9}" >&2; return 2; }
   if [ -z "$rows" ]; then
+    # A repo whose only workflows are release, publish, notify-gm or pages has no CI to run on a push, so its tip is green without a run.
+    ci=$(gh api "repos/AnEntrypoint/$1/actions/workflows" --jq '[.workflows[] | select(.state == "active" and (.name | test("release|publish|notify|pages|deploy"; "i") | not))] | length') || { echo "::error::workflow query failed for $1" >&2; return 2; }
+    [ "$ci" = "0" ] && return 0
     GATE_REASON="no CI run exists for this sha (no workflow triggered for it; path filters skip docs-only tips)"
     return 1
   fi
@@ -47,7 +50,7 @@ wait_for_tip() {
   # spin cost 615 s of a 641 s run and was held anyway.
   local runs total active polled=0
   while :; do
-    runs=$(gh api --paginate "repos/AnEntrypoint/$1/actions/runs?head_sha=$2&per_page=100" --jq '.workflow_runs[] | select(.name != "Deploy GH Pages") | .status' | awk 'NF {n++; if ($0 != "completed") a++} END{print n+0, a+0}') || return 2
+    runs=$(gh api --paginate "repos/AnEntrypoint/$1/actions/runs?head_sha=$2&per_page=100" --jq '.workflow_runs[] | select(.name != "Deploy GH Pages" and .name != "notify-gm") | .status' | awk 'NF {n++; if ($0 != "completed") a++} END{print n+0, a+0}') || return 2
     read -r total active <<<"$runs"
     [ "$total" -gt 0 ] && [ "$active" = "0" ] && return 0
     if [ "$total" = "0" ]; then
