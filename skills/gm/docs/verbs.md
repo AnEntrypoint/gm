@@ -448,6 +448,29 @@ body: {"url":"https://html.duckduckgo.com/html/?q=openbw", "prompt":"what is ope
 
 Both filters take host suffixes (`example.com` matches `www.example.com` and `docs.example.com`) as an array or a comma-separated string. The reply carries `query`, `engine`, `endpoint`, `status`, `count`, `found`, `limit`, `truncated`, `filters` and `results` (one row per hit: `rank`, `title`, `url`, `host`, `snippet`, each clamped at 400 characters), plus `prompt`/`answer` when a prompt is given. Empty `results` come with a `note` naming the usual cause, a challenge page, and the two ways past it: `url`, or `fetch` on a known URL.
 
+### `github-search`: public code on GitHub
+
+`github-search` searches code in public GitHub repositories through the GitHub code search API. The public-reference subagent of a PRD row calls it first (gm-prd, stage 0). `query` is plain text: the API takes no regex, so send literal terms and check each hit with `codesearch`. Results can differ from the github.com search page (the API index, ranking and rate limits differ), so a hit is a lead to open before it is cited.
+
+```
+body: {"query":"ensure_sibling_registered","language":"rust"}
+```
+
+| body key | GitHub qualifier | narrows the search to | example |
+|---|---|---|---|
+| `query` | (terms) | plain-text terms; required | `{"query":"preserve_order"}` |
+| `language` | `language:` | one language | `{"query":"serde_json","language":"rust"}` |
+| `owner` | `user:` | one account or organization | `{"query":"fetch_retry","owner":"AnEntrypoint"}` |
+| `repo` | `repo:` | one `owner/name` repository | `{"query":"bm25","repo":"AnEntrypoint/gm"}` |
+| `extension` | `extension:` | one file extension, without the dot | `{"query":"rrf","extension":"rs"}` |
+| `filename` | `filename:` | one exact file name; finds the authoritative data file | `{"query":"tokenizer","filename":"Cargo.toml"}` |
+| `path` | `path:` | a path prefix or fragment | `{"query":"preserve_order","path":"crates/"}` |
+| `match` | `in:` | `file` (terms in the file body, the default) or `path` (terms in the file path) | `{"query":"libsql","match":"path"}` |
+| `size` | `size:` | file size in bytes, with a comparison such as `>10000` | `{"query":"tokenizer","size":">10000"}` |
+| `limit` | (none) | hits returned | `{"query":"rrf","limit":5}` |
+
+Keys combine in one body and each narrows the query. The reply lists each hit's repository, path and URL.
+
 ### `browser`: browse pages through one of two engines
 
 `browser` takes a plain text body (see Execution). The first line selects the engine; the rest is the browser request (URLs and steps). No lease is needed first: the call takes the project's lease itself and releases it on return. `browser_lease_acquire` is only for holding the lease across several calls.
@@ -572,6 +595,10 @@ These verbs drive the phase machine, dispatched through the same spool.
 
 `phase-status`, `comment-audit`, `submodule-check`, `prd-list`, `unknown-list`, `task-list`, `task-output`, `discipline`, `discipline-audit`, `fsm-validate`, `predicates-md`, `capability-resolve`, `calculus-model-check`, `component-loader-hmr`, `dream-replay`, `dream-round` and `pool-brief` are `query`; `instruction`, `transition`, `transition-revert`, `residual-scan`, `claim-audit`, `prd-add`, `prd-resolve`, `prd-defer`, `unknown-add`, `unknown-resolve`, `unknown-defer`, `task-spawn`, `task-stop`, `memorize-continue`, `discipline-note`, `discipline-check-removal`, `fsm-vendor`, `fsm-propose-override`, `codeinsight-namespace-audit`, `component-loader-reconcile`, `dream-policy-register`, `dream-evaluator-receipt`, `dream-discovery-record`, `dream-world-seal`, `dream-replay-round`, `dream-replay-cycle`, `prd-block`, `prd-witness-request`, `expansion-audit`, `prd-repair`, `subagent-start`, `subagent-end`, `browser_lease_acquire` and `browser_lease_release` are `command`; `browser_lease_status` is `query`.
 `prd-add` takes `id`, `subject`, `description`, `acceptance_criteria`, `witness_plan`, `status`, `blockedBy`, `overwrite`, `repair`, `owner` (the accountable lane or session; defaults to the filer's session_id), `disposition` (`open`, `accepted`, `rejected` or `deferred`; a reason belongs in `description`) and `recheck_by` (a session that re-checks the finding; must differ from `owner`), at the top level or inside `body` (same call either way). `description` is the row's long-form prose, stored on the row as `description`, never as the dispatch body, so `{"subject":"<intent>","description":"<prose>"}` is the correct shape. `prd-list` brief rows carry the row's text in `title`, clamped to a fixed length. Full rows (`{"id":...}` or `{"full":true}`) return the stored row as `prd-add` wrote it. The brief `title` is the row's `title`, or its `subject` when it has none. `status` matches a row's `status` string exactly. A row written without a `status` gets `pending`, and `pending` lists the folder rows whose status is `pending`.
+
+`prd-add`'s reply carries a `public_search` block: the brief for the subagent that finds public references for the new row, and the verbs it uses (`github-search`, `prd-references`). The lane that files the row starts that subagent from the brief in the same turn (gm-prd, stage 0).
+
+`prd-references` takes `{"id":"<row id>","references":[{"repo":"<owner/name>","path":"<file>","url":"<https URL>","line":<n>,"why":"<one line on what the code shows>"}]}`, or `{"id":"<row id>","none_because":"<why no public code applies>"}` when nothing matches. `line` is optional; `why` is one line per reference. The call appends to an open row, and `prd-list {"id":"<row id>","full":true}` returns the stored references. No-reopen rule: a resolved row takes no references. `prd-references` on a resolved row is refused, and a reference found later is filed as a new row that names the original id.
 
 The closed statuses are `done`, `complete`, `completed` and `resolved` (the `prd_closed_statuses` policy default). A closed status also reads resolved rows from the log, and `all` returns every open and resolved row. No `ready` or `blocked` row status is defined in the source, so a filter on either finds only a row whose file holds that exact string.
 
