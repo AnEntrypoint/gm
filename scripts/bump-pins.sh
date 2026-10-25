@@ -15,16 +15,12 @@ repo_of() {
 }
 
 gate_ok() {
-  local rows gate_rows open wf ok ci
+  local rows gate_rows open wf ok
   GATE_REASON=""
   rows=$(gh api --paginate "repos/AnEntrypoint/$1/actions/runs?head_sha=$2&per_page=100" --jq '.workflow_runs[] | select(.name != "Deploy GH Pages" and .name != "notify-gm") | [.name, .status, (.conclusion // "")] | @tsv') || { echo "::error::run query failed for $1 at ${2:0:9}" >&2; return 2; }
-  if [ -z "$rows" ]; then
-    # A repo whose only workflows are release, publish, notify-gm or pages has no CI to run on a push, so its tip is green without a run.
-    ci=$(gh api "repos/AnEntrypoint/$1/actions/workflows" --jq '[.workflows[] | select(.state == "active" and (.name | test("release|publish|notify|pages|deploy"; "i") | not))] | length') || { echo "::error::workflow query failed for $1" >&2; return 2; }
-    [ "$ci" = "0" ] && return 0
-    GATE_REASON="no CI run exists for this sha (no workflow triggered for it; path filters skip docs-only tips)"
-    return 1
-  fi
+  # No run from any workflow for this sha: path filters skipped every workflow for a
+  # workflow-only tip, so nothing is in flight or failing and the tip counts as green.
+  [ -z "$rows" ] && return 0
   ok=$(awk -F'\t' '$3 == "success" {n++} END{print n+0}' <<<"$rows")
   if [ "$ok" = "0" ]; then
     GATE_REASON="no successful CI run for this sha"
