@@ -179,6 +179,8 @@ Query and body: `query` is required in every mode. `pattern` aliases `query` and
                                pyproject.toml).
 ```
 
+`fs_write` is project-only: it refuses any path outside the cwd project root, and `allowOutsideRoot` never widens a write. Memory files live in the project under `memory/`, never in the user config directory.
+
 Line ranges: every alias is **1-based and inclusive on both ends**. The start alias names the first line returned; `endLine`/`end`/`to` the last line returned; `limit`/`count`/`lines` a line count, never an end line. Aliases resolve in this order (the first pair with a key present wins):
 
 ```
@@ -616,6 +618,8 @@ The closed statuses are `done`, `complete`, `completed` and `resolved` (the `prd
 
 Pass the `instruction_hash`/`policy_hash` of the prior `instruction` response back as `known_instruction_hash`/`known_policy_hash`. An unchanged match empties the `instruction` field, sets `instruction_unchanged: true` and omits `discipline_policies`; a mismatch or first dispatch returns them in full. Send only a hash read from a response you received; the check only shrinks the reply. Where `instruction_unchanged` is true, the fields phase, `prd_pending_count`, `mutables_pending_count` and `prd_items` are restated.
 
+A blocker is annotated on the row it blocks with `prd-note {"id":"<row id>","note":"<text>"}`, which appends the note to that row's notes list (default `notes`, or `field`) with its timestamp and session_id, and leaves the row open. The row's fields and status are not rewritten, and a closed row is refused. A blocker is never filed as a child row, by `prd-add` with `blockedBy` or by `prd-block`.
+
 `prd-block` takes `{"id":"<row id>","note":"<text>"}` and appends the note to the row's `blocker_notes` list in one compare-and-swap write of that row's file. Both fields are required, and an id with no row is refused.
 
 `unknown-add` stamps the dispatch `session_id` on the unknown. Re-adding an id whose open entry belongs to another `row` (or, when either side names no row, another session) is refused as `unknown-add-id-collision` with the owner and a `suggested_id` of `<row>/<id>`; nothing is written. Namespace unknown ids by row, or pass `rescope:true` to replace the open entry deliberately.
@@ -668,7 +672,7 @@ Every record is owned by the dispatch session, so the whole chain runs under one
 
 `wait_for_task` is the served name of `wait-for-task` (`gm.list` and `gm.describe` report it so): same body, same reply.
 
-`proc-list {"pattern"?,"limit"?}` lists running OS processes whose command line contains `pattern`, up to `limit` (default 100, max 1000), with `pid`, `ppid` and `args`. It never lists its own process chain (the listing process, its parent shells and its children), so a pattern appearing in the dispatch body does not match itself. Query class. `proc-signal {"pid"|"pattern","signal"?,"all"?}` sends `TERM` (default), `INT`, `HUP` or `KILL` to one pid, or to the single process a pattern matches; a pattern matching several processes is refused unless `all` is true, and the own process chain is refused. Command class. The served names are `proc_list` and `proc_signal`.
+A shell pipe from `ps` into `grep` is denied by the bash gate (`deviation.native-search-bypass`); `proc-list` is the process listing. `proc-list {"pattern"?,"limit"?}` lists running OS processes whose command line contains `pattern`, up to `limit` (default 100, max 1000), with `pid`, `ppid` and `args`. It never lists its own process chain (the listing process, its parent shells and its children), so a pattern appearing in the dispatch body does not match itself. Query class. `proc-signal {"pid"|"pattern","signal"?,"all"?}` sends `TERM` (default), `INT`, `HUP` or `KILL` to one pid, or to the single process a pattern matches; a pattern matching several processes is refused unless `all` is true, and the own process chain is refused. Command class. The served names are `proc_list` and `proc_signal`.
 
 `learn` is retired.
 
@@ -735,7 +739,7 @@ Served verbs with no entry elsewhere in this file. Rows are sourced from `gm.des
 | `writer_lock` | `{"action":"take"\|"release"\|"status"\|"check"\|"quarantine_stale", "repo", "session"?, "cwd"}` | writer lock for one checkout under `.gm/locks/<repo>.writer`; `take` and `release` need `session` as a top-level key holding a non-empty single-line session name (not the `session_id` envelope key, which the verb refuses as an unknown key); a lock with no live holder is quarantined, never deleted; a refusal returns `ok: false` | command |
 | `write_queue` | `{"action":"add"\|"list"\|"done", "repo", "row"?, "note"?, "cwd"}` | per-repository queue of rows whose edit a lane could not write | command |
 | `shards` | `{"out_dir"?, "cwd"}` | build shard files of at most 20 rows per owner from the row store; never overwrites an existing directory | command |
-| `publish_on_origin` | `{"repo_dir", "row", "message", "paths", "publish_base"?, "dry_run"?, "witness"?, "status"?, "cwd"}` | apply one lane's change onto `origin/main` by three-way merge, run the secrets check, push by sha and confirm the sha is on origin. A publish that closes a row (`status` given, or its `.gm/prd/` row file removed) requires `witness` (a dispatch id present in `.gm/exec-spool/.dispatch-ledger.json`) and `status` `resolved` or `stale`; it writes `Witness:` and `Status:` lines into the commit body beside `Row:`, and refuses with `witness_required` otherwise | command |
+| `publish_on_origin` | `{"repo_dir", "row", "message", "paths", "publish_base"?, "dry_run"?, "witness"?, "status"?, "cwd"}` | apply one lane's change onto `origin/main` by three-way merge, run the secrets check, push by sha and confirm the sha is on origin. A publish that closes a row (`status` given, or its `.gm/prd/` row file removed) requires `witness` (a dispatch id present in `.gm/exec-spool/.dispatch-ledger.json`) and `status` `resolved` or `stale`; it writes `Witness:` and `Status:` lines into the commit body beside `Row:`, and refuses with `witness_required` otherwise. A scratch clone under `/config/tmp` passes `publish_base` as its fork-point sha, never the literal `origin/main` (SKILL, Standing preferences, Scratch clone); a submodule path in `paths` publishes its commit sha at mode 160000, which advances the parent pin | command |
 | `spool_orphans` | `{"roots"?, "dry_run"?, "unserved"?, "cwd"?}` | move orphaned `.inflight` spool requests to a dated quarantine directory; `unserved` bounds the age of a plain request in a submodule spool; never deletes | command |
 | `resources` | `{"samples"?, "interval_seconds"?, "disk_paths"?}` | snapshot RAM, swap, CPU, disk, process and listener pressure (Linux detail where noted) | query |
 | `gm` | `{"verb"?}` | run one spool verb dispatch and return its result as flat YAML; unknown verbs answer `unknown_verb` | command |
