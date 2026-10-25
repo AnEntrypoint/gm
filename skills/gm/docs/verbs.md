@@ -450,7 +450,7 @@ Both filters take host suffixes (`example.com` matches `www.example.com` and `do
 
 ### `browser`: browse pages through one of two engines
 
-`browser` takes a plain text body (see Execution). The first line selects the engine; the rest is the browser request (URLs and steps).
+`browser` takes a plain text body (see Execution). The first line selects the engine; the rest is the browser request (URLs and steps). No lease is needed first: the call takes the project's lease itself and releases it on return. `browser_lease_acquire` is only for holding the lease across several calls.
 
 | engine | runs | window |
 |---|---|---|
