@@ -106,7 +106,7 @@ article th { font-family: var(--ff-mono); font-size: 11px; text-transform: upper
 
 <p>Pick the command for your system. Each one installs the parts it names:</p>
 <ul>
-  <li><strong>Any system with Node.js, all parts:</strong> <code>npx github:AnEntrypoint/gm -g</code> installs the skills, registers the MCP server in each detected agent host (the app that runs your coding agent, such as Claude Code, Cursor, Codex or Gemini) and installs the runner. Without <code>-g</code>, the MCP registration goes into the current project. The runner installs under your home directory. When the installer has its skill source, the skills install into <code>~/.claude/skills</code> and <code>~/.agents/skills</code>, with or without <code>-g</code>.</li>
+  <li><strong>Any system, all parts:</strong> fetch the MCP server bundle once with <code>curl -fsSL https://raw.githubusercontent.com/AnEntrypoint/gm-mcp/main/bin/gm-mcp-server.js -o ~/.gm-tools/gm-mcp-server.mjs</code>, then register it with <code>claude mcp add gm -s user -- node ~/.gm-tools/gm-mcp-server.mjs</code>. The server installs the skills into <code>~/.claude/skills</code> and <code>~/.agents/skills</code>, and the agentplug runner and gm guest from their releases, on its first start. No clone or npx spec is involved.</li>
   <li><strong>macOS or Linux, runner only:</strong> <code>curl -fsSL https://raw.githubusercontent.com/AnEntrypoint/gm/main/install.sh | sh</code> installs the runner into <code>~/.gm-tools</code>, then runs the runner with no command. The runner prints its usage line and exits with status 1, so that status is expected. Section 4 checks the installed runner.</li>
   <li><strong>macOS or Linux, skills and MCP server bundle only:</strong> <code>curl -fsSL https://raw.githubusercontent.com/AnEntrypoint/gm/main/install.sh | sh -s -- install</code></li>
   <li><strong>Windows PowerShell, runner only:</strong> <code>irm https://raw.githubusercontent.com/AnEntrypoint/gm/main/install.ps1 | iex</code> installs the runner the same way, then runs the runner with no command. The runner prints its usage line and exits with status 1, so that status is expected.</li>
@@ -132,7 +132,7 @@ article th { font-family: var(--ff-mono); font-size: 11px; text-transform: upper
   <li><strong>From a checkout of the repository, user registration:</strong> <code>node bin/gm-install.js -g --mcp-only</code></li>
   <li><strong>From a checkout of the repository, project registration:</strong> <code>node bin/gm-install.js --mcp-only</code></li>
   <li><strong>After the skills and MCP bundle install (the install argument in section 1):</strong> <code>claude mcp remove gm 2>/dev/null; claude mcp add gm -- node ~/.gm-tools/gm-mcp-server.mjs</code></li>
-  <li><strong>From any directory, user registration:</strong> <code>npx github:AnEntrypoint/gm -g --mcp-only</code> re-runs the installer, which writes the node bundle path above.</li>
+  <li><strong>Any directory, user registration:</strong> <code>claude mcp add gm -s user -- node ~/.gm-tools/gm-mcp-server.mjs</code> (the bundle path above).</li>
 </ul>
 
 <p>Restart the agent host after a registration change.</p>

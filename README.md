@@ -8,43 +8,29 @@ A gate decides when work is done, not the coding agent. Most agent harnesses ask
 
 ## Install
 
-Run this in a terminal (Node.js required):
+Two commands install gm. Node.js is needed for the server. The server installs the rest itself on its first start: the `/gm` skill files into `~/.claude/skills` and `~/.agents/skills`, the agentplug runner, and the gm guest, each from its release with a checksum check (see [gm-mcp/README.md](./gm-mcp/README.md), "Self-install on a fresh machine").
+
+The first command fetches the MCP server bundle once, and the second registers it with the agent host. This is the only step a human or host has to take. On macOS or Linux:
 
 ```
-npx github:AnEntrypoint/gm -g
+mkdir -p ~/.gm-tools && curl -fsSL https://raw.githubusercontent.com/AnEntrypoint/gm-mcp/main/bin/gm-mcp-server.js -o ~/.gm-tools/gm-mcp-server.mjs
+claude mcp add gm -s user -- node ~/.gm-tools/gm-mcp-server.mjs
 ```
 
-It installs the `/gm` skill and registers the MCP server in every detected agent host: Claude Code, Cursor, Gemini CLI and Codex. Drop `-g` to install into the current project only.
-
-**MCP launch.** The MCP server launches from the local bundle, `~/.gm-tools/gm-mcp-server.mjs`, and never from an npx GitHub spec. A spec re-resolves the package on every connect: measured at 8.2 s warm and 22.2 s cold, against 0.19 s to launch the bundle from disk, which under load can trip Claude Code's 30 s connect timeout ([gm-mcp/README.md](./gm-mcp/README.md)). To repair a registration, run the first command for a global install (`-g`) or the second for the current project:
+On Windows PowerShell:
 
 ```
-node bin/gm-install.js -g --mcp-only
-node bin/gm-install.js --mcp-only
+New-Item -ItemType Directory -Force "$HOME\.gm-tools" | Out-Null; Invoke-WebRequest https://raw.githubusercontent.com/AnEntrypoint/gm-mcp/main/bin/gm-mcp-server.js -OutFile "$HOME\.gm-tools\gm-mcp-server.mjs"
+claude mcp add gm -s user -- node "$HOME\.gm-tools\gm-mcp-server.mjs"
 ```
+
+For another host (Cursor, Gemini CLI, Codex), register the same stdio command in its MCP configuration: `node` with the argument `~/.gm-tools/gm-mcp-server.mjs`.
+
+**MCP launch.** The server launches from the local bundle, `~/.gm-tools/gm-mcp-server.mjs`, and never from an npx GitHub spec: a spec re-resolves the package on every connect (measured at 8.2 s warm and 22.2 s cold, against 0.19 s from disk), which under load can trip Claude Code's 30 s connect timeout ([gm-mcp/README.md](./gm-mcp/README.md)). To repair a registration, run `claude mcp remove gm -s user` and then the `claude mcp add` line again.
 
 Restart the agent host after a registration change. Then open the agent and run `/gm` with a description of the change. The agent turns it into plan rows (one task each, see Terms) and works through them until every plan row is closed.
 
 The `bin/gm` entry point runs a verb from a plain shell, with no agent host and no MCP client, using the same dispatch that `gm.gm({verb, body})` inside the `gm_codemode` MCP tool (see Tools below) runs.
-
-### Skill only
-
-Use this path only if you do not want the npx installer. On macOS or Linux:
-
-```
-curl -fsSL https://raw.githubusercontent.com/AnEntrypoint/gm/main/install.sh | sh -s -- install
-```
-
-On Windows PowerShell, `irm ... | iex` cannot pass an argument, so download the script and run it with `install`:
-
-```
-Invoke-WebRequest https://raw.githubusercontent.com/AnEntrypoint/gm/main/install.ps1 -OutFile install.ps1
-.\install.ps1 install
-```
-
-Both scripts resolve the latest tagged release under [AnEntrypoint/gm releases](https://github.com/AnEntrypoint/gm/releases). They download the `gm-skill-<version>.tar.gz` asset and check it against its published SHA-256 sidecar. They then install `skills/gm` into `~/.claude/skills/gm/`. Run from a checkout (or with `GM_SKILL_SOURCE_DIR` set), the install is a link: a directory junction on Windows and a symlink elsewhere. A source edit then reaches the installed skill without a reinstall. With no local source, the install copies the release.
-
-Inside a project, run the same script with the argument `spool`, for example `curl -fsSL https://raw.githubusercontent.com/AnEntrypoint/gm/main/install.sh | sh -s -- spool`. It starts the `agentplug-runner` that serves the project's verbs: the script resolves, checks, and runs that native spool host from the `AnEntrypoint/agentplug-bin` releases.
 
 ## Terms
 
