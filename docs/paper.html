@@ -335,7 +335,7 @@ article tbody tr:hover { background: var(--panel-1); }
 
 <p>AGENTS.md requires a falsifiable hypothesis and a live witness before each change.</p>
 
-<p>The gate <code>no-synthetic-test-files</code> refuses a standing test file or test directory that the working diff introduces (<code>gm-config/fsm/predicates.md</code>). Verification is a live witness against real code instead, and the submodules keep their own tests, such as <code>gm-mcp/test/</code>. The diff gates <code>no-secrets-in-diff</code>, <code>no-graphical-symbols-in-diff</code>, <code>no-hedge-language-in-diff</code>, <code>no-unchecked-panics-in-diff</code> and <code>no-admit-deferral-markers</code> refuse the matching text, and <code>claim-audit-clean</code> is the claim-audit gate.</p>
+<p>The gate <code>no-synthetic-test-files</code> refuses a standing test file or test directory that the working diff introduces (<code>gm-config/fsm/predicates.md</code>). Verification is a live witness against real code instead, and the gate is diff-scoped, so it does not touch what a submodule already carries. The diff gates <code>no-secrets-in-diff</code>, <code>no-graphical-symbols-in-diff</code>, <code>no-hedge-language-in-diff</code>, <code>no-unchecked-panics-in-diff</code> and <code>no-admit-deferral-markers</code> refuse the matching text, and <code>claim-audit-clean</code> is the claim-audit gate.</p>
 
 <hr>
 

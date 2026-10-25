@@ -14,11 +14,11 @@ For each function the diff changes, renames or removes, dispatch callers {"symbo
 
 Shape sweeps use codesearch {"query":"<regex>","mode":"regex","root":"<absolute project root>","path_glob":"**/*.{rs,js,ts,py,md,toml,json,yml}"} for secret shapes, injection sinks and panic sites. Comment spans are swept with the gm verb grep and body {"mode":"comments"}. Mode dual is ranked and cut, so it answers "where is the code that does X" only, never an exhaustive question.
 
-Every live witness is an exec_js dispatch: raw_body is the Node source, and the limit is the typed timeoutMs field, never a header line in the body. The source runs real commands through require("node:child_process").execFileSync(command, args, { encoding: "utf8" }) and prints what it observed. Build checks use the project's own tools, such as execFileSync("cargo", ["check", "-p", "<crate>"]) or execFileSync("node", ["--check", "<file>"]). Never use a Bash or PowerShell tool call for a build, subprocess or process check, and run git only through git_* verbs.
+Every live witness is an exec_js dispatch: raw_body is the Node source, and the limit is the typed timeoutMs field, never a header line in the body. The source runs real commands through require("node:child_process").execFileSync(command, args, { encoding: "utf8" }) and prints what it observed. Build checks use the project's own tools, such as execFileSync("cargo", ["check", "-p", "<crate>"]) or execFileSync("node", ["--check", "<file>"]). Never use a host shell call (bash or PowerShell) for a build, subprocess or process check, and run git only through git_* verbs.
 
 Dispatch the eight adversarial classes one at a time, each as its own exec_js probe, reading each reply before the next. Re-dispatch instruction between unknown resolutions, after a failed exec retry, and whenever an error is unfamiliar.
 
-For a multi-file diff, dispatch independent reviewers with the Agent tool. A reviewer gets the file list, the PRD rows and the changed signatures, never the implementer's reasoning. Its prompt opens with "use the gm skill for this; code questions go to codeinsight (callers/impact) first, then codesearch, and Read only a located path", carries its own SESSION_ID built from the parent id plus an index (for example "<parent_session_id>-sub1"), and says "assume this is broken, find why".
+For a multi-file diff, dispatch independent reviewers as subagents. A reviewer gets the file list, the PRD rows and the changed signatures, never the implementer's reasoning. Its prompt opens with "use the gm skill for this; code questions go to codeinsight (callers/impact) first, then codesearch, and fs_read only a located path", carries its own SESSION_ID built from the parent id plus an index (for example "<parent_session_id>-sub1"), and says "assume this is broken, find why".
 
 Rows and unknowns: prd-add {"id":"<kebab-case-slug>","subject":"<what it proves or repairs>"}, prd-resolve {"id":"<row id>","witness_evidence":"<file:line or exec output>","witness_dispatch_id":"<dispatch id of your live run>"}, unknown-add {"id":"<kebab-case-slug>","value":"<the unknown>","obligation_kind":"<kind>","depends_on":["<id>"]} and unknown-resolve {"unknown_id":"<id>","witness_evidence":"<witness>"}.
 
@@ -163,7 +163,7 @@ Live witnesses must reflect the current code. Enumerate every cache between the 
 
 A log line that says the fixed code ran is not a witness that the defect is gone. The witness is the primary artifact the bug report named: the live response body, the live file, the live rendered value. Re-run the same diagnostic that found the bug against the same target.
 
-A subagent's finding or a memory is a hypothesis. Before acting on a claimed dead function, junk file or tracking state, run the check that confirms it on the live tree: callers and a codesearch identifier query, Read on the claimed path, git_log or git_show for tracking intent. An overturned premise is re-scoped with prd-add under the same id.
+A subagent's finding or a memory is a hypothesis. Before acting on a claimed dead function, junk file or tracking state, run the check that confirms it on the live tree: callers and a codesearch identifier query, fs_read on the claimed path, git_log or git_show for tracking intent. An overturned premise is re-scoped with prd-add under the same id.
 
 When a tool cannot produce a witness, the unknown is to make that tool reachable (fix it, replace it, or drive its protocol directly), then witness. Parking the unknown as blocked on an outside party is refused.
 

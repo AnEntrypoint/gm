@@ -56,7 +56,7 @@ The body states why the change exists and why any contract changed, since the di
 
 Handover: Repository-tracked state is handed to BLAME so the history of each changed region is read before committing it. cite Git Is the State - stateless runtime, Kapale.
 
-Every piece of state a future reader must see is a commit, a PRD row or an unknown. No notes or sidecar files live outside the repository, except the harness memory files. Before committing, git_status confirms that every touched path is tracked or deliberately ignored by the managed block. State that exists outside the repository fires the backreference to LIVEPLAN: move it into a commit or remove it, and rewrite the live plan to point at the commit.
+Every piece of state a future reader must see is a commit, a PRD row or an unknown. No notes or sidecar files live outside the repository, except the project memory files. Before committing, git_status confirms that every touched path is tracked or deliberately ignored by the managed block. State that exists outside the repository fires the backreference to LIVEPLAN: move it into a commit or remove it, and rewrite the live plan to point at the commit.
 
 ### BLAME - git blame as the Index
 

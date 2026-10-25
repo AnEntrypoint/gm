@@ -14,7 +14,7 @@ When a sweep's claim depends on a policy or strategy choice, the incumbent is re
 
 Before the walk stops, dispatch `residual-scan`. It refuses without its fired marker, and its denial names `residual-scan` as the next dispatch. `claim-audit` checks the claims the walk made. Then `transition to=COMPLETE`. A gate that is false is answered by the recovery verb it names (`git_finalize`, `residual-scan`, `claim-audit`, or the CI-watching verb), never by a bare retry of the transition.
 
-Nothing in this node dispatches Glob, Grep, `find`, a shell `grep`, Bash git or PowerShell. Search goes through `codesearch`, `grep` and `codeinsight`. Git goes through the `git_*` verbs, and execution goes through `exec_js`.
+Nothing in this node dispatches native search or file-read tools, `find`, a shell `grep`, shell git or PowerShell. Search goes through `codesearch`, `grep` and `codeinsight`. Git goes through the `git_*` verbs, and execution goes through `exec_js`.
 
 ## PRD rows
 

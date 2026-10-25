@@ -5,7 +5,7 @@ Every gm operation is a dispatch verb, such as `codesearch` or `fs_read`. This f
 Two facts:
 
 1. **Code lookup exists.** `grep` answers "where is this string", `codesearch` answers "where is this concept", `fs_read` reads a file or a line range, and `callers`/`callees`/`impact` walk the symbol graph built by `codeinsight_index`.
-2. **A directory under `.gm/exec-spool/in/` is not evidence that a verb exists.** The spool creates `.gm/exec-spool/in/<verb>/` before dispatch, so an unknown verb leaves one behind and replies `ok: false`, `error_code: unknown_verb`, and an `error` beginning `unknown verb:`. Retired verbs leave one too. Names seen there but absent from the tables below are not verbs in the current build: `glob`, `fs_glob`, `fs_list`, `fs_delete`, `fs_remove`, `exec`, `exec_bash`, `similarity`, `git_clone`, `kv`, `kill-port`, `learn-debug`, `learn-status`, `submodule_drift_check`. Use `grep` instead of `glob`, `fs_readdir` instead of `fs_list`, and `bash` or `exec_js` with `raw_body` instead of `exec_bash`. There is no delete verb: remove a file inside the project with `exec_js` (`require('fs').rmSync(<relative path>)`).
+2. **A verb is what `gm.list()` names.** A name it does not list replies `ok: false`, `error_code: unknown_verb`, with an `error` beginning `unknown verb:`. Retired verbs reply the same way. Names absent from the tables below are not verbs in the current build: `glob`, `fs_glob`, `fs_list`, `fs_delete`, `fs_remove`, `exec`, `exec_bash`, `similarity`, `git_clone`, `kv`, `kill-port`, `learn-debug`, `learn-status`, `submodule_drift_check`. Use `grep` instead of `glob`, `fs_readdir` instead of `fs_list`, and `bash` or `exec_js` with `raw_body` instead of `exec_bash`. There is no delete verb: remove a file inside the project with `exec_js` (`require('fs').rmSync(<relative path>)`).
 
 ## Dispatching
 
@@ -18,13 +18,13 @@ gm_codemode({ "code": "return await gm.codesearch({body: {query: \"kLinkQuantum\
 
 Plain-text-body verbs take `raw_body` instead of `body` (see Execution).
 
-Via the spool: write the body atomically to `.gm/exec-spool/in/<verb>/<N>.txt`, then read `.gm/exec-spool/out/<verb>-<N>.json`. Make `N` `<session id>-<counter>`, never a bare integer, so two sessions cannot collide.
-
-The spool watcher launch command (`agentplug-runner spool`) is in `skills/gm/spool-adapter.md`, under Starting the watcher.
+Every verb is a `gm.<verb>({...})` call inside `gm_codemode`; the transport is `skills/gm/spool-adapter.md`.
 
 `cwd` selects the project; pass it on every call. gm resolves the root with `git rev-parse --show-toplevel`; a cwd outside any git repository is its own root. The body field `git_root_override` pins the root for any verb.
 
 `bin/gm` is the shell entrypoint: `gm <verb> [flags]` forwards to gm-mcp's `dispatch` subcommand, so a shell runs a verb with no MCP client or daemon. Search verbs also take a shorter form: `gm codesearch literal <needle> --path <dir> --glob <glob>`, which builds `{"query","mode"}` plus `path`, with `--glob` as `path_glob`. It exists because a bare mode word such as `literal` is not a dispatch body. It applies to `grep`, `rg`, `codesearch`, `code_search` and `search` only.
+
+The runner binary is `~/.gm-tools/agentplug-runner` (`agentplug-runner.exe` on Windows), installed by `install.sh` or `install.ps1`; on this host it is `/data/cache/gm/.gm-tools/agentplug-runner`. It is not on PATH, so a bash dispatch calls it by that full path.
 
 Inside `gm_codemode`, `gm.grep` and `gm.codesearch` are the search functions. `rg` aliases `gm.grep`; `code_search` and `search` alias `gm.codesearch`. `gm.list()` lists all five; `gm.describe` resolves each.
 
@@ -514,6 +514,7 @@ A `browser` or `chrome` request that writes a screenshot (`screenshot=<path>`, `
 A `cdp` body may open with `session=<name>`, then one step per line. The steps run over the single Chrome that a project root shares.
 
 - `session=<name>` (a browser session name, not a gm `session_id`; 1-64 letters, digits, `-`, `_`) keeps the tab and the `uid=N` numbers it assigned across calls, in `.gm/browser-cdp-sessions/<name>.json`. Calls on one browser session are serialized. A corrupt state file is refused, never reset. `sessionId=<name>` is an alias of `session=<name>`; a body that gives both is refused.
+- `isolated=true` (with `session=<name>`; refused alone) gives that session its own page in a separate browser context under the same Chrome: its own cookies and localStorage, unshared with the shared tab and with other isolated sessions. The page is kept in the session's state file and reused across calls. Without `isolated=true`, a session reuses the shared tab as before, and never takes another session's isolated page. `isolated=false` is the default.
 - The shared Chrome stays open after its last lease is released, and closes after 15 minutes with no holder or waiter. A lease is the hold one call keeps on it. Without `session=`, a call opens its own tab and closes it when it ends.
 
 | Step | Does |
@@ -616,7 +617,7 @@ Every record is owned by the dispatch session, so the whole chain runs under one
 
 `pool-brief` hands one subagent its brief for one PRD row. Its body takes three non-empty string fields: `row` (a PRD row id), `session` (the subagent's SESSION_ID: the key is spelled `session`, never `session_id`) and `role` (one of `resolver`, `traversal`). A missing or empty field is refused with the list of what is required.
 
-`pool-observe` writes `.gm/pool/` state (the count of record, the spawn ceiling and the held rows) and reports the pool's slot state and advertised launches. Its body takes `live` (the ListAgents count of running subagents), written to `.gm/pool/count-of-record.json` and kept for 5 minutes. `held` is an array of the row id of every running worker, kept for 30 minutes. `refusal` is the text of a spawn refusal, which records the spawn ceiling in `.gm/pool/ceiling.json`. Every field is optional. `limit` caps each displayed list (default 12); `rules: true` adds the pool rules to the reply; `blocker_notes: true` adds the open rows that carry blocker notes; `scanned_nodes` records traversal nodes as scanned, leasing each for 6 hours. A reply carries `floor`, `ceiling`, `count_of_record`, `refill_needed`, `launch` (one item per id to launch now, each with `id`, `role` and `reason`), `shortfall`, `unfilled_shortfall`, `sufficient`, `traversal`, and a `slots` block with `open_rows`, `live_rows`, `live_rows_unmatched`, `aging_heartbeats`, `candidates`, `candidates_removed`, `launch_filters` and `already_fixed_on_head`. A `live` count under the floor while rows are open is refused with `error_code` `floor_gate_denied` when launchable rows are advertised but not launched. When no open row is launchable and no traversal node is due, the reply is ok with `state` `supply_exhausted`, `held_rows` (running rows, the only supply) and `unlaunchable_open_rows`: wait for the held rows to complete, then re-observe; a retry cannot change the answer. Example body: `{"live":4,"held":["<row-id>"]}`.
+`pool-observe` writes `.gm/pool/` state (the count of record, the spawn ceiling and the held rows) and reports the pool's slot state and advertised launches. Its body takes `live` (the count of running subagents), written to `.gm/pool/count-of-record.json` and kept for 5 minutes. `held` is an array of the row id of every running worker, kept for 30 minutes. `refusal` is the text of a spawn refusal, which records the spawn ceiling in `.gm/pool/ceiling.json`. Every field is optional. `limit` caps each displayed list (default 12); `rules: true` adds the pool rules to the reply; `blocker_notes: true` adds the open rows that carry blocker notes; `scanned_nodes` records traversal nodes as scanned, leasing each for 6 hours. A reply carries `floor`, `ceiling`, `count_of_record`, `refill_needed`, `launch` (one item per id to launch now, each with `id`, `role` and `reason`), `shortfall`, `unfilled_shortfall`, `sufficient`, `traversal`, and a `slots` block with `open_rows`, `live_rows`, `live_rows_unmatched`, `aging_heartbeats`, `candidates`, `candidates_removed`, `launch_filters` and `already_fixed_on_head`. A `live` count under the floor while rows are open is refused with `error_code` `floor_gate_denied` when launchable rows are advertised but not launched. When no open row is launchable and no traversal node is due, the reply is ok with `state` `supply_exhausted`, `held_rows` (running rows, the only supply) and `unlaunchable_open_rows`: wait for the held rows to complete, then re-observe; a retry cannot change the answer. Example body: `{"live":4,"held":["<row-id>"]}`.
 
 ### `session_handover`: transfer session ownership
 
@@ -698,6 +699,12 @@ Served verbs with no entry elsewhere in this file. Rows are sourced from `gm.des
 | verb | body | purpose | kind |
 |---|---|---|---|
 | `gm_result` | `{"result_file"?, "root"?, "projectPath"?, "field"?, "offset"?, "limit"?}` | read a bounded page from a spool result named by a truncation notice | query |
+| `writer_lock` | `{"action":"take"\|"release"\|"status"\|"check"\|"quarantine_stale", "repo", "session"?, "cwd"}` | writer lock for one checkout under `.gm/locks/<repo>.writer`; `take` and `release` need `session` as a top-level key holding a non-empty single-line session name (not the `session_id` envelope key, which the verb refuses as an unknown key); a lock with no live holder is quarantined, never deleted; a refusal returns `ok: false` | command |
+| `write_queue` | `{"action":"add"\|"list"\|"done", "repo", "row"?, "note"?, "cwd"}` | per-repository queue of rows whose edit a lane could not write | command |
+| `shards` | `{"out_dir"?, "cwd"}` | build shard files of at most 20 rows per owner from the row store; never overwrites an existing directory | command |
+| `publish_on_origin` | `{"repo_dir", "row", "message", "paths", "publish_base"?, "dry_run"?, "witness"?, "status"?, "cwd"}` | apply one lane's change onto `origin/main` by three-way merge, run the secrets check, push by sha and confirm the sha is on origin. A publish that closes a row (`status` given, or its `.gm/prd/` row file removed) requires `witness` (a dispatch id present in `.gm/exec-spool/.dispatch-ledger.json`) and `status` `resolved` or `stale`; it writes `Witness:` and `Status:` lines into the commit body beside `Row:`, and refuses with `witness_required` otherwise | command |
+| `spool_orphans` | `{"roots"?, "dry_run"?, "unserved"?, "cwd"?}` | move orphaned `.inflight` spool requests to a dated quarantine directory; `unserved` bounds the age of a plain request in a submodule spool; never deletes | command |
+| `resources` | `{"samples"?, "interval_seconds"?, "disk_paths"?}` | snapshot RAM, swap, CPU, disk, process and listener pressure (Linux detail where noted) | query |
 | `gm` | `{"verb"?}` | run one spool verb dispatch and return its result as flat YAML; unknown verbs answer `unknown_verb` | command |
 | `env_get` | none | read one environment variable through the spool | query |
 | `kv_get` | none | read a value from the project key-value store | query |
