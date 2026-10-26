@@ -56,5 +56,3 @@ If an atom fails its gate:
 - **Fix or redefine** -- either finish the work or redefine the atom scope
 
 This is where fake completion gets caught.
-
-See `POLARIS-SKILLS-GUIDE.md` for full integration.

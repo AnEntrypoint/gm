@@ -72,5 +72,3 @@ A flat answer is:
 | Design | Architecture with component roles and interactions |
 | Repair | Root cause with fix path and side-effect checks |
 | Research | Research kernel with hypothesis and validation steps |
-
-See `POLARIS-SKILLS-GUIDE.md` for full integration.

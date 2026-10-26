@@ -64,5 +64,3 @@ Once atomized:
 - **Blocked work** = at least one blocker is pending
 
 The Goal Compiler makes this explicit to prevent working on blocked items.
-
-See `POLARIS-SKILLS-GUIDE.md` for full integration.

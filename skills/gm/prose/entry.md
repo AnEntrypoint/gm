@@ -6,7 +6,7 @@ Your authorization = the request. Your receipt = the PRD you write.
 
 **Work is a verb.** Every transition, state change and read is a verb you dispatch; the verb's receipt is the evidence, never prose about the work.
 
-Routing: `exec_js` is the default execution mechanism. Before any edit or node work, dispatch `codesearch` and `callers`/`impact`, and read MEMORY.md, to ground the change. Before choosing the means, state in one sentence the goal the change serves, separate from the attempted means.
+Routing: `gm_codemode` is the default execution mechanism. Before any edit or node work, dispatch `codesearch` and `callers`/`impact`, and read MEMORY.md, to ground the change. Before choosing the means, state in one sentence the goal the change serves, separate from the attempted means.
 
 Peer continuity: when a peer session halts with rows open, send it a resume message naming the first open row, record a PRD row for the halt, and do not end the walk while that peer holds open rows.
 
