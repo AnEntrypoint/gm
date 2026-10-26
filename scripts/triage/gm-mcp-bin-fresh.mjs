@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto'
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
+import path from 'node:path'
 
 const [repo, sha] = process.argv.slice(2)
 if (!repo || !sha) {
@@ -12,22 +13,9 @@ const execFileP = promisify(execFile)
 const gh = async (route) => JSON.parse((await execFileP('gh', ['api', route], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 })).stdout)
 const blobText = async (blobSha) => Buffer.from((await gh(`repos/AnEntrypoint/${repo}/git/blobs/${blobSha}`)).content, 'base64').toString('utf8')
 
-// One blob per request, so the fetch count is the wall-clock cost: measured at 30.2 s
-// wall against 3.9 s CPU for 44 src files. Running them with a bounded fan-out keeps
-// the request burst clear of secondary rate limits and moves the cost to one wave.
+const BUNDLE_ENTRIES = ['src/cli.js', 'src/fast-entry.js']
+const RELATIVE_IMPORT = /(?:\bfrom\s*|\bimport\s*\(?\s*)['"](\.{1,2}\/[^'"]+)['"]/g
 const CONCURRENCY = Number(process.env.BIN_FRESH_CONCURRENCY || 8)
-async function mapLimit(items, limit, fn) {
-  const out = new Array(items.length)
-  let next = 0
-  const worker = async () => {
-    while (next < items.length) {
-      const i = next++
-      out[i] = await fn(items[i])
-    }
-  }
-  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker))
-  return out
-}
 
 const bin = await blobText((await gh(`repos/AnEntrypoint/${repo}/contents/bin/gm-mcp-server.js?ref=${sha}`)).sha)
 const recorded = bin.slice(0, 4000).match(/BUNDLE_SRC_SHA256 = "([0-9a-f]{64})"/)
@@ -36,17 +24,38 @@ if (!recorded) {
   process.exit(1)
 }
 
-const srcEntries = (await gh(`repos/AnEntrypoint/${repo}/git/trees/${sha}?recursive=1`)).tree
-  .filter((e) => e.type === 'blob' && /^src\/[^/]+\.js$/.test(e.path))
-  .map((e) => ({ name: e.path.slice(4), blob: e.sha }))
-  .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0))
+const tree = (await gh(`repos/AnEntrypoint/${repo}/git/trees/${sha}?recursive=1`)).tree
+const blobOf = new Map(tree.filter((e) => e.type === 'blob').map((e) => [e.path, e.sha]))
 
-const texts = await mapLimit(srcEntries, CONCURRENCY, async ({ blob }) => (await blobText(blob)).replace(/\r\n?/g, '\n'))
+function resolveRelativeImport(fromRel, spec) {
+  const base = path.posix.normalize(path.posix.join(path.posix.dirname(fromRel), spec))
+  for (const candidate of [base, base + '.js', base + '/index.js']) {
+    if (blobOf.has(candidate)) return candidate
+  }
+  return null
+}
+
+const seen = new Set()
+const pending = BUNDLE_ENTRIES.filter((rel) => blobOf.has(rel))
+const texts = new Map()
+while (pending.length) {
+  const batch = pending.splice(0, CONCURRENCY).filter((rel) => !seen.has(rel))
+  if (!batch.length) continue
+  batch.forEach((rel) => seen.add(rel))
+  const fetched = await Promise.all(batch.map(async (rel) => [rel, (await blobText(blobOf.get(rel))).replace(/\r\n?/g, '\n')]))
+  for (const [rel, text] of fetched) {
+    texts.set(rel, text)
+    for (const match of text.matchAll(RELATIVE_IMPORT)) {
+      const next = resolveRelativeImport(rel, match[1])
+      if (next && !seen.has(next)) pending.push(next)
+    }
+  }
+}
 
 const hash = createHash('sha256')
-srcEntries.forEach(({ name }, i) => {
-  hash.update(name).update('\0').update(texts[i]).update('\0')
-})
+for (const rel of [...seen].sort()) {
+  hash.update(rel).update('\0').update(texts.get(rel)).update('\0')
+}
 const computed = hash.digest('hex')
 if (computed === recorded[1]) {
   console.log(`fresh: bin matches src at ${sha.slice(0, 9)}`)
