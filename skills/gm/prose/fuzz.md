@@ -1,6 +1,6 @@
 # Coverage-Guided Fuzzing - Michal Zalewski
 
-Principle `FUZZ`. Apply "Coverage-Guided Fuzzing - Michal Zalewski" to the work this node stands on. Entered from any neighbour that leads here; left to any neighbour it links to. Its place in a walk is set by the work it applies to, not a bucket.
+Principle `FUZZ`. Apply "Coverage-Guided Fuzzing - Michal Zalewski" to the work this node stands on. Entered from any neighbour that leads here; left to any neighbour it links to. Its place in a walk follows the work it applies to, not a bucket.
 
 Checkable claims for the work this node stands on. Each is checked by live dispatches against the real entry point, never by a test file, fuzz harness or mock:
 

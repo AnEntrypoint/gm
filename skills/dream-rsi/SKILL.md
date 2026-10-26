@@ -5,10 +5,10 @@ description: "Infer strategy proposals from Dream-RSI observation logs, and meas
 
 # dream-rsi inference
 
-Schedule (set by the caller, not by this skill): run as a background agent on the smallest available model at an interval. The subagent reads files and returns one JSON object. It does not edit files or dispatch verbs.
+Schedule (set by the caller, not by this skill): run as a background agent on the smallest available model at an interval. The subagent reads files and returns one JSON object. It does not edit files; it dispatches verbs only for the Part B scorer chain (step 4).
 
 Inputs:
-- Storage index: `<repo>/.gm/dream-rsi/index.json` (`schema_version`, `files`, `record_kinds`, `fields`), written by the guest on every persist. Read it first and resolve every Dream-RSI file name and record kind from it; the observation log, the cycle result and their fields are described there. Orchestration verbs and `dream-*` dispatches are not recorded. A failed record carries `error_code` (the reply's short failure code) or `no_match:true` (a zero-count failure, scored 0.5 and not counted as a failure); a success carries neither.
+- Storage index: `<repo>/.gm/dream-rsi/index.json` (`schema_version`, `files`, `record_kinds`, `fields`), written by the guest on every persist. Read it first and resolve every Dream-RSI file name and record kind from it. Orchestration verbs and `dream-*` dispatches are not recorded. A failed record carries `error_code` (the reply's short failure code) or `no_match:true` (a zero-count failure, scored 0.5 and not counted as a failure); a success carries neither.
 - Cycle result: the `cycle_result` file of each session named in `index.json`, written by the automatic `dream-replay-cycle` boundary.
 - The gm graph: `gm-graph.json` (`nodes`, `edges`; node `kind` is `principle`, `gate`, `tension` or `terminal` -- there is no phase node; edge `kind` is `forward` or `backreference`). A node is a book when its `book` is non-empty; `book_index` names each anchor book and the node that carries it.
 - Phase history: `.gm/turn-state.json` `phase_history`.

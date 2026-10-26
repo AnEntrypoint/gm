@@ -26,7 +26,7 @@ Rows and unknowns: prd-add {"id":"<kebab-case-slug>","subject":"<what it proves 
 
 Each need becomes a row the moment it is spotted, with prd-add, before the next probe runs. A failing adversarial class becomes a row naming the class and its repair. A reviewer's real finding becomes a row citing its file and line. A tool that cannot reach its witness becomes a row whose subject is making that tool reachable, because a missing witness channel is a build task. A row that looks out of reach is a row to build a way in: drive the crashing tool's protocol directly, spawn a second instance, or script the credential path.
 
-The agent never writes deferral wording into a row or a transition note. Wording that moves a need to another time, another session, another person or a scope exclusion is not admitted. A need is a row now or it is not a need. Each row's witness_evidence is specific to that row; identical witness text across rows is refused.
+No deferral wording goes into a row or transition note. Wording that moves a need to another time, another session, another person or a scope exclusion is not admitted. A need is a row now or it is not a need. Each row's witness_evidence is specific to that row; identical witness text across rows is refused.
 
 ## Mutables
 
@@ -60,11 +60,11 @@ Crucible: drive maximum load, degenerate input and resource exhaustion, with at 
 
 ### DIJKSTRATEST - Testing Shows Presence, Never Absence - Edsger Dijkstra
 
-Handover: Presence witnessed on real inputs is handed to ORACLEBIAS so the probe expected values are checked against the contract rather than the code. cite Testing Shows Presence, Never Absence - Edsger Dijkstra.
+Handover: Presence witnessed on real inputs is handed to ORACLEBIAS so the probe expected values are checked against the contract rather than the code; nominated next node: ORACLEBIAS; cite Testing Shows Presence, Never Absence - Edsger Dijkstra.
 
 Before claiming correctness, the agent names the one red-capable command that drives the reported behaviour on the real surface, runs it, and records the output. A pass is recorded as presence of the behaviour on that input. Each absence claim (no panic, no leak, no injection, no duplicate effect) moves into the adversarial classes or the SEC and RES sweeps, where it is witnessed on inputs that could falsify it.
 
-No standing test file is introduced. no-synthetic-test-files is diff-scoped as predicates.md:19 defines it: it is true when the working diff introduces no standing test file (*.test.*, *.spec.*, or a test, tests or __tests__ directory). A test file this walk created is deleted: untracked or staged as a new file now, and absent from both `git ls-files` and the untracked set recorded at session start. Its assertions are re-expressed as an exec_js probe against the real boundary that prints observed values, and the probe is not committed. A tracked test file, such as `gm-mcp/test/*`, is never deleted or edited by this rule: leave it byte-identical and report it as tracked.
+No standing test file is introduced. no-synthetic-test-files is diff-scoped as predicates.md:19 defines it: it is true when the working diff introduces no standing test file (*.test.*, *.spec.*, or a test, tests or __tests__ directory). A test file this walk created is deleted: untracked or staged as a new file now, and absent from both `git ls-files` and the untracked set recorded at session start. Its assertions become an uncommitted exec_js probe against the real boundary that prints observed values. A tracked test file, such as `gm-mcp/test/*`, is never deleted or edited by this rule: leave it byte-identical and report it as tracked.
 
 ### ORACLEBIAS - Implementation-Biased Test Generation - LLM test-generation study
 
@@ -132,7 +132,7 @@ A characterization probe is written only when the changed code has no contract l
 
 Handover: Verb and MCP reply checks are handed to LLMJUDGE for surfaces where no metamorphic relation can be stated. cite Agent-Native QA over MCP.
 
-For each gm verb, MCP tool or spool reply the diff changes, the agent dispatches that verb through the gm MCP exactly as a calling agent does, with a real session id, and quotes the reply fields in the row. A dashboard, screenshot or human view is never the witness for a surface an agent consumes. When verification seems to need a dashboard, the backreference to SANITIZE fires and the check is re-expressed as a verb dispatch returning the value the dashboard would show.
+For each gm verb, MCP tool or spool reply the diff changes, the agent dispatches that verb through the gm MCP exactly as a calling agent does, with a real session id, and quotes the reply fields in the row. A dashboard, screenshot or human view is never the witness for a surface an agent consumes. When verification needs a dashboard, the backreference to SANITIZE fires and the check is re-expressed as a verb dispatch returning the value the dashboard would show.
 
 ### LLMJUDGE - LLM as a Judge
 

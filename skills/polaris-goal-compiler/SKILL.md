@@ -41,7 +41,7 @@ Use this skill **before** starting any of:
 - Work involving others (code review, collaboration)
 - Theorem work or formal verification
 
-**Excluded**: the agent shall not use this skill on a task that completes within 2 tool calls and writes no file; a lookup answered by one search or one file read is excluded by this rule.
+**Excluded**: tasks that finish within 2 tool calls and write no file, including a lookup answered by one search or one file read.
 
 ## Core Workflow
 
@@ -98,7 +98,7 @@ Clear separation prevents fake progress (looking busy on wrong things).
 
 What must be checked *before* moving forward:
 - Does this output match what was asked for?
-- Is it complete enough for the next task?
+- Does it meet the entrance criteria of the next atom?
 - Are there hidden assumptions?
 - What could break downstream?
 

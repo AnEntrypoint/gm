@@ -14,7 +14,7 @@ Commit through the git verbs only. git_finalize {"message":"<message>"} bundles 
 
 After the push, git_log {"limit":1} gives the sha to validate, and ci-status reports the run for that head. On green, write the marker with fs_write {"path":".gm/exec-spool/.ci-validated","content":"{\"head_sha\":\"<that sha>\"}"}. On red, read the failing step, name its cause, fix the cause, and push again.
 
-Before the transition, dispatch claim-audit, then residual-scan as the last write-free verb: residual-scan is one-shot per stop window, and any prd-add, unknown-add or unknown write invalidates its marker. Then dispatch transition {"to":"G_SWEEP"} from ADRN, which starts the sweep that re-walks every node against the whole artifact. Use node-status when the state is in doubt.
+Before the transition, dispatch claim-audit, then residual-scan as the last write-free verb: residual-scan is one-shot per stop window, and any prd-add, unknown-add or unknown write invalidates its marker. Then dispatch transition {"to":"G_DONE"} from ADRN; the sweep re-walks every node against the whole artifact once that gate passes. Use node-status when the state is in doubt.
 
 ## PRD rows
 
@@ -101,7 +101,7 @@ Before the commit, each unknown that a later task needs is saved as a memory: on
 
 ## Transition
 
-The node is entered with transition {"to":"ADRN"} from G_NET. The graph has no gate on that edge, since the net-negative gate already passed before PRESSURE.
+The node is entered with transition {"to":"ADRN"} from G_NET. The graph has no gate on that edge; G_NET already passed.
 
 The exit is ADRN, then G_DONE, the gate for "contract satisfied and recorded", whose predicate lean-contract-recorded is blocking: every PRD row is closed and the worktree is clean. The sweep starts only after that gate passes: dispatch transition {"to":"G_SWEEP"} once every witness above is quoted in the transition note. The sweep walks every node head to tail and ends in one of two terminal states: G_FIXPOINT when it changed nothing, or G_SURFACE when the variant did not decrease. Done is the terminal state the transition returns, never the agent's own pronouncement.
 

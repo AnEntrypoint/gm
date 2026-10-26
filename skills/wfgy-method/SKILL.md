@@ -12,7 +12,7 @@ metadata:
 
 WFGY (Wan Fa Gui Yi, "all methods return to one") is a reasoning-drift-control technique from `onestardao/WFGY`. This skill ports its portable behavioral core to a text-generating agent's own multi-step work. Provenance and the dropped list: `references/honesty-and-provenance.md`. Technical basis of each claim: `references/wfgy-core-mechanism.md`.
 
-**On deltaS**: deltaS = 1 - cos(I, G) (I = current state, G = goal/anchor). Absent a real embedding call, any numeric deltaS you produce is your own qualitative estimate, not a measurement. Use the label ("deltaS is climbing," "deltaS looks high here") as shorthand for "this step is drifting from the stated goal"; never present a specific decimal as computed.The current build serves no embedding verb, so every deltaS here is your own estimate. Say so explicitly ("deltaS looks high here, my own estimate, no embedding measured").
+**On deltaS**: deltaS = 1 - cos(I, G) (I = current state, G = goal/anchor). Without a real embedding call (the current build serves none), every deltaS you produce is your own estimate: label it ("deltaS looks high here, my own estimate, no embedding measured") and never present a decimal as computed.
 
 ## G - the anchor (BBMC pattern: compare state against goal)
 
@@ -30,7 +30,7 @@ For ambiguous or high-stakes decisions only: name at least two real candidate ap
 
 ## BBCR pattern - checkpoint, bounded retry, then surface rather than confabulate
 
-Before a risky step, note the last known good state. On real incoherence, return to it and retry at most 2-3 times, then stop and surface the unresolved problem; never retry indefinitely. Checklist and gotcha: `references/bbcr-checkpoint-retry.md`.
+Before a risky step, note the last known good state. On real incoherence, return to it and retry at most 2-3 times on that route, then switch route per Finish the work; surface the unresolved problem only when every route is blocked; never retry indefinitely. Checklist and gotcha: `references/bbcr-checkpoint-retry.md`.
 
 ## BBAM pattern - notice and correct over-narrow focus (agent-delegated: no real attention weights are read)
 

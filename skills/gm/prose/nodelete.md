@@ -7,7 +7,7 @@ Claims:
 - Every replacement is followed by a search for the path it replaced. A call site still pointing at the old path is repointed to the replacement, then the old path is removed in the same change.
 - An old path that survives beside its new one is a defect of this node, never a style choice.
 
-Pre-deletion witness, run before each removal:
+Witness per removal (1-2 before, 3 after):
 1. callers {"symbol":"<name>","limit":50} returns no edges outside the removed path.
 2. codesearch {"query":"<name>","mode":"literal","root":"<absolute project root>"} returns zero hits outside history.
 3. After the deletion, exec_js runs the project's build check through execFileSync and prints its output line.

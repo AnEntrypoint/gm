@@ -16,7 +16,7 @@ This skill is the **tree root**. It does not re-explain the children -- it wires
 
 ## When to load
 
-Load this root first for complex, multi-step, high-stakes, or long-horizon work where premature completion or goal drift is a risk. Then dispatch the children listed under Children below: compile, shoot, and drift control.
+Load this root only when a task needs both compile and shoot, as the description states; for drift control alone, load `wfgy-method`. Then dispatch the children listed under Children below.
 
 ## The tree
 

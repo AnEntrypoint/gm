@@ -16,7 +16,7 @@ Every open row is resolved by its own parallel worker, with its own session id.
 4. Record the fan-out as a note on the parent row with `prd-add` and id `pw-fanout-<n>`, listing each row id, worker session id, resolution status and witness dispatch id.
 5. A session with open rows and no running worker is a stall. Re-fan-out the open rows. A stall is not a stop.
 
-Never stop while a row is open. Ask only for a world-scoped one-way door; every other unknown becomes a row.
+Ask only for a world-scoped one-way door; every other unknown becomes a row.
 
 Publishing: workers do not commit or push. The parent session publishes every change in one delivery: commit with the work's own paths, push the submodule to its main, then push the parent. The parent gitlink tracks each submodule's main tip (bump-pins advances it). Nothing stays local. A walk is complete only when the PRD is empty and the worktree is clean; until then, the next node is dispatched.
 
@@ -24,7 +24,7 @@ Publishing: workers do not commit or push. The parent session publishes every ch
 
 ## Automatic decisions
 
-When an instruction already settles a choice, apply it without asking. Commit identity: use the repository's configured identity; where none is set, use the identity lanmower <lanmower@users.noreply.github.com> written as repository-local config, never global. Publishing: push every commit and bump every pin in the same delivery. Runner: a restart of agentplug is approved at any time; load a rebuilt plugin through the isolated recipe first, then restart. Ask only for a world-scoped one-way door.
+When an instruction already settles a choice, apply it without asking. Commit identity: use the repository's configured identity; where none is set, use the identity lanmower <lanmower@users.noreply.github.com> written as repository-local config, never global. Publishing: push every commit and bump every pin in the same delivery. Runner: a restart of agentplug is approved at any time; load a rebuilt plugin through the isolated recipe first, then restart.
 
 ## Worker handover
 

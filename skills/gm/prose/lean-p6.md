@@ -2,7 +2,7 @@
 
 A method concern, not a pipeline stage: entered from any node that reaches it, left once its ask holds. No concern gates entry to a node.
 
-PRESSURE removes what the change did not need. It finds every superseded path, fallback, duplicate, dead function and unreachable entry point the change left behind, and deletes each one only after callers, codesearch and a build check prove nothing still depends on it, keeping the diff net-negative or recording why not. Exit: the deletion-completeness check and reachability analysis pass for every removed or superseded symbol, the diff budget holds, and transition to=ADRN is dispatched.
+PRESSURE removes what the change did not need. It finds every superseded path, fallback, duplicate, dead function and unreachable entry point the change left behind, and deletes each one only after callers, codesearch and a build check prove nothing still depends on it, keeping the diff net-negative (lean-net-negative). Exit: the deletion-completeness check and reachability analysis pass for every removed or superseded symbol, the diff budget holds, and transition to=ADRN is dispatched.
 
 Principles are applied as work, from the lean method (AnEntrypoint/lean). Each heading's label is its attribution in gm-config/fsm/graph.json.
 
@@ -26,7 +26,7 @@ A superseded path, fallback, duplicate or dead symbol becomes a row the moment i
 
 A removal not yet provably safe is a row whose subject is the proof it needs, such as "prove the legacy parser has no callers in the crates outside the workspace", run with codesearch against the other root. A row is never closed by reasoning that a symbol looks unused.
 
-Never write deferral wording into a row or transition note: wording that moves a removal to another time, session, person or a scope exclusion is not admitted. A superseded path is removed in this change, or it is a row that stays open until its removal proof exists.
+Never write deferral wording into a row or transition note: wording that moves a removal to another time, session, person or a scope exclusion is not admitted. A superseded path is removed in this change; its row stays open only until the removal proof runs.
 
 ## Mutables
 
@@ -92,7 +92,7 @@ Fan-out: one subagent per removed symbol and one per removed file runs its zero-
 
 Nominates: {REACHABLE}. Backreference: {REACHABLE}.
 
-A deletion is complete only when every reference is gone. For each removed symbol: codesearch literal on its name returns zero hits outside history, callers returns no edges, and the build check passes. For each removed file: codesearch filename on its path returns zero hits, and the build check passes. The row quotes the zero-hit count and the build output. Superseded code still reachable from an entry point fires the backreference to REACHABLE, and the reachable chain is cut at the superseded node.
+A deletion is complete only when every reference is gone. Its witnesses are listed under Witness below. Superseded code still reachable from an entry point fires the backreference to REACHABLE, and the reachable chain is cut at the superseded node.
 
 ### DIFFBUDGET - Net-Negative Diff Target
 
@@ -167,7 +167,7 @@ Deleted symbol and file lists live in the commit and the rows. Diff stats live i
 
 The node is entered from G_INDEP through G_NET, the gate for "change closes net-negative, or states why not". Its predicate lean-net-negative is blocking: it passes only when added lines in the working diff against HEAD are at most the removed lines. Enter the walk at state NODELETE only after the G_NET gate passes. A denial names next_dispatch: dispatch it, which removes superseded or duplicated code in this change, then re-dispatch the G_NET transition. The predicate reads no growth reason, so the denial clears by shrinking the diff, not by describing it.
 
-The exit is DIFFBUDGET to CONVCOM, a forward edge with no gate. Dispatch transition {"to":"ADRN"} once every removal has its zero-hit or reachability witness and the net count passes. The gate lean-contract-recorded is checked at the next boundary, in ADRN, where it refuses until every PRD row is closed and the worktree is clean.
+The exit is DIFFBUDGET (graph edge to CONVCOM, ungated). Dispatch transition {"to":"ADRN"} once every removal has its zero-hit or reachability witness and the net count passes. The gate lean-contract-recorded is checked at the next boundary, in ADRN, where it refuses until every PRD row is closed and the worktree is clean.
 
 Feedback routes each discovery to the earliest node able to fix it. A net-positive diff that removals cannot shrink returns to G_NET and BUILD, because the grown code must be rebuilt in a smaller shape. A superseded path still reachable is cut under DELETIONGATE here. A new symbol with no entry point is removed here. An accidental state caused by a type that does not express its invariant returns to G_CONTRACT through ILLEGAL. A description that exceeds its content returns to G_CONTRACT through DEEPMOD. Duplicate behaviour is merged in TOTALITY through DRY. A drift finding returns to G_INDEP through INVARIANTRUN, because behaviour is re-witnessed there rather than accepted here.
 

@@ -52,7 +52,7 @@ Unknown gate: drain every pending PROVE-kind unknown before leaving. Loop: `unkn
 
 Two-pass rule: an unknown surviving two genuine resolution attempts without a witness is reclassified as a fresh, differently scoped unknown with a new id; re-cut affected rows and dispatch `transition to=EARS`, since the reclassification shows the plan must reshape.
 
-Always rearchitect immediately: an in-spirit architectural improvement found mid-node, clearly better and not merely different, is handled at once: dispatch `transition to=EARS` in the same turn and re-cut affected rows with prd-add on existing ids (handle and position kept). Sunk cost never justifies the worse design. Writing "this should be rearchitected" is the trigger for the transition; narrating it without dispatching strands the chain.
+Always rearchitect immediately: an in-spirit architectural improvement found mid-node, better and not merely different, is handled at once: dispatch `transition to=EARS` in the same turn and re-cut affected rows with prd-add on existing ids (handle and position kept). Sunk cost never justifies the worse design. Writing "this should be rearchitected" is the trigger for the transition; narrating it without dispatching strands the chain.
 
 Surface divergence: a state differing from the PRD's assumed shape is a new unknown with its witness. A broken tool blocking a witness becomes an unknown to make the witness reachable: fix the tool, replace it, or drive its lower-level interface directly.
 

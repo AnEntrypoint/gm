@@ -1,6 +1,6 @@
 # Research Kernel Extraction -- Fifth-Dimension Engine
 
-Mixing two unrelated themes turns them into a theorem-shaped research kernel. The same mechanic generalizes to ordinary research questions.
+Mixing two unrelated themes can yield a theorem-shaped research kernel. The same mechanic generalizes to ordinary research questions.
 
 ## The mechanic
 
