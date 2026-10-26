@@ -68,6 +68,17 @@ These hold in any project, with or without its own AGENTS.md. A project file may
 - **Blockers.** A blocker is annotated on the row it blocks with `prd-note`, and the row stays open. It is never filed as a child row, by `prd-add` with `blockedBy` or by `prd-block`.
 - **Grep and proc-list.** A shell verb that invokes `find`, `grep` or `rg` is denied (`deviation.native-search-bypass`), including a pipe from process output such as `ps | grep`. Content and file search use `codesearch`; running processes are listed with `proc-list` and signalled with `proc-signal`.
 - **Memory and fs_write.** `fs_write` is project-only: it refuses any path outside the cwd project root, and `allowOutsideRoot` never widens a write. Memory lives in the project under `memory/` (tracked; `memory/MEMORY.md` is the index), never in the user config directory. A file outside the project that must change is edited with the host editor and named in the report.
+- **Fast path.** Before any multi-item job, time one item and extrapolate; start the full run only when the estimate is acceptable.
+- **Fast path.** Plan independent items as one parallel batch with per-item results; never run them in sequence by default.
+- **Fast path.** Scope before scanning: restrict each search or walk to the relevant directories and exclude regenerable caches (target, node_modules, dist, out) up front.
+- **Fast path.** Compute every shared input once and reuse it; never recompute per item.
+- **Fast path.** Choose the cheapest verb that answers the question (a listing before a walk, a read before a diff).
+- **Fast path.** Parse tool output by explicit form, not field position; check a surprising result against raw output before acting on it.
+- **Fast path.** Never sleep; wait on long jobs with a monitor until-loop.
+- **Fast path.** While a long step runs (CI, fetch, build, monitor), start the next independent step; block on a result only when nothing else can proceed.
+- **Fast path.** Before any multi-step job, list its slow steps and cache, batch, parallelise or skip each one up front.
+- **Fast path.** Cache any result a later step needs; never repeat a step whose input has not changed.
+- **Fast path.** Keep automated gates that cascade updates; remove only test-only gates.
 
 ## 0. Precedence
 Live response (gate denial, residual, `instruction`/`phase-status`, `entry` prose) outranks every tier. Higher tiers replace lower, never merge. Served text beats this file; report a contradiction in one line. Sole exception: Section 4 world-scope. Tiers: `Tier` enum (`config::Tier`, `rs-plugkit/crates/plugkit-core/src/config.rs`), declaration order = resolution order. Sections 2-3 sit below its last variant.
