@@ -687,6 +687,21 @@ The agentplug daemon, not the gm plugin, handles these:
 | `background-convert` | mark an in-flight dispatch `{verb, task}` as converted (`converted: true`), or answer `already_completed` or `unknown_task` |
 | `plugin-refresh` | force the plugin and runner update poll to fire on the next loop tick |
 
+## One verb gm-mcp answers
+
+`gm-skill` (canonical `gm_skill`) is answered by the MCP server from the skill snapshot baked into its bundle, not by the plugin or the daemon. Use it when a host froze its skill list before gm wrote the skills into `~/.claude/skills`, so no gm skill is visible in this session: the reply is the same text the skill would have loaded.
+
+| body field | meaning |
+|---|---|
+| `name` | skill name, e.g. `gm`. Omit, or send `list: true`, for the index: every skill with its description, file count, bundle digest, installed path and whether the installed file matches the bundle |
+| `file` | file inside the skill, defaults to `SKILL.md`; `prose/` and `docs/` paths work too |
+| `list` | answer the index even when `name` is given |
+| `head` | answer only the `SKILL.md` frontmatter (`name` and `description`) instead of the body |
+| `offset` | first line to return, 1-based (alias `startLine`) |
+| `limit` | lines to return, default 400, then cut to fit the reply cap (alias `lines`) |
+
+The reply carries `lines_total`, `lines_from`, `lines_to`, `truncated` and `next`; follow `next` until `truncated` is false. `installed_path` is the same text on disk, readable with `fs_read` when this session can see skills at all.
+
 ## Getting a verb's own documentation
 
 Three verbs publish their parameter doc: `{"help": true}` as the body of `grep` (alias `rg`), `comment-audit` or `git_worktree` replies `{"help": true, "verb": ..., "parameters": "<doc>"}`. Other verbs refuse the key as an undeclared body field (`undeclared key help`, naming their declared fields): `codesearch`, `fs_read`, `fs_write`, `fs_stat`, `fs_readdir`, `codeinsight`, `prd-add`, `prd-resolve`, `git_merge_abort`, `git_status` and `git_log`. `ci-status` with `help` answers `error_code: failed`.
@@ -857,3 +872,4 @@ Served verbs with no entry elsewhere in this file. Rows are sourced from `gm.des
 - `git_show`: `rev` (any), `ref` (any), `sha` (any), `commit` (any), `stat` (any), `path` (any), `paths` (any), `files` (any), `offset` (any), `full` (any)
 - `git_remote`: `action` (string), `name` (string), `url` (string)
 - `ci_log`: `run_id` (integer), `job_id` (integer), `sha` (string), `github_repo` (string), `job` (string), `step` (string), `pattern` (string), `mode` (string), `regex` (boolean), `ignore_case` (boolean), `max_lines` (integer), `max_chars` (integer), `failed_only` (boolean), `tail_lines` (integer)
+- `gm_skill`: `name` (string), `file` (string), `list` (boolean), `head` (boolean), `offset` (integer), `limit` (integer), `startLine` (integer), `lines` (integer)
