@@ -322,7 +322,7 @@ The sanctioned publish is `git_push {rev:"<sha>"}` naming the commit you made, a
 
 A push publishes a chain, not one commit: `git_push` sends `git push origin <rev>:<branch>` (`<rev>:refs/heads/<branch>` for a full sha), so every commit on local `main` the remote lacks ships with it, including another lane's. On shared linear main that is the intended contract: no refspec publishes a commit without its ancestors, so `rev` names the tip and never narrows the set. `git_commit` does not publish. Publishing goes through `git_push`, and `git_finalize` publishes by calling it.
 
-`git_log` with `paths` keeps only commits touching those pathspecs; `max_count` (aliases `n`, `limit`, `count`) caps the number of commits. `git_fetch` takes the refspec as `ref` (also `rev` or `refspec`), the first non-blank one naming it; `remote` defaults to `origin`. `git_diff` scopes the same way.
+`git_log` with `paths` keeps only commits touching those pathspecs; `max_count` (alias `limit`; `limit` wins when both are present) caps the number of commits. `git_fetch` takes the refspec as `ref` (also `rev` or `refspec`), the first non-blank one naming it; `remote` defaults to `origin`. `git_diff` scopes the same way.
 
 `git_show`: `path` prints that file at the revision (same as `rev: "<rev>:<path>"`); `paths` limits a commit's diff. Output pages at 60000 bytes by `offset`; the reply carries `total_bytes` and `next_offset` (`null` on the last page), so a long diff is read page by page. `full: true` returns the whole blob or diff in one reply, with `truncated: false`. These three refuse unknown fields, naming `unknown_fields` and `accepted_fields`. `git_status` scopes to `paths`. `summary: true` returns counts by status plus the first `limit` (default 20) `first_paths`; without it, `limit` caps each status list (default 10), and `truncated` is set when a list overflows.
 
@@ -758,7 +758,7 @@ Served verbs with no entry elsewhere in this file. Rows are sourced from `gm.des
 | `sql_smoke` | none | run the SQL store smoke test | command |
 | `sql_serialize` | none | serialize an open SQL database | query |
 | `sql_deserialize` | none | load a serialized SQL database | command |
-| `codeinsight_index` | none | index state and symbol overview, see the Code lookup section | query |
+| `codeinsight_index` | `{"root"}` | build the codeinsight index, see the Code lookup section | command |
 | `code_search` | `{"query", "mode"?, "k"?, "max_matches"?, "max_files"?, "timeout_ms"?, "path"?, "root"?, "glob"?, "exclude"?, "combine"?, "output"?, "case_insensitive"?, "whole_word"?, "comments_only"?, "verbatim"?, "docs"?, "refresh"?, "no_ignore"?}` | ranked code search; alias of `codesearch`, see the Code lookup section | query |
 | `discipline` | none | the discipline checklist for the current phase | query |
 | `python` | raw_body | run Python code through the spool | command |
@@ -777,10 +777,6 @@ Served verbs with no entry elsewhere in this file. Rows are sourced from `gm.des
 | `unknown_add` | none | add an unknown item | command |
 | `unknown_list` | none | list unknown items | query |
 | `unknown_defer` | none | defer an unknown item | command |
-| `unknown_add` | none | add an unknown | command |
-| `unknown_list` | none | list unknowns | query |
-| `unknown_resolve` | none | resolve an unknown | command |
-| `unknown_defer` | none | defer an unknown | command |
 | `dream_policy_register` | none | register a Dream-RSI policy; proposes only, never deploys | command |
 | `dream_evaluator_receipt` | none | record a Dream-RSI evaluator receipt | command |
 | `dream_discovery_record` | undeclared | record a Dream-RSI discovery | command |
@@ -797,7 +793,7 @@ Served verbs with no entry elsewhere in this file. Rows are sourced from `gm.des
 | `codeinsight_namespace_audit` | undeclared | audit the codeinsight namespaces | query |
 | `calculus_model_check` | undeclared | model-check the calculus | query |
 | `phase_status` | undeclared | report the current phase and pending row count | query |
-| `session_handover` | `{"session_id"}` | read the handover for a session | query |
+| `session_handover` | `{"session_id"}` | make `session_id` the owner of the project session | command |
 | `wait` | undeclared | wait for a condition | query |
 | `wait_for_task` | undeclared | wait for a task to finish | query |
 | `sleep` | undeclared | sleep for a duration | query |

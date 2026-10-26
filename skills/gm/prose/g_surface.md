@@ -1,5 +1,5 @@
 # variant did not decrease
 
-Terminal `G_SURFACE`. The variant did not decrease, or one condition fired twice with no new information: stop, hand the ambiguity to a person, do not sweep again.
+Terminal `G_SURFACE`. The variant did not decrease, or one condition fired twice with no new facts: stop, `unknown-add` the ambiguity with its default, do not re-sweep.
 
-The walk is recorded by the transition that reaches this node.
+The transition that reaches this node records the walk.

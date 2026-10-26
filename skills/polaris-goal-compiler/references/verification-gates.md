@@ -2,7 +2,7 @@
 
 ## What a Gate Is
 
-A verification gate is a **check that shall pass before the next atom begins**. It prevents fake completion by requiring proof of actual readiness.
+A verification gate is a **check that shall pass before the next atom begins**. It prevents fake completion by requiring proof.
 
 ## Types of Gates
 
@@ -15,7 +15,7 @@ A verification gate is a **check that shall pass before the next atom begins**. 
 
 ### Completeness Gate
 
-"Is it complete enough for downstream work?"
+"Does it cover everything downstream work needs?"
 
 - Atom: "Research payment APIs"
 - Gate: "Have we identified all APIs that meet our compliance requirements?"

@@ -10,8 +10,7 @@ Input: `row=<id>; session=<SESSION_ID>`. Output: `.gm/receipts/<row>/04-edit.md`
 1. Refuse to start while any unknown is open. Load `gm-eliminate` instead.
 2. Make exact-match edits only. Run `callers` on each changed symbol first.
 3. If the edit exposes a new unknown, record it and load `gm-eliminate`; the edit is re-run after it closes.
-4. When the edit is complete, load `gm-validate`.
-   the `gm-validate` skill with `row=<id>; session=<SESSION_ID>`
+4. When the edit is complete, load the `gm-validate` skill with `row=<id>; session=<SESSION_ID>`.
 
 ## Finish the work
 

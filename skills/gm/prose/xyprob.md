@@ -1,6 +1,6 @@
 # XY Problem
 
-Principle `XYPROB`. Apply it to the work this node stands on. Entered from any neighbour that leads here, left to any neighbour it links to; its place in a walk is decided by the work it applies to, not by a bucket.
+Principle `XYPROB`. Apply it to the work this node stands on. Placement follows that work, not a bucket: enter from any neighbour that leads here; leave to any neighbour it links to.
 
 Claims, each with the walk that falsifies it:
 

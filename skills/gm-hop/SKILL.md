@@ -5,7 +5,7 @@ description: "Use when a gm walk must apply one named principle (book or discipl
 
 # gm-hop
 
-Args: one JSON object `{"node":{"id":"<id>","label":"<Author - Title>","advocate":"<advocate spec>","links":[{"to":"<id>","guards":["<guard>"]}]},"surface":"<path>","session":"<SESSION_ID>","wave":"<wave>","depth":<n>,"rhetoric":""}`. `links` is sorted lexically by `to`. The payload is the only graph data a hop receives: never load `gm-graph.json`. `rhetoric`, `max_depth` (default 6, the wave's cap) and `wave` (names `.gm/pool/ledger-<wave>.txt`) are optional; `wave` is required for ledger lines. Missing `node`, `surface` or `session`: `VERDICT: NOT-APPLICABLE`, no writes.
+Args: one JSON object `{"node":{"id":"<id>","label":"<Author - Title>","advocate":"<advocate spec>","links":[{"to":"<id>","guards":["<guard>"]}]},"surface":"<path>","session":"<SESSION_ID>","wave":"<wave>","depth":<n>,"rhetoric":""}`. `links` is sorted lexically by `to`. The payload is the only graph data a hop receives: never load `gm-graph.json`. `rhetoric`, `max_depth` (default 6, the wave's cap) and `wave` (names `.gm/pool/ledger-<wave>.txt`) are optional; `wave` is required for ledger lines. Missing `node`, `surface` or `session`: `VERDICT: NOT-APPLICABLE`, no writes or emission.
 
 Verbs: gm section 1. Code questions: codeinsight first, then `codesearch` literal rooted at the surface. `fs_read` only located paths.
 
@@ -41,12 +41,12 @@ A hop EMITS a node on EVERY verdict, including NOT-APPLICABLE; a receipt summary
 - The hop never witnesses its own edit. Before `applied:true`, verifier session `<session>-v1` gets only the change contract (file, expected edit, witness command) and re-runs the witness live; record `verified_by:"<session>-v1"` and its ids. No verifier pass: `applied:false`, `verified_by:null`. `../dream-rsi/SKILL.md` Part B step 2 counts a walk only when `verified_by` differs from `session`.
 - Stamp `lean_node:"<NODE>"` on your dispatches (read by `rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs.rs`; recorded by `rs-plugkit/crates/plugkit-core/src/orchestrator/dream_rsi.rs`).
 - A discipline the surface demands that `links_offered` lacks is emitted, not dropped: `fs_write` with `append:true` adds `{id,label,book,author,kind:"principle",proposed_by:<node.id>,session,witness}` to `.gm/lean-walk/new-nodes.jsonl` (`id` = upper-case slug of the book title). Refuse an `id` already in `nodes[]`; join that node instead. Never edit `../dream-rsi/gm-graph.json`; its owner promotes nodes.
-- Evidence budget: the node file keeps verdict fields and pointers; a bulky array moves to `.gm/lean-walk/<NODE>-<field>.json`. Under 4 KB. `.gm/lean-walk/` is gitignored: no commit, no push.
+- Evidence budget: the node file keeps verdict fields and pointers; bulk moves to `.gm/lean-walk/<NODE>-<field>.json`. Under 4 KB. `.gm/lean-walk/` is gitignored: no commit, no push.
 
 ## Rules
 
 - A receipt is the hop's own: a successor is named by session in `next:`, with no child text. The orchestrator reads each receipt by the session it launched, and merges a principle already filed by another wave instead of adding it again.
-- A hop is one named principle from the book "lean" (AnEntrypoint/lean), applied to every in-scope instance in one pass, as its own subagent with its own SESSION_ID. It is one lane, never the pool; the orchestrator never performs hop work inline (gm-orchestrate, Never let the pool dip).
+- A hop is one named principle from the book "lean" (AnEntrypoint/lean), applied to every in-scope instance in one pass, as its own subagent. It is one lane, never the pool; the orchestrator never performs hop work inline (gm-orchestrate, Never let the pool dip).
 - A hop reads pending rows once at start in one `gm_codemode` body (`prd-list {"status":"pending","limit":<n>}`), filtered in code to its principle or cause literal. It nominates its successor from that list and never invents an id.
 - Choose the next node by project fit and diversity. Traversal is unfinished until earlier applied nodes that a later change may affect are re-checked (back-verify).
 - Each confirmed node-only row is `prd-add`ed at once, never batched. A hop with zero rows 15 minutes after its heartbeat start returns a receipt (surfaces scanned, candidates checked, rows logged 0, reason).

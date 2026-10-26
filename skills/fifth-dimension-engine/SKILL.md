@@ -12,7 +12,7 @@ metadata:
 
 WFGY 5.0's core problem-solving tool. Lifts a target into a higher problem-coordinate, then returns a structured route that can be inspected, attacked, expanded, and tested. Route kinds: proof paths, strategy kernels, research structures, repair paths, positioning routes.
 
-**Before you decide, shoot first.**
+**Shoot a complex target before deciding on it.**
 
 ## What This Is
 
@@ -88,7 +88,7 @@ You get:
 
 **Workflow**:
 1. Goal Compiler compiles the problem into task atoms
-2. For each atom, ask: "Do I need to shoot this, or is it routine?"
+2. For each atom, decide: shoot it if it needs structured reasoning; otherwise it is routine.
 3. If routine: execute directly
 4. If complex: shoot it with Fifth-Dimension Engine
 5. Use Goal Compiler's verification gate to check the output
@@ -121,7 +121,7 @@ See `references/research-kernel-extraction.md` for how mixed themes become resea
 
 ### Everyday Problems
 
-The same engine works on ordinary decisions, work problems, product questions, and engineering failures -- any well-specified target benefits from being shot into a route rather than answered directly.
+The same engine works on ordinary decisions, work problems, product questions, and engineering failures: any well-specified target can be shot into a route.
 
 ## Verification
 

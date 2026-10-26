@@ -36,7 +36,7 @@ Start with: "Goal: Build a payment microservice."
      running system -- no test files, no suites, ever (see gm SKILL.md)
    - Deploy: Staging validation, production rollout
 
-3. **For each piece, refine**: Can this be done in 1-2 days by one person? If not, break further.
+3. **For each piece, refine**: Can one person finish this in one session? If not, break further.
 
 ## Dependency Edges
 

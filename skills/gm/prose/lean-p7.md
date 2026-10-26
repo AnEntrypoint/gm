@@ -2,7 +2,7 @@
 
 A concern of the method, not a pipeline stage: entered from whichever node reaches it, left once its ask holds. No concern gates entry to a set of nodes.
 
-CONTEXT ECONOMY keeps tokens spent per unit of change low at every node. The main thread holds only the signal the current change needs: instruction prose in use, search output actually read, memory entries verified against the live tree, tool definitions dispatched, and subagent replies reduced to a conclusion plus a witness. It is entered when a backreference fires into it (the sweep condition "context spend rose per unit of change", or a memory lookup that returned approximate matches). It exits when measured spend per unit of change has stopped rising and the walk returns to the node whose work it measured. The exit condition is a sweep in which no context-spend measure rose.
+CONTEXT ECONOMY keeps tokens spent per unit of change low at every node. The main thread holds only the signal the current change needs: instruction prose in use, search output actually read, memory entries verified against the live tree, tool definitions dispatched, and subagent replies reduced to a conclusion plus a witness. It is entered when a backreference fires into it (the sweep condition "context spend rose per unit of change", or a memory lookup that returned approximate matches). It exits when measured spend per unit of change has stopped rising and the walk returns to the node whose work it measured.
 
 Principles here are applied as work, from the lean method (AnEntrypoint/lean). Each principle's book and attribution is its H3 label, taken from gm-config/fsm/graph.json.
 
@@ -166,7 +166,7 @@ List the tool and MCP definitions this session loads, and those this node's walk
 
 ### GREPFIRST - Exact-String Retrieval Before Embedding Retrieval
 
-Handover: its exit is the backreference to SMALLESTSET (gm-config/fsm/graph.json GREPFIRST -> SMALLESTSET, backreference) by design, taken when a dual answer is the only answer; cite Exact-String Retrieval Before Embedding Retrieval.
+Handover: its exit is the backreference to SMALLESTSET (gm-config/fsm/graph.json GREPFIRST -> SMALLESTSET, backreference) by design; cite Exact-String Retrieval Before Embedding Retrieval.
 
 Fan-out: each exact string's literal search is an independent slice: one subagent per string (`goal-s1-d7-sub<k>`) returns its match count and `exhaustive` field. Canary: a literal search with `exhaustive: false` was not closed and is not counted as complete; a subagent that falls back to `dual` for an exact string has gone off-task.
 

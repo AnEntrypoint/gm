@@ -2,7 +2,7 @@
 
 A method concern, not a pipeline stage: entered from any node that reaches it, left once its exit holds. No concern gates entry to nodes.
 
-SHAPE turns the request into a PRD covering its whole closure before any contract is written. It orients on the live tree; names every in-spirit row; states each row's pre-conditions, invariants and post-conditions; resolves every grounding unknown with a witness; types every contract- or runtime-level unknown for the node that discharges it. Exit when no row is unshaped, no grounding unknown is open, and an expansion pass adds nothing. Exit runs LIVEPLAN, then the G_CONTRACT gate.
+SHAPE turns the request into a PRD covering its whole closure before any contract is written. It orients on the live tree; names every in-spirit row; states each row's pre-conditions, invariants and post-conditions; resolves every grounding unknown with a witness; types every contract- or runtime-level unknown for the node that discharges it. Exit when no row is unshaped, no grounding unknown is open, and an expansion pass adds nothing.
 
 Principles are applied as work, from the lean method (AnEntrypoint/lean). Each H3 carries a principle key, then the attribution exactly as gm-config/fsm/graph.json labels it.
 
@@ -22,7 +22,7 @@ An answer plausibly on the public web: `websearch`, then at least one targeted `
 
 Once per project per session, read gm.config.json (absent: every default applies) with the README, CONTRIBUTING and `.gm/` signals. A real signal makes a prd-add row proposing the change. Signals: the project references TencentDB Agent Memory or a deployed instance; an embedding pipeline commits to a dimension the fixed 384-dimension default cannot hold; or the user names the need. Repointing `.gm/config.source.json` or flipping a `memory.tencentdb_backend` block is a reconfiguration: raise it in prose at the end of the turn, with a default already taken, before writing it, unless the user's words named the need. No real signal: move on.
 
-On the first dependency install of a session, and before trusting cloned or vendored dependency content, dispatch `scan_deps`. Body `{}` scans the project; `{"root":"<relative dir>"}` a subdirectory; `{"root":"<absolute dir>"}` a sibling project. blockedCount or failCount above zero is a real hit: stop, raise it in prose at the end of the turn with a default already taken, and investigate the introducing commit in the dependency's history. Never add exclusions; never retry blindly. warnCount alone is a glance, not a block. nodeModulesTruncated true gets a prd-add row for a standing unbounded sweep.
+On the first dependency install of a session, and before trusting cloned or vendored dependency content, dispatch `scan_deps` (rules in Supply-chain scan). A blockedCount or failCount above zero is a real hit: record it as a PRD row and keep the walk running.
 
 Fan out only when the closure splits into independent slices; launch each as a subagent. The subagent prompt opens "use the gm skill for this; code questions go to codeinsight (callers/impact) first, then codesearch, and fs_read only a located path", then the task, its terminal condition (prd_pending_count 0 against the full discovered scope, not its slice), and session_id `<parent_session_id>-sub<k>`. A parent never passes its own literal session id to a child. A shared recurring transform (rename sweep, API migration, more than five applications of one pattern) gets a mapping note drafted by one subagent and adversarially reviewed by a second; only then do parallel workers dispatch against it.
 
@@ -48,7 +48,7 @@ Expansion: the floor is the directly requested items; the closure adds every adj
 
 Every row asks the architecture question: is there a structural change (removing an obsolete mechanism, consolidating duplicated logic, replacing a bespoke implementation with a maintained one, fixing a wrong abstraction at its root) that makes this and every later instance cheaper? If so, it is its own row beside the literal ask.
 
-Jank sweep over reached surfaces (UI, client state, server state, their boundary, anything else touched): every immature, unfinished or half-wired edge, rough and nearly finished work included, is a row. Add a performance-measurement row and a security-review row wherever they apply. Exhaustive inside reached surfaces only.
+Jank sweep over reached surfaces (UI, client state, server state, their boundary, anything else touched): every immature, unfinished or half-wired edge, rough and nearly finished work included, is a row. Add a performance-measurement row for each reached surface with a runtime cost, and a security-review row for each one that takes untrusted input. Exhaustive inside reached surfaces only.
 
 Tell-tale sweep on any AI-written design element (boilerplate flourish, over-hedged comment, generic scaffold name): one sighting is never patched alone. It becomes rows: a full-codebase scan, a grouping of findings, one fix-and-verify row per group.
 
@@ -86,7 +86,7 @@ scan_deps detects the obfuscated dropper that appends a payload after a source f
 
 Dispatch `{}` on the first dependency install of a session and before trusting any cloned or vendored node_modules. `{"root":"<relative dir>"}` limits the git-tracked half to a subdirectory; `{"root":"<absolute dir>"}` scans a sibling project, gitignored node_modules included. A symlink or junction leaving the root is not followed and is listed in symlinkEscapes. `{"full":true}` forces a complete walk for a one-off sweep after a suspicious install. Otherwise the per-package stamp in `.gm/exec-spool/.scan-deps-stamp.json` skips unchanged packages. A package with a failing or blocked finding is never stamped, so it is reported on every scan.
 
-Read the counts. blockedCount above zero: the OS or antivirus already blocked a read. failCount above zero: a structural hit. warnCount alone usually marks a legitimate minified bundle: a glance, never a block. nodeModulesTruncated true: part of the tree went uncovered; add a prd-add row for a standing unbounded sweep.
+Read the counts. blockedCount above zero: the OS or antivirus already blocked a read. failCount above zero: a structural hit. warnCount alone marks a legitimate minified bundle: a glance, never a block. nodeModulesTruncated true: part of the tree went uncovered; add a prd-add row for a standing unbounded sweep.
 
 A failing or blocked hit is a one-way door. Record it as a PRD row and keep the walk running; ask only when the hit is a world-scoped one-way door. Find the introducing commit in the dependency's history and confirm the last clean commit before proposing a pin, revert or exclusion. Never add an exclusion; never retry blindly. Several unrelated repositories under one account showing the same pattern point to a shared compromised credential: name that to the user. A compromised default branch is repaired with git_revert, keeping the bad commit visible. A history rewrite waits for an explicit request.
 
@@ -140,7 +140,7 @@ Cut each row as a thin vertical slice crossing every layer the behaviour touches
 
 Handover: Hands the spike's printed output and the settled unknowns to YAGNI to cut scope to caller-backed rows; nominated next node: YAGNI; cite Spike Solution - Kent Beck.
 
-Where search cannot settle an unknown, spike it: a throwaway exec_js probe against the real service, run with a named command that is red-capable, deterministic and fast. Timebox: one exec_js dispatch and five minutes wall clock; exceeding the box without settling fires the backreference to LIVEPLAN. The spike's printed output is the unknown's witness. Spike code is never shipped. If the unknown survives, the backreference to LIVEPLAN fires and the plan is re-cut around it.
+Where search cannot settle an unknown, spike it: a throwaway exec_js probe against the real service, run with a named command that is red-capable, deterministic and fast. Timebox: one exec_js dispatch and five minutes wall clock; exceeding the box without settling fires the backreference to LIVEPLAN, which re-cuts the plan around the unknown. The spike's printed output is the unknown's witness. Spike code is never shipped.
 
 ### YAGNI - YAGNI - Ron Jeffries
 
@@ -174,4 +174,4 @@ Feedback inside the node: XYPROB routes back to JTBD, INVEST to THINSLICE, SPIKE
 
 Route to the earliest capable node. A discovery made in EARS stays in EARS unless it changes a contract or runtime property, and never sends the walk further back than the discovery requires.
 
-Every turn ends in a verb dispatch. A transition refused with a next_dispatch is dispatched next, not narrated; the denied transition is not retried blind.
+A transition refused with a next_dispatch is dispatched next, not narrated; the denied transition is not retried blind.

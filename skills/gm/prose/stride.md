@@ -1,5 +1,5 @@
 # STRIDE Threat Model - Loren Kohnfelder
 
-Principle `STRIDE`. Apply it to the work this node stands on. Entered from any neighbour that leads here, left to any neighbour it links to; its place in a walk is decided by the work it applies to, not by a bucket.
+Principle `STRIDE`. Apply it to the work at this node. Entered from any neighbour that leads here, left to any neighbour it links to; the work it applies to decides its place in a walk, not a bucket.
 
 The walk is recorded by the transition that leaves this node.

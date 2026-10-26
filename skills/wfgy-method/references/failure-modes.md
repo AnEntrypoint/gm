@@ -1,6 +1,6 @@
 # Named failure modes to watch for
 
-The upstream WFGY ProblemMap documents name and describe 60+ specific ways multi-step reasoning and retrieval pipelines fail. Most are scoped to RAG/vectorstore pipelines and are out of scope for a general coding-agent skill. The subset below generalizes to any multi-step agent task and is worth checking against explicitly. Fetched and adapted from the real source documents (hallucination, context drift, entropy collapse, logic collapse, symbolic collapse, memory coherence, agent memory drift and multi-agent chaos) -- reworded here as plain checklist items an agent applies to its own work, not as retrieval-pipeline diagnostics.
+The upstream WFGY ProblemMap documents name and describe 60+ specific ways multi-step reasoning and retrieval pipelines fail. Most are scoped to RAG/vectorstore pipelines and are out of scope for a general coding-agent skill. The subset below generalizes to any multi-step agent task and is worth checking against explicitly. Adapted from the upstream documents on those failures and reworded as checklist items an agent applies to its own work.
 
 Where the original describes a symptom detectable via embeddings or token statistics, the instruction here asks the calling agent to make the equivalent judgment call itself in plain language -- the intelligence work is delegated to the agent, not computed.
 

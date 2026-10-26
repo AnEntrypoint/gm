@@ -5,7 +5,7 @@ Why the rules in `skills/gm-orchestrate/SKILL.md` are shaped the way they are. T
 ## Terms and floor
 - The ceiling is found by launching because the harness's refusal text is the only source of truth; a constant drifts as the platform changes.
 - Local HEAD lags remote main constantly, so a "modified" blob is compared against remote before a lane stands down.
-- The floor is `min(10, ceiling)` because the refill floor in the runtime (`rs-plugkit/crates/plugkit-core/src/orchestrator/pool_slots/mod.rs`, capped by `rs-plugkit/crates/plugkit-core/src/orchestrator/pool_slots/floor.rs`) cannot exceed the ceiling.
+- The floor is `min(2, ceiling)` because the refill floor in the runtime (`rs-plugkit/crates/plugkit-core/src/orchestrator/pool_slots/mod.rs`, capped by `rs-plugkit/crates/plugkit-core/src/orchestrator/pool_slots/floor.rs`) cannot exceed the ceiling.
 - A dip is judged as a mean across ticks, because a single-tick reading hides the time spent under the floor.
 
 ## Node-to-node payloads
@@ -41,7 +41,6 @@ Why the rules in `skills/gm-orchestrate/SKILL.md` are shaped the way they are. T
 - The git-lane publish carries every ancestor commit, so pushing the tip once is enough.
 - Admission band is process-wide: a waiting git verb may be waiting on other projects' traffic, not its own lane.
 - Walk workers are never forks because a fork inherits the parent conversation and breaks SESSION_ID isolation.
-- Skill edits are live on the next dispatch because the skill directory is linked, not copied.
 - A shortfall is a log event, not a PRD row, so `prd_pending_count` is unchanged by it.
 
 ## Headroom probes
