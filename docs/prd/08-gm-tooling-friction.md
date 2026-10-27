@@ -2,22 +2,22 @@
 
 ## Observed issues
 
-- The gm MCP server served `/workspace/oscraft` when called without an explicit cwd. Every call in this port passed `cwd` to work around it.
-- A spool dispatch sat unclaimed for more than two minutes while the claim sweep reported a stall. The daemon was alive and had free claim slots.
-- A `task-output` poll was refused with `long-gap-no-instruction` after a long idle gap, so a recovery `instruction` dispatch was needed.
-- A `git_push` with `rev:"HEAD"` was refused as symbolic, and the push then needed a full sha.
-- A `git_commit` subject over 50 characters was refused. Commit message rules are enforced by the verb.
+- gm MCP server serve `/workspace/oscraft` if no explicit cwd. Every call this port pass `cwd` to work around.
+- Spool dispatch sit unclaimed >2 min while claim sweep report stall. Daemon alive, free claim slots.
+- `task-output` poll refused with `long-gap-no-instruction` after long idle gap; recovery `instruction` dispatch needed.
+- `git_push` with `rev:"HEAD"` refused as symbolic; push then need full sha.
+- `git_commit` subject over 50 chars refused. Commit message rules enforced by verb.
 
 ## Scope
 
-- Make the default project root follow the session cwd, or refuse calls that would run in another project.
-- Diagnose the claim-sweep stall in the daemon, and record the cause in `docs/verified-incidents.md`.
+- Make default project root follow session cwd, or refuse calls running in other project.
+- Diagnose claim-sweep stall in daemon. Record cause in `docs/verified-incidents.md`.
 
 ## Acceptance
 
-- A call with no cwd from `/workspace/gm` resolves to `/workspace/gm`.
-- The spool claim sweep completes within its 30 s bound under the same load.
+- Call no cwd from `/workspace/gm` resolve to `/workspace/gm`.
+- Spool claim sweep finish within 30 s bound under same load.
 
 ## Witness
 
-A live dispatch from a default-cwd call that reports `/workspace/gm` as its project.
+Live dispatch from default-cwd call report `/workspace/gm` as project.

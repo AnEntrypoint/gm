@@ -2,8 +2,8 @@ id: home
 title: gm
 hero:
   heading: "gm"
-  subheading: "a check layer for the coding agent you already run: gm holds the agent to a list of recorded checks before it calls a task done."
-  body: "You describe a change and the agent builds it. Before the agent can call a task done, every plan row (a task file in .gm/prd/) must be closed, a continuous integration (CI) result for HEAD must be recorded, and submodules must be clean."
+  subheading: "check layer for coding agent you already run: gm hold agent to list of recorded checks before task done."
+  body: "You describe change, agent build it. Before agent call task done: every plan row (task file in .gm/prd/) closed, continuous integration (CI) result for HEAD recorded, submodules clean."
   badges:
     - { label: "installs into Claude Code, Cursor, Gemini CLI and Codex" }
     - { label: "one entry skill, installed as /gm" }
@@ -16,15 +16,15 @@ features:
   heading: "what gm does"
   items:
     - name: "a plan the agent cannot skip"
-      desc: "each plan row is a file, .gm/prd/<id>.yml, and the agent works through the rows. A row closes only with the recorded result of a real check."
+      desc: "each plan row = file .gm/prd/<id>.yml, agent work thru rows. row close only w/ recorded result of real check."
     - name: "one graph, one walk"
-      desc: "A walk is one run of the graph. The work runs as a graph of steps, listed in gm-config/fsm/graph.json. The steps include principles, each a discipline that the agent applies to the code. The agent moves along edges (the links from one step to the next), and a gate on an edge can refuse a move. Independent steps run in parallel subagents (separate agents that the main agent starts)."
+      desc: "A walk = one run of graph. Work runs as graph of steps, listed in gm-config/fsm/graph.json. Steps include principles, each discipline agent applies to code. Agent moves along edges (links from one step to next); gate on edge can refuse move. Independent steps run parallel in subagents (separate agents main agent starts)."
     - name: "gates that block a move"
-      desc: "Gate predicates (named checks) on the graph's edges block a move until their check passes, and advisory predicates only report. Gates check work state (closed rows, resolved questions, a clean work tree), delivery (a marker file that names HEAD, and clean submodules) and the diff (no synthetic test files, meaning the diff adds no test file that stays in the repository, such as *.test.* or *.spec.*, or a test, tests or __tests__ directory; and no hedge language, meaning no deferral phrase in prose files, such as 'todo later' or 'for now we'). The CI gate passes when the marker, .gm/exec-spool/.ci-validated, has a head_sha equal to HEAD. gm writes that marker after the ci-status verb reports success or the status no_applicable_workflow for HEAD. A no_applicable_workflow result passes without a CI run. A hand-written marker that names HEAD also passes. So the gate shows that CI reported success or no_applicable_workflow for HEAD, not that CI ran."
+      desc: "Gate predicates (named checks) on graph edges block move till check pass. Advisory predicates only report. Gates check work state (closed rows, resolved questions, clean work tree), delivery (marker file naming HEAD, clean submodules) and diff (no synthetic test files, meaning diff add no test file that stay in repo, like *.test.* or *.spec.*, or test, tests or __tests__ directory; and no hedge language, meaning no deferral phrase in prose files, like 'todo later' or 'for now we'). CI gate pass when marker, .gm/exec-spool/.ci-validated, has head_sha equal HEAD. gm write that marker after ci-status verb report success or status no_applicable_workflow for HEAD. no_applicable_workflow result pass without CI run. Hand-written marker that name HEAD also pass. So gate show CI reported success or no_applicable_workflow for HEAD, not that CI ran."
     - name: "unknowns get resolved by running code"
       desc: "An open question is recorded with the mutable-add verb and stays open until the mutable-resolve verb closes it. The exec_js verb runs a claim against real code, the codesearch verb finds where something lives, and the recall verb brings back what the project already stored."
     - name: "memory searched by meaning"
-      desc: "recall ranks stored memories by meaning, using embeddings (vectors that place text by meaning), and blends that with recency. The recency term decays with a 30-day half-life."
+      desc: "recall rank stored memory by meaning, use embedding (vector place text by meaning), blend with recency. Recency term decay 30-day half-life."
     - name: "one tool for every verb"
       desc: "gm adds one MCP tool, gm_codemode. Its short JavaScript code calls gm verbs as functions, such as gm.codesearch({query: ...}), and gm.list() lists them all."
 quickstart:
@@ -34,6 +34,6 @@ quickstart:
 examples:
   heading: "read further"
   items:
-    - { name: "the core components", desc: "rs-plugkit is the WebAssembly (WASM) guest that implements orchestration, spool verbs, memory and code search. rs-search ranks candidate id lists by Reciprocal Rank Fusion and tokenizes text for indexing and search. rs-codeinsight is a fast codebase analyzer powered by tree-sitter, a parser library.", cta: "read the crates", href: "./crates/" }
-    - { name: "the skills", desc: "gm is the entry skill. gm-orchestrate runs parallel work, gm-hop applies one principle to one surface (a path in the code), gm-prd closes one plan row, and gm-continue wraps up a finished walk. gm-orchestrate and gm-hop are invoked only by gm, and they are not meant to be loaded directly.", cta: "read the skills", href: "./skills/" }
-    - { name: "distribution", desc: "how gm is installed for each agent host, and how to check the runner, which is agentplug-runner, the native WASM host that loads rs-plugkit.", cta: "read how it installs", href: "./distribution/" }
+    - { name: "the core components", desc: "rs-plugkit = WebAssembly (WASM) guest. Does orchestration, spool verbs, memory, code search. rs-search ranks candidate id lists by Reciprocal Rank Fusion. Tokenizes text for indexing and search. rs-codeinsight = fast codebase analyzer, powered by tree-sitter parser lib.", cta: "read the crates", href: "./crates/" }
+    - { name: "the skills", desc: "gm = entry skill. gm-orchestrate runs parallel work. gm-hop applies one principle to one surface (path in code). gm-prd closes one plan row. gm-continue wraps up finished walk. gm-orchestrate and gm-hop invoked only by gm, not meant to load direct.", cta: "read the skills", href: "./skills/" }
+    - { name: "distribution", desc: "how gm install per agent host, how check runner: agentplug-runner, native WASM host loads rs-plugkit.", cta: "read how it installs", href: "./distribution/" }

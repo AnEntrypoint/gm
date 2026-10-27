@@ -1,6 +1,6 @@
 title: "gm"
 tagline: "the comedown for vibe coding"
-description: "vibe coding ships fast and then claims the work is finished. gm adds a checkable walk around your coding agent. A walk is one run through gm's state machine, which has 146 states (129 of them principles, the disciplines a subagent applies) joined by 376 edges. The gates on an edge decide each move. The graph has 26 gate predicates: 24 can block a move and name the condition that failed, and 2 only report. A pool of subagents works the graph of disciplines in parallel. one skill for Claude Code, Cursor, Gemini CLI and Codex. the orchestrator, which runs the walk, is written in rust and compiled to WebAssembly (wasm)."
+description: "vibe coding ship fast, then claim work done. gm add checkable walk around coding agent. Walk = one run through gm state machine: 146 states (129 principles, disciplines subagent apply) joined by 376 edges. Gates on edge decide each move. Graph has 26 gate predicates: 24 block move, name failed condition; 2 only report. Pool of subagents work discipline graph parallel. One skill for Claude Code, Cursor, Gemini CLI, Codex. Orchestrator, runs walk, written in rust, compiled to WebAssembly (wasm)."
 repo: "https://github.com/AnEntrypoint/gm"
 url: "https://anentrypoint.github.io/gm"
 keywords:

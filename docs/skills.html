@@ -92,7 +92,7 @@ article tbody tr:hover { background: var(--panel-1); }
 
 <div class="skill">
   <div class="skill-header"><h2>gm-orchestrate</h2><span class="role">runs the walk loop</span></div>
-  <div class="row"><span class="k">does</span><span>Runs the pool loop of a walk, which keeps the pool full. The pool is the set of parallel subagents a walk runs at once. The loop observes, launches plan rows and graph hops, logs, waits, refills freed slots and exits.</span></div>
+  <div class="row"><span class="k">does</span><span>Run pool loop of walk. Keep pool full. Pool = parallel subagents walk run at once. Loop: observe, launch plan rows and graph hops, log, wait, refill freed slots, exit.</span></div>
   </div>
 
 <div class="skill">
@@ -107,12 +107,12 @@ article tbody tr:hover { background: var(--panel-1); }
 
 <div class="skill">
   <div class="skill-header"><h2>gm-continue</h2><span class="role">final check when the walk is done</span></div>
-  <div class="row"><span class="k">does</span><span>Runs when the walk reaches its final phase, COMPLETE, with no pending plan rows. It searches for remaining work before the walk ends.</span></div>
+  <div class="row"><span class="k">does</span><span>Run when walk hit final phase COMPLETE, no pending plan rows. Search remaining work before walk end.</span></div>
 </div>
 
 <h2>The discipline skills</h2>
 
-<p>These skills hold method rather than walk control. Each one is loaded when its frontmatter description matches the task.</p>
+<p>Skills hold method, not walk control. Each loads when its frontmatter description matches task.</p>
 
 <table>
 <thead><tr><th>Skill</th><th>Does</th></tr></thead>
@@ -120,9 +120,9 @@ article tbody tr:hover { background: var(--panel-1); }
 <tr><td><code>wfgy-method</code></td><td>Drift control: compares each step to the goal and checkpoints before a risky step.</td></tr>
 <tr><td><code>polaris-protocol</code></td><td>Routes multi-step work to <code>polaris-goal-compiler</code> and <code>fifth-dimension-engine</code>, when a task needs both.</td></tr>
 <tr><td><code>polaris-goal-compiler</code></td><td>Compiles a goal into gated task atoms and claim ceilings.</td></tr>
-<tr><td><code>fifth-dimension-engine</code></td><td>Lifts a complex target into a structured route. Use after polaris-goal-compiler, or when a request is written as shoot + [problem].</td></tr>
+<tr><td><code>fifth-dimension-engine</code></td><td>Lift complex target → structured route. Use after polaris-goal-compiler, or when request written as shoot + [problem].</td></tr>
 <tr><td><code>agent-memory</code></td><td>Sets up TencentDB Agent Memory for agent teams.</td></tr>
-<tr><td><code>dream-rsi</code></td><td>Proposes strategy changes from observation logs and measures gm-graph coverage. It proposes only and never deploys.</td></tr>
+<tr><td><code>dream-rsi</code></td><td>Propose strategy changes from observation logs. Measure gm-graph coverage. Propose only, never deploy.</td></tr>
 </tbody>
 </table>
 

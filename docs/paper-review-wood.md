@@ -1,137 +1,125 @@
 # Peer Review: "The Complete Discipline: Lifecycle Control, Governance, and Operational Hard Rules for LLM Coding Agents"
 
-> **Superseded revision.** This review covers an earlier revision of the paper (Papers I-IV consolidated). It is kept as the record of that revision. Its claims about the current repository are superseded.
+> **Superseded revision.** Covers earlier revision of paper (Papers I-IV consolidated). Kept as record. Claims about current repo superseded.
 
-**Reviewed document:** the earlier consolidation of Papers I-IV, superseded by the current `docs/paper.html`  
+**Reviewed document:** earlier consolidation of Papers I-IV, superseded by current `docs/paper.html`  
 **Reviewer:** Wood  
-**Scope:** Clarity, internal consistency, gaps not covered in the paper, and structural observations
+**Scope:** Clarity, internal consistency, gaps not covered, structural observations
 
 ---
 
 ## Summary Assessment
 
-The paper presents a coherent, practice-grounded discipline for constraining LLM coding agents. Its core insight -- that self-regulation by the same model that reasons through problems cannot prevent shortcut reasoning, and therefore external enforcement below the agent's decision layer is required -- is sound and well-motivated. The consolidation of four prior papers into one reference document succeeds in breadth. The primary weaknesses are: the absence of quantitative evidence for any of the claims, several undefined or under-specified terms in the formal apparatus, internal redundancies across sections, and a set of edge cases in the rules themselves that the paper does not address.
+Paper presents coherent, practice-grounded discipline for constraining LLM coding agents. Core insight -- same model that reasons through problems cannot prevent shortcut reasoning, so external enforcement below agent's decision layer required -- sound, well-motivated. Consolidating four prior papers into one reference succeeds in breadth. Main weaknesses: no quantitative evidence for claims, several undefined or under-specified terms in formal apparatus, internal redundancies across sections, edge cases in rules paper does not address.
 
 ---
 
 ## I. Strengths
 
-**1. External enforcement over self-regulation.** The paper's central argument -- that the same model that reasons through a problem also reasons through the justification for shortcuts -- is the most important and most underdiscussed point in the agent reliability literature. The design choice to place enforcement in Rust hooks below the agent's decision layer rather than in the agent's in-context reasoning is well-justified and distinguishes this work from most agent frameworks.
+**1. External enforcement over self-regulation.** Paper's central argument -- same model that reasons through problem also reasons through justification for shortcuts -- is most important and most underdiscussed point in agent reliability literature. Design choice to place enforcement in Rust hooks below agent's decision layer, not in in-context reasoning, well-justified and distinguishes work from most agent frameworks.
 
-**2. Named mutables make uncertainty visible.** The mutable discipline (S3) operationalizes a good epistemic principle: uncertainty that is not named cannot be managed. Making every unknown explicit before writing code is a discipline that catches assumption propagation before it compounds.
+**2. Named mutables make uncertainty visible.** Mutable discipline (S3) operationalizes good epistemic principle: uncertainty not named cannot be managed. Making every unknown explicit before writing code catches assumption propagation before it compounds.
 
-**3. The PRD as durable contract across sessions.** The insight that sessions are scheduling while the PRD is the contract (S4.4) addresses context-window limitations without depending on context retrieval. The stop hook that blocks session close until the PRD is empty is a clean enforcement mechanism.
+**3. The PRD as durable contract across sessions.** Insight: sessions are scheduling, PRD is the contract (S4.4). Addresses context-window limits without depending on context retrieval. Stop hook blocks session close until PRD empty -- clean enforcement mechanism.
 
-**4. Failure taxonomy (S15).** Cataloguing sixteen failure modes across four categories and cross-referencing each against planning passes is practically useful. Naming failure modes prevents them from being treated as one-off surprises.
+**4. Failure taxonomy (S15).** Catalogues sixteen failure modes across four categories, cross-refs each against planning passes. Practically useful. Naming failure modes stops them being treated as one-off surprises.
 
-**5. The "asking cost" framing (S18).** Treating unnecessary questions as a quality failure equivalent to a broken test is an effective reframing. It makes the invisible cost of asking-as-progress legible.
-
----
+**5. The "asking cost" framing (S18).** Unnecessary questions treated as quality failure, same as broken test. Effective reframing. Makes invisible cost of asking-as-progress legible.
 
 ## II. Clarity Issues
 
 **1. "tier_confidence" is undefined.**  
-Section 14 states the verification budget formula as `verification_budget = load x (1 - tier_confidence)`. The load score (lambda) is defined (0.0-1.0 consequence weight). `tier_confidence` is never defined. It appears in no other section. A reader cannot apply this formula without knowing whether tier_confidence is a per-item field, a per-tier constant, or computed dynamically.
+Section 14 states verification budget formula as `verification_budget = load x (1 - tier_confidence)`. Load score (lambda) defined (0.0-1.0 consequence weight). `tier_confidence` never defined. Appears in no other section. Reader cannot apply formula without knowing: per-item field, per-tier constant, or computed dynamically?
 
 **2. The four state planes are introduced but never operationalized.**  
-Section 13.2 defines four state planes (epistemic, operational, relational, temporal) and states that a phase transition "is legitimate only when all four planes are consistent with the transition's exit condition." The paper provides no mechanism for checking this consistency. What does it mean for the relational plane to be consistent with EXECUTE->EMIT? What relational state is checked? This is introduced as a formal tool but used only decoratively.
+Section 13.2 defines four state planes (epistemic, operational, relational, temporal). States phase transition "is legitimate only when all four planes are consistent with the transition's exit condition." No mechanism for checking consistency. What does relational plane consistency mean for EXECUTE->EMIT? What relational state checked? Introduced as formal tool, used only decoratively.
 
 **3. "The 13 skills" referenced in the cross-footer but not in the paper.**  
-The footer link to `skills.html` reads "13 skills, one chain, no skipping." The paper describes six skills in the chain: `gm -> planning -> gm-execute -> gm-emit -> gm-complete -> update-docs`. The number 13 does not appear in the text. A reader of the paper alone cannot reconcile this.
+Footer link to `skills.html` reads "13 skills, one chain, no skipping." Paper describes six skills in chain: `gm -> planning -> gm-execute -> gm-emit -> gm-complete -> update-docs`. Number 13 absent from text. Reader of paper alone cannot reconcile.
 
 **4. The "247420" identifier in the page title is unexplained.**  
-The page title is "The Complete Discipline . gm . 247420." The number 247420 appears in the navigation and in the design system import URL. No explanation of its significance is given in the paper.
+Page title is "The Complete Discipline . gm . 247420." Number 247420 appears in navigation and design system import URL. Paper gives no explanation of significance.
 
 **5. "Forced closure" is used as a term of art without formal definition.**  
-"Forced closure" appears throughout the paper as the generic term for premature completion failures. It is defined only implicitly through examples. A single definitional sentence early in the paper would help readers apply the term consistently when categorizing new failure modes.
+"Forced closure" used throughout as generic term for premature completion failures. Defined only implicitly through examples. One definitional sentence early would help readers apply term consistently when categorizing new failure modes.
 
 **6. The "weak_prior" status is named but not described.**  
-Sections 19.1 and 21 mention that recall hits land as `weak_prior`. The paper does not explain how weak_prior differs from a resolved mutable in practice -- can the agent act on a weak_prior without witnessing? What is the full lifecycle of a weak_prior value?
-
----
+Sections 19.1 and 21 mention recall hits land as `weak_prior`. Paper does not explain how weak_prior differs from resolved mutable in practice -- can agent act on weak_prior without witnessing? Full lifecycle of weak_prior value?
 
 ## III. Internal Consistency Issues
 
 **1. Mermaid `startOnLoad` configuration.**  
-The paper's own `<script>` block (line 60 of the HTML source) initializes mermaid with `startOnLoad: true`. AGENTS.md states that `startOnLoad` must be `false` because "the parse happens before article injection, so `startOnLoad` would miss injected blocks." The paper's mermaid diagram is in-page (not injected), so the current behavior is correct for this file. However, the configuration in the paper contradicts the documented rule without explanation, and the flatspace extraction note in AGENTS.md warns that per-page head scripts are stripped during article extraction -- meaning the mermaid diagram would silently break if the paper were ever extracted through that pipeline.
+Paper's own `<script>` block (line 60 of HTML source) initializes mermaid with `startOnLoad: true`. AGENTS.md states `startOnLoad` must be `false` because "the parse happens before article injection, so `startOnLoad` would miss injected blocks." Paper's mermaid diagram is in-page (not injected), so current behavior correct for this file. But config contradicts documented rule without explanation. Flatspace extraction note in AGENTS.md warns per-page head scripts stripped during article extraction -- mermaid diagram would silently break if paper ever extracted through that pipeline.
 
 **2. Redundancy between S13.3 and S15.**  
-The five refused collapses (S13.3) overlap substantially with the failure taxonomy (S15):
+Five refused collapses (S13.3) overlap substantially with failure taxonomy (S15):
 - Refused collapse 3 (partial closure) = Failure mode 9 (partial closure)
 - Refused collapse 5 (asking-as-progress) = Failure mode 16 (asking-as-progress)
 - Refused collapse 1 (narrating as executing) maps to failure modes 1-3
 
-The paper does not acknowledge this overlap or explain whether the two lists serve different purposes (normative vs. descriptive). A reader must infer the distinction.
+Paper does not acknowledge overlap or explain whether lists serve different purposes (normative vs. descriptive). Reader must infer distinction.
 
 **3. Wave execution max of 3 subagents stated twice with no rationale.**  
-Sections 4.2 and 10 both state the wave limit is "up to 3 concurrent subagents." No rationale is given. Is this a context-window constraint? An empirically-derived limit? A token budget? If it is a hard rule it should appear in the constraint tiers (S7). If it is a guideline it should say so.
+Sections 4.2 and 10 both state wave limit is "up to 3 concurrent subagents." No rationale given. Context-window constraint? Empirically-derived limit? Token budget? If hard rule, should appear in constraint tiers (S7). If guideline, should say so.
 
 **4. The two-pass rule (S3.3) and infinite regression.**  
-If a mutable is unresolvable after two passes, it is reclassified as a new unknown and the agent returns to PLAN. The paper does not address what happens when the reclassified unknown also fails to resolve after two passes. If the same underlying blocker persists, the agent could cycle between EXECUTE and PLAN indefinitely. The termination observation (S2.3 blockquote) depends on the finite unknowns assumption, but the two-pass reclassification mechanism can in theory generate new unknowns faster than they are resolved.
+Mutable unresolvable after two passes gets reclassified as new unknown, agent returns to PLAN. Paper does not address reclassified unknown also failing after two passes. Same blocker persists -> agent could cycle between EXECUTE and PLAN indefinitely. Termination observation (S2.3 blockquote) depends on finite unknowns assumption, but two-pass reclassification can in theory generate new unknowns faster than resolved.
 
 **5. exec:pause and PRD continuity.**  
-Section 18 describes `exec:pause` as renaming `prd.yml` to `prd.paused.yml` to surface a question. Section 4 (PRD management) and section 4.3 (stop-hook enforcement) make no mention of `prd.paused.yml`. It is unclear whether the stop hook fires on `prd.paused.yml`, whether the pause state is resumable, or what happens if the agent restarts before the user responds to the paused question.
-
----
+Section 18 describes `exec:pause` as renaming `prd.yml` to `prd.paused.yml` to surface a question. Section 4 (PRD management) and 4.3 (stop-hook enforcement) never mention `prd.paused.yml`. Unclear whether stop hook fires on `prd.paused.yml`, whether pause state resumable, or what happens if agent restarts before user answers paused question.
 
 ## IV. Gaps Not Covered in the Paper
 
 **1. No quantitative evidence for any claim.**  
-The paper explicitly positions itself as "a practical engineering artifact rather than a theoretical claim" Yet every claim is qualitative. No failure rates before/after applying the discipline are reported. No comparison between platforms with full enforcement and platforms without it. No data on how often each failure mode occurs or how often each hard rule fires. Even crude observational data would distinguish "this rule fires often and prevents real failures" from "this rule has never fired in production." The absence makes it impossible to prioritize the rules or evaluate which are load-bearing.
+Paper positions itself as "a practical engineering artifact rather than a theoretical claim" Yet every claim qualitative. No failure rates before/after discipline. No comparison of platforms with full enforcement vs without. No data on how often each failure mode occurs or each hard rule fires. Crude observational data would distinguish "this rule fires often and prevents real failures" from "this rule has never fired in production." Absence makes it impossible to prioritize rules or evaluate which are load-bearing.
 
 **2. Concurrent session behavior on the shared SQLite memory database.**  
-Section 19.3 states that `rs-learn.db` is committed to git so memory state shares across machines and sessions. The paper does not address what happens when two agents -- running on separate machines against separate branches -- both memorize facts in the same turn. SQLite is not a concurrent database; parallel writes from two git-synced sessions would create a merge conflict on a binary file. The paper's recommendation to commit the database is correct but incomplete without a strategy for this conflict case.
+Section 19.3 states `rs-learn.db` committed to git so memory state shares across machines and sessions. Paper does not address two agents -- separate machines, separate branches -- both memorizing facts in same turn. SQLite not concurrent DB; parallel writes from two git-synced sessions create merge conflict on binary file. Paper's recommendation to commit DB correct but incomplete without strategy for this conflict case.
 
 **3. The 200-line test budget ceiling (S30.5 Limitation 5) has no resolution.**  
-The paper acknowledges in limitations that "genuinely large subsystems may not be adequately witnessed within [the 200-line budget]." But sections 26.1-26.4 give no mechanism for handling this case. The answer given -- "question whether the assertion is load-bearing" -- shifts the responsibility without resolving the tension. A project with 20 load-bearing subsystems and a 200-line budget can witness only ~10 assertions per subsystem. Whether that is adequate is a project-specific judgment the paper cannot make for the reader, but it could acknowledge this more explicitly.
+Paper acknowledges in limitations that "genuinely large subsystems may not be adequately witnessed within [the 200-line budget]." But sections 26.1-26.4 give no mechanism for this case. Answer given -- "question whether the assertion is load-bearing" -- shifts responsibility without resolving tension. Project with 20 load-bearing subsystems and 200-line budget can witness only ~10 assertions per subsystem. Adequacy is project-specific judgment paper cannot make for reader, but could acknowledge this more explicitly.
 
 **4. Adversarial or automated contexts undermine the Maximal Cover mid-chain declaration.**  
-Section 17 (Maximal Cover) requires the agent to declare self-authorized scope expansions in-response "so the user can correct mid-chain." This assumes a human is watching the response stream. In fully automated pipelines -- CI-triggered agents, scheduled tasks, headless execution -- there is no user to correct mid-chain. The rule as written degrades silently to unconditional self-authorization in those contexts. The paper does not address automated deployment at all.
+Section 17 (Maximal Cover) requires agent to declare self-authorized scope expansions in-response "so the user can correct mid-chain." Assumes human watching response stream. In fully automated pipelines -- CI-triggered agents, scheduled tasks, headless execution -- no user to correct mid-chain. Rule as written silently degrades to unconditional self-authorization there. Paper does not address automated deployment at all.
 
 **5. Security model is absent.**  
-The paper describes agents operating on real services with real data and a `exec:browser` managed Chromium instance. No discussion of what happens when the code being processed is malicious, what the sandbox boundary is, or what blast radius is possible when a task runs against real external APIs. Even a brief acknowledgment of the threat model -- "we assume the agent operates on trusted repositories with trusted user input" -- would locate the discipline correctly.
+Paper describes agents operating on real services, real data, and `exec:browser` managed Chromium instance. No discussion of malicious code being processed, sandbox boundary, or blast radius when task runs against real external APIs. Brief threat model acknowledgment -- "we assume the agent operates on trusted repositories with trusted user input" -- would locate discipline correctly.
 
 **6. Conflict between "Fix on Sight" and scope boundaries.**  
-Section 22 mandates fixing every surfaced issue in-band, this turn, at root cause. Section 22.1 carves out "genuinely out-of-reach errors" (user credentials, external services down, product decisions). But the paper gives no guidance on the middle case: errors that are within technical reach but have high risk of breakage -- refactoring a shared utility used by 50 files because it has a bug discovered mid-task. "Fix on Sight" with full scope implies changing that utility; "minimal-change resolution" might suggest a local workaround instead. The paper leaves this tension unresolved.
+Section 22 mandates fixing every surfaced issue in-band, this turn, at root cause. Section 22.1 carves out "genuinely out-of-reach errors" (user credentials, external services down, product decisions). No guidance on middle case: errors within technical reach but high breakage risk -- refactoring shared utility used by 50 files because bug found mid-task. "Fix on Sight" with full scope implies changing that utility; "minimal-change resolution" might suggest local workaround. Paper leaves tension unresolved.
 
 **7. The "nothing fake" stub detection rule has no mechanical test.**  
-Section 24 defines stubs behaviorally: "code paths that always succeed, always return the same value regardless of input, or short-circuit a real call to satisfy a type signature." This is a useful definition but it requires the reviewer (agent or human) to reason about runtime behavior from source code. The paper does not describe how the pre-tool-use hook or any automated mechanism detects stubs at enforcement time. If detection is only manual, the rule's enforcement level is softer than the "Tier 0 absolute" framing suggests.
+Section 24 defines stubs behaviorally: "code paths that always succeed, always return the same value regardless of input, or short-circuit a real call to satisfy a type signature." Useful definition, but reviewer (agent or human) must reason about runtime behavior from source. Paper does not describe how pre-tool-use hook or any automated mechanism detects stubs at enforcement time. If detection only manual, enforcement softer than "Tier 0 absolute" framing suggests.
 
 **8. No discussion of how the discipline interacts with model capability differences.**  
-The paper is deployed across 12 platforms spanning multiple underlying models (Claude, Gemini, Codex, Qwen, etc.). The discipline's effectiveness likely varies across models -- a model with weaker tool use may trigger the two-pass rule more frequently; a model with strong context management may require the memory system less. The paper treats model capability as uniform, which limits its generalizability.
+Paper deployed across 12 platforms spanning multiple models (Claude, Gemini, Codex, Qwen, etc.). Discipline's effectiveness likely varies across models -- weaker tool use may trigger two-pass rule more often; strong context management may need memory system less. Paper treats model capability as uniform, limiting generalizability.
 
 **9. The Implicit Skill Prose rule (S29) creates a bootstrapping problem.**  
-The paper prohibits numbered step lists in skill files ("the skill is a prompt, not a manual"). Yet the paper itself uses numbered procedures extensively to describe each rule to a human reader. When a rule needs to be embedded in a skill for the agent, the transformation from explicit numbered procedure (as written in the paper) to implicit eliciting prose (as required by S29) is not described. This is a documentation-to-implementation gap.
+Paper prohibits numbered step lists in skill files ("the skill is a prompt, not a manual"). Yet paper itself uses numbered procedures extensively to describe each rule to human reader. When rule embedded in skill for agent, transformation from explicit numbered procedure (as in paper) to implicit eliciting prose (as required by S29) not described. Documentation-to-implementation gap.
 
 **10. No guidance on rule conflict resolution.**  
-The paper defines at least seven hard rules (SS21-29) plus four constraint tiers (S7) plus seven route families (S13.1). What happens when rules conflict? Example: "Fix on Sight" (S22) says fix immediately; "Web-Search Before Pause" (S25) says search before pausing; but searching requires an exec:codesearch call which in EMIT phase should be blocked (S9.1 notes that "Glob/Grep/Find tools are hook-blocked during agent phases"). If a bug surfaces during EMIT that requires search to diagnose, does Fix on Sight override the EMIT tool restrictions, or does it trigger a backward transition first? The paper has no explicit rule conflict resolution layer.
-
----
+Paper defines at least seven hard rules (SS21-29), four constraint tiers (S7), seven route families (S13.1). What happens when rules conflict? Example: "Fix on Sight" (S22) says fix immediately; "Web-Search Before Pause" (S25) says search before pausing; but searching requires exec:codesearch call which in EMIT phase should be blocked (S9.1 notes "Glob/Grep/Find tools are hook-blocked during agent phases"). If bug surfaces during EMIT needing search to diagnose, does Fix on Sight override EMIT tool restrictions, or trigger backward transition first? Paper has no explicit rule conflict resolution layer.
 
 ## V. Structural Observations
 
 **1. Sections 21-29 lack a phase-layer identity.**  
-The introduction states that SS2-8 cover Phase I, SS9-12 Phase II, SS13-16 Phase III, SS17-20 Phase IV, and SS21-29 cover "operational hard rules that emerged from production." The operational hard rules are the most numerous section of the paper (9 sections vs. 4 for each earlier phase) but have no corresponding phase or layer label. They are harder to reason about as a set because there is no principle unifying them beyond "emerged from production." A brief framing of what these rules have in common and how they relate to the four-phase model would improve navigability.
+Intro states SS2-8 cover Phase I, SS9-12 Phase II, SS13-16 Phase III, SS17-20 Phase IV, SS21-29 cover "operational hard rules that emerged from production." Operational hard rules most numerous (9 sections vs. 4 per earlier phase) but no corresponding phase or layer label. Harder to reason about as set -- no principle unifying beyond "emerged from production." Brief framing of common traits and relation to four-phase model would improve navigability.
 
 **2. The Glootie callout appears only once.**  
-The paper introduces Glootie as a stylistic device with a dedicated CSS class and mascot styling. The callout appears only at S2. If Glootie serves a rhetorical function (highlighting non-obvious implications), using the device only once suggests either that the device was added to S2 and then abandoned, or that only S2 contains a non-obvious implication. Either reading reflects on the paper's use of the device.
+Paper introduces Glootie as stylistic device with dedicated CSS class and mascot styling. Callout appears only at S2. If Glootie serves rhetorical function (highlighting non-obvious implications), using it once suggests device added to S2 then abandoned, or only S2 has non-obvious implication. Either reading reflects on paper's use of device.
 
 **3. The references section is thin for the breadth claimed.**  
-Six references are cited. The paper claims relationships to formal methods, design-by-contract, TDD, model checking (S30), and the broader agent reliability literature. The six references (ReAct, Reflexion, SWE-agent, Chain-of-Thought, Generative Agents, Voyager) cover planning and reasoning but omit directly relevant work on agent scaffolding, tool use, and compositional agent frameworks. No reference is given for the formal methods analogies in S30.1.
+Six references cited. Paper claims relationships to formal methods, design-by-contract, TDD, model checking (S30), broader agent reliability literature. Six references (ReAct, Reflexion, SWE-agent, Chain-of-Thought, Generative Agents, Voyager) cover planning and reasoning but omit directly relevant work on agent scaffolding, tool use, compositional agent frameworks. No reference for formal methods analogies in S30.1.
 
 **4. The abstract claims the discipline is "complete."**  
-The title and abstract use "complete" without qualification. Section 30.5 lists five acknowledged limitations, and this review identifies additional gaps. "Complete" as used here seems to mean "consolidates all previously described rules" rather than "closes all failure modes" -- the distinction should be made explicit in the abstract.
-
----
+Title and abstract use "complete" without qualification. Section 30.5 lists five acknowledged limitations; this review identifies additional gaps. "Complete" here seems to mean "consolidates all previously described rules," not "closes all failure modes" -- distinction should be explicit in abstract.
 
 ## VI. Minor Issues
 
-- S7 lists `max_file_lines=200` as a Tier 1 quality constraint. Section 26 gives `test.js` a 200-line hard cap. The coincidence of the number is unexplained -- are these the same constraint applied to a specific file, or coincidentally equal values?
-- S8 describes pre-emit and post-emit verification using in-memory imports. Most CI systems (and many Rust/Go toolchains) do not support "importing a module in-memory" in the same sense as Node.js. The protocol as described applies cleanly to JS/TS but the paper presents it as universal.
-- S16.3 catalogues "five CI failure shapes for rapid triage." The cataloguing is useful but the list is incomplete (no coverage of OOM, network flap, flaky test, or environment-specific failures) without acknowledgment that these are the most common, not all possible.
-- The termination observation in S2.3 is labeled "Observation" and formatted as a blockquote but is neither cited nor proven. Calling it an observation creates an impression of empirical support it does not have.
-
----
+- S7 lists `max_file_lines=200` as Tier 1 quality constraint. Section 26 gives `test.js` 200-line hard cap. Coincidence of number unexplained -- same constraint applied to specific file, or coincidentally equal values?
+- S8 describes pre-emit and post-emit verification using in-memory imports. Most CI systems (and many Rust/Go toolchains) do not support "importing a module in-memory" like Node.js. Protocol applies cleanly to JS/TS but paper presents it as universal.
+- S16.3 catalogues "five CI failure shapes for rapid triage." Useful, but list incomplete (no OOM, network flap, flaky test, or environment-specific failures) without acknowledging these are most common, not all possible.
+- Termination observation in S2.3 labeled "Observation," formatted as blockquote, neither cited nor proven. Calling it observation implies empirical support it lacks.
 
 ## Summary of Critical Gaps
 
@@ -144,5 +132,5 @@ The title and abstract use "complete" without qualification. Section 30.5 lists 
 | exec:pause + stop-hook interaction | Operational ambiguity | S4.3, S18 |
 | Rule conflict resolution absent | Behavioral gap | All hard rules |
 | Automated context breaks Maximal Cover mid-chain guarantee | Deployment gap | S17 |
-| Stub detection is not mechanical | Enforcement softness | S24 |
+| Stub detection not mechanical | Enforcement softness | S24 |
 | State plane consistency check not operationalized | Formal apparatus incomplete | S13.2 |

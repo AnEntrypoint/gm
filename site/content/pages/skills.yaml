@@ -1,5 +1,5 @@
 id: skills
 title: The gm skills
-description: "gm is a skill and MCP server for coding agents. It keeps a plan of tasks and refuses to let the agent mark a task done until its checks pass. Each task is a plan row. The skills also call a plan row a PRD row. A plan row is one file under .gm/prd/, and it closes only with a recorded witness, the reply of a read dispatch named by its dispatch id. gm is for developers who run coding agents such as Claude Code, Cursor, Codex or Gemini CLI. Install gm (the commands are on the page Install gm and check it works), then ask your agent to use the gm skill, the /gm entry skill. This page lists the gm skills and the orchestrator verbs, the named gm operations an agent calls."
+description: "gm = skill + MCP server for coding agents. Keeps plan of tasks, refuses let agent mark task done until checks pass. Each task = plan row. Skills also call plan row a PRD row. Plan row = one file under .gm/prd/, closes only with recorded witness, reply of read dispatch named by its dispatch id. gm for devs who run coding agents such as Claude Code, Cursor, Codex or Gemini CLI. Install gm (commands on page Install gm and check it works), then ask agent use gm skill, the /gm entry skill. This page lists gm skills and orchestrator verbs, named gm operations agent calls."
 layout: article
 source: ../docs/skills.html

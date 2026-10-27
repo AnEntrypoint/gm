@@ -1,8 +1,8 @@
 # Mining ledger
 
-The conversation mining run used the shard range `sub1` through `sub8`. The transcript directories for those shards are not present on disk at audit time, so their launch cannot be witnessed from this checkout. This ledger lists which pending PRD rows cite each shard. The rows are the only source; no per-shard count or file list is recorded in any of them, so none is given here.
+Mining run used shard range `sub1` through `sub8`. Transcript dirs for those shards absent on disk at audit time, so launch not witnessed from this checkout. Ledger lists which pending PRD rows cite each shard. Rows only source; no per-shard count or file list recorded in any, so none given here.
 
-Source: pending rows read with `prd-list` (status pending) at the time of this audit. Resolved rows live in `.gm/prd-log.jsonl` and were not searched.
+Source: pending rows read via `prd-list` (status pending) at audit time. Resolved rows in `.gm/prd-log.jsonl`, not searched.
 
 | Shard | Pending rows that cite it | Citation as the row writes it |
 | --- | --- | --- |
@@ -15,6 +15,6 @@ Source: pending rows read with `prd-list` (status pending) at the time of this a
 | sub7 | none | |
 | sub8 | `codemode-nullable-reply-fields`, `codemode-require-hint`, `git-identity-fallback`, `git-substitution-table`, `timeoutms-doc` | "22 hits in shard 8"; "shard 8 S/agent-a14c2e81ebb76074e.jsonl:265"; "Shard 4 and 8"; "Shard 8: 5 bash-git-bypass denials"; "Shard 8: 8 refusals of timeoutMs=N" |
 
-Shards sub1-sub3 and sub5-sub7 produced no cited row.
+Shards sub1-sub3 and sub5-sub7 cite no row.
 
-Whether the subagent reports for sub1-sub3 and sub5-sub7 were received is not recorded in any row, so this ledger does not infer it. The `mine-shards-launched` row names sub1 through sub8 as the shard range; it cites no finding.
+Whether subagent reports for sub1-sub3 and sub5-sub7 received not recorded in any row, so ledger doesn't infer it. `mine-shards-launched` row names sub1 through sub8 as shard range; cites no finding.

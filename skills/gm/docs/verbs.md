@@ -322,7 +322,7 @@ The sanctioned publish is `git_push {rev:"<sha>"}` naming the commit you made, a
 
 A push publishes a chain, not one commit: `git_push` sends `git push origin <rev>:<branch>` (`<rev>:refs/heads/<branch>` for a full sha), so every commit on local `main` the remote lacks ships with it, including another lane's. On shared linear main that is the intended contract: no refspec publishes a commit without its ancestors, so `rev` names the tip and never narrows the set. `git_commit` does not publish. Publishing goes through `git_push`, and `git_finalize` publishes by calling it.
 
-`git_log` with `paths` keeps only commits touching those pathspecs; `max_count` (alias `limit`; `limit` wins when both are present) caps the number of commits. `git_fetch` takes the refspec as `ref` (also `rev` or `refspec`), the first non-blank one naming it; `remote` defaults to `origin`. `git_diff` scopes the same way.
+`git_log` with `paths` keeps only commits touching those pathspecs; `max_count` (aliases `n`, `limit`, `count`) caps the number of commits. `git_fetch` takes the refspec as `ref` (also `rev` or `refspec`), the first non-blank one naming it; `remote` defaults to `origin`. `git_diff` scopes the same way.
 
 `git_show`: `path` prints that file at the revision (same as `rev: "<rev>:<path>"`); `paths` limits a commit's diff. Output pages at 60000 bytes by `offset`; the reply carries `total_bytes` and `next_offset` (`null` on the last page), so a long diff is read page by page. `full: true` returns the whole blob or diff in one reply, with `truncated: false`. These three refuse unknown fields, naming `unknown_fields` and `accepted_fields`. `git_status` scopes to `paths`. `summary: true` returns counts by status plus the first `limit` (default 20) `first_paths`; without it, `limit` caps each status list (default 10), and `truncated` is set when a list overflows.
 
@@ -350,12 +350,13 @@ Each git verb here takes `{}`, or `{"cwd"|"repo"|"root"|"projectPath": "<path>"}
 
 **Main only: work in the shared work tree; collisions are recovered, not avoided.** No lane (one parallel agent session) opens a worktree, side branch or scratch checkout for a clean HEAD. Every extra tree ends in a consolidation run (a merge back into the shared tree), and a publish from one merges into the tree every other lane is writing, which is exactly where lanes sweep each other's uncommitted edits. Isolation buys a clean HEAD and costs a merge; recovery is cheaper. A blocked lane re-reads the row or file, reapplies the change on current state and retries. A READ question needs no second checkout: one file with `gh api /repos/<owner>/<repo>/contents/<path>?ref=main` (when its `content` is empty or the file is over 1 MB, fall back to `gh api /repos/<owner>/<repo>/git/blobs/<sha>` with the `sha` from that contents reply); a whole tree with `gh api repos/<owner>/<repo>/git/trees/<remote sha>?recursive=1`, used read-only.
 
-The `git_worktree_*` verbs are not used under the main-only rule: no lane opens a worktree, side branch or scratch checkout. A read-only reproduction of another commit is taken from its tree with `git_show` or `gh api` contents, never a checkout. The reference below documents the verbs' shapes only; it is not a sanctioned workflow.
+The `git_worktree_*` verbs below are a LAST RESORT with one legitimate use: a read-only reproduction of another commit, such as bisecting a regression by running the red-capable command at a candidate sha, then removing it with `git_worktree_remove`. Never edit, commit or publish from one, and never use one to get a clean HEAD. For that use, the detached forms below are the sanctioned way, never raw `git worktree` through `bash`. Branch-creating forms (`create:true` with a branch `ref`) are refused under main-only and are not shown:
 
 ```
 {"path":"<tmp>/bisect","rev":"5ba0bd4ae70006e4fa0de8d95984559e7ccdf408"}           git_worktree_add: --detach <path> <rev>
 {"path":"<tmp>/bisect","ref":"5ba0bd4a","create":true}                             git_worktree_add: --detach <path> <ref>
-{"path":"<tmp>/bisect"}                                                      git_worktree_remove (force:true to drop a dirty one)
+{"path":"<tmp>/proj-sweep"}                                                      git_worktree_add: <path> <HEAD>
+{"path":"<tmp>/proj-sweep"}                                                      git_worktree_remove (force:true to drop a dirty one)
 {}                                                                                git_worktree_list / git_worktree_prune
 {"base":"<sha>"}                                                                  git_worktree_prune: `base` is the commit a worktree's HEAD must be an ancestor of before it is removed (default HEAD)
 ```
@@ -372,7 +373,7 @@ The `git_worktree_*` verbs are not used under the main-only rule: no lane opens 
 | add | `{"action":"add","path":"/absolute/checkout","ref":"HEAD","detach":true}` | `added`, `ref`, `detached` |
 | remove | `{"action":"remove","path":"/absolute/checkout"}` | `removed` |
 
-The `git_worktree_add`, `git_worktree_list` and `git_worktree_remove` verbs serve the same operations with their own body fields (shown above); `git_worktree_prune` has no action here. Add defaults to a detached checkout at `HEAD`; The `remove` action refuses `force`; to drop a dirty checkout, dispatch `git_worktree_remove` with `force:true`, which runs `git worktree remove` with `--force` only when `force` is true. Each action rejects unknown fields; repository selectors and session fields are accepted. Relative paths resolve against the body's `cwd`, falling back to `repo`, `root` or `projectPath`.
+The `git_worktree_add`, `git_worktree_list` and `git_worktree_remove` verbs serve the same operations with their own body fields (shown above); `git_worktree_prune` has no action here. Add defaults to a detached checkout at `HEAD`; set `detach:false` with an existing local branch name to attach it. The `remove` action refuses `force`; to drop a dirty checkout, dispatch `git_worktree_remove` with `force:true`, which runs `git worktree remove` with `--force` only when `force` is true. Each action rejects unknown fields; repository selectors and session fields are accepted. Relative paths resolve against the body's `cwd`, falling back to `repo`, `root` or `projectPath`.
 
 ## Web
 
@@ -633,8 +634,6 @@ A blocker is annotated on the row it blocks with `prd-note {"id":"<row id>","not
 
 `prd-repair` reads the PRD file at `path` (default `.gm/prd.yml`) and repairs the YAML faults in it. A file that already parses is left unchanged. Otherwise the repair copies the file to `<path>.bak-<ms>` and writes the repaired text back by compare-and-swap. `dry_run:true` reports `would_change`, `rows_after` and `faults` without writing, and `max_passes` (default 16) bounds the repair loop.
 
-Availability: the dream verbs below are served only by builds that include the dream runtime; `gm.list()` names the verbs the running build serves.
-
 `dream-round` takes `baseline_policy_id` and `candidate_policy_ids`, evaluates the baseline and each candidate policy over the recorded observations, and returns the rankings sorted by `score`, highest first.
 
 `dream-strategy-propose` takes no body fields beyond the envelope. It reads the owner session's newest automatic replay, sets `proposed_selection` from that replay's `selection` (`continue-current-exploration` when none is named), writes `.gm/dream-rsi/<session_id>/proposed-strategy.json` and answers `kind: strategy-proposal` with `owner_session_id`, `proposed_selection`, `replay` and `path`. It only proposes: nothing deploys the selection. The session id must be safe (ASCII letters, digits, `-`, `_` or `.`, at most 256 bytes, never `.` or `..`), and the verb runs only in the wasm guest.
@@ -718,7 +717,7 @@ Every body field a verb declares, grouped by verb. The contract check (`scripts/
 - `websearch` and `web_search`: `wiki`, `user`, `stars`
 - `git_push`: `recover_remote_moved`, `allow_foreign_commits`
 - `git_commit`: `allow_whole_index`, `allow_foreign_rows`
-- `git_commit` and `git_push` can fail through the MCP tool with `error_code: failed` and "Maximum call stack size exceeded", landing nothing (observed 2026-10-22 on two projects). Call the same verb as `gm.<verb>(...)` in gm_codemode; skills run no shell route. It prints YAML, so read `sha_full: <hex>` rather than a JSON key, and a commit body without `paths` is refused as `blanket_stage_refused`.
+- `git_commit` and `git_push` can fail through the MCP tool with `error_code: failed` and "Maximum call stack size exceeded", landing nothing (observed 2026-10-22 on two projects). The CLI route does the same work: `node ~/.gm-tools/gm-mcp-server.mjs dispatch <verb> --cwd <project> --body '<json>'`. It prints YAML, so read `sha_full: <hex>` rather than a JSON key, and a commit body without `paths` is refused as `blanket_stage_refused`.
 - `git_finalize`: `allow_whole_index`, `untrack`
 - `git_log`: `range`. Commit count is `limit`; `max_count` is its git-native alias, and `limit` wins when both are present (default 10). `count` and `n` are refused as unknown fields.
 - `git_diff`: `range`, `staged`, `stat`
@@ -774,7 +773,7 @@ Served verbs with no entry elsewhere in this file. Rows are sourced from `gm.des
 | `sql_smoke` | none | run the SQL store smoke test | command |
 | `sql_serialize` | none | serialize an open SQL database | query |
 | `sql_deserialize` | none | load a serialized SQL database | command |
-| `codeinsight_index` | `{"root"}` | build the codeinsight index, see the Code lookup section | command |
+| `codeinsight_index` | none | index state and symbol overview, see the Code lookup section | query |
 | `code_search` | `{"query", "mode"?, "k"?, "max_matches"?, "max_files"?, "timeout_ms"?, "path"?, "root"?, "glob"?, "exclude"?, "combine"?, "output"?, "case_insensitive"?, "whole_word"?, "comments_only"?, "verbatim"?, "docs"?, "refresh"?, "no_ignore"?}` | ranked code search; alias of `codesearch`, see the Code lookup section | query |
 | `discipline` | none | the discipline checklist for the current phase | query |
 | `python` | raw_body | run Python code through the spool | command |
@@ -793,6 +792,10 @@ Served verbs with no entry elsewhere in this file. Rows are sourced from `gm.des
 | `unknown_add` | none | add an unknown item | command |
 | `unknown_list` | none | list unknown items | query |
 | `unknown_defer` | none | defer an unknown item | command |
+| `unknown_add` | none | add an unknown | command |
+| `unknown_list` | none | list unknowns | query |
+| `unknown_resolve` | none | resolve an unknown | command |
+| `unknown_defer` | none | defer an unknown | command |
 | `dream_policy_register` | none | register a Dream-RSI policy; proposes only, never deploys | command |
 | `dream_evaluator_receipt` | none | record a Dream-RSI evaluator receipt | command |
 | `dream_discovery_record` | undeclared | record a Dream-RSI discovery | command |
@@ -809,7 +812,7 @@ Served verbs with no entry elsewhere in this file. Rows are sourced from `gm.des
 | `codeinsight_namespace_audit` | undeclared | audit the codeinsight namespaces | query |
 | `calculus_model_check` | undeclared | model-check the calculus | query |
 | `phase_status` | undeclared | report the current phase and pending row count | query |
-| `session_handover` | `{"session_id"}` | make `session_id` the owner of the project session | command |
+| `session_handover` | `{"session_id"}` | read the handover for a session | query |
 | `wait` | undeclared | wait for a condition | query |
 | `wait_for_task` | undeclared | wait for a task to finish | query |
 | `sleep` | undeclared | sleep for a duration | query |

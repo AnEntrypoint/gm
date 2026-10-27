@@ -1,5 +1,5 @@
 id: distribution
 title: Install gm and check it works
-description: gm is a state machine, a fixed set of states with gates, that decides when a coding agent's work is done. This page installs gm for Claude Code, Cursor, Codex or Gemini, connects the MCP server and checks the agentplug-runner binary.
+description: gm = state machine. Fixed states, gates. Decide when coding agent work done. This page install gm for Claude Code, Cursor, Codex, Gemini. Connect MCP server. Check agentplug-runner binary.
 layout: article
 source: ../docs/distribution.html

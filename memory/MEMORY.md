@@ -1,3 +1,3 @@
-- [Data economy](data-economy.md): keep data moved and stored small; partial clones for history work; housekeep verb; automate steps
-- [History rewrite lessons](history-rewrite-lessons.md): force-with-lease pushes, detached HEAD, deduplication and bot identities from the attribution rewrite
-- [oscraft gm backlog](oscraft-gm-backlog.md): 37 peer-reported gm tooling defects; file as PRD rows once open rows fall below 20
+- [Data economy](data-economy.md): keep data moved + stored small; partial clones for history work; housekeep verb; automate steps
+- [History rewrite lessons](history-rewrite-lessons.md): force-with-lease pushes, detached HEAD, dedup + bot identities from attribution rewrite
+- [oscraft gm backlog](oscraft-gm-backlog.md): 37 peer-reported gm tooling defects; file as PRD rows once open rows < 20

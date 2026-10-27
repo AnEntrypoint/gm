@@ -1,7 +1,7 @@
 id: paper
 title: "gm: a skill that gates AI coding agents on real command output"
-subtitle: "How gm's checks, gates and walks fit together. A check is a command run that passes or fails on its output. A gate is a condition on one move between states, and a failed gate refuses that move. A walk is one run of the gm state machine, driven to COMPLETE. For developers who already use an AI coding agent."
-description: "gm is a skill for Claude Code, Cursor, Gemini CLI and Codex that gates the agent on real command output. It refuses to let the agent mark a task finished until the checks on that output pass."
+subtitle: "How gm's checks, gates, walks fit together. Check = command run, pass/fail on output. Gate = condition on one move between states; failed gate refuses move. Walk = one run of gm state machine, driven to COMPLETE. For devs already using AI coding agent."
+description: "gm = skill for Claude Code, Cursor, Gemini CLI, Codex. Gate agent on real command output. Refuse let agent mark task finished until checks on that output pass."
 layout: article
 wide: true
 source: ../docs/paper.html

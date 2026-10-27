@@ -117,7 +117,7 @@ article tbody tr:hover { background: var(--panel-1); }
 
 <div class="title-block">
   <h1>gm: a skill that makes LLM coding agents check their work against real command output</h1>
-  <p class="subtitle" style="font-size:16px;color:var(--panel-text-2);margin:8px 0 0 0">How the checks, the gates that refuse a step, and the walks that drive a task to COMPLETE fit together, for developers who use a large language model (LLM) coding agent.</p>
+  <p class="subtitle" style="font-size:16px;color:var(--panel-text-2);margin:8px 0 0 0">How checks, gates refusing step, walks driving task to COMPLETE fit together, for devs using large language model (LLM) coding agent.</p>
   <div class="author">AnEntrypoint / gm</div>
   <div class="byline">Describes gm on its main branch. The counts in section 3 come from gm-config/fsm/graph.json.</div>
 </div>
@@ -125,8 +125,8 @@ article tbody tr:hover { background: var(--panel-1); }
 <div class="abstract-block">
   <div class="abstract-title">Abstract</div>
   <div class="abstract-text">
-    <p style="margin:0 0 8px 0">gm is a skill for LLM coding agents. It targets three failures: acting on an unverified guess, losing resolved work when the context window fills, and declaring a task done before it meets the requirement. Section 3 maps the discipline graph that enforces the gates, section 4 gives the gates, and section 9 gives how a PRD row (planned work) closes.</p>
-    <p style="margin:0">gm is for developers who run an LLM coding agent in their own project. Install with the two commands in the <a href="https://github.com/AnEntrypoint/gm#install">README Install section</a> (Node.js required), or follow <a href="./distribution.html">install and release paths</a> for the skill, runner and MCP server steps.</p>
+    <p style="margin:0 0 8px 0">gm = skill for LLM coding agents. Targets three failures: acting on unverified guess, losing resolved work when context window fills, declaring task done before meets requirement. Section 3 maps discipline graph enforcing gates. Section 4 gives gates. Section 9 gives how PRD row (planned work) closes.</p>
+    <p style="margin:0">gm for devs who run LLM coding agent in own project. Install with two commands in the <a href="https://github.com/AnEntrypoint/gm#install">README Install section</a> (Node.js required), or follow <a href="./distribution.html">install and release paths</a> for the skill, runner and MCP server steps.</p>
   </div>
 </div>
 
@@ -168,13 +168,13 @@ article tbody tr:hover { background: var(--panel-1); }
 <dt>Spool</dt><dd>A folder of request and reply files, served by the runner (section 15).</dd>
 <dt>Memorize</dt><dd>The verb that writes an entry to memory. <code>memorize-fire</code> is its inbox form (section 13).</dd>
 <dt>Dream-RSI</dt><dd>The learning loop that turns the record of real work into strategy proposals (section 14).</dd>
-<dt>Pool</dt><dd>The subagents a walk runs at once, up to the ceiling, the number of subagents the platform accepts at once (section 8).</dd>
+<dt>Pool</dt><dd>Walk runs subagents concurrent, up to ceiling: max platform accepts at once (section 8).</dd>
 <dt>Principle</dt><dd>One discipline from a published book or method, applied by one hop. Section 3 gives the count.</dd>
 <dt>Hop</dt><dd>One node traversal by one subagent, defined in section 7.</dd>
 <dt>Orchestrator</dt><dd>The orchestration code in <code>rs-plugkit</code> that runs a walk, its gates and its pool (section 2).</dd>
 <dt>Gate</dt><dd>A predicate on an edge of the graph (section 4). A gate node is a node of kind gate (section 3).</dd>
 <dt>PRD row (planned work)</dt><dd>One unit of planned work (section 9).</dd>
-<dt>Witness</dt><dd>A live dispatch whose reply carries the value under test. Section 9 gives the binding that closes a row with one.</dd>
+<dt>Witness</dt><dd>Live dispatch whose reply carry value under test. Section 9 give binding that close row with one.</dd>
 <dt>Mutable</dt><dd>A named unknown that a decision depends on (section 10).</dd>
 <dt>AGENTS.md</dt><dd>The repository's agent rules file. <code>CLAUDE.md</code> imports it.</dd>
 </dl>
@@ -187,7 +187,7 @@ article tbody tr:hover { background: var(--panel-1); }
 
 <h2 id="s2">2. Components</h2>
 
-<p>The shipped system is a set of directories with one owner each. The table names each component, its path and its role.</p>
+<p>Shipped system = set of directories, one owner each. Table names each component, its path, and its role.</p>
 
 <table>
 <caption>Components and the file that states each contract</caption>
@@ -203,7 +203,7 @@ article tbody tr:hover { background: var(--panel-1); }
 <tr><td>rs-plugkit</td><td><code>rs-plugkit/</code></td><td>The WASM (WebAssembly) guest: orchestration, spool verbs, memory and code search</td></tr>
 <tr><td>agentplug</td><td><code>agentplug/</code></td><td><code>agentplug-runner</code>, the native host that runs the daemon (section 15)</td></tr>
 <tr><td>gm-mcp</td><td><code>gm-mcp/</code></td><td>The MCP (Model Context Protocol) server, described in section 15</td></tr>
-<tr><td>rs-codeinsight</td><td><code>rs-codeinsight/</code></td><td>AST (abstract syntax tree) traversal, entity extraction and dependency graphs for a codebase, built with tree-sitter</td></tr>
+<tr><td>rs-codeinsight</td><td><code>rs-codeinsight/</code></td><td>AST (abstract syntax tree) traversal, entity extraction, dependency graphs for codebase. Built w/ tree-sitter.</td></tr>
 <tr><td>rs-search</td><td><code>rs-search/</code></td><td>Reciprocal rank fusion and identifier tokenization, described in section 12</td></tr>
 <tr><td>agentplug-bert</td><td><code>agentplug-bert/</code></td><td>The sibling plugin, which supplies the bge-small-en-v1.5 embedding weights, described in section 13</td></tr>
 </tbody>
@@ -221,7 +221,7 @@ article tbody tr:hover { background: var(--panel-1); }
 <caption>Node and edge counts of <code>gm-config/fsm/graph.json</code>, computed from the file</caption>
 <thead><tr><th>Item</th><th>Count</th><th>Members</th></tr></thead>
 <tbody>
-<tr><td>principle nodes</td><td>129</td><td>One per discipline. Keys such as JTBD and XYPROB; 101 labels name the author after a spaced hyphen, as in the JTBD label</td></tr>
+<tr><td>principle nodes</td><td>129</td><td>One per discipline. Keys like JTBD, XYPROB; 101 labels name author after spaced hyphen, like JTBD label</td></tr>
 <tr><td>tension nodes</td><td>8</td><td>OUSTERHOUTC, NAURTHEORY, TACIT, HYRUM, REGEVIDENCE, MAINTCOST, SPECDRIFT, CTXEXPLODE</td></tr>
 <tr><td>gate nodes</td><td>6, described in section 4</td><td>G_START, G_CONTRACT, G_INDEP, G_NET, G_DONE, G_SWEEP</td></tr>
 <tr><td>terminal nodes</td><td>3</td><td>G_FIXPOINT, G_SURFACE, COMPLETE</td></tr>
@@ -307,14 +307,14 @@ article tbody tr:hover { background: var(--panel-1); }
 <caption>The nine gm-prd stages, in order</caption>
 <thead><tr><th>Stage</th><th>What the stage does</th></tr></thead>
 <tbody>
-<tr><td>SPECIFY</td><td>Restates the row and its acceptance, and checks each cited line against the tree. A line that is absent makes the row stale.</td></tr>
+<tr><td>SPECIFY</td><td>Restate row + acceptance. Check each cited line vs tree. Line absent → row stale.</td></tr>
 <tr><td>PROVE</td><td>Runs the precondition, the invariant and the postcondition, each as a live check.</td></tr>
 <tr><td>EMIT</td><td>Makes exact-match edits only, and witnesses them through the live entry point.</td></tr>
 <tr><td>STATE</td><td>Shows that the change replays idempotently, and names the state it owns.</td></tr>
 <tr><td>CONC</td><td>Lists each touched file and the hunks other writers hold in it.</td></tr>
 <tr><td>SEC</td><td>Checks secrets, injection and identity, each as a run.</td></tr>
 <tr><td>RES</td><td>Runs each failure mode, partial failure included.</td></tr>
-<tr><td>DECIDE</td><td>Checks the receipts and the live witnesses against the words of the row, and checks the push or CI result.</td></tr>
+<tr><td>DECIDE</td><td>Check receipts + live witnesses vs row words. Check push or CI result.</td></tr>
 <tr><td>COMPLETE</td><td>Calls <code>prd-resolve</code> with the witness evidence and a witness dispatch id.</td></tr>
 </tbody>
 </table>
@@ -370,7 +370,7 @@ article tbody tr:hover { background: var(--panel-1); }
 
 <p>Each recall hit is scored by its cosine similarity multiplied by a recency factor. The recency factor has a half-life of 30 days (<code>scoring.half_life_ms</code> is 2592000000) and a floor of 0.4 (<code>scoring.recency_floor</code>). Near-duplicate hits are removed when their Jaccard overlap reaches 0.7 (<code>scoring.dedup_jaccard_threshold</code>).</p>
 
-<p>AGENTS.md sets the durable-memory rule: the agent deletes every entry that is not current (each path, verb and setting it names still resolves) or not reusable (it states a rule for a future task with no session, date or incident).</p>
+<p>AGENTS.md sets durable-memory rule: agent delete every entry not current (each path, verb, setting it names still resolve) or not reusable (state rule for future task, no session, date, or incident).</p>
 
 <hr>
 
@@ -419,7 +419,7 @@ article tbody tr:hover { background: var(--panel-1); }
 
 <h2 id="s17">17. Invariants and what would break them</h2>
 
-<p>AGENTS.md states the repository's invariants. Each item below states one of them with the condition that falsifies it, and its status at the revision this paper reads. Status not checked means this paper ran no check for that item.</p>
+<p>AGENTS.md states repo invariants. Each item below states one, with the condition that falsifies it, and its status at the revision this paper reads. "Status not checked" means paper ran no check for that item.</p>
 
 <ul>
 <li><strong>Walk completion.</strong> The completion checks are in section 5. Falsified by a COMPLETE reply while <code>prd-list</code> with <code>{"status":"pending"}</code> still returns rows. Status: not checked.</li>
@@ -427,11 +427,11 @@ article tbody tr:hover { background: var(--panel-1); }
 <li><strong>Gate names.</strong> A gate names only a predicate generated into <code>gm-config/fsm/predicates.md</code>. Falsified by a gate that names a predicate outside that file. Status: holds for the graph. Every predicate that a gate in <code>gm-config/fsm/graph.json</code> names appears in that file (section 4 gives the gate predicates per edge).</li>
 <li><strong>Path safety.</strong> <code>fs_read {"path":"../etc/hostname"}</code> returns <code>error_code: failed</code>. Falsified by an <code>ok: true</code> reply for that path. Status: holds. A live <code>fs_read</code> of that path returned <code>error_code: failed</code> in dispatch <code>1791899041532-500-8ffb5e21f24ca6d2</code>.</li>
 <li><strong>Remote transports.</strong> The system accepts only HTTP(S) remote transports with a nonempty authority, and refuses any other scheme. Falsified by a live dispatch that accepts a remote transport with another scheme or an empty authority. Status: violated in the source. The URL allow-list in <code>rs-plugkit/crates/plugkit-core/src/config_path.rs</code> also names <code>ssh://</code>, which AGENTS.md does not allow.</li>
-<li><strong>One writer per surface.</strong> Each shared file, ref, submodule pin or spool directory has one writer. Falsified by two briefs that write the same surface. Status: not checked.</li>
+<li><strong>One writer per surface.</strong> Each shared file, ref, submodule pin, spool dir: one writer. Falsified by two briefs writing same surface. Status: not checked.</li>
 <li><strong>Pin parity.</strong> Each parent gitlink points to its submodule's <code>main</code> tip, and <code>.github/workflows/bump-pins.yml</code> advances it. Falsified by a parent gitlink that differs from its target's remote <code>main</code> tip after a green bump run. Status: the workflow file exists. This paper does not compare the gitlinks.</li>
 <li><strong>Replay identity.</strong> <code>git_commit_dedup_lookup</code> shall answer a replay only while <code>rev-parse HEAD</code> equals the recorded <code>sha_full</code>, because object existence is not enough after <code>git_reset</code>. Falsified by a replay answered after <code>git_reset</code> moves HEAD off the recorded <code>sha_full</code>. Status: violated in the source. The lookup in <code>rs-plugkit/crates/plugkit-core/src/wasm_dispatch/verbs/git.rs</code> checks only that the object exists (<code>git cat-file -e</code>) and that the record is younger than its 180000 ms TTL.</li>
 <li><strong>Build identity.</strong> The update guard <code>locally_built_installed_reason</code> refuses to replace a runner whose <code>build_info::is_release_build()</code> is false, unless <code>update_over_local_build_allowed()</code> permits it. Falsified by a release swapped over a runner whose <code>RELEASE_BUILD</code> is false. Status: the guard source has both checks (<code>agentplug/crates/agentplug-runner/src/download.rs</code>). This paper does not run it live.</li>
-<li><strong>Single-writer markers.</strong> A single-writer or lock guard creates its marker by atomic create or atomic rename. Falsified by a plain write in the guard's source. Status: not checked.</li>
+<li><strong>Single-writer markers.</strong> Single-writer/lock guard make marker via atomic create or atomic rename. Falsified by plain write in guard source. Status: not checked.</li>
 <li><strong>Text encoding.</strong> Every tracked text file is UTF-8 without a byte-order mark. Falsified by a tracked file that begins with <code>EF BB BF</code>. Status: not checked.</li>
 <li><strong>Lean graph sync.</strong> <code>scripts/sync-lean-graph.mjs emit</code> never writes a path under <code>rs-plugkit/</code>. Falsified by an <code>emit</code> that writes there. Status: not checked.</li>
 </ul>
@@ -441,9 +441,9 @@ article tbody tr:hover { background: var(--panel-1); }
 <h2 id="s18">18. Limits</h2>
 
 <ol>
-<li><strong>The live ceiling, the number of subagents that can run at once, is not measured here.</strong> Section 8 gives the fallback default and says how the orchestrator finds the live value, and the paper records no value that any platform accepted.</li>
+<li><strong>The live ceiling, the number of subagents that can run at once, is not measured here.</strong> Section 8 gives fallback default, say how orchestrator find live value. Paper record no value any platform accept.</li>
 <li><strong>Memory goes stale.</strong> An entry is a claim written at one time, and section 13 gives the rule for removing stale ones.</li>
-<li><strong>A walk is bounded, not proven complete.</strong> The graph is finite (section 3), the hop chain stops at its depth limit (section 7), and the stop rules of section 5 end it. These bounds end a walk. They do not show that the walk found all the work a request contains (section 5 lists the completion checks).</li>
+<li><strong>A walk is bounded, not proven complete.</strong> Graph finite (section 3). Hop chain stop at depth limit (section 7). Stop rules section 5 end it. Bounds end walk. Not prove walk found all work request contain (section 5 list completion checks).</li>
 <li><strong>The paper measures nothing.</strong> It reports no speed, failure rate or effect size. No <code>#[bench]</code> or <code>[[bench]]</code> target exists in <code>rs-plugkit</code> or <code>agentplug</code>. The three failures named in the Abstract block are the design motivation, and the paper reports no count of them.</li>
 </ol>
 
