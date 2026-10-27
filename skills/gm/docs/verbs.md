@@ -355,8 +355,7 @@ The `git_worktree_*` verbs below are a LAST RESORT with one legitimate use: a re
 ```
 {"path":"<tmp>/bisect","rev":"5ba0bd4ae70006e4fa0de8d95984559e7ccdf408"}           git_worktree_add: --detach <path> <rev>
 {"path":"<tmp>/bisect","ref":"5ba0bd4a","create":true}                             git_worktree_add: --detach <path> <ref>
-{"path":"<tmp>/proj-sweep"}                                                      git_worktree_add: <path> <HEAD>
-{"path":"<tmp>/proj-sweep"}                                                      git_worktree_remove (force:true to drop a dirty one)
+{"path":"<tmp>/bisect"}                                                      git_worktree_remove (force:true to drop a dirty one)
 {}                                                                                git_worktree_list / git_worktree_prune
 {"base":"<sha>"}                                                                  git_worktree_prune: `base` is the commit a worktree's HEAD must be an ancestor of before it is removed (default HEAD)
 ```
