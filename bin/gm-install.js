@@ -17,7 +17,6 @@ const help = argv.includes('-h') || argv.includes('--help')
 const GM_TOOLS_DIR = path.join(os.homedir(), '.gm-tools')
 const MCP_BUNDLE_PATH = path.join(GM_TOOLS_DIR, 'gm-mcp-server.mjs')
 const MCP_BUNDLE_URL = 'https://raw.githubusercontent.com/AnEntrypoint/gm-mcp/main/bin/gm-mcp-server.js'
-const LEGACY_NPX_SPEC = 'github:AnEntrypoint/gm-mcp'
 
 if (help) {
   console.log('Usage: gm [-g|--global] [--mcp-only] [--skills-only] [--check-skills] [--force-link]')
@@ -420,10 +419,6 @@ if (!mcpOnly) {
   if (skillsOnly) process.exit(0)
 }
 
-function isLegacyNpxEntry(entry) {
-  return entry && entry.command === 'npx' && Array.isArray(entry.args) && entry.args.includes(LEGACY_NPX_SPEC)
-}
-
 function isCurrentEntry(entry, wanted) {
   return entry && entry.command === wanted.command && JSON.stringify(entry.args) === JSON.stringify(wanted.args)
 }
@@ -462,9 +457,8 @@ function needsGmServerUpdate(servers, wanted, create) {
 }
 
 function setGmServer(servers, wanted, label) {
-  const existing = servers.gm
   servers.gm = wanted
-  console.log(`registered gm MCP server in ${label}${isLegacyNpxEntry(existing) ? ' (replaced legacy npx github spec)' : ''}`)
+  console.log(`registered gm MCP server in ${label}`)
 }
 
 function syncGmServers(configPath, config, targets, wanted) {

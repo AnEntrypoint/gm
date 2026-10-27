@@ -245,3 +245,20 @@ find1-*/
 
 # generated install copies of skills/ (served from the checkout by the installer)
 .claude/skills/
+.gm/prd-log*
+.gm/unknowns-log*
+.gm/locks/
+.gm/queues/
+.gm/shelved/
+.gm/quarantine/
+.gm/publish/
+.gm/drain-list/
+.gm/handoffs/
+.gm/prd-log.d/
+.gm/unknowns-log.d/
+.gm/unknowns/
+.gm/witness-fs-exact-line.txt
+.gm/check-pins.out
+.gm/housekeep.json
+.gm/prd.log-dir-migrated.json
+.gm/unknowns.*.json

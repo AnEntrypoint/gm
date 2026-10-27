@@ -24,7 +24,7 @@ New-Item -ItemType Directory -Force "$HOME\.gm-tools" | Out-Null; Invoke-WebRequ
 claude mcp add gm -s user -- node "$HOME\.gm-tools\gm-mcp-server.mjs"
 ```
 
-Other host (Cursor, Gemini CLI, Codex): register same stdio command in its MCP config: `node` with argument `~/.gm-tools/gm-mcp-server.mjs`.
+Any other MCP host (Cursor, Gemini CLI, Codex, others): one route, the same stdio command in that host's MCP config: `node` with argument `~/.gm-tools/gm-mcp-server.mjs`. From a checkout, `node bin/gm-install.js` installs the skill and registers the server with every detected host. The npx route is retired.
 
 **MCP launch.** Server launches from local bundle, `~/.gm-tools/gm-mcp-server.mjs`, never from npx GitHub spec. Spec re-resolves package every connect (measured 8.2 s warm, 22.2 s cold, vs 0.19 s from disk), which under load can trip Claude Code's 30 s connect timeout ([gm-mcp/README.md](./gm-mcp/README.md)). To repair registration, run `claude mcp remove gm -s user`, then `claude mcp add` line again.
 
