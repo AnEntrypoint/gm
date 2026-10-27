@@ -181,6 +181,12 @@ Query and body: `query` is required in every mode. `pattern` aliases `query` and
 
 `fs_write` is project-only: it refuses any path outside the cwd project root, and `allowOutsideRoot` never widens a write. Memory files live in the project under `memory/`, never in the user config directory.
 
+`fs_write` exact-line form: `{"path","startLine","endLine","replacement"}` replaces lines `startLine` through `endLine` (1-based, inclusive) with `replacement`, one dispatch per edit:
+
+```
+{"path":"skills/gm/docs/verbs.md","startLine":1,"endLine":1,"replacement":"# gm verb inventory"}
+```
+
 Line ranges: every alias is **1-based and inclusive on both ends**. The start alias names the first line returned; `endLine`/`end`/`to` the last line returned; `limit`/`count`/`lines` a line count, never an end line. Aliases resolve in this order (the first pair with a key present wins):
 
 ```
@@ -288,7 +294,13 @@ Query verbs:
 
 Command verbs (every other git verb):
 
-- `git_push`, `git_add`, `git_commit`, `git_amend`, `git_rewrite_authors`, `git_finalize`, `git_fetch`, `git_pull`, `git_init`, `git_branch`, `git_branch_delete`, `git_checkout`, `git_merge`, `git_merge_abort`, `git_stash`, `git_stash_pop`, `git_stash_drop`, `git_rm`, `git_revert`, `git_cherry_pick`, `git_reset`, `git_submodule_add`, `git_submodule_update`, `git_worktree_add`, `git_worktree_remove`, `git_worktree_prune`
+- `git_push`, `git_add`, `git_commit`, `git_amend`, `git_rewrite_authors`, `git_finalize`, `git_fetch`, `git_pull`, `git_init`, `git_branch`, `git_branch_delete`, `git_checkout`, `git_merge`, `git_merge_abort`, `git_stash`, `git_stash_pop`, `git_stash_drop`, `git_rm`, `git_revert`, `git_cherry_pick`, `git_reset`, `git_submodule_add`, `git_submodule_update`, `git_worktree_add`, `git_worktree_remove`, `git_worktree_prune`, `git-clone`
+
+`git-clone {repo, dest, mode}` clones one AnEntrypoint repository into a directory under `/config/tmp` (`repo` is `AnEntrypoint/<name>` or its https URL; `mode` is `blobless` (default), `shallow` or `full`). Reply carries `sha`, `default_branch` and `dest`:
+
+```
+{"repo":"AnEntrypoint/gm","dest":"gm-probe","mode":"shallow"}
+```
 
 `git_cherry_pick {rev}` (alias `ref`, top level or under `body`) takes the commit to pick. Without a revision it falls back to its own default or refuses, per `gm.describe`.
 
