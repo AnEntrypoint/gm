@@ -34,7 +34,7 @@ Why the rules in `skills/gm-orchestrate/SKILL.md` are shaped the way they are. T
 - Bake re-generation is in the same commit as the source edit, because a later commit that moves the code again hides the failure from every hop after the first.
 
 ## Skill edits
-- Skills are installed as junctions or symlinks, so an edit is live on the next dispatch; an edit made during a merge is discarded silently by the merge resolution.
+- Skills are served over MCP with no host copy or junction, so an edit is live on the next dispatch; an edit made during a merge is discarded silently by the merge resolution.
 
 ## Moved out of SKILL.md during the trim
 - Lane single-writer: the git lane admits one writer at a time; the network yield never passes the RUNNING holder.

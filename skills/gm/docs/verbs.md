@@ -701,7 +701,7 @@ The agentplug daemon, not the gm plugin, handles these:
 
 ## One verb gm-mcp answers
 
-`gm-skill` (canonical `gm_skill`) is answered by the MCP server from the skill snapshot baked into its bundle, not by the plugin or the daemon. Use it when a host froze its skill list before gm wrote the skills into `~/.claude/skills`, so no gm skill is visible in this session: the reply is the same text the skill would have loaded.
+`gm-skill` (canonical `gm_skill`) is answered by the MCP server from the skill snapshot baked into its bundle, not by the plugin or the daemon. Use it when a host froze its skill list before the gm MCP server connected, so no gm skill is visible in this session: the reply is the same text the skill would have loaded.
 
 | body field | meaning |
 |---|---|

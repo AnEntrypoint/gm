@@ -6,7 +6,7 @@ hero:
   body: "You describe change, agent build it. Before agent call task done: every plan row (task file in .gm/prd/) closed, continuous integration (CI) result for HEAD recorded, submodules clean."
   badges:
     - { label: "installs into Claude Code, Cursor, Gemini CLI and Codex" }
-    - { label: "one entry skill, installed as /gm" }
+    - { label: "one entry skill, served over MCP as /gm" }
   ctas:
     - { label: "Install gm", href: "https://github.com/AnEntrypoint/gm#install", primary: true }
     - { label: "Read the paper", href: "./paper/" }

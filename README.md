@@ -20,11 +20,11 @@ Windows PowerShell:
 irm https://raw.githubusercontent.com/AnEntrypoint/gm/main/install.ps1 | iex
 ```
 
-The installer installs the `/gm` skill, downloads the MCP server bundle to `~/.gm-tools/gm-mcp-server.mjs`, and registers it with Claude Code by absolute path. Restart Claude Code, then run `/gm`. On first start the server installs the agentplug runner and gm guest from their releases, each checked against its sha256 ([gm-mcp/README.md](./gm-mcp/README.md), "Self-install on a fresh machine").
+The installer downloads the MCP server bundle to `~/.gm-tools/gm-mcp-server.mjs` and registers it with Claude Code by absolute path. Skills are served over MCP only: `/gm` is the prompt `/mcp__gm__gm`, and each skill is a `skill://<name>` resource. Restart Claude Code, then run `/gm`. On first start the server installs the agentplug runner and gm guest from their releases, each checked against its sha256 ([gm-mcp/README.md](./gm-mcp/README.md), "Self-install on a fresh machine").
 
 Registration is one command, the same on every OS: `node ~/.gm-tools/gm-mcp-server.mjs register` (PowerShell: `node "$env:USERPROFILE\.gm-tools\gm-mcp-server.mjs" register`). The bundle resolves its own absolute path, so no shell expands `$HOME` or `~`. Rerun it to repair a broken `gm` entry; it is idempotent.
 
-Any other MCP host (Cursor, Gemini CLI, Codex, others): the same stdio command in that host's MCP config: `node` with the absolute path of `gm-mcp-server.mjs`. From a checkout, `node bin/gm-install.js` installs the skill and registers the server with every detected host. The npx route is retired.
+Any other MCP host (Cursor, Gemini CLI, Codex, others): the same stdio command in that host's MCP config: `node` with the absolute path of `gm-mcp-server.mjs`. From a checkout, `node bin/gm-install.js` registers the server with every detected host. The npx route is retired.
 
 **MCP launch.** Server launches from local bundle, `~/.gm-tools/gm-mcp-server.mjs`, never from npx GitHub spec. Spec re-resolves package every connect (measured 8.2 s warm, 22.2 s cold, vs 0.19 s from disk), which under load can trip Claude Code's 30 s connect timeout ([gm-mcp/README.md](./gm-mcp/README.md)).
 
@@ -112,7 +112,7 @@ Root `.gitmodules` lists 10 submodules:
 
 Gate predicate registry: `rs-plugkit/crates/plugkit-core/src/orchestrator/predicate_registry.rs`. Predicate graph names but registry lacks refused as `fsm_unknown_predicate`, so registry is source of truth. Advisory gates: `lean-contract-only-description` and `lean-verifier-independent`.
 
-`node bin/gm-install.js` takes `--mcp-only` (repair MCP registration without reinstalling), `--skills-only`, `--check-skills`, `--force-link`, and `-g` or `--global`.
+`node bin/gm-install.js` takes `--mcp-only` (repair MCP registration without reinstalling) and `-g` or `--global`. `--skills-only`, `--check-skills` and `--force-link` are retired: skills are served over MCP, so those flags print a notice and change nothing.
 
 `gm-mcp/` ships no test tree. `no-synthetic-test-files` gate is diff-scoped (`gm-config/fsm/predicates.md`): refuses test file or test directory diff introduces, not one already existing.
 

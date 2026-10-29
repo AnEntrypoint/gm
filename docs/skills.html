@@ -58,7 +58,7 @@ article tbody tr:hover { background: var(--panel-1); }
 <div class="abstract-block">
   <div class="abstract-title">tl;dr</div>
   <div class="abstract-text">
-    gm is a workflow for AI coding agents. It drives an agent through engineering work in a git project: code search, git verbs, recorded memory, and a plan whose rows each close only with recorded evidence. It is for developers who run coding agents such as Claude Code, Cursor, Codex or Gemini. The release ships eleven skills, each a directory under <code>skills/</code> with a <code>SKILL.md</code>: the <code>/gm</code> entry skill, four walk skills and six discipline skills. Install it from the <a href="./distribution.html">distribution page</a>. The install also registers the gm MCP server, which serves the verbs. Then type <code>/gm</code> in your coding agent to load the skill.
+    gm is a workflow for AI coding agents. It drives an agent through engineering work in a git project: code search, git verbs, recorded memory, and a plan whose rows each close only with recorded evidence. It is for developers who run coding agents such as Claude Code, Cursor, Codex or Gemini. The release ships eleven skills, each a directory under <code>skills/</code> with a <code>SKILL.md</code>: the <code>/gm</code> entry skill, four walk skills and six discipline skills. Install it from the <a href="./distribution.html">distribution page</a>. The install registers the gm MCP server, which serves the verbs and the skills. Then type <code>/gm</code> in your coding agent to load the skill.
   </div>
 </div>
 
@@ -126,11 +126,9 @@ article tbody tr:hover { background: var(--panel-1); }
 </tbody>
 </table>
 
-<h2>How the skills are installed</h2>
+<h2>How the skills are served</h2>
 
-<p>From a checkout, <code>install.sh</code>, <code>install.ps1</code> and <code>bin/gm-install.js</code> link each skill folder under <code>skills/</code> into <code>~/.claude/skills/</code> and <code>~/.agents/skills/</code> under the same folder name: a symlink on macOS and Linux, a junction on Windows. A source edit is served on the next dispatch. With no durable source, such as the release tarball or an npx cache, the installer copies the skill, announces the copy, and records the mode in <code>&lt;root&gt;/.gm-skill-install-modes</code>.</p>
-
-<p>An install that must be replaced is parked under the dotted <code>&lt;root&gt;/.gm-skill-prelink/</code> directory and is never deleted. Deleting it needs <code>--force-link</code> in <code>bin/gm-install.js</code>, or <code>GM_SKILL_LINK_FORCE=1</code> in <code>install.sh</code> and <code>install.ps1</code>. On MINGW, MSYS and Cygwin only a junction counts as a link.</p>
+<p>The skills are served over MCP only. The gm MCP server exposes each <code>skills/&lt;name&gt;/SKILL.md</code> as the prompt <code>/mcp__gm__&lt;name&gt;</code> and as the resource <code>skill://&lt;name&gt;</code>. The installers, <code>install.sh</code>, <code>install.ps1</code> and <code>bin/gm-install.js</code>, register the MCP server and do not write skill files into <code>~/.claude/skills/</code> or <code>~/.agents/skills/</code>.</p>
 
 <h2 id="orchestrator-verbs">The verbs this page documents</h2>
 

@@ -3,7 +3,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Install gm and check it works - gm - 247420</title>
-<meta name="description" content="gm is a state machine for coding agents. This page covers installing its skills, the agentplug-runner binary and the local MCP server, and checking that each one works.">
+<meta name="description" content="gm is a state machine for coding agents. This page covers installing the agentplug-runner binary and the local MCP server, which serves its skills, and checking that each one works.">
 <meta name="color-scheme" content="light dark">
 <meta name="theme-color" content="#181a1f" media="(prefers-color-scheme: dark)">
 <meta name="theme-color" content="#f4f5f7" media="(prefers-color-scheme: light)">
@@ -96,7 +96,7 @@ article th { font-family: var(--ff-mono); font-size: 11px; text-transform: upper
 <div class="abstract-block">
   <div class="abstract-title">Summary</div>
   <div class="abstract-text">
-    gm is a state machine for coding agents: a fixed set of states, with gates that decide when work is done. The coding agent drives the state machine, and a walk, one run of the state machine, completes only when the state machine accepts <code>COMPLETE</code>, every required row (one PRD entry) is completed, and <code>gm-continue</code> has checked for remaining work. This page is for developers who run Claude Code, Cursor, Codex or Gemini. The installers place the gm skills, the native <code>agentplug-runner</code> host and a local Model Context Protocol (MCP) server bundle. After install, your coding agent sends gm requests to a local runner.
+    gm is a state machine for coding agents: a fixed set of states, with gates that decide when work is done. The coding agent drives the state machine, and a walk, one run of the state machine, completes only when the state machine accepts <code>COMPLETE</code>, every required row (one PRD entry) is completed, and <code>gm-continue</code> has checked for remaining work. This page is for developers who run Claude Code, Cursor, Codex or Gemini. The installers place the native <code>agentplug-runner</code> host and a local Model Context Protocol (MCP) server bundle, which serves the gm skills. After install, your coding agent sends gm requests to a local runner.
   </div>
 </div>
 
@@ -109,12 +109,12 @@ article th { font-family: var(--ff-mono); font-size: 11px; text-transform: upper
   <li><strong>macOS or Linux:</strong> <code>curl -fsSL https://raw.githubusercontent.com/AnEntrypoint/gm/main/install.sh | sh</code></li>
   <li><strong>Windows PowerShell:</strong> <code>irm https://raw.githubusercontent.com/AnEntrypoint/gm/main/install.ps1 | iex</code></li>
 </ul>
-<p>The installer installs the skill, downloads the MCP server bundle to <code>~/.gm-tools/gm-mcp-server.mjs</code>, and registers it with Claude Code. It registers by absolute path, resolved by the bundle itself, so no shell has to expand <code>$HOME</code> or <code>~</code>. Then restart Claude Code and run <code>/gm</code>. On its first start the server installs the agentplug runner and gm guest from their releases, each checked against its sha256.</p>
+<p>The installer downloads the MCP server bundle to <code>~/.gm-tools/gm-mcp-server.mjs</code>, and registers it with Claude Code. It registers by absolute path, resolved by the bundle itself, so no shell has to expand <code>$HOME</code> or <code>~</code>. Then restart Claude Code and run <code>/gm</code>. On its first start the server installs the agentplug runner and gm guest from their releases, each checked against its sha256.</p>
 <p>The same registration, run by hand on any OS: <code>node ~/.gm-tools/gm-mcp-server.mjs register</code>. On Windows PowerShell: <code>node "$env:USERPROFILE\.gm-tools\gm-mcp-server.mjs" register</code>. It is idempotent, rewrites a broken <code>gm</code> entry, and prints whether the config read back as expected.</p>
 
 <p>The MCP server bundle (gm-mcp) is downloaded without a checksum, unlike the runner download, which is checked against its <code>.sha256</code> file.</p>
 
-<p>The Node.js installer <code>bin/gm-install.js</code> also takes <code>--mcp-only</code>, which repairs an MCP registration without reinstalling anything, and <code>--skills-only</code>, which copies or links the skills and stops (no MCP registration, no runner).</p>
+<p>The Node.js installer <code>bin/gm-install.js</code> also takes <code>--mcp-only</code>, which repairs an MCP registration without reinstalling anything, and retires <code>--skills-only</code>, <code>--check-skills</code> and <code>--force-link</code>: skills are served over MCP, so those flags print a notice and change nothing.</p>
 
 <h2>2. Run a verb from a shell</h2>
 
