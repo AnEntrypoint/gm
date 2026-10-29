@@ -28,9 +28,10 @@ features:
     - name: "one tool for every verb"
       desc: "gm adds one MCP tool, gm_codemode. Its short JavaScript code calls gm verbs as functions, such as gm.codesearch({query: ...}), and gm.list() lists them all."
 quickstart:
-  heading: "install (needs Node.js; drop -g for the current project only)"
+  heading: "install (needs Node.js; no npm, no npx)"
   lines:
-    - { kind: "cmd", text: "npx github:AnEntrypoint/gm -g" }
+    - { kind: "cmd", text: "curl -fsSL https://raw.githubusercontent.com/AnEntrypoint/gm/main/install.sh | sh" }
+    - { kind: "cmd", text: "irm https://raw.githubusercontent.com/AnEntrypoint/gm/main/install.ps1 | iex" }
 examples:
   heading: "read further"
   items:

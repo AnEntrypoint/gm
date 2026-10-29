@@ -104,14 +104,13 @@ article th { font-family: var(--ff-mono); font-size: 11px; text-transform: upper
 
 <h2>1. Install</h2>
 
-<p>Pick the command for your system. Each one installs the parts it names:</p>
+<p>One command, for your system. It needs Node.js (any current LTS, from <a href="https://nodejs.org">nodejs.org</a>) and nothing else: no npm, no npx, no clone.</p>
 <ul>
-  <li><strong>Any system, all parts:</strong> fetch the MCP server bundle once with <code>curl -fsSL https://raw.githubusercontent.com/AnEntrypoint/gm-mcp/main/bin/gm-mcp-server.js -o ~/.gm-tools/gm-mcp-server.mjs</code>, then register it with <code>claude mcp add gm -s user -- node ~/.gm-tools/gm-mcp-server.mjs</code>. The server installs the skills into <code>~/.claude/skills</code> and <code>~/.agents/skills</code>, and the agentplug runner and gm guest from their releases, on its first start. No clone or npx spec is involved.</li>
-  <li><strong>macOS or Linux, runner only:</strong> <code>curl -fsSL https://raw.githubusercontent.com/AnEntrypoint/gm/main/install.sh | sh</code> installs the runner into <code>~/.gm-tools</code>, then runs the runner with no command. The runner prints its usage line and exits with status 1, so that status is expected. Section 4 checks the installed runner.</li>
-  <li><strong>macOS or Linux, skills and MCP server bundle only:</strong> <code>curl -fsSL https://raw.githubusercontent.com/AnEntrypoint/gm/main/install.sh | sh -s -- install</code></li>
-  <li><strong>Windows PowerShell, runner only:</strong> <code>irm https://raw.githubusercontent.com/AnEntrypoint/gm/main/install.ps1 | iex</code> installs the runner the same way, then runs the runner with no command. The runner prints its usage line and exits with status 1, so that status is expected.</li>
-  <li><strong>Windows, skills and MCP server bundle only:</strong> from a checkout, run <code>powershell -ExecutionPolicy Bypass -File install.ps1 install</code>.</li>
+  <li><strong>macOS or Linux:</strong> <code>curl -fsSL https://raw.githubusercontent.com/AnEntrypoint/gm/main/install.sh | sh</code></li>
+  <li><strong>Windows PowerShell:</strong> <code>irm https://raw.githubusercontent.com/AnEntrypoint/gm/main/install.ps1 | iex</code></li>
 </ul>
+<p>The installer installs the skill, downloads the MCP server bundle to <code>~/.gm-tools/gm-mcp-server.mjs</code>, and registers it with Claude Code. It registers by absolute path, resolved by the bundle itself, so no shell has to expand <code>$HOME</code> or <code>~</code>. Then restart Claude Code and run <code>/gm</code>. On its first start the server installs the agentplug runner and gm guest from their releases, each checked against its sha256.</p>
+<p>The same registration, run by hand on any OS: <code>node ~/.gm-tools/gm-mcp-server.mjs register</code>. On Windows PowerShell: <code>node "$env:USERPROFILE\.gm-tools\gm-mcp-server.mjs" register</code>. It is idempotent, rewrites a broken <code>gm</code> entry, and prints whether the config read back as expected.</p>
 
 <p>The MCP server bundle (gm-mcp) is downloaded without a checksum, unlike the runner download, which is checked against its <code>.sha256</code> file.</p>
 
@@ -131,8 +130,7 @@ article th { font-family: var(--ff-mono); font-size: 11px; text-transform: upper
 <ul>
   <li><strong>From a checkout of the repository, user registration:</strong> <code>node bin/gm-install.js -g --mcp-only</code></li>
   <li><strong>From a checkout of the repository, project registration:</strong> <code>node bin/gm-install.js --mcp-only</code></li>
-  <li><strong>After the skills and MCP bundle install (the install argument in section 1):</strong> <code>claude mcp remove gm 2>/dev/null; claude mcp add gm -- node ~/.gm-tools/gm-mcp-server.mjs</code></li>
-  <li><strong>Any directory, user registration:</strong> <code>claude mcp add gm -s user -- node ~/.gm-tools/gm-mcp-server.mjs</code> (the bundle path above).</li>
+  <li><strong>Any OS, after any install:</strong> <code>node ~/.gm-tools/gm-mcp-server.mjs register</code> (PowerShell: <code>node "$env:USERPROFILE\.gm-tools\gm-mcp-server.mjs" register</code>). It rewrites the user-scope <code>gm</code> entry to the bundle's absolute path.</li>
 </ul>
 
 <p>Restart the agent host after a registration change.</p>

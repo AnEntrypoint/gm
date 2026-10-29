@@ -262,7 +262,11 @@ function Install-Skill {
 
         $extractDir = Join-Path $work "extract"
         New-Item -ItemType Directory -Force -Path $extractDir | Out-Null
-        tar -xzf $assetPath -C $extractDir
+        # Windows' own bsdtar: a Git or MSYS tar on PATH reads "C:\..." as a remote host and fails.
+        $tar = Join-Path $env:SystemRoot "System32\tar.exe"
+        if (-not (Test-Path $tar)) { $tar = "tar" }
+        & $tar -xzf $assetPath -C $extractDir
+        if ($LASTEXITCODE -ne 0) { throw "could not extract $asset (tar exit $LASTEXITCODE)" }
 
         foreach ($root in $SkillInstallRoots) {
             New-Item -ItemType Directory -Force -Path $root | Out-Null
@@ -318,21 +322,28 @@ function Install-McpServer {
         Invoke-WebRequest -Uri $url -OutFile $tmp -UseBasicParsing
         Move-Item -Force $tmp $dest
         Write-Host "installed gm-mcp server -> $dest"
-        Write-Host "register it (once) with:"
-        Write-Host "  claude mcp remove gm 2>`$null; claude mcp add gm -- node `"$dest`""
     } catch {
         Remove-Item -Force -ErrorAction SilentlyContinue $tmp
-        Write-Warning "could not download the gm-mcp server bundle: $($_.Exception.Message) -- the spool protocol still works without it"
+        Write-Error "could not download the gm-mcp server bundle: $($_.Exception.Message)"
+        exit 1
     }
+    if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
+        Write-Error "Node.js is needed to run the gm MCP server. Install it from https://nodejs.org, then run: node `"$dest`" register"
+        exit 1
+    }
+    # The bundle registers itself by absolute path, so no shell expands $HOME or ~ on the way.
+    & node $dest register
+    if ($LASTEXITCODE -ne 0) { throw "gm register failed (exit $LASTEXITCODE)" }
 }
 
 function Main {
     param([string[]]$RunnerArgs)
 
-    if ($RunnerArgs.Count -gt 0 -and $RunnerArgs[0] -eq "install") {
+    if ($RunnerArgs.Count -eq 0 -or $RunnerArgs[0] -eq "install") {
         Install-Skill
         Install-McpServer
         Remove-RetiredJsHost
+        Write-Host "done. Restart Claude Code, then run /gm."
         return
     }
 

@@ -393,22 +393,27 @@ install_mcp_server() {
   dest="${GM_TOOLS_DIR}/gm-mcp-server.mjs"
   tmp="${dest}.tmp.$$"
   url="https://raw.githubusercontent.com/AnEntrypoint/gm-mcp/main/bin/gm-mcp-server.js"
-  if fetch "$url" "$tmp"; then
-    mv -f "$tmp" "$dest"
-    log "installed gm-mcp server -> ${dest}"
-    log "register it (once) with:"
-    log "  claude mcp remove gm 2>/dev/null; claude mcp add gm -- node \"${dest}\""
-  else
+  if ! fetch "$url" "$tmp"; then
     rm -f "$tmp"
-    log "WARN: could not download the gm-mcp server bundle -- the spool protocol still works without it"
+    log "FATAL: could not download the gm-mcp server bundle from ${url}"
+    exit 1
   fi
+  mv -f "$tmp" "$dest"
+  log "installed gm-mcp server -> ${dest}"
+  if ! command -v node >/dev/null 2>&1; then
+    log "FATAL: Node.js is needed to run the gm MCP server. Install Node.js from https://nodejs.org, then run: node \"${dest}\" register"
+    exit 1
+  fi
+  # The bundle registers itself by absolute path, so no shell expands $HOME or ~ on the way.
+  node "$dest" register
 }
 
 main() {
-  if [ "${1:-}" = "install" ]; then
+  if [ $# -eq 0 ] || [ "$1" = "install" ]; then
     install_skill
     install_mcp_server
     quarantine_retired_js_host
+    log "done. Restart Claude Code, then run /gm."
     exit 0
   fi
 

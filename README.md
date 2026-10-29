@@ -8,25 +8,25 @@ Gate decides when work done, not coding agent. Most harnesses ask model follow p
 
 ## Install
 
-Two commands install gm. Node.js needed for server. Server installs rest itself on first start: `/gm` skill files into `~/.claude/skills` and `~/.agents/skills`, agentplug runner, gm guest, each from its release with checksum check (see [gm-mcp/README.md](./gm-mcp/README.md), "Self-install on a fresh machine").
-
-First command fetches MCP server bundle once; second registers it with agent host. Only step human or host must take. macOS or Linux:
+One command. Needs Node.js (any current LTS, [nodejs.org](https://nodejs.org)); no npm, no npx, no clone. macOS or Linux:
 
 ```
-mkdir -p ~/.gm-tools && curl -fsSL https://raw.githubusercontent.com/AnEntrypoint/gm-mcp/main/bin/gm-mcp-server.js -o ~/.gm-tools/gm-mcp-server.mjs
-claude mcp add gm -s user -- node ~/.gm-tools/gm-mcp-server.mjs
+curl -fsSL https://raw.githubusercontent.com/AnEntrypoint/gm/main/install.sh | sh
 ```
 
 Windows PowerShell:
 
 ```
-New-Item -ItemType Directory -Force "$HOME\.gm-tools" | Out-Null; Invoke-WebRequest https://raw.githubusercontent.com/AnEntrypoint/gm-mcp/main/bin/gm-mcp-server.js -OutFile "$HOME\.gm-tools\gm-mcp-server.mjs"
-claude mcp add gm -s user -- node "$HOME\.gm-tools\gm-mcp-server.mjs"
+irm https://raw.githubusercontent.com/AnEntrypoint/gm/main/install.ps1 | iex
 ```
 
-Any other MCP host (Cursor, Gemini CLI, Codex, others): one route, the same stdio command in that host's MCP config: `node` with argument `~/.gm-tools/gm-mcp-server.mjs`. From a checkout, `node bin/gm-install.js` installs the skill and registers the server with every detected host. The npx route is retired.
+The installer installs the `/gm` skill, downloads the MCP server bundle to `~/.gm-tools/gm-mcp-server.mjs`, and registers it with Claude Code by absolute path. Restart Claude Code, then run `/gm`. On first start the server installs the agentplug runner and gm guest from their releases, each checked against its sha256 ([gm-mcp/README.md](./gm-mcp/README.md), "Self-install on a fresh machine").
 
-**MCP launch.** Server launches from local bundle, `~/.gm-tools/gm-mcp-server.mjs`, never from npx GitHub spec. Spec re-resolves package every connect (measured 8.2 s warm, 22.2 s cold, vs 0.19 s from disk), which under load can trip Claude Code's 30 s connect timeout ([gm-mcp/README.md](./gm-mcp/README.md)). To repair registration, run `claude mcp remove gm -s user`, then `claude mcp add` line again.
+Registration is one command, the same on every OS: `node ~/.gm-tools/gm-mcp-server.mjs register` (PowerShell: `node "$env:USERPROFILE\.gm-tools\gm-mcp-server.mjs" register`). The bundle resolves its own absolute path, so no shell expands `$HOME` or `~`. Rerun it to repair a broken `gm` entry; it is idempotent.
+
+Any other MCP host (Cursor, Gemini CLI, Codex, others): the same stdio command in that host's MCP config: `node` with the absolute path of `gm-mcp-server.mjs`. From a checkout, `node bin/gm-install.js` installs the skill and registers the server with every detected host. The npx route is retired.
+
+**MCP launch.** Server launches from local bundle, `~/.gm-tools/gm-mcp-server.mjs`, never from npx GitHub spec. Spec re-resolves package every connect (measured 8.2 s warm, 22.2 s cold, vs 0.19 s from disk), which under load can trip Claude Code's 30 s connect timeout ([gm-mcp/README.md](./gm-mcp/README.md)).
 
 Restart agent host after registration change. Then open agent, run `/gm` with description of change. Agent turns it into plan rows (one task each, see Terms) and works through them until every plan row closed.
 
