@@ -1,6 +1,7 @@
 ---
 name: gm-orient
 description: "First stage of resolving one PRD row: code search and code insight before any edit. Loads gm-unknowns next. Invoke only from gm-prd; do not load directly."
+exposed_when: prd:pending
 ---
 
 # gm-orient

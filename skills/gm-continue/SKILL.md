@@ -1,6 +1,7 @@
 ---
 name: gm-continue
 description: The mandatory final handoff after a gm walk reaches phase=COMPLETE with prd_pending_count=0. The agent shall never end a gm session with prose alone, and shall dispatch this skill instead. Searches for remaining work and reloads gm if any exists, or loads wfgy-method if a walk already repeated the same gap. Use immediately when any gm chain reaches its terminal state, never as a substitute for gm itself.
+exposed_when: COMPLETE
 ---
 
 # gm-continue

@@ -1,6 +1,7 @@
 ---
 name: gm-finish
 description: "Drains every open PRD row in bounded slices through the six-stage chain, archives rows that cannot run, and publishes after each slice. Invoke when asked to finish all remaining work. Loads gm-orient per row."
+exposed_when: prd:pending
 ---
 
 # gm-finish

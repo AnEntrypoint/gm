@@ -1,6 +1,7 @@
 ---
 name: gm
 description: "Drives a gm walk (nodes, PRD rows, pool and hop subagents) for coding, refactoring, debugging and engineering work. Use for a gm walk, a PRD row, or the pool protocol. Does not cover one-off questions, read-only lookups, code review, simplification, or launching the app."
+exposed_when: always
 ---
 
 # gm

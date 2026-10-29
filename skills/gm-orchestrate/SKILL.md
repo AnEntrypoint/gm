@@ -1,6 +1,7 @@
 ---
 name: gm-orchestrate
 description: "Main-thread pool loop for a gm walk that has advertised PRD rows or hops: fans out as many parallel graph workflows as the work allows, refills slots, and exits only at zero pending rows. Invoke only from gm; do not load directly. Hop rules are in gm-hop, PRD-row rules in gm-prd."
+exposed_when: prd:pending
 ---
 
 # gm-orchestrate

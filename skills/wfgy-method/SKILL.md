@@ -6,6 +6,7 @@ compatibility: "Designed for agent hosts. No external services, embedding models
 metadata:
   origin: adapted-from-onestardao-wfgy
   provenance: independent-honest-reimplementation-not-verbatim
+exposed_when: always
 ---
 
 # WFGY method

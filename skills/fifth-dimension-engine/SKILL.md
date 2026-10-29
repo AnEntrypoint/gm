@@ -6,6 +6,7 @@ compatibility: Portable "shoot + [problem]" command; works wherever an assistant
 metadata:
   origin: onestardao-wfgy-5.0-polaris-protocol
   provenance: adapted-and-honest-reimplementation-not-verbatim
+exposed_when: JTBD
 ---
 
 # Fifth-Dimension Engine

@@ -1,6 +1,7 @@
 ---
 name: gm-prd
 description: "Closes one PRD row through the gm stages: an executor edits and hands off, then verifier and CI lanes close it. Input: row=<id>; session=<SESSION_ID>; optional mode=witness. PRD-row rules are defined in this skill."
+exposed_when: prd:pending
 ---
 
 # gm-prd

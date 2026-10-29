@@ -6,6 +6,7 @@ compatibility: "Portable protocol; upstream released the Goal Compiler ChatGPT-f
 metadata:
   origin: onestardao-wfgy-5.0-polaris-protocol
   provenance: adapted-and-honest-reimplementation-not-verbatim
+exposed_when: G_START
 ---
 
 # WFGY 5.0 -- Polaris Protocol (tree root)

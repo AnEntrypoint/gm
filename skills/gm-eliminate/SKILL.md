@@ -1,6 +1,7 @@
 ---
 name: gm-eliminate
 description: "Third stage of resolving one PRD row: eliminates each unknown by a live JIT run, adding new unknowns found on the way. Loads gm-edit only when none is open. Invoke only from gm-prd; do not load directly."
+exposed_when: prd:pending
 ---
 
 # gm-eliminate

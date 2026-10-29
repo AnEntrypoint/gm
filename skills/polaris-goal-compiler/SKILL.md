@@ -6,6 +6,7 @@ compatibility: Upstream Polaris Goal Compiler is released ChatGPT-first (teaser 
 metadata:
   origin: onestardao-wfgy-5.0-polaris-protocol
   provenance: adapted-and-honest-reimplementation-not-verbatim
+exposed_when: G_START
 ---
 
 # Polaris Goal Compiler

@@ -1,6 +1,7 @@
 ---
 name: dream-rsi
 description: "Infer strategy proposals from Dream-RSI observation logs, and measure and propose gm-graph traversal coverage. Use when observation logs need strategy proposals. Proposes only; never deploys."
+exposed_when: always
 ---
 
 # dream-rsi inference

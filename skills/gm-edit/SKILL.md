@@ -1,6 +1,7 @@
 ---
 name: gm-edit
 description: "Fourth stage of resolving one PRD row: makes the edit the eliminated unknowns allow. Loads gm-validate next. Invoke only from gm-prd; do not load directly."
+exposed_when: prd:pending
 ---
 
 # gm-edit

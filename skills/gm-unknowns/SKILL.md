@@ -1,6 +1,7 @@
 ---
 name: gm-unknowns
 description: "Second stage of resolving one PRD row: writes the list of unknowns the row depends on. Loads gm-eliminate next. Invoke only from gm-prd; do not load directly."
+exposed_when: prd:pending
 ---
 
 # gm-unknowns

@@ -1,6 +1,7 @@
 ---
 name: gm-validate
 description: "Verification lane for one PRD row, spawned by the orchestrator after an executor hands off: validates the pushed edit with live JIT runs as a witness in its own session. Failures return to the orchestrator as a fix handoff; it does not loop into edit itself. Invoke only from the orchestrator; do not load directly."
+exposed_when: prd:pending
 ---
 
 # gm-validate

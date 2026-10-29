@@ -1,6 +1,7 @@
 ---
 name: gm-publish
 description: "Publish stage of one PRD row: merges upstream, commits local work by explicit path, pushes to main (executor), then a separate spawned CI lane reads ci-status for that sha. A CI failure returns to the orchestrator as a fix handoff. Invoke only from gm-prd or the orchestrator; do not load directly."
+exposed_when: prd:pending
 ---
 
 # gm-publish
