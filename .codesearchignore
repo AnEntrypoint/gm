@@ -10,3 +10,4 @@ rs-plugkit/wt-ci-status-fix/
 rs-plugkit/wt-config-lock-fix/
 vendor/
 gm-mcp/bin/
+gm-mcp/src/skills-snapshot.js
