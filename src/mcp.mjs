@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { basename, join, resolve } from 'node:path';
 import { createInterface } from 'node:readline';
-import { DEFAULT_WITNESS, prefixShaOf } from './prompt.mjs';
+import { DEFAULT_WITNESS, prefixShaOf, renderTools } from './prompt.mjs';
 import { createRun, isDirectory, loadTask, newRunId, ROOT, RUNS } from './run.mjs';
 import { conflicts, createTools } from './tools.mjs';
 
@@ -35,17 +35,17 @@ const TOOLS = [
   { name: 'read_file', description: 'Read a text file in the workspace.', inputSchema: objectSchema({ path: text }, ['path']) },
   { name: 'write_file', description: 'Write a text file in the workspace, creating parent directories.', inputSchema: objectSchema({ path: text, content: text }, ['path', 'content']) },
   { name: 'list_dir', description: 'List a workspace directory. Directories end with "/".', inputSchema: objectSchema({ path: text }) },
-  { name: 'run_shell', description: 'Run a shell command in the workspace and wait for it. Default timeout 60000 ms.', inputSchema: objectSchema({ command: text, timeoutMs: number }, ['command']) },
+  { name: 'run_shell', description: 'Run a shell command in the workspace and wait for it. Default timeout 60000 ms. Its process group is killed when it returns, so background work must go through job_start.', inputSchema: objectSchema({ command: text, timeoutMs: number }, ['command']) },
   { name: 'job_start', description: 'Start a shell command as a named background job and return at once. Poll it with job_status.', inputSchema: objectSchema({ job: text, command: text, timeoutMs: number }, ['job', 'command']) },
   { name: 'job_status', description: 'State (running, exited or killed), exit code and output tail of a job. waitMs polls until the job leaves running, at most 30000 ms.', inputSchema: objectSchema({ job: text, waitMs: number }, ['job']) },
   { name: 'query_log', description: 'Evaluate a JavaScript expression over the run events array and return JSON.', inputSchema: objectSchema({ js: text }, ['js']) },
   { name: 'finish', description: 'End the run. witness is one string that quotes the evidence you observed.', inputSchema: objectSchema({ witness: text }, ['witness']) },
 ];
 
-// The tool list as the prefix hash sees it: one line per tool, its schema and its description.
-const TOOL_TEXT = TOOLS.map((tool) => `${tool.name} ${JSON.stringify(tool.inputSchema)}: ${tool.description}`).join('\n');
-// next_context reads only the rules and the log, so it conflicts with no path call.
-const NO_PATHS = { items: [] };
+// The tool list as the prefix hash sees it, rendered the same way as the CLI's list.
+const TOOL_TEXT = renderTools(TOOLS);
+// next_context reads the rules and a snapshot of the log, so it never waits behind a path call or a barrier.
+const NO_PATHS = { items: [], free: true };
 
 class RpcError extends Error {
   constructor(code, message) {
@@ -162,7 +162,8 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight }) 
   function startableIndex(accesses) {
     const running = [...active.values()];
     return accesses.findIndex(
-      (access, i) => !running.some((other) => conflicts(other, access)) && !accesses.slice(0, i).some((earlier) => conflicts(earlier, access)),
+      (access, i) =>
+        access.free || (!running.some((other) => conflicts(other, access)) && !accesses.slice(0, i).some((earlier) => conflicts(earlier, access))),
     );
   }
 

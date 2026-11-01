@@ -14,13 +14,29 @@ export const DEFAULT_RULES = `# Rules
 export const DEFAULT_WITNESS =
   'Finish only with a witness: one string that states the evidence (command output, file content or query result) showing the task is done.';
 
-const TOOL_HELP = `read_file {path}: text of a file.
-write_file {path, content}: write a file, creating parent directories.
-list_dir {path}: entries of a directory; directories end with "/".
-run_shell {command, timeoutMs?, background?, job?}: run a shell command in the workspace (default timeout 60000 ms). Returns exitCode, signal and output. With background true and a job name, it returns at once; the job keeps running while you act. Read a job's files only after job_status shows exited. A job still running when the run ends is killed.
-job_status {job, waitMs?}: state (running, exited or killed), exitCode and the last 2000 characters of output. With waitMs it polls the job every 100 ms until it leaves running or waitMs passes (max 30000).
-query_log {js}: JavaScript expression over "events", every log event so far (seq, t, mono, kind, ...). Returns JSON. Kinds: start, reply, action, result, refusal, skipped, parse_error, error, end.
-finish {witness}: end the run. The witness must state the evidence.`;
+const str = { type: 'string' };
+const num = { type: 'number' };
+const obj = (properties, required = []) => ({ type: 'object', properties, required });
+
+// The CLI's tool list. renderTools turns it into the same text the MCP server renders for its own list.
+export const CLI_TOOLS = [
+  { name: 'read_file', description: 'text of a file.', inputSchema: obj({ path: str }, ['path']) },
+  { name: 'write_file', description: 'write a file, creating parent directories.', inputSchema: obj({ path: str, content: str }, ['path', 'content']) },
+  { name: 'list_dir', description: 'entries of a directory; directories end with "/".', inputSchema: obj({ path: str }) },
+  {
+    name: 'run_shell',
+    description: 'run a shell command in the workspace (default timeout 60000 ms). Returns exitCode, signal and output. The command process group is killed when the command returns, so background work must use background true with a job name. Read the job files only after job_status shows exited. A job still running when the run ends is killed.',
+    inputSchema: obj({ command: str, timeoutMs: num, background: { type: 'boolean' }, job: str }, ['command']),
+  },
+  { name: 'job_status', description: 'state (running, exited or killed), exitCode and the last 2000 characters of output. With waitMs it polls every 100 ms until the job leaves running or waitMs passes (max 30000).', inputSchema: obj({ job: str, waitMs: num }, ['job']) },
+  { name: 'query_log', description: 'JavaScript expression over "events", every log event so far (seq, t, mono, kind, ...). Returns JSON. Kinds: start, reply, action, result, refusal, skipped, parse_error, error, end.', inputSchema: obj({ js: str }, ['js']) },
+  { name: 'finish', description: 'end the run. The witness must state the evidence.', inputSchema: obj({ witness: str }, ['witness']) },
+];
+
+// One rendering for both modes: one line per tool, its input schema and its description.
+export function renderTools(tools) {
+  return tools.map((tool) => `${tool.name} ${JSON.stringify(tool.inputSchema)}: ${tool.description}`).join('\n');
+}
 
 const MAX_EVENT_CHARS = 4000;
 const MAX_ACTIONS = 16;
@@ -42,7 +58,7 @@ export function prefixShaOf(args) {
 }
 
 export function buildPrompt({ rules, spec, events, total }) {
-  const prefix = renderPrefix({ rules, task: spec.task, witness: spec.witness, tools: TOOL_HELP });
+  const prefix = renderPrefix({ rules, task: spec.task, witness: spec.witness, tools: renderTools(CLI_TOOLS) });
   const log = events.map(formatEvent).join('\n') || '(empty)';
   const window = `## Log: last ${events.length} of ${total} events (older events: query_log)\n\n${log}`;
   return { prompt: `${prefix}\n\n${window}`, prefix, prefixSha: hashPrefix(prefix) };

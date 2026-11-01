@@ -286,6 +286,13 @@ async function killGroup(pid) {
   signalGroup(pid, 'SIGKILL');
 }
 
+// The foreground rule: a command's group is killed the moment its shell exits, so no child outlives the call.
+function killGroupNow(pid) {
+  if (process.platform === 'win32') return taskkillTree(pid);
+  signalGroup(pid, 'SIGKILL');
+  return undefined;
+}
+
 function signalGroup(pid, signal) {
   try {
     process.kill(-pid, signal);
@@ -312,6 +319,7 @@ function shell(cwd, command, timeoutMs) {
     };
     const child = spawnGroup(command, cwd, ['ignore', 'pipe', 'pipe']);
     foregroundGroups.add(child.pid);
+    child.on('exit', () => killGroupNow(child.pid));
     child.stdout.setEncoding('utf8');
     child.stderr.setEncoding('utf8');
     child.stdout.on('data', collect);

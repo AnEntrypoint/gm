@@ -89,7 +89,7 @@ function doctor(flags) {
   const writable = probeWritable(workspace);
   console.log(`workspace ${workspace}: ${writable.ok ? 'writable' : `not writable (${writable.error})`}`);
   console.log(lastRunSummary());
-  console.log('limits: the Node-below-20 failure path has no live run; run_shell is unconfined, so a shell command can hard-link a file from outside the workspace');
+  console.log('limits: the Node-below-20 failure path has no live run; run_shell is unconfined, so a shell command can hard-link a file from outside the workspace; the process-group kill is unverified on Windows');
   return nodeOk && writable.ok ? 0 : 1;
 }
 
