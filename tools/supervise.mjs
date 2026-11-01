@@ -4,8 +4,8 @@
 // asks the worker to pause (SIGTERM, then SIGKILL after EXIT_MS), starts a new worker on the same run directory, replays
 // the MCP handshake, and tells the host that its tool, prompt and resource lists may have changed. The new worker resumes
 // the run from its log. A call in flight is never interrupted or answered with an error: the restart waits until its
-// result is logged. The relay stops this file with SIGTERM to replace it, and the worker is paused, not closed. Stdin
-// ending closes the run.
+// result is logged. Every exit of this file pauses the worker first, with SIGTERM, so the run stays open: SIGTERM, SIGINT and
+// the end of stdin all pause it. The worker also pauses if this file is killed, because it runs with --supervised yes.
 import { spawn } from 'node:child_process';
 import { existsSync, watch } from 'node:fs';
 import { createInterface } from 'node:readline';
@@ -105,6 +105,7 @@ function onChildLine(line) {
 function startWorker(reason) {
   const args = [WORKER, ...argv];
   if (reason) args.push('--restart-reason', reason);
+  args.push('--supervised', 'yes');
   const proc = spawn(process.execPath, args, { cwd: ROOT, stdio: ['pipe', 'pipe', 'pipe'] });
   child = proc;
   proc.stdin.on('error', () => {});
@@ -246,10 +247,10 @@ function onSourceChange(_event, file) {
   watchTimer = setTimeout(() => scheduleRestart(`changed: ${file}`), DEBOUNCE_MS);
 }
 
+// The end of this file's stdin, or SIGINT, pauses the worker. Ending the worker's stdin would close the run, and a closed
+// run stays closed, so the worker is stopped with SIGTERM instead.
 function shutdown() {
-  if (!child) process.exit(0);
-  child.once('exit', () => process.exit(0));
-  child.stdin.end();
+  pause(0);
 }
 
 // A supervisor the relay started after the host's initialize replays the handshake to its worker, as a restart does.
@@ -263,8 +264,7 @@ for (const dir of WATCHED) if (existsSync(dir)) watch(dir, { recursive: true }, 
 createInterface({ input: process.stdin, crlfDelay: Infinity }).on('line', onHostLine).on('close', shutdown);
 process.once('SIGINT', shutdown);
 process.once('SIGTERM', () => pause(0));
-// A crash this file can catch pauses the worker before it exits, so the run stays open for the relay's next start. Only a
-// kill that cannot be caught, such as SIGKILL, closes the run, because the worker then sees its stdin end.
+// A crash this file can catch pauses the worker before it exits, so the run stays open for the next start.
 process.on('uncaughtException', (err) => crash(err));
 process.on('unhandledRejection', (err) => crash(err));
 

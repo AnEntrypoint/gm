@@ -509,10 +509,16 @@ async function main(argv) {
   const session = createSession({ workspace, runDir, log, task, maxSteps, maxInflight, resume, jobLifetimeMs, recovery: recovery && recovery.open.length > 0 ? recovery : null, history });
   const lines = createInterface({ input: process.stdin, crlfDelay: Infinity });
   lines.on('line', session.accept);
-  lines.on('close', () => session.inputEnded().catch((err) => console.error(`gm-new: ${err.message}`)));
+  // Under a supervisor, the end of stdin means the supervisor has gone, so the run is paused. Closing it here would end the
+  // run as closed, and a closed run stays closed. A paused run has no end event, and the next start resumes it.
+  let pausing = null;
+  const pauseRun = (reason) => {
+    pausing ??= session.quiesceForRestart().then(() => log.append('paused', { reason })).finally(() => process.exit(0));
+    return pausing;
+  };
+  lines.on('close', () => (flags.supervised === 'yes' ? pauseRun('the supervisor ended stdin') : session.inputEnded().catch((err) => console.error(`gm-new: ${err.message}`))));
   process.once('SIGINT', () => lines.close());
-  // SIGTERM from the supervisor pauses the run. Closing stdin here would end the run as closed, so it does not.
-  process.once('SIGTERM', () => session.quiesceForRestart().then(() => log.append('paused', { reason: 'SIGTERM from the supervisor' })).finally(() => process.exit(0)));
+  process.once('SIGTERM', () => pauseRun('SIGTERM from the supervisor'));
   process.stdout.on('error', (err) => console.error(`gm-new: stdout: ${err.message}`));
   console.error(`gm-new mcp: run ${basename(runDir)} in ${runDir}`);
 }
