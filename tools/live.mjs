@@ -28,6 +28,8 @@ const RESEND_MS = 15000; // wait before resending a slash command that Claude di
 const MAX_SENDS = 4;
 const STAGGER_MS = 8000; // gap between trial starts, so sessions do not all start in the same second
 const TRUST_RETRY_MS = 3000; // while the trust dialog stays on screen, Down and Enter are sent again this often
+const MAX_ATTEMPTS = 2; // a trial whose session dies or never becomes ready is tried once more
+const RETRY_GAP_MS = 10000;
 // The cap across both arms: at most this many Claude Code sessions run at a time. The gm agent lowered it from 3 to 1
 // on 2026-11-01, because the machine was saturated. It rises back only once the runner's concurrency cap is committed
 // and the 1-minute load average is under 6 (see DESIGN.md).
@@ -90,13 +92,18 @@ async function main() {
       const wait = lastStart + STAGGER_MS - Date.now();
       lastStart = Math.max(Date.now(), lastStart + STAGGER_MS);
       if (wait > 0) await sleep(wait);
+      // A session that dies or never becomes ready gets one more attempt, since the machine is shared and that failure is transient.
       let result;
-      try {
-        result = await runTrial(args.arm, arm, job.task, job.trial, job.id, Number(args.port));
-      } catch (err) {
-        result = { id: job.id, arm: args.arm, task: job.task, trial: job.trial, error: err.message, metrics: { ok: false, error: err.message }, checker: { pass: false, detail: 'trial did not run' } };
-        mkdirSync(join(RESULTS, job.id), { recursive: true });
-        writeFileSync(join(RESULTS, job.id, 'result.json'), `${JSON.stringify(result, null, 2)}\n`);
+      for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
+        try {
+          result = await runTrial(args.arm, arm, job.task, job.trial, job.id, Number(args.port));
+          break;
+        } catch (err) {
+          result = { id: job.id, arm: args.arm, task: job.task, trial: job.trial, attempts: attempt, error: err.message, metrics: { ok: false, error: err.message }, checker: { pass: false, detail: 'trial did not run' } };
+          mkdirSync(join(RESULTS, job.id), { recursive: true });
+          writeFileSync(join(RESULTS, job.id, 'result.json'), `${JSON.stringify(result, null, 2)}\n`);
+          if (attempt < MAX_ATTEMPTS) await sleep(RETRY_GAP_MS);
+        }
       }
       results.push(result);
       if (result.error) console.log(`${result.id}: failed: ${result.error}`);
