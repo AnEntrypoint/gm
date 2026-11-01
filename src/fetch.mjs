@@ -1,3 +1,5 @@
+import { errorTypeOf, retrying } from './retry.mjs';
+
 const DEFAULT_TIMEOUT_MS = 15000;
 const MAX_TIMEOUT_MS = 60000;
 const DEFAULT_MAX_BYTES = 2000000;
@@ -22,9 +24,18 @@ export const FETCH_TOOLS = [
   },
 ];
 
-export function createFetchVerbs() {
-  return {
-    async fetch({ url, timeoutMs = DEFAULT_TIMEOUT_MS, maxBytes = DEFAULT_MAX_BYTES, maxRedirects = DEFAULT_REDIRECTS }) {
+export function createFetchVerbs({ log }) {
+  const verbs = {
+    fetch: (args) =>
+      retrying({
+        tool: 'fetch',
+        log,
+        attempt: async () => {
+          const result = await verbs.getOnce(args);
+          return { result, errorType: classify(result) };
+        },
+      }),
+    async getOnce({ url, timeoutMs = DEFAULT_TIMEOUT_MS, maxBytes = DEFAULT_MAX_BYTES, maxRedirects = DEFAULT_REDIRECTS }) {
       if (typeof url !== 'string') return fail('url must be a string');
       if (!Number.isInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > MAX_TIMEOUT_MS) return fail(`timeoutMs must be an integer from 1 to ${MAX_TIMEOUT_MS}`);
       if (!Number.isInteger(maxBytes) || maxBytes < 1 || maxBytes > MAX_MAX_BYTES) return fail(`maxBytes must be an integer from 1 to ${MAX_MAX_BYTES}`);
@@ -81,6 +92,13 @@ export function createFetchVerbs() {
       };
     },
   };
+  return verbs;
+}
+
+// A 408, 429 or 5xx status is a transient answer, so it is retried. Other statuses are final, and a 404 is never retried.
+function classify(result) {
+  if (result.ok && (result.status === 408 || result.status === 429 || result.status >= 500)) return `HTTP-${result.status}`;
+  return errorTypeOf(result);
 }
 
 function isWeb(url) {

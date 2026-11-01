@@ -1,6 +1,7 @@
 import { relative } from 'node:path';
 import { runCommand } from './exec.mjs';
 import { runGate } from './gate.mjs';
+import { errorTypeOf, retrying } from './retry.mjs';
 
 const GIT_TIMEOUT_MS = 120000;
 const GH_TIMEOUT_MS = 60000;
@@ -42,6 +43,17 @@ export function createGitVerbs({ root, confine, log }) {
   const gitRaw = (args, timeoutMs = GIT_TIMEOUT_MS) => runCommand('git', args, { cwd: root, timeoutMs, env: GIT_ENV });
   const git = async (args, timeoutMs) => verbOf(args[0], await gitRaw(args, timeoutMs));
 
+  // A network verb retries a transient failure, with a retry event each time. The local checks around it are not retried.
+  const retried = (tool, attempt) =>
+    retrying({
+      tool,
+      log,
+      attempt: async () => {
+        const result = await attempt();
+        return { result, errorType: errorTypeOf(result) };
+      },
+    });
+
   function pathArgs(list) {
     if (!Array.isArray(list) || list.length === 0 || !list.every((item) => typeof item === 'string')) {
       return { error: 'paths must be a non-empty array of strings' };
@@ -76,8 +88,8 @@ export function createGitVerbs({ root, confine, log }) {
     const name = repo ?? (await originRepo());
     if (name === null) return fail('origin is not a GitHub remote; pass repo as owner/name');
     const full = head.output.trim();
-    const api = await runCommand('gh', ['api', `repos/${name}/actions/runs?head_sha=${full}&per_page=20`], { cwd: root, timeoutMs: GH_TIMEOUT_MS });
-    if (!api.ok) return { ok: false, error: api.error ?? `gh api exited ${api.exitCode}`, output: api.output.trim() };
+    const api = await retried('ci_status', () => runCommand('gh', ['api', `repos/${name}/actions/runs?head_sha=${full}&per_page=20`], { cwd: root, timeoutMs: GH_TIMEOUT_MS }));
+    if (!api.ok) return { ok: false, error: api.error ?? `gh api exited ${api.exitCode}`, output: api.output.trim(), attempts: api.attempts };
     let runs;
     try {
       runs = JSON.parse(api.output).workflow_runs ?? [];
@@ -118,7 +130,7 @@ export function createGitVerbs({ root, confine, log }) {
       log.append('stage', { tool: 'git_push', stage: 'branch', startMono: branchStart, branch });
       if (branch !== 'main') return fail(`refused: git_push sends only main, and the current branch is ${branch ?? 'unknown'}`);
       const pushStart = log.now();
-      const result = await git(['push', '--set-upstream', 'origin', 'main'], GIT_TIMEOUT_MS);
+      const result = await retried('git_push', () => git(['push', '--set-upstream', 'origin', 'main'], GIT_TIMEOUT_MS));
       log.append('stage', { tool: 'git_push', stage: 'push', startMono: pushStart, ok: result.ok });
       return result;
     },
@@ -140,7 +152,7 @@ export function createGitVerbs({ root, confine, log }) {
       return bad ? fail(bad) : git(['show', '--no-color', '--stat', ref]);
     },
 
-    git_fetch: () => git(['fetch', 'origin']),
+    git_fetch: () => retried('git_fetch', () => git(['fetch', 'origin'])),
 
     git_pull: () => git(['pull', '--ff-only']),
 
