@@ -233,6 +233,7 @@ async function runTrial(armKey, arm, task, trial, id, port) {
     id,
     arm: armKey,
     route: arm.route,
+    witness: args.witness === 'true', // a witness checks that a route works; it is not a timed trial and counts in no group
     task,
     trial,
     marker,
@@ -464,7 +465,7 @@ function quietCounts(arm, route) {
     const file = join(RESULTS, name, 'result.json');
     if (!name.startsWith(`${arm}-`) || !existsSync(file)) continue;
     const result = JSON.parse(readFileSync(file, 'utf8'));
-    if (!result.error && result.metrics?.ok === true && result.route === route && loadGroup(result) === 'quiet') counts[result.task] = (counts[result.task] ?? 0) + 1;
+    if (!result.error && result.metrics?.ok === true && result.route === route && result.witness !== true && loadGroup(result) === 'quiet') counts[result.task] = (counts[result.task] ?? 0) + 1;
   }
   return counts;
 }
@@ -492,8 +493,9 @@ function report() {
       if (!name.startsWith(`${armKey}-`) || !existsSync(file)) continue;
       all.push(JSON.parse(readFileSync(file, 'utf8')));
     }
-    const invalid = all.filter((result) => result.error || result.metrics?.ok !== true);
-    const valid = all.filter((result) => !invalid.includes(result));
+    const witnesses = all.filter((result) => result.witness === true);
+    const invalid = all.filter((result) => !witnesses.includes(result) && (result.error || result.metrics?.ok !== true));
+    const valid = all.filter((result) => !invalid.includes(result) && !witnesses.includes(result));
     // Groups are keyed by route and load, so copied-skill and mcp-prompt trials are never pooled.
     const groups = {};
     for (const result of valid) (groups[`${result.route ?? 'unlabelled'}/${loadGroup(result)}`] ??= []).push(result);
@@ -502,6 +504,7 @@ function report() {
       trialRecords: all.length,
       valid: valid.length,
       invalid: invalid.map((result) => ({ id: result.id, task: result.task, reason: result.error ?? result.metrics?.error ?? 'no metrics' })),
+      witnesses: witnesses.map((result) => ({ id: result.id, route: result.route, task: result.task, checker: result.checker?.pass, load: result.load })),
       groups: Object.fromEntries(Object.entries(groups).map(([name, rows]) => [name, { trials: rows.length, summary: summarize(rows) }])),
     };
     writeFileSync(join(RESULTS, `report-${armKey}.json`), `${JSON.stringify(report, null, 2)}\n`);
@@ -525,7 +528,7 @@ function round(value) {
 }
 
 function parseArgs(argv) {
-  const out = { arm: 'A', tasks: 't1,t2,t3', trials: '3', concurrency: '1', port: '8810', resume: 'false', report: 'false', 'quiet-target': '0', attempts: String(MAX_ATTEMPTS), 'max-new': '999' };
+  const out = { arm: 'A', tasks: 't1,t2,t3', trials: '3', concurrency: '1', port: '8810', resume: 'false', report: 'false', 'quiet-target': '0', attempts: String(MAX_ATTEMPTS), 'max-new': '999', witness: 'false' };
   for (let i = 0; i < argv.length; i += 2) {
     const name = argv[i].replace(/^--/, '');
     if (!(name in out)) throw new Error(`unknown option --${name}`);
