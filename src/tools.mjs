@@ -3,7 +3,7 @@ import { closeSync, existsSync, lstatSync, mkdirSync, openSync, readFileSync, re
 import { mkdir, readdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { runQuery } from './log.mjs';
-import { foregroundGroups, killGroup, runCommand, signalGroup, sleep, spawnGroup } from './exec.mjs';
+import { foregroundGroups, killGroup, runCommand, signalGroup, spawnGroup } from './exec.mjs';
 import { createGitVerbs } from './git.mjs';
 import { createRowVerbs } from './rows.mjs';
 import { createSearchVerbs } from './search.mjs';
@@ -14,7 +14,6 @@ const DEFAULT_TIMEOUT_MS = 60000;
 const MAX_TIMEOUT_MS = 600000;
 const TAIL_CAP = 2000;
 const OUTPUT_PAGE = 20000;
-const POLL_MS = 100;
 const MAX_WAIT_MS = 30000;
 const JOB_NAME = /^[A-Za-z0-9_-]{1,64}$/;
 const BARRIER = { barrier: true };
@@ -105,12 +104,9 @@ export function createTools({ workspace, runDir, log, background = true }) {
     async job_status(args) {
       if (!JOB_NAME.test(args.job ?? '')) return { ok: false, error: 'job must be a job name' };
       const waitMs = Math.min(Math.max(Number(args.waitMs) || 0, 0), MAX_WAIT_MS);
-      const deadline = Date.now() + waitMs;
-      let status = readStatus(args.job);
-      while (status?.state === 'running' && Date.now() < deadline) {
-        await sleep(POLL_MS);
-        status = readStatus(args.job);
-      }
+      const job = jobs.get(args.job);
+      if (job && !job.settled && waitMs > 0) await waitOrTimeout(job.done, waitMs);
+      const status = readStatus(args.job);
       if (!status) return { ok: false, error: `no job named ${args.job}` };
       if (args.offset !== undefined) {
         const offset = args.offset;
@@ -245,6 +241,15 @@ function pageOf(events) {
     page.push(next);
   }
   return { events: page, next: page.length < events.length ? page.at(-1).seq : null };
+}
+
+// Waits for the job's completion event, with a deadline. The job settles when its process exits, so no timer polls it.
+function waitOrTimeout(promise, ms) {
+  let timer;
+  const deadline = new Promise((resolve) => {
+    timer = setTimeout(resolve, ms);
+  });
+  return Promise.race([promise, deadline]).finally(() => clearTimeout(timer));
 }
 
 function readTail(file, cap) {
