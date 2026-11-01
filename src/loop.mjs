@@ -9,7 +9,6 @@ const MAX_RETRY_AFTER_MS = 60000;
 const BASE_DELAY_MS = 1000;
 const MAX_DELAY_MS = 16000;
 const JITTER = 0.2;
-const RETRYABLE_STATUS = new Set([408, 409, 500, 529]);
 const RETRYABLE_NETWORK = new Set(['ECONNRESET', 'ETIMEDOUT', 'UND_ERR_SOCKET', 'UND_ERR_CONNECT_TIMEOUT', 'UND_ERR_HEADERS_TIMEOUT', 'UND_ERR_BODY_TIMEOUT', 'TimeoutError']);
 
 export async function runLoop({ runDir, spec, model, tools, log, maxSteps, serial = false }) {
@@ -92,7 +91,7 @@ async function askModel(model, { prompt, prefix }, { step, prefixSha, log }) {
 // Returns {delayMs, source, headerless} to retry, or {reason} to fail the call.
 function retryPlan(error, { retries, headerless429 }) {
   const rateLimited = error.status === 429;
-  const retryable = rateLimited || RETRYABLE_STATUS.has(error.status) || (error.network === true && RETRYABLE_NETWORK.has(error.errorType));
+  const retryable = rateLimited || retryableStatus(error.status) || (error.network === true && RETRYABLE_NETWORK.has(error.errorType));
   if (!retryable) {
     const where = error.status === undefined ? 'network' : `HTTP ${error.status}`;
     return { reason: `not retryable: ${where} ${error.errorType ?? ''}`.trim() };
@@ -109,6 +108,11 @@ function retryPlan(error, { retries, headerless429 }) {
   }
   if (retries >= MAX_RETRIES) return { reason: `${MAX_RETRIES} retries used` };
   return { delayMs: backoffMs(retries), source: 'backoff', headerless: rateLimited };
+}
+
+// 408, 409 and every 5xx are retried. A 429 has its own rule, and other 4xx fail at once.
+function retryableStatus(status) {
+  return status === 408 || status === 409 || (status >= 500 && status <= 599);
 }
 
 // Exponential backoff: 1 s, doubling, capped at 16 s, with plus or minus 20% jitter.
@@ -148,9 +152,10 @@ async function runAction({ tool, args }, step, tools, log) {
   return result;
 }
 
-// Groups actions into waves that run together. Actions in one wave touch no
-// path that another in the wave writes. A barrier action (shell, query_log,
-// finish, unknown tools) runs alone. Serial mode puts every action in its own wave.
+// Groups actions into waves that run together. Paths compare by real path and by
+// dev:ino group (hard links), so actions in one wave touch no file that another
+// in the wave writes. A barrier action (shell, query_log, finish, unknown tools,
+// a path that cannot be planned) runs alone. Serial mode puts every action in its own wave.
 export function planWaves(actions, tools, serial) {
   if (serial) return actions.map((action) => [action]);
   const waves = [];
@@ -178,7 +183,11 @@ export function planWaves(actions, tools, serial) {
 }
 
 function conflicts(item, items) {
-  return items.some((other) => (item.write || other.write) && (isPrefix(item.path, other.path) || isPrefix(other.path, item.path)));
+  return items.some((other) => (item.write || other.write) && (sameFile(item, other) || isPrefix(item.path, other.path) || isPrefix(other.path, item.path)));
+}
+
+function sameFile(a, b) {
+  return a.group !== undefined && a.group === b.group;
 }
 
 function isPrefix(a, b) {

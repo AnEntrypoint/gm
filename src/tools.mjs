@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import { closeSync, existsSync, mkdirSync, openSync, readFileSync, realpathSync, renameSync, writeFileSync } from 'node:fs';
+import { closeSync, existsSync, lstatSync, mkdirSync, openSync, readFileSync, realpathSync, renameSync, statSync, writeFileSync } from 'node:fs';
 import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { runQuery } from './log.mjs';
@@ -23,9 +23,9 @@ export function createTools({ workspace, runDir, log, background = true }) {
     if (rel.split(/[\\/]+/).includes('..')) return { refused: 'path has a .. segment' };
     const target = resolve(root, rel);
     if (!inside(root, target)) return { refused: 'path is outside the workspace' };
-    if (!inside(realRoot, realpathSync(nearestExisting(target)))) {
-      return { refused: 'path leads through a link outside the workspace' };
-    }
+    const real = realpathOrNull(nearestExisting(target));
+    if (real === null) return { refused: 'path leads through a link that does not resolve' };
+    if (!inside(realRoot, real)) return { refused: 'path leads through a link outside the workspace' };
     return { path: target };
   };
 
@@ -117,6 +117,7 @@ export function createTools({ workspace, runDir, log, background = true }) {
       child.on('close', (exitCode, signal) => finish(exitCode, signal));
     });
     jobs.set(name, job);
+    log.append('job', { job: name, state: 'running', pid: child.pid });
     return { ok: true, state: 'running', output: `started job ${name} (pid ${child.pid})` };
   }
 
@@ -127,9 +128,9 @@ export function createTools({ workspace, runDir, log, background = true }) {
       if (name === 'job_status') return { items: [] };
       if (name !== 'read_file' && name !== 'list_dir' && name !== 'write_file') return BARRIER;
       const rel = name === 'list_dir' ? (args.path ?? '.') : args.path;
-      const path = workspaceSegments(root, rel);
-      if (!path) return BARRIER;
-      return { items: [{ path, write: name === 'write_file' }] };
+      const at = planPath(root, rel);
+      if (!at) return BARRIER;
+      return { items: [{ path: at.path, group: at.group, write: name === 'write_file' }] };
     },
 
     async run(name, args) {
@@ -172,11 +173,28 @@ function readTail(file, cap) {
   return readFileSync(file, 'utf8').slice(-cap);
 }
 
-function workspaceSegments(root, rel) {
+// The real location of the path an action names, for wave planning. An existing
+// entry resolves through realpath and carries a dev:ino group, so hard links to
+// one file share a group. A new path resolves its nearest existing ancestor and
+// keeps the rest. Null means the path cannot be planned (outside the workspace,
+// a link that does not resolve, or an error), and the action runs alone.
+function planPath(root, rel) {
   if (typeof rel !== 'string' || rel === '' || rel.split(/[\\/]+/).includes('..')) return null;
   const target = resolve(root, rel);
   if (!inside(root, target)) return null;
-  return relative(root, target).split(sep).filter(Boolean);
+  try {
+    const nearest = nearestExisting(target);
+    const full = join(realpathSync(nearest), relative(nearest, target));
+    const group = nearest === target ? groupOf(full) : undefined;
+    return { path: full.split(sep), group };
+  } catch {
+    return null;
+  }
+}
+
+function groupOf(file) {
+  const { dev, ino } = statSync(file);
+  return `${dev}:${ino}`;
 }
 
 function refusal(reason) {
@@ -190,8 +208,27 @@ function inside(root, target) {
 
 function nearestExisting(target) {
   let current = target;
-  while (!existsSync(current) && dirname(current) !== current) current = dirname(current);
+  while (!entryExists(current) && dirname(current) !== current) current = dirname(current);
   return current;
+}
+
+// lstat, not existsSync: a dangling symlink is an entry, so it is found here and
+// then refused because its realpath fails.
+function entryExists(path) {
+  try {
+    lstatSync(path);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function realpathOrNull(path) {
+  try {
+    return realpathSync(path);
+  } catch {
+    return null;
+  }
 }
 
 function childEnv() {
