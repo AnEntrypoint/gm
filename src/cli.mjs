@@ -109,13 +109,15 @@ function probeWritable(dir) {
 
 function lastRunSummary() {
   if (!isDirectory(RUNS)) return 'last run: none (no runs/ directory)';
-  const ids = readdirSync(RUNS, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory())
-    .map((entry) => entry.name)
-    .sort();
-  if (ids.length === 0) return 'last run: none';
-  const id = ids.at(-1);
-  const events = readEvents(join(RUNS, id, 'log.jsonl'));
+  const runs = [RUNS, join(RUNS, 'self')]
+    .filter((dir) => isDirectory(dir))
+    .flatMap((dir) => readdirSync(dir)
+      .filter((name) => /^\d{4}(-\d{2}){5}-[0-9a-f]{6}$/.test(name) && existsSync(join(dir, name, 'log.jsonl')))
+      .map((name) => ({ id: name, file: join(dir, name, 'log.jsonl') })))
+    .sort((a, b) => a.id.localeCompare(b.id));
+  if (runs.length === 0) return 'last run: none';
+  const { id, file } = runs.at(-1);
+  const events = readEvents(file);
   return `last run ${id}: ${events.length} events, outcome ${lastOutcome(events)}`;
 }
 
