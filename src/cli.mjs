@@ -1,16 +1,14 @@
 #!/usr/bin/env node
 import { randomBytes } from 'node:crypto';
-import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { existsSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 import { runLoop } from './loop.mjs';
 import { anthropicRequestBody, createModel } from './models.mjs';
-import { openLog, readEvents, runQuery } from './log.mjs';
+import { readEvents, runQuery } from './log.mjs';
 import { buildPrompt, DEFAULT_RULES, DEFAULT_WITNESS } from './prompt.mjs';
 import { createTools } from './tools.mjs';
+import { createRun, isDirectory, loadTask, newRunId, RUNS } from './run.mjs';
 
-const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const RUNS = join(ROOT, 'runs');
 const USAGE = `usage:
   gmnew run --task <file-or-text> --workspace <dir> [--model scripted|anthropic] [--max-steps N]
             [--script <replies.json>] [--faults 429,429] [--serial] [--no-background]
@@ -50,15 +48,12 @@ async function run(flags) {
 
   const id = newRunId();
   const runDir = join(RUNS, id);
-  mkdirSync(runDir, { recursive: true });
-  writeFileSync(join(runDir, 'rules.md'), DEFAULT_RULES);
   const options = { serial, background, script: flags.script === undefined ? null : resolve(flags.script), faults: faults ?? null };
-  writeFileSync(
-    join(runDir, 'task.json'),
-    `${JSON.stringify({ id, ...spec, workspace, model: modelName, maxSteps, ...options, createdAt: new Date().toISOString() }, null, 2)}\n`,
-  );
-
-  const log = openLog(join(runDir, 'log.jsonl'));
+  const log = createRun({
+    runDir,
+    rules: DEFAULT_RULES,
+    meta: { id, ...spec, workspace, model: modelName, maxSteps, ...options, createdAt: new Date().toISOString() },
+  });
   const tools = createTools({ workspace, runDir, log, background });
   const result = await runLoop({ runDir, spec, model, tools, log, maxSteps, serial });
 
@@ -86,7 +81,7 @@ function doctor(flags) {
   const writable = probeWritable(workspace);
   console.log(`workspace ${workspace}: ${writable.ok ? 'writable' : `not writable (${writable.error})`}`);
   console.log(lastRunSummary());
-  console.log('limits: the Node-below-20 failure path has no live run; run_shell is unconfined');
+  console.log('limits: the Node-below-20 failure path has no live run; run_shell is unconfined, so a shell command can hard-link a file from outside the workspace');
   return nodeOk && writable.ok ? 0 : 1;
 }
 
@@ -162,25 +157,6 @@ function parseFaults(value) {
     throw new Error('--faults takes comma-separated HTTP statuses from 400 to 599, for example 429,429');
   }
   return statuses;
-}
-
-function loadTask(value) {
-  const path = resolve(value);
-  if (isFile(path)) return readFileSync(path, 'utf8');
-  return value;
-}
-
-function newRunId() {
-  const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
-  return `${stamp}-${randomBytes(3).toString('hex')}`;
-}
-
-function isDirectory(path) {
-  return existsSync(path) && statSync(path).isDirectory();
-}
-
-function isFile(path) {
-  return existsSync(path) && statSync(path).isFile();
 }
 
 main(process.argv.slice(2)).then(
