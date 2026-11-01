@@ -1,8 +1,15 @@
 # gm-new
 
-Carte blanche rethink of gm as a simple, fast, adaptable long-horizon worker.
+A single-worker long-horizon loop: one worker, one append-only log, governance rules re-read at every step. Design and evidence: `DESIGN.md` and `research/deep-research.md`.
 
-Status: research and design only. No implementation exists yet.
+Status: first slice. Node.js 20+, standard library only, no build step.
 
-- `research/deep-research.md`: cited synthesis from the deep-research run `wf_77db7747-1a6` (2026-11-01). 13 claims confirmed, 12 refuted, all sources and caveats listed.
-- `DESIGN.md`: design directions derived from that evidence, split into what is confirmed and what is still a hypothesis, plus the decisions that need an owner.
+## Run
+
+    node src/cli.mjs run --task "<text or file>" --workspace <dir> [--model scripted|anthropic] [--max-steps N]
+    node src/cli.mjs query --run <id> --js "events.filter((e) => e.kind === 'end')"
+
+- `scripted` is a deterministic offline model for smoke runs. It makes no API call.
+- `anthropic` calls the Messages API. It needs `ANTHROPIC_API_KEY`, and `GMNEW_MODEL` overrides the default `claude-sonnet-5-5`. The key is never logged and is removed from the environment that `run_shell` children get.
+- Each run writes `runs/<id>/` with `log.jsonl`, `rules.md` and `task.json`. `runs/` is git-ignored.
+- Paths given to the file tools are confined to the workspace. `run_shell` is not sandboxed.

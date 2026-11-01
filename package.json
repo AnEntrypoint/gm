@@ -1,0 +1,14 @@
+{
+  "name": "gm-new",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Single-worker long-horizon loop with a complete append-only log.",
+  "type": "module",
+  "bin": {
+    "gmnew": "src/cli.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {}
+}

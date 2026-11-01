@@ -2,6 +2,21 @@
 
 This note turns the evidence in `research/deep-research.md` into design directions. Each direction is marked as confirmed by the evidence, or as a hypothesis gm-new must test on its own workload before it becomes a design rule.
 
+## Decided
+
+- Scope: a fresh worker that replaces gm's loop, not a fork of gm. Reason: one worker, one log and one loop is the simplest design the evidence supports.
+- Language: Node.js 20+ ES modules, standard library only, zero dependencies. Reason: runs unchanged on macOS, Windows and Linux, on x64 and arm, with no build step.
+- Shape: one CLI process, with no MCP server, spool, daemon or network listener. Reason: the simplest transport.
+- Model: pluggable behind `reply(prompt)`, with `scripted` (offline, deterministic) and `anthropic` (Messages API via fetch). Reason: scripted gives a free end-to-end check, and anthropic is the real worker.
+- Anthropic model: default `claude-sonnet-5-5`, overridable with `GMNEW_MODEL`; the key comes only from `ANTHROPIC_API_KEY` and the run refuses without it. Reason: the key stays out of files, logs and shell children.
+- Context: no summarisation. Each prompt holds the rules, the task, the witness requirement and the last 20 events, plus `query_log` for older events. Reason: the log stays complete, so no lossy summary can drop a fact.
+- Governance: `rules.md` in the run directory is re-read at every step, placed first in the prompt and never compacted. Reason: rules that a summary drops are violated (finding 3).
+- Tools: `read_file`, `write_file`, `list_dir`, `run_shell` (60 s default timeout), `query_log`, `finish` (needs a witness). Reason: the worker's only actions, each plannable as a step (finding 4).
+- Path confinement: paths stay inside the workspace, a `..` segment is refused, and a symlink that leaves the workspace is refused. Refusals are logged as `refusal` events and not thrown. Reason: an escape attempt then shows up in the log.
+- Loop: plan, act, observe, repeat. Each reply is one JSON action, and every reply, action and result is appended to the log. Stops on `finish` or at `maxSteps` (default 50). An unparseable reply counts as one step. Reason: the simplest loop the log can replay.
+- Storage: `runs/<run-id>/` holds `log.jsonl` (append-only), `rules.md` and `task.json`, and `runs/` is git-ignored. Reason: runtime state is never tracked.
+- Remote: none. No GitHub repository and no push until the owner asks. Reason: publishing is outward-facing.
+
 ## Simplicity rule
 
 Start with one worker, one log and one loop. Add a component only when a measured run shows the current design failing. This follows the Anthropic harness guidance (low confidence, dated) and the single-agent baseline result (medium confidence).
@@ -28,14 +43,10 @@ Start with one worker, one log and one loop. Add a component only when a measure
 - Whether subagent isolation helps long-horizon outcomes (open question 4).
 - Whether rule re-injection restores compliance without losing permitted actions (open question 1).
 
-## Decisions that need an owner before building
+## Owner decisions (resolved)
 
-These are not answerable from the research:
-
-1. Scope: a fresh worker that replaces gm's loop, or a reduced fork of gm that keeps its verbs, memory and code search.
-2. Runtime and language, and whether the MCP and spool transport stays.
-3. Whether gm-new gets its own repository and remote. No remote exists yet, and pushing one is an outward-facing step.
+The three questions this section used to ask are answered in Decided: scope, runtime and language, and remote.
 
 ## Next step
 
-Pick the scope in decision 1. Then build the smallest worker that runs one long gm task end to end with a full log, and measure it against the current gm on the same task before adding anything from the directions above.
+The first slice runs end to end with the scripted model. Run it on one long task with the anthropic model, then measure it against the current gm on the same task before adding anything from the directions above.
