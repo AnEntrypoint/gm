@@ -9,6 +9,7 @@ import { conflicts, createTools } from './tools.mjs';
 import { GIT_TOOLS } from './git.mjs';
 import { ROW_TOOLS } from './rows.mjs';
 import { SEARCH_TOOLS } from './search.mjs';
+import { FETCH_TOOLS } from './fetch.mjs';
 import { writeSummary } from './summary.mjs';
 
 const PROTOCOL_VERSION = '2025-06-18';
@@ -51,6 +52,7 @@ const TOOLS = [
   { name: 'query_log', description: 'Evaluate a JavaScript expression over the run events array and return JSON.', inputSchema: objectSchema({ js: text }, ['js']) },
   { name: 'finish', description: 'End the run. witness is one string that quotes the evidence you observed.', inputSchema: objectSchema({ witness: text }, ['witness']) },
   ...SEARCH_TOOLS,
+  ...FETCH_TOOLS,
   ...GIT_TOOLS,
   ...ROW_TOOLS,
 ];
