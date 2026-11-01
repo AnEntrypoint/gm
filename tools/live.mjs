@@ -28,7 +28,6 @@ const RETRY_GAP_MS = 10000;
 const SEND_TIME_SLACK_MS = 2000;
 const MAX_CONCURRENCY = 1;
 const LOCK = join(ROOT, 'runs', 'live', '.lock');
-const GM_STATE = ['.gm', '.agentplug'];
 
 const ARMS = {
   A: {
@@ -206,8 +205,6 @@ async function runTrial(armKey, arm, task, trial, id, port) {
   const metrics = transcript ? parseTurn(readTranscript(transcript), marker) : { ok: false, error: 'transcript not found' };
   const checker = grade(task, workspace);
   const filesAfterRun = countFiles(workspace);
-  const removed = GM_STATE.filter((name) => existsSync(join(workspace, name)));
-  for (const name of removed) rmSync(join(workspace, name), { recursive: true, force: true });
 
   if (transcript) copyFileSync(transcript, join(dir, 'transcript.jsonl'));
   if (existsSync(join(project, 'run'))) cpSync(join(project, 'run'), join(dir, 'mcp-run'), { recursive: true });
@@ -223,7 +220,7 @@ async function runTrial(armKey, arm, task, trial, id, port) {
     outcome,
     metrics,
     checker,
-    workspaceFiles: { before: filesBefore, afterRun: filesAfterRun, afterCleanup: countFiles(workspace), removed },
+    workspaceFiles: { before: filesBefore, afterRun: filesAfterRun },
     load: { start: loadStart, end: round(loadavg()[0]) },
   };
   writeFileSync(join(dir, 'result.json'), `${JSON.stringify(result, null, 2)}\n`);
