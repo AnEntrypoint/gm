@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, statSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import { isAbsolute, relative, resolve } from 'node:path';
 
 // Review functions. A review packet names a spec, its sha256, and the paths it refers to. A review record is the verdict of
@@ -65,24 +66,56 @@ export function reviewRecord({ root, log, packet, verdict, reviewer, notes = '' 
   return { ok: true, packet, verdict };
 }
 
-// The join: one row per record, with the outcomes that follow it in the log, up to the next record. Each commit event carries
-// its gate outcome, each git_commit result carries ok, and an end event carries its status and witness.
-export function reviewJoin(events) {
+// The join: one row per record, with the outcomes that follow it, up to the next record. The spec's sha is read at each commit
+// from the commit's own tree (git show <sha>:<spec>), and at the end from the working tree. An outcome whose spec sha is not the
+// packet's sha is after-edit: it goes to unattributed, and it is not attributed to the record. A commit whose spec cannot be read
+// at the commit goes to unattributed too. A git_commit result follows its commit, and it takes the commit's attribution.
+export function reviewJoin(events, root) {
+  const packets = new Map();
+  for (const event of events) if (event.kind === 'review-packet') packets.set(event.packet, event);
   const rows = [];
   let row = null;
+  let commitCovered = true;
   for (const event of events) {
     if (event.kind === 'review') {
-      row = { packet: event.packet, verdict: event.verdict, reviewer: event.reviewer, isolation: event.isolation, seq: event.seq, outcomes: [] };
+      const made = packets.get(event.packet);
+      row = { packet: event.packet, verdict: event.verdict, reviewer: event.reviewer, isolation: event.isolation, seq: event.seq, spec: made?.spec ?? null, specSha: made?.specSha ?? null, outcomes: [], unattributed: [] };
       rows.push(row);
     } else if (row === null) {
       continue;
     } else if (event.kind === 'commit') {
-      row.outcomes.push({ seq: event.seq, kind: 'commit', gateOk: Array.isArray(event.gate) ? event.gate.every((check) => check.ok) : null, sha: event.sha ?? null });
+      const specAt = specShaAt(root, event.sha, row.spec);
+      commitCovered = specAt !== null && specAt === row.specSha;
+      const item = { seq: event.seq, kind: 'commit', gateOk: Array.isArray(event.gate) ? event.gate.every((check) => check.ok) : null, sha: event.sha ?? null, specSha: specAt };
+      place(row, commitCovered, item, specAt === null ? 'no spec at the commit' : 'after-edit');
     } else if (event.kind === 'result' && event.tool === 'git_commit') {
-      row.outcomes.push({ seq: event.seq, kind: 'git_commit', ok: event.ok === true });
+      const ok = event.ok === true;
+      const covered = ok ? commitCovered : true;
+      place(row, covered, { seq: event.seq, kind: 'git_commit', ok }, 'its commit is after-edit');
     } else if (event.kind === 'end') {
-      row.outcomes.push({ seq: event.seq, kind: 'end', status: event.status, witness: event.witness ?? null });
+      const now = currentSpecSha(root, row.spec);
+      const covered = now !== null && now === row.specSha;
+      place(row, covered, { seq: event.seq, kind: 'end', status: event.status, witness: event.witness ?? null, specSha: now }, now === null ? 'no spec on disk' : 'after-edit');
     }
   }
   return rows;
+}
+
+function place(row, covered, item, reason) {
+  if (covered) row.outcomes.push(item);
+  else row.unattributed.push({ ...item, reason });
+}
+
+// The spec's sha in the commit's tree, or null when the commit or the path is not there.
+function specShaAt(root, commit, spec) {
+  if (!root || !commit || !spec) return null;
+  const result = spawnSync('git', ['show', `${commit}:${spec}`], { cwd: root, timeout: 10000, maxBuffer: 64 * 1024 * 1024 });
+  return result.status === 0 ? sha256(result.stdout) : null;
+}
+
+// The spec's sha in the working tree now, or null when it is missing.
+function currentSpecSha(root, spec) {
+  if (!root || !spec) return null;
+  const at = fileAt(root, spec);
+  return at === null ? null : sha256(readFileSync(at));
 }
