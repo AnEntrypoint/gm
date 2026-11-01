@@ -144,14 +144,14 @@ async function trackedFiles(root) {
   }
 }
 
-function lineOf(text) {
+export function lineOf(text) {
   const tf = new Map();
   const tokens = tokensOf(text);
   for (const term of tokens) tf.set(term, (tf.get(term) ?? 0) + 1);
   return { text, len: tokens.length, tf };
 }
 
-function buildIndex(entries) {
+export function buildIndex(entries) {
   const docs = [];
   for (const entry of entries) {
     entry.lines.forEach((line, i) => {
@@ -169,7 +169,7 @@ function buildIndex(entries) {
   return { docs, postings, avg };
 }
 
-function rank(index, terms, k) {
+export function rank(index, terms, k) {
   const scores = new Map();
   const n = index.docs.length;
   for (const term of terms) {
@@ -190,7 +190,7 @@ function rank(index, terms, k) {
 }
 
 // An identifier gives its whole lowercase form, and its camelCase or snake_case parts when it has more than one.
-function tokensOf(text) {
+export function tokensOf(text) {
   const out = [];
   for (const word of text.match(/[A-Za-z0-9_]+/g) ?? []) {
     const whole = word.toLowerCase();
