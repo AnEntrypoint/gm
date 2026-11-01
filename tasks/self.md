@@ -2,7 +2,7 @@ Iterate on gm-new itself, in /workspace/gm-new, using the gm-new tools. Call nex
 
 Next work, in order, from the gm agent's phase plan (DESIGN.md, Decided, 2026-11-02):
 1. Phases 1 and 2 are witnessed in DESIGN.md under Measured: the kernel tools, and search (BM25 with literal, regex and whole-word grep). callers and impact stay unavailable until the user decides the parser dependency, and the reply must say so.
-2. Phase 3 is JIT execution: run the project's tests and checks through run_shell, each with a witness. Write no test files.
+2. Phase 3, JIT checks through run_shell, is witnessed in DESIGN.md under Measured (8 of 8). Open defect for the gate: doctor's last-run pick chooses runs/live over the timestamped runs. Write no test files.
 3. Phase 4 is optional: fetch, then browser over CDP, only if a project needs them.
 4. The gate: edit a small real change to gm-new with its own tools in a live Claude session through airc, commit it through its git verbs, and see CI pass. Only after that remove the gm dependencies listed in DESIGN.md under "Dependencies on gm, to be replaced", each in its own commit.
 5. Hot reload is witnessed in two sessions (DESIGN.md). The witness through the project's own .mcp.json in Claude Code waits for the user's one-time /mcp approval.
