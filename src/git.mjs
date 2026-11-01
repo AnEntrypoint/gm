@@ -36,7 +36,7 @@ export function commitExists(root, sha) {
   return runCommand('git', ['cat-file', '-e', `${sha}^{commit}`], { cwd: root, timeoutMs: CHECK_TIMEOUT_MS, env: GIT_ENV }).then((result) => result.ok);
 }
 
-export function createGitVerbs({ root, confine }) {
+export function createGitVerbs({ root, confine, log }) {
   const gitRaw = (args, timeoutMs = GIT_TIMEOUT_MS) => runCommand('git', args, { cwd: root, timeoutMs, env: GIT_ENV });
   const git = async (args, timeoutMs) => verbOf(args[0], await gitRaw(args, timeoutMs));
 
@@ -103,9 +103,14 @@ export function createGitVerbs({ root, confine }) {
     },
 
     async git_push() {
+      const branchStart = log.now();
       const branch = await currentBranch();
+      log.append('stage', { tool: 'git_push', stage: 'branch', startMono: branchStart, branch });
       if (branch !== 'main') return fail(`refused: git_push sends only main, and the current branch is ${branch ?? 'unknown'}`);
-      return git(['push', '--set-upstream', 'origin', 'main'], GIT_TIMEOUT_MS);
+      const pushStart = log.now();
+      const result = await git(['push', '--set-upstream', 'origin', 'main'], GIT_TIMEOUT_MS);
+      log.append('stage', { tool: 'git_push', stage: 'push', startMono: pushStart, ok: result.ok });
+      return result;
     },
 
     async git_log({ count = 20, path }) {

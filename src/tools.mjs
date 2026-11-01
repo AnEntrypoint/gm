@@ -119,7 +119,7 @@ export function createTools({ workspace, runDir, log, background = true }) {
       return { ok: true, finished: true, output: args.witness };
     },
   };
-  Object.assign(handlers, createGitVerbs({ root, confine }), createRowVerbs({ root, confine, log }), createSearchVerbs({ root, confine }));
+  Object.assign(handlers, createGitVerbs({ root, confine, log }), createRowVerbs({ root, confine, log }), createSearchVerbs({ root, confine }));
 
   function startJob(name, command, timeoutMs) {
     if (jobs.has(name)) return { ok: false, error: `job ${name} already exists` };
