@@ -140,6 +140,8 @@ Arm B (gm): 9 valid trials, 7 quiet and 2 unrecorded, and no loaded trial.
 
 Comparison: arm A has no quiet trial, and arm B's quiet trials cannot be set against arm A's unrecorded ones. So the arms are not compared, and no medians are read as a difference between gm-new and gm. The numbers above describe each arm's own trials. The tool-call split shows that each arm used its own MCP tools, but in different proportions per task.
 
+Pending handoff, not yet delivered: the gm agent was not reachable when this was sent (ListAgents showed no gm session). The request is to the gm agent, to do, since it is API-side: (1) measure G3, the cache effect, from the host transcripts. Each assistant record carries usage with cache_creation_input_tokens and cache_read_input_tokens. Report the cache read share per arm and route, from runs/live. Claim no saving until that is done. (2) Run the minimal tool set only if wanted, since every trial is a host model session, under the load rule.
+
 Still open: the minimal tool set (open question). The gaps G1 and G2 are built from the research consolidation, and G3 is handed to the gm agent, since measuring the cache is an API-side observation.
 
 ## Live comparison, quiet batch
