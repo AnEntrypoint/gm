@@ -9,6 +9,7 @@ const MAX_FILE_BYTES = 1000000;
 const MAX_LIST_BYTES = 64 * 1024 * 1024;
 const LIST_TIMEOUT_MS = 30000;
 const SNIPPET_CHARS = 300;
+const OUTPUT_PAGE = 20000;
 const DEFAULT_K = 10;
 const MAX_K = 50;
 const DEFAULT_LIMIT = 100;
@@ -30,7 +31,7 @@ export const SEARCH_TOOLS = [
   {
     name: 'grep',
     description: 'Find text in git-tracked files. mode is literal (default), regex, or word (a whole identifier). Returns path:line text. ignoreCase is optional; limit is 1 to 1000, default 100.',
-    inputSchema: obj({ pattern: str, mode: str, ignoreCase: bool, limit: num }, ['pattern']),
+    inputSchema: obj({ pattern: str, mode: str, ignoreCase: bool, limit: num, offset: num }, ['pattern']),
   },
 ];
 
@@ -53,7 +54,7 @@ export function createSearchVerbs({ root, confine }) {
       return { ok: true, output: lines.length ? lines.join('\n') : '(no match)' };
     },
 
-    async grep({ pattern, mode = 'literal', ignoreCase = false, limit = DEFAULT_LIMIT }) {
+    async grep({ pattern, mode = 'literal', ignoreCase = false, limit = DEFAULT_LIMIT, offset = 0 }) {
       if (typeof pattern !== 'string' || pattern === '') return fail('pattern must be a non-empty string');
       if (pattern.length > MAX_PATTERN_CHARS) return fail(`pattern must be at most ${MAX_PATTERN_CHARS} characters`);
       if (!MODES.includes(mode)) return fail(`mode must be one of ${MODES.join(', ')}`);
@@ -66,16 +67,26 @@ export function createSearchVerbs({ root, confine }) {
       }
       const listed = await loadFiles();
       if (listed.error) return fail(listed.error);
+      if (!Number.isInteger(offset) || offset < 0) return fail('offset must be a whole number, zero or more');
       const found = [];
       let total = 0;
+      let size = 0;
+      let next = null;
       for (const entry of listed.entries) {
         entry.lines.forEach((line, i) => {
           if (!matches(line.text)) return;
           total += 1;
-          if (found.length < limit) found.push(`${entry.rel}:${i + 1} ${snippet(line.text)}`);
+          if (total <= offset || next !== null) return;
+          const row = `${entry.rel}:${i + 1} ${snippet(line.text)}`;
+          if (found.length >= limit || size + row.length > OUTPUT_PAGE) {
+            next = total - 1;
+            return;
+          }
+          found.push(row);
+          size += row.length + 1;
         });
       }
-      const footer = total > found.length ? [`(${total} matches, first ${found.length} shown; raise limit or narrow the pattern)`] : [`(${total} matches)`];
+      const footer = [`(${total} matches; showing ${found.length ? offset : 0} to ${offset + found.length}; ${next === null ? 'no more' : `next offset ${next}`})`];
       return { ok: true, output: [...found, ...footer].join('\n') };
     },
   };

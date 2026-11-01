@@ -13,6 +13,7 @@ import { createCodeVerbs } from './code.mjs';
 const DEFAULT_TIMEOUT_MS = 60000;
 const MAX_TIMEOUT_MS = 600000;
 const TAIL_CAP = 2000;
+const OUTPUT_PAGE = 20000;
 const POLL_MS = 100;
 const MAX_WAIT_MS = 30000;
 const JOB_NAME = /^[A-Za-z0-9_-]{1,64}$/;
@@ -41,7 +42,13 @@ export function createTools({ workspace, runDir, log, background = true }) {
     async read_file(args) {
       const at = confine(args.path);
       if (at.refused) return refusal(at.refused);
-      return { ok: true, output: await readFile(at.path, 'utf8') };
+      const offset = args.offset ?? 0;
+      const limit = args.limit ?? OUTPUT_PAGE;
+      if (!Number.isInteger(offset) || offset < 0) return { ok: false, error: 'offset must be a whole number of characters, zero or more' };
+      if (!Number.isInteger(limit) || limit < 1 || limit > OUTPUT_PAGE) return { ok: false, error: `limit must be a whole number from 1 to ${OUTPUT_PAGE}` };
+      const text = await readFile(at.path, 'utf8');
+      const end = Math.min(offset + limit, text.length);
+      return { ok: true, output: text.slice(offset, end), total: text.length, offset, next: end < text.length ? end : null };
     },
 
     async write_file(args) {
@@ -105,6 +112,13 @@ export function createTools({ workspace, runDir, log, background = true }) {
         status = readStatus(args.job);
       }
       if (!status) return { ok: false, error: `no job named ${args.job}` };
+      if (args.offset !== undefined) {
+        const offset = args.offset;
+        if (!Number.isInteger(offset) || offset < 0) return { ok: false, error: 'offset must be a whole number of characters, zero or more' };
+        const text = existsSync(status.output) ? readFileSync(status.output, 'utf8') : '';
+        const end = Math.min(offset + OUTPUT_PAGE, text.length);
+        return { ok: true, state: status.state, output: JSON.stringify({ ...status, chunk: text.slice(offset, end), total: text.length, offset, next: end < text.length ? end : null }) };
+      }
       const tail = readTail(status.output, TAIL_CAP);
       return { ok: true, state: status.state, output: JSON.stringify({ ...status, tail }) };
     },
