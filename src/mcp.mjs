@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { readFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
-import { basename, join, resolve } from 'node:path';
+import { basename, dirname, join, resolve } from 'node:path';
 import { createInterface } from 'node:readline';
 import { DEFAULT_WITNESS, prefixShaOf, renderTools } from './prompt.mjs';
 import { isDirectory, loadTask, newRunId, openRun, ROOT, RUNS } from './run.mjs';
@@ -73,6 +73,7 @@ class RpcError extends Error {
 }
 
 function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, resume = null }) {
+  const runId = basename(runDir);
   const tools = createTools({ workspace, runDir, log, background: true });
   const active = new Map();
   const waiting = [];
@@ -207,7 +208,9 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
   }
 
   function endedReason() {
-    return ended === 'closed' ? 'stdin closed before the call started' : `run has ended (${ended})`;
+    if (ended === 'closed') return 'stdin closed before the call started';
+    if (ended === 'restarting') return 'the server is restarting; repeat the call';
+    return `run ${runId} has ended (${ended}); restart the server to open a new run`;
   }
 
   function invoke(name, args, access) {
@@ -370,21 +373,29 @@ async function main(argv) {
   const task = loadTask(flags.task).trim();
   if (task === '') throw new Error('--task is empty');
 
-  const runDir = flags['run-dir'] === undefined ? join(RUNS, newRunId()) : resolve(flags['run-dir']);
-  const id = basename(runDir);
-  const meta = { id, mode: 'mcp', task, witness: DEFAULT_WITNESS, workspace, maxSteps, maxInflight, createdAt: new Date().toISOString() };
-  const { log, resumed } = openRun({ runDir, rules: MCP_RULES, meta });
+  let runDir = flags['run-dir'] === undefined ? join(RUNS, newRunId()) : resolve(flags['run-dir']);
+  const runMeta = (dir) => ({ id: basename(dir), mode: 'mcp', task, witness: DEFAULT_WITNESS, workspace, maxSteps, maxInflight, createdAt: new Date().toISOString() });
+  let { log, resumed } = openRun({ runDir, rules: MCP_RULES, meta: runMeta(runDir) });
+  let resume = resumed ? resumeFrom(log.events()) : null;
+  if (resume?.ended) {
+    // A closed run stays closed. A start after it opens a new run beside it, with the same task and workspace.
+    const closed = `${basename(runDir)} (${resume.ended})`;
+    runDir = join(dirname(runDir), newRunId());
+    ({ log, resumed } = openRun({ runDir, rules: MCP_RULES, meta: runMeta(runDir) }));
+    resume = null;
+    console.error(`gm-new mcp: run ${closed} is closed; opened run ${basename(runDir)}`);
+  }
   if (resumed) log.append('restart', { reason: flags['restart-reason'] ?? 'restarted without a reason' });
   else log.append('start', { mode: 'mcp', maxSteps, maxInflight });
 
-  const session = createSession({ workspace, runDir, log, task, maxSteps, maxInflight, resume: resumed ? resumeFrom(log.events()) : null });
+  const session = createSession({ workspace, runDir, log, task, maxSteps, maxInflight, resume });
   const lines = createInterface({ input: process.stdin, crlfDelay: Infinity });
   lines.on('line', session.accept);
   lines.on('close', () => session.inputEnded().catch((err) => console.error(`gm-new: ${err.message}`)));
   for (const signal of ['SIGINT', 'SIGTERM']) process.once(signal, () => lines.close());
   process.on('SIGUSR2', () => session.quiesceForRestart().finally(() => process.exit(0)));
   process.stdout.on('error', (err) => console.error(`gm-new: stdout: ${err.message}`));
-  console.error(`gm-new mcp: run ${id} in ${runDir}`);
+  console.error(`gm-new mcp: run ${basename(runDir)} in ${runDir}`);
 }
 
 main(process.argv.slice(2)).catch((err) => {
