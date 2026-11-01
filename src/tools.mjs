@@ -8,6 +8,7 @@ import { createGitVerbs } from './git.mjs';
 import { createRowVerbs } from './rows.mjs';
 import { createSearchVerbs } from './search.mjs';
 import { createFetchVerbs } from './fetch.mjs';
+import { createCodeVerbs } from './code.mjs';
 
 const DEFAULT_TIMEOUT_MS = 60000;
 const MAX_TIMEOUT_MS = 600000;
@@ -18,7 +19,7 @@ const JOB_NAME = /^[A-Za-z0-9_-]{1,64}$/;
 const BARRIER = { barrier: true };
 const PATH_TOOLS = new Set(['read_file', 'write_file', 'edit_file', 'list_dir', 'stat_file']);
 const WRITE_TOOLS = new Set(['write_file', 'edit_file']);
-const READ_ONLY = new Set(['job_status', 'search', 'grep', 'fetch']);
+const READ_ONLY = new Set(['job_status', 'search', 'grep', 'fetch', 'callers', 'impact']);
 
 export function createTools({ workspace, runDir, log, background = true }) {
   const root = resolve(workspace);
@@ -120,7 +121,7 @@ export function createTools({ workspace, runDir, log, background = true }) {
       return { ok: true, finished: true, output: args.witness };
     },
   };
-  Object.assign(handlers, createGitVerbs({ root, confine, log }), createRowVerbs({ root, confine, log }), createSearchVerbs({ root, confine }), createFetchVerbs());
+  Object.assign(handlers, createGitVerbs({ root, confine, log }), createRowVerbs({ root, confine, log }), createSearchVerbs({ root, confine }), createFetchVerbs(), createCodeVerbs({ root, confine }));
 
   function startJob(name, command, timeoutMs) {
     if (jobs.has(name)) return { ok: false, error: `job ${name} already exists` };
