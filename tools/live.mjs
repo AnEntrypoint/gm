@@ -43,8 +43,9 @@ const GM_STATE = ['.gm', '.agentplug'];
 const ARMS = {
   A: {
     label: 'gm-new',
-    command: '/gm-new',
-    skill: { name: 'gm-new', file: join(ROOT, 'skills', 'gm-new', 'SKILL.md') },
+    command: '/mcp__gm-new__gm-new',
+    route: 'mcp-prompt', // the skill is served over MCP as the prompt, so nothing is copied into the project
+    skill: null,
     server: (project) => ({
       command: 'node',
       args: [join(ROOT, 'src', 'mcp.mjs'), '--workspace', join(project, 'ws'), '--run-dir', join(project, 'run'), '--task', join(project, 'task.md')],
@@ -53,6 +54,7 @@ const ARMS = {
   B: {
     label: 'gm',
     command: '/mcp__gm__gm',
+    route: 'mcp-prompt',
     skill: null,
     server: () => ({ command: 'node', args: ['/config/.gm-tools/gm-mcp-server.mjs'] }),
   },
@@ -79,7 +81,7 @@ async function main() {
   if (Number(args['quiet-target']) > 0) {
     // Quiet mode: each task needs this many valid trials started under the load threshold. Only quiet trials count.
     const target = Number(args['quiet-target']);
-    const quiet = quietCounts(args.arm);
+    const quiet = quietCounts(args.arm, arm.route);
     jobs.length = 0;
     for (const task of args.tasks.split(',')) {
       // --max-new caps the slots added for one task in a pass; a replacement pass uses 2.
@@ -230,6 +232,7 @@ async function runTrial(armKey, arm, task, trial, id, port) {
   const result = {
     id,
     arm: armKey,
+    route: arm.route,
     task,
     trial,
     marker,
@@ -455,13 +458,13 @@ function printSummary(arm, summary) {
 }
 
 // Valid quiet trials per task for this arm: metrics present, no error, and a start load under LOADED_AT.
-function quietCounts(arm) {
+function quietCounts(arm, route) {
   const counts = {};
   for (const name of readdirSync(RESULTS)) {
     const file = join(RESULTS, name, 'result.json');
     if (!name.startsWith(`${arm}-`) || !existsSync(file)) continue;
     const result = JSON.parse(readFileSync(file, 'utf8'));
-    if (!result.error && result.metrics?.ok === true && loadGroup(result) === 'quiet') counts[result.task] = (counts[result.task] ?? 0) + 1;
+    if (!result.error && result.metrics?.ok === true && result.route === route && loadGroup(result) === 'quiet') counts[result.task] = (counts[result.task] ?? 0) + 1;
   }
   return counts;
 }
@@ -491,8 +494,9 @@ function report() {
     }
     const invalid = all.filter((result) => result.error || result.metrics?.ok !== true);
     const valid = all.filter((result) => !invalid.includes(result));
-    const groups = { quiet: [], loaded: [], unrecorded: [] };
-    for (const result of valid) groups[loadGroup(result)].push(result);
+    // Groups are keyed by route and load, so copied-skill and mcp-prompt trials are never pooled.
+    const groups = {};
+    for (const result of valid) (groups[`${result.route ?? 'unlabelled'}/${loadGroup(result)}`] ??= []).push(result);
     const report = {
       arm: armKey,
       trialRecords: all.length,
@@ -502,7 +506,7 @@ function report() {
     };
     writeFileSync(join(RESULTS, `report-${armKey}.json`), `${JSON.stringify(report, null, 2)}\n`);
     console.log(`arm ${armKey}: ${valid.length} valid of ${all.length} trial records, ${invalid.length} invalid`);
-    for (const name of ['quiet', 'loaded', 'unrecorded']) {
+    for (const name of Object.keys(groups).sort()) {
       console.log(`${name}: ${groups[name].length} trials`);
       printSummary(`${armKey} ${name}`, summarize(groups[name]));
     }

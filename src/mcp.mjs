@@ -10,6 +10,11 @@ import { writeSummary } from './summary.mjs';
 
 const PROTOCOL_VERSION = '2025-06-18';
 const SERVER_INFO = { name: 'gm-new', version: JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')).version };
+// The skill is served over MCP only, as a prompt and as a resource. SKILL.md is the single source, read once at start.
+const SKILL_URI = 'gm-new://skill/SKILL.md';
+const SKILL = parseSkill(readFileSync(join(ROOT, 'skills', 'gm-new', 'SKILL.md'), 'utf8'));
+const SKILL_PROMPT = { name: SKILL.name, description: SKILL.description, arguments: [{ name: 'task', description: 'The task to run', required: false }] };
+const SKILL_RESOURCE = { uri: SKILL_URI, name: `${SKILL.name} skill`, description: SKILL.description, mimeType: 'text/markdown' };
 const WINDOW = 20;
 const EVENT_CAP = 4000;
 const DEFAULT_MAX_STEPS = 50;
@@ -47,6 +52,14 @@ const TOOLS = [
 const TOOL_TEXT = renderTools(TOOLS);
 // next_context reads the rules and a snapshot of the log, so it never waits behind a path call or a barrier.
 const NO_PATHS = { items: [], free: true };
+
+// Splits SKILL.md into its frontmatter fields, its body and its full text.
+function parseSkill(text) {
+  const match = /^---\n([\s\S]*?)\n---\n?/.exec(text);
+  if (!match) throw new Error('skills/gm-new/SKILL.md has no frontmatter');
+  const fields = Object.fromEntries(match[1].split('\n').map((line) => line.split(/:\s*(.*)/s).slice(0, 2)));
+  return { text, name: fields.name, description: fields.description, body: text.slice(match[0].length).trim() };
+}
 
 class RpcError extends Error {
   constructor(code, message) {
@@ -115,13 +128,30 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight }) 
     if (method === 'ping' || method === 'server/discover') return {};
     if (method === 'tools/list') return { tools: TOOLS };
     if (method === 'tools/call') return callTool(params);
+    if (method === 'prompts/list') return { prompts: [SKILL_PROMPT] };
+    if (method === 'prompts/get') return getPrompt(params);
+    if (method === 'resources/list') return { resources: [SKILL_RESOURCE] };
+    if (method === 'resources/read') return readResource(params);
     if (method.startsWith('notifications/')) return null;
     throw new RpcError(-32601, `method not found: ${method}`);
   }
 
   function initialize(params) {
     const version = typeof params?.protocolVersion === 'string' ? params.protocolVersion : PROTOCOL_VERSION;
-    return { protocolVersion: version, capabilities: { tools: {} }, serverInfo: SERVER_INFO };
+    return { protocolVersion: version, capabilities: { tools: {}, prompts: {}, resources: {} }, serverInfo: SERVER_INFO };
+  }
+
+  // The skill body as a user message. A task argument, when given, is appended after the body.
+  function getPrompt(params) {
+    if (params?.name !== SKILL.name) throw new RpcError(-32602, `unknown prompt: ${params?.name}`);
+    const task = typeof params?.arguments?.task === 'string' ? params.arguments.task.trim() : '';
+    const text = task === '' ? SKILL.body : `${SKILL.body}\n\nTask: ${task}`;
+    return { description: SKILL.description, messages: [{ role: 'user', content: { type: 'text', text } }] };
+  }
+
+  function readResource(params) {
+    if (params?.uri !== SKILL_URI) throw new RpcError(-32602, `unknown resource: ${params?.uri}`);
+    return { contents: [{ uri: SKILL_URI, mimeType: 'text/markdown', text: SKILL.text }] };
   }
 
   async function callTool(params) {
