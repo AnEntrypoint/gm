@@ -124,6 +124,18 @@ The three questions this section used to ask are answered in Decided: scope, run
 
 Work follows the gm agent's phase plan (2026-11-02, see Decided). Phase 1, the kernel tools, and phase 2, search, are witnessed in Measured. callers and impact wait for the user's parser decision. Phase 3, JIT checks through run_shell, is witnessed in Measured. Phase 4 (fetch, then browser) is skipped: no project of gm-new needs it yet, and the plan makes it optional. The commit gate is built and in use (commit 1e40fcb, witnessed by events 39 and 49). gm-new must not depend on gm. The live comparison is closed (see "Project close"). Still open and recorded: the minimal tool set (not run), and G3 (cache effect), now measured as a cache share, with no saving claimed.
 
+## Decisions on the open items, 2026-11-01 (gm agent)
+
+Each item below records the decision and its trigger. A trigger is the only condition under which the item reopens.
+
+- Minimal tool set: closed, not pursued. No decision depends on it. Live trials use the owner's login and are rate-limited. Trigger to reopen: a concrete question that depends on the tool set.
+- Rule re-injection (open question 1): deferred. Trigger: a live run shows a rule violated after a summary. Summaries do not happen while the log is complete. No live trials are spent now.
+- Subagent isolation (open questions 3 and 4): deferred. Trigger: a long-horizon run shows a single worker hitting a limit. Until then no subagents are built.
+- Windows process-group kill: a named limit. Windows support is not claimed until a Windows witness exists.
+- Proactive mode, verification-gated admission, the matched-budget falsifier and the raw-replay arm: future, unchanged. Not built.
+- Validated compaction and the RL summariser: deferred. Trigger: a scripted run at 20000 events where query_log takes over 100 ms. Below that, compaction is not built. The measured point is 2002 events, with query_log at 3 to 5 ms (commit 2121c2d).
+- CI: closed. The owner chose no CI for gm-new. The commit gate is the check. The gate is built: commit 1e40fcb passed all four checks (its git_commit result is event 39), and a commit with a bad doc path was refused (event 49).
+
 ## Open items, status 2026-11-01
 
 - Minimal tool set: open. Blocked: it needs live trials under the load rule, and the gm agent did not request it.
