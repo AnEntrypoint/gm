@@ -300,6 +300,24 @@ Status (2026-11-01): the gm dependencies are removed, except the gm runner's fil
 - Removed, process only: the builder briefs' `gm.codesearch` use and the relayed coordination. Neither is a dependency of gm-new code.
 - Not a dependency: the the removed live runner arm B and cleanup items (removed, bullets above); the recorded arm B trials `runs/live/B-*` and `report-B.json`, which are a comparison record; the MCP server name `gm-new`; the `gm-new` skill; and the research notes that cite gm's evidence.
 
+## Code surface, pre-registration (gm agent decision, 2026-11-01)
+
+Recorded before any run of either surface. The criteria below decide. A result is not read against a preferred outcome.
+
+- Surfaces: `tools` (the current per-tool surface, default) and `code` (`--surface code`: the tool list is `next_context`, `run_code` and `finish`, and `run_code` takes a JavaScript body that calls the same verbs as `gm.<verb>(args)`). The witness rule, the commit gate and the rules re-read are the same on both surfaces.
+- Tasks, fixed. Each trial starts in a fresh temporary workspace that the harness fills with the same files.
+  - T1: `a.txt` and `b.txt` each hold lines. Write `c.txt` with the first line of `a.txt` followed by the first line of `b.txt`, then finish with a witness. Checker: `c.txt` has exactly those two lines.
+  - T2: count the lines that contain `TODO` in the `.mjs` files of the workspace. Write the count to `count.txt`, then finish. Checker: `count.txt` holds the scripted count.
+  - T3: start a background job that sleeps 3 seconds and writes `done.txt`. While it runs, write `other.txt`. Poll the job until it has exited, then finish. Checker: `done.txt` and `other.txt` exist and the job state is `exited`.
+- Pass: the checker passes, and the run ends with `finish` and a non-empty witness, with status `finished`.
+- Host tokens per task: the sum of `input_tokens`, `output_tokens`, `cache_creation_input_tokens` and `cache_read_input_tokens` over the assistant messages of the task's host transcript, each message counted once by its message id. The primary figure is this total. Input plus output alone is reported as a secondary figure, not decided on.
+- Steps per task: the number of assistant messages that contain a tool call.
+- Trials: at least three per task per surface. gm's codemode runs the same three tasks as the comparison arm.
+- Decision rule, on pooled trials of T1 to T3: the `code` surface is kept only if (a) its median host tokens per task is at least 20% lower than the `tools` surface's median, (b) its median steps is lower, and (c) its pass rate is not lower. If any of the three fails, the `tools` surface stays the default.
+- Load rule: no live trial starts while the one-minute load average is above 6 (DESIGN.md, Live comparison).
+- Scripted measurements, which make no model call, run first: (1) the bytes and the approximate tokens (bytes / 4) of each surface's tool list; (2) the MCP calls one fixed scripted run of T1 to T3 needs on each surface; (3) how many prefix hashes change when one tool description is edited, for each description in turn.
+- Live measurements are model runs. They are reported to the gm agent to run, and this repository does not run them (AGENTS.md, hard rules).
+
 ## Measured
 
 - Tool list hash witness (brief change 7, run 2026-11-01-18-39-35-820e47): the `tools` event at seq 258 has sha 5e8c956cc447. The fetch description changed, which was needed (the body is untrusted input), and the next start logged `tools-changed` at seq 266 with old 5e8c956cc447 and new 39a328f0521e, then `tools` at seq 267. Friction, recorded: an edit that added a call before its definition made the restart fail, and the supervisor held every call in its failed state until the next source change. That change restarted the worker and recovered it. Supervisor defect for item 1 of the brief to note.
