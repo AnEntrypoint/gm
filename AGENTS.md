@@ -17,17 +17,17 @@ Finish gm-new as the simplest architecture that runs one long task end to end, w
 These are settled. Change one only by messaging the orchestrator, with the reason.
 
 - Node.js 20+ ES modules, standard library only, no dependencies.
-- One CLI process. No MCP server, spool, daemon, or listening port.
+- Shape: an MCP server over stdio (JSON-RPC written by hand) plus `skills/gm-new/SKILL.md`. The Claude Code session is the model. The CLI is a thin wrapper for scripted witnesses. No spool, daemon, or listening port.
 - Model adapters behind `reply(prompt)`: `scripted` (offline, deterministic) and `anthropic` (Messages API via fetch). The anthropic adapter reads `ANTHROPIC_API_KEY` and refuses to run without it. Default model `claude-sonnet-5-5`, overridable with `GMNEW_MODEL`.
-- Context: no summarisation. The prompt holds the rules, the task, the witness requirement, and the last 20 events. Older events are reached with `query_log`.
+- Context: no summarisation. `next_context` returns the rules, the task, the witness requirement, the last 20 events and `prefixSha`. Older events are reached with `query_log`.
 - Rules live in `runs/<id>/rules.md`, re-read every step and placed first in the prompt. Rules are never compacted.
-- Tools: `read_file`, `write_file`, `list_dir`, `run_shell` (60 s default timeout), `query_log`, `finish` (requires a witness).
-- Paths stay inside the workspace. A `..` segment is refused. A symlink that leaves the workspace is refused. Refusals are `refusal` events, not thrown errors.
+- MCP tools: `next_context`, `read_file`, `write_file`, `list_dir`, `run_shell` (60 s default timeout), `job_start`, `job_status`, `query_log`, `finish` (requires a witness). The server writes every event to the log and answers concurrent requests by JSON-RPC id.
+- Paths stay inside the workspace for the file tools. A `..` segment is refused. A symlink that leaves the workspace is refused, including a dangling one. Refusals are `refusal` events, not thrown errors. `run_shell` is not confined.
 - Storage: `runs/<id>/` with `log.jsonl` (append-only), `rules.md`, `task.json`. `runs/` is git-ignored.
 
 ## Hard rules
 
-- No paid model calls. Do not call the live Anthropic API until the owner approves a run. Verify the adapter offline: parse checks, and a fake HTTP server is not allowed, so verify by reading the code and by the scripted path.
+- Paid calls are approved with no limit (owner, relayed by the gm agent, 2026-11-01). Live runs use the Claude Code login, because `ANTHROPIC_API_KEY` is unset here. Verify the adapter offline: parse checks, and a fake HTTP server is not allowed, so verify by reading the code and by the scripted path.
 - No test files and no fixtures that stand in for a real run. Verify by running the CLI on a real task in a temporary workspace, then delete that workspace.
 - Use Node built-ins only. Shell commands use `child_process.spawn` with an explicit timeout.
 - Commit only by explicit path, on branch `main`. Author lanmower. The commit body states the change only. No trailers of any kind.
@@ -62,7 +62,13 @@ Each item is done when its live witness is recorded in the log and its line is i
 7. Measurement harness: runs one task with each concurrency feature on and off, and prints wall time from the logs.
 8. Keep DESIGN.md and README.md current. Each decision is one line with its reason.
 
-Blocked until the owner approves paid calls: the live anthropic run and the comparison with gm on the same task. Do not start them. Report the item as blocked, with the reason.
+Paid calls are approved (owner, 2026-11-01). Item 7 is a live comparison of gm-new and gm on the same task, run through Claude Code interactive sessions. Compare wall time, idle time, step count and outcome from the logs.
+
+9. MCP server (`src/mcp.mjs`): stdio, JSON-RPC by hand, concurrent requests answered by id. Witness: a host session makes parallel tool calls and the log shows overlapping calls.
+10. Skill `skills/gm-new/SKILL.md`: loop prose only (call `next_context`, decide, act through tools, finish with a witness). Witness: a session loads it and finishes a run.
+11. Interactive Claude Code witness, driven in tmux. Witness: a real session, not a script. Record the session transcript path and the run id.
+
+Order (owner, via the gm agent): 3, then the symlink and alias fix, then 4, then 6, then 9, 10, 11, then 7 and 8. Keep one writer.
 
 ## Reporting
 
