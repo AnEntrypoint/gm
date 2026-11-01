@@ -76,7 +76,17 @@ async function main() {
   }
 
   mkdirSync(RESULTS, { recursive: true });
-  if (args.resume === 'true') {
+  if (Number(args['quiet-target']) > 0) {
+    // Quiet mode: each task needs this many valid trials started under the load threshold. Only quiet trials count.
+    const target = Number(args['quiet-target']);
+    const quiet = quietCounts(args.arm);
+    jobs.length = 0;
+    for (const task of args.tasks.split(',')) {
+      const need = Math.max(0, target - (quiet[task] ?? 0));
+      for (let n = 1; n <= need; n += 1) jobs.push({ task, trial: `q${n}`, id: `${args.arm}-${task}-q${n}-${Math.random().toString(16).slice(2, 8)}` });
+    }
+    console.log(`quiet batch: target ${target} quiet valid trials per task, quiet counts ${JSON.stringify(quiet)}, ${jobs.length} trials to run`);
+  } else if (args.resume === 'true') {
     const done = validTrials(args.arm);
     for (let i = jobs.length - 1; i >= 0; i -= 1) if (done.has(`${jobs[i].task}-${jobs[i].trial}`)) jobs.splice(i, 1);
     console.log(`resume: ${done.size} valid trials kept, ${jobs.length} to run`);
@@ -95,7 +105,7 @@ async function main() {
       if (wait > 0) await sleep(wait);
       // A session that dies or never becomes ready gets one more attempt, since the machine is shared and that failure is transient.
       let result;
-      for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
+      for (let attempt = 1; attempt <= Number(args.attempts); attempt += 1) {
         try {
           result = await runTrial(args.arm, arm, job.task, job.trial, job.id, Number(args.port));
           break;
@@ -103,7 +113,7 @@ async function main() {
           result = { id: job.id, arm: args.arm, task: job.task, trial: job.trial, attempts: attempt, error: err.message, metrics: { ok: false, error: err.message }, checker: { pass: false, detail: 'trial did not run' } };
           mkdirSync(join(RESULTS, job.id), { recursive: true });
           writeFileSync(join(RESULTS, job.id, 'result.json'), `${JSON.stringify(result, null, 2)}\n`);
-          if (attempt < MAX_ATTEMPTS) await sleep(RETRY_GAP_MS);
+          if (attempt < Number(args.attempts)) await sleep(RETRY_GAP_MS);
         }
       }
       results.push(result);
@@ -443,6 +453,18 @@ function printSummary(arm, summary) {
   }
 }
 
+// Valid quiet trials per task for this arm: metrics present, no error, and a start load under LOADED_AT.
+function quietCounts(arm) {
+  const counts = {};
+  for (const name of readdirSync(RESULTS)) {
+    const file = join(RESULTS, name, 'result.json');
+    if (!name.startsWith(`${arm}-`) || !existsSync(file)) continue;
+    const result = JSON.parse(readFileSync(file, 'utf8'));
+    if (!result.error && result.metrics?.ok === true && loadGroup(result) === 'quiet') counts[result.task] = (counts[result.task] ?? 0) + 1;
+  }
+  return counts;
+}
+
 // Keys (task-trial) of this arm's trials that ran and got metrics, so a resumed batch does not run them again.
 function validTrials(arm) {
   const done = new Set();
@@ -498,7 +520,7 @@ function round(value) {
 }
 
 function parseArgs(argv) {
-  const out = { arm: 'A', tasks: 't1,t2,t3', trials: '3', concurrency: '1', port: '8810', resume: 'false', report: 'false' };
+  const out = { arm: 'A', tasks: 't1,t2,t3', trials: '3', concurrency: '1', port: '8810', resume: 'false', report: 'false', 'quiet-target': '0', attempts: String(MAX_ATTEMPTS) };
   for (let i = 0; i < argv.length; i += 2) {
     const name = argv[i].replace(/^--/, '');
     if (!(name in out)) throw new Error(`unknown option --${name}`);
