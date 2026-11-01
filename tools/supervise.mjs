@@ -18,6 +18,8 @@ const WATCHED = [join(ROOT, 'src'), join(ROOT, 'skills')];
 const WATCHED_FILE = /\.(mjs|md)$/;
 const DEBOUNCE_MS = 250;
 const EXIT_MS = 5000;
+const RETRY_MIN_MS = 1000;
+const RETRY_MAX_MS = 30000;
 const HANDSHAKE_MS = 10000;
 const HANDSHAKE_ID = 'gm-new-supervisor-handshake';
 const HOST_CHANGED = ['notifications/tools/list_changed', 'notifications/prompts/list_changed', 'notifications/resources/list_changed'];
@@ -62,6 +64,8 @@ function withoutOptions(args, names) {
   return out;
 }
 
+let retryDelay = RETRY_MIN_MS;
+let retryTimer = null;
 let child = null;
 let state = 'starting'; // running, draining, restarting, or failed
 let hostInitialize = null;
@@ -149,6 +153,19 @@ function onWorkerExit(proc, code, signal) {
   if (state === 'running') failWith(`the worker exited unexpectedly (${how})`);
 }
 
+// A failed restart retries by itself, with no source change needed: 1 s, then doubling to a 30 s cap. Calls that arrive
+// while it is failed are answered with the failure text at once, so none is held silently.
+function scheduleRetry() {
+  clearTimeout(retryTimer);
+  const delay = retryDelay;
+  retryDelay = Math.min(retryDelay * 2, RETRY_MAX_MS);
+  process.stderr.write(`gm-new dev: retrying the restart in ${delay} ms\n`);
+  retryTimer = setTimeout(() => {
+    retryTimer = null;
+    if (state === 'failed') scheduleRestart('retry after a failed restart');
+  }, delay);
+}
+
 function failWith(reason) {
   state = 'failed';
   failure = `${reason}. Last stderr of the worker:\n${stderrTail.slice(-1500)}`;
@@ -158,6 +175,7 @@ function failWith(reason) {
     const message = parse(line);
     if (message?.id !== undefined && message.method) writeHost(errorReply(message.id, failure));
   }
+  scheduleRetry();
 }
 
 // No timeout: a restart waits until every call in flight has its result logged.
@@ -220,6 +238,9 @@ async function restart(reason) {
     startWorker(reason);
     await replayHandshake();
     state = 'running';
+    retryDelay = RETRY_MIN_MS;
+    clearTimeout(retryTimer);
+    retryTimer = null;
     for (const method of HOST_CHANGED) writeHost({ jsonrpc: '2.0', method });
     for (const line of held.splice(0)) onHostLine(line);
   } catch (err) {
