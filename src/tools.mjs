@@ -1,11 +1,13 @@
 import { spawn } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, readdirSync, realpathSync, writeFileSync } from 'node:fs';
+import { existsSync, realpathSync } from 'node:fs';
+import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, isAbsolute, relative, resolve, sep } from 'node:path';
 import { runQuery } from './log.mjs';
 
 const DEFAULT_TIMEOUT_MS = 60000;
 const MAX_TIMEOUT_MS = 600000;
 const OUTPUT_CAP = 200000;
+const BARRIER = { barrier: true };
 
 export function createTools({ workspace, log }) {
   const root = resolve(workspace);
@@ -23,25 +25,25 @@ export function createTools({ workspace, log }) {
   };
 
   const handlers = {
-    read_file(args) {
+    async read_file(args) {
       const at = confine(args.path);
       if (at.refused) return refusal(at.refused);
-      return { ok: true, output: readFileSync(at.path, 'utf8') };
+      return { ok: true, output: await readFile(at.path, 'utf8') };
     },
 
-    write_file(args) {
+    async write_file(args) {
       const at = confine(args.path);
       if (at.refused) return refusal(at.refused);
       if (typeof args.content !== 'string') return { ok: false, error: 'content must be a string' };
-      mkdirSync(dirname(at.path), { recursive: true });
-      writeFileSync(at.path, args.content);
+      await mkdir(dirname(at.path), { recursive: true });
+      await writeFile(at.path, args.content);
       return { ok: true, output: `wrote ${relative(root, at.path)} (${args.content.length} chars)` };
     },
 
-    list_dir(args) {
+    async list_dir(args) {
       const at = confine(args.path ?? '.');
       if (at.refused) return refusal(at.refused);
-      const entries = readdirSync(at.path, { withFileTypes: true })
+      const entries = (await readdir(at.path, { withFileTypes: true }))
         .map((entry) => (entry.isDirectory() ? `${entry.name}/` : entry.name))
         .sort();
       return { ok: true, output: entries.join('\n') };
@@ -69,6 +71,17 @@ export function createTools({ workspace, log }) {
   };
 
   return {
+    // Which workspace paths an action reads or writes. An action with no
+    // path (or a barrier) is decided by the loop's wave planner.
+    access(name, args) {
+      if (name === 'job_status') return { items: [] };
+      if (name !== 'read_file' && name !== 'list_dir' && name !== 'write_file') return BARRIER;
+      const rel = name === 'list_dir' ? (args.path ?? '.') : args.path;
+      const path = workspaceSegments(root, rel);
+      if (!path) return BARRIER;
+      return { items: [{ path, write: name === 'write_file' }] };
+    },
+
     async run(name, args) {
       if (!Object.hasOwn(handlers, name)) return { ok: false, error: `unknown tool: ${name}` };
       try {
@@ -78,6 +91,14 @@ export function createTools({ workspace, log }) {
       }
     },
   };
+}
+
+function workspaceSegments(root, rel) {
+  if (typeof rel !== 'string' || rel === '' || rel.split(/[\\/]+/).includes('..')) return null;
+  const target = resolve(root, rel);
+  if (!inside(root, target)) return null;
+  const parts = relative(root, target).split(sep).filter(Boolean);
+  return parts;
 }
 
 function refusal(reason) {

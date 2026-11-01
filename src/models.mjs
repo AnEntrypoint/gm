@@ -4,7 +4,10 @@ const DEFAULT_ANTHROPIC_MODEL = 'claude-sonnet-5-5';
 const MAX_TOKENS = 4096;
 
 const SCRIPT = [
-  { tool: 'write_file', args: { path: 'hello.mjs', content: 'console.log("gmnew scripted witness");\n' } },
+  [
+    { tool: 'write_file', args: { path: 'hello.mjs', content: 'console.log("gmnew scripted witness");\n' } },
+    { tool: 'write_file', args: { path: 'notes.txt', content: 'two independent actions in one reply\n' } },
+  ],
   { tool: 'run_shell', args: { command: 'node hello.mjs > out.txt' } },
   { tool: 'read_file', args: { path: 'out.txt' } },
   { tool: 'read_file', args: { path: '../outside.txt' } },
@@ -35,7 +38,7 @@ function scriptedModel() {
     async reply() {
       const action = SCRIPT[turn] ?? SCRIPT_EXHAUSTED;
       turn += 1;
-      return JSON.stringify(action);
+      return { text: JSON.stringify(action) };
     },
   };
 }
@@ -63,10 +66,12 @@ function anthropicModel() {
       if (!response.ok) {
         throw new Error(`Messages API returned HTTP ${response.status}: ${body.error?.message ?? 'no detail'}`);
       }
-      return (body.content ?? [])
-        .filter((block) => block.type === 'text')
-        .map((block) => block.text)
-        .join('');
+      return {
+        text: (body.content ?? [])
+          .filter((block) => block.type === 'text')
+          .map((block) => block.text)
+          .join(''),
+      };
     },
   };
 }

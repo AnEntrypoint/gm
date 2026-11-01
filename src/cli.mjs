@@ -12,7 +12,7 @@ import { createTools } from './tools.mjs';
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const RUNS = join(ROOT, 'runs');
 const USAGE = `usage:
-  gmnew run --task <file-or-text> --workspace <dir> [--model scripted|anthropic] [--max-steps N]
+  gmnew run --task <file-or-text> --workspace <dir> [--model scripted|anthropic] [--max-steps N] [--serial]
   gmnew query --run <id> --js "<filter>"`;
 
 async function main(argv) {
@@ -48,7 +48,7 @@ async function run(flags) {
 
   const log = openLog(join(runDir, 'log.jsonl'));
   const tools = createTools({ workspace, log });
-  const result = await runLoop({ runDir, spec, model, tools, log, maxSteps });
+  const result = await runLoop({ runDir, spec, model, tools, log, maxSteps, serial: flags.serial === true });
 
   console.log(`run ${id}: ${result.status} after ${result.steps} steps`);
   if (result.witness) console.log(`witness: ${result.witness}`);
@@ -66,14 +66,22 @@ function query(flags) {
   console.log(result.output);
 }
 
+const BOOLEAN_FLAGS = new Set(['serial']);
+
 function parseFlags(argv) {
   const flags = {};
-  for (let i = 0; i < argv.length; i += 2) {
+  for (let i = 0; i < argv.length; i += 1) {
     const name = argv[i];
-    const value = argv[i + 1];
     if (!name?.startsWith('--')) throw new Error(`unexpected argument: ${name}`);
+    const key = name.slice(2);
+    if (BOOLEAN_FLAGS.has(key)) {
+      flags[key] = true;
+      continue;
+    }
+    const value = argv[i + 1];
     if (value === undefined || value.startsWith('--')) throw new Error(`${name} needs a value`);
-    flags[name.slice(2)] = value;
+    flags[key] = value;
+    i += 1;
   }
   return flags;
 }

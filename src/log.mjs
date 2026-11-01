@@ -1,12 +1,25 @@
 import { appendFileSync, existsSync, readFileSync } from 'node:fs';
+import { performance } from 'node:perf_hooks';
 
 const QUERY_CAP = 20000;
 
 export function openLog(file) {
   const events = [];
+  let inFlight = 0;
+  const now = () => round(performance.now());
   return {
+    now,
+    enter() {
+      inFlight += 1;
+      return inFlight;
+    },
+    leave() {
+      inFlight -= 1;
+    },
     append(kind, data) {
-      const event = { seq: events.length + 1, t: new Date().toISOString(), kind, ...data };
+      const mono = now();
+      const event = { seq: events.length + 1, t: new Date().toISOString(), mono, inFlight, kind, ...data };
+      if (typeof data.startMono === 'number') event.durMs = round(mono - data.startMono);
       events.push(event);
       appendFileSync(file, `${JSON.stringify(event)}\n`);
       return event;
@@ -33,6 +46,10 @@ export function runQuery(events, js) {
   } catch (err) {
     return { ok: false, error: err.message };
   }
+}
+
+function round(ms) {
+  return Math.round(ms * 1000) / 1000;
 }
 
 function compile(js) {

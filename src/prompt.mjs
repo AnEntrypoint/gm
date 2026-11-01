@@ -2,8 +2,8 @@ export const DEFAULT_RULES = `# Rules
 
 1. Work only inside the workspace. A path with a .. segment is refused.
 2. Verify before you finish: run what you built and read its output.
-3. Reply with exactly one JSON object: {"tool": "<name>", "args": {...}}.
-4. finish needs a witness: one string that quotes the evidence you observed.
+3. Reply with one JSON object {"tool": "<name>", "args": {...}}, or a JSON array of such objects when the actions are independent. Independent actions run together. An action that needs an earlier result goes in a later reply.
+4. finish needs a witness: one string that quotes the evidence you observed. finish must be the only action in its reply.
 5. Events older than the window are not in this prompt. Query them with query_log. Do not guess.
 6. Never print, store or request secrets, environment variables or API keys.
 7. If the task cannot be done, finish with a witness that states why, with the evidence.
@@ -16,10 +16,11 @@ const TOOL_HELP = `read_file {path}: text of a file.
 write_file {path, content}: write a file, creating parent directories.
 list_dir {path}: entries of a directory; directories end with "/".
 run_shell {command, timeoutMs?}: run a shell command in the workspace (default timeout 60000 ms). Returns exitCode, signal and output.
-query_log {js}: JavaScript expression over "events", every log event so far (seq, t, kind, ...). Returns JSON. Kinds: reply, action, result, refusal, parse_error, error, end.
+query_log {js}: JavaScript expression over "events", every log event so far (seq, t, mono, kind, ...). Returns JSON. Kinds: start, reply, action, result, refusal, skipped, parse_error, error, end.
 finish {witness}: end the run. The witness must state the evidence.`;
 
 const MAX_EVENT_CHARS = 4000;
+const MAX_ACTIONS = 16;
 
 export function buildPrompt({ rules, spec, events, total }) {
   const log = events.map(formatEvent).join('\n') || '(empty)';
@@ -29,20 +30,34 @@ export function buildPrompt({ rules, spec, events, total }) {
     `## Witness requirement\n\n${spec.witness}`,
     `## Tools\n\n${TOOL_HELP}`,
     `## Log: last ${events.length} of ${total} events (older events: query_log)\n\n${log}`,
-    '## Reply\n\nOne JSON object: {"tool": "...", "args": {...}}. Nothing else.',
+    '## Reply\n\nOne JSON object {"tool": "...", "args": {...}}, or a JSON array of them when the actions are independent. Nothing else.',
   ].join('\n\n');
 }
 
-export function parseAction(text) {
-  const candidates = [text.trim(), text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1)];
+export function parseActions(text) {
+  const candidates = [text.trim(), between(text, '{', '}'), between(text, '[', ']')];
   for (const candidate of candidates) {
-    const action = tryJson(candidate);
-    const args = action?.args ?? {};
-    if (typeof action?.tool === 'string' && typeof args === 'object' && !Array.isArray(args)) {
-      return { ok: true, tool: action.tool, args };
-    }
+    const value = tryJson(candidate);
+    if (value === undefined) continue;
+    const list = Array.isArray(value) ? value : [value];
+    if (list.length === 0 || list.length > MAX_ACTIONS) continue;
+    if (list.every(isAction)) return { ok: true, actions: list.map((item) => ({ tool: item.tool, args: item.args ?? {} })) };
   }
-  return { ok: false, error: 'reply is not a JSON object with a string "tool" and an object "args"' };
+  return {
+    ok: false,
+    error: `reply is not a JSON object or array of 1 to ${MAX_ACTIONS} objects, each with a string "tool" and an object "args"`,
+  };
+}
+
+function isAction(item) {
+  const args = item?.args ?? {};
+  return typeof item?.tool === 'string' && typeof args === 'object' && args !== null && !Array.isArray(args);
+}
+
+function between(text, open, close) {
+  const start = text.indexOf(open);
+  const end = text.lastIndexOf(close);
+  return start === -1 || end < start ? '' : text.slice(start, end + 1);
 }
 
 function tryJson(text) {

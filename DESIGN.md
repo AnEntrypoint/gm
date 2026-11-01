@@ -13,7 +13,7 @@ This note turns the evidence in `research/deep-research.md` into design directio
 - Governance: `rules.md` in the run directory is re-read at every step, placed first in the prompt and never compacted. Reason: rules that a summary drops are violated (finding 3).
 - Tools: `read_file`, `write_file`, `list_dir`, `run_shell` (60 s default timeout), `query_log`, `finish` (needs a witness). Reason: the worker's only actions, each plannable as a step (finding 4).
 - Path confinement: paths stay inside the workspace, a `..` segment is refused, and a symlink that leaves the workspace is refused. Refusals are logged as `refusal` events and not thrown. Reason: an escape attempt then shows up in the log.
-- Loop: plan, act, observe, repeat. Each reply is one JSON action, and every reply, action and result is appended to the log. Stops on `finish` or at `maxSteps` (default 50). An unparseable reply counts as one step. Reason: the simplest loop the log can replay.
+- Loop: plan, act, observe, repeat. Each reply is one JSON action or an array of actions; actions that touch no common path run together in one wave with `Promise.all`, and a shell command, `query_log`, `finish` or unknown tool runs alone. Every reply, action and result is appended to the log with monotonic times. Stops on `finish` or at `maxSteps` (default 50). An unparseable reply counts as one step. Reason: work item 1 needs multi-action replies, and the wave rule keeps the log replayable.
 - Storage: `runs/<run-id>/` holds `log.jsonl` (append-only), `rules.md` and `task.json`, and `runs/` is git-ignored. Reason: runtime state is never tracked.
 - Remote: none. No GitHub repository and no push until the owner asks. Reason: publishing is outward-facing.
 
@@ -59,3 +59,7 @@ The three questions this section used to ask are answered in Decided: scope, run
 ## Next step
 
 The first slice runs end to end with the scripted model. Run it on one long task with the anthropic model, then measure it against the current gm on the same task before adding anything from the directions above.
+
+## Measured
+
+- Item 1, parallel actions: run `2026-11-01-11-27-17-d7f205` (scripted). Seq 3 and 4 are two `write_file` actions in one reply (inFlight 2). Their results at seq 5 and 6 overlap: 102.121 to 108.857 and 103.942 to 109.035 ms. File actions use `fs/promises`, so their intervals can overlap in I/O, not only in logging order.
