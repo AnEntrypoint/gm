@@ -1,31 +1,35 @@
 #!/usr/bin/env node
 import { randomBytes } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { runLoop } from './loop.mjs';
-import { createModel } from './models.mjs';
+import { anthropicRequestBody, createModel } from './models.mjs';
 import { openLog, readEvents, runQuery } from './log.mjs';
-import { DEFAULT_RULES, DEFAULT_WITNESS } from './prompt.mjs';
+import { buildPrompt, DEFAULT_RULES, DEFAULT_WITNESS } from './prompt.mjs';
 import { createTools } from './tools.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const RUNS = join(ROOT, 'runs');
 const USAGE = `usage:
   gmnew run --task <file-or-text> --workspace <dir> [--model scripted|anthropic] [--max-steps N]
-            [--script <replies.json>] [--serial] [--no-background]
-  gmnew query --run <id> --js "<filter>"`;
+            [--script <replies.json>] [--faults 429,429] [--serial] [--no-background]
+            [--dump-request]
+  gmnew query --run <id> --js "<filter>"
+  gmnew doctor [--workspace <dir>]`;
 
 async function main(argv) {
   const [command, ...rest] = argv;
   if (command === 'run') return run(parseFlags(rest));
   if (command === 'query') return query(parseFlags(rest));
+  if (command === 'doctor') return doctor(parseFlags(rest));
   console.error(USAGE);
   return 2;
 }
 
 async function run(flags) {
   if (!flags.task) throw new Error('--task is required');
+  if (flags['dump-request'] === true) return dumpRequest(loadTask(flags.task).trim());
   if (!flags.workspace) throw new Error('--workspace is required');
   const workspace = resolve(flags.workspace);
   if (!isDirectory(workspace)) throw new Error(`workspace is not a directory: ${workspace}`);
@@ -34,7 +38,9 @@ async function run(flags) {
   const modelName = flags.model ?? 'scripted';
   const script = flags.script === undefined ? undefined : loadScript(flags.script);
   if (script && modelName !== 'scripted') throw new Error('--script works only with --model scripted');
-  const model = createModel(modelName, { script });
+  const faults = flags.faults === undefined ? undefined : parseFaults(flags.faults);
+  if (faults && modelName !== 'scripted') throw new Error('--faults works only with --model scripted');
+  const model = createModel(modelName, { script, faults });
   const serial = flags.serial === true;
   const background = flags['no-background'] !== true;
 
@@ -46,7 +52,7 @@ async function run(flags) {
   const runDir = join(RUNS, id);
   mkdirSync(runDir, { recursive: true });
   writeFileSync(join(runDir, 'rules.md'), DEFAULT_RULES);
-  const options = { serial, background, script: flags.script === undefined ? null : resolve(flags.script) };
+  const options = { serial, background, script: flags.script === undefined ? null : resolve(flags.script), faults: faults ?? null };
   writeFileSync(
     join(runDir, 'task.json'),
     `${JSON.stringify({ id, ...spec, workspace, model: modelName, maxSteps, ...options, createdAt: new Date().toISOString() }, null, 2)}\n`,
@@ -72,7 +78,51 @@ function query(flags) {
   console.log(result.output);
 }
 
-const BOOLEAN_FLAGS = new Set(['serial', 'no-background']);
+function doctor(flags) {
+  const workspace = resolve(flags.workspace ?? process.cwd());
+  const nodeOk = Number(process.versions.node.split('.')[0]) >= 20;
+  console.log(`node ${process.version}: ${nodeOk ? 'ok' : 'fail, Node 20 or newer is required'}`);
+  console.log(`ANTHROPIC_API_KEY: ${process.env.ANTHROPIC_API_KEY ? 'set' : 'not set'}`);
+  const writable = probeWritable(workspace);
+  console.log(`workspace ${workspace}: ${writable.ok ? 'writable' : `not writable (${writable.error})`}`);
+  console.log(lastRunSummary());
+  console.log('limits: the Node-below-20 failure path has no live run; run_shell is unconfined');
+  return nodeOk && writable.ok ? 0 : 1;
+}
+
+function probeWritable(dir) {
+  const probe = join(dir, `.gmnew-doctor-${randomBytes(4).toString('hex')}`);
+  try {
+    writeFileSync(probe, 'probe\n', { flag: 'wx' });
+  } catch (err) {
+    return { ok: false, error: err.code ?? err.message };
+  }
+  unlinkSync(probe);
+  return { ok: true };
+}
+
+function lastRunSummary() {
+  if (!isDirectory(RUNS)) return 'last run: none (no runs/ directory)';
+  const ids = readdirSync(RUNS, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)
+    .sort();
+  if (ids.length === 0) return 'last run: none';
+  const id = ids.at(-1);
+  const events = readEvents(join(RUNS, id, 'log.jsonl'));
+  return `last run ${id}: ${events.length} events, outcome ${lastOutcome(events)}`;
+}
+
+function lastOutcome(events) {
+  for (let i = events.length - 1; i >= 0; i -= 1) {
+    const event = events[i];
+    if (event.kind === 'end') return event.status;
+    if (event.kind === 'result' && event.tool === 'finish' && event.finished) return 'finished';
+  }
+  return 'none';
+}
+
+const BOOLEAN_FLAGS = new Set(['serial', 'no-background', 'dump-request']);
 
 function parseFlags(argv) {
   const flags = {};
@@ -96,6 +146,22 @@ function loadScript(file) {
   const value = JSON.parse(readFileSync(resolve(file), 'utf8'));
   if (!Array.isArray(value)) throw new Error('--script must be a JSON array of replies');
   return value;
+}
+
+// Prints the anthropic request body for the first step, as the adapter would send it. Makes no network call.
+function dumpRequest(task) {
+  const { prompt, prefix } = buildPrompt({ rules: DEFAULT_RULES, spec: { task, witness: DEFAULT_WITNESS }, events: [], total: 0 });
+  console.log(JSON.stringify(anthropicRequestBody(prompt, { prefix }), null, 2));
+  return 0;
+}
+
+// --faults 429,429 makes the first model calls fail with those HTTP statuses.
+function parseFaults(value) {
+  const statuses = value.split(',').map((item) => Number(item));
+  if (statuses.some((status) => !Number.isInteger(status) || status < 400 || status > 599)) {
+    throw new Error('--faults takes comma-separated HTTP statuses from 400 to 599, for example 429,429');
+  }
+  return statuses;
 }
 
 function loadTask(value) {

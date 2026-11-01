@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto';
+
 export const DEFAULT_RULES = `# Rules
 
 1. Work only inside the workspace. A path with a .. segment is refused.
@@ -23,16 +25,24 @@ finish {witness}: end the run. The witness must state the evidence.`;
 const MAX_EVENT_CHARS = 4000;
 const MAX_ACTIONS = 16;
 
+// The prefix (rules, task, witness, tools, reply format) is identical on every
+// step, so it comes first and prompt caching can cover it. The event window
+// changes every step, so it comes last.
 export function buildPrompt({ rules, spec, events, total }) {
-  const log = events.map(formatEvent).join('\n') || '(empty)';
-  return [
+  const prefix = [
     rules.trim(),
     `## Task\n\n${spec.task}`,
     `## Witness requirement\n\n${spec.witness}`,
     `## Tools\n\n${TOOL_HELP}`,
-    `## Log: last ${events.length} of ${total} events (older events: query_log)\n\n${log}`,
     '## Reply\n\nOne JSON object {"tool": "...", "args": {...}}, or a JSON array of them when the actions are independent. Nothing else.',
   ].join('\n\n');
+  const log = events.map(formatEvent).join('\n') || '(empty)';
+  const window = `## Log: last ${events.length} of ${total} events (older events: query_log)\n\n${log}`;
+  return { prompt: `${prefix}\n\n${window}`, prefix, prefixSha: hashPrefix(prefix) };
+}
+
+function hashPrefix(prefix) {
+  return createHash('sha256').update(prefix).digest('hex');
 }
 
 export function parseActions(text) {
