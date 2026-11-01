@@ -7,8 +7,8 @@ This note turns the evidence in `research/deep-research.md` into design directio
 - Scope: a fresh worker that replaces gm's loop, not a fork of gm. Reason: one worker, one log and one loop is the simplest design the evidence supports.
 - Language: Node.js 20+ ES modules, standard library only, zero dependencies. Reason: runs unchanged on macOS, Windows and Linux, on x64 and arm, with no build step.
 - Shape: gm-new is an MCP server (stdio, JSON-RPC written by hand with Node built-ins, no network listener) plus a skill at `skills/gm-new/SKILL.md`. The Claude Code session is the model. The CLI is a thin wrapper for scripted witnesses. Reason: owner decision, relayed by the gm agent (2026-11-01). It supersedes the earlier single-CLI shape, because the host model is already the worker.
-- Model: in MCP mode the host model is the worker. The CLI wrapper keeps the `reply(prompt)` adapters: `scripted` (offline, deterministic) and `anthropic` (Messages API via fetch). Reason: scripted gives a free end-to-end check, and anthropic serves the CLI witnesses.
-- Anthropic model: default `claude-sonnet-5-5`, overridable with `GMNEW_MODEL`; the key comes only from `ANTHROPIC_API_KEY` and the run refuses without it. Reason: the key stays out of files, logs and shell children. Spend is approved with no limit (owner, relayed by the gm agent, 2026-11-01). Live runs use the Claude Code login, because `ANTHROPIC_API_KEY` is unset here.
+- Model: gm-new makes no API calls. In MCP mode the host session is the model. The CLI has one model, `scripted`, which is offline and deterministic. Reason: the owner's directive (2026-11-01), gm-new is an MCP tool and does not interact with any API. Anything that would call an API is reported to the gm agent to do, not done here.
+- Anthropic adapter: removed. gm-new holds no API key and sends no Messages API request, so the earlier decisions (the default model, the key from `ANTHROPIC_API_KEY`, the fetch adapter) are superseded. Reason: the owner's directive (2026-11-01). Spend belongs to the host session on the Claude Code login, not to gm-new.
 - Context: no summarisation. `next_context` returns the rules, the task, the witness requirement, the last 20 events and `prefixSha`; `query_log` reaches older events. Reason: the log stays complete, so no lossy summary can drop a fact.
 - Governance: `rules.md` in the run directory is re-read at every step, placed first in the prompt and never compacted. Reason: rules that a summary drops are violated (finding 3).
 - Tools (MCP): `next_context`, `read_file`, `write_file`, `list_dir`, `run_shell` (60 s default timeout), `job_start` (detached shell job), `job_status` (state, exit code and output tail, with a bounded `waitMs` poll), `query_log`, `finish` (needs a witness). The server writes every event to the log, and the host model calls `next_context` each step. The server answers concurrent requests: it reads stdin without blocking and replies by JSON-RPC id, so the host's parallel tool calls run in parallel and the server measures them. Reason: owner decision (2026-11-01). Each tool is one plannable step (finding 4), and background jobs let shell work overlap other actions (item 2).
@@ -34,9 +34,9 @@ This note turns the evidence in `research/deep-research.md` into design directio
 - Live metrics: every live trial is graded by its checker in `tasks/<task>/` and measured by one parser, `tools/transcript.mjs`, for both arms. Wall time runs from the prompt record to the first end_turn. Tool time is the union of tool_use to tool_result intervals. Model time is the union of gaps from each request (the prompt or a tool_result) to the next assistant record. Idle time is the wall time covered by neither. Reason: both arms are measured by the same code, from the transcript timestamps, not from our own clocks. Owner decision via the gm agent (2026-11-01).
 - Live validity and load: an invalid trial is a trial whose session never became ready, or whose transcript never held its prompt. Invalid trials are listed, never dropped silently, and the report counts them. A slot is re-run once after the batch, and if it still fails it is recorded as invalid, so arm A has only two valid t3 trials, and the 3-trial rule is not claimed for t3. The 1-minute load average is recorded at the start and end of every trial. Trials that started at a load of 6 or more are reported apart from quiet-window trials, and trials from before the load was recorded apart from both. The arms are compared only on quiet-window trials, or the comparison is stated as loaded. Development builders wait until the load is under 6, and the live batch stays at one session. Reason: load changes wall time and idle time, so work running now would contaminate the timings. Owner decision via the gm agent (2026-11-01).
 - Minimal tool set: the comparison of the full and reduced tool sets runs only after the runner's concurrency cap is in and the load is under 6. It does not run under load, and it does not run at all while the runner fix is blocked. It stays an open question until then. Owner decision via the gm agent (2026-11-01).
-- Retry: retry 408, 409, every 5xx (502, 503, 504 and 529 included), and network errors (ECONNRESET, timeouts) with backoff from 1 s, doubling, capped at 16 s, plus or minus 20% jitter, at most 4 retries. A 429 with `retry-after` waits that many seconds, and fails with a logged reason if the header asks for more than 60 s. A 429 without `retry-after` retries at most 2 times. Every other 4xx fails at once, logged with its error type. Each retry is an event with attempt, status, errorType and delayMs. Reason: the rules follow platform.claude.com/docs/en/api/errors (fetched 2026-11-01). A spend-cap 429 has no `retry-after` and keeps failing, so it must never loop.
+- Retry, exercised only by scripted faults in gm-new, since gm-new makes no request: retry 408, 409, every 5xx (502, 503, 504 and 529 included), and network errors (ECONNRESET, timeouts) with backoff from 1 s, doubling, capped at 16 s, plus or minus 20% jitter, at most 4 retries. Live retries belong to the host. A 429 with `retry-after` waits that many seconds, and fails with a logged reason if the header asks for more than 60 s. A 429 without `retry-after` retries at most 2 times. Every other 4xx fails at once, logged with its error type. Each retry is an event with attempt, status, errorType and delayMs. Reason: the rules follow platform.claude.com/docs/en/api/errors (fetched 2026-11-01). A spend-cap 429 has no `retry-after` and keeps failing, so it must never loop.
 - Log fields: camelCase everywhere (`errorType`, `delayMs`, `prefixSha`, `durMs`). Reason: one naming convention for the log, confirmed by the gm agent (2026-11-01).
-- Cache: `prefixSha` is the sha256 of the rendered stable prefix (rules, tool list, fixed instructions), logged on every model event. The anthropic request marks the last block of that prefix with `cache_control`. `usage.cache_creation_input_tokens` and `usage.cache_read_input_tokens` are logged when present; the scripted model reports zeros. `--dump-request` prints the exact anthropic request body and exits with no network call. Reason: a prefix that changes between steps defeats caching, and the dump shows it without spend.
+- Cache: `prefixSha` is the sha256 of the rendered stable prefix (rules, tool list, fixed instructions), logged on every model event. It is a local check that the prefix does not change between steps. gm-new sends no request, so it places no cache breakpoint: the host manages the cache. The host transcript carries each turn's `usage`, including `cache_creation_input_tokens` and `cache_read_input_tokens`. The `cache_control` marking and `--dump-request` are removed, superseded by the owner's directive (2026-11-01). Reason: a prefix that changes between steps defeats caching, and the prefix hash shows it does not.
 - Run summary: at run end the loop writes one `summary` event with maxInFlight, meanInFlight, modelMs, toolMs and idleMs (time with no action and no model call in flight). `query_log` reads it. Reason: concurrency and waiting are measured from the log, not estimated.
 - Harness: runs a scripted task with the parallel and background features on and off, and prints each run's wall time and idleMs from its log. No paid calls. Reason: direction 6 requires measured numbers before any feature is default-on beyond items 1 and 2.
 - Defaults: background jobs (`--no-background` turns them off) and parallel waves (`--serial` turns them off) are on. Speculative overlap of the next model call (rule 3) and multi-worker fan-out stay off until measured. Reason: owner decision through the gm agent; measured evidence is the only route to change them.
@@ -88,7 +88,7 @@ The three questions this section used to ask are answered in Decided: scope, run
 
 ## Next step
 
-No build step is open. The live comparison is closed (see "Project close"). Still open and recorded: the minimal tool set, and G3 (cache effect, blocked). The code comment sweep is in progress, with no change to behaviour.
+No build step is open. The live comparison is closed (see "Project close"). Still open and recorded: the minimal tool set, and G3 (cache effect, handed to the gm agent). The comment sweep is done.
 
 ## Research consolidation
 
@@ -100,7 +100,7 @@ The status of each research item, as of 2026-11-01. "Implemented" means built. "
 | Live harness and summaries (item 7) | implemented; the scripted harness measured; the live trials partly measured | arm A has two valid t3 trials, one short of three; the trial rule is recorded as not met |
 | Parallel waves (item 1) | implemented and witnessed (overlap in run 2026-11-01-11-27-17-d7f205); effect not measured | writes are too short to show a gain (42.6 ms on, 27.6 ms off) |
 | Retry (item 3) | implemented, scripted witness | the live network error and the live retry-after header are not witnessed |
-| Prefix hash (item 4) | implemented | cache_control appears only in --dump-request; the host route owns the cache |
+| Prefix hash (item 4) | implemented | gm-new sends no request; the host manages the cache, and its transcript reports cache usage |
 | Queryable log (F1) | implemented, not measured | none; every event is logged and query_log reads it |
 | Rules re-read each step (F3) | implemented, violation rate not tested | rules.md is re-read each CLI step and on each next_context call |
 | Context as a worker action (F4) | implemented in part | query_log only |
@@ -115,7 +115,7 @@ Gaps the research says to close:
 
 - G1, overlap of the next model call with tool work (C2): built. A CLI-only `--overlap` flag, default off. It is witnessed in scripted runs, and it has no live run. MCP cannot overlap, because the host owns the loop.
 - G2, parallel gain (C1): built and measured with simulated latency. `--latency-ms N` is scripted only, and every event it touches carries `simulatedMs`. The numbers below are simulated, not live.
-- G3, cache effect (C3): blocked. There is no API key, and the host route shows no cache usage. No caching claim is made.
+- G3, cache effect (C3): reported to the gm agent to do. The cache is the host's, and gm-new sends no request, so gm-new cannot measure it directly. The host transcript does report cache usage per turn, so the measurement can be made from transcripts. Measuring it is an API-side observation, so it is handed to the gm agent. No caching claim is made until it is measured.
 
 Limit, kept for safety: `run_shell` always runs alone. Parallel waves cover `read_file`, `write_file`, `list_dir` and `job_status`. `job_start` is a barrier as well, because it starts a shell. The shell barrier stays.
 
@@ -140,7 +140,7 @@ Arm B (gm): 9 valid trials, 7 quiet and 2 unrecorded, and no loaded trial.
 
 Comparison: arm A has no quiet trial, and arm B's quiet trials cannot be set against arm A's unrecorded ones. So the arms are not compared, and no medians are read as a difference between gm-new and gm. The numbers above describe each arm's own trials. The tool-call split shows that each arm used its own MCP tools, but in different proportions per task.
 
-Still open: the minimal tool set (open question). The gaps G1 and G2 are built from the research consolidation, and G3 stays blocked.
+Still open: the minimal tool set (open question). The gaps G1 and G2 are built from the research consolidation, and G3 is handed to the gm agent, since measuring the cache is an API-side observation.
 
 ## Live comparison, quiet batch
 
@@ -174,7 +174,7 @@ Close conditions:
 
 - The consolidated research matrix is in this file, in "Research consolidation".
 - G1 (`--overlap`) and G2 (`--latency-ms`, simulated) are built and witnessed. G2 is labelled simulated wherever it appears.
-- G3 (cache effect) is recorded as blocked, and no caching claim is made.
+- G3 (cache effect) is handed to the gm agent, and no caching claim is made until it is measured.
 - The live report is in: the final comparison, on the MCP prompt route, is below.
 
 Final live comparison, MCP prompt route, the same route and rules for both arms. Each arm has 9 valid quiet trials, 3 per task, all passing. Medians, with spread as min to max, are from quiet trials only. The witness `A-t1-1-c49976` is excluded.
@@ -195,7 +195,7 @@ The copied-skill record (arm A, 9 quiet trials) is kept as a labelled record. It
 Open items, recorded and not run:
 
 - The minimal tool set (open question). Its cost and trigger are above.
-- G3, the cache effect, is blocked: there is no API key, and the host route shows no cache usage.
+- G3, the cache effect, is handed to the gm agent: the host transcript reports cache usage per turn, and gm-new cannot measure it directly.
 - Subagent isolation, proactive mode, verification-gated admission, the matched-budget falsifier, the raw-replay arm, and the RL summariser are deferred, as the matrix says.
 
 ## Measured
@@ -231,8 +231,8 @@ Open items, recorded and not run:
 - Retry every 5xx: run `2026-11-01-11-38-33-9b8e40` (`--faults 502,503,504`), seq 2 to 4 are retry events with delayMs 1194, 2100 and 4781, and seq 5 is the reply. A 4xx other than 408 and 409 fails at once: run `2026-11-01-11-38-41-436da5`, seq 2 error "not retryable: HTTP 400", no retry event.
 
 - Item 3, retry with backoff: run `2026-11-01-11-34-59-1de3db` (scripted, `--faults 429,429`). Seq 2 and 3 are `retry` events, attempts 1 and 2, status 429, delayMs 1172 and 2209, source backoff. Seq 4 is the reply at attempts 3. Retry-after runs: `2026-11-01-11-33-17-f19f55` (delayMs 1000, source retry-after) and `2026-11-01-11-33-18-14301b` (retry-after of 90 s refused). The header parse and a live network error are not witnessed, because they need a live run.
-- Item 4, prefix hash and cache: run `2026-11-01-11-35-02-40d1bf` (scripted, two steps). Seq 2 and seq 5 share `prefixSha` `f713c772...`. `--dump-request` prints the request with `cache_control` on the stable prefix block, and makes no network call.
-- Item 6, doctor: `node src/cli.mjs doctor` printed Node v24.22.0 ok, ANTHROPIC_API_KEY not set, workspace writable, the last run's id, event count and outcome, and the two limits line. The Node-below-20 failure path has no live run.
+- Item 4, prefix hash and cache: run `2026-11-01-11-35-02-40d1bf` (scripted, two steps). Seq 2 and seq 5 share `prefixSha` `f713c772...`. Superseded: `--dump-request` and the `cache_control` marking are removed, since gm-new sends no request.
+- Item 6, doctor: `node src/cli.mjs doctor` printed Node v24.22.0 ok, ANTHROPIC_API_KEY not set (that line is removed now), workspace writable, the last run's id, event count and outcome, and the two limits line. The Node-below-20 failure path has no live run.
 
 - Item 1, parallel actions: run `2026-11-01-11-27-17-d7f205` (scripted). Seq 3 and 4 are two `write_file` actions in one reply (inFlight 2). Their results at seq 5 and 6 overlap: 102.121 to 108.857 and 103.942 to 109.035 ms. File actions use `fs/promises`, so their intervals can overlap in I/O, not only in logging order.
 - Item 2, background jobs: run `2026-11-01-11-28-50-c49668` (scripted, `--script` replies outside the repo). Job `slow` (`sleep 3`) started at seq 3-4 (result 44.581 ms, state running). `job_status` at seq 8 showed running while `write_file` ran at seq 9 and 11-18. The `job` end event is seq 19 (durMs 3008.572, exited, code 0). The `waitMs` poll at seq 16 to 20 ran alongside `write_file` seq 17-18.

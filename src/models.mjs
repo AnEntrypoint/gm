@@ -1,8 +1,3 @@
-const API_URL = 'https://api.anthropic.com/v1/messages';
-const API_VERSION = '2023-06-01';
-const DEFAULT_ANTHROPIC_MODEL = 'claude-sonnet-5-5';
-const MAX_TOKENS = 4096;
-
 const SCRIPT = [
   [
     { tool: 'write_file', args: { path: 'hello.mjs', content: 'console.log("gmnew scripted witness");\n' } },
@@ -26,10 +21,11 @@ const SCRIPT_EXHAUSTED = {
   args: { witness: 'scripted model has no further steps' },
 };
 
+// gm-new makes no API calls. The model is the host session (Claude Code) in MCP mode, and the only model
+// here is the scripted one, which is offline and deterministic.
 export function createModel(name, options = {}) {
   if (name === 'scripted') return scriptedModel(options.script, options.faults, options.latencyMs);
-  if (name === 'anthropic') return anthropicModel();
-  throw new Error(`unknown model: ${name} (use scripted or anthropic)`);
+  throw new Error(`unknown model: ${name}; gm-new calls no API, so the only model is scripted`);
 }
 
 function scriptedModel(script, faults = [], latencyMs = 0) {
@@ -44,11 +40,12 @@ function scriptedModel(script, faults = [], latencyMs = 0) {
       turn += 1;
       if (entry?.httpError) throw scriptedHttpError(entry.httpError);
       const text = typeof entry === 'string' ? entry : JSON.stringify(entry);
-      return { text, usage: { cache_creation_input_tokens: 0, cache_read_input_tokens: 0 } };
+      return { text };
     },
   };
 }
 
+// A simulated HTTP failure, so the retry policy can be witnessed offline. It never leaves the process.
 function scriptedHttpError(fault) {
   const { status, message, retryAfter } = typeof fault === 'number' ? { status: fault } : fault;
   return httpError(status, message ?? `scripted HTTP ${status}`, {
@@ -63,80 +60,4 @@ function httpError(status, message, { errorType, retryAfterMs }) {
   err.errorType = errorType;
   if (retryAfterMs !== undefined) err.retryAfterMs = retryAfterMs;
   return err;
-}
-
-function retryAfterMs(response) {
-  const value = response.headers.get('retry-after');
-  if (value === null) return undefined;
-  const seconds = Number(value);
-  if (Number.isFinite(seconds)) return Math.max(0, seconds * 1000);
-  const date = Date.parse(value);
-  return Number.isNaN(date) ? undefined : Math.max(0, date - Date.now());
-}
-
-function anthropicModel() {
-  const key = process.env.ANTHROPIC_API_KEY;
-  if (!key) throw new Error('ANTHROPIC_API_KEY is not set; export it, or run with --model scripted');
-  return {
-    async reply(prompt, { prefix } = {}) {
-      const response = await send(key, anthropicRequestBody(prompt, { prefix }));
-      const body = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        throw httpError(response.status, `Messages API returned HTTP ${response.status}: ${body.error?.message ?? 'no detail'}`, {
-          errorType: body.error?.type ?? `http_${response.status}`,
-          retryAfterMs: retryAfterMs(response),
-        });
-      }
-      return {
-        text: (body.content ?? [])
-          .filter((block) => block.type === 'text')
-          .map((block) => block.text)
-          .join(''),
-        usage: cacheUsage(body.usage),
-      };
-    },
-  };
-}
-
-async function send(key, body) {
-  try {
-    return await fetch(API_URL, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-api-key': key,
-        'anthropic-version': API_VERSION,
-      },
-      body: JSON.stringify(body),
-    });
-  } catch (err) {
-    const failure = new Error(`network error calling the Messages API: ${err.cause?.message ?? err.message}`);
-    failure.errorType = err.cause?.code ?? err.code ?? err.name;
-    failure.network = true;
-    throw failure;
-  }
-}
-
-export function anthropicRequestBody(prompt, { prefix } = {}) {
-  return {
-    model: process.env.GMNEW_MODEL || DEFAULT_ANTHROPIC_MODEL,
-    max_tokens: MAX_TOKENS,
-    messages: [{ role: 'user', content: userContent(prompt, prefix) }],
-  };
-}
-
-function userContent(prompt, prefix) {
-  if (!prefix || !prompt.startsWith(prefix)) return prompt;
-  return [
-    { type: 'text', text: prefix, cache_control: { type: 'ephemeral' } },
-    { type: 'text', text: prompt.slice(prefix.length) },
-  ];
-}
-
-function cacheUsage(usage) {
-  const counters = {};
-  for (const key of ['cache_creation_input_tokens', 'cache_read_input_tokens']) {
-    if (usage?.[key] !== undefined) counters[key] = usage[key];
-  }
-  return counters;
 }

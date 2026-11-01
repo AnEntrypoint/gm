@@ -3,7 +3,7 @@ import { randomBytes } from 'node:crypto';
 import { existsSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { runLoop } from './loop.mjs';
-import { anthropicRequestBody, createModel } from './models.mjs';
+import { createModel } from './models.mjs';
 import { readEvents, runQuery } from './log.mjs';
 import { buildPrompt, DEFAULT_RULES, DEFAULT_WITNESS } from './prompt.mjs';
 import { createTools } from './tools.mjs';
@@ -11,9 +11,9 @@ import { createRun, isDirectory, loadTask, newRunId, RUNS } from './run.mjs';
 import { writeSummary } from './summary.mjs';
 
 const USAGE = `usage:
-  gmnew run --task <file-or-text> --workspace <dir> [--model scripted|anthropic] [--max-steps N]
+  gmnew run --task <file-or-text> --workspace <dir> [--model scripted] [--max-steps N]
             [--script <replies.json>] [--faults 429,429] [--serial] [--no-background]
-            [--latency-ms N] [--overlap] [--dump-request]
+            [--latency-ms N] [--overlap]
   gmnew query --run <id> --js "<filter>"
   gmnew doctor [--workspace <dir>]`;
 
@@ -28,7 +28,6 @@ async function main(argv) {
 
 async function run(flags) {
   if (!flags.task) throw new Error('--task is required');
-  if (flags['dump-request'] === true) return dumpRequest(loadTask(flags.task).trim());
   if (!flags.workspace) throw new Error('--workspace is required');
   const workspace = resolve(flags.workspace);
   if (!isDirectory(workspace)) throw new Error(`workspace is not a directory: ${workspace}`);
@@ -90,7 +89,6 @@ function doctor(flags) {
   const workspace = resolve(flags.workspace ?? process.cwd());
   const nodeOk = Number(process.versions.node.split('.')[0]) >= 20;
   console.log(`node ${process.version}: ${nodeOk ? 'ok' : 'fail, Node 20 or newer is required'}`);
-  console.log(`ANTHROPIC_API_KEY: ${process.env.ANTHROPIC_API_KEY ? 'set' : 'not set'}`);
   const writable = probeWritable(workspace);
   console.log(`workspace ${workspace}: ${writable.ok ? 'writable' : `not writable (${writable.error})`}`);
   console.log(lastRunSummary());
@@ -130,7 +128,7 @@ function lastOutcome(events) {
   return 'none';
 }
 
-const BOOLEAN_FLAGS = new Set(['serial', 'no-background', 'overlap', 'dump-request']);
+const BOOLEAN_FLAGS = new Set(['serial', 'no-background', 'overlap']);
 
 function parseFlags(argv) {
   const flags = {};
@@ -154,12 +152,6 @@ function loadScript(file) {
   const value = JSON.parse(readFileSync(resolve(file), 'utf8'));
   if (!Array.isArray(value)) throw new Error('--script must be a JSON array of replies');
   return value;
-}
-
-function dumpRequest(task) {
-  const { prompt, prefix } = buildPrompt({ rules: DEFAULT_RULES, spec: { task, witness: DEFAULT_WITNESS }, events: [], total: 0 });
-  console.log(JSON.stringify(anthropicRequestBody(prompt, { prefix }), null, 2));
-  return 0;
 }
 
 function parseLatency(value) {

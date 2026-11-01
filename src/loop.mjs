@@ -51,7 +51,7 @@ async function stepLoop({ runDir, spec, model, tools, log, maxSteps, serial, lat
         return { status: 'error', steps: step, witness: null };
       }
       const { reply } = call;
-      log.append('reply', { step, text: reply.text, attempts: reply.attempts, prefixSha, usage: reply.usage, startMono: reply.startMono, ...simulated(latencyMs) });
+      log.append('reply', { step, text: reply.text, attempts: reply.attempts, prefixSha, startMono: reply.startMono, ...simulated(latencyMs) });
 
       const parsed = parseActions(reply.text);
       if (!parsed.ok) {

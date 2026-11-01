@@ -18,7 +18,7 @@ These are settled. Change one only by messaging the orchestrator, with the reaso
 
 - Node.js 20+ ES modules, standard library only, no dependencies.
 - Shape: an MCP server over stdio (JSON-RPC written by hand) plus `skills/gm-new/SKILL.md`. The Claude Code session is the model. The CLI is a thin wrapper for scripted witnesses. No spool, daemon, or listening port.
-- Model adapters behind `reply(prompt)`: `scripted` (offline, deterministic) and `anthropic` (Messages API via fetch). The anthropic adapter reads `ANTHROPIC_API_KEY` and refuses to run without it. Default model `claude-sonnet-5-5`, overridable with `GMNEW_MODEL`.
+- gm-new makes no API calls. The model is the host session (Claude Code) in MCP mode. The only model in the CLI is `scripted`, which is offline and deterministic. Anything that would call an API is reported to the gm agent to do, not done here.
 - Context: no summarisation. `next_context` returns the rules, the task, the witness requirement, the last 20 events and `prefixSha`. Older events are reached with `query_log`.
 - Rules live in `runs/<id>/rules.md`, re-read every step and placed first in the prompt. Rules are never compacted.
 - MCP tools: `next_context`, `read_file`, `write_file`, `list_dir`, `run_shell` (60 s default timeout), `job_start`, `job_status`, `query_log`, `finish` (requires a witness). The server writes every event to the log and answers concurrent requests by JSON-RPC id.
@@ -27,7 +27,7 @@ These are settled. Change one only by messaging the orchestrator, with the reaso
 
 ## Hard rules
 
-- Paid calls are approved with no limit (owner, relayed by the gm agent, 2026-11-01). Live runs use the Claude Code login, because `ANTHROPIC_API_KEY` is unset here. Verify the adapter offline: parse checks, and a fake HTTP server is not allowed, so verify by reading the code and by the scripted path.
+- Test runs run with the gm MCP disabled: each live trial uses a strict MCP configuration that names only the arm's own server, and the scripted runs call no gm tool. Anything that would make an API call, such as a cache measurement or a live model run, is reported to the gm agent to do.
 - No test files and no fixtures that stand in for a real run. Verify by running the CLI on a real task in a temporary workspace, then delete that workspace.
 - Use Node built-ins only. Shell commands use `child_process.spawn` with an explicit timeout.
 - Commit only by explicit path, on branch `main`. Author lanmower. The commit body states the change only. No trailers of any kind.
@@ -76,7 +76,7 @@ Send a message to `main` when a work-plan item lands. Include: the item number, 
 
 ## Done means
 
-Work-plan items 1 to 11 are witnessed and committed on main, and DESIGN.md is current. The live comparison of gm-new and gm is closed, with its report in DESIGN.md under "Project close". Still open and recorded: the minimal tool set, which is not run, and G3 (cache effect), which is blocked because the host route shows no cache usage. The project closes when those are recorded, and it is recorded.
+Work-plan items 1 to 11 are witnessed and committed on main, and DESIGN.md is current. The live comparison of gm-new and gm is closed, with its report in DESIGN.md under "Project close". Still open and recorded: the minimal tool set, which is not run, and G3 (cache effect), which is handed to the gm agent, since the host transcript reports cache usage and measuring it is an API-side observation. The project closes when those are recorded, and it is recorded.
 
 ## Rationale not expressible in code
 
