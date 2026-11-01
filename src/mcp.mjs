@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { basename, dirname, join, resolve } from 'node:path';
@@ -361,6 +362,16 @@ function parseFlags(argv) {
   return flags;
 }
 
+// The hash of the served tool list is logged at each start. A resumed run whose list differs from its last start
+// gets a tools-changed event with both hashes. A changed description invalidates the host's prompt cache, so the
+// log shows when it happens.
+function logTools(log, resumed) {
+  const sha = createHash('sha256').update(JSON.stringify(TOOLS)).digest('hex');
+  const last = resumed ? log.events().findLast((event) => event.kind === 'tools') : undefined;
+  if (last && last.sha !== sha) log.append('tools-changed', { old: last.sha, new: sha });
+  log.append('tools', { sha, count: TOOLS.length });
+}
+
 function positiveInt(value, name) {
   const number = Number(value);
   if (!Number.isInteger(number) || number < 1) throw new Error(`${name} must be a positive integer`);
@@ -391,6 +402,7 @@ async function main(argv) {
   }
   if (resumed) log.append('restart', { reason: flags['restart-reason'] ?? 'restarted without a reason' });
   else log.append('start', { mode: 'mcp', maxSteps, maxInflight });
+  logTools(log, resumed);
 
   const session = createSession({ workspace, runDir, log, task, maxSteps, maxInflight, resume });
   const lines = createInterface({ input: process.stdin, crlfDelay: Infinity });
