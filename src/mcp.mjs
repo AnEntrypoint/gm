@@ -24,7 +24,8 @@ const WINDOW = 20;
 const EVENT_CAP = 4000;
 const DEFAULT_MAX_STEPS = 50;
 const DEFAULT_MAX_INFLIGHT = 8;
-const USAGE = 'usage: node src/mcp.mjs --workspace <dir> --task <file-or-text> [--run-dir <dir>] [--max-steps N] [--max-inflight N]';
+const DEFAULT_JOB_LIFETIME_MS = 1800000;
+const USAGE = 'usage: node src/mcp.mjs --workspace <dir> --task <file-or-text> [--run-dir <dir>] [--max-steps N] [--max-inflight N] [--job-lifetime-ms N]';
 
 const MCP_RULES = `# Rules
 
@@ -77,13 +78,16 @@ class RpcError extends Error {
   }
 }
 
-function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, resume = null }) {
+function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, resume = null, jobLifetimeMs = DEFAULT_JOB_LIFETIME_MS, recovery = null, history = [] }) {
   const runId = basename(runDir);
-  const tools = createTools({ workspace, runDir, log, background: true });
+  const tools = createTools({ workspace, runDir, log, background: true, jobLifetimeMs });
+  let pendingRecovery = recovery;
+  let noticeSeq = log.count();
   const active = new Map();
   const waiting = [];
   const unansweredTurns = new Set();
   const replies = new Map(); // a repeated tools/call request id is answered from its first reply, never run again
+  for (const [key, reply] of answersFrom(history)) replies.set(key, Promise.resolve(reply));
   let steps = resume?.steps ?? 0;
   let ended = resume?.ended ?? null;
   let endLogged = ended !== null;
@@ -128,7 +132,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
         log.append('duplicate', { rpcId: message.id, tool: message.params?.name });
         return { jsonrpc: '2.0', id: message.id, result: await replies.get(key) };
       }
-      const pending = route(message.method, message.params);
+      const pending = route(message.method, message.params, message.id);
       if (key !== null) replies.set(key, pending);
       const result = await pending;
       return request ? { jsonrpc: '2.0', id: message.id, result: result ?? {} } : null;
@@ -140,11 +144,11 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     }
   }
 
-  async function route(method, params) {
+  async function route(method, params, rpcId) {
     if (method === 'initialize') return initialize(params);
     if (method === 'ping' || method === 'server/discover') return {};
     if (method === 'tools/list') return { tools: TOOLS };
-    if (method === 'tools/call') return callTool(params);
+    if (method === 'tools/call') return callTool(params, rpcId);
     if (method === 'prompts/list') return { prompts: [SKILL_PROMPT] };
     if (method === 'prompts/get') return getPrompt(params);
     if (method === 'resources/list') return { resources: [SKILL_RESOURCE] };
@@ -171,27 +175,27 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     return { contents: [{ uri: SKILL_URI, mimeType: 'text/markdown', text: SKILL.text }] };
   }
 
-  async function callTool(params) {
+  async function callTool(params, rpcId) {
     const name = params?.name;
     const args = params?.arguments ?? {};
     if (typeof name !== 'string') throw new RpcError(-32602, 'tools/call needs a string name');
     if (typeof args !== 'object' || args === null || Array.isArray(args)) {
       throw new RpcError(-32602, 'tools/call arguments must be an object');
     }
-    const out = await startCall(name, args);
+    const out = await startCall(name, args, rpcId);
     return { content: [{ type: 'text', text: JSON.stringify(out) }], isError: out.ok !== true };
   }
 
-  function startCall(name, args) {
+  function startCall(name, args, rpcId) {
     return new Promise((resolveCall) => {
-      waiting.push({ name, args, resolveCall });
+      waiting.push({ name, args, resolveCall, rpcId });
       drain();
     });
   }
 
   function drain() {
     if (ended !== null) {
-      for (const call of waiting.splice(0)) call.resolveCall(refuse(call.name, call.args, endedReason()));
+      for (const call of waiting.splice(0)) call.resolveCall(refuse(call.name, call.args, endedReason(), call.rpcId));
       return;
     }
     while (active.size < maxInflight && waiting.length > 0) {
@@ -199,7 +203,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
       const index = startableIndex(accesses);
       if (index < 0) return;
       const [call] = waiting.splice(index, 1);
-      call.resolveCall(invoke(call.name, call.args, accesses[index]));
+      call.resolveCall(invoke(call.name, call.args, accesses[index], call.rpcId));
     }
   }
 
@@ -226,28 +230,32 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     return `run ${runId} has ended (${ended}); restart the server to open a new run`;
   }
 
-  function invoke(name, args, access) {
-    if (ended !== null) return refuse(name, args, endedReason());
-    if (name === 'next_context') return nextContext(access);
-    if (name === 'finish') return finish(args, access);
-    if (Object.hasOwn(handlers, name)) return act(name, args, access, () => handlers[name](args));
-    return act(name, args, access, () => tools.run(name, args));
+  function invoke(name, args, access, rpcId) {
+    if (ended !== null) return refuse(name, args, endedReason(), rpcId);
+    if (name === 'next_context') return nextContext(access, rpcId);
+    if (name === 'finish') return finish(args, access, rpcId);
+    if (Object.hasOwn(handlers, name)) return act(name, args, access, () => handlers[name](args), undefined, rpcId);
+    return act(name, args, access, () => tools.run(name, args), undefined, rpcId);
   }
 
-  async function nextContext(access) {
+  async function nextContext(access, rpcId) {
     if (steps >= maxSteps) {
       stop('max_steps');
-      const out = refuse('next_context', {}, `step limit ${maxSteps} reached`);
+      const out = refuse('next_context', {}, `step limit ${maxSteps} reached`, rpcId);
       await endRun('max_steps', null);
       return out;
     }
     steps += 1;
     const step = steps;
-    return act('next_context', {}, access, () => context(step), ({ ok, error, prefixSha, total }) => ({ ok, error, prefixSha, total }));
+    return act('next_context', {}, access, () => context(step), ({ ok, error, prefixSha, total }) => ({ ok, error, prefixSha, total }), rpcId);
   }
 
   async function context(step) {
     const rules = await readFile(join(runDir, 'rules.md'), 'utf8');
+    const recoveryNow = pendingRecovery === null ? undefined : recoveryNote(pendingRecovery);
+    pendingRecovery = null;
+    const killed = log.events().filter((event) => event.kind === 'job-killed' && event.seq > noticeSeq);
+    noticeSeq = log.count();
     return {
       ok: true,
       step,
@@ -259,21 +267,23 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
       prefixSha: prefixShaOf({ rules, task, witness: DEFAULT_WITNESS, tools: TOOL_TEXT }),
       total: log.count(),
       events: log.recent(WINDOW).map(compactEvent),
+      ...(recoveryNow ? { recovery: recoveryNow } : {}),
+      ...(killed.length ? { jobsKilled: killed.map(({ seq, job, reason, lifetimeMs, tail }) => ({ seq, job, reason, lifetimeMs, tail })) } : {}),
     };
   }
 
-  async function finish(args, access) {
+  async function finish(args, access, rpcId) {
     if (typeof args.witness !== 'string' || args.witness.trim() === '') {
       return refuse('finish', args, 'finish needs a non-empty witness string');
     }
     stop('finished');
-    const out = await act('finish', args, access, () => tools.run('finish', args));
+    const out = await act('finish', args, access, () => tools.run('finish', args), undefined, rpcId);
     await endRun('finished', out.output);
     return out;
   }
 
-  function act(tool, args, access, exec, digest = (result) => result) {
-    const work = perform(tool, args, exec, digest);
+  function act(tool, args, access, exec, digest = (result) => result, rpcId = undefined) {
+    const work = perform(tool, args, exec, digest, rpcId);
     active.set(work, access);
     const forget = () => {
       active.delete(work);
@@ -283,29 +293,29 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     return work;
   }
 
-  async function perform(tool, args, exec, digest) {
+  async function perform(tool, args, exec, digest, rpcId) {
     const step = steps;
     const startMono = log.now();
     log.enter();
-    log.append('action', { step, tool, args });
+    const action = log.append('action', { step, tool, args, ...(rpcId === undefined ? {} : { rpcId }) });
     let result;
     try {
       result = await exec();
     } catch (err) {
       result = { ok: false, error: err.message };
     }
-    if (result.refused) log.append('refusal', { step, tool, error: result.error, startMono });
-    else log.append('result', { step, tool, startMono, ...digest(result) });
+    if (result.refused) log.append('refusal', { step, tool, error: result.error, startMono, actionSeq: action.seq });
+    else log.append('result', { step, tool, startMono, actionSeq: action.seq, ...digest(result) });
     log.leave();
     return result;
   }
 
-  function refuse(tool, args, reason) {
+  function refuse(tool, args, reason, rpcId) {
     const step = steps;
     const startMono = log.now();
-    log.append('action', { step, tool, args });
+    const action = log.append('action', { step, tool, args, ...(rpcId === undefined ? {} : { rpcId }) });
     const result = { ok: false, refused: true, error: `refused: ${reason}` };
-    log.append('refusal', { step, tool, error: result.error, startMono });
+    log.append('refusal', { step, tool, error: result.error, startMono, actionSeq: action.seq });
     return result;
   }
 
@@ -333,6 +343,54 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
   }
 
   return { accept, inputEnded, quiesceForRestart };
+}
+
+// The answer to every request id that a run already received, rebuilt from its log, so a repeated id is answered from
+// the log and never run again. An action with no end event was interrupted by a restart, and its repeat gets an error.
+function answersFrom(events) {
+  const ends = new Map();
+  for (const event of events) {
+    if ((event.kind === 'result' || event.kind === 'refusal') && event.actionSeq !== undefined) ends.set(event.actionSeq, event);
+  }
+  const answers = new Map();
+  for (const action of events) {
+    if (action.kind !== 'action' || action.rpcId === undefined) continue;
+    const end = ends.get(action.seq);
+    let out;
+    if (end === undefined) out = { ok: false, error: 'the call was interrupted by a restart; check its outside effects before repeating it' };
+    else if (end.kind === 'refusal') out = { ok: false, refused: true, error: end.error };
+    else out = outputOf(end);
+    answers.set(JSON.stringify(action.rpcId), { content: [{ type: 'text', text: JSON.stringify(out) }], isError: out.ok !== true });
+  }
+  return answers;
+}
+
+const LOG_FIELDS = new Set(['seq', 't', 'mono', 'inFlight', 'kind', 'step', 'tool', 'startMono', 'durMs', 'actionSeq', 'rpcId']);
+
+function outputOf(event) {
+  return Object.fromEntries(Object.entries(event).filter(([key]) => !LOG_FIELDS.has(key)));
+}
+
+// The open actions of a resumed run: actions with no result or refusal. Only runs whose events carry actionSeq are
+// read, because older events cannot say which action an end belongs to.
+function recoveryOf(events) {
+  const first = events.findIndex((event) => event.actionSeq !== undefined || event.rpcId !== undefined);
+  const lastSeq = events.length ? events.at(-1).seq : 0;
+  if (first < 0) return { lastSeq, open: [] };
+  const ended = new Set(events.filter((event) => (event.kind === 'result' || event.kind === 'refusal') && event.actionSeq !== undefined).map((event) => event.actionSeq));
+  const open = events.slice(first).filter((event) => event.kind === 'action' && !ended.has(event.seq)).map((event) => ({ seq: event.seq, tool: event.tool, args: event.args }));
+  return { lastSeq, open };
+}
+
+// The recovery note the next next_context carries after a resume. It names the open actions and asks the model to
+// verify their outside effects before repeating any of them.
+function recoveryNote(recovery) {
+  const list = recovery.open.map((action) => `seq ${action.seq} ${action.tool} ${JSON.stringify(action.args)}`).join('; ');
+  return {
+    lastSeq: recovery.lastSeq,
+    open: recovery.open,
+    note: `This run resumed after a restart, at last seq ${recovery.lastSeq}. These actions started and have no end event: ${list}. Before you repeat any of them, check the outside effects: git log and git status, the remote, and the row files under work/rows. Do not repeat a push, a commit, a fetch that posted, or a row resolve unless those checks show that it did not happen.`,
+  };
 }
 
 // Where a resumed run stands: the steps it has taken, and whether it already ended.
@@ -393,6 +451,7 @@ async function main(argv) {
   if (!isDirectory(workspace)) throw new Error(`workspace is not a directory: ${workspace}`);
   const maxSteps = positiveInt(flags['max-steps'] ?? DEFAULT_MAX_STEPS, '--max-steps');
   const maxInflight = positiveInt(flags['max-inflight'] ?? DEFAULT_MAX_INFLIGHT, '--max-inflight');
+  const jobLifetimeMs = positiveInt(flags['job-lifetime-ms'] ?? DEFAULT_JOB_LIFETIME_MS, '--job-lifetime-ms');
   const task = loadTask(flags.task).trim();
   if (task === '') throw new Error('--task is empty');
 
@@ -408,11 +467,14 @@ async function main(argv) {
     resume = null;
     console.error(`gm-new mcp: run ${closed} is closed; opened run ${basename(runDir)}`);
   }
+  const history = resumed ? log.events() : [];
+  const recovery = resumed ? recoveryOf(history) : null;
   if (resumed) log.append('restart', { reason: flags['restart-reason'] ?? 'restarted without a reason' });
   else log.append('start', { mode: 'mcp', maxSteps, maxInflight });
+  if (recovery && recovery.open.length > 0) log.append('recovery', { lastSeq: recovery.lastSeq, open: recovery.open });
   logTools(log, resumed);
 
-  const session = createSession({ workspace, runDir, log, task, maxSteps, maxInflight, resume });
+  const session = createSession({ workspace, runDir, log, task, maxSteps, maxInflight, resume, jobLifetimeMs, recovery: recovery && recovery.open.length > 0 ? recovery : null, history });
   const lines = createInterface({ input: process.stdin, crlfDelay: Infinity });
   lines.on('line', session.accept);
   lines.on('close', () => session.inputEnded().catch((err) => console.error(`gm-new: ${err.message}`)));

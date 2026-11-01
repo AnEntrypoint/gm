@@ -17,11 +17,12 @@ const OUTPUT_PAGE = 20000;
 const MAX_WAIT_MS = 30000;
 const JOB_NAME = /^[A-Za-z0-9_-]{1,64}$/;
 const BARRIER = { barrier: true };
+const DEFAULT_JOB_LIFETIME_MS = 1800000;
 const PATH_TOOLS = new Set(['read_file', 'write_file', 'edit_file', 'list_dir', 'stat_file']);
 const WRITE_TOOLS = new Set(['write_file', 'edit_file']);
 const READ_ONLY = new Set(['job_status', 'search', 'grep', 'fetch', 'callers', 'impact']);
 
-export function createTools({ workspace, runDir, log, background = true }) {
+export function createTools({ workspace, runDir, log, background = true, jobLifetimeMs = DEFAULT_JOB_LIFETIME_MS }) {
   const root = resolve(workspace);
   const realRoot = realpathSync(root);
   const jobs = new Map();
@@ -151,10 +152,11 @@ export function createTools({ workspace, runDir, log, background = true }) {
     writeStatus(name, status);
 
     const job = { child, killRequested: false, settled: false };
+    job.lifetimeKilled = jobLifetimeMs < timeoutMs;
     const timer = setTimeout(() => {
       job.killRequested = true;
       killGroup(child.pid);
-    }, timeoutMs);
+    }, Math.min(timeoutMs, jobLifetimeMs));
     job.done = new Promise((settle) => {
       const finish = (exitCode, signal) => {
         if (job.settled) return;
@@ -164,6 +166,9 @@ export function createTools({ workspace, runDir, log, background = true }) {
         const ended = { ...status, state, exitCode, signal };
         writeStatus(name, ended);
         log.append('job', { job: name, state, exitCode, signal, startMono });
+        if (job.lifetimeKilled && job.killRequested) {
+          log.append('job-killed', { job: name, reason: 'lifetime', lifetimeMs: jobLifetimeMs, tail: readTail(outputFile, TAIL_CAP) });
+        }
         settle();
       };
       child.on('error', (err) => finish(null, err.message));
