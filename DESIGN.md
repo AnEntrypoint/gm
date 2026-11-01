@@ -25,6 +25,8 @@ This note turns the evidence in `research/deep-research.md` into design directio
 - Queue cap: `--max-inflight` defaults to 8, and calls beyond the cap wait FIFO. Reason: the cap bounds the server's work, and the witness needs it to be deterministic. Owner decision (2026-11-01).
 - Steps: each `next_context` call is one step. The run summary reports `contextCalls` with the same value. The harness uses wall time and idleMs as its primary measures, and step count as a secondary one. Reason: one explicit definition of a step, and the primary measures are the ones concurrency changes. Owner decision (2026-11-01).
 - prefixSha: one definition in both modes, the sha256 of the rendered stable prefix (rules, task, witness requirement, tool descriptions and fixed instructions, in that order). The CLI and the MCP server render it with the same function, and each passes its own tool list. Reason: one name with one definition, so the hash compares across modes. Owner decision (2026-11-01).
+- Dependencies: none beyond Node built-ins. The DeepSeek Harness is in developer preview and warns of breaking changes, so gm-new does not depend on it. Reason: keeps the zero-dependency decision. Source: the DeepSeek prototype (github.com/deepseek-ai/dsh-superagent-prototype, MIT) and the Harness preview notice, as reported by the gm agent; not verified here.
+- Comparison trials (item 7): each comparison arm runs at least 3 trials per task, across at least 3 tasks, and the report gives the median and the spread, not one run. Reason: a single run is noise, and the prototype's Minimal-mode gain is unmeasured on controlled tasks (same source as above).
 - Retry: retry 408, 409, every 5xx (502, 503, 504 and 529 included), and network errors (ECONNRESET, timeouts) with backoff from 1 s, doubling, capped at 16 s, plus or minus 20% jitter, at most 4 retries. A 429 with `retry-after` waits that many seconds, and fails with a logged reason if the header asks for more than 60 s. A 429 without `retry-after` retries at most 2 times. Every other 4xx fails at once, logged with its error type. Each retry is an event with attempt, status, errorType and delayMs. Reason: the rules follow platform.claude.com/docs/en/api/errors (fetched 2026-11-01). A spend-cap 429 has no `retry-after` and keeps failing, so it must never loop.
 - Log fields: camelCase everywhere (`errorType`, `delayMs`, `prefixSha`, `durMs`). Reason: one naming convention for the log, confirmed by the gm agent (2026-11-01).
 - Cache: `prefixSha` is the sha256 of the rendered stable prefix (rules, tool list, fixed instructions), logged on every model event. The anthropic request marks the last block of that prefix with `cache_control`. `usage.cache_creation_input_tokens` and `usage.cache_read_input_tokens` are logged when present; the scripted model reports zeros. `--dump-request` prints the exact anthropic request body and exits with no network call. Reason: a prefix that changes between steps defeats caching, and the dump shows it without spend.
@@ -51,6 +53,7 @@ Start with one worker, one log and one loop. Add a component only when a measure
 6. **Measure one worker before fanning out (confirmed in direction, threshold unusable).** Finding 6 (medium) supports measuring a single-worker baseline before adding parallel workers. The saturation threshold (finding 7, low) must not be used as a constant (94% and 45% are unverified).
 
 7. **Subagent isolation (open).** The claim that isolated subagents help was refuted 1-2. Parallel subagents stay in gm-new only where a measured run shows they beat one worker on the same task.
+8. **Proactive mode (future, not built).** The agent watches a repo with no task. Source: the DeepSeek prototype README (github.com/deepseek-ai/dsh-superagent-prototype), as reported by the gm agent. gm-new is task-driven, and the prototype's code does not contain the proactive designs, so there is no evidence for this here.
 
 ## Concurrency evidence (digest, research/concurrency.md)
 
@@ -66,6 +69,7 @@ Start with one worker, one log and one loop. Add a component only when a measure
 - Whether a query-the-log design beats validated compaction on the same tasks (open question 2).
 - Whether subagent isolation helps long-horizon outcomes (open question 4).
 - Whether rule re-injection restores compliance without losing permitted actions (open question 1).
+- Whether a reduced tool set matches the full set on the same tasks with the same trials (the prototype's minimal configuration, as reported by the gm agent). Open until item 7 has run.
 
 ## Owner decisions (resolved)
 
