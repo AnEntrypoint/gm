@@ -40,13 +40,6 @@ const ARMS = {
       args: [join(ROOT, 'src', 'mcp.mjs'), '--workspace', join(project, 'ws'), '--run-dir', join(project, 'run'), '--task', join(project, 'task.md')],
     }),
   },
-  B: {
-    label: 'gm',
-    command: '/mcp__gm__gm',
-    route: 'mcp-prompt',
-    skill: null,
-    server: () => ({ command: 'node', args: ['/config/.gm-tools/gm-mcp-server.mjs'] }),
-  },
 };
 
 const args = parseArgs(process.argv.slice(2));
