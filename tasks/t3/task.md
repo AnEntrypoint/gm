@@ -1,0 +1,1 @@
+Start a background job named build that runs: sleep 3 && echo finished > build.log. While the job runs, write status.txt containing the word working. Wait until the job has exited, then check that build.log contains finished. Finish with the content of build.log as the witness.

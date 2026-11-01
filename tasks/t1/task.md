@@ -1,0 +1,1 @@
+Create a file named report.txt in the workspace that contains the integers 1 to 10, one per line, in order. Check that report.txt has exactly ten lines and that they are 1 through 10. Finish with the content of report.txt as the witness.

@@ -1,0 +1,1 @@
+The workspace contains numbers.txt, one integer per line. Write a Node.js program named sum.mjs that prints the sum of those integers. Run it, and write the printed sum to answer.txt. Finish with the content of answer.txt as the witness.
