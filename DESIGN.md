@@ -92,6 +92,9 @@ The first slice runs end to end with the scripted model. Run it on one long task
 
 ## Measured
 
+- Live pause: the arm B batch was paused at 2026-11-01 15:59:23 SAST, with a 1-minute load of 11.88 at the pause (11.20 as the batch stopped), on the gm agent's decision, because load of 6 or more yields only loaded trials. The runner, its server and the trial in flight (`B-t1-3-82b605`, which had no result) were stopped. Its state is the result files: `--resume true` reruns exactly the slots without a valid result, so the resume picks up the same trials. The cap stays at 1. The minimal-tool comparison does not run. A-t3-2 stays invalid, as recorded.
+- Live trials so far, not yet compared: arm A has 10 valid trials and arm B has 2 valid trials, all recorded before load was recorded, so they are unrecorded. Invalid trials are listed in the report, never dropped (`node tools/live.mjs --report true`).
+
 - Item 7, scripted harness (`node src/bench.mjs`, 4 arms times 3 tasks times 3 trials, scripted model, real tools, all 36 runs finished). Rerun output is in `/tmp/gmnc/bench-rerun.txt`, and the builder's run ids are between `2026-11-01-12-10-30-293006` and `2026-11-01-12-11-22-db192c` in `runs/`. Median wall time, background task: 3175 ms with background on, against 5296 ms with it off. The 3 s job overlaps the 2 s command only when background is on. Parallel on and off give 42.6 and 27.6 ms on the writes task, which is too short to show a parallel gain. The scripted replies return at once, so idle time does not separate the arms.
 - Summary event witnesses: CLI run `2026-11-01-12-09-42-d52be8` (summary seq 22, end seq 23; maxInFlight 2, idleMs 35.77, contextCalls 6). MCP run `2026-11-01-12-09-59-68794c` (summary seq 13, end seq 14; contextCalls 2, idleMs 134.494). Interrupt run `2026-11-01-12-10-21-51dbf6` (summary seq 4, end seq 5, status interrupted).
 
