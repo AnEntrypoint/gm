@@ -1,5 +1,5 @@
-// The wiki's write tool. wiki_search is in search-index.mjs, beside search, because both rank a corpus through the same index. wikiWrite
-// refuses a claim whose quote is not in its named source, and it writes nothing when it refuses.
+// The wiki's write tool. wiki_search is in search.mjs, beside search. wikiWrite refuses a claim whose quote is not in its named
+// source, and it writes nothing when it refuses.
 import { wikiWrite } from './wiki.mjs';
 
 const str = { type: 'string' };

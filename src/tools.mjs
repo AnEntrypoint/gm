@@ -9,10 +9,8 @@ import { createRowVerbs } from './rows.mjs';
 import { createSearchVerbs } from './search.mjs';
 import { createFetchVerbs } from './fetch.mjs';
 import { createAstVerbs } from './code-ast.mjs';
-import { createSearchIndexVerbs } from './search-index.mjs';
 import { createWikiVerbs } from './wiki-tools.mjs';
 import { createReviewVerbs } from './review-tools.mjs';
-import { createInsightVerbs } from './insight.mjs';
 
 const DEFAULT_TIMEOUT_MS = 60000;
 const MAX_TIMEOUT_MS = 600000;
@@ -24,7 +22,7 @@ const BARRIER = { barrier: true };
 const DEFAULT_JOB_LIFETIME_MS = 1800000;
 const PATH_TOOLS = new Set(['read_file', 'write_file', 'edit_file', 'list_dir', 'stat_file']);
 const WRITE_TOOLS = new Set(['write_file', 'edit_file']);
-const READ_ONLY = new Set(['job_status', 'search', 'wiki_search', 'grep', 'fetch', 'callers', 'impact', 'insight', 'review_join']);
+const READ_ONLY = new Set(['job_status', 'search', 'wiki_search', 'grep', 'fetch', 'callers', 'impact', 'review_join']);
 
 export function createTools({ workspace, runDir, log, background = true, jobLifetimeMs = DEFAULT_JOB_LIFETIME_MS }) {
   const root = resolve(workspace);
@@ -142,7 +140,7 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
       return { ok: true, finished: true, output: args.witness };
     },
   };
-  Object.assign(handlers, createGitVerbs({ root, confine, log }), createRowVerbs({ root, confine, log }), createSearchVerbs({ root, confine }), createSearchIndexVerbs({ root, log }), createWikiVerbs({ root, log }), createReviewVerbs({ root, log }), createInsightVerbs({ confine }), createFetchVerbs({ log, root }), createAstVerbs({ root, confine }));
+  Object.assign(handlers, createGitVerbs({ root, confine, log }), createRowVerbs({ root, confine, log }), createSearchVerbs({ root, confine }), createWikiVerbs({ root, log }), createReviewVerbs({ root, log }),createFetchVerbs({ log, root }), createAstVerbs({ root, confine }));
 
   function startJob(name, command, timeoutMs) {
     if (jobs.has(name)) return { ok: false, error: `job ${name} already exists` };

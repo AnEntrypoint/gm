@@ -2,14 +2,13 @@
 
 A single-worker long-horizon loop: one worker, one append-only log, governance rules re-read at every step. Design and evidence: `DESIGN.md` and `research/deep-research.md`.
 
-Status: the MCP server, the skill, the CLI wrapper, the measurement tools, and the search, wiki, review, insight and call-site tools are built and witnessed. The live comparison with gm is closed, with its results in DESIGN.md. Node.js 22.5+.
+Status: the MCP server, the skill, the CLI wrapper, the measurement tools, and the search, wiki, review and call-site tools are built and witnessed. The live comparison with gm is closed, with its results in DESIGN.md. Node.js 20+.
 
-Install, once, after a clone (the thorns submodule and two npm packages):
+Install, once, after a clone (one pinned runtime dependency, acorn):
 
-    git submodule update --init
     npm install
 
-The served tools are listed in `DESIGN.md`, Decisions. `search` and `wiki_search` rank by BM25 over `.gm-new/index/` (created in the workspace on first use, and ignored by git). `callers` and `impact` parse the JavaScript with acorn. `insight` runs thorns. `wiki_write` and the three `review_*` tools write to the run log and the wiki.
+The served tools are listed in `DESIGN.md`, Decisions. `search` and `wiki_search` rank by BM25 in process, over the tracked files and the wiki pages. `callers` and `impact` parse the JavaScript with acorn. `wiki_write` and the three `review_*` tools write to the run log and the wiki.
 
 ## The worker: an MCP server
 

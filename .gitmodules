@@ -1,3 +1,0 @@
-[submodule "vendor/thorns"]
-	path = vendor/thorns
-	url = https://github.com/AnEntrypoint/thorns.git

@@ -8,10 +8,9 @@
     "gmnew": "src/cli.mjs"
   },
   "engines": {
-    "node": ">=22.5"
+    "node": ">=20"
   },
   "dependencies": {
-    "acorn": "8.18.0",
-    "thorns": "file:vendor/thorns"
+    "acorn": "8.18.0"
   }
 }

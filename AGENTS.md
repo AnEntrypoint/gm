@@ -16,7 +16,7 @@ Finish gm-new as the simplest architecture that runs one long task end to end, w
 
 These are settled. Change one only by messaging the orchestrator, with the reason.
 
-- Node.js 22.5+ ES modules. Dependencies: acorn, and thorns (the submodule at vendor/thorns). A new one needs an entry in DESIGN.md, Decisions, first.
+- Node.js 20+ ES modules. One pinned runtime dependency, acorn 8.18.0. No native code and no submodules. Any further dependency needs a measured gain in turns or accuracy, and a measured memory cost per worker, recorded in DESIGN.md first.
 - Shape: an MCP server over stdio (JSON-RPC written by hand) plus `skills/gm/SKILL.md`. The Claude Code session is the model. The CLI is a thin wrapper for scripted witnesses. No spool, daemon, or listening port.
 - gm-new does not use gm. Its code, skill, MCP server, runner, tests and builds use no gm MCP tool, no gm skill, no gm runner and no gm state. gm was the comparison target for arm B only, and the arm B configuration was removed with the live runner (DESIGN.md, Live comparison, closed). Code search for gm-new work uses this directory's own files, not gm.
 - gm-new makes no API calls. The model is the host session (Claude Code) in MCP mode. The only model in the CLI is `scripted`, which is offline and deterministic. Anything that would call an API is reported to the gm agent to do, not done here.
