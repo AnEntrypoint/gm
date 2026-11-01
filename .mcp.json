@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "gm-new": {
+      "command": "node",
+      "args": [
+        "/workspace/gm-new/src/mcp.mjs",
+        "--workspace",
+        "/workspace/gm-new",
+        "--run-dir",
+        "/workspace/gm-new/runs/self",
+        "--task",
+        "/workspace/gm-new/tasks/self.md",
+        "--max-steps",
+        "100000"
+      ]
+    }
+  }
+}
