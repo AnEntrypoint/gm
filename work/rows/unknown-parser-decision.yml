@@ -1,0 +1,8 @@
+id: "unknown-parser-decision"
+kind: "unknown"
+title: "Parser for callers and impact"
+body: "Owner decision. callers and impact are regex approximations until then."
+status: "open"
+owner: true
+triggerMet: false
+createdAt: "2026-11-01T23:00:00.000Z"

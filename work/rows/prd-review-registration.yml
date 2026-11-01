@@ -1,0 +1,8 @@
+id: "prd-review-registration"
+kind: "prd"
+title: "Register the review functions as tools"
+body: "A feature, so the owner decides. src/review.mjs is unregistered until then."
+status: "open"
+owner: true
+triggerMet: true
+createdAt: "2026-11-01T23:00:00.000Z"

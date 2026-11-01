@@ -1,0 +1,8 @@
+id: "prd-verb-rename"
+kind: "prd"
+title: "Rename gm.verbs() to gm.list and gm.describe"
+body: "A gm decision, now that the comparison has closed. Not made."
+status: "open"
+owner: true
+triggerMet: true
+createdAt: "2026-11-01T23:00:00.000Z"

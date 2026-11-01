@@ -1,0 +1,7 @@
+id: "prd-surface-decision"
+kind: "prd"
+title: "Surface decision: code, tools or neither"
+body: "Decided by the batch: the tools surface stays the default (d980416). The code surface stays behind --surface code."
+status: "resolved"
+createdAt: "2026-11-01T23:00:00.000Z"
+witnessCommit: "d980416"

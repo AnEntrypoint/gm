@@ -1,0 +1,8 @@
+id: "prd-janitor-cleanup"
+kind: "prd"
+title: "Module-mode body cleanup (<run>/code)"
+body: "Parked with module mode. The prototype is witnessed in scratch."
+status: "blocked"
+owner: false
+triggerMet: false
+createdAt: "2026-11-01T23:00:00.000Z"

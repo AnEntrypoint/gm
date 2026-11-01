@@ -1,0 +1,8 @@
+id: "unknown-future-directions"
+kind: "unknown"
+title: "Proactive mode, verification-gated admission, matched-budget falsifier, raw-replay arm"
+body: "Future, not built. The falsifier is triggered only when gm-new writes a reusable artifact from its runs."
+status: "blocked"
+owner: false
+triggerMet: false
+createdAt: "2026-11-01T23:00:00.000Z"

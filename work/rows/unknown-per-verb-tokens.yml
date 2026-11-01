@@ -1,0 +1,8 @@
+id: "unknown-per-verb-tokens"
+kind: "unknown"
+title: "Per-verb output tokens unmeasured"
+body: "Due when the owner approves a measurement from the log."
+status: "open"
+owner: false
+triggerMet: false
+createdAt: "2026-11-01T23:00:00.000Z"

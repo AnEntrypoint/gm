@@ -1,0 +1,8 @@
+id: "unknown-rule-reinjection"
+kind: "unknown"
+title: "Rule re-injection (open question 1)"
+body: "Needs live trials, so it waits for the owner's live-trial budget. Trigger: a live run shows a rule violated after a summary."
+status: "open"
+owner: false
+triggerMet: false
+createdAt: "2026-11-01T23:00:00.000Z"

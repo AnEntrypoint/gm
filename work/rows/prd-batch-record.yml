@@ -1,0 +1,7 @@
+id: "prd-batch-record"
+kind: "prd"
+title: "Closed live batch recorded in DESIGN"
+body: "Landed in d980416: per-arm table, the pooled decision and the gm arm as reference only."
+status: "resolved"
+createdAt: "2026-11-01T23:00:00.000Z"
+witnessCommit: "d980416"

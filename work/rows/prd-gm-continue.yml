@@ -1,0 +1,8 @@
+id: "prd-gm-continue"
+kind: "prd"
+title: "gm-continue skill and its setup, with the stop rule"
+body: "Lands after the rows and before the rename."
+status: "open"
+owner: false
+triggerMet: true
+createdAt: "2026-11-01T23:00:00.000Z"

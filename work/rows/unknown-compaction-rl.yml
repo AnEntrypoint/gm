@@ -1,0 +1,8 @@
+id: "unknown-compaction-rl"
+kind: "unknown"
+title: "Validated compaction, RL summariser, saturation threshold"
+body: "Deferred. Trigger: a scripted run at 20000 events where query_log exceeds 100 ms."
+status: "blocked"
+owner: false
+triggerMet: false
+createdAt: "2026-11-01T23:00:00.000Z"

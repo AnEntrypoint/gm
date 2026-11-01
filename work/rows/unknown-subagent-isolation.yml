@@ -1,0 +1,8 @@
+id: "unknown-subagent-isolation"
+kind: "unknown"
+title: "Subagent isolation (open questions 3 and 4)"
+body: "Deferred. Trigger: a long-horizon run shows a single worker's limit."
+status: "open"
+owner: false
+triggerMet: false
+createdAt: "2026-11-01T23:00:00.000Z"

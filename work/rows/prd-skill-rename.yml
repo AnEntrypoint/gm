@@ -1,0 +1,8 @@
+id: "prd-skill-rename"
+kind: "prd"
+title: "Rename the gm-new skill to gm"
+body: "Owner approved. Lands last, as one commit, with the served read of gm://skill/SKILL.md."
+status: "open"
+owner: false
+triggerMet: true
+createdAt: "2026-11-01T23:00:00.000Z"

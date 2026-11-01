@@ -1,0 +1,8 @@
+id: "unknown-run-code-sandbox"
+kind: "unknown"
+title: "Sandbox for run_code"
+body: "Owner decision. The body runs unsandboxed in the worker, as run_shell does."
+status: "open"
+owner: true
+triggerMet: false
+createdAt: "2026-11-01T23:00:00.000Z"

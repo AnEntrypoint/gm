@@ -1,0 +1,8 @@
+id: "unknown-minimal-tool-set"
+kind: "unknown"
+title: "Minimal tool set, not run"
+body: "Not run and not requested (gm). Needs live trials under the load rule."
+status: "open"
+owner: false
+triggerMet: false
+createdAt: "2026-11-01T23:00:00.000Z"

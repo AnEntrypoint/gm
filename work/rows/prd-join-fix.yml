@@ -1,0 +1,7 @@
+id: "prd-join-fix"
+kind: "prd"
+title: "Join fix in src/review.mjs (after-edit check)"
+body: "Landed in f46a389."
+status: "resolved"
+createdAt: "2026-11-01T23:00:00.000Z"
+witnessCommit: "f46a389"

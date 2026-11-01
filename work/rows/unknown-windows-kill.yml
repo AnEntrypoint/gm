@@ -1,0 +1,8 @@
+id: "unknown-windows-kill"
+kind: "unknown"
+title: "Windows process-group kill unverified"
+body: "Blocked: no Windows machine here."
+status: "blocked"
+owner: false
+triggerMet: false
+createdAt: "2026-11-01T23:00:00.000Z"

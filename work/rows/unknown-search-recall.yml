@@ -1,0 +1,8 @@
+id: "unknown-search-recall"
+kind: "unknown"
+title: "Search recall and precision unmeasured"
+body: "Needs a gold-set measurement on this repo. Due when the owner approves a measurement."
+status: "open"
+owner: false
+triggerMet: false
+createdAt: "2026-11-01T23:00:00.000Z"

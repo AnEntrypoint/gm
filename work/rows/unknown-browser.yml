@@ -1,0 +1,8 @@
+id: "unknown-browser"
+kind: "unknown"
+title: "Browser"
+body: "Deferred. The owner will fix it at the core level. Node's global WebSocket is noted, not built."
+status: "open"
+owner: true
+triggerMet: false
+createdAt: "2026-11-01T23:00:00.000Z"
