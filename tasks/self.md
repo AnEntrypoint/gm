@@ -1,7 +1,7 @@
 Iterate on gm-new itself, in /workspace/gm-new, using the gm-new tools. Call next_context at the start of every step, and follow the rules it returns and the rules in AGENTS.md.
 
 Next work, in order, from the gm agent's phase plan (DESIGN.md, Decided, 2026-11-02):
-1. Phase 1, the kernel tools, is witnessed in DESIGN.md under Measured. Phase 2 is search: BM25 over tracked files, plus literal, regex and whole-word modes. Witness it by finding a known symbol with its path and line. callers and impact stay unavailable until the user decides the parser dependency, and the reply must say so.
+1. Phases 1 and 2 are witnessed in DESIGN.md under Measured: the kernel tools, and search (BM25 with literal, regex and whole-word grep). callers and impact stay unavailable until the user decides the parser dependency, and the reply must say so.
 2. Phase 3 is JIT execution: run the project's tests and checks through run_shell, each with a witness. Write no test files.
 3. Phase 4 is optional: fetch, then browser over CDP, only if a project needs them.
 4. The gate: edit a small real change to gm-new with its own tools in a live Claude session through airc, commit it through its git verbs, and see CI pass. Only after that remove the gm dependencies listed in DESIGN.md under "Dependencies on gm, to be replaced", each in its own commit.
