@@ -1,2 +1,4 @@
 runs/
 node_modules/
+.gm/
+.agentplug-kv/
