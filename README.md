@@ -14,7 +14,7 @@ An entry for `.mcp.json`:
 
     {"mcpServers":{"gm-new":{"command":"node","args":["/abs/gm-new/src/mcp.mjs","--workspace","/abs/ws","--run-dir","/abs/run","--task","/abs/task.md"]}}}
 
-Tools: `next_context`, `read_file`, `write_file`, `list_dir`, `run_shell`, `job_start`, `job_status`, `query_log`, `finish`. Each `next_context` call is one step. A call starts at once while one of `--max-inflight` slots (default 8) is free. Calls that touch one file, with a write among them, wait in order, and a shell runs alone. The server answers each request by its id, so a session's parallel calls overlap, and the log shows `inFlight`.
+Tools: `next_context`, `read_file`, `write_file`, `edit_file`, `stat_file`, `list_dir`, `run_shell`, `job_start`, `job_status`, `query_log`, `finish`; the git tools `git_status`, `git_add`, `git_commit`, `git_push`, `git_log`, `git_diff`, `git_show`, `git_fetch`, `git_pull`, `git_checkout`, `git_branch`; `ci_status` (through the gh CLI); and the row tools `prd_add`, `prd_list`, `prd_resolve`, `unknown_add`, `unknown_list`, `unknown_resolve`. Rows are files under `work/rows/`, and a row resolves with a seq of the run log and a commit that exists in the repository. Code search (`grep`, `callers`, `impact`) is not in this set yet: it waits for the search phase and the parser decision (DESIGN.md). Each `next_context` call is one step. A call starts at once while one of `--max-inflight` slots (default 8) is free. Calls that touch one file, with a write among them, wait in order, and a shell runs alone. The server answers each request by its id, so a session's parallel calls overlap, and the log shows `inFlight`.
 
 The skill is `skills/gm-new/SKILL.md`. It holds the loop prose only.
 
@@ -41,7 +41,7 @@ Each run writes `runs/<id>/` with `log.jsonl`, `rules.md` and `task.json`, and e
 
 ## Paths and limits
 
-- Paths given to `read_file`, `write_file` and `list_dir` stay inside the workspace. A `..` segment is refused, and so is a symlink that leaves the workspace, including a dangling one. Writes that touch one file run in order, including through a symlink alias or a hard link.
+- Paths given to `read_file`, `write_file`, `edit_file`, `stat_file`, `list_dir` and the git tools stay inside the workspace. A `..` segment is refused, and so is a symlink that leaves the workspace, including a dangling one. Writes that touch one file run in order, including through a symlink alias or a hard link.
 - `run_shell` is not confined. A shell command can hard-link a file from outside the workspace, and a path check does not see that.
 - A background job and a foreground shell run in their own process group. A job kill, a foreground timeout, the end of a run and an interrupt all end the group.
 - The repository is pushed privately to `AnEntrypoint/gm-new`.

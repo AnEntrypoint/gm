@@ -1,19 +1,21 @@
-import { spawn, spawnSync } from 'node:child_process';
+import { spawnSync } from 'node:child_process';
 import { closeSync, existsSync, lstatSync, mkdirSync, openSync, readFileSync, realpathSync, renameSync, statSync, writeFileSync } from 'node:fs';
-import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { runQuery } from './log.mjs';
+import { foregroundGroups, killGroup, runCommand, signalGroup, sleep, spawnGroup } from './exec.mjs';
+import { createGitVerbs } from './git.mjs';
+import { createRowVerbs } from './rows.mjs';
 
 const DEFAULT_TIMEOUT_MS = 60000;
 const MAX_TIMEOUT_MS = 600000;
-const OUTPUT_CAP = 200000;
 const TAIL_CAP = 2000;
 const POLL_MS = 100;
 const MAX_WAIT_MS = 30000;
 const JOB_NAME = /^[A-Za-z0-9_-]{1,64}$/;
 const BARRIER = { barrier: true };
-const KILL_GRACE_MS = 500;
-const foregroundGroups = new Set();
+const PATH_TOOLS = new Set(['read_file', 'write_file', 'edit_file', 'list_dir', 'stat_file']);
+const WRITE_TOOLS = new Set(['write_file', 'edit_file']);
 
 export function createTools({ workspace, runDir, log, background = true }) {
   const root = resolve(workspace);
@@ -47,6 +49,29 @@ export function createTools({ workspace, runDir, log, background = true }) {
       return { ok: true, output: `wrote ${relative(root, at.path)} (${args.content.length} chars)` };
     },
 
+    async edit_file(args) {
+      const at = confine(args.path);
+      if (at.refused) return refusal(at.refused);
+      if (typeof args.old !== 'string' || args.old === '') return { ok: false, error: 'old must be a non-empty string' };
+      if (typeof args.new !== 'string') return { ok: false, error: 'new must be a string' };
+      const text = await readFile(at.path, 'utf8');
+      const count = text.split(args.old).length - 1;
+      if (count === 0) return { ok: false, error: `old text not found in ${args.path}` };
+      if (count > 1 && args.replaceAll !== true) {
+        return { ok: false, error: `old text occurs ${count} times in ${args.path}; add context to make it unique, or set replaceAll` };
+      }
+      await writeFile(at.path, text.split(args.old).join(args.new));
+      return { ok: true, output: `edited ${relative(root, at.path)} (${count} replacement${count === 1 ? '' : 's'})` };
+    },
+
+    async stat_file(args) {
+      const at = confine(args.path);
+      if (at.refused) return refusal(at.refused);
+      const info = await stat(at.path);
+      const type = info.isDirectory() ? 'dir' : info.isFile() ? 'file' : 'other';
+      return { ok: true, output: JSON.stringify({ type, size: info.size, mtime: info.mtime.toISOString() }) };
+    },
+
     async list_dir(args) {
       const at = confine(args.path ?? '.');
       if (at.refused) return refusal(at.refused);
@@ -61,7 +86,7 @@ export function createTools({ workspace, runDir, log, background = true }) {
         return { ok: false, error: 'command must be a non-empty string' };
       }
       const timeoutMs = Math.min(Number(args.timeoutMs) || DEFAULT_TIMEOUT_MS, MAX_TIMEOUT_MS);
-      if (args.background !== true || !background) return shell(root, args.command, timeoutMs);
+      if (args.background !== true || !background) return runCommand(args.command, [], { cwd: root, timeoutMs, shell: true });
       if (!JOB_NAME.test(args.job ?? '')) return { ok: false, error: 'a background job needs job: 1 to 64 letters, digits, _ or -' };
       return startJob(args.job, args.command, timeoutMs);
     },
@@ -92,6 +117,7 @@ export function createTools({ workspace, runDir, log, background = true }) {
       return { ok: true, finished: true, output: args.witness };
     },
   };
+  Object.assign(handlers, createGitVerbs({ root, confine }), createRowVerbs({ root, confine, log }));
 
   function startJob(name, command, timeoutMs) {
     if (jobs.has(name)) return { ok: false, error: `job ${name} already exists` };
@@ -99,7 +125,7 @@ export function createTools({ workspace, runDir, log, background = true }) {
     mkdirSync(join(runDir, 'jobs'), { recursive: true });
     const out = openSync(outputFile, 'w');
     const startMono = log.now();
-    const child = spawnGroup(command, root, ['ignore', out, out]);
+    const child = spawnGroup(command, [], root, ['ignore', out, out], { shell: true });
     closeSync(out);
     const status = { job: name, command, state: 'running', pid: child.pid, startMono, output: outputFile };
     writeStatus(name, status);
@@ -131,11 +157,11 @@ export function createTools({ workspace, runDir, log, background = true }) {
   return {
     access(name, args) {
       if (name === 'job_status') return { items: [] };
-      if (name !== 'read_file' && name !== 'list_dir' && name !== 'write_file') return BARRIER;
+      if (!PATH_TOOLS.has(name)) return BARRIER;
       const rel = name === 'list_dir' ? (args.path ?? '.') : args.path;
       const at = planPath(root, rel);
       if (!at) return BARRIER;
-      return { items: [{ path: at.path, group: at.group, write: name === 'write_file' }] };
+      return { items: [{ path: at.path, group: at.group, write: WRITE_TOOLS.has(name) }] };
     },
 
     async run(name, args) {
@@ -248,80 +274,3 @@ function realpathOrNull(path) {
   }
 }
 
-function childEnv() {
-  const env = { ...process.env };
-  delete env.ANTHROPIC_API_KEY;
-  return env;
-}
-
-function sleep(ms) {
-  return new Promise((done) => setTimeout(done, ms));
-}
-
-function spawnGroup(command, cwd, stdio) {
-  return spawn(command, { cwd, env: childEnv(), shell: true, detached: true, windowsHide: true, stdio });
-}
-
-async function killGroup(pid) {
-  if (process.platform === 'win32') return taskkillTree(pid);
-  if (!signalGroup(pid, 'SIGTERM')) return;
-  await sleep(KILL_GRACE_MS);
-  signalGroup(pid, 'SIGKILL');
-}
-
-function killGroupNow(pid) {
-  if (process.platform === 'win32') return taskkillTree(pid);
-  signalGroup(pid, 'SIGKILL');
-  return undefined;
-}
-
-function signalGroup(pid, signal) {
-  try {
-    process.kill(-pid, signal);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function taskkillTree(pid) {
-  return new Promise((done) => {
-    const killer = spawn('taskkill', ['/PID', String(pid), '/T', '/F'], { windowsHide: true, stdio: 'ignore' });
-    killer.on('error', done);
-    killer.on('close', done);
-  });
-}
-
-function shell(cwd, command, timeoutMs) {
-  return new Promise((done) => {
-    let output = '';
-    let timedOut = false;
-    const collect = (chunk) => {
-      if (output.length < OUTPUT_CAP) output += chunk;
-    };
-    const child = spawnGroup(command, cwd, ['ignore', 'pipe', 'pipe']);
-    foregroundGroups.add(child.pid);
-    child.on('exit', () => killGroupNow(child.pid));
-    child.stdout.setEncoding('utf8');
-    child.stderr.setEncoding('utf8');
-    child.stdout.on('data', collect);
-    child.stderr.on('data', collect);
-    const timer = setTimeout(() => {
-      timedOut = true;
-      killGroup(child.pid).then(() => {
-        done({ ok: false, timedOut: true, error: `timed out after ${timeoutMs} ms`, output: output.slice(0, OUTPUT_CAP) });
-      });
-    }, timeoutMs);
-    child.on('error', (err) => {
-      clearTimeout(timer);
-      foregroundGroups.delete(child.pid);
-      done({ ok: false, error: err.message });
-    });
-    child.on('close', (exitCode, signal) => {
-      clearTimeout(timer);
-      foregroundGroups.delete(child.pid);
-      if (timedOut) return;
-      done({ ok: exitCode === 0, exitCode, signal, output: output.slice(0, OUTPUT_CAP) });
-    });
-  });
-}

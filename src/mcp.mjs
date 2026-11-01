@@ -6,6 +6,8 @@ import { createInterface } from 'node:readline';
 import { DEFAULT_WITNESS, prefixShaOf, renderTools } from './prompt.mjs';
 import { isDirectory, loadTask, newRunId, openRun, ROOT, RUNS } from './run.mjs';
 import { conflicts, createTools } from './tools.mjs';
+import { GIT_TOOLS } from './git.mjs';
+import { ROW_TOOLS } from './rows.mjs';
 import { writeSummary } from './summary.mjs';
 
 const PROTOCOL_VERSION = '2025-06-18';
@@ -39,12 +41,16 @@ const TOOLS = [
   { name: 'next_context', description: 'Begin a step. Returns rules, task, witness requirement, the last 20 log events and prefixSha. Call it at the start of each step.', inputSchema: objectSchema({}) },
   { name: 'read_file', description: 'Read a text file in the workspace.', inputSchema: objectSchema({ path: text }, ['path']) },
   { name: 'write_file', description: 'Write a text file in the workspace, creating parent directories.', inputSchema: objectSchema({ path: text, content: text }, ['path', 'content']) },
+  { name: 'edit_file', description: 'Replace old with new in a workspace text file. old must occur once, unless replaceAll is true.', inputSchema: objectSchema({ path: text, old: text, new: text, replaceAll: { type: 'boolean' } }, ['path', 'old', 'new']) },
+  { name: 'stat_file', description: 'Type, size and mtime of a workspace path, as JSON.', inputSchema: objectSchema({ path: text }, ['path']) },
   { name: 'list_dir', description: 'List a workspace directory. Directories end with "/".', inputSchema: objectSchema({ path: text }) },
   { name: 'run_shell', description: 'Run a shell command in the workspace and wait for it. Default timeout 60000 ms. Its process group is killed when it returns, so background work must go through job_start.', inputSchema: objectSchema({ command: text, timeoutMs: number }, ['command']) },
   { name: 'job_start', description: 'Start a shell command as a named background job and return at once. Poll it with job_status.', inputSchema: objectSchema({ job: text, command: text, timeoutMs: number }, ['job', 'command']) },
   { name: 'job_status', description: 'State (running, exited or killed), exit code and output tail of a job. waitMs polls until the job leaves running, at most 30000 ms.', inputSchema: objectSchema({ job: text, waitMs: number }, ['job']) },
   { name: 'query_log', description: 'Evaluate a JavaScript expression over the run events array and return JSON.', inputSchema: objectSchema({ js: text }, ['js']) },
   { name: 'finish', description: 'End the run. witness is one string that quotes the evidence you observed.', inputSchema: objectSchema({ witness: text }, ['witness']) },
+  ...GIT_TOOLS,
+  ...ROW_TOOLS,
 ];
 
 const TOOL_TEXT = renderTools(TOOLS);
@@ -206,7 +212,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     if (name === 'next_context') return nextContext(access);
     if (name === 'finish') return finish(args, access);
     if (Object.hasOwn(handlers, name)) return act(name, args, access, () => handlers[name](args));
-    return act(name, args, access, () => ({ ok: false, error: `unknown tool: ${name}` }));
+    return act(name, args, access, () => tools.run(name, args));
   }
 
   async function nextContext(access) {
