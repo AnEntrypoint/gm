@@ -23,8 +23,44 @@ const HANDSHAKE_ID = 'gm-new-supervisor-handshake';
 const HOST_CHANGED = ['notifications/tools/list_changed', 'notifications/prompts/list_changed', 'notifications/resources/list_changed'];
 const DEFAULT_INITIALIZE = { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'gm-new-supervisor', version: '1' } };
 
-const argv = process.argv.slice(2);
-if (!argv.includes('--run-dir')) argv.push('--run-dir', join(ROOT, 'runs', newRunId()));
+// Each server start gets its own run under --runs, unless --resume names an existing run. The run is chosen once per
+// session, so every restart of this session's worker resumes the same run. --run-dir still names a run directly.
+const { argv, runDir } = chooseRun(process.argv.slice(2));
+
+function chooseRun(args) {
+  const runsRoot = optionValue(args, '--runs');
+  const resumeId = optionValue(args, '--resume');
+  const rest = withoutOptions(args, ['--runs', '--resume']);
+  if (optionValue(args, '--run-dir') !== undefined) return { argv: rest, runDir: resolve(optionValue(args, '--run-dir')) };
+  if (runsRoot === undefined) {
+    if (resumeId !== undefined) throw new Error('--resume needs --runs');
+    const dir = join(ROOT, 'runs', newRunId());
+    return { argv: [...rest, '--run-dir', dir], runDir: dir };
+  }
+  const root = resolve(runsRoot);
+  if (resumeId !== undefined) {
+    if (!/^[A-Za-z0-9_-]+$/.test(resumeId)) throw new Error('--resume takes a run id');
+    const dir = join(root, resumeId);
+    if (!existsSync(join(dir, 'log.jsonl'))) throw new Error(`no run ${resumeId} under ${root}`);
+    return { argv: [...rest, '--run-dir', dir], runDir: dir };
+  }
+  const dir = join(root, newRunId());
+  return { argv: [...rest, '--run-dir', dir], runDir: dir };
+}
+
+function optionValue(args, name) {
+  const index = args.indexOf(name);
+  return index < 0 ? undefined : args[index + 1];
+}
+
+function withoutOptions(args, names) {
+  const out = [];
+  for (let i = 0; i < args.length; i += 1) {
+    if (names.includes(args[i])) i += 1;
+    else out.push(args[i]);
+  }
+  return out;
+}
 
 let child = null;
 let state = 'starting'; // running, draining, restarting, or failed

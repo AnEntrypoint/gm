@@ -7,4 +7,4 @@ Next work, in order:
 
 Every change needs a witness before it is committed: a scripted run, a supervisor test, or a JSON-RPC check, with its run id or output recorded in DESIGN.md under Measured. Commit each change by explicit path on main. Do not create branches. Keep the code ASCII, use Node built-ins only, and write no test files.
 
-Do not call finish. This run is shared by every session that opens this project, and a finished run refuses all later calls.
+Call finish, with a witness, when this session's work is done. finish closes only this session's run. The next session that opens this project starts a new run, so the closed run does not affect it.

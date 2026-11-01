@@ -3,10 +3,10 @@
     "gm-new": {
       "command": "node",
       "args": [
-        "/workspace/gm-new/src/mcp.mjs",
+        "/workspace/gm-new/tools/supervise.mjs",
         "--workspace",
         "/workspace/gm-new",
-        "--run-dir",
+        "--runs",
         "/workspace/gm-new/runs/self",
         "--task",
         "/workspace/gm-new/tasks/self.md",
