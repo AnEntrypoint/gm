@@ -113,8 +113,8 @@ The status of each research item, as of 2026-11-01. "Implemented" means built. "
 
 Gaps the research says to close:
 
-- G1, overlap of the next model call with tool work (C2): a CLI-only `--overlap` flag, default off. MCP cannot overlap, because the host owns the loop. Built after arm B.
-- G2, parallel gain (C1): a `--latency-ms` knob on the scripted model. The latency is simulated, and every output that uses it says so. Waves on and off are measured on a task with independent slow work. Built after arm B.
+- G1, overlap of the next model call with tool work (C2): built. A CLI-only `--overlap` flag, default off. It is witnessed in scripted runs, and it has no live run. MCP cannot overlap, because the host owns the loop.
+- G2, parallel gain (C1): built and measured with simulated latency. `--latency-ms N` is scripted only, and every event it touches carries `simulatedMs`. The numbers below are simulated, not live.
 - G3, cache effect (C3): blocked. There is no API key, and the host route shows no cache usage. No caching claim is made.
 
 Limit, kept for safety: `run_shell` always runs alone. Parallel waves cover `read_file`, `write_file`, `list_dir` and `job_status`. `job_start` is a barrier as well, because it starts a shell. The shell barrier stays.
@@ -168,6 +168,9 @@ Comparison, on quiet trials only, with 9 against 9 trials: arm A's median wall t
 
 ## Measured
 
+- G2, simulated latency 500 ms (`node src/bench.mjs --task slow-writes --latency-ms 500`, scripted, four independent writes then a finish, 3 trials per arm). SIMULATED, not live. Parallel waves on: median wall 2010.9 ms (2008.9 to 2014.9), median idle 3.6 ms, runs `2026-11-01-15-19-35-886d17`, `-37-6ff901`, `-39-f67de4`. Waves off (`--serial`): median wall 3512.7 ms (3512.1 to 3537), median idle 3.5 ms, runs `2026-11-01-15-19-42-08c888`, `-45-07250e`, `-49-a14119`.
+- G1, overlap witness (scripted, latency 500 ms, two writes then a read of a.txt, then finish; SIMULATED latency). With `--overlap`, run `2026-11-01-15-20-01-5d098a`: pending is seq 5, the second reply is seq 6, the write results are seq 7 and 8, the read is seq 9, wall 2054 ms. Without it, run `2026-11-01-15-20-03-243227`: the write results are seq 5 and 6, the second reply is seq 7, wall 3055 ms. Across three runs each, wall medians are 2010 ms with overlap and 3012 ms without. Edge runs, all with overlap: HTTP 400 `2026-11-01-15-21-45-b46985`, parse error `2026-11-01-15-21-46-f31ba3`, max steps `2026-11-01-15-21-48-ca5309`.
+- Regression, default flags: run `2026-11-01-15-19-28-bf7078` against the pre-change baseline `2026-11-01-15-16-26-c4deda` gives the same 23 events, apart from timing fields.
 - Live pause, second: the arm B resume was paused again at 2026-11-01 16:18:48 SAST, with a 1-minute load of 15.68, which the gm agent's rule requires (pause above 6). The runner, its server and the trial in flight (`B-t3-2`, no result) were stopped. Two arm B slots remain, `t3-2` and `t3-3`. The resume is `node tools/live.mjs --arm B --tasks t1,t2,t3 --trials 3 --concurrency 1 --resume true`, once the gm agent reports load under 6.
 - Arm B quiet-window trials recorded so far (start load under 6): `B-t1-3-1d05b6` (start 3.61), `B-t2-1-0e9f91` (2.56), `B-t2-2-b8815f` (3.03), `B-t2-3-0157fd` (3.24), `B-t3-1-e2d32c` (5.38). Each passed its checker. `B-t2-3-0157fd` ended at load 5.38, and `B-t3-1-e2d32c` started at 5.38, so both are close to the threshold.
 
