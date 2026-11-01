@@ -166,6 +166,38 @@ Invalid trials, listed and not dropped: arm A has 9 records, all readiness failu
 
 Comparison, on quiet trials only, with 9 against 9 trials: arm A's median wall time is lower on all three tasks, and its median idle time is lower on t2 and t3. The spreads overlap on t1, and the arms differ in tool strategy as well as in harness: arm B's skill is the served prompt, while arm A's is copied in. With 3 trials per task, these are medians, not significance tests.
 
+## Project close
+
+The project closes with this section. Each close condition is met, and each open item is named.
+
+Close conditions:
+
+- The consolidated research matrix is in this file, in "Research consolidation".
+- G1 (`--overlap`) and G2 (`--latency-ms`, simulated) are built and witnessed. G2 is labelled simulated wherever it appears.
+- G3 (cache effect) is recorded as blocked, and no caching claim is made.
+- The live report is in: the final comparison, on the MCP prompt route, is below.
+
+Final live comparison, MCP prompt route, the same route and rules for both arms. Each arm has 9 valid quiet trials, 3 per task, all passing. Medians, with spread as min to max, are from quiet trials only. The witness `A-t1-1-c49976` is excluded.
+
+- Arm A (gm-new), t1: wall 28506 ms (17027 to 42533), idle 410 ms, tool calls 7 (gm-new MCP 6).
+- Arm A (gm-new), t2: wall 34941 ms (31023 to 40033), idle 1349 ms, tool calls 12 (MCP 11).
+- Arm A (gm-new), t3: wall 28077 ms (26823 to 28775), idle 803 ms, tool calls 11 (MCP 10).
+- Arm B (gm), t1: wall 31093 ms (29339 to 36576), idle 1463 ms, tool calls 3 (gm MCP 2).
+- Arm B (gm), t2: wall 48995 ms (47362 to 55716), idle 3387 ms, tool calls 6 (MCP 4).
+- Arm B (gm), t3: wall 53406 ms (36970 to 83288), idle 4482 ms, tool calls 8 (MCP 6).
+
+Loaded trials: none for either arm on this route. Unrecorded trials, not used: arm B has 2 (t1). Invalid records are listed in `runs/live/report-A.json` and `report-B.json`, and they are not dropped. Arm A's t3 slot t3-2 has no valid run on the copied-skill route, and it has three invalid attempts there.
+
+The comparison: arm A's median wall time is lower on all three tasks. On t2 and t3 the spreads do not overlap. On t1 they overlap. Arm A's median idle time is lower on each task. The two arms do not use the same tools in the same way: arm A made 6 to 11 MCP calls per trial, and arm B made 2 to 6. So the difference reflects each route's tool use as well as its speed. The two arms also use different MCP servers, so this is a comparison of the two whole routes, not of one design choice.
+
+The copied-skill record (arm A, 9 quiet trials) is kept as a labelled record. It is not pooled with the MCP route, and it is not used in the comparison above.
+
+Open items, recorded and not run:
+
+- The minimal tool set (open question). Its cost and trigger are above.
+- G3, the cache effect, is blocked: there is no API key, and the host route shows no cache usage.
+- Subagent isolation, proactive mode, verification-gated admission, the matched-budget falsifier, the raw-replay arm, and the RL summariser are deferred, as the matrix says.
+
 ## Measured
 
 - Arm A MCP-route re-run, pause: paused at 2026-11-01 18:58:34 SAST, with a 1-minute load of 7.53, which is above the pause rule of 6. The runner and its server were stopped, and no trial was in flight. Completed MCP-route quiet trials so far: task 1 has 3 (`A-t1-q1-0708b9`, `A-t1-q2-9816f5`, `A-t1-q3-2c477b`), and task 2 has 1 (`A-t2-q1-10a3a1`). Five slots remain, two for t2 and three for t3, and the batch resumes when the 1-minute load is under 6. The witness `A-t1-1-c49976` is excluded from the counts.
