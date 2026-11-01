@@ -1,16 +1,16 @@
 #!/usr/bin/env node
-// Hot-reload supervisor, run as a plain local process. It holds the host's stdio connection and runs the worker
-// (src/mcp.mjs) as a child. When a file under src/ or skills/ changes, it holds new host requests, waits for calls in
-// flight to answer, asks the worker to pause (SIGTERM, then SIGKILL after EXIT_MS), starts a new worker on the same run
-// directory, replays the MCP handshake, and tells the host that its tool, prompt and resource lists may have changed.
-// The new worker resumes the run from its log. A call in flight is never interrupted or answered with an error: the
-// restart waits until its result is logged.
+// Supervisor for the worker, run by tools/relay.mjs, which holds the host's stdio. It runs the worker (src/mcp.mjs) as
+// a child. When a file under src/ or skills/ changes, it holds new host requests, waits for calls in flight to answer,
+// asks the worker to pause (SIGTERM, then SIGKILL after EXIT_MS), starts a new worker on the same run directory, replays
+// the MCP handshake, and tells the host that its tool, prompt and resource lists may have changed. The new worker resumes
+// the run from its log. A call in flight is never interrupted or answered with an error: the restart waits until its
+// result is logged. The relay stops this file with SIGTERM to replace it, and the worker is paused, not closed. Stdin
+// ending closes the run.
 import { spawn } from 'node:child_process';
 import { existsSync, watch } from 'node:fs';
 import { createInterface } from 'node:readline';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { newRunId } from '../src/run.mjs';
 
 const ROOT = process.env.GMNEW_ROOT ? resolve(process.env.GMNEW_ROOT) : resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const WORKER = join(ROOT, 'src', 'mcp.mjs');
@@ -24,51 +24,21 @@ const HANDSHAKE_MS = 10000;
 const HANDSHAKE_ID = 'gm-new-supervisor-handshake';
 const HOST_CHANGED = ['notifications/tools/list_changed', 'notifications/prompts/list_changed', 'notifications/resources/list_changed'];
 const DEFAULT_INITIALIZE = { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'gm-new-supervisor', version: '1' } };
+const READY_METHOD = 'gm-new/ready';
 
-// Each server start gets its own run under --runs, unless --resume names an existing run. The run is chosen once per
-// session, so every restart of this session's worker resumes the same run. --run-dir still names a run directly.
-const { argv, runDir } = chooseRun(process.argv.slice(2));
-
-function chooseRun(args) {
-  const runsRoot = optionValue(args, '--runs');
-  const resumeId = optionValue(args, '--resume');
-  const rest = withoutOptions(args, ['--runs', '--resume']);
-  if (optionValue(args, '--run-dir') !== undefined) return { argv: rest, runDir: resolve(optionValue(args, '--run-dir')) };
-  if (runsRoot === undefined) {
-    if (resumeId !== undefined) throw new Error('--resume needs --runs');
-    const dir = join(ROOT, 'runs', newRunId());
-    return { argv: [...rest, '--run-dir', dir], runDir: dir };
-  }
-  const root = resolve(runsRoot);
-  if (resumeId !== undefined) {
-    if (!/^[A-Za-z0-9_-]+$/.test(resumeId)) throw new Error('--resume takes a run id');
-    const dir = join(root, resumeId);
-    if (!existsSync(join(dir, 'log.jsonl'))) throw new Error(`no run ${resumeId} under ${root}`);
-    return { argv: [...rest, '--run-dir', dir], runDir: dir };
-  }
-  const dir = join(root, newRunId());
-  return { argv: [...rest, '--run-dir', dir], runDir: dir };
-}
-
-function optionValue(args, name) {
-  const index = args.indexOf(name);
-  return index < 0 ? undefined : args[index + 1];
-}
-
-function withoutOptions(args, names) {
-  const out = [];
-  for (let i = 0; i < args.length; i += 1) {
-    if (names.includes(args[i])) i += 1;
-    else out.push(args[i]);
-  }
-  return out;
-}
+// The relay passes the run directory and the worker options in argv, and the start reason and the host's initialize
+// in the environment. Both are removed from the environment here, so the worker and its jobs do not inherit them.
+const argv = process.argv.slice(2);
+const START_REASON = process.env.GMNEW_CORE_REASON || null;
+const INITIAL_INITIALIZE = process.env.GMNEW_HOST_INITIALIZE ? JSON.parse(process.env.GMNEW_HOST_INITIALIZE) : null;
+delete process.env.GMNEW_CORE_REASON;
+delete process.env.GMNEW_HOST_INITIALIZE;
 
 let retryDelay = RETRY_MIN_MS;
 let retryTimer = null;
 let child = null;
 let state = 'starting'; // running, draining, restarting, or failed
-let hostInitialize = null;
+let hostInitialize = INITIAL_INITIALIZE;
 let failure = '';
 let stderrTail = '';
 const inflight = new Map(); // request ids sent to the worker and not yet answered
@@ -97,6 +67,12 @@ function parse(line) {
 function onHostLine(line) {
   if (line.trim() === '') return;
   const message = parse(line);
+  if (message?.method === READY_METHOD) {
+    // The relay's probe. It is answered once this supervisor is running, so the relay knows the message loop is alive.
+    if (state === 'running') writeHost({ jsonrpc: '2.0', id: message.id, result: {} });
+    else hold(line, message);
+    return;
+  }
   if (message?.method === 'initialize') hostInitialize = message.params ?? {};
   if (state !== 'running') {
     hold(line, message);
@@ -276,8 +252,30 @@ function shutdown() {
   child.stdin.end();
 }
 
-startWorker(null);
-state = 'running';
+// A supervisor the relay started after the host's initialize replays the handshake to its worker, as a restart does.
+if (hostInitialize === null) {
+  startWorker(START_REASON);
+  state = 'running';
+} else {
+  scheduleRestart(START_REASON ?? 'the supervisor was replaced');
+}
 for (const dir of WATCHED) if (existsSync(dir)) watch(dir, { recursive: true }, onSourceChange);
 createInterface({ input: process.stdin, crlfDelay: Infinity }).on('line', onHostLine).on('close', shutdown);
-for (const signal of ['SIGINT', 'SIGTERM']) process.once(signal, shutdown);
+process.once('SIGINT', shutdown);
+process.once('SIGTERM', () => pause(0));
+// A crash this file can catch pauses the worker before it exits, so the run stays open for the relay's next start. Only a
+// kill that cannot be caught, such as SIGKILL, closes the run, because the worker then sees its stdin end.
+process.on('uncaughtException', (err) => crash(err));
+process.on('unhandledRejection', (err) => crash(err));
+
+// The relay replaces this supervisor with SIGTERM. The calls in flight have all been answered by then. The worker is
+// paused, so its run stays open for the next start, and its jobs are stopped and logged.
+async function pause(code) {
+  await stopWorker();
+  process.exit(code);
+}
+
+async function crash(err) {
+  process.stderr.write(`gm-new dev: the supervisor crashed: ${err?.stack ?? err}\n`);
+  await pause(1);
+}

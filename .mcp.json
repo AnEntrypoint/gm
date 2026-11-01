@@ -3,7 +3,7 @@
     "gm-new": {
       "command": "node",
       "args": [
-        "/workspace/gm-new/tools/supervise.mjs",
+        "/workspace/gm-new/tools/relay.mjs",
         "--workspace",
         "/workspace/gm-new",
         "--runs",

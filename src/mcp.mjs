@@ -333,13 +333,15 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     if (!endLogged) await endRun(ended, null);
   }
 
-  // A restart is not a finish. New calls are refused, calls in flight finish, background jobs are stopped and logged,
-  // and no end event is written, so the next worker resumes this run.
+  // A restart is not a finish. New calls are refused, background jobs and foreground shell groups are killed and logged
+  // first, so no child outlives the worker, and no end event is written, so the next worker resumes this run. The supervisor
+  // sends a restart only after every call has answered, so a call still active here means the worker was stopped
+  // without a drain, such as a crash; its shell is killed, and the call settles with that result.
   async function quiesceForRestart() {
     ended = 'restarting';
     for (const call of waiting.splice(0)) call.resolveCall(refuse(call.name, call.args, endedReason()));
-    await Promise.allSettled([...active.keys()]);
     await tools.close();
+    await Promise.allSettled([...active.keys()]);
   }
 
   return { accept, inputEnded, quiesceForRestart };
