@@ -92,6 +92,9 @@ The first slice runs end to end with the scripted model. Run it on one long task
 
 ## Measured
 
+- Live pause, second: the arm B resume was paused again at 2026-11-01 16:18:48 SAST, with a 1-minute load of 15.68, which the gm agent's rule requires (pause above 6). The runner, its server and the trial in flight (`B-t3-2`, no result) were stopped. Two arm B slots remain, `t3-2` and `t3-3`. The resume is `node tools/live.mjs --arm B --tasks t1,t2,t3 --trials 3 --concurrency 1 --resume true`, once the gm agent reports load under 6.
+- Arm B quiet-window trials recorded so far (start load under 6): `B-t1-3-1d05b6` (start 3.61), `B-t2-1-0e9f91` (2.56), `B-t2-2-b8815f` (3.03), `B-t2-3-0157fd` (3.24), `B-t3-1-e2d32c` (5.38). Each passed its checker. `B-t2-3-0157fd` ended at load 5.38, and `B-t3-1-e2d32c` started at 5.38, so both are close to the threshold.
+
 - Live pause: the arm B batch was paused at 2026-11-01 15:59:23 SAST, with a 1-minute load of 11.88 at the pause (11.20 as the batch stopped), on the gm agent's decision, because load of 6 or more yields only loaded trials. The runner, its server and the trial in flight (`B-t1-3-82b605`, which had no result) were stopped. Its state is the result files: `--resume true` reruns exactly the slots without a valid result, so the resume picks up the same trials. The cap stays at 1. The minimal-tool comparison does not run. A-t3-2 stays invalid, as recorded.
 - Live trials so far, not yet compared: arm A has 10 valid trials and arm B has 2 valid trials, all recorded before load was recorded, so they are unrecorded. Invalid trials are listed in the report, never dropped (`node tools/live.mjs --report true`).
 
