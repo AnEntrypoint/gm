@@ -119,6 +119,29 @@ Gaps the research says to close:
 
 Limit, kept for safety: `run_shell` always runs alone. Parallel waves cover `read_file`, `write_file`, `list_dir` and `job_status`. `job_start` is a barrier as well, because it starts a shell. The shell barrier stays.
 
+## Live comparison, closed
+
+Valid trials only. Invalid trials are listed and counted, never dropped. Load is the 1-minute average at each trial's start: quiet means under 6, loaded means 6 or more, and unrecorded means the trial ran before load was recorded. Report: `node tools/live.mjs --report true`, written to `runs/live/report-A.json` and `report-B.json`. Medians, with spread as min to max.
+
+Arm A (gm-new): 10 valid trials, all unrecorded, so arm A has no quiet trial.
+
+- t1 (5 valid): wall 24948 ms (22887 to 25779), idle 675 ms, tool calls 7 (gm-new MCP 6).
+- t2 (3 valid): wall 31975 ms (26788 to 35133), idle 1397 ms, tool calls 10 (MCP 9).
+- t3 (2 valid): wall 25758 ms (25670 to 25845), idle 1046 ms, tool calls 10 (MCP 9). One valid t3 trial is missing, so the 3-trial rule is not met for t3. Slot t3-2 has three invalid attempts and no valid run.
+- Invalid arm A records: 9. Six were superseded by a valid run of the same slot (t1-1, t1-2, t2-1, t2-2, t3-1, t3-3). Three are the attempts at slot t3-2, which has no valid run.
+
+Arm B (gm): 9 valid trials, 7 quiet and 2 unrecorded, and no loaded trial.
+
+- Quiet, t1 (1 trial): wall 31093 ms, idle 1463 ms, tool calls 3 (gm MCP 2).
+- Quiet, t2 (3 trials): wall 48995 ms (47362 to 55716), idle 3387 ms, tool calls 6 (MCP 4).
+- Quiet, t3 (3 trials): wall 53406 ms (36970 to 83288), idle 4482 ms, tool calls 8 (MCP 6). One trial, `B-t3-1-e2d32c`, used one gm MCP call out of six tool calls, so the arm B task-3 numbers mix two tool choices.
+- Unrecorded, t1 (2 trials): wall 33693 ms (25104 to 42282), idle 2028 ms, tool calls 3.5 (MCP 2.5).
+- Invalid arm B records: 2 (`B-t1-1-47ac20` and `B-t1-1-4cd9f4`). Both failed before the unknown-command resend was added, and no prompt reached the transcript.
+
+Comparison: arm A has no quiet trial, and arm B's quiet trials cannot be set against arm A's unrecorded ones. So the arms are not compared, and no medians are read as a difference between gm-new and gm. The numbers above describe each arm's own trials. The tool-call split shows that each arm used its own MCP tools, but in different proportions per task.
+
+Still open: the minimal tool set (open question). The gaps G1 and G2 are built from the research consolidation, and G3 stays blocked.
+
 ## Measured
 
 - Live pause, second: the arm B resume was paused again at 2026-11-01 16:18:48 SAST, with a 1-minute load of 15.68, which the gm agent's rule requires (pause above 6). The runner, its server and the trial in flight (`B-t3-2`, no result) were stopped. Two arm B slots remain, `t3-2` and `t3-3`. The resume is `node tools/live.mjs --arm B --tasks t1,t2,t3 --trials 3 --concurrency 1 --resume true`, once the gm agent reports load under 6.
