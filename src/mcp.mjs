@@ -135,6 +135,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     if (method === 'prompts/get') return getPrompt(params);
     if (method === 'resources/list') return { resources: [SKILL_RESOURCE] };
     if (method === 'resources/read') return readResource(params);
+    if (method === 'resources/templates/list') return { resourceTemplates: [] };
     if (method.startsWith('notifications/')) return null;
     throw new RpcError(-32601, `method not found: ${method}`);
   }
