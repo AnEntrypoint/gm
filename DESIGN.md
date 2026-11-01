@@ -79,7 +79,7 @@ Start with one worker, one log and one loop. Add a component only when a measure
 - Whether a query-the-log design beats validated compaction on the same tasks (open question 2).
 - Whether subagent isolation helps long-horizon outcomes (open question 4).
 - Whether rule re-injection restores compliance without losing permitted actions (open question 1).
-- Whether a reduced tool set matches the full set on the same tasks with the same trials (the prototype's minimal configuration, as reported by the gm agent). Open until item 7 has run.
+- Whether a reduced tool set matches the full set on the same tasks with the same trials (the prototype's minimal configuration, as reported by the gm agent). Open. Cost: about 18 more live trials across both arms, 3 tasks with 3 trials each, under the same load rule. Trigger: a decision that depends on whether the tool set can shrink. Not run: the gm agent closed the project without it (2026-11-01).
 - Whether learned-skill gains transfer to troubleshooting work. Unmeasured, so any transfer is an experiment, not a gain.
 
 ## Owner decisions (resolved)
