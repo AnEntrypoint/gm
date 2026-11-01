@@ -1,5 +1,6 @@
 import { relative } from 'node:path';
 import { runCommand } from './exec.mjs';
+import { runGate } from './gate.mjs';
 
 const GIT_TIMEOUT_MS = 120000;
 const GH_TIMEOUT_MS = 60000;
@@ -20,7 +21,7 @@ const obj = (properties, required = []) => ({ type: 'object', properties, requir
 export const GIT_TOOLS = [
   { name: 'git_status', description: 'Working tree status: the branch and the changed paths (porcelain v1).', inputSchema: obj({}) },
   { name: 'git_add', description: 'Stage the given workspace paths. Each path is explicit; "." is refused.', inputSchema: obj({ paths: strings }, ['paths']) },
-  { name: 'git_commit', description: 'Commit only the given paths, with the message. Stage new files with git_add first.', inputSchema: obj({ message: str, paths: strings }, ['message', 'paths']) },
+  { name: 'git_commit', description: 'Commit only the given paths, with the message. Stage new files with git_add first. The commit gate runs first: syntax of every module, ASCII of every tracked text file, every doc path and KEEP path exists, and a smoke run with a negative control. A failed check refuses the commit, and gate reports each check with its time.', inputSchema: obj({ message: str, paths: strings }, ['message', 'paths']) },
   { name: 'git_push', description: 'Push main to origin and set its upstream. Refused unless the current branch is main.', inputSchema: obj({}) },
   { name: 'git_log', description: 'The last count commits, one line each, optionally only for one path (count 1 to 200, default 20).', inputSchema: obj({ count: num, path: str }) },
   { name: 'git_diff', description: 'Diff of the given paths (default: all), or of the staged index when staged is true.', inputSchema: obj({ paths: strings, staged: bool }) },
@@ -99,7 +100,10 @@ export function createGitVerbs({ root, confine, log }) {
     async git_commit({ message, paths }) {
       if (typeof message !== 'string' || message.trim() === '') return fail('message must be a non-empty string');
       const scope = pathArgs(paths);
-      return scope.error ? fail(scope.error) : git(['commit', '-m', message, ...scope.args]);
+      if (scope.error) return fail(scope.error);
+      const gate = await runGate(root);
+      if (!gate.ok) return { ok: false, error: `refused: the commit gate failed: ${gate.failed.join(', ')}`, gate: gate.checks };
+      return { ...(await git(['commit', '-m', message, ...scope.args])), gate: gate.checks };
     },
 
     async git_push() {

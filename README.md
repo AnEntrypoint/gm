@@ -37,7 +37,7 @@ Each run writes `runs/<id>/` with `log.jsonl`, `rules.md` and `task.json`, and e
     node tools/live.mjs --arm A --tasks t1,t2,t3 --trials 3 --concurrency 1 [--resume true]
 
 - `src/bench.mjs` runs four scripted arms, three tasks and three trials each, with the real tools and the offline model. It prints the median and spread of wall time and idle time, read from each run's log.
-- `tasks/t1`, `t2` and `t3` are the live tasks. Each holds a `task.md`, the same text for both arms, and a `checker.mjs` that grades the workspace.
+- The live tasks `t1`, `t2` and `t3` were removed from the repo when the live comparison closed. Their recorded results stay under `runs/live` (not tracked). `tools/live.mjs` needs those task directories, so it cannot run from this repo as it is.
 - `tools/transcript.mjs` is the one transcript parser that both live arms use. It gives wall time, tool time, model time, idle time and the tool-call split.
 - `tools/live.mjs` runs each trial as one interactive Claude Code session through ccbridge, in its own tmux session and temp project. It needs the ccbridge checkout at `/workspace/airc`, tmux, and the Claude Code login. The cap is one session at a time, across both arms (DESIGN.md).
 
