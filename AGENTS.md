@@ -22,7 +22,7 @@ These are settled. Change one only by messaging the orchestrator, with the reaso
 - Context: no summarisation. `next_context` returns the rules, the task, the witness requirement, the last 20 events and `prefixSha`. Older events are reached with `query_log`.
 - Rules live in `runs/<id>/rules.md`, re-read every step and placed first in the prompt. Rules are never compacted.
 - MCP tools: `next_context`, `read_file`, `write_file`, `list_dir`, `run_shell` (60 s default timeout), `job_start`, `job_status`, `query_log`, `finish` (requires a witness). The server writes every event to the log and answers concurrent requests by JSON-RPC id.
-- Paths stay inside the workspace for the file tools. A `..` segment is refused. A symlink that leaves the workspace is refused, including a dangling one. Refusals are `refusal` events, not thrown errors. `run_shell` is not confined.
+- Paths stay inside the workspace for the file tools. A `..` segment is refused. A symlink that leaves the workspace is refused, including a dangling one. Refusals are `refusal` events, not thrown errors. `run_shell` is not confined. A shell command can hard-link a file from outside the workspace; a path check does not see that, and it is a known limit, not a bug to close with a path check.
 - Storage: `runs/<id>/` with `log.jsonl` (append-only), `rules.md`, `task.json`. `runs/` is git-ignored.
 
 ## Hard rules
