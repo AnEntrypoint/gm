@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { createHash } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { basename, dirname, join, resolve } from 'node:path';
 import { createInterface } from 'node:readline';
@@ -264,7 +264,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     if (surface === 'code' && !CODE_SURFACE.has(name)) {
       return refuse(name, args, 'the code surface serves next_context, run_code and finish; call a verb as gm.<name>(args) inside run_code', rpcId);
     }
-    if (name === 'run_code') return act('run_code', args, access, () => runBody({ body: args.body, timeoutMs: args.timeoutMs, verbs: VERBS, call: innerCall }), undefined, rpcId);
+    if (name === 'run_code') return act('run_code', args, access, () => runBody({ body: args.body, timeoutMs: args.timeoutMs, verbs: VERBS, call: innerCall, project: workspace, runDir, log, step: steps }), undefined, rpcId);
     if (name === 'next_context') return nextContext(access, rpcId);
     if (name === 'finish') return finish(args, access, rpcId);
     if (Object.hasOwn(handlers, name)) return act(name, args, access, () => handlers[name](args), undefined, rpcId);
@@ -367,6 +367,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     await tools.close();
     writeSummary(log);
     log.append('end', { status, steps, witness, ...(gaps === undefined ? {} : { gaps }) });
+    rmSync(join(runDir, 'code'), { recursive: true, force: true });
   }
 
   async function inputEnded() {
@@ -498,6 +499,18 @@ function parseFlags(argv) {
 // The hash of the served tool list is logged at each start. A resumed run whose list differs from its last start
 // gets a tools-changed event with both hashes. A changed description invalidates the host's prompt cache, so the
 // log shows when it happens.
+// At a server start, the body directories of runs that have already ended are deleted. A run with no end event is left alone,
+// because it may still be resumed.
+function sweepEndedCode(runsRoot, current) {
+  if (!existsSync(runsRoot)) return;
+  for (const name of readdirSync(runsRoot)) {
+    const dir = join(runsRoot, name);
+    if (dir === current || !existsSync(join(dir, 'log.jsonl'))) continue;
+    const ended = readFileSync(join(dir, 'log.jsonl'), 'utf8').split('\n').some((line) => line !== '' && JSON.parse(line).kind === 'end');
+    if (ended) rmSync(join(dir, 'code'), { recursive: true, force: true });
+  }
+}
+
 function logTools(log, resumed, served) {
   const sha = createHash('sha256').update(JSON.stringify(served)).digest('hex');
   const last = resumed ? log.events().findLast((event) => event.kind === 'tools') : undefined;
@@ -543,6 +556,7 @@ async function main(argv) {
   if (recovery && recovery.open.length > 0) log.append('recovery', { lastSeq: recovery.lastSeq, open: recovery.open });
   logTools(log, resumed, servedTools(surface));
 
+  sweepEndedCode(dirname(runDir), runDir);
   const session = createSession({ workspace, runDir, log, task, maxSteps, maxInflight, resume, jobLifetimeMs, recovery: recovery && recovery.open.length > 0 ? recovery : null, history, surface });
   const lines = createInterface({ input: process.stdin, crlfDelay: Infinity });
   lines.on('line', session.accept);
