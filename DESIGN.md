@@ -164,6 +164,8 @@ Limit, kept for safety: `run_shell` always runs alone. Parallel waves cover `rea
 
 ## Live comparison, closed
 
+Removal (gm agent decision, 2026-11-01, option a): the live runner and its transcript parser are gone from the repo. The removal is commit `3e205e7`. The last commit where the runner ran is `5436183`, which removed its arm B configuration. The script stays in git history, so `git show 5436183:tools/live.mjs` reads it. The raw trial results are git-ignored, so they were not in the repo. They are archived at `/tmp/gm-scratch/gm-new/live-record`, which KEEP lists. The summary numbers below are kept as the record.
+
 Valid trials only. Invalid trials are listed and counted, never dropped. Load is the 1-minute average at each trial's start: quiet means under 6, loaded means 6 or more, and unrecorded means the trial ran before load was recorded. Report: `node tools/live.mjs --report true`, written to `runs/live/report-A.json` and `report-B.json`. Medians, with spread as min to max.
 
 Arm A (gm-new): 10 valid trials, all unrecorded, so arm A has no quiet trial.
