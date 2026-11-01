@@ -10,11 +10,19 @@
 //   toolCallMs  sum of tool intervals, where parallel calls count twice (kept for comparison with toolMs)
 import { readFileSync } from 'node:fs';
 
+// Each record is written more than once, so records are kept once by their uuid, or by their exact line when they have none.
 export function readTranscript(file) {
-  return readFileSync(file, 'utf8')
-    .split('\n')
-    .filter((line) => line.trim() !== '')
-    .map((line) => JSON.parse(line));
+  const seen = new Set();
+  const records = [];
+  for (const line of readFileSync(file, 'utf8').split('\n')) {
+    if (line.trim() === '') continue;
+    const record = JSON.parse(line);
+    const key = record.uuid ?? line;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    records.push(record);
+  }
+  return records;
 }
 
 export function parseTurn(records, marker) {

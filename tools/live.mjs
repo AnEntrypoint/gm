@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 // Live comparison runner. Each trial is one interactive Claude Code session, driven through ccbridge in its own
-// tmux session and temp project. The arm supplies the MCP server and the skill. Metrics come from the session
+// tmux session and temp project. The arm supplies its MCP server and its prompt. Metrics come from the session
 // transcript through tools/transcript.mjs, and the checker in tasks/<task>/ grades the workspace.
 //
 // usage: node tools/live.mjs --arm A --tasks t1,t2,t3 --trials 3 [--concurrency 3] [--port 8810]
 import { execFileSync, spawn } from 'node:child_process';
-import { chmodSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync, cpSync } from 'node:fs';
+import { appendFileSync, chmodSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync, cpSync } from 'node:fs';
 import { createConnection } from 'node:net';
 import { homedir, tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
@@ -20,53 +20,66 @@ const CLAUDE = '/data/cache/node/current/bin/claude';
 const SHIM_DIR = join(tmpdir(), 'gmlive-bin');
 const PROJECTS = join(homedir(), '.claude', 'projects');
 const TURN_TIMEOUT_MS = 30 * 60 * 1000;
+const QUIET_MS = 20000; // frames must be quiet this long before the turn is read as finished
+const SUBMIT_CHECK_MS = 8000; // if the prompt is not in the transcript by then, a slash command is stuck in the input
+const SUBMIT_ABORT_MS = 150000; // a prompt that never reaches the transcript ends the trial, with the pane kept for diagnosis
+const MCP_SETTLE_MS = 15000; // MCP servers connect after the input box appears; a slash command sent before that is unknown
+const RESEND_MS = 15000; // wait before resending a slash command that Claude did not know
+const MAX_SENDS = 4;
 // The owner's cap across both arms: at most this many Claude Code sessions run at a time (OAuth rate limits are unknown).
 const MAX_CONCURRENCY = 3;
 const LOCK = join(ROOT, 'runs', 'live', '.lock');
+// gm-created state that the gm runner leaves in the workspace; removed after every trial.
+const GM_STATE = ['.gm', '.agentplug'];
 
-// Arm A is gm-new: its MCP server and its skill. Arm B (gm) is set up by the gm agent's procedure, and is refused until then.
+// Arm A is gm-new: its MCP server and its skill, copied into the project. Arm B is gm: its MCP server, and its skill is
+// the served prompt /mcp__gm__gm, so nothing is copied. Both arms get the same task text.
 const ARMS = {
   A: {
     label: 'gm-new',
-    skill: 'gm-new',
-    skillFile: join(ROOT, 'skills', 'gm-new', 'SKILL.md'),
+    command: '/gm-new',
+    skill: { name: 'gm-new', file: join(ROOT, 'skills', 'gm-new', 'SKILL.md') },
     server: (project) => ({
       command: 'node',
       args: [join(ROOT, 'src', 'mcp.mjs'), '--workspace', join(project, 'ws'), '--run-dir', join(project, 'run'), '--task', join(project, 'task.md')],
     }),
   },
-  B: null,
+  B: {
+    label: 'gm',
+    command: '/mcp__gm__gm',
+    skill: null,
+    server: () => ({ command: 'node', args: ['/config/.gm-tools/gm-mcp-server.mjs'] }),
+  },
 };
 
 const args = parseArgs(process.argv.slice(2));
 
 async function main() {
   const arm = ARMS[args.arm];
-  if (!arm) throw new Error(`arm ${args.arm} is not configured (arm A is gm-new; arm B waits for the gm procedure)`);
+  if (!arm) throw new Error(`arm ${args.arm} is not configured`);
   const concurrency = Number(args.concurrency);
   if (!Number.isInteger(concurrency) || concurrency < 1 || concurrency > MAX_CONCURRENCY) {
     throw new Error(`--concurrency must be 1 to ${MAX_CONCURRENCY}, the cap across both arms`);
   }
-  const tasks = args.tasks.split(',');
   const jobs = [];
-  for (const task of tasks) for (let trial = 1; trial <= Number(args.trials); trial += 1) jobs.push({ task, trial });
+  for (const task of args.tasks.split(',')) for (let trial = 1; trial <= Number(args.trials); trial += 1) jobs.push({ task, trial });
 
   mkdirSync(RESULTS, { recursive: true });
   takeLock();
-  ensureShim();
-  const server = await ensureServer(Number(args.port));
+  let server = null;
   const results = [];
   try {
+    ensureShim();
+    server = await ensureServer(Number(args.port));
     await pool(jobs, concurrency, async (job) => {
       const result = await runTrial(args.arm, arm, job.task, job.trial, Number(args.port));
       results.push(result);
       console.log(`${result.id}: checker ${result.checker.pass ? 'pass' : 'fail'}, wall ${result.metrics?.wallMs} ms, idle ${result.metrics?.idleMs} ms`);
     });
   } finally {
-    if (server) server.kill('SIGTERM');
+    if (server) process.kill(server, 'SIGTERM');
     rmSync(LOCK, { force: true });
   }
-  mkdirSync(RESULTS, { recursive: true });
   const summary = summarize(results);
   writeFileSync(join(RESULTS, `summary-${args.arm}.json`), `${JSON.stringify({ arm: args.arm, results, summary }, null, 2)}\n`);
   printSummary(args.arm, summary);
@@ -98,20 +111,29 @@ function ensureShim() {
   chmodSync(shim, 0o755);
 }
 
-// Starts ccbridge on the port unless one is already listening, and returns the child it started.
+// Starts ccbridge with setsid and nohup, unless one already listens, and returns the pid found by its command line.
+// The wrapper pid is not used, because setsid can fork.
 async function ensureServer(port) {
   if (await listening(port)) return null;
-  const child = spawn('python3', ['-B', 'server.py', '--host', '127.0.0.1', '--port', String(port)], {
+  spawn('setsid', ['nohup', 'python3', '-B', 'server.py', '--host', '127.0.0.1', '--port', String(port)], {
     cwd: AIRC,
     env: { ...process.env, PATH: `${SHIM_DIR}:${process.env.PATH}` },
     stdio: 'ignore',
-  });
+  }).unref();
   for (let i = 0; i < 100; i += 1) {
-    if (await listening(port)) return child;
+    if (await listening(port)) return serverPid(port);
     await sleep(100);
   }
-  child.kill('SIGTERM');
   throw new Error(`ccbridge did not listen on ${port}`);
+}
+
+function serverPid(port) {
+  const needle = `python3 -B server.py --host 127.0.0.1 --port ${port}`;
+  for (const line of execFileSync('ps', ['-eo', 'pid,args'], { encoding: 'utf8' }).split('\n')) {
+    const match = /^\s*(\d+)\s+(.*)$/.exec(line);
+    if (match && match[2].trim() === needle) return Number(match[1]);
+  }
+  throw new Error(`ccbridge is listening on ${port} but its pid was not found`);
 }
 
 function listening(port) {
@@ -128,6 +150,8 @@ async function runTrial(armKey, arm, task, trial, port) {
   const id = `${armKey}-${task}-${trial}-${Math.random().toString(16).slice(2, 8)}`;
   const marker = `trial ${id}`;
   const session = `gmlive${id.replace(/[^A-Za-z0-9]/g, '')}`;
+  const dir = join(RESULTS, id);
+  mkdirSync(dir, { recursive: true });
   const project = mkdtempSync(join(tmpdir(), `gmlive-${id}-`));
   const workspace = join(project, 'ws');
   mkdirSync(workspace);
@@ -137,71 +161,126 @@ async function runTrial(armKey, arm, task, trial, port) {
   }
   copyFileSync(join(TASKS, task, 'task.md'), join(project, 'task.md'));
   writeFileSync(join(project, 'mcp.json'), `${JSON.stringify({ mcpServers: { [arm.label]: arm.server(project) } }, null, 2)}\n`);
-  mkdirSync(join(project, '.claude', 'skills', arm.skill), { recursive: true });
-  copyFileSync(arm.skillFile, join(project, '.claude', 'skills', arm.skill, 'SKILL.md'));
+  if (arm.skill) {
+    mkdirSync(join(project, '.claude', 'skills', arm.skill.name), { recursive: true });
+    copyFileSync(arm.skill.file, join(project, '.claude', 'skills', arm.skill.name, 'SKILL.md'));
+  }
+  const filesBefore = countFiles(workspace);
 
   const taskText = readFileSync(join(TASKS, task, 'task.md'), 'utf8').trim();
-  const prompt = `/${arm.skill} ${taskText} (${marker})`;
-  const frames = [];
-  const outcome = await converse({ port, session, project, prompt, frames });
+  const prompt = `${arm.command} ${taskText} The workspace is ${workspace}. (${marker})`;
+  const framesFile = join(dir, 'frames.txt');
+  writeFileSync(framesFile, '');
+  const outcome = await converse({ port, session, project, marker, prompt, framesFile, dir, command: arm.command });
 
   const transcript = findTranscript(project, marker);
   const metrics = transcript ? parseTurn(readTranscript(transcript), marker) : { ok: false, error: 'transcript not found' };
   const checker = grade(task, workspace);
+  const filesAfterRun = countFiles(workspace);
+  const removed = GM_STATE.filter((name) => existsSync(join(workspace, name)));
+  for (const name of removed) rmSync(join(workspace, name), { recursive: true, force: true });
 
-  const dir = join(RESULTS, id);
-  mkdirSync(dir, { recursive: true });
-  writeFileSync(join(dir, 'frames.txt'), frames.join('\n') + '\n');
   if (transcript) copyFileSync(transcript, join(dir, 'transcript.jsonl'));
   if (existsSync(join(project, 'run'))) cpSync(join(project, 'run'), join(dir, 'mcp-run'), { recursive: true });
-  const result = { id, arm: armKey, task, trial, marker, session, outcome, metrics, checker };
+  const result = {
+    id,
+    arm: armKey,
+    task,
+    trial,
+    marker,
+    session,
+    outcome,
+    metrics,
+    checker,
+    workspaceFiles: { before: filesBefore, afterRun: filesAfterRun, afterCleanup: countFiles(workspace), removed },
+  };
   writeFileSync(join(dir, 'result.json'), `${JSON.stringify(result, null, 2)}\n`);
   rmSync(project, { recursive: true, force: true });
   return result;
 }
 
-// Opens the session, answers the trust prompt for this project only, sends the prompt, and waits for the turn end.
-async function converse({ port, session, project, prompt, frames }) {
+// Opens the session and logs every frame to a file as it arrives. Answers the trust prompt for this project only,
+// sends the prompt, and presses Enter once if the prompt stays in the input box. The turn counts as finished only
+// when the transcript holds its end_turn and the frames have gone quiet, since the reply can come after the first e:.
+async function converse({ port, session, project, marker, prompt, framesFile, dir, command }) {
   const url = `ws://127.0.0.1:${port}/ws?session=${session}&harness=claude&cwd=${encodeURIComponent(project)}&mode=tagged&kinds=text,tool,result`;
   const ws = new WebSocket(url);
-  let sawTurnEnd;
-  let closed;
-  const turnEnd = new Promise((done, fail) => {
-    sawTurnEnd = done;
-    closed = fail;
-  });
-  turnEnd.catch(() => {}); // an early close is reported when the turn is awaited, not as an unhandled rejection
+  let closed = false;
+  let lastFrameAt = Date.now();
+  let frameCount = 0;
   ws.onmessage = (event) => {
     const frame = String(event.data);
-    frames.push(frame);
-    if (frame === 'e:') sawTurnEnd();
-    if (frame === '') closed(new Error('session ended before the turn ended'));
+    frameCount += 1;
+    lastFrameAt = Date.now();
+    appendFileSync(framesFile, `${frame}\n`);
+    if (frame === '') closed = true;
   };
-  ws.onclose = () => closed(new Error('websocket closed'));
-  ws.onerror = () => closed(new Error('websocket error'));
+  ws.onclose = () => {
+    closed = true;
+  };
   await new Promise((done, fail) => {
     ws.onopen = done;
+    ws.onerror = () => fail(new Error('websocket error'));
     setTimeout(() => fail(new Error('websocket did not open')), 30000);
   });
 
   await waitForReady(session);
-  const started = Date.now();
-  ws.send(prompt);
-  let ended = true;
-  const timeout = new Promise((_, fail) => setTimeout(() => fail(new Error('turn timed out')), TURN_TIMEOUT_MS));
-  try {
-    await Promise.race([turnEnd, timeout]);
-  } catch (err) {
-    ended = false;
-    frames.push(`[${err.message}]`);
+  // MCP servers connect after the input box appears. A slash command sent before that is "Unknown command", so resend it.
+  await sleep(MCP_SETTLE_MS);
+  writeFileSync(join(dir, 'pane-ready.txt'), tmux(['capture-pane', '-p', '-t', `ccb-${session}`], true));
+  const sentAt = Date.now();
+  let lastSendAt = sentAt;
+  let sends = 0;
+  const send = () => {
+    ws.send(prompt);
+    sends += 1;
+    lastSendAt = Date.now();
+  };
+  send();
+  let enterPressed = false;
+  let finished = false;
+  let abort = null;
+  while (Date.now() - sentAt < TURN_TIMEOUT_MS) {
+    await sleep(2000);
+    const pane = tmux(['capture-pane', '-p', '-t', `ccb-${session}`], true);
+    writeFileSync(join(dir, 'pane.txt'), pane);
+    const file = findTranscript(project, marker);
+    const records = file === null ? [] : readTranscript(file);
+    if (unknownCommandSince(records, command, lastSendAt)) {
+      if (sends >= MAX_SENDS) {
+        abort = `${command} stayed unknown after ${sends} sends`;
+        break;
+      }
+      await sleep(RESEND_MS);
+      send();
+      continue;
+    }
+    const prompted = hasPrompt(records, marker);
+    if (!prompted && !enterPressed && Date.now() - lastSendAt > SUBMIT_CHECK_MS && inInputLine(pane, marker)) {
+      tmux(['send-keys', '-t', `ccb-${session}`, 'Enter'], true);
+      enterPressed = true;
+    }
+    if (!prompted && Date.now() - lastSendAt > SUBMIT_ABORT_MS) {
+      abort = 'the prompt never reached the session transcript';
+      break;
+    }
+    const turnDone = prompted && parseTurn(records, marker).ok === true;
+    if (turnDone && Date.now() - lastFrameAt > QUIET_MS) {
+      finished = true;
+      break;
+    }
+    if (closed) break;
   }
-  if (ended) {
+  if (!closed) {
     ws.send('/exit');
     await sleep(3000);
+    if (tmux(['capture-pane', '-p', '-t', `ccb-${session}`], true).includes('shift+tab to cycle')) {
+      tmux(['send-keys', '-t', `ccb-${session}`, 'Enter'], true);
+    }
   }
   ws.close();
   tmux(['kill-session', '-t', `ccb-${session}`], true);
-  return { ended, prompt_sent_ms: started, ended_ms: Date.now() };
+  return { finished, abort, sends, frames: frameCount, sentAt, endedAt: Date.now(), closedEarly: closed };
 }
 
 // Waits for the session pane to show the input prompt, and answers the trust prompt once if it is shown.
@@ -222,6 +301,29 @@ async function waitForReady(session) {
   throw new Error(`session ${session} never became ready`);
 }
 
+// True when the trial's prompt sits on the input line, so it was typed but not submitted.
+function inInputLine(pane, marker) {
+  return pane.split('\n').some((line) => line.includes('❯') && line.includes(marker));
+}
+
+// True when Claude answered "Unknown command" for the slash command, at or after the last send.
+function unknownCommandSince(records, command, since) {
+  return records.some(
+    (r) => r.type === 'system' && typeof r.content === 'string' && r.content.startsWith(`Unknown command: ${command}`) && Date.parse(r.timestamp) >= since - 2000,
+  );
+}
+
+// True when a user record carries the trial's marker, which means Claude took the prompt.
+function hasPrompt(records, marker) {
+  return records.some(
+    (r) =>
+      r.type === 'user' &&
+      typeof r.timestamp === 'string' &&
+      JSON.stringify(r.message?.content ?? '').includes(marker) &&
+      !(Array.isArray(r.message?.content) && r.message.content.some((b) => b.type === 'tool_result')),
+  );
+}
+
 function findTranscript(project, marker) {
   const dashed = project.replace(/[^A-Za-z0-9]/g, '-');
   const dir = join(PROJECTS, dashed);
@@ -232,6 +334,16 @@ function findTranscript(project, marker) {
     if (readFileSync(file, 'utf8').includes(marker)) return file;
   }
   return null;
+}
+
+// Number of files under a directory, counting nested files. Symlinks are counted as files.
+function countFiles(dir) {
+  let count = 0;
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    if (entry.isDirectory()) count += countFiles(join(dir, entry.name));
+    else count += 1;
+  }
+  return count;
 }
 
 function grade(task, workspace) {
