@@ -76,7 +76,7 @@ Send a message to `main` when a work-plan item lands. Include: the item number, 
 
 ## Done means
 
-Work-plan items 1 to 11 are witnessed and committed on main, and DESIGN.md is current. The live comparison of gm-new and gm is closed, with its report in DESIGN.md under "Project close". Still open and recorded: the minimal tool set, which is not run, and G3 (cache effect), which is handed to the gm agent, since the host transcript reports cache usage and measuring it is an API-side observation. The project closes when those are recorded, and it is recorded.
+Work-plan items 1 to 11 are witnessed and committed on main, and DESIGN.md is current. The live comparison of gm-new and gm is closed, with its report in DESIGN.md under "Project close". Still open and recorded: the minimal tool set, which is not run, and G3 (cache effect), measured by the gm agent as a cache share from the host transcripts. No saving is claimed, because the price multipliers are unverified. The project closes when those are recorded, and it is recorded.
 
 ## Rationale not expressible in code
 

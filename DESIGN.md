@@ -7,8 +7,8 @@ This note turns the evidence in `research/deep-research.md` into design directio
 - Scope: a fresh worker that replaces gm's loop, not a fork of gm. Reason: one worker, one log and one loop is the simplest design the evidence supports.
 - Language: Node.js 20+ ES modules, standard library only, zero dependencies. Reason: runs unchanged on macOS, Windows and Linux, on x64 and arm, with no build step.
 - Shape: gm-new is an MCP server (stdio, JSON-RPC written by hand with Node built-ins, no network listener) plus a skill at `skills/gm-new/SKILL.md`. The Claude Code session is the model. The CLI is a thin wrapper for scripted witnesses. Reason: owner decision, relayed by the gm agent (2026-11-01). It supersedes the earlier single-CLI shape, because the host model is already the worker.
-- Model: gm-new makes no API calls. In MCP mode the host session is the model. The CLI has one model, `scripted`, which is offline and deterministic. Reason: the owner's directive (2026-11-01), gm-new is an MCP tool and does not interact with any API. Anything that would call an API is reported to the gm agent to do, not done here.
-- Anthropic adapter: removed. gm-new holds no API key and sends no Messages API request, so the earlier decisions (the default model, the key from `ANTHROPIC_API_KEY`, the fetch adapter) are superseded. Reason: the owner's directive (2026-11-01). Spend belongs to the host session on the Claude Code login, not to gm-new.
+- Model: gm-new makes no API calls. In MCP mode the host session is the model. The CLI has one model, `scripted`, which is offline and deterministic. Reason: a project decision (2026-11-01), taken on the user's instruction that gm-new is an MCP tool and does not interact with any API. No API key is needed, because interactive Claude Code runs on OAuth. Anything that would call an API is reported to the gm agent to do, not done here.
+- Anthropic adapter: removed. gm-new holds no API key and sends no Messages API request, so the earlier decisions (the default model, the key from `ANTHROPIC_API_KEY`, the fetch adapter) are superseded. Reason: a project decision (2026-11-01), taken on the user's instruction that gm-new is an MCP tool. Spend belongs to the host session on the Claude Code login, not to gm-new.
 - Context: no summarisation. `next_context` returns the rules, the task, the witness requirement, the last 20 events and `prefixSha`; `query_log` reaches older events. Reason: the log stays complete, so no lossy summary can drop a fact.
 - Governance: `rules.md` in the run directory is re-read at every step, placed first in the prompt and never compacted. Reason: rules that a summary drops are violated (finding 3).
 - Tools (MCP): `next_context`, `read_file`, `write_file`, `list_dir`, `run_shell` (60 s default timeout), `job_start` (detached shell job), `job_status` (state, exit code and output tail, with a bounded `waitMs` poll), `query_log`, `finish` (needs a witness). The server writes every event to the log, and the host model calls `next_context` each step. The server answers concurrent requests: it reads stdin without blocking and replies by JSON-RPC id, so the host's parallel tool calls run in parallel and the server measures them. Reason: owner decision (2026-11-01). Each tool is one plannable step (finding 4), and background jobs let shell work overlap other actions (item 2).
@@ -36,7 +36,7 @@ This note turns the evidence in `research/deep-research.md` into design directio
 - Minimal tool set: the comparison of the full and reduced tool sets runs only after the runner's concurrency cap is in and the load is under 6. It does not run under load, and it does not run at all while the runner fix is blocked. It stays an open question until then. Owner decision via the gm agent (2026-11-01).
 - Retry, exercised only by scripted faults in gm-new, since gm-new makes no request: retry 408, 409, every 5xx (502, 503, 504 and 529 included), and network errors (ECONNRESET, timeouts) with backoff from 1 s, doubling, capped at 16 s, plus or minus 20% jitter, at most 4 retries. Live retries belong to the host. A 429 with `retry-after` waits that many seconds, and fails with a logged reason if the header asks for more than 60 s. A 429 without `retry-after` retries at most 2 times. Every other 4xx fails at once, logged with its error type. Each retry is an event with attempt, status, errorType and delayMs. Reason: the rules follow platform.claude.com/docs/en/api/errors (fetched 2026-11-01). A spend-cap 429 has no `retry-after` and keeps failing, so it must never loop.
 - Log fields: camelCase everywhere (`errorType`, `delayMs`, `prefixSha`, `durMs`). Reason: one naming convention for the log, confirmed by the gm agent (2026-11-01).
-- Cache: `prefixSha` is the sha256 of the rendered stable prefix (rules, tool list, fixed instructions), logged on every model event. It is a local check that the prefix does not change between steps. gm-new sends no request, so it places no cache breakpoint: the host manages the cache. The host transcript carries each turn's `usage`, including `cache_creation_input_tokens` and `cache_read_input_tokens`. The `cache_control` marking and `--dump-request` are removed, superseded by the owner's directive (2026-11-01). Reason: a prefix that changes between steps defeats caching, and the prefix hash shows it does not.
+- Cache: `prefixSha` is the sha256 of the rendered stable prefix (rules, tool list, fixed instructions), logged on every model event. It is a local check that the prefix does not change between steps. gm-new sends no request, so it places no cache breakpoint: the host manages the cache. The host transcript carries each turn's `usage`, including `cache_creation_input_tokens` and `cache_read_input_tokens`. The `cache_control` marking and `--dump-request` are removed, superseded by the project decision of 2026-11-01. Reason: a prefix that changes between steps defeats caching, and the prefix hash shows it does not.
 - Run summary: at run end the loop writes one `summary` event with maxInFlight, meanInFlight, modelMs, toolMs and idleMs (time with no action and no model call in flight). `query_log` reads it. Reason: concurrency and waiting are measured from the log, not estimated.
 - Harness: runs a scripted task with the parallel and background features on and off, and prints each run's wall time and idleMs from its log. No paid calls. Reason: direction 6 requires measured numbers before any feature is default-on beyond items 1 and 2.
 - Defaults: background jobs (`--no-background` turns them off) and parallel waves (`--serial` turns them off) are on. Speculative overlap of the next model call (rule 3) and multi-worker fan-out stay off until measured. Reason: owner decision through the gm agent; measured evidence is the only route to change them.
@@ -88,7 +88,7 @@ The three questions this section used to ask are answered in Decided: scope, run
 
 ## Next step
 
-No build step is open. The live comparison is closed (see "Project close"). Still open and recorded: the minimal tool set, and G3 (cache effect, handed to the gm agent). The comment sweep is done.
+No build step is open. The live comparison is closed (see "Project close"). Still open and recorded: the minimal tool set (not run), and G3 (cache effect), now measured as a cache share, with no saving claimed. The comment sweep is done.
 
 ## Research consolidation
 
@@ -115,7 +115,7 @@ Gaps the research says to close:
 
 - G1, overlap of the next model call with tool work (C2): built. A CLI-only `--overlap` flag, default off. It is witnessed in scripted runs, and it has no live run. MCP cannot overlap, because the host owns the loop.
 - G2, parallel gain (C1): built and measured with simulated latency. `--latency-ms N` is scripted only, and every event it touches carries `simulatedMs`. The numbers below are simulated, not live.
-- G3, cache effect (C3): reported to the gm agent to do. The cache is the host's, and gm-new sends no request, so gm-new cannot measure it directly. The host transcript does report cache usage per turn, so the measurement can be made from transcripts. Measuring it is an API-side observation, so it is handed to the gm agent. No caching claim is made until it is measured.
+- G3, cache effect (C3): measured by the gm agent as a cache share from the host transcripts, not as a saving. Arm A is about 91% and arm B about 83% (medians, quiet trials). No saving is claimed, because the price multipliers are unverified here. See "Measured".
 
 Limit, kept for safety: `run_shell` always runs alone. Parallel waves cover `read_file`, `write_file`, `list_dir` and `job_status`. `job_start` is a barrier as well, because it starts a shell. The shell barrier stays.
 
@@ -140,9 +140,9 @@ Arm B (gm): 9 valid trials, 7 quiet and 2 unrecorded, and no loaded trial.
 
 Comparison: arm A has no quiet trial, and arm B's quiet trials cannot be set against arm A's unrecorded ones. So the arms are not compared, and no medians are read as a difference between gm-new and gm. The numbers above describe each arm's own trials. The tool-call split shows that each arm used its own MCP tools, but in different proportions per task.
 
-Handoff, delivered to the gm agent once it was reachable again: the request is to the gm agent, to do, since it is API-side: (1) measure G3, the cache effect, from the host transcripts. Each assistant record carries usage with cache_creation_input_tokens and cache_read_input_tokens. Report the cache read share per arm and route, from runs/live. Claim no saving until that is done. (2) Run the minimal tool set only if wanted, since every trial is a host model session, under the load rule.
+Handoff, delivered to the gm agent, and receipt confirmed. (1) G3, the cache effect, was measured by the gm agent from the host transcripts, read-only; the result is in "Measured", with no saving claimed. (2) The minimal tool set was not run and is not requested. It stays open, and it falls under the load rule.
 
-Still open: the minimal tool set (open question). The gaps G1 and G2 are built from the research consolidation, and G3 is handed to the gm agent, since measuring the cache is an API-side observation.
+Still open: the minimal tool set (open question). The gaps G1 and G2 are built from the research consolidation. G3 is measured as a cache share, and no saving is claimed.
 
 ## Live comparison, quiet batch
 
@@ -176,7 +176,7 @@ Close conditions:
 
 - The consolidated research matrix is in this file, in "Research consolidation".
 - G1 (`--overlap`) and G2 (`--latency-ms`, simulated) are built and witnessed. G2 is labelled simulated wherever it appears.
-- G3 (cache effect) is handed to the gm agent, and no caching claim is made until it is measured.
+- G3 (cache effect) is measured as a cache share, from the gm agent's read-only run. No saving is claimed, because the price multipliers are unverified.
 - The live report is in: the final comparison, on the MCP prompt route, is below.
 
 Final live comparison, MCP prompt route, the same route and rules for both arms. Each arm has 9 valid quiet trials, 3 per task, all passing. Medians, with spread as min to max, are from quiet trials only. The witness `A-t1-1-c49976` is excluded.
@@ -197,11 +197,18 @@ The copied-skill record (arm A, 9 quiet trials) is kept as a labelled record. It
 Open items, recorded and not run:
 
 - The minimal tool set (open question). Its cost and trigger are above.
-- G3, the cache effect, is handed to the gm agent: the host transcript reports cache usage per turn, and gm-new cannot measure it directly.
+- G3, the cache effect, is measured as a cache share from the host transcript, and no saving is claimed (see "Measured").
 - Subagent isolation, proactive mode, verification-gated admission, the matched-budget falsifier, the raw-replay arm, and the RL summariser are deferred, as the matrix says.
 
 ## Measured
 
+- G3, cache effect, measured by the gm agent (read-only over runs/live, no new trials, no load added). Per turn, the cache share is cache_read / (input + cache_creation + cache_read), deduplicated by uuid, with medians over valid, non-witness trials that finished:
+  - Arm A, copied-skill route: 18 valid trials (9 quiet), median 90.7%, min 87.7%, max 93.2%, pooled 91.0%.
+  - Arm A, mcp-prompt route: 9 valid trials, all quiet, median 91.4%, min 89.9%, max 94.4%, pooled 92.1%.
+  - Arm B, mcp-prompt route: 11 valid trials (9 quiet), median 82.3%, min 78.1%, max 93.4%, pooled 84.5%; quiet only 82.7%.
+  - These are shares of input served from cache, not savings. A saving needs the cache price multipliers, which are unverified here, so no saving is claimed.
+  - The routes differ in tool use and in how the skill is delivered, so this is not a controlled comparison.
+  - Unreconciled: the copied-skill count is 18 here, against 19 in the report. One trial is not reconciled.
 - Arm A MCP-route re-run, pause: paused at 2026-11-01 18:58:34 SAST, with a 1-minute load of 7.53, which is above the pause rule of 6. The runner and its server were stopped, and no trial was in flight. Completed MCP-route quiet trials so far: task 1 has 3 (`A-t1-q1-0708b9`, `A-t1-q2-9816f5`, `A-t1-q3-2c477b`), and task 2 has 1 (`A-t2-q1-10a3a1`). Five slots remain, two for t2 and three for t3, and the batch resumes when the 1-minute load is under 6. The witness `A-t1-1-c49976` is excluded from the counts.
 
 - CLI prefixSha change, query_log kinds (gm agent decision, 2026-11-01). The CLI prompt listed the event kinds without retry, job, pending or summary, and the agent sees all four. The description now lists them. Old prefixSha `676623b5...` (run `2026-11-01-12-02-34-c35d97`, reconfirmed in `2026-11-01-16-35-08-af599d`). New prefixSha `dfb09f4f...` (run `2026-11-01-16-35-16-d87f6d`). Reason: the prompt must describe the events the agent actually sees. The MCP prefixSha does not change, because the MCP prompt uses the MCP tool list.
