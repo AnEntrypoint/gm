@@ -1,4 +1,4 @@
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { closeSync, existsSync, lstatSync, mkdirSync, openSync, readFileSync, realpathSync, renameSync, statSync, writeFileSync } from 'node:fs';
 import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
@@ -13,6 +13,7 @@ const MAX_WAIT_MS = 30000;
 const JOB_NAME = /^[A-Za-z0-9_-]{1,64}$/;
 const BARRIER = { barrier: true };
 const KILL_GRACE_MS = 500;
+const foregroundGroups = new Set(); // foreground shells that have not exited, so run end can signal their groups
 
 export function createTools({ workspace, runDir, log, background = true }) {
   const root = resolve(workspace);
@@ -153,11 +154,22 @@ export function createTools({ workspace, runDir, log, background = true }) {
     async close() {
       const running = [...jobs.values()].filter((job) => !job.settled);
       for (const job of running) job.killRequested = true;
-      // Every job's group is signalled, even a job whose shell has exited, because a background child can outlive its shell.
-      await Promise.all([...jobs.values()].map((job) => killGroup(job.child.pid)));
+      // Every job's group and every foreground shell still running is signalled, because a child can outlive its shell.
+      await Promise.all(liveGroups().map((pid) => killGroup(pid)));
       await Promise.all(running.map((job) => job.done));
     },
+    // Synchronous, for an interrupt: SIGKILL every group now, so no work starts while the process exits.
+    killAllNow() {
+      for (const pid of liveGroups()) {
+        if (process.platform === 'win32') spawnSync('taskkill', ['/PID', String(pid), '/T', '/F'], { windowsHide: true, stdio: 'ignore' });
+        else signalGroup(pid, 'SIGKILL');
+      }
+    },
   };
+
+  function liveGroups() {
+    return [...jobs.values()].map((job) => job.child.pid).concat([...foregroundGroups]);
+  }
 
   function writeStatus(name, status) {
     const file = join(runDir, 'jobs', `${name}.json`);
@@ -299,6 +311,7 @@ function shell(cwd, command, timeoutMs) {
       if (output.length < OUTPUT_CAP) output += chunk;
     };
     const child = spawnGroup(command, cwd, ['ignore', 'pipe', 'pipe']);
+    foregroundGroups.add(child.pid);
     child.stdout.setEncoding('utf8');
     child.stderr.setEncoding('utf8');
     child.stdout.on('data', collect);
@@ -311,10 +324,12 @@ function shell(cwd, command, timeoutMs) {
     }, timeoutMs);
     child.on('error', (err) => {
       clearTimeout(timer);
+      foregroundGroups.delete(child.pid);
       done({ ok: false, error: err.message });
     });
     child.on('close', (exitCode, signal) => {
       clearTimeout(timer);
+      foregroundGroups.delete(child.pid);
       if (timedOut) return;
       done({ ok: exitCode === 0, exitCode, signal, output: output.slice(0, OUTPUT_CAP) });
     });

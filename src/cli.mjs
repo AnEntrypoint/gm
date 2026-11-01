@@ -55,6 +55,14 @@ async function run(flags) {
     meta: { id, ...spec, workspace, model: modelName, maxSteps, ...options, createdAt: new Date().toISOString() },
   });
   const tools = createTools({ workspace, runDir, log, background });
+  // An interrupt kills every shell group at once and exits, so no new call starts while the process goes down.
+  for (const [signal, code] of [['SIGINT', 130], ['SIGTERM', 143]]) {
+    process.once(signal, () => {
+      tools.killAllNow();
+      log.append('end', { status: 'interrupted', signal });
+      process.exit(code);
+    });
+  }
   const result = await runLoop({ runDir, spec, model, tools, log, maxSteps, serial });
 
   console.log(`run ${id}: ${result.status} after ${result.steps} steps`);
