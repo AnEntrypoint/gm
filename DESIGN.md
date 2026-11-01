@@ -323,6 +323,30 @@ Recorded before any run of either surface. The criteria below decide. A result i
 
 - Discovery reply, scripted (2026-11-01, `/tmp/gm-scratch/gm-new/surface/discovery/run-1793564678566/run`): `gm.verbs()` inside `run_code` returns 33 verbs with their descriptions and input schemas, 9654 bytes, about 2414 tokens (bytes / 4). The tools surface's whole list is 2559 tokens, and the code surface's list is 362. The verb names alone are 318 bytes. The pre-registered host-token measure counts this reply in any live run that calls it, so one `gm.verbs()` call spends most of the code surface's prefix saving. The surface is not changed while the live trials run. Measured: the discovery reply is 9654 bytes (run `/tmp/gm-scratch/gm-new/surface/discovery/run-1793564678566/run`), against 10234 bytes for the tools surface's whole list (`run-tools-1` in `/tmp/gm-scratch/gm-new/surface/measure-1793564386798`). The descriptions and the discovery call stay as they are for this comparison. A names-only split is a new variant, and it needs its own pre-registration after this comparison closes.
 
+## Live batch, closed (orchestrator, 2026-11-01)
+
+The first live batch compared gm-new's two surfaces under the pre-registration in b2301ca. gm's codemode ran as a reference arm, for context only. Results file: `/tmp/gm-scratch/gm-orch/live/results.json`, 27 trials, 9 per arm, across T1, T2 and T3 with three trials each. Every trial ran at HEAD 8dbfcc2 (one distinct HEAD across all 27). The served tool-list hash was recorded on each trial: tools 727388701771, code ce4c24c8570d.
+
+Pooled medians over the 9 trials per arm:
+
+| Arm | Host tokens | Input+output | Steps | Passes | Wall ms |
+| --- | --- | --- | --- | --- | --- |
+| tools (default) | 211544 | 2646 | 9 | 9/9 | 33007 |
+| code | 216024 | 2992 | 8 | 9/9 | 33315 |
+| gm (reference only) | 356318 | 5654 | 7 | 7/9 | 73394 |
+
+Per task (host tokens, steps): tools T1 199414 / 8, T2 293425 / 11, T3 284664 / 10. Code T1 282227 / 10, T2 226857 / 9, T3 170648 / 7. gm T1 300661 / 5, T2 322440 / 5, T3 657312 / 11 (one of three passed).
+
+Decision, by the pre-registered rule:
+- Tokens at least 20% lower than tools: no. Code is 2.1% higher (216024 against 211544).
+- Steps lower: yes (8 against 9).
+- Pass rate not lower: yes (9/9 against 9/9).
+- The code surface is not kept. The tools surface stays the default. The code surface stays in the repo behind `--surface code`, and it is not the default.
+
+The gm arm is reference only, and it is not an input to the decision. Deviations: gm's codemode has no finish tool, so its pass is the checker plus a final statement of the result; the arm uses its own served prompt, while the task text was the orchestrator's and is the same for every arm; two T3 trials failed with task_spawn; the arm was launched with `node -e`. Verb names differ per arm, and each trial records the names it used.
+
+Not decided here: module mode and the JIT verb stay parked in scratch, since the rule above does not favour the code surface they build on. Nothing is registered, and no trial runs until the owner decides. The gm-new versus gm draft stays in scratch until the owner approves its spend.
+
 ## Review functions (gm agent decision, 2026-11-01)
 
 The gm agent's Elephant-Goldfish decision: the research found no measured benefit for the method, apart from one single-author preprint, so the functions embed only what lets this log measure the effect. They are plain functions in `src/review.mjs`, with no tool name. They are registered only after the live comparison closes, because a new tool or a discovery entry would change what is measured.
