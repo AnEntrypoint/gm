@@ -7,7 +7,7 @@
 import { execFileSync, spawn } from 'node:child_process';
 import { appendFileSync, chmodSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync, cpSync } from 'node:fs';
 import { createConnection } from 'node:net';
-import { homedir, tmpdir } from 'node:os';
+import { homedir, loadavg, tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseTurn, readTranscript } from './transcript.mjs';
@@ -61,6 +61,7 @@ const ARMS = {
 const args = parseArgs(process.argv.slice(2));
 
 async function main() {
+  if (args.report === 'true') return report();
   const arm = ARMS[args.arm];
   if (!arm) throw new Error(`arm ${args.arm} is not configured`);
   const concurrency = Number(args.concurrency);
@@ -181,6 +182,7 @@ function listening(port) {
 
 async function runTrial(armKey, arm, task, trial, id, port) {
   const marker = `trial ${id}`;
+  const loadStart = round(loadavg()[0]); // 1-minute load when the trial starts; trials at or over LOADED_AT are reported apart
   const session = `gmlive${id.replace(/[^A-Za-z0-9]/g, '')}`;
   const dir = join(RESULTS, id);
   mkdirSync(dir, { recursive: true });
@@ -225,6 +227,7 @@ async function runTrial(armKey, arm, task, trial, id, port) {
     metrics,
     checker,
     workspaceFiles: { before: filesBefore, afterRun: filesAfterRun, afterCleanup: countFiles(workspace), removed },
+    load: { start: loadStart, end: round(loadavg()[0]) },
   };
   writeFileSync(join(dir, 'result.json'), `${JSON.stringify(result, null, 2)}\n`);
   rmSync(project, { recursive: true, force: true });
@@ -452,8 +455,50 @@ function validTrials(arm) {
   return done;
 }
 
+// Summaries of each arm's trial records. Invalid trials are listed, not dropped. Trials that started at a 1-minute load of
+// LOADED_AT or more are reported apart from quiet-window trials, and trials from before load was recorded apart from both.
+// Takes no lock, so it runs during a batch.
+function report() {
+  for (const armKey of Object.keys(ARMS)) {
+    const all = [];
+    for (const name of readdirSync(RESULTS)) {
+      const file = join(RESULTS, name, 'result.json');
+      if (!name.startsWith(`${armKey}-`) || !existsSync(file)) continue;
+      all.push(JSON.parse(readFileSync(file, 'utf8')));
+    }
+    const invalid = all.filter((result) => result.error || result.metrics?.ok !== true);
+    const valid = all.filter((result) => !invalid.includes(result));
+    const groups = { quiet: [], loaded: [], unrecorded: [] };
+    for (const result of valid) groups[loadGroup(result)].push(result);
+    const report = {
+      arm: armKey,
+      trialRecords: all.length,
+      valid: valid.length,
+      invalid: invalid.map((result) => ({ id: result.id, task: result.task, reason: result.error ?? result.metrics?.error ?? 'no metrics' })),
+      groups: Object.fromEntries(Object.entries(groups).map(([name, rows]) => [name, { trials: rows.length, summary: summarize(rows) }])),
+    };
+    writeFileSync(join(RESULTS, `report-${armKey}.json`), `${JSON.stringify(report, null, 2)}\n`);
+    console.log(`arm ${armKey}: ${valid.length} valid of ${all.length} trial records, ${invalid.length} invalid`);
+    for (const name of ['quiet', 'loaded', 'unrecorded']) {
+      console.log(`${name}: ${groups[name].length} trials`);
+      printSummary(`${armKey} ${name}`, summarize(groups[name]));
+    }
+    for (const row of report.invalid) console.log(`invalid: ${row.id} (${row.reason})`);
+  }
+}
+
+const LOADED_AT = 6;
+function loadGroup(result) {
+  if (!result.load) return 'unrecorded';
+  return result.load.start >= LOADED_AT ? 'loaded' : 'quiet';
+}
+
+function round(value) {
+  return Math.round(value * 100) / 100;
+}
+
 function parseArgs(argv) {
-  const out = { arm: 'A', tasks: 't1,t2,t3', trials: '3', concurrency: '1', port: '8810', resume: 'false' };
+  const out = { arm: 'A', tasks: 't1,t2,t3', trials: '3', concurrency: '1', port: '8810', resume: 'false', report: 'false' };
   for (let i = 0; i < argv.length; i += 2) {
     const name = argv[i].replace(/^--/, '');
     if (!(name in out)) throw new Error(`unknown option --${name}`);
