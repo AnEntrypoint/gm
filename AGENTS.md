@@ -35,6 +35,7 @@ These are settled. Change one only by messaging the orchestrator, with the reaso
 - ASCII only in every file. No decorative symbols.
 - Remote: `AnEntrypoint/gm-new`, private, pushed to `main` (DESIGN.md, Remote). Making it public is the owner's decision.
 - Do not create branches or worktrees.
+- Batch flow: a multi-step change is built as one batch, all steps first, then witnessed in one pass over all of them, and the commits land after that pass. Each step's witness is recorded in the run log and cited in DESIGN.md. A step is not witnessed on its own during the build.
 
 ## Concurrency strategy
 
