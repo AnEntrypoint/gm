@@ -47,6 +47,7 @@ This is what you build and codify. Single worker first: DESIGN.md direction 6 sa
 6. At most one model call in flight per run. Retry 429 and 5xx with exponential backoff, honouring `retry-after`. Log each retry.
 7. Debug from the log. A failure is an event. Reproduce a run by re-running its `task.json` with the scripted model, and say in the log which events came from the replay.
 8. Measure each feature. Run the same scripted task with the feature on and off, and record the wall time from the log. Keep the numbers in DESIGN.md with the run ids.
+9. Collisions are resolved after the fact, not avoided. Change existing files with Edit only, never Write over an existing file. On a failed Edit, re-read the region and reapply once; if it fails again, stop and report. Only the single writer commits, by explicit path. On an `index.lock` error, retry the add 3 times, 2 s apart. Never delete `.git/index.lock`; if it persists, report. Do not commit runtime files such as `.gm/cold-index.*.queued`.
 
 ## Work plan, in order
 
