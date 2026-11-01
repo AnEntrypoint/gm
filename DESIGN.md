@@ -54,6 +54,9 @@ Start with one worker, one log and one loop. Add a component only when a measure
 
 7. **Subagent isolation (open).** The claim that isolated subagents help was refuted 1-2. Parallel subagents stay in gm-new only where a measured run shows they beat one worker on the same task.
 8. **Proactive mode (future, not built).** The agent watches a repo with no task. Source: the DeepSeek prototype README (github.com/deepseek-ai/dsh-superagent-prototype), checked against the primary sources in research run wf_261fe87f-4c6. It describes a proactive coding agent for one repository, and the article's designs for it are unimplemented. gm-new is task-driven, so this is a future direction with no evidence here.
+9. **Verification-gated admission (future, not built).** If gm-new learns from its runs, an item is admitted only after a check, and the gaps the check did not cover are recorded, not hidden. Source: arXiv 2609.02749 (Repo-To-Skill, AREX-Skill): "no skill admitted on sources alone; surviving gaps are recorded, not hidden." The gains there are self-reported, from one preprint with no replication, and the construction compute is excluded.
+10. **Matched-budget falsifier (future, not built).** Once a learned artifact exists, compare it with and without the artifact, with the same model, the same budget and the same tasks, at least 3 trials per task. Count the construction cost inside the budget. The source paper (arXiv 2609.02749) leaves construction cost out, which inflates its gains.
+11. **Raw-replay arm (future).** When there is something to replay, add an arm that replays the raw log instead of a distilled skill. SkillEvolBench (arXiv 2605.24117) finds raw replay often beats distilled skills. The full log already keeps the raw trajectory (direction 1).
 
 ## Concurrency evidence (digest, research/concurrency.md)
 
@@ -70,6 +73,7 @@ Start with one worker, one log and one loop. Add a component only when a measure
 - Whether subagent isolation helps long-horizon outcomes (open question 4).
 - Whether rule re-injection restores compliance without losing permitted actions (open question 1).
 - Whether a reduced tool set matches the full set on the same tasks with the same trials (the prototype's minimal configuration, as reported by the gm agent). Open until item 7 has run.
+- Whether learned-skill gains transfer to troubleshooting work. Unmeasured, so any transfer is an experiment, not a gain.
 
 ## Owner decisions (resolved)
 
