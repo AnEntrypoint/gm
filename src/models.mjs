@@ -26,19 +26,21 @@ const SCRIPT_EXHAUSTED = {
   args: { witness: 'scripted model has no further steps' },
 };
 
-export function createModel(name) {
-  if (name === 'scripted') return scriptedModel();
+export function createModel(name, options = {}) {
+  if (name === 'scripted') return scriptedModel(options.script);
   if (name === 'anthropic') return anthropicModel();
   throw new Error(`unknown model: ${name} (use scripted or anthropic)`);
 }
 
-function scriptedModel() {
+// A script entry is a reply: a string is sent as the text, anything else as JSON.
+function scriptedModel(script) {
+  const replies = script ?? SCRIPT;
   let turn = 0;
   return {
     async reply() {
-      const action = SCRIPT[turn] ?? SCRIPT_EXHAUSTED;
+      const entry = turn < replies.length ? replies[turn] : SCRIPT_EXHAUSTED;
       turn += 1;
-      return { text: JSON.stringify(action) };
+      return { text: typeof entry === 'string' ? entry : JSON.stringify(entry) };
     },
   };
 }

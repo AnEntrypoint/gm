@@ -15,7 +15,8 @@ export const DEFAULT_WITNESS =
 const TOOL_HELP = `read_file {path}: text of a file.
 write_file {path, content}: write a file, creating parent directories.
 list_dir {path}: entries of a directory; directories end with "/".
-run_shell {command, timeoutMs?}: run a shell command in the workspace (default timeout 60000 ms). Returns exitCode, signal and output.
+run_shell {command, timeoutMs?, background?, job?}: run a shell command in the workspace (default timeout 60000 ms). Returns exitCode, signal and output. With background true and a job name, it returns at once; the job keeps running while you act. Read a job's files only after job_status shows exited. A job still running when the run ends is killed.
+job_status {job, waitMs?}: state (running, exited or killed), exitCode and the last 2000 characters of output. With waitMs it polls the job every 100 ms until it leaves running or waitMs passes (max 30000).
 query_log {js}: JavaScript expression over "events", every log event so far (seq, t, mono, kind, ...). Returns JSON. Kinds: start, reply, action, result, refusal, skipped, parse_error, error, end.
 finish {witness}: end the run. The witness must state the evidence.`;
 

@@ -12,7 +12,8 @@ import { createTools } from './tools.mjs';
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const RUNS = join(ROOT, 'runs');
 const USAGE = `usage:
-  gmnew run --task <file-or-text> --workspace <dir> [--model scripted|anthropic] [--max-steps N] [--serial]
+  gmnew run --task <file-or-text> --workspace <dir> [--model scripted|anthropic] [--max-steps N]
+            [--script <replies.json>] [--serial] [--no-background]
   gmnew query --run <id> --js "<filter>"`;
 
 async function main(argv) {
@@ -31,7 +32,11 @@ async function run(flags) {
   const maxSteps = Number(flags['max-steps'] ?? 50);
   if (!Number.isInteger(maxSteps) || maxSteps < 1) throw new Error('--max-steps must be a positive integer');
   const modelName = flags.model ?? 'scripted';
-  const model = createModel(modelName);
+  const script = flags.script === undefined ? undefined : loadScript(flags.script);
+  if (script && modelName !== 'scripted') throw new Error('--script works only with --model scripted');
+  const model = createModel(modelName, { script });
+  const serial = flags.serial === true;
+  const background = flags['no-background'] !== true;
 
   const task = loadTask(flags.task).trim();
   if (task === '') throw new Error('--task is empty');
@@ -41,14 +46,15 @@ async function run(flags) {
   const runDir = join(RUNS, id);
   mkdirSync(runDir, { recursive: true });
   writeFileSync(join(runDir, 'rules.md'), DEFAULT_RULES);
+  const options = { serial, background, script: flags.script === undefined ? null : resolve(flags.script) };
   writeFileSync(
     join(runDir, 'task.json'),
-    `${JSON.stringify({ id, ...spec, workspace, model: modelName, maxSteps, createdAt: new Date().toISOString() }, null, 2)}\n`,
+    `${JSON.stringify({ id, ...spec, workspace, model: modelName, maxSteps, ...options, createdAt: new Date().toISOString() }, null, 2)}\n`,
   );
 
   const log = openLog(join(runDir, 'log.jsonl'));
-  const tools = createTools({ workspace, log });
-  const result = await runLoop({ runDir, spec, model, tools, log, maxSteps, serial: flags.serial === true });
+  const tools = createTools({ workspace, runDir, log, background });
+  const result = await runLoop({ runDir, spec, model, tools, log, maxSteps, serial });
 
   console.log(`run ${id}: ${result.status} after ${result.steps} steps`);
   if (result.witness) console.log(`witness: ${result.witness}`);
@@ -66,7 +72,7 @@ function query(flags) {
   console.log(result.output);
 }
 
-const BOOLEAN_FLAGS = new Set(['serial']);
+const BOOLEAN_FLAGS = new Set(['serial', 'no-background']);
 
 function parseFlags(argv) {
   const flags = {};
@@ -84,6 +90,12 @@ function parseFlags(argv) {
     i += 1;
   }
   return flags;
+}
+
+function loadScript(file) {
+  const value = JSON.parse(readFileSync(resolve(file), 'utf8'));
+  if (!Array.isArray(value)) throw new Error('--script must be a JSON array of replies');
+  return value;
 }
 
 function loadTask(value) {

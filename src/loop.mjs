@@ -6,6 +6,13 @@ const WINDOW = 20;
 
 export async function runLoop({ runDir, spec, model, tools, log, maxSteps, serial = false }) {
   log.append('start', { maxSteps, serial });
+  const outcome = await stepLoop({ runDir, spec, model, tools, log, maxSteps, serial });
+  await tools.close();
+  log.append('end', outcome);
+  return outcome;
+}
+
+async function stepLoop({ runDir, spec, model, tools, log, maxSteps, serial }) {
   for (let step = 1; step <= maxSteps; step += 1) {
     const rules = readFileSync(join(runDir, 'rules.md'), 'utf8');
     const prompt = buildPrompt({ rules, spec, events: log.recent(WINDOW), total: log.count() });
@@ -16,7 +23,7 @@ export async function runLoop({ runDir, spec, model, tools, log, maxSteps, seria
       reply = await model.reply(prompt);
     } catch (err) {
       log.append('error', { step, message: err.message, startMono });
-      return end(log, 'error', step, null);
+      return { status: 'error', steps: step, witness: null };
     }
     log.append('reply', { step, text: reply.text, startMono });
 
@@ -26,9 +33,9 @@ export async function runLoop({ runDir, spec, model, tools, log, maxSteps, seria
       continue;
     }
     const outcome = await runActions(parsed.actions, { step, tools, log, serial });
-    if (outcome.finished) return end(log, 'finished', step, outcome.witness);
+    if (outcome.finished) return { status: 'finished', steps: step, witness: outcome.witness };
   }
-  return end(log, 'max_steps', maxSteps, null);
+  return { status: 'max_steps', steps: maxSteps, witness: null };
 }
 
 async function runActions(actions, { step, tools, log, serial }) {
@@ -92,9 +99,4 @@ function conflicts(item, items) {
 
 function isPrefix(a, b) {
   return a.length <= b.length && a.every((part, i) => part === b[i]);
-}
-
-function end(log, status, steps, witness) {
-  log.append('end', { status, steps, witness });
-  return { status, steps, witness };
 }

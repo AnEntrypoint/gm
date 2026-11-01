@@ -1,17 +1,22 @@
 import { spawn } from 'node:child_process';
-import { existsSync, realpathSync } from 'node:fs';
+import { closeSync, existsSync, mkdirSync, openSync, readFileSync, realpathSync, renameSync, writeFileSync } from 'node:fs';
 import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
-import { dirname, isAbsolute, relative, resolve, sep } from 'node:path';
+import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { runQuery } from './log.mjs';
 
 const DEFAULT_TIMEOUT_MS = 60000;
 const MAX_TIMEOUT_MS = 600000;
 const OUTPUT_CAP = 200000;
+const TAIL_CAP = 2000;
+const POLL_MS = 100;
+const MAX_WAIT_MS = 30000;
+const JOB_NAME = /^[A-Za-z0-9_-]{1,64}$/;
 const BARRIER = { barrier: true };
 
-export function createTools({ workspace, log }) {
+export function createTools({ workspace, runDir, log, background = true }) {
   const root = resolve(workspace);
   const realRoot = realpathSync(root);
+  const jobs = new Map();
 
   const confine = (rel) => {
     if (typeof rel !== 'string' || rel === '') return { refused: 'path must be a non-empty string' };
@@ -54,7 +59,23 @@ export function createTools({ workspace, log }) {
         return { ok: false, error: 'command must be a non-empty string' };
       }
       const timeoutMs = Math.min(Number(args.timeoutMs) || DEFAULT_TIMEOUT_MS, MAX_TIMEOUT_MS);
-      return shell(root, args.command, timeoutMs);
+      if (args.background !== true || !background) return shell(root, args.command, timeoutMs);
+      if (!JOB_NAME.test(args.job ?? '')) return { ok: false, error: 'a background job needs job: 1 to 64 letters, digits, _ or -' };
+      return startJob(args.job, args.command, timeoutMs);
+    },
+
+    async job_status(args) {
+      if (!JOB_NAME.test(args.job ?? '')) return { ok: false, error: 'job must be a job name' };
+      const waitMs = Math.min(Math.max(Number(args.waitMs) || 0, 0), MAX_WAIT_MS);
+      const deadline = Date.now() + waitMs;
+      let status = readStatus(args.job);
+      while (status?.state === 'running' && Date.now() < deadline) {
+        await sleep(POLL_MS);
+        status = readStatus(args.job);
+      }
+      if (!status) return { ok: false, error: `no job named ${args.job}` };
+      const tail = readTail(status.output, TAIL_CAP);
+      return { ok: true, state: status.state, output: JSON.stringify({ ...status, tail }) };
     },
 
     query_log(args) {
@@ -69,6 +90,35 @@ export function createTools({ workspace, log }) {
       return { ok: true, finished: true, output: args.witness };
     },
   };
+
+  function startJob(name, command, timeoutMs) {
+    if (jobs.has(name)) return { ok: false, error: `job ${name} already exists` };
+    const outputFile = join(runDir, 'jobs', `${name}.out`);
+    mkdirSync(join(runDir, 'jobs'), { recursive: true });
+    const out = openSync(outputFile, 'w');
+    const startMono = log.now();
+    const child = spawn(command, { cwd: root, env: childEnv(), shell: true, timeout: timeoutMs, stdio: ['ignore', out, out] });
+    closeSync(out);
+    const status = { job: name, command, state: 'running', pid: child.pid, startMono, output: outputFile };
+    writeStatus(name, status);
+
+    const job = { child, killRequested: false, settled: false };
+    job.done = new Promise((settle) => {
+      const finish = (exitCode, signal) => {
+        if (job.settled) return;
+        job.settled = true;
+        const state = exitCode !== null && !job.killRequested ? 'exited' : 'killed';
+        const ended = { ...status, state, exitCode, signal };
+        writeStatus(name, ended);
+        log.append('job', { job: name, state, exitCode, signal, startMono });
+        settle();
+      };
+      child.on('error', (err) => finish(null, err.message));
+      child.on('close', (exitCode, signal) => finish(exitCode, signal));
+    });
+    jobs.set(name, job);
+    return { ok: true, state: 'running', output: `started job ${name} (pid ${child.pid})` };
+  }
 
   return {
     // Which workspace paths an action reads or writes. An action with no
@@ -90,15 +140,43 @@ export function createTools({ workspace, log }) {
         return { ok: false, error: err.message };
       }
     },
+
+    // Kills every background job still running and waits until each one has
+    // logged its end, so no child outlives the run.
+    async close() {
+      const running = [...jobs.values()].filter((job) => !job.settled);
+      for (const job of running) {
+        job.killRequested = true;
+        job.child.kill('SIGTERM');
+      }
+      await Promise.all(running.map((job) => job.done));
+    },
   };
+
+  function writeStatus(name, status) {
+    const file = join(runDir, 'jobs', `${name}.json`);
+    const temp = `${file}.${process.pid}.tmp`;
+    writeFileSync(temp, `${JSON.stringify(status)}\n`);
+    renameSync(temp, file);
+  }
+
+  function readStatus(name) {
+    const file = join(runDir, 'jobs', `${name}.json`);
+    if (!existsSync(file)) return null;
+    return JSON.parse(readFileSync(file, 'utf8'));
+  }
+}
+
+function readTail(file, cap) {
+  if (!existsSync(file)) return '';
+  return readFileSync(file, 'utf8').slice(-cap);
 }
 
 function workspaceSegments(root, rel) {
   if (typeof rel !== 'string' || rel === '' || rel.split(/[\\/]+/).includes('..')) return null;
   const target = resolve(root, rel);
   if (!inside(root, target)) return null;
-  const parts = relative(root, target).split(sep).filter(Boolean);
-  return parts;
+  return relative(root, target).split(sep).filter(Boolean);
 }
 
 function refusal(reason) {
@@ -116,15 +194,23 @@ function nearestExisting(target) {
   return current;
 }
 
-function shell(cwd, command, timeoutMs) {
+function childEnv() {
   const env = { ...process.env };
   delete env.ANTHROPIC_API_KEY;
+  return env;
+}
+
+function sleep(ms) {
+  return new Promise((done) => setTimeout(done, ms));
+}
+
+function shell(cwd, command, timeoutMs) {
   return new Promise((done) => {
     let output = '';
     const collect = (chunk) => {
       if (output.length < OUTPUT_CAP) output += chunk;
     };
-    const child = spawn(command, { cwd, env, shell: true, timeout: timeoutMs, stdio: ['ignore', 'pipe', 'pipe'] });
+    const child = spawn(command, { cwd, env: childEnv(), shell: true, timeout: timeoutMs, stdio: ['ignore', 'pipe', 'pipe'] });
     child.stdout.setEncoding('utf8');
     child.stderr.setEncoding('utf8');
     child.stdout.on('data', collect);
