@@ -53,7 +53,7 @@ const TOOLS = [
   { name: 'job_start', description: 'Start a shell command as a named background job and return at once. Poll it with job_status.', inputSchema: objectSchema({ job: text, command: text, timeoutMs: number }, ['job', 'command']) },
   { name: 'job_status', description: 'State (running, exited or killed), exit code and output tail of a job. waitMs polls until the job leaves running, at most 30000 ms. offset returns a page of 20000 characters of the output from that offset, with next.', inputSchema: objectSchema({ job: text, waitMs: number, offset: number }, ['job']) },
   { name: 'query_log', description: 'Evaluate a JavaScript expression over the run events array and return JSON. kind keeps events of one kind, and fromMono and toMono keep events in a time window (monotonic milliseconds). js defaults to returning the filtered events. A reply holds at most 50 events and about 20 KB. When events remain, next is the seq to pass back as after, which keeps only the events after that seq.', inputSchema: objectSchema({ js: text, kind: text, fromMono: number, toMono: number, after: number }, []) },
-  { name: 'finish', description: 'End the run. witness is one string that quotes the evidence you observed.', inputSchema: objectSchema({ witness: text }, ['witness']) },
+  { name: 'finish', description: 'End the run. witness is one string that quotes the evidence you observed. gaps optionally lists, one string each, what the run did not check; the end event logs them.', inputSchema: objectSchema({ witness: text, gaps: { type: 'array', items: text } }, ['witness']) },
   ...SEARCH_TOOLS,
   ...FETCH_TOOLS,
   ...CODE_TOOLS,
@@ -280,9 +280,12 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     if (typeof args.witness !== 'string' || args.witness.trim() === '') {
       return refuse('finish', args, 'finish needs a non-empty witness string');
     }
+    if (args.gaps !== undefined && (!Array.isArray(args.gaps) || args.gaps.some((gap) => typeof gap !== 'string' || gap.trim() === ''))) {
+      return refuse('finish', args, 'gaps must be an array of non-empty strings');
+    }
     stop('finished');
     const out = await act('finish', args, access, () => tools.run('finish', args), undefined, rpcId);
-    await endRun('finished', out.output);
+    await endRun('finished', out.output, args.gaps);
     return out;
   }
 
@@ -323,12 +326,12 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     return result;
   }
 
-  async function endRun(status, witness) {
+  async function endRun(status, witness, gaps) {
     endLogged = true;
     await Promise.allSettled([...active.keys()]);
     await tools.close();
     writeSummary(log);
-    log.append('end', { status, steps, witness });
+    log.append('end', { status, steps, witness, ...(gaps === undefined ? {} : { gaps }) });
   }
 
   async function inputEnded() {

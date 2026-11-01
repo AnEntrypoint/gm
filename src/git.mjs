@@ -23,7 +23,7 @@ export const GIT_TOOLS = [
   { name: 'git_status', description: 'Working tree status: the branch and the changed paths (porcelain v1).', inputSchema: obj({}) },
   { name: 'git_add', description: 'Stage the given workspace paths. Each path is explicit; "." is refused.', inputSchema: obj({ paths: strings }, ['paths']) },
   { name: 'git_rm', description: 'Remove the given workspace paths from the disk and the index, with git rm, so the removal is staged. Each path is explicit; "." is refused. Commit it with git_commit, which runs the commit gate.', inputSchema: obj({ paths: strings }, ['paths']) },
-  { name: 'git_commit', description: 'Commit only the given paths, with the message. Stage new files with git_add first. The commit gate runs first: syntax of every module, ASCII of every tracked text file, every doc path and KEEP path exists, and a smoke run with a negative control. A failed check refuses the commit, and gate reports each check with its time.', inputSchema: obj({ message: str, paths: strings }, ['message', 'paths']) },
+  { name: 'git_commit', description: 'Commit only the given paths, with the message. Stage new files with git_add first. The commit gate runs first: syntax of every module, ASCII of every tracked text file, every doc path and KEEP path exists, and a smoke run with a negative control. A failed check refuses the commit. gate reports each check with its time, and notCovered lists what the gate does not check.', inputSchema: obj({ message: str, paths: strings }, ['message', 'paths']) },
   { name: 'git_push', description: 'Push main to origin and set its upstream. Refused unless the current branch is main.', inputSchema: obj({}) },
   { name: 'git_log', description: 'The last count commits, one line each, optionally only for one path (count 1 to 200, default 20).', inputSchema: obj({ count: num, path: str }) },
   { name: 'git_diff', description: 'Diff of the given paths (default: all), or of the staged index when staged is true.', inputSchema: obj({ paths: strings, staged: bool }) },
@@ -120,8 +120,13 @@ export function createGitVerbs({ root, confine, log }) {
       const scope = pathArgs(paths);
       if (scope.error) return fail(scope.error);
       const gate = await runGate(root);
-      if (!gate.ok) return { ok: false, error: `refused: the commit gate failed: ${gate.failed.join(', ')}`, gate: gate.checks };
-      return { ...(await git(['commit', '-m', message, ...scope.args])), gate: gate.checks };
+      if (!gate.ok) return { ok: false, error: `refused: the commit gate failed: ${gate.failed.join(', ')}`, gate: gate.checks, notCovered: gate.notCovered };
+      const result = await git(['commit', '-m', message, ...scope.args]);
+      if (result.ok) {
+        const head = await gitRaw(['rev-parse', '--short', 'HEAD'], CHECK_TIMEOUT_MS);
+        log.append('commit', { sha: head.ok ? head.output.trim() : null, message: message.split('\n')[0], paths: scope.args.slice(1), gate: gate.checks, notCovered: gate.notCovered });
+      }
+      return { ...result, gate: gate.checks, notCovered: gate.notCovered };
     },
 
     async git_push() {

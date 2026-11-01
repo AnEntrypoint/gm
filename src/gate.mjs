@@ -12,6 +12,15 @@ const SOURCE = /\.(?:mjs|js|cjs)$/;
 const NODE_TIMEOUT_MS = 20000;
 const SMOKE_TIMEOUT_MS = 60000;
 
+// What the gate does not check. Every git_commit result and its commit event carry this list, so a pass is not read as more
+// than it is. Any gap that survives the checks is recorded here, rather than hidden.
+export const NOT_COVERED = [
+  'semantic correctness of the change: the gate parses and runs the code, and it does not judge what the change means',
+  'behaviour the smoke run does not exercise: the smoke run is one scripted task, plus a one-step negative control',
+  'doc content beyond path existence: the docs check finds the repo paths, not whether a claim in the docs is true',
+  'CI: none is configured, and no CI result is read',
+];
+
 export async function runGate(root) {
   const checks = [];
   checks.push(await timed('syntax', () => syntaxCheck(root)));
@@ -19,7 +28,7 @@ export async function runGate(root) {
   checks.push(await timed('docs', () => docCheck(root)));
   checks.push(await timed('smoke', () => smokeCheck(root)));
   const failed = checks.filter((check) => !check.ok).map((check) => check.name);
-  return { ok: failed.length === 0, failed, checks };
+  return { ok: failed.length === 0, failed, checks, notCovered: NOT_COVERED };
 }
 
 async function timed(name, run) {
