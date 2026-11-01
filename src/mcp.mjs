@@ -264,7 +264,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     if (surface === 'code' && !CODE_SURFACE.has(name)) {
       return refuse(name, args, 'the code surface serves next_context, run_code and finish; call a verb as gm.<name>(args) inside run_code', rpcId);
     }
-    if (name === 'run_code') return act('run_code', args, access, () => runBody({ body: args.body, timeoutMs: args.timeoutMs, verbs: VERBS, call: innerCall, project: workspace, runDir, log, step: steps }), undefined, rpcId);
+    if (name === 'run_code') return act('run_code', args, access, () => runBody({ body: args.body, timeoutMs: args.timeoutMs, format: args.format, verbs: VERBS, call: innerCall, project: workspace, runDir, log, step: steps }), undefined, rpcId);
     if (name === 'next_context') return nextContext(access, rpcId);
     if (name === 'finish') return finish(args, access, rpcId);
     if (Object.hasOwn(handlers, name)) return act(name, args, access, () => handlers[name](args), undefined, rpcId);
