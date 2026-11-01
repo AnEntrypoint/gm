@@ -26,8 +26,12 @@ const SUBMIT_ABORT_MS = 150000; // a prompt that never reaches the transcript en
 const MCP_SETTLE_MS = 15000; // MCP servers connect after the input box appears; a slash command sent before that is unknown
 const RESEND_MS = 15000; // wait before resending a slash command that Claude did not know
 const MAX_SENDS = 4;
-// The owner's cap across both arms: at most this many Claude Code sessions run at a time (OAuth rate limits are unknown).
-const MAX_CONCURRENCY = 3;
+const STAGGER_MS = 8000; // gap between trial starts, so sessions do not all start in the same second
+const TRUST_RETRY_MS = 3000; // while the trust dialog stays on screen, Down and Enter are sent again this often
+// The cap across both arms: at most this many Claude Code sessions run at a time. The gm agent lowered it from 3 to 1
+// on 2026-11-01, because the machine was saturated. It rises back only once the runner's concurrency cap is committed
+// and the 1-minute load average is under 6 (see DESIGN.md).
+const MAX_CONCURRENCY = 1;
 const LOCK = join(ROOT, 'runs', 'live', '.lock');
 // gm-created state that the gm runner leaves in the workspace; removed after every trial.
 const GM_STATE = ['.gm', '.agentplug'];
@@ -62,19 +66,41 @@ async function main() {
     throw new Error(`--concurrency must be 1 to ${MAX_CONCURRENCY}, the cap across both arms`);
   }
   const jobs = [];
-  for (const task of args.tasks.split(',')) for (let trial = 1; trial <= Number(args.trials); trial += 1) jobs.push({ task, trial });
+  for (const task of args.tasks.split(',')) {
+    for (let trial = 1; trial <= Number(args.trials); trial += 1) {
+      jobs.push({ task, trial, id: `${args.arm}-${task}-${trial}-${Math.random().toString(16).slice(2, 8)}` });
+    }
+  }
 
   mkdirSync(RESULTS, { recursive: true });
+  if (args.resume === 'true') {
+    const done = validTrials(args.arm);
+    for (let i = jobs.length - 1; i >= 0; i -= 1) if (done.has(`${jobs[i].task}-${jobs[i].trial}`)) jobs.splice(i, 1);
+    console.log(`resume: ${done.size} valid trials kept, ${jobs.length} to run`);
+  }
   takeLock();
   let server = null;
   const results = [];
   try {
     ensureShim();
     server = await ensureServer(Number(args.port));
+    // Trials start STAGGER_MS apart, so sessions do not all start in the same second. A failed trial is recorded, and the batch goes on.
+    let lastStart = 0;
     await pool(jobs, concurrency, async (job) => {
-      const result = await runTrial(args.arm, arm, job.task, job.trial, Number(args.port));
+      const wait = lastStart + STAGGER_MS - Date.now();
+      lastStart = Math.max(Date.now(), lastStart + STAGGER_MS);
+      if (wait > 0) await sleep(wait);
+      let result;
+      try {
+        result = await runTrial(args.arm, arm, job.task, job.trial, job.id, Number(args.port));
+      } catch (err) {
+        result = { id: job.id, arm: args.arm, task: job.task, trial: job.trial, error: err.message, metrics: { ok: false, error: err.message }, checker: { pass: false, detail: 'trial did not run' } };
+        mkdirSync(join(RESULTS, job.id), { recursive: true });
+        writeFileSync(join(RESULTS, job.id, 'result.json'), `${JSON.stringify(result, null, 2)}\n`);
+      }
       results.push(result);
-      console.log(`${result.id}: checker ${result.checker.pass ? 'pass' : 'fail'}, wall ${result.metrics?.wallMs} ms, idle ${result.metrics?.idleMs} ms`);
+      if (result.error) console.log(`${result.id}: failed: ${result.error}`);
+      else console.log(`${result.id}: checker ${result.checker.pass ? 'pass' : 'fail'}, wall ${result.metrics?.wallMs} ms, idle ${result.metrics?.idleMs} ms`);
     });
   } finally {
     if (server) process.kill(server, 'SIGTERM');
@@ -146,8 +172,7 @@ function listening(port) {
   });
 }
 
-async function runTrial(armKey, arm, task, trial, port) {
-  const id = `${armKey}-${task}-${trial}-${Math.random().toString(16).slice(2, 8)}`;
+async function runTrial(armKey, arm, task, trial, id, port) {
   const marker = `trial ${id}`;
   const session = `gmlive${id.replace(/[^A-Za-z0-9]/g, '')}`;
   const dir = join(RESULTS, id);
@@ -224,7 +249,7 @@ async function converse({ port, session, project, marker, prompt, framesFile, di
     setTimeout(() => fail(new Error('websocket did not open')), 30000);
   });
 
-  await waitForReady(session);
+  await waitForReady(session, dir);
   // MCP servers connect after the input box appears. A slash command sent before that is "Unknown command", so resend it.
   await sleep(MCP_SETTLE_MS);
   writeFileSync(join(dir, 'pane-ready.txt'), tmux(['capture-pane', '-p', '-t', `ccb-${session}`], true));
@@ -284,21 +309,25 @@ async function converse({ port, session, project, marker, prompt, framesFile, di
 }
 
 // Waits for the session pane to show the input prompt, and answers the trust prompt once if it is shown.
-async function waitForReady(session) {
+async function waitForReady(session, dir) {
   const target = `ccb-${session}`;
-  let trusted = false;
+  let lastTrustKeys = 0;
   for (let i = 0; i < 600; i += 1) {
     const pane = tmux(['capture-pane', '-p', '-t', target], true);
-    if (!trusted && pane.includes('Yes, I trust this folder')) {
-      tmux(['send-keys', '-t', target, 'Down'], true);
-      tmux(['send-keys', '-t', target, 'Enter'], true);
-      trusted = true;
+    writeFileSync(join(dir, 'pane-wait.txt'), pane);
+    if (pane.includes('Yes, I trust this folder')) {
+      // The keys can land before the dialog takes input, so they are sent again while the dialog stays on screen.
+      if (Date.now() - lastTrustKeys > TRUST_RETRY_MS) {
+        tmux(['send-keys', '-t', target, 'Down'], true);
+        tmux(['send-keys', '-t', target, 'Enter'], true);
+        lastTrustKeys = Date.now();
+      }
     } else if (pane.includes('shift+tab to cycle')) {
       return;
     }
-    await sleep(200);
+    await sleep(500);
   }
-  throw new Error(`session ${session} never became ready`);
+  throw new Error(`session ${session} never became ready; the last pane is in ${dir}/pane-wait.txt`);
 }
 
 // True when the trial's prompt sits on the input line, so it was typed but not submitted.
@@ -404,8 +433,20 @@ function printSummary(arm, summary) {
   }
 }
 
+// Keys (task-trial) of this arm's trials that ran and got metrics, so a resumed batch does not run them again.
+function validTrials(arm) {
+  const done = new Set();
+  for (const name of readdirSync(RESULTS)) {
+    const file = join(RESULTS, name, 'result.json');
+    if (!name.startsWith(`${arm}-`) || !existsSync(file)) continue;
+    const result = JSON.parse(readFileSync(file, 'utf8'));
+    if (!result.error && result.metrics?.ok === true) done.add(`${result.task}-${result.trial}`);
+  }
+  return done;
+}
+
 function parseArgs(argv) {
-  const out = { arm: 'A', tasks: 't1,t2,t3', trials: '3', concurrency: '3', port: '8810' };
+  const out = { arm: 'A', tasks: 't1,t2,t3', trials: '3', concurrency: '1', port: '8810', resume: 'false' };
   for (let i = 0; i < argv.length; i += 2) {
     const name = argv[i].replace(/^--/, '');
     if (!(name in out)) throw new Error(`unknown option --${name}`);
