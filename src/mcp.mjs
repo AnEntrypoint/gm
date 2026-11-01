@@ -83,6 +83,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
   const active = new Map();
   const waiting = [];
   const unansweredTurns = new Set();
+  const replies = new Map(); // a repeated tools/call request id is answered from its first reply, never run again
   let steps = resume?.steps ?? 0;
   let ended = resume?.ended ?? null;
   let endLogged = ended !== null;
@@ -121,8 +122,15 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
       return errorReply(null, -32600, 'Invalid Request');
     }
     const request = Object.hasOwn(message, 'id');
+    const key = request && message.method === 'tools/call' ? JSON.stringify(message.id) : null;
     try {
-      const result = await route(message.method, message.params);
+      if (key !== null && replies.has(key)) {
+        log.append('duplicate', { rpcId: message.id, tool: message.params?.name });
+        return { jsonrpc: '2.0', id: message.id, result: await replies.get(key) };
+      }
+      const pending = route(message.method, message.params);
+      if (key !== null) replies.set(key, pending);
+      const result = await pending;
       return request ? { jsonrpc: '2.0', id: message.id, result: result ?? {} } : null;
     } catch (err) {
       if (!request) return null;
@@ -408,8 +416,9 @@ async function main(argv) {
   const lines = createInterface({ input: process.stdin, crlfDelay: Infinity });
   lines.on('line', session.accept);
   lines.on('close', () => session.inputEnded().catch((err) => console.error(`gm-new: ${err.message}`)));
-  for (const signal of ['SIGINT', 'SIGTERM']) process.once(signal, () => lines.close());
-  process.on('SIGUSR2', () => session.quiesceForRestart().finally(() => process.exit(0)));
+  process.once('SIGINT', () => lines.close());
+  // SIGTERM from the supervisor pauses the run. Closing stdin here would end the run as closed, so it does not.
+  process.once('SIGTERM', () => session.quiesceForRestart().then(() => log.append('paused', { reason: 'SIGTERM from the supervisor' })).finally(() => process.exit(0)));
   process.stdout.on('error', (err) => console.error(`gm-new: stdout: ${err.message}`));
   console.error(`gm-new mcp: run ${basename(runDir)} in ${runDir}`);
 }
