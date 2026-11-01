@@ -82,7 +82,8 @@ async function main() {
     const quiet = quietCounts(args.arm);
     jobs.length = 0;
     for (const task of args.tasks.split(',')) {
-      const need = Math.max(0, target - (quiet[task] ?? 0));
+      // --max-new caps the slots added for one task in a pass; a replacement pass uses 2.
+      const need = Math.min(Number(args['max-new']), Math.max(0, target - (quiet[task] ?? 0)));
       for (let n = 1; n <= need; n += 1) jobs.push({ task, trial: `q${n}`, id: `${args.arm}-${task}-q${n}-${Math.random().toString(16).slice(2, 8)}` });
     }
     console.log(`quiet batch: target ${target} quiet valid trials per task, quiet counts ${JSON.stringify(quiet)}, ${jobs.length} trials to run`);
@@ -520,7 +521,7 @@ function round(value) {
 }
 
 function parseArgs(argv) {
-  const out = { arm: 'A', tasks: 't1,t2,t3', trials: '3', concurrency: '1', port: '8810', resume: 'false', report: 'false', 'quiet-target': '0', attempts: String(MAX_ATTEMPTS) };
+  const out = { arm: 'A', tasks: 't1,t2,t3', trials: '3', concurrency: '1', port: '8810', resume: 'false', report: 'false', 'quiet-target': '0', attempts: String(MAX_ATTEMPTS), 'max-new': '999' };
   for (let i = 0; i < argv.length; i += 2) {
     const name = argv[i].replace(/^--/, '');
     if (!(name in out)) throw new Error(`unknown option --${name}`);
