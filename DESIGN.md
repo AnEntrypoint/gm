@@ -318,6 +318,12 @@ Recorded before any run of either surface. The criteria below decide. A result i
 - Scripted measurements, which make no model call, run first: (1) the bytes and the approximate tokens (bytes / 4) of each surface's tool list; (2) the MCP calls one fixed scripted run of T1 to T3 needs on each surface; (3) how many prefix hashes change when one tool description is edited, for each description in turn.
 - Live measurements are model runs. They are reported to the gm agent to run, and this repository does not run them (AGENTS.md, hard rules).
 
+## Wiki (gm agent decision, 2026-11-01)
+
+The gm agent asked for the compounding wiki of Karpathy's "LLM Wiki" gist (April 2026, gist 442a6bf555914893e9891c11519de94f). The wiki items are plain functions in a wiki module, with no new tool names (gm agent decision, the code-surface change of plan). Each item is done when its witness is in the log.
+
+- Item 1, raw source archive: built. `fetch` saves the full body, up to 1 MB, as ASCII text in `sources/<id>.txt`. The id is the first 12 hex digits of the sha256 of the stored bytes. Every non-ASCII UTF-16 code unit is written as a `\uXXXX` escape, so the repo's ASCII rule holds and the text can be recovered. The one lossy step is invalid UTF-8, which becomes U+FFFD. A file is written once (`wx`), so a fetch of an existing id leaves it unchanged. The reply carries `source` and `sourceNew`, and each fetch adds one line to `sources/index.jsonl`. The gate's `sources` check refuses any file whose hash does not match its name. Witness, `/tmp/gm-scratch/gm-new/sources-fix/run-1793564150358`: `fetch` of example.com gave source 25ddf2c883e0 (sourceNew true); the second fetch gave the same id with sourceNew false, and the file's mtime did not change; the copy's commit of the archive passed `sources`; after the file was edited, the commit was refused with `sources` failing (the file has the hash of 1a56ad7a0901).
+
 ## Measured
 
 - Tool list hash witness (brief change 7, run 2026-11-01-18-39-35-820e47): the `tools` event at seq 258 has sha 5e8c956cc447. The fetch description changed, which was needed (the body is untrusted input), and the next start logged `tools-changed` at seq 266 with old 5e8c956cc447 and new 39a328f0521e, then `tools` at seq 267. Friction, recorded: an edit that added a call before its definition made the restart fail, and the supervisor held every call in its failed state until the next source change. That change restarted the worker and recovered it. Supervisor defect for item 1 of the brief to note.

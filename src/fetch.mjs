@@ -1,3 +1,4 @@
+import { archiveSource } from './sources.mjs';
 import { errorTypeOf, retrying } from './retry.mjs';
 
 const DEFAULT_TIMEOUT_MS = 15000;
@@ -24,7 +25,7 @@ export const FETCH_TOOLS = [
   },
 ];
 
-export function createFetchVerbs({ log }) {
+export function createFetchVerbs({ log, root }) {
   const verbs = {
     fetch: (args) =>
       retrying({
@@ -81,6 +82,7 @@ export function createFetchVerbs({ log }) {
       const cut = text.length > TEXT_CAP;
       if (cut) text = text.slice(0, TEXT_CAP);
       const footer = cut ? `\n...[text cut at ${TEXT_CAP} characters]` : '';
+      const archived = archiveSource(root, Buffer.concat(read.chunks), current.href);
       return {
         ok: true,
         status: response.status,
@@ -88,6 +90,8 @@ export function createFetchVerbs({ log }) {
         finalUrl: current.href,
         redirects,
         truncated: read.truncated,
+        source: archived.id,
+        sourceNew: archived.created,
         output: `${response.status} ${read.bytes} bytes ${current.href}\n${text}${footer}`,
       };
     },
