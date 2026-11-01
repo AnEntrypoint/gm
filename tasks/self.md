@@ -5,7 +5,7 @@ Next work, in order, from the gm agent's phase plan (DESIGN.md, Decided, 2026-11
 2. Phase 3, JIT checks through run_shell, is witnessed in DESIGN.md under Measured (8 of 8). The doctor last-run defect was fixed by the gate (commit d66b206). The gate's CI check reads "none configured", and that is not a pass. Write no test files.
 3. Phase 4 is optional: fetch, then browser over CDP, only if a project needs them.
 4. The gate: edit a small real change to gm-new with its own tools in a live Claude session through airc, commit it through its git verbs, and see CI pass. Only after that remove the gm dependencies listed in DESIGN.md under "Dependencies on gm, to be replaced", each in its own commit.
-5. Hot reload is witnessed in two sessions (DESIGN.md). The witness through the project's own .mcp.json in Claude Code waits for the user's one-time /mcp approval.
+5. Hot reload is witnessed in two sessions and through the project's own .mcp.json (DESIGN.md, Measured).
 6. The minimal tool set is not run and is not requested.
 
 Every change needs a witness before it is committed: a scripted run, a supervisor test, or a JSON-RPC check, with its run id or output recorded in DESIGN.md under Measured. Commit each change by explicit path on main. Do not create branches. Keep the code ASCII, use Node built-ins only, and write no test files.
