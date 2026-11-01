@@ -18,6 +18,9 @@ import { writeSummary } from './summary.mjs';
 
 const PROTOCOL_VERSION = '2025-06-18';
 const SERVER_INFO = { name: 'gm-new', version: JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')).version };
+// The instructions the host sees at initialize. The code surface names run_code, and the verbs are functions on gm.
+const CODE_INSTRUCTIONS = "One tool does the work: run_code. Its body is JavaScript in the project, and each verb is a function on gm, for example await gm.read_file({ path }). The verb list is in run_code's description, gm.verbs() returns each verb's details, and finish ends the run and is not a verb. Start each step with next_context.";
+const TOOLS_INSTRUCTIONS = "Each verb is a tool. Start each step with next_context, and end the run with finish and a witness.";
 const SKILL_URI = 'gm-new://skill/SKILL.md';
 const SKILL = parseSkill(readFileSync(join(ROOT, 'skills', 'gm-new', 'SKILL.md'), 'utf8'));
 const SKILL_PROMPT = { name: SKILL.name, description: SKILL.description, arguments: [{ name: 'task', description: 'The task to run', required: false }] };
@@ -186,7 +189,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
 
   function initialize(params) {
     const version = typeof params?.protocolVersion === 'string' ? params.protocolVersion : PROTOCOL_VERSION;
-    return { protocolVersion: version, capabilities: { tools: { listChanged: true }, prompts: { listChanged: true }, resources: { listChanged: true } }, serverInfo: SERVER_INFO };
+    return { protocolVersion: version, capabilities: { tools: { listChanged: true }, prompts: { listChanged: true }, resources: { listChanged: true } }, serverInfo: SERVER_INFO, instructions: surface === 'code' ? CODE_INSTRUCTIONS : TOOLS_INSTRUCTIONS };
   }
 
   function getPrompt(params) {
