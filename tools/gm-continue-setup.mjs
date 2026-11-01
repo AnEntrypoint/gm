@@ -94,9 +94,9 @@ if (defects.length > 0) out.push(`Pass defect (reported): ${defects.join('; ')}.
 if (pass === null) {
   out.push('Re-entry: no pass record yet. The batch is built first, then the witness pass runs once over all of it.');
 } else if (before === null) {
-  out.push('Re-entry: first pass; re-enter the gm-new skill while actionable rows remain.');
+  out.push('Re-entry: first pass; re-enter the gm skill while actionable rows remain.');
 } else if (closed.length > 0) {
-  out.push(`Re-entry: ${closed.length} row(s) closed in the last pass (${closed.join(', ')}); re-enter the gm-new skill while actionable rows remain.`);
+  out.push(`Re-entry: ${closed.length} row(s) closed in the last pass (${closed.join(', ')}); re-enter the gm skill while actionable rows remain.`);
 } else if (defects.length > 0) {
   out.push('Re-entry: the last pass closed no row and has a defect, so this is not a stop.');
 } else {

@@ -17,7 +17,7 @@ Finish gm-new as the simplest architecture that runs one long task end to end, w
 These are settled. Change one only by messaging the orchestrator, with the reason.
 
 - Node.js 20+ ES modules, standard library only, no dependencies.
-- Shape: an MCP server over stdio (JSON-RPC written by hand) plus `skills/gm-new/SKILL.md`. The Claude Code session is the model. The CLI is a thin wrapper for scripted witnesses. No spool, daemon, or listening port.
+- Shape: an MCP server over stdio (JSON-RPC written by hand) plus `skills/gm/SKILL.md`. The Claude Code session is the model. The CLI is a thin wrapper for scripted witnesses. No spool, daemon, or listening port.
 - gm-new does not use gm. Its code, skill, MCP server, runner, tests and builds use no gm MCP tool, no gm skill, no gm runner and no gm state. gm was the comparison target for arm B only, and the arm B configuration was removed with the live runner (DESIGN.md, Live comparison, closed). Code search for gm-new work uses this directory's own files, not gm.
 - gm-new makes no API calls. The model is the host session (Claude Code) in MCP mode. The only model in the CLI is `scripted`, which is offline and deterministic. Anything that would call an API is reported to the gm agent to do, not done here.
 - Context: no summarisation. `next_context` returns the rules, the task, the witness requirement, the last 20 events and `prefixSha`. Older events are reached with `query_log`.
@@ -67,7 +67,7 @@ Each item is done when its live witness is recorded in the log and its line is i
 Item 7 was a live comparison of gm-new and gm on the same task, run through Claude Code interactive sessions. It is closed, and its report is in DESIGN.md. Compare wall time, idle time, step count and outcome from the logs.
 
 9. MCP server (`src/mcp.mjs`): stdio, JSON-RPC by hand, concurrent requests answered by id. Witness: a host session makes parallel tool calls and the log shows overlapping calls.
-10. Skill `skills/gm-new/SKILL.md`: loop prose only (call `next_context`, decide, act through tools, finish with a witness). Witness: a session loads it and finishes a run.
+10. Skill `skills/gm/SKILL.md`: loop prose only (call `next_context`, decide, act through tools, finish with a witness). Witness: a session loads it and finishes a run.
 11. Interactive Claude Code witness, driven in tmux. Witness: a real session, not a script. Record the session transcript path and the run id.
 
 The work-plan order was 3, the symlink and alias fix, 4, 6, 9, 10, 11, then 7 and 8. All are done. Keep one writer for any new change.

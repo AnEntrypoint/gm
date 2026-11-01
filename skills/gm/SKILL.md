@@ -1,9 +1,9 @@
 ---
-name: gm-new
+name: gm
 description: Runs a long task as a gm-new worker. Each step calls next_context, does the work in one run_code body, and ends with finish and a witness. Use when a task should run under the gm-new MCP server.
 ---
 
-# gm-new loop
+# gm loop
 
 Flow rule. A multi-step change is built as one batch, all steps first, then witnessed in one pass over all of them, and the commits land after that pass. Each step's witness goes in the run log and is cited in DESIGN.md. A step is not witnessed on its own during the build.
 

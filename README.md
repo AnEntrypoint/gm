@@ -16,7 +16,7 @@ An entry for `.mcp.json`:
 
 Tools: `next_context`, `read_file`, `write_file`, `edit_file`, `stat_file`, `list_dir`, `run_shell`, `job_start`, `job_status`, `query_log`, `finish` (with an optional `gaps` array, logged in the end event); the search tools `search` (BM25 over the lines of tracked files) and `grep` (literal, regex or whole word); the git tools `git_status`, `git_add`, `git_commit`, `git_push`, `git_log`, `git_diff`, `git_show`, `git_fetch`, `git_pull`, `git_checkout`, `git_branch`; `ci_status` (through the gh CLI); and the row tools `prd_add`, `prd_list`, `prd_resolve`, `unknown_add`, `unknown_list`, `unknown_resolve`. Rows are files under `work/rows/`, and a row resolves with a seq of the run log and a commit that exists in the repository. `callers` and `impact` are not available: they wait for the user's parser decision (DESIGN.md). Each `next_context` call is one step. A call starts at once while one of `--max-inflight` slots (default 8) is free. Calls that touch one file, with a write among them, wait in order, and a shell runs alone. The server answers each request by its id, so a session's parallel calls overlap, and the log shows `inFlight`.
 
-The skill is `skills/gm-new/SKILL.md`. It holds the loop prose only.
+The skill is `skills/gm/SKILL.md`. It holds the loop prose only.
 
 ## The CLI wrapper, for scripted witnesses
 

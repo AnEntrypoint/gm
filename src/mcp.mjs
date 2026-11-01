@@ -21,8 +21,8 @@ const SERVER_INFO = { name: 'gm-new', version: JSON.parse(readFileSync(join(ROOT
 // The instructions the host sees at initialize. The code surface names run_code, and the verbs are functions on gm.
 const CODE_INSTRUCTIONS = "One tool does the work: run_code. Its body is JavaScript in the project, and each verb is a function on gm, for example await gm.read_file({ path }). The verb list is in run_code's description, gm.verbs() returns each verb's details, and finish ends the run and is not a verb. Start each step with next_context.";
 const TOOLS_INSTRUCTIONS = "Each verb is a tool. Start each step with next_context, and end the run with finish and a witness.";
-const SKILL_URI = 'gm-new://skill/SKILL.md';
-const SKILL = parseSkill(readFileSync(join(ROOT, 'skills', 'gm-new', 'SKILL.md'), 'utf8'));
+const SKILL_URI = 'gm://skill/SKILL.md';
+const SKILL = parseSkill(readFileSync(join(ROOT, 'skills', 'gm', 'SKILL.md'), 'utf8'));
 const SKILL_PROMPT = { name: SKILL.name, description: SKILL.description, arguments: [{ name: 'task', description: 'The task to run', required: false }] };
 const SKILL_RESOURCE = { uri: SKILL_URI, name: `${SKILL.name} skill`, description: SKILL.description, mimeType: 'text/markdown' };
 const WINDOW = 20;
@@ -79,7 +79,7 @@ const NO_PATHS = { items: [], free: true };
 
 function parseSkill(text) {
   const match = /^---\n([\s\S]*?)\n---\n?/.exec(text);
-  if (!match) throw new Error('skills/gm-new/SKILL.md has no frontmatter');
+  if (!match) throw new Error('skills/gm/SKILL.md has no frontmatter');
   const fields = Object.fromEntries(match[1].split('\n').map((line) => line.split(/:\s*(.*)/s).slice(0, 2)));
   return { text, name: fields.name, description: fields.description, body: text.slice(match[0].length).trim() };
 }
