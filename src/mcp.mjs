@@ -13,6 +13,7 @@ import { SEARCH_TOOLS } from './search.mjs';
 import { FETCH_TOOLS } from './fetch.mjs';
 import { CODE_TOOLS } from './code.mjs';
 import { runBody, runCodeTool } from './runcode.mjs';
+import { lintWiki } from './wiki.mjs';
 import { writeSummary } from './summary.mjs';
 
 const PROTOCOL_VERSION = '2025-06-18';
@@ -314,6 +315,8 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     }
     stop('finished');
     const out = await act('finish', args, access, () => tools.run('finish', args), undefined, rpcId);
+    const lint = lintWiki(workspace);
+    log.append('lint', { problems: lint.problems, pages: lint.pages });
     await endRun('finished', out.output, args.gaps);
     return out;
   }
