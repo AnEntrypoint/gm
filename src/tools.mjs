@@ -129,7 +129,9 @@ export function createTools({ workspace, runDir, log, background = true }) {
       if (args.kind !== undefined) events = events.filter((event) => event.kind === args.kind);
       if (args.fromMono !== undefined) events = events.filter((event) => event.mono >= args.fromMono);
       if (args.toMono !== undefined) events = events.filter((event) => event.mono <= args.toMono);
-      return runQuery(events, args.js ?? 'events');
+      if (args.after !== undefined) events = events.filter((event) => event.seq > args.after);
+      const page = pageOf(events);
+      return { ...runQuery(page.events, args.js ?? 'events'), ...(page.next === null ? {} : { next: page.next }) };
     },
 
     finish(args) {
@@ -225,6 +227,24 @@ export function createTools({ workspace, runDir, log, background = true }) {
     if (!existsSync(file)) return null;
     return JSON.parse(readFileSync(file, 'utf8'));
   }
+}
+
+// A query_log reply holds at most 50 events and stays within about 20 KB once serialized, because the reply escapes the
+// JSON it carries. When events remain, next is the seq of the last event returned, and the caller passes it as after.
+const QUERY_PAGE_EVENTS = 50;
+const QUERY_REPLY_CHARS = 20000;
+
+function pageOf(events) {
+  const page = [];
+  for (const event of events) {
+    if (page.length === QUERY_PAGE_EVENTS) break;
+    const text = JSON.stringify(event);
+    const next = text.length > QUERY_REPLY_CHARS ? { seq: event.seq, kind: event.kind, truncated: text.slice(0, QUERY_REPLY_CHARS) } : event;
+    const candidate = [...page, next];
+    if (page.length > 0 && JSON.stringify({ ok: true, output: JSON.stringify(candidate) }).length > QUERY_REPLY_CHARS) break;
+    page.push(next);
+  }
+  return { events: page, next: page.length < events.length ? page.at(-1).seq : null };
 }
 
 function readTail(file, cap) {
