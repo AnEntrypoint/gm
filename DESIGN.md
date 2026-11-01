@@ -142,6 +142,30 @@ Comparison: arm A has no quiet trial, and arm B's quiet trials cannot be set aga
 
 Still open: the minimal tool set (open question). The gaps G1 and G2 are built from the research consolidation, and G3 stays blocked.
 
+## Live comparison, quiet batch
+
+The quiet batch ran at cap 1, one attempt per trial, with the pause rule above a 1-minute load of 6. Load was recorded at each trial's start and end. Quiet means the start load was under 6. Each task was held to 3 valid quiet trials per arm. Medians, with spread as min to max, are from valid quiet trials only.
+
+Arm A (gm-new), 9 valid quiet trials, 3 per task, all passed:
+
+- t1: wall 21384 ms (17890 to 36762), idle 1378 ms, tool calls 7 (gm-new MCP 6).
+- t2: wall 33097 ms (28166 to 42082), idle 1991 ms, tool calls 12 (MCP 11).
+- t3: wall 26036 ms (25788 to 49736), idle 482 ms, tool calls 10 (MCP 9). The first t3 trial of the batch was the t3-2 re-attempt, and it was valid.
+
+Arm B (gm), 9 valid quiet trials, 3 per task, all passed:
+
+- t1: wall 31093 ms (29339 to 36576), idle 1463 ms, tool calls 3 (gm MCP 2).
+- t2: wall 48995 ms (47362 to 55716), idle 3387 ms, tool calls 6 (MCP 4).
+- t3: wall 53406 ms (36970 to 83288), idle 4482 ms, tool calls 8 (MCP 6). One trial used one MCP call out of six tool calls.
+
+Loaded trials: none for either arm.
+
+Unrecorded trials, not used in the comparison: arm A has 10 valid, and arm B has 2 valid (t1), all run before load was recorded.
+
+Invalid trials, listed and not dropped: arm A has 9 records, all readiness failures. Six were superseded by a valid run of the same slot, and three are the failed attempts at slot t3-2, which the quiet batch later filled with a valid trial. Arm B has 2 records, both from before the unknown-command resend was added.
+
+Comparison, on quiet trials only, with 9 against 9 trials: arm A's median wall time is lower on all three tasks, and its median idle time is lower on t2 and t3. The spreads overlap on t1, and the arms differ in tool strategy as well as in harness: arm B's skill is the served prompt, while arm A's is copied in. With 3 trials per task, these are medians, not significance tests.
+
 ## Measured
 
 - Live pause, second: the arm B resume was paused again at 2026-11-01 16:18:48 SAST, with a 1-minute load of 15.68, which the gm agent's rule requires (pause above 6). The runner, its server and the trial in flight (`B-t3-2`, no result) were stopped. Two arm B slots remain, `t3-2` and `t3-3`. The resume is `node tools/live.mjs --arm B --tasks t1,t2,t3 --trials 3 --concurrency 1 --resume true`, once the gm agent reports load under 6.
