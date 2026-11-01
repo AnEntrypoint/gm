@@ -37,6 +37,15 @@ Start with one worker, one log and one loop. Add a component only when a measure
 
 7. **Subagent isolation (open).** The claim that isolated subagents help was refuted 1-2. Parallel subagents stay in gm-new only where a measured run shows they beat one worker on the same task.
 
+## Concurrency evidence (digest, research/concurrency.md)
+
+- Parallel tool calls in one turn cut wall-clock 40.6% and cost 35.9% in one self-reported study (medium, arxiv 2602.07359). Use: work item 1, measured in item 7.
+- Overlapping tool execution with generation can cut latency (medium, arxiv 2603.18897, serving-system paper). Speculation can hurt under high load. Use: default off until measured.
+- Fine-grained tool streaming may return invalid JSON tool input. Use: not enabled. The parser already handles unparseable replies.
+- Prompt caching: order is tools, system, messages; put the breakpoint at the end of the stable prefix, before the event window. Measured 41 to 80% cost cut and 13 to 31% faster first token (medium, arxiv 2601.06007). Use: rule 5, item 4.
+- Rate limits: honour retry-after first, then backoff (high, Anthropic docs). Cached input tokens do not count toward input-tokens-per-minute for most models (high). Use: rule 6, item 3.
+- Dropped as unverified: cache write and read multipliers, minimum cacheable length, back-pressure measurement.
+
 ## What the evidence does not settle
 
 - Whether a query-the-log design beats validated compaction on the same tasks (open question 2).
