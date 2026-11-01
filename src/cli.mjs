@@ -8,6 +8,7 @@ import { readEvents, runQuery } from './log.mjs';
 import { buildPrompt, DEFAULT_RULES, DEFAULT_WITNESS } from './prompt.mjs';
 import { createTools } from './tools.mjs';
 import { createRun, isDirectory, loadTask, newRunId, RUNS } from './run.mjs';
+import { writeSummary } from './summary.mjs';
 
 const USAGE = `usage:
   gmnew run --task <file-or-text> --workspace <dir> [--model scripted|anthropic] [--max-steps N]
@@ -59,6 +60,7 @@ async function run(flags) {
   for (const [signal, code] of [['SIGINT', 130], ['SIGTERM', 143]]) {
     process.once(signal, () => {
       tools.killAllNow();
+      writeSummary(log);
       log.append('end', { status: 'interrupted', signal });
       process.exit(code);
     });

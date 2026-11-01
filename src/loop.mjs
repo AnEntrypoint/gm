@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { buildPrompt, parseActions } from './prompt.mjs';
 import { conflicts } from './tools.mjs';
+import { writeSummary } from './summary.mjs';
 
 const WINDOW = 20;
 const MAX_RETRIES = 4;
@@ -13,13 +14,14 @@ const JITTER = 0.2;
 const RETRYABLE_NETWORK = new Set(['ECONNRESET', 'ETIMEDOUT', 'UND_ERR_SOCKET', 'UND_ERR_CONNECT_TIMEOUT', 'UND_ERR_HEADERS_TIMEOUT', 'UND_ERR_BODY_TIMEOUT', 'TimeoutError']);
 
 export async function runLoop({ runDir, spec, model, tools, log, maxSteps, serial = false }) {
-  log.append('start', { maxSteps, serial });
+  log.append('start', { mode: 'cli', maxSteps, serial });
   let outcome;
   try {
     outcome = await stepLoop({ runDir, spec, model, tools, log, maxSteps, serial });
   } finally {
     await tools.close();
   }
+  writeSummary(log);
   log.append('end', outcome);
   return outcome;
 }

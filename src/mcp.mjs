@@ -6,6 +6,7 @@ import { createInterface } from 'node:readline';
 import { DEFAULT_WITNESS, prefixShaOf, renderTools } from './prompt.mjs';
 import { createRun, isDirectory, loadTask, newRunId, ROOT, RUNS } from './run.mjs';
 import { conflicts, createTools } from './tools.mjs';
+import { writeSummary } from './summary.mjs';
 
 const PROTOCOL_VERSION = '2025-06-18';
 const SERVER_INFO = { name: 'gm-new', version: JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')).version };
@@ -111,7 +112,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight }) 
 
   async function route(method, params) {
     if (method === 'initialize') return initialize(params);
-    if (method === 'ping') return {};
+    if (method === 'ping' || method === 'server/discover') return {};
     if (method === 'tools/list') return { tools: TOOLS };
     if (method === 'tools/call') return callTool(params);
     if (method.startsWith('notifications/')) return null;
@@ -270,6 +271,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight }) 
     endLogged = true;
     await Promise.allSettled([...active.keys()]);
     await tools.close();
+    writeSummary(log);
     log.append('end', { status, steps, witness });
   }
 

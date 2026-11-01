@@ -1,0 +1,127 @@
+#!/usr/bin/env node
+// Scripted measurement harness. Each task is a scripted reply file that drives real tools in a temp
+// workspace. Every arm runs every task 3 times through the CLI with the scripted model (no paid calls).
+// Wall time and idleMs come from each run's own log. The temp scripts and workspaces are deleted; the run logs stay in runs/.
+import { spawnSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { readEvents } from './log.mjs';
+import { RUNS } from './run.mjs';
+
+const CLI = fileURLToPath(new URL('./cli.mjs', import.meta.url));
+const TRIALS = 3;
+const SLEEP_2S = 'node -e "setTimeout(() => {}, 2000)"';
+const SLEEP_3S = 'node -e "setTimeout(() => {}, 3000)"';
+
+const TASKS = [
+  {
+    name: 'writes',
+    task: 'Write two files in one reply, read one back, and finish with a witness.',
+    replies: [
+      [
+        { tool: 'write_file', args: { path: 'a.txt', content: 'alpha\n' } },
+        { tool: 'write_file', args: { path: 'b.txt', content: 'beta\n' } },
+      ],
+      { tool: 'read_file', args: { path: 'a.txt' } },
+      { tool: 'finish', args: { witness: 'a.txt and b.txt were written in one reply; read_file a.txt returned alpha.' } },
+    ],
+  },
+  {
+    name: 'background',
+    task: 'Start a 3 s background job, run a 2 s command while it runs, poll the job, and finish.',
+    replies: [
+      { tool: 'run_shell', args: { command: SLEEP_3S, background: true, job: 'slow' } },
+      { tool: 'run_shell', args: { command: SLEEP_2S } },
+      { tool: 'job_status', args: { job: 'slow', waitMs: 10000 } },
+      { tool: 'finish', args: { witness: 'job slow was polled after a 2 s command; job_status reported its state.' } },
+    ],
+  },
+  {
+    name: 'log',
+    task: 'Write one file, count the result events with query_log, and finish.',
+    replies: [
+      { tool: 'write_file', args: { path: 'log.txt', content: 'one\n' } },
+      { tool: 'query_log', args: { js: "events.filter((e) => e.kind === 'result').length" } },
+      { tool: 'finish', args: { witness: 'write_file log.txt returned ok; query_log counted the result events.' } },
+    ],
+  },
+];
+
+const ARMS = [
+  { name: 'parallel on', flags: [] },
+  { name: 'parallel off', flags: ['--serial'] },
+  { name: 'background on', flags: [] },
+  { name: 'background off', flags: ['--no-background'] },
+];
+
+function main() {
+  const root = mkdtempSync(join(tmpdir(), 'gmnew-bench-'));
+  const results = [];
+  try {
+    for (const task of TASKS) {
+      const script = join(root, `${task.name}.json`);
+      writeFileSync(script, `${JSON.stringify(task.replies)}\n`);
+      for (const arm of ARMS) {
+        for (let trial = 1; trial <= TRIALS; trial += 1) {
+          const workspace = join(root, `ws-${task.name}-${arm.name.replaceAll(' ', '-')}-${trial}`);
+          mkdirSync(workspace);
+          const run = runOnce(task, script, workspace, arm.flags);
+          results.push({ arm: arm.name, task: task.name, ...run });
+          console.log(`${arm.name} | ${task.name} | trial ${trial} | run ${run.id} | ${run.status} | wall ${run.wallMs} ms | idleMs ${run.idleMs}`);
+        }
+      }
+    }
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+  printTable(results);
+  process.exitCode = results.every((result) => result.status === 'finished') ? 0 : 1;
+}
+
+// Runs the CLI once, then reads wall time and idleMs from the run's own log.
+function runOnce(task, script, workspace, flags) {
+  const child = spawnSync(
+    process.execPath,
+    [CLI, 'run', '--task', task.task, '--workspace', workspace, '--model', 'scripted', '--script', script, ...flags],
+    { encoding: 'utf8', timeout: 120000 },
+  );
+  const match = /^run (\S+): (\S+) after/m.exec(child.stdout);
+  if (!match) throw new Error(`run did not start for ${task.name}: ${child.stderr}`);
+  const [, id, status] = match;
+  const events = readEvents(join(RUNS, id, 'log.jsonl'));
+  const start = events.find((event) => event.kind === 'start');
+  const summary = events.find((event) => event.kind === 'summary');
+  if (!summary) throw new Error(`run ${id} has no summary event`);
+  return { id, status, wallMs: round(events.at(-1).mono - start.mono), idleMs: summary.idleMs };
+}
+
+function printTable(results) {
+  console.log('');
+  console.log('arm              task        trials  status              wall ms: median (min to max)    idleMs: median (min to max)');
+  for (const arm of ARMS) {
+    for (const task of TASKS) {
+      const rows = results.filter((row) => row.arm === arm.name && row.task === task.name);
+      const finished = rows.filter((row) => row.status === 'finished').length;
+      const wall = spread(rows.map((row) => row.wallMs));
+      const idle = spread(rows.map((row) => row.idleMs));
+      console.log(
+        `${arm.name.padEnd(16)} ${task.name.padEnd(11)} ${String(rows.length).padEnd(7)} ${`${finished}/${rows.length} finished`.padEnd(19)} ${wall.padEnd(31)} ${idle}`,
+      );
+    }
+  }
+}
+
+function spread(values) {
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  const median = sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+  return `${round(median)} (${round(sorted[0])} to ${round(sorted.at(-1))})`;
+}
+
+function round(value) {
+  return Math.round(value * 10) / 10;
+}
+
+main();

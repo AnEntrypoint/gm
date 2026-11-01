@@ -16,8 +16,8 @@ export function openLog(file) {
     leave() {
       inFlight -= 1;
     },
-    append(kind, data) {
-      const mono = now();
+    append(kind, data, at) {
+      const mono = at ?? now();
       const event = { seq: events.length + 1, t: new Date().toISOString(), mono, inFlight, kind, ...data };
       if (typeof data.startMono === 'number') event.durMs = round(mono - data.startMono);
       events.push(event);
