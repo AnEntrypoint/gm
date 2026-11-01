@@ -13,6 +13,7 @@ const MAX_LIMIT = 1000;
 const DEFAULT_DEPTH = 2;
 const MAX_DEPTH = 5;
 const IDENTIFIER = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
+const KEYWORDS = new Set(['break', 'case', 'catch', 'class', 'const', 'continue', 'debugger', 'default', 'delete', 'do', 'else', 'export', 'extends', 'finally', 'for', 'function', 'if', 'import', 'in', 'instanceof', 'let', 'new', 'of', 'return', 'super', 'switch', 'this', 'throw', 'try', 'typeof', 'var', 'void', 'while', 'with', 'yield', 'await']);
 const SPECIFIER = /(?:\bfrom\s+|\bimport\s*\(\s*|\brequire\s*\(\s*|\bimport\s+)['"]([^'"]+)['"]/g;
 const NOTE = 'approximate: regex over the tracked source files. Dynamic calls, re-exports and shadowed names are not resolved. A line that starts with a comment marker is skipped.';
 
@@ -141,18 +142,27 @@ function scan(index, name) {
   for (const file of index.files) {
     file.lines.forEach((text, i) => {
       if (isComment(text)) return;
+      let scanned = text;
       if (definition.test(text)) {
         defs.push({ rel: file.rel, line: i + 1, text });
         found.defining.add(file.rel);
-        return;
+        scanned = declaredValue(text);
+        if (scanned === null) return;
       }
-      if (direct.test(text)) found.direct.push({ rel: file.rel, line: i + 1, text, kind: 'direct' });
-      else if (member.test(text)) found.member.push({ rel: file.rel, line: i + 1, text, kind: 'member' });
+      if (direct.test(scanned)) found.direct.push({ rel: file.rel, line: i + 1, text, kind: 'direct' });
+      else if (member.test(scanned)) found.member.push({ rel: file.rel, line: i + 1, text, kind: 'member' });
     });
   }
   const importsDefining = (rel) => [...(index.edges.get(rel) ?? [])].some((target) => found.defining.has(target));
   found.direct = found.direct.map((site) => (importsDefining(site.rel) ? { ...site, kind: 'linked' } : site));
   return found;
+}
+
+// The value after the = of a const, let or var declaration. A declaration of the name can still call something on the
+// right-hand side. Function, class and method definitions have no value, so they return null.
+function declaredValue(text) {
+  const match = /^\s*(?:export\s+)?(?:default\s+)?(?:const|let|var)\s+[A-Za-z_$][A-Za-z0-9_$]*\s*=\s*(.*)$/.exec(text);
+  return match ? match[1] : null;
 }
 
 function isComment(text) {
@@ -161,6 +171,7 @@ function isComment(text) {
 
 function badArgs(name) {
   if (typeof name !== 'string' || !IDENTIFIER.test(name)) return 'name must be a JavaScript identifier';
+  if (KEYWORDS.has(name)) return `${name} is a JavaScript keyword, so it has no callers to list`;
   return null;
 }
 
