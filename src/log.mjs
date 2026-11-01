@@ -4,9 +4,10 @@ import { performance } from 'node:perf_hooks';
 const QUERY_CAP = 20000;
 
 export function openLog(file) {
-  const events = [];
+  const events = existsSync(file) ? readEvents(file) : [];
   let inFlight = 0;
-  const now = () => round(performance.now());
+  const offset = events.length ? events.at(-1).mono : 0;
+  const now = () => round(offset + performance.now());
   return {
     now,
     enter() {

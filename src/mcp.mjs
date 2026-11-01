@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 import { basename, join, resolve } from 'node:path';
 import { createInterface } from 'node:readline';
 import { DEFAULT_WITNESS, prefixShaOf, renderTools } from './prompt.mjs';
-import { createRun, isDirectory, loadTask, newRunId, ROOT, RUNS } from './run.mjs';
+import { isDirectory, loadTask, newRunId, openRun, ROOT, RUNS } from './run.mjs';
 import { conflicts, createTools } from './tools.mjs';
 import { writeSummary } from './summary.mjs';
 
@@ -64,14 +64,14 @@ class RpcError extends Error {
   }
 }
 
-function createSession({ workspace, runDir, log, task, maxSteps, maxInflight }) {
+function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, resume = null }) {
   const tools = createTools({ workspace, runDir, log, background: true });
   const active = new Map();
   const waiting = [];
   const unansweredTurns = new Set();
-  let steps = 0;
-  let ended = null;
-  let endLogged = false;
+  let steps = resume?.steps ?? 0;
+  let ended = resume?.ended ?? null;
+  let endLogged = ended !== null;
 
   const handlers = {
     read_file: (args) => tools.run('read_file', args),
@@ -133,7 +133,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight }) 
 
   function initialize(params) {
     const version = typeof params?.protocolVersion === 'string' ? params.protocolVersion : PROTOCOL_VERSION;
-    return { protocolVersion: version, capabilities: { tools: {}, prompts: {}, resources: {} }, serverInfo: SERVER_INFO };
+    return { protocolVersion: version, capabilities: { tools: { listChanged: true }, prompts: { listChanged: true }, resources: { listChanged: true } }, serverInfo: SERVER_INFO };
   }
 
   function getPrompt(params) {
@@ -298,7 +298,23 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight }) 
     if (!endLogged) await endRun(ended, null);
   }
 
-  return { accept, inputEnded };
+  // A restart is not a finish. New calls are refused, calls in flight finish, background jobs are stopped and logged,
+  // and no end event is written, so the next worker resumes this run.
+  async function quiesceForRestart() {
+    ended = 'restarting';
+    for (const call of waiting.splice(0)) call.resolveCall(refuse(call.name, call.args, endedReason()));
+    await Promise.allSettled([...active.keys()]);
+    await tools.close();
+  }
+
+  return { accept, inputEnded, quiesceForRestart };
+}
+
+// Where a resumed run stands: the steps it has taken, and whether it already ended.
+function resumeFrom(events) {
+  const steps = events.filter((event) => event.kind === 'result' && event.tool === 'next_context' && event.ok === true).length;
+  const end = events.findLast((event) => event.kind === 'end');
+  return { steps, ended: end ? end.status : null };
 }
 
 function write(message) {
@@ -348,14 +364,16 @@ async function main(argv) {
   const runDir = flags['run-dir'] === undefined ? join(RUNS, newRunId()) : resolve(flags['run-dir']);
   const id = basename(runDir);
   const meta = { id, mode: 'mcp', task, witness: DEFAULT_WITNESS, workspace, maxSteps, maxInflight, createdAt: new Date().toISOString() };
-  const log = createRun({ runDir, rules: MCP_RULES, meta });
-  log.append('start', { mode: 'mcp', maxSteps, maxInflight });
+  const { log, resumed } = openRun({ runDir, rules: MCP_RULES, meta });
+  if (resumed) log.append('restart', { reason: flags['restart-reason'] ?? 'restarted without a reason' });
+  else log.append('start', { mode: 'mcp', maxSteps, maxInflight });
 
-  const session = createSession({ workspace, runDir, log, task, maxSteps, maxInflight });
+  const session = createSession({ workspace, runDir, log, task, maxSteps, maxInflight, resume: resumed ? resumeFrom(log.events()) : null });
   const lines = createInterface({ input: process.stdin, crlfDelay: Infinity });
   lines.on('line', session.accept);
   lines.on('close', () => session.inputEnded().catch((err) => console.error(`gm-new: ${err.message}`)));
   for (const signal of ['SIGINT', 'SIGTERM']) process.once(signal, () => lines.close());
+  process.on('SIGUSR2', () => session.quiesceForRestart().finally(() => process.exit(0)));
   process.stdout.on('error', (err) => console.error(`gm-new: stdout: ${err.message}`));
   console.error(`gm-new mcp: run ${id} in ${runDir}`);
 }

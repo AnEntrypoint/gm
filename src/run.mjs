@@ -20,6 +20,12 @@ export function createRun({ runDir, rules, meta }) {
   return openLog(join(runDir, 'log.jsonl'));
 }
 
+export function openRun({ runDir, rules, meta }) {
+  const file = join(runDir, 'log.jsonl');
+  if (existsSync(file)) return { log: openLog(file), resumed: true };
+  return { log: createRun({ runDir, rules, meta }), resumed: false };
+}
+
 export function loadTask(value) {
   const path = resolve(value);
   if (isFile(path)) return readFileSync(path, 'utf8');
