@@ -11,7 +11,11 @@ import { GIT_TOOLS } from './git.mjs';
 import { ROW_TOOLS } from './rows.mjs';
 import { SEARCH_TOOLS } from './search.mjs';
 import { FETCH_TOOLS } from './fetch.mjs';
-import { CODE_TOOLS } from './code.mjs';
+import { CODE_TOOLS } from './code-ast.mjs';
+import { SEARCH_INDEX_TOOLS } from './search-index.mjs';
+import { WIKI_TOOLS } from './wiki-tools.mjs';
+import { REVIEW_TOOLS } from './review-tools.mjs';
+import { INSIGHT_TOOLS } from './insight.mjs';
 import { runBody, runCodeTool } from './runcode.mjs';
 import { lintWiki } from './wiki.mjs';
 import { writeSummary } from './summary.mjs';
@@ -60,6 +64,10 @@ const TOOLS = [
   { name: 'query_log', description: 'Evaluate a JavaScript expression over the run events array and return JSON. kind keeps events of one kind, and fromMono and toMono keep events in a time window (monotonic milliseconds). js defaults to returning the filtered events. A reply holds at most 50 events and about 20 KB. When events remain, next is the seq to pass back as after, which keeps only the events after that seq.', inputSchema: objectSchema({ js: text, kind: text, fromMono: number, toMono: number, after: number }, []) },
   { name: 'finish', description: 'End the run. witness is one string that quotes the evidence you observed. gaps optionally lists, one string each, what the run did not check; the end event logs them.', inputSchema: objectSchema({ witness: text, gaps: { type: 'array', items: text } }, ['witness']) },
   ...SEARCH_TOOLS,
+  ...SEARCH_INDEX_TOOLS,
+  ...WIKI_TOOLS,
+  ...REVIEW_TOOLS,
+  ...INSIGHT_TOOLS,
   ...FETCH_TOOLS,
   ...CODE_TOOLS,
   ...GIT_TOOLS,

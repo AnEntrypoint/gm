@@ -7,7 +7,7 @@
 // result is logged. Every exit of this file pauses the worker first, with SIGTERM, so the run stays open: SIGTERM, SIGINT and
 // the end of stdin all pause it. The worker also pauses if this file is killed, because it runs with --supervised yes.
 import { spawn } from 'node:child_process';
-import { existsSync, watch } from 'node:fs';
+import { existsSync, readFileSync, watch } from 'node:fs';
 import { createInterface } from 'node:readline';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -18,6 +18,9 @@ const WATCHED = [join(ROOT, 'src'), join(ROOT, 'skills')];
 const WATCHED_FILE = /\.(mjs|md)$/;
 const DEBOUNCE_MS = 250;
 const EXIT_MS = 5000;
+// The worker is restarted when its resident memory is above this, checked after each line it sends (see onChildLine). A restart waits
+// for calls in flight, and the run resumes from its log. The limit must be above the worker's own start, about 75 MB.
+const MEMORY_LIMIT_MB = Number(process.env.GMNEW_MEMORY_LIMIT_MB ?? 512);
 const RETRY_MIN_MS = 1000;
 const RETRY_MAX_MS = 30000;
 const HANDSHAKE_MS = 10000;
@@ -90,6 +93,16 @@ function hold(line, message) {
   held.push(line);
 }
 
+// The resident memory of a child process in MB, read from /proc. Zero where /proc is missing, so the limit is not applied there.
+function residentMB(proc) {
+  try {
+    const match = /VmRSS:\s+(\d+)/.exec(readFileSync(`/proc/${proc.pid}/status`, 'utf8'));
+    return match ? Number(match[1]) / 1024 : 0;
+  } catch {
+    return 0;
+  }
+}
+
 function onChildLine(line) {
   if (line.trim() === '') return;
   const message = parse(line);
@@ -100,6 +113,7 @@ function onChildLine(line) {
   if (message?.id !== undefined && message?.id !== null) inflight.delete(message.id);
   process.stdout.write(`${line}\n`);
   if (onDrained && inflight.size === 0) onDrained();
+  if (state === 'running' && child !== null && residentMB(child) > MEMORY_LIMIT_MB) scheduleRestart(`memory limit ${MEMORY_LIMIT_MB} MB passed`);
 }
 
 function startWorker(reason) {

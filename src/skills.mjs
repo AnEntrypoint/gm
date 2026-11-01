@@ -1,6 +1,10 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { CODE_TOOLS } from './code.mjs';
+import { CODE_TOOLS } from './code-ast.mjs';
+import { SEARCH_INDEX_TOOLS } from './search-index.mjs';
+import { WIKI_TOOLS } from './wiki-tools.mjs';
+import { REVIEW_TOOLS } from './review-tools.mjs';
+import { INSIGHT_TOOLS } from './insight.mjs';
 import { FETCH_TOOLS } from './fetch.mjs';
 import { GIT_TOOLS } from './git.mjs';
 import { ROW_TOOLS } from './rows.mjs';
@@ -12,7 +16,7 @@ import { SEARCH_TOOLS } from './search.mjs';
 const FILE_TOOLS = ['read_file', 'write_file', 'edit_file', 'stat_file', 'list_dir', 'run_shell', 'job_start', 'job_status', 'query_log'];
 
 export function unservedNames() {
-  return [...FILE_TOOLS, ...SEARCH_TOOLS, ...FETCH_TOOLS, ...CODE_TOOLS, ...GIT_TOOLS, ...ROW_TOOLS].map((tool) => (typeof tool === 'string' ? tool : tool.name));
+  return [...FILE_TOOLS, ...SEARCH_TOOLS, ...SEARCH_INDEX_TOOLS, ...WIKI_TOOLS, ...REVIEW_TOOLS, ...INSIGHT_TOOLS, ...FETCH_TOOLS, ...CODE_TOOLS, ...GIT_TOOLS, ...ROW_TOOLS].map((tool) => (typeof tool === 'string' ? tool : tool.name));
 }
 
 // The skills under skills/, each SKILL.md. A bare name of an unserved tool, that is not written as gm.<name>, is a finding.

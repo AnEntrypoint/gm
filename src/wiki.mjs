@@ -1,10 +1,9 @@
 import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { asciiText } from './sources.mjs';
-import { buildIndex, lineOf, rank, tokensOf } from './search.mjs';
 
-// The wiki: pages written from quoted sources, an index and a log. These are plain functions. No tool is registered for
-// them. wikiWrite refuses a claim whose quote is not in its named source. The gate and finish run lintWiki (lint.mjs).
+// The wiki: pages written from quoted sources, an index and a log. These are plain functions, served by wiki_write, and the wiki is
+// searched through retrieve.mjs. wikiWrite refuses a claim whose quote is not in its named source. The gate and finish run lintWiki.
 const PAGE = /^[a-z0-9][a-z0-9-]{0,63}$/;
 const SOURCE = /^[0-9a-f]{12}$/;
 const KINDS = ['ingest', 'answer', 'lint'];
@@ -74,27 +73,6 @@ export function wikiWrite({ root, log, page, title, body, summary, sources, clai
 }
 
 const ENTRY = /^- \[\[([a-z0-9][a-z0-9-]{0,63})\]\] - (.+)$/;
-
-// Reads the index first, then ranks its entries with the same BM25 that search uses, and returns the best k pages with their
-// summaries. A query files nothing: an answer is written with wikiWrite and kind answer.
-export function wikiQuery({ root, question, k = 3 }) {
-  if (typeof question !== 'string' || question.trim() === '') return { ok: false, error: 'question must be a non-empty string' };
-  const indexPath = join(root, 'wiki', 'index.md');
-  if (!existsSync(indexPath)) return { ok: false, error: 'the wiki has no index yet' };
-  const text = readFileSync(indexPath, 'utf8');
-  const entries = text
-    .split('\n')
-    .map((row) => ENTRY.exec(row))
-    .filter(Boolean)
-    .map((match) => ({ page: match[1], summary: match[2] }));
-  const index = buildIndex([{ rel: 'wiki/index.md', lines: entries.map((entry) => lineOf(`${entry.page} ${entry.summary}`)) }]);
-  const results = rank(index, tokensOf(question), k).map(({ doc, score }) => {
-    const entry = entries[doc.line - 1];
-    return { page: entry.page, summary: entry.summary, score: Number(score.toFixed(3)) };
-  });
-  const output = results.map((row) => `wiki/${row.page}.md | ${row.summary} | score ${row.score}`).join('\n') || 'no page matches';
-  return { ok: true, indexChars: text.length, results, output };
-}
 
 // The lint, run by the gate and by finish. Each problem is one line. An absent wiki has no problems. A page is an orphan
 // when no other page links to it; the index does not count. A contradiction is open until a later page resolves it.

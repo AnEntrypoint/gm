@@ -16,7 +16,7 @@ Finish gm-new as the simplest architecture that runs one long task end to end, w
 
 These are settled. Change one only by messaging the orchestrator, with the reason.
 
-- Node.js 20+ ES modules, standard library only, no dependencies.
+- Node.js 22.5+ ES modules. Dependencies: acorn, and thorns (the submodule at vendor/thorns). A new one needs an entry in DESIGN.md, Decisions, first.
 - Shape: an MCP server over stdio (JSON-RPC written by hand) plus `skills/gm/SKILL.md`. The Claude Code session is the model. The CLI is a thin wrapper for scripted witnesses. No spool, daemon, or listening port.
 - gm-new does not use gm. Its code, skill, MCP server, runner, tests and builds use no gm MCP tool, no gm skill, no gm runner and no gm state. gm was the comparison target for arm B only, and the arm B configuration was removed with the live runner (DESIGN.md, Live comparison, closed). Code search for gm-new work uses this directory's own files, not gm.
 - gm-new makes no API calls. The model is the host session (Claude Code) in MCP mode. The only model in the CLI is `scripted`, which is offline and deterministic. Anything that would call an API is reported to the gm agent to do, not done here.
@@ -30,7 +30,7 @@ These are settled. Change one only by messaging the orchestrator, with the reaso
 
 - Test runs run with the gm MCP disabled: each live trial uses a strict MCP configuration that names only the arm's own server, and the scripted runs call no gm tool. Anything that would make an API call, such as a cache measurement or a live model run, is reported to the gm agent to do.
 - No test files and no fixtures that stand in for a real run. Verify by running the CLI on a real task in a temporary workspace, then delete that workspace.
-- Use Node built-ins only. Shell commands use `child_process.spawn` with an explicit timeout.
+- Shell commands use `child_process.spawn` with an explicit timeout.
 - Commit only by explicit path, on branch `main`. Author lanmower. The commit body states the change only. No trailers of any kind.
 - ASCII only in every file. No decorative symbols.
 - Remote: `AnEntrypoint/gm-new`, private, pushed to `main` (DESIGN.md, Remote). Making it public is the owner's decision.
