@@ -76,7 +76,7 @@ Send a message to `main` when a work-plan item lands. Include: the item number, 
 
 ## Done means
 
-Work-plan items 1 to 8 are witnessed and committed on main, and DESIGN.md is current. The live anthropic run and the gm comparison remain blocked, and the report says so.
+Work-plan items 1 to 11 are witnessed and committed on main, and DESIGN.md is current. The live comparison of gm-new and gm is closed, with its report in DESIGN.md under "Project close". Still open and recorded: the minimal tool set, which is not run, and G3 (cache effect), which is blocked because the host route shows no cache usage. The project closes when those are recorded, and it is recorded.
 
 ## Rationale not expressible in code
 
