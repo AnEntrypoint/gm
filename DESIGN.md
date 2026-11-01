@@ -88,7 +88,7 @@ The three questions this section used to ask are answered in Decided: scope, run
 
 ## Next step
 
-The first slice runs end to end with the scripted model. Run it on one long task with the anthropic model, then measure it against the current gm on the same task before adding anything from the directions above.
+No build step is open. The live comparison is closed (see "Project close"). Still open and recorded: the minimal tool set, and G3 (cache effect, blocked). The code comment sweep is in progress, with no change to behaviour.
 
 ## Research consolidation
 

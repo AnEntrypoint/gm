@@ -2,7 +2,7 @@
 
 A single-worker long-horizon loop: one worker, one append-only log, governance rules re-read at every step. Design and evidence: `DESIGN.md` and `research/deep-research.md`.
 
-Status: the MCP server, the skill, the CLI wrapper and the measurement tools are built and witnessed. The live comparison with gm is running. Node.js 20+, standard library only, no build step.
+Status: the MCP server, the skill, the CLI wrapper and the measurement tools are built and witnessed. The live comparison with gm is closed, with its results in DESIGN.md. Node.js 20+, standard library only, no build step.
 
 ## The worker: an MCP server
 
