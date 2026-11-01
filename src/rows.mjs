@@ -40,12 +40,12 @@ export function createRowVerbs({ root, confine, log }) {
   async function listRows(kind, status) {
     if (!STATUSES.includes(status)) return fail(`status must be one of ${STATUSES.join(', ')}`);
     const rows = (await readRows()).filter((row) => row.kind === kind && (status === 'all' || row.status === status));
-    rows.sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)) || a.id.localeCompare(b.id));
+    rows.sort((a, b) => compareText(String(a.createdAt), String(b.createdAt)) || compareText(a.id, b.id));
     return { ok: true, output: rows.length ? rows.map((row) => `${row.id} ${row.status} ${row.title}`).join('\n') : '(none)' };
   }
 
   async function resolveRow(kind, { id, event, commit }) {
-    if (typeof id !== 'string' || !new RegExp(`^${kind}-[a-z0-9]+$`).test(id)) return fail(`id must be a ${kind} row id`);
+    if (typeof id !== 'string' || !new RegExp(`^${kind}-[a-z0-9]+$`).test(id)) return fail(`id must name a ${kind} row, with an id that starts ${kind}-`);
     if (!Number.isInteger(event) || event < 1) return fail('event must be a log seq number');
     if (!log.events().some((entry) => entry.seq === event)) return fail(`event ${event} is not in this run's log`);
     if (typeof commit !== 'string' || !SHA.test(commit)) return fail('commit must be 7 to 40 lowercase hex digits');
@@ -118,6 +118,12 @@ function parseScalar(raw) {
   } catch {
     return raw;
   }
+}
+
+// Code-point order, so the list order does not depend on the host's locale.
+function compareText(a, b) {
+  if (a === b) return 0;
+  return a < b ? -1 : 1;
 }
 
 function fail(error) {
