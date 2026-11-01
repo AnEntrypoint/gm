@@ -33,7 +33,7 @@ These are settled. Change one only by messaging the orchestrator, with the reaso
 - Use Node built-ins only. Shell commands use `child_process.spawn` with an explicit timeout.
 - Commit only by explicit path, on branch `main`. Author lanmower. The commit body states the change only. No trailers of any kind.
 - ASCII only in every file. No decorative symbols.
-- No remote and no push. Anything outward-facing waits for the owner.
+- Remote: `AnEntrypoint/gm-new`, private, pushed to `main` (DESIGN.md, Remote). Making it public is the owner's decision.
 - Do not create branches or worktrees.
 
 ## Concurrency strategy
@@ -63,13 +63,13 @@ Each item is done when its live witness is recorded in the log and its line is i
 7. Measurement harness: runs one task with each concurrency feature on and off, and prints wall time from the logs.
 8. Keep DESIGN.md and README.md current. Each decision is one line with its reason.
 
-Paid calls are approved (owner, 2026-11-01). Item 7 is a live comparison of gm-new and gm on the same task, run through Claude Code interactive sessions. Compare wall time, idle time, step count and outcome from the logs.
+Item 7 was a live comparison of gm-new and gm on the same task, run through Claude Code interactive sessions. It is closed, and its report is in DESIGN.md. Compare wall time, idle time, step count and outcome from the logs.
 
 9. MCP server (`src/mcp.mjs`): stdio, JSON-RPC by hand, concurrent requests answered by id. Witness: a host session makes parallel tool calls and the log shows overlapping calls.
 10. Skill `skills/gm-new/SKILL.md`: loop prose only (call `next_context`, decide, act through tools, finish with a witness). Witness: a session loads it and finishes a run.
 11. Interactive Claude Code witness, driven in tmux. Witness: a real session, not a script. Record the session transcript path and the run id.
 
-Order (owner, via the gm agent): 3, then the symlink and alias fix, then 4, then 6, then 9, 10, 11, then 7 and 8. Keep one writer.
+The work-plan order was 3, the symlink and alias fix, 4, 6, 9, 10, 11, then 7 and 8. All are done. Keep one writer for any new change.
 
 ## Reporting
 

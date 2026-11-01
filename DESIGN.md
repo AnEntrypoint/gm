@@ -89,7 +89,7 @@ The three questions this section used to ask are answered in Decided: scope, run
 
 ## Next step
 
-No build step is open. The live comparison is closed (see "Project close"). Still open and recorded: the minimal tool set (not run), and G3 (cache effect), now measured as a cache share, with no saving claimed. The comment sweep is done.
+Feature work is stopped. The gm agent's mandate (2026-11-01): gm-new is a complete replacement for gm and must not depend on gm. No code changes until the gm agent sends the phase plan from its inventory of gm's verbs. The live comparison is closed (see "Project close"). Still open and recorded: the minimal tool set (not run), and G3 (cache effect), now measured as a cache share, with no saving claimed.
 
 ## Research consolidation
 
@@ -200,6 +200,18 @@ Open items, recorded and not run:
 - The minimal tool set (open question). Its cost and trigger are above.
 - G3, the cache effect, is measured as a cache share from the host transcript, and no saving is claimed (see "Measured").
 - Subagent isolation, proactive mode, verification-gated admission, the matched-budget falsifier, the raw-replay arm, and the RL summariser are deferred, as the matrix says.
+
+## Dependencies on gm, to be replaced
+
+Recorded on 2026-11-01 under the gm agent's mandate that gm-new must not depend on gm. Each entry is a dependency to be replaced. No new dependency is added. The phase plan from the gm agent's inventory will assign each one.
+
+- `.gitignore`, lines 1 to 60: a `# >>> plugkit managed` block, written by gm's plugkit tooling, listing gm's state paths. Replace with an ignore list gm-new owns.
+- `.gm/` at the repo root: about 2.4 MB of gm runner state, untracked and written by gm's tooling in this repo. Replace by removing it once the plan allows; gm-new's own runtime state is `runs/`.
+- `tools/live.mjs`: the arm B configuration (`/config/.gm-tools/gm-mcp-server.mjs` and the `/mcp__gm__gm` prompt), and the cleanup of `.gm` and `.agentplug` after each trial. Comparison tooling only, and the only code that names gm's paths. The plan decides whether the comparison stays, as an external measurement, or leaves this repo.
+- Build process: builder briefs and this session's code search used gm's MCP `gm.codesearch`. Superseded, and no gm-new file depends on it, but the process did run through gm.
+- Coordination: decisions were relayed by the gm agent, a peer session, over messages. That is process, not product, and the phase plan replaces it.
+- Recorded results: `runs/live/B-*` and `report-B.json` are arm B's (gm's) trials. They are a comparison record, not a dependency of gm-new.
+- Not a dependency: the MCP server name `gm-new`, the `gm-new` skill, and the research notes that cite gm's evidence.
 
 ## Measured
 
