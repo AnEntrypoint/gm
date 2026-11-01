@@ -6,7 +6,7 @@ import { basename, dirname, join, resolve } from 'node:path';
 import { createInterface } from 'node:readline';
 import { DEFAULT_WITNESS, prefixShaOf, renderTools } from './prompt.mjs';
 import { isDirectory, loadTask, newRunId, openRun, ROOT, RUNS } from './run.mjs';
-import { conflicts, createTools } from './tools.mjs';
+import { conflicts, createTools, OUTPUT_PAGE } from './tools.mjs';
 import { GIT_TOOLS } from './git.mjs';
 import { ROW_TOOLS } from './rows.mjs';
 import { SEARCH_TOOLS } from './search.mjs';
@@ -82,7 +82,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
   const runId = basename(runDir);
   const tools = createTools({ workspace, runDir, log, background: true, jobLifetimeMs });
   let pendingRecovery = recovery;
-  let noticeSeq = log.count();
+  let noticeSeq = lastContextSeq(log.events());
   const active = new Map();
   const waiting = [];
   const unansweredTurns = new Set();
@@ -254,8 +254,11 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     const rules = await readFile(join(runDir, 'rules.md'), 'utf8');
     const recoveryNow = pendingRecovery === null ? undefined : recoveryNote(pendingRecovery);
     pendingRecovery = null;
-    const killed = log.events().filter((event) => event.kind === 'job-killed' && event.seq > noticeSeq);
+    const since = log.events().filter((event) => event.seq > noticeSeq);
     noticeSeq = log.count();
+    const killed = since.filter((event) => event.kind === 'job-killed');
+    const ended = since.filter((event) => event.kind === 'job' && event.state !== 'running');
+    const jobsEnded = await Promise.all(ended.map((event) => endedJob(runDir, event)));
     return {
       ok: true,
       step,
@@ -269,6 +272,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
       events: log.recent(WINDOW).map(compactEvent),
       ...(recoveryNow ? { recovery: recoveryNow } : {}),
       ...(killed.length ? { jobsKilled: killed.map(({ seq, job, reason, lifetimeMs, tail }) => ({ seq, job, reason, lifetimeMs, tail })) } : {}),
+      ...(jobsEnded.length ? { jobsEnded } : {}),
     };
   }
 
@@ -349,6 +353,29 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
 
 // The answer to every request id that a run already received, rebuilt from its log, so a repeated id is answered from
 // the log and never run again. An action with no end event was interrupted by a restart, and its repeat gets an error.
+// The seq of the last next_context action in the log. A worker reports every job that ended after it, so a job that a
+// restart stopped, which the old worker logged, is named by the first next_context of the new worker.
+function lastContextSeq(events) {
+  let seq = 0;
+  for (const event of events) if (event.kind === 'action' && event.tool === 'next_context') seq = event.seq;
+  return seq;
+}
+
+// A job that ended since the last next_context: its state, exit code, and the first page of its output. next is the
+// offset of the next page for job_status, or null when the output fits on this page.
+async function endedJob(runDir, event) {
+  const text = await readFile(join(runDir, 'jobs', `${event.job}.out`), 'utf8').catch(() => '');
+  return {
+    seq: event.seq,
+    job: event.job,
+    state: event.state,
+    exitCode: event.exitCode,
+    signal: event.signal,
+    output: text.slice(0, OUTPUT_PAGE),
+    next: text.length > OUTPUT_PAGE ? OUTPUT_PAGE : null,
+  };
+}
+
 function answersFrom(events) {
   const ends = new Map();
   for (const event of events) {

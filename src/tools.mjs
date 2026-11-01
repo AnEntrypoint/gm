@@ -13,7 +13,7 @@ import { createCodeVerbs } from './code.mjs';
 const DEFAULT_TIMEOUT_MS = 60000;
 const MAX_TIMEOUT_MS = 600000;
 const TAIL_CAP = 2000;
-const OUTPUT_PAGE = 20000;
+export const OUTPUT_PAGE = 20000;
 const MAX_WAIT_MS = 30000;
 const JOB_NAME = /^[A-Za-z0-9_-]{1,64}$/;
 const BARRIER = { barrier: true };
