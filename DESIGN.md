@@ -209,20 +209,15 @@ Open items, recorded and not run:
 
 ## Dependencies on gm, to be replaced
 
-Recorded on 2026-11-01 under the gm agent's mandate that gm-new must not depend on gm. Each entry is a dependency to be replaced. No new dependency is added. The phase plan (gm agent, 2026-11-02, see Decided) removes these only after the gate passes, each removal in its own commit.
+Status (2026-11-01): the gm dependencies are removed, except the gm runner's files at the repo root, which stay by the gm agent's decision until the owner decides on the runner. The bullets below record what was removed and what is kept.
 
 - Decided 2026-11-01 (gm agent, relayed): the `.gitignore` entries for `.gm/` and `.agentplug-kv/` stay, with a comment that the gm runner on this host writes them, and both directories stay. They belong to the runner, which serves every gm session on this machine, and runner restarts need the owner's approval. Their removal waits for that decision. Note: `.agentplug-kv/` was removed and restored from the snapshot `/tmp/gm-new-agentplug-kv-snapshot-20261101` before this decision arrived; `diff -r` shows the restored tree matches the snapshot.
 - Removed 2026-11-01: the `GM_STATE` cleanup in `tools/live.mjs`, which deleted `.gm` and `.agentplug` from each trial's workspace, and the `removed` field of `workspaceFiles`. Witness: `node --check tools/live.mjs` ok, no stale references, and `node tools/live.mjs --report true` exit 0 (run 2026-11-01-18-39-35-820e47).
 - Removed 2026-11-01: the arm B configuration in `tools/live.mjs` (the `gm` label, the `/mcp__gm__gm` command and the `/config/.gm-tools/gm-mcp-server.mjs` server). `--arm B` now fails with "arm B is not configured". The recorded arm B results in `runs/live/B-*` and `report-B.json` stay as records. Witness: syntax ok, no gm arm references, the refusal above, and the report exit 0 (run 2026-11-01-18-39-35-820e47).
-- `.gitignore`, lines 1 to 60: a `# >>> plugkit managed` block, written by gm's plugkit tooling, listing gm's state paths. Replace with an ignore list gm-new owns.
-- `.gm/` at the repo root: about 2.4 MB of gm runner state, untracked and written by gm's tooling in this repo. Replace by removing it once the plan allows; gm-new's own runtime state is `runs/`.
-- Not yet removed, and ignored as a stopgap: the untracked .gm/ directory at the repo root, about 2.4 MB of gm runner state. A snapshot of the whole directory was taken first: "/tmp/gm-new-gm-state-20261101-200445" (3.1 MB). It holds gm config and prose caches, gm.db (empty vector tables), gm exec-spool files (prd and mutable dispatches, not gm-new rows), and status files. No gm-new row, receipt or witness is in it. The live gm runner (pid 1561623) rewrites it as a heartbeat into every project it serves, so removal is undone while it runs. gm has filed this as a defect. The directory and its ignore entry come out with the replacement.
-- Not committed, and ignored as a stopgap: .agentplug-kv/ at the repo root, gm runtime state. Its ignore entry comes out with the replacement.
-- `tools/live.mjs`: the arm B configuration (`/config/.gm-tools/gm-mcp-server.mjs` and the `/mcp__gm__gm` prompt), and the cleanup of `.gm` and `.agentplug` after each trial. Comparison tooling only, and the only code that names gm's paths. The plan decides whether the comparison stays, as an external measurement, or leaves this repo.
-- Build process: builder briefs and this session's code search used gm's MCP `gm.codesearch`. Superseded, and no gm-new file depends on it, but the process did run through gm.
-- Coordination: decisions were relayed by the gm agent, a peer session, over messages. That is process, not product, and the phase plan replaces it.
-- Recorded results: `runs/live/B-*` and `report-B.json` are arm B's (gm's) trials. They are a comparison record, not a dependency of gm-new.
-- Not a dependency: the MCP server name `gm-new`, the `gm-new` skill, and the research notes that cite gm's evidence.
+- Removed: the plugkit block in `.gitignore` (commit 6efd56e).
+- Kept (owner decision pending): `.gm/` and `.agentplug-kv/` at the repo root, with their ignore entries. The gm runner on this host writes both, and it serves every gm session here, so they stay until the owner decides on the runner. The `.gm/` snapshot is `/tmp/gm-new-gm-state-20261101-200445`.
+- Removed, process only: the builder briefs' `gm.codesearch` use and the relayed coordination. Neither is a dependency of gm-new code.
+- Not a dependency: the `tools/live.mjs` arm B and cleanup items (removed, bullets above); the recorded arm B trials `runs/live/B-*` and `report-B.json`, which are a comparison record; the MCP server name `gm-new`; the `gm-new` skill; and the research notes that cite gm's evidence.
 
 ## Measured
 
