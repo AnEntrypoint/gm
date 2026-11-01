@@ -1,0 +1,9 @@
+id: "prd-mvy74ktldb0a"
+kind: "prd"
+title: "README: document the replay command"
+body: ""
+status: "resolved"
+createdAt: "2026-11-01T19:01:23.433Z"
+witnessEvent: 24
+witnessCommit: "8227b7d"
+resolvedAt: "2026-11-01T19:01:48.529Z"
