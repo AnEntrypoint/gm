@@ -13,11 +13,11 @@ const MAX_DELAY_MS = 16000;
 const JITTER = 0.2;
 const RETRYABLE_NETWORK = new Set(['ECONNRESET', 'ETIMEDOUT', 'UND_ERR_SOCKET', 'UND_ERR_CONNECT_TIMEOUT', 'UND_ERR_HEADERS_TIMEOUT', 'UND_ERR_BODY_TIMEOUT', 'TimeoutError']);
 
-export async function runLoop({ runDir, spec, model, tools, log, maxSteps, serial = false }) {
+export async function runLoop({ runDir, spec, model, tools, log, maxSteps, serial = false, latencyMs = 0, overlap = false }) {
   log.append('start', { mode: 'cli', maxSteps, serial });
   let outcome;
   try {
-    outcome = await stepLoop({ runDir, spec, model, tools, log, maxSteps, serial });
+    outcome = await stepLoop({ runDir, spec, model, tools, log, maxSteps, serial, latencyMs, overlap });
   } finally {
     await tools.close();
   }
@@ -26,43 +26,92 @@ export async function runLoop({ runDir, spec, model, tools, log, maxSteps, seria
   return outcome;
 }
 
-async function stepLoop({ runDir, spec, model, tools, log, maxSteps, serial }) {
-  for (let step = 1; step <= maxSteps; step += 1) {
-    const rules = readFileSync(join(runDir, 'rules.md'), 'utf8');
-    const { prompt, prefix, prefixSha } = buildPrompt({ rules, spec, events: log.recent(WINDOW), total: log.count() });
+async function stepLoop({ runDir, spec, model, tools, log, maxSteps, serial, latencyMs, overlap }) {
+  let flight = null; // the last reply's actions while they run; set only when overlap is on
+  try {
+    for (let step = 1; step <= maxSteps; step += 1) {
+      if (flight) logPending(flight, step, log);
+      const rules = readFileSync(join(runDir, 'rules.md'), 'utf8');
+      const { prompt, prefix, prefixSha } = buildPrompt({ rules, spec, events: log.recent(WINDOW), total: log.count() });
 
-    const call = await askModel(model, { prompt, prefix }, { step, prefixSha, log });
-    if (!call.ok) {
-      const { error } = call;
-      log.append('error', {
-        step,
-        message: error.message,
-        status: error.status,
-        errorType: error.errorType,
-        attempts: call.attempts,
-        reason: call.reason,
-        prefixSha,
-        startMono: call.startMono,
-      });
-      return { status: 'error', steps: step, witness: null };
-    }
-    const { reply } = call;
-    log.append('reply', { step, text: reply.text, attempts: reply.attempts, prefixSha, usage: reply.usage, startMono: reply.startMono });
+      const call = await askModel(model, { prompt, prefix }, { step, prefixSha, log, latencyMs });
+      if (!call.ok) {
+        const { error } = call;
+        log.append('error', {
+          step,
+          message: error.message,
+          status: error.status,
+          errorType: error.errorType,
+          attempts: call.attempts,
+          reason: call.reason,
+          prefixSha,
+          startMono: call.startMono,
+          ...simulated(latencyMs),
+        });
+        return { status: 'error', steps: step, witness: null };
+      }
+      const { reply } = call;
+      log.append('reply', { step, text: reply.text, attempts: reply.attempts, prefixSha, usage: reply.usage, startMono: reply.startMono, ...simulated(latencyMs) });
 
-    const parsed = parseActions(reply.text);
-    if (!parsed.ok) {
-      log.append('parse_error', { step, error: parsed.error });
-      continue;
+      const parsed = parseActions(reply.text);
+      if (!parsed.ok) {
+        log.append('parse_error', { step, error: parsed.error });
+        continue;
+      }
+      // The previous reply's actions finish before this reply's actions start, so no two waves run together.
+      flight = await settle(flight);
+      // A reply with finish is never overlapped: the finish result decides whether another step runs.
+      if (!overlap || parsed.actions.some((action) => action.tool === 'finish')) {
+        const outcome = await runActions(parsed.actions, { step, tools, log, serial, latencyMs });
+        if (outcome.finished) return { status: 'finished', steps: step, witness: outcome.witness };
+      } else {
+        flight = startActions(parsed.actions, { step, tools, log, serial, latencyMs });
+      }
     }
-    const outcome = await runActions(parsed.actions, { step, tools, log, serial });
-    if (outcome.finished) return { status: 'finished', steps: step, witness: outcome.witness };
+    return { status: 'max_steps', steps: maxSteps, witness: null };
+  } finally {
+    await settle(flight);
   }
-  return { status: 'max_steps', steps: maxSteps, witness: null };
+}
+
+// Dispatches a reply's actions without waiting for them. The loop settles them before its own actions run.
+function startActions(actions, ctx) {
+  const flight = { step: ctx.step, actions, done: new Set() };
+  flight.result = runActions(actions, { ...ctx, done: flight.done }).then(
+    () => ({ ok: true }),
+    (error) => ({ ok: false, error }),
+  );
+  return flight;
+}
+
+// Waits for an overlapped reply's actions to finish. A failure of the wave is rethrown here, not lost.
+async function settle(flight) {
+  if (!flight) return null;
+  const { ok, error } = await flight.result;
+  if (!ok) throw error;
+  return null;
+}
+
+// Before a step runs, the actions still in flight are logged as pending: their results are not in the log yet.
+function logPending(flight, step, log) {
+  const unfinished = flight.actions.filter((action) => !flight.done.has(action));
+  if (unfinished.length === 0) return;
+  log.append('pending', {
+    step,
+    fromStep: flight.step,
+    actions: unfinished.map(({ tool, args }) => ({ tool, args })),
+    note: 'no result event yet; each result is appended as a result event when it lands',
+  });
+}
+
+// Events that include a simulated wait say so, so their durations are not read as measured time.
+function simulated(latencyMs) {
+  return latencyMs > 0 ? { simulatedMs: latencyMs } : {};
 }
 
 // One model call per step. A failure is retried only when retryPlan allows it. Each retry is logged,
 // and a failure that is not retried returns with its reason.
-async function askModel(model, { prompt, prefix }, { step, prefixSha, log }) {
+async function askModel(model, { prompt, prefix }, { step, prefixSha, log, latencyMs }) {
   let retries = 0;
   let headerless429 = 0;
   for (let attempt = 1; ; attempt += 1) {
@@ -83,6 +132,7 @@ async function askModel(model, { prompt, prefix }, { step, prefixSha, log }) {
         prefixSha,
         message: error.message,
         startMono,
+        ...simulated(latencyMs),
       });
       retries += 1;
       if (plan.headerless) headerless429 += 1;
@@ -129,10 +179,16 @@ function sleep(ms) {
   return new Promise((done) => setTimeout(done, ms));
 }
 
-async function runActions(actions, { step, tools, log, serial }) {
+async function runActions(actions, { step, tools, log, serial, latencyMs = 0, done }) {
   const waves = planWaves(actions, tools, serial);
   for (let i = 0; i < waves.length; i += 1) {
-    const results = await Promise.all(waves[i].map((action) => runAction(action, step, tools, log)));
+    const results = await Promise.all(
+      waves[i].map(async (action) => {
+        const result = await runAction(action, { step, tools, log, latencyMs });
+        done?.add(action);
+        return result;
+      }),
+    );
     const finish = results.find((result) => result.finished);
     if (finish) {
       for (const rest of waves.slice(i + 1).flat()) {
@@ -144,13 +200,14 @@ async function runActions(actions, { step, tools, log, serial }) {
   return { finished: false };
 }
 
-async function runAction({ tool, args }, step, tools, log) {
+async function runAction({ tool, args }, { step, tools, log, latencyMs }) {
   const startMono = log.now();
   log.enter();
-  log.append('action', { step, tool, args });
+  log.append('action', { step, tool, args, ...simulated(latencyMs) });
+  if (latencyMs > 0) await sleep(latencyMs);
   const result = await tools.run(tool, args);
-  if (result.refused) log.append('refusal', { step, tool, error: result.error, startMono });
-  else log.append('result', { step, tool, startMono, ...result });
+  if (result.refused) log.append('refusal', { step, tool, error: result.error, startMono, ...simulated(latencyMs) });
+  else log.append('result', { step, tool, startMono, ...result, ...simulated(latencyMs) });
   log.leave();
   return result;
 }

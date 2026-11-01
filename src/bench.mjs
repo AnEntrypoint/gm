@@ -2,6 +2,7 @@
 // Scripted measurement harness. Each task is a scripted reply file that drives real tools in a temp
 // workspace. Every arm runs every task 3 times through the CLI with the scripted model (no paid calls).
 // Wall time and idleMs come from each run's own log. The temp scripts and workspaces are deleted; the run logs stay in runs/.
+// Options: --latency-ms N gives every scripted reply and action a simulated wait of N ms (default 0); --task <name> runs one task.
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -14,6 +15,16 @@ const CLI = fileURLToPath(new URL('./cli.mjs', import.meta.url));
 const TRIALS = 3;
 const SLEEP_2S = 'node -e "setTimeout(() => {}, 2000)"';
 const SLEEP_3S = 'node -e "setTimeout(() => {}, 3000)"';
+
+const PARALLEL_ARMS = [
+  { name: 'parallel on', flags: [] },
+  { name: 'parallel off', flags: ['--serial'] },
+];
+const ARMS = [
+  ...PARALLEL_ARMS,
+  { name: 'background on', flags: [] },
+  { name: 'background off', flags: ['--no-background'] },
+];
 
 const TASKS = [
   {
@@ -47,27 +58,37 @@ const TASKS = [
       { tool: 'finish', args: { witness: 'write_file log.txt returned ok; query_log counted the result events.' } },
     ],
   },
+  {
+    name: 'slow-writes',
+    task: 'Write four independent files in one reply, then finish with a witness.',
+    replies: [
+      [
+        { tool: 'write_file', args: { path: 'a.txt', content: 'alpha\n' } },
+        { tool: 'write_file', args: { path: 'b.txt', content: 'beta\n' } },
+        { tool: 'write_file', args: { path: 'c.txt', content: 'gamma\n' } },
+        { tool: 'write_file', args: { path: 'd.txt', content: 'delta\n' } },
+      ],
+      { tool: 'finish', args: { witness: 'a.txt, b.txt, c.txt and d.txt were written in one reply.' } },
+    ],
+    arms: PARALLEL_ARMS,
+  },
 ];
 
-const ARMS = [
-  { name: 'parallel on', flags: [] },
-  { name: 'parallel off', flags: ['--serial'] },
-  { name: 'background on', flags: [] },
-  { name: 'background off', flags: ['--no-background'] },
-];
-
-function main() {
+function main(argv) {
+  const { latencyMs, only } = parseOptions(argv);
+  const tasks = only === undefined ? TASKS : TASKS.filter((task) => task.name === only);
+  if (tasks.length === 0) throw new Error(`no bench task named ${only}`);
   const root = mkdtempSync(join(tmpdir(), 'gmnew-bench-'));
   const results = [];
   try {
-    for (const task of TASKS) {
+    for (const task of tasks) {
       const script = join(root, `${task.name}.json`);
       writeFileSync(script, `${JSON.stringify(task.replies)}\n`);
-      for (const arm of ARMS) {
+      for (const arm of armsOf(task)) {
         for (let trial = 1; trial <= TRIALS; trial += 1) {
           const workspace = join(root, `ws-${task.name}-${arm.name.replaceAll(' ', '-')}-${trial}`);
           mkdirSync(workspace);
-          const run = runOnce(task, script, workspace, arm.flags);
+          const run = runOnce(task, script, workspace, arm.flags, latencyMs);
           results.push({ arm: arm.name, task: task.name, ...run });
           console.log(`${arm.name} | ${task.name} | trial ${trial} | run ${run.id} | ${run.status} | wall ${run.wallMs} ms | idleMs ${run.idleMs}`);
         }
@@ -76,15 +97,15 @@ function main() {
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
-  printTable(results);
+  printTable(results, tasks, latencyMs);
   process.exitCode = results.every((result) => result.status === 'finished') ? 0 : 1;
 }
 
 // Runs the CLI once, then reads wall time and idleMs from the run's own log.
-function runOnce(task, script, workspace, flags) {
+function runOnce(task, script, workspace, flags, latencyMs) {
   const child = spawnSync(
     process.execPath,
-    [CLI, 'run', '--task', task.task, '--workspace', workspace, '--model', 'scripted', '--script', script, ...flags],
+    [CLI, 'run', '--task', task.task, '--workspace', workspace, '--model', 'scripted', '--script', script, '--latency-ms', String(latencyMs), ...flags],
     { encoding: 'utf8', timeout: 120000 },
   );
   const match = /^run (\S+): (\S+) after/m.exec(child.stdout);
@@ -97,11 +118,13 @@ function runOnce(task, script, workspace, flags) {
   return { id, status, wallMs: round(events.at(-1).mono - start.mono), idleMs: summary.idleMs };
 }
 
-function printTable(results) {
+function printTable(results, tasks, latencyMs) {
+  const label = latencyMs > 0 ? `simulated latency ${latencyMs} ms` : 'no simulated latency (0 ms)';
   console.log('');
+  console.log(`${label}: median wall time per arm, with min to max`);
   console.log('arm              task        trials  status              wall ms: median (min to max)    idleMs: median (min to max)');
-  for (const arm of ARMS) {
-    for (const task of TASKS) {
+  for (const task of tasks) {
+    for (const arm of armsOf(task)) {
       const rows = results.filter((row) => row.arm === arm.name && row.task === task.name);
       const finished = rows.filter((row) => row.status === 'finished').length;
       const wall = spread(rows.map((row) => row.wallMs));
@@ -111,6 +134,28 @@ function printTable(results) {
       );
     }
   }
+}
+
+function armsOf(task) {
+  return task.arms ?? ARMS;
+}
+
+// --latency-ms N sets the simulated wait of every scripted reply and action (0 by default). --task <name> picks one task.
+function parseOptions(argv) {
+  const options = { latencyMs: 0, only: undefined };
+  for (let i = 0; i < argv.length; i += 2) {
+    const value = argv[i + 1];
+    if (value === undefined) throw new Error(`${argv[i]} needs a value`);
+    if (argv[i] === '--latency-ms') {
+      if (!/^\d+$/.test(value)) throw new Error('--latency-ms takes a whole number of milliseconds, 0 or more');
+      options.latencyMs = Number(value);
+    } else if (argv[i] === '--task') {
+      options.only = value;
+    } else {
+      throw new Error(`unknown flag: ${argv[i]}`);
+    }
+  }
+  return options;
 }
 
 function spread(values) {
@@ -124,4 +169,4 @@ function round(value) {
   return Math.round(value * 10) / 10;
 }
 
-main();
+main(process.argv.slice(2));

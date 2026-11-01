@@ -13,7 +13,7 @@ import { writeSummary } from './summary.mjs';
 const USAGE = `usage:
   gmnew run --task <file-or-text> --workspace <dir> [--model scripted|anthropic] [--max-steps N]
             [--script <replies.json>] [--faults 429,429] [--serial] [--no-background]
-            [--dump-request]
+            [--latency-ms N] [--overlap] [--dump-request]
   gmnew query --run <id> --js "<filter>"
   gmnew doctor [--workspace <dir>]`;
 
@@ -39,9 +39,12 @@ async function run(flags) {
   if (script && modelName !== 'scripted') throw new Error('--script works only with --model scripted');
   const faults = flags.faults === undefined ? undefined : parseFaults(flags.faults);
   if (faults && modelName !== 'scripted') throw new Error('--faults works only with --model scripted');
-  const model = createModel(modelName, { script, faults });
+  if (flags['latency-ms'] !== undefined && modelName !== 'scripted') throw new Error('--latency-ms works only with --model scripted');
+  const latencyMs = flags['latency-ms'] === undefined ? 0 : parseLatency(flags['latency-ms']);
+  const model = createModel(modelName, { script, faults, latencyMs });
   const serial = flags.serial === true;
   const background = flags['no-background'] !== true;
+  const overlap = flags.overlap === true;
 
   const task = loadTask(flags.task).trim();
   if (task === '') throw new Error('--task is empty');
@@ -49,7 +52,7 @@ async function run(flags) {
 
   const id = newRunId();
   const runDir = join(RUNS, id);
-  const options = { serial, background, script: flags.script === undefined ? null : resolve(flags.script), faults: faults ?? null };
+  const options = { serial, background, overlap, latencyMs, script: flags.script === undefined ? null : resolve(flags.script), faults: faults ?? null };
   const log = createRun({
     runDir,
     rules: DEFAULT_RULES,
@@ -65,10 +68,11 @@ async function run(flags) {
       process.exit(code);
     });
   }
-  const result = await runLoop({ runDir, spec, model, tools, log, maxSteps, serial });
+  const result = await runLoop({ runDir, spec, model, tools, log, maxSteps, serial, latencyMs, overlap });
 
   console.log(`run ${id}: ${result.status} after ${result.steps} steps`);
   if (result.witness) console.log(`witness: ${result.witness}`);
+  if (latencyMs > 0) console.log(`simulated latency ${latencyMs} ms: each scripted reply and action waited this long; those events carry simulatedMs`);
   console.log(`log: ${join(runDir, 'log.jsonl')}`);
   return result.status === 'finished' ? 0 : 1;
 }
@@ -127,7 +131,7 @@ function lastOutcome(events) {
   return 'none';
 }
 
-const BOOLEAN_FLAGS = new Set(['serial', 'no-background', 'dump-request']);
+const BOOLEAN_FLAGS = new Set(['serial', 'no-background', 'overlap', 'dump-request']);
 
 function parseFlags(argv) {
   const flags = {};
@@ -158,6 +162,12 @@ function dumpRequest(task) {
   const { prompt, prefix } = buildPrompt({ rules: DEFAULT_RULES, spec: { task, witness: DEFAULT_WITNESS }, events: [], total: 0 });
   console.log(JSON.stringify(anthropicRequestBody(prompt, { prefix }), null, 2));
   return 0;
+}
+
+// --latency-ms N: a whole number of milliseconds, 0 for none (the default).
+function parseLatency(value) {
+  if (!/^\d+$/.test(value)) throw new Error('--latency-ms takes a whole number of milliseconds, 0 or more');
+  return Number(value);
 }
 
 // --faults 429,429 makes the first model calls fail with those HTTP statuses.

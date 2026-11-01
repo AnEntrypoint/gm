@@ -27,7 +27,7 @@ const SCRIPT_EXHAUSTED = {
 };
 
 export function createModel(name, options = {}) {
-  if (name === 'scripted') return scriptedModel(options.script, options.faults);
+  if (name === 'scripted') return scriptedModel(options.script, options.faults, options.latencyMs);
   if (name === 'anthropic') return anthropicModel();
   throw new Error(`unknown model: ${name} (use scripted or anthropic)`);
 }
@@ -35,12 +35,14 @@ export function createModel(name, options = {}) {
 // A script entry is a reply: a string is sent as the text, anything else as JSON.
 // {"httpError": {"status": 429, "retryAfter": 1}} fails that call (retryAfter in seconds).
 // Each entry of faults fails one call with that HTTP status before the script resumes.
-function scriptedModel(script, faults = []) {
+// latencyMs above 0 simulates a wait: every call, a faulted one included, waits that long first.
+function scriptedModel(script, faults = [], latencyMs = 0) {
   const replies = script ?? SCRIPT;
   const pending = [...faults];
   let turn = 0;
   return {
     async reply() {
+      if (latencyMs > 0) await new Promise((done) => setTimeout(done, latencyMs));
       if (pending.length > 0) throw scriptedHttpError(pending.shift());
       const entry = turn < replies.length ? replies[turn] : SCRIPT_EXHAUSTED;
       turn += 1;
