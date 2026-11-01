@@ -12,6 +12,7 @@ const POLL_MS = 100;
 const MAX_WAIT_MS = 30000;
 const JOB_NAME = /^[A-Za-z0-9_-]{1,64}$/;
 const BARRIER = { barrier: true };
+const KILL_GRACE_MS = 500;
 
 export function createTools({ workspace, runDir, log, background = true }) {
   const root = resolve(workspace);
@@ -97,16 +98,21 @@ export function createTools({ workspace, runDir, log, background = true }) {
     mkdirSync(join(runDir, 'jobs'), { recursive: true });
     const out = openSync(outputFile, 'w');
     const startMono = log.now();
-    const child = spawn(command, { cwd: root, env: childEnv(), shell: true, timeout: timeoutMs, stdio: ['ignore', out, out] });
+    const child = spawnGroup(command, root, ['ignore', out, out]);
     closeSync(out);
     const status = { job: name, command, state: 'running', pid: child.pid, startMono, output: outputFile };
     writeStatus(name, status);
 
     const job = { child, killRequested: false, settled: false };
+    const timer = setTimeout(() => {
+      job.killRequested = true;
+      killGroup(child.pid);
+    }, timeoutMs);
     job.done = new Promise((settle) => {
       const finish = (exitCode, signal) => {
         if (job.settled) return;
         job.settled = true;
+        clearTimeout(timer);
         const state = exitCode !== null && !job.killRequested ? 'exited' : 'killed';
         const ended = { ...status, state, exitCode, signal };
         writeStatus(name, ended);
@@ -146,10 +152,9 @@ export function createTools({ workspace, runDir, log, background = true }) {
     // logged its end, so no child outlives the run.
     async close() {
       const running = [...jobs.values()].filter((job) => !job.settled);
-      for (const job of running) {
-        job.killRequested = true;
-        job.child.kill('SIGTERM');
-      }
+      for (const job of running) job.killRequested = true;
+      // Every job's group is signalled, even a job whose shell has exited, because a background child can outlive its shell.
+      await Promise.all([...jobs.values()].map((job) => killGroup(job.child.pid)));
       await Promise.all(running.map((job) => job.done));
     },
   };
@@ -197,6 +202,21 @@ function groupOf(file) {
   return `${dev}:${ino}`;
 }
 
+// Two accesses conflict when either is a barrier, or when a path of one is the same file as, or a prefix of,
+// a path of the other, and at least one of the two writes. An access with no items conflicts with no path.
+export function conflicts(a, b) {
+  if (a.barrier || b.barrier) return true;
+  return a.items.some((x) => b.items.some((y) => (x.write || y.write) && (sameFile(x, y) || isPrefix(x.path, y.path) || isPrefix(y.path, x.path))));
+}
+
+function sameFile(a, b) {
+  return a.group !== undefined && a.group === b.group;
+}
+
+function isPrefix(a, b) {
+  return a.length <= b.length && a.every((part, i) => part === b[i]);
+}
+
 function refusal(reason) {
   return { ok: false, refused: true, error: `refused: ${reason}` };
 }
@@ -241,19 +261,61 @@ function sleep(ms) {
   return new Promise((done) => setTimeout(done, ms));
 }
 
+// Each shell leads its own process group, so a kill reaches the grandchildren it started.
+function spawnGroup(command, cwd, stdio) {
+  return spawn(command, { cwd, env: childEnv(), shell: true, detached: true, windowsHide: true, stdio });
+}
+
+// POSIX: SIGTERM to the group, then SIGKILL after a short grace. Windows: taskkill /T /F ends the tree.
+async function killGroup(pid) {
+  if (process.platform === 'win32') return taskkillTree(pid);
+  if (!signalGroup(pid, 'SIGTERM')) return;
+  await sleep(KILL_GRACE_MS);
+  signalGroup(pid, 'SIGKILL');
+}
+
+function signalGroup(pid, signal) {
+  try {
+    process.kill(-pid, signal);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function taskkillTree(pid) {
+  return new Promise((done) => {
+    const killer = spawn('taskkill', ['/PID', String(pid), '/T', '/F'], { windowsHide: true, stdio: 'ignore' });
+    killer.on('error', done);
+    killer.on('close', done);
+  });
+}
+
 function shell(cwd, command, timeoutMs) {
   return new Promise((done) => {
     let output = '';
+    let timedOut = false;
     const collect = (chunk) => {
       if (output.length < OUTPUT_CAP) output += chunk;
     };
-    const child = spawn(command, { cwd, env: childEnv(), shell: true, timeout: timeoutMs, stdio: ['ignore', 'pipe', 'pipe'] });
+    const child = spawnGroup(command, cwd, ['ignore', 'pipe', 'pipe']);
     child.stdout.setEncoding('utf8');
     child.stderr.setEncoding('utf8');
     child.stdout.on('data', collect);
     child.stderr.on('data', collect);
-    child.on('error', (err) => done({ ok: false, error: err.message }));
+    const timer = setTimeout(() => {
+      timedOut = true;
+      killGroup(child.pid).then(() => {
+        done({ ok: false, timedOut: true, error: `timed out after ${timeoutMs} ms`, output: output.slice(0, OUTPUT_CAP) });
+      });
+    }, timeoutMs);
+    child.on('error', (err) => {
+      clearTimeout(timer);
+      done({ ok: false, error: err.message });
+    });
     child.on('close', (exitCode, signal) => {
+      clearTimeout(timer);
+      if (timedOut) return;
       done({ ok: exitCode === 0, exitCode, signal, output: output.slice(0, OUTPUT_CAP) });
     });
   });

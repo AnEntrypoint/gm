@@ -1,12 +1,11 @@
 #!/usr/bin/env node
-import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { basename, join, resolve } from 'node:path';
 import { createInterface } from 'node:readline';
-import { DEFAULT_WITNESS } from './prompt.mjs';
+import { DEFAULT_WITNESS, prefixShaOf } from './prompt.mjs';
 import { createRun, isDirectory, loadTask, newRunId, ROOT, RUNS } from './run.mjs';
-import { createTools } from './tools.mjs';
+import { conflicts, createTools } from './tools.mjs';
 
 const PROTOCOL_VERSION = '2025-06-18';
 const SERVER_INFO = { name: 'gm-new', version: JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')).version };
@@ -43,6 +42,11 @@ const TOOLS = [
   { name: 'finish', description: 'End the run. witness is one string that quotes the evidence you observed.', inputSchema: objectSchema({ witness: text }, ['witness']) },
 ];
 
+// The tool list as the prefix hash sees it: one line per tool, its schema and its description.
+const TOOL_TEXT = TOOLS.map((tool) => `${tool.name} ${JSON.stringify(tool.inputSchema)}: ${tool.description}`).join('\n');
+// next_context reads only the rules and the log, so it conflicts with no path call.
+const NO_PATHS = { items: [] };
+
 class RpcError extends Error {
   constructor(code, message) {
     super(message);
@@ -53,8 +57,7 @@ class RpcError extends Error {
 // One session per run. Requests are handled as independent turns, and each reply is written with its request id.
 function createSession({ workspace, runDir, log, task, maxSteps, maxInflight }) {
   const tools = createTools({ workspace, runDir, log, background: true });
-  const stable = JSON.stringify([task, DEFAULT_WITNESS, TOOLS]);
-  const active = new Set(); // tool calls that have started and not settled
+  const active = new Map(); // tool calls that have started and not settled, each with its path access
   const waiting = []; // tool calls accepted but not started, in arrival order
   const pending = new Set(); // request turns that have not written their reply
   let steps = 0;
@@ -131,7 +134,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight }) 
     return { content: [{ type: 'text', text: JSON.stringify(out) }], isError: out.ok !== true };
   }
 
-  // A call starts at once when a slot is free, and otherwise waits its turn in the queue.
+  // A call waits in the queue until drain starts it.
   function startCall(name, args) {
     return new Promise((resolveCall) => {
       waiting.push({ name, args, resolveCall });
@@ -139,32 +142,53 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight }) 
     });
   }
 
+  // Starts waiting calls while a slot is free. A call starts only when no active call conflicts with it, and no
+  // earlier waiting call conflicts with it, so conflicting calls keep their arrival order and none is starved.
+  // Once the run has ended, every waiting call is refused.
   function drain() {
-    while (waiting.length > 0 && active.size < maxInflight) {
-      const call = waiting.shift();
-      call.resolveCall(invoke(call.name, call.args));
+    if (ended !== null) {
+      for (const call of waiting.splice(0)) call.resolveCall(refuse(call.name, call.args, endedReason()));
+      return;
     }
+    while (active.size < maxInflight && waiting.length > 0) {
+      const accesses = waiting.map((call) => accessOf(call.name, call.args));
+      const index = startableIndex(accesses);
+      if (index < 0) return;
+      const [call] = waiting.splice(index, 1);
+      call.resolveCall(invoke(call.name, call.args, accesses[index]));
+    }
+  }
+
+  function startableIndex(accesses) {
+    const running = [...active.values()];
+    return accesses.findIndex(
+      (access, i) => !running.some((other) => conflicts(other, access)) && !accesses.slice(0, i).some((earlier) => conflicts(earlier, access)),
+    );
+  }
+
+  function accessOf(name, args) {
+    return name === 'next_context' ? NO_PATHS : tools.access(name, args);
   }
 
   // Ends the run for new calls. Queued calls that have not started are refused now, so none starts later.
   function stop(status) {
     ended = status;
-    for (const call of waiting.splice(0)) call.resolveCall(refuse(call.name, call.args, endedReason()));
+    drain();
   }
 
   function endedReason() {
     return ended === 'closed' ? 'stdin closed before the call started' : `run has ended (${ended})`;
   }
 
-  function invoke(name, args) {
+  function invoke(name, args, access) {
     if (ended !== null) return refuse(name, args, endedReason());
-    if (name === 'next_context') return nextContext();
-    if (name === 'finish') return finish(args);
-    if (Object.hasOwn(handlers, name)) return act(name, args, () => handlers[name](args));
-    return act(name, args, () => ({ ok: false, error: `unknown tool: ${name}` }));
+    if (name === 'next_context') return nextContext(access);
+    if (name === 'finish') return finish(args, access);
+    if (Object.hasOwn(handlers, name)) return act(name, args, access, () => handlers[name](args));
+    return act(name, args, access, () => ({ ok: false, error: `unknown tool: ${name}` }));
   }
 
-  async function nextContext() {
+  async function nextContext(access) {
     if (steps >= maxSteps) {
       stop('max_steps');
       const out = refuse('next_context', {}, `step limit ${maxSteps} reached`);
@@ -173,7 +197,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight }) 
     }
     steps += 1;
     const step = steps;
-    return act('next_context', {}, () => context(step), ({ ok, error, prefixSha, total }) => ({ ok, error, prefixSha, total }));
+    return act('next_context', {}, access, () => context(step), ({ ok, error, prefixSha, total }) => ({ ok, error, prefixSha, total }));
   }
 
   async function context(step) {
@@ -186,26 +210,26 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight }) 
       rules,
       task,
       witness: DEFAULT_WITNESS,
-      prefixSha: createHash('sha256').update(rules).update(stable).digest('hex'),
+      prefixSha: prefixShaOf({ rules, task, witness: DEFAULT_WITNESS, tools: TOOL_TEXT }),
       total: log.count(),
       events: log.recent(WINDOW).map(compactEvent),
     };
   }
 
-  async function finish(args) {
+  async function finish(args, access) {
     if (typeof args.witness !== 'string' || args.witness.trim() === '') {
       return refuse('finish', args, 'finish needs a non-empty witness string');
     }
     stop('finished');
-    const out = await act('finish', args, () => tools.run('finish', args));
+    const out = await act('finish', args, access, () => tools.run('finish', args));
     await endRun('finished', out.output);
     return out;
   }
 
   // Runs a call that starts work. It counts as in flight from its action event until its result event.
-  function act(tool, args, exec, digest = (result) => result) {
+  function act(tool, args, access, exec, digest = (result) => result) {
     const work = perform(tool, args, exec, digest);
-    active.add(work);
+    active.set(work, access);
     const forget = () => {
       active.delete(work);
       drain();
@@ -243,7 +267,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight }) 
 
   async function endRun(status, witness) {
     endLogged = true;
-    await Promise.allSettled([...active]);
+    await Promise.allSettled([...active.keys()]);
     await tools.close();
     log.append('end', { status, steps, witness });
   }

@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { buildPrompt, parseActions } from './prompt.mjs';
+import { conflicts } from './tools.mjs';
 
 const WINDOW = 20;
 const MAX_RETRIES = 4;
@@ -170,7 +171,7 @@ export function planWaves(actions, tools, serial) {
       touched = [];
       continue;
     }
-    if (touched.some((item) => conflicts(item, access.items))) {
+    if (conflicts({ items: touched }, access)) {
       waves.push(wave);
       wave = [];
       touched = [];
@@ -180,16 +181,4 @@ export function planWaves(actions, tools, serial) {
   }
   if (wave.length) waves.push(wave);
   return waves;
-}
-
-function conflicts(item, items) {
-  return items.some((other) => (item.write || other.write) && (sameFile(item, other) || isPrefix(item.path, other.path) || isPrefix(other.path, item.path)));
-}
-
-function sameFile(a, b) {
-  return a.group !== undefined && a.group === b.group;
-}
-
-function isPrefix(a, b) {
-  return a.length <= b.length && a.every((part, i) => part === b[i]);
 }
