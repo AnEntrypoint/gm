@@ -59,7 +59,6 @@ async function run(flags) {
     meta: { id, ...spec, workspace, model: modelName, maxSteps, ...options, createdAt: new Date().toISOString() },
   });
   const tools = createTools({ workspace, runDir, log, background });
-  // An interrupt kills every shell group at once and exits, so no new call starts while the process goes down.
   for (const [signal, code] of [['SIGINT', 130], ['SIGTERM', 143]]) {
     process.once(signal, () => {
       tools.killAllNow();
@@ -157,20 +156,17 @@ function loadScript(file) {
   return value;
 }
 
-// Prints the anthropic request body for the first step, as the adapter would send it. Makes no network call.
 function dumpRequest(task) {
   const { prompt, prefix } = buildPrompt({ rules: DEFAULT_RULES, spec: { task, witness: DEFAULT_WITNESS }, events: [], total: 0 });
   console.log(JSON.stringify(anthropicRequestBody(prompt, { prefix }), null, 2));
   return 0;
 }
 
-// --latency-ms N: a whole number of milliseconds, 0 for none (the default).
 function parseLatency(value) {
   if (!/^\d+$/.test(value)) throw new Error('--latency-ms takes a whole number of milliseconds, 0 or more');
   return Number(value);
 }
 
-// --faults 429,429 makes the first model calls fail with those HTTP statuses.
 function parseFaults(value) {
   const statuses = value.split(',').map((item) => Number(item));
   if (statuses.some((status) => !Number.isInteger(status) || status < 400 || status > 599)) {

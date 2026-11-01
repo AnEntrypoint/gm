@@ -32,10 +32,6 @@ export function createModel(name, options = {}) {
   throw new Error(`unknown model: ${name} (use scripted or anthropic)`);
 }
 
-// A script entry is a reply: a string is sent as the text, anything else as JSON.
-// {"httpError": {"status": 429, "retryAfter": 1}} fails that call (retryAfter in seconds).
-// Each entry of faults fails one call with that HTTP status before the script resumes.
-// latencyMs above 0 simulates a wait: every call, a faulted one included, waits that long first.
 function scriptedModel(script, faults = [], latencyMs = 0) {
   const replies = script ?? SCRIPT;
   const pending = [...faults];
@@ -69,7 +65,6 @@ function httpError(status, message, { errorType, retryAfterMs }) {
   return err;
 }
 
-// retry-after is either a number of seconds or an HTTP date.
 function retryAfterMs(response) {
   const value = response.headers.get('retry-after');
   if (value === null) return undefined;
@@ -103,7 +98,6 @@ function anthropicModel() {
   };
 }
 
-// A failure before any response is a network error. Its code (ECONNRESET, UND_ERR_HEADERS_TIMEOUT, ...) is the errorType.
 async function send(key, body) {
   try {
     return await fetch(API_URL, {
@@ -123,7 +117,6 @@ async function send(key, body) {
   }
 }
 
-// The Messages API request for one step. --dump-request prints this same object.
 export function anthropicRequestBody(prompt, { prefix } = {}) {
   return {
     model: process.env.GMNEW_MODEL || DEFAULT_ANTHROPIC_MODEL,
@@ -132,7 +125,6 @@ export function anthropicRequestBody(prompt, { prefix } = {}) {
   };
 }
 
-// The stable prefix gets a cache breakpoint on its last block, so the API can reuse it on the next step.
 function userContent(prompt, prefix) {
   if (!prefix || !prompt.startsWith(prefix)) return prompt;
   return [
@@ -141,7 +133,6 @@ function userContent(prompt, prefix) {
   ];
 }
 
-// Cache counters are kept only when the API reports them.
 function cacheUsage(usage) {
   const counters = {};
   for (const key of ['cache_creation_input_tokens', 'cache_read_input_tokens']) {

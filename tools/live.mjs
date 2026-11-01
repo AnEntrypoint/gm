@@ -1,9 +1,4 @@
 #!/usr/bin/env node
-// Live comparison runner. Each trial is one interactive Claude Code session, driven through ccbridge in its own
-// tmux session and temp project. The arm supplies its MCP server and its prompt. Metrics come from the session
-// transcript through tools/transcript.mjs, and the checker in tasks/<task>/ grades the workspace.
-//
-// usage: node tools/live.mjs --arm A --tasks t1,t2,t3 --trials 3 [--concurrency 3] [--port 8810]
 import { execFileSync, spawn } from 'node:child_process';
 import { appendFileSync, chmodSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync, cpSync } from 'node:fs';
 import { createConnection } from 'node:net';
@@ -20,31 +15,26 @@ const CLAUDE = '/data/cache/node/current/bin/claude';
 const SHIM_DIR = join(tmpdir(), 'gmlive-bin');
 const PROJECTS = join(homedir(), '.claude', 'projects');
 const TURN_TIMEOUT_MS = 30 * 60 * 1000;
-const QUIET_MS = 20000; // frames must be quiet this long before the turn is read as finished
-const SUBMIT_CHECK_MS = 8000; // if the prompt is not in the transcript by then, a slash command is stuck in the input
-const SUBMIT_ABORT_MS = 150000; // a prompt that never reaches the transcript ends the trial, with the pane kept for diagnosis
-const MCP_SETTLE_MS = 15000; // MCP servers connect after the input box appears; a slash command sent before that is unknown
-const RESEND_MS = 15000; // wait before resending a slash command that Claude did not know
+const FRAMES_QUIET_MS = 20000;
+const UNSUBMITTED_ENTER_MS = 8000;
+const PROMPT_NOT_TRANSCRIBED_MS = 150000;
+const MCP_CONNECT_SETTLE_MS = 15000;
+const UNKNOWN_COMMAND_RESEND_MS = 15000;
 const MAX_SENDS = 4;
-const STAGGER_MS = 8000; // gap between trial starts, so sessions do not all start in the same second
-const TRUST_RETRY_MS = 3000; // while the trust dialog stays on screen, Down and Enter are sent again this often
-const MAX_ATTEMPTS = 2; // a trial whose session dies or never becomes ready is tried once more
+const TRIAL_START_GAP_MS = 8000;
+const TRUST_KEYS_RESEND_MS = 3000;
+const MAX_ATTEMPTS = 2;
 const RETRY_GAP_MS = 10000;
-// The cap across both arms: at most this many Claude Code sessions run at a time. The gm agent lowered it from 3 to 1
-// on 2026-11-01, because the machine was saturated. It rises back only once the runner's concurrency cap is committed
-// and the 1-minute load average is under 6 (see DESIGN.md).
+const SEND_TIME_SLACK_MS = 2000;
 const MAX_CONCURRENCY = 1;
 const LOCK = join(ROOT, 'runs', 'live', '.lock');
-// gm-created state that the gm runner leaves in the workspace; removed after every trial.
 const GM_STATE = ['.gm', '.agentplug'];
 
-// Arm A is gm-new: its MCP server and its skill, copied into the project. Arm B is gm: its MCP server, and its skill is
-// the served prompt /mcp__gm__gm, so nothing is copied. Both arms get the same task text.
 const ARMS = {
   A: {
     label: 'gm-new',
     command: '/mcp__gm-new__gm-new',
-    route: 'mcp-prompt', // the skill is served over MCP as the prompt, so nothing is copied into the project
+    route: 'mcp-prompt',
     skill: null,
     server: (project) => ({
       command: 'node',
@@ -79,12 +69,10 @@ async function main() {
 
   mkdirSync(RESULTS, { recursive: true });
   if (Number(args['quiet-target']) > 0) {
-    // Quiet mode: each task needs this many valid trials started under the load threshold. Only quiet trials count.
     const target = Number(args['quiet-target']);
     const quiet = quietCounts(args.arm, arm.route);
     jobs.length = 0;
     for (const task of args.tasks.split(',')) {
-      // --max-new caps the slots added for one task in a pass; a replacement pass uses 2.
       const need = Math.min(Number(args['max-new']), Math.max(0, target - (quiet[task] ?? 0)));
       for (let n = 1; n <= need; n += 1) jobs.push({ task, trial: `q${n}`, id: `${args.arm}-${task}-q${n}-${Math.random().toString(16).slice(2, 8)}` });
     }
@@ -100,13 +88,11 @@ async function main() {
   try {
     ensureShim();
     server = await ensureServer(Number(args.port));
-    // Trials start STAGGER_MS apart, so sessions do not all start in the same second. A failed trial is recorded, and the batch goes on.
     let lastStart = 0;
     await pool(jobs, concurrency, async (job) => {
-      const wait = lastStart + STAGGER_MS - Date.now();
-      lastStart = Math.max(Date.now(), lastStart + STAGGER_MS);
+      const wait = lastStart + TRIAL_START_GAP_MS - Date.now();
+      lastStart = Math.max(Date.now(), lastStart + TRIAL_START_GAP_MS);
       if (wait > 0) await sleep(wait);
-      // A session that dies or never becomes ready gets one more attempt, since the machine is shared and that failure is transient.
       let result;
       for (let attempt = 1; attempt <= Number(args.attempts); attempt += 1) {
         try {
@@ -132,7 +118,6 @@ async function main() {
   printSummary(args.arm, summary);
 }
 
-// One batch at a time across both arms. The lock holds the pid of the running batch, and a stale lock is replaced.
 function takeLock() {
   if (existsSync(LOCK)) {
     const pid = Number(readFileSync(LOCK, 'utf8'));
@@ -150,7 +135,6 @@ function alive(pid) {
   }
 }
 
-// A single shared shim: it passes this session's own mcp.json, found from the session's working directory.
 function ensureShim() {
   mkdirSync(SHIM_DIR, { recursive: true });
   const shim = join(SHIM_DIR, 'claude');
@@ -158,8 +142,6 @@ function ensureShim() {
   chmodSync(shim, 0o755);
 }
 
-// Starts ccbridge with setsid and nohup, unless one already listens, and returns the pid found by its command line.
-// The wrapper pid is not used, because setsid can fork.
 async function ensureServer(port) {
   if (await listening(port)) return null;
   spawn('setsid', ['nohup', 'python3', '-B', 'server.py', '--host', '127.0.0.1', '--port', String(port)], {
@@ -195,7 +177,7 @@ function listening(port) {
 
 async function runTrial(armKey, arm, task, trial, id, port) {
   const marker = `trial ${id}`;
-  const loadStart = round(loadavg()[0]); // 1-minute load when the trial starts; trials at or over LOADED_AT are reported apart
+  const loadStart = round(loadavg()[0]);
   const session = `gmlive${id.replace(/[^A-Za-z0-9]/g, '')}`;
   const dir = join(RESULTS, id);
   mkdirSync(dir, { recursive: true });
@@ -233,7 +215,7 @@ async function runTrial(armKey, arm, task, trial, id, port) {
     id,
     arm: armKey,
     route: arm.route,
-    witness: args.witness === 'true', // a witness checks that a route works; it is not a timed trial and counts in no group
+    witness: args.witness === 'true',
     task,
     trial,
     marker,
@@ -249,9 +231,6 @@ async function runTrial(armKey, arm, task, trial, id, port) {
   return result;
 }
 
-// Opens the session and logs every frame to a file as it arrives. Answers the trust prompt for this project only,
-// sends the prompt, and presses Enter once if the prompt stays in the input box. The turn counts as finished only
-// when the transcript holds its end_turn and the frames have gone quiet, since the reply can come after the first e:.
 async function converse({ port, session, project, marker, prompt, framesFile, dir, command }) {
   const url = `ws://127.0.0.1:${port}/ws?session=${session}&harness=claude&cwd=${encodeURIComponent(project)}&mode=tagged&kinds=text,tool,result`;
   const ws = new WebSocket(url);
@@ -275,8 +254,7 @@ async function converse({ port, session, project, marker, prompt, framesFile, di
   });
 
   await waitForReady(session, dir);
-  // MCP servers connect after the input box appears. A slash command sent before that is "Unknown command", so resend it.
-  await sleep(MCP_SETTLE_MS);
+  await sleep(MCP_CONNECT_SETTLE_MS);
   writeFileSync(join(dir, 'pane-ready.txt'), tmux(['capture-pane', '-p', '-t', `ccb-${session}`], true));
   const sentAt = Date.now();
   let lastSendAt = sentAt;
@@ -301,21 +279,21 @@ async function converse({ port, session, project, marker, prompt, framesFile, di
         abort = `${command} stayed unknown after ${sends} sends`;
         break;
       }
-      await sleep(RESEND_MS);
+      await sleep(UNKNOWN_COMMAND_RESEND_MS);
       send();
       continue;
     }
     const prompted = hasPrompt(records, marker);
-    if (!prompted && !enterPressed && Date.now() - lastSendAt > SUBMIT_CHECK_MS && inInputLine(pane, marker)) {
+    if (!prompted && !enterPressed && Date.now() - lastSendAt > UNSUBMITTED_ENTER_MS && isTypedNotSubmitted(pane, marker)) {
       tmux(['send-keys', '-t', `ccb-${session}`, 'Enter'], true);
       enterPressed = true;
     }
-    if (!prompted && Date.now() - lastSendAt > SUBMIT_ABORT_MS) {
+    if (!prompted && Date.now() - lastSendAt > PROMPT_NOT_TRANSCRIBED_MS) {
       abort = 'the prompt never reached the session transcript';
       break;
     }
     const turnDone = prompted && parseTurn(records, marker).ok === true;
-    if (turnDone && Date.now() - lastFrameAt > QUIET_MS) {
+    if (turnDone && Date.now() - lastFrameAt > FRAMES_QUIET_MS) {
       finished = true;
       break;
     }
@@ -333,7 +311,6 @@ async function converse({ port, session, project, marker, prompt, framesFile, di
   return { finished, abort, sends, frames: frameCount, sentAt, endedAt: Date.now(), closedEarly: closed };
 }
 
-// Waits for the session pane to show the input prompt, and answers the trust prompt once if it is shown.
 async function waitForReady(session, dir) {
   const target = `ccb-${session}`;
   let lastTrustKeys = 0;
@@ -341,8 +318,7 @@ async function waitForReady(session, dir) {
     const pane = tmux(['capture-pane', '-p', '-t', target], true);
     writeFileSync(join(dir, 'pane-wait.txt'), pane);
     if (pane.includes('Yes, I trust this folder')) {
-      // The keys can land before the dialog takes input, so they are sent again while the dialog stays on screen.
-      if (Date.now() - lastTrustKeys > TRUST_RETRY_MS) {
+      if (Date.now() - lastTrustKeys > TRUST_KEYS_RESEND_MS) {
         tmux(['send-keys', '-t', target, 'Down'], true);
         tmux(['send-keys', '-t', target, 'Enter'], true);
         lastTrustKeys = Date.now();
@@ -355,19 +331,16 @@ async function waitForReady(session, dir) {
   throw new Error(`session ${session} never became ready; the last pane is in ${dir}/pane-wait.txt`);
 }
 
-// True when the trial's prompt sits on the input line, so it was typed but not submitted.
-function inInputLine(pane, marker) {
+function isTypedNotSubmitted(pane, marker) {
   return pane.split('\n').some((line) => line.includes('\u276f') && line.includes(marker));
 }
 
-// True when Claude answered "Unknown command" for the slash command, at or after the last send.
 function unknownCommandSince(records, command, since) {
   return records.some(
-    (r) => r.type === 'system' && typeof r.content === 'string' && r.content.startsWith(`Unknown command: ${command}`) && Date.parse(r.timestamp) >= since - 2000,
+    (r) => r.type === 'system' && typeof r.content === 'string' && r.content.startsWith(`Unknown command: ${command}`) && Date.parse(r.timestamp) >= since - SEND_TIME_SLACK_MS,
   );
 }
 
-// True when a user record carries the trial's marker, which means Claude took the prompt.
 function hasPrompt(records, marker) {
   return records.some(
     (r) =>
@@ -390,7 +363,6 @@ function findTranscript(project, marker) {
   return null;
 }
 
-// Number of files under a directory, counting nested files. Symlinks are counted as files.
 function countFiles(dir) {
   let count = 0;
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -432,19 +404,18 @@ function summarize(results) {
     out[task] = {
       trials: rows.length,
       passRate: rows.filter((row) => row.pass).length / rows.length,
-      wallMs: stat(rows.map((row) => row.wallMs)),
-      idleMs: stat(rows.map((row) => row.idleMs)),
-      toolMs: stat(rows.map((row) => row.toolMs)),
-      modelMs: stat(rows.map((row) => row.modelMs)),
-      toolCalls: stat(rows.map((row) => row.toolCalls)),
-      mcpToolCalls: stat(rows.map((row) => row.mcpToolCalls)),
+      wallMs: medianAndSpread(rows.map((row) => row.wallMs)),
+      idleMs: medianAndSpread(rows.map((row) => row.idleMs)),
+      toolMs: medianAndSpread(rows.map((row) => row.toolMs)),
+      modelMs: medianAndSpread(rows.map((row) => row.modelMs)),
+      toolCalls: medianAndSpread(rows.map((row) => row.toolCalls)),
+      mcpToolCalls: medianAndSpread(rows.map((row) => row.mcpToolCalls)),
     };
   }
   return out;
 }
 
-// Median and spread (min to max) of a list of numbers.
-function stat(values) {
+function medianAndSpread(values) {
   const sorted = [...values].sort((a, b) => a - b);
   const mid = Math.floor(sorted.length / 2);
   const median = sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
@@ -458,7 +429,6 @@ function printSummary(arm, summary) {
   }
 }
 
-// Valid quiet trials per task for this arm: metrics present, no error, and a start load under LOADED_AT.
 function quietCounts(arm, route) {
   const counts = {};
   for (const name of readdirSync(RESULTS)) {
@@ -470,7 +440,6 @@ function quietCounts(arm, route) {
   return counts;
 }
 
-// Keys (task-trial) of this arm's trials that ran and got metrics, so a resumed batch does not run them again.
 function validTrials(arm) {
   const done = new Set();
   for (const name of readdirSync(RESULTS)) {
@@ -482,9 +451,6 @@ function validTrials(arm) {
   return done;
 }
 
-// Summaries of each arm's trial records. Invalid trials are listed, not dropped. Trials that started at a 1-minute load of
-// LOADED_AT or more are reported apart from quiet-window trials, and trials from before load was recorded apart from both.
-// Takes no lock, so it runs during a batch.
 function report() {
   for (const armKey of Object.keys(ARMS)) {
     const all = [];
@@ -496,7 +462,6 @@ function report() {
     const witnesses = all.filter((result) => result.witness === true);
     const invalid = all.filter((result) => !witnesses.includes(result) && (result.error || result.metrics?.ok !== true));
     const valid = all.filter((result) => !invalid.includes(result) && !witnesses.includes(result));
-    // Groups are keyed by route and load, so copied-skill and mcp-prompt trials are never pooled.
     const groups = {};
     for (const result of valid) (groups[`${result.route ?? 'unlabelled'}/${loadGroup(result)}`] ??= []).push(result);
     const report = {

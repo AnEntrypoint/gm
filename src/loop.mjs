@@ -27,7 +27,7 @@ export async function runLoop({ runDir, spec, model, tools, log, maxSteps, seria
 }
 
 async function stepLoop({ runDir, spec, model, tools, log, maxSteps, serial, latencyMs, overlap }) {
-  let flight = null; // the last reply's actions while they run; set only when overlap is on
+  let flight = null;
   try {
     for (let step = 1; step <= maxSteps; step += 1) {
       if (flight) logPending(flight, step, log);
@@ -58,9 +58,7 @@ async function stepLoop({ runDir, spec, model, tools, log, maxSteps, serial, lat
         log.append('parse_error', { step, error: parsed.error });
         continue;
       }
-      // The previous reply's actions finish before this reply's actions start, so no two waves run together.
-      flight = await settle(flight);
-      // A reply with finish is never overlapped: the finish result decides whether another step runs.
+      flight = await waitForFlight(flight);
       if (!overlap || parsed.actions.some((action) => action.tool === 'finish')) {
         const outcome = await runActions(parsed.actions, { step, tools, log, serial, latencyMs });
         if (outcome.finished) return { status: 'finished', steps: step, witness: outcome.witness };
@@ -70,11 +68,10 @@ async function stepLoop({ runDir, spec, model, tools, log, maxSteps, serial, lat
     }
     return { status: 'max_steps', steps: maxSteps, witness: null };
   } finally {
-    await settle(flight);
+    await waitForFlight(flight);
   }
 }
 
-// Dispatches a reply's actions without waiting for them. The loop settles them before its own actions run.
 function startActions(actions, ctx) {
   const flight = { step: ctx.step, actions, done: new Set() };
   flight.result = runActions(actions, { ...ctx, done: flight.done }).then(
@@ -84,15 +81,13 @@ function startActions(actions, ctx) {
   return flight;
 }
 
-// Waits for an overlapped reply's actions to finish. A failure of the wave is rethrown here, not lost.
-async function settle(flight) {
+async function waitForFlight(flight) {
   if (!flight) return null;
   const { ok, error } = await flight.result;
   if (!ok) throw error;
   return null;
 }
 
-// Before a step runs, the actions still in flight are logged as pending: their results are not in the log yet.
 function logPending(flight, step, log) {
   const unfinished = flight.actions.filter((action) => !flight.done.has(action));
   if (unfinished.length === 0) return;
@@ -104,13 +99,10 @@ function logPending(flight, step, log) {
   });
 }
 
-// Events that include a simulated wait say so, so their durations are not read as measured time.
 function simulated(latencyMs) {
   return latencyMs > 0 ? { simulatedMs: latencyMs } : {};
 }
 
-// One model call per step. A failure is retried only when retryPlan allows it. Each retry is logged,
-// and a failure that is not retried returns with its reason.
 async function askModel(model, { prompt, prefix }, { step, prefixSha, log, latencyMs }) {
   let retries = 0;
   let headerless429 = 0;
@@ -141,7 +133,6 @@ async function askModel(model, { prompt, prefix }, { step, prefixSha, log, laten
   }
 }
 
-// Returns {delayMs, source, headerless} to retry, or {reason} to fail the call.
 function retryPlan(error, { retries, headerless429 }) {
   const rateLimited = error.status === 429;
   const retryable = rateLimited || retryableStatus(error.status) || (error.network === true && RETRYABLE_NETWORK.has(error.errorType));
@@ -163,12 +154,10 @@ function retryPlan(error, { retries, headerless429 }) {
   return { delayMs: backoffMs(retries), source: 'backoff', headerless: rateLimited };
 }
 
-// 408, 409 and every 5xx are retried. A 429 has its own rule, and other 4xx fail at once.
 function retryableStatus(status) {
   return status === 408 || status === 409 || (status >= 500 && status <= 599);
 }
 
-// Exponential backoff: 1 s, doubling, capped at 16 s, with plus or minus 20% jitter.
 function backoffMs(retries) {
   const base = Math.min(BASE_DELAY_MS * 2 ** retries, MAX_DELAY_MS);
   const jittered = base * (1 + JITTER * (2 * Math.random() - 1));
@@ -212,10 +201,6 @@ async function runAction({ tool, args }, { step, tools, log, latencyMs }) {
   return result;
 }
 
-// Groups actions into waves that run together. Paths compare by real path and by
-// dev:ino group (hard links), so actions in one wave touch no file that another
-// in the wave writes. A barrier action (shell, query_log, finish, unknown tools,
-// a path that cannot be planned) runs alone. Serial mode puts every action in its own wave.
 export function planWaves(actions, tools, serial) {
   if (serial) return actions.map((action) => [action]);
   const waves = [];

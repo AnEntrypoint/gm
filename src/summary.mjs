@@ -1,13 +1,7 @@
-// The run summary: one event at the end of every run, computed only from the log's own events.
-// Times are the monotonic clock the log stamps on each event: mono, and startMono for a span.
-// A span is [startMono, mono] for an event that carries startMono.
-
 export function summarize(events, endMono) {
   const first = events[0];
   const wall = first ? endMono - first.mono : 0;
-  // A tool span is one action from enter to leave, so the integral of inFlight is the sum of the tool spans.
   const tool = spans(events, (event) => event.kind === 'result' || event.kind === 'refusal');
-  // A model span is one attempt, from its startMono to its reply, retry or error. Backoff sleeps are idle.
   const model = spans(events, (event) => event.kind === 'reply' || event.kind === 'retry' || event.kind === 'error');
   const mcp = events.find((event) => event.kind === 'start')?.mode === 'mcp';
   return {
@@ -22,8 +16,6 @@ export function summarize(events, endMono) {
   };
 }
 
-// Writes the summary once, before the end event. Its mono is the end time the summary was computed at,
-// so the summary can be recomputed from the events before it.
 export function writeSummary(log) {
   if (log.events().some((event) => event.kind === 'summary')) return;
   const endMono = log.now();

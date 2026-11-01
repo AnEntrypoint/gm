@@ -77,3 +77,22 @@ Send a message to `main` when a work-plan item lands. Include: the item number, 
 ## Done means
 
 Work-plan items 1 to 8 are witnessed and committed on main, and DESIGN.md is current. The live anthropic run and the gm comparison remain blocked, and the report says so.
+
+## Rationale not expressible in code
+
+- Claude Code repeats some transcript records exactly. Records without a uuid repeated 502 times across 42 live transcripts, so transcript.mjs keeps the first copy, by uuid or by line when there is no uuid.
+- toolCallMs counts parallel tool calls twice. It sits beside toolMs in each result for comparison; no report reads it.
+- Summary meanInFlight is the sum of tool spans over wall time. That equals the integral of inFlight, because a span runs from enter to leave of one action.
+- A model span is one attempt (startMono to reply, retry or error), so backoff sleeps count as idle.
+- The summary event's mono is the end time it was computed at, so the summary can be recomputed from the events before it.
+- A reply with a finish action is never overlapped, because the finish result decides whether another step runs.
+- An MCP call starts only when no active call and no earlier waiting call conflicts with it. Conflicting calls keep arrival order, and none starves.
+- live.mjs finds the ccbridge pid by its command line, not from the setsid wrapper, because setsid can fork.
+- Claude Code connects MCP servers after the input box appears. A slash command sent before then answers "Unknown command" (seen in runs/live/B-t1-1-47ac20 and B-t1-1-4cd9f4), so live.mjs waits MCP_CONNECT_SETTLE_MS before the first send and resends after that answer.
+- Trials start TRIAL_START_GAP_MS apart so sessions do not all start in the same second.
+- A session that dies or never becomes ready gets one more attempt (MAX_ATTEMPTS), because the shared machine makes that failure transient.
+- Trust-dialog keys can land before the dialog takes input, so live.mjs resends them every TRUST_KEYS_RESEND_MS while the dialog shows.
+- A reply can arrive after the first e: frame (text frames follow the first e: in 19 of 43 live trials), so a turn is finished only when its transcript has end_turn and frames have been quiet for FRAMES_QUIET_MS.
+- gm's runner leaves .gm and .agentplug in the workspace. live.mjs removes them after grading and lists them in workspaceFiles.removed.
+- A replacement pass for lost live trials uses --max-new 2.
+- live.mjs --report takes no lock, so it can run during a batch.

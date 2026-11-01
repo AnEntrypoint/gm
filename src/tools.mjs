@@ -13,7 +13,7 @@ const MAX_WAIT_MS = 30000;
 const JOB_NAME = /^[A-Za-z0-9_-]{1,64}$/;
 const BARRIER = { barrier: true };
 const KILL_GRACE_MS = 500;
-const foregroundGroups = new Set(); // foreground shells that have not exited, so run end can signal their groups
+const foregroundGroups = new Set();
 
 export function createTools({ workspace, runDir, log, background = true }) {
   const root = resolve(workspace);
@@ -129,8 +129,6 @@ export function createTools({ workspace, runDir, log, background = true }) {
   }
 
   return {
-    // Which workspace paths an action reads or writes. An action with no
-    // path (or a barrier) is decided by the loop's wave planner.
     access(name, args) {
       if (name === 'job_status') return { items: [] };
       if (name !== 'read_file' && name !== 'list_dir' && name !== 'write_file') return BARRIER;
@@ -149,16 +147,12 @@ export function createTools({ workspace, runDir, log, background = true }) {
       }
     },
 
-    // Kills every background job still running and waits until each one has
-    // logged its end, so no child outlives the run.
     async close() {
       const running = [...jobs.values()].filter((job) => !job.settled);
       for (const job of running) job.killRequested = true;
-      // Every job's group and every foreground shell still running is signalled, because a child can outlive its shell.
       await Promise.all(liveGroups().map((pid) => killGroup(pid)));
       await Promise.all(running.map((job) => job.done));
     },
-    // Synchronous, for an interrupt: SIGKILL every group now, so no work starts while the process exits.
     killAllNow() {
       for (const pid of liveGroups()) {
         if (process.platform === 'win32') spawnSync('taskkill', ['/PID', String(pid), '/T', '/F'], { windowsHide: true, stdio: 'ignore' });
@@ -190,11 +184,6 @@ function readTail(file, cap) {
   return readFileSync(file, 'utf8').slice(-cap);
 }
 
-// The real location of the path an action names, for wave planning. An existing
-// entry resolves through realpath and carries a dev:ino group, so hard links to
-// one file share a group. A new path resolves its nearest existing ancestor and
-// keeps the rest. Null means the path cannot be planned (outside the workspace,
-// a link that does not resolve, or an error), and the action runs alone.
 function planPath(root, rel) {
   if (typeof rel !== 'string' || rel === '' || rel.split(/[\\/]+/).includes('..')) return null;
   const target = resolve(root, rel);
@@ -214,8 +203,6 @@ function groupOf(file) {
   return `${dev}:${ino}`;
 }
 
-// Two accesses conflict when either is a barrier, or when a path of one is the same file as, or a prefix of,
-// a path of the other, and at least one of the two writes. An access with no items conflicts with no path.
 export function conflicts(a, b) {
   if (a.barrier || b.barrier) return true;
   return a.items.some((x) => b.items.some((y) => (x.write || y.write) && (sameFile(x, y) || isPrefix(x.path, y.path) || isPrefix(y.path, x.path))));
@@ -244,8 +231,6 @@ function nearestExisting(target) {
   return current;
 }
 
-// lstat, not existsSync: a dangling symlink is an entry, so it is found here and
-// then refused because its realpath fails.
 function entryExists(path) {
   try {
     lstatSync(path);
@@ -273,12 +258,10 @@ function sleep(ms) {
   return new Promise((done) => setTimeout(done, ms));
 }
 
-// Each shell leads its own process group, so a kill reaches the grandchildren it started.
 function spawnGroup(command, cwd, stdio) {
   return spawn(command, { cwd, env: childEnv(), shell: true, detached: true, windowsHide: true, stdio });
 }
 
-// POSIX: SIGTERM to the group, then SIGKILL after a short grace. Windows: taskkill /T /F ends the tree.
 async function killGroup(pid) {
   if (process.platform === 'win32') return taskkillTree(pid);
   if (!signalGroup(pid, 'SIGTERM')) return;
@@ -286,7 +269,6 @@ async function killGroup(pid) {
   signalGroup(pid, 'SIGKILL');
 }
 
-// The foreground rule: a command's group is killed the moment its shell exits, so no child outlives the call.
 function killGroupNow(pid) {
   if (process.platform === 'win32') return taskkillTree(pid);
   signalGroup(pid, 'SIGKILL');

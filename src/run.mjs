@@ -12,8 +12,6 @@ export function newRunId() {
   return `${stamp}-${randomBytes(3).toString('hex')}`;
 }
 
-// Creates the run directory with rules.md and task.json, and returns the run's log.
-// A directory that already holds a log is refused, so a run is never appended to by mistake.
 export function createRun({ runDir, rules, meta }) {
   if (existsSync(join(runDir, 'log.jsonl'))) throw new Error(`run directory already has a log: ${runDir}`);
   mkdirSync(runDir, { recursive: true });
@@ -22,7 +20,6 @@ export function createRun({ runDir, rules, meta }) {
   return openLog(join(runDir, 'log.jsonl'));
 }
 
-// The task is the text of a file when the value names one, otherwise the value itself.
 export function loadTask(value) {
   const path = resolve(value);
   if (isFile(path)) return readFileSync(path, 'utf8');

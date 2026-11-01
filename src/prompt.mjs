@@ -18,7 +18,6 @@ const str = { type: 'string' };
 const num = { type: 'number' };
 const obj = (properties, required = []) => ({ type: 'object', properties, required });
 
-// The CLI's tool list. renderTools turns it into the same text the MCP server renders for its own list.
 export const CLI_TOOLS = [
   { name: 'read_file', description: 'text of a file.', inputSchema: obj({ path: str }, ['path']) },
   { name: 'write_file', description: 'write a file, creating parent directories.', inputSchema: obj({ path: str, content: str }, ['path', 'content']) },
@@ -33,7 +32,6 @@ export const CLI_TOOLS = [
   { name: 'finish', description: 'end the run. The witness must state the evidence.', inputSchema: obj({ witness: str }, ['witness']) },
 ];
 
-// One rendering for both modes: one line per tool, its input schema and its description.
 export function renderTools(tools) {
   return tools.map((tool) => `${tool.name} ${JSON.stringify(tool.inputSchema)}: ${tool.description}`).join('\n');
 }
@@ -41,18 +39,12 @@ export function renderTools(tools) {
 const MAX_EVENT_CHARS = 4000;
 const MAX_ACTIONS = 16;
 
-// The prefix (rules, task, witness, tools, reply format) is identical on every
-// step, so it comes first and prompt caching can cover it. The event window
-// changes every step, so it comes last.
 const REPLY_TEXT = '## Reply\n\nOne JSON object {"tool": "...", "args": {...}}, or a JSON array of them when the actions are independent. Nothing else.';
 
-// The stable prefix: rules, task, witness requirement, tool descriptions and reply instructions, in that order.
-// The CLI and the MCP server both render it here, and each passes its own tool text.
 export function renderPrefix({ rules, task, witness, tools }) {
   return [rules.trim(), `## Task\n\n${task}`, `## Witness requirement\n\n${witness}`, `## Tools\n\n${tools}`, REPLY_TEXT].join('\n\n');
 }
 
-// The one prefixSha definition: the sha256 of the rendered stable prefix.
 export function prefixShaOf(args) {
   return hashPrefix(renderPrefix(args));
 }

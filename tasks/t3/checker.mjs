@@ -1,4 +1,3 @@
-// Pass when build.log holds finished and status.txt holds working.
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 

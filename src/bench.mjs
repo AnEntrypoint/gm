@@ -1,8 +1,4 @@
 #!/usr/bin/env node
-// Scripted measurement harness. Each task is a scripted reply file that drives real tools in a temp
-// workspace. Every arm runs every task 3 times through the CLI with the scripted model (no paid calls).
-// Wall time and idleMs come from each run's own log. The temp scripts and workspaces are deleted; the run logs stay in runs/.
-// Options: --latency-ms N gives every scripted reply and action a simulated wait of N ms (default 0); --task <name> runs one task.
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -101,7 +97,6 @@ function main(argv) {
   process.exitCode = results.every((result) => result.status === 'finished') ? 0 : 1;
 }
 
-// Runs the CLI once, then reads wall time and idleMs from the run's own log.
 function runOnce(task, script, workspace, flags, latencyMs) {
   const child = spawnSync(
     process.execPath,
@@ -140,7 +135,6 @@ function armsOf(task) {
   return task.arms ?? ARMS;
 }
 
-// --latency-ms N sets the simulated wait of every scripted reply and action (0 by default). --task <name> picks one task.
 function parseOptions(argv) {
   const options = { latencyMs: 0, only: undefined };
   for (let i = 0; i < argv.length; i += 2) {

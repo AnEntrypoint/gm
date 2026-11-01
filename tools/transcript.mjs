@@ -1,16 +1,6 @@
 #!/usr/bin/env node
-// One parser for both live arms. It reads a Claude Code transcript (JSONL) and returns the metrics of the
-// turn that carries a marker token, so gm-new and gm are measured by the same code.
-//
-// Definitions, all in milliseconds from the transcript timestamps:
-//   wallMs   prompt record (carrying the marker) to the first end_turn assistant record after it
-//   toolMs   union of tool intervals, each from its tool_use record to its tool_result record
-//   modelMs  union of model intervals, each from a request point (the prompt, or a tool_result) to the next assistant record
-//   idleMs   wall time covered by neither a tool interval nor a model interval
-//   toolCallMs  sum of tool intervals, where parallel calls count twice (kept for comparison with toolMs)
 import { readFileSync } from 'node:fs';
 
-// Each record is written more than once, so records are kept once by their uuid, or by their exact line when they have none.
 export function readTranscript(file) {
   const seen = new Set();
   const records = [];
@@ -40,15 +30,15 @@ export function parseTurn(records, marker) {
   if (!endRecord) return { ok: false, error: 'no end_turn assistant record after the prompt' };
   const tEnd = at(endRecord);
 
-  const toolUses = new Map(); // tool_use id -> {name, start}
+  const toolUses = new Map();
   for (const record of assistants) {
     if (at(record) > tEnd) continue;
     for (const block of blocksOf(record)) {
       if (block.type === 'tool_use' && !toolUses.has(block.id)) toolUses.set(block.id, { name: block.name, start: at(record) });
     }
   }
-  const resultAt = new Map(); // tool_use id -> time of its tool_result
-  const requests = [t0]; // request points: the prompt, then each tool_result
+  const resultAt = new Map();
+  const requests = [t0];
   for (const record of records) {
     if (record.type !== 'user' || typeof record.timestamp !== 'string') continue;
     const ts = at(record);
@@ -72,9 +62,9 @@ export function parseTurn(records, marker) {
     if (response !== undefined) modelIntervals.push([request, response]);
   }
 
-  const toolMs = unionMs(toolIntervals);
-  const modelMs = unionMs(modelIntervals);
-  const busy = unionMs([...toolIntervals, ...modelIntervals]);
+  const toolMs = coveredMs(toolIntervals);
+  const modelMs = coveredMs(modelIntervals);
+  const busy = coveredMs([...toolIntervals, ...modelIntervals]);
   const wallMs = tEnd - t0;
   const names = [...toolUses.values()].map((u) => u.name);
   const mcp = names.filter((name) => name.startsWith('mcp__'));
@@ -93,8 +83,7 @@ export function parseTurn(records, marker) {
   };
 }
 
-// Total length covered by the intervals, counting overlaps once.
-function unionMs(intervals) {
+function coveredMs(intervals) {
   const sorted = intervals.map(([a, b]) => [a, b]).sort((x, y) => x[0] - y[0]);
   let total = 0;
   let current = null;

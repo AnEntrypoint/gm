@@ -1,4 +1,3 @@
-// Pass when report.txt holds exactly the integers 1 to 10, one per line, in order.
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 

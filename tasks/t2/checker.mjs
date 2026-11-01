@@ -1,4 +1,3 @@
-// Pass when answer.txt holds the sum of the integers in numbers.txt, and sum.mjs exists.
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 

@@ -10,7 +10,6 @@ import { writeSummary } from './summary.mjs';
 
 const PROTOCOL_VERSION = '2025-06-18';
 const SERVER_INFO = { name: 'gm-new', version: JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')).version };
-// The skill is served over MCP only, as a prompt and as a resource. SKILL.md is the single source, read once at start.
 const SKILL_URI = 'gm-new://skill/SKILL.md';
 const SKILL = parseSkill(readFileSync(join(ROOT, 'skills', 'gm-new', 'SKILL.md'), 'utf8'));
 const SKILL_PROMPT = { name: SKILL.name, description: SKILL.description, arguments: [{ name: 'task', description: 'The task to run', required: false }] };
@@ -48,12 +47,9 @@ const TOOLS = [
   { name: 'finish', description: 'End the run. witness is one string that quotes the evidence you observed.', inputSchema: objectSchema({ witness: text }, ['witness']) },
 ];
 
-// The tool list as the prefix hash sees it, rendered the same way as the CLI's list.
 const TOOL_TEXT = renderTools(TOOLS);
-// next_context reads the rules and a snapshot of the log, so it never waits behind a path call or a barrier.
 const NO_PATHS = { items: [], free: true };
 
-// Splits SKILL.md into its frontmatter fields, its body and its full text.
 function parseSkill(text) {
   const match = /^---\n([\s\S]*?)\n---\n?/.exec(text);
   if (!match) throw new Error('skills/gm-new/SKILL.md has no frontmatter');
@@ -68,14 +64,13 @@ class RpcError extends Error {
   }
 }
 
-// One session per run. Requests are handled as independent turns, and each reply is written with its request id.
 function createSession({ workspace, runDir, log, task, maxSteps, maxInflight }) {
   const tools = createTools({ workspace, runDir, log, background: true });
-  const active = new Map(); // tool calls that have started and not settled, each with its path access
-  const waiting = []; // tool calls accepted but not started, in arrival order
-  const pending = new Set(); // request turns that have not written their reply
+  const active = new Map();
+  const waiting = [];
+  const unansweredTurns = new Set();
   let steps = 0;
-  let ended = null; // null while running, else finished, max_steps or closed
+  let ended = null;
   let endLogged = false;
 
   const handlers = {
@@ -95,8 +90,8 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight }) 
         if (reply !== null) write(reply);
       })
       .catch((err) => console.error(`gm-new: ${err.message}`))
-      .finally(() => pending.delete(turn));
-    pending.add(turn);
+      .finally(() => unansweredTurns.delete(turn));
+    unansweredTurns.add(turn);
   }
 
   async function handleLine(line) {
@@ -141,7 +136,6 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight }) 
     return { protocolVersion: version, capabilities: { tools: {}, prompts: {}, resources: {} }, serverInfo: SERVER_INFO };
   }
 
-  // The skill body as a user message. A task argument, when given, is appended after the body.
   function getPrompt(params) {
     if (params?.name !== SKILL.name) throw new RpcError(-32602, `unknown prompt: ${params?.name}`);
     const task = typeof params?.arguments?.task === 'string' ? params.arguments.task.trim() : '';
@@ -165,7 +159,6 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight }) 
     return { content: [{ type: 'text', text: JSON.stringify(out) }], isError: out.ok !== true };
   }
 
-  // A call waits in the queue until drain starts it.
   function startCall(name, args) {
     return new Promise((resolveCall) => {
       waiting.push({ name, args, resolveCall });
@@ -173,9 +166,6 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight }) 
     });
   }
 
-  // Starts waiting calls while a slot is free. A call starts only when no active call conflicts with it, and no
-  // earlier waiting call conflicts with it, so conflicting calls keep their arrival order and none is starved.
-  // Once the run has ended, every waiting call is refused.
   function drain() {
     if (ended !== null) {
       for (const call of waiting.splice(0)) call.resolveCall(refuse(call.name, call.args, endedReason()));
@@ -202,7 +192,6 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight }) 
     return name === 'next_context' ? NO_PATHS : tools.access(name, args);
   }
 
-  // Ends the run for new calls. Queued calls that have not started are refused now, so none starts later.
   function stop(status) {
     ended = status;
     drain();
@@ -258,7 +247,6 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight }) 
     return out;
   }
 
-  // Runs a call that starts work. It counts as in flight from its action event until its result event.
   function act(tool, args, access, exec, digest = (result) => result) {
     const work = perform(tool, args, exec, digest);
     active.set(work, access);
@@ -287,7 +275,6 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight }) 
     return result;
   }
 
-  // A refusal starts no work, so it is logged without entering the in-flight count.
   function refuse(tool, args, reason) {
     const step = steps;
     const startMono = log.now();
@@ -305,10 +292,9 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight }) 
     log.append('end', { status, steps, witness });
   }
 
-  // Stdin has ended: no new call starts, calls in flight finish and are answered, then the run ends as closed.
   async function inputEnded() {
     if (ended === null) stop('closed');
-    await Promise.allSettled([...pending]);
+    await Promise.allSettled([...unansweredTurns]);
     if (!endLogged) await endRun(ended, null);
   }
 
