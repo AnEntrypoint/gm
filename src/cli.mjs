@@ -21,6 +21,7 @@ async function main(argv) {
   const [command, ...rest] = argv;
   if (command === 'run') return run(parseFlags(rest));
   if (command === 'query') return query(parseFlags(rest));
+  if (command === 'replay') return replay(parseFlags(rest));
   if (command === 'doctor') return doctor(parseFlags(rest));
   console.error(USAGE);
   return 2;
@@ -71,6 +72,35 @@ async function run(flags) {
   console.log(`run ${id}: ${result.status} after ${result.steps} steps`);
   if (result.witness) console.log(`witness: ${result.witness}`);
   if (latencyMs > 0) console.log(`simulated latency ${latencyMs} ms: each scripted reply and action waited this long; those events carry simulatedMs`);
+  console.log(`log: ${join(runDir, 'log.jsonl')}`);
+  return result.status === 'finished' ? 0 : 1;
+}
+
+// Replays a finished CLI run from its task.json and its recorded replies. The scripted model returns the recorded replies
+// in order, and every event of the replay carries replayOf, so the log marks the replayed events. A replay is a harness
+// test: it reproduces the tools' results, not the model's choices.
+async function replay(flags) {
+  if (!flags.run || !/^[A-Za-z0-9_-]+$/.test(flags.run)) throw new Error('--run <id> is required');
+  const source = join(RUNS, flags.run);
+  const meta = JSON.parse(readFileSync(join(source, 'task.json'), 'utf8'));
+  const replies = readEvents(join(source, 'log.jsonl')).filter((event) => event.kind === 'reply').map((event) => event.text);
+  if (replies.length === 0) throw new Error(`run ${flags.run} has no reply events to replay`);
+  const workspace = resolve(flags.workspace ?? meta.workspace);
+  if (!isDirectory(workspace)) throw new Error(`workspace is not a directory: ${workspace}`);
+  const maxSteps = Number(flags['max-steps'] ?? meta.maxSteps ?? 50);
+  const spec = { task: meta.task, witness: meta.witness ?? DEFAULT_WITNESS };
+  const model = createModel('scripted', { script: replies });
+
+  const id = newRunId();
+  const runDir = join(RUNS, id);
+  const log = createRun({ runDir, rules: DEFAULT_RULES, meta: { id, ...spec, workspace, model: 'scripted', maxSteps, replayOf: flags.run, createdAt: new Date().toISOString() } });
+  const append = log.append;
+  log.append = (kind, data, at) => append(kind, { replayOf: flags.run, ...data }, at);
+  const tools = createTools({ workspace, runDir, log, background: true });
+  const result = await runLoop({ runDir, spec, model, tools, log, maxSteps, serial: false, latencyMs: 0, overlap: false });
+
+  console.log(`run ${id}: ${result.status} after ${result.steps} steps, replay of ${flags.run}`);
+  if (result.witness) console.log(`witness: ${result.witness}`);
   console.log(`log: ${join(runDir, 'log.jsonl')}`);
   return result.status === 'finished' ? 0 : 1;
 }

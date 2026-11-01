@@ -51,7 +51,7 @@ const TOOLS = [
   { name: 'run_shell', description: 'Run a shell command in the workspace and wait for it. Default timeout 60000 ms. Its process group is killed when it returns, so background work must go through job_start.', inputSchema: objectSchema({ command: text, timeoutMs: number }, ['command']) },
   { name: 'job_start', description: 'Start a shell command as a named background job and return at once. Poll it with job_status.', inputSchema: objectSchema({ job: text, command: text, timeoutMs: number }, ['job', 'command']) },
   { name: 'job_status', description: 'State (running, exited or killed), exit code and output tail of a job. waitMs polls until the job leaves running, at most 30000 ms. offset returns a page of 20000 characters of the output from that offset, with next.', inputSchema: objectSchema({ job: text, waitMs: number, offset: number }, ['job']) },
-  { name: 'query_log', description: 'Evaluate a JavaScript expression over the run events array and return JSON.', inputSchema: objectSchema({ js: text }, ['js']) },
+  { name: 'query_log', description: 'Evaluate a JavaScript expression over the run events array and return JSON. kind keeps events of one kind, and fromMono and toMono keep events in a time window (monotonic milliseconds). js defaults to returning the filtered events.', inputSchema: objectSchema({ js: text, kind: text, fromMono: number, toMono: number }, []) },
   { name: 'finish', description: 'End the run. witness is one string that quotes the evidence you observed.', inputSchema: objectSchema({ witness: text }, ['witness']) },
   ...SEARCH_TOOLS,
   ...FETCH_TOOLS,
@@ -95,7 +95,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     run_shell: ({ command, timeoutMs }) => tools.run('run_shell', { command, timeoutMs }),
     job_start: ({ job, command, timeoutMs }) => tools.run('run_shell', { job, command, timeoutMs, background: true }),
     job_status: ({ job, waitMs, offset }) => tools.run('job_status', { job, waitMs, offset }),
-    query_log: ({ js }) => tools.run('query_log', { js }),
+    query_log: (args) => tools.run('query_log', args),
   };
 
   function accept(line) {

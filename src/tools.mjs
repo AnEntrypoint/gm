@@ -124,8 +124,12 @@ export function createTools({ workspace, runDir, log, background = true }) {
     },
 
     query_log(args) {
-      if (typeof args.js !== 'string') return { ok: false, error: 'js must be a string' };
-      return runQuery(log.events(), args.js);
+      if (args.js !== undefined && typeof args.js !== 'string') return { ok: false, error: 'js must be a string' };
+      let events = log.events();
+      if (args.kind !== undefined) events = events.filter((event) => event.kind === args.kind);
+      if (args.fromMono !== undefined) events = events.filter((event) => event.mono >= args.fromMono);
+      if (args.toMono !== undefined) events = events.filter((event) => event.mono <= args.toMono);
+      return runQuery(events, args.js ?? 'events');
     },
 
     finish(args) {
