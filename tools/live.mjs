@@ -332,7 +332,7 @@ async function waitForReady(session, dir) {
 
 // True when the trial's prompt sits on the input line, so it was typed but not submitted.
 function inInputLine(pane, marker) {
-  return pane.split('\n').some((line) => line.includes('❯') && line.includes(marker));
+  return pane.split('\n').some((line) => line.includes('\u276f') && line.includes(marker));
 }
 
 // True when Claude answered "Unknown command" for the slash command, at or after the last send.
