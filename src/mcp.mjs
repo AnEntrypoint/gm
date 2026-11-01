@@ -12,6 +12,7 @@ import { ROW_TOOLS } from './rows.mjs';
 import { SEARCH_TOOLS } from './search.mjs';
 import { FETCH_TOOLS } from './fetch.mjs';
 import { CODE_TOOLS } from './code.mjs';
+import { runBody, runCodeTool } from './runcode.mjs';
 import { writeSummary } from './summary.mjs';
 
 const PROTOCOL_VERSION = '2025-06-18';
@@ -25,7 +26,7 @@ const EVENT_CAP = 4000;
 const DEFAULT_MAX_STEPS = 50;
 const DEFAULT_MAX_INFLIGHT = 8;
 const DEFAULT_JOB_LIFETIME_MS = 1800000;
-const USAGE = 'usage: node src/mcp.mjs --workspace <dir> --task <file-or-text> [--run-dir <dir>] [--max-steps N] [--max-inflight N] [--job-lifetime-ms N]';
+const USAGE = 'usage: node src/mcp.mjs --workspace <dir> --task <file-or-text> [--run-dir <dir>] [--max-steps N] [--max-inflight N] [--job-lifetime-ms N] [--surface tools|code]';
 
 const MCP_RULES = `# Rules
 
@@ -61,7 +62,15 @@ const TOOLS = [
   ...ROW_TOOLS,
 ];
 
-const TOOL_TEXT = renderTools(TOOLS);
+// The code surface (--surface code) serves next_context, finish and run_code. Every other verb is called from run_code as
+// gm.<name>(args). The tools surface serves the whole list, as before.
+const SURFACES = ['tools', 'code'];
+const CODE_SURFACE = new Set(['next_context', 'run_code', 'finish']);
+const VERBS = TOOLS.filter((tool) => !CODE_SURFACE.has(tool.name));
+const CODE_LIST = [...TOOLS.filter((tool) => tool.name === 'next_context' || tool.name === 'finish'), runCodeTool(VERBS.map((tool) => tool.name))];
+function servedTools(surface) {
+  return surface === 'code' ? CODE_LIST : TOOLS;
+}
 const NO_PATHS = { items: [], free: true };
 
 function parseSkill(text) {
@@ -78,7 +87,7 @@ class RpcError extends Error {
   }
 }
 
-function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, resume = null, jobLifetimeMs = DEFAULT_JOB_LIFETIME_MS, recovery = null, history = [] }) {
+function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, resume = null, jobLifetimeMs = DEFAULT_JOB_LIFETIME_MS, recovery = null, history = [], surface = 'tools' }) {
   const runId = basename(runDir);
   const tools = createTools({ workspace, runDir, log, background: true, jobLifetimeMs });
   let pendingRecovery = recovery;
@@ -101,6 +110,22 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     job_status: ({ job, waitMs, offset }) => tools.run('job_status', { job, waitMs, offset }),
     query_log: (args) => tools.run('query_log', args),
   };
+  const served = servedTools(surface);
+  const servedText = renderTools(served);
+
+  // One verb called from run_code. It runs through the same handler the tool surface uses, and it is logged as code-call.
+  async function innerCall(name, args) {
+    const startMono = log.now();
+    const exec = Object.hasOwn(handlers, name) ? handlers[name] : (value) => tools.run(name, value);
+    let result;
+    try {
+      result = await exec(args);
+    } catch (err) {
+      result = { ok: false, error: err.message };
+    }
+    log.append('code-call', { step: steps, tool: name, startMono, ok: result?.ok === true, ...(result?.ok === true ? {} : { error: result?.error }) });
+    return result;
+  }
 
   function accept(line) {
     if (line.trim() === '') return;
@@ -147,7 +172,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
   async function route(method, params, rpcId) {
     if (method === 'initialize') return initialize(params);
     if (method === 'ping' || method === 'server/discover') return {};
-    if (method === 'tools/list') return { tools: TOOLS };
+    if (method === 'tools/list') return { tools: served };
     if (method === 'tools/call') return callTool(params, rpcId);
     if (method === 'prompts/list') return { prompts: [SKILL_PROMPT] };
     if (method === 'prompts/get') return getPrompt(params);
@@ -232,6 +257,10 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
 
   function invoke(name, args, access, rpcId) {
     if (ended !== null) return refuse(name, args, endedReason(), rpcId);
+    if (surface === 'code' && !CODE_SURFACE.has(name)) {
+      return refuse(name, args, 'the code surface serves next_context, run_code and finish; call a verb as gm.<name>(args) inside run_code', rpcId);
+    }
+    if (name === 'run_code') return act('run_code', args, access, () => runBody({ body: args.body, timeoutMs: args.timeoutMs, verbs: VERBS, call: innerCall }), undefined, rpcId);
     if (name === 'next_context') return nextContext(access, rpcId);
     if (name === 'finish') return finish(args, access, rpcId);
     if (Object.hasOwn(handlers, name)) return act(name, args, access, () => handlers[name](args), undefined, rpcId);
@@ -267,7 +296,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
       rules,
       task,
       witness: DEFAULT_WITNESS,
-      prefixSha: prefixShaOf({ rules, task, witness: DEFAULT_WITNESS, tools: TOOL_TEXT }),
+      prefixSha: prefixShaOf({ rules, task, witness: DEFAULT_WITNESS, tools: servedText }),
       total: log.count(),
       events: log.recent(WINDOW).map(compactEvent),
       ...(recoveryNow ? { recovery: recoveryNow } : {}),
@@ -463,11 +492,11 @@ function parseFlags(argv) {
 // The hash of the served tool list is logged at each start. A resumed run whose list differs from its last start
 // gets a tools-changed event with both hashes. A changed description invalidates the host's prompt cache, so the
 // log shows when it happens.
-function logTools(log, resumed) {
-  const sha = createHash('sha256').update(JSON.stringify(TOOLS)).digest('hex');
+function logTools(log, resumed, served) {
+  const sha = createHash('sha256').update(JSON.stringify(served)).digest('hex');
   const last = resumed ? log.events().findLast((event) => event.kind === 'tools') : undefined;
   if (last && last.sha !== sha) log.append('tools-changed', { old: last.sha, new: sha });
-  log.append('tools', { sha, count: TOOLS.length });
+  log.append('tools', { sha, count: served.length });
 }
 
 function positiveInt(value, name) {
@@ -484,6 +513,8 @@ async function main(argv) {
   const maxSteps = positiveInt(flags['max-steps'] ?? DEFAULT_MAX_STEPS, '--max-steps');
   const maxInflight = positiveInt(flags['max-inflight'] ?? DEFAULT_MAX_INFLIGHT, '--max-inflight');
   const jobLifetimeMs = positiveInt(flags['job-lifetime-ms'] ?? DEFAULT_JOB_LIFETIME_MS, '--job-lifetime-ms');
+  const surface = flags.surface ?? 'tools';
+  if (!SURFACES.includes(surface)) throw new Error('--surface takes tools or code');
   const task = loadTask(flags.task).trim();
   if (task === '') throw new Error('--task is empty');
 
@@ -504,9 +535,9 @@ async function main(argv) {
   if (resumed) log.append('restart', { reason: flags['restart-reason'] ?? 'restarted without a reason' });
   else log.append('start', { mode: 'mcp', maxSteps, maxInflight });
   if (recovery && recovery.open.length > 0) log.append('recovery', { lastSeq: recovery.lastSeq, open: recovery.open });
-  logTools(log, resumed);
+  logTools(log, resumed, servedTools(surface));
 
-  const session = createSession({ workspace, runDir, log, task, maxSteps, maxInflight, resume, jobLifetimeMs, recovery: recovery && recovery.open.length > 0 ? recovery : null, history });
+  const session = createSession({ workspace, runDir, log, task, maxSteps, maxInflight, resume, jobLifetimeMs, recovery: recovery && recovery.open.length > 0 ? recovery : null, history, surface });
   const lines = createInterface({ input: process.stdin, crlfDelay: Infinity });
   lines.on('line', session.accept);
   // Under a supervisor, the end of stdin means the supervisor has gone, so the run is paused. Closing it here would end the
