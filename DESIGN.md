@@ -90,6 +90,35 @@ The three questions this section used to ask are answered in Decided: scope, run
 
 The first slice runs end to end with the scripted model. Run it on one long task with the anthropic model, then measure it against the current gm on the same task before adding anything from the directions above.
 
+## Research consolidation
+
+The status of each research item, as of 2026-11-01. "Implemented" means built. "Measured" means a run in this repo shows an effect. "Witnessed" means a run shows the mechanism works. Each row cites its limit.
+
+| Item | Status | Limit |
+| --- | --- | --- |
+| Background jobs (item 2) | implemented, measured: scripted median 3175 ms on, 5296 ms off | none beyond the scripted model |
+| Live harness and summaries (item 7) | implemented; the scripted harness measured; the live trials partly measured | arm A has two valid t3 trials, one short of three; the trial rule is recorded as not met |
+| Parallel waves (item 1) | implemented and witnessed (overlap in run 2026-11-01-11-27-17-d7f205); effect not measured | writes are too short to show a gain (42.6 ms on, 27.6 ms off) |
+| Retry (item 3) | implemented, scripted witness | the live network error and the live retry-after header are not witnessed |
+| Prefix hash (item 4) | implemented | cache_control appears only in --dump-request; the host route owns the cache |
+| Queryable log (F1) | implemented, not measured | none; every event is logged and query_log reads it |
+| Rules re-read each step (F3) | implemented, violation rate not tested | rules.md is re-read each CLI step and on each next_context call |
+| Context as a worker action (F4) | implemented in part | query_log only |
+| Validated compaction (F2) | deferred | the log is complete, so no summary exists |
+| RL summariser (F5) | deferred | needs training infrastructure |
+| Saturation threshold (F7) | deferred | the threshold is unverified |
+| Subagent isolation | open | |
+| Proactive mode, verification-gated admission, matched-budget falsifier, raw-replay arm (directions 8 to 11) | deferred | no learned artifact exists yet |
+| Minimal tool set | open | cost and trigger under open questions |
+
+Gaps the research says to close:
+
+- G1, overlap of the next model call with tool work (C2): a CLI-only `--overlap` flag, default off. MCP cannot overlap, because the host owns the loop. Built after arm B.
+- G2, parallel gain (C1): a `--latency-ms` knob on the scripted model. The latency is simulated, and every output that uses it says so. Waves on and off are measured on a task with independent slow work. Built after arm B.
+- G3, cache effect (C3): blocked. There is no API key, and the host route shows no cache usage. No caching claim is made.
+
+Limit, kept for safety: `run_shell` always runs alone. Parallel waves cover `read_file`, `write_file`, `list_dir` and `job_status`. `job_start` is a barrier as well, because it starts a shell. The shell barrier stays.
+
 ## Measured
 
 - Live pause, second: the arm B resume was paused again at 2026-11-01 16:18:48 SAST, with a 1-minute load of 15.68, which the gm agent's rule requires (pause above 6). The runner, its server and the trial in flight (`B-t3-2`, no result) were stopped. Two arm B slots remain, `t3-2` and `t3-3`. The resume is `node tools/live.mjs --arm B --tasks t1,t2,t3 --trials 3 --concurrency 1 --resume true`, once the gm agent reports load under 6.
