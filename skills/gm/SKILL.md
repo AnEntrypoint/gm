@@ -1,6 +1,6 @@
 ---
 name: gm
-description: Runs a long task as a gm-new worker. Each step calls next_context, does the work in one run_code body, and ends with finish and a witness. Use when a task should run under the gm-new MCP server.
+description: Runs a long task as a gm worker. Each step calls next_context, does the work in one run_code body, and ends with finish and a witness. Use when a task should run under the gm MCP server.
 ---
 
 # gm loop
@@ -84,7 +84,7 @@ A summary can replace earlier messages, including the rules, the witness require
 1. Call `next_context` at once. It returns the rules, the task, the witness requirement and the events new since your last step.
 2. Follow the rules it returns. They are the same rules as before the compaction.
 3. Do not rely on a summary for a rule, the witness requirement or an event. Use `gm.query_log` for any event the summary does not give exactly.
-4. If a reply carries `rulesNotice`, or `next_context` carries `rulesPending`, read the gm skill again with ReadMcpResourceTool (server gm-new, uri gm://skill/SKILL.md) and follow it. That one read clears the notice, and it is the only extra step the notice needs. Do not repeat finished work.
+4. If a reply carries `rulesNotice`, or `next_context` carries `rulesPending`, read the gm skill again with ReadMcpResourceTool (server gm, uri gm://skill/SKILL.md) and follow it. That one read clears the notice, and it is the only extra step the notice needs. Do not repeat finished work.
 
 ## Pending events
 
@@ -92,7 +92,7 @@ next_context returns `pending`: the events that need you since your last step, e
 
 Use the first route that works, in this order:
 
-1. A channel event, `<channel source="gm-new" id="..." kind="...">`, arrives in the session when the host registered this server as a channel. Act on it as it lands.
+1. A channel event, `<channel source="gm" id="..." kind="...">`, arrives in the session when the host registered this server as a channel. Act on it as it lands.
 2. Otherwise, watch `pendingFile` in the background. If you have the Monitor tool (load it with ToolSearch when it is deferred), arm it on `tail -n +1 -F "<pendingFile>"`, with a description and a timeout of 1800000 ms. Each line it reports is one event. A watch expires, so re-arm it.
 3. Otherwise, start the same tail as a job and read it at each step: `await gm.job_start({ job: 'pending', command: 'tail -n +1 -F "<pendingFile>"' })`, then `await gm.job_status({ job: 'pending' })`.
 

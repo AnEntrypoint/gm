@@ -1,6 +1,6 @@
 {
   "mcpServers": {
-    "gm-new": {
+    "gm": {
       "command": "node",
       "args": [
         "/workspace/gm-new/tools/relay.mjs",

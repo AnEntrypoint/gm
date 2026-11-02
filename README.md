@@ -1,24 +1,32 @@
-# gm-new
+# gm
 
 A single-worker long-horizon loop: one worker, one append-only log, governance rules re-read at every step. Design and evidence: `DESIGN.md` and `research/deep-research.md`.
 
 Status: the MCP server, the skill, the CLI wrapper, the measurement tools, and the search, wiki, review and call-site tools are built and witnessed. The live comparison with gm is closed, with its results in DESIGN.md. Node.js 20+.
 
-Install, once, after a clone (one pinned runtime dependency, acorn):
+Install, once per clone, from the checkout:
 
-    npm install
+    ./setup.sh
+
+The setup installs the one pinned runtime dependency, acorn, runs the gate, and prints three add-mcp commands. add-mcp runs through npx, pinned to version 2.6.1. Run them in this order:
+
+    npx -y add-mcp@2.6.1 list -g
+    npx -y add-mcp@2.6.1 remove gm -g -y
+    npx -y add-mcp@2.6.1 "node /abs/path/to/gm-new/tools/relay.mjs" -n gm -g -a claude-code -y
+
+The first only lists. The second removes every gm entry, old or new, from the global configs. It matches any server whose name contains gm, so read the list first. The third installs gm for Claude Code at user level, where the relay starts in each session's folder. setup runs none of them. The manual is `docs/index.html`, chapter 2.
 
 The served tools are listed in `DESIGN.md`, Decisions. `search` and `wiki_search` rank by BM25 in process, over the tracked files and the wiki pages. `callers` and `impact` parse the JavaScript with acorn. `wiki_write` and the three `review_*` tools write to the run log and the wiki.
 
 ## The worker: an MCP server
 
-gm-new runs as a stdio MCP server, and the Claude Code session is the model.
+gm runs as a stdio MCP server, and the agent session is the model.
 
     node src/mcp.mjs --workspace <dir> --task <file-or-text> [--run-dir <dir>] [--max-steps N] [--max-inflight N]
 
-An entry for `.mcp.json`:
+A project can also hold its own entry in `.mcp.json`, which overrides the user-level one in that project. This is the shape, with the worker started directly:
 
-    {"mcpServers":{"gm-new":{"command":"node","args":["/abs/gm-new/src/mcp.mjs","--workspace","/abs/ws","--run-dir","/abs/run","--task","/abs/task.md"]}}}
+    {"mcpServers":{"gm":{"command":"node","args":["/abs/gm-new/src/mcp.mjs","--workspace","/abs/ws","--run-dir","/abs/run","--task","/abs/task.md"]}}}
 
 Tools: `next_context`, `read_file`, `write_file`, `edit_file`, `stat_file`, `list_dir`, `run_shell`, `job_start`, `job_status`, `query_log`, `finish` (with an optional `gaps` array, logged in the end event, and `stopBackground`, which kills a background run that is still running); the search tools `search` (BM25 over the lines of tracked files) and `grep` (literal, regex or whole word); the git tools `git_status`, `git_add`, `git_commit`, `git_push`, `git_log`, `git_diff`, `git_show`, `git_fetch`, `git_pull`, `git_checkout`, `git_branch`; `ci_status` (through the gh CLI); and the row tools `prd_add`, `prd_list`, `prd_resolve`, `unknown_add`, `unknown_list`, `unknown_resolve`. Rows are files under `work/rows/`, and a row resolves with a seq of the run log and a commit that exists in the repository. `callers` and `impact` parse the JavaScript with acorn; `wiki_search` ranks the wiki pages; `wiki_write`, `review_packet`, `review_record` and `review_join` write to the run log and the wiki (DESIGN.md). Each `next_context` call is one step. A call starts at once while one of `--max-inflight` slots (default 8) is free. Calls that touch one file, with a write among them, wait in order, and a shell runs alone. The server answers each request by its id, so a session's parallel calls overlap, and the log shows `inFlight`. On the code surface, `run_code` runs a body; one still running after its budget (180 seconds by default, `timeoutMs` at most 300000) becomes a background run, which `job_status` watches. Its kill, its lifetime and its restart are in DESIGN.md, Background budget.
 
@@ -31,7 +39,7 @@ The skill is `skills/gm/SKILL.md`. It holds the loop prose only.
     node src/cli.mjs replay --run <id> [--workspace <dir>]
     node src/cli.mjs doctor [--workspace <dir>]
 
-- `scripted` is the only model, and it is offline. gm-new makes no API call. In MCP mode the model is the host session, such as Claude Code.
+- `scripted` is the only model, and it is offline. gm makes no API call. In MCP mode the model is the host session, such as Claude Code.
 - `doctor` reports Node, whether the key is set (never its value), whether the workspace is writable, the last run, and two limits: the Node-below-20 failure path has no live run, and `run_shell` is unconfined. The process-group kill is unverified on Windows.
 - `replay` reruns a finished CLI run through the scripted model, and every replayed event carries `replayOf`.
 
