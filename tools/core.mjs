@@ -277,11 +277,8 @@ function onChildLine(line) {
   }
 }
 
-// The worker runs without V8's memory reducer. The reducer is a background garbage collector that wakes the process while it is idle, and a
-// worker that has been idle a minute had woken for it (see the efficiency audit in DESIGN.md). It frees nothing measured in a burst of calls,
-// so the flag is set here, where the core starts the worker. The core and the relay keep their own flags, which only the host's command can set.
 function workerArgs(reason) {
-  const args = ['--no-memory-reducer', WORKER, ...withoutOptions(HOST_ARGS, ['--runs', '--resume', '--run-dir']), '--run-dir', runDir];
+  const args = [WORKER, ...withoutOptions(HOST_ARGS, ['--runs', '--resume', '--run-dir']), '--run-dir', runDir];
   if (reason) args.push('--restart-reason', reason);
   args.push('--supervised', 'yes');
   return args;
