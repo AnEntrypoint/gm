@@ -4,7 +4,8 @@
 // files. Then the checkout is fast-forwarded and npm ci runs when the lock file changed. A pull that changes src/ or skills/ restarts the
 // worker, and the check waits for the restart: when the worker does not start on the new code, the pull is rolled back, the checkout is
 // reset to the commit before it, the worker starts on the old code, and the rollback is logged. A diverged history is reported and left
-// alone. A check that cannot reach origin is reported and skipped. The checks never throw.
+// alone. A check that cannot reach origin is reported and skipped. The checks never throw. A pull that changes tools/, other than the relay
+// (tools/relay.mjs), replaces the core: replaceCore starts the new core, and when that core does not take over, the pull is rolled back.
 import { execFile } from 'node:child_process';
 import { mkdtemp, rm, symlink } from 'node:fs/promises';
 import { promisify } from 'node:util';
@@ -74,7 +75,7 @@ async function candidate(root, target, lockChanged) {
 
 // One check. It returns what it did as { state, ... }, and it never throws. busy() returns why the worker's work must not be interrupted now,
 // or null. nextWorkerEvent(ms) resolves with the supervisor's next report of the worker's state, or null after ms.
-export async function checkForUpdate(root, { log = () => {}, busy = null, nextWorkerEvent = null } = {}) {
+export async function checkForUpdate(root, { log = () => {}, busy = null, nextWorkerEvent = null, replaceCore = null } = {}) {
   try {
     await git(root, ['remote', 'get-url', 'origin']);
   } catch {
@@ -96,13 +97,14 @@ export async function checkForUpdate(root, { log = () => {}, busy = null, nextWo
   if (dirty !== '') return { state: 'dirty', head, target, ahead };
   const waiting = busy?.() ?? null;
   if (waiting) return { state: 'waiting', reason: waiting, head, target, ahead };
-  return apply(root, head, target, ahead, log, { busy, nextWorkerEvent });
+  return apply(root, head, target, ahead, log, { busy, nextWorkerEvent, replaceCore });
 }
 
-async function apply(root, prev, target, ahead, log, { busy, nextWorkerEvent }) {
+async function apply(root, prev, target, ahead, log, { busy, nextWorkerEvent, replaceCore }) {
   const changed = (await git(root, ['diff', '--name-only', prev, target])).split('\n').filter(Boolean);
   const lockChanged = changed.includes('package-lock.json');
   const restarts = changed.some((file) => file.startsWith('src/') || file.startsWith('skills/'));
+  const replaces = changed.some((file) => file.startsWith('tools/') && file !== 'tools/relay.mjs');
   const verdict = await candidate(root, target, lockChanged);
   if (verdict.ok !== true) {
     const reason = `the gate failed on the new commit: ${verdict.failed.join(', ')}`;
@@ -125,6 +127,12 @@ async function apply(root, prev, target, ahead, log, { busy, nextWorkerEvent }) 
   } catch (err) {
     if (!landed) return { state: 'failed', error: firstLine(err) };
     return rollback(root, prev, target, lockChanged, restarts, `the install failed (${firstLine(err)})`, { log, nextWorkerEvent });
+  }
+  // A pull that changes the core replaces it. The new core is checked and loaded before it takes over, and it starts the worker itself.
+  if (replaces && replaceCore) {
+    const handed = await replaceCore(`pulled ${short(target)}`);
+    if (handed.ok) return { state: 'updated', from: prev, to: target, ahead, changed, verified: true, restarted: true };
+    return rollback(root, prev, target, lockChanged, restarts, `the new core did not take over (${handed.reason})`, { log, nextWorkerEvent });
   }
   if (!outcome) {
     log(`pulled ${ahead} commit(s) to ${short(target)}; the gate passed`);
@@ -194,7 +202,7 @@ function describe(result) {
 
 // Starts the checks: the first after FIRST_CHECK_MS, then every everyMs. Zero, or anything that is not a positive number, turns them off. A check
 // that is still running is not started again. The timers do not keep the process alive. It returns a function that stops the checks.
-export function startUpdates({ root, everyMs = DEFAULT_UPDATE_MS, log = () => {}, busy = null, nextWorkerEvent = null }) {
+export function startUpdates({ root, everyMs = DEFAULT_UPDATE_MS, log = () => {}, busy = null, nextWorkerEvent = null, replaceCore = null }) {
   if (!(everyMs > 0)) return () => {};
   let running = false;
   let retry = null;
@@ -205,7 +213,7 @@ export function startUpdates({ root, everyMs = DEFAULT_UPDATE_MS, log = () => {}
     clearTimeout(retry);
     retry = null;
     try {
-      const result = await checkForUpdate(root, { log, busy, nextWorkerEvent });
+      const result = await checkForUpdate(root, { log, busy, nextWorkerEvent, replaceCore });
       if (result.state === 'waiting') {
         // The pull waits, and it is tried again soon, so a body or a job that ends does not wait for the next hour. It is logged once for each wait.
         if (lastWait !== result.reason) log(describe(result));
