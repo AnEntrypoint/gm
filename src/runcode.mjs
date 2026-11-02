@@ -17,6 +17,87 @@ const BUDGET = Symbol('budget');
 const OUTPUT_CAP = 20000;
 // The thread that runs a body. Each body gets one of its own (body-worker.mjs).
 const BODY_WORKER = new URL('./body-worker.mjs', import.meta.url);
+// The most bodies that run at once in this process. A body beyond the cap waits in arrival order, and its wait is logged as body-queued.
+const BODY_SLOTS = 4;
+const waiting = [];
+let running = 0;
+
+// A slot for one body. It is granted in arrival order, and releasing a slot grants it to the next waiting body. Only a body that waited is
+// logged at its start and finish, so the log of a body that ran at once is unchanged.
+function takeSlot(log, { body, step }) {
+  const slot = { body, step, log, granted: false, released: false, started: false, queued: running >= BODY_SLOTS };
+  slot.ready = new Promise((resolve) => {
+    slot.grant = resolve;
+  });
+  if (slot.queued) log?.append('body-queued', { body, step, ahead: waiting.length, running });
+  waiting.push(slot);
+  serveSlots();
+  return slot;
+}
+
+function serveSlots() {
+  while (running < BODY_SLOTS && waiting.length > 0) {
+    const slot = waiting.shift();
+    slot.granted = true;
+    running += 1;
+    slot.grant();
+  }
+}
+
+// A body that waited is logged when its thread starts, not when its slot is granted, so a body stopped in between leaves no start.
+function startSlot(slot) {
+  slot.started = true;
+  if (slot.queued) slot.log?.append('body-started', { body: slot.body, step: slot.step, running });
+}
+
+function releaseSlot(slot) {
+  if (!slot.granted || slot.released) return;
+  slot.released = true;
+  running -= 1;
+  if (slot.queued && slot.started) slot.log?.append('body-finished', { body: slot.body, step: slot.step, running });
+  serveSlots();
+}
+
+// A body still waiting leaves the queue, so a body stopped before its turn never starts.
+function cancelSlot(slot) {
+  const at = waiting.indexOf(slot);
+  if (at >= 0) waiting.splice(at, 1);
+}
+
+// Starts the thread that runs one body. The body's verb calls are messages that this session serves in the body's context, so each call is
+// logged with the body's seq and a shell it starts is tagged with it. done resolves with the body's reply: {ok, text} when it returns, and
+// {ok:false, error} when it fails or its thread stops. terminate stops the thread at once, which also stops a loop that never awaits.
+function spawnWorker({ file, kind, project, verbs, call, log, step, startSeq }) {
+  const worker = new Worker(BODY_WORKER, { workerData: { file, kind, project, verbs: verbs.map(({ name, description, inputSchema }) => ({ name, description, inputSchema })) }, stdout: true, stderr: true });
+  // The body's console output is drained here, so it cannot reach the session's stdout, which carries the protocol.
+  worker.stdout.resume();
+  worker.stderr.resume();
+  let stopped = false;
+  const done = new Promise((resolve) => {
+    worker.on('message', (msg) => {
+      if (msg.type === 'call') {
+        if (stopped) return;
+        const work = bodyContext.run({ body: startSeq }, () => Promise.resolve().then(() => call(msg.name, msg.args)));
+        work.catch((err) => ({ ok: false, error: err.message })).then((result) => {
+          if (!stopped) worker.postMessage({ type: 'reply', id: msg.id, result });
+        });
+      } else if (msg.type === 'refusal') {
+        log?.append('refusal', { step, tool: 'run_code', stage: 'require', error: msg.error });
+      } else if (msg.type === 'done') {
+        resolve(msg.ok ? { ok: true, text: msg.text } : { ok: false, error: msg.error });
+      }
+    });
+    worker.on('error', (err) => resolve({ ok: false, error: err.message }));
+    worker.on('exit', () => resolve({ ok: false, error: 'the body stopped before it returned' }));
+  });
+  return {
+    done,
+    terminate: () => {
+      stopped = true;
+      worker.terminate();
+    },
+  };
+}
 
 // A path inside the root. The check is textual; a symlink is followed separately by confined().
 function inside(root, at) {
@@ -142,36 +223,24 @@ export async function runBody({ body, timeoutMs = DEFAULT_TIMEOUT_MS, format, ve
   const file = join(runDir, 'code', `body-${startSeq}-${digest}.${kind === 'esm' ? 'mjs' : 'cjs'}`);
   mkdirSync(dirname(file), { recursive: true });
   writeFileSync(file, source);
-  // The body runs in a thread of its own (body-worker.mjs). Its verb calls are messages that this session serves in the body's context, so
-  // each call is logged with the body's seq and a shell it starts is tagged with it. The thread is terminated when the body ends, and at a
-  // stop, which is how a body that never awaits is stopped.
-  const worker = new Worker(BODY_WORKER, { workerData: { file, kind, project, verbs: verbs.map(({ name, description, inputSchema }) => ({ name, description, inputSchema })) }, stdout: true, stderr: true });
-  // The body's console output is drained here, so it cannot reach the session's stdout, which carries the protocol.
-  worker.stdout.resume();
-  worker.stderr.resume();
-  let stopped = false;
+  // The body waits for a slot (takeSlot), and its thread starts when it gets one. The slot is held until the thread stops, so the threads
+  // that run at once are the cap. A stop terminates the thread, or, while the body still waits, takes it out of the queue.
+  const slot = takeSlot(log, { body: startSeq, step });
+  let spawned = null;
+  let stoppedBeforeStart = false;
   const stop = () => {
-    stopped = true;
-    worker.terminate();
+    if (spawned !== null) spawned.terminate();
+    else stoppedBeforeStart = true;
+    if (slot.granted) releaseSlot(slot);
+    else cancelSlot(slot);
   };
-  const done = new Promise((resolve) => {
-    worker.on('message', (msg) => {
-      if (msg.type === 'call') {
-        if (stopped) return;
-        const work = bodyContext.run({ body: startSeq }, () => Promise.resolve().then(() => call(msg.name, msg.args)));
-        work.catch((err) => ({ ok: false, error: err.message })).then((result) => {
-          if (!stopped) worker.postMessage({ type: 'reply', id: msg.id, result });
-        });
-      } else if (msg.type === 'refusal') {
-        log?.append('refusal', { step, tool: 'run_code', stage: 'require', error: msg.error });
-      } else if (msg.type === 'done') {
-        resolve(msg.ok ? { ok: true, text: msg.text } : { ok: false, error: msg.error });
-      }
-    });
-    worker.on('error', (err) => resolve({ ok: false, error: err.message }));
-    worker.on('exit', () => resolve({ ok: false, error: 'the body stopped before it returned' }));
+  const done = slot.ready.then(() => {
+    if (stoppedBeforeStart) return { ok: false, error: 'the body was stopped before it started' };
+    startSlot(slot);
+    spawned = spawnWorker({ file, kind, project, verbs, call, log, step, startSeq });
+    spawned.done.then(stop);
+    return spawned.done;
   });
-  done.then(stop);
   // The background run's result has the same shape as a foreground reply, so the job's status and the call's reply agree.
   const result = done.then((reply) => (reply.ok
     ? { ok: true, output: reply.text.slice(0, OUTPUT_CAP), truncated: reply.text.length > OUTPUT_CAP }
@@ -188,9 +257,10 @@ export async function runBody({ body, timeoutMs = DEFAULT_TIMEOUT_MS, format, ve
     rmSync(file, { force: true });
     return { ...outcome, loads };
   }
-  const name = background({ result, cleanup: () => rmSync(file, { force: true }), kill: stop, body: startSeq });
+  const queued = !slot.granted;
+  const name = background({ result, cleanup: () => rmSync(file, { force: true }), kill: stop, body: startSeq, queued, started: slot.ready });
   const logged = log.eventsFrom(startSeq + 1).filter((event) => event.kind === 'code-call').map((event) => ({ seq: event.seq, tool: event.tool, ok: event.ok }));
-  return { ok: true, background: name, state: 'running', logged, loads };
+  return { ok: true, background: name, state: queued ? 'queued' : 'running', logged, loads };
 }
 
 // Static import statements are hoisted to the module's top, and may span lines. Their ./ and ../ specifiers become confined absolute

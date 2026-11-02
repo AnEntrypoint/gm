@@ -209,11 +209,13 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
   // A body that ran past its foreground budget becomes a background job, named body-<seq> after its first log event. It has a status file
   // like a shell job, but no process: its output is its verb calls, read back from the log, and it ends with its result. A stop settles the
   // job at once and kills the shells the body started; the body's next verb call refuses, so a reply that comes late changes nothing.
-  function adoptBody({ result, cleanup, kill, body }) {
+  // A body that waits for a slot is adopted in state queued, and it starts when its slot is granted (started resolves then). Its lifetime and
+  // its notices count from that start, so a body is not killed for the time it waited.
+  function adoptBody({ result, cleanup, kill, body, queued = false, started = Promise.resolve() }) {
     let name = `body-${body}`;
     for (let n = 2; jobs.has(name); n += 1) name = `body-${body}-${n}`;
     const startMono = log.now();
-    const status = { job: name, body, state: 'running', startMono };
+    const status = { job: name, body, state: queued ? 'queued' : 'running', startMono };
     mkdirSync(join(runDir, 'jobs'), { recursive: true });
     writeStatus(name, status);
     const job = { name, body, settled: false };
@@ -240,11 +242,27 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
       settle('killed', { reason });
       log.append('job-killed', { job: name, reason, tail, ...(reason === 'lifetime' ? { lifetimeMs: jobLifetimeMs } : {}) });
     };
-    const lifetime = setTimeout(() => job.stop('lifetime'), jobLifetimeMs);
-    const reminder = setInterval(() => log.append('job-running', { job: name, body, runningMs: Math.round(log.now() - startMono) }), BODY_NOTICE_MS);
+    let lifetime;
+    let reminder;
+    const begin = () => {
+      lifetime = setTimeout(() => job.stop('lifetime'), jobLifetimeMs);
+      reminder = setInterval(() => log.append('job-running', { job: name, body, runningMs: Math.round(log.now() - startMono) }), BODY_NOTICE_MS);
+    };
     result.then((reply) => (reply.ok ? settle('exited', { value: reply.output, truncated: reply.truncated }) : settle('failed', { error: reply.error })));
     jobs.set(name, job);
-    log.append('job', { job: name, body, state: 'running' });
+    log.append('job', { job: name, body, state: status.state });
+    if (queued) {
+      // The job starts when its slot is granted. A stop before that leaves the queue, so the job never starts.
+      started.then(() => {
+        if (job.settled) return;
+        status.state = 'running';
+        writeStatus(name, status);
+        log.append('job', { job: name, body, state: 'running' });
+        begin();
+      });
+    } else {
+      begin();
+    }
     return name;
   }
 
@@ -263,7 +281,7 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
     for (const file of readdirSync(dir)) {
       if (!file.endsWith('.json')) continue;
       const status = JSON.parse(readFileSync(join(dir, file), 'utf8'));
-      if (status.state !== 'running') continue;
+      if (status.state !== 'running' && status.state !== 'queued') continue;
       const tail = status.body !== undefined ? bodyText(log, status.body, TAIL_CAP) : readTail(status.output, TAIL_CAP);
       if (status.body === undefined) signalGroup(status.pid, 'SIGKILL');
       writeStatus(status.job, { ...status, state: 'killed', reason: 'restart' });
