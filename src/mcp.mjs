@@ -6,6 +6,7 @@ import { basename, dirname, join, resolve } from 'node:path';
 import { createInterface } from 'node:readline';
 import { DEFAULT_WITNESS, prefixShaOf, renderTools } from './prompt.mjs';
 import { isDirectory, loadTask, newRunId, openRun, ROOT, RUNS } from './run.mjs';
+import { flushAllLogs } from './log.mjs';
 import { conflicts, createTools, loggedReply, OUTPUT_PAGE, DEFAULT_STUCK_MS, DEFAULT_MONITOR_MS } from './tools.mjs';
 import { GIT_TOOLS } from './git.mjs';
 import { ROW_TOOLS } from './rows.mjs';
@@ -443,6 +444,8 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     const startMono = log.now();
     log.enter();
     const action = log.append('action', { step, tool, args, ...(rpcId === undefined ? {} : { rpcId }) });
+    // A body, a shell command or a job can run long, so its start is in the file before it runs.
+    if (LONG_TOOLS.has(tool)) flushAllLogs();
     let result;
     try {
       result = await exec();
@@ -579,7 +582,11 @@ function resumeFrom(events) {
   return { steps, ended: end ? end.status : null };
 }
 
+// The tools whose start is written to the log before they run: a body, a shell command, and a job.
+const LONG_TOOLS = new Set(['run_code', 'run_shell', 'job_start']);
+// A reply is written only after the events so far are in the log, so the log holds every event a reply reports.
 function write(message) {
+  flushAllLogs();
   process.stdout.write(`${JSON.stringify(message)}\n`);
 }
 

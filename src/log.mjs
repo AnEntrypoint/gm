@@ -4,19 +4,32 @@ import { performance } from 'node:perf_hooks';
 const QUERY_CAP = 20000;
 // The events kept in memory, the last ones. Any other event is read from the file at its offset.
 const WINDOW = 512;
+// Events are written to the file in batches of this many, and at every flush point (see flushAllLogs). A batch is one append, not one per event.
+const BATCH = 256;
+const writers = new Set();
 
 // The log lives in its file. The worker keeps the byte offset of every event and the last WINDOW events, so the memory does not grow
-// with the length of the run. A restart rebuilds the offsets and the window from the file.
+// with the length of the run. A restart rebuilds the offsets and the window from the file. Events wait in memory only until the next flush
+// point: before any reply is written, before a body, a shell command or a job starts, before the file is read, and at process exit. So
+// nothing is replied before its events are in the file.
 export function openLog(file) {
   const { offsets, tail, size: start } = scanLog(file);
   let size = start;
   let inFlight = 0;
+  let unwritten = [];
+  const flush = () => {
+    if (unwritten.length === 0) return;
+    appendFileSync(file, unwritten.join(''));
+    unwritten = [];
+  };
+  writers.add(flush);
   const offset = tail.length ? tail.at(-1).mono : 0;
   const now = () => round(offset + performance.now());
   const firstInWindow = () => offsets.length - tail.length + 1;
   const at = (seq) => {
     if (seq < 1 || seq > offsets.length) return undefined;
     if (seq >= firstInWindow()) return tail[seq - firstInWindow()];
+    flush();
     const begin = offsets[seq - 1];
     const end = seq < offsets.length ? offsets[seq] : size;
     return JSON.parse(readRange(file, begin, end));
@@ -36,7 +49,8 @@ export function openLog(file) {
       if (typeof data.startMono === 'number') event.durMs = round(mono - data.startMono);
       const line = `${JSON.stringify(event)}\n`;
       offsets.push(size);
-      appendFileSync(file, line);
+      unwritten.push(line);
+      if (unwritten.length >= BATCH) flush();
       size += Buffer.byteLength(line);
       tail.push(event);
       if (tail.length > WINDOW) tail.shift();
@@ -50,13 +64,26 @@ export function openLog(file) {
     },
     // The first events after seq that match, in order, at most limit. The file is read from the first of them, so a page costs the lines
     // it reads, not the whole log. after is a whole number of events.
-    take: (after, limit, match) => (after >= offsets.length ? [] : scanFrom(file, offsets[after], size, limit, match)),
+    take: (after, limit, match) => {
+      flush();
+      return after >= offsets.length ? [] : scanFrom(file, offsets[after], size, limit, match);
+    },
     // The whole history, read from the file. Only the callers that need every event use it.
-    events: () => readEvents(file),
+    events: () => {
+      flush();
+      return readEvents(file);
+    },
+    flush,
     recent: (n) => tail.slice(-n),
     count: () => offsets.length,
   };
 }
+
+// Writes every open log's events to its file. The worker calls it before a reply, and the exit of the process calls it too.
+export function flushAllLogs() {
+  for (const flush of writers) flush();
+}
+process.on('exit', flushAllLogs);
 
 // The offset of every event's line, the file size, and the last WINDOW events, read from the file in chunks.
 function scanLog(file) {
