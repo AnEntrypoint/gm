@@ -52,8 +52,7 @@ export function createRowVerbs({ root, confine, log }) {
 
   async function listRows(kind, status) {
     if (!STATUSES.includes(status)) return fail(`status must be one of ${STATUSES.join(', ')}`);
-    const rows = (await readRows()).filter((row) => row.kind === kind && (status === 'all' || row.status === status));
-    rows.sort((a, b) => compareText(String(a.createdAt), String(b.createdAt)) || compareText(a.id, b.id));
+    const rows = sortByCreated((await readRows(confine)).filter((row) => row.kind === kind && (status === 'all' || row.status === status)));
     return { ok: true, output: rows.length ? rows.map((row) => `${row.id} ${row.status} ${row.title}`).join('\n') : '(none)' };
   }
 
@@ -69,20 +68,6 @@ export function createRowVerbs({ root, confine, log }) {
     Object.assign(row, { status: 'resolved', witnessEvent: event, witnessCommit: commit, resolvedAt: new Date().toISOString() });
     await writeRow(row);
     return { ok: true, output: `${id} resolved by event ${event} at commit ${commit}` };
-  }
-
-  async function readRows() {
-    const dir = confine(ROW_DIR);
-    if (dir.refused) throw new Error(dir.refused);
-    let names;
-    try {
-      names = await readdir(dir.path);
-    } catch (err) {
-      if (err.code === 'ENOENT') return [];
-      throw err;
-    }
-    const files = names.filter((name) => name.endsWith('.yml'));
-    return Promise.all(files.map(async (name) => parseRow(await readFile(join(dir.path, name), 'utf8'))));
   }
 
   async function readRow(id) {
@@ -104,6 +89,34 @@ export function createRowVerbs({ root, confine, log }) {
     await writeFile(temp, renderRow(row));
     await rename(temp, at.path);
   }
+}
+
+// The open rows of a kind, for the reminder of a long body: how many rows there are and how many are open, and the first limit open rows in
+// list order. That window is the next rows to do. A row file that cannot be read makes the read throw, and the caller says so.
+export async function rowSummary(confine, kind, limit) {
+  const rows = sortByCreated((await readRows(confine)).filter((row) => row.kind === kind));
+  const open = rows.filter((row) => row.status === 'open');
+  const window = open.slice(0, limit).map((row) => ({ id: row.id, title: row.title }));
+  return { total: rows.length, open: open.length, window, more: open.length - window.length };
+}
+
+async function readRows(confine) {
+  const dir = confine(ROW_DIR);
+  if (dir.refused) throw new Error(dir.refused);
+  let names;
+  try {
+    names = await readdir(dir.path);
+  } catch (err) {
+    if (err.code === 'ENOENT') return [];
+    throw err;
+  }
+  const files = names.filter((name) => name.endsWith('.yml'));
+  return Promise.all(files.map(async (name) => parseRow(await readFile(join(dir.path, name), 'utf8'))));
+}
+
+// Creation order, then id, so the list order is the same for every reader.
+function sortByCreated(rows) {
+  return rows.sort((a, b) => compareText(String(a.createdAt), String(b.createdAt)) || compareText(a.id, b.id));
 }
 
 function newId(kind) {

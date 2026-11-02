@@ -8,7 +8,7 @@ import { DEFAULT_WITNESS, prefixShaOf, renderTools } from './prompt.mjs';
 import { isDirectory, loadTask, newRunId, openRun, ROOT, RUNS } from './run.mjs';
 import { flushAllLogs } from './log.mjs';
 import { clearPending, onPendingAppended, PENDING_FILE, takePending } from './pending.mjs';
-import { conflicts, createTools, loggedReply, OUTPUT_PAGE, DEFAULT_STUCK_MS, DEFAULT_MONITOR_MS } from './tools.mjs';
+import { conflicts, createTools, loggedReply, OUTPUT_PAGE, DEFAULT_STUCK_MS, DEFAULT_MONITOR_MS, BODY_NOTICE_MS } from './tools.mjs';
 import { GIT_TOOLS } from './git.mjs';
 import { ROW_TOOLS } from './rows.mjs';
 import { SEARCH_TOOLS } from './search.mjs';
@@ -47,7 +47,7 @@ const DEFAULT_MAX_INFLIGHT = 8;
 const DEFAULT_JOB_LIFETIME_MS = 1800000;
 // The most open jobs a next_context reply lists. The rest are counted in jobsOpenMore.
 const OPEN_LIST = 20;
-const USAGE = 'usage: node src/mcp.mjs --workspace <dir> --task <file-or-text> [--run-dir <dir>] [--max-steps N] [--max-inflight N] [--job-lifetime-ms N] [--stuck-ms N] [--monitor-ms N] [--surface tools|code]';
+const USAGE = 'usage: node src/mcp.mjs --workspace <dir> --task <file-or-text> [--run-dir <dir>] [--max-steps N] [--max-inflight N] [--job-lifetime-ms N] [--stuck-ms N] [--monitor-ms N] [--notice-ms N] [--surface tools|code]';
 
 const MCP_RULES = `# Rules
 
@@ -110,9 +110,9 @@ class RpcError extends Error {
   }
 }
 
-function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, resume = null, jobLifetimeMs = DEFAULT_JOB_LIFETIME_MS, stuckMs = DEFAULT_STUCK_MS, monitorMs = DEFAULT_MONITOR_MS, recovery = null, history = [], surface = 'code' }) {
+function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, resume = null, jobLifetimeMs = DEFAULT_JOB_LIFETIME_MS, stuckMs = DEFAULT_STUCK_MS, monitorMs = DEFAULT_MONITOR_MS, noticeMs = BODY_NOTICE_MS, recovery = null, history = [], surface = 'code' }) {
   const runId = basename(runDir);
-  const tools = createTools({ workspace, runDir, log, background: true, jobLifetimeMs, stuckMs, monitorMs });
+  const tools = createTools({ workspace, runDir, log, background: true, jobLifetimeMs, stuckMs, monitorMs, noticeMs });
   let pendingRecovery = recovery;
   let noticeSeq = lastContextSeq(log.events());
   const active = new Map();
@@ -417,7 +417,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
       ...(rulesOpen.size > 0 ? { rulesPending: rulesNotice() } : {}),
       ...(killed.length ? { jobsKilled: killed.map(({ seq, job, reason, lifetimeMs, tail }) => ({ seq, job, reason, lifetimeMs, tail })) } : {}),
       ...(started.length ? { jobsStarted: started.map(({ seq, job }) => ({ seq, job })) } : {}),
-      ...(stillRunning.length ? { jobsRunning: stillRunning.map(({ seq, job, runningMs }) => ({ seq, job, runningMs })) } : {}),
+      ...(stillRunning.length ? { jobsRunning: stillRunning.map(({ seq, job, runningMs, prd }) => ({ seq, job, runningMs, prd })) } : {}),
       ...(jobsEnded.length ? { jobsEnded } : {}),
       ...(turnedStuck.length ? { jobsStuck: turnedStuck.map(({ seq, job, body, sinceProgressMs }) => ({ seq, job, ...(body === undefined ? {} : { body }), sinceProgressMs })) } : {}),
       ...(progressedAgain.length ? { jobsUnstuck: progressedAgain.map(({ seq, job }) => ({ seq, job })) } : {}),
@@ -687,6 +687,7 @@ async function main(argv) {
   const jobLifetimeMs = positiveInt(flags['job-lifetime-ms'] ?? DEFAULT_JOB_LIFETIME_MS, '--job-lifetime-ms');
   const stuckMs = positiveInt(flags['stuck-ms'] ?? DEFAULT_STUCK_MS, '--stuck-ms');
   const monitorMs = positiveInt(flags['monitor-ms'] ?? DEFAULT_MONITOR_MS, '--monitor-ms');
+  const noticeMs = positiveInt(flags['notice-ms'] ?? BODY_NOTICE_MS, '--notice-ms');
   const surface = flags.surface ?? 'code';
   if (!SURFACES.includes(surface)) throw new Error('--surface takes tools or code');
   const task = loadTask(flags.task).trim();
@@ -712,7 +713,7 @@ async function main(argv) {
   logTools(log, resumed, servedTools(surface));
 
   sweepEndedCode(dirname(runDir), runDir);
-  const session = createSession({ workspace, runDir, log, task, maxSteps, maxInflight, resume, jobLifetimeMs, stuckMs, monitorMs, recovery: recovery && recovery.open.length > 0 ? recovery : null, history, surface });
+  const session = createSession({ workspace, runDir, log, task, maxSteps, maxInflight, resume, jobLifetimeMs, stuckMs, monitorMs, noticeMs, recovery: recovery && recovery.open.length > 0 ? recovery : null, history, surface });
   const lines = createInterface({ input: process.stdin, crlfDelay: Infinity });
   lines.on('line', session.accept);
   // Under a supervisor, the end of stdin means the supervisor has gone, so the run is paused. Closing it here would end the

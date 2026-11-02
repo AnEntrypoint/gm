@@ -5,7 +5,7 @@ import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { runQuery } from './log.mjs';
 import { foregroundGroups, killBody, killGroup, runCommand, signalGroup, spawnGroup } from './exec.mjs';
 import { createGitVerbs } from './git.mjs';
-import { createRowVerbs } from './rows.mjs';
+import { createRowVerbs, rowSummary } from './rows.mjs';
 import { createSearchVerbs } from './search.mjs';
 import { createFetchVerbs } from './fetch.mjs';
 import { createAstVerbs } from './code-ast.mjs';
@@ -49,8 +49,10 @@ const MAX_WAIT_MS = 30000;
 const JOB_NAME = /^[A-Za-z0-9_-]{1,64}$/;
 const BARRIER = { barrier: true };
 const DEFAULT_JOB_LIFETIME_MS = 1800000;
-// A background run reports that it is still running at each multiple of this, once per multiple.
-const BODY_NOTICE_MS = 180000;
+// A background run reports that it is still running at each multiple of this, once per multiple. Each report carries the open PRD rows: the
+// first NOTICE_PRD_WINDOW of them, and the counts, read when the report is made.
+export const BODY_NOTICE_MS = 180000;
+const NOTICE_PRD_WINDOW = 5;
 // A running job with no progress for this long is stuck, and the agent is told once. Progress is output a shell job writes, a verb call a
 // body makes or has in flight, and the start of the job. The check runs every monitorMs.
 export const DEFAULT_STUCK_MS = 180000;
@@ -81,7 +83,7 @@ export const COMPACT = {
   },
 };
 
-export function createTools({ workspace, runDir, log, background = true, jobLifetimeMs = DEFAULT_JOB_LIFETIME_MS, stuckMs = DEFAULT_STUCK_MS, monitorMs = DEFAULT_MONITOR_MS }) {
+export function createTools({ workspace, runDir, log, background = true, jobLifetimeMs = DEFAULT_JOB_LIFETIME_MS, stuckMs = DEFAULT_STUCK_MS, monitorMs = DEFAULT_MONITOR_MS, noticeMs = BODY_NOTICE_MS }) {
   const root = resolve(workspace);
   const realRoot = realpathSync(root);
   const jobs = new Map();
@@ -286,7 +288,15 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
       job.queued = false;
       job.startWall = Date.now();
       lifetime = setTimeout(() => job.stop('lifetime'), jobLifetimeMs);
-      reminder = setInterval(() => log.append('job-running', { job: name, body, runningMs: Math.round(log.now() - startMono) }), BODY_NOTICE_MS);
+      reminder = setInterval(() => {
+        const runningMs = Math.round(log.now() - startMono);
+        // The row read is asynchronous, so the job may settle before it returns. A report for a job that has settled is dropped.
+        rowSummary(confine, 'prd', NOTICE_PRD_WINDOW)
+          .catch((err) => ({ error: err.message }))
+          .then((prd) => {
+            if (!job.settled) log.append('job-running', { job: name, body, runningMs, prd });
+          });
+      }, noticeMs);
     };
     result.then((reply) => (reply.ok ? settle('exited', { value: reply.output, truncated: reply.truncated }) : settle('failed', { error: reply.error })));
     jobs.set(name, job);
