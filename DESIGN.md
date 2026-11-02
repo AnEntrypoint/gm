@@ -462,6 +462,14 @@ Witness, run memory-root/run-1793595966251 (a project with a helper, a leaf and 
 
 Memory, measured with the loop tool on the fixed code (memory/fix-plain.json and memory/fix-import.json, 1000 calls each). The identical ESM body grew 21.0 KB per call, against 44.2 before this change. The body that imports a project module grew 24.4 KB per call, against 51.6 before. The module instances no longer accumulate. What remains is the event log, which the worker keeps in memory, and each call adds about five events. Resident memory is therefore not flat. A flat figure needs the log to leave memory, which is a storage change and not part of this fix. The restart bound at GMNEW_MEMORY_LIMIT_MB stays as the backstop.
 
+## Horizon fields witness (2026-11-02)
+
+Each kind the gates depend on is taken from a real log that holds it. The event is placed in the first horizon, and then in the second, by the feed code the worker uses (feedOf over the log up to the event). The script is /tmp/gm-scratch/gm-new/compact/horizon-fields.mjs. All 18 checks passed.
+
+The records keep the fields the gates read. A commit (run review/run-1793564909795, landed-1793568639448) keeps its sha, paths and gate outcome in both horizons. A refusal (run runcode-fresh/format-1793570604328) keeps its reason. A finished end (run review/landed-1793568639448) keeps its status and its witness text. A closed end keeps its status and a witness key, which is null because nothing was finished. A review keeps its verdict and isolation, and a review-packet keeps its packet hash, in both horizons. A finish result keeps its witness and its full-output reference in both horizons. A failed shell call (run compact/witness2-1793595580169) keeps its exit code and the error line in the first horizon, and its exit code in the second.
+
+query_log over the full log of run compact/witness2-1793595580169 reaches the first event (seq 1) and the last (seq 437).
+
 ## Measured
 
 - Tool list hash witness (brief change 7, run 2026-11-01-18-39-35-820e47): the `tools` event at seq 258 has sha 5e8c956cc447. The fetch description changed, which was needed (the body is untrusted input), and the next start logged `tools-changed` at seq 266 with old 5e8c956cc447 and new 39a328f0521e, then `tools` at seq 267. Friction, recorded: an edit that added a call before its definition made the restart fail, and the supervisor held every call in its failed state until the next source change. That change restarted the worker and recovered it. Supervisor defect for item 1 of the brief to note.
