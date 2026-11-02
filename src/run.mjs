@@ -23,6 +23,8 @@ export function createRun({ runDir, rules, meta }) {
 export function openRun({ runDir, rules, meta }) {
   const file = join(runDir, 'log.jsonl');
   if (existsSync(file)) return { log: openLog(file), resumed: true };
+  // A completed run that retention compressed has its record in log.jsonl.gz. A new log beside that record would not be a resume, so it is refused.
+  if (existsSync(`${file}.gz`)) throw new Error(`run ${runDir} is compressed, so it cannot be resumed; start a new run`);
   return { log: createRun({ runDir, rules, meta }), resumed: false };
 }
 
