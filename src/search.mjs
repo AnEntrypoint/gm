@@ -1,6 +1,7 @@
 import { execFile } from 'node:child_process';
 import { readFile, lstat } from 'node:fs/promises';
 import { promisify } from 'node:util';
+import { resultZone1 } from './compact.mjs';
 
 const execFileAsync = promisify(execFile);
 const K1 = 1.2;
@@ -45,6 +46,15 @@ export const SEARCH_TOOLS = [
 // search and wiki_search read text files only: search the git-tracked files, and wiki_search the wiki pages, tracked or not. A line is
 // one BM25 document, so a hit names the line that holds the term. Each file is re-read only when its mtime or size changes, and an
 // index is rebuilt only when a file in its listing changed.
+// A search reads the files, so the second horizon cuts its results: the hits can be found again by searching.
+export const COMPACT = {
+  tools: {
+    search: { zone1: resultZone1, zone2: () => null },
+    grep: { zone1: resultZone1, zone2: () => null },
+    wiki_search: { zone1: resultZone1, zone2: () => null },
+  },
+};
+
 export function createSearchVerbs({ root, confine }) {
   const files = new Map();
   const built = new Map();

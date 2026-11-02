@@ -7,6 +7,7 @@ import { lstat, readFile } from 'node:fs/promises';
 import { posix } from 'node:path';
 import { promisify } from 'node:util';
 import { parse } from 'acorn';
+import { resultZone1 } from './compact.mjs';
 
 const execFileAsync = promisify(execFile);
 const SOURCE = /\.(?:js|mjs|cjs|ts)$/;
@@ -41,6 +42,14 @@ export const CODE_TOOLS = [
     inputSchema: obj({ name: str, depth: num }, ['name']),
   },
 ];
+
+// callers and impact search the code, so the second horizon cuts their results.
+export const COMPACT = {
+  tools: {
+    callers: { zone1: resultZone1, zone2: () => null },
+    impact: { zone1: resultZone1, zone2: () => null },
+  },
+};
 
 export function createAstVerbs({ root, confine }) {
   const cache = new Map();

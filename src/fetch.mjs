@@ -1,5 +1,6 @@
 import { archiveSource } from './sources.mjs';
 import { errorTypeOf, retrying } from './retry.mjs';
+import { resultZone1, resultZone2 } from './compact.mjs';
 
 const DEFAULT_TIMEOUT_MS = 15000;
 const MAX_TIMEOUT_MS = 60000;
@@ -24,6 +25,16 @@ export const FETCH_TOOLS = [
     inputSchema: obj({ url: str, timeoutMs: num, maxBytes: num, maxRedirects: num }, ['url']),
   },
 ];
+
+// A fetch keeps where its text came from in both horizons. The text itself is archived in sources/.
+export const COMPACT = {
+  tools: {
+    fetch: {
+      zone1: (event, action) => ({ ...resultZone1(event, action), source: event.source, sourceNew: event.sourceNew }),
+      zone2: (event, action) => ({ ...resultZone2(event, action), source: event.source, sourceNew: event.sourceNew }),
+    },
+  },
+};
 
 export function createFetchVerbs({ log, root }) {
   const verbs = {

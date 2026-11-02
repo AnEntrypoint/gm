@@ -2,6 +2,7 @@
 // ends after them. The reviewer is spawned by the host, which passes its reply in. gm-new records the isolation as host-attested and
 // does not verify it. The functions are in review.mjs.
 import { reviewJoin, reviewPacket, reviewRecord } from './review.mjs';
+import { resultZone1, resultZone2 } from './compact.mjs';
 
 const OUTPUT_PAGE = 20000;
 const str = { type: 'string' };
@@ -25,6 +26,26 @@ export const REVIEW_TOOLS = [
     inputSchema: obj({}),
   },
 ];
+
+// The review tools keep their witness in both horizons: review_packet keeps the packet hash that a record names. review_join lists the
+// records, so the second horizon cuts it.
+const packetOf = (event) => {
+  try {
+    return JSON.parse(event.output).packet;
+  } catch {
+    return undefined;
+  }
+};
+export const COMPACT = {
+  tools: {
+    review_packet: {
+      zone1: resultZone1,
+      zone2: (event, action) => ({ ...resultZone2(event, action), packet: packetOf(event) }),
+    },
+    review_record: { zone1: resultZone1, zone2: resultZone2 },
+    review_join: { zone1: resultZone1, zone2: () => null },
+  },
+};
 
 export function createReviewVerbs({ root, log }) {
   return {

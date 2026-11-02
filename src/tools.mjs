@@ -10,6 +10,7 @@ import { createSearchVerbs } from './search.mjs';
 import { createFetchVerbs } from './fetch.mjs';
 import { createAstVerbs } from './code-ast.mjs';
 import { createWikiVerbs } from './wiki-tools.mjs';
+import { resultZone1, resultZone2 } from './compact.mjs';
 import { createReviewVerbs } from './review-tools.mjs';
 
 const DEFAULT_TIMEOUT_MS = 60000;
@@ -23,6 +24,28 @@ const DEFAULT_JOB_LIFETIME_MS = 1800000;
 const PATH_TOOLS = new Set(['read_file', 'write_file', 'edit_file', 'list_dir', 'stat_file']);
 const WRITE_TOOLS = new Set(['write_file', 'edit_file']);
 const READ_ONLY = new Set(['job_status', 'search', 'wiki_search', 'grep', 'fetch', 'callers', 'impact', 'review_join']);
+
+// The tools this module owns, with their strategies. A file write keeps its path and its size, and an edit keeps its path and the sizes
+// of the old and new text. A listing or a log query is cut in the second horizon. finish keeps its witness and its gaps whole in both
+// horizons, because the gate and the next step depend on them. run_shell keeps its exit code and its error lines.
+const compactBytes = (text) => (typeof text === 'string' ? Buffer.byteLength(text) : undefined);
+const compactWrite = (action) => ({ path: action?.args?.path, bytes: compactBytes(action?.args?.content) });
+const compactEdit = (action) => ({ path: action?.args?.path, oldBytes: compactBytes(action?.args?.old), newBytes: compactBytes(action?.args?.new) });
+const compactFinish = (event, action) => ({ seq: event.seq, tool: 'finish', ok: event.ok, witness: action?.args?.witness, gaps: action?.args?.gaps, full: { seq: event.seq, bytes: compactBytes(event.output) ?? 0 } });
+export const COMPACT = {
+  tools: {
+    read_file: { zone1: resultZone1, zone2: resultZone2 },
+    write_file: { zone1: (event, action) => ({ ...resultZone1(event, action), args: compactWrite(action) }), zone2: (event, action) => ({ ...resultZone2(event, action), args: compactWrite(action) }) },
+    edit_file: { zone1: (event, action) => ({ ...resultZone1(event, action), args: compactEdit(action) }), zone2: (event, action) => ({ ...resultZone2(event, action), args: compactEdit(action) }) },
+    stat_file: { zone1: resultZone1, zone2: resultZone2 },
+    list_dir: { zone1: resultZone1, zone2: () => null },
+    run_shell: { zone1: resultZone1, zone2: resultZone2 },
+    job_start: { zone1: resultZone1, zone2: resultZone2 },
+    job_status: { zone1: resultZone1, zone2: resultZone2 },
+    query_log: { zone1: resultZone1, zone2: () => null },
+    finish: { zone1: compactFinish, zone2: compactFinish },
+  },
+};
 
 export function createTools({ workspace, runDir, log, background = true, jobLifetimeMs = DEFAULT_JOB_LIFETIME_MS }) {
   const root = resolve(workspace);

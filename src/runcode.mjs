@@ -6,6 +6,7 @@ import { createRequire, register } from 'node:module';
 import { existsSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { resultZone1, resultZone2, shortKind } from './compact.mjs';
 
 const DEFAULT_TIMEOUT_MS = 120000;
 const MAX_TIMEOUT_MS = 600000;
@@ -82,6 +83,17 @@ function guardedRequire(project, log, step) {
 
 // The tool's description names the verbs and nothing else about them, so a change to a verb's description does not change
 // the served list, or the prefix hash that the list feeds.
+// run_code is the tool the default surface serves. A body's arguments keep their size and their head. Its code-load events list the
+// project files a body loaded, and the second horizon cuts them.
+export const COMPACT = {
+  tools: {
+    run_code: { zone1: resultZone1, zone2: resultZone2 },
+  },
+  kinds: {
+    'code-load': { zone1: shortKind, zone2: () => null },
+  },
+};
+
 export function runCodeTool(verbNames) {
   return {
     name: 'run_code',

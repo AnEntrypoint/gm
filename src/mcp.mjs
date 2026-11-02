@@ -16,6 +16,16 @@ import { WIKI_TOOLS } from './wiki-tools.mjs';
 import { REVIEW_TOOLS } from './review-tools.mjs';
 import { runBody, runCodeTool } from './runcode.mjs';
 import { lintWiki } from './wiki.mjs';
+import { COMPACT as SEARCH_COMPACT } from './search.mjs';
+import { COMPACT as FETCH_COMPACT } from './fetch.mjs';
+import { COMPACT as GIT_COMPACT } from './git.mjs';
+import { COMPACT as CODE_COMPACT } from './code-ast.mjs';
+import { COMPACT as ROWS_COMPACT } from './rows.mjs';
+import { COMPACT as WIKI_COMPACT } from './wiki-tools.mjs';
+import { COMPACT as REVIEW_COMPACT } from './review-tools.mjs';
+import { COMPACT as RUNCODE_COMPACT } from './runcode.mjs';
+import { COMPACT as TOOLS_COMPACT } from './tools.mjs';
+import { feedOf, registryOf, resultZone1, resultZone2, shownTotalOf } from './compact.mjs';
 import { writeSummary } from './summary.mjs';
 
 const PROTOCOL_VERSION = '2025-06-18';
@@ -27,8 +37,6 @@ const SKILL_URI = 'gm://skill/SKILL.md';
 const SKILL = parseSkill(readFileSync(join(ROOT, 'skills', 'gm', 'SKILL.md'), 'utf8'));
 const SKILL_PROMPT = { name: SKILL.name, description: SKILL.description, arguments: [{ name: 'task', description: 'The task to run', required: false }] };
 const SKILL_RESOURCE = { uri: SKILL_URI, name: `${SKILL.name} skill`, description: SKILL.description, mimeType: 'text/markdown' };
-const WINDOW = 20;
-const EVENT_CAP = 4000;
 const DEFAULT_MAX_STEPS = 50;
 const DEFAULT_MAX_INFLIGHT = 8;
 const DEFAULT_JOB_LIFETIME_MS = 1800000;
@@ -50,7 +58,7 @@ const number = { type: 'number' };
 const objectSchema = (properties, required = []) => ({ type: 'object', properties, required });
 
 const TOOLS = [
-  { name: 'next_context', description: 'Begin a step. Returns rules, task, witness requirement, the last 20 log events and prefixSha. Call it at the start of each step.', inputSchema: objectSchema({}) },
+  { name: 'next_context', description: 'Begin a step. Returns rules, task, witness requirement, the events new since the last step in full, the older ones in compact form within two horizons, and prefixSha. Call it at the start of each step. query_log reaches every event.', inputSchema: objectSchema({}) },
   { name: 'read_file', description: 'Read a text file in the workspace, one page of at most 20000 characters. Returns output, total characters, the offset of this page and next, the offset of the next page (null at the end).', inputSchema: objectSchema({ path: text, offset: number, limit: number }, ['path']) },
   { name: 'write_file', description: 'Write a text file in the workspace, creating parent directories.', inputSchema: objectSchema({ path: text, content: text }, ['path', 'content']) },
   { name: 'edit_file', description: 'Replace old with new in a workspace text file. old must occur once, unless replaceAll is true.', inputSchema: objectSchema({ path: text, old: text, new: text, replaceAll: { type: 'boolean' } }, ['path', 'old', 'new']) },
@@ -131,7 +139,9 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     } catch (err) {
       result = { ok: false, error: err.message };
     }
-    log.append('code-call', { step: steps, tool: name, startMono, ok: result?.ok === true, ...(result?.ok === true ? {} : { error: result?.error }) });
+    // The full result is logged, so query_log reaches the output and the exit code of a verb called inside a body.
+    const fields = { ok: result?.ok === true, args, exitCode: result?.exitCode, signal: result?.signal, output: result?.output, error: result?.error };
+    log.append('code-call', { step: steps, tool: name, startMono, ...fields });
     return result;
   }
 
@@ -306,7 +316,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
       witness: DEFAULT_WITNESS,
       prefixSha: prefixShaOf({ rules, task, witness: DEFAULT_WITNESS, tools: servedText }),
       total: log.count(),
-      events: log.recent(WINDOW).map(compactEvent),
+      ...feedOf(log.events(), REGISTRY, { shown: shownTotalOf(log.events()) }),
       ...(recoveryNow ? { recovery: recoveryNow } : {}),
       ...(killed.length ? { jobsKilled: killed.map(({ seq, job, reason, lifetimeMs, tail }) => ({ seq, job, reason, lifetimeMs, tail })) } : {}),
       ...(jobsEnded.length ? { jobsEnded } : {}),
@@ -484,10 +494,11 @@ function isRequestShape(message) {
   return message !== null && typeof message === 'object' && !Array.isArray(message) && typeof message.method === 'string';
 }
 
-function compactEvent(event) {
-  const text = JSON.stringify(event);
-  return text.length <= EVENT_CAP ? event : { seq: event.seq, kind: event.kind, truncated: text.slice(0, EVENT_CAP) };
-}
+// The lifecycle events the worker writes. A code call is cut in the second horizon. The other kinds use the defaults in compact.mjs.
+const SELF_COMPACT = {
+  tools: { next_context: { zone1: resultZone1, zone2: resultZone2 } },
+};
+const REGISTRY = registryOf(TOOLS_COMPACT, SEARCH_COMPACT, FETCH_COMPACT, GIT_COMPACT, CODE_COMPACT, ROWS_COMPACT, WIKI_COMPACT, REVIEW_COMPACT, RUNCODE_COMPACT, SELF_COMPACT);
 
 function parseFlags(argv) {
   const flags = {};

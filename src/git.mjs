@@ -2,6 +2,7 @@ import { relative } from 'node:path';
 import { runCommand } from './exec.mjs';
 import { runGate } from './gate.mjs';
 import { errorTypeOf, retrying } from './retry.mjs';
+import { resultZone1, resultZone2 } from './compact.mjs';
 
 const GIT_TIMEOUT_MS = 120000;
 const GH_TIMEOUT_MS = 60000;
@@ -38,6 +39,16 @@ export const GIT_TOOLS = [
 export function commitExists(root, sha) {
   return runCommand('git', ['cat-file', '-e', `${sha}^{commit}`], { cwd: root, timeoutMs: CHECK_TIMEOUT_MS, env: GIT_ENV }).then((result) => result.ok);
 }
+
+// Git and CI results keep their outcome in both horizons. A log or a diff is a listing, so the second horizon cuts it.
+const GIT_RESULTS = ['git_status', 'git_add', 'git_rm', 'git_commit', 'git_push', 'git_fetch', 'git_pull', 'git_checkout', 'git_branch', 'ci_status'];
+const GIT_LISTINGS = ['git_log', 'git_diff', 'git_show'];
+export const COMPACT = {
+  tools: {
+    ...Object.fromEntries(GIT_RESULTS.map((name) => [name, { zone1: resultZone1, zone2: resultZone2 }])),
+    ...Object.fromEntries(GIT_LISTINGS.map((name) => [name, { zone1: resultZone1, zone2: () => null }])),
+  },
+};
 
 export function createGitVerbs({ root, confine, log }) {
   const gitRaw = (args, timeoutMs = GIT_TIMEOUT_MS) => runCommand('git', args, { cwd: root, timeoutMs, env: GIT_ENV });

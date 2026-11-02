@@ -2,6 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { mkdir, readdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { commitExists, SHA } from './git.mjs';
+import { resultZone1, resultZone2 } from './compact.mjs';
 
 export const ROW_DIR = 'work/rows';
 const KINDS = { prd: 'work item', unknown: 'open question' };
@@ -19,6 +20,18 @@ export const ROW_TOOLS = Object.entries(KINDS).flatMap(([kind, label]) => [
     inputSchema: obj({ id: str, event: { type: 'number' }, commit: str }, ['id', 'event', 'commit']),
   },
 ]);
+
+// A row keeps its id and its state in both horizons. A listing of rows is cut in the second horizon.
+export const COMPACT = {
+  tools: {
+    prd_add: { zone1: resultZone1, zone2: resultZone2 },
+    prd_resolve: { zone1: resultZone1, zone2: resultZone2 },
+    unknown_add: { zone1: resultZone1, zone2: resultZone2 },
+    unknown_resolve: { zone1: resultZone1, zone2: resultZone2 },
+    prd_list: { zone1: resultZone1, zone2: () => null },
+    unknown_list: { zone1: resultZone1, zone2: () => null },
+  },
+};
 
 export function createRowVerbs({ root, confine, log }) {
   const handlers = {};
