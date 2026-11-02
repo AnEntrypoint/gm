@@ -649,6 +649,43 @@ What this does not show: that taskkill behaves the same on Windows. Wine impleme
 
 Rule re-injection and the live witness are a different limit, and Wine does not touch them: they need live model trials.
 
+## Owner decision: compression removed, pending queue added (2026-11-02)
+
+The owner decided, relayed by gm: remove compression. The audit log `runs/<id>/log.jsonl` stays raw and complete, and nothing is compressed or deleted. A query of an old run must not depend on a reader for a compressed form. In its place, a separate pending queue carries only the events an agent must act on, for live feedback and for read-and-clear.
+
+- Removed: the compression sweep, the size cap, the gzip read path and the resume guard for compressed runs (the retention module, retain.mjs, deleted in commit `f4968bb`). Nothing in the repository's `runs/` had been compressed, so nothing needed restoring. The efficiency table's retention row (item 6) describes the compression that was removed, and it is superseded by this decision.
+- Added: `src/pending.mjs` and `runs/<id>/pending.jsonl` (commit `f03e01f`). A record is appended only after the log holds its event, so the queue never names an event the log lacks, and it carries the event's seq as its `id`. The kinds are: a job's start and end, a killed job, a stuck or unstuck job, a rules notice and a recovery.
+- Live feedback: `next_context` returns `pendingFile`, and the agent follows that file with a shell job (`tail -n +1 -F`), reading the job's output with `job_status`. The skill's section "Pending events" says so.
+- Read-and-clear: `next_context` returns the pending events once, and removes them after its reply is written. The CLI `events --run <id> --read-clear` does the same. The queue is renamed, the renamed copy is read, and the copy is removed. A crash between the read and the removal delivers those records again, and never fewer. A consumer skips an id it has seen.
+
+Witness, scratch check `audit/pending-check.mjs`, run `pending-witness-1793611099864`, a real run under `runs/`, removed afterwards:
+- A job exit (id 11) is in `pending.jsonl` (exit in file: true), and in the tail job's output (exit in tail: true).
+- The first `next_context` returns ids 3, 5, 8 and 11, and the second returns none. The file is gone after the read (0 records left).
+- The CLI read-and-clear prints the two events of a second job, then prints nothing.
+- A read that crashed before its removal (the copy left behind) delivers its two records again, and the copy is removed (crash re-delivered: true).
+- The raw log holds 78 events, and `query_log` paged through the whole log returns 85 (its own actions included), so no event is missing. No `.gz` file exists.
+
+Limits, stated for the owner: a tail job that stays idle for three minutes is reported as stuck, and that report is a pending event, so the agent sees a stuck notice for a healthy tail. Each pending event costs one log flush at the time it is written. Only the kinds above are pending, so a long job's reminders are not.
+
+## Side-effect flush (2026-11-02, gm condition on the batched log)
+
+A side-effecting action's start is flushed before it runs, so a crash after its effect still leaves its start in the log, and recovery lists it as open. The tools that only read are listed in `READ_ONLY_TOOLS` (`src/mcp.mjs`). Every other tool is flushed, and so is a side-effecting verb called inside a body, which now has its own start event naming the body. A code-call closes its start, as a result closes a top-level action. Commit `304ff1d`.
+
+Witness, `audit/recover-check.mjs`: a `write_file` to a named pipe, which never returns, and a `write_file` in a `run_code` body to a second pipe, each followed by SIGKILL before any reply. The start must be on disk at the kill, and a restarted worker on the same run must list it as open.
+- Before, HEAD (`head-now`): no start on disk in either case, and the recovery lists nothing for the write. Run ids `recover/run-top`, `recover/run-body` under the scratch directory.
+- After, `304ff1d`: the top-level write is open as seq 4 (`write_file`), and the body write is open as seq 6, with `body` 5 (its `run_code`). Both pass.
+
+## Idle trace (2026-11-02, gm request)
+
+The idle wake-ups are V8's memory reducer, a background garbage collector that runs main-thread tasks while the process is idle. Evidence, in scratch under `audit/`:
+- A bare Node process that only waits makes no wake-up in 45 seconds (`bare-wait.sh`: 0 switches for a timer, a stdin pipe, and an interval).
+- A standalone worker makes 5 wake-ups in 45 seconds by default, and 0 with `--no-memory-reducer` (`worker-idle.sh plain`, `worker-idle.sh no-memory-reducer`).
+- A standalone core, with updates off, makes 5 by default and 0 with the flag (`core-idle.sh plain-core-noupd`, `flag-core-noupd`). With updates on, the first update check at 30 seconds adds wake-ups, so the core's numbers were 18 and 13 for the same window.
+- The whole stack, traced per thread (`idle-threads.mjs`, runs `trace-now` and `trace-flag`): before, 8 switches a minute on the main thread for each of the relay, the core and the worker. After the worker flag (commit `0d9dd42`), the worker shows 0. The relay shows 0 in this run and 8 in the first, which varies run to run. The core shows 8, because the relay starts it without the flag.
+- The runtime does not accept the flag through `NODE_OPTIONS`, and `v8.setFlagsFromString` in a preload has no effect (5 switches with it). So the flag has to be on the command line of the process: the worker gets it from the core, and the core and relay get it only from the host's command, in `.mcp.json`. That is a config decision for the owner, and it needs the reconnect that is already pending. It is not made here.
+- Memory cost, `mem-burst.mjs`: after 3000 calls and 30 seconds idle, 87.1 MB by default and 84.7 MB with the flag. The default did not shrink in the idle period, so the reducer gave no saving here.
+- Timers in the stack, from the preload trace: the relay's only timer is its shutdown timeout. The core has its shutdown and startup timers and the update check, which is an hourly interval with a first check at 30 seconds (updates off in these traces). The worker has none while idle, since its stuck check now runs only while a job is open.
+
 ## Efficiency audit (2026-11-02, gm request)
 
 Each item was measured before and after with the same harness, in scratch under `/tmp/gm-scratch/gm-new/audit`, and the results are the JSON files named in the table. Each item that showed a gain is committed through `audit/ship.sh`, which runs the gate, takes its exit code, and commits and pushes only when that code is zero. Items that did not show a gain are dropped and say why.
