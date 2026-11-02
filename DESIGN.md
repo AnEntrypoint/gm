@@ -470,6 +470,16 @@ The records keep the fields the gates read. A commit (run review/run-17935649097
 
 query_log over the full log of run compact/witness2-1793595580169 reaches the first event (seq 1) and the last (seq 437).
 
+## Log window (2026-11-02)
+
+The log lives in its file. The worker keeps the byte offset of every event, one number each, and the last 512 events. Any other event is read from the file at its offset. A restart rebuilds the offsets and the window from the file, in chunks. The feed reads its events through the log (count and at), so it never holds the run. query_log and the other full-history callers read the file. The map of tools/call replies, which answers a repeated request id, keeps the last 256 requests instead of all of them.
+
+Witness, run log-window/run-1793596211661: 1000 identical run_code calls, 0 failures. query_log, paged through run_code with after, returns every event of the log from seq 1 to seq 3098, contiguous. A restart on the same run directory resumes at step 3, and the resumed feed (18 records) equals the feed a replay of the file gives at that point.
+
+Memory. Resident memory from call 20 to call 1000 grew 17.4 MB. That is the witness's figure, and it includes the heap V8 grows early on, so it is more than "a few MB". From call 100 to call 1000 it grew 6.4 MB (memory/window-heap.json, the loop tool in heap mode). The heap after a forced collection grew from 7.61 MB at call 100 to 8.15 MB at call 1000, about 0.6 KB per call. So the worker retains almost nothing per call. The residual RSS growth is V8 keeping the heap pages it has committed. A figure flatter than this needs a smaller starting heap or a V8 flag, and neither is set here.
+
+The feed witness (compact/witness2, 60 steps) and the horizon-fields witness passed on the new log.
+
 ## Measured
 
 - Tool list hash witness (brief change 7, run 2026-11-01-18-39-35-820e47): the `tools` event at seq 258 has sha 5e8c956cc447. The fetch description changed, which was needed (the body is untrusted input), and the next start logged `tools-changed` at seq 266 with old 5e8c956cc447 and new 39a328f0521e, then `tools` at seq 267. Friction, recorded: an edit that added a call before its definition made the restart fail, and the supervisor held every call in its failed state until the next source change. That change restarted the worker and recovered it. Supervisor defect for item 1 of the brief to note.

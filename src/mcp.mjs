@@ -38,6 +38,7 @@ const SKILL = parseSkill(readFileSync(join(ROOT, 'skills', 'gm', 'SKILL.md'), 'u
 const SKILL_PROMPT = { name: SKILL.name, description: SKILL.description, arguments: [{ name: 'task', description: 'The task to run', required: false }] };
 const SKILL_RESOURCE = { uri: SKILL_URI, name: `${SKILL.name} skill`, description: SKILL.description, mimeType: 'text/markdown' };
 const DEFAULT_MAX_STEPS = 50;
+const REPLY_MEMORY = 256;
 const DEFAULT_MAX_INFLIGHT = 8;
 const DEFAULT_JOB_LIFETIME_MS = 1800000;
 const USAGE = 'usage: node src/mcp.mjs --workspace <dir> --task <file-or-text> [--run-dir <dir>] [--max-steps N] [--max-inflight N] [--job-lifetime-ms N] [--surface tools|code]';
@@ -111,8 +112,13 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
   const active = new Map();
   const waiting = [];
   const unansweredTurns = new Set();
-  const replies = new Map(); // a repeated tools/call request id is answered from its first reply, never run again
-  for (const [key, reply] of answersFrom(history)) replies.set(key, Promise.resolve(reply));
+  // A repeated tools/call request id is answered from its first reply, never run again. Only the last REPLY_MEMORY requests are kept.
+  const replies = new Map();
+  const remember = (key, pending) => {
+    replies.set(key, pending);
+    if (replies.size > REPLY_MEMORY) replies.delete(replies.keys().next().value);
+  };
+  for (const [key, reply] of answersFrom(history)) remember(key, Promise.resolve(reply));
   let steps = resume?.steps ?? 0;
   let ended = resume?.ended ?? null;
   let endLogged = ended !== null;
@@ -176,7 +182,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
         return { jsonrpc: '2.0', id: message.id, result: await replies.get(key) };
       }
       const pending = route(message.method, message.params, message.id);
-      if (key !== null) replies.set(key, pending);
+      if (key !== null) remember(key, pending);
       const result = await pending;
       return request ? { jsonrpc: '2.0', id: message.id, result: result ?? {} } : null;
     } catch (err) {
@@ -301,7 +307,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     const rules = await readFile(join(runDir, 'rules.md'), 'utf8');
     const recoveryNow = pendingRecovery === null ? undefined : recoveryNote(pendingRecovery);
     pendingRecovery = null;
-    const since = log.events().filter((event) => event.seq > noticeSeq);
+    const since = log.eventsFrom(noticeSeq + 1);
     noticeSeq = log.count();
     const killed = since.filter((event) => event.kind === 'job-killed');
     const ended = since.filter((event) => event.kind === 'job' && event.state !== 'running');
@@ -316,7 +322,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
       witness: DEFAULT_WITNESS,
       prefixSha: prefixShaOf({ rules, task, witness: DEFAULT_WITNESS, tools: servedText }),
       total: log.count(),
-      ...feedOf(log.events(), REGISTRY, { shown: shownTotalOf(log.events()) }),
+      ...feedOf(log, REGISTRY, { shown: shownTotalOf(log) }),
       ...(recoveryNow ? { recovery: recoveryNow } : {}),
       ...(killed.length ? { jobsKilled: killed.map(({ seq, job, reason, lifetimeMs, tail }) => ({ seq, job, reason, lifetimeMs, tail })) } : {}),
       ...(jobsEnded.length ? { jobsEnded } : {}),

@@ -114,10 +114,17 @@ export function registryOf(...compacts) {
   return { tools, kinds };
 }
 
+// The events of a log, by seq: count() and at(seq). A log object has both. An array is wrapped, for a caller that holds one.
+export function sourceOf(events) {
+  return { count: () => events.length, at: (seq) => events[seq - 1] };
+}
+const asSource = (events) => (Array.isArray(events) ? sourceOf(events) : events);
+
 // The log's count when the last feed was made. Every event up to it has been transferred, so only the events after it are new.
 export function shownTotalOf(events) {
-  for (let i = events.length - 1; i >= 0; i -= 1) {
-    const event = events[i];
+  const source = asSource(events);
+  for (let seq = source.count(); seq >= 1; seq -= 1) {
+    const event = source.at(seq);
     if (event.kind === 'result' && event.tool === 'next_context' && event.ok === true && typeof event.total === 'number') return event.total;
   }
   return 0;
@@ -127,33 +134,39 @@ export function shownTotalOf(events) {
 // most FULL of them. The events before that are seen already, and they come as the registry's compact records: the first horizon, then
 // the second. Events older than the second horizon are not in the feed, and query_log reaches them. Events come oldest first.
 export function feedOf(events, registry, { shown = 0, full = FULL, h1 = H1, h2 = H2 } = {}) {
-  const n = events.length;
+  const source = asSource(events);
+  const n = source.count();
   const fullStart = Math.max(shown, n - full);
   const zone1Start = Math.max(0, fullStart - h1);
   const zone2Start = Math.max(0, zone1Start - h2);
+  // An answer comes after its action, so every answer to an action in the feed's range is in the range.
   const answered = new Set();
-  for (const event of events) if (event.actionSeq !== undefined) answered.add(event.actionSeq);
+  for (let seq = zone2Start + 1; seq <= n; seq += 1) {
+    const event = source.at(seq);
+    if (event.actionSeq !== undefined) answered.add(event.actionSeq);
+  }
   const out = [];
   for (let i = zone2Start; i < n; i += 1) {
     const zone = i >= fullStart ? 0 : i >= zone1Start ? 1 : 2;
+    const event = source.at(i + 1);
     if (zone === 0) {
-      out.push(compactEvent(events[i]));
+      out.push(compactEvent(event));
       continue;
     }
-    const record = recordOf(events[i], zone, events, answered, registry);
+    const record = recordOf(event, zone, source, answered, registry);
     if (record !== null) out.push(record);
   }
   return { older: zone2Start, records: out.length, events: out };
 }
 
-function recordOf(event, zone, events, answered, registry) {
+function recordOf(event, zone, source, answered, registry) {
   if (event.kind === 'action') {
     if (answered.has(event.seq)) return null;
     return zone === 1 ? { seq: event.seq, kind: 'action', tool: event.tool, args: argsOf(event.args), unanswered: true } : null;
   }
   if (event.kind === 'result' || event.kind === 'code-call') {
     // A verb called in a body is its own action: its arguments are on the event, so its tool's strategy applies to it as to a result.
-    const action = event.kind === 'code-call' ? event : event.actionSeq !== undefined ? events[event.actionSeq - 1] : undefined;
+    const action = event.kind === 'code-call' ? event : event.actionSeq !== undefined ? source.at(event.actionSeq) : undefined;
     const owned = registry.tools[event.tool];
     const fn = owned ? (zone === 1 ? owned.zone1 : owned.zone2) : undefined;
     if (fn) return fn(event, action);
