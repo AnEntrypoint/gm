@@ -5,6 +5,7 @@ import { runCommand } from './exec.mjs';
 import { sourcesCheck } from './sources.mjs';
 import { wikiCheck } from './wiki.mjs';
 import { skillCheck } from './skills.mjs';
+import { connectCheck } from './connect.mjs';
 
 // The commit gate. git_commit runs these checks before it commits, with no CI and no test files. A failed check refuses
 // the commit, and every check reports its result and its time in the commit's log event.
@@ -32,6 +33,7 @@ export async function runGate(root) {
   checks.push(await timed('sources', async () => sourcesCheck(root)));
   checks.push(await timed('wiki', async () => wikiCheck(root)));
   checks.push(await timed('skills', async () => skillCheck(root)));
+  checks.push(await timed('connect', async () => connectCheck(root)));
   checks.push(await timed('smoke', () => smokeCheck(root)));
   const failed = checks.filter((check) => !check.ok).map((check) => check.name);
   return { ok: failed.length === 0, failed, checks, notCovered: NOT_COVERED };

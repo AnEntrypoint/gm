@@ -5,6 +5,7 @@ import { readFile } from 'node:fs/promises';
 import { basename, dirname, join, resolve } from 'node:path';
 import { createInterface } from 'node:readline';
 import { DEFAULT_WITNESS, MCP_RULES, prefixShaOf, renderTools } from './prompt.mjs';
+import { connectReply, SERVER_NAME } from './connect.mjs';
 import { isDirectory, loadTask, newRunId, openRun, ROOT } from './run.mjs';
 import { flushAllLogs } from './log.mjs';
 import { clearPending, onPendingAppended, PENDING_FILE, takePending } from './pending.mjs';
@@ -31,12 +32,7 @@ import { feedOf, registryOf, resultZone1, resultZone2, shownTotalOf } from './co
 import { writeSummary } from './summary.mjs';
 
 const PROTOCOL_VERSION = '2025-06-18';
-const SERVER_INFO = { name: 'gm', version: JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')).version };
-// The instructions the host sees at initialize. The code surface names run_code, and the verbs are functions on gm.
-const CODE_INSTRUCTIONS = "One tool does the work: run_code. Its body is JavaScript in the project, and each verb is a function on gm, for example await gm.read_file({ path }). The verb list is in run_code's description, gm.verbs() returns each verb's details, and finish ends the run and is not a verb. Start each step with next_context.";
-const TOOLS_INSTRUCTIONS = "Each verb is a tool. Start each step with next_context, and end the run with finish and a witness.";
-// How pending events reach the agent, by the first route that works. The routes differ by host, so the order is the preference.
-const WATCH_INSTRUCTIONS = "Pending events (a job starts or exits, a job is killed or stuck, a rules notice, a recovery) reach you by the first route that works: a channel event <channel source=\"gm\" id=\"...\" kind=\"...\"> arriving in this session; otherwise a background watch on the file that next_context names as pendingFile. The watch is the Monitor tool if you have it (load it with ToolSearch when it is deferred), and otherwise a background job that runs tail -n +1 -F on that file, read with job_status. A watch expires, so re-arm it. An id you have already acted on is skipped, whichever route reports it.";
+const SERVER_INFO = { name: SERVER_NAME, version: JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')).version };
 const SKILL_URI = 'gm://skill/SKILL.md';
 const SKILL = parseSkill(readFileSync(join(ROOT, 'skills', 'gm', 'SKILL.md'), 'utf8'));
 const SKILL_PROMPT = { name: SKILL.name, description: SKILL.description, arguments: [{ name: 'task', description: 'The task to run', required: false }] };
@@ -240,7 +236,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
   function initialize(params) {
     const version = typeof params?.protocolVersion === 'string' ? params.protocolVersion : PROTOCOL_VERSION;
     // The channel capability tells a host that this server can push pending events as channel events. A host that does not register it drops them.
-    return { protocolVersion: version, capabilities: { tools: { listChanged: true }, prompts: { listChanged: true }, resources: { listChanged: true }, experimental: { 'claude/channel': {} } }, serverInfo: SERVER_INFO, instructions: `${surface === 'code' ? CODE_INSTRUCTIONS : TOOLS_INSTRUCTIONS}\n\n${WATCH_INSTRUCTIONS}\n\n${MCP_RULES}` };
+    return { protocolVersion: version, ...connectReply(surface), serverInfo: SERVER_INFO };
   }
 
   function getPrompt(params) {
@@ -614,7 +610,7 @@ function write(message) {
 }
 
 // A pending event is also a channel event. A host that registered this server as a channel shows it in the session; a host that did not
-// drops it, and the watch routes in WATCH_INSTRUCTIONS still report the event. The meta keys are identifiers, as the host requires.
+// drops it, and the pending-event routes in the gm skill still report the event. The meta keys are identifiers, as the host requires.
 onPendingAppended((record) => {
   process.stdout.write(`${JSON.stringify({ jsonrpc: '2.0', method: 'notifications/claude/channel', params: { content: JSON.stringify(record), meta: { id: String(record.id), kind: record.kind } } })}\n`);
 });
