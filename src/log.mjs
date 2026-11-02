@@ -92,12 +92,24 @@ export function openLog(file) {
       for (let s = Math.max(1, seq); s <= count; s += 1) out.push(at(s));
       return out;
     },
-    // The first events after seq that match, in order, at most limit. The file is read from the first of them, so a page costs the lines
-    // it reads, not the whole log. after is a whole number of events.
-    take: (after, limit, match) => {
+    // The first events after seq that match, in order. The window ends after limit matches, or once it has read budget bytes of lines, and
+    // last is the seq of the last event it read, so a caller that continues from last misses no event. The file is read from the first
+    // event after seq, so a window costs the lines it reads, not the whole log. after is a whole number of events.
+    window: (after, limit, match, budget) => {
       flush();
-      if (after >= count) return [];
-      return scanFrom(file, locate(after + 1)[0], size, limit, match);
+      if (after >= count) return { events: [], last: after };
+      return scanWindow(file, locate(after + 1)[0], size, after, limit, match, budget);
+    },
+    // The newest events after seq that match, in order, at most limit. The walk goes back from the newest event, so it reads only the
+    // events it needs, and a tail of recent events costs little whatever the length of the log.
+    tail: (after, limit, match) => {
+      flush();
+      const out = [];
+      for (let seq = count; seq > after && out.length < limit; seq -= 1) {
+        const event = at(seq);
+        if (match(event)) out.push(event);
+      }
+      return out.reverse();
     },
     // The whole history, read from the file. Only the callers that need every event use it.
     events: () => {
@@ -220,21 +232,24 @@ export function readEvents(file) {
     .map((line) => JSON.parse(line));
 }
 
-// The events in the bytes from begin to end that match, in order, at most limit. It reads in chunks and stops at the limit.
-function scanFrom(file, begin, end, limit, match) {
+// The events after seq in the bytes from begin to end that match, in order. The scan stops after limit matches, or once it has read budget
+// bytes and has read one event. last is the seq of the last event it read, matching or not. A line still open at the stop is not read.
+function scanWindow(file, begin, end, after, limit, match, budget) {
   const out = [];
   const fd = openSync(file, 'r');
   const chunk = Buffer.alloc(1 << 16);
   let pending = Buffer.alloc(0);
   let position = begin;
+  let last = after;
   const visit = (bytes) => {
     const line = bytes.toString('utf8');
     if (line.trim() === '') return;
     const event = JSON.parse(line);
+    last = event.seq;
     if (match(event)) out.push(event);
   };
   try {
-    while (position < end && out.length < limit) {
+    while (position < end && out.length < limit && (position - begin < budget || last === after)) {
       const n = readSync(fd, chunk, 0, Math.min(chunk.length, end - position), position);
       if (n === 0) break;
       position += n;
@@ -246,11 +261,12 @@ function scanFrom(file, begin, end, limit, match) {
       }
       pending = pending.subarray(start);
     }
-    if (pending.length > 0 && out.length < limit) visit(pending);
+    // The last line has no newline only at the end of the file, so an open line is read only once the file is read to its end.
+    if (position >= end && pending.length > 0 && out.length < limit) visit(pending);
   } finally {
     closeSync(fd);
   }
-  return out;
+  return { events: out, last };
 }
 
 export function runQuery(events, js) {

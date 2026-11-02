@@ -182,17 +182,38 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
       return { ok: true, state: status.state, output: JSON.stringify({ ...status, tail: outputOf(status, TAIL_CAP) }) };
     },
 
-    query_log(args) {
+    query_log(args = {}) {
+      const unknown = Object.keys(args).filter((name) => !QUERY_ARGS.includes(name));
+      if (unknown.length > 0) return refusal(`unknown argument ${unknown.join(', ')}; query_log takes ${QUERY_ARGS.join(', ')}`);
       if (args.js !== undefined && typeof args.js !== 'string') return { ok: false, error: 'js must be a string' };
-      const after = args.after === undefined ? 0 : Number(args.after);
-      if (!Number.isFinite(after)) return { ok: false, error: 'after must be a number' };
+      if (args.kind !== undefined && typeof args.kind !== 'string') return { ok: false, error: 'kind must be a string' };
+      for (const name of ['after', 'fromMono', 'toMono']) {
+        if (args[name] !== undefined && !Number.isFinite(args[name])) return { ok: false, error: `${name} must be a number` };
+      }
+      if (args.last !== undefined && (!Number.isInteger(args.last) || args.last < 1 || args.last > QUERY_PAGE_EVENTS)) {
+        return { ok: false, error: `last must be a whole number from 1 to ${QUERY_PAGE_EVENTS}` };
+      }
+      const after = Math.max(0, Math.floor(args.after ?? 0));
       const match = (event) =>
         (args.kind === undefined || event.kind === args.kind) &&
         (args.fromMono === undefined || event.mono >= args.fromMono) &&
         (args.toMono === undefined || event.mono <= args.toMono);
-      // One event past the page is read, so pageOf can tell whether more remain.
-      const page = pageOf(log.take(Math.max(0, Math.floor(after)), QUERY_PAGE_EVENTS + 1, match));
-      return { ...runQuery(page.events, args.js ?? 'events'), ...(page.next === null ? {} : { next: page.next }) };
+      const js = args.js ?? 'events';
+      // last is the newest matching events, oldest first. It is the end of the list, so it has no next.
+      if (args.last !== undefined) {
+        const newest = log.tail(after, args.last, match);
+        if (args.js !== undefined) return runQuery(newest, js);
+        const kept = newestOf(newest);
+        return { ...runQuery(kept.events, js), ...(kept.omitted === 0 ? {} : { omitted: kept.omitted }) };
+      }
+      // The expression sees one window of matching events. A reply without js is a page of that window. When the window ends before the end of
+      // the log, next is the seq to pass back as after, and the next call reads on from it.
+      const scan = log.window(after, QUERY_WINDOW_EVENTS, match, QUERY_WINDOW_BYTES);
+      const more = scan.last < log.count();
+      if (args.js !== undefined) return { ...runQuery(scan.events, js), ...(more ? { next: scan.last } : {}) };
+      const page = pageOf(scan.events);
+      const next = page.length < scan.events.length ? page.at(-1).seq : more ? scan.last : null;
+      return { ...runQuery(page, js), ...(next === null ? {} : { next }) };
     },
 
     finish(args) {
@@ -466,11 +487,15 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
   }
 }
 
-// A query_log reply holds at most 50 events and stays within 20 KB once serialized, because the reply escapes the JSON it carries. When
-// events remain, next is the seq of the last event returned, and the caller passes it as after. An event too large for a reply of its
-// own is cut to its head, so the reply is always valid JSON. A log that holds earlier query results has such events.
+// A query_log reply holds at most 50 events and stays within 20 KB once serialized, because the reply escapes the JSON it carries. When a
+// page of events is cut short, next is the seq of the last event returned, and the caller passes it as after. An event too large for a
+// reply of its own is cut to its head, so the reply is always valid JSON. A log that holds earlier query results has such events.
+// A js expression sees one window of matching events: at most QUERY_WINDOW_EVENTS, read from at most QUERY_WINDOW_BYTES of the log.
 const QUERY_PAGE_EVENTS = 50;
 const QUERY_REPLY_CHARS = 20000;
+const QUERY_WINDOW_EVENTS = 1000;
+const QUERY_WINDOW_BYTES = 4 * 1024 * 1024;
+const QUERY_ARGS = ['js', 'kind', 'fromMono', 'toMono', 'after', 'last'];
 
 function pageOf(events) {
   const page = [];
@@ -483,7 +508,16 @@ function pageOf(events) {
     if (page.length === 0) page.push(clipped(event));
     break;
   }
-  return { events: page, next: page.length < events.length ? page.at(-1).seq : null };
+  return page;
+}
+
+// The newest events of a tail that fit a reply: the oldest are dropped first, and omitted counts them. An event too large for a reply of its
+// own is cut to its head, as pageOf does.
+function newestOf(events) {
+  let from = 0;
+  while (from < events.length - 1 && replyChars(events.slice(from)) > QUERY_REPLY_CHARS) from += 1;
+  if (replyChars(events.slice(from)) <= QUERY_REPLY_CHARS) return { events: events.slice(from), omitted: from };
+  return { events: [clipped(events[events.length - 1])], omitted: events.length - 1 };
 }
 
 // The length of the reply a page would make: the page as JSON, escaped once more inside the reply.

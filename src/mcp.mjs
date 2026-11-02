@@ -17,7 +17,7 @@ import { FETCH_TOOLS } from './fetch.mjs';
 import { CODE_TOOLS } from './code-ast.mjs';
 import { WIKI_TOOLS } from './wiki-tools.mjs';
 import { REVIEW_TOOLS } from './review-tools.mjs';
-import { runBody, runCodeTool } from './runcode.mjs';
+import { runBody, runCodeTool, RUN_CODE_PROPERTIES } from './runcode.mjs';
 import { bodyContext } from './exec.mjs';
 import { COMPACT as SEARCH_COMPACT } from './search.mjs';
 import { COMPACT as FETCH_COMPACT } from './fetch.mjs';
@@ -59,7 +59,7 @@ const TOOLS = [
   { name: 'run_shell', description: 'Run a shell command in the workspace and wait for it. Default timeout 60000 ms. Its process group is killed when it returns, so background work must go through job_start.', inputSchema: objectSchema({ command: text, timeoutMs: number }, ['command']) },
   { name: 'job_start', description: 'Start a shell command as a named background job and return at once. Poll it with job_status.', inputSchema: objectSchema({ job: text, command: text, timeoutMs: number }, ['job', 'command']) },
   { name: 'job_status', description: 'State (running, exited or killed), exit code and output tail of a job. waitMs polls until the job leaves running, at most 30000 ms. offset returns a page of 20000 characters of the output from that offset, with next.', inputSchema: objectSchema({ job: text, waitMs: number, offset: number }, ['job']) },
-  { name: 'query_log', description: 'Evaluate a JavaScript expression over the run events array and return JSON. kind keeps events of one kind, and fromMono and toMono keep events in a time window (monotonic milliseconds). js defaults to returning the filtered events. A reply holds at most 50 events and about 20 KB. When events remain, next is the seq to pass back as after, which keeps only the events after that seq.', inputSchema: objectSchema({ js: text, kind: text, fromMono: number, toMono: number, after: number }, []) },
+  { name: 'query_log', description: 'Read the run events, as JSON. after is a seq: only the events after it are read (since), so after the last seq you saw reads on from there. kind keeps events of one kind, and fromMono and toMono keep events in a time window (monotonic milliseconds). last N returns the newest N matching events instead, oldest first, at most 50, and has no next. js is a JavaScript expression over the matching events, and defaults to returning them: js sees one window of at most 1000 events or 4 MB of log. Without js, a reply holds at most 50 events and about 20 KB. When events remain, next is the seq to pass back as after; with js, next is set when the window ends before the end of the log. An unknown argument is refused, and the reply names the arguments query_log takes.', inputSchema: objectSchema({ js: text, kind: text, fromMono: number, toMono: number, after: number, last: number }, []) },
   { name: 'finish', description: 'End the run. witness is one string that quotes the evidence you observed. gaps optionally lists, one string each, what the run did not check; the end event logs them. finish is refused while a background run is running, and stopBackground true kills it first.', inputSchema: objectSchema({ witness: text, gaps: { type: 'array', items: text }, stopBackground: { type: 'boolean' } }, ['witness']) },
   ...SEARCH_TOOLS,
   ...WIKI_TOOLS,
@@ -338,7 +338,12 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     if (surface === 'code' && !CODE_SURFACE.has(name)) {
       return refuse(name, args, 'the code surface serves next_context, run_code and finish; call a verb as gm.<name>(args) inside run_code', rpcId);
     }
-    if (name === 'run_code') return act('run_code', args, access, () => runBody({ body: args.body, timeoutMs: args.timeoutMs, format: args.format, verbs: VERBS, call: innerCall, project: workspace, runDir, log, step: steps, background: (handle) => tools.adoptBody(handle) }), undefined, rpcId);
+    if (name === 'run_code') {
+      // A wrong argument name is refused by name. The run_code reply names its action, which is the seq of the action event, so a body can cite it.
+      const unknown = Object.keys(args).filter((key) => !Object.hasOwn(RUN_CODE_PROPERTIES, key));
+      if (unknown.length > 0) return refuse(name, args, `unknown argument ${unknown.join(', ')}; run_code takes ${Object.keys(RUN_CODE_PROPERTIES).join(', ')}`, rpcId);
+      return act('run_code', args, access, (actionSeq) => runBody({ body: args.body, timeoutMs: args.timeoutMs, format: args.format, verbs: VERBS, call: innerCall, project: workspace, runDir, log, step: steps, background: (handle) => tools.adoptBody(handle) }).then((reply) => ({ ...reply, actionSeq })), undefined, rpcId);
+    }
     if (name === 'next_context') return nextContext(access, rpcId);
     if (name === 'finish') return finish(args, access, rpcId);
     if (Object.hasOwn(handlers, name)) return act(name, args, access, () => handlers[name](args), name === 'query_log' ? loggedReply : undefined, rpcId);
@@ -465,7 +470,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     if (!READ_ONLY_TOOLS.has(tool)) flushAllLogs();
     let result;
     try {
-      result = await exec();
+      result = await exec(action.seq);
     } catch (err) {
       result = { ok: false, error: err.message };
     }
@@ -479,7 +484,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     const step = steps;
     const startMono = log.now();
     const action = log.append('action', { step, tool, args, ...(rpcId === undefined ? {} : { rpcId }) });
-    const result = { ok: false, refused: true, error: `refused: ${reason}` };
+    const result = { ok: false, refused: true, error: `refused: ${reason}`, actionSeq: action.seq };
     log.append('refusal', { step, tool, error: result.error, startMono, actionSeq: action.seq });
     return result;
   }
