@@ -12,9 +12,13 @@ import { existsSync, watch } from 'node:fs';
 import { createInterface } from 'node:readline';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { DEFAULT_UPDATE_MS, startUpdates } from './update.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = process.env.GMNEW_ROOT ? resolve(process.env.GMNEW_ROOT) : resolve(HERE, '..');
+// Updates from origin main: a check at start and then every GMNEW_UPDATE_MS (0 turns them off). The relay runs the checks, because the relay
+// outlives supervisor swaps.
+const UPDATE_MS = process.env.GMNEW_UPDATE_MS === undefined ? DEFAULT_UPDATE_MS : Number(process.env.GMNEW_UPDATE_MS);
 const SUPERVISOR = join(HERE, 'supervise.mjs');
 const DEBOUNCE_MS = 250;
 const CHECK_MS = 10000;
@@ -368,6 +372,7 @@ function shutdown() {
   supervisor.stdin.end();
 }
 
+startUpdates({ root: ROOT, everyMs: UPDATE_MS, log: (message) => process.stderr.write(`gm-new update: ${message}\n`) });
 scheduleSwap(null);
 createInterface({ input: process.stdin, crlfDelay: Infinity }).on('line', onHostLine).on('close', shutdown);
 for (const signal of ['SIGINT', 'SIGTERM']) process.once(signal, shutdown);

@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>gm-new: manual</title>
+<style>
+@page { size: A4; margin: 20mm 18mm 22mm 18mm; }
+html { background: #fff; color: #000; }
+body {
+  font-family: "Liberation Mono", "Courier New", Courier, monospace;
+  font-size: 11pt;
+  line-height: 1.45;
+  max-width: 48em;
+  margin: 2em auto;
+  padding: 0 1.2em;
+}
+h1 {
+  font-size: 2.6em;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-top: 8px solid #000;
+  border-bottom: 8px solid #000;
+  padding: 0.25em 0;
+  margin: 0 0 0.5em 0;
+}
+.sub { font-size: 1.05em; margin: 0 0 2em 0; }
+h2 {
+  font-size: 1.45em;
+  text-transform: uppercase;
+  border-bottom: 4px solid #000;
+  padding-bottom: 0.15em;
+  margin: 1.6em 0 0.7em 0;
+}
+h3 { font-size: 1.05em; text-transform: uppercase; margin: 1.2em 0 0.4em 0; }
+p, li { margin: 0.45em 0; }
+ul, ol { padding-left: 1.6em; }
+pre {
+  border: 2px solid #000;
+  padding: 0.7em 0.8em;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin: 0.8em 0;
+  font-size: 0.95em;
+}
+code { font-family: inherit; font-weight: bold; }
+pre code { font-weight: normal; }
+table { border-collapse: collapse; width: 100%; margin: 0.8em 0; }
+th, td { border: 2px solid #000; padding: 0.35em 0.5em; text-align: left; vertical-align: top; }
+th { text-transform: uppercase; }
+a { color: #000; }
+nav ol { list-style: none; padding-left: 0; }
+nav li { border-bottom: 1px solid #000; padding: 0.3em 0; }
+.note { border-left: 8px solid #000; padding-left: 0.8em; margin: 0.9em 0; }
+footer { border-top: 4px solid #000; margin-top: 2.4em; padding-top: 0.5em; font-size: 0.9em; }
+
+@media print {
+  body { max-width: none; margin: 0; padding: 0; font-size: 10pt; line-height: 1.38; }
+  h1 { font-size: 2.1em; }
+  h2 { font-size: 1.25em; }
+  section.chapter { page-break-before: always; }
+  h2, h3 { page-break-after: avoid; }
+  pre, table, .note { page-break-inside: avoid; }
+  nav { page-break-after: always; }
+  a[href^="http"]::after { content: " <" attr(href) ">"; font-size: 85%; }
+  footer { page-break-inside: avoid; }
+}
+</style>
+</head>
+<body>
+
+<h1>gm-new</h1>
+<p class="sub">Manual. One worker, one append-only log, governance rules read at every step.</p>
+
+<nav>
+<h3>Contents</h3>
+<ol>
+  <li>1. What it is</li>
+  <li>2. Install</li>
+  <li>3. Connect Claude Code</li>
+  <li>4. The loop</li>
+  <li>5. The tools</li>
+  <li>6. Background runs and stuck jobs</li>
+  <li>7. Updates</li>
+  <li>8. Files and runs</li>
+  <li>9. Limits, named and recorded</li>
+  <li>10. Troubleshooting</li>
+</ol>
+</nav>
+
+<section class="chapter" id="ch-1">
+<h2>1. What it is</h2>
+<p>gm-new is a stdio MCP server that runs one long task as one worker. The Claude Code session is the model. gm-new makes no model calls of its own: the session reads what the tools return and decides what to do next.</p>
+<p>Every event of a run goes to one append-only log. Each step starts with <code>next_context</code>, which returns the rules, the task, the events the session has not yet seen, and the open jobs. Work is done inside <code>run_code</code>, and a step ends with <code>finish</code> and a witness.</p>
+<p>gm-new needs Node 20 or later. Its one runtime dependency is acorn 8.18.0, pinned, which parses JavaScript for the <code>callers</code> and <code>impact</code> tools.</p>
+</section>
+
+<section class="chapter" id="ch-2">
+<h2>2. Install</h2>
+<p>You need git, npm and Node 20 or later. From the folder of the checkout, run:</p>
+<pre>./setup.sh</pre>
+<p>The setup checks the tools, installs acorn if it is missing, pulls origin main if the checkout has no changes to tracked files, runs the gate, and prints the entry for <code>.mcp.json</code>. It is safe to run again at any time.</p>
+<p class="note">The gate checks syntax, ASCII, the docs, the sources, the wiki, the skills, and runs a smoke test. A checkout that fails the gate is not used.</p>
+</section>
+
+<section class="chapter" id="ch-3">
+<h2>3. Connect Claude Code</h2>
+<p>Put the entry that setup prints into <code>.mcp.json</code> in the folder of the project you want gm-new to work on. Replace the three placeholders: the project folder, the runs folder (inside the project), and a task file, which is a plain text file holding the task.</p>
+<pre>{"mcpServers":{"gm-new":{"command":"node","args":["CHECKOUT/tools/relay.mjs","--workspace","PROJECT","--runs","PROJECT/runs","--task","TASK.md","--max-steps","100000"]}}}</pre>
+<p>Start Claude Code in that project and approve the server when it asks. Each start opens the run, or resumes it after a restart. A run that has ended stays closed, and the next start opens a new run beside it.</p>
+<p>The entry starts <code>tools/relay.mjs</code>. The relay holds Claude Code's connection, and it runs the supervisor, which runs the worker. The relay and the supervisor are what make updates and restarts possible without a reconnect.</p>
+</section>
+
+<section class="chapter" id="ch-4">
+<h2>4. The loop</h2>
+<h3>Each step</h3>
+<ol>
+  <li>Call <code>next_context</code>. It returns the rules, the task, the witness requirement, the events new since the last step in full, the older events in compact form, <code>stepsLeft</code>, <code>prefixSha</code>, and the open jobs.</li>
+  <li>Do the work in one <code>run_code</code> call. The body is JavaScript in the project. Each verb is a function on <code>gm</code>: <code>await gm.read_file({ path: 'a.txt' })</code>.</li>
+  <li>Verify: run what you built and read its output.</li>
+  <li>Call <code>finish</code> with a witness. The witness quotes the evidence: tool output, labelled with the tool that returned it.</li>
+</ol>
+<h3>Inside a body</h3>
+<ul>
+  <li>Independent calls go together in <code>Promise.all</code>. A call that needs another call's result waits for it.</li>
+  <li>A failed verb call returns <code>{ ok: false, error }</code> as data. It does not stop the body. <code>gm.try(fn)</code> wraps a step that may throw.</li>
+  <li><code>gm.verbs()</code> returns each verb's description and input schema.</li>
+</ul>
+<pre>const [spec, notes] = await Promise.all([
+  gm.read_file({ path: 'spec.md' }),
+  gm.read_file({ path: 'notes.md' }),
+]);
+const todo = [spec.output, notes.output].join('\n').split('\n').filter((line) => line.startsWith('TODO'));
+await gm.write_file({ path: 'todo.txt', content: todo.join('\n') + '\n' });
+return { todo: todo.length };</pre>
+<p>One step is one body and one <code>finish</code>. The body reads its inputs together, decides in code, writes independent results together, checks in the same body, and returns a compact result.</p>
+<h3>Witnesses</h3>
+<p>A witness quotes only what a tool returned, labelled with the tool that returned it. If a search did not return the target, the witness says so. A read is never presented as a search result.</p>
+</section>
+
+<section class="chapter" id="ch-5">
+<h2>5. The tools</h2>
+<p>By default the session sees three tools: <code>next_context</code>, <code>run_code</code> and <code>finish</code>. Every other verb is called from inside <code>run_code</code> as <code>gm.&lt;name&gt;(args)</code>. With <code>--surface tools</code> each verb is served as a tool of its own.</p>
+<table>
+<tr><th>Group</th><th>Verbs</th></tr>
+<tr><td>Files</td><td>read_file, write_file, edit_file, stat_file, list_dir</td></tr>
+<tr><td>Shell and jobs</td><td>run_shell, job_start, job_status</td></tr>
+<tr><td>Log</td><td>query_log (reaches every event of the run)</td></tr>
+<tr><td>Search</td><td>search (BM25 over tracked files), grep (literal, regex or word)</td></tr>
+<tr><td>Web</td><td>fetch</td></tr>
+<tr><td>Code</td><td>callers, impact (acorn)</td></tr>
+<tr><td>Git</td><td>git_status, git_add, git_rm, git_commit, git_push, git_log, git_diff, git_show, git_fetch, git_pull, git_checkout, git_branch</td></tr>
+<tr><td>CI</td><td>ci_status</td></tr>
+<tr><td>Rows</td><td>prd_add, prd_list, prd_resolve, unknown_add, unknown_list, unknown_resolve</td></tr>
+<tr><td>Wiki</td><td>wiki_search, wiki_write</td></tr>
+<tr><td>Review</td><td>review_packet, review_record, review_join</td></tr>
+</table>
+<p>File paths stay inside the workspace. A path with a <code>..</code> segment is refused, and so is a symlink that leads outside. A refusal is logged as an event, not thrown as an error.</p>
+<p class="note"><code>run_shell</code> is not confined to the workspace. A shell command can reach files outside it, for example through a hard link. A path check does not see that. This is a known limit, recorded below.</p>
+</section>
+
+<section class="chapter" id="ch-6">
+<h2>6. Background runs and stuck jobs</h2>
+<ul>
+  <li>A body gets a budget of 180 seconds by default. <code>timeoutMs</code> sets it, at most 300000.</li>
+  <li>A body that finishes within its budget returns its value in the call.</li>
+  <li>A body still running after its budget becomes a background run, named <code>body-N</code>. The call returns the id at once, with the verb results logged so far. The body keeps running in its own thread.</li>
+  <li><code>job_status</code> with <code>waitMs</code> waits for a job, for up to 30 seconds per call. When the body ends, it returns the value. Nothing is polled in a loop without a limit.</li>
+  <li><code>finish</code> is refused while a background run is running, and it names the run. <code>finish</code> with <code>stopBackground: true</code> stops each run first, and logs each stop.</li>
+  <li>A background run is stopped at 30 minutes, the job lifetime, with its output tail logged.</li>
+  <li>At most four bodies run at once in one worker. A body beyond that waits in arrival order, and its job is shown as queued.</li>
+  <li>A restart stops the background runs and logs each as killed.</li>
+</ul>
+<h3>Stuck jobs</h3>
+<p>A running job that makes no progress for 180 seconds is stuck. Progress is output written by a shell job, a verb call in flight or just finished in a body, or the start of the job. The worker logs <code>job-stuck</code> once when a job becomes stuck, and <code>job-unstuck</code> once when it progresses again.</p>
+<p>Each <code>next_context</code> reports the changes since the last step as <code>jobsStuck</code> and <code>jobsUnstuck</code>. It also lists every open job in <code>jobsOpen</code>, with its state, how long it has run, how long since it progressed, and whether it is stuck.</p>
+</section>
+
+<section class="chapter" id="ch-7">
+<h2>7. Updates</h2>
+<p>The checkout is a clone of origin main, so an update is a fast-forward pull. The relay checks for updates once, 30 seconds after it starts, and then every hour. <code>GMNEW_UPDATE_MS</code> sets the interval in milliseconds. Zero turns the checks off.</p>
+<p>A check fetches origin. When main is ahead, and no tracked file has local changes, it pulls. If <code>package-lock.json</code> changed, it runs <code>npm ci</code>. Then it runs the gate on the new code. A pull that the gate rejects is undone with <code>git reset</code>, to the commit the checkout had before the pull.</p>
+<p>A pull that changes files under <code>src/</code> or <code>skills/</code> restarts the worker, so the new code loads. The run resumes from its log, and calls in flight finish first.</p>
+<p>A checkout with local changes, or a history that has diverged from origin, is reported and left alone. A check that cannot reach origin is reported and skipped. A check never throws. To update by hand, run <code>./setup.sh</code>.</p>
+</section>
+
+<section class="chapter" id="ch-8">
+<h2>8. Files and runs</h2>
+<table>
+<tr><th>Path</th><th>What it is</th></tr>
+<tr><td>runs/ID/log.jsonl</td><td>The run's log. Append-only. Every event, with its sequence number and times.</td></tr>
+<tr><td>runs/ID/rules.md</td><td>The rules, read at every step and placed first in each reply.</td></tr>
+<tr><td>runs/ID/task.json</td><td>The task and the run's settings.</td></tr>
+<tr><td>runs/ID/jobs/</td><td>Job status files and shell job output.</td></tr>
+<tr><td>runs/ID/code/</td><td>Body files of running bodies. Each is deleted when its body ends.</td></tr>
+</table>
+<p><code>runs/</code> is ignored by git. The log is the record: <code>query_log</code> reads all of it, and a restart rebuilds the worker's state from it.</p>
+</section>
+
+<section class="chapter" id="ch-9">
+<h2>9. Limits, named and recorded</h2>
+<p>These are the limits the project has named, with what would settle each one. They are recorded in DESIGN.md.</p>
+<table>
+<tr><th>Limit</th><th>Status and trigger</th></tr>
+<tr><td>Windows process-group kill</td><td>Unverified. There is no Windows machine. Windows support is not claimed.</td></tr>
+<tr><td>Rule re-injection</td><td>Deferred. Trigger: a live run shows a rule violated after a summary.</td></tr>
+<tr><td>Subagent isolation</td><td>Deferred. Trigger: a long-horizon run shows a single worker's limit.</td></tr>
+<tr><td>No long live run yet</td><td>Held. The owner decides whether a long live run is required. The scripted long-horizon witnesses are scripted evidence only.</td></tr>
+<tr><td>run_shell is not confined</td><td>A shell command can reach outside the workspace. A path check cannot see that.</td></tr>
+<tr><td>Search recall</td><td>BM25 in process found 16 of 18 on the measured queries. An FTS5 index found 17 of 18. The SQLite index was rejected: it adds 13.2 MB of idle memory per worker and native code. The in-process index was kept.</td></tr>
+<tr><td>Resident memory</td><td>Each body thread costs memory while it runs. Memory stays above the base after bodies stop. It is bounded by the four-body cap.</td></tr>
+</table>
+</section>
+
+<section class="chapter" id="ch-10">
+<h2>10. Troubleshooting</h2>
+<table>
+<tr><th>Message</th><th>What to do</th></tr>
+<tr><td>node is vXX. gm-new needs Node 20 or later.</td><td>Install Node 20 or later, then run setup again.</td></tr>
+<tr><td>npm ci failed</td><td>Check the network, then run setup again.</td></tr>
+<tr><td>origin could not be reached</td><td>The worker still runs. The next check tries again.</td></tr>
+<tr><td>the checkout has changes to tracked files</td><td>Commit or stash them. Nothing is pulled while they are there.</td></tr>
+<tr><td>the checkout and origin main have diverged</td><td>The checkout has commits that origin does not have. Resolve it by hand. Nothing is pulled.</td></tr>
+<tr><td>pulled code that the gate failed, and reset to the commit before it</td><td>The pull was undone. Read the failing check names in the message, and fix the cause upstream.</td></tr>
+<tr><td>the gate failed</td><td>setup prints the failing check names. Fix the cause, then run setup again.</td></tr>
+</table>
+<p>To print this manual, use the browser's Print command and choose Save as PDF. The print layout is set for A4 paper.</p>
+</section>
+
+<footer>
+<p>gm-new manual. The revision is the commit the checkout is at (git log -1). The design, the decisions and the evidence are in DESIGN.md.</p>
+</footer>
+
+</body>
+</html>
