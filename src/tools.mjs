@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { closeSync, existsSync, lstatSync, mkdirSync, openSync, readdirSync, readFileSync, realpathSync, renameSync, statSync, writeFileSync } from 'node:fs';
+import { closeSync, existsSync, lstatSync, mkdirSync, openSync, readdirSync, readFileSync, readSync, realpathSync, renameSync, statSync, writeFileSync } from 'node:fs';
 import { mkdir, readdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { runQuery } from './log.mjs';
@@ -12,6 +12,34 @@ import { createAstVerbs } from './code-ast.mjs';
 import { createWikiVerbs } from './wiki-tools.mjs';
 import { resultZone1, resultZone2 } from './compact.mjs';
 import { createReviewVerbs } from './review-tools.mjs';
+
+// read_file reads its file through one buffer that every call reuses. The buffer starts at READ_BUFFER_BYTES, the size of a page, and grows to
+// the largest file read so far, which is the peak, and never shrinks. A file bigger than READ_SYNC_LIMIT is read asynchronously, so a large
+// read does not hold the event loop.
+const READ_BUFFER_BYTES = 4096;
+const READ_SYNC_LIMIT = 1024 * 1024;
+let readBuffer = Buffer.allocUnsafe(READ_BUFFER_BYTES);
+async function readText(path) {
+  if (statSync(path).size > READ_SYNC_LIMIT) return readFile(path, 'utf8');
+  const fd = openSync(path, 'r');
+  try {
+    let got = 0;
+    for (;;) {
+      if (got === readBuffer.length) {
+        const bigger = Buffer.allocUnsafe(readBuffer.length * 2);
+        readBuffer.copy(bigger, 0, 0, got);
+        readBuffer = bigger;
+      }
+      const n = readSync(fd, readBuffer, got, readBuffer.length - got, null);
+      if (n === 0) break;
+      got += n;
+    }
+    // The bytes are decoded once. The text is the reply's output and the logged output alike.
+    return readBuffer.toString('utf8', 0, got);
+  } finally {
+    closeSync(fd);
+  }
+}
 
 const DEFAULT_TIMEOUT_MS = 60000;
 const MAX_TIMEOUT_MS = 600000;
@@ -79,7 +107,7 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
       const limit = args.limit ?? OUTPUT_PAGE;
       if (!Number.isInteger(offset) || offset < 0) return { ok: false, error: 'offset must be a whole number of characters, zero or more' };
       if (!Number.isInteger(limit) || limit < 1 || limit > OUTPUT_PAGE) return { ok: false, error: `limit must be a whole number from 1 to ${OUTPUT_PAGE}` };
-      const text = await readFile(at.path, 'utf8');
+      const text = await readText(at.path);
       const end = Math.min(offset + limit, text.length);
       return { ok: true, output: text.slice(offset, end), total: text.length, offset, next: end < text.length ? end : null };
     },

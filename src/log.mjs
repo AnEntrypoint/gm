@@ -1,6 +1,6 @@
-import { appendFileSync, closeSync, existsSync, openSync, readFileSync, readSync } from 'node:fs';
+import { appendFileSync, closeSync, existsSync, openSync, readFileSync, readSync, statSync, writeFileSync, writeSync } from 'node:fs';
 import { performance } from 'node:perf_hooks';
-import { dirname } from 'node:path';
+import { dirname, join } from 'node:path';
 import { appendPending, PENDING_KINDS } from './pending.mjs';
 
 const QUERY_CAP = 20000;
@@ -10,32 +10,48 @@ const WINDOW = 512;
 const BATCH = 256;
 const writers = new Set();
 
-// The log lives in its file. The worker keeps the byte offset of every event and the last WINDOW events, so the memory does not grow
-// with the length of the run. A restart rebuilds the offsets and the window from the file. Events wait in memory only until the next flush
-// point: before any reply is written, before a body, a shell command or a job starts, before the file is read, and at process exit. So
-// nothing is replied before its events are in the file.
+// The log lives in its file, and its index lives beside it: one fixed record for each event, holding the event's byte offset and length in the
+// log. The worker keeps the last WINDOW events in memory and reads any other event by seeking to its record, so memory does not grow with the
+// length of the run. Events wait in memory only until the next flush point: before any reply is written, before a body, a shell command or a
+// job starts, before the file is read, and at process exit. So nothing is replied before its events are in the file.
 export function openLog(file) {
-  const { offsets, tail, size: start } = scanLog(file);
-  let size = start;
-  let inFlight = 0;
-  let unwritten = [];
   const runDir = dirname(file);
+  const indexFile = join(runDir, INDEX_FILE);
+  const checked = checkIndex(file, indexFile);
+  let count = checked.count;
+  let size = checked.size;
+  let inFlight = 0;
+  const indexFd = openSync(indexFile, 'a+');
+  const recordBuf = Buffer.alloc(RECORD_BYTES);
+  const locate = (seq) => {
+    readSync(indexFd, recordBuf, 0, RECORD_BYTES, (seq - 1) * RECORD_BYTES);
+    return [recordBuf.readDoubleLE(0), recordBuf.readUInt32LE(8)];
+  };
+  const tail = checked.tail ?? readWindow(file, count, size, locate);
+  // The lines and the records not yet written. Each record is written after its line, so the index never names bytes the log lacks.
+  let unwritten = [];
+  let pendingRecords = 0;
+  const pendingIndex = Buffer.alloc(RECORD_BYTES * BATCH);
   const flush = () => {
-    if (unwritten.length === 0) return;
-    appendFileSync(file, unwritten.join(''));
-    unwritten = [];
+    if (unwritten.length > 0) {
+      appendFileSync(file, unwritten.join(''));
+      unwritten = [];
+    }
+    if (pendingRecords > 0) {
+      writeAll(indexFd, pendingIndex, pendingRecords * RECORD_BYTES);
+      pendingRecords = 0;
+    }
   };
   writers.add(flush);
   const offset = tail.length ? tail.at(-1).mono : 0;
   const now = () => round(offset + performance.now());
-  const firstInWindow = () => offsets.length - tail.length + 1;
+  const firstInWindow = () => count - tail.length + 1;
   const at = (seq) => {
-    if (seq < 1 || seq > offsets.length) return undefined;
+    if (seq < 1 || seq > count) return undefined;
     if (seq >= firstInWindow()) return tail[seq - firstInWindow()];
     flush();
-    const begin = offsets[seq - 1];
-    const end = seq < offsets.length ? offsets[seq] : size;
-    return JSON.parse(readRange(file, begin, end));
+    const [begin, length] = locate(seq);
+    return JSON.parse(readRange(file, begin, begin + length));
   };
   return {
     now,
@@ -48,13 +64,19 @@ export function openLog(file) {
     },
     append(kind, data, monoAt) {
       const mono = monoAt ?? now();
-      const event = { seq: offsets.length + 1, t: new Date().toISOString(), mono, inFlight, kind, ...data };
+      const event = { seq: count + 1, t: new Date().toISOString(), mono, inFlight, kind, ...data };
       if (typeof data.startMono === 'number') event.durMs = round(mono - data.startMono);
       const line = `${JSON.stringify(event)}\n`;
-      offsets.push(size);
+      const bytes = Buffer.byteLength(line);
+      const slot = pendingRecords * RECORD_BYTES;
+      pendingIndex.writeDoubleLE(size, slot);
+      pendingIndex.writeUInt32LE(bytes, slot + 8);
+      pendingIndex.writeUInt32LE(0, slot + 12);
+      pendingRecords += 1;
       unwritten.push(line);
+      count += 1;
       if (unwritten.length >= BATCH) flush();
-      size += Buffer.byteLength(line);
+      size += bytes;
       tail.push(event);
       if (tail.length > WINDOW) tail.shift();
       // The log holds the event before the pending queue names it, so the queue never names an event the log lacks.
@@ -67,14 +89,15 @@ export function openLog(file) {
     at,
     eventsFrom: (seq) => {
       const out = [];
-      for (let s = Math.max(1, seq); s <= offsets.length; s += 1) out.push(at(s));
+      for (let s = Math.max(1, seq); s <= count; s += 1) out.push(at(s));
       return out;
     },
     // The first events after seq that match, in order, at most limit. The file is read from the first of them, so a page costs the lines
     // it reads, not the whole log. after is a whole number of events.
     take: (after, limit, match) => {
       flush();
-      return after >= offsets.length ? [] : scanFrom(file, offsets[after], size, limit, match);
+      if (after >= count) return [];
+      return scanFrom(file, locate(after + 1)[0], size, limit, match);
     },
     // The whole history, read from the file. Only the callers that need every event use it.
     events: () => {
@@ -83,8 +106,61 @@ export function openLog(file) {
     },
     flush,
     recent: (n) => tail.slice(-n),
-    count: () => offsets.length,
+    count: () => count,
   };
+}
+
+const INDEX_FILE = 'log.index';
+const RECORD_BYTES = 16;
+
+// The index covers the log exactly when it has one record per line and the last record ends where the log ends. Otherwise it is rebuilt from
+// the log, which is the record. The result is the count of events, the size of the log, and the last events when they were read on the way.
+function checkIndex(file, indexFile) {
+  const logSize = existsSync(file) ? statSync(file).size : 0;
+  if (existsSync(indexFile)) {
+    const indexSize = statSync(indexFile).size;
+    if (indexSize % RECORD_BYTES === 0) {
+      const count = indexSize / RECORD_BYTES;
+      if (count === 0 ? logSize === 0 : lastEnd(indexFile, count) === logSize) return { count, size: logSize, tail: null };
+    }
+  }
+  const scanned = scanLog(file);
+  const records = Buffer.alloc(scanned.offsets.length * RECORD_BYTES);
+  scanned.offsets.forEach((begin, i) => {
+    const end = i + 1 < scanned.offsets.length ? scanned.offsets[i + 1] : scanned.size;
+    records.writeDoubleLE(begin, i * RECORD_BYTES);
+    records.writeUInt32LE(end - begin, i * RECORD_BYTES + 8);
+  });
+  writeFileSync(indexFile, records);
+  return { count: scanned.offsets.length, size: scanned.size, tail: scanned.tail };
+}
+
+// The end of the event whose record is the last one of the index.
+function lastEnd(indexFile, count) {
+  const fd = openSync(indexFile, 'r');
+  try {
+    const record = Buffer.alloc(RECORD_BYTES);
+    readSync(fd, record, 0, RECORD_BYTES, (count - 1) * RECORD_BYTES);
+    return record.readDoubleLE(0) + record.readUInt32LE(8);
+  } finally {
+    closeSync(fd);
+  }
+}
+
+// The last WINDOW events, read from the first of them to the end of the log.
+function readWindow(file, count, size, locate) {
+  if (count === 0) return [];
+  const [begin] = locate(Math.max(1, count - WINDOW + 1));
+  return readRange(file, begin, size)
+    .split('\n')
+    .filter((line) => line.trim() !== '')
+    .map((line) => JSON.parse(line));
+}
+
+// Writes the first length bytes of a buffer, and goes on until all of them are written.
+function writeAll(fd, buffer, length) {
+  let at = 0;
+  while (at < length) at += writeSync(fd, buffer, at, length - at);
 }
 
 // Writes every open log's events to its file. The worker calls it before a reply, and the exit of the process calls it too.
