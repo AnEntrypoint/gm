@@ -154,12 +154,14 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
 
     query_log(args) {
       if (args.js !== undefined && typeof args.js !== 'string') return { ok: false, error: 'js must be a string' };
-      let events = log.events();
-      if (args.kind !== undefined) events = events.filter((event) => event.kind === args.kind);
-      if (args.fromMono !== undefined) events = events.filter((event) => event.mono >= args.fromMono);
-      if (args.toMono !== undefined) events = events.filter((event) => event.mono <= args.toMono);
-      if (args.after !== undefined) events = events.filter((event) => event.seq > args.after);
-      const page = pageOf(events);
+      const after = args.after === undefined ? 0 : Number(args.after);
+      if (!Number.isFinite(after)) return { ok: false, error: 'after must be a number' };
+      const match = (event) =>
+        (args.kind === undefined || event.kind === args.kind) &&
+        (args.fromMono === undefined || event.mono >= args.fromMono) &&
+        (args.toMono === undefined || event.mono <= args.toMono);
+      // One event past the page is read, so pageOf can tell whether more remain.
+      const page = pageOf(log.take(Math.max(0, Math.floor(after)), QUERY_PAGE_EVENTS + 1, match));
       return { ...runQuery(page.events, args.js ?? 'events'), ...(page.next === null ? {} : { next: page.next }) };
     },
 
@@ -416,8 +418,9 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
   }
 }
 
-// A query_log reply holds at most 50 events and stays within about 20 KB once serialized, because the reply escapes the
-// JSON it carries. When events remain, next is the seq of the last event returned, and the caller passes it as after.
+// A query_log reply holds at most 50 events and stays within 20 KB once serialized, because the reply escapes the JSON it carries. When
+// events remain, next is the seq of the last event returned, and the caller passes it as after. An event too large for a reply of its
+// own is cut to its head, so the reply is always valid JSON. A log that holds earlier query results has such events.
 const QUERY_PAGE_EVENTS = 50;
 const QUERY_REPLY_CHARS = 20000;
 
@@ -425,13 +428,40 @@ function pageOf(events) {
   const page = [];
   for (const event of events) {
     if (page.length === QUERY_PAGE_EVENTS) break;
-    const text = JSON.stringify(event);
-    const next = text.length > QUERY_REPLY_CHARS ? { seq: event.seq, kind: event.kind, truncated: text.slice(0, QUERY_REPLY_CHARS) } : event;
-    const candidate = [...page, next];
-    if (page.length > 0 && JSON.stringify({ ok: true, output: JSON.stringify(candidate) }).length > QUERY_REPLY_CHARS) break;
-    page.push(next);
+    if (replyChars([...page, event]) <= QUERY_REPLY_CHARS) {
+      page.push(event);
+      continue;
+    }
+    if (page.length === 0) page.push(clipped(event));
+    break;
   }
   return { events: page, next: page.length < events.length ? page.at(-1).seq : null };
+}
+
+// The length of the reply a page would make: the page as JSON, escaped once more inside the reply.
+function replyChars(page) {
+  return JSON.stringify({ ok: true, output: JSON.stringify(page) }).length;
+}
+
+// The head of an event's JSON, cut until a page of that one event fits the reply.
+function clipped(event) {
+  const text = JSON.stringify(event);
+  let size = Math.min(text.length, QUERY_REPLY_CHARS);
+  let shown = { seq: event.seq, kind: event.kind, truncated: text.slice(0, size) };
+  while (replyChars([shown]) > QUERY_REPLY_CHARS) {
+    size = Math.floor(size * 0.8);
+    shown = { seq: event.seq, kind: event.kind, truncated: text.slice(0, size) };
+  }
+  return shown;
+}
+
+// A query_log reply is a copy of events already in the log. The log keeps its first LOGGED_REPLY_CHARS and the full length. A full copy
+// would add up to 20 KB to the log for each query, and a page that reads the copies would never reach the end of the log. The events the
+// query reads are logged in full. Every path that logs a result uses this, so the log does not depend on the path that wrote it.
+const LOGGED_REPLY_CHARS = 1000;
+export function loggedReply(result) {
+  if (typeof result?.output !== 'string' || result.output.length <= LOGGED_REPLY_CHARS) return result;
+  return { ...result, output: result.output.slice(0, LOGGED_REPLY_CHARS), outputChars: result.output.length };
 }
 
 // Waits for the job's completion event, with a deadline. The job settles when its process exits, so no timer polls it.

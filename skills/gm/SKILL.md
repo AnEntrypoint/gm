@@ -11,7 +11,7 @@ Setup invariant. The gm-continue setup runs before any work, and this skill take
 
 The served tools are three: next_context, run_code and finish. All the work is done in run_code.
 
-1. Start every step with `next_context`. It returns the rules, the task, the witness requirement, the events new since your last step in full, the older events in compact form, `stepsLeft` and `prefixSha`. `gm.query_log` reaches every event. Follow the rules it returns.
+1. Start every step with `next_context`. It returns the rules, the task, the witness requirement, the events new since your last step in full, the older events in compact form, `run` (this run's id), `stepsLeft` and `prefixSha`. `gm.query_log` reaches every event. Follow the rules it returns.
 2. Do the work in one `run_code` call. Its body is JavaScript in the project, and each verb is a function on `gm`: `await gm.read_file({ path: 'a.txt' })`, `await gm.write_file({ path: 'c.txt', content })`, `await gm.run_shell({ command: 'npm test' })`. The verb list is in run_code's description, and `gm.verbs()` returns each verb's description and input schema as data.
 3. Put independent calls in one body with `Promise.all`, for example `const [a, b] = await Promise.all([gm.read_file({ path: 'a.txt' }), gm.read_file({ path: 'b.txt' })]);`. Do not put a call in the body that needs the result of another call in the same batch.
 4. A failed verb call returns `{ ok: false, error }` as data, and it does not stop the body. For per-call isolation, wrap any step that may throw in `gm.try`: `await gm.try(async () => ...)` returns the value, or `{ ok: false, error }` if the function throws.
@@ -85,5 +85,20 @@ A summary can replace earlier messages, including the rules, the witness require
 2. Follow the rules it returns. They are the same rules as before the compaction.
 3. Do not rely on a summary for a rule, the witness requirement or an event. Use `gm.query_log` for any event the summary does not give exactly.
 4. If a reply carries `rulesNotice`, or `next_context` carries `rulesPending`, read the gm skill again with ReadMcpResourceTool (server gm-new, uri gm://skill/SKILL.md) and follow it. That one read clears the notice, and it is the only extra step the notice needs. Do not repeat finished work.
+
+## Handing work to a child session
+
+Hand a piece of work to a child session when it can be done apart from this run, and its context would crowd this one. A child is a new session with its own run, log and context. It sees its task and its own events, and you see only what it hands back.
+
+1. Put the child's task in a file in the project, and name the file and the workspace to the child.
+2. The child calls `next_context` first. Its reply has `run`, the child's run id. The child puts that id in its witness, with its evidence, and finishes as in step 7.
+3. Read the child's result from a body. The CLI reads the child's log by its run id, and your context keeps only the witness:
+
+```
+const res = await gm.run_shell({ command: `node src/cli.mjs query --run ${childRun} --js "events.filter((e) => e.kind === 'end').map((e) => e.witness)"` });
+return res.output;
+```
+
+4. The child shares the workspace with you. Do not give two sessions a write to the same file: give the child its own files, or wait until it has finished before you write them.
 
 Never print, store or request secrets or API keys.

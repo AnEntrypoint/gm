@@ -649,6 +649,53 @@ What this does not show: that taskkill behaves the same on Windows. Wine impleme
 
 Rule re-injection and the live witness are a different limit, and Wine does not touch them: they need live model trials.
 
+## Single-worker limit: query_log paging (2026-11-02, owner request, reviewed by the orchestrator)
+
+The owner asked for the single-worker limit to be fixed as far as possible, for subagents and single workers alike. The measured limit was query_log. Each call parsed the whole log and filtered it before it cut the page, so paging a log of N events cost about N squared over the page size. A reply could also go out over its cap: an event larger than the cap was not cut, so runQuery cut the output mid-string and the reply was not valid JSON. The real log had no such event (its largest is 603 characters), but a log that holds earlier query results does, since each result is up to 20000 characters, and paging that log hit both problems.
+
+What changed (src/log.mjs, src/tools.mjs, src/mcp.mjs):
+- `take(after, limit, match)` reads the file from the byte offset of the first event after `after`, and stops at `limit` matches. query_log asks for 51 events, so pageOf makes the same page and the same `next` as before: one event past the page says whether more remain.
+- pageOf never returns a reply over 20000 characters. An event that does not fit a reply of its own is cut to its head until it fits, so the reply is valid JSON.
+- A query_log reply is logged with its first 1000 characters and `outputChars`, its full length, at the top level, inside run_code, and in the scripted run (src/loop.mjs). The events a query reads are logged in full. gm accepted this on that condition (2026-11-02). Reason: a reply is a copy of events already in the log. Logged in full, each query added up to 20 KB, and a reader that pages to the end reads its own copies: each page returns one copy and each query adds two events, so `next` never clears. The reply the agent receives is unchanged. This changes what the log stores for query replies, so it is the part gm should review.
+- query_log rejects an `after` that is not a number. Before, any value was compared as it was.
+
+Measured on a copy of a real run: 3137 events, with the copy's end event removed, so the server resumes the run and does not open a new one beside it. The scripts are scratch files outside the repo, in /tmp/gm-scratch/gm-new/qlog: page3.mjs pages one case per run and times each call as a stdio round trip, and samples RSS; compare.mjs checks two runs page by page, leaving out timestamps and durations; page4.mjs is page3.mjs with SRC for another source log. Each case's log is runs/<label>/run under that directory.
+
+| Case (label) | Code | Query | Pages | Invalid pages | Events | Elapsed ms | Mean call ms | Max call ms | Peak RSS MB |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| base-head-bounded | eeb8fa2 | toMono 45183.966, the copied events | 63 | 0 | 3137 | 531 | 8.3 | 17.8 | 92 |
+| new-take-bounded2 | this change | same | 63 | 0 | 3137 | 146 | 2.2 | 3.4 | 85 |
+| base-head-open | eeb8fa2 | none | 1000, cap reached | 375 | 4514 parsed | 37667 | 37.5 | 98.3 | 293 |
+| new-take-open2 | this change | none | 70, ended | 0 | 3279, seqs 1 to 3279 contiguous | 161 | 2.2 | 3.3 | 84 |
+| base-kind-result-open | eeb8fa2 | kind result | 1000, cap reached | 956 | 1047 parsed | 79276 | 79.1 | 176.8 | 328 |
+| new-kind-result-open | this change | kind result | 23, ended | 0 | 1046, equal to the result seqs of the final log up to seq 3184 | 72 | 3.0 | 4.5 | 83 |
+| new-over-head-log-full | this change, on runs/base-head-open/run | none | 1428, ended | 0 | 7997, seqs 1 to 7997 contiguous, 561 clipped to their head | 3536 | 2.4 | 6.3 | 268 |
+
+Results:
+- Page for page, the bounded runs are identical (compare.mjs base-head-bounded new-take-bounded2: 63 pages, identical). On a log with no oversized event, query_log returns the same pages as before.
+- Per call, the changed code is about 3.8 times faster on the same 3137 events (mean 2.2 against 8.3 ms). A call reads from its cursor and stops after one page, so its cost follows the page, not the log, unless the filter matches few events and the call reads to the end (mean 2.2 to 3.0 ms over 3137 to 7997 events). HEAD's call grows with the log, since each call parses all of it.
+- HEAD does not finish an unbounded page loop. Its own replies were logged in full and read back, and 375 of its pages (956 for kind result) were not valid JSON. The changed code ends every unbounded case here.
+- Clipping ran: 561 events too large for a reply of their own are cut to their head (438 of them are over 20000 characters in the copied HEAD log), and every reply in that run is valid JSON.
+
+Not measured: a host session's round trip, and a log of many thousands of events in a live run. Those need the owner's long-horizon run.
+
+Logging condition, witnessed (gm's condition, 2026-11-02). Scripted run 2026-11-02-08-01-22-fdb81d, through the CLI with no model call: the file is 22000 characters, and read_file replies with 20000 of them, its own page cap. Its logged read_file result is 20000 characters and a prefix of the file, so the tool result is in full. Its logged query_log reply (kind result, which holds that read) is 1000 characters with outputChars 13923. The MCP path logged 70 query replies in scratch run mcp-cap-check, each at most 1000 characters with outputChars. Replay of the run, 2026-11-02-08-01-28-3d9a08, finished with the same witness. A copy of the run whose logged query_log reply was replaced by CORRUPTED REPLY (the copy was deleted after the replay) replayed as 2026-11-02-08-01-28-a29c5a, with the same witness, and that replay's own query reply was the full reply, not the corrupted text. cli replay reads only the model's reply events, so no logged query reply is an input to a replay. Run 2026-11-02-08-00-51-a10ca3, from before the scripted path had the cap, logged its 13923-character query reply in full; that gap is closed.
+
+## Subagent handoff (2026-11-02, owner request, reviewed by the orchestrator)
+
+The owner asked for subagent isolation to be fixed as far as possible, once the single worker's limit showed (the section above). The mechanics are built. Whether isolation helps a long-horizon outcome is not measured, and it stays open.
+
+- A child session is a new run with its own run directory, log, feed and context. Isolation is by construction: the child's `next_context` shows only its task and its own events, and its log is separate from the parent's.
+- The handle is the child's run id. `next_context` now returns it as `run` (src/mcp.mjs, the reply of `context`). Before, the id was only on stderr, so a child could not name its log to the parent.
+- The parent reads the child's result through the CLI, `node src/cli.mjs query --run <id> --js "..."`, and keeps only the witness. The skill section "Handing work to a child session" (skills/gm/SKILL.md) tells a session to do this.
+- The workspace is shared. Children and parent can write the same file, and nothing enforces a separate workspace. The skill tells a session not to give two sessions a write to one file.
+
+Witness, scripted (no model: the calls are sent over stdio by /tmp/gm-scratch/gm-new/handoff/handoff.mjs, with the temporary workspace deleted after it). The child run is 2026-11-02-07-58-10-95bf7c, under runs/. Its `next_context` reply has `run` equal to the id on its stderr (`sameRun` true). Seq 3 and 4 are `next_context`; seq 5 and 6 are `read_file` of notes.txt, whose output starts with "alpha"; seq 7 and 8 are `finish` with the witness "child read notes.txt with read_file, first line: alpha"; seq 11 is `end`, status finished, 1 step. The parent's CLI query returned the finish output and the end witness, the same text, exit 0 for both.
+
+Not measured, and not run here: whether isolation helps (a child against one worker on the same long task), and a Claude Code subagent that loads the skill. Both need live model runs, which gm-new does not make (AGENTS.md). They are reported to gm, to run. Subagent isolation stays a named limit until a live run measures it (gm, 2026-11-02).
+
+Served hashes at this change: the tools surface b848c7e090507f36 (40 tools, the same hash as before this change), the default surface f1643e7385432449 (3 tools), and the sha256 of skills/gm/SKILL.md c1bf257cd9266368daaddf2e439e49263b5bad06c4669f5fab22da40a3ebcbe5. The tools hashes are the first 16 hex digits of the sha in the run's tools event.
+
 ## Measured
 
 - Update safety, witnessed (run update3/run-1793603564, real git repositories, final code): benign pull updated; a commit that breaks syntax was rejected, and the checkout was untouched; the same commit on the next check was refused; a dirty checkout gave dirty with HEAD unchanged; a diverged history gave diverged; an upstream revert was pulled; a busy callback gave waiting with HEAD unchanged, and the pull landed once it cleared; an unreachable origin gave offline; the timer logged 2 checks in 2.6 s and none after stop. The log for the dirty case reads "origin main is 1 commit(s) ahead, but the checkout has changes to tracked files, so nothing was pulled".

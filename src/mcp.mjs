@@ -6,7 +6,7 @@ import { basename, dirname, join, resolve } from 'node:path';
 import { createInterface } from 'node:readline';
 import { DEFAULT_WITNESS, prefixShaOf, renderTools } from './prompt.mjs';
 import { isDirectory, loadTask, newRunId, openRun, ROOT, RUNS } from './run.mjs';
-import { conflicts, createTools, OUTPUT_PAGE, DEFAULT_STUCK_MS, DEFAULT_MONITOR_MS } from './tools.mjs';
+import { conflicts, createTools, loggedReply, OUTPUT_PAGE, DEFAULT_STUCK_MS, DEFAULT_MONITOR_MS } from './tools.mjs';
 import { GIT_TOOLS } from './git.mjs';
 import { ROW_TOOLS } from './rows.mjs';
 import { SEARCH_TOOLS } from './search.mjs';
@@ -180,7 +180,8 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     }
     if (result?.refused === true && LEAVES_WORKSPACE.test(String(result.error))) noteRule(1, `${name}: ${result.error}`);
     // The full result is logged, so query_log reaches the output and the exit code of a verb called inside a body.
-    const fields = { ok: result?.ok === true, args, exitCode: result?.exitCode, signal: result?.signal, output: result?.output, error: result?.error };
+    const shown = name === 'query_log' ? loggedReply(result) : result;
+    const fields = { ok: shown?.ok === true, args, exitCode: shown?.exitCode, signal: shown?.signal, output: shown?.output, outputChars: shown?.outputChars, error: shown?.error };
     log.append('code-call', { step: steps, tool: name, startMono, ...fields, ...(body === undefined ? {} : { body }) });
     return result;
   }
@@ -343,7 +344,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     if (name === 'run_code') return act('run_code', args, access, () => runBody({ body: args.body, timeoutMs: args.timeoutMs, format: args.format, verbs: VERBS, call: innerCall, project: workspace, runDir, log, step: steps, background: (handle) => tools.adoptBody(handle) }), undefined, rpcId);
     if (name === 'next_context') return nextContext(access, rpcId);
     if (name === 'finish') return finish(args, access, rpcId);
-    if (Object.hasOwn(handlers, name)) return act(name, args, access, () => handlers[name](args), undefined, rpcId);
+    if (Object.hasOwn(handlers, name)) return act(name, args, access, () => handlers[name](args), name === 'query_log' ? loggedReply : undefined, rpcId);
     return act(name, args, access, () => tools.run(name, args), undefined, rpcId);
   }
 
@@ -382,6 +383,8 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     return {
       ok: true,
       step,
+      // The run's id, so a session that hands work to a child session can name the child's log (see query in src/cli.mjs).
+      run: runId,
       stepsLeft: maxSteps - step,
       maxSteps,
       rules,

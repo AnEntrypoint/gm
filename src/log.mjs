@@ -48,6 +48,9 @@ export function openLog(file) {
       for (let s = Math.max(1, seq); s <= offsets.length; s += 1) out.push(at(s));
       return out;
     },
+    // The first events after seq that match, in order, at most limit. The file is read from the first of them, so a page costs the lines
+    // it reads, not the whole log. after is a whole number of events.
+    take: (after, limit, match) => (after >= offsets.length ? [] : scanFrom(file, offsets[after], size, limit, match)),
     // The whole history, read from the file. Only the callers that need every event use it.
     events: () => readEvents(file),
     recent: (n) => tail.slice(-n),
@@ -104,6 +107,39 @@ export function readEvents(file) {
     .split('\n')
     .filter((line) => line.trim() !== '')
     .map((line) => JSON.parse(line));
+}
+
+// The events in the bytes from begin to end that match, in order, at most limit. It reads in chunks and stops at the limit.
+function scanFrom(file, begin, end, limit, match) {
+  const out = [];
+  const fd = openSync(file, 'r');
+  const chunk = Buffer.alloc(1 << 16);
+  let pending = Buffer.alloc(0);
+  let position = begin;
+  const visit = (bytes) => {
+    const line = bytes.toString('utf8');
+    if (line.trim() === '') return;
+    const event = JSON.parse(line);
+    if (match(event)) out.push(event);
+  };
+  try {
+    while (position < end && out.length < limit) {
+      const n = readSync(fd, chunk, 0, Math.min(chunk.length, end - position), position);
+      if (n === 0) break;
+      position += n;
+      pending = Buffer.concat([pending, chunk.subarray(0, n)]);
+      let start = 0;
+      for (let nl = pending.indexOf(10); nl !== -1 && out.length < limit; nl = pending.indexOf(10, start)) {
+        visit(pending.subarray(start, nl));
+        start = nl + 1;
+      }
+      pending = pending.subarray(start);
+    }
+    if (pending.length > 0 && out.length < limit) visit(pending);
+  } finally {
+    closeSync(fd);
+  }
+  return out;
 }
 
 export function runQuery(events, js) {
