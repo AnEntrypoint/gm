@@ -1,7 +1,7 @@
 #!/bin/sh
-# gm-new setup. Run it once after a clone, and again whenever you like: it is safe to repeat. It checks the tools gm-new needs, installs
+# gm setup. Run it once after a clone, and again whenever you like: it is safe to repeat. It checks the tools gm needs, installs
 # the one dependency when it is missing, pulls origin main when the checkout has no changes to tracked files (and runs the gate on the
-# result), runs the gate, and prints the .mcp.json entry for Claude Code.
+# result), runs the gate, and prints the two add-mcp commands that install gm. It runs neither command and writes nothing.
 #
 #   ./setup.sh
 set -eu
@@ -14,9 +14,11 @@ die() {
   exit 1
 }
 
+[ "$#" -eq 0 ] || die "setup takes no arguments: run ./setup.sh, then the add-mcp commands it prints"
+
 command -v git >/dev/null 2>&1 || die "git is not installed. Install git, then run this again."
-command -v node >/dev/null 2>&1 || die "node is not installed. gm-new needs Node 20 or later: https://nodejs.org"
-node -e 'process.exit(Number(process.versions.node.split(".")[0]) >= 20 ? 0 : 1)' || die "node is $(node -v). gm-new needs Node 20 or later."
+command -v node >/dev/null 2>&1 || die "node is not installed. gm needs Node 20 or later: https://nodejs.org"
+node -e 'process.exit(Number(process.versions.node.split(".")[0]) >= 20 ? 0 : 1)' || die "node is $(node -v). gm needs Node 20 or later."
 command -v npm >/dev/null 2>&1 || die "npm is not installed. It comes with node: https://nodejs.org"
 
 echo "setup: node $(node -v), git $(git --version | cut -d' ' -f3)"
@@ -44,12 +46,16 @@ else
   die "the gate failed. Read the message above, fix it, then run this again."
 fi
 
-# 4. Connect Claude Code. The entry below goes in the .mcp.json of the project you want gm-new to work on. Replace the three placeholders.
+# 4. The install. gm is installed with add-mcp, run through npx. The first command only lists the gm entries. The second removes every gm
+# entry, old or new. The third installs gm for Claude Code at user level, where the relay starts in the directory each session opens, so one
+# entry serves every project. setup prints the commands and runs none of them.
+case "$here" in
+  *[[:space:]]*) die "the checkout path has a space, and add-mcp splits a command string at spaces: $here" ;;
+esac
+echo "setup: install gm with these commands, in this order. Remove matches any server whose name contains gm, so list first."
 cat <<EOF
-
-setup: done. To connect Claude Code, put this in .mcp.json in your project:
-
-{"mcpServers":{"gm-new":{"command":"node","args":["$here/tools/relay.mjs","--workspace","<your project folder>","--runs","<your project folder>/runs","--task","<your task file>","--max-steps","100000"]}}}
-
-Then start Claude Code in that project. The manual is in docs/index.html.
+  npx -y add-mcp@2.6.1 list -g
+  npx -y add-mcp@2.6.1 remove gm -g -y
+  npx -y add-mcp@2.6.1 "node $here/tools/relay.mjs" -n gm -g -a claude-code -y
 EOF
+echo "setup: done. Nothing was run. The manual is in docs/index.html, and README.md has the same commands."
