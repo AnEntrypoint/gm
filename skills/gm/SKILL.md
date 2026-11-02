@@ -106,9 +106,9 @@ Use the first route that works, in this order:
 
 1. A channel event, `<channel source="gm" id="..." kind="...">`, arrives in the session when the host registered this server as a channel. Act on it as it lands.
 2. Otherwise, watch `pendingFile` in the background. If you have the Monitor tool (load it with ToolSearch when it is deferred), arm it on `tail -n +1 -F "<pendingFile>"`, with a description and a timeout of 1800000 ms. Each line it reports is one event. A watch expires, so re-arm it.
-3. Otherwise, start the same tail as a job and read it at each step: `await gm.job_start({ job: 'pending', command: 'tail -n +1 -F "<pendingFile>"' })`, then `await gm.job_status({ job: 'pending' })`.
+3. Otherwise, run `pendingCommands.wait` from `next_context` as a background task of the host's shell (Bash with run_in_background in Claude Code). It waits until the next event lands, prints the events once, and ends. The host reports when a background task ends, so the events reach you as they land. Act on what it printed, then start it again. It also ends with no output when its timeout passes, so start it again then too.
 
-Skip an id you have already acted on, whichever route reports it. Where no watch is possible at all, read and clear the queue from the shell: `node src/cli.mjs events --run <run> --read-clear` prints the events once, and a second call prints nothing.
+Skip an id you have already acted on, whichever route reports it. Where no background task is possible at all, run `pendingCommands.read` in the foreground at each step: it prints the events once, and a second call prints nothing.
 
 ## Handing work to a child session
 

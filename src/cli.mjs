@@ -5,7 +5,7 @@ import { join, resolve } from 'node:path';
 import { runLoop } from './loop.mjs';
 import { createModel } from './models.mjs';
 import { readEvents, runQuery } from './log.mjs';
-import { clearPending, takePending } from './pending.mjs';
+import { clearPending, hasPending, takePending } from './pending.mjs';
 import { buildPrompt, DEFAULT_RULES, DEFAULT_WITNESS } from './prompt.mjs';
 import { createTools } from './tools.mjs';
 import { createRun, isDirectory, loadTask, newRunId, RUNS } from './run.mjs';
@@ -16,6 +16,7 @@ const USAGE = `usage:
             [--script <replies.json>] [--faults 429,429] [--serial] [--no-background]
             [--latency-ms N] [--overlap]
   gmnew query --run <id> --js "<filter>"
+  gmnew events (--run <id> | --dir <run dir>) (--read-clear | --wait [--timeout-ms N])
   gmnew doctor [--workspace <dir>]`;
 
 async function main(argv) {
@@ -108,16 +109,49 @@ async function replay(flags) {
 }
 
 // Prints the pending events of a run once, and clears them: the queue is renamed, read, and its copy removed after printing. A crash between
-// the print and the removal prints them again, and never fewer.
-function events(flags) {
-  if (!flags.run || !/^[A-Za-z0-9_-]+$/.test(flags.run)) throw new Error('--run <id> is required');
-  if (flags['read-clear'] !== true) throw new Error('events takes --read-clear, which prints the pending events once and clears them');
-  const dir = join(RUNS, flags.run);
-  if (!isDirectory(dir)) throw new Error(`no run ${flags.run}`);
+// the print and the removal prints them again, and never fewer. With --wait, it first waits until the queue has an event, or until
+// --timeout-ms passes (default 1800000), and then does the same. A host that runs it as a background task reports when it ends, so the
+// events reach the agent as they land.
+async function events(flags) {
+  if (flags['read-clear'] !== true && flags.wait !== true) throw new Error('events takes --read-clear, which prints the pending events once and clears them, or --wait');
+  const dir = eventsDir(flags);
+  if (flags.wait === true) await waitForPending(dir, timeoutMs(flags));
   const taken = takePending(dir);
   for (const record of taken.records) console.log(JSON.stringify(record));
   clearPending(taken.files);
   return 0;
+}
+
+// The run directory is named by --dir (an absolute path, as next_context gives it) or by --run (an id under runs/ of this checkout).
+function eventsDir(flags) {
+  if (flags.dir !== undefined) {
+    const dir = resolve(flags.dir);
+    if (!isDirectory(dir)) throw new Error(`no run directory ${dir}`);
+    return dir;
+  }
+  if (!flags.run || !/^[A-Za-z0-9_-]+$/.test(flags.run)) throw new Error('--run <id> or --dir <run dir> is required');
+  const dir = join(RUNS, flags.run);
+  if (!isDirectory(dir)) throw new Error(`no run ${flags.run}`);
+  return dir;
+}
+
+function timeoutMs(flags) {
+  const ms = Number(flags['timeout-ms'] ?? 1800000);
+  if (!Number.isInteger(ms) || ms < 1) throw new Error('--timeout-ms must be a positive integer');
+  return ms;
+}
+
+// Resolves when the run's queue has an event, or when the timeout passes. The queue is checked every 200 ms, so an event is seen within that.
+function waitForPending(dir, ms) {
+  const until = Date.now() + ms;
+  return new Promise((done) => {
+    const timer = setInterval(() => {
+      if (hasPending(dir) || Date.now() >= until) {
+        clearInterval(timer);
+        done();
+      }
+    }, 200);
+  });
 }
 
 function query(flags) {
@@ -175,7 +209,7 @@ function lastOutcome(events) {
   return 'none';
 }
 
-const BOOLEAN_FLAGS = new Set(['serial', 'no-background', 'overlap', 'read-clear']);
+const BOOLEAN_FLAGS = new Set(['serial', 'no-background', 'overlap', 'read-clear', 'wait']);
 
 function parseFlags(argv) {
   const flags = {};

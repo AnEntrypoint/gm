@@ -403,6 +403,12 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
       total: log.count(),
       ...(taken.records.length > 0 ? { pending: taken.records } : {}),
       pendingFile: join(runDir, PENDING_FILE),
+      // The shell commands for a host with no channel and no Monitor. wait runs as a background task and ends at the next event; read clears
+      // the queue once. Both name the run directory, so they work from any directory.
+      pendingCommands: {
+        wait: `node "${join(ROOT, 'src', 'cli.mjs')}" events --dir "${runDir}" --wait`,
+        read: `node "${join(ROOT, 'src', 'cli.mjs')}" events --dir "${runDir}" --read-clear`,
+      },
       ...feedOf(log, REGISTRY, { shown: shownTotalOf(log) }),
       ...(recoveryNow ? { recovery: recoveryNow } : {}),
       ...(rulesOpen.size > 0 ? { rulesPending: rulesNotice() } : {}),

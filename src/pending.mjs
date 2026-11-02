@@ -34,14 +34,29 @@ export function takePending(runDir) {
     renameSync(join(runDir, PENDING_FILE), join(runDir, name));
     names.push(name);
   }
-  const files = names.map((name) => join(runDir, name));
+  const files = [];
   const records = [];
-  for (const file of files) {
-    for (const line of readFileSync(file, 'utf8').split('\n')) {
+  for (const name of names) {
+    const file = join(runDir, name);
+    let text;
+    try {
+      text = readFileSync(file, 'utf8');
+    } catch (err) {
+      // Another reader took this copy after it was listed, so its records are that reader's to deliver.
+      if (err.code === 'ENOENT') continue;
+      throw err;
+    }
+    files.push(file);
+    for (const line of text.split('\n')) {
       if (line.trim() !== '') records.push(JSON.parse(line));
     }
   }
   return { records, files };
+}
+
+// True when takePending would return records: the queue has some, or a copy from an earlier crash is waiting.
+export function hasPending(runDir) {
+  return existsSync(join(runDir, PENDING_FILE)) || readdirSync(runDir).some((name) => READING.test(name));
 }
 
 // Removes the copies that takePending read. A copy that is already gone is not an error.

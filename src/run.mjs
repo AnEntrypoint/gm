@@ -1,4 +1,4 @@
-import { randomBytes } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -22,8 +22,26 @@ export function createRun({ runDir, rules, meta }) {
 
 export function openRun({ runDir, rules, meta }) {
   const file = join(runDir, 'log.jsonl');
-  if (existsSync(file)) return { log: openLog(file), resumed: true };
+  if (existsSync(file)) {
+    const log = openLog(file);
+    refreshRules(runDir, rules, log);
+    return { log, resumed: true };
+  }
   return { log: createRun({ runDir, rules, meta }), resumed: false };
+}
+
+// A resumed run takes the rules the server holds now. Each step reads rules.md, so an edit to the rules reaches a run in progress at its next
+// step, with no reconnect. The log records the change, with a short hash of the text before and after it.
+function refreshRules(runDir, rules, log) {
+  const path = join(runDir, 'rules.md');
+  const before = existsSync(path) ? readFileSync(path, 'utf8') : null;
+  if (before === rules) return;
+  writeFileSync(path, rules);
+  log.append('rules-updated', { from: before === null ? null : hashOf(before), to: hashOf(rules) });
+}
+
+function hashOf(text) {
+  return createHash('sha256').update(text).digest('hex').slice(0, 12);
 }
 
 export function loadTask(value) {
