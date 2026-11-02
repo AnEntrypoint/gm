@@ -86,6 +86,19 @@ A summary can replace earlier messages, including the rules, the witness require
 3. Do not rely on a summary for a rule, the witness requirement or an event. Use `gm.query_log` for any event the summary does not give exactly.
 4. If a reply carries `rulesNotice`, or `next_context` carries `rulesPending`, read the gm skill again with ReadMcpResourceTool (server gm-new, uri gm://skill/SKILL.md) and follow it. That one read clears the notice, and it is the only extra step the notice needs. Do not repeat finished work.
 
+## Pending events
+
+next_context returns `pending`: the events that need you since your last step, each one once, with an `id`. A job that starts or exits, a killed or stuck job, a rules notice and a recovery are pending events. Skip an id you have already acted on, because a crash can deliver one twice. `pendingFile` is the file that holds them.
+
+For live feedback, follow the file as a shell job, and read the job as its events land:
+
+```
+await gm.job_start({ job: 'pending', command: 'tail -n +1 -F "<pendingFile>"' });
+const seen = await gm.job_status({ job: 'pending' });
+```
+
+Where no monitor is available, read and clear them from the shell: `node src/cli.mjs events --run <run> --read-clear` prints them once, and a second call prints nothing.
+
 ## Handing work to a child session
 
 Hand a piece of work to a child session when it can be done apart from this run, and its context would crowd this one. A child is a new session with its own run, log and context. It sees its task and its own events, and you see only what it hands back.

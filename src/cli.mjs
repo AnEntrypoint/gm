@@ -5,6 +5,7 @@ import { join, resolve } from 'node:path';
 import { runLoop } from './loop.mjs';
 import { createModel } from './models.mjs';
 import { readEvents, runQuery } from './log.mjs';
+import { clearPending, takePending } from './pending.mjs';
 import { buildPrompt, DEFAULT_RULES, DEFAULT_WITNESS } from './prompt.mjs';
 import { createTools } from './tools.mjs';
 import { createRun, isDirectory, loadTask, newRunId, RUNS } from './run.mjs';
@@ -21,6 +22,7 @@ async function main(argv) {
   const [command, ...rest] = argv;
   if (command === 'run') return run(parseFlags(rest));
   if (command === 'query') return query(parseFlags(rest));
+  if (command === 'events') return events(parseFlags(rest));
   if (command === 'replay') return replay(parseFlags(rest));
   if (command === 'doctor') return doctor(parseFlags(rest));
   console.error(USAGE);
@@ -105,6 +107,19 @@ async function replay(flags) {
   return result.status === 'finished' ? 0 : 1;
 }
 
+// Prints the pending events of a run once, and clears them: the queue is renamed, read, and its copy removed after printing. A crash between
+// the print and the removal prints them again, and never fewer.
+function events(flags) {
+  if (!flags.run || !/^[A-Za-z0-9_-]+$/.test(flags.run)) throw new Error('--run <id> is required');
+  if (flags['read-clear'] !== true) throw new Error('events takes --read-clear, which prints the pending events once and clears them');
+  const dir = join(RUNS, flags.run);
+  if (!isDirectory(dir)) throw new Error(`no run ${flags.run}`);
+  const taken = takePending(dir);
+  for (const record of taken.records) console.log(JSON.stringify(record));
+  clearPending(taken.files);
+  return 0;
+}
+
 function query(flags) {
   if (!flags.run || !/^[A-Za-z0-9_-]+$/.test(flags.run)) throw new Error('--run <id> is required');
   if (flags.js === undefined) throw new Error('--js "<filter>" is required');
@@ -160,7 +175,7 @@ function lastOutcome(events) {
   return 'none';
 }
 
-const BOOLEAN_FLAGS = new Set(['serial', 'no-background', 'overlap']);
+const BOOLEAN_FLAGS = new Set(['serial', 'no-background', 'overlap', 'read-clear']);
 
 function parseFlags(argv) {
   const flags = {};

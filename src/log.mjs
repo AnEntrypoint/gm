@@ -1,5 +1,7 @@
 import { appendFileSync, closeSync, existsSync, openSync, readFileSync, readSync } from 'node:fs';
 import { performance } from 'node:perf_hooks';
+import { dirname } from 'node:path';
+import { appendPending, PENDING_KINDS } from './pending.mjs';
 
 const QUERY_CAP = 20000;
 // The events kept in memory, the last ones. Any other event is read from the file at its offset.
@@ -17,6 +19,7 @@ export function openLog(file) {
   let size = start;
   let inFlight = 0;
   let unwritten = [];
+  const runDir = dirname(file);
   const flush = () => {
     if (unwritten.length === 0) return;
     appendFileSync(file, unwritten.join(''));
@@ -54,6 +57,11 @@ export function openLog(file) {
       size += Buffer.byteLength(line);
       tail.push(event);
       if (tail.length > WINDOW) tail.shift();
+      // The log holds the event before the pending queue names it, so the queue never names an event the log lacks.
+      if (PENDING_KINDS.has(kind)) {
+        flush();
+        appendPending(runDir, event);
+      }
       return event;
     },
     at,

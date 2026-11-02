@@ -7,6 +7,7 @@ import { createInterface } from 'node:readline';
 import { DEFAULT_WITNESS, prefixShaOf, renderTools } from './prompt.mjs';
 import { isDirectory, loadTask, newRunId, openRun, ROOT, RUNS } from './run.mjs';
 import { flushAllLogs } from './log.mjs';
+import { clearPending, PENDING_FILE, takePending } from './pending.mjs';
 import { conflicts, createTools, loggedReply, OUTPUT_PAGE, DEFAULT_STUCK_MS, DEFAULT_MONITOR_MS } from './tools.mjs';
 import { GIT_TOOLS } from './git.mjs';
 import { ROW_TOOLS } from './rows.mjs';
@@ -62,7 +63,7 @@ const number = { type: 'number' };
 const objectSchema = (properties, required = []) => ({ type: 'object', properties, required });
 
 const TOOLS = [
-  { name: 'next_context', description: 'Begin a step. Returns rules, task, witness requirement, the events new since the last step in full, the older ones in compact form within two horizons, and prefixSha. Call it at the start of each step. query_log reaches every event.', inputSchema: objectSchema({}) },
+  { name: 'next_context', description: 'Begin a step. Returns rules, task, witness requirement, the events new since the last step in full, the older ones in compact form within two horizons, and prefixSha. pending lists the events that need you since your last step, each once, with an id, and pendingFile is the file that holds them for a live tail. Call it at the start of each step. query_log reaches every event.', inputSchema: objectSchema({}) },
   { name: 'read_file', description: 'Read a text file in the workspace, one page of at most 20000 characters. Returns output, total characters, the offset of this page and next, the offset of the next page (null at the end).', inputSchema: objectSchema({ path: text, offset: number, limit: number }, ['path']) },
   { name: 'write_file', description: 'Write a text file in the workspace, creating parent directories.', inputSchema: objectSchema({ path: text, content: text }, ['path', 'content']) },
   { name: 'edit_file', description: 'Replace old with new in a workspace text file. old must occur once, unless replaceAll is true.', inputSchema: objectSchema({ path: text, old: text, new: text, replaceAll: { type: 'boolean' } }, ['path', 'old', 'new']) },
@@ -369,6 +370,9 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     const rules = await readFile(join(runDir, 'rules.md'), 'utf8');
     const recoveryNow = pendingRecovery === null ? undefined : recoveryNote(pendingRecovery);
     pendingRecovery = null;
+    // The pending events are delivered once. They are removed only after this reply is written, so a crash before that delivers them again.
+    const taken = takePending(runDir);
+    if (taken.files.length > 0) afterReply.push(() => clearPending(taken.files));
     const since = log.eventsFrom(noticeSeq + 1);
     noticeSeq = log.count();
     const killed = since.filter((event) => event.kind === 'job-killed');
@@ -395,6 +399,8 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
       witness: DEFAULT_WITNESS,
       prefixSha: prefixShaOf({ rules, task, witness: DEFAULT_WITNESS, tools: servedText }),
       total: log.count(),
+      ...(taken.records.length > 0 ? { pending: taken.records } : {}),
+      pendingFile: join(runDir, PENDING_FILE),
       ...feedOf(log, REGISTRY, { shown: shownTotalOf(log) }),
       ...(recoveryNow ? { recovery: recoveryNow } : {}),
       ...(rulesOpen.size > 0 ? { rulesPending: rulesNotice() } : {}),
@@ -592,10 +598,13 @@ const READ_ONLY_TOOLS = new Set([
   'next_context', 'read_file', 'list_dir', 'stat_file', 'search', 'wiki_search', 'grep', 'callers', 'impact', 'query_log', 'job_status',
   'git_status', 'git_log', 'git_diff', 'git_show', 'ci_status', 'prd_list', 'unknown_list', 'review_join',
 ]);
+// Actions that run once the reply they belong to is written, such as the removal of pending events the reply delivered.
+const afterReply = [];
 // A reply is written only after the events so far are in the log, so the log holds every event a reply reports.
 function write(message) {
   flushAllLogs();
   process.stdout.write(`${JSON.stringify(message)}\n`);
+  for (const done of afterReply.splice(0)) done();
 }
 
 function errorReply(id, code, message) {
