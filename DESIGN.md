@@ -660,9 +660,9 @@ This supersedes the relay and supervisor bullets above. The relay has no swap, l
 - `tools/supervise.mjs` is no longer started by anything. It stays until the owner's reconnect, because the relay before this change still runs it. Remove it in the next commit after the reconnect.
 
 Witness, scripted host (no model), run in a scratch clone with a bare origin (`/tmp/gm-scratch/gm-new/relay-witness/drive.mjs`, log `drive.log`, summary `drive-summary-final.json`, run `2026-11-02-08-38-48-a16efb`). The commits below are in the scratch origin, not in the public one:
-- (a) commit `b58f0bf` edits only `src/run.mjs`: the worker is replaced (worker pid changed), the core and the relay keep their pids, and the host's `tools/list` answers with 3 tools. No reconnect.
-- (b) commit `d05b32b` edits only `tools/core.mjs`: the core is replaced (pid 241895 to 243365), the relay keeps its pid, no second core starts, and `tools/list` answers with 3 tools.
-- (c) commit `8951d84` edits only `skills/`: the worker restarts and `tools/list` answers with 3 tools. The relay's hash is the same at `da34588`, `b58f0bf`, `d05b32b`, and `8951d84`: `28b8226b395566de1d182e13ec1db098e1efb8891bb74328b22247688c041175`.
+- (a) commit `b58f0bf` edits only `src/run.mjs`: the worker is replaced (worker pid changed), the core and the relay keep their pids, and the host's tools list answers with 3 tools. No reconnect.
+- (b) commit `d05b32b` edits only `tools/core.mjs`: the core is replaced (pid 241895 to 243365), the relay keeps its pid, no second core starts, and tools list answers with 3 tools.
+- (c) commit `8951d84` edits only `skills/`: the worker restarts and tools list answers with 3 tools. The relay's hash is the same at `da34588`, `b58f0bf`, `d05b32b`, and `8951d84`: `28b8226b395566de1d182e13ec1db098e1efb8891bb74328b22247688c041175`.
 - (d) the core is killed with SIGKILL (pid 243365). The relay logs `core output ended`, starts a new core (pid 244161) on the same run directory after one second, and answers the request sent at the kill (`requestSentAtKill` 3, the reply has 3 tools). The relay stays up, and when the host closes its input the relay exits with code 0.
 
 Not witnessed yet: the same with the owner's live host. The live relay (pid 99097) still runs the previous code, so witnesses (a) to (c) on the public origin come after the owner's reconnect. Limit: a line that the core has read but not processed when the core dies gets no reply. Lines still in the pipe are answered by the next core.
