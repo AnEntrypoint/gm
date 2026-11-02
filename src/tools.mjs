@@ -23,6 +23,10 @@ const BARRIER = { barrier: true };
 const DEFAULT_JOB_LIFETIME_MS = 1800000;
 // A background run reports that it is still running at each multiple of this, once per multiple.
 const BODY_NOTICE_MS = 180000;
+// A running job with no progress for this long is stuck, and the agent is told once. Progress is output a shell job writes, a verb call a
+// body makes or has in flight, and the start of the job. The check runs every monitorMs.
+export const DEFAULT_STUCK_MS = 180000;
+export const DEFAULT_MONITOR_MS = 15000;
 const PATH_TOOLS = new Set(['read_file', 'write_file', 'edit_file', 'list_dir', 'stat_file']);
 const WRITE_TOOLS = new Set(['write_file', 'edit_file']);
 const READ_ONLY = new Set(['job_status', 'search', 'wiki_search', 'grep', 'fetch', 'callers', 'impact', 'review_join']);
@@ -49,10 +53,12 @@ export const COMPACT = {
   },
 };
 
-export function createTools({ workspace, runDir, log, background = true, jobLifetimeMs = DEFAULT_JOB_LIFETIME_MS }) {
+export function createTools({ workspace, runDir, log, background = true, jobLifetimeMs = DEFAULT_JOB_LIFETIME_MS, stuckMs = DEFAULT_STUCK_MS, monitorMs = DEFAULT_MONITOR_MS }) {
   const root = resolve(workspace);
   const realRoot = realpathSync(root);
   const jobs = new Map();
+  // The verb calls a body has in flight, by the body's seq. A body with a call in flight is progressing.
+  const inFlightByBody = new Map();
 
   const confine = (rel) => {
     if (typeof rel !== 'string' || rel === '') return { refused: 'path must be a non-empty string' };
@@ -177,7 +183,7 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
     const status = { job: name, command, state: 'running', pid: child.pid, startMono, output: outputFile };
     writeStatus(name, status);
 
-    const job = { child, killRequested: false, killReason: undefined, settled: false };
+    const job = { name, child, outputFile, startWall: Date.now(), stuck: false, killRequested: false, killReason: undefined, settled: false };
     job.lifetimeKilled = jobLifetimeMs < timeoutMs;
     const timer = setTimeout(() => {
       job.killRequested = true;
@@ -218,7 +224,7 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
     const status = { job: name, body, state: queued ? 'queued' : 'running', startMono };
     mkdirSync(join(runDir, 'jobs'), { recursive: true });
     writeStatus(name, status);
-    const job = { name, body, settled: false };
+    const job = { name, body, settled: false, queued, stuck: false, startWall: Date.now() };
     job.done = new Promise((resolve) => {
       job.resolve = resolve;
     });
@@ -245,6 +251,9 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
     let lifetime;
     let reminder;
     const begin = () => {
+      // The clock of progress and of the lifetime starts with the thread, not with the adoption, so a body that waited is not stuck for the wait.
+      job.queued = false;
+      job.startWall = Date.now();
       lifetime = setTimeout(() => job.stop('lifetime'), jobLifetimeMs);
       reminder = setInterval(() => log.append('job-running', { job: name, body, runningMs: Math.round(log.now() - startMono) }), BODY_NOTICE_MS);
     };
@@ -290,10 +299,58 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
     }
   }
 
+  // The progress of a running job: now while a verb call of its body is in flight, otherwise the newest verb call the body made, or the last
+  // write to a shell job's output, or the start, whichever is latest.
+  function progressAt(job) {
+    if ((inFlightByBody.get(job.body) ?? 0) > 0) return Date.now();
+    if (job.body !== undefined) return Math.max(job.startWall, lastCallWall(log, job.body));
+    return Math.max(job.startWall, existsSync(job.outputFile) ? statSync(job.outputFile).mtimeMs : 0);
+  }
+
+  // The stuck check. A running job that has made no progress for stuckMs is stuck. The agent is told once when a job becomes stuck, and once
+  // when it progresses again, so a stuck job is never reported twice in a row. A queued job is waiting for a slot, not stuck.
+  function checkStuck() {
+    const now = Date.now();
+    for (const job of jobs.values()) {
+      if (job.settled || job.queued) continue;
+      const sinceProgressMs = Math.round(now - progressAt(job));
+      const body = job.body !== undefined ? { body: job.body } : {};
+      if (!job.stuck && sinceProgressMs > stuckMs) {
+        job.stuck = true;
+        log.append('job-stuck', { job: job.name, ...body, sinceProgressMs });
+      } else if (job.stuck && sinceProgressMs <= stuckMs) {
+        job.stuck = false;
+        log.append('job-unstuck', { job: job.name, ...body, sinceProgressMs });
+      }
+    }
+  }
+  const monitor = setInterval(checkStuck, monitorMs);
+  monitor.unref();
+
+  // The jobs still open, for the status the agent reads at each step: how long each has run and how long since it progressed.
+  function activeJobs() {
+    const now = Date.now();
+    return [...jobs.values()].filter((job) => !job.settled).map((job) => ({
+      job: job.name,
+      ...(job.body !== undefined ? { body: job.body } : {}),
+      state: job.queued ? 'queued' : 'running',
+      runningMs: now - job.startWall,
+      ...(job.queued ? {} : { sinceProgressMs: Math.round(now - progressAt(job)) }),
+      stuck: job.stuck,
+    }));
+  }
+
   stopOrphans();
 
   return {
     adoptBody,
+    activeJobs,
+    callStarted(body) {
+      inFlightByBody.set(body, (inFlightByBody.get(body) ?? 0) + 1);
+    },
+    callEnded(body) {
+      inFlightByBody.set(body, Math.max(0, (inFlightByBody.get(body) ?? 0) - 1));
+    },
     access(name, args) {
       if (READ_ONLY.has(name)) return { items: [] };
       if (!PATH_TOOLS.has(name)) return BARRIER;
@@ -313,6 +370,7 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
     },
 
     async close(reason = 'run-ended') {
+      clearInterval(monitor);
       for (const job of jobs.values()) if (!job.settled && job.body !== undefined) job.stop(reason);
       const running = [...jobs.values()].filter((job) => !job.settled && job.child !== undefined);
       for (const job of running) {
@@ -399,6 +457,15 @@ function bodyText(log, body, cap = Infinity) {
   }
   const text = lines.reverse().join('\n');
   return text.length > cap ? text.slice(text.length - cap) : text;
+}
+
+// The wall time of the newest verb call a body made, from the log, or 0 when it made none. The walk stops at the first call it finds.
+function lastCallWall(log, body) {
+  for (let seq = log.count(); seq > body; seq -= 1) {
+    const event = log.at(seq);
+    if (event.kind === 'code-call' && event.body === body) return Date.parse(event.t);
+  }
+  return 0;
 }
 
 function readTail(file, cap) {

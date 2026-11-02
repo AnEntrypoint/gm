@@ -456,6 +456,24 @@ Decision (gm, 2026-11-02): no channel. A channel depends on a Claude Code develo
 
 Accepted (gm, 2026-11-02): the lookup semantics, delivered through next_context and not a new verb. Each event the agent has not seen is delivered once in next_context, within the horizons of the approved compact feed, and query_log reaches anything older. This is the feed change already decided (Feed compaction above), so no new Decided change is needed.
 
+## Stuck check and the open-jobs snapshot (agent decision under the owner's delegation, 2026-11-02)
+
+The owner asked that the agent get all progress from every source when it queries, and also the notices about what is still happening, so that it can later tell when something has stuck. Decisions, made by the agent under the owner's delegation:
+
+- A running job is stuck when it has made no progress for stuckMs, default 180000, the same as the run_code budget. Progress is: output written by a shell job (the mtime of its output file); a verb call a body has in flight, or has finished (the body's newest code-call in the log); or the job's start.
+- A verb call in flight counts as progress until it returns, so a call that never returns is not flagged. Its own timeout is what bounds it.
+- A queued body is waiting for a slot, not stuck. Its clock starts when its thread starts.
+- The monitor checks every monitorMs, default 15000. It logs job-stuck once when a job becomes stuck, and job-unstuck once when it progresses again. A job that settles while stuck is not reported unstuck; its end notice is the report.
+- next_context carries the changes since the last step as jobsStuck and jobsUnstuck, which are events and so are delivered once. It also carries jobsOpen, a snapshot of every open job (job, body, state, runningMs, sinceProgressMs, stuck), limited to 20 with jobsOpenMore for the rest. The snapshot is not an event, so nothing is logged for it, and it is sent at each step because it says what is happening now.
+- The two numbers are flags, --stuck-ms and --monitor-ms. The witnesses use 2000 and 500.
+- New event kinds, job-stuck and job-unstuck, use the generic compaction, which keeps their fields.
+
+Witnesses, run on a copy of the working tree (/tmp/gm-scratch/gm-new/next-tree) before the change was applied to the repository, so that the counts' tree was not changed while they ran:
+
+- stuck-1793600083637: a silent shell job (sleep 8) is flagged at 2.4 s, and jobsOpen shows it stuck. A chatty job, which writes every second, is never flagged. A body that waits without a verb call is flagged at seq 19, unstuck when its list_dir lands at seq 21, and stuck again at seq 26. A body with a 5-second run_shell in flight is never flagged.
+- queue-1793600107424: of five bodies that wait 4 seconds with four slots, the fifth is listed as queued, not stuck, with no job-stuck before its thread starts (body-started at seq 28).
+- Regression on the copy, same seqs as before: budget (returns at 2055 ms, started at seq 7, exited at seq 12), lifetime (killed at seq 19, 9 calls before and 0 after), finish, restart (seq 9 and 10), crash (seq 12), shell (SIGKILL), cap (replies in order, at most 4 running, RSS 136 MB at peak) and capstop (no queued body starts, six killed).
+
 ## Relay list notices (2026-11-02)
 
 After a swap of the supervisor, the relay compares the new worker's tools, prompts and resources lists with the lists the host last fetched. The relay keeps a digest of each host list response, so the comparison is against what the host has seen, not against the previous worker. For each kind that differs, it sends the host that kind's list_changed notice. A kind the host never fetched gets none, and nothing is sent when nothing differs. The supervisor's own list notices during a swap are dropped, since the relay decides them. A restart the supervisor makes from a source change still sends its three notices, as before.

@@ -6,7 +6,7 @@ import { basename, dirname, join, resolve } from 'node:path';
 import { createInterface } from 'node:readline';
 import { DEFAULT_WITNESS, prefixShaOf, renderTools } from './prompt.mjs';
 import { isDirectory, loadTask, newRunId, openRun, ROOT, RUNS } from './run.mjs';
-import { conflicts, createTools, OUTPUT_PAGE } from './tools.mjs';
+import { conflicts, createTools, OUTPUT_PAGE, DEFAULT_STUCK_MS, DEFAULT_MONITOR_MS } from './tools.mjs';
 import { GIT_TOOLS } from './git.mjs';
 import { ROW_TOOLS } from './rows.mjs';
 import { SEARCH_TOOLS } from './search.mjs';
@@ -42,7 +42,9 @@ const DEFAULT_MAX_STEPS = 50;
 const REPLY_MEMORY = 256;
 const DEFAULT_MAX_INFLIGHT = 8;
 const DEFAULT_JOB_LIFETIME_MS = 1800000;
-const USAGE = 'usage: node src/mcp.mjs --workspace <dir> --task <file-or-text> [--run-dir <dir>] [--max-steps N] [--max-inflight N] [--job-lifetime-ms N] [--surface tools|code]';
+// The most open jobs a next_context reply lists. The rest are counted in jobsOpenMore.
+const OPEN_LIST = 20;
+const USAGE = 'usage: node src/mcp.mjs --workspace <dir> --task <file-or-text> [--run-dir <dir>] [--max-steps N] [--max-inflight N] [--job-lifetime-ms N] [--stuck-ms N] [--monitor-ms N] [--surface tools|code]';
 
 const MCP_RULES = `# Rules
 
@@ -105,9 +107,9 @@ class RpcError extends Error {
   }
 }
 
-function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, resume = null, jobLifetimeMs = DEFAULT_JOB_LIFETIME_MS, recovery = null, history = [], surface = 'code' }) {
+function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, resume = null, jobLifetimeMs = DEFAULT_JOB_LIFETIME_MS, stuckMs = DEFAULT_STUCK_MS, monitorMs = DEFAULT_MONITOR_MS, recovery = null, history = [], surface = 'code' }) {
   const runId = basename(runDir);
-  const tools = createTools({ workspace, runDir, log, background: true, jobLifetimeMs });
+  const tools = createTools({ workspace, runDir, log, background: true, jobLifetimeMs, stuckMs, monitorMs });
   let pendingRecovery = recovery;
   let noticeSeq = lastContextSeq(log.events());
   const active = new Map();
@@ -139,17 +141,21 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
   // One verb called from run_code. It runs through the same handler the tool surface uses, and it is logged as code-call.
   async function innerCall(name, args) {
     const startMono = log.now();
+    // A call that a background body makes carries the body's seq, so the body's output can be read back from the log. While the call is in
+    // flight, the body counts as progressing (the stuck check reads it).
+    const body = bodyContext.getStore()?.body;
+    if (body !== undefined) tools.callStarted(body);
     const exec = Object.hasOwn(handlers, name) ? handlers[name] : (value) => tools.run(name, value);
     let result;
     try {
       result = await exec(args);
     } catch (err) {
       result = { ok: false, error: err.message };
+    } finally {
+      if (body !== undefined) tools.callEnded(body);
     }
     // The full result is logged, so query_log reaches the output and the exit code of a verb called inside a body.
     const fields = { ok: result?.ok === true, args, exitCode: result?.exitCode, signal: result?.signal, output: result?.output, error: result?.error };
-    // A call that a background body makes carries the body's seq, so the body's output can be read back from the log.
-    const body = bodyContext.getStore()?.body;
     log.append('code-call', { step: steps, tool: name, startMono, ...fields, ...(body === undefined ? {} : { body }) });
     return result;
   }
@@ -317,6 +323,11 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     // A background run's notices: it started, it is still running (once per 3 minutes), and it ended. A kill is named once, by job-killed.
     const started = since.filter((event) => event.kind === 'job' && event.state === 'running' && event.body !== undefined);
     const stillRunning = since.filter((event) => event.kind === 'job-running');
+    // What is still happening: the jobs that turned stuck or progressed again since the last step, and every job still open now, so the agent
+    // can tell whether anything is stuck. The open list is a snapshot of the present, not a notice, so it is not an event.
+    const turnedStuck = since.filter((event) => event.kind === 'job-stuck');
+    const progressedAgain = since.filter((event) => event.kind === 'job-unstuck');
+    const open = tools.activeJobs();
     const ended = since.filter((event) => event.kind === 'job' && event.state !== 'running' && !(event.state === 'killed' && killedNames.has(event.job)));
     const jobsEnded = await Promise.all(ended.map((event) => endedJob(runDir, event)));
     return {
@@ -335,6 +346,9 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
       ...(started.length ? { jobsStarted: started.map(({ seq, job }) => ({ seq, job })) } : {}),
       ...(stillRunning.length ? { jobsRunning: stillRunning.map(({ seq, job, runningMs }) => ({ seq, job, runningMs })) } : {}),
       ...(jobsEnded.length ? { jobsEnded } : {}),
+      ...(turnedStuck.length ? { jobsStuck: turnedStuck.map(({ seq, job, body, sinceProgressMs }) => ({ seq, job, ...(body === undefined ? {} : { body }), sinceProgressMs })) } : {}),
+      ...(progressedAgain.length ? { jobsUnstuck: progressedAgain.map(({ seq, job }) => ({ seq, job })) } : {}),
+      ...(open.length ? { jobsOpen: open.slice(0, OPEN_LIST), ...(open.length > OPEN_LIST ? { jobsOpenMore: open.length - OPEN_LIST } : {}) } : {}),
     };
   }
 
@@ -576,6 +590,8 @@ async function main(argv) {
   const maxSteps = positiveInt(flags['max-steps'] ?? DEFAULT_MAX_STEPS, '--max-steps');
   const maxInflight = positiveInt(flags['max-inflight'] ?? DEFAULT_MAX_INFLIGHT, '--max-inflight');
   const jobLifetimeMs = positiveInt(flags['job-lifetime-ms'] ?? DEFAULT_JOB_LIFETIME_MS, '--job-lifetime-ms');
+  const stuckMs = positiveInt(flags['stuck-ms'] ?? DEFAULT_STUCK_MS, '--stuck-ms');
+  const monitorMs = positiveInt(flags['monitor-ms'] ?? DEFAULT_MONITOR_MS, '--monitor-ms');
   const surface = flags.surface ?? 'code';
   if (!SURFACES.includes(surface)) throw new Error('--surface takes tools or code');
   const task = loadTask(flags.task).trim();
@@ -601,7 +617,7 @@ async function main(argv) {
   logTools(log, resumed, servedTools(surface));
 
   sweepEndedCode(dirname(runDir), runDir);
-  const session = createSession({ workspace, runDir, log, task, maxSteps, maxInflight, resume, jobLifetimeMs, recovery: recovery && recovery.open.length > 0 ? recovery : null, history, surface });
+  const session = createSession({ workspace, runDir, log, task, maxSteps, maxInflight, resume, jobLifetimeMs, stuckMs, monitorMs, recovery: recovery && recovery.open.length > 0 ? recovery : null, history, surface });
   const lines = createInterface({ input: process.stdin, crlfDelay: Infinity });
   lines.on('line', session.accept);
   // Under a supervisor, the end of stdin means the supervisor has gone, so the run is paused. Closing it here would end the
