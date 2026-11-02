@@ -678,6 +678,18 @@ Witnesses (scratch, run labels as listed):
 
 The steady-state growth is now 11 KB per 1000 calls (the second-interval total above), down from 24 KB. The index no longer sits in memory, so the memory of the log is the window, whatever the length of the run.
 
+## First open after the index change (2026-11-02, gm condition)
+
+Each existing run gets its `log.index` on its first open, by a scan of its log. Measured on copies of the logs, with the source runs only read (`audit/index-scan.mjs`, `audit/index-scan-all.mjs`, commit `001274b`):
+
+| Run | Log bytes | Events | First open (rebuild), median | Later open (index consistent), median |
+|---|---|---|---|---|
+| Largest run in the repository's `runs/` (`repo-largest`) | 287,495 | 577 | 3.3 ms (2.2 to 6.9) | 1.7 ms |
+| Largest run overall, a scratch paging run with 20 KB results (`overall-largest`) | 39,115,190 | 5,141 | 88.9 ms (80.1 to 91.0) | 40.4 ms |
+| All 540 runs in `runs/`, once each (`index-scan-all`) | 2,907,704 | 9,900 | 102 ms in total, slowest 2.3 ms | not measured |
+
+The cost is a one-time scan per run, about 100 ms for the whole repository. The later open still reads the window's last 512 events, and that is what dominates the 40 ms on the large run, since its events hold 20 KB results each.
+
 ## Standing rule: buffer reuse and garbage collection (2026-11-02, owner's rule relayed by gm)
 
 Method, the same for each path: the worker, or the log alone, is run with `--expose-gc` and a 'gc' PerformanceObserver. A forced collection at the start and at the end gives the heap used, and the RSS is read at both points. The workload is 1000 calls, after a warm-up of 200 calls. Scratch scripts are under `audit/`: `gcbench.mjs` (the worker), `gc-trace.cjs` (the preload), `bench-log.mjs` (the log alone).
