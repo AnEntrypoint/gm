@@ -649,6 +649,31 @@ What this does not show: that taskkill behaves the same on Windows. Wine impleme
 
 Rule re-injection and the live witness are a different limit, and Wine does not touch them: they need live model trials.
 
+## Standing rule: buffer reuse and garbage collection (2026-11-02, owner's rule relayed by gm)
+
+Method, the same for each path: the worker, or the log alone, is run with `--expose-gc` and a 'gc' PerformanceObserver. A forced collection at the start and at the end gives the heap used, and the RSS is read at both points. The workload is 1000 calls, after a warm-up of 200 calls. Scratch scripts are under `audit/`: `gcbench.mjs` (the worker), `gc-trace.cjs` (the preload), `bench-log.mjs` (the log alone).
+
+| Path | Before (HEAD) | After | Result |
+|---|---|---|---|
+| Log append, alone, 40000 events (`bench-log` `log-head`) | 8 collections, 0.20 per 1000 events | 6 collections, 0.15 per 1000 events (`log-new1`) | No measurable gain. The writer change (one reused buffer, `writeSync`) was reverted, so it is not committed. |
+| Top-level `read_file`, 1000 calls (`gc-top-before`) | 18 collections, 9.66 ms pause, heap 6.51 to 6.87 MB, RSS 68.2 to 74.8 MB | Not changed, since the writer change was reverted | Its path is the reply and the request, not the log. The log is near zero, as above. |
+| `next_context`, 1000 steps (`gc-next-before2`, `gc-next-before3`) | 15 collections, heap 6.98 to 7.49 MB | 12 collections (`gc-next-prefix1`, `gc-next-prefix2`), heap 6.93 to 7.43 MB | The prefix was rendered and hashed at every step. It is now rebuilt only when the rules change (commit `96e2abe`). The prefix hash is the same as HEAD's (`78b1eb67...878dc5`). |
+| Body with 1000 verb calls (`gc-body-before`) | 4 collections, 6.33 ms pause, heap 7.36 to 7.32 MB | Not changed | Already near zero, and flat after warm-up. |
+| Feed reads of older events | 0 log file opens during 1000 `next_context` steps (`count-opens`, `opens-next-head`) | Not changed | The feed reads from the in-memory window, so the disk read path is not hot. |
+| Object shapes | Not measured separately | Not changed | The log path is already near zero, so a shape change could show no gain there. Dropped. |
+
+Target not met: the heap grows after warm-up, by 0.36 MB on the top-level path and 0.50 MB on `next_context`, over 1000 calls. That growth is the log's own growth (its offsets and the window). It was not traced further.
+
+## Ship script (2026-11-02, owner rule relayed by gm)
+
+`tools/ship.sh` is in the repository, so every commit goes through it. The first commit added the script unchanged (`7c9fe23`). The fix (`87b43ca`) stages only the paths it is given, stages a deleted path before the gate runs (the gate lists tracked files), unstages those paths when the gate fails, and refuses a path that is neither in the tree nor tracked. `SHIP_ROOT` and `SHIP_PUSH=0` let the witness run in a scratch clone without a push.
+
+Witness, in a scratch clone with pushing off (`/tmp/gm-scratch/gm-new/ship-witness`):
+- A commit given `README.md` contains that file only. A file staged beforehand, `src/log.mjs`, stays staged. Gate exit 0.
+- A commit given a tracked file that was deleted contains the deletion only, and the staged file stays staged. Gate exit 0.
+- A gate that fails (a non-ASCII byte in a named file) commits nothing. The named path is unstaged, and the staged file stays staged. HEAD does not move. Exit 1.
+- A path that is neither in the tree nor tracked is refused with exit 1 and no change.
+
 ## Owner decision: compression removed, pending queue added (2026-11-02)
 
 The owner decided, relayed by gm: remove compression. The audit log `runs/<id>/log.jsonl` stays raw and complete, and nothing is compressed or deleted. A query of an old run must not depend on a reader for a compressed form. In its place, a separate pending queue carries only the events an agent must act on, for live feedback and for read-and-clear.
