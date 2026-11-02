@@ -1,50 +1,20 @@
 ---
 name: gm-continue
-description: Final check of a gm run. Lists the remaining work from the open PRD rows, open questions and the task, fills the rows that are missing, writes what the run learned to AGENTS.md and the process skill, and sends the run back to gm when work remains, or lets it finish when none does. Load it before every finish of a gm run.
+description: Works out what is left in gm-new from its rows, plans the whole batch of actionable rows, hands the batch to the gm skill, and calls the gm skill again while actionable rows remain. Use to continue gm-new work from its rows. Load it before every finish of a gm run: it fills the missing rows and writes the run's notes to AGENTS.md and the process skill.
 ---
 
 # gm-continue
 
-Load this before you send `finish` in a gm run, and after a context compaction that lands while a run is open. It does no work itself. It lists what remains, fills the rows that are missing, and then either sends the run back to gm or lets it finish.
+1. Setup. Before any work starts, run tools/gm-continue-setup.mjs. It reads the rows only, plans the whole batch of actionable rows (status open, not owner-owned, trigger met), and prints the plan. Nothing is worked before the plan is printed. Independent items in the batch are worked in parallel.
+2. Build, then witness. The whole batch is built first, all steps, and then witnessed in one pass over all of them. The commits land after that pass. Each step's witness is recorded in the run log and cited in DESIGN.md. A step is not witnessed on its own during the build.
+3. Fill and write notes. Before the hand-off, make the rows match the work, then record what the run learned:
+   - For each piece of the task's literal words that no open row covers, add a row with `gm.prd_add`. Check the open list by title first, so a row is not added twice. Run the real path the request names, read its output, and add a row for any mismatch.
+   - A project fact that the troubleshooting found goes to AGENTS.md, as one line under "Facts found by troubleshooting", with the DESIGN.md section that records it. A process lesson goes to `skills/dev/SKILL.md`, in the section it belongs to. Delete any AGENTS.md line that needed no troubleshooting to learn, and any line about finished work. Keep AGENTS.md under 30 KB.
+   - Change the files with Edit only, and commit them by explicit path with `tools/ship.sh`.
+4. Hand off. Call the gm skill with the setup's list as its task. The gm skill's task is the setup output, and nothing else. Any PRD row still open at this point goes in the hand-off with it.
+5. Re-enter. After the gm skill returns, call the gm skill again while actionable items remain. This is an invariant of this skill. Re-entry stops after any pass that closes no row, and only when every actionable row was attempted and ended resolved, or blocked with a named fact. Any other actionable row is a defect, and the setup reports it.
+6. End. The end prints the handoff only after the witness pass has run. The handoff lists each blocked item with its reason, each decision the owner must make, each held item with its trigger, HEAD and the served hashes, the open runs and processes, and the next actions in order. Print it even when the list is empty.
 
-INVARIANT, when finishing: load skill gm, in this same run, when any work remains. Pass it the remaining rows as its arguments. Do not send `finish` while work remains.
+INVARIANT, when finishing: load skill gm, in this same run, when any work remains, with the remaining rows as its arguments. Do not send `finish` while work remains.
 
-## What remains
-
-1. The task is the one in your last `next_context` reply. Keep its literal words.
-2. Read the open work in one `run_code` body, with the rows in one `Promise.all`:
-
-```
-const [prd, questions] = await Promise.all([gm.prd_list({ status: 'open' }), gm.unknown_list({ status: 'open' })]);
-return { prd: prd.output, questions: questions.output };
-```
-
-3. Each open row is remaining work. An open question is remaining work too: resolve it with the evidence, or name it as work.
-
-## Fill the missing rows
-
-4. For each piece of the task's literal words that no open row covers, add a row. Check the list by title first, so a row is not added twice:
-
-```
-const want = ['the exact piece of the request, in the request's words'];
-const open = (await gm.prd_list({ status: 'open' })).output;
-const added = [];
-for (const title of want) if (!open.includes(title)) added.push((await gm.prd_add({ title, body: 'from the request' })).output);
-return { added };
-```
-
-5. Exercise the live system against the request's words. Run the real path the user would use and read its output. Any mismatch is remaining work, added as a row.
-
-## Write what the run learned
-
-6. Troubleshooting discoveries from this run go to the project's notes, before the run is sent back or finished:
-   - A project fact (how the code behaves, a limit, a surprise): one line under "Facts found by troubleshooting" in AGENTS.md, with the DESIGN.md section that records it.
-   - A process lesson (how to witness, commit, recover a collision, use scratch space): a line in the project's process skill, in the section it belongs to. For gm-new that is skills/dev/SKILL.md. The served gm skill is for runs, so process prose does not go there.
-7. Keep AGENTS.md lean. Delete any line that needed no troubleshooting to learn, any line about finished work, and any line the code, a tool description or DESIGN.md already states. Keep the file under 30 KB. If it grows past that, rebuild it from the decided list, the facts and the rationale, not from the history.
-8. Change the files with Edit only, reading each region first. Commit them by explicit path with the project's commit path (for gm-new, tools/ship.sh, in skills/dev/SKILL.md).
-
-## Send the run back, or let it finish
-
-9. If any row is open, or one was just added: load skill gm, with the remaining rows as its arguments. Say what remains in one line per row, then say that finishing now would leave it undone. Keep working in this run until `gm.prd_list` with `status: 'open'` returns no rows. Do not send `finish` in this step.
-10. If no row is open, and step 5 passed: confirm with a real check in one `run_code` body, the check the task names, and read its output. Send `finish` after the body returns, with that output as the witness.
-11. Stop only when the open count is zero and step 10 passed in this step. Never end the turn with prose alone while a row is open.
+The setup is read-only. It writes nothing, commits nothing and changes no served behaviour. No new tool names are used: the verbs above are existing ones, and they are named as `gm.<verb>`.
