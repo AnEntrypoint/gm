@@ -17,6 +17,9 @@ const DEFAULT_LIMIT = 100;
 const MAX_LIMIT = 1000;
 const MAX_PATTERN_CHARS = 200;
 const MODES = ['literal', 'regex', 'word'];
+// The characters that mean something in a regex and nothing in a literal. A literal pattern with one of them that matches nothing gets a hint
+// that names regex mode, so a zero result is not silent.
+const REGEX_CHARS = /[|()[\]{}*+?^$\\]/;
 const TRACKED = { name: 'tracked', args: ['ls-files', '-z'] };
 const WIKI = { name: 'wiki', args: ['ls-files', '-z', '-co', '--exclude-standard', '--', 'wiki'] };
 
@@ -101,7 +104,10 @@ export function createSearchVerbs({ root, confine }) {
         });
       }
       const footer = [`(${total} matches; showing ${found.length ? offset : 0} to ${offset + found.length}; ${next === null ? 'no more' : `next offset ${next}`})`];
-      return { ok: true, output: [...found, ...footer].join('\n') };
+      const hint = total === 0 && mode === 'literal' && REGEX_CHARS.test(pattern)
+        ? 'the pattern has regex characters and was matched literally; with mode regex it matches as a pattern'
+        : undefined;
+      return { ok: true, output: [...found, ...footer, ...(hint ? [`hint: ${hint}`] : [])].join('\n'), ...(hint ? { hint } : {}) };
     },
   };
 
