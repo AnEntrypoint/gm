@@ -3,7 +3,8 @@
 // a call through the session, so it is logged as a code-call event. A failed call returns {ok:false, error} as data, so one failure
 // does not abort the body. The body runs in the worker's process, so it is trusted as much as run_shell is: it is not sandboxed.
 import { createRequire, register } from 'node:module';
-import { existsSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { resultZone1, resultZone2, shortKind } from './compact.mjs';
@@ -11,7 +12,6 @@ import { resultZone1, resultZone2, shortKind } from './compact.mjs';
 const DEFAULT_TIMEOUT_MS = 120000;
 const MAX_TIMEOUT_MS = 600000;
 const OUTPUT_CAP = 20000;
-let bodies = 0;
 const cjsLoad = createRequire(import.meta.url);
 
 // A path inside the root. The check is textual; a symlink is followed separately by confined().
@@ -44,17 +44,45 @@ export function formatOf(project, file) {
   return 'cjs';
 }
 
-// Each call that loads project files takes a new generation. The resolve hook (freshness.mjs) gives every project file the generation as
-// its query, so the call loads the files as they are on disk now. The hook is registered once, on the first call; its counter is shared
-// with the hook's thread through a SharedArrayBuffer.
+// The generation is taken only when a project file changed. The resolve hook (freshness.mjs) gives every project file the generation as
+// its query. A fingerprint of the project's files (path, mtime and size) is compared with the last one: a call with no edit keeps the
+// generation, so no module is loaded again and the memory does not grow with the number of calls. One edit gives one new generation,
+// and every project file loads again with it, so a file that imports the edited one is never stale. The hook is registered once; its
+// counter is shared with the hook's thread through a SharedArrayBuffer.
 let generation = null;
-function nextGeneration(project) {
+let fingerprint = null;
+const SKIP_DIRS = new Set(['node_modules', 'runs', '.gm-new', '.git', 'sources', 'vendor']);
+function nextGeneration(project, log, step) {
   if (generation === null) {
     const buffer = new SharedArrayBuffer(4);
     register('./freshness.mjs', { parentURL: import.meta.url, data: { root: project, buffer } });
     generation = new Int32Array(buffer);
   }
-  Atomics.add(generation, 0, 1);
+  const now = projectFingerprint(project);
+  if (now !== fingerprint) {
+    fingerprint = now;
+    Atomics.add(generation, 0, 1);
+    log?.append('generation', { step, generation: Atomics.load(generation, 0) });
+  }
+}
+
+function projectFingerprint(project) {
+  const parts = [];
+  walkFiles(project, '', parts);
+  return createHash('sha1').update(parts.sort().join('\n')).digest('hex');
+}
+
+function walkFiles(dir, rel, parts) {
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    if (SKIP_DIRS.has(entry.name)) continue;
+    const at = join(dir, entry.name);
+    const name = rel === '' ? entry.name : `${rel}/${entry.name}`;
+    if (entry.isDirectory()) walkFiles(at, name, parts);
+    else if (entry.isFile()) {
+      const info = statSync(at);
+      parts.push(`${name}:${info.mtimeMs}:${info.size}`);
+    }
+  }
 }
 
 // Node caches CommonJS by path, and an ES module that imports a .cjs file gets the cached copy. Dropping the project's entries before
@@ -132,18 +160,22 @@ export async function runBody({ body, timeoutMs = DEFAULT_TIMEOUT_MS, format, ve
   }
   const loads = split.loads.map(({ path, via }) => ({ path: path.slice(project.length + 1), via, format: formatOf(project, path) }));
   for (const load of loads) log?.append('code-load', { step, path: load.path, via: load.via, format: load.format });
-  bodies += 1;
-  const file = join(runDir, 'code', `body-${bodies}.${kind === 'esm' ? 'mjs' : 'cjs'}`);
+  nextGeneration(project, log, step);
+  const source = kind === 'esm'
+    ? `${split.imports}\nexport default async function body(gm, require) {\n${split.code}\n}\n`
+    : `module.exports = async function body(gm, require) {\n${split.code}\n};\n`;
+  // The file is named by its text and the generation. An identical body in the same generation is the same module, and a new
+  // generation gets a new one, whose imports resolve to the new files.
+  const digest = createHash('sha1').update(source).digest('hex').slice(0, 16);
+  const file = join(runDir, 'code', `body-${digest}-${Atomics.load(generation, 0)}.${kind === 'esm' ? 'mjs' : 'cjs'}`);
   let run;
   try {
     mkdirSync(dirname(file), { recursive: true });
     dropCommonJS(project);
-    nextGeneration(project);
+    writeFileSync(file, source);
     if (kind === 'esm') {
-      writeFileSync(file, `${split.imports}\nexport default async function body(gm, require) {\n${split.code}\n}\n`);
       run = (await import(pathToFileURL(file).href)).default;
     } else {
-      writeFileSync(file, `module.exports = async function body(gm, require) {\n${split.code}\n};\n`);
       run = cjsLoad(file);
       delete cjsLoad.cache[file];
     }

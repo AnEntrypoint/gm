@@ -454,6 +454,14 @@ Witness, run relay-witness/run-1793595783835: the new relay runs on a copy of th
 
 The live relay runs the code it started with until the owner reconnects once, so the live witness waits for that reconnect. The witness above is a scripted relay running the new tools/relay.mjs.
 
+## Memory root fix (2026-11-02)
+
+The generation is taken only when a project file changed. A fingerprint of the project's files (path, mtime and size, skipping node_modules, runs, .gm-new, .git, sources and vendor) is compared with the last one, and a body file is named by its text and the generation, so an identical body in the same generation is one module.
+
+Witness, run memory-root/run-1793595966251 (a project with a helper, a leaf and a chain that imports the leaf): 1000 of 1000 calls that load the helper returned 1. Generation events: 1 after those calls with no edit, 2 after the helper was edited, 3 after the leaf was edited, and still 3 after one more call with no edit. The helper read 2 after its edit, and the chain read 2 after the leaf edit, so no import is stale.
+
+Memory, measured with the loop tool on the fixed code (memory/fix-plain.json and memory/fix-import.json, 1000 calls each). The identical ESM body grew 21.0 KB per call, against 44.2 before this change. The body that imports a project module grew 24.4 KB per call, against 51.6 before. The module instances no longer accumulate. What remains is the event log, which the worker keeps in memory, and each call adds about five events. Resident memory is therefore not flat. A flat figure needs the log to leave memory, which is a storage change and not part of this fix. The restart bound at GMNEW_MEMORY_LIMIT_MB stays as the backstop.
+
 ## Measured
 
 - Tool list hash witness (brief change 7, run 2026-11-01-18-39-35-820e47): the `tools` event at seq 258 has sha 5e8c956cc447. The fetch description changed, which was needed (the body is untrusted input), and the next start logged `tools-changed` at seq 266 with old 5e8c956cc447 and new 39a328f0521e, then `tools` at seq 267. Friction, recorded: an edit that added a call before its definition made the restart fail, and the supervisor held every call in its failed state until the next source change. That change restarted the worker and recovered it. Supervisor defect for item 1 of the brief to note.
