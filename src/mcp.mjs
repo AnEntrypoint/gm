@@ -170,6 +170,9 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     // flight, the body counts as progressing (the stuck check reads it).
     const body = bodyContext.getStore()?.body;
     if (body !== undefined) tools.callStarted(body);
+    // A verb that may change something has its start in the file before it runs. Its code-call names that start, as a result names its action.
+    const action = READ_ONLY_TOOLS.has(name) ? undefined : log.append('action', { step: steps, tool: name, args, ...(body === undefined ? {} : { body }) });
+    if (action !== undefined) flushAllLogs();
     const exec = Object.hasOwn(handlers, name) ? handlers[name] : (value) => tools.run(name, value);
     let result;
     try {
@@ -183,7 +186,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     // The full result is logged, so query_log reaches the output and the exit code of a verb called inside a body.
     const shown = name === 'query_log' ? loggedReply(result) : result;
     const fields = { ok: shown?.ok === true, args, exitCode: shown?.exitCode, signal: shown?.signal, output: shown?.output, outputChars: shown?.outputChars, error: shown?.error };
-    log.append('code-call', { step: steps, tool: name, startMono, ...fields, ...(body === undefined ? {} : { body }) });
+    log.append('code-call', { step: steps, tool: name, startMono, ...fields, ...(body === undefined ? {} : { body }), ...(action === undefined ? {} : { actionSeq: action.seq }) });
     return result;
   }
 
@@ -445,8 +448,8 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     const startMono = log.now();
     log.enter();
     const action = log.append('action', { step, tool, args, ...(rpcId === undefined ? {} : { rpcId }) });
-    // A body, a shell command or a job can run long, so its start is in the file before it runs.
-    if (LONG_TOOLS.has(tool)) flushAllLogs();
+    // A tool that may change something has its start in the file before it runs, so a crash after its effect still leaves the start in the log.
+    if (!READ_ONLY_TOOLS.has(tool)) flushAllLogs();
     let result;
     try {
       result = await exec();
@@ -560,7 +563,8 @@ function recoveryOf(events) {
   const first = events.findIndex((event) => event.actionSeq !== undefined || event.rpcId !== undefined);
   const lastSeq = events.length ? events.at(-1).seq : 0;
   if (first < 0) return { lastSeq, open: [] };
-  const ended = new Set(events.filter((event) => (event.kind === 'result' || event.kind === 'refusal') && event.actionSeq !== undefined).map((event) => event.actionSeq));
+  // A body's verb closes its start with a code-call that names the start, as a top-level call closes its start with a result.
+  const ended = new Set(events.filter((event) => (event.kind === 'result' || event.kind === 'refusal' || event.kind === 'code-call') && event.actionSeq !== undefined).map((event) => event.actionSeq));
   const open = events.slice(first).filter((event) => event.kind === 'action' && !ended.has(event.seq)).map((event) => ({ seq: event.seq, tool: event.tool, args: event.args }));
   return { lastSeq, open };
 }
@@ -583,8 +587,12 @@ function resumeFrom(events) {
   return { steps, ended: end ? end.status : null };
 }
 
-// The tools whose start is written to the log before they run: a body, a shell command, and a job.
-const LONG_TOOLS = new Set(['run_code', 'run_shell', 'job_start']);
+// The tools that only read. Every other tool is a side effect: its start is flushed before it runs (see perform and innerCall), so recovery
+// can list it as open after a crash. A tool that is not on this list is treated as a side effect.
+const READ_ONLY_TOOLS = new Set([
+  'next_context', 'read_file', 'list_dir', 'stat_file', 'search', 'wiki_search', 'grep', 'callers', 'impact', 'query_log', 'job_status',
+  'git_status', 'git_log', 'git_diff', 'git_show', 'ci_status', 'prd_list', 'unknown_list', 'review_join',
+]);
 // A reply is written only after the events so far are in the log, so the log holds every event a reply reports.
 function write(message) {
   flushAllLogs();
