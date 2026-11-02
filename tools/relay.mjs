@@ -7,7 +7,7 @@
 // sees no disconnect. If a supervisor cannot start, host requests are answered with the failure text, and the start is
 // retried with backoff. Edit this file only when a reconnect is acceptable: every change here needs one.
 import { spawn } from 'node:child_process';
-import { randomBytes } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import { existsSync, watch } from 'node:fs';
 import { createInterface } from 'node:readline';
 import { dirname, join, resolve } from 'node:path';
@@ -73,8 +73,14 @@ let hostInitialize = null;
 let failure = '';
 let stderrTail = '';
 let ready = null; // the pending probe of a new supervisor
-const inflight = new Map(); // request ids sent to the supervisor and not yet answered
+const inflight = new Map(); // request ids sent to the supervisor and not yet answered, with their method
 const held = []; // host lines held while the supervisor starts or is replaced
+const relayRequests = new Map(); // ids the relay sent to the supervisor itself, for the list comparison after a swap
+const hostSeen = {}; // a digest of each list as the host last fetched it, by kind
+let swapping = false; // true from the start of a swap until its list notices are decided
+const LIST_MS = 5000;
+const LISTS = { 'tools/list': 'tools', 'prompts/list': 'prompts', 'resources/list': 'resources' };
+const NOTICE = { tools: 'notifications/tools/list_changed', prompts: 'notifications/prompts/list_changed', resources: 'notifications/resources/list_changed' };
 let onDrained = null;
 let retryDelay = RETRY_MIN_MS;
 let retryTimer = null;
@@ -106,7 +112,7 @@ function onHostLine(line) {
 }
 
 function forward(line, message) {
-  if (message?.id !== undefined && message.method) inflight.set(message.id, true);
+  if (message?.id !== undefined && message.method) inflight.set(message.id, message.method);
   supervisor.stdin.write(`${line}\n`);
 }
 
@@ -125,9 +131,56 @@ function onSupervisorLine(line) {
     ready?.answer();
     return;
   }
-  if (message?.id !== undefined && message?.id !== null) inflight.delete(message.id);
+  if (message?.id !== undefined && relayRequests.has(message.id)) {
+    onRelayReply(message);
+    return;
+  }
+  // During a swap the relay decides which list notices the host gets, so the supervisor's own copies are dropped here.
+  if (swapping && typeof message?.method === 'string' && message.method.endsWith('list_changed')) return;
+  if (message?.id !== undefined && message?.id !== null) {
+    const method = inflight.get(message.id);
+    inflight.delete(message.id);
+    // The host's own list requests record what the host has seen, so a later comparison is against that.
+    if (LISTS[method] !== undefined && message.result !== undefined) hostSeen[LISTS[method]] = digestOf(message.result);
+  }
   process.stdout.write(`${line}\n`);
   if (onDrained && inflight.size === 0) onDrained();
+}
+
+function digestOf(value) {
+  return createHash('sha256').update(JSON.stringify(value)).digest('hex');
+}
+
+function askWorker(method) {
+  const id = `gm-new-relay:${method}`;
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => {
+      relayRequests.delete(id);
+      resolve(null);
+    }, LIST_MS);
+    relayRequests.set(id, { resolve, timer });
+    supervisor.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id, method, params: {} })}\n`);
+  });
+}
+
+function onRelayReply(message) {
+  const pending = relayRequests.get(message.id);
+  relayRequests.delete(message.id);
+  clearTimeout(pending.timer);
+  pending.resolve(message.error === undefined ? (message.result ?? null) : null);
+}
+
+// After a swap, the lists the new worker serves are compared with the lists the host last fetched, and a kind that differs gets its
+// list_changed notice. A kind the host has never fetched gets none. Nothing is sent when nothing differs.
+async function announceChanges() {
+  const now = {};
+  for (const [method, kind] of Object.entries(LISTS)) {
+    const result = await askWorker(method);
+    if (result !== null) now[kind] = digestOf(result);
+  }
+  for (const [kind, digest] of Object.entries(now)) {
+    if (hostSeen[kind] !== undefined && hostSeen[kind] !== digest) writeHost({ jsonrpc: '2.0', method: NOTICE[kind] });
+  }
 }
 
 function spawnSupervisor(reason) {
@@ -271,13 +324,19 @@ function syntaxOk() {
 async function swap(reason) {
   if (reason?.startsWith('changed') && !(await syntaxOk())) return;
   process.stderr.write(`gm-new dev: replacing the supervisor (${reason ?? 'start'})\n`);
-  if (state === 'running') {
+  swapping = true;
+  try {
+    if (state === 'running') {
+      state = 'stopping';
+      await waitForDrain();
+    }
     state = 'stopping';
-    await waitForDrain();
+    await stopSupervisor();
+    await startSupervisor(reason);
+    if (state === 'running') await announceChanges();
+  } finally {
+    swapping = false;
   }
-  state = 'stopping';
-  await stopSupervisor();
-  await startSupervisor(reason);
 }
 
 // Swaps run one at a time. A request that arrives during a swap is kept and runs after it.
