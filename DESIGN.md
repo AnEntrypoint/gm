@@ -127,7 +127,7 @@ The three questions this section used to ask are answered in Decided: scope, run
 
 ## Next step
 
-Work follows the gm agent's phase plan (2026-11-02, see Decided). Phase 1, the kernel tools, and phase 2, search, are witnessed in Measured. callers and impact wait for the user's parser decision. Phase 3, JIT checks through run_shell, is witnessed in Measured. Phase 4 (fetch, then browser) is skipped: no project of gm-new needs it yet, and the plan makes it optional. The commit gate is built and in use (commit 1e40fcb, witnessed by events 39 and 49). gm-new must not depend on gm. The live comparison is closed (see "Project close"). Still open and recorded: the minimal tool set (not run), and G3 (cache effect), now measured as a cache share, with no saving claimed.
+Work follows the gm agent's phase plan (2026-11-02, see Decided). Phase 1, the kernel tools, and phase 2, search, are witnessed in Measured. callers and impact use acorn, decided by the joint decision of 2026-11-02. Phase 3, JIT checks through run_shell, is witnessed in Measured. Phase 4 (fetch, then browser) is skipped: no project of gm-new needs it yet, and the plan makes it optional. The commit gate is built and in use (commit 1e40fcb, witnessed by events 39 and 49). gm-new must not depend on gm. The live comparison is closed (see "Project close"). Still open and recorded: the minimal tool set (not run), and G3 (cache effect), now measured as a cache share, with no saving claimed.
 
 ## Decisions on the open items, 2026-11-01 (gm agent)
 
@@ -141,17 +141,21 @@ Each item below records the decision and its trigger. A trigger is the only cond
 - Validated compaction and the RL summariser [row unknown-compaction-rl]: deferred. Trigger: a scripted run at 20000 events where query_log takes over 100 ms. Below that, compaction is not built. The measured point is 2002 events, with query_log at 3 to 5 ms (commit 2121c2d).
 - CI: closed. The owner chose no CI for gm-new. The commit gate is the check. The gate is built: commit 1e40fcb passed all four checks (its git_commit result is event 39), and a commit with a bad doc path was refused (event 49).
 
-## Open items, status 2026-11-01
+## Open items, status 2026-11-02
 
-- Minimal tool set [row unknown-minimal-tool-set]: open. Blocked: it needs live trials under the load rule, and the gm agent did not request it.
-- Rule re-injection [row unknown-rule-reinjection] (open question 1): open. Blocked: it needs live trials, so it waits for the owner's live-trial budget.
+- Minimal tool set [row unknown-minimal-tool-set]: closed by the joint decision of 2026-11-02, not run. No decision depends on it.
+- Rule re-injection [row unknown-rule-reinjection] (open question 1): blocked. It needs live trials, so it waits for the owner's live-trial budget.
 - Subagent isolation [row unknown-subagent-isolation] (open questions 3 and 4): open. Blocked: it needs a long-horizon run that shows a single worker's limit. The scripted long-horizon run measures log cost, not that limit.
 - Windows process-group kill [row unknown-windows-kill]: unverified. Blocked: there is no Windows machine here.
 - Validated compaction [row unknown-compaction-rl]: deferred, and not needed now. The log stays complete at 273.6 bytes per event, with query_log at 3 to 5 ms over 2000 events. Build it only when the log is too big to query.
 - RL summariser [row unknown-compaction-rl]: deferred. It needs training infrastructure.
 - Proactive mode, verification-gated admission, matched-budget falsifier and raw-replay arm [row unknown-future-directions]: future, not built. Blocked: no learned artifact exists yet.
-- CI for gm-new: an owner decision. Until then it reads "none configured", and the commit gate is the quality check.
+- CI for gm-new: closed by the owner's choice (see Decisions). It reads "none configured", and the commit gate is the quality check.
 - Long-horizon design: documented in the prototype and built here, but untested on our workload.
+- Parser for callers and impact: decided, acorn 8.18.0 (joint decision, 2026-11-02).
+- Sandbox for run_code: decided, none (orchestrator, 2026-11-02; the owner may reverse it).
+- Browser: not built (held by the owner, 2026-11-02).
+- Search recall, wiki answer quality and per-verb tokens: partly or not measured. They need a measurement the owner approves, so they stay open.
 
 ## Research consolidation
 

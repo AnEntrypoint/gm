@@ -1,8 +1,8 @@
 id: "unknown-run-code-sandbox"
 kind: "unknown"
 title: "Sandbox for run_code"
-body: "Owner decision. The body runs unsandboxed in the worker, as run_shell does."
-status: "open"
+body: "Decided by the orchestrator (gm agent) on 2026-11-02: no sandbox. Reason: run_shell already runs unconfined, so run_code adds no new authority. The owner may reverse it. Recorded in DESIGN.md under Run code: freshness and format."
+status: "resolved"
 owner: true
 triggerMet: false
 createdAt: "2026-11-01T23:00:00.000Z"

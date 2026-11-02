@@ -1,8 +1,8 @@
 id: "prd-janitor-cleanup"
 kind: "prd"
 title: "Module-mode body cleanup (<run>/code)"
-body: "Parked with module mode. The prototype is witnessed in scratch."
-status: "blocked"
+body: "Built with the module-mode body. A body file is written under the run directory and deleted when its call ends. Witness, DESIGN.md Batch witness pass: body files left after the calls, 0."
+status: "resolved"
 owner: false
 triggerMet: false
 createdAt: "2026-11-01T23:00:00.000Z"

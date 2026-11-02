@@ -1,8 +1,8 @@
 id: "unknown-parser-decision"
 kind: "unknown"
 title: "Parser for callers and impact"
-body: "Owner decision. callers and impact are regex approximations until then."
-status: "open"
+body: "Decided by the joint decision of 2026-11-02: acorn 8.18.0, pinned, the one runtime dependency. callers and impact parse with acorn. Witness run revert/run-1793571974475: the five named functions match a grep oracle exactly. Commit 3f7434f."
+status: "resolved"
 owner: true
 triggerMet: false
 createdAt: "2026-11-01T23:00:00.000Z"

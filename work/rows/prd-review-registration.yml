@@ -1,8 +1,8 @@
 id: "prd-review-registration"
 kind: "prd"
 title: "Register the review functions as tools"
-body: "A feature, so the owner decides. src/review.mjs is unregistered until then."
-status: "open"
+body: "Resolved by the joint decision of 2026-11-02. review_packet, review_record and review_join are reachable from run_code as gm verbs, and they stay off the default surface. Commit 9687875, witnessed in run final/run-1793571487908."
+status: "resolved"
 owner: true
 triggerMet: true
 createdAt: "2026-11-01T23:00:00.000Z"
