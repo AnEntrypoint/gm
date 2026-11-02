@@ -1,43 +1,43 @@
 import { randomBytes } from 'node:crypto';
-import { mkdir, readdir, readFile, rename, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { commitExists, SHA } from './git.mjs';
 import { resultZone1, resultZone2 } from './compact.mjs';
 
 export const ROW_DIR = 'work/rows';
 const KINDS = { prd: 'work item', unknown: 'open question' };
-// open means the worker can work the row now. blocked means it cannot, and fact names the unmet condition and trigger what reopens it.
-const STATUSES = ['open', 'blocked', 'resolved', 'all'];
-const FIELDS = ['id', 'kind', 'title', 'body', 'status', 'fact', 'trigger', 'createdAt', 'witnessEvent', 'witnessCommit', 'resolvedAt'];
+// A row is open until it is implemented (resolved), or, for a PRD, deleted. No row is held in any other state.
+const STATUSES = ['open', 'resolved', 'all'];
+const FIELDS = ['id', 'kind', 'title', 'body', 'status', 'createdAt', 'witnessEvent', 'witnessCommit', 'resolvedAt'];
 const str = { type: 'string' };
 const obj = (properties, required = []) => ({ type: 'object', properties, required });
 
-export const ROW_TOOLS = Object.entries(KINDS).flatMap(([kind, label]) => [
-  { name: `${kind}_add`, description: `Add a ${label} row, one file under ${ROW_DIR}. Returns its id.`, inputSchema: obj({ title: str, body: str }, ['title']) },
-  { name: `${kind}_list`, description: `List ${label} rows, one line each: id, status, title. status is open (default), blocked, resolved or all.`, inputSchema: obj({ status: str }) },
-  {
-    name: `${kind}_block`,
-    description: `Block an open ${label} row the worker cannot work now. fact names the unmet condition, and trigger names what reopens the row (an owner decision is a trigger that names the owner). A blocked row does not hold finish.`,
-    inputSchema: obj({ id: str, fact: str, trigger: str }, ['id', 'fact', 'trigger']),
-  },
-  { name: `${kind}_reopen`, description: `Reopen a blocked ${label} row once its trigger is met. Its fact and trigger are removed.`, inputSchema: obj({ id: str }, ['id']) },
-  {
-    name: `${kind}_resolve`,
-    description: `Resolve a ${label} row. The witness is a seq of this run's log and a commit that exists in this repository.`,
-    inputSchema: obj({ id: str, event: { type: 'number' }, commit: str }, ['id', 'event', 'commit']),
-  },
-]);
+const DELETE_TOOL = {
+  name: 'prd_delete',
+  description: `Delete a work item (PRD) row that is not resolved: the work is dropped and its file is removed, and git keeps it. An open question is resolved, not deleted.`,
+  inputSchema: obj({ id: str }, ['id']),
+};
+
+export const ROW_TOOLS = [
+  ...Object.entries(KINDS).flatMap(([kind, label]) => [
+    { name: `${kind}_add`, description: `Add a ${label} row, one file under ${ROW_DIR}. Returns its id.`, inputSchema: obj({ title: str, body: str }, ['title']) },
+    { name: `${kind}_list`, description: `List ${label} rows, one line each: id, status, title. status is open (default), resolved or all.`, inputSchema: obj({ status: str }) },
+    {
+      name: `${kind}_resolve`,
+      description: `Resolve a ${label} row. The witness is a seq of this run's log and a commit that exists in this repository.`,
+      inputSchema: obj({ id: str, event: { type: 'number' }, commit: str }, ['id', 'event', 'commit']),
+    },
+  ]),
+  DELETE_TOOL,
+];
 
 // A row keeps its id and its state in both horizons. A listing of rows is cut in the second horizon.
 export const COMPACT = {
   tools: {
     prd_add: { zone1: resultZone1, zone2: resultZone2 },
-    prd_block: { zone1: resultZone1, zone2: resultZone2 },
-    prd_reopen: { zone1: resultZone1, zone2: resultZone2 },
+    prd_delete: { zone1: resultZone1, zone2: resultZone2 },
     prd_resolve: { zone1: resultZone1, zone2: resultZone2 },
     unknown_add: { zone1: resultZone1, zone2: resultZone2 },
-    unknown_block: { zone1: resultZone1, zone2: resultZone2 },
-    unknown_reopen: { zone1: resultZone1, zone2: resultZone2 },
     unknown_resolve: { zone1: resultZone1, zone2: resultZone2 },
     prd_list: { zone1: resultZone1, zone2: () => null },
     unknown_list: { zone1: resultZone1, zone2: () => null },
@@ -49,10 +49,9 @@ export function createRowVerbs({ root, confine, log }) {
   for (const kind of Object.keys(KINDS)) {
     handlers[`${kind}_add`] = ({ title, body = '' }) => addRow(kind, title, body);
     handlers[`${kind}_list`] = ({ status = 'open' }) => listRows(kind, status);
-    handlers[`${kind}_block`] = (args) => blockRow(kind, args);
-    handlers[`${kind}_reopen`] = ({ id }) => reopenRow(kind, id);
     handlers[`${kind}_resolve`] = (args) => resolveRow(kind, args);
   }
+  handlers.prd_delete = ({ id }) => deleteRow(id);
   return handlers;
 
   async function addRow(kind, title, body) {
@@ -69,26 +68,15 @@ export function createRowVerbs({ root, confine, log }) {
     return { ok: true, output: rows.length ? rows.map((row) => `${row.id} ${row.status} ${row.title}`).join('\n') : '(none)' };
   }
 
-  async function blockRow(kind, { id, fact, trigger }) {
-    if (!validId(kind, id)) return fail(`id must name a ${kind} row, with an id that starts ${kind}-`);
-    if (typeof fact !== 'string' || fact.trim() === '') return fail('fact must name the unmet condition');
-    if (typeof trigger !== 'string' || trigger.trim() === '') return fail('trigger must name what reopens the row');
+  async function deleteRow(id) {
+    if (!validId('prd', id)) return fail('id must name a prd row, with an id that starts prd-');
     const row = await readRow(id);
     if (row === null) return fail(`no row ${id}`);
-    if (row.status !== 'open') return fail(`row ${id} is ${row.status}; only an open row can be blocked`);
-    Object.assign(row, { status: 'blocked', fact: fact.trim(), trigger: trigger.trim() });
-    await writeRow(row);
-    return { ok: true, output: `${id} blocked: ${row.fact}` };
-  }
-
-  async function reopenRow(kind, id) {
-    if (!validId(kind, id)) return fail(`id must name a ${kind} row, with an id that starts ${kind}-`);
-    const row = await readRow(id);
-    if (row === null) return fail(`no row ${id}`);
-    if (row.status !== 'blocked') return fail(`row ${id} is ${row.status}; only a blocked row can be reopened`);
-    Object.assign(row, { status: 'open', fact: undefined, trigger: undefined });
-    await writeRow(row);
-    return { ok: true, output: `${id} reopened` };
+    if (row.status === 'resolved') return fail(`row ${id} is resolved; a resolved PRD is history and stays`);
+    const at = confine(`${ROW_DIR}/${id}.yml`);
+    if (at.refused) throw new Error(at.refused);
+    await rm(at.path);
+    return { ok: true, output: `${id} deleted` };
   }
 
   async function resolveRow(kind, { id, event, commit }) {

@@ -17,8 +17,6 @@ const EXTRA = flag('--extra');
 const BEFORE = flag('--before');
 const PASS = flag('--pass');
 
-const nonEmpty = (value) => typeof value === 'string' && value.trim() !== '';
-
 function readRows(dir) {
   if (!dir || !existsSync(dir)) return [];
   return readdirSync(dir)
@@ -55,28 +53,26 @@ const head = git('rev-parse', '--short', 'HEAD');
 const ahead = Number(git('rev-list', '--count', 'origin/main..main'));
 const changed = git('status', '--short').split('\n').filter(Boolean);
 
-// open means actionable, so every open row is planned. blocked rows are held, and each one names its fact and its trigger.
+// A row is open until it is implemented or deleted, so every open row is planned. Any other status is a defect: nothing holds a row.
 const rows = [...readRows(join(REPO, 'work', 'rows')), ...readRows(EXTRA)];
 const actionable = rows.filter((row) => row.status === 'open');
-const blocked = rows.filter((row) => row.status === 'blocked');
-const unnamed = blocked.filter((row) => !nonEmpty(row.fact) || !nonEmpty(row.trigger));
+const stray = rows.filter((row) => row.status !== 'open' && row.status !== 'resolved');
 const runs = openRuns(join(REPO, 'runs'));
 
 const out = [];
 out.push('GM-CONTINUE SETUP (read-only)');
 out.push(`HEAD ${head}; ${ahead} commit(s) ahead of origin; working tree: ${changed.length} changed`);
-out.push(`Batch plan: ${actionable.length} open row(s), each actionable, planned before any work starts.`);
+out.push(`Batch plan: ${actionable.length} open row(s), planned before any work starts.`);
 for (const row of actionable) out.push(`  plan ${row.id}: ${row.title}`);
-out.push(`Held rows: ${blocked.length}; open runs: ${runs.length}`);
-for (const row of blocked) out.push(`  held ${row.id}: ${row.fact ?? '(no fact)'}; reopens when: ${row.trigger ?? '(no trigger)'}`);
-if (unnamed.length > 0) out.push(`Row defect (reported): ${unnamed.map((row) => row.id).join(', ')} blocked without a named fact and trigger.`);
+out.push(`Open runs: ${runs.length}`);
+if (stray.length > 0) out.push(`Row defect (reported): ${stray.map((row) => `${row.id} is ${row.status}`).join('; ')}. A row is open until it is implemented, or deleted if it is a PRD.`);
 
 const pass = PASS && existsSync(PASS) ? JSON.parse(readFileSync(PASS, 'utf8')) : null;
 const before = BEFORE && existsSync(BEFORE) ? JSON.parse(readFileSync(BEFORE, 'utf8')).sort() : null;
 const resolvedNow = rows.filter((row) => row.status === 'resolved').map((row) => row.id).sort();
 const closed = before === null ? null : resolvedNow.filter((id) => !before.includes(id));
 
-// Every actionable row must be attempted in the last pass, and must end resolved, or blocked with a named fact.
+// Every actionable row must be attempted in the last pass, and must end resolved.
 const attempted = new Set(pass?.attempted ?? []);
 const defects = [];
 const ended = [];
@@ -87,11 +83,11 @@ for (const row of actionable) {
     continue;
   }
   const outcome = pass.outcomes?.[row.id];
-  if (!outcome || (outcome.status !== 'resolved' && outcome.status !== 'blocked') || (outcome.status === 'blocked' && !outcome.fact)) {
-    defects.push(`${row.id} was attempted and did not end resolved, or blocked with a named fact`);
+  if (outcome?.status !== 'resolved') {
+    defects.push(`${row.id} was attempted and did not end resolved`);
     continue;
   }
-  ended.push({ id: row.id, status: outcome.status, fact: outcome.fact ?? '' });
+  ended.push({ id: row.id });
 }
 if (defects.length > 0) out.push(`Pass defect (reported): ${defects.join('; ')}.`);
 
@@ -104,12 +100,12 @@ if (pass === null) {
 } else if (defects.length > 0) {
   out.push('Re-entry: the last pass closed no row and has a defect, so this is not a stop.');
 } else {
-  out.push('Re-entry: the last pass closed no row, and every actionable row ended resolved or blocked with a named fact. Stop.');
+  out.push('Re-entry: the last pass closed no row, and every actionable row ended resolved. Stop.');
   if (pass.witnessPass === true) {
     out.push('HANDOFF');
-    out.push(`  HEAD ${head}; held: ${blocked.length}; open runs: ${runs.length}`);
-    for (const result of ended) out.push(`  attempted this pass, ${result.status}: ${result.id}: ${result.fact}`);
-    for (const row of blocked) out.push(`  ${row.id}: ${row.fact}; reopens when: ${row.trigger}`);
+    out.push(`  HEAD ${head}; open runs: ${runs.length}`);
+    for (const result of ended) out.push(`  attempted this pass, resolved: ${result.id}`);
+    for (const row of stray) out.push(`  defect, ${row.status}: ${row.id}: ${row.title}`);
   } else {
     out.push('Handoff withheld: the witness pass has not run. It prints only after the witness pass.');
   }

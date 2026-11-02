@@ -26,7 +26,7 @@ These are settled. Change one only by messaging the orchestrator, with the reaso
 - Rules live in `runs/<id>/rules.md`, re-read every step and placed first in the prompt. Rules are never compacted.
 - Surface: the default MCP surface serves three tools, `next_context`, `run_code` and `finish` (requires a witness, and no open row unless `stopRows` is true). Every other verb is a function on `gm` inside `run_code`: `await gm.read_file({ path })`. The owner decided this on 2026-11-01 (DESIGN.md, the surface entries). The server writes every event to the log and answers concurrent requests by JSON-RPC id.
 - Paths stay inside the workspace for the file tools. A `..` segment is refused. A symlink that leaves the workspace is refused, including a dangling one. Refusals are `refusal` events, not thrown errors. `run_shell` is not confined. A shell command can hard-link a file from outside the workspace; a path check does not see that, and it is a known limit, not a bug to close with a path check.
-- Rows: `open` means the worker can work the row now. A row it cannot work is `blocked`, with a `fact` (the unmet condition) and a `trigger` (what reopens it). An owner decision is a trigger that names the owner. The planner plans every open row (DESIGN.md, Row states).
+- Rows: a row is open until it is implemented (`gm.<kind>_resolve`, with a witness) or, for a PRD, deleted (`gm.prd_delete`). No row is held in any other state. The planner plans every open row and reports any other status as a defect (DESIGN.md, Rows without a hold).
 - Storage: `runs/<id>/` with `log.jsonl` (append-only), `log.index`, `rules.md`, `task.json` and `jobs/`. `runs/` is git-ignored.
 
 ## Hard rules
