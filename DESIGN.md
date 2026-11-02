@@ -649,6 +649,35 @@ What this does not show: that taskkill behaves the same on Windows. Wine impleme
 
 Rule re-injection and the live witness are a different limit, and Wine does not touch them: they need live model trials.
 
+## Heap growth: what retains it, and the index file (2026-11-02, gm request)
+
+Method: a worker runs with the heap-snapshot preload (`audit/snap-worker.cjs`), which writes a snapshot on SIGUSR1. The run (`audit/snap-run.mjs`) takes a snapshot after 200 warm-up calls, one after 1000 more `read_file` calls, and one after 1000 more. `audit/snap-diff.mjs` diffs two snapshots by constructor, and by retainer for the objects that exist only in the later one. Snapshot run `snap/read1` is HEAD (96e2abe). Snapshot run `snap/read2` is the index commit (001274b).
+
+Snapshot totals (self size, bytes):
+
+| Interval | HEAD (read1) | Index commit (read2) |
+|---|---|---|
+| Warm-up end to 1000 calls | +299,680, mostly JIT code: 89 new code objects, 92 KB of them | not taken (the warm-up is the same) |
+| 1000 calls to 2000 calls | +23,912 | +10,904 |
+
+Top retainers of the objects that exist only in the later snapshot (second interval, HEAD):
+- `Object --property:text-->`: 256 objects, 108,544 bytes. These are the reply memory (`REPLY_MEMORY` in `src/mcp.mjs`), which keeps the last 256 requests and evicts the oldest. It is bounded, so it does not grow.
+- `Object --internal:properties-->`: 512 objects, 32,768 bytes. Those are the same kind of bounded window.
+- `(object elements)`: +11,720 bytes of growth in the array of the event offsets. That array held one number per event, so it grew with the length of the run. It is the byte-offset index gm suspected.
+
+The first interval's growth is JIT compilation, not retention: after a 200-call warm-up, the heap rises by 0.35 MB, but after a 2000-call warm-up it does not rise over the next 1000 calls.
+
+Change, commit `001274b`: the log keeps one 16-byte record for each event in `log.index` beside the log: a float64 byte offset, a uint32 length, and four zero bytes. The index is written after the lines it describes, in the same flush points as the log. A missing index, or one that does not end where the log ends, is rebuilt from the log, which is the record. The worker keeps the last 512 events in memory, and reads any other event by seeking to its record. `read_file` reads through one buffer, which starts at a page and grows to the largest file read so far (the peak; it never shrinks), and a file bigger than 1 MB is read asynchronously. The bytes are decoded once, and the text is both the reply and the logged output.
+
+Witnesses (scratch, run labels as listed):
+- The index covers the log: 2005 events, `log.index` 32,080 bytes, which is 16 bytes times the events (`eq-new`).
+- The event log matches HEAD's, event for event, for 2001 events of 1000 calls. The first difference is the run summary's timing fields (`eq-head`, `eq-new`).
+- `query_log` still reaches every event: paged bounded, the 3137-event copy gives 63 pages, identical to HEAD (`idx-bounded`, compared with `base-head-bounded`). Paged unbounded, it gives contiguous events 1 to 3279, the first is seq 1 and the last is seq 3279 (`idx-open`). The pending witness also reads 85 events against 78 logged (`pending-witness-1793611099864`, and later runs).
+- Heap after a 2000-call warm-up, over the next 1000 calls: `read_file` HEAD 6.92 to 6.87 MB, now 6.88 to 6.85 MB (`gc-top-warm-head`, `gc-top-warm-new`). `next_context` HEAD 7.51 to 7.50 MB, now 7.47 to 7.45 MB (`gc-next-warm-head`, `gc-next-warm-new`). Both are flat.
+- Collections per 1000 calls. After a 200-call warm-up, `read_file` goes from 18 at HEAD (`gc-top-before2`) to 16 (`gc-top-after2`). After a 2000-call warm-up, both are 8 (`gc-top-warm-head`, `gc-top-warm-new`). `next_context` after a 2000-call warm-up is 5 at HEAD and 7 now (`gc-next-warm-head`, `gc-next-warm-new`). That is within noise, so the steady state shows no drop in collections. The drop in the warm-up numbers is warm-up only.
+
+The steady-state growth is now 11 KB per 1000 calls (the second-interval total above), down from 24 KB. The index no longer sits in memory, so the memory of the log is the window, whatever the length of the run.
+
 ## Standing rule: buffer reuse and garbage collection (2026-11-02, owner's rule relayed by gm)
 
 Method, the same for each path: the worker, or the log alone, is run with `--expose-gc` and a 'gc' PerformanceObserver. A forced collection at the start and at the end gives the heap used, and the RSS is read at both points. The workload is 1000 calls, after a warm-up of 200 calls. Scratch scripts are under `audit/`: `gcbench.mjs` (the worker), `gc-trace.cjs` (the preload), `bench-log.mjs` (the log alone).
