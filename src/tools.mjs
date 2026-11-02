@@ -210,6 +210,7 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
       child.on('close', (exitCode, signal) => finish(exitCode, signal));
     });
     jobs.set(name, job);
+    watchJobs();
     log.append('job', { job: name, state: 'running', pid: child.pid });
     return { ok: true, state: 'running', output: `started job ${name} (pid ${child.pid})` };
   }
@@ -261,6 +262,7 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
     };
     result.then((reply) => (reply.ok ? settle('exited', { value: reply.output, truncated: reply.truncated }) : settle('failed', { error: reply.error })));
     jobs.set(name, job);
+    watchJobs();
     log.append('job', { job: name, body, state: status.state });
     if (queued) {
       // The job starts when its slot is granted. A stop before that leaves the queue, so the job never starts.
@@ -325,9 +327,17 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
         log.append('job-unstuck', { job: job.name, ...body, sinceProgressMs });
       }
     }
+    if (monitor !== null && ![...jobs.values()].some((job) => !job.settled)) {
+      clearInterval(monitor);
+      monitor = null;
+    }
   }
-  const monitor = setInterval(checkStuck, monitorMs);
-  monitor.unref();
+  // The check runs only while a job or a body is open. checkStuck stops it when none is, so an idle worker does not wake for it.
+  let monitor = null;
+  function watchJobs() {
+    if (monitor === null) monitor = setInterval(checkStuck, monitorMs);
+    monitor.unref();
+  }
 
   // The jobs still open, for the status the agent reads at each step: how long each has run and how long since it progressed.
   function activeJobs() {
