@@ -24,6 +24,8 @@ const MODES = ['literal', 'regex', 'word'];
 const REGEX_CHARS = /[|()[\]{}*+?^$\\]/;
 const TRACKED = { name: 'tracked', args: ['ls-files', '-z'] };
 const WIKI = { name: 'wiki', args: ['ls-files', '-z', '-co', '--exclude-standard', '--', 'wiki'] };
+// Dependency and vendored trees. grep skips them unless its vendor argument is true.
+const VENDOR = /(^|\/)(node_modules|vendor)\//;
 
 const str = { type: 'string' };
 const num = { type: 'number' };
@@ -43,8 +45,8 @@ export const SEARCH_TOOLS = [
   },
   {
     name: 'grep',
-    description: 'Find text in git-tracked files. mode is literal (default), regex, or word (a whole identifier). Returns path:line text. ignoreCase is optional; limit is 1 to 1000, default 100.',
-    inputSchema: obj({ pattern: str, mode: str, ignoreCase: bool, limit: num, offset: num }, ['pattern']),
+    description: 'Find text in git-tracked files. mode is literal (default), regex, or word (a whole identifier). Returns path:line text. ignoreCase is optional; limit is 1 to 1000, default 100. Paths under node_modules/ or vendor/ are skipped unless vendor is true.',
+    inputSchema: obj({ pattern: str, mode: str, ignoreCase: bool, limit: num, offset: num, vendor: bool }, ['pattern']),
   },
 ];
 
@@ -73,30 +75,36 @@ export function createSearchVerbs({ root, confine }) {
       return searchWith(WIKI, args);
     },
 
-    async grep({ pattern, mode = 'literal', ignoreCase = false, limit = DEFAULT_LIMIT, offset = 0 }) {
+    async grep({ pattern, mode = 'literal', ignoreCase = false, limit = DEFAULT_LIMIT, offset = 0, vendor = false }) {
       if (typeof pattern !== 'string' || pattern === '') return fail('pattern must be a non-empty string');
       if (pattern.length > MAX_PATTERN_CHARS) return fail(`pattern must be at most ${MAX_PATTERN_CHARS} characters`);
       if (!MODES.includes(mode)) return fail(`mode must be one of ${MODES.join(', ')}`);
       if (!Number.isInteger(limit) || limit < 1 || limit > MAX_LIMIT) return fail(`limit must be an integer from 1 to ${MAX_LIMIT}`);
+      if (typeof vendor !== 'boolean') return fail('vendor must be true or false');
       let matches;
       try {
         matches = matcherFor(pattern, mode, ignoreCase === true);
       } catch (err) {
         return fail(`bad pattern: ${err.message}`);
       }
-      const listed = await loadFiles();
-      if (listed.error) return fail(listed.error);
+      const listing = await trackedFiles(root, TRACKED);
+      if (listing.error) return fail(listing.error);
       if (!Number.isInteger(offset) || offset < 0) return fail('offset must be a whole number, zero or more');
       const found = [];
       let total = 0;
       let size = 0;
       let next = null;
-      for (const entry of listed.entries) {
-        entry.lines.forEach((line, i) => {
-          if (!matches(line.text)) return;
+      // The files are read one at a time and nothing is kept, so memory is one file at a time, not the whole tracked text. A file that is
+      // too large, binary or outside the workspace is skipped, as the index skips it.
+      for (const rel of listing.paths) {
+        if (!vendor && VENDOR.test(rel)) continue;
+        const lines = await readLines(rel);
+        if (lines === null) continue;
+        lines.forEach((text, i) => {
+          if (!matches(text)) return;
           total += 1;
           if (total <= offset || next !== null) return;
-          const row = `${entry.rel}:${i + 1} ${snippet(line.text)}`;
+          const row = `${rel}:${i + 1} ${snippet(text)}`;
           if (found.length >= limit || size + row.length > OUTPUT_PAGE) {
             next = total - 1;
             return;
@@ -150,6 +158,22 @@ export function createSearchVerbs({ root, confine }) {
     files.clear();
     for (const [rel, entry] of next) files.set(rel, entry);
     return { entries };
+  }
+
+  // The lines of one tracked file, as plain strings, for grep. The same skips as loadFile apply. Nothing is cached.
+  async function readLines(rel) {
+    const at = confine(rel);
+    if (at.refused) return null;
+    let info;
+    try {
+      info = await lstat(at.path);
+    } catch {
+      return null;
+    }
+    if (!info.isFile() || info.size > MAX_FILE_BYTES) return null;
+    const buffer = await readFile(at.path);
+    if (buffer.subarray(0, 8000).includes(0)) return null;
+    return buffer.toString('utf8').split('\n').map((raw) => (raw.endsWith('\r') ? raw.slice(0, -1) : raw));
   }
 
   async function loadFile(rel) {

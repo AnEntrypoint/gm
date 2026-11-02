@@ -15,6 +15,11 @@ const DOCS = ['DESIGN.md', 'AGENTS.md', 'README.md'];
 const SOURCE = /\.(?:mjs|js|cjs)$/;
 const NODE_TIMEOUT_MS = 20000;
 const SMOKE_TIMEOUT_MS = 60000;
+// gm-new's own checks read gm-new's files: its docs, its skill, its relay and its smoke run. They run only in a gm-new checkout. In any
+// other workspace they are not run, and notCovered names them, so a commit there is not refused for files it never had. The checkout is
+// recognised by the package name, which a deleted file cannot change, so a damaged gm-new checkout still fails its own checks.
+const OWN_NAME = 'gm-new';
+const OWN_CHECKS = ['ascii', 'docs', 'sources', 'wiki', 'skills', 'connect', 'smoke'];
 
 // What the gate does not check. Every git_commit result and its commit event carry this list, so a pass is not read as more
 // than it is. Any gap that survives the checks is recorded here, rather than hidden.
@@ -26,23 +31,40 @@ export const NOT_COVERED = [
 ];
 
 export async function runGate(root) {
+  const own = isOwnCheckout(root);
   const checks = [];
   checks.push(await timed('syntax', () => syntaxCheck(root)));
-  checks.push(await timed('ascii', () => asciiCheck(root)));
-  checks.push(await timed('docs', () => docCheck(root)));
-  checks.push(await timed('sources', async () => sourcesCheck(root)));
-  checks.push(await timed('wiki', async () => wikiCheck(root)));
-  checks.push(await timed('skills', async () => skillCheck(root)));
-  checks.push(await timed('connect', async () => connectCheck(root)));
-  checks.push(await timed('smoke', () => smokeCheck(root)));
+  if (own) {
+    checks.push(await timed('ascii', () => asciiCheck(root)));
+    checks.push(await timed('docs', () => docCheck(root)));
+    checks.push(await timed('sources', async () => sourcesCheck(root)));
+    checks.push(await timed('wiki', async () => wikiCheck(root)));
+    checks.push(await timed('skills', async () => skillCheck(root)));
+    checks.push(await timed('connect', async () => connectCheck(root)));
+    checks.push(await timed('smoke', () => smokeCheck(root)));
+  }
   const failed = checks.filter((check) => !check.ok).map((check) => check.name);
-  return { ok: failed.length === 0, failed, checks, notCovered: NOT_COVERED };
+  const notCovered = own ? NOT_COVERED : [...NOT_COVERED, `${OWN_CHECKS.join(', ')}: gm-new's own checks, not run in ${root}, which is not a gm-new checkout`];
+  return { ok: failed.length === 0, failed, checks, notCovered };
 }
 
+function isOwnCheckout(root) {
+  try {
+    return JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).name === OWN_NAME;
+  } catch {
+    return false;
+  }
+}
+
+// A check that throws is a failed check with its message, not an error out of the gate, so a commit is refused with the reason.
 async function timed(name, run) {
   const started = Date.now();
-  const result = await run();
-  return { name, ok: result.ok, durMs: Date.now() - started, detail: result.detail };
+  try {
+    const result = await run();
+    return { name, ok: result.ok, durMs: Date.now() - started, detail: result.detail };
+  } catch (err) {
+    return { name, ok: false, durMs: Date.now() - started, detail: `check threw: ${err.message}` };
+  }
 }
 
 function trackedFiles(root) {
