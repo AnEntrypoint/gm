@@ -125,6 +125,30 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
   let steps = resume?.steps ?? 0;
   let ended = resume?.ended ?? null;
   let endLogged = ended !== null;
+  // The rules watchdog. It notices the rule breaks it can see: a call before the run's first next_context (rule 2), a path or load that
+  // leaves the workspace (rule 1), a finish with no call in its step (rule 3), and a finish refused for its witness (rule 4). An open notice is
+  // carried in the reply of each call and in next_context until the agent loads the skill again, which clears them all.
+  const rulesOpen = new Map();
+  let runStarted = steps > 0;
+  let stepCalls = 0;
+  const RULE_TEXT = { 1: 'work only inside the workspace', 2: 'call next_context at the start of every step', 3: 'verify before you finish', 4: 'finish needs a witness' };
+  const LEAVES_WORKSPACE = /workspace|\.\.|link|outside/;
+  function noteRule(rule, evidence) {
+    if (rulesOpen.has(rule)) return;
+    const entry = log.append('rules-notice', { step: steps, rule, evidence });
+    rulesOpen.set(rule, { seq: entry.seq, evidence });
+  }
+  function clearRules() {
+    if (rulesOpen.size === 0) return;
+    const rules = [...rulesOpen.keys()];
+    rulesOpen.clear();
+    log.append('rules-cleared', { step: steps, rules });
+  }
+  function rulesNotice() {
+    if (rulesOpen.size === 0) return null;
+    const lines = [...rulesOpen].map(([rule, { evidence }]) => `rule ${rule} (${RULE_TEXT[rule]}): ${evidence}`);
+    return `The rules check found: ${lines.join('; ')}. Load the gm skill again with /mcp__gm-new__gm and follow the rules it gives. This notice stays until you load it.`;
+  }
 
   const handlers = {
     read_file: (args) => tools.run('read_file', args),
@@ -154,6 +178,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     } finally {
       if (body !== undefined) tools.callEnded(body);
     }
+    if (result?.refused === true && LEAVES_WORKSPACE.test(String(result.error))) noteRule(1, `${name}: ${result.error}`);
     // The full result is logged, so query_log reaches the output and the exit code of a verb called inside a body.
     const fields = { ok: result?.ok === true, args, exitCode: result?.exitCode, signal: result?.signal, output: result?.output, error: result?.error };
     log.append('code-call', { step: steps, tool: name, startMono, ...fields, ...(body === undefined ? {} : { body }) });
@@ -223,6 +248,8 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
 
   function getPrompt(params) {
     if (params?.name !== SKILL.name) throw new RpcError(-32602, `unknown prompt: ${params?.name}`);
+    // Loading the skill again is what the notice asks for, so it clears the open notices.
+    clearRules();
     const task = typeof params?.arguments?.task === 'string' ? params.arguments.task.trim() : '';
     const text = task === '' ? SKILL.body : `${SKILL.body}\n\nTask: ${task}`;
     return { description: SKILL.description, messages: [{ role: 'user', content: { type: 'text', text } }] };
@@ -230,7 +257,21 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
 
   function readResource(params) {
     if (params?.uri !== SKILL_URI) throw new RpcError(-32602, `unknown resource: ${params?.uri}`);
+    clearRules();
     return { contents: [{ uri: SKILL_URI, mimeType: 'text/markdown', text: SKILL.text }] };
+  }
+
+  // The checks on one call's result, for the rules the server can see. A finish is judged by its own result. Any other call counts toward the
+  // step that is open, which the next_context call started.
+  function watchCall(name, out) {
+    if (name === 'next_context') return;
+    if (name === 'finish') {
+      if (out.refused === true && String(out.error).includes('witness')) noteRule(4, `finish was refused: ${out.error}`);
+      else if (out.ok === true && stepCalls === 0) noteRule(3, 'finish was called with no call in its step');
+      return;
+    }
+    stepCalls += 1;
+    if (out.refused === true && LEAVES_WORKSPACE.test(String(out.error))) noteRule(1, `${name}: ${out.error}`);
   }
 
   async function callTool(params, rpcId) {
@@ -240,8 +281,12 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     if (typeof args !== 'object' || args === null || Array.isArray(args)) {
       throw new RpcError(-32602, 'tools/call arguments must be an object');
     }
+    if (!runStarted && name !== 'next_context' && name !== 'finish') noteRule(2, `${name} was called before the first next_context of the run`);
     const out = await startCall(name, args, rpcId);
-    return { content: [{ type: 'text', text: JSON.stringify(out) }], isError: out.ok !== true };
+    watchCall(name, out);
+    const notice = rulesNotice();
+    const payload = notice === null ? out : { ...out, rulesNotice: notice };
+    return { content: [{ type: 'text', text: JSON.stringify(payload) }], isError: out.ok !== true };
   }
 
   function startCall(name, args, rpcId) {
@@ -308,6 +353,8 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
       return out;
     }
     steps += 1;
+    runStarted = true;
+    stepCalls = 0;
     const step = steps;
     return act('next_context', {}, access, () => context(step), ({ ok, error, prefixSha, total }) => ({ ok, error, prefixSha, total }), rpcId);
   }
@@ -342,6 +389,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
       total: log.count(),
       ...feedOf(log, REGISTRY, { shown: shownTotalOf(log) }),
       ...(recoveryNow ? { recovery: recoveryNow } : {}),
+      ...(rulesOpen.size > 0 ? { rulesPending: rulesNotice() } : {}),
       ...(killed.length ? { jobsKilled: killed.map(({ seq, job, reason, lifetimeMs, tail }) => ({ seq, job, reason, lifetimeMs, tail })) } : {}),
       ...(started.length ? { jobsStarted: started.map(({ seq, job }) => ({ seq, job })) } : {}),
       ...(stillRunning.length ? { jobsRunning: stillRunning.map(({ seq, job, runningMs }) => ({ seq, job, runningMs })) } : {}),

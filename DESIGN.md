@@ -602,6 +602,18 @@ Witness, delivery (run rules/run-1793604554, JSON-RPC against the repository's s
 
 Not witnessed, and the row stays blocked: whether a rule holds after a summary in a live run. That needs live trials, so it waits for the owner's live-trial budget. The trigger is unchanged.
 
+## Rules watchdog and compaction handling (2026-11-02)
+
+Requested by the owner in the session on 2026-11-02, and implemented by the agent. gm has not reviewed this record, so it is not a joint decision.
+
+- The server watches for the rule breaks it can see: rule 2, a call before the run's first next_context; rule 1, a path or a load that leaves the workspace (top-level refusals, and refusals of verbs called inside a body); rule 3, a finish with no call in its step; rule 4, a finish refused for its witness.
+- Each break raises a notice, logged as rules-notice. The notice is carried in the reply of each call (rulesNotice) and in next_context (rulesPending), and it asks the agent to load the gm skill again with /mcp__gm-new__gm. Loading the skill, through the prompt or the resource, clears the notices and is logged as rules-cleared.
+- The steps the agent takes after a context compaction are in the skill, because a skill survives a compaction and the server's notices only point to it: call next_context at once, follow the rules it returns, do not rely on a summary for a rule, the witness or an event, use gm.query_log for any event the summary does not give exactly, and load the skill again when a notice appears.
+
+Witness (run rules-watch/run-1793605220927, JSON-RPC against the working-tree server): a run whose first call is run_code raised rule 2, next_context carried it, the skill fetch cleared it, and both events were logged. A body that read ../outside.txt raised rule 1 on its reply, with the refusal text. A blank witness raised rule 4. A finish with no call in its step raised rule 3. A clean run, with one read and a witnessed finish, raised no notice.
+
+Limits: the watchdog sees only rules 1 to 4. Rules 5 to 7 are not observed. It cannot force the agent to comply. Whether the agent loads the skill after a notice, and whether a rule holds after a compaction, is measured only by a live run, which is the open witness of the rule re-injection row.
+
 ## Publication (2026-11-02)
 
 The owner decided to make the repository public, so that GitHub Pages can serve the manual. The Pages plan does not allow Pages on a private repository, which GitHub reported when Pages was first requested (HTTP 422).

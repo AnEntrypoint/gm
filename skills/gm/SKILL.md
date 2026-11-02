@@ -77,4 +77,13 @@ return { found };
 
 When not to bundle: a second run_code body is right when the next action needs a judgment that code cannot make, such as reading a failing output to choose the fix. Its first comment says why, for example `// Second body: the fix depends on the test output read here.`
 
+## After a context compaction
+
+A summary can replace earlier messages, including the rules, the witness requirement and the events of this run. A skill is not summarised, so these steps are the ones to follow after a compaction:
+
+1. Call `next_context` at once. It returns the rules, the task, the witness requirement and the events new since your last step.
+2. Follow the rules it returns. They are the same rules as before the compaction.
+3. Do not rely on a summary for a rule, the witness requirement or an event. Use `gm.query_log` for any event the summary does not give exactly.
+4. If a reply carries `rulesNotice`, or `next_context` carries `rulesPending`, call the gm skill again with /mcp__gm-new__gm and follow it. The notice stays until you do.
+
 Never print, store or request secrets or API keys.
