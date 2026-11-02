@@ -715,6 +715,24 @@ Witness, in a scratch clone with pushing off (`/tmp/gm-scratch/gm-new/ship-witne
 - A gate that fails (a non-ASCII byte in a named file) commits nothing. The named path is unstaged, and the staged file stays staged. HEAD does not move. Exit 1.
 - A path that is neither in the tree nor tracked is refused with exit 1 and no change.
 
+## Notifications for pending events (2026-11-02, owner's request)
+
+The owner asked for the best route each host offers, in order: MCP channel events, a Claude Code Monitor, and a background process for any other host. Each pending record is sent to the host as a `notifications/claude/channel` line when it is queued (`src/pending.mjs` listener, `src/mcp.mjs`). The worker declares `experimental: {'claude/channel': {}}` in its initialize result, and its instructions name the three routes in order. The lines pass through the core and the relay unchanged, so this needs no relay change.
+
+What is verified, and what is not:
+- Monitor, live, in Claude Code 2.1.301 (this session): a Monitor on a watched file reported a line appended to it as a notification, with its JSON intact (task `b5uzgwec7`). This route needs no server support.
+- Channel events, scripted (`audit/channel-check.mjs`, commit `29dccb4`): the capability is declared, and every pending record has exactly one channel notification whose `meta.id` and `meta.kind` match it and whose content is the record. Metadata keys are identifiers, as the host requires.
+- Channel delivery into a session, not verified. The host registers a custom channel only when it is launched with `--dangerously-load-development-channels server:gm-new` in an interactive session, and the operator accepts the dialog. The reference says the host drops events from a server it did not register, without an error, and the server cannot tell whether it is registered. So the channel route needs the owner's relaunch with that flag to be witnessed.
+- The instructions and the channel capability reach a session only at connect. The live worker gets the new code on the core's next update check, but the host keeps the instructions it read at connect, so one more `/mcp` reconnect is needed for the new instructions to apply.
+
+Routes, by preference:
+1. A channel event `<channel source="gm-new" id kind>` in the session.
+2. A Monitor armed on `pendingFile` with `tail -n +1 -F`, re-armed when it expires, if the host has the tool.
+3. A job that runs the same tail, read with `job_status`, on any host.
+4. `node src/cli.mjs events --run <run> --read-clear`, for a shell with no watch.
+
+Trade-off: if the channel route is live and a Monitor is also armed, each event is reported twice. The instructions say to act on an id once, but the server cannot tell the two routes apart, so the duplicate costs one notification per event. Stopping the Monitor when channel events arrive would remove it, and that is left to the agent.
+
 ## Owner decision: compression removed, pending queue added (2026-11-02)
 
 The owner decided, relayed by gm: remove compression. The audit log `runs/<id>/log.jsonl` stays raw and complete, and nothing is compressed or deleted. A query of an old run must not depend on a reader for a compressed form. In its place, a separate pending queue carries only the events an agent must act on, for live feedback and for read-and-clear.
