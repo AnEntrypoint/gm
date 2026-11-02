@@ -55,6 +55,12 @@ function writeHost(message) {
   process.stdout.write(`${JSON.stringify(message)}\n`);
 }
 
+// The worker's state, for the relay: running when a start or a restart has answered the handshake, failed when it did not. The relay reads
+// this message and does not forward it to the host. The update check waits for it after a pull, to decide whether to roll back.
+function reportWorker(next, reason) {
+  writeHost({ jsonrpc: '2.0', method: 'gm-new/worker', params: reason === undefined ? { state: next } : { state: next, reason } });
+}
+
 function errorReply(id, message) {
   return { jsonrpc: '2.0', id, error: { code: -32000, message } };
 }
@@ -159,6 +165,7 @@ function scheduleRetry() {
 
 function failWith(reason) {
   state = 'failed';
+  reportWorker('failed', reason);
   failure = `${reason}. Last stderr of the worker:\n${stderrTail.slice(-1500)}`;
   for (const id of inflight.keys()) writeHost(errorReply(id, failure));
   inflight.clear();
@@ -229,6 +236,7 @@ async function restart(reason) {
     startWorker(reason);
     await replayHandshake();
     state = 'running';
+    reportWorker('running');
     retryDelay = RETRY_MIN_MS;
     clearTimeout(retryTimer);
     retryTimer = null;
@@ -271,6 +279,7 @@ function shutdown() {
 if (hostInitialize === null) {
   startWorker(START_REASON);
   state = 'running';
+  reportWorker('running');
 } else {
   scheduleRestart(START_REASON ?? 'the supervisor was replaced');
 }

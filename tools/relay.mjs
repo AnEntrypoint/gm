@@ -8,7 +8,7 @@
 // retried with backoff. Edit this file only when a reconnect is acceptable: every change here needs one.
 import { spawn } from 'node:child_process';
 import { createHash, randomBytes } from 'node:crypto';
-import { existsSync, watch } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, watch } from 'node:fs';
 import { createInterface } from 'node:readline';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -131,6 +131,11 @@ function hold(line, message) {
 function onSupervisorLine(line) {
   if (line.trim() === '') return;
   const message = parse(line);
+  // The supervisor's worker state. It goes to the update check and not to the host.
+  if (message?.method === 'gm-new/worker') {
+    for (const waiter of workerWaiters.splice(0)) waiter.resolve(message.params ?? null);
+    return;
+  }
   if (message?.id === READY_ID) {
     ready?.answer();
     return;
@@ -224,6 +229,43 @@ function onSupervisorExit(proc, code, signal) {
   for (const id of inflight.keys()) writeHost(errorReply(id, `the supervisor exited (${how}) with this call in flight`));
   inflight.clear();
   if (onDrained) onDrained();
+}
+
+// The next worker state the supervisor reports ({ state, reason? }), or null after timeoutMs. The update check uses it to wait for the outcome of
+// the restart its pull caused.
+const workerWaiters = [];
+function nextWorkerEvent(timeoutMs) {
+  return new Promise((resolve) => {
+    const waiter = { resolve: (params) => { clearTimeout(timer); resolve(params); } };
+    const timer = setTimeout(() => {
+      const at = workerWaiters.indexOf(waiter);
+      if (at >= 0) workerWaiters.splice(at, 1);
+      resolve(null);
+    }, timeoutMs);
+    workerWaiters.push(waiter);
+  });
+}
+
+// Why the worker's work must not be interrupted now, or null when it may be restarted. A tool call in flight is work. So is a body or job
+// that the current run still has running or queued, which its status files say.
+function busyReason() {
+  let calls = 0;
+  for (const method of inflight.values()) if (method === 'tools/call') calls += 1;
+  if (calls > 0) return `${calls} tool call(s) in flight`;
+  const runDir = argv[argv.indexOf('--run-dir') + 1];
+  const jobsDir = join(runDir, 'jobs');
+  if (!existsSync(jobsDir)) return null;
+  let open = 0;
+  for (const name of readdirSync(jobsDir)) {
+    if (!name.endsWith('.json')) continue;
+    try {
+      const status = JSON.parse(readFileSync(join(jobsDir, name), 'utf8'));
+      if (status.state === 'running' || status.state === 'queued') open += 1;
+    } catch {
+      // A status file that is being written is read again at the next check.
+    }
+  }
+  return open > 0 ? `${open} body or job(s) running or queued` : null;
 }
 
 function probeSupervisor() {
@@ -372,7 +414,7 @@ function shutdown() {
   supervisor.stdin.end();
 }
 
-startUpdates({ root: ROOT, everyMs: UPDATE_MS, log: (message) => process.stderr.write(`gm-new update: ${message}\n`) });
+startUpdates({ root: ROOT, everyMs: UPDATE_MS, log: (message) => process.stderr.write(`gm-new update: ${message}\n`), busy: busyReason, nextWorkerEvent });
 scheduleSwap(null);
 createInterface({ input: process.stdin, crlfDelay: Infinity }).on('line', onHostLine).on('close', shutdown);
 for (const signal of ['SIGINT', 'SIGTERM']) process.once(signal, shutdown);

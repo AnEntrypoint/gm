@@ -573,7 +573,31 @@ Named limits, added:
 - The print layout was checked as a PDF from headless Chromium. It was not checked on paper.
 - The update check needs network access to origin. Offline, it reports the fact and skips.
 
+## Update safety (2026-11-02)
+
+The owner asked for the update check to deploy main into running workers within the hour, and gm asked for two conditions before the hourly update is judged safe. This section supersedes the pull-then-undo rule in the section above: a commit is now checked before the checkout moves to it.
+
+- A commit is checked in a clone of the checkout at that commit. The clone shares the checkout's objects and creates no branch in the checkout. The gate runs there, and the checkout is fast-forwarded only when the gate passes. A commit the gate rejects never reaches the checkout.
+- A target that was refused by the gate, or rolled back, is remembered in the process. Origin still points at it, so it is not tried again until origin moves to another commit. Without this, a broken commit on main would be pulled, failed and rolled back at every check.
+- The pull never runs into a checkout with changes to tracked files.
+- The pull waits while a tool call is in flight, or while a body or job of the current run is running or queued. The relay supplies that test: the calls it has forwarded that have not been answered, and the run's job status files. The wait is checked before the candidate and again just before the pull, and it is retried every 60 seconds, so a body that ends does not wait for the next hour.
+- A pull that changes src/ or skills/ restarts the worker through the supervisor's watch. The supervisor reports the worker's state to the relay (running, or failed with the reason). The relay does not forward that report to the host. The check waits for it. When the worker does not start on the new code, the checkout is reset to the commit before the pull, the worker starts on the old code, and the rollback is logged. The wait for the rollback takes only a report that the worker is running, because the supervisor keeps retrying the broken code until the reset, and a failure report from those retries is not the outcome of the rollback.
+- When the worker does not start on the old code either, the state is stuck, and the message asks for a person to check the checkout.
+- The hourly check stays on until the owner decides. gm will ask.
+
+Named limits, added:
+
+- A check takes the time of a clone and a gate, and an npm ci when the lock file changed.
+- The refused list is kept in the process. A relay restart retries a refused commit once.
+- Between a failed restart and the rollback, the supervisor keeps retrying the broken code, so calls in that window get the supervisor's error reply.
+- The tools/relay.mjs and tools/supervise.mjs changes go live only at the owner's reconnect. The witnesses below start the relay directly.
+
 ## Measured
+
+- Update safety, witnessed (run update3/run-1793603564, real git repositories, final code): benign pull updated; a commit that breaks syntax was rejected, and the checkout was untouched; the same commit on the next check was refused; a dirty checkout gave dirty with HEAD unchanged; a diverged history gave diverged; an upstream revert was pulled; a busy callback gave waiting with HEAD unchanged, and the pull landed once it cleared; an unreachable origin gave offline; the timer logged 2 checks in 2.6 s and none after stop. The log for the dirty case reads "origin main is 1 commit(s) ahead, but the checkout has changes to tracked files, so nothing was pulled".
+- Rollback, witnessed through the real relay, supervisor and worker (run relay4/run-1793603581, host driven over JSON-RPC): a commit that passes the gate and makes the worker exit before its handshake was pulled, the worker failed, and the log reads "rolled back 14276ab to b27c63c: the worker did not start on the new code (the worker failed to restart (the worker exited (code 1) before the handshake)); the worker answers on b27c63c". The checkout was back at its pre-pull commit and clean, and the worker answered tools/list with its three tools.
+- Busy wait, witnessed in the same run: with background body body-9 running, a benign commit landed upstream. The log reads "origin main is ahead; the pull waits for 1 body or job(s) running or queued". The checkout did not move while the body ran, and "pulled 1 commit(s) to 5ffe447; the gate passed" followed the end of the body.
+- No retry of a rolled-back commit (run relay3/run-1793603546): the commit was rolled back once and pulled once. Over the six seconds after the rollback, six "points at a commit that was refused" lines were logged, with no second pull, and the worker answered tools/list with its three tools.
 
 - Updates, the check through every state (scratch, real git repositories, run run-1793602564, tools/update.mjs): updated (a benign push was pulled, the gate passed, the checkout equals origin); reverted (a push with a syntax error: the gate failed with "Unexpected token '='", the checkout went back to the prior commit, and its tree was clean); dirty (origin ahead by 2, a checkout with an uncommitted edit: HEAD unchanged); diverged (a local-only commit: HEAD unchanged); updated after the upstream revert (ahead by 3, the gate passed); offline (an unreachable origin was reported); timer (startUpdates every 1000 ms logged 2 checks in 2.6 s, none after stop, HEAD unchanged).
 - setup.sh, first run in a fresh clone with no node_modules (run setup-check/run-1793602589): it installed the dependency with npm ci, the update check said current, the gate passed, the .mcp.json entry was printed, exit 0. Second run: dependencies present, update check current, gate passed, exit 0.
