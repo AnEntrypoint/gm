@@ -1043,3 +1043,9 @@ Limit: the reminder reaches the agent at its next `next_context`, not at the mom
   - A checkout with local changes to tracked files does not pull, so a push reaches a checkout only once that checkout is clean. A push from this checkout needs no pull: its files changed on disk at the edit, and the src/ watch restarted the worker then.
   - tools/relay.mjs is frozen and is not reloaded. A push that changes it reaches a host on the host's reconnect.
   - Each running checkout runs one git fetch a minute. Its network and wake-up cost is not measured here. The hourly default was chosen for idle wake-ups (see the idle measurements above). GMNEW_UPDATE_MS sets another interval, and 0 turns the check off.
+
+## Agent notes split (2026-11-02, the owner's direction)
+
+- AGENTS.md keeps the project facts that troubleshooting found, the decided list, the concurrency design, the current state and the continuation rule. Its process went to `skills/dev/SKILL.md`. The server serves only `skills/gm/SKILL.md`, so runs do not load the dev prose.
+- The continuation rule: before new work, write what troubleshooting found. A project fact goes to AGENTS.md and a process lesson to the dev skill. A line that needed no troubleshooting is deleted. AGENTS.md went from 10106 to 9499 bytes.
+- The live gm-continue skill is not installed in this environment. Only a backup exists (`/config/.claude/skillbak/gm-continue/SKILL.md`). It was not edited, so the rule lives in AGENTS.md and in the user's memory.
