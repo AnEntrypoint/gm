@@ -55,7 +55,7 @@ This is what you build and codify. Single worker first: DESIGN.md direction 6 sa
 
 - Work-plan items 1 to 11 are witnessed and in DESIGN.md. The live comparison of gm-new and gm is closed; its report is in DESIGN.md, Project close.
 - Open and recorded: the minimal tool set, which is not run, and G3 (cache effect), measured by the gm agent as a cache share from the host transcripts. No saving is claimed, because the price multipliers are unverified. The project closes when both are recorded.
-- Updates: a running checkout pulls origin main about every minute (`tools/update.mjs`, DEFAULT_UPDATE_MS). A pull goes only into a clean checkout. A pull that changes `src/` or `skills/` restarts the worker. `tools/relay.mjs` is frozen, so a change to it reaches a host only on reconnect (DESIGN.md, Update on push).
+- Updates: a running checkout pulls origin main about every minute (`tools/update.mjs`, DEFAULT_UPDATE_MS). A pull goes only into a clean checkout. A pull that changes `src/` restarts the worker. A skill file is served in place (DESIGN.md, Skill in place). `tools/relay.mjs` is frozen, so a change to it reaches a host only on reconnect (DESIGN.md, Update on push).
 
 ## Facts found by troubleshooting
 

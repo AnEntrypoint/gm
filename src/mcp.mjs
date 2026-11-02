@@ -34,9 +34,25 @@ import { writeSummary } from './summary.mjs';
 const PROTOCOL_VERSION = '2025-06-18';
 const SERVER_INFO = { name: SERVER_NAME, version: JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')).version };
 const SKILL_URI = 'gm://skill/SKILL.md';
-const SKILL = parseSkill(readFileSync(join(ROOT, 'skills', 'gm', 'SKILL.md'), 'utf8'));
-const SKILL_PROMPT = { name: SKILL.name, description: SKILL.description, arguments: [{ name: 'task', description: 'The task to run', required: false }] };
-const SKILL_RESOURCE = { uri: SKILL_URI, name: `${SKILL.name} skill`, description: SKILL.description, mimeType: 'text/markdown' };
+// The skill is read on each request, so an edit to skills/gm/SKILL.md is served without a restart. A file caught mid-write keeps the last
+// text that parsed. Before any text has parsed, the error reaches the caller.
+let skillLast = null;
+function skill() {
+  try {
+    skillLast = parseSkill(readFileSync(join(ROOT, 'skills', 'gm', 'SKILL.md'), 'utf8'));
+  } catch (err) {
+    if (skillLast === null) throw err;
+  }
+  return skillLast;
+}
+function skillPrompt() {
+  const SKILL = skill();
+  return { name: SKILL.name, description: SKILL.description, arguments: [{ name: 'task', description: 'The task to run', required: false }] };
+}
+function skillResource() {
+  const SKILL = skill();
+  return { uri: SKILL_URI, name: `${SKILL.name} skill`, description: SKILL.description, mimeType: 'text/markdown' };
+}
 const DEFAULT_MAX_STEPS = 50;
 const REPLY_MEMORY = 256;
 const DEFAULT_MAX_INFLIGHT = 8;
@@ -224,9 +240,9 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     if (method === 'ping' || method === 'server/discover') return {};
     if (method === 'tools/list') return { tools: served };
     if (method === 'tools/call') return callTool(params, rpcId);
-    if (method === 'prompts/list') return { prompts: [SKILL_PROMPT] };
+    if (method === 'prompts/list') return { prompts: [skillPrompt()] };
     if (method === 'prompts/get') return getPrompt(params);
-    if (method === 'resources/list') return { resources: [SKILL_RESOURCE] };
+    if (method === 'resources/list') return { resources: [skillResource()] };
     if (method === 'resources/read') return readResource(params);
     if (method === 'resources/templates/list') return { resourceTemplates: [] };
     if (method.startsWith('notifications/')) return null;
@@ -240,6 +256,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
   }
 
   function getPrompt(params) {
+    const SKILL = skill();
     if (params?.name !== SKILL.name) throw new RpcError(-32602, `unknown prompt: ${params?.name}`);
     // Loading the skill again is what the notice asks for, so it clears the open notices. Each fetch is logged, so a live run can count them.
     log.append('skill-loaded', { via: 'prompt', cleared: [...rulesOpen.keys()] });
@@ -255,6 +272,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
   }
 
   function readResource(params) {
+    const SKILL = skill();
     if (params?.uri !== SKILL_URI) throw new RpcError(-32602, `unknown resource: ${params?.uri}`);
     log.append('skill-loaded', { via: 'resource', cleared: [...rulesOpen.keys()] });
     clearRules();

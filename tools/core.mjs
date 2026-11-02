@@ -21,7 +21,8 @@ const ROOT = process.env.GMNEW_ROOT ? resolve(process.env.GMNEW_ROOT) : resolve(
 const CORE_FILE = join(HERE, 'core.mjs');
 const UPDATE_FILE = join(HERE, 'update.mjs');
 const WORKER = join(ROOT, 'src', 'mcp.mjs');
-const WATCHED = [join(ROOT, 'src'), join(ROOT, 'skills')];
+const SKILLS_DIR = join(ROOT, 'skills');
+const WATCHED = [join(ROOT, 'src'), SKILLS_DIR];
 const WATCHED_FILE = /\.(mjs|md)$/;
 const SESSIONS = join(ROOT, 'runs', '.sessions');
 const DEBOUNCE_MS = 250;
@@ -76,6 +77,7 @@ const workerWaiters = [];
 const pending = []; // transitions waiting to run: a restart of the worker, or a handover to new code
 let pumping = false;
 let sourceTimer = null;
+let skillTimer = null;
 let coreTimer = null;
 let updatesStarted = false;
 
@@ -448,6 +450,14 @@ async function announceChanges() {
   }
 }
 
+// A change the worker serves in place: nothing restarts, and the host is told of any list whose content changed.
+async function refresh(reason) {
+  if (state !== 'running') return { ok: false, reason: `the worker is ${state}` };
+  say(`refreshing the lists (${reason})`);
+  await announceChanges().catch(() => {});
+  return { ok: true };
+}
+
 async function restart(reason) {
   say(`restarting the worker (${reason})`);
   if (state === 'running') {
@@ -592,6 +602,8 @@ async function handOver(reason) {
 // code starts its worker itself.
 function requestTransition(kind, reason) {
   if (kind === 'restart' && pending.some((job) => job.kind === 'restart' || job.kind === 'handover')) return Promise.resolve(null);
+  // A refresh is redundant when a transition is queued: a restart announces the lists itself, and a queued refresh already covers this change.
+  if (kind === 'refresh' && pending.length > 0) return Promise.resolve(null);
   return new Promise((resolveJob) => {
     pending.push({ kind, reason, resolve: resolveJob });
     pump();
@@ -605,7 +617,7 @@ async function pump() {
     while (pending.length > 0) {
       const job = pending.shift();
       try {
-        job.resolve(job.kind === 'restart' ? await restart(job.reason) : await handOver(job.reason));
+        job.resolve(job.kind === 'restart' ? await restart(job.reason) : job.kind === 'refresh' ? await refresh(job.reason) : await handOver(job.reason));
       } catch (err) {
         say(`the ${job.kind} failed: ${err.message}`);
         job.resolve({ ok: false, reason: err.message });
@@ -672,13 +684,20 @@ function onSourceChange(_event, file) {
   sourceTimer = setTimeout(() => requestTransition('restart', `changed: ${file}`), DEBOUNCE_MS);
 }
 
+// A skill file is served in place, so a change to it only refreshes the host's lists. Its own timer, so a change to src/ is not lost.
+function onSkillChange(_event, file) {
+  if (!file || !WATCHED_FILE.test(file)) return;
+  clearTimeout(skillTimer);
+  skillTimer = setTimeout(() => requestTransition('refresh', `changed: skills/${file}`), DEBOUNCE_MS);
+}
+
 function onCoreChange(_event, file) {
   if (file !== 'core.mjs' && file !== 'update.mjs') return;
   clearTimeout(coreTimer);
   coreTimer = setTimeout(() => requestTransition('handover', `changed: tools/${file}`), DEBOUNCE_MS);
 }
 
-for (const dir of WATCHED) if (existsSync(dir)) watch(dir, { recursive: true }, onSourceChange);
+for (const dir of WATCHED) if (existsSync(dir)) watch(dir, { recursive: true }, dir === SKILLS_DIR ? onSkillChange : onSourceChange);
 watch(HERE, onCoreChange);
 process.once('SIGINT', () => pause(0));
 process.once('SIGTERM', () => pause(0));

@@ -1098,3 +1098,14 @@ Limit: the reminder reaches the agent at its next `next_context`, not at the mom
 - Change, `tools/gm-continue-setup.mjs`: it plans every open row. Any other status is a defect, and the setup names each such row.
 - Data: the held PRD `prd-adaptive-codemode` is deleted, under the owner's rule. Its pre-registration was parked and never run. Nine held open questions remain as `blocked` rows, and the setup reports each as a defect. The owner has not yet said whether each is to be resolved with a witness or raised as a PRD.
 - Witness, through the relay on the working tree (run 2026-11-02-16-57-31-5a3e5e, `/tmp/gm-scratch/gm-new/rows-delete/witness.mjs`, `witness-result.json`): `prd_delete` of an open PRD returned ok and removed its file. A second delete found no row. `prd_delete` of an open question was refused. `gm.prd_block` is not a function. `finish` was refused while the other PRD and the question were open, and named both. `stopRows` ended the run with both as gaps.
+
+## Skill in place (2026-11-02, the owner's direction)
+
+- Before: a change to a skill file was a restart. The worker read SKILL.md once at boot, so each edit restarted it. The restart paused the run (a `paused` and a `restart` event) and killed background jobs.
+- Change, `src/mcp.mjs`: the skill is read on each request (prompts/list, prompts/get, resources/list, resources/read). A file caught mid-write keeps the last text that parsed. A skill that never parses fails at its first request, not at boot.
+- Change, `tools/core.mjs`: a change under `skills/` queues a `refresh` transition. It compares the host's lists and sends a notice only for a list whose content changed. It does not restart the worker. A refresh is dropped while another transition is queued, because that transition announces the lists.
+- Change, `tools/update.mjs`: a pull restarts the worker only when it changes `src/`.
+- Witness, a copy of the working tree through the relay (`/tmp/gm-scratch/gm-new/skill-hmr/witness.mjs`). Baseline, run 2026-11-02-16-59-25-f9f06d: one edit gave one restart and one paused event, and the new text showed after 502 ms. After the change, run 2026-11-02-17-00-01-137a3c: no restart and no paused event, one refresh line in the core's stderr, and the new text showed after 502 ms.
+- Not measured: how the host reacts to a list notice when a skill's name or description changes. The witness changes only the body.
+- Not changed: a change under `src/` still restarts the worker. In-place reload of `src/` is the next step, and it is not built.
+- Reported, not reproduced here: on oscraft, between about 16:21 and 16:36, restarts opened new three-event runs. Later restarts stayed inside the same run. The cause is open.

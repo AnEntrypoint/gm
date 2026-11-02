@@ -104,7 +104,8 @@ export async function checkForUpdate(root, { log = () => {}, busy = null, nextWo
 async function apply(root, prev, target, ahead, log, { busy, nextWorkerEvent, replaceCore }) {
   const changed = (await git(root, ['diff', '--name-only', prev, target])).split('\n').filter(Boolean);
   const lockChanged = changed.includes('package-lock.json');
-  const restarts = changed.some((file) => file.startsWith('src/') || file.startsWith('skills/'));
+  // A skill file is served in place (the core refreshes the lists), so only src/ restarts the worker.
+  const restarts = changed.some((file) => file.startsWith('src/'));
   const replaces = changed.some((file) => file.startsWith('tools/') && file !== 'tools/relay.mjs');
   const verdict = await candidate(root, target, lockChanged);
   if (verdict.ok !== true) {
