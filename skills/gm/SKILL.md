@@ -90,14 +90,13 @@ A summary can replace earlier messages, including the rules, the witness require
 
 next_context returns `pending`: the events that need you since your last step, each one once, with an `id`. A job that starts or exits, a killed or stuck job, a rules notice and a recovery are pending events. Skip an id you have already acted on, because a crash can deliver one twice. `pendingFile` is the file that holds them.
 
-For live feedback, follow the file as a shell job, and read the job as its events land:
+Use the first route that works, in this order:
 
-```
-await gm.job_start({ job: 'pending', command: 'tail -n +1 -F "<pendingFile>"' });
-const seen = await gm.job_status({ job: 'pending' });
-```
+1. A channel event, `<channel source="gm-new" id="..." kind="...">`, arrives in the session when the host registered this server as a channel. Act on it as it lands.
+2. Otherwise, watch `pendingFile` in the background. If you have the Monitor tool (load it with ToolSearch when it is deferred), arm it on `tail -n +1 -F "<pendingFile>"`, with a description and a timeout of 1800000 ms. Each line it reports is one event. A watch expires, so re-arm it.
+3. Otherwise, start the same tail as a job and read it at each step: `await gm.job_start({ job: 'pending', command: 'tail -n +1 -F "<pendingFile>"' })`, then `await gm.job_status({ job: 'pending' })`.
 
-Where no monitor is available, read and clear them from the shell: `node src/cli.mjs events --run <run> --read-clear` prints them once, and a second call prints nothing.
+Skip an id you have already acted on, whichever route reports it. Where no watch is possible at all, read and clear the queue from the shell: `node src/cli.mjs events --run <run> --read-clear` prints the events once, and a second call prints nothing.
 
 ## Handing work to a child session
 

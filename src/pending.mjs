@@ -11,10 +11,18 @@ export const PENDING_FILE = 'pending.jsonl';
 export const PENDING_KINDS = new Set(['job', 'job-killed', 'job-stuck', 'job-unstuck', 'rules-notice', 'recovery']);
 const READING = /^pending\.\d+-[0-9a-f]+\.reading$/;
 
+// A listener is called with each record after it is in the file. The worker uses one to send the record to the host as a channel event.
+const listeners = new Set();
+export function onPendingAppended(listener) {
+  listeners.add(listener);
+}
+
 // The file is opened for each append, not kept open: a read-and-clear renames it, and a descriptor held open would then write into the copy
 // that is being read.
 export function appendPending(runDir, event) {
-  appendFileSync(join(runDir, PENDING_FILE), `${JSON.stringify({ id: event.seq, ...event })}\n`);
+  const record = { id: event.seq, ...event };
+  appendFileSync(join(runDir, PENDING_FILE), `${JSON.stringify(record)}\n`);
+  for (const listener of listeners) listener(record);
 }
 
 // The records not yet delivered, in the order they were written. Copies left by an earlier crash come first. The files are returned so
