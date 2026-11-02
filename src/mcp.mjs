@@ -218,7 +218,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
 
   function initialize(params) {
     const version = typeof params?.protocolVersion === 'string' ? params.protocolVersion : PROTOCOL_VERSION;
-    return { protocolVersion: version, capabilities: { tools: { listChanged: true }, prompts: { listChanged: true }, resources: { listChanged: true } }, serverInfo: SERVER_INFO, instructions: surface === 'code' ? CODE_INSTRUCTIONS : TOOLS_INSTRUCTIONS };
+    return { protocolVersion: version, capabilities: { tools: { listChanged: true }, prompts: { listChanged: true }, resources: { listChanged: true } }, serverInfo: SERVER_INFO, instructions: `${surface === 'code' ? CODE_INSTRUCTIONS : TOOLS_INSTRUCTIONS}\n\n${MCP_RULES}` };
   }
 
   function getPrompt(params) {
