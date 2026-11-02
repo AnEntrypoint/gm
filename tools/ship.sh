@@ -1,16 +1,39 @@
 #!/usr/bin/env bash
-# Gate, then commit and push only the named paths, and only when the gate's own exit code is zero. Usage: ship.sh "<subject>" <paths...>
+# Stages the named paths, runs the gate, then commits and pushes only those paths, and only when the gate's own exit code is zero.
+# Usage: tools/ship.sh "<subject>" <paths...>
+# Only the named paths are staged, and a deleted path is staged as its deletion. The gate lists the tracked files, so the paths are staged
+# before it runs. A gate that fails unstages the named paths again, and leaves the rest of the index as it was.
+# SHIP_ROOT names the checkout (default: the repository this script is in). SHIP_PUSH=0 commits without pushing, for a witness.
 set -o pipefail
-cd /workspace/gm-new || exit 1
+root="${SHIP_ROOT:-$(cd "$(dirname "$0")/.." && pwd)}"
+cd "$root" || exit 1
+if [ "$#" -lt 2 ]; then
+  echo "usage: tools/ship.sh \"<subject>\" <paths...>"
+  exit 2
+fi
 msg="$1"
 shift
-out=/tmp/gm-scratch/gm-new/audit/gate.out
+for path in "$@"; do
+  if [ ! -e "$path" ] && ! git ls-files --error-unmatch -- "$path" > /dev/null 2>&1; then
+    echo "refused: $path is neither in the tree nor tracked"
+    exit 1
+  fi
+done
+git add -A -- "$@" || exit 1
+out="${SHIP_OUT:-/tmp/ship-gate.out}"
 node -e "import('./src/gate.mjs').then(async (m) => { const r = await m.runGate(process.cwd()); console.log(JSON.stringify({ gate: r.ok, failed: r.failed })); process.exit(r.ok ? 0 : 1); })" > "$out" 2>&1
 rc=$?
 tail -n 1 "$out"
 echo "gate exit code: $rc"
 if [ "$rc" -ne 0 ]; then
-  echo "NOT COMMITTED: the gate failed"
+  git reset -q -- "$@"
+  echo "NOT COMMITTED: the gate failed; the named paths are unstaged"
   exit 1
 fi
-git add -- "$@" && git commit -q -m "$msg" -- "$@" && git push -q origin main && echo "COMMITTED $(git rev-parse HEAD) and pushed; gate exit code $rc"
+git commit -q -m "$msg" -- "$@" || exit 1
+if [ "${SHIP_PUSH:-1}" = "1" ]; then
+  git push -q origin main || exit 1
+  echo "COMMITTED $(git rev-parse HEAD) and pushed; gate exit code $rc"
+else
+  echo "COMMITTED $(git rev-parse HEAD), not pushed; gate exit code $rc"
+fi
