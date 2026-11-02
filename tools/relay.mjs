@@ -18,6 +18,9 @@ const CORE = join(dirname(fileURLToPath(import.meta.url)), 'core.mjs');
 const RESPAWN_MS = 1000;
 const EXIT_MS = 10000;
 const args = process.argv.slice(2);
+// The workspace is the directory the host started this file in, unless the host's arguments name one. An entry with no arguments serves
+// the directory it was started in, so one user-level entry serves each project.
+if (!args.includes('--workspace')) args.push('--workspace', process.cwd());
 let core = null;
 let closing = false;
 

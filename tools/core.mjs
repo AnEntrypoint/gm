@@ -130,7 +130,8 @@ function newRunId() {
   return `${stamp}-${randomBytes(3).toString('hex')}`;
 }
 
-// The run directory of a fresh session. --run-dir names it; --runs with --resume resumes it; --runs alone starts a new one under it.
+// The run directory of a fresh session. --run-dir names it; --runs with --resume resumes it; --runs alone starts a new one under it. With none
+// of them, the run is <workspace>/runs/<session>, so a run never lands in the checkout that holds this code.
 function chooseRunDir(args) {
   const explicit = optionValue(args, '--run-dir');
   if (explicit !== undefined) return resolve(explicit);
@@ -138,7 +139,9 @@ function chooseRunDir(args) {
   const resumeId = optionValue(args, '--resume');
   if (runsRoot === undefined) {
     if (resumeId !== undefined) throw new Error('--resume needs --runs');
-    return join(ROOT, 'runs', newRunId());
+    const workspace = optionValue(args, '--workspace');
+    if (workspace === undefined) throw new Error('a run needs --workspace, --run-dir or --runs');
+    return join(resolve(workspace), 'runs', SESSION_NAME);
   }
   const root = resolve(runsRoot);
   if (resumeId !== undefined) {

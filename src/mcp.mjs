@@ -5,7 +5,7 @@ import { readFile } from 'node:fs/promises';
 import { basename, dirname, join, resolve } from 'node:path';
 import { createInterface } from 'node:readline';
 import { DEFAULT_WITNESS, prefixShaOf, renderTools } from './prompt.mjs';
-import { isDirectory, loadTask, newRunId, openRun, ROOT, RUNS } from './run.mjs';
+import { isDirectory, loadTask, newRunId, openRun, ROOT } from './run.mjs';
 import { flushAllLogs } from './log.mjs';
 import { clearPending, onPendingAppended, PENDING_FILE, takePending } from './pending.mjs';
 import { conflicts, createTools, loggedReply, OUTPUT_PAGE, DEFAULT_STUCK_MS, DEFAULT_MONITOR_MS, BODY_NOTICE_MS } from './tools.mjs';
@@ -31,12 +31,12 @@ import { feedOf, registryOf, resultZone1, resultZone2, shownTotalOf } from './co
 import { writeSummary } from './summary.mjs';
 
 const PROTOCOL_VERSION = '2025-06-18';
-const SERVER_INFO = { name: 'gm-new', version: JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')).version };
+const SERVER_INFO = { name: 'gm', version: JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')).version };
 // The instructions the host sees at initialize. The code surface names run_code, and the verbs are functions on gm.
 const CODE_INSTRUCTIONS = "One tool does the work: run_code. Its body is JavaScript in the project, and each verb is a function on gm, for example await gm.read_file({ path }). The verb list is in run_code's description, gm.verbs() returns each verb's details, and finish ends the run and is not a verb. Start each step with next_context.";
 const TOOLS_INSTRUCTIONS = "Each verb is a tool. Start each step with next_context, and end the run with finish and a witness.";
 // How pending events reach the agent, by the first route that works. The routes differ by host, so the order is the preference.
-const WATCH_INSTRUCTIONS = "Pending events (a job starts or exits, a job is killed or stuck, a rules notice, a recovery) reach you by the first route that works: a channel event <channel source=\"gm-new\" id=\"...\" kind=\"...\"> arriving in this session; otherwise a background watch on the file that next_context names as pendingFile. The watch is the Monitor tool if you have it (load it with ToolSearch when it is deferred), and otherwise a background job that runs tail -n +1 -F on that file, read with job_status. A watch expires, so re-arm it. An id you have already acted on is skipped, whichever route reports it.";
+const WATCH_INSTRUCTIONS = "Pending events (a job starts or exits, a job is killed or stuck, a rules notice, a recovery) reach you by the first route that works: a channel event <channel source=\"gm\" id=\"...\" kind=\"...\"> arriving in this session; otherwise a background watch on the file that next_context names as pendingFile. The watch is the Monitor tool if you have it (load it with ToolSearch when it is deferred), and otherwise a background job that runs tail -n +1 -F on that file, read with job_status. A watch expires, so re-arm it. An id you have already acted on is skipped, whichever route reports it.";
 const SKILL_URI = 'gm://skill/SKILL.md';
 const SKILL = parseSkill(readFileSync(join(ROOT, 'skills', 'gm', 'SKILL.md'), 'utf8'));
 const SKILL_PROMPT = { name: SKILL.name, description: SKILL.description, arguments: [{ name: 'task', description: 'The task to run', required: false }] };
@@ -47,7 +47,7 @@ const DEFAULT_MAX_INFLIGHT = 8;
 const DEFAULT_JOB_LIFETIME_MS = 1800000;
 // The most open jobs a next_context reply lists. The rest are counted in jobsOpenMore.
 const OPEN_LIST = 20;
-const USAGE = 'usage: node src/mcp.mjs --workspace <dir> --task <file-or-text> [--run-dir <dir>] [--max-steps N] [--max-inflight N] [--job-lifetime-ms N] [--stuck-ms N] [--monitor-ms N] [--notice-ms N] [--surface tools|code]';
+const USAGE = 'usage: node src/mcp.mjs --workspace <dir> [--task <file-or-text>] [--run-dir <dir>] [--max-steps N] [--max-inflight N] [--job-lifetime-ms N] [--stuck-ms N] [--monitor-ms N] [--notice-ms N] [--surface tools|code]';
 
 const MCP_RULES = `# Rules
 
@@ -150,7 +150,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
   function rulesNotice() {
     if (rulesOpen.size === 0) return null;
     const lines = [...rulesOpen].map(([rule, { evidence }]) => `rule ${rule} (${RULE_TEXT[rule]}): ${evidence}`);
-    return `The rules check found: ${lines.join('; ')}. Read the gm skill again with ReadMcpResourceTool (server gm-new, uri gm://skill/SKILL.md) and follow the rules it gives. That one read clears this notice. Do not repeat finished work.`;
+    return `The rules check found: ${lines.join('; ')}. Read the gm skill again with ReadMcpResourceTool (server gm, uri gm://skill/SKILL.md) and follow the rules it gives. That one read clears this notice. Do not repeat finished work.`;
   }
 
   const handlers = {
@@ -198,7 +198,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
       .then((reply) => {
         if (reply !== null) write(reply);
       })
-      .catch((err) => console.error(`gm-new: ${err.message}`))
+      .catch((err) => console.error(`gm: ${err.message}`))
       .finally(() => unansweredTurns.delete(turn));
     unansweredTurns.add(turn);
   }
@@ -259,8 +259,13 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     // Loading the skill again is what the notice asks for, so it clears the open notices. Each fetch is logged, so a live run can count them.
     log.append('skill-loaded', { via: 'prompt', cleared: [...rulesOpen.keys()] });
     clearRules();
-    const task =typeof params?.arguments?.task === 'string' ? params.arguments.task.trim() : '';
-    const text = task === '' ? SKILL.body : `${SKILL.body}\n\nTask: ${task}`;
+    const given = typeof params?.arguments?.task === 'string' ? params.arguments.task.trim() : '';
+    // The session's prompt gives the task of a run that was started without --task. The first task given is the run's task, logged once.
+    if (task === '' && given !== '') {
+      task = given;
+      log.append('task', { from: 'session prompt', text: task });
+    }
+    const text = given === '' ? SKILL.body : `${SKILL.body}\n\nTask: ${given}`;
     return { description: SKILL.description, messages: [{ role: 'user', content: { type: 'text', text } }] };
   }
 
@@ -373,7 +378,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
   // the rules change. A step whose rules are the same reuses the hash, so no step builds the tool text again.
   let prefixMemo = null;
   function prefixShaFor(rules) {
-    if (prefixMemo === null || prefixMemo.rules !== rules) prefixMemo = { rules, sha: prefixShaOf({ rules, task, witness: DEFAULT_WITNESS, tools: servedText }) };
+    if (prefixMemo === null || prefixMemo.rules !== rules || prefixMemo.task !== task) prefixMemo = { rules, task, sha: prefixShaOf({ rules, task, witness: DEFAULT_WITNESS, tools: servedText }) };
     return prefixMemo.sha;
   }
 
@@ -406,7 +411,8 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
       stepsLeft: maxSteps - step,
       maxSteps,
       rules,
-      task,
+      task: task === '' ? null : task,
+      ...(task === '' ? { taskNotice: 'No task yet. The gm skill prompt, with its task argument, gives the task of this run.' } : {}),
       witness: DEFAULT_WITNESS,
       prefixSha: prefixShaFor(rules),
       total: log.count(),
@@ -679,7 +685,7 @@ function positiveInt(value, name) {
 
 async function main(argv) {
   const flags = parseFlags(argv);
-  if (!flags.workspace || !flags.task) throw new Error(USAGE);
+  if (!flags.workspace) throw new Error(USAGE);
   const workspace = resolve(flags.workspace);
   if (!isDirectory(workspace)) throw new Error(`workspace is not a directory: ${workspace}`);
   const maxSteps = positiveInt(flags['max-steps'] ?? DEFAULT_MAX_STEPS, '--max-steps');
@@ -690,10 +696,11 @@ async function main(argv) {
   const noticeMs = positiveInt(flags['notice-ms'] ?? BODY_NOTICE_MS, '--notice-ms');
   const surface = flags.surface ?? 'code';
   if (!SURFACES.includes(surface)) throw new Error('--surface takes tools or code');
-  const task = loadTask(flags.task).trim();
-  if (task === '') throw new Error('--task is empty');
+  // Without --task, the run's task is the prompt the session sends (the gm prompt's task argument), and the run says so in its start event.
+  let task = flags.task === undefined ? '' : loadTask(flags.task).trim();
+  if (flags.task !== undefined && task === '') throw new Error('--task is empty');
 
-  let runDir = flags['run-dir'] === undefined ? join(RUNS, newRunId()) : resolve(flags['run-dir']);
+  let runDir = flags['run-dir'] === undefined ? join(workspace, 'runs', newRunId()) : resolve(flags['run-dir']);
   const runMeta = (dir) => ({ id: basename(dir), mode: 'mcp', task, witness: DEFAULT_WITNESS, workspace, maxSteps, maxInflight, createdAt: new Date().toISOString() });
   let { log, resumed } = openRun({ runDir, rules: MCP_RULES, meta: runMeta(runDir) });
   let resume = resumed ? resumeFrom(log.events()) : null;
@@ -703,12 +710,14 @@ async function main(argv) {
     runDir = join(dirname(runDir), newRunId());
     ({ log, resumed } = openRun({ runDir, rules: MCP_RULES, meta: runMeta(runDir) }));
     resume = null;
-    console.error(`gm-new mcp: run ${closed} is closed; opened run ${basename(runDir)}`);
+    console.error(`gm mcp: run${closed} is closed; opened run ${basename(runDir)}`);
   }
   const history = resumed ? log.events() : [];
+  // A resumed run that was started without a task takes the task its session gave, from its task event.
+  if (task === '' && resumed) task = history.findLast((event) => event.kind === 'task')?.text ?? '';
   const recovery = resumed ? recoveryOf(history) : null;
   if (resumed) log.append('restart', { reason: flags['restart-reason'] ?? 'restarted without a reason' });
-  else log.append('start', { mode: 'mcp', maxSteps, maxInflight });
+  else log.append('start', { mode: 'mcp', maxSteps, maxInflight, taskFrom: flags.task === undefined ? 'session prompt' : 'task file' });
   if (recovery && recovery.open.length > 0) log.append('recovery', { lastSeq: recovery.lastSeq, open: recovery.open });
   logTools(log, resumed, servedTools(surface));
 
@@ -723,14 +732,14 @@ async function main(argv) {
     pausing ??= session.quiesceForRestart().then(() => log.append('paused', { reason })).finally(() => process.exit(0));
     return pausing;
   };
-  lines.on('close', () => (flags.supervised === 'yes' ? pauseRun('the supervisor ended stdin') : session.inputEnded().catch((err) => console.error(`gm-new: ${err.message}`))));
+  lines.on('close', () => (flags.supervised === 'yes' ? pauseRun('the supervisor ended stdin') : session.inputEnded().catch((err) => console.error(`gm: ${err.message}`))));
   process.once('SIGINT', () => lines.close());
   process.once('SIGTERM', () => pauseRun('SIGTERM from the supervisor'));
-  process.stdout.on('error', (err) => console.error(`gm-new: stdout: ${err.message}`));
-  console.error(`gm-new mcp: run ${basename(runDir)} in ${runDir}`);
+  process.stdout.on('error', (err) => console.error(`gm: stdout: ${err.message}`));
+  console.error(`gm mcp: run${basename(runDir)} in ${runDir}`);
 }
 
 main(process.argv.slice(2)).catch((err) => {
-  console.error(`gm-new mcp: ${err.message}`);
+  console.error(`gm mcp: ${err.message}`);
   process.exitCode = 1;
 });
