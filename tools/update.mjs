@@ -14,7 +14,8 @@ import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 const run = promisify(execFile);
-export const DEFAULT_UPDATE_MS = 3600000;
+// A push to origin reaches a running checkout within one check. The check is a fetch of origin, which changes nothing when origin has not moved.
+export const DEFAULT_UPDATE_MS = 60000;
 const FIRST_CHECK_MS = 30000;
 const SHORT_MS = 10000;
 const FETCH_MS = 60000;
@@ -215,7 +216,7 @@ export function startUpdates({ root, everyMs = DEFAULT_UPDATE_MS, log = () => {}
     try {
       const result = await checkForUpdate(root, { log, busy, nextWorkerEvent, replaceCore });
       if (result.state === 'waiting') {
-        // The pull waits, and it is tried again soon, so a body or a job that ends does not wait for the next hour. It is logged once for each wait.
+        // The pull waits, and it is tried again soon, so a body or a job that ends does not wait for the next check. It is logged once for each wait.
         if (lastWait !== result.reason) log(describe(result));
         lastWait = result.reason;
         retry = setTimeout(tick, WAIT_RETRY_MS);
