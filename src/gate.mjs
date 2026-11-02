@@ -30,10 +30,12 @@ export const NOT_COVERED = [
   'CI: none is configured, and no CI result is read',
 ];
 
-export async function runGate(root) {
+// scope names the paths of the commit. In a gm-new checkout the syntax step checks every tracked module. In another workspace it checks only
+// the modules the commit names: the rest of that tree is not gm-new's to judge, and its files may hold other code, such as evidence files.
+export async function runGate(root, scope = null) {
   const own = isOwnCheckout(root);
   const checks = [];
-  checks.push(await timed('syntax', () => syntaxCheck(root)));
+  checks.push(await timed('syntax', () => syntaxCheck(root, own ? null : scope ?? [])));
   if (own) {
     checks.push(await timed('ascii', () => asciiCheck(root)));
     checks.push(await timed('docs', () => docCheck(root)));
@@ -44,7 +46,11 @@ export async function runGate(root) {
     checks.push(await timed('smoke', () => smokeCheck(root)));
   }
   const failed = checks.filter((check) => !check.ok).map((check) => check.name);
-  const notCovered = own ? NOT_COVERED : [...NOT_COVERED, `${OWN_CHECKS.join(', ')}: gm-new's own checks, not run in ${root}, which is not a gm-new checkout`];
+  const notCovered = own ? NOT_COVERED : [
+    ...NOT_COVERED,
+    `${OWN_CHECKS.join(', ')}: gm-new's own checks, not run in ${root}, which is not a gm-new checkout`,
+    `syntax: in ${root}, only the modules named in this commit were checked; the rest of the tree was not`,
+  ];
   return { ok: failed.length === 0, failed, checks, notCovered };
 }
 
@@ -80,8 +86,10 @@ function isPlainFile(path) {
   }
 }
 
-async function syntaxCheck(root) {
-  const files = trackedFiles(root).filter((file) => SOURCE.test(file));
+// scope is null for the whole tree, or the paths of a commit, where a file is in scope when it is one of them or lies under one.
+async function syntaxCheck(root, scope) {
+  const modules = trackedFiles(root).filter((file) => SOURCE.test(file));
+  const files = scope === null ? modules : modules.filter((file) => scope.some((rel) => file === rel || file.startsWith(`${rel}/`)));
   const runs = await Promise.all(files.map((file) => runCommand(process.execPath, ['--check', file], { cwd: root, timeoutMs: NODE_TIMEOUT_MS })));
   const bad = files.filter((_, i) => !runs[i].ok);
   return bad.length ? { ok: false, detail: `syntax errors in ${bad.join(', ')}` } : { ok: true, detail: `${files.length} modules parse` };

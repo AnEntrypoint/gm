@@ -131,8 +131,11 @@ export function createGitVerbs({ root, confine, log }) {
       if (scope.error) return fail(scope.error);
       // The gate loads on the first commit, so a worker that never commits does not hold it.
       const { runGate } = await import('./gate.mjs');
-      const gate = await runGate(root);
-      if (!gate.ok) return { ok: false, error: `refused: the commit gate failed: ${gate.failed.join(', ')}`, gate: gate.checks, notCovered: gate.notCovered };
+      const gate = await runGate(root, scope.args.slice(1));
+      if (!gate.ok) {
+        const reasons = gate.checks.filter((check) => !check.ok).map((check) => `${check.name}: ${check.detail}`);
+        return { ok: false, error: `refused: the commit gate failed: ${reasons.join('; ')}`, gate: gate.checks, notCovered: gate.notCovered };
+      }
       const result = await git(['commit', '-m', message, ...scope.args]);
       if (result.ok) {
         const head = await gitRaw(['rev-parse', '--short', 'HEAD'], CHECK_TIMEOUT_MS);
