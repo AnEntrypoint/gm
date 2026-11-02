@@ -1,8 +1,13 @@
 import { spawn } from 'node:child_process';
+import { AsyncLocalStorage } from 'node:async_hooks';
 
 const OUTPUT_CAP = 200000;
 const KILL_GRACE_MS = 500;
 export const foregroundGroups = new Set();
+// The body a call runs for, when a background run's body runs it. A shell that a body starts is recorded with that body, so a stop of
+// the body kills its own shells and no other run's.
+export const bodyContext = new AsyncLocalStorage();
+const bodyGroups = new Map();
 
 export function childEnv(extra = {}) {
   const env = { ...process.env, ...extra };
@@ -31,6 +36,11 @@ export function killGroupNow(pid) {
   return undefined;
 }
 
+// Kills the shells that one body started and that are still running. The other runs' shells are not touched.
+export function killBody(body) {
+  for (const [pid, owner] of bodyGroups) if (owner === body) killGroupNow(pid);
+}
+
 export function signalGroup(pid, signal) {
   try {
     process.kill(-pid, signal);
@@ -51,6 +61,8 @@ export function runCommand(file, args, { cwd, timeoutMs, shell = false, env = {}
     };
     const child = spawnGroup(file, args, cwd, ['ignore', 'pipe', 'pipe'], { shell, env });
     if (child.pid !== undefined) foregroundGroups.add(child.pid);
+    const body = bodyContext.getStore()?.body;
+    if (child.pid !== undefined && body !== undefined) bodyGroups.set(child.pid, body);
     child.on('exit', () => killGroupNow(child.pid));
     child.stdout.setEncoding('utf8');
     child.stderr.setEncoding('utf8');
@@ -65,11 +77,13 @@ export function runCommand(file, args, { cwd, timeoutMs, shell = false, env = {}
     child.on('error', (err) => {
       clearTimeout(timer);
       foregroundGroups.delete(child.pid);
+      bodyGroups.delete(child.pid);
       done({ ok: false, error: err.message });
     });
     child.on('close', (exitCode, signal) => {
       clearTimeout(timer);
       foregroundGroups.delete(child.pid);
+      bodyGroups.delete(child.pid);
       if (timedOut) return;
       done({ ok: exitCode === 0, exitCode, signal, output: output.slice(0, OUTPUT_CAP) });
     });

@@ -1,9 +1,9 @@
 import { spawnSync } from 'node:child_process';
-import { closeSync, existsSync, lstatSync, mkdirSync, openSync, readFileSync, realpathSync, renameSync, statSync, writeFileSync } from 'node:fs';
+import { closeSync, existsSync, lstatSync, mkdirSync, openSync, readdirSync, readFileSync, realpathSync, renameSync, statSync, writeFileSync } from 'node:fs';
 import { mkdir, readdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { runQuery } from './log.mjs';
-import { foregroundGroups, killGroup, runCommand, signalGroup, spawnGroup } from './exec.mjs';
+import { foregroundGroups, killBody, killGroup, runCommand, signalGroup, spawnGroup } from './exec.mjs';
 import { createGitVerbs } from './git.mjs';
 import { createRowVerbs } from './rows.mjs';
 import { createSearchVerbs } from './search.mjs';
@@ -21,6 +21,8 @@ const MAX_WAIT_MS = 30000;
 const JOB_NAME = /^[A-Za-z0-9_-]{1,64}$/;
 const BARRIER = { barrier: true };
 const DEFAULT_JOB_LIFETIME_MS = 1800000;
+// A background run reports that it is still running at each multiple of this, once per multiple.
+const BODY_NOTICE_MS = 180000;
 const PATH_TOOLS = new Set(['read_file', 'write_file', 'edit_file', 'list_dir', 'stat_file']);
 const WRITE_TOOLS = new Set(['write_file', 'edit_file']);
 const READ_ONLY = new Set(['job_status', 'search', 'wiki_search', 'grep', 'fetch', 'callers', 'impact', 'review_join']);
@@ -137,12 +139,11 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
       if (args.offset !== undefined) {
         const offset = args.offset;
         if (!Number.isInteger(offset) || offset < 0) return { ok: false, error: 'offset must be a whole number of characters, zero or more' };
-        const text = existsSync(status.output) ? readFileSync(status.output, 'utf8') : '';
+        const text = outputOf(status);
         const end = Math.min(offset + OUTPUT_PAGE, text.length);
         return { ok: true, state: status.state, output: JSON.stringify({ ...status, chunk: text.slice(offset, end), total: text.length, offset, next: end < text.length ? end : null }) };
       }
-      const tail = readTail(status.output, TAIL_CAP);
-      return { ok: true, state: status.state, output: JSON.stringify({ ...status, tail }) };
+      return { ok: true, state: status.state, output: JSON.stringify({ ...status, tail: outputOf(status, TAIL_CAP) }) };
     },
 
     query_log(args) {
@@ -176,10 +177,11 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
     const status = { job: name, command, state: 'running', pid: child.pid, startMono, output: outputFile };
     writeStatus(name, status);
 
-    const job = { child, killRequested: false, settled: false };
+    const job = { child, killRequested: false, killReason: undefined, settled: false };
     job.lifetimeKilled = jobLifetimeMs < timeoutMs;
     const timer = setTimeout(() => {
       job.killRequested = true;
+      if (job.lifetimeKilled) job.killReason = 'lifetime';
       killGroup(child.pid);
     }, Math.min(timeoutMs, jobLifetimeMs));
     job.done = new Promise((settle) => {
@@ -191,8 +193,8 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
         const ended = { ...status, state, exitCode, signal };
         writeStatus(name, ended);
         log.append('job', { job: name, state, exitCode, signal, startMono });
-        if (job.lifetimeKilled && job.killRequested) {
-          log.append('job-killed', { job: name, reason: 'lifetime', lifetimeMs: jobLifetimeMs, tail: readTail(outputFile, TAIL_CAP) });
+        if (job.killReason !== undefined) {
+          log.append('job-killed', { job: name, reason: job.killReason, ...(job.killReason === 'lifetime' ? { lifetimeMs: jobLifetimeMs } : {}), tail: readTail(outputFile, TAIL_CAP) });
         }
         settle();
       };
@@ -204,7 +206,76 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
     return { ok: true, state: 'running', output: `started job ${name} (pid ${child.pid})` };
   }
 
+  // A body that ran past its foreground budget becomes a background job, named body-<seq> after its first log event. It has a status file
+  // like a shell job, but no process: its output is its verb calls, read back from the log, and it ends with its result. A stop settles the
+  // job at once and kills the shells the body started; the body's next verb call refuses, so a reply that comes late changes nothing.
+  function adoptBody({ result, cleanup, kill, body }) {
+    let name = `body-${body}`;
+    for (let n = 2; jobs.has(name); n += 1) name = `body-${body}-${n}`;
+    const startMono = log.now();
+    const status = { job: name, body, state: 'running', startMono };
+    mkdirSync(join(runDir, 'jobs'), { recursive: true });
+    writeStatus(name, status);
+    const job = { name, body, settled: false };
+    job.done = new Promise((resolve) => {
+      job.resolve = resolve;
+    });
+    const settle = (state, fields) => {
+      if (job.settled) return;
+      job.settled = true;
+      clearInterval(reminder);
+      clearTimeout(lifetime);
+      writeStatus(name, { ...status, state, ...fields });
+      // The result stays in the status file, as a shell job's output stays in its file, and reaches the agent once, in the exited notice.
+      const { value, error, ...rest } = fields;
+      log.append('job', { job: name, body, state, startMono, ...rest });
+      cleanup();
+      job.resolve();
+    };
+    job.stop = (reason) => {
+      if (job.settled) return;
+      kill();
+      killBody(body);
+      const tail = bodyText(log, body, TAIL_CAP);
+      settle('killed', { reason });
+      log.append('job-killed', { job: name, reason, tail, ...(reason === 'lifetime' ? { lifetimeMs: jobLifetimeMs } : {}) });
+    };
+    const lifetime = setTimeout(() => job.stop('lifetime'), jobLifetimeMs);
+    const reminder = setInterval(() => log.append('job-running', { job: name, body, runningMs: Math.round(log.now() - startMono) }), BODY_NOTICE_MS);
+    result.then((reply) => (reply.ok ? settle('exited', { value: reply.output, truncated: reply.truncated }) : settle('failed', { error: reply.error })));
+    jobs.set(name, job);
+    log.append('job', { job: name, body, state: 'running' });
+    return name;
+  }
+
+  // The output of a job, as text: a body's verb calls from the log, or a shell job's output file. cap keeps the last cap characters.
+  function outputOf(status, cap = Infinity) {
+    if (status.body !== undefined) return bodyText(log, status.body, cap);
+    const text = existsSync(status.output) ? readFileSync(status.output, 'utf8') : '';
+    return text.length > cap ? text.slice(text.length - cap) : text;
+  }
+
+  // A job whose status file still says running was started by a worker that stopped without ending it, such as a crash. Its shell group is
+  // killed and it is logged as killed with reason restart, so no child outlives the worker and the next context names it.
+  function stopOrphans() {
+    const dir = join(runDir, 'jobs');
+    if (!existsSync(dir)) return;
+    for (const file of readdirSync(dir)) {
+      if (!file.endsWith('.json')) continue;
+      const status = JSON.parse(readFileSync(join(dir, file), 'utf8'));
+      if (status.state !== 'running') continue;
+      const tail = status.body !== undefined ? bodyText(log, status.body, TAIL_CAP) : readTail(status.output, TAIL_CAP);
+      if (status.body === undefined) signalGroup(status.pid, 'SIGKILL');
+      writeStatus(status.job, { ...status, state: 'killed', reason: 'restart' });
+      log.append('job', { job: status.job, body: status.body, state: 'killed', startMono: status.startMono, reason: 'restart' });
+      log.append('job-killed', { job: status.job, reason: 'restart', tail });
+    }
+  }
+
+  stopOrphans();
+
   return {
+    adoptBody,
     access(name, args) {
       if (READ_ONLY.has(name)) return { items: [] };
       if (!PATH_TOOLS.has(name)) return BARRIER;
@@ -223,11 +294,21 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
       }
     },
 
-    async close() {
-      const running = [...jobs.values()].filter((job) => !job.settled);
-      for (const job of running) job.killRequested = true;
+    async close(reason = 'run-ended') {
+      for (const job of jobs.values()) if (!job.settled && job.body !== undefined) job.stop(reason);
+      const running = [...jobs.values()].filter((job) => !job.settled && job.child !== undefined);
+      for (const job of running) {
+        job.killRequested = true;
+        job.killReason ??= reason;
+      }
       await Promise.all(liveGroups().map((pid) => killGroup(pid)));
       await Promise.all(running.map((job) => job.done));
+    },
+    runningBodies,
+    stopBodies(reason) {
+      const names = runningBodies();
+      for (const name of names) jobs.get(name).stop(reason);
+      return names;
     },
     killAllNow() {
       for (const pid of liveGroups()) {
@@ -238,7 +319,11 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
   };
 
   function liveGroups() {
-    return [...jobs.values()].map((job) => job.child.pid).concat([...foregroundGroups]);
+    return [...jobs.values()].filter((job) => job.child !== undefined).map((job) => job.child.pid).concat([...foregroundGroups]);
+  }
+
+  function runningBodies() {
+    return [...jobs.values()].filter((job) => job.body !== undefined && !job.settled).map((job) => job.name);
   }
 
   function writeStatus(name, status) {
@@ -280,6 +365,22 @@ function waitOrTimeout(promise, ms) {
     timer = setTimeout(resolve, ms);
   });
   return Promise.race([promise, deadline]).finally(() => clearTimeout(timer));
+}
+
+// The verb calls of a background body, from the log, as JSON lines, oldest first. The calls are found by walking back from the newest
+// event, so a tail reads only the events it needs. cap keeps the last cap characters.
+function bodyText(log, body, cap = Infinity) {
+  const lines = [];
+  let size = 0;
+  for (let seq = log.count(); seq > body && size < cap; seq -= 1) {
+    const event = log.at(seq);
+    if (event.kind !== 'code-call' || event.body !== body) continue;
+    const line = JSON.stringify({ seq: event.seq, tool: event.tool, ok: event.ok, output: event.output, error: event.error });
+    lines.push(line);
+    size += line.length + 1;
+  }
+  const text = lines.reverse().join('\n');
+  return text.length > cap ? text.slice(text.length - cap) : text;
 }
 
 function readTail(file, cap) {

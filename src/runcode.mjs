@@ -8,9 +8,12 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, rmSync,
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { resultZone1, resultZone2, shortKind } from './compact.mjs';
+import { bodyContext } from './exec.mjs';
 
-const DEFAULT_TIMEOUT_MS = 120000;
-const MAX_TIMEOUT_MS = 600000;
+// The foreground budget of a body: past it, the body keeps running as a background job, and the call returns at once with its id.
+const DEFAULT_TIMEOUT_MS = 180000;
+const MAX_TIMEOUT_MS = 300000;
+const BUDGET = Symbol('budget');
 const OUTPUT_CAP = 20000;
 const cjsLoad = createRequire(import.meta.url);
 
@@ -125,7 +128,7 @@ export const COMPACT = {
 export function runCodeTool(verbNames) {
   return {
     name: 'run_code',
-    description: `Run a JavaScript body in the project. The body is an ES module when format is esm and CommonJS when format is cjs. Left out, format follows the project's package.json type (type module is esm, anything else is cjs). A CommonJS body loads with require() and cannot use a static import. Static imports (single or multi-line) load ES modules, and require() loads CommonJS; each project file loads in its own format (.mjs is ES module, .cjs is CommonJS, .js follows the package.json type), and each file is read from disk when the call runs. Relative paths resolve against the project root and may not leave it. A non-literal import() or require() is refused. The body receives gm, with one method per verb: await gm.<name>(args), and gm.project is the project root. The verbs are: ${verbNames.join(', ')}. gm.verbs() returns each verb's description and input schema as data. A failed call returns {ok:false, error} and does not stop the body. The body's return value comes back as JSON. finish is not a verb: end the run with the finish tool.`,
+    description: `Run a JavaScript body in the project. The body is an ES module when format is esm and CommonJS when format is cjs. Left out, format follows the project's package.json type (type module is esm, anything else is cjs). A CommonJS body loads with require() and cannot use a static import. Static imports (single or multi-line) load ES modules, and require() loads CommonJS; each project file loads in its own format (.mjs is ES module, .cjs is CommonJS, .js follows the package.json type), and each file is read from disk when the call runs. Relative paths resolve against the project root and may not leave it. A non-literal import() or require() is refused. The body receives gm, with one method per verb: await gm.<name>(args), and gm.project is the project root. The verbs are: ${verbNames.join(', ')}. gm.verbs() returns each verb's description and input schema as data. A failed call returns {ok:false, error} and does not stop the body. The body's return value comes back as JSON. A body still running after timeoutMs (default 180000, at most 300000) becomes a background run: the call returns its job id at once, job_status with waitMs returns its value, and finish is refused while it runs unless stopBackground is true. finish is not a verb: end the run with the finish tool.`,
     inputSchema: { type: 'object', properties: { body: { type: 'string' }, timeoutMs: { type: 'number' }, format: { type: 'string', enum: ['esm', 'cjs'] } }, required: ['body'] },
   };
 }
@@ -133,13 +136,20 @@ export function runCodeTool(verbNames) {
 // Runs one body. The body is written as an ES module, or as CommonJS when its format is cjs, under the run directory, and the file is deleted when the call ends, success or
 // failure. A reference that leaves the project root is refused before the body loads, and logged. Each project file it loads is logged
 // with its format. verbs is the list of {name, description, inputSchema}, and call(name, args) runs one verb through the session.
-export async function runBody({ body, timeoutMs = DEFAULT_TIMEOUT_MS, format, verbs, call, project, runDir, log, step }) {
+export async function runBody({ body, timeoutMs = DEFAULT_TIMEOUT_MS, format, verbs, call, project, runDir, log, step, background }) {
   if (typeof body !== 'string' || body.trim() === '') return { ok: false, error: 'body must be a non-empty string' };
   if (!Number.isInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > MAX_TIMEOUT_MS) return { ok: false, error: `timeoutMs must be an integer from 1 to ${MAX_TIMEOUT_MS}` };
   if (format !== undefined && format !== 'esm' && format !== 'cjs') return { ok: false, error: 'format must be esm or cjs' };
   const kind = format ?? formatOf(project, join(project, 'body.js'));
   const gm = { project, verbs: () => verbs.map(({ name, description, inputSchema }) => ({ name, description, inputSchema })) };
-  for (const { name } of verbs) gm[name] = (args = {}) => call(name, args);
+  // A body that was killed stops at its next verb call. Its verbs refuse from then on, so it cannot start new work.
+  const control = { killed: false };
+  for (const { name } of verbs) {
+    gm[name] = (args = {}) => {
+      if (control.killed) throw new Error('the body was killed; its verbs refuse');
+      return call(name, args);
+    };
+  }
   gm.try = async (fn) => {
     try {
       return await fn();
@@ -183,20 +193,31 @@ export async function runBody({ body, timeoutMs = DEFAULT_TIMEOUT_MS, format, ve
     rmSync(file, { force: true });
     return { ok: false, error: `the body does not load: ${err.message}` };
   }
+  // The body runs from here. If it settles within the budget, the call returns its value. If the budget is spent first, the body is handed
+  // to the caller as a background job, which watches it through the job machinery; its body file stays until the body ends.
+  // The body runs in its own context, which names it by its start seq. Every shell and verb call it makes carries that seq, so a stop reaches them.
+  const startSeq = log.count();
+  const exec = bodyContext.run({ body: startSeq }, () => Promise.resolve().then(() => run(gm, guardedRequire(project, log, step))));
   let timer;
-  const deadline = new Promise((_, reject) => {
-    timer = setTimeout(() => reject(new Error(`timed out after ${timeoutMs} ms`)), timeoutMs);
+  const budget = new Promise((resolve) => {
+    timer = setTimeout(() => resolve(BUDGET), timeoutMs);
   });
-  try {
-    const value = await Promise.race([run(gm, guardedRequire(project, log, step)), deadline]);
-    const text = JSON.stringify(value) ?? 'undefined';
-    return { ok: true, output: text.slice(0, OUTPUT_CAP), truncated: text.length > OUTPUT_CAP, loads };
-  } catch (err) {
-    return { ok: false, error: err.message, loads };
-  } finally {
-    clearTimeout(timer);
+  const outcome = await Promise.race([exec.then((value) => ({ value }), (err) => ({ err })), budget]);
+  clearTimeout(timer);
+  if (outcome !== BUDGET) {
     rmSync(file, { force: true });
+    if (outcome.err) return { ok: false, error: outcome.err.message, loads };
+    const text = JSON.stringify(outcome.value) ?? 'undefined';
+    return { ok: true, output: text.slice(0, OUTPUT_CAP), truncated: text.length > OUTPUT_CAP, loads };
   }
+  // The background run's result has the same shape as a foreground reply, so the job's status and the call's reply agree.
+  const result = exec.then((value) => {
+    const text = JSON.stringify(value) ?? 'undefined';
+    return { ok: true, output: text.slice(0, OUTPUT_CAP), truncated: text.length > OUTPUT_CAP };
+  }, (err) => ({ ok: false, error: err.message }));
+  const name = background({ result, cleanup: () => rmSync(file, { force: true }), kill: () => { control.killed = true; }, body: startSeq });
+  const logged = log.eventsFrom(startSeq + 1).filter((event) => event.kind === 'code-call').map((event) => ({ seq: event.seq, tool: event.tool, ok: event.ok }));
+  return { ok: true, background: name, state: 'running', logged, loads };
 }
 
 // Static import statements are hoisted to the module's top, and may span lines. Their ./ and ../ specifiers become confined absolute

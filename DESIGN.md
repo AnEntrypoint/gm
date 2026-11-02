@@ -480,6 +480,41 @@ Memory. Resident memory from call 20 to call 1000 grew 17.4 MB. That is the witn
 
 The feed witness (compact/witness2, 60 steps) and the horizon-fields witness passed on the new log.
 
+## Background budget for run_code (2026-11-02)
+
+gm asked that a body never hold the agent for more than a few minutes, and never leave work the agent cannot see. The decisions, one line each with its reason:
+
+- The foreground budget is 180 s by default and timeoutMs is at most 300000: a body must not hold the agent for more than a few minutes (gm).
+- A body past its budget keeps running as a background job, named body-<seq>, and run_code returns at once with the id and the verb calls logged so far: the work stays visible and the agent is free.
+- The job uses the job machinery's status file and lifetime, and job_status with waitMs (at most 30 s) returns its value or its error: one observation tool, no new one.
+- next_context reports each state change once: started, still running every 3 minutes (logged as job-running), exited, killed, failed. A kill is named once, by job-killed, not again as an ended job.
+- finish is refused while a background run runs, and names it; stopBackground true kills each one and logs each kill: no work runs unseen past the end of a run.
+- A background run is killed at the job lifetime, 30 minutes by default, with its tail logged: a runaway body cannot outlive the job rule.
+- A restart kills background runs and logs each as killed. A supervised restart logs it when it quiesces; a crash is found by the next start, which logs the same: no child outlives the worker.
+- A body's output is its verb calls, read from the log by the body's seq: the log is the one record, so the tail needs no second file.
+- A stop kills the shells the body started and no other run's: each shell is tagged with its body through AsyncLocalStorage when it starts (src/exec.mjs, bodyContext).
+- A body's result is in its status file, as a shell job's output is in its file, and the job event in the log carries the state only. The result reaches the agent once, in the exited notice: a result in both would be sent twice.
+
+Limits, stated, not closed:
+
+- A stop is cooperative in the body. Its next verb call refuses, so a body that runs pure JavaScript with no verb call is not interrupted, and a pure-JavaScript loop blocks the worker's single thread until it returns. Only a restart ends such a body.
+- A body job has no process, so a restart signals nothing for it; it is logged as killed and its module goes with the process.
+- The three-minute notices and the start notice apply to run_code bodies, as gm named them. A shell job keeps its exit notice and gets no start or running notice.
+
+Witnesses. Each is a real worker on a fresh workspace, driven by a scratch script outside the repo (/tmp/gm-scratch/gm-new/background/witness.mjs). The run id is the scratch directory name; the run is its run/ directory.
+
+- budget, run budget-1793597064033: a 10 s body with timeoutMs 2000 returned at 2050 ms with background body-6. The started notice is seq 7 (job running). job_status with waitMs 30000 returned the value "slept". The exited notice (seq 12) appeared once, at the next next_context, and not at the one after.
+- lifetime, run lifetime-1793597074218 (--job-lifetime-ms 4000): a body calling list_dir every 500 ms was killed at the 4 s lifetime. The job went killed at seq 18, and job-killed at seq 19 with reason lifetime and a tail of 9 calls. The body made 9 verb calls before the kill and none after. next_context named it in jobsKilled, and job_status reports it killed.
+- finish, run finish-1793597081398: finish with no flag was refused and named body-6. finish with stopBackground true killed it: job-killed at seq 12, reason stopBackground, then the end event with status finished.
+- shell, run shell-1793597092053: the body's run_shell of sleep 30 ended with signal SIGKILL at 1005 ms (code-call seq 14), when finish stopped the body, not at 30 s.
+- restart, run restart-1793597089561 (SIGTERM, the supervisor's path): the quiesce logged the job killed at seq 9 and job-killed at seq 10, reason restart. The resumed worker's first next_context named body-6 in jobsKilled.
+- crash, run crash-1793597090809 (SIGKILL, no quiesce): the next start found body-6 running in its status file and logged it killed at seq 11 and 12, reason restart. Its first next_context named it at seq 12.
+- notice3, run notice3-1793597064155 (about 7 minutes, a 400 s body): started at seq 7. job-running at seq 9 with runningMs 180002, and again at seq 12 with runningMs 360006. The exit at seq 15 was sent once, with the value "long"; the next next_context had no notice.
+
+Regression, on the final code. The gate passes its seven checks (33 modules parse, 73 text files ASCII, 132 doc paths exist, skills name only served tools, smoke finished). The horizon-fields witness reports allOk. The log-window witness (run log-window/run-1793597497356) ran 1000 identical run_code calls with 0 failures, and query_log paged through 3097 events, contiguous. Its resumed feed equals the replay of the file.
+
+Memory over the 1000 calls, RSS growth, measured on this change: 21.1 MB and 22.5 MB on the working tree in the first pass (runs run-1793596922864 and run-1793596934551), 19.5 MB in the final pass (run-1793597497356), 17.1 MB on HEAD exported with git archive (run-1793596939169), and 19.9 MB on the working tree with the per-call async context removed in a scratch copy (run-1793596949041). Runs of one tree differ by 1 to 3 MB. The per-call context is within that spread. The gap to HEAD, about 2 to 5 MB, is not isolated, and it is within the range this log-window section already records as V8's committed heap.
+
 ## Measured
 
 - Tool list hash witness (brief change 7, run 2026-11-01-18-39-35-820e47): the `tools` event at seq 258 has sha 5e8c956cc447. The fetch description changed, which was needed (the body is untrusted input), and the next start logged `tools-changed` at seq 266 with old 5e8c956cc447 and new 39a328f0521e, then `tools` at seq 267. Friction, recorded: an edit that added a call before its definition made the restart fail, and the supervisor held every call in its failed state until the next source change. That change restarted the worker and recovered it. Supervisor defect for item 1 of the brief to note.

@@ -15,6 +15,7 @@ import { CODE_TOOLS } from './code-ast.mjs';
 import { WIKI_TOOLS } from './wiki-tools.mjs';
 import { REVIEW_TOOLS } from './review-tools.mjs';
 import { runBody, runCodeTool } from './runcode.mjs';
+import { bodyContext } from './exec.mjs';
 import { lintWiki } from './wiki.mjs';
 import { COMPACT as SEARCH_COMPACT } from './search.mjs';
 import { COMPACT as FETCH_COMPACT } from './fetch.mjs';
@@ -69,7 +70,7 @@ const TOOLS = [
   { name: 'job_start', description: 'Start a shell command as a named background job and return at once. Poll it with job_status.', inputSchema: objectSchema({ job: text, command: text, timeoutMs: number }, ['job', 'command']) },
   { name: 'job_status', description: 'State (running, exited or killed), exit code and output tail of a job. waitMs polls until the job leaves running, at most 30000 ms. offset returns a page of 20000 characters of the output from that offset, with next.', inputSchema: objectSchema({ job: text, waitMs: number, offset: number }, ['job']) },
   { name: 'query_log', description: 'Evaluate a JavaScript expression over the run events array and return JSON. kind keeps events of one kind, and fromMono and toMono keep events in a time window (monotonic milliseconds). js defaults to returning the filtered events. A reply holds at most 50 events and about 20 KB. When events remain, next is the seq to pass back as after, which keeps only the events after that seq.', inputSchema: objectSchema({ js: text, kind: text, fromMono: number, toMono: number, after: number }, []) },
-  { name: 'finish', description: 'End the run. witness is one string that quotes the evidence you observed. gaps optionally lists, one string each, what the run did not check; the end event logs them.', inputSchema: objectSchema({ witness: text, gaps: { type: 'array', items: text } }, ['witness']) },
+  { name: 'finish', description: 'End the run. witness is one string that quotes the evidence you observed. gaps optionally lists, one string each, what the run did not check; the end event logs them. finish is refused while a background run is running, and stopBackground true kills it first.', inputSchema: objectSchema({ witness: text, gaps: { type: 'array', items: text }, stopBackground: { type: 'boolean' } }, ['witness']) },
   ...SEARCH_TOOLS,
   ...WIKI_TOOLS,
   ...REVIEW_TOOLS,
@@ -147,7 +148,9 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     }
     // The full result is logged, so query_log reaches the output and the exit code of a verb called inside a body.
     const fields = { ok: result?.ok === true, args, exitCode: result?.exitCode, signal: result?.signal, output: result?.output, error: result?.error };
-    log.append('code-call', { step: steps, tool: name, startMono, ...fields });
+    // A call that a background body makes carries the body's seq, so the body's output can be read back from the log.
+    const body = bodyContext.getStore()?.body;
+    log.append('code-call', { step: steps, tool: name, startMono, ...fields, ...(body === undefined ? {} : { body }) });
     return result;
   }
 
@@ -284,7 +287,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     if (surface === 'code' && !CODE_SURFACE.has(name)) {
       return refuse(name, args, 'the code surface serves next_context, run_code and finish; call a verb as gm.<name>(args) inside run_code', rpcId);
     }
-    if (name === 'run_code') return act('run_code', args, access, () => runBody({ body: args.body, timeoutMs: args.timeoutMs, format: args.format, verbs: VERBS, call: innerCall, project: workspace, runDir, log, step: steps }), undefined, rpcId);
+    if (name === 'run_code') return act('run_code', args, access, () => runBody({ body: args.body, timeoutMs: args.timeoutMs, format: args.format, verbs: VERBS, call: innerCall, project: workspace, runDir, log, step: steps, background: (handle) => tools.adoptBody(handle) }), undefined, rpcId);
     if (name === 'next_context') return nextContext(access, rpcId);
     if (name === 'finish') return finish(args, access, rpcId);
     if (Object.hasOwn(handlers, name)) return act(name, args, access, () => handlers[name](args), undefined, rpcId);
@@ -310,7 +313,11 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     const since = log.eventsFrom(noticeSeq + 1);
     noticeSeq = log.count();
     const killed = since.filter((event) => event.kind === 'job-killed');
-    const ended = since.filter((event) => event.kind === 'job' && event.state !== 'running');
+    const killedNames = new Set(killed.map((event) => event.job));
+    // A background run's notices: it started, it is still running (once per 3 minutes), and it ended. A kill is named once, by job-killed.
+    const started = since.filter((event) => event.kind === 'job' && event.state === 'running' && event.body !== undefined);
+    const stillRunning = since.filter((event) => event.kind === 'job-running');
+    const ended = since.filter((event) => event.kind === 'job' && event.state !== 'running' && !(event.state === 'killed' && killedNames.has(event.job)));
     const jobsEnded = await Promise.all(ended.map((event) => endedJob(runDir, event)));
     return {
       ok: true,
@@ -325,6 +332,8 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
       ...feedOf(log, REGISTRY, { shown: shownTotalOf(log) }),
       ...(recoveryNow ? { recovery: recoveryNow } : {}),
       ...(killed.length ? { jobsKilled: killed.map(({ seq, job, reason, lifetimeMs, tail }) => ({ seq, job, reason, lifetimeMs, tail })) } : {}),
+      ...(started.length ? { jobsStarted: started.map(({ seq, job }) => ({ seq, job })) } : {}),
+      ...(stillRunning.length ? { jobsRunning: stillRunning.map(({ seq, job, runningMs }) => ({ seq, job, runningMs })) } : {}),
       ...(jobsEnded.length ? { jobsEnded } : {}),
     };
   }
@@ -336,6 +345,12 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     if (args.gaps !== undefined && (!Array.isArray(args.gaps) || args.gaps.some((gap) => typeof gap !== 'string' || gap.trim() === ''))) {
       return refuse('finish', args, 'gaps must be an array of non-empty strings');
     }
+    // A background run still running refuses the finish and is named. stopBackground true kills each one, and each kill is logged.
+    const running = tools.runningBodies();
+    if (running.length > 0 && args.stopBackground !== true) {
+      return refuse('finish', args, `background run ${running.join(', ')} is still running; job_status watches it, and finish with stopBackground: true kills it`);
+    }
+    if (args.stopBackground === true) tools.stopBodies('stopBackground');
     stop('finished');
     const out = await act('finish', args, access, () => tools.run('finish', args), undefined, rpcId);
     const lint = lintWiki(workspace);
@@ -384,7 +399,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
   async function endRun(status, witness, gaps) {
     endLogged = true;
     await Promise.allSettled([...active.keys()]);
-    await tools.close();
+    await tools.close('run-ended');
     writeSummary(log);
     log.append('end', { status, steps, witness, ...(gaps === undefined ? {} : { gaps }) });
     rmSync(join(runDir, 'code'), { recursive: true, force: true });
@@ -403,7 +418,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
   async function quiesceForRestart() {
     ended = 'restarting';
     for (const call of waiting.splice(0)) call.resolveCall(refuse(call.name, call.args, endedReason()));
-    await tools.close();
+    await tools.close('restart');
     await Promise.allSettled([...active.keys()]);
   }
 
@@ -420,10 +435,12 @@ function lastContextSeq(events) {
   return seq;
 }
 
-// A job that ended since the last next_context: its state, exit code, and the first page of its output. next is the
-// offset of the next page for job_status, or null when the output fits on this page.
+// A job that ended since the last next_context: its state, exit code, and the first page of its output. next is the offset of the next
+// page for job_status, or null when the output fits on this page.
 async function endedJob(runDir, event) {
-  const text = await readFile(join(runDir, 'jobs', `${event.job}.out`), 'utf8').catch(() => '');
+  const text = event.body !== undefined
+    ? await bodyResult(runDir, event.job)
+    : await readFile(join(runDir, 'jobs', `${event.job}.out`), 'utf8').catch(() => '');
   return {
     seq: event.seq,
     job: event.job,
@@ -433,6 +450,12 @@ async function endedJob(runDir, event) {
     output: text.slice(0, OUTPUT_PAGE),
     next: text.length > OUTPUT_PAGE ? OUTPUT_PAGE : null,
   };
+}
+
+// A background run's result, from its status file: its value, or its error when it failed. The job event in the log carries the state only.
+async function bodyResult(runDir, job) {
+  const status = JSON.parse(await readFile(join(runDir, 'jobs', `${job}.json`), 'utf8').catch(() => '{}'));
+  return status.value ?? status.error ?? '';
 }
 
 function answersFrom(events) {
