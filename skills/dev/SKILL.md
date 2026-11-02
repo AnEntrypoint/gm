@@ -12,6 +12,7 @@ How to change this project. Project facts are in AGENTS.md, and decisions with t
 
 - Run the real path through the relay, not a unit call. The run's log file is the ground truth; a result a script returns is not.
 - Before a filter on the log, read which kinds the log holds for the call. A body's verb call is `code-call`; a top-level tool call writes `action` and `result`. A filter on the wrong kind returns zero and looks like a pass.
+- Before a filter reads a row or log field, find every writer of that field and check each one. A field no writer sets makes the filter false for every row, and the reader then reports zero as if it were a fact.
 - A witness that edits a file by string counts the matches first and edits the one it means. A sentence that occurs in two places once changed the wrong one.
 - Record the before run id and the after run id, with the numbers, in DESIGN.md under a dated section.
 - A multi-step change is built as one batch: all the steps, then one witness over all of them, then the commits. A step is not witnessed alone during the build.

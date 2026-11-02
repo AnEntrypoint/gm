@@ -3,6 +3,4 @@ kind: "prd"
 title: "Rename the gm-new skill to gm"
 body: "Landed in the rename commit: the skill is served as gm, with the resource at gm://skill/SKILL.md."
 status: "resolved"
-owner: false
-triggerMet: true
 createdAt: "2026-11-01T23:00:00.000Z"

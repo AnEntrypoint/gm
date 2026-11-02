@@ -3,6 +3,6 @@ kind: "unknown"
 title: "Validated compaction, RL summariser, saturation threshold"
 body: "Deferred. Trigger: a scripted run at 20000 events where query_log exceeds 100 ms."
 status: "blocked"
-owner: false
-triggerMet: false
+fact: "Deferred: the log is complete, and query_log takes 3 to 5 ms at 2002 events, so no compaction is needed yet."
+trigger: "a scripted run at 20000 events where query_log exceeds 100 ms"
 createdAt: "2026-11-01T23:00:00.000Z"

@@ -26,6 +26,7 @@ These are settled. Change one only by messaging the orchestrator, with the reaso
 - Rules live in `runs/<id>/rules.md`, re-read every step and placed first in the prompt. Rules are never compacted.
 - Surface: the default MCP surface serves three tools, `next_context`, `run_code` and `finish` (requires a witness, and no open row unless `stopRows` is true). Every other verb is a function on `gm` inside `run_code`: `await gm.read_file({ path })`. The owner decided this on 2026-11-01 (DESIGN.md, the surface entries). The server writes every event to the log and answers concurrent requests by JSON-RPC id.
 - Paths stay inside the workspace for the file tools. A `..` segment is refused. A symlink that leaves the workspace is refused, including a dangling one. Refusals are `refusal` events, not thrown errors. `run_shell` is not confined. A shell command can hard-link a file from outside the workspace; a path check does not see that, and it is a known limit, not a bug to close with a path check.
+- Rows: `open` means the worker can work the row now. A row it cannot work is `blocked`, with a `fact` (the unmet condition) and a `trigger` (what reopens it). An owner decision is a trigger that names the owner. The planner plans every open row (DESIGN.md, Row states).
 - Storage: `runs/<id>/` with `log.jsonl` (append-only), `log.index`, `rules.md`, `task.json` and `jobs/`. `runs/` is git-ignored.
 
 ## Hard rules
@@ -67,6 +68,7 @@ This is what you build and codify. Single worker first: DESIGN.md direction 6 sa
 - `run_code` and `next_context` refuse with "run has ended" after `finish`. Only a reconnect opens a new run. This is the shared-run question, open with the owner.
 - A body that outlives its budget becomes a background job. Each body runs in a worker thread, four at most at once per session. A thread costs about 31 ms to start, most of a median `run_code` call (DESIGN.md, "Limits, stated, not closed").
 - The update checks tick every 60 s counted from the core's start, and the first is at 30 s. A push is pulled at the next tick, so within about a minute. A witness that pushes must time from the tick, not from the first check.
+- A row file holds only the names in `FIELDS` (src/rows.mjs). A verb rewrite drops any other name, so a planner that reads a field no verb writes sees every row as lacking it (DESIGN.md, Row states).
 
 ## Rationale not expressible in code
 

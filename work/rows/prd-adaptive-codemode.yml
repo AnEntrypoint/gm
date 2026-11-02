@@ -3,6 +3,6 @@ kind: "prd"
 title: "Adaptive codemode"
 body: "Its own pre-registration first. Parked: the batch decided the code surface does not win."
 status: "blocked"
-owner: false
-triggerMet: false
+fact: "Parked: the batch decided the code surface does not win, so its own pre-registration is not run."
+trigger: "the owner asks for the code-surface pre-registration to be run"
 createdAt: "2026-11-01T23:00:00.000Z"

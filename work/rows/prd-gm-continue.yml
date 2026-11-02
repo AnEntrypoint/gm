@@ -3,6 +3,4 @@ kind: "prd"
 title: "gm-continue skill and its setup, with the stop rule"
 body: "Landed in the gm-continue commit: setup, skill, flow rule and the skill check."
 status: "resolved"
-owner: false
-triggerMet: true
 createdAt: "2026-11-01T23:00:00.000Z"

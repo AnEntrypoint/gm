@@ -3,6 +3,4 @@ kind: "prd"
 title: "Commit the module-mode pre-registration draft"
 body: "Superseded, not committed. The module-mode feature was adopted by the owner direction and built as the run_code format argument (commit 9fa29b4). The draft was for a pre-registration trial, which was not run."
 status: "resolved"
-owner: false
-triggerMet: false
 createdAt: "2026-11-01T23:00:00.000Z"

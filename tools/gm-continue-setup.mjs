@@ -17,6 +17,8 @@ const EXTRA = flag('--extra');
 const BEFORE = flag('--before');
 const PASS = flag('--pass');
 
+const nonEmpty = (value) => typeof value === 'string' && value.trim() !== '';
+
 function readRows(dir) {
   if (!dir || !existsSync(dir)) return [];
   return readdirSync(dir)
@@ -53,19 +55,21 @@ const head = git('rev-parse', '--short', 'HEAD');
 const ahead = Number(git('rev-list', '--count', 'origin/main..main'));
 const changed = git('status', '--short').split('\n').filter(Boolean);
 
+// open means actionable, so every open row is planned. blocked rows are held, and each one names its fact and its trigger.
 const rows = [...readRows(join(REPO, 'work', 'rows')), ...readRows(EXTRA)];
-const open = rows.filter((row) => row.status !== 'resolved');
-const actionable = open.filter((row) => row.status === 'open' && row.owner !== true && row.triggerMet === true);
-const blocked = open.filter((row) => row.status === 'blocked');
-const owner = open.filter((row) => row.owner === true);
+const actionable = rows.filter((row) => row.status === 'open');
+const blocked = rows.filter((row) => row.status === 'blocked');
+const unnamed = blocked.filter((row) => !nonEmpty(row.fact) || !nonEmpty(row.trigger));
 const runs = openRuns(join(REPO, 'runs'));
 
 const out = [];
 out.push('GM-CONTINUE SETUP (read-only)');
 out.push(`HEAD ${head}; ${ahead} commit(s) ahead of origin; working tree: ${changed.length} changed`);
-out.push(`Batch plan: ${actionable.length} actionable row(s), planned before any work starts.`);
+out.push(`Batch plan: ${actionable.length} open row(s), each actionable, planned before any work starts.`);
 for (const row of actionable) out.push(`  plan ${row.id}: ${row.title}`);
-out.push(`Open rows: ${open.length}; held: ${blocked.length}; owner decisions: ${owner.length}; open runs: ${runs.length}`);
+out.push(`Held rows: ${blocked.length}; open runs: ${runs.length}`);
+for (const row of blocked) out.push(`  held ${row.id}: ${row.fact ?? '(no fact)'}; reopens when: ${row.trigger ?? '(no trigger)'}`);
+if (unnamed.length > 0) out.push(`Row defect (reported): ${unnamed.map((row) => row.id).join(', ')} blocked without a named fact and trigger.`);
 
 const pass = PASS && existsSync(PASS) ? JSON.parse(readFileSync(PASS, 'utf8')) : null;
 const before = BEFORE && existsSync(BEFORE) ? JSON.parse(readFileSync(BEFORE, 'utf8')).sort() : null;
@@ -103,9 +107,9 @@ if (pass === null) {
   out.push('Re-entry: the last pass closed no row, and every actionable row ended resolved or blocked with a named fact. Stop.');
   if (pass.witnessPass === true) {
     out.push('HANDOFF');
-    out.push(`  HEAD ${head}; held: ${blocked.length}; owner decisions: ${owner.length}; open runs: ${runs.length}`);
+    out.push(`  HEAD ${head}; held: ${blocked.length}; open runs: ${runs.length}`);
     for (const result of ended) out.push(`  attempted this pass, ${result.status}: ${result.id}: ${result.fact}`);
-    for (const row of new Set([...blocked, ...owner])) out.push(`  ${row.id}: ${row.body}`);
+    for (const row of blocked) out.push(`  ${row.id}: ${row.fact}; reopens when: ${row.trigger}`);
   } else {
     out.push('Handoff withheld: the witness pass has not run. It prints only after the witness pass.');
   }

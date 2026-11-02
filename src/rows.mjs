@@ -6,14 +6,21 @@ import { resultZone1, resultZone2 } from './compact.mjs';
 
 export const ROW_DIR = 'work/rows';
 const KINDS = { prd: 'work item', unknown: 'open question' };
-const STATUSES = ['open', 'resolved', 'all'];
-const FIELDS = ['id', 'kind', 'title', 'body', 'status', 'createdAt', 'witnessEvent', 'witnessCommit', 'resolvedAt'];
+// open means the worker can work the row now. blocked means it cannot, and fact names the unmet condition and trigger what reopens it.
+const STATUSES = ['open', 'blocked', 'resolved', 'all'];
+const FIELDS = ['id', 'kind', 'title', 'body', 'status', 'fact', 'trigger', 'createdAt', 'witnessEvent', 'witnessCommit', 'resolvedAt'];
 const str = { type: 'string' };
 const obj = (properties, required = []) => ({ type: 'object', properties, required });
 
 export const ROW_TOOLS = Object.entries(KINDS).flatMap(([kind, label]) => [
   { name: `${kind}_add`, description: `Add a ${label} row, one file under ${ROW_DIR}. Returns its id.`, inputSchema: obj({ title: str, body: str }, ['title']) },
-  { name: `${kind}_list`, description: `List ${label} rows, one line each: id, status, title. status is open (default), resolved or all.`, inputSchema: obj({ status: str }) },
+  { name: `${kind}_list`, description: `List ${label} rows, one line each: id, status, title. status is open (default), blocked, resolved or all.`, inputSchema: obj({ status: str }) },
+  {
+    name: `${kind}_block`,
+    description: `Block an open ${label} row the worker cannot work now. fact names the unmet condition, and trigger names what reopens the row (an owner decision is a trigger that names the owner). A blocked row does not hold finish.`,
+    inputSchema: obj({ id: str, fact: str, trigger: str }, ['id', 'fact', 'trigger']),
+  },
+  { name: `${kind}_reopen`, description: `Reopen a blocked ${label} row once its trigger is met. Its fact and trigger are removed.`, inputSchema: obj({ id: str }, ['id']) },
   {
     name: `${kind}_resolve`,
     description: `Resolve a ${label} row. The witness is a seq of this run's log and a commit that exists in this repository.`,
@@ -25,8 +32,12 @@ export const ROW_TOOLS = Object.entries(KINDS).flatMap(([kind, label]) => [
 export const COMPACT = {
   tools: {
     prd_add: { zone1: resultZone1, zone2: resultZone2 },
+    prd_block: { zone1: resultZone1, zone2: resultZone2 },
+    prd_reopen: { zone1: resultZone1, zone2: resultZone2 },
     prd_resolve: { zone1: resultZone1, zone2: resultZone2 },
     unknown_add: { zone1: resultZone1, zone2: resultZone2 },
+    unknown_block: { zone1: resultZone1, zone2: resultZone2 },
+    unknown_reopen: { zone1: resultZone1, zone2: resultZone2 },
     unknown_resolve: { zone1: resultZone1, zone2: resultZone2 },
     prd_list: { zone1: resultZone1, zone2: () => null },
     unknown_list: { zone1: resultZone1, zone2: () => null },
@@ -38,6 +49,8 @@ export function createRowVerbs({ root, confine, log }) {
   for (const kind of Object.keys(KINDS)) {
     handlers[`${kind}_add`] = ({ title, body = '' }) => addRow(kind, title, body);
     handlers[`${kind}_list`] = ({ status = 'open' }) => listRows(kind, status);
+    handlers[`${kind}_block`] = (args) => blockRow(kind, args);
+    handlers[`${kind}_reopen`] = ({ id }) => reopenRow(kind, id);
     handlers[`${kind}_resolve`] = (args) => resolveRow(kind, args);
   }
   return handlers;
@@ -56,8 +69,30 @@ export function createRowVerbs({ root, confine, log }) {
     return { ok: true, output: rows.length ? rows.map((row) => `${row.id} ${row.status} ${row.title}`).join('\n') : '(none)' };
   }
 
+  async function blockRow(kind, { id, fact, trigger }) {
+    if (!validId(kind, id)) return fail(`id must name a ${kind} row, with an id that starts ${kind}-`);
+    if (typeof fact !== 'string' || fact.trim() === '') return fail('fact must name the unmet condition');
+    if (typeof trigger !== 'string' || trigger.trim() === '') return fail('trigger must name what reopens the row');
+    const row = await readRow(id);
+    if (row === null) return fail(`no row ${id}`);
+    if (row.status !== 'open') return fail(`row ${id} is ${row.status}; only an open row can be blocked`);
+    Object.assign(row, { status: 'blocked', fact: fact.trim(), trigger: trigger.trim() });
+    await writeRow(row);
+    return { ok: true, output: `${id} blocked: ${row.fact}` };
+  }
+
+  async function reopenRow(kind, id) {
+    if (!validId(kind, id)) return fail(`id must name a ${kind} row, with an id that starts ${kind}-`);
+    const row = await readRow(id);
+    if (row === null) return fail(`no row ${id}`);
+    if (row.status !== 'blocked') return fail(`row ${id} is ${row.status}; only a blocked row can be reopened`);
+    Object.assign(row, { status: 'open', fact: undefined, trigger: undefined });
+    await writeRow(row);
+    return { ok: true, output: `${id} reopened` };
+  }
+
   async function resolveRow(kind, { id, event, commit }) {
-    if (typeof id !== 'string' || !new RegExp(`^${kind}-[a-z0-9]+$`).test(id)) return fail(`id must name a ${kind} row, with an id that starts ${kind}-`);
+    if (!validId(kind, id)) return fail(`id must name a ${kind} row, with an id that starts ${kind}-`);
     if (!Number.isInteger(event) || event < 1) return fail('event must be a log seq number');
     if (!log.events().some((entry) => entry.seq === event)) return fail(`event ${event} is not in this run's log`);
     if (typeof commit !== 'string' || !SHA.test(commit)) return fail('commit must be 7 to 40 lowercase hex digits');
@@ -126,6 +161,10 @@ function sortByCreated(rows) {
 
 function newId(kind) {
   return `${kind}-${Date.now().toString(36)}${randomBytes(2).toString('hex')}`;
+}
+
+function validId(kind, id) {
+  return typeof id === 'string' && new RegExp(`^${kind}-[a-z0-9]+$`).test(id);
 }
 
 // Each value is written as JSON, which is also a valid YAML scalar, so a row file is readable YAML.

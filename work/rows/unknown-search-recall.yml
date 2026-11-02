@@ -2,7 +2,7 @@ id: "unknown-search-recall"
 kind: "unknown"
 title: "Search recall and precision unmeasured"
 body: "Partly measured: 18 queries on this repository. FTS5 17 of 18 and in-process BM25 16 of 18, on the same snapshot (scratch runs final/run-1793571487908 and recall-js/run-1793572079413). Not measured: a larger gold set and larger corpora. Due when the owner approves a measurement."
-status: "open"
-owner: false
-triggerMet: false
+status: "blocked"
+fact: "Measured on 18 queries (FTS5 17 of 18, BM25 16 of 18). A larger gold set and larger corpora need the owner's approval, which is not given."
+trigger: "owner decision: the owner approves the measurement"
 createdAt: "2026-11-01T23:00:00.000Z"

@@ -3,6 +3,6 @@ kind: "unknown"
 title: "Rule re-injection (open question 1)"
 body: "Fix implemented 2026-11-02: the rules are in the server instructions, which the host puts in the system prompt, as well as in next_context. Delivery is witnessed (DESIGN.md, Rule re-injection). Whether a rule holds after a summary is not measured: it needs live trials, so it waits for the owner's live-trial budget. Trigger: a live run shows a rule violated after a summary."
 status: "blocked"
-owner: false
-triggerMet: false
+fact: "Whether a rule holds after a summary needs live trials, which gm-new does not make, and the owner's live-trial budget is not spent."
+trigger: "a live run shows a rule violated after a summary"
 createdAt: "2026-11-01T23:00:00.000Z"

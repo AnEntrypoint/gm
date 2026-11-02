@@ -3,6 +3,4 @@ kind: "prd"
 title: "Module-mode run_code"
 body: "Adopted by the owner direction of 2026-11-02, without a pre-registration trial (none was run). run_code takes format esm or cjs, and with format left out it follows the project package.json type. Witnesses: runcode-fresh format-1793570615753 and esmformat-1793570604488. Commit 9fa29b4."
 status: "resolved"
-owner: false
-triggerMet: false
 createdAt: "2026-11-01T23:00:00.000Z"

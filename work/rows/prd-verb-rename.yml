@@ -3,6 +3,4 @@ kind: "prd"
 title: "Rename gm.verbs() to gm.list and gm.describe"
 body: "Decided by gm: keep gm.verbs(), and do not rename it to gm.list and gm.describe. Reason: the discovery cost is measured at 9654 bytes, and the signatures of the ten most-used verbs in run_code's description already cover them; a split would change the served surface for a benefit that has not been measured. Recorded in DESIGN.md, Decisions and named limits, 2026-11-02."
 status: "resolved"
-owner: true
-triggerMet: true
 createdAt: "2026-11-01T23:00:00.000Z"
