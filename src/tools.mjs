@@ -4,14 +4,18 @@ import { mkdir, readdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { runQuery } from './log.mjs';
 import { foregroundGroups, killBody, killGroup, runCommand, signalGroup, spawnGroup } from './exec.mjs';
-import { createGitVerbs } from './git.mjs';
-import { createRowVerbs, openRows, rowSummary } from './rows.mjs';
+import * as gitModule from './git.mjs';
+import * as rowsModule from './rows.mjs';
 import { createSearchVerbs } from './search.mjs';
-import { createFetchVerbs } from './fetch.mjs';
-import { createAstVerbs } from './code-ast.mjs';
-import { createWikiVerbs } from './wiki-tools.mjs';
+import * as fetchModule from './fetch.mjs';
+import * as astModule from './code-ast.mjs';
+import * as wikiModule from './wiki-tools.mjs';
 import { resultZone1, resultZone2 } from './compact.mjs';
-import { createReviewVerbs } from './review-tools.mjs';
+import * as reviewModule from './review-tools.mjs';
+
+// The leaf modules (src/hot-config.mjs) as they were at boot. A worker passes the modules of its current generation to createTools; the CLI
+// and the gate use these.
+const BOOT_LEAVES = { 'git.mjs': gitModule, 'rows.mjs': rowsModule, 'fetch.mjs': fetchModule, 'code-ast.mjs': astModule, 'wiki-tools.mjs': wikiModule, 'review-tools.mjs': reviewModule };
 
 // read_file reads its file through one buffer that every call reuses. The buffer starts at READ_BUFFER_BYTES, the size of a page, and grows to
 // the largest file read so far, which is the peak, and never shrinks. A file bigger than READ_SYNC_LIMIT is read asynchronously, so a large
@@ -83,7 +87,7 @@ export const COMPACT = {
   },
 };
 
-export function createTools({ workspace, runDir, log, background = true, jobLifetimeMs = DEFAULT_JOB_LIFETIME_MS, stuckMs = DEFAULT_STUCK_MS, monitorMs = DEFAULT_MONITOR_MS, noticeMs = BODY_NOTICE_MS }) {
+export function createTools({ workspace, runDir, log, background = true, jobLifetimeMs = DEFAULT_JOB_LIFETIME_MS, stuckMs = DEFAULT_STUCK_MS, monitorMs = DEFAULT_MONITOR_MS, noticeMs = BODY_NOTICE_MS, leaves = BOOT_LEAVES }) {
   const root = resolve(workspace);
   const realRoot = realpathSync(root);
   const jobs = new Map();
@@ -223,7 +227,26 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
       return { ok: true, finished: true, output: args.witness };
     },
   };
-  Object.assign(handlers, createGitVerbs({ root, confine, log }), createRowVerbs({ root, confine, log }), createSearchVerbs({ root, confine }), createWikiVerbs({ root, log }), createReviewVerbs({ root, log }),createFetchVerbs({ log, root }), createAstVerbs({ root, confine }));
+  // The verbs of a set of leaf modules (src/hot-config.mjs), and the row queries the job reminder and the finish refusal read. The whole set is
+  // built before it is returned, so a module that fails to build throws before anything is replaced.
+  function leafVerbsOf(modules) {
+    const verbs = { ...modules['git.mjs'].createGitVerbs({ root, confine, log }), ...modules['rows.mjs'].createRowVerbs({ root, confine, log }), ...modules['wiki-tools.mjs'].createWikiVerbs({ root, log }), ...modules['review-tools.mjs'].createReviewVerbs({ root, log }), ...modules['fetch.mjs'].createFetchVerbs({ log, root }), ...modules['code-ast.mjs'].createAstVerbs({ root, confine }) };
+    return { verbs, rowQueries: { openRows: modules['rows.mjs'].openRows, rowSummary: modules['rows.mjs'].rowSummary } };
+  }
+  // Search keeps its own paging state, so it is not a leaf and a reload keeps it as it is.
+  const boot = leafVerbsOf(leaves);
+  Object.assign(handlers, boot.verbs, createSearchVerbs({ root, confine }));
+  let leafNames = Object.keys(boot.verbs);
+  let rowQueries = boot.rowQueries;
+
+  // Replaces the leaf verbs and the row queries in one step, after the new set is built. A reload calls it between tool calls.
+  function setLeaves(modules) {
+    const next = leafVerbsOf(modules);
+    for (const name of leafNames) delete handlers[name];
+    Object.assign(handlers, next.verbs);
+    leafNames = Object.keys(next.verbs);
+    rowQueries = next.rowQueries;
+  }
 
   function startJob(name, command, timeoutMs) {
     if (jobs.has(name)) return { ok: false, error: `job ${name} already exists` };
@@ -312,7 +335,7 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
       reminder = setInterval(() => {
         const runningMs = Math.round(log.now() - startMono);
         // The row read is asynchronous, so the job may settle before it returns. A report for a job that has settled is dropped.
-        rowSummary(confine, 'prd', NOTICE_PRD_WINDOW)
+        rowQueries.rowSummary(confine, 'prd', NOTICE_PRD_WINDOW)
           .catch((err) => ({ error: err.message }))
           .then((prd) => {
             if (!job.settled) log.append('job-running', { job: name, body, runningMs, prd });
@@ -416,7 +439,8 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
   return {
     adoptBody,
     activeJobs,
-    openRows: () => openRows(confine),
+    openRows: () => rowQueries.openRows(confine),
+    setLeaves,
     callStarted(body) {
       inFlightByBody.set(body, (inFlightByBody.get(body) ?? 0) + 1);
     },

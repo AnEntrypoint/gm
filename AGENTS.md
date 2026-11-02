@@ -55,7 +55,7 @@ This is what you build and codify. Single worker first: DESIGN.md direction 6 sa
 
 - Work-plan items 1 to 11 are witnessed and in DESIGN.md. The live comparison of gm-new and gm is closed; its report is in DESIGN.md, Project close.
 - Open and recorded: the minimal tool set, which is not run, and G3 (cache effect), measured by the gm agent as a cache share from the host transcripts. No saving is claimed, because the price multipliers are unverified. The project closes when both are recorded.
-- Updates: a running checkout pulls origin main about every minute (`tools/update.mjs`, DEFAULT_UPDATE_MS). A pull goes only into a clean checkout. A pull that changes `src/` restarts the worker. A skill file is served in place (DESIGN.md, Skill in place). `tools/relay.mjs` is frozen, so a change to it reaches a host only on reconnect (DESIGN.md, Update on push).
+- Updates: a running checkout pulls origin main about every minute (`tools/update.mjs`, DEFAULT_UPDATE_MS). A pull goes only into a clean checkout. A change to a reloadable module (src/hot-config.mjs) or to a skill is applied in place. Any other change under `src/` restarts the worker (DESIGN.md, Hot reload in place; Skill in place). `tools/relay.mjs` is frozen, so a change to it reaches a host only on reconnect (DESIGN.md, Update on push).
 
 ## Facts found by troubleshooting
 
@@ -68,8 +68,10 @@ This is what you build and codify. Single worker first: DESIGN.md direction 6 sa
 - `run_code` and `next_context` refuse with "run has ended" after `finish`. Only a reconnect opens a new run. This is the shared-run question, open with the owner.
 - A body that outlives its budget becomes a background job. Each body runs in a worker thread, four at most at once per session. A thread costs about 31 ms to start, most of a median `run_code` call (DESIGN.md, "Limits, stated, not closed").
 - The update checks tick every 60 s counted from the core's start, and the first is at 30 s. A push is pulled at the next tick, so within about a minute. A witness that pushes must time from the tick, not from the first check.
-- The running relay, core and worker that start from /workspace/gm-new run its working tree. An uncommitted edit under `src/` or `tools/` is live at the next restart, so a half-made change breaks the runs of peers (DESIGN.md, Shared checkout is live).
+- The running relay, core and worker that start from /workspace/gm-new run its working tree. An uncommitted edit under `src/` or `tools/` is live at the next reload or restart, so a half-made change breaks the runs of peers (DESIGN.md, Shared checkout is live).
 - A row file holds only the names in `FIELDS` (src/rows.mjs). A verb rewrite drops any other name, so a planner that reads a field no verb writes sees every row as lacking it (DESIGN.md, Row states).
+- A reloadable module's verbs are rebuilt per session from the worker's leaf set. A singleton that imports one statically keeps the code it loaded at boot (DESIGN.md, Hot reload in place).
+- A batch that changes `tools/core.mjs` or a singleton restarts each live worker on the checkout, and the two debounce windows can restart a worker twice. Background jobs are killed (DESIGN.md, Hot reload in place).
 
 ## Rationale not expressible in code
 

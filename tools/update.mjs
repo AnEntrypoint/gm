@@ -1,8 +1,9 @@
 // Updates from the repository. A checkout of gm-new is a clone of origin main, so an update is a fast-forward pull. A check fetches origin.
 // When main is ahead, the gate runs on the new commit first, in a clone of the checkout at that commit, so a commit the gate rejects never
 // reaches the checkout. The pull waits while a tool call, a body or a job is running, and it never runs in a checkout with changes to tracked
-// files. Then the checkout is fast-forwarded and npm ci runs when the lock file changed. A pull that changes src/ or skills/ restarts the
-// worker, and the check waits for the restart: when the worker does not start on the new code, the pull is rolled back, the checkout is
+// files. Then the checkout is fast-forwarded and npm ci runs when the lock file changed. A pull that changes a src/ module outside the
+// reloadable set (src/hot-config.mjs) restarts the worker, and the check waits for the restart: when the worker does not start on the new
+// code, the pull is rolled back, the checkout is
 // reset to the commit before it, the worker starts on the old code, and the rollback is logged. A diverged history is reported and left
 // alone. A check that cannot reach origin is reported and skipped. The checks never throw. A pull that changes tools/, other than the relay
 // (tools/relay.mjs), replaces the core: replaceCore starts the new core, and when that core does not take over, the pull is rolled back.
@@ -12,6 +13,7 @@ import { promisify } from 'node:util';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { RELOADABLE } from '../src/hot-config.mjs';
 
 const run = promisify(execFile);
 // A push to origin reaches a running checkout within one check. The check is a fetch of origin, which changes nothing when origin has not moved.
@@ -104,8 +106,9 @@ export async function checkForUpdate(root, { log = () => {}, busy = null, nextWo
 async function apply(root, prev, target, ahead, log, { busy, nextWorkerEvent, replaceCore }) {
   const changed = (await git(root, ['diff', '--name-only', prev, target])).split('\n').filter(Boolean);
   const lockChanged = changed.includes('package-lock.json');
-  // A skill file is served in place (the core refreshes the lists), so only src/ restarts the worker.
-  const restarts = changed.some((file) => file.startsWith('src/'));
+  // A skill file and a reloadable module are served in place (the core refreshes the lists, and its watch reloads the module), so only the
+  // other src/ modules restart the worker.
+  const restarts = changed.some((file) => file.startsWith('src/') && !RELOADABLE.includes(file.slice('src/'.length)));
   const replaces = changed.some((file) => file.startsWith('tools/') && file !== 'tools/relay.mjs');
   const verdict = await candidate(root, target, lockChanged);
   if (verdict.ok !== true) {
@@ -186,7 +189,7 @@ async function rollback(root, prev, target, lockChanged, restarts, why, { log, n
 
 function describe(result) {
   switch (result.state) {
-    case 'updated': return `updated ${result.ahead} commit(s)${result.verified ? '; the worker answers on the new code' : result.restarted ? '; the worker restarts on the changed files' : '; no file under src/ or skills/ changed, so the worker did not restart'}`;
+    case 'updated': return `updated ${result.ahead} commit(s)${result.verified ? '; the worker answers on the new code' : result.restarted ? '; the worker restarts on the changed files' : '; the worker did not restart: the changed files are served in place or are not loaded'}`;
     case 'reverted': return `pulled code that ${result.reason}, and reset to the commit before it`;
     case 'stuck': return `pulled code that ${result.reason}, and the reset failed (${result.error}); check the checkout by hand`;
     case 'dirty': return `origin main is ${result.ahead} commit(s) ahead, but the checkout has changes to tracked files, so nothing was pulled`;

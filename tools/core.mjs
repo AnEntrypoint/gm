@@ -15,6 +15,7 @@ import { createInterface } from 'node:readline';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DEFAULT_UPDATE_MS, startUpdates } from './update.mjs';
+import { RELOADABLE } from '../src/hot-config.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = process.env.GMNEW_ROOT ? resolve(process.env.GMNEW_ROOT) : resolve(HERE, '..');
@@ -450,6 +451,22 @@ async function announceChanges() {
   }
 }
 
+// A change to reloadable modules is applied in the running worker. The worker builds the new code beside the old and swaps it in only when
+// every module loads. A refused reload leaves the old code serving, and the core says why. A worker that does not answer is restarted.
+async function reload(reason) {
+  if (state !== 'running') return { ok: false, reason: `the worker is ${state}` };
+  say(`reloading in place (${reason})`);
+  const answer = await askWorker('core/reload');
+  if (answer === null) return restart('the reload did not answer');
+  if (answer.ok !== true) {
+    say(`reload refused, the old code keeps serving: ${answer.error}`);
+    return { ok: false, reason: answer.error };
+  }
+  say(`reloaded in place: generation ${answer.generation}`);
+  await announceChanges().catch(() => {});
+  return { ok: true };
+}
+
 // A change the worker serves in place: nothing restarts, and the host is told of any list whose content changed.
 async function refresh(reason) {
   if (state !== 'running') return { ok: false, reason: `the worker is ${state}` };
@@ -604,11 +621,19 @@ function requestTransition(kind, reason) {
   if (kind === 'restart' && pending.some((job) => job.kind === 'restart' || job.kind === 'handover')) return Promise.resolve(null);
   // A refresh is redundant when a transition is queued: a restart announces the lists itself, and a queued refresh already covers this change.
   if (kind === 'refresh' && pending.length > 0) return Promise.resolve(null);
+  if (kind === 'reload' && pending.some((job) => job.kind === 'restart' || job.kind === 'handover')) return Promise.resolve(null);
   return new Promise((resolveJob) => {
     pending.push({ kind, reason, resolve: resolveJob });
     pump();
   });
 }
+
+const TRANSITIONS = {
+  restart: (reason) => restart(reason),
+  refresh: (reason) => refresh(reason),
+  reload: (reason) => reload(reason),
+  handover: (reason) => handOver(reason),
+};
 
 async function pump() {
   if (pumping) return;
@@ -617,7 +642,7 @@ async function pump() {
     while (pending.length > 0) {
       const job = pending.shift();
       try {
-        job.resolve(job.kind === 'restart' ? await restart(job.reason) : job.kind === 'refresh' ? await refresh(job.reason) : await handOver(job.reason));
+        job.resolve(await TRANSITIONS[job.kind](job.reason));
       } catch (err) {
         say(`the ${job.kind} failed: ${err.message}`);
         job.resolve({ ok: false, reason: err.message });
@@ -678,10 +703,19 @@ async function pause(code) {
   process.exit(code);
 }
 
+// Changes under src/ are gathered for one debounce window. A window that changes only reloadable modules is applied in place. Any other
+// change restarts the worker, as before.
+const changedSource = new Set();
 function onSourceChange(_event, file) {
   if (!file || !WATCHED_FILE.test(file)) return;
+  changedSource.add(file);
   clearTimeout(sourceTimer);
-  sourceTimer = setTimeout(() => requestTransition('restart', `changed: ${file}`), DEBOUNCE_MS);
+  sourceTimer = setTimeout(() => {
+    const files = [...changedSource];
+    changedSource.clear();
+    const inPlace = files.every((name) => RELOADABLE.includes(name));
+    requestTransition(inPlace ? 'reload' : 'restart', `changed: ${files.join(', ')}`);
+  }, DEBOUNCE_MS);
 }
 
 // A skill file is served in place, so a change to it only refreshes the host's lists. Its own timer, so a change to src/ is not lost.

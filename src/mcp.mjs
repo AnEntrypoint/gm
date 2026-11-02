@@ -10,22 +10,12 @@ import { isDirectory, loadTask, newRunId, openRun, ROOT } from './run.mjs';
 import { flushAllLogs } from './log.mjs';
 import { clearPending, onPendingAppended, PENDING_FILE, takePending } from './pending.mjs';
 import { conflicts, createTools, loggedReply, OUTPUT_PAGE, DEFAULT_STUCK_MS, DEFAULT_MONITOR_MS, BODY_NOTICE_MS } from './tools.mjs';
-import { GIT_TOOLS } from './git.mjs';
-import { ROW_TOOLS } from './rows.mjs';
+import { bumpGeneration } from './hot.mjs';
+import { RELOADABLE } from './hot-config.mjs';
 import { SEARCH_TOOLS } from './search.mjs';
-import { FETCH_TOOLS } from './fetch.mjs';
-import { CODE_TOOLS } from './code-ast.mjs';
-import { WIKI_TOOLS } from './wiki-tools.mjs';
-import { REVIEW_TOOLS } from './review-tools.mjs';
 import { runBody, runCodeTool, RUN_CODE_PROPERTIES } from './runcode.mjs';
 import { bodyContext } from './exec.mjs';
 import { COMPACT as SEARCH_COMPACT } from './search.mjs';
-import { COMPACT as FETCH_COMPACT } from './fetch.mjs';
-import { COMPACT as GIT_COMPACT } from './git.mjs';
-import { COMPACT as CODE_COMPACT } from './code-ast.mjs';
-import { COMPACT as ROWS_COMPACT } from './rows.mjs';
-import { COMPACT as WIKI_COMPACT } from './wiki-tools.mjs';
-import { COMPACT as REVIEW_COMPACT } from './review-tools.mjs';
 import { COMPACT as RUNCODE_COMPACT } from './runcode.mjs';
 import { COMPACT as TOOLS_COMPACT } from './tools.mjs';
 import { feedOf, registryOf, resultZone1, resultZone2, shownTotalOf } from './compact.mjs';
@@ -65,7 +55,7 @@ const text = { type: 'string' };
 const number = { type: 'number' };
 const objectSchema = (properties, required = []) => ({ type: 'object', properties, required });
 
-const TOOLS = [
+const BASE_TOOLS = [
   { name: 'next_context', description: 'Begin a step. Returns rules, task, witness requirement, the events new since the last step in full, the older ones in compact form within two horizons, and prefixSha. pending lists the events that need you since your last step, each once, with an id, and pendingFile is the file that holds them for a live tail. Call it at the start of each step. query_log reaches every event.', inputSchema: objectSchema({}) },
   { name: 'read_file', description: 'Read a text file in the workspace, one page of at most 20000 characters. offset and limit are counted in characters, not lines: limit is 1 to 20000, default 20000. Returns output, total characters, the offset of this page and next, the offset of the next page (null at the end).', inputSchema: objectSchema({ path: text, offset: number, limit: number }, ['path']) },
   { name: 'write_file', description: 'Write a text file in the workspace, creating parent directories.', inputSchema: objectSchema({ path: text, content: text }, ['path', 'content']) },
@@ -78,22 +68,37 @@ const TOOLS = [
   { name: 'query_log', description: 'Read the run events, as JSON. after is a seq: only the events after it are read (since), so after the last seq you saw reads on from there. kind keeps events of one kind, and fromMono and toMono keep events in a time window (monotonic milliseconds). last N returns the newest N matching events instead, oldest first, at most 50, and has no next. js is a JavaScript expression over the matching events, and defaults to returning them: js sees one window of at most 1000 events or 4 MB of log. Without js, a reply holds at most 50 events and about 20 KB. When events remain, next is the seq to pass back as after; with js, next is set when the window ends before the end of the log. An unknown argument is refused, and the reply names the arguments query_log takes.', inputSchema: objectSchema({ js: text, kind: text, fromMono: number, toMono: number, after: number, last: number }, []) },
   { name: 'finish', description: 'End the run. witness is one string that quotes the evidence you observed. gaps optionally lists, one string each, what the run did not check; the end event logs them. finish is refused while a background run is running, and stopBackground true kills it first. finish is refused while a PRD or question row is open, and names the rows; stopRows true ends the run anyway, with each open row listed as a gap in the end event.', inputSchema: objectSchema({ witness: text, gaps: { type: 'array', items: text }, stopBackground: { type: 'boolean' }, stopRows: { type: 'boolean' } }, ['witness']) },
   ...SEARCH_TOOLS,
-  ...WIKI_TOOLS,
-  ...REVIEW_TOOLS,
-  ...FETCH_TOOLS,
-  ...CODE_TOOLS,
-  ...GIT_TOOLS,
-  ...ROW_TOOLS,
 ];
 
 // The code surface (--surface code) serves next_context, finish and run_code. Every other verb is called from run_code as
 // gm.<name>(args). The tools surface serves the whole list, as before.
 const SURFACES = ['tools', 'code'];
 const CODE_SURFACE = new Set(['next_context', 'run_code', 'finish']);
-const VERBS = TOOLS.filter((tool) => !CODE_SURFACE.has(tool.name));
-const CODE_LIST = [...TOOLS.filter((tool) => tool.name === 'next_context' || tool.name === 'finish'), runCodeTool(VERBS.map((tool) => tool.name))];
+// The surface the worker serves: the tool list, the verbs and the compaction registry. surfaceOf builds it from the leaf modules it is given,
+// so a reload builds the next surface from the new code and swaps it in whole.
+function surfaceOf(leaves) {
+  const TOOLS = [
+    ...BASE_TOOLS,
+    ...leaves['wiki-tools.mjs'].WIKI_TOOLS,
+    ...leaves['review-tools.mjs'].REVIEW_TOOLS,
+    ...leaves['fetch.mjs'].FETCH_TOOLS,
+    ...leaves['code-ast.mjs'].CODE_TOOLS,
+    ...leaves['git.mjs'].GIT_TOOLS,
+    ...leaves['rows.mjs'].ROW_TOOLS,
+  ];
+  const VERBS = TOOLS.filter((tool) => !CODE_SURFACE.has(tool.name));
+  const CODE_LIST = [...TOOLS.filter((tool) => tool.name === 'next_context' || tool.name === 'finish'), runCodeTool(VERBS.map((tool) => tool.name))];
+  const REGISTRY = registryOf(TOOLS_COMPACT, SEARCH_COMPACT, leaves['fetch.mjs'].COMPACT, leaves['git.mjs'].COMPACT, leaves['code-ast.mjs'].COMPACT, leaves['rows.mjs'].COMPACT, leaves['wiki-tools.mjs'].COMPACT, leaves['review-tools.mjs'].COMPACT, RUNCODE_COMPACT, SELF_COMPACT);
+  return { TOOLS, VERBS, CODE_LIST, REGISTRY, leaves };
+}
+// Every reloadable module at the current generation. Boot and each reload read them here, so both take the same path.
+async function loadLeaves() {
+  const leaves = {};
+  for (const file of RELOADABLE) leaves[file] = await import(`./${file}`);
+  return leaves;
+}
 function servedTools(surface) {
-  return surface === 'code' ? CODE_LIST : TOOLS;
+  return surface === 'code' ? current.CODE_LIST : current.TOOLS;
 }
 const NO_PATHS = { items: [], free: true };
 
@@ -113,7 +118,9 @@ class RpcError extends Error {
 
 function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, resume = null, jobLifetimeMs = DEFAULT_JOB_LIFETIME_MS, stuckMs = DEFAULT_STUCK_MS, monitorMs = DEFAULT_MONITOR_MS, noticeMs = BODY_NOTICE_MS, recovery = null, history = [], surface = 'code' }) {
   const runId = basename(runDir);
-  const tools = createTools({ workspace, runDir, log, background: true, jobLifetimeMs, stuckMs, monitorMs, noticeMs });
+  const tools = createTools({ workspace, runDir, log, background: true, jobLifetimeMs, stuckMs, monitorMs, noticeMs, leaves: current.leaves });
+  activeTools = tools;
+  activeLog = log;
   let pendingRecovery = recovery;
   let noticeSeq = lastContextSeq(log.events());
   const active = new Map();
@@ -163,8 +170,6 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     job_status: ({ job, waitMs, offset }) => tools.run('job_status', { job, waitMs, offset }),
     query_log: (args) => tools.run('query_log', args),
   };
-  const served = servedTools(surface);
-  const servedText = renderTools(served);
 
   // One verb called from run_code. It runs through the same handler the tool surface uses, and it is logged as code-call.
   async function innerCall(name, args) {
@@ -238,13 +243,14 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
   async function route(method, params, rpcId) {
     if (method === 'initialize') return initialize(params);
     if (method === 'ping' || method === 'server/discover') return {};
-    if (method === 'tools/list') return { tools: served };
+    if (method === 'tools/list') return { tools: servedTools(surface) };
     if (method === 'tools/call') return callTool(params, rpcId);
     if (method === 'prompts/list') return { prompts: [skillPrompt()] };
     if (method === 'prompts/get') return getPrompt(params);
     if (method === 'resources/list') return { resources: [skillResource()] };
     if (method === 'resources/read') return readResource(params);
     if (method === 'resources/templates/list') return { resourceTemplates: [] };
+    if (method === 'core/reload') return reloadLeaves();
     if (method.startsWith('notifications/')) return null;
     throw new RpcError(-32601, `method not found: ${method}`);
   }
@@ -360,7 +366,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
       // A wrong argument name is refused by name. The run_code reply names its action, which is the seq of the action event, so a body can cite it.
       const unknown = Object.keys(args).filter((key) => !Object.hasOwn(RUN_CODE_PROPERTIES, key));
       if (unknown.length > 0) return refuse(name, args, `unknown argument ${unknown.join(', ')}; run_code takes ${Object.keys(RUN_CODE_PROPERTIES).join(', ')}`, rpcId);
-      return act('run_code', args, access, (actionSeq) => runBody({ body: args.body, timeoutMs: args.timeoutMs, format: args.format, verbs: VERBS, call: innerCall, project: workspace, runDir, log, step: steps, background: (handle) => tools.adoptBody(handle) }).then((reply) => ({ ...reply, actionSeq })), undefined, rpcId);
+      return act('run_code', args, access, (actionSeq) => runBody({ body: args.body, timeoutMs: args.timeoutMs, format: args.format, verbs: current.VERBS, call: innerCall, project: workspace, runDir, log, step: steps, background: (handle) => tools.adoptBody(handle) }).then((reply) => ({ ...reply, actionSeq })), undefined, rpcId);
     }
     if (name === 'next_context') return nextContext(access, rpcId);
     if (name === 'finish') return finish(args, access, rpcId);
@@ -386,7 +392,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
   // the rules change. A step whose rules are the same reuses the hash, so no step builds the tool text again.
   let prefixMemo = null;
   function prefixShaFor(rules) {
-    if (prefixMemo === null || prefixMemo.rules !== rules || prefixMemo.task !== task) prefixMemo = { rules, task, sha: prefixShaOf({ rules, task, witness: DEFAULT_WITNESS, tools: servedText }) };
+    if (prefixMemo === null || prefixMemo.surface !== current || prefixMemo.rules !== rules || prefixMemo.task !== task) prefixMemo = { surface: current, rules, task, sha: prefixShaOf({ rules, task, witness: DEFAULT_WITNESS, tools: renderTools(servedTools(surface)) }) };
     return prefixMemo.sha;
   }
 
@@ -432,7 +438,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
         wait: `node "${join(ROOT, 'src', 'cli.mjs')}" events --dir "${runDir}" --wait`,
         read: `node "${join(ROOT, 'src', 'cli.mjs')}" events --dir "${runDir}" --read-clear`,
       },
-      ...feedOf(log, REGISTRY, { shown: shownTotalOf(log) }),
+      ...feedOf(log, current.REGISTRY, { shown: shownTotalOf(log) }),
       ...(recoveryNow ? { recovery: recoveryNow } : {}),
       ...(rulesOpen.size > 0 ? { rulesPending: rulesNotice() } : {}),
       ...(killed.length ? { jobsKilled: killed.map(({ seq, job, reason, lifetimeMs, tail }) => ({ seq, job, reason, lifetimeMs, tail })) } : {}),
@@ -663,7 +669,25 @@ function isRequestShape(message) {
 const SELF_COMPACT = {
   tools: { next_context: { zone1: resultZone1, zone2: resultZone2 } },
 };
-const REGISTRY = registryOf(TOOLS_COMPACT, SEARCH_COMPACT, FETCH_COMPACT, GIT_COMPACT, CODE_COMPACT, ROWS_COMPACT, WIKI_COMPACT, REVIEW_COMPACT, RUNCODE_COMPACT, SELF_COMPACT);
+// The surface of the running worker, built at boot from the leaf modules. activeTools and activeLog are the session's, set when it starts.
+let current = surfaceOf(await loadLeaves());
+let activeTools = null;
+let activeLog = null;
+
+// A reload applies the leaf modules' new code between calls. The surface and the session's verbs are built from the new modules before anything
+// is replaced, so a build that fails leaves the old code serving, and the core is told why. Runs, jobs and the log are not touched.
+async function reloadLeaves() {
+  try {
+    const generation = bumpGeneration();
+    const next = surfaceOf(await loadLeaves());
+    activeTools?.setLeaves(next.leaves);
+    current = next;
+    activeLog?.append('reload', { generation, modules: RELOADABLE });
+    return { ok: true, generation, reloaded: RELOADABLE };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+}
 
 function parseFlags(argv) {
   const flags = {};
