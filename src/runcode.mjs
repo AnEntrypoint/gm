@@ -2,11 +2,11 @@
 // and each project file loads in its own format. It receives gm, which has one method per verb, and gm.verbs(). Each verb call is
 // a call through the session, so it is logged as a code-call event. A failed call returns {ok:false, error} as data, so one failure
 // does not abort the body. The body runs in the worker's process, so it is trusted as much as run_shell is: it is not sandboxed.
-import { createRequire, register } from 'node:module';
+import { register } from 'node:module';
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { Worker } from 'node:worker_threads';
 import { resultZone1, resultZone2, shortKind } from './compact.mjs';
 import { bodyContext } from './exec.mjs';
 
@@ -15,7 +15,8 @@ const DEFAULT_TIMEOUT_MS = 180000;
 const MAX_TIMEOUT_MS = 300000;
 const BUDGET = Symbol('budget');
 const OUTPUT_CAP = 20000;
-const cjsLoad = createRequire(import.meta.url);
+// The thread that runs a body. Each body gets one of its own (body-worker.mjs).
+const BODY_WORKER = new URL('./body-worker.mjs', import.meta.url);
 
 // A path inside the root. The check is textual; a symlink is followed separately by confined().
 function inside(root, at) {
@@ -25,7 +26,7 @@ function inside(root, at) {
 
 // The path inside the project root, or null. A path that leaves the root, through .. or through a symlink whose real location is
 // outside, is refused. A missing file is not refused here; the load fails later and names the file.
-function confined(project, path) {
+export function confined(project, path) {
   const at = resolve(project, path);
   if (!inside(project, at)) return null;
   if (existsSync(at) && !inside(realpathSync(project), realpathSync(at))) return null;
@@ -88,30 +89,6 @@ function walkFiles(dir, rel, parts) {
   }
 }
 
-// Node caches CommonJS by path, and an ES module that imports a .cjs file gets the cached copy. Dropping the project's entries before
-// each call makes every load read the file again.
-function dropCommonJS(project) {
-  for (const key of Object.keys(cjsLoad.cache)) if (inside(project, key)) delete cjsLoad.cache[key];
-}
-
-// require for the body, rooted at the workspace. A relative path is confined again at the call, so a path that leaves the root is
-// refused even if it is built at run time.
-function guardedRequire(project, log, step) {
-  const base = createRequire(join(project, 'package.json'));
-  return (spec) => {
-    if (typeof spec !== 'string') throw new TypeError('require needs a string path');
-    if (/^\.\.?(\/|$)/.test(spec)) {
-      const at = confined(project, spec);
-      if (at === null) {
-        log?.append('refusal', { step, tool: 'run_code', stage: 'require', error: `the require ${spec} resolves outside the workspace` });
-        throw new Error(`refused: the require ${spec} resolves outside the workspace`);
-      }
-      return base(at);
-    }
-    return base(spec);
-  };
-}
-
 // The tool's description names the verbs and nothing else about them, so a change to a verb's description does not change
 // the served list, or the prefix hash that the list feeds.
 // run_code is the tool the default surface serves. A body's arguments keep their size and their head. Its code-load events list the
@@ -141,22 +118,6 @@ export async function runBody({ body, timeoutMs = DEFAULT_TIMEOUT_MS, format, ve
   if (!Number.isInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > MAX_TIMEOUT_MS) return { ok: false, error: `timeoutMs must be an integer from 1 to ${MAX_TIMEOUT_MS}` };
   if (format !== undefined && format !== 'esm' && format !== 'cjs') return { ok: false, error: 'format must be esm or cjs' };
   const kind = format ?? formatOf(project, join(project, 'body.js'));
-  const gm = { project, verbs: () => verbs.map(({ name, description, inputSchema }) => ({ name, description, inputSchema })) };
-  // A body that was killed stops at its next verb call. Its verbs refuse from then on, so it cannot start new work.
-  const control = { killed: false };
-  for (const { name } of verbs) {
-    gm[name] = (args = {}) => {
-      if (control.killed) throw new Error('the body was killed; its verbs refuse');
-      return call(name, args);
-    };
-  }
-  gm.try = async (fn) => {
-    try {
-      return await fn();
-    } catch (err) {
-      return { ok: false, error: err.message };
-    }
-  };
   const split = splitBody(body, project);
   if (split.refusal) {
     log?.append('refusal', { step, tool: 'run_code', stage: 'load', error: split.refusal });
@@ -174,48 +135,60 @@ export async function runBody({ body, timeoutMs = DEFAULT_TIMEOUT_MS, format, ve
   const source = kind === 'esm'
     ? `${split.imports}\nexport default async function body(gm, require) {\n${split.code}\n}\n`
     : `module.exports = async function body(gm, require) {\n${split.code}\n};\n`;
-  // The file is named by its text and the generation. An identical body in the same generation is the same module, and a new
-  // generation gets a new one, whose imports resolve to the new files.
-  const digest = createHash('sha1').update(source).digest('hex').slice(0, 16);
-  const file = join(runDir, 'code', `body-${digest}-${Atomics.load(generation, 0)}.${kind === 'esm' ? 'mjs' : 'cjs'}`);
-  let run;
-  try {
-    mkdirSync(dirname(file), { recursive: true });
-    dropCommonJS(project);
-    writeFileSync(file, source);
-    if (kind === 'esm') {
-      run = (await import(pathToFileURL(file).href)).default;
-    } else {
-      run = cjsLoad(file);
-      delete cjsLoad.cache[file];
-    }
-  } catch (err) {
-    rmSync(file, { force: true });
-    return { ok: false, error: `the body does not load: ${err.message}` };
-  }
-  // The body runs from here. If it settles within the budget, the call returns its value. If the budget is spent first, the body is handed
-  // to the caller as a background job, which watches it through the job machinery; its body file stays until the body ends.
-  // The body runs in its own context, which names it by its start seq. Every shell and verb call it makes carries that seq, so a stop reaches them.
+  // The start seq names the body: its verb calls and its shells carry it, and its file is named by it, so two bodies never share a file.
+  // The file is deleted when the body ends, success or failure, or is stopped.
   const startSeq = log.count();
-  const exec = bodyContext.run({ body: startSeq }, () => Promise.resolve().then(() => run(gm, guardedRequire(project, log, step))));
+  const digest = createHash('sha1').update(source).digest('hex').slice(0, 16);
+  const file = join(runDir, 'code', `body-${startSeq}-${digest}.${kind === 'esm' ? 'mjs' : 'cjs'}`);
+  mkdirSync(dirname(file), { recursive: true });
+  writeFileSync(file, source);
+  // The body runs in a thread of its own (body-worker.mjs). Its verb calls are messages that this session serves in the body's context, so
+  // each call is logged with the body's seq and a shell it starts is tagged with it. The thread is terminated when the body ends, and at a
+  // stop, which is how a body that never awaits is stopped.
+  const worker = new Worker(BODY_WORKER, { workerData: { file, kind, project, verbs: verbs.map(({ name, description, inputSchema }) => ({ name, description, inputSchema })) }, stdout: true, stderr: true });
+  // The body's console output is drained here, so it cannot reach the session's stdout, which carries the protocol.
+  worker.stdout.resume();
+  worker.stderr.resume();
+  let stopped = false;
+  const stop = () => {
+    stopped = true;
+    worker.terminate();
+  };
+  const done = new Promise((resolve) => {
+    worker.on('message', (msg) => {
+      if (msg.type === 'call') {
+        if (stopped) return;
+        const work = bodyContext.run({ body: startSeq }, () => Promise.resolve().then(() => call(msg.name, msg.args)));
+        work.catch((err) => ({ ok: false, error: err.message })).then((result) => {
+          if (!stopped) worker.postMessage({ type: 'reply', id: msg.id, result });
+        });
+      } else if (msg.type === 'refusal') {
+        log?.append('refusal', { step, tool: 'run_code', stage: 'require', error: msg.error });
+      } else if (msg.type === 'done') {
+        resolve(msg.ok ? { ok: true, text: msg.text } : { ok: false, error: msg.error });
+      }
+    });
+    worker.on('error', (err) => resolve({ ok: false, error: err.message }));
+    worker.on('exit', () => resolve({ ok: false, error: 'the body stopped before it returned' }));
+  });
+  done.then(stop);
+  // The background run's result has the same shape as a foreground reply, so the job's status and the call's reply agree.
+  const result = done.then((reply) => (reply.ok
+    ? { ok: true, output: reply.text.slice(0, OUTPUT_CAP), truncated: reply.text.length > OUTPUT_CAP }
+    : { ok: false, error: reply.error }));
+  // If the body settles within the budget, the call returns its result. If the budget is spent first, the body is handed to the caller as a
+  // background job, which watches it through the job machinery; its body file stays until the body ends.
   let timer;
   const budget = new Promise((resolve) => {
     timer = setTimeout(() => resolve(BUDGET), timeoutMs);
   });
-  const outcome = await Promise.race([exec.then((value) => ({ value }), (err) => ({ err })), budget]);
+  const outcome = await Promise.race([result, budget]);
   clearTimeout(timer);
   if (outcome !== BUDGET) {
     rmSync(file, { force: true });
-    if (outcome.err) return { ok: false, error: outcome.err.message, loads };
-    const text = JSON.stringify(outcome.value) ?? 'undefined';
-    return { ok: true, output: text.slice(0, OUTPUT_CAP), truncated: text.length > OUTPUT_CAP, loads };
+    return { ...outcome, loads };
   }
-  // The background run's result has the same shape as a foreground reply, so the job's status and the call's reply agree.
-  const result = exec.then((value) => {
-    const text = JSON.stringify(value) ?? 'undefined';
-    return { ok: true, output: text.slice(0, OUTPUT_CAP), truncated: text.length > OUTPUT_CAP };
-  }, (err) => ({ ok: false, error: err.message }));
-  const name = background({ result, cleanup: () => rmSync(file, { force: true }), kill: () => { control.killed = true; }, body: startSeq });
+  const name = background({ result, cleanup: () => rmSync(file, { force: true }), kill: stop, body: startSeq });
   const logged = log.eventsFrom(startSeq + 1).filter((event) => event.kind === 'code-call').map((event) => ({ seq: event.seq, tool: event.tool, ok: event.ok }));
   return { ok: true, background: name, state: 'running', logged, loads };
 }
