@@ -147,7 +147,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
   function rulesNotice() {
     if (rulesOpen.size === 0) return null;
     const lines = [...rulesOpen].map(([rule, { evidence }]) => `rule ${rule} (${RULE_TEXT[rule]}): ${evidence}`);
-    return `The rules check found: ${lines.join('; ')}. Load the gm skill again with /mcp__gm-new__gm and follow the rules it gives. This notice stays until you load it.`;
+    return `The rules check found: ${lines.join('; ')}. Read the gm skill again with ReadMcpResourceTool (server gm-new, uri gm://skill/SKILL.md) and follow the rules it gives. That one read clears this notice. Do not repeat finished work.`;
   }
 
   const handlers = {
@@ -248,15 +248,17 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
 
   function getPrompt(params) {
     if (params?.name !== SKILL.name) throw new RpcError(-32602, `unknown prompt: ${params?.name}`);
-    // Loading the skill again is what the notice asks for, so it clears the open notices.
+    // Loading the skill again is what the notice asks for, so it clears the open notices. Each fetch is logged, so a live run can count them.
+    log.append('skill-loaded', { via: 'prompt', cleared: [...rulesOpen.keys()] });
     clearRules();
-    const task = typeof params?.arguments?.task === 'string' ? params.arguments.task.trim() : '';
+    const task =typeof params?.arguments?.task === 'string' ? params.arguments.task.trim() : '';
     const text = task === '' ? SKILL.body : `${SKILL.body}\n\nTask: ${task}`;
     return { description: SKILL.description, messages: [{ role: 'user', content: { type: 'text', text } }] };
   }
 
   function readResource(params) {
     if (params?.uri !== SKILL_URI) throw new RpcError(-32602, `unknown resource: ${params?.uri}`);
+    log.append('skill-loaded', { via: 'resource', cleared: [...rulesOpen.keys()] });
     clearRules();
     return { contents: [{ uri: SKILL_URI, mimeType: 'text/markdown', text: SKILL.text }] };
   }

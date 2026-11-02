@@ -602,17 +602,25 @@ Witness, delivery (run rules/run-1793604554, JSON-RPC against the repository's s
 
 Not witnessed, and the row stays blocked: whether a rule holds after a summary in a live run. That needs live trials, so it waits for the owner's live-trial budget. The trigger is unchanged.
 
-## Rules watchdog and compaction handling (2026-11-02)
+## Rules watchdog and compaction handling (2026-11-02, joint decision: gm and the agent, reviewed by the orchestrator)
 
-Requested by the owner in the session on 2026-11-02, and implemented by the agent. gm has not reviewed this record, so it is not a joint decision.
+A joint decision of gm and the agent, reviewed by the orchestrator on 2026-11-02. It is not recorded as the owner's request.
 
 - The server watches for the rule breaks it can see: rule 2, a call before the run's first next_context; rule 1, a path or a load that leaves the workspace (top-level refusals, and refusals of verbs called inside a body); rule 3, a finish with no call in its step; rule 4, a finish refused for its witness.
-- Each break raises a notice, logged as rules-notice. The notice is carried in the reply of each call (rulesNotice) and in next_context (rulesPending), and it asks the agent to load the gm skill again with /mcp__gm-new__gm. Loading the skill, through the prompt or the resource, clears the notices and is logged as rules-cleared.
+- Each break raises a notice, logged as rules-notice. The notice is carried in the reply of each call (rulesNotice) and in next_context (rulesPending). It asks the agent for one read of the skill with ReadMcpResourceTool (server gm-new, uri gm://skill/SKILL.md), which the agent can do itself. A slash command is not used, because the user types those. A fetch of the skill, through the resource or the prompt, clears the notices. Each fetch is logged as skill-loaded with the notices it cleared, and the clear is logged as rules-cleared.
 - The steps the agent takes after a context compaction are in the skill, because a skill survives a compaction and the server's notices only point to it: call next_context at once, follow the rules it returns, do not rely on a summary for a rule, the witness or an event, use gm.query_log for any event the summary does not give exactly, and load the skill again when a notice appears.
 
 Witness (run rules-watch/run-1793605220927, JSON-RPC against the working-tree server): a run whose first call is run_code raised rule 2, next_context carried it, the skill fetch cleared it, and both events were logged. A body that read ../outside.txt raised rule 1 on its reply, with the refusal text. A blank witness raised rule 4. A finish with no call in its step raised rule 3. A clean run, with one read and a witnessed finish, raised no notice.
 
-Limits: the watchdog sees only rules 1 to 4. Rules 5 to 7 are not observed. It cannot force the agent to comply. Whether the agent loads the skill after a notice, and whether a rule holds after a compaction, is measured only by a live run, which is the open witness of the rule re-injection row.
+Condition 1, a notice costs no more than one skill fetch, and does not repeat once cleared. Witness (run rules-watch/one-fetch-1793605325406, JSON-RPC): the first call is run_code, which raises rule 2. One resources/read of gm://skill/SKILL.md clears it. The next next_context has no rulesPending, and the two replies after it have no rulesNotice. The log holds one rules-notice, one skill-loaded with via resource, and one rules-cleared. The five watchdog scenarios were rerun after the change (run rules-watch/run-1793605325678): rules 1, 3 and 4 still raise, rule 2 still raises and clears, and the clean run raises no notice.
+
+Condition 2, the extra turns, is measured in the next live acceptance run, not in a separate run. The method, for the harness to apply to each run's log:
+- notices fired: the count of rules-notice events.
+- notice-driven fetches, which are the turns a notice adds at the server: the count of skill-loaded events whose cleared list is not empty. A fetch with an empty cleared list is an ordinary load and is not counted.
+- host turns: the count of action events, which is one per tool call, so the notice's turns can be read against the clean runs.
+The turns the agent spends responding to a notice are not visible to the server, so the live transcript has to be read for them. The rule for the change: if a notice adds turns on a clean run, that is reported before any further change. A clean run is a run with no notice.
+
+Limits: the watchdog sees only rules 1 to 4. Rules 5 to 7 are not observed. It cannot force the agent to comply. Whether the agent reads the skill after a notice, and whether a rule holds after a compaction, is measured only by a live run, which is the open witness of the rule re-injection row.
 
 ## Publication (2026-11-02)
 
