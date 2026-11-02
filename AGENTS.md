@@ -68,6 +68,7 @@ This is what you build and codify. Single worker first: DESIGN.md direction 6 sa
 - `run_code` and `next_context` refuse with "run has ended" after `finish`. Only a reconnect opens a new run. This is the shared-run question, open with the owner.
 - A body that outlives its budget becomes a background job. Each body runs in a worker thread, four at most at once per session. A thread costs about 31 ms to start, most of a median `run_code` call (DESIGN.md, "Limits, stated, not closed").
 - The update checks tick every 60 s counted from the core's start, and the first is at 30 s. A push is pulled at the next tick, so within about a minute. A witness that pushes must time from the tick, not from the first check.
+- The running relay, core and worker that start from /workspace/gm-new run its working tree. An uncommitted edit under `src/` or `tools/` is live at the next restart, so a half-made change breaks the runs of peers (DESIGN.md, Shared checkout is live).
 - A row file holds only the names in `FIELDS` (src/rows.mjs). A verb rewrite drops any other name, so a planner that reads a field no verb writes sees every row as lacking it (DESIGN.md, Row states).
 
 ## Rationale not expressible in code

@@ -19,6 +19,7 @@ How to change this project. Project facts are in AGENTS.md, and decisions with t
 
 ## Edits and collisions
 
+- The shared checkout is live: a worker started from it runs its working tree. Build a change in a scratch copy (a tar of the tree), witness it there, and apply it to the checkout in one step once it is witnessed. A half-made edit breaks every worker that restarts.
 - Change an existing file with Edit only. Never Write over an existing file.
 - On a failed Edit, re-read the region and reapply once. If it fails again, stop and report.
 - Only the single writer commits. A collision is repaired after the fact, not avoided.
