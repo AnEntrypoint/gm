@@ -5,7 +5,7 @@ import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { runQuery } from './log.mjs';
 import { foregroundGroups, killBody, killGroup, runCommand, signalGroup, spawnGroup } from './exec.mjs';
 import { createGitVerbs } from './git.mjs';
-import { createRowVerbs, rowSummary } from './rows.mjs';
+import { createRowVerbs, openRows, rowSummary } from './rows.mjs';
 import { createSearchVerbs } from './search.mjs';
 import { createFetchVerbs } from './fetch.mjs';
 import { createAstVerbs } from './code-ast.mjs';
@@ -416,6 +416,7 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
   return {
     adoptBody,
     activeJobs,
+    openRows: () => openRows(confine),
     callStarted(body) {
       inFlightByBody.set(body, (inFlightByBody.get(body) ?? 0) + 1);
     },

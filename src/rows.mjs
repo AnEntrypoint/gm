@@ -100,6 +100,11 @@ export async function rowSummary(confine, kind, limit) {
   return { total: rows.length, open: open.length, window, more: open.length - window.length };
 }
 
+// The open rows of every kind, in list order. A finish is refused while any of them is open, and names them.
+export async function openRows(confine) {
+  return sortByCreated((await readRows(confine)).filter((row) => row.status === 'open'));
+}
+
 async function readRows(confine) {
   const dir = confine(ROW_DIR);
   if (dir.refused) throw new Error(dir.refused);

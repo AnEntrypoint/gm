@@ -1059,3 +1059,21 @@ Limit: the reminder reaches the agent at its next `next_context`, not at the mom
 - Witness, through the relay on the working tree (run `2026-11-02-16-37-29-e8ce42`, `/tmp/gm-scratch/gm-new/gm-continue/witness.mjs`, `witness-result.json`): `prompts/get gm` carries the finish invariant. The list step returned no open rows. The fill step added the one missing row, and its loop skipped the row already open. The listing shows both rows open. The finish was accepted with rows open.
 - Open, for the owner: `finish` is not refused while PRD rows are open, so the invariant is the only guard. A refusal, with a `stopRows` flag that ends the run and lists the open rows in the end event, would make the guard a tool rule. It changes the decided finish semantics, so it is not built.
 - Not witnessed here: a host session that loads gm-continue by name. That needs a live session with the skill installed.
+
+## Finish, the connection, and restarts (2026-11-02, reported by oscraft-16)
+
+- Report: run 68247-767948 was finished with 124 PRD rows open, and the finish was sent by a child agent. The child shares the parent's gm connection, so it shares the run, and its finish closed the parent's run. The witness was the child's text, not a drain witness.
+- Cause, in the code: a run belongs to one server connection. `finish` checks that a witness and gaps are well formed, and that no background run is running. It does not check which agent sends it, so any agent on the connection can end the run.
+- The served gm skill said the opposite: "finish closes only this session's run". That line is corrected in step 7. The behaviour is unchanged.
+- Restarts: a restart or a roll ends a run with `paused` and no `finish`. oscraft-16 reports 42 run directories with logs, and many are three-event runs (start and tools) that close without a finish. Their turns ended in prose, or the server rolled.
+- Not built, for the owner (the shared-run question): (a) a child agent gets its own run through a key the caller passes to next_context; (b) `finish` is refused unless the caller passes the run's key; (c) each child gets its own connection, and so its own run.
+- Until one of these is chosen, a child agent on a parent's connection must not send `finish`, and the finish invariant in the gm skill is the only guard.
+
+## Finish refused while rows are open (2026-11-02, the owner's yes)
+
+- `finish` is refused while any PRD or question row is open. The refusal names up to five of them, and the run stays open, so the agent can work the rows and call again. `stopRows: true` ends the run anyway, and each open row is logged as a gap in the end event.
+- Code: `openRows` in `src/rows.mjs`, exposed as `tools.openRows` in `src/tools.mjs`. `finish()` in `src/mcp.mjs` checks it after the background-run check and before `stop('finished')`, so a refused finish does not end the run.
+- The rule-4 notice fired on any refusal whose text contained "witness", so a row titled with the word triggered it. The notice now matches only the witness refusal's own text, "needs a non-empty witness".
+- Witness, through the relay on the working tree (`/tmp/gm-scratch/gm-new/finish-rows/witness.mjs`, `witness-result.json`). A, run 2026-11-02-16-41-44-dad598: one row open. finish was refused with the row named, one refusal event with actionSeq 10, and no rule notice. run_code still answered. finish with stopRows ended the run, and the end event's gaps hold "open row prd-mvzhkujjf018: open row for the finish witness". B, run 2026-11-02-16-41-28-da7d18, no row: finish was accepted and the run ended.
+- The gm-continue witness (`2026-11-02-16-37-29-e8ce42`) finished with rows open. That finish is refused now, which is the behaviour this change is for.
+- Not decided here: the shared-run question. A child agent on a parent's connection can still send `finish`, and the refusal for open rows does not check the sender.

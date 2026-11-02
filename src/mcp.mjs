@@ -60,7 +60,7 @@ const TOOLS = [
   { name: 'job_start', description: 'Start a shell command as a named background job and return at once. Poll it with job_status.', inputSchema: objectSchema({ job: text, command: text, timeoutMs: number }, ['job', 'command']) },
   { name: 'job_status', description: 'State (running, exited or killed), exit code and output tail of a job. waitMs polls until the job leaves running, at most 30000 ms. offset returns a page of 20000 characters of the output from that offset, with next.', inputSchema: objectSchema({ job: text, waitMs: number, offset: number }, ['job']) },
   { name: 'query_log', description: 'Read the run events, as JSON. after is a seq: only the events after it are read (since), so after the last seq you saw reads on from there. kind keeps events of one kind, and fromMono and toMono keep events in a time window (monotonic milliseconds). last N returns the newest N matching events instead, oldest first, at most 50, and has no next. js is a JavaScript expression over the matching events, and defaults to returning them: js sees one window of at most 1000 events or 4 MB of log. Without js, a reply holds at most 50 events and about 20 KB. When events remain, next is the seq to pass back as after; with js, next is set when the window ends before the end of the log. An unknown argument is refused, and the reply names the arguments query_log takes.', inputSchema: objectSchema({ js: text, kind: text, fromMono: number, toMono: number, after: number, last: number }, []) },
-  { name: 'finish', description: 'End the run. witness is one string that quotes the evidence you observed. gaps optionally lists, one string each, what the run did not check; the end event logs them. finish is refused while a background run is running, and stopBackground true kills it first.', inputSchema: objectSchema({ witness: text, gaps: { type: 'array', items: text }, stopBackground: { type: 'boolean' } }, ['witness']) },
+  { name: 'finish', description: 'End the run. witness is one string that quotes the evidence you observed. gaps optionally lists, one string each, what the run did not check; the end event logs them. finish is refused while a background run is running, and stopBackground true kills it first. finish is refused while a PRD or question row is open, and names the rows; stopRows true ends the run anyway, with each open row listed as a gap in the end event.', inputSchema: objectSchema({ witness: text, gaps: { type: 'array', items: text }, stopBackground: { type: 'boolean' }, stopRows: { type: 'boolean' } }, ['witness']) },
   ...SEARCH_TOOLS,
   ...WIKI_TOOLS,
   ...REVIEW_TOOLS,
@@ -266,7 +266,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
   function watchCall(name, out) {
     if (name === 'next_context') return;
     if (name === 'finish') {
-      if (out.refused === true && String(out.error).includes('witness')) noteRule(4, `finish was refused: ${out.error}`);
+      if (out.refused === true && String(out.error).includes('needs a non-empty witness')) noteRule(4, `finish was refused: ${out.error}`);
       else if (out.ok === true && stepCalls === 0) noteRule(3, 'finish was called with no call in its step');
       return;
     }
@@ -439,6 +439,12 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     if (running.length > 0 && args.stopBackground !== true) {
       return refuse('finish', args, `background run ${running.join(', ')} is still running; job_status watches it, and finish with stopBackground: true kills it`);
     }
+    // An open row refuses the finish and is named, so the run stays open for the work. stopRows true ends the run with each open row listed as a gap.
+    const open = await tools.openRows();
+    if (open.length > 0 && args.stopRows !== true) {
+      const names = open.slice(0, 5).map((row) => `${row.id} ${row.title}`).join('; ');
+      return refuse('finish', args, `${open.length} row(s) open: ${names}${open.length > 5 ? '; ...' : ''}. Work them, or finish with stopRows: true to end with them listed as gaps`, rpcId);
+    }
     if (args.stopBackground === true) tools.stopBodies('stopBackground');
     stop('finished');
     const out = await act('finish', args, access, () => tools.run('finish', args), undefined, rpcId);
@@ -446,7 +452,8 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     const { lintWiki } = await import('./wiki.mjs');
     const lint = lintWiki(workspace);
     log.append('lint', { problems: lint.problems, pages: lint.pages });
-    await endRun('finished', out.output, args.gaps);
+    const gaps = args.stopRows === true ? [...(args.gaps ?? []), ...open.map((row) => `open row ${row.id}: ${row.title}`)] : args.gaps;
+    await endRun('finished', out.output, gaps);
     return out;
   }
 
