@@ -78,7 +78,7 @@ This is what you build and codify. Single worker first: DESIGN.md direction 6 sa
 
 ## Continuation
 
-Every continuation starts with this, before new work.
+Every continuation starts with this, before new work. The gm-continue skill (skills/gm-continue/SKILL.md) runs it at each finish.
 
 - A project fact that troubleshooting found (how the code behaves, a limit, a surprise) gets one line under "Facts found by troubleshooting", with its DESIGN.md section.
 - A process lesson (how to witness, commit, recover a collision, use scratch space) goes to skills/dev/SKILL.md, in the section it belongs to.

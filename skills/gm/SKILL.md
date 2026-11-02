@@ -9,6 +9,8 @@ Flow rule. A multi-step change is built as one batch, all steps first, then witn
 
 Setup invariant. The gm-continue setup runs before any work, and this skill takes its task from the setup's list.
 
+Finish invariant. Before you send `finish`, load skill gm-continue. It lists the remaining work, fills any row that is missing, and either sends this run back here or lets it finish. If it lists work, keep working in this run, and do not finish.
+
 The served tools are three: next_context, run_code and finish. All the work is done in run_code.
 
 ## Rules
@@ -29,7 +31,7 @@ These are the rules of every run. next_context returns them with each step, and 
 4. A failed verb call returns `{ ok: false, error }` as data, and it does not stop the body. For per-call isolation, wrap any step that may throw in `gm.try`: `await gm.try(async () => ...)` returns the value, or `{ ok: false, error }` if the function throws.
 5. Background work: `await gm.job_start({ job: 'build', command })` starts a job, and `await gm.job_status({ job: 'build', waitMs: 30000 })` waits for it. Call it again only if the job is still running. A body still running after its budget (180 seconds by default, `timeoutMs` at most 300000) becomes a background run: run_code returns its job id at once, with the verb results logged so far. `gm.job_status` with that id and `waitMs` returns its value when it ends. finish is refused while a background run is running and names it; finish with `stopBackground: true` kills it first. Each step's next_context also lists `jobsOpen`: every open job with its state and `sinceProgressMs`, and `stuck` is true for a job that has made no progress for three minutes. `jobsStuck` and `jobsUnstuck` name the jobs that changed since your last step. `jobsRunning` carries each reminder that a background run has made, and each reminder has `prd`: the PRD rows' `total`, the `open` count, the first five open rows as `window` (`id` and `title`), and `more`, the number of open rows past the window.
 6. Verify the work: run what you built and read its output.
-7. Finish outside `run_code`, with `finish` and a witness. The witness quotes the evidence you observed: command output, file content or a query result. Quote only tool output, labelled with the tool that returned it. If gm.search did not return the target, say so. Never present a gm.read_file result as a gm.search result. Send `finish` after the run_code calls in the step have returned, not in the same body. The run belongs to this session: `finish` closes only this session's run, and the next session starts a new run.
+7. Load gm-continue first, as the finish invariant says. Then finish outside `run_code`, with `finish` and a witness. The witness quotes the evidence you observed: command output, file content or a query result. Quote only tool output, labelled with the tool that returned it. If gm.search did not return the target, say so. Never present a gm.read_file result as a gm.search result. Send `finish` after the run_code calls in the step have returned, not in the same body. The run belongs to this session: `finish` closes only this session's run, and the next session starts a new run.
 8. If the task cannot be done, finish with a witness that states why, with the evidence.
 
 ## Bundling a step
