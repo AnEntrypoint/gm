@@ -446,6 +446,16 @@ Witness, run witness2-1793595580169: two sessions of 60 steps with the same scri
 
 Not measured here: the MCP round trip of query_log over a log of 3000 events. The in-process time was 0.065 ms at 3000 events on the MCP logs, measured earlier.
 
+## Event delivery: channels rejected, next_context stays (2026-11-02)
+
+The owner asked whether events could be pushed into the agent through MCP notifications, with a lookup that clears what it returns, instead of the feed. Checked against the Claude Code channels documentation (code.claude.com/docs/en/channels and /channels-reference, read 2026-11-02). A channel server's notifications/claude/channel events reach the model as channel tags. A custom server is outside the preview allowlist, so it needs the development flag --dangerously-load-development-channels server:<name>. The flag is ignored under -p, and events arrive only while the session is open, batched into the next turn.
+
+Probe, in scratch and outside the repository (/tmp/gm-scratch/gm-new/channel-probe): over stdio, the server advertised the channel capability, pushed a notification each period, and its lookup returned each pending event once, in order (events 1 to 3, then 4 and 5). Nothing from the probe is committed. The live part, whether the agent sees a pushed event without a tool call, was not run.
+
+Decision (gm, 2026-11-02): no channel. A channel depends on a Claude Code development flag and on the host's experimental channel support. That is a feature that only one harness has, and gm-new uses no harness-only feature. It gains nothing either: the events batch into the agent's next turn, which next_context already does.
+
+Accepted (gm, 2026-11-02): the lookup semantics, delivered through next_context and not a new verb. Each event the agent has not seen is delivered once in next_context, within the horizons of the approved compact feed, and query_log reaches anything older. This is the feed change already decided (Feed compaction above), so no new Decided change is needed.
+
 ## Relay list notices (2026-11-02)
 
 After a swap of the supervisor, the relay compares the new worker's tools, prompts and resources lists with the lists the host last fetched. The relay keeps a digest of each host list response, so the comparison is against what the host has seen, not against the previous worker. For each kind that differs, it sends the host that kind's list_changed notice. A kind the host never fetched gets none, and nothing is sent when nothing differs. The supervisor's own list notices during a swap are dropped, since the relay decides them. A restart the supervisor makes from a source change still sends its three notices, as before.
