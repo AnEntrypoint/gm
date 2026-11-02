@@ -649,6 +649,28 @@ What this does not show: that taskkill behaves the same on Windows. Wine impleme
 
 Rule re-injection and the live witness are a different limit, and Wine does not touch them: they need live model trials.
 
+## Efficiency audit (2026-11-02, gm request)
+
+Each item was measured before and after with the same harness, in scratch under `/tmp/gm-scratch/gm-new/audit`, and the results are the JSON files named in the table. Each item that showed a gain is committed through `audit/ship.sh`, which runs the gate, takes its exit code, and commits and pushes only when that code is zero. Items that did not show a gain are dropped and say why.
+
+| # | Item | Before | After | Commit | Run ids (scratch labels) |
+|---|---|---|---|---|---|
+| 1 | Relay as a pipe | relay.mjs 15671 bytes, 420 lines | 4075 bytes, 85 lines; relay hash `28b8226b...3421` | da34588 | witness `2026-11-02-08-38-48-a16efb` |
+| 2 | Lazy-load gate, acorn, wiki, review, wiki lint | spawn to first next_context 76 ms, RSS 61.1 MB | 63 ms, 59.2 MB | eb99897 | `startup-base-head`, `startup-lazy-1`; checks `lazy-check` pass |
+| 3 | Batch log writes | 1002 appends per 1000 events (top), 1004 (body); 411 and 347 ms per 1000 calls | 501 (top), 7 (body); 399 and 318 ms | db20205 | `calls-base-top`, `calls-batch-top`, `calls-base-body`, `calls-batch-body`; same events, only the summary's timings differ |
+| 4 | Search listing kept by the index's stat | median 10.4 ms per search, 79 lstat per call | 5.5 ms, 79 lstat per call | 702009d | `search-base-search`, `search-cached-search`; freshness check `search-fresh` passes |
+| 5 | Stuck check only while a job or body is open | idle: 10 ms CPU and 28 voluntary switches per minute | 0 ms and 16 switches | d96bb5a | `idle-base-idle`, `idle-idle-after`; job check passes |
+| 6 | Retention for runs/ | 2757871 bytes over 502 runs; 299515 bytes per 1000 completed-run events | 857860 bytes after the age sweep; 70294 bytes per 1000 events gzipped | 35b869a | `retain-check` (copy of runs, 452 completed runs compressed, event counts equal) |
+| 7 | Memoize the prefix | hash 0.018 ms per step; next_context median 0.327 ms | dropped | none | `ctx-base-ctx` |
+
+Notes that go with the table:
+- Item 2: the saving is 2 MB and 13 ms. The worker's largest remaining loads are the run-code runtime, and the modules that the server needs for its tool list at startup.
+- Item 3: the log is still the record. A reply is written only after the events so far are in the file. A crash between replies can lose the buffered events, which were not yet replied to. The events of a long body go to the file at its start, at each 256 events, and at each reply.
+- Item 4: the per-file check stays, so an edit is seen at once. The stats per call did not fall, so the stat part of the target is not met. The code analysis is not changed: it lists untracked files too, which an index key cannot see, so keying it on the index would hide new files.
+- Item 5: after the change the relay shows no voluntary switches, and the worker and the core still show about 8 a minute each. Their cause is not traced. The hourly update check is kept. Both are small, and this item does not claim zero wake-ups.
+- Item 6: nothing is deleted. The size cap compresses the oldest completed runs until the total is under the cap, and it reports `overCap` when it cannot. A cap that would delete is the owner's decision.
+- Item 7: the hash costs 0.018 ms of a 0.327 ms median next_context, and a model step takes seconds. The path is not hot, so the item is dropped.
+
 ## Relay pipe and core (2026-11-02, gm request, one reconnect)
 
 This supersedes the relay and supervisor bullets above. The relay has no swap, list, or update logic, so a change to the core needs no reconnect. The relay itself needs one reconnect, and then it does not change.
