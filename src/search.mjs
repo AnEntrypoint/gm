@@ -1,5 +1,7 @@
 import { execFile } from 'node:child_process';
+import { statSync } from 'node:fs';
 import { readFile, lstat } from 'node:fs/promises';
+import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { resultZone1 } from './compact.mjs';
 
@@ -170,12 +172,30 @@ export function createSearchVerbs({ root, confine }) {
   }
 }
 
+// The listing of tracked paths changes only when the git index changes, so it is kept by the index's mtime and size, which is one stat. A
+// change to a file's content is still seen, because loadFile checks each file's own signature. A path added or removed comes with an index
+// change, so a stale listing cannot hide one.
+const listings = new Map();
 async function trackedFiles(root, listing) {
+  const key = indexKey(root);
+  const known = listings.get(listing.name);
+  if (key !== null && known !== undefined && known.key === key && known.root === root) return { paths: known.paths };
   try {
     const { stdout } = await execFileAsync('git', listing.args, { cwd: root, maxBuffer: MAX_LIST_BYTES, timeout: LIST_TIMEOUT_MS });
-    return { paths: stdout.split('\0').filter((path) => path !== '') };
+    const paths = stdout.split('\0').filter((path) => path !== '');
+    if (key !== null) listings.set(listing.name, { key, root, paths });
+    return { paths };
   } catch {
     return { error: 'search and grep need a git repository: git ls-files failed' };
+  }
+}
+
+function indexKey(root) {
+  try {
+    const info = statSync(join(root, '.git', 'index'));
+    return `${info.mtimeMs}:${info.size}`;
+  } catch {
+    return null;
   }
 }
 
