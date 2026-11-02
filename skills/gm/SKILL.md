@@ -111,6 +111,7 @@ const res = await gm.run_shell({ command: `node src/cli.mjs query --run ${childR
 return res.output;
 ```
 
-4. The child shares the workspace with you. Do not give two sessions a write to the same file: give the child its own files, or wait until it has finished before you write them.
+4. The child shares the workspace with you, and you both edit it at the same time. Do not branch, do not use worktrees, and do not claim files to keep sessions apart. An edit that collides is repaired after the fact, which costs far less than keeping sessions apart.
+5. When the child has finished and your own edits are in, run the validation once over the whole result: the checks the task names. Read its output. If it fails, repair in one pass, and run the validation again. Every hand-off ends this way, and your finish witness quotes the last validation run.
 
 Never print, store or request secrets or API keys.
