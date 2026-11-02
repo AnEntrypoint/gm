@@ -592,6 +592,14 @@ Named limits, added:
 - Between a failed restart and the rollback, the supervisor keeps retrying the broken code, so calls in that window get the supervisor's error reply.
 - The tools/relay.mjs and tools/supervise.mjs changes go live only at the owner's reconnect. The witnesses below start the relay directly.
 
+## Publication (2026-11-02)
+
+The owner decided to make the repository public, so that GitHub Pages can serve the manual. The Pages plan does not allow Pages on a private repository, which GitHub reported when Pages was first requested (HTTP 422).
+
+- Before the change, a scan of the tracked files and of every commit in the history (159 commits) found no credentials or private keys.
+- Repository: public. Pages: built from main, folder /docs, at https://anentrypoint.github.io/gm-new/. The first build finished in about a minute, and the page served the manual with HTTP 200.
+- The "private" remote rule in AGENTS.md is not changed by this record. It still says private, and the owner decides whether to edit that file.
+
 ## Measured
 
 - Update safety, witnessed (run update3/run-1793603564, real git repositories, final code): benign pull updated; a commit that breaks syntax was rejected, and the checkout was untouched; the same commit on the next check was refused; a dirty checkout gave dirty with HEAD unchanged; a diverged history gave diverged; an upstream revert was pulled; a busy callback gave waiting with HEAD unchanged, and the pull landed once it cleared; an unreachable origin gave offline; the timer logged 2 checks in 2.6 s and none after stop. The log for the dirty case reads "origin main is 1 commit(s) ahead, but the checkout has changes to tracked files, so nothing was pulled".
