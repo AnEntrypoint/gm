@@ -610,6 +610,25 @@ The owner decided to make the repository public, so that GitHub Pages can serve 
 - Repository: public. Pages: built from main, folder /docs, at https://anentrypoint.github.io/gm-new/. The first build finished in about a minute, and the page served the manual with HTTP 200.
 - The "private" remote rule in AGENTS.md is not changed by this record. It still says private, and the owner decides whether to edit that file.
 
+## Windows under Wine (2026-11-02)
+
+The owner asked for the Windows tests to be run under Wine. Wine is not a Windows host, so this checks the tree kill on Wine 10.0, not on Windows, and the named limit stays open.
+
+Set-up: the Wine 10.0 that the owner's office folder ships, run through its wrapper script, which clears the sandbox's LD_PRELOAD interposers (the raw loader aborted with "free(): invalid pointer"). The Windows build of Node was v24.22.0 for win-x64, and its SHA-256 matched the official SHASUMS file.
+
+Test (run on the Wine prefix's C: drive, the repo's exec.mjs copied in, record in /tmp/gm-scratch/gm-new/wine/record/results.json): runCommand starts a shell command that starts a grandchild Node process and then sleeps, with a 4 s timeout, through the same killGroup path the repo uses on Windows (taskkill /T /F).
+
+- Positive control: the test process is alive by process.kill(pid, 0).
+- Before the timeout, at 2 s: the grandchild is alive.
+- After the timeout: runCommand reports timedOut, and both the parent and the grandchild are gone.
+- Clean exit: a plain command returns exit code 0 through runCommand.
+
+Wine limits found along the way, recorded so that nobody repeats them: a child started with an explicit working directory fails under this Wine (any value of cwd, including C:), so the test runs in the default directory and uses absolute paths; stdout through a pipe is unusable (EBADF), so results are written to a file; tasklist writes UTF-16, so its text output does not match a pid, which is why the liveness check is process.kill(pid, 0).
+
+What this does not show: that taskkill behaves the same on Windows. Wine implements taskkill itself, so a Windows host is still needed to close the limit. The row unknown-windows-kill stays blocked, and its body records the Wine result.
+
+Rule re-injection and the live witness are a different limit, and Wine does not touch them: they need live model trials.
+
 ## Measured
 
 - Update safety, witnessed (run update3/run-1793603564, real git repositories, final code): benign pull updated; a commit that breaks syntax was rejected, and the checkout was untouched; the same commit on the next check was refused; a dirty checkout gave dirty with HEAD unchanged; a diverged history gave diverged; an upstream revert was pulled; a busy callback gave waiting with HEAD unchanged, and the pull landed once it cleared; an unreachable origin gave offline; the timer logged 2 checks in 2.6 s and none after stop. The log for the dirty case reads "origin main is 1 commit(s) ahead, but the checkout has changes to tracked files, so nothing was pulled".

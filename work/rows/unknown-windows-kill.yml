@@ -1,7 +1,7 @@
 id: "unknown-windows-kill"
 kind: "unknown"
 title: "Windows process-group kill unverified"
-body: "Blocked: no Windows machine here."
+body: "Blocked: no Windows machine here. Under Wine 10.0 (not a Windows host), the tree kill through runCommand worked: the grandchild was alive at 2 s, and both it and its parent were gone after the 4 s timeout, with a process.kill(pid, 0) control (DESIGN.md, Windows under Wine). The limit stays open until a Windows host runs the same test."
 status: "blocked"
 owner: false
 triggerMet: false
