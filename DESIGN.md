@@ -592,11 +592,11 @@ Named limits, added:
 - Between a failed restart and the rollback, the supervisor keeps retrying the broken code, so calls in that window get the supervisor's error reply.
 - The tools/relay.mjs and tools/supervise.mjs changes go live only at the owner's reconnect. The witnesses below start the relay directly.
 
-## Rule re-injection (2026-11-02, owner's delegation)
+## Rule re-injection (2026-11-02, joint decision: gm and the agent)
 
 The gap: the rules reached the model only through next_context results, which are part of the conversation. If the host summarises the conversation partway through a step, the rules go with the summary until the next next_context call.
 
-The fix: the rules are also in the server's instructions, the text the host puts in the system prompt on every request. The system prompt is not summarised. The rules are appended to the instructions for both surfaces, after the surface's own text. They stay in rules.md and in next_context, as before. The cost is about 650 bytes in each request's system prompt, which is cached.
+The fix: the rules are also in the server's instructions, the text the host puts in the system prompt on every request. The system prompt is not summarised. The rules are appended to the instructions for both surfaces, after the surface's own text. They stay in rules.md and in next_context, as before. The whole instructions text is 960 bytes, of which the rules are 647, and it sits in each request's system prompt, which is cached. Reason: the rules cost about 960 bytes in the system prompt, which is cheap, and they stay with the run.
 
 Witness, delivery (run rules/run-1793604554, JSON-RPC against the repository's server): the instructions contain the rules verbatim, the rules are numbered 1 to 7, and next_context returns the same text as the run's rules.md. The instructions are 960 bytes.
 
