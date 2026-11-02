@@ -1,5 +1,6 @@
 import { appendFileSync, closeSync, existsSync, openSync, readFileSync, readSync } from 'node:fs';
 import { performance } from 'node:perf_hooks';
+import { readLogText } from './retain.mjs';
 
 const QUERY_CAP = 20000;
 // The events kept in memory, the last ones. Any other event is read from the file at its offset.
@@ -129,8 +130,9 @@ function readRange(file, begin, end) {
 }
 
 export function readEvents(file) {
-  if (!existsSync(file)) return [];
-  return readFileSync(file, 'utf8')
+  const text = readLogText(file);
+  if (text === null) return [];
+  return text
     .split('\n')
     .filter((line) => line.trim() !== '')
     .map((line) => JSON.parse(line));

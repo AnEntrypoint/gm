@@ -7,6 +7,7 @@ import { createInterface } from 'node:readline';
 import { DEFAULT_WITNESS, prefixShaOf, renderTools } from './prompt.mjs';
 import { isDirectory, loadTask, newRunId, openRun, ROOT, RUNS } from './run.mjs';
 import { flushAllLogs } from './log.mjs';
+import { sweepRuns } from './retain.mjs';
 import { conflicts, createTools, loggedReply, OUTPUT_PAGE, DEFAULT_STUCK_MS, DEFAULT_MONITOR_MS } from './tools.mjs';
 import { GIT_TOOLS } from './git.mjs';
 import { ROW_TOOLS } from './rows.mjs';
@@ -678,6 +679,11 @@ async function main(argv) {
   logTools(log, resumed, servedTools(surface));
 
   sweepEndedCode(dirname(runDir), runDir);
+  // Completed runs older than the retention age are compressed, and the sweep is logged here. Nothing is deleted. The sweep runs at start only.
+  const retained = sweepRuns(RUNS, { current: runDir });
+  if (retained.compressed.length > 0 || retained.overCap) {
+    log.append('retention', { compressed: retained.compressed.length, bytesBefore: retained.bytesBefore, bytesAfter: retained.bytesAfter, overCap: retained.overCap, runs: retained.compressed.slice(0, 20).map((entry) => basename(entry.run)) });
+  }
   const session = createSession({ workspace, runDir, log, task, maxSteps, maxInflight, resume, jobLifetimeMs, stuckMs, monitorMs, recovery: recovery && recovery.open.length > 0 ? recovery : null, history, surface });
   const lines = createInterface({ input: process.stdin, crlfDelay: Infinity });
   lines.on('line', session.accept);

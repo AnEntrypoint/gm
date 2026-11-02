@@ -5,6 +5,7 @@ import { join, resolve } from 'node:path';
 import { runLoop } from './loop.mjs';
 import { createModel } from './models.mjs';
 import { readEvents, runQuery } from './log.mjs';
+import { readLogText } from './retain.mjs';
 import { buildPrompt, DEFAULT_RULES, DEFAULT_WITNESS } from './prompt.mjs';
 import { createTools } from './tools.mjs';
 import { createRun, isDirectory, loadTask, newRunId, RUNS } from './run.mjs';
@@ -109,7 +110,7 @@ function query(flags) {
   if (!flags.run || !/^[A-Za-z0-9_-]+$/.test(flags.run)) throw new Error('--run <id> is required');
   if (flags.js === undefined) throw new Error('--js "<filter>" is required');
   const file = join(RUNS, flags.run, 'log.jsonl');
-  if (!existsSync(file)) throw new Error(`no log for run ${flags.run}`);
+  if (readLogText(file) === null) throw new Error(`no log for run ${flags.run}`);
   const result = runQuery(readEvents(file), flags.js);
   if (!result.ok) throw new Error(`query failed: ${result.error}`);
   console.log(result.output);
