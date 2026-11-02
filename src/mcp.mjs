@@ -366,6 +366,14 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     return act('next_context', {}, access, () => context(step), ({ ok, error, prefixSha, total }) => ({ ok, error, prefixSha, total }), rpcId);
   }
 
+  // The prefix is the same at every step, except for the rules, which are read again at each step. Its text is built and hashed only when
+  // the rules change. A step whose rules are the same reuses the hash, so no step builds the tool text again.
+  let prefixMemo = null;
+  function prefixShaFor(rules) {
+    if (prefixMemo === null || prefixMemo.rules !== rules) prefixMemo = { rules, sha: prefixShaOf({ rules, task, witness: DEFAULT_WITNESS, tools: servedText }) };
+    return prefixMemo.sha;
+  }
+
   async function context(step) {
     const rules = await readFile(join(runDir, 'rules.md'), 'utf8');
     const recoveryNow = pendingRecovery === null ? undefined : recoveryNote(pendingRecovery);
@@ -397,7 +405,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
       rules,
       task,
       witness: DEFAULT_WITNESS,
-      prefixSha: prefixShaOf({ rules, task, witness: DEFAULT_WITNESS, tools: servedText }),
+      prefixSha: prefixShaFor(rules),
       total: log.count(),
       ...(taken.records.length > 0 ? { pending: taken.records } : {}),
       pendingFile: join(runDir, PENDING_FILE),
