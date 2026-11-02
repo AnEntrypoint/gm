@@ -474,6 +474,11 @@ Witnesses, run on a copy of the working tree (/tmp/gm-scratch/gm-new/next-tree) 
 - queue-1793600107424: of five bodies that wait 4 seconds with four slots, the fifth is listed as queued, not stuck, with no job-stuck before its thread starts (body-started at seq 28).
 - Regression on the copy, same seqs as before: budget (returns at 2055 ms, started at seq 7, exited at seq 12), lifetime (killed at seq 19, 9 calls before and 0 after), finish, restart (seq 9 and 10), crash (seq 12), shell (SIGKILL), cap (replies in order, at most 4 running, RSS 136 MB at peak) and capstop (no queued body starts, six killed).
 
+## Decisions and named limits, 2026-11-02 (gm)
+
+- The verb rename is decided against (row prd-verb-rename, closed). gm.verbs() stays, and it is not renamed to gm.list and gm.describe. Reason: the discovery cost is measured at 9654 bytes, and the signatures of the ten most-used verbs in run_code's description already cover them. A split would change the served surface for a benefit that has not been measured.
+- No long live run has happened yet (named limit, row unknown-long-live-run, held). Trigger: the owner decides whether a long live run is required. The scripted long-horizon witnesses (run run-1793560605024, /tmp/gm-scratch/gm-new/longhorizon) are scripted evidence only. They are not a long live run.
+
 ## Relay list notices (2026-11-02)
 
 After a swap of the supervisor, the relay compares the new worker's tools, prompts and resources lists with the lists the host last fetched. The relay keeps a digest of each host list response, so the comparison is against what the host has seen, not against the previous worker. For each kind that differs, it sends the host that kind's list_changed notice. A kind the host never fetched gets none, and nothing is sent when nothing differs. The supervisor's own list notices during a swap are dropped, since the relay decides them. A restart the supervisor makes from a source change still sends its three notices, as before.

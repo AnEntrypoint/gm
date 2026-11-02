@@ -1,0 +1,8 @@
+id: "unknown-long-live-run"
+kind: "unknown"
+title: "No long live run yet"
+body: "Named limit. No long live run has happened yet. The scripted long-horizon witnesses (run-1793560605024, /tmp/gm-scratch/gm-new/longhorizon) are scripted evidence only, and they are not a long live run. Trigger: the owner decides whether a long live run is required."
+status: "blocked"
+owner: true
+triggerMet: false
+createdAt: "2026-11-02T08:50:00.000Z"
