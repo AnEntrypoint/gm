@@ -1,7 +1,6 @@
 // The review tools: a packet of a spec and its references, a reviewer's record on it, and the join of records with the commits and
 // ends after them. The reviewer is spawned by the host, which passes its reply in. gm-new records the isolation as host-attested and
 // does not verify it. The functions are in review.mjs.
-import { reviewJoin, reviewPacket, reviewRecord } from './review.mjs';
 import { resultZone1, resultZone2 } from './compact.mjs';
 
 const OUTPUT_PAGE = 20000;
@@ -49,15 +48,19 @@ export const COMPACT = {
 
 export function createReviewVerbs({ root, log }) {
   return {
-    review_packet(args) {
+    // review.mjs loads on the first review call.
+    async review_packet(args) {
+      const { reviewPacket } = await import('./review.mjs');
       const result = reviewPacket({ root, log, spec: args.spec, refs: args.refs ?? [] });
       return result.ok ? { ok: true, output: JSON.stringify(result) } : result;
     },
-    review_record(args) {
+    async review_record(args) {
+      const { reviewRecord } = await import('./review.mjs');
       const result = reviewRecord({ root, log, packet: args.packet, verdict: args.verdict, reviewer: args.reviewer, notes: args.notes ?? '' });
       return result.ok ? { ok: true, output: JSON.stringify(result) } : result;
     },
-    review_join() {
+    async review_join() {
+      const { reviewJoin } = await import('./review.mjs');
       const text = JSON.stringify(reviewJoin(log.events(), root), null, 1);
       return { ok: true, output: text.length > OUTPUT_PAGE ? `${text.slice(0, OUTPUT_PAGE)}\n(truncated at ${OUTPUT_PAGE} characters)` : text };
     },

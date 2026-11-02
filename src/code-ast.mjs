@@ -6,10 +6,16 @@ import { execFile } from 'node:child_process';
 import { lstat, readFile } from 'node:fs/promises';
 import { posix } from 'node:path';
 import { promisify } from 'node:util';
-import { parse } from 'acorn';
+import { createRequire } from 'node:module';
 import { resultZone1 } from './compact.mjs';
 
 const execFileAsync = promisify(execFile);
+// acorn loads on the first parse, not when the worker starts. createRequire reads the package's CommonJS build, so the parse stays synchronous.
+let acornParse = null;
+function parseSource(text, options) {
+  acornParse ??= createRequire(import.meta.url)('acorn').parse;
+  return acornParse(text, options);
+}
 const SOURCE = /\.(?:js|mjs|cjs|ts)$/;
 const MAX_FILE_BYTES = 1000000;
 const MAX_LIST_BYTES = 64 * 1024 * 1024;
@@ -147,7 +153,7 @@ function analyse(rel, text) {
 function parseJs(text) {
   for (const sourceType of ['module', 'script']) {
     try {
-      return parse(text, { ecmaVersion: 'latest', sourceType, allowHashBang: true });
+      return parseSource(text, { ecmaVersion: 'latest', sourceType, allowHashBang: true });
     } catch {
       // try the next source type
     }

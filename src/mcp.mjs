@@ -16,7 +16,6 @@ import { WIKI_TOOLS } from './wiki-tools.mjs';
 import { REVIEW_TOOLS } from './review-tools.mjs';
 import { runBody, runCodeTool } from './runcode.mjs';
 import { bodyContext } from './exec.mjs';
-import { lintWiki } from './wiki.mjs';
 import { COMPACT as SEARCH_COMPACT } from './search.mjs';
 import { COMPACT as FETCH_COMPACT } from './fetch.mjs';
 import { COMPACT as GIT_COMPACT } from './git.mjs';
@@ -420,6 +419,8 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     if (args.stopBackground === true) tools.stopBodies('stopBackground');
     stop('finished');
     const out = await act('finish', args, access, () => tools.run('finish', args), undefined, rpcId);
+    // The wiki lint loads on the first finish.
+    const { lintWiki } = await import('./wiki.mjs');
     const lint = lintWiki(workspace);
     log.append('lint', { problems: lint.problems, pages: lint.pages });
     await endRun('finished', out.output, args.gaps);

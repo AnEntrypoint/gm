@@ -1,6 +1,5 @@
 // The wiki's write tool. wiki_search is in search.mjs, beside search. wikiWrite refuses a claim whose quote is not in its named
 // source, and it writes nothing when it refuses.
-import { wikiWrite } from './wiki.mjs';
 import { resultZone1 } from './compact.mjs';
 
 const str = { type: 'string' };
@@ -34,7 +33,9 @@ export const COMPACT = {
 
 export function createWikiVerbs({ root, log }) {
   return {
-    wiki_write(args) {
+    async wiki_write(args) {
+      // wiki.mjs loads on the first write.
+      const { wikiWrite } = await import('./wiki.mjs');
       const result = wikiWrite({
         root,
         log,

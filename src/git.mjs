@@ -1,6 +1,5 @@
 import { relative } from 'node:path';
 import { runCommand } from './exec.mjs';
-import { runGate } from './gate.mjs';
 import { errorTypeOf, retrying } from './retry.mjs';
 import { resultZone1, resultZone2 } from './compact.mjs';
 
@@ -130,6 +129,8 @@ export function createGitVerbs({ root, confine, log }) {
       if (typeof message !== 'string' || message.trim() === '') return fail('message must be a non-empty string');
       const scope = pathArgs(paths);
       if (scope.error) return fail(scope.error);
+      // The gate loads on the first commit, so a worker that never commits does not hold it.
+      const { runGate } = await import('./gate.mjs');
       const gate = await runGate(root);
       if (!gate.ok) return { ok: false, error: `refused: the commit gate failed: ${gate.failed.join(', ')}`, gate: gate.checks, notCovered: gate.notCovered };
       const result = await git(['commit', '-m', message, ...scope.args]);
