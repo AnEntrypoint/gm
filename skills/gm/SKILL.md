@@ -11,6 +11,18 @@ Setup invariant. The gm-continue setup runs before any work, and this skill take
 
 The served tools are three: next_context, run_code and finish. All the work is done in run_code.
 
+## Rules
+
+These are the rules of every run. next_context returns them with each step, and the server's instructions carry the same text. This skill holds them word for word as well: a skill is re-attached after a compaction, and the server's instructions are not documented to survive one.
+
+- Work only inside the workspace. A path with a .. segment is refused.
+- Call next_context at the start of every step. Each call is one step; stepsLeft counts the steps the run has left.
+- Verify before you finish: run what you built and read its output.
+- finish needs a witness: one string that quotes the evidence you observed. Calls sent with finish may be refused.
+- Events older than the window are not in next_context. Query them with gm.query_log. Do not guess.
+- Never print, store or request secrets, environment variables or API keys.
+- If the task cannot be done, finish with a witness that states why, with the evidence.
+
 1. Start every step with `next_context`. It returns the rules, the task, the witness requirement, the events new since your last step in full, the older events in compact form, `run` (this run's id), `stepsLeft` and `prefixSha`. `gm.query_log` reaches every event. Follow the rules it returns.
 2. Do the work in one `run_code` call. Its body is JavaScript in the project, and each verb is a function on `gm`: `await gm.read_file({ path: 'a.txt' })`, `await gm.write_file({ path: 'c.txt', content })`, `await gm.run_shell({ command: 'npm test' })`. The verb list is in run_code's description, and `gm.verbs()` returns each verb's description and input schema as data.
 3. Put independent calls in one body with `Promise.all`, for example `const [a, b] = await Promise.all([gm.read_file({ path: 'a.txt' }), gm.read_file({ path: 'b.txt' })]);`. Do not put a call in the body that needs the result of another call in the same batch.

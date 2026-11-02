@@ -4,7 +4,7 @@ import { existsSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { basename, dirname, join, resolve } from 'node:path';
 import { createInterface } from 'node:readline';
-import { DEFAULT_WITNESS, prefixShaOf, renderTools } from './prompt.mjs';
+import { DEFAULT_WITNESS, MCP_RULES, prefixShaOf, renderTools } from './prompt.mjs';
 import { isDirectory, loadTask, newRunId, openRun, ROOT } from './run.mjs';
 import { flushAllLogs } from './log.mjs';
 import { clearPending, onPendingAppended, PENDING_FILE, takePending } from './pending.mjs';
@@ -48,17 +48,6 @@ const DEFAULT_JOB_LIFETIME_MS = 1800000;
 // The most open jobs a next_context reply lists. The rest are counted in jobsOpenMore.
 const OPEN_LIST = 20;
 const USAGE = 'usage: node src/mcp.mjs --workspace <dir> [--task <file-or-text>] [--run-dir <dir>] [--max-steps N] [--max-inflight N] [--job-lifetime-ms N] [--stuck-ms N] [--monitor-ms N] [--notice-ms N] [--surface tools|code]';
-
-const MCP_RULES = `# Rules
-
-1. Work only inside the workspace. A path with a .. segment is refused.
-2. Call next_context at the start of every step. Each call is one step; stepsLeft counts the steps the run has left.
-3. Verify before you finish: run what you built and read its output.
-4. finish needs a witness: one string that quotes the evidence you observed. Calls sent with finish may be refused.
-5. Events older than the window are not in next_context. Query them with query_log. Do not guess.
-6. Never print, store or request secrets, environment variables or API keys.
-7. If the task cannot be done, finish with a witness that states why, with the evidence.
-`;
 
 const text = { type: 'string' };
 const number = { type: 'number' };

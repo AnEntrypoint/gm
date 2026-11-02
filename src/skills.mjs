@@ -7,6 +7,7 @@ import { FETCH_TOOLS } from './fetch.mjs';
 import { GIT_TOOLS } from './git.mjs';
 import { ROW_TOOLS } from './rows.mjs';
 import { SEARCH_TOOLS } from './search.mjs';
+import { MCP_RULES } from './prompt.mjs';
 
 // The default surface serves next_context, run_code and finish, and every other verb is a function on gm inside run_code. A skill
 // that names a verb or a tool without the gm. prefix names a tool the default does not serve, so the gate refuses it. The names are
@@ -17,7 +18,13 @@ export function unservedNames() {
   return [...FILE_TOOLS, ...SEARCH_TOOLS, ...WIKI_TOOLS, ...REVIEW_TOOLS,...FETCH_TOOLS, ...CODE_TOOLS, ...GIT_TOOLS, ...ROW_TOOLS].map((tool) => (typeof tool === 'string' ? tool : tool.name));
 }
 
-// The skills under skills/, each SKILL.md. A bare name of an unserved tool, that is not written as gm.<name>, is a finding.
+// The rules of an MCP run, one per line, without their numbers.
+export function ruleBodies() {
+  return MCP_RULES.split('\n').filter((line) => /^\d+\. /.test(line)).map((line) => line.replace(/^\d+\. /, ''));
+}
+
+// The skills under skills/, each SKILL.md. A bare name of an unserved tool, that is not written as gm.<name>, is a finding. The gm skill
+// holds each rule word for word. The check reads the skill without its gm. prefix, so a verb may be written as gm.query_log.
 export function skillCheck(root) {
   const dir = join(root, 'skills');
   if (!existsSync(dir)) return { ok: true, detail: 'no skills' };
@@ -31,6 +38,10 @@ export function skillCheck(root) {
     const text = readFileSync(file, 'utf8');
     for (const name of names) {
       if (new RegExp(`(?<![\\w.])${name}\\b`).test(text)) findings.push(`${skill} names ${name} without gm.`);
+    }
+    if (skill === 'gm') {
+      const plain = text.replace(/\bgm\./g, '');
+      for (const rule of ruleBodies()) if (!plain.includes(rule)) findings.push(`gm skill lacks rule: ${rule.slice(0, 60)}`);
     }
   }
   return findings.length ? { ok: false, detail: findings.slice(0, 3).join(' | ') } : { ok: true, detail: `${count} skill(s) name only served tools` };

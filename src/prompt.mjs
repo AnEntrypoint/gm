@@ -11,6 +11,19 @@ export const DEFAULT_RULES = `# Rules
 7. If the task cannot be done, finish with a witness that states why, with the evidence.
 `;
 
+// The rules of an MCP run. They are written to the run's rules.md, served by the server's instructions, and held word for word by the gm
+// skill: the gate checks the skill against this text (src/skills.mjs).
+export const MCP_RULES = `# Rules
+
+1. Work only inside the workspace. A path with a .. segment is refused.
+2. Call next_context at the start of every step. Each call is one step; stepsLeft counts the steps the run has left.
+3. Verify before you finish: run what you built and read its output.
+4. finish needs a witness: one string that quotes the evidence you observed. Calls sent with finish may be refused.
+5. Events older than the window are not in next_context. Query them with query_log. Do not guess.
+6. Never print, store or request secrets, environment variables or API keys.
+7. If the task cannot be done, finish with a witness that states why, with the evidence.
+`;
+
 export const DEFAULT_WITNESS =
   'Finish only with a witness: one string that states the evidence (command output, file content or query result) showing the task is done.';
 
