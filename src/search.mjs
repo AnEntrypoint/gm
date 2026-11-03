@@ -20,9 +20,10 @@ const DEFAULT_LIMIT = 100;
 const MAX_LIMIT = 1000;
 const MAX_PATTERN_CHARS = 200;
 const MODES = ['literal', 'regex', 'word'];
+const MODE_ALIASES = new Map([['content', 'literal']]);
 // The characters that mean something in a regex and nothing in a literal. A literal pattern with one of them that matches nothing gets a hint
 // that names regex mode, so a zero result is not silent.
-const REGEX_CHARS = /[|()[\]{}*+?^$\\]/;
+const REGEX_CHARS = /[.|()[\]{}*+?^$\\]/;
 const TRACKED = { name: 'tracked', args: ['ls-files', '-z'], cached: true };
 const WIKI = { name: 'wiki', args: ['ls-files', '-z', '-co', '--exclude-standard', '--', 'wiki'], cached: false };
 const STAMP_SETTLE_MS = 3000;
@@ -49,7 +50,7 @@ export const SEARCH_TOOLS = [
   },
   {
     name: 'grep',
-    description: `Find text in the files under path: the workspace by default, or a file or directory of it. A path inside the workspace searches its git-tracked files (or, outside a git repository, every file under it); a path outside the workspace is walked and its hits show absolute paths. files is git or walk, the source used. mode is literal (default), regex, or word (a whole identifier). Returns path:line text. ignoreCase is optional; limit is 1 to 1000, default 100. Paths under node_modules/ or vendor/ are skipped unless vendor is true; a walk also skips dot-directories and runs/. ${ROOT_NOTE}`,
+    description: `Find text in the files under path: the workspace by default, or a file or directory of it. A path inside the workspace searches its git-tracked files (or, outside a git repository, every file under it); a path outside the workspace is walked and its hits show absolute paths. files is git or walk, the source used. mode is literal (default; also named content), regex, or word (a whole identifier). Returns path:line text. ignoreCase is optional; limit is 1 to 1000, default 100. Paths under node_modules/ or vendor/ are skipped unless vendor is true; a walk also skips dot-directories and runs/. ${ROOT_NOTE}`,
     inputSchema: obj({ pattern: str, path: str, mode: str, ignoreCase: bool, limit: num, offset: num, vendor: bool, root: str }, ['pattern']),
   },
 ];
@@ -141,9 +142,10 @@ function searcherFor({ root, confine }) {
       return searchWith(WIKI, args);
     },
 
-    async grep({ pattern, path, mode = 'literal', ignoreCase = false, limit = DEFAULT_LIMIT, offset = 0, vendor = false }) {
+    async grep({ pattern, path, mode: requested = 'literal', ignoreCase = false, limit = DEFAULT_LIMIT, offset = 0, vendor = false }) {
       if (typeof pattern !== 'string' || pattern === '') return fail('pattern must be a non-empty string');
       if (pattern.length > MAX_PATTERN_CHARS) return fail(`pattern must be at most ${MAX_PATTERN_CHARS} characters`);
+      const mode = MODE_ALIASES.get(requested) ?? requested;
       if (!MODES.includes(mode)) return fail(`mode must be one of ${MODES.join(', ')}`);
       if (!Number.isInteger(limit) || limit < 1 || limit > MAX_LIMIT) return fail(`limit must be an integer from 1 to ${MAX_LIMIT}`);
       if (typeof vendor !== 'boolean') return fail('vendor must be true or false');
@@ -188,7 +190,7 @@ function searcherFor({ root, confine }) {
       }
       const footer = [`(${total} matches; showing ${found.length ? offset : 0} to ${offset + found.length}; ${next === null ? 'no more' : `next offset ${next}`})`];
       const hint = total === 0 && mode === 'literal' && REGEX_CHARS.test(pattern)
-        ? 'the pattern has regex characters and was matched literally; with mode regex it matches as a pattern'
+        ? 'the pattern has regex characters and was matched as exact text; mode regex matches it as a regular expression'
         : undefined;
       return { ok: true, files: source, output: [...found, ...footer, ...(hint ? [`hint: ${hint}`] : [])].join('\n'), ...(hint ? { hint } : {}) };
     },
