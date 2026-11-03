@@ -1,4 +1,5 @@
 import { execFile } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { statSync } from 'node:fs';
 import { readdir, readFile, lstat } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -22,8 +23,9 @@ const MODES = ['literal', 'regex', 'word'];
 // The characters that mean something in a regex and nothing in a literal. A literal pattern with one of them that matches nothing gets a hint
 // that names regex mode, so a zero result is not silent.
 const REGEX_CHARS = /[|()[\]{}*+?^$\\]/;
-const TRACKED = { name: 'tracked', args: ['ls-files', '-z'] };
-const WIKI = { name: 'wiki', args: ['ls-files', '-z', '-co', '--exclude-standard', '--', 'wiki'] };
+const TRACKED = { name: 'tracked', args: ['ls-files', '-z'], cached: true };
+const WIKI = { name: 'wiki', args: ['ls-files', '-z', '-co', '--exclude-standard', '--', 'wiki'], cached: false };
+const STAMP_SETTLE_MS = 3000;
 // Dependency and vendored trees. grep skips them unless its vendor argument is true.
 const VENDOR = /(^|\/)(node_modules|vendor)\//;
 
@@ -50,9 +52,6 @@ export const SEARCH_TOOLS = [
   },
 ];
 
-// search and wiki_search read text files only: search the git-tracked files, and wiki_search the wiki pages, tracked or not. A line is
-// one BM25 document, so a hit names the line that holds the term. Each file is re-read only when its mtime or size changes, and an
-// index is rebuilt only when a file in its listing changed.
 // A search reads the files, so the second horizon cuts its results: the hits can be found again by searching.
 export const COMPACT = {
   tools: {
@@ -63,7 +62,7 @@ export const COMPACT = {
 };
 
 export function createSearchVerbs({ root, confine }) {
-  const files = new Map();
+  const filesOf = new Map();
   const built = new Map();
 
   return {
@@ -137,7 +136,7 @@ export function createSearchVerbs({ root, confine }) {
   async function currentIndex(listing) {
     const listed = await loadFiles(listing);
     if (listed.error) return { error: listed.error };
-    const key = JSON.stringify(listed.entries.map((entry) => [entry.rel, entry.sig]));
+    const key = JSON.stringify(listed.entries.map((entry) => [entry.rel, entry.digest]));
     const cached = built.get(listing.name);
     if (cached !== undefined && cached.key === key) return { index: cached.index };
     const next = { key, index: buildIndex(listed.entries) };
@@ -148,16 +147,16 @@ export function createSearchVerbs({ root, confine }) {
   async function loadFiles(listing = TRACKED) {
     const tracked = await trackedFiles(root, listing);
     if (tracked.error) return tracked;
+    const previous = filesOf.get(listing.name) ?? new Map();
     const next = new Map();
     const entries = [];
     for (const rel of tracked.paths) {
-      const entry = await loadFile(rel);
+      const entry = await loadFile(rel, previous.get(rel));
       if (entry === null) continue;
       next.set(rel, entry);
       entries.push(entry);
     }
-    files.clear();
-    for (const [rel, entry] of next) files.set(rel, entry);
+    filesOf.set(listing.name, next);
     return { entries };
   }
 
@@ -177,7 +176,7 @@ export function createSearchVerbs({ root, confine }) {
     return buffer.toString('utf8').split('\n').map((raw) => (raw.endsWith('\r') ? raw.slice(0, -1) : raw));
   }
 
-  async function loadFile(rel) {
+  async function loadFile(rel, known) {
     const at = confine(rel);
     if (at.refused) return null;
     let info;
@@ -187,28 +186,29 @@ export function createSearchVerbs({ root, confine }) {
       return null;
     }
     if (!info.isFile() || info.size > MAX_FILE_BYTES) return null;
-    const sig = `${info.mtimeMs}:${info.size}`;
-    const known = files.get(rel);
-    if (known && known.sig === sig) return known;
+    const stamp = stampOf(info);
+    if (known && known.stamp === stamp && known.settled) return known;
+    const readAt = Date.now();
     const buffer = await readFile(at.path);
+    const digest = createHash('sha1').update(buffer).digest('hex');
+    const settled = settledAt(info, readAt);
+    if (known && known.digest === digest) return { ...known, stamp, settled };
     const binary = buffer.subarray(0, 8000).includes(0);
     const lines = binary ? [] : buffer.toString('utf8').split('\n').map((raw) => lineOf(raw.endsWith('\r') ? raw.slice(0, -1) : raw));
-    return { rel, sig, lines };
+    return { rel, stamp, settled, digest, lines };
   }
 }
 
-// The listing of tracked paths changes only when the git index changes, so it is kept by the index's mtime and size, which is one stat. A
-// change to a file's content is still seen, because loadFile checks each file's own signature. A path added or removed comes with an index
-// change, so a stale listing cannot hide one.
 const listings = new Map();
 async function trackedFiles(root, listing) {
-  const key = indexKey(root);
+  const readAt = Date.now();
+  const index = indexStamp(root, readAt);
   const known = listings.get(listing.name);
-  if (key !== null && known !== undefined && known.key === key && known.root === root) return { paths: known.paths };
+  if (listing.cached && index !== null && index.settled && known !== undefined && known.key === index.key && known.root === root) return { paths: known.paths };
   try {
     const { stdout } = await execFileAsync('git', listing.args, { cwd: root, maxBuffer: MAX_LIST_BYTES, timeout: LIST_TIMEOUT_MS });
     const paths = stdout.split('\0').filter((path) => path !== '');
-    if (key !== null) listings.set(listing.name, { key, root, paths });
+    if (listing.cached && index !== null && index.settled) listings.set(listing.name, { key: index.key, root, paths });
     return { paths };
   } catch {
     return { error: 'search and grep need a git repository: git ls-files failed' };
@@ -243,10 +243,18 @@ function skippedDirectory(name, vendor) {
   return !vendor && (name === 'node_modules' || name === 'vendor');
 }
 
-function indexKey(root) {
+function stampOf(info) {
+  return `${info.dev}:${info.ino}:${info.size}:${info.mtimeMs}:${info.ctimeMs}`;
+}
+
+function settledAt(info, readAt) {
+  return info.mtimeMs < readAt - STAMP_SETTLE_MS && info.ctimeMs < readAt - STAMP_SETTLE_MS;
+}
+
+function indexStamp(root, readAt) {
   try {
     const info = statSync(join(root, '.git', 'index'));
-    return `${info.mtimeMs}:${info.size}`;
+    return { key: stampOf(info), settled: settledAt(info, readAt) };
   } catch {
     return null;
   }

@@ -61,6 +61,7 @@ This is what you build and codify. Single worker first: DESIGN.md direction 6 sa
 
 - The commit gate runs every check only in a checkout whose package.json name is gm-new. Elsewhere it runs syntax on the modules a commit names, and `notCovered` lists the rest. A check that throws is a failed check (DESIGN.md, Commit gate in other workspaces).
 - `grep` streams files and skips `node_modules` and `vendor` unless `vendor` is true. Caching the tokenized text of every file once put the worker at 1399 MB of heap on a 108 MB tree (DESIGN.md, Friction from oscraft run 23125-406580).
+- `search` and `wiki_search` reuse a file's lines only while its stamp (device, inode, size, mtime, ctime) is unchanged and settled, meaning read at least `STAMP_SETTLE_MS` after its mtime and ctime: a same-size write in one timestamp tick keeps the mtime. The tracked listing is keyed by the `.git/index` stamp under the same rule. The wiki listing is never cached, because untracked pages do not touch the index (DESIGN.md, "grep index refresh (2026-11-03)").
 - `query_log`'s `js` sees one window of matching events, at most 1000 events or 4 MB of log. A count over a whole run pages with `next` (DESIGN.md, Query log window).
 - A body's console output is drained by the session and is not returned or logged. The owner's decision on it is open (DESIGN.md, "Limits, stated, not closed").
 - `fetch` cannot read `file:` URLs: Node's fetch fails them, and the reply is "request failed: fetch failed". `data:` URLs are served (DESIGN.md, "Network access with no caps (2026-11-03)").
