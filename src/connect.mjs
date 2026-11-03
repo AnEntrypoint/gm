@@ -7,7 +7,7 @@ import { join } from 'node:path';
 // connectCheck compares them with CONNECT_SHA, and a change fails the gate until its new value is recorded here, which is the owner's
 // acceptance of that reconnect (DESIGN.md, Reconnect).
 export const SERVER_NAME = 'gm';
-export const CAPABILITIES = { tools: { listChanged: true }, prompts: { listChanged: true }, resources: { listChanged: true }, experimental: { 'claude/channel': {} } };
+export const CAPABILITIES = { tools: { listChanged: true }, prompts: { listChanged: true }, resources: { listChanged: true } };
 
 // The instructions the host sees at initialize. The code surface names run_code, and the verbs are functions on gm.
 const CODE_INSTRUCTIONS = "One tool does the work: run_code. Its body is JavaScript in the project, and each verb is a function on gm, for example await gm.read_file({ path }). The verb list is in run_code's description, gm.verbs() returns each verb's details, and finish ends the run and is not a verb. Start each step with next_context.";
@@ -27,7 +27,7 @@ export function connectSha(root) {
 }
 
 // Recorded when the owner accepts the connect-time text as it is now. It is the value connectSha returns for this checkout.
-export const CONNECT_SHA = 'c5f60987ea5898612ee6d0b547631df7660faec62f72b63f3016ef7ddf380bfc';
+export const CONNECT_SHA = '740b70f60adc89b8d239a74183d80275bc9fd665180c5bbf045eab3f58d198db';
 
 export function connectCheck(root) {
   const sha = connectSha(root);

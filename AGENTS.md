@@ -72,6 +72,8 @@ This is what you build and codify. Single worker first: DESIGN.md direction 6 sa
 - A row file holds only the names in `FIELDS` (src/rows.mjs). A verb rewrite drops any other name, so a planner that reads a field no verb writes sees every row as lacking it (DESIGN.md, Row states).
 - A reloadable module's verbs are rebuilt per session from the worker's leaf set. A singleton that imports one statically keeps the code it loaded at boot (DESIGN.md, Hot reload in place).
 - A batch that changes `tools/core.mjs` or a singleton restarts each live worker on the checkout, and the two debounce windows can restart a worker twice. Background jobs are killed (DESIGN.md, Hot reload in place).
+- A turn that ends with the run open and no watcher running leaves nothing to wake the agent. A paused run wrote no event that reached an idle agent before the watcher, so oscraft run 79788-955320 stopped with no finish (DESIGN.md, Wake by a watcher).
+- A `next_context` held by `waitMs` is an active call, so the host-idle watchdog does not count it as quiet (DESIGN.md, Wake by a watcher).
 
 ## Rationale not expressible in code
 

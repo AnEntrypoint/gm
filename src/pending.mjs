@@ -7,14 +7,18 @@ import { appendFileSync, existsSync, readdirSync, readFileSync, renameSync, unli
 import { join } from 'node:path';
 
 export const PENDING_FILE = 'pending.jsonl';
-// The event kinds an agent must act on: a job's start and end, a job killed, a stuck or unstuck job, a rules notice, and a recovery.
-export const PENDING_KINDS = new Set(['job', 'job-killed', 'job-stuck', 'job-unstuck', 'rules-notice', 'recovery']);
+// The event kinds an agent must act on: a job's start and end, a job killed, a stuck or unstuck job, a rules notice, a recovery, a paused
+// run (the worker was stopped with the run open, so nothing else wakes the agent), and a host-idle notice (no call for a while).
+export const PENDING_KINDS = new Set(['job', 'job-killed', 'job-stuck', 'job-unstuck', 'rules-notice', 'recovery', 'paused', 'host-idle']);
 const READING = /^pending\.\d+-[0-9a-f]+\.reading$/;
 
-// A listener is called with each record after it is in the file. The worker uses one to send the record to the host as a channel event.
+// A listener is called with each record after it is in the file. next_context uses one to hold a call until an event lands.
 const listeners = new Set();
 export function onPendingAppended(listener) {
   listeners.add(listener);
+}
+export function offPendingAppended(listener) {
+  listeners.delete(listener);
 }
 
 // The file is opened for each append, not kept open: a read-and-clear renames it, and a descriptor held open would then write into the copy

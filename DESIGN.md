@@ -1129,3 +1129,23 @@ The owner asked for the most in-place reload possible, so an edit costs a restar
 - Not closed: a pushed commit whose reloadable module does not load is not rolled back. The old code keeps serving, and the next restart would start on the broken code. Whether the gate loads the leaf modules was not checked.
 - Not closed: the src/ and tools/ windows debounce separately, so one batch can restart a worker twice. Merging the windows would save one restart. Not done.
 - Not closed: a singleton that imports a leaf statically keeps the boot code. Today only tools.mjs (its default, used by the CLI) and skills.mjs (the gate, a separate process) do so.
+
+## Wake by a watcher, long-poll and host-idle (2026-11-03, the owner's direction)
+
+Problem. oscraft run 79788-955320 ended its turn with no watcher running and asked the user whether to finish. Its last model action ended at 03:29:54 UTC, and no `next_context` followed after 03:26:41. A supervisor SIGTERM paused it at 03:39:26, and the run has no finish event. Nothing reached the idle agent: a paused run wrote no event that woke it, and the wait route was optional. The fix needs no channel and no Monitor. The agent starts a watcher at the start of every turn, and the watcher exits on the events that matter.
+
+Changes:
+- `src/pending.mjs`: `paused` and `host-idle` join the pending kinds, so a supervisor pause and a quiet spell reach the watcher. `offPendingAppended` is added.
+- `src/mcp.mjs`: `next_context` takes `waitMs`, capped at 300000. The call holds until an event is pending or the wait passes (`untilPending`). The hold is an active call, so the watchdog does not count it as idle. A watchdog queues one `host-idle` event after `--host-idle-ms` (default 600000) with no call in flight and none since. It queues once per quiet spell, and it stops when the run ends. The channel notification (`notifications/claude/channel`) is removed.
+- `src/connect.mjs`: the `claude/channel` experimental capability is removed, and CONNECT_SHA is recorded as 740b70f6, per the owner's direction (no channels). A host that connected earlier keeps its cached capability until it reconnects.
+- `skills/gm/SKILL.md`, Pending events: the watcher starts at the start of every turn while the run is open, and a turn does not end with the run open and no watcher running. A host with no background process uses `next_context` with `waitMs`, and `pendingCommands.read` at each step. The Monitor and channel routes are removed.
+- `skills/gm-continue/SKILL.md`: the next step after the list is the gm skill, with the list and what is left as its task (INVARIANT). A pass that closes no row is not a stop: the loop ends with `finish`, `stopRows: true`, and each open row named in the gaps, with the witness.
+
+Witnesses (scratch copies, real relay, `/tmp/gm-scratch/gm-new/wake`):
+- `wake-witness.mjs`, run 2026-11-03-04-32-22-6acbf2 (`wake-result-w1.json`), all ten checks pass. A job exit woke a `--wait` watcher after 3063 ms. `next_context` with `waitMs` returned on a job exit after 2005 ms, and it timed out after 3004 ms with nothing pending. A SIGTERM to the worker woke a watcher with a `paused` record after 471 ms, and the same run answered afterwards. The initialize reply declares no channel capability, and no channel notification was sent. A finish with an open row was refused, and `stopRows` ended the run with that row as a gap. A second relay with `--host-idle-ms 3000` woke a watcher with a `host-idle` record after 4061 ms.
+- Regression, `reload-witness.mjs` (in-place reload), run 2026-11-03-04-32-43-522e21: all eleven checks pass, and the leaf edit reloaded in 401 ms.
+
+Not witnessed:
+- The host's wake. The witness runs the watcher as a child process. Whether a host wakes an agent when a background process ends is a property of the host, and no live session has been observed doing it yet.
+- A planned restart also pauses the run, so it wakes a watcher too. oscraft run 79788-955320 had 38 restarts, so its agent would have woken 38 times. The cost in a live session is not measured.
+- Whether a host cuts a waiting `next_context`. The wait is capped at 300000 ms for that reason.

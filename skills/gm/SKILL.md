@@ -102,15 +102,11 @@ A summary can replace earlier messages, including the rules, the witness require
 
 ## Pending events
 
-next_context returns `pending`: the events that need you since your last step, each one once, with an `id`. A job that starts or exits, a killed or stuck job, a rules notice and a recovery are pending events. Skip an id you have already acted on, because a crash can deliver one twice. `pendingFile` is the file that holds them.
+next_context returns `pending`: the events that need you since your last step, each one once, with an `id`. They are a job that starts, exits, is killed or stuck, a rules notice, a recovery, a paused run (the worker was stopped with the run open), and a host-idle notice (no call for a while). Skip an id you have already acted on, because a crash can deliver one twice. `pendingFile` is the file that holds them.
 
-Use the first route that works, in this order:
+Start the watcher at the start of every turn while the run is open, before other work: run `pendingCommands.wait` from `next_context` as a background process of your shell. It prints the queued events once and exits, and it exits at once if events are queued. Its exit wakes you with its output: act on the events, then start it again. It also exits with no output when its timeout passes, so start it again then.
 
-1. A channel event, `<channel source="gm" id="..." kind="...">`, arrives in the session when the host registered this server as a channel. Act on it as it lands.
-2. Otherwise, watch `pendingFile` in the background. If you have the Monitor tool (load it with ToolSearch when it is deferred), arm it on `tail -n +1 -F "<pendingFile>"`, with a description and a timeout of 1800000 ms. Each line it reports is one event. A watch expires, so re-arm it.
-3. Otherwise, run `pendingCommands.wait` from `next_context` as a background task of the host's shell (Bash with run_in_background in Claude Code). It waits until the next event lands, prints the events once, and ends. The host reports when a background task ends, so the events reach you as they land. Act on what it printed, then start it again. It also ends with no output when its timeout passes, so start it again then too.
-
-Skip an id you have already acted on, whichever route reports it. Where no background task is possible at all, run `pendingCommands.read` in the foreground at each step: it prints the events once, and a second call prints nothing.
+Do not end a turn while the run is open unless the watcher is running. A host with no background process calls `next_context` with `waitMs` (at most 300000) to hold the step until an event lands, and runs `pendingCommands.read` at each step.
 
 ## Handing work to a child session
 

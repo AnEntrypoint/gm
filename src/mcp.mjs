@@ -8,7 +8,7 @@ import { DEFAULT_WITNESS, MCP_RULES, prefixShaOf, renderTools } from './prompt.m
 import { connectReply, SERVER_NAME } from './connect.mjs';
 import { isDirectory, loadTask, newRunId, openRun, ROOT } from './run.mjs';
 import { flushAllLogs } from './log.mjs';
-import { clearPending, onPendingAppended, PENDING_FILE, takePending } from './pending.mjs';
+import { clearPending, hasPending, offPendingAppended, onPendingAppended, PENDING_FILE, takePending } from './pending.mjs';
 import { conflicts, createTools, loggedReply, OUTPUT_PAGE, DEFAULT_STUCK_MS, DEFAULT_MONITOR_MS, BODY_NOTICE_MS } from './tools.mjs';
 import { bumpGeneration } from './hot.mjs';
 import { RELOADABLE } from './hot-config.mjs';
@@ -49,14 +49,17 @@ const DEFAULT_MAX_INFLIGHT = 8;
 const DEFAULT_JOB_LIFETIME_MS = 1800000;
 // The most open jobs a next_context reply lists. The rest are counted in jobsOpenMore.
 const OPEN_LIST = 20;
-const USAGE = 'usage: node src/mcp.mjs --workspace <dir> [--task <file-or-text>] [--run-dir <dir>] [--max-steps N] [--max-inflight N] [--job-lifetime-ms N] [--stuck-ms N] [--monitor-ms N] [--notice-ms N] [--surface tools|code]';
+const USAGE = 'usage: node src/mcp.mjs --workspace <dir> [--task <file-or-text>] [--run-dir <dir>] [--max-steps N] [--max-inflight N] [--job-lifetime-ms N] [--stuck-ms N] [--monitor-ms N] [--notice-ms N] [--host-idle-ms N] [--surface tools|code]';
+// A host that stops calling is noticed after this long with no call in flight (--host-idle-ms). next_context waitMs is capped here, because a host cuts a call that runs too long.
+const DEFAULT_HOST_IDLE_MS = 600000;
+const MAX_WAIT_MS = 300000;
 
 const text = { type: 'string' };
 const number = { type: 'number' };
 const objectSchema = (properties, required = []) => ({ type: 'object', properties, required });
 
 const BASE_TOOLS = [
-  { name: 'next_context', description: 'Begin a step. Returns rules, task, witness requirement, the events new since the last step in full, the older ones in compact form within two horizons, and prefixSha. pending lists the events that need you since your last step, each once, with an id, and pendingFile is the file that holds them for a live tail. Call it at the start of each step. query_log reaches every event.', inputSchema: objectSchema({}) },
+  { name: 'next_context', description: 'Begin a step. Returns rules, task, witness requirement, the events new since the last step in full, the older ones in compact form within two horizons, and prefixSha. pending lists the events that need you since your last step, each once, with an id, and pendingFile is the file that holds them for a live tail. Call it at the start of each step. query_log reaches every event. waitMs, when set, holds this call until an event is pending or that many milliseconds pass, at most 300000.', inputSchema: objectSchema({ waitMs: number }) },
   { name: 'read_file', description: 'Read a text file in the workspace, one page of at most 20000 characters. offset and limit are counted in characters, not lines: limit is 1 to 20000, default 20000. Returns output, total characters, the offset of this page and next, the offset of the next page (null at the end).', inputSchema: objectSchema({ path: text, offset: number, limit: number }, ['path']) },
   { name: 'write_file', description: 'Write a text file in the workspace, creating parent directories.', inputSchema: objectSchema({ path: text, content: text }, ['path', 'content']) },
   { name: 'edit_file', description: 'Replace old with new in a workspace text file. old must occur once, unless replaceAll is true.', inputSchema: objectSchema({ path: text, old: text, new: text, replaceAll: { type: 'boolean' } }, ['path', 'old', 'new']) },
@@ -116,7 +119,27 @@ class RpcError extends Error {
   }
 }
 
-function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, resume = null, jobLifetimeMs = DEFAULT_JOB_LIFETIME_MS, stuckMs = DEFAULT_STUCK_MS, monitorMs = DEFAULT_MONITOR_MS, noticeMs = BODY_NOTICE_MS, recovery = null, history = [], surface = 'code' }) {
+// The hold next_context takes when waitMs is set. The listener is added before the check, so an event that lands between them is not missed.
+function untilPending(runDir, waitMs) {
+  if (waitMs === 0) return Promise.resolve();
+  return new Promise((done) => {
+    const wake = () => {
+      clearTimeout(timer);
+      offPendingAppended(wake);
+      done();
+    };
+    const timer = setTimeout(wake, waitMs);
+    onPendingAppended(wake);
+    if (hasPending(runDir)) wake();
+  });
+}
+
+function waitOf(value) {
+  const ms = Number(value ?? 0);
+  return Number.isFinite(ms) && ms > 0 ? Math.min(ms, MAX_WAIT_MS) : 0;
+}
+
+function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, resume = null, jobLifetimeMs = DEFAULT_JOB_LIFETIME_MS, stuckMs = DEFAULT_STUCK_MS, monitorMs = DEFAULT_MONITOR_MS, noticeMs = BODY_NOTICE_MS, hostIdleMs = DEFAULT_HOST_IDLE_MS, recovery = null, history = [], surface = 'code' }) {
   const runId = basename(runDir);
   const tools = createTools({ workspace, runDir, log, background: true, jobLifetimeMs, stuckMs, monitorMs, noticeMs, leaves: current.leaves });
   activeTools = tools;
@@ -136,6 +159,24 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
   let steps = resume?.steps ?? 0;
   let ended = resume?.ended ?? null;
   let endLogged = ended !== null;
+  // A host that stops calling leaves the run open, and nothing wakes it. After hostIdleMs with no call in flight and none since, one
+  // host-idle event is queued for a watcher on the pending file. It is queued once per quiet spell, and the timer stops when the run ends.
+  let quietSince = log.now();
+  let idleQueued = false;
+  const touch = () => {
+    quietSince = log.now();
+    idleQueued = false;
+  };
+  const idleTimer = setInterval(() => {
+    if (ended !== null) {
+      clearInterval(idleTimer);
+      return;
+    }
+    if (active.size > 0 || idleQueued || log.now() - quietSince < hostIdleMs) return;
+    idleQueued = true;
+    log.append('host-idle', { idleMs: Math.round(log.now() - quietSince) });
+  }, Math.max(1000, Math.floor(hostIdleMs / 4)));
+  idleTimer.unref();
   // The rules watchdog. It notices the rule breaks it can see: a call before the run's first next_context (rule 2), a path or load that
   // leaves the workspace (rule 1), a finish with no call in its step (rule 3), and a finish refused for its witness (rule 4). An open notice is
   // carried in the reply of each call and in next_context until the agent loads the skill again, which clears them all.
@@ -244,7 +285,10 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     if (method === 'initialize') return initialize(params);
     if (method === 'ping' || method === 'server/discover') return {};
     if (method === 'tools/list') return { tools: servedTools(surface) };
-    if (method === 'tools/call') return callTool(params, rpcId);
+    if (method === 'tools/call') {
+      touch();
+      return callTool(params, rpcId);
+    }
     if (method === 'prompts/list') return { prompts: [skillPrompt()] };
     if (method === 'prompts/get') return getPrompt(params);
     if (method === 'resources/list') return { resources: [skillResource()] };
@@ -257,7 +301,6 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
 
   function initialize(params) {
     const version = typeof params?.protocolVersion === 'string' ? params.protocolVersion : PROTOCOL_VERSION;
-    // The channel capability tells a host that this server can push pending events as channel events. A host that does not register it drops them.
     return { protocolVersion: version, ...connectReply(surface), serverInfo: SERVER_INFO };
   }
 
@@ -368,13 +411,13 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
       if (unknown.length > 0) return refuse(name, args, `unknown argument ${unknown.join(', ')}; run_code takes ${Object.keys(RUN_CODE_PROPERTIES).join(', ')}`, rpcId);
       return act('run_code', args, access, (actionSeq) => runBody({ body: args.body, timeoutMs: args.timeoutMs, format: args.format, verbs: current.VERBS, call: innerCall, project: workspace, runDir, log, step: steps, background: (handle) => tools.adoptBody(handle) }).then((reply) => ({ ...reply, actionSeq })), undefined, rpcId);
     }
-    if (name === 'next_context') return nextContext(access, rpcId);
+    if (name === 'next_context') return nextContext(access, rpcId, args);
     if (name === 'finish') return finish(args, access, rpcId);
     if (Object.hasOwn(handlers, name)) return act(name, args, access, () => handlers[name](args), name === 'query_log' ? loggedReply : undefined, rpcId);
     return act(name, args, access, () => tools.run(name, args), undefined, rpcId);
   }
 
-  async function nextContext(access, rpcId) {
+  async function nextContext(access, rpcId, args = {}) {
     if (steps >= maxSteps) {
       stop('max_steps');
       const out = refuse('next_context', {}, `step limit ${maxSteps} reached`, rpcId);
@@ -385,7 +428,11 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     runStarted = true;
     stepCalls = 0;
     const step = steps;
-    return act('next_context', {}, access, () => context(step), ({ ok, error, prefixSha, total }) => ({ ok, error, prefixSha, total }), rpcId);
+    const waitMs = waitOf(args.waitMs);
+    return act('next_context', {}, access, async () => {
+      await untilPending(runDir, waitMs);
+      return context(step);
+    }, ({ ok, error, prefixSha, total }) => ({ ok, error, prefixSha, total }), rpcId);
   }
 
   // The prefix is the same at every step, except for the rules, which are read again at each step. Its text is built and hashed only when
@@ -432,8 +479,8 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
       total: log.count(),
       ...(taken.records.length > 0 ? { pending: taken.records } : {}),
       pendingFile: join(runDir, PENDING_FILE),
-      // The shell commands for a host with no channel and no Monitor. wait runs as a background task and ends at the next event; read clears
-      // the queue once. Both name the run directory, so they work from any directory.
+      // The shell commands the agent runs. wait runs as a background task and ends at the next event, so the host reports the event as the
+      // end of that task; read clears the queue once. Both name the run directory, so they work from any directory.
       pendingCommands: {
         wait: `node "${join(ROOT, 'src', 'cli.mjs')}" events --dir "${runDir}" --wait`,
         read: `node "${join(ROOT, 'src', 'cli.mjs')}" events --dir "${runDir}" --read-clear`,
@@ -486,6 +533,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     active.set(work, access);
     const forget = () => {
       active.delete(work);
+      touch();
       drain();
     };
     work.then(forget, forget);
@@ -651,12 +699,6 @@ function write(message) {
   for (const done of afterReply.splice(0)) done();
 }
 
-// A pending event is also a channel event. A host that registered this server as a channel shows it in the session; a host that did not
-// drops it, and the pending-event routes in the gm skill still report the event. The meta keys are identifiers, as the host requires.
-onPendingAppended((record) => {
-  process.stdout.write(`${JSON.stringify({ jsonrpc: '2.0', method: 'notifications/claude/channel', params: { content: JSON.stringify(record), meta: { id: String(record.id), kind: record.kind } } })}\n`);
-});
-
 function errorReply(id, code, message) {
   return { jsonrpc: '2.0', id, error: { code, message } };
 }
@@ -739,6 +781,7 @@ async function main(argv) {
   const stuckMs = positiveInt(flags['stuck-ms'] ?? DEFAULT_STUCK_MS, '--stuck-ms');
   const monitorMs = positiveInt(flags['monitor-ms'] ?? DEFAULT_MONITOR_MS, '--monitor-ms');
   const noticeMs = positiveInt(flags['notice-ms'] ?? BODY_NOTICE_MS, '--notice-ms');
+  const hostIdleMs = positiveInt(flags['host-idle-ms'] ?? DEFAULT_HOST_IDLE_MS, '--host-idle-ms');
   const surface = flags.surface ?? 'code';
   if (!SURFACES.includes(surface)) throw new Error('--surface takes tools or code');
   // Without --task, the run's task is the prompt the session sends (the gm prompt's task argument), and the run says so in its start event.
@@ -767,7 +810,7 @@ async function main(argv) {
   logTools(log, resumed, servedTools(surface));
 
   sweepEndedCode(dirname(runDir), runDir);
-  const session = createSession({ workspace, runDir, log, task, maxSteps, maxInflight, resume, jobLifetimeMs, stuckMs, monitorMs, noticeMs, recovery: recovery && recovery.open.length > 0 ? recovery : null, history, surface });
+  const session = createSession({ workspace, runDir, log, task, maxSteps, maxInflight, resume, jobLifetimeMs, stuckMs, monitorMs, noticeMs, hostIdleMs, recovery: recovery && recovery.open.length > 0 ? recovery : null, history, surface });
   const lines = createInterface({ input: process.stdin, crlfDelay: Infinity });
   lines.on('line', session.accept);
   // Under a supervisor, the end of stdin means the supervisor has gone, so the run is paused. Closing it here would end the
