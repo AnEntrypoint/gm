@@ -21,6 +21,8 @@ These are the rules of every run. next_context returns them with each step, and 
 - Never print, store or request secrets, environment variables or API keys.
 - If the task cannot be done, finish with a witness that states why, with the evidence.
 
+A subagent never calls `finish` and never closes a run. It reports its result to the session that started it, and that session decides when the run ends.
+
 1. Start every step with `next_context`. It returns the rules, the task, the witness requirement, the events new since your last step in full up to 20,000 characters, the rest of those events and the older events in compact form, `query` (the seq range of the step, and how to read any event by seq), `run` (this run's id), `stepsLeft` and `prefixSha`. `gm.query_log` reaches every event. Follow the rules it returns.
 2. Do the work in one `run_code` call. Its body is JavaScript in the project, and each verb is a function on `gm`: `await gm.read_file({ path: 'a.txt' })`, `await gm.write_file({ path: 'c.txt', content })`, `await gm.run_shell({ command: 'npm test' })`. The verb list is in run_code's description, and `gm.verbs()` returns each verb's description and input schema as data. The tools of the MCP servers that the project configures are verbs too, named `gm.<server>_<tool>`.
 3. Put independent calls in one body with `Promise.all`, for example `const [a, b] = await Promise.all([gm.read_file({ path: 'a.txt' }), gm.read_file({ path: 'b.txt' })]);`. Do not put a call in the body that needs the result of another call in the same batch.

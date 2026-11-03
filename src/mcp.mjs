@@ -208,7 +208,7 @@ function queryHintOf(shown, total) {
   return total > shown ? `${reach}. This step's new events are seqs ${shown + 1} to ${total}.` : `${reach}.`;
 }
 
-function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, resume = null, jobLifetimeMs = DEFAULT_JOB_LIFETIME_MS, stuckMs = DEFAULT_STUCK_MS, monitorMs = DEFAULT_MONITOR_MS, noticeMs = BODY_NOTICE_MS, hostIdleMs = DEFAULT_HOST_IDLE_MS, recovery = null, history = [], surface = 'code' }) {
+function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, resume = null, jobLifetimeMs = DEFAULT_JOB_LIFETIME_MS, stuckMs = DEFAULT_STUCK_MS, monitorMs = DEFAULT_MONITOR_MS, noticeMs = BODY_NOTICE_MS, hostIdleMs = DEFAULT_HOST_IDLE_MS, recovery = null, history = [], taskInherited = false, surface = 'code' }) {
   const runId = basename(runDir);
   const tools = createTools({ workspace, runDir, log, background: true, jobLifetimeMs, stuckMs, monitorMs, noticeMs, leaves: current.leaves });
   activeTools = tools;
@@ -404,9 +404,9 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     log.append('skill-loaded', { via: 'prompt', skill: 'gm', cleared: [...rulesOpen.keys()] });
     clearRules();
     const given = typeof params?.arguments?.task === 'string' ? params.arguments.task.trim() : '';
-    // The session's prompt gives the task of a run that was started without --task. The first task given is the run's task, logged once.
-    if (task === '' && given !== '') {
+    if (given !== '' && (task === '' || taskInherited)) {
       task = given;
+      taskInherited = false;
       log.append('task', { from: 'session prompt', text: task });
     }
     const text = given === '' ? SKILL.body : `${SKILL.body}\n\nTask: ${given}`;
@@ -831,6 +831,14 @@ function resumeFrom(events) {
   return { steps, ended: end ? end.status : null };
 }
 
+function taskOfRun(events, runDir) {
+  const logged = events.findLast((event) => event.kind === 'task');
+  if (logged !== undefined) return logged.text;
+  const file = join(runDir, 'task.json');
+  if (!existsSync(file)) return '';
+  return JSON.parse(readFileSync(file, 'utf8')).task ?? '';
+}
+
 // The tools that only read. Every other tool is a side effect: its start is flushed before it runs (see perform and innerCall), so recovery
 // can list it as open after a crash. A tool that is not on this list is treated as a side effect.
 const READ_ONLY_TOOLS = new Set([
@@ -975,10 +983,17 @@ async function main(argv) {
   const runMeta = (dir) => ({ id: basename(dir), mode: 'mcp', task, witness: DEFAULT_WITNESS, workspace, maxSteps, maxInflight, createdAt: new Date().toISOString() });
   let { log, resumed } = openRun({ runDir, rules: MCP_RULES, meta: runMeta(runDir) });
   let resume = resumed ? resumeFrom(log.events()) : null;
+  let inheritedFrom = null;
   if (resume?.ended) {
-    // A closed run stays closed. A start after it opens a new run beside it, with the same task and workspace.
-    const closed = `${basename(runDir)} (${resume.ended})`;
+    // A closed run stays closed. A start after it opens a new run beside it, which takes the closed run's task unless --task gives one.
+    const closedId = basename(runDir);
+    const closed = `${closedId} (${resume.ended})`;
+    const closedTask = taskOfRun(log.events(), runDir);
     runDir = join(dirname(runDir), newRunId());
+    if (task === '' && closedTask !== '') {
+      task = closedTask;
+      inheritedFrom = closedId;
+    }
     ({ log, resumed } = openRun({ runDir, rules: MCP_RULES, meta: runMeta(runDir) }));
     resume = null;
     console.error(`gm mcp: run${closed} is closed; opened run ${basename(runDir)}`);
@@ -988,7 +1003,8 @@ async function main(argv) {
   if (task === '' && resumed) task = history.findLast((event) => event.kind === 'task')?.text ?? '';
   const recovery = resumed ? recoveryOf(history) : null;
   if (resumed) log.append('restart', { reason: flags['restart-reason'] ?? 'restarted without a reason' });
-  else log.append('start', { mode: 'mcp', maxSteps, maxInflight, taskFrom: flags.task === undefined ? 'session prompt' : 'task file' });
+  else log.append('start', { mode: 'mcp', maxSteps, maxInflight, taskFrom: flags.task !== undefined ? 'task file' : inheritedFrom !== null ? `closed run ${inheritedFrom}` : 'session prompt' });
+  if (inheritedFrom !== null) log.append('task', { from: `closed run ${inheritedFrom}`, text: task });
   if (recovery && recovery.open.length > 0) log.append('recovery', { lastSeq: recovery.lastSeq, open: recovery.open });
   const mcpFlag = flags['mcp-config'];
   const mcpFile = mcpFlag === undefined ? join(workspace, '.gm-new', 'mcp.json') : resolve(mcpFlag);
@@ -1003,7 +1019,7 @@ async function main(argv) {
   process.on('exit', () => client.stop());
 
   sweepEndedCode(dirname(runDir), runDir);
-  const session = createSession({ workspace, runDir, log, task, maxSteps, maxInflight, resume, jobLifetimeMs, stuckMs, monitorMs, noticeMs, hostIdleMs, recovery: recovery && recovery.open.length > 0 ? recovery : null, history, surface });
+  const session = createSession({ workspace, runDir, log, task, maxSteps, maxInflight, resume, jobLifetimeMs, stuckMs, monitorMs, noticeMs, hostIdleMs, recovery: recovery && recovery.open.length > 0 ? recovery : null, history, taskInherited: inheritedFrom !== null, surface });
   const lines = createInterface({ input: process.stdin, crlfDelay: Infinity });
   lines.on('line', session.accept);
   // Under a supervisor, the end of stdin means the supervisor has gone, so the run is paused. Closing it here would end the

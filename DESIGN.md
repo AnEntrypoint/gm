@@ -1690,3 +1690,28 @@ Limits: stdio only; `notifications/tools/list_changed` is not handled, so a tool
 Session prompt (defect 1). A `/mcp__gm__gm` command with several words recorded its task as its first word, "we". gm-new keeps every word it is sent: `prompts/get` reads `arguments.task` whole (src/mcp.mjs). The host drops the rest. Claude Code 2.1.301 splits the command on whitespace and binds the words by position to the declared arguments (its code: `j.split(/\s+/)`), and the gm prompt declares one. A fix needs a host change or a new surface verb, which is the owner's decision and was not made here. The commit gate has a `prompt` check (src/gate.mjs) that sends a 15-word task through the real server and requires the task event to hold all of it. Negative control: with the task cut to its first word in a copy, the check failed with task ["we"]. Commit 37208d7.
 
 read_file (defect 2). offset and limit counted characters, so a caller that assumed lines got a silently wrong slice. Lines are now the default (the handler in src/tools.mjs, commit f6cc36a), and `unit: "chars"` keeps character paging for callers that need it. The served description and schema (src/mcp.mjs) now say so, in commit 03b6ffa. Lines match the host Read tool. No caller in gm-new or the skill files passes offset or limit. job_status's offset still counts characters, as its description says. Witness: offset 401 and limit 72 returned lines 402 to 473, with next 473 and total 500. unit "chars" returned 72 characters from character 401 (total 4392).
+
+## Task carried into a new run after a closed run (2026-11-03)
+
+Answers thorns-35 items 3 and 4. Item 4: a run closed by `finish`, then reopened by a worker start that names it, opened with task null. Cause, in `src/mcp.mjs`: the closed-run branch of `main()` built the new run's meta from the `task` variable, which is '' when the session sends its task through the prompt, and the closed run's task was never read. Item 3: a child agent sent `finish` on its parent's connection and closed the parent's run.
+
+Decided:
+- A start whose run directory is a closed run still opens a new run beside it. The new run takes the closed run's task when the start has no `--task`: the text of the closed run's last `task` event (a session prompt writes it), or else the `task` field of its `task.json` (`--task` writes it). Its `task.json` holds that task, and its log gets a `task` event with from "closed run <id>" right after its `start` event, whose `taskFrom` names the same closed run.
+- With `--task`, nothing is inherited. The flag is the operator's explicit task. This was decided here, not asked.
+- A session prompt that gives a task replaces an inherited task, logged as a `task` event with from "session prompt", as before. A prompt with no task keeps the inherited one.
+- A resumed run that is still open keeps its own task from its history, and a prompt does not replace it. Its code path is unchanged; its history now holds the inherited task event.
+- A fresh run with no closed run behind it and no task keeps task null and the taskNotice.
+- Item 3: `skills/gm/SKILL.md` has one plain paragraph in its Rules section, after the seven bullets: a subagent never calls `finish` and never closes a run, and it reports its result to the session that started it. The seven rules and MCP_RULES in `src/prompt.mjs` are unchanged. Step 6 of the skill already said a child on a shared connection must not send `finish`; the new paragraph is where a reader meets it first.
+
+Witness, through the real stdio path: a driver spawns `src/mcp.mjs` and speaks JSON-RPC to it. The tree is a tar copy of 9ad3e7a with this change, and the workspace is a scratch git repository. Driver `/tmp/gm-scratch/gm-new/task-carry/driver/drive.mjs`, output `/tmp/gm-scratch/gm-new/task-carry/out-after.json`, logs under `ws/runs/` of the same directory.
+- a, run `first`: start seq 1 (taskFrom session prompt), task seq 4 ("first task text", session prompt), next_context result seq 6 with task "first task text", run_code action seq 7 (returned 2), end seq 14 (finished, witness "done"), finish ok.
+- b, run `2026-11-03-09-50-21-1633f3`, started on `first` with no prompt task: start seq 1 (taskFrom closed run first), task seq 2 (from closed run first, "first task text"), next_context result seq 6 with task "first task text".
+- c, run `2026-11-03-09-50-22-e0c461`, started on `first` with prompt "second task text": start seq 1, task seq 2 (from closed run first, "first task text"), task seq 5 (from session prompt, "second task text"), next_context result seq 7 with task "second task text".
+- d, the open run from b, started with prompt "third task text": restart seq 8, no task event, next_context result seq 12 with task "first task text", so the prompt did not replace it.
+- e, run `2026-11-03-09-50-22-0dfc4a`, default run directory, no prompt task: start seq 1, next_context result seq 5 with task null and the taskNotice.
+- Before, on an untouched copy of 9ad3e7a: run `2026-11-03-09-49-50-673a6d` (started on a closed run) had next_context result seq 5 with task null, which is the defect; run `2026-11-03-09-49-50-2e6086` had task seq 4 "second task text"; run `2026-11-03-09-49-50-17c614` (default directory) had task null.
+
+Limits, not closed here:
+- A default run directory opens a fresh run and never reaches the closed-run branch, so the reopen path is witnessed with the run directory named.
+- The witness runs the worker directly. A live host session that reconnects, or a core that respawns a worker on a finished run, is not witnessed here.
+- A child on a parent's connection can still send `finish`; the Rules paragraph is the only guard until the owner chooses between the options under "Finish, the connection, and restarts".
