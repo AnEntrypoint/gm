@@ -1236,3 +1236,32 @@ Witness, on a tar copy of HEAD 17a0a14 under /tmp/gm-scratch/gm-new (node_module
 - m (cancel of a side-effecting verb): run_code with a 3 s body (id 9), cancelled at 1 s. cancel-ignored seq 22 (reason side-effecting verb), and the answer for id 9 carried "slept".
 
 Apply: at 06:15 on 2026-11-03 the eight changed files went into /workspace/gm-new in one step (cp from the copy, then cmp). Before it, the checkout was clean, the self run runs/self/2026-11-03-05-07-18-ba0516 had one exited job and none running, and no job was running in the other live runs (oscraft, hy3d), which were idle. Three live workers restarted by a core handover (reason "core replaced"): self (run 2026-11-03-06-04-33-93d8e4), oscraft (run 197518-5696774) and hy3d (run 197547-5697339). Each new worker logged tools sha 836ea504 (3 tools). tools/relay.mjs did not change, so no host reconnect was needed.
+
+## gm-continue as an MCP prompt (2026-11-03)
+
+Problem. Claude Code's Skill tool does not resolve MCP skills: once the user-level copy of gm-continue was gone, it answered "Unknown skill: gm-continue". The server served gm-continue as a skill resource (skill://gm-continue/SKILL.md), but `prompts/list` returned only the gm prompt, so a host had no prompt for it.
+
+Change, `src/mcp.mjs`:
+- `prompts/list` answers two prompts, gm and gm-continue, each with its name, title and description from the skill frontmatter. The titles are "gm run" and "gm continue". The skills are read on each request, as before (`skillPrompt` and `promptResult`).
+- The gm prompt keeps its `task` argument, and gm-continue takes none. The brief asked for no arguments on both. The gm prompt keeps one because the session prompt is how a run started without --task gets its task, and the user-level relay starts the worker without one. A host that is not told the argument cannot send it.
+- `prompts/get gm-continue` returns the skill's body, the file without its frontmatter, as one user message, as the gm prompt does. It sets no task and clears no rules notice. It logs one `skill-loaded` event with via prompt and an empty cleared list, the kind a resource read of the same skill already logs. No new event kind.
+- `prompts/get gm` is unchanged in its behaviour. Only its name check now accepts any served skill and then branches.
+
+Change, `skills/gm-continue/SKILL.md`: the description now says to read skill://gm-continue/SKILL.md with ReadMcpResourceTool (server gm), or to run the gm-continue prompt, before every finish of a gm run. It named no route before. The body already named the MCP route for skill://gm/SKILL.md, and it has no Skill tool wording.
+
+Not changed, `skills/gm/SKILL.md`. The brief asked that its finish step name the MCP route to gm-continue. No such step exists: the gm-continue setup and finish invariants were removed from the served gm skill on 2026-11-02 (Skill cleanup, above), because gm-continue plans gm-new's rows, and runs in other projects read the same served skill. A pointer there would send them to tools/gm-continue-setup.mjs, which only gm-new has. The seven rules are unchanged. If the owner wants a finish pointer in the served gm skill, that is a decision to make first.
+
+Change, `README.md` and `docs/index.html`: both skills are MCP prompts and skill:// resources, served by the server, and no user-level copy of either is needed.
+
+Witness, on a tar copy of the working tree at HEAD d8f4dab with this change (`/tmp/gm-scratch/gm-new/gmcont/tree`), and on a tar of HEAD (`/tmp/gm-scratch/gm-new/gmcont/before`). Both are real workers over stdio (`src/mcp.mjs`, no --task), each in its own temporary workspace with a real notes file and task file. Driver: `/tmp/gm-scratch/gm-new/gmcont/witness.mjs`, results in `witness-result.json` beside it. Eight of eight checks pass on the change:
+- (a) prompts/list returns exactly gm and gm-continue, each with a title and a description. Before the change it returned gm only.
+- (b) prompts/get gm-continue returns the SKILL.md body (equal to the file minus its frontmatter). Its skill-loaded event is seq 3 (via prompt, cleared []), run 2026-11-03-06-24-03-082b2e. Before the change it answered -32602 "unknown prompt: gm-continue" (error seq 3, run 2026-11-03-06-24-03-e6be40).
+- b2 the gm-continue prompt sets no task: the run has no task event, and next_context reports task null.
+- (c) prompts/get gm with the task sets the run task: task seq 4 (from session prompt), skill-loaded seq 3 (via prompt, cleared []), run 2026-11-03-06-24-03-4b95ee. Its event kinds are the same as the HEAD run 2026-11-03-06-24-03-413af5 (start 1, tools 2, skill-loaded 3, task 4, code-call 9, end 15 finished).
+- (d) resources/read skill://gm-continue/SKILL.md returns the whole file, and its body equals the (b) text. The read is skill-loaded seq 4 (via resource, cleared []).
+- (e) tools/list returns the three default tools (next_context, finish, run_code). The tools hash is 836ea50420d01153637b4f5a7d062d324428e8bd97d1c613b70b62b824b89932, the same as before the change (tools event seq 2).
+- f) both prompt reads and the resource read are logged as skill-loaded, in the order of the requests.
+
+Gate, runGate on the copy, with the tracked files read from the checkout's index: gate true, failed none. syntax 41 modules parse; ascii 85 text files; docs 237 paths; sources 3; wiki none; skills 3 skill(s) name only served tools, and gm and gm-continue parse as served skills; connect ec7180e23afa5292, unchanged; smoke finished, and the negative control stopped at max_steps.
+
+Not verified here: whether a host lists the gm-continue prompt as a command, and whether its Skill list shows the skill. Both need a live /mcp reconnect. The user-level copies in /config/.claude/skills are not touched by this change.

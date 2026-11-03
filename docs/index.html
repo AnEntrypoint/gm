@@ -113,6 +113,7 @@ npx -y add-mcp@2.6.1 "node /abs/path/to/gm-new/tools/relay.mjs" -n gm -g -a clau
 <p>Each start opens the run, or resumes it after a restart. A run that has ended stays closed, and the next start opens a new run beside it.</p>
 <p>The chapter 2 remove command clears any older <code>gm</code> entry from the global configs. A project that has its own <code>gm</code> entry in its <code>.mcp.json</code> keeps that entry, which overrides the user-level one in that project.</p>
 <p>The entry starts <code>tools/relay.mjs</code>. The relay holds Claude Code's connection, and it runs the supervisor, which runs the worker. The relay and the supervisor are what make updates and restarts possible without a reconnect.</p>
+<p>The server serves two skills, <code>gm</code> and <code>gm-continue</code>. Each is an MCP prompt, which <code>prompts/list</code> answers, and each is a resource: <code>skill://gm/SKILL.md</code> and <code>skill://gm-continue/SKILL.md</code>. A host gets both from the server, so no user-level copy of either skill is needed. The <code>gm</code> prompt takes the run's task. A host reads a skill resource with <code>resources/read</code>.</p>
 </section>
 
 <section class="chapter" id="ch-4">

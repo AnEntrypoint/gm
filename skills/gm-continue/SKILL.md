@@ -1,6 +1,6 @@
 ---
 name: gm-continue
-description: Works out what is left in gm-new from its rows, plans the whole batch of actionable rows, hands the batch to the gm skill, and calls the gm skill again while actionable rows remain. Use to continue gm-new work from its rows. Load it before every finish of a gm run; it fills the missing rows and writes the run's notes to AGENTS.md and the process skill.
+description: Works out what is left in gm-new from its rows, plans the whole batch of actionable rows, hands the batch to the gm skill, and calls the gm skill again while actionable rows remain. Use to continue gm-new work from its rows. Read skill://gm-continue/SKILL.md with ReadMcpResourceTool (server gm), or run the gm-continue prompt, before every finish of a gm run; it fills the missing rows and writes the run's notes to AGENTS.md and the process skill.
 ---
 
 # gm-continue

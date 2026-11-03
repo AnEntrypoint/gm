@@ -97,9 +97,18 @@ function skillGet(params) {
   if (match === null || !SERVED_SKILLS.includes(match[1])) throw new RpcError(-32602, `unknown skill: ${params?.uri}`);
   return { resultType: 'complete', skill: skillEntry(skillOf(match[1])) };
 }
-function skillPrompt() {
-  const SKILL = skillOf('gm');
-  return { name: SKILL.frontmatter.name, title: 'gm run', description: SKILL.frontmatter.description, arguments: [{ name: 'task', description: 'The task to run', required: false }] };
+// The prompts are the served skills, read on each request. The gm prompt takes the run's task, which its session prompt gives to a run
+// started without --task. The gm-continue prompt takes no argument.
+const PROMPT_TITLES = { gm: 'gm run', 'gm-continue': 'gm continue' };
+const TASK_ARGUMENT = { name: 'task', description: 'The task to run', required: false };
+function skillPrompt(name) {
+  const SKILL = skillOf(name);
+  const prompt = { name, title: PROMPT_TITLES[name], description: SKILL.frontmatter.description };
+  return name === 'gm' ? { ...prompt, arguments: [TASK_ARGUMENT] } : prompt;
+}
+// The result of a prompts/get: the skill's description, and its text as one user message.
+function promptResult(SKILL, text) {
+  return { description: SKILL.frontmatter.description, messages: [{ role: 'user', content: { type: 'text', text } }] };
 }
 const DEFAULT_MAX_STEPS = 50;
 const REPLY_MEMORY = 256;
@@ -352,7 +361,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
       touch();
       return callTool(params, rpcId);
     }
-    if (method === 'prompts/list') return { prompts: [skillPrompt()] };
+    if (method === 'prompts/list') return { prompts: SERVED_SKILLS.map((name) => skillPrompt(name)) };
     if (method === 'prompts/get') return getPrompt(params);
     if (method === 'resources/list') return { resources: resourceList() };
     if (method === 'resources/read') return readResource(params);
@@ -376,8 +385,15 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
   }
 
   function getPrompt(params) {
+    const name = params?.name;
+    if (!SERVED_SKILLS.includes(name)) throw new RpcError(-32602, `unknown prompt: ${name}`);
+    // The gm-continue prompt is the skill's text. It sets no task and clears no notice, so its fetch is logged with no rule cleared: an ordinary load.
+    if (name !== 'gm') {
+      const other = skillOf(name);
+      log.append('skill-loaded', { via: 'prompt', skill: name, cleared: [] });
+      return promptResult(other, other.body);
+    }
     const SKILL = skillOf('gm');
-    if (params?.name !== SKILL.frontmatter.name) throw new RpcError(-32602, `unknown prompt: ${params?.name}`);
     // Loading the skill again is what the notice asks for, so it clears the open notices. Each fetch is logged, so a live run can count them.
     log.append('skill-loaded', { via: 'prompt', skill: 'gm', cleared: [...rulesOpen.keys()] });
     clearRules();
@@ -388,7 +404,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
       log.append('task', { from: 'session prompt', text: task });
     }
     const text = given === '' ? SKILL.body : `${SKILL.body}\n\nTask: ${given}`;
-    return { description: SKILL.frontmatter.description, messages: [{ role: 'user', content: { type: 'text', text } }] };
+    return promptResult(SKILL, text);
   }
 
   function readResource(params) {
