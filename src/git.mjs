@@ -1,4 +1,5 @@
-import { relative } from 'node:path';
+import { statSync } from 'node:fs';
+import { relative, resolve } from 'node:path';
 import { runCommand } from './exec.mjs';
 import { errorTypeOf, retrying } from './retry.mjs';
 import { resultZone1, resultZone2 } from './compact.mjs';
@@ -11,7 +12,6 @@ const MAX_COUNT = 200;
 const REF = /^[A-Za-z0-9._\/@-]{1,200}$/;
 export const SHA = /^[0-9a-f]{7,40}$/;
 const REPO = /^[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+$/;
-// The origin's host, owner and name, for any scheme or host: https://host/owner/name(.git), git@host:owner/name, ssh://user@host:port/owner/name.
 const ORIGIN = /^(?:[a-z][a-z0-9+.-]*:\/\/)?(?:[^@\/\s]+@)?([^\/:\s]+)(?::\d+)?[\/:]([^\/\s]+)\/([^\/\s]+?)(?:\.git)?\/?$/i;
 
 const str = { type: 'string' };
@@ -19,28 +19,28 @@ const bool = { type: 'boolean' };
 const num = { type: 'number' };
 const strings = { type: 'array', items: { type: 'string' } };
 const obj = (properties, required = []) => ({ type: 'object', properties, required });
+const scoped = (properties = {}, required = []) => obj({ cwd: str, ...properties }, required);
 
 export const GIT_TOOLS = [
-  { name: 'git_status', description: 'Working tree status: the branch and the changed paths (porcelain v1).', inputSchema: obj({}) },
-  { name: 'git_add', description: 'Stage the given workspace paths. Each path is explicit; "." is refused.', inputSchema: obj({ paths: strings }, ['paths']) },
-  { name: 'git_rm', description: 'Remove the given workspace paths from the disk and the index, with git rm, so the removal is staged. Each path is explicit; "." is refused. Commit it with git_commit, which runs the commit gate.', inputSchema: obj({ paths: strings }, ['paths']) },
-  { name: 'git_commit', description: 'Commit only the given paths, with the message. Stage new files with git_add first. The commit gate runs first: syntax of every module, ASCII of every tracked text file, every doc path and KEEP path exists, and a smoke run with a negative control. A failed check refuses the commit. gate reports each check with its time, and notCovered lists what the gate does not check.', inputSchema: obj({ message: str, paths: strings }, ['message', 'paths']) },
-  { name: 'git_push', description: 'Push main to origin and set its upstream. Refused unless the current branch is main.', inputSchema: obj({}) },
-  { name: 'git_log', description: 'The last count commits, one line each, optionally only for one path (count 1 to 200, default 20).', inputSchema: obj({ count: num, path: str }) },
-  { name: 'git_diff', description: 'Diff of the given paths (default: all), or of the staged index when staged is true.', inputSchema: obj({ paths: strings, staged: bool }) },
-  { name: 'git_show', description: 'Commit message and changed files for a ref (default HEAD).', inputSchema: obj({ ref: str }) },
-  { name: 'git_fetch', description: 'Fetch origin. The working tree is not changed.', inputSchema: obj({}) },
-  { name: 'git_pull', description: 'Fast-forward pull of the current branch from its upstream. Never merges.', inputSchema: obj({}) },
-  { name: 'git_checkout', description: 'Switch to an existing branch, tag or commit. Creates nothing.', inputSchema: obj({ ref: str }, ['ref']) },
-  { name: 'git_branch', description: 'List local branches. The current branch is marked with *.', inputSchema: obj({}) },
-  { name: 'ci_status', description: 'GitHub Actions runs for a commit (default HEAD), every page of them, with status and conclusion. repo is owner/name and defaults to origin; when it comes from origin, gh calls origin\'s host, whatever that host is.', inputSchema: obj({ sha: str, repo: str }) },
+  { name: 'git_status', description: 'Working tree status: the branch and the changed paths (porcelain v1).', inputSchema: scoped() },
+  { name: 'git_add', description: 'Stage the given workspace paths. Each path is explicit; "." is refused.', inputSchema: scoped({ paths: strings }, ['paths']) },
+  { name: 'git_rm', description: 'Remove the given workspace paths from the disk and the index, with git rm, so the removal is staged. Each path is explicit; "." is refused. Commit it with git_commit, which runs the commit gate.', inputSchema: scoped({ paths: strings }, ['paths']) },
+  { name: 'git_commit', description: 'Commit only the given paths, with the message. Stage new files with git_add first. The commit gate runs first: syntax of every module, ASCII of every tracked text file, every doc path and KEEP path exists, and a smoke run with a negative control. A failed check refuses the commit. gate reports each check with its time, and notCovered lists what the gate does not check.', inputSchema: scoped({ message: str, paths: strings }, ['message', 'paths']) },
+  { name: 'git_push', description: 'Push main to origin and set its upstream. Refused unless the current branch is main.', inputSchema: scoped() },
+  { name: 'git_log', description: 'The last count commits, one line each, optionally only for one path (count 1 to 200, default 20).', inputSchema: scoped({ count: num, path: str }) },
+  { name: 'git_diff', description: 'Diff of the given paths (default: all), or of the staged index when staged is true.', inputSchema: scoped({ paths: strings, staged: bool }) },
+  { name: 'git_show', description: 'Commit message and changed files for a ref (default HEAD).', inputSchema: scoped({ ref: str }) },
+  { name: 'git_fetch', description: 'Fetch origin. The working tree is not changed.', inputSchema: scoped() },
+  { name: 'git_pull', description: 'Fast-forward pull of the current branch from its upstream. Never merges.', inputSchema: scoped() },
+  { name: 'git_checkout', description: 'Switch to an existing branch, tag or commit. Creates nothing.', inputSchema: scoped({ ref: str }, ['ref']) },
+  { name: 'git_branch', description: 'List local branches. The current branch is marked with *.', inputSchema: scoped() },
+  { name: 'ci_status', description: 'GitHub Actions runs for a commit (default HEAD), every page of them, with status and conclusion. repo is owner/name and defaults to origin; when it comes from origin, gh calls origin\'s host, whatever that host is.', inputSchema: scoped({ sha: str, repo: str }) },
 ];
 
 export function commitExists(root, sha) {
   return runCommand('git', ['cat-file', '-e', `${sha}^{commit}`], { cwd: root, timeoutMs: CHECK_TIMEOUT_MS, env: GIT_ENV }).then((result) => result.ok);
 }
 
-// Git and CI results keep their outcome in both horizons. A log or a diff is a listing, so the second horizon cuts it.
 const GIT_RESULTS = ['git_status', 'git_add', 'git_rm', 'git_commit', 'git_push', 'git_fetch', 'git_pull', 'git_checkout', 'git_branch', 'ci_status'];
 const GIT_LISTINGS = ['git_log', 'git_diff', 'git_show'];
 export const COMPACT = {
@@ -51,10 +51,9 @@ export const COMPACT = {
 };
 
 export function createGitVerbs({ root, confine, log }) {
-  const gitRaw = (args, timeoutMs = GIT_TIMEOUT_MS) => runCommand('git', args, { cwd: root, timeoutMs, env: GIT_ENV });
-  const git = async (args, timeoutMs) => verbOf(args[0], await gitRaw(args, timeoutMs));
+  const gitIn = (dir, args, timeoutMs = GIT_TIMEOUT_MS) => runCommand('git', args, { cwd: dir, timeoutMs, env: GIT_ENV });
+  const git = async (dir, args, timeoutMs) => verbOf(args[0], await gitIn(dir, args, timeoutMs));
 
-  // A network verb retries a transient failure, with a retry event each time. The local checks around it are not retried.
   const retried = (tool, attempt) =>
     retrying({
       tool,
@@ -65,44 +64,58 @@ export function createGitVerbs({ root, confine, log }) {
       },
     });
 
-  function pathArgs(list) {
+  async function repoAt(cwd) {
+    if (cwd === undefined) return { dir: root };
+    if (typeof cwd !== 'string' || cwd === '') return { error: 'cwd must be a non-empty path' };
+    const dir = resolve(root, cwd);
+    if (!isDirectory(dir)) return { error: `no such directory: ${cwd}` };
+    const inside = await gitIn(dir, ['rev-parse', '--show-toplevel'], CHECK_TIMEOUT_MS);
+    return inside.ok ? { dir } : { error: `cwd ${cwd} is not inside a git repository` };
+  }
+
+  const inRepo = (run) => async (args = {}) => {
+    const where = await repoAt(args.cwd);
+    return where.error === undefined ? run(where.dir, args) : fail(where.error);
+  };
+
+  function pathArgs(dir, list) {
     if (!Array.isArray(list) || list.length === 0 || !list.every((item) => typeof item === 'string')) {
       return { error: 'paths must be a non-empty array of strings' };
     }
     const rels = [];
     for (const path of list) {
-      const at = confine(path);
+      const at = dir === root ? confine(path) : { path: resolve(dir, path) };
       if (at.refused) return { error: at.refused };
-      const rel = relative(root, at.path);
+      const rel = relative(dir, at.path);
       if (rel === '') return { error: 'refused: "." names the whole workspace; name each path explicitly' };
       rels.push(rel);
     }
     return { args: ['--', ...rels] };
   }
 
-  async function currentBranch() {
-    const result = await gitRaw(['rev-parse', '--abbrev-ref', 'HEAD'], CHECK_TIMEOUT_MS);
+  async function currentBranch(dir) {
+    const result = await gitIn(dir, ['rev-parse', '--abbrev-ref', 'HEAD'], CHECK_TIMEOUT_MS);
     return result.ok ? result.output.trim() : null;
   }
 
-  async function originRepo() {
-    const url = await gitRaw(['remote', 'get-url', 'origin'], CHECK_TIMEOUT_MS);
+  async function originRepo(dir) {
+    const url = await gitIn(dir, ['remote', 'get-url', 'origin'], CHECK_TIMEOUT_MS);
     const match = url.ok ? ORIGIN.exec(url.output.trim()) : null;
     return match ? { host: match[1], name: `${match[2]}/${match[3]}` } : null;
   }
 
-  async function ciStatus(sha, repo) {
+  async function ciStatus(dir, sha, repo) {
     if (sha !== undefined && !SHA.test(sha)) return fail('sha must be 7 to 40 lowercase hex digits');
     if (repo !== undefined && !REPO.test(repo)) return fail('repo must be owner/name');
-    const head = await gitRaw(['rev-parse', '--verify', `${sha ?? 'HEAD'}^{commit}`], CHECK_TIMEOUT_MS);
+    const head = await gitIn(dir, ['rev-parse', '--verify', `${sha ?? 'HEAD'}^{commit}`], CHECK_TIMEOUT_MS);
     if (!head.ok) return fail(`no commit ${sha ?? 'HEAD'} in this repository`);
-    const origin = repo === undefined ? await originRepo() : { host: null, name: repo };
+    const origin = repo === undefined ? await originRepo(dir) : { host: null, name: repo };
     if (origin === null) return fail('origin has no owner/name path; pass repo as owner/name');
     const { host, name } = origin;
     if (!REPO.test(name)) return fail('origin has no owner/name path; pass repo as owner/name');
     const full = head.output.trim();
     const hostArgs = host === null ? [] : ['--hostname', host];
-    const api = await retried('ci_status', () => runCommand('gh', ['api', ...hostArgs, '--paginate', '--slurp', `repos/${name}/actions/runs?head_sha=${full}&per_page=100`], { cwd: root, timeoutMs: GH_TIMEOUT_MS }));
+    const api = await retried('ci_status', () => runCommand('gh', ['api', ...hostArgs, '--paginate', '--slurp', `repos/${name}/actions/runs?head_sha=${full}&per_page=100`], { cwd: dir, timeoutMs: GH_TIMEOUT_MS }));
     if (!api.ok) return { ok: false, error: api.error ?? `gh api exited ${api.exitCode}`, output: api.output.trim(), attempts: api.attempts };
     let runs;
     try {
@@ -115,80 +128,85 @@ export function createGitVerbs({ root, confine, log }) {
   }
 
   return {
-    async git_status() {
-      return git(['status', '--porcelain=v1', '--branch']);
-    },
+    git_status: inRepo((dir) => git(dir, ['status', '--porcelain=v1', '--branch'])),
 
-    async git_rm({ paths }) {
-      const scope = pathArgs(paths);
-      return scope.error ? fail(scope.error) : git(['rm', ...scope.args]);
-    },
+    git_rm: inRepo((dir, { paths }) => {
+      const scope = pathArgs(dir, paths);
+      return scope.error ? fail(scope.error) : git(dir, ['rm', ...scope.args]);
+    }),
 
-    async git_add({ paths }) {
-      const scope = pathArgs(paths);
-      return scope.error ? fail(scope.error) : git(['add', ...scope.args]);
-    },
+    git_add: inRepo((dir, { paths }) => {
+      const scope = pathArgs(dir, paths);
+      return scope.error ? fail(scope.error) : git(dir, ['add', ...scope.args]);
+    }),
 
-    async git_commit({ message, paths }) {
+    git_commit: inRepo(async (dir, { message, paths }) => {
       if (typeof message !== 'string' || message.trim() === '') return fail('message must be a non-empty string');
-      const scope = pathArgs(paths);
+      const scope = pathArgs(dir, paths);
       if (scope.error) return fail(scope.error);
-      // The gate loads on the first commit, so a worker that never commits does not hold it.
       const { runGate } = await import('./gate.mjs');
-      const gate = await runGate(root, scope.args.slice(1));
+      const gate = await runGate(dir, scope.args.slice(1));
       if (!gate.ok) {
         const reasons = gate.checks.filter((check) => !check.ok).map((check) => `${check.name}: ${check.detail}`);
         return { ok: false, error: `refused: the commit gate failed: ${reasons.join('; ')}`, gate: gate.checks, notCovered: gate.notCovered };
       }
-      const result = await git(['commit', '-m', message, ...scope.args]);
+      const result = await git(dir, ['commit', '-m', message, ...scope.args]);
       if (result.ok) {
-        const head = await gitRaw(['rev-parse', '--short', 'HEAD'], CHECK_TIMEOUT_MS);
+        const head = await gitIn(dir, ['rev-parse', '--short', 'HEAD'], CHECK_TIMEOUT_MS);
         log.append('commit', { sha: head.ok ? head.output.trim() : null, message: message.split('\n')[0], paths: scope.args.slice(1), gate: gate.checks, notCovered: gate.notCovered });
       }
       return { ...result, gate: gate.checks, notCovered: gate.notCovered };
-    },
+    }),
 
-    async git_push() {
+    git_push: inRepo(async (dir) => {
       const branchStart = log.now();
-      const branch = await currentBranch();
+      const branch = await currentBranch(dir);
       log.append('stage', { tool: 'git_push', stage: 'branch', startMono: branchStart, branch });
       if (branch !== 'main') return fail(`refused: git_push sends only main, and the current branch is ${branch ?? 'unknown'}`);
       const pushStart = log.now();
-      const result = await retried('git_push', () => git(['push', '--set-upstream', 'origin', 'main'], GIT_TIMEOUT_MS));
+      const result = await retried('git_push', () => git(dir, ['push', '--set-upstream', 'origin', 'main'], GIT_TIMEOUT_MS));
       log.append('stage', { tool: 'git_push', stage: 'push', startMono: pushStart, ok: result.ok });
       return result;
-    },
+    }),
 
-    async git_log({ count = 20, path }) {
+    git_log: inRepo((dir, { count = 20, path }) => {
       if (!Number.isInteger(count) || count < 1 || count > MAX_COUNT) return fail(`count must be an integer from 1 to ${MAX_COUNT}`);
-      const scope = path === undefined ? { args: [] } : pathArgs([path]);
-      return scope.error ? fail(scope.error) : git(['log', '--oneline', '--no-color', '-n', String(count), ...scope.args]);
-    },
+      const scope = path === undefined ? { args: [] } : pathArgs(dir, [path]);
+      return scope.error ? fail(scope.error) : git(dir, ['log', '--oneline', '--no-color', '-n', String(count), ...scope.args]);
+    }),
 
-    async git_diff({ paths, staged = false }) {
-      const scope = paths === undefined ? { args: [] } : pathArgs(paths);
+    git_diff: inRepo((dir, { paths, staged = false }) => {
+      const scope = paths === undefined ? { args: [] } : pathArgs(dir, paths);
       if (scope.error) return fail(scope.error);
-      return git(['diff', '--no-color', ...(staged === true ? ['--cached'] : []), ...scope.args]);
-    },
+      return git(dir, ['diff', '--no-color', ...(staged === true ? ['--cached'] : []), ...scope.args]);
+    }),
 
-    async git_show({ ref = 'HEAD' }) {
+    git_show: inRepo((dir, { ref = 'HEAD' }) => {
       const bad = badRef(ref);
-      return bad ? fail(bad) : git(['show', '--no-color', '--stat', ref]);
-    },
+      return bad ? fail(bad) : git(dir, ['show', '--no-color', '--stat', ref]);
+    }),
 
-    git_fetch: () => retried('git_fetch', () => git(['fetch', 'origin'])),
+    git_fetch: inRepo((dir) => retried('git_fetch', () => git(dir, ['fetch', 'origin']))),
 
-    git_pull: () => git(['pull', '--ff-only']),
+    git_pull: inRepo((dir) => git(dir, ['pull', '--ff-only'])),
 
-    async git_checkout({ ref }) {
+    git_checkout: inRepo((dir, { ref }) => {
       const bad = badRef(ref);
-      return bad ? fail(bad) : git(['checkout', ref]);
-    },
+      return bad ? fail(bad) : git(dir, ['checkout', ref]);
+    }),
 
-    git_branch: () => git(['branch', '--no-color', '--list']),
+    git_branch: inRepo((dir) => git(dir, ['branch', '--no-color', '--list'])),
 
-    ci_status: ({ sha, repo }) => ciStatus(sha, repo),
+    ci_status: inRepo((dir, { sha, repo }) => ciStatus(dir, sha, repo)),
   };
+}
+
+function isDirectory(path) {
+  try {
+    return statSync(path).isDirectory();
+  } catch {
+    return false;
+  }
 }
 
 function badRef(ref) {
