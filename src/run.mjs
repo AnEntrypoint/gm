@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { existsSync, mkdirSync, readFileSync, renameSync, statSync, writeFileSync } from 'node:fs';
+import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { openLog } from './log.mjs';
 
@@ -18,6 +18,24 @@ export function createRun({ runDir, rules, meta }) {
   writeFileSync(join(runDir, 'rules.md'), rules);
   writeFileSync(join(runDir, 'task.json'), `${JSON.stringify(meta, null, 2)}\n`);
   return openLog(join(runDir, 'log.jsonl'));
+}
+
+export function currentRunDir(runDir) {
+  const seen = new Set();
+  let dir = runDir;
+  while (!seen.has(dir) && existsSync(join(dir, 'successor'))) {
+    seen.add(dir);
+    const name = readFileSync(join(dir, 'successor'), 'utf8').trim();
+    if (name === '') break;
+    dir = join(dirname(dir), name);
+  }
+  return dir;
+}
+
+export function setSuccessor(runDir, successorDir) {
+  const file = join(runDir, 'successor');
+  writeFileSync(`${file}.tmp`, basename(successorDir));
+  renameSync(`${file}.tmp`, file);
 }
 
 export function openRun({ runDir, rules, meta }) {

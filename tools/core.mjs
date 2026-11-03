@@ -17,6 +17,7 @@ import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DEFAULT_UPDATE_MS, loadedByWorker, startUpdates, workerModulesOf } from './update.mjs';
 import { RELOADABLE } from '../src/hot-config.mjs';
+import { currentRunDir } from '../src/run.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = process.env.GMNEW_ROOT ? resolve(process.env.GMNEW_ROOT) : resolve(HERE, '..');
@@ -537,7 +538,7 @@ function busyReason() {
   for (const method of inflight.values()) if (method === 'tools/call') calls += 1;
   if (calls > 0) return `${calls} tool call(s) in flight`;
   if (runDir === null) return null;
-  const jobsDir = join(runDir, 'jobs');
+  const jobsDir = join(currentRunDir(runDir), 'jobs');
   if (!existsSync(jobsDir)) return null;
   let open = 0;
   for (const name of readdirSync(jobsDir)) {

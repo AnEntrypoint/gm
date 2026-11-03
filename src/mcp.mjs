@@ -6,7 +6,7 @@ import { basename, dirname, join, resolve } from 'node:path';
 import { createInterface } from 'node:readline';
 import { DEFAULT_WITNESS, MCP_RULES, prefixShaOf, renderTools } from './prompt.mjs';
 import { connectReply, SERVER_NAME } from './connect.mjs';
-import { isDirectory, loadTask, newRunId, openRun, ROOT } from './run.mjs';
+import { currentRunDir, isDirectory, loadTask, newRunId, openRun, ROOT, setSuccessor } from './run.mjs';
 import { flushAllLogs } from './log.mjs';
 import { clearPending, hasPending, offPendingAppended, onPendingAppended, takePending } from './pending.mjs';
 import { conflicts, createTools, loggedReply, OUTPUT_PAGE, DEFAULT_STUCK_MS, DEFAULT_MONITOR_MS, BODY_NOTICE_MS } from './tools.mjs';
@@ -1016,7 +1016,7 @@ async function main(argv) {
   let task = flags.task === undefined ? '' : loadTask(flags.task).trim();
   if (flags.task !== undefined && task === '') throw new Error('--task is empty');
 
-  let runDir = flags['run-dir'] === undefined ? join(workspace, 'runs', newRunId()) : resolve(flags['run-dir']);
+  let runDir = currentRunDir(flags['run-dir'] === undefined ? join(workspace, 'runs', newRunId()) : resolve(flags['run-dir']));
   const runMeta = (dir, runTask) => ({ id: basename(dir), mode: 'mcp', task: runTask, witness: DEFAULT_WITNESS, workspace, maxSteps, maxInflight, createdAt: new Date().toISOString() });
   let { log, resumed } = openRun({ runDir, rules: MCP_RULES, meta: runMeta(runDir, task) });
   let resume = resumed ? resumeFrom(log.events()) : null;
@@ -1057,6 +1057,7 @@ async function main(argv) {
     const closedId = basename(runDir);
     const nextDir = join(dirname(runDir), newRunId());
     const { log: fresh } = openRun({ runDir: nextDir, rules: MCP_RULES, meta: runMeta(nextDir, start.task) });
+    setSuccessor(runDir, nextDir);
     runDir = nextDir;
     fresh.append('start', { mode: 'mcp', maxSteps, maxInflight, taskFrom: start.taskFrom });
     if (start.task !== '') fresh.append('task', { from: start.taskFrom, text: start.task });
