@@ -41,6 +41,7 @@ How to change this project. Project facts are in AGENTS.md, and decisions with t
 - Author lanmower. The subject states the change. No trailers of any kind.
 - Work on main. Do not create branches or worktrees.
 - A refusal from the gate names each failing check and its detail. Fix the cause and run it again. Do not commit around the gate.
+- A bare verb name in any skill file fails the gate's skills check (`src/skills.mjs`), because the check reads the text as written. Reword the sentence, or write the name as gm.<verb>.
 
 ## Docs
 

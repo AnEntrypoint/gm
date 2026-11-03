@@ -1,0 +1,7 @@
+id: "prd-fan-out-tactic"
+kind: "prd"
+title: "Fan-out tactic in the gm skill"
+body: "Landed in 41ecc94: the deep-research shape (scope, fan out, merge in code, three-vote verification, one synthesis) as the skill section Fan out to many agents, with the child-session rules it relies on."
+status: "resolved"
+createdAt: "2026-11-03T18:27:55.539Z"
+witnessCommit: "41ecc94"
