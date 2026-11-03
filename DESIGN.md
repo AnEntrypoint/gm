@@ -2018,3 +2018,7 @@ Commit: the commit that adds this section (`git log -1 -- DESIGN.md`).
 
 Not witnessed: a host session (Claude Code) calling `grep` with `scope`; macOS, Windows and arm64; `all` on a tree larger than the 30 s listing limit; the default before the change on `/workspace/gm`.
 
+
+## Fan-out tactic in the gm skill (2026-11-03)
+
+Decision: `skills/gm/SKILL.md` gains "Fan out to many agents", the deep-research shape (scope, fan out, merge in code, three-vote verification with two kills, one synthesis), written as prose over the existing child sessions and run_code verbs. No runtime default changes: the parallel and background defaults and multi-worker fan-out stay as direction 6 sets them until measured. Reason: the skill is the instruction surface, and the owner asked for the tactic there. Witness: run `2026-11-03-18-22-23-3fb0a8`, where the skill read back from `skill://gm/SKILL.md` carries the new section.
