@@ -5,17 +5,13 @@ description: Runs a long task as a gm worker. Each step calls next_context, does
 
 # gm loop
 
-Flow rule. A multi-step change is built as one batch, all steps first, then witnessed in one pass over all of them, and the commits land after that pass. Each step's witness goes in the run log and is cited in DESIGN.md. A step is not witnessed on its own during the build.
-
-Setup invariant. The gm-continue setup (skill://gm-continue/SKILL.md, read with ReadMcpResourceTool, server gm) runs before any work, and this skill takes its task from the setup's list.
-
-Finish invariant. Before you send `finish`, read skill://gm-continue/SKILL.md with ReadMcpResourceTool (server gm). It lists the remaining work, fills any row that is missing, and either sends this run back here or lets it finish. If it lists work, keep working in this run, and do not finish.
+Flow rule. A multi-step change is built as one batch, all steps first, then witnessed in one pass over all of them. Each step's witness goes in the run log. A step is not witnessed on its own during the build.
 
 The served tools are three: next_context, run_code and finish. All the work is done in run_code.
 
 ## Rules
 
-These are the rules of every run. next_context returns them with each step, and the server's instructions carry the same text. This skill holds them word for word as well: a skill is re-attached after a compaction, and the server's instructions are not documented to survive one.
+These are the rules of every run. next_context returns them with each step, and this skill holds them word for word as well, because a skill is re-attached after a compaction.
 
 - Work only inside the workspace. A path with a .. segment is refused.
 - Call next_context at the start of every step. Each call is one step; stepsLeft counts the steps the run has left.
@@ -29,10 +25,8 @@ These are the rules of every run. next_context returns them with each step, and 
 2. Do the work in one `run_code` call. Its body is JavaScript in the project, and each verb is a function on `gm`: `await gm.read_file({ path: 'a.txt' })`, `await gm.write_file({ path: 'c.txt', content })`, `await gm.run_shell({ command: 'npm test' })`. The verb list is in run_code's description, and `gm.verbs()` returns each verb's description and input schema as data.
 3. Put independent calls in one body with `Promise.all`, for example `const [a, b] = await Promise.all([gm.read_file({ path: 'a.txt' }), gm.read_file({ path: 'b.txt' })]);`. Do not put a call in the body that needs the result of another call in the same batch.
 4. A failed verb call returns `{ ok: false, error }` as data, and it does not stop the body. For per-call isolation, wrap any step that may throw in `gm.try`: `await gm.try(async () => ...)` returns the value, or `{ ok: false, error }` if the function throws.
-5. Background work: `await gm.job_start({ job: 'build', command })` starts a job, and `await gm.job_status({ job: 'build', waitMs: 30000 })` waits for it. Call it again only if the job is still running. A body still running after its budget (180 seconds by default, `timeoutMs` at most 300000) becomes a background run: run_code returns its job id at once, with the verb results logged so far. `gm.job_status` with that id and `waitMs` returns its value when it ends. finish is refused while a background run is running and names it; finish with `stopBackground: true` kills it first. Each step's next_context also lists `jobsOpen`: every open job with its state and `sinceProgressMs`, and `stuck` is true for a job that has made no progress for three minutes. `jobsStuck` and `jobsUnstuck` name the jobs that changed since your last step. `jobsRunning` carries each reminder that a background run has made, and each reminder has `prd`: the PRD rows' `total`, the `open` count, the first five open rows as `window` (`id` and `title`), and `more`, the number of open rows past the window.
-6. Verify the work: run what you built and read its output.
-7. Read skill://gm-continue/SKILL.md with ReadMcpResourceTool (server gm) first, as the finish invariant says. Then finish outside `run_code`, with `finish` and a witness. `finish` is refused while a PRD or question row is open, and names the rows: work them first. A PRD you will not implement is deleted with `gm.prd_delete({ id })`; any other open row is implemented and resolved, never held. `stopRows: true` ends the run anyway, with each open row listed as a gap. The witness quotes the evidence you observed: command output, file content or a query result. Quote only tool output, labelled with the tool that returned it. If gm.search did not return the target, say so. Never present a gm.read_file result as a gm.search result. Send `finish` after the run_code calls in the step have returned, not in the same body. A run belongs to one server connection, and every agent on that connection shares it: `finish` closes that run for all of them. A child agent that shares your connection must not send `finish`. A new connection starts a new run.
-8. If the task cannot be done, finish with a witness that states why, with the evidence.
+5. Background work: `await gm.job_start({ job: 'build', command })` starts a job, and `await gm.job_status({ job: 'build', waitMs: 30000 })` waits for it. Call it again only if the job is still running. A body still running after its budget (180 seconds by default, `timeoutMs` at most 300000) becomes a background run: run_code returns its job id at once, with the verb results logged so far. `gm.job_status` with that id and `waitMs` returns its value when it ends. Each step's next_context also lists `jobsOpen`: every open job with its state and `sinceProgressMs`, and `stuck` is true for a job that has made no progress for three minutes. `jobsStuck` and `jobsUnstuck` name the jobs that changed since your last step. `jobsRunning` carries each reminder that a background run has made, and each reminder has `prd`: the PRD rows' `total`, the `open` count, the first five open rows as `window` (`id` and `title`), and `more`, the number of open rows past the window.
+6. Send `finish` outside `run_code`, after the run_code calls in the step have returned, with a witness. A finish call is refused without a witness, while a background run is running, or while a PRD or question row is open; stopBackground, which kills a background run, and stopRows, which ends the run with each open row listed as a gap, are the way past those. A PRD you will not implement is deleted with `gm.prd_delete({ id })`; any other open row is implemented and resolved, never held. The witness quotes the evidence you observed: command output, file content or a query result. Quote only tool output, labelled with the tool that returned it. If gm.search did not return the target, say so. Never present a gm.read_file result as a gm.search result. A run belongs to one server connection, and every agent on that connection shares it: `finish` closes that run for all of them. A child agent that shares your connection must not send `finish`. A new connection starts a new run.
 
 ## Bundling a step
 
@@ -43,8 +37,6 @@ A step is one run_code body and one finish. The body does the step's work in cod
 3. Act: the independent writes go in one Promise.all.
 4. Verify in the same body, from a check whose output the body reads.
 5. Return a compact result: counts, paths and failures, not the full output.
-
-Then send finish, outside run_code, with a witness that quotes the returned result.
 
 ```
 const [spec, notes] = await Promise.all([gm.read_file({ path: 'spec.md' }), gm.read_file({ path: 'notes.md' })]);
@@ -65,7 +57,7 @@ for (let round = 0; round < 10 && state === 'running'; round += 1) {
 return { state };
 ```
 
-Failures: a verb call that fails returns { ok: false, error } as data. Collect them with gm.try and return them with the successes, so one failure does not hide the rest:
+Fan out with gm.try and return the failures with the successes, so one failure does not hide the rest:
 
 ```
 const files = ['a.mjs', 'b.mjs', 'c.mjs'];
@@ -106,14 +98,14 @@ next_context returns `pending`: the events that need you since your last step, e
 
 Keep a wait running while the run is open: start one at the start of every turn, before other work, using the most effective wait your host offers. A wait is either a command that ends at the next event and hands over the events, which `pendingCommands.wait` from `next_context` is (it prints the queued events once and exits, at once if events are queued, and with no output when its timeout passes), or, where the host can run a tool call in the background, a `next_context` call with `waitMs` run that way, whose return is the wake. Act on the events, then start the wait again.
 
-Do not end a turn while the run is open unless a wait is running. A host that can only hold a call in the foreground calls `next_context` with `waitMs` (at most 300000) to hold the step until an event lands, and runs `pendingCommands.read` at each step. A job whose start answers with an error wrote no job event, so no wait reports it: check that the start answered `started job`, and start it again if it did not.
+A host that can only hold a call in the foreground calls `next_context` with `waitMs` (at most 300000) to hold the step until an event lands, and runs `pendingCommands.read` at each step. A job whose start answers with an error wrote no job event, so no wait reports it: check that the start answered `started job`, and start it again if it did not.
 
 ## Handing work to a child session
 
 Hand a piece of work to a child session when it can be done apart from this run, and its context would crowd this one. A child is a new session with its own run, log and context. It sees its task and its own events, and you see only what it hands back.
 
 1. Put the child's task in a file in the project, and name the file and the workspace to the child.
-2. The child calls `next_context` first. Its reply has `run`, the child's run id. The child puts that id in its witness, with its evidence, and finishes as in step 7.
+2. The child calls `next_context` first. Its reply has `run`, the child's run id. The child puts that id in its witness, with its evidence, and finishes as in step 6.
 3. Read the child's result from a body. The CLI reads the child's log by its run id, and your context keeps only the witness:
 
 ```
@@ -123,5 +115,3 @@ return res.output;
 
 4. The child shares the workspace with you, and you both edit it at the same time. Do not branch, do not use worktrees, and do not claim files to keep sessions apart. An edit that collides is repaired after the fact, which costs far less than keeping sessions apart.
 5. When the child has finished and your own edits are in, run the validation once over the whole result: the checks the task names. Read its output. If it fails, repair in one pass, and run the validation again. Every hand-off ends this way, and your finish witness quotes the last validation run.
-
-Never print, store or request secrets or API keys.
