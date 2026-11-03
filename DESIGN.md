@@ -1967,3 +1967,19 @@ Commit: the commit whose subject is "grep: a literal miss with a regex character
 
 Not witnessed: a host session (Claude Code) calling grep; macOS, Windows, arm64.
 
+## Subagents on one connection: child reads (2026-11-03)
+
+Friction (chatnano-f6, run 465053-9472994): a general-purpose subagent called `next_context` on the parent's connection and got the parent's run (task "lets"). The reply did not say it was a child, and the skill says a child must not send `finish`. The earlier handoff design assumed a child on its own session, but a subagent shares its parent's connection.
+
+Design: a child calls `next_context` with `{ child: true, run: "<owning run id>" }`. The reply has `role: "child"`, the owning `run`, and a `note`. The read takes no step, claims no pending event and does not move the feed cursor. It never opens a run: a child call on an ended run is refused, and a call that names another run is refused. A child on its own connection still gets its own run on its first call. Rejected: a child opening its own run on a shared connection, because a connection holds one session and that would change every parent reply. The skill's child section (`skills/gm/SKILL.md`) names the read.
+
+Witness: the relay over stdio, in a temp workspace. The driver is `/tmp/gm-scratch/child-witness/witness.mjs`, outside the repository.
+- Parent `next_context`: run `w1`, `stepsLeft` 49.
+- Child `next_context({ child: true, run: "w1" })`: `{"ok":true,"role":"child","run":"w1","note":"child of run w1: the session that opened the run ends it, so a child does not send finish",...}`.
+- Child naming another run: `refused: this connection's run is w1, not not-this-run`. The parent's next call then showed `stepsLeft` 48, so the child read took no step.
+- After the parent's `finish`, a child call: `refused: run w1 has ended; the session that opened it calls next_context to open the next run`. The parent's next call opened run `2026-11-03-16-48-24-56c7c8`.
+
+Commit: "next_context child read: a subagent on a shared connection reads its run" (`ebeaafe2f283f6d92028d92ba18fc38aa7165d03`).
+
+Not witnessed: a live Claude Code subagent sending `child: true` on a shared connection. A worker started before this commit runs the old code until it restarts.
+
