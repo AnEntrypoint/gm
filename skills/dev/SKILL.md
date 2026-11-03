@@ -5,7 +5,7 @@ How to change this project. Project facts are in AGENTS.md, and decisions with t
 ## Scratch
 
 - Scratch work lives under /tmp/gm-scratch/gm-new. A script never sits in a directory it deletes: a probe that removed its own directory is why this rule exists.
-- A witness copies the working tree (tar, without .git, runs and node_modules), runs the real path through the relay, reads the result from the run's log file, and removes its copy.
+- A witness copies the working tree as a tar (without .git, runs and node_modules). The copy is not a git clone and not a worktree. The witness runs the real path through the relay, reads the result from the run's log file, and deletes the copy.
 - A witness for propagation uses a scratch bare repository as origin and a runner checkout started with default settings. It times the push and reads the relay's stderr.
 
 ## Witnesses
@@ -16,10 +16,11 @@ How to change this project. Project facts are in AGENTS.md, and decisions with t
 - A witness that edits a file by string counts the matches first and edits the one it means. A sentence that occurs in two places once changed the wrong one.
 - Record the before run id and the after run id, with the numbers, in DESIGN.md under a dated section.
 - A multi-step change is built as one batch: all the steps, then one witness over all of them, then the commits. A step is not witnessed alone during the build.
+- A top-level `return` fails `node --check` in an ES module. A probe that needs one wraps its body in a function.
 
 ## Edits and collisions
 
-- The shared checkout is live: a worker started from it runs its working tree. Build a change in a scratch copy (a tar of the tree), witness it there, and apply it to the checkout in one step once it is witnessed. A half-made edit breaks every worker that restarts. A change to a reloadable leaf (src/hot-config.mjs) reloads in place. A batch that restarts a worker kills its background jobs, so apply it when no worker on the checkout is busy, and tell the peers that run it.
+- The shared checkout is live: a worker started from it runs its working tree. Build a change in a copy of the tree (a tar, see Scratch; not a git clone or a worktree), witness it there, and apply it to the checkout in one step once it passes. A half-made edit breaks every worker that restarts. A change to a reloadable leaf (src/hot-config.mjs) reloads in place. A batch that restarts a worker kills its background jobs, so apply it when no worker on the checkout is busy, and tell the peers that run it.
 - Change an existing file with Edit only. Never Write over an existing file.
 - On a failed Edit, re-read the region and reapply once. If it fails again, stop and report.
 - Only the single writer commits. A collision is repaired after the fact, not avoided.
@@ -33,7 +34,11 @@ How to change this project. Project facts are in AGENTS.md, and decisions with t
 - Work on main. Do not create branches or worktrees.
 - A refusal from the gate names each failing check and its detail. Fix the cause and run it again. Do not commit around the gate.
 
+## Docs
+
+- When a tool, a tool's input, an install step or a skill path changes, update docs/index.html and README.md in the same commit, because they are the public description.
+
 ## Reporting
 
-- When a request lands, send the session that asked one message under 15 lines: the item, the run id, the event sequence numbers that witness it, and any open question.
+- When a request lands, send the orchestrator one message under 15 lines: the item, the run id, the event sequence numbers that witness it, and any open question.
 - Keep working on other items while a question is open. Ask one question at a time.
