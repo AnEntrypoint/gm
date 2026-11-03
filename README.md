@@ -8,13 +8,12 @@ Install, once per clone, from the checkout:
 
     ./setup.sh
 
-The setup installs the one pinned runtime dependency, acorn, runs the gate, fetches the playwriter tools, and prints three add-mcp commands. add-mcp runs through npx, pinned to version 2.6.1. Run them in this order:
+The setup installs the one pinned runtime dependency, acorn, runs the gate, fetches the playwriter tools, reports whether a gm entry is registered, and prints three add-mcp commands. add-mcp runs through npx, pinned to version 2.6.1. Run them in this order: list, remove, then install. The first two are:
 
     npx -y add-mcp@2.6.1 list -g
     npx -y add-mcp@2.6.1 remove gm -g -y
-    npx -y add-mcp@2.6.1 "node /abs/path/to/gm-new/tools/relay.mjs" -n gm -g -a claude-code -y
 
-Use the three commands setup prints: they carry this checkout's real absolute path. The `/abs/path/to/gm-new` in the third line below is a placeholder; copying it unchanged registers a relay that does not exist, and gm fails to start with CONNECTION_CLOSED.
+The third, the install, is printed by setup with this checkout's real absolute path. Copy it from the setup output, not from this file. A registered path that does not exist starts no relay, and gm fails with CONNECTION_CLOSED. `./setup.sh` and `node src/cli.mjs doctor` both report the registered path, and doctor fails when it is missing.
 
 The first only lists. The second removes every gm entry, old or new, from the global configs. It matches any server whose name contains gm, so read the list first. The third installs gm for Claude Code at user level, where the relay starts in each session's folder. setup runs none of them. The manual is `docs/index.html`, chapter 2.
 

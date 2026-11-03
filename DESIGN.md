@@ -1929,3 +1929,13 @@ Fix: the entry now runs `node /data/workspace/gm-new/tools/relay.mjs` with no ar
 
 Gap: nothing checks that the path in the entry exists, so a placeholder fails silently until the host reconnects. Possible change: `setup.sh` reads the entry and reports a missing path. Not done here.
 
+gm install check: the registered path is reported (2026-11-03)
+
+Change: `src/registration.mjs` reads the user-level gm entry in the Claude config (`CLAUDE_CONFIG_DIR`, else `~/.claude.json`) and reports the path its relay runs. `node src/cli.mjs doctor` prints that line and fails when the path does not exist. `setup.sh` prints the same line before its install commands. The README and the manual no longer carry a copyable install line with a placeholder path, and the manual's troubleshooting table has a row for CONNECTION_CLOSED.
+
+Why: a user-level entry with the placeholder path `/abs/path/to/gm-new/tools/relay.mjs`, copied from the documentation, made `node` exit at once. The session then showed CONNECTION_CLOSED on every reconnect and nothing said why. The relay answered `initialize` correctly over stdio, so the fault was the registered path alone.
+
+Checked: five config states give fail for a placeholder path, ok for a real path, ok for no gm entry, fail for unreadable JSON, and ok for no config file. `doctor` exits 1 for the placeholder and 0 for the real path. The gate passed on the working tree: 43 modules parse, 89 text files are ASCII, 212 doc paths exist, 30 worker modules match the import graph, the session prompt keeps all 15 words, and the smoke run finishes with its negative control at max_steps.
+
+Not covered: a gm entry in a project's `.mcp.json` is not checked, and a path that exists but is not this checkout's relay is reported as ok.
+

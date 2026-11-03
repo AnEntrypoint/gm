@@ -99,10 +99,10 @@ footer { border-top: 4px solid #000; margin-top: 2.4em; padding-top: 0.5em; font
 <h2>2. Install</h2>
 <p>You need git, npm and Node 22 or later. From the folder of the checkout, run the setup once after a clone:</p>
 <pre>./setup.sh</pre>
-<p>The setup checks the tools, installs acorn if it is missing, pulls origin main if the checkout has no changes to tracked files, runs the gate, and prints three add-mcp commands. They run through npx, pinned to version 2.6.1. Run them in this order. The first only lists the gm entries. The second removes every gm entry, old or new, from the global configs. Remove matches any server whose name contains gm, so read the list first. The third installs gm for Claude Code at user level, so one entry serves every project:</p>
+<p>The setup checks the tools, installs acorn if it is missing, pulls origin main if the checkout has no changes to tracked files, runs the gate, reports whether a gm entry is registered, and prints three add-mcp commands. They run through npx, pinned to version 2.6.1. Run them in this order. The first only lists the gm entries. The second removes every gm entry, old or new, from the global configs. Remove matches any server whose name contains gm, so read the list first. The first two are:</p>
 <pre>npx -y add-mcp@2.6.1 list -g
-npx -y add-mcp@2.6.1 remove gm -g -y
-npx -y add-mcp@2.6.1 "node /abs/path/to/gm-new/tools/relay.mjs" -n gm -g -a claude-code -y</pre>
+npx -y add-mcp@2.6.1 remove gm -g -y</pre>
+<p>The third installs gm for Claude Code at user level, so one entry serves every project. Setup prints it with this checkout's real absolute path, so copy it from the setup output. A registered path that does not exist starts no relay, and gm then fails with CONNECTION_CLOSED.</p>
 <p>The setup runs none of these commands. Other agents do not get gm from this install; add-mcp can add it to any agent it lists by changing the name after <code>-a</code>.</p>
 <p class="note">The gate checks syntax, ASCII, the docs, the sources, the wiki, the skills, and runs a smoke test. A checkout that fails the gate is not used.</p>
 </section>
@@ -230,6 +230,7 @@ return { todo: todo.length };</pre>
 <tr><td>the checkout and origin main have diverged</td><td>The checkout has commits that origin does not have. Resolve it by hand. Nothing is pulled.</td></tr>
 <tr><td>pulled code that the gate failed, and reset to the commit before it</td><td>The pull was undone. Read the failing check names in the message, and fix the cause upstream.</td></tr>
 <tr><td>the gate failed</td><td>setup prints the failing check names. Fix the cause, then run setup again.</td></tr>
+<tr><td>gm fails with CONNECTION_CLOSED, or setup or doctor reports that the gm entry runs a path that does not exist</td><td>The registered path is missing, often a placeholder copied from this manual. Run the remove and install commands that setup prints (chapter 2), then reconnect gm with /mcp in Claude Code.</td></tr>
 </table>
 <p>To print this manual, use the browser's Print command and choose Save as PDF. The print layout is set for A4 paper.</p>
 </section>

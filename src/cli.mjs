@@ -9,6 +9,7 @@ import { clearPending, takePending } from './pending.mjs';
 import { buildPrompt, DEFAULT_RULES, DEFAULT_WITNESS } from './prompt.mjs';
 import { createTools } from './tools.mjs';
 import { createRun, isDirectory, loadTask, newRunId, RUNS } from './run.mjs';
+import { registrationStatus } from './registration.mjs';
 import { writeSummary } from './summary.mjs';
 
 const USAGE = `usage:
@@ -180,8 +181,10 @@ function doctor(flags) {
   const writable = probeWritable(workspace);
   console.log(`workspace ${workspace}: ${writable.ok ? 'writable' : `not writable (${writable.error})`}`);
   console.log(lastRunSummary());
+  const registration = registrationStatus();
+  console.log(registration.text);
   console.log('limits: the Node-below-22 failure path has no live run; run_shell is unconfined, so a shell command can hard-link a file from outside the workspace; the process-group kill is unverified on Windows');
-  return nodeOk && writable.ok ? 0 : 1;
+  return nodeOk && writable.ok && registration.ok ? 0 : 1;
 }
 
 function probeWritable(dir) {

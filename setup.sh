@@ -50,6 +50,8 @@ fi
 
 node --input-type=module -e "import('./tools/prefetch.mjs').then((m) => m.prefetch())"
 
+node --input-type=module -e "import('./src/registration.mjs').then((m) => console.log('setup: ' + m.registrationStatus().text))"
+
 # 5. The install. gm is installed with add-mcp, run through npx. The first command only lists the gm entries. The second removes every gm
 # entry, old or new. The third installs gm for Claude Code at user level, where the relay starts in the directory each session opens, so one
 # entry serves every project. setup prints the commands and runs none of them.
