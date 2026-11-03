@@ -106,7 +106,7 @@ next_context returns `pending`: the events that need you since your last step, e
 
 Start the watcher at the start of every turn while the run is open, before other work: run `pendingCommands.wait` from `next_context` as a background process of your shell. It prints the queued events once and exits, and it exits at once if events are queued. Its exit wakes you with its output: act on the events, then start it again. It also exits with no output when its timeout passes, so start it again then.
 
-Do not end a turn while the run is open unless the watcher is running. A host with no background process calls `next_context` with `waitMs` (at most 300000) to hold the step until an event lands, and runs `pendingCommands.read` at each step.
+Do not end a turn while the run is open unless the watcher is running. A host with no background process calls `next_context` with `waitMs` (at most 300000) to hold the step until an event lands, and runs `pendingCommands.read` at each step. A job whose start answers with an error wrote no job event, so the watcher never reports it: check that the start answered `started job`, and start it again if it did not.
 
 ## Handing work to a child session
 

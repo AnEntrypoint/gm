@@ -41,6 +41,7 @@ const UPDATE_MS = process.env.GMNEW_UPDATE_MS === undefined ? DEFAULT_UPDATE_MS 
 const DEFAULT_INITIALIZE = { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'gm-new-core', version: '1' } };
 const LISTS = { 'tools/list': 'tools', 'prompts/list': 'prompts', 'resources/list': 'resources' };
 const NOTICE = { tools: 'notifications/tools/list_changed', prompts: 'notifications/prompts/list_changed', resources: 'notifications/resources/list_changed' };
+const PAUSED_BEFORE_ANSWER = 'the worker paused before it answered this call; query_log shows what it did, then repeat the call if it did nothing';
 
 const argv = process.argv.slice(2);
 // The probe loads this file and its imports, then stops before any side effect. A handover runs it before the new code takes over.
@@ -311,7 +312,16 @@ function onWorkerExit(proc, code, signal) {
     handshake.fail(new Error(`the worker exited (${how}) before the handshake`));
     return;
   }
-  if (state === 'running') failWith(`the worker exited unexpectedly (${how})`);
+  if (state !== 'running') return;
+  // A worker that exits 0 with the run open paused itself on SIGTERM (src/mcp.mjs pauseRun), so a restart follows at once and new calls are held.
+  if (signal === null && code === 0) {
+    state = 'restarting';
+    for (const id of inflight.keys()) writeHost(errorReply(id, PAUSED_BEFORE_ANSWER));
+    inflight.clear();
+    requestTransition('restart', 'the worker paused itself');
+    return;
+  }
+  failWith(`the worker exited unexpectedly (${how})`);
 }
 
 async function stopWorker() {

@@ -1149,3 +1149,19 @@ Not witnessed:
 - The host's wake. The witness runs the watcher as a child process. Whether a host wakes an agent when a background process ends is a property of the host, and no live session has been observed doing it yet.
 - A planned restart also pauses the run, so it wakes a watcher too. oscraft run 79788-955320 had 38 restarts, so its agent would have woken 38 times. The cost in a live session is not measured.
 - Whether a host cuts a waiting `next_context`. The wait is capped at 300000 ms for that reason.
+
+## Self-pause keeps calls held, and the live stops (2026-11-03, the owner's direction)
+
+Problem. The worker's own pause (SIGTERM, `pauseRun` in src/mcp.mjs) logs `paused` and exits 0. The core read every exit while running as a crash: it answered each call with "the worker exited unexpectedly (code 0)" and waited for the 1 s retry before it started the worker again. A `job_start` answered that way wrote no job event, so a watcher waiting on that job could not wake. Witness of the defect, before the change: turn-loop run 2026-11-03-04-49-00-19a58c. The SIGTERM was at 2440 ms, error replies ran from 2944 ms to the restart at 3222 ms, and a watcher on `jobB-4` waited until the 150 s watchdog.
+
+Change. `tools/core.mjs`, `onWorkerExit`: an exit with code 0 and no signal, while running, is a self-pause. The core sets the state to `restarting`, answers each call in flight with `PAUSED_BEFORE_ANSWER` (check query_log, then repeat the call if it did nothing), and queues a restart at once. New calls are held until the handshake is replayed. Any other exit fails the calls as before. The gm skill, Pending events, says a job whose start answered with an error wrote no job event, so do not wait on it.
+
+Witnesses (scratch copies at `/tmp/gm-scratch/gm-new/selfpause/tree`, real relay, `turn-loop.mjs` in `/tmp/gm-scratch/gm-new/wake`):
+- turn-loop, run 2026-11-03-04-52-50-209d27: three jobs. The SIGTERM killed `jobB-2`, the loop started `jobB-3`, and the run finished in four turns. Restart reason "the worker paused itself". No error reply after the pause, and the finish was accepted with end status finished.
+- turn-loop, run 2026-11-03-04-52-12-c1ec9f: the first run on the fix, before two loop fixes (the refusal test and the state line). It also finished.
+- wake-witness, run 2026-11-03-04-53-10-d03586: all ten checks pass.
+- reload-witness, run 2026-11-03-04-53-27-22219c: all eleven checks pass.
+
+Live runs at the apply (04:48 UTC). Both were idle, with no watcher and no call since before 8ed0e94. hy3d run 79960-959581: its agent ended its turn at 03:14 UTC by asking the owner to decide the push. It restarted on the new code at 04:33:45 and logged host-idle at 04:43:45. oscraft run 150276-4824995: its agent ended at 03:30 UTC by asking the owner for an answer, and it has 7 events since 03:39. Neither agent has run a turn under the new instructions, so the watcher wake is not yet seen live. The apply restarts those idle workers.
+
+Not witnessed: a live host waking from a watcher under these instructions.
