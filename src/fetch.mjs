@@ -1,5 +1,5 @@
 import { archiveSource } from './sources.mjs';
-import { errorTypeOf, retrying } from './retry.mjs';
+import { codeType, retrying, statusType } from './retry.mjs';
 import { resultZone1, resultZone2 } from './compact.mjs';
 
 const DEFAULT_TIMEOUT_MS = 15000;
@@ -59,7 +59,7 @@ export function createFetchVerbs({ log, root }) {
         try {
           response = await httpGet(current, signal);
         } catch (err) {
-          return fail(failureOf(err, timeoutMs));
+          return failureOf(err, timeoutMs);
         }
         const location = response.headers.get('location');
         if (response.status < 300 || response.status > 399 || !location) break;
@@ -72,7 +72,7 @@ export function createFetchVerbs({ log, root }) {
       try {
         read = await readAll(response);
       } catch (err) {
-        return fail(failureOf(err, timeoutMs));
+        return failureOf(err, timeoutMs);
       }
       const type = response.headers.get('content-type') ?? '';
       const body = Buffer.concat(read.chunks).toString('utf8');
@@ -96,10 +96,10 @@ export function createFetchVerbs({ log, root }) {
   return verbs;
 }
 
-// A 408, 429 or 5xx status is a transient answer, so it is retried. Other statuses are final, and a 404 is never retried.
+// A 408, 429 or 5xx status is a transient answer, so it is retried. Other statuses are final, and a 404 is never retried. A failed
+// call is classified by its error code, never by its message.
 function classify(result) {
-  if (result.ok && (result.status === 408 || result.status === 429 || result.status >= 500)) return `HTTP-${result.status}`;
-  return errorTypeOf(result);
+  return result.ok ? statusType(result.status) : codeType(result.code);
 }
 
 function httpGet(url, signal) {
@@ -120,9 +120,11 @@ async function readAll(response) {
   return { chunks, bytes };
 }
 
+// The failed result of a call that threw, with the error code it carries. A timeout is ETIMEDOUT.
 function failureOf(err, timeoutMs) {
-  if (err.name === 'TimeoutError' || err.name === 'AbortError') return `timed out after ${timeoutMs} ms`;
-  return `request failed: ${err.cause?.code ?? err.message}`;
+  if (err.name === 'TimeoutError' || err.name === 'AbortError') return { ok: false, error: `timed out after ${timeoutMs} ms`, code: 'ETIMEDOUT' };
+  const code = err.cause?.code;
+  return { ok: false, error: `request failed: ${code ?? err.message}`, code };
 }
 
 // Script, style, noscript and comments are dropped first, so their text never reaches the output.

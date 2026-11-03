@@ -66,7 +66,7 @@ This is what you build and codify. Single worker first: DESIGN.md direction 6 sa
 - A body's console output is drained by the session and is not returned or logged. The owner's decision on it is open (DESIGN.md, "Limits, stated, not closed").
 - `fetch` cannot read `file:` URLs: Node's fetch fails them, and the reply is "request failed: fetch failed". `data:` URLs are served (DESIGN.md, "Network access with no caps (2026-11-03)").
 - `ci_status` pages every run with `gh api --paginate --slurp` and passes origin's host as `--hostname`, so it needs a gh that has --slurp (gh 2.102.0 has it) (DESIGN.md, "Network access with no caps (2026-11-03)").
-- `src/retry.mjs` PERMANENT matches the word "invalid" anywhere in an error, so a transient network error that names a host with "invalid" in it is not retried (DESIGN.md, "Network access with no caps (2026-11-03)").
+- `src/retry.mjs` classifies a failure by its error code and HTTP status. git and gh print no code, so their message is matched after its URLs and dotted host names are removed, and a host name never decides a retry (DESIGN.md, "Retry by code and status (2026-11-03)").
 - `run_code` and `next_context` refuse with "run has ended" after `finish`. Only a reconnect opens a new run. This is the shared-run question, open with the owner.
 - A body that outlives its budget becomes a background job. Each body runs in a worker thread, four at most at once per session. A thread costs about 31 ms to start, most of a median `run_code` call (DESIGN.md, "Limits, stated, not closed").
 - The update checks tick every 60 s counted from the core's start, and the first is at 30 s. A push is pulled at the next tick, so within about a minute. A witness that pushes must time from the tick, not from the first check.

@@ -1512,3 +1512,29 @@ Rebased before the apply, onto a7afdd4 (the network-access commit). It changed r
 - The steps of the witness on a7afdd4, with the change (run `2026-11-03-07-08-53-0650da`): (a) job events 6, 9, 12; (b) none; exits 19, 22, 25 once; (c) rules notice 33 printed once, exit 0 in 654 ms, queue gone, next_context none; (d) nothing, exit 0 at 1655 ms; (g) notice 42 to the watcher, none to next_context; (f) read of an outside file ok, git_add of ../ returned an error, no rule 1 notice; (e) query_log seqs 1 to 49 contiguous, the log on disk 1 to 50 contiguous.
 - The raw tail probe on a7afdd4 with the change (run `2026-11-03-07-08-53-fd0a09`): the tail saw 7 and next_context delivered 7 again, the open gap above; events --read-clear printed 14 and cleared it, and the next next_context returned none.
 - The gate on the a7afdd4 tree with the change: gate true, failed none.
+
+## Retry by code and status (2026-11-03)
+
+The defect: `src/retry.mjs` read a failure's text against a PERMANENT word list, and "invalid" was on it. A transient failure whose message named a host with "invalid" in it was final at attempt 1. Fixed: a failure is classified by its error code and its HTTP status. A message decides nothing that carries a code.
+
+Decided:
+- fetch: a failed call carries the code of its error (`err.cause.code`; a timeout is ETIMEDOUT). `codeType` retries it only when the code is in `TRANSIENT_CODES`: ECONNRESET, ECONNREFUSED, ECONNABORTED, ETIMEDOUT, EAI_AGAIN, UND_ERR_SOCKET, UND_ERR_CONNECT_TIMEOUT, UND_ERR_HEADERS_TIMEOUT, UND_ERR_BODY_TIMEOUT. A call with no code is final. An answer's status decides by `statusType`: 408, 429 and 5xx retry, and every other status is final, so a 404 is never retried.
+- git_fetch, git_push, ci_status: git and gh print no code, so their message is matched for the transient words (`TRANSIENT_TEXT`, the words as before). Each URL and each dotted host name is removed from the message first, so a host name in it cannot decide the class. The PERMANENT list is removed: a message that names no transient word is final.
+- Unchanged: 3 retries, backoff from 1 s doubling to 16 s, plus or minus 20%. Added: EAI_AGAIN (a fetch code, and "temporary failure in name resolution" in git's text), the DNS temporary failure the brief names as transient.
+- 409 stays out of the network verbs, as before. The scripted loop (src/loop.mjs) retries it.
+
+Changed: src/retry.mjs, and src/fetch.mjs (failureOf returns the code; classify uses codeType and statusType). src/git.mjs is unchanged and still calls errorTypeOf.
+
+Witness, through the real path (the driver spawns src/mcp.mjs; the body calls gm.fetch or gm.git_fetch), on tar copies of HEAD 2571e55 (`git archive`), each in a temporary workspace with task.md and a git origin. invalid.example does not resolve in this sandbox, so the name goes to local servers. Node 24.22 fetch tunnels http:// targets through a proxy with CONNECT (`NODE_OPTIONS=--use-env-proxy`, HTTP_PROXY): server A resets the first CONNECT and answers the second with a body. git used `-c http.proxy` in the workspace config: server C resets every request. Server B answers 404 directly.
+- HEAD, run `a-head2`: fetch, attempts 2 (retry seq 8, ECONNRESET, delayMs 906), body "retry body ok". The fetch path was not the defect: its failed call carries a code, not the host name, so HEAD retried it too.
+- HEAD, run `b-head2`: fetch 404, attempts 1, one request to server B.
+- HEAD, run `g-head2`: git_fetch, attempts 1, no retry event. The message was "fatal: unable to access 'http://invalid.example:9/repo.git/': Recv failure: Connection reset by peer". This is the defect.
+- Fix, run `a-fix2`: retry seq 8 (ECONNRESET, delayMs 930), attempts 2, body returned. Server A: 2 CONNECTs, 1 tunnelled request.
+- Fix, run `b-fix2`: fetch 404, attempts 1, one request.
+- Fix, run `g-fix2`: retry seqs 8, 9, 10 (ECONNRESET, delayMs 1115, 2137, 3637), attempts 4, exhausted. Server C saw 4 requests.
+- Gate on the fix copy: gate true, failed none; syntax, ascii, docs, sources, wiki, skills, connect, workers and smoke all true. The copy took the checkout's node_modules (acorn), because the workers check loads the modules.
+- A first pass on a7afdd4 gave the same outcome for all six runs.
+
+Known limits, not closed here:
+- git and gh print no code, so their message is still read for words. A host name with no dot in it is not removed, so a permanent message that names such a host and also a transient word is retried.
+- The fetch witness needs a proxy because invalid.example does not resolve here. A direct fetch to a real host with "invalid" in its name is not witnessed.

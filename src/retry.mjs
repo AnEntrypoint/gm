@@ -6,17 +6,26 @@ const BASE_MS = 1000;
 const CAP_MS = 16000;
 const JITTER = 0.2;
 
-// Failures that a retry cannot fix. Checked first, so "Connection refused" (transient) is never caught by a word like "refusal".
-const PERMANENT = /authentication failed|permission denied|access denied|denied|rejected|non-fast-forward|invalid|could not read username|refusal|refuses to/i;
+// The error codes a retry can fix. fetch reports the code of a failed call (err.cause.code), and that code decides the class. A
+// message never does, so a host name in one cannot decide it.
+const TRANSIENT_CODES = new Set([
+  'ECONNRESET', 'ECONNREFUSED', 'ECONNABORTED', 'ETIMEDOUT', 'EAI_AGAIN', 'UND_ERR_SOCKET',
+  'UND_ERR_CONNECT_TIMEOUT', 'UND_ERR_HEADERS_TIMEOUT', 'UND_ERR_BODY_TIMEOUT',
+]);
 
-const TRANSIENT = [
+// git and gh print no error code, so their message is matched for the words they print a transient failure with. Each URL and
+// each dotted host name is removed from the message first, so a host name in it never decides the class.
+const TRANSIENT_TEXT = [
   [/connection refused|econnrefused/i, 'ECONNREFUSED'],
   [/failed to connect|error connecting to/i, 'connect'],
   [/connection reset|econnreset|reset by peer|und_err_socket/i, 'ECONNRESET'],
   [/timed out|timeout|etimedout|aborterror|aborted/i, 'ETIMEDOUT'],
   [/hung up unexpectedly|remote end hung up|socket hang up/i, 'hung-up'],
+  [/temporary failure in name resolution/i, 'EAI_AGAIN'],
   [/(?:HTTP|returned error:?|status code)\s*(408|429|5\d\d)\b/i, 'HTTP'],
 ];
+const URL_TEXT = /[a-z][a-z0-9+.-]*:\/\/\S*/gi;
+const HOST_TEXT = /\b[a-z0-9-]+(?:\.[a-z0-9-]+)+\b/gi;
 
 // attempt() returns { result, errorType }. errorType is null when the result is final: a success or a permanent failure.
 // A transient failure is retried, with a retry event each time, until RETRIES retries have run. Then the last result is
@@ -32,10 +41,20 @@ export async function retrying({ tool, log, attempt }) {
   }
 }
 
-// The errorType of a failed result, from its error and output text, or null when the result is final.
+// The errorType of a failed fetch call, from its error code, or null when it is final. A call with no code is final.
+export function codeType(code) {
+  return TRANSIENT_CODES.has(code) ? code : null;
+}
+
+// The errorType of an HTTP status: 408, 429 and every 5xx is transient, and every other status is an answer, so it is final.
+export function statusType(status) {
+  return status === 408 || status === 429 || (status >= 500 && status <= 599) ? `HTTP-${status}` : null;
+}
+
+// The errorType of a failed git or gh result, from its message, or null when it is final. A successful result is final.
 export function errorTypeOf(result) {
   if (result.ok) return null;
-  return transientType(`${result.error ?? ''}\n${result.output ?? ''}`);
+  return transientText(`${result.error ?? ''}\n${result.output ?? ''}`);
 }
 
 export function backoffMs(attempt) {
@@ -43,11 +62,12 @@ export function backoffMs(attempt) {
   return Math.round(base * (1 + JITTER * (2 * Math.random() - 1)));
 }
 
-// The errorType of a transient failure named in a message, or null for a permanent or unknown failure.
-export function transientType(text) {
-  if (PERMANENT.test(text)) return null;
-  for (const [pattern, type] of TRANSIENT) {
-    const match = pattern.exec(text);
+// The errorType of a transient failure named in a message, or null when the message names none. URLs and dotted host names are
+// removed from it first.
+function transientText(text) {
+  const message = text.replace(URL_TEXT, ' ').replace(HOST_TEXT, ' ');
+  for (const [pattern, type] of TRANSIENT_TEXT) {
+    const match = pattern.exec(message);
     if (match) return type === 'HTTP' ? `HTTP-${match[1]}` : type;
   }
   return null;
