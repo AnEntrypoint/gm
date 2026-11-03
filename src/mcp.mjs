@@ -128,7 +128,7 @@ const number = { type: 'number' };
 const objectSchema = (properties, required = []) => ({ type: 'object', properties, required });
 
 const BASE_TOOLS = [
-  { name: 'next_context', description: 'Begin a step. Returns rules, task, witness requirement, the events new since the last step in full, the older ones in compact form within two horizons, and prefixSha. pending lists the events that need you since your last step, each once, with an id. Delivery clears an event, so no later step or wait lists it again. Call it at the start of each step. query_log reaches every event. waitMs, when set, holds this call until an event is pending or that many milliseconds pass, at most 300000.', inputSchema: objectSchema({ waitMs: number }) },
+  { name: 'next_context', description: 'Begin a step. Returns rules, task, witness requirement, the events new since the last step in full, the older ones in compact form within two horizons, and prefixSha. pending lists the events that need you since your last step, each once, with an id. Delivery clears an event, so no later step or wait lists it again. Call it at the start of each step. query_log reaches every event. waitMs, when set, holds this call until an event is pending or that many milliseconds pass, at most 300000. child: true makes the call a read by a subagent on this connection: it takes no step, claims no pending event, and its reply has role child and the owning run. run, with child, names that owning run, and another run is refused.', inputSchema: objectSchema({ waitMs: number, child: { type: 'boolean' }, run: text }) },
   { name: 'read_file', description: 'Read a text file, inside or outside the workspace, one page of at most 20000 characters. Lines are the default unit: offset is a 0-based line index, limit a line count (default: as many whole lines as fit), and total (the file in lines) and next (the line index of the next page, null at the end) count lines. A line longer than the page is cut to its first 20000 characters, with cutLine true, and next is the line after it. unit "chars" counts offset, limit (1 to 20000, default 20000), total and next in characters instead. A path that starts with skill:// reads a served skill file, the text resources/read returns, and a skill:// uri that no served skill has is an error that names it.', inputSchema: objectSchema({ path: text, offset: number, limit: number, unit: text }, ['path']) },
   { name: 'write_file', description: 'Write a text file, inside or outside the workspace, creating parent directories.', inputSchema: objectSchema({ path: text, content: text }, ['path', 'content']) },
   { name: 'edit_file', description: 'Replace old with new in a text file, inside or outside the workspace. old must occur once, unless replaceAll is true.', inputSchema: objectSchema({ path: text, old: text, new: text, replaceAll: { type: 'boolean' } }, ['path', 'old', 'new']) },
@@ -518,7 +518,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
 
   function drain() {
     if (ended !== null) {
-      for (const call of waiting.splice(0)) call.resolveCall(refuse(call.name, call.args, endedReason(), call.rpcId));
+      for (const call of waiting.splice(0)) call.resolveCall(refuse(call.name, call.args, endedReason(isChildRead(call.name, call.args)), call.rpcId));
       return;
     }
     while (active.size < maxInflight && waiting.length > 0) {
@@ -542,6 +542,10 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     return name === 'next_context' ? NO_PATHS : tools.access(name, args);
   }
 
+  function isChildRead(name, args) {
+    return name === 'next_context' && args.child === true;
+  }
+
   function stop(status) {
     ended = status;
     drain();
@@ -551,15 +555,16 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     return `step limit ${maxSteps} reached; a restart of the server opens a new run`;
   }
 
-  function endedReason() {
+  function endedReason(child = false) {
     if (stepLimited) return stepLimitText();
     if (ended === 'closed') return 'stdin closed before the call started';
     if (ended === 'restarting') return 'the server is restarting; repeat the call';
+    if (child) return `run ${runId} has ended; the session that opened it calls next_context to open the next run`;
     return `run ${runId} has ended; call next_context to open a new run`;
   }
 
   function invoke(name, args, access, rpcId) {
-    if (ended !== null) return refuse(name, args, endedReason(), rpcId);
+    if (ended !== null) return refuse(name, args, endedReason(isChildRead(name, args)), rpcId);
     // A call cancelled while it waited for a slot never starts.
     if (signalOf(rpcId)?.aborted === true) return refuse(name, args, 'cancelled before it started', rpcId);
     if (name === 'run_code') {
@@ -568,10 +573,32 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
       if (unknown.length > 0) return refuse(name, args, `unknown argument ${unknown.join(', ')}; run_code takes ${Object.keys(RUN_CODE_PROPERTIES).join(', ')}`, rpcId);
       return act('run_code', args, access, (actionSeq) => runBody({ body: args.body, timeoutMs: args.timeoutMs, format: args.format, verbs: current.VERBS, call: innerCall, project: workspace, runDir, log, step: steps, background: (handle) => tools.adoptBody(handle) }).then((reply) => ({ ...reply, actionSeq })), undefined, rpcId);
     }
-    if (name === 'next_context') return nextContext(access, rpcId, args);
+    if (name === 'next_context') return args.child === true ? childContext(access, rpcId, args) : nextContext(access, rpcId, args);
     if (name === 'finish') return finish(args, access, rpcId);
     if (Object.hasOwn(handlers, name)) return act(name, args, access, () => handlers[name](args, signalOf(rpcId)), name === 'query_log' ? loggedReply : undefined, rpcId);
     return act(name, args, access, () => tools.run(name, args, { signal: signalOf(rpcId) }), undefined, rpcId);
+  }
+
+  function childContext(access, rpcId, args) {
+    if (!runStarted) return refuse('child_context', args, 'no step has started on this connection; the session that owns the run calls next_context first', rpcId);
+    if (args.run !== undefined && args.run !== runId) return refuse('child_context', args, `this connection's run is ${runId}, not ${args.run}`, rpcId);
+    return act('child_context', args, access, childRead, ({ ok, error, role, run }) => ({ ok, error, role, run }), rpcId);
+  }
+
+  async function childRead() {
+    const rules = await readFile(join(runDir, 'rules.md'), 'utf8');
+    return {
+      ok: true,
+      role: 'child',
+      run: runId,
+      note: `child of run ${runId}: the session that opened the run ends it, so a child does not send finish`,
+      stepsLeft: maxSteps - steps,
+      maxSteps,
+      rules,
+      task: task === '' ? null : task,
+      prefixSha: prefixShaFor(rules),
+      total: log.count(),
+    };
   }
 
   async function nextContext(access, rpcId, args = {}) {
@@ -930,7 +957,7 @@ function requestIdOf(line) {
 function isNextContextCall(line) {
   try {
     const message = JSON.parse(line);
-    return message?.method === 'tools/call' && message.params?.name === 'next_context';
+    return message?.method === 'tools/call' && message.params?.name === 'next_context' && message.params?.arguments?.child !== true;
   } catch {
     return false;
   }

@@ -105,16 +105,18 @@ A host that can only hold a call in the foreground calls `next_context` with `wa
 
 ## Handing work to a child session
 
-Hand a piece of work to a child session when it can be done apart from this run, and its context would crowd this one. A child is a new session with its own run, log and context. It sees its task and its own events, and you see only what it hands back.
+Hand a piece of work to a child when it can be done apart from this run, and its context would crowd this one. A child is one of two kinds, and the brief names which.
 
-1. Put the child's task in a file in the project, and name the file and the workspace to the child.
-2. The child calls `next_context` first. Its reply has `run`, the child's run id. The child puts that id in its witness, with its evidence, and finishes as in step 6.
-3. Read the child's result from a body. The CLI reads the child's log by its run id, and your context keeps only the witness:
+- A separate session, with its own connection to gm, has its own run, log and context. It calls `next_context` first, and its reply has `run`, its own run id. It puts that id in its witness, with its evidence, and finishes as in step 6.
+- A subagent on this connection works in your run. It calls `next_context` with `{ child: true, run: "<your run id>" }` at the start of each of its steps. The reply has `role: "child"`, `run` is your run id, and `note` says the run is not its own. That call takes no step and claims no pending event, so your feed is not changed. It does not send `finish` (step 6), and it does not call `next_context` without `child: true`, which would open a new run once your run has ended. Its calls are in your run log.
+
+1. Put the child's task in a file in the project, and name the file, the workspace and the kind of child to the child.
+2. For a separate session, read its result from a body. The CLI reads its log by its run id, and your context keeps only the witness:
 
 ```
 const res = await gm.run_shell({ command: `node src/cli.mjs query --run ${childRun} --js "events.filter((e) => e.kind === 'end').map((e) => e.witness)"` });
 return res.output;
 ```
 
-4. The child shares the workspace with you, and you both edit it at the same time. Do not branch, do not use worktrees, and do not claim files to keep sessions apart. An edit that collides is repaired after the fact, which costs far less than keeping sessions apart.
-5. When the child has finished and your own edits are in, run the validation once over the whole result: the checks the task names. Read its output. If it fails, repair in one pass, and run the validation again. Every hand-off ends this way, and your finish witness quotes the last validation run.
+3. The child shares the workspace with you, and you both edit it at the same time. Do not branch, do not use worktrees, and do not claim files to keep sessions apart. An edit that collides is repaired after the fact, which costs far less than keeping sessions apart.
+4. When the child has finished and your own edits are in, run the validation once over the whole result: the checks the task names. Read its output. If it fails, repair in one pass, and run the validation again. Every hand-off ends this way, and your finish witness quotes the last validation run.
