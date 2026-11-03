@@ -5,6 +5,7 @@ import { readdir, readFile, lstat } from 'node:fs/promises';
 import { isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { promisify } from 'node:util';
 import { resultZone1 } from './compact.mjs';
+import { closureLines } from './closure.mjs';
 
 const execFileAsync = promisify(execFile);
 const K1 = 1.2;
@@ -41,8 +42,8 @@ const ROOT_NOTE = 'root (or its aliases projectPath and cwd) names another exist
 export const SEARCH_TOOLS = [
   {
     name: 'search',
-    description: `Rank the lines of git-tracked files by BM25 and return the best k as path:line score text. An identifier also matches its parts, so planWaves matches plan and waves. k is 1 to 50, default 10. ${ROOT_NOTE}`,
-    inputSchema: obj({ query: str, k: num, root: str }, ['query']),
+    description: `Rank the lines of git-tracked files by BM25 and return the best k as path:line score text. An identifier also matches its parts, so planWaves matches plan and waves. k is 1 to 50, default 10. closure true (default false) adds one line per JavaScript file that defines a function called from a top-10 hit and is not itself a top-10 file, as path:line closure text in place of a score, at most 20 lines. ${ROOT_NOTE}`,
+    inputSchema: obj({ query: str, k: num, root: str, closure: bool }, ['query']),
   },
   {
     name: 'wiki_search',
@@ -58,7 +59,7 @@ export const SEARCH_TOOLS = [
 
 const ROOT_ARGS = ['root', 'projectPath', 'cwd'];
 const TAKES = {
-  search: ['query', 'k'],
+  search: ['query', 'k', 'closure'],
   wiki_search: ['query', 'k'],
   grep: ['pattern', 'path', 'mode', 'scope', 'ignoreCase', 'limit', 'offset', 'vendor'],
 };
@@ -235,15 +236,17 @@ function searcherFor({ root, confine }) {
     return `${plural(skipped.length, 'file')} skipped (${untrackedCount} untracked, ${skipped.length - untrackedCount} gitignored or in node_modules); use scope: 'all' to include them`;
   }
 
-  async function searchWith(listing, { query, k = DEFAULT_K }) {
+  async function searchWith(listing, { query, k = DEFAULT_K, closure = false }) {
     if (typeof query !== 'string' || query.trim() === '') return fail('query must be a non-empty string');
     if (!Number.isInteger(k) || k < 1 || k > MAX_K) return fail(`k must be an integer from 1 to ${MAX_K}`);
+    if (typeof closure !== 'boolean') return fail('closure must be true or false');
     const terms = [...new Set(tokensOf(query))];
     if (terms.length === 0) return fail('query has no word characters');
     const indexed = await currentIndex(listing);
     if (indexed.error) return fail(indexed.error);
     const hits = rank(indexed.index, terms, k);
     const lines = hits.map(({ doc, score }) => `${shownAt(doc.path)}:${doc.line} ${score.toFixed(3)} ${snippet(doc.text)}`);
+    if (closure) lines.push(...closureLines(indexed.entries, hits, { shownAt, snippet }));
     return { ok: true, output: lines.length ? lines.join('\n') : '(no match)' };
   }
 
@@ -252,10 +255,10 @@ function searcherFor({ root, confine }) {
     if (listed.error) return { error: listed.error };
     const key = JSON.stringify(listed.entries.map((entry) => [entry.rel, entry.digest]));
     const cached = built.get(listing.name);
-    if (cached !== undefined && cached.key === key) return { index: cached.index };
+    if (cached !== undefined && cached.key === key) return { index: cached.index, entries: listed.entries };
     const next = { key, index: buildIndex(listed.entries) };
     built.set(listing.name, next);
-    return { index: next.index };
+    return { index: next.index, entries: listed.entries };
   }
 
   async function loadFiles(listing = TRACKED) {

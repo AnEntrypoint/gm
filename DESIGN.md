@@ -66,3 +66,23 @@ Witnesses (run 2026-11-03-19-43-51-791ac8): actionSeq 6 and 8 (defaults/mcp.json
 Friction: `gm.grep({ pattern, root })` with `root` set to one file path returned `output: undefined` with no error, while a directory root works. An agent that reads that as "no matches" can conclude the text is absent. Seen in run 1709854-10504510 (actionSeq 172, reading uhh AGENTS.md; read_file worked).
 
 Decision: no session named `gm` is in ListAgents, so the owner decides. The verb should search a single file, or fail with a clear error, and should not return undefined. The owner may reverse or refine this.
+
+## Dependency closure, blind witness (2026-11-03)
+
+Question: does one-hop dependency closure help natural-language search? The earlier witness (15 descriptions written by the author, research/dep-recall/natural.cjs) let the described function's own hit anchor the closure, so its callees were credited by construction. This witness uses descriptions the author did not write, and reports the closure both ways.
+
+- Units: all 35 top-level functions of gm-new src/ that call a function in another file, and 60 units sampled evenly from the 283 such functions in gm-mcp/src/ (the predecessor's MCP server). A name defined twice is excluded, as in research/dep-recall/units.cjs.
+- Descriptions: three child writers (general-purpose agents) each read a share of 95 snippets. A snippet is the first 50 lines of one function, with the function's name replaced by FN. Each writer wrote one description per snippet from the code alone. Checked in run 2026-11-03-20-14-53-70d7da, actionSeq 203: 0 missing, 0 non-ASCII, 0 names leaking. The writers could not read skill://gm/SKILL.md (no ReadMcpResourceTool in their sessions), so the gm rule for subagents was not met for them; their output is text only. The descriptions and the unit map are in research/dep-recall/blind/.
+- Measure (research/dep-recall/blind-measure.cjs, actionSeq 101). Mean recall of the callee-defining files, at the file budget that the closure itself reaches:
+
+| corpus | plain at budget | closure, unit excluded from anchors | closure, unit allowed as anchor |
+| --- | --- | --- | --- |
+| all 95 | 0.235 | 0.398 | 0.476 |
+| gm-new (35) | 0.384 | 0.508 | 0.631 |
+| gm-mcp (60) | 0.147 | 0.333 | 0.386 |
+
+- Production (research/dep-recall/production-check.cjs, run through gm.run_shell, actionSeq 246): the shipped search with closure true over the same 95 descriptions gives plain at budget 0.236 and closure 0.471, with 2.07 files added on average (gm-new 0.388 against 0.617; gm-mcp 0.147 against 0.386). The shipped verb sees the described unit's own hit when it is among the top 10, so its figure sits near the all-anchors column, as designed.
+- Reading: at a matched file budget, closure recalls more callee-defining files than plain search in both repositories and in every column. The excluded column is the lower bound with the unit's own hit removed. The production column is what a search returns.
+- Shipped: search takes closure (default false). Its closure rows read `path:line closure text`, at most 20, one for each JavaScript file that defines a function called from a top-10 hit and is not itself a top-10 file. src/closure.mjs parses the tracked JavaScript with acorn, the one runtime dependency, and caches the definitions by file digest. The definitions come from every tracked JavaScript file of the searched root; the measurement used src/ and gm-mcp/src/ only, so the production corpus is wider.
+- Live check (gm.search with closure true and root /workspace/gm-new, actionSeq 258): 11 lines, one closure row, src/log.mjs:227 closure export function readEvents(file). The gate passes after closure.mjs is listed in src/worker-modules.json, which the workers check requires for every module the graph reaches.
+- Limits: 95 units from two repositories; the descriptions come from three writers, not from users; the corpus moves as src changes, so each number holds only for the corpus it was measured on. In this session the gm server serves /workspace/gm, so gm.search needs root to reach gm-new.

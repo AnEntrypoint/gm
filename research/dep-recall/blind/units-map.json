@@ -1,0 +1,762 @@
+[
+ {
+  "key": "u001",
+  "tag": "gm-new",
+  "file": "src/bench.mjs",
+  "name": "runOnce",
+  "start": 100,
+  "end": 114
+ },
+ {
+  "key": "u002",
+  "tag": "gm-new",
+  "file": "src/cli.mjs",
+  "name": "replay",
+  "start": 83,
+  "end": 107
+ },
+ {
+  "key": "u003",
+  "tag": "gm-new",
+  "file": "src/cli.mjs",
+  "name": "events",
+  "start": 109,
+  "end": 137
+ },
+ {
+  "key": "u004",
+  "tag": "gm-new",
+  "file": "src/cli.mjs",
+  "name": "eventsDir",
+  "start": 139,
+  "end": 149
+ },
+ {
+  "key": "u005",
+  "tag": "gm-new",
+  "file": "src/cli.mjs",
+  "name": "query",
+  "start": 167,
+  "end": 175
+ },
+ {
+  "key": "u006",
+  "tag": "gm-new",
+  "file": "src/cli.mjs",
+  "name": "doctor",
+  "start": 177,
+  "end": 188
+ },
+ {
+  "key": "u007",
+  "tag": "gm-new",
+  "file": "src/cli.mjs",
+  "name": "lastRunSummary",
+  "start": 201,
+  "end": 213
+ },
+ {
+  "key": "u008",
+  "tag": "gm-new",
+  "file": "src/fetch.mjs",
+  "name": "createFetchVerbs",
+  "start": 34,
+  "end": 97
+ },
+ {
+  "key": "u009",
+  "tag": "gm-new",
+  "file": "src/fetch.mjs",
+  "name": "classify",
+  "start": 101,
+  "end": 103
+ },
+ {
+  "key": "u010",
+  "tag": "gm-new",
+  "file": "src/gate.mjs",
+  "name": "runGate",
+  "start": 43,
+  "end": 65
+ },
+ {
+  "key": "u011",
+  "tag": "gm-new",
+  "file": "src/gate.mjs",
+  "name": "syntaxCheck",
+  "start": 100,
+  "end": 106
+ },
+ {
+  "key": "u012",
+  "tag": "gm-new",
+  "file": "src/gate.mjs",
+  "name": "promptCheck",
+  "start": 201,
+  "end": 220
+ },
+ {
+  "key": "u013",
+  "tag": "gm-new",
+  "file": "src/gate.mjs",
+  "name": "smokeCheck",
+  "start": 224,
+  "end": 238
+ },
+ {
+  "key": "u014",
+  "tag": "gm-new",
+  "file": "src/git.mjs",
+  "name": "commitExists",
+  "start": 39,
+  "end": 41
+ },
+ {
+  "key": "u015",
+  "tag": "gm-new",
+  "file": "src/git.mjs",
+  "name": "createGitVerbs",
+  "start": 53,
+  "end": 192
+ },
+ {
+  "key": "u016",
+  "tag": "gm-new",
+  "file": "src/log.mjs",
+  "name": "openLog",
+  "start": 17,
+  "end": 123
+ },
+ {
+  "key": "u017",
+  "tag": "gm-new",
+  "file": "src/loop.mjs",
+  "name": "runLoop",
+  "start": 16,
+  "end": 27
+ },
+ {
+  "key": "u018",
+  "tag": "gm-new",
+  "file": "src/loop.mjs",
+  "name": "stepLoop",
+  "start": 29,
+  "end": 73
+ },
+ {
+  "key": "u019",
+  "tag": "gm-new",
+  "file": "src/loop.mjs",
+  "name": "runAction",
+  "start": 192,
+  "end": 202
+ },
+ {
+  "key": "u020",
+  "tag": "gm-new",
+  "file": "src/loop.mjs",
+  "name": "planWaves",
+  "start": 204,
+  "end": 228
+ },
+ {
+  "key": "u021",
+  "tag": "gm-new",
+  "file": "src/mcp.mjs",
+  "name": "readSkill",
+  "start": 51,
+  "end": 61
+ },
+ {
+  "key": "u022",
+  "tag": "gm-new",
+  "file": "src/mcp.mjs",
+  "name": "surfaceOf",
+  "start": 152,
+  "end": 166
+ },
+ {
+  "key": "u023",
+  "tag": "gm-new",
+  "file": "src/mcp.mjs",
+  "name": "untilPending",
+  "start": 188,
+  "end": 200
+ },
+ {
+  "key": "u024",
+  "tag": "gm-new",
+  "file": "src/mcp.mjs",
+  "name": "createSession",
+  "start": 212,
+  "end": 796
+ },
+ {
+  "key": "u025",
+  "tag": "gm-new",
+  "file": "src/mcp.mjs",
+  "name": "write",
+  "start": 919,
+  "end": 928
+ },
+ {
+  "key": "u026",
+  "tag": "gm-new",
+  "file": "src/mcp.mjs",
+  "name": "reloadLeaves",
+  "start": 981,
+  "end": 992
+ },
+ {
+  "key": "u027",
+  "tag": "gm-new",
+  "file": "src/review-tools.mjs",
+  "name": "createReviewVerbs",
+  "start": 49,
+  "end": 68
+ },
+ {
+  "key": "u028",
+  "tag": "gm-new",
+  "file": "src/rows.mjs",
+  "name": "createRowVerbs",
+  "start": 47,
+  "end": 115
+ },
+ {
+  "key": "u029",
+  "tag": "gm-new",
+  "file": "src/run.mjs",
+  "name": "createRun",
+  "start": 15,
+  "end": 21
+ },
+ {
+  "key": "u030",
+  "tag": "gm-new",
+  "file": "src/run.mjs",
+  "name": "openRun",
+  "start": 41,
+  "end": 49
+ },
+ {
+  "key": "u031",
+  "tag": "gm-new",
+  "file": "src/runcode.mjs",
+  "name": "spawnWorker",
+  "start": 70,
+  "end": 98
+ },
+ {
+  "key": "u032",
+  "tag": "gm-new",
+  "file": "src/search.mjs",
+  "name": "searcherFor",
+  "start": 130,
+  "end": 313
+ },
+ {
+  "key": "u033",
+  "tag": "gm-new",
+  "file": "src/tools.mjs",
+  "name": "createTools",
+  "start": 124,
+  "end": 573
+ },
+ {
+  "key": "u034",
+  "tag": "gm-new",
+  "file": "src/wiki-tools.mjs",
+  "name": "createWikiVerbs",
+  "start": 34,
+  "end": 55
+ },
+ {
+  "key": "u035",
+  "tag": "gm-new",
+  "file": "src/wiki.mjs",
+  "name": "wikiWrite",
+  "start": 22,
+  "end": 73
+ },
+ {
+  "key": "u036",
+  "tag": "gm-mcp",
+  "file": "src/browser-feed.js",
+  "name": "browserApiDocs",
+  "start": 179,
+  "end": 194
+ },
+ {
+  "key": "u037",
+  "tag": "gm-mcp",
+  "file": "src/bundle-drift.js",
+  "name": "startBundleDriftWatch",
+  "start": 186,
+  "end": 220
+ },
+ {
+  "key": "u038",
+  "tag": "gm-mcp",
+  "file": "src/child-ledger.js",
+  "name": "recordChild",
+  "start": 72,
+  "end": 98
+ },
+ {
+  "key": "u039",
+  "tag": "gm-mcp",
+  "file": "src/codemode.js",
+  "name": "proseFieldFor",
+  "start": 189,
+  "end": 193
+ },
+ {
+  "key": "u040",
+  "tag": "gm-mcp",
+  "file": "src/codemode.js",
+  "name": "withoutEchoedSession",
+  "start": 253,
+  "end": 261
+ },
+ {
+  "key": "u041",
+  "tag": "gm-mcp",
+  "file": "src/codemode.js",
+  "name": "refuseSelectorlessCodeinsight",
+  "start": 346,
+  "end": 353
+ },
+ {
+  "key": "u042",
+  "tag": "gm-mcp",
+  "file": "src/codemode.js",
+  "name": "browserCallContext",
+  "start": 508,
+  "end": 521
+ },
+ {
+  "key": "u043",
+  "tag": "gm-mcp",
+  "file": "src/codemode.js",
+  "name": "registerCodeMode",
+  "start": 754,
+  "end": 838
+ },
+ {
+  "key": "u044",
+  "tag": "gm-mcp",
+  "file": "src/dev-sync.js",
+  "name": "stampPath",
+  "start": 17,
+  "end": 19
+ },
+ {
+  "key": "u045",
+  "tag": "gm-mcp",
+  "file": "src/dev-sync.js",
+  "name": "runDevSync",
+  "start": 88,
+  "end": 105
+ },
+ {
+  "key": "u046",
+  "tag": "gm-mcp",
+  "file": "src/dispatch.js",
+  "name": "lastProjectRoot",
+  "start": 68,
+  "end": 75
+ },
+ {
+  "key": "u047",
+  "tag": "gm-mcp",
+  "file": "src/dispatch.js",
+  "name": "fsReadProjectRelativeBody",
+  "start": 248,
+  "end": 256
+ },
+ {
+  "key": "u048",
+  "tag": "gm-mcp",
+  "file": "src/dispatch.js",
+  "name": "exactLineEdit",
+  "start": 338,
+  "end": 365
+ },
+ {
+  "key": "u049",
+  "tag": "gm-mcp",
+  "file": "src/dispatch.js",
+  "name": "fsReadFitReply",
+  "start": 472,
+  "end": 525
+ },
+ {
+  "key": "u050",
+  "tag": "gm-mcp",
+  "file": "src/dispatch.js",
+  "name": "gitPathOf",
+  "start": 787,
+  "end": 787
+ },
+ {
+  "key": "u051",
+  "tag": "gm-mcp",
+  "file": "src/dispatch.js",
+  "name": "indexLockTargets",
+  "start": 907,
+  "end": 913
+ },
+ {
+  "key": "u052",
+  "tag": "gm-mcp",
+  "file": "src/dispatch.js",
+  "name": "liftStdoutFault",
+  "start": 999,
+  "end": 1006
+ },
+ {
+  "key": "u053",
+  "tag": "gm-mcp",
+  "file": "src/dispatch.js",
+  "name": "dualHitPath",
+  "start": 1346,
+  "end": 1351
+ },
+ {
+  "key": "u054",
+  "tag": "gm-mcp",
+  "file": "src/dispatch.js",
+  "name": "withCodesearchKCut",
+  "start": 1421,
+  "end": 1433
+ },
+ {
+  "key": "u055",
+  "tag": "gm-mcp",
+  "file": "src/dispatch.js",
+  "name": "withPrdListNextOffset",
+  "start": 1624,
+  "end": 1630
+ },
+ {
+  "key": "u056",
+  "tag": "gm-mcp",
+  "file": "src/dispatch.js",
+  "name": "globalDaemonPid",
+  "start": 1833,
+  "end": 1844
+ },
+ {
+  "key": "u057",
+  "tag": "gm-mcp",
+  "file": "src/dispatch.js",
+  "name": "leaseSessionsFor",
+  "start": 1937,
+  "end": 1963
+ },
+ {
+  "key": "u058",
+  "tag": "gm-mcp",
+  "file": "src/dispatch.js",
+  "name": "readLauncherLock",
+  "start": 2010,
+  "end": 2016
+ },
+ {
+  "key": "u059",
+  "tag": "gm-mcp",
+  "file": "src/dispatch.js",
+  "name": "trackRunnerEnsureChild",
+  "start": 2154,
+  "end": 2169
+ },
+ {
+  "key": "u060",
+  "tag": "gm-mcp",
+  "file": "src/dispatch.js",
+  "name": "carriedNoFailure",
+  "start": 2842,
+  "end": 2848
+ },
+ {
+  "key": "u061",
+  "tag": "gm-mcp",
+  "file": "src/dispatch.js",
+  "name": "withResumeDisclosure",
+  "start": 2923,
+  "end": 2927
+ },
+ {
+  "key": "u062",
+  "tag": "gm-mcp",
+  "file": "src/dispatch.js",
+  "name": "preloadVerbTable",
+  "start": 3134,
+  "end": 3145
+ },
+ {
+  "key": "u063",
+  "tag": "gm-mcp",
+  "file": "src/dispatch.js",
+  "name": "closeReferenceRefusal",
+  "start": 3297,
+  "end": 3305
+ },
+ {
+  "key": "u064",
+  "tag": "gm-mcp",
+  "file": "src/dispatch.js",
+  "name": "refutedStaleClose",
+  "start": 3374,
+  "end": 3384
+ },
+ {
+  "key": "u065",
+  "tag": "gm-mcp",
+  "file": "src/dispatch.js",
+  "name": "withHealthBundleFields",
+  "start": 3449,
+  "end": 3462
+ },
+ {
+  "key": "u066",
+  "tag": "gm-mcp",
+  "file": "src/http-transport.js",
+  "name": "httpListenOptions",
+  "start": 17,
+  "end": 23
+ },
+ {
+  "key": "u067",
+  "tag": "gm-mcp",
+  "file": "src/http-transport.js",
+  "name": "announceAdoption",
+  "start": 182,
+  "end": 189
+ },
+ {
+  "key": "u068",
+  "tag": "gm-mcp",
+  "file": "src/janitor.js",
+  "name": "recordItems",
+  "start": 198,
+  "end": 232
+ },
+ {
+  "key": "u069",
+  "tag": "gm-mcp",
+  "file": "src/leak-reaper.js",
+  "name": "windowsCommandByPid",
+  "start": 80,
+  "end": 82
+ },
+ {
+  "key": "u070",
+  "tag": "gm-mcp",
+  "file": "src/leak-reaper.js",
+  "name": "liveMcpClientInParentChain",
+  "start": 304,
+  "end": 330
+ },
+ {
+  "key": "u071",
+  "tag": "gm-mcp",
+  "file": "src/leak-reaper.js",
+  "name": "reapReport",
+  "start": 619,
+  "end": 621
+ },
+ {
+  "key": "u072",
+  "tag": "gm-mcp",
+  "file": "src/leak-watch.js",
+  "name": "duplicateSupervisorFindings",
+  "start": 119,
+  "end": 135
+ },
+ {
+  "key": "u073",
+  "tag": "gm-mcp",
+  "file": "src/leak-watch.js",
+  "name": "findingSummary",
+  "start": 215,
+  "end": 223
+ },
+ {
+  "key": "u074",
+  "tag": "gm-mcp",
+  "file": "src/live-state.js",
+  "name": "statusRead",
+  "start": 52,
+  "end": 57
+ },
+ {
+  "key": "u075",
+  "tag": "gm-mcp",
+  "file": "src/live-state.js",
+  "name": "bootstrapReply",
+  "start": 117,
+  "end": 127
+ },
+ {
+  "key": "u076",
+  "tag": "gm-mcp",
+  "file": "src/mcp-server.js",
+  "name": "verbRejectionHint",
+  "start": 88,
+  "end": 103
+ },
+ {
+  "key": "u077",
+  "tag": "gm-mcp",
+  "file": "src/prd-feed.js",
+  "name": "noteNextRow",
+  "start": 71,
+  "end": 79
+ },
+ {
+  "key": "u078",
+  "tag": "gm-mcp",
+  "file": "src/release-bridge.js",
+  "name": "clearBomMisclassifiedSideloadMarker",
+  "start": 68,
+  "end": 75
+ },
+ {
+  "key": "u079",
+  "tag": "gm-mcp",
+  "file": "src/release-bridge.js",
+  "name": "installAbsentRunner",
+  "start": 261,
+  "end": 278
+ },
+ {
+  "key": "u080",
+  "tag": "gm-mcp",
+  "file": "src/release-bridge.js",
+  "name": "acquireLock",
+  "start": 392,
+  "end": 423
+ },
+ {
+  "key": "u081",
+  "tag": "gm-mcp",
+  "file": "src/release-bridge.js",
+  "name": "runReleaseBridgeInBackground",
+  "start": 524,
+  "end": 538
+ },
+ {
+  "key": "u082",
+  "tag": "gm-mcp",
+  "file": "src/response-compact.js",
+  "name": "withNoticeCodes",
+  "start": 206,
+  "end": 212
+ },
+ {
+  "key": "u083",
+  "tag": "gm-mcp",
+  "file": "src/response-compact.js",
+  "name": "compactWireFields",
+  "start": 626,
+  "end": 698
+ },
+ {
+  "key": "u084",
+  "tag": "gm-mcp",
+  "file": "src/self-update.js",
+  "name": "defaultDeployedPath",
+  "start": 44,
+  "end": 46
+ },
+ {
+  "key": "u085",
+  "tag": "gm-mcp",
+  "file": "src/self-update.js",
+  "name": "refreshStaleDeployedBundle",
+  "start": 351,
+  "end": 427
+ },
+ {
+  "key": "u086",
+  "tag": "gm-mcp",
+  "file": "src/self-update.js",
+  "name": "scheduleStaleDeployedBundleChecks",
+  "start": 547,
+  "end": 563
+ },
+ {
+  "key": "u087",
+  "tag": "gm-mcp",
+  "file": "src/singleton.js",
+  "name": "dropHttpRecord",
+  "start": 101,
+  "end": 118
+ },
+ {
+  "key": "u088",
+  "tag": "gm-mcp",
+  "file": "src/singleton.js",
+  "name": "portOwnerPid",
+  "start": 181,
+  "end": 185
+ },
+ {
+  "key": "u089",
+  "tag": "gm-mcp",
+  "file": "src/singleton.js",
+  "name": "reclaimDeadPortRegistries",
+  "start": 332,
+  "end": 345
+ },
+ {
+  "key": "u090",
+  "tag": "gm-mcp",
+  "file": "src/skill-gate.js",
+  "name": "readContext",
+  "start": 68,
+  "end": 80
+ },
+ {
+  "key": "u091",
+  "tag": "gm-mcp",
+  "file": "src/skills-mcp.js",
+  "name": "registerSkillPrompt",
+  "start": 73,
+  "end": 82
+ },
+ {
+  "key": "u092",
+  "tag": "gm-mcp",
+  "file": "src/transport-guard.js",
+  "name": "logSignalExits",
+  "start": 61,
+  "end": 70
+ },
+ {
+  "key": "u093",
+  "tag": "gm-mcp",
+  "file": "src/transport-guard.js",
+  "name": "installStdioGuards",
+  "start": 123,
+  "end": 137
+ },
+ {
+  "key": "u094",
+  "tag": "gm-mcp",
+  "file": "src/triage-verbs.js",
+  "name": "githubSearchVerb",
+  "start": 1886,
+  "end": 1893
+ },
+ {
+  "key": "u095",
+  "tag": "gm-mcp",
+  "file": "src/verbs.js",
+  "name": "canonicalToolName",
+  "start": 9,
+  "end": 11
+ }
+]

@@ -1,8 +1,10 @@
-module.exports = function buildUnits(root) {
+module.exports = function buildUnits(root, opts = {}) {
   const fs = require('fs');
   const path = require('path');
-  const acorn = require(path.join(root, 'node_modules', 'acorn'));
-  const files = fs.readdirSync(path.join(root, 'src')).filter((f) => f.endsWith('.mjs')).map((f) => 'src/' + f);
+  const acorn = require(opts.acorn ?? path.join(root, 'node_modules', 'acorn'));
+  const dir = opts.dir ?? 'src';
+  const ext = opts.ext ?? '.mjs';
+  const files = fs.readdirSync(path.join(root, dir)).filter((f) => f.endsWith(ext)).map((f) => dir + '/' + f);
   const defs = new Map();
   const dupes = new Set();
   for (const file of files) {

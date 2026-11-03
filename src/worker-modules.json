@@ -1,5 +1,6 @@
 [
   "body-worker.mjs",
+  "closure.mjs",
   "code-ast.mjs",
   "compact.mjs",
   "connect.mjs",
