@@ -1740,3 +1740,26 @@ Limits, not closed here:
 - A repeated request id is answered from the finished run only. Sent again after the rotation, it runs again.
 - A child agent on the parent's connection that sends `finish` still ends the parent's run. The parent's next call opens a fresh run; its open rows are workspace files and stay, but its log and steps do not carry over.
 - Whether runs are shared across connections stays with the owner (options a to c under "Finish, the connection, and restarts").
+
+## query_log limit argument (2026-11-03)
+
+Agents read `gm.query_log` as reaching every event and tried `limit` to page through them. It was refused as an unknown argument. Code: the `query_log` branch and `pageOf` in `src/tools.mjs`, and the entry in `BASE_TOOLS` in `src/mcp.mjs`.
+
+Decided:
+- `limit` is an integer from 1 to 50. Without `js` or `last` it caps the events one reply returns. The default stays 50 events and about 20 KB, and the 20 KB cap still applies, so a reply can hold fewer events than `limit` when events are large. `next` is still the seq to pass back as `after`, and it is set when events remain. Without `after` the read starts at seq 0.
+- `limit` with `last` is refused, because `last` already sets the count.
+- `limit` with `js` is refused, not ignored. A js expression sees the whole window of matching events, and a silent limit would make its count look like the whole window.
+- A `limit` outside 1 to 50 gets the error `last` gets. `limit` is listed in the unknown-argument reply.
+
+Witness: stdio driver `/tmp/gm-scratch/query-limit/drive.mjs` against `src/mcp.mjs` on the working tree, run directory `/tmp/gm-scratch/query-limit/runs/A`. Replies from `run_code` bodies:
+- `{after: 0, limit: 3}`: events seqs 1, 2, 3, next 3.
+- `{after: 3, limit: 3}`: events seqs 4, 5, 6, next 6.
+- `{last: 2, limit: 1}`: refused, "limit cannot be used with last, which already sets how many events a reply returns".
+- `{js: 'events.length', limit: 3}`: refused, "limit cannot be used with js, whose expression sees the whole window of matching events".
+- `{after: 0, limit: 51}`: "limit must be a whole number from 1 to 50".
+- `{after: 0}` with no limit: 27 events, seqs 1 to 27, no next.
+- `{bogus: 1}`: refused, and the list of arguments ends "after, last, limit".
+
+Limits, not closed here:
+- Only the seq form with no `kind`, `fromMono` or `toMono` is witnessed. Those filters pass through the same page, but no reply with one of them was run with `limit`.
+- The witness runs the worker directly over stdio. A live session serves the new description and schema after its worker reloads.

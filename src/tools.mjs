@@ -245,6 +245,13 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
       if (args.last !== undefined && (!Number.isInteger(args.last) || args.last < 1 || args.last > QUERY_PAGE_EVENTS)) {
         return { ok: false, error: `last must be a whole number from 1 to ${QUERY_PAGE_EVENTS}` };
       }
+      if (args.limit !== undefined) {
+        if (args.last !== undefined) return refusal('limit cannot be used with last, which already sets how many events a reply returns');
+        if (args.js !== undefined) return refusal('limit cannot be used with js, whose expression sees the whole window of matching events');
+        if (!Number.isInteger(args.limit) || args.limit < 1 || args.limit > QUERY_PAGE_EVENTS) {
+          return { ok: false, error: `limit must be a whole number from 1 to ${QUERY_PAGE_EVENTS}` };
+        }
+      }
       const after = Math.max(0, Math.floor(args.after ?? 0));
       const match = (event) =>
         (args.kind === undefined || event.kind === args.kind) &&
@@ -263,7 +270,7 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
       const scan = log.window(after, QUERY_WINDOW_EVENTS, match, QUERY_WINDOW_BYTES);
       const more = scan.last < log.count();
       if (args.js !== undefined) return { ...runQuery(scan.events, js), ...(more ? { next: scan.last } : {}) };
-      const page = pageOf(scan.events);
+      const page = pageOf(scan.events, args.limit);
       const next = page.length < scan.events.length ? page.at(-1).seq : more ? scan.last : null;
       return { ...runQuery(page, js), ...(next === null ? {} : { next }) };
     },
@@ -570,12 +577,12 @@ const QUERY_PAGE_EVENTS = 50;
 const QUERY_REPLY_CHARS = 20000;
 const QUERY_WINDOW_EVENTS = 1000;
 const QUERY_WINDOW_BYTES = 4 * 1024 * 1024;
-const QUERY_ARGS = ['js', 'kind', 'fromMono', 'toMono', 'after', 'last'];
+const QUERY_ARGS = ['js', 'kind', 'fromMono', 'toMono', 'after', 'last', 'limit'];
 
-function pageOf(events) {
+function pageOf(events, limit = QUERY_PAGE_EVENTS) {
   const page = [];
   for (const event of events) {
-    if (page.length === QUERY_PAGE_EVENTS) break;
+    if (page.length === limit) break;
     if (replyChars([...page, event]) <= QUERY_REPLY_CHARS) {
       page.push(event);
       continue;

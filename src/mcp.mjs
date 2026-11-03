@@ -137,7 +137,7 @@ const BASE_TOOLS = [
   { name: 'job_start', description: 'Start a shell command as a named background job and return at once. Poll it with job_status.', inputSchema: objectSchema({ job: text, command: text, timeoutMs: number }, ['job', 'command']) },
   { name: 'job_status', description: 'State (running, exited or killed), exit code and output tail of a job. waitMs polls until the job leaves running, at most 30000 ms. offset returns a page of 20000 characters of the output from that offset, with total and next. offset, total and next count characters, not lines.', inputSchema: objectSchema({ job: text, waitMs: number, offset: number }, ['job']) },
   { name: 'job_stop', description: 'Stop a background shell job: its process group is killed, and the job ends killed with reason cancelled. The job event is logged before the answer. A job that already ended is an error result. stopBackground stops run_code bodies only.', inputSchema: objectSchema({ job: text }, ['job']) },
-  { name: 'query_log', description: 'Read the run events, as JSON. after is a seq: only the events after it are read (since), so after the last seq you saw reads on from there. kind keeps events of one kind, and fromMono and toMono keep events in a time window (monotonic milliseconds). last N returns the newest N matching events instead, oldest first, at most 50, and has no next. js is a JavaScript expression over the matching events, and defaults to returning them: js sees one window of at most 1000 events or 4 MB of log. Without js, a reply holds at most 50 events and about 20 KB. When events remain, next is the seq to pass back as after; with js, next is set when the window ends before the end of the log. An unknown argument is refused, and the reply names the arguments query_log takes.', inputSchema: objectSchema({ js: text, kind: text, fromMono: number, toMono: number, after: number, last: number }, []) },
+  { name: 'query_log', description: 'Read the run events, as JSON. after is a seq: only the events after it are read (since), so after the last seq you saw reads on from there. kind keeps events of one kind, and fromMono and toMono keep events in a time window (monotonic milliseconds). last N returns the newest N matching events instead, oldest first, at most 50, and has no next. js is a JavaScript expression over the matching events, and defaults to returning them: js sees one window of at most 1000 events or 4 MB of log. Without js, a reply holds at most 50 events and about 20 KB; limit (1 to 50) lowers that count, and is refused with last or js. When events remain, next is the seq to pass back as after; with js, next is set when the window ends before the end of the log. An unknown argument is refused, and the reply names the arguments query_log takes.', inputSchema: objectSchema({ js: text, kind: text, fromMono: number, toMono: number, after: number, last: number, limit: number }, []) },
   { name: 'finish', description: 'End the run. witness is one string that quotes the evidence you observed. gaps optionally lists, one string each, what the run did not check; the end event logs them. finish is refused while a background run is running, and stopBackground true kills it first. finish is refused while a PRD or question row is open, and names the rows; stopRows true ends the run anyway, with each open row listed as a gap in the end event.', inputSchema: objectSchema({ witness: text, gaps: { type: 'array', items: text }, stopBackground: { type: 'boolean' }, stopRows: { type: 'boolean' } }, ['witness']) },
   ...SEARCH_TOOLS,
 ];
@@ -208,7 +208,7 @@ function queryHintOf(shown, total) {
   return total > shown ? `${reach}. This step's new events are seqs ${shown + 1} to ${total}.` : `${reach}.`;
 }
 
-function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, resume = null, jobLifetimeMs = DEFAULT_JOB_LIFETIME_MS, stuckMs = DEFAULT_STUCK_MS, monitorMs = DEFAULT_MONITOR_MS, noticeMs = BODY_NOTICE_MS, hostIdleMs = DEFAULT_HOST_IDLE_MS, recovery = null, history = [], taskInherited = false, surface = 'code' }) {
+function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, resume = null, jobLifetimeMs = DEFAULT_JOB_LIFETIME_MS, stuckMs = DEFAULT_STUCK_MS, monitorMs = DEFAULT_MONITOR_MS, noticeMs = BODY_NOTICE_MS, hostIdleMs = DEFAULT_HOST_IDLE_MS, recovery = null, history = [], taskInherited = false, startOverride = null, surface = 'code' }) {
   const runId = basename(runDir);
   const tools = createTools({ workspace, runDir, log, background: true, jobLifetimeMs, stuckMs, monitorMs, noticeMs, leaves: current.leaves });
   activeTools = tools;
@@ -233,6 +233,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
   for (const [key, reply] of answersFrom(history, runId)) remember(key, Promise.resolve(reply));
   let steps = resume?.steps ?? 0;
   let ended = resume?.ended ?? null;
+  let endedTask = null;
   let endLogged = ended !== null;
   // A host that stops calling leaves the run open, and nothing wakes it. After hostIdleMs with no call in flight and none since, one
   // host-idle event is queued for a watcher on the pending file. It is queued once per quiet spell, and the timer stops when the run ends.
@@ -404,7 +405,8 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     log.append('skill-loaded', { via: 'prompt', skill: 'gm', cleared: [...rulesOpen.keys()] });
     clearRules();
     const given = typeof params?.arguments?.task === 'string' ? params.arguments.task.trim() : '';
-    if (given !== '' && (task === '' || taskInherited)) {
+    if (given !== '' && ended !== null) endedTask = given;
+    else if (given !== '' && (task === '' || taskInherited)) {
       task = given;
       taskInherited = false;
       log.append('task', { from: 'session prompt', text: task });
@@ -445,7 +447,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     }
     // A name the surface does not serve is a protocol error, not a tool result. A tool that fails keeps isError true (below).
     if (!servedTools(surface).some((tool) => tool.name === name)) throw new RpcError(-32602, unknownToolText(name));
-    if (!runStarted && name !== 'next_context' && name !== 'finish') noteRule(2, `${name} was called before the first next_context of the run`);
+    if (!runStarted && ended === null && name !== 'next_context' && name !== 'finish') noteRule(2, `${name} was called before the first next_context of the run`);
     const meta = params?._meta ?? {};
     const key = JSON.stringify(rpcId);
     inFlightCalls.set(key, { name, trace: traceOf(meta), controller: new AbortController() });
@@ -541,8 +543,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
   function endedReason() {
     if (ended === 'closed') return 'stdin closed before the call started';
     if (ended === 'restarting') return 'the server is restarting; repeat the call';
-    if (ended === 'finished') return `run ${runId} has ended (finished); the next tools/call opens a new run`;
-    return `run ${runId} has ended (${ended}); restart the server to open a new run`;
+    return `run ${runId} has ended; call next_context to open a new run`;
   }
 
   function invoke(name, args, access, rpcId) {
@@ -736,6 +737,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
   // sends a restart only after every call has answered, so a call still active here means the worker was stopped
   // without a drain, such as a crash; its shell is killed, and the call settles with that result.
   async function pause(reason) {
+    if (endLogged) return;
     ended = 'restarting';
     for (const call of waiting.splice(0)) call.resolveCall(refuse(call.name, call.args, endedReason()));
     await tools.close('restart');
@@ -743,7 +745,14 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     log.append('paused', { reason });
   }
 
-  return { accept, inputEnded, pause, finished: () => ended === 'finished', settled: () => Promise.allSettled([...unansweredTurns]), taskNow: () => task };
+  function successorStart() {
+    if (endedTask !== null) return { task: endedTask, taskFrom: 'session prompt', inherited: false };
+    if (startOverride !== null) return { ...startOverride, inherited: false };
+    if (task !== '') return { task, taskFrom: `closed run ${runId}`, inherited: true };
+    return { task: '', taskFrom: 'session prompt', inherited: false };
+  }
+
+  return { accept, inputEnded, pause, ended: () => ended, settled: () => Promise.allSettled([...unansweredTurns]), successorStart };
 }
 
 // The answer to every request id that a run already received, rebuilt from its log, so a repeated id is answered from
@@ -896,9 +905,10 @@ function isRequestShape(message) {
   return message !== null && typeof message === 'object' && !Array.isArray(message) && typeof message.method === 'string';
 }
 
-function isToolsCall(line) {
+function isNextContextCall(line) {
   try {
-    return JSON.parse(line)?.method === 'tools/call';
+    const message = JSON.parse(line);
+    return message?.method === 'tools/call' && message.params?.name === 'next_context';
   } catch {
     return false;
   }
@@ -994,29 +1004,23 @@ async function main(argv) {
   const runMeta = (dir, runTask) => ({ id: basename(dir), mode: 'mcp', task: runTask, witness: DEFAULT_WITNESS, workspace, maxSteps, maxInflight, createdAt: new Date().toISOString() });
   let { log, resumed } = openRun({ runDir, rules: MCP_RULES, meta: runMeta(runDir, task) });
   let resume = resumed ? resumeFrom(log.events()) : null;
-  let inheritedFrom = null;
-  if (resume?.ended) {
-    // A closed run stays closed. A start after it opens a new run beside it, which takes the closed run's task unless --task gives one.
-    const closedId = basename(runDir);
-    const closed = `${closedId} (${resume.ended})`;
+  const closedAtBoot = resume?.ended ?? null;
+  let startOverride = null;
+  if (closedAtBoot !== null) {
     const closedTask = taskOfRun(log.events(), runDir);
-    runDir = join(dirname(runDir), newRunId());
-    if (task === '' && closedTask !== '') {
-      task = closedTask;
-      inheritedFrom = closedId;
-    }
-    ({ log, resumed } = openRun({ runDir, rules: MCP_RULES, meta: runMeta(runDir, task) }));
-    resume = null;
-    console.error(`gm mcp: run${closed} is closed; opened run ${basename(runDir)}`);
+    if (flags.task !== undefined) startOverride = { task, taskFrom: 'task file' };
+    else task = closedTask;
+    console.error(`gm mcp: run ${basename(runDir)} (${closedAtBoot}) is closed; the first next_context opens a new run`);
   }
   const history = resumed ? log.events() : [];
   // A resumed run that was started without a task takes the task its session gave, from its task event.
   if (task === '' && resumed) task = history.findLast((event) => event.kind === 'task')?.text ?? '';
-  const recovery = resumed ? recoveryOf(history) : null;
-  if (resumed) log.append('restart', { reason: flags['restart-reason'] ?? 'restarted without a reason' });
-  else log.append('start', { mode: 'mcp', maxSteps, maxInflight, taskFrom: flags.task !== undefined ? 'task file' : inheritedFrom !== null ? `closed run ${inheritedFrom}` : 'session prompt' });
-  if (inheritedFrom !== null) log.append('task', { from: `closed run ${inheritedFrom}`, text: task });
-  if (recovery && recovery.open.length > 0) log.append('recovery', { lastSeq: recovery.lastSeq, open: recovery.open });
+  const recovery = resumed && closedAtBoot === null ? recoveryOf(history) : null;
+  if (closedAtBoot === null) {
+    if (resumed) log.append('restart', { reason: flags['restart-reason'] ?? 'restarted without a reason' });
+    else log.append('start', { mode: 'mcp', maxSteps, maxInflight, taskFrom: flags.task !== undefined ? 'task file' : 'session prompt' });
+    if (recovery && recovery.open.length > 0) log.append('recovery', { lastSeq: recovery.lastSeq, open: recovery.open });
+  }
   const mcpFlag = flags['mcp-config'];
   const mcpFile = mcpFlag === undefined ? join(workspace, '.gm-new', 'mcp.json') : resolve(mcpFlag);
   const { servers, problems } = readServerConfig(mcpFile, workspace, { required: mcpFlag !== undefined });
@@ -1025,27 +1029,26 @@ async function main(argv) {
   mcp = client;
   mcpReady = client.ready.then(() => {
     current = surfaceOf(current.leaves);
-    logTools(log, resumed, servedTools(surface));
+    if (closedAtBoot === null) logTools(log, resumed, servedTools(surface));
   });
   process.on('exit', () => client.stop());
 
   sweepEndedCode(dirname(runDir), runDir);
-  let session = createSession({ ...limits, runDir, log, task, resume, recovery: recovery && recovery.open.length > 0 ? recovery : null, history, taskInherited: inheritedFrom !== null });
+  let session = createSession({ ...limits, runDir, log, task, resume, recovery: recovery && recovery.open.length > 0 ? recovery : null, history, startOverride });
   let retired = Promise.resolve();
-  function reopen(finished) {
+  function reopen(ended) {
+    const start = ended.successorStart();
     const closedId = basename(runDir);
-    const carried = finished.taskNow();
-    const inherited = carried !== '';
     runDir = join(dirname(runDir), newRunId());
-    const { log: fresh } = openRun({ runDir, rules: MCP_RULES, meta: runMeta(runDir, carried) });
-    fresh.append('start', { mode: 'mcp', maxSteps, maxInflight, taskFrom: inherited ? `closed run ${closedId}` : 'session prompt' });
-    if (inherited) fresh.append('task', { from: `closed run ${closedId}`, text: carried });
+    const { log: fresh } = openRun({ runDir, rules: MCP_RULES, meta: runMeta(runDir, start.task) });
+    fresh.append('start', { mode: 'mcp', maxSteps, maxInflight, taskFrom: start.taskFrom });
+    if (start.task !== '') fresh.append('task', { from: start.taskFrom, text: start.task });
     mcpReady.then(() => logTools(fresh, false, servedTools(surface)));
-    console.error(`gm mcp: run ${closedId} has finished; opened run ${basename(runDir)}`);
-    return createSession({ ...limits, runDir, log: fresh, task: carried, taskInherited: inherited });
+    console.error(`gm mcp: run ${closedId} has ended; opened run ${basename(runDir)}`);
+    return createSession({ ...limits, runDir, log: fresh, task: start.task, taskInherited: start.inherited });
   }
   const acceptLine = (line) => {
-    if (session.finished() && isToolsCall(line)) {
+    if (session.ended() !== null && isNextContextCall(line)) {
       retired = Promise.allSettled([retired, session.settled()]);
       session = reopen(session);
     }
