@@ -1983,3 +1983,37 @@ Commit: "next_context child read: a subagent on a shared connection reads its ru
 
 Not witnessed: a live Claude Code subagent sending `child: true` on a shared connection. A worker started before this commit runs the old code until it restarts.
 
+## grep scope and the skipped-file hint (2026-11-03)
+
+Friction: chatnano-f6, run 465053-9472994, 2026-11-03. `gm.grep` returned `(0 matches; showing 0 to 0; no more)` for a text that sat in an untracked directory (`mic-runner/`, not yet added) and in `node_modules/`. `grep` reads only git-tracked files and said nothing about the rest, so the zero read as "not present". The peer's suggestion: keep the tracked default, and say in the hint how many files were skipped and how to include them.
+
+Baseline, before the change (`/tmp/gm-scratch/grep-scope-witness/body.js`, run `runs-before`, workspace `/tmp/gm-scratch/grep-scope-witness/ws`): a match in the tracked file had no hint; a match only in the untracked and node_modules files returned `(0 matches; showing 0 to 0; no more)` with no hint; `scope` was refused as an unknown argument.
+
+Rule (`grep` in `searcherFor`, `src/search.mjs`):
+- `scope` is `tracked` (default) or `all`. Any other value is refused with `scope must be one of tracked, all`.
+- `tracked` reads the same files as before and returns the same matches. When it skips one or more files under `path`, its reply carries one more hint line: `N files skipped (U untracked, G gitignored or in node_modules); use scope: 'all' to include them`. The line shows whenever the count is above zero, not only on a zero result: a match in the tracked files can hide the fact that other files matched, and the count tells the agent the search was partial. Skipped means a file under `path` that git lists (tracked, untracked or ignored) and that `tracked` does not read. A tracked file under node_modules or vendor counts as skipped when `vendor` is not true. State directories do not count.
+- `U` counts untracked files that are neither ignored nor under node_modules or vendor. `G` counts the rest. The split follows the peer's wording.
+- `all` reads every file git lists under `path`: tracked, untracked and gitignored, node_modules included. It skips `.git` and the state directories `.gm`, `.agentplug`, `.agentplug-kv`, `.gm-new`, `.playwriter` and `runs`, which hold gm and gm-new state. A tracked file inside one of them is still read. `all` adds no hint.
+- Outside the workspace (a walk), `tracked` skips dot-directories, node_modules, vendor and runs/ as before. Its hint counts the directories it skipped, because counting their files would mean walking them: `N directories skipped (dot-directories, node_modules, vendor or runs); use scope: 'all' to include them`. `all` walks them.
+- `vendor` is unchanged. It admits tracked files under node_modules and vendor, and it never reached untracked or gitignored files, which is why `scope` exists.
+- Time: `all` lists with `git ls-files -c -o` under the existing 30 s listing limit (`LIST_TIMEOUT_MS`). Past the limit, `all` replies `scope all: git ls-files failed or ran past its 30 s limit`. The tracked count uses the same limit; past it the hint reads `skipped files not counted: git ls-files failed or ran past its limit`, and the matches are still returned.
+
+Cost, measured on `/workspace/gm` (375 tracked files, 29,326 entries from `git ls-files -c -o`), bash `time`: `git ls-files -c -o` 62 ms, `git ls-files -o --exclude-standard` 5 ms, `git ls-files -c` 2 ms. Default `grep` for `zzqqmiss` through the MCP worker: 204 ms and 152 ms, with `hint: 2182 files skipped (0 untracked, 2182 gitignored or in node_modules)`. `scope: "all"` for the same pattern: 788 ms. The default before the change was not timed on this tree. The 20 untracked non-ignored files there are all under `.gm/` and `runs/`, which is why the count shows 0 untracked.
+
+Witness: the working tree of `/workspace/gm-new` (uncommitted when run), through `tools/relay.mjs` started by `/tmp/gm-scratch/gm-new/grep-fix/driver.mjs` with `--mcp-config` disabling playwriter. Workspace `/tmp/gm-scratch/grep-scope-witness/ws`, a fresh `git init` with tracked `tracked.txt`, `.gitignore` and `notes.txt`, untracked `mic-runner/run.txt`, ignored `node_modules/pkg/index.js`, and untracked state `.gm/state.txt`. Run `runs-after`. Each reply is quoted as its `output`; the `hint` field repeats the hint line, and two hints join with ` | `.
+- (a) default, tracked file holds `mic`: `tracked.txt:1 mic in tracked` / `(1 matches; showing 0 to 1; no more)` / `hint: 2 files skipped (1 untracked, 1 gitignored or in node_modules); use scope: 'all' to include them`
+- (b) default, tracked file rewritten without `mic`: `(0 matches; showing 0 to 0; no more)` / `hint: 2 files skipped (1 untracked, 1 gitignored or in node_modules); use scope: 'all' to include them`
+- (c) `scope: "all"`: `mic-runner/run.txt:1 mic in untracked dir` / `node_modules/pkg/index.js:1 module.exports = 'mic';` / `(2 matches; showing 0 to 2; no more)`. No hint. `.gm/state.txt` is absent.
+- (c2) `scope: "some"`: `{"ok":false,"error":"scope must be one of tracked, all"}`
+- (d) `zzqqmiss`, matches nothing: `(0 matches; showing 0 to 0; no more)` / `hint: 2 files skipped (1 untracked, 1 gitignored or in node_modules); use scope: 'all' to include them`
+- (d2) `zz.qq`, matches nothing, regex fallback runs: `(0 matches; showing 0 to 0; no more)` / `hint: no match as literal or regex` / `hint: 2 files skipped (1 untracked, 1 gitignored or in node_modules); use scope: 'all' to include them`
+- (e1) `ternar|BitNet|1\.58|two-bit|2-bit`: `notes.txt:1 BitNet 1.58 two-bit ternar ||` / `(1 matches; showing 0 to 1; no more)` / `hint: no literal match; matched as regex` / `hint: 2 files skipped (1 untracked, 1 gitignored or in node_modules); use scope: 'all' to include them`
+- (e2) `||`: `notes.txt:1 BitNet 1.58 two-bit ternar ||` / `(1 matches; showing 0 to 1; no more)` / `hint: 2 files skipped (1 untracked, 1 gitignored or in node_modules); use scope: 'all' to include them`
+- (e3) `zzqq|x(`: `{"ok":false,"error":"no literal match, and the pattern is not a valid regex: Invalid regular expression: /zzqq|x(/: Unterminated group"}`, unchanged from ec3f3a9.
+- (f) walk over `/tmp/gm-scratch/grep-scope-witness/outside` (`top.txt`, `node_modules/`, `.hidden/`, `.gm/`), default: `/tmp/gm-scratch/grep-scope-witness/outside/top.txt:1 mic top` / `(1 matches; showing 0 to 1; no more)` / `hint: 2 directories skipped (dot-directories, node_modules, vendor or runs); use scope: 'all' to include them`, `files: walk`.
+- (g) the same walk with `scope: "all"`: `.../outside/.hidden/x.txt:1 mic in dot dir` / `.../outside/node_modules/pkg/index.js:1 mic in node_modules` / `.../outside/top.txt:1 mic top` / `(3 matches; showing 0 to 3; no more)`. `.gm/s.txt` is absent.
+
+Commit: the commit that adds this section (`git log -1 -- DESIGN.md`).
+
+Not witnessed: a host session (Claude Code) calling `grep` with `scope`; macOS, Windows and arm64; `all` on a tree larger than the 30 s listing limit; the default before the change on `/workspace/gm`.
+

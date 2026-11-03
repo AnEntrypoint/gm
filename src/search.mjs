@@ -24,6 +24,10 @@ const MODE_ALIASES = new Map([['content', 'literal']]);
 const REGEX_CHARS = /[.|()[\]{}*+?^$\\]/;
 const TRACKED = { name: 'tracked', args: ['ls-files', '-z'], cached: true };
 const WIKI = { name: 'wiki', args: ['ls-files', '-z', '-co', '--exclude-standard', '--', 'wiki'], cached: false };
+const SCOPES = ['tracked', 'all'];
+const ALL_FILES = { name: 'all', args: ['ls-files', '-z', '-c', '-o'], cached: false };
+const UNTRACKED = { name: 'untracked', args: ['ls-files', '-z', '-o', '--exclude-standard'], cached: false };
+const STATE_DIRS = new Set(['.git', '.gm', '.agentplug', '.agentplug-kv', '.gm-new', '.playwriter', 'runs']);
 const STAMP_SETTLE_MS = 3000;
 const VENDOR = /(^|\/)(node_modules|vendor)\//;
 
@@ -47,8 +51,8 @@ export const SEARCH_TOOLS = [
   },
   {
     name: 'grep',
-    description: `Find text in the files under path: the workspace by default, or a file or directory of it. A path inside the workspace searches its git-tracked files (or, outside a git repository, every file under it); a path outside the workspace is walked and its hits show absolute paths. files is git or walk, the source used. mode is literal (default; also named content), regex, or word (a whole identifier). If a literal search finds nothing and the pattern has a regex character, the pattern runs once more as a regex; the hint says which pass matched, and a pattern that is not a valid regex is an error. Returns path:line text. ignoreCase is optional; limit is 1 to 1000, default 100. Paths under node_modules/ or vendor/ are skipped unless vendor is true; a walk also skips dot-directories and runs/. ${ROOT_NOTE}`,
-    inputSchema: obj({ pattern: str, path: str, mode: str, ignoreCase: bool, limit: num, offset: num, vendor: bool, root: str }, ['pattern']),
+    description: `Find text in the files under path: the workspace by default, or a file or directory of it. A path inside the workspace searches its git-tracked files (or, outside a git repository, every file under it); a path outside the workspace is walked and its hits show absolute paths. files is git or walk, the source used. mode is literal (default; also named content), regex, or word (a whole identifier). If a literal search finds nothing and the pattern has a regex character, the pattern runs once more as a regex; the hint says which pass matched, and a pattern that is not a valid regex is an error. scope is tracked (default) or all: all also searches untracked and gitignored files, node_modules included, and skips .git and the state directories .gm, .agentplug, .agentplug-kv, .gm-new, .playwriter and runs. A tracked search that skips files says how many in a hint and names scope all. Returns path:line text. ignoreCase is optional; limit is 1 to 1000, default 100. Paths under node_modules/ or vendor/ are skipped by tracked unless vendor is true; a walk also skips dot-directories and runs/. all lists files with git ls-files, which has a 30 s limit, so a large tree can take longer. ${ROOT_NOTE}`,
+    inputSchema: obj({ pattern: str, path: str, mode: str, scope: str, ignoreCase: bool, limit: num, offset: num, vendor: bool, root: str }, ['pattern']),
   },
 ];
 
@@ -56,7 +60,7 @@ const ROOT_ARGS = ['root', 'projectPath', 'cwd'];
 const TAKES = {
   search: ['query', 'k'],
   wiki_search: ['query', 'k'],
-  grep: ['pattern', 'path', 'mode', 'ignoreCase', 'limit', 'offset', 'vendor'],
+  grep: ['pattern', 'path', 'mode', 'scope', 'ignoreCase', 'limit', 'offset', 'vendor'],
 };
 const MAX_SEARCH_ROOTS = 4;
 
@@ -138,11 +142,12 @@ function searcherFor({ root, confine }) {
       return searchWith(WIKI, args);
     },
 
-    async grep({ pattern, path, mode: requested = 'literal', ignoreCase = false, limit = DEFAULT_LIMIT, offset = 0, vendor = false }) {
+    async grep({ pattern, path, mode: requested = 'literal', scope: coverage = 'tracked', ignoreCase = false, limit = DEFAULT_LIMIT, offset = 0, vendor = false }) {
       if (typeof pattern !== 'string' || pattern === '') return fail('pattern must be a non-empty string');
       if (pattern.length > MAX_PATTERN_CHARS) return fail(`pattern must be at most ${MAX_PATTERN_CHARS} characters`);
       const mode = MODE_ALIASES.get(requested) ?? requested;
       if (!MODES.includes(mode)) return fail(`mode must be one of ${MODES.join(', ')}`);
+      if (!SCOPES.includes(coverage)) return fail(`scope must be one of ${SCOPES.join(', ')}`);
       if (!Number.isInteger(limit) || limit < 1 || limit > MAX_LIMIT) return fail(`limit must be an integer from 1 to ${MAX_LIMIT}`);
       if (typeof vendor !== 'boolean') return fail('vendor must be true or false');
       if (path !== undefined && (typeof path !== 'string' || path === '')) return fail('path must be a non-empty string');
@@ -158,7 +163,20 @@ function searcherFor({ root, confine }) {
       const listing = inside ? await trackedFiles(root, TRACKED) : { error: 'outside the workspace' };
       const source = listing.error ? 'walk' : 'git';
       const base = listing.error ? scope : root;
-      const names = listing.error ? await walkFiles(scope, vendor) : trackedUnder(listing.paths, relative(root, scope), vendor);
+      const under = relative(root, scope);
+      const all = coverage === 'all';
+      const walked = listing.error ? await walkFiles(scope, all, vendor) : null;
+      let names;
+      if (walked !== null) {
+        names = walked.paths;
+      } else if (all) {
+        const every = await trackedFiles(root, ALL_FILES);
+        if (every.error) return fail(`scope all: git ls-files failed or ran past its ${LIST_TIMEOUT_MS / 1000} s limit`);
+        const tracked = new Set(listing.paths);
+        names = trackedUnder(every.paths, under, true).filter((rel) => !rel.endsWith('/') && (tracked.has(rel) || !inState(rel)));
+      } else {
+        names = trackedUnder(listing.paths, under, vendor);
+      }
       if (!Number.isInteger(offset) || offset < 0) return fail('offset must be a whole number, zero or more');
       const scan = async (matchesLine) => {
         const found = [];
@@ -186,7 +204,7 @@ function searcherFor({ root, confine }) {
         return { found, total, next };
       };
       let scanned = await scan(matches);
-      let hint;
+      const hints = [];
       if (scanned.total === 0 && mode === 'literal' && REGEX_CHARS.test(pattern)) {
         let asRegex;
         try {
@@ -195,13 +213,27 @@ function searcherFor({ root, confine }) {
           return fail(`no literal match, and the pattern is not a valid regex: ${err.message}`);
         }
         scanned = await scan(asRegex);
-        hint = scanned.total > 0 ? 'no literal match; matched as regex' : 'no match as literal or regex';
+        hints.push(scanned.total > 0 ? 'no literal match; matched as regex' : 'no match as literal or regex');
       }
       const { found, total, next } = scanned;
       const footer = [`(${total} matches; showing ${found.length ? offset : 0} to ${offset + found.length}; ${next === null ? 'no more' : `next offset ${next}`})`];
-      return { ok: true, files: source, output: [...found, ...footer, ...(hint ? [`hint: ${hint}`] : [])].join('\n'), ...(hint ? { hint } : {}) };
+      const skipped = all ? null : walked !== null ? walkSkipHint(walked.skippedDirs) : await skippedHint(listing, under, vendor);
+      if (skipped !== null) hints.push(skipped);
+      return { ok: true, files: source, output: [...found, ...footer, ...hints.map((hint) => `hint: ${hint}`)].join('\n'), ...(hints.length ? { hint: hints.join(' | ') } : {}) };
     },
   };
+
+  async function skippedHint(listing, under, vendor) {
+    const every = await trackedFiles(root, ALL_FILES);
+    const untracked = await trackedFiles(root, UNTRACKED);
+    if (every.error || untracked.error) return 'skipped files not counted: git ls-files failed or ran past its limit';
+    const tracked = new Set(listing.paths);
+    const loose = new Set(untracked.paths);
+    const skipped = trackedUnder(every.paths, under, true).filter((rel) => !rel.endsWith('/') && (tracked.has(rel) ? (!vendor && VENDOR.test(rel)) : !inState(rel)));
+    if (skipped.length === 0) return null;
+    const untrackedCount = skipped.filter((rel) => !tracked.has(rel) && loose.has(rel) && !VENDOR.test(rel)).length;
+    return `${plural(skipped.length, 'file')} skipped (${untrackedCount} untracked, ${skipped.length - untrackedCount} gitignored or in node_modules); use scope: 'all' to include them`;
+  }
 
   async function searchWith(listing, { query, k = DEFAULT_K }) {
     if (typeof query !== 'string' || query.trim() === '') return fail('query must be a non-empty string');
@@ -296,9 +328,10 @@ async function trackedFiles(root, listing) {
   }
 }
 
-async function walkFiles(base, vendor) {
-  if ((await lstat(base).catch(() => null))?.isFile()) return [''];
+async function walkFiles(base, all, vendor) {
+  if ((await lstat(base).catch(() => null))?.isFile()) return { paths: [''], skippedDirs: 0 };
   const paths = [];
+  let skippedDirs = 0;
   const pending = [''];
   while (pending.length > 0) {
     const dir = pending.pop();
@@ -311,18 +344,32 @@ async function walkFiles(base, vendor) {
     for (const entry of entries) {
       const rel = dir === '' ? entry.name : `${dir}/${entry.name}`;
       if (entry.isDirectory()) {
-        if (!skippedDirectory(entry.name, vendor)) pending.push(rel);
+        if (STATE_DIRS.has(entry.name)) continue;
+        if (!all && skippedDirectory(entry.name, vendor)) skippedDirs += 1;
+        else pending.push(rel);
       } else if (entry.isFile()) {
         paths.push(rel);
       }
     }
   }
-  return paths.sort();
+  return { paths: paths.sort(), skippedDirs };
 }
 
 function skippedDirectory(name, vendor) {
   if (name.startsWith('.') || name === 'runs') return true;
   return !vendor && (name === 'node_modules' || name === 'vendor');
+}
+
+function inState(rel) {
+  return rel.split('/').slice(0, -1).some((part) => STATE_DIRS.has(part));
+}
+
+function plural(count, one, many = `${one}s`) {
+  return `${count} ${count === 1 ? one : many}`;
+}
+
+function walkSkipHint(dirs) {
+  return dirs === 0 ? null : `${plural(dirs, 'directory', 'directories')} skipped (dot-directories, node_modules, vendor or runs); use scope: 'all' to include them`;
 }
 
 function trackedUnder(paths, dir, vendor) {
