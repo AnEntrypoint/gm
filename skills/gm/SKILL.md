@@ -104,9 +104,9 @@ A summary can replace earlier messages, including the rules, the witness require
 
 next_context returns `pending`: the events that need you since your last step, each one once, with an `id`. They are a job that starts, exits, is killed or stuck, a rules notice, a recovery, a paused run (the worker was stopped with the run open), and a host-idle notice (no call for a while). Skip an id you have already acted on, because a crash can deliver one twice. `pendingFile` is the file that holds them.
 
-Start the watcher at the start of every turn while the run is open, before other work: run `pendingCommands.wait` from `next_context` as a background process of your shell. It prints the queued events once and exits, and it exits at once if events are queued. Its exit wakes you with its output: act on the events, then start it again. It also exits with no output when its timeout passes, so start it again then.
+Keep a wait running while the run is open: start one at the start of every turn, before other work. Use the most effective wait your host offers, one that ends at the next event and hands you the events. The command is `pendingCommands.wait` from `next_context`. It prints the queued events once and exits, and it exits at once if events are queued. Act on the events, then start the wait again. It also exits with no output when its timeout passes, so start it again then.
 
-Do not end a turn while the run is open unless the watcher is running. A host with no background process calls `next_context` with `waitMs` (at most 300000) to hold the step until an event lands, and runs `pendingCommands.read` at each step. A job whose start answers with an error wrote no job event, so the watcher never reports it: check that the start answered `started job`, and start it again if it did not.
+Do not end a turn while the run is open unless a wait is running. A host that cannot hold a wait calls `next_context` with `waitMs` (at most 300000) to hold the step until an event lands, and runs `pendingCommands.read` at each step. A job whose start answers with an error wrote no job event, so the watcher never reports it: check that the start answered `started job`, and start it again if it did not.
 
 ## Handing work to a child session
 

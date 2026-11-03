@@ -75,6 +75,7 @@ This is what you build and codify. Single worker first: DESIGN.md direction 6 sa
 - A turn that ends with the run open and no watcher running leaves nothing to wake the agent. A paused run wrote no event that reached an idle agent before the watcher, so oscraft run 79788-955320 stopped with no finish (DESIGN.md, Wake by a watcher).
 - A `next_context` held by `waitMs` is an active call, so the host-idle watchdog does not count it as quiet (DESIGN.md, Wake by a watcher).
 - A worker that exits 0 with the run open paused itself. The core restarts it at once, and a call in flight gets a repeat-the-call error. Any other exit fails calls until the retry (DESIGN.md, Self-pause keeps calls held).
+- A wait that ends at the next event wakes the agent on its exit only. Output written while it runs wakes nothing, and the runner's text reaches no wait (DESIGN.md, Stdout and stderr test).
 
 ## Rationale not expressible in code
 
