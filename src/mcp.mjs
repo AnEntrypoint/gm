@@ -912,6 +912,15 @@ function isRequestShape(message) {
   return message !== null && typeof message === 'object' && !Array.isArray(message) && typeof message.method === 'string';
 }
 
+function requestIdOf(line) {
+  try {
+    const message = JSON.parse(line);
+    return message !== null && typeof message === 'object' && Object.hasOwn(message, 'id') ? message.id : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 function isNextContextCall(line) {
   try {
     const message = JSON.parse(line);
@@ -1046,8 +1055,9 @@ async function main(argv) {
   function reopen(ended) {
     const start = ended.successorStart();
     const closedId = basename(runDir);
-    runDir = join(dirname(runDir), newRunId());
-    const { log: fresh } = openRun({ runDir, rules: MCP_RULES, meta: runMeta(runDir, start.task) });
+    const nextDir = join(dirname(runDir), newRunId());
+    const { log: fresh } = openRun({ runDir: nextDir, rules: MCP_RULES, meta: runMeta(nextDir, start.task) });
+    runDir = nextDir;
     fresh.append('start', { mode: 'mcp', maxSteps, maxInflight, taskFrom: start.taskFrom });
     if (start.task !== '') fresh.append('task', { from: start.taskFrom, text: start.task });
     mcpReady.then(() => logTools(fresh, false, servedTools(surface)));
@@ -1055,11 +1065,17 @@ async function main(argv) {
     return createSession({ ...limits, runDir, log: fresh, task: start.task, taskInherited: start.inherited });
   }
   const acceptLine = (line) => {
-    if (session.ended() !== null && !session.stepLimited() && isNextContextCall(line)) {
-      retired = Promise.allSettled([retired, session.settled()]);
-      session = reopen(session);
+    try {
+      if (session.ended() !== null && !session.stepLimited() && isNextContextCall(line)) {
+        retired = Promise.allSettled([retired, session.settled()]);
+        session = reopen(session);
+      }
+      session.accept(line);
+    } catch (err) {
+      console.error(`gm mcp: ${err.message}`);
+      const id = requestIdOf(line);
+      if (id !== undefined) write(errorReply(id, -32603, err.message));
     }
-    session.accept(line);
   };
   const lines = createInterface({ input: process.stdin, crlfDelay: Infinity });
   lines.on('line', acceptLine);
