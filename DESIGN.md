@@ -133,3 +133,13 @@ Finding: `read_file` cut a file at 20000 bytes and returned `truncated: false`. 
 Decision: a cut page carries `truncated: true`, `totalBytes` (the file size) and a `hint` that names the `offset` and `limit` of the next page. `cutNotice` in `src/tools.mjs` sets them on every reply path: lines, chars, the long-line cut and the end of the file (commit `35f2729`). The `read_file` description in `src/mcp.mjs` names the three fields.
 
 Witness, taken before this section was appended: a whole read of DESIGN.md gave `truncated: true`, `totalBytes: 32351`, `hint: "pass offset: 39 and limit: 88 to read the rest"`, and 19766 characters. The page at `offset: 39, limit: 88` gave `truncated: false`, `next: null` and 12585 characters. 19766 + 12585 = 32351, so the two pages cover the file.
+
+## git verbs honor cwd (2026-11-04)
+
+Finding: `gm.git_status({ cwd: "/workspace/gm-new" })` returned the status of `/workspace/gm`, the checkout this session is bound to. The git verbs ignored `cwd`.
+
+Decision: every git verb takes `cwd`. A relative `cwd` resolves against the workspace root, and a `cwd` outside a git repository is refused. A call with no `cwd` behaves as before. The fix is commit `d8e838a` (`src/git.mjs`), and the `cwd` sentence is in each verb description (commit of this section).
+
+Witness, run `2026-11-03-22-40-50-654010`: `gm.git_status({ cwd: "/workspace/gm-new" })` gave `## main...origin/main`, which matches `git status --porcelain=v1 --branch` in gm-new. `gm.git_status({ cwd: "/tmp" })` gave `{"ok":false,"error":"cwd /tmp is not inside a git repository"}`. `gm.git_log({ cwd: "/workspace/gm-new", count: 2 })` gave `d8e838a` and `cec628b`. `gm.git_status({})` still reports the `/workspace/gm` submodules, because the session binding is unchanged until the session restarts.
+
+Not tested: `cwd` on the write and network verbs (add, rm, commit, push, fetch, pull, ci_status), and the commit gate in a repository other than gm-new.
