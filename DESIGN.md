@@ -1857,3 +1857,9 @@ Limits, not closed here:
 - Windows and macOS are not witnessed, and neither is arm64 (this host is linux-x64). The `cmd.exe` path is untested.
 - A worker killed with SIGKILL runs no cleanup, so its servers can outlive it. This follows from Node's process model and was not witnessed.
 - Foreign uncommitted changes in `src/search.mjs` and `src/runcode.mjs` were not committed.
+
+gm MCP server closed in the uhh session (2026-11-03)
+
+Friction: during the portal work in `/data/workspace/uhh`, the `gm` MCP server reported CONNECTION_CLOSED. Its tools, and the gm skill read through ReadMcpResourceTool, were unavailable for the rest of that session. The uhh session changed nothing in gm-new. This checkout had foreign uncommitted edits to `src/mcp-client.mjs` and `defaults/mcp.json` around 14:17 the same day, so a live edit during a run is a candidate cause, not a diagnosis.
+
+Decision: ListAgents showed no other session named `gm`, so the decision is the owner's. This entry records it, and the owner is told. Not done: a reproduction from a fresh session, and the gm server's stderr from the time of the close.
