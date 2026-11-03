@@ -175,12 +175,12 @@ function query(flags) {
 
 function doctor(flags) {
   const workspace = resolve(flags.workspace ?? process.cwd());
-  const nodeOk = Number(process.versions.node.split('.')[0]) >= 26;
-  console.log(`node ${process.version}: ${nodeOk ? 'ok' : 'fail, Node 26 or newer is required'}`);
+  const nodeOk = Number(process.versions.node.split('.')[0]) >= 22;
+  console.log(`node ${process.version}: ${nodeOk ? 'ok' : 'fail, Node 22 or newer is required'}`);
   const writable = probeWritable(workspace);
   console.log(`workspace ${workspace}: ${writable.ok ? 'writable' : `not writable (${writable.error})`}`);
   console.log(lastRunSummary());
-  console.log('limits: the Node-below-26 failure path has no live run; run_shell is unconfined, so a shell command can hard-link a file from outside the workspace; the process-group kill is unverified on Windows');
+  console.log('limits: the Node-below-22 failure path has no live run; run_shell is unconfined, so a shell command can hard-link a file from outside the workspace; the process-group kill is unverified on Windows');
   return nodeOk && writable.ok ? 0 : 1;
 }
 

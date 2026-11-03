@@ -1,6 +1,5 @@
 #!/bin/sh
-# gm setup, for Node 26 or later (the latest LTS line; older Node lines are refused).
-# Run it once after a clone, and again whenever you like: it is safe to repeat. It checks the tools gm needs, installs
+# gm setup. Run it once after a clone, and again whenever you like: it is safe to repeat. It checks the tools gm needs, installs
 # the one dependency when it is missing, pulls origin main when the checkout has no changes to tracked files (and runs the gate on the
 # result), runs the gate, fetches the playwriter tools, and prints the three add-mcp commands that install gm. It runs none of them.
 # Outside the checkout it writes only the playwriter fetch, into the npm cache (`npm config get cache`). The gate's runs use the OS
@@ -20,8 +19,8 @@ die() {
 [ "$#" -eq 0 ] || die "setup takes no arguments: run ./setup.sh, then the add-mcp commands it prints"
 
 command -v git >/dev/null 2>&1 || die "git is not installed. Install git, then run this again."
-command -v node >/dev/null 2>&1 || die "node is not installed. gm needs Node 26 or later, the latest LTS line. Install it from https://nodejs.org, then run ./setup.sh again."
-node -e 'process.exit(Number(process.versions.node.split(".")[0]) >= 26 ? 0 : 1)' || die "gm needs Node 26 or later, the latest LTS line. This is node $(node -v). Install it from https://nodejs.org, then run ./setup.sh again."
+command -v node >/dev/null 2>&1 || die "node is not installed. gm needs Node 22 or later: https://nodejs.org"
+node -e 'process.exit(Number(process.versions.node.split(".")[0]) >= 22 ? 0 : 1)' || die "gm needs Node 22 or later. This is node $(node -v). Install it from https://nodejs.org, then run ./setup.sh again."
 command -v npm >/dev/null 2>&1 || die "npm is not installed. It comes with node: https://nodejs.org"
 
 echo "setup: node $(node -v), git $(git --version | cut -d' ' -f3)"

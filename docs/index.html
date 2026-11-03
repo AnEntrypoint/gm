@@ -92,12 +92,12 @@ footer { border-top: 4px solid #000; margin-top: 2.4em; padding-top: 0.5em; font
 <h2>1. What it is</h2>
 <p>gm is a stdio MCP server that runs one long task as one worker. The agent session is the model. gm makes no model calls of its own: the session reads what the tools return and decides what to do next.</p>
 <p>Every event of a run goes to one append-only log. Each step starts with <code>next_context</code>, which returns the rules, the task, the events the session has not yet seen, and the open jobs. Work is done inside <code>run_code</code>, and a step ends with <code>finish</code> and a witness.</p>
-<p>gm needs Node 26 or later, the latest LTS line. Its one runtime dependency is acorn 8.18.0, pinned, which parses JavaScript for the <code>callers</code> and <code>impact</code> tools.</p>
+<p>gm needs Node 22 or later. Its one runtime dependency is acorn 8.18.0, pinned, which parses JavaScript for the <code>callers</code> and <code>impact</code> tools.</p>
 </section>
 
 <section class="chapter" id="ch-2">
 <h2>2. Install</h2>
-<p>You need git, npm and Node 26 or later, the latest LTS line. From the folder of the checkout, run the setup once after a clone:</p>
+<p>You need git, npm and Node 22 or later. From the folder of the checkout, run the setup once after a clone:</p>
 <pre>./setup.sh</pre>
 <p>The setup checks the tools, installs acorn if it is missing, pulls origin main if the checkout has no changes to tracked files, runs the gate, and prints three add-mcp commands. They run through npx, pinned to version 2.6.1. Run them in this order. The first only lists the gm entries. The second removes every gm entry, old or new, from the global configs. Remove matches any server whose name contains gm, so read the list first. The third installs gm for Claude Code at user level, so one entry serves every project:</p>
 <pre>npx -y add-mcp@2.6.1 list -g
@@ -223,7 +223,7 @@ return { todo: todo.length };</pre>
 <h2>10. Troubleshooting</h2>
 <table>
 <tr><th>Message</th><th>What to do</th></tr>
-<tr><td>gm needs Node 26 or later, the latest LTS line. This is node vXX.</td><td>Install Node 26 from https://nodejs.org, then run setup again.</td></tr>
+<tr><td>gm needs Node 22 or later. This is node vXX.</td><td>Install Node 22 or later from https://nodejs.org, then run setup again.</td></tr>
 <tr><td>npm ci failed</td><td>Check the network, then run setup again.</td></tr>
 <tr><td>origin could not be reached</td><td>The worker still runs. The next check tries again.</td></tr>
 <tr><td>the checkout has changes to tracked files</td><td>Commit or stash them. Nothing is pulled while they are there.</td></tr>
