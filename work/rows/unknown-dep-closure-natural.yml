@@ -1,0 +1,6 @@
+id: "unknown-dep-closure-natural"
+kind: "unknown"
+title: "Does one-hop dependency closure help natural-language search?"
+body: "Open. The measurement in research/dep-recall/measure.cjs uses function names as queries and includes the queried function as its own anchor, so the 0.97 closure recall is partly by construction. Witness needed: natural-language queries for gm-new functions, scored against callee-defining files at a file budget matched to plain search. Closure stays opt-in until that witness beats plain search."
+status: "open"
+createdAt: "2026-11-03T19:41:05.825Z"
