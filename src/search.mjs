@@ -217,7 +217,7 @@ function searcherFor({ root, confine }) {
       }
       const { found, total, next } = scanned;
       const footer = [`(${total} matches; showing ${found.length ? offset : 0} to ${offset + found.length}; ${next === null ? 'no more' : `next offset ${next}`})`];
-      const skipped = all ? null : walked !== null ? walkSkipHint(walked.skippedDirs) : await skippedHint(listing, under, vendor);
+      const skipped = all || total > 0 ? null : walked !== null ? walkSkipHint(walked.skippedDirs) : await skippedHint(listing, under, vendor);
       if (skipped !== null) hints.push(skipped);
       return { ok: true, files: source, output: [...found, ...footer, ...hints.map((hint) => `hint: ${hint}`)].join('\n'), ...(hints.length ? { hint: hints.join(' | ') } : {}) };
     },
