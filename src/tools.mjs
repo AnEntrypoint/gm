@@ -96,6 +96,8 @@ export const DEFAULT_MONITOR_MS = 15000;
 const PATH_TOOLS = new Set(['read_file', 'write_file', 'edit_file', 'list_dir', 'stat_file']);
 const WRITE_TOOLS = new Set(['write_file', 'edit_file']);
 const READ_ONLY = new Set(['job_status', 'search', 'wiki_search', 'grep', 'fetch', 'callers', 'impact', 'review_join']);
+const SKILL_URI = /^skill:\/\//;
+const unservedSkill = (uri) => ({ ok: false, error: `no served skill file has the uri ${uri}` });
 
 // The tools this module owns, with their strategies. A file write keeps its path and its size, and an edit keeps its path and the sizes
 // of the old and new text. A listing or a log query is cut in the second horizon. finish keeps its witness and its gaps whole in both
@@ -119,7 +121,7 @@ export const COMPACT = {
   },
 };
 
-export function createTools({ workspace, runDir, log, background = true, jobLifetimeMs = DEFAULT_JOB_LIFETIME_MS, stuckMs = DEFAULT_STUCK_MS, monitorMs = DEFAULT_MONITOR_MS, noticeMs = BODY_NOTICE_MS, leaves = BOOT_LEAVES }) {
+export function createTools({ workspace, runDir, log, background = true, jobLifetimeMs = DEFAULT_JOB_LIFETIME_MS, stuckMs = DEFAULT_STUCK_MS, monitorMs = DEFAULT_MONITOR_MS, noticeMs = BODY_NOTICE_MS, leaves = BOOT_LEAVES, serveSkill = unservedSkill }) {
   const root = resolve(workspace);
   const realRoot = realpathSync(root);
   const jobs = new Map();
@@ -143,6 +145,7 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
 
   const handlers = {
     async read_file(args) {
+      if (SKILL_URI.test(args.path ?? '')) return serveSkill(args.path);
       const at = locate(args.path);
       if (at.refused) return refusal(at.refused);
       const unit = args.unit ?? 'lines';

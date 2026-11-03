@@ -129,7 +129,7 @@ const objectSchema = (properties, required = []) => ({ type: 'object', propertie
 
 const BASE_TOOLS = [
   { name: 'next_context', description: 'Begin a step. Returns rules, task, witness requirement, the events new since the last step in full, the older ones in compact form within two horizons, and prefixSha. pending lists the events that need you since your last step, each once, with an id. Delivery clears an event, so no later step or wait lists it again. Call it at the start of each step. query_log reaches every event. waitMs, when set, holds this call until an event is pending or that many milliseconds pass, at most 300000.', inputSchema: objectSchema({ waitMs: number }) },
-  { name: 'read_file', description: 'Read a text file, inside or outside the workspace, one page of at most 20000 characters. Lines are the default unit: offset is a 0-based line index, limit a line count (default: as many whole lines as fit), and total (the file in lines) and next (the line index of the next page, null at the end) count lines. A line longer than the page is cut to its first 20000 characters, with cutLine true, and next is the line after it. unit "chars" counts offset, limit (1 to 20000, default 20000), total and next in characters instead.', inputSchema: objectSchema({ path: text, offset: number, limit: number, unit: text }, ['path']) },
+  { name: 'read_file', description: 'Read a text file, inside or outside the workspace, one page of at most 20000 characters. Lines are the default unit: offset is a 0-based line index, limit a line count (default: as many whole lines as fit), and total (the file in lines) and next (the line index of the next page, null at the end) count lines. A line longer than the page is cut to its first 20000 characters, with cutLine true, and next is the line after it. unit "chars" counts offset, limit (1 to 20000, default 20000), total and next in characters instead. A path that starts with skill:// reads a served skill file, the text resources/read returns, and a skill:// uri that no served skill has is an error that names it.', inputSchema: objectSchema({ path: text, offset: number, limit: number, unit: text }, ['path']) },
   { name: 'write_file', description: 'Write a text file, inside or outside the workspace, creating parent directories.', inputSchema: objectSchema({ path: text, content: text }, ['path', 'content']) },
   { name: 'edit_file', description: 'Replace old with new in a text file, inside or outside the workspace. old must occur once, unless replaceAll is true.', inputSchema: objectSchema({ path: text, old: text, new: text, replaceAll: { type: 'boolean' } }, ['path', 'old', 'new']) },
   { name: 'stat_file', description: 'Type, size and mtime of a path, inside or outside the workspace, as JSON.', inputSchema: objectSchema({ path: text }, ['path']) },
@@ -211,7 +211,7 @@ function queryHintOf(shown, total) {
 
 function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, resume = null, jobLifetimeMs = DEFAULT_JOB_LIFETIME_MS, stuckMs = DEFAULT_STUCK_MS, monitorMs = DEFAULT_MONITOR_MS, noticeMs = BODY_NOTICE_MS, hostIdleMs = DEFAULT_HOST_IDLE_MS, recovery = null, history = [], taskInherited = false, startOverride = null, surface = 'code' }) {
   const runId = basename(runDir);
-  const tools = createTools({ workspace, runDir, log, background: true, jobLifetimeMs, stuckMs, monitorMs, noticeMs, leaves: current.leaves });
+  const tools = createTools({ workspace, runDir, log, background: true, jobLifetimeMs, stuckMs, monitorMs, noticeMs, leaves: current.leaves, serveSkill: (uri) => serveSkillFile(uri, 'read_file') });
   activeTools = tools;
   activeLog = log;
   let pendingRecovery = recovery;
@@ -418,14 +418,19 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
   }
 
   function readResource(params) {
-    const found = skillFileOf(params?.uri);
+    const served = serveSkillFile(params?.uri, 'resource');
     // A missing resource is -32002 with its uri, as the 2025-11-25 page says. A uri with a .. segment is not served, so it is not found either.
-    if (found === null) throw new RpcError(-32002, `resource not found: ${params?.uri}`, { uri: params?.uri });
-    // Only the gm skill's SKILL.md clears the rules notice, since the notice asks for that read. Each read is logged, so a live run can count them.
+    if (!served.ok) throw new RpcError(-32002, `resource not found: ${params?.uri}`, { uri: params?.uri });
+    return { contents: [{ uri: served.uri, mimeType: served.mimeType, text: served.output }] };
+  }
+
+  function serveSkillFile(uri, via) {
+    const found = skillFileOf(uri);
+    if (found === null) return { ok: false, error: `no served skill file has the uri ${uri}` };
     const isGm = found.file.uri === GM_SKILL_URI;
-    log.append('skill-loaded', { via: 'resource', skill: found.skill.name, uri: found.file.uri, cleared: isGm ? [...rulesOpen.keys()] : [] });
+    log.append('skill-loaded', { via, skill: found.skill.name, uri: found.file.uri, cleared: isGm ? [...rulesOpen.keys()] : [] });
     if (isGm) clearRules();
-    return { contents: [{ uri: found.file.uri, mimeType: found.file.mimeType, text: found.file.bytes.toString('utf8') }] };
+    return { ok: true, output: found.file.bytes.toString('utf8'), uri: found.file.uri, mimeType: found.file.mimeType };
   }
 
   // The checks on one call's result, for the rules the server can see. A finish is judged by its own result. Any other call counts toward the
