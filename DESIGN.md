@@ -125,3 +125,11 @@ Question: do gm-new's `gm.playwriter_*` verbs work on this machine, and does the
 - Through gm (run `2026-11-03-22-40-50-654010`): an isolated context from `context.browser().newContext()` opened one data-URL page, read its title and heading, and closed the page and the context in a `finally`. It returned `{"title":"gm-pw-test","heading":"hello from gm","pagesInDefault":1}`. The default context listed only `about:blank` before and after.
 - Defect fixed: the default exposed `playwriter_reset`, which recreates the CDP connection and resets the context that every worker shares. `defaults/mcp.json` now sets `"deny": ["reset"]` on the playwriter entry, and `startMcpClients` in `src/mcp-client.mjs` leaves a denied tool out before its verb is registered. Witnesses: the fake stdio server with deny gave `has_reset: false` and a skipped `reset`; without deny it gave `has_reset: true` (`/tmp/gm-scratch/deny-probe/test2.mjs`).
 - This machine's user layer, `/config/.gm-new/mcp.json`, got the same `deny` entry. The previous file is kept at `/config/.gm-new/mcp.json.bak-2026-11-04`. A session already running keeps its tool list, so `playwriter_reset` disappears only after that session restarts.
+
+## read_file cuts report themselves (2026-11-04)
+
+Finding: `read_file` cut a file at 20000 bytes and returned `truncated: false`. Reading DESIGN.md (30495 bytes, run `2026-11-03-22-40-50-654010`) returned 19766 characters with no sign of the cut, so an agent could take the cut for the end of the file.
+
+Decision: a cut page carries `truncated: true`, `totalBytes` (the file size) and a `hint` that names the `offset` and `limit` of the next page. `cutNotice` in `src/tools.mjs` sets them on every reply path: lines, chars, the long-line cut and the end of the file (commit `35f2729`). The `read_file` description in `src/mcp.mjs` names the three fields.
+
+Witness, taken before this section was appended: a whole read of DESIGN.md gave `truncated: true`, `totalBytes: 32351`, `hint: "pass offset: 39 and limit: 88 to read the rest"`, and 19766 characters. The page at `offset: 39, limit: 88` gave `truncated: false`, `next: null` and 12585 characters. 19766 + 12585 = 32351, so the two pages cover the file.
