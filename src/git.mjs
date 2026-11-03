@@ -11,7 +11,8 @@ const MAX_COUNT = 200;
 const REF = /^[A-Za-z0-9._\/@-]{1,200}$/;
 export const SHA = /^[0-9a-f]{7,40}$/;
 const REPO = /^[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+$/;
-const ORIGIN = /github\.com[:\/]([^\/\s]+)\/([^\/\s]+?)(?:\.git)?\/?$/;
+// The origin's host, owner and name, for any scheme or host: https://host/owner/name(.git), git@host:owner/name, ssh://user@host:port/owner/name.
+const ORIGIN = /^(?:[a-z][a-z0-9+.-]*:\/\/)?(?:[^@\/\s]+@)?([^\/:\s]+)(?::\d+)?[\/:]([^\/\s]+)\/([^\/\s]+?)(?:\.git)?\/?$/i;
 
 const str = { type: 'string' };
 const bool = { type: 'boolean' };
@@ -32,7 +33,7 @@ export const GIT_TOOLS = [
   { name: 'git_pull', description: 'Fast-forward pull of the current branch from its upstream. Never merges.', inputSchema: obj({}) },
   { name: 'git_checkout', description: 'Switch to an existing branch, tag or commit. Creates nothing.', inputSchema: obj({ ref: str }, ['ref']) },
   { name: 'git_branch', description: 'List local branches. The current branch is marked with *.', inputSchema: obj({}) },
-  { name: 'ci_status', description: 'GitHub Actions runs for a commit (default HEAD) with status and conclusion. repo is owner/name and defaults to origin.', inputSchema: obj({ sha: str, repo: str }) },
+  { name: 'ci_status', description: 'GitHub Actions runs for a commit (default HEAD), every page of them, with status and conclusion. repo is owner/name and defaults to origin; when it comes from origin, gh calls origin\'s host, whatever that host is.', inputSchema: obj({ sha: str, repo: str }) },
 ];
 
 export function commitExists(root, sha) {
@@ -87,7 +88,7 @@ export function createGitVerbs({ root, confine, log }) {
   async function originRepo() {
     const url = await gitRaw(['remote', 'get-url', 'origin'], CHECK_TIMEOUT_MS);
     const match = url.ok ? ORIGIN.exec(url.output.trim()) : null;
-    return match ? `${match[1]}/${match[2]}` : null;
+    return match ? { host: match[1], name: `${match[2]}/${match[3]}` } : null;
   }
 
   async function ciStatus(sha, repo) {
@@ -95,14 +96,17 @@ export function createGitVerbs({ root, confine, log }) {
     if (repo !== undefined && !REPO.test(repo)) return fail('repo must be owner/name');
     const head = await gitRaw(['rev-parse', '--verify', `${sha ?? 'HEAD'}^{commit}`], CHECK_TIMEOUT_MS);
     if (!head.ok) return fail(`no commit ${sha ?? 'HEAD'} in this repository`);
-    const name = repo ?? (await originRepo());
-    if (name === null) return fail('origin is not a GitHub remote; pass repo as owner/name');
+    const origin = repo === undefined ? await originRepo() : { host: null, name: repo };
+    if (origin === null) return fail('origin has no owner/name path; pass repo as owner/name');
+    const { host, name } = origin;
+    if (!REPO.test(name)) return fail('origin has no owner/name path; pass repo as owner/name');
     const full = head.output.trim();
-    const api = await retried('ci_status', () => runCommand('gh', ['api', `repos/${name}/actions/runs?head_sha=${full}&per_page=20`], { cwd: root, timeoutMs: GH_TIMEOUT_MS }));
+    const hostArgs = host === null ? [] : ['--hostname', host];
+    const api = await retried('ci_status', () => runCommand('gh', ['api', ...hostArgs, '--paginate', '--slurp', `repos/${name}/actions/runs?head_sha=${full}&per_page=100`], { cwd: root, timeoutMs: GH_TIMEOUT_MS }));
     if (!api.ok) return { ok: false, error: api.error ?? `gh api exited ${api.exitCode}`, output: api.output.trim(), attempts: api.attempts };
     let runs;
     try {
-      runs = JSON.parse(api.output).workflow_runs ?? [];
+      runs = JSON.parse(api.output).flatMap((page) => page.workflow_runs ?? []);
     } catch {
       return fail('gh api did not return JSON');
     }

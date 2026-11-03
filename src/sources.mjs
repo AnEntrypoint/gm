@@ -2,11 +2,10 @@ import { createHash } from 'node:crypto';
 import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-// The raw source archive. A fetched body is saved in full, up to SOURCE_CAP bytes, as ASCII text: every non-ASCII UTF-16
+// The raw source archive. A fetched body is saved in full, as ASCII text: every non-ASCII UTF-16
 // code unit is written as a \uXXXX escape, so the repo's ASCII rule holds and the text can be recovered. A file is named by
 // the first 12 hex digits of the sha256 of its bytes, and it is written once: an existing file is never overwritten.
 // sources/index.jsonl is the append-only registry of fetches: one line per fetch, with its url, source id and time.
-export const SOURCE_CAP = 1048576;
 const SOURCE_NAME = /^[0-9a-f]{12}\.txt$/;
 const REGISTRY = 'index.jsonl';
 
@@ -20,7 +19,7 @@ export function sourceIdOf(bytes) {
 
 // Archives one fetched body and records the fetch in the registry. Returns the id, and whether this call created the file.
 export function archiveSource(root, body, url) {
-  const stored = Buffer.from(asciiText(body.subarray(0, SOURCE_CAP).toString('utf8')), 'utf8');
+  const stored = Buffer.from(asciiText(body.toString('utf8')), 'utf8');
   const id = sourceIdOf(stored);
   const dir = join(root, 'sources');
   mkdirSync(dir, { recursive: true });

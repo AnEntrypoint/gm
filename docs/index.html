@@ -152,10 +152,10 @@ return { todo: todo.length };</pre>
 <tr><td>Shell and jobs</td><td>run_shell, job_start, job_status, job_stop</td></tr>
 <tr><td>Log</td><td>query_log (reaches every event of the run)</td></tr>
 <tr><td>Search</td><td>search (BM25 over tracked files), grep (literal, regex or word)</td></tr>
-<tr><td>Web</td><td>fetch</td></tr>
+<tr><td>Web</td><td>fetch (any URL Node fetch serves; the whole reply, no cap on redirects)</td></tr>
 <tr><td>Code</td><td>callers, impact (acorn)</td></tr>
 <tr><td>Git</td><td>git_status, git_add, git_rm, git_commit, git_push, git_log, git_diff, git_show, git_fetch, git_pull, git_checkout, git_branch</td></tr>
-<tr><td>CI</td><td>ci_status</td></tr>
+<tr><td>CI</td><td>ci_status (every page of runs, from origin's host)</td></tr>
 <tr><td>Rows</td><td>prd_add, prd_list, prd_resolve, prd_delete, unknown_add, unknown_list, unknown_resolve</td></tr>
 <tr><td>Wiki</td><td>wiki_search, wiki_write</td></tr>
 <tr><td>Review</td><td>review_packet, review_record, review_join</td></tr>

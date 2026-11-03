@@ -1416,3 +1416,55 @@ Witnesses, on a tar of HEAD 2a930ff (git archive, not a clone), with node_module
 
 Open, for the owner (not decided here):
 - src/mcp.mjs RULE_TEXT (the rules watchdog label for rule 1, line 260) still says "work only inside the workspace". Its notices fire on a refusal whose text names the workspace, a link or "..". The git tools and the row files still refuse outside paths, and the file tools no longer do. Whether to relabel rule 1 is open.
+
+## Network access with no caps (2026-11-03)
+
+Owner direction, 2026-11-03: outside access covers the network, and there is no cap on it. The network verbs are uncapped now: no size cap on a reply, no count on redirects, no protocol or host allow-list, and no truncation of a reply. Retries stay (they are not caps), and timeouts stay (listed below, for the owner to decide). The model is still the host session: no API call was added, and the no-API rule of 2026-11-01 stands.
+
+Restrictions removed, with their file and line at HEAD 38bc532:
+- src/fetch.mjs:61 and :78, a protocol allow-list: `isWeb` refused any scheme but http and https ("only http and https URLs are fetched", and "a redirect led to a URL that is not http or https"). Node's fetch now decides which schemes it serves (data: works; file: fails inside Node with "request failed: fetch failed").
+- src/fetch.mjs:7-8 and :53, :127-148, a size cap on the reply: `maxBytes`, default 2000000, up to 20000000, and readCapped's cut at that many bytes. The body is read whole.
+- src/fetch.mjs:11 and :93-95, the reply's text was cut at TEXT_CAP = 20000 characters, with a footer. The text is returned whole.
+- src/fetch.mjs:9-10, :54, :75, a count cap on redirects: `maxRedirects`, default 5, up to 10. Redirects are followed with no count, and the one timeout bounds the whole call.
+- src/fetch.mjs:24-25, the description said "public" and listed maxBytes and maxRedirects; it now says any URL, and the schema has `url` and `timeoutMs` only.
+- src/sources.mjs:9 and :23, the archive cap SOURCE_CAP = 1048576: a fetched body was archived only up to 1 MB. It is archived whole now.
+- src/git.mjs:14 and :99, a host allow-list: ORIGIN matched github.com only, and ci_status refused any other origin ("origin is not a GitHub remote"). ORIGIN now takes the host, owner and name from https, scp-like (git@host:owner/name) and ssh URLs, and ci_status passes the host to gh with --hostname.
+- src/git.mjs:101-105, a reply cap: ci_status read one page of 20 runs (per_page=20). It now reads every page (`gh api --paginate --slurp`, per_page=100), and it merges the pages' workflow_runs.
+- src/runcode.mjs (the run_code description's ten most-used verbs) listed fetch's maxBytes and maxRedirects; it lists `fetch({ url, timeoutMs? })` now. src/git.mjs:35, the ci_status description, says every page and origin's host.
+- README.md:31 said "an HTTP GET of a public URL", and docs/index.html:155 and :158 listed the verbs with no statement of what they reach; they now say what the verbs reach.
+
+Kept, and not a cap (open, for the owner):
+- src/fetch.mjs, the content-type branch: HTML is reduced to text with script and style removed (a transform, not a cut), and a non-text content type returns "(binary content not shown: type)". A binary body is not returned as text. The archive stores the body as UTF-8 text (src/sources.mjs), so bytes that are not UTF-8 are lost there.
+- src/exec.mjs:4 and :62, :102, OUTPUT_CAP = 200000 characters, applied by runCommand to every shell command's output, a curl through run_shell included. It bounds the memory of every command, so it is not changed here.
+- src/retry.mjs, PERMANENT: the word "invalid" matches in any error text, so a transient error that names a host with "invalid" in it is not retried. Witness e below shows it (attempts 1).
+
+Timeouts kept, with value and location (not changed; the owner decides):
+- src/fetch.mjs:5-6, the fetch timeoutMs: default 15000 ms, at most 60000 ms (a larger value is refused). It covers the headers, the body and every redirect.
+- src/git.mjs:6, GIT_TIMEOUT_MS = 120000 ms, for git_fetch, git_pull and git_push (network verbs).
+- src/git.mjs:7, GH_TIMEOUT_MS = 60000 ms, for ci_status's gh call. Now that gh pages through every run, one call covers all pages, so a long history can exceed 60 s.
+- src/git.mjs:8, CHECK_TIMEOUT_MS = 15000 ms, for local git checks (not network).
+- tools/update.mjs:25, FETCH_MS = 60000 ms, the update check's git fetch of origin; :26, PULL_MS = 60000 ms.
+
+Witnesses. Before: a tar of HEAD 38bc532 (git archive, not a clone). After: a tar of the working tree with these edits (not a clone). Each run is the worker over stdio (node src/mcp.mjs --workspace ws --run-dir run --task file) with JSON-RPC from a witness driver in /tmp/gm-scratch/gm-new/net (drive.mjs, scenarios a to e, prep.sh, run-all.sh). Scenario a's local server listens on 127.0.0.1 at a random port and is stopped after its run. The workspaces, the copies, the bare origin and the server are deleted after the witness.
+
+Before, HEAD 38bc532:
+- (a) run h-a-1793689180810556405: a 3,000,000-byte body from 127.0.0.1 came back with bytes 2000000, truncated true, and 20034 characters of text (the cut and its footer). seq 8 code-call, seq 14 end.
+- (b) run h-b-1793689181112369655: data: and file: both refused, "only http and https URLs are fetched". seq 8 and seq 10 code-call.
+- (c) run h-c-1793689181329434601: git_fetch ok, and ci_status on sha 38bc532 returned one run ("pages build and deployment completed success"). seq 8 and seq 9.
+- (d) run h-d-1793689184153863899: git_push of main to a local bare origin, ok. seq 8 and seq 9 stage, seq 10 code-call.
+- (e) run h-e-1793689184431807653: ci_status with origin https://example.invalid/acme/tool.git refused, "origin is not a GitHub remote; pass repo as owner/name". seq 7 code-call.
+- Default tools hash (tools event seq 2): 462f256b6ee7c52223971735badce28c7bcbec4255cf63ebfe8ebdc1c43e9722. The HEAD commit records it. The value 836ea50420d01153637b4f5a7d062d324428e8bd97d1c613b70b62b824b89932 was the hash before 38bc532, not HEAD.
+
+After, the working tree:
+- (a) pass: run w-a-1793689295618936541: bytes 3000000, textChars 3000000, no truncation, and the sha256 of the returned text 0b37eeca70f8bafbfd3ba8097d03f436264b25f49cb8d845889cdc2c75627fbe equals the served body's sha (the driver's own hash). seq 8 code-call, seq 14 end. The reply archived as sources/0b37eeca70f8.txt, 2.9 MB.
+- (b) pass for data:, run w-b-1793689295970919677: 200, 21 bytes, body "hello from a data url" (seq 8). file: is not refused by gm-new, and Node's fetch fails it: "request failed: fetch failed" (seq 10).
+- (c) pass: run w-c-1793689296208258185: git_fetch ok, and ci_status returned the same run as before (seq 8 and seq 9).
+- (d) pass: run w-d-1793689298638426378: git_push ok, the same output as before (seq 8 to seq 10).
+- (e) pass for the removed refusal, run w-e-1793689298907599648: the call reached gh, which failed with "error connecting to example.invalid" (the sandbox cannot reach that host). seq 7 code-call. attempts 1, because of the "invalid" match above.
+- Default tools hash: 23b998913a0bd9fd3886cd8cfa86f2c0bf10a1ffb6569130e3a4659fd4efd4b4 (tools event seq 2). It moved because the run_code description's fetch arguments changed.
+- Gate on the copy: ok true, failed none. syntax 41 modules, ascii 86 files, docs 242 paths, sources (none archived in the tree), wiki none, skills 3, connect ec7180e23afa5292 (unchanged), workers 29 modules, smoke finished and the negative control stopped at max_steps. The copy has its own git index (git init and git add -A in the copy), so the checkout's index was not read.
+
+Open, for the owner (not decided here):
+- Timeouts, listed above: the owner decides whether the 60 s fetch and gh bounds, and the 120 s git bound, stay.
+- The sources archive is whole now, so a large fetch adds its size to sources/ (up to six bytes per byte of non-ASCII text, as ASCII escapes), and the gate's sources check reads every archived file on every commit. Whether to keep an archive cap, or to store large bodies outside the tree, is open.
+- Binary bodies and run_shell's 200000-character output cap stay (above).
