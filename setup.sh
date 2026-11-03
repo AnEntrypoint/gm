@@ -1,5 +1,6 @@
 #!/bin/sh
-# gm setup. Run it once after a clone, and again whenever you like: it is safe to repeat. It checks the tools gm needs, installs
+# gm setup, for Node 26 or later (the latest LTS line; older Node lines are refused).
+# Run it once after a clone, and again whenever you like: it is safe to repeat. It checks the tools gm needs, installs
 # the one dependency when it is missing, pulls origin main when the checkout has no changes to tracked files (and runs the gate on the
 # result), runs the gate, fetches the playwriter tools, and prints the three add-mcp commands that install gm. It runs none of them.
 # Outside the checkout it writes only the playwriter fetch, into the npm cache (`npm config get cache`). The gate's runs use the OS
@@ -19,8 +20,8 @@ die() {
 [ "$#" -eq 0 ] || die "setup takes no arguments: run ./setup.sh, then the add-mcp commands it prints"
 
 command -v git >/dev/null 2>&1 || die "git is not installed. Install git, then run this again."
-command -v node >/dev/null 2>&1 || die "node is not installed. gm needs Node 20 or later: https://nodejs.org"
-node -e 'process.exit(Number(process.versions.node.split(".")[0]) >= 20 ? 0 : 1)' || die "node is $(node -v). gm needs Node 20 or later."
+command -v node >/dev/null 2>&1 || die "node is not installed. gm needs Node 26 or later, the latest LTS line. Install it from https://nodejs.org, then run ./setup.sh again."
+node -e 'process.exit(Number(process.versions.node.split(".")[0]) >= 26 ? 0 : 1)' || die "gm needs Node 26 or later, the latest LTS line. This is node $(node -v). Install it from https://nodejs.org, then run ./setup.sh again."
 command -v npm >/dev/null 2>&1 || die "npm is not installed. It comes with node: https://nodejs.org"
 
 echo "setup: node $(node -v), git $(git --version | cut -d' ' -f3)"
@@ -48,11 +49,7 @@ else
   die "the gate failed. Read the message above, fix it, then run this again."
 fi
 
-if node -e 'process.exit(Number(process.versions.node.split(".")[0]) >= 22 ? 0 : 1)'; then
-  node --input-type=module -e "import('./tools/prefetch.mjs').then((m) => m.prefetch())"
-else
-  echo "setup: the playwriter tools need Node 22 or later, and will not start on $(node -v). The fetch is skipped; gm still installs and runs."
-fi
+node --input-type=module -e "import('./tools/prefetch.mjs').then((m) => m.prefetch())"
 
 # 5. The install. gm is installed with add-mcp, run through npx. The first command only lists the gm entries. The second removes every gm
 # entry, old or new. The third installs gm for Claude Code at user level, where the relay starts in the directory each session opens, so one

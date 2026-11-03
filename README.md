@@ -2,7 +2,7 @@
 
 A single-worker long-horizon loop: one worker, one append-only log, governance rules re-read at every step. Design and evidence: `DESIGN.md` and `research/deep-research.md`.
 
-Status: the MCP server, the skill, the CLI wrapper, the measurement tools, and the search, wiki, review and call-site tools are built and witnessed. The live comparison with gm is closed, with its results in DESIGN.md. Node.js 20+.
+Status: the MCP server, the skill, the CLI wrapper, the measurement tools, and the search, wiki, review and call-site tools are built and witnessed. The live comparison with gm is closed, with its results in DESIGN.md. Node.js 26, the latest LTS line; older Node lines are not supported.
 
 Install, once per clone, from the checkout:
 
@@ -18,13 +18,13 @@ Use the three commands setup prints: they carry this checkout's real absolute pa
 
 The first only lists. The second removes every gm entry, old or new, from the global configs. It matches any server whose name contains gm, so read the list first. The third installs gm for Claude Code at user level, where the relay starts in each session's folder. setup runs none of them. The manual is `docs/index.html`, chapter 2.
 
-The playwriter fetch is the setup step after the gate. Before it runs, setup prints what it does: it runs `npx -y -p github:AnEntrypoint/pw#v0.1.0 playwriter-project help`, which downloads the browser tool gm uses (pw v0.1.0, which installs playwriter 0.9.0) once into the npm cache, at the path `npm config get cache` prints. The download can take a few minutes on a slow network. The help command starts no gate, browser or server, and the browser starts only on first use. After it, setup prints the result. The pw package declares Node 22, so on Node 20 or 21 setup prints that the playwriter tools need Node 22 or later and skips the fetch. A failed fetch prints its reason and does not stop setup: gm still installs and runs, the playwriter tools are fetched on the first gm start, and `./setup.sh` retries the fetch.
+The playwriter fetch is the setup step after the gate. Before it runs, setup prints what it does: it runs `npx -y -p github:AnEntrypoint/pw#v0.1.0 playwriter-project help`, which downloads the browser tool gm uses (pw v0.1.0, which installs playwriter 0.9.0) once into the npm cache, at the path `npm config get cache` prints. The download can take a few minutes on a slow network. The help command starts no gate, browser or server, and the browser starts only on first use. After it, setup prints the result. Setup refuses any Node below 26, which meets the pw package's Node 22 requirement, so the fetch always runs. A failed fetch prints its reason and does not stop setup: gm still installs and runs, the playwriter tools are fetched on the first gm start, and `./setup.sh` retries the fetch.
 
 The served tools are listed in `DESIGN.md`, Decisions. `search` and `wiki_search` rank by BM25 in process, over the tracked files and the wiki pages. `callers` and `impact` parse the JavaScript with acorn. `wiki_write` and the three `review_*` tools write to the run log and the wiki.
 
 ## The worker: an MCP server
 
-gm runs as a stdio MCP server, and the agent session is the model.
+gm runs as a stdio MCP server, and the agent session is the model. The worker runs on Node 26, the latest LTS line; older Node lines are not supported.
 
     node src/mcp.mjs --workspace <dir> --task <file-or-text> [--run-dir <dir>] [--max-steps N] [--max-inflight N]
 
@@ -40,7 +40,7 @@ Both skills are served as MCP skills under SEP-2640 (the `io.modelcontextprotoco
 
 The worker is also an MCP client. It starts the MCP servers that its config names, and adds each of their tools to `gm` inside `run_code` as `gm.<server>_<tool>(args)`, beside the native verbs. `gm.verbs()` and run_code's description list them. The config is three files in the `mcpServers` shape of `.mcp.json`, read in this order. A later entry with the same name replaces the earlier one whole:
 
-1. `defaults/mcp.json` in the checkout. It is required, and a missing file is logged as an `mcp-config` problem. It starts playwriter, as `npx -y -p github:AnEntrypoint/pw#v0.1.0 playwriter-project`, with `PLAYWRITER_TELEMETRY=0` in its environment, which turns off playwriter's anonymous usage stats, and with `"ignore": [".playwriter/"]`. The `pw` package declares `engines` `node >=22`, and gm-new runs on Node 20 and later, so on Node 20 or 21 playwriter may fail to start. The reason is in the stderr of its `mcp-server` failed event.
+1. `defaults/mcp.json` in the checkout. It is required, and a missing file is logged as an `mcp-config` problem. It starts playwriter, as `npx -y -p github:AnEntrypoint/pw#v0.1.0 playwriter-project`, with `PLAYWRITER_TELEMETRY=0` in its environment, which turns off playwriter's anonymous usage stats, and with `"ignore": [".playwriter/"]`. The `pw` package declares `engines` `node >=22`, which Node 26 meets. A failed start gives its reason in the stderr of the `mcp-server` failed event.
 2. `.gm-new/mcp.json` in the workspace, if it exists.
 3. The file that `--mcp-config <file>` names, if given. It is required.
 
@@ -64,7 +64,7 @@ A layer that sets `"disabled": true` for a name removes that server, so `{"mcpSe
     node src/cli.mjs doctor [--workspace <dir>]
 
 - `scripted` is the only model, and it is offline. gm makes no API call. In MCP mode the model is the host session, such as Claude Code.
-- `doctor` reports Node, whether the key is set (never its value), whether the workspace is writable, the last run, and two limits: the Node-below-20 failure path has no live run, and `run_shell` is unconfined. The process-group kill is unverified on Windows.
+- `doctor` reports Node, whether the key is set (never its value), whether the workspace is writable, the last run, and two limits: the Node-below-26 failure path has no live run, and `run_shell` is unconfined. The process-group kill is unverified on Windows.
 - `replay` reruns a finished CLI run through the scripted model, and every replayed event carries `replayOf`.
 
 Each run writes `runs/<id>/` with `log.jsonl`, `rules.md` and `task.json`, and ends with a `summary` event: `maxInFlight`, `meanInFlight`, `toolMs`, `modelMs`, `idleMs` and `contextCalls`. `runs/` is git-ignored.
