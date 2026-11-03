@@ -1322,3 +1322,21 @@ Witnesses. Each is a real relay on a copy of the tree in a temporary workspace, 
 - Process note: three driver jobs (drive-a, drive-a0, drive-b) were started with job_start in the live self run, so their records are in runs/self/2026-11-03-06-04-33-93d8e4 (events 453, 454 and 489). Their state was killed when found, and no process of the witness was left. The drivers were restarted from the shell in the background. The runner was restarted at 4dfaa49 (run 207608-5860460), and it then pulled b, c and c2 in that run.
 
 Not verified: Windows; a failure after the pull (see item 2); the rollback of other pulls, which is unchanged; the update line names a failed check but not its detail (a follow-up). docs/index.html:189 still says a pull that changes files under src/ restarts the worker. That file belongs to the other agent, and it was not edited here.
+
+## gm skill invoked as mcp__gm__gm (2026-11-03)
+
+Problem. The docs named the skill files, not the names a host invokes them by. The host names an MCP prompt /mcp__<server>__<prompt>, so on the server gm the gm skill is the prompt `gm`, invoked as mcp__gm__gm, and gm-continue is the prompt `gm-continue`, invoked as mcp__gm__gm-continue. Both are also resources: skill://gm/SKILL.md and skill://gm-continue/SKILL.md.
+
+Change, text only (no src/ or tools/ change, so no worker restarts):
+- README.md, the worker paragraph on the MCP prompts, and docs/index.html, chapter 3: the two invocation names.
+- AGENTS.md, Continuation: gm-continue is the MCP prompt `gm-continue`, invoked as mcp__gm__gm-continue.
+- skills/dev/SKILL.md, first paragraph: the served skills with their invocation names.
+- .gitignore: `.playwriter/`, the playwriter tool's browser profile and log.
+The README, docs, AGENTS.md and skills/dev lines were in the working tree of a checkout that another agent was committing. They landed in commits 4160d0b and 5b8d4b9, which that agent made with its own batches; this change did not ship them.
+
+Witness, prompts/list through the relay (tools/relay.mjs, stdio, a real task file in a temporary workspace, the copy and workspace removed afterwards):
+- HEAD 7142516, before the docs change: run 211556-5888217. prompts/list answers exactly two prompts, `gm` (title "gm run", argument task, optional) and `gm-continue` (title "gm continue", no argument), each with a description. The run's tools event sha is 836ea50420d01153637b4f5a7d062d324428e8bd97d1c613b70b62b824b89932, count 3.
+- The copy of HEAD 5b8d4b9 with the `.playwriter/` line: run 214764-5913345. prompts/list answers the same two prompts, each with a title and a description. The tools sha is unchanged, 836ea50420d01153637b4f5a7d062d324428e8bd97d1c613b70b62b824b89932, count 3.
+- The gate on that copy (runGate, the tracked list read from HEAD's index through a scratch index file): gate true, failed none. Its notCovered list names CI as none configured, which is not a pass.
+
+Not verified here: the host's naming. Whether Claude Code lists /mcp__gm__gm and /mcp__gm__gm-continue as commands, and whether its Skill list shows them, needs a /mcp reconnect in a live session.
