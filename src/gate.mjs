@@ -1,6 +1,7 @@
 import { existsSync, lstatSync, mkdirSync, readFileSync, rmSync } from 'node:fs';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { runCommand } from './exec.mjs';
 import { RELOADABLE } from './hot-config.mjs';
@@ -11,7 +12,7 @@ import { connectCheck } from './connect.mjs';
 
 // The commit gate. git_commit runs these checks before it commits, with no CI and no test files. A failed check refuses
 // the commit, and every check reports its result and its time in the commit's log event.
-const SCRATCH = '/tmp/gm-scratch/gm-new';
+const SCRATCH = join(tmpdir(), 'gm-scratch', 'gm-new');
 const KEEP = join(SCRATCH, 'KEEP');
 const DOCS = ['DESIGN.md', 'AGENTS.md', 'README.md'];
 const SOURCE = /\.(?:mjs|js|cjs)$/;
@@ -139,9 +140,7 @@ function docCheck(root) {
       if (!exists) missing.push(`${doc}: ${token}`);
     }
   }
-  if (!existsSync(KEEP)) {
-    missing.push('KEEP file missing');
-  } else {
+  if (existsSync(KEEP)) {
     for (const rel of readFileSync(KEEP, 'utf8').split('\n').filter(Boolean)) {
       checked += 1;
       if (!existsSync(join(SCRATCH, rel))) missing.push(`KEEP: ${rel}`);

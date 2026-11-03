@@ -14,6 +14,8 @@ The setup installs the one pinned runtime dependency, acorn, runs the gate, and 
     npx -y add-mcp@2.6.1 remove gm -g -y
     npx -y add-mcp@2.6.1 "node /abs/path/to/gm-new/tools/relay.mjs" -n gm -g -a claude-code -y
 
+Use the three commands setup prints: they carry this checkout's real absolute path. The `/abs/path/to/gm-new` in the third line below is a placeholder; copying it unchanged registers a relay that does not exist, and gm fails to start with CONNECTION_CLOSED.
+
 The first only lists. The second removes every gm entry, old or new, from the global configs. It matches any server whose name contains gm, so read the list first. The third installs gm for Claude Code at user level, where the relay starts in each session's folder. setup runs none of them. The manual is `docs/index.html`, chapter 2.
 
 The served tools are listed in `DESIGN.md`, Decisions. `search` and `wiki_search` rank by BM25 in process, over the tracked files and the wiki pages. `callers` and `impact` parse the JavaScript with acorn. `wiki_write` and the three `review_*` tools write to the run log and the wiki.
