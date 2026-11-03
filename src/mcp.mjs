@@ -233,6 +233,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
   for (const [key, reply] of answersFrom(history, runId)) remember(key, Promise.resolve(reply));
   let steps = resume?.steps ?? 0;
   let ended = resume?.ended ?? null;
+  let stepLimited = false;
   let endedTask = null;
   let endLogged = ended !== null;
   // A host that stops calling leaves the run open, and nothing wakes it. After hostIdleMs with no call in flight and none since, one
@@ -540,7 +541,12 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     drain();
   }
 
+  function stepLimitText() {
+    return `step limit ${maxSteps} reached; a restart of the server opens a new run`;
+  }
+
   function endedReason() {
+    if (stepLimited) return stepLimitText();
     if (ended === 'closed') return 'stdin closed before the call started';
     if (ended === 'restarting') return 'the server is restarting; repeat the call';
     return `run ${runId} has ended; call next_context to open a new run`;
@@ -564,8 +570,9 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
 
   async function nextContext(access, rpcId, args = {}) {
     if (steps >= maxSteps) {
+      stepLimited = true;
       stop('max_steps');
-      const out = refuse('next_context', {}, `step limit ${maxSteps} reached`, rpcId);
+      const out = refuse('next_context', {}, stepLimitText(), rpcId);
       await endRun('max_steps', null);
       return out;
     }
@@ -752,7 +759,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     return { task: '', taskFrom: 'session prompt', inherited: false };
   }
 
-  return { accept, inputEnded, pause, ended: () => ended, settled: () => Promise.allSettled([...unansweredTurns]), successorStart };
+  return { accept, inputEnded, pause, ended: () => ended, stepLimited: () => stepLimited, settled: () => Promise.allSettled([...unansweredTurns]), successorStart };
 }
 
 // The answer to every request id that a run already received, rebuilt from its log, so a repeated id is answered from
@@ -1048,7 +1055,7 @@ async function main(argv) {
     return createSession({ ...limits, runDir, log: fresh, task: start.task, taskInherited: start.inherited });
   }
   const acceptLine = (line) => {
-    if (session.ended() !== null && isNextContextCall(line)) {
+    if (session.ended() !== null && !session.stepLimited() && isNextContextCall(line)) {
       retired = Promise.allSettled([retired, session.settled()]);
       session = reopen(session);
     }

@@ -1725,7 +1725,7 @@ Decided:
 - The first next_context on the same connection opens the fresh run: a new run directory from `newRunId()`, a new log, steps from 0, and a start event with taskFrom. The step is then served, so the reply carries the new run id. `acceptLine` in `src/mcp.mjs` makes the swap, and `reopen` builds the run.
 - The fresh run takes the ended run's task. A gm prompt with a task, sent after the end, is held for the fresh run and replaces the inherited task, and it writes no task event into the ended log. taskFrom is "closed run <id>", "session prompt", or "task file" (a boot with --task).
 - A run that is closed when the process starts stays the current run, with its calls refused as above. Its log gets no start, restart, tools or recovery event. This supersedes the start-time rule of "Task carried into a new run after a closed run (2026-11-03)": the next_context opens the run, not the start. The task rule there is unchanged.
-- A run ended by max_steps is treated like a finished one, so its next_context opens a fresh run too (see Limits).
+- A run ended by max_steps is not rotated: its next_context is refused like any other call, and a restart opens the fresh run (see Limits).
 
 Witness, on origin's code (05c4791, working tree clean): driver `/tmp/gm-scratch/fresh-run/drive-next.mjs`, base `/tmp/gm-scratch/fresh-run/next-2026-11-03T10-14-06-492Z`. All 29 checks pass.
 - Run A (task "rotation witness task"): next_context ok, run_code output 1, finish ok with witness "w1".
@@ -1738,7 +1738,7 @@ Witness, on origin's code (05c4791, working tree clean): driver `/tmp/gm-scratch
 
 Limits, not closed here:
 - Only the first next_context opens the run. The driver checks run_code and finish. Other tools/call names take the same path, because the refusal depends on the ended state, not on the name.
-- max_steps: the step budget is per run, so each next_context after a max_steps refusal opens a run with a new budget. Before this change, only a restart did that. Whether that is wanted is the owner's decision.
+- max_steps: a run that reached its step limit is not rotated; its calls stay refused with "step limit N reached; a restart of the server opens a new run" until a restart. Before this change, the first next_context after that refusal opened a run with a new budget, so a loop could repeat the refusal and bypass the limit.
 - A gm prompt after the end still logs its skill-loaded and rules-cleared events on the ended run, after its end event, as before.
 - A repeated request id is answered from the ended run only. Sent again after the next_context, it runs again.
 - A child agent on the parent's connection that sends `finish` still ends the parent's run. The parent's next_context opens a fresh run; its open rows are workspace files and stay, but its log and steps do not carry over.
