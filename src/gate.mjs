@@ -1,5 +1,5 @@
 import { existsSync, lstatSync, mkdirSync, readFileSync, rmSync } from 'node:fs';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { join } from 'node:path';
 import { runCommand } from './exec.mjs';
@@ -21,10 +21,11 @@ const SMOKE_TIMEOUT_MS = 60000;
 // other workspace they are not run, and notCovered names them, so a commit there is not refused for files it never had. The checkout is
 // recognised by the package name, which a deleted file cannot change, so a damaged gm-new checkout still fails its own checks.
 const OWN_NAME = 'gm-new';
-const OWN_CHECKS = ['ascii', 'docs', 'sources', 'wiki', 'skills', 'connect', 'workers', 'smoke'];
+const OWN_CHECKS = ['ascii', 'docs', 'sources', 'wiki', 'skills', 'connect', 'workers', 'prompt', 'smoke'];
 const WORKER_ENTRY = 'mcp.mjs';
 const WORKER_LIST = 'src/worker-modules.json';
 const MODULE_PATH = /^\.\/[\w.-]+\.mjs$/;
+const SESSION_PROMPT = 'we want every possible approach to maximizing the usefulness kept whole, every word of it';
 
 // What the gate does not check. Every git_commit result and its commit event carry this list, so a pass is not read as more
 // than it is. Any gap that survives the checks is recorded here, rather than hidden.
@@ -49,6 +50,7 @@ export async function runGate(root, scope = null) {
     checks.push(await timed('skills', async () => skillCheck(root)));
     checks.push(await timed('connect', async () => connectCheck(root)));
     checks.push(await timed('workers', () => workersCheck(root)));
+    checks.push(await timed('prompt', () => promptCheck(root)));
     checks.push(await timed('smoke', () => smokeCheck(root)));
   }
   const failed = checks.filter((check) => !check.ok).map((check) => check.name);
@@ -194,6 +196,25 @@ async function workersCheck(root) {
   const missing = graph.filter((name) => !listed.includes(name));
   if (extra.length === 0 && missing.length === 0) return { ok: true, detail: `${graph.length} worker modules match the import graph` };
   return { ok: false, detail: `${WORKER_LIST} lists ${JSON.stringify(extra)} that the graph does not reach, and lacks ${JSON.stringify(missing)}` };
+}
+
+async function promptCheck(root) {
+  const dir = join(SCRATCH, 'gate-prompt', `run-${Date.now()}`);
+  const runDir = join(dir, 'run');
+  mkdirSync(join(dir, 'workspace'), { recursive: true });
+  try {
+    const requests = [
+      { jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2025-11-25', capabilities: {}, clientInfo: { name: 'gate', version: '0' } } },
+      { jsonrpc: '2.0', id: 2, method: 'prompts/get', params: { name: 'gm', arguments: { task: SESSION_PROMPT } } },
+    ];
+    spawnSync(process.execPath, ['src/mcp.mjs', '--workspace', join(dir, 'workspace'), '--run-dir', runDir], { cwd: root, input: requests.map((request) => `${JSON.stringify(request)}\n`).join(''), timeout: NODE_TIMEOUT_MS, encoding: 'utf8' });
+    const events = existsSync(join(runDir, 'log.jsonl')) ? readFileSync(join(runDir, 'log.jsonl'), 'utf8').split('\n').filter(Boolean).map((line) => JSON.parse(line)) : [];
+    const tasks = events.filter((event) => event.kind === 'task').map((event) => event.text);
+    if (tasks.length === 1 && tasks[0] === SESSION_PROMPT) return { ok: true, detail: `the session prompt kept all ${SESSION_PROMPT.split(' ').length} words` };
+    return { ok: false, detail: `the session prompt became task ${JSON.stringify(tasks)}, not the whole prompt` };
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 }
 
 // The smoke run must finish. The negative control runs the same task with one step, so it must stop at max_steps.
