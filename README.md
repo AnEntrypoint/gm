@@ -47,6 +47,12 @@ A layer that sets `"disabled": true` for a name removes that server, so `{"mcpSe
 
     {"mcpServers":{"files":{"command":"npx","args":["-y","<an MCP server package>","/abs/dir"],"env":{"TOKEN":"${MY_TOKEN}"},"timeoutMs":60000}}}
 
+A Linux container where Chromium's sandbox is blocked makes the browser refuse to start, with `no usable sandbox`. The default entry does not set `PLAYWRITER_NO_SANDBOX`, because that turns off Chromium's sandbox on every machine that runs the default. Set it in a layer, restating the whole playwriter entry:
+
+    {"mcpServers":{"playwriter":{"command":"npx","args":["-y","-p","github:AnEntrypoint/pw#v0.1.0","playwriter-project"],"env":{"PLAYWRITER_TELEMETRY":"0","PLAYWRITER_NO_SANDBOX":"1"},"ignore":[".playwriter/"],"startupTimeoutMs":600000}}}
+
+Setup registers only gm with the host, so the worker is the only thing that starts playwriter.
+
 - `ignore` lists gitignore lines for the workspace's `.gitignore`. When the server connects in a git repository (a `.git` file or directory exists in the workspace), each line the file does not already hold is appended, and the file is created when it is missing. Existing lines and their line endings are kept, and no line is removed. Each change is logged as a `gitignore` event with the lines added, and a connect with nothing to add logs nothing. A workspace that is not a git repository gets one `gitignore` event with state `skipped`, and no file is written. Each line must be relative, with no `..` segment, and a leading slash makes a line absolute, so an anchored pattern is written without it. A bad `ignore` fails that server only, with its problem in the log.
 - Only stdio servers run, from `command`, `args`, `env` and `cwd`; a relative `cwd` is taken from the workspace. A server with a `url` is not supported yet. A `${NAME}` in a value takes the environment variable NAME, and a missing variable stops that server from starting, with the reason in the log. On Windows, a command of `npx` or `npm` starts through `cmd.exe`. `disabled: true` keeps an entry without starting it, and in a later layer it removes the server.
 - The servers start with the worker, in parallel, and tools/list and run_code wait for them, each for at most `startupTimeoutMs` (default 30000; the default playwriter entry sets 600000, because a first npx install of it took 174 s and 458 s on the measured host). A server that fails is logged as `mcp-server` with its error and the tail of its stderr, and the others still run. A server that exits is started again by its next call.

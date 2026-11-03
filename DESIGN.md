@@ -48,3 +48,15 @@ Decision: research/sota-improvements-2026-11-03.md records the deep-research lev
 
 Decision: the search default is unchanged. On 15 functions, with descriptions written from their code, closure recalls 0.66 of the callee-defining files against 0.29 for plain search at the same file budget (research/dep-recall/natural.cjs, run 2026-11-03-19-38-52-ff0729, actionSeq 165). The sample is small and the queries are the author's own, so an opt-in closure waits for the broader witness in row unknown-dep-closure-natural. The name-query witness (research/dep-recall/measure.cjs) is not used for the decision, because the queried function is its own anchor.
 
+
+## playwriter on each install (2026-11-03)
+
+Question: is playwriter set up on every gm install the way it is on this machine? No. Three things differ.
+
+- Each gm-new checkout runs the shipped default: `npx -y -p github:AnEntrypoint/pw#v0.1.0 playwriter-project` with telemetry off and no sandbox flag, from `defaults/mcp.json`. Setup registers only gm with the host (`setup.sh` prints add-mcp commands for gm alone), so the worker is the only thing that starts playwriter.
+- This machine adds a layer through the `--mcp-config` file of its gm registration (`/config/.claude.json` points it at `/config/.gm-new/mcp.json`). That layer runs `/workspace/pw/bin/playwriter-project` with `PLAYWRITER_NO_SANDBOX=1`. The code matches the pinned tag: `git diff --stat v0.1.0 HEAD` in `/workspace/pw` lists only `docs/index.html`.
+- The predecessor gm (`/workspace/gm`) installs no playwriter. Its `install.sh` and `bin/gm-install.js` do not name it, and only `.gitignore` names `.playwriter/`.
+
+Decision: the shipped default does not set `PLAYWRITER_NO_SANDBOX`. It turns off Chromium's sandbox on every platform, and pw documents it only for Linux containers. README.md shows the layer that sets it. The owner may reverse this.
+
+Witnesses (run 2026-11-03-19-43-51-791ac8): actionSeq 6 and 8 (defaults/mcp.json; `/workspace/pw` HEAD caab629 equals origin main), actionSeq 15 (pw sandbox handling at README:17 and bin/playwriter-project:156-170), actionSeq 23 (tag v0.1.0 handles the flag; package.json identical to HEAD), actionSeq 35 (setup.sh registers gm only), actionSeq 41 (the --mcp-config layer; no `.gm-new/` directory in the workspace).
