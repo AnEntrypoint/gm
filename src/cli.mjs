@@ -79,9 +79,6 @@ async function run(flags) {
   return result.status === 'finished' ? 0 : 1;
 }
 
-// Replays a finished CLI run from its task.json and its recorded replies. The scripted model returns the recorded replies
-// in order, and every event of the replay carries replayOf, so the log marks the replayed events. A replay is a harness
-// test: it reproduces the tools' results, not the model's choices.
 async function replay(flags) {
   if (!flags.run || !/^[A-Za-z0-9_-]+$/.test(flags.run)) throw new Error('--run <id> is required');
   const source = join(RUNS, flags.run);
@@ -108,26 +105,36 @@ async function replay(flags) {
   return result.status === 'finished' ? 0 : 1;
 }
 
-// Prints the pending events of a run once, and clears them. A record is cleared only after its lines are written out, so a write that fails
-// (the reader has gone) leaves them queued for the next reader. With --wait, it polls every 200 ms until an event is queued or --timeout-ms
-// passes (default 1800000), and then does the same. The reader that claims an event prints it, so a watcher and a step's next_context never
-// both deliver it. A host that runs it as a background task reports when it ends, so the events reach the agent as they land.
 async function events(flags) {
   if (flags['read-clear'] !== true && flags.wait !== true) throw new Error('events takes --read-clear, which prints the pending events once and clears them, or --wait');
   const dir = eventsDir(flags);
-  const until = flags.wait === true ? Date.now() + timeoutMs(flags) : 0;
+  const waiting = flags.wait === true;
+  const timeout = waiting ? timeoutMs(flags) : 0;
+  const signals = [];
+  if (waiting) {
+    for (const signal of Object.keys(SIGNAL_EXIT)) process.on(signal, () => signals.push(signal));
+  }
+  const started = performance.now();
   let taken = takePending(dir);
-  while (taken.records.length === 0 && flags.wait === true && Date.now() < until) {
+  while (taken.records.length === 0 && waiting && signals.length === 0 && performance.now() - started < timeout) {
     clearPending(taken.files);
     await sleep(POLL_MS);
     taken = takePending(dir);
   }
-  if (taken.records.length > 0) await writeOut(taken.records.map((record) => `${JSON.stringify(record)}\n`).join(''));
+  if (taken.records.length > 0) {
+    await writeOut(taken.records.map((record) => `${JSON.stringify(record)}\n`).join(''));
+    clearPending(taken.files);
+    return 0;
+  }
   clearPending(taken.files);
+  if (signals.length > 0) {
+    await writeOut(`events: stopped by ${signals[0]} with no event pending\n`);
+    return SIGNAL_EXIT[signals[0]];
+  }
+  if (waiting) await writeOut(`events: timed out after ${timeout} ms with no event pending\n`);
   return 0;
 }
 
-// The run directory is named by --dir (an absolute path, as next_context gives it) or by --run (an id under runs/ of this checkout).
 function eventsDir(flags) {
   if (flags.dir !== undefined) {
     const dir = resolve(flags.dir);
@@ -147,9 +154,9 @@ function timeoutMs(flags) {
 }
 
 const POLL_MS = 200;
+const SIGNAL_EXIT = { SIGINT: 130, SIGTERM: 143 };
 const sleep = (ms) => new Promise((done) => setTimeout(done, ms));
 
-// Resolves once the text is written out to stdout. A write that fails rejects, so the caller keeps its records queued.
 function writeOut(text) {
   return new Promise((done, fail) => {
     process.stdout.write(text, (err) => (err ? fail(err) : done()));

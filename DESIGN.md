@@ -1596,3 +1596,28 @@ Witness: `/tmp/gm-scratch/gm-new/continue-name-tools/witness.mjs`, a stdio clien
 Apply: the change is one step on the checkout. It restarts each live worker on it, because src/connect.mjs is in src/worker-modules.json and is not reloadable. At apply time four workers ran from the checkout: self (2026-11-03-06-52-45-4d3dfc), oscraft (197518-5696774), hy3d (197547-5697339) and research (207329-5859625). No background job ran in any of them. Each run resumes from its log.
 
 Limits: a host keeps the connect-time text it read until its owner runs /mcp, so a live host sees the new routes only after that reconnect. The stdio witness shows the server's text, not a host's. Not witnessed: whether a host's Skill tool lists MCP skills, and whether /mcp__gm__gm and /mcp__gm__gm-continue appear as commands. Those need a live /mcp reconnect.
+
+## events --wait exits with a reason (2026-11-03)
+
+Problem. `events --dir <run dir> --wait` sometimes exited 0 with no output and no error while its worker was alive and the run open (self run `2026-11-03-06-52-45-4d3dfc`, last event seq 826 at 08:26:35 UTC). A session that waits on the watcher cannot tell an event from a watcher that quit, or a quit from a paused run. The watcher writes nothing to the run log, so the silent exit leaves no line anywhere.
+
+Cause, reproduced on HEAD 46e3a5e (`/tmp/gm-scratch/gm-new/events-wait/drivers/probe.mjs`, scenario repro, `events-wait/repro/results-repro.json`). `events` has one exit path that prints nothing: the deadline. When the wait's timeout passes with no event, it returns 0. The default is 1800000 ms, and the wait command the skill gives does not set it, so a watcher ends silently 30 minutes after it starts. Probe: `--timeout-ms 1500` on an empty run dir exited 0 at 1661 ms with empty stdout and stderr. A SIGTERM had no handler, so the watcher died by the signal at 3008 ms with no line. The deadline was read from Date.now(), so a wall-clock step would also end the wait early, silently. The skill described the silent end as intended ("with no output when its timeout passes"), and the earlier witness of this path recorded it as the pass (DESIGN.md, "Pending events without a channel or a Monitor", the 1500 ms case).
+
+Fix, in src/cli.mjs (`events`):
+- A --wait returns only after it prints a line that says why: the queued events (the same JSON lines, cleared after the write as before), or `events: timed out after <ms> ms with no event pending` at the deadline (exit 0), or `events: stopped by <SIGINT|SIGTERM> with no event pending` on a signal (exit 130 or 143).
+- The deadline is read from performance.now().
+- The stale comments of src/cli.mjs (the replay note, the eventsDir and writeOut notes, the events note) are removed. The replay fact moved to AGENTS.md (Facts).
+- skills/gm/SKILL.md, Pending events: the wait prints one line that names its timeout or signal, and an agent starts the wait again after it. AGENTS.md has the fact line.
+- --read-clear is unchanged, and src/pending.mjs is unchanged.
+
+Restarts: src/cli.mjs is not in src/worker-modules.json, so applying it restarts no worker (tools/core.mjs, loadedByWorker). The skill applies in place. A watcher already running keeps the code it started with, and so keeps the silent deadline until it is started again.
+
+Witness, on a tar copy of 46e3a5e in its own repository, with node_modules copied in (`/tmp/gm-scratch/gm-new/events-wait/copy`; the copy and the temporary workspace were deleted after the run). Driver `drivers/probe.mjs`, scenario witness, results in `events-wait/witness-1/results-witness.json`.
+- (a) no event: a watcher on an empty run dir was alive at 3 s with empty stdout. A watcher on the open run of a live worker (`events-wait/witness-1/runs/paused`, worker alive, no event pending) was alive at 3 s with empty stdout.
+- timeout: `--timeout-ms 1500` printed `events: timed out after 1500 ms with no event pending` and exited 0 at 1682 ms.
+- signal: SIGTERM at 3 s printed `events: stopped by SIGTERM with no event pending` and exited 143 at 3080 ms.
+- (b) an event: a worker with `--host-idle-ms 1000` (`witness-1/runs/host-idle`) logged host-idle at seq 3 (idleMs 1002). The watcher printed that record and exited 0 at 1070 ms.
+- (c) a pause: SIGTERM to the open worker (`witness-1/runs/paused`) logged paused at seq 3 (reason "SIGTERM from the supervisor"). The watcher printed that record and exited 0 at 3062 ms, and the worker exited 0.
+- (d) runGate on the copy with this change and this section: gate true, failed none (`events-wait/gate-final.out`). The unchanged copy passed the same gate (`events-wait/gate-baseline.out`).
+
+Limits: on Windows a SIGTERM is not delivered to a Node listener, so a watcher ended there by a kill prints no line; not witnessed on Windows. `--read-clear` on an empty queue still prints nothing, which is its answer. The full 1800000 ms default was not waited out; the 1500 ms run takes the same path. The event lines are unchanged (JSON, with id and seq); the reason line is not an event and has no JSON form.
