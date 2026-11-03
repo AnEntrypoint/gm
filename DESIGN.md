@@ -1790,3 +1790,13 @@ Witness: `/tmp/gm-scratch/grep-stale/drive.mjs`, run as `node drive.mjs B` (befo
 - Cost: warm `search` calls take 3 to 6 ms CPU before and after the change (`/tmp/gm-scratch/grep-stale/bench.mjs`).
 
 Limits: the stamp is not a content hash, so a change that keeps size, mtime and ctime cannot be seen; the witness ran on Linux only, and macOS and Windows are not witnessed. The search set is the tracked files, so an untracked file outside wiki/ is not indexed. A workspace that is not a git repository is unchanged: `search` refuses and `grep` walks.
+
+## grep path outside the workspace (2026-11-03)
+
+Cause: `grep` in `src/search.mjs` took no `path`. Its argument destructuring dropped any `path` a caller sent, so the search always covered the workspace. Before the change, `grep({ pattern: 'export', path: '/workspace/Gemini-OAuth-Flow-Boilerplate/src' })` returned gm-new's own files (`DESIGN.md:49`), and `path: 'src'` returned `AGENTS.md:12`.
+
+Decision: `grep` takes `path`, a file or a directory, inside or outside the workspace. With no path it searches the workspace as before. A path inside searches the git-tracked files under it (every file under it when the workspace is not a git repository); a path outside is walked with the walk's skips (dot-directories, `runs/`, and `node_modules/` or `vendor/` unless `vendor` is true), and its hits show absolute paths. A missing path is refused with `no such path`. A path is not confined, the same as the file tools' `locate`.
+
+Witness: `createTools` from `src/tools.mjs` in node, on the final code, workspace `/workspace/gm-new`. An outside directory returned `/workspace/Gemini-OAuth-Flow-Boilerplate/src/config.ts:11 export interface ConfigOptions {` and `files: walk`; an outside file returned `/workspace/Gemini-OAuth-Flow-Boilerplate/src/pkce.ts:11`; `path: 'src'` returned `src/search.mjs:64` and `src/tools.mjs:9`, `files: git`; `path: 'no/such/dir'` returned `no such path`. A temporary non-git workspace, removed after the run, gave `sub/a.txt:1` for a walk and `vendor/v.txt:1` only with `vendor: true`.
+
+Limits: the witness ran in node on Linux, not through a gm-new worker session; macOS and Windows are not witnessed. The gm server in the session that asked for this serves `/workspace/acptoapi`, so it could not search this repository.

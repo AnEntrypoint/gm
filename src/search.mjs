@@ -2,7 +2,7 @@ import { execFile } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { statSync } from 'node:fs';
 import { readdir, readFile, lstat } from 'node:fs/promises';
-import { join } from 'node:path';
+import { isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { promisify } from 'node:util';
 import { resultZone1 } from './compact.mjs';
 
@@ -47,8 +47,8 @@ export const SEARCH_TOOLS = [
   },
   {
     name: 'grep',
-    description: 'Find text in the workspace files: the git-tracked files of a git repository, or else every file under the workspace (files is git or walk, the source used). mode is literal (default), regex, or word (a whole identifier). Returns path:line text. ignoreCase is optional; limit is 1 to 1000, default 100. Paths under node_modules/ or vendor/ are skipped unless vendor is true; a walk also skips dot-directories and runs/.',
-    inputSchema: obj({ pattern: str, mode: str, ignoreCase: bool, limit: num, offset: num, vendor: bool }, ['pattern']),
+    description: 'Find text in the files under path: the workspace by default, or a file or directory of it. A path inside the workspace searches its git-tracked files (or, outside a git repository, every file under it); a path outside the workspace is walked and its hits show absolute paths. files is git or walk, the source used. mode is literal (default), regex, or word (a whole identifier). Returns path:line text. ignoreCase is optional; limit is 1 to 1000, default 100. Paths under node_modules/ or vendor/ are skipped unless vendor is true; a walk also skips dot-directories and runs/.',
+    inputSchema: obj({ pattern: str, path: str, mode: str, ignoreCase: bool, limit: num, offset: num, vendor: bool }, ['pattern']),
   },
 ];
 
@@ -74,37 +74,43 @@ export function createSearchVerbs({ root, confine }) {
       return searchWith(WIKI, args);
     },
 
-    async grep({ pattern, mode = 'literal', ignoreCase = false, limit = DEFAULT_LIMIT, offset = 0, vendor = false }) {
+    async grep({ pattern, path, mode = 'literal', ignoreCase = false, limit = DEFAULT_LIMIT, offset = 0, vendor = false }) {
       if (typeof pattern !== 'string' || pattern === '') return fail('pattern must be a non-empty string');
       if (pattern.length > MAX_PATTERN_CHARS) return fail(`pattern must be at most ${MAX_PATTERN_CHARS} characters`);
       if (!MODES.includes(mode)) return fail(`mode must be one of ${MODES.join(', ')}`);
       if (!Number.isInteger(limit) || limit < 1 || limit > MAX_LIMIT) return fail(`limit must be an integer from 1 to ${MAX_LIMIT}`);
       if (typeof vendor !== 'boolean') return fail('vendor must be true or false');
+      if (path !== undefined && (typeof path !== 'string' || path === '')) return fail('path must be a non-empty string');
       let matches;
       try {
         matches = matcherFor(pattern, mode, ignoreCase === true);
       } catch (err) {
         return fail(`bad pattern: ${err.message}`);
       }
-      const listing = await trackedFiles(root, TRACKED);
+      const scope = resolve(root, path ?? '.');
+      if ((await lstat(scope).catch(() => null)) === null) return fail(`no such path: ${path}`);
+      const inside = within(root, scope);
+      const listing = inside ? await trackedFiles(root, TRACKED) : { error: 'outside the workspace' };
       const source = listing.error ? 'walk' : 'git';
-      const paths = listing.error ? await walkFiles(root, vendor) : listing.paths;
+      const base = listing.error ? scope : root;
+      const names = listing.error ? await walkFiles(scope, vendor) : trackedUnder(listing.paths, relative(root, scope), vendor);
       if (!Number.isInteger(offset) || offset < 0) return fail('offset must be a whole number, zero or more');
       const found = [];
       let total = 0;
       let size = 0;
       let next = null;
       // The files are read one at a time and nothing is kept, so memory is one file at a time, not the whole tracked text. A file that is
-      // too large, binary or outside the workspace is skipped, as the index skips it.
-      for (const rel of paths) {
-        if (!vendor && VENDOR.test(rel)) continue;
-        const lines = await readLines(rel);
+      // too large or binary is skipped, as the index skips it.
+      for (const name of names) {
+        const at = join(base, name);
+        const lines = await readLines(at, inside);
         if (lines === null) continue;
+        const shown = inside ? relative(root, at).split(sep).join('/') : at;
         lines.forEach((text, i) => {
           if (!matches(text)) return;
           total += 1;
           if (total <= offset || next !== null) return;
-          const row = `${rel}:${i + 1} ${snippet(text)}`;
+          const row = `${shown}:${i + 1} ${snippet(text)}`;
           if (found.length >= limit || size + row.length > OUTPUT_PAGE) {
             next = total - 1;
             return;
@@ -160,18 +166,18 @@ export function createSearchVerbs({ root, confine }) {
     return { entries };
   }
 
-  // The lines of one tracked file, as plain strings, for grep. The same skips as loadFile apply. Nothing is cached.
-  async function readLines(rel) {
-    const at = confine(rel);
-    if (at.refused) return null;
+  // The lines of one file, as plain strings, for grep. Nothing is cached.
+  async function readLines(at, inside) {
+    const target = inside ? confine(relative(root, at)) : { path: at };
+    if (target.refused) return null;
     let info;
     try {
-      info = await lstat(at.path);
+      info = await lstat(target.path);
     } catch {
       return null;
     }
     if (!info.isFile() || info.size > MAX_FILE_BYTES) return null;
-    const buffer = await readFile(at.path);
+    const buffer = await readFile(target.path);
     if (buffer.subarray(0, 8000).includes(0)) return null;
     return buffer.toString('utf8').split('\n').map((raw) => (raw.endsWith('\r') ? raw.slice(0, -1) : raw));
   }
@@ -215,14 +221,15 @@ async function trackedFiles(root, listing) {
   }
 }
 
-async function walkFiles(root, vendor) {
+async function walkFiles(base, vendor) {
+  if ((await lstat(base).catch(() => null))?.isFile()) return [''];
   const paths = [];
   const pending = [''];
   while (pending.length > 0) {
     const dir = pending.pop();
     let entries;
     try {
-      entries = await readdir(join(root, dir), { withFileTypes: true });
+      entries = await readdir(join(base, dir), { withFileTypes: true });
     } catch {
       continue;
     }
@@ -241,6 +248,16 @@ async function walkFiles(root, vendor) {
 function skippedDirectory(name, vendor) {
   if (name.startsWith('.') || name === 'runs') return true;
   return !vendor && (name === 'node_modules' || name === 'vendor');
+}
+
+function trackedUnder(paths, dir, vendor) {
+  const prefix = dir.split(sep).join('/');
+  return paths.filter((rel) => (prefix === '' || rel === prefix || rel.startsWith(`${prefix}/`)) && (vendor || !VENDOR.test(rel)));
+}
+
+function within(base, target) {
+  const rel = relative(base, target);
+  return rel === '' || (rel.split(sep)[0] !== '..' && !isAbsolute(rel));
 }
 
 function stampOf(info) {
