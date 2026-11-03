@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "playwriter": {
+      "command": "npx",
+      "args": ["-y", "-p", "github:AnEntrypoint/pw#v0.1.0", "playwriter-project"],
+      "env": {},
+      "startupTimeoutMs": 600000
+    }
+  }
+}

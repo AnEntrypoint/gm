@@ -36,12 +36,18 @@ Both skills are served as MCP skills under SEP-2640 (the `io.modelcontextprotoco
 
 ## Other MCP servers in run_code
 
-The worker is also an MCP client. It starts the MCP servers that its config names, and adds each of their tools to `gm` inside `run_code` as `gm.<server>_<tool>(args)`, beside the native verbs. `gm.verbs()` and run_code's description list them. The config is `.gm-new/mcp.json` in the workspace, in the `mcpServers` shape of `.mcp.json`, or the file that `--mcp-config <file>` names:
+The worker is also an MCP client. It starts the MCP servers that its config names, and adds each of their tools to `gm` inside `run_code` as `gm.<server>_<tool>(args)`, beside the native verbs. `gm.verbs()` and run_code's description list them. The config is three files in the `mcpServers` shape of `.mcp.json`, read in this order. A later entry with the same name replaces the earlier one whole:
+
+1. `defaults/mcp.json` in the checkout. It is required, and a missing file is logged as an `mcp-config` problem. It starts playwriter, as `npx -y -p github:AnEntrypoint/pw#v0.1.0 playwriter-project`, with no environment. The `pw` package declares `engines` `node >=22`, and gm-new runs on Node 20 and later, so on Node 20 or 21 playwriter may fail to start. The reason is in the stderr of its `mcp-server` failed event.
+2. `.gm-new/mcp.json` in the workspace, if it exists.
+3. The file that `--mcp-config <file>` names, if given. It is required.
+
+A layer that sets `"disabled": true` for a name removes that server, so `{"mcpServers":{"playwriter":{"disabled":true}}}` in the workspace file turns playwriter off. An entry looks like this:
 
     {"mcpServers":{"files":{"command":"npx","args":["-y","<an MCP server package>","/abs/dir"],"env":{"TOKEN":"${MY_TOKEN}"},"timeoutMs":60000}}}
 
-- Only stdio servers run, from `command`, `args`, `env` and `cwd`; a relative `cwd` is taken from the workspace. A server with a `url` is not supported yet. A `${NAME}` in a value takes the environment variable NAME, and a missing variable stops that server from starting, with the reason in the log. `disabled: true` keeps an entry without starting it.
-- The servers start with the worker, in parallel, and tools/list and run_code wait for them, each for at most `startupTimeoutMs` (default 30000). A server that fails is logged as `mcp-server` with its error and the tail of its stderr, and the others still run. A server that exits is started again by its next call.
+- Only stdio servers run, from `command`, `args`, `env` and `cwd`; a relative `cwd` is taken from the workspace. A server with a `url` is not supported yet. A `${NAME}` in a value takes the environment variable NAME, and a missing variable stops that server from starting, with the reason in the log. On Windows, a command of `npx` or `npm` starts through `cmd.exe`. `disabled: true` keeps an entry without starting it, and in a later layer it removes the server.
+- The servers start with the worker, in parallel, and tools/list and run_code wait for them, each for at most `startupTimeoutMs` (default 30000; the default playwriter entry sets 600000, because a first npx install of it took 174 s and 458 s on the measured host). A server that fails is logged as `mcp-server` with its error and the tail of its stderr, and the others still run. A server that exits is started again by its next call.
 - A call is an `action` and a `code-call` in the log, with its arguments and output. A call that runs past `timeoutMs` (default 60000) fails with that message, and the server is sent `notifications/cancelled`.
 - A tool whose verb name is a native verb is skipped and logged as `mcp-tool-skipped`. The other MCP tools are on the code surface only, not on `--surface tools`.
 - A worker started as an MCP server starts its own servers only to a depth of two (`GMNEW_MCP_DEPTH`), so a config that names gm-new itself stops after two levels.

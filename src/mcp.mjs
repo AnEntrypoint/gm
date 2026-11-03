@@ -121,6 +121,7 @@ const USAGE = 'usage: node src/mcp.mjs --workspace <dir> [--task <file-or-text>]
 // A host that stops calling is noticed after this long with no call in flight (--host-idle-ms). next_context waitMs is capped here, because a host cuts a call that runs too long.
 const DEFAULT_HOST_IDLE_MS = 600000;
 const MAX_WAIT_MS = 300000;
+const DEFAULT_MCP_CONFIG = join(ROOT, 'defaults', 'mcp.json');
 
 const text = { type: 'string' };
 const number = { type: 'number' };
@@ -1038,8 +1039,9 @@ async function main(argv) {
     if (recovery && recovery.open.length > 0) log.append('recovery', { lastSeq: recovery.lastSeq, open: recovery.open });
   }
   const mcpFlag = flags['mcp-config'];
-  const mcpFile = mcpFlag === undefined ? join(workspace, '.gm-new', 'mcp.json') : resolve(mcpFlag);
-  const { servers, problems } = readServerConfig(mcpFile, workspace, { required: mcpFlag !== undefined });
+  const mcpFiles = [{ file: DEFAULT_MCP_CONFIG, required: true }, { file: join(workspace, '.gm-new', 'mcp.json') }];
+  if (mcpFlag !== undefined) mcpFiles.push({ file: resolve(mcpFlag), required: true });
+  const { servers, problems } = readServerConfig(mcpFiles, workspace);
   const depth = Number.parseInt(process.env.GMNEW_MCP_DEPTH ?? '0', 10) || 0;
   const client = startMcpClients({ servers, problems, log, depth, reserved: new Set(current.TOOLS.map((tool) => tool.name)) });
   mcp = client;

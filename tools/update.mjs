@@ -9,13 +9,14 @@
 // waits for the worker unless the core is the same code.
 import { execFile, spawn } from 'node:child_process';
 import { readFileSync } from 'node:fs';
-import { mkdtemp, rm, symlink } from 'node:fs/promises';
+import { mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
 import { promisify } from 'node:util';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createInterface } from 'node:readline';
 import { pathToFileURL } from 'node:url';
 import { RELOADABLE } from '../src/hot-config.mjs';
+import { disabledServers } from '../src/mcp-client.mjs';
 
 const run = promisify(execFile);
 // A push to origin reaches a running checkout within one check. The check is a fetch of origin, which changes nothing when origin has not moved.
@@ -113,9 +114,11 @@ async function startProblem(dir) {
 }
 
 // The worker starts in the clone with the arguments a core gives it, and must answer initialize. Its run is in the clone, so it is removed with it.
-function workerStarts(dir) {
+async function workerStarts(dir) {
+  const noDefaults = join(dir, 'no-default-mcp.json');
+  await writeFile(noDefaults, JSON.stringify(disabledServers(join(dir, 'defaults', 'mcp.json'))));
   return new Promise((resolveStart) => {
-    const proc = spawn(process.execPath, [join(dir, 'src', 'mcp.mjs'), '--workspace', dir, '--run-dir', join(dir, 'runs', 'candidate'), '--supervised', 'yes'], { cwd: dir, stdio: ['pipe', 'pipe', 'pipe'] });
+    const proc = spawn(process.execPath, [join(dir, 'src', 'mcp.mjs'), '--workspace', dir, '--run-dir', join(dir, 'runs', 'candidate'), '--mcp-config', noDefaults, '--supervised', 'yes'], { cwd: dir, stdio: ['pipe', 'pipe', 'pipe'] });
     let stderr = '';
     const finish = (problem) => {
       clearTimeout(timer);

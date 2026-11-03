@@ -1,9 +1,10 @@
-import { existsSync, lstatSync, mkdirSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, lstatSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { runCommand } from './exec.mjs';
+import { disabledServers } from './mcp-client.mjs';
 import { RELOADABLE } from './hot-config.mjs';
 import { sourcesCheck } from './sources.mjs';
 import { wikiCheck } from './wiki.mjs';
@@ -202,11 +203,13 @@ async function promptCheck(root) {
   const runDir = join(dir, 'run');
   mkdirSync(join(dir, 'workspace'), { recursive: true });
   try {
+    const noDefaults = join(dir, 'no-default-mcp.json');
+    writeFileSync(noDefaults, JSON.stringify(disabledServers(join(root, 'defaults', 'mcp.json'))));
     const requests = [
       { jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2025-11-25', capabilities: {}, clientInfo: { name: 'gate', version: '0' } } },
       { jsonrpc: '2.0', id: 2, method: 'prompts/get', params: { name: 'gm', arguments: { task: SESSION_PROMPT } } },
     ];
-    spawnSync(process.execPath, ['src/mcp.mjs', '--workspace', join(dir, 'workspace'), '--run-dir', runDir], { cwd: root, input: requests.map((request) => `${JSON.stringify(request)}\n`).join(''), timeout: NODE_TIMEOUT_MS, encoding: 'utf8' });
+    spawnSync(process.execPath, ['src/mcp.mjs', '--workspace', join(dir, 'workspace'), '--run-dir', runDir, '--mcp-config', noDefaults], { cwd: root, input: requests.map((request) => `${JSON.stringify(request)}\n`).join(''), timeout: NODE_TIMEOUT_MS, encoding: 'utf8' });
     const events = existsSync(join(runDir, 'log.jsonl')) ? readFileSync(join(runDir, 'log.jsonl'), 'utf8').split('\n').filter(Boolean).map((line) => JSON.parse(line)) : [];
     const tasks = events.filter((event) => event.kind === 'task').map((event) => event.text);
     if (tasks.length === 1 && tasks[0] === SESSION_PROMPT) return { ok: true, detail: `the session prompt kept all ${SESSION_PROMPT.split(' ').length} words` };

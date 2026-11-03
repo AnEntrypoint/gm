@@ -12,29 +12,49 @@ const DESCRIPTION_CHARS = 300;
 const VARIABLE = /\$\{([A-Za-z_][A-Za-z0-9_]*)\}/g;
 const DEPTH_VARIABLE = 'GMNEW_MCP_DEPTH';
 const MAX_DEPTH = 2;
+const BATCH_LAUNCHERS = new Set(['npx', 'npm']);
 
 const identOf = (text) => text.replace(/[^A-Za-z0-9_]/g, '_');
+
+function launchOf(spec) {
+  if (process.platform !== 'win32' || !BATCH_LAUNCHERS.has(spec.command)) return { command: spec.command, args: spec.args };
+  return { command: process.env.ComSpec ?? 'cmd.exe', args: ['/d', '/s', '/c', spec.command, ...spec.args] };
+}
 
 export function verbNameOf(server, tool) {
   const name = `${identOf(server)}_${identOf(tool)}`;
   return /^[0-9]/.test(name) ? `mcp_${name}` : name;
 }
 
-export function readServerConfig(file, workspace, { required = false } = {}) {
-  if (!existsSync(file)) return { servers: [], problems: required ? [`${file} does not exist`] : [] };
+export function readServerConfig(files, workspace) {
+  const specs = new Map();
+  const problems = [];
+  for (const { file, required = false } of files) {
+    for (const [name, server] of readLayer(file, workspace, required, problems)) specs.set(name, server);
+  }
+  return { servers: [...specs.values()].filter((server) => server !== null), problems };
+}
+
+export function disabledServers(file) {
+  const names = Object.keys(JSON.parse(readFileSync(file, 'utf8')).mcpServers ?? {});
+  return { mcpServers: Object.fromEntries(names.map((name) => [name, { disabled: true }])) };
+}
+
+function readLayer(file, workspace, required, problems) {
+  const layer = new Map();
+  if (!existsSync(file)) {
+    if (required) problems.push(`${file} does not exist`);
+    return layer;
+  }
   let document;
   try {
     document = JSON.parse(readFileSync(file, 'utf8'));
   } catch (err) {
-    return { servers: [], problems: [`${file} is not valid JSON: ${err.message}`] };
+    problems.push(`${file} is not valid JSON: ${err.message}`);
+    return layer;
   }
-  const problems = [];
-  const servers = [];
-  for (const [name, spec] of Object.entries(document?.mcpServers ?? {})) {
-    const server = serverOf(name, spec, workspace, problems);
-    if (server !== null) servers.push(server);
-  }
-  return { servers, problems };
+  for (const [name, spec] of Object.entries(document?.mcpServers ?? {})) layer.set(name, serverOf(name, spec, workspace, problems));
+  return layer;
 }
 
 function serverOf(name, spec, workspace, problems) {
@@ -139,7 +159,8 @@ class ServerProcess {
 
   start() {
     const env = { ...process.env, ...this.spec.env, [DEPTH_VARIABLE]: String(this.depth + 1) };
-    const child = spawn(this.spec.command, this.spec.args, { cwd: this.spec.cwd, env, detached: true, windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'] });
+    const { command, args } = launchOf(this.spec);
+    const child = spawn(command, args, { cwd: this.spec.cwd, env, detached: true, windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'] });
     this.child = child;
     this.up = true;
     this.buffer = '';

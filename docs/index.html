@@ -146,7 +146,7 @@ return { todo: todo.length };</pre>
 <section class="chapter" id="ch-5">
 <h2>5. The tools</h2>
 <p>By default the session sees three tools: <code>next_context</code>, <code>run_code</code> and <code>finish</code>. Every other verb is called from inside <code>run_code</code> as <code>gm.&lt;name&gt;(args)</code>. With <code>--surface tools</code> each verb is served as a tool of its own.</p>
-<p>The tools of the MCP servers that the project configures are verbs too, named <code>gm.&lt;server&gt;_&lt;tool&gt;(args)</code>. The servers are listed in <code>.gm-new/mcp.json</code> in the workspace, or in the file that <code>--mcp-config</code> names, in the <code>mcpServers</code> shape of <code>.mcp.json</code>. Only stdio servers run. Their tools appear on the code surface only, and <code>gm.verbs()</code> lists them with the rest.</p>
+<p>The tools of the MCP servers that the project configures are verbs too, named <code>gm.&lt;server&gt;_&lt;tool&gt;(args)</code>. The servers come from three files in the <code>mcpServers</code> shape of <code>.mcp.json</code>, read in this order: <code>defaults/mcp.json</code> in the checkout, which starts playwriter; then <code>.gm-new/mcp.json</code> in the workspace, if it exists; then the file that <code>--mcp-config</code> names, if given. A later entry with the same name replaces the earlier one whole, and <code>"disabled": true</code> removes a server. Only stdio servers run. Their tools appear on the code surface only, and <code>gm.verbs()</code> lists them with the rest.</p>
 <table>
 <tr><th>Group</th><th>Verbs</th></tr>
 <tr><td>Files</td><td>read_file, write_file, edit_file, stat_file, list_dir</td></tr>
