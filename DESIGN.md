@@ -43,3 +43,8 @@ Decision: the project entry projects["/workspace/gm"].mcpServers.gm in /config/.
 
 Decision: research/sota-improvements-2026-11-03.md records the deep-research levers checked against gm-new code. The search default is unchanged. Dependency closure stays a candidate until the natural-language witness (row unknown-dep-closure-natural) beats plain search at a matched file budget. The run said gm-new has vector RRF; that was wrong, since gm-new search is BM25 only. Witness: run 2026-11-03-19-38-52-ff0729, actionSeq 104 (research/dep-recall/measure.cjs: plain top-10 recall 0.15; closure 0.97 with the queried function as an anchor, 0.52 without).
 
+
+## Dependency closure, natural-language witness (2026-11-03)
+
+Decision: the search default is unchanged. On 15 functions, with descriptions written from their code, closure recalls 0.66 of the callee-defining files against 0.29 for plain search at the same file budget (research/dep-recall/natural.cjs, run 2026-11-03-19-38-52-ff0729, actionSeq 165). The sample is small and the queries are the author's own, so an opt-in closure waits for the broader witness in row unknown-dep-closure-natural. The name-query witness (research/dep-recall/measure.cjs) is not used for the decision, because the queried function is its own anchor.
+

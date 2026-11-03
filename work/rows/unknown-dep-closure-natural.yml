@@ -1,6 +1,6 @@
 id: "unknown-dep-closure-natural"
 kind: "unknown"
 title: "Does one-hop dependency closure help natural-language search?"
-body: "Open. The measurement in research/dep-recall/measure.cjs uses function names as queries and includes the queried function as its own anchor, so the 0.97 closure recall is partly by construction. Witness needed: natural-language queries for gm-new functions, scored against callee-defining files at a file budget matched to plain search. Closure stays opt-in until that witness beats plain search."
+body: "Open. Result so far, from research/dep-recall/natural.cjs: 15 functions in file order, each with a description written from its code. At a matched file budget, plain search recalls 0.29 of the callee-defining files and closure recalls 0.66, adding 4.6 files on average. Still open: the descriptions are the author own and the sample is 15, so the witness needs independently written queries, more units and a second repository before an opt-in closure is built into search. The name-query measurement (research/dep-recall/measure.cjs) includes the queried function as its own anchor and is not used for the decision."
 status: "open"
-createdAt: "2026-11-03T19:41:05.825Z"
+createdAt: "2026-11-03T19:42:55.045Z"
