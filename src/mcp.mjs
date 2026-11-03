@@ -20,28 +20,78 @@ import { COMPACT as RUNCODE_COMPACT } from './runcode.mjs';
 import { COMPACT as TOOLS_COMPACT } from './tools.mjs';
 import { feedOf, registryOf, resultZone1, resultZone2, shownTotalOf } from './compact.mjs';
 import { writeSummary } from './summary.mjs';
+import { parseSkill, SERVED_SKILLS } from './skills.mjs';
 
 const PROTOCOL_VERSION = '2025-06-18';
 const SERVER_INFO = { name: SERVER_NAME, version: JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')).version };
-const SKILL_URI = 'gm://skill/SKILL.md';
-// The skill is read on each request, so an edit to skills/gm/SKILL.md is served without a restart. A file caught mid-write keeps the last
-// text that parsed. Before any text has parsed, the error reaches the caller.
-let skillLast = null;
-function skill() {
+// The served skills (SEP-2640) are read on each request, so an edit under skills/ is served without a restart. Each skill's files are listed
+// and read from its directory: every file is a resource with a sha256 digest and a size, and SKILL.md is the skill's uri. A file caught
+// mid-write keeps the last read of that skill that succeeded. Before a skill has read cleanly, the error reaches the caller.
+const GM_SKILL_URI = 'skill://gm/SKILL.md';
+const lastSkill = new Map();
+function skillOf(name) {
   try {
-    skillLast = parseSkill(readFileSync(join(ROOT, 'skills', 'gm', 'SKILL.md'), 'utf8'));
+    const entry = readSkill(name);
+    lastSkill.set(name, entry);
+    return entry;
   } catch (err) {
-    if (skillLast === null) throw err;
+    if (!lastSkill.has(name)) throw err;
+    return lastSkill.get(name);
   }
-  return skillLast;
+}
+function readSkill(name) {
+  const dir = join(ROOT, 'skills', name);
+  const files = filesUnder(dir).map((path) => {
+    const bytes = readFileSync(join(dir, path));
+    return { path, uri: `skill://${name}/${path}`, bytes, digest: `sha256:${createHash('sha256').update(bytes).digest('hex')}`, size: bytes.length, mimeType: path.endsWith('.md') ? 'text/markdown' : 'text/plain' };
+  });
+  const skillMd = files.find((file) => file.path === 'SKILL.md');
+  if (skillMd === undefined) throw new Error(`skills/${name}/SKILL.md is missing`);
+  const { frontmatter, body } = parseSkill(skillMd.bytes.toString('utf8'), name);
+  return { name, uri: skillMd.uri, frontmatter, body, files };
+}
+// The files under a directory, relative to it with / separators on every platform, sorted.
+function filesUnder(dir, rel = '') {
+  const files = [];
+  for (const entry of readdirSync(join(dir, rel), { withFileTypes: true })) {
+    const path = rel === '' ? entry.name : `${rel}/${entry.name}`;
+    if (entry.isDirectory()) files.push(...filesUnder(dir, path));
+    else if (entry.isFile()) files.push(path);
+  }
+  return files.sort();
+}
+// The entry that skills/list and skills/get return: the uri, the frontmatter as read, and each file with its digest and size.
+function skillEntry(skill) {
+  return { uri: skill.uri, frontmatter: skill.frontmatter, resources: skill.files.map(({ uri, digest, size }) => ({ uri, digest, size })) };
+}
+// The resource of one file. SKILL.md is named by its frontmatter, as the SEP asks, and any other file by its path.
+function resourceOf(skill, file) {
+  if (file.path !== 'SKILL.md') return { uri: file.uri, name: file.path, mimeType: file.mimeType };
+  return { uri: file.uri, name: skill.frontmatter.name, description: skill.frontmatter.description, mimeType: file.mimeType };
+}
+function resourceList() {
+  return SERVED_SKILLS.flatMap((name) => {
+    const skill = skillOf(name);
+    return skill.files.map((file) => resourceOf(skill, file));
+  });
+}
+// The served file a skill:// uri names, with its skill, or null when no served skill has that file.
+function skillFileOf(uri) {
+  const match = typeof uri === 'string' ? /^skill:\/\/([^/]+)\//.exec(uri) : null;
+  if (match === null || !SERVED_SKILLS.includes(match[1])) return null;
+  const skill = skillOf(match[1]);
+  const file = skill.files.find((candidate) => candidate.uri === uri);
+  return file === undefined ? null : { skill, file };
+}
+// skills/get: the entry of one served skill, named by its SKILL.md uri. Any other uri is -32602, as resources/read refuses an unknown one.
+function skillGet(params) {
+  const match = typeof params?.uri === 'string' ? /^skill:\/\/([^/]+)\/SKILL\.md$/.exec(params.uri) : null;
+  if (match === null || !SERVED_SKILLS.includes(match[1])) throw new RpcError(-32602, `unknown skill: ${params?.uri}`);
+  return { resultType: 'complete', skill: skillEntry(skillOf(match[1])) };
 }
 function skillPrompt() {
-  const SKILL = skill();
-  return { name: SKILL.name, description: SKILL.description, arguments: [{ name: 'task', description: 'The task to run', required: false }] };
-}
-function skillResource() {
-  const SKILL = skill();
-  return { uri: SKILL_URI, name: `${SKILL.name} skill`, description: SKILL.description, mimeType: 'text/markdown' };
+  const SKILL = skillOf('gm');
+  return { name: SKILL.frontmatter.name, description: SKILL.frontmatter.description, arguments: [{ name: 'task', description: 'The task to run', required: false }] };
 }
 const DEFAULT_MAX_STEPS = 50;
 const REPLY_MEMORY = 256;
@@ -104,13 +154,6 @@ function servedTools(surface) {
   return surface === 'code' ? current.CODE_LIST : current.TOOLS;
 }
 const NO_PATHS = { items: [], free: true };
-
-function parseSkill(text) {
-  const match = /^---\n([\s\S]*?)\n---\n?/.exec(text);
-  if (!match) throw new Error('skills/gm/SKILL.md has no frontmatter');
-  const fields = Object.fromEntries(match[1].split('\n').map((line) => line.split(/:\s*(.*)/s).slice(0, 2)));
-  return { text, name: fields.name, description: fields.description, body: text.slice(match[0].length).trim() };
-}
 
 class RpcError extends Error {
   constructor(code, message) {
@@ -199,7 +242,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
   function rulesNotice() {
     if (rulesOpen.size === 0) return null;
     const lines = [...rulesOpen].map(([rule, { evidence }]) => `rule ${rule} (${RULE_TEXT[rule]}): ${evidence}`);
-    return `The rules check found: ${lines.join('; ')}. Read the gm skill again with ReadMcpResourceTool (server gm, uri gm://skill/SKILL.md) and follow the rules it gives. That one read clears this notice. Do not repeat finished work.`;
+    return `The rules check found: ${lines.join('; ')}. Read the gm skill again with ReadMcpResourceTool (server gm, uri skill://gm/SKILL.md) and follow the rules it gives. That one read clears this notice. Do not repeat finished work.`;
   }
 
   const handlers = {
@@ -291,8 +334,10 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     }
     if (method === 'prompts/list') return { prompts: [skillPrompt()] };
     if (method === 'prompts/get') return getPrompt(params);
-    if (method === 'resources/list') return { resources: [skillResource()] };
+    if (method === 'resources/list') return { resources: resourceList() };
     if (method === 'resources/read') return readResource(params);
+    if (method === 'skills/list') return { resultType: 'complete', skills: SERVED_SKILLS.map((name) => skillEntry(skillOf(name))) };
+    if (method === 'skills/get') return skillGet(params);
     if (method === 'resources/templates/list') return { resourceTemplates: [] };
     if (method === 'core/reload') return reloadLeaves();
     if (method.startsWith('notifications/')) return null;
@@ -305,10 +350,10 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
   }
 
   function getPrompt(params) {
-    const SKILL = skill();
-    if (params?.name !== SKILL.name) throw new RpcError(-32602, `unknown prompt: ${params?.name}`);
+    const SKILL = skillOf('gm');
+    if (params?.name !== SKILL.frontmatter.name) throw new RpcError(-32602, `unknown prompt: ${params?.name}`);
     // Loading the skill again is what the notice asks for, so it clears the open notices. Each fetch is logged, so a live run can count them.
-    log.append('skill-loaded', { via: 'prompt', cleared: [...rulesOpen.keys()] });
+    log.append('skill-loaded', { via: 'prompt', skill: 'gm', cleared: [...rulesOpen.keys()] });
     clearRules();
     const given = typeof params?.arguments?.task === 'string' ? params.arguments.task.trim() : '';
     // The session's prompt gives the task of a run that was started without --task. The first task given is the run's task, logged once.
@@ -317,15 +362,17 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
       log.append('task', { from: 'session prompt', text: task });
     }
     const text = given === '' ? SKILL.body : `${SKILL.body}\n\nTask: ${given}`;
-    return { description: SKILL.description, messages: [{ role: 'user', content: { type: 'text', text } }] };
+    return { description: SKILL.frontmatter.description, messages: [{ role: 'user', content: { type: 'text', text } }] };
   }
 
   function readResource(params) {
-    const SKILL = skill();
-    if (params?.uri !== SKILL_URI) throw new RpcError(-32602, `unknown resource: ${params?.uri}`);
-    log.append('skill-loaded', { via: 'resource', cleared: [...rulesOpen.keys()] });
-    clearRules();
-    return { contents: [{ uri: SKILL_URI, mimeType: 'text/markdown', text: SKILL.text }] };
+    const found = skillFileOf(params?.uri);
+    if (found === null) throw new RpcError(-32602, `unknown resource: ${params?.uri}`);
+    // Only the gm skill's SKILL.md clears the rules notice, since the notice asks for that read. Each read is logged, so a live run can count them.
+    const isGm = found.file.uri === GM_SKILL_URI;
+    log.append('skill-loaded', { via: 'resource', skill: found.skill.name, uri: found.file.uri, cleared: isGm ? [...rulesOpen.keys()] : [] });
+    if (isGm) clearRules();
+    return { contents: [{ uri: found.file.uri, mimeType: found.file.mimeType, text: found.file.bytes.toString('utf8') }] };
   }
 
   // The checks on one call's result, for the rules the server can see. A finish is judged by its own result. Any other call counts toward the

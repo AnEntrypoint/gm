@@ -1,6 +1,6 @@
 # Working on gm-new
 
-How to change this project. Project facts are in AGENTS.md, and decisions with their witnesses are in DESIGN.md. This skill is not served to runs; only skills/gm/SKILL.md is.
+How to change this project. Project facts are in AGENTS.md, and decisions with their witnesses are in DESIGN.md. This skill is not served to runs; only skills/gm/SKILL.md and skills/gm-continue/SKILL.md are.
 
 ## Scratch
 

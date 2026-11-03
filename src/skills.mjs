@@ -9,6 +9,38 @@ import { ROW_TOOLS } from './rows.mjs';
 import { SEARCH_TOOLS } from './search.mjs';
 import { MCP_RULES } from './prompt.mjs';
 
+// The skills the server serves over SEP-2640, each by its directory name. skills/dev is a process skill for the checkout, not served.
+// A served skill's frontmatter name is its directory name, which is the final segment of its skill:// URI.
+export const SERVED_SKILLS = ['gm', 'gm-continue'];
+
+// A served SKILL.md's frontmatter, as the SEP needs it: a JSON object of the `key: value` lines between the two --- lines. The server reads
+// plain YAML scalars only. A line that is not key: value, and a value that quotes or holds ': ' or ' #' (YAML reads those as a mapping or a
+// comment), is refused, so a partial object is never returned. name and description are required, and name must equal the directory.
+export function parseSkill(text, dir) {
+  const match = /^---\n([\s\S]*?)\n---\n?/.exec(text);
+  if (!match) throw new Error(`skills/${dir}/SKILL.md has no frontmatter`);
+  const frontmatter = {};
+  for (const line of match[1].split('\n')) {
+    const field = /^([A-Za-z][\w-]*):\s+(.*)$/.exec(line);
+    if (field === null) throw new Error(`skills/${dir}/SKILL.md: frontmatter line is not key: value: ${line.slice(0, 40)}`);
+    const problem = plainProblem(field[2]);
+    if (problem !== null) throw new Error(`skills/${dir}/SKILL.md: ${field[1]} ${problem}; reword it`);
+    frontmatter[field[1]] = field[2];
+  }
+  for (const key of ['name', 'description']) {
+    if (typeof frontmatter[key] !== 'string' || frontmatter[key].trim() === '') throw new Error(`skills/${dir}/SKILL.md has no ${key}`);
+  }
+  if (frontmatter.name !== dir) throw new Error(`skills/${dir}/SKILL.md: name is ${frontmatter.name}, and its URI ends in ${dir}; they must match`);
+  return { frontmatter, body: text.slice(match[0].length).trim() };
+}
+
+function plainProblem(value) {
+  if (/^[-?:,[\]{}#&*!|>'"%@`]/.test(value)) return 'starts with a character YAML reads as syntax';
+  if (value.includes(': ') || value.endsWith(':')) return "has ': ' inside it, which YAML reads as a mapping";
+  if (value.includes(' #')) return "has ' #' inside it, which YAML reads as a comment";
+  return null;
+}
+
 // The default surface serves next_context, run_code and finish, and every other verb is a function on gm inside run_code. A skill
 // that names a verb or a tool without the gm. prefix names a tool the default does not serve, so the gate refuses it. The names are
 // read when the check runs, because git.mjs imports the gate.
@@ -44,5 +76,12 @@ export function skillCheck(root) {
       for (const rule of ruleBodies()) if (!plain.includes(rule)) findings.push(`gm skill lacks rule: ${rule.slice(0, 60)}`);
     }
   }
-  return findings.length ? { ok: false, detail: findings.slice(0, 3).join(' | ') } : { ok: true, detail: `${count} skill(s) name only served tools` };
+  for (const skill of SERVED_SKILLS) {
+    try {
+      parseSkill(readFileSync(join(dir, skill, 'SKILL.md'), 'utf8'), skill);
+    } catch (err) {
+      findings.push(err.message);
+    }
+  }
+  return findings.length ? { ok: false, detail: findings.slice(0, 3).join(' | ') } : { ok: true, detail: `${count} skill(s) name only served tools; ${SERVED_SKILLS.join(', ')} parse as served skills` };
 }
