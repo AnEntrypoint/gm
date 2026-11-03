@@ -1621,3 +1621,18 @@ Witness, on a tar copy of 46e3a5e in its own repository, with node_modules copie
 - (d) runGate on the copy with this change and this section: gate true, failed none (`events-wait/gate-final.out`). The unchanged copy passed the same gate (`events-wait/gate-baseline.out`).
 
 Limits: on Windows a SIGTERM is not delivered to a Node listener, so a watcher ended there by a kill prints no line; not witnessed on Windows. `--read-clear` on an empty queue still prints nothing, which is its answer. The full 1800000 ms default was not waited out; the 1500 ms run takes the same path. The event lines are unchanged (JSON, with id and seq); the reason line is not an event and has no JSON form.
+
+## gm-continue from a freddie-attached session (2026-11-03)
+
+Run 11347-6820153 ran gm-continue on a gm server whose workspace is /workspace/freddie. Its setup, its row verbs and its git verbs read freddie, so the run saw no gm-new rows, and nothing reported it.
+
+- Path. The skill names `tools/gm-continue-setup.mjs` with no repository. From freddie that file is missing: list_dir on tools returned ENOENT: no such file or directory, scandir '/workspace/freddie/tools'.
+- Silent wrong checkout. The setup defaults `--repo` to the process cwd. `cd /workspace/freddie && node /workspace/gm-new/tools/gm-continue-setup.mjs` printed `HEAD ebcf0378; 0 commit(s) ahead of origin`, `Batch plan: 0 open row(s)` and `Open runs: 1`, with no defect line. Run from /workspace/gm-new, the same script printed `HEAD 50a9ecf` and the nine defect rows.
+- Row verbs. `gm.prd_list` and `gm.unknown_list` returned `(none)` for the statuses open, resolved and all. gm-new holds 11 resolved PRDs and 13 open questions (4 resolved, 9 blocked). The verbs read the rows directory under the workspace, and freddie has none: list_dir on work returned ENOENT: no such file or directory, scandir '/workspace/freddie/work'. A write verb from this session would create rows in freddie, so none was called.
+- Not added here: the row that step 3 of gm-continue asks for. It must be added with `gm.prd_add` from a session whose workspace is gm-new.
+
+Decision, the owner's. No session is named gm in ListAgents (peers: gm-4b, oscraft-6b, hy3d-12), so INVARIANT 2 leaves it to the owner. Two options: run gm-continue only from a session whose workspace is gm-new, with the skill saying so; or give the row verbs and the setup an explicit repository. Either way the setup should take its default from its own checkout, not from the cwd.
+
+The nine blocked rows are unchanged; see "Rows without a hold". Commit 671cbb0 removed the blocked state and migrated none of their files: `git show --stat 671cbb0` lists seven files, and among them only the deleted prd-adaptive-codemode.yml is a row under the rows directory.
+
+Witness: run 11347-6820153, its setup, list and list_dir calls in this session, and `git show --stat 671cbb0` in /workspace/gm-new.

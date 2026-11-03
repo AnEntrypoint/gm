@@ -54,7 +54,6 @@ This is what you build and codify. Single worker first: DESIGN.md direction 6 sa
 
 ## Current state
 
-- Items 1 to 11 under DESIGN.md, ## Measured, are witnessed. The live comparison of gm-new and gm is closed; its report is in DESIGN.md, Project close.
 - Open and recorded: the minimal tool set, which is not run, and G3 (cache effect), measured by the gm agent as a cache share from the host transcripts. No saving is claimed, because the price multipliers are unverified. The project closes when both are recorded.
 - Updates: a running checkout pulls origin main about every minute (`tools/update.mjs`, DEFAULT_UPDATE_MS). A pull goes only into a clean checkout. A change to a reloadable leaf or to a skill is applied in place. A change to any other module the worker loads (`src/worker-modules.json`, src/hot-config.mjs included) restarts it; a `src/` module the worker does not load restarts nothing (DESIGN.md, HMR step 1; Skill in place). `tools/relay.mjs` is frozen, so a change to it reaches a host only on reconnect (DESIGN.md, Update on push).
 
@@ -85,6 +84,7 @@ This is what you build and codify. Single worker first: DESIGN.md direction 6 sa
 - The pending queue is guarded by `runs/<id>/pending.lock`, held for one append or one claim. A claimed copy is named with its reader's pid, and another reader takes it only when that pid is gone, so a zombie reader keeps its copy until it is reaped (DESIGN.md, "Pending append and claim under one lock (2026-11-03)").
 - A top-level tools/call run_shell is always foreground: the session's handler drops `background`, so job_start is the only background shell path (DESIGN.md, Protocol conformance and cancellation, batch 1).
 - A cancel of a run_shell call kills its group, and the worker sends no answer for it. The core stops counting that request when the cancel passes, so a restart does not wait for it. Any other cancelled request counts until its answer (DESIGN.md, the same section).
+- `tools/gm-continue-setup.mjs` and the row verbs read the session's workspace, not gm-new: from a freddie session the setup reports freddie's HEAD and no defect, and `gm.prd_list` returns (none) for every status (DESIGN.md, "gm-continue from a freddie-attached session (2026-11-03)").
 
 ## Rationale not expressible in code
 
