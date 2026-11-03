@@ -1538,3 +1538,39 @@ Witness, through the real path (the driver spawns src/mcp.mjs; the body calls gm
 Known limits, not closed here:
 - git and gh print no code, so their message is still read for words. A host name with no dot in it is not removed, so a permanent message that names such a host and also a transient word is retried.
 - The fetch witness needs a proxy because invalid.example does not resolve here. A direct fetch to a real host with "invalid" in its name is not witnessed.
+
+## Pending append and claim under one lock (2026-11-03)
+
+The defect, reported on 2571e55: an event appended while a reader claims the queue can be lost, and a record can be delivered twice when two readers run at once.
+
+The interleavings, on fd93c26 (the tree before the change):
+- Lost append. (1) The writer's `appendFileSync` opens `pending.jsonl` (open, write, close); its descriptor is bound to the queue's inode. (2) A reader's claim renames `pending.jsonl` to its copy, which is the same inode under the copy's name. (3) The reader reads the copy, which does not hold the new line. (4) The writer writes the line into that inode, now the copy. (5) The reader removes the copy (clearPending), and the line goes with it. The window is the writer's open-to-write gap, a few microseconds; a writer preempted inside it widens it.
+- Double delivery. (1) Reader A claims the queue into its copy and has not cleared it. (2) Reader B lists the directory, takes A's copy as the leftover of a crash, and renames it. (3) A then reads its copy, which throws ENOENT if B's rename came first (the CLI did this once in the stress and exited 1), or A has already delivered it and B delivers the same records again.
+
+Decided:
+- One queue lock, `runs/<id>/pending.lock`, created with open flag `wx`. An append holds it for its open, write and close of `pending.jsonl`; a claim holds it for its rename. A claim cannot rename the queue while an append writes to it, so each append is either in the queue before the claim (and read by it) or in the new queue after it.
+- Why a lock, not a per-claim file. A writer that appends to a file its claimer owns still needs a rule for a claim that is live and one that is abandoned (the pid rule below), and it must find that file. The lock adds one create and one unlink per append and per claim, and holds nothing across a read or a reply, so it is the smallest change that closes the window.
+- A copy is named `pending.<ms>-<hex>-<pid>.reading`. A reader takes another reader's copy only when that pid is gone (`process.kill(pid, 0)` throws ESRCH). A copy with no pid, from the earlier version, counts as gone, so an upgrade does not strand it.
+- A waiter sleeps 1 ms (Atomics.wait) between tries. A lock older than 2 s is removed, because its holder died: a holder keeps the lock for microseconds. A waiter that has waited 5 s throws.
+- next_context claims last, after its reply is built. Nothing that can throw runs between the claim and the registration of its clear, so a step that fails before that point claims nothing. On fd93c26 a failed step left a copy that any reader took; with the pid rule that copy would keep a live pid, so the claim moved.
+- Unchanged: log.jsonl, log.index, query_log, the signatures of appendPending and takePending, the CLI, and the reply fields. `pending` is now the last key of the reply.
+- This closes the gap that "Events cleared once delivered (2026-11-03)" lists under known limits.
+
+Not closed:
+- A reader that has exited but is not reaped by its parent is a zombie, and `kill(pid, 0)` still succeeds for it. Its copy is not taken until the parent reaps it. Shells and Node reap their children; a parent that never waits holds the copy until it exits.
+- A crash between a reply's write and the removal of its copy delivers those records again. This is unchanged.
+- A reply that cannot be written after its claim (an IO error in the log or on stdout) keeps its copy until that worker exits; the next worker takes it.
+- Two waiters that break one stale lock in the same microseconds can both enter the queue. It needs a holder that died and two waiters at one instant. Not closed.
+
+Witness. The copy is a tar of fd93c26 (`git archive`) with the change. It has node_modules copied in and its own repository (one commit), so the gate's checks run on it. The stress harness is in /tmp/gm-scratch/gm-new/pending-fix (deleted after the run). Per round, a writer process appends 2000 events through `openLog().append('job')`; claimers run in their own processes: "hot" loops `takePending` and `clearPending`, "cli" loops `events --read-clear`. Twelve busy processes load the 12 cores. sent is the seqs the writer returned; delivered is the distinct sent ids delivered; duplicates is the extra deliveries; lost is a sent id neither delivered nor queued after the last pass. Base runs: before `2026-11-03-07-16-40-bac67d`, after `2026-11-03-07-19-02-9d6929`.
+- (a) Before, fd93c26: one hot claimer, 10 rounds: sent 20000, delivered 19961, duplicates 0, lost 39 (3 rounds: 6000, 5987, 0, 13). One cli claimer, 3 rounds: sent 6000, delivered 6000, duplicates 0, lost 0. Hot and cli together, 10 rounds: sent 20000, delivered 19967, duplicates 47, lost 33 (3 rounds: 6000, 5990, 40, 10; one cli claim exited 1 with ENOENT on its copy).
+- (b) After: one hot claimer, 10 rounds: sent 20000, delivered 20000, duplicates 0, lost 0 (3 rounds: 6000, 6000, 0, 0). One cli claimer, 3 rounds: 6000, 6000, 0, 0. Hot and cli together, 10 rounds: 20000, 20000, 0, 0 (3 rounds: 6000, 6000, 0, 0). No claimer error in any round.
+- (c) The gate on the copy: gate true; syntax, ascii, docs, sources, wiki, skills, connect, workers and smoke all true.
+
+Probes, through the real CLI and the worker:
+- Reclaim. Before, the earlier code takes a copy whatever its reader: the first `events --read-clear` printed both leftover copies (7001 and 7002). After, a copy of an exited reader is taken first (7001); the copy of a live reader waits and is printed on the next pass (7002), after that process ended and was reaped. A copy with no pid is taken on the first pass.
+- Lock. With a fresh lock held by another process, an append waited 2001 ms, went through, and removed the lock; the queue held the event. With a lock 60 s old, the append took 2 ms.
+- next_context through the worker over stdio: a job's start and end (`job`, running and exited) came in the first call's `pending`; the second call had none; no queue or copy file was left in the run directory.
+- The default tools hash is unchanged: 692c1e7bc2dc7a3ac2302e44013e6e9cd7ba341ddfc91d0ba6b6b31643637aab (tools seq 2 of the probe run), because no tool description changed.
+
+Changed: src/pending.mjs (the queue lock, the pid in a copy's name, the reclaim rule), src/mcp.mjs (context claims last and sets `pending` on the reply), DESIGN.md, AGENTS.md (one fact), skills/dev/SKILL.md (one witness line).

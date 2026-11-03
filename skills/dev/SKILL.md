@@ -18,6 +18,7 @@ How to change this project. Project facts are in AGENTS.md, and decisions with t
 - A witness that edits a file by string counts the matches first and edits the one it means. A sentence that occurs in two places once changed the wrong one.
 - Record the before run id and the after run id, with the numbers, in DESIGN.md under a dated section.
 - A multi-step change is built as one batch: all the steps, then one witness over all of them, then the commits. A step is not witnessed alone during the build.
+- The gate's checks call git (syntax, ascii, docs, workers) and load acorn (workers), so a bare tar copy fails it. Copy node_modules into the copy and give the copy its own repository (`git init`, one commit), then run the gate on the copy. That is not a clone of the shared checkout.
 - A top-level `return` fails `node --check` in an ES module. A probe that needs one wraps its body in a function.
 - A witness that makes a top-level tool call runs with `--surface tools`. The default code surface answers a verb name with -32602, so the call never reaches the verb.
 - A host name that does not resolve here goes to a local proxy. gm.fetch needs `NODE_OPTIONS=--use-env-proxy` with HTTP_PROXY, and it tunnels http:// with CONNECT, so the proxy must answer CONNECT; git takes `-c http.proxy=` in the workspace config. A proxy that logs nothing usually means the CONNECT path.

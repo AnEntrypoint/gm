@@ -588,9 +588,6 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     const rules = await readFile(join(runDir, 'rules.md'), 'utf8');
     const recoveryNow = pendingRecovery === null ? undefined : recoveryNote(pendingRecovery);
     pendingRecovery = null;
-    // The pending events are claimed here, and cleared once the reply that carries them is written, so a crash before that write delivers
-    // them again. The clear is registered only when the reply is built, so a step that fails leaves its claim for the next reader.
-    const taken = takePending(runDir);
     const since = log.eventsFrom(noticeSeq + 1);
     noticeSeq = log.count();
     const killed = since.filter((event) => event.kind === 'job-killed');
@@ -620,7 +617,6 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
       witness: DEFAULT_WITNESS,
       prefixSha: prefixShaFor(rules),
       total: log.count(),
-      ...(taken.records.length > 0 ? { pending: taken.records } : {}),
       // The shell command that waits for the next event. It ends when it prints the queued events, and what it prints is cleared, so a host
       // that runs it as a background task or a Monitor is told each event once. It names the run directory, so it works from any directory.
       pendingCommands: {
@@ -638,6 +634,11 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
       ...(progressedAgain.length ? { jobsUnstuck: progressedAgain.map(({ seq, job }) => ({ seq, job })) } : {}),
       ...(open.length ? { jobsOpen: open.slice(0, OPEN_LIST), ...(open.length > OPEN_LIST ? { jobsOpenMore: open.length - OPEN_LIST } : {}) } : {}),
     };
+    // The pending events are claimed last: nothing that can throw runs between the claim and the registration of its clear, so a step that
+    // fails before this point claims nothing. The clear runs once the reply that carries the events is written, so a crash before that write
+    // delivers them again.
+    const taken = takePending(runDir);
+    if (taken.records.length > 0) reply.pending = taken.records;
     if (taken.files.length > 0) afterReply.set(JSON.stringify(rpcId), () => clearPending(taken.files));
     return reply;
   }
