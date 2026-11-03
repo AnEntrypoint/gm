@@ -1325,11 +1325,11 @@ Not verified: Windows; a failure after the pull (see item 2); the rollback of ot
 
 ## gm skill invoked as mcp__gm__gm (2026-11-03)
 
-Problem. The docs named the skill files, not the names a host invokes them by. The host names an MCP prompt /mcp__<server>__<prompt>, so on the server gm the gm skill is the prompt `gm`, invoked as mcp__gm__gm, and gm-continue is the prompt `gm-continue`, invoked as mcp__gm__gm-continue. Both are also resources: skill://gm/SKILL.md and skill://gm-continue/SKILL.md.
+Problem. The docs named the skill files, not the names a host invokes them by. The host names an MCP prompt /mcp__<server>__<prompt>, so on the server gm the gm skill is the prompt `gm`, invoked as mcp__gm__gm, and gm-continue is the prompt `gm-continue`, invoked as mcp__gm__gm-continue. Both are also resources: skill://gm/SKILL.md and skill://gm-continue/SKILL.md. The route to each is its resource, read with ReadMcpResourceTool (server gm). Do not call gm or gm-continue with the Skill tool; it is not listed there.
 
 Change, text only (no src/ or tools/ change, so no worker restarts):
 - README.md, the worker paragraph on the MCP prompts, and docs/index.html, chapter 3: the two invocation names.
-- AGENTS.md, Continuation: gm-continue is the MCP prompt `gm-continue`, invoked as mcp__gm__gm-continue.
+- AGENTS.md, Continuation: gm-continue is the MCP prompt `gm-continue`, invoked as mcp__gm__gm-continue. Its route is the resource skill://gm-continue/SKILL.md, read with ReadMcpResourceTool (server gm). Do not call gm-continue with the Skill tool; it is not listed there.
 - skills/dev/SKILL.md, first paragraph: the served skills with their invocation names.
 - .gitignore: `.playwriter/`, the playwriter tool's browser profile and log.
 The README, docs, AGENTS.md and skills/dev lines were in the working tree of a checkout that another agent was committing. They landed in commits 4160d0b and 5b8d4b9, which that agent made with its own batches; this change did not ship them.
@@ -1339,7 +1339,7 @@ Witness, prompts/list through the relay (tools/relay.mjs, stdio, a real task fil
 - The copy of HEAD 5b8d4b9 with the `.playwriter/` line: run 214764-5913345. prompts/list answers the same two prompts, each with a title and a description. The tools sha is unchanged, 836ea50420d01153637b4f5a7d062d324428e8bd97d1c613b70b62b824b89932, count 3.
 - The gate on that copy (runGate, the tracked list read from HEAD's index through a scratch index file): gate true, failed none. Its notCovered list names CI as none configured, which is not a pass.
 
-Not verified here: the host's naming. Whether Claude Code lists /mcp__gm__gm and /mcp__gm__gm-continue as commands, and whether its Skill list shows them, needs a /mcp reconnect in a live session. The names are the expected ones under the host's /mcp__<server>__<prompt> rule, not witnessed ones.
+Not verified here: the host's naming. Whether Claude Code lists /mcp__gm__gm and /mcp__gm__gm-continue as commands, and whether its Skill list shows them, needs a /mcp reconnect in a live session. The names are the expected ones under the host's /mcp__<server>__<prompt> rule, not witnessed ones. The routes that are witnessed are the resources skill://gm/SKILL.md and skill://gm-continue/SKILL.md, read with ReadMcpResourceTool (server gm). Do not call gm or gm-continue with the Skill tool; it is not listed there.
 
 Follow-up, the same day, from the coordinator: skills/dev/SKILL.md line 3 now says the host names are expected, not witnessed, and names the /mcp reconnect check. docs/index.html:189 now says that a pull restarts the worker only for a module the worker loads (src/worker-modules.json, checked by the gate, since 5b8d4b9), and that a reloadable leaf reloads in place. The same paragraph said the update checks run every hour; DEFAULT_UPDATE_MS is 60000 (DESIGN, 2026-11-02, tools/update.mjs), so it now says every minute. Docs-only; the gate is the check.
 
@@ -1574,3 +1574,25 @@ Probes, through the real CLI and the worker:
 - The default tools hash is unchanged: 692c1e7bc2dc7a3ac2302e44013e6e9cd7ba341ddfc91d0ba6b6b31643637aab (tools seq 2 of the probe run), because no tool description changed.
 
 Changed: src/pending.mjs (the queue lock, the pid in a copy's name, the reclaim rule), src/mcp.mjs (context claims last and sets `pending` on the reply), DESIGN.md, AGENTS.md (one fact), skills/dev/SKILL.md (one witness line).
+
+## gm and gm-continue named in the server instructions (2026-11-03)
+
+Problem. The host's Skill tool does not list MCP skills. An agent that called gm-continue through it got "Unknown skill: gm-continue" (owner report, 2026-11-03). The connect-time instructions named only the gm skill, so an agent that read only the server text never learned that gm-continue existed or how to load it.
+
+Decision, owner's direction: the instructions name both skills and their routes, in words. The route to each is its resource, read with ReadMcpResourceTool (server gm), or its prompt, run by name: mcp__gm__gm and mcp__gm__gm-continue. Those prompt names are expected, not witnessed. The instructions also say that the host's Skill tool does not list either, so neither is called with it.
+
+Change:
+- `src/connect.mjs`: SKILL_POINTER names skill://gm/SKILL.md and skill://gm-continue/SKILL.md, each with ReadMcpResourceTool (server gm) and its prompt. The gm-continue line says it plans the open rows of gm-new and hands them to the gm skill. CONNECT_SHA moves from ec7180e23afa5292584a01688f0542c8bd78cf1e822a6f9f8b7336e17b11cd54 (the value at d168018) to 8705ba70148cb6bc34ab31badcab9f5a06affc095e22e98a9271d356c939fefe, the connectSha of this checkout after the change. The owner asked for the change, which is the acceptance the connect gate needs.
+- `skills/gm/SKILL.md`, step 6 (finish): one line, in gm-new only, that reads skill://gm-continue/SKILL.md with ReadMcpResourceTool (server gm), or runs the gm-continue prompt, before finish, and keeps working while it lists open rows. This reverses "Not changed, skills/gm/SKILL.md" in "gm-continue as an MCP prompt (2026-11-03)", which declined the same line; the owner now asks for it. The seven rules are unchanged.
+- `AGENTS.md` (Continuation), `README.md`, `docs/index.html` (chapter 3), `skills/dev/SKILL.md` (line 3), and the DESIGN entries that name mcp__gm__gm or mcp__gm__gm-continue: each adds the resource route, read with ReadMcpResourceTool (server gm), and the sentence that the Skill tool does not list it. The mcp__ names stay marked as expected, not witnessed.
+
+Witness: `/tmp/gm-scratch/gm-new/continue-name-tools/witness.mjs`, a stdio client that starts `src/mcp.mjs` with a real task file in a temporary workspace, with no relay. It ran on a tar copy of d168018 (before) and on the same copy with this change (after), each with its own repository and node_modules. Results: `before2.json` and `after2.json` beside it.
+- (a) initialize's instructions. Before, run continue-named-before: all three checks are false (no gm-continue route, no gm route, no Skill-tool sentence). After, run continue-named-after: all three are true. The reply is not logged; start is seq 1 and tools is seq 2 in both runs.
+- (b) resources/list gives skill://gm/SKILL.md and skill://gm-continue/SKILL.md, and prompts/list gives gm and gm-continue, before and after. After: prompts/get gm-continue logs skill-loaded seq 3 (via prompt), the gm-continue resource read is seq 4 (via resource), the gm resource read is seq 5 (via resource), and skills/list answers.
+- (c) the seven rules in skills/gm/SKILL.md equal MCP_RULES after the gate's rule that drops the gm. prefix: 7 of 7, before and after. Strict text equality holds for 6 of 7; rule 5 reads gm.query_log in the skill and query_log in MCP_RULES, as it did before this change.
+- (d) runGate on the copy with CONNECT_SHA 8705ba70148cb6bc: gate true, failed none, including connect and skills.
+- (e) default tools hash 692c1e7bc2dc7a3ac2302e44013e6e9cd7ba341ddfc91d0ba6b6b31643637aab at d168018 (tools seq 2, run continue-named-before) and after this change (tools seq 2, run continue-named-after): unchanged, because no tool description changed.
+
+Apply: the change is one step on the checkout. It restarts each live worker on it, because src/connect.mjs is in src/worker-modules.json and is not reloadable. At apply time four workers ran from the checkout: self (2026-11-03-06-52-45-4d3dfc), oscraft (197518-5696774), hy3d (197547-5697339) and research (207329-5859625). No background job ran in any of them. Each run resumes from its log.
+
+Limits: a host keeps the connect-time text it read until its owner runs /mcp, so a live host sees the new routes only after that reconnect. The stdio witness shows the server's text, not a host's. Not witnessed: whether a host's Skill tool lists MCP skills, and whether /mcp__gm__gm and /mcp__gm__gm-continue appear as commands. Those need a live /mcp reconnect.

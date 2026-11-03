@@ -94,7 +94,7 @@ This is what you build and codify. Single worker first: DESIGN.md direction 6 sa
 
 ## Continuation
 
-Every continuation starts with this, before new work. The gm-continue skill runs it at each finish. It is the MCP prompt `gm-continue`, invoked as mcp__gm__gm-continue (typed as /mcp__gm__gm-continue), and the resource skill://gm-continue/SKILL.md.
+Every continuation starts with this, before new work. The gm-continue skill runs it at each finish. It is the MCP prompt `gm-continue`, invoked as mcp__gm__gm-continue (typed as /mcp__gm__gm-continue; an expected name, not witnessed), and the resource skill://gm-continue/SKILL.md, read with ReadMcpResourceTool (server gm). Do not call gm-continue with the Skill tool; it is not listed there.
 
 - A project fact that troubleshooting found (how the code behaves, a limit, a surprise) gets one line under "Facts found by troubleshooting", with its DESIGN.md section.
 - A process lesson (how to witness, commit, recover a collision, use scratch space) goes to skills/dev/SKILL.md, in the section it belongs to.

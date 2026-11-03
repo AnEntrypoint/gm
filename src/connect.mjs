@@ -15,7 +15,7 @@ const CODE_INSTRUCTIONS = "One tool does the work: run_code. Its body is JavaScr
 const TOOLS_INSTRUCTIONS = "Each verb is a tool. Start each step with next_context, and end the run with finish and a witness.";
 // The rules of a run and the routes for pending events are in the gm skill, which next_context names each step. They are not repeated here,
 // so a change to the rules or the routes is a change to the skill and needs no reconnect.
-const SKILL_POINTER = 'The gm skill, resource skill://gm/SKILL.md or the gm prompt, holds the rules of a run, the routes for pending events, and the way to hand work to a child session. Read it when a run starts, and read it again after a compaction.';
+const SKILL_POINTER = 'The gm skill holds the rules of a run, the routes for pending events, and the way to hand work to a child session. Read it when a run starts, and read it again after a compaction. Read skill://gm/SKILL.md with ReadMcpResourceTool (server gm), or run the gm prompt (mcp__gm__gm). The host\'s Skill tool does not list it, so do not call it with the Skill tool. The gm-continue skill plans the open rows of gm-new and hands them to the gm skill. Read skill://gm-continue/SKILL.md with ReadMcpResourceTool (server gm), or run the gm-continue prompt (mcp__gm__gm-continue). The host\'s Skill tool does not list it, so do not call it with the Skill tool.';
 
 export function connectReply(surface) {
   return { capabilities: CAPABILITIES, instructions: `${surface === 'code' ? CODE_INSTRUCTIONS : TOOLS_INSTRUCTIONS}\n\n${SKILL_POINTER}` };
@@ -28,7 +28,7 @@ export function connectSha(root) {
 }
 
 // Recorded when the owner accepts the connect-time text as it is now. It is the value connectSha returns for this checkout.
-export const CONNECT_SHA = 'ec7180e23afa5292584a01688f0542c8bd78cf1e822a6f9f8b7336e17b11cd54';
+export const CONNECT_SHA = '8705ba70148cb6bc34ab31badcab9f5a06affc095e22e98a9271d356c939fefe';
 
 export function connectCheck(root) {
   const sha = connectSha(root);
