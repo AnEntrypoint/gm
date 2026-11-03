@@ -1921,3 +1921,11 @@ Witness: a stand-in `node` first on PATH (`/tmp/gm-scratch/node22/v21/bin/node`)
 
 Not witnessed: a live run on Node 22 or Node 26 (this machine has neither), macOS, Windows, arm64.
 
+gm MCP entry fixed in the user config (2026-11-03)
+
+Cause: the user-level `gm` entry in `~/.claude.json` (top-level `mcpServers`) still had the placeholder path `/abs/path/to/gm-new/tools/relay.mjs`. `node` exited at once and the host reported CONNECTION_CLOSED, on every reconnect. The relay was fine: a stdio probe answered `initialize` with the gm instructions and protocol 2025-11-25, with stdin held open for the core.
+
+Fix: the entry now runs `node /data/workspace/gm-new/tools/relay.mjs` with no arguments, as `setup.sh` prints it. The relay uses the session's directory as its workspace. Only that path changed; the other top-level keys were checked equal before and after.
+
+Gap: nothing checks that the path in the entry exists, so a placeholder fails silently until the host reconnects. Possible change: `setup.sh` reads the entry and reports a missing path. Not done here.
+
