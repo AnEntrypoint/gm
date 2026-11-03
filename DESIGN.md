@@ -1766,3 +1766,11 @@ Witness: stdio driver `/tmp/gm-scratch/query-limit/drive.mjs` against `src/mcp.m
 Limits, not closed here:
 - Only the seq form with no `kind`, `fromMono` or `toMono` is witnessed. Those filters pass through the same page, but no reply with one of them was run with `limit`.
 - The witness runs the worker directly over stdio. A live session serves the new description and schema after its worker reloads.
+
+## session.finished crash in mcp.mjs (2026-11-03)
+
+What broke: the gm MCP worker exited with code 1 before the handshake, `TypeError: session.finished is not a function` at `src/mcp.mjs:1058` (run2800-6805174 in /workspace/oscraft). The line listener called `session.finished()` on every line. No commit pairs that call site with a createSession that lacks `finished`, so the crashing copy was a mix. Only mcp.mjs ever held `.finished(` (commits 209d5e0 and 05c4791).
+
+What changed: origin main at 05c4791 calls `session.ended() !== null && isNextContextCall(line)`, which matches the `ended()` that createSession returns. This entry records that fix; no source changed in this commit.
+
+Witness at 05c4791, in temporary workspaces removed after the run: `initialize` (protocol 2025-11-25) and tools/list (next_context, finish, run_code) answered, exit 0 on stdin close. On one connection, next_context, finish, next_context ended run 2026-11-03-10-14-09-533fbb and opened run 2026-11-03-10-14-09-87d951, exit 0.
