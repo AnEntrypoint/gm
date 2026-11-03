@@ -1468,3 +1468,47 @@ Open, for the owner (not decided here):
 - Timeouts, listed above: the owner decides whether the 60 s fetch and gh bounds, and the 120 s git bound, stay.
 - The sources archive is whole now, so a large fetch adds its size to sources/ (up to six bytes per byte of non-ASCII text, as ASCII escapes), and the gate's sources check reads every archived file on every commit. Whether to keep an archive cap, or to store large bodies outside the tree, is open.
 - Binary bodies and run_shell's 200000-character output cap stay (above).
+## Events cleared once delivered (2026-11-03)
+
+Owner's direction, relayed by the coordinator: an event the agent sees, through next_context or through the output of any monitor (a watcher run as `events --wait`, a Monitor, a background command), is cleared, so it is never delivered to the agent again. The log is not changed: every event stays in `log.jsonl`, and query_log reaches it by seq.
+
+Found first, at 38bc532, on a tar of HEAD (the same witness driver as below):
+- next_context returned each queued event once and cleared it after its reply was written. Run `2026-11-03-07-01-44-68eeb4`: job events 6, 9, 12 (running) in the first step, none on a second call; exits 19, 22, 25 once; none after.
+- `events --wait` printed the queued event, then removed the queue copy. Same run: rules notice 33 printed once, exit 0 in 654 ms, pending.jsonl gone. A second wait with a 1500 ms timeout printed nothing.
+- `events --read-clear` printed what it cleared, then removed it. Run `2026-11-03-07-02-18-950dae`: printed 14, the file was gone, and the next next_context returned none.
+- The gap: a passive `tail -n +1 -F pending.jsonl` (what a Monitor on the file runs) printed event 7 and did not clear it, so the next next_context delivered 7 again. Same run.
+- The default tools hash at 38bc532 reproduces: 462f256b6ee7c52223971735badce28c7bcbec4255cf63ebfe8ebdc1c43e9722 (run `2026-11-03-07-01-44-5c77ef`, tools seq 2).
+
+Decided:
+- Delivery clears. A reader claims the queue by renaming pending.jsonl to a copy with its own name, and removes the copy after the records are written out. The rename is atomic: no reader sees a half-removed queue, and one reader gets a record.
+- A temporary file with a rename over pending.jsonl was not used. Two readers that both read the queue before either rewrites it would both deliver the same event (a watcher and a held next_context). The claim-by-rename prevents that; witness (g) shows it.
+- A crash between the write and the removal delivers the records once more; nothing is lost. A copy left by a crash is claimed first by the next reader.
+- The clear is registered under the request's id and runs after that reply is written (afterReply). A next_context step that fails after its claim keeps its copy, so the next reader delivers it.
+- pendingCommands.read is removed from the next_context reply and from the gm skill. Once delivery clears events, read-and-clear does what next_context already does, except that it delivers outside a step (no step is counted, and no rules are checked). No route needs that: a host with no background task holds the step with waitMs, and each step's next_context returns the queued events. The CLI flag `events --read-clear` stays for people and scripts, and still prints what it clears.
+- pendingFile is removed from the reply. Its only use was the tail, which cannot clear.
+- The skill says a Monitor runs the wait command and re-arms it after each event, and says not to tail the file. Open for the owner: a tail that a person or an agent runs by hand still shows events without clearing them (run `2026-11-03-07-05-44-22dfed`: the tail saw 7, and next_context delivered 7 again). A passive reader cannot be made to clear.
+- The next_context description says delivery clears events, and no longer names the file. The default tools hash moves from 462f256b6ee7c52223971735badce28c7bcbec4255cf63ebfe8ebdc1c43e9722 to 28b6551c9e4c93f427107bd62c9325b13d0924d74952061fe09b32f808a45c2d (run `2026-11-03-07-05-44-1f08e1`, tools seq 2). The tools surface hash moves from 7cd72c2361acc1065a07a9e72c12ad92a851a4ca4aa1df067fdeaea5a4926573 to 844b36649892a500de8fbcb0f66627d72913d9710c6f5ae39b7c412e842bd2c9 (run `2026-11-03-07-05-44-c21e45`, tools seq 2).
+- Rule 1 watchdog: the check and its label are removed, which closes the open item above. The check matched refused results whose text named the workspace, a link or "..". The rules now allow a path outside the workspace, so no such refusal is a breach. The file tools refuse only an empty path. A confined verb's refusal of a ".." path (git_add) returns ok:false without refused: true, so the check never saw it. The label is removed with the check, not kept as a dead entry.
+
+Changed: src/pending.mjs (claim by rename, the copies and the queue), src/cli.mjs (events: print, then clear after the write; --wait polls every 200 ms and claims), src/mcp.mjs (next_context claims and registers the clear per request id; reply has pendingCommands.wait only; the description; the rule 1 check), skills/gm/SKILL.md (Pending events), AGENTS.md (the wake line and one fact). MCP_RULES in src/prompt.mjs is unchanged.
+
+Witness, on a tar of HEAD with the change (`git archive`, node_modules linked), in a temporary workspace, the worker over stdio with `--surface tools`, driver `/tmp/gm-scratch/gm-new/clear-witness/drive.mjs`; the copy and the workspace were deleted afterwards. Run `2026-11-03-07-05-44-c21e45`:
+- (a) pass: three job_start calls; next_context returned job events 6, 9, 12 (running), each once.
+- (b) pass: a second next_context at once returned none. After the exits, next_context returned 19, 22, 25 (exited), each once, and the step after returned none.
+- (c) pass: a watcher (`events --wait`) was started in the background, then a finish with no witness was refused, which raised rules notice 33. The watcher printed 33 once and exited 0 in 655 ms, and pending.jsonl was gone. The next next_context returned none.
+- (d) pass: a second watcher with a 1500 ms timeout printed nothing and exited 0 at 1656 ms.
+- (g) pass, exactly once across readers: rules notice 42 went to a watcher while a next_context held with waitMs 15000 returned none.
+- (f) pass: read_file of a file outside the workspace returned ok; git_add of ../ returned an error (ok false, with no refused flag); no rule 1 notice was raised, and the pending list was empty.
+- (e) pass: query_log returned seqs 1 to 49 contiguous, with the jobs 6, 9, 12, 19, 22, 25 and the notices 33 and 42; the log on disk held 1 to 50 contiguous.
+- The gate on the copy: gate true, failed none.
+The same steps on HEAD (run `2026-11-03-07-01-44-68eeb4`) gave the same seqs for (a) to (e), so the change moves no delivery; it changes the reply fields and the rule 1 check.
+
+Known limits, not closed here:
+- An append that opened pending.jsonl before a claim and wrote after the claim's read is lost. The window is the gap between open and write in appendFileSync, a few microseconds. Closing it needs a lock shared by the worker and the CLI.
+- A JSON line cut in half (a read that caught a half-written append) throws in takePending, as before. The copy stays for the next reader, which throws the same way, so next_context fails until the copy is removed by hand.
+
+Rebased before the apply, onto a7afdd4 (the network-access commit). It changed runcode.mjs, so the default tools hash moved even without this change. The change was merged onto a7afdd4 (the four files it does not share with that commit are copied; AGENTS.md and DESIGN.md are merged, with no conflict), and the witness was run again on that tree:
+- The default tools hash at a7afdd4 without the change is 23b998913a0bd9fd3886cd8cfa86f2c0bf10a1ffb6569130e3a4659fd4efd4b4 (run `2026-11-03-07-08-37-6b8c44`). With the change it is 692c1e7bc2dc7a3ac2302e44013e6e9cd7ba341ddfc91d0ba6b6b31643637aab (run `2026-11-03-07-08-53-126ee5`, tools seq 2). The tools surface hash with the change is b6b1e8cc3ad1522fe55632244f454e67bf6eb1e9c656a3d063d0eee46a2a08c9 (run `2026-11-03-07-08-53-0650da`, 42 tools).
+- The steps of the witness on a7afdd4, with the change (run `2026-11-03-07-08-53-0650da`): (a) job events 6, 9, 12; (b) none; exits 19, 22, 25 once; (c) rules notice 33 printed once, exit 0 in 654 ms, queue gone, next_context none; (d) nothing, exit 0 at 1655 ms; (g) notice 42 to the watcher, none to next_context; (f) read of an outside file ok, git_add of ../ returned an error, no rule 1 notice; (e) query_log seqs 1 to 49 contiguous, the log on disk 1 to 50 contiguous.
+- The raw tail probe on a7afdd4 with the change (run `2026-11-03-07-08-53-fd0a09`): the tail saw 7 and next_context delivered 7 again, the open gap above; events --read-clear printed 14 and cleared it, and the next next_context returned none.
+- The gate on the a7afdd4 tree with the change: gate true, failed none.

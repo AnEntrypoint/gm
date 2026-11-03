@@ -76,9 +76,10 @@ This is what you build and codify. Single worker first: DESIGN.md direction 6 sa
 - A batch that changes `tools/core.mjs` or a singleton restarts each live worker on the checkout, and the two debounce windows can restart a worker twice. Background jobs are killed (DESIGN.md, Hot reload in place).
 - `src/worker-modules.json` is the worker's import graph, and the gate's `workers` check fails when it differs. The core reads it at each change, so a `src/` module outside it, such as cli.mjs, restarts nothing (DESIGN.md, HMR step 1).
 - A pull whose core and worker changed is not reset when the worker does not start: the update check starts the worker in a clone before the checkout moves, so only a failure after the pull reaches the checkout (DESIGN.md, HMR step 1).
-- The wake rules are in skills/gm/SKILL.md, Pending events, and in DESIGN.md, "Wake by a watcher".
+- The wake rules are in skills/gm/SKILL.md, Pending events, and in DESIGN.md, "Wake by a watcher" and "Events cleared once delivered".
 - A worker that exits 0 with the run open paused itself. The core restarts it at once, and a call in flight gets a repeat-the-call error. Any other exit fails calls until the retry (DESIGN.md, Self-pause keeps calls held).
 - `read_file`'s `offset` and `limit`, and `job_status`'s `offset`, count characters, not lines. `total` and `next` are characters too (src/tools.mjs).
+- A delivered pending event is cleared: next_context clears what it returns, and a wait clears what it prints. A tail of the queue file clears nothing, so the next step delivers the same event again (DESIGN.md, "Events cleared once delivered").
 - A top-level tools/call run_shell is always foreground: the session's handler drops `background`, so job_start is the only background shell path (DESIGN.md, Protocol conformance and cancellation, batch 1).
 - A cancel of a run_shell call kills its group, and the worker sends no answer for it. The core stops counting that request when the cancel passes, so a restart does not wait for it. Any other cancelled request counts until its answer (DESIGN.md, the same section).
 

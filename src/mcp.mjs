@@ -8,7 +8,7 @@ import { DEFAULT_WITNESS, MCP_RULES, prefixShaOf, renderTools } from './prompt.m
 import { connectReply, SERVER_NAME } from './connect.mjs';
 import { isDirectory, loadTask, newRunId, openRun, ROOT } from './run.mjs';
 import { flushAllLogs } from './log.mjs';
-import { clearPending, hasPending, offPendingAppended, onPendingAppended, PENDING_FILE, takePending } from './pending.mjs';
+import { clearPending, hasPending, offPendingAppended, onPendingAppended, takePending } from './pending.mjs';
 import { conflicts, createTools, loggedReply, OUTPUT_PAGE, DEFAULT_STUCK_MS, DEFAULT_MONITOR_MS, BODY_NOTICE_MS } from './tools.mjs';
 import { bumpGeneration } from './hot.mjs';
 import { RELOADABLE } from './hot-config.mjs';
@@ -126,7 +126,7 @@ const number = { type: 'number' };
 const objectSchema = (properties, required = []) => ({ type: 'object', properties, required });
 
 const BASE_TOOLS = [
-  { name: 'next_context', description: 'Begin a step. Returns rules, task, witness requirement, the events new since the last step in full, the older ones in compact form within two horizons, and prefixSha. pending lists the events that need you since your last step, each once, with an id, and pendingFile is the file that holds them for a live tail. Call it at the start of each step. query_log reaches every event. waitMs, when set, holds this call until an event is pending or that many milliseconds pass, at most 300000.', inputSchema: objectSchema({ waitMs: number }) },
+  { name: 'next_context', description: 'Begin a step. Returns rules, task, witness requirement, the events new since the last step in full, the older ones in compact form within two horizons, and prefixSha. pending lists the events that need you since your last step, each once, with an id. Delivery clears an event, so no later step or wait lists it again. Call it at the start of each step. query_log reaches every event. waitMs, when set, holds this call until an event is pending or that many milliseconds pass, at most 300000.', inputSchema: objectSchema({ waitMs: number }) },
   { name: 'read_file', description: 'Read a text file, inside or outside the workspace, one page of at most 20000 characters. offset, limit, total and next are counted in characters, not lines: limit is 1 to 20000, default 20000. Returns output, total (the file in characters), offset (of this page) and next (the offset of the next page, null at the end).', inputSchema: objectSchema({ path: text, offset: number, limit: number }, ['path']) },
   { name: 'write_file', description: 'Write a text file, inside or outside the workspace, creating parent directories.', inputSchema: objectSchema({ path: text, content: text }, ['path', 'content']) },
   { name: 'edit_file', description: 'Replace old with new in a text file, inside or outside the workspace. old must occur once, unless replaceAll is true.', inputSchema: objectSchema({ path: text, old: text, new: text, replaceAll: { type: 'boolean' } }, ['path', 'old', 'new']) },
@@ -251,14 +251,14 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     log.append('host-idle', { idleMs: Math.round(log.now() - quietSince) });
   }, Math.max(1000, Math.floor(hostIdleMs / 4)));
   idleTimer.unref();
-  // The rules watchdog. It notices the rule breaks it can see: a call before the run's first next_context (rule 2), a path or load that
-  // leaves the workspace (rule 1), a finish with no call in its step (rule 3), and a finish refused for its witness (rule 4). An open notice is
+  // The rules watchdog. It notices the rule breaks it can see: a call before the run's first next_context (rule 2), a finish with no call
+  // in its step (rule 3), and a finish refused for its witness (rule 4). An open notice is
   // carried in the reply of each call and in next_context until the agent loads the skill again, which clears them all.
   const rulesOpen = new Map();
   let runStarted = steps > 0;
   let stepCalls = 0;
-  const RULE_TEXT = { 1: 'work only inside the workspace', 2: 'call next_context at the start of every step', 3: 'verify before you finish', 4: 'finish needs a witness' };
-  const LEAVES_WORKSPACE = /workspace|\.\.|link|outside/;
+  // Rule 1 has no check: a path outside the workspace is allowed, so a refusal of one is not a breach of it.
+  const RULE_TEXT = { 2: 'call next_context at the start of every step', 3: 'verify before you finish', 4: 'finish needs a witness' };
   function noteRule(rule, evidence) {
     if (rulesOpen.has(rule)) return;
     const entry = log.append('rules-notice', { step: steps, rule, evidence });
@@ -305,7 +305,6 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     } finally {
       if (body !== undefined) tools.callEnded(body);
     }
-    if (result?.refused === true && LEAVES_WORKSPACE.test(String(result.error))) noteRule(1, `${name}: ${result.error}`);
     // The full result is logged, so query_log reaches the output and the exit code of a verb called inside a body.
     const shown = name === 'query_log' ? loggedReply(result) : result;
     const fields = { ok: shown?.ok === true, args, exitCode: shown?.exitCode, signal: shown?.signal, output: shown?.output, outputChars: shown?.outputChars, error: shown?.error };
@@ -433,7 +432,6 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
       return;
     }
     stepCalls += 1;
-    if (out.refused === true && LEAVES_WORKSPACE.test(String(out.error))) noteRule(1, `${name}: ${out.error}`);
   }
 
   async function callTool(params, rpcId) {
@@ -574,7 +572,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     const waitMs = waitOf(args.waitMs);
     return act('next_context', {}, access, async () => {
       await untilPending(runDir, waitMs);
-      return context(step);
+      return context(step, rpcId);
     }, ({ ok, error, prefixSha, total }) => ({ ok, error, prefixSha, total }), rpcId);
   }
 
@@ -586,13 +584,13 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     return prefixMemo.sha;
   }
 
-  async function context(step) {
+  async function context(step, rpcId) {
     const rules = await readFile(join(runDir, 'rules.md'), 'utf8');
     const recoveryNow = pendingRecovery === null ? undefined : recoveryNote(pendingRecovery);
     pendingRecovery = null;
-    // The pending events are delivered once. They are removed only after this reply is written, so a crash before that delivers them again.
+    // The pending events are claimed here, and cleared once the reply that carries them is written, so a crash before that write delivers
+    // them again. The clear is registered only when the reply is built, so a step that fails leaves its claim for the next reader.
     const taken = takePending(runDir);
-    if (taken.files.length > 0) afterReply.push(() => clearPending(taken.files));
     const since = log.eventsFrom(noticeSeq + 1);
     noticeSeq = log.count();
     const killed = since.filter((event) => event.kind === 'job-killed');
@@ -609,7 +607,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     const jobsEnded = await Promise.all(ended.map((event) => endedJob(runDir, event)));
     const shown = shownTotalOf(log);
     const feed = feedOf(log, current.REGISTRY, { shown });
-    return {
+    const reply = {
       ok: true,
       step,
       // The run's id, so a session that hands work to a child session can name the child's log (see query in src/cli.mjs).
@@ -623,12 +621,10 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
       prefixSha: prefixShaFor(rules),
       total: log.count(),
       ...(taken.records.length > 0 ? { pending: taken.records } : {}),
-      pendingFile: join(runDir, PENDING_FILE),
-      // The shell commands the agent runs. wait runs as a background task and ends at the next event, so the host reports the event as the
-      // end of that task; read clears the queue once. Both name the run directory, so they work from any directory.
+      // The shell command that waits for the next event. It ends when it prints the queued events, and what it prints is cleared, so a host
+      // that runs it as a background task or a Monitor is told each event once. It names the run directory, so it works from any directory.
       pendingCommands: {
         wait: `node "${join(ROOT, 'src', 'cli.mjs')}" events --dir "${runDir}" --wait`,
-        read: `node "${join(ROOT, 'src', 'cli.mjs')}" events --dir "${runDir}" --read-clear`,
       },
       ...feed,
       query: queryHintOf(shown, log.count()),
@@ -642,6 +638,8 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
       ...(progressedAgain.length ? { jobsUnstuck: progressedAgain.map(({ seq, job }) => ({ seq, job })) } : {}),
       ...(open.length ? { jobsOpen: open.slice(0, OPEN_LIST), ...(open.length > OPEN_LIST ? { jobsOpenMore: open.length - OPEN_LIST } : {}) } : {}),
     };
+    if (taken.files.length > 0) afterReply.set(JSON.stringify(rpcId), () => clearPending(taken.files));
+    return reply;
   }
 
   async function finish(args, access, rpcId) {
@@ -852,13 +850,19 @@ function titleOf(name) {
   return words[0].toUpperCase() + words.slice(1);
 }
 
-// Actions that run once the reply they belong to is written, such as the removal of pending events the reply delivered.
-const afterReply = [];
+// The actions that run once the reply to a request is written, keyed by the request's id. A next_context reply clears the pending events it
+// delivered, and only after its own write, so a crash before the write delivers them again.
+const afterReply = new Map();
 // A reply is written only after the events so far are in the log, so the log holds every event a reply reports.
 function write(message) {
   flushAllLogs();
   process.stdout.write(`${JSON.stringify(message)}\n`);
-  for (const done of afterReply.splice(0)) done();
+  const key = JSON.stringify(message.id);
+  const done = afterReply.get(key);
+  if (done !== undefined) {
+    afterReply.delete(key);
+    done();
+  }
 }
 
 function errorReply(id, code, message, data = undefined) {

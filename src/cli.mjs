@@ -5,7 +5,7 @@ import { join, resolve } from 'node:path';
 import { runLoop } from './loop.mjs';
 import { createModel } from './models.mjs';
 import { readEvents, runQuery } from './log.mjs';
-import { clearPending, hasPending, takePending } from './pending.mjs';
+import { clearPending, takePending } from './pending.mjs';
 import { buildPrompt, DEFAULT_RULES, DEFAULT_WITNESS } from './prompt.mjs';
 import { createTools } from './tools.mjs';
 import { createRun, isDirectory, loadTask, newRunId, RUNS } from './run.mjs';
@@ -108,16 +108,21 @@ async function replay(flags) {
   return result.status === 'finished' ? 0 : 1;
 }
 
-// Prints the pending events of a run once, and clears them: the queue is renamed, read, and its copy removed after printing. A crash between
-// the print and the removal prints them again, and never fewer. With --wait, it first waits until the queue has an event, or until
-// --timeout-ms passes (default 1800000), and then does the same. A host that runs it as a background task reports when it ends, so the
-// events reach the agent as they land.
+// Prints the pending events of a run once, and clears them. A record is cleared only after its lines are written out, so a write that fails
+// (the reader has gone) leaves them queued for the next reader. With --wait, it polls every 200 ms until an event is queued or --timeout-ms
+// passes (default 1800000), and then does the same. The reader that claims an event prints it, so a watcher and a step's next_context never
+// both deliver it. A host that runs it as a background task reports when it ends, so the events reach the agent as they land.
 async function events(flags) {
   if (flags['read-clear'] !== true && flags.wait !== true) throw new Error('events takes --read-clear, which prints the pending events once and clears them, or --wait');
   const dir = eventsDir(flags);
-  if (flags.wait === true) await waitForPending(dir, timeoutMs(flags));
-  const taken = takePending(dir);
-  for (const record of taken.records) console.log(JSON.stringify(record));
+  const until = flags.wait === true ? Date.now() + timeoutMs(flags) : 0;
+  let taken = takePending(dir);
+  while (taken.records.length === 0 && flags.wait === true && Date.now() < until) {
+    clearPending(taken.files);
+    await sleep(POLL_MS);
+    taken = takePending(dir);
+  }
+  if (taken.records.length > 0) await writeOut(taken.records.map((record) => `${JSON.stringify(record)}\n`).join(''));
   clearPending(taken.files);
   return 0;
 }
@@ -141,16 +146,13 @@ function timeoutMs(flags) {
   return ms;
 }
 
-// Resolves when the run's queue has an event, or when the timeout passes. The queue is checked every 200 ms, so an event is seen within that.
-function waitForPending(dir, ms) {
-  const until = Date.now() + ms;
-  return new Promise((done) => {
-    const timer = setInterval(() => {
-      if (hasPending(dir) || Date.now() >= until) {
-        clearInterval(timer);
-        done();
-      }
-    }, 200);
+const POLL_MS = 200;
+const sleep = (ms) => new Promise((done) => setTimeout(done, ms));
+
+// Resolves once the text is written out to stdout. A write that fails rejects, so the caller keeps its records queued.
+function writeOut(text) {
+  return new Promise((done, fail) => {
+    process.stdout.write(text, (err) => (err ? fail(err) : done()));
   });
 }
 
