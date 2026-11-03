@@ -1,7 +1,9 @@
 #!/bin/sh
 # gm setup. Run it once after a clone, and again whenever you like: it is safe to repeat. It checks the tools gm needs, installs
 # the one dependency when it is missing, pulls origin main when the checkout has no changes to tracked files (and runs the gate on the
-# result), runs the gate, and prints the two add-mcp commands that install gm. It runs neither command and writes nothing.
+# result), runs the gate, fetches the playwriter tools, and prints the three add-mcp commands that install gm. It runs none of them.
+# Outside the checkout it writes only the playwriter fetch, into the npm cache (`npm config get cache`). The gate's runs use the OS
+# temporary directory and are removed after each check.
 #
 #   ./setup.sh
 set -eu
@@ -46,7 +48,13 @@ else
   die "the gate failed. Read the message above, fix it, then run this again."
 fi
 
-# 4. The install. gm is installed with add-mcp, run through npx. The first command only lists the gm entries. The second removes every gm
+if node -e 'process.exit(Number(process.versions.node.split(".")[0]) >= 22 ? 0 : 1)'; then
+  node --input-type=module -e "import('./tools/prefetch.mjs').then((m) => m.prefetch())"
+else
+  echo "setup: the playwriter tools need Node 22 or later, and will not start on $(node -v). The fetch is skipped; gm still installs and runs."
+fi
+
+# 5. The install. gm is installed with add-mcp, run through npx. The first command only lists the gm entries. The second removes every gm
 # entry, old or new. The third installs gm for Claude Code at user level, where the relay starts in the directory each session opens, so one
 # entry serves every project. setup prints the commands and runs none of them.
 case "$here" in

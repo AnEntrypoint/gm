@@ -3,7 +3,8 @@
     "playwriter": {
       "command": "npx",
       "args": ["-y", "-p", "github:AnEntrypoint/pw#v0.1.0", "playwriter-project"],
-      "env": {},
+      "env": {"PLAYWRITER_TELEMETRY": "0"},
+      "ignore": [".playwriter/"],
       "startupTimeoutMs": 600000
     }
   }

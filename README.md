@@ -8,7 +8,7 @@ Install, once per clone, from the checkout:
 
     ./setup.sh
 
-The setup installs the one pinned runtime dependency, acorn, runs the gate, and prints three add-mcp commands. add-mcp runs through npx, pinned to version 2.6.1. Run them in this order:
+The setup installs the one pinned runtime dependency, acorn, runs the gate, fetches the playwriter tools, and prints three add-mcp commands. add-mcp runs through npx, pinned to version 2.6.1. Run them in this order:
 
     npx -y add-mcp@2.6.1 list -g
     npx -y add-mcp@2.6.1 remove gm -g -y
@@ -17,6 +17,8 @@ The setup installs the one pinned runtime dependency, acorn, runs the gate, and 
 Use the three commands setup prints: they carry this checkout's real absolute path. The `/abs/path/to/gm-new` in the third line below is a placeholder; copying it unchanged registers a relay that does not exist, and gm fails to start with CONNECTION_CLOSED.
 
 The first only lists. The second removes every gm entry, old or new, from the global configs. It matches any server whose name contains gm, so read the list first. The third installs gm for Claude Code at user level, where the relay starts in each session's folder. setup runs none of them. The manual is `docs/index.html`, chapter 2.
+
+The playwriter fetch is the setup step after the gate. Before it runs, setup prints what it does: it runs `npx -y -p github:AnEntrypoint/pw#v0.1.0 playwriter-project help`, which downloads the browser tool gm uses (pw v0.1.0, which installs playwriter 0.9.0) once into the npm cache, at the path `npm config get cache` prints. The download can take a few minutes on a slow network. The help command starts no gate, browser or server, and the browser starts only on first use. After it, setup prints the result. The pw package declares Node 22, so on Node 20 or 21 setup prints that the playwriter tools need Node 22 or later and skips the fetch. A failed fetch prints its reason and does not stop setup: gm still installs and runs, the playwriter tools are fetched on the first gm start, and `./setup.sh` retries the fetch.
 
 The served tools are listed in `DESIGN.md`, Decisions. `search` and `wiki_search` rank by BM25 in process, over the tracked files and the wiki pages. `callers` and `impact` parse the JavaScript with acorn. `wiki_write` and the three `review_*` tools write to the run log and the wiki.
 
@@ -38,7 +40,7 @@ Both skills are served as MCP skills under SEP-2640 (the `io.modelcontextprotoco
 
 The worker is also an MCP client. It starts the MCP servers that its config names, and adds each of their tools to `gm` inside `run_code` as `gm.<server>_<tool>(args)`, beside the native verbs. `gm.verbs()` and run_code's description list them. The config is three files in the `mcpServers` shape of `.mcp.json`, read in this order. A later entry with the same name replaces the earlier one whole:
 
-1. `defaults/mcp.json` in the checkout. It is required, and a missing file is logged as an `mcp-config` problem. It starts playwriter, as `npx -y -p github:AnEntrypoint/pw#v0.1.0 playwriter-project`, with no environment. The `pw` package declares `engines` `node >=22`, and gm-new runs on Node 20 and later, so on Node 20 or 21 playwriter may fail to start. The reason is in the stderr of its `mcp-server` failed event.
+1. `defaults/mcp.json` in the checkout. It is required, and a missing file is logged as an `mcp-config` problem. It starts playwriter, as `npx -y -p github:AnEntrypoint/pw#v0.1.0 playwriter-project`, with `PLAYWRITER_TELEMETRY=0` in its environment, which turns off playwriter's anonymous usage stats, and with `"ignore": [".playwriter/"]`. The `pw` package declares `engines` `node >=22`, and gm-new runs on Node 20 and later, so on Node 20 or 21 playwriter may fail to start. The reason is in the stderr of its `mcp-server` failed event.
 2. `.gm-new/mcp.json` in the workspace, if it exists.
 3. The file that `--mcp-config <file>` names, if given. It is required.
 
@@ -46,6 +48,7 @@ A layer that sets `"disabled": true` for a name removes that server, so `{"mcpSe
 
     {"mcpServers":{"files":{"command":"npx","args":["-y","<an MCP server package>","/abs/dir"],"env":{"TOKEN":"${MY_TOKEN}"},"timeoutMs":60000}}}
 
+- `ignore` lists gitignore lines for the workspace's `.gitignore`. When the server connects in a git repository (a `.git` file or directory exists in the workspace), each line the file does not already hold is appended, and the file is created when it is missing. Existing lines and their line endings are kept, and no line is removed. Each change is logged as a `gitignore` event with the lines added, and a connect with nothing to add logs nothing. A workspace that is not a git repository gets one `gitignore` event with state `skipped`, and no file is written. Each line must be relative, with no `..` segment, and a leading slash makes a line absolute, so an anchored pattern is written without it. A bad `ignore` fails that server only, with its problem in the log.
 - Only stdio servers run, from `command`, `args`, `env` and `cwd`; a relative `cwd` is taken from the workspace. A server with a `url` is not supported yet. A `${NAME}` in a value takes the environment variable NAME, and a missing variable stops that server from starting, with the reason in the log. On Windows, a command of `npx` or `npm` starts through `cmd.exe`. `disabled: true` keeps an entry without starting it, and in a later layer it removes the server.
 - The servers start with the worker, in parallel, and tools/list and run_code wait for them, each for at most `startupTimeoutMs` (default 30000; the default playwriter entry sets 600000, because a first npx install of it took 174 s and 458 s on the measured host). A server that fails is logged as `mcp-server` with its error and the tail of its stderr, and the others still run. A server that exits is started again by its next call.
 - A call is an `action` and a `code-call` in the log, with its arguments and output. A call that runs past `timeoutMs` (default 60000) fails with that message, and the server is sent `notifications/cancelled`.

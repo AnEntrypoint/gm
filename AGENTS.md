@@ -97,6 +97,10 @@ This is what you build and codify. Single worker first: DESIGN.md direction 6 sa
 - A top-level tools/call run_shell is always foreground: the session's handler drops `background`, so job_start is the only background shell path (DESIGN.md, Protocol conformance and cancellation, batch 1).
 - A cancel of a run_shell call kills its group, and the worker sends no answer for it. The core stops counting that request when the cancel passes, so a restart does not wait for it. Any other cancelled request counts until its answer (DESIGN.md, the same section).
 - `tools/gm-continue-setup.mjs` and the row verbs read the session's workspace, not gm-new: from a freddie session the setup reports freddie's HEAD and no defect, and `gm.prd_list` returns (none) for every status (DESIGN.md, "gm-continue from a freddie-attached session (2026-11-03)").
+- The pw launcher's `help` argument prints its usage and returns before it reads a port or starts a gate, so the setup fetch leaves no process and no `.playwriter/` (`bin/playwriter-project` at tag v0.1.0; DESIGN.md, "Pre-fetch, telemetry off, and gitignore on use (2026-11-03)").
+- `PLAYWRITER_TELEMETRY=0` is read when the playwriter module loads: `TELEMETRY_ENABLED` in its `dist/telemetry.js` returns false, and `startRelayTelemetry` returns before it starts Strada (playwriter 0.9.0; the same DESIGN.md section).
+- The `ignore` append runs on each successful connect, not once, so a line removed by hand is appended again at the next connect of that server (DESIGN.md, the same section).
+- In this shell `NPM_CONFIG_CACHE` (upper case) overrides `npm_config_cache`, so a witness that sets only the lower-case name still reads the real cache. Unset the upper-case name too (DESIGN.md, the same section).
 
 ## Rationale not expressible in code
 

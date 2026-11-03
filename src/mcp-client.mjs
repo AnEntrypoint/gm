@@ -1,6 +1,6 @@
 import { spawn } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { appendFileSync, existsSync, readFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 import { killGroupNow } from './exec.mjs';
 
 const PROTOCOL_VERSIONS = ['2025-11-25', '2025-06-18'];
@@ -13,6 +13,7 @@ const VARIABLE = /\$\{([A-Za-z_][A-Za-z0-9_]*)\}/g;
 const DEPTH_VARIABLE = 'GMNEW_MCP_DEPTH';
 const MAX_DEPTH = 2;
 const BATCH_LAUNCHERS = new Set(['npx', 'npm']);
+const IGNORE_ABSOLUTE = /^(?:[\\/]|[A-Za-z]:)/;
 
 const identOf = (text) => text.replace(/[^A-Za-z0-9_]/g, '_');
 
@@ -71,6 +72,8 @@ function serverOf(name, spec, workspace, problems) {
   if (!Array.isArray(args) || args.some((arg) => typeof arg !== 'string')) return fail('args must be an array of strings');
   const env = spec.env ?? {};
   if (typeof env !== 'object' || Array.isArray(env) || Object.values(env).some((value) => typeof value !== 'string')) return fail('env must be an object of strings');
+  const ignoreFault = ignoreProblem(spec.ignore ?? []);
+  if (ignoreFault !== null) return fail(ignoreFault);
   const timeoutMs = spec.timeoutMs ?? CALL_MS;
   const startupMs = spec.startupTimeoutMs ?? STARTUP_MS;
   if (!Number.isInteger(timeoutMs) || timeoutMs < 1 || !Number.isInteger(startupMs) || startupMs < 1) return fail('timeoutMs and startupTimeoutMs must be positive integers');
@@ -90,9 +93,29 @@ function serverOf(name, spec, workspace, problems) {
     cwd: spec.cwd === undefined ? workspace : resolve(workspace, expand(spec.cwd)),
     timeoutMs,
     startupMs,
+    ignore: (spec.ignore ?? []).map((line) => line.trim()),
+    workspace,
   };
   if (missing.length > 0) return fail(`environment variable ${[...new Set(missing)].join(', ')} is not set`);
   return server;
+}
+
+function ignoreProblem(ignore) {
+  if (!Array.isArray(ignore) || ignore.some((line) => typeof line !== 'string' || line.trim() === '')) return 'ignore must be an array of non-empty strings';
+  if (ignore.some((line) => IGNORE_ABSOLUTE.test(line.trim()))) return 'ignore lines must be relative paths, not absolute';
+  if (ignore.some((line) => line.trim().split(/[\\/]/).includes('..'))) return 'ignore lines must not contain a .. segment';
+  return null;
+}
+
+function addIgnoreLines(file, wanted) {
+  const text = existsSync(file) ? readFileSync(file, 'utf8') : '';
+  const present = new Set(text.split(/\r?\n/).map((line) => line.trim()));
+  const added = [...new Set(wanted)].filter((line) => !present.has(line));
+  if (added.length === 0) return added;
+  const eol = text.includes('\r\n') ? '\r\n' : '\n';
+  const lead = text === '' || text.endsWith('\n') ? '' : eol;
+  appendFileSync(file, `${lead}${added.map((line) => `${line}${eol}`).join('')}`);
+  return added;
 }
 
 function describe(server, tool) {
@@ -149,11 +172,28 @@ class ServerProcess {
       this.notify('notifications/initialized');
       this.tools = await this.listTools();
       this.log.append('mcp-server', { server: this.spec.name, state: again ? 'restarted' : 'connected', tools: this.tools.length, protocolVersion: init.protocolVersion });
+      this.ignoreWorkspace();
       return null;
     } catch (err) {
       this.stop();
       this.log.append('mcp-server', { server: this.spec.name, state: 'failed', error: err.message, stderr: this.stderr });
       return err.message;
+    }
+  }
+
+  ignoreWorkspace() {
+    const { name, workspace, ignore } = this.spec;
+    if (ignore.length === 0) return;
+    if (!existsSync(join(workspace, '.git'))) {
+      this.log.append('gitignore', { server: name, state: 'skipped', reason: 'the workspace is not a git repository', ignore });
+      return;
+    }
+    const file = join(workspace, '.gitignore');
+    try {
+      const added = addIgnoreLines(file, ignore);
+      if (added.length > 0) this.log.append('gitignore', { server: name, state: 'added', file, added });
+    } catch (err) {
+      this.log.append('gitignore', { server: name, state: 'failed', file, error: err.message });
     }
   }
 
