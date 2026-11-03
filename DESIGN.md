@@ -1636,3 +1636,9 @@ Decision, the owner's. No session is named gm in ListAgents (peers: gm-4b, oscra
 The nine blocked rows are unchanged; see "Rows without a hold". Commit 671cbb0 removed the blocked state and migrated none of their files: `git show --stat 671cbb0` lists seven files, and among them only the deleted prd-adaptive-codemode.yml is a row under the rows directory.
 
 Witness: run 11347-6820153, its setup, list and list_dir calls in this session, and `git show --stat 671cbb0` in /workspace/gm-new.
+
+## Two gm friction fixes (2026-11-03)
+
+Session prompt (defect 1). A `/mcp__gm__gm` command with several words recorded its task as its first word, "we". gm-new keeps every word it is sent: `prompts/get` reads `arguments.task` whole (src/mcp.mjs). The host drops the rest. Claude Code 2.1.301 splits the command on whitespace and binds the words by position to the declared arguments (its code: `j.split(/\s+/)`), and the gm prompt declares one. A fix needs a host change or a new surface verb, which is the owner's decision and was not made here. The commit gate has a `prompt` check (src/gate.mjs) that sends a 15-word task through the real server and requires the task event to hold all of it. Negative control: with the task cut to its first word in a copy, the check failed with task ["we"]. Commit 37208d7.
+
+read_file (defect 2). offset and limit counted characters, so a caller that assumed lines got a silently wrong slice. Lines are now the default (the handler in src/tools.mjs, commit f6cc36a), and `unit: "chars"` keeps character paging for callers that need it. The served description and schema (src/mcp.mjs) now say so, in commit 03b6ffa. Lines match the host Read tool. No caller in gm-new or the skill files passes offset or limit. job_status's offset still counts characters, as its description says. Witness: offset 401 and limit 72 returned lines 402 to 473, with next 473 and total 500. unit "chars" returned 72 characters from character 401 (total 4392).
