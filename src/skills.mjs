@@ -44,7 +44,7 @@ function plainProblem(value) {
 // The default surface serves next_context, run_code and finish, and every other verb is a function on gm inside run_code. A skill
 // that names a verb or a tool without the gm. prefix names a tool the default does not serve, so the gate refuses it. The names are
 // read when the check runs, because git.mjs imports the gate.
-const FILE_TOOLS = ['read_file', 'write_file', 'edit_file', 'stat_file', 'list_dir', 'run_shell', 'job_start', 'job_status', 'query_log'];
+const FILE_TOOLS = ['read_file', 'write_file', 'edit_file', 'stat_file', 'list_dir', 'run_shell', 'job_start', 'job_status', 'job_stop', 'query_log'];
 
 export function unservedNames() {
   return [...FILE_TOOLS, ...SEARCH_TOOLS, ...WIKI_TOOLS, ...REVIEW_TOOLS,...FETCH_TOOLS, ...CODE_TOOLS, ...GIT_TOOLS, ...ROW_TOOLS].map((tool) => (typeof tool === 'string' ? tool : tool.name));

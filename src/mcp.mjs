@@ -22,7 +22,15 @@ import { feedOf, registryOf, resultZone1, resultZone2, shownTotalOf } from './co
 import { writeSummary } from './summary.mjs';
 import { parseSkill, SERVED_SKILLS } from './skills.mjs';
 
-const PROTOCOL_VERSION = '2025-06-18';
+// The protocol versions this server negotiates, newest first. An initialize that asks for another version is answered with the newest.
+const SUPPORTED_VERSIONS = ['2025-11-25', '2025-06-18'];
+const PROTOCOL_VERSION = SUPPORTED_VERSIONS[0];
+// The key of a tools/call result's run id: a vendor key in reverse-DNS form, owner decision O3. Results carry it; errors do not.
+const RUN_META = 'com.anentrypoint.gmnew/run';
+// Trace context a tools/call request may carry in _meta (W3C Trace Context and Baggage). It is copied into that call's action event.
+const TRACE_KEYS = ['traceparent', 'tracestate', 'baggage'];
+// A foreground shell whose request names a progress token reports its elapsed seconds this often.
+const PROGRESS_MS = 5000;
 const SERVER_INFO = { name: SERVER_NAME, version: JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')).version };
 // The served skills (SEP-2640) are read on each request, so an edit under skills/ is served without a restart. Each skill's files are listed
 // and read from its directory: every file is a resource with a sha256 digest and a size, and SKILL.md is the skill's uri. A file caught
@@ -91,7 +99,7 @@ function skillGet(params) {
 }
 function skillPrompt() {
   const SKILL = skillOf('gm');
-  return { name: SKILL.frontmatter.name, description: SKILL.frontmatter.description, arguments: [{ name: 'task', description: 'The task to run', required: false }] };
+  return { name: SKILL.frontmatter.name, title: 'gm run', description: SKILL.frontmatter.description, arguments: [{ name: 'task', description: 'The task to run', required: false }] };
 }
 const DEFAULT_MAX_STEPS = 50;
 const REPLY_MEMORY = 256;
@@ -118,6 +126,7 @@ const BASE_TOOLS = [
   { name: 'run_shell', description: 'Run a shell command in the workspace and wait for it. Default timeout 60000 ms. Its process group is killed when it returns, so background work must go through job_start.', inputSchema: objectSchema({ command: text, timeoutMs: number }, ['command']) },
   { name: 'job_start', description: 'Start a shell command as a named background job and return at once. Poll it with job_status.', inputSchema: objectSchema({ job: text, command: text, timeoutMs: number }, ['job', 'command']) },
   { name: 'job_status', description: 'State (running, exited or killed), exit code and output tail of a job. waitMs polls until the job leaves running, at most 30000 ms. offset returns a page of 20000 characters of the output from that offset, with total and next. offset, total and next count characters, not lines.', inputSchema: objectSchema({ job: text, waitMs: number, offset: number }, ['job']) },
+  { name: 'job_stop', description: 'Stop a background shell job: its process group is killed, and the job ends killed with reason cancelled. The job event is logged before the answer. A job that already ended is an error result. stopBackground stops run_code bodies only.', inputSchema: objectSchema({ job: text }, ['job']) },
   { name: 'query_log', description: 'Read the run events, as JSON. after is a seq: only the events after it are read (since), so after the last seq you saw reads on from there. kind keeps events of one kind, and fromMono and toMono keep events in a time window (monotonic milliseconds). last N returns the newest N matching events instead, oldest first, at most 50, and has no next. js is a JavaScript expression over the matching events, and defaults to returning them: js sees one window of at most 1000 events or 4 MB of log. Without js, a reply holds at most 50 events and about 20 KB. When events remain, next is the seq to pass back as after; with js, next is set when the window ends before the end of the log. An unknown argument is refused, and the reply names the arguments query_log takes.', inputSchema: objectSchema({ js: text, kind: text, fromMono: number, toMono: number, after: number, last: number }, []) },
   { name: 'finish', description: 'End the run. witness is one string that quotes the evidence you observed. gaps optionally lists, one string each, what the run did not check; the end event logs them. finish is refused while a background run is running, and stopBackground true kills it first. finish is refused while a PRD or question row is open, and names the rows; stopRows true ends the run anyway, with each open row listed as a gap in the end event.', inputSchema: objectSchema({ witness: text, gaps: { type: 'array', items: text }, stopBackground: { type: 'boolean' }, stopRows: { type: 'boolean' } }, ['witness']) },
   ...SEARCH_TOOLS,
@@ -138,9 +147,9 @@ function surfaceOf(leaves) {
     ...leaves['code-ast.mjs'].CODE_TOOLS,
     ...leaves['git.mjs'].GIT_TOOLS,
     ...leaves['rows.mjs'].ROW_TOOLS,
-  ];
+  ].map(annotated);
   const VERBS = TOOLS.filter((tool) => !CODE_SURFACE.has(tool.name));
-  const CODE_LIST = [...TOOLS.filter((tool) => tool.name === 'next_context' || tool.name === 'finish'), runCodeTool(VERBS.map((tool) => tool.name))];
+  const CODE_LIST = [...TOOLS.filter((tool) => tool.name === 'next_context' || tool.name === 'finish'), annotated(runCodeTool(VERBS.map((tool) => tool.name)))];
   const REGISTRY = registryOf(TOOLS_COMPACT, SEARCH_COMPACT, leaves['fetch.mjs'].COMPACT, leaves['git.mjs'].COMPACT, leaves['code-ast.mjs'].COMPACT, leaves['rows.mjs'].COMPACT, leaves['wiki-tools.mjs'].COMPACT, leaves['review-tools.mjs'].COMPACT, RUNCODE_COMPACT, SELF_COMPACT);
   return { TOOLS, VERBS, CODE_LIST, REGISTRY, leaves };
 }
@@ -155,10 +164,12 @@ function servedTools(surface) {
 }
 const NO_PATHS = { items: [], free: true };
 
+// A protocol error. data, when given, is the error's data member (resources/read names the uri it did not find).
 class RpcError extends Error {
-  constructor(code, message) {
+  constructor(code, message, data = undefined) {
     super(message);
     this.code = code;
+    this.data = data;
   }
 }
 
@@ -198,7 +209,13 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     replies.set(key, pending);
     if (replies.size > REPLY_MEMORY) replies.delete(replies.keys().next().value);
   };
-  for (const [key, reply] of answersFrom(history)) remember(key, Promise.resolve(reply));
+  // The tools/call requests in flight, by id: the call's name, its trace context, and the controller that a cancel aborts. A cancelled request
+  // is listed in cancelled, so handleLine drops its reply.
+  const inFlightCalls = new Map();
+  const cancelled = new Set();
+  const callOf = (rpcId) => inFlightCalls.get(JSON.stringify(rpcId));
+  const signalOf = (rpcId) => callOf(rpcId)?.controller.signal;
+  for (const [key, reply] of answersFrom(history, runId)) remember(key, Promise.resolve(reply));
   let steps = resume?.steps ?? 0;
   let ended = resume?.ended ?? null;
   let endLogged = ended !== null;
@@ -249,7 +266,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     read_file: (args) => tools.run('read_file', args),
     write_file: (args) => tools.run('write_file', args),
     list_dir: (args) => tools.run('list_dir', args),
-    run_shell: ({ command, timeoutMs }) => tools.run('run_shell', { command, timeoutMs }),
+    run_shell: ({ command, timeoutMs }, signal) => tools.run('run_shell', { command, timeoutMs }, { signal }),
     job_start: ({ job, command, timeoutMs }) => tools.run('run_shell', { job, command, timeoutMs, background: true }),
     job_status: ({ job, waitMs, offset }) => tools.run('job_status', { job, waitMs, offset }),
     query_log: (args) => tools.run('query_log', args),
@@ -315,18 +332,21 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
       const pending = route(message.method, message.params, message.id);
       if (key !== null) remember(key, pending);
       const result = await pending;
+      // A cancelled foreground shell gets no answer. Its call ended with its kill, and cancelRequest listed its id.
+      if (key !== null && cancelled.delete(key)) return null;
       return request ? { jsonrpc: '2.0', id: message.id, result: result ?? {} } : null;
     } catch (err) {
       if (!request) return null;
       const code = err instanceof RpcError ? err.code : -32603;
       log.append('error', { method: message.method, code, message: err.message });
-      return errorReply(message.id, code, err.message);
+      return errorReply(message.id, code, err.message, err.data);
     }
   }
 
   async function route(method, params, rpcId) {
     if (method === 'initialize') return initialize(params);
-    if (method === 'ping' || method === 'server/discover') return {};
+    // server/discover is not served (owner decision: -32601 until a modern path exists), so it falls through to method not found.
+    if (method === 'ping') return {};
     if (method === 'tools/list') return { tools: servedTools(surface) };
     if (method === 'tools/call') {
       touch();
@@ -340,12 +360,18 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     if (method === 'skills/get') return skillGet(params);
     if (method === 'resources/templates/list') return { resourceTemplates: [] };
     if (method === 'core/reload') return reloadLeaves();
+    if (method === 'notifications/cancelled') {
+      cancelRequest(params?.requestId);
+      return null;
+    }
     if (method.startsWith('notifications/')) return null;
     throw new RpcError(-32601, `method not found: ${method}`);
   }
 
+  // The version the host asked for, when this server negotiates it; otherwise the newest version this server speaks (lifecycle page).
   function initialize(params) {
-    const version = typeof params?.protocolVersion === 'string' ? params.protocolVersion : PROTOCOL_VERSION;
+    const asked = params?.protocolVersion;
+    const version = SUPPORTED_VERSIONS.includes(asked) ? asked : PROTOCOL_VERSION;
     return { protocolVersion: version, ...connectReply(surface), serverInfo: SERVER_INFO };
   }
 
@@ -367,7 +393,8 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
 
   function readResource(params) {
     const found = skillFileOf(params?.uri);
-    if (found === null) throw new RpcError(-32602, `unknown resource: ${params?.uri}`);
+    // A missing resource is -32002 with its uri, as the 2025-11-25 page says. A uri with a .. segment is not served, so it is not found either.
+    if (found === null) throw new RpcError(-32002, `resource not found: ${params?.uri}`, { uri: params?.uri });
     // Only the gm skill's SKILL.md clears the rules notice, since the notice asks for that read. Each read is logged, so a live run can count them.
     const isGm = found.file.uri === GM_SKILL_URI;
     log.append('skill-loaded', { via: 'resource', skill: found.skill.name, uri: found.file.uri, cleared: isGm ? [...rulesOpen.keys()] : [] });
@@ -395,12 +422,61 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     if (typeof args !== 'object' || args === null || Array.isArray(args)) {
       throw new RpcError(-32602, 'tools/call arguments must be an object');
     }
+    // A name the surface does not serve is a protocol error, not a tool result. A tool that fails keeps isError true (below).
+    if (!servedTools(surface).some((tool) => tool.name === name)) throw new RpcError(-32602, unknownToolText(name));
     if (!runStarted && name !== 'next_context' && name !== 'finish') noteRule(2, `${name} was called before the first next_context of the run`);
-    const out = await startCall(name, args, rpcId);
+    const meta = params?._meta ?? {};
+    const key = JSON.stringify(rpcId);
+    inFlightCalls.set(key, { name, trace: traceOf(meta), controller: new AbortController() });
+    const stopProgress = progressFor(name, meta.progressToken);
+    let out;
+    try {
+      out = await startCall(name, args, rpcId);
+    } finally {
+      inFlightCalls.delete(key);
+      stopProgress();
+    }
     watchCall(name, out);
     const notice = rulesNotice();
     const payload = notice === null ? out : { ...out, rulesNotice: notice };
-    return { content: [{ type: 'text', text: JSON.stringify(payload) }], isError: out.ok !== true };
+    return { content: [{ type: 'text', text: JSON.stringify(payload) }], isError: out.ok !== true, _meta: { [RUN_META]: runId } };
+  }
+
+  // The message of an unknown tool. The code surface keeps its guidance: a verb is a function on gm, called inside run_code.
+  function unknownToolText(name) {
+    const guidance = surface === 'code' ? '; the code surface serves next_context, run_code and finish; call a verb as gm.<name>(args) inside run_code' : '';
+    return `Unknown tool: ${name}${guidance}`;
+  }
+
+  // A foreground shell whose request names a progress token reports every PROGRESS_MS: progress is the elapsed seconds, which rise at each
+  // report, and the message says how long the shell has run. The timer stops when the call ends.
+  function progressFor(name, token) {
+    if (name !== 'run_shell' || (typeof token !== 'string' && !Number.isInteger(token))) return () => {};
+    const started = Date.now();
+    let last = 0;
+    const timer = setInterval(() => {
+      last = Math.max(last + 1, Math.floor((Date.now() - started) / 1000));
+      notify({ jsonrpc: '2.0', method: 'notifications/progress', params: { progressToken: token, progress: last, message: `running ${last} s` } });
+    }, PROGRESS_MS);
+    return () => clearInterval(timer);
+  }
+
+  // notifications/cancelled. A foreground run_shell is killed, and its request gets no answer (handleLine). Any other cancelled request runs on:
+  // a read-only verb has no effect to undo, and a side-effecting verb must finish its effect. Each cancel that is not honoured is logged.
+  function cancelRequest(requestId) {
+    const key = JSON.stringify(requestId);
+    const call = inFlightCalls.get(key);
+    if (call === undefined) {
+      log.append('cancel-ignored', { requestId, reason: 'no call in flight with that id' });
+      return;
+    }
+    if (call.name === 'run_shell') {
+      cancelled.add(key);
+      call.controller.abort();
+      log.append('cancel', { requestId, tool: call.name, reason: 'foreground shell killed; no answer is sent' });
+      return;
+    }
+    log.append('cancel-ignored', { requestId, tool: call.name, reason: READ_ONLY_TOOLS.has(call.name) ? 'read-only verb' : 'side-effecting verb' });
   }
 
   function startCall(name, args, rpcId) {
@@ -449,9 +525,8 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
 
   function invoke(name, args, access, rpcId) {
     if (ended !== null) return refuse(name, args, endedReason(), rpcId);
-    if (surface === 'code' && !CODE_SURFACE.has(name)) {
-      return refuse(name, args, 'the code surface serves next_context, run_code and finish; call a verb as gm.<name>(args) inside run_code', rpcId);
-    }
+    // A call cancelled while it waited for a slot never starts.
+    if (signalOf(rpcId)?.aborted === true) return refuse(name, args, 'cancelled before it started', rpcId);
     if (name === 'run_code') {
       // A wrong argument name is refused by name. The run_code reply names its action, which is the seq of the action event, so a body can cite it.
       const unknown = Object.keys(args).filter((key) => !Object.hasOwn(RUN_CODE_PROPERTIES, key));
@@ -460,8 +535,8 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     }
     if (name === 'next_context') return nextContext(access, rpcId, args);
     if (name === 'finish') return finish(args, access, rpcId);
-    if (Object.hasOwn(handlers, name)) return act(name, args, access, () => handlers[name](args), name === 'query_log' ? loggedReply : undefined, rpcId);
-    return act(name, args, access, () => tools.run(name, args), undefined, rpcId);
+    if (Object.hasOwn(handlers, name)) return act(name, args, access, () => handlers[name](args, signalOf(rpcId)), name === 'query_log' ? loggedReply : undefined, rpcId);
+    return act(name, args, access, () => tools.run(name, args, { signal: signalOf(rpcId) }), undefined, rpcId);
   }
 
   async function nextContext(access, rpcId, args = {}) {
@@ -591,7 +666,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     const step = steps;
     const startMono = log.now();
     log.enter();
-    const action = log.append('action', { step, tool, args, ...(rpcId === undefined ? {} : { rpcId }) });
+    const action = log.append('action', { step, tool, args, ...(rpcId === undefined ? {} : { rpcId, ...callOf(rpcId)?.trace }) });
     // A tool that may change something has its start in the file before it runs, so a crash after its effect still leaves the start in the log.
     if (!READ_ONLY_TOOLS.has(tool)) flushAllLogs();
     let result;
@@ -609,7 +684,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
   function refuse(tool, args, reason, rpcId) {
     const step = steps;
     const startMono = log.now();
-    const action = log.append('action', { step, tool, args, ...(rpcId === undefined ? {} : { rpcId }) });
+    const action = log.append('action', { step, tool, args, ...(rpcId === undefined ? {} : { rpcId, ...callOf(rpcId)?.trace }) });
     const result = { ok: false, refused: true, error: `refused: ${reason}`, actionSeq: action.seq };
     log.append('refusal', { step, tool, error: result.error, startMono, actionSeq: action.seq });
     return result;
@@ -677,7 +752,7 @@ async function bodyResult(runDir, job) {
   return status.value ?? status.error ?? '';
 }
 
-function answersFrom(events) {
+function answersFrom(events, runId) {
   const ends = new Map();
   for (const event of events) {
     if ((event.kind === 'result' || event.kind === 'refusal') && event.actionSeq !== undefined) ends.set(event.actionSeq, event);
@@ -690,7 +765,7 @@ function answersFrom(events) {
     if (end === undefined) out = { ok: false, error: 'the call was interrupted by a restart; check its outside effects before repeating it' };
     else if (end.kind === 'refusal') out = { ok: false, refused: true, error: end.error };
     else out = outputOf(end);
-    answers.set(JSON.stringify(action.rpcId), { content: [{ type: 'text', text: JSON.stringify(out) }], isError: out.ok !== true });
+    answers.set(JSON.stringify(action.rpcId), { content: [{ type: 'text', text: JSON.stringify(out) }], isError: out.ok !== true, _meta: { [RUN_META]: runId } });
   }
   return answers;
 }
@@ -737,6 +812,22 @@ const READ_ONLY_TOOLS = new Set([
   'next_context', 'read_file', 'list_dir', 'stat_file', 'search', 'wiki_search', 'grep', 'callers', 'impact', 'query_log', 'job_status',
   'git_status', 'git_log', 'git_diff', 'git_show', 'ci_status', 'prd_list', 'unknown_list', 'review_join',
 ]);
+// The tools that reach past the workspace: the open-world hint. A tool that only records the run (next_context, finish) is not destructive.
+// Every tool carries a title and all three hints, set explicitly, so no host has to guess them.
+const OPEN_WORLD = new Set(['fetch', 'git_fetch', 'git_pull', 'git_push', 'ci_status']);
+const RECORDS_ONLY = new Set(['next_context', 'finish']);
+// readOnlyHint is READ_ONLY_TOOLS, except next_context, which writes a step event. destructiveHint is true for a tool that is not read-only
+// and does not only record the run.
+function annotated(tool) {
+  const readOnly = READ_ONLY_TOOLS.has(tool.name) && tool.name !== 'next_context';
+  return { ...tool, title: titleOf(tool.name), annotations: { readOnlyHint: readOnly, destructiveHint: !readOnly && !RECORDS_ONLY.has(tool.name), openWorldHint: OPEN_WORLD.has(tool.name) } };
+}
+// A title from a tool's name: read_file is "Read file".
+function titleOf(name) {
+  const words = name.replace(/_/g, ' ');
+  return words[0].toUpperCase() + words.slice(1);
+}
+
 // Actions that run once the reply they belong to is written, such as the removal of pending events the reply delivered.
 const afterReply = [];
 // A reply is written only after the events so far are in the log, so the log holds every event a reply reports.
@@ -746,8 +837,18 @@ function write(message) {
   for (const done of afterReply.splice(0)) done();
 }
 
-function errorReply(id, code, message) {
-  return { jsonrpc: '2.0', id, error: { code, message } };
+function errorReply(id, code, message, data = undefined) {
+  return { jsonrpc: '2.0', id, error: { code, message, ...(data === undefined ? {} : { data }) } };
+}
+
+// A notification goes out on stdout without running afterReply, which holds the actions of a reply that is not yet written.
+function notify(message) {
+  process.stdout.write(`${JSON.stringify(message)}\n`);
+}
+
+// The trace context a request carries in _meta, the keys TRACE_KEYS that are strings. An absent key is left out.
+function traceOf(meta) {
+  return Object.fromEntries(TRACE_KEYS.filter((key) => typeof meta[key] === 'string').map((key) => [key, meta[key]]));
 }
 
 function isRequestShape(message) {

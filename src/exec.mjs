@@ -51,11 +51,13 @@ export function signalGroup(pid, signal) {
 }
 
 // Runs one command in its own process group and waits for it. With shell true, file is a shell command line.
-// The group is killed when the command returns, so no child outlives the call.
-export function runCommand(file, args, { cwd, timeoutMs, shell = false, env = {} }) {
+// The group is killed when the command returns, so no child outlives the call. An abort signal (a cancel from the host) kills the group the
+// same way, and the call settles as cancelled; the caller decides whether anyone is told.
+export function runCommand(file, args, { cwd, timeoutMs, shell = false, env = {}, signal: abort = undefined }) {
   return new Promise((done) => {
     let output = '';
     let timedOut = false;
+    let cancelled = false;
     const collect = (chunk) => {
       if (output.length < OUTPUT_CAP) output += chunk;
     };
@@ -63,6 +65,12 @@ export function runCommand(file, args, { cwd, timeoutMs, shell = false, env = {}
     if (child.pid !== undefined) foregroundGroups.add(child.pid);
     const body = bodyContext.getStore()?.body;
     if (child.pid !== undefined && body !== undefined) bodyGroups.set(child.pid, body);
+    const stopOnCancel = () => {
+      cancelled = true;
+      killGroup(child.pid);
+    };
+    if (abort?.aborted === true) stopOnCancel();
+    else abort?.addEventListener('abort', stopOnCancel, { once: true });
     child.on('exit', () => killGroupNow(child.pid));
     child.stdout.setEncoding('utf8');
     child.stderr.setEncoding('utf8');
@@ -76,16 +84,22 @@ export function runCommand(file, args, { cwd, timeoutMs, shell = false, env = {}
     }, timeoutMs);
     child.on('error', (err) => {
       clearTimeout(timer);
+      abort?.removeEventListener('abort', stopOnCancel);
       foregroundGroups.delete(child.pid);
       bodyGroups.delete(child.pid);
       done({ ok: false, error: err.message });
     });
-    child.on('close', (exitCode, signal) => {
+    child.on('close', (exitCode, exitSignal) => {
       clearTimeout(timer);
+      abort?.removeEventListener('abort', stopOnCancel);
       foregroundGroups.delete(child.pid);
       bodyGroups.delete(child.pid);
       if (timedOut) return;
-      done({ ok: exitCode === 0, exitCode, signal, output: output.slice(0, OUTPUT_CAP) });
+      if (cancelled) {
+        done({ ok: false, cancelled: true, error: 'cancelled by the host', exitCode, signal: exitSignal, output: output.slice(0, OUTPUT_CAP) });
+        return;
+      }
+      done({ ok: exitCode === 0, exitCode, signal: exitSignal, output: output.slice(0, OUTPUT_CAP) });
     });
   });
 }

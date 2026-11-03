@@ -17,6 +17,7 @@ How to change this project. Project facts are in AGENTS.md, and decisions with t
 - Record the before run id and the after run id, with the numbers, in DESIGN.md under a dated section.
 - A multi-step change is built as one batch: all the steps, then one witness over all of them, then the commits. A step is not witnessed alone during the build.
 - A top-level `return` fails `node --check` in an ES module. A probe that needs one wraps its body in a function.
+- A witness that makes a top-level tool call runs with `--surface tools`. The default code surface answers a verb name with -32602, so the call never reaches the verb.
 
 ## Edits and collisions
 

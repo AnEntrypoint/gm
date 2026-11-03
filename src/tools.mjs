@@ -159,12 +159,12 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
       return { ok: true, output: entries.join('\n') };
     },
 
-    run_shell(args) {
+    run_shell(args, ctx) {
       if (typeof args.command !== 'string' || args.command.trim() === '') {
         return { ok: false, error: 'command must be a non-empty string' };
       }
       const timeoutMs = Math.min(Number(args.timeoutMs) || DEFAULT_TIMEOUT_MS, MAX_TIMEOUT_MS);
-      if (args.background !== true || !background) return runCommand(args.command, [], { cwd: root, timeoutMs, shell: true });
+      if (args.background !== true || !background) return runCommand(args.command, [], { cwd: root, timeoutMs, shell: true, signal: ctx?.signal });
       if (!JOB_NAME.test(args.job ?? '')) return { ok: false, error: 'a background job needs job: 1 to 64 letters, digits, _ or -' };
       return startJob(args.job, args.command, timeoutMs);
     },
@@ -184,6 +184,21 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
         return { ok: true, state: status.state, output: JSON.stringify({ ...status, chunk: text.slice(offset, end), total: text.length, offset, next: end < text.length ? end : null }) };
       }
       return { ok: true, state: status.state, output: JSON.stringify({ ...status, tail: outputOf(status, TAIL_CAP) }) };
+    },
+
+    // A shell job is stopped by its process group. It ends killed with reason cancelled, and the job event is logged before this answers
+    // (finish writes it when the group has closed). A job that already ended, and a background run, are error results, not throws.
+    async job_stop(args) {
+      if (!JOB_NAME.test(args.job ?? '')) return { ok: false, error: 'job must be a job name' };
+      const job = jobs.get(args.job);
+      if (job === undefined) return { ok: false, error: `no job named ${args.job}` };
+      if (job.body !== undefined) return { ok: false, error: `${args.job} is a background run, not a shell job; finish with stopBackground: true stops it` };
+      if (job.settled) return { ok: false, error: `job ${args.job} already ended (${readStatus(args.job)?.state})` };
+      job.killRequested = true;
+      job.killReason ??= 'cancelled';
+      killGroup(job.child.pid);
+      await job.done;
+      return { ok: true, state: 'killed', reason: job.killReason, output: `stopped job ${args.job}` };
     },
 
     query_log(args = {}) {
@@ -272,9 +287,10 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
         job.settled = true;
         clearTimeout(timer);
         const state = exitCode !== null && !job.killRequested ? 'exited' : 'killed';
-        const ended = { ...status, state, exitCode, signal };
+        const reason = state === 'killed' ? job.killReason : undefined;
+        const ended = { ...status, state, exitCode, signal, ...(reason === undefined ? {} : { reason }) };
         writeStatus(name, ended);
-        log.append('job', { job: name, state, exitCode, signal, startMono });
+        log.append('job', { job: name, state, exitCode, signal, startMono, ...(reason === undefined ? {} : { reason }) });
         if (job.killReason !== undefined) {
           log.append('job-killed', { job: name, reason: job.killReason, ...(job.killReason === 'lifetime' ? { lifetimeMs: jobLifetimeMs } : {}), tail: readTail(outputFile, TAIL_CAP) });
         }
@@ -456,10 +472,11 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
       return { items: [{ path: at.path, group: at.group, write: WRITE_TOOLS.has(name) }] };
     },
 
-    async run(name, args) {
+    // ctx carries what the caller may pass a verb: the abort signal of a cancelled request, which only run_shell reads.
+    async run(name, args, ctx) {
       if (!Object.hasOwn(handlers, name)) return { ok: false, error: `unknown tool: ${name}` };
       try {
-        return await handlers[name](args);
+        return await handlers[name](args, ctx);
       } catch (err) {
         return { ok: false, error: err.message };
       }

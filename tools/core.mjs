@@ -68,6 +68,7 @@ let heldLines = []; // host lines held while the worker starts, restarts or the 
 let inputBuffer = ''; // host input after its last line break
 let inputOn = false;
 const inflight = new Map(); // ids of host requests sent to the worker, with their methods
+const shellCalls = new Set(); // ids of the host's run_shell calls in flight, which a cancel ends with no answer (see cancelShell)
 const coreRequests = new Map(); // ids the core sent to the worker itself, with the function that takes each reply
 let handshake = null;
 let onDrained = null;
@@ -238,8 +239,25 @@ function onHostLine(line) {
     hold(line, message);
     return;
   }
-  if (message?.id !== undefined && message.method) inflight.set(message.id, message.method);
+  if (message?.id !== undefined && message.method) {
+    inflight.set(message.id, message.method);
+    if (isShellCall(message)) shellCalls.add(message.id);
+  }
+  if (message?.method === 'notifications/cancelled') cancelShell(message.params?.requestId);
   child.stdin.write(`${line}\n`);
+}
+
+// A run_shell call is killed by a cancel, and the worker sends no answer for it (src/mcp.mjs, cancelRequest). The core stops counting such a
+// request when its cancel passes, or a restart would wait for an answer that never comes. Any other request is answered by the worker, so it
+// stays counted until that answer.
+function isShellCall(message) {
+  return message.method === 'tools/call' && message.params?.name === 'run_shell';
+}
+
+function cancelShell(requestId) {
+  if (!shellCalls.delete(requestId)) return;
+  inflight.delete(requestId);
+  if (onDrained && inflight.size === 0) onDrained();
 }
 
 function hold(line, message) {
@@ -271,6 +289,7 @@ function onChildLine(line) {
   if (message?.id !== undefined && message?.id !== null) {
     const method = inflight.get(message.id);
     inflight.delete(message.id);
+    shellCalls.delete(message.id);
     if (LISTS[method] !== undefined && message.result !== undefined) {
       seen[LISTS[method]] = digestOf(message.result);
       saveSession();
@@ -318,6 +337,7 @@ function onWorkerExit(proc, code, signal) {
     state = 'restarting';
     for (const id of inflight.keys()) writeHost(errorReply(id, PAUSED_BEFORE_ANSWER));
     inflight.clear();
+    shellCalls.clear();
     requestTransition('restart', 'the worker paused itself');
     return;
   }
@@ -400,6 +420,7 @@ function failWith(reason) {
   failure = `${reason}. Last stderr of the worker:\n${stderrTail.slice(-1500)}`;
   for (const id of inflight.keys()) writeHost(errorReply(id, failure));
   inflight.clear();
+  shellCalls.clear();
   for (const line of heldLines.splice(0)) {
     const message = parse(line);
     if (message?.id !== undefined && message.method) writeHost(errorReply(message.id, failure));

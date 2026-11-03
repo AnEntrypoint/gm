@@ -73,6 +73,8 @@ This is what you build and codify. Single worker first: DESIGN.md direction 6 sa
 - The wake rules are in skills/gm/SKILL.md, Pending events, and in DESIGN.md, "Wake by a watcher".
 - A worker that exits 0 with the run open paused itself. The core restarts it at once, and a call in flight gets a repeat-the-call error. Any other exit fails calls until the retry (DESIGN.md, Self-pause keeps calls held).
 - `read_file`'s `offset` and `limit`, and `job_status`'s `offset`, count characters, not lines. `total` and `next` are characters too (src/tools.mjs).
+- A top-level tools/call run_shell is always foreground: the session's handler drops `background`, so job_start is the only background shell path (DESIGN.md, Protocol conformance and cancellation, batch 1).
+- A cancel of a run_shell call kills its group, and the worker sends no answer for it. The core stops counting that request when the cancel passes, so a restart does not wait for it. Any other cancelled request counts until its answer (DESIGN.md, the same section).
 
 ## Rationale not expressible in code
 

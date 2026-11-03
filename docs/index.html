@@ -148,7 +148,7 @@ return { todo: todo.length };</pre>
 <table>
 <tr><th>Group</th><th>Verbs</th></tr>
 <tr><td>Files</td><td>read_file, write_file, edit_file, stat_file, list_dir</td></tr>
-<tr><td>Shell and jobs</td><td>run_shell, job_start, job_status</td></tr>
+<tr><td>Shell and jobs</td><td>run_shell, job_start, job_status, job_stop</td></tr>
 <tr><td>Log</td><td>query_log (reaches every event of the run)</td></tr>
 <tr><td>Search</td><td>search (BM25 over tracked files), grep (literal, regex or word)</td></tr>
 <tr><td>Web</td><td>fetch</td></tr>
@@ -160,6 +160,7 @@ return { todo: todo.length };</pre>
 <tr><td>Review</td><td>review_packet, review_record, review_join</td></tr>
 </table>
 <p>File paths stay inside the workspace. A path with a <code>..</code> segment is refused, and so is a symlink that leads outside. A refusal is logged as an event, not thrown as an error.</p>
+<p><code>job_stop</code> kills a shell job's process group, and the job ends killed with reason cancelled. A cancel from the host (<code>notifications/cancelled</code>) ends a foreground <code>run_shell</code> the same way, and that call gets no answer. A foreground <code>run_shell</code> whose request carries a progress token reports its elapsed seconds every 5 seconds.</p>
 <p class="note"><code>run_shell</code> is not confined to the workspace. A shell command can reach files outside it, for example through a hard link. A path check does not see that. This is a known limit, recorded below.</p>
 </section>
 
