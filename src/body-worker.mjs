@@ -5,7 +5,6 @@ import { parentPort, workerData } from 'node:worker_threads';
 import { createRequire } from 'node:module';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { confined } from './runcode.mjs';
 
 const { file, kind, project, verbs } = workerData;
 const waiting = new Map();
@@ -37,20 +36,10 @@ gm.try = async (fn) => {
   }
 };
 
-// require for the body, rooted at the workspace. A relative path is confined again at the call, so a path that leaves the root is
-// refused even if it is built at run time, and the refusal is logged by the session.
+// require for the body. A relative path resolves against the project root, as the static loads do, and an absolute path loads as it is.
 const base = createRequire(join(project, 'package.json'));
 const requireBody = (spec) => {
   if (typeof spec !== 'string') throw new TypeError('require needs a string path');
-  if (/^\.\.?(\/|$)/.test(spec)) {
-    const at = confined(project, spec);
-    if (at === null) {
-      const error = `the require ${spec} resolves outside the workspace`;
-      parentPort.postMessage({ type: 'refusal', error });
-      throw new Error(`refused: ${error}`);
-    }
-    return base(at);
-  }
   return base(spec);
 };
 

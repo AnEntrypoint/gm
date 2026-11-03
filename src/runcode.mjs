@@ -4,7 +4,7 @@
 // does not abort the body. The body runs in the worker's process, so it is trusted as much as run_shell is: it is not sandboxed.
 import { register } from 'node:module';
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { Worker } from 'node:worker_threads';
 import { resultZone1, resultZone2, shortKind } from './compact.mjs';
@@ -81,8 +81,6 @@ function spawnWorker({ file, kind, project, verbs, call, log, step, startSeq }) 
         work.catch((err) => ({ ok: false, error: err.message })).then((result) => {
           if (!stopped) worker.postMessage({ type: 'reply', id: msg.id, result });
         });
-      } else if (msg.type === 'refusal') {
-        log?.append('refusal', { step, tool: 'run_code', stage: 'require', error: msg.error });
       } else if (msg.type === 'done') {
         resolve(msg.ok ? { ok: true, text: msg.text } : { ok: false, error: msg.error });
       }
@@ -99,34 +97,24 @@ function spawnWorker({ file, kind, project, verbs, call, log, step, startSeq }) 
   };
 }
 
-// A path inside the root. The check is textual; a symlink is followed separately by confined().
+// Whether a path is inside the root. It decides only how a load is logged, relative to the project or in full: a body may load any path.
 function inside(root, at) {
   const rel = relative(root, at);
   return rel === '' || (rel !== '..' && !rel.startsWith(`..${sep}`) && !isAbsolute(rel));
 }
 
-// The path inside the project root, or null. A path that leaves the root, through .. or through a symlink whose real location is
-// outside, is refused. A missing file is not refused here; the load fails later and names the file.
-export function confined(project, path) {
-  const at = resolve(project, path);
-  if (!inside(project, at)) return null;
-  if (existsSync(at) && !inside(realpathSync(project), realpathSync(at))) return null;
-  return at;
-}
-
 // The format a project file loads as, read the way Node reads it. .mjs is an ES module and .cjs is CommonJS. A .js file follows the
-// "type" of the nearest package.json at or above it, up to the project root; with none, it is CommonJS.
+// "type" of the nearest package.json at or above it: up to the project root for a file inside it, and up to the filesystem root for one
+// outside it. With none, it is CommonJS.
 export function formatOf(project, file) {
   if (file.endsWith('.mjs')) return 'esm';
   if (file.endsWith('.cjs')) return 'cjs';
-  let dir = dirname(file);
-  while (inside(project, dir)) {
+  const top = inside(project, file) ? project : null;
+  for (let dir = dirname(file); ; dir = dirname(dir)) {
     const pkg = join(dir, 'package.json');
     if (existsSync(pkg)) return JSON.parse(readFileSync(pkg, 'utf8')).type === 'module' ? 'esm' : 'cjs';
-    if (dir === project) break;
-    dir = dirname(dir);
+    if (dir === top || dirname(dir) === dir) return 'cjs';
   }
-  return 'cjs';
 }
 
 // The generation is taken only when a project file changed. The resolve hook (freshness.mjs) gives every project file the generation as
@@ -195,8 +183,9 @@ export function runCodeTool(verbNames) {
 export const RUN_CODE_PROPERTIES = { body: { type: 'string' }, timeoutMs: { type: 'number' }, format: { type: 'string', enum: ['esm', 'cjs'] } };
 
 // Runs one body. The body is written as an ES module, or as CommonJS when its format is cjs, under the run directory, and the file is deleted when the call ends, success or
-// failure. A reference that leaves the project root is refused before the body loads, and logged. Each project file it loads is logged
-// with its format. verbs is the list of {name, description, inputSchema}, and call(name, args) runs one verb through the session.
+// failure. A non-literal import() or require() is refused before the body loads, and logged. A literal path loads as it is, inside or outside
+// the project, and each file it loads is logged with its path and its format. verbs is the list of {name, description, inputSchema}, and
+// call(name, args) runs one verb through the session.
 export async function runBody({ body, timeoutMs = DEFAULT_TIMEOUT_MS, format, verbs, call, project, runDir, log, step, background }) {
   if (typeof body !== 'string' || body.trim() === '') return { ok: false, error: 'body must be a non-empty string' };
   if (!Number.isInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > MAX_TIMEOUT_MS) return { ok: false, error: `timeoutMs must be an integer from 1 to ${MAX_TIMEOUT_MS}` };
@@ -213,7 +202,7 @@ export async function runBody({ body, timeoutMs = DEFAULT_TIMEOUT_MS, format, ve
     log?.append('refusal', { step, tool: 'run_code', stage: 'load', error });
     return { ok: false, error: `refused: ${error}` };
   }
-  const loads = split.loads.map(({ path, via }) => ({ path: path.slice(project.length + 1), via, format: formatOf(project, path) }));
+  const loads = split.loads.map(({ path, via }) => ({ path: inside(project, path) ? relative(project, path) : path, via, format: formatOf(project, path) }));
   for (const load of loads) log?.append('code-load', { step, path: load.path, via: load.via, format: load.format });
   nextGeneration(project, log, step);
   const source = kind === 'esm'
@@ -266,9 +255,9 @@ export async function runBody({ body, timeoutMs = DEFAULT_TIMEOUT_MS, format, ve
   return { ok: true, background: name, state: queued ? 'queued' : 'running', logged, loads };
 }
 
-// Static import statements are hoisted to the module's top, and may span lines. Their ./ and ../ specifiers become confined absolute
-// paths. Dynamic import() and require() must take a literal path, and a relative one is confined the same way. Anything else is a refusal,
-// and a statement that is not closed is an error. Each confined path is recorded with the way it is loaded.
+// Static import statements are hoisted to the module's top, and may span lines. Their relative (./, ../) and absolute specifiers become absolute
+// paths, a relative one resolved against the project root. Dynamic import() and require() must take a literal path, and it is resolved the
+// same way. Anything else is a refusal, and a statement that is not closed is an error. Each resolved path is recorded with the way it is loaded.
 // The text with the contents of strings, template literals and comments blanked to spaces, so the length and the positions are
 // unchanged. A quote or a backtick stays, so the masked text still shows where each string begins and ends.
 function maskStrings(text) {
@@ -348,16 +337,15 @@ function splitBody(body, project) {
   if (pending !== null) return { error: 'an import statement is not closed' };
   let refusal = null;
   const loads = [];
-  const confine = (path, via) => {
-    const at = confined(project, path);
-    if (at === null) refusal = refusal ?? `the ${via} ${path} resolves outside the workspace`;
-    else loads.push({ path: at, via });
+  const resolveLoad = (path, via) => {
+    const at = resolve(project, path);
+    loads.push({ path: at, via });
     return at;
   };
-  const imports = statements.map((text) => text.replace(/(['"])(\.{1,2}\/[^'"\n]*)\1/g, (match, quote, path) => `${quote}${confine(path, 'import') ?? path}${quote}`));
+  const imports = statements.map((text) => text.replace(/(['"])(\.{0,2}\/[^'"\n]*)\1/g, (match, quote, path) => `${quote}${resolveLoad(path, 'import')}${quote}`));
   let rest = code.join('\n');
   // A call written inside a string, a template or a comment is not a call. Calls are found in the masked text, and the path is read
-  // from the original text at the same position, so a relative literal can be confined and rewritten.
+  // from the original text at the same position, so a relative literal can be resolved and rewritten.
   const callsOf = (keyword) => {
     const literal = new RegExp(`${keyword}\\s*\\(\\s*(['"])([^'"\\n]+)\\1\\s*\\)`, 'y');
     const found = [];
@@ -374,9 +362,9 @@ function splitBody(body, project) {
         refusal = refusal ?? (keyword === 'import' ? 'a dynamic import() needs a literal specifier' : 'a require() needs a literal path');
         continue;
       }
-      if (/^\.\.?\//.test(match[2])) {
+      if (/^\.{0,2}\//.test(match[2])) {
         const via = keyword === 'import' ? 'import()' : 'require';
-        edits.push({ start: index, end: index + match[0].length, text: `${keyword}(${match[1]}${confine(match[2], via) ?? match[2]}${match[1]})` });
+        edits.push({ start: index, end: index + match[0].length, text: `${keyword}(${match[1]}${resolveLoad(match[2], via)}${match[1]})` });
       }
     }
     for (const edit of edits.reverse()) rest = rest.slice(0, edit.start) + edit.text + rest.slice(edit.end);
