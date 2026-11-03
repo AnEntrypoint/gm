@@ -60,3 +60,9 @@ Question: is playwriter set up on every gm install the way it is on this machine
 Decision: the shipped default does not set `PLAYWRITER_NO_SANDBOX`. It turns off Chromium's sandbox on every platform, and pw documents it only for Linux containers. README.md shows the layer that sets it. The owner may reverse this.
 
 Witnesses (run 2026-11-03-19-43-51-791ac8): actionSeq 6 and 8 (defaults/mcp.json; `/workspace/pw` HEAD caab629 equals origin main), actionSeq 15 (pw sandbox handling at README:17 and bin/playwriter-project:156-170), actionSeq 23 (tag v0.1.0 handles the flag; package.json identical to HEAD), actionSeq 35 (setup.sh registers gm only), actionSeq 41 (the --mcp-config layer; no `.gm-new/` directory in the workspace).
+
+## gm.grep on a single file (2026-11-03)
+
+Friction: `gm.grep({ pattern, root })` with `root` set to one file path returned `output: undefined` with no error, while a directory root works. An agent that reads that as "no matches" can conclude the text is absent. Seen in run 1709854-10504510 (actionSeq 172, reading uhh AGENTS.md; read_file worked).
+
+Decision: no session named `gm` is in ListAgents, so the owner decides. The verb should search a single file, or fail with a clear error, and should not return undefined. The owner may reverse or refine this.
