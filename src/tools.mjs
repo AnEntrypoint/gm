@@ -45,6 +45,38 @@ async function readText(path) {
   }
 }
 
+async function readCharPage(path, offset, limit) {
+  if (!Number.isInteger(offset) || offset < 0) return { ok: false, error: 'offset must be a whole number of characters, zero or more' };
+  if (!Number.isInteger(limit) || limit < 1 || limit > OUTPUT_PAGE) return { ok: false, error: `limit must be a whole number from 1 to ${OUTPUT_PAGE}` };
+  const text = await readText(path);
+  const end = Math.min(offset + limit, text.length);
+  return { ok: true, output: text.slice(offset, end), total: text.length, offset, next: end < text.length ? end : null };
+}
+
+async function readLinePage(path, offset, limit) {
+  if (!Number.isInteger(offset) || offset < 0) return { ok: false, error: 'offset must be a whole number of lines, zero or more' };
+  if (limit !== Infinity && (!Number.isInteger(limit) || limit < 1)) return { ok: false, error: 'limit must be a whole number of lines, one or more' };
+  const text = await readText(path);
+  const starts = lineStarts(text);
+  const total = starts.length;
+  if (offset >= total) return { ok: true, unit: 'lines', output: '', total, offset, next: null };
+  const lineEnd = (line) => (line + 1 < total ? starts[line + 1] : text.length);
+  const begin = starts[offset];
+  if (lineEnd(offset) - begin > OUTPUT_PAGE) {
+    return { ok: true, unit: 'lines', output: text.slice(begin, begin + OUTPUT_PAGE), cutLine: true, total, offset, next: offset + 1 < total ? offset + 1 : null };
+  }
+  let last = offset + 1;
+  while (last < total && last - offset < limit && lineEnd(last) - begin <= OUTPUT_PAGE) last += 1;
+  return { ok: true, unit: 'lines', output: text.slice(begin, lineEnd(last - 1)), total, offset, next: last < total ? last : null };
+}
+
+function lineStarts(text) {
+  const starts = [0];
+  for (let at = text.indexOf('\n'); at !== -1; at = text.indexOf('\n', at + 1)) starts.push(at + 1);
+  if (starts.at(-1) === text.length) starts.pop();
+  return starts;
+}
+
 const DEFAULT_TIMEOUT_MS = 60000;
 const MAX_TIMEOUT_MS = 600000;
 const TAIL_CAP = 2000;
@@ -113,13 +145,10 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
     async read_file(args) {
       const at = locate(args.path);
       if (at.refused) return refusal(at.refused);
-      const offset = args.offset ?? 0;
-      const limit = args.limit ?? OUTPUT_PAGE;
-      if (!Number.isInteger(offset) || offset < 0) return { ok: false, error: 'offset must be a whole number of characters, zero or more' };
-      if (!Number.isInteger(limit) || limit < 1 || limit > OUTPUT_PAGE) return { ok: false, error: `limit must be a whole number from 1 to ${OUTPUT_PAGE}` };
-      const text = await readText(at.path);
-      const end = Math.min(offset + limit, text.length);
-      return { ok: true, output: text.slice(offset, end), total: text.length, offset, next: end < text.length ? end : null };
+      const unit = args.unit ?? 'lines';
+      if (unit === 'chars') return readCharPage(at.path, args.offset ?? 0, args.limit ?? OUTPUT_PAGE);
+      if (unit !== 'lines') return { ok: false, error: 'unit must be lines or chars' };
+      return readLinePage(at.path, args.offset ?? 0, args.limit ?? Infinity);
     },
 
     async write_file(args) {
