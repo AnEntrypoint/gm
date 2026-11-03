@@ -184,9 +184,9 @@ return { todo: todo.length };</pre>
 
 <section class="chapter" id="ch-7">
 <h2>7. Updates</h2>
-<p>The checkout is a clone of origin main, so an update is a fast-forward pull. The relay checks for updates once, 30 seconds after it starts, and then every hour. <code>GMNEW_UPDATE_MS</code> sets the interval in milliseconds. Zero turns the checks off.</p>
+<p>The checkout is a clone of origin main, so an update is a fast-forward pull. The relay checks for updates once, 30 seconds after it starts, and then every minute. <code>GMNEW_UPDATE_MS</code> sets the interval in milliseconds. Zero turns the checks off.</p>
 <p>A check fetches origin. When main is ahead, and no tracked file has local changes, it pulls. If <code>package-lock.json</code> changed, it runs <code>npm ci</code>. Then it runs the gate on the new code. A pull that the gate rejects is undone with <code>git reset</code>, to the commit the checkout had before the pull.</p>
-<p>A pull that changes files under <code>src/</code> restarts the worker, so the new code loads. A change under <code>skills/</code> is served without a restart. The run resumes from its log, and calls in flight finish first.</p>
+<p>A pull that changes a module the worker loads restarts the worker, so the new code loads. The modules it loads are listed in <code>src/worker-modules.json</code>, and the gate checks that list against the import graph; a change to a module it does not load restarts nothing. A change to a reloadable leaf (<code>src/hot-config.mjs</code>) reloads in place. A change under <code>skills/</code> is served without a restart. The run resumes from its log, and calls in flight finish first.</p>
 <p>A checkout with local changes, or a history that has diverged from origin, is reported and left alone. A check that cannot reach origin is reported and skipped. A check never throws. To update by hand, run <code>./setup.sh</code>.</p>
 </section>
 

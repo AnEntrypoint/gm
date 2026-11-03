@@ -1,6 +1,6 @@
 # Working on gm-new
 
-How to change this project. Project facts are in AGENTS.md, and decisions with their witnesses are in DESIGN.md. This skill is not served to runs; only skills/gm/SKILL.md and skills/gm-continue/SKILL.md are, as the MCP prompts `gm` (invoked as mcp__gm__gm) and `gm-continue` (invoked as mcp__gm__gm-continue), and as the resources skill://gm/SKILL.md and skill://gm-continue/SKILL.md.
+How to change this project. Project facts are in AGENTS.md, and decisions with their witnesses are in DESIGN.md. This skill is not served to runs; only skills/gm/SKILL.md and skills/gm-continue/SKILL.md are, as the MCP prompts `gm` (invoked as mcp__gm__gm) and `gm-continue` (invoked as mcp__gm__gm-continue), and as the resources skill://gm/SKILL.md and skill://gm-continue/SKILL.md. The host names mcp__gm__gm and mcp__gm__gm-continue are the expected names under the host's /mcp__<server>__<prompt> rule, not witnessed ones: check them with a /mcp reconnect in a live session, in the host's command list and Skill list.
 
 ## Scratch
 
