@@ -1716,29 +1716,32 @@ Limits, not closed here:
 - The witness runs the worker directly. A live host session that reconnects, or a core that respawns a worker on a finished run, is not witnessed here.
 - A child on a parent's connection can still send `finish`; the Rules paragraph is the only guard until the owner chooses between the options under "Finish, the connection, and restarts".
 
-## Fresh run on the first call after finish (2026-11-03)
+## Fresh run on the first next_context after finish (2026-11-03)
 
-Friction report research-e5: after `finish`, every later call on the same connection was refused with "run <id> has ended (finished); restart the server to open a new run". The host keeps one long-lived connection per session, so a follow-up was unusable until the host restarted.
+Friction report research-e5: after `finish`, every later call on the same connection was refused, so a host with one long-lived connection needed a restart. 209d5e0 fixed that by rotating on the first tools/call after finish, which let a run_code sent before next_context roll the run over: a new run id, actionSeq back at 1, a rules notice raised again, and seqs cited from the old run refused by prd-resolve. 05c4791 carries the fix below: the rotation happens only on the first next_context.
 
 Decided:
-- The first tools/call that arrives after a `finish` on the same connection opens a fresh run beside the finished one, in the same workspace, and that call is served by the fresh run. `reopen` and `acceptLine` in `src/mcp.mjs` swap the session. The MCP clients started at boot keep running, and nothing restarts.
-- The fresh run gets a new run directory from `newRunId()`, a new log, and steps from 0. It takes the finished run's task. A gm prompt with a task still replaces an inherited task. Its start event has taskFrom "closed run <id>", and its log has a `task` event from the same closed run, as in "Task carried into a new run after a closed run".
-- Only tools/call rotates. `prompts/get`, `resources/read`, `ping` and the other requests after a finish are served by the finished run, as before.
-- A call already waiting on the finished run is refused with "has ended (finished); the next tools/call opens a new run". The end of input waits for the finished run's calls (`retired`), and a pause stops the current run.
-- A run that ended by `max_steps` does not rotate. Its refusal is unchanged, so the step budget is not renewed per connection.
+- Every call on an ended run is refused with "run <id> has ended; call next_context to open a new run". The run id does not change, the refusal is logged on the ended run, and it raises no rules notice (callTool skips rule 2 once the run has ended).
+- The first next_context on the same connection opens the fresh run: a new run directory from `newRunId()`, a new log, steps from 0, and a start event with taskFrom. The step is then served, so the reply carries the new run id. `acceptLine` in `src/mcp.mjs` makes the swap, and `reopen` builds the run.
+- The fresh run takes the ended run's task. A gm prompt with a task, sent after the end, is held for the fresh run and replaces the inherited task, and it writes no task event into the ended log. taskFrom is "closed run <id>", "session prompt", or "task file" (a boot with --task).
+- A run that is closed when the process starts stays the current run, with its calls refused as above. Its log gets no start, restart, tools or recovery event. This supersedes the start-time rule of "Task carried into a new run after a closed run (2026-11-03)": the next_context opens the run, not the start. The task rule there is unchanged.
+- A run ended by max_steps is treated like a finished one, so its next_context opens a fresh run too (see Limits).
 
-Witness, through the stdio path: driver `/tmp/gm-scratch/fresh-run/drive.mjs` spawns `node /workspace/gm-new/src/mcp.mjs --workspace <base>/ws --run-dir <base>/runs/A --task "witness task for the fresh run"` on the working tree after this change. Base `/tmp/gm-scratch/fresh-run/2026-11-03T10-07-18-357Z`.
-- Round 1, run `A`: next_context `ok true`, run_code output "1", finish `ok true` with witness "first". Log A has end status finished.
-- Round 2, run `2026-11-03-10-07-18-63af21`: next_context `ok true` with the same task, step 1. Start taskFrom "closed run A". run_code output "2", finish `ok true` with witness "second", end status finished.
-- Round 3, run `2026-11-03-10-07-18-15c5ef`: start taskFrom "closed run 2026-11-03-10-07-18-63af21", run_code output "3", finish `ok true` with witness "third", end status finished.
-- Round 4, run `2026-11-03-10-07-18-35ff1c`: next_context sent with stdin closed right after it. The reply came with `ok true`, the log ends with status closed, and the child exited 0.
+Witness, on origin's code (05c4791, working tree clean): driver `/tmp/gm-scratch/fresh-run/drive-next.mjs`, base `/tmp/gm-scratch/fresh-run/next-2026-11-03T10-14-06-492Z`. All 29 checks pass.
+- Run A (task "rotation witness task"): next_context ok, run_code output 1, finish ok with witness "w1".
+- After the finish, run_code is refused with run A: "refused: run A has ended; call next_context to open a new run", and no rulesNotice. A later finish is refused the same way.
+- next_context opens run `2026-11-03-10-14-06-2f422c` at step 1 with the inherited task. run_code output 2 names that run in `_meta`, and finish is ok.
+- Boot on that closed run: run_code is refused with its id, and no run directory is opened. next_context opens `2026-11-03-10-14-06-faff8d`, taskFrom "closed run" with the closed run's id.
+- A gm prompt task "prompt witness task" sent before next_context: run `2026-11-03-10-14-06-ab2547` takes it, taskFrom "session prompt".
+- Boot with --task "boot flag task": run `2026-11-03-10-14-07-c9d887`, taskFrom "task file".
+- The process exits 0 when stdin closes.
 
 Limits, not closed here:
-- The witness starts each round with next_context. `run_code` and any other tools/call take the same path, because the check is on the method, but they are not witnessed alone. A `run_code` first after a finish gets the rule-2 notice, as on a new connection.
-- Rules notices are per run, so a notice open on the finished run does not carry over.
-- A `gm` prompt with a task sent after the finish, before the first call, is logged in the finished run, and the fresh run inherits it. Its `task` event says "closed run", which is a label, not the source.
-- A repeated request id is answered from the finished run only. Sent again after the rotation, it runs again.
-- A child agent on the parent's connection that sends `finish` still ends the parent's run. The parent's next call opens a fresh run; its open rows are workspace files and stay, but its log and steps do not carry over.
+- Only the first next_context opens the run. The driver checks run_code and finish. Other tools/call names take the same path, because the refusal depends on the ended state, not on the name.
+- max_steps: the step budget is per run, so each next_context after a max_steps refusal opens a run with a new budget. Before this change, only a restart did that. Whether that is wanted is the owner's decision.
+- A gm prompt after the end still logs its skill-loaded and rules-cleared events on the ended run, after its end event, as before.
+- A repeated request id is answered from the ended run only. Sent again after the next_context, it runs again.
+- A child agent on the parent's connection that sends `finish` still ends the parent's run. The parent's next_context opens a fresh run; its open rows are workspace files and stay, but its log and steps do not carry over.
 - Whether runs are shared across connections stays with the owner (options a to c under "Finish, the connection, and restarts").
 
 ## query_log limit argument (2026-11-03)
