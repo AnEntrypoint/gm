@@ -1815,3 +1815,13 @@ Witness: stdio drivers in `/tmp/gm-scratch/rotation-race/drive.mjs`, outside the
 - Direct worker, no core: `seq`, `same-write` and `back-to-back` as before the fix; a run_code sent before the next_context of the step is refused by its own run, as designed.
 
 Not reproduced: a rotation with no restart, and two workers answering one connection. Open: `restart()` in `tools/core.mjs` flushes held lines after `announceChanges()` has awaited, so a line that arrives in that window reaches the worker first. No wrong-run case was found from it.
+
+## Search verbs honour root (2026-11-03)
+
+Cause: `grep`, `search` and `wiki_search` in `src/search.mjs` took no `root`. Their argument handling dropped it, so a call with `root` searched the workspace and returned those hits as if the root had been used. A root that does not exist, and an unknown argument such as `rootz`, were accepted the same way.
+
+Fix: each verb takes `root` (aliases `projectPath` and `cwd`), an existing directory that replaces the workspace for that call. Each root has its own index and file cache, and the four most recent roots are kept. A root other than the workspace shows absolute paths in its hits. A root that is missing, is not a directory, or differs between its aliases is refused by name, and so is an argument the verb does not take, with the arguments it does take. `src/runcode.mjs` lists `root` in the grep line of the run_code description.
+
+Witness: `/tmp/gm-scratch/grep-root/drive.mjs`, a stdio driver for `src/mcp.mjs` with workspace `/tmp/gm-scratch/grep-root/a` and two `git init` repositories, `a` and `b`. Before the fix (run `A-prefix`), `gm.grep` with root `b` returned 0 matches and `gm.search` returned a's line. After the fix (runs `A-fix` and `A-fix2`): `gm.grep` with root `b` returned `/tmp/gm-scratch/grep-root/b/notes.txt:2 MARKER_B_5e82d4 repo b only`, and the same call without root returned 0 matches. A missing root returned `refused: no such root: .../no-such-root`, and `rootz` returned `refused: unknown argument rootz; grep takes pattern, path, mode, ignoreCase, limit, offset, vendor, root`. `search` with root `b` returned b's line, `wiki_search` with root `b` returned `/tmp/gm-scratch/grep-root/b/wiki/page.md:2`, and a root that is a file, and a root that differs from cwd, were refused.
+
+Limits: the verbs are `search`, `wiki_search` and `grep`, since no `codesearch` verb exists in this checkout. The witness ran through the stdio server on Linux only; macOS and Windows are not witnessed. A root's first call builds its index, so it is slower than a warm workspace call. A root is not limited to the workspace, as run_code allows paths outside it.

@@ -34,23 +34,33 @@ const num = { type: 'number' };
 const bool = { type: 'boolean' };
 const obj = (properties, required = []) => ({ type: 'object', properties, required });
 
+const ROOT_NOTE = 'root (or its aliases projectPath and cwd) names another existing directory to search instead of the workspace; with a root other than the workspace, hits show absolute paths. An unknown argument is refused by name.';
+
 export const SEARCH_TOOLS = [
   {
     name: 'search',
-    description: 'Rank the lines of git-tracked files by BM25 and return the best k as path:line score text. An identifier also matches its parts, so planWaves matches plan and waves. k is 1 to 50, default 10.',
-    inputSchema: obj({ query: str, k: num }, ['query']),
+    description: `Rank the lines of git-tracked files by BM25 and return the best k as path:line score text. An identifier also matches its parts, so planWaves matches plan and waves. k is 1 to 50, default 10. ${ROOT_NOTE}`,
+    inputSchema: obj({ query: str, k: num, root: str }, ['query']),
   },
   {
     name: 'wiki_search',
-    description: 'Rank the lines of the wiki pages (wiki/, tracked or not) by BM25 and return the best k as path:line score text, the same way as search. k is 1 to 50, default 10.',
-    inputSchema: obj({ query: str, k: num }, ['query']),
+    description: `Rank the lines of the wiki pages (wiki/, tracked or not) by BM25 and return the best k as path:line score text, the same way as search. k is 1 to 50, default 10. ${ROOT_NOTE}`,
+    inputSchema: obj({ query: str, k: num, root: str }, ['query']),
   },
   {
     name: 'grep',
-    description: 'Find text in the files under path: the workspace by default, or a file or directory of it. A path inside the workspace searches its git-tracked files (or, outside a git repository, every file under it); a path outside the workspace is walked and its hits show absolute paths. files is git or walk, the source used. mode is literal (default), regex, or word (a whole identifier). Returns path:line text. ignoreCase is optional; limit is 1 to 1000, default 100. Paths under node_modules/ or vendor/ are skipped unless vendor is true; a walk also skips dot-directories and runs/.',
-    inputSchema: obj({ pattern: str, path: str, mode: str, ignoreCase: bool, limit: num, offset: num, vendor: bool }, ['pattern']),
+    description: `Find text in the files under path: the workspace by default, or a file or directory of it. A path inside the workspace searches its git-tracked files (or, outside a git repository, every file under it); a path outside the workspace is walked and its hits show absolute paths. files is git or walk, the source used. mode is literal (default), regex, or word (a whole identifier). Returns path:line text. ignoreCase is optional; limit is 1 to 1000, default 100. Paths under node_modules/ or vendor/ are skipped unless vendor is true; a walk also skips dot-directories and runs/. ${ROOT_NOTE}`,
+    inputSchema: obj({ pattern: str, path: str, mode: str, ignoreCase: bool, limit: num, offset: num, vendor: bool, root: str }, ['pattern']),
   },
 ];
+
+const ROOT_ARGS = ['root', 'projectPath', 'cwd'];
+const TAKES = {
+  search: ['query', 'k'],
+  wiki_search: ['query', 'k'],
+  grep: ['pattern', 'path', 'mode', 'ignoreCase', 'limit', 'offset', 'vendor'],
+};
+const MAX_SEARCH_ROOTS = 4;
 
 // A search reads the files, so the second horizon cuts its results: the hits can be found again by searching.
 export const COMPACT = {
@@ -62,8 +72,65 @@ export const COMPACT = {
 };
 
 export function createSearchVerbs({ root, confine }) {
+  const searchers = new Map();
+  const searcherAt = (dir) => {
+    if (searchers.has(dir)) {
+      const known = searchers.get(dir);
+      searchers.delete(dir);
+      searchers.set(dir, known);
+      return known;
+    }
+    if (searchers.size === MAX_SEARCH_ROOTS) searchers.delete(searchers.keys().next().value);
+    const made = searcherFor({ root: dir, confine: dir === root ? confine : null });
+    searchers.set(dir, made);
+    return made;
+  };
+  const verb = (name, run) => async (args = {}) => {
+    const unknown = Object.keys(args).filter((key) => !TAKES[name].includes(key) && !ROOT_ARGS.includes(key));
+    if (unknown.length > 0) return refused(`unknown argument ${unknown.join(', ')}; ${name} takes ${[...TAKES[name], 'root'].join(', ')}`);
+    const home = homeOf(args);
+    if (home.error) return refused(home.error);
+    return run(searcherAt(home.dir), args);
+  };
+  return {
+    search: verb('search', (searcher, args) => searcher.search(args)),
+    wiki_search: verb('wiki_search', (searcher, args) => searcher.wiki_search(args)),
+    grep: verb('grep', (searcher, args) => searcher.grep(args)),
+  };
+
+  function homeOf(args) {
+    const given = ROOT_ARGS.filter((key) => args[key] !== undefined);
+    if (given.length === 0) return { dir: root };
+    for (const key of given) {
+      if (typeof args[key] !== 'string' || args[key] === '') return { error: `${key} must be a non-empty path` };
+    }
+    const dirs = new Set(given.map((key) => resolve(root, args[key])));
+    if (dirs.size > 1) return { error: `${given.join(' and ')} name different roots; pass one` };
+    const [dir] = dirs;
+    const isDirectory = directoryOrNull(dir);
+    if (isDirectory === null) return { error: `no such root: ${args[given[0]]}` };
+    if (!isDirectory) return { error: `root is not a directory: ${args[given[0]]}` };
+    return { dir };
+  }
+}
+
+function directoryOrNull(path) {
+  try {
+    return statSync(path).isDirectory();
+  } catch {
+    return null;
+  }
+}
+
+function refused(reason) {
+  return { ok: false, refused: true, error: `refused: ${reason}` };
+}
+
+function searcherFor({ root, confine }) {
   const filesOf = new Map();
   const built = new Map();
+  const targetOf = (rel) => (confine === null ? { path: join(root, rel) } : confine(rel));
+  const shownAt = (rel) => (confine === null ? join(root, rel) : rel);
 
   return {
     async search(args) {
@@ -105,7 +172,7 @@ export function createSearchVerbs({ root, confine }) {
         const at = join(base, name);
         const lines = await readLines(at, inside);
         if (lines === null) continue;
-        const shown = inside ? relative(root, at).split(sep).join('/') : at;
+        const shown = inside && confine !== null ? relative(root, at).split(sep).join('/') : at;
         lines.forEach((text, i) => {
           if (!matches(text)) return;
           total += 1;
@@ -135,7 +202,7 @@ export function createSearchVerbs({ root, confine }) {
     const indexed = await currentIndex(listing);
     if (indexed.error) return fail(indexed.error);
     const hits = rank(indexed.index, terms, k);
-    const lines = hits.map(({ doc, score }) => `${doc.path}:${doc.line} ${score.toFixed(3)} ${snippet(doc.text)}`);
+    const lines = hits.map(({ doc, score }) => `${shownAt(doc.path)}:${doc.line} ${score.toFixed(3)} ${snippet(doc.text)}`);
     return { ok: true, output: lines.length ? lines.join('\n') : '(no match)' };
   }
 
@@ -168,7 +235,7 @@ export function createSearchVerbs({ root, confine }) {
 
   // The lines of one file, as plain strings, for grep. Nothing is cached.
   async function readLines(at, inside) {
-    const target = inside ? confine(relative(root, at)) : { path: at };
+    const target = inside && confine !== null ? confine(relative(root, at)) : { path: at };
     if (target.refused) return null;
     let info;
     try {
@@ -183,7 +250,7 @@ export function createSearchVerbs({ root, confine }) {
   }
 
   async function loadFile(rel, known) {
-    const at = confine(rel);
+    const at = targetOf(rel);
     if (at.refused) return null;
     let info;
     try {
