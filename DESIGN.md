@@ -1637,6 +1637,54 @@ The nine blocked rows are unchanged; see "Rows without a hold". Commit 671cbb0 r
 
 Witness: run 11347-6820153, its setup, list and list_dir calls in this session, and `git show --stat 671cbb0` in /workspace/gm-new.
 
+
+## Friction found by oscraft run 2800-6805174 (2026-11-03)
+
+Owner decision: no session is named exactly `gm` in ListAgents (peers were gm-4b, hy3d-12, freddie-09), so INVARIANT 2 leaves these to the owner. Recorded here, not changed.
+
+- `gm.read_file` offset and limit count characters, not lines. Verified: `read_file({ path: 'AGENTS.md', limit: 10 })` returned 10 characters (`# Agent in`). The verb and the Read tool both read as line-based.
+- `gm.read_file` does not resolve `skill://` URIs. Verified: `skill://gm/SKILL.md` resolved to `/workspace/oscraft/skill:/gm/SKILL.md` and returned ENOENT.
+- Agents spawned by the Agent tool have no ReadMcpResourceTool. Two audit subagents reported this, so they could not read skill://gm/SKILL.md, and INVARIANT 1 cannot be met by a child session without a verb or prompt that serves the skill text.
+
+## Peer report: grep without git and read_file lines (2026-11-03)
+
+Peer pw-a1 reported two faults (run 24133-6845321). Both are fixed in commit f6cc36ad446264e1840d0ce7c85530b5431f0eaf, which changes src/search.mjs and src/tools.mjs.
+
+- grep outside git: when `git ls-files` fails, grep walks the workspace root and its reply carries `files: "walk"`. A git repository still lists its tracked files and reports `files: "git"`. The walk never enters `.git`, `runs` or any dot-directory, and enters `node_modules` and `vendor` only when `vendor` is true. It does not follow symbolic links, and each file is read under the search limits: text only, at most 1 MB, no NUL in the first 8000 bytes. search and wiki_search still refuse a non-git workspace; the walk is not applied to them.
+- read_file counts lines by default: offset is a 0-based line index, limit a line count (left out, a page takes as many lines as fit), total the line count, and next the next line index or null. A page holds at most 20000 characters. A line longer than 20000 characters is cut to its first 20000 characters, the reply carries `cutLine: true`, and next is the line after it. `unit: "chars"` restores the character paging exactly as before, with offset, limit, total and next counted in characters.
+- Superseded: the "Output pages" item in "## Decided" (brief change 3, gm agent 2026-11-01), for read_file's unit. That item stays as the record of the decision. The read_file lines in AGENTS.md ("Facts found by troubleshooting") and in the oscraft friction section above are out of date.
+
+Witnesses: scratch tree of f6cc36a, driver /tmp/gm-scratch/gm-new/peer-fix/driver/drive.mjs, output and logs under /tmp/gm-scratch/gm-new/peer-fix/witness-1793698244458/run1.
+- Run nongit-tools (non-git workspace, tools surface): grep at seq 6 found 3 matches, all in app/index.js and lib/util.js, with files walk. node_modules, vendor, .hidden, runs, a file with a NUL byte, a 1.17 MB file and a symbolic link were not matched. A vendor grep at seq 8 found vendor/vend.js. read_file default lines at seq 10 (total 300, next 130). unit chars at seq 12 (50 characters, total 6600, next 130). A cut line at seq 18 (cutLine true, 20000 characters, next 2). Errors at seq 32 and 34. Empty, no-final-newline and CRLF files at seq 22, 24 and 26.
+- Run git-tools (git repository, tools surface): grep at seq 6 with files git returned only the tracked app.js, not the untracked file.
+- Run nongit-code (code surface): run_code at seq 10 called gm.grep (files walk) and both read_file forms.
+
+Resolved: the read_file description in src/mcp.mjs (BASE_TOOLS) now says lines are the default and lists unit, in commit b2ad777.
+
+## MCP client in run_code (2026-11-03)
+
+Owner direction: gm-new's codemode adds any MCP tools natively. Built in commit 6b31b32 (src/mcp-client.mjs, src/mcp.mjs, src/worker-modules.json, README.md, skills/gm/SKILL.md).
+
+- Config: `.gm-new/mcp.json` in the workspace, or the file that `--mcp-config` names, in the `mcpServers` shape of `.mcp.json`. The project's `.mcp.json` is not read: it registers gm-new's own server, and reading it would connect gm-new to itself.
+- Transport: stdio only. A server whose `type` is not stdio, or that has no `command`, is a logged config problem. HTTP servers are not built: a witness needs a real HTTP server, and gm-new opens no listener.
+- Names: `gm.<server>_<tool>`, each character outside `[A-Za-z0-9_]` replaced by `_`, and `mcp_` in front of a name that starts with a digit. A name taken by a native verb or by another MCP tool is skipped and logged as `mcp-tool-skipped`. Reason: the code surface's verb list is flat, so a native verb keeps its name.
+- Surface: codemode only, meaning run_code, `gm.verbs()` and run_code's description. `--surface tools` does not serve MCP tools. Reason: the request was for codemode.
+- Startup: every server starts with the worker, in parallel. tools/list and each request except initialize and ping wait for them, each for at most `startupTimeoutMs` (default 30000). Reason: the verb list is part of the stable prefix, so it must not change after a step has started.
+- Calls: each call is an `action` and a `code-call` event, so recovery reads it as a side effect. A call past `timeoutMs` (default 60000) fails with that message, and the server is sent `notifications/cancelled`.
+- Failure and restart: a server that fails to start is logged with its error and the tail of its stderr, and the others still run. A server that exits restarts on its next call, and concurrent calls to a down server share one restart.
+- Environment: `${NAME}` in `command`, `args`, `env` and `cwd` takes the variable NAME. A missing variable skips that server, and the log names the variable.
+- Depth: a worker started as an MCP server reads its workspace's config too. Its `GMNEW_MCP_DEPTH` is one more than its parent's, and servers start only below depth 2. Before this limit, a config that named gm-new itself grew a chain of workers that never ended: 270 processes were found running and were killed by PID.
+- Stop: the worker stops its servers when its input ends and when it pauses, not only at process exit. A live child's pipes keep the event loop open, so the exit handler never ran after input ended, and the worker waited on its child until the driver's timeout.
+
+Witnesses, on a tar copy of the tree (drivers in /tmp/gm-scratch/gm-new/mcp-client/driver, runs in /tmp/gm-scratch/gm-new/mcp-client/ws/runs):
+
+- Run outer2, recovery, concurrency and timeout: a non-string `cwd` at seq 2 was a config problem and the worker still ran; the inner server connected with 42 tools at seq 3; a SIGKILL of the server, found by pid, went down at seq 11; two concurrent run_code calls both succeeded after it, with one `restarted` event at seq 14; a `run_shell` of `sleep 3` through the server failed with `tools/call timed out after 1500 ms`, and the server's run logged `cancel` for that request; the worker exited 0 and left no child.
+- Run outer4, pause: a SIGTERM from the supervisor wrote `paused` at seq 11, the worker exited 0, and no inner server remained.
+- Basic path, driver output `driver/out.txt` (its run was replaced by a later run): 42 `inner_` verbs were listed in run_code's description, `gm.inner_read_file` and `gm.inner_list_dir` returned the file and the listing, a missing file came back as data, and the `broken` server (ENOENT) and the `unset` server (a missing variable) were logged and skipped. The worker exited 0.
+- Depth, driver output `driver/out3.txt` (its run was replaced): a config that named gm-new itself with the default config stopped at depth 2, and the depth-2 worker logged `servers are not started at MCP depth 2`. The chain ended with stdin.
+
+Limits: stdio only; `notifications/tools/list_changed` is not handled, so a tool added by a running server appears after its next start; Windows is not witnessed, and a bare command such as `npx` needs its `.cmd` form there; a worker killed with SIGKILL leaves its children to see EOF on their stdin.
+
 ## Two gm friction fixes (2026-11-03)
 
 Session prompt (defect 1). A `/mcp__gm__gm` command with several words recorded its task as its first word, "we". gm-new keeps every word it is sent: `prompts/get` reads `arguments.task` whole (src/mcp.mjs). The host drops the rest. Claude Code 2.1.301 splits the command on whitespace and binds the words by position to the declared arguments (its code: `j.split(/\s+/)`), and the gm prompt declares one. A fix needs a host change or a new surface verb, which is the owner's decision and was not made here. The commit gate has a `prompt` check (src/gate.mjs) that sends a 15-word task through the real server and requires the task event to hold all of it. Negative control: with the task cut to its first word in a copy, the check failed with task ["we"]. Commit 37208d7.
