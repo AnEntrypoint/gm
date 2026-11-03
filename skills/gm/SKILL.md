@@ -13,7 +13,7 @@ The served tools are three: next_context, run_code and finish. All the work is d
 
 These are the rules of every run. next_context returns them with each step, and this skill holds them word for word as well, because a skill is re-attached after a compaction.
 
-- Work only inside the workspace. A path with a .. segment is refused.
+- Paths may point inside or outside the workspace. An outside path should be absolute.
 - Call next_context at the start of every step. Each call is one step; stepsLeft counts the steps the run has left.
 - Verify before you finish: run what you built and read its output.
 - finish needs a witness: one string that quotes the evidence you observed. Calls sent with finish may be refused.

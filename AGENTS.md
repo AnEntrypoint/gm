@@ -1,6 +1,6 @@
 # gm-new: agent instructions
 
-You build gm-new: one long-horizon worker. Everything you need is in this directory. gm-new does not depend on the gm project, its skills, or its runner. Do not read files outside this directory, except the files named in the brief you were given.
+You build gm-new: one long-horizon worker. Everything you need is in this directory. gm-new does not depend on the gm project, its skills, or its runner. Files outside this directory may be read when a task needs them (owner decision, 2026-11-03, DESIGN.md).
 
 ## Goal
 
@@ -25,7 +25,7 @@ These are settled. Change one only by messaging the orchestrator, with the reaso
 - Context: no summarisation. `next_context` returns the rules, the task, the witness requirement, the events new since the last step in full, the seen events as compact records within two horizons, and `prefixSha`. Older events are reached with `query_log`, which reaches every event. The horizons and the compactors are in DESIGN.md, "Feed compaction".
 - Rules live in `runs/<id>/rules.md`, re-read every step and placed first in the prompt. Rules are never compacted.
 - Surface: the default MCP surface serves three tools, `next_context`, `run_code` and `finish` (requires a witness, and no open row unless `stopRows` is true). Every other verb is a function on `gm` inside `run_code`: `await gm.read_file({ path })`. The owner decided this on 2026-11-01 (DESIGN.md, the surface entries). The server writes every event to the log and answers concurrent requests by JSON-RPC id.
-- Paths stay inside the workspace for the file tools. A `..` segment is refused. A symlink that leaves the workspace is refused, including a dangling one. Refusals are `refusal` events, not thrown errors. `run_shell` is not confined. A shell command can hard-link a file from outside the workspace; a path check does not see that, and it is a known limit, not a bug to close with a path check.
+- Paths for the file tools (`read_file`, `write_file`, `edit_file`, `stat_file`, `list_dir`, and the spec and references of `review_packet`) may point inside or outside the workspace. A relative path is taken from the workspace; an outside path should be absolute. A `..` segment and a symlink that leads outside are followed, not refused (owner decision, 2026-11-03, DESIGN.md, "Outside access allowed"). `search`, `grep`, `callers` and `impact` read only the git-tracked files of the workspace, `query_log` reads only the run's log, and the git tools and row files stay inside the workspace. A body's `require` or `import` of a path that leaves the project root is still refused. `run_shell` is not confined: a shell command can hard-link a file from outside the workspace, and a path check does not see that. A remaining refusal is a `refusal` event, not a thrown error.
 - Rows: a row is open until it is implemented (`gm.<kind>_resolve`, with a witness) or, for a PRD, deleted (`gm.prd_delete`). No row is held in any other state. The planner plans every open row and reports any other status as a defect (DESIGN.md, Rows without a hold).
 - Storage: `runs/<id>/` with `log.jsonl` (append-only), `log.index`, `rules.md`, `task.json` and `jobs/`. `runs/` is git-ignored.
 
@@ -86,7 +86,7 @@ This is what you build and codify. Single worker first: DESIGN.md direction 6 sa
 
 ## Continuation
 
-Every continuation starts with this, before new work. The gm-continue skill (skills/gm-continue/SKILL.md) runs it at each finish.
+Every continuation starts with this, before new work. The gm-continue skill runs it at each finish. It is the MCP prompt `gm-continue`, invoked as mcp__gm__gm-continue (typed as /mcp__gm__gm-continue), and the resource skill://gm-continue/SKILL.md.
 
 - A project fact that troubleshooting found (how the code behaves, a limit, a surprise) gets one line under "Facts found by troubleshooting", with its DESIGN.md section.
 - A process lesson (how to witness, commit, recover a collision, use scratch space) goes to skills/dev/SKILL.md, in the section it belongs to.

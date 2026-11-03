@@ -104,10 +104,14 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
     if (!inside(realRoot, real)) return { refused: 'path leads through a link outside the workspace' };
     return { path: target };
   };
+  const locate = (rel) => {
+    if (typeof rel !== 'string' || rel === '') return { refused: 'path must be a non-empty string' };
+    return { path: resolve(root, rel) };
+  };
 
   const handlers = {
     async read_file(args) {
-      const at = confine(args.path);
+      const at = locate(args.path);
       if (at.refused) return refusal(at.refused);
       const offset = args.offset ?? 0;
       const limit = args.limit ?? OUTPUT_PAGE;
@@ -119,7 +123,7 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
     },
 
     async write_file(args) {
-      const at = confine(args.path);
+      const at = locate(args.path);
       if (at.refused) return refusal(at.refused);
       if (typeof args.content !== 'string') return { ok: false, error: 'content must be a string' };
       await mkdir(dirname(at.path), { recursive: true });
@@ -128,7 +132,7 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
     },
 
     async edit_file(args) {
-      const at = confine(args.path);
+      const at = locate(args.path);
       if (at.refused) return refusal(at.refused);
       if (typeof args.old !== 'string' || args.old === '') return { ok: false, error: 'old must be a non-empty string' };
       if (typeof args.new !== 'string') return { ok: false, error: 'new must be a string' };
@@ -143,7 +147,7 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
     },
 
     async stat_file(args) {
-      const at = confine(args.path);
+      const at = locate(args.path);
       if (at.refused) return refusal(at.refused);
       const info = await stat(at.path);
       const type = info.isDirectory() ? 'dir' : info.isFile() ? 'file' : 'other';
@@ -151,7 +155,7 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
     },
 
     async list_dir(args) {
-      const at = confine(args.path ?? '.');
+      const at = locate(args.path ?? '.');
       if (at.refused) return refusal(at.refused);
       const entries = (await readdir(at.path, { withFileTypes: true }))
         .map((entry) => (entry.isDirectory() ? `${entry.name}/` : entry.name))
@@ -628,9 +632,8 @@ function readTail(file, cap) {
 }
 
 function planPath(root, rel) {
-  if (typeof rel !== 'string' || rel === '' || rel.split(/[\\/]+/).includes('..')) return null;
+  if (typeof rel !== 'string' || rel === '') return null;
   const target = resolve(root, rel);
-  if (!inside(root, target)) return null;
   try {
     const nearest = nearestExisting(target);
     const full = join(realpathSync(nearest), relative(nearest, target));

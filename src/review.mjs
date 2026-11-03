@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
-import { isAbsolute, relative, resolve } from 'node:path';
+import { resolve } from 'node:path';
 
 // Review functions. A review packet names a spec, its sha256, and the paths it refers to. A review record is the verdict of
 // a fresh reviewer on one packet, and the host spawns that reviewer and passes its reply here. Both are plain functions with
@@ -17,11 +17,10 @@ function sortKeys(value) {
   return value;
 }
 
-// The file at a path inside the workspace, or null. A path with a .. segment, or an absolute path, is not a workspace path.
+// The file at a path, inside or outside the workspace, or null. A relative path is taken from the workspace.
 function fileAt(root, rel) {
-  if (typeof rel !== 'string' || rel === '' || isAbsolute(rel) || rel.split(/[\\/]+/).includes('..')) return null;
+  if (typeof rel !== 'string' || rel === '') return null;
   const at = resolve(root, rel);
-  if (relative(resolve(root), at).startsWith('..')) return null;
   return existsSync(at) && statSync(at).isFile() ? at : null;
 }
 
@@ -34,7 +33,7 @@ export function reviewPacket({ root, log, spec, refs = [] }) {
   };
   if (!Array.isArray(refs) || !refs.every((ref) => typeof ref === 'string')) return refuse('refs must be a list of paths');
   const specAt = fileAt(root, spec);
-  if (specAt === null) return refuse(`spec ${spec} is not a file in the workspace`);
+  if (specAt === null) return refuse(`spec ${spec} is not a file`);
   const missing = refs.filter((ref) => fileAt(root, ref) === null);
   if (missing.length > 0) return refuse(`referenced paths do not exist: ${missing.join(', ')}`);
   const specSha = sha256(readFileSync(specAt));

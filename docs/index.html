@@ -113,7 +113,7 @@ npx -y add-mcp@2.6.1 "node /abs/path/to/gm-new/tools/relay.mjs" -n gm -g -a clau
 <p>Each start opens the run, or resumes it after a restart. A run that has ended stays closed, and the next start opens a new run beside it.</p>
 <p>The chapter 2 remove command clears any older <code>gm</code> entry from the global configs. A project that has its own <code>gm</code> entry in its <code>.mcp.json</code> keeps that entry, which overrides the user-level one in that project.</p>
 <p>The entry starts <code>tools/relay.mjs</code>. The relay holds Claude Code's connection, and it runs the supervisor, which runs the worker. The relay and the supervisor are what make updates and restarts possible without a reconnect.</p>
-<p>The server serves two skills, <code>gm</code> and <code>gm-continue</code>. Each is an MCP prompt, which <code>prompts/list</code> answers, and each is a resource: <code>skill://gm/SKILL.md</code> and <code>skill://gm-continue/SKILL.md</code>. A host gets both from the server, so no user-level copy of either skill is needed. The <code>gm</code> prompt takes the run's task. A host reads a skill resource with <code>resources/read</code>.</p>
+<p>The server serves two skills, <code>gm</code> and <code>gm-continue</code>. Each is an MCP prompt, which <code>prompts/list</code> answers, invoked as <code>mcp__gm__gm</code> (the gm skill) and <code>mcp__gm__gm-continue</code> (gm-continue), and each is a resource: <code>skill://gm/SKILL.md</code> and <code>skill://gm-continue/SKILL.md</code>. A host gets both from the server, so no user-level copy of either skill is needed. The <code>gm</code> prompt takes the run's task. A host reads a skill resource with <code>resources/read</code>.</p>
 </section>
 
 <section class="chapter" id="ch-4">
@@ -160,7 +160,7 @@ return { todo: todo.length };</pre>
 <tr><td>Wiki</td><td>wiki_search, wiki_write</td></tr>
 <tr><td>Review</td><td>review_packet, review_record, review_join</td></tr>
 </table>
-<p>File paths stay inside the workspace. A path with a <code>..</code> segment is refused, and so is a symlink that leads outside. A refusal is logged as an event, not thrown as an error.</p>
+<p>File paths may point inside or outside the workspace. A relative path is taken from the workspace, and an outside path should be absolute. A <code>..</code> segment or a symlink that leads outside is followed, not refused. <code>search</code> and <code>grep</code> cover the workspace's git-tracked text files, and <code>query_log</code> reads the run's log. The git tools and the row files stay inside the workspace.</p>
 <p><code>job_stop</code> kills a shell job's process group, and the job ends killed with reason cancelled. A cancel from the host (<code>notifications/cancelled</code>) ends a foreground <code>run_shell</code> the same way, and that call gets no answer. A foreground <code>run_shell</code> whose request carries a progress token reports its elapsed seconds every 5 seconds.</p>
 <p class="note"><code>run_shell</code> is not confined to the workspace. A shell command can reach files outside it, for example through a hard link. A path check does not see that. This is a known limit, recorded below.</p>
 </section>

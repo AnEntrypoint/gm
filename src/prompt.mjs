@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 
 export const DEFAULT_RULES = `# Rules
 
-1. Work only inside the workspace. A path with a .. segment is refused.
+1. Paths may point inside or outside the workspace. An outside path should be absolute.
 2. Verify before you finish: run what you built and read its output.
 3. Reply with one JSON object {"tool": "<name>", "args": {...}}, or a JSON array of such objects when the actions are independent. Independent actions run together. An action that needs an earlier result goes in a later reply.
 4. finish needs a witness: one string that quotes the evidence you observed. finish must be the only action in its reply.
@@ -15,7 +15,7 @@ export const DEFAULT_RULES = `# Rules
 // skill: the gate checks the skill against this text (src/skills.mjs).
 export const MCP_RULES = `# Rules
 
-1. Work only inside the workspace. A path with a .. segment is refused.
+1. Paths may point inside or outside the workspace. An outside path should be absolute.
 2. Call next_context at the start of every step. Each call is one step; stepsLeft counts the steps the run has left.
 3. Verify before you finish: run what you built and read its output.
 4. finish needs a witness: one string that quotes the evidence you observed. Calls sent with finish may be refused.
