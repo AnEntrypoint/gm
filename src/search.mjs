@@ -21,13 +21,10 @@ const MAX_LIMIT = 1000;
 const MAX_PATTERN_CHARS = 200;
 const MODES = ['literal', 'regex', 'word'];
 const MODE_ALIASES = new Map([['content', 'literal']]);
-// The characters that mean something in a regex and nothing in a literal. A literal pattern with one of them that matches nothing gets a hint
-// that names regex mode, so a zero result is not silent.
 const REGEX_CHARS = /[.|()[\]{}*+?^$\\]/;
 const TRACKED = { name: 'tracked', args: ['ls-files', '-z'], cached: true };
 const WIKI = { name: 'wiki', args: ['ls-files', '-z', '-co', '--exclude-standard', '--', 'wiki'], cached: false };
 const STAMP_SETTLE_MS = 3000;
-// Dependency and vendored trees. grep skips them unless its vendor argument is true.
 const VENDOR = /(^|\/)(node_modules|vendor)\//;
 
 const str = { type: 'string' };
@@ -50,7 +47,7 @@ export const SEARCH_TOOLS = [
   },
   {
     name: 'grep',
-    description: `Find text in the files under path: the workspace by default, or a file or directory of it. A path inside the workspace searches its git-tracked files (or, outside a git repository, every file under it); a path outside the workspace is walked and its hits show absolute paths. files is git or walk, the source used. mode is literal (default; also named content), regex, or word (a whole identifier). Returns path:line text. ignoreCase is optional; limit is 1 to 1000, default 100. Paths under node_modules/ or vendor/ are skipped unless vendor is true; a walk also skips dot-directories and runs/. ${ROOT_NOTE}`,
+    description: `Find text in the files under path: the workspace by default, or a file or directory of it. A path inside the workspace searches its git-tracked files (or, outside a git repository, every file under it); a path outside the workspace is walked and its hits show absolute paths. files is git or walk, the source used. mode is literal (default; also named content), regex, or word (a whole identifier). If a literal search finds nothing and the pattern has a regex character, the pattern runs once more as a regex; the hint says which pass matched, and a pattern that is not a valid regex is an error. Returns path:line text. ignoreCase is optional; limit is 1 to 1000, default 100. Paths under node_modules/ or vendor/ are skipped unless vendor is true; a walk also skips dot-directories and runs/. ${ROOT_NOTE}`,
     inputSchema: obj({ pattern: str, path: str, mode: str, ignoreCase: bool, limit: num, offset: num, vendor: bool, root: str }, ['pattern']),
   },
 ];
@@ -63,7 +60,6 @@ const TAKES = {
 };
 const MAX_SEARCH_ROOTS = 4;
 
-// A search reads the files, so the second horizon cuts its results: the hits can be found again by searching.
 export const COMPACT = {
   tools: {
     search: { zone1: resultZone1, zone2: () => null },
@@ -164,34 +160,45 @@ function searcherFor({ root, confine }) {
       const base = listing.error ? scope : root;
       const names = listing.error ? await walkFiles(scope, vendor) : trackedUnder(listing.paths, relative(root, scope), vendor);
       if (!Number.isInteger(offset) || offset < 0) return fail('offset must be a whole number, zero or more');
-      const found = [];
-      let total = 0;
-      let size = 0;
-      let next = null;
-      // The files are read one at a time and nothing is kept, so memory is one file at a time, not the whole tracked text. A file that is
-      // too large or binary is skipped, as the index skips it.
-      for (const name of names) {
-        const at = join(base, name);
-        const lines = await readLines(at, inside);
-        if (lines === null) continue;
-        const shown = inside && confine !== null ? relative(root, at).split(sep).join('/') : at;
-        lines.forEach((text, i) => {
-          if (!matches(text)) return;
-          total += 1;
-          if (total <= offset || next !== null) return;
-          const row = `${shown}:${i + 1} ${snippet(text)}`;
-          if (found.length >= limit || size + row.length > OUTPUT_PAGE) {
-            next = total - 1;
-            return;
-          }
-          found.push(row);
-          size += row.length + 1;
-        });
+      const scan = async (matchesLine) => {
+        const found = [];
+        let total = 0;
+        let size = 0;
+        let next = null;
+        for (const name of names) {
+          const at = join(base, name);
+          const lines = await readLines(at, inside);
+          if (lines === null) continue;
+          const shown = inside && confine !== null ? relative(root, at).split(sep).join('/') : at;
+          lines.forEach((text, i) => {
+            if (!matchesLine(text)) return;
+            total += 1;
+            if (total <= offset || next !== null) return;
+            const row = `${shown}:${i + 1} ${snippet(text)}`;
+            if (found.length >= limit || size + row.length > OUTPUT_PAGE) {
+              next = total - 1;
+              return;
+            }
+            found.push(row);
+            size += row.length + 1;
+          });
+        }
+        return { found, total, next };
+      };
+      let scanned = await scan(matches);
+      let hint;
+      if (scanned.total === 0 && mode === 'literal' && REGEX_CHARS.test(pattern)) {
+        let asRegex;
+        try {
+          asRegex = matcherFor(pattern, 'regex', ignoreCase === true);
+        } catch (err) {
+          return fail(`no literal match, and the pattern is not a valid regex: ${err.message}`);
+        }
+        scanned = await scan(asRegex);
+        hint = scanned.total > 0 ? 'no literal match; matched as regex' : 'no match as literal or regex';
       }
+      const { found, total, next } = scanned;
       const footer = [`(${total} matches; showing ${found.length ? offset : 0} to ${offset + found.length}; ${next === null ? 'no more' : `next offset ${next}`})`];
-      const hint = total === 0 && mode === 'literal' && REGEX_CHARS.test(pattern)
-        ? 'the pattern has regex characters and was matched as exact text; mode regex matches it as a regular expression'
-        : undefined;
       return { ok: true, files: source, output: [...found, ...footer, ...(hint ? [`hint: ${hint}`] : [])].join('\n'), ...(hint ? { hint } : {}) };
     },
   };
@@ -235,7 +242,6 @@ function searcherFor({ root, confine }) {
     return { entries };
   }
 
-  // The lines of one file, as plain strings, for grep. Nothing is cached.
   async function readLines(at, inside) {
     const target = inside && confine !== null ? confine(relative(root, at)) : { path: at };
     if (target.refused) return null;
@@ -391,7 +397,6 @@ export function rank(index, terms, k) {
     .map(([id, score]) => ({ doc: index.docs[id], score }));
 }
 
-// An identifier gives its whole lowercase form, and its camelCase or snake_case parts when it has more than one.
 export function tokensOf(text) {
   const out = [];
   for (const word of text.match(/[A-Za-z0-9_]+/g) ?? []) {

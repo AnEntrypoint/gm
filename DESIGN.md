@@ -1897,7 +1897,7 @@ Source: the list in "Friction found by oscraft run 2800-6805174" above. Drivers 
 - Item 6, session.finished crash: already fixed on origin. A gm.grep of `\.finished\(` over src/ and tools/ at 28ea4e7 (tree from git archive) has no hit; the one session call is `session.ended()` in src/mcp.mjs. Witness: protocol 2025-11-25 handshake, run_code `{"two":2}`, finish, next_context opened run 2026-11-03-12-20-51-f86d0c, run_code read the file, finish, exit 0.
 - Item 1, read_file counts characters: already fixed on origin (b2ad777, f6cc36a). The run_code verb calls the same handler as the served tool. Witness: `gm.read_file({ path: 'thirty.txt', limit: 10 })` on a 30-line file returned unit lines, 10 lines, line 01 to line 10. `unit: "chars"` returned `line 01 of`.
 - Item 2, skill:// paths: fixed in c6c33bb5. read_file hands a skill:// path to `serveSkillFile` (src/mcp.mjs), the function resources/read uses, so both log `skill-loaded`. The rules-notice clearing shares resources/read's code path; it is not witnessed. Before: ENOENT for `ws/skill:/gm/SKILL.md`. After: ok true, 12297 characters, byte-equal to skills/gm/SKILL.md; `skill://nope/SKILL.md` returns `no served skill file has the uri skill://nope/SKILL.md`.
-- Item 4, grep mode `content`: fixed in b2d82088. Choice: `content` is an alias of `literal`, the default mode, which already returns the matching lines. A new output mode would add a second meaning for one word. The zero-result hint says the pattern was matched as exact text and that mode regex matches it as a regular expression, and `.` now counts as a regex character (before, a dotted pattern got no hint). Witness: literal `ab.c` on a file holding `abxc` returned 0 matches with the hint; `mode: "regex"` returned `abxc is the regex hit`; `mode: "content"` with `abxc` returned that line.
+- Item 4, grep mode `content`: fixed in b2d82088. Choice: `content` is an alias of `literal`, the default mode, which already returns the matching lines. A new output mode would add a second meaning for one word. The zero-result hint is now the regex fallback in "grep regex fallback (2026-11-03)" below, and `.` counts as a regex character (before, a dotted pattern got no hint). Witness: literal `ab.c` on a file holding `abxc` returned 0 matches with the hint; `mode: "regex"` returned `abxc is the regex hit`; `mode: "content"` with `abxc` returned that line.
 - Item 5, events --wait ended on a restart: fixed in db328096 (`paused` removed from PENDING_KINDS, so it is logged but not queued). Witness, origin: the watcher exited at the SIGTERM with `kind: paused, reason: SIGTERM from the supervisor`. Fixed tree: the watcher was alive at the SIGTERM, alive after a new worker started on the same run dir, and exited on `kind: job, job: probe-1`. Trade-off: a worker stopped without a restart wakes its watcher only at host-idle (600000 ms by default). This reverses the 2026-11-03 "Wake by a watcher" decision for `paused` only, on the owner's direction in this item. Not measured on a live host.
 - Item 7, pipeline exit status: fixed in 52f4f4ce, one sentence in skills/gm/SKILL.md under Background work. run_shell's options are unchanged.
 - Item 3, child agents without ReadMcpResourceTool: fixed in 52f4f4ce. The gm reread line (rules notice) and the gm-continue line in skills/gm/SKILL.md name `gm.read_file({ path: 'skill://gm/SKILL.md' })` as the fallback. Not changed: the connect-time pointer in src/connect.mjs and the rules notice text in src/mcp.mjs still name only ReadMcpResourceTool and the prompt. Changing them is a separate change, since the connect text sets CONNECT_SHA.
@@ -1938,4 +1938,32 @@ Why: a user-level entry with the placeholder path `/abs/path/to/gm-new/tools/rel
 Checked: five config states give fail for a placeholder path, ok for a real path, ok for no gm entry, fail for unreadable JSON, and ok for no config file. `doctor` exits 1 for the placeholder and 0 for the real path. The gate passed on the working tree: 43 modules parse, 89 text files are ASCII, 212 doc paths exist, 30 worker modules match the import graph, the session prompt keeps all 15 words, and the smoke run finishes with its negative control at max_steps.
 
 Not covered: a gm entry in a project's `.mcp.json` is not checked, and a path that exists but is not this checkout's relay is reported as ok.
+
+## grep regex fallback (2026-11-03)
+
+Friction: chatnano-f6, run 465053-9472994, 2026-11-03. In the default mode, `gm.grep({ pattern: "ternar|BitNet|1\\.58|two-bit|2-bit", ignoreCase: true })` returned `(0 matches; showing 0 to 0; no more)` with the hint that the pattern was matched as exact text. The same pattern in mode regex returned 92 matches. `gm.grep({ pattern: "^(def |class )" })` returned 0 in the default mode. A silent zero reads as "not present".
+
+Rule (`grep` in `searcherFor`, `src/search.mjs`). In literal mode (the default, also named `content`), when the literal pass finds no match and the pattern has a regex character (`.|()[]{}*+?^$\`), the same files are scanned once more with the pattern as a regex, with the same path, ignoreCase, limit and offset.
+- The regex pass finds matches: they are returned, and the hint is `no literal match; matched as regex`.
+- The regex pass finds none: the hint is `no match as literal or regex`.
+- The pattern is not a valid regex: the reply is `{ ok: false, error }`, and the error says that the literal pass found nothing and that the pattern is not a valid regex.
+- The literal pass finds any match: the reply is unchanged.
+
+Why not regex first: `||` and `foo()` are literal code text, and a regex-first rule would change their hits. The fallback runs only when the literal pass is empty, so no literal result changes. Cost: a pattern with a regex character that matches nothing literally reads the files twice. Mode regex and mode word are unchanged; a zero from mode regex is still a bare zero.
+
+The `grep` tool description names the fallback. The comments in `src/search.mjs` were swept in this change: the fallback and the second-horizon cut are now facts in AGENTS.md, and the streaming fact was already there.
+
+Witness: the working tree was copied as a tar (without .git, runs and .gm) to `/tmp/gm-scratch/gm-new/grep-fix/after`. `tools/relay.mjs` ran from that copy with `--mcp-config` disabling the playwriter entry, in a temp workspace holding `notes.txt` (`BitNet b1.58 uses ternary weights.` and `a two-bit quantiser`) and `code.py` (`def f(x):`, `    return x or foo()`, `a = b || c`). One run_code body called `gm.grep` on six patterns. The driver and body are in /tmp/gm-scratch/gm-new/grep-fix/, outside the repository. The replies:
+- `ternar|BitNet|1\.58|two-bit|2-bit`, ignoreCase true: `{"ok":true,"files":"walk","output":"notes.txt:1 BitNet b1.58 uses ternary weights.\nnotes.txt:2 a two-bit quantiser\n(2 matches; showing 0 to 2; no more)\nhint: no literal match; matched as regex","hint":"no literal match; matched as regex"}`
+- `^(def |class )`: `{"ok":true,"files":"walk","output":"code.py:1 def f(x):\n(1 matches; showing 0 to 1; no more)\nhint: no literal match; matched as regex","hint":"no literal match; matched as regex"}`
+- `||`: `{"ok":true,"files":"walk","output":"code.py:3 a = b || c\n(1 matches; showing 0 to 1; no more)"}`
+- `foo()`: `{"ok":true,"files":"walk","output":"code.py:2     return x or foo()\n(1 matches; showing 0 to 1; no more)"}`
+- `zzqq|x(`: `{"ok":false,"error":"no literal match, and the pattern is not a valid regex: Invalid regular expression: /zzqq|x(/: Unterminated group"}`
+- `zzqq|yy`: `{"ok":true,"files":"walk","output":"(0 matches; showing 0 to 0; no more)\nhint: no match as literal or regex","hint":"no match as literal or regex"}`
+
+Before, on the unchanged tree with the same driver: the first, second, fifth and sixth patterns returned `(0 matches; showing 0 to 0; no more)` with the hint `the pattern has regex characters and was matched as exact text; mode regex matches it as a regular expression`. `||` and `foo()` returned the same replies as after.
+
+Commit: the commit whose subject is "grep: a literal miss with a regex character runs as a regex" (in git log of main).
+
+Not witnessed: a host session (Claude Code) calling grep; macOS, Windows, arm64.
 
