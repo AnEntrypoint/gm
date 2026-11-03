@@ -120,7 +120,7 @@ npx -y add-mcp@2.6.1 "node /abs/path/to/gm-new/tools/relay.mjs" -n gm -g -a clau
 <h2>4. The loop</h2>
 <h3>Each step</h3>
 <ol>
-  <li>Call <code>next_context</code>. It returns the rules, the task, the witness requirement, the events new since the last step in full, the older events in compact form, <code>stepsLeft</code>, <code>prefixSha</code>, and the open jobs.</li>
+  <li>Call <code>next_context</code>. It returns the rules, the task, the witness requirement, the events new since the last step in full up to 20,000 characters, the rest of those events and the older events in compact form, <code>query</code> (the seq range of the step, and how to read any event by seq), <code>stepsLeft</code>, <code>prefixSha</code>, and the open jobs.</li>
   <li>Do the work in one <code>run_code</code> call. The body is JavaScript in the project. Each verb is a function on <code>gm</code>: <code>await gm.read_file({ path: 'a.txt' })</code>.</li>
   <li>Verify: run what you built and read its output.</li>
   <li>Call <code>finish</code> with a witness. The witness quotes the evidence: tool output, labelled with the tool that returned it.</li>

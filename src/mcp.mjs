@@ -202,6 +202,11 @@ function waitOf(value) {
   return Number.isFinite(ms) && ms > 0 ? Math.min(ms, MAX_WAIT_MS) : 0;
 }
 
+function queryHintOf(shown, total) {
+  const reach = 'query_log reads any event (after: seq - 1 returns it first)';
+  return total > shown ? `${reach}. This step's new events are seqs ${shown + 1} to ${total}.` : `${reach}.`;
+}
+
 function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, resume = null, jobLifetimeMs = DEFAULT_JOB_LIFETIME_MS, stuckMs = DEFAULT_STUCK_MS, monitorMs = DEFAULT_MONITOR_MS, noticeMs = BODY_NOTICE_MS, hostIdleMs = DEFAULT_HOST_IDLE_MS, recovery = null, history = [], surface = 'code' }) {
   const runId = basename(runDir);
   const tools = createTools({ workspace, runDir, log, background: true, jobLifetimeMs, stuckMs, monitorMs, noticeMs, leaves: current.leaves });
@@ -602,6 +607,8 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     const open = tools.activeJobs();
     const ended = since.filter((event) => event.kind === 'job' && event.state !== 'running' && !(event.state === 'killed' && killedNames.has(event.job)));
     const jobsEnded = await Promise.all(ended.map((event) => endedJob(runDir, event)));
+    const shown = shownTotalOf(log);
+    const feed = feedOf(log, current.REGISTRY, { shown });
     return {
       ok: true,
       step,
@@ -623,7 +630,8 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
         wait: `node "${join(ROOT, 'src', 'cli.mjs')}" events --dir "${runDir}" --wait`,
         read: `node "${join(ROOT, 'src', 'cli.mjs')}" events --dir "${runDir}" --read-clear`,
       },
-      ...feedOf(log, current.REGISTRY, { shown: shownTotalOf(log) }),
+      ...feed,
+      query: queryHintOf(shown, log.count()),
       ...(recoveryNow ? { recovery: recoveryNow } : {}),
       ...(rulesOpen.size > 0 ? { rulesPending: rulesNotice() } : {}),
       ...(killed.length ? { jobsKilled: killed.map(({ seq, job, reason, lifetimeMs, tail }) => ({ seq, job, reason, lifetimeMs, tail })) } : {}),

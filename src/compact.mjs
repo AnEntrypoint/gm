@@ -1,19 +1,19 @@
-// The feed's compaction. The log is never changed. The feed is a view of it: the last FULL events in full, the events of the first
-// horizon as records, the events of the second horizon as shorter records, and nothing older, which query_log still reaches. A module
+// The feed's compaction. The log is never changed. The feed is a view of it: the events new since the last step, in full up to a cap and
+// as records after that, the seen events of the first horizon as records, the seen events of the second horizon as shorter records, and
+// nothing older, which query_log still reaches. A module
 // that owns a tool or an event kind exports COMPACT next to that code, with its own strategy for it:
 //   COMPACT = { tools: { name: { zone1, zone2 } }, kinds: { kind: { zone1, zone2 } } }
 // A zone function takes (event, action) or (event), and returns a record, or null to drop the event from that zone. Every record
 // names its full event by seq, so query_log reaches all of it. The functions here are deterministic: they read the events and nothing
 // else, no clock and no path outside the log, so identical runs give identical feeds.
 
-export const FULL = 20;
-// The horizons, in events back from the full part. Measured on the scripted session of 151 steps at 7.14 events per step, with the
+export const NEXT_CONTEXT_EVENTS_CAP = 20000;
+// The horizons, in events back from the new events. Measured on the scripted session of 151 steps at 7.14 events per step, with the
 // code-call results logged in full (DESIGN.md, "Feed compaction"). H1 is two steps of events. H2 is 12, the largest second horizon
 // that keeps the average feed per step within the old window's average (4997 bytes against 5030), with H1 at two steps.
 export const H1 = 14;
 export const H2 = 12;
 
-const EVENT_CAP = 4000;
 const LINE_CAP = 400;
 const ARG_CAP = 200;
 const ARG_HEAD = 80;
@@ -27,12 +27,6 @@ const KEEP_ZONE2 = new Set(['end', 'commit', 'refusal', 'error', 'restart', 'job
 export function clip(text, cap = LINE_CAP) {
   if (typeof text !== 'string' || text.length <= cap) return text;
   return `${text.slice(0, cap)} ...[${text.length} chars]`;
-}
-
-// The full event as the window shows it: capped as before, so one event cannot fill the feed.
-export function compactEvent(event) {
-  const text = JSON.stringify(event);
-  return text.length <= EVENT_CAP ? event : { seq: event.seq, kind: event.kind, truncated: text.slice(0, EVENT_CAP), bytes: text.length };
 }
 
 // Input compaction for a call's arguments: a long string keeps its size and its first characters, a long list keeps its length.
@@ -130,14 +124,21 @@ export function shownTotalOf(events) {
   return 0;
 }
 
-// The feed. An event is transferred in full the first time the agent sees it, so the full part is the events after the last feed, at
-// most FULL of them. The events before that are seen already, and they come as the registry's compact records: the first horizon, then
-// the second. Events older than the second horizon are not in the feed, and query_log reaches them. Events come oldest first.
-export function feedOf(events, registry, { shown = 0, full = FULL, h1 = H1, h2 = H2 } = {}) {
+// The feed's events array is capped by its serialized length. The new events come first, oldest first: the longest prefix of them in full
+// that fits, and the rest as records after it. When the records of the rest would not fit, the rest is one range record, and query_log
+// reaches each event in it. The seen events come after, newest first, within the two horizons, as far as the cap still has room. The
+// cap is two characters short of its value, for the brackets of the array. Events come oldest first.
+const ARRAY_OVERHEAD = 2;
+const NO_ANSWERS = new Set();
+
+const costOf = (value) => JSON.stringify(value).length + 1;
+const sumCost = (items) => items.reduce((sum, item) => sum + costOf(item), 0);
+
+export function feedOf(events, registry, { shown = 0, cap = NEXT_CONTEXT_EVENTS_CAP, h1 = H1, h2 = H2 } = {}) {
   const source = asSource(events);
   const n = source.count();
-  const fullStart = Math.max(shown, n - full);
-  const zone1Start = Math.max(0, fullStart - h1);
+  const newStart = Math.min(shown, n);
+  const zone1Start = Math.max(0, newStart - h1);
   const zone2Start = Math.max(0, zone1Start - h2);
   // An answer comes after its action, so every answer to an action in the feed's range is in the range.
   const answered = new Set();
@@ -145,18 +146,67 @@ export function feedOf(events, registry, { shown = 0, full = FULL, h1 = H1, h2 =
     const event = source.at(seq);
     if (event.actionSeq !== undefined) answered.add(event.actionSeq);
   }
-  const out = [];
-  for (let i = zone2Start; i < n; i += 1) {
-    const zone = i >= fullStart ? 0 : i >= zone1Start ? 1 : 2;
-    const event = source.at(i + 1);
-    if (zone === 0) {
-      out.push(compactEvent(event));
-      continue;
-    }
-    const record = recordOf(event, zone, source, answered, registry);
-    if (record !== null) out.push(record);
+  const seen = [];
+  for (let i = zone2Start; i < newStart; i += 1) {
+    const record = recordOf(source.at(i + 1), i >= zone1Start ? 1 : 2, source, answered, registry);
+    if (record !== null) seen.push({ index: i, item: record, cost: costOf(record) });
   }
-  return { older: zone2Start, records: out.length, events: out };
+  const fresh = [];
+  for (let i = newStart; i < n; i += 1) {
+    const event = source.at(i + 1);
+    const record = freshRecordOf(event, source, registry);
+    fresh.push({ index: i, event, cost: costOf(event), record, recordCost: costOf(record) });
+  }
+  const room = cap - ARRAY_OVERHEAD;
+  const plan = planFresh(fresh, n, room);
+  const kept = keptSeen(seen, room - plan.used);
+  const items = [...kept.map((entry) => entry.item), ...plan.items];
+  return {
+    older: kept.length > 0 ? kept[0].index : newStart,
+    records: items.length,
+    fullEvents: plan.full,
+    compactFrom: plan.full < fresh.length ? fresh[plan.full].index + 1 : null,
+    events: items,
+  };
+}
+
+// A new event as a record. An action always has one, even when its answer is in the feed, so no new event is dropped.
+function freshRecordOf(event, source, registry) {
+  if (event.kind === 'action') return { seq: event.seq, kind: 'action', tool: event.tool, args: argsOf(event.args) };
+  return recordOf(event, 1, source, NO_ANSWERS, registry) ?? shortKind(event);
+}
+
+function planFresh(fresh, lastSeq, room) {
+  const tailOf = (k) => (k === fresh.length ? [] : [{ kind: 'range', seqs: [fresh[k].index + 1, lastSeq], count: lastSeq - fresh[k].index }]);
+  const recordTotal = fresh.reduce((sum, entry) => sum + entry.recordCost, 0);
+  if (recordTotal <= room) {
+    let spare = room - recordTotal;
+    let full = 0;
+    while (full < fresh.length && fresh[full].cost - fresh[full].recordCost <= spare) {
+      spare -= fresh[full].cost - fresh[full].recordCost;
+      full += 1;
+    }
+    const items = [...fresh.slice(0, full).map((entry) => entry.event), ...fresh.slice(full).map((entry) => entry.record)];
+    return { full, items, used: room - spare };
+  }
+  let used = 0;
+  let full = 0;
+  while (full < fresh.length && used + fresh[full].cost + sumCost(tailOf(full + 1)) <= room) {
+    used += fresh[full].cost;
+    full += 1;
+  }
+  const tail = tailOf(full);
+  return { full, items: [...fresh.slice(0, full).map((entry) => entry.event), ...tail], used: used + sumCost(tail) };
+}
+
+function keptSeen(seen, room) {
+  const kept = [];
+  let spare = room;
+  for (let j = seen.length - 1; j >= 0 && seen[j].cost <= spare; j -= 1) {
+    spare -= seen[j].cost;
+    kept.unshift(seen[j]);
+  }
+  return kept;
 }
 
 function recordOf(event, zone, source, answered, registry) {
