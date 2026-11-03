@@ -77,6 +77,8 @@ function serverOf(name, spec, workspace, problems) {
   const timeoutMs = spec.timeoutMs ?? CALL_MS;
   const startupMs = spec.startupTimeoutMs ?? STARTUP_MS;
   if (!Number.isInteger(timeoutMs) || timeoutMs < 1 || !Number.isInteger(startupMs) || startupMs < 1) return fail('timeoutMs and startupTimeoutMs must be positive integers');
+  const deny = spec.deny ?? [];
+  if (!Array.isArray(deny) || deny.some((tool) => typeof tool !== 'string' || tool === '')) return fail('deny must be an array of non-empty tool names');
   const missing = [];
   const expand = (text) => text.replace(VARIABLE, (match, variable) => {
     if (process.env[variable] === undefined) {
@@ -93,6 +95,7 @@ function serverOf(name, spec, workspace, problems) {
     cwd: spec.cwd === undefined ? workspace : resolve(workspace, expand(spec.cwd)),
     timeoutMs,
     startupMs,
+    deny,
     ignore: (spec.ignore ?? []).map((line) => line.trim()),
     workspace,
   };
@@ -331,6 +334,10 @@ export function startMcpClients({ servers, problems = [], log, reserved = new Se
     for (const runner of runners) {
       for (const tool of runner.tools) {
         const name = verbNameOf(runner.spec.name, tool.name);
+        if (runner.spec.deny.includes(tool.name)) {
+          log.append('mcp-tool-skipped', { server: runner.spec.name, tool: tool.name, verb: name, reason: 'the server entry denies it' });
+          continue;
+        }
         const taken = reserved.has(name) || routes.has(name);
         if (taken) {
           log.append('mcp-tool-skipped', { server: runner.spec.name, tool: tool.name, verb: name, reason: reserved.has(name) ? 'the name is a gm-new verb' : 'the name is another MCP tool' });

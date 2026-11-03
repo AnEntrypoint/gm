@@ -116,3 +116,12 @@ Decisions (owner decisions where marked):
 4. Roots, sampling and logging: gm-new uses none, so the 2026-07-28 deprecations need no migration.
 
 Witnesses (run 2026-11-03-20-34-41-82fd69): actionSeq 6 (capability and version grep of src), actionSeq 12 (client-feature grep of src, no match); the Claude Code docs read above.
+
+## playwriter through gm-new, live test (2026-11-04)
+
+Question: do gm-new's `gm.playwriter_*` verbs work on this machine, and does the shipped default start here without `PLAYWRITER_NO_SANDBOX`?
+
+- Shipped default, from `defaults/mcp.json`, started with `PLAYWRITER_NO_SANDBOX` removed from the environment. It connected with two tools: `playwriter_execute` is listed, and `playwriter_reset` is skipped by the entry's `deny`. Witness: `/tmp/gm-scratch/deny-probe/default-probe.mjs`, run in this session, gave `{"problems":[],"has_execute":true,"has_reset":false}` with a `mcp-tool-skipped` log (reason `the server entry denies it`). The Ubuntu `/usr/bin/chromium` wrapper adds `--no-sandbox`, so the default starts here without the flag.
+- Through gm (run `2026-11-03-22-40-50-654010`): an isolated context from `context.browser().newContext()` opened one data-URL page, read its title and heading, and closed the page and the context in a `finally`. It returned `{"title":"gm-pw-test","heading":"hello from gm","pagesInDefault":1}`. The default context listed only `about:blank` before and after.
+- Defect fixed: the default exposed `playwriter_reset`, which recreates the CDP connection and resets the context that every worker shares. `defaults/mcp.json` now sets `"deny": ["reset"]` on the playwriter entry, and `startMcpClients` in `src/mcp-client.mjs` leaves a denied tool out before its verb is registered. Witnesses: the fake stdio server with deny gave `has_reset: false` and a skipped `reset`; without deny it gave `has_reset: true` (`/tmp/gm-scratch/deny-probe/test2.mjs`).
+- This machine's user layer, `/config/.gm-new/mcp.json`, got the same `deny` entry. The previous file is kept at `/config/.gm-new/mcp.json.bak-2026-11-04`. A session already running keeps its tool list, so `playwriter_reset` disappears only after that session restarts.
