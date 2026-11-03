@@ -541,6 +541,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
   function endedReason() {
     if (ended === 'closed') return 'stdin closed before the call started';
     if (ended === 'restarting') return 'the server is restarting; repeat the call';
+    if (ended === 'finished') return `run ${runId} has ended (finished); the next tools/call opens a new run`;
     return `run ${runId} has ended (${ended}); restart the server to open a new run`;
   }
 
@@ -734,14 +735,15 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
   // first, so no child outlives the worker, and no end event is written, so the next worker resumes this run. The supervisor
   // sends a restart only after every call has answered, so a call still active here means the worker was stopped
   // without a drain, such as a crash; its shell is killed, and the call settles with that result.
-  async function quiesceForRestart() {
+  async function pause(reason) {
     ended = 'restarting';
     for (const call of waiting.splice(0)) call.resolveCall(refuse(call.name, call.args, endedReason()));
     await tools.close('restart');
     await Promise.allSettled([...active.keys()]);
+    log.append('paused', { reason });
   }
 
-  return { accept, inputEnded, quiesceForRestart };
+  return { accept, inputEnded, pause, finished: () => ended === 'finished', settled: () => Promise.allSettled([...unansweredTurns]), taskNow: () => task };
 }
 
 // The answer to every request id that a run already received, rebuilt from its log, so a repeated id is answered from
@@ -894,6 +896,14 @@ function isRequestShape(message) {
   return message !== null && typeof message === 'object' && !Array.isArray(message) && typeof message.method === 'string';
 }
 
+function isToolsCall(line) {
+  try {
+    return JSON.parse(line)?.method === 'tools/call';
+  } catch {
+    return false;
+  }
+}
+
 // The lifecycle events the worker writes. A code call is cut in the second horizon. The other kinds use the defaults in compact.mjs.
 const SELF_COMPACT = {
   tools: { next_context: { zone1: resultZone1, zone2: resultZone2 } },
@@ -975,13 +985,14 @@ async function main(argv) {
   const hostIdleMs = positiveInt(flags['host-idle-ms'] ?? DEFAULT_HOST_IDLE_MS, '--host-idle-ms');
   const surface = flags.surface ?? 'code';
   if (!SURFACES.includes(surface)) throw new Error('--surface takes tools or code');
+  const limits = { workspace, maxSteps, maxInflight, jobLifetimeMs, stuckMs, monitorMs, noticeMs, hostIdleMs, surface };
   // Without --task, the run's task is the prompt the session sends (the gm prompt's task argument), and the run says so in its start event.
   let task = flags.task === undefined ? '' : loadTask(flags.task).trim();
   if (flags.task !== undefined && task === '') throw new Error('--task is empty');
 
   let runDir = flags['run-dir'] === undefined ? join(workspace, 'runs', newRunId()) : resolve(flags['run-dir']);
-  const runMeta = (dir) => ({ id: basename(dir), mode: 'mcp', task, witness: DEFAULT_WITNESS, workspace, maxSteps, maxInflight, createdAt: new Date().toISOString() });
-  let { log, resumed } = openRun({ runDir, rules: MCP_RULES, meta: runMeta(runDir) });
+  const runMeta = (dir, runTask) => ({ id: basename(dir), mode: 'mcp', task: runTask, witness: DEFAULT_WITNESS, workspace, maxSteps, maxInflight, createdAt: new Date().toISOString() });
+  let { log, resumed } = openRun({ runDir, rules: MCP_RULES, meta: runMeta(runDir, task) });
   let resume = resumed ? resumeFrom(log.events()) : null;
   let inheritedFrom = null;
   if (resume?.ended) {
@@ -994,7 +1005,7 @@ async function main(argv) {
       task = closedTask;
       inheritedFrom = closedId;
     }
-    ({ log, resumed } = openRun({ runDir, rules: MCP_RULES, meta: runMeta(runDir) }));
+    ({ log, resumed } = openRun({ runDir, rules: MCP_RULES, meta: runMeta(runDir, task) }));
     resume = null;
     console.error(`gm mcp: run${closed} is closed; opened run ${basename(runDir)}`);
   }
@@ -1019,17 +1030,37 @@ async function main(argv) {
   process.on('exit', () => client.stop());
 
   sweepEndedCode(dirname(runDir), runDir);
-  const session = createSession({ workspace, runDir, log, task, maxSteps, maxInflight, resume, jobLifetimeMs, stuckMs, monitorMs, noticeMs, hostIdleMs, recovery: recovery && recovery.open.length > 0 ? recovery : null, history, taskInherited: inheritedFrom !== null, surface });
+  let session = createSession({ ...limits, runDir, log, task, resume, recovery: recovery && recovery.open.length > 0 ? recovery : null, history, taskInherited: inheritedFrom !== null });
+  let retired = Promise.resolve();
+  function reopen(finished) {
+    const closedId = basename(runDir);
+    const carried = finished.taskNow();
+    const inherited = carried !== '';
+    runDir = join(dirname(runDir), newRunId());
+    const { log: fresh } = openRun({ runDir, rules: MCP_RULES, meta: runMeta(runDir, carried) });
+    fresh.append('start', { mode: 'mcp', maxSteps, maxInflight, taskFrom: inherited ? `closed run ${closedId}` : 'session prompt' });
+    if (inherited) fresh.append('task', { from: `closed run ${closedId}`, text: carried });
+    mcpReady.then(() => logTools(fresh, false, servedTools(surface)));
+    console.error(`gm mcp: run ${closedId} has finished; opened run ${basename(runDir)}`);
+    return createSession({ ...limits, runDir, log: fresh, task: carried, taskInherited: inherited });
+  }
+  const acceptLine = (line) => {
+    if (session.finished() && isToolsCall(line)) {
+      retired = Promise.allSettled([retired, session.settled()]);
+      session = reopen(session);
+    }
+    session.accept(line);
+  };
   const lines = createInterface({ input: process.stdin, crlfDelay: Infinity });
-  lines.on('line', session.accept);
+  lines.on('line', acceptLine);
   // Under a supervisor, the end of stdin means the supervisor has gone, so the run is paused. Closing it here would end the
   // run as closed, and a closed run stays closed. A paused run has no end event, and the next start resumes it.
   let pausing = null;
   const pauseRun = (reason) => {
-    pausing ??= session.quiesceForRestart().then(() => log.append('paused', { reason })).finally(() => process.exit(0));
+    pausing ??= Promise.all([session.pause(reason), retired]).finally(() => process.exit(0));
     return pausing;
   };
-  lines.on('close', () => (flags.supervised === 'yes' ? pauseRun('the supervisor ended stdin') : session.inputEnded().catch((err) => console.error(`gm: ${err.message}`)).finally(() => client.stop())));
+  lines.on('close', () => (flags.supervised === 'yes' ? pauseRun('the supervisor ended stdin') : session.inputEnded().then(() => retired).catch((err) => console.error(`gm: ${err.message}`)).finally(() => client.stop())));
   process.once('SIGINT', () => lines.close());
   process.once('SIGTERM', () => pauseRun('SIGTERM from the supervisor'));
   process.stdout.on('error', (err) => console.error(`gm: stdout: ${err.message}`));

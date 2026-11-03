@@ -1715,3 +1715,28 @@ Limits, not closed here:
 - A default run directory opens a fresh run and never reaches the closed-run branch, so the reopen path is witnessed with the run directory named.
 - The witness runs the worker directly. A live host session that reconnects, or a core that respawns a worker on a finished run, is not witnessed here.
 - A child on a parent's connection can still send `finish`; the Rules paragraph is the only guard until the owner chooses between the options under "Finish, the connection, and restarts".
+
+## Fresh run on the first call after finish (2026-11-03)
+
+Friction report research-e5: after `finish`, every later call on the same connection was refused with "run <id> has ended (finished); restart the server to open a new run". The host keeps one long-lived connection per session, so a follow-up was unusable until the host restarted.
+
+Decided:
+- The first tools/call that arrives after a `finish` on the same connection opens a fresh run beside the finished one, in the same workspace, and that call is served by the fresh run. `reopen` and `acceptLine` in `src/mcp.mjs` swap the session. The MCP clients started at boot keep running, and nothing restarts.
+- The fresh run gets a new run directory from `newRunId()`, a new log, and steps from 0. It takes the finished run's task. A gm prompt with a task still replaces an inherited task. Its start event has taskFrom "closed run <id>", and its log has a `task` event from the same closed run, as in "Task carried into a new run after a closed run".
+- Only tools/call rotates. `prompts/get`, `resources/read`, `ping` and the other requests after a finish are served by the finished run, as before.
+- A call already waiting on the finished run is refused with "has ended (finished); the next tools/call opens a new run". The end of input waits for the finished run's calls (`retired`), and a pause stops the current run.
+- A run that ended by `max_steps` does not rotate. Its refusal is unchanged, so the step budget is not renewed per connection.
+
+Witness, through the stdio path: driver `/tmp/gm-scratch/fresh-run/drive.mjs` spawns `node /workspace/gm-new/src/mcp.mjs --workspace <base>/ws --run-dir <base>/runs/A --task "witness task for the fresh run"` on the working tree after this change. Base `/tmp/gm-scratch/fresh-run/2026-11-03T10-07-18-357Z`.
+- Round 1, run `A`: next_context `ok true`, run_code output "1", finish `ok true` with witness "first". Log A has end status finished.
+- Round 2, run `2026-11-03-10-07-18-63af21`: next_context `ok true` with the same task, step 1. Start taskFrom "closed run A". run_code output "2", finish `ok true` with witness "second", end status finished.
+- Round 3, run `2026-11-03-10-07-18-15c5ef`: start taskFrom "closed run 2026-11-03-10-07-18-63af21", run_code output "3", finish `ok true` with witness "third", end status finished.
+- Round 4, run `2026-11-03-10-07-18-35ff1c`: next_context sent with stdin closed right after it. The reply came with `ok true`, the log ends with status closed, and the child exited 0.
+
+Limits, not closed here:
+- The witness starts each round with next_context. `run_code` and any other tools/call take the same path, because the check is on the method, but they are not witnessed alone. A `run_code` first after a finish gets the rule-2 notice, as on a new connection.
+- Rules notices are per run, so a notice open on the finished run does not carry over.
+- A `gm` prompt with a task sent after the finish, before the first call, is logged in the finished run, and the fresh run inherits it. Its `task` event says "closed run", which is a label, not the source.
+- A repeated request id is answered from the finished run only. Sent again after the rotation, it runs again.
+- A child agent on the parent's connection that sends `finish` still ends the parent's run. The parent's next call opens a fresh run; its open rows are workspace files and stay, but its log and steps do not carry over.
+- Whether runs are shared across connections stays with the owner (options a to c under "Finish, the connection, and restarts").
