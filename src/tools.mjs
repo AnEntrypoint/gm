@@ -45,12 +45,17 @@ async function readText(path) {
   }
 }
 
+function cutNotice(text, rest) {
+  return { truncated: rest !== null, totalBytes: Buffer.byteLength(text), ...(rest === null ? {} : { hint: rest }) };
+}
+
 async function readCharPage(path, offset, limit) {
   if (!Number.isInteger(offset) || offset < 0) return { ok: false, error: 'offset must be a whole number of characters, zero or more' };
   if (!Number.isInteger(limit) || limit < 1 || limit > OUTPUT_PAGE) return { ok: false, error: `limit must be a whole number from 1 to ${OUTPUT_PAGE}` };
   const text = await readText(path);
   const end = Math.min(offset + limit, text.length);
-  return { ok: true, output: text.slice(offset, end), total: text.length, offset, next: end < text.length ? end : null };
+  const next = end < text.length ? end : null;
+  return { ok: true, output: text.slice(offset, end), total: text.length, offset, next, ...cutNotice(text, next === null ? null : `pass unit: "chars", offset: ${next} and limit: ${OUTPUT_PAGE} to read the rest`) };
 }
 
 async function readLinePage(path, offset, limit) {
@@ -59,15 +64,16 @@ async function readLinePage(path, offset, limit) {
   const text = await readText(path);
   const starts = lineStarts(text);
   const total = starts.length;
-  if (offset >= total) return { ok: true, unit: 'lines', output: '', total, offset, next: null };
+  if (offset >= total) return { ok: true, unit: 'lines', output: '', total, offset, next: null, ...cutNotice(text, null) };
   const lineEnd = (line) => (line + 1 < total ? starts[line + 1] : text.length);
   const begin = starts[offset];
   if (lineEnd(offset) - begin > OUTPUT_PAGE) {
-    return { ok: true, unit: 'lines', output: text.slice(begin, begin + OUTPUT_PAGE), cutLine: true, total, offset, next: offset + 1 < total ? offset + 1 : null };
+    return { ok: true, unit: 'lines', output: text.slice(begin, begin + OUTPUT_PAGE), cutLine: true, total, offset, next: offset + 1 < total ? offset + 1 : null, ...cutNotice(text, `line ${offset} is longer than a page: pass unit: "chars", offset: ${begin + OUTPUT_PAGE} and limit: ${OUTPUT_PAGE} to read the rest`) };
   }
   let last = offset + 1;
   while (last < total && last - offset < limit && lineEnd(last) - begin <= OUTPUT_PAGE) last += 1;
-  return { ok: true, unit: 'lines', output: text.slice(begin, lineEnd(last - 1)), total, offset, next: last < total ? last : null };
+  const next = last < total ? last : null;
+  return { ok: true, unit: 'lines', output: text.slice(begin, lineEnd(last - 1)), total, offset, next, ...cutNotice(text, next === null ? null : `pass offset: ${next} and limit: ${total - next} to read the rest`) };
 }
 
 function lineStarts(text) {
