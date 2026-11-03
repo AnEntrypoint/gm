@@ -32,6 +32,19 @@ The default surface serves three tools: `next_context`, `run_code` and `finish` 
 
 Both skills are served as MCP skills under SEP-2640 (the `io.modelcontextprotocol/skills` extension): `skill://gm/SKILL.md` from `skills/gm/SKILL.md`, which holds the loop prose and the seven rules of a run, word for word, and `skill://gm-continue/SKILL.md` from `skills/gm-continue/SKILL.md`. The methods skills/list and skills/get answer for both, and each file of a skill is a resource with its sha256 digest and size. Both are also MCP prompts, which `prompts/list` answers: the gm skill is the prompt `gm`, invoked as mcp__gm__gm (an expected name, not witnessed) and takes the run's task, and gm-continue is the prompt `gm-continue`, invoked as mcp__gm__gm-continue (an expected name, not witnessed) and takes none. The route to each is its resource, read with ReadMcpResourceTool (server gm). Do not call gm or gm-continue with the Skill tool; it is not listed there. Both are also resources, skill://gm/SKILL.md and skill://gm-continue/SKILL.md, as above. A prompt's text is its skill's body (gm adds the task), so a host gets either skill from the server, and no user-level copy of either skill is needed. The gate checks the rules in the gm skill against the server's text (`MCP_RULES` in `src/prompt.mjs`), and it checks each served skill's frontmatter.
 
+## Other MCP servers in run_code
+
+The worker is also an MCP client. It starts the MCP servers that its config names, and adds each of their tools to `gm` inside `run_code` as `gm.<server>_<tool>(args)`, beside the native verbs. `gm.verbs()` and run_code's description list them. The config is `.gm-new/mcp.json` in the workspace, in the `mcpServers` shape of `.mcp.json`, or the file that `--mcp-config <file>` names:
+
+    {"mcpServers":{"files":{"command":"npx","args":["-y","<an MCP server package>","/abs/dir"],"env":{"TOKEN":"${MY_TOKEN}"},"timeoutMs":60000}}}
+
+- Only stdio servers run, from `command`, `args`, `env` and `cwd`; a relative `cwd` is taken from the workspace. A server with a `url` is not supported yet. A `${NAME}` in a value takes the environment variable NAME, and a missing variable stops that server from starting, with the reason in the log. `disabled: true` keeps an entry without starting it.
+- The servers start with the worker, in parallel, and tools/list and run_code wait for them, each for at most `startupTimeoutMs` (default 30000). A server that fails is logged as `mcp-server` with its error and the tail of its stderr, and the others still run. A server that exits is started again by its next call.
+- A call is an `action` and a `code-call` in the log, with its arguments and output. A call that runs past `timeoutMs` (default 60000) fails with that message, and the server is sent `notifications/cancelled`.
+- A tool whose verb name is a native verb is skipped and logged as `mcp-tool-skipped`. The other MCP tools are on the code surface only, not on `--surface tools`.
+- A worker started as an MCP server starts its own servers only to a depth of two (`GMNEW_MCP_DEPTH`), so a config that names gm-new itself stops after two levels.
+- The servers are stopped when the worker exits. Their state lives in the servers, so a restart of the worker starts them again with a fresh state.
+
 ## The CLI wrapper, for scripted witnesses
 
     node src/cli.mjs run --task "<text or file>" --workspace <dir> [--model scripted] [--script replies.json] [--faults 429,429] [--latency-ms N] [--serial] [--no-background] [--overlap]

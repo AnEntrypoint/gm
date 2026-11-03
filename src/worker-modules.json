@@ -12,6 +12,7 @@
   "hot-hook.mjs",
   "hot.mjs",
   "log.mjs",
+  "mcp-client.mjs",
   "mcp.mjs",
   "pending.mjs",
   "prompt.mjs",

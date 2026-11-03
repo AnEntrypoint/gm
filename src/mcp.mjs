@@ -15,6 +15,7 @@ import { RELOADABLE } from './hot-config.mjs';
 import { SEARCH_TOOLS } from './search.mjs';
 import { runBody, runCodeTool, RUN_CODE_PROPERTIES } from './runcode.mjs';
 import { bodyContext } from './exec.mjs';
+import { readServerConfig, startMcpClients } from './mcp-client.mjs';
 import { COMPACT as SEARCH_COMPACT } from './search.mjs';
 import { COMPACT as RUNCODE_COMPACT } from './runcode.mjs';
 import { COMPACT as TOOLS_COMPACT } from './tools.mjs';
@@ -116,7 +117,7 @@ const DEFAULT_MAX_INFLIGHT = 8;
 const DEFAULT_JOB_LIFETIME_MS = 1800000;
 // The most open jobs a next_context reply lists. The rest are counted in jobsOpenMore.
 const OPEN_LIST = 20;
-const USAGE = 'usage: node src/mcp.mjs --workspace <dir> [--task <file-or-text>] [--run-dir <dir>] [--max-steps N] [--max-inflight N] [--job-lifetime-ms N] [--stuck-ms N] [--monitor-ms N] [--notice-ms N] [--host-idle-ms N] [--surface tools|code]';
+const USAGE = 'usage: node src/mcp.mjs --workspace <dir> [--task <file-or-text>] [--run-dir <dir>] [--max-steps N] [--max-inflight N] [--job-lifetime-ms N] [--stuck-ms N] [--monitor-ms N] [--notice-ms N] [--host-idle-ms N] [--surface tools|code] [--mcp-config <file>]';
 // A host that stops calling is noticed after this long with no call in flight (--host-idle-ms). next_context waitMs is capped here, because a host cuts a call that runs too long.
 const DEFAULT_HOST_IDLE_MS = 600000;
 const MAX_WAIT_MS = 300000;
@@ -157,7 +158,7 @@ function surfaceOf(leaves) {
     ...leaves['git.mjs'].GIT_TOOLS,
     ...leaves['rows.mjs'].ROW_TOOLS,
   ].map(annotated);
-  const VERBS = TOOLS.filter((tool) => !CODE_SURFACE.has(tool.name));
+  const VERBS = [...TOOLS.filter((tool) => !CODE_SURFACE.has(tool.name)), ...mcp.verbs()];
   const CODE_LIST = [...TOOLS.filter((tool) => tool.name === 'next_context' || tool.name === 'finish'), annotated(runCodeTool(VERBS.map((tool) => tool.name)))];
   const REGISTRY = registryOf(TOOLS_COMPACT, SEARCH_COMPACT, leaves['fetch.mjs'].COMPACT, leaves['git.mjs'].COMPACT, leaves['code-ast.mjs'].COMPACT, leaves['rows.mjs'].COMPACT, leaves['wiki-tools.mjs'].COMPACT, leaves['review-tools.mjs'].COMPACT, RUNCODE_COMPACT, SELF_COMPACT);
   return { TOOLS, VERBS, CODE_LIST, REGISTRY, leaves };
@@ -296,7 +297,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     // A verb that may change something has its start in the file before it runs. Its code-call names that start, as a result names its action.
     const action = READ_ONLY_TOOLS.has(name) ? undefined : log.append('action', { step: steps, tool: name, args, ...(body === undefined ? {} : { body }) });
     if (action !== undefined) flushAllLogs();
-    const exec = Object.hasOwn(handlers, name) ? handlers[name] : (value) => tools.run(name, value);
+    const exec = mcp.has(name) ? (value) => mcp.call(name, value) : Object.hasOwn(handlers, name) ? handlers[name] : (value) => tools.run(name, value);
     let result;
     try {
       result = await exec(args);
@@ -360,6 +361,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     if (method === 'initialize') return initialize(params);
     // server/discover is not served (owner decision: -32601 until a modern path exists), so it falls through to method not found.
     if (method === 'ping') return {};
+    await mcpReady;
     if (method === 'tools/list') return { tools: servedTools(surface) };
     if (method === 'tools/call') {
       touch();
@@ -888,6 +890,10 @@ function isRequestShape(message) {
 const SELF_COMPACT = {
   tools: { next_context: { zone1: resultZone1, zone2: resultZone2 } },
 };
+// The MCP servers configured for this worker. Until main starts them, there are none, and their tools are not in any surface.
+const NO_MCP = { ready: Promise.resolve(), verbs: () => [], has: () => false, call: () => undefined, stop: () => {} };
+let mcp = NO_MCP;
+let mcpReady = NO_MCP.ready;
 // The surface of the running worker, built at boot from the leaf modules. activeTools and activeLog are the session's, set when it starts.
 let current = surfaceOf(await loadLeaves());
 let activeTools = null;
@@ -984,7 +990,17 @@ async function main(argv) {
   if (resumed) log.append('restart', { reason: flags['restart-reason'] ?? 'restarted without a reason' });
   else log.append('start', { mode: 'mcp', maxSteps, maxInflight, taskFrom: flags.task === undefined ? 'session prompt' : 'task file' });
   if (recovery && recovery.open.length > 0) log.append('recovery', { lastSeq: recovery.lastSeq, open: recovery.open });
-  logTools(log, resumed, servedTools(surface));
+  const mcpFlag = flags['mcp-config'];
+  const mcpFile = mcpFlag === undefined ? join(workspace, '.gm-new', 'mcp.json') : resolve(mcpFlag);
+  const { servers, problems } = readServerConfig(mcpFile, workspace, { required: mcpFlag !== undefined });
+  const depth = Number.parseInt(process.env.GMNEW_MCP_DEPTH ?? '0', 10) || 0;
+  const client = startMcpClients({ servers, problems, log, depth, reserved: new Set(current.TOOLS.map((tool) => tool.name)) });
+  mcp = client;
+  mcpReady = client.ready.then(() => {
+    current = surfaceOf(current.leaves);
+    logTools(log, resumed, servedTools(surface));
+  });
+  process.on('exit', () => client.stop());
 
   sweepEndedCode(dirname(runDir), runDir);
   const session = createSession({ workspace, runDir, log, task, maxSteps, maxInflight, resume, jobLifetimeMs, stuckMs, monitorMs, noticeMs, hostIdleMs, recovery: recovery && recovery.open.length > 0 ? recovery : null, history, surface });
@@ -997,7 +1013,7 @@ async function main(argv) {
     pausing ??= session.quiesceForRestart().then(() => log.append('paused', { reason })).finally(() => process.exit(0));
     return pausing;
   };
-  lines.on('close', () => (flags.supervised === 'yes' ? pauseRun('the supervisor ended stdin') : session.inputEnded().catch((err) => console.error(`gm: ${err.message}`))));
+  lines.on('close', () => (flags.supervised === 'yes' ? pauseRun('the supervisor ended stdin') : session.inputEnded().catch((err) => console.error(`gm: ${err.message}`)).finally(() => client.stop())));
   process.once('SIGINT', () => lines.close());
   process.once('SIGTERM', () => pauseRun('SIGTERM from the supervisor'));
   process.stdout.on('error', (err) => console.error(`gm: stdout: ${err.message}`));
