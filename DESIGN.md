@@ -86,3 +86,33 @@ Question: does one-hop dependency closure help natural-language search? The earl
 - Shipped: search takes closure (default false). Its closure rows read `path:line closure text`, at most 20, one for each JavaScript file that defines a function called from a top-10 hit and is not itself a top-10 file. src/closure.mjs parses the tracked JavaScript with acorn, the one runtime dependency, and caches the definitions by file digest. The definitions come from every tracked JavaScript file of the searched root; the measurement used src/ and gm-mcp/src/ only, so the production corpus is wider.
 - Live check (gm.search with closure true and root /workspace/gm-new, actionSeq 258): 11 lines, one closure row, src/log.mjs:227 closure export function readEvents(file). The gate passes after closure.mjs is listed in src/worker-modules.json, which the workers check requires for every module the graph reaches.
 - Limits: 95 units from two repositories; the descriptions come from three writers, not from users; the corpus moves as src changes, so each number holds only for the corpus it was measured on. In this session the gm server serves /workspace/gm, so gm.search needs root to reach gm-new.
+
+## MCP features against gm-new, after the 2026-07-28 research (2026-11-03)
+
+Research: deep-research workflow wf_226cee04-a18 (MCP protocol features): 20 sources, 25 claims verified, 20 confirmed, 5 refuted. The refuted claims are not used. Caveats from the run: the 2026-07-28 revision was current on 2026-11-03, and the release-candidate dates conflict across sources.
+
+What gm-new declares and does (src/connect.mjs CAPABILITIES; src/mcp.mjs):
+
+- tools, prompts and resources each declare listChanged: true. No subscribe, tasks, logging or completions capability.
+- It negotiates 2025-11-25 and accepts 2025-06-18. Any other asked version gets 2025-11-25 back (src/mcp.mjs, the initialize reply).
+- It serves server instructions (src/connect.mjs), the prompts gm and gm-continue, the skill:// resources, and an empty resources/templates/list.
+- It sends notifications/progress for long calls and handles notifications/cancelled.
+- It uses none of: roots/list, sampling/createMessage, elicitation/create, completion/complete, logging/setLevel, resources/subscribe, tasks, InputRequiredResult (gm.grep of src, no match).
+- It sends no list_changed notification. Its tool, prompt and resource lists are fixed at connect, so the declared flags do not claim a change that does not happen. If a list starts to change, the notification must be sent.
+
+Client facts from https://code.claude.com/docs/en/mcp (fetched 2026-11-03; 100000 of 155688 characters read):
+
+- Elicitation: elicitation/create is served only in interactive terminal sessions, and roots/list everywhere. A non-interactive session cancels a task that requests input.
+- Tasks: supported in public beta from Claude Code v2.1.304.
+- list_changed: an interactive session refreshes the lists from that server; with -p and in the Agent SDK only the tool list is refreshed.
+- Streamable HTTP is supported. SSE is deprecated. Resource subscriptions, the Multi Round-Trip pattern by name, and server instructions are not stated.
+- The v2 runtime is built on TypeScript SDK 2.0, which adds protocol revision 2026-07-28.
+
+Decisions (owner decisions where marked):
+
+1. No protocol upgrade now. gm-new negotiates 2025-11-25. The 2026-07-28 revision removes sessions, which bears on the run-per-connection model, and the research caveats need a fresh read of the spec before a change. OWNER DECISION. Risk not tested here: a v2 client may ask for 2026-07-28, and gm-new then answers 2025-11-25. No v2 client is installed to check the handshake.
+2. No elicitation. A question mid-call would hold the run open on the user answer, and the run model records a question as a row instead. Interactive-only in Claude Code. OWNER DECISION if wanted.
+3. No tasks. gm-new already runs long work as background runs (run_code past its budget, job_start), and the Claude Code task support is public beta. Revisit when it leaves beta.
+4. Roots, sampling and logging: gm-new uses none, so the 2026-07-28 deprecations need no migration.
+
+Witnesses (run 2026-11-03-20-34-41-82fd69): actionSeq 6 (capability and version grep of src), actionSeq 12 (client-feature grep of src, no match); the Claude Code docs read above.

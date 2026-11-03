@@ -33,3 +33,7 @@ Token use per turn, CPU, RAM, SSD writes, debugging power and thrashing under pa
 - MAST (arXiv 2503.13657, abstract, https://arxiv.org/abs/2503.13657): 14 failure modes in 3 categories (system design issues, inter-agent misalignment, task verification); MAST-Data has 1600+ annotated traces from 7 frameworks; inter-annotator kappa 0.88.
 - CooperBench (arXiv 2601.13295 v2, abstract, https://arxiv.org/abs/2601.13295): over 600 collaborative coding tasks across 12 libraries in 4 languages; agents average 30% lower success when they work together than when they work alone (the abstract does not say relative or absolute). The abstract gives no human-pair figure, so the 9 of 10 against 3 of 10 figure from a search summary is not verified.
 - The refutation records do not state the claim wording, so these checks report what the papers state. They do not overturn the verdicts, which stand as excluded, not shown false.
+
+## Follow-up 2026-11-03: MCP protocol features
+
+The deep-research run wf_226cee04-a18 on the MCP feature set reports the 2026-07-28 revision as stable, with roots, sampling and logging deprecated and tasks moved to an extension. gm-new is audited against it and its decisions are in DESIGN.md, "MCP features against gm-new, after the 2026-07-28 research". Nothing in gm-new depends on the deprecated features.
