@@ -1,17 +1,19 @@
 // Updates from the repository. A checkout of gm-new is a clone of origin main, so an update is a fast-forward pull. A check fetches origin.
-// When main is ahead, the gate runs on the new commit first, in a clone of the checkout at that commit, so a commit the gate rejects never
-// reaches the checkout. The pull waits while a tool call, a body or a job is running, and it never runs in a checkout with changes to tracked
-// files. Then the checkout is fast-forwarded and npm ci runs when the lock file changed. A pull that changes a src/ module outside the
-// reloadable set (src/hot-config.mjs) restarts the worker, and the check waits for the restart: when the worker does not start on the new
-// code, the pull is rolled back, the checkout is
-// reset to the commit before it, the worker starts on the old code, and the rollback is logged. A diverged history is reported and left
-// alone. A check that cannot reach origin is reported and skipped. The checks never throw. A pull that changes tools/, other than the relay
-// (tools/relay.mjs), replaces the core: replaceCore starts the new core, and when that core does not take over, the pull is rolled back.
-import { execFile } from 'node:child_process';
+// When main is ahead, the checks run on the new commit first, in a clone of the checkout at that commit, so a commit they reject never reaches
+// the checkout. A commit that changes src/ or tools/ must also load its core and start its worker there. The pull waits while a tool call,
+// a body or a job is running, and it never runs in a checkout with changes to tracked files. Then the checkout is fast-forwarded and npm ci
+// runs when the lock file changed. A pull that changes a module the worker loads (src/worker-modules.json) restarts the worker, and the check
+// waits for the worker's report. When the worker does not start after a pull, the pull is rolled back by a reset, except a pull that changed
+// the core too: that one is reported and not reset. A diverged history is reported and left alone. A check that cannot reach origin is reported
+// and skipped. The checks never throw. A pull that changes tools/, other than the relay (tools/relay.mjs), replaces the core, and its check
+// waits for the worker unless the core is the same code.
+import { execFile, spawn } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { mkdtemp, rm, symlink } from 'node:fs/promises';
 import { promisify } from 'node:util';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { createInterface } from 'node:readline';
 import { pathToFileURL } from 'node:url';
 import { RELOADABLE } from '../src/hot-config.mjs';
 
@@ -27,6 +29,9 @@ const GATE_MS = 600000;
 // How long the check waits for the supervisor to report the worker's start after a pull or a rollback, and how soon a waiting pull is retried.
 const WORKER_MS = 60000;
 const WAIT_RETRY_MS = 60000;
+// How long a candidate's core and worker have to load and answer initialize, and the id of that request.
+const START_MS = 20000;
+const START_ID = 'gm-new-candidate-start';
 // The targets that were refused by the gate or rolled back, with the reason. Until origin moves to another commit, a refused target is not
 // tried again, so a broken commit on main is not pulled, failed and rolled back at every check.
 const refused = new Map();
@@ -59,21 +64,82 @@ async function gate(root) {
   }
 }
 
+// The modules the worker loads, as src/worker-modules.json lists them (the gate checks the list against the import graph). null when the list
+// cannot be read.
+export function workerModulesOf(root) {
+  try {
+    return JSON.parse(readFileSync(join(root, 'src', 'worker-modules.json'), 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
+// The names, among names, that the worker loads. With no readable list, every name counts, so no change is missed.
+export function loadedByWorker(names, list) {
+  return list === null ? names : names.filter((name) => list.includes(name));
+}
+
 // The commit checked in a clone of the checkout at that commit. The clone shares the checkout's objects, and it creates no branch in the
-// checkout, so the checkout is not touched. Its node_modules is shared with the checkout, or installed when the lock file changed.
-async function candidate(root, target, lockChanged) {
+// checkout, so the checkout is not touched. Its node_modules is shared with the checkout, or installed when the lock file changed. When the
+// commit changes src/ or tools/, the clone must also start: its core loads, and its worker answers initialize.
+async function candidate(root, target, lockChanged, starts) {
   const dir = await mkdtemp(join(tmpdir(), 'gm-new-candidate-'));
   try {
     await run('git', ['clone', '--quiet', '--shared', '--no-checkout', root, dir], { timeout: FETCH_MS });
     await run('git', ['-C', dir, 'checkout', '--quiet', '--detach', target], { timeout: PULL_MS });
     if (lockChanged) await install(dir);
     else await symlink(join(root, 'node_modules'), join(dir, 'node_modules'), 'dir');
-    return await gate(dir);
+    const verdict = await gate(dir);
+    if (verdict.ok !== true) return { ...verdict, workers: null };
+    const workers = workerModulesOf(dir);
+    const problem = starts ? await startProblem(dir) : null;
+    return problem === null ? { ok: true, failed: [], workers } : { ok: false, failed: [problem], workers };
   } catch (err) {
-    return { ok: false, failed: [`the commit could not be checked: ${firstLine(err)}`] };
+    return { ok: false, failed: [`the commit could not be checked: ${firstLine(err)}`], workers: null };
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
+}
+
+// The new code must load and start before the checkout moves: the core is probed, then the worker must answer initialize. A commit that fails
+// here is refused, so the checkout keeps the code that is running, and its worker keeps running.
+async function startProblem(dir) {
+  try {
+    await run(process.execPath, ['tools/core.mjs', '--probe'], { cwd: dir, timeout: START_MS });
+  } catch (err) {
+    return `the new core does not load (${firstLine(err)})`;
+  }
+  return workerStarts(dir);
+}
+
+// The worker starts in the clone with the arguments a core gives it, and must answer initialize. Its run is in the clone, so it is removed with it.
+function workerStarts(dir) {
+  return new Promise((resolveStart) => {
+    const proc = spawn(process.execPath, [join(dir, 'src', 'mcp.mjs'), '--workspace', dir, '--run-dir', join(dir, 'runs', 'candidate'), '--supervised', 'yes'], { cwd: dir, stdio: ['pipe', 'pipe', 'pipe'] });
+    let stderr = '';
+    const finish = (problem) => {
+      clearTimeout(timer);
+      proc.kill('SIGKILL');
+      resolveStart(problem);
+    };
+    const timer = setTimeout(() => finish(`the worker did not answer initialize within ${START_MS} ms`), START_MS);
+    proc.stdin.on('error', () => {});
+    proc.stderr.on('data', (chunk) => {
+      stderr += chunk;
+    });
+    proc.on('error', (err) => finish(`the worker could not start (${err.message})`));
+    proc.on('exit', (code, signal) => finish(`the worker exited (${signal ?? `code ${code}`}) before it answered initialize: ${firstLine(stderr) || 'no output'}`));
+    createInterface({ input: proc.stdout }).on('line', (line) => {
+      let message;
+      try {
+        message = JSON.parse(line);
+      } catch {
+        return;
+      }
+      if (message.id === START_ID) finish(message.error ? `the worker answered initialize with an error (${message.error.message})` : null);
+    });
+    proc.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id: START_ID, method: 'initialize', params: { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'gm-new-candidate', version: '1' } } })}\n`);
+  });
 }
 
 // One check. It returns what it did as { state, ... }, and it never throws. busy() returns why the worker's work must not be interrupted now,
@@ -106,13 +172,11 @@ export async function checkForUpdate(root, { log = () => {}, busy = null, nextWo
 async function apply(root, prev, target, ahead, log, { busy, nextWorkerEvent, replaceCore }) {
   const changed = (await git(root, ['diff', '--name-only', prev, target])).split('\n').filter(Boolean);
   const lockChanged = changed.includes('package-lock.json');
-  // A skill file and a reloadable module are served in place (the core refreshes the lists, and its watch reloads the module), so only the
-  // other src/ modules restart the worker.
-  const restarts = changed.some((file) => file.startsWith('src/') && !RELOADABLE.includes(file.slice('src/'.length)));
   const replaces = changed.some((file) => file.startsWith('tools/') && file !== 'tools/relay.mjs');
-  const verdict = await candidate(root, target, lockChanged);
+  const starts = replaces || changed.some((file) => file.startsWith('src/'));
+  const verdict = await candidate(root, target, lockChanged, starts);
   if (verdict.ok !== true) {
-    const reason = `the gate failed on the new commit: ${verdict.failed.join(', ')}`;
+    const reason = `the checks failed on the new commit: ${verdict.failed.join(', ')}`;
     log(`not pulled ${short(target)}: ${reason}`);
     refused.set(target, reason);
     return { state: 'rejected', head: prev, target, reason };
@@ -122,7 +186,10 @@ async function apply(root, prev, target, ahead, log, { busy, nextWorkerEvent, re
   if (waiting) return { state: 'waiting', reason: waiting, head: prev, target, ahead };
   const dirty = await git(root, ['status', '--porcelain', '--untracked-files=no']);
   if (dirty !== '') return { state: 'dirty', head: prev, target, ahead };
-  // The wait for the restart starts before the pull, so the supervisor's report of it is not missed.
+  // Only a module the worker loads restarts it, by the list at the target commit, and a reloadable one is reloaded in place instead.
+  const srcFiles = changed.filter((file) => file.startsWith('src/')).map((file) => file.slice('src/'.length));
+  const restarts = loadedByWorker(srcFiles, verdict.workers).some((name) => !RELOADABLE.includes(name));
+  // The wait for the restart starts before the pull, so the worker's report of it is not missed.
   const outcome = restarts && nextWorkerEvent ? nextWorkerEvent(WORKER_MS) : null;
   let landed = false;
   try {
@@ -133,19 +200,24 @@ async function apply(root, prev, target, ahead, log, { busy, nextWorkerEvent, re
     if (!landed) return { state: 'failed', error: firstLine(err) };
     return rollback(root, prev, target, lockChanged, restarts, `the install failed (${firstLine(err)})`, { log, nextWorkerEvent });
   }
-  // A pull that changes the core replaces it. The new core is checked and loaded before it takes over, and it starts the worker itself.
+  // A pull that changes the core replaces it. The new core is checked and loaded before it takes over, and it starts the worker itself, so its
+  // take-over is the worker's answer. A core that is the same code takes over with nothing to do, so the worker's report decides below.
   if (replaces && replaceCore) {
     const handed = await replaceCore(`pulled ${short(target)}`);
-    if (handed.ok) return { state: 'updated', from: prev, to: target, ahead, changed, verified: true, restarted: true };
-    return rollback(root, prev, target, lockChanged, restarts, `the new core did not take over (${handed.reason})`, { log, nextWorkerEvent });
+    if (!handed.ok) {
+      const why = `the new core did not take over (${handed.reason})`;
+      if (restarts) return { state: 'unstarted', from: prev, to: target, reason: why };
+      return rollback(root, prev, target, lockChanged, restarts, why, { log, nextWorkerEvent });
+    }
+    if (!handed.unchanged) return { state: 'updated', from: prev, to: target, ahead, changed, verified: true, restarted: true };
   }
   if (!outcome) {
-    log(`pulled ${ahead} commit(s) to ${short(target)}; the gate passed`);
+    log(`pulled ${ahead} commit(s) to ${short(target)}; the checks passed`);
     return { state: 'updated', from: prev, to: target, ahead, changed, verified: false, restarted: restarts };
   }
   const answered = await outcome;
   if (answered?.state === 'running') {
-    log(`pulled ${ahead} commit(s) to ${short(target)}; the gate passed, and the worker answered on the new code`);
+    log(`pulled ${ahead} commit(s) to ${short(target)}; the checks passed, and the worker answered on the new code`);
     return { state: 'updated', from: prev, to: target, ahead, changed, verified: true, restarted: true };
   }
   const why = answered?.state === 'failed'
@@ -166,8 +238,8 @@ async function untilRunning(nextWorkerEvent, deadline) {
   }
 }
 
-// Undoes a pull: the checkout goes back to the commit before it, and the worker is restarted on the old code by the supervisor's watch on
-// src/ and skills/. The rollback is logged. When the worker does not start on the old code either, the state is stuck, for a person to check.
+// Undoes a pull: the checkout goes back to the commit before it, and the worker is restarted on the old code by the core's watch on src/ and
+// skills/. The rollback is logged. When the worker does not start on the old code either, the state is stuck, for a person to check.
 async function rollback(root, prev, target, lockChanged, restarts, why, { log, nextWorkerEvent }) {
   refused.set(target, why);
   const back =restarts && nextWorkerEvent ? untilRunning(nextWorkerEvent, Date.now() + WORKER_MS) : null;
@@ -190,6 +262,7 @@ async function rollback(root, prev, target, lockChanged, restarts, why, { log, n
 function describe(result) {
   switch (result.state) {
     case 'updated': return `updated ${result.ahead} commit(s)${result.verified ? '; the worker answers on the new code' : result.restarted ? '; the worker restarts on the changed files' : '; the worker did not restart: the changed files are served in place or are not loaded'}`;
+    case 'unstarted': return `pulled ${short(result.to)}, and the new code did not start (${result.reason}); nothing was reset, so the checkout keeps ${short(result.to)}, and the worker retries it`;
     case 'reverted': return `pulled code that ${result.reason}, and reset to the commit before it`;
     case 'stuck': return `pulled code that ${result.reason}, and the reset failed (${result.error}); check the checkout by hand`;
     case 'dirty': return `origin main is ${result.ahead} commit(s) ahead, but the checkout has changes to tracked files, so nothing was pulled`;

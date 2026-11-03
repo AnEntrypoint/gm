@@ -1,12 +1,14 @@
 # Working on gm-new
 
-How to change this project. Project facts are in AGENTS.md, and decisions with their witnesses are in DESIGN.md. This skill is not served to runs; only skills/gm/SKILL.md and skills/gm-continue/SKILL.md are.
+How to change this project. Project facts are in AGENTS.md, and decisions with their witnesses are in DESIGN.md. This skill is not served to runs; only skills/gm/SKILL.md and skills/gm-continue/SKILL.md are, as the MCP prompts `gm` (invoked as mcp__gm__gm) and `gm-continue` (invoked as mcp__gm__gm-continue), and as the resources skill://gm/SKILL.md and skill://gm-continue/SKILL.md.
 
 ## Scratch
 
 - Scratch work lives under /tmp/gm-scratch/gm-new. A script never sits in a directory it deletes: a probe that removed its own directory is why this rule exists.
 - A witness copies the working tree as a tar (without .git, runs and node_modules). The copy is not a git clone and not a worktree. The witness runs the real path through the relay, reads the result from the run's log file, and deletes the copy.
 - A witness for propagation uses a scratch bare repository as origin and a runner checkout started with default settings. It times the push and reads the relay's stderr.
+- A witness driver is started from the shell in the background, never with gm.job_start in the live run: a job is a record in that run's log, so a driver started there put three witness jobs in runs/self.
+- Send JSON to a driver with a quoted heredoc (cat >> file <<'EOF'). A body with single quotes broke a printf quoting and sent a garbled line.
 
 ## Witnesses
 
@@ -21,7 +23,7 @@ How to change this project. Project facts are in AGENTS.md, and decisions with t
 
 ## Edits and collisions
 
-- The shared checkout is live: a worker started from it runs its working tree. Build a change in a copy of the tree (a tar, see Scratch; not a git clone or a worktree), witness it there, and apply it to the checkout in one step once it passes. A half-made edit breaks every worker that restarts. A change to a reloadable leaf (src/hot-config.mjs) reloads in place. A batch that restarts a worker kills its background jobs, so apply it when no worker on the checkout is busy, and tell the peers that run it.
+- The shared checkout is live: a worker started from it runs its working tree. Build a change in a copy of the tree (a tar, see Scratch; not a git clone or a worktree), witness it there, and apply it to the checkout in one step once it passes. A half-made edit breaks every worker that restarts. A change to a reloadable leaf reloads in place. A change to another module the worker loads restarts it, and a change to a module it does not load restarts nothing. A batch that restarts a worker kills its background jobs, so apply it when no worker on the checkout is busy, and tell the peers that run it.
 - Change an existing file with Edit only. Never Write over an existing file.
 - On a failed Edit, re-read the region and reapply once. If it fails again, stop and report.
 - Only the single writer commits. A collision is repaired after the fact, not avoided.

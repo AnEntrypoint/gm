@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // The gm-new core. tools/relay.mjs runs this file and passes the host's lines through it, so the host's connection never changes.
-// The core runs the worker (src/mcp.mjs) as a child. When a file under src/ or skills/ changes, the core holds new host requests,
+// The core runs the worker (src/mcp.mjs) as a child. When a module the worker loads changes (src/worker-modules.json) or a skill changes,
+// the core holds new host requests,
 // waits for the calls in flight to answer, pauses the worker (SIGTERM), starts a new one on the same run directory, replays the MCP
 // handshake, and tells the host which of its lists changed, by comparing digests. The new worker resumes the run from its log. A call
 // in flight is never interrupted or answered with an error.
@@ -14,7 +15,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, watch, wr
 import { createInterface } from 'node:readline';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { DEFAULT_UPDATE_MS, startUpdates } from './update.mjs';
+import { DEFAULT_UPDATE_MS, loadedByWorker, startUpdates, workerModulesOf } from './update.mjs';
 import { RELOADABLE } from '../src/hot-config.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -734,16 +735,21 @@ async function pause(code) {
   process.exit(code);
 }
 
-// Changes under src/ are gathered for one debounce window. A window that changes only reloadable modules is applied in place. Any other
-// change restarts the worker, as before.
+// Changes under src/ are gathered for one debounce window. Only a module the worker loads counts: a module it does not load restarts nothing.
+// A window of those that are all reloadable modules is applied in place. Any other window restarts the worker.
 const changedSource = new Set();
 function onSourceChange(_event, file) {
   if (!file || !WATCHED_FILE.test(file)) return;
   changedSource.add(file);
   clearTimeout(sourceTimer);
   sourceTimer = setTimeout(() => {
-    const files = [...changedSource];
+    const changed = [...changedSource];
     changedSource.clear();
+    const files = loadedByWorker(changed, workerModulesOf(ROOT));
+    if (files.length === 0) {
+      say(`not loaded by the worker, so nothing restarts: ${changed.map((name) => `src/${name}`).join(', ')}`);
+      return;
+    }
     const inPlace = files.every((name) => RELOADABLE.includes(name));
     requestTransition(inPlace ? 'reload' : 'restart', `changed: ${files.join(', ')}`);
   }, DEBOUNCE_MS);

@@ -55,7 +55,7 @@ This is what you build and codify. Single worker first: DESIGN.md direction 6 sa
 
 - Items 1 to 11 under DESIGN.md, ## Measured, are witnessed. The live comparison of gm-new and gm is closed; its report is in DESIGN.md, Project close.
 - Open and recorded: the minimal tool set, which is not run, and G3 (cache effect), measured by the gm agent as a cache share from the host transcripts. No saving is claimed, because the price multipliers are unverified. The project closes when both are recorded.
-- Updates: a running checkout pulls origin main about every minute (`tools/update.mjs`, DEFAULT_UPDATE_MS). A pull goes only into a clean checkout. A change to a reloadable module (src/hot-config.mjs) or to a skill is applied in place. Any other change under `src/` restarts the worker (DESIGN.md, Hot reload in place; Skill in place). `tools/relay.mjs` is frozen, so a change to it reaches a host only on reconnect (DESIGN.md, Update on push).
+- Updates: a running checkout pulls origin main about every minute (`tools/update.mjs`, DEFAULT_UPDATE_MS). A pull goes only into a clean checkout. A change to a reloadable leaf or to a skill is applied in place. A change to any other module the worker loads (`src/worker-modules.json`, src/hot-config.mjs included) restarts it; a `src/` module the worker does not load restarts nothing (DESIGN.md, HMR step 1; Skill in place). `tools/relay.mjs` is frozen, so a change to it reaches a host only on reconnect (DESIGN.md, Update on push).
 
 ## Facts found by troubleshooting
 
@@ -70,6 +70,8 @@ This is what you build and codify. Single worker first: DESIGN.md direction 6 sa
 - A row file holds only the names in `FIELDS` (src/rows.mjs). A verb rewrite drops any other name, so a planner that reads a field no verb writes sees every row as lacking it (DESIGN.md, Row states).
 - A reloadable module's verbs are rebuilt per session from the worker's leaf set. A singleton that imports one statically keeps the code it loaded at boot (DESIGN.md, Hot reload in place).
 - A batch that changes `tools/core.mjs` or a singleton restarts each live worker on the checkout, and the two debounce windows can restart a worker twice. Background jobs are killed (DESIGN.md, Hot reload in place).
+- `src/worker-modules.json` is the worker's import graph, and the gate's `workers` check fails when it differs. The core reads it at each change, so a `src/` module outside it, such as cli.mjs, restarts nothing (DESIGN.md, HMR step 1).
+- A pull whose core and worker changed is not reset when the worker does not start: the update check starts the worker in a clone before the checkout moves, so only a failure after the pull reaches the checkout (DESIGN.md, HMR step 1).
 - The wake rules are in skills/gm/SKILL.md, Pending events, and in DESIGN.md, "Wake by a watcher".
 - A worker that exits 0 with the run open paused itself. The core restarts it at once, and a call in flight gets a repeat-the-call error. Any other exit fails calls until the retry (DESIGN.md, Self-pause keeps calls held).
 - `read_file`'s `offset` and `limit`, and `job_status`'s `offset`, count characters, not lines. `total` and `next` are characters too (src/tools.mjs).

@@ -1,7 +1,9 @@
 import { existsSync, lstatSync, mkdirSync, readFileSync, rmSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
+import { createRequire } from 'node:module';
 import { join } from 'node:path';
 import { runCommand } from './exec.mjs';
+import { RELOADABLE } from './hot-config.mjs';
 import { sourcesCheck } from './sources.mjs';
 import { wikiCheck } from './wiki.mjs';
 import { skillCheck } from './skills.mjs';
@@ -19,7 +21,10 @@ const SMOKE_TIMEOUT_MS = 60000;
 // other workspace they are not run, and notCovered names them, so a commit there is not refused for files it never had. The checkout is
 // recognised by the package name, which a deleted file cannot change, so a damaged gm-new checkout still fails its own checks.
 const OWN_NAME = 'gm-new';
-const OWN_CHECKS = ['ascii', 'docs', 'sources', 'wiki', 'skills', 'connect', 'smoke'];
+const OWN_CHECKS = ['ascii', 'docs', 'sources', 'wiki', 'skills', 'connect', 'workers', 'smoke'];
+const WORKER_ENTRY = 'mcp.mjs';
+const WORKER_LIST = 'src/worker-modules.json';
+const MODULE_PATH = /^\.\/[\w.-]+\.mjs$/;
 
 // What the gate does not check. Every git_commit result and its commit event carry this list, so a pass is not read as more
 // than it is. Any gap that survives the checks is recorded here, rather than hidden.
@@ -43,6 +48,7 @@ export async function runGate(root, scope = null) {
     checks.push(await timed('wiki', async () => wikiCheck(root)));
     checks.push(await timed('skills', async () => skillCheck(root)));
     checks.push(await timed('connect', async () => connectCheck(root)));
+    checks.push(await timed('workers', () => workersCheck(root)));
     checks.push(await timed('smoke', () => smokeCheck(root)));
   }
   const failed = checks.filter((check) => !check.ok).map((check) => check.name);
@@ -146,6 +152,48 @@ function isRepoPath(token, tops) {
   if (token.includes('<') || token.includes('*') || token.includes('://') || token.includes('=') || token.startsWith('/')) return false;
   if (/^(runs|node_modules|\.gm|\.agentplug-kv)(\/|$)/.test(token)) return false;
   return token.includes('/') && tops.has(token.split('/')[0]);
+}
+
+// The modules the worker loads, from the import graph of src/mcp.mjs. It follows static imports, literal import() calls and the module paths in
+// string literals (new URL and register entries). The leaves loader in src/mcp.mjs is import(`./${file}`) over RELOADABLE, so that template
+// adds RELOADABLE; the same template anywhere else is an error. An import() of a project file (src/body-worker.mjs) is not a module of src/.
+export async function workerModules(root) {
+  const { parse } = createRequire(import.meta.url)('acorn');
+  const graph = new Set();
+  const queue = [WORKER_ENTRY];
+  while (queue.length > 0) {
+    const name = queue.pop();
+    if (graph.has(name)) continue;
+    graph.add(name);
+    const ast = parse(readFileSync(join(root, 'src', name), 'utf8'), { ecmaVersion: 'latest', sourceType: 'module' });
+    queue.push(...importsIn(ast, name));
+  }
+  return [...graph].sort();
+}
+
+function importsIn(node, file, found = []) {
+  if (Array.isArray(node)) {
+    for (const child of node) importsIn(child, file, found);
+    return found;
+  }
+  if (node === null || typeof node !== 'object') return found;
+  if (node.type === 'Literal' && typeof node.value === 'string' && MODULE_PATH.test(node.value)) found.push(node.value.slice(2));
+  if (node.type === 'ImportExpression' && node.source.type === 'TemplateLiteral' && node.source.quasis[0].value.cooked.startsWith('./')) {
+    if (file !== WORKER_ENTRY) throw new Error(`a computed import() of ./ modules in src/${file} is not followed by the graph`);
+    found.push(...RELOADABLE);
+  }
+  for (const [key, child] of Object.entries(node)) if (key !== 'type' && typeof child === 'object') importsIn(child, file, found);
+  return found;
+}
+
+// The checked-in list must equal the graph. A module the graph reaches and the list lacks would not restart the worker when it changes.
+async function workersCheck(root) {
+  const graph = await workerModules(root);
+  const listed = JSON.parse(readFileSync(join(root, WORKER_LIST), 'utf8'));
+  const extra = listed.filter((name) => !graph.includes(name));
+  const missing = graph.filter((name) => !listed.includes(name));
+  if (extra.length === 0 && missing.length === 0) return { ok: true, detail: `${graph.length} worker modules match the import graph` };
+  return { ok: false, detail: `${WORKER_LIST} lists ${JSON.stringify(extra)} that the graph does not reach, and lacks ${JSON.stringify(missing)}` };
 }
 
 // The smoke run must finish. The negative control runs the same task with one step, so it must stop at max_steps.
