@@ -1,6 +1,10 @@
+#include <atomic>
 #include <chrono>
+#include <csignal>
 #include <cstdio>
 #include <cstdlib>
+#include <string>
+#include <thread>
 
 #include "gmnew/proc.hpp"
 
@@ -53,6 +57,36 @@ int main() {
 
     auto missing = run({"definitely-not-a-program-xyz"});
     CHECK(!missing.started);
+
+    {
+        std::atomic<bool> finished{false};
+        Outcome owned;
+        auto owned_begin = std::chrono::steady_clock::now();
+        std::thread owner_thread([&] {
+            OwnerScope scope(7);
+            owned = shell("exec sleep 30");
+            finished = true;
+        });
+        while (!finished) {
+            kill_owned(7);
+            std::this_thread::sleep_for(std::chrono::milliseconds(20));
+        }
+        owner_thread.join();
+        CHECK(owned.started && owned.signal == SIGKILL && owned.exit_code == 128 + SIGKILL);
+        CHECK(!owned.timed_out && std::chrono::steady_clock::now() - owned_begin < std::chrono::seconds(10));
+        CHECK(signal_name(SIGKILL) != nullptr && std::string(signal_name(SIGKILL)) == "SIGKILL");
+    }
+
+    {
+        Outcome plain;
+        std::thread other([&] {
+            OwnerScope scope(8);
+            plain = shell("sleep 0.3; exit 4");
+        });
+        kill_owned(7);
+        other.join();
+        CHECK(plain.exit_code == 4 && plain.signal == 0);
+    }
 
     if (failures == 0) std::puts("proc ok");
     return failures == 0 ? 0 : 1;

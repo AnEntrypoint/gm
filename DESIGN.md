@@ -434,3 +434,9 @@ Gaps against Node, open:
 - A server request other than ping gets the SDK method-not-found text.
 - A stopped background body is not killed in native (see the friction section above).
 - The default grep scope searches untracked files in native (commit 2706397), and Node searches tracked files only. This is a recorded decision that Node has not yet taken.
+
+## Stopped background fetch: native-ahead row (2026-11-04)
+
+The "log event kinds" row differed by one code-call, from the "run_code background" scenario, not from the lint scenario. The body runs `gm.read_file` and then `gm.fetch` to a server that never answers, and `finish` with stopBackground kills it. Native's fetch runs curl, which the body owns (`OwnerScope` in native/components/mcp/server.cpp and `proc::kill_owned` in `stop_locked`), so the stop kills curl, the fetch returns "curl exited 137", and its code-call is logged after the job-killed event. Node's fetch is in-process with only an `AbortSignal.timeout` (src/fetch.mjs), and `killBody` (src/exec.mjs) kills shells only, so the stop never reaches it and no code-call is logged before end. Node's run_shell in the same body is killed and logged in both trees.
+
+Decision: native-ahead, recorded in native/tests/parity/run.mjs (`NATIVE_AHEAD`, the code-call count and the first-divergence index). Native's behaviour is the deliberate one: a stopped body leaves no network request running and its code-call carries the real outcome. Node leaves the request running until its 60 s timeout, and its code-call would then land after the run has ended. Node is not changed here (it is the reference). If the owner wants Node to match, the Node change is to abort fetch on a body stop, and the row is then removed.

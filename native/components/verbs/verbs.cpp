@@ -474,8 +474,14 @@ struct CoreVerbs::Impl {
             return reply;
         }
         reply.set("ok", outcome.exit_code == 0);
-        reply.set("exitCode", outcome.exit_code);
-        reply.set("signal", nullptr);
+        if (outcome.signal != 0) {
+            const char* name = proc::signal_name(outcome.signal);
+            reply.set("exitCode", nullptr);
+            reply.set("signal", name != nullptr ? json::Value(name) : json::Value(outcome.signal));
+        } else {
+            reply.set("exitCode", outcome.exit_code);
+            reply.set("signal", nullptr);
+        }
         reply.set("output", std::move(output));
         return reply;
     }

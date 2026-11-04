@@ -19,6 +19,53 @@ extern char** environ;
 
 namespace gmnew::proc {
 
+namespace {
+
+thread_local Owner current_owner = 0;
+std::mutex registry_mutex;
+std::vector<std::pair<Owner, long long>> registry;
+
+void kill_tree(long long pid) {
+#if defined(_WIN32)
+    run({"taskkill", "/PID", std::to_string(pid), "/T", "/F"});
+#else
+    ::kill(-static_cast<pid_t>(pid), SIGKILL);
+#endif
+}
+
+class Enrolment {
+public:
+    explicit Enrolment(long long pid) : pid_(pid), owner_(current_owner) {
+        if (owner_ == 0) return;
+        std::lock_guard guard(registry_mutex);
+        registry.emplace_back(owner_, pid_);
+    }
+    ~Enrolment() {
+        if (owner_ == 0) return;
+        std::lock_guard guard(registry_mutex);
+        std::erase_if(registry, [this](const auto& entry) { return entry.second == pid_; });
+    }
+    Enrolment(const Enrolment&) = delete;
+    Enrolment& operator=(const Enrolment&) = delete;
+
+private:
+    long long pid_;
+    Owner owner_;
+};
+
+}
+
+OwnerScope::OwnerScope(Owner owner) : previous_(std::exchange(current_owner, owner)) {}
+
+OwnerScope::~OwnerScope() { current_owner = previous_; }
+
+void kill_owned(Owner owner) {
+    std::lock_guard guard(registry_mutex);
+    for (const auto& [entry_owner, pid] : registry) {
+        if (entry_owner == owner) kill_tree(pid);
+    }
+}
+
 #if !defined(_WIN32)
 
 namespace {
@@ -84,6 +131,7 @@ Outcome run(const std::vector<std::string>& argv, const std::filesystem::path& c
     if (rc != 0) return outcome;
 
     outcome.started = true;
+    Enrolment enrolled(static_cast<long long>(pid));
     in_read.close();
     out_write.close();
     err_write.close();
@@ -162,12 +210,36 @@ Outcome run(const std::vector<std::string>& argv, const std::filesystem::path& c
 
     while (!reaped && ::waitpid(pid, &status, 0) < 0 && errno == EINTR) {}
     if (WIFEXITED(status)) outcome.exit_code = WEXITSTATUS(status);
-    else if (WIFSIGNALED(status)) outcome.exit_code = 128 + WTERMSIG(status);
+    else if (WIFSIGNALED(status)) {
+        outcome.exit_code = 128 + WTERMSIG(status);
+        outcome.signal = WTERMSIG(status);
+    }
     return outcome;
 }
 
 Outcome shell(std::string_view command, const std::filesystem::path& cwd, std::uint64_t timeout_ms) {
     return run({"/bin/sh", "-c", std::string(command)}, cwd, {}, timeout_ms);
+}
+
+const char* signal_name(int signal_number) {
+    switch (signal_number) {
+        case SIGHUP: return "SIGHUP";
+        case SIGINT: return "SIGINT";
+        case SIGQUIT: return "SIGQUIT";
+        case SIGILL: return "SIGILL";
+        case SIGTRAP: return "SIGTRAP";
+        case SIGABRT: return "SIGABRT";
+        case SIGBUS: return "SIGBUS";
+        case SIGFPE: return "SIGFPE";
+        case SIGKILL: return "SIGKILL";
+        case SIGUSR1: return "SIGUSR1";
+        case SIGSEGV: return "SIGSEGV";
+        case SIGUSR2: return "SIGUSR2";
+        case SIGPIPE: return "SIGPIPE";
+        case SIGALRM: return "SIGALRM";
+        case SIGTERM: return "SIGTERM";
+        default: return nullptr;
+    }
 }
 
 #else
@@ -235,6 +307,7 @@ Outcome run(const std::vector<std::string>& argv, const std::filesystem::path& c
         return outcome;
     }
     outcome.started = true;
+    Enrolment enrolled(static_cast<long long>(pi.dwProcessId));
     DWORD wrote = 0;
     if (!stdin_text.empty()) WriteFile(in_w, stdin_text.data(), static_cast<DWORD>(stdin_text.size()), &wrote, nullptr);
     CloseHandle(in_w);
@@ -267,6 +340,8 @@ Outcome run(const std::vector<std::string>& argv, const std::filesystem::path& c
 Outcome shell(std::string_view command, const std::filesystem::path& cwd, std::uint64_t timeout_ms) {
     return run({"cmd", "/c", std::string(command)}, cwd, {}, timeout_ms);
 }
+
+const char* signal_name(int) { return nullptr; }
 
 #endif
 

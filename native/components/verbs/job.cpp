@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "core_internal.hpp"
+#include "gmnew/proc.hpp"
 
 #if !defined(_WIN32)
 #include <fcntl.h>
@@ -50,27 +51,6 @@ std::string read_bytes(const std::filesystem::path& path) {
 }
 
 #if !defined(_WIN32)
-
-const char* signal_name(int signal_number) {
-    switch (signal_number) {
-        case SIGHUP: return "SIGHUP";
-        case SIGINT: return "SIGINT";
-        case SIGQUIT: return "SIGQUIT";
-        case SIGILL: return "SIGILL";
-        case SIGTRAP: return "SIGTRAP";
-        case SIGABRT: return "SIGABRT";
-        case SIGBUS: return "SIGBUS";
-        case SIGFPE: return "SIGFPE";
-        case SIGKILL: return "SIGKILL";
-        case SIGUSR1: return "SIGUSR1";
-        case SIGSEGV: return "SIGSEGV";
-        case SIGUSR2: return "SIGUSR2";
-        case SIGPIPE: return "SIGPIPE";
-        case SIGALRM: return "SIGALRM";
-        case SIGTERM: return "SIGTERM";
-        default: return nullptr;
-    }
-}
 
 void kill_group(int pid) {
     if (::kill(-pid, SIGTERM) != 0) return;
@@ -250,7 +230,7 @@ json::Value JobTable::start(const std::string& name, const std::string& command,
         if (WIFEXITED(raw)) {
             settle(ref, WEXITSTATUS(raw), nullptr);
         } else if (WIFSIGNALED(raw)) {
-            const char* signal_text = signal_name(WTERMSIG(raw));
+            const char* signal_text = proc::signal_name(WTERMSIG(raw));
             settle(ref, std::nullopt, signal_text != nullptr ? json::Value(signal_text) : json::Value(WTERMSIG(raw)));
         } else {
             settle(ref, std::nullopt, nullptr);

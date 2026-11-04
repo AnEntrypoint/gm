@@ -15,6 +15,8 @@ const SCRATCH = resolve(argValue('--scratch', `/tmp/parity-scratch-${process.pid
 const REPLY_TIMEOUT_MS = Number(argValue('--reply-timeout-ms', '30000'));
 const VALUE_WIDTH = 160;
 const FIXED_DATE = '2026-01-01T00:00:00Z';
+const STOPPED_PID_FILE = 'stopped-body.pid';
+const STOPPED_SLEEP_S = 4711;
 
 function extractReference() {
   rmSync(REF, { recursive: true, force: true });
@@ -173,6 +175,7 @@ function scenarios({ head, url }) {
     ['run_code syntax error', call('run_code', { body: 'return (;' })],
     ['run_code background', call('run_code', { body: `await gm.read_file({ path: 'README.md' }); return await gm.fetch({ url: '${url}/hang', timeoutMs: 60000 });`, timeoutMs: 300 })],
     ['job_status background', (replies) => code(`return await gm.job_status({ job: '${backgroundName(replies)}' });`)],
+    ['run_code background shell', call('run_code', { body: `return await gm.run_shell({ command: 'echo $$ > ${STOPPED_PID_FILE}; exec sleep ${STOPPED_SLEEP_S}', timeoutMs: 60000 });`, timeoutMs: 300 })],
     ['finish', call('finish', { witness: 'parity harness witness: every scenario ran', stopBackground: true })],
     ['next_context after finish', call('next_context', {})],
   ];
@@ -304,6 +307,19 @@ function isSeqPath(path) {
   return /(\.actionSeq|gmnew\/seq)$/.test(path);
 }
 
+const NATIVE_AHEAD = [
+  { path: /^\.result\.capabilities\.resources\.subscribe$/, reason: 'native does not declare resources.subscribe: subscriptions/listen is not served' },
+  { path: /^\.result\.(ttlMs|cacheScope)$/, reason: 'native adds ttlMs and cacheScope to complete list and read results (MCP 2026-07-28 caching)' },
+  { path: /^\.result\.tools\[\d+\]\.(title|annotations)(\.|$)/, reason: 'native adds a title and tool annotations (MCP 2026-07-28 tools)' },
+  { path: /^\.result\.(content\[0\]\.text|structuredContent)\.events\[\d+\]\.sha$/, reason: 'the tools event sha covers the tool list, which native now titles and annotates' },
+  { path: /^\.count\.code-call$/, reason: 'stopBackground kills a fetch that a background body started: native owns its curl to the body (proc::kill_owned) and logs the fetch code-call at the stop; Node fetch runs in-process, stopBackground does not reach it, so it logs no code-call before end' },
+  { path: /^\.firstDivergence\[\d+\]$/, reason: 'the event order follows from the stopped fetch code-call above' },
+];
+
+function nativeAheadOf(path) {
+  return NATIVE_AHEAD.find((entry) => entry.path.test(path));
+}
+
 function mirroredInText(path, diffs) {
   if (!path.startsWith('.result.structuredContent')) return false;
   const twin = path.replace('.result.structuredContent', '.result.content[0].text');
@@ -377,6 +393,37 @@ function mcpEvents(runDir) {
     .map(({ seq, t, mono, startMono, inFlight, ...fields }) => fields);
 }
 
+function processState(pid) {
+  try {
+    return execFileSync('ps', ['-o', 'stat=', '-p', String(pid)], { encoding: 'utf8' }).trim();
+  } catch {
+    return '';
+  }
+}
+
+async function stoppedShellRows(spaces) {
+  const rows = [];
+  for (const side of ['node', 'native']) {
+    const name = `stopped body shell ${side}`;
+    const file = join(spaces[side].workspace, STOPPED_PID_FILE);
+    if (!existsSync(file)) {
+      rows.push([name, [['.pidFile', 'written by the shell', 'missing']]]);
+      continue;
+    }
+    const pid = Number(readFileSync(file, 'utf8').trim());
+    const deadline = Date.now() + 3000;
+    let state = processState(pid);
+    while (state !== '' && !state.startsWith('Z') && Date.now() < deadline) {
+      await new Promise((done) => setTimeout(done, 100));
+      state = processState(pid);
+    }
+    const alive = state !== '' && !state.startsWith('Z');
+    if (alive) process.kill(pid, 'SIGKILL');
+    rows.push([name, alive ? [['.sleep', `pid ${pid} still running after finish`, 'stopped']] : []]);
+  }
+  return rows;
+}
+
 async function mcpPass() {
   const base = join(SCRATCH, 'mcp');
   const { spaces } = makeWorkspaces(base);
@@ -430,20 +477,22 @@ async function main() {
     rows.push(['notifications', differences(toolMethods(node.notifications), toolMethods(native.notifications))]);
     rows.push(['log event kinds', logKindDifferences(logKinds(spaces.node.runDir), logKinds(spaces.native.runDir))]);
     rows.push(...(await mcpPass()));
+    rows.push(...(await stoppedShellRows(spaces)));
 
     const classified = rows.map(([name, diffs]) => {
       const cutover = diffs.filter(([path]) => isCutoverPath(path));
       const counted = diffs.filter(([path]) => !isCutoverPath(path));
-      const real = counted.filter(([path]) => !isSeqPath(path));
-      const verdict = diffs.length === 0 ? 'match' : counted.length === 0 ? 'cutover-expected' : real.length === 0 ? 'seq-only' : 'diff';
-      return { name, diffs, cutover, counted, real, verdict };
+      const ahead = counted.filter(([path]) => nativeAheadOf(path));
+      const real = counted.filter(([path]) => !isSeqPath(path) && !nativeAheadOf(path));
+      const verdict = diffs.length === 0 ? 'match' : counted.length === 0 ? 'cutover-expected' : real.length === 0 ? (ahead.length > 0 ? 'native-ahead' : 'seq-only') : 'diff';
+      return { name, diffs, cutover, counted, ahead, real, verdict };
     });
 
     console.log(`parity: reference HEAD ${refHead} at ${REF}; native ${NATIVE_BIN}`);
     console.log(`transcripts: ${join(SCRATCH, 'transcript-node.json')} ${join(SCRATCH, 'transcript-native.json')}`);
     const width = Math.max(...rows.map(([name]) => name.length));
     const verdictWidth = 'cutover-expected'.length;
-    console.log(`${'scenario'.padEnd(width)} | ${'result'.padEnd(verdictWidth)} | first differing field (seq-only: only log seq numbers differ; cutover-expected: not counted)`);
+    console.log(`${'scenario'.padEnd(width)} | ${'result'.padEnd(verdictWidth)} | first differing field (seq-only: only log seq numbers differ; cutover-expected: not counted; native-ahead: expected, listed below)`);
     console.log(`${'-'.repeat(width)}-|-${'-'.repeat(verdictWidth)}-|----------------------`);
     for (const row of classified) {
       const first = row.real[0] ?? row.counted[0] ?? row.cutover[0];
@@ -455,14 +504,19 @@ async function main() {
       if (shownDiffs.length === 0) continue;
       console.log(`\n== ${row.name}`);
       for (const [path, left, right] of shownDiffs) {
-        const label = isCutoverPath(path) ? ' [cutover-expected]' : '';
+        const expected = nativeAheadOf(path);
+        const label = isCutoverPath(path) ? ' [cutover-expected]' : expected ? ' [native-ahead]' : '';
         console.log(`  ${path}${label}\n    node:   ${shown(left)}\n    native: ${shown(right)}`);
       }
     }
-    const differing = classified.filter((row) => row.counted.length > 0).length;
+    const seenAhead = new Map();
+    for (const row of classified) for (const [path] of row.ahead) seenAhead.set(nativeAheadOf(path).reason, nativeAheadOf(path));
+    for (const entry of seenAhead.values()) console.log(`native-ahead: ${entry.path.source} -- ${entry.reason}`);
+    const differing = classified.filter((row) => row.verdict === 'diff' || row.verdict === 'seq-only').length;
     const cutoverOnly = classified.filter((row) => row.verdict === 'cutover-expected').length;
+    const aheadRows = classified.filter((row) => row.verdict === 'native-ahead').length;
     const matching = classified.filter((row) => row.verdict === 'match').length;
-    console.log(`\n${matching}/${rows.length} scenarios match, ${cutoverOnly} cutover-expected, ${differing} differ`);
+    console.log(`\n${matching}/${rows.length} scenarios match, ${cutoverOnly} cutover-expected, ${aheadRows} native-ahead, ${differing} differ`);
     if (node.stderr.trim()) console.log(`\nnode stderr (tail): ${node.stderr.trim().split('\n').slice(-5).join(' | ')}`);
     if (native.stderr.trim()) console.log(`native stderr (tail): ${native.stderr.trim().split('\n').slice(-5).join(' | ')}`);
     process.exitCode = differing > 0 ? 1 : 0;

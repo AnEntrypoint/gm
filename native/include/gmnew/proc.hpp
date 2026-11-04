@@ -18,6 +18,7 @@ namespace gmnew::proc {
 struct Outcome {
     bool started = false;
     int exit_code = -1;
+    int signal = 0;
     bool timed_out = false;
     std::string out;
     std::string err;
@@ -27,6 +28,23 @@ Outcome run(const std::vector<std::string>& argv, const std::filesystem::path& c
             std::string_view stdin_text = {}, std::uint64_t timeout_ms = 0);
 
 Outcome shell(std::string_view command, const std::filesystem::path& cwd = {}, std::uint64_t timeout_ms = 0);
+
+const char* signal_name(int signal_number);
+
+using Owner = std::uint64_t;
+
+class OwnerScope {
+public:
+    explicit OwnerScope(Owner owner);
+    ~OwnerScope();
+    OwnerScope(const OwnerScope&) = delete;
+    OwnerScope& operator=(const OwnerScope&) = delete;
+
+private:
+    Owner previous_;
+};
+
+void kill_owned(Owner owner);
 
 struct SpawnOptions {
     std::filesystem::path cwd;

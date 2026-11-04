@@ -326,6 +326,20 @@ void test_startup_failure(const fs::path& dir) {
     check(failed != nullptr && field(*failed, "error").find("could not start") != std::string::npos, "a server that cannot start logs failed");
 }
 
+void test_bare_initialize(const fs::path& dir) {
+    Recorder recorder;
+    const fs::path config = dir / "bare" / "mcp.json";
+    write_file(config, config_of({{"bare", server("bare", "", "")}}));
+    McpVerbs verbs(options_for(dir / "bare", config, recorder));
+    verbs.wait_ready();
+    const Events events = recorder.snapshot();
+    const Value* connected = find_event(events, "mcp-server", "bare", "connected");
+    check(connected != nullptr && field(*connected, "protocolVersion") == "2025-11-25", "an initialize result with only protocolVersion connects");
+    check(find_event(events, "mcp-server", "bare", "failed") == nullptr, "an initialize result without capabilities or serverInfo.version does not fail");
+    const Value browsers = verbs.call("bare_browsers", Value(Object{}));
+    check(ok_of(browsers) && text_of(browsers, "output") == "[]", "a server that initialized bare serves its tools");
+}
+
 void test_startup_timeout_and_exit(const fs::path& dir) {
     Recorder silent;
     const fs::path silent_config = dir / "silent" / "mcp.json";
@@ -367,6 +381,7 @@ int main() {
     test_ignore_lines(dir);
     test_startup_failure(dir);
     test_startup_timeout_and_exit(dir);
+    test_bare_initialize(dir);
     std::error_code ignored;
     fs::remove_all(dir, ignored);
     std::cout << (failures == 0 ? "mcpclient ok" : "mcpclient failures") << " (" << failures << ")" << std::endl;

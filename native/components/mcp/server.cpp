@@ -12,6 +12,7 @@
 
 #include "gmnew/log.hpp"
 #include "gmnew/mcp.hpp"
+#include "gmnew/proc.hpp"
 #include "internal.hpp"
 
 namespace gmnew::mcp {
@@ -45,6 +46,9 @@ constexpr long long kStartedJobGraceMs = 100;
 constexpr std::size_t kCompletionCap = 100;
 constexpr std::size_t kQueueMax = 64;
 constexpr int kMaxTimeoutMs = 300000;
+constexpr double kListTtlMs = 3600000;
+constexpr double kVolatileTtlMs = 0;
+constexpr const char* kCachePublic = "public";
 
 const std::string kMcpRules =
     "# Rules\n\n"
@@ -160,17 +164,24 @@ std::string title_of(const std::string& name) {
     return words;
 }
 
+Value tool_annotations(const std::string& name) {
+    if (name == "next_context") return object().set("readOnlyHint", true).set("destructiveHint", false).set("openWorldHint", false);
+    if (name == "finish") return object().set("readOnlyHint", false).set("destructiveHint", false).set("openWorldHint", false);
+    return object().set("readOnlyHint", false).set("destructiveHint", true).set("openWorldHint", true);
+}
+
 Value annotated(Value tool, Value output_schema) {
     std::string name = tool.find("name")->as_string();
-    bool read_only = kReadOnlyTools.contains(name) && name != "next_context";
-    bool records_only = name == "next_context" || name == "finish";
     tool.set("title", title_of(name));
-    tool.set("annotations", object()
-                                .set("readOnlyHint", read_only)
-                                .set("destructiveHint", !read_only && !records_only)
-                                .set("openWorldHint", false));
+    tool.set("annotations", tool_annotations(name));
     tool.set("outputSchema", std::move(output_schema));
     return tool;
+}
+
+Value cacheable(Value result, double ttl_ms) {
+    result.set("ttlMs", number(ttl_ms));
+    result.set("cacheScope", kCachePublic);
+    return result;
 }
 
 const std::vector<std::string>& node_verb_order() {
@@ -396,6 +407,8 @@ struct Server::State {
     std::map<std::string, std::string> subscriptions;
     std::optional<std::string> log_level;
     std::vector<Value> queued_notices;
+    std::string announced_tools;
+    std::string announced_prompts;
 
     struct Session {
         fs::path run_dir;
@@ -1106,6 +1119,7 @@ struct Server::State {
     void stop_locked(BodyJob& job, const std::string& reason) {
         if (job.settled || !job.adopted) return;
         job.stopped = true;
+        proc::kill_owned(job.body);
         std::string tail = body_text(*job.owner, job.body, kTailCap);
         settle_locked(job, "killed", object().set("reason", reason));
         Value killed = object().set("job", job.name).set("reason", reason).set("tail", tail);
@@ -1894,22 +1908,19 @@ struct Server::State {
 
     Value read_resource(const Value* params) {
         const Value* uri_value = params ? params->find("uri") : nullptr;
-        std::string uri = uri_value && uri_value->is_string() ? uri_value->as_string() : "";
-        if (uri_value && uri_value->is_string()) {
-            if (auto run = read_run(uri)) {
-                Value contents = array();
-                contents.push(*run);
-                return object().set("contents", std::move(contents));
-            }
-            if (auto served = serve_skill_file(uri, "resource")) {
-                Value contents = array();
-                contents.push(*served);
-                return object().set("contents", std::move(contents));
-            }
+        if (!uri_value || !uri_value->is_string()) throw RpcError(-32602, "resources/read needs a uri string");
+        const std::string& uri = uri_value->as_string();
+        if (auto run = read_run(uri)) {
+            Value contents = array();
+            contents.push(*run);
+            return cacheable(object().set("contents", std::move(contents)), kVolatileTtlMs);
         }
-        Value data = object();
-        if (uri_value) data.set("uri", *uri_value);
-        throw RpcError(-32002, "resource not found: " + text_or_undefined(uri_value), data);
+        if (auto served = serve_skill_file(uri, "resource")) {
+            Value contents = array();
+            contents.push(*served);
+            return cacheable(object().set("contents", std::move(contents)), kListTtlMs);
+        }
+        throw RpcError(-32602, "resource not found: " + uri, object().set("uri", uri));
     }
 
     Value skill_prompt(const std::string& name) {
@@ -2063,6 +2074,25 @@ struct Server::State {
         }
     }
 
+    void announce_list_changes() {
+        std::string tools_sha;
+        std::string prompts_sha;
+        try {
+            tools_sha = sha256_hex(json::dump(served_tools()));
+            prompts_sha = sha256_hex(json::dump(prompts_list()));
+        } catch (const std::exception&) {
+            return;
+        }
+        if (!announced_tools.empty() && tools_sha != announced_tools) {
+            notify(object().set("jsonrpc", "2.0").set("method", "notifications/tools/list_changed"));
+        }
+        if (!announced_prompts.empty() && prompts_sha != announced_prompts) {
+            notify(object().set("jsonrpc", "2.0").set("method", "notifications/prompts/list_changed"));
+        }
+        announced_tools = tools_sha;
+        announced_prompts = prompts_sha;
+    }
+
     void check_subscriptions() {
         for (auto& [uri, seen] : subscriptions) {
             std::string now = digest_of(uri).value_or("");
@@ -2075,6 +2105,18 @@ struct Server::State {
         }
     }
 
+    static Value capabilities() {
+        return object()
+            .set("tools", object().set("listChanged", true))
+            .set("prompts", object().set("listChanged", true))
+            .set("resources", object().set("listChanged", true))
+            .set("logging", object())
+            .set("completions", object())
+            .set("extensions", object().set("io.modelcontextprotocol/skills", object()));
+    }
+
+    static std::string instructions() { return kCodeInstructions + "\n\n" + kResourcesPointer + "\n\n" + kSkillPointer; }
+
     Value initialize(const Value* params) {
         const Value* asked = params ? params->find("protocolVersion") : nullptr;
         std::string version = kSupportedVersions.front();
@@ -2082,32 +2124,42 @@ struct Server::State {
             std::find(kSupportedVersions.begin(), kSupportedVersions.end(), asked->as_string()) != kSupportedVersions.end()) {
             version = asked->as_string();
         }
-        Value capabilities = object()
-                                 .set("tools", object().set("listChanged", true))
-                                 .set("prompts", object().set("listChanged", true))
-                                 .set("resources", object().set("listChanged", true).set("subscribe", true))
-                                 .set("logging", object())
-                                 .set("completions", object())
-                                 .set("extensions", object().set("io.modelcontextprotocol/skills", object()));
         return object()
             .set("protocolVersion", version)
-            .set("capabilities", std::move(capabilities))
-            .set("instructions", kCodeInstructions + "\n\n" + kResourcesPointer + "\n\n" + kSkillPointer)
+            .set("capabilities", capabilities())
+            .set("instructions", instructions())
             .set("serverInfo", object().set("name", kServerName).set("title", kServerTitle).set("version", options.version));
+    }
+
+    Value discover() {
+        Value versions = array();
+        for (const auto& version : kSupportedVersions) versions.push(version);
+        return cacheable(object()
+                             .set("resultType", "complete")
+                             .set("supportedVersions", std::move(versions))
+                             .set("capabilities", capabilities())
+                             .set("_meta", object().set("io.modelcontextprotocol/serverInfo", object().set("name", kServerName).set("version", options.version)))
+                             .set("instructions", instructions()),
+                         kListTtlMs);
+    }
+
+    Value tools_list() { return cacheable(object().set("tools", served_tools()), kListTtlMs); }
+
+    Value prompts_list() {
+        Value prompts = array();
+        for (const auto& name : served_skills()) prompts.push(skill_prompt(name));
+        return cacheable(object().set("prompts", std::move(prompts)), kListTtlMs);
     }
 
     std::optional<Value> route(const std::string& method, const Value* params, const Value& rpc_id) {
         if (method == "initialize") return initialize(params);
         if (method == "ping") return object();
-        if (method == "tools/list") return object().set("tools", served_tools());
+        if (method == "server/discover") return discover();
+        if (method == "tools/list") return tools_list();
         if (method == "tools/call") return call_tool(params, rpc_id);
-        if (method == "prompts/list") {
-            Value prompts = array();
-            for (const auto& name : served_skills()) prompts.push(skill_prompt(name));
-            return object().set("prompts", std::move(prompts));
-        }
+        if (method == "prompts/list") return prompts_list();
         if (method == "prompts/get") return get_prompt(params);
-        if (method == "resources/list") return resources_list();
+        if (method == "resources/list") return cacheable(resources_list(), kVolatileTtlMs);
         if (method == "resources/read") return read_resource(params);
         if (method == "skills/list") {
             Value list = array();
@@ -2115,14 +2167,14 @@ struct Server::State {
             return object().set("resultType", "complete").set("skills", std::move(list));
         }
         if (method == "skills/get") return skills_get(params);
-        if (method == "resources/templates/list") return resource_templates();
+        if (method == "resources/templates/list") return cacheable(resource_templates(), kListTtlMs);
         if (method == "resources/subscribe") {
             const Value* uri = params ? params->find("uri") : nullptr;
             auto digest = uri && uri->is_string() ? digest_of(uri->as_string()) : std::nullopt;
             if (!digest) {
                 Value data = object();
                 if (uri) data.set("uri", *uri);
-                throw RpcError(-32002, "resource not found: " + text_or_undefined(uri), data);
+                throw RpcError(-32602, "resource not found: " + text_or_undefined(uri), data);
             }
             subscriptions[uri->as_string()] = *digest;
             return object();
@@ -2238,6 +2290,7 @@ struct Server::State {
             auto parsed = json::parse(line);
             if (parsed && parsed->find("id")) emit(json::dump(error_reply(*parsed->find("id"), -32603, err.what())));
         }
+        announce_list_changes();
         check_subscriptions();
     }
 
@@ -2388,6 +2441,7 @@ Value Server::State::run_code(const Value& args) {
             auto logged = std::make_shared<LoggedVerbs>(*this, job, gate);
             job->thread = std::thread([this, job, logged, runner = options.run_body, source = body->as_string(), root = options.workspace,
                                        shared_gate = gate] {
+                proc::OwnerScope owner(job->body);
                 auto outcome = runner(*logged, source, root);
                 {
                     std::shared_lock guard(shared_gate->lock);

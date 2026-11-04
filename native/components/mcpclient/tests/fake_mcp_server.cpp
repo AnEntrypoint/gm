@@ -65,7 +65,9 @@ int main(int argc, char** argv) {
         const Value* params = parsed->find("params");
         const Value empty{Object{}};
         if (params == nullptr) params = &empty;
-        if (name == "initialize") {
+        if (name == "initialize" && profile == "bare") {
+            reply.set("result", Value(Object{}).set("protocolVersion", "2025-11-25"));
+        } else if (name == "initialize") {
             Value info;
             info.set("name", "fake").set("version", "1");
             reply.set("result", Value(Object{}).set("protocolVersion", "2025-11-25").set("capabilities", Object{}).set("serverInfo", info));
