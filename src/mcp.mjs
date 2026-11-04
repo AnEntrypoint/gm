@@ -952,13 +952,9 @@ const OUTPUT_SCHEMAS = {
   run_code: objectSchema({ ok: { type: 'boolean' }, refused: { type: 'boolean' }, error: text, truncated: { type: 'boolean' }, background: text, state: text, actionSeq: number }, ['ok']),
   finish: objectSchema({ ok: { type: 'boolean' }, refused: { type: 'boolean' }, error: text, finished: { type: 'boolean' }, actionSeq: number }, ['ok']),
 };
-const STRUCTURED_FIELDS = ['ok', 'refused', 'error', 'finished', 'step', 'run', 'stepsLeft', 'maxSteps', 'total', 'prefixSha', 'actionSeq', 'truncated', 'background', 'state', 'rulesNotice', 'rulesPending'];
 function toolResultOf(name, out, meta) {
-  const structured = Object.hasOwn(OUTPUT_SCHEMAS, name) ? { structuredContent: structuredOf(out) } : {};
+  const structured = Object.hasOwn(OUTPUT_SCHEMAS, name) ? { structuredContent: out } : {};
   return { content: [{ type: 'text', text: JSON.stringify(out) }], ...structured, isError: out.ok !== true, _meta: meta };
-}
-function structuredOf(out) {
-  return Object.fromEntries(STRUCTURED_FIELDS.filter((key) => out[key] !== undefined).map((key) => [key, out[key]]));
 }
 // A title from a tool's name: read_file is "Read file".
 function titleOf(name) {
