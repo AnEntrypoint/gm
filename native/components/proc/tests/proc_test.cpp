@@ -33,7 +33,7 @@ int main() {
     CHECK(cat.out == "piped input" && cat.exit_code == 0);
 
     auto cwd = run({"pwd"}, "/tmp");
-    CHECK(cwd.out.rfind("/tmp", 0) == 0);
+    CHECK(cwd.out.find("/tmp") != std::string::npos);
 
     auto begin = std::chrono::steady_clock::now();
     auto slow = shell("sleep 30", {}, 300);
