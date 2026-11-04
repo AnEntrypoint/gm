@@ -36,7 +36,7 @@ json::Value outcome_reply(const proc::Outcome& outcome) {
     return reply;
 }
 
-}  // namespace
+}
 
 std::map<std::string, Primitive> make_primitives(std::filesystem::path workspace, CurrentLog current_log) {
     std::map<std::string, Primitive> primitives;
@@ -75,4 +75,4 @@ std::map<std::string, Primitive> make_primitives(std::filesystem::path workspace
     return primitives;
 }
 
-}  // namespace gmnew::host
+}

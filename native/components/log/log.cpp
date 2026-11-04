@@ -86,7 +86,7 @@ Scan scan(const std::string& text) {
     return s;
 }
 
-}  // namespace
+}
 
 RunLog::RunLog(std::filesystem::path dir, std::uint64_t next_seq) : dir_(std::move(dir)), next_seq_(next_seq) {}
 
@@ -115,14 +115,14 @@ deoxidene::Result<RunLog, std::string> RunLog::open(std::filesystem::path run_di
     return log;
 }
 
-double RunLog::now() const {
+double RunLog::now_ms() const {
     using namespace std::chrono;
     return round_millis(mono_base_ + duration<double, std::milli>(steady_clock::now() - opened_).count());
 }
 
 std::uint64_t RunLog::append(std::string_view kind, json::Value fields) {
     std::lock_guard<std::mutex> guard(*lock_);
-    double mono = now();
+    double mono = now_ms();
     std::uint64_t seq = next_seq_++;
     json::Value event = json::Object{};
     event.set("seq", seq).set("t", iso_now()).set("mono", mono).set("inFlight", 0).set("kind", std::string(kind));
@@ -157,7 +157,7 @@ deoxidene::Result<std::vector<json::Value>, std::string> parse_lines(const std::
     return events;
 }
 
-}  // namespace
+}
 
 std::uint64_t RunLog::count() const {
     std::lock_guard<std::mutex> guard(*lock_);
@@ -190,4 +190,4 @@ deoxidene::Result<std::vector<json::Value>, std::string> RunLog::read_from(std::
     return parse_lines(ss.str());
 }
 
-}  // namespace gmnew
+}

@@ -4,6 +4,7 @@
 #include <sstream>
 
 #include "gmnew/core_verbs.hpp"
+#include "gmnew/host/child.hpp"
 #include "gmnew/host/composed_verbs.hpp"
 #include "gmnew/host/options.hpp"
 #include "gmnew/host/primitives.hpp"
@@ -48,7 +49,7 @@ deoxidene::Result<std::string, std::string> load_task(const HostArgs& args) {
     return task;
 }
 
-}  // namespace
+}
 
 int run_worker(const HostArgs& args) {
     const auto workspace = workspace_of(args);
@@ -66,6 +67,13 @@ int run_worker(const HostArgs& args) {
 
     CoreVerbsOptions core_options;
     core_options.workspace = workspace;
+    core_options.on_append = [](const RunLog& log, std::string_view kind, std::uint64_t seq) {
+        try {
+            mcp::enqueue_pending(log, kind, seq);
+        } catch (const std::exception& error) {
+            std::cerr << "gm mcp: " << error.what() << '\n';
+        }
+    };
     CoreVerbs core(std::move(core_options));
     SearchVerbs search(workspace);
     auto native = ComposedVerbs::compose({&core, &search});
@@ -91,6 +99,19 @@ int run_worker(const HostArgs& args) {
         }
         core.bind_run(std::move(log));
     };
+    options.job_snapshot = [&core] {
+        json::Value open(json::Array{});
+        const json::Value snapshot = core.job_snapshot();
+        const json::Value* jobs = snapshot.find("jobs");
+        if (jobs == nullptr || !jobs->is_array()) return open;
+        for (const json::Value& job : jobs->as_array()) {
+            const json::Value* state = job.find("state");
+            if (state != nullptr && state->is_string() && state->as_string() == "running") open.push(job);
+        }
+        return open;
+    };
+    options.flush_job_events = [&core] { core.flush_job_events(); };
+    options.wait_program = current_executable().string();
     options.run_body = [](VerbTable& verbs, std::string_view body, const std::filesystem::path& root) {
         return gmnew::run_body(verbs, body, root);
     };
@@ -115,4 +136,4 @@ int run_doctor(const HostArgs& args) {
     return 0;
 }
 
-}  // namespace gmnew::host
+}

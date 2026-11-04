@@ -116,7 +116,7 @@ LogCheck check_log(const fs::path& file) {
     return result;
 }
 
-}  // namespace
+}
 
 int main() {
     const fs::path root = fs::temp_directory_path() /
@@ -238,6 +238,25 @@ int main() {
     check(run_dir_at != std::string::npos && job.find(second_run, run_dir_at) != std::string::npos &&
               job.find(second_run, run_dir_at) < job.find("seq", run_dir_at),
           "host.runDir names the reopened run: " + job.substr(run_dir_at == std::string::npos ? 0 : run_dir_at, 160));
+
+    std::string waited;
+    if (auto events = gmnew::host::Child::spawn({GMNEW_BINARY, "events", "--dir", (root / "runs" / second_run).string(),
+                                                 "--wait", "--timeout-ms", "5000"})) {
+        while (auto line = (*events)->read_line()) waited += *line + "\n";
+        (*events)->wait_for(5s);
+    }
+    check(waited.find("\"kind\":\"job\"") != std::string::npos && waited.find("after-reopen") != std::string::npos &&
+              waited.find("\"id\":") != std::string::npos,
+          "events --wait prints the pending job event: " + shorten(waited.substr(0, waited.find('\n'))));
+
+    worker->write_line(call_line(10, "run_code", R"({"body":"return await gm.job_start({ job: 'long-job', command: 'sleep 20' });"})"));
+    const std::string long_job = out.wait_for_id(10, 10s);
+    worker->write_line(call_line(11, "next_context", "{}"));
+    const std::string open_jobs = out.wait_for_id(11, 10s);
+    const auto jobs_open_at = open_jobs.find("jobsOpen");
+    check(jobs_open_at != std::string::npos && open_jobs.find("long-job", jobs_open_at) != std::string::npos,
+          "next_context jobsOpen lists the shell job: " +
+              open_jobs.substr(jobs_open_at == std::string::npos ? 0 : jobs_open_at, 200));
 
     worker->close_input();
     const auto code = worker->wait_for(15s);

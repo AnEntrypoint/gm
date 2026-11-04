@@ -1,6 +1,7 @@
 #pragma once
 
 #include <condition_variable>
+#include <functional>
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
@@ -42,7 +43,8 @@ std::string write_text(const std::filesystem::path& path, std::string_view conte
 
 class LockedLog {
 public:
-    explicit LockedLog(std::shared_ptr<RunLog> log) : log_(std::move(log)) {}
+    using AppendHook = std::function<void(const RunLog& log, std::string_view kind, std::uint64_t seq)>;
+    LockedLog(std::shared_ptr<RunLog> log, AppendHook on_append) : log_(std::move(log)), on_append_(std::move(on_append)) {}
     std::uint64_t append(std::string_view kind, json::Value fields);
     deoxidene::Result<std::vector<json::Value>, std::string> read_all();
     std::filesystem::path dir() const;
@@ -52,6 +54,7 @@ private:
     std::shared_ptr<RunLog> current() const;
 
     std::shared_ptr<RunLog> log_;
+    AppendHook on_append_;
     mutable std::mutex mutex_;
 };
 
@@ -65,9 +68,17 @@ public:
     json::Value stop(const json::Value& args);
     void close(std::string_view reason);
     void stop_orphans();
+    json::Value snapshot(std::uint64_t stuck_ms);
+    void flush_ended();
 
 private:
     struct Job;
+    struct UnloggedEvent {
+        std::string kind;
+        json::Value fields;
+    };
+    void flush_ended_locked();
+    void flush_after_grace();
     void settle(Job& job, std::optional<int> exit_code, json::Value signal);
     void watch(Job& job, std::uint64_t deadline_ms);
     double mono_now();
@@ -81,7 +92,8 @@ private:
     std::mutex mutex_;
     std::condition_variable changed_;
     std::map<std::string, std::unique_ptr<Job>> jobs_;
+    std::vector<UnloggedEvent> unlogged_;
     std::optional<double> mono_offset_;
 };
 
-}  // namespace gmnew::core
+}

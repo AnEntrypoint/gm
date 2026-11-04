@@ -90,3 +90,13 @@ Each run writes `runs/<id>/` under its `--workspace` (gm-new's own `runs/` when 
 - The server speaks protocol versions 2025-11-25 and 2025-06-18. An `initialize` that asks for another version is answered with 2025-11-25. Each tools/call result carries the run id in `_meta` under `com.anentrypoint.gmnew/run`, and the `traceparent`, `tracestate` and `baggage` of a call's `_meta` are copied into its action event.
 - A `notifications/cancelled` for a `run_shell` call kills its process group, and that call gets no answer. A cancel of any other call is logged as `cancel-ignored`, and the call runs on. A `run_shell` call whose `_meta` has a `progressToken` gets `notifications/progress` every 5 seconds, with the elapsed seconds.
 - The repository is pushed privately to `AnEntrypoint/gm-new`.
+
+## Native build
+
+    cmake --preset release -DGMNEW_BUILD_TESTS=ON
+    cmake --build build/release
+    ctest --test-dir build/release --output-on-failure
+
+- `scripts/gmnew.sh` and `scripts/gmnew.ps1` run the same steps: `build`, `test`, `doctor` or `all`. `GMNEW_PRESET` picks the preset (default `release`).
+- The binary is build/PRESET/native/components/host/gmnew. `setup.sh` builds it and prints the path; it does not change `.mcp.json`.
+- `.github/workflows/ci.yml` builds and tests on Linux, macOS and Windows, x64 and arm64. `release.yml` uploads the binary for each target on a `v*.*.*` tag.

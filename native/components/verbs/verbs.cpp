@@ -11,6 +11,7 @@
 #include <system_error>
 
 #include "core_internal.hpp"
+#include "engine.hpp"
 #include "gmnew/proc.hpp"
 
 #if !defined(_WIN32)
@@ -36,6 +37,7 @@ constexpr std::size_t query_reply_chars = 20000;
 constexpr std::size_t query_window_events = 1000;
 constexpr std::size_t query_window_bytes = 4 * 1024 * 1024;
 constexpr std::size_t query_cap = 20000;
+constexpr std::chrono::milliseconds query_js_deadline{5000};
 constexpr std::array<std::string_view, 7> query_args = {"js", "kind", "fromMono", "toMono", "after", "last", "limit"};
 
 const std::vector<VerbInfo>& verb_table() {
@@ -140,8 +142,7 @@ json::Array page_of(const std::vector<const json::Value*>& events, std::size_t l
     return page;
 }
 
-json::Value run_query_text(const json::Array& events) {
-    std::string text = json::dump(json::Value(events));
+json::Value capped_query_reply(std::string text) {
     json::Value reply;
     reply.set("ok", true);
     if (utf16_length(text) <= query_cap) {
@@ -152,18 +153,29 @@ json::Value run_query_text(const json::Array& events) {
     return reply;
 }
 
+json::Value run_query_text(const json::Array& events) { return capped_query_reply(json::dump(json::Value(events))); }
+
+json::Value run_query_js(const std::vector<const json::Value*>& events, const std::string& js) {
+    json::Array copied;
+    copied.reserve(events.size());
+    for (const json::Value* event : events) copied.push_back(*event);
+    auto text = engine::stringify_function_of("events", js, json::Value(std::move(copied)), query_js_deadline);
+    if (!text) return failure(text.error());
+    return capped_query_reply(std::move(*text));
+}
+
 std::uint64_t seq_of(const json::Value& event) {
     const json::Value* s = event.find("seq");
     return s != nullptr && s->is_number() ? static_cast<std::uint64_t>(s->as_number()) : 0;
 }
 
-}  // namespace
+}
 
 struct CoreVerbs::Impl {
     Impl(CoreVerbsOptions opts, std::shared_ptr<RunLog> run_log)
         : options(std::move(opts)),
           root(resolve_root(options.workspace)),
-          log(std::move(run_log)),
+          log(std::move(run_log), options.on_append),
           jobs(root, log, options.job_lifetime_ms) {}
 
     static std::filesystem::path resolve_root(const std::filesystem::path& workspace) {
@@ -489,8 +501,6 @@ struct CoreVerbs::Impl {
                 return failure("limit must be a whole number from 1 to 50");
             }
         }
-        if (js != nullptr) return failure("js is not supported by the native query_log yet; use kind, fromMono, toMono, after and last");
-
         auto events = log.read_all();
         if (!events) return failure(events.error());
         const json::Value* after_value = present(args, "after");
@@ -521,6 +531,7 @@ struct CoreVerbs::Impl {
                 if (match(*it)) newest.push_back(&*it);
             }
             std::reverse(newest.begin(), newest.end());
+            if (js != nullptr) return run_query_js(newest, js->as_string());
             std::vector<std::size_t> units;
             std::size_t sum = 0;
             for (const json::Value* e : newest) {
@@ -558,6 +569,11 @@ struct CoreVerbs::Impl {
             if (match(event)) window.push_back(&event);
         }
         bool more = scanned_last < count;
+        if (js != nullptr) {
+            json::Value reply = run_query_js(window, js->as_string());
+            if (more) reply.set("next", scanned_last);
+            return reply;
+        }
         std::size_t page_limit = limit != nullptr ? static_cast<std::size_t>(limit->as_number()) : query_page_events;
         json::Array page = page_of(window, page_limit);
         json::Value reply = run_query_text(page);
@@ -593,10 +609,15 @@ std::vector<VerbInfo> CoreVerbs::list() const { return verb_table(); }
 
 void CoreVerbs::close(std::string_view reason) { impl_->jobs.close(reason); }
 
+void CoreVerbs::flush_job_events() { impl_->jobs.flush_ended(); }
+
+json::Value CoreVerbs::job_snapshot() { return impl_->jobs.snapshot(impl_->options.job_stuck_ms); }
+
 json::Value CoreVerbs::call(std::string_view name, const json::Value& raw_args) {
     static const json::Value empty_object = json::Value(json::Object{});
     const json::Value& args = raw_args.is_object() ? raw_args : empty_object;
     try {
+        impl_->jobs.flush_ended();
         if (name == "read_file") return impl_->read_file(args);
         if (name == "write_file") return impl_->write_file(args);
         if (name == "edit_file") return impl_->edit_file(args);
@@ -613,4 +634,4 @@ json::Value CoreVerbs::call(std::string_view name, const json::Value& raw_args) 
     return failure("unknown tool: " + std::string(name));
 }
 
-}  // namespace gmnew
+}

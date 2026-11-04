@@ -29,4 +29,4 @@ private:
     mutable std::map<std::string, VerbTable*, std::less<>> index_;
 };
 
-}  // namespace gmnew::host
+}

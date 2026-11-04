@@ -1,0 +1,54 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  native-matrix:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            preset: x64-linux-release
+          - os: ubuntu-24.04-arm
+            preset: arm64-linux-release
+          - os: windows-latest
+            preset: x64-windows-release
+          - os: windows-11-arm
+            preset: arm64-windows-release
+          - os: macos-13
+            preset: x64-macos-release
+          - os: macos-latest
+            preset: arm64-macos-release
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: seanmiddleditch/gha-setup-ninja@master
+      - uses: ilammy/msvc-dev-cmd@v1
+        if: runner.os == 'Windows'
+        with:
+          arch: ${{ contains(matrix.preset, 'arm64') && 'arm64' || 'x64' }}
+      - name: Configure and build
+        run: |
+          cmake --preset ${{ matrix.preset }} -DGMNEW_BUILD_TESTS=ON
+          cmake --build build/${{ matrix.preset }}
+        shell: bash
+      - name: Test
+        run: ctest --test-dir build/${{ matrix.preset }} --output-on-failure
+        shell: bash
+
+  sanitizers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: seanmiddleditch/gha-setup-ninja@master
+      - name: Configure and build asan-ubsan
+        run: |
+          cmake --preset asan-ubsan -DGMNEW_BUILD_TESTS=ON
+          cmake --build build/asan-ubsan
+      - name: Test asan-ubsan
+        run: ctest --test-dir build/asan-ubsan --output-on-failure

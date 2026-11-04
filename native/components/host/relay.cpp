@@ -63,7 +63,7 @@ std::string last_lines(const std::string& text, std::size_t max_bytes) {
     return text.size() <= max_bytes ? text : text.substr(text.size() - max_bytes);
 }
 
-}  // namespace
+}
 
 Relay::Relay(RelayOptions options, std::function<void(std::string_view)> to_host)
     : options_(std::move(options)), to_host_(std::move(to_host)), retry_delay_(options_.retry_min) {}
@@ -460,4 +460,4 @@ int serve_stdio(RelayOptions options) {
     return 0;
 }
 
-}  // namespace gmnew::host
+}

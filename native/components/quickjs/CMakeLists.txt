@@ -21,7 +21,7 @@ else()
     target_compile_options(gmnew_quickjs_ng PRIVATE -funsigned-char -w)
 endif()
 
-add_library(gmnew_runcode STATIC engine.cpp runcode.cpp leaves.cpp)
+add_library(gmnew_runcode STATIC engine.cpp runcode.cpp leaves.cpp query.cpp)
 target_link_libraries(gmnew_runcode PUBLIC gmnew_json PRIVATE gmnew_quickjs_ng)
 add_library(gmnew_leaves ALIAS gmnew_runcode)
 

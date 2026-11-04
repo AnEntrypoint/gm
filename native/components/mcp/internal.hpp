@@ -1,7 +1,9 @@
 #pragma once
 
+#include <chrono>
 #include <cstdint>
 #include <filesystem>
+#include <functional>
 #include <map>
 #include <optional>
 #include <stdexcept>
@@ -60,6 +62,25 @@ inline const std::vector<std::string>& served_skills() {
     return names;
 }
 
+std::string clip(const std::string& text, std::size_t cap = 400);
+Value output_digest(const std::string& text, bool failed);
+Value args_of(const Value* args);
+
+using EventAt = std::function<const Value*(std::uint64_t seq)>;
+Value feed_of(const EventAt& at, std::uint64_t count, std::uint64_t shown);
+
+bool is_pending_kind(std::string_view kind);
+void append_pending(const std::filesystem::path& run_dir, const Value& event);
+struct PendingTake {
+    std::vector<Value> records;
+    std::vector<std::filesystem::path> files;
+};
+PendingTake take_pending(const std::filesystem::path& run_dir);
+bool has_pending(const std::filesystem::path& run_dir);
+void clear_pending(const std::vector<std::filesystem::path>& files);
+std::uint64_t pending_generation();
+void wait_pending_change(std::uint64_t seen, std::chrono::steady_clock::time_point deadline);
+
 deoxidene::Result<Skill, std::string> read_skill(const std::filesystem::path& skills_dir, const std::string& name);
 
 class SkillCache {
@@ -73,4 +94,4 @@ private:
     std::map<std::string, Skill> last_;
 };
 
-}  // namespace gmnew::mcp::detail
+}

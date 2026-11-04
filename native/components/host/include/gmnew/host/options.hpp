@@ -35,4 +35,4 @@ int run_serve(const HostArgs& args);
 int run_worker(const HostArgs& args);
 int run_doctor(const HostArgs& args);
 
-}  // namespace gmnew::host
+}

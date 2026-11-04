@@ -85,7 +85,10 @@ struct Settled {
 Settled settle(Engine& engine, JSValue maybe_promise);
 std::string deadline_or(Engine& engine, std::string text);
 
+deoxidene::Result<std::string, std::string> stringify_function_of(std::string_view parameter, std::string_view source,
+                                                                  const json::Value& argument, std::chrono::milliseconds deadline);
+
 deoxidene::Result<std::vector<std::uint8_t>, std::string> compile_module(std::string_view source, const std::string& module_name);
 deoxidene::Result<JSValue, std::string> load_module_namespace(Engine& engine, const std::vector<std::uint8_t>& bytecode);
 
-}  // namespace gmnew::engine
+}

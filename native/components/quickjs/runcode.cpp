@@ -95,7 +95,7 @@ deoxidene::Result<JSValue, std::string> make_gm(Engine& engine, const std::files
     return gm.take();
 }
 
-}  // namespace
+}
 
 deoxidene::Result<json::Value, std::string> run_body(VerbTable& verbs, std::string_view body,
                                                      const std::filesystem::path& project_root) {
@@ -130,4 +130,4 @@ deoxidene::Result<json::Value, std::string> run_body(VerbTable& verbs, std::stri
     return std::move(*converted);
 }
 
-}  // namespace gmnew
+}

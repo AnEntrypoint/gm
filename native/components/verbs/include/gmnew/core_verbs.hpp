@@ -17,7 +17,9 @@ namespace gmnew {
 struct CoreVerbsOptions {
     std::filesystem::path workspace;
     std::uint64_t job_lifetime_ms = 1800000;
+    std::uint64_t job_stuck_ms = 180000;
     std::function<json::Value(const std::string& uri)> serve_skill;
+    std::function<void(const RunLog& log, std::string_view kind, std::uint64_t seq)> on_append;
 };
 
 class CoreVerbs : public VerbTable {
@@ -34,10 +36,12 @@ public:
 
     void close(std::string_view reason = "run-ended");
     void bind_run(std::shared_ptr<RunLog> log);
+    json::Value job_snapshot();
+    void flush_job_events();
 
 private:
     struct Impl;
     std::unique_ptr<Impl> impl_;
 };
 
-}  // namespace gmnew
+}

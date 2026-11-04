@@ -39,7 +39,7 @@ std::string output_of(const Value& reply) {
     return out ? out->as_string() : std::string();
 }
 
-}  // namespace
+}
 
 int main() {
     fs::path dir = fs::temp_directory_path() / ("gmnew_search_test_" + std::to_string(std::rand()));

@@ -347,7 +347,7 @@ void dump_into(std::string& out, const Value& v) {
     }
 }
 
-}  // namespace
+}
 
 Kind Value::kind() const {
     switch (data_.index()) {
@@ -431,4 +431,4 @@ std::string quote(std::string_view s) {
     return out;
 }
 
-}  // namespace gmnew::json
+}

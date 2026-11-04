@@ -27,4 +27,4 @@ private:
     std::map<std::filesystem::path, std::unique_ptr<search::Searcher>> searchers_;
 };
 
-}  // namespace gmnew
+}

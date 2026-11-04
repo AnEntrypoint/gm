@@ -27,4 +27,4 @@ int run_serve(const HostArgs& args) {
     return serve_stdio(std::move(options));
 }
 
-}  // namespace gmnew::host
+}

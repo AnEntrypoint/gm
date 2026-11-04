@@ -56,7 +56,7 @@ void compress(std::array<std::uint32_t, 8>& h, const unsigned char* block) {
     h[7] += k;
 }
 
-}  // namespace
+}
 
 std::string sha256_hex(std::string_view bytes) {
     std::array<std::uint32_t, 8> h = {0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
@@ -81,4 +81,4 @@ std::string sha256_hex(std::string_view bytes) {
     return out;
 }
 
-}  // namespace gmnew::mcp
+}

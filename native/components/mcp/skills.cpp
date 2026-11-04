@@ -90,7 +90,7 @@ deoxidene::Result<std::pair<Value, std::string>, std::string> parse_skill(const 
     return std::pair<Value, std::string>{std::move(frontmatter), trim(std::string_view(text).substr(end))};
 }
 
-}  // namespace
+}
 
 std::size_t js_length(std::string_view utf8) {
     std::size_t units = 0;
@@ -192,4 +192,4 @@ const Skill& SkillCache::get(const std::string& name) {
     return kept->second;
 }
 
-}  // namespace gmnew::mcp::detail
+}

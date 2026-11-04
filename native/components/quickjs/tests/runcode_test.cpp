@@ -123,7 +123,7 @@ void test_fresh_state_and_edges() {
     expect(!empty && empty.error() == "body must be a non-empty string", "empty body refused");
 }
 
-}  // namespace
+}
 
 int main() {
     test_promise_all_over_two_verbs();

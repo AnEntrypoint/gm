@@ -19,7 +19,7 @@ json::Value refused(const std::string& reason) {
     return json::Value(json::Object{{"ok", false}, {"refused", true}, {"error", "refused: " + reason}});
 }
 
-}  // namespace
+}
 
 SearchVerbs::SearchVerbs(fs::path workspace) : workspace_(std::move(workspace)) {}
 
@@ -74,4 +74,4 @@ json::Value SearchVerbs::call(std::string_view name, const json::Value& args) {
     return parsed ? *parsed : json::Value(json::Object{{"ok", false}, {"error", "internal: unparsable reply"}});
 }
 
-}  // namespace gmnew
+}

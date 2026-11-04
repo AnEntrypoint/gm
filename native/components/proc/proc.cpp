@@ -48,7 +48,7 @@ bool make_pipe(Fd& read_end, Fd& write_end) {
     return true;
 }
 
-}  // namespace
+}
 
 Outcome run(const std::vector<std::string>& argv, const std::filesystem::path& cwd, std::string_view stdin_text,
             std::uint64_t timeout_ms) {
@@ -197,7 +197,7 @@ std::string quote(const std::string& arg) {
     return quoted + "\"";
 }
 
-}  // namespace
+}
 
 Outcome run(const std::vector<std::string>& argv, const std::filesystem::path& cwd, std::string_view stdin_text,
             std::uint64_t timeout_ms) {
@@ -270,4 +270,4 @@ Outcome shell(std::string_view command, const std::filesystem::path& cwd, std::u
 
 #endif
 
-}  // namespace gmnew::proc
+}

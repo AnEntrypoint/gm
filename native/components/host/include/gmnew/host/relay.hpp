@@ -107,4 +107,4 @@ private:
 
 int serve_stdio(RelayOptions options);
 
-}  // namespace gmnew::host
+}

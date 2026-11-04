@@ -1,6 +1,6 @@
-add_library(gmnew_host STATIC child.cpp composed_verbs.cpp relay.cpp options.cpp primitives.cpp)
+add_library(gmnew_host STATIC child.cpp composed_verbs.cpp relay.cpp options.cpp primitives.cpp cli.cpp)
 target_include_directories(gmnew_host PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_CURRENT_SOURCE_DIR}/../../include)
-target_link_libraries(gmnew_host PUBLIC deoxidene::deoxidene gmnew_json gmnew_log gmnew_proc)
+target_link_libraries(gmnew_host PUBLIC deoxidene::deoxidene gmnew_json gmnew_log gmnew_proc gmnew_runcode)
 target_compile_definitions(gmnew_host PRIVATE GMNEW_SOURCE_DIR="${PROJECT_SOURCE_DIR}"
                                               GMNEW_BUILD_DIR="${PROJECT_BINARY_DIR}")
 
@@ -12,6 +12,11 @@ if(GMNEW_BUILD_TESTS)
     add_executable(gmnew_relay_test tests/relay_test.cpp)
     target_link_libraries(gmnew_relay_test PRIVATE gmnew_host)
     add_test(NAME gmnew_relay_test COMMAND gmnew_relay_test)
+    add_executable(gmnew_cli_test tests/cli_test.cpp)
+    target_link_libraries(gmnew_cli_test PRIVATE gmnew_host)
+    target_compile_definitions(gmnew_cli_test PRIVATE GMNEW_BINARY="$<TARGET_FILE:gmnew>")
+    add_dependencies(gmnew_cli_test gmnew)
+    add_test(NAME gmnew_cli_test COMMAND gmnew_cli_test)
 endif()
 
 function(gmnew_host_link_worker)

@@ -47,7 +47,7 @@ std::filesystem::path fresh_dir() {
     return base;
 }
 
-}  // namespace
+}
 
 int main() {
     using gmnew::json::Value;
@@ -142,8 +142,85 @@ int main() {
         auto paged_log = verbs.call("query_log", object_of({{"limit", 1}}));
         expect(number_of(paged_log, "next") == 1, "query_log limit gives next: " + gmnew::json::dump(paged_log));
 
+        auto js_count = verbs.call("query_log", object_of({{"js", "events.filter(e => e.kind === 'job').length"}}));
+        expect(ok_of(js_count) && text_of(js_count, "output") == "4" && js_count.find("next") == nullptr,
+               "query_log js counts job events: " + gmnew::json::dump(js_count));
+        auto js_statements = verbs.call("query_log", object_of({{"js", "const n = events.length; return n > 0 ? 'some' : 'none';"}}));
+        expect(text_of(js_statements, "output") == "\"some\"", "query_log js statement body: " + gmnew::json::dump(js_statements));
+        auto js_undefined = verbs.call("query_log", object_of({{"js", "undefined"}}));
+        expect(text_of(js_undefined, "output") == "undefined", "query_log js undefined: " + gmnew::json::dump(js_undefined));
+        auto js_last = verbs.call("query_log", object_of({{"kind", "job"}, {"last", 2}, {"js", "events.map(e => e.state)"}}));
+        expect(text_of(js_last, "output") == "[\"running\",\"killed\"]", "query_log js with last: " + gmnew::json::dump(js_last));
+        auto js_throws = verbs.call("query_log", object_of({{"js", "events.nope.length"}}));
+        expect(!ok_of(js_throws) && !text_of(js_throws, "error").empty(), "query_log js error: " + gmnew::json::dump(js_throws));
+        auto loop_started = std::chrono::steady_clock::now();
+        auto js_loop = verbs.call("query_log", object_of({{"js", "{ for (;;) {} }"}}));
+        auto loop_ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - loop_started).count();
+        expect(!ok_of(js_loop) && text_of(js_loop, "error") == "the call passed its deadline of 5000 ms" && loop_ms < 10000,
+               "query_log js infinite loop hits the deadline in " + std::to_string(loop_ms) + " ms: " + gmnew::json::dump(js_loop));
+        auto js_window =verbs.call("query_log", object_of({{"js", "events.length"}, {"after", 0}}));
+        expect(ok_of(js_window) && js_window.find("next") == nullptr, "query_log js whole log in one window: " + gmnew::json::dump(js_window));
+
         auto unknown_tool = verbs.call("nope", object_of({}));
         expect(text_of(unknown_tool, "error") == "unknown tool: nope", "unknown tool");
+    }
+    {
+        std::filesystem::create_directories(base / "run-stuck");
+        auto stuck_log = gmnew::RunLog::open(base / "run-stuck");
+        expect(static_cast<bool>(stuck_log), "open stuck log");
+        gmnew::CoreVerbsOptions options;
+        options.workspace = base / "workspace";
+        options.job_stuck_ms = 1000;
+        gmnew::CoreVerbs verbs(std::move(options), *stuck_log);
+        verbs.call("job_start", object_of({{"job", "quiet"}, {"command", "sleep 2; echo woke; sleep 5"}}));
+        verbs.call("job_start", object_of({{"job", "brief"}, {"command", "true"}}));
+        verbs.call("job_status", object_of({{"job", "brief"}, {"waitMs", 5000}}));
+        auto first = verbs.job_snapshot();
+        auto listed = first.find("jobs");
+        expect(listed != nullptr && listed->as_array().size() == 2 && first.find("jobsStuck") == nullptr && first.find("jobsUnstuck") == nullptr,
+               "snapshot lists both jobs, none stuck: " + gmnew::json::dump(first));
+        std::this_thread::sleep_for(std::chrono::milliseconds(1500));
+        auto stuck = verbs.job_snapshot();
+        const gmnew::json::Value* turned = stuck.find("jobsStuck");
+        expect(turned != nullptr && turned->as_array().size() == 1 && text_of(turned->as_array()[0], "job") == "quiet" &&
+                   number_of(turned->as_array()[0], "sinceProgressMs") > 1000 && number_of(turned->as_array()[0], "seq") > 0,
+               "quiet job turns stuck: " + gmnew::json::dump(stuck));
+        bool brief_state_ok = false;
+        bool quiet_flag_ok = false;
+        for (const auto& entry : stuck.find("jobs")->as_array()) {
+            if (text_of(entry, "job") == "brief") brief_state_ok = text_of(entry, "state") == "exited" && entry.find("stuck")->as_bool() == false;
+            if (text_of(entry, "job") == "quiet") quiet_flag_ok = text_of(entry, "state") == "running" && entry.find("stuck")->as_bool();
+        }
+        expect(brief_state_ok && quiet_flag_ok, "snapshot entries carry state and stuck: " + gmnew::json::dump(stuck));
+        auto repeat = verbs.job_snapshot();
+        expect(repeat.find("jobsStuck") == nullptr, "stuck is reported once: " + gmnew::json::dump(repeat));
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        auto unstuck = verbs.job_snapshot();
+        const gmnew::json::Value* again = unstuck.find("jobsUnstuck");
+        expect(again != nullptr && again->as_array().size() == 1 && text_of(again->as_array()[0], "job") == "quiet",
+               "output write unsticks the job: " + gmnew::json::dump(unstuck));
+        auto changes = verbs.call("query_log", object_of({{"js", "events.filter(e => e.kind === 'job-stuck' || e.kind === 'job-unstuck').map(e => e.kind)"}}));
+        expect(text_of(changes, "output") == "[\"job-stuck\",\"job-unstuck\"]", "stuck changes are logged: " + gmnew::json::dump(changes));
+        verbs.call("job_stop", object_of({{"job", "quiet"}}));
+
+        verbs.call("job_start", object_of({{"job", "ordered"}, {"command", "true"}}));
+        std::this_thread::sleep_for(std::chrono::milliseconds(80));
+        stuck_log->append("action", object_of({{"tool", "run_code"}}));
+        auto ordered_status = verbs.call("job_status", object_of({{"job", "ordered"}}));
+        auto order = verbs.call("query_log", object_of({{"js", "events.filter(e => e.job === 'ordered' || e.kind === 'action').map(e => e.kind + ':' + (e.state ?? ''))"}}));
+        expect(text_of(ordered_status, "state") == "exited" && text_of(order, "output") == "[\"job:running\",\"action:\",\"job:exited\"]",
+               "exit event lands after the next action and before the reply that reads it: " + gmnew::json::dump(order));
+
+        verbs.call("job_start", object_of({{"job", "unobserved"}, {"command", "true"}}));
+        std::this_thread::sleep_for(std::chrono::milliseconds(600));
+        auto logged = stuck_log->read_all();
+        bool exit_logged = false;
+        if (logged) {
+            for (const auto& event : *logged) {
+                if (text_of(event, "job") == "unobserved" && text_of(event, "state") == "exited") exit_logged = true;
+            }
+        }
+        expect(exit_logged, "exit event lands within the grace when no call reads it");
     }
     std::error_code ec;
     std::filesystem::remove_all(base, ec);

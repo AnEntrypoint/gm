@@ -1,9 +1,14 @@
 #include <algorithm>
+#include <atomic>
+#include <condition_variable>
 #include <deque>
+#include <mutex>
+#include <thread>
 #include <iostream>
 #include <random>
 #include <regex>
 #include <set>
+#include <shared_mutex>
 
 #include "gmnew/log.hpp"
 #include "gmnew/mcp.hpp"
@@ -25,13 +30,18 @@ constexpr const char* kServerName = "gm";
 constexpr const char* kServerTitle = "gm-new run worker";
 constexpr const char* kGmSkillUri = "skill://gm/SKILL.md";
 constexpr std::size_t kReplyMemory = 256;
-constexpr std::size_t kEventsCap = 20000;
 constexpr std::size_t kOutputCap = 20000;
+constexpr std::size_t kOutputPage = 20000;
+constexpr std::size_t kTailCap = 2000;
 constexpr std::size_t kLoggedReplyChars = 1000;
-constexpr std::size_t kLineCap = 400;
-constexpr std::size_t kDigestErrors = 10;
-constexpr std::size_t kFailedHeadChars = 1000;
 constexpr std::size_t kLogTailBytes = 65536;
+constexpr std::size_t kOpenList = 20;
+constexpr std::size_t kNoticePrdWindow = 5;
+constexpr std::size_t kRowsNamed = 5;
+constexpr double kDefaultBodyTimeoutMs = 180000;
+constexpr double kMaxWaitMs = 300000;
+constexpr double kMaxJobWaitMs = 30000;
+constexpr long long kStartedJobGraceMs = 100;
 constexpr std::size_t kCompletionCap = 100;
 constexpr std::size_t kQueueMax = 64;
 constexpr int kMaxTimeoutMs = 300000;
@@ -83,7 +93,7 @@ const std::string kFinishDescription =
     "End the run. witness is one string that quotes the evidence you observed. gaps optionally lists, one string "
     "each, what the run did not check; the end event logs them. finish is refused while a background run is running, "
     "and stopBackground true kills it first. finish is refused while a PRD or question row is open, and names the "
-    "rows; stopRows true ends the run anyway, with each open row listed as a gap in the end event.";
+    "rows. A gap that names an open row is refused too.";
 
 std::string run_code_description(const std::string& verb_names) {
     return "Run a JavaScript body in the project. The body is an ES module when format is esm and CommonJS when format "
@@ -163,9 +173,34 @@ Value annotated(Value tool, Value output_schema) {
     return tool;
 }
 
+const std::vector<std::string>& node_verb_order() {
+    static const std::vector<std::string> order = {
+        "read_file",   "write_file",    "edit_file",   "stat_file",    "list_dir",       "run_shell",   "job_start",
+        "job_status",  "job_stop",      "query_log",   "search",       "wiki_search",    "grep",        "wiki_write",
+        "review_packet", "review_record", "review_join", "fetch",      "callers",        "impact",      "git_status",
+        "git_add",     "git_rm",        "git_commit",  "git_push",     "git_log",        "git_diff",    "git_show",
+        "git_fetch",   "git_pull",      "git_checkout", "git_branch",  "ci_status",      "prd_add",     "prd_list",
+        "prd_resolve", "unknown_add",   "unknown_list", "unknown_resolve", "prd_delete"};
+    return order;
+}
+
+const std::set<std::string> kInternalVerbs = {"wiki_lint"};
+
+std::vector<VerbInfo> served_verbs(const VerbTable& verbs) {
+    std::vector<VerbInfo> all = verbs.list();
+    std::erase_if(all, [](const VerbInfo& verb) { return kInternalVerbs.contains(verb.name); });
+    const auto& order = node_verb_order();
+    auto rank = [&](const VerbInfo& verb) {
+        auto at = std::find(order.begin(), order.end(), verb.name);
+        return static_cast<std::size_t>(at - order.begin());
+    };
+    std::stable_sort(all.begin(), all.end(), [&](const VerbInfo& a, const VerbInfo& b) { return rank(a) < rank(b); });
+    return all;
+}
+
 Value code_tools(const VerbTable& verbs) {
     std::string names;
-    for (const VerbInfo& verb : verbs.list()) {
+    for (const VerbInfo& verb : served_verbs(verbs)) {
         if (!names.empty()) names += ", ";
         names += verb.name;
     }
@@ -181,8 +216,7 @@ Value code_tools(const VerbTable& verbs) {
                             object_schema(object()
                                               .set("witness", str_schema())
                                               .set("gaps", object().set("type", "array").set("items", str_schema()))
-                                              .set("stopBackground", bool_schema())
-                                              .set("stopRows", bool_schema()),
+                                              .set("stopBackground", bool_schema()),
                                           {"witness"}));
     Value format = object().set("type", "string").set("enum", string_array({"esm", "cjs"}));
     Value run_code = object()
@@ -299,12 +333,6 @@ Value merge(Value into, const Value& from) {
     return into;
 }
 
-std::string clip(const std::string& text, std::size_t cap = kLineCap) {
-    std::size_t length = js_length(text);
-    if (length <= cap) return text;
-    return js_prefix(text, cap) + " ...[" + std::to_string(length) + " chars]";
-}
-
 std::vector<std::string> split_lines(const std::string& text) {
     std::vector<std::string> lines;
     std::size_t at = 0;
@@ -315,46 +343,6 @@ std::vector<std::string> split_lines(const std::string& text) {
         at = nl + 1;
     }
     return lines;
-}
-
-Value output_digest(const std::string& text, bool failed) {
-    if (text.empty()) return object().set("lines", 0).set("bytes", 0);
-    static const std::regex kError(
-        R"(\b(error|errors|fail|failed|failure|fatal|warn|warning|exception|traceback|denied|not ok)\b)",
-        std::regex::ECMAScript | std::regex::icase);
-    auto lines = split_lines(text);
-    Value head = array();
-    for (std::size_t i = 0; i < std::min<std::size_t>(2, lines.size()); ++i) head.push(clip(lines[i]));
-    Value tail = array();
-    for (std::size_t i = lines.size() >= 2 ? lines.size() - 2 : 0; i < lines.size(); ++i) tail.push(clip(lines[i]));
-    Value digest = object()
-                       .set("lines", number_of(lines.size()))
-                       .set("bytes", number_of(text.size()))
-                       .set("head", std::move(head))
-                       .set("tail", std::move(tail));
-    std::vector<std::string> errors;
-    for (const auto& line : lines) {
-        if (std::regex_search(line, kError)) errors.push_back(line);
-    }
-    if (!errors.empty()) {
-        Value shown = array();
-        for (std::size_t i = 0; i < std::min(errors.size(), kDigestErrors); ++i) shown.push(clip(errors[i]));
-        digest.set("errors", std::move(shown));
-        if (errors.size() > kDigestErrors) digest.set("moreErrors", number_of(errors.size() - kDigestErrors));
-    }
-    if (failed) {
-        std::size_t shown = 0;
-        std::size_t chars = 0;
-        while (shown < lines.size() && (shown == 0 || chars + js_length(lines[shown]) <= kFailedHeadChars)) {
-            chars += js_length(lines[shown]);
-            shown += 1;
-        }
-        Value all = array();
-        for (std::size_t i = 0; i < shown; ++i) all.push(clip(lines[i]));
-        digest.set("all", std::move(all));
-        if (shown < lines.size()) digest.set("more", number_of(lines.size() - shown));
-    }
-    return digest;
 }
 
 bool failed_of(const Value& result) {
@@ -398,9 +386,7 @@ std::string text_or_undefined(const Value* v) {
     return json::dump(*v);
 }
 
-class LoggedVerbs;
-
-}  // namespace
+}
 
 struct Server::State {
     VerbTable& verbs;
@@ -433,15 +419,68 @@ struct Server::State {
         std::optional<Value> rpc_id;
         Value trace;
         std::optional<std::uint64_t> call_action_seq;
+        std::uint64_t notice_seq = 0;
+        std::optional<Value> recovery;
+        std::string rules_baseline;
     };
     std::unique_ptr<Session> session;
+    std::vector<std::unique_ptr<Session>> retired;
+
+    struct Gate {
+        std::shared_mutex lock;
+        bool alive = true;
+    };
+
+    struct BodyJob {
+        std::uint64_t body = 0;
+        int step = 0;
+        Session* owner = nullptr;
+        std::string name;
+        double start_mono = 0;
+        std::chrono::steady_clock::time_point start_wall = std::chrono::steady_clock::now();
+        std::atomic<bool> stopped{false};
+        std::atomic<bool> exited{false};
+        std::atomic<int> in_flight{0};
+        std::atomic<long long> last_call_ms{0};
+        std::mutex lock;
+        std::condition_variable changed;
+        bool finished = false;
+        bool adopted = false;
+        bool settled = false;
+        bool stuck = false;
+        std::uint64_t reminders = 0;
+        std::vector<std::string> started_jobs;
+        std::optional<Value> value;
+        std::string error;
+        std::thread thread;
+    };
+
+    std::recursive_mutex mu;
+    std::atomic<int> in_flight{0};
+    std::uint64_t generation = 0;
+    std::optional<std::string> fingerprint;
+    std::shared_ptr<Gate> gate = std::make_shared<Gate>();
+    std::vector<std::shared_ptr<BodyJob>> bodies;
+    std::map<std::string, std::function<void()>> after_reply;
+    std::thread monitor;
+    bool monitor_running = false;
+    std::mutex monitor_mutex;
+    std::condition_variable monitor_wake;
+    bool shutting_down = false;
 
     State(VerbTable& v, ServerOptions o, LineWriter w)
         : verbs(v), options(std::move(o)), write(std::move(w)), skills(options.skills) {}
 
+    ~State();
+
     Session& s() { return *session; }
 
-    void notify(const Value& message) { write(json::dump(message)); }
+    void emit(const std::string& line) {
+        std::lock_guard guard(mu);
+        write(line);
+    }
+
+    void notify(const Value& message) { emit(json::dump(message)); }
 
     void send_notice(const Value& notice) {
         auto at = [](const std::string& level) {
@@ -455,11 +494,23 @@ struct Server::State {
     std::uint64_t append(std::string_view kind, Value fields) { return append_to(s(), kind, std::move(fields)); }
 
     std::uint64_t append_to(Session& target, std::string_view kind, Value fields) {
+        std::lock_guard guard(mu);
+        if (fields.is_object() && fields.find("inFlight") == nullptr) fields.set("inFlight", in_flight.load());
         Value kept = fields;
         std::uint64_t seq = target.log->append(kind, std::move(fields));
         target.count = seq;
         std::string k(kind);
         note_shown(target, k, kept);
+        if (is_pending_kind(k)) {
+            auto written = target.log->read_from(seq - 1);
+            if (written && !written->empty()) {
+                try {
+                    append_pending(target.run_dir, written->front());
+                } catch (const std::exception& err) {
+                    std::cerr << "gm mcp: " << err.what() << '\n';
+                }
+            }
+        }
         if (k == "end") notify(object().set("jsonrpc", "2.0").set("method", "notifications/resources/list_changed"));
         auto level = kNoticeLevels.find(k);
         if (level != kNoticeLevels.end()) {
@@ -519,6 +570,7 @@ struct Server::State {
         session_.run_dir = dir;
         session_.run_id = dir.filename().string();
         session_.log = std::make_shared<RunLog>(std::move(*log));
+        session_.rules_baseline = kMcpRules;
         if (options.on_run_open) options.on_run_open(session_.log);
         if (resumed) {
             session_.count = session_.log->count();
@@ -535,9 +587,138 @@ struct Server::State {
         return resumed;
     }
 
-    void log_tools() {
+    void log_tools(const std::vector<Value>& history = {}) {
         Value served = served_tools();
-        append("tools", object().set("sha", sha256_hex(json::dump(served))).set("count", number_of(served.as_array().size())));
+        std::string sha = sha256_hex(json::dump(served));
+        const Value* last = nullptr;
+        for (const Value& event : history) {
+            if (string_of(event, "kind") == "tools") last = &event;
+        }
+        if (last && string_of(*last, "sha") != sha) {
+            append("tools-changed", object().set("old", *last->find("sha")).set("new", sha));
+        }
+        append("tools", object().set("sha", sha).set("count", number_of(served.as_array().size())));
+    }
+
+    static std::string string_of(const Value& v, const char* key) {
+        const Value* f = v.find(key);
+        return f && f->is_string() ? f->as_string() : "";
+    }
+
+    static std::optional<std::uint64_t> seq_field(const Value& v, const char* key) {
+        const Value* f = v.find(key);
+        if (f == nullptr || !f->is_number()) return std::nullopt;
+        return static_cast<std::uint64_t>(f->as_number());
+    }
+
+    void prefill_answers(const std::vector<Value>& history) {
+        std::map<std::uint64_t, const Value*> ends;
+        for (const Value& event : history) {
+            std::string kind = string_of(event, "kind");
+            auto action = seq_field(event, "actionSeq");
+            if ((kind == "result" || kind == "refusal") && action) ends[*action] = &event;
+        }
+        static const std::set<std::string> kLogFields = {"seq",       "t",     "mono",      "inFlight", "kind", "step",
+                                                         "tool",      "startMono", "durMs", "actionSeq", "rpcId"};
+        for (const Value& action : history) {
+            const Value* rpc = action.find("rpcId");
+            if (string_of(action, "kind") != "action" || rpc == nullptr) continue;
+            std::uint64_t seq = seq_field(action, "seq").value_or(0);
+            auto end = ends.find(seq);
+            Value out = object();
+            if (end == ends.end()) {
+                out.set("ok", false).set("error", "the call was interrupted by a restart; check its outside effects before repeating it");
+            } else if (string_of(*end->second, "kind") == "refusal") {
+                out.set("ok", false).set("refused", true).set("error", end->second->find("error") ? *end->second->find("error") : Value());
+            } else {
+                for (const json::Member& m : end->second->as_object()) {
+                    if (!kLogFields.contains(m.first)) out.set(m.first, m.second);
+                }
+            }
+            remember(id_key(rpc), tool_result(string_of(action, "tool"), out, seq));
+        }
+    }
+
+    static std::optional<Value> recovery_of(const std::vector<Value>& history) {
+        std::size_t first = history.size();
+        for (std::size_t i = 0; i < history.size(); ++i) {
+            if (history[i].find("actionSeq") || history[i].find("rpcId")) {
+                first = i;
+                break;
+            }
+        }
+        if (first == history.size()) return std::nullopt;
+        std::set<std::uint64_t> ended;
+        for (const Value& event : history) {
+            std::string kind = string_of(event, "kind");
+            auto action = seq_field(event, "actionSeq");
+            if ((kind == "result" || kind == "refusal" || kind == "code-call") && action) ended.insert(*action);
+        }
+        Value open = array();
+        for (std::size_t i = first; i < history.size(); ++i) {
+            const Value& event = history[i];
+            std::uint64_t seq = seq_field(event, "seq").value_or(0);
+            if (string_of(event, "kind") != "action" || ended.contains(seq)) continue;
+            Value entry = object().set("seq", number_of(seq));
+            if (const Value* tool = event.find("tool")) entry.set("tool", *tool);
+            if (const Value* args = event.find("args")) entry.set("args", *args);
+            open.push(std::move(entry));
+        }
+        if (open.as_array().empty()) return std::nullopt;
+        std::uint64_t last = history.empty() ? 0 : seq_field(history.back(), "seq").value_or(0);
+        return object().set("lastSeq", number_of(last)).set("open", std::move(open));
+    }
+
+    static Value recovery_note(const Value& recovery) {
+        std::string list;
+        for (const Value& action : recovery.find("open")->as_array()) {
+            if (!list.empty()) list += "; ";
+            list += "seq " + json::dump(*action.find("seq")) + " " + text_or_undefined(action.find("tool")) + " " +
+                    (action.find("args") ? json::dump(*action.find("args")) : std::string("undefined"));
+        }
+        std::string last = json::dump(*recovery.find("lastSeq"));
+        return object()
+            .set("lastSeq", *recovery.find("lastSeq"))
+            .set("open", *recovery.find("open"))
+            .set("note", "This run resumed after a restart, at last seq " + last +
+                             ". These actions started and have no end event: " + list +
+                             ". Before you repeat any of them, check the outside effects: git log and git status, the remote, "
+                             "and the row files under work/rows. Do not repeat a push, a commit, a fetch that posted, or a row "
+                             "resolve unless those checks show that it did not happen.");
+    }
+
+    static std::uint64_t last_context_seq(const std::vector<Value>& history) {
+        std::uint64_t seq = 0;
+        for (const Value& event : history) {
+            if (string_of(event, "kind") == "action" && string_of(event, "tool") == "next_context") seq = seq_field(event, "seq").value_or(0);
+        }
+        return seq;
+    }
+
+    void stop_orphans() {
+        fs::path dir = s().run_dir / "jobs";
+        std::error_code ec;
+        if (!fs::is_directory(dir, ec)) return;
+        for (const auto& entry : fs::directory_iterator(dir, ec)) {
+            if (entry.path().extension() != ".json") continue;
+            std::string text;
+            if (!read_file(entry.path(), text)) continue;
+            auto status = json::parse(text);
+            if (!status || !status->is_object()) continue;
+            std::string state = string_of(*status, "state");
+            if (state != "running" && state != "queued") continue;
+            if (!status->find("body")) continue;
+            std::string job = string_of(*status, "job");
+            auto body = seq_field(*status, "body").value_or(0);
+            std::string tail = body_text(s(), body, kTailCap);
+            Value killed = *status;
+            killed.set("state", "killed").set("reason", "restart");
+            write_status(s(), job, killed);
+            Value fields = object().set("job", job).set("body", number_of(body)).set("state", "killed");
+            if (const Value* start = status->find("startMono")) fields.set("startMono", *start);
+            append("job", fields.set("reason", "restart"));
+            append("job-killed", object().set("job", job).set("reason", "restart").set("tail", tail));
+        }
     }
 
     deoxidene::Result<bool, std::string> boot() {
@@ -552,8 +733,9 @@ struct Server::State {
         bool resumed = *opened;
         session = std::move(fresh);
         std::optional<std::string> closed_at_boot;
+        std::vector<Value> history;
         if (resumed) {
-            auto history = events();
+            history = events();
             for (const Value& event : history) {
                 std::string kind = event.find("kind") ? event.find("kind")->as_string() : "";
                 note_shown(s(), kind, event);
@@ -586,15 +768,23 @@ struct Server::State {
                 s().task = logged_task;
             }
             s().run_started = s().steps > 0;
+            s().notice_seq = last_context_seq(history);
+            prefill_answers(history);
         }
         if (!closed_at_boot) {
+            auto recovery = resumed ? recovery_of(history) : std::nullopt;
             if (resumed) append("restart", object().set("reason", options.restart_reason));
             else append("start", object()
                                      .set("mode", "mcp")
                                      .set("maxSteps", options.max_steps)
                                      .set("maxInflight", options.max_inflight)
                                      .set("taskFrom", trim(options.task).empty() ? "session prompt" : "task file"));
-            log_tools();
+            if (recovery) {
+                append("recovery", *recovery);
+                s().recovery = recovery;
+            }
+            log_tools(history);
+            stop_orphans();
         }
         return true;
     }
@@ -621,7 +811,11 @@ struct Server::State {
         auto opened = open_run(*fresh, next_dir, task);
         if (!opened) throw std::runtime_error(opened.error());
         set_successor(s().run_dir, next_dir);
-        session = std::move(fresh);
+        {
+            std::lock_guard guard(mu);
+            retired.push_back(std::move(session));
+            session = std::move(fresh);
+        }
         s().task = task;
         s().task_inherited = inherited;
         append("start", object()
@@ -676,16 +870,28 @@ struct Server::State {
     }
 
     Value refuse(const std::string& tool, const Value& args, const std::string& reason, bool with_rpc = true) {
+        double start = s().log->now_ms();
         std::uint64_t action = append("action", action_fields(tool, args, with_rpc));
         if (with_rpc && s().rpc_id) s().call_action_seq = action;
         std::string error = "refused: " + reason;
-        append("refusal", object().set("step", s().steps).set("tool", tool).set("error", error).set("actionSeq", number_of(action)));
+        append("refusal", object()
+                              .set("step", s().steps)
+                              .set("tool", tool)
+                              .set("error", error)
+                              .set("startMono", start)
+                              .set("actionSeq", number_of(action)));
         return object().set("ok", false).set("refused", true).set("error", error).set("actionSeq", number_of(action));
     }
 
     template <typename Exec, typename Digest>
     Value act(const std::string& tool, const Value& args, Exec exec, Digest digest) {
         int step = s().steps;
+        double start = s().log->now_ms();
+        in_flight += 1;
+        struct Leave {
+            std::atomic<int>& count;
+            ~Leave() { count -= 1; }
+        } leave{in_flight};
         std::uint64_t action = append("action", action_fields(tool, args, true));
         if (s().rpc_id) s().call_action_seq = action;
         Value result;
@@ -694,15 +900,18 @@ struct Server::State {
         } catch (const std::exception& err) {
             result = object().set("ok", false).set("error", err.what());
         }
+        if (tool == "run_code" && options.flush_job_events) options.flush_job_events();
         const Value* refused = result.find("refused");
         if (refused != nullptr && refused->as_bool()) {
             append("refusal", object()
                                   .set("step", step)
                                   .set("tool", tool)
                                   .set("error", *result.find("error"))
+                                  .set("startMono", start)
                                   .set("actionSeq", number_of(action)));
         } else {
-            append("result", merge(object().set("step", step).set("tool", tool).set("actionSeq", number_of(action)), digest(result)));
+            append("result", merge(object().set("step", step).set("tool", tool).set("startMono", start).set("actionSeq", number_of(action)),
+                                   digest(result)));
         }
         return result;
     }
@@ -729,6 +938,8 @@ struct Server::State {
 
     void end_run(const std::string& status, const Value& witness, const std::optional<Value>& gaps) {
         s().end_logged = true;
+        stop_bodies("run-ended");
+        write_summary();
         Value fields = object().set("status", status).set("steps", s().steps).set("witness", witness);
         if (gaps) fields.set("gaps", *gaps);
         append("end", std::move(fields));
@@ -759,7 +970,7 @@ struct Server::State {
                     .set("rules", rules)
                     .set("task", task_value())
                     .set("prefixSha", prefix_sha(rules, s().task, served_tools()))
-                    .set("total", number_of(s().count));
+                    .set("total", number_of(s().log->count()));
             },
             [](const Value& r) {
                 Value d = object();
@@ -770,37 +981,526 @@ struct Server::State {
             });
     }
 
-    Value feed(std::uint64_t shown, std::uint64_t total, const std::vector<Value>& all) {
-        Value items = array();
-        std::size_t used = 0;
-        std::size_t room = kEventsCap - 2;
-        std::uint64_t full = 0;
-        std::uint64_t first_compact = 0;
-        for (const Value& event : all) {
-            std::uint64_t seq = static_cast<std::uint64_t>(event.find("seq") ? event.find("seq")->as_number() : 0);
-            if (seq <= shown || seq > total) continue;
-            if (first_compact != 0) continue;
-            std::size_t cost = js_length(json::dump(event)) + 1;
-            if (used + cost <= room) {
-                used += cost;
-                items.push(event);
-                full += 1;
-            } else {
-                first_compact = seq;
+    static void fingerprint_into(const fs::path& dir, const std::string& rel, std::vector<std::string>& parts) {
+        static const std::set<std::string> kSkipDirs = {"node_modules", "runs", ".gm-new", ".git", "sources", "vendor"};
+        std::error_code ec;
+        for (const auto& entry : fs::directory_iterator(dir, ec)) {
+            std::string name = entry.path().filename().string();
+            if (kSkipDirs.contains(name)) continue;
+            std::string path = rel.empty() ? name : rel + "/" + name;
+            auto status = entry.symlink_status(ec);
+            if (fs::is_directory(status)) {
+                fingerprint_into(entry.path(), path, parts);
+            } else if (fs::is_regular_file(status)) {
+                auto when = fs::last_write_time(entry.path(), ec).time_since_epoch().count();
+                parts.push_back(path + ":" + std::to_string(when) + ":" + std::to_string(entry.file_size(ec)));
             }
         }
-        if (first_compact != 0) {
-            Value seqs = array();
-            seqs.push(number_of(first_compact));
-            seqs.push(number_of(total));
-            items.push(object().set("kind", "range").set("seqs", std::move(seqs)).set("count", number_of(total - first_compact + 1)));
+    }
+
+    void next_generation() {
+        std::vector<std::string> parts;
+        fingerprint_into(options.workspace, "", parts);
+        std::sort(parts.begin(), parts.end());
+        std::string joined;
+        for (const auto& part : parts) joined += joined.empty() ? part : "\n" + part;
+        std::string now = sha256_hex(joined);
+        if (fingerprint && *fingerprint == now) return;
+        fingerprint = now;
+        generation += 1;
+        append("generation", object().set("step", s().steps).set("generation", number_of(generation)));
+    }
+
+    void settle_started_jobs(const std::vector<std::string>& names) {
+        if (names.empty() || !options.job_snapshot) return;
+        using namespace std::chrono;
+        auto deadline = steady_clock::now() + milliseconds(kStartedJobGraceMs);
+        while (steady_clock::now() < deadline) {
+            Value open = options.job_snapshot();
+            bool running = false;
+            if (open.is_array()) {
+                for (const Value& entry : open.as_array()) {
+                    running = running || std::find(names.begin(), names.end(), string_of(entry, "job")) != names.end();
+                }
+            }
+            if (!running) return;
+            std::this_thread::sleep_for(milliseconds(5));
         }
-        return object()
-            .set("older", number_of(shown))
-            .set("records", number_of(items.as_array().size()))
-            .set("fullEvents", number_of(full))
-            .set("compactFrom", first_compact == 0 ? Value(nullptr) : number_of(first_compact))
-            .set("events", std::move(items));
+    }
+
+    static long long steady_ms() {
+        using namespace std::chrono;
+        return duration_cast<milliseconds>(steady_clock::now().time_since_epoch()).count();
+    }
+
+    static long long wall_ms_of(const BodyJob& job) {
+        using namespace std::chrono;
+        return duration_cast<milliseconds>(job.start_wall.time_since_epoch()).count();
+    }
+
+    static std::string js_suffix(const std::string& text, std::size_t units) {
+        std::size_t length = js_length(text);
+        if (length <= units) return text;
+        return text.substr(js_prefix(text, length - units).size());
+    }
+
+    static std::string js_slice(const std::string& text, std::size_t from, std::size_t to) {
+        std::string head = js_prefix(text, to);
+        return head.substr(js_prefix(head, from).size());
+    }
+
+    std::string body_text(Session& owner, std::uint64_t body, std::size_t cap) {
+        auto events = owner.log->read_from(body);
+        std::vector<std::string> lines;
+        if (events) {
+            for (const Value& event : *events) {
+                if (string_of(event, "kind") != "code-call" || seq_field(event, "body") != body) continue;
+                Value line = object();
+                for (const char* key : {"seq", "tool", "ok", "output", "error"}) {
+                    if (const Value* v = event.find(key)) line.set(key, *v);
+                }
+                lines.push_back(json::dump(line));
+            }
+        }
+        std::string text;
+        for (const auto& line : lines) text += text.empty() ? line : "\n" + line;
+        return js_suffix(text, cap);
+    }
+
+    void write_status(Session& owner, const std::string& name, const Value& status) {
+        fs::path dir = owner.run_dir / "jobs";
+        std::error_code ec;
+        fs::create_directories(dir, ec);
+        fs::path file = dir / (name + ".json");
+        fs::path temp = dir / (name + ".json.tmp");
+        write_file(temp, json::dump(status) + "\n");
+        fs::rename(temp, file, ec);
+    }
+
+    std::optional<Value> read_status(Session& owner, const std::string& name) {
+        std::string text;
+        if (!read_file(owner.run_dir / "jobs" / (name + ".json"), text)) return std::nullopt;
+        auto parsed = json::parse(text);
+        if (!parsed || !parsed->is_object()) return std::nullopt;
+        return *parsed;
+    }
+
+    Value status_of(const BodyJob& job, const std::string& state) {
+        return object().set("job", job.name).set("body", number_of(job.body)).set("state", state).set("startMono", job.start_mono);
+    }
+
+    void settle_locked(BodyJob& job, const std::string& state, const Value& fields) {
+        if (job.settled) return;
+        job.settled = true;
+        Value status = status_of(job, state);
+        Value event = status;
+        for (const json::Member& m : fields.as_object()) {
+            status.set(m.first, m.second);
+            if (m.first != "value" && m.first != "error") event.set(m.first, m.second);
+        }
+        write_status(*job.owner, job.name, status);
+        append_to(*job.owner, "job", std::move(event));
+        job.changed.notify_all();
+    }
+
+    void stop_locked(BodyJob& job, const std::string& reason) {
+        if (job.settled || !job.adopted) return;
+        job.stopped = true;
+        std::string tail = body_text(*job.owner, job.body, kTailCap);
+        settle_locked(job, "killed", object().set("reason", reason));
+        Value killed = object().set("job", job.name).set("reason", reason).set("tail", tail);
+        if (reason == "lifetime") killed.set("lifetimeMs", number_of(options.job_lifetime_ms));
+        append_to(*job.owner, "job-killed", std::move(killed));
+    }
+
+    std::vector<std::shared_ptr<BodyJob>> body_list() {
+        std::lock_guard guard(mu);
+        return bodies;
+    }
+
+    std::vector<std::string> running_bodies() {
+        std::vector<std::string> names;
+        for (const auto& job : body_list()) {
+            std::lock_guard guard(job->lock);
+            if (job->adopted && !job->settled) names.push_back(job->name);
+        }
+        return names;
+    }
+
+    void stop_bodies(const std::string& reason) {
+        for (const auto& job : body_list()) {
+            std::lock_guard guard(job->lock);
+            stop_locked(*job, reason);
+        }
+    }
+
+    std::shared_ptr<BodyJob> body_named(const std::string& name) {
+        for (const auto& job : body_list()) {
+            if (job->name == name && job->owner == session.get()) return job;
+        }
+        return nullptr;
+    }
+
+    void body_finished(const std::shared_ptr<BodyJob>& job, const deoxidene::Result<Value, std::string>& outcome) {
+        std::lock_guard guard(job->lock);
+        job->finished = true;
+        if (outcome) job->value = *outcome;
+        else job->error = outcome.error();
+        if (job->adopted && !job->settled) {
+            if (job->value) {
+                std::string text = json::dump(*job->value);
+                std::size_t length = js_length(text);
+                settle_locked(*job, "exited",
+                              object()
+                                  .set("value", length > kOutputCap ? js_prefix(text, kOutputCap) : text)
+                                  .set("truncated", length > kOutputCap));
+            } else {
+                settle_locked(*job, "failed", object().set("error", job->error));
+            }
+        }
+        job->changed.notify_all();
+    }
+
+    Value body_job_status(const Value& args) {
+        static const std::regex kJobName(R"(^[A-Za-z0-9_-]{1,64}$)");
+        std::string name = string_of(args, "job");
+        if (!std::regex_match(name, kJobName)) return object().set("ok", false).set("error", "job must be a job name");
+        double wait = std::clamp(args.find("waitMs") ? args.find("waitMs")->as_number(0) : 0.0, 0.0, kMaxJobWaitMs);
+        if (auto job = body_named(name); job && wait > 0) {
+            std::unique_lock guard(job->lock);
+            job->changed.wait_for(guard, std::chrono::milliseconds(static_cast<long long>(wait)), [&] { return job->settled; });
+        }
+        auto status = read_status(s(), name);
+        if (!status) return object().set("ok", false).set("error", "no job named " + name);
+        const Value* offset_arg = args.find("offset");
+        if (offset_arg && (!offset_arg->is_number() || offset_arg->as_number() < 0 ||
+                           offset_arg->as_number() != static_cast<double>(static_cast<long long>(offset_arg->as_number())))) {
+            return object().set("ok", false).set("error", "offset must be a whole number of characters, zero or more");
+        }
+        std::string text = body_text(s(), seq_field(*status, "body").value_or(0), std::numeric_limits<std::size_t>::max());
+        std::size_t total = js_length(text);
+        std::size_t from = offset_arg ? static_cast<std::size_t>(offset_arg->as_number()) : (total > kOutputPage ? total - kOutputPage : 0);
+        std::size_t end = std::min(from + kOutputPage, total);
+        if (from > end) from = end;
+        Value reply = object().set("ok", true);
+        for (const json::Member& m : status->as_object()) {
+            if (m.first != "output") reply.set(m.first, m.second);
+        }
+        reply.set("exitCode", status->find("exitCode") ? *status->find("exitCode") : Value(nullptr));
+        reply.set("signal", status->find("signal") ? *status->find("signal") : Value(nullptr));
+        return reply.set("output", js_slice(text, from, end))
+            .set("total", number_of(total))
+            .set("truncated", from > 0 || end < total)
+            .set("offset", number_of(from))
+            .set("next", end < total ? number_of(end) : Value(nullptr))
+            .set("logPath", nullptr);
+    }
+
+    bool is_body_job(const Value& args) {
+        std::string name = string_of(args, "job");
+        if (name.empty()) return false;
+        if (body_named(name)) return true;
+        auto status = read_status(s(), name);
+        return status && status->find("body") != nullptr;
+    }
+
+    Value prd_summary() {
+        bool served = false;
+        for (const VerbInfo& verb : verbs.list()) served = served || verb.name == "prd_list";
+        if (!served) return object().set("error", "no prd_list verb is served");
+        Value reply = verbs.call("prd_list", object().set("status", "all"));
+        if (!is_ok(reply)) return object().set("error", text_or_undefined(reply.find("error")));
+        std::size_t total = 0;
+        std::size_t open = 0;
+        Value window = array();
+        for (const Row& row : rows_of(string_of(reply, "output"), true, total)) {
+            open += 1;
+            if (window.as_array().size() < kNoticePrdWindow) window.push(object().set("id", row.id).set("title", row.title));
+        }
+        std::size_t shown = window.as_array().size();
+        return object().set("total", number_of(total)).set("open", number_of(open)).set("window", std::move(window)).set("more", number_of(open - shown));
+    }
+
+    struct Row {
+        std::string id;
+        std::string title;
+    };
+
+    static std::vector<Row> rows_of(const std::string& listing, bool open_only, std::size_t& total) {
+        std::vector<Row> rows;
+        if (trim(listing) == "(none)") return rows;
+        for (const auto& line : split_lines(listing)) {
+            if (trim(line).empty()) continue;
+            total += 1;
+            std::size_t first = line.find(' ');
+            if (first == std::string::npos) continue;
+            std::size_t second = line.find(' ', first + 1);
+            std::string status = line.substr(first + 1, second == std::string::npos ? std::string::npos : second - first - 1);
+            if (open_only && status != "open") continue;
+            rows.push_back({line.substr(0, first), second == std::string::npos ? std::string() : line.substr(second + 1)});
+        }
+        return rows;
+    }
+
+    std::vector<Row> open_rows() {
+        std::set<std::string> served;
+        for (const VerbInfo& verb : verbs.list()) served.insert(verb.name);
+        std::vector<Row> rows;
+        for (const char* verb : {"prd_list", "unknown_list"}) {
+            if (!served.contains(verb)) continue;
+            Value reply = verbs.call(verb, object());
+            if (!is_ok(reply)) throw std::runtime_error(std::string(verb) + " failed: " + text_or_undefined(reply.find("error")));
+            std::size_t total = 0;
+            for (Row& row : rows_of(string_of(reply, "output"), true, total)) rows.push_back(std::move(row));
+        }
+        return rows;
+    }
+
+    Value active_jobs() {
+        Value open = array();
+        long long now = steady_ms();
+        for (const auto& job : body_list()) {
+            std::lock_guard guard(job->lock);
+            if (!job->adopted || job->settled || job->owner != session.get()) continue;
+            long long progress = job->in_flight > 0 ? now : std::max(wall_ms_of(*job), job->last_call_ms.load());
+            open.push(object()
+                          .set("job", job->name)
+                          .set("body", number_of(job->body))
+                          .set("state", "running")
+                          .set("runningMs", static_cast<double>(now - wall_ms_of(*job)))
+                          .set("sinceProgressMs", static_cast<double>(now - progress))
+                          .set("stuck", job->stuck));
+        }
+        if (options.job_snapshot) {
+            Value shells = options.job_snapshot();
+            if (shells.is_array()) {
+                for (const Value& entry : shells.as_array()) open.push(entry);
+            }
+        }
+        return open;
+    }
+
+    void ensure_monitor() {
+        std::lock_guard guard(mu);
+        if (monitor_running) return;
+        if (monitor.joinable()) monitor.join();
+        monitor_running = true;
+        monitor = std::thread([this] { monitor_loop(); });
+    }
+
+    void monitor_loop() {
+        while (true) {
+            {
+                std::unique_lock guard(monitor_mutex);
+                monitor_wake.wait_for(guard, std::chrono::milliseconds(options.monitor_ms), [&] { return shutting_down; });
+                if (shutting_down) break;
+            }
+            if (!check_bodies()) {
+                std::lock_guard guard(mu);
+                bool open = false;
+                for (const auto& job : bodies) open = open || (job->adopted && !job->exited && !job->settled);
+                if (!open) {
+                    monitor_running = false;
+                    return;
+                }
+            }
+        }
+        std::lock_guard guard(mu);
+        monitor_running = false;
+    }
+
+    bool check_bodies() {
+        bool any = false;
+        for (const auto& job : body_list()) {
+            bool remind = false;
+            double running_ms = 0;
+            {
+                std::lock_guard guard(job->lock);
+                if (!job->adopted || job->settled) continue;
+                any = true;
+                long long now = steady_ms();
+                if (static_cast<std::uint64_t>(now - wall_ms_of(*job)) >= options.job_lifetime_ms) {
+                    stop_locked(*job, "lifetime");
+                    continue;
+                }
+                long long progress = job->in_flight > 0 ? now : std::max(wall_ms_of(*job), job->last_call_ms.load());
+                double since = static_cast<double>(now - progress);
+                if (!job->stuck && since > static_cast<double>(options.stuck_ms)) {
+                    job->stuck = true;
+                    append_to(*job->owner, "job-stuck", object().set("job", job->name).set("body", number_of(job->body)).set("sinceProgressMs", since));
+                } else if (job->stuck && since <= static_cast<double>(options.stuck_ms)) {
+                    job->stuck = false;
+                    append_to(*job->owner, "job-unstuck", object().set("job", job->name).set("body", number_of(job->body)).set("sinceProgressMs", since));
+                }
+                std::uint64_t due = static_cast<std::uint64_t>(now - wall_ms_of(*job)) / std::max<std::uint64_t>(1, options.notice_ms);
+                if (due > job->reminders) {
+                    job->reminders = due;
+                    remind = true;
+                    running_ms = std::round(job->owner->log->now_ms() - job->start_mono);
+                }
+            }
+            if (!remind) continue;
+            Value prd = prd_summary();
+            std::lock_guard guard(job->lock);
+            if (!job->settled) {
+                append_to(*job->owner, "job-running",
+                          object().set("job", job->name).set("body", number_of(job->body)).set("runningMs", running_ms).set("prd", std::move(prd)));
+            }
+        }
+        return any;
+    }
+
+    Value job_notices(const std::vector<Value>& since) {
+        Value notices = object();
+        std::set<std::string> killed_names;
+        Value killed = array();
+        Value started = array();
+        Value running = array();
+        Value ended = array();
+        Value stuck = array();
+        Value unstuck = array();
+        for (const Value& event : since) {
+            if (string_of(event, "kind") == "job-killed") killed_names.insert(string_of(event, "job"));
+        }
+        auto pick = [](const Value& event, std::initializer_list<const char*> keys) {
+            Value out = object();
+            for (const char* key : keys) {
+                if (const Value* v = event.find(key)) out.set(key, *v);
+            }
+            return out;
+        };
+        for (const Value& event : since) {
+            std::string kind = string_of(event, "kind");
+            std::string state = string_of(event, "state");
+            if (kind == "job-killed") killed.push(pick(event, {"seq", "job", "reason", "lifetimeMs", "tail"}));
+            if (kind == "job" && state == "running" && event.find("body")) started.push(pick(event, {"seq", "job"}));
+            if (kind == "job-running") running.push(pick(event, {"seq", "job", "runningMs", "prd"}));
+            if (kind == "job" && state != "running" && !(state == "killed" && killed_names.contains(string_of(event, "job")))) {
+                ended.push(ended_job(event));
+            }
+            if (kind == "job-stuck") stuck.push(pick(event, {"seq", "job", "body", "sinceProgressMs"}));
+            if (kind == "job-unstuck") unstuck.push(pick(event, {"seq", "job"}));
+        }
+        Value open = active_jobs();
+        if (!killed.as_array().empty()) notices.set("jobsKilled", std::move(killed));
+        if (!started.as_array().empty()) notices.set("jobsStarted", std::move(started));
+        if (!running.as_array().empty()) notices.set("jobsRunning", std::move(running));
+        if (!ended.as_array().empty()) notices.set("jobsEnded", std::move(ended));
+        if (!stuck.as_array().empty()) notices.set("jobsStuck", std::move(stuck));
+        if (!unstuck.as_array().empty()) notices.set("jobsUnstuck", std::move(unstuck));
+        std::size_t open_count = open.as_array().size();
+        if (open_count > 0) {
+            Value shown = array();
+            for (std::size_t i = 0; i < std::min(open_count, kOpenList); ++i) shown.push(open.as_array()[i]);
+            notices.set("jobsOpen", std::move(shown));
+            if (open_count > kOpenList) notices.set("jobsOpenMore", number_of(open_count - kOpenList));
+        }
+        return notices;
+    }
+
+    Value ended_job(const Value& event) {
+        std::string job = string_of(event, "job");
+        std::string text;
+        if (event.find("body")) {
+            if (auto status = read_status(s(), job)) {
+                const Value* value = status->find("value");
+                const Value* error = status->find("error");
+                const Value* chosen = value && !value->is_null() ? value : error;
+                if (chosen && !chosen->is_null()) text = chosen->is_string() ? chosen->as_string() : json::dump(*chosen);
+            }
+        } else if (!read_file(s().run_dir / "jobs" / (job + ".out"), text)) {
+            read_file(s().run_dir / "jobs" / (job + ".log"), text);
+        }
+        std::size_t length = js_length(text);
+        Value out = object().set("seq", *event.find("seq")).set("job", job);
+        for (const char* key : {"state", "exitCode", "signal"}) {
+            if (const Value* v = event.find(key)) out.set(key, *v);
+        }
+        return out.set("output", js_prefix(text, kOutputPage)).set("next", length > kOutputPage ? number_of(kOutputPage) : Value(nullptr));
+    }
+
+    std::optional<std::string> rules_change(const std::string& rules) {
+        if (rules == s().rules_baseline) return std::nullopt;
+        append("rules-changed", object().set("from", sha256_hex(s().rules_baseline).substr(0, 12)).set("to", sha256_hex(rules).substr(0, 12)));
+        s().rules_baseline = rules;
+        return "rules.md changed since the run started. The rules that hold from this step on are:\n\n" + rules;
+    }
+
+    void wait_for_pending(double wait_ms) {
+        if (wait_ms <= 0) return;
+        using namespace std::chrono;
+        auto deadline = steady_clock::now() + milliseconds(static_cast<long long>(wait_ms));
+        while (true) {
+            std::uint64_t seen = pending_generation();
+            if (has_pending(s().run_dir) || steady_clock::now() >= deadline) return;
+            wait_pending_change(seen, std::min(deadline, steady_clock::now() + milliseconds(250)));
+        }
+    }
+
+    Value context(int step) {
+        std::string rules = read_rules();
+        std::optional<Value> recovery_now;
+        if (s().recovery) recovery_now = recovery_note(*s().recovery);
+        s().recovery.reset();
+        auto since_events = s().log->read_from(s().notice_seq);
+        std::vector<Value> since = since_events ? std::move(*since_events) : std::vector<Value>{};
+        s().notice_seq = s().log->count();
+        Value notices = job_notices(since);
+        std::uint64_t total = s().log->count();
+        std::uint64_t shown = std::min(s().shown, total);
+        std::uint64_t reach = shown > 26 ? shown - 26 : 0;
+        std::map<std::uint64_t, Value> cache;
+        if (auto window = s().log->read_from(reach)) {
+            for (Value& event : *window) {
+                auto seq = seq_field(event, "seq");
+                if (seq) cache.emplace(*seq, std::move(event));
+            }
+        }
+        EventAt at = [&](std::uint64_t seq) -> const Value* {
+            auto found = cache.find(seq);
+            if (found != cache.end()) return &found->second;
+            if (seq == 0 || seq > total) return nullptr;
+            auto one = s().log->read_from(seq - 1);
+            if (!one || one->empty()) return nullptr;
+            return &cache.emplace(seq, std::move(one->front())).first->second;
+        };
+        Value reply = object()
+                          .set("ok", true)
+                          .set("step", step)
+                          .set("run", s().run_id)
+                          .set("stepsLeft", options.max_steps - step)
+                          .set("maxSteps", options.max_steps)
+                          .set("rules", rules)
+                          .set("task", task_value());
+        if (s().task.empty()) {
+            reply.set("taskNotice", "No task yet. The gm skill prompt, with its task argument, gives the task of this run.");
+        }
+        reply.set("witness", kDefaultWitness)
+            .set("prefixSha", prefix_sha(rules, s().task, served_tools()))
+            .set("total", number_of(total))
+            .set("pendingCommands", object().set("wait", "\"" + options.wait_program + "\" events --dir \"" + s().run_dir.string() + "\" --wait"));
+        reply = merge(std::move(reply), feed_of(at, total, shown));
+        reply.set("query", query_hint(shown, total));
+        if (recovery_now) reply.set("recovery", *recovery_now);
+        auto notice = rules_notice();
+        auto changed = rules_change(rules);
+        if (notice || changed) {
+            std::string text = notice.value_or("");
+            if (changed) text += (text.empty() ? "" : " ") + *changed;
+            reply.set("rulesPending", text);
+        }
+        reply = merge(std::move(reply), notices);
+        PendingTake taken = take_pending(s().run_dir);
+        if (!taken.records.empty()) {
+            Value records = array();
+            for (Value& record : taken.records) records.push(std::move(record));
+            reply.set("pending", std::move(records));
+        }
+        if (!taken.files.empty()) {
+            auto files = taken.files;
+            after_reply[id_key(s().rpc_id ? &*s().rpc_id : nullptr)] = [files] { clear_pending(files); };
+        }
+        return reply;
     }
 
     Value next_context(const Value& args) {
@@ -815,33 +1515,13 @@ struct Server::State {
         s().run_started = true;
         s().step_calls = 0;
         int step = s().steps;
-        (void)args;
+        const Value* wait_arg = args.find("waitMs");
+        double wait_ms = wait_arg && wait_arg->is_number() && wait_arg->as_number() > 0 ? std::min(wait_arg->as_number(), kMaxWaitMs) : 0;
         return act(
             "next_context", object(),
             [&](std::uint64_t) {
-                std::string rules = read_rules();
-                std::uint64_t total = s().count;
-                std::uint64_t shown = std::min(s().shown, total);
-                auto fresh = s().log->read_from(shown);
-                std::vector<Value> all = fresh ? std::move(*fresh) : std::vector<Value>{};
-                Value reply = object()
-                                  .set("ok", true)
-                                  .set("step", step)
-                                  .set("run", s().run_id)
-                                  .set("stepsLeft", options.max_steps - step)
-                                  .set("maxSteps", options.max_steps)
-                                  .set("rules", rules)
-                                  .set("task", task_value());
-                if (s().task.empty()) {
-                    reply.set("taskNotice", "No task yet. The gm skill prompt, with its task argument, gives the task of this run.");
-                }
-                reply.set("witness", kDefaultWitness)
-                    .set("prefixSha", prefix_sha(rules, s().task, served_tools()))
-                    .set("total", number_of(total));
-                reply = merge(std::move(reply), feed(shown, total, all));
-                reply.set("query", query_hint(shown, total));
-                if (auto notice = rules_notice()) reply.set("rulesPending", *notice);
-                return reply;
+                wait_for_pending(wait_ms);
+                return context(step);
             },
             [](const Value& r) {
                 Value d = object();
@@ -850,6 +1530,97 @@ struct Server::State {
                 }
                 return d;
             });
+    }
+
+    void log_lint() {
+        bool served = false;
+        for (const VerbInfo& verb : verbs.list()) served = served || verb.name == "wiki_lint";
+        Value problems = array();
+        Value pages = number(0);
+        if (served) {
+            Value lint = verbs.call("wiki_lint", object());
+            if (const Value* found = lint.find("problems")) problems = *found;
+            if (const Value* found = lint.find("pages")) pages = *found;
+            if (lint.find("problems") == nullptr && lint.find("error")) problems.push(text_or_undefined(lint.find("error")));
+        } else if (std::error_code ec; fs::is_directory(options.workspace / "wiki", ec)) {
+            problems.push("wiki_lint is not served");
+        }
+        append("lint", object().set("problems", std::move(problems)).set("pages", std::move(pages)));
+    }
+
+    static double round_ms(double value) { return std::round(value * 1000) / 1000; }
+
+    void write_summary() {
+        auto all = events();
+        for (const Value& event : all) {
+            if (string_of(event, "kind") == "summary") return;
+        }
+        double end = s().log->now_ms();
+        using Span = std::pair<double, double>;
+        auto spans = [&](auto picks) {
+            std::vector<Span> out;
+            for (const Value& event : all) {
+                const Value* start = event.find("startMono");
+                const Value* mono = event.find("mono");
+                if (picks(string_of(event, "kind")) && start && start->is_number() && mono) out.emplace_back(start->as_number(), mono->as_number());
+            }
+            return out;
+        };
+        auto merged = [](std::vector<Span> intervals) {
+            std::sort(intervals.begin(), intervals.end(), [](const Span& a, const Span& b) { return a.first < b.first; });
+            std::vector<Span> out;
+            for (const auto& [from, to] : intervals) {
+                if (!out.empty() && from <= out.back().second) out.back().second = std::max(out.back().second, to);
+                else out.emplace_back(from, to);
+            }
+            return out;
+        };
+        auto total = [](const std::vector<Span>& intervals) {
+            double sum = 0;
+            for (const auto& [from, to] : intervals) sum += to - from;
+            return sum;
+        };
+        auto tool = spans([](const std::string& k) { return k == "result" || k == "refusal"; });
+        auto model = spans([](const std::string& k) { return k == "reply" || k == "retry" || k == "error"; });
+        double wall = all.empty() ? 0 : end - (all.front().find("mono") ? all.front().find("mono")->as_number() : 0);
+        double max_in_flight = 0;
+        bool mcp_mode = false;
+        double context_calls = 0;
+        double replies = 0;
+        bool start_seen = false;
+        for (const Value& event : all) {
+            if (const Value* flight = event.find("inFlight"); flight && flight->is_number()) max_in_flight = std::max(max_in_flight, flight->as_number());
+            std::string kind = string_of(event, "kind");
+            if (kind == "start" && !start_seen) {
+                start_seen = true;
+                mcp_mode = string_of(event, "mode") == "mcp";
+            }
+            if (kind == "result" && string_of(event, "tool") == "next_context") context_calls += 1;
+            if (kind == "reply") replies += 1;
+        }
+        auto both = tool;
+        both.insert(both.end(), model.begin(), model.end());
+        append("summary", object()
+                              .set("maxInFlight", max_in_flight)
+                              .set("meanInFlight", wall > 0 ? round_ms(total(tool) / wall) : 0.0)
+                              .set("modelMs", round_ms(total(merged(model))))
+                              .set("toolMs", round_ms(total(merged(tool))))
+                              .set("idleMs", round_ms(std::max(0.0, wall - total(merged(both)))))
+                              .set("contextCalls", mcp_mode ? context_calls : replies));
+    }
+
+    static bool gap_names(const std::string& gap, const std::string& id) {
+        std::string word;
+        auto is_word = [](char c) { return std::isalnum(static_cast<unsigned char>(c)) || c == '-'; };
+        for (std::size_t i = 0; i <= gap.size(); ++i) {
+            if (i < gap.size() && is_word(gap[i])) {
+                word.push_back(gap[i]);
+                continue;
+            }
+            if (word == id) return true;
+            word.clear();
+        }
+        return false;
     }
 
     Value finish(const Value& args) {
@@ -863,11 +1634,45 @@ struct Server::State {
             for (const Value& gap : gaps->as_array()) bad = bad || !gap.is_string() || trim(gap.as_string()).empty();
             if (bad) return refuse("finish", args, "gaps must be an array of non-empty strings", false);
         }
+        const Value* stop_background = args.find("stopBackground");
+        bool stopping = stop_background && stop_background->is_bool() && stop_background->as_bool();
+        auto running = running_bodies();
+        if (!running.empty() && !stopping) {
+            std::string names;
+            for (const auto& name : running) names += names.empty() ? name : ", " + name;
+            return refuse("finish", args,
+                          "background run " + names + " is still running; job_status watches it, and finish with stopBackground: true kills it",
+                          false);
+        }
+        auto open = open_rows();
+        if (gaps != nullptr) {
+            for (const Row& row : open) {
+                bool named = false;
+                for (const Value& gap : gaps->as_array()) named = named || gap_names(gap.as_string(), row.id);
+                if (named) {
+                    return refuse("finish", args,
+                                  "gap names open row " + row.id +
+                                      "; a gap cannot stand in for an open row, so resolve it or, for a PRD, delete it");
+                }
+            }
+        }
+        if (!open.empty()) {
+            std::string names;
+            for (std::size_t i = 0; i < std::min(open.size(), kRowsNamed); ++i) {
+                names += (i == 0 ? "" : "; ") + open[i].id + " " + open[i].title;
+            }
+            return refuse("finish", args,
+                          std::to_string(open.size()) + " row(s) open: " + names + (open.size() > kRowsNamed ? "; ..." : "") +
+                              ". Resolve each with its witness, or delete a PRD you will not implement with prd_delete. A "
+                              "question for the owner stays open until the owner answers");
+        }
+        if (stopping) stop_bodies("stopBackground");
         s().ended = "finished";
         Value out = act(
             "finish", args,
             [&](std::uint64_t) { return object().set("ok", true).set("finished", true).set("output", *witness); },
             [](const Value& r) { return r; });
+        log_lint();
         end_run("finished", *out.find("output"), gaps ? std::optional<Value>(*gaps) : std::nullopt);
         return out;
     }
@@ -897,16 +1702,14 @@ struct Server::State {
         s().step_calls += 1;
     }
 
-    Value tool_result(const Value& out, std::optional<std::uint64_t> seq) {
+    Value tool_result(const std::string& name, const Value& out, std::optional<std::uint64_t> seq) {
         Value content = array();
         content.push(object().set("type", "text").set("text", json::dump(out)));
         Value meta = object().set(kRunMeta, s().run_id);
         if (seq) meta.set(kRunSeq, number_of(*seq));
-        return object()
-            .set("content", std::move(content))
-            .set("structuredContent", out)
-            .set("isError", !is_ok(out))
-            .set("_meta", std::move(meta));
+        Value result = object().set("content", std::move(content));
+        if (name == "next_context" || name == "run_code" || name == "finish") result.set("structuredContent", out);
+        return result.set("isError", !is_ok(out)).set("_meta", std::move(meta));
     }
 
     Value call_tool(const Value* params, const Value& rpc_id) {
@@ -931,7 +1734,7 @@ struct Server::State {
         s().rpc_id.reset();
         watch_call(name, out);
         if (auto notice = rules_notice()) out.set("rulesNotice", *notice);
-        return tool_result(out, seq);
+        return tool_result(name, out, seq);
     }
 
     void remember(const std::string& key, const Value& result) {
@@ -1409,10 +2212,18 @@ struct Server::State {
                 notify(object().set("jsonrpc", "2.0").set("method", "notifications/resources/list_changed"));
             }
             auto reply = handle_line(line);
-            if (reply) write(json::dump(*reply));
+            if (reply) {
+                emit(json::dump(*reply));
+                auto done = after_reply.find(id_key(reply->find("id")));
+                if (done != after_reply.end()) {
+                    auto action = std::move(done->second);
+                    after_reply.erase(done);
+                    action();
+                }
+            }
         } catch (const std::exception& err) {
             auto parsed = json::parse(line);
-            if (parsed && parsed->find("id")) write(json::dump(error_reply(*parsed->find("id"), -32603, err.what())));
+            if (parsed && parsed->find("id")) emit(json::dump(error_reply(*parsed->find("id"), -32603, err.what())));
         }
         check_subscriptions();
     }
@@ -1421,6 +2232,7 @@ struct Server::State {
         if (s().end_logged) return;
         if (options.supervised) {
             s().ended = "restarting";
+            stop_bodies("restart");
             append("paused", object().set("reason", "the supervisor ended stdin"));
             return;
         }
@@ -1433,43 +2245,89 @@ namespace {
 
 class LoggedVerbs : public VerbTable {
 public:
-    LoggedVerbs(Server::State& state, std::uint64_t body) : state_(state), body_(body) {}
+    LoggedVerbs(Server::State& state, std::shared_ptr<Server::State::BodyJob> job, std::shared_ptr<Server::State::Gate> gate)
+        : state_(state), job_(std::move(job)), gate_(std::move(gate)) {}
 
-    std::vector<VerbInfo> list() const override { return state_.verbs.list(); }
+    std::vector<VerbInfo> list() const override {
+        std::shared_lock guard(gate_->lock);
+        if (!gate_->alive) return {};
+        return served_verbs(state_.verbs);
+    }
 
     json::Value call(std::string_view name_view, const json::Value& args) override {
         std::string name(name_view);
+        std::shared_lock guard(gate_->lock);
+        if (!gate_->alive || job_->stopped) {
+            return object().set("ok", false).set("error", "background run " + job_->name + " was stopped; its verb calls are refused");
+        }
+        Server::State::Session& owner = *job_->owner;
+        double start = owner.log->now_ms();
         std::optional<std::uint64_t> action;
         if (!kReadOnlyTools.contains(name)) {
-            action = state_.append("action", object()
-                                                 .set("step", state_.s().steps)
-                                                 .set("tool", name)
-                                                 .set("args", args)
-                                                 .set("body", number_of(body_)));
+            action = state_.append_to(owner, "action", object()
+                                                           .set("step", job_->step)
+                                                           .set("tool", name)
+                                                           .set("args", args)
+                                                           .set("body", number_of(job_->body)));
         }
+        job_->in_flight += 1;
         Value result;
         try {
-            result = state_.verbs.call(name, args);
+            bool body_job = (name == "job_status" || name == "job_stop") && state_.is_body_job(args);
+            if (body_job && name == "job_status") result = state_.body_job_status(args);
+            else if (body_job) {
+                result = object().set("ok", false).set("error", Server::State::string_of(args, "job") +
+                                                                     " is a background run, not a shell job; finish with stopBackground: true stops it");
+            } else {
+                result = state_.verbs.call(name, args);
+                if (name == "job_start" && is_ok(result)) {
+                    std::lock_guard job_guard(job_->lock);
+                    job_->started_jobs.push_back(Server::State::string_of(args, "job"));
+                }
+            }
         } catch (const std::exception& err) {
             result = object().set("ok", false).set("error", err.what());
         }
+        job_->in_flight -= 1;
+        job_->last_call_ms = Server::State::steady_ms();
         Value shown = logged_for(name, result);
-        Value fields = object().set("step", state_.s().steps).set("tool", name).set("ok", is_ok(shown)).set("args", args);
+        Value fields = object().set("step", job_->step).set("tool", name).set("startMono", start).set("ok", is_ok(shown)).set("args", args);
         for (const char* key : {"exitCode", "signal", "output", "outputChars", "outputDigest", "error"}) {
             if (const Value* v = shown.find(key)) fields.set(key, *v);
         }
-        fields.set("body", number_of(body_));
+        fields.set("body", number_of(job_->body));
         if (action) fields.set("actionSeq", number_of(*action));
-        state_.append("code-call", std::move(fields));
+        state_.append_to(owner, "code-call", std::move(fields));
         return result;
     }
 
 private:
     Server::State& state_;
-    std::uint64_t body_;
+    std::shared_ptr<Server::State::BodyJob> job_;
+    std::shared_ptr<Server::State::Gate> gate_;
 };
 
-}  // namespace
+}
+
+Server::State::~State() {
+    {
+        std::lock_guard guard(monitor_mutex);
+        shutting_down = true;
+    }
+    monitor_wake.notify_all();
+    if (monitor.joinable()) monitor.join();
+    auto jobs = body_list();
+    for (const auto& job : jobs) job->stopped = true;
+    {
+        std::unique_lock guard(gate->lock);
+        gate->alive = false;
+    }
+    for (const auto& job : jobs) {
+        if (!job->thread.joinable()) continue;
+        if (job->exited) job->thread.join();
+        else job->thread.detach();
+    }
+}
 
 Value Server::State::run_code(const Value& args) {
     static const std::vector<std::string> kProperties = {"body", "timeoutMs", "format"};
@@ -1489,26 +2347,82 @@ Value Server::State::run_code(const Value& args) {
                 return with_seq(object().set("ok", false).set("error", "body must be a non-empty string"));
             }
             const Value* timeout = args.find("timeoutMs");
+            double budget = kDefaultBodyTimeoutMs;
             if (timeout != nullptr) {
                 double ms = timeout->as_number(-1);
                 if (!timeout->is_number() || ms != static_cast<double>(static_cast<long long>(ms)) || ms < 1 || ms > kMaxTimeoutMs) {
                     return with_seq(object().set("ok", false).set("error", "timeoutMs must be an integer from 1 to " + std::to_string(kMaxTimeoutMs)));
                 }
+                budget = ms;
             }
             const Value* format = args.find("format");
             if (format != nullptr && !(format->is_string() && (format->as_string() == "esm" || format->as_string() == "cjs"))) {
                 return with_seq(object().set("ok", false).set("error", "format must be esm or cjs"));
             }
             if (!options.run_body) return with_seq(object().set("ok", false).set("error", "no body runner is configured"));
-            LoggedVerbs logged(*this, action);
-            auto outcome = options.run_body(logged, body->as_string(), options.workspace);
-            if (!outcome) return with_seq(object().set("ok", false).set("error", outcome.error()).set("loads", array()));
-            std::string text = json::dump(*outcome);
-            std::size_t length = js_length(text);
+            next_generation();
+            auto job = std::make_shared<BodyJob>();
+            job->body = action;
+            job->step = s().steps;
+            job->owner = &s();
+            job->start_mono = s().log->now_ms();
+            job->name = "body-" + std::to_string(action);
+            for (int n = 2; body_named(job->name); ++n) job->name = "body-" + std::to_string(action) + "-" + std::to_string(n);
+            {
+                std::lock_guard guard(mu);
+                bodies.push_back(job);
+            }
+            auto logged = std::make_shared<LoggedVerbs>(*this, job, gate);
+            job->thread = std::thread([this, job, logged, runner = options.run_body, source = body->as_string(), root = options.workspace,
+                                       shared_gate = gate] {
+                auto outcome = runner(*logged, source, root);
+                {
+                    std::shared_lock guard(shared_gate->lock);
+                    if (shared_gate->alive) body_finished(job, outcome);
+                }
+                job->exited = true;
+            });
+            std::unique_lock guard(job->lock);
+            bool done = job->changed.wait_for(guard, std::chrono::milliseconds(static_cast<long long>(budget)), [&] { return job->finished; });
+            if (done) {
+                auto started_jobs = job->started_jobs;
+                guard.unlock();
+                job->thread.join();
+                settle_started_jobs(started_jobs);
+                {
+                    std::lock_guard list_guard(mu);
+                    std::erase(bodies, job);
+                }
+                if (!job->value) return with_seq(object().set("ok", false).set("error", job->error).set("loads", array()));
+                std::string text = json::dump(*job->value);
+                std::size_t length = js_length(text);
+                return with_seq(object()
+                                    .set("ok", true)
+                                    .set("output", length > kOutputCap ? js_prefix(text, kOutputCap) : text)
+                                    .set("truncated", length > kOutputCap)
+                                    .set("loads", array()));
+            }
+            job->adopted = true;
+            job->start_wall = std::chrono::steady_clock::now();
+            write_status(*job->owner, job->name, status_of(*job, "running"));
+            append("job", object().set("job", job->name).set("body", number_of(job->body)).set("state", "running"));
+            guard.unlock();
+            ensure_monitor();
+            Value logged_calls = array();
+            if (auto after = s().log->read_from(action)) {
+                for (const Value& event : *after) {
+                    if (string_of(event, "kind") != "code-call") continue;
+                    Value entry = object().set("seq", *event.find("seq"));
+                    if (const Value* tool = event.find("tool")) entry.set("tool", *tool);
+                    if (const Value* ok = event.find("ok")) entry.set("ok", *ok);
+                    logged_calls.push(std::move(entry));
+                }
+            }
             return with_seq(object()
                                 .set("ok", true)
-                                .set("output", length > kOutputCap ? js_prefix(text, kOutputCap) : text)
-                                .set("truncated", length > kOutputCap)
+                                .set("background", job->name)
+                                .set("state", "running")
+                                .set("logged", std::move(logged_calls))
                                 .set("loads", array()));
         },
         [](const Value& r) { return logged_for("run_code", r); });
@@ -1547,4 +2461,4 @@ int serve_stream(std::istream& in, std::ostream& out, VerbTable& verbs, ServerOp
     return 0;
 }
 
-}  // namespace gmnew::mcp
+}

@@ -7,7 +7,18 @@ const str = { type: 'string' };
 const obj = (properties, required = []) => ({ type: 'object', properties, required });
 const fail = (error) => ({ ok: false, error });
 
-const textOf = (reply) => (typeof reply === 'string' ? reply : (reply?.content ?? reply?.output ?? reply?.text ?? ''));
+const textOf = (reply) => (typeof reply === 'string' ? reply : (reply?.output ?? reply?.content ?? reply?.text ?? ''));
+
+function readText(path) {
+  let text = '';
+  for (let offset = 0; ;) {
+    const reply = host.read_file({ path, offset });
+    if (reply?.ok === false) return reply;
+    text += textOf(reply);
+    if (typeof reply?.next !== 'number') return { ok: true, output: text };
+    offset = reply.next;
+  }
+}
 const missing = (reply) => reply?.ok === false && /ENOENT|no such file|not found/i.test(String(reply.error ?? ''));
 const rowPath = (id) => `${host.workspace}/${ROW_DIR}/${id}.yml`;
 
@@ -34,7 +45,7 @@ function renderRow(row) {
 }
 
 function readRow(id) {
-  const reply = host.read_file({ path: rowPath(id) });
+  const reply = readText(rowPath(id));
   if (missing(reply)) return null;
   if (reply?.ok === false) throw new Error(reply.error);
   return parseRow(textOf(reply));
@@ -51,11 +62,11 @@ function readRows() {
     if (missing(listing)) return [];
     throw new Error(listing.error);
   }
-  const entries = Array.isArray(listing) ? listing : (listing.entries ?? listing.names ?? []);
+  const entries = Array.isArray(listing) ? listing : (listing.entries ?? listing.names ?? String(listing.output ?? '').split('\n'));
   return entries
     .map((entry) => (typeof entry === 'string' ? entry : entry.name))
     .filter((name) => name.endsWith('.yml'))
-    .map((name) => parseRow(textOf(host.read_file({ path: `${host.workspace}/${ROW_DIR}/${name}` }))));
+    .map((name) => parseRow(textOf(readText(`${host.workspace}/${ROW_DIR}/${name}`))));
 }
 
 const compareText = (a, b) => (a === b ? 0 : a < b ? -1 : 1);
@@ -68,7 +79,7 @@ function newId(kind) {
 }
 
 function eventInLog(event) {
-  const reply = host.read_file({ path: `${host.runDir}/log.jsonl` });
+  const reply = readText(`${host.runDir}/log.jsonl`);
   if (reply?.ok === false) return false;
   return textOf(reply).split('\n').some((line) => {
     try {
@@ -85,8 +96,12 @@ function commitExists(commit) {
 }
 
 function removeFile(path) {
-  if (typeof host.delete_file === 'function') return host.delete_file({ path });
-  return host.run({ argv: ['rm', '-f', path], timeoutMs: 15000 });
+  const removed = typeof host.delete_file === 'function' ? host.delete_file({ path }) : null;
+  if (removed?.ok === true) return removed;
+  const git = (argv) => host.run({ argv: ['git', '--literal-pathspecs', ...argv, '--', path], cwd: host.workspace, timeoutMs: 15000 });
+  git(['clean', '-f', '-q']);
+  if (host.stat_file({ path })?.ok === false) return { ok: true };
+  return git(['rm', '-f', '-q']);
 }
 
 function addRow(kind, { title, body = '' }) {
@@ -123,6 +138,7 @@ function deleteRow({ id }) {
   if (row === null) return fail(`no row ${id}`);
   if (row.status === 'resolved') return fail(`row ${id} is resolved; a resolved PRD is history and stays`);
   removeFile(rowPath(id));
+  if (host.stat_file({ path: rowPath(id) })?.ok !== false) return fail(`row ${id} could not be removed`);
   return { ok: true, output: `${id} deleted` };
 }
 

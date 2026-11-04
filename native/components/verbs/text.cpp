@@ -61,7 +61,7 @@ constexpr ErrnoName errno_names[] = {
     {EINVAL, "EINVAL", "invalid argument"},
 };
 
-}  // namespace
+}
 
 std::string to_valid_utf8(std::string_view bytes) {
     std::string out;
@@ -279,7 +279,10 @@ std::filesystem::path LockedLog::dir() const {
 
 std::uint64_t LockedLog::append(std::string_view kind, json::Value fields) {
     auto log = current();
-    return log ? log->append(kind, std::move(fields)) : 0;
+    if (!log) return 0;
+    const std::uint64_t seq = log->append(kind, std::move(fields));
+    if (on_append_) on_append_(*log, kind, seq);
+    return seq;
 }
 
 deoxidene::Result<std::vector<json::Value>, std::string> LockedLog::read_all() {
@@ -288,4 +291,4 @@ deoxidene::Result<std::vector<json::Value>, std::string> LockedLog::read_all() {
     return log->read_all();
 }
 
-}  // namespace gmnew::core
+}

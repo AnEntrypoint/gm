@@ -12,10 +12,10 @@ int unavailable(std::string_view mode) {
     return 1;
 }
 
-}  // namespace
+}
 
 int run_worker(const HostArgs&) { return unavailable("worker"); }
 
 int run_doctor(const HostArgs&) { return unavailable("doctor"); }
 
-}  // namespace gmnew::host
+}

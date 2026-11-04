@@ -1,0 +1,467 @@
+{
+ "codeAst": [
+  {
+   "ok": true,
+   "output": "src/bad.js:2 [direct, line scan] function (( alpha(9)\nsrc/bad.js:3 [direct, line scan] const delta = alpha(4);\nsrc/c.cjs:3 [member] return alpha(2) + this.alpha(1);\nsrc/c.cjs:3 [linked] return alpha(2) + this.alpha(1);\nsrc/d.ts:2 [linked, line scan] function gamma(): number { return alpha(5); }\nsrc/u.js:1 [direct] alpha(7);\n(6 call sites in 8 files; Exact for parsed JavaScript: a call is a call expression whose callee is the name, or a member call .name(). Not resolved: shadowing, aliases and dynamic calls. A TypeScript file, or one that does not parse, is scanned by lines and marked approximate.)"
+  },
+  {
+   "ok": true,
+   "output": "src/a.mjs:3 [linked] return beta(x) + 1;\n(2 call sites in 8 files; Exact for parsed JavaScript: a call is a call expression whose callee is the name, or a member call .name(). Not resolved: shadowing, aliases and dynamic calls. A TypeScript file, or one that does not parse, is scanned by lines and marked approximate.)"
+  },
+  {
+   "ok": true,
+   "output": "(0 call sites in 8 files; Exact for parsed JavaScript: a call is a call expression whose callee is the name, or a member call .name(). Not resolved: shadowing, aliases and dynamic calls. A TypeScript file, or one that does not parse, is scanned by lines and marked approximate.)"
+  },
+  {
+   "ok": false,
+   "error": "class is a JavaScript keyword, so it has no callers to list"
+  },
+  {
+   "ok": false,
+   "error": "name must be a JavaScript identifier"
+  },
+  {
+   "ok": false,
+   "error": "limit must be an integer from 1 to 1000"
+  },
+  {
+   "ok": true,
+   "output": "impact of alpha: 1 defining file(s), 4 calling file(s)\ndefines: src/a.mjs\ncalls: src/bad.js, src/c.cjs, src/d.ts, src/u.js\nimporters at depth 1: src/e.mjs\nimporters at depth 2: src/f.mjs\n(Exact for parsed JavaScript: a call is a call expression whose callee is the name, or a member call .name(). Not resolved: shadowing, aliases and dynamic calls. A TypeScript file, or one that does not parse, is scanned by lines and marked approximate.)"
+  },
+  {
+   "ok": true,
+   "output": "impact of beta: 1 defining file(s), 2 calling file(s)\ndefines: src/b.mjs\ncalls: src/a.mjs, src/b.mjs\n(Exact for parsed JavaScript: a call is a call expression whose callee is the name, or a member call .name(). Not resolved: shadowing, aliases and dynamic calls. A TypeScript file, or one that does not parse, is scanned by lines and marked approximate.)"
+  },
+  {
+   "ok": true,
+   "output": "impact of beta: 1 defining file(s), 2 calling file(s)\ndefines: src/b.mjs\ncalls: src/a.mjs, src/b.mjs\nimporters at depth 1: src/c.cjs, src/d.ts\nimporters at depth 2: src/e.mjs\nimporters at depth 3: src/f.mjs\nimporters at depth 4: (none)\n(Exact for parsed JavaScript: a call is a call expression whose callee is the name, or a member call .name(). Not resolved: shadowing, aliases and dynamic calls. A TypeScript file, or one that does not parse, is scanned by lines and marked approximate.)"
+  },
+  {
+   "ok": false,
+   "error": "depth must be an integer from 0 to 5"
+  },
+  {
+   "ok": true,
+   "output": "impact of nothingHere: 0 defining file(s), 0 calling file(s)\ndefines: (none)\ncalls: (none)\n(Exact for parsed JavaScript: a call is a call expression whose callee is the name, or a member call .name(). Not resolved: shadowing, aliases and dynamic calls. A TypeScript file, or one that does not parse, is scanned by lines and marked approximate.)"
+  }
+ ],
+ "wikiSearch": [
+  {
+   "ok": true,
+   "output": "wiki/sky.md:10 2.787 Blue skies and blue water.\nwiki/sky.md:5 2.530 claims: [{\"quote\":\"The sky is blue.\",\"source\":\"0123456789ab\"}]\nwiki/sky.md:9 2.530 The sky is blue, see [[water]] and [[nowhere]].\nwiki/index.md:3 2.091 - [[sky]] - The sky\nwiki/sky.md:2 1.776 title: \"Sky\"\nwiki/water.md:7 1.776 resolves: [\"sky\"]\nwiki/log.md:3 1.277 ## [2026-01-01] ingest | Sky\nwiki/water.md:9 1.168 Water is wet, unlike the [[sky]]."
+  },
+  {
+   "ok": true,
+   "output": "wiki/index.md:4 2.065 - [[water]] - Water"
+  },
+  {
+   "ok": true,
+   "output": "wiki/sky.md:10 2.787 Blue skies and blue water.\nwiki/sky.md:5 2.530 claims: [{\"quote\":\"The sky is blue.\",\"source\":\"0123456789ab\"}]\nwiki/sky.md:9 2.530 The sky is blue, see [[water]] and [[nowhere]].\nwiki/index.md:3 2.091 - [[sky]] - The sky\nwiki/sky.md:2 1.776 title: \"Sky\"\nwiki/water.md:7 1.776 resolves: [\"sky\"]\nwiki/log.md:3 1.277 ## [2026-01-01] ingest | Sky\nwiki/water.md:9 1.168 Water is wet, unlike the [[sky]]."
+  },
+  {
+   "ok": true,
+   "output": "(no match)"
+  },
+  {
+   "ok": false,
+   "error": "query must be a non-empty string"
+  },
+  {
+   "ok": false,
+   "error": "query has no word characters"
+  },
+  {
+   "ok": false,
+   "error": "k must be an integer from 1 to 50"
+  },
+  {
+   "ok": false,
+   "refused": true,
+   "error": "refused: unknown argument bogus; wiki_search takes query, k, root"
+  },
+  {
+   "ok": false,
+   "refused": true,
+   "error": "refused: no such root: no-such-dir"
+  },
+  {
+   "ok": false,
+   "refused": true,
+   "error": "refused: root is not a directory: src/a.mjs"
+  },
+  {
+   "ok": true,
+   "output": "(no match)"
+  },
+  {
+   "ok": false,
+   "refused": true,
+   "error": "refused: root and cwd name different roots; pass one"
+  }
+ ],
+ "wikiWriteRefusals": [
+  {
+   "ok": false,
+   "error": "refused: page must be lowercase letters, digits and hyphens, at most 64 characters"
+  },
+  {
+   "ok": false,
+   "error": "refused: title must be one line of ASCII"
+  },
+  {
+   "ok": false,
+   "error": "refused: body must be ASCII text; write non-ASCII as \\uXXXX"
+  },
+  {
+   "ok": false,
+   "error": "refused: summary must be one line of ASCII"
+  },
+  {
+   "ok": false,
+   "error": "refused: kind must be one of ingest, answer, lint"
+  },
+  {
+   "ok": false,
+   "error": "refused: sources must be a non-empty list of source ids"
+  },
+  {
+   "ok": false,
+   "error": "refused: source 000000000000 is not in sources/"
+  },
+  {
+   "ok": false,
+   "error": "refused: claim 1 needs a quote and a source that is listed in sources"
+  },
+  {
+   "ok": false,
+   "error": "refused: claim 1: the quote is not in source 0123456789ab"
+  },
+  {
+   "ok": false,
+   "error": "refused: contradicts and resolves must be lists of page names"
+  }
+ ],
+ "lintBefore": {
+  "ok": true,
+  "output": "{\"problems\":[\"wiki/broken.md has no frontmatter\",\"page orphan has no entry in wiki/index.md\",\"wiki/index.md lists ghost, which has no page\",\"wiki/index.md links to ghost, which has no page\",\"page sky links to nowhere, which has no page\",\"page orphan is an orphan: no other page links to it\",\"page orphan has no line in wiki/log.md\",\"page orphan cites source ffffffffffff, which is not in sources/\",\"page water: a quote is no longer in source 0123456789ab\",\"page water has a claim from abcdef012345, which it does not list\",\"page sky cites source 0123456789ab, but https://example.com/sky was archived again as abcdef012345 at 2026-03-01T00:00:00.000Z\",\"page water cites source 0123456789ab, but https://example.com/sky was archived again as abcdef012345 at 2026-03-01T00:00:00.000Z\",\"page orphan contradicts nobody, which has no page\",\"page orphan resolves noone, which has no page\",\"open contradiction: sky contradicts water\"],\"pages\":3,\"claims\":3,\"skipped\":false}",
+  "problems": [
+   "wiki/broken.md has no frontmatter",
+   "page orphan has no entry in wiki/index.md",
+   "wiki/index.md lists ghost, which has no page",
+   "wiki/index.md links to ghost, which has no page",
+   "page sky links to nowhere, which has no page",
+   "page orphan is an orphan: no other page links to it",
+   "page orphan has no line in wiki/log.md",
+   "page orphan cites source ffffffffffff, which is not in sources/",
+   "page water: a quote is no longer in source 0123456789ab",
+   "page water has a claim from abcdef012345, which it does not list",
+   "page sky cites source 0123456789ab, but https://example.com/sky was archived again as abcdef012345 at 2026-03-01T00:00:00.000Z",
+   "page water cites source 0123456789ab, but https://example.com/sky was archived again as abcdef012345 at 2026-03-01T00:00:00.000Z",
+   "page orphan contradicts nobody, which has no page",
+   "page orphan resolves noone, which has no page",
+   "open contradiction: sky contradicts water"
+  ],
+  "pages": 3,
+  "claims": 3,
+  "skipped": false
+ },
+ "write": {
+  "ok": true,
+  "output": "{\"ok\":true,\"output\":\"wrote wiki/grass.md, its index entry and its log line\",\"page\":\"wiki/grass.md\",\"claims\":2}"
+ },
+ "rewrite": {
+  "ok": true,
+  "output": "{\"ok\":true,\"output\":\"wrote wiki/grass.md, its index entry and its log line\",\"page\":\"wiki/grass.md\",\"claims\":0}"
+ },
+ "files": {
+  "page": "---\ntitle: \"Grass again\"\nsources: [\"abcdef012345\"]\nclaims: []\ncontradicts: []\nresolves: []\n---\nShort.\n",
+  "index": "# Index\n\n- [[sky]] - The sky\n- [[water]] - Water\n- [[ghost]] - Missing page\n- [[grass]] - Grass, again\n",
+  "log": "# Log\n\n## [DATE] ingest | Sky\n## [DATE] ingest | Water\n## [DATE] ingest | Grass\n## [DATE] answer | Grass again\n"
+ },
+ "lintAfter": {
+  "ok": true,
+  "output": "{\"problems\":[\"wiki/broken.md has no frontmatter\",\"page orphan has no entry in wiki/index.md\",\"wiki/index.md lists ghost, which has no page\",\"wiki/index.md links to ghost, which has no page\",\"page sky links to nowhere, which has no page\",\"page grass is an orphan: no other page links to it\",\"page orphan is an orphan: no other page links to it\",\"page orphan has no line in wiki/log.md\",\"page orphan cites source ffffffffffff, which is not in sources/\",\"page water: a quote is no longer in source 0123456789ab\",\"page water has a claim from abcdef012345, which it does not list\",\"page sky cites source 0123456789ab, but https://example.com/sky was archived again as abcdef012345 at 2026-03-01T00:00:00.000Z\",\"page water cites source 0123456789ab, but https://example.com/sky was archived again as abcdef012345 at 2026-03-01T00:00:00.000Z\",\"page orphan contradicts nobody, which has no page\",\"page orphan resolves noone, which has no page\",\"open contradiction: sky contradicts water\"],\"pages\":4,\"claims\":3,\"skipped\":false}",
+  "problems": [
+   "wiki/broken.md has no frontmatter",
+   "page orphan has no entry in wiki/index.md",
+   "wiki/index.md lists ghost, which has no page",
+   "wiki/index.md links to ghost, which has no page",
+   "page sky links to nowhere, which has no page",
+   "page grass is an orphan: no other page links to it",
+   "page orphan is an orphan: no other page links to it",
+   "page orphan has no line in wiki/log.md",
+   "page orphan cites source ffffffffffff, which is not in sources/",
+   "page water: a quote is no longer in source 0123456789ab",
+   "page water has a claim from abcdef012345, which it does not list",
+   "page sky cites source 0123456789ab, but https://example.com/sky was archived again as abcdef012345 at 2026-03-01T00:00:00.000Z",
+   "page water cites source 0123456789ab, but https://example.com/sky was archived again as abcdef012345 at 2026-03-01T00:00:00.000Z",
+   "page orphan contradicts nobody, which has no page",
+   "page orphan resolves noone, which has no page",
+   "open contradiction: sky contradicts water"
+  ],
+  "pages": 4,
+  "claims": 3,
+  "skipped": false
+ },
+ "searchAfter": {
+  "ok": true,
+  "output": "wiki/index.md:6 2.936 - [[grass]] - Grass, again\nwiki/grass.md:2 2.198 title: \"Grass again\"\nwiki/log.md:5 1.779 ## [2026-11-04] ingest | Grass\nwiki/log.md:6 1.624 ## [2026-11-04] answer | Grass again\nwiki/water.md:5 1.132 claims: [{\"quote\":\"Water is dry.\",\"source\":\"0123456789ab\"},{\"quote\":\"Grass\",\"source\":\"abcdef012345\"}]"
+ },
+ "review": [
+  [
+   "review_packet",
+   {
+    "ok": false,
+    "error": "refused: spec docs/missing.md is not a file"
+   }
+  ],
+  [
+   "review_packet",
+   {
+    "ok": false,
+    "error": "refused: referenced paths do not exist: nope.js"
+   }
+  ],
+  [
+   "review_packet",
+   {
+    "ok": false,
+    "error": "refused: refs must be a list of paths"
+   }
+  ],
+  [
+   "review_packet",
+   {
+    "ok": true,
+    "output": "{\"ok\":true,\"packet\":\"b273223bea45368746a603c5c21f97ff462484d5e9be94f9575b1b7fa196f072\",\"spec\":\"docs/spec.md\",\"specSha\":\"f5665619de182c87c52be77278d55b0debec7f53abef2505c50994067c45d4c3\",\"refs\":[\"src/a.mjs\",\"src/b.mjs\"]}"
+   }
+  ],
+  [
+   "review_join",
+   {
+    "ok": true,
+    "output": "[]"
+   }
+  ],
+  [
+   "review_record",
+   {
+    "ok": false,
+    "error": "refused: no review packet feedface in this log"
+   }
+  ],
+  [
+   "review_record",
+   {
+    "ok": false,
+    "error": "refused: verdict must be one of pass, fail, needs-changes"
+   }
+  ],
+  [
+   "review_record",
+   {
+    "ok": false,
+    "error": "refused: reviewer must name the fresh reviewer that the host spawned"
+   }
+  ],
+  [
+   "review_record",
+   {
+    "ok": true,
+    "output": "{\"ok\":true,\"packet\":\"b273223bea45368746a603c5c21f97ff462484d5e9be94f9575b1b7fa196f072\",\"verdict\":\"pass\"}"
+   }
+  ],
+  [
+   "review_record",
+   {
+    "ok": false,
+    "error": "refused: packet b273223bea45368746a603c5c21f97ff462484d5e9be94f9575b1b7fa196f072 already has a record"
+   }
+  ],
+  [
+   "review_join",
+   {
+    "ok": true,
+    "output": "[\n {\n  \"packet\": \"b273223bea45368746a603c5c21f97ff462484d5e9be94f9575b1b7fa196f072\",\n  \"verdict\": \"pass\",\n  \"reviewer\": \"r1\",\n  \"isolation\": \"host-attested\",\n  \"seq\": 10,\n  \"spec\": \"docs/spec.md\",\n  \"specSha\": \"f5665619de182c87c52be77278d55b0debec7f53abef2505c50994067c45d4c3\",\n  \"outcomes\": [\n   {\n    \"seq\": 12,\n    \"kind\": \"commit\",\n    \"gateOk\": true,\n    \"sha\": \"089299d8e300fc754a85c50d82203008118e3ebd\",\n    \"specSha\": \"f5665619de182c87c52be77278d55b0debec7f53abef2505c50994067c45d4c3\"\n   },\n   {\n    \"seq\": 13,\n    \"kind\": \"git_commit\",\n    \"ok\": true\n   },\n   {\n    \"seq\": 15,\n    \"kind\": \"git_commit\",\n    \"ok\": false\n   }\n  ],\n  \"unattributed\": [\n   {\n    \"seq\": 14,\n    \"kind\": \"commit\",\n    \"gateOk\": false,\n    \"sha\": \"deadbeef\",\n    \"specSha\": null,\n    \"reason\": \"no spec at the commit\"\n   },\n   {\n    \"seq\": 16,\n    \"kind\": \"commit\",\n    \"gateOk\": true,\n    \"sha\": \"60786959b521da7770e071de190b18138f906f71\",\n    \"specSha\": \"7162dcd51da0d927f096fd48b8818e7b07b63db788fe0e95c1797f06e9f75c51\",\n    \"reason\": \"after-edit\"\n   },\n   {\n    \"seq\": 17,\n    \"kind\": \"git_commit\",\n    \"ok\": true,\n    \"reason\": \"its commit is after-edit\"\n   },\n   {\n    \"seq\": 18,\n    \"kind\": \"end\",\n    \"status\": \"finished\",\n    \"witness\": \"w\",\n    \"specSha\": \"7162dcd51da0d927f096fd48b8818e7b07b63db788fe0e95c1797f06e9f75c51\",\n    \"reason\": \"after-edit\"\n   }\n  ]\n }\n]"
+   }
+  ]
+ ],
+ "events": [
+  {
+   "kind": "wiki",
+   "keys": [
+    "claims",
+    "kind",
+    "page",
+    "seq",
+    "sources",
+    "writeKind"
+   ]
+  },
+  {
+   "kind": "wiki",
+   "keys": [
+    "claims",
+    "kind",
+    "page",
+    "seq",
+    "sources",
+    "writeKind"
+   ]
+  },
+  {
+   "kind": "review-refused",
+   "keys": [
+    "kind",
+    "reason",
+    "seq",
+    "stage"
+   ]
+  },
+  {
+   "kind": "review-refused",
+   "keys": [
+    "kind",
+    "reason",
+    "seq",
+    "stage"
+   ]
+  },
+  {
+   "kind": "review-refused",
+   "keys": [
+    "kind",
+    "reason",
+    "seq",
+    "stage"
+   ]
+  },
+  {
+   "kind": "review-packet",
+   "keys": [
+    "kind",
+    "packet",
+    "refs",
+    "seq",
+    "spec",
+    "specSha"
+   ]
+  },
+  {
+   "kind": "review-refused",
+   "keys": [
+    "kind",
+    "packet",
+    "reason",
+    "seq",
+    "stage"
+   ]
+  },
+  {
+   "kind": "review-refused",
+   "keys": [
+    "kind",
+    "packet",
+    "reason",
+    "seq",
+    "stage"
+   ]
+  },
+  {
+   "kind": "review-refused",
+   "keys": [
+    "kind",
+    "packet",
+    "reason",
+    "seq",
+    "stage"
+   ]
+  },
+  {
+   "kind": "review",
+   "keys": [
+    "isolation",
+    "kind",
+    "notes",
+    "packet",
+    "reviewer",
+    "seq",
+    "specSha",
+    "verdict"
+   ]
+  },
+  {
+   "kind": "review-refused",
+   "keys": [
+    "kind",
+    "packet",
+    "reason",
+    "seq",
+    "stage"
+   ]
+  },
+  {
+   "kind": "commit",
+   "keys": [
+    "gate",
+    "kind",
+    "seq",
+    "sha"
+   ]
+  },
+  {
+   "kind": "result",
+   "keys": [
+    "kind",
+    "ok",
+    "seq",
+    "tool"
+   ]
+  },
+  {
+   "kind": "commit",
+   "keys": [
+    "gate",
+    "kind",
+    "seq",
+    "sha"
+   ]
+  },
+  {
+   "kind": "result",
+   "keys": [
+    "kind",
+    "ok",
+    "seq",
+    "tool"
+   ]
+  },
+  {
+   "kind": "commit",
+   "keys": [
+    "gate",
+    "kind",
+    "seq",
+    "sha"
+   ]
+  },
+  {
+   "kind": "result",
+   "keys": [
+    "kind",
+    "ok",
+    "seq",
+    "tool"
+   ]
+  },
+  {
+   "kind": "end",
+   "keys": [
+    "kind",
+    "seq",
+    "status",
+    "witness"
+   ]
+  }
+ ]
+}

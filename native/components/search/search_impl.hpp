@@ -60,4 +60,4 @@ private:
     Listing listing_;
 };
 
-}  // namespace gmnew::search
+}

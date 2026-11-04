@@ -19,4 +19,4 @@ struct HostServices {
     std::map<std::string, Primitive> extra;
 };
 
-}  // namespace gmnew
+}

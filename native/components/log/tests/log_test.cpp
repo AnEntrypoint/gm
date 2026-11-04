@@ -58,7 +58,7 @@ int main() {
     {
         auto log = RunLog::open(dir);
         CHECK(log.has_value());
-        double before = log->now();
+        double before = log->now_ms();
         std::vector<std::thread> threads;
         std::vector<std::vector<std::uint64_t>> got(4);
         for (int t = 0; t < 4; ++t) {
@@ -72,7 +72,7 @@ int main() {
         CHECK(seqs.size() == 400);
         auto all = log->read_all();
         CHECK(all && all->size() == 404);
-        CHECK(log->now() >= before);
+        CHECK(log->now_ms() >= before);
         CHECK(log->count() == 404);
         auto tail = log->read_from(400);
         CHECK(tail && tail->size() == 4 && (*tail)[0].find("seq")->as_number() == 401);

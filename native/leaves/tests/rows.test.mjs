@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import test from 'node:test';
 import { cleanup, realHost, tempDir } from './helpers.mjs';
@@ -30,6 +30,9 @@ test('add, list, resolve and delete rows', async () => {
     assert.equal(call('prd_delete', { id }).ok, false);
     const other = call('prd_add', { title: 'drop' }).output;
     assert.equal(call('prd_delete', { id: other }).output, `${other} deleted`);
+    assert.equal(call('prd_list', { status: 'open' }).output, '(none)');
+    assert.equal(existsSync(join(dir, 'work/rows', `${other}.yml`)), false);
+    assert.equal(call('prd_delete', { id: other }).error, `no row ${other}`);
     assert.equal(call('prd_list', { status: 'all' }).output, `${id} resolved ship it`);
     assert.equal(call('prd_list', { status: 'bad' }).ok, false);
   } finally {

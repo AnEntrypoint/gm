@@ -16,7 +16,7 @@ export function realHost(workspace, runDir = workspace) {
     },
     read_file({ path }) {
       try {
-        return { ok: true, content: readFileSync(path, 'utf8') };
+        return { ok: true, output: readFileSync(path, 'utf8'), next: null };
       } catch (e) {
         return { ok: false, error: e.message };
       }
@@ -28,7 +28,7 @@ export function realHost(workspace, runDir = workspace) {
     },
     list_dir({ path }) {
       try {
-        return readdirSync(path);
+        return { ok: true, output: readdirSync(path).join('\n') };
       } catch (e) {
         return { ok: false, error: e.message };
       }

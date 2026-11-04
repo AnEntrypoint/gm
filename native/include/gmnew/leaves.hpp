@@ -28,4 +28,4 @@ private:
     std::unique_ptr<State> state_;
 };
 
-}  // namespace gmnew
+}

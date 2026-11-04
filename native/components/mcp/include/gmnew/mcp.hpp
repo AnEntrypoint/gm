@@ -31,8 +31,15 @@ struct ServerOptions {
     bool supervised = false;
     std::string restart_reason = "restarted without a reason";
     std::string version = GMNEW_MCP_VERSION;
+    std::uint64_t job_lifetime_ms = 1800000;
+    std::uint64_t stuck_ms = 180000;
+    std::uint64_t monitor_ms = 15000;
+    std::uint64_t notice_ms = 180000;
+    std::string wait_program = "gmnew";
     BodyRunner run_body;
     std::function<void(std::shared_ptr<RunLog> log)> on_run_open;
+    std::function<json::Value()> job_snapshot;
+    std::function<void()> flush_job_events;
 };
 
 class Server {
@@ -60,4 +67,6 @@ int serve(std::istream& in, std::ostream& out, VerbTable& verbs, std::filesystem
 
 std::string sha256_hex(std::string_view bytes);
 
-}  // namespace gmnew::mcp
+void enqueue_pending(const RunLog& log, std::string_view kind, std::uint64_t seq);
+
+}

@@ -83,7 +83,7 @@ void test_leaves(const fs::path& fixtures) {
 
     gmnew::LeafVerbs leaves(dir, host);
     auto list = leaves.list();
-    expect(list.size() == 5, "five verbs listed, got " + std::to_string(list.size()));
+    expect(list.size() == 6, "six verbs listed, got " + std::to_string(list.size()));
     expect(!list.empty() && list[0].name == "sample_value" && list[0].input_schema_json == R"({"type":"object","properties":{"who":{"type":"string"}}})",
            "verb metadata read");
     auto start_generation = leaves.generation();
@@ -102,10 +102,17 @@ void test_leaves(const fs::path& fixtures) {
     expected_paths.set("kinds", gmnew::json::Array{"string", "string"});
     expect(paths == expected_paths, "host paths are strings: " + dump(paths));
 
+    auto shape = leaves.call("sample_host_shape", gmnew::json::Value(gmnew::json::Object{}));
+    expect(dump(shape) ==
+               R"({"missing":"undefined","deleteFile":"undefined","missingIn":false,)"
+               R"("keys":["logAppend","read_file","runDir","shell","workspace"],)"
+               R"("kinds":{"read_file":"function","shell":"function","logAppend":"function","workspace":"string","runDir":"string"}})",
+           "host has exactly its names: " + dump(shape));
+
     auto thrown = leaves.call("sample_throw", gmnew::json::Value(gmnew::json::Object{}));
     expect(dump(thrown) == R"({"ok":false,"error":"leaf failed on purpose"})", "throw: " + dump(thrown));
     auto missing = leaves.call("sample_missing_host", gmnew::json::Value(gmnew::json::Object{}));
-    expect(dump(missing) == R"({"ok":false,"error":"unknown verb: no_such_verb"})", "missing host verb: " + dump(missing));
+    expect(dump(missing) == R"({"ok":false,"error":"not a function"})", "missing host verb: " + dump(missing));
     auto unknown = leaves.call("nope", gmnew::json::Value(gmnew::json::Object{}));
     expect(dump(unknown) == R"({"ok":false,"error":"unknown verb: nope"})", "unknown: " + dump(unknown));
 
@@ -155,7 +162,7 @@ void test_deadline() {
     expect(error == "the call passed its deadline of 50 ms", "deadline error: " + error);
 }
 
-}  // namespace
+}
 
 int main(int argc, char** argv) {
     if (argc < 2) {

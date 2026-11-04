@@ -44,7 +44,7 @@ int decode_status(int status) {
     return -1;
 }
 
-}  // namespace
+}
 
 deoxidene::Result<std::shared_ptr<Child>, std::string> Child::spawn(const std::vector<std::string>& argv,
                                                                     const std::filesystem::path& cwd) {
@@ -217,7 +217,7 @@ std::wstring quote_argument(const std::wstring& arg) {
     return out;
 }
 
-}  // namespace
+}
 
 deoxidene::Result<std::shared_ptr<Child>, std::string> Child::spawn(const std::vector<std::string>& argv,
                                                                     const std::filesystem::path& cwd) {
@@ -337,4 +337,4 @@ std::filesystem::path current_executable() {
 
 #endif
 
-}  // namespace gmnew::host
+}

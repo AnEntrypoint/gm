@@ -59,4 +59,4 @@ json::Value ComposedVerbs::call(std::string_view name, const json::Value& args) 
     return table->call(name, args);
 }
 
-}  // namespace gmnew::host
+}

@@ -1,6 +1,7 @@
 add_library(gmnew_verbs STATIC verbs.cpp job.cpp text.cpp)
 target_include_directories(gmnew_verbs PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_CURRENT_SOURCE_DIR}/../../include)
-target_link_libraries(gmnew_verbs PUBLIC gmnew_json gmnew_log gmnew_proc Threads::Threads)
+target_include_directories(gmnew_verbs PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../quickjs)
+target_link_libraries(gmnew_verbs PUBLIC gmnew_json gmnew_log gmnew_proc Threads::Threads PRIVATE gmnew_runcode gmnew_quickjs_ng)
 
 if(GMNEW_BUILD_TESTS)
     add_executable(gmnew_verbs_test tests/verbs_test.cpp)

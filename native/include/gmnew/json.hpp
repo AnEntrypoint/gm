@@ -47,11 +47,8 @@ public:
     const Array& as_array() const;
     const Object& as_object() const;
 
-    // Object lookup; nullptr when the key is absent or this is not an object.
     const Value* find(std::string_view key) const;
-    // Replaces the member if the key exists, appends it otherwise. Turns a null value into an object first.
     Value& set(std::string key, Value v);
-    // Appends to an array. Turns a null value into an array first.
     Value& push(Value v);
 
     bool operator==(const Value& other) const;
@@ -60,13 +57,10 @@ private:
     std::variant<std::monostate, bool, double, std::string, Array, Object> data_;
 };
 
-// Parses one complete JSON document. The error string names the byte offset.
 deoxidene::Result<Value, std::string> parse(std::string_view text);
 
-// Compact JSON. Non-ASCII is emitted as UTF-8; control characters are escaped.
 std::string dump(const Value& v);
 
-// A JSON string literal for s, quotes included.
 std::string quote(std::string_view s);
 
-}  // namespace gmnew::json
+}

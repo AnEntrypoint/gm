@@ -16,4 +16,4 @@ int serve(std::istream& in, std::ostream& out, VerbTable& verbs, std::filesystem
     return serve_stream(in, out, verbs, std::move(options));
 }
 
-}  // namespace gmnew::mcp
+}

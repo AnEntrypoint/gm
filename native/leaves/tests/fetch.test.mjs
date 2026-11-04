@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import test from 'node:test';
 import { realHost } from './helpers.mjs';
 
@@ -15,17 +18,20 @@ server.listen(0, '127.0.0.1', () => console.log(server.address().port));
 `;
 
 test('fetch through curl against a local server', async () => {
+  const workspace = mkdtempSync(join(tmpdir(), 'fetch-'));
   const child = spawn(process.execPath, ['-e', SERVER], { stdio: ['ignore', 'pipe', 'inherit'] });
   const port = await new Promise((done) => child.stdout.once('data', (d) => done(Number(d))));
   const base = `http://127.0.0.1:${port}`;
-  globalThis.host = realHost('/tmp');
+  globalThis.host = realHost(workspace);
   try {
     const { verbs } = await import('../fetch.mjs');
     const call = (args) => verbs[0].call(args);
     const result = call({ url: `${base}/redir` });
     assert.equal(result.status, 200);
     assert.equal(result.redirects, 1);
-    assert.equal(result.headers['content-type'], 'text/html');
+    assert.match(result.source, /^[0-9a-f]{12}$/);
+    assert.equal(result.sourceNew, true);
+    assert.equal(call({ url: `${base}/redir` }).sourceNew, false);
     assert.equal(result.output, `200 ${result.bytes} bytes ${base}/page\nHi & bye`);
     const flaky = call({ url: `${base}/flaky` });
     assert.deepEqual([flaky.status, flaky.attempts], [200, 2]);

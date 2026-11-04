@@ -1,0 +1,71 @@
+name: release
+
+on:
+  push:
+    tags: ['v*.*.*']
+
+jobs:
+  build-artifact:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            preset: x64-linux-release
+            artifact: gmnew-x64-linux
+          - os: ubuntu-24.04-arm
+            preset: arm64-linux-release
+            artifact: gmnew-arm64-linux
+          - os: windows-latest
+            preset: x64-windows-release
+            artifact: gmnew-x64-windows
+          - os: windows-11-arm
+            preset: arm64-windows-release
+            artifact: gmnew-arm64-windows
+          - os: macos-13
+            preset: x64-macos-release
+            artifact: gmnew-x64-macos
+          - os: macos-latest
+            preset: arm64-macos-release
+            artifact: gmnew-arm64-macos
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: seanmiddleditch/gha-setup-ninja@master
+      - uses: ilammy/msvc-dev-cmd@v1
+        if: runner.os == 'Windows'
+        with:
+          arch: ${{ contains(matrix.preset, 'arm64') && 'arm64' || 'x64' }}
+      - name: Configure and build
+        run: |
+          cmake --preset ${{ matrix.preset }} -DGMNEW_BUILD_TESTS=ON
+          cmake --build build/${{ matrix.preset }}
+        shell: bash
+      - name: Test
+        run: ctest --test-dir build/${{ matrix.preset }} --output-on-failure
+        shell: bash
+      - name: Package
+        run: |
+          mkdir -p out/${{ matrix.artifact }}
+          cp build/${{ matrix.preset }}/native/components/host/gmnew* out/${{ matrix.artifact }}/ || true
+          rm -f out/${{ matrix.artifact }}/*.ilk out/${{ matrix.artifact }}/*.pdb out/${{ matrix.artifact }}/*.a
+          tar czf ${{ matrix.artifact }}.tar.gz -C out ${{ matrix.artifact }}
+        shell: bash
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.artifact }}.tar.gz
+
+  publish-release:
+    needs: [build-artifact]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+      - name: Flatten artifacts
+        run: find dist -name '*.tar.gz' -exec mv {} dist/ \;
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.tar.gz
+          generate_release_notes: true

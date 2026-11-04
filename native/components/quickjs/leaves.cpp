@@ -132,7 +132,7 @@ json::Value run_leaf_verb(const HostServices& host, const std::vector<std::uint8
     return engine::failed_reply("unknown verb: " + std::string(name));
 }
 
-}  // namespace
+}
 
 struct LeafVerbs::State {
     std::filesystem::path leaves_dir;
@@ -265,4 +265,4 @@ std::uint64_t LeafVerbs::generation() const {
     return state_->generation.load();
 }
 
-}  // namespace gmnew
+}

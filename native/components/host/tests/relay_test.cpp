@@ -157,7 +157,7 @@ void missing_worker_answers_with_failure(const fs::path& root) {
     relay.host_closed();
 }
 
-}  // namespace
+}
 
 int main() {
     const fs::path root = fs::temp_directory_path() / ("gmnew-relay-test-" + std::to_string(std::rand()) +

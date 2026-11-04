@@ -234,7 +234,7 @@ struct Scan {
     long long next = -1;
 };
 
-}  // namespace
+}
 
 Searcher::Searcher(fs::path workspace, fs::path root) : workspace_(workspace.lexically_normal()) {
     root_ = root.empty() ? workspace_ : (workspace_ / root).lexically_normal();
@@ -566,4 +566,4 @@ std::string Searcher::grep(const json::Value& args) {
     return json::dump(out);
 }
 
-}  // namespace gmnew::search
+}

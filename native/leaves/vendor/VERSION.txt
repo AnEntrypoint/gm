@@ -1,0 +1,6 @@
+acorn 8.18.0
+url https://registry.npmjs.org/acorn/-/acorn-8.18.0.tgz
+sha256 0ad4c0f28f9bc5bb6f3eb879b4fd38265def6d7e1e5d61f96f78ee6a8a7be94a (the tarball)
+file package/dist/acorn.mjs copied to acorn.mjs; package/LICENSE copied to acorn.LICENSE
+normalised to ASCII: 13 comment lines, U+2014 replaced by -- and U+2026 replaced by ...; no code changed
+sha256 of acorn.mjs after normalising 60e5f95d9987572e9ee67ae48333001d62a81caec1adc6e7b8b5db82844215e8

@@ -41,4 +41,4 @@ private:
 
 std::filesystem::path current_executable();
 
-}  // namespace gmnew::host
+}

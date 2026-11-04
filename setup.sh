@@ -65,3 +65,15 @@ cat <<EOF
   npx -y add-mcp@2.6.1 "node $here/tools/relay.mjs" -n gm -g -a claude-code -y
 EOF
 echo "setup: done. Nothing was run. The manual is in docs/index.html, and README.md has the same commands."
+
+# 6. The native build. It is optional and does not change .mcp.json: the cutover from Node to the native binary is a later decision.
+if command -v cmake >/dev/null 2>&1 && command -v ninja >/dev/null 2>&1; then
+  echo "setup: native build (release preset)"
+  if cmake --preset release -DGMNEW_BUILD_TESTS=ON >/dev/null && cmake --build build/release >/dev/null; then
+    echo "setup: native binary: $here/build/release/native/components/host/gmnew"
+  else
+    echo "setup: the native build failed. Node gm is unaffected."
+  fi
+else
+  echo "setup: cmake and ninja are not both installed, so the native build was skipped. Node gm is unaffected."
+fi

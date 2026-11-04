@@ -32,6 +32,18 @@ export const verbs = [
     call: () => ({ workspace: host.workspace, runDir: host.runDir, kinds: [typeof host.workspace, typeof host.runDir] }),
   },
   {
+    name: 'sample_host_shape',
+    description: 'Describes the names the host global provides.',
+    inputSchema: { type: 'object' },
+    call: () => ({
+      missing: typeof host.no_such_verb,
+      deleteFile: typeof host.delete_file,
+      missingIn: 'no_such_verb' in host,
+      keys: Object.keys(host).sort(),
+      kinds: Object.fromEntries(['read_file', 'shell', 'logAppend', 'workspace', 'runDir'].map((name) => [name, typeof host[name]])),
+    }),
+  },
+  {
     name: 'sample_missing_host',
     description: 'Calls a host verb that does not exist.',
     inputSchema: { type: 'object' },

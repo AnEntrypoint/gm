@@ -92,4 +92,4 @@ std::filesystem::path leaves_dir_of(const HostArgs& args) {
 
 std::filesystem::path skills_dir_of(const HostArgs& args) { return args.path_or("--skills", source_root() / "skills"); }
 
-}  // namespace gmnew::host
+}

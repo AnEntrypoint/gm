@@ -25,6 +25,7 @@ namespace {
 
 constexpr std::uint64_t kill_grace_ms = 500;
 constexpr double max_wait_ms = 30000;
+constexpr std::uint64_t ended_event_grace_ms = 250;
 
 bool is_job_name(const json::Value* v) {
     if (v == nullptr || !v->is_string()) return false;
@@ -127,7 +128,7 @@ Spawned spawn_shell_job(const std::string& command, const std::filesystem::path&
 
 #endif
 
-}  // namespace
+}
 
 struct JobTable::Job {
     std::string name;
@@ -135,6 +136,9 @@ struct JobTable::Job {
     std::filesystem::path out;
     json::Value status;
     double start_mono = 0;
+    std::filesystem::file_time_type start_file_time;
+    std::string state = "running";
+    bool stuck = false;
     bool settled = false;
     bool kill_requested = false;
     bool lifetime_killed = false;
@@ -226,6 +230,7 @@ json::Value JobTable::start(const std::string& name, const std::string& command,
     job->pid = spawned.pid;
     job->out = out;
     job->start_mono = *start_mono;
+    job->start_file_time = std::filesystem::file_time_type::clock::now();
     job->lifetime_killed = lifetime_ms_ < timeout_ms;
     job->status.set("job", name);
     job->status.set("command", command);
@@ -250,6 +255,7 @@ json::Value JobTable::start(const std::string& name, const std::string& command,
         } else {
             settle(ref, std::nullopt, nullptr);
         }
+        flush_after_grace();
     });
     ref.timer = std::thread([this, &ref, deadline_ms] { watch(ref, deadline_ms); });
 
@@ -298,17 +304,82 @@ void JobTable::settle(Job& job, std::optional<int> exit_code, json::Value signal
     event.set("signal", signal);
     event.set("startMono", job.start_mono);
     if (reason) event.set("reason", *reason);
-    log_.append("job", std::move(event));
+    unlogged_.push_back({"job", std::move(event)});
     if (job.kill_reason) {
         json::Value killed;
         killed.set("job", job.name);
         killed.set("reason", *job.kill_reason);
         if (*job.kill_reason == "lifetime") killed.set("lifetimeMs", static_cast<std::uint64_t>(lifetime_ms_));
         killed.set("tail", utf16_tail(read_bytes(job.out), tail_cap));
-        log_.append("job-killed", std::move(killed));
+        unlogged_.push_back({"job-killed", std::move(killed)});
     }
+    job.state = state;
     job.settled = true;
     changed_.notify_all();
+}
+
+void JobTable::flush_ended_locked() {
+    if (unlogged_.empty()) return;
+    for (auto& unlogged : unlogged_) log_.append(unlogged.kind, std::move(unlogged.fields));
+    unlogged_.clear();
+    changed_.notify_all();
+}
+
+void JobTable::flush_ended() {
+    std::unique_lock lock(mutex_);
+    flush_ended_locked();
+}
+
+void JobTable::flush_after_grace() {
+    std::unique_lock lock(mutex_);
+    changed_.wait_for(lock, std::chrono::milliseconds(ended_event_grace_ms), [&] { return unlogged_.empty(); });
+    flush_ended_locked();
+}
+
+json::Value JobTable::snapshot(std::uint64_t stuck_ms) {
+    using FileClock = std::filesystem::file_time_type::clock;
+    auto whole_ms = [](FileClock::duration span) {
+        return std::max<std::int64_t>(0, std::chrono::duration_cast<std::chrono::milliseconds>(span).count());
+    };
+    std::unique_lock lock(mutex_);
+    flush_ended_locked();
+    auto now = FileClock::now();
+    json::Array listed;
+    json::Array turned_stuck;
+    json::Array progressed_again;
+    for (auto& [name, job] : jobs_) {
+        std::error_code ec;
+        auto written = std::filesystem::last_write_time(job->out, ec);
+        auto progress = ec ? job->start_file_time : std::max(job->start_file_time, written);
+        std::int64_t since_progress_ms = whole_ms(now - progress);
+        if (!job->settled) {
+            bool over = since_progress_ms > static_cast<std::int64_t>(stuck_ms);
+            if (over != job->stuck) {
+                job->stuck = over;
+                json::Value change;
+                change.set("job", name);
+                change.set("sinceProgressMs", since_progress_ms);
+                std::uint64_t seq = log_.append(over ? "job-stuck" : "job-unstuck", change);
+                json::Value shown;
+                shown.set("seq", seq);
+                shown.set("job", name);
+                if (over) shown.set("sinceProgressMs", since_progress_ms);
+                (over ? turned_stuck : progressed_again).push_back(std::move(shown));
+            }
+        }
+        json::Value entry;
+        entry.set("job", name);
+        entry.set("state", job->state);
+        entry.set("runningMs", whole_ms(now - job->start_file_time));
+        entry.set("sinceProgressMs", since_progress_ms);
+        entry.set("stuck", job->stuck && !job->settled);
+        listed.push_back(std::move(entry));
+    }
+    json::Value reply;
+    reply.set("jobs", std::move(listed));
+    if (!turned_stuck.empty()) reply.set("jobsStuck", std::move(turned_stuck));
+    if (!progressed_again.empty()) reply.set("jobsUnstuck", std::move(progressed_again));
+    return reply;
 }
 
 json::Value JobTable::status(const json::Value& args) {
@@ -326,6 +397,7 @@ json::Value JobTable::status(const json::Value& args) {
             Job& job = *found->second;
             changed_.wait_for(lock, std::chrono::duration<double, std::milli>(wait_ms), [&] { return job.settled; });
         }
+        flush_ended_locked();
     }
     auto status = read_status(name);
     if (!status) return failure("no job named " + name);
@@ -390,6 +462,7 @@ json::Value JobTable::stop(const json::Value& args) {
     kill_group(job.pid);
 #endif
     changed_.wait(lock, [&] { return job.settled; });
+    flush_ended_locked();
     json::Value reply;
     reply.set("ok", true);
     reply.set("state", "killed");
@@ -411,6 +484,7 @@ void JobTable::close(std::string_view reason) {
     for (Job* job : running) kill_group(job->pid);
 #endif
     changed_.wait(lock, [&] { return std::all_of(running.begin(), running.end(), [](Job* job) { return job->settled; }); });
+    flush_ended_locked();
 }
 
 void JobTable::stop_orphans() {
@@ -457,4 +531,4 @@ void JobTable::stop_orphans() {
     }
 }
 
-}  // namespace gmnew::core
+}
