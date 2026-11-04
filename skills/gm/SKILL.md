@@ -111,10 +111,10 @@ Hand a piece of work to a child when it can be done apart from this run, and its
 - A subagent on this connection works in your run. It calls `next_context` with `{ child: true, run: "<your run id>" }` at the start of each of its steps. The reply has `role: "child"`, `run` is your run id, and `note` says the run is not its own. That call takes no step and claims no pending event, so your feed is not changed. It does not send `finish` (step 6), and it does not call `next_context` without `child: true`, which would open a new run once your run has ended. Its calls are in your run log.
 
 1. Put the child's task in a file in the project, and name the file, the workspace and the kind of child to the child.
-2. For a separate session, read its result from a body. The CLI reads its log by its run id, and your context keeps only the witness:
+2. For a separate session, read its result from a body. The CLI reads its log from the child's run directory, `<child workspace>/runs/<child run id>`, given with `--dir`. `--run` reads only gm-new's own `runs/`, so it does not find a child run in another workspace. Your context keeps only the witness:
 
 ```
-const res = await gm.run_shell({ command: `node src/cli.mjs query --run ${childRun} --js "events.filter((e) => e.kind === 'end').map((e) => e.witness)"` });
+const res = await gm.run_shell({ command: `node src/cli.mjs query --dir "${childWorkspace}/runs/${childRun}" --js "events.filter((e) => e.kind === 'end').map((e) => e.witness)"` });
 return res.output;
 ```
 

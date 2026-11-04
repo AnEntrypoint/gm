@@ -571,7 +571,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
       // A wrong argument name is refused by name. The run_code reply names its action, which is the seq of the action event, so a body can cite it.
       const unknown = Object.keys(args).filter((key) => !Object.hasOwn(RUN_CODE_PROPERTIES, key));
       if (unknown.length > 0) return refuse(name, args, `unknown argument ${unknown.join(', ')}; run_code takes ${Object.keys(RUN_CODE_PROPERTIES).join(', ')}`, rpcId);
-      return act('run_code', args, access, (actionSeq) => runBody({ body: args.body, timeoutMs: args.timeoutMs, format: args.format, verbs: current.VERBS, call: innerCall, project: workspace, runDir, log, step: steps, background: (handle) => tools.adoptBody(handle) }).then((reply) => ({ ...reply, actionSeq })), undefined, rpcId);
+      return act('run_code', args, access, (actionSeq) => runBody({ body: args.body, timeoutMs: args.timeoutMs, format: args.format, verbs: current.VERBS, call: innerCall, project: workspace, runDir, log, step: steps, background: (handle) => tools.adoptBody(handle) }).then((reply) => ({ ...reply, actionSeq })), (result) => loggedFor('run_code', result), rpcId);
     }
     if (name === 'next_context') return args.child === true ? childContext(access, rpcId, args) : nextContext(access, rpcId, args);
     if (name === 'finish') return finish(args, access, rpcId);

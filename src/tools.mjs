@@ -640,7 +640,7 @@ function clipped(event) {
 }
 
 const LOGGED_REPLY_CHARS = 1000;
-const LOGGED_OUTPUT_TOOLS = new Set(['query_log', 'job_status']);
+const LOGGED_OUTPUT_TOOLS = new Set(['query_log', 'job_status', 'run_shell', 'run_code']);
 export function loggedFor(tool, result) {
   if (!LOGGED_OUTPUT_TOOLS.has(tool) || typeof result?.output !== 'string' || result.output.length <= LOGGED_REPLY_CHARS) return result;
   return { ...result, output: result.output.slice(0, LOGGED_REPLY_CHARS), outputChars: result.output.length };
