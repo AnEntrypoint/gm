@@ -1,0 +1,5 @@
+file(GLOB GMNEW_COMPONENT_CMAKE CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/components/*/CMakeLists.txt)
+foreach(component_cmake IN LISTS GMNEW_COMPONENT_CMAKE)
+    get_filename_component(component_dir ${component_cmake} DIRECTORY)
+    add_subdirectory(${component_dir})
+endforeach()

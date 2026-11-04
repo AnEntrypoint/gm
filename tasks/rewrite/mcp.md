@@ -1,0 +1,13 @@
+# Brief: the MCP server (components/mcp)
+
+Implement the MCP server as the library gmnew_mcp (components/mcp), with the entry point taking stdin and stdout, a workspace, a runs directory and a skills directory. Use VerbTable, RunLog and run_body (runcode.hpp). Do not implement the host binary; a worker is started by the host worker's main.
+- JSON-RPC 2.0 over stdio exactly as the Node server frames it (check src/mcp.mjs for the framing: newline-delimited JSON or Content-Length). Methods: initialize (protocol version and capabilities as src/mcp.mjs answers them), ping, tools/list, tools/call, resources/list, resources/read, resources/templates/list, resources/subscribe, prompts/list, prompts/get, logging/setLevel, completion/complete, skills/list, skills/get. Notifications get no reply.
+- The surface is three tools, next_context, run_code and finish, with input schemas copied from src/mcp.mjs. Every other verb is reached inside run_code through gm.<verb>.
+- next_context: each call is one step. It returns the rules (copied from skills/gm/SKILL.md, the section "## Rules" word for word), the task, the witness requirement, the events new since the last step, query, run, stepsLeft, prefixSha. Events are read from the run's RunLog. Pending events and the window/compaction rules can come later; report what you left out.
+- run_code: runs run_body on the body and logs an action event and a result event with the verb calls.
+- finish: needs a witness string; without one it is refused. After a finish, further calls on that run are refused with "run <id> has ended; call next_context to open a new run". The first next_context after a finish opens a fresh run in the same workspace, as src/mcp.mjs does (reopen).
+- Run directories: <runs>/<id>/ with log.jsonl, rules.md and task.json, as src/run.mjs and src/mcp.mjs write them.
+- Skills: serve skill://gm/SKILL.md and skill://gm-continue/SKILL.md from the skills directory.
+- Background runs and the job table are out of scope for this brief. Report what you left out.
+- Tests: native/components/mcp/tests/mcp_test.cpp feeds a scripted JSON-RPC session over a pipe or a string stream: initialize, tools/list, next_context, run_code with a fake VerbTable, finish, next_context refused, next_context reopening a run. Quote the transcript lines in your report.
+Spec: src/mcp.mjs (the whole server, 71 KB), src/mcp-resources.mjs, src/run.mjs, src/log.mjs, skills/gm/SKILL.md, skills/gm-continue/SKILL.md.

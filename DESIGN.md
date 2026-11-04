@@ -2,6 +2,46 @@
 
 This note turns the evidence in `research/deep-research.md` into design directions. Each direction is marked as confirmed by the evidence, or as a hypothesis gm-new must test on its own workload before it becomes a design rule.
 
+## Hot reload language (2026-11-04)
+
+Owner direction, 2026-11-04: choose the ideal language for hot reload. QuickJS is not mandatory, and every option is a candidate. Decision: hot code is ES2023 JavaScript run by QuickJS-NG, in one fresh context per leaf call. This supersedes decisions 4 and 7 of "Rewrite on deoxidene" for the leaves: the leaves are JavaScript modules in native/leaves/, not native plugins in native/plugins/.
+
+Candidates, judged on reload cost, crash isolation, toolchain needed at edit time, portability to the six targets, and one language with run_code bodies:
+
+| Option | Reload cost | Verdict |
+| --- | --- | --- |
+| Native C++ plugin, rebuilt on change and loaded with dlopen (deoxidene tier 0, spike in docs/spikes/hmr) | A compile per edit, then a load. A loaded DLL cannot be overwritten on Windows, so each load needs a copied file. A crash in a plugin takes the worker down. | Rejected for leaves. Every machine that edits gm-new would need a C++ toolchain at edit time. Core code stays native and restarts through the relay instead of reloading. |
+| QuickJS-NG, leaves as JavaScript modules, fresh context per call (chosen) | No compile step. A changed file is read and its bytecode cached by mtime; the next call uses it. Deoxidene measured about 0.1 ms per runtime and context. | Chosen. One language for leaves and run_code bodies, C source with no dependency, builds with any C compiler on the six targets, and an exception stays inside its call. |
+| Lua 5.4 or LuaJIT | As QuickJS | Rejected: run_code bodies are JavaScript, so Lua would be a second language for the leaves. |
+| Hermes | As QuickJS | Rejected: a much larger source tree and build for the same job. |
+| WebAssembly modules (wasm3 or WAMR as the interpreter) | A compile to wasm per edit | Rejected: needs a compiler at edit time, as native does, plus an extra runtime. |
+| Node.js as the host (gm-new today) | An ESM loader hook, cheap | Rejected for the rewrite: it keeps the Node runtime the rewrite removes. It stays the live runtime until cutover. |
+| Embedded Python | Interpreter reload | Rejected: a heavy runtime and a third language. |
+
+Rules that follow from the choice:
+- A leaf is native/leaves/<name>.mjs. It exports verbs, an array of objects with name, description, inputSchema and call(args). A leaf keeps no state at module level, because each call runs in a fresh context.
+- A leaf reaches the host only through host.<name>(args), where the name is a native verb (read_file, write_file, list_dir, stat_file, edit_file, search, grep, and the others) or one of the extra primitives (run, shell, logAppend). It uses no Node or engine-specific API, so the same file also runs under node in its tests.
+- Reload: a call recompiles a leaf when its mtime or size changes. A file that does not compile keeps its last good bytecode, and the error goes to the caller and the log, as the Node loader keeps old code on a refused reload.
+- The core (MCP server, run log, job table, verb table, primitives) is C++. A change to it restarts the worker through the relay, as today.
+- Witness: an edit to a leaf takes effect on the next call with no restart. The latency is measured and recorded here.
+
+## Rewrite on deoxidene (2026-11-04)
+
+Owner direction, 2026-11-04 (`/mcp__gm__gm`): rewrite gm-new starting from `../deoxidene` as the boilerplate, keep gm-new's hot reload, and the orchestrating session decides the rest. Decided by the orchestrator under that delegation:
+
+1. Language and build: C++23 with deoxidene's CMake presets, library headers (`include/deoxidene`), vendored `third_party/tl` and CTest setup. Preset names are the ones in `CMakePresets.json` (x64 and arm64 on Linux, Windows and macOS). Built and tested here with GCC 15.2, CMake 4.2, Ninja.
+2. Node stays the live runtime until the native build reaches parity and is witnessed. `src/` and `tools/` are not edited during the port: a half-made edit there is live to every running worker (see AGENTS.md, "shared checkout is live"). Cutover is one commit that points `.mcp.json` at the native binary, and it needs a reconnect.
+3. `run_code` bodies run in QuickJS-NG (deoxidene tier 1, measured in `docs/spikes/quickjs`). The `gm.*` verbs are bound as native functions, so bodies stay JavaScript and existing prompts and skills keep working.
+4. Hot reload: superseded by "Hot reload language (2026-11-04)".
+5. `fetch` runs the system `curl` (present on macOS, Linux and Windows 10 and later), so there is no TLS library. No new library was added.
+6. `callers` and `impact` (code-ast) need a JavaScript parser. acorn is pure JavaScript, so it is vendored as a file and run inside QuickJS-NG; no native parser is written.
+7. Layout: `native/components/<name>` holds the core (json, log, host, quickjs, mcp, verbs, relay), and `native/plugins/<name>` holds the leaf plugins. `native/CMakeLists.txt` adds every directory that has a `CMakeLists.txt`, so a directory is added only once it configures and builds.
+8. Comments: the new code has none. A reason that cannot be read from the code goes to AGENTS.md after it is checked (INVARIANT 6).
+9. Commits are attributed to lanmower with no trailers and pushed to origin main at each witnessed milestone. Nothing is pushed that breaks the running gm-new.
+
+Milestones: M0 the scaffold configures and its boilerplate tests pass. M1 json and the run log pass their tests. M2 the native binary serves the three-tool surface over stdio from a fresh run. M3 each verb group matches the JavaScript on the same inputs. M4 a plugin edit is live in the running process, shown by a new generation. M5 cutover.
+
+
 ## History squash (2026-11-04)
 
 The Rust port and its removal are out of gm-new's history, because the rust/ blobs made every clone larger. Commits up to and including `c9172c4` keep their shas. From `19b14bd` on, every commit has a new sha, and `a360041` was dropped because it touched only rust/. The tree at HEAD is the same as before the squash (`2618522e`). Old to new: `19b14bd` to `6adfc95`, `4e9fa56` to `b937311`, `56e0586` to `d23e974`, `84f508a` to `247cee0`, `9b7ba65` to `ae4d5a5`, `bac1557` to `1161f49`, `5035c17` to `9140693`, `584f50d` to `b67df48`, `82a8104` to `e61140e`. Backup bundle of the pre-squash history: /config/gm-new-pre-squash-2026-11-04-b.bundle (outside the repo; the first backup is /config/gm-new-pre-squash-2026-11-04.bundle).

@@ -1,0 +1,4 @@
+tag: v0.18.0
+url: https://github.com/quickjs-ng/quickjs/archive/refs/tags/v0.18.0.tar.gz
+sha256: 28bcd89aa3683fd2a946537e5ce3f11cc46b5cbf3383c7561aaef3df5ff9f1dd
+files: the library sources (quickjs.c, libregexp.c, libunicode.c, dtoa.c), every top-level header except quickjs-libc.h, and LICENSE, copied unchanged from the archive.

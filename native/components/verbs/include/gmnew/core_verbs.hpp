@@ -1,0 +1,43 @@
+#pragma once
+
+#include <cstdint>
+#include <filesystem>
+#include <functional>
+#include <memory>
+#include <string>
+#include <string_view>
+#include <vector>
+
+#include "gmnew/json.hpp"
+#include "gmnew/log.hpp"
+#include "gmnew/verbs.hpp"
+
+namespace gmnew {
+
+struct CoreVerbsOptions {
+    std::filesystem::path workspace;
+    std::uint64_t job_lifetime_ms = 1800000;
+    std::function<json::Value(const std::string& uri)> serve_skill;
+};
+
+class CoreVerbs : public VerbTable {
+public:
+    CoreVerbs(CoreVerbsOptions options, RunLog& log);
+    explicit CoreVerbs(CoreVerbsOptions options);
+    ~CoreVerbs() override;
+
+    CoreVerbs(const CoreVerbs&) = delete;
+    CoreVerbs& operator=(const CoreVerbs&) = delete;
+
+    std::vector<VerbInfo> list() const override;
+    json::Value call(std::string_view name, const json::Value& args) override;
+
+    void close(std::string_view reason = "run-ended");
+    void bind_run(std::shared_ptr<RunLog> log);
+
+private:
+    struct Impl;
+    std::unique_ptr<Impl> impl_;
+};
+
+}  // namespace gmnew

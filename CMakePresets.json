@@ -1,0 +1,183 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 25,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_CXX_STANDARD": "23",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "GMNEW_BUILD_TESTS": "ON"
+      }
+    },
+    {
+      "name": "debug",
+      "inherits": "base",
+      "displayName": "Native debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "release",
+      "inherits": "base",
+      "displayName": "Native release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+      }
+    },
+    {
+      "name": "asan",
+      "inherits": "base",
+      "displayName": "AddressSanitizer",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_CXX_FLAGS": "-fsanitize=address -fno-omit-frame-pointer -g",
+        "CMAKE_EXE_LINKER_FLAGS": "-fsanitize=address"
+      }
+    },
+    {
+      "name": "ubsan",
+      "inherits": "base",
+      "displayName": "UndefinedBehaviorSanitizer",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_CXX_FLAGS": "-fsanitize=undefined -fno-omit-frame-pointer -g",
+        "CMAKE_EXE_LINKER_FLAGS": "-fsanitize=undefined"
+      }
+    },
+    {
+      "name": "asan-ubsan",
+      "inherits": "base",
+      "displayName": "ASan + UBSan combined",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_CXX_FLAGS": "-fsanitize=address,undefined -fno-omit-frame-pointer -g",
+        "CMAKE_EXE_LINKER_FLAGS": "-fsanitize=address,undefined"
+      }
+    },
+    {
+      "name": "tsan",
+      "inherits": "base",
+      "displayName": "ThreadSanitizer",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_CXX_FLAGS": "-fsanitize=thread -fno-omit-frame-pointer -g",
+        "CMAKE_EXE_LINKER_FLAGS": "-fsanitize=thread"
+      }
+    },
+    {
+      "name": "x64-linux-release",
+      "inherits": "release",
+      "displayName": "x64 Linux release",
+      "cacheVariables": {},
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      }
+    },
+    {
+      "name": "arm64-linux-release",
+      "inherits": "release",
+      "displayName": "arm64 Linux cross release",
+      "cacheVariables": {}
+    },
+    {
+      "name": "x64-windows-release",
+      "inherits": "release",
+      "displayName": "x64 Windows release",
+      "cacheVariables": {}
+    },
+    {
+      "name": "arm64-windows-release",
+      "inherits": "release",
+      "displayName": "arm64 Windows release",
+      "cacheVariables": {}
+    },
+    {
+      "name": "x64-macos-release",
+      "inherits": "release",
+      "displayName": "x64 macOS release",
+      "cacheVariables": {}
+    },
+    {
+      "name": "arm64-macos-release",
+      "inherits": "release",
+      "displayName": "arm64 macOS release",
+      "cacheVariables": {}
+    },
+    {
+      "name": "native-perf",
+      "inherits": "release",
+      "displayName": "Native performance: LTO, host CPU tuning, benchmarks",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "DEOXIDENE_LTO": "ON",
+        "DEOXIDENE_NATIVE_TUNE": "ON",
+        "DEOXIDENE_BUILD_BENCH": "ON"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "debug",
+      "configurePreset": "debug"
+    },
+    {
+      "name": "release",
+      "configurePreset": "release"
+    },
+    {
+      "name": "asan",
+      "configurePreset": "asan"
+    },
+    {
+      "name": "ubsan",
+      "configurePreset": "ubsan"
+    },
+    {
+      "name": "asan-ubsan",
+      "configurePreset": "asan-ubsan"
+    },
+    {
+      "name": "tsan",
+      "configurePreset": "tsan"
+    },
+    {
+      "name": "x64-linux-release",
+      "configurePreset": "x64-linux-release"
+    },
+    {
+      "name": "arm64-linux-release",
+      "configurePreset": "arm64-linux-release"
+    },
+    {
+      "name": "x64-windows-release",
+      "configurePreset": "x64-windows-release"
+    },
+    {
+      "name": "arm64-windows-release",
+      "configurePreset": "arm64-windows-release"
+    },
+    {
+      "name": "x64-macos-release",
+      "configurePreset": "x64-macos-release"
+    },
+    {
+      "name": "arm64-macos-release",
+      "configurePreset": "arm64-macos-release"
+    },
+    {
+      "name": "native-perf",
+      "configurePreset": "native-perf"
+    }
+  ]
+}

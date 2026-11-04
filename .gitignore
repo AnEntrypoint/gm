@@ -5,3 +5,4 @@ node_modules/
 .gm/
 .agentplug-kv/
 .playwriter/
+build/

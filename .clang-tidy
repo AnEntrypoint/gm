@@ -1,0 +1,15 @@
+Checks: >
+  cppcoreguidelines-*,
+  bugprone-*,
+  clang-analyzer-*,
+  performance-*,
+  modernize-*,
+  -modernize-use-trailing-return-type
+WarningsAsErrors: >
+  cppcoreguidelines-owning-memory,
+  cppcoreguidelines-pro-type-*,
+  cppcoreguidelines-pro-bounds-*,
+  cppcoreguidelines-no-malloc,
+  bugprone-use-after-move
+HeaderFilterRegex: 'include/deoxidene/.*'
+FormatStyle: none

@@ -1,0 +1,9 @@
+add_library(gmnew_verbs STATIC verbs.cpp job.cpp text.cpp)
+target_include_directories(gmnew_verbs PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_CURRENT_SOURCE_DIR}/../../include)
+target_link_libraries(gmnew_verbs PUBLIC gmnew_json gmnew_log gmnew_proc Threads::Threads)
+
+if(GMNEW_BUILD_TESTS)
+    add_executable(gmnew_verbs_test tests/verbs_test.cpp)
+    target_link_libraries(gmnew_verbs_test PRIVATE gmnew_verbs)
+    add_test(NAME gmnew_verbs_test COMMAND gmnew_verbs_test)
+endif()

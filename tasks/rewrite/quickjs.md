@@ -1,0 +1,10 @@
+# Brief: QuickJS-NG engine, run_code and leaves (components/quickjs, native/third_party/quickjs-ng)
+
+Supersedes the earlier brief in its leaf parts. Keep the vendoring and run_body from the earlier brief (native/include/gmnew/runcode.hpp). Read tasks/rewrite/common.md and native/include/gmnew/leaves.hpp, host.hpp, then DESIGN.md section "Hot reload language (2026-11-04)".
+
+1. Vendor QuickJS-NG as before (tag, URL and sha256 in native/third_party/quickjs-ng/VERSION.txt).
+2. Engine helpers shared by run_body and LeafVerbs: a fresh runtime and context per call, a module loader that resolves a leaf's relative imports from its own directory, and a global host object. host.<name>(obj) takes one object, converts it to json::Value, calls the matching VerbTable (HostServices.native) or the extra primitive, and converts the reply back. Errors become JS exceptions.
+3. LeafVerbs (leaves.hpp): list() evaluates each leaf module in a fresh context, reads its verbs export, and caches the metadata per (path, mtime, size). call(name, args) finds the leaf that owns the verb, compiles it (or reuses bytecode), evaluates it in a fresh context, calls the verb's call with the args object, drives pending jobs until the promise settles, and converts the result. Bytecode cache: JS_Eval with JS_EVAL_TYPE_MODULE and JS_EVAL_FLAG_COMPILE_ONLY, then JS_WriteObject, reloaded with JS_ReadObject. A file that fails to compile keeps its last good bytecode; the error is returned as {ok:false, error} and generation is not bumped for that failure. generation() increments when a leaf's mtime or size changes and it compiles.
+4. A deadline per call through JS_SetInterruptHandler, 120 s by default, an error on expiry.
+5. Tests in components/quickjs/tests: a fixture leaf in tests/fixtures; a call returns its value; rewrite the fixture with a new value and a later mtime; the next call returns the new value and generation increases; a syntax error keeps the old value and reports the error; host.<native verb> reaches a fake VerbTable; run_body still passes its earlier tests. Quote the output.
+Spec for run_body: src/runcode.mjs and src/body-worker.mjs.
