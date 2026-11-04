@@ -13,7 +13,6 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  GMNEW_VERSION: ${{ format('{0}-{1}', substr(github.sha, 0, 7), github.run_number) }}
   RELEASE_REPO: AnEntrypoint/gmc
 
 jobs:
@@ -43,6 +42,9 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+      - name: Version
+        shell: bash
+        run: echo "GMNEW_VERSION=${GITHUB_SHA:0:7}-${GITHUB_RUN_NUMBER}" >> "$GITHUB_ENV"
       - uses: seanmiddleditch/gha-setup-ninja@master
       - uses: ilammy/msvc-dev-cmd@v1
         if: runner.os == 'Windows'
@@ -73,6 +75,9 @@ jobs:
       GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
+      - name: Version
+        shell: bash
+        run: echo "GMNEW_VERSION=${GITHUB_SHA:0:7}-${GITHUB_RUN_NUMBER}" >> "$GITHUB_ENV"
       - uses: actions/download-artifact@v4
         with:
           pattern: gmnew-*
