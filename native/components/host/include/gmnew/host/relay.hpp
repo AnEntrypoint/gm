@@ -19,13 +19,19 @@
 
 namespace gmnew::host {
 
+using SourceStamp = std::pair<std::filesystem::file_time_type, std::uintmax_t>;
+using SourceStamps = std::map<std::filesystem::path, SourceStamp>;
+
 struct RelayOptions {
     std::vector<std::string> worker_argv;
     std::filesystem::path worker_cwd;
-    std::vector<std::filesystem::path> watch_roots;
+    std::vector<std::filesystem::path> runtime_roots;
+    std::vector<std::filesystem::path> build_roots;
     std::filesystem::path build_dir;
     std::string build_target = "gmnew";
     std::chrono::milliseconds poll{500};
+    std::chrono::milliseconds drain_timeout{30000};
+    std::chrono::milliseconds settle{250};
     std::chrono::milliseconds stop_grace{5000};
     std::chrono::milliseconds exit_grace{10000};
     std::chrono::milliseconds handshake_timeout{10000};
@@ -73,8 +79,11 @@ private:
     bool replay_handshake(Lock& lock);
     void announce_changes(Lock& lock);
     void flush_held(Lock& lock);
-    std::optional<std::string> sources_changed();
-    bool rebuild(Lock& lock);
+    std::optional<std::string> sources_changed(const std::vector<std::filesystem::path>& roots, SourceStamps& stamps);
+    void rebuild(Lock& lock);
+    bool binary_settled(Lock& lock);
+    std::filesystem::path binary() const;
+    std::vector<std::filesystem::path> restart_roots() const;
     void emit(const std::string& line);
     void say(std::string_view message);
 
@@ -99,7 +108,9 @@ private:
     std::string failure_;
     std::chrono::milliseconds retry_delay_;
     std::optional<std::chrono::steady_clock::time_point> retry_at_;
-    std::map<std::filesystem::path, std::pair<std::filesystem::file_time_type, std::uintmax_t>> source_stamps_;
+    SourceStamps source_stamps_;
+    SourceStamps build_stamps_;
+    bool deferred_restart_ = false;
     bool child_ended_ = false;
     std::uint64_t restarts_ = 0;
     std::uint64_t failed_builds_ = 0;

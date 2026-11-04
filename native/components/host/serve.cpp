@@ -23,7 +23,8 @@ int run_serve(const HostArgs& args) {
     options.build_dir = build_flag && *build_flag == "none" ? std::filesystem::path{}
                                                             : args.path_or("--build-dir", default_build_dir());
     const auto root = source_root();
-    options.watch_roots = {root / "native" / "components", root / "native" / "include", root / "include"};
+    options.runtime_roots = {leaves_dir_of(args), skills_dir_of(args)};
+    options.build_roots = {root / "native" / "components", root / "native" / "include", root / "include"};
     return serve_stdio(std::move(options));
 }
 

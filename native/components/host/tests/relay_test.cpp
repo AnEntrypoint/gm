@@ -57,7 +57,7 @@ bool eventually(Predicate predicate, std::chrono::milliseconds timeout) {
 gmnew::host::RelayOptions echo_options(const fs::path& watched) {
     gmnew::host::RelayOptions options;
     options.worker_argv = {"/bin/sh", "-c", "while IFS= read -r line; do printf '%s\\n' \"$line\"; done"};
-    options.watch_roots = {watched};
+    options.runtime_roots = {watched};
     options.poll = 50ms;
     options.retry_min = 100ms;
     options.say = [](std::string_view message) { std::cout << "     relay: " << message << '\n'; };
@@ -81,8 +81,9 @@ void restart_on_source_change(const fs::path& root) {
     check(host.wait_for_text(R"("id":2)", 3s), "a host line reaches the worker and its answer comes back");
     const long long first_pid = relay.worker_pid();
     write_file(watched / "tests" / "ignored.cpp", "int ignored;\n");
+    write_file(root / "CMakeLists.txt", "project(gmnew)\n");
     std::this_thread::sleep_for(300ms);
-    check(relay.restarts() == 0, "a change under tests/ restarts nothing");
+    check(relay.restarts() == 0, "a change under tests/ or outside the runtime roots restarts nothing");
     write_file(watched / "core.cpp", "int a, b;\n");
     check(eventually([&] { return relay.restarts() == 1 && relay.running(); }, 5s),
           "a source change restarts the worker once");
@@ -122,6 +123,54 @@ void drain_before_restart(const fs::path& root) {
     relay.host_closed();
 }
 
+void stuck_call_gets_retry_error(const fs::path& root) {
+    const fs::path watched = root / "stuck";
+    fs::create_directories(watched);
+    write_file(watched / "core.cpp", "int a;\n");
+    HostSide host;
+    auto options = echo_options(watched);
+    options.worker_argv = {"/bin/sh", "-c",
+                           R"sh(while IFS= read -r line; do case "$line" in *hang*) sleep 3;; esac; printf '%s\n' "$line"; done)sh"};
+    options.drain_timeout = 300ms;
+    gmnew::host::Relay relay(options, [&](std::string_view line) { host.take(line); });
+    relay.start();
+    relay.host_line(R"({"jsonrpc":"2.0","id":9,"method":"hang"})");
+    std::this_thread::sleep_for(100ms);
+    relay.request_restart("test");
+    relay.host_line(R"({"jsonrpc":"2.0","id":10,"method":"ping"})");
+    check(host.wait_for_text(R"("id":9,"error")", 5s), "a call still running after the drain gets an error reply");
+    check(host.wait_for_text("may be retried", 5s), "the error says the call may be retried");
+    check(host.wait_for_text(R"("id":10)", 8s), "a call held during the restart reaches the new worker");
+    relay.host_closed();
+}
+
+void binary_change_restarts_once(const fs::path& root) {
+    const fs::path dir = root / "binary";
+    fs::create_directories(dir / "leaves");
+    const fs::path worker = dir / "worker.sh";
+    const std::string first = R"sh(#!/bin/sh
+while IFS= read -r line; do printf '%s\n' "$line"; done
+)sh";
+    write_file(worker, first);
+    fs::permissions(worker, fs::perms::owner_all, fs::perm_options::replace);
+    HostSide host;
+    auto options = echo_options(dir / "leaves");
+    options.worker_argv = {worker.string()};
+    gmnew::host::Relay relay(options, [&](std::string_view line) { host.take(line); });
+    relay.start();
+    relay.host_line(R"({"jsonrpc":"2.0","id":11,"method":"ping"})");
+    check(host.wait_for_text(R"("id":11)", 3s), "a worker started from a script answers a call");
+    const fs::path next = dir / "worker.next";
+    write_file(next, first + "\n");
+    fs::permissions(next, fs::perms::owner_all, fs::perm_options::replace);
+    fs::rename(next, worker);
+    check(eventually([&] { return relay.restarts() == 1 && relay.running(); }, 5s),
+          "a new worker binary restarts the worker once");
+    relay.host_line(R"({"jsonrpc":"2.0","id":12,"method":"ping"})");
+    check(host.wait_for_text(R"("id":12)", 3s), "the worker started from the new binary answers");
+    relay.host_closed();
+}
+
 void failed_build_keeps_worker(const fs::path& root) {
     const fs::path watched = root / "build-fail";
     fs::create_directories(watched);
@@ -129,6 +178,8 @@ void failed_build_keeps_worker(const fs::path& root) {
     write_file(watched / "core.cpp", "int a;\n");
     HostSide host;
     auto options = echo_options(watched);
+    options.runtime_roots.clear();
+    options.build_roots = {watched};
     options.build_dir = root / "not-a-build-dir";
     gmnew::host::Relay relay(options, [&](std::string_view line) { host.take(line); });
     relay.start();
@@ -165,6 +216,8 @@ int main() {
     fs::create_directories(root);
     restart_on_source_change(root);
     drain_before_restart(root);
+    stuck_call_gets_retry_error(root);
+    binary_change_restarts_once(root);
     failed_build_keeps_worker(root);
     missing_worker_answers_with_failure(root);
     std::error_code ec;

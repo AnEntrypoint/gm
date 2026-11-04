@@ -18,6 +18,8 @@ constexpr std::string_view kHandshakeId = "gm-new-core-handshake";
 constexpr std::string_view kPausedBeforeAnswer =
     "the worker paused before it answered this call; query_log shows what it did, then repeat the call if it did "
     "nothing";
+constexpr std::string_view kRestartedBeforeAnswer =
+    "the worker restarted before it answered this call; the call may be retried";
 constexpr std::uint64_t kBuildTimeoutMs = 600000;
 
 struct ListKind {
@@ -52,6 +54,12 @@ std::string method_of(const json::Value& message) {
 std::string error_reply(const std::string& id_json, std::string_view message) {
     return "{\"jsonrpc\":\"2.0\",\"id\":" + id_json + ",\"error\":{\"code\":-32000,\"message\":" + json::quote(message) +
            "}}";
+}
+
+std::optional<SourceStamp> stamp_of(const std::filesystem::path& path) {
+    std::error_code ec;
+    if (!std::filesystem::is_regular_file(path, ec)) return std::nullopt;
+    return SourceStamp{std::filesystem::last_write_time(path, ec), std::filesystem::file_size(path, ec)};
 }
 
 bool skipped_directory(const std::filesystem::path& path) {
@@ -91,7 +99,8 @@ void Relay::emit(const std::string& line) {
 }
 
 void Relay::start() {
-    sources_changed();
+    sources_changed(restart_roots(), source_stamps_);
+    sources_changed(options_.build_roots, build_stamps_);
     Lock lock(mutex_);
     if (spawn_worker(lock))
         mark_running(lock);
@@ -288,16 +297,46 @@ void Relay::flush_held(Lock& lock) {
     for (std::string& line : lines) route_host_line(lock, std::move(line));
 }
 
+std::vector<std::filesystem::path> Relay::restart_roots() const {
+    std::vector<std::filesystem::path> roots = options_.runtime_roots;
+    roots.push_back(binary());
+    return roots;
+}
+
+std::filesystem::path Relay::binary() const {
+    return options_.worker_argv.empty() ? std::filesystem::path{} : std::filesystem::path(options_.worker_argv.front());
+}
+
+bool Relay::binary_settled(Lock& lock) {
+    const auto before = stamp_of(binary());
+    lock.unlock();
+    std::this_thread::sleep_for(options_.settle);
+    lock.lock();
+    const auto after = stamp_of(binary());
+    if (before != after) return false;
+    if (auto known = source_stamps_.find(binary()); known != source_stamps_.end() && after) known->second = *after;
+    return true;
+}
+
 void Relay::restart(Lock& lock, const std::string& reason) {
+    if (!binary_settled(lock)) {
+        if (!deferred_restart_) say("the worker binary is still being written; the restart waits for it to settle");
+        deferred_restart_ = true;
+        pending_restart_ = reason;
+        return;
+    }
+    deferred_restart_ = false;
     say("restarting the worker (" + reason + ")");
     if (state_ == State::Running) {
         state_ = State::Draining;
-        changed_.wait(lock, [&] { return inflight_.empty() || host_gone_; });
+        changed_.wait_for(lock, options_.drain_timeout, [&] { return inflight_.empty() || host_gone_; });
     }
     if (host_gone_) return;
     state_ = State::Restarting;
     swapping_ = true;
     stop_worker(lock);
+    for (const auto& [id, method] : inflight_) emit(error_reply(id, kRestartedBeforeAnswer));
+    inflight_.clear();
     if (host_gone_) {
         swapping_ = false;
         return;
@@ -325,9 +364,13 @@ void Relay::request_restart(std::string reason) {
     changed_.notify_all();
 }
 
-std::optional<std::string> Relay::sources_changed() {
-    std::map<std::filesystem::path, std::pair<std::filesystem::file_time_type, std::uintmax_t>> now;
-    for (const auto& root : options_.watch_roots) {
+std::optional<std::string> Relay::sources_changed(const std::vector<std::filesystem::path>& roots, SourceStamps& stamps) {
+    SourceStamps now;
+    for (const auto& root : roots) {
+        if (auto file = stamp_of(root)) {
+            now[root] = *file;
+            continue;
+        }
         std::error_code ec;
         std::filesystem::recursive_directory_iterator it(root, ec), end;
         for (; !ec && it != end; it.increment(ec)) {
@@ -341,34 +384,30 @@ std::optional<std::string> Relay::sources_changed() {
     }
     std::vector<std::string> changed;
     for (const auto& [path, stamp] : now) {
-        auto before = source_stamps_.find(path);
-        if (before == source_stamps_.end() || before->second != stamp) changed.push_back(path.filename().string());
+        auto before = stamps.find(path);
+        if (before == stamps.end() || before->second != stamp) changed.push_back(path.filename().string());
     }
-    for (const auto& [path, stamp] : source_stamps_) {
+    for (const auto& [path, stamp] : stamps) {
         if (!now.contains(path)) changed.push_back(path.filename().string());
     }
-    const bool first = source_stamps_.empty();
-    source_stamps_ = std::move(now);
+    const bool first = stamps.empty();
+    stamps = std::move(now);
     if (first || changed.empty()) return std::nullopt;
     std::string names;
     for (const std::string& name : changed) names += (names.empty() ? "" : ", ") + name;
     return names;
 }
 
-bool Relay::rebuild(Lock& lock) {
-    if (options_.build_dir.empty()) return true;
+void Relay::rebuild(Lock& lock) {
+    if (options_.build_dir.empty()) return;
     lock.unlock();
     const proc::Outcome outcome = proc::run(
         {"cmake", "--build", options_.build_dir.string(), "--target", options_.build_target}, {}, {}, kBuildTimeoutMs);
     lock.lock();
     if (!outcome.started || outcome.timed_out || outcome.exit_code != 0) {
         ++failed_builds_;
-        say("the build failed, the old worker keeps serving: " +
-            last_lines(outcome.out + outcome.err, 1500));
-        return false;
+        say("the build failed, the old worker keeps serving: " + last_lines(outcome.out + outcome.err, 1500));
     }
-    if (outcome.out.find("no work to do") != std::string::npos) return false;
-    return true;
 }
 
 void Relay::control_loop() {
@@ -388,11 +427,19 @@ void Relay::control_loop() {
         }
         if (state_ != State::Running) continue;
         lock.unlock();
-        auto changed = sources_changed();
+        auto built = sources_changed(options_.build_roots, build_stamps_);
+        lock.lock();
+        if (built && !host_gone_) {
+            say("changed: " + *built);
+            rebuild(lock);
+        }
+        if (state_ != State::Running || host_gone_) continue;
+        lock.unlock();
+        auto changed = sources_changed(restart_roots(), source_stamps_);
         lock.lock();
         if (!changed || host_gone_) continue;
         say("changed: " + *changed);
-        if (rebuild(lock) && !host_gone_) restart(lock, "changed: " + *changed);
+        restart(lock, "changed: " + *changed);
     }
 }
 
