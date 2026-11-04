@@ -8,10 +8,6 @@ on:
 permissions:
   contents: write
 
-concurrency:
-  group: release
-  cancel-in-progress: false
-
 env:
   RELEASE_REPO: AnEntrypoint/gmc
 
@@ -24,22 +20,33 @@ jobs:
           - os: ubuntu-latest
             preset: x64-linux-release
             target: x64-linux
+            ccache: true
           - os: ubuntu-24.04-arm
             preset: arm64-linux-release
             target: arm64-linux
+            ccache: true
           - os: windows-latest
             preset: x64-windows-release
             target: x64-windows
+            ccache: false
           - os: windows-11-arm
             preset: arm64-windows-release
             target: arm64-windows
-          - os: macos-13
+            ccache: false
+          - os: macos-latest
             preset: x64-macos-release
             target: x64-macos
+            ccache: true
+            extra: -DCMAKE_OSX_ARCHITECTURES=x86_64
           - os: macos-latest
             preset: arm64-macos-release
             target: arm64-macos
+            ccache: true
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    concurrency:
+      group: build-${{ github.ref }}-${{ matrix.target }}
+      cancel-in-progress: true
     steps:
       - uses: actions/checkout@v4
       - name: Version
@@ -50,14 +57,21 @@ jobs:
         if: runner.os == 'Windows'
         with:
           arch: ${{ contains(matrix.preset, 'arm64') && 'arm64' || 'x64' }}
+      - uses: hendrikmuhs/ccache-action@v1.2
+        if: matrix.ccache
+        with:
+          key: ${{ matrix.preset }}
+          create-symlink: true
       - name: Configure and build
         shell: bash
+        env:
+          CCACHE_ARGS: ${{ matrix.ccache && '-DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache' || '' }}
         run: |
-          cmake --preset ${{ matrix.preset }} -DGMNEW_BUILD_TESTS=ON -DGMNEW_VERSION=$GMNEW_VERSION
+          cmake --preset ${{ matrix.preset }} -DGMNEW_BUILD_TESTS=ON -DGMNEW_VERSION=$GMNEW_VERSION ${{ matrix.extra }} $CCACHE_ARGS
           cmake --build build/${{ matrix.preset }}
       - name: Test
         shell: bash
-        run: ctest --test-dir build/${{ matrix.preset }} --output-on-failure
+        run: ctest --test-dir build/${{ matrix.preset }} --output-on-failure -j "$(nproc 2>/dev/null || sysctl -n hw.ncpu)"
       - name: Package
         shell: bash
         run: node tools/package.mjs --target ${{ matrix.target }} --build-dir build/${{ matrix.preset }} --out dist
@@ -66,26 +80,47 @@ jobs:
           name: gmnew-${{ matrix.target }}
           path: dist/gmnew-${{ matrix.target }}.*
           if-no-files-found: error
+          compression-level: 0
+          retention-days: 1
 
   publish:
     needs: build
     if: github.repository == 'AnEntrypoint/gmc'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: publish-latest
+      cancel-in-progress: false
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
+      - name: Stop unless this commit is main's head
+        id: head
+        run: |
+          head=$(gh api "repos/$RELEASE_REPO/git/ref/heads/main" --jq .object.sha)
+          if [ "$head" = "$GITHUB_SHA" ]; then
+            echo "current=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "current=false" >> "$GITHUB_OUTPUT"
+            echo "main is at $head; $GITHUB_SHA is superseded and is not published"
+          fi
       - uses: actions/checkout@v4
+        if: steps.head.outputs.current == 'true'
       - name: Version
+        if: steps.head.outputs.current == 'true'
         shell: bash
         run: echo "GMNEW_VERSION=${GITHUB_SHA:0:7}-${GITHUB_RUN_NUMBER}" >> "$GITHUB_ENV"
       - uses: actions/download-artifact@v4
+        if: steps.head.outputs.current == 'true'
         with:
           pattern: gmnew-*
           path: dist
           merge-multiple: true
       - name: Manifest and checksums
+        if: steps.head.outputs.current == 'true'
         run: node tools/release-manifest.mjs --dir dist --version "$GMNEW_VERSION" --commit "$GITHUB_SHA" --repo "$RELEASE_REPO"
       - name: Move latest tag
+        if: steps.head.outputs.current == 'true'
         run: |
           if gh api "repos/$RELEASE_REPO/git/ref/tags/latest" >/dev/null 2>&1; then
             gh api -X PATCH "repos/$RELEASE_REPO/git/refs/tags/latest" -f sha="$GITHUB_SHA" -F force=true
@@ -93,6 +128,7 @@ jobs:
             gh api -X POST "repos/$RELEASE_REPO/git/refs" -f ref=refs/tags/latest -f sha="$GITHUB_SHA"
           fi
       - name: Publish latest release
+        if: steps.head.outputs.current == 'true'
         run: |
           notes="$RUNNER_TEMP/notes.md"
           printf 'Version: %s\nCommit: %s\nBuilt: %s\n' "$GMNEW_VERSION" "$GITHUB_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$notes"
