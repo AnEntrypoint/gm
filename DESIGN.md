@@ -2,6 +2,25 @@
 
 This note turns the evidence in `research/deep-research.md` into design directions. Each direction is marked as confirmed by the evidence, or as a hypothesis gm-new must test on its own workload before it becomes a design rule.
 
+## spawn-20 friction, 2026-11-04
+
+Source: peer session spawn-20 (run 2026-11-04-16-36-00-a12151), section "gm (this session)" of /workspace/game-6/.spawn/reference/LESSONS.md. Each item: hypothesis, then live witness before and after the change.
+
+- Item 1, slash-command args truncated. Not changed; the host side is not verified here. Hypothesis: the host splits the slash-command arguments on whitespace and gives the one declared argument only its first word. Witness: this run's task is "make" for a prompt that has more words. The server keeps the whole argument: native/components/mcp/tests/mcp_test.cpp:567 asserts prompts/get keeps the whole task, and the Node commit gate (src/gate.mjs:210-215) checks the same and passed on both commits below. The argument description (native/components/mcp/server.cpp:1911) already says some hosts pass only the first word.
+
+- Item 2, background output dropped. Changed: 0cc8958d0e6511711fae8fd4b813be25e8a42675 (src/runcode.mjs). Hypothesis: a stopped background body (finish with stopBackground) replies only "the body stopped before it returned", so its return value and console output are lost without a statement. Witness before, node harness on runBody, stopped after 2.6 s: {"ok":false,"error":"the body stopped before it returned"}. After: "the body stopped before it returned: its return value and console output are lost; 6 verb calls completed before the stop, each in query_log as a code-call after seq 1". A body that completes after its budget still returns its full value through job_status (body-900 returned {"names":4,"ok":4,"fail":0,"parts":["step 0",...]}). The 120 s move to background was not reproduced: a 130 s body with timeoutMs 280000 returned in the foreground (elapsedMs 130001). The live stop path needs finish, which this child does not send, so the witness is the node harness.
+
+- Item 3, gm.grep hides untracked files. Not changed. The live grep is native/components/search/search_impl.cpp (footer at line 520, skip hints appended after it), and native/ belongs to gmc. Witness before: "(0 matches; showing 0 to 0; no more)" then "hint: 1316 files skipped (5 untracked, 1311 gitignored or in node_modules); use scope: 'all' to include them". An edit of src/search.mjs that moved the hints first left the live output unchanged, so it was reverted. Fix for the native owner: emit the skipped-count hint before the footer. scope all finds the untracked probe file (spawn20-leak-probe.txt:1), so the data is reachable.
+
+- Item 4, body load error had no location. Changed: 691fa75e9893a09970293683894740552c5f0468 (src/runcode.mjs, src/body-worker.mjs). Hypothesis: Node's ESM SyntaxError carries no file line in its message or stack, so the location comes from node --check. Witness before: "the body does not load: Unexpected identifier 'spawn'". After: "the body does not load: Unexpected identifier 'spawn' (line 2, column 19)" for the statement on body line 2, and "(line 3, column 19)" for the same statement after an import line that is removed from the code. The lesson's "${PIPESTATUS[0]}" example does not fail to load: it runs and fails with "PIPESTATUS is not defined". A backtick inside a template literal ends it early and produces the reported message.
+
+- Item 5, refusal does not name next_context. Not changed; already correct. src/mcp.mjs:600-601 and native/components/mcp/server.cpp:923-924 both name next_context ("call next_context to open a new run", and for a child "the session that opened it calls next_context to open the next run"). native/components/mcp/tests/mcp_test.cpp:284 asserts the text. Not reproduced live, since that needs finish.
+
+Not in the five items:
+- gm.grep refuses a file given as root ("refused: root is not a directory: src/mcp.mjs"); the file belongs in path. The refusal could say so.
+- The live server is mixed: run_code bodies run from src/ and pick up edits at once, while grep and the MCP surface are native. A fix in src/ may not reach a verb served natively.
+- Four untracked work/rows/unknown-*.yml files in the shared checkout belong to another session and were left alone.
+
 ## Hot reload language (2026-11-04)
 
 Owner direction, 2026-11-04: choose the ideal language for hot reload. QuickJS is not mandatory, and every option is a candidate. Decision: hot code is ES2023 JavaScript run by QuickJS-NG, in one fresh context per leaf call. This supersedes decisions 4 and 7 of "Rewrite on deoxidene" for the leaves: the leaves are JavaScript modules in native/leaves/, not native plugins in native/plugins/.
