@@ -42,6 +42,30 @@ Owner direction, 2026-11-04 (`/mcp__gm__gm`): rewrite gm-new starting from `../d
 Milestones: M0 the scaffold configures and its boilerplate tests pass. M1 json and the run log pass their tests. M2 the native binary serves the three-tool surface over stdio from a fresh run. M3 each verb group matches the JavaScript on the same inputs. M4 a plugin edit is live in the running process, shown by a new generation. M5 cutover.
 
 
+## Finish waits for every row (2026-11-04)
+
+Friction from oscraft: runs ended with rows open. Run 2026-11-04-07-24-35-be3eb8 ended at seq 6007 with 34 PRD rows open, recorded as gaps. Run 2026-11-04-14-27-00-a85d22 ended at seq 29 with its open rows listed as gaps (prd-mw1bzqqz7f60, prd-liveswapverify2setup). Cause: finish took `stopRows: true`, which ended the run with each open row listed as a gap, and skill step 6 named it as the way past open rows.
+
+Rule (owner direction, 2026-11-04, from deepseek-ai/dsh-superagent-prototype docs/003-execution.md): a ticket ends only when no work remains open. A ticket that needs a person waits in a person stage and resumes on the person's reply. Closing one artefact does not end the ticket while work is unfinished.
+
+Decision:
+- `stopRows` is removed from finish (src/mcp.mjs) and from its description. finish is refused while any PRD or unknown row is open, and the refusal names the rows.
+- A gap that names an open row id is refused: "gap names open row <id>; a gap cannot stand in for an open row".
+- A question for the owner is an open unknown row (`gm.unknown_add`). It keeps the run open until `gm.unknown_resolve` records the answer.
+- Only `gm.prd_delete` drops a row. Checked: prd_delete refuses an unknown row and a resolved PRD, and unknown_resolve refuses a commit that is not in the repository and an event that is not in the run's log. Both match skills/gm/SKILL.md step 6.
+- skills/gm/SKILL.md step 6 and AGENTS.md (Surface, Rows) no longer name stopRows. README.md did not name it.
+
+Not changed, open: the owner asked that the run wait for the owner's reply through the events wait. The events wait wakes only on the kinds in src/pending.mjs (PENDING_KINDS: job, job-killed, job-stuck, job-unstuck, rules-notice, recovery, host-idle). A row is not one of them, and an owner reply reaches the session as a message, so the wait ends at host-idle (600000 ms) and is started again while the row is open. Whether a row should wake the wait is open with the owner.
+Also: unknown_resolve needs a commit that exists. An answer that changes no file has no commit of its own, so its witness is an existing commit, for example HEAD.
+
+Impact at the change: src/mcp.mjs is in src/worker-modules.json, so the change restarted each worker on the checkout. The live workers before it were gm-new pid 1087915 (open run 2026-11-04-07-53-54-3c7bb2), oscraft pid 2457829 (its last run 2026-11-04-14-27-00-a85d22 had ended) and gmc pid 2529361 (open run 2529320-17406516). No job or background body was running: each run's jobs directory held only exited or killed jobs, and no action was in flight after the last restart of an open run.
+
+Witness, on a scratch copy of the tree under /tmp/gm-scratch/gm-new/finish-stop, through the MCP entry (node src/mcp.mjs over stdio, playwriter disabled with --mcp-config):
+- Before, unchanged code, run 2026-11-04-14-58-01-13734a: seq 11 refusal "refused: 1 row(s) open: prd-mw28r5o6e8e3 witness row. Work them, or finish with stopRows: true to end with them listed as gaps". finish with stopRows true returned {"ok":true,"finished":true}, and seq 16 end {"status":"finished","gaps":["open row prd-mw28r5o6e8e3: witness row"]}.
+- After, run 2026-11-04-14-58-32-c4ba7b: seq 11 and seq 13 refuse with "refused: 1 row(s) open: prd-mw28rtlu8146 witness row. Resolve each with its witness, or delete a PRD you will not implement with prd_delete. A question for the owner stays open until the owner answers" (stopRows true is refused the same way). Seq 15 refuses "refused: gap names open row prd-mw28rtlu8146; a gap cannot stand in for an open row, so resolve it or, for a PRD, delete it". gm.prd_delete returned "prd-mw28rtlu8146 deleted", and seq 25 end {"status":"finished","witness":"witness probe: row deleted by prd_delete, no open rows remain"} with no gaps.
+- Question row, run 2026-11-04-14-58-49-68f62e in a git scratch workspace: unknown_add gave unknown-mw28s6t530fe, and seq 11 refusal names it. unknown_resolve was refused for commit deadbeefdeadbeef ("no commit deadbeefdeadbeef in this repository") and for event 99999 ("event 99999 is not in this run's log"). prd_delete was refused ("id must name a prd row, with an id that starts prd-"). unknown_resolve with commit 1f19c8fc8ad6 returned "unknown-mw28s6t530fe resolved by event 1 at commit 1f19c8fc8ad6", and seq 33 end finished.
+- On the edited checkout itself, the same two scenarios: run 2026-11-04-14-59-38-146a42 gave refusals at seq 11, 13 and 15 and end at seq 25; run 2026-11-04-14-59-38-37844b gave refusal at seq 11 and end at seq 33.
+
 ## History squash (2026-11-04)
 
 The Rust port and its removal are out of gm-new's history, because the rust/ blobs made every clone larger. Commits up to and including `c9172c4` keep their shas. From `19b14bd` on, every commit has a new sha, and `a360041` was dropped because it touched only rust/. The tree at HEAD is the same as before the squash (`2618522e`). Old to new: `19b14bd` to `6adfc95`, `4e9fa56` to `b937311`, `56e0586` to `d23e974`, `84f508a` to `247cee0`, `9b7ba65` to `ae4d5a5`, `bac1557` to `1161f49`, `5035c17` to `9140693`, `584f50d` to `b67df48`, `82a8104` to `e61140e`. Backup bundle of the pre-squash history: /config/gm-new-pre-squash-2026-11-04-b.bundle (outside the repo; the first backup is /config/gm-new-pre-squash-2026-11-04.bundle).

@@ -165,7 +165,7 @@ const BASE_TOOLS = [
   { name: 'job_status', description: 'State (running, exited or killed), exitCode, signal and output of a job as plain fields, with logPath (the job output file). output is the last 20000 characters, with total (its length) and truncated; with offset, output is the 20000 characters from that offset, with next. waitMs polls until the job leaves running, at most 30000 ms. Offsets and lengths count characters, not lines.', inputSchema: objectSchema({ job: text, waitMs: number, offset: number }, ['job']) },
   { name: 'job_stop', description: 'Stop a background shell job: its process group is killed, and the job ends killed with reason cancelled. The job event is logged before the answer. A job that already ended is an error result. stopBackground stops run_code bodies only.', inputSchema: objectSchema({ job: text }, ['job']) },
   { name: 'query_log', description: 'Read the run events, as JSON. after is a seq: only the events after it are read (since), so after the last seq you saw reads on from there. kind keeps events of one kind, and fromMono and toMono keep events in a time window (monotonic milliseconds). last N returns the newest N matching events instead, oldest first, at most 50, and has no next. js is a JavaScript expression over the matching events, and defaults to returning them: js sees one window of at most 1000 events or 4 MB of log. Without js, a reply holds at most 50 events and about 20 KB; limit (1 to 50) lowers that count, and is refused with last or js. When events remain, next is the seq to pass back as after; with js, next is set when the window ends before the end of the log. An unknown argument is refused, and the reply names the arguments query_log takes.', inputSchema: objectSchema({ js: text, kind: text, fromMono: number, toMono: number, after: number, last: number, limit: number }, []) },
-  { name: 'finish', description: 'End the run. witness is one string that quotes the evidence you observed. gaps optionally lists, one string each, what the run did not check; the end event logs them. finish is refused while a background run is running, and stopBackground true kills it first. finish is refused while a PRD or question row is open, and names the rows; stopRows true ends the run anyway, with each open row listed as a gap in the end event.', inputSchema: objectSchema({ witness: text, gaps: { type: 'array', items: text }, stopBackground: { type: 'boolean' }, stopRows: { type: 'boolean' } }, ['witness']) },
+  { name: 'finish', description: 'End the run. witness is one string that quotes the evidence you observed. gaps optionally lists, one string each, what the run did not check; the end event logs them. finish is refused while a background run is running, and stopBackground true kills it first. finish is refused while a PRD or question row is open, and names the rows. A gap that names an open row is refused too.', inputSchema: objectSchema({ witness: text, gaps: { type: 'array', items: text }, stopBackground: { type: 'boolean' } }, ['witness']) },
   ...SEARCH_TOOLS,
 ];
 
@@ -737,11 +737,14 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     if (running.length > 0 && args.stopBackground !== true) {
       return refuse('finish', args, `background run ${running.join(', ')} is still running; job_status watches it, and finish with stopBackground: true kills it`);
     }
-    // An open row refuses the finish and is named, so the run stays open for the work. stopRows true ends the run with each open row listed as a gap.
     const open = await tools.openRows();
-    if (open.length > 0 && args.stopRows !== true) {
+    const gapOnOpen = open.find((row) => (args.gaps ?? []).some((gap) => gap.split(/[^A-Za-z0-9-]+/).includes(row.id)));
+    if (gapOnOpen !== undefined) {
+      return refuse('finish', args, `gap names open row ${gapOnOpen.id}; a gap cannot stand in for an open row, so resolve it or, for a PRD, delete it`, rpcId);
+    }
+    if (open.length > 0) {
       const names = open.slice(0, 5).map((row) => `${row.id} ${row.title}`).join('; ');
-      return refuse('finish', args, `${open.length} row(s) open: ${names}${open.length > 5 ? '; ...' : ''}. Work them, or finish with stopRows: true to end with them listed as gaps`, rpcId);
+      return refuse('finish', args, `${open.length} row(s) open: ${names}${open.length > 5 ? '; ...' : ''}. Resolve each with its witness, or delete a PRD you will not implement with prd_delete. A question for the owner stays open until the owner answers`, rpcId);
     }
     if (args.stopBackground === true) tools.stopBodies('stopBackground');
     stop('finished');
@@ -750,8 +753,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     const { lintWiki } = await import('./wiki.mjs');
     const lint = lintWiki(workspace);
     log.append('lint', { problems: lint.problems, pages: lint.pages });
-    const gaps = args.stopRows === true ? [...(args.gaps ?? []), ...open.map((row) => `open row ${row.id}: ${row.title}`)] : args.gaps;
-    await endRun('finished', out.output, gaps);
+    await endRun('finished', out.output, args.gaps);
     return out;
   }
 
