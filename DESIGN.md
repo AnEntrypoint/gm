@@ -29,9 +29,9 @@ Rules that follow from the choice:
 
 Owner direction, 2026-11-04 (`/mcp__gm__gm`): rewrite gm-new starting from `../deoxidene` as the boilerplate, keep gm-new's hot reload, and the orchestrating session decides the rest. Decided by the orchestrator under that delegation:
 
-1. Language and build: C++23 with deoxidene's CMake presets, library headers (`include/deoxidene`), vendored `third_party/tl` and CTest setup. Preset names are the ones in `CMakePresets.json` (x64 and arm64 on Linux, Windows and macOS). Built and tested here with GCC 15.2, CMake 4.2, Ninja.
+1. Language and build: C++23 with deoxidene's CMake presets, library headers (`include/deoxidene/`), vendored `third_party/tl/` and CTest setup. Preset names are the ones in `CMakePresets.json` (x64 and arm64 on Linux, Windows and macOS). Built and tested here with GCC 15.2, CMake 4.2, Ninja.
 2. Node stays the live runtime until the native build reaches parity and is witnessed. `src/` and `tools/` are not edited during the port: a half-made edit there is live to every running worker (see AGENTS.md, "shared checkout is live"). Cutover is one commit that points `.mcp.json` at the native binary, and it needs a reconnect.
-3. `run_code` bodies run in QuickJS-NG (deoxidene tier 1, measured in `docs/spikes/quickjs`). The `gm.*` verbs are bound as native functions, so bodies stay JavaScript and existing prompts and skills keep working.
+3. `run_code` bodies run in QuickJS-NG (deoxidene tier 1, measured in the QuickJS spike of deoxidene (its docs/spikes/quickjs)). The `gm.*` verbs are bound as native functions, so bodies stay JavaScript and existing prompts and skills keep working.
 4. Hot reload: superseded by "Hot reload language (2026-11-04)".
 5. `fetch` runs the system `curl` (present on macOS, Linux and Windows 10 and later), so there is no TLS library. No new library was added.
 6. `callers` and `impact` (code-ast) need a JavaScript parser. acorn is pure JavaScript, so it is vendored as a file and run inside QuickJS-NG; no native parser is written.
