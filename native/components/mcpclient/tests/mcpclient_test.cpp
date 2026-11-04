@@ -322,7 +322,8 @@ void test_startup_failure(const fs::path& dir) {
     verbs.wait_ready();
     check(verbs.list().empty(), "a server that cannot start serves no verbs");
     check(!ok_of(verbs.call("playwriter_browsers", Value(Object{}))), "a call to a server that cannot start fails");
-    const Value* failed = find_event(recorder.snapshot(), "mcp-server", "playwriter", "failed");
+    const Events events = recorder.snapshot();
+    const Value* failed = find_event(events, "mcp-server", "playwriter", "failed");
     check(failed != nullptr && field(*failed, "error").find("could not start") != std::string::npos, "a server that cannot start logs failed");
 }
 
