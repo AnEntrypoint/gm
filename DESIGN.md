@@ -229,7 +229,7 @@ Ownership (one owner per file, so parallel work does not collide):
 
 Not ported in this phase, each to be decided with the owner: the scripted model and the `replay` and `bench` commands (they serve Node witnesses; the MCP path needs none of them), and the live comparison (closed). Cutover, meaning the `.mcp.json` entry switches to `gmnew serve`, is a later commit and needs a reconnect of each host.
 
-Rules that bind the port: ASCII only; no test files and no fixtures that stand in for a run; no comments that carry prose (a comment that cannot be turned into code goes to AGENTS.md); commit only through `tools/ship.sh` by explicit path, author lanmower, no trailers; no branches or worktrees; `rust/target/` is git-ignored.
+Rules that bind the port: ASCII only; no test files and no fixtures that stand in for a run; no comments that carry prose (a comment that cannot be turned into code goes to AGENTS.md); commit only through `tools/ship.sh` by explicit path, author lanmower, no trailers; no branches or worktrees; the Cargo build directory under rust/ is git-ignored.
 
 ## Feed digest from the full output (2026-11-04)
 
