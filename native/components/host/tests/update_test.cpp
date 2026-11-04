@@ -1,3 +1,5 @@
+#include <chrono>
+#include <cstdint>
 #include <fstream>
 #include <iostream>
 #include <iterator>
@@ -162,6 +164,86 @@ void rolls_back_a_failed_swap(const fs::path& root) {
     check(read_text(staged / executable_name()) == "new", "the staged build is still there after a rollback");
 }
 
+using Reply = deoxidene::Result<ManifestReply, std::string>;
+
+std::int64_t epoch_ms(std::chrono::milliseconds offset = {}) {
+    return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch() + offset)
+        .count();
+}
+
+void state_round_trips(const fs::path& root) {
+    const fs::path install = root / "state";
+    fs::create_directories(install);
+    check(read_update_state(install).checked_ms == 0, "a missing state file reads as never checked");
+    const UpdateState saved{1793836800000, "\"abc\"", kVersion};
+    check(write_update_state(install, saved), "the state file is written");
+    const UpdateState loaded = read_update_state(install);
+    check(loaded.checked_ms == saved.checked_ms && loaded.etag == saved.etag && loaded.version == saved.version,
+          "the state file reads back what was written");
+    check(!fs::exists(install / ".gmnew-update.json.tmp"), "the state file leaves no temporary file behind");
+}
+
+void interval_skips_the_network(const fs::path& root) {
+    const fs::path install = root / "install-fresh";
+    make_build(install, "old");
+    write_update_state(install, UpdateState{epoch_ms(), "\"fresh\"", "abc0000-3"});
+    int fetches = 0;
+    UpdatePolicy policy = policy_for(install, "https://unreachable.invalid/manifest.json", "abc0000-3");
+    policy.fetch = [&fetches](const std::string&, const std::string&, const fs::path&) -> Reply {
+        ++fetches;
+        return deoxidene::Err<std::string>("the fetcher must not be called inside the interval");
+    };
+    const UpdateResult result = update_now(policy);
+    check(result.ok && !result.updated && result.status == "already current" && fetches == 0,
+          "a check inside the interval returns without touching the fetcher");
+    check(read_update_state(install).etag == "\"fresh\"", "a skipped check leaves the state file as it was");
+}
+
+void not_modified_refreshes_the_check(const fs::path& root) {
+    const fs::path install = root / "install-304";
+    make_build(install, "old");
+    const std::int64_t stale = epoch_ms(-std::chrono::hours(7));
+    write_update_state(install, UpdateState{stale, "\"tag\"", "abc0000-3"});
+    std::string sent_etag;
+    UpdatePolicy policy = policy_for(install, "https://unreachable.invalid/manifest.json", "abc0000-3");
+    policy.fetch = [&sent_etag](const std::string&, const std::string& etag, const fs::path&) -> Reply {
+        sent_etag = etag;
+        ManifestReply reply;
+        reply.not_modified = true;
+        return reply;
+    };
+    const UpdateResult result = update_now(policy);
+    check(result.ok && !result.updated && result.status == "already current", "a 304 is reported as already current");
+    check(sent_etag == "\"tag\"", "the stored etag is sent for the conditional request");
+    const UpdateState after = read_update_state(install);
+    check(after.checked_ms > stale && after.etag == "\"tag\"", "a 304 records the check time and keeps the etag");
+    check(read_text(install / executable_name()) == "old", "a 304 downloads and installs nothing");
+}
+
+void lock_is_exclusive(const fs::path& root) {
+    const fs::path install = root / "lock";
+    const fs::path lock = install / ".gmnew-update.lock";
+    fs::create_directories(install);
+    check(acquire_update_lock(install), "the first updater takes the lock");
+    check(!acquire_update_lock(install), "a second updater is refused while the lock is held");
+    fs::remove_all(lock);
+    check(acquire_update_lock(install), "the lock can be taken again once released");
+    fs::last_write_time(lock, fs::file_time_type::clock::now() - std::chrono::minutes(31));
+    check(acquire_update_lock(install), "a lock older than thirty minutes is taken over");
+    fs::last_write_time(lock, fs::file_time_type::clock::now() - std::chrono::minutes(5));
+    check(!acquire_update_lock(install), "a fresh lock is not taken over");
+    fs::remove_all(lock);
+}
+
+void etag_is_read_from_the_last_response() {
+    check(etag_from_headers("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nETag: \"abc\"\r\n\r\n").value_or("") == "\"abc\"",
+          "the etag of a 200 is read with its quotes");
+    check(etag_from_headers("HTTP/1.1 302 Found\r\netag: \"old\"\r\n\r\nHTTP/2 200\r\netag: W/\"new\"\r\n\r\n").value_or("") ==
+              "W/\"new\"",
+          "after a redirect the etag of the final response is used");
+    check(!etag_from_headers("HTTP/1.1 200 OK\r\n\r\n").has_value(), "a response without an etag gives none");
+}
+
 }
 
 int main() {
@@ -176,6 +258,11 @@ int main() {
     same_version_is_a_no_op(root);
     missing_manifest_is_silent(root);
     rolls_back_a_failed_swap(root);
+    state_round_trips(root);
+    interval_skips_the_network(root);
+    not_modified_refreshes_the_check(root);
+    lock_is_exclusive(root);
+    etag_is_read_from_the_last_response();
 
     fs::remove_all(root);
     std::cout << (failures == 0 ? "update_test passed" : "update_test FAILED") << '\n';

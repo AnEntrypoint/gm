@@ -4,18 +4,25 @@ A single-worker long-horizon loop: one worker, one append-only log, governance r
 
 Status: the MCP server, the skill, the CLI wrapper, the measurement tools, and the search, wiki, review and call-site tools are built and witnessed. The live comparison with gm is closed, with its results in DESIGN.md. Node.js 22 or later; older Node lines are not supported.
 
-Install, once per clone, from the checkout:
+Install the latest release, once per machine. It fetches the release manifest, verifies the archive's sha256 and size, unpacks into `~/.gmnew/current`, and registers gm for Claude Code at user level with add-mcp:
 
-    ./setup.sh
+    curl -fsSL https://raw.githubusercontent.com/AnEntrypoint/gmc/main/scripts/install.sh | sh
 
-The setup installs the one pinned runtime dependency, acorn, runs the gate, fetches the playwriter tools, reports whether a gm entry is registered, and prints three add-mcp commands. add-mcp runs through npx, pinned to version 2.6.1. Run them in this order: list, remove, then install. The first two are:
+Windows, in PowerShell:
 
-    npx -y add-mcp@2.6.1 list -g
-    npx -y add-mcp@2.6.1 remove gm -g -y
+    irm https://raw.githubusercontent.com/AnEntrypoint/gmc/main/scripts/install.ps1 | iex
 
-The third, the install, is printed by setup with this checkout's real absolute path. Copy it from the setup output, not from this file. A registered path that does not exist starts no relay, and gm fails with CONNECTION_CLOSED. `./setup.sh` and `node src/cli.mjs doctor` both report the registered path, and doctor fails when it is missing.
+To register gm with its playwriter config, pass the config path: `sh install.sh --mcp-config <path>`, or `install.ps1 -McpConfig <path>`.
 
-The first only lists. The second removes every gm entry, old or new, from the global configs. It matches any server whose name contains gm, so read the list first. The third installs gm for Claude Code at user level, where the relay starts in each session's folder. setup runs none of them. The manual is `docs/index.html`, chapter 2.
+The registration is add-mcp, pinned to version 2.6.1, run through npx. The command it runs is:
+
+    npx -y add-mcp@2.6.1 <path-to-gmnew> --args serve -n gm -g -a claude-code -y
+
+add-mcp takes the executable as its target and each argument after `--args`, so the command and its arguments are stored apart. Do not put the whole command in one string: add-mcp stores that string as the executable name, and the server cannot start.
+
+Check the registration with `npx -y add-mcp@2.6.1 list -g`. Remove it with `npx -y add-mcp@2.6.1 remove gm -g -y`. The installer re-registers over an existing gm entry, so running it again updates the path.
+
+Auto-update: the server checks the `latest` release at start and every six hours, and downloads a build only when the release has changed. Set `GMNEW_AUTO_UPDATE=0` to turn that off. Development builds never update.
 
 The playwriter fetch is the setup step after the gate. Before it runs, setup prints what it does: it runs `npx -y -p github:AnEntrypoint/pw#v0.1.0 playwriter-project help`, which downloads the browser tool gm uses (pw v0.1.0, which installs playwriter 0.9.0) once into the npm cache, at the path `npm config get cache` prints. The download can take a few minutes on a slow network. The help command starts no gate, browser or server, and the browser starts only on first use. After it, setup prints the result. Setup refuses any Node below 22, the floor the pw package needs, so the fetch always runs. A failed fetch prints its reason and does not stop setup: gm still installs and runs, the playwriter tools are fetched on the first gm start, and `./setup.sh` retries the fetch.
 

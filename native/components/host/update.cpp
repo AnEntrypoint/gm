@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <chrono>
 #include <cstdlib>
 #include <exception>
 #include <fstream>
@@ -26,6 +27,10 @@ constexpr std::uint64_t kArchiveTimeoutMs = 900000;
 constexpr std::string_view kStagingName = ".gmnew-staging";
 constexpr std::string_view kPreviousName = ".gmnew-previous";
 constexpr std::string_view kRetiredSuffix = ".old";
+constexpr std::string_view kStateName = ".gmnew-update.json";
+constexpr std::string_view kLockName = ".gmnew-update.lock";
+constexpr std::chrono::minutes kLockStale{30};
+constexpr std::string_view kEtagHeader = "etag:";
 constexpr std::string_view kSharedDirectories[] = {"leaves", "skills", "defaults"};
 
 struct Rename {
@@ -75,12 +80,20 @@ std::string failure_of(const std::string& what, const proc::Outcome& outcome) {
     return what + " failed (exit " + std::to_string(outcome.exit_code) + ")" + (detail.empty() ? std::string{} : ": " + detail);
 }
 
-deoxidene::Result<std::string, std::string> fetch_text(const std::string& url) {
-    const proc::Outcome outcome =
-        proc::run({"curl", "-fsSL", "--max-time", "60", url}, {}, {}, kManifestTimeoutMs);
-    if (!outcome.started || outcome.timed_out || outcome.exit_code != 0)
-        return deoxidene::Err<std::string>(failure_of("fetch " + url, outcome));
-    return outcome.out;
+std::string read_bytes(const fs::path& path) {
+    std::ifstream in(path, std::ios::binary);
+    return std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+}
+
+std::string_view trimmed(std::string_view text) {
+    const std::size_t first = text.find_first_not_of(" \t\r\n");
+    if (first == std::string_view::npos) return {};
+    const std::size_t last = text.find_last_not_of(" \t\r\n");
+    return text.substr(first, last - first + 1);
+}
+
+std::int64_t now_ms() {
+    return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 }
 
 std::optional<std::string> download(const std::string& url, const fs::path& destination) {
@@ -97,8 +110,7 @@ std::optional<std::string> verify_archive(const fs::path& archive, const Manifes
     if (asset.size != 0 && size != asset.size)
         return "the archive " + asset.file + " is " + std::to_string(size) + " bytes, the manifest says " +
                std::to_string(asset.size);
-    std::ifstream in(archive, std::ios::binary);
-    const std::string bytes((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+    const std::string bytes = read_bytes(archive);
     if (asset.sha256.empty() || lower(mcp::sha256_hex(bytes)) != lower(asset.sha256))
         return "sha256 of " + asset.file + " does not match the manifest; the installed build is kept";
     return std::nullopt;
@@ -123,6 +135,17 @@ std::optional<long long> build_number(std::string_view version) {
 std::string_view commit_prefix(std::string_view version) {
     const std::size_t dash = version.rfind('-');
     return dash == std::string_view::npos ? version : version.substr(0, dash);
+}
+
+bool newer_build(std::string_view offered, std::string_view current_version) {
+    const auto offered_build = build_number(offered);
+    if (!offered_build) return false;
+    const auto have = build_number(current_version);
+    return !have || *offered_build > *have;
+}
+
+bool superseded(const UpdateState& state, std::string_view current_version) {
+    return !state.version.empty() && state.version != current_version && newer_build(state.version, current_version);
 }
 
 std::optional<std::string> move_recorded(const fs::path& from, const fs::path& to, std::vector<Rename>& done) {
@@ -153,6 +176,7 @@ fs::path retired_path([[maybe_unused]] const fs::path& install_dir, const fs::pa
 json::Value UpdateResult::to_json() const {
     json::Value out(json::Object{});
     out.set("ok", ok).set("updated", updated).set("from", from).set("to", to).set("commit", commit).set("target", target_name());
+    if (!status.empty()) out.set("status", status);
     if (!error.empty()) out.set("error", error);
     return out;
 }
@@ -211,10 +235,94 @@ bool is_newer(const Manifest& manifest, std::string_view current_version) {
     if (manifest.version == current_version) return false;
     const std::string_view current_commit = commit_prefix(current_version);
     if (!current_commit.empty() && manifest.commit.starts_with(current_commit)) return false;
-    const auto offered = build_number(manifest.version);
-    if (!offered) return false;
-    const auto have = build_number(current_version);
-    return !have || *offered > *have;
+    return newer_build(manifest.version, current_version);
+}
+
+deoxidene::Result<ManifestReply, std::string> fetch_manifest_over_http(const std::string& url, const std::string& etag,
+                                                                       const fs::path& scratch) {
+    std::error_code ec;
+    fs::create_directories(scratch, ec);
+    const fs::path headers = scratch / "manifest.headers";
+    const fs::path body = scratch / "manifest.json";
+    std::vector<std::string> argv = {"curl", "-fsSL", "--max-time", "60", "-D", headers.string(),
+                                     "-o", body.string(), "-w", "%{http_code}"};
+    if (!etag.empty()) argv.insert(argv.end(), {"-H", "If-None-Match: " + etag});
+    argv.push_back(url);
+    const proc::Outcome outcome = proc::run(argv, {}, {}, kManifestTimeoutMs);
+    if (!outcome.started || outcome.timed_out || outcome.exit_code != 0)
+        return deoxidene::Err<std::string>(failure_of("fetch " + url, outcome));
+    ManifestReply reply;
+    reply.not_modified = trimmed(outcome.out) == "304";
+    if (reply.not_modified) return reply;
+    reply.body = read_bytes(body);
+    reply.etag = etag_from_headers(read_bytes(headers)).value_or("");
+    return reply;
+}
+
+UpdateState read_update_state(const fs::path& install_dir) {
+    UpdateState state;
+    const auto parsed = json::parse(read_bytes(install_dir / kStateName));
+    if (!parsed || !parsed->is_object()) return state;
+    const json::Value* checked = parsed->find("checked_ms");
+    if (checked != nullptr && checked->is_number()) state.checked_ms = static_cast<std::int64_t>(checked->as_number());
+    state.etag = text_member(*parsed, "etag");
+    state.version = text_member(*parsed, "version");
+    return state;
+}
+
+bool write_update_state(const fs::path& install_dir, const UpdateState& state) {
+    json::Value out(json::Object{});
+    out.set("checked_ms", state.checked_ms).set("etag", state.etag).set("version", state.version);
+    const fs::path target = install_dir / kStateName;
+    const fs::path temp = install_dir / (std::string(kStateName) + ".tmp");
+    {
+        std::ofstream file(temp, std::ios::binary | std::ios::trunc);
+        file << json::dump(out);
+        file.close();
+        if (!file) {
+            std::error_code ignored;
+            fs::remove(temp, ignored);
+            return false;
+        }
+    }
+    std::error_code ec;
+    fs::rename(temp, target, ec);
+    if (ec) {
+        std::error_code ignored;
+        fs::remove(temp, ignored);
+    }
+    return !ec;
+}
+
+bool checked_recently(const UpdateState& state, std::int64_t now, std::chrono::hours interval) {
+    const std::int64_t age = now - state.checked_ms;
+    return state.checked_ms > 0 && age >= 0 && age < std::chrono::duration_cast<std::chrono::milliseconds>(interval).count();
+}
+
+std::optional<std::string> etag_from_headers(std::string_view headers) {
+    std::optional<std::string> etag;
+    while (!headers.empty()) {
+        const std::size_t end = headers.find('\n');
+        const std::string_view line = trimmed(headers.substr(0, end));
+        headers = end == std::string_view::npos ? std::string_view{} : headers.substr(end + 1);
+        if (line.starts_with("HTTP/")) {
+            etag.reset();
+        } else if (lower(std::string(line.substr(0, kEtagHeader.size()))) == kEtagHeader) {
+            etag = std::string(trimmed(line.substr(kEtagHeader.size())));
+        }
+    }
+    return etag;
+}
+
+bool acquire_update_lock(const fs::path& install_dir) {
+    const fs::path lock = install_dir / kLockName;
+    std::error_code ec;
+    if (fs::create_directory(lock, ec)) return true;
+    const fs::file_time_type modified = fs::last_write_time(lock, ec);
+    if (ec || fs::file_time_type::clock::now() - modified < kLockStale) return false;
+    fs::remove_all(lock, ec);
+    if (ec) return false;
+    return fs::create_directory(lock, ec);
 }
 
 UpdatePolicy policy_from_environment(const fs::path& install_dir) {
@@ -281,18 +389,51 @@ UpdateResult failed(UpdateResult result, std::string error) {
     return result;
 }
 
+UpdateResult current_build(UpdateResult result, const UpdatePolicy& policy, std::string status) {
+    result.ok = true;
+    result.to = policy.current_version;
+    result.status = std::move(status);
+    return result;
+}
+
 UpdateResult update_once(const UpdatePolicy& policy, UpdateResult result) {
     const fs::path staging = policy.install_dir / kStagingName;
     const ScopedRemoval cleanup(staging);
 
-    auto text = fetch_text(policy.url);
-    if (!text) return failed(std::move(result), text.error());
-    auto manifest = parse_manifest(*text);
+    UpdateState state = read_update_state(policy.install_dir);
+    if (checked_recently(state, now_ms(), policy.interval)) return current_build(std::move(result), policy, "already current");
+    if (!acquire_update_lock(policy.install_dir))
+        return current_build(std::move(result), policy, "another update is running");
+    const ScopedRemoval unlock(policy.install_dir / kLockName);
+
+    state = read_update_state(policy.install_dir);
+    if (checked_recently(state, now_ms(), policy.interval)) return current_build(std::move(result), policy, "already current");
+    if (superseded(state, policy.current_version)) {
+        result = current_build(std::move(result), policy, "installed by another process");
+        result.to = state.version;
+        return result;
+    }
+
+    auto reply = policy.fetch(policy.url, state.etag, staging);
+    if (!reply) return failed(std::move(result), reply.error());
+    if (reply->not_modified) {
+        state.checked_ms = now_ms();
+        write_update_state(policy.install_dir, state);
+        return current_build(std::move(result), policy, "already current");
+    }
+    auto manifest = parse_manifest(reply->body);
     if (!manifest) return failed(std::move(result), manifest.error());
     result.to = manifest->version;
     result.commit = manifest->commit;
     result.ok = true;
-    if (!is_newer(*manifest, policy.current_version)) return result;
+    state.etag = reply->etag;
+    if (!is_newer(*manifest, policy.current_version)) {
+        state.checked_ms = now_ms();
+        state.version = manifest->version;
+        write_update_state(policy.install_dir, state);
+        result.status = "already current";
+        return result;
+    }
 
     const std::string target = target_name();
     const auto asset = manifest->assets.find(target);
@@ -308,7 +449,11 @@ UpdateResult update_once(const UpdatePolicy& policy, UpdateResult result) {
     if (auto error = unpack(archive, unpacked)) return failed(std::move(result), *error);
     if (auto error = install_staged(unpacked / ("gmnew-" + target), policy.install_dir))
         return failed(std::move(result), *error);
+    state.checked_ms = now_ms();
+    state.version = manifest->version;
+    write_update_state(policy.install_dir, state);
     result.updated = true;
+    result.status = "updated";
     return result;
 }
 
