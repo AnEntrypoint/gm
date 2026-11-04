@@ -28,4 +28,6 @@ if(GMNEW_BUILD_TESTS)
     add_subdirectory(tests)
 endif()
 
+set(GMNEW_VERSION "dev" CACHE STRING "Version stamped into gmnew builds")
+
 add_subdirectory(native)

@@ -15,6 +15,7 @@
 #include <vector>
 
 #include "gmnew/host/child.hpp"
+#include "gmnew/host/update.hpp"
 #include "gmnew/json.hpp"
 
 namespace gmnew::host {
@@ -39,6 +40,9 @@ struct RelayOptions {
     std::chrono::milliseconds retry_min{1000};
     std::chrono::milliseconds retry_max{30000};
     std::function<void(std::string_view)> say;
+    std::vector<std::string> reexec_argv;
+    std::optional<json::Value> initialize;
+    std::optional<UpdatePolicy> update;
 };
 
 class Relay {
@@ -52,6 +56,7 @@ public:
     void host_line(std::string line);
     void host_closed();
     void request_restart(std::string reason);
+    void reexec();
 
     std::uint64_t restarts() const;
     std::uint64_t failed_builds() const;
@@ -66,6 +71,7 @@ private:
     };
 
     void control_loop();
+    void update_loop();
     void read_loop(std::shared_ptr<Child> child);
     void route_host_line(Lock& lock, std::string line);
     void send_to_worker(Lock& lock, const std::string& line);
@@ -99,6 +105,8 @@ private:
     std::shared_ptr<Child> child_;
     std::thread reader_;
     std::thread control_;
+    std::thread updater_;
+    bool reexec_pending_ = false;
     std::map<std::string, std::string> inflight_;
     std::map<std::string, std::shared_ptr<Waiter>> waiters_;
     std::vector<std::string> held_;

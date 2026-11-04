@@ -1,13 +1,17 @@
 #include "gmnew/host/relay.hpp"
 
 #include <algorithm>
+#include <cerrno>
 #include <cstdio>
+#include <cstring>
 #include <iostream>
 
 #include "gmnew/proc.hpp"
 
 #if !defined(_WIN32)
+#include <poll.h>
 #include <signal.h>
+#include <unistd.h>
 #endif
 
 namespace gmnew::host {
@@ -71,10 +75,44 @@ std::string last_lines(const std::string& text, std::size_t max_bytes) {
     return text.size() <= max_bytes ? text : text.substr(text.size() - max_bytes);
 }
 
+#if !defined(_WIN32)
+void pump_host_stdin(Relay& relay) {
+    std::string buffer;
+    char chunk[65536];
+    for (;;) {
+        if (buffer.empty()) relay.reexec();
+        pollfd input{0, POLLIN, 0};
+        if (::poll(&input, 1, 200) < 0) {
+            if (errno == EINTR) continue;
+            return;
+        }
+        if (input.revents == 0) continue;
+        const ssize_t count = ::read(0, chunk, sizeof chunk);
+        if (count < 0) {
+            if (errno == EINTR || errno == EAGAIN) continue;
+            return;
+        }
+        if (count == 0) {
+            if (!buffer.empty()) relay.host_line(std::move(buffer));
+            return;
+        }
+        buffer.append(chunk, static_cast<std::size_t>(count));
+        for (std::size_t end = buffer.find('\n'); end != std::string::npos; end = buffer.find('\n')) {
+            std::string line = buffer.substr(0, end);
+            buffer.erase(0, end + 1);
+            if (!line.empty() && line.back() == '\r') line.pop_back();
+            relay.host_line(std::move(line));
+        }
+    }
+}
+#endif
+
 }
 
 Relay::Relay(RelayOptions options, std::function<void(std::string_view)> to_host)
-    : options_(std::move(options)), to_host_(std::move(to_host)), retry_delay_(options_.retry_min) {}
+    : options_(std::move(options)), to_host_(std::move(to_host)), retry_delay_(options_.retry_min) {
+    host_initialize_ = options_.initialize;
+}
 
 Relay::~Relay() {
     bool gone;
@@ -102,11 +140,14 @@ void Relay::start() {
     sources_changed(restart_roots(), source_stamps_);
     sources_changed(options_.build_roots, build_stamps_);
     Lock lock(mutex_);
-    if (spawn_worker(lock))
-        mark_running(lock);
-    else
+    if (!spawn_worker(lock))
         fail_with(lock, failure_);
+    else if (!replay_handshake(lock))
+        fail_with(lock, "the worker did not answer the handshake");
+    else
+        mark_running(lock);
     control_ = std::thread([this] { control_loop(); });
+    if (options_.update && options_.update->enabled) updater_ = std::thread([this] { update_loop(); });
 }
 
 bool Relay::spawn_worker(Lock&) {
@@ -364,6 +405,58 @@ void Relay::request_restart(std::string reason) {
     changed_.notify_all();
 }
 
+void Relay::reexec() {
+#if !defined(_WIN32)
+    Lock lock(mutex_);
+    if (!reexec_pending_ || options_.reexec_argv.empty() || state_ != State::Running || !inflight_.empty() || swapping_ ||
+        host_gone_)
+        return;
+    reexec_pending_ = false;
+    state_ = State::Restarting;
+    say("re-executing the relay on the new build");
+    stop_worker(lock);
+    std::vector<std::string> argv = options_.reexec_argv;
+    if (host_initialize_) {
+        argv.emplace_back("--handshake");
+        argv.push_back(json::dump(*host_initialize_));
+    }
+    std::vector<char*> arguments;
+    for (std::string& argument : argv) arguments.push_back(argument.data());
+    arguments.push_back(nullptr);
+    lock.unlock();
+    {
+        std::lock_guard out(output_mutex_);
+        std::fflush(stdout);
+        ::execv(argv.front().c_str(), arguments.data());
+    }
+    lock.lock();
+    fail_with(lock, std::string("the relay could not re-execute (") + std::strerror(errno) + ")");
+#endif
+}
+
+void Relay::update_loop() {
+    const UpdatePolicy policy = *options_.update;
+    Lock lock(mutex_);
+    while (!host_gone_) {
+        lock.unlock();
+        const UpdateResult result = update_now(policy);
+        lock.lock();
+        if (host_gone_) break;
+        if (!result.ok) {
+            say("update skipped: " + result.error);
+        } else if (result.updated) {
+            say("updated " + result.from + " -> " + result.to);
+#if defined(_WIN32)
+            say("the relay keeps the previous build until it restarts; the worker runs the new build");
+#else
+            reexec_pending_ = true;
+#endif
+            changed_.notify_all();
+        }
+        changed_.wait_for(lock, policy.interval, [&] { return host_gone_; });
+    }
+}
+
 std::optional<std::string> Relay::sources_changed(const std::vector<std::filesystem::path>& roots, SourceStamps& stamps) {
     SourceStamps now;
     for (const auto& root : roots) {
@@ -452,6 +545,7 @@ void Relay::host_closed() {
     say("host closed the connection; ending the worker");
     lock.unlock();
     if (control_.joinable()) control_.join();
+    if (updater_.joinable()) updater_.join();
     lock.lock();
     std::shared_ptr<Child> child = child_;
     lock.unlock();
@@ -498,11 +592,15 @@ int serve_stdio(RelayOptions options) {
         std::fflush(stdout);
     });
     relay.start();
+#if defined(_WIN32)
     std::string line;
     while (std::getline(std::cin, line)) {
         if (!line.empty() && line.back() == '\r') line.pop_back();
         relay.host_line(std::move(line));
     }
+#else
+    pump_host_stdin(relay);
+#endif
     relay.host_closed();
     return 0;
 }

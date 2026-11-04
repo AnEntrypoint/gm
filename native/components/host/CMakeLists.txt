@@ -1,8 +1,12 @@
-add_library(gmnew_host STATIC child.cpp composed_verbs.cpp relay.cpp options.cpp primitives.cpp cli.cpp)
+set(GMNEW_VERSION "dev" CACHE STRING "Version of this build, reported by gmnew --version and checked by gmnew update")
+
+add_library(gmnew_host STATIC child.cpp composed_verbs.cpp relay.cpp options.cpp primitives.cpp cli.cpp update.cpp)
 target_include_directories(gmnew_host PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_CURRENT_SOURCE_DIR}/../../include)
-target_link_libraries(gmnew_host PUBLIC deoxidene::deoxidene gmnew_json gmnew_log gmnew_proc gmnew_runcode)
+target_link_libraries(gmnew_host PUBLIC deoxidene::deoxidene gmnew_json gmnew_log gmnew_proc gmnew_runcode
+                                        $<TARGET_NAME_IF_EXISTS:gmnew_mcp>)
 target_compile_definitions(gmnew_host PRIVATE GMNEW_SOURCE_DIR="${PROJECT_SOURCE_DIR}"
                                               GMNEW_BUILD_DIR="${PROJECT_BINARY_DIR}")
+target_compile_definitions(gmnew_host PUBLIC GMNEW_BUILD_VERSION="${GMNEW_VERSION}")
 
 add_executable(gmnew main.cpp serve.cpp)
 target_link_libraries(gmnew PRIVATE gmnew_host)
@@ -17,6 +21,9 @@ if(GMNEW_BUILD_TESTS)
     target_compile_definitions(gmnew_cli_test PRIVATE GMNEW_BINARY="$<TARGET_FILE:gmnew>")
     add_dependencies(gmnew_cli_test gmnew)
     add_test(NAME gmnew_cli_test COMMAND gmnew_cli_test)
+    add_executable(gmnew_update_test tests/update_test.cpp)
+    target_link_libraries(gmnew_update_test PRIVATE gmnew_host)
+    add_test(NAME gmnew_update_test COMMAND gmnew_update_test)
 endif()
 
 function(gmnew_host_link_worker)

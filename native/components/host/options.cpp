@@ -3,6 +3,9 @@
 #include <chrono>
 #include <ctime>
 #include <random>
+#include <system_error>
+
+#include "gmnew/host/child.hpp"
 
 namespace gmnew::host {
 
@@ -86,10 +89,20 @@ std::filesystem::path workspace_of(const HostArgs& args) {
     return args.path_or("--workspace", std::filesystem::current_path());
 }
 
-std::filesystem::path leaves_dir_of(const HostArgs& args) {
-    return args.path_or("--leaves", source_root() / "native" / "leaves");
+std::filesystem::path installed_or(std::string_view name, const std::filesystem::path& fallback) {
+    const std::filesystem::path candidate = current_executable().parent_path() / name;
+    std::error_code ec;
+    return std::filesystem::is_directory(candidate, ec) ? candidate : fallback;
 }
 
-std::filesystem::path skills_dir_of(const HostArgs& args) { return args.path_or("--skills", source_root() / "skills"); }
+std::filesystem::path leaves_dir_of(const HostArgs& args) {
+    return args.path_or("--leaves", installed_or("leaves", source_root() / "native" / "leaves"));
+}
+
+std::filesystem::path skills_dir_of(const HostArgs& args) {
+    return args.path_or("--skills", installed_or("skills", source_root() / "skills"));
+}
+
+std::filesystem::path defaults_dir_of() { return installed_or("defaults", source_root() / "defaults"); }
 
 }

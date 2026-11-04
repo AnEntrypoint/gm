@@ -30,6 +30,7 @@ std::filesystem::path default_build_dir();
 std::filesystem::path workspace_of(const HostArgs& args);
 std::filesystem::path leaves_dir_of(const HostArgs& args);
 std::filesystem::path skills_dir_of(const HostArgs& args);
+std::filesystem::path defaults_dir_of();
 
 int run_serve(const HostArgs& args);
 int run_worker(const HostArgs& args);

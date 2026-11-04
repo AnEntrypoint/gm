@@ -136,7 +136,7 @@ int run_worker(const HostArgs& args) {
     BootEvents boot_events;
     mcpclient::Options mcp_options;
     mcp_options.workspace = workspace;
-    mcp_options.config_files = {{source_root() / "defaults" / "mcp.json", true}, {workspace / ".gm-new" / "mcp.json", false}};
+    mcp_options.config_files = {{defaults_dir_of() / "mcp.json", true}, {workspace / ".gm-new" / "mcp.json", false}};
     if (auto config = args.flag("--mcp-config")) mcp_options.config_files.push_back({std::filesystem::absolute(*config), true});
     mcp_options.depth = mcpclient::depth_from_environment();
     for (const VerbInfo& verb : (*native)->list()) mcp_options.reserved.insert(verb.name);
