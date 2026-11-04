@@ -313,3 +313,13 @@ Left out, and why:
 - The Rust port (rust/src/mcp.rs, rust/src/skills.rs) is not changed. It needs the same protocol surface: the capabilities, the serverInfo title, the RESOURCES_POINTER text, the four templates and the run resources with their annotations, skill annotations, `_meta` com.anentrypoint.gmnew/seq, progress for run_code, outputSchema and structuredContent for the three tools, logging/setLevel and notifications/message, completion/complete, resources/subscribe with a file watcher, the two list_changed notices, and the TASK_ARGUMENT text.
 
 Owner decision open: whether the relay should replay the host's initialize, logging/setLevel and subscriptions to a worker it starts after a swap.
+
+## Structured content carries the whole reply (2026-11-04)
+
+Cause: commit 84f508a (MCP features A to I, 10:11 +0200) returned structuredContent for next_context, run_code and finish with only the fields named in STRUCTURED_FIELDS. The host shows structuredContent in place of the text, so run_code lost `output` and next_context lost its rules, task and feed. The result event still logged the output, so the log and the reply disagreed. Run 2026-11-04-07-55-51-193104 ran the server before 84f508a (tools sha e3b27c9d, now cc60d9) and its run_code replies had output.
+
+Not the trigger: a body that outlives its budget. Witness on a git archive of 84f508a (scratch, driver /tmp/gm-scratch/mcp-features/drive.mjs, input /tmp/gm-scratch/outfix/bg.jsonl): `return 'probe'` gave text output "probe" and structuredContent {"ok":true,"actionSeq":8,"truncated":false}. A body with timeoutMs 1000 that sleeps 3 s gave background body-11, state running. While it ran, `return 'during-bg'` gave text output "during-bg" and structuredContent without output, and after it ended `return 'after-bg'` did the same. Each result event logged its output (seqs 10, 15 and 18).
+
+Fix: structuredContent is the whole reply, as in 9b7ba65 (section D above). Witness on a git archive of 9b7ba65 (scratch, /tmp/gm-scratch/outfix/after): `return 'probe'` gave structuredContent {"ok":true,"output":"\"probe\"","truncated":false,"loads":[],"actionSeq":8}, the background case gave the same as above with output in every run_code reply, and next_context's structuredContent carries rules and the feed. Live, after the update: `return 'live-probe-after-fix'` at actionSeq 39 returned output "\"live-probe-after-fix\"".
+
+Trade-off: each reply is sent twice on the wire, as text and as structuredContent. The model sees one copy, because the host shows structuredContent. The logged preview (loggedFor) is unchanged. The CLI's scripted path builds no MCP reply, so `gmnew run` cannot show this; it was checked through the MCP driver only.
