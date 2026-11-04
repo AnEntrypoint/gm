@@ -17,6 +17,9 @@ const VALUE_WIDTH = 160;
 const FIXED_DATE = '2026-01-01T00:00:00Z';
 const STOPPED_PID_FILE = 'stopped-body.pid';
 const STOPPED_SLEEP_S = 4711;
+const STOPPED_FETCH_KIND = 'code-call:stopped-fetch';
+const SUBSCRIBE_ERROR_KIND = 'error:resources/subscribe';
+const NATIVE_AHEAD_KINDS = [STOPPED_FETCH_KIND, SUBSCRIBE_ERROR_KIND];
 
 function extractReference() {
   rmSync(REF, { recursive: true, force: true });
@@ -141,6 +144,11 @@ function scenarios({ head, url }) {
     ['initialized', { method: 'notifications/initialized', notify: true }],
     ['tools/list', { method: 'tools/list', params: {} }],
     ['next_context', call('next_context', {})],
+    ['resources/read missing', { method: 'resources/read', params: { uri: 'skill://gm/NOPE.md' } }],
+    ['tools/call unknown tool', call('no_such_tool', {})],
+    ['prompts/get unknown', { method: 'prompts/get', params: { name: 'no-such-prompt' } }],
+    ['skills/get unknown', { method: 'skills/get', params: { uri: 'skill://gm/NOPE.md' } }],
+    ['resources/subscribe', { method: 'resources/subscribe', params: { uri: 'skill://gm/SKILL.md' } }],
     ['read_file', code("return await gm.read_file({ path: 'README.md' });")],
     ['read_file offset', code("return await gm.read_file({ path: 'README.md', offset: 1, limit: 1 });")],
     ['read_file missing', code("return await gm.read_file({ path: 'missing.txt' });")],
@@ -176,6 +184,18 @@ function scenarios({ head, url }) {
     ['run_code background', call('run_code', { body: `await gm.read_file({ path: 'README.md' }); return await gm.fetch({ url: '${url}/hang', timeoutMs: 60000 });`, timeoutMs: 300 })],
     ['job_status background', (replies) => code(`return await gm.job_status({ job: '${backgroundName(replies)}' });`)],
     ['run_code background shell', call('run_code', { body: `return await gm.run_shell({ command: 'echo $$ > ${STOPPED_PID_FILE}; exec sleep ${STOPPED_SLEEP_S}', timeoutMs: 60000 });`, timeoutMs: 300 })],
+    ['run_code esm static import', call('run_code', { body: "import { join } from 'node:path';\nreturn join('a', 'b');", format: 'esm' })],
+    ['run_code esm dynamic import', call('run_code', { body: "const os = await import('node:os');\nreturn typeof os.platform;", format: 'esm' })],
+    ['run_code esm require', call('run_code', { body: "return require('node:path').join('a', 'b');", format: 'esm' })],
+    ['run_code cjs require', call('run_code', { body: "return require('node:path').join('a', 'b');", format: 'cjs' })],
+    ['run_code default require', call('run_code', { body: "return require('node:path').join('a', 'b');" })],
+    ['run_code cjs static import', call('run_code', { body: "import { join } from 'node:path';\nreturn join('a', 'b');", format: 'cjs' })],
+    ['run_code cjs non-literal require', call('run_code', { body: "const spec = 'node:path';\nreturn require(spec);", format: 'cjs' })],
+    ['run_code write project module', code("return await gm.write_file({ path: 'lib/add.mjs', content: 'export const add = (a, b) => a + b;\\n' });")],
+    ['run_code esm project import', call('run_code', { body: "import { add } from './lib/add.mjs';\nreturn add(2, 3);", format: 'esm' })],
+    ['run_code bad format', call('run_code', { body: 'return 1;', format: 'mjs' })],
+    ['run_code write package type', code("return await gm.write_file({ path: 'package.json', content: JSON.stringify({ type: 'module' }) + '\\n' });")],
+    ['run_code default format follows package type', call('run_code', { body: "import { join } from 'node:path';\nreturn join('a', 'b');" })],
     ['finish', call('finish', { witness: 'parity harness witness: every scenario ran', stopBackground: true })],
     ['next_context after finish', call('next_context', {})],
   ];
@@ -239,6 +259,7 @@ function normalizer(side, spaces) {
     [/\bpid \d+/g, 'pid <N>'],
     [/(the body does not load: ).*?(?= \(line \d+, column \d+\)$)/gm, '$1<ENGINE-MESSAGE>'],
     [/\b\d+(\.\d+)? ?ms\b/g, '<N>ms'],
+    [/\bbody-\d+(-\d+)?\b/g, 'body-<N>'],
   ];
   const text = (value) => {
     let out = value;
@@ -307,17 +328,67 @@ function isSeqPath(path) {
   return /(\.actionSeq|gmnew\/seq)$/.test(path);
 }
 
+const SUBSCRIPTIONS_REASON = 'native removed resources/subscribe: it answers -32601, and subscriptions/listen is the surface (2026-07-28 subscriptions page); Node still serves resources/subscribe';
+const CAPABILITY_REASON = 'native no longer advertises resources.subscribe, since subscriptions/listen replaces it (2026-07-28 subscriptions page); Node still advertises it';
+const namesAfter = (name) => {
+  const names = scenarios({ head: '', url: '' }).map(([row]) => row);
+  return new Set(names.slice(names.indexOf(name) + 1));
+};
+const CASCADE_ROWS = namesAfter('resources/subscribe');
+const REFUSAL_ROWS = namesAfter('run_code cjs static import');
+const SEQ_PATH = /(^|\.)(seq|actionSeq|body|logged\[\d+\]\.seq)$|\.output\.(output\.)?(seq|body)$|\/seq$/;
+const BODY_RESULT_PATH = /^\.result\.(isError|(content\[0\]\.text|structuredContent)\.(ok|output|truncated|error))$/;
+const nativeFailed = (left, right) => right === undefined || typeof right === 'string' || (typeof right === 'boolean' && right !== left);
+const BUILTIN_IMPORT_ROWS = new Set(['run_code esm static import', 'run_code esm dynamic import', 'run_code esm require', 'run_code cjs require', 'run_code default require', 'run_code default format follows package type']);
+const BUILTIN_REASON = 'documented gap: native runs a body with gm only and passes it no require, and its module loader reads files from disk, so require() and import of node: builtins fail; Node passes require to every body and loads node: builtins';
+const STATIC_REFUSAL_REASON = 'documented gap: native does not refuse a static import in a CommonJS body; the body fails in the JS engine with a load error and logs no refusal';
+const REQUIRE_REFUSAL_REASON = 'documented gap: native does not refuse a non-literal require(); the body reaches the missing require() and fails at run time, and logs no refusal';
+const LOAD_EVENT_REASON = 'documented gap: native does not list a project file that a body loads, and logs no code-load event for it; Node does both';
+const BOOT_SURFACE_REASON = 'native-ahead: the handshake no longer waits for MCP, so the boot tools event is written before the MCP verbs join; Node has the verbs at boot and writes the server, gitignore and skipped events before its tools event';
+const JOIN_SEQ_REASON = 'native-ahead: native writes the MCP join events (mcp-server connected, gitignore added, mcp-tool-skipped) after its first run_code call, so that call is three sequence numbers lower than Node, which writes them at boot';
+const JOIN_GENERATION_REASON = 'native-ahead: native logs one generation event after the first MCP run, when the .gitignore the join adds changes the project fingerprint, so every later sequence number is one higher than Node';
+const MCP_ROWS = mcpScenarios().map(([name]) => `mcp ${name}`);
+const MCP_AFTER_BROWSERS = new Set(MCP_ROWS.slice(MCP_ROWS.indexOf('mcp mcp browsers') + 1));
+const REFUSAL_SEQ_REASON ='documented gap: native logs no refusal event (two here) and no code-load event (one here), so each later sequence number is one or two lower than Node';
 const NATIVE_AHEAD = [
-  { path: /^\.result\.capabilities\.resources\.subscribe$/, reason: 'native does not declare resources.subscribe: subscriptions/listen is not served' },
   { path: /^\.result\.(ttlMs|cacheScope)$/, reason: 'native adds ttlMs and cacheScope to complete list and read results (MCP 2026-07-28 caching)' },
   { path: /^\.result\.tools\[\d+\]\.(title|annotations)(\.|$)/, reason: 'native adds a title and tool annotations (MCP 2026-07-28 tools)' },
   { path: /^\.result\.(content\[0\]\.text|structuredContent)\.events\[\d+\]\.sha$/, reason: 'the tools event sha covers the tool list, which native now titles and annotates' },
-  { path: /^\.count\.code-call$/, reason: 'stopBackground kills a fetch that a background body started: native owns its curl to the body (proc::kill_owned) and logs the fetch code-call at the stop; Node fetch runs in-process, stopBackground does not reach it, so it logs no code-call before end' },
-  { path: /^\.firstDivergence\[\d+\]$/, reason: 'the event order follows from the stopped fetch code-call above' },
+  { row: 'resources/read missing', path: /^\.error\.code$/, when: (left, right) => left === -32002 && right === -32602, reason: 'native answers a missing resource with -32602 and data.uri, never an empty contents (AGENTS.md: -32002 is accepted only by clients); Node answers -32002 as the 2025-11-25 spec page does, and the error data matches' },
+  { row: 'log event kinds', path: /^\.count\.code-call:stopped-fetch$/, when: (left, right) => left === undefined && right === 1, reason: 'stopBackground kills a fetch that a background body started: native owns its curl to the body (proc::kill_owned) and logs the fetch code-call after the stopBackground job-killed; Node fetch runs in-process, stopBackground does not reach it, so it logs no code-call before end' },
+  { row: 'log event kinds', path: /^\.count\.error:resources\/subscribe$/, when: (left, right) => left === undefined && right === 1, reason: SUBSCRIPTIONS_REASON },
+  { row: 'resources/subscribe', path: /^\.result$/, when: (left, right) => right === undefined, reason: SUBSCRIPTIONS_REASON },
+  { row: 'resources/subscribe', path: /^\.error$/, when: (left, right) => left === undefined && right?.code === -32601, reason: SUBSCRIPTIONS_REASON },
+  { row: 'log event kinds', path: /^\.firstDivergence\[\d+\]$/, when: (left, right) => [left, right].some((window) => NATIVE_AHEAD_KINDS.some((kind) => window.includes(kind))), reason: 'the event order follows from the stopped fetch code-call and the resources/subscribe error above' },
+  { row: /^(initialize|mcp initialize)$/, path: /^\.result\.instructions$/, reason: 'native names subscriptions/listen in the resources pointer of its instructions; Node still names resources/subscribe' },
+  { row: 'job_status', path: /^\.result\.(content\[0\]\.text|structuredContent)\.output\.timeoutMs$/, when: (left, right) => left === undefined, reason: 'native job_status reports the effective deadline as timeoutMs (search and jobs change, default 300000 ms); Node does not report it' },
+  { row: CASCADE_ROWS, path: SEQ_PATH, when: (left, right) => Number.isInteger(left) && right === left + 1, reason: 'native logs one more event than Node, the resources/subscribe error (native-ahead above), so every later sequence number is one higher' },
+  { row: /^(initialize|mcp initialize)$/, path: /^\.result\.capabilities\.resources\.subscribe$/, when: (left, right) => right === undefined, reason: CAPABILITY_REASON },
+  { row: BUILTIN_IMPORT_ROWS, path: BODY_RESULT_PATH, when: nativeFailed, reason: BUILTIN_REASON, gap: true },
+  { row: 'run_code cjs static import', path: /^\.result\.(content\[0\]\.text|structuredContent)\.error$/, when: (left, right) => [left, right].every((text) => typeof text === 'string' && text.startsWith('refused: a CommonJS body cannot use a static import;')), reason: STATIC_REFUSAL_REASON, gap: true },
+  { row: 'run_code cjs static import', path: /^\.result\.(content\[0\]\.text|structuredContent)\.loads$/, when: (left, right) => left === undefined && Array.isArray(right), reason: STATIC_REFUSAL_REASON, gap: true },
+  { row: /^(tools\/list|mcp tools\/list)$/, path: /^\.result\.tools\[\d+\]\.description$/, when: (left, right) => [left, right].every((text) => typeof text === 'string' && text.startsWith('Run a JavaScript body in the project.')), reason: 'documented gap: native\'s run_code description omits require() and calls a CommonJS body a script, since native has no require(); Node\'s description names both', gap: true },
+  { row: new Set(['next_context', 'next_context after finish']), path: /^\.result\.(content\[0\]\.text|structuredContent)\.prefixSha$/, when: (left, right) => typeof left === 'string' && typeof right === 'string', reason: 'documented gap: the served prefix hashes the run_code description, which native words differently (see the tools/list row)', gap: true },
+  { row: 'mcp next_context', path: /^\.result\.(content\[0\]\.text|structuredContent)\.(records|fullEvents)$/, when: (left, right) => Number.isInteger(left) && Number.isInteger(right) && left > right, reason: BOOT_SURFACE_REASON },
+  { row: 'mcp next_context', path: /^\.result\.(content\[0\]\.text|structuredContent)\.events\[[3-7]\](\.[A-Za-z]+)?$/, reason: BOOT_SURFACE_REASON },
+  { row: 'mcp next_context', path: /^\.result\.(content\[0\]\.text|structuredContent)\.query$/, when: (left, right) => typeof left === 'string' && typeof right === 'string', reason: BOOT_SURFACE_REASON },
+  { row: 'mcp log event kinds', path: /^\.firstDivergence\[4\]$/, when: (left, right) => left[0] === 'mcp-server' && right[0] === 'tools', reason: BOOT_SURFACE_REASON },
+  { row: 'mcp mcp echo', path: SEQ_PATH, when: (left, right) => Number.isInteger(left) && left - right === 3, reason: JOIN_SEQ_REASON },
+  { row: MCP_AFTER_BROWSERS, path: SEQ_PATH, when: (left, right) => Number.isInteger(left) && right === left + 1, reason: JOIN_GENERATION_REASON },
+  { row: 'mcp notifications', path: /^\[0\]$/, when: (left, right) => left === 'notifications/resources/list_changed' && right === 'notifications/tools/list_changed', reason: 'native announces its tool list (notifications/tools/list_changed) first when its MCP servers are ready; Node announces resources first and no tool list' },
+  { row: 'mcp notifications', path: /^\[1\]$/, when: (left, right) => left === undefined && right === 'notifications/resources/list_changed', reason: 'native announces resources (notifications/resources/list_changed) after the tool list on ready; Node sends one resources list_changed' },
+  { row: 'mcp next_context', path: /^\.result\.(content\[0\]\.text|structuredContent)\.prefixSha$/, when: (left, right) => typeof left === 'string' && typeof right === 'string', reason: 'documented gap: native serves its tool table before the MCP servers join, so the boot tools event and the prefix hash omit the MCP verbs; the body table waits for them', gap: true },
+  { row: 'mcp next_context', path: /^\.result\.(content\[0\]\.text|structuredContent)\.total$/, when: (left, right) => Number.isInteger(left) && Number.isInteger(right) && left > right, reason: 'documented gap: the MCP server events are recorded after the boot tools event, which native writes before the MCP verbs join, so at this call native holds fewer events than Node', gap: true },
+  { row: 'mcp log event kinds', path: /^\.count\.generation$/, when: (left, right) => left === 1 && right === 2, reason: 'documented gap: native writes its boot tools event before the MCP verbs join, so the first run_code body sees a changed tool table and bumps the generation once more; Node has the MCP verbs at boot', gap: true },
+  { row: 'run_code cjs non-literal require', path: /^\.result\.(content\[0\]\.text|structuredContent)\.(error|loads)$/, when: (left, right) => left === undefined || nativeFailed(left, right), reason: REQUIRE_REFUSAL_REASON, gap: true },
+  { row: 'run_code esm project import', path: /^\.result\.(content\[0\]\.text|structuredContent)\.loads\[0\]$/, when: (left, right) => right === undefined, reason: LOAD_EVENT_REASON, gap: true },
+  { row: 'log event kinds', path: /^\.count\.(refusal|code-load)$/, when: (left, right) => right === undefined, reason: LOAD_EVENT_REASON, gap: true },
+  { row: REFUSAL_ROWS, path: SEQ_PATH, when: (left, right) => Number.isInteger(left) && (left - right === 1 || left - right === 2), reason: REFUSAL_SEQ_REASON, gap: true },
 ];
 
-function nativeAheadOf(path) {
-  return NATIVE_AHEAD.find((entry) => entry.path.test(path));
+function nativeAheadOf(row, path, left, right) {
+  const rowMatches = (entry) => !entry.row || (entry.row instanceof Set ? entry.row.has(row) : entry.row instanceof RegExp ? entry.row.test(row) : entry.row === row);
+  return NATIVE_AHEAD.find((entry) => rowMatches(entry) && entry.path.test(path) && (!entry.when || entry.when(left, right)));
 }
 
 function mirroredInText(path, diffs) {
@@ -329,9 +400,13 @@ function mirroredInText(path, diffs) {
 function logKinds(runDir) {
   const file = join(runDir, 'log.jsonl');
   if (!existsSync(file)) return [`no log at ${file}`];
+  let stopped = false;
   return readFileSync(file, 'utf8').split('\n').filter(Boolean).map((line) => {
     try {
       const event = JSON.parse(line);
+      if (event.kind === 'job-killed' && event.reason === 'stopBackground') stopped = true;
+      if (event.kind === 'code-call' && stopped && event.tool === 'fetch' && /\/hang$/.test(event.args?.url ?? '')) return STOPPED_FETCH_KIND;
+      if (event.kind === 'error' && event.method === 'resources/subscribe') return SUBSCRIBE_ERROR_KIND;
       return event.kind === 'action' || event.kind === 'result' ? `${event.kind}:${event.tool ?? event.name ?? ''}` : event.kind;
     } catch {
       return 'unparsed';
@@ -482,9 +557,10 @@ async function main() {
     const classified = rows.map(([name, diffs]) => {
       const cutover = diffs.filter(([path]) => isCutoverPath(path));
       const counted = diffs.filter(([path]) => !isCutoverPath(path));
-      const ahead = counted.filter(([path]) => nativeAheadOf(path));
-      const real = counted.filter(([path]) => !isSeqPath(path) && !nativeAheadOf(path));
-      const verdict = diffs.length === 0 ? 'match' : counted.length === 0 ? 'cutover-expected' : real.length === 0 ? (ahead.length > 0 ? 'native-ahead' : 'seq-only') : 'diff';
+      const ahead = counted.filter(([path, left, right]) => nativeAheadOf(name, path, left, right));
+      const real = counted.filter(([path, left, right]) => !isSeqPath(path) && !nativeAheadOf(name, path, left, right));
+      const gapped = ahead.some(([path, left, right]) => nativeAheadOf(name, path, left, right).gap);
+      const verdict = diffs.length === 0 ? 'match' : counted.length === 0 ? 'cutover-expected' : real.length === 0 ? (ahead.length === 0 ? 'seq-only' : gapped ? 'documented-gap' : 'native-ahead') : 'diff';
       return { name, diffs, cutover, counted, ahead, real, verdict };
     });
 
@@ -504,19 +580,23 @@ async function main() {
       if (shownDiffs.length === 0) continue;
       console.log(`\n== ${row.name}`);
       for (const [path, left, right] of shownDiffs) {
-        const expected = nativeAheadOf(path);
-        const label = isCutoverPath(path) ? ' [cutover-expected]' : expected ? ' [native-ahead]' : '';
+        const expected = nativeAheadOf(row.name, path, left, right);
+        const label = isCutoverPath(path) ? ' [cutover-expected]' : expected ? (expected.gap ? ' [documented-gap]' : ' [native-ahead]') : '';
         console.log(`  ${path}${label}\n    node:   ${shown(left)}\n    native: ${shown(right)}`);
       }
     }
     const seenAhead = new Map();
-    for (const row of classified) for (const [path] of row.ahead) seenAhead.set(nativeAheadOf(path).reason, nativeAheadOf(path));
-    for (const entry of seenAhead.values()) console.log(`native-ahead: ${entry.path.source} -- ${entry.reason}`);
+    for (const row of classified) for (const [path, left, right] of row.ahead) {
+      const entry = nativeAheadOf(row.name, path, left, right);
+      seenAhead.set(entry.reason, entry);
+    }
+    for (const entry of seenAhead.values()) console.log(`${entry.gap ? 'documented gap' : 'native-ahead'}: ${entry.path.source} -- ${entry.reason}`);
     const differing = classified.filter((row) => row.verdict === 'diff' || row.verdict === 'seq-only').length;
     const cutoverOnly = classified.filter((row) => row.verdict === 'cutover-expected').length;
     const aheadRows = classified.filter((row) => row.verdict === 'native-ahead').length;
+    const gapRows = classified.filter((row) => row.verdict === 'documented-gap').length;
     const matching = classified.filter((row) => row.verdict === 'match').length;
-    console.log(`\n${matching}/${rows.length} scenarios match, ${cutoverOnly} cutover-expected, ${aheadRows} native-ahead, ${differing} differ`);
+    console.log(`\n${matching}/${rows.length} scenarios match, ${cutoverOnly} cutover-expected, ${aheadRows} native-ahead, ${gapRows} documented-gap, ${differing} differ`);
     if (node.stderr.trim()) console.log(`\nnode stderr (tail): ${node.stderr.trim().split('\n').slice(-5).join(' | ')}`);
     if (native.stderr.trim()) console.log(`native stderr (tail): ${native.stderr.trim().split('\n').slice(-5).join(' | ')}`);
     process.exitCode = differing > 0 ? 1 : 0;

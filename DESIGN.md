@@ -19,7 +19,7 @@ Source: peer session spawn-20 (run 2026-11-04-16-36-00-a12151), section "gm (thi
 - Item 5, refusal does not name next_context. Not changed; already correct. src/mcp.mjs:600-601 and native/components/mcp/server.cpp:923-924 both name next_context ("call next_context to open a new run", and for a child "the session that opened it calls next_context to open the next run"). native/components/mcp/tests/mcp_test.cpp:284 asserts the text. Not reproduced live, since that needs finish.
 
 Not in the five items:
-- gm.grep refuses a file given as root ("refused: root is not a directory: src/mcp.mjs"); the file belongs in path. The refusal could say so.
+- gm.grep accepts a file as root (commit 6d708a2, search.cpp): one tracked file, or any file with scope all; path cannot be combined with it. gm.search still refuses a file root ("refused: root is not a directory").
 - The live server is mixed: run_code bodies run from src/ and pick up edits at once, while grep and the MCP surface are native. A fix in src/ may not reach a verb served natively.
 - Four untracked work/rows/unknown-*.yml files in the shared checkout belong to another session and were left alone.
 
@@ -76,7 +76,7 @@ Decision:
 - Only `gm.prd_delete` drops a row. Checked: prd_delete refuses an unknown row and a resolved PRD, and unknown_resolve refuses a commit that is not in the repository and an event that is not in the run's log. Both match skills/gm/SKILL.md step 6.
 - skills/gm/SKILL.md step 6 and AGENTS.md (Surface, Rows) no longer name stopRows. README.md did not name it.
 
-Not changed, open: the owner asked that the run wait for the owner's reply through the events wait. The events wait wakes only on the kinds in src/pending.mjs (PENDING_KINDS: job, job-killed, job-stuck, job-unstuck, rules-notice, recovery, host-idle). A row is not one of them, and an owner reply reaches the session as a message, so the wait ends at host-idle (600000 ms) and is started again while the row is open. Whether a row should wake the wait is open with the owner.
+Changed: prd_add and unknown_add log a row-added event (fields row, rowKind, title) through host.logAppend, and row-added is a pending kind in native/components/mcp/pending.cpp and src/pending.mjs, so events --wait wakes when a PRD or question row is added. The owner's reply to a question still reaches the session as a message; the wait is started again after the answer.
 Also: unknown_resolve needs a commit that exists. An answer that changes no file has no commit of its own, so its witness is an existing commit, for example HEAD.
 
 Impact at the change: src/mcp.mjs is in src/worker-modules.json, so the change restarted each worker on the checkout. The live workers before it were gm-new pid 1087915 (open run 2026-11-04-07-53-54-3c7bb2), oscraft pid 2457829 (its last run 2026-11-04-14-27-00-a85d22 had ended) and gmc pid 2529361 (open run 2529320-17406516). No job or background body was running: each run's jobs directory held only exited or killed jobs, and no action was in flight after the last restart of an open run.
@@ -188,7 +188,7 @@ Research: deep-research workflow wf_226cee04-a18 (MCP protocol features): 20 sou
 
 What gm-new declares and does (src/connect.mjs CAPABILITIES; src/mcp.mjs):
 
-- tools, prompts and resources each declare listChanged: true. No subscribe, tasks, logging or completions capability.
+- tools, prompts and resources each declare listChanged: true. No subscribe, tasks, logging or completions capability (as of this section; superseded by item H in "MCP protocol features A to I (2026-11-04)" below and by subscriptions/listen).
 - It negotiates 2025-11-25 and accepts 2025-06-18. Any other asked version gets 2025-11-25 back (src/mcp.mjs, the initialize reply).
 - It serves server instructions (src/connect.mjs), the prompts gm and gm-continue, the skill:// resources, and an empty resources/templates/list.
 - It sends notifications/progress for long calls and handles notifications/cancelled.
@@ -313,7 +313,7 @@ The owner's request, in the session: "make sure we maximize our use and instruct
 
 Decisions of "MCP features against gm-new, after the 2026-07-28 research (2026-11-03)" that this section changes:
 - Decision 4 (roots, sampling and logging not used): logging is used now, through logging/setLevel and notifications/message. Roots and sampling are still not used. Reason: the owner's request, and a host can show a worker restart, a stuck job or an error without reading the log.
-- "It uses none of ... completion/complete, logging/setLevel, resources/subscribe": all three are served now. Reason: the owner's request.
+- "It uses none of ... completion/complete, logging/setLevel, resources/subscribe": completion/complete and logging/setLevel are served now. resources/subscribe was served then and is removed now: subscriptions/listen is the only subscription surface, and resources/subscribe answers -32601. Reason: the owner's request, and the 2026-07-28 changelog.
 - "It sends no list_changed notification": notifications/resources/list_changed is sent when a run ends (its witness becomes a resource) and when a new run opens (its log becomes one). The tool and prompt lists stay fixed. Reason: the resource list changes, and the rule in that section says a changing list sends the notice.
 - "resources/templates/list returns an empty list": it returns four templates.
 - Decisions 1 to 3 (no protocol upgrade, no elicitation, no tasks) are unchanged.
@@ -326,7 +326,7 @@ What shipped, by item (src/mcp.mjs, src/connect.mjs, the new src/mcp-resources.m
 - E. The gm prompt's task argument reads: "The task to run. The whole task text is this one argument. Some hosts pass only its first word." Observed 2026-11-04: a /mcp__gm__gm command with words after the first gave the gm prompt the task "make" only, which is the host passing the first word. Not worked around in the server beyond this text.
 - F. Logging: capability logging {}, logging/setLevel, and notifications/message at the level of each event: notice for restart, reload, tools-changed and end; info for paused, cancel and job-unstuck; warning for recovery, job-stuck, job-killed and rules-notice; error for error. With no level set, events wait in a queue of 64 and are sent when a host sets a level. The event log stays the record.
 - G. Completions: completion/complete suggests the skill name, and the skill file path given the name, for skill:// templates, and the run id for run:// templates. Run ids come from runs/, newest first, at most 100.
-- H. resources.subscribe: resources/subscribe and resources/unsubscribe, for served skill files. A recursive fs.watch on skills/gm and skills/gm-continue, unref'd, opens with the first subscription and closes with the last. 150 ms after an event, each subscribed file's sha256 digest is compared with the digest last sent, and notifications/resources/updated goes out only when it changed.
+- H. Subscriptions: subscriptions/listen is the only subscription surface (native/components/mcp/server.cpp:2223). resources/subscribe and resources/unsubscribe, which this item first shipped, are removed and answer -32601 (native/components/mcp/tests/spec_test.cpp:235), and resources.subscribe is not declared. The fs.watch and sha256 digest mechanism described for the removed methods is not confirmed for subscriptions/listen.
 - I. The connect text gains a resources pointer (RESOURCES_POINTER, src/connect.mjs). serverInfo gains the title "gm-new run worker", and connectSha covers the title.
 
 Reconnect and gate: CAPABILITIES, the instructions and the title changed. The host reads them once, at connect, so a host reconnects to see A to I. CONNECT_SHA is recorded as 9b707f4390fef8d4e21d4d661e636260ea830e228fddd8c26b5b34924914705f, the value connectSha returns for this checkout.
@@ -438,7 +438,7 @@ Gaps against Node, open:
 - A server killed by a signal reports 128 plus the signal number, not Node text. A spawn failure reports the OS text.
 - Windows captures no server stderr. Windows is not built here.
 - A server request other than ping gets the SDK method-not-found text.
-- A stopped background body is not killed in native (see the friction section above).
+- A stopped background body is killed in native: `stop_locked` calls `proc::kill_owned` on the body's owner, and the body thread holds a `proc::OwnerScope` (native/components/mcp/server.cpp).
 - The default grep scope searches untracked files in native (commit 2706397), and Node searches tracked files only. This is a recorded decision that Node has not yet taken.
 
 ## Stopped background fetch: native-ahead row (2026-11-04)
@@ -447,6 +447,18 @@ The "log event kinds" row differed by one code-call, from the "run_code backgrou
 
 Decision: native-ahead, recorded in native/tests/parity/run.mjs (`NATIVE_AHEAD`, the code-call count and the first-divergence index). Native's behaviour is the deliberate one: a stopped body leaves no network request running and its code-call carries the real outcome. Node leaves the request running until its 60 s timeout, and its code-call would then land after the run has ended. Node is not changed here (it is the reference). If the owner wants Node to match, the Node change is to abort fetch on a body stop, and the row is then removed.
 
+## Session round: relay, search, jobs, MCP surface, parity (2026-11-04)
+
+- Relay (40c94df): the relay restarts only when a runtime source changes (leaves dir, skills dir, worker binary), the binary must settle for 250 ms, in-flight calls drain for up to 30 s, and any still open get "the worker restarted before it answered this call; the call may be retried" (native/components/host/include/gmnew/host/relay.hpp:33-34, relay.cpp:22, 321-360). Before this, restarts dropped in-flight requests; the conformance agent counted 140 restarts in about 30 minutes (reported, not re-measured).
+- Search and jobs (6d708a2): gm.grep takes a file root, and its pattern is capped at 200 characters and refused with "pattern must be at most 200 characters; got N", as the verb description states (search.cpp:34). job_start defaults to 300000 ms and caps at 600000 ms (verbs.cpp:33-34); job_status reports timeoutMs, and a timed-out job ends with reason timeout.
+- MCP surface: subscriptions/listen is the only subscription surface (server.cpp:2223). resources/subscribe and resources/unsubscribe are removed and answer -32601 (spec_test.cpp:235), and resources.subscribe is not declared.
+- Conformance runner: tools/mcp-conformance.mjs --stdio <program> [args...] runs 56 checks in 22 scenarios (22 scenarios counted in the file; the 56 check count is as reported, not re-run here). It no longer takes --url, and the official conformance package fixtures are not used.
+- Esm: run_code takes format esm or cjs. Left out, the format follows package.json type (type module is esm, anything else is cjs; server.cpp:103-106), so the default is not always cjs. Esm and cjs files load through the QuickJS module loader (quickjs/engine.cpp:144).
+- Parity harness (native/tests/parity/run.mjs): the normaliser maps body-<N> (line 262). NATIVE_AHEAD (lines 336-348) accepts the stopped-fetch code-call (a count rule, narrowed in code at line 370 to a fetch to /hang), the instructions text, job_status timeoutMs, and a broad path-based sequence rule (when right === left + 1). Open: the broad sequence rule is weak evidence and can hide real drift; narrow it to the fields one dropped event moves.
+- Invariant 4 violations this session, not to be repeated: the lead ran a grep in a shell, and the conformance agent ran find and grep in shells, to inspect leaves test output and list files (session record, not re-checked here).
+- Benchmark (re-measured 2026-11-04 on 6d708a2 with a dirty tree, harness /tmp/bench-f8dc6d/bench.mjs; sampled /proc every 50 ms): native gmnew peak RSS 11.2 MiB per worker and 6.0 MiB for the relay, flat at N = 1, 4 and 8 parallel run_code bodies, against 88 to 99 MiB for the Node reference. CPU for 200 read_file calls (N = 8): 0.09 s native (worker plus relay) against 0.80 s Node. Native threads 3 and fds 5 per worker, against Node 14 and 31. Run-dir bytes about 60 KB per 200 calls on both sides. Open: the native handshake takes 4.3 to 6.3 s wall against 0.22 s for Node with little CPU, so it is a wait, not work. The earlier figures (0.83 s and 8.5 s CPU, 107 MiB, 0.19 MB against 1.0 MB) did not reproduce and are retired.
+- Open owner items: grep default (native includes untracked files that git does not ignore; Node is tracked-only); Node tree direction (unknown-mw29a63rd40c); stopped background fetch (native kills the fetch's curl, Node waits out its 60 s timeout); client roots and elicitation (not used). Four untracked owner-question rows in work/rows are left alone until the owner answers.
+
 ## Search falls back to a disk walk outside git (2026-11-04)
 
 Friction: a codesearch with cwd /workspace/characters (not a git repository) was refused with error_code empty_universe and asked for refresh: true. That verb is served by the predecessor gm product (the gm-mcp package under /workspace/gm), not by this checkout, which has no codesearch, rg, codeinsight_index or code_index verb. The same refusal existed here for search (BM25) and wiki_search, with the text "search and grep need a git repository: git ls-files failed". grep already walked outside git.
@@ -454,3 +466,13 @@ Friction: a codesearch with cwd /workspace/characters (not a git repository) was
 Change: src/search.mjs listedFiles() walks the root (or root/wiki for wiki_search) when git ls-files fails, and refuses only when the walk lists zero files. native/components/search/search_impl.cpp load_tracked() does the same through walk_listing(), with the same skip rules as its grep walk. search and wiki_search descriptions name the fallback.
 
 Witness: Node search, wiki_search and grep on a temp tree with no git repository found the files and skipped node_modules; gmnew_search_test passes with two new cases (a plain folder is searched; an empty folder is refused); node --test native/leaves/tests passes 15 of 15. The parity harness was not run. Owner item: the codesearch verb in the predecessor gm product still refuses non-git roots, so its fix belongs to the other session named gm (ListAgents was not checked in this run), or to the owner if no such session exists.
+
+## Startup, MCP join and the logged table (2026-11-04)
+
+Friction: the native MCP handshake took 4.9 s, because worker.cpp GatedVerbs::list() waited for the default playwriter MCP server (npx github:AnEntrypoint/pw, startupTimeoutMs 600000) before answering initialize. Fix: the served table no longer waits (initialize and tools/list answer at once; the handshake is 33 to 37 ms), and run_code waits for the MCP servers inside its run_body lambda, which uses the logged VerbTable that server.cpp passes in (worker.cpp). The first attempt skipped the logged table and lost the action and code-call events, and it was caught by the parity harness and fixed.
+
+Trade-off, owner review: a tools/list answered before the MCP servers join omits their tools until tools/list_changed is pushed. State::start_list_watch (server.cpp) polls the tool set and pushes the change when the servers become ready, so the push is poll-based (50 ms doubling to 2 s), not event-driven. The boot tools event is written before the MCP verbs join, so the first run_code call sees the generation bumped once more. Parity excuses are narrow and tied to that boot order: they are native-ahead rows, with index-based event paths and exact seq counts for this run (BOOT_SURFACE_REASON, JOIN_SEQ_REASON, JOIN_GENERATION_REASON in native/tests/parity/run.mjs). They need updating if the boot order changes.
+
+Also in this round: an open call left by a dead process was re-listed by every recovery event (server.cpp boot() and recovery_of). Fix: boot() writes one abandoned event per open call with the reason "abandoned: the worker restarted before it answered", and recovery_of treats it as ended (compact.cpp keeps it). gmnew_mcpclient_test had a dangling reference to a temporary event vector in test_startup_failure; the message was right, the test was fixed.
+
+Witness: ctest --test-dir build/integ 20 of 20; node tools/mcp-conformance.mjs --stdio build/integ/native/components/host/gmnew serve --workspace <dir> 56 of 56 checks in 22 scenarios; node native/tests/parity/run.mjs 8 of 75 match, 47 native-ahead, 20 documented-gap, 0 differ. Benchmark on the same tree (see the round section above) is unchanged: 11.2 MiB per worker, flat with N; handshake now 37 ms.
