@@ -196,55 +196,6 @@ Decision: the example passes the run directory with `--dir`, built from the chil
 
 Witness: scratch child run 2026-11-04-06-59-29-be5e7b in /tmp/gm-scratch/childdir-1793775569/ws. `query --dir` on it returned its witness, exit 0. `query --run` on the same id printed `gmnew: no run 2026-11-04-06-59-29-be5e7b`, exit 1.
 
-## Rust port of gm-new (2026-11-04)
-
-Decision: the owner asked for gm-new to be rewritten in Rust, keeping hot reload and JIT run_code bodies, built for the lowest memory, CPU and startup cost. This supersedes the "Language" entry of Decided for the new code. The port lives in `rust/` (crate `gmnew`, binary `gmnew`). Node `src/` and `tools/` stay live and untouched until cutover, because the running workers load them. The gm session (ListAgents `gm`) has no objection (message 2026-11-04) and asked that the port keep three behaviours, each in origin main with the gate passing:
-
-1. A layer's server entry takes `deny`, a list of tool names left unregistered (`defaults/mcp.json` denies playwriter `reset`; commit 807828da; `startMcpClients` in `src/mcp-client.mjs`).
-2. `read_file` pages carry `truncated`, `totalBytes` and `hint` when cut, and accept `offset` and `limit` (commits 35f2729 and cec628b4).
-3. Git verbs take `cwd`, resolved against the workspace root and refused outside a git repository (commits d8e838a and f3e5a27).
-
-Architecture:
-
-- One binary, three roles. `gmnew serve` is the relay: it holds the host stdio, runs `gmnew worker` as a child with the same arguments, and pumps lines both ways. It tracks the request ids it forwarded and not yet answered. It swaps the worker only when the binary fingerprint (length and mtime, `hot.rs`) has changed and no request is in flight. The swap is SIGTERM to the worker, which logs `paused` and exits with the run still open, then a new worker starts and resumes the run. A worker that dies is restarted with backoff (1 s, doubling, capped at 30 s), and each call it had taken is answered with the failure text.
-- Hot reload has two tiers. JIT code (run_code bodies, skill files, `defaults/mcp.json`) is read from disk on every use, so an edit applies with no build. Rust code changes by rebuild: `update.rs` pulls origin main every 60 s when the checkout is clean, runs `cargo build --release` in the background when `rust/` changed, and the relay swaps when the new binary lands. A failed build keeps the old binary and logs the error.
-- The worker is an MCP server over stdio with JSON-RPC written by hand (serde_json). It serves protocol 2025-11-25 and accepts 2025-06-18. It has the three tools `next_context`, `run_code` and `finish`, the prompts `gm` and `gm-continue`, and the resources `skill://gm/SKILL.md` and `skill://gm-continue/SKILL.md` read from `skills/`. No listening socket.
-- run_code bodies run in QuickJS (rquickjs 0.14), one fresh runtime per body, on a thread of their own. Verbs are `gm.<name>` functions that bridge to async Rust. A body past `timeoutMs` (default 180000, at most 300000) becomes a background run, and four bodies run at once at most.
-- Run store, unchanged on disk: `<workspace>/runs/<id>/` with `log.jsonl` (append-only, one JSON object per line with seq, t, mono and inFlight), `rules.md`, `task.json` and `jobs/`. The log index is an in-memory list of byte offsets, rebuilt when a run opens.
-- Concurrency: a current-thread tokio runtime, with blocking work on `spawn_blocking`. Locks in `locks.rs`: run_shell takes the exclusive side of one RwLock and every other verb takes the shared side, and writes to one path go in order through a per-path mutex.
-- Dependencies: serde_json, tokio (no default features), rquickjs, ureq 3 (fetch), regex, sha2, oxc_parser/oxc_ast/oxc_allocator/oxc_span 0.157 (callers and impact, replacing acorn), and libc on unix only. Each one is measured for build cost before a further dependency is added.
-- Platforms: unix uses process groups (`process_group(0)`, killed with `killpg`), and Windows uses `CREATE_NEW_PROCESS_GROUP` with `taskkill /T /F`. Shell verbs run `sh -c` on unix and `cmd /d /s /c` on Windows. Targets: linux, macos and windows, on x64 and arm64.
-- Verbs: each module exports `pub const VERBS: &[VerbDef]` with the name, the description (the text of gm.verbs() in Node) and the input schema. `verbs.rs` collects them. A `VerbDef` is a fn pointer, so no allocation per call.
-
-Ownership (one owner per file, so parallel work does not collide):
-
-- Kernel: `run.rs`, `log.rs`, `feed.rs`. Source: `src/run.mjs`, `src/log.mjs`, `src/compact.mjs`, `src/pending.mjs`, `src/summary.mjs`, `src/prompt.mjs`.
-- Protocol: `mcp.rs`, `skills.rs`. Source: `src/mcp.mjs`, `src/connect.mjs`, `src/skills.mjs`.
-- Relay: `relay.rs`, `update.rs`, `hot.rs`. Source: `tools/relay.mjs`, `tools/supervise.mjs`, `tools/core.mjs`, `tools/update.mjs`, `src/hot*.mjs`, `src/freshness.mjs`.
-- Exec and files: `exec.rs`, `locks.rs`, `fsverbs.rs`. Source: `src/exec.mjs`, `src/tools.mjs`.
-- Search and review: `search.rs`, `review.rs`. Source: `src/search.mjs`, `src/wiki.mjs`, `src/wiki-tools.mjs`, `src/review.mjs`, `src/review-tools.mjs`.
-- Git and rows: `git.rs`, `ci.rs`, `rows.rs`, `gate.rs`. Source: `src/git.mjs`, `src/gate.mjs`, `src/rows.mjs`.
-- Run code: `runcode.rs`, `verbs.rs`. Source: `src/runcode.mjs`, `src/body-worker.mjs`.
-- Client, fetch and code: `mcp_client.rs`, `fetch.rs`, `retry.rs`, `code.rs`, `cli.rs`. Source: `src/mcp-client.mjs`, `src/fetch.mjs`, `src/retry.mjs`, `src/code-ast.mjs`, `src/closure.mjs`, `src/cli.mjs`.
-
-Not ported in this phase, each to be decided with the owner: the scripted model and the `replay` and `bench` commands (they serve Node witnesses; the MCP path needs none of them), and the live comparison (closed). Cutover, meaning the `.mcp.json` entry switches to `gmnew serve`, is a later commit and needs a reconnect of each host.
-
-Integration pass (2026-11-04):
-
-- job_status and job_stop (exec.rs) answer for `body-<seq>` names through runcode.rs, with the plain-field job_status shape (`logPath` null for a body). finish is refused while any body or shell job runs, naming the count; stopBackground stops them before the end event.
-- search closure uses `code::closure_lines`: the callees of the function enclosing a top-10 hit, at the callee's first line.
-- Wired: Jobs::set_dir and Hub::attach at worker start and run reopen (job_start had no run directory, and client events were never logged), next_context waitMs (Run::hold), jobsOpen with the prd summary, the session prompt task (Run::set_task), tools text in prefixSha, inFlight counting, the wiki lint at finish, and the skills and wiki checks in the commit gate of a gm-new checkout. Duplicates deleted: run.rs open_rows, runcode run_code_tool, search.rs def scan. Build: zero warnings.
-
-Rules that bind the port: ASCII only; no test files and no fixtures that stand in for a run; no comments that carry prose (a comment that cannot be turned into code goes to AGENTS.md); commit only through `tools/ship.sh` by explicit path, author lanmower, no trailers; no branches or worktrees; the Cargo build directory under rust/ is git-ignored.
-
-Completion pass (2026-11-04), the missing parts from the gm session's check:
-
-- Digest from the full output: `logged_for` (rust/src/mcp.rs) attaches `outputDigest`, digested over the full text before the 1000-character cut, and `outputBytes`, the full byte length. `result_zone1` (rust/src/feed.rs) reads the digest and `output_bytes` reads `outputBytes`, so `full.bytes` is the full size. Witness, release build, run 2026-11-04-07-44-19-3b0faf (run_shell of 3042 characters, `ERROR: disk quota exceeded` at character 3001, exit 1): the feed mentions the error line, and the code-call event has outputBytes 3042, outputChars 3042, outputDigest.errors ["ERROR: disk quota exceeded"] and outputDigest.bytes 3042. The compact record form was not seen live, because the event stayed in the new-event view; its fields come from this same digest.
-- Duplicate removed: runcode.rs no longer defines logged_for and calls mcp::logged_for, and its two unused constants are gone.
-- Freshness: src/freshness.mjs, src/hot-hook.mjs, src/hot.mjs and src/hot-config.mjs have no Rust counterpart, and none is needed. Each run_code body runs in a fresh QuickJS runtime and reads project files from disk at call time, so there is no module cache to bust. A Rust change takes effect by rebuild and a relay swap, not by an in-process reload (hot.rs and relay.rs). Witness, release build, run 2026-11-04-07-44-19-b8beb3: body 6 returned via 1 and direct 1; lib/b.mjs was edited to export 2; body 7 returned via 2 and direct 2, through the chained import of jit.mjs.
-- Bug fixed on the way: a dynamic import() in a CommonJS-format body, the default for a project without a module package type, was not linked, so QuickJS's default loader failed with "could not load module" for every project file. execute in rust/src/runcode.rs now links and declares a CommonJS body as the ESM body is linked. Before: body error "could not load module" with loads entry via import(). After: the witness above.
-- Not complete: replay. rust/src/cli.rs sends run and replay to a deferred message and exit, so replay is counted as not ported. The scripted loop (src/loop.mjs), bench and the cutover of .mcp.json are not started; each waits for the owner's decision.
-
 ## Feed digest from the full output (2026-11-04)
 
 Friction: the event log keeps a 1000-character preview of a `run_shell`, `run_code` or `job_status` reply, and the next_context feed digested that preview. An error line of a failed call past character 1000 did not reach the feed. The caller still got the whole reply.
@@ -272,7 +223,7 @@ Decisions of "MCP features against gm-new, after the 2026-07-28 research (2026-1
 - "resources/templates/list returns an empty list": it returns four templates.
 - Decisions 1 to 3 (no protocol upgrade, no elicitation, no tasks) are unchanged.
 
-What shipped, by item (src/mcp.mjs, src/connect.mjs, the new src/mcp-resources.mjs, and src/worker-modules.json, which lists the new module). tools/, skills/ and rust/ are not changed.
+What shipped, by item (src/mcp.mjs, src/connect.mjs, the new src/mcp-resources.mjs, and src/worker-modules.json, which lists the new module). tools/ and skills/ are not changed.
 - A. Templates: skill://{name}/SKILL.md, skill://{name}/{path}, run://{run}/log and run://{run}/witness. resources/list gives every served skill file and the current run's log, and its witness once the run has ended. resources/read serves each of them. A run log is its newest 64 KB, cut at a line boundary, with `_meta` key com.anentrypoint.gmnew/log holding totalBytes, fromByte and truncated. Only the current run is listed; other runs under runs/ are reached through the template and through completion.
 - B. Annotations: skill files carry audience assistant, priority 1 for SKILL.md and 0.5 for the rest, and lastModified from the file's mtime. Run resources carry priority 0.5 (log) and 0.8 (witness, audience user and assistant). A tools/call result's `_meta` carries com.anentrypoint.gmnew/run (as before) and com.anentrypoint.gmnew/seq, the seq of the call's action event, which query_log reads. A repeated request id answered from the log carries the same pair.
 - C. Progress: run_code reports progress like run_shell, every 5 s, against the request's progressToken.
@@ -310,7 +261,6 @@ Left out, and why:
 - resources/list does not enumerate every run, because each run adds two entries. The template and completion reach the rest.
 - No roots, sampling, elicitation or tasks: decisions 1 to 4 stand.
 - No completion for prompt arguments: no argument there narrows a value.
-- The Rust port (rust/src/mcp.rs, rust/src/skills.rs) is not changed. It needs the same protocol surface: the capabilities, the serverInfo title, the RESOURCES_POINTER text, the four templates and the run resources with their annotations, skill annotations, `_meta` com.anentrypoint.gmnew/seq, progress for run_code, outputSchema and structuredContent for the three tools, logging/setLevel and notifications/message, completion/complete, resources/subscribe with a file watcher, the two list_changed notices, and the TASK_ARGUMENT text.
 
 Owner decision open: whether the relay should replay the host's initialize, logging/setLevel and subscriptions to a worker it starts after a swap.
 

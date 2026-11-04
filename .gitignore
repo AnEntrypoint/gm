@@ -1,5 +1,4 @@
 runs/
-rust/target/
 sources/
 node_modules/
 # The gm runner on this host writes .gm/ and .agentplug-kv/. Keep them out of commits.
