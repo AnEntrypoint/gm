@@ -171,3 +171,28 @@ Witness, before (unchanged code): scripted run 2026-11-04-06-50-11-c77781, a job
 Witness, after: scratch run 2026-11-04-06-51-35-7757c7 with the same replies. The log is 9982 bytes, and each job_status result event is 1470 to 1471 bytes with 1000 characters of output and `outputChars` 20000. The job file `jobs/big.out` holds all 25000 bytes.
 
 Witness, live: run 2026-11-04-06-33-34-2c4415. Its seq 206 and 207 logged 20000 characters, and seq 208 (a page at offset 20000) logged 5000, before the change was loaded. Seq 278 to 281, four polls of job `probe25k` after the change, logged 1000 characters each with `outputChars` 20000. The caller got 20000 characters, `total` 25000, `truncated` true, `offset` 5000, `next` null and exit code 0 in each poll.
+
+## run_shell and run_code log a bounded preview (2026-11-04)
+
+Friction: the event log kept the whole reply of `run_shell` (up to 200000 characters, `OUTPUT_CAP` in src/exec.mjs) and of `run_code` (up to 20000 characters, `OUTPUT_CAP` in src/runcode.mjs). A repeated shell output was written again on each query and repeated in the next_context feed. The job_status change above bounded the same kind of reply.
+
+Decision: `run_shell` and `run_code` join `query_log` and `job_status` in `LOGGED_OUTPUT_TOOLS` (src/tools.mjs). The logged copy keeps the first 1000 characters of `output` and `outputChars` for the full length. The caller's return value does not change: `loggedFor` builds a new object for the log only, and `act` in src/mcp.mjs returns the original result. Every path passes the helper: a top-level run_shell through its handler, a run_code through its act call (src/mcp.mjs), a run_shell inside a body at its code-call (src/mcp.mjs), and the scripted loop through `runAction` (src/loop.mjs).
+
+Witness check, before the change: nothing on the witness or finish path reads a logged reply. `finish` takes the witness from its own argument (src/mcp.mjs, src/tools.mjs). `resolveRow` in src/rows.mjs checks only that the event seq is in the run's log. `review_packet` reads the output of its own event (src/review-tools.mjs), and that verb is not in the set. Replay (`cli.mjs replay`) reads only the model's `reply` events and runs the tools again, so it does not read a logged shell reply.
+
+Trade-off, not fixed here: the next_context feed reads the logged output. src/compact.mjs builds each result's `out` digest (lines, bytes, head, tail, errors, and every line of a failed call) and `full.bytes` from `event.output`. After this change they come from the 1000-character preview, so a failed run_shell whose error lines lie past the preview loses them from the feed, and `tail` is the end of the preview. The caller still received the full reply in its own tool result. A follow-up would compute the digest from the full text when the call is logged. The job-killed tail (`bodyText` in src/tools.mjs) also reads a body's code-call output, so it shows previews. run_shell has no job file, so its text beyond the preview is in no file after the reply.
+
+Witness, before (run 2026-11-04-06-33-34-2c4415, unchanged code): run_shell code-calls seq 318 and seq 325, each of 25000 characters, with JSON event sizes 25311 and 25310 bytes, outputLen 25000 and outputChars null.
+
+Witness, after (same run, change loaded): run_shell code-call seq 344 is 1331 bytes, with outputLen 1000 and outputChars 25000. The run_code action that made it returned callerOutputLen 25000 and exitCode 0. A run_code body that returned 3000 characters logged seq 347 at 1245 bytes, with outputLen 1000 and outputChars 3002 (the reply is JSON, so the quotes add two), and the caller got the whole reply. The byte sizes are Buffer.byteLength of each event's JSON, read by query_log.
+
+Not run live: the scripted CLI path (`runAction` in src/loop.mjs) uses the same helper, and it was not run.
+
+## child run example uses --dir (2026-11-04)
+
+Friction: skills/gm/SKILL.md, in the child-session section, gave `node src/cli.mjs query --run ${childRun}`. `--run` reads only gm-new's own `runs/` (`runDirOf` in src/cli.mjs), but a child writes its run to `<its workspace>/runs/<id>` (the MCP server, and `run --workspace`), so a child in another workspace was not found.
+
+Decision: the example passes the run directory with `--dir`, built from the child's workspace (named in its brief) and its run id: `query --dir "${childWorkspace}/runs/${childRun}"`. Limit: the example runs `node src/cli.mjs` from the parent's workspace root, so that root must be a gm-new checkout for the path to exist.
+
+Witness: scratch child run 2026-11-04-06-59-29-be5e7b in /tmp/gm-scratch/childdir-1793775569/ws. `query --dir` on it returned its witness, exit 0. `query --run` on the same id printed `gmnew: no run 2026-11-04-06-59-29-be5e7b`, exit 1.
+
