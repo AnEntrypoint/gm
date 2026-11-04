@@ -237,6 +237,14 @@ Integration pass (2026-11-04):
 
 Rules that bind the port: ASCII only; no test files and no fixtures that stand in for a run; no comments that carry prose (a comment that cannot be turned into code goes to AGENTS.md); commit only through `tools/ship.sh` by explicit path, author lanmower, no trailers; no branches or worktrees; the Cargo build directory under rust/ is git-ignored.
 
+Completion pass (2026-11-04), the missing parts from the gm session's check:
+
+- Digest from the full output: `logged_for` (rust/src/mcp.rs) attaches `outputDigest`, digested over the full text before the 1000-character cut, and `outputBytes`, the full byte length. `result_zone1` (rust/src/feed.rs) reads the digest and `output_bytes` reads `outputBytes`, so `full.bytes` is the full size. Witness, release build, run 2026-11-04-07-44-19-3b0faf (run_shell of 3042 characters, `ERROR: disk quota exceeded` at character 3001, exit 1): the feed mentions the error line, and the code-call event has outputBytes 3042, outputChars 3042, outputDigest.errors ["ERROR: disk quota exceeded"] and outputDigest.bytes 3042. The compact record form was not seen live, because the event stayed in the new-event view; its fields come from this same digest.
+- Duplicate removed: runcode.rs no longer defines logged_for and calls mcp::logged_for, and its two unused constants are gone.
+- Freshness: src/freshness.mjs, src/hot-hook.mjs, src/hot.mjs and src/hot-config.mjs have no Rust counterpart, and none is needed. Each run_code body runs in a fresh QuickJS runtime and reads project files from disk at call time, so there is no module cache to bust. A Rust change takes effect by rebuild and a relay swap, not by an in-process reload (hot.rs and relay.rs). Witness, release build, run 2026-11-04-07-44-19-b8beb3: body 6 returned via 1 and direct 1; lib/b.mjs was edited to export 2; body 7 returned via 2 and direct 2, through the chained import of jit.mjs.
+- Bug fixed on the way: a dynamic import() in a CommonJS-format body, the default for a project without a module package type, was not linked, so QuickJS's default loader failed with "could not load module" for every project file. execute in rust/src/runcode.rs now links and declares a CommonJS body as the ESM body is linked. Before: body error "could not load module" with loads entry via import(). After: the witness above.
+- Not complete: replay. rust/src/cli.rs sends run and replay to a deferred message and exit, so replay is counted as not ported. The scripted loop (src/loop.mjs), bench and the cutover of .mcp.json are not started; each waits for the owner's decision.
+
 ## Feed digest from the full output (2026-11-04)
 
 Friction: the event log keeps a 1000-character preview of a `run_shell`, `run_code` or `job_status` reply, and the next_context feed digested that preview. An error line of a failed call past character 1000 did not reach the feed. The caller still got the whole reply.
