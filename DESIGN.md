@@ -132,6 +132,12 @@ Decision: the project entry projects["/workspace/gm"].mcpServers.gm in /config/.
 
 Decision: research/sota-improvements-2026-11-03.md records the deep-research levers checked against gm-new code. The search default is unchanged. Dependency closure stays a candidate until the natural-language witness (row unknown-dep-closure-natural) beats plain search at a matched file budget. The run said gm-new has vector RRF; that was wrong, since gm-new search is BM25 only. Witness: run 2026-11-03-19-38-52-ff0729, actionSeq 104 (research/dep-recall/measure.cjs: plain top-10 recall 0.15; closure 0.97 with the queried function as an anchor, 0.52 without).
 
+## Owner answers on the open rows (2026-11-04)
+
+- Browsers may close (row `unknown-mw29a63z2661`): owner decision. The agent may close browsers from the agent side, the default and the adopted ones included. The page rule still holds: a worker acts only on pages it opened. CLAUDE.md invariant 12 is the owner's file and is not edited here; it still says to leave the shared browser as found, so the owner reconciles the two.
+- Events wait on a row add (row `unknown-mw29a6424ad2`): owner says yes if it helps. Decision: an added row (`prd_add` or `unknown_add`) wakes an open `events --wait`, because a new question or PRD is what the owner loop has to act on. The row stays open until the change lands.
+- pw gate as the default (row `unknown-mw29a63ve31c`): owner decision. The pw gate is an MCP tool in gm's client, so codemode reaches it as `gm.playwriter_*`, the same verb names as today. It is set up as the default in `defaults/mcp.json`, pinned to `github:AnEntrypoint/pw#c318773`, the tip of origin/main and the commit this machine's checkout runs. The `v0.1.0` tag lacks four gate commits, so it is not the pin. oscraft is not switched by this change. The machine layer `/config/.gm-new/mcp.json` still points at `/workspace/pw` with `PLAYWRITER_NO_SANDBOX=1`; the sandbox setting is not a default and stays local. Not verified live: a run of the pinned package would start a second gate for this project.
+
 
 ## Dependency closure, natural-language witness (2026-11-03)
 
