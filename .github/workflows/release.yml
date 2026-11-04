@@ -2,32 +2,44 @@ name: release
 
 on:
   push:
-    tags: ['v*.*.*']
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+env:
+  GMNEW_VERSION: ${{ format('{0}-{1}', substr(github.sha, 0, 7), github.run_number) }}
+  RELEASE_REPO: AnEntrypoint/gmc
 
 jobs:
-  build-artifact:
+  build:
     strategy:
       fail-fast: false
       matrix:
         include:
           - os: ubuntu-latest
             preset: x64-linux-release
-            artifact: gmnew-x64-linux
+            target: x64-linux
           - os: ubuntu-24.04-arm
             preset: arm64-linux-release
-            artifact: gmnew-arm64-linux
+            target: arm64-linux
           - os: windows-latest
             preset: x64-windows-release
-            artifact: gmnew-x64-windows
+            target: x64-windows
           - os: windows-11-arm
             preset: arm64-windows-release
-            artifact: gmnew-arm64-windows
+            target: arm64-windows
           - os: macos-13
             preset: x64-macos-release
-            artifact: gmnew-x64-macos
+            target: x64-macos
           - os: macos-latest
             preset: arm64-macos-release
-            artifact: gmnew-arm64-macos
+            target: arm64-macos
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -37,35 +49,51 @@ jobs:
         with:
           arch: ${{ contains(matrix.preset, 'arm64') && 'arm64' || 'x64' }}
       - name: Configure and build
+        shell: bash
         run: |
-          cmake --preset ${{ matrix.preset }} -DGMNEW_BUILD_TESTS=ON
+          cmake --preset ${{ matrix.preset }} -DGMNEW_BUILD_TESTS=ON -DGMNEW_VERSION=$GMNEW_VERSION
           cmake --build build/${{ matrix.preset }}
-        shell: bash
       - name: Test
+        shell: bash
         run: ctest --test-dir build/${{ matrix.preset }} --output-on-failure
-        shell: bash
       - name: Package
-        run: |
-          mkdir -p out/${{ matrix.artifact }}
-          cp build/${{ matrix.preset }}/native/components/host/gmnew* out/${{ matrix.artifact }}/ || true
-          rm -f out/${{ matrix.artifact }}/*.ilk out/${{ matrix.artifact }}/*.pdb out/${{ matrix.artifact }}/*.a
-          tar czf ${{ matrix.artifact }}.tar.gz -C out ${{ matrix.artifact }}
         shell: bash
+        run: node tools/package.mjs --target ${{ matrix.target }} --build-dir build/${{ matrix.preset }} --out dist
       - uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.artifact }}
-          path: ${{ matrix.artifact }}.tar.gz
+          name: gmnew-${{ matrix.target }}
+          path: dist/gmnew-${{ matrix.target }}.*
+          if-no-files-found: error
 
-  publish-release:
-    needs: [build-artifact]
+  publish:
+    needs: build
+    if: github.repository == 'AnEntrypoint/gmc'
     runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
     steps:
+      - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
+          pattern: gmnew-*
           path: dist
-      - name: Flatten artifacts
-        run: find dist -name '*.tar.gz' -exec mv {} dist/ \;
-      - uses: softprops/action-gh-release@v2
-        with:
-          files: dist/*.tar.gz
-          generate_release_notes: true
+          merge-multiple: true
+      - name: Manifest and checksums
+        run: node tools/release-manifest.mjs --dir dist --version "$GMNEW_VERSION" --commit "$GITHUB_SHA" --repo "$RELEASE_REPO"
+      - name: Move latest tag
+        run: |
+          if gh api "repos/$RELEASE_REPO/git/ref/tags/latest" >/dev/null 2>&1; then
+            gh api -X PATCH "repos/$RELEASE_REPO/git/refs/tags/latest" -f sha="$GITHUB_SHA" -F force=true
+          else
+            gh api -X POST "repos/$RELEASE_REPO/git/refs" -f ref=refs/tags/latest -f sha="$GITHUB_SHA"
+          fi
+      - name: Publish latest release
+        run: |
+          notes="$RUNNER_TEMP/notes.md"
+          printf 'Version: %s\nCommit: %s\nBuilt: %s\n' "$GMNEW_VERSION" "$GITHUB_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$notes"
+          if gh release view latest --repo "$RELEASE_REPO" >/dev/null 2>&1; then
+            gh release upload latest dist/* --repo "$RELEASE_REPO" --clobber
+            gh release edit latest --repo "$RELEASE_REPO" --title "latest $GMNEW_VERSION" --notes-file "$notes" --latest --prerelease=false
+          else
+            gh release create latest dist/* --repo "$RELEASE_REPO" --title "latest $GMNEW_VERSION" --notes-file "$notes" --latest --prerelease=false
+          fi
