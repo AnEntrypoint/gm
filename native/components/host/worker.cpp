@@ -11,6 +11,7 @@
 #include "gmnew/leaves.hpp"
 #include "gmnew/log.hpp"
 #include "gmnew/mcp.hpp"
+#include "gmnew/playwriter.hpp"
 #include "gmnew/runcode.hpp"
 #include "search.hpp"
 
@@ -80,7 +81,14 @@ int run_worker(const HostArgs& args) {
     if (!native) return fail(native.error());
     HostServices services{workspace, *run_dir, native->get(), make_primitives(workspace, read_current_log)};
     LeafVerbs leaves(leaves_dir_of(args), services);
-    auto all = ComposedVerbs::compose({native->get(), &leaves});
+    playwriter::Options playwriter_options;
+    playwriter_options.workspace = workspace;
+    playwriter_options.config_files = {{source_root() / "defaults" / "mcp.json", true}, {workspace / ".gm-new" / "mcp.json", false}};
+    if (auto config = args.flag("--mcp-config")) playwriter_options.config_files.push_back({std::filesystem::absolute(*config), true});
+    playwriter_options.depth = playwriter::depth_from_environment();
+    for (const VerbInfo& verb : (*native)->list()) playwriter_options.reserved.insert(verb.name);
+    playwriter::PlaywriterVerbs playwriter_verbs(std::move(playwriter_options));
+    auto all = ComposedVerbs::compose({native->get(), &playwriter_verbs, &leaves});
     if (!all) return fail(all.error());
 
     mcp::ServerOptions options;

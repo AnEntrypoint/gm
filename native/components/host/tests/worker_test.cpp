@@ -153,9 +153,12 @@ int main() {
     check(gmnew::json::dump(before).find("4242") != std::string::npos,
           "ComposedVerbs routes probe to LeafVerbs: " + gmnew::json::dump(before));
 
+    const fs::path no_default_mcp = root / "no-default-mcp.json";
+    std::ofstream(no_default_mcp) << R"({"mcpServers":{"playwriter":{"disabled":true}}})";
     auto spawned = gmnew::host::Child::spawn({GMNEW_BINARY, "worker", "--workspace", workspace.string(), "--runs",
                                               (root / "runs").string(), "--leaves", leaves.string(), "--skills",
-                                              (fs::path(GMNEW_SOURCE_ROOT) / "skills").string()});
+                                              (fs::path(GMNEW_SOURCE_ROOT) / "skills").string(), "--mcp-config",
+                                              no_default_mcp.string()});
     check(spawned.has_value(), "the worker starts");
     if (!spawned) return 1;
     auto worker = *spawned;

@@ -1,4 +1,4 @@
-add_library(gmnew_proc STATIC proc.cpp)
+add_library(gmnew_proc STATIC proc.cpp child.cpp)
 target_include_directories(gmnew_proc PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../include)
 target_link_libraries(gmnew_proc PUBLIC deoxidene::deoxidene)
 

@@ -373,3 +373,13 @@ Friction, seen in run 2529320-17406516 (the native rewrite session, workspace /w
 - A shared /tmp output file was overwritten by another worker's run during this session. Harness output now goes to a path named for the run.
 
 Parity status, native binary build/integ (harness run in this session): 34 of 38 scenarios match, 2 are cutover-expected, 2 differ. The two differences are the order of the job exit event against the run_code result (the Node reference logs the exit before the result in one run and after it in another, so the order is timing-dependent), and seq-only numbering after job_status. ctest of the native tree: 12 of 12 pass. Later in the same session the parity result moved to 36 of 38 match, 2 cutover-expected, 0 differ, with the job exit order matching the Node reference. Trade-off: a run_code body that started a job waits up to 100 ms for the job's exit before its result is logged, so the order is stable; a body that started no job is not delayed. Row removal: prd_delete asks the host for a delete if one exists, else runs git clean (an untracked row file) or git rm (a tracked one), then checks with stat_file. It works only inside a git repository; a host delete primitive would lift that limit. Comments in the native code are removed (INVARIANT 6); the facts that cannot be expressed in code are under "Native notes" in AGENTS.md. Open before cutover: the owner's question on keeping the native rewrite or staying Node-only (row unknown-mw29a63rd40c), and Windows and macOS verification (the CreateProcess branch and CI on those systems are not built or run here).
+
+## Local cutover of the native gm-new (2026-11-04)
+
+Owner choice: cut over on the local path only, not user-wide. The project entry projects["/workspace/gmc"].mcpServers.gm in /config/.claude.json runs build/integ/native/components/host/gmnew serve --workspace /workspace/gmc --mcp-config /config/.gm-new/mcp.json. The user-wide entry is unchanged. Backup: /config/.gm-new/claude.json.bak-2026-11-04-native-local. A running session keeps its binding until it restarts.
+
+Native playwriter: native/components/playwriter is a stdio MCP client for the configured servers. It serves only the playwriter entry, with the entry's deny list honoured. Node serves every configured stdio server, so that difference stays until the native build needs another server.
+
+Witnesses, through the native binary on scratch workspaces: initialize, tools/list (next_context, finish, run_code), run_code returning 2 and finish. run_code calling gm.playwriter_browsers with action list returned ok with the browsers listed, and no page was opened or closed. Harness 36 of 38, 0 real differences; ctest 13 of 13; leaf tests 15 of 15.
+
+Not verified: Windows and macOS builds, and arm.

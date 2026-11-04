@@ -337,7 +337,7 @@ async function main() {
     const node = new Peer(process.execPath, [join(REF, 'src', 'mcp.mjs'), '--workspace', spaces.node.workspace, '--run-dir', spaces.node.runDir, '--task', task, '--mcp-config', join(SCRATCH, 'no-default-mcp.json')], REF);
     const nodeReplies = await drive(node, script);
     await node.stop();
-    const native = new Peer(NATIVE_BIN, ['worker', '--workspace', spaces.native.workspace, '--run-dir', spaces.native.runDir, '--task', task, '--skills', join(REF, 'skills'), '--leaves', join(REPO, 'native', 'leaves')], REPO);
+    const native = new Peer(NATIVE_BIN, ['worker', '--workspace', spaces.native.workspace, '--run-dir', spaces.native.runDir, '--task', task, '--skills', join(REF, 'skills'), '--leaves', join(REPO, 'native', 'leaves'), '--mcp-config', join(SCRATCH, 'no-default-mcp.json')], REPO);
     const nativeReplies = await drive(native, script);
     await native.stop();
 
