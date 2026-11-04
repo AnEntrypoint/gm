@@ -211,6 +211,7 @@ json::Value JobTable::start(const std::string& name, const std::string& command,
     job->out = out;
     job->start_mono = *start_mono;
     job->start_file_time = std::filesystem::file_time_type::clock::now();
+    std::uint64_t deadline_ms = std::min(timeout_ms, lifetime_ms_);
     job->lifetime_killed = lifetime_ms_ < timeout_ms;
     job->status.set("job", name);
     job->status.set("command", command);
@@ -218,11 +219,11 @@ json::Value JobTable::start(const std::string& name, const std::string& command,
     job->status.set("pid", spawned.pid);
     job->status.set("startMono", *start_mono);
     job->status.set("output", out.string());
+    job->status.set("timeoutMs", deadline_ms);
     write_status(name, job->status);
 
     Job& ref = *job;
     jobs_.emplace(name, std::move(job));
-    std::uint64_t deadline_ms = std::min(timeout_ms, lifetime_ms_);
     ref.waiter = std::thread([this, &ref] {
         int raw = 0;
         while (::waitpid(ref.pid, &raw, 0) < 0 && errno == EINTR) {
@@ -252,7 +253,7 @@ void JobTable::watch(Job& job, std::uint64_t deadline_ms) {
     std::unique_lock lock(mutex_);
     if (changed_.wait_for(lock, std::chrono::milliseconds(deadline_ms), [&] { return job.settled; })) return;
     job.kill_requested = true;
-    if (job.lifetime_killed) job.kill_reason = "lifetime";
+    job.kill_reason = job.lifetime_killed ? "lifetime" : "timeout";
     int pid = job.pid;
     lock.unlock();
     kill_group(pid);

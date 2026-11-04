@@ -16,7 +16,7 @@ const char GREP_SCHEMA[] =
     R"({"type":"object","properties":{"pattern":{"type":"string"},"path":{"type":"string"},"mode":{"type":"string"},"scope":{"type":"string"},"ignoreCase":{"type":"boolean"},"limit":{"type":"number"},"offset":{"type":"number"},"vendor":{"type":"boolean"},"root":{"type":"string"}},"required":["pattern"]})";
 
 json::Value refused(const std::string& reason) {
-    return json::Value(json::Object{{"ok", false}, {"refused", true}, {"error", "refused: " + reason}});
+    return json::Value(json::Object{{"ok", false}, {"refused", true}, {"error", "refused: " + reason}, {"output", "refused: " + reason}});
 }
 
 }
@@ -31,7 +31,7 @@ std::vector<VerbInfo> SearchVerbs::list() const {
          "Rank the lines of git-tracked files by BM25 and return the best k as path:line score text. An identifier also matches its parts, so planWaves matches plan and waves. k is 1 to 50, default 10. root names another existing directory to search instead of the workspace.",
          SEARCH_SCHEMA},
         {"grep",
-         "Find text in the files under path: the workspace by default. mode is literal (default), regex, or word. If a literal search finds nothing and the pattern has a regex character, it runs once more as a regex; an invalid regex is an error. scope is tracked (default: tracked files and untracked files that git does not ignore) or all (also gitignored files, node_modules included). A zero-match reply starts with a hint that counts the files it skipped. Returns path:line text. ignoreCase is optional; limit is 1 to 1000, default 100.",
+         "Find text in the files under path: the workspace by default. root names another existing directory, or one file, to search instead of the workspace; a file root must be tracked by git unless scope is all. pattern is at most 200 characters; a longer one is refused with its length. mode is literal (default), regex, or word. If a literal search finds nothing and the pattern has a regex character, it runs once more as a regex; an invalid regex is an error. scope is tracked (default: tracked files and untracked files that git does not ignore) or all (also gitignored files, node_modules included). A zero-match reply starts with a hint that counts the files it skipped. Returns path:line text. ignoreCase is optional; limit is 1 to 1000, default 100.",
          GREP_SCHEMA},
     };
 }
@@ -57,19 +57,26 @@ json::Value SearchVerbs::call(std::string_view name, const json::Value& args) {
     if (!unknown.empty()) return refused("unknown argument " + unknown + "; " + std::string(name) + " takes " + list + ", root");
 
     fs::path root = workspace_;
+    json::Value scoped = args;
     if (const json::Value* given = args.find("root")) {
         if (!given->is_string() || given->as_string().empty()) return refused("root must be a non-empty path");
         root = (workspace_ / given->as_string()).lexically_normal();
         std::error_code ec;
         if (!fs::exists(root, ec)) return refused("no such root: " + given->as_string());
-        if (!fs::is_directory(root, ec)) return refused("root is not a directory: " + given->as_string());
+        if (name == "grep" && fs::is_regular_file(root, ec)) {
+            if (args.find("path") != nullptr) return refused("path cannot be combined with a file root");
+            scoped.set("path", root.filename().string());
+            root = root.parent_path();
+        } else if (!fs::is_directory(root, ec)) {
+            return refused("root is not a directory: " + given->as_string());
+        }
     }
     auto found = searchers_.find(root);
     if (found == searchers_.end()) {
         if (searchers_.size() >= MAX_SEARCH_ROOTS) searchers_.erase(searchers_.begin());
         found = searchers_.emplace(root, std::make_unique<search::Searcher>(workspace_, root == workspace_ ? fs::path() : root)).first;
     }
-    std::string reply = name == "search" ? found->second->search(args) : found->second->grep(args);
+    std::string reply = name == "search" ? found->second->search(scoped) : found->second->grep(scoped);
     auto parsed = json::parse(reply);
     return parsed ? *parsed : json::Value(json::Object{{"ok", false}, {"error", "internal: unparsable reply"}});
 }

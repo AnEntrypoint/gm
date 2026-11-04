@@ -51,8 +51,9 @@ int main() {
     write(dir / ".gitignore", "ignored.log\n");
     write(dir / "ignored.log", "needle_in_ignored\n");
     write(dir / "loose.txt", "needle_loose\n");
+    write(dir / "blob.bin", std::string("needle\0bin\n", 11));
     gmnew::proc::run({"git", "init", "-q"}, dir);
-    gmnew::proc::run({"git", "add", "-f", "a.txt", "src", ".gitignore", "node_modules"}, dir);
+    gmnew::proc::run({"git", "add", "-f", "a.txt", "src", ".gitignore", "node_modules", "blob.bin"}, dir);
 
     gmnew::search::Searcher searcher(dir);
 
@@ -79,6 +80,41 @@ int main() {
 
     Value all = parse(searcher.grep(Value(gmnew::json::Object{{"pattern", "needle_in"}, {"scope", "all"}})));
     check(output_of(all).find("ignored.log:1") != std::string::npos, "scope all finds gitignored file: " + output_of(all));
+
+    Value by_path = parse(searcher.grep(Value(gmnew::json::Object{{"pattern", "plain text"}, {"path", "a.txt"}})));
+    check(output_of(by_path).find("a.txt:2 plain text") != std::string::npos, "grep path names one tracked file: " + output_of(by_path));
+
+    Value untracked_path = parse(searcher.grep(Value(gmnew::json::Object{{"pattern", "needle_loose"}, {"path", "loose.txt"}})));
+    check(untracked_path.find("ok") && !untracked_path.find("ok")->as_bool(), "untracked file path is refused");
+    check(output_of(untracked_path) == "loose.txt is not tracked by git; grep does not search it", "untracked file reply says so in output: " + output_of(untracked_path));
+
+    Value binary_path = parse(searcher.grep(Value(gmnew::json::Object{{"pattern", "needle"}, {"path", "blob.bin"}})));
+    check(output_of(binary_path) == "blob.bin is not text; grep does not search it", "binary file reply says so in output: " + output_of(binary_path));
+
+    Value at_limit = parse(searcher.grep(Value(gmnew::json::Object{{"pattern", std::string(200, 'a')}})));
+    check(at_limit.find("ok") && at_limit.find("ok")->as_bool(), "a 200-character pattern is accepted");
+    Value over_limit = parse(searcher.grep(Value(gmnew::json::Object{{"pattern", std::string(201, 'a')}})));
+    check(over_limit.find("ok") && !over_limit.find("ok")->as_bool(), "a 201-character pattern is refused");
+    check(over_limit.find("error") && over_limit.find("error")->as_string() == "pattern must be at most 200 characters; got 201",
+          "pattern refusal names the limit and the length: " + output_of(over_limit));
+    check(output_of(over_limit) == "pattern must be at most 200 characters; got 201", "pattern refusal is also in output");
+
+    gmnew::SearchVerbs verbs(dir);
+    Value file_root = verbs.call("grep", Value(gmnew::json::Object{{"pattern", "planWaves"}, {"root", "src/planner.js"}}));
+    check(file_root.find("ok") && file_root.find("ok")->as_bool(), "grep accepts a file root");
+    check(output_of(file_root).find("planner.js:1 function planWaves") != std::string::npos, "file root finds its line: " + output_of(file_root));
+
+    Value file_root_untracked = verbs.call("grep", Value(gmnew::json::Object{{"pattern", "needle_loose"}, {"root", "loose.txt"}}));
+    check(output_of(file_root_untracked) == "loose.txt is not tracked by git; grep does not search it",
+          "file root that is untracked says so: " + output_of(file_root_untracked));
+
+    Value file_root_search = verbs.call("search", Value(gmnew::json::Object{{"query", "planWaves"}, {"root", "src/planner.js"}}));
+    check(file_root_search.find("error") && file_root_search.find("error")->as_string() == "refused: root is not a directory: src/planner.js",
+          "search still refuses a file root: " + output_of(file_root_search));
+
+    Value file_root_path = verbs.call("grep", Value(gmnew::json::Object{{"pattern", "planWaves"}, {"root", "src/planner.js"}, {"path", "src"}}));
+    check(file_root_path.find("error") && file_root_path.find("error")->as_string() == "refused: path cannot be combined with a file root",
+          "grep refuses path with a file root: " + output_of(file_root_path));
 
     Value bad = parse(searcher.grep(Value(gmnew::json::Object{{"pattern", "(["}, {"mode", "regex"}})));
     check(bad.find("ok") && !bad.find("ok")->as_bool(), "invalid regex is an error");

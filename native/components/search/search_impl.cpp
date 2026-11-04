@@ -43,6 +43,7 @@ std::string fail(const std::string& error) {
     json::Value out;
     out.set("ok", false);
     out.set("error", error);
+    out.set("output", error);
     return json::dump(out);
 }
 
@@ -52,6 +53,12 @@ bool is_whole(const json::Value& v) {
 
 bool is_word_char(unsigned char c) {
     return std::isalnum(c) || c == '_';
+}
+
+std::size_t char_count(const std::string& s) {
+    std::size_t count = 0;
+    for (unsigned char c : s) count += (c & 0xC0) != 0x80;
+    return count;
 }
 
 bool has_regex_char(const std::string& s) {
@@ -386,7 +393,9 @@ std::string Searcher::grep(const json::Value& args) {
     const json::Value* pattern_arg = args.find("pattern");
     if (!pattern_arg || !pattern_arg->is_string() || pattern_arg->as_string().empty()) return fail("pattern must be a non-empty string");
     const std::string& pattern = pattern_arg->as_string();
-    if (pattern.size() > MAX_PATTERN_CHARS) return fail("pattern must be at most " + std::to_string(MAX_PATTERN_CHARS) + " characters");
+    std::size_t pattern_chars = char_count(pattern);
+    if (pattern_chars > MAX_PATTERN_CHARS)
+        return fail("pattern must be at most " + std::to_string(MAX_PATTERN_CHARS) + " characters; got " + std::to_string(pattern_chars));
     std::string mode = "literal";
     if (const json::Value* given = args.find("mode")) {
         mode = given->is_string() ? given->as_string() : "";
@@ -471,6 +480,28 @@ std::string Searcher::grep(const json::Value& args) {
         std::set<std::string> known(tracked.paths.begin(), tracked.paths.end());
         for (const std::string& rel : under(visible.ok ? visible.paths : tracked.paths, rel_scope, vendor))
             if (known.count(rel) || !in_state(rel)) names.push_back(rel);
+    }
+
+    if (fs::is_regular_file(scope, ec)) {
+        std::string reason;
+        std::set<std::string> tracked_set(tracked.paths.begin(), tracked.paths.end());
+        struct stat info;
+        std::string data;
+        if (use_git && !all && !tracked_set.count(rel_scope)) reason = "is not tracked by git";
+        else if (use_git && !vendor && in_vendor(rel_scope)) reason = "is in node_modules or vendor; pass vendor: true to search it";
+        else if (use_git && std::find(names.begin(), names.end(), rel_scope) == names.end()) reason = "is gitignored; pass scope: all to search it";
+        else if (!stat_file(scope, info) || static_cast<std::uintmax_t>(info.st_size) > MAX_FILE_BYTES)
+            reason = "is larger than " + std::to_string(MAX_FILE_BYTES) + " bytes";
+        else if (!read_text(scope, data) || looks_binary(data)) reason = "is not text";
+        if (!reason.empty()) {
+            std::string message = (inside && root_ == workspace_ ? rel_scope : generic(scope)) + " " + reason + "; grep does not search it";
+            json::Value skipped;
+            skipped.set("ok", false);
+            skipped.set("files", use_git ? "git" : "walk");
+            skipped.set("error", message);
+            skipped.set("output", message);
+            return json::dump(skipped);
+        }
     }
 
     long long offset = 0;
