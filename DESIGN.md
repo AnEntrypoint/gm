@@ -143,3 +143,11 @@ Decision: every git verb takes `cwd`. A relative `cwd` resolves against the work
 Witness, run `2026-11-03-22-40-50-654010`: `gm.git_status({ cwd: "/workspace/gm-new" })` gave `## main...origin/main`, which matches `git status --porcelain=v1 --branch` in gm-new. `gm.git_status({ cwd: "/tmp" })` gave `{"ok":false,"error":"cwd /tmp is not inside a git repository"}`. `gm.git_log({ cwd: "/workspace/gm-new", count: 2 })` gave `d8e838a` and `cec628b`. `gm.git_status({})` still reports the `/workspace/gm` submodules, because the session binding is unchanged until the session restarts.
 
 Not tested: `cwd` on the write and network verbs (add, rm, commit, push, fetch, pull, ci_status), and the commit gate in a repository other than gm-new.
+
+## job_status returns plain fields (2026-11-04)
+
+Friction, seen in deoxidene-06 (run 2026-11-04-06-33-34-2c4415): `job_status` returned the state and output as one JSON string in `output`, with the log path and a 2000-character tail inside it. Reading a finished job's full output took a second read of the log, and run_code encoded the string again.
+
+Decision: `job_status` returns plain top-level fields: `state`, `exitCode`, `signal`, the job's own fields (`job`, `command`, `pid`, `startMono`, and `reason` when set), `output` (the last 20000 characters, or with `offset` the 20000 characters from it), `total`, `truncated`, `offset`, `next` and `logPath` (the job output file, null for a background run). The `offset` page had the same JSON-string shape and now has the same fields. Callers: grep of gm-new finds no code that parses the JSON string. src/bench.mjs only issues the call, and skills/gm/SKILL.md reads `.state`. Cost: the log records each call's output, so a polled job logs up to 20000 characters per poll.
+
+Witness: scripted run 2026-11-04-06-45-51-e8951a (job `short`: state exited, exitCode 3, output "alpha\nbeta\n", total 11, next null, logPath set). Live run 2026-11-04-06-33-34-2c4415: job `shapecheck` in one job_status call, and job `bigcheck` (25000 characters): the tail is 20000 characters at offset 5000, and offsets 0 and 20000 give pages with next 20000 and null.

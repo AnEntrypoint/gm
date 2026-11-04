@@ -218,14 +218,25 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
       if (job && !job.settled && waitMs > 0) await waitOrTimeout(job.done, waitMs);
       const status = readStatus(args.job);
       if (!status) return { ok: false, error: `no job named ${args.job}` };
-      if (args.offset !== undefined) {
-        const offset = args.offset;
-        if (!Number.isInteger(offset) || offset < 0) return { ok: false, error: 'offset must be a whole number of characters, zero or more' };
-        const text = outputOf(status);
-        const end = Math.min(offset + OUTPUT_PAGE, text.length);
-        return { ok: true, state: status.state, output: JSON.stringify({ ...status, chunk: text.slice(offset, end), total: text.length, offset, next: end < text.length ? end : null }) };
+      if (args.offset !== undefined && (!Number.isInteger(args.offset) || args.offset < 0)) {
+        return { ok: false, error: 'offset must be a whole number of characters, zero or more' };
       }
-      return { ok: true, state: status.state, output: JSON.stringify({ ...status, tail: outputOf(status, TAIL_CAP) }) };
+      const { output: logPath, ...meta } = status;
+      const text = outputOf(status);
+      const from = args.offset ?? Math.max(0, text.length - OUTPUT_PAGE);
+      const end = Math.min(from + OUTPUT_PAGE, text.length);
+      return {
+        ok: true,
+        ...meta,
+        exitCode: status.exitCode ?? null,
+        signal: status.signal ?? null,
+        output: text.slice(from, end),
+        total: text.length,
+        truncated: from > 0 || end < text.length,
+        offset: from,
+        next: end < text.length ? end : null,
+        logPath: logPath ?? null,
+      };
     },
 
     // A shell job is stopped by its process group. It ends killed with reason cancelled, and the job event is logged before this answers
