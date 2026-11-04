@@ -8,7 +8,7 @@ Install the latest release, once per machine. It fetches the release manifest, v
 
     curl -fsSL https://raw.githubusercontent.com/AnEntrypoint/gmc/main/scripts/install.sh | sh
 
-Windows, in PowerShell:
+Windows, in PowerShell (not published yet: the Windows build fails most of its tests, so the release carries Linux and macOS only):
 
     irm https://raw.githubusercontent.com/AnEntrypoint/gmc/main/scripts/install.ps1 | iex
 

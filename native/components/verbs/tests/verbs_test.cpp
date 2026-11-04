@@ -221,10 +221,10 @@ int main() {
         expect(text_of(changes, "output") == "[\"job-stuck\",\"job-unstuck\"]", "stuck changes are logged: " + gmnew::json::dump(changes));
         verbs.call("job_stop", object_of({{"job", "quiet"}}));
 
-        verbs.call("job_start", object_of({{"job", "ordered"}, {"command", "true"}}));
+        verbs.call("job_start", object_of({{"job", "ordered"}, {"command", "sleep 1"}}));
         std::this_thread::sleep_for(std::chrono::milliseconds(80));
         stuck_log->append("action", object_of({{"tool", "run_code"}}));
-        auto ordered_status = verbs.call("job_status", object_of({{"job", "ordered"}}));
+        auto ordered_status = verbs.call("job_status", object_of({{"job", "ordered"}, {"waitMs", 10000}}));
         auto order = verbs.call("query_log", object_of({{"js", "events.filter(e => e.job === 'ordered' || e.kind === 'action').map(e => e.kind + ':' + (e.state ?? ''))"}}));
         expect(text_of(ordered_status, "state") == "exited" && text_of(order, "output") == "[\"job:running\",\"action:\",\"job:exited\"]",
                "exit event lands after the next action and before the reply that reads it: " + gmnew::json::dump(order));

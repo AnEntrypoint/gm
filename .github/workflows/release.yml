@@ -25,14 +25,6 @@ jobs:
             preset: arm64-linux-release
             target: arm64-linux
             ccache: true
-          - os: windows-latest
-            preset: x64-windows-release
-            target: x64-windows
-            ccache: false
-          - os: windows-11-arm
-            preset: arm64-windows-release
-            target: arm64-windows
-            ccache: false
           - os: macos-latest
             preset: x64-macos-release
             target: x64-macos
@@ -53,10 +45,6 @@ jobs:
         shell: bash
         run: echo "GMNEW_VERSION=${GITHUB_SHA:0:7}-${GITHUB_RUN_NUMBER}" >> "$GITHUB_ENV"
       - uses: seanmiddleditch/gha-setup-ninja@master
-      - uses: ilammy/msvc-dev-cmd@v1
-        if: runner.os == 'Windows'
-        with:
-          arch: ${{ contains(matrix.preset, 'arm64') && 'arm64' || 'x64' }}
       - uses: hendrikmuhs/ccache-action@v1.2
         if: matrix.ccache
         with:
@@ -82,6 +70,40 @@ jobs:
           if-no-files-found: error
           compression-level: 0
           retention-days: 1
+
+  # Not published yet: Windows fails most of its test suites. It builds and tests on every push so the failures stay visible.
+  build-windows:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            preset: x64-windows-release
+          - os: windows-11-arm
+            preset: arm64-windows-release
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    continue-on-error: true
+    concurrency:
+      group: build-${{ github.ref }}-${{ matrix.preset }}
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v4
+      - name: Version
+        shell: bash
+        run: echo "GMNEW_VERSION=${GITHUB_SHA:0:7}-${GITHUB_RUN_NUMBER}" >> "$GITHUB_ENV"
+      - uses: seanmiddleditch/gha-setup-ninja@master
+      - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: ${{ contains(matrix.preset, 'arm64') && 'arm64' || 'x64' }}
+      - name: Configure and build
+        shell: bash
+        run: |
+          cmake --preset ${{ matrix.preset }} -DGMNEW_BUILD_TESTS=ON -DGMNEW_VERSION=$GMNEW_VERSION
+          cmake --build build/${{ matrix.preset }}
+      - name: Test
+        shell: bash
+        run: ctest --test-dir build/${{ matrix.preset }} --output-on-failure -j "$(nproc 2>/dev/null || sysctl -n hw.ncpu)"
 
   publish:
     needs: build
