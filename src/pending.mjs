@@ -9,8 +9,8 @@ import { appendFileSync, closeSync, existsSync, openSync, readdirSync, readFileS
 import { join } from 'node:path';
 
 export const PENDING_FILE = 'pending.jsonl';
-// The event kinds an agent must act on: a job's start and end, a job killed, a stuck or unstuck job, a rules notice, a recovery, and a host-idle notice.
-export const PENDING_KINDS = new Set(['job', 'job-killed', 'job-stuck', 'job-unstuck', 'rules-notice', 'recovery', 'host-idle']);
+// The event kinds an agent must act on: a job's start and end, a job killed, a stuck or unstuck job, a rules notice, a recovery, a host-idle notice, and a row added.
+export const PENDING_KINDS = new Set(['job', 'job-killed', 'job-stuck', 'job-unstuck', 'rules-notice', 'recovery', 'host-idle', 'row-added']);
 const LOCK_FILE = 'pending.lock';
 // A holder keeps the lock for one append or one rename, so a lock older than LOCK_STALE_MS was left by a holder that died. A waiter that
 // waits LOCK_WAIT_MS without a stale lock gives up.

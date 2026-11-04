@@ -109,6 +109,7 @@ function addRow(kind, { title, body = '' }) {
   if (typeof body !== 'string') return fail('body must be a string');
   const row = { id: newId(kind), kind, title: title.trim(), body, status: 'open', createdAt: new Date().toISOString() };
   writeRow(row);
+  host.logAppend({ kind: 'row-added', fields: { row: row.id, rowKind: kind, title: row.title } });
   return { ok: true, output: row.id };
 }
 

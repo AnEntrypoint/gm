@@ -137,7 +137,7 @@ std::vector<std::string> abandoned_copies(const fs::path& run_dir) {
 }
 
 bool is_pending_kind(std::string_view kind) {
-    static const std::set<std::string_view> kinds = {"job", "job-killed", "job-stuck", "job-unstuck", "rules-notice", "recovery", "host-idle"};
+    static const std::set<std::string_view> kinds = {"job", "job-killed", "job-stuck", "job-unstuck", "rules-notice", "recovery", "host-idle", "row-added"};
     return kinds.contains(kind);
 }
 

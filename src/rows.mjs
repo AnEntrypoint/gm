@@ -59,6 +59,7 @@ export function createRowVerbs({ root, confine, log }) {
     if (typeof body !== 'string') return fail('body must be a string');
     const row = { id: newId(kind), kind, title: title.trim(), body, status: 'open', createdAt: new Date().toISOString() };
     await writeRow(row);
+    log.append('row-added', { row: row.id, rowKind: kind, title: row.title });
     return { ok: true, output: row.id };
   }
 

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import test from 'node:test';
+import { PENDING_KINDS } from '../../../src/pending.mjs';
 import { cleanup, realHost, tempDir } from './helpers.mjs';
 
 test('add, list, resolve and delete rows', async () => {
@@ -16,6 +17,15 @@ test('add, list, resolve and delete rows', async () => {
     assert.match(id, /^prd-[a-z0-9]+$/);
     assert.equal(call('prd_list', {}).output, `${id} open ship it`);
     assert.equal(call('unknown_list', {}).output, '(none)');
+    const question = call('unknown_add', { title: 'which colour?' }).output;
+    assert.deepEqual(
+      host.calls.filter((entry) => entry[0] === 'row-added').map((entry) => entry[1]),
+      [
+        { row: id, rowKind: 'prd', title: 'ship it' },
+        { row: question, rowKind: 'unknown', title: 'which colour?' },
+      ],
+    );
+    assert.equal(PENDING_KINDS.has('row-added'), true);
     host.run({ argv: ['git', 'init', '-b', 'main'], cwd: dir });
     writeFileSync(join(dir, 'f'), 'x');
     host.run({ argv: ['git', 'add', 'f'], cwd: dir });
