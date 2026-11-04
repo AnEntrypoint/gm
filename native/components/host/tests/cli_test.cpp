@@ -6,6 +6,11 @@
 
 #include "gmnew/log.hpp"
 
+#ifdef _WIN32
+#define popen _popen
+#define pclose _pclose
+#endif
+
 namespace {
 
 namespace fs = std::filesystem;
