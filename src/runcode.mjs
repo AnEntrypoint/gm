@@ -241,9 +241,15 @@ export async function runBody({ body, timeoutMs = DEFAULT_TIMEOUT_MS, format, ve
     const line = at.line - head + removed;
     return line >= 1 && line <= bodyLines ? ` (line ${line}, column ${at.column})` : '';
   };
+  let killed = false;
+  const kill = () => {
+    killed = true;
+    stop();
+  };
+  const lost = () => `its return value and console output are lost; ${log.eventsFrom(startSeq + 1).filter((event) => event.kind === 'code-call').length} verb calls completed before the stop, each in query_log as a code-call after seq ${startSeq}`;
   const result = done.then((reply) => (reply.ok
     ? { ok: true, output: reply.text.slice(0, OUTPUT_CAP), truncated: reply.text.length > OUTPUT_CAP }
-    : { ok: false, error: reply.at ? reply.error + locate(reply.at) : reply.error }));
+    : { ok: false, error: killed ? `${reply.error}: ${lost()}` : reply.at ? reply.error + locate(reply.at) : reply.error }));
   // If the body settles within the budget, the call returns its result. If the budget is spent first, the body is handed to the caller as a
   // background job, which watches it through the job machinery; its body file stays until the body ends.
   let timer;
@@ -257,7 +263,7 @@ export async function runBody({ body, timeoutMs = DEFAULT_TIMEOUT_MS, format, ve
     return { ...outcome, loads };
   }
   const queued = !slot.granted;
-  const name = background({ result, cleanup: () => rmSync(file, { force: true }), kill: stop, body: startSeq, queued, started: slot.ready });
+  const name = background({ result, cleanup: () => rmSync(file, { force: true }), kill, body: startSeq, queued, started: slot.ready });
   const logged = log.eventsFrom(startSeq + 1).filter((event) => event.kind === 'code-call').map((event) => ({ seq: event.seq, tool: event.tool, ok: event.ok }));
   return { ok: true, background: name, state: queued ? 'queued' : 'running', logged, loads };
 }
