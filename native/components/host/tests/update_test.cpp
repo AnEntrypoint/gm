@@ -233,6 +233,10 @@ void lock_is_exclusive(const fs::path& root) {
     fs::last_write_time(lock, fs::file_time_type::clock::now() - std::chrono::minutes(5));
     check(!acquire_update_lock(install), "a fresh lock is not taken over");
     fs::remove_all(lock);
+    fs::create_directories(lock);
+    std::ofstream(lock / "owner") << 2147483646 << '\n';
+    check(acquire_update_lock(install), "a fresh lock whose owner has exited is taken over");
+    fs::remove_all(lock);
 }
 
 void etag_is_read_from_the_last_response() {

@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cerrno>
 #include <chrono>
 #include <cstdlib>
 #include <exception>
@@ -16,6 +17,12 @@
 #include "gmnew/mcp.hpp"
 #include "gmnew/proc.hpp"
 
+#if !defined(_WIN32)
+#include <signal.h>
+#include <sys/types.h>
+#include <unistd.h>
+#endif
+
 namespace gmnew::host {
 
 namespace {
@@ -29,6 +36,7 @@ constexpr std::string_view kPreviousName = ".gmnew-previous";
 constexpr std::string_view kRetiredSuffix = ".old";
 constexpr std::string_view kStateName = ".gmnew-update.json";
 constexpr std::string_view kLockName = ".gmnew-update.lock";
+constexpr std::string_view kOwnerName = "owner";
 constexpr std::chrono::minutes kLockStale{30};
 constexpr std::string_view kEtagHeader = "etag:";
 constexpr std::string_view kSharedDirectories[] = {"leaves", "skills", "defaults"};
@@ -314,15 +322,34 @@ std::optional<std::string> etag_from_headers(std::string_view headers) {
     return etag;
 }
 
+void record_lock_owner([[maybe_unused]] const fs::path& lock) {
+#if !defined(_WIN32)
+    std::ofstream(lock / kOwnerName) << ::getpid() << '\n';
+#endif
+}
+
+bool lock_owner_is_gone([[maybe_unused]] const fs::path& lock) {
+#if defined(_WIN32)
+    return false;
+#else
+    long pid = 0;
+    if (!(std::ifstream(lock / kOwnerName) >> pid) || pid <= 0) return false;
+    return ::kill(static_cast<pid_t>(pid), 0) == -1 && errno == ESRCH;
+#endif
+}
+
 bool acquire_update_lock(const fs::path& install_dir) {
     const fs::path lock = install_dir / kLockName;
     std::error_code ec;
-    if (fs::create_directory(lock, ec)) return true;
-    const fs::file_time_type modified = fs::last_write_time(lock, ec);
-    if (ec || fs::file_time_type::clock::now() - modified < kLockStale) return false;
-    fs::remove_all(lock, ec);
-    if (ec) return false;
-    return fs::create_directory(lock, ec);
+    if (!fs::create_directory(lock, ec)) {
+        const fs::file_time_type modified = fs::last_write_time(lock, ec);
+        const bool aged_out = !ec && fs::file_time_type::clock::now() - modified >= kLockStale;
+        if (!aged_out && !lock_owner_is_gone(lock)) return false;
+        fs::remove_all(lock, ec);
+        if (ec || !fs::create_directory(lock, ec)) return false;
+    }
+    record_lock_owner(lock);
+    return true;
 }
 
 UpdatePolicy policy_from_environment(const fs::path& install_dir) {
