@@ -39,6 +39,31 @@ constexpr std::size_t BINARY_PROBE_BYTES = 8000;
 
 const std::set<std::string> STATE_DIRS = {".git", ".gm", ".agentplug", ".agentplug-kv", ".gm-new", ".playwriter", "runs"};
 
+Listing walk_listing(const fs::path& base) {
+    Listing walked;
+    walked.ok = true;
+    std::vector<std::string> pending = {""};
+    while (!pending.empty()) {
+        std::string dir = pending.back();
+        pending.pop_back();
+        std::error_code walk_ec;
+        for (const fs::directory_entry& entry : fs::directory_iterator(base / dir, walk_ec)) {
+            std::string name = entry.path().filename().string();
+            std::string rel = dir.empty() ? name : dir + "/" + name;
+            std::error_code type_ec;
+            if (entry.is_symlink(type_ec)) continue;
+            if (entry.is_directory(type_ec)) {
+                bool skip = STATE_DIRS.count(name) || (!name.empty() && name[0] == '.') || name == "runs" || name == "node_modules" || name == "vendor";
+                if (!skip) pending.push_back(rel);
+            } else if (entry.is_regular_file(type_ec)) {
+                walked.paths.push_back(rel);
+            }
+        }
+    }
+    std::sort(walked.paths.begin(), walked.paths.end());
+    return walked;
+}
+
 std::string fail(const std::string& error) {
     json::Value out;
     out.set("ok", false);
@@ -280,8 +305,11 @@ Listing Searcher::list(const std::vector<std::string>& args, bool cached) {
 bool Searcher::load_tracked(std::string& error) {
     Listing listing = list({"ls-files", "-z"}, true);
     if (!listing.ok) {
-        error = "search and grep need a git repository: git ls-files failed";
-        return false;
+        listing = walk_listing(root_);
+        if (listing.paths.empty()) {
+            error = "search and grep need a git repository: git ls-files failed";
+            return false;
+        }
     }
     std::map<std::string, FileEntry> next;
     std::string key;

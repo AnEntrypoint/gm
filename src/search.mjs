@@ -42,7 +42,7 @@ const ROOT_NOTE = 'root (or its aliases projectPath and cwd) names another exist
 export const SEARCH_TOOLS = [
   {
     name: 'search',
-    description: `Rank the lines of git-tracked files by BM25 and return the best k as path:line score text. An identifier also matches its parts, so planWaves matches plan and waves. k is 1 to 50, default 10. closure true (default false) adds one line per JavaScript file that defines a function called from a top-10 hit and is not itself a top-10 file, as path:line closure text in place of a score, at most 20 lines. ${ROOT_NOTE}`,
+    description: `Rank the lines of git-tracked files (outside a git repository, every file under the root) by BM25 and return the best k as path:line score text. An identifier also matches its parts, so planWaves matches plan and waves. k is 1 to 50, default 10. closure true (default false) adds one line per JavaScript file that defines a function called from a top-10 hit and is not itself a top-10 file, as path:line closure text in place of a score, at most 20 lines. ${ROOT_NOTE}`,
     inputSchema: obj({ query: str, k: num, root: str, closure: bool }, ['query']),
   },
   {
@@ -262,7 +262,7 @@ function searcherFor({ root, confine }) {
   }
 
   async function loadFiles(listing = TRACKED) {
-    const tracked = await trackedFiles(root, listing);
+    const tracked = await listedFiles(root, listing);
     if (tracked.error) return tracked;
     const previous = filesOf.get(listing.name) ?? new Map();
     const next = new Map();
@@ -329,6 +329,15 @@ async function trackedFiles(root, listing) {
   } catch {
     return { error: 'search and grep need a git repository: git ls-files failed' };
   }
+}
+
+async function listedFiles(root, listing) {
+  const tracked = await trackedFiles(root, listing);
+  if (!tracked.error) return tracked;
+  const under = listing === WIKI ? 'wiki' : '';
+  const walked = await walkFiles(join(root, under), false, false);
+  if (walked.paths.length === 0) return tracked;
+  return { paths: walked.paths.map((rel) => (under === '' ? rel : `${under}/${rel}`)) };
 }
 
 async function walkFiles(base, all, vendor) {

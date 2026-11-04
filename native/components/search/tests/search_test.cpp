@@ -120,6 +120,17 @@ int main() {
     check(bad.find("ok") && !bad.find("ok")->as_bool(), "invalid regex is an error");
     check(bad.find("error") && bad.find("error")->as_string().rfind("bad pattern", 0) == 0, "invalid regex error text");
 
+    fs::path plain = fs::temp_directory_path() / ("gmnew_search_plain_" + std::to_string(std::rand()));
+    fs::remove_all(plain);
+    write(plain / "notes.txt", "planWaves in a plain folder\n");
+    Value plain_search = parse(gmnew::search::Searcher(plain).search(Value(gmnew::json::Object{{"query", "waves"}})));
+    check(plain_search.find("ok") && plain_search.find("ok")->as_bool(), "search accepts a folder outside git");
+    check(output_of(plain_search).rfind("notes.txt:1 ", 0) == 0, "search walks a folder outside git: " + output_of(plain_search));
+    fs::create_directories(plain / "empty");
+    Value plain_empty = parse(gmnew::search::Searcher(plain / "empty").search(Value(gmnew::json::Object{{"query", "waves"}})));
+    check(plain_empty.find("ok") && !plain_empty.find("ok")->as_bool(), "search refuses a folder with no files");
+    fs::remove_all(plain);
+
     fs::remove_all(dir);
     if (failures == 0) std::cout << "search tests passed\n";
     return failures == 0 ? 0 : 1;
