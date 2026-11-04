@@ -50,6 +50,7 @@ int main() {
     write(dir / "node_modules" / "dep" / "index.js", "needle_in_vendor\n");
     write(dir / ".gitignore", "ignored.log\n");
     write(dir / "ignored.log", "needle_in_ignored\n");
+    write(dir / "loose.txt", "needle_loose\n");
     gmnew::proc::run({"git", "init", "-q"}, dir);
     gmnew::proc::run({"git", "add", "-f", "a.txt", "src", ".gitignore", "node_modules"}, dir);
 
@@ -69,10 +70,12 @@ int main() {
     check(output_of(fallback).find("matched as regex") != std::string::npos, "literal falls back to regex");
 
     Value tracked_skip = parse(searcher.grep(Value(gmnew::json::Object{{"pattern", "needle_in"}, {"vendor", false}})));
-    check(output_of(tracked_skip).find("2 files skipped (1 untracked, 1 gitignored or in node_modules)") == std::string::npos ||
-              output_of(tracked_skip).find("skipped") != std::string::npos,
-          "zero-match hint names skipped files");
-    check(output_of(tracked_skip).find("skipped") != std::string::npos, "hint present: " + output_of(tracked_skip));
+    check(output_of(tracked_skip).rfind("hint: 2 files skipped (1 in node_modules or vendor, 1 gitignored); use scope: 'all' to include them\n(0 matches", 0) == 0,
+          "zero-match hint is the first line: " + output_of(tracked_skip));
+
+    Value loose_found = parse(searcher.grep(Value(gmnew::json::Object{{"pattern", "needle_loose"}})));
+    check(output_of(loose_found).find("loose.txt:1 needle_loose") != std::string::npos,
+          "default scope finds an untracked file that git does not ignore: " + output_of(loose_found));
 
     Value all = parse(searcher.grep(Value(gmnew::json::Object{{"pattern", "needle_in"}, {"scope", "all"}})));
     check(output_of(all).find("ignored.log:1") != std::string::npos, "scope all finds gitignored file: " + output_of(all));

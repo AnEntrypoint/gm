@@ -434,6 +434,7 @@ std::string Searcher::grep(const json::Value& args) {
     fs::path base = use_git ? root_ : scope;
     std::vector<std::string> names;
     std::size_t skipped_dirs = 0;
+    Listing visible = use_git && !all ? list({"ls-files", "-z", "-c", "-o", "--exclude-standard"}, false) : Listing{};
     if (!use_git) {
         if (fs::is_regular_file(scope, ec)) {
             names.push_back("");
@@ -467,7 +468,9 @@ std::string Searcher::grep(const json::Value& args) {
         for (const std::string& rel : under(every.paths, rel_scope, true))
             if (rel.back() != '/' && (known.count(rel) || !in_state(rel))) names.push_back(rel);
     } else {
-        names = under(tracked.paths, rel_scope, vendor);
+        std::set<std::string> known(tracked.paths.begin(), tracked.paths.end());
+        for (const std::string& rel : under(visible.ok ? visible.paths : tracked.paths, rel_scope, vendor))
+            if (known.count(rel) || !in_state(rel)) names.push_back(rel);
     }
 
     long long offset = 0;
@@ -524,40 +527,39 @@ std::string Searcher::grep(const json::Value& args) {
     if (!all && scanned.total == 0) {
         if (!use_git) {
             if (skipped_dirs > 0)
-                hints.push_back(plural(skipped_dirs, "directory", "directories") +
-                                " skipped (dot-directories, node_modules, vendor or runs); use scope: 'all' to include them");
+                hints.insert(hints.begin(), plural(skipped_dirs, "directory", "directories") +
+                                                " skipped (dot-directories, node_modules, vendor or runs); use scope: 'all' to include them");
         } else {
             Listing every = list({"ls-files", "-z", "-c", "-o"}, false);
-            Listing untracked = list({"ls-files", "-z", "-o", "--exclude-standard"}, false);
-            if (!every.ok || !untracked.ok) {
-                hints.push_back("skipped files not counted: git ls-files failed or ran past its limit");
+            if (!every.ok || !visible.ok) {
+                hints.insert(hints.begin(), "skipped files not counted: git ls-files failed or ran past its limit");
             } else {
                 std::set<std::string> known(tracked.paths.begin(), tracked.paths.end());
-                std::set<std::string> loose(untracked.paths.begin(), untracked.paths.end());
-                std::size_t skipped = 0;
-                std::size_t untracked_count = 0;
+                std::set<std::string> searched(names.begin(), names.end());
+                std::size_t in_vendor_count = 0;
+                std::size_t ignored_count = 0;
                 for (const std::string& rel : under(every.paths, rel_scope, true)) {
-                    if (rel.back() == '/') continue;
-                    bool is_known = known.count(rel) > 0;
-                    if (is_known ? (vendor || !in_vendor(rel)) : in_state(rel)) continue;
-                    ++skipped;
-                    if (!is_known && loose.count(rel) && !in_vendor(rel)) ++untracked_count;
+                    if (rel.back() == '/' || searched.count(rel) || (!known.count(rel) && in_state(rel))) continue;
+                    if (!vendor && in_vendor(rel)) ++in_vendor_count;
+                    else ++ignored_count;
                 }
+                std::size_t skipped = in_vendor_count + ignored_count;
                 if (skipped > 0)
-                    hints.push_back(plural(skipped, "file", "files") + " skipped (" + std::to_string(untracked_count) + " untracked, " +
-                                    std::to_string(skipped - untracked_count) + " gitignored or in node_modules); use scope: 'all' to include them");
+                    hints.insert(hints.begin(), plural(skipped, "file", "files") + " skipped (" + std::to_string(in_vendor_count) +
+                                                " in node_modules or vendor, " + std::to_string(ignored_count) +
+                                                " gitignored); use scope: 'all' to include them");
             }
         }
     }
 
     std::string output;
-    for (const std::string& row : scanned.found) output += row + "\n";
-    output += footer;
     std::string joined;
     for (const std::string& hint : hints) {
-        output += "\nhint: " + hint;
+        output += "hint: " + hint + "\n";
         joined += (joined.empty() ? "" : " | ") + hint;
     }
+    for (const std::string& row : scanned.found) output += row + "\n";
+    output += footer;
     json::Value out;
     out.set("ok", true);
     out.set("files", use_git ? "git" : "walk");

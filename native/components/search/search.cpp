@@ -31,7 +31,7 @@ std::vector<VerbInfo> SearchVerbs::list() const {
          "Rank the lines of git-tracked files by BM25 and return the best k as path:line score text. An identifier also matches its parts, so planWaves matches plan and waves. k is 1 to 50, default 10. root names another existing directory to search instead of the workspace.",
          SEARCH_SCHEMA},
         {"grep",
-         "Find text in the files under path: the workspace by default. mode is literal (default), regex, or word. If a literal search finds nothing and the pattern has a regex character, it runs once more as a regex; an invalid regex is an error. scope is tracked (default) or all. Returns path:line text. ignoreCase is optional; limit is 1 to 1000, default 100.",
+         "Find text in the files under path: the workspace by default. mode is literal (default), regex, or word. If a literal search finds nothing and the pattern has a regex character, it runs once more as a regex; an invalid regex is an error. scope is tracked (default: tracked files and untracked files that git does not ignore) or all (also gitignored files, node_modules included). A zero-match reply starts with a hint that counts the files it skipped. Returns path:line text. ignoreCase is optional; limit is 1 to 1000, default 100.",
          GREP_SCHEMA},
     };
 }
