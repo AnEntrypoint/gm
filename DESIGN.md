@@ -229,6 +229,12 @@ Ownership (one owner per file, so parallel work does not collide):
 
 Not ported in this phase, each to be decided with the owner: the scripted model and the `replay` and `bench` commands (they serve Node witnesses; the MCP path needs none of them), and the live comparison (closed). Cutover, meaning the `.mcp.json` entry switches to `gmnew serve`, is a later commit and needs a reconnect of each host.
 
+Integration pass (2026-11-04):
+
+- job_status and job_stop (exec.rs) answer for `body-<seq>` names through runcode.rs, with the plain-field job_status shape (`logPath` null for a body). finish is refused while any body or shell job runs, naming the count; stopBackground stops them before the end event.
+- search closure uses `code::closure_lines`: the callees of the function enclosing a top-10 hit, at the callee's first line.
+- Wired: Jobs::set_dir and Hub::attach at worker start and run reopen (job_start had no run directory, and client events were never logged), next_context waitMs (Run::hold), jobsOpen with the prd summary, the session prompt task (Run::set_task), tools text in prefixSha, inFlight counting, the wiki lint at finish, and the skills and wiki checks in the commit gate of a gm-new checkout. Duplicates deleted: run.rs open_rows, runcode run_code_tool, search.rs def scan. Build: zero warnings.
+
 Rules that bind the port: ASCII only; no test files and no fixtures that stand in for a run; no comments that carry prose (a comment that cannot be turned into code goes to AGENTS.md); commit only through `tools/ship.sh` by explicit path, author lanmower, no trailers; no branches or worktrees; the Cargo build directory under rust/ is git-ignored.
 
 ## Feed digest from the full output (2026-11-04)
