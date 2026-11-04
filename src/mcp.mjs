@@ -9,7 +9,7 @@ import { connectReply, SERVER_NAME } from './connect.mjs';
 import { currentRunDir, isDirectory, loadTask, newRunId, openRun, ROOT, setSuccessor } from './run.mjs';
 import { flushAllLogs } from './log.mjs';
 import { clearPending, hasPending, offPendingAppended, onPendingAppended, takePending } from './pending.mjs';
-import { conflicts, createTools, loggedReply, OUTPUT_PAGE, DEFAULT_STUCK_MS, DEFAULT_MONITOR_MS, BODY_NOTICE_MS } from './tools.mjs';
+import { conflicts, createTools, loggedFor, OUTPUT_PAGE, DEFAULT_STUCK_MS, DEFAULT_MONITOR_MS, BODY_NOTICE_MS } from './tools.mjs';
 import { bumpGeneration } from './hot.mjs';
 import { RELOADABLE } from './hot-config.mjs';
 import { SEARCH_TOOLS } from './search.mjs';
@@ -310,7 +310,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
       if (body !== undefined) tools.callEnded(body);
     }
     // The full result is logged, so query_log reaches the output and the exit code of a verb called inside a body.
-    const shown = name === 'query_log' ? loggedReply(result) : result;
+    const shown = loggedFor(name, result);
     const fields = { ok: shown?.ok === true, args, exitCode: shown?.exitCode, signal: shown?.signal, output: shown?.output, outputChars: shown?.outputChars, error: shown?.error };
     log.append('code-call', { step: steps, tool: name, startMono, ...fields, ...(body === undefined ? {} : { body }), ...(action === undefined ? {} : { actionSeq: action.seq }) });
     return result;
@@ -575,7 +575,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     }
     if (name === 'next_context') return args.child === true ? childContext(access, rpcId, args) : nextContext(access, rpcId, args);
     if (name === 'finish') return finish(args, access, rpcId);
-    if (Object.hasOwn(handlers, name)) return act(name, args, access, () => handlers[name](args, signalOf(rpcId)), name === 'query_log' ? loggedReply : undefined, rpcId);
+    if (Object.hasOwn(handlers, name)) return act(name, args, access, () => handlers[name](args, signalOf(rpcId)), (result) => loggedFor(name, result), rpcId);
     return act(name, args, access, () => tools.run(name, args, { signal: signalOf(rpcId) }), undefined, rpcId);
   }
 

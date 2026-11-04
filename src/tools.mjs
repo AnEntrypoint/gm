@@ -639,12 +639,10 @@ function clipped(event) {
   return shown;
 }
 
-// A query_log reply is a copy of events already in the log. The log keeps its first LOGGED_REPLY_CHARS and the full length. A full copy
-// would add up to 20 KB to the log for each query, and a page that reads the copies would never reach the end of the log. The events the
-// query reads are logged in full. Every path that logs a result uses this, so the log does not depend on the path that wrote it.
 const LOGGED_REPLY_CHARS = 1000;
-export function loggedReply(result) {
-  if (typeof result?.output !== 'string' || result.output.length <= LOGGED_REPLY_CHARS) return result;
+const LOGGED_OUTPUT_TOOLS = new Set(['query_log', 'job_status']);
+export function loggedFor(tool, result) {
+  if (!LOGGED_OUTPUT_TOOLS.has(tool) || typeof result?.output !== 'string' || result.output.length <= LOGGED_REPLY_CHARS) return result;
   return { ...result, output: result.output.slice(0, LOGGED_REPLY_CHARS), outputChars: result.output.length };
 }
 

@@ -65,15 +65,15 @@ Setup registers only gm with the host, so the worker is the only thing that star
 ## The CLI wrapper, for scripted witnesses
 
     node src/cli.mjs run --task "<text or file>" --workspace <dir> [--model scripted] [--script replies.json] [--faults 429,429] [--latency-ms N] [--serial] [--no-background] [--overlap]
-    node src/cli.mjs query --run <id> --js "events.filter((e) => e.kind === 'end')"
-    node src/cli.mjs replay --run <id> [--workspace <dir>]
+    node src/cli.mjs query (--run <id> | --dir <run dir>) --js "events.filter((e) => e.kind === 'end')"
+    node src/cli.mjs replay (--run <id> | --dir <run dir>) [--workspace <dir>]
     node src/cli.mjs doctor [--workspace <dir>]
 
 - `scripted` is the only model, and it is offline. gm makes no API call. In MCP mode the model is the host session, such as Claude Code.
 - `doctor` reports Node, whether the key is set (never its value), whether the workspace is writable, the last run, and two limits: the Node-below-22 failure path has no live run, and `run_shell` is unconfined. The process-group kill is unverified on Windows.
 - `replay` reruns a finished CLI run through the scripted model, and every replayed event carries `replayOf`.
 
-Each run writes `runs/<id>/` with `log.jsonl`, `rules.md` and `task.json`, and ends with a `summary` event: `maxInFlight`, `meanInFlight`, `toolMs`, `modelMs`, `idleMs` and `contextCalls`. `runs/` is git-ignored.
+Each run writes `runs/<id>/` under its `--workspace` (gm-new's own `runs/` when the workspace is the checkout), with `log.jsonl`, `rules.md` and `task.json`, and ends with a `summary` event: `maxInFlight`, `meanInFlight`, `toolMs`, `modelMs`, `idleMs` and `contextCalls`. The run's `log:` line prints its path. `runs/` is git-ignored.
 
 ## Measurement
 

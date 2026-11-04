@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { buildPrompt, parseActions } from './prompt.mjs';
-import { conflicts, loggedReply } from './tools.mjs';
+import { conflicts, loggedFor } from './tools.mjs';
 import { writeSummary } from './summary.mjs';
 
 const WINDOW = 20;
@@ -196,7 +196,7 @@ async function runAction({ tool, args }, { step, tools, log, latencyMs }) {
   if (latencyMs > 0) await sleep(latencyMs);
   const result = await tools.run(tool, args);
   if (result.refused) log.append('refusal', { step, tool, error: result.error, startMono, ...simulated(latencyMs) });
-  else log.append('result', { step, tool, startMono, ...(tool === 'query_log' ? loggedReply(result) : result), ...simulated(latencyMs) });
+  else log.append('result', { step, tool, startMono, ...loggedFor(tool, result), ...simulated(latencyMs) });
   log.leave();
   return result;
 }

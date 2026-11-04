@@ -5,7 +5,6 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { readEvents } from './log.mjs';
-import { RUNS } from './run.mjs';
 
 const CLI = fileURLToPath(new URL('./cli.mjs', import.meta.url));
 const TRIALS = 3;
@@ -106,7 +105,7 @@ function runOnce(task, script, workspace, flags, latencyMs) {
   const match = /^run (\S+): (\S+) after/m.exec(child.stdout);
   if (!match) throw new Error(`run did not start for ${task.name}: ${child.stderr}`);
   const [, id, status] = match;
-  const events = readEvents(join(RUNS, id, 'log.jsonl'));
+  const events = readEvents(join(workspace, 'runs', id, 'log.jsonl'));
   const start = events.find((event) => event.kind === 'start');
   const summary = events.find((event) => event.kind === 'summary');
   if (!summary) throw new Error(`run ${id} has no summary event`);

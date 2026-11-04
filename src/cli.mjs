@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { randomBytes } from 'node:crypto';
 import { existsSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { basename, join, resolve } from 'node:path';
 import { runLoop } from './loop.mjs';
 import { createModel } from './models.mjs';
 import { readEvents, runQuery } from './log.mjs';
@@ -16,8 +16,9 @@ const USAGE = `usage:
   gmnew run --task <file-or-text> --workspace <dir> [--model scripted] [--max-steps N]
             [--script <replies.json>] [--faults 429,429] [--serial] [--no-background]
             [--latency-ms N] [--overlap]
-  gmnew query --run <id> --js "<filter>"
+  gmnew query (--run <id> | --dir <run dir>) --js "<filter>"
   gmnew events (--run <id> | --dir <run dir>) (--read-clear | --wait [--timeout-ms N])
+  gmnew replay (--run <id> | --dir <run dir>) [--workspace <dir>] [--max-steps N]
   gmnew doctor [--workspace <dir>]`;
 
 async function main(argv) {
@@ -55,8 +56,8 @@ async function run(flags) {
   const spec = { task, witness: DEFAULT_WITNESS };
 
   const id = newRunId();
-  const runDir = join(RUNS, id);
-  const options = { serial, background, overlap, latencyMs, script: flags.script === undefined ? null : resolve(flags.script), faults: faults ?? null };
+  const runDir = join(workspace, 'runs', id);
+  const options ={ serial, background, overlap, latencyMs, script: flags.script === undefined ? null : resolve(flags.script), faults: faults ?? null };
   const log = createRun({
     runDir,
     rules: DEFAULT_RULES,
@@ -81,8 +82,8 @@ async function run(flags) {
 }
 
 async function replay(flags) {
-  if (!flags.run || !/^[A-Za-z0-9_-]+$/.test(flags.run)) throw new Error('--run <id> is required');
-  const source = join(RUNS, flags.run);
+  const source = runDirOf(flags);
+  const sourceId = basename(source);
   const meta = JSON.parse(readFileSync(join(source, 'task.json'), 'utf8'));
   const replies = readEvents(join(source, 'log.jsonl')).filter((event) => event.kind === 'reply').map((event) => event.text);
   if (replies.length === 0) throw new Error(`run ${flags.run} has no reply events to replay`);
@@ -93,14 +94,14 @@ async function replay(flags) {
   const model = createModel('scripted', { script: replies });
 
   const id = newRunId();
-  const runDir = join(RUNS, id);
-  const log = createRun({ runDir, rules: DEFAULT_RULES, meta: { id, ...spec, workspace, model: 'scripted', maxSteps, replayOf: flags.run, createdAt: new Date().toISOString() } });
+  const runDir = join(workspace, 'runs', id);
+  const log = createRun({ runDir, rules: DEFAULT_RULES, meta: { id, ...spec, workspace, model: 'scripted', maxSteps, replayOf: sourceId, createdAt: new Date().toISOString() } });
   const append = log.append;
-  log.append = (kind, data, at) => append(kind, { replayOf: flags.run, ...data }, at);
+  log.append = (kind, data, at) => append(kind, { replayOf: sourceId, ...data }, at);
   const tools = createTools({ workspace, runDir, log, background: true });
   const result = await runLoop({ runDir, spec, model, tools, log, maxSteps, serial: false, latencyMs: 0, overlap: false });
 
-  console.log(`run ${id}: ${result.status} after ${result.steps} steps, replay of ${flags.run}`);
+  console.log(`run ${id}: ${result.status} after ${result.steps} steps, replay of ${sourceId}`);
   if (result.witness) console.log(`witness: ${result.witness}`);
   console.log(`log: ${join(runDir, 'log.jsonl')}`);
   return result.status === 'finished' ? 0 : 1;
@@ -108,7 +109,7 @@ async function replay(flags) {
 
 async function events(flags) {
   if (flags['read-clear'] !== true && flags.wait !== true) throw new Error('events takes --read-clear, which prints the pending events once and clears them, or --wait');
-  const dir = eventsDir(flags);
+  const dir = runDirOf(flags);
   const waiting = flags.wait === true;
   const timeout = waiting ? timeoutMs(flags) : 0;
   const signals = [];
@@ -136,7 +137,7 @@ async function events(flags) {
   return 0;
 }
 
-function eventsDir(flags) {
+function runDirOf(flags) {
   if (flags.dir !== undefined) {
     const dir = resolve(flags.dir);
     if (!isDirectory(dir)) throw new Error(`no run directory ${dir}`);
@@ -165,10 +166,9 @@ function writeOut(text) {
 }
 
 function query(flags) {
-  if (!flags.run || !/^[A-Za-z0-9_-]+$/.test(flags.run)) throw new Error('--run <id> is required');
   if (flags.js === undefined) throw new Error('--js "<filter>" is required');
-  const file = join(RUNS, flags.run, 'log.jsonl');
-  if (!existsSync(file)) throw new Error(`no log for run ${flags.run}`);
+  const file = join(runDirOf(flags), 'log.jsonl');
+  if (!existsSync(file)) throw new Error(`no log at ${file}`);
   const result = runQuery(readEvents(file), flags.js);
   if (!result.ok) throw new Error(`query failed: ${result.error}`);
   console.log(result.output);
