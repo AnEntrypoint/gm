@@ -1,7 +1,10 @@
 #include "gmnew/runcode.hpp"
 
+#include <algorithm>
+#include <charconv>
 #include <exception>
 #include <string>
+#include <system_error>
 #include <vector>
 
 #include "engine.hpp"
@@ -33,6 +36,23 @@ JSValue resolved_promise(JSContext* ctx, JSValue value) {
     JS_FreeValue(ctx, resolving[0]);
     JS_FreeValue(ctx, resolving[1]);
     return promise;
+}
+
+std::string load_error(const std::string& text, std::string_view body) {
+    constexpr std::string_view marker = "\n    at <body>:";
+    const std::size_t at = text.find(marker);
+    if (at == std::string::npos) return "the body does not load: " + text;
+    const std::string message = "the body does not load: " + text.substr(0, at);
+    const std::string_view rest = std::string_view(text).substr(at + marker.size());
+    const char* end = rest.data() + rest.size();
+    std::size_t line = 0;
+    std::size_t column = 0;
+    auto parsed_line = std::from_chars(rest.data(), end, line);
+    if (parsed_line.ec != std::errc() || parsed_line.ptr == end || *parsed_line.ptr != ':') return message;
+    if (std::from_chars(parsed_line.ptr + 1, end, column).ec != std::errc()) return message;
+    const std::size_t body_lines = 1 + static_cast<std::size_t>(std::count(body.begin(), body.end(), '\n'));
+    if (line < 2 || line - 1 > body_lines) return message;
+    return message + " (line " + std::to_string(line - 1) + ", column " + std::to_string(column) + ")";
 }
 
 JSValue call_verb(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv, int verb_index, JSValueConst*) {
@@ -117,7 +137,7 @@ deoxidene::Result<json::Value, std::string> run_body(VerbTable& verbs, std::stri
     source.append(body);
     source.append("\n})");
     Scoped function(ctx, JS_Eval(ctx, source.c_str(), source.size(), "<body>", JS_EVAL_TYPE_GLOBAL));
-    if (JS_IsException(function.get())) return Fail("the body does not load: " + engine::take_exception_text(engine));
+    if (JS_IsException(function.get())) return Fail(load_error(engine::take_exception_text(engine), body));
 
     JSValue call_args[1] = {gm_value.get()};
     engine::Settled settled = engine::settle(engine, JS_Call(ctx, function.get(), JS_UNDEFINED, 1, call_args));

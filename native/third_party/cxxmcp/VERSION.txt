@@ -1,0 +1,49 @@
+tag: v1.3.0
+commit: 9ec050d3269da318380a264d8269f0d904f8aef8 (tag v1.3.0 object, commit type)
+source: gh api repos/caomengxuan666/cxxmcp/tarball/v1.3.0 (tarball sha256 6bb3a6a5b061aa7319c09d1ab1def0fc18091f94aa5bfff022a3a9a792b45ac6)
+repo: https://github.com/caomengxuan666/cxxmcp (MIT, LICENSE copied unchanged)
+vendored: the stdio client path only: the client core and the child-process stdio transport, the JSON-RPC serializer, the core result/async helpers and the protocol models they include, plus nlohmann/json 3.12.0 and tl/expected they depend on. src/process_stdio_transport.cpp, src/stdio_transport.cpp and src/transport_adapter.cpp are compiled only because client.cpp refers to their classes in Client::connect_stdio; gm-new calls neither and speaks over its own transport (native/components/mcpclient/transport.cpp), which is the only transport it passes to Client. Layout: sdk/include and sdk/*/include become include/, third_party becomes include/, sdk/*/src becomes src/.
+not vendored: the HTTP, WebSocket and OpenSSL transports, the auth layer, the server, examples and tests; cpp-httplib is not needed, and CXXMCP_ENABLE_HTTP/WEBSOCKET stay undefined.
+ASCII-normalized: tool.hpp has box-drawing characters in one comment line, written as "-"; nlohmann/json.hpp has a copyright line with a u-umlaut (Bjoern Hoehrmann), written as "oe". No code changed.
+files (path, bytes, sha256 of the vendored file; changed files also give the upstream sha256):
+include/cxxmcp/client/client.hpp 39801 2124f264b5c26c4ae468f8a6b3655f4788b29f2d78d382806b49958913b5084f
+include/cxxmcp/client/handler.hpp 14321 c2086600ef57144e0c5f61c610e8aa1ff1d4fcba2b82ef9ebe7100ebef13bcc9
+include/cxxmcp/client/process_stdio_transport.hpp 2694 286750ba501ccf08651512f4dfdfac68efd19c399ae07adc1ac22812c2fe6d52
+include/cxxmcp/client/session.hpp 3866 cb1b04e43bdafc05382c884b9a1a2c82d3de908484fc9977e01a791d94a21008
+include/cxxmcp/client/stdio_transport.hpp 2214 2e102c66c550b7e8e7c138ea6ffd06a28d72dc4c60a7829f372fef39ed08a36e
+include/cxxmcp/client/transport_adapter.hpp 9900 cabebc92a9396478d2666e7d6cc1412c845c72c3728d10585bd76302111a197f
+src/client.cpp 82871 996b55b71eb9cdf333bd6a4d129520352fe7e882f99f2fafa17445984c37cc40
+src/process_stdio_transport.cpp 41007 d69259efbc3ae25234e960b689a9f981c809df1453f16669ec7203596bc2c0d7
+src/stdio_transport.cpp 7102 d79b0d34f177f5f2e4f0b76950fb39c9b04de96031220afaa0a7b8695d04afba
+src/transport_adapter.cpp 512 b9d77805c09664450ad25e884e7b6a0fd248611557b54e0a4a11042eaedddae5
+include/cxxmcp/core/async_result.hpp 9499 f2cb5634d581ec65e28313b4f5953c5dfa42db7b41b1a40896494dd7eb6eaf75
+include/cxxmcp/core/executor.hpp 10314 0e12e1d039c328598f0f8e14eeca8ba538667a8e474a2b4a1537d954954f1239
+include/cxxmcp/core/result.hpp 3177 a875582283257210ef54069bc881d94cff5d981a10ece36c573a695b380cdc34
+include/cxxmcp/core/string_constant.hpp 4116 5d27ad76c60a52ac482e2342143890e2c4705133f743f43eb4865ca53197740d
+include/cxxmcp/core/timer_handle.hpp 1444 09428b3f72672eb0c66bb4cd1c299db3a0d8bf8faaada4cfe246ab3174a729a8
+include/cxxmcp/cancellation.hpp 7674 b28312bac995ec4e5d6fbbe1052b2db80fbacec3bdbec7863a953b42aef1ad17
+include/cxxmcp/error.hpp 4930 a701351f0fd42c4113a9a51b6e45f0f8d270f03e025f21c6f57db5bf4ff8c2cc
+include/cxxmcp/request.hpp 13312 7f172637af9931d4569fb99f9f71110e66c34fa45def4943c708665baefa87ff
+include/cxxmcp/roles.hpp 319 2c43e5945c1ff0dd65a7d0a081f040f98f6cd28ee0bacc93311eebae8248ffb7
+include/cxxmcp/protocol/annotations.hpp 10123 d3ecc3318d38d142b3f495878e0f7670d11a5b4c7d46460897c167dc6704dc2f
+include/cxxmcp/protocol/capabilities.hpp 27760 e742a98807829154fcd53305370f4016c06d417297774c4a7dd5d251e2ccdefe
+include/cxxmcp/protocol/completion.hpp 14527 a4b5bb38a03c6dcb2133d253e47b7acdbb5802d89ff5acdbbeb5d2532b03a986
+include/cxxmcp/protocol/elicitation.hpp 64980 24b9c34541a26916528306c1f01f3b43d17903d79e624a991624606355f3d58e
+include/cxxmcp/protocol/initialize.hpp 10086 5ea382b1333d4f96c231b72c19d8aedca7e7612881d8279ecda90d8dcefd7696
+include/cxxmcp/protocol/logging.hpp 6939 bf5d3ede66211f0a3f31b1d94028d4224aff7778b05b813384d101a8b6fb1034
+include/cxxmcp/protocol/prompt.hpp 21974 5b974a6c5c1d93529c21d639cf3354a0e175a050858eb23344383ac0ab0a743d
+include/cxxmcp/protocol/reflect.hpp 55915 64630c0514af91ffb9da4f9697024d7f6650f65071820a58acfbef943d6ed41d
+include/cxxmcp/protocol/resource.hpp 29805 40fa95433c12e737e07b1dd873c461d11a7683ff6d5da6a393691eaacbba5ed2
+include/cxxmcp/protocol/roots.hpp 3756 1cfd0d392cd073897db806928bb928c5f373c70326b7645d814fcbca0ab90388
+include/cxxmcp/protocol/sampling.hpp 38522 81dfb825e5a6bed1a74242bac9ab83e05daec0a39ba62a634b1e3788c88b9a18
+include/cxxmcp/protocol/schema.hpp 7644 b776f31f57033344a76d6f9e31c1baf5f3655b42eb50b44d5652aa3edcf6c4b6
+include/cxxmcp/protocol/serialization.hpp 12991 138f3656a9f8ecbd0e0fd74df75e4278772a4639db7c9de3048def053c7e0b91
+include/cxxmcp/protocol/task.hpp 20209 204272cd7b75b0b5b313ce90b2b4f94a536797c4baf91c7b36037fd1b95103b0
+include/cxxmcp/protocol/tool.hpp 39138 7fe2ab8272e5157dc88eff8da340f5b8c23d92706260bf92a173d942ef387135 upstream 60ebb347ffe7aa1c0d8bdf6c20a68e2cb06632478fe2939da5c757d7ec89175b
+include/cxxmcp/protocol/types.hpp 14265 5e6a1378d37c035cf5eea57479d76470b9b260872e666b0008f345ab664a6575
+include/cxxmcp/protocol/types_reflect.hpp 5176 ef12d1ca2913a5d36b5734a222e2200832c5eb6b3f3e0dd148c4f20c8fbdf5af
+src/serialization.cpp 22928 f2f59e5cce14b9aa6c0947d116a395d9a43881e45bbac7121113034d1a86f66a
+include/cxxmcp/transport/process_stdio_transport.hpp 2375 43db27f7dcd432e5173185d52e7e4eece386d43039609d33eb7418425fea4f2d
+include/cxxmcp/transport/transport.hpp 4766 2737df1481abad0f1dea0a8977a088b3df6ededfcdf9f904e8df9c281b65df1f
+include/nlohmann/json.hpp 959429 d7a78c98e622093b1872ebe3675ea7c57d52d92e353c5af2ee96c52ce4a25cec upstream 33f83895283b59cb2cf54104be53d3a37a55a2930278e36597418389f9a2c888
+include/tl/expected.hpp 111678 436da97d226e42100f6dff1a1f4e110e702926b8db2181df46886d227ca27686

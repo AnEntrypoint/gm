@@ -1141,11 +1141,24 @@ struct Server::State {
         return nullptr;
     }
 
+    static std::string lost_output(const BodyJob& job) {
+        std::size_t calls = 0;
+        if (auto after = job.owner->log->read_from(job.body)) {
+            for (const Value& event : *after) calls += string_of(event, "kind") == "code-call" ? 1 : 0;
+        }
+        return "the body stopped before it returned: its return value and console output are lost; " + std::to_string(calls) +
+               " verb calls completed before the stop, each in query_log as a code-call after seq " + std::to_string(job.body);
+    }
+
     void body_finished(const std::shared_ptr<BodyJob>& job, const deoxidene::Result<Value, std::string>& outcome) {
         std::lock_guard guard(job->lock);
         job->finished = true;
         if (outcome) job->value = *outcome;
         else job->error = outcome.error();
+        if (job->stopped) {
+            job->value.reset();
+            job->error = lost_output(*job);
+        }
         if (job->adopted && !job->settled) {
             if (job->value) {
                 std::string text = json::dump(*job->value);

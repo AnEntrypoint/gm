@@ -95,6 +95,7 @@ void test_throw_in_body() {
     expect(!sync_throw && sync_throw.error() == "plain", "a thrown string is its text");
     auto syntax = gmnew::run_body(verbs, "return {;", project_root);
     expect(!syntax && syntax.error().rfind("the body does not load: ", 0) == 0, "syntax error names the load");
+    expect(!syntax && syntax.error().find(" (line 1, column 9)") != std::string::npos, "syntax error gives its line and column: " + syntax.error());
 }
 
 void test_top_level_await_and_gm_fields() {

@@ -25,9 +25,9 @@ function extractReference() {
   return execFileSync('git', ['-C', REPO, 'rev-parse', '--short', 'HEAD'], { encoding: 'utf8' }).trim();
 }
 
-function makeWorkspaces() {
-  rmSync(SCRATCH, { recursive: true, force: true });
-  const seed = join(SCRATCH, 'seed');
+function makeWorkspaces(base = SCRATCH) {
+  rmSync(base, { recursive: true, force: true });
+  const seed = join(base, 'seed');
   mkdirSync(join(seed, 'src'), { recursive: true });
   writeFileSync(join(seed, 'README.md'), 'hello world\nhello again\nhelloworld\n');
   writeFileSync(join(seed, 'src', 'a.js'), "export function hello() {\n  return 'hellooo';\n}\n");
@@ -40,18 +40,19 @@ function makeWorkspaces() {
   const head = git('rev-parse', 'HEAD');
   const spaces = {};
   for (const side of ['node', 'native']) {
-    const workspace = join(SCRATCH, side, 'ws');
-    mkdirSync(join(SCRATCH, side), { recursive: true });
+    const workspace = join(base, side, 'ws');
+    mkdirSync(join(base, side), { recursive: true });
     cpSync(seed, workspace, { recursive: true });
-    spaces[side] = { workspace, runDir: join(SCRATCH, side, 'runs', 'run-parity'), root: join(SCRATCH, side) };
+    spaces[side] = { workspace, runDir: join(base, side, 'runs', 'run-parity'), root: join(base, side) };
   }
-  writeFileSync(join(SCRATCH, 'task.md'), 'parity harness task\n');
-  writeFileSync(join(SCRATCH, 'no-default-mcp.json'), JSON.stringify({ mcpServers: { playwriter: { disabled: true } } }));
+  writeFileSync(join(base, 'task.md'), 'parity harness task\n');
+  writeFileSync(join(base, 'no-default-mcp.json'), JSON.stringify({ mcpServers: { playwriter: { disabled: true } } }));
   return { spaces, head };
 }
 
 function startHttp() {
   const server = createServer((request, response) => {
+    if (request.url.startsWith('/hang')) return;
     response.writeHead(200, { 'content-type': 'text/plain' });
     response.end(`parity body for ${request.url}\n`);
   });
@@ -165,19 +166,28 @@ function scenarios({ head, url }) {
     ['unknown_resolve', code(`const open = await gm.unknown_list({ status: 'open' }); const id = (${idOf('unknown')})(open); return await gm.unknown_resolve({ id, event: 1, commit: '${head}' });`)],
     ['fetch', code(`return await gm.fetch({ url: '${url}/parity?x=1' });`)],
     ['fetch refused', code("return await gm.fetch({ url: 'ftp://example.invalid/' });")],
-    ['job_start', code("return await gm.job_start({ job: 'p1', command: 'echo one; echo two' });")],
+    ['job_start', code("const started = await gm.job_start({ job: 'p1', command: 'echo one; echo two' }); await gm.job_status({ job: 'p1', waitMs: 10000 }); return started;")],
     ['job_status', code("return await gm.job_status({ job: 'p1', waitMs: 10000 });")],
     ['job_stop', code("const started = await gm.job_start({ job: 'p2', command: 'sleep 30' }); const stopped = await gm.job_stop({ job: 'p2' }); return { started, stopped };")],
     ['job_status unknown', code("return await gm.job_status({ job: 'nope' });")],
-    ['finish', call('finish', { witness: 'parity harness witness: every scenario ran' })],
+    ['run_code syntax error', call('run_code', { body: 'return (;' })],
+    ['run_code background', call('run_code', { body: `await gm.read_file({ path: 'README.md' }); return await gm.fetch({ url: '${url}/hang', timeoutMs: 60000 });`, timeoutMs: 300 })],
+    ['job_status background', (replies) => code(`return await gm.job_status({ job: '${backgroundName(replies)}' });`)],
+    ['finish', call('finish', { witness: 'parity harness witness: every scenario ran', stopBackground: true })],
     ['next_context after finish', call('next_context', {})],
   ];
+}
+
+function backgroundName(replies) {
+  const reply = replies.find(([name]) => name === 'run_code background')?.[1];
+  return JSON.parse(reply.result.content[0].text).background;
 }
 
 async function drive(peer, script) {
   const replies = [];
   let id = 0;
-  for (const [name, step] of script) {
+  for (const [name, given] of script) {
+    const step = typeof given === 'function' ? given(replies) : given;
     if (step.notify) {
       await peer.send({ jsonrpc: '2.0', method: step.method });
       continue;
@@ -224,6 +234,7 @@ function normalizer(side, spaces) {
     [/\bunknown-[A-Za-z0-9]+/g, '<UNKNOWN>'],
     [/\/tmp\/[A-Za-z0-9._-]+/g, '<TMP>'],
     [/\bpid \d+/g, 'pid <N>'],
+    [/(the body does not load: ).*?(?= \(line \d+, column \d+\)$)/gm, '$1<ENGINE-MESSAGE>'],
     [/\b\d+(\.\d+)? ?ms\b/g, '<N>ms'],
   ];
   const text = (value) => {
@@ -325,6 +336,68 @@ function toolMethods(notifications) {
   return notifications.map((message) => message.method ?? (message.unparsed ? `unparsed: ${message.unparsed.slice(0, 80)}` : 'reply-without-waiter'));
 }
 
+const MCP_KINDS = new Set(['mcp-config', 'mcp-server', 'mcp-tool-skipped', 'gitignore']);
+
+function mcpScenarios() {
+  const call = (name, args) => ({ method: 'tools/call', params: { name, arguments: args } });
+  const code = (body) => call('run_code', { body });
+  return [
+    ['initialize', { method: 'initialize', params: { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'parity', version: '1' } } }],
+    ['initialized', { method: 'notifications/initialized', notify: true }],
+    ['tools/list', { method: 'tools/list', params: {} }],
+    ['next_context', call('next_context', {})],
+    ['mcp echo', code("return await gm.fake_echo({ text: 'hello mcp', n: 2 });")],
+    ['mcp browsers', code('return await gm.fake_browsers({});')],
+    ['mcp fail', code('return await gm.fake_fail({});')],
+    ['mcp denied', code('return typeof gm.fake_hidden;')],
+    ['mcp hang', code('return await gm.fake_hang({});')],
+    ['mcp crash', code('return await gm.fake_crash({});')],
+    ['mcp restart', code('return await gm.fake_browsers({});')],
+    ['finish', call('finish', { witness: 'parity harness witness: the MCP servers ran', stopBackground: true })],
+  ];
+}
+
+function writeMcpConfig(base) {
+  const file = join(base, 'fake-mcp.json');
+  const fake = { command: process.execPath, args: [join(REPO, 'native', 'tests', 'parity', 'fake-mcp.mjs')], timeoutMs: 1500, startupTimeoutMs: 10000, deny: ['hidden'], ignore: ['cache/'] };
+  const broken = { command: '${GMNEW_PARITY_UNSET_VARIABLE}' };
+  const typed = { type: 'http', command: 'unused' };
+  writeFileSync(file, JSON.stringify({ mcpServers: { playwriter: { disabled: true }, fake, broken, typed } }));
+  return file;
+}
+
+function mcpEvents(runDir) {
+  const file = join(runDir, 'log.jsonl');
+  if (!existsSync(file)) return [`no log at ${file}`];
+  return readFileSync(file, 'utf8')
+    .split('\n')
+    .filter(Boolean)
+    .map((line) => JSON.parse(line))
+    .filter((event) => MCP_KINDS.has(event.kind))
+    .map(({ seq, t, mono, startMono, inFlight, ...fields }) => fields);
+}
+
+async function mcpPass() {
+  const base = join(SCRATCH, 'mcp');
+  const { spaces } = makeWorkspaces(base);
+  const config = writeMcpConfig(base);
+  const task = join(base, 'task.md');
+  const script = mcpScenarios();
+  const node = new Peer(process.execPath, [join(REF, 'src', 'mcp.mjs'), '--workspace', spaces.node.workspace, '--run-dir', spaces.node.runDir, '--task', task, '--mcp-config', config], REF);
+  const nodeReplies = await drive(node, script);
+  await node.stop();
+  const native = new Peer(NATIVE_BIN, ['worker', '--workspace', spaces.native.workspace, '--run-dir', spaces.native.runDir, '--task', task, '--skills', join(REF, 'skills'), '--leaves', join(REPO, 'native', 'leaves'), '--mcp-config', config], REPO);
+  const nativeReplies = await drive(native, script);
+  await native.stop();
+  const normalNode = normalizer('node', spaces);
+  const normalNative = normalizer('native', spaces);
+  const rows = nodeReplies.map(([name, reply], i) => [`mcp ${name}`, differences(normalNode(reply), normalNative(nativeReplies[i]?.[1]))]);
+  rows.push(['mcp notifications', differences(toolMethods(node.notifications), toolMethods(native.notifications))]);
+  rows.push(['mcp log event kinds', logKindDifferences(logKinds(spaces.node.runDir), logKinds(spaces.native.runDir))]);
+  rows.push(['mcp server events', differences(normalNode(mcpEvents(spaces.node.runDir)), normalNative(mcpEvents(spaces.native.runDir)))]);
+  return rows;
+}
+
 async function main() {
   if (!existsSync(NATIVE_BIN)) throw new Error(`native binary not found: ${NATIVE_BIN} (build build/integ or pass --bin)`);
   const refHead = extractReference();
@@ -356,6 +429,7 @@ async function main() {
     }
     rows.push(['notifications', differences(toolMethods(node.notifications), toolMethods(native.notifications))]);
     rows.push(['log event kinds', logKindDifferences(logKinds(spaces.node.runDir), logKinds(spaces.native.runDir))]);
+    rows.push(...(await mcpPass()));
 
     const classified = rows.map(([name, diffs]) => {
       const cutover = diffs.filter(([path]) => isCutoverPath(path));
@@ -393,6 +467,7 @@ async function main() {
     if (native.stderr.trim()) console.log(`native stderr (tail): ${native.stderr.trim().split('\n').slice(-5).join(' | ')}`);
     process.exitCode = differing > 0 ? 1 : 0;
   } finally {
+    http.closeAllConnections();
     http.close();
   }
 }

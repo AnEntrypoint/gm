@@ -11,13 +11,67 @@
 #include "gmnew/leaves.hpp"
 #include "gmnew/log.hpp"
 #include "gmnew/mcp.hpp"
-#include "gmnew/playwriter.hpp"
+#include "gmnew/mcpclient.hpp"
 #include "gmnew/runcode.hpp"
 #include "search.hpp"
 
 namespace gmnew::host {
 
 namespace {
+
+class BootEvents {
+public:
+    void emit(std::string_view kind, json::Value fields) {
+        std::lock_guard lock(mutex_);
+        if (released_ && log_ != nullptr) {
+            log_->append(kind, std::move(fields));
+            return;
+        }
+        pending_.emplace_back(std::string(kind), std::move(fields));
+    }
+
+    void bind(const std::shared_ptr<RunLog>& log) {
+        std::lock_guard lock(mutex_);
+        if (log_ == nullptr) log_ = log;
+    }
+
+    void release() {
+        std::lock_guard lock(mutex_);
+        if (released_ || log_ == nullptr) return;
+        released_ = true;
+        for (auto& [kind, fields] : pending_) log_->append(kind, std::move(fields));
+        pending_.clear();
+    }
+
+private:
+    std::mutex mutex_;
+    std::shared_ptr<RunLog> log_;
+    std::vector<std::pair<std::string, json::Value>> pending_;
+    bool released_ = false;
+};
+
+class GatedVerbs final : public VerbTable {
+public:
+    GatedVerbs(const mcpclient::McpVerbs& gate, BootEvents& events, VerbTable& inner) : gate_(gate), events_(events), inner_(inner) {}
+    std::vector<VerbInfo> list() const override {
+        settle();
+        return inner_.list();
+    }
+    json::Value call(std::string_view name, const json::Value& args) override {
+        settle();
+        return inner_.call(name, args);
+    }
+
+private:
+    void settle() const {
+        gate_.wait_ready();
+        events_.release();
+    }
+
+    const mcpclient::McpVerbs& gate_;
+    BootEvents& events_;
+    VerbTable& inner_;
+};
 
 class EmptyVerbs final : public VerbTable {
 public:
@@ -82,15 +136,19 @@ int run_worker(const HostArgs& args) {
     if (!native) return fail(native.error());
     HostServices services{workspace, *run_dir, native->get(), make_primitives(workspace, read_current_log)};
     LeafVerbs leaves(leaves_dir_of(args), services);
-    playwriter::Options playwriter_options;
-    playwriter_options.workspace = workspace;
-    playwriter_options.config_files = {{source_root() / "defaults" / "mcp.json", true}, {workspace / ".gm-new" / "mcp.json", false}};
-    if (auto config = args.flag("--mcp-config")) playwriter_options.config_files.push_back({std::filesystem::absolute(*config), true});
-    playwriter_options.depth = playwriter::depth_from_environment();
-    for (const VerbInfo& verb : (*native)->list()) playwriter_options.reserved.insert(verb.name);
-    playwriter::PlaywriterVerbs playwriter_verbs(std::move(playwriter_options));
-    auto all = ComposedVerbs::compose({native->get(), &playwriter_verbs, &leaves});
+    BootEvents boot_events;
+    mcpclient::Options mcp_options;
+    mcp_options.workspace = workspace;
+    mcp_options.config_files = {{source_root() / "defaults" / "mcp.json", true}, {workspace / ".gm-new" / "mcp.json", false}};
+    if (auto config = args.flag("--mcp-config")) mcp_options.config_files.push_back({std::filesystem::absolute(*config), true});
+    mcp_options.depth = mcpclient::depth_from_environment();
+    for (const VerbInfo& verb : (*native)->list()) mcp_options.reserved.insert(verb.name);
+    for (const VerbInfo& verb : leaves.list()) mcp_options.reserved.insert(verb.name);
+    mcp_options.emit = [&boot_events](std::string_view kind, json::Value fields) { boot_events.emit(kind, std::move(fields)); };
+    mcpclient::McpVerbs mcp_verbs(std::move(mcp_options));
+    auto all = ComposedVerbs::compose({native->get(), &mcp_verbs, &leaves});
     if (!all) return fail(all.error());
+    GatedVerbs gated(mcp_verbs, boot_events, **all);
 
     mcp::ServerOptions options;
     options.workspace = workspace;
@@ -100,7 +158,8 @@ int run_worker(const HostArgs& args) {
     options.run_dir = *run_dir;
     options.supervised = args.flag("--supervised") == "yes";
     if (auto reason = args.flag("--restart-reason")) options.restart_reason = *reason;
-    options.on_run_open = [&core, &leaves, current_log, current_log_mutex](std::shared_ptr<RunLog> log) {
+    options.on_run_open = [&core, &leaves, &boot_events, current_log, current_log_mutex](std::shared_ptr<RunLog> log) {
+        boot_events.bind(log);
         leaves.set_run_dir(log->dir());
         {
             std::lock_guard lock(*current_log_mutex);
@@ -124,7 +183,9 @@ int run_worker(const HostArgs& args) {
     options.run_body = [](VerbTable& verbs, std::string_view body, const std::filesystem::path& root) {
         return gmnew::run_body(verbs, body, root);
     };
-    return mcp::serve_stream(std::cin, std::cout, **all, std::move(options));
+    const int code = mcp::serve_stream(std::cin, std::cout, gated, std::move(options));
+    boot_events.release();
+    return code;
 }
 
 int run_doctor(const HostArgs& args) {

@@ -413,3 +413,24 @@ Not verified: Windows and macOS builds, and arm.
 - A read of a skill through the verb does not log the skill-loaded event or clear the gm rules, unlike the resources/read path. Open.
 
 Witness: ctest 13 of 13; node --test 15 pass, 0 fail; harness 36 of 38 match, 2 cutover-expected, 0 differ.
+
+## Native MCP client on cxxmcp v1.3.0 (2026-11-04)
+
+Owner choice: the native client is built on an existing SDK, not hand-written. Candidates checked from GitHub on 2026-11-04: caomengxuan666/cxxmcp (MIT, pushed 2026-10-24, release v1.3.0 on 2026-09-15, protocol range 2024-11-05 to 2026-07-28, client conformance 501/501 and server conformance 272/272 against the official modelcontextprotocol/conformance runner, stdio transport), jesspig/modelcontextprotocol-cpp-sdk (MIT, 3 stars, internal conformance tests only), gopher-mcp (Apache-2.0, 153 stars, large), hkr04/cpp-mcp (MIT, protocol 2024-11-05 and 2025-03-26 only). cxxmcp was chosen for the official-runner evidence and the latest-spec range.
+
+Decision: vendored at native/third_party/cxxmcp/ from tag v1.3.0 (commit 9ec050d3269da318380a264d8269f0d904f8aef8), with LICENSE and VERSION.txt holding the tag, the commit and a sha256 per file. Only the stdio path is built; the HTTP and WebSocket transports stay undefined, so cpp-httplib is not needed. Size: 41 files, 1.8 MB, of which nlohmann/json.hpp is 959 KB. This is a new dependency; the rule "no new library without a measured gain" is met by the conformance result and the cost above.
+
+What we keep, because the Node contract needs it and the SDK does not provide it: the layered config reader, ${VAR} expansion, deny and ignore lists, gitignore events, startup and call timeouts, stderr capture, the depth guard, the Windows launch path, the gm.<server>_<tool> verb names, and the mcp-server events. What the SDK does: the handshake, version negotiation, JSON-RPC framing, tools/list and tools/call, and ping.
+
+Witnesses, on build/integ: cmake build clean; ctest 13 of 13; gmnew_mcpclient_test 52 ok, 0 fail; node --test native/leaves/tests/*.test.mjs 15 pass, 0 fail; a live run_code with gm.playwriter_browsers({ action: list }) through the native binary returned ok with the browsers listed, and the mcp-server connected event carries protocolVersion 2025-11-25.
+
+Parity: the job_start scenario of native/tests/parity/run.mjs now waits for the job to exit inside its body before it returns. Before this, Node logged the job exit either before or after the run_code result, depending on timing, so one run in two differed. The harness now gives 52 of 55 match, 3 cutover-expected, 0 differ on two runs in a row.
+
+Gaps against Node, open:
+- The SDK requires capabilities and serverInfo.version in the initialize result. Node has not been checked to accept a result without them.
+- The SDK accepts six protocol versions. Our client checks the two Node speaks itself after initialize.
+- A server killed by a signal reports 128 plus the signal number, not Node text. A spawn failure reports the OS text.
+- Windows captures no server stderr. Windows is not built here.
+- A server request other than ping gets the SDK method-not-found text.
+- A stopped background body is not killed in native (see the friction section above).
+- The default grep scope searches untracked files in native (commit 2706397), and Node searches tracked files only. This is a recorded decision that Node has not yet taken.

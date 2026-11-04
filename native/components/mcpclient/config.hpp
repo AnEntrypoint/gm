@@ -2,14 +2,13 @@
 
 #include <cstdint>
 #include <filesystem>
-#include <map>
 #include <string>
 #include <utility>
 #include <vector>
 
-#include "gmnew/playwriter.hpp"
+#include "gmnew/mcpclient.hpp"
 
-namespace gmnew::playwriter {
+namespace gmnew::mcpclient {
 
 struct ServerSpec {
     std::string name;
@@ -17,15 +16,18 @@ struct ServerSpec {
     std::vector<std::string> args;
     std::vector<std::pair<std::string, std::string>> env;
     std::filesystem::path cwd;
+    std::filesystem::path workspace;
     std::uint64_t timeout_ms = 0;
     std::uint64_t startup_ms = 0;
     std::vector<std::string> deny;
     std::vector<std::string> ignore;
 };
 
-void warn(const std::string& text);
+struct ConfigReading {
+    std::vector<ServerSpec> servers;
+    std::vector<std::string> problems;
+};
 
-std::map<std::string, ServerSpec, std::less<>> read_servers(const std::vector<ConfigFile>& files,
-                                                            const std::filesystem::path& workspace);
+ConfigReading read_servers(const std::vector<ConfigFile>& files, const std::filesystem::path& workspace);
 
 }

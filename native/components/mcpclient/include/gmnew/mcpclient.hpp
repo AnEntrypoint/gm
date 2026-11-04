@@ -2,39 +2,46 @@
 
 #include <cstddef>
 #include <filesystem>
+#include <functional>
 #include <memory>
 #include <set>
 #include <string>
+#include <string_view>
 #include <vector>
 
+#include "gmnew/json.hpp"
 #include "gmnew/verbs.hpp"
 
-namespace gmnew::playwriter {
+namespace gmnew::mcpclient {
 
 struct ConfigFile {
     std::filesystem::path path;
     bool required = false;
 };
 
+using Emit = std::function<void(std::string_view kind, json::Value fields)>;
+
 struct Options {
     std::filesystem::path workspace;
     std::vector<ConfigFile> config_files;
     std::set<std::string, std::less<>> reserved;
     std::size_t depth = 0;
+    Emit emit;
 };
 
 std::size_t depth_from_environment();
 
-class PlaywriterVerbs final : public VerbTable {
+class McpVerbs final : public VerbTable {
 public:
-    explicit PlaywriterVerbs(Options options);
-    ~PlaywriterVerbs() override;
+    explicit McpVerbs(Options options);
+    ~McpVerbs() override;
 
-    PlaywriterVerbs(const PlaywriterVerbs&) = delete;
-    PlaywriterVerbs& operator=(const PlaywriterVerbs&) = delete;
+    McpVerbs(const McpVerbs&) = delete;
+    McpVerbs& operator=(const McpVerbs&) = delete;
 
     std::vector<VerbInfo> list() const override;
     json::Value call(std::string_view name, const json::Value& args) override;
+    void wait_ready() const;
 
 private:
     struct Impl;

@@ -32,6 +32,7 @@ struct SpawnOptions {
     std::filesystem::path cwd;
     std::vector<std::pair<std::string, std::string>> env;
     bool own_group = false;
+    bool capture_stderr = false;
 
     SpawnOptions(std::filesystem::path dir = {}) : cwd(std::move(dir)) {}
 };
@@ -46,6 +47,7 @@ public:
 
     bool write_line(std::string_view line);
     std::optional<std::string> read_line();
+    std::optional<std::string> read_error_chunk();
     void close_input();
     void terminate();
     void kill();

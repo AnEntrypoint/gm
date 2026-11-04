@@ -27,6 +27,7 @@ struct Child::Handles {
     pid_t pid = -1;
     int input = -1;
     int output = -1;
+    int error = -1;
 };
 
 namespace {
@@ -69,11 +70,20 @@ deoxidene::Result<std::shared_ptr<Child>, std::string> Child::spawn(const std::v
         ::close(in_fds[1]);
         return deoxidene::Err<std::string>("pipe failed");
     }
+    int err_fds[2] = {-1, -1};
+    if (options.capture_stderr && !cloexec_pipe(err_fds)) {
+        ::close(in_fds[0]);
+        ::close(in_fds[1]);
+        ::close(out_fds[0]);
+        ::close(out_fds[1]);
+        return deoxidene::Err<std::string>("pipe failed");
+    }
     ::signal(SIGPIPE, SIG_IGN);
     posix_spawn_file_actions_t actions;
     posix_spawn_file_actions_init(&actions);
     posix_spawn_file_actions_adddup2(&actions, in_fds[0], 0);
     posix_spawn_file_actions_adddup2(&actions, out_fds[1], 1);
+    if (err_fds[1] >= 0) posix_spawn_file_actions_adddup2(&actions, err_fds[1], 2);
     const std::string dir = options.cwd.string();
 #if defined(__GLIBC__) || defined(__APPLE__)
     if (!dir.empty()) posix_spawn_file_actions_addchdir_np(&actions, dir.c_str());
@@ -97,9 +107,11 @@ deoxidene::Result<std::shared_ptr<Child>, std::string> Child::spawn(const std::v
     posix_spawn_file_actions_destroy(&actions);
     ::close(in_fds[0]);
     ::close(out_fds[1]);
+    if (err_fds[1] >= 0) ::close(err_fds[1]);
     if (rc != 0) {
         ::close(in_fds[1]);
         ::close(out_fds[0]);
+        if (err_fds[0] >= 0) ::close(err_fds[0]);
         return deoxidene::Err<std::string>("cannot start " + argv[0] + ": " + std::strerror(rc));
     }
     std::shared_ptr<Child> child(new Child());
@@ -107,6 +119,7 @@ deoxidene::Result<std::shared_ptr<Child>, std::string> Child::spawn(const std::v
     child->handles_->pid = pid;
     child->handles_->input = in_fds[1];
     child->handles_->output = out_fds[0];
+    child->handles_->error = err_fds[0];
     child->own_group_ = options.own_group;
     return child;
 }
@@ -114,6 +127,7 @@ deoxidene::Result<std::shared_ptr<Child>, std::string> Child::spawn(const std::v
 Child::~Child() {
     close_input();
     if (handles_->output >= 0) ::close(handles_->output);
+    if (handles_->error >= 0) ::close(handles_->error);
     if (!exit_code_) {
         kill();
         wait_for(std::chrono::milliseconds(2000));
@@ -154,6 +168,17 @@ std::optional<std::string> Child::read_line() {
             return rest;
         }
         read_buffer_.append(chunk, static_cast<std::size_t>(n));
+    }
+}
+
+std::optional<std::string> Child::read_error_chunk() {
+    if (handles_->error < 0) return std::nullopt;
+    char chunk[4096];
+    for (;;) {
+        const ssize_t n = ::read(handles_->error, chunk, sizeof chunk);
+        if (n < 0 && errno == EINTR) continue;
+        if (n <= 0) return std::nullopt;
+        return std::string(chunk, static_cast<std::size_t>(n));
     }
 }
 
@@ -352,6 +377,8 @@ void Child::close_input() {
 }
 
 void Child::terminate() { close_input(); }
+
+std::optional<std::string> Child::read_error_chunk() { return std::nullopt; }
 
 void Child::kill() {
     if (!exit_code_) TerminateProcess(handles_->process.hProcess, 137);
