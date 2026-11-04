@@ -68,6 +68,7 @@ int run_worker(const HostArgs& args) {
 
     CoreVerbsOptions core_options;
     core_options.workspace = workspace;
+    core_options.serve_skill = [skills = skills_dir_of(args)](const std::string& uri) { return mcp::served_skill_text(skills, uri); };
     core_options.on_append = [](const RunLog& log, std::string_view kind, std::uint64_t seq) {
         try {
             mcp::enqueue_pending(log, kind, seq);

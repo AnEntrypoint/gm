@@ -204,58 +204,84 @@ struct CoreVerbs::Impl {
 
     json::Value read_file(const json::Value& args) {
         const json::Value* path_value = args.find("path");
-        if (path_value != nullptr && path_value->is_string() && path_value->as_string().starts_with("skill://")) {
-            if (options.serve_skill) return options.serve_skill(path_value->as_string());
-            return failure("no served skill file has the uri " + path_value->as_string());
+        const bool served = path_value != nullptr && path_value->is_string() && path_value->as_string().starts_with("skill://");
+        std::optional<std::filesystem::path> at;
+        if (!served) {
+            at = locate(path_value);
+            if (!at) return refusal("path must be a non-empty string");
         }
-        auto at = locate(path_value);
-        if (!at) return refusal("path must be a non-empty string");
         const json::Value* unit_value = present(args, "unit");
         std::string unit = unit_value == nullptr ? "lines" : (unit_value->is_string() ? unit_value->as_string() : "?");
-        if (unit == "chars") return read_char_page(*at, args);
-        if (unit != "lines") return failure("unit must be lines or chars");
-        return read_line_page(*at, args);
+        if (unit != "chars" && unit != "lines") return failure("unit must be lines or chars");
+        if (served) {
+            std::string uri = path_value->as_string();
+            auto text = options.serve_skill ? options.serve_skill(uri) : std::nullopt;
+            if (!text) return failure("no served skill file has the uri " + uri);
+            return unit == "chars" ? char_page(*text, args) : line_page(*text, args);
+        }
+        return unit == "chars" ? read_char_page(*at, args) : read_line_page(*at, args);
     }
 
-    json::Value read_char_page(const std::filesystem::path& path, const json::Value& args) {
+    std::optional<std::string> char_args_problem(const json::Value& args) {
         const json::Value* offset_value = present(args, "offset");
         const json::Value* limit_value = present(args, "limit");
         if (offset_value != nullptr && (!core::is_whole_number(offset_value) || offset_value->as_number() < 0)) {
-            return failure("offset must be a whole number of characters, zero or more");
+            return "offset must be a whole number of characters, zero or more";
         }
         if (limit_value != nullptr && (!core::is_whole_number(limit_value) || limit_value->as_number() < 1 || limit_value->as_number() > static_cast<double>(output_page))) {
-            return failure("limit must be a whole number from 1 to 20000");
+            return "limit must be a whole number from 1 to 20000";
         }
+        return std::nullopt;
+    }
+
+    json::Value read_char_page(const std::filesystem::path& path, const json::Value& args) {
+        if (auto problem = char_args_problem(args)) return failure(*problem);
         auto file = core::read_text(path, "stat");
         if (!file.ok) return failure(file.error);
+        return char_page(file.text, args);
+    }
+
+    json::Value char_page(const std::string& text, const json::Value& args) {
+        const json::Value* offset_value = present(args, "offset");
+        const json::Value* limit_value = present(args, "limit");
         std::size_t offset = offset_value != nullptr ? static_cast<std::size_t>(offset_value->as_number()) : 0;
         std::size_t limit = limit_value != nullptr ? static_cast<std::size_t>(limit_value->as_number()) : output_page;
-        std::size_t length = utf16_length(file.text);
+        std::size_t length = utf16_length(text);
         std::size_t end = std::min(offset + limit, length);
         bool more = end < length;
         json::Value reply;
         reply.set("ok", true);
-        reply.set("output", utf16_slice(file.text, offset, end));
+        reply.set("output", utf16_slice(text, offset, end));
         reply.set("total", static_cast<std::uint64_t>(length));
         reply.set("offset", static_cast<std::uint64_t>(offset));
         reply.set("next", number_or_null(more, end));
         std::string hint = "pass unit: \"chars\", offset: " + std::to_string(end) + " and limit: 20000 to read the rest";
-        set_cut_notice(reply, file.text, more ? &hint : nullptr);
+        set_cut_notice(reply, text, more ? &hint : nullptr);
         return reply;
     }
 
-    json::Value read_line_page(const std::filesystem::path& path, const json::Value& args) {
+    std::optional<std::string> line_args_problem(const json::Value& args) {
         const json::Value* offset_value = present(args, "offset");
         const json::Value* limit_value = present(args, "limit");
         if (offset_value != nullptr && (!core::is_whole_number(offset_value) || offset_value->as_number() < 0)) {
-            return failure("offset must be a whole number of lines, zero or more");
+            return "offset must be a whole number of lines, zero or more";
         }
         if (limit_value != nullptr && (!core::is_whole_number(limit_value) || limit_value->as_number() < 1)) {
-            return failure("limit must be a whole number of lines, one or more");
+            return "limit must be a whole number of lines, one or more";
         }
+        return std::nullopt;
+    }
+
+    json::Value read_line_page(const std::filesystem::path& path, const json::Value& args) {
+        if (auto problem = line_args_problem(args)) return failure(*problem);
         auto file = core::read_text(path, "stat");
         if (!file.ok) return failure(file.error);
-        const std::string& text = file.text;
+        return line_page(file.text, args);
+    }
+
+    json::Value line_page(const std::string& text, const json::Value& args) {
+        const json::Value* offset_value = present(args, "offset");
+        const json::Value* limit_value = present(args, "limit");
         std::size_t offset = offset_value != nullptr ? static_cast<std::size_t>(offset_value->as_number()) : 0;
         std::size_t limit = limit_value != nullptr ? static_cast<std::size_t>(limit_value->as_number()) : std::numeric_limits<std::size_t>::max();
         auto starts = line_starts(text);

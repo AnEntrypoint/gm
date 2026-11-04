@@ -126,3 +126,5 @@ This is what you build and codify. Single worker first: DESIGN.md direction 6 sa
 - Tool descriptions are cut at 300 bytes, backed up to a UTF-8 boundary. Node cuts at 300 UTF-16 units.
 - gm.playwriter_browsers needs {"action": "list"} or {"action": "close"}. The server refuses {} with its own error text, which the verb passes through.
 - The playwriter gate (playwriter-project --gate) is a detached daemon shared by sessions. It outlives the worker, as it does under Node.
+- read_file (the verb, so also gm.read_file in run_code) serves skill://<name>/<file> from the skills dir through mcp::served_skill_text, wired in host/worker.cpp. Paging is the same as for a file. Unlike resources/read, it logs no skill-loaded event and does not clear the gm rules.
+- The gm prompt's task argument reaches prompts/get whole when the host sends it whole (verified with a live prompts/get). A host that splits the slash-command argument on spaces and gives the first word to the single task argument truncates it before gm-new sees it; gm-new cannot recover the rest.

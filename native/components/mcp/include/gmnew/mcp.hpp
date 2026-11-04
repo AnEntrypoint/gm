@@ -67,6 +67,8 @@ int serve(std::istream& in, std::ostream& out, VerbTable& verbs, std::filesystem
 
 std::string sha256_hex(std::string_view bytes);
 
+std::optional<std::string> served_skill_text(const std::filesystem::path& skills, const std::string& uri);
+
 void enqueue_pending(const RunLog& log, std::string_view kind, std::uint64_t seq);
 
 }

@@ -559,6 +559,19 @@ int main() {
         check(c.call("next_context", "{}").find("step")->as_number() == 2, "the successor resumes at its own step count");
     }
 
+    std::cout << "--- item 5b: task argument and served skill text ---\n";
+    {
+        Harness h(verbs, fresh_options(root, "task-argument"));
+        h.server->accept(rpc(1, "prompts/get", R"({"name":"gm","arguments":{"task":"we restarted, finish all remaining work"}})"));
+        Value step = h.call("next_context", "{}");
+        check(str(step, "task") == "we restarted, finish all remaining work", "prompts/get keeps the whole task argument, commas and spaces included");
+        auto skill = gmnew::mcp::served_skill_text(fresh_options(root, "skill-text").skills, "skill://gm/SKILL.md");
+        check(skill && skill->find("## Rules") != std::string::npos, "served_skill_text returns the gm skill file");
+        check(!gmnew::mcp::served_skill_text(fresh_options(root, "skill-text").skills, "skill://gm/NOPE.md") &&
+                  !gmnew::mcp::served_skill_text(fresh_options(root, "skill-text").skills, "skill://nope/SKILL.md"),
+              "served_skill_text refuses unserved skill uris");
+    }
+
     std::cout << "--- item 6: rulesPending ---\n";
     {
         Harness h(verbs, fresh_options(root, "rules"));

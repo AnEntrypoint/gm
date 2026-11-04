@@ -383,3 +383,12 @@ Native playwriter: native/components/playwriter is a stdio MCP client for the co
 Witnesses, through the native binary on scratch workspaces: initialize, tools/list (next_context, finish, run_code), run_code returning 2 and finish. run_code calling gm.playwriter_browsers with action list returned ok with the browsers listed, and no page was opened or closed. Harness 36 of 38, 0 real differences; ctest 13 of 13; leaf tests 15 of 15.
 
 Not verified: Windows and macOS builds, and arm.
+
+## Native gm friction after the restart (2026-11-04)
+
+- read_file on skill:// paths failed in the native server. Fixed: read_file serves the skill text through the same path as resources/read, and gm.read_file({ path: 'skill://gm/SKILL.md' }) returns ok on the live server.
+- The task recorded for run 2026-11-04-17-25-06-1edb1f was "we", for the prompt "we restarted, finish all remaining work". The server keeps the full argument when it is sent over JSON-RPC, so the cut happens before the server, in the host's slash-command path. Not verified in host code. Open. Workaround: start the run with a task file (the --task option) or send the task as the first message.
+- search and grep without a root need a git repository. /workspace/gmc is not one, and the error reads "git ls-files failed", which does not name the cause. Open: the message should name the workspace and say that it is not a git repository.
+- A read of a skill through the verb does not log the skill-loaded event or clear the gm rules, unlike the resources/read path. Open.
+
+Witness: ctest 13 of 13; node --test 15 pass, 0 fail; harness 36 of 38 match, 2 cutover-expected, 0 differ.

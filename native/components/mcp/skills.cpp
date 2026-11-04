@@ -2,6 +2,8 @@
 #include <chrono>
 #include <cstdio>
 #include <fstream>
+#include <optional>
+#include <regex>
 #include <sstream>
 
 #include "gmnew/mcp.hpp"
@@ -190,6 +192,24 @@ const Skill& SkillCache::get(const std::string& name) {
     auto kept = last_.find(name);
     if (kept == last_.end()) throw std::runtime_error(fresh.error());
     return kept->second;
+}
+
+}
+
+namespace gmnew::mcp {
+
+std::optional<std::string> served_skill_text(const std::filesystem::path& skills, const std::string& uri) {
+    static const std::regex kSkillFileUri(R"(^skill://([^/]+)/.+$)");
+    std::smatch match;
+    if (!std::regex_match(uri, match, kSkillFileUri)) return std::nullopt;
+    const auto& served = detail::served_skills();
+    if (std::find(served.begin(), served.end(), match[1].str()) == served.end()) return std::nullopt;
+    auto fresh = detail::read_skill(skills, match[1].str());
+    if (!fresh) return std::nullopt;
+    for (const detail::SkillFile& file : fresh->files) {
+        if (file.uri == uri) return file.bytes;
+    }
+    return std::nullopt;
 }
 
 }

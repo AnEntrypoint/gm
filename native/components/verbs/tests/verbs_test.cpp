@@ -165,6 +165,24 @@ int main() {
         expect(text_of(unknown_tool, "error") == "unknown tool: nope", "unknown tool");
     }
     {
+        gmnew::CoreVerbsOptions options;
+        options.workspace = base / "workspace";
+        options.serve_skill = [](const std::string& uri) -> std::optional<std::string> {
+            if (uri == "skill://gm/SKILL.md") return std::string("line one\nline two\n");
+            return std::nullopt;
+        };
+        gmnew::CoreVerbs verbs(std::move(options), *log);
+        auto served = verbs.call("read_file", object_of({{"path", "skill://gm/SKILL.md"}}));
+        expect(ok_of(served) && text_of(served, "output") == "line one\nline two\n" && number_of(served, "total") == 2,
+               "read_file serves a skill:// uri: " + gmnew::json::dump(served));
+        auto paged = verbs.call("read_file", object_of({{"path", "skill://gm/SKILL.md"}, {"offset", 1}, {"limit", 1}}));
+        expect(ok_of(paged) && text_of(paged, "output") == "line two\n" && number_of(paged, "next") == -1,
+               "read_file pages a skill:// uri: " + gmnew::json::dump(paged));
+        auto absent = verbs.call("read_file", object_of({{"path", "skill://gm/NOPE.md"}}));
+        expect(!ok_of(absent) && text_of(absent, "error") == "no served skill file has the uri skill://gm/NOPE.md",
+               "read_file of an unserved skill:// uri fails: " + gmnew::json::dump(absent));
+    }
+    {
         std::filesystem::create_directories(base / "run-stuck");
         auto stuck_log = gmnew::RunLog::open(base / "run-stuck");
         expect(static_cast<bool>(stuck_log), "open stuck log");

@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -18,7 +19,7 @@ struct CoreVerbsOptions {
     std::filesystem::path workspace;
     std::uint64_t job_lifetime_ms = 1800000;
     std::uint64_t job_stuck_ms = 180000;
-    std::function<json::Value(const std::string& uri)> serve_skill;
+    std::function<std::optional<std::string>(const std::string& uri)> serve_skill;
     std::function<void(const RunLog& log, std::string_view kind, std::uint64_t seq)> on_append;
 };
 
