@@ -1015,7 +1015,7 @@ struct Server::State {
                 fingerprint_into(entry.path(), path, parts);
             } else if (fs::is_regular_file(status)) {
                 auto when = fs::last_write_time(entry.path(), ec).time_since_epoch().count();
-                parts.push_back(path + ":" + std::to_string(when) + ":" + std::to_string(entry.file_size(ec)));
+                parts.push_back(path + ":" + std::to_string(static_cast<long long>(when)) + ":" + std::to_string(entry.file_size(ec)));
             }
         }
     }

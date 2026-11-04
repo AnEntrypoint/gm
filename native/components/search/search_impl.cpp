@@ -165,6 +165,10 @@ bool stat_file(const fs::path& path, struct stat& info) {
     return ::stat(path.string().c_str(), &info) == 0;
 }
 
+bool is_regular(const struct stat& info) {
+    return (info.st_mode & S_IFMT) == S_IFREG;
+}
+
 bool read_text(const fs::path& path, std::string& out) {
     std::ifstream in(path, std::ios::binary);
     if (!in) return false;
@@ -318,7 +322,7 @@ bool Searcher::load_tracked(std::string& error) {
     for (const std::string& rel : listing.paths) {
         struct stat info;
         fs::path at = root_ / rel;
-        if (!stat_file(at, info) || !S_ISREG(info.st_mode) || static_cast<std::uintmax_t>(info.st_size) > MAX_FILE_BYTES) continue;
+        if (!stat_file(at, info) || !is_regular(info) || static_cast<std::uintmax_t>(info.st_size) > MAX_FILE_BYTES) continue;
         long long newest = 0;
         std::string stamp = stamp_of(info, newest);
         long long read_at = now_ms();
@@ -545,7 +549,7 @@ std::string Searcher::grep(const json::Value& args) {
         for (const std::string& name : names) {
             fs::path at = name.empty() ? base : base / name;
             struct stat info;
-            if (!stat_file(at, info) || !S_ISREG(info.st_mode) || static_cast<std::uintmax_t>(info.st_size) > MAX_FILE_BYTES) continue;
+            if (!stat_file(at, info) || !is_regular(info) || static_cast<std::uintmax_t>(info.st_size) > MAX_FILE_BYTES) continue;
             std::string data;
             if (!read_text(at, data) || looks_binary(data)) continue;
             std::string shown = show_relative ? name : generic(at);

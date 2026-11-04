@@ -9,6 +9,9 @@ add_library(gmnew_cxxmcp STATIC
     ${CXXMCP_ROOT}/src/serialization.cpp)
 target_include_directories(gmnew_cxxmcp SYSTEM PUBLIC ${CXXMCP_ROOT}/include)
 target_link_libraries(gmnew_cxxmcp PUBLIC Threads::Threads)
+if(MSVC)
+    target_compile_options(gmnew_cxxmcp PRIVATE /bigobj)
+endif()
 
 add_library(gmnew_mcpclient STATIC mcpclient.cpp config.cpp client.cpp transport.cpp)
 target_include_directories(gmnew_mcpclient PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_CURRENT_SOURCE_DIR}/../../include)
