@@ -196,3 +196,53 @@ Decision: the example passes the run directory with `--dir`, built from the chil
 
 Witness: scratch child run 2026-11-04-06-59-29-be5e7b in /tmp/gm-scratch/childdir-1793775569/ws. `query --dir` on it returned its witness, exit 0. `query --run` on the same id printed `gmnew: no run 2026-11-04-06-59-29-be5e7b`, exit 1.
 
+## Rust port of gm-new (2026-11-04)
+
+Decision: the owner asked for gm-new to be rewritten in Rust, keeping hot reload and JIT run_code bodies, built for the lowest memory, CPU and startup cost. This supersedes the "Language" entry of Decided for the new code. The port lives in `rust/` (crate `gmnew`, binary `gmnew`). Node `src/` and `tools/` stay live and untouched until cutover, because the running workers load them. The gm session (ListAgents `gm`) has no objection (message 2026-11-04) and asked that the port keep three behaviours, each in origin main with the gate passing:
+
+1. A layer's server entry takes `deny`, a list of tool names left unregistered (`defaults/mcp.json` denies playwriter `reset`; commit 807828da; `startMcpClients` in `src/mcp-client.mjs`).
+2. `read_file` pages carry `truncated`, `totalBytes` and `hint` when cut, and accept `offset` and `limit` (commits 35f2729 and cec628b4).
+3. Git verbs take `cwd`, resolved against the workspace root and refused outside a git repository (commits d8e838a and f3e5a27).
+
+Architecture:
+
+- One binary, three roles. `gmnew serve` is the relay: it holds the host stdio, runs `gmnew worker` as a child with the same arguments, and pumps lines both ways. It tracks the request ids it forwarded and not yet answered. It swaps the worker only when the binary fingerprint (length and mtime, `hot.rs`) has changed and no request is in flight. The swap is SIGTERM to the worker, which logs `paused` and exits with the run still open, then a new worker starts and resumes the run. A worker that dies is restarted with backoff (1 s, doubling, capped at 30 s), and each call it had taken is answered with the failure text.
+- Hot reload has two tiers. JIT code (run_code bodies, skill files, `defaults/mcp.json`) is read from disk on every use, so an edit applies with no build. Rust code changes by rebuild: `update.rs` pulls origin main every 60 s when the checkout is clean, runs `cargo build --release` in the background when `rust/` changed, and the relay swaps when the new binary lands. A failed build keeps the old binary and logs the error.
+- The worker is an MCP server over stdio with JSON-RPC written by hand (serde_json). It serves protocol 2025-11-25 and accepts 2025-06-18. It has the three tools `next_context`, `run_code` and `finish`, the prompts `gm` and `gm-continue`, and the resources `skill://gm/SKILL.md` and `skill://gm-continue/SKILL.md` read from `skills/`. No listening socket.
+- run_code bodies run in QuickJS (rquickjs 0.14), one fresh runtime per body, on a thread of their own. Verbs are `gm.<name>` functions that bridge to async Rust. A body past `timeoutMs` (default 180000, at most 300000) becomes a background run, and four bodies run at once at most.
+- Run store, unchanged on disk: `<workspace>/runs/<id>/` with `log.jsonl` (append-only, one JSON object per line with seq, t, mono and inFlight), `rules.md`, `task.json` and `jobs/`. The log index is an in-memory list of byte offsets, rebuilt when a run opens.
+- Concurrency: a current-thread tokio runtime, with blocking work on `spawn_blocking`. Locks in `locks.rs`: run_shell takes the exclusive side of one RwLock and every other verb takes the shared side, and writes to one path go in order through a per-path mutex.
+- Dependencies: serde_json, tokio (no default features), rquickjs, ureq 3 (fetch), regex, sha2, oxc_parser/oxc_ast/oxc_allocator/oxc_span 0.157 (callers and impact, replacing acorn), and libc on unix only. Each one is measured for build cost before a further dependency is added.
+- Platforms: unix uses process groups (`process_group(0)`, killed with `killpg`), and Windows uses `CREATE_NEW_PROCESS_GROUP` with `taskkill /T /F`. Shell verbs run `sh -c` on unix and `cmd /d /s /c` on Windows. Targets: linux, macos and windows, on x64 and arm64.
+- Verbs: each module exports `pub const VERBS: &[VerbDef]` with the name, the description (the text of gm.verbs() in Node) and the input schema. `verbs.rs` collects them. A `VerbDef` is a fn pointer, so no allocation per call.
+
+Ownership (one owner per file, so parallel work does not collide):
+
+- Kernel: `run.rs`, `log.rs`, `feed.rs`. Source: `src/run.mjs`, `src/log.mjs`, `src/compact.mjs`, `src/pending.mjs`, `src/summary.mjs`, `src/prompt.mjs`.
+- Protocol: `mcp.rs`, `skills.rs`. Source: `src/mcp.mjs`, `src/connect.mjs`, `src/skills.mjs`.
+- Relay: `relay.rs`, `update.rs`, `hot.rs`. Source: `tools/relay.mjs`, `tools/supervise.mjs`, `tools/core.mjs`, `tools/update.mjs`, `src/hot*.mjs`, `src/freshness.mjs`.
+- Exec and files: `exec.rs`, `locks.rs`, `fsverbs.rs`. Source: `src/exec.mjs`, `src/tools.mjs`.
+- Search and review: `search.rs`, `review.rs`. Source: `src/search.mjs`, `src/wiki.mjs`, `src/wiki-tools.mjs`, `src/review.mjs`, `src/review-tools.mjs`.
+- Git and rows: `git.rs`, `ci.rs`, `rows.rs`, `gate.rs`. Source: `src/git.mjs`, `src/gate.mjs`, `src/rows.mjs`.
+- Run code: `runcode.rs`, `verbs.rs`. Source: `src/runcode.mjs`, `src/body-worker.mjs`.
+- Client, fetch and code: `mcp_client.rs`, `fetch.rs`, `retry.rs`, `code.rs`, `cli.rs`. Source: `src/mcp-client.mjs`, `src/fetch.mjs`, `src/retry.mjs`, `src/code-ast.mjs`, `src/closure.mjs`, `src/cli.mjs`.
+
+Not ported in this phase, each to be decided with the owner: the scripted model and the `replay` and `bench` commands (they serve Node witnesses; the MCP path needs none of them), and the live comparison (closed). Cutover, meaning the `.mcp.json` entry switches to `gmnew serve`, is a later commit and needs a reconnect of each host.
+
+Rules that bind the port: ASCII only; no test files and no fixtures that stand in for a run; no comments that carry prose (a comment that cannot be turned into code goes to AGENTS.md); commit only through `tools/ship.sh` by explicit path, author lanmower, no trailers; no branches or worktrees; `rust/target/` is git-ignored.
+
+## Feed digest from the full output (2026-11-04)
+
+Friction: the event log keeps a 1000-character preview of a `run_shell`, `run_code` or `job_status` reply, and the next_context feed digested that preview. An error line of a failed call past character 1000 did not reach the feed. The caller still got the whole reply.
+
+Decision: `loggedFor` (src/tools.mjs) attaches `outputDigest` to every reply it cuts to the preview. It is the digest of the full output, built by `outputDigest` in src/compact.mjs. The feed reads it through `digestOf`, and `full.bytes` is the full output's size (`fullBytesOf`). An uncut reply is digested from its output, as before. The caller's return value does not change. The digest is bounded: the sizes, the first and last two lines, the first 10 lines that name an error (`moreErrors` counts the rest), and for a failed call the head up to 1000 characters (`more` counts the rest). The same rule covers run_shell, run_code and job_status, because all three pass through `loggedFor`. Trade-offs: a failed reply's logged event grows by its digest; only the first 10 error lines are kept, and the last two lines are always kept; a job_status digest covers the page the reply returned (up to 20000 characters from its offset), not the whole job.
+
+Witness, before (unchanged code), scratch run 2026-11-04-07-03-56-572c09 (CLI with --workspace in /tmp/gm-scratch/digest-fix/ws, scripted run_shell that prints 3042 characters with `ERROR: disk quota exceeded` at about character 3000, exit 1). The logged result event is 1255 bytes with outputChars 3042 and 1000 characters of output. The feed record (feedOf over the log, seen form) has `out.bytes` 1000, a tail that ends in "or", `full.bytes` 1000, and no error line.
+
+Witness, after, same script: run 2026-11-04-07-05-23-c9cef7. The logged event is 2564 bytes with outputChars 3042. The feed record has `out.lines` 127, `out.bytes` 3042, `out.errors` ["ERROR: disk quota exceeded"], a tail that ends in that line, and `full.bytes` 3042. The feed record is 1387 bytes, against 1314 before.
+
+Witness, job_status: run 2026-11-04-07-07-10-3d7858, background job `emitjob` (run_shell with background true, exit 1, 3042 characters), then job_status with waitMs 5000. The logged reply is 2809 bytes with outputChars 3042. The feed record has the error line in `out.errors` and `full.bytes` 3042.
+
+Witness, bound: `loggedFor` called directly in node on a 224000-character failing output of error lines. The logged event is 2764 bytes, 10 error lines are kept, and `moreErrors` is 6990.
+
+Not run live: run_code (the same `loggedFor` call in src/mcp.mjs `act`) and the scripted loop's `runAction` (src/loop.mjs). The Rust port in rust/ (untracked, not touched here) has its own feed in `feed.rs`, and it needs the same rule before cutover. The two 2026-11-04 entries on the preview stay as written; this entry closes the trade-off they name.

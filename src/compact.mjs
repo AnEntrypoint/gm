@@ -40,30 +40,46 @@ export function argsOf(args) {
   return out;
 }
 
-// Output compaction for a result text. It keeps the sizes, the first two lines and the last two, and every line that names an error,
-// a failure or a warning. Nothing is dropped that a reader needs to see a failure.
+const DIGEST_ERRORS = 10;
+const FAILED_HEAD_CHARS = 1000;
+export const failedOf = (event) => event.ok === false || (typeof event.exitCode === 'number' && event.exitCode !== 0);
+
 export function outputDigest(text, failed = false) {
   if (typeof text !== 'string' || text === '') return { lines: 0, bytes: 0 };
   const lines = text.split('\n');
   const digest = { lines: lines.length, bytes: Buffer.byteLength(text), head: lines.slice(0, 2).map((line) => clip(line)), tail: lines.slice(-2).map((line) => clip(line)) };
-  const errors = lines.filter((line) => ERROR.test(line)).map((line) => clip(line));
-  if (errors.length > 0) digest.errors = errors;
-  // A failed call keeps its output whole up to 60 lines. A failure's lines are not all marked by a keyword, so none is cut before that.
+  const errors = lines.filter((line) => ERROR.test(line));
+  if (errors.length > 0) {
+    digest.errors = errors.slice(0, DIGEST_ERRORS).map((line) => clip(line));
+    if (errors.length > DIGEST_ERRORS) digest.moreErrors = errors.length - DIGEST_ERRORS;
+  }
   if (failed) {
-    const FAIL_LINES = 60;
-    digest.all = lines.slice(0, FAIL_LINES).map((line) => clip(line));
-    if (lines.length > FAIL_LINES) digest.more = lines.length - FAIL_LINES;
+    let shown = 0;
+    let chars = 0;
+    while (shown < lines.length && (shown === 0 || chars + lines[shown].length <= FAILED_HEAD_CHARS)) {
+      chars += lines[shown].length;
+      shown += 1;
+    }
+    digest.all = lines.slice(0, shown).map((line) => clip(line));
+    if (shown < lines.length) digest.more = lines.length - shown;
   }
   return digest;
 }
+
+function digestOf(event) {
+  if (event.outputDigest !== undefined) return event.outputDigest;
+  return typeof event.output === 'string' ? outputDigest(event.output, failedOf(event)) : undefined;
+}
+const fullBytesOf = (event) => event.outputDigest?.bytes ?? Buffer.byteLength(typeof event.output === 'string' ? event.output : '');
 
 // A result in the first horizon: its arguments in compact form, its exit code, its error text whole, and the digest of its output.
 export function resultZone1(event, action) {
   const record = { seq: event.seq, tool: event.tool, ok: event.ok, args: argsOf(action?.args) };
   if (event.exitCode !== undefined) record.exit = event.exitCode;
   if (event.error !== undefined) record.error = event.error;
-  if (typeof event.output === 'string') record.out = outputDigest(event.output, event.ok === false || (typeof event.exitCode === 'number' && event.exitCode !== 0));
-  record.full = { seq: event.seq, bytes: Buffer.byteLength(typeof event.output === 'string' ? event.output : '') };
+  const digest = digestOf(event);
+  if (digest !== undefined) record.out = digest;
+  record.full = { seq: event.seq, bytes: fullBytesOf(event) };
   return record;
 }
 
@@ -72,7 +88,7 @@ export function resultZone2(event, action) {
   const record = { seq: event.seq, tool: event.tool, ok: event.ok, args: argsOf(action?.args) };
   if (event.exitCode !== undefined) record.exit = event.exitCode;
   if (event.error !== undefined) record.error = event.error;
-  record.full = { seq: event.seq, bytes: Buffer.byteLength(typeof event.output === 'string' ? event.output : '') };
+  record.full = { seq: event.seq, bytes: fullBytesOf(event) };
   return record;
 }
 

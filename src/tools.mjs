@@ -10,7 +10,7 @@ import { createSearchVerbs } from './search.mjs';
 import * as fetchModule from './fetch.mjs';
 import * as astModule from './code-ast.mjs';
 import * as wikiModule from './wiki-tools.mjs';
-import { resultZone1, resultZone2 } from './compact.mjs';
+import { failedOf, outputDigest, resultZone1, resultZone2 } from './compact.mjs';
 import * as reviewModule from './review-tools.mjs';
 
 // The leaf modules (src/hot-config.mjs) as they were at boot. A worker passes the modules of its current generation to createTools; the CLI
@@ -643,7 +643,7 @@ const LOGGED_REPLY_CHARS = 1000;
 const LOGGED_OUTPUT_TOOLS = new Set(['query_log', 'job_status', 'run_shell', 'run_code']);
 export function loggedFor(tool, result) {
   if (!LOGGED_OUTPUT_TOOLS.has(tool) || typeof result?.output !== 'string' || result.output.length <= LOGGED_REPLY_CHARS) return result;
-  return { ...result, output: result.output.slice(0, LOGGED_REPLY_CHARS), outputChars: result.output.length };
+  return { ...result, output: result.output.slice(0, LOGGED_REPLY_CHARS), outputChars: result.output.length, outputDigest: outputDigest(result.output, failedOf(result)) };
 }
 
 // Waits for the job's completion event, with a deadline. The job settles when its process exits, so no timer polls it.

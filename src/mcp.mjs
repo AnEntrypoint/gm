@@ -311,7 +311,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     }
     // The full result is logged, so query_log reaches the output and the exit code of a verb called inside a body.
     const shown = loggedFor(name, result);
-    const fields = { ok: shown?.ok === true, args, exitCode: shown?.exitCode, signal: shown?.signal, output: shown?.output, outputChars: shown?.outputChars, error: shown?.error };
+    const fields = { ok: shown?.ok === true, args, exitCode: shown?.exitCode, signal: shown?.signal, output: shown?.output, outputChars: shown?.outputChars, outputDigest: shown?.outputDigest, error: shown?.error };
     log.append('code-call', { step: steps, tool: name, startMono, ...fields, ...(body === undefined ? {} : { body }), ...(action === undefined ? {} : { actionSeq: action.seq }) });
     return result;
   }
