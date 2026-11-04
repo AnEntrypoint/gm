@@ -82,7 +82,7 @@ function spawnWorker({ file, kind, project, verbs, call, log, step, startSeq }) 
           if (!stopped) worker.postMessage({ type: 'reply', id: msg.id, result });
         });
       } else if (msg.type === 'done') {
-        resolve(msg.ok ? { ok: true, text: msg.text } : { ok: false, error: msg.error });
+        resolve(msg.ok ? { ok: true, text: msg.text } : { ok: false, error: msg.error, at: msg.at });
       }
     });
     worker.on('error', (err) => resolve({ ok: false, error: err.message }));
@@ -234,9 +234,16 @@ export async function runBody({ body, timeoutMs = DEFAULT_TIMEOUT_MS, format, ve
     return spawned.done;
   });
   // The background run's result has the same shape as a foreground reply, so the job's status and the call's reply agree.
+  const head = kind === 'esm' ? split.imports.split('\n').length + 1 : 1;
+  const removed = body.split('\n').length - split.code.split('\n').length;
+  const bodyLines = body.split('\n').length;
+  const locate = (at) => {
+    const line = at.line - head + removed;
+    return line >= 1 && line <= bodyLines ? ` (line ${line}, column ${at.column})` : '';
+  };
   const result = done.then((reply) => (reply.ok
     ? { ok: true, output: reply.text.slice(0, OUTPUT_CAP), truncated: reply.text.length > OUTPUT_CAP }
-    : { ok: false, error: reply.error }));
+    : { ok: false, error: reply.at ? reply.error + locate(reply.at) : reply.error }));
   // If the body settles within the budget, the call returns its result. If the budget is spent first, the body is handed to the caller as a
   // background job, which watches it through the job machinery; its body file stays until the body ends.
   let timer;

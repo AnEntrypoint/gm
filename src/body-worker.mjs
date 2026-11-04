@@ -1,6 +1,7 @@
 // The thread that runs one run_code body. The body's verb calls are messages to the session, which runs each verb and posts the reply back
 // by its id, so the body's JavaScript runs off the session's thread and the session stays responsive while a body runs. A body that never
 // awaits is stopped by the session, which terminates this thread. The body's console output is not sent anywhere: the session drains it.
+import { spawnSync } from 'node:child_process';
 import { parentPort, workerData } from 'node:worker_threads';
 import { createRequire } from 'node:module';
 import { join } from 'node:path';
@@ -43,12 +44,18 @@ const requireBody = (spec) => {
   return base(spec);
 };
 
+function loadPosition(file) {
+  const check = spawnSync(process.execPath, ['--check', file], { encoding: 'utf8' });
+  const at = /:(\d+)\r?\n[^\n]*\r?\n( *)\^/.exec(check.stderr);
+  return at === null ? null : { line: Number(at[1]), column: at[2].length + 1 };
+}
+
 async function run() {
   let body;
   try {
     body = kind === 'esm' ? (await import(pathToFileURL(file).href)).default : createRequire(file)(file);
   } catch (err) {
-    return { type: 'done', ok: false, error: `the body does not load: ${err.message}` };
+    return { type: 'done', ok: false, error: `the body does not load: ${err.message}`, at: loadPosition(file) };
   }
   try {
     const value = await body(gm, requireBody);
