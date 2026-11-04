@@ -89,6 +89,7 @@ deoxidene::Result<std::string, std::string> stringify_function_of(std::string_vi
                                                                   const json::Value& argument, std::chrono::milliseconds deadline);
 
 deoxidene::Result<std::vector<std::uint8_t>, std::string> compile_module(std::string_view source, const std::string& module_name);
+deoxidene::Result<JSValue, std::string> module_namespace(Engine& engine, JSValue module);
 deoxidene::Result<JSValue, std::string> load_module_namespace(Engine& engine, const std::vector<std::uint8_t>& bytecode);
 
 }

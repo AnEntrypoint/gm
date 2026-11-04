@@ -12,6 +12,6 @@
 namespace gmnew {
 
 deoxidene::Result<json::Value, std::string> run_body(VerbTable& verbs, std::string_view body,
-                                                     const std::filesystem::path& project_root);
+                                                     const std::filesystem::path& project_root, std::string_view format = "cjs");
 
 }

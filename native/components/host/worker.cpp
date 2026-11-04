@@ -52,22 +52,19 @@ private:
 
 class GatedVerbs final : public VerbTable {
 public:
-    GatedVerbs(const mcpclient::McpVerbs& gate, BootEvents& events, VerbTable& inner) : gate_(gate), events_(events), inner_(inner) {}
+    GatedVerbs(const mcpclient::McpVerbs& gate, BootEvents& events, VerbTable& inner)
+        : gate_(gate), events_(events), inner_(inner) {}
     std::vector<VerbInfo> list() const override {
-        settle();
+        events_.release();
         return inner_.list();
     }
     json::Value call(std::string_view name, const json::Value& args) override {
-        settle();
+        gate_.wait_ready();
+        events_.release();
         return inner_.call(name, args);
     }
 
 private:
-    void settle() const {
-        gate_.wait_ready();
-        events_.release();
-    }
-
     const mcpclient::McpVerbs& gate_;
     BootEvents& events_;
     VerbTable& inner_;
@@ -148,7 +145,7 @@ int run_worker(const HostArgs& args) {
     mcpclient::McpVerbs mcp_verbs(std::move(mcp_options));
     auto all = ComposedVerbs::compose({native->get(), &mcp_verbs, &leaves});
     if (!all) return fail(all.error());
-    GatedVerbs gated(mcp_verbs, boot_events, **all);
+    GatedVerbs served(mcp_verbs, boot_events, **all);
 
     mcp::ServerOptions options;
     options.workspace = workspace;
@@ -180,12 +177,13 @@ int run_worker(const HostArgs& args) {
     };
     options.flush_job_events = [&core] { core.flush_job_events(); };
     options.wait_program = current_executable().string();
-    options.run_body = [](VerbTable& verbs, std::string_view body, const std::filesystem::path& root) {
-        return gmnew::run_body(verbs, body, root);
+    options.run_body = [&mcp_verbs, &boot_events](VerbTable& verbs, std::string_view body, const std::filesystem::path& root,
+                                                  std::string_view format) {
+        mcp_verbs.wait_ready();
+        boot_events.release();
+        return gmnew::run_body(verbs, body, root, format);
     };
-    const int code = mcp::serve_stream(std::cin, std::cout, gated, std::move(options));
-    boot_events.release();
-    return code;
+    return mcp::serve_stream(std::cin, std::cout, served, std::move(options));
 }
 
 int run_doctor(const HostArgs& args) {

@@ -17,7 +17,7 @@
 namespace gmnew::mcp {
 
 using BodyRunner = std::function<deoxidene::Result<json::Value, std::string>(VerbTable&, std::string_view body,
-                                                                             const std::filesystem::path& project_root)>;
+                                                                             const std::filesystem::path& project_root, std::string_view format)>;
 using LineWriter = std::function<void(std::string_view line)>;
 
 struct ServerOptions {

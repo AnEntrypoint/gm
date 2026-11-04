@@ -1,4 +1,7 @@
 #include <cstdio>
+#include <filesystem>
+#include <fstream>
+#include <random>
 #include <string>
 #include <vector>
 
@@ -124,10 +127,72 @@ void test_fresh_state_and_edges() {
     expect(!empty && empty.error() == "body must be a non-empty string", "empty body refused");
 }
 
+std::filesystem::path fresh_project(const std::string& package_json = "") {
+    std::filesystem::path root = std::filesystem::temp_directory_path() / ("gmnew-runcode-" + std::to_string(std::random_device{}()));
+    std::filesystem::create_directories(root);
+    std::ofstream(root / "lib.mjs") << "export const value = 41;\n";
+    if (!package_json.empty()) std::ofstream(root / "package.json") << package_json;
+    return root;
+}
+
+void test_esm_static_import_returns_value() {
+    FakeVerbs verbs;
+    const std::filesystem::path project = fresh_project();
+    auto result = gmnew::run_body(verbs,
+                                  "import { value } from './lib.mjs';\n"
+                                  "const sum = await gm.add({ a: value, b: 1 });\n"
+                                  "return { value: value + 1, sum: sum.sum };",
+                                  project, "esm");
+    expect(result.has_value(), "esm static import: expected a value, got error " + (result ? std::string() : result.error()));
+    if (result) expect(gmnew::json::dump(*result) == R"({"value":42,"sum":42})", "esm static import value: " + gmnew::json::dump(*result));
+    std::filesystem::remove_all(project);
+}
+
+void test_cjs_format_is_the_default() {
+    FakeVerbs verbs;
+    auto named = gmnew::run_body(verbs, "return { n: 1 };", project_root, "cjs");
+    auto defaulted = gmnew::run_body(verbs, "return { n: 1 };", project_root);
+    expect(named.has_value() && defaulted.has_value(), "cjs format runs with and without the format argument");
+    if (named && defaulted) expect(gmnew::json::dump(*named) == R"({"n":1})" && gmnew::json::dump(*defaulted) == R"({"n":1})", "cjs format returns its value");
+}
+
+void test_default_format_follows_package_type() {
+    FakeVerbs verbs;
+    const std::filesystem::path module_project = fresh_project("{\"type\":\"module\"}\n");
+    const std::filesystem::path script_project = fresh_project("{\"type\":\"commonjs\"}\n");
+    const std::filesystem::path bare_project = fresh_project();
+    auto esm = gmnew::run_body(verbs, "import { value } from './lib.mjs';\nreturn value + 1;", module_project, "");
+    expect(esm.has_value(), "type module default runs as esm: " + (esm ? std::string() : esm.error()));
+    if (esm) expect(gmnew::json::dump(*esm) == "42", "type module default value: " + gmnew::json::dump(*esm));
+    auto script = gmnew::run_body(verbs, "return { n: 1 };", script_project, "");
+    expect(script.has_value() && gmnew::json::dump(*script) == R"({"n":1})", "type commonjs default runs as cjs");
+    auto bare = gmnew::run_body(verbs, "return { n: 1 };", bare_project, "");
+    expect(bare.has_value(), "no package.json default runs as cjs");
+    auto refused = gmnew::run_body(verbs, "import { value } from './lib.mjs';\nreturn value;", script_project, "");
+    expect(!refused && refused.error() == "refused: a CommonJS body cannot use a static import; use format esm", "cjs static import is refused: " + (refused ? std::string() : refused.error()));
+    std::filesystem::remove_all(module_project);
+    std::filesystem::remove_all(script_project);
+    std::filesystem::remove_all(bare_project);
+}
+
+void test_esm_syntax_error_reports_position() {
+    FakeVerbs verbs;
+    auto result = gmnew::run_body(verbs, "const x = ;\nreturn x;", project_root, "esm");
+    expect(!result, "esm syntax error is an error");
+    if (!result) {
+        expect(result.error().rfind("the body does not load: ", 0) == 0, "esm syntax error is a load error: " + result.error());
+        expect(result.error().find(" (line 1, column 11)") != std::string::npos, "esm syntax error gives its line and column: " + result.error());
+    }
+}
+
 }
 
 int main() {
     test_promise_all_over_two_verbs();
+    test_esm_static_import_returns_value();
+    test_cjs_format_is_the_default();
+    test_default_format_follows_package_type();
+    test_esm_syntax_error_reports_position();
     test_try_catches_failing_verb();
     test_nested_return();
     test_throw_in_body();

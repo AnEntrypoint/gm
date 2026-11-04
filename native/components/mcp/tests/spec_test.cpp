@@ -7,6 +7,10 @@
 #include <vector>
 
 #include "gmnew/json.hpp"
+#include <atomic>
+#include <chrono>
+#include <thread>
+
 #include "gmnew/mcp.hpp"
 #include "gmnew/verbs.hpp"
 
@@ -32,7 +36,7 @@ public:
 
 class GrowingVerbs : public FakeVerbs {
 public:
-    bool grown = false;
+    std::atomic<bool> grown{false};
     std::vector<gmnew::VerbInfo> list() const override {
         auto all = FakeVerbs::list();
         if (grown) all.push_back({"extra_verb", "An added verb.", R"({"type":"object"})"});
@@ -131,8 +135,8 @@ void discover() {
     check(caps && caps->find("tools") && caps->find("prompts") && caps->find("resources") && caps->find("logging") &&
               caps->find("completions") && caps->find("extensions"),
           "discover declares the capabilities the server serves");
-    check(caps && caps->find("resources") && caps->find("resources")->find("subscribe") == nullptr,
-          "resources does not declare subscribe, since subscriptions/listen is not served");
+    check(caps && caps->find("resources") && !caps->find("resources")->find("subscribe"),
+          "discover declares no resources.subscribe, since subscriptions/listen replaces resources/subscribe");
     const Value* meta = d.find("_meta");
     const Value* server_info = meta ? meta->find("io.modelcontextprotocol/serverInfo") : nullptr;
     check(server_info && str(*server_info, "name") == "gm" && !str(*server_info, "version").empty(),
@@ -170,14 +174,15 @@ void missing() {
     Harness h(verbs, fresh_options(root));
     h.server->accept(rpc(206, "resources/read", R"({"uri":"skill://gm/NOPE.md"})"));
     h.server->accept(rpc(207, "resources/read", "{}"));
-    h.server->accept(rpc(208, "resources/subscribe", R"({"uri":"skill://gm/NOPE.md"})"));
+    h.server->accept(rpc(208, "subscriptions/listen", R"({"notifications":{"resourceSubscriptions":["skill://gm/NOPE.md"]}})"));
     Value e206 = h.error(206);
     const Value* data = e206.find("data");
     check(e206.find("code") && e206.find("code")->as_number() == -32602 && data && str(*data, "uri") == "skill://gm/NOPE.md" &&
               h.result(206).find("contents") == nullptr,
           "a missing resource is -32602 with data.uri and no contents");
     check(h.error(207).find("code") && h.error(207).find("code")->as_number() == -32602, "resources/read without a uri is -32602");
-    check(h.error(208).find("code") && h.error(208).find("code")->as_number() == -32602, "resources/subscribe of a missing resource is -32602");
+    check(h.error(208).find("code") && h.error(208).find("code")->as_number() == -32602, "subscriptions/listen of a missing resource is -32602");
+    check(h.methods("notifications/subscriptions/acknowledged") == 0, "a refused subscriptions/listen is not acknowledged");
     fs::remove_all(root);
 }
 
@@ -225,16 +230,36 @@ void capabilities() {
     h.server->accept(rpc(213, "skills/list", "{}"));
     Value init = h.result(199);
     const Value* caps = init.find("capabilities");
-    check(caps && caps->find("resources") && caps->find("resources")->find("subscribe") == nullptr, "initialize does not declare resources.subscribe");
+    check(caps && caps->find("resources") && !caps->find("resources")->find("subscribe"),
+          "initialize declares no resources.subscribe, since subscriptions/listen replaces resources/subscribe");
     Value log_reply = h.raw(210);
     check(log_reply.find("result") != nullptr && log_reply.find("error") == nullptr, "logging/setLevel answers, as declared");
     check(h.result(211).find("completion") != nullptr, "completion/complete answers, as declared");
-    check(h.error(212).find("code") == nullptr, "resources/subscribe of a served skill answers");
+    check(h.error(212).find("code") && h.error(212).find("code")->as_number() == -32601,
+          "resources/subscribe is replaced by subscriptions/listen, so it answers method not found");
     check(h.result(213).find("skills") != nullptr, "skills/list answers for the declared skills extension");
     fs::remove_all(root);
 }
 
+void list_changed_pushed_on_ready() {
+    fs::path root = scratch("list-ready");
+    GrowingVerbs growing;
+    Harness h(growing, fresh_options(root));
+    h.server->accept(rpc(310, "tools/list", "{}"));
+    check(h.result(310).find("tools") != nullptr, "a tools/list before readiness answers without waiting");
+    check(h.methods("notifications/tools/list_changed") == 0, "no tools list_changed before the server is ready");
+    growing.grown = true;
+    bool pushed = false;
+    for (int i = 0; i < 250 && !pushed; ++i) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(20));
+        pushed = h.methods("notifications/tools/list_changed") == 1;
+    }
+    check(pushed, "readiness pushes notifications/tools/list_changed without another message");
+    fs::remove_all(root);
+}
+
 void list_changed() {
+    list_changed_pushed_on_ready();
     fs::path root = scratch("list-changed");
     GrowingVerbs growing;
     Harness h(growing, fresh_options(root));

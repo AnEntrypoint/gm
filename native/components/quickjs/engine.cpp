@@ -298,10 +298,8 @@ deoxidene::Result<std::vector<std::uint8_t>, std::string> compile_module(std::st
     return out;
 }
 
-deoxidene::Result<JSValue, std::string> load_module_namespace(Engine& engine, const std::vector<std::uint8_t>& bytecode) {
+deoxidene::Result<JSValue, std::string> module_namespace(Engine& engine, JSValue module) {
     JSContext* ctx = engine.ctx();
-    JSValue module = JS_ReadObject(ctx, bytecode.data(), bytecode.size(), JS_READ_OBJ_BYTECODE);
-    if (JS_IsException(module)) return deoxidene::Err<std::string>(take_exception_message(engine));
     if (JS_ResolveModule(ctx, module) < 0) {
         JS_FreeValue(ctx, module);
         return deoxidene::Err<std::string>(take_exception_message(engine));
@@ -312,6 +310,13 @@ deoxidene::Result<JSValue, std::string> load_module_namespace(Engine& engine, co
     if (evaluated.outcome == Outcome::Rejected) return deoxidene::Err<std::string>(deadline_or(engine, error_message(ctx, evaluated.value)));
     if (evaluated.outcome == Outcome::Pending) return deoxidene::Err<std::string>("the module did not finish loading");
     return JS_GetModuleNamespace(ctx, definition);
+}
+
+deoxidene::Result<JSValue, std::string> load_module_namespace(Engine& engine, const std::vector<std::uint8_t>& bytecode) {
+    JSContext* ctx = engine.ctx();
+    JSValue module = JS_ReadObject(ctx, bytecode.data(), bytecode.size(), JS_READ_OBJ_BYTECODE);
+    if (JS_IsException(module)) return deoxidene::Err<std::string>(take_exception_message(engine));
+    return module_namespace(engine, module);
 }
 
 }

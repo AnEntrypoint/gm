@@ -75,7 +75,7 @@ const std::string kCodeInstructions =
 const std::string kResourcesPointer =
     "Resources: skill://<name>/<file> reads a served skill file. run://<run>/log reads a run's event log, and "
     "run://<run>/witness its witness; resources/templates/list names the templates. Subscribe to a skill file with "
-    "resources/subscribe to be told when it changes on disk. Log messages follow logging/setLevel, and "
+    "subscriptions/listen to be told when it changes on disk. Log messages follow logging/setLevel, and "
     "completion/complete suggests skill names and run ids.";
 const std::string kSkillPointer =
     "The gm skill holds the rules of a run, the routes for pending events, and the way to hand work to a child "
@@ -100,15 +100,13 @@ const std::string kFinishDescription =
     "rows. A gap that names an open row is refused too.";
 
 std::string run_code_description(const std::string& verb_names) {
-    return "Run a JavaScript body in the project. The body is an ES module when format is esm and CommonJS when format "
-           "is cjs. Left out, format follows the project's package.json type (type module is esm, anything else is "
-           "cjs). A CommonJS body loads with require() and cannot use a static import. Static imports (single or "
-           "multi-line) load ES modules, and require() loads CommonJS; each project file loads in its own format "
-           "(.mjs is ES module, .cjs is CommonJS, .js follows the package.json type), and each file is read from disk "
-           "when the call runs. Relative paths resolve against the project root. Paths may point inside or outside "
-           "the workspace, for the body's own require and import and for the file verbs alike; an outside path should "
-           "be absolute. A non-literal import() or require() is refused. The body receives gm, with one method per "
-           "verb: await gm.<name>(args), and gm.project is the project root. The verbs are: " +
+    return "Run a JavaScript body in the project. The body is an ES module when format is esm and a script when format is cjs. "
+           "Left out, format follows the project's package.json type (type module is esm, anything else is cjs). "
+           "The body receives gm, with one method per verb: await gm.<name>(args), and gm.project is the project root. "
+           "The body has no require(), and node: builtins cannot be imported. A static import loads a project file as an "
+           "ES module, and a relative specifier resolves against the project root. A cjs body cannot use a static import, "
+           "so it is refused. Each project file is read from disk when the call runs. Paths given to the file verbs may "
+           "point inside or outside the workspace; an outside path should be absolute. The verbs are: " +
            verb_names +
            ". gm.verbs() returns each verb's description and input schema as data. A failed call returns "
            "{ok:false, error} and does not stop the body. The body's return value comes back as JSON. A body still "
@@ -130,6 +128,7 @@ const std::set<std::string> kReadOnlyTools = {
     "callers",      "impact",    "query_log", "job_status", "git_status", "git_log",     "git_diff",
     "git_show",     "ci_status", "prd_list",  "unknown_list", "review_join"};
 const std::set<std::string> kLoggedOutputTools = {"query_log", "job_status", "run_shell", "run_code"};
+const std::string kAbandonedReason = "abandoned: the worker restarted before it answered";
 const std::vector<std::string> kLogLevels = {"debug", "info", "notice", "warning", "error", "critical", "alert", "emergency"};
 const std::map<std::string, std::string> kNoticeLevels = {
     {"restart", "notice"},  {"reload", "notice"},     {"tools-changed", "notice"}, {"end", "notice"},
@@ -404,7 +403,11 @@ struct Server::State {
     ServerOptions options;
     LineWriter write;
     SkillCache skills;
-    std::map<std::string, std::string> subscriptions;
+    struct Listen {
+        Value id;
+        std::map<std::string, std::string> digests;
+    };
+    std::map<std::string, Listen> listens;
     std::optional<std::string> log_level;
     std::vector<Value> queued_notices;
     std::string announced_tools;
@@ -476,6 +479,7 @@ struct Server::State {
     std::vector<std::shared_ptr<BodyJob>> bodies;
     std::map<std::string, std::function<void()>> after_reply;
     std::thread monitor;
+    std::thread list_watch;
     bool monitor_running = false;
     std::mutex monitor_mutex;
     std::condition_variable monitor_wake;
@@ -665,7 +669,7 @@ struct Server::State {
         for (const Value& event : history) {
             std::string kind = string_of(event, "kind");
             auto action = seq_field(event, "actionSeq");
-            if ((kind == "result" || kind == "refusal" || kind == "code-call") && action) ended.insert(*action);
+            if ((kind == "result" || kind == "refusal" || kind == "code-call" || kind == "abandoned") && action) ended.insert(*action);
         }
         Value open = array();
         for (std::size_t i = first; i < history.size(); ++i) {
@@ -795,6 +799,11 @@ struct Server::State {
             if (recovery) {
                 append("recovery", *recovery);
                 s().recovery = recovery;
+                for (const Value& action : recovery->find("open")->as_array()) {
+                    Value close = object().set("actionSeq", *action.find("seq")).set("reason", kAbandonedReason);
+                    if (const Value* tool = action.find("tool")) close.set("tool", *tool);
+                    append("abandoned", std::move(close));
+                }
             }
             log_tools(history);
             stop_orphans();
@@ -1972,7 +1981,12 @@ struct Server::State {
             s().task_inherited = false;
             append("task", object().set("from", "session prompt").set("text", given));
         }
-        return prompt_result(skill, given.empty() ? skill.body : skill.body + "\n\nTask: " + given);
+        Value reply = prompt_result(skill, given.empty() ? skill.body : skill.body + "\n\nTask: " + given);
+        if (!given.empty() && given.find_first_of(" \t\r\n") == std::string::npos) {
+            reply.set("warning", "The task argument is one word, of length " + std::to_string(given.size()) +
+                                     ". Some hosts pass only the first word of the task, so the task may have been cut by the host. Pass the whole task text.");
+        }
+        return reply;
     }
 
     Value skills_get(const Value* params) {
@@ -2074,6 +2088,26 @@ struct Server::State {
         }
     }
 
+    void start_list_watch() {
+        list_watch = std::thread([this] { watch_list(); });
+    }
+
+    void watch_list() {
+        constexpr auto kFirst = std::chrono::milliseconds(50);
+        constexpr auto kLast = std::chrono::milliseconds(2000);
+        auto interval = kFirst;
+        std::unique_lock guard(monitor_mutex);
+        while (!monitor_wake.wait_for(guard, interval, [&] { return shutting_down; })) {
+            guard.unlock();
+            {
+                std::lock_guard list_guard(mu);
+                announce_list_changes();
+            }
+            guard.lock();
+            interval = std::min(interval * 2, kLast);
+        }
+    }
+
     void announce_list_changes() {
         std::string tools_sha;
         std::string prompts_sha;
@@ -2093,15 +2127,58 @@ struct Server::State {
         announced_prompts = prompts_sha;
     }
 
+    static Value subscription_meta(const Value& subscription_id) {
+        return object().set("io.modelcontextprotocol/subscriptionId", subscription_id);
+    }
+
+    std::optional<Value> open_listen(const Value* params, const Value& rpc_id) {
+        const Value* filter = params ? params->find("notifications") : nullptr;
+        const Value* wanted = filter ? filter->find("resourceSubscriptions") : nullptr;
+        std::map<std::string, std::string> digests;
+        Value honored = array();
+        if (wanted && wanted->is_array()) {
+            for (const Value& item : wanted->as_array()) {
+                auto digest = item.is_string() ? digest_of(item.as_string()) : std::nullopt;
+                if (!digest) {
+                    throw RpcError(-32602, "resource not found: " + text_or_undefined(&item), object().set("uri", item));
+                }
+                digests[item.as_string()] = *digest;
+                honored.push(item);
+            }
+        }
+        listens[id_key(&rpc_id)] = Listen{rpc_id, std::move(digests)};
+        notify(object()
+                   .set("jsonrpc", "2.0")
+                   .set("method", "notifications/subscriptions/acknowledged")
+                   .set("params", object()
+                                      .set("_meta", subscription_meta(rpc_id))
+                                      .set("notifications", object().set("resourceSubscriptions", std::move(honored)))));
+        return std::nullopt;
+    }
+
+    bool end_listen(const Value& request_id) {
+        auto found = listens.find(id_key(&request_id));
+        if (found == listens.end()) return false;
+        Value reply = object()
+                          .set("jsonrpc", "2.0")
+                          .set("id", found->second.id)
+                          .set("result", object().set("resultType", "complete").set("_meta", subscription_meta(found->second.id)));
+        listens.erase(found);
+        emit(json::dump(reply));
+        return true;
+    }
+
     void check_subscriptions() {
-        for (auto& [uri, seen] : subscriptions) {
-            std::string now = digest_of(uri).value_or("");
-            if (now == seen) continue;
-            seen = now;
-            notify(object()
-                       .set("jsonrpc", "2.0")
-                       .set("method", "notifications/resources/updated")
-                       .set("params", object().set("uri", uri)));
+        for (auto& [key, listen] : listens) {
+            for (auto& [uri, seen] : listen.digests) {
+                std::string now = digest_of(uri).value_or("");
+                if (now == seen) continue;
+                seen = now;
+                notify(object()
+                           .set("jsonrpc", "2.0")
+                           .set("method", "notifications/resources/updated")
+                           .set("params", object().set("_meta", subscription_meta(listen.id)).set("uri", uri)));
+            }
         }
     }
 
@@ -2168,22 +2245,7 @@ struct Server::State {
         }
         if (method == "skills/get") return skills_get(params);
         if (method == "resources/templates/list") return cacheable(resource_templates(), kListTtlMs);
-        if (method == "resources/subscribe") {
-            const Value* uri = params ? params->find("uri") : nullptr;
-            auto digest = uri && uri->is_string() ? digest_of(uri->as_string()) : std::nullopt;
-            if (!digest) {
-                Value data = object();
-                if (uri) data.set("uri", *uri);
-                throw RpcError(-32602, "resource not found: " + text_or_undefined(uri), data);
-            }
-            subscriptions[uri->as_string()] = *digest;
-            return object();
-        }
-        if (method == "resources/unsubscribe") {
-            const Value* uri = params ? params->find("uri") : nullptr;
-            if (uri && uri->is_string()) subscriptions.erase(uri->as_string());
-            return object();
-        }
+        if (method == "subscriptions/listen") return open_listen(params, rpc_id);
         if (method == "completion/complete") return completion(params);
         if (method == "logging/setLevel") {
             const Value* level = params ? params->find("level") : nullptr;
@@ -2199,6 +2261,7 @@ struct Server::State {
         }
         if (method == "notifications/cancelled") {
             const Value* request = params ? params->find("requestId") : nullptr;
+            if (request && end_listen(*request)) return std::nullopt;
             Value fields = object();
             if (request) fields.set("requestId", *request);
             fields.set("reason", "no call in flight with that id");
@@ -2244,7 +2307,7 @@ struct Server::State {
             }
             auto result = route(method, params, rpc_id);
             if (key && result) remember(*key, *result);
-            if (!request) return std::nullopt;
+            if (!request || (!result && method == "subscriptions/listen")) return std::nullopt;
             return object().set("jsonrpc", "2.0").set("id", rpc_id).set("result", result ? *result : object());
         } catch (const RpcError& err) {
             if (!request) return std::nullopt;
@@ -2290,7 +2353,10 @@ struct Server::State {
             auto parsed = json::parse(line);
             if (parsed && parsed->find("id")) emit(json::dump(error_reply(*parsed->find("id"), -32603, err.what())));
         }
-        announce_list_changes();
+        {
+            std::lock_guard guard(mu);
+            announce_list_changes();
+        }
         check_subscriptions();
     }
 
@@ -2382,6 +2448,7 @@ Server::State::~State() {
     }
     monitor_wake.notify_all();
     if (monitor.joinable()) monitor.join();
+    if (list_watch.joinable()) list_watch.join();
     auto jobs = body_list();
     for (const auto& job : jobs) job->stopped = true;
     {
@@ -2440,9 +2507,10 @@ Value Server::State::run_code(const Value& args) {
             }
             auto logged = std::make_shared<LoggedVerbs>(*this, job, gate);
             job->thread = std::thread([this, job, logged, runner = options.run_body, source = body->as_string(), root = options.workspace,
+                                       format_name = format == nullptr ? std::string() : std::string(format->as_string()),
                                        shared_gate = gate] {
                 proc::OwnerScope owner(job->body);
-                auto outcome = runner(*logged, source, root);
+                auto outcome = runner(*logged, source, root, format_name);
                 {
                     std::shared_lock guard(shared_gate->lock);
                     if (shared_gate->alive) body_finished(job, outcome);
@@ -2502,6 +2570,7 @@ deoxidene::Result<std::unique_ptr<Server>, std::string> Server::open(VerbTable& 
     auto state = std::make_unique<State>(verbs, std::move(options), std::move(write));
     auto booted = state->boot();
     if (!booted) return deoxidene::Err<std::string>{booted.error()};
+    state->start_list_watch();
     return std::unique_ptr<Server>(new Server(std::move(state)));
 }
 

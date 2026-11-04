@@ -20,7 +20,7 @@ constexpr std::size_t kArrayOverhead = 2;
 const std::set<std::string> kSkip = {"t", "mono", "inFlight", "startMono", "durMs", "actionSeq", "step"};
 const std::set<std::string> kKeepWhole = {"witness", "error", "reason", "gate", "gaps", "paths"};
 const std::set<std::string> kKeepZone2 = {"end",  "commit", "refusal", "error",  "restart",     "job-killed", "review",
-                                          "review-packet", "review-refused", "lint", "wiki", "recovery", "parse_error"};
+                                          "review-packet", "review-refused", "lint", "wiki", "recovery", "abandoned", "parse_error"};
 const std::set<std::string> kCutInZone2 = {"list_dir", "query_log", "prd_list", "unknown_list", "callers", "impact", "git_log",
                                            "git_diff", "git_show", "review_join", "search",    "grep",    "wiki_search"};
 

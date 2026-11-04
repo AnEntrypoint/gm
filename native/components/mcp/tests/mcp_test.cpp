@@ -4,6 +4,7 @@
 #include <mutex>
 #include <thread>
 #include <fstream>
+#include <initializer_list>
 #include <random>
 #include <iostream>
 #include <sstream>
@@ -155,7 +156,7 @@ int count_kind(const std::vector<Value>& events, const std::string& kind) {
     return n;
 }
 
-deoxidene::Result<Value, std::string> scripted_body(gmnew::VerbTable& table, std::string_view body, const fs::path&) {
+deoxidene::Result<Value, std::string> scripted_body(gmnew::VerbTable& table, std::string_view body, const fs::path&, std::string_view) {
     std::string text(body);
     if (text.rfind("sleep:", 0) == 0) {
         auto colon = text.find(':', 6);
@@ -182,6 +183,39 @@ gmnew::mcp::ServerOptions fresh_options(const fs::path& root, const std::string&
     return options;
 }
 
+Value result_of(Harness& h, int id) {
+    Value reply = h.raw(id);
+    const Value* result = reply.find("result");
+    return result ? *result : Value();
+}
+
+const Value* field(const Value* value, std::initializer_list<const char*> keys) {
+    for (const char* key : keys) {
+        if (value == nullptr) return nullptr;
+        value = value->find(key);
+    }
+    return value;
+}
+
+double number_at(const Value* value) { return value && value->is_number() ? value->as_number() : -1.0; }
+
+Value first_notice(Harness& h, const std::string& method) {
+    std::lock_guard guard(h.lock);
+    for (const Value& message : h.out) {
+        if (str(message, "method") == method) return message;
+    }
+    return Value();
+}
+
+int notice_count(Harness& h, const std::string& method) {
+    std::lock_guard guard(h.lock);
+    int n = 0;
+    for (const Value& message : h.out) n += str(message, "method") == method ? 1 : 0;
+    return n;
+}
+
+void append_line(const fs::path& file, const std::string& line) { std::ofstream(file, std::ios::app | std::ios::binary) << line; }
+
 }
 
 int main() {
@@ -196,7 +230,7 @@ int main() {
     options.workspace = workspace;
     options.runs = runs;
     options.skills = fs::path(GMNEW_SOURCE_DIR) / "skills";
-    options.run_body = [](gmnew::VerbTable& table, std::string_view body, const fs::path&) -> deoxidene::Result<Value, std::string> {
+    options.run_body = [](gmnew::VerbTable& table, std::string_view body, const fs::path&, std::string_view) -> deoxidene::Result<Value, std::string> {
         Value args = Value(gmnew::json::Object{}).set("path", "a.txt").set("content", std::string(body));
         Value wrote = table.call("write_file", args);
         Value read = table.call("read_file", Value(gmnew::json::Object{}).set("path", "a.txt"));
@@ -371,7 +405,7 @@ int main() {
 #ifdef GMNEW_HAVE_RUNCODE
     {
         gmnew::mcp::ServerOptions real = options;
-        real.run_body = [](gmnew::VerbTable& table, std::string_view body, const fs::path& rootp) { return gmnew::run_body(table, body, rootp); };
+        real.run_body = [](gmnew::VerbTable& table, std::string_view body, const fs::path& rootp, std::string_view format) { return gmnew::run_body(table, body, rootp, format); };
         real.run_dir.reset();
         std::istringstream in2(call(1, "next_context", "{}") + "\n" +
                                call(2, "run_code", R"({"body":"const [w] = await Promise.all([gm.write_file({path:'b',content:'hi'})]); const r = await gm.read_file({path:'b'}); return {w: w.ok, r: r.output};"})") + "\n");
@@ -572,6 +606,72 @@ int main() {
               "served_skill_text refuses unserved skill uris");
     }
 
+    std::cout << "--- item 5c: a one-word task argument may have been cut ---\n";
+    {
+        Harness h(verbs, fresh_options(root, "task-word"));
+        h.server->accept(rpc(1, "prompts/get", R"({"name":"gm","arguments":{"task":"resume"}})"));
+        h.server->accept(rpc(2, "prompts/get", R"({"name":"gm","arguments":{"task":"resume this task"}})"));
+        std::string warning = str(result_of(h, 1), "warning");
+        check(warning.find("may have been cut") != std::string::npos && warning.find("length 6") != std::string::npos,
+              "a one-word task argument gets a warning that the task may have been cut, naming its length");
+        check(result_of(h, 2).find("warning") == nullptr, "a multi-word task argument gets no warning");
+    }
+
+    std::cout << "--- item 5d: subscriptions/listen ---\n";
+    {
+        fs::path skills = root / "skills-listen";
+        fs::copy(fs::path(GMNEW_SOURCE_DIR) / "skills", skills, fs::copy_options::recursive);
+        auto options = fresh_options(root, "listen");
+        options.skills = skills;
+        Harness h(verbs, options);
+        const fs::path skill_file = skills / "gm" / "SKILL.md";
+        h.server->accept(rpc(400, "subscriptions/listen",
+                             R"({"notifications":{"toolsListChanged":true,"resourceSubscriptions":["skill://gm/SKILL.md"]}})"));
+        Value ack = first_notice(h, "notifications/subscriptions/acknowledged");
+        const Value* acked = field(&ack, {"params", "notifications", "resourceSubscriptions"});
+        check(acked && acked->is_array() && acked->as_array().size() == 1 && acked->as_array()[0].as_string() == "skill://gm/SKILL.md",
+              "the acknowledgement names the resource subscriptions the server honors");
+        check(field(&ack, {"params", "notifications", "toolsListChanged"}) == nullptr,
+              "the acknowledgement omits the filter types the server does not honor");
+        check(number_at(field(&ack, {"params", "_meta", "io.modelcontextprotocol/subscriptionId"})) == 400,
+              "the acknowledgement carries the listen request id as subscriptionId");
+        check(h.raw(400).find("result") == nullptr && h.raw(400).find("error") == nullptr,
+              "subscriptions/listen gets no reply while the stream is open");
+
+        h.server->accept(rpc(401, "tools/list", "{}"));
+        check(notice_count(h, "notifications/resources/updated") == 0, "an unchanged subscribed skill file sends no update");
+
+        append_line(skill_file, "\nA change the subscription must see.\n");
+        h.server->accept(rpc(402, "tools/list", "{}"));
+        Value updated = first_notice(h, "notifications/resources/updated");
+        const Value* updated_params = field(&updated, {"params"});
+        check(notice_count(h, "notifications/resources/updated") == 1 && updated_params && str(*updated_params, "uri") == "skill://gm/SKILL.md",
+              "a changed subscribed skill file sends notifications/resources/updated for its uri");
+        check(number_at(field(&updated, {"params", "_meta", "io.modelcontextprotocol/subscriptionId"})) == 400,
+              "the update carries the subscriptionId of its listen request");
+
+        h.server->accept(rpc(403, "tools/list", "{}"));
+        check(notice_count(h, "notifications/resources/updated") == 1, "the change is announced once");
+
+        h.server->accept(R"({"jsonrpc":"2.0","method":"notifications/cancelled","params":{"requestId":400}})");
+        Value closed = result_of(h, 400);
+        check(str(closed, "resultType") == "complete" && number_at(field(&closed, {"_meta", "io.modelcontextprotocol/subscriptionId"})) == 400,
+              "cancelling the stream answers subscriptions/listen with a complete result");
+
+        append_line(skill_file, "\nA change after the cancel.\n");
+        h.server->accept(rpc(404, "tools/list", "{}"));
+        check(notice_count(h, "notifications/resources/updated") == 1, "a cancelled stream gets no further updates");
+
+        h.server->accept(rpc(405, "resources/subscribe", R"({"uri":"skill://gm/SKILL.md"})"));
+        check(h.raw(405).find("error") && h.raw(405).find("error")->find("code") &&
+                  h.raw(405).find("error")->find("code")->as_number() == -32601,
+              "resources/subscribe is replaced by subscriptions/listen, so it answers method not found");
+        h.server->accept(rpc(406, "subscriptions/listen", R"({"notifications":{"resourceSubscriptions":["skill://gm/NOPE.md"]}})"));
+        check(h.raw(406).find("error") && h.raw(406).find("error")->find("code") &&
+                  h.raw(406).find("error")->find("code")->as_number() == -32602,
+              "subscriptions/listen of a missing skill file is -32602");
+    }
+
     std::cout << "--- item 6: rulesPending ---\n";
     {
         Harness h(verbs, fresh_options(root, "rules"));
@@ -585,6 +685,43 @@ int main() {
               "a changed rules.md gives rulesPending with the new text");
         Value third = h.call("next_context", "{}");
         check(third.find("rulesPending") == nullptr, "the change is announced once");
+    }
+
+    {
+        auto options = fresh_options(root, "abandoned");
+        options.supervised = true;
+        fs::path dir;
+        {
+            Harness a(verbs, options);
+            dir = a.server->run_dir();
+            a.server->accept(rpc(1, "prompts/get", R"({"name":"gm","arguments":{"task":"abandon open calls"}})"));
+            a.call("next_context", "{}");
+            a.server->input_ended();
+        }
+        {
+            auto log = gmnew::RunLog::open(dir);
+            log->append("action", obj().set("step", 1).set("tool", "run_shell").set("args", obj().set("command", "cmake --build build/mcp-surface")));
+        }
+        options.run_dir = dir;
+        options.restart_reason = "test restart";
+        {
+            Harness b(verbs, options);
+            b.next_id = 2000;
+            Value first = b.call("next_context", "{}");
+            check(first.find("recovery") && str(*first.find("recovery"), "note").find("seq ") != std::string::npos,
+                  "the first start after a restart lists the open call");
+            b.server->input_ended();
+        }
+        {
+            Harness c(verbs, options);
+            c.next_id = 3000;
+            Value second = c.call("next_context", "{}");
+            auto events = log_of(dir);
+            check(count_kind(events, "recovery") == 1 && count_kind(events, "abandoned") == 1,
+                  "the open call is closed once in the log, with its reason");
+            check(second.find("recovery") == nullptr, "a later restart does not list the closed call again");
+            c.server->input_ended();
+        }
     }
 
     std::error_code ec;
