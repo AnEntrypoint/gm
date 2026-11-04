@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 import { createHash } from 'node:crypto';
-import { existsSync, readdirSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, rmSync, statSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { basename, dirname, join, resolve } from 'node:path';
 import { createInterface } from 'node:readline';
 import { DEFAULT_WITNESS, MCP_RULES, prefixShaOf, renderTools } from './prompt.mjs';
-import { connectReply, SERVER_NAME } from './connect.mjs';
+import { connectReply, SERVER_NAME, SERVER_TITLE } from './connect.mjs';
 import { currentRunDir, isDirectory, loadTask, newRunId, openRun, ROOT, setSuccessor } from './run.mjs';
 import { flushAllLogs } from './log.mjs';
 import { clearPending, hasPending, offPendingAppended, onPendingAppended, takePending } from './pending.mjs';
@@ -22,17 +22,20 @@ import { COMPACT as TOOLS_COMPACT } from './tools.mjs';
 import { feedOf, registryOf, resultZone1, resultZone2, shownTotalOf } from './compact.mjs';
 import { writeSummary } from './summary.mjs';
 import { parseSkill, SERVED_SKILLS } from './skills.mjs';
+import { completionOf, createSubscriptions, readRun, RESOURCE_TEMPLATES, runResources, witnessOf } from './mcp-resources.mjs';
 
 // The protocol versions this server negotiates, newest first. An initialize that asks for another version is answered with the newest.
 const SUPPORTED_VERSIONS = ['2025-11-25', '2025-06-18'];
 const PROTOCOL_VERSION = SUPPORTED_VERSIONS[0];
 // The key of a tools/call result's run id: a vendor key in reverse-DNS form, owner decision O3. Results carry it; errors do not.
 const RUN_META = 'com.anentrypoint.gmnew/run';
+const RUN_SEQ = 'com.anentrypoint.gmnew/seq';
 // Trace context a tools/call request may carry in _meta (W3C Trace Context and Baggage). It is copied into that call's action event.
 const TRACE_KEYS = ['traceparent', 'tracestate', 'baggage'];
-// A foreground shell whose request names a progress token reports its elapsed seconds this often.
+// A foreground run_shell or run_code whose request names a progress token reports its elapsed seconds this often.
 const PROGRESS_MS = 5000;
-const SERVER_INFO = { name: SERVER_NAME, version: JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')).version };
+const PROGRESS_TOOLS = new Set(['run_shell', 'run_code']);
+const SERVER_INFO = { name: SERVER_NAME, title: SERVER_TITLE, version: JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')).version };
 // The served skills (SEP-2640) are read on each request, so an edit under skills/ is served without a restart. Each skill's files are listed
 // and read from its directory: every file is a resource with a sha256 digest and a size, and SKILL.md is the skill's uri. A file caught
 // mid-write keeps the last read of that skill that succeeded. Before a skill has read cleanly, the error reaches the caller.
@@ -52,7 +55,7 @@ function readSkill(name) {
   const dir = join(ROOT, 'skills', name);
   const files = filesUnder(dir).map((path) => {
     const bytes = readFileSync(join(dir, path));
-    return { path, uri: `skill://${name}/${path}`, bytes, digest: `sha256:${createHash('sha256').update(bytes).digest('hex')}`, size: bytes.length, mimeType: path.endsWith('.md') ? 'text/markdown' : 'text/plain' };
+    return { path, uri: `skill://${name}/${path}`, bytes, digest: `sha256:${createHash('sha256').update(bytes).digest('hex')}`, size: bytes.length, mimeType: path.endsWith('.md') ? 'text/markdown' : 'text/plain', lastModified: statSync(join(dir, path)).mtime.toISOString() };
   });
   const skillMd = files.find((file) => file.path === 'SKILL.md');
   if (skillMd === undefined) throw new Error(`skills/${name}/SKILL.md is missing`);
@@ -75,8 +78,9 @@ function skillEntry(skill) {
 }
 // The resource of one file. SKILL.md is named by its frontmatter, as the SEP asks, and any other file by its path.
 function resourceOf(skill, file) {
-  if (file.path !== 'SKILL.md') return { uri: file.uri, name: file.path, mimeType: file.mimeType };
-  return { uri: file.uri, name: skill.frontmatter.name, description: skill.frontmatter.description, mimeType: file.mimeType };
+  const annotations = { audience: ['assistant'], priority: file.path === 'SKILL.md' ? 1 : 0.5, lastModified: file.lastModified };
+  if (file.path !== 'SKILL.md') return { uri: file.uri, name: file.path, mimeType: file.mimeType, annotations };
+  return { uri: file.uri, name: skill.frontmatter.name, description: skill.frontmatter.description, mimeType: file.mimeType, annotations };
 }
 function resourceList() {
   return SERVED_SKILLS.flatMap((name) => {
@@ -98,10 +102,32 @@ function skillGet(params) {
   if (match === null || !SERVED_SKILLS.includes(match[1])) throw new RpcError(-32602, `unknown skill: ${params?.uri}`);
   return { resultType: 'complete', skill: skillEntry(skillOf(match[1])) };
 }
+const subscriptions = createSubscriptions({
+  dirs: SERVED_SKILLS.map((name) => join(ROOT, 'skills', name)),
+  digestOf: digestOfUri,
+  changed: (uri) => notify({ jsonrpc: '2.0', method: 'notifications/resources/updated', params: { uri } }),
+});
+function digestOfUri(uri) {
+  try {
+    return skillFileOf(uri)?.file.digest ?? null;
+  } catch {
+    return null;
+  }
+}
+function subscribeTo(params) {
+  const found = typeof params?.uri === 'string' ? skillFileOf(params.uri) : null;
+  if (found === null) throw new RpcError(-32002, `resource not found: ${params?.uri}`, { uri: params?.uri });
+  subscriptions.subscribe(params.uri, found.file.digest);
+  return {};
+}
+function unsubscribeFrom(params) {
+  subscriptions.unsubscribe(params?.uri);
+  return {};
+}
 // The prompts are the served skills, read on each request. The gm prompt takes the run's task, which its session prompt gives to a run
 // started without --task. The gm-continue prompt takes no argument.
 const PROMPT_TITLES = { gm: 'gm run', 'gm-continue': 'gm continue' };
-const TASK_ARGUMENT = { name: 'task', description: 'The task to run', required: false };
+const TASK_ARGUMENT = { name: 'task', description: 'The task to run. The whole task text is this one argument. Some hosts pass only its first word.', required: false };
 function skillPrompt(name) {
   const SKILL = skillOf(name);
   const prompt = { name, title: PROMPT_TITLES[name], description: SKILL.frontmatter.description };
@@ -211,6 +237,7 @@ function queryHintOf(shown, total) {
 
 function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, resume = null, jobLifetimeMs = DEFAULT_JOB_LIFETIME_MS, stuckMs = DEFAULT_STUCK_MS, monitorMs = DEFAULT_MONITOR_MS, noticeMs = BODY_NOTICE_MS, hostIdleMs = DEFAULT_HOST_IDLE_MS, recovery = null, history = [], taskInherited = false, startOverride = null, surface = 'code' }) {
   const runId = basename(runDir);
+  const runsRoot = dirname(runDir);
   const tools = createTools({ workspace, runDir, log, background: true, jobLifetimeMs, stuckMs, monitorMs, noticeMs, leaves: current.leaves, serveSkill: (uri) => serveSkillFile(uri, 'read_file') });
   activeTools = tools;
   activeLog = log;
@@ -231,6 +258,10 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
   const cancelled = new Set();
   const callOf = (rpcId) => inFlightCalls.get(JSON.stringify(rpcId));
   const signalOf = (rpcId) => callOf(rpcId)?.controller.signal;
+  const noteAction = (rpcId, seq) => {
+    const call = callOf(rpcId);
+    if (call !== undefined) call.actionSeq = seq;
+  };
   for (const [key, reply] of answersFrom(history, runId)) remember(key, Promise.resolve(reply));
   let steps = resume?.steps ?? 0;
   let ended = resume?.ended ?? null;
@@ -372,11 +403,15 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     }
     if (method === 'prompts/list') return { prompts: SERVED_SKILLS.map((name) => skillPrompt(name)) };
     if (method === 'prompts/get') return getPrompt(params);
-    if (method === 'resources/list') return { resources: resourceList() };
+    if (method === 'resources/list') return { resources: [...resourceList(), ...runResources(runsRoot, runId, witnessOf(runsRoot, runId))] };
     if (method === 'resources/read') return readResource(params);
     if (method === 'skills/list') return { resultType: 'complete', skills: SERVED_SKILLS.map((name) => skillEntry(skillOf(name))) };
     if (method === 'skills/get') return skillGet(params);
-    if (method === 'resources/templates/list') return { resourceTemplates: [] };
+    if (method === 'resources/templates/list') return { resourceTemplates: RESOURCE_TEMPLATES };
+    if (method === 'resources/subscribe') return subscribeTo(params);
+    if (method === 'resources/unsubscribe') return unsubscribeFrom(params);
+    if (method === 'completion/complete') return completionOf(params, { skills: SERVED_SKILLS, filesOf: (name) => skillOf(name).files.map((file) => file.path), runsRoot });
+    if (method === 'logging/setLevel') return setLogLevel(params);
     if (method === 'core/reload') return reloadLeaves();
     if (method === 'notifications/cancelled') {
       cancelRequest(params?.requestId);
@@ -418,6 +453,8 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
   }
 
   function readResource(params) {
+    const run = readRun(runsRoot, params?.uri);
+    if (run !== null) return { contents: [run] };
     const served = serveSkillFile(params?.uri, 'resource');
     // A missing resource is -32002 with its uri, as the 2025-11-25 page says. A uri with a .. segment is not served, so it is not found either.
     if (!served.ok) throw new RpcError(-32002, `resource not found: ${params?.uri}`, { uri: params?.uri });
@@ -457,7 +494,8 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     if (!runStarted && ended === null && name !== 'next_context' && name !== 'finish') noteRule(2, `${name} was called before the first next_context of the run`);
     const meta = params?._meta ?? {};
     const key = JSON.stringify(rpcId);
-    inFlightCalls.set(key, { name, trace: traceOf(meta), controller: new AbortController() });
+    const call = { name, trace: traceOf(meta), controller: new AbortController() };
+    inFlightCalls.set(key, call);
     const stopProgress = progressFor(name, meta.progressToken);
     let out;
     try {
@@ -469,7 +507,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     watchCall(name, out);
     const notice = rulesNotice();
     const payload = notice === null ? out : { ...out, rulesNotice: notice };
-    return { content: [{ type: 'text', text: JSON.stringify(payload) }], isError: out.ok !== true, _meta: { [RUN_META]: runId } };
+    return toolResultOf(name, payload, { [RUN_META]: runId, [RUN_SEQ]: call.actionSeq });
   }
 
   // The message of an unknown tool. The code surface keeps its guidance: a verb is a function on gm, called inside run_code.
@@ -481,7 +519,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
   // A foreground shell whose request names a progress token reports every PROGRESS_MS: progress is the elapsed seconds, which rise at each
   // report, and the message says how long the shell has run. The timer stops when the call ends.
   function progressFor(name, token) {
-    if (name !== 'run_shell' || (typeof token !== 'string' && !Number.isInteger(token))) return () => {};
+    if (!PROGRESS_TOOLS.has(name) || (typeof token !== 'string' && !Number.isInteger(token))) return () => {};
     const started = Date.now();
     let last = 0;
     const timer = setInterval(() => {
@@ -734,6 +772,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     const startMono = log.now();
     log.enter();
     const action = log.append('action', { step, tool, args, ...(rpcId === undefined ? {} : { rpcId, ...callOf(rpcId)?.trace }) });
+    noteAction(rpcId, action.seq);
     // A tool that may change something has its start in the file before it runs, so a crash after its effect still leaves the start in the log.
     if (!READ_ONLY_TOOLS.has(tool)) flushAllLogs();
     let result;
@@ -752,6 +791,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     const step = steps;
     const startMono = log.now();
     const action = log.append('action', { step, tool, args, ...(rpcId === undefined ? {} : { rpcId, ...callOf(rpcId)?.trace }) });
+    noteAction(rpcId, action.seq);
     const result = { ok: false, refused: true, error: `refused: ${reason}`, actionSeq: action.seq };
     log.append('refusal', { step, tool, error: result.error, startMono, actionSeq: action.seq });
     return result;
@@ -841,7 +881,7 @@ function answersFrom(events, runId) {
     if (end === undefined) out = { ok: false, error: 'the call was interrupted by a restart; check its outside effects before repeating it' };
     else if (end.kind === 'refusal') out = { ok: false, refused: true, error: end.error };
     else out = outputOf(end);
-    answers.set(JSON.stringify(action.rpcId), { content: [{ type: 'text', text: JSON.stringify(out) }], isError: out.ok !== true, _meta: { [RUN_META]: runId } });
+    answers.set(JSON.stringify(action.rpcId), toolResultOf(action.tool, out, { [RUN_META]: runId, [RUN_SEQ]: action.seq }));
   }
   return answers;
 }
@@ -904,7 +944,21 @@ const RECORDS_ONLY = new Set(['next_context', 'finish']);
 // and does not only record the run.
 function annotated(tool) {
   const readOnly = READ_ONLY_TOOLS.has(tool.name) && tool.name !== 'next_context';
-  return { ...tool, title: titleOf(tool.name), annotations: { readOnlyHint: readOnly, destructiveHint: !readOnly && !RECORDS_ONLY.has(tool.name), openWorldHint: OPEN_WORLD.has(tool.name) } };
+  const described = { ...tool, title: titleOf(tool.name), annotations: { readOnlyHint: readOnly, destructiveHint: !readOnly && !RECORDS_ONLY.has(tool.name), openWorldHint: OPEN_WORLD.has(tool.name) } };
+  return Object.hasOwn(OUTPUT_SCHEMAS, tool.name) ? { ...described, outputSchema: OUTPUT_SCHEMAS[tool.name] } : described;
+}
+const OUTPUT_SCHEMAS = {
+  next_context: objectSchema({ ok: { type: 'boolean' }, refused: { type: 'boolean' }, error: text, step: number, run: text, stepsLeft: number, maxSteps: number, total: number, prefixSha: text, actionSeq: number }, ['ok']),
+  run_code: objectSchema({ ok: { type: 'boolean' }, refused: { type: 'boolean' }, error: text, truncated: { type: 'boolean' }, background: text, state: text, actionSeq: number }, ['ok']),
+  finish: objectSchema({ ok: { type: 'boolean' }, refused: { type: 'boolean' }, error: text, finished: { type: 'boolean' }, actionSeq: number }, ['ok']),
+};
+const STRUCTURED_FIELDS = ['ok', 'refused', 'error', 'finished', 'step', 'run', 'stepsLeft', 'maxSteps', 'total', 'prefixSha', 'actionSeq', 'truncated', 'background', 'state', 'rulesNotice', 'rulesPending'];
+function toolResultOf(name, out, meta) {
+  const structured = Object.hasOwn(OUTPUT_SCHEMAS, name) ? { structuredContent: structuredOf(out) } : {};
+  return { content: [{ type: 'text', text: JSON.stringify(out) }], ...structured, isError: out.ok !== true, _meta: meta };
+}
+function structuredOf(out) {
+  return Object.fromEntries(STRUCTURED_FIELDS.filter((key) => out[key] !== undefined).map((key) => [key, out[key]]));
 }
 // A title from a tool's name: read_file is "Read file".
 function titleOf(name) {
@@ -934,6 +988,51 @@ function errorReply(id, code, message, data = undefined) {
 // A notification goes out on stdout without running afterReply, which holds the actions of a reply that is not yet written.
 function notify(message) {
   process.stdout.write(`${JSON.stringify(message)}\n`);
+}
+
+const RESOURCES_CHANGED = { jsonrpc: '2.0', method: 'notifications/resources/list_changed' };
+const LOG_LEVELS = ['debug', 'info', 'notice', 'warning', 'error', 'critical', 'alert', 'emergency'];
+const NOTICE_LEVELS = new Map([
+  ['restart', 'notice'], ['reload', 'notice'], ['tools-changed', 'notice'], ['end', 'notice'],
+  ['paused', 'info'], ['cancel', 'info'], ['job-unstuck', 'info'],
+  ['recovery', 'warning'], ['job-stuck', 'warning'], ['job-killed', 'warning'], ['rules-notice', 'warning'],
+  ['error', 'error'],
+]);
+const DETAIL_FIELDS = ['job', 'tool', 'state', 'code', 'method', 'message', 'error', 'reason', 'status', 'rules', 'sinceProgressMs', 'lastSeq'];
+const QUEUE_MAX = 64;
+let logLevel = null;
+const queuedNotices = [];
+
+function hosted(log) {
+  return { ...log, append(kind, data, monoAt) {
+    const event = log.append(kind, data, monoAt);
+    hostNotice(event);
+    return event;
+  } };
+}
+
+function hostNotice(event) {
+  if (event.kind === 'end') notify(RESOURCES_CHANGED);
+  const level = NOTICE_LEVELS.get(event.kind);
+  if (level === undefined) return;
+  const notice = { level, logger: SERVER_NAME, data: { kind: event.kind, seq: event.seq, ...detailOf(event) } };
+  if (logLevel !== null) sendNotice(notice);
+  else if (queuedNotices.length < QUEUE_MAX) queuedNotices.push(notice);
+}
+
+function detailOf(event) {
+  return Object.fromEntries(DETAIL_FIELDS.filter((key) => event[key] !== undefined).map((key) => [key, event[key]]));
+}
+
+function sendNotice(notice) {
+  if (LOG_LEVELS.indexOf(notice.level) >= LOG_LEVELS.indexOf(logLevel)) notify({ jsonrpc: '2.0', method: 'notifications/message', params: notice });
+}
+
+function setLogLevel(params) {
+  if (!LOG_LEVELS.includes(params?.level)) throw new RpcError(-32602, `unknown log level: ${params?.level}`);
+  logLevel = params.level;
+  for (const notice of queuedNotices.splice(0)) sendNotice(notice);
+  return {};
 }
 
 // The trace context a request carries in _meta, the keys TRACE_KEYS that are strings. An absent key is left out.
@@ -1051,7 +1150,9 @@ async function main(argv) {
 
   let runDir = currentRunDir(flags['run-dir'] === undefined ? join(workspace, 'runs', newRunId()) : resolve(flags['run-dir']));
   const runMeta = (dir, runTask) => ({ id: basename(dir), mode: 'mcp', task: runTask, witness: DEFAULT_WITNESS, workspace, maxSteps, maxInflight, createdAt: new Date().toISOString() });
-  let { log, resumed } = openRun({ runDir, rules: MCP_RULES, meta: runMeta(runDir, task) });
+  const opened = openRun({ runDir, rules: MCP_RULES, meta: runMeta(runDir, task) });
+  const { resumed } = opened;
+  const log = hosted(opened.log);
   let resume = resumed ? resumeFrom(log.events()) : null;
   const closedAtBoot = resume?.ended ?? null;
   let startOverride = null;
@@ -1090,7 +1191,7 @@ async function main(argv) {
     const start = ended.successorStart();
     const closedId = basename(runDir);
     const nextDir = join(dirname(runDir), newRunId());
-    const { log: fresh } = openRun({ runDir: nextDir, rules: MCP_RULES, meta: runMeta(nextDir, start.task) });
+    const fresh = hosted(openRun({ runDir: nextDir, rules: MCP_RULES, meta: runMeta(nextDir, start.task) }).log);
     setSuccessor(runDir, nextDir);
     runDir = nextDir;
     fresh.append('start', { mode: 'mcp', maxSteps, maxInflight, taskFrom: start.taskFrom });
@@ -1104,6 +1205,7 @@ async function main(argv) {
       if (session.ended() !== null && !session.stepLimited() && isNextContextCall(line)) {
         retired = Promise.allSettled([retired, session.settled()]);
         session = reopen(session);
+        notify(RESOURCES_CHANGED);
       }
       session.accept(line);
     } catch (err) {

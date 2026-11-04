@@ -260,3 +260,54 @@ Witness, job_status: run 2026-11-04-07-07-10-3d7858, background job `emitjob` (r
 Witness, bound: `loggedFor` called directly in node on a 224000-character failing output of error lines. The logged event is 2764 bytes, 10 error lines are kept, and `moreErrors` is 6990.
 
 Not run live: run_code (the same `loggedFor` call in src/mcp.mjs `act`) and the scripted loop's `runAction` (src/loop.mjs). The Rust port in rust/ (untracked, not touched here) has its own feed in `feed.rs`, and it needs the same rule before cutover. The two 2026-11-04 entries on the preview stay as written; this entry closes the trade-off they name.
+
+## MCP protocol features A to I (2026-11-04)
+
+The owner's request, in the session: "make sure we maximize our use and instructivity of the mcp protocols entire spread of features as effectively as possible in gm-new". It is taken as the owner's acceptance of the connect-time change in this section.
+
+Decisions of "MCP features against gm-new, after the 2026-07-28 research (2026-11-03)" that this section changes:
+- Decision 4 (roots, sampling and logging not used): logging is used now, through logging/setLevel and notifications/message. Roots and sampling are still not used. Reason: the owner's request, and a host can show a worker restart, a stuck job or an error without reading the log.
+- "It uses none of ... completion/complete, logging/setLevel, resources/subscribe": all three are served now. Reason: the owner's request.
+- "It sends no list_changed notification": notifications/resources/list_changed is sent when a run ends (its witness becomes a resource) and when a new run opens (its log becomes one). The tool and prompt lists stay fixed. Reason: the resource list changes, and the rule in that section says a changing list sends the notice.
+- "resources/templates/list returns an empty list": it returns four templates.
+- Decisions 1 to 3 (no protocol upgrade, no elicitation, no tasks) are unchanged.
+
+What shipped, by item (src/mcp.mjs, src/connect.mjs, the new src/mcp-resources.mjs, and src/worker-modules.json, which lists the new module). tools/, skills/ and rust/ are not changed.
+- A. Templates: skill://{name}/SKILL.md, skill://{name}/{path}, run://{run}/log and run://{run}/witness. resources/list gives every served skill file and the current run's log, and its witness once the run has ended. resources/read serves each of them. A run log is its newest 64 KB, cut at a line boundary, with `_meta` key com.anentrypoint.gmnew/log holding totalBytes, fromByte and truncated. Only the current run is listed; other runs under runs/ are reached through the template and through completion.
+- B. Annotations: skill files carry audience assistant, priority 1 for SKILL.md and 0.5 for the rest, and lastModified from the file's mtime. Run resources carry priority 0.5 (log) and 0.8 (witness, audience user and assistant). A tools/call result's `_meta` carries com.anentrypoint.gmnew/run (as before) and com.anentrypoint.gmnew/seq, the seq of the call's action event, which query_log reads. A repeated request id answered from the log carries the same pair.
+- C. Progress: run_code reports progress like run_shell, every 5 s, against the request's progressToken.
+- D. Structured results: next_context, run_code and finish declare outputSchema, and return structuredContent with the small fields only (see the measurement). The text content is unchanged.
+- E. The gm prompt's task argument reads: "The task to run. The whole task text is this one argument. Some hosts pass only its first word." Observed 2026-11-04: a /mcp__gm__gm command with words after the first gave the gm prompt the task "make" only, which is the host passing the first word. Not worked around in the server beyond this text.
+- F. Logging: capability logging {}, logging/setLevel, and notifications/message at the level of each event: notice for restart, reload, tools-changed and end; info for paused, cancel and job-unstuck; warning for recovery, job-stuck, job-killed and rules-notice; error for error. With no level set, events wait in a queue of 64 and are sent when a host sets a level. The event log stays the record.
+- G. Completions: completion/complete suggests the skill name, and the skill file path given the name, for skill:// templates, and the run id for run:// templates. Run ids come from runs/, newest first, at most 100.
+- H. resources.subscribe: resources/subscribe and resources/unsubscribe, for served skill files. A recursive fs.watch on skills/gm and skills/gm-continue, unref'd, opens with the first subscription and closes with the last. 150 ms after an event, each subscribed file's sha256 digest is compared with the digest last sent, and notifications/resources/updated goes out only when it changed.
+- I. The connect text gains a resources pointer (RESOURCES_POINTER, src/connect.mjs). serverInfo gains the title "gm-new run worker", and connectSha covers the title.
+
+Reconnect and gate: CAPABILITIES, the instructions and the title changed. The host reads them once, at connect, so a host reconnects to see A to I. CONNECT_SHA is recorded as 9b707f4390fef8d4e21d4d661e636260ea830e228fddd8c26b5b34924914705f, the value connectSha returns for this checkout.
+
+Measured for D, on the live server (reply bytes as sent):
+
+| reply | text bytes | structuredContent bytes |
+| --- | --- | --- |
+| next_context | 2456 | 153 |
+| run_code | 68 | 43 |
+| finish | 110 | 27 |
+
+tools/list grew from 4756 to 5563 bytes (+807): the outputSchema of next_context is 323 bytes, of run_code 247 and of finish 189. A host reads that once per tools list. The structured fields are paid per call. Whether a host puts structuredContent into the model's context was not measured. run_code's output and the next_context feed are not repeated in structuredContent (run_code's output can be 20000 characters), so they stay in the text only. The served tool list changed, so prefixSha changed from 091705ba54948fffe57ad8bbebc909cefc8e0efa3611b52ce4e865342eefb9a0 to 02c66f270e7b6143590a397210158911ee055a2a689a833cd0f6ed6acb51e75a, and the next resumed start logs tools-changed with both hashes.
+
+Limits:
+- Subscriptions, the log level and the queued notices live in the worker's memory. A worker restart clears them (a src change the relay applies, or an update that changes a worker module), so a host sends logging/setLevel and resources/subscribe again. This follows from where the state is held; it was not witnessed across a live swap. Replaying them from the relay would change tools/relay.mjs, which is frozen, so it is the owner's decision.
+- Not witnessed live: job-stuck, job-unstuck, job-killed, recovery, rules-notice, reload, tools-changed and cancel. Their level mapping is in the code, and each needs a run that produces the event.
+
+Witnesses (scratch under /tmp/gm-scratch/mcp-features; drive.mjs writes each request to node src/mcp.mjs on stdin in turn. Each run used a tar copy of this tree, so the shared checkout's workers were not restarted in the middle of a check):
+- run-w1 (wA.jsonl): resources/templates/list returned the four templates. resources/list gave run://run-w1/log with priority 0.5. completion/complete for skill name "g" gave ["gm","gm-continue"], and for run id prefix "run-" gave ["run-w1"]. run_code 6 * 7 gave `_meta` com.anentrypoint.gmnew/seq 8 and structuredContent {"ok":true,"actionSeq":8,"truncated":false}. An unknown method logged an error event at seq 12 and a notifications/message at level error. Before logging/setLevel, an unknown tool at seq 11 was queued and sent at the level set. finish gave {"ok":true,"finished":true} at seq 13, then notifications/resources/list_changed, then notifications/message at level notice with kind end. resources/read of run://run-w1/witness returned the finish witness.
+- run-w2 (wB.jsonl): prompts/list gave the new TASK_ARGUMENT text. resources/subscribe, then a change to the copy's skills/gm-continue/SKILL.md, gave notifications/resources/updated for skill://gm-continue/SKILL.md. After resources/unsubscribe, a second change gave no notification. run_code with progressToken "p1" and an 11 s body gave notifications/progress at 5 and 10 with messages "running 5 s" and "running 10 s".
+- run-w3 (wF1, then wF2, both with --supervised yes): life 1 paused at seq 11 (supervisor ended stdin). Life 2 logged restart at seq 12, and logging/setLevel at notice sent it as notifications/message with kind restart. A repeated request id 5 for run_code was answered from the log ("first", not "second") with structuredContent and `_meta` seq 8.
+
+Left out, and why:
+- resources/list does not enumerate every run, because each run adds two entries. The template and completion reach the rest.
+- No roots, sampling, elicitation or tasks: decisions 1 to 4 stand.
+- No completion for prompt arguments: no argument there narrows a value.
+- The Rust port (rust/src/mcp.rs, rust/src/skills.rs) is not changed. It needs the same protocol surface: the capabilities, the serverInfo title, the RESOURCES_POINTER text, the four templates and the run resources with their annotations, skill annotations, `_meta` com.anentrypoint.gmnew/seq, progress for run_code, outputSchema and structuredContent for the three tools, logging/setLevel and notifications/message, completion/complete, resources/subscribe with a file watcher, the two list_changed notices, and the TASK_ARGUMENT text.
+
+Owner decision open: whether the relay should replay the host's initialize, logging/setLevel and subscriptions to a worker it starts after a swap.
