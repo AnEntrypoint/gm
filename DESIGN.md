@@ -2,6 +2,10 @@
 
 This note turns the evidence in `research/deep-research.md` into design directions. Each direction is marked as confirmed by the evidence, or as a hypothesis gm-new must test on its own workload before it becomes a design rule.
 
+## History squash (2026-11-04)
+
+The Rust port and its removal are out of gm-new's history, because the rust/ blobs made every clone larger. Commits up to and including `c9172c4` keep their shas. From `19b14bd` on, every commit has a new sha, and `a360041` was dropped because it touched only rust/. The tree at HEAD is the same as before the squash (`2618522e`). Old to new: `19b14bd` to `6adfc95`, `4e9fa56` to `b937311`, `56e0586` to `d23e974`, `84f508a` to `247cee0`, `9b7ba65` to `ae4d5a5`, `bac1557` to `1161f49`, `5035c17` to `9140693`, `584f50d` to `b67df48`, `82a8104` to `e61140e`. Backup bundle of the pre-squash history: /config/gm-new-pre-squash-2026-11-04-b.bundle (outside the repo; the first backup is /config/gm-new-pre-squash-2026-11-04.bundle).
+
 ## Decided
 
 - Scope: a fresh worker that replaces gm's loop, not a fork of gm. Reason: one worker, one log and one loop is the simplest design the evidence supports.
