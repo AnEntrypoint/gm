@@ -464,11 +464,14 @@ void Relay::reexec() {
 }
 
 void Relay::update_loop() {
-    const UpdatePolicy policy = *options_.update;
+    UpdatePolicy policy = *options_.update;
     Lock lock(mutex_);
     while (!host_gone_) {
         lock.unlock();
         const UpdateResult result = update_now(policy);
+#if defined(_WIN32)
+        if (result.updated) policy.current_version = result.to;
+#endif
         const std::chrono::milliseconds wait = result.ok ? std::max(next_check_delay(policy), kUpdateRetryWait) : kUpdateRetryWait;
         lock.lock();
         if (host_gone_) break;
