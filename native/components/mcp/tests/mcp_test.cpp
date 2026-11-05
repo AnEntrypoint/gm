@@ -503,7 +503,7 @@ int main() {
         rows.rows = {"prd-r1 resolved done thing"};
         Harness h(rows, options);
         h.call("next_context", "{}");
-        Value bg = h.call("run_code", R"({"body":"sleep:600:seven","timeoutMs":50})");
+        Value bg = h.call("run_code", R"({"body":"sleep:2000:seven","timeoutMs":50})");
         std::string job = str(bg, "background");
         check(bg.find("ok")->as_bool() && job == "body-" + gm::json::dump(*bg.find("actionSeq")) && str(bg, "state") == "running",
               "a body past timeoutMs becomes a background run: " + gm::json::dump(bg));
