@@ -1,8 +1,12 @@
+#include <chrono>
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
+#include <future>
+#include <memory>
 #include <random>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include "gm/json.hpp"
@@ -32,6 +36,8 @@ public:
 
     gm::json::Value call(std::string_view name, const gm::json::Value& args) override {
         calls.emplace_back(name);
+        const gm::json::Value* wait = args.find("waitMs");
+        if (wait != nullptr && wait->is_number()) std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<long long>(wait->as_number())));
         gm::json::Value reply;
         if (name == "echo") {
             reply.set("ok", true);
@@ -50,6 +56,47 @@ public:
 };
 
 const std::filesystem::path project_root = "/project/root";
+
+void test_js_deadline_stops_spin() {
+    FakeVerbs verbs;
+    auto controls = std::make_shared<gm::BodyControls>();
+    controls->js_budget = std::chrono::milliseconds(100);
+    const auto start = std::chrono::steady_clock::now();
+    auto result = gm::run_body(verbs, "while (true) {}", project_root, "cjs", controls);
+    const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count();
+    expect(!result && result.error() == "the body passed its JavaScript deadline of 100 ms",
+           "a spinning body is stopped by its JavaScript deadline: " + (result ? "a value" : result.error()));
+    expect(elapsed < 5000, "the JavaScript deadline stops the spin promptly: " + std::to_string(elapsed) + " ms");
+}
+
+void test_cancel_stops_spin() {
+    auto controls = std::make_shared<gm::BodyControls>();
+    auto outcome = std::make_shared<std::promise<std::string>>();
+    auto future = outcome->get_future();
+    std::thread worker([verbs = FakeVerbs{}, controls, outcome]() mutable {
+        auto result = gm::run_body(verbs, "while (true) {}", project_root, "cjs", controls);
+        outcome->set_value(result ? gm::json::dump(*result) : result.error());
+    });
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    controls->stopped = true;
+    const bool exited = future.wait_for(std::chrono::seconds(5)) == std::future_status::ready;
+    if (exited) worker.join();
+    else worker.detach();
+    expect(exited, "a cancelled spinning body exits its thread");
+    if (exited) {
+        const std::string error = future.get();
+        expect(error == "the body was stopped", "a cancelled body reports the stop: " + error);
+    }
+}
+
+void test_long_verb_does_not_spend_js_deadline() {
+    FakeVerbs verbs;
+    auto controls = std::make_shared<gm::BodyControls>();
+    controls->js_budget = std::chrono::milliseconds(100);
+    auto result = gm::run_body(verbs, "const r = await gm.echo({ waitMs: 400 }); return r.ok;", project_root, "cjs", controls);
+    expect(result && gm::json::dump(*result) == "true",
+           "a body awaiting a long verb still returns: " + (result ? gm::json::dump(*result) : result.error()));
+}
 
 gm::json::Value run_ok(FakeVerbs& verbs, std::string_view body, const std::string& what) {
     auto result = gm::run_body(verbs, body, project_root);
@@ -218,6 +265,9 @@ int main() {
     test_top_level_await_and_gm_fields();
     test_verbs_filter();
     test_fresh_state_and_edges();
+    test_js_deadline_stops_spin();
+    test_cancel_stops_spin();
+    test_long_verb_does_not_spend_js_deadline();
     if (failures == 0) std::printf("runcode: all tests passed\n");
     return failures == 0 ? 0 : 1;
 }

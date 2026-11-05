@@ -13,6 +13,7 @@
 #include "gm/log.hpp"
 #include "gm/mcp.hpp"
 #include "gm/proc.hpp"
+#include "gm/runcode.hpp"
 #include "internal.hpp"
 
 namespace gm::mcp {
@@ -473,6 +474,9 @@ struct Server::State {
         std::chrono::steady_clock::time_point start_wall = std::chrono::steady_clock::now();
         std::atomic<bool> stopped{false};
         std::atomic<bool> exited{false};
+        std::shared_ptr<gm::BodyControls> controls;
+        bool killing = false;
+        bool thread_joined = false;
         std::atomic<int> in_flight{0};
         std::atomic<long long> last_call_ms{0};
         std::mutex lock;
@@ -1228,21 +1232,54 @@ struct Server::State {
             std::lock_guard guard(job->lock);
             if (job->adopted || job->settled || job->finished || job->request_key != key) continue;
             job->stopped = true;
+            if (job->controls) job->controls->stopped = true;
             proc::kill_owned(job->body);
             return true;
         }
         return false;
     }
 
-    void stop_locked(BodyJob& job, const std::string& reason) {
-        if (job.settled || !job.adopted) return;
-        job.stopped = true;
-        proc::kill_owned(job.body);
-        std::string tail = body_text(*job.owner, job.body, kTailCap);
-        settle_locked(job, "killed", object().set("reason", reason));
-        Value killed = object().set("job", job.name).set("reason", reason).set("tail", tail);
-        if (reason == "lifetime") killed.set("lifetimeMs", number_of(options.job_lifetime_ms));
-        append_to(*job.owner, "job-killed", std::move(killed));
+    bool join_body(const std::shared_ptr<BodyJob>& job) {
+        std::thread thread;
+        {
+            std::lock_guard guard(job->lock);
+            if (job->thread_joined || !job->thread.joinable()) return true;
+            thread = std::move(job->thread);
+            job->thread_joined = true;
+        }
+        using namespace std::chrono;
+        const auto until = steady_clock::now() + milliseconds(5000);
+        while (!job->exited && steady_clock::now() < until) std::this_thread::sleep_for(milliseconds(2));
+        if (!job->exited) {
+            std::cerr << "gm: background body " << job->name << " did not stop after its cancel flag; detached\n";
+            thread.detach();
+            return false;
+        }
+        thread.join();
+        return true;
+    }
+
+    void stop_body(const std::shared_ptr<BodyJob>& job, const std::string& reason) {
+        {
+            std::lock_guard guard(job->lock);
+            if (job->settled || job->killing) {
+                if (job->controls) job->controls->stopped = true;
+                return;
+            }
+            job->stopped = true;
+            if (job->controls) job->controls->stopped = true;
+            proc::kill_owned(job->body);
+            if (!job->adopted) return;
+            job->killing = true;
+            std::string tail = body_text(*job->owner, job->body, kTailCap);
+            Value killed = object().set("job", job->name).set("reason", reason).set("tail", tail);
+            if (reason == "lifetime") killed.set("lifetimeMs", number_of(options.job_lifetime_ms));
+            append_to(*job->owner, "job-killed", std::move(killed));
+        }
+        join_body(job);
+        std::lock_guard guard(job->lock);
+        if (job->settled) return;
+        settle_locked(*job, "killed", object().set("reason", reason));
     }
 
     std::vector<std::shared_ptr<BodyJob>> body_list() {
@@ -1260,10 +1297,7 @@ struct Server::State {
     }
 
     void stop_bodies(const std::string& reason) {
-        for (const auto& job : body_list()) {
-            std::lock_guard guard(job->lock);
-            stop_locked(*job, reason);
-        }
+        for (const auto& job : body_list()) stop_body(job, reason);
     }
 
     std::shared_ptr<BodyJob> body_named(const std::string& name) {
@@ -1291,7 +1325,7 @@ struct Server::State {
             job->value.reset();
             job->error = lost_output(*job);
         }
-        if (job->adopted && !job->settled) {
+        if (job->adopted && !job->settled && !job->killing) {
             if (job->value) {
                 std::string text = json::dump(*job->value);
                 std::size_t length = js_length(text);
@@ -1484,6 +1518,7 @@ struct Server::State {
         bool any = false;
         for (const auto& job : body_list()) {
             bool remind = false;
+            bool expired = false;
             double running_ms = 0;
             {
                 std::lock_guard guard(job->lock);
@@ -1491,24 +1526,28 @@ struct Server::State {
                 any = true;
                 long long now = steady_ms();
                 if (static_cast<std::uint64_t>(now - wall_ms_of(*job)) >= options.job_lifetime_ms) {
-                    stop_locked(*job, "lifetime");
-                    continue;
+                    expired = true;
+                } else {
+                    long long progress = job->in_flight > 0 ? now : std::max(wall_ms_of(*job), job->last_call_ms.load());
+                    double since = static_cast<double>(now - progress);
+                    if (!job->stuck && since > static_cast<double>(options.stuck_ms)) {
+                        job->stuck = true;
+                        append_to(*job->owner, "job-stuck", object().set("job", job->name).set("body", number_of(job->body)).set("sinceProgressMs", since));
+                    } else if (job->stuck && since <= static_cast<double>(options.stuck_ms)) {
+                        job->stuck = false;
+                        append_to(*job->owner, "job-unstuck", object().set("job", job->name).set("body", number_of(job->body)).set("sinceProgressMs", since));
+                    }
+                    std::uint64_t due = static_cast<std::uint64_t>(now - wall_ms_of(*job)) / std::max<std::uint64_t>(1, options.notice_ms);
+                    if (due > job->reminders) {
+                        job->reminders = due;
+                        remind = true;
+                        running_ms = std::round(job->owner->log->now_ms() - job->start_mono);
+                    }
                 }
-                long long progress = job->in_flight > 0 ? now : std::max(wall_ms_of(*job), job->last_call_ms.load());
-                double since = static_cast<double>(now - progress);
-                if (!job->stuck && since > static_cast<double>(options.stuck_ms)) {
-                    job->stuck = true;
-                    append_to(*job->owner, "job-stuck", object().set("job", job->name).set("body", number_of(job->body)).set("sinceProgressMs", since));
-                } else if (job->stuck && since <= static_cast<double>(options.stuck_ms)) {
-                    job->stuck = false;
-                    append_to(*job->owner, "job-unstuck", object().set("job", job->name).set("body", number_of(job->body)).set("sinceProgressMs", since));
-                }
-                std::uint64_t due = static_cast<std::uint64_t>(now - wall_ms_of(*job)) / std::max<std::uint64_t>(1, options.notice_ms);
-                if (due > job->reminders) {
-                    job->reminders = due;
-                    remind = true;
-                    running_ms = std::round(job->owner->log->now_ms() - job->start_mono);
-                }
+            }
+            if (expired) {
+                stop_body(job, "lifetime");
+                continue;
             }
             if (!remind) continue;
             Value prd = prd_summary();
@@ -2722,6 +2761,7 @@ Value Server::State::run_code(const Value& args) {
             if (!options.run_body) return with_seq(object().set("ok", false).set("error", "no body runner is configured"));
             next_generation();
             auto job = std::make_shared<BodyJob>();
+            job->controls = std::make_shared<gm::BodyControls>();
             job->body = action;
             job->step = s().steps;
             job->owner = &s();
@@ -2737,6 +2777,7 @@ Value Server::State::run_code(const Value& args) {
             job->thread = std::thread([this, job, logged, runner = options.run_body, source = body->as_string(), root = options.workspace,
                                        format_name = format == nullptr ? std::string() : std::string(format->as_string()),
                                        shared_gate = gate] {
+                gm::BodyControlsScope controls_scope(job->controls);
                 proc::OwnerScope owner(job->body);
                 auto outcome = runner(*logged, source, root, format_name);
                 {
@@ -2762,7 +2803,7 @@ Value Server::State::run_code(const Value& args) {
                     std::lock_guard guard(job->lock);
                     started_jobs = job->started_jobs;
                 }
-                job->thread.join();
+                if (job->thread.joinable()) job->thread.join();
                 settle_started_jobs(started_jobs);
                 {
                     std::lock_guard list_guard(mu);

@@ -10,7 +10,20 @@ namespace {
 
 int interrupt_on_deadline(JSContext*, void* opaque) {
     auto* session = static_cast<Session*>(opaque);
-    if (session->deadline == Clock::time_point::max() || Clock::now() < session->deadline) return 0;
+    const auto now = Clock::now();
+    if (session->cancel != nullptr && session->cancel->load(std::memory_order_relaxed)) {
+        session->cancelled = true;
+        return 1;
+    }
+    if (session->js_budget.count() > 0) {
+        Clock::duration paused = session->paused;
+        if (session->host_depth > 0) paused += now - session->host_start;
+        if (now - session->started - paused >= session->js_budget) {
+            session->deadline_passed = true;
+            return 1;
+        }
+    }
+    if (session->deadline == Clock::time_point::max() || now < session->deadline) return 0;
     session->deadline_passed = true;
     return 1;
 }
@@ -51,6 +64,7 @@ JSValue call_host(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv) {
     }
     json::Value reply;
     try {
+        HostPause paused(*session);
         if (auto extra = session->host->extra.find(name); extra != session->host->extra.end()) {
             reply = extra->second(args);
         } else if (session->host->native != nullptr) {
@@ -213,8 +227,13 @@ std::string error_text(JSContext* ctx, JSValueConst thrown) {
 }
 
 std::string deadline_or(Engine& engine, std::string text) {
-    if (!engine.session().deadline_passed) return text;
-    return "the call passed its deadline of " + std::to_string(engine.session().deadline_budget.count()) + " ms";
+    const Session& session = engine.session();
+    if (session.cancelled) return "the body was stopped";
+    if (!session.deadline_passed) return text;
+    if (session.js_budget.count() > 0) {
+        return "the body passed its JavaScript deadline of " + std::to_string(session.js_budget.count()) + " ms";
+    }
+    return "the call passed its deadline of " + std::to_string(session.deadline_budget.count()) + " ms";
 }
 
 std::string take_exception_text(Engine& engine) {

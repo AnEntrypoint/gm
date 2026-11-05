@@ -85,9 +85,11 @@ bool project_is_module(const fs::path& project_root) {
 JSValue call_verb(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv, int verb_index, JSValueConst*) {
     auto* session = static_cast<Session*>(JS_GetContextOpaque(ctx));
     const std::string& name = session->gm_verb_list[static_cast<size_t>(verb_index)].name;
+    json::Value args = args_from_js(ctx, argc, argv);
     json::Value reply;
     try {
-        reply = session->gm_verbs->call(name, args_from_js(ctx, argc, argv));
+        engine::HostPause paused(*session);
+        reply = session->gm_verbs->call(name, args);
     } catch (const std::exception& err) {
         reply = engine::failed_reply(err.what());
     } catch (...) {
@@ -294,13 +296,20 @@ deoxidene::Result<JSValue, std::string> load_module_body(Engine& engine, std::st
 }
 
 deoxidene::Result<json::Value, std::string> run_body(VerbTable& verbs, std::string_view body,
-                                                     const std::filesystem::path& project_root, std::string_view format) {
+                                                     const std::filesystem::path& project_root, std::string_view format,
+                                                     BodyControlsPtr controls) {
     using Fail = deoxidene::Err<std::string>;
     if (body.find_first_not_of(" \t\r\n") == std::string_view::npos) return Fail("body must be a non-empty string");
 
+    if (!controls) controls = thread_body_controls();
+    if (!controls) controls = std::make_shared<BodyControls>();
     Session session;
     session.gm_verbs = &verbs;
     session.gm_verb_list = verbs.list();
+    session.cancel = &controls->stopped;
+    session.js_budget = controls->js_budget;
+    session.deadline_budget = controls->js_budget;
+    session.started = std::chrono::steady_clock::now();
     Engine engine(session);
     if (!engine.ready()) return Fail("the JavaScript runtime did not start");
     JSContext* ctx = engine.ctx();

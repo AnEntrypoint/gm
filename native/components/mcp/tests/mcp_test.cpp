@@ -457,6 +457,24 @@ int main() {
         std::cout << "quickjs: " << out2.str();
         check(out2.str().find(R"(\"output\":\"{\\\"w\\\":true,\\\"r\\\":\\\"hi\\\"}\")") != std::string::npos, "run_code through QuickJS-NG");
     }
+    {
+        auto spin = fresh_options(root, "spin");
+        spin.run_body = [](gm::VerbTable& table, std::string_view body, const fs::path& rootp, std::string_view format) {
+            return gm::run_body(table, body, rootp, format);
+        };
+        Harness h(verbs, spin);
+        h.call("next_context", "{}");
+        Value bg = h.call("run_code", R"({"body":"while (true) {}","timeoutMs":50})");
+        check(str(bg, "state") == "running", "a spinning body becomes a background run: " + gm::json::dump(bg));
+        const auto start = std::chrono::steady_clock::now();
+        Value done = h.call("finish", R"({"witness":"spin stopped","stopBackground":true})");
+        const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count();
+        check(done.find("finished") && done.find("finished")->as_bool(),
+              "stopBackground finishes a run with a spinning body: " + gm::json::dump(done));
+        check(elapsed < 5000, "the spinning body stops promptly: " + std::to_string(elapsed) + " ms");
+        auto events = log_of(h.server->run_dir());
+        check(count_kind(events, "job-killed") == 1, "the spinning body is killed once");
+    }
 #endif
 
     std::cout << "--- item 1: finish rules ---\n";

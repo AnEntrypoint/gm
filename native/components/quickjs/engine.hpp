@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <chrono>
 #include <cstdint>
 #include <memory>
@@ -24,6 +25,31 @@ struct Session {
     Clock::time_point deadline = Clock::time_point::max();
     std::chrono::milliseconds deadline_budget{0};
     bool deadline_passed = false;
+    std::atomic<bool>* cancel = nullptr;
+    bool cancelled = false;
+    std::chrono::milliseconds js_budget{0};
+    Clock::time_point started = Clock::now();
+    Clock::duration paused{0};
+    Clock::time_point host_start{};
+    int host_depth = 0;
+};
+
+class HostPause {
+public:
+    explicit HostPause(Session& session) : session_(session) {
+        if (session_.host_depth++ == 0) session_.host_start = Clock::now();
+    }
+    ~HostPause() {
+        if (--session_.host_depth == 0) {
+            session_.paused += Clock::now() - session_.host_start;
+            session_.host_start = {};
+        }
+    }
+    HostPause(const HostPause&) = delete;
+    HostPause& operator=(const HostPause&) = delete;
+
+private:
+    Session& session_;
 };
 
 class Engine {
