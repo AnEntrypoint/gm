@@ -22,6 +22,7 @@ const SUBSCRIBE_ERROR_KIND = 'error:resources/subscribe';
 const DOTENV_KEY = 'TOGETHERAI';
 const DOTENV_LOCAL_KEY = 'LOCAL_ALIAS';
 const DOTENV_DUMMY = 'dummy_not_a_real_key_12345';
+const ALT_FILES = 4096;
 const NATIVE_AHEAD_KINDS = [STOPPED_FETCH_KIND, SUBSCRIBE_ERROR_KIND];
 
 function extractReference() {
@@ -568,6 +569,52 @@ async function dotenvPass() {
   return rows;
 }
 
+async function alternationPass() {
+  const base = join(SCRATCH, 'alternation');
+  const { spaces } = makeWorkspaces(base);
+  const config = join(base, 'no-default-mcp.json');
+  const task = join(base, 'task.md');
+  for (const side of ['node', 'native']) {
+    const workspace = spaces[side].workspace;
+    writeFileSync(join(workspace, '0000-turn.txt'), 'scenarios/moba/turn_rates.lua turn_rates\n');
+    writeFileSync(join(workspace, '0001-fx.txt'), 'ability_fx effect mapping\n');
+    for (let i = 2; i < ALT_FILES; i += 1) writeFileSync(join(workspace, `filler-${String(i).padStart(5, '0')}.txt`), `filler line ${i}\n`);
+    execFileSync('git', ['-C', workspace, 'add', '-f', '-A']);
+  }
+  const call = (name, args) => ({ method: 'tools/call', params: { name, arguments: args } });
+  const body = `const pats = ['turn_rates','ability_fx','turn_rates|ability_fx','ability_fx|turn_rates'];
+const r = await Promise.all(pats.map(p => gm.grep({ pattern: p, root: '.', mode: 'content', limit: 10 })));
+return r.map(x => String(x.output ?? ''));`;
+  const script = [
+    ['initialize', { method: 'initialize', params: { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'alternation', version: '1' } } }],
+    ['initialized', { method: 'notifications/initialized', notify: true }],
+    ['next_context', call('next_context', {})],
+    ['alternation terms', call('run_code', { body })],
+  ];
+  const node = new Peer(process.execPath, [join(REF, 'src', 'mcp.mjs'), '--workspace', spaces.node.workspace, '--run-dir', spaces.node.runDir, '--task', task, '--mcp-config', config], REF);
+  const nodeReplies = await drive(node, script);
+  await node.stop();
+  const native = new Peer(NATIVE_BIN, ['worker', '--workspace', spaces.native.workspace, '--run-dir', spaces.native.runDir, '--task', task, '--skills', join(REF, 'skills'), '--leaves', join(REPO, 'native', 'leaves'), '--mcp-config', config], REPO);
+  const nativeReplies = await drive(native, script);
+  await native.stop();
+  const rows = [];
+  for (const [side, replies] of [['node', nodeReplies], ['native', nativeReplies]]) {
+    const reply = replies.at(-1)?.[1];
+    const text = reply?.result?.content?.[0]?.text ?? '';
+    let parsed = [];
+    try { parsed = JSON.parse(JSON.parse(text).output); } catch {}
+    const outputs = Array.isArray(parsed) ? parsed.map((value) => typeof value === 'string' ? value : '') : [];
+    const [turn, fx, alt, reversed] = outputs;
+    const ok = (turn ?? '').includes('0000-turn.txt:1') && (fx ?? '').includes('0001-fx.txt:1')
+      && (alt ?? '').includes('0000-turn.txt:1') && (alt ?? '').includes('0001-fx.txt:1')
+      && (reversed ?? '').includes('0000-turn.txt:1') && (reversed ?? '').includes('0001-fx.txt:1');
+    rows.push([`alternation ${side}`, ok ? [] : [['.hits', 'both alternation terms', String(alt ?? '').slice(0, VALUE_WIDTH)]]]);
+    const row = String(alt ?? '').split('\n').find((line) => line.includes('0000-turn.txt:1'));
+    console.log(`alternation ${side}: ${row ?? String(alt ?? '').slice(0, VALUE_WIDTH)}`);
+  }
+  return rows;
+}
+
 async function main() {
   if (!existsSync(NATIVE_BIN)) throw new Error(`native binary not found: ${NATIVE_BIN} (build build/integ or pass --bin)`);
   const refHead = extractReference();
@@ -601,6 +648,7 @@ async function main() {
     rows.push(['log event kinds', logKindDifferences(logKinds(spaces.node.runDir), logKinds(spaces.native.runDir))]);
     rows.push(...(await mcpPass()));
     rows.push(...(await dotenvPass()));
+    rows.push(...(await alternationPass()));
     rows.push(...(await stoppedShellRows(spaces)));
 
     const classified = rows.map(([name, diffs]) => {

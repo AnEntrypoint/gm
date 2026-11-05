@@ -208,12 +208,18 @@ int main() {
 
     fs::path bulk = fs::temp_directory_path() / ("gm_search_bulk_" + std::to_string(std::rand()));
     fs::remove_all(bulk);
+    write(bulk / "0000-turn.txt", "scenarios/moba/turn_rates.lua turn_rates\n");
+    write(bulk / "0001-fx.txt", "ability_fx effect mapping\n");
     for (int i = 0; i < 40; ++i) write(bulk / ("bulk" + std::to_string(i) + ".txt"), std::string(999000, 'a'));
     gm::search::Searcher bulk_searcher(bulk);
     Value bounded = parse(bulk_searcher.grep(Value(gm::json::Object{{"pattern", "needle_not_here"}})));
     check(bounded.find("ok") && bounded.find("ok")->as_bool(), "a root past the work budget returns normally: " + output_of(bounded));
     check(hint_of(bounded).find("scan budget hit: stopped after") != std::string::npos, "the work budget is reported in the hint: " + hint_of(bounded));
     check(output_of(bounded).rfind("(0 matches", 0) == 0, "the budget hit keeps the reply footer: " + output_of(bounded));
+    Value alternation = parse(bulk_searcher.grep(Value(gm::json::Object{{"pattern", "turn_rates|ability_fx"}, {"mode", "content"}, {"limit", 10}})));
+    check(output_of(alternation).find("0000-turn.txt:1 ") != std::string::npos, "the first alternation term matches past the scan budget: " + output_of(alternation));
+    check(output_of(alternation).find("0001-fx.txt:1 ") != std::string::npos, "the second alternation term matches past the scan budget: " + output_of(alternation));
+    check(hint_of(alternation).find("no literal match; matched as regex") != std::string::npos, "the regex retry runs on a budget-capped root: " + hint_of(alternation));
     fs::remove_all(bulk);
 
     fs::remove_all(dir);

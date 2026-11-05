@@ -165,6 +165,12 @@ function searcherFor({ root, confine }) {
       const budget = { listed: 0, files: 0, bytes: 0, deadline: Date.now() + SCAN_DEADLINE_MS, walkStopped: false, scanStopped: false };
       const budgetHit = () => budget.walkStopped || budget.scanStopped;
       const budgetHint = () => `scan budget hit: stopped after ${budget.files} files and ${budget.bytes} bytes; narrow the root or pass a path`;
+      const startScan = () => {
+        budget.files = 0;
+        budget.bytes = 0;
+        budget.scanStopped = false;
+        budget.deadline = Date.now() + SCAN_DEADLINE_MS;
+      };
       const scope = resolve(root, path ?? '.');
       if ((await lstat(scope).catch(() => null)) === null) return fail(`no such path: ${path}`);
       const inside = within(root, scope);
@@ -187,6 +193,7 @@ function searcherFor({ root, confine }) {
       }
       if (!Number.isInteger(offset) || offset < 0) return fail('offset must be a whole number, zero or more');
       const scan = async (matchesLine) => {
+        startScan();
         const found = [];
         let total = 0;
         let size = 0;

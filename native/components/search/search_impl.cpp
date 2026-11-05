@@ -304,6 +304,12 @@ struct ScanBudget {
     bool scan_stopped = false;
 
     void start() { deadline = now_ms() + SCAN_DEADLINE_MS; }
+    void start_scan() {
+        start();
+        files = 0;
+        bytes = 0;
+        scan_stopped = false;
+    }
     bool expired() const { return now_ms() >= deadline; }
     bool hit() const { return walk_stopped || scan_stopped; }
     std::string hint() const {
@@ -602,6 +608,7 @@ std::string Searcher::grep(const json::Value& args) {
 
     bool show_relative = inside && root_ == workspace_;
     auto scan = [&](const Matcher& matcher) {
+        budget.start_scan();
         Scan result;
         std::size_t size = 0;
         for (const std::string& name : names) {
