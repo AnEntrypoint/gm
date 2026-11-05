@@ -56,6 +56,7 @@ struct UpdatePolicy {
     std::string current_version = std::string(kBuildVersion);
     std::chrono::hours interval = kUpdateInterval;
     bool enabled = true;
+    bool force = false;
     ManifestFetcher fetch = fetch_manifest_over_http;
 };
 
@@ -63,6 +64,7 @@ struct UpdateState {
     std::int64_t checked_ms = 0;
     std::string etag;
     std::string version;
+    std::string asset_sha;
 };
 
 struct UpdateResult {

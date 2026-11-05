@@ -282,12 +282,13 @@ UpdateState read_update_state(const fs::path& install_dir) {
     if (checked != nullptr && checked->is_number()) state.checked_ms = static_cast<std::int64_t>(checked->as_number());
     state.etag = text_member(*parsed, "etag");
     state.version = text_member(*parsed, "version");
+    state.asset_sha = text_member(*parsed, "assetSha");
     return state;
 }
 
 bool write_update_state(const fs::path& install_dir, const UpdateState& state) {
     json::Value out(json::Object{});
-    out.set("checked_ms", state.checked_ms).set("etag", state.etag).set("version", state.version);
+    out.set("checked_ms", state.checked_ms).set("etag", state.etag).set("version", state.version).set("assetSha", state.asset_sha);
     const fs::path target = install_dir / kStateName;
     const fs::path temp = install_dir / (std::string(kStateName) + ".tmp");
     {
@@ -439,13 +440,15 @@ UpdateResult update_once(const UpdatePolicy& policy, UpdateResult result) {
     const ScopedRemoval cleanup(staging);
 
     UpdateState state = read_update_state(policy.install_dir);
-    if (checked_recently(state, now_ms(), policy.interval)) return current_build(std::move(result), policy, "already current");
+    if (!policy.force && checked_recently(state, now_ms(), policy.interval))
+        return current_build(std::move(result), policy, "already current");
     if (!acquire_update_lock(policy.install_dir))
         return current_build(std::move(result), policy, "another update is running");
     const ScopedRemoval unlock(policy.install_dir / kLockName);
 
     state = read_update_state(policy.install_dir);
-    if (checked_recently(state, now_ms(), policy.interval)) return current_build(std::move(result), policy, "already current");
+    if (!policy.force && checked_recently(state, now_ms(), policy.interval))
+        return current_build(std::move(result), policy, "already current");
     if (superseded(state, policy.current_version)) {
         result = current_build(std::move(result), policy, "installed by another process");
         result.to = state.version;
@@ -465,19 +468,21 @@ UpdateResult update_once(const UpdatePolicy& policy, UpdateResult result) {
     result.commit = manifest->commit;
     result.ok = true;
     state.etag = reply->etag;
-    if (!is_newer(*manifest, policy.current_version)) {
-        state.checked_ms = now_ms();
-        state.version = manifest->version;
-        write_update_state(policy.install_dir, state);
-        result.status = "already current";
-        return result;
-    }
 
     const std::string target = target_name();
     const auto asset = manifest->assets.find(target);
     if (asset == manifest->assets.end()) return failed(std::move(result), "the manifest has no build for " + target);
     if (!plain_file_name(asset->second.file))
         return failed(std::move(result), "the manifest names " + asset->second.file + ", which is not a file name");
+    const bool asset_unchanged = !state.asset_sha.empty() && lower(state.asset_sha) == lower(asset->second.sha256);
+    if (!is_newer(*manifest, policy.current_version) && asset_unchanged) {
+        state.checked_ms = now_ms();
+        state.version = manifest->version;
+        state.asset_sha = asset->second.sha256;
+        write_update_state(policy.install_dir, state);
+        result.status = "already current";
+        return result;
+    }
 
     fs::create_directories(staging);
     const fs::path archive = staging / asset->second.file;
@@ -489,6 +494,7 @@ UpdateResult update_once(const UpdatePolicy& policy, UpdateResult result) {
         return failed(std::move(result), *error);
     state.checked_ms = now_ms();
     state.version = manifest->version;
+    state.asset_sha = asset->second.sha256;
     write_update_state(policy.install_dir, state);
     result.updated = true;
     result.status = "updated";
@@ -516,7 +522,8 @@ UpdateResult update_now(const UpdatePolicy& policy) {
 }
 
 int run_update_command() {
-    const UpdatePolicy policy = policy_from_environment(current_executable().parent_path());
+    UpdatePolicy policy = policy_from_environment(current_executable().parent_path());
+    policy.force = true;
     const UpdateResult result = update_now(policy);
     std::cout << json::dump(result.to_json()) << '\n';
     return result.ok ? 0 : 1;

@@ -52,6 +52,7 @@ const std::string kCommit = "abc1234def5678";
 struct Release {
     fs::path manifest;
     std::string url;
+    std::string sha256;
 };
 
 Release make_release(const fs::path& dir, const std::string& mark, const std::string& digest_override = {}) {
@@ -71,7 +72,7 @@ Release make_release(const fs::path& dir, const std::string& mark, const std::st
                    "\",\"built\":\"2026-11-05T00:00:00Z\",\"repo\":\"AnEntrypoint/gmc\",\"assets\":{\"" + target +
                    "\":{\"file\":\"gm-" + target + ".tar.gz\",\"sha256\":\"" + digest +
                    "\",\"size\":" + std::to_string(bytes.size()) + "},\"other-target\":{\"file\":\"x.tar.gz\",\"sha256\":\"00\",\"size\":1}}}");
-    return {manifest, file_url(manifest)};
+    return {manifest, file_url(manifest), digest};
 }
 
 UpdatePolicy policy_for(const fs::path& install, const std::string& url, const std::string& current) {
@@ -141,9 +142,42 @@ void same_version_is_a_no_op(const fs::path& root) {
     const fs::path install = root / "install-same";
     make_build(install, "old");
     const Release release = make_release(root / "release-same", "new");
+    fs::remove(release.manifest.parent_path() / ("gm-" + target_name() + ".tar.gz"));
+    write_update_state(install, UpdateState{0, "", kVersion, release.sha256});
     const UpdateResult result = update_now(policy_for(install, release.url, kVersion));
-    check(result.ok && !result.updated, "the installed version is kept when the manifest is not newer");
-    check(read_text(install / executable_name()) == "old", "a not-newer manifest changes nothing");
+    check(result.ok && !result.updated && result.status == "already current",
+          "a matching asset sha keeps the same version current without a download");
+    check(read_text(install / executable_name()) == "old" && !fs::exists(install / ".gmnew-previous"),
+          "a matching asset sha changes nothing");
+    check(read_update_state(install).asset_sha == release.sha256, "the matched asset sha is kept in the state");
+}
+
+void same_version_changed_asset_refreshes(const fs::path& root) {
+    const fs::path install = root / "install-same-changed";
+    make_build(install, "old");
+    const Release release = make_release(root / "release-same-changed", "new");
+    write_update_state(install, UpdateState{0, "", kVersion, std::string(64, '1')});
+    const UpdateResult result = update_now(policy_for(install, release.url, kVersion));
+    check(result.ok && result.updated && result.to == kVersion, "a changed asset sha updates the same version");
+    check(read_text(install / "leaves" / "core.mjs") == "new" &&
+              read_text(install / "skills" / "gm" / "SKILL.md") == "new" &&
+              read_text(install / "defaults" / "mcp.json") == "new",
+          "an unchanged version with a changed asset refreshes the runtime directories");
+    const UpdateState after = read_update_state(install);
+    check(after.version == kVersion && after.asset_sha == release.sha256,
+          "the installed asset sha and version are recorded after the refresh");
+}
+
+void legacy_state_without_asset_sha_refreshes(const fs::path& root) {
+    const fs::path install = root / "install-legacy-state";
+    make_build(install, "old");
+    const Release release = make_release(root / "release-legacy-state", "new");
+    write_text(install / ".gmnew-update.json",
+               "{\"checked_ms\":0,\"etag\":\"\",\"version\":\"" + kVersion + "\"}");
+    check(read_update_state(install).asset_sha.empty(), "a legacy state has no asset sha");
+    const UpdateResult result = update_now(policy_for(install, release.url, kVersion));
+    check(result.ok && result.updated, "a legacy state is treated as stale at the same version");
+    check(read_text(install / "defaults" / "mcp.json") == "new", "a legacy state refreshes the runtime directories");
 }
 
 void missing_manifest_is_silent(const fs::path& root) {
@@ -178,11 +212,13 @@ std::int64_t epoch_ms(std::chrono::milliseconds offset = {}) {
 void state_round_trips(const fs::path& root) {
     const fs::path install = root / "state";
     fs::create_directories(install);
-    check(read_update_state(install).checked_ms == 0, "a missing state file reads as never checked");
-    const UpdateState saved{1793836800000, "\"abc\"", kVersion};
+    const UpdateState missing = read_update_state(install);
+    check(missing.checked_ms == 0 && missing.asset_sha.empty(), "a missing state file reads as never checked");
+    const UpdateState saved{1793836800000, "\"abc\"", kVersion, "asset-sha"};
     check(write_update_state(install, saved), "the state file is written");
     const UpdateState loaded = read_update_state(install);
-    check(loaded.checked_ms == saved.checked_ms && loaded.etag == saved.etag && loaded.version == saved.version,
+    check(loaded.checked_ms == saved.checked_ms && loaded.etag == saved.etag && loaded.version == saved.version &&
+              loaded.asset_sha == saved.asset_sha,
           "the state file reads back what was written");
     check(!fs::exists(install / ".gmnew-update.json.tmp"), "the state file leaves no temporary file behind");
 }
@@ -222,6 +258,27 @@ void not_modified_refreshes_the_check(const fs::path& root) {
     const UpdateState after = read_update_state(install);
     check(after.checked_ms > stale && after.etag == "\"tag\"", "a 304 records the check time and keeps the etag");
     check(read_text(install / executable_name()) == "old", "a 304 downloads and installs nothing");
+}
+
+void force_bypasses_recent_check(const fs::path& root) {
+    const fs::path install = root / "install-force";
+    make_build(install, "old");
+    const std::int64_t checked = epoch_ms();
+    write_update_state(install, UpdateState{checked, "\"fresh\"", kVersion, std::string(64, 'a')});
+    int fetches = 0;
+    UpdatePolicy policy = policy_for(install, "https://unreachable.invalid/manifest.json", kVersion);
+    policy.force = true;
+    policy.fetch = [&fetches](const std::string&, const std::string& etag, const fs::path&) -> Reply {
+        ++fetches;
+        ManifestReply reply;
+        reply.not_modified = true;
+        reply.etag = etag;
+        return reply;
+    };
+    const UpdateResult result = update_now(policy);
+    check(result.ok && !result.updated && result.status == "already current" && fetches == 1,
+          "a forced manual check reaches the fetcher inside the interval");
+    check(read_update_state(install).checked_ms >= checked, "a forced manual check records its own check time");
 }
 
 void lock_is_exclusive(const fs::path& root) {
@@ -264,11 +321,14 @@ int main() {
     refuses_bad_digest(root);
     swaps_and_keeps_previous(root);
     same_version_is_a_no_op(root);
+    same_version_changed_asset_refreshes(root);
+    legacy_state_without_asset_sha_refreshes(root);
     missing_manifest_is_silent(root);
     rolls_back_a_failed_swap(root);
     state_round_trips(root);
     interval_skips_the_network(root);
     not_modified_refreshes_the_check(root);
+    force_bypasses_recent_check(root);
     lock_is_exclusive(root);
     etag_is_read_from_the_last_response();
 
