@@ -40,7 +40,7 @@ constexpr std::size_t kOpenList = 20;
 constexpr std::size_t kNoticePrdWindow = 5;
 constexpr std::size_t kRowsNamed = 5;
 constexpr double kDefaultBodyTimeoutMs = 180000;
-constexpr double kMaxWaitMs = 300000;
+constexpr double kMaxWaitMs = 100000;
 constexpr double kMaxJobWaitMs = 30000;
 constexpr long long kStartedJobGraceMs = 100;
 constexpr std::size_t kCompletionCap = 100;
@@ -90,7 +90,8 @@ const std::string kNextContextDescription =
     "ones in compact form within two horizons, and prefixSha. pending lists the events that need you since your last "
     "step, each once, with an id. Delivery clears an event, so no later step or wait lists it again. Call it at the "
     "start of each step. query_log reaches every event. waitMs, when set, holds this call until an event is pending "
-    "or that many milliseconds pass, at most 300000. child: true makes the call a read by a subagent on this "
+    "or that many milliseconds pass, at most 100000. A hold that passes with nothing pending takes no step and "
+    "returns progress. child: true makes the call a read by a subagent on this "
     "connection: it takes no step, claims no pending event, and its reply has role child and the owning run. run, "
     "with child, names that owning run, and another run is refused.";
 const std::string kFinishDescription =
@@ -1547,21 +1548,26 @@ struct Server::State {
             end_run("max_steps", Value(nullptr), std::nullopt);
             return out;
         }
-        s().steps += 1;
-        s().run_started = true;
-        s().step_calls = 0;
-        int step = s().steps;
         const Value* wait_arg = args.find("waitMs");
         double wait_ms = wait_arg && wait_arg->is_number() && wait_arg->as_number() > 0 ? std::min(wait_arg->as_number(), kMaxWaitMs) : 0;
         return act(
             "next_context", object(),
             [&](std::uint64_t) {
                 wait_for_pending(wait_ms);
-                return context(step);
+                if (wait_ms > 0 && s().run_started && !has_pending(s().run_dir)) {
+                    return object()
+                        .set("ok", true)
+                        .set("progress", "no event pending after " + std::to_string(static_cast<long long>(wait_ms)) + " ms; no step was used, call next_context again to keep waiting")
+                        .set("steps", number_of(s().steps));
+                }
+                s().steps += 1;
+                s().run_started = true;
+                s().step_calls = 0;
+                return context(s().steps);
             },
             [](const Value& r) {
                 Value d = object();
-                for (const char* key : {"ok", "error", "prefixSha", "total"}) {
+                for (const char* key : {"ok", "error", "prefixSha", "total", "progress"}) {
                     if (const Value* v = r.find(key)) d.set(key, *v);
                 }
                 return d;
