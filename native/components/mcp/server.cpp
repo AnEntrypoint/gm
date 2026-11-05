@@ -1439,6 +1439,10 @@ struct Server::State {
     void ensure_monitor() {
         std::lock_guard guard(mu);
         if (monitor_running) return;
+        {
+            std::lock_guard shutdown(monitor_mutex);
+            if (shutting_down) return;
+        }
         if (monitor.joinable()) monitor.join();
         monitor_running = true;
         monitor = std::thread([this] { monitor_loop(); });
