@@ -25,7 +25,7 @@ export const GIT_TOOLS = [
   { name: 'git_status', description: 'Working tree status: the branch and the changed paths (porcelain v1). cwd, when given, is the directory whose repository the verb acts on: absolute, or relative to the workspace root; a directory outside a git repository is refused. Omitted, the workspace is used.', inputSchema: scoped() },
   { name: 'git_add', description: 'Stage the given workspace paths. Each path is explicit; "." is refused. cwd, when given, is the directory whose repository the verb acts on: absolute, or relative to the workspace root; a directory outside a git repository is refused. Omitted, the workspace is used.', inputSchema: scoped({ paths: strings }, ['paths']) },
   { name: 'git_rm', description: 'Remove the given workspace paths from the disk and the index, with git rm, so the removal is staged. Each path is explicit; "." is refused. Commit it with git_commit, which runs the commit gate. cwd, when given, is the directory whose repository the verb acts on: absolute, or relative to the workspace root; a directory outside a git repository is refused. Omitted, the workspace is used.', inputSchema: scoped({ paths: strings }, ['paths']) },
-  { name: 'git_commit', description: 'Commit only the given paths, with the message. Stage new files with git_add first. The commit gate runs first: syntax of every module, ASCII of every tracked text file, every doc path and KEEP path exists, and a smoke run with a negative control. A failed check refuses the commit. gate reports each check with its time, and notCovered lists what the gate does not check. cwd, when given, is the directory whose repository the verb acts on: absolute, or relative to the workspace root; a directory outside a git repository is refused. Omitted, the workspace is used.', inputSchema: scoped({ message: str, paths: strings }, ['message', 'paths']) },
+  { name: 'git_commit', description: 'Commit only the given paths, with the message. Stage new files with git_add first. The commit gate runs first: syntax of every module, ASCII of every tracked text file, every doc path and KEEP path exists, and a smoke run with a negative control. A failed check refuses the commit. gate reports each check with its time, and notCovered lists what the gate does not check. cwd, when given, is the directory whose repository the verb acts on: absolute, or relative to the workspace root; a directory outside a git repository is refused. Omitted, the workspace is used.', inputSchema: scoped({ message: str, paths: strings, author: str }, ['message', 'paths']) },
   { name: 'git_push', description: 'Push main to origin and set its upstream. Refused unless the current branch is main. cwd, when given, is the directory whose repository the verb acts on: absolute, or relative to the workspace root; a directory outside a git repository is refused. Omitted, the workspace is used.', inputSchema: scoped() },
   { name: 'git_log', description: 'The last count commits, one line each, optionally only for one path (count 1 to 200, default 20). cwd, when given, is the directory whose repository the verb acts on: absolute, or relative to the workspace root; a directory outside a git repository is refused. Omitted, the workspace is used.', inputSchema: scoped({ count: num, path: str }) },
   { name: 'git_diff', description: 'Diff of the given paths (default: all), or of the staged index when staged is true. cwd, when given, is the directory whose repository the verb acts on: absolute, or relative to the workspace root; a directory outside a git repository is refused. Omitted, the workspace is used.', inputSchema: scoped({ paths: strings, staged: bool }) },
@@ -140,7 +140,8 @@ export function createGitVerbs({ root, confine, log }) {
       return scope.error ? fail(scope.error) : git(dir, ['add', ...scope.args]);
     }),
 
-    git_commit: inRepo(async (dir, { message, paths }) => {
+    git_commit: inRepo(async (dir, args) => {
+      const { message, paths } = args;
       if (typeof message !== 'string' || message.trim() === '') return fail('message must be a non-empty string');
       const scope = pathArgs(dir, paths);
       if (scope.error) return fail(scope.error);
@@ -150,7 +151,10 @@ export function createGitVerbs({ root, confine, log }) {
         const reasons = gate.checks.filter((check) => !check.ok).map((check) => `${check.name}: ${check.detail}`);
         return { ok: false, error: `refused: the commit gate failed: ${reasons.join('; ')}`, gate: gate.checks, notCovered: gate.notCovered };
       }
-      const result = await git(dir, ['commit', '-m', message, ...scope.args]);
+      const authorName = args.author;
+      if (authorName !== undefined && (typeof authorName !== 'string' || authorName.trim() === '' || /[<>\r\n]/.test(authorName))) return fail('author must be a name without <, > or line breaks; the configured git email is kept');
+      const env = authorName === undefined ? GIT_ENV : { ...GIT_ENV, GIT_AUTHOR_NAME: authorName.trim() };
+      const result = verbOf('commit', await runCommand('git', ['commit', '-m', message, ...scope.args], { cwd: dir, timeoutMs: GIT_TIMEOUT_MS, env }));
       if (result.ok) {
         const head = await gitIn(dir, ['rev-parse', '--short', 'HEAD'], CHECK_TIMEOUT_MS);
         log.append('commit', { sha: head.ok ? head.output.trim() : null, message: message.split('\n')[0], paths: scope.args.slice(1), gate: gate.checks, notCovered: gate.notCovered });
