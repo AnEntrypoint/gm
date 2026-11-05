@@ -1,6 +1,9 @@
+#include <algorithm>
 #include <cstdio>
 #include <filesystem>
+#include <fstream>
 #include <set>
+#include <string>
 #include <thread>
 #include <vector>
 
@@ -17,6 +20,46 @@ static int failures = 0;
             ++failures;                                                  \
         }                                                                \
     } while (0)
+
+static std::uint64_t seq_of(const json::Value& event) {
+    const json::Value* s = event.find("seq");
+    return s != nullptr && s->is_number() ? static_cast<std::uint64_t>(s->as_number()) : 0;
+}
+
+static bool same_window(const LogWindow& got, const std::vector<json::Value>& all, std::uint64_t after, std::size_t max_events, std::size_t max_bytes, const LogMatch& match) {
+    std::vector<json::Value> events;
+    std::uint64_t scanned_last = after;
+    std::size_t bytes_read = 0;
+    for (const json::Value& event : all) {
+        std::uint64_t seq = seq_of(event);
+        if (seq <= after) continue;
+        if (events.size() >= max_events) break;
+        if (bytes_read >= max_bytes && scanned_last != after) break;
+        bytes_read += json::dump(event).size() + 1;
+        scanned_last = seq;
+        if (!match || match(event)) events.push_back(event);
+    }
+    std::uint64_t expected_count = all.empty() ? 0 : seq_of(all.back());
+    if (got.count != expected_count || got.scanned_last != scanned_last || got.bytes_read != bytes_read || got.events.size() != events.size()) return false;
+    for (std::size_t i = 0; i < events.size(); ++i) {
+        if (json::dump(got.events[i]) != json::dump(events[i])) return false;
+    }
+    return true;
+}
+
+static bool same_last(const std::vector<json::Value>& got, const std::vector<json::Value>& all, std::size_t n, std::uint64_t after, const LogMatch& match) {
+    std::vector<json::Value> events;
+    for (auto it = all.rbegin(); it != all.rend() && events.size() < n; ++it) {
+        if (seq_of(*it) <= after) break;
+        if (!match || match(*it)) events.push_back(*it);
+    }
+    std::reverse(events.begin(), events.end());
+    if (got.size() != events.size()) return false;
+    for (std::size_t i = 0; i < events.size(); ++i) {
+        if (json::dump(got[i]) != json::dump(events[i])) return false;
+    }
+    return true;
+}
 
 int main() {
     auto dir = std::filesystem::temp_directory_path() / "gm_log_test_run";
@@ -83,6 +126,54 @@ int main() {
         auto mid = log->read_from(2);
         CHECK(mid && mid->size() == 402 && (*mid)[0].find("seq")->as_number() == 3);
         CHECK(std::filesystem::file_size(dir / "log.index") == 404 * 16);
+    }
+    {
+        auto long_dir = std::filesystem::temp_directory_path() / "gm_log_long_run";
+        std::filesystem::remove_all(long_dir);
+        auto long_log = RunLog::open(long_dir);
+        CHECK(long_log.has_value());
+        if (long_log) {
+            constexpr std::uint64_t total = 2205;
+            constexpr std::size_t window_bytes = 4 * 1024 * 1024;
+            constexpr std::size_t unlimited_bytes = 1u << 30;
+            for (std::uint64_t i = 1; i <= total; ++i) {
+                json::Value fields;
+                fields.set("pad", std::string(4096, 'x')).set("even", i % 2 == 0);
+                long_log->append(i % 2 == 0 ? "even" : "odd", fields);
+            }
+            auto all = long_log->read_all();
+            CHECK(all && all->size() == total);
+            auto first = long_log->read_window(0, 1000, unlimited_bytes);
+            CHECK(first && first->events.size() == 1000 && first->scanned_last == 1000);
+            CHECK(first && all && same_window(*first, *all, 0, 1000, unlimited_bytes, {}));
+            auto byte_bound = long_log->read_window(0, 10000, window_bytes);
+            CHECK(byte_bound && byte_bound->events.size() < total && byte_bound->bytes_read >= window_bytes);
+            CHECK(byte_bound && all && same_window(*byte_bound, *all, 0, 10000, window_bytes, {}));
+            LogMatch even = [](const json::Value& event) {
+                const json::Value* kind = event.find("kind");
+                return kind != nullptr && kind->is_string() && kind->as_string() == "even";
+            };
+            auto filtered = long_log->read_window(0, 1000, unlimited_bytes, even);
+            CHECK(filtered && filtered->events.size() == 1000 && filtered->scanned_last < total);
+            CHECK(filtered && all && same_window(*filtered, *all, 0, 1000, unlimited_bytes, even));
+            std::uint64_t filtered_last = filtered ? filtered->scanned_last : 0;
+            auto paged = long_log->read_window(filtered_last, 1000, unlimited_bytes, even);
+            CHECK(paged && paged->events.size() == static_cast<std::size_t>(total / 2 - 1000));
+            CHECK(paged && all && same_window(*paged, *all, filtered_last, 1000, unlimited_bytes, even));
+            auto newest = long_log->read_last(50, 1000, even);
+            CHECK(newest && newest->size() == 50);
+            CHECK(newest && all && same_last(*newest, *all, 50, 1000, even));
+            auto one = long_log->read_last(1);
+            CHECK(one && one->size() == 1 && seq_of(one->back()) == total);
+            {
+                std::ofstream out(long_dir / "log.jsonl", std::ios::binary | std::ios::app);
+                out << "{\"seq\":9999,\"kind\":\"partial\"";
+            }
+            CHECK(!long_log->read_all());
+            CHECK(!long_log->read_window(0, 1000, window_bytes));
+            CHECK(!long_log->read_last(1));
+        }
+        std::filesystem::remove_all(long_dir);
     }
     std::filesystem::remove_all(dir);
     if (failures == 0) std::puts("log_test ok");

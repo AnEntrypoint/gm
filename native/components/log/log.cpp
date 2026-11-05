@@ -1,11 +1,15 @@
 #include "gm/log.hpp"
 
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <cstring>
 #include <fstream>
+#include <limits>
+#include <optional>
 #include <sstream>
 #include <system_error>
+#include <utility>
 
 namespace gm {
 
@@ -65,6 +69,137 @@ struct Scan {
     std::uint64_t seq = 0;
     double mono = 0;
 };
+
+struct ParsedLine {
+    std::optional<json::Value> event;
+    std::string error;
+};
+
+ParsedLine parse_line(std::string_view line) {
+    if (line.find_first_not_of(" \t\r") == std::string_view::npos) return {};
+    auto event = json::parse(line);
+    if (!event) return {std::nullopt, event.error()};
+    return {std::move(*event), {}};
+}
+
+std::vector<ParsedLine> parse_line_set(const std::string& text) {
+    std::vector<ParsedLine> lines;
+    std::size_t begin = 0;
+    while (begin < text.size()) {
+        std::size_t nl = text.find('\n', begin);
+        std::size_t end = nl == std::string::npos ? text.size() : nl;
+        lines.push_back(parse_line(std::string_view(text.data() + begin, end - begin)));
+        begin = end + 1;
+    }
+    return lines;
+}
+
+deoxidene::Result<std::vector<json::Value>, std::string> parse_lines(const std::string& text) {
+    std::vector<json::Value> events;
+    for (ParsedLine& parsed : parse_line_set(text)) {
+        if (!parsed.error.empty()) return deoxidene::Err<std::string>{parsed.error};
+        if (parsed.event) events.push_back(std::move(*parsed.event));
+    }
+    return events;
+}
+
+std::uint64_t seq_field(const json::Value& event) {
+    const json::Value* s = event.find("seq");
+    return s != nullptr && s->is_number() ? static_cast<std::uint64_t>(s->as_number()) : 0;
+}
+
+struct IndexRecord {
+    std::uint64_t offset = 0;
+    std::uint32_t length = 0;
+};
+
+bool read_index_record(std::ifstream& index, std::uint64_t position, IndexRecord& out) {
+    if (position > std::numeric_limits<std::uint64_t>::max() / kRecordBytes) return false;
+    char rec[kRecordBytes];
+    index.clear();
+    index.seekg(static_cast<std::streamoff>(position * kRecordBytes));
+    if (!index.read(rec, kRecordBytes)) return false;
+    std::uint64_t bits = 0;
+    for (std::size_t i = 0; i < 8; ++i) bits |= static_cast<std::uint64_t>(static_cast<unsigned char>(rec[i])) << (8 * i);
+    double offset;
+    std::memcpy(&offset, &bits, sizeof offset);
+    if (!std::isfinite(offset) || offset < 0 || offset > static_cast<double>(std::numeric_limits<std::uint64_t>::max())) return false;
+    std::uint32_t length = 0;
+    for (std::size_t i = 0; i < 4; ++i) length |= static_cast<std::uint32_t>(static_cast<unsigned char>(rec[8 + i])) << (8 * i);
+    out.offset = static_cast<std::uint64_t>(offset);
+    out.length = length;
+    return true;
+}
+
+struct LineSet {
+    std::ifstream index;
+    std::ifstream log;
+    std::uint64_t indexed = 0;
+    std::uint64_t last_seq = 0;
+    std::vector<ParsedLine> tail;
+    std::string error;
+
+    std::uint64_t size() const { return indexed + tail.size(); }
+
+    ParsedLine at(std::uint64_t seq) {
+        if (seq <= indexed) {
+            IndexRecord rec;
+            if (!read_index_record(index, seq - 1, rec)) return {std::nullopt, "cannot read log.index"};
+            std::string bytes(rec.length, '\0');
+            log.clear();
+            log.seekg(static_cast<std::streamoff>(rec.offset));
+            if (!log.read(bytes.data(), static_cast<std::streamsize>(rec.length))) return {std::nullopt, "cannot read log.jsonl"};
+            std::string_view line(bytes.data(), rec.length);
+            if (!line.empty() && line.back() == '\n') line.remove_suffix(1);
+            return parse_line(line);
+        }
+        std::size_t position = static_cast<std::size_t>(seq - indexed - 1);
+        if (position >= tail.size()) return {};
+        return tail[position];
+    }
+};
+
+LineSet open_lines(const std::filesystem::path& dir, std::uint64_t next_seq) {
+    LineSet lines;
+    lines.last_seq = next_seq - 1;
+    auto index_path = dir / "log.index";
+    auto log_path = dir / "log.jsonl";
+    std::error_code ec;
+    std::uint64_t index_bytes = std::filesystem::file_size(index_path, ec);
+    if (ec) index_bytes = 0;
+    lines.indexed = std::min(index_bytes / kRecordBytes, lines.last_seq);
+    lines.index.open(index_path, std::ios::binary);
+    lines.log.open(log_path, std::ios::binary);
+    if (!lines.log) {
+        lines.error = "cannot read " + log_path.string();
+        return lines;
+    }
+    std::uint64_t end = 0;
+    if (lines.indexed > 0) {
+        IndexRecord rec;
+        if (!read_index_record(lines.index, lines.indexed - 1, rec)) {
+            lines.error = "cannot read log.index";
+            return lines;
+        }
+        end = rec.offset + rec.length;
+    }
+    std::uint64_t log_bytes = std::filesystem::file_size(log_path, ec);
+    if (ec) log_bytes = 0;
+    if (log_bytes > end) {
+        lines.log.clear();
+        lines.log.seekg(static_cast<std::streamoff>(end));
+        std::ostringstream rest;
+        rest << lines.log.rdbuf();
+        lines.tail = parse_line_set(rest.str());
+        for (const ParsedLine& parsed : lines.tail) {
+            if (!parsed.error.empty()) {
+                lines.error = parsed.error;
+                return lines;
+            }
+        }
+    }
+    return lines;
+}
 
 Scan scan(const std::string& text) {
     Scan s;
@@ -139,26 +274,6 @@ std::uint64_t RunLog::append(std::string_view kind, json::Value fields) {
     return seq;
 }
 
-namespace {
-
-deoxidene::Result<std::vector<json::Value>, std::string> parse_lines(const std::string& text) {
-    std::vector<json::Value> events;
-    std::size_t begin = 0;
-    while (begin < text.size()) {
-        std::size_t nl = text.find('\n', begin);
-        std::size_t end = nl == std::string::npos ? text.size() : nl;
-        std::string_view line(text.data() + begin, end - begin);
-        begin = end + 1;
-        if (line.find_first_not_of(" \t\r") == std::string_view::npos) continue;
-        auto event = json::parse(line);
-        if (!event) return deoxidene::Err<std::string>{event.error()};
-        events.push_back(std::move(*event));
-    }
-    return events;
-}
-
-}
-
 std::uint64_t RunLog::count() const {
     std::lock_guard<std::mutex> guard(*lock_);
     return next_seq_ - 1;
@@ -188,6 +303,48 @@ deoxidene::Result<std::vector<json::Value>, std::string> RunLog::read_from(std::
     std::ostringstream ss;
     ss << in.rdbuf();
     return parse_lines(ss.str());
+}
+
+deoxidene::Result<LogWindow, std::string> RunLog::read_window(std::uint64_t after_seq, std::size_t max_events, std::size_t max_bytes, LogMatch match) const {
+    std::lock_guard<std::mutex> guard(*lock_);
+    LogWindow window;
+    window.scanned_last = after_seq;
+    window.count = next_seq_ - 1;
+    LineSet lines = open_lines(dir_, next_seq_);
+    if (!lines.error.empty()) return deoxidene::Err<std::string>{lines.error};
+    std::uint64_t total = lines.size();
+    if (after_seq == std::numeric_limits<std::uint64_t>::max() || after_seq >= total || max_events == 0) return window;
+    for (std::uint64_t seq = after_seq + 1; seq <= total && window.events.size() < max_events; ++seq) {
+        if (window.bytes_read >= max_bytes && window.scanned_last != after_seq) break;
+        ParsedLine parsed = lines.at(seq);
+        if (!parsed.error.empty()) return deoxidene::Err<std::string>{parsed.error};
+        if (!parsed.event) continue;
+        const json::Value& event = *parsed.event;
+        std::uint64_t event_seq = seq_field(event);
+        if (event_seq <= after_seq) continue;
+        window.bytes_read += json::dump(event).size() + 1;
+        window.scanned_last = event_seq;
+        if (!match || match(event)) window.events.push_back(event);
+    }
+    return window;
+}
+
+deoxidene::Result<std::vector<json::Value>, std::string> RunLog::read_last(std::size_t n, std::uint64_t after_seq, LogMatch match) const {
+    std::lock_guard<std::mutex> guard(*lock_);
+    LineSet lines = open_lines(dir_, next_seq_);
+    if (!lines.error.empty()) return deoxidene::Err<std::string>{lines.error};
+    std::vector<json::Value> newest;
+    if (n == 0) return newest;
+    for (std::uint64_t seq = lines.size(); seq > 0 && newest.size() < n; --seq) {
+        ParsedLine parsed = lines.at(seq);
+        if (!parsed.error.empty()) return deoxidene::Err<std::string>{parsed.error};
+        if (!parsed.event) continue;
+        const json::Value& event = *parsed.event;
+        if (seq_field(event) <= after_seq) break;
+        if (!match || match(event)) newest.push_back(event);
+    }
+    std::reverse(newest.begin(), newest.end());
+    return newest;
 }
 
 }

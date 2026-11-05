@@ -291,4 +291,21 @@ deoxidene::Result<std::vector<json::Value>, std::string> LockedLog::read_all() {
     return log->read_all();
 }
 
+std::uint64_t LockedLog::count() {
+    auto log = current();
+    return log ? log->count() : 0;
+}
+
+deoxidene::Result<LogWindow, std::string> LockedLog::read_window(std::uint64_t after_seq, std::size_t max_events, std::size_t max_bytes, LogMatch match) {
+    auto log = current();
+    if (!log) return deoxidene::Err<std::string>("no run is open");
+    return log->read_window(after_seq, max_events, max_bytes, std::move(match));
+}
+
+deoxidene::Result<std::vector<json::Value>, std::string> LockedLog::read_last(std::size_t n, std::uint64_t after_seq, LogMatch match) {
+    auto log = current();
+    if (!log) return deoxidene::Err<std::string>("no run is open");
+    return log->read_last(n, after_seq, std::move(match));
+}
+
 }

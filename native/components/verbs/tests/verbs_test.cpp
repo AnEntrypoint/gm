@@ -1,9 +1,12 @@
+#include <algorithm>
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
+#include <fstream>
 #include <string>
 #include <thread>
+#include <vector>
 
 #include "gm/core_verbs.hpp"
 #include "gm/json.hpp"
@@ -11,6 +14,8 @@
 #include "../condense.hpp"
 
 namespace {
+
+using gm::json::Value;
 
 int failures = 0;
 
@@ -83,10 +88,57 @@ std::filesystem::path fresh_dir() {
     return base;
 }
 
+std::uint64_t event_seq(const Value& event) {
+    const Value* s = event.find("seq");
+    return s != nullptr && s->is_number() ? static_cast<std::uint64_t>(s->as_number()) : 0;
+}
+
+struct ExpectedWindow {
+    std::vector<Value> events;
+    std::uint64_t scanned_last = 0;
+    std::size_t bytes_read = 0;
+};
+
+ExpectedWindow old_window(const std::vector<Value>& all, std::uint64_t after, std::size_t max_events, std::size_t max_bytes, const gm::LogMatch& match) {
+    ExpectedWindow window;
+    window.scanned_last = after;
+    for (const Value& event : all) {
+        std::uint64_t seq = event_seq(event);
+        if (seq <= after) continue;
+        if (window.events.size() >= max_events) break;
+        if (window.bytes_read >= max_bytes && window.scanned_last != after) break;
+        window.bytes_read += gm::json::dump(event).size() + 1;
+        window.scanned_last = seq;
+        if (!match || match(event)) window.events.push_back(event);
+    }
+    return window;
+}
+
+std::vector<Value> old_last(const std::vector<Value>& all, std::size_t n, std::uint64_t after, const gm::LogMatch& match) {
+    std::vector<Value> events;
+    for (auto it = all.rbegin(); it != all.rend() && events.size() < n; ++it) {
+        if (event_seq(*it) <= after) break;
+        if (!match || match(*it)) events.push_back(*it);
+    }
+    std::reverse(events.begin(), events.end());
+    return events;
+}
+
+std::string seqs_text(const std::vector<Value>& events) {
+    gm::json::Array out;
+    for (const Value& event : events) out.push_back(Value(event_seq(event)));
+    return gm::json::dump(Value(out));
+}
+
+std::string events_text(const std::vector<Value>& events) {
+    gm::json::Array out;
+    for (const Value& event : events) out.push_back(event);
+    return gm::json::dump(Value(out));
+}
+
 }
 
 int main() {
-    using gm::json::Value;
     auto base = fresh_dir();
     auto log = gm::RunLog::open(base / "run");
     if (!log) {
@@ -314,6 +366,68 @@ int main() {
         auto short_done = verbs.call("job_status", object_of({{"job", "short"}, {"waitMs", 10000}}));
         expect(text_of(short_done, "state") == "killed" && text_of(short_done, "reason") == "timeout",
                "job past its deadline is killed with reason timeout: " + gm::json::dump(short_done));
+    }
+    {
+        auto long_run = base / "run-long";
+        auto long_log = gm::RunLog::open(long_run);
+        expect(static_cast<bool>(long_log), "open long query_log run");
+        if (long_log) {
+            constexpr std::uint64_t total = 2205;
+            constexpr std::size_t window_bytes = 4 * 1024 * 1024;
+            for (std::uint64_t i = 1; i <= total; ++i) {
+                Value fields;
+                fields.set("mark", i % 2 == 0);
+                long_log->append(i % 2 == 0 ? "even" : "odd", fields);
+            }
+            auto all = long_log->read_all();
+            expect(static_cast<bool>(all) && all->size() == total, "long log has 2205 events");
+            if (all) {
+                gm::CoreVerbsOptions options;
+                options.workspace = base / "workspace";
+                gm::CoreVerbs verbs(std::move(options), *long_log);
+                auto expect_js_window = [&](const Value& reply, const ExpectedWindow& expected, const std::string& name) {
+                    std::string shown = gm::json::dump(reply).substr(0, 200);
+                    expect(ok_of(reply) && text_of(reply, "output") == seqs_text(expected.events), name + ": " + shown);
+                    if (expected.scanned_last < total) {
+                        expect(number_of(reply, "next") == static_cast<double>(expected.scanned_last), name + " next: " + shown);
+                    } else {
+                        expect(reply.find("next") == nullptr, name + " has no next: " + shown);
+                    }
+                };
+                auto first = verbs.call("query_log", object_of({{"js", "events.map(e => e.seq)"}}));
+                auto first_expected = old_window(*all, 0, 1000, window_bytes, {});
+                expect(first_expected.events.size() == 1000 && first_expected.scanned_last == 1000, "old first window ends at seq 1000");
+                expect_js_window(first, first_expected, "query_log long js first window");
+                auto second = verbs.call("query_log", object_of({{"js", "events.map(e => e.seq)"}, {"after", 1000}}));
+                auto second_expected = old_window(*all, 1000, 1000, window_bytes, {});
+                expect_js_window(second, second_expected, "query_log long js after 1000");
+                gm::LogMatch even = [](const Value& event) {
+                    const Value* kind = event.find("kind");
+                    return kind != nullptr && kind->is_string() && kind->as_string() == "even";
+                };
+                auto filtered = verbs.call("query_log", object_of({{"kind", "even"}, {"js", "events.map(e => e.seq)"}}));
+                auto filtered_expected = old_window(*all, 0, 1000, window_bytes, even);
+                expect(filtered_expected.events.size() == 1000, "old filtered window has 1000 matching events");
+                expect_js_window(filtered, filtered_expected, "query_log long js kind even");
+                auto filtered_tail = verbs.call("query_log", object_of({{"kind", "even"}, {"js", "events.map(e => e.seq)"}, {"after", static_cast<double>(filtered_expected.scanned_last)}}));
+                auto filtered_tail_expected = old_window(*all, filtered_expected.scanned_last, 1000, window_bytes, even);
+                expect_js_window(filtered_tail, filtered_tail_expected, "query_log long js kind even tail");
+                std::vector<Value> page(all->begin(), all->begin() + 50);
+                auto text_page = verbs.call("query_log", object_of({{"limit", 50}}));
+                expect(ok_of(text_page) && text_of(text_page, "output") == events_text(page) && number_of(text_page, "next") == 50,
+                       "query_log long text page: " + gm::json::dump(text_page).substr(0, 200));
+                auto newest = verbs.call("query_log", object_of({{"kind", "even"}, {"last", 50}, {"after", 1000}}));
+                auto newest_expected = old_last(*all, 50, 1000, even);
+                expect(ok_of(newest) && text_of(newest, "output") == events_text(newest_expected) && newest.find("next") == nullptr && newest.find("omitted") == nullptr,
+                       "query_log long last matches old tail: " + gm::json::dump(newest).substr(0, 200));
+                {
+                    std::ofstream out(long_run / "log.jsonl", std::ios::binary | std::ios::app);
+                    out << "{\"seq\":9999,\"kind\":\"partial\"";
+                }
+                auto bad = verbs.call("query_log", object_of({{"js", "events.length"}}));
+                expect(!ok_of(bad) && !text_of(bad, "error").empty() && !long_log->read_all(), "query_log rejects a partially written tail line");
+            }
+        }
     }
     std::error_code ec;
     std::filesystem::remove_all(base, ec);

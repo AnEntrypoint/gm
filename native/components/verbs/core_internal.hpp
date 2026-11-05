@@ -47,6 +47,9 @@ public:
     LockedLog(std::shared_ptr<RunLog> log, AppendHook on_append) : log_(std::move(log)), on_append_(std::move(on_append)) {}
     std::uint64_t append(std::string_view kind, json::Value fields);
     deoxidene::Result<std::vector<json::Value>, std::string> read_all();
+    std::uint64_t count();
+    deoxidene::Result<LogWindow, std::string> read_window(std::uint64_t after_seq, std::size_t max_events, std::size_t max_bytes, LogMatch match = {});
+    deoxidene::Result<std::vector<json::Value>, std::string> read_last(std::size_t n, std::uint64_t after_seq = 0, LogMatch match = {});
     std::filesystem::path dir() const;
     void bind(std::shared_ptr<RunLog> log);
 

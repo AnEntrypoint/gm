@@ -291,13 +291,11 @@ json::Value JobTable::start(const std::string& name, const std::string& command,
     std::uint64_t seq = log_.append("job", std::move(running));
     if (!start_mono) {
         double mono = 0;
-        if (auto events = log_.read_all()) {
-            for (auto it = events->rbegin(); it != events->rend(); ++it) {
-                const json::Value* s = it->find("seq");
-                if (s != nullptr && s->as_number() == static_cast<double>(seq)) {
-                    if (const json::Value* m = it->find("mono")) mono = m->as_number();
-                    break;
-                }
+        if (auto events = log_.read_last(1); events && !events->empty()) {
+            const json::Value& last = events->back();
+            const json::Value* s = last.find("seq");
+            if (s != nullptr && s->as_number() == static_cast<double>(seq)) {
+                if (const json::Value* m = last.find("mono")) mono = m->as_number();
             }
         }
         mono_offset_ = mono - steady_ms();

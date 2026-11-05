@@ -552,8 +552,6 @@ struct CoreVerbs::Impl {
                 return failure("limit must be a whole number from 1 to 50");
             }
         }
-        auto events = log.read_all();
-        if (!events) return failure(events.error());
         const json::Value* after_value = present(args, "after");
         double after_raw = after_value != nullptr ? std::floor(after_value->as_number()) : 0;
         auto after = static_cast<std::uint64_t>(std::max(0.0, after_raw));
@@ -572,16 +570,15 @@ struct CoreVerbs::Impl {
             }
             return true;
         };
-        std::uint64_t count = events->empty() ? 0 : seq_of(events->back());
+        std::uint64_t count = log.count();
 
         if (last != nullptr) {
             auto wanted = static_cast<std::size_t>(last->as_number());
+            auto recent = log.read_last(wanted, after, match);
+            if (!recent) return failure(recent.error());
             std::vector<const json::Value*> newest;
-            for (auto it = events->rbegin(); it != events->rend() && newest.size() < wanted; ++it) {
-                if (seq_of(*it) <= after) break;
-                if (match(*it)) newest.push_back(&*it);
-            }
-            std::reverse(newest.begin(), newest.end());
+            newest.reserve(recent->size());
+            for (const json::Value& event : *recent) newest.push_back(&event);
             if (js != nullptr) return run_query_js(newest, js->as_string());
             std::vector<std::size_t> units;
             std::size_t sum = 0;
@@ -607,18 +604,13 @@ struct CoreVerbs::Impl {
             return reply;
         }
 
+        auto bounded = log.read_window(after, query_window_events, query_window_bytes, match);
+        if (!bounded) return failure(bounded.error());
+        if (count != bounded->count) count = bounded->count;
         std::vector<const json::Value*> window;
-        std::uint64_t scanned_last = after;
-        std::size_t bytes_read = 0;
-        for (const json::Value& event : *events) {
-            std::uint64_t seq = seq_of(event);
-            if (seq <= after) continue;
-            if (window.size() >= query_window_events) break;
-            if (bytes_read >= query_window_bytes && scanned_last != after) break;
-            bytes_read += json::dump(event).size() + 1;
-            scanned_last = seq;
-            if (match(event)) window.push_back(&event);
-        }
+        window.reserve(bounded->events.size());
+        for (const json::Value& event : bounded->events) window.push_back(&event);
+        std::uint64_t scanned_last = bounded->scanned_last;
         bool more = scanned_last < count;
         if (js != nullptr) {
             json::Value reply = run_query_js(window, js->as_string());
