@@ -4,15 +4,17 @@ A single-worker long-horizon loop: one worker, one append-only log, governance r
 
 Status: the MCP server, the skill, the CLI wrapper, the measurement tools, and the search, wiki, review and call-site tools are built and witnessed. The live comparison with gm is closed, with its results in DESIGN.md. Node.js 22 or later; older Node lines are not supported.
 
-Install the latest release, once per machine. It fetches the release manifest, verifies the archive's sha256 and size, unpacks into `~/.gmnew/current`, and registers gm for Claude Code at user level with add-mcp:
+Install the latest release, once per machine, on Linux or macOS (x64 or arm64). It fetches the release manifest, verifies the archive's sha256 and size, unpacks into `~/.gmnew/current`, and registers gm for Claude Code at user level with add-mcp. It needs curl, tar and sha256sum or shasum; Node is not needed to run gm.
 
     curl -fsSL https://raw.githubusercontent.com/AnEntrypoint/gmc/main/scripts/install.sh | sh
 
-Windows, in PowerShell (not published yet: the Windows build fails most of its tests, so the release carries Linux and macOS only):
+To register gm with a playwriter config, pass the path through `sh -s --`:
 
-    irm https://raw.githubusercontent.com/AnEntrypoint/gmc/main/scripts/install.ps1 | iex
+    curl -fsSL https://raw.githubusercontent.com/AnEntrypoint/gmc/main/scripts/install.sh | sh -s -- --mcp-config <path>
 
-To register gm with its playwriter config, pass the config path: `sh install.sh --mcp-config <path>`, or `install.ps1 -McpConfig <path>`.
+Right after a release, the install can fail with a sha256 mismatch while GitHub's download cache catches up with the new manifest. Run it again after a minute.
+
+Windows is not published yet: the Windows build fails most of its tests, so the release carries Linux and macOS only. `scripts/install.ps1` is kept for when it is.
 
 The registration is add-mcp, pinned to version 2.6.1, run through npx. The command it runs is:
 
