@@ -5,7 +5,7 @@ description: Works out what is left in gm from its rows, plans the whole batch o
 
 # gm-continue
 
-1. Setup. Before any work starts, run tools/gm-continue-setup.mjs. It reads the rows only, plans every open row, reports any row that is neither open nor resolved as a defect, and prints the plan. Nothing is worked before the plan is printed. Independent items in the batch are worked in parallel.
+1. Setup. Before any work starts, produce the batch plan. If `gm.stat_file({ path: 'tools/gm-continue-setup.mjs' })` finds a checkout with that script, run the read-only `tools/gm-continue-setup.mjs`; it plans every open row, reports any row that is neither open nor resolved as a defect, and prints the plan. If no checkout with the script is available, plan from the row verbs: call `gm.prd_list({ status: 'open' })` and `gm.unknown_list({ status: 'open' })`, print `Batch plan: <count> open row(s), planned before any work starts.` and one `  plan <id>: <title>` line for every listed row, and use `gm.prd_list({ status: 'all' })` and `gm.unknown_list({ status: 'all' })` to report any row that is neither open nor resolved as a defect. Nothing is worked before the plan is printed. Independent items in the batch are worked in parallel.
 2. Build, then witness. The whole batch is built first, all steps, and then witnessed in one pass over all of them. The commits land after that pass. Each step's witness is recorded in the run log and cited in DESIGN.md. A step is not witnessed on its own during the build.
 3. Fill and write notes. Before the hand-off, make the rows match the work, then record what the run learned:
    - For each piece of the task's literal words that no open row covers, add a row with `gm.prd_add`. Check the open list by title first, so a row is not added twice. Run the real path the request names, read its output, and add a row for any mismatch.
@@ -18,4 +18,4 @@ description: Works out what is left in gm from its rows, plans the whole batch o
 
 INVARIANT: always read skill://gm/SKILL.md with ReadMcpResourceTool (server gm) when the list is produced, in this same run, with the list and what is left as its task. The next step after the list is the gm skill, never a question to the user. Do not send `finish` while work remains.
 
-The setup is read-only. It writes nothing, commits nothing and changes no served behaviour. The only verbs used are the row verbs, named as `gm.<verb>`: `gm.prd_add`, `gm.prd_resolve`, `gm.prd_delete` and `gm.prd_list`, and their `gm.unknown_` twins.
+The setup is read-only and stays read-only. It writes nothing, commits nothing and changes no served behaviour. The only verbs used are the row verbs, named as `gm.<verb>`: `gm.prd_add`, `gm.prd_resolve`, `gm.prd_delete` and `gm.prd_list`, and their `gm.unknown_` twins. The row-verb plan uses `gm.prd_list` and `gm.unknown_list` only, so it writes nothing.
