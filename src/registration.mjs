@@ -18,7 +18,9 @@ export function registrationStatus(file = claudeConfigFile()) {
   }
   const entry = config?.mcpServers?.gm;
   if (entry === undefined) return { ok: true, text: `gm user entry: none in ${file}` };
+  const command = entry?.command;
+  if (typeof command === 'string' && existsSync(command)) return { ok: true, text: `gm user entry runs ${command} ${(entry.args ?? []).join(' ')}`.trimEnd() };
   const relay = entry?.args?.[0];
   if (typeof relay === 'string' && existsSync(relay)) return { ok: true, text: `gm user entry runs ${relay}` };
-  return { ok: false, text: `gm user entry in ${file} runs ${relay ?? 'nothing'}, which does not exist. ${INSTALL_HINT}` };
+  return { ok: false, text: `gm user entry in ${file} runs ${command ?? relay ?? 'nothing'}, which does not exist. ${INSTALL_HINT}` };
 }
