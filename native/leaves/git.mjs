@@ -140,6 +140,16 @@ function pathArgs(dir, list) {
 
 const badRef = (ref) => (typeof ref === 'string' && REF.test(ref) && !ref.startsWith('-') ? null : 'ref must be a branch, tag or commit name');
 
+function ciRuns(output) {
+  const lines = output.trim().split(/\r?\n/).map((line) => line.trim()).filter((line) => line !== '');
+  if (lines.length === 0) throw new Error('empty reply');
+  return lines.flatMap((line) => {
+    const page = JSON.parse(line);
+    if (Array.isArray(page)) return page;
+    return page && Array.isArray(page.workflow_runs) ? page.workflow_runs : [];
+  });
+}
+
 function ciStatus(dir, sha, repo) {
   if (sha !== undefined && !SHA.test(sha)) return fail('sha must be 7 to 40 lowercase hex digits');
   if (repo !== undefined && !REPO.test(repo)) return fail('repo must be owner/name');
@@ -155,13 +165,13 @@ function ciStatus(dir, sha, repo) {
   const full = head.output.trim();
   const hostArgs = origin.host === null ? [] : ['--hostname', origin.host];
   const api = retrying('ci_status', () => {
-    const reply = exec('gh', ['api', ...hostArgs, '--paginate', '--slurp', `repos/${origin.name}/actions/runs?head_sha=${full}&per_page=100`], dir, GH_TIMEOUT_MS);
+    const reply = exec('gh', ['api', ...hostArgs, '--paginate', '--jq', '(.workflow_runs // []) | map({name, status, conclusion, html_url})', `repos/${origin.name}/actions/runs?head_sha=${full}&per_page=100`], dir, GH_TIMEOUT_MS);
     return reply.ok ? reply : { ok: false, error: reply.error ?? `gh api exited ${reply.exitCode}`, output: reply.output.trim() };
   });
   if (!api.ok) return { ok: false, error: api.error ?? `gh api exited ${api.exitCode}`, output: api.output.trim(), attempts: api.attempts };
   let runs;
   try {
-    runs = JSON.parse(api.output).flatMap((page) => page.workflow_runs ?? []);
+    runs = ciRuns(api.output);
   } catch {
     return fail('gh api did not return JSON');
   }

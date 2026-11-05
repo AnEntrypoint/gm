@@ -50,6 +50,16 @@ export const COMPACT = {
   },
 };
 
+function ciRuns(output) {
+  const lines = output.trim().split(/\r?\n/).map((line) => line.trim()).filter((line) => line !== '');
+  if (lines.length === 0) throw new Error('empty reply');
+  return lines.flatMap((line) => {
+    const page = JSON.parse(line);
+    if (Array.isArray(page)) return page;
+    return page && Array.isArray(page.workflow_runs) ? page.workflow_runs : [];
+  });
+}
+
 export function createGitVerbs({ root, confine, log }) {
   const gitIn = (dir, args, timeoutMs = GIT_TIMEOUT_MS) => runCommand('git', args, { cwd: dir, timeoutMs, env: GIT_ENV });
   const git = async (dir, args, timeoutMs) => verbOf(args[0], await gitIn(dir, args, timeoutMs));
@@ -116,11 +126,11 @@ export function createGitVerbs({ root, confine, log }) {
     if (!REPO.test(name)) return fail('origin has no owner/name path; pass repo as owner/name');
     const full = head.output.trim();
     const hostArgs = host === null ? [] : ['--hostname', host];
-    const api = await retried('ci_status', () => runCommand('gh', ['api', ...hostArgs, '--paginate', '--slurp', `repos/${name}/actions/runs?head_sha=${full}&per_page=100`], { cwd: dir, timeoutMs: GH_TIMEOUT_MS }));
+    const api = await retried('ci_status', () => runCommand('gh', ['api', ...hostArgs, '--paginate', '--jq', '(.workflow_runs // []) | map({name, status, conclusion, html_url})', `repos/${name}/actions/runs?head_sha=${full}&per_page=100`], { cwd: dir, timeoutMs: GH_TIMEOUT_MS }));
     if (!api.ok) return { ok: false, error: api.error ?? `gh api exited ${api.exitCode}`, output: api.output.trim(), attempts: api.attempts };
     let runs;
     try {
-      runs = JSON.parse(api.output).flatMap((page) => page.workflow_runs ?? []);
+      runs = ciRuns(api.output);
     } catch {
       return fail('gh api did not return JSON');
     }

@@ -105,7 +105,7 @@ gm is one long-horizon worker: an MCP server that runs a task as one append-only
 
 - fetch, git_fetch, git_push and ci_status retry transient failures 3 times, with backoff from 1 s doubling to a 16 s cap and plus or minus 20% jitter (src/retry.mjs). A permanent failure is not retried. Each retry is logged. Git and gh print no error code, so their messages are matched after URLs and host names are removed.
 - No caps on network verbs: fetch reaches any host and scheme Node's fetch serves, follows redirects with no count, and archives the whole body. Timeouts stay. fetch cannot read file: URLs (Node's fetch fails them) and serves data: URLs.
-- ci_status pages every run with `gh api --paginate --slurp` and passes origin's host as --hostname. It needs a gh with --slurp (2.102.0 has it).
+- ci_status pages every run with `gh api --paginate --jq`, one compact JSON array of runs per page parsed line by line, and passes origin's host as --hostname. It needs only --paginate and --jq, so gh 2.46.0 works.
 
 ## Platform notes
 

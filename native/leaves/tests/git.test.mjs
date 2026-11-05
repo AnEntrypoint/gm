@@ -64,11 +64,16 @@ test('ci_status reads origin host and pages', async () => {
       seen.push(argv.join(' '));
       if (argv.includes('rev-parse')) return { started: true, exitCode: 0, out: 'abc1234\n', err: '' };
       if (argv.includes('get-url')) return { started: true, exitCode: 0, out: 'git@ghe.example.com:own/repo.git\n', err: '' };
-      return { started: true, exitCode: 0, out: JSON.stringify([{ workflow_runs: [{ name: 'ci', status: 'completed', conclusion: 'success', html_url: 'u' }] }]), err: '' };
+      const pages = [
+        [{ name: 'ci', status: 'completed', conclusion: 'success', html_url: 'u' }],
+        [{ name: 'deploy', status: 'completed', conclusion: null, html_url: 'v' }],
+      ];
+      return { started: true, exitCode: 0, out: pages.map((page) => JSON.stringify(page)).join('\n'), err: '' };
     },
   };
   const verbs = await load();
   const result = verb(verbs, 'ci_status').call({});
-  assert.equal(result.output, 'own/repo abc1234\nci completed success u');
-  assert.ok(seen.some((s) => s.includes('--hostname ghe.example.com --paginate --slurp')));
+  assert.equal(result.output, 'own/repo abc1234\nci completed success u\ndeploy completed - v');
+  assert.ok(seen.some((s) => s.includes('--hostname ghe.example.com --paginate --jq')));
+  assert.ok(!seen.some((s) => s.includes('--slurp')));
 });
