@@ -68,7 +68,7 @@ std::string sleep_then_echo() {
 }
 
 std::string hello_and_oops() {
-    if (windows_host) return "echo hello&echo oops 1>&2";
+    if (windows_host) return "echo hello&echo oops>&2";
     return "echo hello; echo oops 1>&2";
 }
 
@@ -123,7 +123,7 @@ int main() {
 
         verbs.call("write_file", object_of({{"path", "dir/b.txt"}, {"content", "x x x"}}));
         auto twice = verbs.call("edit_file", object_of({{"path", "dir/b.txt"}, {"old", "x"}, {"new", "y"}}));
-        expect(text_of(twice, "error") == "old text occurs 3 times in " + native_path("dir/b.txt") + "; add context to make it unique, or set replaceAll", "edit_file ambiguity");
+        expect(text_of(twice, "error") == "old text occurs 3 times in dir/b.txt; add context to make it unique, or set replaceAll", "edit_file ambiguity");
         auto all = verbs.call("edit_file", object_of({{"path", "dir/b.txt"}, {"old", "x"}, {"new", "y"}, {"replaceAll", true}}));
         expect(text_of(all, "output") == "edited " + native_path("dir/b.txt") + " (3 replacements)", "edit_file replaceAll");
 
