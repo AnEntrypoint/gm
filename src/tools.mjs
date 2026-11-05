@@ -85,12 +85,13 @@ function lineStarts(text) {
 
 const DEFAULT_TIMEOUT_MS = 60000;
 const MAX_TIMEOUT_MS = 600000;
+const MAX_JOB_TIMEOUT_MS = 3600000;
 const TAIL_CAP = 2000;
 export const OUTPUT_PAGE = 20000;
 const MAX_WAIT_MS = 30000;
 const JOB_NAME = /^[A-Za-z0-9_-]{1,64}$/;
 const BARRIER = { barrier: true };
-const DEFAULT_JOB_LIFETIME_MS = 1800000;
+const DEFAULT_JOB_LIFETIME_MS = 3600000;
 // A background run reports that it is still running at each multiple of this, once per multiple. Each report carries the open PRD rows: the
 // first NOTICE_PRD_WINDOW of them, and the counts, read when the report is made.
 export const BODY_NOTICE_MS = 180000;
@@ -205,9 +206,12 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
       if (typeof args.command !== 'string' || args.command.trim() === '') {
         return { ok: false, error: 'command must be a non-empty string' };
       }
-      const timeoutMs = Math.min(Number(args.timeoutMs) || DEFAULT_TIMEOUT_MS, MAX_TIMEOUT_MS);
-      if (args.background !== true || !background) return runCommand(args.command, [], { cwd: root, timeoutMs, shell: true, signal: ctx?.signal });
+      if (args.background !== true || !background) {
+        const timeoutMs = Math.min(Number(args.timeoutMs) || DEFAULT_TIMEOUT_MS, MAX_TIMEOUT_MS);
+        return runCommand(args.command, [], { cwd: root, timeoutMs, shell: true, signal: ctx?.signal });
+      }
       if (!JOB_NAME.test(args.job ?? '')) return { ok: false, error: 'a background job needs job: 1 to 64 letters, digits, _ or -' };
+      const timeoutMs = Math.min(Number(args.timeoutMs) || DEFAULT_TIMEOUT_MS, MAX_JOB_TIMEOUT_MS);
       return startJob(args.job, args.command, timeoutMs);
     },
 
@@ -331,7 +335,7 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
     const startMono = log.now();
     const child = spawnGroup(command, [], root, ['ignore', out, out], { shell: true });
     closeSync(out);
-    const status = { job: name, command, state: 'running', pid: child.pid, startMono, output: outputFile };
+    const status = { job: name, command, state: 'running', pid: child.pid, startMono, output: outputFile, timeoutMs: Math.min(timeoutMs, jobLifetimeMs) };
     writeStatus(name, status);
 
     const job = { name, child, outputFile, startWall: Date.now(), stuck: false, killRequested: false, killReason: undefined, settled: false };

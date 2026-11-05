@@ -541,3 +541,8 @@ The row store (work/rows/*.yml, src/rows.mjs and native/leaves/rows.mjs) writes 
 ## run_shell uses bash when present (2026-11-05)
 
 run_shell and job_start ran /bin/sh, so `${PIPESTATUS[0]}` failed with "Bad substitution" (exit 2). Node (src/exec.mjs spawnGroup) and native (proc::shell in native/components/proc/proc.cpp, job.cpp) now run the command through /bin/bash when it exists, else /bin/sh. Witness, Node runCommand with shell true: `echo EXIT=${PIPESTATUS[0]}` before: "/bin/sh: 2: Bad substitution" exit 2; after: "EXIT=" exit 0 (no pipeline, so the value is empty in bash). `false | true; echo EXIT=${PIPESTATUS[0]}` after: "EXIT=1" exit 0. node --test native/leaves/tests: 15 pass; ctest -R gm_proc and -R verbs: pass.
+
+## job_start timeoutMs up to 3600000 (2026-11-05)
+
+A job ended "killed, reason timeout" at the deadline, and the deadline could not be raised past 600000 ms (native) or 600000 (Node, shared with run_shell); the job lifetime (1800000 ms) also capped it, with reason lifetime. job_start now takes timeoutMs up to 3600000 in both trees, the job lifetime default is 3600000, and job_status reports the job's timeoutMs (Node adds it to the status). The default is unchanged: 300000 ms native, 60000 ms Node (the trees still differ there). run_shell keeps its 600000 cap. The "about 236 s" in the report was not found as a literal in src or native; the defaults here are 60000 and 300000.
+Witness (live gm server, job witness-400s): job_start timeoutMs 400000 running `sleep 300; echo DONE`; job_status showed timeoutMs 400000 while running, then state exited, exitCode 0, output "DONE\n". ctest -R verbs: pass (cap test now expects 3600000). node --test native/leaves/tests: 15 pass.

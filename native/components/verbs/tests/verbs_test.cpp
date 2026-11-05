@@ -253,13 +253,13 @@ int main() {
         gm::CoreVerbs verbs(std::move(options), *timeout_log);
         verbs.call("job_start", object_of({{"job", "by-default"}, {"command", "sleep 30"}}));
         verbs.call("job_start", object_of({{"job", "explicit"}, {"command", "sleep 30"}, {"timeoutMs", 450000}}));
-        verbs.call("job_start", object_of({{"job", "capped"}, {"command", "sleep 30"}, {"timeoutMs", 900000}}));
+        verbs.call("job_start", object_of({{"job", "capped"}, {"command", "sleep 30"}, {"timeoutMs", 4000000}}));
         auto by_default = verbs.call("job_status", object_of({{"job", "by-default"}}));
         auto explicit_status = verbs.call("job_status", object_of({{"job", "explicit"}}));
         auto capped = verbs.call("job_status", object_of({{"job", "capped"}}));
         expect(number_of(by_default, "timeoutMs") == 300000, "job_start default deadline is 300000 ms: " + gm::json::dump(by_default));
         expect(number_of(explicit_status, "timeoutMs") == 450000, "job_start honors an explicit timeoutMs above the default: " + gm::json::dump(explicit_status));
-        expect(number_of(capped, "timeoutMs") == 600000, "job_start caps timeoutMs at 600000 ms: " + gm::json::dump(capped));
+        expect(number_of(capped, "timeoutMs") == 3600000, "job_start caps timeoutMs at 3600000 ms: " + gm::json::dump(capped));
         for (const char* name : {"by-default", "explicit", "capped"}) verbs.call("job_stop", object_of({{"job", name}}));
 
         verbs.call("job_start", object_of({{"job", "short"}, {"command", "sleep 30"}, {"timeoutMs", 200}}));

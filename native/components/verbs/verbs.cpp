@@ -32,6 +32,7 @@ using core::utf16_slice;
 constexpr double default_timeout_ms = 60000;
 constexpr double default_job_timeout_ms = 300000;
 constexpr double max_timeout_ms = 600000;
+constexpr double max_job_timeout_ms = 3600000;
 constexpr std::size_t shell_output_cap = 200000;
 constexpr std::size_t query_page_events = 50;
 constexpr std::size_t query_reply_chars = 20000;
@@ -49,7 +50,7 @@ const std::vector<VerbInfo>& verb_table() {
     {"stat_file", "Type, size and mtime of a path, inside or outside the workspace, as JSON.", R"json({"type":"object","properties":{"path":{"type":"string"}},"required":["path"]})json"},
     {"list_dir", "List a directory, inside or outside the workspace. Directories end with \"/\".", R"json({"type":"object","properties":{"path":{"type":"string"}},"required":[]})json"},
     {"run_shell", "Run a shell command in the workspace and wait for it. Default timeout 60000 ms. Its process group is killed when it returns, so background work must go through job_start.", R"json({"type":"object","properties":{"command":{"type":"string"},"timeoutMs":{"type":"number"}},"required":["command"]})json"},
-    {"job_start", "Start a shell command as a named background job and return at once. Poll it with job_status. timeoutMs is the job's deadline in milliseconds: default 300000, at most 600000. At the deadline the job's process group gets SIGTERM, then SIGKILL, and the job ends killed with reason timeout. job_status reports the deadline as timeoutMs.", R"json({"type":"object","properties":{"job":{"type":"string"},"command":{"type":"string"},"timeoutMs":{"type":"number"}},"required":["job","command"]})json"},
+    {"job_start", "Start a shell command as a named background job and return at once. Poll it with job_status. timeoutMs is the job's deadline in milliseconds: default 300000, at most 3600000 (and never past the job lifetime, 3600000 by default). At the deadline the job's process group gets SIGTERM, then SIGKILL, and the job ends killed with reason timeout. job_status reports the deadline as timeoutMs.", R"json({"type":"object","properties":{"job":{"type":"string"},"command":{"type":"string"},"timeoutMs":{"type":"number"}},"required":["job","command"]})json"},
     {"job_status", "State (running, exited or killed), exitCode, signal and output of a job as plain fields, with logPath (the job output file). output is the last 20000 characters, with total (its length) and truncated; with offset, output is the 20000 characters from that offset, with next. waitMs polls until the job leaves running, at most 30000 ms. Offsets and lengths count characters, not lines.", R"json({"type":"object","properties":{"job":{"type":"string"},"waitMs":{"type":"number"},"offset":{"type":"number"}},"required":["job"]})json"},
     {"job_stop", "Stop a background shell job: its process group is killed, and the job ends killed with reason cancelled. The job event is logged before the answer. A job that already ended is an error result. stopBackground stops run_code bodies only.", R"json({"type":"object","properties":{"job":{"type":"string"}},"required":["job"]})json"},
     {"query_log", "Read the run events, as JSON. after is a seq: only the events after it are read (since), so after the last seq you saw reads on from there. kind keeps events of one kind, and fromMono and toMono keep events in a time window (monotonic milliseconds). last N returns the newest N matching events instead, oldest first, at most 50, and has no next. js is a JavaScript expression over the matching events, and defaults to returning them: js sees one window of at most 1000 events or 4 MB of log. Without js, a reply holds at most 50 events and about 20 KB; limit (1 to 50) lowers that count, and is refused with last or js. When events remain, next is the seq to pass back as after; with js, next is set when the window ends before the end of the log. An unknown argument is refused, and the reply names the arguments query_log takes.", R"json({"type":"object","properties":{"js":{"type":"string"},"kind":{"type":"string"},"fromMono":{"type":"number"},"toMono":{"type":"number"},"after":{"type":"number"},"last":{"type":"number"},"limit":{"type":"number"}},"required":[]})json"},
@@ -95,10 +96,10 @@ std::string trim_ascii(std::string_view s) {
     return std::string(s);
 }
 
-double timeout_of(const json::Value& args, double fallback = default_timeout_ms) {
+double timeout_of(const json::Value& args, double fallback = default_timeout_ms, double cap = max_timeout_ms) {
     const json::Value* t = args.find("timeoutMs");
     double ms = t != nullptr && t->is_number() && std::isfinite(t->as_number()) && t->as_number() != 0 ? t->as_number() : fallback;
-    return std::min(ms, max_timeout_ms);
+    return std::min(ms, cap);
 }
 
 std::size_t escaped_units(const json::Value& event) { return utf16_length(json::quote(json::dump(event))) - 2; }
@@ -492,7 +493,7 @@ struct CoreVerbs::Impl {
         if (command == nullptr || !command->is_string() || trim_ascii(command->as_string()).empty()) {
             return failure("command must be a non-empty string");
         }
-        double timeout_ms = timeout_of(args, default_job_timeout_ms);
+        double timeout_ms = timeout_of(args, default_job_timeout_ms, max_job_timeout_ms);
         const json::Value* job = args.find("job");
         bool named = job != nullptr && job->is_string() && !job->as_string().empty() && job->as_string().size() <= 64 &&
                      std::all_of(job->as_string().begin(), job->as_string().end(), [](char c) {
