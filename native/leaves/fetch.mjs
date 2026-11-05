@@ -12,7 +12,7 @@ const MARK = '\n--gm-fetch-meta--';
 
 const fail = (error) => ({ ok: false, error });
 const statusType = (status) => (status === 408 || status === 429 || (status >= 500 && status <= 599) ? `HTTP-${status}` : null);
-const classify = (result) => (result.ok ? statusType(result.status) : TRANSIENT_CODES.includes(result.code) ? result.code : null);
+const classify = (result) => (result.status !== undefined ? statusType(result.status) : TRANSIENT_CODES.includes(result.code) ? result.code : null);
 
 function backoffMs(attempt) {
   const base = Math.min(BASE_MS * 2 ** (attempt - 1), CAP_MS);
@@ -177,7 +177,7 @@ function getOnce({ url, timeoutMs = DEFAULT_TIMEOUT_MS }) {
   else text = `(binary content not shown: ${type})`;
   const bytes = utf8Length(body);
   const archived = archiveSource(body, finalUrl);
-  return { ok: true, status, bytes, finalUrl, redirects, source: archived.id, sourceNew: archived.created, output: `${status} ${bytes} bytes ${finalUrl}\n${text}` };
+  return { ok: status >= 200 && status < 300, status, bytes, finalUrl, redirects, source: archived.id, sourceNew: archived.created, output: `${status} ${bytes} bytes ${finalUrl}\n${text}` };
 }
 
 export const verbs = [

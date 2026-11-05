@@ -617,10 +617,7 @@ std::string Searcher::grep(const json::Value& args) {
 
     std::string output;
     std::string joined;
-    for (const std::string& hint : hints) {
-        output += "hint: " + hint + "\n";
-        joined += (joined.empty() ? "" : " | ") + hint;
-    }
+    for (const std::string& hint : hints) joined += (joined.empty() ? "" : " | ") + hint;
     for (const std::string& row : scanned.found) output += row + "\n";
     output += footer;
     json::Value out;

@@ -39,6 +39,11 @@ std::string output_of(const Value& reply) {
     return out ? out->as_string() : std::string();
 }
 
+std::string hint_of(const Value& reply) {
+    const Value* hint = reply.find("hint");
+    return hint ? hint->as_string() : std::string();
+}
+
 }
 
 int main() {
@@ -68,11 +73,13 @@ int main() {
     check(output_of(regex).find("src/planner.js:1") != std::string::npos, "grep regex");
 
     Value fallback = parse(searcher.grep(Value(gm::json::Object{{"pattern", "plan.aves"}})));
-    check(output_of(fallback).find("matched as regex") != std::string::npos, "literal falls back to regex");
+    check(hint_of(fallback) == "no literal match; matched as regex" && output_of(fallback).find("hint:") == std::string::npos,
+          "literal falls back to regex, and the hint is a field: " + output_of(fallback));
 
     Value tracked_skip = parse(searcher.grep(Value(gm::json::Object{{"pattern", "needle_in"}, {"vendor", false}})));
-    check(output_of(tracked_skip).rfind("hint: 2 files skipped (1 in node_modules or vendor, 1 gitignored); use scope: 'all' to include them\n(0 matches", 0) == 0,
-          "zero-match hint is the first line: " + output_of(tracked_skip));
+    check(hint_of(tracked_skip).rfind("2 files skipped (1 in node_modules or vendor, 1 gitignored); use scope: 'all' to include them", 0) == 0 &&
+              output_of(tracked_skip).rfind("(0 matches", 0) == 0,
+          "zero-match hint is the hint field, and output starts with the footer: " + output_of(tracked_skip));
 
     Value loose_found = parse(searcher.grep(Value(gm::json::Object{{"pattern", "needle_loose"}})));
     check(output_of(loose_found).find("loose.txt:1 needle_loose") != std::string::npos,

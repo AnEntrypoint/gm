@@ -82,7 +82,7 @@ export function createFetchVerbs({ log, root }) {
       else text = `(binary content not shown: ${type})`;
       const archived = archiveSource(root, Buffer.concat(read.chunks), current.href);
       return {
-        ok: true,
+        ok: response.status >= 200 && response.status < 300,
         status: response.status,
         bytes: read.bytes,
         finalUrl: current.href,
@@ -99,7 +99,7 @@ export function createFetchVerbs({ log, root }) {
 // A 408, 429 or 5xx status is a transient answer, so it is retried. Other statuses are final, and a 404 is never retried. A failed
 // call is classified by its error code, never by its message.
 function classify(result) {
-  return result.ok ? statusType(result.status) : codeType(result.code);
+  return result.status !== undefined ? statusType(result.status) : codeType(result.code);
 }
 
 function httpGet(url, signal) {
