@@ -86,7 +86,7 @@ jobs:
     continue-on-error: true
     concurrency:
       group: build-${{ github.ref }}-${{ matrix.preset }}
-      cancel-in-progress: true
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
       - name: Version
