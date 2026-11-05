@@ -114,6 +114,35 @@ public:
     std::vector<std::string> rows;
 };
 
+class CapVerbs final : public FakeVerbs {
+public:
+    std::vector<gm::VerbInfo> list() const override {
+        auto verbs = FakeVerbs::list();
+        verbs.push_back({"query_log", "Read the run log.", R"({"type":"object","properties":{"after":{"type":"number"}}})"});
+        return verbs;
+    }
+    Value call(std::string_view name, const Value& args) override {
+        if (name == "query_log") {
+            Value events = Value(gm::json::Array{});
+            const Value* after = args.find("after");
+            double since = after && after->is_number() ? after->as_number() : 0;
+            auto log = gm::RunLog::open(run_dir);
+            if (log) {
+                auto all = log->read_all();
+                if (all) {
+                    for (const Value& event : *all) {
+                        const Value* seq = event.find("seq");
+                        if (seq && seq->is_number() && seq->as_number() > since) events.push(event);
+                    }
+                }
+            }
+            return obj().set("ok", true).set("output", gm::json::dump(events));
+        }
+        return FakeVerbs::call(name, args);
+    }
+    fs::path run_dir;
+};
+
 struct Harness {
     std::unique_ptr<gm::mcp::Server> server;
     std::vector<Value> out;
@@ -175,6 +204,9 @@ deoxidene::Result<Value, std::string> scripted_body(gm::VerbTable& table, std::s
         std::this_thread::sleep_for(std::chrono::milliseconds(ms));
         Value after = table.call("write_file", obj().set("path", "bg.txt").set("content", "after sleep"));
         return obj().set("value", text.substr(colon + 1)).set("afterOk", after.find("ok") ? *after.find("ok") : Value());
+    }
+    if (text.rfind("read:", 0) == 0) {
+        return table.call("read_file", obj().set("path", "big.txt"));
     }
     if (text.rfind("status:", 0) == 0) {
         return table.call("job_status", obj().set("job", text.substr(7)).set("waitMs", 5000));
@@ -501,6 +533,65 @@ int main() {
             if (str(e, "kind") == "code-call" && e.find("startMono") && e.find("durMs")) call_timed = true;
         }
         check(timed && call_timed, "result and code-call events carry startMono and durMs");
+    }
+
+    std::cout << "--- item 2b: one large event is bounded ---\n";
+    {
+        CapVerbs cap;
+        Harness h(cap, fresh_options(root, "bounded"));
+        cap.run_dir = h.server->run_dir();
+        h.call("next_context", "{}");
+        std::string big(8000, 'x');
+        cap.stored = big;
+        h.call("run_code", R"({"body":"read:big"})");
+        Value step = h.call("next_context", "{}");
+        auto log = log_of(cap.run_dir);
+        const Value* full = nullptr;
+        for (const Value& event : log) {
+            const Value* output = event.find("output");
+            if (output && output->is_string() && output->as_string().find(big) != std::string::npos) full = &event;
+        }
+        double seq = full && full->find("seq") && full->find("seq")->is_number() ? full->find("seq")->as_number() : -1;
+        const Value* feed = step.find("events");
+        const Value* bounded = nullptr;
+        if (feed && feed->is_array()) {
+            for (const Value& event : feed->as_array()) {
+                const Value* at = event.find("seq");
+                if (at && at->is_number() && at->as_number() == seq) bounded = &event;
+            }
+        }
+        std::size_t feed_chars = bounded ? gm::json::dump(*bounded).size() : 0;
+        std::string feed_output = bounded ? str(*bounded, "output") : "";
+        const Value* cut = bounded ? bounded->find("feedCut") : nullptr;
+        std::string feed_cut_text = cut ? gm::json::dump(*cut) : "missing";
+        std::string reach = cut ? str(*cut, "reach") : "";
+        const Value* chars_field = bounded ? bounded->find("outputChars") : nullptr;
+        double output_chars = chars_field && chars_field->is_number() ? chars_field->as_number() : -1;
+        bool digest = bounded && bounded->find("outputDigest") != nullptr;
+        Value queried = cap.call("query_log", obj().set("after", Value(seq - 1)));
+        auto parsed = gm::json::parse(str(queried, "output"));
+        Value queried_events = parsed ? *parsed : Value();
+        bool query_full = false;
+        std::size_t query_chars = 0;
+        if (queried_events.is_array()) {
+            for (const Value& event : queried_events.as_array()) {
+                const Value* at = event.find("seq");
+                const Value* output = event.find("output");
+                if (at && at->is_number() && at->as_number() == seq && output && output->is_string() &&
+                    output->as_string().find(big) != std::string::npos) {
+                    query_full = true;
+                    query_chars = output->as_string().size();
+                }
+            }
+        }
+        std::cout << "bounded event: seq=" << seq << " next_contextChars=" << feed_chars << " outputChars=" << output_chars
+                  << " feedCut=" << feed_cut_text << " query_logFullChars=" << query_chars << '\n';
+        check(full != nullptr && bounded != nullptr && feed_chars > 0 && feed_chars <= 2000 &&
+                  feed_output.find("chars cut; query_log reads any event") != std::string::npos &&
+                  output_chars >= static_cast<double>(big.size()) && digest &&
+                  reach.find("query_log reads any event") != std::string::npos &&
+                  query_full && query_chars >= big.size(),
+              "one large event is bounded in next_context and query_log still reaches it");
     }
 
     std::cout << "--- items 3 and 4: background run_code and job notices ---\n";

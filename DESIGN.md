@@ -618,3 +618,19 @@ Not witnessed: the 6 h wait itself (no run waited out the interval), and the ins
 
 
 
+
+## Update witness against the published release (2026-11-05)
+
+- Release `latest 661f70b-80` was witnessed end to end in a scratch install. The archive `gmnew-661f70b-80-x64-linux.tar.gz` (4,111,858 bytes, sha256 dea7309f36c9044ccc5a067f14455da962a918da0152a803329dfbc8b3d2f380) unpacks to `gmnew-x64-linux/` with `defaults,gm,gm-core,leaves,skills` and 32 entries.
+- The published `gm` was copied into a temp install dir with stale state, offered a local file:// manifest advertising `ffff111-81` that kept the published asset file, size and sha256, and run with GMNEW_UPDATE_URL. Output: `{"ok":true,"updated":true,"from":"661f70b-80","to":"ffff111-81","commit":"ffff111aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","target":"x64-linux","status":"updated"}`. gm and gm-core inodes changed, the retired `.gmnew-previous` hashes matched, `defaults,gm,gm-core,leaves,skills` were present, and the state read `{"checked_ms":1793894213456,"etag":"","version":"ffff111-81"}`.
+- The same offer to a scratch copy of the published `409087f-77` build failed: `{"ok":false,"updated":false,"from":"409087f-77","to":"ffff111-81","commit":"ffff111aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","target":"x64-linux","error":"the build has no gm"}`. That build looks for `gm-<target>` in the unpacked archive; 70e4349 changed the updater to `gmnew-<target>`. Installs from 409087f-77 or earlier need one manual `scripts/install.sh` run before self-update works again.
+- The scratch dir /tmp/gm-update-witness-KfK5MX was deleted; the real install, ~/.claude.json and the running MCP server were not touched.
+
+## Bounded next_context events under large child outputs (2026-11-05)
+
+Root cause: feedOf in src/compact.mjs and feed_of in native/components/mcp/compact.cpp measured only the whole 20,000-character feed window. A fresh full event was inserted as the raw log event, so one 16,694-byte read_file code-call or 18,766-byte run_code result could use the whole window and push the parent's real events into compact form. The seven rules, query_log, the row verbs, finish and the run state are unchanged.
+
+Fix: both trees bound every event and compact record shown by next_context to 2,000 serialized characters. boundedItem and bounded_item keep a short head and tail, outputChars, a compact outputDigest and a feedCut marker naming the original size and saying query_log reads the whole event. Long arguments, text fields and digests are clipped too. The log is not modified; query_log still reaches every event in full. The whole window cap stays 20,000 characters. The native test in native/components/mcp/tests/mcp_test.cpp drives a real next_context reply after a large read_file code-call and reads the same event back through query_log.
+
+Witness, ctest -R gm_mcp_test -V: "9: bounded event: seq=7 next_contextChars=925 outputChars=8000 feedCut={\"seq\":7,\"chars\":8203,\"reach\":\"query_log reads any event (after: seq - 1 returns it first)\"} query_logFullChars=8000" and "9: ok   one large event is bounded in next_context and query_log still reaches it"; "100% tests passed, 0 tests failed out of 1". Node feedOf with one 8,000-character output: "{\"eventChars\":855,\"feedChars\":858,\"outputChars\":8000,\"hasDigest\":true,\"hasFeedCut\":true,\"marker\":true,\"logChars\":8000,\"fullEvents\":1}". node --test native/leaves/tests/*.test.mjs: 15 pass, 0 fail. Full ctest in build/compact-check: 21 of 22 pass; gm_runcode_test fails in verbs filter checks from other agents' uncommitted changes to native/components/quickjs/runcode.cpp and native/components/quickjs/tests/runcode_test.cpp, not from this cap.
+

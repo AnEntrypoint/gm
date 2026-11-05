@@ -1,5 +1,8 @@
+#include <algorithm>
+#include <initializer_list>
 #include <regex>
 #include <set>
+#include <utility>
 
 #include "internal.hpp"
 
@@ -16,6 +19,14 @@ constexpr std::size_t kListCap = 10;
 constexpr std::size_t kDigestErrors = 10;
 constexpr std::size_t kFailedHeadChars = 1000;
 constexpr std::size_t kArrayOverhead = 2;
+constexpr std::size_t kEventCap = 2000;
+constexpr std::size_t kEventHead = 160;
+constexpr std::size_t kEventTail = 80;
+constexpr std::size_t kEventTextCap = 200;
+constexpr std::size_t kEventArgsCap = 8;
+constexpr std::size_t kDigestLines = 2;
+constexpr std::size_t kDigestClip = 120;
+constexpr const char* kFeedReach = "query_log reads any event (after: seq - 1 returns it first)";
 
 const std::set<std::string> kSkip = {"t", "mono", "inFlight", "startMono", "durMs", "actionSeq", "step"};
 const std::set<std::string> kKeepWhole = {"witness", "error", "reason", "gate", "gaps", "paths"};
@@ -38,6 +49,19 @@ std::vector<std::string> split_lines(const std::string& text) {
 
 std::size_t cost_of(const Value& v) { return js_length(json::dump(v)) + 1; }
 
+std::string js_suffix(std::string_view text, std::size_t units) {
+    std::size_t length = js_length(text);
+    std::size_t skip = length > units ? length - units : 0;
+    return std::string(text.substr(js_prefix(text, skip).size()));
+}
+
+std::string head_tail(const std::string& text, std::size_t head, std::size_t tail) {
+    std::size_t length = js_length(text);
+    if (length <= head + tail) return text;
+    return js_prefix(text, head) + " ...[" + std::to_string(length - head - tail) + " chars cut; " + kFeedReach + "] ..." +
+           js_suffix(text, tail);
+}
+
 std::string string_field(const Value& v, const char* key) {
     const Value* f = v.find(key);
     return f && f->is_string() ? f->as_string() : "";
@@ -58,6 +82,113 @@ std::optional<Value> digest_of(const Value& event) {
     const Value* output = event.find("output");
     if (output && output->is_string()) return output_digest(output->as_string(), failed_of(event));
     return std::nullopt;
+}
+
+Value clipped_lines(const Value* values, std::size_t take, bool tail) {
+    Value out = array();
+    if (values == nullptr || !values->is_array()) return out;
+    const auto& items = values->as_array();
+    std::size_t from = tail && items.size() > take ? items.size() - take : 0;
+    std::size_t to = tail ? items.size() : std::min(take, items.size());
+    for (std::size_t i = from; i < to; ++i) {
+        std::string text = items[i].is_string() ? items[i].as_string() : json::dump(items[i]);
+        out.push(Value(clip(text, kDigestClip)));
+    }
+    return out;
+}
+
+Value compact_digest(const Value* digest) {
+    Value out = object().set("lines", number(0)).set("bytes", number(0)).set("head", array()).set("tail", array());
+    if (digest == nullptr || !digest->is_object()) return out;
+    copy_if(out, *digest, "lines");
+    copy_if(out, *digest, "bytes");
+    out.set("head", clipped_lines(digest->find("head"), kDigestLines, false));
+    out.set("tail", clipped_lines(digest->find("tail"), kDigestLines, true));
+    const Value* errors = digest->find("errors");
+    if (errors && errors->is_array()) {
+        out.set("errors", clipped_lines(errors, kDigestLines, false));
+        std::size_t more = errors->as_array().size() > kDigestLines ? errors->as_array().size() - kDigestLines : 0;
+        if (const Value* given = digest->find("moreErrors"); given && given->is_number()) more += static_cast<std::size_t>(given->as_number());
+        if (more > 0) out.set("moreErrors", number_of(more));
+    }
+    const Value* all = digest->find("all");
+    if (all && all->is_array()) {
+        out.set("all", clipped_lines(all, kDigestLines, false));
+        std::size_t more = all->as_array().size() > kDigestLines ? all->as_array().size() - kDigestLines : 0;
+        if (const Value* given = digest->find("more"); given && given->is_number()) more += static_cast<std::size_t>(given->as_number());
+        if (more > 0) out.set("more", number_of(more));
+    }
+    return out;
+}
+
+Value bounded_args(const Value* args) {
+    Value compact = args_of(args);
+    const auto& members = compact.as_object();
+    if (members.size() <= kEventArgsCap) return compact;
+    Value out = object();
+    for (std::size_t i = 0; i < kEventArgsCap; ++i) out.set(members[i].first, members[i].second);
+    out.set("more", number_of(members.size() - kEventArgsCap));
+    return out;
+}
+
+void put_if_fits(Value& out, const char* key, Value value, std::size_t cap) {
+    Value candidate = out;
+    candidate.set(key, std::move(value));
+    if (cost_of(candidate) <= cap) out = std::move(candidate);
+}
+
+Value bounded_item(const Value& item, std::size_t cap = kEventCap) {
+    std::size_t original = cost_of(item);
+    if (original <= cap) return item;
+    Value out = object();
+    auto put = [&](const char* key, Value value) { put_if_fits(out, key, std::move(value), cap); };
+    for (const char* key : {"seq", "t", "kind", "tool", "ok", "exitCode", "exit", "signal", "actionSeq", "step", "full", "unanswered"}) {
+        if (const Value* field = item.find(key)) put(key, *field);
+    }
+    Value cut = object()
+                    .set("seq", item.find("seq") ? *item.find("seq") : Value(nullptr))
+                    .set("chars", number_of(original))
+                    .set("reach", Value(kFeedReach));
+    put("feedCut", std::move(cut));
+    const Value* output = item.find("output");
+    if (output && output->is_string()) {
+        put("output", Value(head_tail(output->as_string(), kEventHead, kEventTail)));
+        double chars = 0;
+        if (const Value* given = item.find("outputChars"); given && given->is_number()) chars = given->as_number();
+        else if (auto digest = digest_of(item); digest && digest->is_object()) {
+            const Value* bytes = digest->find("bytes");
+            chars = bytes && bytes->is_number() ? bytes->as_number() : static_cast<double>(js_length(output->as_string()));
+        } else chars = static_cast<double>(js_length(output->as_string()));
+        put("outputChars", number(chars));
+        if (auto digest = digest_of(item)) {
+            Value compact = compact_digest(&*digest);
+            put("outputDigest", std::move(compact));
+        }
+    } else {
+        std::string text = json::dump(item);
+        put("head", Value(js_prefix(text, kEventHead)));
+        put("tail", Value(js_suffix(text, kEventTail)));
+        put("textChars", number(static_cast<double>(js_length(text))));
+        Value digest = output_digest(text, failed_of(item));
+        Value compact = compact_digest(&digest);
+        put("textDigest", std::move(compact));
+    }
+    if (const Value* digest = item.find("out")) {
+        Value compact = compact_digest(digest);
+        put("out", std::move(compact));
+    }
+    if (const Value* args = item.find("args")) {
+        Value compact = bounded_args(args);
+        put("args", std::move(compact));
+    }
+    for (const char* key : {"body", "error", "witness", "reason", "gate", "gaps", "paths", "task", "source", "sourceNew"}) {
+        const Value* field = item.find(key);
+        if (field == nullptr) continue;
+        if (field->is_string()) put(key, Value(clip(field->as_string(), kEventTextCap)));
+        else if (field->is_array()) put(key, object().set("items", number_of(field->as_array().size())));
+        else if (field->is_number() || field->is_bool()) put(key, *field);
+    }
+    return out;
 }
 
 Value full_of(const Value& event) {
@@ -212,7 +343,7 @@ Value fresh_record_of(const Value& event, const EventAt& at) {
 
 struct Fresh {
     std::uint64_t index;
-    const Value* event;
+    Value shown;
     std::size_t cost;
     Value record;
     std::size_t record_cost;
@@ -244,11 +375,13 @@ Plan plan_fresh(const std::vector<Fresh>& fresh, std::uint64_t last_seq, std::si
     Plan plan;
     if (record_total <= room) {
         std::size_t spare = room - record_total;
-        while (plan.full < fresh.size() && fresh[plan.full].cost - fresh[plan.full].record_cost <= spare) {
-            spare -= fresh[plan.full].cost - fresh[plan.full].record_cost;
+        while (plan.full < fresh.size()) {
+            std::size_t delta = fresh[plan.full].cost > fresh[plan.full].record_cost ? fresh[plan.full].cost - fresh[plan.full].record_cost : 0;
+            if (delta > spare) break;
+            spare -= delta;
             plan.full += 1;
         }
-        for (std::size_t i = 0; i < fresh.size(); ++i) plan.items.push_back(i < plan.full ? *fresh[i].event : fresh[i].record);
+        for (std::size_t i = 0; i < fresh.size(); ++i) plan.items.push_back(i < plan.full ? fresh[i].shown : fresh[i].record);
         plan.used = room - spare;
         return plan;
     }
@@ -257,7 +390,7 @@ Plan plan_fresh(const std::vector<Fresh>& fresh, std::uint64_t last_seq, std::si
         used += fresh[plan.full].cost;
         plan.full += 1;
     }
-    for (std::size_t i = 0; i < plan.full; ++i) plan.items.push_back(*fresh[i].event);
+    for (std::size_t i = 0; i < plan.full; ++i) plan.items.push_back(fresh[i].shown);
     if (plan.full < fresh.size()) {
         Value tail = range_of(fresh, plan.full, last_seq);
         used += cost_of(tail);
@@ -348,17 +481,20 @@ Value feed_of(const EventAt& at, std::uint64_t count, std::uint64_t shown) {
         if (event == nullptr) continue;
         auto record = record_of(*event, i >= zone1_start ? 1 : 2, at, answered);
         if (record) {
-            std::size_t cost = cost_of(*record);
-            seen.push_back({i, std::move(*record), cost});
+            Value bounded = bounded_item(*record);
+            std::size_t cost = cost_of(bounded);
+            seen.push_back({i, std::move(bounded), cost});
         }
     }
     std::vector<Fresh> fresh;
     for (std::uint64_t i = new_start; i < count; ++i) {
         const Value* event = at(i + 1);
         if (event == nullptr) continue;
-        Value record = fresh_record_of(*event, at);
+        Value bounded = bounded_item(*event);
+        std::size_t bounded_cost = cost_of(bounded);
+        Value record = bounded_item(fresh_record_of(*event, at));
         std::size_t record_cost = cost_of(record);
-        fresh.push_back({i, event, cost_of(*event), std::move(record), record_cost});
+        fresh.push_back({i, std::move(bounded), bounded_cost, std::move(record), record_cost});
     }
     std::size_t room = kEventsCap - kArrayOverhead;
     Plan plan = plan_fresh(fresh, count, room);

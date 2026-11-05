@@ -1,16 +1,5 @@
-// The feed's compaction. The log is never changed. The feed is a view of it: the events new since the last step, in full up to a cap and
-// as records after that, the seen events of the first horizon as records, the seen events of the second horizon as shorter records, and
-// nothing older, which query_log still reaches. A module
-// that owns a tool or an event kind exports COMPACT next to that code, with its own strategy for it:
-//   COMPACT = { tools: { name: { zone1, zone2 } }, kinds: { kind: { zone1, zone2 } } }
-// A zone function takes (event, action) or (event), and returns a record, or null to drop the event from that zone. Every record
-// names its full event by seq, so query_log reaches all of it. The functions here are deterministic: they read the events and nothing
-// else, no clock and no path outside the log, so identical runs give identical feeds.
-
 export const NEXT_CONTEXT_EVENTS_CAP = 20000;
-// The horizons, in events back from the new events. Measured on the scripted session of 151 steps at 7.14 events per step, with the
-// code-call results logged in full (DESIGN.md, "Feed compaction"). H1 is two steps of events. H2 is 12, the largest second horizon
-// that keeps the average feed per step within the old window's average (4997 bytes against 5030), with H1 at two steps.
+export const NEXT_CONTEXT_EVENT_CAP = 2000;
 export const H1 = 14;
 export const H2 = 12;
 
@@ -19,17 +8,22 @@ const ARG_CAP = 200;
 const ARG_HEAD = 80;
 const ERROR = /\b(error|errors|fail|failed|failure|fatal|warn|warning|exception|traceback|denied|not ok)\b/i;
 const SKIP = new Set(['t', 'mono', 'inFlight', 'startMono', 'durMs', 'actionSeq', 'step']);
-// Kinds whose records keep their text whole in the second horizon: the witness, the error, the refusal reason, the gate outcome.
 const KEEP_WHOLE = new Set(['witness', 'error', 'reason', 'gate', 'gaps', 'paths']);
-// Kinds that the second horizon still shows. Everything else is cut there.
 const KEEP_ZONE2 = new Set(['end', 'commit', 'refusal', 'error', 'restart', 'job-killed', 'review', 'review-packet', 'review-refused', 'lint', 'wiki', 'recovery', 'parse_error']);
+const EVENT_HEAD = 160;
+const EVENT_TAIL = 80;
+const EVENT_TEXT_CAP = 200;
+const EVENT_ARGS_CAP = 8;
+const DIGEST_LINES = 2;
+const DIGEST_LINE_CAP = 120;
+const FEED_REACH = 'query_log reads any event (after: seq - 1 returns it first)';
+const TEXT_KEYS = ['body', 'error', 'witness', 'reason', 'gate', 'gaps', 'paths', 'task', 'source', 'sourceNew'];
 
 export function clip(text, cap = LINE_CAP) {
   if (typeof text !== 'string' || text.length <= cap) return text;
   return `${text.slice(0, cap)} ...[${text.length} chars]`;
 }
 
-// Input compaction for a call's arguments: a long string keeps its size and its first characters, a long list keeps its length.
 export function argsOf(args) {
   const out = {};
   for (const [key, value] of Object.entries(args ?? {})) {
@@ -72,7 +66,6 @@ function digestOf(event) {
 }
 const fullBytesOf = (event) => event.outputDigest?.bytes ?? Buffer.byteLength(typeof event.output === 'string' ? event.output : '');
 
-// A result in the first horizon: its arguments in compact form, its exit code, its error text whole, and the digest of its output.
 export function resultZone1(event, action) {
   const record = { seq: event.seq, tool: event.tool, ok: event.ok, args: argsOf(action?.args) };
   if (event.exitCode !== undefined) record.exit = event.exitCode;
@@ -83,7 +76,6 @@ export function resultZone1(event, action) {
   return record;
 }
 
-// A result in the second horizon: the path and the sizes, the exit code and the error text, and no output.
 export function resultZone2(event, action) {
   const record = { seq: event.seq, tool: event.tool, ok: event.ok, args: argsOf(action?.args) };
   if (event.exitCode !== undefined) record.exit = event.exitCode;
@@ -92,7 +84,6 @@ export function resultZone2(event, action) {
   return record;
 }
 
-// An event of a kind that no module owns, in the first horizon: its fields, short.
 export function shortKind(event) {
   const record = { seq: event.seq, kind: event.kind };
   for (const [key, value] of Object.entries(event)) {
@@ -102,7 +93,6 @@ export function shortKind(event) {
   return record;
 }
 
-// The same event in the second horizon: kept only when a kind the agent still needs, with its witness, error and reason whole.
 export function keptKind(event) {
   if (!KEEP_ZONE2.has(event.kind)) return null;
   const record = { seq: event.seq, kind: event.kind };
@@ -113,7 +103,6 @@ export function keptKind(event) {
   return record;
 }
 
-// Merges the COMPACT exports of the modules into one registry, keyed by tool and by kind.
 export function registryOf(...compacts) {
   const tools = {};
   const kinds = {};
@@ -124,13 +113,11 @@ export function registryOf(...compacts) {
   return { tools, kinds };
 }
 
-// The events of a log, by seq: count() and at(seq). A log object has both. An array is wrapped, for a caller that holds one.
 export function sourceOf(events) {
   return { count: () => events.length, at: (seq) => events[seq - 1] };
 }
 const asSource = (events) => (Array.isArray(events) ? sourceOf(events) : events);
 
-// The log's count when the last feed was made. Every event up to it has been transferred, so only the events after it are new.
 export function shownTotalOf(events) {
   const source = asSource(events);
   for (let seq = source.count(); seq >= 1; seq -= 1) {
@@ -140,23 +127,88 @@ export function shownTotalOf(events) {
   return 0;
 }
 
-// The feed's events array is capped by its serialized length. The new events come first, oldest first: the longest prefix of them in full
-// that fits, and the rest as records after it. When the records of the rest would not fit, the rest is one range record, and query_log
-// reaches each event in it. The seen events come after, newest first, within the two horizons, as far as the cap still has room. The
-// cap is two characters short of its value, for the brackets of the array. Events come oldest first.
 const ARRAY_OVERHEAD = 2;
 const NO_ANSWERS = new Set();
 
 const costOf = (value) => JSON.stringify(value).length + 1;
 const sumCost = (items) => items.reduce((sum, item) => sum + costOf(item), 0);
 
-export function feedOf(events, registry, { shown = 0, cap = NEXT_CONTEXT_EVENTS_CAP, h1 = H1, h2 = H2 } = {}) {
+function headTail(text) {
+  const length = text.length;
+  if (length <= EVENT_HEAD + EVENT_TAIL) return text;
+  return `${text.slice(0, EVENT_HEAD)} ...[${length - EVENT_HEAD - EVENT_TAIL} chars cut; ${FEED_REACH}] ...${text.slice(-EVENT_TAIL)}`;
+}
+
+function compactDigest(digest) {
+  if (!digest || typeof digest !== 'object') return { lines: 0, bytes: 0, head: [], tail: [] };
+  const linesOf = (values, fromTail = false) => {
+    if (!Array.isArray(values)) return [];
+    const part = fromTail ? values.slice(-DIGEST_LINES) : values.slice(0, DIGEST_LINES);
+    return part.map((value) => clip(typeof value === 'string' ? value : JSON.stringify(value), DIGEST_LINE_CAP));
+  };
+  const out = { lines: Number(digest.lines) || 0, bytes: Number(digest.bytes) || 0, head: linesOf(digest.head), tail: linesOf(digest.tail, true) };
+  if (Array.isArray(digest.errors)) {
+    out.errors = linesOf(digest.errors);
+    const more = Math.max(0, digest.errors.length - DIGEST_LINES) + (Number(digest.moreErrors) || 0);
+    if (more > 0) out.moreErrors = more;
+  }
+  if (Array.isArray(digest.all)) {
+    out.all = linesOf(digest.all);
+    const more = Math.max(0, digest.all.length - DIGEST_LINES) + (Number(digest.more) || 0);
+    if (more > 0) out.more = more;
+  }
+  return out;
+}
+
+function boundedArgs(args) {
+  const compact = argsOf(args);
+  const keys = Object.keys(compact);
+  if (keys.length <= EVENT_ARGS_CAP) return compact;
+  const out = {};
+  for (const key of keys.slice(0, EVENT_ARGS_CAP)) out[key] = compact[key];
+  out.more = keys.length - EVENT_ARGS_CAP;
+  return out;
+}
+
+export function boundedItem(item, cap = NEXT_CONTEXT_EVENT_CAP) {
+  const original = costOf(item);
+  if (original <= cap) return item;
+  let out = {};
+  const put = (key, value) => {
+    if (value === undefined) return;
+    const candidate = { ...out, [key]: value };
+    if (costOf(candidate) <= cap) out = candidate;
+  };
+  for (const key of ['seq', 't', 'kind', 'tool', 'ok', 'exitCode', 'exit', 'signal', 'actionSeq', 'step', 'full', 'unanswered']) put(key, item[key]);
+  put('feedCut', { seq: item.seq ?? null, chars: original, reach: FEED_REACH });
+  if (typeof item.output === 'string') {
+    put('output', headTail(item.output));
+    put('outputChars', item.outputChars ?? item.outputDigest?.bytes ?? item.output.length);
+    put('outputDigest', compactDigest(digestOf(item)));
+  } else {
+    const text = JSON.stringify(item);
+    put('head', text.slice(0, EVENT_HEAD));
+    put('tail', text.slice(-EVENT_TAIL));
+    put('textChars', text.length);
+    put('textDigest', compactDigest(outputDigest(text, failedOf(item))));
+  }
+  if (item.out !== undefined) put('out', compactDigest(item.out));
+  if (item.args !== undefined) put('args', boundedArgs(item.args));
+  for (const key of TEXT_KEYS) {
+    if (typeof item[key] === 'string') put(key, clip(item[key], EVENT_TEXT_CAP));
+    else if (Array.isArray(item[key])) put(key, { items: item[key].length });
+    else if (typeof item[key] === 'number' || typeof item[key] === 'boolean') put(key, item[key]);
+  }
+  return out;
+}
+
+export function feedOf(events, registry, { shown = 0, cap = NEXT_CONTEXT_EVENTS_CAP, eventCap = NEXT_CONTEXT_EVENT_CAP, h1 = H1, h2 = H2 } = {}) {
   const source = asSource(events);
   const n = source.count();
+  const itemCap = Math.min(cap, eventCap);
   const newStart = Math.min(shown, n);
   const zone1Start = Math.max(0, newStart - h1);
   const zone2Start = Math.max(0, zone1Start - h2);
-  // An answer comes after its action, so every answer to an action in the feed's range is in the range.
   const answered = new Set();
   for (let seq = zone2Start + 1; seq <= n; seq += 1) {
     const event = source.at(seq);
@@ -165,13 +217,17 @@ export function feedOf(events, registry, { shown = 0, cap = NEXT_CONTEXT_EVENTS_
   const seen = [];
   for (let i = zone2Start; i < newStart; i += 1) {
     const record = recordOf(source.at(i + 1), i >= zone1Start ? 1 : 2, source, answered, registry);
-    if (record !== null) seen.push({ index: i, item: record, cost: costOf(record) });
+    if (record !== null) {
+      const bounded = boundedItem(record, itemCap);
+      seen.push({ index: i, item: bounded, cost: costOf(bounded) });
+    }
   }
   const fresh = [];
   for (let i = newStart; i < n; i += 1) {
     const event = source.at(i + 1);
-    const record = freshRecordOf(event, source, registry);
-    fresh.push({ index: i, event, cost: costOf(event), record, recordCost: costOf(record) });
+    const shown = boundedItem(event, itemCap);
+    const record = boundedItem(freshRecordOf(event, source, registry), itemCap);
+    fresh.push({ index: i, shown, cost: costOf(shown), record, recordCost: costOf(record) });
   }
   const room = cap - ARRAY_OVERHEAD;
   const plan = planFresh(fresh, n, room);
@@ -186,7 +242,6 @@ export function feedOf(events, registry, { shown = 0, cap = NEXT_CONTEXT_EVENTS_
   };
 }
 
-// A new event as a record. An action always has one, even when its answer is in the feed, so no new event is dropped.
 function freshRecordOf(event, source, registry) {
   if (event.kind === 'action') return { seq: event.seq, kind: 'action', tool: event.tool, args: argsOf(event.args) };
   return recordOf(event, 1, source, NO_ANSWERS, registry) ?? shortKind(event);
@@ -198,11 +253,11 @@ function planFresh(fresh, lastSeq, room) {
   if (recordTotal <= room) {
     let spare = room - recordTotal;
     let full = 0;
-    while (full < fresh.length && fresh[full].cost - fresh[full].recordCost <= spare) {
-      spare -= fresh[full].cost - fresh[full].recordCost;
+    while (full < fresh.length && Math.max(0, fresh[full].cost - fresh[full].recordCost) <= spare) {
+      spare -= Math.max(0, fresh[full].cost - fresh[full].recordCost);
       full += 1;
     }
-    const items = [...fresh.slice(0, full).map((entry) => entry.event), ...fresh.slice(full).map((entry) => entry.record)];
+    const items = [...fresh.slice(0, full).map((entry) => entry.shown), ...fresh.slice(full).map((entry) => entry.record)];
     return { full, items, used: room - spare };
   }
   let used = 0;
@@ -212,7 +267,7 @@ function planFresh(fresh, lastSeq, room) {
     full += 1;
   }
   const tail = tailOf(full);
-  return { full, items: [...fresh.slice(0, full).map((entry) => entry.event), ...tail], used: used + sumCost(tail) };
+  return { full, items: [...fresh.slice(0, full).map((entry) => entry.shown), ...tail], used: used + sumCost(tail) };
 }
 
 function keptSeen(seen, room) {
@@ -231,7 +286,6 @@ function recordOf(event, zone, source, answered, registry) {
     return zone === 1 ? { seq: event.seq, kind: 'action', tool: event.tool, args: argsOf(event.args), unanswered: true } : null;
   }
   if (event.kind === 'result' || event.kind === 'code-call') {
-    // A verb called in a body is its own action: its arguments are on the event, so its tool's strategy applies to it as to a result.
     const action = event.kind === 'code-call' ? event : event.actionSeq !== undefined ? source.at(event.actionSeq) : undefined;
     const owned = registry.tools[event.tool];
     const fn = owned ? (zone === 1 ? owned.zone1 : owned.zone2) : undefined;
