@@ -330,7 +330,8 @@ std::optional<std::string> StdioClient::connect(bool again) {
         return std::nullopt;
     }
     if (session) {
-        const std::string reason = session->transport->alive() ? std::string("stopped by gm") : exit_reason(*session->child);
+        std::string reason = "stopped by gm";
+        if (const auto code = session->child->wait_for(std::chrono::milliseconds(300))) reason = "exited with code " + std::to_string(*code);
         lose(core_, session, reason);
         session->child->kill();
     }
