@@ -82,6 +82,7 @@ UpdateResult update_now(const UpdatePolicy& policy);
 UpdateState read_update_state(const std::filesystem::path& install_dir);
 bool write_update_state(const std::filesystem::path& install_dir, const UpdateState& state);
 bool checked_recently(const UpdateState& state, std::int64_t now_ms, std::chrono::hours interval);
+std::chrono::milliseconds next_check_delay(const UpdatePolicy& policy);
 std::optional<std::string> etag_from_headers(std::string_view headers);
 bool acquire_update_lock(const std::filesystem::path& install_dir);
 std::optional<std::string> install_staged(const std::filesystem::path& staged_root,

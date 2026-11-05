@@ -25,6 +25,7 @@ constexpr std::string_view kPausedBeforeAnswer =
 constexpr std::string_view kRestartedBeforeAnswer =
     "the worker restarted before it answered this call; the call may be retried";
 constexpr std::uint64_t kBuildTimeoutMs = 600000;
+constexpr std::chrono::milliseconds kUpdateRetryWait{600000};
 
 struct ListKind {
     std::string_view method;
@@ -416,6 +417,11 @@ void Relay::reexec() {
     say("re-executing the relay on the new build");
     stop_worker(lock);
     std::vector<std::string> argv = options_.reexec_argv;
+    if (options_.update) {
+        const std::filesystem::path installed = options_.update->install_dir / executable_name();
+        std::error_code ec;
+        if (std::filesystem::exists(installed, ec)) argv.front() = installed.string();
+    }
     if (host_initialize_) {
         argv.emplace_back("--handshake");
         argv.push_back(json::dump(*host_initialize_));
@@ -440,6 +446,7 @@ void Relay::update_loop() {
     while (!host_gone_) {
         lock.unlock();
         const UpdateResult result = update_now(policy);
+        const std::chrono::milliseconds wait = result.ok ? std::max(next_check_delay(policy), kUpdateRetryWait) : kUpdateRetryWait;
         lock.lock();
         if (host_gone_) break;
         if (!result.ok) {
@@ -453,7 +460,7 @@ void Relay::update_loop() {
 #endif
             changed_.notify_all();
         }
-        changed_.wait_for(lock, policy.interval, [&] { return host_gone_; });
+        changed_.wait_for(lock, wait, [&] { return host_gone_; });
     }
 }
 

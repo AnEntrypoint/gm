@@ -497,6 +497,14 @@ UpdateResult update_once(const UpdatePolicy& policy, UpdateResult result) {
 
 }
 
+std::chrono::milliseconds next_check_delay(const UpdatePolicy& policy) {
+    const UpdateState state = read_update_state(policy.install_dir);
+    const std::int64_t interval = std::chrono::duration_cast<std::chrono::milliseconds>(policy.interval).count();
+    const std::int64_t elapsed = now_ms() - state.checked_ms;
+    if (state.checked_ms <= 0 || elapsed < 0 || elapsed >= interval) return std::chrono::milliseconds(0);
+    return std::chrono::milliseconds(interval - elapsed);
+}
+
 UpdateResult update_now(const UpdatePolicy& policy) {
     UpdateResult result;
     result.from = policy.current_version;
