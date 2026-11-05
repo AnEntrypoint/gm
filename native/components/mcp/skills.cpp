@@ -52,9 +52,14 @@ std::optional<std::string> plain_problem(const std::string& value) {
 bool is_key_start(char c) { return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z'); }
 bool is_key_char(char c) { return is_key_start(c) || (c >= '0' && c <= '9') || c == '_' || c == '-'; }
 
-deoxidene::Result<std::pair<Value, std::string>, std::string> parse_skill(const std::string& text, const std::string& dir) {
+deoxidene::Result<std::pair<Value, std::string>, std::string> parse_skill(const std::string& raw, const std::string& dir) {
     using Fail = deoxidene::Err<std::string>;
     std::string prefix = "skills/" + dir + "/SKILL.md";
+    std::string text;
+    text.reserve(raw.size());
+    for (char c : raw) {
+        if (c != '\r') text.push_back(c);
+    }
     std::size_t close = text.rfind("---\n", 0) == 0 ? text.find("\n---", 4) : std::string::npos;
     if (close == std::string::npos) return Fail{prefix + " has no frontmatter"};
     std::size_t end = close + 4;
