@@ -38,7 +38,7 @@ jobs:
     timeout-minutes: 30
     concurrency:
       group: build-${{ github.ref }}-${{ matrix.target }}
-      cancel-in-progress: true
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
       - name: Version
