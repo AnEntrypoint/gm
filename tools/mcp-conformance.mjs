@@ -8,6 +8,7 @@ const CODE_TOOLS = ['next_context', 'run_code', 'finish'];
 const SKILL_URI = 'skill://gm/SKILL.md';
 const HOUR_MS = 3600000;
 const REQUEST_TIMEOUT_MS = 60000;
+const RULES_RUN_DIR = `/tmp/gm-conformance-rules-${process.pid}-${Date.now()}`;
 const INVALID_PARAMS = -32602;
 const METHOD_NOT_FOUND = -32601;
 
@@ -34,8 +35,8 @@ const cached = (r, ttl) => r && r.ttlMs === ttl && r.cacheScope === 'public';
 const short = (v) => JSON.stringify(v)?.slice(0, 240);
 
 class Client {
-  constructor() {
-    this.child = spawn(command[0], command.slice(1), { stdio: ['pipe', 'pipe', 'inherit'] });
+  constructor(extraArgs = []) {
+    this.child = spawn(command[0], [...command.slice(1), ...extraArgs], { stdio: ['pipe', 'pipe', 'inherit'] });
     this.child.stdout.setEncoding('utf8');
     this.buffer = '';
     this.inbox = [];
@@ -337,11 +338,27 @@ const SCENARIOS = [
       ok('an unknown method is -32601', r.error?.code === METHOD_NOT_FOUND, short(r));
     },
   },
+  {
+    name: 'rules notice after successor',
+    args: ['--run-dir', RULES_RUN_DIR],
+    run: async (c, ok) => {
+      const call = async (name, args) => (await c.rpc('tools/call', { name, arguments: args })).result?.structuredContent ?? {};
+      const early = await call('run_code', { body: 'return 1' });
+      ok('run_code before the first next_context carries rule 2', String(early.rulesNotice ?? '').includes('rule 2'), short(early.rulesNotice));
+      const first = await call('next_context', {});
+      await call('run_code', { body: 'return 2' });
+      await call('finish', { witness: 'successor rules notice check' });
+      const successor = await call('next_context', {});
+      ok('next_context after finish opens a fresh run', successor.run !== first.run && first.run !== undefined, short({ first: first.run, successor: successor.run }));
+      const after = await call('run_code', { body: 'return 3' });
+      ok('the successor run does not inherit the rule 2 notice', after.rulesNotice === undefined, short(after.rulesNotice));
+    },
+  },
 ];
 
 for (const scenario of SCENARIOS) {
   console.log(`=== ${scenario.name}`);
-  const client = new Client();
+  const client = new Client(scenario.args ?? []);
   try {
     await client.open();
     await scenario.run(client, record);
