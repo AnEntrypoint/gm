@@ -283,37 +283,55 @@ std::wstring environment_block(const std::vector<std::pair<std::string, std::str
 deoxidene::Result<std::shared_ptr<Child>, std::string> Child::spawn(const std::vector<std::string>& argv,
                                                                     const SpawnOptions& options) {
     if (argv.empty()) return deoxidene::Err<std::string>("no program to start");
-    SECURITY_ATTRIBUTES inherit{sizeof(SECURITY_ATTRIBUTES), nullptr, TRUE};
+    SECURITY_ATTRIBUTES none{sizeof(SECURITY_ATTRIBUTES), nullptr, FALSE};
     HANDLE in_read, in_write, out_read, out_write;
-    if (!CreatePipe(&in_read, &in_write, &inherit, 0)) return deoxidene::Err<std::string>("pipe failed");
-    if (!CreatePipe(&out_read, &out_write, &inherit, 0)) {
+    if (!CreatePipe(&in_read, &in_write, &none, 0)) return deoxidene::Err<std::string>("pipe failed");
+    if (!CreatePipe(&out_read, &out_write, &none, 0)) {
         CloseHandle(in_read);
         CloseHandle(in_write);
         return deoxidene::Err<std::string>("pipe failed");
     }
     SetHandleInformation(in_write, HANDLE_FLAG_INHERIT, 0);
     SetHandleInformation(out_read, HANDLE_FLAG_INHERIT, 0);
+    SetHandleInformation(in_read, HANDLE_FLAG_INHERIT, HANDLE_FLAG_INHERIT);
+    SetHandleInformation(out_write, HANDLE_FLAG_INHERIT, HANDLE_FLAG_INHERIT);
+    HANDLE error_inherit = nullptr;
+    const HANDLE std_error = GetStdHandle(STD_ERROR_HANDLE);
+    if (std_error && std_error != INVALID_HANDLE_VALUE)
+        DuplicateHandle(GetCurrentProcess(), std_error, GetCurrentProcess(), &error_inherit, 0, TRUE, DUPLICATE_SAME_ACCESS);
+    std::vector<HANDLE> inherited{in_read, out_write};
+    if (error_inherit) inherited.push_back(error_inherit);
+    SIZE_T attribute_size = 0;
+    InitializeProcThreadAttributeList(nullptr, 1, 0, &attribute_size);
+    std::vector<unsigned char> attribute_storage(attribute_size);
+    auto* attributes = reinterpret_cast<LPPROC_THREAD_ATTRIBUTE_LIST>(attribute_storage.data());
+    InitializeProcThreadAttributeList(attributes, 1, 0, &attribute_size);
+    UpdateProcThreadAttribute(attributes, 0, PROC_THREAD_ATTRIBUTE_HANDLE_LIST, inherited.data(),
+                              inherited.size() * sizeof(HANDLE), nullptr, nullptr);
     std::wstring command;
     for (const auto& a : argv) {
         if (!command.empty()) command.push_back(L' ');
         command += quote_argument(widen(a));
     }
-    STARTUPINFOW startup{};
-    startup.cb = sizeof startup;
-    startup.dwFlags = STARTF_USESTDHANDLES;
-    startup.hStdInput = in_read;
-    startup.hStdOutput = out_write;
-    startup.hStdError = GetStdHandle(STD_ERROR_HANDLE);
+    STARTUPINFOEXW startup{};
+    startup.StartupInfo.cb = sizeof startup;
+    startup.StartupInfo.dwFlags = STARTF_USESTDHANDLES;
+    startup.StartupInfo.hStdInput = in_read;
+    startup.StartupInfo.hStdOutput = out_write;
+    startup.StartupInfo.hStdError = error_inherit ? error_inherit : std_error;
+    startup.lpAttributeList = attributes;
     PROCESS_INFORMATION process{};
     const std::wstring dir = options.cwd.wstring();
     std::wstring block = options.env.empty() ? std::wstring() : environment_block(options.env);
-    DWORD flags = CREATE_NEW_PROCESS_GROUP;
+    DWORD flags = CREATE_NEW_PROCESS_GROUP | EXTENDED_STARTUPINFO_PRESENT;
     if (!block.empty()) flags |= CREATE_UNICODE_ENVIRONMENT;
     const BOOL ok = CreateProcessW(nullptr, command.data(), nullptr, nullptr, TRUE, flags,
-                                   block.empty() ? nullptr : block.data(), dir.empty() ? nullptr : dir.c_str(), &startup,
-                                   &process);
+                                   block.empty() ? nullptr : block.data(), dir.empty() ? nullptr : dir.c_str(),
+                                   &startup.StartupInfo, &process);
+    DeleteProcThreadAttributeList(attributes);
     CloseHandle(in_read);
     CloseHandle(out_write);
+    if (error_inherit) CloseHandle(error_inherit);
     if (!ok) {
         CloseHandle(in_write);
         CloseHandle(out_read);
