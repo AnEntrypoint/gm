@@ -955,7 +955,7 @@ function annotated(tool) {
 }
 const OUTPUT_SCHEMAS = {
   next_context: objectSchema({ ok: { type: 'boolean' }, refused: { type: 'boolean' }, error: text, step: number, run: text, stepsLeft: number, maxSteps: number, total: number, prefixSha: text, actionSeq: number }, ['ok']),
-  run_code: objectSchema({ ok: { type: 'boolean' }, refused: { type: 'boolean' }, error: text, truncated: { type: 'boolean' }, background: text, state: text, actionSeq: number }, ['ok']),
+  run_code: objectSchema({ ok: { type: 'boolean' }, refused: { type: 'boolean' }, error: text, truncated: { type: 'boolean' }, background: text, job: text, hint: text, state: text, actionSeq: number }, ['ok']),
   finish: objectSchema({ ok: { type: 'boolean' }, refused: { type: 'boolean' }, error: text, finished: { type: 'boolean' }, actionSeq: number }, ['ok']),
 };
 function toolResultOf(name, out, meta) {

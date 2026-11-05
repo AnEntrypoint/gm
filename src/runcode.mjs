@@ -265,7 +265,7 @@ export async function runBody({ body, timeoutMs = DEFAULT_TIMEOUT_MS, format, ve
   const queued = !slot.granted;
   const name = background({ result, cleanup: () => rmSync(file, { force: true }), kill, body: startSeq, queued, started: slot.ready });
   const logged = log.eventsFrom(startSeq + 1).filter((event) => event.kind === 'code-call').map((event) => ({ seq: event.seq, tool: event.tool, ok: event.ok }));
-  return { ok: true, background: name, state: queued ? 'queued' : 'running', logged, loads };
+  return { ok: true, background: name, job: name, state: queued ? 'queued' : 'running', hint: `job_status({ job: "${name}", waitMs }) returns its state and, once it ends, its value`, logged, loads };
 }
 
 // Static import statements are hoisted to the module's top, and may span lines. Their relative (./, ../) and absolute specifiers become absolute

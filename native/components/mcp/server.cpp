@@ -2722,7 +2722,9 @@ Value Server::State::run_code(const Value& args) {
             return with_seq(object()
                                 .set("ok", true)
                                 .set("background", job->name)
+                                .set("job", job->name)
                                 .set("state", "running")
+                                .set("hint", "job_status({ job: \"" + job->name + "\", waitMs }) returns its state and, once it ends, its value")
                                 .set("logged", std::move(logged_calls))
                                 .set("loads", array()));
         },
