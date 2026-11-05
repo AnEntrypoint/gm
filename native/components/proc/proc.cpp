@@ -218,7 +218,8 @@ Outcome run(const std::vector<std::string>& argv, const std::filesystem::path& c
 }
 
 Outcome shell(std::string_view command, const std::filesystem::path& cwd, std::uint64_t timeout_ms) {
-    return run({"/bin/sh", "-c", std::string(command)}, cwd, {}, timeout_ms);
+    const std::string sh = std::filesystem::exists("/bin/bash") ? "/bin/bash" : "/bin/sh";
+    return run({sh, "-c", std::string(command)}, cwd, {}, timeout_ms);
 }
 
 const char* signal_name(int signal_number) {

@@ -537,3 +537,7 @@ Reported by the spawn session (run 2026-11-05-06-58-25-6b9460), which runs this 
 ## PRD status aliases (2026-11-05)
 
 The row store (work/rows/*.yml, src/rows.mjs and native/leaves/rows.mjs) writes only open and resolved. prd_list accepts pending as open and completed as resolved, so a row written with those names is listed. Reproduced in a scratch workspace: before the fix prd_list {status:"open"} returned (none) for a row with status pending; after it returns "prd-aaa1 pending pending one". A spoint .gm/prd.yml is not read by gm; gm reads work/rows only.
+
+## run_shell uses bash when present (2026-11-05)
+
+run_shell and job_start ran /bin/sh, so `${PIPESTATUS[0]}` failed with "Bad substitution" (exit 2). Node (src/exec.mjs spawnGroup) and native (proc::shell in native/components/proc/proc.cpp, job.cpp) now run the command through /bin/bash when it exists, else /bin/sh. Witness, Node runCommand with shell true: `echo EXIT=${PIPESTATUS[0]}` before: "/bin/sh: 2: Bad substitution" exit 2; after: "EXIT=" exit 0 (no pipeline, so the value is empty in bash). `false | true; echo EXIT=${PIPESTATUS[0]}` after: "EXIT=1" exit 0. node --test native/leaves/tests: 15 pass; ctest -R gm_proc and -R verbs: pass.

@@ -1,6 +1,8 @@
 import { spawn } from 'node:child_process';
 import { AsyncLocalStorage } from 'node:async_hooks';
+import { existsSync } from 'node:fs';
 
+const POSIX_SHELL = process.platform !== 'win32' && existsSync('/bin/bash') ? '/bin/bash' : null;
 const OUTPUT_CAP = 200000;
 const KILL_GRACE_MS = 500;
 export const foregroundGroups = new Set();
@@ -20,6 +22,7 @@ export function sleep(ms) {
 }
 
 export function spawnGroup(file, args, cwd, stdio, { shell = false, env = {} } = {}) {
+  if (shell && POSIX_SHELL) return spawn(POSIX_SHELL, ['-c', [file, ...args].join(' ')], { cwd, env: childEnv(env), detached: true, windowsHide: true, stdio });
   return spawn(file, args, { cwd, env: childEnv(env), shell, detached: true, windowsHide: true, stdio });
 }
 

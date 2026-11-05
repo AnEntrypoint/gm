@@ -3,6 +3,7 @@
 #include <chrono>
 #include <cmath>
 #include <cstring>
+#include <filesystem>
 #include <fstream>
 #include <system_error>
 #include <vector>
@@ -79,7 +80,7 @@ Spawned spawn_shell_job(const std::string& command, const std::filesystem::path&
     for (auto& s : env_strings) envp.push_back(s.data());
     envp.push_back(nullptr);
 
-    std::string shell = "/bin/sh";
+    std::string shell = std::filesystem::exists("/bin/bash") ? "/bin/bash" : "/bin/sh";
     std::string dash_c = "-c";
     std::string line = command;
     char* argv[] = {shell.data(), dash_c.data(), line.data(), nullptr};
@@ -99,7 +100,7 @@ Spawned spawn_shell_job(const std::string& command, const std::filesystem::path&
     posix_spawn_file_actions_destroy(&actions);
     posix_spawnattr_destroy(&attributes);
     if (rc != 0) {
-        result.error = "spawn /bin/sh " + std::string(std::strerror(rc));
+        result.error = "spawn " + shell + " " + std::string(std::strerror(rc));
         return result;
     }
     result.pid = static_cast<int>(pid);
