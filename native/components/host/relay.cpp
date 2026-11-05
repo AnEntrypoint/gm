@@ -56,6 +56,13 @@ std::string method_of(const json::Value& message) {
     return method != nullptr && method->is_string() ? method->as_string() : std::string{};
 }
 
+bool resendable_call(const json::Value& message) {
+    if (method_of(message) != "tools/call") return false;
+    const json::Value* params = message.find("params");
+    const json::Value* name = params != nullptr ? params->find("name") : nullptr;
+    return name != nullptr && name->is_string() && name->as_string() == "next_context";
+}
+
 std::string error_reply(const std::string& id_json, std::string_view message) {
     return "{\"jsonrpc\":\"2.0\",\"id\":" + id_json + ",\"error\":{\"code\":-32000,\"message\":" + json::quote(message) +
            "}}";
@@ -191,6 +198,7 @@ void Relay::fail_with(Lock&, const std::string& reason) {
     failure_ = reason;
     for (const auto& [id, method] : inflight_) emit(error_reply(id, failure_));
     inflight_.clear();
+    resendable_.clear();
     for (const std::string& line : held_) {
         auto message = parse_message(line);
         if (!message) continue;
@@ -228,11 +236,18 @@ void Relay::route_host_line(Lock& lock, std::string line) {
     }
     if (message) {
         auto id = id_key(*message);
-        if (id && !method.empty()) inflight_[*id] = method;
+        if (id && !method.empty()) {
+            inflight_[*id] = method;
+            if (resendable_call(*message)) resendable_[*id] = line;
+            else resendable_.erase(*id);
+        }
         if (method == "notifications/cancelled") {
             const json::Value* params = message->find("params");
             const json::Value* request = params != nullptr ? params->find("requestId") : nullptr;
-            if (request != nullptr && inflight_.erase(json::dump(*request)) > 0) changed_.notify_all();
+            if (request != nullptr) {
+                resendable_.erase(json::dump(*request));
+                if (inflight_.erase(json::dump(*request)) > 0) changed_.notify_all();
+            }
         }
     }
     send_to_worker(lock, line);
@@ -267,6 +282,7 @@ void Relay::read_loop(std::shared_ptr<Child> child) {
                     }
                     inflight_.erase(request);
                 }
+                resendable_.erase(*id);
             }
             method = method_of(*message);
         }
@@ -377,8 +393,12 @@ void Relay::restart(Lock& lock, const std::string& reason) {
     state_ = State::Restarting;
     swapping_ = true;
     stop_worker(lock);
-    for (const auto& [id, method] : inflight_) emit(error_reply(id, kRestartedBeforeAnswer));
-    inflight_.clear();
+    std::map<std::string, std::string> resend;
+    for (const auto& [id, method] : inflight_) {
+        if (resendable_.contains(id)) resend.emplace(id, method);
+        else emit(error_reply(id, kRestartedBeforeAnswer));
+    }
+    inflight_ = std::move(resend);
     if (host_gone_) {
         swapping_ = false;
         return;
@@ -396,6 +416,9 @@ void Relay::restart(Lock& lock, const std::string& reason) {
     mark_running(lock);
     ++restarts_;
     announce_changes(lock);
+    std::vector<std::string> replay;
+    for (const auto& [id, method] : inflight_) replay.push_back(resendable_.at(id));
+    for (const std::string& line : replay) send_to_worker(lock, line);
     flush_held(lock);
     swapping_ = false;
 }

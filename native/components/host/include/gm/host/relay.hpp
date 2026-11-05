@@ -108,6 +108,7 @@ private:
     std::thread updater_;
     bool reexec_pending_ = false;
     std::map<std::string, std::string> inflight_;
+    std::map<std::string, std::string> resendable_;
     std::map<std::string, std::shared_ptr<Waiter>> waiters_;
     std::vector<std::string> held_;
     std::optional<json::Value> host_initialize_;

@@ -153,6 +153,32 @@ void stuck_call_gets_retry_error(const fs::path& root) {
     relay.host_closed();
 }
 
+void next_context_resent_after_restart(const fs::path& root) {
+    const fs::path watched = root / "resend";
+    fs::create_directories(watched);
+    write_file(watched / "core.cpp", "int a;\n");
+    HostSide host;
+    auto options = echo_options(watched);
+    options.worker_argv = worker_argv(
+        R"sh(while IFS= read -r line; do case "$line" in *hang*) sleep 3;; esac; printf '%s\n' "$line"; done)sh", "hang");
+    options.drain_timeout = 300ms;
+    gm::host::Relay relay(options, [&](std::string_view line) { host.take(line); });
+    relay.start();
+    relay.host_line(R"({"jsonrpc":"2.0","id":13,"method":"tools/call","params":{"name":"next_context","arguments":{"hang":true}}})");
+    std::this_thread::sleep_for(100ms);
+    relay.request_restart("test");
+    check(host.wait_for_text(R"("id":13,"method")", 8s),
+          "a next_context call in flight at a restart is sent again to the new worker");
+    {
+        std::lock_guard lock(host.mutex);
+        bool errored = false;
+        for (const auto& line : host.lines)
+            if (line.find(R"("id":13,"error")") != std::string::npos) errored = true;
+        check(!errored, "a next_context call in flight at a restart gets no error reply");
+    }
+    relay.host_closed();
+}
+
 void binary_change_restarts_once(const fs::path& root) {
     const fs::path dir = root / "binary";
     fs::create_directories(dir / "leaves");
@@ -240,6 +266,7 @@ int main() {
     restart_on_source_change(root);
     drain_before_restart(root);
     stuck_call_gets_retry_error(root);
+    next_context_resent_after_restart(root);
     binary_change_restarts_once(root);
     failed_build_keeps_worker(root);
     missing_worker_answers_with_failure(root);

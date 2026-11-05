@@ -751,3 +751,10 @@ Witness, ctest -R gm_mcp_test -V: "9: bounded event: seq=7 next_contextChars=925
 - Fix: ship.sh now runs a require.resolve(acorn) probe after staging and before the gate. When acorn is missing it unstages the named paths, prints a one-line npm install hint naming the checkout root, and exits 1. No gate check runs and no stack trace reaches the user. require.resolve also honours NODE_PATH and npm workspaces.
 - Witness: with node_modules/acorn absent, ship.sh returns the hint and leaves the paths unstaged; with acorn present the gate runs normally.
 
+## Spawn run friction: restart replay of next_context, discover, refusal (2026-11-05)
+
+- Friction 1, `error: method not found: server/discover` in run 2703944-18033865 (2026-11-04 16:21). Already fixed before this round: Node answers server/discover (src/mcp.mjs, 2026-11-05 entry above) and native/components/mcp/server.cpp discover() answers it; gm_mcp_spec_discover passes. No change.
+- Friction 2, `abandoned: the worker restarted before it answered` in runs 2026-11-05-14-22-29-0298e7 and 2026-11-05-16-46-46-0c62d1: both were run_code calls open when relay restart() drained and stopped the worker. Fix in native/components/host/relay.cpp: an in-flight next_context tools/call (no side effects beyond a step) is sent again to the new worker after the handshake instead of an error reply. run_code is not replayed: its body may already have written files or pushed, so it still gets "the worker restarted before it answered this call; the call may be retried" and the recovery note asks the agent to check outside effects first. Node is unchanged (the relay is native). The worker still logs the old action as abandoned at boot; the replayed call is a new action. Witness: gm_relay_test cases "a next_context call in flight at a restart is sent again to the new worker" and "gets no error reply"; ctest 23 of 23 passed.
+- Friction 3, `refused: run <id> has ended; call next_context to open a new run` (3 runs, run_code after finish). The text already names next_context and the first next_context after a finish opens a fresh run (gm_mcp_test "next_context after finish opens a fresh run"). No change.
+
+
