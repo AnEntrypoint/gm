@@ -95,7 +95,8 @@ const std::string kNextContextDescription =
     "connection: it takes no step, claims no pending event, and its reply has role child and the owning run. run, "
     "with child, names that owning run, and another run is refused. compactChildren: true summarizes child run_code "
     "and code-call generations into counts with a seq range and a gm.query_log note, while pending, parent-action, "
-    "job, row and recovery events stay full; the default feed is unchanged.";
+    "job, row and recovery events stay full; the default feed is unchanged. task, when set, replaces the run's "
+    "task text; use it in the first step when a host cut the slash-command task to its first word.";
 const std::string kFinishDescription =
     "End the run. witness is one string that quotes the evidence you observed. gaps optionally lists, one string "
     "each, what the run did not check; the end event logs them. finish is refused while a background run is running, "
@@ -229,7 +230,8 @@ Value code_tools(const VerbTable& verbs) {
                                                   .set("waitMs", num_schema())
                                                   .set("child", bool_schema())
                                                   .set("run", str_schema())
-                                                  .set("compactChildren", bool_schema()),
+                                                  .set("compactChildren", bool_schema())
+                                                  .set("task", str_schema()),
                                               {}));
     Value finish = object()
                        .set("name", "finish")
@@ -1708,6 +1710,13 @@ struct Server::State {
                         .set("progress", "no event pending after " + std::to_string(static_cast<long long>(wait_ms)) + " ms; no step was used, call next_context again to keep waiting")
                         .set("steps", number_of(s().steps));
                 }
+                const Value* task_arg = args.find("task");
+                std::string corrected = task_arg && task_arg->is_string() ? trim(task_arg->as_string()) : "";
+                if (!corrected.empty() && corrected != s().task) {
+                    s().task = corrected;
+                    s().task_inherited = false;
+                    append("task", object().set("from", "next_context").set("text", corrected));
+                }
                 s().steps += 1;
                 s().run_started = true;
                 s().step_calls = 0;
@@ -2149,7 +2158,11 @@ struct Server::State {
             s().task_inherited = false;
             append("task", object().set("from", "session prompt").set("text", given));
         }
-        Value reply = prompt_result(skill, given.empty() ? skill.body : skill.body + "\n\nTask: " + given);
+        std::string text = given.empty() ? skill.body : skill.body + "\n\nTask: " + given;
+        if (!given.empty() && given.find_first_of(" \t\r\n") == std::string::npos) {
+            text += "\n\nThe task above is one word. Some hosts cut a slash-command task to its first word. If your slash command had more words, call next_context({ task: '<the whole slash-command text>' }) in your first step so the run records the whole task.";
+        }
+        Value reply = prompt_result(skill, text);
         if (!given.empty() && given.find_first_of(" \t\r\n") == std::string::npos) {
             reply.set("warning", "The task argument is one word, of length " + std::to_string(given.size()) +
                                      ". Some hosts pass only the first word of the task, so the task may have been cut by the host. Pass the whole task text.");

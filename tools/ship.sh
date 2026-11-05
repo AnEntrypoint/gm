@@ -20,6 +20,11 @@ for path in "$@"; do
   fi
 done
 git add -A -- "$@" || exit 1
+if ! node -e "require.resolve('acorn')" >/dev/null 2>&1; then
+  git reset -q -- "$@"
+  echo "ship: the gate needs acorn; run npm install in $root and retry" >&2
+  exit 1
+fi
 out="${SHIP_OUT:-/tmp/ship-gate.out}"
 node -e "import('./src/gate.mjs').then(async (m) => { const r = await m.runGate(process.cwd()); console.log(JSON.stringify({ gate: r.ok, failed: r.failed })); process.exit(r.ok ? 0 : 1); })" > "$out" 2>&1
 rc=$?

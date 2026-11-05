@@ -9,6 +9,10 @@ Flow rule. A multi-step change is built as one batch, all steps first, then witn
 
 The served tools are three: next_context, run_code and finish. All the work is done in run_code.
 
+## Task text
+
+A host may cut a slash-command task to its first word before gm sees it. The server keeps the whole argument it receives, so a one-word task in next_context is a host truncation, not a gm cut. If the task below is shorter than the slash command you were given, pass the whole text as `next_context({ task: '<the whole slash-command text>' })` in your first step. The run logs the correction, next_context then reports the whole task, and successor runs inherit it.
+
 ## Browser control
 
 Playwriter is this project's browser control. Drive the browser only through its verbs inside run_code: `gm.playwriter_execute({ code })` runs a snippet in the project browser, and `gm.playwriter_browsers({ action })` lists or closes browsers on the machine. Do not start another browser, and do not call the playwriter binary from a shell. A browser call that runs past 60 seconds needs `timeoutMs` on the playwriter server entry (defaults/mcp.json sets 300000). The execute call's own `timeout` argument sets playwriter's limit, which defaults to 10 seconds, and does not lift the server cap.

@@ -63,8 +63,9 @@ int main() {
     write(dir / "blob.bin", std::string("needle\0bin\n", 11));
     write(dir / ".env", "TOGETHERAI=dummy_not_a_real_key_12345\n");
     write(dir / ".env.local", "LOCAL_ALIAS=dummy_not_a_real_key_67890\n");
+    write(dir / "prod.env", "PROD_TOKEN=dummy_not_a_real_key_99999\n");
     gm::proc::run({"git", "init", "-q"}, dir);
-    gm::proc::run({"git", "add", "-f", "a.txt", "src", ".gitignore", "node_modules", "blob.bin", ".env", ".env.local"}, dir);
+    gm::proc::run({"git", "add", "-f", "a.txt", "src", ".gitignore", "node_modules", "blob.bin", ".env", ".env.local", "prod.env"}, dir);
 
     gm::search::Searcher searcher(dir);
 
@@ -78,6 +79,9 @@ int main() {
     Value env_local_grep = parse(searcher.grep(Value(gm::json::Object{{"pattern", "LOCAL_ALIAS"}})));
     check(output_of(env_local_grep).find(".env.local:1 LOCAL_ALIAS=<redacted>") != std::string::npos, "grep masks a .env.local value: " + output_of(env_local_grep));
     check(output_of(env_local_grep).find("dummy_not_a_real_key_67890") == std::string::npos, "grep does not print a .env.local value");
+    Value prod_grep = parse(searcher.grep(Value(gm::json::Object{{"pattern", "PROD_TOKEN"}})));
+    check(output_of(prod_grep).find("prod.env:1 PROD_TOKEN=<redacted>") != std::string::npos, "grep masks a *.env value: " + output_of(prod_grep));
+    check(output_of(prod_grep).find("dummy_not_a_real_key_99999") == std::string::npos, "grep does not print a *.env value");
     Value env_search = parse(searcher.search(Value(gm::json::Object{{"query", "togetherai"}, {"k", 5}})));
     check(output_of(env_search).find(".env:1 ") != std::string::npos && output_of(env_search).find("TOGETHERAI=<redacted>") != std::string::npos, "search masks a .env value: " + output_of(env_search));
     check(output_of(env_search).find("dummy_not_a_real_key_12345") == std::string::npos, "search does not print a .env value");

@@ -117,7 +117,7 @@ std::string match_prefix(const std::string& line) {
 bool is_dotenv(const std::string& shown) {
     std::size_t slash = shown.find_last_of("/\\");
     std::string name = lower_ascii(slash == std::string::npos ? shown : shown.substr(slash + 1));
-    return name == ".env" || name.starts_with(".env.");
+    return name == ".env" || name.starts_with(".env.") || name.ends_with(".env") || name.find(".env.") != std::string::npos;
 }
 
 std::string shown_text(const std::string& shown, const std::string& line) {

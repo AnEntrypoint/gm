@@ -729,3 +729,25 @@ Witness, ctest -R gm_mcp_test -V: "9: bounded event: seq=7 next_contextChars=925
 - When condensation happens the reply gains `compressed`, `originalChars`, `keptChars` and `droppedLines`. exitCode, signal, ok, timedOut and error are unchanged. Both trees use the same rules: src/condense.mjs plus src/tools.mjs, and native/components/verbs/condense.cpp/.hpp plus verbs.cpp. The verb description and inputSchema name `raw` in src/mcp.mjs, src/prompt.mjs and native/components/verbs/verbs.cpp. src/worker-modules.json lists condense.mjs so hot reload reaches it.
 - Scope: job_status output is not condensed; background job files remain the lossless path. The log's outputChars/outputDigest describe the returned (condensed) text when condensation happens, which is the text that actually reached the body.
 
+
+## Redact every *.env name (2026-11-05)
+
+- A witness grep on /tmp/gm-witness.env printed its TOGETHERAI value unmasked: is_dotenv/shownText only recognised basenames equal to `.env` or starting with `.env.`. Files named `prod.env` or `prod.env.local` are common and can hold the same keys.
+- Both trees now also match a basename ending in `.env` or containing `.env.`. native/components/search/tests/search_test.cpp adds a prod.env fixture and asserts the value is masked. The .env and .env.local cases, snippets, ranking and the 5d9e835 mutex are unchanged.
+
+
+## Slash-command task truncation is a host cut, with a codemode correction (2026-11-05)
+
+- Witness: run 2026-11-05-18-30-14-26528a in /workspace/gmp logged `task` seq 6 with text `we` for the slash args "we want to replace js with embedded python with the richest possible coding toolset for codemode, while keeping the distribution as light as possible and not adding files". This run 2026-11-05-15-30-50-484992 has the same shape: the slash args were "rebooted, keep going" and the task is `rebooted,`.
+- DESIGN.md "spawn-20 friction, 2026-11-04" already established that the server keeps the whole argument (native/components/mcp/tests/mcp_test.cpp asserts prompts/get keeps the whole task; the Node gate checks the same). The layer that drops the words is the host that turns slash-command text into the MCP prompt argument: it assigns the first whitespace-delimited word to the single declared `task` argument. gm cannot recover text it never received, so the server argument handling was NOT changed.
+- Fix: `next_context` gains a `task` argument in both trees. When it is set and differs from the run task, the run replaces its task, appends a `task` event with `from: next_context`, and reports the whole task from then on; successor runs inherit it. The next_context description and inputSchema name it in src/mcp.mjs and native/components/mcp/server.cpp.
+- The served gm prompt now detects a one-word task and appends an instruction to call `next_context({ task: ... })` in the first step, in both trees. skills/gm/SKILL.md has a "Task text" section with the same rule, so a host that shows the prompt text or the skill tells the model what to do. A multi-word task is unchanged.
+- This closes AGENTS.md open friction 9 for the task-truncation part. The other two items in that friction (search and grep without a root on a non-git workspace, and a skill read through the verb not logging skill-loaded) are separate.
+
+
+## ship.sh names the missing dependency (2026-11-05)
+
+- Friction: in a checkout without node_modules, tools/ship.sh ran the gate through a dynamic import of src/gate.mjs, and the static import of src/closure.mjs failed with a raw ERR_MODULE_NOT_FOUND stack trace naming acorn before any gate check ran. ship.sh then printed NOT COMMITTED with no hint. AGENTS.md documented the npm install prerequisite but the script did not.
+- Fix: ship.sh now runs a require.resolve(acorn) probe after staging and before the gate. When acorn is missing it unstages the named paths, prints a one-line npm install hint naming the checkout root, and exits 1. No gate check runs and no stack trace reaches the user. require.resolve also honours NODE_PATH and npm workspaces.
+- Witness: with node_modules/acorn absent, ship.sh returns the hint and leaves the paths unstaged; with acorn present the gate runs normally.
+

@@ -154,7 +154,7 @@ const number = { type: 'number' };
 const objectSchema = (properties, required = []) => ({ type: 'object', properties, required });
 
 const BASE_TOOLS = [
-  { name: 'next_context', description: 'Begin a step. Returns rules, task, witness requirement, the events new since the last step in full, the older ones in compact form within two horizons, and prefixSha. pending lists the events that need you since your last step, each once, with an id. Delivery clears an event, so no later step or wait lists it again. Call it at the start of each step. query_log reaches every event. waitMs, when set, holds this call until an event is pending or that many milliseconds pass, at most 300000. child: true makes the call a read by a subagent on this connection: it takes no step, claims no pending event, and its reply has role child and the owning run. run, with child, names that owning run, and another run is refused. compactChildren: true summarizes child run_code and code-call generations into counts with a seq range and a gm.query_log note, while pending, parent-action, job, row and recovery events stay full; the default feed is unchanged.', inputSchema: objectSchema({ waitMs: number, child: { type: 'boolean' }, run: text, compactChildren: { type: 'boolean' } }) },
+  { name: 'next_context', description: 'Begin a step. Returns rules, task, witness requirement, the events new since the last step in full, the older ones in compact form within two horizons, and prefixSha. pending lists the events that need you since your last step, each once, with an id. Delivery clears an event, so no later step or wait lists it again. Call it at the start of each step. query_log reaches every event. waitMs, when set, holds this call until an event is pending or that many milliseconds pass, at most 300000. child: true makes the call a read by a subagent on this connection: it takes no step, claims no pending event, and its reply has role child and the owning run. run, with child, names that owning run, and another run is refused. compactChildren: true summarizes child run_code and code-call generations into counts with a seq range and a gm.query_log note, while pending, parent-action, job, row and recovery events stay full; the default feed is unchanged. task, when set, replaces the run\'s task text; use it in the first step when a host cut the slash-command task to its first word.', inputSchema: objectSchema({ waitMs: number, child: { type: 'boolean' }, run: text, compactChildren: { type: 'boolean' }, task: text }) },
   { name: 'read_file', description: 'Read a text file, inside or outside the workspace, one page of at most 20000 characters. Lines are the default unit: offset is a 0-based line index, limit a line count (default: as many whole lines as fit), and total (the file in lines) and next (the line index of the next page, null at the end) count lines. truncated is true when the page stops before the end, totalBytes is the file size in bytes, and hint names the read that gets the rest. A line longer than the page is cut to its first 20000 characters, with cutLine true, and next is the line after it. unit "chars" counts offset, limit (1 to 20000, default 20000), total and next in characters instead. A path that starts with skill:// reads a served skill file, the text resources/read returns, and a skill:// uri that no served skill has is an error that names it.', inputSchema: objectSchema({ path: text, offset: number, limit: number, unit: text }, ['path']) },
   { name: 'write_file', description: 'Write a text file, inside or outside the workspace, creating parent directories.', inputSchema: objectSchema({ path: text, content: text }, ['path', 'content']) },
   { name: 'edit_file', description: 'Replace old with new in a text file, inside or outside the workspace. old must occur once, unless replaceAll is true.', inputSchema: objectSchema({ path: text, old: text, new: text, replaceAll: { type: 'boolean' } }, ['path', 'old', 'new']) },
@@ -450,7 +450,8 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
       taskInherited = false;
       log.append('task', { from: 'session prompt', text: task });
     }
-    const text = given === '' ? SKILL.body : `${SKILL.body}\n\nTask: ${given}`;
+    let text = given === '' ? SKILL.body : `${SKILL.body}\n\nTask: ${given}`;
+    if (given !== '' && !/\s/.test(given)) text += '\n\nThe task above is one word. Some hosts cut a slash-command task to its first word. If your slash command had more words, call next_context({ task: \'<the whole slash-command text>\' }) in your first step so the run records the whole task.';
     return promptResult(SKILL, text);
   }
 
@@ -655,6 +656,12 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     const step = steps;
     const waitMs = waitOf(args.waitMs);
     const compactChildren = args.compactChildren === true;
+    const given = typeof args.task === 'string' ? args.task.trim() : '';
+    if (given !== '' && given !== task) {
+      task = given;
+      taskInherited = false;
+      log.append('task', { from: 'next_context', text: task });
+    }
     return act('next_context', {}, access, async () => {
       await untilPending(runDir, waitMs);
       return context(step, rpcId, compactChildren);

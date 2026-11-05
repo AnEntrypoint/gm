@@ -538,7 +538,7 @@ function budgetExpired(budget) {
 
 function isDotenv(shown) {
   const name = shown.split(/[\\/]/).pop().toLowerCase();
-  return name === '.env' || name.startsWith('.env.');
+  return name === '.env' || name.startsWith('.env.') || name.endsWith('.env') || name.includes('.env.');
 }
 
 function shownText(shown, text) {
