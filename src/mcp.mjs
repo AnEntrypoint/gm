@@ -154,7 +154,7 @@ const number = { type: 'number' };
 const objectSchema = (properties, required = []) => ({ type: 'object', properties, required });
 
 const BASE_TOOLS = [
-  { name: 'next_context', description: 'Begin a step. Returns rules, task, witness requirement, the events new since the last step in full, the older ones in compact form within two horizons, and prefixSha. pending lists the events that need you since your last step, each once, with an id. Delivery clears an event, so no later step or wait lists it again. Call it at the start of each step. query_log reaches every event. waitMs, when set, holds this call until an event is pending or that many milliseconds pass, at most 300000. child: true makes the call a read by a subagent on this connection: it takes no step, claims no pending event, and its reply has role child and the owning run. run, with child, names that owning run, and another run is refused.', inputSchema: objectSchema({ waitMs: number, child: { type: 'boolean' }, run: text }) },
+  { name: 'next_context', description: 'Begin a step. Returns rules, task, witness requirement, the events new since the last step in full, the older ones in compact form within two horizons, and prefixSha. pending lists the events that need you since your last step, each once, with an id. Delivery clears an event, so no later step or wait lists it again. Call it at the start of each step. query_log reaches every event. waitMs, when set, holds this call until an event is pending or that many milliseconds pass, at most 300000. child: true makes the call a read by a subagent on this connection: it takes no step, claims no pending event, and its reply has role child and the owning run. run, with child, names that owning run, and another run is refused. compactChildren: true summarizes child run_code and code-call generations into counts with a seq range and a gm.query_log note, while pending, parent-action, job, row and recovery events stay full; the default feed is unchanged.', inputSchema: objectSchema({ waitMs: number, child: { type: 'boolean' }, run: text, compactChildren: { type: 'boolean' } }) },
   { name: 'read_file', description: 'Read a text file, inside or outside the workspace, one page of at most 20000 characters. Lines are the default unit: offset is a 0-based line index, limit a line count (default: as many whole lines as fit), and total (the file in lines) and next (the line index of the next page, null at the end) count lines. truncated is true when the page stops before the end, totalBytes is the file size in bytes, and hint names the read that gets the rest. A line longer than the page is cut to its first 20000 characters, with cutLine true, and next is the line after it. unit "chars" counts offset, limit (1 to 20000, default 20000), total and next in characters instead. A path that starts with skill:// reads a served skill file, the text resources/read returns, and a skill:// uri that no served skill has is an error that names it.', inputSchema: objectSchema({ path: text, offset: number, limit: number, unit: text }, ['path']) },
   { name: 'write_file', description: 'Write a text file, inside or outside the workspace, creating parent directories.', inputSchema: objectSchema({ path: text, content: text }, ['path', 'content']) },
   { name: 'edit_file', description: 'Replace old with new in a text file, inside or outside the workspace. old must occur once, unless replaceAll is true.', inputSchema: objectSchema({ path: text, old: text, new: text, replaceAll: { type: 'boolean' } }, ['path', 'old', 'new']) },
@@ -654,9 +654,10 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     stepCalls = 0;
     const step = steps;
     const waitMs = waitOf(args.waitMs);
+    const compactChildren = args.compactChildren === true;
     return act('next_context', {}, access, async () => {
       await untilPending(runDir, waitMs);
-      return context(step, rpcId);
+      return context(step, rpcId, compactChildren);
     }, ({ ok, error, prefixSha, total }) => ({ ok, error, prefixSha, total }), rpcId);
   }
 
@@ -668,7 +669,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     return prefixMemo.sha;
   }
 
-  async function context(step, rpcId) {
+  async function context(step, rpcId, compactChildren = false) {
     const rules = await readFile(join(runDir, 'rules.md'), 'utf8');
     const recoveryNow = pendingRecovery === null ? undefined : recoveryNote(pendingRecovery);
     pendingRecovery = null;
@@ -687,7 +688,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     const ended = since.filter((event) => event.kind === 'job' && event.state !== 'running' && !(event.state === 'killed' && killedNames.has(event.job)));
     const jobsEnded = await Promise.all(ended.map((event) => endedJob(runDir, event)));
     const shown = shownTotalOf(log);
-    const feed = feedOf(log, current.REGISTRY, { shown });
+    const feed = feedOf(log, current.REGISTRY, { shown, compactChildren });
     const openRows = await tools.openRows();
     const parkedRows = await tools.parkedRows();
     const reply = {

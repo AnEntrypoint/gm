@@ -67,7 +67,7 @@ Value output_digest(const std::string& text, bool failed);
 Value args_of(const Value* args);
 
 using EventAt = std::function<const Value*(std::uint64_t seq)>;
-Value feed_of(const EventAt& at, std::uint64_t count, std::uint64_t shown);
+Value feed_of(const EventAt& at, std::uint64_t count, std::uint64_t shown, bool compact_children = false);
 
 bool is_pending_kind(std::string_view kind);
 void append_pending(const std::filesystem::path& run_dir, const Value& event);

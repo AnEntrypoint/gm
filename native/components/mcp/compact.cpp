@@ -27,6 +27,7 @@ constexpr std::size_t kEventArgsCap = 8;
 constexpr std::size_t kDigestLines = 2;
 constexpr std::size_t kDigestClip = 120;
 constexpr const char* kFeedReach = "query_log reads any event (after: seq - 1 returns it first)";
+constexpr const char* kChildReach = "gm.query_log({ after: seqs[0] - 1 }) reaches every event in this range";
 
 const std::set<std::string> kSkip = {"t", "mono", "inFlight", "startMono", "durMs", "actionSeq", "step"};
 const std::set<std::string> kKeepWhole = {"witness", "error", "reason", "gate", "gaps", "paths"};
@@ -341,19 +342,104 @@ Value fresh_record_of(const Value& event, const EventAt& at) {
     return record ? *record : short_kind(event);
 }
 
+struct ChildMark {
+    std::uint64_t index;
+    std::uint64_t seq;
+    std::string kind;
+    std::string tool;
+};
+
+std::optional<ChildMark> child_mark_of(const Value& event, std::uint64_t index) {
+    std::string kind = string_field(event, "kind");
+    std::string tool = string_field(event, "tool");
+    const Value* body = event.find("body");
+    bool child = kind == "code-call" || kind == "code-load" || kind == "generation" ||
+                 (kind == "action" && (tool == "run_code" || (body && body->is_number()))) ||
+                 (kind == "result" && tool == "run_code");
+    if (!child) return std::nullopt;
+    std::uint64_t seq = seq_of(event);
+    return ChildMark{index, seq == 0 ? index + 1 : seq, std::move(kind), std::move(tool)};
+}
+
+Value child_summary(const std::vector<ChildMark>& marks) {
+    Value counts = object();
+    for (const ChildMark& mark : marks) {
+        std::string key = mark.tool.empty() ? mark.kind : mark.kind + ":" + mark.tool;
+        const Value* current = counts.find(key);
+        counts.set(std::move(key), number(current && current->is_number() ? current->as_number() + 1 : 1));
+    }
+    Value seqs = array();
+    seqs.push(number_of(marks.front().seq));
+    seqs.push(number_of(marks.back().seq));
+    return object()
+        .set("kind", "child-range")
+        .set("seqs", std::move(seqs))
+        .set("count", number_of(marks.size()))
+        .set("counts", std::move(counts))
+        .set("query", object()
+                          .set("after", number_of(marks.front().seq > 0 ? marks.front().seq - 1 : 0))
+                          .set("note", Value(kChildReach)));
+}
+
 struct Fresh {
     std::uint64_t index;
     Value shown;
     std::size_t cost;
     Value record;
     std::size_t record_cost;
+    std::optional<ChildMark> child;
 };
 
 struct Seen {
     std::uint64_t index;
     Value item;
     std::size_t cost;
+    std::optional<ChildMark> child;
 };
+
+std::vector<Seen> collapse_seen(const std::vector<Seen>& seen) {
+    std::vector<Seen> out;
+    std::vector<ChildMark> group;
+    auto flush = [&]() {
+        if (group.empty()) return;
+        Value item = bounded_item(child_summary(group));
+        std::size_t cost = cost_of(item);
+        out.push_back({group.front().index, std::move(item), cost, std::nullopt});
+        group.clear();
+    };
+    for (const Seen& entry : seen) {
+        if (entry.child) {
+            group.push_back(*entry.child);
+            continue;
+        }
+        flush();
+        if (!entry.item.is_null()) out.push_back(entry);
+    }
+    flush();
+    return out;
+}
+
+std::vector<Fresh> collapse_fresh(const std::vector<Fresh>& fresh) {
+    std::vector<Fresh> out;
+    std::vector<ChildMark> group;
+    auto flush = [&]() {
+        if (group.empty()) return;
+        Value item = bounded_item(child_summary(group));
+        std::size_t cost = cost_of(item);
+        out.push_back({group.back().index, item, cost, item, cost, std::nullopt});
+        group.clear();
+    };
+    for (const Fresh& entry : fresh) {
+        if (entry.child) {
+            group.push_back(*entry.child);
+            continue;
+        }
+        flush();
+        out.push_back(entry);
+    }
+    flush();
+    return out;
+}
 
 struct Plan {
     std::size_t full = 0;
@@ -465,7 +551,7 @@ Value args_of(const Value* args) {
     return out;
 }
 
-Value feed_of(const EventAt& at, std::uint64_t count, std::uint64_t shown) {
+Value feed_of(const EventAt& at, std::uint64_t count, std::uint64_t shown, bool compact_children) {
     std::uint64_t new_start = std::min(shown, count);
     std::uint64_t zone1_start = new_start > kHorizon1 ? new_start - kHorizon1 : 0;
     std::uint64_t zone2_start = zone1_start > kHorizon2 ? zone1_start - kHorizon2 : 0;
@@ -479,11 +565,15 @@ Value feed_of(const EventAt& at, std::uint64_t count, std::uint64_t shown) {
     for (std::uint64_t i = zone2_start; i < new_start; ++i) {
         const Value* event = at(i + 1);
         if (event == nullptr) continue;
+        std::optional<ChildMark> child;
+        if (compact_children) child = child_mark_of(*event, i);
         auto record = record_of(*event, i >= zone1_start ? 1 : 2, at, answered);
         if (record) {
             Value bounded = bounded_item(*record);
             std::size_t cost = cost_of(bounded);
-            seen.push_back({i, std::move(bounded), cost});
+            seen.push_back({i, std::move(bounded), cost, std::move(child)});
+        } else if (child) {
+            seen.push_back({i, Value(), 0, std::move(child)});
         }
     }
     std::vector<Fresh> fresh;
@@ -494,7 +584,13 @@ Value feed_of(const EventAt& at, std::uint64_t count, std::uint64_t shown) {
         std::size_t bounded_cost = cost_of(bounded);
         Value record = bounded_item(fresh_record_of(*event, at));
         std::size_t record_cost = cost_of(record);
-        fresh.push_back({i, std::move(bounded), bounded_cost, std::move(record), record_cost});
+        std::optional<ChildMark> child;
+        if (compact_children) child = child_mark_of(*event, i);
+        fresh.push_back({i, std::move(bounded), bounded_cost, std::move(record), record_cost, std::move(child)});
+    }
+    if (compact_children) {
+        seen = collapse_seen(seen);
+        fresh = collapse_fresh(fresh);
     }
     std::size_t room = kEventsCap - kArrayOverhead;
     Plan plan = plan_fresh(fresh, count, room);

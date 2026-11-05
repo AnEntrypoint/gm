@@ -16,6 +16,7 @@
 #include "gm/log.hpp"
 #include "gm/mcp.hpp"
 #include "gm/verbs.hpp"
+#include "../internal.hpp"
 
 #ifdef GMNEW_HAVE_RUNCODE
 #include "gm/runcode.hpp"
@@ -825,6 +826,67 @@ int main() {
             check(second.find("recovery") == nullptr, "a later restart does not list the closed call again");
             c.server->input_ended();
         }
+    }
+
+    std::cout << "--- item 7: compactChildren feed ---\n";
+    {
+        using gm::mcp::detail::feed_of;
+        using gm::mcp::detail::number_of;
+        using gm::mcp::detail::object;
+        std::vector<Value> log;
+        std::uint64_t seq = 1;
+        auto base = [](std::uint64_t at, const char* kind) {
+            return object().set("seq", number_of(at)).set("t", "2026-11-05T00:00:00Z").set("kind", kind);
+        };
+        auto add = [&](Value event) { log.push_back(std::move(event)); };
+        add(base(seq++, "start"));
+        add(base(seq++, "action").set("tool", "next_context"));
+        add(base(seq++, "result").set("tool", "next_context").set("ok", true).set("total", number_of(3)));
+        for (int i = 0; i < 60; ++i) {
+            add(base(seq++, "action").set("tool", "run_code").set("args", object().set("body", "x")));
+            add(base(seq++, "generation").set("generation", number_of(1)));
+            add(base(seq++, "code-call").set("tool", "read_file").set("ok", true).set("output", "x").set("args", object().set("path", "a")));
+            add(base(seq++, "code-call").set("tool", "grep").set("ok", true).set("output", "y").set("args", object().set("pattern", "a")));
+            add(base(seq++, "result").set("tool", "run_code").set("ok", true).set("output", "z"));
+            if (i % 10 == 9) {
+                add(base(seq++, "action").set("tool", "child_context").set("args", object()));
+                add(base(seq++, "result").set("tool", "child_context").set("ok", true).set("role", "child"));
+            }
+        }
+        add(base(seq++, "row-added").set("row", "prd-x").set("title", "ship it"));
+        auto at = [&](std::uint64_t number) -> const Value* {
+            return number >= 1 && number <= log.size() ? &log[static_cast<std::size_t>(number - 1)] : nullptr;
+        };
+        Value plain = feed_of(at, log.size(), 0, false);
+        Value compact = feed_of(at, log.size(), 0, true);
+        Value default_feed = feed_of(at, log.size(), 0);
+        std::size_t plain_chars = gm::json::dump(*plain.find("events")).size();
+        std::size_t compact_chars = gm::json::dump(*compact.find("events")).size();
+        double plain_records = plain.find("records")->as_number();
+        double compact_records = compact.find("records")->as_number();
+        int summaries = 0;
+        bool has_range = false;
+        bool has_counts = false;
+        bool has_note = false;
+        bool pending_full = false;
+        for (const Value& event : compact.find("events")->as_array()) {
+            if (str(event, "kind") == "child-range") {
+                summaries += 1;
+                const Value* seqs = event.find("seqs");
+                has_range = has_range || (seqs && seqs->is_array() && seqs->as_array().size() == 2);
+                const Value* counts = event.find("counts");
+                has_counts = has_counts || (counts && counts->is_object() && !counts->as_object().empty());
+                const Value* query = event.find("query");
+                has_note = has_note || (query && str(*query, "note").find("gm.query_log") != std::string::npos);
+            }
+            if (str(event, "kind") == "row-added" && str(event, "row") == "prd-x" && event.find("t") != nullptr) pending_full = true;
+        }
+        std::cout << "compact children: plain records=" << plain_records << " chars=" << plain_chars
+                  << " compact records=" << compact_records << " chars=" << compact_chars
+                  << " summaries=" << summaries << " pendingFull=" << pending_full << '\n';
+        check(compact_chars < plain_chars && compact_records < plain_records && summaries > 0 && has_range && has_counts &&
+                  has_note && pending_full && gm::json::dump(plain) == gm::json::dump(default_feed),
+              "compactChildren shrinks a child-heavy feed, keeps the pending event full and leaves the default feed unchanged");
     }
 
     std::error_code ec;

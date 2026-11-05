@@ -17,6 +17,7 @@ const EVENT_ARGS_CAP = 8;
 const DIGEST_LINES = 2;
 const DIGEST_LINE_CAP = 120;
 const FEED_REACH = 'query_log reads any event (after: seq - 1 returns it first)';
+const CHILD_REACH = 'gm.query_log({ after: seqs[0] - 1 }) reaches every event in this range';
 const TEXT_KEYS = ['body', 'error', 'witness', 'reason', 'gate', 'gaps', 'paths', 'task', 'source', 'sourceNew'];
 
 export function clip(text, cap = LINE_CAP) {
@@ -202,7 +203,75 @@ export function boundedItem(item, cap = NEXT_CONTEXT_EVENT_CAP) {
   return out;
 }
 
-export function feedOf(events, registry, { shown = 0, cap = NEXT_CONTEXT_EVENTS_CAP, eventCap = NEXT_CONTEXT_EVENT_CAP, h1 = H1, h2 = H2 } = {}) {
+function childMarkOf(event, index) {
+  const kind = event.kind;
+  const tool = event.tool;
+  const child = kind === 'code-call' || kind === 'code-load' || kind === 'generation'
+    || (kind === 'action' && (tool === 'run_code' || typeof event.body === 'number'))
+    || (kind === 'result' && tool === 'run_code');
+  return child ? { index, seq: event.seq ?? index + 1, kind, tool } : null;
+}
+
+function childSummaryOf(marks, itemCap) {
+  const counts = {};
+  for (const mark of marks) {
+    const key = mark.tool ? `${mark.kind}:${mark.tool}` : mark.kind;
+    counts[key] = (counts[key] ?? 0) + 1;
+  }
+  const first = marks[0].seq;
+  const last = marks[marks.length - 1].seq;
+  return boundedItem({
+    kind: 'child-range',
+    seqs: [first, last],
+    count: marks.length,
+    counts,
+    query: { after: first - 1, note: CHILD_REACH },
+  }, itemCap);
+}
+
+function collapseSeen(seen, itemCap) {
+  const out = [];
+  let group = [];
+  const flush = () => {
+    if (group.length === 0) return;
+    const item = childSummaryOf(group, itemCap);
+    out.push({ index: group[0].index, item, cost: costOf(item) });
+    group = [];
+  };
+  for (const entry of seen) {
+    if (entry.child !== null) {
+      group.push(entry.child);
+      continue;
+    }
+    flush();
+    if (entry.item !== null) out.push(entry);
+  }
+  flush();
+  return out;
+}
+
+function collapseFresh(fresh, itemCap) {
+  const out = [];
+  let group = [];
+  const flush = () => {
+    if (group.length === 0) return;
+    const item = childSummaryOf(group, itemCap);
+    out.push({ index: group[group.length - 1].index, shown: item, cost: costOf(item), record: item, recordCost: costOf(item) });
+    group = [];
+  };
+  for (const entry of fresh) {
+    if (entry.child !== null) {
+      group.push(entry.child);
+      continue;
+    }
+    flush();
+    out.push(entry);
+  }
+  flush();
+  return out;
+}
+
+export function feedOf(events, registry, { shown = 0, cap = NEXT_CONTEXT_EVENTS_CAP, eventCap = NEXT_CONTEXT_EVENT_CAP, h1 = H1, h2 = H2, compactChildren = false } = {}) {
   const source = asSource(events);
   const n = source.count();
   const itemCap = Math.min(cap, eventCap);
@@ -216,28 +285,32 @@ export function feedOf(events, registry, { shown = 0, cap = NEXT_CONTEXT_EVENTS_
   }
   const seen = [];
   for (let i = zone2Start; i < newStart; i += 1) {
-    const record = recordOf(source.at(i + 1), i >= zone1Start ? 1 : 2, source, answered, registry);
+    const event = source.at(i + 1);
+    const child = compactChildren ? childMarkOf(event, i) : null;
+    const record = recordOf(event, i >= zone1Start ? 1 : 2, source, answered, registry);
     if (record !== null) {
       const bounded = boundedItem(record, itemCap);
-      seen.push({ index: i, item: bounded, cost: costOf(bounded) });
-    }
+      seen.push({ index: i, item: bounded, cost: costOf(bounded), child });
+    } else if (child !== null) seen.push({ index: i, item: null, cost: 0, child });
   }
   const fresh = [];
   for (let i = newStart; i < n; i += 1) {
     const event = source.at(i + 1);
     const shown = boundedItem(event, itemCap);
     const record = boundedItem(freshRecordOf(event, source, registry), itemCap);
-    fresh.push({ index: i, shown, cost: costOf(shown), record, recordCost: costOf(record) });
+    fresh.push({ index: i, shown, cost: costOf(shown), record, recordCost: costOf(record), child: compactChildren ? childMarkOf(event, i) : null });
   }
+  const seenPlan = compactChildren ? collapseSeen(seen, itemCap) : seen;
+  const freshPlan = compactChildren ? collapseFresh(fresh, itemCap) : fresh;
   const room = cap - ARRAY_OVERHEAD;
-  const plan = planFresh(fresh, n, room);
-  const kept = keptSeen(seen, room - plan.used);
+  const plan = planFresh(freshPlan, n, room);
+  const kept = keptSeen(seenPlan, room - plan.used);
   const items = [...kept.map((entry) => entry.item), ...plan.items];
   return {
     older: kept.length > 0 ? kept[0].index : newStart,
     records: items.length,
     fullEvents: plan.full,
-    compactFrom: plan.full < fresh.length ? fresh[plan.full].index + 1 : null,
+    compactFrom: plan.full < freshPlan.length ? freshPlan[plan.full].index + 1 : null,
     events: items,
   };
 }

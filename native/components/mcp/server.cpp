@@ -93,7 +93,9 @@ const std::string kNextContextDescription =
     "or that many milliseconds pass, at most 100000. A hold that passes with nothing pending takes no step and "
     "returns progress. child: true makes the call a read by a subagent on this "
     "connection: it takes no step, claims no pending event, and its reply has role child and the owning run. run, "
-    "with child, names that owning run, and another run is refused.";
+    "with child, names that owning run, and another run is refused. compactChildren: true summarizes child run_code "
+    "and code-call generations into counts with a seq range and a gm.query_log note, while pending, parent-action, "
+    "job, row and recovery events stay full; the default feed is unchanged.";
 const std::string kFinishDescription =
     "End the run. witness is one string that quotes the evidence you observed. gaps optionally lists, one string "
     "each, what the run did not check; the end event logs them. finish is refused while a background run is running, "
@@ -223,7 +225,12 @@ Value code_tools(const VerbTable& verbs) {
         object()
             .set("name", "next_context")
             .set("description", kNextContextDescription)
-            .set("inputSchema", object_schema(object().set("waitMs", num_schema()).set("child", bool_schema()).set("run", str_schema()), {}));
+            .set("inputSchema", object_schema(object()
+                                                  .set("waitMs", num_schema())
+                                                  .set("child", bool_schema())
+                                                  .set("run", str_schema())
+                                                  .set("compactChildren", bool_schema()),
+                                              {}));
     Value finish = object()
                        .set("name", "finish")
                        .set("description", kFinishDescription)
@@ -1612,7 +1619,7 @@ struct Server::State {
         return object().set("open", std::move(open)).set("parked", std::move(parked)).set("jobs", std::move(jobs));
     }
 
-    Value context(int step) {
+    Value context(int step, bool compact_children = false) {
         std::string rules = read_rules();
         std::optional<Value> recovery_now;
         if (s().recovery) recovery_now = recovery_note(*s().recovery);
@@ -1654,7 +1661,7 @@ struct Server::State {
             .set("prefixSha", prefix_sha(rules, s().task, served_tools()))
             .set("total", number_of(total))
             .set("pendingCommands", object().set("wait", "\"" + options.wait_program + "\" events --dir \"" + s().run_dir.string() + "\" --wait"));
-        reply = merge(std::move(reply), feed_of(at, total, shown));
+        reply = merge(std::move(reply), feed_of(at, total, shown, compact_children));
         reply.set("query", query_hint(shown, total));
         if (recovery_now) reply.set("recovery", *recovery_now);
         auto notice = rules_notice();
@@ -1689,9 +1696,11 @@ struct Server::State {
         }
         const Value* wait_arg = args.find("waitMs");
         double wait_ms = wait_arg && wait_arg->is_number() && wait_arg->as_number() > 0 ? std::min(wait_arg->as_number(), kMaxWaitMs) : 0;
+        const Value* compact_arg = args.find("compactChildren");
+        bool compact_children = compact_arg && compact_arg->is_bool() && compact_arg->as_bool();
         return act(
             "next_context", object(),
-            [&](std::uint64_t) {
+            [&, compact_children](std::uint64_t) {
                 wait_for_pending(wait_ms);
                 if (wait_ms > 0 && s().run_started && !has_pending(s().run_dir)) {
                     return object()
@@ -1702,7 +1711,7 @@ struct Server::State {
                 s().steps += 1;
                 s().run_started = true;
                 s().step_calls = 0;
-                return context(s().steps);
+                return context(s().steps, compact_children);
             },
             [](const Value& r) {
                 Value d = object();
