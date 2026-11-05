@@ -8,6 +8,16 @@
 
 namespace gm::host {
 
+namespace {
+
+std::filesystem::path worker_executable(const std::filesystem::path& install_dir) {
+    std::error_code ec;
+    const std::filesystem::path core = install_dir / core_executable_name();
+    return std::filesystem::exists(core, ec) ? core : current_executable();
+}
+
+}
+
 int run_serve(const HostArgs& args) {
     const auto workspace = workspace_of(args);
     auto run_dir = choose_run_dir(args, workspace);
@@ -18,7 +28,7 @@ int run_serve(const HostArgs& args) {
     const std::filesystem::path install_dir = current_executable().parent_path();
     remove_retired_executable(install_dir);
     RelayOptions options;
-    options.worker_argv = {current_executable().string(), "worker"};
+    options.worker_argv = {worker_executable(install_dir).string(), "worker"};
     for (std::string& arg : without_flags(args.rest, {"--runs", "--resume", "--run-dir", "--workspace", "--supervised"}))
         options.worker_argv.push_back(std::move(arg));
     options.worker_argv.insert(options.worker_argv.end(), {"--workspace", workspace.string(), "--run-dir",

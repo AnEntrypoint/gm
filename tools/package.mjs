@@ -14,9 +14,11 @@ const { values } = parseArgs({
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const windows = values.target.endsWith('-windows');
-const exeName = windows ? 'gmnew.exe' : 'gmnew';
-const exe = join(resolve(values['build-dir']), 'native', 'components', 'host', exeName);
-if (!existsSync(exe)) throw new Error(`missing executable: ${exe}`);
+const hostDir = join(resolve(values['build-dir']), 'native', 'components', 'host');
+const executables = windows ? ['gm.exe', 'gm-core.exe'] : ['gm', 'gm-core'];
+for (const exeName of executables) {
+  if (!existsSync(join(hostDir, exeName))) throw new Error(`missing executable: ${join(hostDir, exeName)}`);
+}
 
 function stripCopy(file, flags) {
   const result = spawnSync('strip', [...flags, file], { stdio: 'inherit' });
@@ -30,8 +32,10 @@ const name = `gmnew-${values.target}`;
 const stage = join(out, name);
 rmSync(stage, { recursive: true, force: true });
 mkdirSync(stage, { recursive: true });
-cpSync(exe, join(stage, exeName));
-if (!windows) stripCopy(join(stage, exeName), values.target.endsWith('-macos') ? ['-x'] : []);
+for (const exeName of executables) {
+  cpSync(join(hostDir, exeName), join(stage, exeName));
+  if (!windows) stripCopy(join(stage, exeName), values.target.endsWith('-macos') ? ['-x'] : []);
+}
 
 const runtime = {
   leaves: join(root, 'native', 'leaves'),

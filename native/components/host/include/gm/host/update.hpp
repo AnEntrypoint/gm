@@ -74,6 +74,7 @@ struct UpdateResult {
 
 std::string target_name();
 std::string executable_name();
+std::string core_executable_name();
 deoxidene::Result<Manifest, std::string> parse_manifest(std::string_view text);
 bool is_newer(const Manifest& manifest, std::string_view current_version);
 UpdatePolicy policy_from_environment(const std::filesystem::path& install_dir);

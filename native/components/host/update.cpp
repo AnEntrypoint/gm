@@ -174,7 +174,7 @@ void undo_renames(std::vector<Rename>& done) {
 
 fs::path retired_path([[maybe_unused]] const fs::path& install_dir, const fs::path& previous_dir, const std::string& name) {
 #if defined(_WIN32)
-    if (name == executable_name()) return install_dir / (name + std::string(kRetiredSuffix));
+    if (name == executable_name() || name == core_executable_name()) return install_dir / (name + std::string(kRetiredSuffix));
 #endif
     return previous_dir / name;
 }
@@ -212,6 +212,14 @@ std::string executable_name() {
     return "gm.exe";
 #else
     return "gm";
+#endif
+}
+
+std::string core_executable_name() {
+#if defined(_WIN32)
+    return "gm-core.exe";
+#else
+    return "gm-core";
 #endif
 }
 
@@ -364,7 +372,7 @@ UpdatePolicy policy_from_environment(const fs::path& install_dir) {
 
 std::optional<std::string> install_staged(const fs::path& staged_root, const fs::path& install_dir,
                                           const std::function<bool(std::string_view)>& allow) {
-    std::vector<std::string> names = {executable_name()};
+    std::vector<std::string> names = {executable_name(), core_executable_name()};
     for (std::string_view name : kSharedDirectories) names.emplace_back(name);
     for (const std::string& name : names) {
         std::error_code ec;
@@ -405,6 +413,7 @@ void remove_retired_executable([[maybe_unused]] const fs::path& install_dir) {
 #if defined(_WIN32)
     std::error_code ignored;
     fs::remove(install_dir / (executable_name() + std::string(kRetiredSuffix)), ignored);
+    fs::remove(install_dir / (core_executable_name() + std::string(kRetiredSuffix)), ignored);
 #endif
 }
 

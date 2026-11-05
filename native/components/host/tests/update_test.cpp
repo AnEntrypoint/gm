@@ -34,6 +34,7 @@ std::string read_text(const fs::path& path) {
 
 void make_build(const fs::path& root, const std::string& mark) {
     write_text(root / executable_name(), mark);
+    write_text(root / core_executable_name(), mark);
     write_text(root / "leaves" / "core.mjs", mark);
     write_text(root / "skills" / "gm" / "SKILL.md", mark);
     write_text(root / "defaults" / "mcp.json", mark);

@@ -37,7 +37,8 @@ fi
 
 TARGET="$ARCH-$OS"
 PACKAGE="gmnew-$TARGET"
-EXE_NAME=gmnew
+EXE_NAME=gm
+CORE_NAME=gm-core
 
 WORK="$(mktemp -d)"
 STAGE=""
@@ -70,8 +71,10 @@ ACTUAL_SIZE="$(wc -c < "$ARCHIVE" | tr -d ' ')"
 mkdir -p "$INSTALL_ROOT"
 STAGE="$(mktemp -d "$INSTALL_ROOT/stage.XXXXXX")"
 tar -xzf "$ARCHIVE" -C "$STAGE"
-[ -f "$STAGE/$PACKAGE/$EXE_NAME" ] || die "archive $FILE does not contain $PACKAGE/$EXE_NAME"
-chmod +x "$STAGE/$PACKAGE/$EXE_NAME"
+for name in "$EXE_NAME" "$CORE_NAME"; do
+    [ -f "$STAGE/$PACKAGE/$name" ] || die "archive $FILE does not contain $PACKAGE/$name"
+    chmod +x "$STAGE/$PACKAGE/$name"
+done
 
 OLD_DIR="$INSTALL_ROOT/previous.$$"
 if [ -e "$CURRENT_DIR" ]; then
