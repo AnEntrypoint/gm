@@ -1599,7 +1599,8 @@ struct Server::State {
         Value parked = array();
         for (const ParkedRow& row : parked_rows()) parked.push(row.id);
         Value jobs = array();
-        for (const Value& job : active_jobs().as_array()) {
+        const Value active = active_jobs();
+        for (const Value& job : active.as_array()) {
             if (const Value* name = job.find("job")) jobs.push(*name);
         }
         return object().set("open", std::move(open)).set("parked", std::move(parked)).set("jobs", std::move(jobs));
