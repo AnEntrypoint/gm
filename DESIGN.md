@@ -780,3 +780,17 @@ Witness, ctest -R gm_mcp_test -V: "9: bounded event: seq=7 next_contextChars=925
 - Housekeeping in the same pass: 14 obsolete local build directories were removed (about 10 GB), leaving `build/release` as the canonical local build, rebuilt at the tip with ctest 23/23. Scratch build dirs were deleted by their owners.
 - Direction from this session owner: no Python change, that was a different experiment, keep the QuickJS setup as it was before it started. Verified: `git diff --stat 1592376..HEAD` has `engine_changed=0`, the vendored quickjs-ng tree still holds 21 files, `runcode.cpp` still evaluates bodies with JS_Eval, and zero libpython/Python.h/Py_Initialize/PyObject references exist anywhere in gm.
 
+
+## Follow-up tool-surface findings, recorded for the next pass (2026-11-06)
+
+Source: a peer 10-angle read-only survey in /workspace/oscraft (7 findings with live witnesses). These are recorded as a plan, not implemented in this run. Each is a concrete verb defect, not a style opinion.
+
+1. read_file serves binary files as text: stat_file on the installed gm binary reports 4,517,440 bytes, but read_file with limit 1 returns ok:true, an ELF header, totalBytes 7,830,990 (UTF-8 decoding inflates it) and a bogus "pass offset 1 and limit 9258 to read the rest" hint. Fix both trees: refuse a first page containing NUL or invalid UTF-8 with a binary marker, and take totalBytes from stat, not from the decoded string. Add a NUL fixture test.
+2. query_log with an unknown kind (code_call instead of code-call) returns an empty result and still advances the paging cursor. Fix: validate kind against the logged event kinds and refuse unknown values with the allowed list, or attach knownKinds to empty replies and leave next unset.
+3. A scan-budget-truncated grep still answers ok:true with a "no more" footer; only the hint prose names the truncation. Fix: add machine-readable scanTruncated, scannedFiles and scannedBytes to the reply and make the footer say the scan is incomplete. Keep ok:true.
+4. One mutex covers the whole search scan, so a fan-out of bodies serialise; the four-root Searcher cache evicts by path order rather than recency. Fix carefully: hold a lock only for the searchers map lookup/insert, give each Searcher its own scan mutex, and use a recency-tracked LRU. This must NOT reintroduce the use-after-free fixed in 5d9e835, so it needs its own regression pass. The parallel-load witness for 5d9e835 (16 bodies, okCount 16/16) is the baseline.
+5. list_dir has no filter or paging, so a growing .gm state directory dumps every entry in one string. Fix: optional prefix, limit, offset plus total and next, in both trees and both schemas.
+6. Peer-side, not gm source: three tracked .gm runtime receipts in /workspace/oscraft are rewritten on every dispatch. The peer owns that hygiene item.
+
+Disposition: items 1, 2, 3 and 5 are small and low risk; item 4 needs a dedicated concurrency pass. The grep-alternation defect, the gm.verbs synchronous throw, the child task/prefix overwrite and the macOS arm64 relay flake were fixed in this run by separate commits rather than deferred.
+
