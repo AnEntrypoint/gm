@@ -31,7 +31,7 @@ gm is one long-horizon worker: an MCP server that runs a task as one append-only
 - native/leaves/: JavaScript leaves (git, fetch, rows, review, wiki, code-ast) and vendor/acorn.mjs; tests in leaves/tests/.
 - native/third_party/: cxxmcp v1.3.0 (MIT, stdio only, VERSION.txt holds the commit and a sha256 per file) and quickjs-ng.
 - native/tests/parity/: run.mjs and fake-mcp.mjs (see Parity harness).
-- skills/gm/SKILL.md, skills/gm-continue/SKILL.md, skills/dev/SKILL.md. defaults/mcp.json: the default MCP servers (playwriter). setup.sh. scripts/gm.sh and scripts/gm.ps1. .github/workflows/ci.yml and release.yml. docs/index.html (the manual). research/ (evidence). tasks/rewrite/ (rewrite briefs). work/rows/ (PRD and unknown rows).
+- skills/gm/SKILL.md, skills/gm-continue/SKILL.md, skills/dev/SKILL.md. defaults/mcp.json: the default MCP servers (playwriter). setup.sh. scripts/gm.sh and scripts/gm.ps1. .github/workflows/release.yml (the only workflow; it builds the presets and publishes). docs/index.html (the manual). research/ (evidence). tasks/rewrite/ (rewrite briefs). work/rows/ (PRD and unknown rows).
 - runs/<id>/ (git-ignored): log.jsonl (append-only), log.index, rules.md, task.json, jobs/.
 
 ## Build and test
