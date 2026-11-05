@@ -18,6 +18,9 @@ async function leafVerbs() {
   return table;
 }
 
+const today = new Date().toISOString().slice(0, 10);
+const dated = (value) => JSON.parse(JSON.stringify(value).split(today).join('<DATE>'));
+
 async function runLeafScenario() {
   const root = buildFixture();
   const runDir = mkdtempSync(join(tmpdir(), 'leaf-cwr-run-'));
@@ -25,7 +28,7 @@ async function runLeafScenario() {
   globalThis.host = host;
   const table = await leafVerbs();
   try {
-    const out = await scenario({ root, call: (verb, args) => table[verb].call(args), appendRaw: (event) => host.appendRaw(event) });
+    const out = dated(await scenario({ root, call: (verb, args) => table[verb].call(args), appendRaw: (event) => host.appendRaw(event) }));
     const events = readFileSync(join(runDir, 'log.jsonl'), 'utf8').split('\n').filter(Boolean).map((line) => JSON.parse(line));
     out.events = events.map((event) => ({ kind: event.kind, keys: Object.keys(event).sort() }));
     return { out, host, events };
