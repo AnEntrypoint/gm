@@ -279,7 +279,13 @@ std::optional<std::string> handshake(const std::shared_ptr<Core>& core, const st
         mcp::RequestOptions options;
         options.protocol_version = std::string(PROTOCOL_VERSIONS[0]);
         const auto init = session->client->initialize(CLIENT_NAME, CLIENT_VERSION, options);
-        if (!init) return init.error().message;
+        if (!init) {
+            if (init.error().category == "transport") {
+                const std::string reason = exit_reason(*session->child);
+                if (reason != "exited") return "MCP server " + core->spec.name + " " + reason;
+            }
+            return init.error().message;
+        }
         std::string version = "undefined";
         if (init->contains("protocolVersion")) {
             const auto& value = (*init)["protocolVersion"];
@@ -324,7 +330,8 @@ std::optional<std::string> StdioClient::connect(bool again) {
         return std::nullopt;
     }
     if (session) {
-        lose(core_, session, "stopped by gm");
+        const std::string reason = session->transport->alive() ? std::string("stopped by gm") : exit_reason(*session->child);
+        lose(core_, session, reason);
         session->child->kill();
     }
     json::Value fields;
