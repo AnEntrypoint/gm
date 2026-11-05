@@ -485,3 +485,13 @@ Witness: ctest --test-dir build/integ 20 of 20; node tools/mcp-conformance.mjs -
 - Windows trade-off: the relay process keeps the build it started with until the host restarts it, because a running image cannot be replaced over its live stdio connection. The worker runs the new gmnew.exe from its next start, and the leaves, skills and defaults directories are read by that worker too. The relay binary therefore changes only on a host restart, which is the rarely-changing relay the release contract asks for.
 - Failure is silent and safe. No network, a bad sha256, a size mismatch or a failed unpack leaves the installed build untouched and writes one line to the relay log (stderr, which the host captures). It does not write to the run log, because the worker is that log's only writer and a second writer would break its sequence numbers.
 - Install layout: a leaves, skills or defaults directory next to the executable takes precedence over the source tree. A dev build in build/ has none, so it keeps using the source tree.
+
+## Spawn session friction: hung finish, waits that spend steps, late timeoutMs error (2026-11-05)
+
+Reported by the spawn session (run 2026-11-05-06-58-25-6b9460), which runs this gmc build. Open items, not yet fixed:
+
+- finish with a witness was moved to the background after 120 s and did not return. run_code calls hung even for `echo ok` when earlier background tasks had been stopped. Open: whether run_code and finish block while a background run is still open, or after stopped background tasks.
+- next_context with waitMs 240000 to 300000 was moved to the background after 120 s. Each such call used a step and returned only "still running", so ten calls took 40 steps. Open: return a progress line, or keep the foreground hold under the host's 120 s limit, so a wait does not spend steps.
+- run_code timeoutMs of 400000 was accepted by the call and rejected later as a background-task failure ("timeoutMs must be an integer from 1 to 300000"). Open: reject it in the call and name the maximum.
+- Background run_code results return as task notifications after 10 minutes or more. Open: state the expected duration in the job event.
+- Live join through the spawn client: a 240 s lease expired before exec ran, and a later 900 s join stalled. Spawn-side, not gm-side. The run_code wrapper gave no progress while it waited.
