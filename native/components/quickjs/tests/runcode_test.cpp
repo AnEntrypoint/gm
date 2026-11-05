@@ -114,6 +114,25 @@ void test_top_level_await_and_gm_fields() {
            "top-level await value: " + gm::json::dump(value));
 }
 
+void test_verbs_filter() {
+    FakeVerbs verbs;
+    auto value = run_ok(verbs,
+                        "const all = gm.verbs();\n"
+                        "const one = gm.verbs({ name: 'add' });\n"
+                        "const names = gm.verbs({ names: true });\n"
+                        "return { all: all.length, full: all.every((v) => typeof v.description === 'string' && v.inputSchema !== null && typeof v.inputSchema === 'object'), one, names };",
+                        "verbs filter");
+    expect(gm::json::dump(value) ==
+               R"({"all":3,"full":true,"one":{"name":"add","description":"Adds a and b.","inputSchema":{"type":"object","required":["a","b"]}},"names":["echo","add","broken"]})",
+           "verbs filter value: " + gm::json::dump(value));
+    auto unknown = gm::run_body(verbs, "return gm.verbs({ name: 'nope' });", project_root);
+    expect(!unknown && unknown.error().rfind("unknown verb: nope", 0) == 0,
+           "unknown verb name is reported: " + (unknown ? std::string() : unknown.error()));
+    auto bad_shape = gm::run_body(verbs, "return gm.verbs({ names: false });", project_root);
+    expect(!bad_shape && bad_shape.error().find("gm.verbs() takes") != std::string::npos,
+           "a bad filter shape is refused: " + (bad_shape ? std::string() : bad_shape.error()));
+}
+
 void test_fresh_state_and_edges() {
     FakeVerbs verbs;
     run_ok(verbs, "globalThis.leak = 1; return null;", "leak set");
@@ -197,6 +216,7 @@ int main() {
     test_nested_return();
     test_throw_in_body();
     test_top_level_await_and_gm_fields();
+    test_verbs_filter();
     test_fresh_state_and_edges();
     if (failures == 0) std::printf("runcode: all tests passed\n");
     return failures == 0 ? 0 : 1;

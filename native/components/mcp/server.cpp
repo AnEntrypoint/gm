@@ -111,7 +111,9 @@ std::string run_code_description(const std::string& verb_names) {
            "refused. The body receives gm, with one method per verb: await gm.<name>(args), and gm.project is the project root. "
            "The verbs are: " +
            verb_names +
-           ". gm.verbs() returns each verb's description and input schema as data. A failed call returns "
+           ". gm.verbs() returns each verb's description and input schema as data. "
+           "gm.verbs({ name: 'read_file' }) returns just that verb's schema, gm.verbs({ names: true }) returns just "
+           "the names, and an unknown name is an error. A failed call returns "
            "{ok:false, error} and does not stop the body. The body's return value comes back as JSON. A body still "
            "running after timeoutMs (default 180000, at most 300000) becomes a background run: the call returns its "
            "job id at once, job_status with waitMs returns its value, and finish is refused while it runs unless "

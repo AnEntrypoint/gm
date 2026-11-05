@@ -1,6 +1,3 @@
-// The thread that runs one run_code body. The body's verb calls are messages to the session, which runs each verb and posts the reply back
-// by its id, so the body's JavaScript runs off the session's thread and the session stays responsive while a body runs. A body that never
-// awaits is stopped by the session, which terminates this thread. The body's console output is not sent anywhere: the session drains it.
 import { spawnSync } from 'node:child_process';
 import { parentPort, workerData } from 'node:worker_threads';
 import { createRequire } from 'node:module';
@@ -27,7 +24,24 @@ function call(name, args) {
   });
 }
 
-const gm = { project, verbs: () => verbs.map((verb) => ({ ...verb })) };
+const VERBS_SHAPE = 'gm.verbs() takes { name: <verb name> } or { names: true }';
+function verbsOf(options) {
+  if (options === undefined) return verbs.map((verb) => ({ ...verb }));
+  if (options === null || typeof options !== 'object' || Array.isArray(options)) throw new TypeError(VERBS_SHAPE);
+  const keys = Object.keys(options);
+  const unknown = keys.find((key) => key !== 'name' && key !== 'names');
+  if (unknown !== undefined) throw new TypeError(`gm.verbs() does not take ${unknown}`);
+  if (keys.includes('names') && options.names !== true) throw new TypeError('gm.verbs() takes { names: true }');
+  if (keys.length === 1 && options.names === true) return verbs.map((verb) => verb.name);
+  if (keys.length === 1 && typeof options.name === 'string') {
+    const found = verbs.find((verb) => verb.name === options.name);
+    if (found === undefined) throw new Error(`unknown verb: ${options.name}`);
+    return { ...found };
+  }
+  throw new TypeError(VERBS_SHAPE);
+}
+
+const gm = { project, verbs: verbsOf };
 for (const { name } of verbs) gm[name] = (args = {}) => call(name, args);
 gm.try = async (fn) => {
   try {
@@ -37,7 +51,6 @@ gm.try = async (fn) => {
   }
 };
 
-// require for the body. A relative path resolves against the project root, as the static loads do, and an absolute path loads as it is.
 const base = createRequire(join(project, 'package.json'));
 const requireBody = (spec) => {
   if (typeof spec !== 'string') throw new TypeError('require needs a string path');

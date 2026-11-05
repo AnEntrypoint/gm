@@ -194,6 +194,17 @@ const SCENARIOS = [
       const r = (await c.rpc('tools/call', { name: 'run_code', arguments: { body: 'return 2' } })).result;
       ok('result has a text content item', r?.content?.[0]?.type === 'text', short(r?.content?.[0]?.type));
       ok('structuredContent carries a boolean ok', typeof r?.structuredContent?.ok === 'boolean', short(r?.structuredContent));
+      const code = async (body) => {
+        const reply = (await c.rpc('tools/call', { name: 'run_code', arguments: { body } })).result;
+        const raw = reply?.structuredContent?.output ?? JSON.parse(reply?.content?.[0]?.text ?? '{}').output;
+        return typeof raw === 'string' ? JSON.parse(raw) : null;
+      };
+      const verbs = await code("const all = gm.verbs(); const one = gm.verbs({ name: 'read_file' }); const names = gm.verbs({ names: true }); return { count: all.length, full: all.every((v) => typeof v.description === 'string' && v.inputSchema !== null && typeof v.inputSchema === 'object'), one, names };");
+      ok('gm.verbs() still returns every schema', verbs?.full === true && verbs?.count > 1, short(verbs?.count));
+      ok('gm.verbs({ name }) returns one schema', verbs?.one?.name === 'read_file' && typeof verbs.one.inputSchema === 'object', short(verbs?.one));
+      ok('gm.verbs({ names: true }) returns just the names', Array.isArray(verbs?.names) && verbs.names.length === verbs.count && verbs.names.every((name) => typeof name === 'string'), short(verbs?.names?.length));
+      const unknown = await code("return await gm.try(() => gm.verbs({ name: 'no_such_verb' }));");
+      ok('an unknown verb name is a clear error', unknown?.ok === false && String(unknown.error).includes('no_such_verb'), short(unknown));
     },
   },
   {
