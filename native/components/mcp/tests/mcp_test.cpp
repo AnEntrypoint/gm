@@ -1,3 +1,4 @@
+#include <atomic>
 #include <chrono>
 #include <cstdio>
 #include <filesystem>
@@ -156,8 +157,17 @@ int count_kind(const std::vector<Value>& events, const std::string& kind) {
     return n;
 }
 
+std::atomic<bool> gate_open{false};
+
 deoxidene::Result<Value, std::string> scripted_body(gm::VerbTable& table, std::string_view body, const fs::path&, std::string_view) {
     std::string text(body);
+    if (text.rfind("gate:", 0) == 0) {
+        table.call("write_file", obj().set("path", "bg.txt").set("content", "before sleep"));
+        const auto until = std::chrono::steady_clock::now() + std::chrono::seconds(30);
+        while (!gate_open && std::chrono::steady_clock::now() < until) std::this_thread::sleep_for(std::chrono::milliseconds(2));
+        Value after = table.call("write_file", obj().set("path", "bg.txt").set("content", "after sleep"));
+        return obj().set("value", text.substr(5)).set("afterOk", after.find("ok") ? *after.find("ok") : Value());
+    }
     if (text.rfind("sleep:", 0) == 0) {
         auto colon = text.find(':', 6);
         int ms = std::stoi(text.substr(6, colon - 6));
@@ -503,7 +513,8 @@ int main() {
         rows.rows = {"prd-r1 resolved done thing"};
         Harness h(rows, options);
         h.call("next_context", "{}");
-        Value bg = h.call("run_code", R"({"body":"sleep:2000:seven","timeoutMs":50})");
+        gate_open = false;
+        Value bg = h.call("run_code", R"({"body":"gate:seven","timeoutMs":50})");
         std::string job = str(bg, "background");
         check(bg.find("ok")->as_bool() && job == "body-" + gm::json::dump(*bg.find("actionSeq")) && str(bg, "state") == "running",
               "a body past timeoutMs becomes a background run: " + gm::json::dump(bg));
@@ -515,6 +526,7 @@ int main() {
               "finish is refused while a background run is running: " + str(refused, "error"));
         std::this_thread::sleep_for(std::chrono::milliseconds(300));
         Value notices = h.call("next_context", "{}");
+        check(notices.find("jobsOpen") != nullptr, "the body is still open when next_context reports it");
         std::cout << "notices: jobsOpen=" << (notices.find("jobsOpen") ? gm::json::dump(*notices.find("jobsOpen")) : "-")
                   << " jobsStuck=" << (notices.find("jobsStuck") ? gm::json::dump(*notices.find("jobsStuck")) : "-")
                   << " jobsRunning=" << (notices.find("jobsRunning") ? gm::json::dump(*notices.find("jobsRunning")) : "-") << '\n';
@@ -526,6 +538,7 @@ int main() {
         check(notices.find("jobsRunning") && notices.find("jobsRunning")->as_array()[0].find("prd") &&
                   notices.find("jobsRunning")->as_array()[0].find("prd")->find("total")->as_number() == 1,
               "jobsRunning carries the prd summary");
+        gate_open = true;
         Value status = h.call("run_code", R"({"body":"status:)" + job + R"("})");
         std::string output = str(status, "output");
         check(output.find("\"state\":\"exited\"") != std::string::npos && output.find("\"value\":\"{\\\"value\\\":\\\"seven\\\",\\\"afterOk\\\":true}\"") != std::string::npos,
