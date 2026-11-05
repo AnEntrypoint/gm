@@ -23,7 +23,7 @@ How to change this project. Project facts are in AGENTS.md, and decisions with t
 - A witness that makes a top-level tool call runs with `--surface tools`. The default code surface answers a verb name with -32602, so the call never reaches the verb.
 - A host name that does not resolve here goes to a local proxy. gm.fetch needs `NODE_OPTIONS=--use-env-proxy` with HTTP_PROXY, and it tunnels http:// with CONNECT, so the proxy must answer CONNECT; git takes `-c http.proxy=` in the workspace config. A proxy that logs nothing usually means the CONNECT path.
 - Stop a witness server by the pid it wrote to a file. A `ps` pattern that names the server also matches the shell that runs the kill.
-- A setup or planner that defaults its repository to the process cwd reports another checkout without an error. Compare its HEAD line with `git rev-parse --short HEAD` in the repository you mean before you read its counts (DESIGN.md, "gm-continue from a freddie-attached session (2026-11-03)").
+- A setup or planner that defaults its repository to the process cwd reports another checkout without an error. Compare its HEAD line with `git rev-parse --short HEAD` in the repository you mean before you read its counts.
 
 ## Edits and collisions
 
@@ -33,7 +33,7 @@ How to change this project. Project facts are in AGENTS.md, and decisions with t
 - Only the single writer commits. A collision is repaired after the fact, not avoided.
 - On an index.lock error during a commit, retry the add 3 times, 2 seconds apart. Never delete .git/index.lock. If it persists, report it.
 - Runtime output is not committed. runs/ is git-ignored, and job files stay there.
-- A commit that removes a row state or a row verb also migrates each row file that still carries the old value. Commit 671cbb0 removed the blocked state and migrated none of the nine blocked rows, so the setup reports each of them on every run (DESIGN.md, "Rows without a hold").
+- A commit that removes a row state or a row verb also migrates each row file that still carries the old value. Commit 671cbb0 removed the blocked state and migrated none of the nine blocked rows, so the setup reports each of them on every run.
 
 ## Commit and push
 
