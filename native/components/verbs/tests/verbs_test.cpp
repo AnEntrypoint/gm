@@ -39,6 +39,18 @@ double number_of(const gm::json::Value& reply, std::string_view key) {
     return v != nullptr && v->is_number() ? v->as_number() : -1;
 }
 
+std::string native_path(std::string_view relative) {
+    return (std::filesystem::path(relative)).make_preferred().string();
+}
+
+std::string lf_only(std::string text) {
+    std::string out;
+    for (char c : text) {
+        if (c != '\r') out.push_back(c);
+    }
+    return out;
+}
+
 std::filesystem::path fresh_dir() {
     auto base = std::filesystem::temp_directory_path() /
                 ("gm-verbs-test-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
@@ -65,7 +77,7 @@ int main() {
         expect(verbs.list().size() == 10, "list has the ten core verbs");
 
         auto wrote = verbs.call("write_file", object_of({{"path", "dir/a.txt"}, {"content", "alpha\nbeta\ngamma\n"}}));
-        expect(ok_of(wrote) && text_of(wrote, "output") == "wrote dir/a.txt (17 chars)", "write_file: " + gm::json::dump(wrote));
+        expect(ok_of(wrote) && text_of(wrote, "output") == "wrote " + native_path("dir/a.txt") + " (17 chars)", "write_file: " + gm::json::dump(wrote));
 
         auto read = verbs.call("read_file", object_of({{"path", "dir/a.txt"}}));
         expect(text_of(read, "output") == "alpha\nbeta\ngamma\n" && number_of(read, "total") == 3 && text_of(read, "unit") == "lines",
@@ -83,14 +95,14 @@ int main() {
 
         auto edited = verbs.call("edit_file", object_of({{"path", "dir/a.txt"}, {"old", "beta"}, {"new", "BETA"}}));
         auto after_edit = verbs.call("read_file", object_of({{"path", "dir/a.txt"}}));
-        expect(text_of(edited, "output") == "edited dir/a.txt (1 replacement)" && text_of(after_edit, "output") == "alpha\nBETA\ngamma\n",
+        expect(text_of(edited, "output") == "edited " + native_path("dir/a.txt") + " (1 replacement)" && text_of(after_edit, "output") == "alpha\nBETA\ngamma\n",
                "edit_file: " + gm::json::dump(edited));
 
         verbs.call("write_file", object_of({{"path", "dir/b.txt"}, {"content", "x x x"}}));
         auto twice = verbs.call("edit_file", object_of({{"path", "dir/b.txt"}, {"old", "x"}, {"new", "y"}}));
-        expect(text_of(twice, "error") == "old text occurs 3 times in dir/b.txt; add context to make it unique, or set replaceAll", "edit_file ambiguity");
+        expect(text_of(twice, "error") == "old text occurs 3 times in " + native_path("dir/b.txt") + "; add context to make it unique, or set replaceAll", "edit_file ambiguity");
         auto all = verbs.call("edit_file", object_of({{"path", "dir/b.txt"}, {"old", "x"}, {"new", "y"}, {"replaceAll", true}}));
-        expect(text_of(all, "output") == "edited dir/b.txt (3 replacements)", "edit_file replaceAll");
+        expect(text_of(all, "output") == "edited " + native_path("dir/b.txt") + " (3 replacements)", "edit_file replaceAll");
 
         std::filesystem::create_directories(base / "workspace/dir/sub");
         auto listing = verbs.call("list_dir", object_of({{"path", "dir"}}));
@@ -103,7 +115,7 @@ int main() {
         expect(text_of(empty_path, "error") == "refused: path must be a non-empty string", "empty path refused");
 
         auto shell = verbs.call("run_shell", object_of({{"command", "echo hello; echo oops 1>&2"}}));
-        expect(ok_of(shell) && text_of(shell, "output") == "hello\noops\n" && number_of(shell, "exitCode") == 0, "run_shell echo: " + gm::json::dump(shell));
+        expect(ok_of(shell) && lf_only(text_of(shell, "output")) == "hello\noops\n" && number_of(shell, "exitCode") == 0, "run_shell echo: " + gm::json::dump(shell));
 
         auto failing = verbs.call("run_shell", object_of({{"command", "exit 3"}}));
         expect(!ok_of(failing) && number_of(failing, "exitCode") == 3, "run_shell exit code: " + gm::json::dump(failing));
