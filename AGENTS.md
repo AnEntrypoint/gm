@@ -26,7 +26,7 @@ gm is one long-horizon worker: an MCP server that runs a task as one append-only
 ## Layout
 
 - src/ (Node reference, ES modules, Node 22 or later, one runtime dependency: acorn 8.18.0): cli.mjs (run, query, replay, doctor), mcp.mjs (the MCP server and its surfaces, DEFAULT_MAX_STEPS 50, DEFAULT_MAX_INFLIGHT 8), tools.mjs (verbs, adoptBody), runcode.mjs (run_code bodies, the 180 s budget), exec.mjs (killBody), mcp-client.mjs (MCP servers inside run_code, launchOf), search.mjs (grep and search), git.mjs (git verbs, ci_status), gate.mjs (commit gate, runGate), rows.mjs, pending.mjs (PENDING_KINDS), retry.mjs, prompt.mjs (MCP_RULES), run.mjs (run directories, setSuccessor), worker-modules.json (the worker's import graph).
-- tools/: core.mjs (runs the worker as a child and reloads it), update.mjs (DEFAULT_UPDATE_MS = 60000), relay.mjs, supervise.mjs, ship.sh, prefetch.mjs, gm-continue-setup.mjs, mcp-conformance.mjs (`--stdio <program> [args...]`: runs the MCP checks against a stdio server; 60 checks in 22 scenarios; the official conformance package fixtures are not used).
+- tools/: core.mjs (runs the worker as a child and reloads it), update.mjs (DEFAULT_UPDATE_MS = 60000), relay.mjs, supervise.mjs, ship.sh, prefetch.mjs, gm-continue-setup.mjs, mcp-conformance.mjs (`--stdio <program> [args...]`: runs the MCP checks against a stdio server; 63 checks in 23 scenarios against native; the official conformance package fixtures are not used).
 - native/components/: host (the gm binary, worker.cpp, relay), mcp (server.cpp, skills.cpp, pending.cpp, compact.cpp), mcpclient (native MCP client on the vendored cxxmcp), quickjs (runcode.cpp, the run_code engine), proc (child.cpp, proc.cpp with OwnerScope and kill_owned), search (search_impl.cpp), verbs, json, log. Public headers are in native/include/gm and each component's include/. Component tests sit in <component>/tests/.
 - native/leaves/: JavaScript leaves (git, fetch, rows, review, wiki, code-ast) and vendor/acorn.mjs; tests in leaves/tests/.
 - native/third_party/: cxxmcp v1.3.0 (MIT, stdio only, VERSION.txt holds the commit and a sha256 per file) and quickjs-ng.
@@ -37,7 +37,7 @@ gm is one long-horizon worker: an MCP server that runs a task as one append-only
 ## Build and test
 
 - Native: `cmake --preset release -DGMNEW_BUILD_TESTS=ON`, then `cmake --build build/release`, then `ctest --test-dir build/release --output-on-failure`. Or `scripts/gm.sh build|test|doctor|all` (GMNEW_PRESET picks the preset, default release; gm.ps1 runs the same steps).
-- Presets in CMakePresets.json: debug, release, asan, ubsan, asan-ubsan, tsan, native-perf, and x64 and arm64 for linux, windows and macos (`*-release`). CI builds and tests the six release presets and asan-ubsan. release.yml uploads the binary on a v*.*.* tag.
+- Presets in CMakePresets.json: debug, release, asan, ubsan, asan-ubsan, tsan, native-perf, and x64 and arm64 for linux, windows and macos (`*-release`). release.yml builds and tests the six release presets on main and publishes latest; arm-diagnose.yml runs asan and gdb on arm64.
 - Node: `node --test native/leaves/tests/*.test.mjs`.
 - Commit gate: tools/ship.sh runs it through src/gate.mjs runGate. It runs every check only in a checkout whose package.json name is gm; elsewhere it checks syntax and lists the rest as notCovered. A check that throws is a failure.
 - Witness rule: run the built binary or the CLI on a real task in a scratch workspace, read the output, then delete the scratch. `node src/cli.mjs run --task "<text>" --workspace <dir> --model scripted` runs offline.
@@ -61,19 +61,19 @@ gm is one long-horizon worker: an MCP server that runs a task as one append-only
 
 ## Runtime and MCP surface
 
-- Surfaces: the code surface (the default) serves next_context, run_code and finish. `--surface tools` serves each verb as a tool. Every other verb is a function on `gm` inside run_code: `await gm.read_file({ path })`. gm.verbs() returns each verb's schema.
+- Surfaces: the code surface (the default) serves next_context, run_code and finish. `--surface tools` serves each verb as a tool. Every other verb is a function on `gm` inside run_code: `await gm.read_file({ path })`. gm.verbs() returns each verb's schema; `{ name }` narrows to one and `{ names: true }` lists names.
 - Verbs: read_file, write_file, edit_file, stat_file, list_dir, run_shell, job_start, job_status, job_stop, query_log, search, grep, wiki_search, wiki_write, callers, impact, git_status, git_add, git_rm, git_commit, git_push, git_log, git_diff, git_show, git_fetch, git_pull, git_checkout, git_branch, ci_status, fetch, prd_add, prd_list, prd_resolve, prd_delete, unknown_add, unknown_list, unknown_resolve, review_packet, review_record, review_join.
 - Each next_context call is one step. Calls run in parallel up to --max-inflight (default 8); calls on one file with a write wait in order, and a shell runs alone. The log records inFlight.
 - A body still running after timeoutMs (default 180000, at most 300000) becomes a background run. job_status watches it. finish refuses while a background run runs, unless stopBackground is true, which kills it.
 - finish needs a witness and no open row. A PRD you will not implement is deleted with prd_delete; other rows are resolved with a witness. A question for the owner is an unknown row, and the run stays open until it is resolved.
 - One run belongs to one server connection, and finish ends it for every agent on that connection. The first next_context after a finish opens a fresh run in the same workspace (reopen in src/mcp.mjs; setSuccessor in src/run.mjs writes the successor file). A run ended by the step limit refuses calls until the server restarts (stepLimited).
 - A child agent that shares the connection never sends finish.
-- Skills are served under the io.modelcontextprotocol/skills extension, and each is also a prompt: gm (mcp__gm__gm) and gm-continue (mcp__gm__gm-continue). read_file serves skill:// paths (serveSkillFile in src/mcp.mjs; served_skill_text in native/components/mcp/skills.cpp).
+- Skills are served under the io.modelcontextprotocol/skills extension, and each is also a prompt: gm (mcp__gm__gm) and gm-continue (mcp__gm__gm-continue). read_file serves skill:// paths (serveSkillFile in src/mcp.mjs; served_skill_text in native/components/mcp/skills.cpp) and logs skill-loaded.
 - Protocol versions served: 2025-11-25 and 2025-06-18. 2026-07-28 is not negotiated (owner decision, DESIGN.md decision 1).
 - Declared capabilities: tools, prompts and resources (listChanged), logging, completions, and the skills extension. resources.subscribe is not declared. subscriptions/listen is the only subscription surface; resources/subscribe and resources/unsubscribe are removed and answer -32601.
-- Each next_context returns the rules, the task, the witness requirement, the new events in full up to 20,000 characters, the older events in compact form, and prefixSha. Older events are read with query_log, which reaches every event. The rules are in runs/<id>/rules.md and are never compacted.
+- Each next_context returns the rules, the task, the witness requirement, the new events in full up to 20,000 characters, the older events in compact form, and prefixSha. `next_context({ task })` replaces a cut slash-command task. Older events are read with query_log, which reaches every event. The rules are in runs/<id>/rules.md and are never compacted.
 - query_log reads one bounded window of matching events; a count over a whole run pages with next.
-- A delivered pending event is cleared once next_context or a wait returns it. A restart is logged as paused and is not pending.
+- A delivered pending event is cleared once next_context or a wait returns it. A restart is logged as paused and is not pending. An added row is a row-added pending event and wakes an open `events --wait`.
 - A worker that exits 0 with its run open paused itself; the core restarts it.
 - read_file counts lines by default (offset is a 0-based line index). unit "chars" counts characters; job_status offset counts characters.
 - Debugging: `node src/cli.mjs replay` reruns a finished CLI run through the scripted model; each replayed event carries replayOf.
@@ -89,10 +89,10 @@ gm is one long-horizon worker: an MCP server that runs a task as one append-only
 ## Search and grep
 
 - Native grep (native/components/search/search_impl.cpp): the default scope is git-tracked files plus untracked files that git does not ignore. scope "all" adds gitignored files and node_modules. Both skip .git, .gm, .agentplug, .agentplug-kv, .gm, .playwriter and runs unless git tracks the file. vendor and node_modules are skipped unless vendor is true. A zero-match reply starts with a hint counting the skipped files.
-- Node search (src/search.mjs) searches tracked files only (open decision). Its literal pass runs the pattern again as a regex when the literal finds nothing and the pattern has regex characters; an invalid regex is an error (searcherFor).
+- Node search (src/search.mjs) searches tracked files only (decision 2026-11-05). Its literal pass runs the pattern again as a regex when the literal finds nothing and the pattern has regex characters; an invalid regex is an error (searcherFor).
 - Native search reuses a file's lines only while its stat (device, inode, size, mtime, ctime) is unchanged and settled (STAMP_SETTLE_MS = 3000), so a same-size write in one timestamp tick is not missed.
 - Do not cache the tokenized text of every file. Doing so once put a worker at 1399 MB of heap on a 108 MB tree (verified in the Node tree).
-- grep's root is a directory or one file (a file root must be tracked unless scope is all, and path cannot be combined with it); search's root must be a directory.
+- grep's root is a directory or one file (a file root must be tracked unless scope is all, and path cannot be combined with it); search's root must be a directory. In a non-git workspace they fail with a named git repository error.
 
 ## Updates and hot reload
 
@@ -117,15 +117,11 @@ gm is one long-horizon worker: an MCP server that runs a task as one append-only
 
 ## Open decisions (owner), with current state
 
-1. Node tree direction. OPEN: work/rows/unknown-mw29a63rd40c.yml asks "native C++ rewrite or Node-only?". State: the native tree builds and passes ctest and the parity harness. It is cut over for /workspace/gm only (DESIGN.md, Local cutover of the native gm, 2026-11-04); the user-wide entry is unchanged, and Node stays the parity reference. Until the owner answers native or node-only, commit df0a6b9 and native/ stay as they are.
-2. Grep default. Native searches untracked files that git does not ignore; Node searches tracked files only (DESIGN.md, Native MCP client (2026-11-04)). Node has not changed. Decided 2026-11-05 (DESIGN.md, Decided): Node keeps tracked-only grep.
-3. Stopped background fetch: native-ahead. Native kills the fetch's curl with its body, so no request keeps running and the code-call carries the real outcome; Node leaves the request until its 60 s timeout. Recorded in native/tests/parity/run.mjs (NATIVE_AHEAD) and DESIGN.md, "Stopped background fetch: native-ahead row". To match Node, Node would abort fetch on a body stop and the row would be removed. The owner has not chosen.
-4. Client-side roots and elicitation. Not used. Roots and sampling are not used (DESIGN.md decision 4); logging is used. Elicitation is not served, because it is interactive-only in Claude Code and a question becomes a row instead. DESIGN.md marks it "OWNER DECISION if wanted" (decision 2). Current state: neither tree uses either.
-5. Protocol 2026-07-28: not negotiated. Owner decision (DESIGN.md decision 1), held 2026-11-05 (DESIGN.md, Decided). Risk noted there: a v2 client may ask for it.
-6. Events wait on a new row: work/rows/unknown-mw29a6424ad2.yml asks whether a wait should wake when a PRD or question row is added. Open.
-7. Console output of a body is drained by the session and not returned or logged (stated, not closed). Open.
-8. Minimal tool set is not run, and G3 (cache effect, measured by the gm agent from host transcripts) is not recorded. The project closes when both are recorded.
-9. Native friction, open (DESIGN.md, Native gm friction after the restart): a host may cut a slash-command task to its first word; search and grep without a root fail with "git ls-files failed" on a non-git workspace, without naming the cause; a skill read through the verb does not log skill-loaded.
+1. Node tree direction. OPEN. State: the native tree builds and passes ctest and the parity harness. It is cut over for /workspace/gm only (DESIGN.md, Local cutover of the native gm, 2026-11-04); the user-wide entry is unchanged, and Node stays the parity reference. Until the owner answers native or node-only, commit df0a6b9 and native/ stay as they are.
+2. Client-side roots and elicitation. Not used. Roots and sampling are not used (DESIGN.md decision 4); logging is used. Elicitation is not served, because it is interactive-only in Claude Code and a question becomes a row instead. DESIGN.md marks it "OWNER DECISION if wanted" (decision 2). Current state: neither tree uses either.
+3. Protocol 2026-07-28: not negotiated. Owner decision (DESIGN.md decision 1), held 2026-11-05 (DESIGN.md, Decided). Risk noted there: a v2 client may ask for it.
+4. Console output of a body is drained by the session and not returned or logged (stated, not closed). Open.
+5. Minimal tool set is not run, and G3 (cache effect, measured by the gm agent from host transcripts) is not recorded. The project closes when both are recorded.
 
 ## Known gaps, native against Node
 
@@ -134,6 +130,7 @@ gm is one long-horizon worker: an MCP server that runs a task as one append-only
 - A server killed by a signal reports 128 plus the signal number in native. A spawn failure reports the OS text in native.
 - Native answers server requests other than ping with the SDK's method-not-found text.
 - Windows captures no server stderr in native.
+- A stopped background fetch follows native: the body stop kills the curl; Node parity is scheduled (DESIGN.md, Decided).
 
 ## Ship and commits
 

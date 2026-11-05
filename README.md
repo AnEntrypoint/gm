@@ -4,7 +4,7 @@ A single-worker long-horizon loop: one worker, one append-only log, governance r
 
 Status: the MCP server, the skill, the CLI wrapper, the measurement tools, and the search, wiki, review and call-site tools are built and witnessed. The live comparison with gm is closed, with its results in DESIGN.md.
 
-Install the latest release, once per machine, on Linux or macOS (x64 or arm64). It fetches the release manifest, verifies the archive's sha256 and size, unpacks into `~/.gmnew/current`, and then runs the installed binary's `install` subcommand, which registers gm for Claude Code at user level. It needs curl, tar and sha256sum or shasum; Node and npm are not needed.
+Install the latest release, once per machine, on Linux, macOS or Windows (x64 or arm64). The installers fetch the release manifest, verify the archive's sha256 and size, unpack into `~/.gmnew/current` (or `%USERPROFILE%\.gmnew\current`), and run the installed binary's `install` subcommand, which registers gm for Claude Code at user level. The POSIX installer needs curl, tar and sha256sum or shasum; the Windows installer uses PowerShell. Node and npm are not needed.
 
     curl -fsSL https://raw.githubusercontent.com/AnEntrypoint/gm/main/scripts/install.sh | sh
 
@@ -12,9 +12,11 @@ To register gm with a playwriter config, pass the path through `sh -s --`:
 
     curl -fsSL https://raw.githubusercontent.com/AnEntrypoint/gm/main/scripts/install.sh | sh -s -- --mcp-config <path>
 
-Each build is published under its own file names (`gm-<version>-<target>`), and the manifest is uploaded last, so an install never mixes two builds. The last three builds stay on `latest`.
+On Windows, run `scripts/install.ps1`; its `-McpConfig` argument does the same. Both installers retry downloads and write `.gmnew-update.json` when it is missing.
 
-Windows is not published yet: the Windows build fails most of its tests, so the release carries Linux and macOS only. `scripts/install.ps1` is kept for when it is.
+Each build is versioned as `gmnew-<version>-<target>.tar.gz` (`.zip` on Windows), and the manifest is uploaded last, so an install never mixes two builds. The last three builds stay on `latest`.
+
+Windows x64 and arm64 build and test jobs pass in CI, and the release publishes their `.zip` assets. `scripts/install.ps1` installs them.
 
 The registration is written by the binary itself: `<path-to-gm> install [--mcp-config <file>]`. It sets `mcpServers.gm` in `~/.claude.json` (on Windows, `%USERPROFILE%\.claude.json`) to `{"command": "<path-to-gm>", "args": ["serve"]}`, with `--mcp-config <file>` appended to args when given. Every other key is kept. The file is written to a temp file, re-read, and renamed over the original; a file that changed meanwhile is re-merged, and a file that is not a JSON object is refused and left alone. Running it again replaces the gm entry, so running the installer again updates the path.
 
@@ -76,4 +78,4 @@ Setup registers only gm with the host, so the worker is the only thing that star
 
 - `scripts/gm.sh` and `scripts/gm.ps1` run the same steps: `build`, `test`, `doctor` or `all`. `GMNEW_PRESET` picks the preset (default `release`).
 - The binary is build/PRESET/native/components/host/gm.
-- No CI workflow is configured. `.github/workflows/release.yml` uploads the binary for each target on a `v*.*.*` tag.
+- Two workflows run on pushes to main: `.github/workflows/release.yml` builds and tests six targets and publishes `latest`; `.github/workflows/arm-diagnose.yml` runs asan and gdb on arm64. There is no ci.yml.

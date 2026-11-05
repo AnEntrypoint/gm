@@ -93,6 +93,8 @@ The Rust port and its removal are out of gm's history, because the rust/ blobs m
 
 ## Decided
 
+Superseded: earlier conformance counts and row ids in this section are historical; native conformance is 63 checks in 23 scenarios.
+
 - Scope: a fresh worker that replaces gm's loop, not a fork of gm. Reason: one worker, one log and one loop is the simplest design the evidence supports.
 - Language: Node.js 22 or later, ES modules (see "Node floor 22 (2026-11-03)" at the end of this file). Dependencies: one pinned runtime dependency, acorn 8.18.0. No native code and no submodules. Any further dependency needs a measured gain in turns or accuracy, and a measured memory cost per worker, recorded here first. Decided 2026-11-02 as the joint decision of the owner and the orchestrator, which replaced the zero-dependency rule; see "Dependency rule, joint decision" below. The orchestrator rejected the agent's earlier change, which had added thorns and node:sqlite and raised Node to 22.5, and that change is reverted by the commit that records this rule. Reason: acorn is small and has no native code, and it gives exact call sites, which cuts the turns spent verifying callers and impact.
 - Shape: gm is an MCP server (stdio, JSON-RPC written by hand with Node built-ins, no network listener) plus a skill at `skills/gm/SKILL.md`. The Claude Code session is the model. The CLI is a thin wrapper for scripted witnesses. Reason: owner decision, relayed by the gm agent (2026-11-01). It supersedes the earlier single-CLI shape, because the host model is already the worker.

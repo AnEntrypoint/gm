@@ -66,24 +66,21 @@ footer { border-top: 4px solid #000; margin-top: 2em; padding-top: 0.5em; font-s
 
 <section class="chapter">
 <h2>1. Install</h2>
-<p>Linux and macOS, x64 or arm64. One command, once per machine. It downloads the latest release, checks its sha256 and size, unpacks into <code>~/.gmnew/current</code>, and registers gm for Claude Code at user level.</p>
+<p>Linux, macOS and Windows, x64 or arm64. On Linux and macOS, one command, once per machine. It downloads the latest release, checks its sha256 and size, unpacks into <code>~/.gmnew/current</code>, then runs the installed binary's <code>gm install</code> subcommand, which registers gm for Claude Code at user level.</p>
 <pre>curl -fsSL https://raw.githubusercontent.com/AnEntrypoint/gm/main/scripts/install.sh | sh</pre>
 <p>Needs curl, tar, and sha256sum or shasum. Node is not needed to run gm.</p>
+<p>The archive holds <code>gm</code> and <code>gm-core</code> (<code>gm.exe</code> and <code>gm-core.exe</code> on Windows) and the <code>leaves</code>, <code>skills</code> and <code>defaults</code> directories. Both installers check the two binaries, retry downloads, and write <code>.gmnew-update.json</code> when it is missing.</p>
 <p>To register gm with a playwriter config:</p>
 <pre>curl -fsSL https://raw.githubusercontent.com/AnEntrypoint/gm/main/scripts/install.sh | sh -s -- --mcp-config &lt;path&gt;</pre>
-<p>Windows is not published yet. The Windows build fails most of its tests, so the release carries Linux and macOS only.</p>
+<p>Windows x64 and arm64 build and test in CI and are published as <code>.zip</code>. Run <code>scripts/install.ps1</code> with PowerShell; it unpacks into <code>%USERPROFILE%\.gmnew\current</code> and runs <code>gm.exe install</code>. Its <code>-McpConfig</code> argument forwards the config to <code>gm.exe install</code>.</p>
 </section>
 
 <section class="chapter">
 <h2>2. Connect Claude Code</h2>
-<p>The installer runs add-mcp, pinned to 2.6.1, which writes a user-scope entry named <code>gm</code>:</p>
-<pre>npx -y add-mcp@2.6.1 &lt;path-to-gm&gt; --args serve -n gm -g -a claude-code -y</pre>
-<p>add-mcp takes the executable as its target and each argument after <code>--args</code>. Do not pass the whole command as one string: add-mcp then stores it as the executable name, and the server cannot start.</p>
-<p>Check the entry:</p>
-<pre>npx -y add-mcp@2.6.1 list -g</pre>
-<p>Remove it:</p>
-<pre>npx -y add-mcp@2.6.1 remove gm -g -y</pre>
-<p>A project <code>.mcp.json</code> with its own <code>gm</code> entry overrides this one in that project. Keep such a file out of the gm checkout.</p>
+<p>The installer runs <code>~/.gmnew/current/gm install</code> (on Windows, <code>%USERPROFILE%\.gmnew\current\gm.exe install</code>). The binary writes <code>mcpServers.gm</code> in <code>~/.claude.json</code> (on Windows, <code>%USERPROFILE%\.claude.json</code>) at user scope, with <code>command</code> set to its own path and <code>args</code> starting with <code>serve</code>. Every other key is kept; running it again replaces the gm entry.</p>
+<pre>~/.gmnew/current/gm install [--mcp-config &lt;path&gt;]</pre>
+<p>With <code>--mcp-config &lt;path&gt;</code>, those two arguments are appended to <code>args</code>. With <code>GMNEW_SKIP_REGISTER=1</code>, the installer leaves the files in place and skips this step; run the command above later to register.</p>
+<p>Check <code>mcpServers.gm</code> in <code>~/.claude.json</code> for the command path. Remove the same key to disconnect. A project <code>.mcp.json</code> with its own <code>gm</code> entry overrides this one in that project. Keep such a file out of the gm checkout.</p>
 </section>
 
 <section class="chapter">
@@ -144,6 +141,7 @@ return { a: a.output.length, b: b.output.length };</pre>
 <table>
   <tr><th>Command</th><th>What it does</th></tr>
   <tr><td><code>gm serve</code></td><td>Serve the MCP tools on stdio. This is what Claude Code runs.</td></tr>
+  <tr><td><code>gm install</code></td><td>Write the user-scope Claude Code entry; <code>--mcp-config</code> adds its two arguments to serve.</td></tr>
   <tr><td><code>gm worker</code></td><td>Run one worker directly. Used by the supervisor.</td></tr>
   <tr><td><code>gm doctor</code></td><td>Check the install&#8217;s runtime.</td></tr>
   <tr><td><code>gm update</code></td><td>Check for a newer release and install it if one exists.</td></tr>
@@ -157,26 +155,27 @@ return { a: a.output.length, b: b.output.length };</pre>
   <tr><td>GMNEW_AUTO_UPDATE=0</td><td>Turn off the background update check.</td></tr>
   <tr><td>GMNEW_UPDATE_URL</td><td>Read the manifest from this URL instead of the default release.</td></tr>
   <tr><td>GMNEW_RELEASE_BASE</td><td>Installer only: the release directory to download from.</td></tr>
-  <tr><td>GMNEW_SKIP_REGISTER=1</td><td>Installer only: install the files, skip the add-mcp registration.</td></tr>
+  <tr><td>GMNEW_SKIP_REGISTER=1</td><td>Installer only: unpack the files and skip the <code>gm install</code> registration.</td></tr>
 </table>
 </section>
 
 <section class="chapter">
 <h2>9. Troubleshooting</h2>
 <h3>sha256 mismatch while installing</h3>
-<p>The manifest and archive disagree. Run the install again. Each build has its own file names, so a mismatch should no longer occur on a fresh release.</p>
+<p>The manifest and archive disagree. Run the install again. Each archive is versioned as <code>gmnew-&lt;version&gt;-&lt;target&gt;.tar.gz</code> on Linux and macOS or <code>.zip</code> on Windows, so a mismatch should no longer occur on a fresh release.</p>
 <h3>"another update is running"</h3>
 <p>An update lock is held. The lock records its owner's process id. If that process has exited, the next check takes the lock over. Otherwise wait for the running check to finish.</p>
 <h3>gm does not connect</h3>
-<p>Run <code>npx -y add-mcp@2.6.1 list -g</code> and check the command path. Then run <code>~/.gmnew/current/gm doctor</code>. If a project <code>.mcp.json</code> defines its own gm entry, that entry is the one Claude Code uses in that project.</p>
+<p>Check <code>mcpServers.gm</code> in <code>~/.claude.json</code> (on Windows, <code>%USERPROFILE%\.claude.json</code>): <code>command</code> should name the installed gm and <code>args</code> should start with <code>serve</code>. Run the installed <code>gm install</code> again to replace a stale path, then <code>gm doctor</code>. If a project <code>.mcp.json</code> defines its own gm entry, that entry is the one Claude Code uses in that project.</p>
 <h3>Windows</h3>
-<p>Not published yet.</p>
+<p>Windows x64 and arm64 build and test jobs pass in CI and are published as <code>.zip</code>. Use <code>scripts/install.ps1</code>; <code>-McpConfig</code> forwards a worker config.</p>
 </section>
 
 <section class="chapter">
 <h2>10. Uninstall</h2>
-<pre>npx -y add-mcp@2.6.1 remove gm -g -y
-rm -rf ~/.gmnew</pre>
+<p>Delete <code>mcpServers.gm</code> from <code>~/.claude.json</code> (on Windows, <code>%USERPROFILE%\.claude.json</code>), then remove the install:</p>
+<pre>rm -rf ~/.gmnew</pre>
+<p>On Windows, remove <code>%USERPROFILE%\.gmnew</code> instead.</p>
 </section>
 
 <footer>
