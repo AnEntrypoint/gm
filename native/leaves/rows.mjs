@@ -72,7 +72,7 @@ function readRows() {
 
 const compareText = (a, b) => (a === b ? 0 : a < b ? -1 : 1);
 const sortByCreated = (rows) => rows.sort((a, b) => compareText(String(a.createdAt), String(b.createdAt)) || compareText(a.id, b.id));
-const validId = (kind, id) => typeof id === 'string' && new RegExp(`^${kind}-[a-z0-9]+$`).test(id);
+const validId = (id) => typeof id === 'string' && /^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(id);
 
 function newId(kind) {
   const random = Math.floor(Math.random() * 65536).toString(16).padStart(4, '0');
@@ -122,10 +122,11 @@ function listRows(kind, { status = 'open' }) {
 }
 
 function parkRow(id, reason) {
-  if (!validId('prd', id)) return fail('id must name a prd row, with an id that starts prd-');
+  if (!validId(id)) return fail('id must be a row id');
   if (typeof reason !== 'string' || reason.trim() === '') return fail('reason must be a non-empty string');
   const row = readRow(id);
   if (row === null) return fail(`no row ${id}`);
+  if (row.kind !== 'prd') return fail(`row ${id} is not a work item`);
   if (row.status !== 'open') return fail(`row ${id} is ${row.status}; only an open row is parked`);
   Object.assign(row, { status: 'parked', parkReason: reason.trim() });
   writeRow(row);
@@ -133,9 +134,10 @@ function parkRow(id, reason) {
 }
 
 function reopenRow({ id }) {
-  if (!validId('prd', id)) return fail('id must name a prd row, with an id that starts prd-');
+  if (!validId(id)) return fail('id must be a row id');
   const row = readRow(id);
   if (row === null) return fail(`no row ${id}`);
+  if (row.kind !== 'prd') return fail(`row ${id} is not a work item`);
   if (row.status !== 'parked') return fail(`row ${id} is ${row.status}; only a parked row is reopened`);
   Object.assign(row, { status: 'open', parkReason: undefined });
   writeRow(row);
@@ -143,13 +145,14 @@ function reopenRow({ id }) {
 }
 
 function resolveRow(kind, { id, event, commit }) {
-  if (!validId(kind, id)) return fail(`id must name a ${kind} row, with an id that starts ${kind}-`);
+  if (!validId(id)) return fail('id must be a row id');
   if (!Number.isInteger(event) || event < 1) return fail('event must be a log seq number');
   if (!eventInLog(event)) return fail(`event ${event} is not in this run's log`);
   if (typeof commit !== 'string' || !SHA.test(commit)) return fail('commit must be 7 to 40 lowercase hex digits');
   if (!commitExists(commit)) return fail(`no commit ${commit} in this repository`);
   const row = readRow(id);
   if (row === null) return fail(`no row ${id}`);
+  if (row.kind !== kind) return fail(`row ${id} is not a ${KINDS[kind]}`);
   if (row.status === 'resolved') return fail(`row ${id} is already resolved`);
   Object.assign(row, { status: 'resolved', witnessEvent: event, witnessCommit: commit, resolvedAt: new Date().toISOString() });
   writeRow(row);
@@ -157,9 +160,10 @@ function resolveRow(kind, { id, event, commit }) {
 }
 
 function deleteRow({ id }) {
-  if (!validId('prd', id)) return fail('id must name a prd row, with an id that starts prd-');
+  if (!validId(id)) return fail('id must be a row id');
   const row = readRow(id);
   if (row === null) return fail(`no row ${id}`);
+  if (row.kind !== 'prd') return fail(`row ${id} is not a work item`);
   if (row.status === 'resolved') return fail(`row ${id} is resolved; a resolved PRD is history and stays`);
   removeFile(rowPath(id));
   if (host.stat_file({ path: rowPath(id) })?.ok !== false) return fail(`row ${id} could not be removed`);

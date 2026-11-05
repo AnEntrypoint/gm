@@ -89,10 +89,11 @@ export function createRowVerbs({ root, confine, log }) {
   }
 
   async function parkRow(id, reason) {
-    if (!validId('prd', id)) return fail('id must name a prd row, with an id that starts prd-');
+    if (!validId(id)) return fail('id must be a row id');
     if (typeof reason !== 'string' || reason.trim() === '') return fail('reason must be a non-empty string');
     const row = await readRow(id);
     if (row === null) return fail(`no row ${id}`);
+    if (row.kind !== 'prd') return fail(`row ${id} is not a work item`);
     if (row.status !== 'open') return fail(`row ${id} is ${row.status}; only an open row is parked`);
     Object.assign(row, { status: 'parked', parkReason: reason.trim() });
     await writeRow(row);
@@ -100,9 +101,10 @@ export function createRowVerbs({ root, confine, log }) {
   }
 
   async function reopenRow(id) {
-    if (!validId('prd', id)) return fail('id must name a prd row, with an id that starts prd-');
+    if (!validId(id)) return fail('id must be a row id');
     const row = await readRow(id);
     if (row === null) return fail(`no row ${id}`);
+    if (row.kind !== 'prd') return fail(`row ${id} is not a work item`);
     if (row.status !== 'parked') return fail(`row ${id} is ${row.status}; only a parked row is reopened`);
     Object.assign(row, { status: 'open', parkReason: undefined });
     await writeRow(row);
@@ -110,9 +112,10 @@ export function createRowVerbs({ root, confine, log }) {
   }
 
   async function deleteRow(id) {
-    if (!validId('prd', id)) return fail('id must name a prd row, with an id that starts prd-');
+    if (!validId(id)) return fail('id must be a row id');
     const row = await readRow(id);
     if (row === null) return fail(`no row ${id}`);
+    if (row.kind !== 'prd') return fail(`row ${id} is not a work item`);
     if (row.status === 'resolved') return fail(`row ${id} is resolved; a resolved PRD is history and stays`);
     const at = confine(`${ROW_DIR}/${id}.yml`);
     if (at.refused) throw new Error(at.refused);
@@ -121,13 +124,14 @@ export function createRowVerbs({ root, confine, log }) {
   }
 
   async function resolveRow(kind, { id, event, commit }) {
-    if (!validId(kind, id)) return fail(`id must name a ${kind} row, with an id that starts ${kind}-`);
+    if (!validId(id)) return fail('id must be a row id');
     if (!Number.isInteger(event) || event < 1) return fail('event must be a log seq number');
     if (!log.events().some((entry) => entry.seq === event)) return fail(`event ${event} is not in this run's log`);
     if (typeof commit !== 'string' || !SHA.test(commit)) return fail('commit must be 7 to 40 lowercase hex digits');
     if (!(await commitExists(root, commit))) return fail(`no commit ${commit} in this repository`);
     const row = await readRow(id);
     if (row === null) return fail(`no row ${id}`);
+    if (row.kind !== kind) return fail(`row ${id} is not a ${KINDS[kind]}`);
     if (row.status === 'resolved') return fail(`row ${id} is already resolved`);
     Object.assign(row, { status: 'resolved', witnessEvent: event, witnessCommit: commit, resolvedAt: new Date().toISOString() });
     await writeRow(row);
@@ -196,8 +200,8 @@ function newId(kind) {
   return `${kind}-${Date.now().toString(36)}${randomBytes(2).toString('hex')}`;
 }
 
-function validId(kind, id) {
-  return typeof id === 'string' && new RegExp(`^${kind}-[a-z0-9]+$`).test(id);
+function validId(id) {
+  return typeof id === 'string' && /^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(id);
 }
 
 // Each value is written as JSON, which is also a valid YAML scalar, so a row file is readable YAML.
