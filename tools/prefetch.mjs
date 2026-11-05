@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process';
 
-const PACKAGE = 'github:AnEntrypoint/pw#v0.1.0';
+const PACKAGE = 'github:AnEntrypoint/pw#54466df';
 const TIMEOUT_MS = 900000;
 const SHELL = process.platform === 'win32';
 
@@ -21,7 +21,7 @@ function reasonOf(result) {
 }
 
 export function prefetch() {
-  console.log(`setup: fetching the playwriter tools: pw v0.1.0, which installs playwriter 0.9.0, the browser tool gm uses. It downloads once into the npm cache at ${cacheOf()}, so the first gm start is quick. It can take a few minutes on a slow network. The browser itself starts only on first use, and this step starts no browser, gate or server.`);
+  console.log(`setup: fetching the playwriter tools: pw 54466df, which installs playwriter 0.9.0, the browser tool gm uses. It downloads once into the npm cache at ${cacheOf()}, so the first gm start is quick. It can take a few minutes on a slow network. The browser itself starts only on first use, and this step starts no browser, gate or server.`);
   const started = Date.now();
   const result = run('npx', ['-y', '-p', PACKAGE, 'playwriter-project', 'help']);
   if (result.status === 0 && (result.stdout ?? '').includes('usage: playwriter-project')) {

@@ -596,3 +596,10 @@ Not witnessed: the 6 h wait itself (no run waited out the interval), and the ins
 - pw on Windows is verified in the pw repo: windows-scan run 42044840454 at 54466df passed on windows-latest; pw DESIGN.md records the browser scan (12 of 12 lifecycle checks and a status --json browser scan) and the Windows fixes it needed.
 - The 383 MB /workspace/gm/core.60199 was an untracked Chromium core dump (file(1) reported chromium.real), not a gm worker core; it was removed so the shared checkout is clean for updates.
 
+
+## pw pin follows the Windows-verified build (2026-11-05)
+
+- gm's shipped default had drifted to github:AnEntrypoint/pw#8a59ed7, which predates every Windows fix in pw. pw main at 54466df has the Windows browser scan verified (windows-scan run 42044840454 on windows-latest; run 42044467037 at 47317fa also passed).
+- defaults/mcp.json, .gm-new/mcp.json, tools/prefetch.mjs, README.md and AGENTS.md now pin and name 54466df. Older pins in dated DESIGN.md sections are historical evidence and stay as written.
+- The pw tag v0.1.0 still points to 8d44415, so pinning the sha rather than moving the tag keeps gm on the verified build without rewriting a published tag.
+

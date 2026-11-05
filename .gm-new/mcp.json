@@ -5,7 +5,7 @@
       "args": [
         "-y",
         "-p",
-        "github:AnEntrypoint/pw#30708f1",
+        "github:AnEntrypoint/pw#54466df",
         "playwriter-project"
       ],
       "env": {
