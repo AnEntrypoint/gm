@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-RELEASE_BASE="${GMNEW_RELEASE_BASE:-https://github.com/AnEntrypoint/gmc/releases/download/latest}"
+RELEASE_BASE="${GMNEW_RELEASE_BASE:-https://github.com/AnEntrypoint/gm/releases/download/latest}"
 INSTALL_ROOT="$HOME/.gmnew"
 CURRENT_DIR="$INSTALL_ROOT/current"
 MCP_CONFIG=""

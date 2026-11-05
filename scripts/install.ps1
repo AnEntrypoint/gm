@@ -2,7 +2,7 @@ param([string]$McpConfig = '')
 
 $ErrorActionPreference = 'Stop'
 
-$releaseBase = if ($env:GMNEW_RELEASE_BASE) { $env:GMNEW_RELEASE_BASE } else { 'https://github.com/AnEntrypoint/gmc/releases/download/latest' }
+$releaseBase = if ($env:GMNEW_RELEASE_BASE) { $env:GMNEW_RELEASE_BASE } else { 'https://github.com/AnEntrypoint/gm/releases/download/latest' }
 $installRoot = Join-Path $env:USERPROFILE '.gmnew'
 $currentDir = Join-Path $installRoot 'current'
 $exeName = 'gmnew.exe'

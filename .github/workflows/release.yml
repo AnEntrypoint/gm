@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 env:
-  RELEASE_REPO: AnEntrypoint/gmc
+  RELEASE_REPO: AnEntrypoint/gm
 
 jobs:
   build:
@@ -107,7 +107,7 @@ jobs:
 
   publish:
     needs: build
-    if: github.repository == 'AnEntrypoint/gmc'
+    if: github.repository == 'AnEntrypoint/gm'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     concurrency:

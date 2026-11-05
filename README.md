@@ -6,11 +6,11 @@ Status: the MCP server, the skill, the CLI wrapper, the measurement tools, and t
 
 Install the latest release, once per machine, on Linux or macOS (x64 or arm64). It fetches the release manifest, verifies the archive's sha256 and size, unpacks into `~/.gmnew/current`, and registers gm for Claude Code at user level with add-mcp. It needs curl, tar and sha256sum or shasum; Node is not needed to run gm.
 
-    curl -fsSL https://raw.githubusercontent.com/AnEntrypoint/gmc/main/scripts/install.sh | sh
+    curl -fsSL https://raw.githubusercontent.com/AnEntrypoint/gm/main/scripts/install.sh | sh
 
 To register gm with a playwriter config, pass the path through `sh -s --`:
 
-    curl -fsSL https://raw.githubusercontent.com/AnEntrypoint/gmc/main/scripts/install.sh | sh -s -- --mcp-config <path>
+    curl -fsSL https://raw.githubusercontent.com/AnEntrypoint/gm/main/scripts/install.sh | sh -s -- --mcp-config <path>
 
 Each build is published under its own file names (`gmnew-<version>-<target>`), and the manifest is uploaded last, so an install never mixes two builds. The last three builds stay on `latest`.
 

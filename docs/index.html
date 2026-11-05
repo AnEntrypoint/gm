@@ -67,10 +67,10 @@ footer { border-top: 4px solid #000; margin-top: 2em; padding-top: 0.5em; font-s
 <section class="chapter">
 <h2>1. Install</h2>
 <p>Linux and macOS, x64 or arm64. One command, once per machine. It downloads the latest release, checks its sha256 and size, unpacks into <code>~/.gmnew/current</code>, and registers gm for Claude Code at user level.</p>
-<pre>curl -fsSL https://raw.githubusercontent.com/AnEntrypoint/gmc/main/scripts/install.sh | sh</pre>
+<pre>curl -fsSL https://raw.githubusercontent.com/AnEntrypoint/gm/main/scripts/install.sh | sh</pre>
 <p>Needs curl, tar, and sha256sum or shasum. Node is not needed to run gm.</p>
 <p>To register gm with a playwriter config:</p>
-<pre>curl -fsSL https://raw.githubusercontent.com/AnEntrypoint/gmc/main/scripts/install.sh | sh -s -- --mcp-config &lt;path&gt;</pre>
+<pre>curl -fsSL https://raw.githubusercontent.com/AnEntrypoint/gm/main/scripts/install.sh | sh -s -- --mcp-config &lt;path&gt;</pre>
 <p>Windows is not published yet. The Windows build fails most of its tests, so the release carries Linux and macOS only.</p>
 </section>
 
@@ -180,7 +180,7 @@ rm -rf ~/.gmnew</pre>
 </section>
 
 <footer>
-gm manual. Source: <a href="https://github.com/AnEntrypoint/gmc">github.com/AnEntrypoint/gmc</a>.
+gm manual. Source: <a href="https://github.com/AnEntrypoint/gm">github.com/AnEntrypoint/gm</a>.
 </footer>
 
 </body>

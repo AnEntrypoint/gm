@@ -16,7 +16,7 @@ namespace gmnew::host {
 
 inline constexpr std::string_view kBuildVersion = GMNEW_BUILD_VERSION;
 inline constexpr std::string_view kDefaultUpdateUrl =
-    "https://github.com/AnEntrypoint/gmc/releases/download/latest/manifest.json";
+    "https://github.com/AnEntrypoint/gm/releases/download/latest/manifest.json";
 inline constexpr std::chrono::hours kUpdateInterval{6};
 
 struct ManifestAsset {
