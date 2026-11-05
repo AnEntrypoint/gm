@@ -1,6 +1,7 @@
 #include <iostream>
 
 #include "gm/host/cli.hpp"
+#include "gm/host/install.hpp"
 #include "gm/host/options.hpp"
 #include "gm/host/update.hpp"
 
@@ -11,6 +12,7 @@ constexpr std::string_view kUsage =
     "[--skills <dir>] [--leaves <dir>] [--build-dir <dir>]\n"
     "       gm doctor [--leaves <dir>]\n"
     "       gm update\n"
+    "       gm install [--mcp-config <file>]\n"
     "       gm --version\n"
     "       gm events (--run <id> [--workspace <dir>] | --dir <run dir>) [--wait [--timeout-ms N]]\n"
     "       gm query (--run <id> [--workspace <dir>] | --dir <run dir>) [--js \"<filter>\"]\n";
@@ -25,6 +27,7 @@ int main(int argc, char** argv) {
     if (args.mode == "events") return gm::host::run_events(args);
     if (args.mode == "query") return gm::host::run_query_command(args);
     if (args.mode == "update") return gm::host::run_update_command();
+    if (args.mode == "install") return gm::host::run_install_command(args);
     if (args.mode == "--version") {
         std::cout << gm::host::kBuildVersion << '\n';
         return 0;

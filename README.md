@@ -4,7 +4,7 @@ A single-worker long-horizon loop: one worker, one append-only log, governance r
 
 Status: the MCP server, the skill, the CLI wrapper, the measurement tools, and the search, wiki, review and call-site tools are built and witnessed. The live comparison with gm is closed, with its results in DESIGN.md.
 
-Install the latest release, once per machine, on Linux or macOS (x64 or arm64). It fetches the release manifest, verifies the archive's sha256 and size, unpacks into `~/.gmnew/current`, and registers gm for Claude Code at user level with add-mcp. It needs curl, tar and sha256sum or shasum; Node is not needed to run gm.
+Install the latest release, once per machine, on Linux or macOS (x64 or arm64). It fetches the release manifest, verifies the archive's sha256 and size, unpacks into `~/.gmnew/current`, and then runs the installed binary's `install` subcommand, which registers gm for Claude Code at user level. It needs curl, tar and sha256sum or shasum; Node and npm are not needed.
 
     curl -fsSL https://raw.githubusercontent.com/AnEntrypoint/gm/main/scripts/install.sh | sh
 
@@ -16,13 +16,9 @@ Each build is published under its own file names (`gm-<version>-<target>`), and 
 
 Windows is not published yet: the Windows build fails most of its tests, so the release carries Linux and macOS only. `scripts/install.ps1` is kept for when it is.
 
-The registration is add-mcp, pinned to version 2.6.1, run through npx. The command it runs is:
+The registration is written by the binary itself: `<path-to-gm> install [--mcp-config <file>]`. It sets `mcpServers.gm` in `~/.claude.json` (on Windows, `%USERPROFILE%\.claude.json`) to `{"command": "<path-to-gm>", "args": ["serve"]}`, with `--mcp-config <file>` appended to args when given. Every other key is kept. The file is written to a temp file, re-read, and renamed over the original; a file that changed meanwhile is re-merged, and a file that is not a JSON object is refused and left alone. Running it again replaces the gm entry, so running the installer again updates the path.
 
-    npx -y add-mcp@2.6.1 <path-to-gm> --args serve -n gm -g -a claude-code -y
-
-add-mcp takes the executable as its target and each argument after `--args`, so the command and its arguments are stored apart. Do not put the whole command in one string: add-mcp stores that string as the executable name, and the server cannot start.
-
-Check the registration with `npx -y add-mcp@2.6.1 list -g`. Remove it with `npx -y add-mcp@2.6.1 remove gm -g -y`. The installer re-registers over an existing gm entry, so running it again updates the path.
+The entry is the same one add-mcp wrote, so installs made with add-mcp stay valid. Remove the entry by deleting `mcpServers.gm` from `~/.claude.json`.
 
 Auto-update: the server checks the `latest` release at start and every six hours, and downloads a build only when the release has changed. Set `GMNEW_AUTO_UPDATE=0` to turn that off. Development builds never update.
 

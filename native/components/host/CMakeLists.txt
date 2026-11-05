@@ -1,6 +1,6 @@
 set(GMNEW_VERSION "dev" CACHE STRING "Version of this build, reported by gm --version and checked by gm update")
 
-add_library(gm_host STATIC child.cpp composed_verbs.cpp relay.cpp options.cpp primitives.cpp cli.cpp update.cpp)
+add_library(gm_host STATIC child.cpp composed_verbs.cpp relay.cpp options.cpp primitives.cpp cli.cpp update.cpp install.cpp)
 target_include_directories(gm_host PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_CURRENT_SOURCE_DIR}/../../include)
 target_link_libraries(gm_host PUBLIC deoxidene::deoxidene gm_json gm_log gm_proc gm_runcode
                                         $<TARGET_NAME_IF_EXISTS:gm_mcp>)
@@ -28,6 +28,9 @@ if(GMNEW_BUILD_TESTS)
     add_executable(gm_update_test tests/update_test.cpp)
     target_link_libraries(gm_update_test PRIVATE gm_host)
     add_test(NAME gm_update_test COMMAND gm_update_test)
+    add_executable(gm_install_test tests/install_test.cpp)
+    target_link_libraries(gm_install_test PRIVATE gm_host)
+    add_test(NAME gm_install_test COMMAND gm_install_test)
 endif()
 
 function(gm_host_link_worker)

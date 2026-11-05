@@ -94,9 +94,7 @@ printf 'installed gmnew %s (%s) at %s\n' "$VERSION" "$TARGET" "$EXE"
 if [ "${GMNEW_SKIP_REGISTER:-0}" = 1 ]; then
     printf 'registration skipped (GMNEW_SKIP_REGISTER=1)\n'
 elif [ -n "$MCP_CONFIG" ]; then
-    npx -y add-mcp@2.6.1 "$EXE" --args serve --args --mcp-config --args "$MCP_CONFIG" -n gm -g -a claude-code -y || die "add-mcp failed"
-    printf 'registered gm MCP server (user scope, add-mcp) at %s\n' "$EXE"
+    "$EXE" install --mcp-config "$MCP_CONFIG" || die "gm install failed"
 else
-    npx -y add-mcp@2.6.1 "$EXE" --args serve -n gm -g -a claude-code -y || die "add-mcp failed"
-    printf 'registered gm MCP server (user scope, add-mcp) at %s\n' "$EXE"
+    "$EXE" install || die "gm install failed"
 fi

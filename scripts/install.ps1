@@ -68,12 +68,10 @@ try {
         Write-Output 'registration skipped (GMNEW_SKIP_REGISTER=1)'
     }
     else {
-        $addArgs = @($exe, '--args', 'serve')
-        if ($McpConfig) { $addArgs += @('--args', '--mcp-config', '--args', $McpConfig) }
-        $addArgs += @('-n', 'gm', '-g', '-a', 'claude-code', '-y')
-        & npx -y add-mcp@2.6.1 @addArgs
-        if ($LASTEXITCODE -ne 0) { throw 'add-mcp failed' }
-        Write-Output "registered gm MCP server (user scope, add-mcp) at $exe"
+        $installArgs = @('install')
+        if ($McpConfig) { $installArgs += @('--mcp-config', $McpConfig) }
+        & $exe @installArgs
+        if ($LASTEXITCODE -ne 0) { throw 'gm install failed' }
     }
 }
 finally {
