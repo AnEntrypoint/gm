@@ -361,7 +361,7 @@ const NATIVE_AHEAD = [
   { row: 'resources/subscribe', path: /^\.error$/, when: (left, right) => left === undefined && right?.code === -32601, reason: SUBSCRIPTIONS_REASON },
   { row: 'log event kinds', path: /^\.firstDivergence\[\d+\]$/, when: (left, right) => [left, right].some((window) => NATIVE_AHEAD_KINDS.some((kind) => window.includes(kind))), reason: 'the event order follows from the stopped fetch code-call and the resources/subscribe error above' },
   { row: /^(initialize|mcp initialize)$/, path: /^\.result\.instructions$/, reason: 'native names subscriptions/listen in the resources pointer of its instructions; Node still names resources/subscribe' },
-  { row: 'job_status', path: /^\.result\.(content\[0\]\.text|structuredContent)\.output\.timeoutMs$/, when: (left, right) => left === undefined, reason: 'native job_status reports the effective deadline as timeoutMs (search and jobs change, default 300000 ms); Node does not report it' },
+  { row: 'job_status', path: /^\.result\.(content\[0\]\.text|structuredContent)\.output\.timeoutMs$/, when: (left, right) => left === 60000 && right === 300000, reason: 'native job_start default is 300000; Node 60000 kept until the owner chooses' },
   { row: CASCADE_ROWS, path: SEQ_PATH, when: (left, right) => Number.isInteger(left) && right === left + 1, reason: 'native logs one more event than Node, the resources/subscribe error (native-ahead above), so every later sequence number is one higher' },
   { row: /^(initialize|mcp initialize)$/, path: /^\.result\.capabilities\.resources\.subscribe$/, when: (left, right) => right === undefined, reason: CAPABILITY_REASON },
   { row: BUILTIN_IMPORT_ROWS, path: BODY_RESULT_PATH, when: nativeFailed, reason: BUILTIN_REASON, gap: true },
