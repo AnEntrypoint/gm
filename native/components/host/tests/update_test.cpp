@@ -57,10 +57,10 @@ struct Release {
 Release make_release(const fs::path& dir, const std::string& mark, const std::string& digest_override = {}) {
     const std::string target = target_name();
     const fs::path tree = dir / "tree";
-    make_build(tree / ("gm-" + target), mark);
+    make_build(tree / ("gmnew-" + target), mark);
     const fs::path archive = dir / ("gm-" + target + ".tar.gz");
     const gm::proc::Outcome packed =
-        gm::proc::run({"tar", "-czf", archive.string(), "-C", tree.string(), "gm-" + target});
+        gm::proc::run({"tar", "-czf", archive.string(), "-C", tree.string(), "gmnew-" + target});
     check(packed.started && packed.exit_code == 0, "fixture archive for " + target + " is packed");
 
     const std::string bytes = read_text(archive);

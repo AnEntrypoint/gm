@@ -485,7 +485,7 @@ UpdateResult update_once(const UpdatePolicy& policy, UpdateResult result) {
     if (auto error = verify_archive(archive, asset->second)) return failed(std::move(result), *error);
     const fs::path unpacked = staging / "unpacked";
     if (auto error = unpack(archive, unpacked)) return failed(std::move(result), *error);
-    if (auto error = install_staged(unpacked / ("gm-" + target), policy.install_dir))
+    if (auto error = install_staged(unpacked / ("gmnew-" + target), policy.install_dir))
         return failed(std::move(result), *error);
     state.checked_ms = now_ms();
     state.version = manifest->version;
