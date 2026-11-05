@@ -1,9 +1,9 @@
 #include <cstdio>
 #include <string>
 
-#include "gmnew/json.hpp"
+#include "gm/json.hpp"
 
-using namespace gmnew::json;
+using namespace gm::json;
 
 static int failures = 0;
 

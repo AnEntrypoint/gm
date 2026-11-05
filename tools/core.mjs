@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// The gm-new core. tools/relay.mjs runs this file and passes the host's lines through it, so the host's connection never changes.
+// The gm core. tools/relay.mjs runs this file and passes the host's lines through it, so the host's connection never changes.
 // The core runs the worker (src/mcp.mjs) as a child. When a module the worker loads changes (src/worker-modules.json) or a skill changes,
 // the core holds new host requests,
 // waits for the calls in flight to answer, pauses the worker (SIGTERM), starts a new one on the same run directory, replays the MCP
@@ -34,13 +34,13 @@ const CHECK_MS = 10000;
 const ACK_MS = 30000;
 const LIST_MS = 5000;
 const HANDSHAKE_MS = 10000;
-const HANDSHAKE_ID = 'gm-new-core-handshake';
+const HANDSHAKE_ID = 'gm-core-handshake';
 const RETRY_MIN_MS = 1000;
 const RETRY_MAX_MS = 30000;
 const HANDOVER_EXIT = 75;
 const MEMORY_LIMIT_MB = Number(process.env.GMNEW_MEMORY_LIMIT_MB ?? 512);
 const UPDATE_MS = process.env.GMNEW_UPDATE_MS === undefined ? DEFAULT_UPDATE_MS : Number(process.env.GMNEW_UPDATE_MS);
-const DEFAULT_INITIALIZE = { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'gm-new-core', version: '1' } };
+const DEFAULT_INITIALIZE = { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'gm-core', version: '1' } };
 const LISTS = { 'tools/list': 'tools', 'prompts/list': 'prompts', 'resources/list': 'resources' };
 const NOTICE = { tools: 'notifications/tools/list_changed', prompts: 'notifications/prompts/list_changed', resources: 'notifications/resources/list_changed' };
 const PAUSED_BEFORE_ANSWER = 'the worker paused before it answered this call; query_log shows what it did, then repeat the call if it did nothing';
@@ -87,7 +87,7 @@ let coreTimer = null;
 let updatesStarted = false;
 
 function say(message) {
-  process.stderr.write(`gm-new core: ${message}\n`);
+  process.stderr.write(`gm core: ${message}\n`);
 }
 
 function writeHost(message) {
@@ -456,7 +456,7 @@ function waitForDrain() {
 
 // The core asks the worker for a list itself. The reply is compared with the digest the host last fetched.
 function askWorker(method) {
-  const id = `gm-new-core:${method}`;
+  const id = `gm-core:${method}`;
   return new Promise((resolveAsk) => {
     const timer = setTimeout(() => {
       coreRequests.delete(id);

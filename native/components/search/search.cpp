@@ -2,7 +2,7 @@
 
 #include "search_impl.hpp"
 
-namespace gmnew {
+namespace gm {
 
 namespace fs = std::filesystem;
 

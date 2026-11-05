@@ -1,4 +1,4 @@
-#include "gmnew/runcode.hpp"
+#include "gm/runcode.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -15,7 +15,7 @@
 
 #include "engine.hpp"
 
-namespace gmnew {
+namespace gm {
 namespace {
 
 using engine::Engine;

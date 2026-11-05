@@ -70,7 +70,7 @@ echo "setup: done. Nothing was run. The manual is in docs/index.html, and README
 if command -v cmake >/dev/null 2>&1 && command -v ninja >/dev/null 2>&1; then
   echo "setup: native build (release preset)"
   if cmake --preset release -DGMNEW_BUILD_TESTS=ON >/dev/null && cmake --build build/release >/dev/null; then
-    echo "setup: native binary: $here/build/release/native/components/host/gmnew"
+    echo "setup: native binary: $here/build/release/native/components/host/gm"
   else
     echo "setup: the native build failed. Node gm is unaffected."
   fi

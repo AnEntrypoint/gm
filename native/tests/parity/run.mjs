@@ -9,7 +9,7 @@ const argValue = (name, fallback) => {
   const at = process.argv.indexOf(name);
   return at >= 0 ? process.argv[at + 1] : fallback;
 };
-const NATIVE_BIN = resolve(argValue('--bin', join(REPO, 'build', 'integ', 'native', 'components', 'host', 'gmnew')));
+const NATIVE_BIN = resolve(argValue('--bin', join(REPO, 'build', 'integ', 'native', 'components', 'host', 'gm')));
 const REF = resolve(argValue('--ref', '/tmp/parity-ref'));
 const SCRATCH = resolve(argValue('--scratch', `/tmp/parity-scratch-${process.pid}`));
 const REPLY_TIMEOUT_MS = Number(argValue('--reply-timeout-ms', '30000'));
@@ -325,7 +325,7 @@ function withCutoverPlaceholders(value, path = '') {
 }
 
 function isSeqPath(path) {
-  return /(\.actionSeq|gmnew\/seq)$/.test(path);
+  return /(\.actionSeq|gm\/seq)$/.test(path);
 }
 
 const SUBSCRIPTIONS_REASON = 'native removed resources/subscribe: it answers -32601, and subscriptions/listen is the surface (2026-07-28 subscriptions page); Node still serves resources/subscribe';

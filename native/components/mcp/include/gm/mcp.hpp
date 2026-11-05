@@ -12,11 +12,11 @@
 #include <vector>
 
 #include "deoxidene/result.hpp"
-#include "gmnew/json.hpp"
-#include "gmnew/log.hpp"
-#include "gmnew/verbs.hpp"
+#include "gm/json.hpp"
+#include "gm/log.hpp"
+#include "gm/verbs.hpp"
 
-namespace gmnew::mcp {
+namespace gm::mcp {
 
 using BodyRunner = std::function<deoxidene::Result<json::Value, std::string>(VerbTable&, std::string_view body,
                                                                              const std::filesystem::path& project_root, std::string_view format)>;
@@ -37,7 +37,7 @@ struct ServerOptions {
     std::uint64_t stuck_ms = 180000;
     std::uint64_t monitor_ms = 15000;
     std::uint64_t notice_ms = 180000;
-    std::string wait_program = "gmnew";
+    std::string wait_program = "gm";
     BodyRunner run_body;
     std::function<void(std::shared_ptr<RunLog> log)> on_run_open;
     std::function<json::Value()> job_snapshot;

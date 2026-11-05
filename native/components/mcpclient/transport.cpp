@@ -3,7 +3,7 @@
 #include <string>
 #include <utility>
 
-namespace gmnew::mcpclient {
+namespace gm::mcpclient {
 
 namespace {
 
@@ -39,7 +39,7 @@ mcp::core::Result<mcp::core::Unit> ChildTransport::start(mcp::client::TransportR
     return mcp::core::Unit{};
 }
 
-void ChildTransport::stop() noexcept { abort("stopped by gm-new"); }
+void ChildTransport::stop() noexcept { abort("stopped by gm"); }
 
 bool ChildTransport::alive() const {
     std::lock_guard lock(mutex_);

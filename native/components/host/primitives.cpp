@@ -1,8 +1,8 @@
-#include "gmnew/host/primitives.hpp"
+#include "gm/host/primitives.hpp"
 
-#include "gmnew/proc.hpp"
+#include "gm/proc.hpp"
 
-namespace gmnew::host {
+namespace gm::host {
 
 namespace {
 

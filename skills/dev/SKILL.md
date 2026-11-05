@@ -1,10 +1,10 @@
-# Working on gm-new
+# Working on gm
 
 How to change this project. Project facts are in AGENTS.md, and decisions with their witnesses are in DESIGN.md. This skill is not served to runs; only skills/gm/SKILL.md and skills/gm-continue/SKILL.md are, as the MCP prompts `gm` (invoked as mcp__gm__gm) and `gm-continue` (invoked as mcp__gm__gm-continue), and as the resources skill://gm/SKILL.md and skill://gm-continue/SKILL.md. The route to each is its resource, read with ReadMcpResourceTool (server gm). Do not call gm or gm-continue with the Skill tool; it is not listed there. The host names mcp__gm__gm and mcp__gm__gm-continue are the expected names under the host's /mcp__<server>__<prompt> rule, not witnessed ones: check them with a /mcp reconnect in a live session, in the host's command list and Skill list.
 
 ## Scratch
 
-- Scratch work lives under /tmp/gm-scratch/gm-new. A script never sits in a directory it deletes: a probe that removed its own directory is why this rule exists.
+- Scratch work lives under /tmp/gm-scratch/gm. A script never sits in a directory it deletes: a probe that removed its own directory is why this rule exists.
 - A witness copies the working tree as a tar (without .git, runs and node_modules). The copy is not a git clone and not a worktree. The witness runs the real path through the relay, reads the result from the run's log file, and deletes the copy.
 - A witness for propagation uses a scratch bare repository as origin and a runner checkout started with default settings. It times the push and reads the relay's stderr.
 - A witness driver is started from the shell in the background, never with gm.job_start in the live run: a job is a record in that run's log, so a driver started there put three witness jobs in runs/self.

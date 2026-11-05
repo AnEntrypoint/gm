@@ -6,10 +6,10 @@
 #include <memory>
 #include <string>
 
-#include "gmnew/host.hpp"
-#include "gmnew/log.hpp"
+#include "gm/host.hpp"
+#include "gm/log.hpp"
 
-namespace gmnew::host {
+namespace gm::host {
 
 using CurrentLog = std::function<std::shared_ptr<RunLog>()>;
 

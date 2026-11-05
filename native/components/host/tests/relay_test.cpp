@@ -9,7 +9,7 @@
 #include <thread>
 #include <vector>
 
-#include "gmnew/host/relay.hpp"
+#include "gm/host/relay.hpp"
 
 namespace {
 
@@ -54,8 +54,8 @@ bool eventually(Predicate predicate, std::chrono::milliseconds timeout) {
     return predicate();
 }
 
-gmnew::host::RelayOptions echo_options(const fs::path& watched) {
-    gmnew::host::RelayOptions options;
+gm::host::RelayOptions echo_options(const fs::path& watched) {
+    gm::host::RelayOptions options;
     options.worker_argv = {"/bin/sh", "-c", "while IFS= read -r line; do printf '%s\\n' \"$line\"; done"};
     options.runtime_roots = {watched};
     options.poll = 50ms;
@@ -74,14 +74,14 @@ void restart_on_source_change(const fs::path& root) {
     fs::create_directories(watched / "tests");
     write_file(watched / "core.cpp", "int a;\n");
     HostSide host;
-    gmnew::host::Relay relay(echo_options(watched), [&](std::string_view line) { host.take(line); });
+    gm::host::Relay relay(echo_options(watched), [&](std::string_view line) { host.take(line); });
     relay.start();
     relay.host_line(R"({"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18"}})");
     relay.host_line(R"({"jsonrpc":"2.0","id":2,"method":"ping"})");
     check(host.wait_for_text(R"("id":2)", 3s), "a host line reaches the worker and its answer comes back");
     const long long first_pid = relay.worker_pid();
     write_file(watched / "tests" / "ignored.cpp", "int ignored;\n");
-    write_file(root / "CMakeLists.txt", "project(gmnew)\n");
+    write_file(root / "CMakeLists.txt", "project(gm)\n");
     std::this_thread::sleep_for(300ms);
     check(relay.restarts() == 0, "a change under tests/ or outside the runtime roots restarts nothing");
     write_file(watched / "core.cpp", "int a, b;\n");
@@ -95,7 +95,7 @@ void restart_on_source_change(const fs::path& root) {
         std::lock_guard lock(host.mutex);
         bool handshake_hidden = true;
         for (const auto& line : host.lines)
-            if (line.find("gm-new-core") != std::string::npos) handshake_hidden = false;
+            if (line.find("gm-core") != std::string::npos) handshake_hidden = false;
         check(handshake_hidden, "the replayed handshake and list probes are not passed to the host");
     }
     relay.host_closed();
@@ -111,7 +111,7 @@ void drain_before_restart(const fs::path& root) {
     options.worker_argv = {"/bin/sh", "-c",
                            "while IFS= read -r line; do case \"$line\" in *slow*) sleep 1;; esac; printf '%s\\n' "
                            "\"$line\"; done"};
-    gmnew::host::Relay relay(options, [&](std::string_view line) { host.take(line); });
+    gm::host::Relay relay(options, [&](std::string_view line) { host.take(line); });
     relay.start();
     relay.host_line(R"({"jsonrpc":"2.0","id":7,"method":"slow"})");
     std::this_thread::sleep_for(100ms);
@@ -132,7 +132,7 @@ void stuck_call_gets_retry_error(const fs::path& root) {
     options.worker_argv = {"/bin/sh", "-c",
                            R"sh(while IFS= read -r line; do case "$line" in *hang*) sleep 3;; esac; printf '%s\n' "$line"; done)sh"};
     options.drain_timeout = 300ms;
-    gmnew::host::Relay relay(options, [&](std::string_view line) { host.take(line); });
+    gm::host::Relay relay(options, [&](std::string_view line) { host.take(line); });
     relay.start();
     relay.host_line(R"({"jsonrpc":"2.0","id":9,"method":"hang"})");
     std::this_thread::sleep_for(100ms);
@@ -156,7 +156,7 @@ while IFS= read -r line; do printf '%s\n' "$line"; done
     HostSide host;
     auto options = echo_options(dir / "leaves");
     options.worker_argv = {worker.string()};
-    gmnew::host::Relay relay(options, [&](std::string_view line) { host.take(line); });
+    gm::host::Relay relay(options, [&](std::string_view line) { host.take(line); });
     relay.start();
     relay.host_line(R"({"jsonrpc":"2.0","id":11,"method":"ping"})");
     check(host.wait_for_text(R"("id":11)", 3s), "a worker started from a script answers a call");
@@ -181,7 +181,7 @@ void failed_build_keeps_worker(const fs::path& root) {
     options.runtime_roots.clear();
     options.build_roots = {watched};
     options.build_dir = root / "not-a-build-dir";
-    gmnew::host::Relay relay(options, [&](std::string_view line) { host.take(line); });
+    gm::host::Relay relay(options, [&](std::string_view line) { host.take(line); });
     relay.start();
     const long long first_pid = relay.worker_pid();
     write_file(watched / "core.cpp", "int broken(;\n");
@@ -197,7 +197,7 @@ void missing_worker_answers_with_failure(const fs::path& root) {
     auto options = echo_options(root);
     options.worker_argv = {(root / "no-such-worker").string()};
     options.retry_min = 10000ms;
-    gmnew::host::Relay relay(options, [&](std::string_view line) { host.take(line); });
+    gm::host::Relay relay(options, [&](std::string_view line) { host.take(line); });
     relay.start();
     relay.host_line(R"({"jsonrpc":"2.0","id":5,"method":"tools/list"})");
     check(host.wait_for_text(R"("id":5,"error")", 2s), "a request while the worker is down gets the failure text");
@@ -211,7 +211,7 @@ void missing_worker_answers_with_failure(const fs::path& root) {
 }
 
 int main() {
-    const fs::path root = fs::temp_directory_path() / ("gmnew-relay-test-" + std::to_string(std::rand()) +
+    const fs::path root = fs::temp_directory_path() / ("gm-relay-test-" + std::to_string(std::rand()) +
                                                        std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
     fs::create_directories(root);
     restart_on_source_change(root);

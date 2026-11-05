@@ -4,9 +4,9 @@
 #include <string_view>
 #include <vector>
 
-#include "gmnew/json.hpp"
+#include "gm/json.hpp"
 
-namespace gmnew {
+namespace gm {
 
 struct VerbInfo {
     std::string name;

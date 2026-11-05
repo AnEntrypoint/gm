@@ -124,7 +124,7 @@ export function formatOf(project, file) {
 // counter is shared with the hook's thread through a SharedArrayBuffer.
 let generation = null;
 let fingerprint = null;
-const SKIP_DIRS = new Set(['node_modules', 'runs', '.gm-new', '.git', 'sources', 'vendor']);
+const SKIP_DIRS = new Set(['node_modules', 'runs', '.gm', '.git', 'sources', 'vendor']);
 function nextGeneration(project, log, step) {
   if (generation === null) {
     const buffer = new SharedArrayBuffer(4);

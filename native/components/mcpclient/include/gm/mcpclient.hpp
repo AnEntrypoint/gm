@@ -9,10 +9,10 @@
 #include <string_view>
 #include <vector>
 
-#include "gmnew/json.hpp"
-#include "gmnew/verbs.hpp"
+#include "gm/json.hpp"
+#include "gm/verbs.hpp"
 
-namespace gmnew::mcpclient {
+namespace gm::mcpclient {
 
 struct ConfigFile {
     std::filesystem::path path;

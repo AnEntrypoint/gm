@@ -6,16 +6,16 @@
 #include <string>
 #include <vector>
 
-#include "gmnew/json.hpp"
+#include "gm/json.hpp"
 #include <atomic>
 #include <chrono>
 #include <thread>
 
-#include "gmnew/mcp.hpp"
-#include "gmnew/verbs.hpp"
+#include "gm/mcp.hpp"
+#include "gm/verbs.hpp"
 
 namespace fs = std::filesystem;
-using gmnew::json::Value;
+using gm::json::Value;
 
 namespace {
 
@@ -26,18 +26,18 @@ void check(bool ok, const std::string& what) {
     if (!ok) ++failures;
 }
 
-class FakeVerbs : public gmnew::VerbTable {
+class FakeVerbs : public gm::VerbTable {
 public:
-    std::vector<gmnew::VerbInfo> list() const override {
+    std::vector<gm::VerbInfo> list() const override {
         return {{"read_file", "Read a file.", R"({"type":"object","properties":{"path":{"type":"string"}},"required":["path"]})"}};
     }
-    Value call(std::string_view, const Value&) override { return Value(gmnew::json::Object{}).set("ok", false); }
+    Value call(std::string_view, const Value&) override { return Value(gm::json::Object{}).set("ok", false); }
 };
 
 class GrowingVerbs : public FakeVerbs {
 public:
     std::atomic<bool> grown{false};
-    std::vector<gmnew::VerbInfo> list() const override {
+    std::vector<gm::VerbInfo> list() const override {
         auto all = FakeVerbs::list();
         if (grown) all.push_back({"extra_verb", "An added verb.", R"({"type":"object"})"});
         return all;
@@ -59,13 +59,13 @@ double ttl_of(const Value& v) {
 }
 
 struct Harness {
-    std::unique_ptr<gmnew::mcp::Server> server;
+    std::unique_ptr<gm::mcp::Server> server;
     std::vector<Value> out;
     std::mutex lock;
 
-    Harness(gmnew::VerbTable& verbs, gmnew::mcp::ServerOptions options) {
-        auto opened = gmnew::mcp::Server::open(verbs, std::move(options), [this](std::string_view line) {
-            auto parsed = gmnew::json::parse(line);
+    Harness(gm::VerbTable& verbs, gm::mcp::ServerOptions options) {
+        auto opened = gm::mcp::Server::open(verbs, std::move(options), [this](std::string_view line) {
+            auto parsed = gm::json::parse(line);
             std::lock_guard guard(lock);
             if (parsed) out.push_back(*parsed);
         });
@@ -104,8 +104,8 @@ struct Harness {
     }
 };
 
-gmnew::mcp::ServerOptions fresh_options(const fs::path& root) {
-    gmnew::mcp::ServerOptions options;
+gm::mcp::ServerOptions fresh_options(const fs::path& root) {
+    gm::mcp::ServerOptions options;
     options.workspace = root / "ws";
     options.runs = root / "runs";
     options.skills = fs::path(GMNEW_SOURCE_DIR) / "skills";
@@ -115,7 +115,7 @@ gmnew::mcp::ServerOptions fresh_options(const fs::path& root) {
 }
 
 fs::path scratch(const std::string& section) {
-    return fs::temp_directory_path() / ("gmnew-mcp-spec-" + section + "-" + std::to_string(std::random_device{}()));
+    return fs::temp_directory_path() / ("gm-mcp-spec-" + section + "-" + std::to_string(std::random_device{}()));
 }
 
 const char* kInitialize = R"({"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"t","version":"1"}})";
@@ -285,7 +285,7 @@ int main(int argc, char** argv) {
     else if (section == "capabilities") capabilities();
     else if (section == "list_changed") list_changed();
     else {
-        std::cout << "usage: gmnew_mcp_spec_test discover|caching|missing|annotations|capabilities|list_changed\n";
+        std::cout << "usage: gm_mcp_spec_test discover|caching|missing|annotations|capabilities|list_changed\n";
         return 2;
     }
     std::cout << (failures == 0 ? "ALL PASSED" : "FAILURES: " + std::to_string(failures)) << '\n';

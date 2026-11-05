@@ -13,13 +13,13 @@ import { registrationStatus } from './registration.mjs';
 import { writeSummary } from './summary.mjs';
 
 const USAGE = `usage:
-  gmnew run --task <file-or-text> --workspace <dir> [--model scripted] [--max-steps N]
+  gm run --task <file-or-text> --workspace <dir> [--model scripted] [--max-steps N]
             [--script <replies.json>] [--faults 429,429] [--serial] [--no-background]
             [--latency-ms N] [--overlap]
-  gmnew query (--run <id> | --dir <run dir>) --js "<filter>"
-  gmnew events (--run <id> | --dir <run dir>) (--read-clear | --wait [--timeout-ms N])
-  gmnew replay (--run <id> | --dir <run dir>) [--workspace <dir>] [--max-steps N]
-  gmnew doctor [--workspace <dir>]`;
+  gm query (--run <id> | --dir <run dir>) --js "<filter>"
+  gm events (--run <id> | --dir <run dir>) (--read-clear | --wait [--timeout-ms N])
+  gm replay (--run <id> | --dir <run dir>) [--workspace <dir>] [--max-steps N]
+  gm doctor [--workspace <dir>]`;
 
 async function main(argv) {
   const [command, ...rest] = argv;
@@ -265,7 +265,7 @@ main(process.argv.slice(2)).then(
     process.exitCode = code ?? 0;
   },
   (err) => {
-    console.error(`gmnew: ${err.message}`);
+    console.error(`gm: ${err.message}`);
     process.exitCode = 1;
   },
 );

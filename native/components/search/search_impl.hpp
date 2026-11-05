@@ -7,9 +7,9 @@
 #include <unordered_map>
 #include <vector>
 
-#include "gmnew/json.hpp"
+#include "gm/json.hpp"
 
-namespace gmnew::search {
+namespace gm::search {
 
 struct FileEntry {
     std::string stamp;

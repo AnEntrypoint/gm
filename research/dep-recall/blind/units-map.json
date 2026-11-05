@@ -1,7 +1,7 @@
 [
  {
   "key": "u001",
-  "tag": "gm-new",
+  "tag": "gm",
   "file": "src/bench.mjs",
   "name": "runOnce",
   "start": 100,
@@ -9,7 +9,7 @@
  },
  {
   "key": "u002",
-  "tag": "gm-new",
+  "tag": "gm",
   "file": "src/cli.mjs",
   "name": "replay",
   "start": 83,
@@ -17,7 +17,7 @@
  },
  {
   "key": "u003",
-  "tag": "gm-new",
+  "tag": "gm",
   "file": "src/cli.mjs",
   "name": "events",
   "start": 109,
@@ -25,7 +25,7 @@
  },
  {
   "key": "u004",
-  "tag": "gm-new",
+  "tag": "gm",
   "file": "src/cli.mjs",
   "name": "eventsDir",
   "start": 139,
@@ -33,7 +33,7 @@
  },
  {
   "key": "u005",
-  "tag": "gm-new",
+  "tag": "gm",
   "file": "src/cli.mjs",
   "name": "query",
   "start": 167,
@@ -41,7 +41,7 @@
  },
  {
   "key": "u006",
-  "tag": "gm-new",
+  "tag": "gm",
   "file": "src/cli.mjs",
   "name": "doctor",
   "start": 177,
@@ -49,7 +49,7 @@
  },
  {
   "key": "u007",
-  "tag": "gm-new",
+  "tag": "gm",
   "file": "src/cli.mjs",
   "name": "lastRunSummary",
   "start": 201,
@@ -57,7 +57,7 @@
  },
  {
   "key": "u008",
-  "tag": "gm-new",
+  "tag": "gm",
   "file": "src/fetch.mjs",
   "name": "createFetchVerbs",
   "start": 34,
@@ -65,7 +65,7 @@
  },
  {
   "key": "u009",
-  "tag": "gm-new",
+  "tag": "gm",
   "file": "src/fetch.mjs",
   "name": "classify",
   "start": 101,
@@ -73,7 +73,7 @@
  },
  {
   "key": "u010",
-  "tag": "gm-new",
+  "tag": "gm",
   "file": "src/gate.mjs",
   "name": "runGate",
   "start": 43,
@@ -81,7 +81,7 @@
  },
  {
   "key": "u011",
-  "tag": "gm-new",
+  "tag": "gm",
   "file": "src/gate.mjs",
   "name": "syntaxCheck",
   "start": 100,
@@ -89,7 +89,7 @@
  },
  {
   "key": "u012",
-  "tag": "gm-new",
+  "tag": "gm",
   "file": "src/gate.mjs",
   "name": "promptCheck",
   "start": 201,
@@ -97,7 +97,7 @@
  },
  {
   "key": "u013",
-  "tag": "gm-new",
+  "tag": "gm",
   "file": "src/gate.mjs",
   "name": "smokeCheck",
   "start": 224,
@@ -105,7 +105,7 @@
  },
  {
   "key": "u014",
-  "tag": "gm-new",
+  "tag": "gm",
   "file": "src/git.mjs",
   "name": "commitExists",
   "start": 39,
@@ -113,7 +113,7 @@
  },
  {
   "key": "u015",
-  "tag": "gm-new",
+  "tag": "gm",
   "file": "src/git.mjs",
   "name": "createGitVerbs",
   "start": 53,
@@ -121,7 +121,7 @@
  },
  {
   "key": "u016",
-  "tag": "gm-new",
+  "tag": "gm",
   "file": "src/log.mjs",
   "name": "openLog",
   "start": 17,
@@ -129,7 +129,7 @@
  },
  {
   "key": "u017",
-  "tag": "gm-new",
+  "tag": "gm",
   "file": "src/loop.mjs",
   "name": "runLoop",
   "start": 16,
@@ -137,7 +137,7 @@
  },
  {
   "key": "u018",
-  "tag": "gm-new",
+  "tag": "gm",
   "file": "src/loop.mjs",
   "name": "stepLoop",
   "start": 29,
@@ -145,7 +145,7 @@
  },
  {
   "key": "u019",
-  "tag": "gm-new",
+  "tag": "gm",
   "file": "src/loop.mjs",
   "name": "runAction",
   "start": 192,
@@ -153,7 +153,7 @@
  },
  {
   "key": "u020",
-  "tag": "gm-new",
+  "tag": "gm",
   "file": "src/loop.mjs",
   "name": "planWaves",
   "start": 204,
@@ -161,7 +161,7 @@
  },
  {
   "key": "u021",
-  "tag": "gm-new",
+  "tag": "gm",
   "file": "src/mcp.mjs",
   "name": "readSkill",
   "start": 51,
@@ -169,7 +169,7 @@
  },
  {
   "key": "u022",
-  "tag": "gm-new",
+  "tag": "gm",
   "file": "src/mcp.mjs",
   "name": "surfaceOf",
   "start": 152,
@@ -177,7 +177,7 @@
  },
  {
   "key": "u023",
-  "tag": "gm-new",
+  "tag": "gm",
   "file": "src/mcp.mjs",
   "name": "untilPending",
   "start": 188,
@@ -185,7 +185,7 @@
  },
  {
   "key": "u024",
-  "tag": "gm-new",
+  "tag": "gm",
   "file": "src/mcp.mjs",
   "name": "createSession",
   "start": 212,
@@ -193,7 +193,7 @@
  },
  {
   "key": "u025",
-  "tag": "gm-new",
+  "tag": "gm",
   "file": "src/mcp.mjs",
   "name": "write",
   "start": 919,
@@ -201,7 +201,7 @@
  },
  {
   "key": "u026",
-  "tag": "gm-new",
+  "tag": "gm",
   "file": "src/mcp.mjs",
   "name": "reloadLeaves",
   "start": 981,
@@ -209,7 +209,7 @@
  },
  {
   "key": "u027",
-  "tag": "gm-new",
+  "tag": "gm",
   "file": "src/review-tools.mjs",
   "name": "createReviewVerbs",
   "start": 49,
@@ -217,7 +217,7 @@
  },
  {
   "key": "u028",
-  "tag": "gm-new",
+  "tag": "gm",
   "file": "src/rows.mjs",
   "name": "createRowVerbs",
   "start": 47,
@@ -225,7 +225,7 @@
  },
  {
   "key": "u029",
-  "tag": "gm-new",
+  "tag": "gm",
   "file": "src/run.mjs",
   "name": "createRun",
   "start": 15,
@@ -233,7 +233,7 @@
  },
  {
   "key": "u030",
-  "tag": "gm-new",
+  "tag": "gm",
   "file": "src/run.mjs",
   "name": "openRun",
   "start": 41,
@@ -241,7 +241,7 @@
  },
  {
   "key": "u031",
-  "tag": "gm-new",
+  "tag": "gm",
   "file": "src/runcode.mjs",
   "name": "spawnWorker",
   "start": 70,
@@ -249,7 +249,7 @@
  },
  {
   "key": "u032",
-  "tag": "gm-new",
+  "tag": "gm",
   "file": "src/search.mjs",
   "name": "searcherFor",
   "start": 130,
@@ -257,7 +257,7 @@
  },
  {
   "key": "u033",
-  "tag": "gm-new",
+  "tag": "gm",
   "file": "src/tools.mjs",
   "name": "createTools",
   "start": 124,
@@ -265,7 +265,7 @@
  },
  {
   "key": "u034",
-  "tag": "gm-new",
+  "tag": "gm",
   "file": "src/wiki-tools.mjs",
   "name": "createWikiVerbs",
   "start": 34,
@@ -273,7 +273,7 @@
  },
  {
   "key": "u035",
-  "tag": "gm-new",
+  "tag": "gm",
   "file": "src/wiki.mjs",
   "name": "wikiWrite",
   "start": 22,

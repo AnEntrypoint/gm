@@ -1,4 +1,4 @@
-#include "gmnew/proc.hpp"
+#include "gm/proc.hpp"
 
 #include <chrono>
 #include <cstring>
@@ -17,7 +17,7 @@
 extern char** environ;
 #endif
 
-namespace gmnew::proc {
+namespace gm::proc {
 
 namespace {
 

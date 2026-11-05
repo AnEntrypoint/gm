@@ -1,18 +1,18 @@
 #include <iostream>
 
-#include "gmnew/host/child.hpp"
-#include "gmnew/host/options.hpp"
-#include "gmnew/host/relay.hpp"
-#include "gmnew/host/update.hpp"
-#include "gmnew/json.hpp"
+#include "gm/host/child.hpp"
+#include "gm/host/options.hpp"
+#include "gm/host/relay.hpp"
+#include "gm/host/update.hpp"
+#include "gm/json.hpp"
 
-namespace gmnew::host {
+namespace gm::host {
 
 int run_serve(const HostArgs& args) {
     const auto workspace = workspace_of(args);
     auto run_dir = choose_run_dir(args, workspace);
     if (!run_dir) {
-        std::cerr << "gm-new relay: " << run_dir.error() << '\n';
+        std::cerr << "gm relay: " << run_dir.error() << '\n';
         return 1;
     }
     const std::filesystem::path install_dir = current_executable().parent_path();

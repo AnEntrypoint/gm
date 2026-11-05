@@ -9,7 +9,7 @@
 
 #include "deoxidene/result.hpp"
 
-namespace gmnew::host {
+namespace gm::host {
 
 struct HostArgs {
     std::string mode;

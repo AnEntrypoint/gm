@@ -1,7 +1,7 @@
 id: "unknown-dep-closure-natural"
 kind: "unknown"
 title: "Does one-hop dependency closure help natural-language search?"
-body: "Resolved. Blind witness on 95 units from two repositories: 35 functions of gm-new src/ and 60 sampled functions of gm-mcp/src/, with descriptions written by three child writers who saw the code with the function name removed. At a matched file budget, plain search recalls 0.235 of the callee-defining files, closure with the described unit excluded from the anchors 0.398, and closure with the unit allowed 0.476. The shipped search takes closure true and measures 0.471 on the same descriptions. Limits: the writers could not read the gm skill, and the production corpus is wider than the measured one. DESIGN.md, Dependency closure, blind witness."
+body: "Resolved. Blind witness on 95 units from two repositories: 35 functions of gm src/ and 60 sampled functions of gm-mcp/src/, with descriptions written by three child writers who saw the code with the function name removed. At a matched file budget, plain search recalls 0.235 of the callee-defining files, closure with the described unit excluded from the anchors 0.398, and closure with the unit allowed 0.476. The shipped search takes closure true and measures 0.471 on the same descriptions. Limits: the writers could not read the gm skill, and the production corpus is wider than the measured one. DESIGN.md, Dependency closure, blind witness."
 status: "resolved"
 createdAt: "2026-11-03T19:42:55.045Z"
 witnessCommit: "8fc50ec"

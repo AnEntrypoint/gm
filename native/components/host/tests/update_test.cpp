@@ -5,14 +5,14 @@
 #include <iterator>
 #include <string>
 
-#include "gmnew/host/update.hpp"
-#include "gmnew/mcp.hpp"
-#include "gmnew/proc.hpp"
+#include "gm/host/update.hpp"
+#include "gm/mcp.hpp"
+#include "gm/proc.hpp"
 
 namespace {
 
 namespace fs = std::filesystem;
-using namespace gmnew::host;
+using namespace gm::host;
 
 int failures = 0;
 
@@ -56,19 +56,19 @@ struct Release {
 Release make_release(const fs::path& dir, const std::string& mark, const std::string& digest_override = {}) {
     const std::string target = target_name();
     const fs::path tree = dir / "tree";
-    make_build(tree / ("gmnew-" + target), mark);
-    const fs::path archive = dir / ("gmnew-" + target + ".tar.gz");
-    const gmnew::proc::Outcome packed =
-        gmnew::proc::run({"tar", "-czf", archive.string(), "-C", tree.string(), "gmnew-" + target});
+    make_build(tree / ("gm-" + target), mark);
+    const fs::path archive = dir / ("gm-" + target + ".tar.gz");
+    const gm::proc::Outcome packed =
+        gm::proc::run({"tar", "-czf", archive.string(), "-C", tree.string(), "gm-" + target});
     check(packed.started && packed.exit_code == 0, "fixture archive for " + target + " is packed");
 
     const std::string bytes = read_text(archive);
-    const std::string digest = digest_override.empty() ? gmnew::mcp::sha256_hex(bytes) : digest_override;
+    const std::string digest = digest_override.empty() ? gm::mcp::sha256_hex(bytes) : digest_override;
     const fs::path manifest = dir / "manifest.json";
     write_text(manifest,
                "{\"version\":\"" + kVersion + "\",\"commit\":\"" + kCommit +
                    "\",\"built\":\"2026-11-05T00:00:00Z\",\"repo\":\"AnEntrypoint/gmc\",\"assets\":{\"" + target +
-                   "\":{\"file\":\"gmnew-" + target + ".tar.gz\",\"sha256\":\"" + digest +
+                   "\":{\"file\":\"gm-" + target + ".tar.gz\",\"sha256\":\"" + digest +
                    "\",\"size\":" + std::to_string(bytes.size()) + "},\"other-target\":{\"file\":\"x.tar.gz\",\"sha256\":\"00\",\"size\":1}}}");
     return {manifest, file_url(manifest)};
 }
@@ -85,13 +85,13 @@ UpdatePolicy policy_for(const fs::path& install, const std::string& url, const s
 void manifest_parsing() {
     const std::string text =
         "{\"version\":\"abc1234-7\",\"commit\":\"abc1234def\",\"built\":\"t\",\"repo\":\"r\","
-        "\"assets\":{\"x64-linux\":{\"file\":\"gmnew-x64-linux.tar.gz\",\"sha256\":\"ff\",\"size\":123}}}";
+        "\"assets\":{\"x64-linux\":{\"file\":\"gm-x64-linux.tar.gz\",\"sha256\":\"ff\",\"size\":123}}}";
     const auto manifest = parse_manifest(text);
     check(manifest.has_value(), "a release manifest parses");
     if (!manifest) return;
     check(manifest->version == "abc1234-7" && manifest->commit == "abc1234def", "the manifest version and commit are read");
     const auto asset = manifest->assets.find("x64-linux");
-    check(asset != manifest->assets.end() && asset->second.file == "gmnew-x64-linux.tar.gz" &&
+    check(asset != manifest->assets.end() && asset->second.file == "gm-x64-linux.tar.gz" &&
               asset->second.sha256 == "ff" && asset->second.size == 123,
           "an asset keeps its file, sha256 and size");
     check(!parse_manifest("not json").has_value(), "text that is not JSON is refused");
@@ -251,7 +251,7 @@ void etag_is_read_from_the_last_response() {
 }
 
 int main() {
-    const fs::path root = fs::temp_directory_path() / "gmnew-update-test";
+    const fs::path root = fs::temp_directory_path() / "gm-update-test";
     fs::remove_all(root);
     fs::create_directories(root);
 

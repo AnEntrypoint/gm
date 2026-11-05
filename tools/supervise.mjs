@@ -24,10 +24,10 @@ const MEMORY_LIMIT_MB = Number(process.env.GMNEW_MEMORY_LIMIT_MB ?? 512);
 const RETRY_MIN_MS = 1000;
 const RETRY_MAX_MS = 30000;
 const HANDSHAKE_MS = 10000;
-const HANDSHAKE_ID = 'gm-new-supervisor-handshake';
+const HANDSHAKE_ID = 'gm-supervisor-handshake';
 const HOST_CHANGED = ['notifications/tools/list_changed', 'notifications/prompts/list_changed', 'notifications/resources/list_changed'];
-const DEFAULT_INITIALIZE = { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'gm-new-supervisor', version: '1' } };
-const READY_METHOD = 'gm-new/ready';
+const DEFAULT_INITIALIZE = { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'gm-supervisor', version: '1' } };
+const READY_METHOD = 'gm/ready';
 
 // The relay passes the run directory and the worker options in argv, and the start reason and the host's initialize
 // in the environment. Both are removed from the environment here, so the worker and its jobs do not inherit them.
@@ -58,7 +58,7 @@ function writeHost(message) {
 // The worker's state, for the relay: running when a start or a restart has answered the handshake, failed when it did not. The relay reads
 // this message and does not forward it to the host. The update check waits for it after a pull, to decide whether to roll back.
 function reportWorker(next, reason) {
-  writeHost({ jsonrpc: '2.0', method: 'gm-new/worker', params: reason === undefined ? { state: next } : { state: next, reason } });
+  writeHost({ jsonrpc: '2.0', method: 'gm/worker', params: reason === undefined ? { state: next } : { state: next, reason } });
 }
 
 function errorReply(id, message) {
@@ -156,7 +156,7 @@ function scheduleRetry() {
   clearTimeout(retryTimer);
   const delay = retryDelay;
   retryDelay = Math.min(retryDelay * 2, RETRY_MAX_MS);
-  process.stderr.write(`gm-new dev: retrying the restart in ${delay} ms\n`);
+  process.stderr.write(`gm dev: retrying the restart in ${delay} ms\n`);
   retryTimer = setTimeout(() => {
     retryTimer = null;
     if (state === 'failed') scheduleRestart('retry after a failed restart');
@@ -225,7 +225,7 @@ function replayHandshake() {
 }
 
 async function restart(reason) {
-  process.stderr.write(`gm-new dev: restarting the worker (${reason})\n`);
+  process.stderr.write(`gm dev: restarting the worker (${reason})\n`);
   if (state === 'running') {
     state = 'draining';
     await waitForDrain();
@@ -299,6 +299,6 @@ async function pause(code) {
 }
 
 async function crash(err) {
-  process.stderr.write(`gm-new dev: the supervisor crashed: ${err?.stack ?? err}\n`);
+  process.stderr.write(`gm dev: the supervisor crashed: ${err?.stack ?? err}\n`);
   await pause(1);
 }

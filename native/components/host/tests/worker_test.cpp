@@ -11,10 +11,10 @@
 #include <thread>
 #include <vector>
 
-#include "gmnew/host/child.hpp"
-#include "gmnew/host/composed_verbs.hpp"
-#include "gmnew/host/primitives.hpp"
-#include "gmnew/leaves.hpp"
+#include "gm/host/child.hpp"
+#include "gm/host/composed_verbs.hpp"
+#include "gm/host/primitives.hpp"
+#include "gm/leaves.hpp"
 
 namespace {
 
@@ -61,12 +61,12 @@ std::string call_line(int id, const std::string& tool, const std::string& argume
            R"(","arguments":)" + arguments + "}}";
 }
 
-class NamedVerbs final : public gmnew::VerbTable {
+class NamedVerbs final : public gm::VerbTable {
 public:
     explicit NamedVerbs(std::string name) : name_(std::move(name)) {}
-    std::vector<gmnew::VerbInfo> list() const override { return {{name_, "", "{}"}}; }
-    gmnew::json::Value call(std::string_view, const gmnew::json::Value&) override {
-        gmnew::json::Value reply;
+    std::vector<gm::VerbInfo> list() const override { return {{name_, "", "{}"}}; }
+    gm::json::Value call(std::string_view, const gm::json::Value&) override {
+        gm::json::Value reply;
         reply.set("ok", true);
         return reply;
     }
@@ -99,7 +99,7 @@ LogCheck check_log(const fs::path& file) {
     double last = 0;
     while (std::getline(in, line)) {
         if (line.empty()) continue;
-        auto event = gmnew::json::parse(line);
+        auto event = gm::json::parse(line);
         if (!event) {
             result.increasing = false;
             continue;
@@ -120,7 +120,7 @@ LogCheck check_log(const fs::path& file) {
 
 int main() {
     const fs::path root = fs::temp_directory_path() /
-                          ("gmnew-worker-test-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
+                          ("gm-worker-test-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
     const fs::path workspace = root / "workspace";
     const fs::path leaves = root / "leaves";
     fs::create_directories(workspace);
@@ -139,23 +139,23 @@ int main() {
 
     NamedVerbs read_file("read_file");
     NamedVerbs other_read_file("read_file");
-    auto clash = gmnew::host::ComposedVerbs::compose({&read_file, &other_read_file});
+    auto clash = gm::host::ComposedVerbs::compose({&read_file, &other_read_file});
     check(!clash.has_value() && clash.error().find("read_file") != std::string::npos,
           "a verb name in two tables is an error: " + (clash ? std::string("no error") : clash.error()));
-    auto native = gmnew::host::ComposedVerbs::compose({&read_file});
-    gmnew::HostServices services{workspace, root / "runs", native->get(), gmnew::host::make_primitives(workspace, {})};
-    const auto shell = services.extra.at("shell")(gmnew::json::parse(R"({"command":"echo primitive"})").value());
+    auto native = gm::host::ComposedVerbs::compose({&read_file});
+    gm::HostServices services{workspace, root / "runs", native->get(), gm::host::make_primitives(workspace, {})};
+    const auto shell = services.extra.at("shell")(gm::json::parse(R"({"command":"echo primitive"})").value());
     check(shell.find("out") != nullptr && shell.find("out")->as_string() == "primitive\n", "the shell primitive runs");
-    gmnew::LeafVerbs in_process(leaves, services);
-    auto composed = gmnew::host::ComposedVerbs::compose({native->get(), &in_process});
-    const auto before = composed.value()->call("probe", gmnew::json::Value(gmnew::json::Object{}));
+    gm::LeafVerbs in_process(leaves, services);
+    auto composed = gm::host::ComposedVerbs::compose({native->get(), &in_process});
+    const auto before = composed.value()->call("probe", gm::json::Value(gm::json::Object{}));
     const auto generation_before = in_process.generation();
-    check(gmnew::json::dump(before).find("4242") != std::string::npos,
-          "ComposedVerbs routes probe to LeafVerbs: " + gmnew::json::dump(before));
+    check(gm::json::dump(before).find("4242") != std::string::npos,
+          "ComposedVerbs routes probe to LeafVerbs: " + gm::json::dump(before));
 
     const fs::path no_default_mcp = root / "no-default-mcp.json";
     std::ofstream(no_default_mcp) << R"({"mcpServers":{"playwriter":{"disabled":true}}})";
-    auto spawned = gmnew::host::Child::spawn({GMNEW_BINARY, "worker", "--workspace", workspace.string(), "--runs",
+    auto spawned = gm::host::Child::spawn({GMNEW_BINARY, "worker", "--workspace", workspace.string(), "--runs",
                                               (root / "runs").string(), "--leaves", leaves.string(), "--skills",
                                               (fs::path(GMNEW_SOURCE_ROOT) / "skills").string(), "--mcp-config",
                                               no_default_mcp.string()});
@@ -199,11 +199,11 @@ int main() {
     check(second.find("535353") != std::string::npos,
           "after the edit the same worker returns the new value in " + std::to_string(latency.count()) +
               " ms: " + shorten(second));
-    const auto after = composed.value()->call("probe", gmnew::json::Value(gmnew::json::Object{}));
-    check(gmnew::json::dump(after).find("535353") != std::string::npos &&
+    const auto after = composed.value()->call("probe", gm::json::Value(gm::json::Object{}));
+    check(gm::json::dump(after).find("535353") != std::string::npos &&
               in_process.generation() > generation_before,
           "LeafVerbs::generation " + std::to_string(generation_before) + " -> " +
-              std::to_string(in_process.generation()) + " with the new value " + gmnew::json::dump(after));
+              std::to_string(in_process.generation()) + " with the new value " + gm::json::dump(after));
     check(!worker->wait_for(0ms).has_value(), "the worker did not restart (pid " + std::to_string(worker->pid()) + ")");
 
     worker->write_line(R"({"jsonrpc":"2.0","id":5,"method":"tools/list"})");
@@ -243,7 +243,7 @@ int main() {
           "host.runDir names the reopened run: " + job.substr(run_dir_at == std::string::npos ? 0 : run_dir_at, 160));
 
     std::string waited;
-    if (auto events = gmnew::host::Child::spawn({GMNEW_BINARY, "events", "--dir", (root / "runs" / second_run).string(),
+    if (auto events = gm::host::Child::spawn({GMNEW_BINARY, "events", "--dir", (root / "runs" / second_run).string(),
                                                  "--wait", "--timeout-ms", "5000"})) {
         while (auto line = (*events)->read_line()) waited += *line + "\n";
         (*events)->wait_for(5s);

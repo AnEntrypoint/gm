@@ -10,9 +10,9 @@
 #include <string>
 
 #include "cxxmcp/client/client.hpp"
-#include "gmnew/proc.hpp"
+#include "gm/proc.hpp"
 
-namespace gmnew::mcpclient {
+namespace gm::mcpclient {
 
 class CallBudget {
 public:

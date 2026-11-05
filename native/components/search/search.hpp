@@ -6,13 +6,13 @@
 #include <string_view>
 #include <vector>
 
-#include "gmnew/verbs.hpp"
+#include "gm/verbs.hpp"
 
-namespace gmnew::search {
+namespace gm::search {
 class Searcher;
 }
 
-namespace gmnew {
+namespace gm {
 
 class SearchVerbs : public VerbTable {
 public:

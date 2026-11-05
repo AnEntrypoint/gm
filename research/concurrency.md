@@ -1,10 +1,10 @@
-# Concurrency and caching evidence for gm-new
+# Concurrency and caching evidence for gm
 
 Digest from the research agent, 2026-11-01. Labels (high, medium, low) are the research agent's own. Each point names its source. Numbers are self-reported unless marked otherwise. Each point maps to a design direction in DESIGN.md and to a work-plan item in AGENTS.md.
 
 ## Points
 
-1. Parallel tool calls in one turn (work item 1). Confidence: medium. One self-reported study (arxiv 2602.07359): three calls per turn cut wall-clock time 40.6% and cost 35.9%, with accuracy 68 vs 66. Use: proceed with item 1 as planned, and measure it on gm-new's own scripted tasks (item 7).
+1. Parallel tool calls in one turn (work item 1). Confidence: medium. One self-reported study (arxiv 2602.07359): three calls per turn cut wall-clock time 40.6% and cost 35.9%, with accuracy 68 vs 66. Use: proceed with item 1 as planned, and measure it on gm's own scripted tasks (item 7).
 
 2. Overlapping tool execution with generation. Confidence: medium for the latency gain. Source: arxiv 2603.18897, a serving-system paper, not the Claude API. Uncoordinated speculation can be worse than the baseline under high load. Use: keep it default off until measured, as AGENTS.md rule 3 says.
 

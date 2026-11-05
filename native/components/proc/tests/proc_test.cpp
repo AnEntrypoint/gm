@@ -6,9 +6,9 @@
 #include <string>
 #include <thread>
 
-#include "gmnew/proc.hpp"
+#include "gm/proc.hpp"
 
-using namespace gmnew::proc;
+using namespace gm::proc;
 
 static int failures = 0;
 #define CHECK(cond)                                                    \

@@ -2,11 +2,11 @@
 #include <iostream>
 #include <string>
 
-#include "gmnew/json.hpp"
+#include "gm/json.hpp"
 
-using gmnew::json::Array;
-using gmnew::json::Object;
-using gmnew::json::Value;
+using gm::json::Array;
+using gm::json::Object;
+using gm::json::Value;
 
 namespace {
 
@@ -53,7 +53,7 @@ int main(int argc, char** argv) {
     if (profile == "quit") return 2;
     std::string line;
     while (std::getline(std::cin, line)) {
-        auto parsed = gmnew::json::parse(line);
+        auto parsed = gm::json::parse(line);
         if (!parsed) continue;
         const Value* method = parsed->find("method");
         const Value* id = parsed->find("id");
@@ -81,7 +81,7 @@ int main(int argc, char** argv) {
             if (tool_name == "ping_first") {
                 Value ping;
                 ping.set("jsonrpc", "2.0").set("id", 900).set("method", "ping");
-                std::cout << gmnew::json::dump(ping) << '\n' << std::flush;
+                std::cout << gm::json::dump(ping) << '\n' << std::flush;
                 reply.set("result", text_result("pinged"));
             } else if (tool_name == "fail") {
                 Value result = text_result("boom");
@@ -109,7 +109,7 @@ int main(int argc, char** argv) {
         } else {
             reply.set("error", Value(Object{}).set("code", -32601).set("message", "fake does not serve " + name));
         }
-        std::cout << gmnew::json::dump(reply) << '\n' << std::flush;
+        std::cout << gm::json::dump(reply) << '\n' << std::flush;
     }
     return 0;
 }

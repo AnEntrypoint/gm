@@ -1,6 +1,6 @@
 id: "unknown-minimal-tool-set"
 kind: "unknown"
 title: "Minimal tool set, not run"
-body: "Closed, not run, by the joint decision of the owner and the orchestrator on 2026-11-02. No decision depends on it. A run needs live model trials, which gm-new does not make; they go to the gm agent under the load rule."
+body: "Closed, not run, by the joint decision of the owner and the orchestrator on 2026-11-02. No decision depends on it. A run needs live model trials, which gm does not make; they go to the gm agent under the load rule."
 status: "resolved"
 createdAt: "2026-11-01T23:00:00.000Z"

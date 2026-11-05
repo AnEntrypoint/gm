@@ -4,9 +4,9 @@
 #include <thread>
 #include <vector>
 
-#include "gmnew/log.hpp"
+#include "gm/log.hpp"
 
-using namespace gmnew;
+using namespace gm;
 
 static int failures = 0;
 
@@ -19,7 +19,7 @@ static int failures = 0;
     } while (0)
 
 int main() {
-    auto dir = std::filesystem::temp_directory_path() / "gmnew_log_test_run";
+    auto dir = std::filesystem::temp_directory_path() / "gm_log_test_run";
     std::filesystem::remove_all(dir);
     double last_mono = 0;
     {

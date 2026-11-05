@@ -6,10 +6,10 @@
 #include <string_view>
 #include <vector>
 
-#include "gmnew/host.hpp"
-#include "gmnew/verbs.hpp"
+#include "gm/host.hpp"
+#include "gm/verbs.hpp"
 
-namespace gmnew {
+namespace gm {
 
 class LeafVerbs final : public VerbTable {
 public:

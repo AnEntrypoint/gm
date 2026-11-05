@@ -8,7 +8,7 @@
 #include <vector>
 
 #include "core_internal.hpp"
-#include "gmnew/proc.hpp"
+#include "gm/proc.hpp"
 
 #if !defined(_WIN32)
 #include <fcntl.h>
@@ -20,7 +20,7 @@
 extern char** environ;
 #endif
 
-namespace gmnew::core {
+namespace gm::core {
 
 namespace {
 

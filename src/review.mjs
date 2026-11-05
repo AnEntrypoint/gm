@@ -5,7 +5,7 @@ import { resolve } from 'node:path';
 
 // Review functions. A review packet names a spec, its sha256, and the paths it refers to. A review record is the verdict of
 // a fresh reviewer on one packet, and the host spawns that reviewer and passes its reply here. Both are plain functions with
-// no tool name. gm-new does not verify the reviewer's isolation: each record says isolation host-attested. The join reads the
+// no tool name. gm does not verify the reviewer's isolation: each record says isolation host-attested. The join reads the
 // log, and attributes the outcomes that follow a record, in order, to that record, up to the next record.
 const VERDICTS = ['pass', 'fail', 'needs-changes'];
 

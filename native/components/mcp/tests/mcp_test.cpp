@@ -11,17 +11,17 @@
 #include <string>
 #include <vector>
 
-#include "gmnew/json.hpp"
-#include "gmnew/log.hpp"
-#include "gmnew/mcp.hpp"
-#include "gmnew/verbs.hpp"
+#include "gm/json.hpp"
+#include "gm/log.hpp"
+#include "gm/mcp.hpp"
+#include "gm/verbs.hpp"
 
 #ifdef GMNEW_HAVE_RUNCODE
-#include "gmnew/runcode.hpp"
+#include "gm/runcode.hpp"
 #endif
 
 namespace fs = std::filesystem;
-using gmnew::json::Value;
+using gm::json::Value;
 
 namespace {
 
@@ -32,9 +32,9 @@ void check(bool ok, const std::string& what) {
     if (!ok) ++failures;
 }
 
-class FakeVerbs : public gmnew::VerbTable {
+class FakeVerbs : public gm::VerbTable {
 public:
-    std::vector<gmnew::VerbInfo> list() const override {
+    std::vector<gm::VerbInfo> list() const override {
         return {{"read_file", "Read a file.", R"({"type":"object","properties":{"path":{"type":"string"}},"required":["path"]})"},
                 {"write_file", "Write a file.", R"({"type":"object","properties":{"path":{"type":"string"},"content":{"type":"string"}},"required":["path","content"]})"}};
     }
@@ -42,10 +42,10 @@ public:
         const Value* path = args.find("path");
         if (name == "write_file") {
             stored = args.find("content") ? args.find("content")->as_string() : "";
-            return Value(gmnew::json::Object{}).set("ok", true).set("output", "wrote " + (path ? path->as_string() : ""));
+            return Value(gm::json::Object{}).set("ok", true).set("output", "wrote " + (path ? path->as_string() : ""));
         }
-        if (name == "read_file") return Value(gmnew::json::Object{}).set("ok", true).set("output", stored);
-        return Value(gmnew::json::Object{}).set("ok", false).set("error", "unknown verb");
+        if (name == "read_file") return Value(gm::json::Object{}).set("ok", true).set("output", stored);
+        return Value(gm::json::Object{}).set("ok", false).set("error", "unknown verb");
     }
     std::string stored;
 };
@@ -84,11 +84,11 @@ std::string str(const Value& v, const char* key) {
     return f && f->is_string() ? f->as_string() : "";
 }
 
-Value obj() { return Value(gmnew::json::Object{}); }
+Value obj() { return Value(gm::json::Object{}); }
 
 class RowVerbs : public FakeVerbs {
 public:
-    std::vector<gmnew::VerbInfo> list() const override {
+    std::vector<gm::VerbInfo> list() const override {
         auto verbs = FakeVerbs::list();
         verbs.push_back({"prd_list", "List prd rows.", R"({"type":"object","properties":{"status":{"type":"string"}}})"});
         verbs.push_back({"unknown_list", "List question rows.", R"({"type":"object","properties":{"status":{"type":"string"}}})"});
@@ -114,14 +114,14 @@ public:
 };
 
 struct Harness {
-    std::unique_ptr<gmnew::mcp::Server> server;
+    std::unique_ptr<gm::mcp::Server> server;
     std::vector<Value> out;
     std::mutex lock;
     int next_id = 1000;
 
-    Harness(gmnew::VerbTable& verbs, gmnew::mcp::ServerOptions options) {
-        auto opened = gmnew::mcp::Server::open(verbs, std::move(options), [this](std::string_view line) {
-            auto parsed = gmnew::json::parse(line);
+    Harness(gm::VerbTable& verbs, gm::mcp::ServerOptions options) {
+        auto opened = gm::mcp::Server::open(verbs, std::move(options), [this](std::string_view line) {
+            auto parsed = gm::json::parse(line);
             std::lock_guard guard(lock);
             if (parsed) out.push_back(*parsed);
         });
@@ -144,7 +144,7 @@ struct Harness {
 };
 
 std::vector<Value> log_of(const fs::path& dir) {
-    auto log = gmnew::RunLog::open(dir);
+    auto log = gm::RunLog::open(dir);
     if (!log) return {};
     auto events = log->read_all();
     return events ? *events : std::vector<Value>{};
@@ -156,7 +156,7 @@ int count_kind(const std::vector<Value>& events, const std::string& kind) {
     return n;
 }
 
-deoxidene::Result<Value, std::string> scripted_body(gmnew::VerbTable& table, std::string_view body, const fs::path&, std::string_view) {
+deoxidene::Result<Value, std::string> scripted_body(gm::VerbTable& table, std::string_view body, const fs::path&, std::string_view) {
     std::string text(body);
     if (text.rfind("sleep:", 0) == 0) {
         auto colon = text.find(':', 6);
@@ -172,8 +172,8 @@ deoxidene::Result<Value, std::string> scripted_body(gmnew::VerbTable& table, std
     return obj().set("echo", text);
 }
 
-gmnew::mcp::ServerOptions fresh_options(const fs::path& root, const std::string& name) {
-    gmnew::mcp::ServerOptions options;
+gm::mcp::ServerOptions fresh_options(const fs::path& root, const std::string& name) {
+    gm::mcp::ServerOptions options;
     options.workspace = root / "ws";
     options.runs = root / ("runs-" + name);
     options.skills = fs::path(GMNEW_SOURCE_DIR) / "skills";
@@ -219,22 +219,22 @@ void append_line(const fs::path& file, const std::string& line) { std::ofstream(
 }
 
 int main() {
-    fs::path root = fs::temp_directory_path() / ("gmnew-mcp-test-" + std::to_string(std::random_device{}()));
+    fs::path root = fs::temp_directory_path() / ("gm-mcp-test-" + std::to_string(std::random_device{}()));
     fs::path workspace = root / "ws";
     fs::path runs = root / "runs";
     fs::create_directories(workspace);
     fs::create_directories(runs);
 
     FakeVerbs verbs;
-    gmnew::mcp::ServerOptions options;
+    gm::mcp::ServerOptions options;
     options.workspace = workspace;
     options.runs = runs;
     options.skills = fs::path(GMNEW_SOURCE_DIR) / "skills";
-    options.run_body = [](gmnew::VerbTable& table, std::string_view body, const fs::path&, std::string_view) -> deoxidene::Result<Value, std::string> {
-        Value args = Value(gmnew::json::Object{}).set("path", "a.txt").set("content", std::string(body));
+    options.run_body = [](gm::VerbTable& table, std::string_view body, const fs::path&, std::string_view) -> deoxidene::Result<Value, std::string> {
+        Value args = Value(gm::json::Object{}).set("path", "a.txt").set("content", std::string(body));
         Value wrote = table.call("write_file", args);
-        Value read = table.call("read_file", Value(gmnew::json::Object{}).set("path", "a.txt"));
-        return Value(gmnew::json::Object{}).set("wrote", wrote).set("read", read);
+        Value read = table.call("read_file", Value(gm::json::Object{}).set("path", "a.txt"));
+        return Value(gm::json::Object{}).set("wrote", wrote).set("read", read);
     };
 
     std::vector<std::string> script = {
@@ -266,7 +266,7 @@ int main() {
     for (const auto& line : script) input += line + "\n";
     std::istringstream in(input);
     std::ostringstream out;
-    int code = gmnew::mcp::serve_stream(in, out, verbs, options);
+    int code = gm::mcp::serve_stream(in, out, verbs, options);
     check(code == 0, "serve_stream exits 0");
 
     std::vector<Value> replies;
@@ -276,7 +276,7 @@ int main() {
     for (std::size_t i = 0; i < script.size(); ++i) std::cout << "> " << script[i].substr(0, 160) << '\n';
     while (std::getline(lines, line)) {
         std::cout << "< " << line.substr(0, 220) << (line.size() > 220 ? " ..." : "") << '\n';
-        auto parsed = gmnew::json::parse(line);
+        auto parsed = gm::json::parse(line);
         check(static_cast<bool>(parsed), "reply line parses");
         if (parsed) replies.push_back(*parsed);
     }
@@ -373,14 +373,14 @@ int main() {
     const Value* skills = reply_for(replies, 17);
     check(skills && skills->find("result")->find("skills")->as_array().size() == 2, "skills/list lists two skills");
     const Value* completion = reply_for(replies, 18);
-    check(completion && gmnew::json::dump(*completion->find("result")) == R"({"completion":{"values":["gm-continue"],"total":1,"hasMore":false}})",
+    check(completion && gm::json::dump(*completion->find("result")) == R"({"completion":{"values":["gm-continue"],"total":1,"hasMore":false}})",
           "completion/complete suggests gm-continue");
     check(reply_for(replies, 19) != nullptr, "logging/setLevel answers");
     std::size_t answered = 0;
     for (const Value& r : replies) answered += r.find("id") != nullptr ? 1 : 0;
     check(answered == script.size() - 1, "every request is answered and the notification is not: " + std::to_string(answered));
 
-    auto first_log = gmnew::RunLog::open(runs / first_run);
+    auto first_log = gm::RunLog::open(runs / first_run);
     std::string kinds;
     int code_calls_with_body = 0;
     std::string end_status;
@@ -404,13 +404,13 @@ int main() {
 
 #ifdef GMNEW_HAVE_RUNCODE
     {
-        gmnew::mcp::ServerOptions real = options;
-        real.run_body = [](gmnew::VerbTable& table, std::string_view body, const fs::path& rootp, std::string_view format) { return gmnew::run_body(table, body, rootp, format); };
+        gm::mcp::ServerOptions real = options;
+        real.run_body = [](gm::VerbTable& table, std::string_view body, const fs::path& rootp, std::string_view format) { return gm::run_body(table, body, rootp, format); };
         real.run_dir.reset();
         std::istringstream in2(call(1, "next_context", "{}") + "\n" +
                                call(2, "run_code", R"({"body":"const [w] = await Promise.all([gm.write_file({path:'b',content:'hi'})]); const r = await gm.read_file({path:'b'}); return {w: w.ok, r: r.output};"})") + "\n");
         std::ostringstream out2;
-        gmnew::mcp::serve_stream(in2, out2, verbs, real);
+        gm::mcp::serve_stream(in2, out2, verbs, real);
         std::cout << "quickjs: " << out2.str();
         check(out2.str().find(R"(\"output\":\"{\\\"w\\\":true,\\\"r\\\":\\\"hi\\\"}\")") != std::string::npos, "run_code through QuickJS-NG");
     }
@@ -453,7 +453,7 @@ int main() {
         bool cleared = !fs::exists(dir / "pending.jsonl");
         for (const auto& entry : fs::directory_iterator(dir)) cleared = cleared && entry.path().extension() != ".reading";
         check(cleared, "delivery clears the queue file and its claimed copy after the reply is written");
-        check(str(*step1.find("pendingCommands"), "wait") == "\"gmnew\" events --dir \"" + dir.string() + "\" --wait",
+        check(str(*step1.find("pendingCommands"), "wait") == "\"gm\" events --dir \"" + dir.string() + "\" --wait",
               "pendingCommands.wait names the run directory");
         Value step2 = h.call("next_context", "{}");
         check(step2.find("pending") == nullptr, "a delivered event is not listed again");
@@ -478,7 +478,7 @@ int main() {
             if (e.find("t") == nullptr && str(e, "kind") != "range") compact += 1;
             if (e.find("t") == nullptr && e.find("tool") && e.find("full")) full_seen += 1;
         }
-        std::cout << "feed events: " << gmnew::json::dump(*last.find("events")).substr(0, 600) << '\n';
+        std::cout << "feed events: " << gm::json::dump(*last.find("events")).substr(0, 600) << '\n';
         check(compact > 0 && full_seen > 0 && total_before > 0 && same_sha && str(last, "prefixSha") == sha,
               "seen events come back as compact records within the horizons, prefixSha unchanged");
         auto events = log_of(dir);
@@ -505,8 +505,8 @@ int main() {
         h.call("next_context", "{}");
         Value bg = h.call("run_code", R"({"body":"sleep:600:seven","timeoutMs":50})");
         std::string job = str(bg, "background");
-        check(bg.find("ok")->as_bool() && job == "body-" + gmnew::json::dump(*bg.find("actionSeq")) && str(bg, "state") == "running",
-              "a body past timeoutMs becomes a background run: " + gmnew::json::dump(bg));
+        check(bg.find("ok")->as_bool() && job == "body-" + gm::json::dump(*bg.find("actionSeq")) && str(bg, "state") == "running",
+              "a body past timeoutMs becomes a background run: " + gm::json::dump(bg));
         auto early = log_of(h.server->run_dir());
         check(count_kind(early, "code-call") >= 1, "the body's verb calls are logged as they happen");
         Value refused = h.call("finish", R"({"witness":"w"})");
@@ -515,9 +515,9 @@ int main() {
               "finish is refused while a background run is running: " + str(refused, "error"));
         std::this_thread::sleep_for(std::chrono::milliseconds(300));
         Value notices = h.call("next_context", "{}");
-        std::cout << "notices: jobsOpen=" << (notices.find("jobsOpen") ? gmnew::json::dump(*notices.find("jobsOpen")) : "-")
-                  << " jobsStuck=" << (notices.find("jobsStuck") ? gmnew::json::dump(*notices.find("jobsStuck")) : "-")
-                  << " jobsRunning=" << (notices.find("jobsRunning") ? gmnew::json::dump(*notices.find("jobsRunning")) : "-") << '\n';
+        std::cout << "notices: jobsOpen=" << (notices.find("jobsOpen") ? gm::json::dump(*notices.find("jobsOpen")) : "-")
+                  << " jobsStuck=" << (notices.find("jobsStuck") ? gm::json::dump(*notices.find("jobsStuck")) : "-")
+                  << " jobsRunning=" << (notices.find("jobsRunning") ? gm::json::dump(*notices.find("jobsRunning")) : "-") << '\n';
         check(notices.find("jobsOpen") && str(notices.find("jobsOpen")->as_array()[0], "job") == job &&
                   notices.find("jobsOpen")->as_array()[0].find("stuck")->as_bool(),
               "jobsOpen lists the open body as stuck");
@@ -531,7 +531,7 @@ int main() {
         check(output.find("\"state\":\"exited\"") != std::string::npos && output.find("\"value\":\"{\\\"value\\\":\\\"seven\\\",\\\"afterOk\\\":true}\"") != std::string::npos,
               "job_status with waitMs returns the body's value: " + output.substr(0, 300));
         Value after = h.call("next_context", "{}");
-        std::cout << "ended: " << (after.find("jobsEnded") ? gmnew::json::dump(*after.find("jobsEnded")) : "-") << std::endl;
+        std::cout << "ended: " << (after.find("jobsEnded") ? gm::json::dump(*after.find("jobsEnded")) : "-") << std::endl;
         check(after.find("jobsEnded") &&
                   str(after.find("jobsEnded")->as_array()[0], "output") == "{\"value\":\"seven\",\"afterOk\":true}",
               "jobsEnded reports the body's end and value");
@@ -560,7 +560,7 @@ int main() {
             a.server->input_ended();
         }
         {
-            auto log = gmnew::RunLog::open(dir);
+            auto log = gm::RunLog::open(dir);
             log->append("action", obj().set("step", 2).set("tool", "run_code").set("args", obj().set("body", "lost")).set("rpcId", 99));
         }
         options.run_dir = dir;
@@ -570,10 +570,10 @@ int main() {
         Value repeat = b.call("run_code", R"({"body":"first"})", 77);
         Value lost = b.call("run_code", R"({"body":"lost"})", 99);
         Value step = b.call("next_context", "{}");
-        std::cout << "resumed step: " << gmnew::json::dump(step).substr(0, 400) << std::endl;
+        std::cout << "resumed step: " << gm::json::dump(step).substr(0, 400) << std::endl;
         if (!step.find("step")) step.set("step", -1);
         check(b.server->run_id() == dir.filename().string() && step.find("step")->as_number() == 3 && str(step, "task") == "resume this task",
-              "a resumed run keeps its steps and its task: step " + gmnew::json::dump(*step.find("step")));
+              "a resumed run keeps its steps and its task: step " + gm::json::dump(*step.find("step")));
         check(str(repeat, "output").find("first") != std::string::npos, "a repeated id is answered from the log");
         check(str(lost, "error") == "the call was interrupted by a restart; check its outside effects before repeating it",
               "an action with no end is answered as interrupted");
@@ -599,10 +599,10 @@ int main() {
         h.server->accept(rpc(1, "prompts/get", R"({"name":"gm","arguments":{"task":"we restarted, finish all remaining work"}})"));
         Value step = h.call("next_context", "{}");
         check(str(step, "task") == "we restarted, finish all remaining work", "prompts/get keeps the whole task argument, commas and spaces included");
-        auto skill = gmnew::mcp::served_skill_text(fresh_options(root, "skill-text").skills, "skill://gm/SKILL.md");
+        auto skill = gm::mcp::served_skill_text(fresh_options(root, "skill-text").skills, "skill://gm/SKILL.md");
         check(skill && skill->find("## Rules") != std::string::npos, "served_skill_text returns the gm skill file");
-        check(!gmnew::mcp::served_skill_text(fresh_options(root, "skill-text").skills, "skill://gm/NOPE.md") &&
-                  !gmnew::mcp::served_skill_text(fresh_options(root, "skill-text").skills, "skill://nope/SKILL.md"),
+        check(!gm::mcp::served_skill_text(fresh_options(root, "skill-text").skills, "skill://gm/NOPE.md") &&
+                  !gm::mcp::served_skill_text(fresh_options(root, "skill-text").skills, "skill://nope/SKILL.md"),
               "served_skill_text refuses unserved skill uris");
     }
 
@@ -699,7 +699,7 @@ int main() {
             a.server->input_ended();
         }
         {
-            auto log = gmnew::RunLog::open(dir);
+            auto log = gm::RunLog::open(dir);
             log->append("action", obj().set("step", 1).set("tool", "run_shell").set("args", obj().set("command", "cmake --build build/mcp-surface")));
         }
         options.run_dir = dir;

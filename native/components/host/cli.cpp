@@ -1,4 +1,4 @@
-#include "gmnew/host/cli.hpp"
+#include "gm/host/cli.hpp"
 
 #include <algorithm>
 #include <atomic>
@@ -11,8 +11,8 @@
 #include <sstream>
 #include <thread>
 
-#include "gmnew/json.hpp"
-#include "gmnew/query.hpp"
+#include "gm/json.hpp"
+#include "gm/query.hpp"
 
 #if defined(_WIN32)
 #define WIN32_LEAN_AND_MEAN
@@ -22,7 +22,7 @@
 #include <unistd.h>
 #endif
 
-namespace gmnew::host {
+namespace gm::host {
 namespace {
 
 namespace fs = std::filesystem;
@@ -323,10 +323,10 @@ int guarded(Command command, const HostArgs& args) {
     try {
         return command(args);
     } catch (const CliError& err) {
-        std::cerr << "gmnew: " << err.text << "\n";
+        std::cerr << "gm: " << err.text << "\n";
         return 1;
     } catch (const std::exception& err) {
-        std::cerr << "gmnew: " << err.what() << "\n";
+        std::cerr << "gm: " << err.what() << "\n";
         return 1;
     }
 }

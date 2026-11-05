@@ -1,8 +1,8 @@
-#include "gmnew/query.hpp"
+#include "gm/query.hpp"
 
 #include "engine.hpp"
 
-namespace gmnew {
+namespace gm {
 namespace {
 
 constexpr std::string_view query_runner = R"JS((function (eventsText, js) {

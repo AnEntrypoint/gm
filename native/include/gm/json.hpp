@@ -10,7 +10,7 @@
 
 #include "deoxidene/result.hpp"
 
-namespace gmnew::json {
+namespace gm::json {
 
 class Value;
 using Array = std::vector<Value>;

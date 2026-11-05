@@ -12,9 +12,9 @@
 #include <vector>
 
 #include "deoxidene/result.hpp"
-#include "gmnew/json.hpp"
+#include "gm/json.hpp"
 
-namespace gmnew::mcp::detail {
+namespace gm::mcp::detail {
 
 using json::Value;
 

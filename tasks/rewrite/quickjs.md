@@ -1,6 +1,6 @@
 # Brief: QuickJS-NG engine, run_code and leaves (components/quickjs, native/third_party/quickjs-ng)
 
-Supersedes the earlier brief in its leaf parts. Keep the vendoring and run_body from the earlier brief (native/include/gmnew/runcode.hpp). Read tasks/rewrite/common.md and native/include/gmnew/leaves.hpp, host.hpp, then DESIGN.md section "Hot reload language (2026-11-04)".
+Supersedes the earlier brief in its leaf parts. Keep the vendoring and run_body from the earlier brief (native/include/gm/runcode.hpp). Read tasks/rewrite/common.md and native/include/gm/leaves.hpp, host.hpp, then DESIGN.md section "Hot reload language (2026-11-04)".
 
 1. Vendor QuickJS-NG as before (tag, URL and sha256 in native/third_party/quickjs-ng/VERSION.txt).
 2. Engine helpers shared by run_body and LeafVerbs: a fresh runtime and context per call, a module loader that resolves a leaf's relative imports from its own directory, and a global host object. host.<name>(obj) takes one object, converts it to json::Value, calls the matching VerbTable (HostServices.native) or the extra primitive, and converts the reply back. Errors become JS exceptions.

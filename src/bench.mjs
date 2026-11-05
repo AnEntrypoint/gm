@@ -73,7 +73,7 @@ function main(argv) {
   const { latencyMs, only } = parseOptions(argv);
   const tasks = only === undefined ? TASKS : TASKS.filter((task) => task.name === only);
   if (tasks.length === 0) throw new Error(`no bench task named ${only}`);
-  const root = mkdtempSync(join(tmpdir(), 'gmnew-bench-'));
+  const root = mkdtempSync(join(tmpdir(), 'gm-bench-'));
   const results = [];
   try {
     for (const task of tasks) {

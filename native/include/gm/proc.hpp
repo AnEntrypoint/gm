@@ -13,7 +13,7 @@
 
 #include "deoxidene/result.hpp"
 
-namespace gmnew::proc {
+namespace gm::proc {
 
 struct Outcome {
     bool started = false;

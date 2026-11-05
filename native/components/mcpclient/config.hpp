@@ -6,9 +6,9 @@
 #include <utility>
 #include <vector>
 
-#include "gmnew/mcpclient.hpp"
+#include "gm/mcpclient.hpp"
 
-namespace gmnew::mcpclient {
+namespace gm::mcpclient {
 
 struct ServerSpec {
     std::string name;

@@ -6,10 +6,10 @@
 #include <regex>
 #include <sstream>
 
-#include "gmnew/mcp.hpp"
+#include "gm/mcp.hpp"
 #include "internal.hpp"
 
-namespace gmnew::mcp::detail {
+namespace gm::mcp::detail {
 
 namespace {
 
@@ -196,7 +196,7 @@ const Skill& SkillCache::get(const std::string& name) {
 
 }
 
-namespace gmnew::mcp {
+namespace gm::mcp {
 
 std::optional<std::string> served_skill_text(const std::filesystem::path& skills, const std::string& uri) {
     static const std::regex kSkillFileUri(R"(^skill://([^/]+)/.+$)");

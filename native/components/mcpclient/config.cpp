@@ -9,9 +9,9 @@
 #include <set>
 #include <sstream>
 
-#include "gmnew/json.hpp"
+#include "gm/json.hpp"
 
-namespace gmnew::mcpclient {
+namespace gm::mcpclient {
 
 namespace {
 

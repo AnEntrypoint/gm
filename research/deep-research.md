@@ -2,7 +2,7 @@
 
 Run: deep-research workflow, run `wf_77db7747-1a6`, 2026-11-01.
 
-Question: the gm-new brief, which asks for the simplest, most performant, most adaptable worker for the longest-horizon task, using the best practice that emerged over the past 12 months.
+Question: the gm brief, which asks for the simplest, most performant, most adaptable worker for the longest-horizon task, using the best practice that emerged over the past 12 months.
 
 Method: 5 search angles (broad, academic, recent industry, contrarian, practitioner). 21 sources fetched, 80 claims extracted, 25 claims verified by 3-vote adversarial review (a claim dies at 2 of 3 refutes). Result: 13 confirmed, 12 refuted, 0 unverified. 103 agent calls, 0 errors.
 
@@ -74,7 +74,7 @@ Each was refuted at 2 or more of 3 votes unless marked otherwise.
 - Verbatim status: quotes behind findings 3, 5, 6 and 7 came from model-summarised fetches. Claim 5's quoted sentence failed its quote check.
 - Time sensitivity: sources span December 2025 to October 2026. The field moves fast.
 - Benchmarks are SWE-bench Verified, Terminal-Bench 2.0, BrowseComp, ARC-AGI-3, NetHack and one inbox scenario. None is a long-horizon PRD or graph-orchestration workload, which is gm's shape.
-- This report is evidence only. It does not design gm-new. See `DESIGN.md`.
+- This report is evidence only. It does not design gm. See `DESIGN.md`.
 
 ## Sources
 

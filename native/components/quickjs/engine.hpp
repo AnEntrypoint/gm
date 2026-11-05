@@ -8,12 +8,12 @@
 #include <vector>
 
 #include "deoxidene/result.hpp"
-#include "gmnew/host.hpp"
-#include "gmnew/json.hpp"
-#include "gmnew/verbs.hpp"
+#include "gm/host.hpp"
+#include "gm/json.hpp"
+#include "gm/verbs.hpp"
 #include "quickjs.h"
 
-namespace gmnew::engine {
+namespace gm::engine {
 
 using Clock = std::chrono::steady_clock;
 

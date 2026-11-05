@@ -1,9 +1,9 @@
-#include "gmnew/json.hpp"
+#include "gm/json.hpp"
 
 #include <charconv>
 #include <cmath>
 
-namespace gmnew::json {
+namespace gm::json {
 
 namespace {
 

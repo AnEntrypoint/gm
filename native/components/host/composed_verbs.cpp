@@ -1,9 +1,9 @@
-#include "gmnew/host/composed_verbs.hpp"
+#include "gm/host/composed_verbs.hpp"
 
 #include <mutex>
 #include <set>
 
-namespace gmnew::host {
+namespace gm::host {
 
 deoxidene::Result<std::unique_ptr<ComposedVerbs>, std::string> ComposedVerbs::compose(std::vector<VerbTable*> tables) {
     std::set<std::string, std::less<>> seen;

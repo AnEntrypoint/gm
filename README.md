@@ -12,13 +12,13 @@ To register gm with a playwriter config, pass the path through `sh -s --`:
 
     curl -fsSL https://raw.githubusercontent.com/AnEntrypoint/gm/main/scripts/install.sh | sh -s -- --mcp-config <path>
 
-Each build is published under its own file names (`gmnew-<version>-<target>`), and the manifest is uploaded last, so an install never mixes two builds. The last three builds stay on `latest`.
+Each build is published under its own file names (`gm-<version>-<target>`), and the manifest is uploaded last, so an install never mixes two builds. The last three builds stay on `latest`.
 
 Windows is not published yet: the Windows build fails most of its tests, so the release carries Linux and macOS only. `scripts/install.ps1` is kept for when it is.
 
 The registration is add-mcp, pinned to version 2.6.1, run through npx. The command it runs is:
 
-    npx -y add-mcp@2.6.1 <path-to-gmnew> --args serve -n gm -g -a claude-code -y
+    npx -y add-mcp@2.6.1 <path-to-gm> --args serve -n gm -g -a claude-code -y
 
 add-mcp takes the executable as its target and each argument after `--args`, so the command and its arguments are stored apart. Do not put the whole command in one string: add-mcp stores that string as the executable name, and the server cannot start.
 
@@ -41,7 +41,7 @@ Both skills are served as MCP skills under SEP-2640 (the `io.modelcontextprotoco
 The worker is also an MCP client. It starts the MCP servers that its config names, and adds each of their tools to `gm` inside `run_code` as `gm.<server>_<tool>(args)`, beside the native verbs. `gm.verbs()` and run_code's description list them. The config is three files in the `mcpServers` shape of `.mcp.json`, read in this order. A later entry with the same name replaces the earlier one whole:
 
 1. `defaults/mcp.json` in the checkout. It is required, and a missing file is logged as an `mcp-config` problem. It starts playwriter, as `npx -y -p github:AnEntrypoint/pw#v0.1.0 playwriter-project`, with `PLAYWRITER_TELEMETRY=0` in its environment, which turns off playwriter's anonymous usage stats, and with `"ignore": [".playwriter/"]`. The `pw` package declares `engines` `node >=22`, the same floor setup enforces. A failed start gives its reason in the stderr of the `mcp-server` failed event.
-2. `.gm-new/mcp.json` in the workspace, if it exists.
+2. `.gm/mcp.json` in the workspace, if it exists.
 3. The file that `--mcp-config <file>` names, if given. It is required.
 
 A layer that sets `"disabled": true` for a name removes that server, so `{"mcpServers":{"playwriter":{"disabled":true}}}` in the workspace file turns playwriter off. An entry looks like this:
@@ -60,7 +60,7 @@ Setup registers only gm with the host, so the worker is the only thing that star
 - The servers start with the worker, in parallel, and tools/list and run_code wait for them, each for at most `startupTimeoutMs` (default 30000; the default playwriter entry sets 600000, because a first npx install of it took 174 s and 458 s on the measured host). A server that fails is logged as `mcp-server` with its error and the tail of its stderr, and the others still run. A server that exits is started again by its next call.
 - A call is an `action` and a `code-call` in the log, with its arguments and output. A call that runs past `timeoutMs` (default 60000) fails with that message, and the server is sent `notifications/cancelled`.
 - A tool whose verb name is a native verb is skipped and logged as `mcp-tool-skipped`. The other MCP tools are on the code surface only, not on `--surface tools`.
-- A worker started as an MCP server starts its own servers only to a depth of two (`GMNEW_MCP_DEPTH`), so a config that names gm-new itself stops after two levels.
+- A worker started as an MCP server starts its own servers only to a depth of two (`GMNEW_MCP_DEPTH`), so a config that names gm itself stops after two levels.
 - The servers are stopped when the worker exits. Their state lives in the servers, so a restart of the worker starts them again with a fresh state.
 
 ## Paths and limits
@@ -78,6 +78,6 @@ Setup registers only gm with the host, so the worker is the only thing that star
     cmake --build build/release
     ctest --test-dir build/release --output-on-failure
 
-- `scripts/gmnew.sh` and `scripts/gmnew.ps1` run the same steps: `build`, `test`, `doctor` or `all`. `GMNEW_PRESET` picks the preset (default `release`).
-- The binary is build/PRESET/native/components/host/gmnew.
+- `scripts/gm.sh` and `scripts/gm.ps1` run the same steps: `build`, `test`, `doctor` or `all`. `GMNEW_PRESET` picks the preset (default `release`).
+- The binary is build/PRESET/native/components/host/gm.
 - No CI workflow is configured. `.github/workflows/release.yml` uploads the binary for each target on a `v*.*.*` tag.

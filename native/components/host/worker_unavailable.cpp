@@ -1,13 +1,13 @@
 #include <iostream>
 
-#include "gmnew/host/options.hpp"
+#include "gm/host/options.hpp"
 
-namespace gmnew::host {
+namespace gm::host {
 
 namespace {
 
 int unavailable(std::string_view mode) {
-    std::cerr << "gmnew " << mode << ": this build has no " << GMNEW_HOST_MISSING_TARGETS
+    std::cerr << "gm " << mode << ": this build has no " << GMNEW_HOST_MISSING_TARGETS
               << "; configure again once those components build\n";
     return 1;
 }

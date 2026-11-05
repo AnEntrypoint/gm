@@ -1,4 +1,4 @@
-#include "gmnew/log.hpp"
+#include "gm/log.hpp"
 
 #include <cmath>
 #include <cstdio>
@@ -7,7 +7,7 @@
 #include <sstream>
 #include <system_error>
 
-namespace gmnew {
+namespace gm {
 
 namespace {
 

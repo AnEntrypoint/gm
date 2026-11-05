@@ -3,7 +3,7 @@
 
 #include "internal.hpp"
 
-namespace gmnew::mcp::detail {
+namespace gm::mcp::detail {
 
 namespace {
 

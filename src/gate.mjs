@@ -13,16 +13,16 @@ import { connectCheck } from './connect.mjs';
 
 // The commit gate. git_commit runs these checks before it commits, with no CI and no test files. A failed check refuses
 // the commit, and every check reports its result and its time in the commit's log event.
-const SCRATCH = join(tmpdir(), 'gm-scratch', 'gm-new');
+const SCRATCH = join(tmpdir(), 'gm-scratch', 'gm');
 const KEEP = join(SCRATCH, 'KEEP');
 const DOCS = ['DESIGN.md', 'AGENTS.md', 'README.md'];
 const SOURCE = /\.(?:mjs|js|cjs)$/;
 const NODE_TIMEOUT_MS = 20000;
 const SMOKE_TIMEOUT_MS = 60000;
-// gm-new's own checks read gm-new's files: its docs, its skill, its relay and its smoke run. They run only in a gm-new checkout. In any
+// gm's own checks read gm's files: its docs, its skill, its relay and its smoke run. They run only in a gm checkout. In any
 // other workspace they are not run, and notCovered names them, so a commit there is not refused for files it never had. The checkout is
-// recognised by the package name, which a deleted file cannot change, so a damaged gm-new checkout still fails its own checks.
-const OWN_NAME = 'gm-new';
+// recognised by the package name, which a deleted file cannot change, so a damaged gm checkout still fails its own checks.
+const OWN_NAME = 'gm';
 const OWN_CHECKS = ['ascii', 'docs', 'sources', 'wiki', 'skills', 'connect', 'workers', 'prompt', 'smoke'];
 const WORKER_ENTRY = 'mcp.mjs';
 const WORKER_LIST = 'src/worker-modules.json';
@@ -38,8 +38,8 @@ export const NOT_COVERED = [
   'CI: none is configured, and no CI result is read',
 ];
 
-// scope names the paths of the commit. In a gm-new checkout the syntax step checks every tracked module. In another workspace it checks only
-// the modules the commit names: the rest of that tree is not gm-new's to judge, and its files may hold other code, such as evidence files.
+// scope names the paths of the commit. In a gm checkout the syntax step checks every tracked module. In another workspace it checks only
+// the modules the commit names: the rest of that tree is not gm's to judge, and its files may hold other code, such as evidence files.
 export async function runGate(root, scope = null) {
   const own = isOwnCheckout(root);
   const checks = [];
@@ -58,7 +58,7 @@ export async function runGate(root, scope = null) {
   const failed = checks.filter((check) => !check.ok).map((check) => check.name);
   const notCovered = own ? NOT_COVERED : [
     ...NOT_COVERED,
-    `${OWN_CHECKS.join(', ')}: gm-new's own checks, not run in ${root}, which is not a gm-new checkout`,
+    `${OWN_CHECKS.join(', ')}: gm's own checks, not run in ${root}, which is not a gm checkout`,
     `syntax: in ${root}, only the modules named in this commit were checked; the rest of the tree was not`,
   ];
   return { ok: failed.length === 0, failed, checks, notCovered };

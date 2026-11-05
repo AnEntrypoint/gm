@@ -1,6 +1,6 @@
 const SCRIPT = [
   [
-    { tool: 'write_file', args: { path: 'hello.mjs', content: 'console.log("gmnew scripted witness");\n' } },
+    { tool: 'write_file', args: { path: 'hello.mjs', content: 'console.log("gm scripted witness");\n' } },
     { tool: 'write_file', args: { path: 'notes.txt', content: 'two independent actions in one reply\n' } },
   ],
   { tool: 'run_shell', args: { command: 'node hello.mjs > out.txt' } },
@@ -11,7 +11,7 @@ const SCRIPT = [
     tool: 'finish',
     args: {
       witness:
-        'node hello.mjs wrote "gmnew scripted witness" to out.txt; read_file out.txt returned that line; read_file ../outside.txt was refused (see refusal event).',
+        'node hello.mjs wrote "gm scripted witness" to out.txt; read_file out.txt returned that line; read_file ../outside.txt was refused (see refusal event).',
     },
   },
 ];
@@ -21,11 +21,11 @@ const SCRIPT_EXHAUSTED = {
   args: { witness: 'scripted model has no further steps' },
 };
 
-// gm-new makes no API calls. The model is the host session (Claude Code) in MCP mode, and the only model
+// gm makes no API calls. The model is the host session (Claude Code) in MCP mode, and the only model
 // here is the scripted one, which is offline and deterministic.
 export function createModel(name, options = {}) {
   if (name === 'scripted') return scriptedModel(options.script, options.faults, options.latencyMs);
-  throw new Error(`unknown model: ${name}; gm-new calls no API, so the only model is scripted`);
+  throw new Error(`unknown model: ${name}; gm calls no API, so the only model is scripted`);
 }
 
 function scriptedModel(script, faults = [], latencyMs = 0) {

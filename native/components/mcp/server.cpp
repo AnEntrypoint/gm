@@ -10,12 +10,12 @@
 #include <set>
 #include <shared_mutex>
 
-#include "gmnew/log.hpp"
-#include "gmnew/mcp.hpp"
-#include "gmnew/proc.hpp"
+#include "gm/log.hpp"
+#include "gm/mcp.hpp"
+#include "gm/proc.hpp"
 #include "internal.hpp"
 
-namespace gmnew::mcp {
+namespace gm::mcp {
 
 using namespace detail;
 
@@ -28,7 +28,7 @@ constexpr const char* kRunMeta = "com.anentrypoint.gmnew/run";
 constexpr const char* kRunSeq = "com.anentrypoint.gmnew/seq";
 constexpr const char* kLogMeta = "com.anentrypoint.gmnew/log";
 constexpr const char* kServerName = "gm";
-constexpr const char* kServerTitle = "gm-new run worker";
+constexpr const char* kServerTitle = "gm run worker";
 constexpr const char* kGmSkillUri = "skill://gm/SKILL.md";
 constexpr std::size_t kReplyMemory = 256;
 constexpr std::size_t kOutputCap = 20000;
@@ -81,7 +81,7 @@ const std::string kSkillPointer =
     "The gm skill holds the rules of a run, the routes for pending events, and the way to hand work to a child "
     "session. Read it when a run starts, and read it again after a compaction. Read skill://gm/SKILL.md with "
     "ReadMcpResourceTool (server gm), or run the gm prompt (mcp__gm__gm). The host's Skill tool does not list it, so "
-    "do not call it with the Skill tool. The gm-continue skill plans the open rows of gm-new and hands them to the gm "
+    "do not call it with the Skill tool. The gm-continue skill plans the open rows of gm and hands them to the gm "
     "skill. Read skill://gm-continue/SKILL.md with ReadMcpResourceTool (server gm), or run the gm-continue prompt "
     "(mcp__gm__gm-continue). The host's Skill tool does not list it, so do not call it with the Skill tool.";
 
@@ -1107,7 +1107,7 @@ struct Server::State {
     }
 
     static void fingerprint_into(const fs::path& dir, const std::string& rel, std::vector<std::string>& parts) {
-        static const std::set<std::string> kSkipDirs = {"node_modules", "runs", ".gm-new", ".git", "sources", "vendor"};
+        static const std::set<std::string> kSkipDirs = {"node_modules", "runs", ".gm", ".git", "sources", "vendor"};
         std::error_code ec;
         for (const auto& entry : fs::directory_iterator(dir, ec)) {
             std::string name = entry.path().filename().string();

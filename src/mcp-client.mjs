@@ -4,7 +4,7 @@ import { join, resolve } from 'node:path';
 import { killGroupNow } from './exec.mjs';
 
 const PROTOCOL_VERSIONS = ['2025-11-25', '2025-06-18'];
-const CLIENT_INFO = { name: 'gm-new', version: '0.1.0' };
+const CLIENT_INFO = { name: 'gm', version: '0.1.0' };
 const STARTUP_MS = 30000;
 const CALL_MS = 60000;
 const STDERR_CHARS = 2000;
@@ -171,7 +171,7 @@ class ServerProcess {
     try {
       this.start();
       const init = await this.request('initialize', { protocolVersion: PROTOCOL_VERSIONS[0], capabilities: {}, clientInfo: CLIENT_INFO }, this.spec.startupMs);
-      if (!PROTOCOL_VERSIONS.includes(init.protocolVersion)) throw new Error(`protocol version ${init.protocolVersion} is not one gm-new speaks`);
+      if (!PROTOCOL_VERSIONS.includes(init.protocolVersion)) throw new Error(`protocol version ${init.protocolVersion} is not one gm speaks`);
       this.notify('notifications/initialized');
       this.tools = await this.listTools();
       this.log.append('mcp-server', { server: this.spec.name, state: again ? 'restarted' : 'connected', tools: this.tools.length, protocolVersion: init.protocolVersion });
@@ -231,7 +231,7 @@ class ServerProcess {
   stop() {
     const child = this.child;
     if (child === null) return;
-    this.lose(child, 'stopped by gm-new');
+    this.lose(child, 'stopped by gm');
     child.stdin.end();
     killGroupNow(child.pid);
   }
@@ -253,7 +253,7 @@ class ServerProcess {
       return;
     }
     if (message.method !== undefined && message.id !== undefined) {
-      const reply = message.method === 'ping' ? { result: {} } : { error: { code: -32601, message: `gm-new does not serve ${message.method}` } };
+      const reply = message.method === 'ping' ? { result: {} } : { error: { code: -32601, message: `gm does not serve ${message.method}` } };
       this.send({ jsonrpc: '2.0', id: message.id, ...reply });
       return;
     }
@@ -340,7 +340,7 @@ export function startMcpClients({ servers, problems = [], log, reserved = new Se
         }
         const taken = reserved.has(name) || routes.has(name);
         if (taken) {
-          log.append('mcp-tool-skipped', { server: runner.spec.name, tool: tool.name, verb: name, reason: reserved.has(name) ? 'the name is a gm-new verb' : 'the name is another MCP tool' });
+          log.append('mcp-tool-skipped', { server: runner.spec.name, tool: tool.name, verb: name, reason: reserved.has(name) ? 'the name is a gm verb' : 'the name is another MCP tool' });
           continue;
         }
         routes.set(name, { runner, tool });

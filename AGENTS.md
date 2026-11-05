@@ -1,6 +1,6 @@
-# gm-new: agent instructions
+# gm: agent instructions
 
-gm-new is one long-horizon worker: an MCP server that runs a task as one append-only log, with the rules re-read at every step. The host session (Claude Code) is the model. Two trees live in this checkout: the Node reference (src/, tools/) and the native C++23 tree (native/). Which one ships is an open owner question (see Open decisions). Design evidence is in DESIGN.md, in dated sections with witness run ids.
+gm is one long-horizon worker: an MCP server that runs a task as one append-only log, with the rules re-read at every step. The host session (Claude Code) is the model. Two trees live in this checkout: the Node reference (src/, tools/) and the native C++23 tree (native/). Which one ships is an open owner question (see Open decisions). Design evidence is in DESIGN.md, in dated sections with witness run ids.
 
 ## Read first
 
@@ -18,8 +18,8 @@ gm-new is one long-horizon worker: an MCP server that runs a task as one append-
 - ASCII only in every file. No decorative symbols.
 - Shell commands in the Node tree use child_process.spawn with an explicit timeout.
 - Files outside the checkout may be read and written when a task needs them (owner decision, 2026-11-03).
-- gm-new makes no API calls. The only model in the CLI is `scripted`, which is offline and deterministic.
-- gm-new's own MCP server is served under the name gm. The separate gm product's tools, skill, runner and state are not used for gm-new work.
+- gm makes no API calls. The only model in the CLI is `scripted`, which is offline and deterministic.
+- gm's own MCP server is served under the name gm. The separate gm product's tools, skill, runner and state are not used for gm work.
 - Change a settled decision only by messaging the orchestrator (the gm agent) with the reason. The owner sets the rules.
 - Owner rule from the Node era, kept as written: no test files and no fixtures that stand in for a real run. The ctest and parity suites now exist and the owner has not restated the rule for the native tree.
 
@@ -27,26 +27,26 @@ gm-new is one long-horizon worker: an MCP server that runs a task as one append-
 
 - src/ (Node reference, ES modules, Node 22 or later, one runtime dependency: acorn 8.18.0): cli.mjs (run, query, replay, doctor), mcp.mjs (the MCP server and its surfaces, DEFAULT_MAX_STEPS 50, DEFAULT_MAX_INFLIGHT 8), tools.mjs (verbs, adoptBody), runcode.mjs (run_code bodies, the 180 s budget), exec.mjs (killBody), mcp-client.mjs (MCP servers inside run_code, launchOf), search.mjs (grep and search), git.mjs (git verbs, ci_status), gate.mjs (commit gate, runGate), rows.mjs, pending.mjs (PENDING_KINDS), retry.mjs, prompt.mjs (MCP_RULES), run.mjs (run directories, setSuccessor), worker-modules.json (the worker's import graph).
 - tools/: core.mjs (runs the worker as a child and reloads it), update.mjs (DEFAULT_UPDATE_MS = 60000), relay.mjs, supervise.mjs, ship.sh, prefetch.mjs, gm-continue-setup.mjs, mcp-conformance.mjs (`--stdio <program> [args...]`: runs the MCP checks against a stdio server; 56 checks in 22 scenarios; the official conformance package fixtures are not used).
-- native/components/: host (the gmnew binary, worker.cpp, relay), mcp (server.cpp, skills.cpp, pending.cpp, compact.cpp), mcpclient (native MCP client on the vendored cxxmcp), quickjs (runcode.cpp, the run_code engine), proc (child.cpp, proc.cpp with OwnerScope and kill_owned), search (search_impl.cpp), verbs, json, log. Public headers are in native/include/gmnew and each component's include/. Component tests sit in <component>/tests/.
+- native/components/: host (the gm binary, worker.cpp, relay), mcp (server.cpp, skills.cpp, pending.cpp, compact.cpp), mcpclient (native MCP client on the vendored cxxmcp), quickjs (runcode.cpp, the run_code engine), proc (child.cpp, proc.cpp with OwnerScope and kill_owned), search (search_impl.cpp), verbs, json, log. Public headers are in native/include/gm and each component's include/. Component tests sit in <component>/tests/.
 - native/leaves/: JavaScript leaves (git, fetch, rows, review, wiki, code-ast) and vendor/acorn.mjs; tests in leaves/tests/.
 - native/third_party/: cxxmcp v1.3.0 (MIT, stdio only, VERSION.txt holds the commit and a sha256 per file) and quickjs-ng.
 - native/tests/parity/: run.mjs and fake-mcp.mjs (see Parity harness).
-- skills/gm/SKILL.md, skills/gm-continue/SKILL.md, skills/dev/SKILL.md. defaults/mcp.json: the default MCP servers (playwriter). setup.sh. scripts/gmnew.sh and scripts/gmnew.ps1. .github/workflows/ci.yml and release.yml. docs/index.html (the manual). research/ (evidence). tasks/rewrite/ (rewrite briefs). work/rows/ (PRD and unknown rows).
+- skills/gm/SKILL.md, skills/gm-continue/SKILL.md, skills/dev/SKILL.md. defaults/mcp.json: the default MCP servers (playwriter). setup.sh. scripts/gm.sh and scripts/gm.ps1. .github/workflows/ci.yml and release.yml. docs/index.html (the manual). research/ (evidence). tasks/rewrite/ (rewrite briefs). work/rows/ (PRD and unknown rows).
 - runs/<id>/ (git-ignored): log.jsonl (append-only), log.index, rules.md, task.json, jobs/.
 
 ## Build and test
 
-- Native: `cmake --preset release -DGMNEW_BUILD_TESTS=ON`, then `cmake --build build/release`, then `ctest --test-dir build/release --output-on-failure`. Or `scripts/gmnew.sh build|test|doctor|all` (GMNEW_PRESET picks the preset, default release; gmnew.ps1 runs the same steps).
+- Native: `cmake --preset release -DGMNEW_BUILD_TESTS=ON`, then `cmake --build build/release`, then `ctest --test-dir build/release --output-on-failure`. Or `scripts/gm.sh build|test|doctor|all` (GMNEW_PRESET picks the preset, default release; gm.ps1 runs the same steps).
 - Presets in CMakePresets.json: debug, release, asan, ubsan, asan-ubsan, tsan, native-perf, and x64 and arm64 for linux, windows and macos (`*-release`). CI builds and tests the six release presets and asan-ubsan. release.yml uploads the binary on a v*.*.* tag.
 - Node: `node --test native/leaves/tests/*.test.mjs`.
-- Commit gate: tools/ship.sh runs it through src/gate.mjs runGate. It runs every check only in a checkout whose package.json name is gm-new; elsewhere it checks syntax and lists the rest as notCovered. A check that throws is a failure.
+- Commit gate: tools/ship.sh runs it through src/gate.mjs runGate. It runs every check only in a checkout whose package.json name is gm; elsewhere it checks syntax and lists the rest as notCovered. A check that throws is a failure.
 - Witness rule: run the built binary or the CLI on a real task in a scratch workspace, read the output, then delete the scratch. `node src/cli.mjs run --task "<text>" --workspace <dir> --model scripted` runs offline.
 
 ## Parity harness
 
-    node native/tests/parity/run.mjs [--bin <gmnew>] [--ref /tmp/parity-ref] [--scratch <dir>] [--reply-timeout-ms N]
+    node native/tests/parity/run.mjs [--bin <gm>] [--ref /tmp/parity-ref] [--scratch <dir>] [--reply-timeout-ms N]
 
-- The default --bin is build/integ/native/components/host/gmnew. build/integ is a build directory that no preset names, so configure it yourself or pass --bin.
+- The default --bin is build/integ/native/components/host/gm. build/integ is a build directory that no preset names, so configure it yourself or pass --bin.
 - It extracts HEAD's src, tools, skills, defaults and package.json with git archive into --ref (no clone), runs the same JSON-RPC scenarios through the Node reference and the native binary, and prints one row per scenario and a total: "N/M scenarios match, X cutover-expected, Y native-ahead, Z differ".
 - mcpPass (run.mjs) runs the MCP scenarios against fake-mcp.mjs: two servers, deny, ignore, a missing ${VAR}, a non-stdio entry. NATIVE_AHEAD lists the accepted differences, each with a path pattern.
 - Last witness (DESIGN.md, Native MCP client, 2026-11-04): 52 of 55 match, 3 cutover-expected, 0 differ. Changing Node to match native is a decision, not a fix.
@@ -72,7 +72,7 @@ gm-new is one long-horizon worker: an MCP server that runs a task as one append-
 
 ## MCP servers inside run_code
 
-- Layers, read in order: defaults/mcp.json (required), <workspace>/.gm-new/mcp.json, and the file given by --mcp-config (required if given). A later entry with the same name replaces the earlier one whole. `"disabled": true` removes a server.
+- Layers, read in order: defaults/mcp.json (required), <workspace>/.gm/mcp.json, and the file given by --mcp-config (required if given). A later entry with the same name replaces the earlier one whole. `"disabled": true` removes a server.
 - Each server's tools are verbs named gm.<server>_<tool>. Entry keys: command, args, env (${NAME} is expanded; a missing variable stops that server), cwd (relative to the workspace), timeoutMs, startupTimeoutMs, deny (tool names not registered as verbs), ignore (gitignore lines appended to the workspace .gitignore when it is a git repository). Only stdio servers run; a url entry is not supported yet.
 - The default playwriter entry runs `npx -y -p github:AnEntrypoint/pw#v0.1.0 playwriter-project` with PLAYWRITER_TELEMETRY=0 and denies its reset tool, which would reset the browser context every worker shares. Where Chromium has no sandbox wrapper, a layer may set PLAYWRITER_NO_SANDBOX=1 by restating the whole entry. The default does not set it.
 - Native client: native/components/mcpclient, built on the vendored cxxmcp (stdio). Its gaps against Node are listed under Known gaps.
@@ -80,7 +80,7 @@ gm-new is one long-horizon worker: an MCP server that runs a task as one append-
 
 ## Search and grep
 
-- Native grep (native/components/search/search_impl.cpp): the default scope is git-tracked files plus untracked files that git does not ignore. scope "all" adds gitignored files and node_modules. Both skip .git, .gm, .agentplug, .agentplug-kv, .gm-new, .playwriter and runs unless git tracks the file. vendor and node_modules are skipped unless vendor is true. A zero-match reply starts with a hint counting the skipped files.
+- Native grep (native/components/search/search_impl.cpp): the default scope is git-tracked files plus untracked files that git does not ignore. scope "all" adds gitignored files and node_modules. Both skip .git, .gm, .agentplug, .agentplug-kv, .gm, .playwriter and runs unless git tracks the file. vendor and node_modules are skipped unless vendor is true. A zero-match reply starts with a hint counting the skipped files.
 - Node search (src/search.mjs) searches tracked files only (open decision). Its literal pass runs the pattern again as a regex when the literal finds nothing and the pattern has regex characters; an invalid regex is an error (searcherFor).
 - Native search reuses a file's lines only while its stat (device, inode, size, mtime, ctime) is unchanged and settled (STAMP_SETTLE_MS = 3000), so a same-size write in one timestamp tick is not missed.
 - Do not cache the tokenized text of every file. Doing so once put a worker at 1399 MB of heap on a 108 MB tree (DESIGN.md, friction notes).
@@ -109,7 +109,7 @@ gm-new is one long-horizon worker: an MCP server that runs a task as one append-
 
 ## Open decisions (owner), with current state
 
-1. Node tree direction. OPEN: work/rows/unknown-mw29a63rd40c.yml asks "native C++ rewrite or Node-only?". State: the native tree builds and passes ctest and the parity harness. It is cut over for /workspace/gm only (DESIGN.md, Local cutover of the native gm-new, 2026-11-04); the user-wide entry is unchanged, and Node stays the parity reference. Until the owner answers native or node-only, commit df0a6b9 and native/ stay as they are.
+1. Node tree direction. OPEN: work/rows/unknown-mw29a63rd40c.yml asks "native C++ rewrite or Node-only?". State: the native tree builds and passes ctest and the parity harness. It is cut over for /workspace/gm only (DESIGN.md, Local cutover of the native gm, 2026-11-04); the user-wide entry is unchanged, and Node stays the parity reference. Until the owner answers native or node-only, commit df0a6b9 and native/ stay as they are.
 2. Grep default. Native searches untracked files that git does not ignore; Node searches tracked files only (DESIGN.md, Native MCP client, gaps). Node has not changed. The decision on whether Node follows is open.
 3. Stopped background fetch: native-ahead. Native kills the fetch's curl with its body, so no request keeps running and the code-call carries the real outcome; Node leaves the request until its 60 s timeout. Recorded in native/tests/parity/run.mjs (NATIVE_AHEAD) and DESIGN.md, "Stopped background fetch: native-ahead row". To match Node, Node would abort fetch on a body stop and the row would be removed. The owner has not chosen.
 4. Client-side roots and elicitation. Not used. Roots and sampling are not used (DESIGN.md decision 4); logging is used. Elicitation is not served, because it is interactive-only in Claude Code and a question becomes a row instead. DESIGN.md marks it "OWNER DECISION if wanted" (decision 2). Current state: neither tree uses either.
@@ -132,7 +132,7 @@ gm-new is one long-horizon worker: an MCP server that runs a task as one append-
 - tools/ship.sh "<subject>" <paths...>: refuses a path that is neither present nor tracked, stages only the named paths, runs the gate, unstages them if the gate fails, commits, and pushes origin main. SHIP_PUSH=0 commits without pushing; SHIP_ROOT names the checkout; SHIP_OUT names the gate log (default /tmp/ship-gate.out).
 - Attribution: author lanmower; no trailers.
 - Collisions: fetch, reapply on origin's tip, push. Do not clone to get around one.
-- Remote: AnEntrypoint/gm-new, private, pushed to main. Making it public is the owner's decision.
+- Remote: AnEntrypoint/gm, private, pushed to main. Making it public is the owner's decision.
 
 ## Keeping this file
 

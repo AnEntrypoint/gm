@@ -1,8 +1,8 @@
 #pragma once
 
-#include "gmnew/host/options.hpp"
+#include "gm/host/options.hpp"
 
-namespace gmnew::host {
+namespace gm::host {
 
 int run_events(const HostArgs& args);
 int run_query_command(const HostArgs& args);

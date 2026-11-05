@@ -4,7 +4,7 @@ param([Parameter(Position = 0)] [string]$Command)
 $Root = Split-Path -Parent $PSScriptRoot
 $Preset = if ($env:GMNEW_PRESET) { $env:GMNEW_PRESET } else { 'release' }
 $Build = Join-Path $Root "build/$Preset"
-$Binary = Join-Path $Build 'native/components/host/gmnew'
+$Binary = Join-Path $Build 'native/components/host/gm'
 
 function Invoke-Checked {
     param([scriptblock]$Step)
@@ -25,5 +25,5 @@ switch ($Command) {
     'test'   { Invoke-Build; Invoke-Test }
     'doctor' { Invoke-Build; Invoke-Doctor }
     'all'    { Invoke-Build; Invoke-Test; Invoke-Doctor }
-    default  { Write-Host 'usage: gmnew.ps1 build|test|doctor|all  (GMNEW_PRESET selects the preset, default release)'; exit 1 }
+    default  { Write-Host 'usage: gm.ps1 build|test|doctor|all  (GMNEW_PRESET selects the preset, default release)'; exit 1 }
 }

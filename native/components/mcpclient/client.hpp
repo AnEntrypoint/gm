@@ -8,9 +8,9 @@
 #include <vector>
 
 #include "config.hpp"
-#include "gmnew/json.hpp"
+#include "gm/json.hpp"
 
-namespace gmnew::mcpclient {
+namespace gm::mcpclient {
 
 struct Core;
 

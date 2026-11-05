@@ -1,4 +1,4 @@
-#include "gmnew/leaves.hpp"
+#include "gm/leaves.hpp"
 
 #include <algorithm>
 #include <atomic>
@@ -13,7 +13,7 @@
 
 #include "engine.hpp"
 
-namespace gmnew {
+namespace gm {
 namespace {
 
 using engine::Engine;

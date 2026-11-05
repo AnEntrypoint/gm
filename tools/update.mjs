@@ -1,4 +1,4 @@
-// Updates from the repository. A checkout of gm-new is a clone of origin main, so an update is a fast-forward pull. A check fetches origin.
+// Updates from the repository. A checkout of gm is a clone of origin main, so an update is a fast-forward pull. A check fetches origin.
 // When main is ahead, the checks run on the new commit first, in a clone of the checkout at that commit, so a commit they reject never reaches
 // the checkout. A commit that changes src/ or tools/ must also load its core and start its worker there. The pull waits while a tool call,
 // a body or a job is running, and it never runs in a checkout with changes to tracked files. Then the checkout is fast-forwarded and npm ci
@@ -32,7 +32,7 @@ const WORKER_MS = 60000;
 const WAIT_RETRY_MS = 60000;
 // How long a candidate's core and worker have to load and answer initialize, and the id of that request.
 const START_MS = 20000;
-const START_ID = 'gm-new-candidate-start';
+const START_ID = 'gm-candidate-start';
 // The targets that were refused by the gate or rolled back, with the reason. Until origin moves to another commit, a refused target is not
 // tried again, so a broken commit on main is not pulled, failed and rolled back at every check.
 const refused = new Map();
@@ -84,7 +84,7 @@ export function loadedByWorker(names, list) {
 // checkout, so the checkout is not touched. Its node_modules is shared with the checkout, or installed when the lock file changed. When the
 // commit changes src/ or tools/, the clone must also start: its core loads, and its worker answers initialize.
 async function candidate(root, target, lockChanged, starts) {
-  const dir = await mkdtemp(join(tmpdir(), 'gm-new-candidate-'));
+  const dir = await mkdtemp(join(tmpdir(), 'gm-candidate-'));
   try {
     await run('git', ['clone', '--quiet', '--shared', '--no-checkout', root, dir], { timeout: FETCH_MS });
     await run('git', ['-C', dir, 'checkout', '--quiet', '--detach', target], { timeout: PULL_MS });
@@ -141,7 +141,7 @@ async function workerStarts(dir) {
       }
       if (message.id === START_ID) finish(message.error ? `the worker answered initialize with an error (${message.error.message})` : null);
     });
-    proc.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id: START_ID, method: 'initialize', params: { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'gm-new-candidate', version: '1' } } })}\n`);
+    proc.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id: START_ID, method: 'initialize', params: { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'gm-candidate', version: '1' } } })}\n`);
   });
 }
 

@@ -3,19 +3,19 @@
 #include <mutex>
 #include <sstream>
 
-#include "gmnew/core_verbs.hpp"
-#include "gmnew/host/child.hpp"
-#include "gmnew/host/composed_verbs.hpp"
-#include "gmnew/host/options.hpp"
-#include "gmnew/host/primitives.hpp"
-#include "gmnew/leaves.hpp"
-#include "gmnew/log.hpp"
-#include "gmnew/mcp.hpp"
-#include "gmnew/mcpclient.hpp"
-#include "gmnew/runcode.hpp"
+#include "gm/core_verbs.hpp"
+#include "gm/host/child.hpp"
+#include "gm/host/composed_verbs.hpp"
+#include "gm/host/options.hpp"
+#include "gm/host/primitives.hpp"
+#include "gm/leaves.hpp"
+#include "gm/log.hpp"
+#include "gm/mcp.hpp"
+#include "gm/mcpclient.hpp"
+#include "gm/runcode.hpp"
 #include "search.hpp"
 
-namespace gmnew::host {
+namespace gm::host {
 
 namespace {
 
@@ -136,7 +136,7 @@ int run_worker(const HostArgs& args) {
     BootEvents boot_events;
     mcpclient::Options mcp_options;
     mcp_options.workspace = workspace;
-    mcp_options.config_files = {{defaults_dir_of() / "mcp.json", true}, {workspace / ".gm-new" / "mcp.json", false}};
+    mcp_options.config_files = {{defaults_dir_of() / "mcp.json", true}, {workspace / ".gm" / "mcp.json", false}};
     if (auto config = args.flag("--mcp-config")) mcp_options.config_files.push_back({std::filesystem::absolute(*config), true});
     mcp_options.depth = mcpclient::depth_from_environment();
     for (const VerbInfo& verb : (*native)->list()) mcp_options.reserved.insert(verb.name);
@@ -181,7 +181,7 @@ int run_worker(const HostArgs& args) {
                                                   std::string_view format) {
         mcp_verbs.wait_ready();
         boot_events.release();
-        return gmnew::run_body(verbs, body, root, format);
+        return gm::run_body(verbs, body, root, format);
     };
     return mcp::serve_stream(std::cin, std::cout, served, std::move(options));
 }
@@ -191,7 +191,7 @@ int run_doctor(const HostArgs& args) {
     EmptyVerbs native;
     HostServices services{std::filesystem::current_path(), {}, &native, make_primitives(std::filesystem::current_path(), {})};
     LeafVerbs leaves(leaves_dir, services);
-    std::cout << "abi: gmnew host " << GMNEW_HOST_ABI_VERSION << ", mcp " << mcp::ServerOptions{}.version << '\n';
+    std::cout << "abi: gm host " << GMNEW_HOST_ABI_VERSION << ", mcp " << mcp::ServerOptions{}.version << '\n';
     std::cout << "leaves: " << leaves_dir.string() << '\n';
     std::error_code ec;
     for (const auto& entry : std::filesystem::directory_iterator(leaves_dir, ec)) {

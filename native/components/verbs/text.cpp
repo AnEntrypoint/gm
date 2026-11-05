@@ -15,7 +15,7 @@
 #include <unistd.h>
 #endif
 
-namespace gmnew::core {
+namespace gm::core {
 
 namespace {
 

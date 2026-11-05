@@ -5,10 +5,10 @@
 #include <map>
 #include <string>
 
-#include "gmnew/json.hpp"
-#include "gmnew/verbs.hpp"
+#include "gm/json.hpp"
+#include "gm/verbs.hpp"
 
-namespace gmnew {
+namespace gm {
 
 using Primitive = std::function<json::Value(const json::Value& args)>;
 

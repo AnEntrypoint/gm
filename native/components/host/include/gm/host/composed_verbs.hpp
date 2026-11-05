@@ -8,9 +8,9 @@
 #include <vector>
 
 #include "deoxidene/result.hpp"
-#include "gmnew/verbs.hpp"
+#include "gm/verbs.hpp"
 
-namespace gmnew::host {
+namespace gm::host {
 
 class ComposedVerbs final : public VerbTable {
 public:

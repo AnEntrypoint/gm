@@ -10,9 +10,9 @@
 #include <string_view>
 
 #include "deoxidene/result.hpp"
-#include "gmnew/json.hpp"
+#include "gm/json.hpp"
 
-namespace gmnew::host {
+namespace gm::host {
 
 inline constexpr std::string_view kBuildVersion = GMNEW_BUILD_VERSION;
 inline constexpr std::string_view kDefaultUpdateUrl =

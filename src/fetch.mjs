@@ -4,7 +4,7 @@ import { resultZone1, resultZone2 } from './compact.mjs';
 
 const DEFAULT_TIMEOUT_MS = 15000;
 const MAX_TIMEOUT_MS = 60000;
-const USER_AGENT = 'gm-new-fetch/1';
+const USER_AGENT = 'gm-fetch/1';
 const ENTITIES = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' };
 
 const str = { type: 'string' };

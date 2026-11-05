@@ -7,12 +7,12 @@
 #include <string>
 #include <vector>
 
-#include "gmnew/json.hpp"
-#include "gmnew/mcp.hpp"
-#include "gmnew/verbs.hpp"
+#include "gm/json.hpp"
+#include "gm/mcp.hpp"
+#include "gm/verbs.hpp"
 
 namespace fs = std::filesystem;
-using gmnew::json::Value;
+using gm::json::Value;
 
 namespace {
 
@@ -102,19 +102,19 @@ std::string tool_call(int id, const std::string& tool, const std::string& args) 
 
 const char* kInitialize = R"({"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"t","version":"1"}})";
 
-class FakeVerbs : public gmnew::VerbTable {
+class FakeVerbs : public gm::VerbTable {
 public:
-    std::vector<gmnew::VerbInfo> list() const override {
+    std::vector<gm::VerbInfo> list() const override {
         return {{"read_file", "Read a file.", R"({"type":"object","properties":{"path":{"type":"string"}},"required":["path"]})"}};
     }
-    Value call(std::string_view, const Value&) override { return Value(gmnew::json::Object{}).set("ok", false); }
+    Value call(std::string_view, const Value&) override { return Value(gm::json::Object{}).set("ok", false); }
 };
 
 class Harness {
 public:
-    Harness(gmnew::VerbTable& verbs, gmnew::mcp::ServerOptions options) {
-        auto opened = gmnew::mcp::Server::open(verbs, std::move(options), [this](std::string_view line) {
-            auto parsed = gmnew::json::parse(line);
+    Harness(gm::VerbTable& verbs, gm::mcp::ServerOptions options) {
+        auto opened = gm::mcp::Server::open(verbs, std::move(options), [this](std::string_view line) {
+            auto parsed = gm::json::parse(line);
             std::lock_guard guard(lock_);
             if (parsed) replies_.push_back(*parsed);
         });
@@ -142,18 +142,18 @@ public:
     }
 
 private:
-    std::unique_ptr<gmnew::mcp::Server> server_;
+    std::unique_ptr<gm::mcp::Server> server_;
     std::vector<Value> replies_;
     std::mutex lock_;
 };
 
-gmnew::mcp::ServerOptions fresh_options(const fs::path& root) {
-    gmnew::mcp::ServerOptions options;
+gm::mcp::ServerOptions fresh_options(const fs::path& root) {
+    gm::mcp::ServerOptions options;
     options.workspace = root / "ws";
     options.runs = root / "runs";
     options.skills = fs::path(GMNEW_SOURCE_DIR) / "skills";
-    options.run_body = [](gmnew::VerbTable&, std::string_view body, const fs::path&, std::string_view) -> deoxidene::Result<Value, std::string> {
-        return Value(gmnew::json::Object{}).set("echo", std::string(body));
+    options.run_body = [](gm::VerbTable&, std::string_view body, const fs::path&, std::string_view) -> deoxidene::Result<Value, std::string> {
+        return Value(gm::json::Object{}).set("echo", std::string(body));
     };
     fs::create_directories(options.workspace);
     fs::create_directories(options.runs);
@@ -161,20 +161,20 @@ gmnew::mcp::ServerOptions fresh_options(const fs::path& root) {
 }
 
 Value without_member(const Value& object, const std::string& key) {
-    gmnew::json::Object kept;
+    gm::json::Object kept;
     for (const auto& member : object.as_object())
         if (member.first != key) kept.push_back(member);
     return Value(kept);
 }
 
 void self_tests() {
-    Value items_schema = Value(gmnew::json::Object{}).set("type", "array").set("items", Value(gmnew::json::Object{}).set("type", "string"));
-    check(conforms(items_schema, Value(gmnew::json::Array{Value("a")})).empty(), "items: an array of strings conforms");
-    check(!conforms(items_schema, Value(gmnew::json::Array{Value("a"), Value(1)})).empty(), "items: a number in an array of strings is rejected");
-    Value enum_schema = Value(gmnew::json::Object{}).set("enum", Value(gmnew::json::Array{Value("esm"), Value("cjs")}));
+    Value items_schema = Value(gm::json::Object{}).set("type", "array").set("items", Value(gm::json::Object{}).set("type", "string"));
+    check(conforms(items_schema, Value(gm::json::Array{Value("a")})).empty(), "items: an array of strings conforms");
+    check(!conforms(items_schema, Value(gm::json::Array{Value("a"), Value(1)})).empty(), "items: a number in an array of strings is rejected");
+    Value enum_schema = Value(gm::json::Object{}).set("enum", Value(gm::json::Array{Value("esm"), Value("cjs")}));
     check(conforms(enum_schema, Value("esm")).empty(), "enum: a listed value conforms");
     check(!conforms(enum_schema, Value("mjs")).empty(), "enum: an unlisted value is rejected");
-    Value pattern_schema = Value(gmnew::json::Object{}).set("type", "string").set("pattern", "^a");
+    Value pattern_schema = Value(gm::json::Object{}).set("type", "string").set("pattern", "^a");
     std::vector<std::string> keyword_problems;
     keyword_errors(pattern_schema, "$", keyword_problems);
     check(!keyword_problems.empty(), "an unsupported keyword (pattern) is flagged, not ignored");
@@ -267,7 +267,7 @@ int run(const fs::path& root) {
 }
 
 int main() {
-    fs::path root = fs::temp_directory_path() / ("gmnew-mcp-schema-" + std::to_string(std::random_device{}()));
+    fs::path root = fs::temp_directory_path() / ("gm-mcp-schema-" + std::to_string(std::random_device{}()));
     fs::create_directories(root);
     const int code = run(root);
     std::error_code ignored;

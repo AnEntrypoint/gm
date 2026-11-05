@@ -5,7 +5,7 @@
 #include <fstream>
 #include <iterator>
 
-namespace gmnew::engine {
+namespace gm::engine {
 namespace {
 
 int interrupt_on_deadline(JSContext*, void* opaque) {

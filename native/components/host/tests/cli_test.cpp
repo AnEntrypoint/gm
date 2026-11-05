@@ -4,7 +4,7 @@
 #include <iostream>
 #include <string>
 
-#include "gmnew/log.hpp"
+#include "gm/log.hpp"
 
 #ifdef _WIN32
 #define popen _popen
@@ -31,20 +31,20 @@ std::string capture(const std::string& command) {
     return out;
 }
 
-std::string run_gmnew(const std::string& arguments) { return capture(std::string("\"") + GMNEW_BINARY + "\" " + arguments + " 2>&1"); }
+std::string run_gm(const std::string& arguments) { return capture(std::string("\"") + GMNEW_BINARY + "\" " + arguments + " 2>&1"); }
 
 }
 
 int main() {
-    const fs::path dir = fs::temp_directory_path() / "gmnew-cli-test-run";
+    const fs::path dir = fs::temp_directory_path() / "gm-cli-test-run";
     fs::remove_all(dir);
     fs::create_directories(dir);
-    auto log = gmnew::RunLog::open(dir);
+    auto log = gm::RunLog::open(dir);
     check(log.has_value(), "run log opens");
-    gmnew::json::Value first;
+    gm::json::Value first;
     first.set("tool", "run_code");
     log->append("action", first);
-    gmnew::json::Value second;
+    gm::json::Value second;
     second.set("status", "ok");
     log->append("job", second);
     {
@@ -53,16 +53,16 @@ int main() {
     }
     const std::string d = "--dir \"" + dir.string() + "\"";
 
-    check(run_gmnew("query " + d + " --js \"events.length\"") == "2\n", "query counts events");
-    check(run_gmnew("query " + d + " --js \"events.map(e => e.kind)\"") == "[\"action\",\"job\"]\n", "query expression");
-    check(run_gmnew("query " + d + " --js \"const x = events.length; return x + 1;\"") == "3\n", "query statement body falls back");
-    check(run_gmnew("query " + d + " --js \"undefined\"") == "undefined\n", "query undefined");
-    check(run_gmnew("query " + d + " --js \"events.nope.x\"").find("gmnew: query failed: ") == 0, "query error text");
-    check(run_gmnew("query " + d).find("\"kind\":\"action\"") != std::string::npos, "query without js prints lines");
+    check(run_gm("query " + d + " --js \"events.length\"") == "2\n", "query counts events");
+    check(run_gm("query " + d + " --js \"events.map(e => e.kind)\"") == "[\"action\",\"job\"]\n", "query expression");
+    check(run_gm("query " + d + " --js \"const x = events.length; return x + 1;\"") == "3\n", "query statement body falls back");
+    check(run_gm("query " + d + " --js \"undefined\"") == "undefined\n", "query undefined");
+    check(run_gm("query " + d + " --js \"events.nope.x\"").find("gm: query failed: ") == 0, "query error text");
+    check(run_gm("query " + d).find("\"kind\":\"action\"") != std::string::npos, "query without js prints lines");
 
-    check(run_gmnew("events " + d + " --wait") == "{\"id\":2,\"seq\":2,\"kind\":\"job\",\"status\":\"ok\"}\n", "events prints queued");
-    check(run_gmnew("events " + d).empty(), "events prints nothing once cleared");
-    check(run_gmnew("events " + d + " --wait --timeout-ms 300") == "events: timed out after 300 ms with no event pending\n", "events wait times out");
+    check(run_gm("events " + d + " --wait") == "{\"id\":2,\"seq\":2,\"kind\":\"job\",\"status\":\"ok\"}\n", "events prints queued");
+    check(run_gm("events " + d).empty(), "events prints nothing once cleared");
+    check(run_gm("events " + d + " --wait --timeout-ms 300") == "events: timed out after 300 ms with no event pending\n", "events wait times out");
     check(!fs::exists(dir / "pending.jsonl"), "queue file consumed");
 
     fs::remove_all(dir);

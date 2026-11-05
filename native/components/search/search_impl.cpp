@@ -15,9 +15,9 @@
 #include <set>
 #include <sstream>
 
-#include "gmnew/proc.hpp"
+#include "gm/proc.hpp"
 
-namespace gmnew::search {
+namespace gm::search {
 
 namespace fs = std::filesystem;
 
@@ -37,7 +37,7 @@ constexpr std::size_t MAX_PATTERN_CHARS = 200;
 constexpr long long STAMP_SETTLE_MS = 3000;
 constexpr std::size_t BINARY_PROBE_BYTES = 8000;
 
-const std::set<std::string> STATE_DIRS = {".git", ".gm", ".agentplug", ".agentplug-kv", ".gm-new", ".playwriter", "runs"};
+const std::set<std::string> STATE_DIRS = {".git", ".gm", ".agentplug", ".agentplug-kv", ".gm", ".playwriter", "runs"};
 
 Listing walk_listing(const fs::path& base) {
     Listing walked;

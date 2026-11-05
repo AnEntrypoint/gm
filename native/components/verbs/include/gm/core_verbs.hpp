@@ -9,11 +9,11 @@
 #include <string_view>
 #include <vector>
 
-#include "gmnew/json.hpp"
-#include "gmnew/log.hpp"
-#include "gmnew/verbs.hpp"
+#include "gm/json.hpp"
+#include "gm/log.hpp"
+#include "gm/verbs.hpp"
 
-namespace gmnew {
+namespace gm {
 
 struct CoreVerbsOptions {
     std::filesystem::path workspace;

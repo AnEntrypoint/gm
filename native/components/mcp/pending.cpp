@@ -9,7 +9,7 @@
 #include <stdexcept>
 #include <thread>
 
-#include "gmnew/mcp.hpp"
+#include "gm/mcp.hpp"
 #include "internal.hpp"
 
 #ifdef _WIN32
@@ -25,7 +25,7 @@
 #include <unistd.h>
 #endif
 
-namespace gmnew::mcp::detail {
+namespace gm::mcp::detail {
 
 namespace {
 
@@ -207,7 +207,7 @@ void wait_pending_change(std::uint64_t seen, std::chrono::steady_clock::time_poi
 
 }
 
-namespace gmnew::mcp {
+namespace gm::mcp {
 
 void enqueue_pending(const RunLog& log, std::string_view kind, std::uint64_t seq) {
     if (seq == 0 || !detail::is_pending_kind(kind)) return;

@@ -2,9 +2,9 @@
 
 #include <filesystem>
 
-#include "gmnew/proc.hpp"
+#include "gm/proc.hpp"
 
-namespace gmnew::host {
+namespace gm::host {
 
 using Child = proc::Child;
 

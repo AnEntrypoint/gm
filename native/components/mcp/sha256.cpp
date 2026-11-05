@@ -3,9 +3,9 @@
 #include <string>
 #include <string_view>
 
-#include "gmnew/mcp.hpp"
+#include "gm/mcp.hpp"
 
-namespace gmnew::mcp {
+namespace gm::mcp {
 
 namespace {
 

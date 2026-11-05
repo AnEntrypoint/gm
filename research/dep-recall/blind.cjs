@@ -3,8 +3,8 @@ const fs = require('fs');
 const build = require('./units.cjs');
 
 const REPOS = [
-  { tag: 'gm-new', root: '/workspace/gm-new', opts: {}, take: Infinity },
-  { tag: 'gm-mcp', root: '/workspace/gm/gm-mcp', opts: { dir: 'src', ext: '.js', acorn: '/workspace/gm-new/node_modules/acorn' }, take: 60 },
+  { tag: 'gm', root: '/workspace/gm', opts: {}, take: Infinity },
+  { tag: 'gm-mcp', root: '/workspace/gm/gm-mcp', opts: { dir: 'src', ext: '.js', acorn: '/workspace/gm/node_modules/acorn' }, take: 60 },
 ];
 const SHOWN = 50;
 

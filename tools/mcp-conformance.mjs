@@ -97,7 +97,7 @@ class Client {
     const init = await this.rpc('initialize', {
       protocolVersion: PROTOCOL,
       capabilities: {},
-      clientInfo: { name: 'gm-new-conformance', version: '1' },
+      clientInfo: { name: 'gm-conformance', version: '1' },
     });
     this.initResult = init.result ?? null;
     await this.notify('notifications/initialized');

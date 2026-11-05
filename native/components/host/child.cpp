@@ -1,4 +1,4 @@
-#include "gmnew/host/child.hpp"
+#include "gm/host/child.hpp"
 
 #if defined(_WIN32)
 #define WIN32_LEAN_AND_MEAN
@@ -11,7 +11,7 @@
 #endif
 #endif
 
-namespace gmnew::host {
+namespace gm::host {
 
 std::filesystem::path current_executable() {
 #if defined(_WIN32)

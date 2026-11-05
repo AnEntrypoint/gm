@@ -1,4 +1,4 @@
-#include "gmnew/core_verbs.hpp"
+#include "gm/core_verbs.hpp"
 
 #include <algorithm>
 #include <array>
@@ -12,13 +12,13 @@
 
 #include "core_internal.hpp"
 #include "engine.hpp"
-#include "gmnew/proc.hpp"
+#include "gm/proc.hpp"
 
 #if !defined(_WIN32)
 #include <sys/stat.h>
 #endif
 
-namespace gmnew {
+namespace gm {
 
 namespace {
 

@@ -1,6 +1,6 @@
 # Brief: core verbs (components/verbs)
 
-Implement the core VerbTable in the library gmnew_verbs (components/verbs, verbs.cpp, job.cpp), a class CoreVerbs : public gmnew::VerbTable, built on proc.hpp and RunLog. Verbs:
+Implement the core VerbTable in the library gm_verbs (components/verbs, verbs.cpp, job.cpp), a class CoreVerbs : public gm::VerbTable, built on proc.hpp and RunLog. Verbs:
 - read_file({path, offset?, limit?}), write_file({path, content}), edit_file, stat_file, list_dir({path}).
 - run_shell({command, timeoutMs?}) through proc::shell in the workspace.
 - job_start({job, command, timeoutMs?}): runs the command in the background on a std::thread, output to <run_dir>/jobs/<job>.log; job_status({job, waitMs?, offset?}) returns state, exitCode, output tail; job_stop({job}).

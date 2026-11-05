@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.25)
-project(gmnew LANGUAGES C CXX)
+project(gm LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -22,12 +22,12 @@ elseif(MSVC)
     target_compile_options(deoxidene INTERFACE /W4 /permissive-)
 endif()
 
-option(GMNEW_BUILD_TESTS "Build the gm-new and deoxidene test programs (run with ctest)" OFF)
+option(GMNEW_BUILD_TESTS "Build the gm and deoxidene test programs (run with ctest)" OFF)
 if(GMNEW_BUILD_TESTS)
     enable_testing()
     add_subdirectory(tests)
 endif()
 
-set(GMNEW_VERSION "dev" CACHE STRING "Version stamped into gmnew builds")
+set(GMNEW_VERSION "dev" CACHE STRING "Version stamped into gm builds")
 
 add_subdirectory(native)

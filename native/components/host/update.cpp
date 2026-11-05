@@ -1,4 +1,4 @@
-#include "gmnew/host/update.hpp"
+#include "gm/host/update.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -13,9 +13,9 @@
 #include <system_error>
 #include <vector>
 
-#include "gmnew/host/child.hpp"
-#include "gmnew/mcp.hpp"
-#include "gmnew/proc.hpp"
+#include "gm/host/child.hpp"
+#include "gm/mcp.hpp"
+#include "gm/proc.hpp"
 
 #if !defined(_WIN32)
 #include <signal.h>
@@ -23,7 +23,7 @@
 #include <unistd.h>
 #endif
 
-namespace gmnew::host {
+namespace gm::host {
 
 namespace {
 
@@ -209,9 +209,9 @@ std::string target_name() {
 
 std::string executable_name() {
 #if defined(_WIN32)
-    return "gmnew.exe";
+    return "gm.exe";
 #else
-    return "gmnew";
+    return "gm";
 #endif
 }
 
@@ -474,7 +474,7 @@ UpdateResult update_once(const UpdatePolicy& policy, UpdateResult result) {
     if (auto error = verify_archive(archive, asset->second)) return failed(std::move(result), *error);
     const fs::path unpacked = staging / "unpacked";
     if (auto error = unpack(archive, unpacked)) return failed(std::move(result), *error);
-    if (auto error = install_staged(unpacked / ("gmnew-" + target), policy.install_dir))
+    if (auto error = install_staged(unpacked / ("gm-" + target), policy.install_dir))
         return failed(std::move(result), *error);
     state.checked_ms = now_ms();
     state.version = manifest->version;

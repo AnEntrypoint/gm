@@ -1,5 +1,5 @@
 // The review tools: a packet of a spec and its references, a reviewer's record on it, and the join of records with the commits and
-// ends after them. The reviewer is spawned by the host, which passes its reply in. gm-new records the isolation as host-attested and
+// ends after them. The reviewer is spawned by the host, which passes its reply in. gm records the isolation as host-attested and
 // does not verify it. The functions are in review.mjs.
 import { resultZone1, resultZone2 } from './compact.mjs';
 

@@ -77,7 +77,7 @@ footer { border-top: 4px solid #000; margin-top: 2em; padding-top: 0.5em; font-s
 <section class="chapter">
 <h2>2. Connect Claude Code</h2>
 <p>The installer runs add-mcp, pinned to 2.6.1, which writes a user-scope entry named <code>gm</code>:</p>
-<pre>npx -y add-mcp@2.6.1 &lt;path-to-gmnew&gt; --args serve -n gm -g -a claude-code -y</pre>
+<pre>npx -y add-mcp@2.6.1 &lt;path-to-gm&gt; --args serve -n gm -g -a claude-code -y</pre>
 <p>add-mcp takes the executable as its target and each argument after <code>--args</code>. Do not pass the whole command as one string: add-mcp then stores it as the executable name, and the server cannot start.</p>
 <p>Check the entry:</p>
 <pre>npx -y add-mcp@2.6.1 list -g</pre>
@@ -136,17 +136,17 @@ return { a: a.output.length, b: b.output.length };</pre>
 <p>The server checks the <code>latest</code> release when it starts and then every six hours. It downloads a build only when the release has changed, and only one check runs at a time across processes. Each build is published under its own file names, the manifest is uploaded last, and the last three builds stay on the release.</p>
 <p>A development build never updates itself. Set <code>GMNEW_AUTO_UPDATE=0</code> to turn updates off.</p>
 <p>To check now:</p>
-<pre>~/.gmnew/current/gmnew update</pre>
+<pre>~/.gmnew/current/gm update</pre>
 </section>
 
 <section class="chapter">
 <h2>7. Commands</h2>
 <table>
   <tr><th>Command</th><th>What it does</th></tr>
-  <tr><td><code>gmnew serve</code></td><td>Serve the MCP tools on stdio. This is what Claude Code runs.</td></tr>
-  <tr><td><code>gmnew worker</code></td><td>Run one worker directly. Used by the supervisor.</td></tr>
-  <tr><td><code>gmnew doctor</code></td><td>Check the install&#8217;s runtime.</td></tr>
-  <tr><td><code>gmnew update</code></td><td>Check for a newer release and install it if one exists.</td></tr>
+  <tr><td><code>gm serve</code></td><td>Serve the MCP tools on stdio. This is what Claude Code runs.</td></tr>
+  <tr><td><code>gm worker</code></td><td>Run one worker directly. Used by the supervisor.</td></tr>
+  <tr><td><code>gm doctor</code></td><td>Check the install&#8217;s runtime.</td></tr>
+  <tr><td><code>gm update</code></td><td>Check for a newer release and install it if one exists.</td></tr>
 </table>
 </section>
 
@@ -168,7 +168,7 @@ return { a: a.output.length, b: b.output.length };</pre>
 <h3>"another update is running"</h3>
 <p>An update lock is held. The lock records its owner's process id. If that process has exited, the next check takes the lock over. Otherwise wait for the running check to finish.</p>
 <h3>gm does not connect</h3>
-<p>Run <code>npx -y add-mcp@2.6.1 list -g</code> and check the command path. Then run <code>~/.gmnew/current/gmnew doctor</code>. If a project <code>.mcp.json</code> defines its own gm entry, that entry is the one Claude Code uses in that project.</p>
+<p>Run <code>npx -y add-mcp@2.6.1 list -g</code> and check the command path. Then run <code>~/.gmnew/current/gm doctor</code>. If a project <code>.mcp.json</code> defines its own gm entry, that entry is the one Claude Code uses in that project.</p>
 <h3>Windows</h3>
 <p>Not published yet.</p>
 </section>

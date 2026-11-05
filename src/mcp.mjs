@@ -1174,7 +1174,7 @@ async function main(argv) {
     if (recovery && recovery.open.length > 0) log.append('recovery', { lastSeq: recovery.lastSeq, open: recovery.open });
   }
   const mcpFlag = flags['mcp-config'];
-  const mcpFiles = [{ file: DEFAULT_MCP_CONFIG, required: true }, { file: join(workspace, '.gm-new', 'mcp.json') }];
+  const mcpFiles = [{ file: DEFAULT_MCP_CONFIG, required: true }, { file: join(workspace, '.gm', 'mcp.json') }];
   if (mcpFlag !== undefined) mcpFiles.push({ file: resolve(mcpFlag), required: true });
   const { servers, problems } = readServerConfig(mcpFiles, workspace);
   const depth = Number.parseInt(process.env.GMNEW_MCP_DEPTH ?? '0', 10) || 0;

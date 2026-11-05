@@ -1,4 +1,4 @@
-#include "gmnew/mcpclient.hpp"
+#include "gm/mcpclient.hpp"
 
 #include <algorithm>
 #include <condition_variable>
@@ -10,7 +10,7 @@
 #include "client.hpp"
 #include "config.hpp"
 
-namespace gmnew::mcpclient {
+namespace gm::mcpclient {
 
 namespace {
 
@@ -121,7 +121,7 @@ struct McpVerbs::Impl {
                     continue;
                 }
                 if (reserved.count(verb) != 0 || table.count(verb) != 0) {
-                    skip(spec.name, tool_name, verb, reserved.count(verb) != 0 ? "the name is a gm-new verb" : "the name is another MCP tool");
+                    skip(spec.name, tool_name, verb, reserved.count(verb) != 0 ? "the name is a gm verb" : "the name is another MCP tool");
                     continue;
                 }
                 table.emplace(verb, Route{client.get(), tool_name});

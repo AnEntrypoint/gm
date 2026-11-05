@@ -14,11 +14,11 @@
 #include <thread>
 #include <vector>
 
-#include "gmnew/host/child.hpp"
-#include "gmnew/host/update.hpp"
-#include "gmnew/json.hpp"
+#include "gm/host/child.hpp"
+#include "gm/host/update.hpp"
+#include "gm/json.hpp"
 
-namespace gmnew::host {
+namespace gm::host {
 
 using SourceStamp = std::pair<std::filesystem::file_time_type, std::uintmax_t>;
 using SourceStamps = std::map<std::filesystem::path, SourceStamp>;
@@ -29,7 +29,7 @@ struct RelayOptions {
     std::vector<std::filesystem::path> runtime_roots;
     std::vector<std::filesystem::path> build_roots;
     std::filesystem::path build_dir;
-    std::string build_target = "gmnew";
+    std::string build_target = "gm";
     std::chrono::milliseconds poll{500};
     std::chrono::milliseconds drain_timeout{30000};
     std::chrono::milliseconds settle{250};

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// The host's pipe to the gm-new core, tools/core.mjs. The host (Claude Code) starts this file from .mcp.json and holds its stdio. This file
+// The host's pipe to the gm core, tools/core.mjs. The host (Claude Code) starts this file from .mcp.json and holds its stdio. This file
 // passes lines both ways, and it does nothing else: it reads where a line ends, never what the line says. The host's lines reach the core
 // through a named pipe that this file keeps open for reading and for writing, so a core that exits does not close it, and the lines wait in
 // the pipe for the next core. The core's output comes back on its stdout. When that output ends, the core is gone without a handover, and a
@@ -25,7 +25,7 @@ let core = null;
 let closing = false;
 
 function log(message) {
-  process.stderr.write(`gm-new relay: ${message}\n`);
+  process.stderr.write(`gm relay: ${message}\n`);
 }
 
 // An error in this process is logged, and the connection stays open.
@@ -35,7 +35,7 @@ process.stdout.on('error', (err) => log(`host output: ${err.message}`));
 
 // The input pipe. The relay holds a reader and a writer, so a write does not fail while no core runs, and the core's end of input comes only
 // when this file ends the writer. Node closes a child's stdin when the child exits, so the pipe is not the child's: it is this file's.
-const FIFO = join(tmpdir(), `gm-new-${process.pid}-${randomBytes(4).toString('hex')}.in`);
+const FIFO = join(tmpdir(), `gm-${process.pid}-${randomBytes(4).toString('hex')}.in`);
 const made = spawnSync('mkfifo', [FIFO]);
 if (made.status !== 0) {
   log(`cannot make the input pipe ${FIFO}: ${String(made.stderr || made.error?.message)}`);

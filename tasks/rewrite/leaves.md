@@ -1,6 +1,6 @@
 # Brief: leaves git, rows, fetch (native/leaves)
 
-Supersedes the native plugins in the earlier brief. These are JavaScript leaves, not C++. Read tasks/rewrite/common.md (its build rules do not apply to you: you have no CMake target) and native/include/gmnew/host.hpp, then DESIGN.md section "Hot reload language (2026-11-04)".
+Supersedes the native plugins in the earlier brief. These are JavaScript leaves, not C++. Read tasks/rewrite/common.md (its build rules do not apply to you: you have no CMake target) and native/include/gm/host.hpp, then DESIGN.md section "Hot reload language (2026-11-04)".
 
 Files: native/leaves/git.mjs, native/leaves/rows.mjs, native/leaves/fetch.mjs, and tests in native/leaves/tests/. Each file exports verbs, an array of {name, description, inputSchema, call(args)}. Verb names, descriptions, input schemas and reply shapes are in src/git.mjs, src/rows.mjs, src/fetch.mjs (the Node spec). Keep the Node reply shapes and error texts.
 

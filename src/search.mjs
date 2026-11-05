@@ -28,7 +28,7 @@ const WIKI = { name: 'wiki', args: ['ls-files', '-z', '-co', '--exclude-standard
 const SCOPES = ['tracked', 'all'];
 const ALL_FILES = { name: 'all', args: ['ls-files', '-z', '-c', '-o'], cached: false };
 const UNTRACKED = { name: 'untracked', args: ['ls-files', '-z', '-o', '--exclude-standard'], cached: false };
-const STATE_DIRS = new Set(['.git', '.gm', '.agentplug', '.agentplug-kv', '.gm-new', '.playwriter', 'runs']);
+const STATE_DIRS = new Set(['.git', '.gm', '.agentplug', '.agentplug-kv', '.gm', '.playwriter', 'runs']);
 const STAMP_SETTLE_MS = 3000;
 const VENDOR = /(^|\/)(node_modules|vendor)\//;
 
@@ -52,7 +52,7 @@ export const SEARCH_TOOLS = [
   },
   {
     name: 'grep',
-    description: `Find text in the files under path: the workspace by default, or a file or directory of it. A path inside the workspace searches its git-tracked files (or, outside a git repository, every file under it); a path outside the workspace is walked and its hits show absolute paths. files is git or walk, the source used. mode is literal (default; also named content), regex, or word (a whole identifier). If a literal search finds nothing and the pattern has a regex character, the pattern runs once more as a regex; the hint says which pass matched, and a pattern that is not a valid regex is an error. scope is tracked (default) or all: all also searches untracked and gitignored files, node_modules included, and skips .git and the state directories .gm, .agentplug, .agentplug-kv, .gm-new, .playwriter and runs. A tracked search that skips files says how many in a hint and names scope all. Returns path:line text. ignoreCase is optional; limit is 1 to 1000, default 100. Paths under node_modules/ or vendor/ are skipped by tracked unless vendor is true; a walk also skips dot-directories and runs/. all lists files with git ls-files, which has a 30 s limit, so a large tree can take longer. ${ROOT_NOTE}`,
+    description: `Find text in the files under path: the workspace by default, or a file or directory of it. A path inside the workspace searches its git-tracked files (or, outside a git repository, every file under it); a path outside the workspace is walked and its hits show absolute paths. files is git or walk, the source used. mode is literal (default; also named content), regex, or word (a whole identifier). If a literal search finds nothing and the pattern has a regex character, the pattern runs once more as a regex; the hint says which pass matched, and a pattern that is not a valid regex is an error. scope is tracked (default) or all: all also searches untracked and gitignored files, node_modules included, and skips .git and the state directories .gm, .agentplug, .agentplug-kv, .gm, .playwriter and runs. A tracked search that skips files says how many in a hint and names scope all. Returns path:line text. ignoreCase is optional; limit is 1 to 1000, default 100. Paths under node_modules/ or vendor/ are skipped by tracked unless vendor is true; a walk also skips dot-directories and runs/. all lists files with git ls-files, which has a 30 s limit, so a large tree can take longer. ${ROOT_NOTE}`,
     inputSchema: obj({ pattern: str, path: str, mode: str, scope: str, ignoreCase: bool, limit: num, offset: num, vendor: bool, root: str }, ['pattern']),
   },
 ];

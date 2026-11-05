@@ -13,10 +13,10 @@
 #include <string_view>
 #include <thread>
 
-#include "gmnew/json.hpp"
-#include "gmnew/log.hpp"
+#include "gm/json.hpp"
+#include "gm/log.hpp"
 
-namespace gmnew::core {
+namespace gm::core {
 
 inline constexpr std::size_t output_page = 20000;
 inline constexpr std::size_t tail_cap = 2000;

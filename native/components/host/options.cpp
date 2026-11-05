@@ -1,13 +1,13 @@
-#include "gmnew/host/options.hpp"
+#include "gm/host/options.hpp"
 
 #include <chrono>
 #include <ctime>
 #include <random>
 #include <system_error>
 
-#include "gmnew/host/child.hpp"
+#include "gm/host/child.hpp"
 
-namespace gmnew::host {
+namespace gm::host {
 
 std::optional<std::string> HostArgs::flag(std::string_view name) const {
     for (std::size_t i = 0; i + 1 < rest.size(); ++i) {

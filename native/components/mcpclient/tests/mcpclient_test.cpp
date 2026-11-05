@@ -10,16 +10,16 @@
 #include <utility>
 #include <vector>
 
-#include "gmnew/json.hpp"
-#include "gmnew/mcpclient.hpp"
+#include "gm/json.hpp"
+#include "gm/mcpclient.hpp"
 
 namespace fs = std::filesystem;
-using gmnew::json::Object;
-using gmnew::json::Value;
-using gmnew::mcpclient::ConfigFile;
-using gmnew::mcpclient::McpVerbs;
-using gmnew::mcpclient::Options;
-using gmnew::VerbInfo;
+using gm::json::Object;
+using gm::json::Value;
+using gm::mcpclient::ConfigFile;
+using gm::mcpclient::McpVerbs;
+using gm::mcpclient::Options;
+using gm::VerbInfo;
 
 namespace {
 
@@ -36,7 +36,7 @@ struct Recorder {
     std::mutex mutex;
     Events events;
 
-    gmnew::mcpclient::Emit sink() {
+    gm::mcpclient::Emit sink() {
         return [this](std::string_view kind, Value fields) {
             std::lock_guard lock(mutex);
             events.emplace_back(std::string(kind), std::move(fields));
@@ -51,7 +51,7 @@ struct Recorder {
 
 fs::path scratch_dir() {
     const auto stamp = std::chrono::steady_clock::now().time_since_epoch().count();
-    const fs::path dir = fs::temp_directory_path() / ("gmnew-mcpclient-test-" + std::to_string(stamp));
+    const fs::path dir = fs::temp_directory_path() / ("gm-mcpclient-test-" + std::to_string(stamp));
     fs::create_directories(dir);
     return dir;
 }
@@ -71,13 +71,13 @@ std::string read_file(const fs::path& path) {
 std::string server(const std::string& profile, const std::string& env_extra, const std::string& more) {
     std::string env = "\"GMNEW_FAKE_PROFILE\":\"" + profile + "\"";
     if (!env_extra.empty()) env += "," + env_extra;
-    return "{\"command\":" + gmnew::json::quote(GMNEW_FAKE_MCP_SERVER) + ",\"env\":{" + env +
+    return "{\"command\":" + gm::json::quote(GMNEW_FAKE_MCP_SERVER) + ",\"env\":{" + env +
            "},\"timeoutMs\":1500,\"startupTimeoutMs\":10000" + (more.empty() ? std::string() : "," + more) + "}";
 }
 
 std::string config_of(std::initializer_list<std::pair<std::string, std::string>> entries) {
     std::string body;
-    for (const auto& [name, value] : entries) body += (body.empty() ? "" : ",") + gmnew::json::quote(name) + ":" + value;
+    for (const auto& [name, value] : entries) body += (body.empty() ? "" : ",") + gm::json::quote(name) + ":" + value;
     return "{\"mcpServers\":{" + body + "}}";
 }
 
@@ -317,7 +317,7 @@ void test_ignore_lines(const fs::path& dir) {
 void test_startup_failure(const fs::path& dir) {
     Recorder recorder;
     const fs::path config = dir / "broken" / "mcp.json";
-    write_file(config, "{\"mcpServers\":{\"playwriter\":{\"command\":\"/nonexistent/gmnew-mcpclient-binary\"}}}");
+    write_file(config, "{\"mcpServers\":{\"playwriter\":{\"command\":\"/nonexistent/gm-mcpclient-binary\"}}}");
     McpVerbs verbs(options_for(dir / "broken", config, recorder));
     verbs.wait_ready();
     check(verbs.list().empty(), "a server that cannot start serves no verbs");
@@ -356,7 +356,7 @@ void test_startup_timeout_and_exit(const fs::path& dir) {
     check(failed != nullptr && field(*failed, "error") == "initialize timed out after 1000 ms", "a server that never answers initialize fails after startupTimeoutMs");
     check(failed != nullptr && field(*failed, "stderr").find("fake boot") != std::string::npos, "the failed event carries the server's stderr");
     const Value* down = find_event(events, "mcp-server", "quiet", "down");
-    check(down != nullptr && field(*down, "reason") == "stopped by gm-new", "the server is stopped before the failed event");
+    check(down != nullptr && field(*down, "reason") == "stopped by gm", "the server is stopped before the failed event");
 
     Recorder quitter;
     const fs::path quit_config = dir / "quit" / "mcp.json";

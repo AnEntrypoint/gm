@@ -12,10 +12,10 @@
 #include <thread>
 #include <utility>
 
-#include "gmnew/proc.hpp"
+#include "gm/proc.hpp"
 #include "transport.hpp"
 
-namespace gmnew::mcpclient {
+namespace gm::mcpclient {
 
 struct Session {
     std::shared_ptr<proc::Child> child;
@@ -40,7 +40,7 @@ namespace {
 
 constexpr const char* PROTOCOL_VERSIONS[] = {"2025-11-25", "2025-06-18"};
 constexpr const char* DEPTH_VARIABLE = "GMNEW_MCP_DEPTH";
-constexpr const char* CLIENT_NAME = "gm-new";
+constexpr const char* CLIENT_NAME = "gm";
 constexpr const char* CLIENT_VERSION = "0.1.0";
 constexpr std::size_t STDERR_BYTES = 2000;
 constexpr auto ERROR_DRAIN = std::chrono::milliseconds(1000);
@@ -247,7 +247,7 @@ std::shared_ptr<Session> spawn(const std::shared_ptr<Core>& core, std::string& e
     if (!accepted) {
         session->child->close_input();
         session->child->kill();
-        error = "MCP server " + core->spec.name + " is stopped by gm-new";
+        error = "MCP server " + core->spec.name + " is stopped by gm";
         return nullptr;
     }
     std::thread(pump, core, session).detach();
@@ -287,7 +287,7 @@ std::optional<std::string> handshake(const std::shared_ptr<Core>& core, const st
         }
         if (std::find_if(std::begin(PROTOCOL_VERSIONS), std::end(PROTOCOL_VERSIONS), [&](const char* known) { return version == known; }) ==
             std::end(PROTOCOL_VERSIONS))
-            return "protocol version " + version + " is not one gm-new speaks";
+            return "protocol version " + version + " is not one gm speaks";
         (void)session->client->notify_initialized();
         if (const auto listed = list_tools(session, tools)) return listed;
         json::Value fields;
@@ -324,7 +324,7 @@ std::optional<std::string> StdioClient::connect(bool again) {
         return std::nullopt;
     }
     if (session) {
-        lose(core_, session, "stopped by gm-new");
+        lose(core_, session, "stopped by gm");
         session->child->kill();
     }
     json::Value fields;
@@ -354,7 +354,7 @@ void StdioClient::stop() {
         session = core_->current;
     }
     if (!session) return;
-    lose(core_, session, "stopped by gm-new");
+    lose(core_, session, "stopped by gm");
     session->child->kill();
 }
 

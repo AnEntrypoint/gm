@@ -1,4 +1,4 @@
-#include "gmnew/host/relay.hpp"
+#include "gm/host/relay.hpp"
 
 #include <algorithm>
 #include <cerrno>
@@ -6,7 +6,7 @@
 #include <cstring>
 #include <iostream>
 
-#include "gmnew/proc.hpp"
+#include "gm/proc.hpp"
 
 #if !defined(_WIN32)
 #include <poll.h>
@@ -14,11 +14,11 @@
 #include <unistd.h>
 #endif
 
-namespace gmnew::host {
+namespace gm::host {
 
 namespace {
 
-constexpr std::string_view kHandshakeId = "gm-new-core-handshake";
+constexpr std::string_view kHandshakeId = "gm-core-handshake";
 constexpr std::string_view kPausedBeforeAnswer =
     "the worker paused before it answered this call; query_log shows what it did, then repeat the call if it did "
     "nothing";
@@ -128,7 +128,7 @@ void Relay::say(std::string_view message) {
         options_.say(message);
         return;
     }
-    std::cerr << "gm-new relay: " << message << '\n';
+    std::cerr << "gm relay: " << message << '\n';
 }
 
 void Relay::emit(const std::string& line) {
@@ -321,7 +321,7 @@ bool Relay::replay_handshake(Lock& lock) {
 
 void Relay::announce_changes(Lock& lock) {
     for (const ListKind& list : kLists) {
-        auto reply = ask_worker(lock, "gm-new-core:" + std::string(list.method), std::string(list.method),
+        auto reply = ask_worker(lock, "gm-core:" + std::string(list.method), std::string(list.method),
                                 json::Value(json::Object{}), options_.list_timeout);
         if (!reply) continue;
         const json::Value* result = reply->find("result");

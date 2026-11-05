@@ -10,9 +10,9 @@
 #include <vector>
 
 #include "deoxidene/result.hpp"
-#include "gmnew/json.hpp"
+#include "gm/json.hpp"
 
-namespace gmnew {
+namespace gm {
 
 class RunLog {
 public:

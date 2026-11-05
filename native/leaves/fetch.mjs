@@ -155,7 +155,7 @@ function getOnce({ url, timeoutMs = DEFAULT_TIMEOUT_MS }) {
   if (!Number.isInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > MAX_TIMEOUT_MS) return fail(`timeoutMs must be an integer from 1 to ${MAX_TIMEOUT_MS}`);
   if (!/^[a-z][a-z0-9+.-]*:\/\/?\S+$/i.test(url) && !/^data:/i.test(url)) return fail('url is not a valid URL');
   const reply = host.run({
-    argv: ['curl', '-sS', '-L', '-i', '--proto', '=http,https', '--proto-redir', '=http,https', '--max-time', (timeoutMs / 1000).toFixed(3), '--max-filesize', String(MAX_BODY_BYTES), '-A', 'gm-new-fetch/1', '-H', 'accept: text/html,text/plain;q=0.9,*/*;q=0.5', '-w', `${MARK}%{url_effective}\n%{num_redirects}`, '--url', url],
+    argv: ['curl', '-sS', '-L', '-i', '--proto', '=http,https', '--proto-redir', '=http,https', '--max-time', (timeoutMs / 1000).toFixed(3), '--max-filesize', String(MAX_BODY_BYTES), '-A', 'gm-fetch/1', '-H', 'accept: text/html,text/plain;q=0.9,*/*;q=0.5', '-w', `${MARK}%{url_effective}\n%{num_redirects}`, '--url', url],
     timeoutMs: timeoutMs + 5000,
   });
   if (!reply.started) return { ok: false, error: 'request failed: could not start curl', code: undefined };
