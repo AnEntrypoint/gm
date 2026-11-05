@@ -11,7 +11,13 @@
 #include "core_internal.hpp"
 #include "gm/proc.hpp"
 
-#if !defined(_WIN32)
+#if defined(_WIN32)
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include <windows.h>
+#include <cwchar>
+#include <wchar.h>
+#else
 #include <fcntl.h>
 #include <signal.h>
 #include <spawn.h>
@@ -25,7 +31,9 @@ namespace gm::core {
 
 namespace {
 
+#if !defined(_WIN32)
 constexpr std::uint64_t kill_grace_ms = 500;
+#endif
 constexpr double max_wait_ms = 30000;
 constexpr std::uint64_t ended_event_grace_ms = 250;
 
@@ -51,7 +59,92 @@ std::string read_bytes(const std::filesystem::path& path) {
     return to_valid_utf8(std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>()));
 }
 
-#if !defined(_WIN32)
+struct Spawned {
+    int pid = -1;
+    std::string error;
+#if defined(_WIN32)
+    HANDLE process = nullptr;
+    HANDLE job = nullptr;
+#endif
+};
+
+#if defined(_WIN32)
+
+std::wstring widen(const std::string& text) {
+    if (text.empty()) return {};
+    const int size = MultiByteToWideChar(CP_UTF8, 0, text.data(), static_cast<int>(text.size()), nullptr, 0);
+    std::wstring wide(static_cast<std::size_t>(size), L'\0');
+    MultiByteToWideChar(CP_UTF8, 0, text.data(), static_cast<int>(text.size()), wide.data(), size);
+    return wide;
+}
+
+std::vector<wchar_t> environment_block_without_api_key() {
+    static const wchar_t key_prefix[] = L"ANTHROPIC_API_KEY=";
+    std::vector<wchar_t> block;
+    wchar_t* strings = GetEnvironmentStringsW();
+    if (strings != nullptr) {
+        for (const wchar_t* entry = strings; *entry != L'\0'; entry += std::wcslen(entry) + 1) {
+            if (_wcsnicmp(entry, key_prefix, std::wcslen(key_prefix)) == 0) continue;
+            block.insert(block.end(), entry, entry + std::wcslen(entry) + 1);
+        }
+        FreeEnvironmentStringsW(strings);
+    }
+    block.push_back(L'\0');
+    return block;
+}
+
+Spawned spawn_shell_job(const std::string& command, const std::filesystem::path& cwd, const std::filesystem::path& out) {
+    Spawned result;
+    SECURITY_ATTRIBUTES inherit{sizeof inherit, nullptr, TRUE};
+    HANDLE output = CreateFileW(out.c_str(), GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_DELETE, &inherit, CREATE_ALWAYS,
+                                FILE_ATTRIBUTE_NORMAL, nullptr);
+    HANDLE input = CreateFileW(L"NUL", GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, &inherit, OPEN_EXISTING, 0, nullptr);
+    if (output == INVALID_HANDLE_VALUE || input == INVALID_HANDLE_VALUE) {
+        if (output != INVALID_HANDLE_VALUE) CloseHandle(output);
+        if (input != INVALID_HANDLE_VALUE) CloseHandle(input);
+        result.error = "cannot open the job output " + out.string();
+        return result;
+    }
+    STARTUPINFOW startup{};
+    startup.cb = sizeof startup;
+    startup.dwFlags = STARTF_USESTDHANDLES;
+    startup.hStdInput = input;
+    startup.hStdOutput = output;
+    startup.hStdError = output;
+    std::wstring line = L"cmd.exe /d /s /c \"" + widen(command) + L"\"";
+    std::vector<wchar_t> line_buffer(line.begin(), line.end());
+    line_buffer.push_back(L'\0');
+    const std::wstring dir = cwd.wstring();
+    std::vector<wchar_t> environment = environment_block_without_api_key();
+    PROCESS_INFORMATION process{};
+    const HANDLE job = CreateJobObjectW(nullptr, nullptr);
+    const BOOL created = CreateProcessW(nullptr, line_buffer.data(), nullptr, nullptr, TRUE,
+                                        CREATE_SUSPENDED | CREATE_NO_WINDOW | CREATE_UNICODE_ENVIRONMENT, environment.data(),
+                                        dir.empty() ? nullptr : dir.c_str(), &startup, &process);
+    CloseHandle(input);
+    CloseHandle(output);
+    if (!created) {
+        result.error = "spawn cmd.exe failed with error " + std::to_string(GetLastError());
+        if (job != nullptr) CloseHandle(job);
+        return result;
+    }
+    if (job == nullptr || !AssignProcessToJobObject(job, process.hProcess)) {
+        result.error = "cannot place the job in a job object (error " + std::to_string(GetLastError()) + ")";
+        TerminateProcess(process.hProcess, 1);
+        CloseHandle(process.hThread);
+        CloseHandle(process.hProcess);
+        if (job != nullptr) CloseHandle(job);
+        return result;
+    }
+    ResumeThread(process.hThread);
+    CloseHandle(process.hThread);
+    result.pid = static_cast<int>(process.dwProcessId);
+    result.process = process.hProcess;
+    result.job = job;
+    return result;
+}
+
+#else
 
 void kill_group(int pid) {
     if (::kill(-pid, SIGTERM) != 0) return;
@@ -62,11 +155,6 @@ void kill_group(int pid) {
 }
 
 void kill_group_now(int pid) { ::kill(-pid, SIGKILL); }
-
-struct Spawned {
-    int pid = -1;
-    std::string error;
-};
 
 Spawned spawn_shell_job(const std::string& command, const std::filesystem::path& cwd, const std::filesystem::path& out) {
     Spawned result;
@@ -124,8 +212,20 @@ struct JobTable::Job {
     bool kill_requested = false;
     bool lifetime_killed = false;
     std::optional<std::string> kill_reason;
+#if defined(_WIN32)
+    HANDLE process = nullptr;
+    HANDLE job_object = nullptr;
+#endif
     std::thread waiter;
     std::thread timer;
+
+    void kill_tree() {
+#if defined(_WIN32)
+        if (job_object != nullptr) TerminateJobObject(job_object, 1);
+#else
+        kill_group(pid);
+#endif
+    }
 };
 
 JobTable::JobTable(std::filesystem::path workspace, LockedLog& log, std::uint64_t lifetime_ms)
@@ -136,6 +236,10 @@ JobTable::~JobTable() {
     for (auto& [name, job] : jobs_) {
         if (job->waiter.joinable()) job->waiter.join();
         if (job->timer.joinable()) job->timer.join();
+#if defined(_WIN32)
+        if (job->process != nullptr) CloseHandle(job->process);
+        if (job->job_object != nullptr) CloseHandle(job->job_object);
+#endif
     }
 }
 
@@ -169,12 +273,6 @@ std::optional<json::Value> JobTable::read_status(const std::string& name) {
 }
 
 json::Value JobTable::start(const std::string& name, const std::string& command, std::uint64_t timeout_ms) {
-#if defined(_WIN32)
-    (void)name;
-    (void)command;
-    (void)timeout_ms;
-    return failure("job_start is not available on Windows in the native build yet");
-#else
     std::unique_lock lock(mutex_);
     if (jobs_.contains(name)) return failure("job " + name + " already exists");
     std::error_code ec;
@@ -209,6 +307,10 @@ json::Value JobTable::start(const std::string& name, const std::string& command,
     auto job = std::make_unique<Job>();
     job->name = name;
     job->pid = spawned.pid;
+#if defined(_WIN32)
+    job->process = spawned.process;
+    job->job_object = spawned.job;
+#endif
     job->out = out;
     job->start_mono = *start_mono;
     job->start_file_time = std::filesystem::file_time_type::clock::now();
@@ -226,6 +328,12 @@ json::Value JobTable::start(const std::string& name, const std::string& command,
     Job& ref = *job;
     jobs_.emplace(name, std::move(job));
     ref.waiter = std::thread([this, &ref] {
+#if defined(_WIN32)
+        WaitForSingleObject(ref.process, INFINITE);
+        DWORD code = 0;
+        GetExitCodeProcess(ref.process, &code);
+        settle(ref, static_cast<int>(code), nullptr);
+#else
         int raw = 0;
         while (::waitpid(ref.pid, &raw, 0) < 0 && errno == EINTR) {
         }
@@ -237,6 +345,7 @@ json::Value JobTable::start(const std::string& name, const std::string& command,
         } else {
             settle(ref, std::nullopt, nullptr);
         }
+#endif
         flush_after_grace();
     });
     ref.timer = std::thread([this, &ref, deadline_ms] { watch(ref, deadline_ms); });
@@ -246,22 +355,15 @@ json::Value JobTable::start(const std::string& name, const std::string& command,
     reply.set("state", "running");
     reply.set("output", "started job " + name + " (pid " + std::to_string(spawned.pid) + ")");
     return reply;
-#endif
 }
 
 void JobTable::watch(Job& job, std::uint64_t deadline_ms) {
-#if !defined(_WIN32)
     std::unique_lock lock(mutex_);
     if (changed_.wait_for(lock, std::chrono::milliseconds(deadline_ms), [&] { return job.settled; })) return;
     job.kill_requested = true;
     job.kill_reason = job.lifetime_killed ? "lifetime" : "timeout";
-    int pid = job.pid;
     lock.unlock();
-    kill_group(pid);
-#else
-    (void)job;
-    (void)deadline_ms;
-#endif
+    job.kill_tree();
 }
 
 void JobTable::settle(Job& job, std::optional<int> exit_code, json::Value signal) {
@@ -440,9 +542,7 @@ json::Value JobTable::stop(const json::Value& args) {
     }
     job.kill_requested = true;
     if (!job.kill_reason) job.kill_reason = "cancelled";
-#if !defined(_WIN32)
-    kill_group(job.pid);
-#endif
+    job.kill_tree();
     changed_.wait(lock, [&] { return job.settled; });
     flush_ended_locked();
     json::Value reply;
@@ -462,9 +562,7 @@ void JobTable::close(std::string_view reason) {
         if (!job->kill_reason) job->kill_reason = std::string(reason);
         running.push_back(job.get());
     }
-#if !defined(_WIN32)
-    for (Job* job : running) kill_group(job->pid);
-#endif
+    for (Job* job : running) job->kill_tree();
     changed_.wait(lock, [&] { return std::all_of(running.begin(), running.end(), [](Job* job) { return job->settled; }); });
     flush_ended_locked();
 }
@@ -486,11 +584,13 @@ void JobTable::stop_orphans() {
             if (const json::Value* output = status->find("output"); output != nullptr && output->is_string()) {
                 tail = utf16_tail(read_bytes(output->as_string()), tail_cap);
             }
-#if !defined(_WIN32)
             if (const json::Value* pid = status->find("pid"); pid != nullptr && pid->is_number()) {
+#if defined(_WIN32)
+                proc::run({"taskkill", "/PID", std::to_string(static_cast<long long>(pid->as_number())), "/T", "/F"});
+#else
                 kill_group_now(static_cast<int>(pid->as_number()));
-            }
 #endif
+            }
         }
         json::Value ended = *status;
         ended.set("state", "killed");

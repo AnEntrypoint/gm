@@ -134,7 +134,11 @@ int main() {
         std::ofstream hello(workspace / "hello.txt");
         hello << "hello native\n";
     }
+#if defined(_WIN32)
+    const std::string git_init = "git -C \"" + workspace.string() + "\" init -q";
+#else
     const std::string git_init = "git -C '" + workspace.string() + "' init -q";
+#endif
     check(std::system(git_init.c_str()) == 0, "the workspace is a fresh git repository");
 
     NamedVerbs read_file("read_file");
@@ -145,7 +149,9 @@ int main() {
     auto native = gm::host::ComposedVerbs::compose({&read_file});
     gm::HostServices services{workspace, root / "runs", native->get(), gm::host::make_primitives(workspace, {})};
     const auto shell = services.extra.at("shell")(gm::json::parse(R"({"command":"echo primitive"})").value());
-    check(shell.find("out") != nullptr && shell.find("out")->as_string() == "primitive\n", "the shell primitive runs");
+    std::string shell_out = shell.find("out") != nullptr ? shell.find("out")->as_string() : std::string();
+    std::erase(shell_out, '\r');
+    check(shell_out == "primitive\n", "the shell primitive runs");
     gm::LeafVerbs in_process(leaves, services);
     auto composed = gm::host::ComposedVerbs::compose({native->get(), &in_process});
     const auto before = composed.value()->call("probe", gm::json::Value(gm::json::Object{}));
@@ -252,7 +258,14 @@ int main() {
               waited.find("\"id\":") != std::string::npos,
           "events --wait prints the pending job event: " + shorten(waited.substr(0, waited.find('\n'))));
 
-    worker->write_line(call_line(10, "run_code", R"({"body":"return await gm.job_start({ job: 'long-job', command: 'sleep 20' });"})"));
+#if defined(_WIN32)
+    const std::string long_command = "ping -n 21 127.0.0.1 >nul";
+#else
+    const std::string long_command = "sleep 20";
+#endif
+    worker->write_line(call_line(10, "run_code",
+                                 R"({"body":"return await gm.job_start({ job: 'long-job', command: ')" + long_command +
+                                     R"(' });"})"));
     const std::string long_job = out.wait_for_id(10, 10s);
     worker->write_line(call_line(11, "next_context", "{}"));
     const std::string open_jobs = out.wait_for_id(11, 10s);

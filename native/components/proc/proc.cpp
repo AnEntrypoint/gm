@@ -320,6 +320,7 @@ Outcome run(const std::vector<std::string>& argv, const std::filesystem::path& c
         outcome.err += read_available(err_r, err_open);
         if (WaitForSingleObject(pi.hProcess, 10) == WAIT_OBJECT_0) break;
         if (timeout_ms > 0 && GetTickCount64() - start >= timeout_ms) {
+            kill_tree(static_cast<long long>(pi.dwProcessId));
             TerminateProcess(pi.hProcess, 1);
             WaitForSingleObject(pi.hProcess, INFINITE);
             outcome.timed_out = true;

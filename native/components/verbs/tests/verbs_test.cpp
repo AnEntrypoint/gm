@@ -13,6 +13,12 @@ namespace {
 
 int failures = 0;
 
+#if defined(_WIN32)
+constexpr bool windows_host = true;
+#else
+constexpr bool windows_host = false;
+#endif
+
 void expect(bool condition, const std::string& what) {
     if (condition) {
         std::printf("ok   %s\n", what.c_str());
@@ -50,6 +56,23 @@ std::string lf_only(std::string text) {
     }
     return out;
 }
+
+std::string sleep_command(int seconds) {
+    if (windows_host) return "ping -n " + std::to_string(seconds + 1) + " 127.0.0.1 >nul";
+    return "sleep " + std::to_string(seconds);
+}
+
+std::string sleep_then_echo() {
+    if (windows_host) return sleep_command(2) + "&echo woke&" + sleep_command(5);
+    return "sleep 2; echo woke; sleep 5";
+}
+
+std::string hello_and_oops() {
+    if (windows_host) return "echo hello&echo oops 1>&2";
+    return "echo hello; echo oops 1>&2";
+}
+
+std::string true_command() { return windows_host ? "exit 0" : "true"; }
 
 std::filesystem::path fresh_dir() {
     auto base = std::filesystem::temp_directory_path() /
@@ -114,30 +137,30 @@ int main() {
         auto empty_path = verbs.call("read_file", object_of({{"path", ""}}));
         expect(text_of(empty_path, "error") == "refused: path must be a non-empty string", "empty path refused");
 
-        auto shell = verbs.call("run_shell", object_of({{"command", "echo hello; echo oops 1>&2"}}));
+        auto shell = verbs.call("run_shell", object_of({{"command", hello_and_oops()}}));
         expect(ok_of(shell) && lf_only(text_of(shell, "output")) == "hello\noops\n" && number_of(shell, "exitCode") == 0, "run_shell echo: " + gm::json::dump(shell));
 
         auto failing = verbs.call("run_shell", object_of({{"command", "exit 3"}}));
         expect(!ok_of(failing) && number_of(failing, "exitCode") == 3, "run_shell exit code: " + gm::json::dump(failing));
 
-        auto timed = verbs.call("run_shell", object_of({{"command", "sleep 5"}, {"timeoutMs", 200}}));
+        auto timed = verbs.call("run_shell", object_of({{"command", sleep_command(5)}, {"timeoutMs", 200}}));
         expect(text_of(timed, "error") == "timed out after 200 ms", "run_shell timeout: " + gm::json::dump(timed));
 
         auto started = verbs.call("job_start", object_of({{"job", "quick"}, {"command", "echo from-job"}}));
         expect(ok_of(started) && text_of(started, "output").starts_with("started job quick (pid "), "job_start: " + gm::json::dump(started));
         auto done = verbs.call("job_status", object_of({{"job", "quick"}, {"waitMs", 10000}}));
-        expect(text_of(done, "state") == "exited" && number_of(done, "exitCode") == 0 && text_of(done, "output") == "from-job\n",
+        expect(text_of(done, "state") == "exited" && number_of(done, "exitCode") == 0 && lf_only(text_of(done, "output")) == "from-job\n",
                "job_status exit 0: " + gm::json::dump(done));
 
-        auto again = verbs.call("job_start", object_of({{"job", "quick"}, {"command", "true"}}));
+        auto again = verbs.call("job_start", object_of({{"job", "quick"}, {"command", true_command()}}));
         expect(text_of(again, "error") == "job quick already exists", "job name reuse refused");
 
-        verbs.call("job_start", object_of({{"job", "sleeper"}, {"command", "sleep 30"}}));
+        verbs.call("job_start", object_of({{"job", "sleeper"}, {"command", sleep_command(30)}}));
         auto stopped = verbs.call("job_stop", object_of({{"job", "sleeper"}}));
         expect(ok_of(stopped) && text_of(stopped, "state") == "killed" && text_of(stopped, "reason") == "cancelled",
                "job_stop sleep: " + gm::json::dump(stopped));
         auto stopped_status = verbs.call("job_status", object_of({{"job", "sleeper"}}));
-        expect(text_of(stopped_status, "state") == "killed" && text_of(stopped_status, "signal") == "SIGTERM" && text_of(stopped_status, "reason") == "cancelled",
+        expect(text_of(stopped_status, "state") == "killed" && (windows_host || text_of(stopped_status, "signal") == "SIGTERM") && text_of(stopped_status, "reason") == "cancelled",
                "job_status after stop: " + gm::json::dump(stopped_status));
         auto stop_again = verbs.call("job_stop", object_of({{"job", "sleeper"}}));
         expect(text_of(stop_again, "error") == "job sleeper already ended (killed)", "job_stop twice");
@@ -202,8 +225,8 @@ int main() {
         options.workspace = base / "workspace";
         options.job_stuck_ms = 1000;
         gm::CoreVerbs verbs(std::move(options), *stuck_log);
-        verbs.call("job_start", object_of({{"job", "quiet"}, {"command", "sleep 2; echo woke; sleep 5"}}));
-        verbs.call("job_start", object_of({{"job", "brief"}, {"command", "true"}}));
+        verbs.call("job_start", object_of({{"job", "quiet"}, {"command", sleep_then_echo()}}));
+        verbs.call("job_start", object_of({{"job", "brief"}, {"command", true_command()}}));
         verbs.call("job_status", object_of({{"job", "brief"}, {"waitMs", 5000}}));
         auto first = verbs.job_snapshot();
         auto listed = first.find("jobs");
@@ -237,7 +260,7 @@ int main() {
         expect(text_of(changes, "output").rfind("[\"job-stuck\",\"job-unstuck\"", 0) == 0, "stuck changes are logged: " + gm::json::dump(changes));
         verbs.call("job_stop", object_of({{"job", "quiet"}}));
 
-        verbs.call("job_start", object_of({{"job", "ordered"}, {"command", "sleep 1"}}));
+        verbs.call("job_start", object_of({{"job", "ordered"}, {"command", sleep_command(1)}}));
         std::this_thread::sleep_for(std::chrono::milliseconds(80));
         stuck_log->append("action", object_of({{"tool", "run_code"}}));
         auto ordered_status = verbs.call("job_status", object_of({{"job", "ordered"}, {"waitMs", 10000}}));
@@ -245,7 +268,7 @@ int main() {
         expect(text_of(ordered_status, "state") == "exited" && text_of(order, "output") == "[\"job:running\",\"action:\",\"job:exited\"]",
                "exit event lands after the next action and before the reply that reads it: " + gm::json::dump(order));
 
-        verbs.call("job_start", object_of({{"job", "unobserved"}, {"command", "true"}}));
+        verbs.call("job_start", object_of({{"job", "unobserved"}, {"command", true_command()}}));
         std::this_thread::sleep_for(std::chrono::milliseconds(600));
         auto logged = stuck_log->read_all();
         bool exit_logged = false;
@@ -263,9 +286,9 @@ int main() {
         gm::CoreVerbsOptions options;
         options.workspace = base / "workspace";
         gm::CoreVerbs verbs(std::move(options), *timeout_log);
-        verbs.call("job_start", object_of({{"job", "by-default"}, {"command", "sleep 30"}}));
-        verbs.call("job_start", object_of({{"job", "explicit"}, {"command", "sleep 30"}, {"timeoutMs", 450000}}));
-        verbs.call("job_start", object_of({{"job", "capped"}, {"command", "sleep 30"}, {"timeoutMs", 4000000}}));
+        verbs.call("job_start", object_of({{"job", "by-default"}, {"command", sleep_command(30)}}));
+        verbs.call("job_start", object_of({{"job", "explicit"}, {"command", sleep_command(30)}, {"timeoutMs", 450000}}));
+        verbs.call("job_start", object_of({{"job", "capped"}, {"command", sleep_command(30)}, {"timeoutMs", 4000000}}));
         auto by_default = verbs.call("job_status", object_of({{"job", "by-default"}}));
         auto explicit_status = verbs.call("job_status", object_of({{"job", "explicit"}}));
         auto capped = verbs.call("job_status", object_of({{"job", "capped"}}));
@@ -274,7 +297,7 @@ int main() {
         expect(number_of(capped, "timeoutMs") == 3600000, "job_start caps timeoutMs at 3600000 ms: " + gm::json::dump(capped));
         for (const char* name : {"by-default", "explicit", "capped"}) verbs.call("job_stop", object_of({{"job", name}}));
 
-        verbs.call("job_start", object_of({{"job", "short"}, {"command", "sleep 30"}, {"timeoutMs", 200}}));
+        verbs.call("job_start", object_of({{"job", "short"}, {"command", sleep_command(30)}, {"timeoutMs", 200}}));
         auto short_done = verbs.call("job_status", object_of({{"job", "short"}, {"waitMs", 10000}}));
         expect(text_of(short_done, "state") == "killed" && text_of(short_done, "reason") == "timeout",
                "job past its deadline is killed with reason timeout: " + gm::json::dump(short_done));
