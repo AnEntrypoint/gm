@@ -25,7 +25,7 @@ try {
 
     $asset = $manifest.assets.$target
     if (-not $asset) { throw "manifest has no asset for $target" }
-    if ($asset.file -ne "$package.zip") { throw "unexpected asset name for ${target}: $($asset.file)" }
+    if ($asset.file -notlike "gmnew-*-$target.zip") { throw "unexpected asset name for ${target}: $($asset.file)" }
 
     $archive = Join-Path $work $asset.file
     Invoke-WebRequest -UseBasicParsing -Uri "$releaseBase/$($asset.file)" -OutFile $archive

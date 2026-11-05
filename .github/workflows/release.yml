@@ -138,9 +138,6 @@ jobs:
           pattern: gmnew-*
           path: dist
           merge-multiple: true
-      - name: Manifest and checksums
-        if: steps.head.outputs.current == 'true'
-        run: node tools/release-manifest.mjs --dir dist --version "$GMNEW_VERSION" --commit "$GITHUB_SHA" --repo "$RELEASE_REPO"
       - name: Move latest tag
         if: steps.head.outputs.current == 'true'
         run: |
@@ -149,14 +146,43 @@ jobs:
           else
             gh api -X POST "repos/$RELEASE_REPO/git/refs" -f ref=refs/tags/latest -f sha="$GITHUB_SHA"
           fi
-      - name: Publish latest release
+      - name: Version the archive names
+        if: steps.head.outputs.current == 'true'
+        shell: bash
+        run: |
+          for file in dist/gmnew-*.tar.gz dist/gmnew-*.zip; do
+            [ -e "$file" ] || continue
+            name="${file#dist/gmnew-}"
+            target="${name%.tar.gz}"
+            ext=tar.gz
+            if [ "$target" = "$name" ]; then
+              target="${name%.zip}"
+              ext=zip
+            fi
+            mv "$file" "dist/gmnew-$GMNEW_VERSION-$target.$ext"
+          done
+      - name: Manifest and checksums
+        if: steps.head.outputs.current == 'true'
+        run: node tools/release-manifest.mjs --dir dist --version "$GMNEW_VERSION" --commit "$GITHUB_SHA" --repo "$RELEASE_REPO"
+      - name: Upload the versioned archives
         if: steps.head.outputs.current == 'true'
         run: |
           notes="$RUNNER_TEMP/notes.md"
           printf 'Version: %s\nCommit: %s\nBuilt: %s\n' "$GMNEW_VERSION" "$GITHUB_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$notes"
           if gh release view latest --repo "$RELEASE_REPO" >/dev/null 2>&1; then
-            gh release upload latest dist/* --repo "$RELEASE_REPO" --clobber
-            gh release edit latest --repo "$RELEASE_REPO" --title "latest $GMNEW_VERSION" --notes-file "$notes" --latest --prerelease=false
+            gh release upload latest dist/gmnew-"$GMNEW_VERSION"-* --repo "$RELEASE_REPO"
           else
-            gh release create latest dist/* --repo "$RELEASE_REPO" --title "latest $GMNEW_VERSION" --notes-file "$notes" --latest --prerelease=false
+            gh release create latest dist/gmnew-"$GMNEW_VERSION"-* --repo "$RELEASE_REPO" --title "latest $GMNEW_VERSION" --notes-file "$notes" --latest --prerelease=false
           fi
+      - name: Point latest at the new manifest
+        if: steps.head.outputs.current == 'true'
+        run: |
+          notes="$RUNNER_TEMP/notes.md"
+          gh release upload latest dist/manifest.json dist/SHA256SUMS --repo "$RELEASE_REPO" --clobber
+          gh release edit latest --repo "$RELEASE_REPO" --title "latest $GMNEW_VERSION" --notes-file "$notes" --latest --prerelease=false
+      - name: Prune old builds
+        if: steps.head.outputs.current == 'true'
+        run: |
+          gh release view latest --repo "$RELEASE_REPO" --json assets --jq '.assets[].name' \
+            | node tools/prune-release-assets.mjs --keep 3 \
+            | while read -r name; do gh release delete-asset latest "$name" --repo "$RELEASE_REPO" --yes; done

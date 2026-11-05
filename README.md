@@ -12,7 +12,7 @@ To register gm with a playwriter config, pass the path through `sh -s --`:
 
     curl -fsSL https://raw.githubusercontent.com/AnEntrypoint/gmc/main/scripts/install.sh | sh -s -- --mcp-config <path>
 
-Right after a release, the install can fail with a sha256 mismatch while GitHub's download cache catches up with the new manifest. Run it again after a minute.
+Each build is published under its own file names (`gmnew-<version>-<target>`), and the manifest is uploaded last, so an install never mixes two builds. The last three builds stay on `latest`.
 
 Windows is not published yet: the Windows build fails most of its tests, so the release carries Linux and macOS only. `scripts/install.ps1` is kept for when it is.
 

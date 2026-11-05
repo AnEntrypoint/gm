@@ -23,7 +23,7 @@ const sums = [];
 for (const file of archives) {
   const bytes = readFileSync(join(values.dir, file));
   const sha256 = createHash('sha256').update(bytes).digest('hex');
-  const target = file.replace(/^gmnew-/, '').replace(/\.(tar\.gz|zip)$/, '');
+  const target = file.match(/(x64|arm64)-(linux|macos|windows)/)[0];
   assets[target] = { file, sha256, size: bytes.length };
   sums.push(`${sha256}  ${file}`);
 }

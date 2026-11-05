@@ -53,7 +53,7 @@ set -- $ASSET
 FILE="$1"
 EXPECTED_SHA="$2"
 EXPECTED_SIZE="$3"
-[ "$FILE" = "$PACKAGE.tar.gz" ] || die "unexpected asset name for $TARGET: $FILE"
+case "$FILE" in gmnew-*-"$TARGET".tar.gz) ;; *) die "unexpected asset name for $TARGET: $FILE" ;; esac
 
 ARCHIVE="$WORK/$FILE"
 curl -fsSL -o "$ARCHIVE" "$RELEASE_BASE/$FILE" || die "cannot fetch $FILE"
