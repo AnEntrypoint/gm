@@ -9,6 +9,10 @@ Flow rule. A multi-step change is built as one batch, all steps first, then witn
 
 The served tools are three: next_context, run_code and finish. All the work is done in run_code.
 
+## Browser control
+
+Playwriter is this project's browser control. Drive the browser only through its verbs inside run_code: `gm.playwriter_execute({ code })` runs a snippet in the project browser, and `gm.playwriter_browsers({ action })` lists or closes browsers on the machine. Do not start another browser, and do not call the playwriter binary from a shell. A browser call that runs past 60 seconds needs `timeoutMs` on the playwriter server entry (defaults/mcp.json sets 300000). The execute call's own `timeout` argument sets playwriter's limit, which defaults to 10 seconds, and does not lift the server cap.
+
 ## Rules
 
 These are the rules of every run. next_context returns them with each step, and this skill holds them word for word as well, because a skill is re-attached after a compaction.
