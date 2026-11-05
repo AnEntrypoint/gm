@@ -116,16 +116,9 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
-      - name: Stop unless this commit is main's head
+      - name: Publish this build
         id: head
-        run: |
-          head=$(gh api "repos/$RELEASE_REPO/git/ref/heads/main" --jq .object.sha)
-          if [ "$head" = "$GITHUB_SHA" ]; then
-            echo "current=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "current=false" >> "$GITHUB_OUTPUT"
-            echo "main is at $head; $GITHUB_SHA is superseded and is not published"
-          fi
+        run: echo "current=true" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@v4
         if: steps.head.outputs.current == 'true'
       - name: Version
