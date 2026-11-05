@@ -106,6 +106,9 @@ void version_comparison() {
     check(!is_newer(manifest, "abc1234-9"), "the same commit is not newer, whatever the run");
     check(!is_newer(manifest, "zzz9999-9"), "a lower run number is not newer");
     check(is_newer(manifest, "dev"), "a dev build takes any release when updated by hand");
+    check(is_dev_version("dev"), "the bare dev version is a dev build");
+    check(is_dev_version("abc1234-dev"), "a sha-dev version is a dev build");
+    check(!is_dev_version("abc1234-7"), "a release version is not a dev build");
 }
 
 void refuses_bad_digest(const fs::path& root) {

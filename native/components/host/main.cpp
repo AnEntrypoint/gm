@@ -29,7 +29,7 @@ int main(int argc, char** argv) {
     if (args.mode == "update") return gm::host::run_update_command();
     if (args.mode == "install") return gm::host::run_install_command(args);
     if (args.mode == "--version") {
-        std::cout << gm::host::kBuildVersion << '\n';
+        std::cout << gm::host::kBuildVersion << " (" << gm::host::kBuildCommit << ")\n";
         return 0;
     }
     std::cerr << kUsage;

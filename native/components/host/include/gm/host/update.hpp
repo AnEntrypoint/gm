@@ -15,6 +15,11 @@
 namespace gm::host {
 
 inline constexpr std::string_view kBuildVersion = GMNEW_BUILD_VERSION;
+inline constexpr std::string_view kBuildCommit = GMNEW_BUILD_COMMIT;
+inline constexpr bool is_dev_version(std::string_view version) {
+    return version == "dev" ||
+           (version.size() >= 4 && version.substr(version.size() - 4) == "-dev");
+}
 inline constexpr std::string_view kDefaultUpdateUrl =
     "https://github.com/AnEntrypoint/gm/releases/download/latest/manifest.json";
 inline constexpr std::chrono::hours kUpdateInterval{6};

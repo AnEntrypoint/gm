@@ -376,7 +376,7 @@ UpdatePolicy policy_from_environment(const fs::path& install_dir) {
     const char* url = std::getenv("GMNEW_UPDATE_URL");
     if (url != nullptr && *url != '\0') policy.url = url;
     const char* auto_update = std::getenv("GMNEW_AUTO_UPDATE");
-    policy.enabled = kBuildVersion != "dev" && !(auto_update != nullptr && std::string_view(auto_update) == "0");
+    policy.enabled = !is_dev_version(kBuildVersion) && !(auto_update != nullptr && std::string_view(auto_update) == "0");
     return policy;
 }
 

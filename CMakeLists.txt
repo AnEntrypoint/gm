@@ -28,6 +28,7 @@ if(GMNEW_BUILD_TESTS)
     add_subdirectory(tests)
 endif()
 
-set(GMNEW_VERSION "dev" CACHE STRING "Version stamped into gm builds")
+include(cmake/gmnew_build_info.cmake)
+gmnew_configure_build_info("${CMAKE_CURRENT_SOURCE_DIR}")
 
 add_subdirectory(native)

@@ -1,12 +1,11 @@
-set(GMNEW_VERSION "dev" CACHE STRING "Version of this build, reported by gm --version and checked by gm update")
-
 add_library(gm_host STATIC child.cpp composed_verbs.cpp relay.cpp options.cpp primitives.cpp cli.cpp update.cpp install.cpp)
 target_include_directories(gm_host PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_CURRENT_SOURCE_DIR}/../../include)
 target_link_libraries(gm_host PUBLIC deoxidene::deoxidene gm_json gm_log gm_proc gm_runcode
                                         $<TARGET_NAME_IF_EXISTS:gm_mcp>)
 target_compile_definitions(gm_host PRIVATE GMNEW_SOURCE_DIR="${PROJECT_SOURCE_DIR}"
                                               GMNEW_BUILD_DIR="${PROJECT_BINARY_DIR}")
-target_compile_definitions(gm_host PUBLIC GMNEW_BUILD_VERSION="${GMNEW_VERSION}")
+target_compile_definitions(gm_host PUBLIC GMNEW_BUILD_VERSION="${GMNEW_VERSION}"
+                                              GMNEW_BUILD_COMMIT="${GMNEW_COMMIT}")
 
 add_executable(gm main.cpp serve.cpp)
 target_link_libraries(gm PRIVATE gm_host)
@@ -28,6 +27,14 @@ if(GMNEW_BUILD_TESTS)
     target_compile_definitions(gm_cli_test PRIVATE GMNEW_BINARY="$<TARGET_FILE:gm>")
     add_dependencies(gm_cli_test gm)
     add_test(NAME gm_cli_test COMMAND gm_cli_test)
+    add_test(NAME gm_version_test COMMAND ${CMAKE_COMMAND}
+        "-DGMNEW_MODULE=${CMAKE_SOURCE_DIR}/cmake/gmnew_build_info.cmake"
+        "-DGMNEW_SOURCE_ROOT=${CMAKE_SOURCE_DIR}"
+        "-DGMNEW_GM_BINARY=$<TARGET_FILE:gm>"
+        "-DGMNEW_CORE_BINARY=$<TARGET_FILE:gm-core>"
+        "-DGMNEW_EXPECTED_VERSION=${GMNEW_VERSION}"
+        "-DGMNEW_EXPECTED_COMMIT=${GMNEW_COMMIT}"
+        -P "${CMAKE_CURRENT_SOURCE_DIR}/tests/version_test.cmake")
     add_executable(gm_update_test tests/update_test.cpp)
     target_link_libraries(gm_update_test PRIVATE gm_host)
     add_test(NAME gm_update_test COMMAND gm_update_test)
