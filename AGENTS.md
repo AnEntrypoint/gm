@@ -118,10 +118,10 @@ gm is one long-horizon worker: an MCP server that runs a task as one append-only
 ## Open decisions (owner), with current state
 
 1. Node tree direction. OPEN: work/rows/unknown-mw29a63rd40c.yml asks "native C++ rewrite or Node-only?". State: the native tree builds and passes ctest and the parity harness. It is cut over for /workspace/gm only (DESIGN.md, Local cutover of the native gm, 2026-11-04); the user-wide entry is unchanged, and Node stays the parity reference. Until the owner answers native or node-only, commit df0a6b9 and native/ stay as they are.
-2. Grep default. Native searches untracked files that git does not ignore; Node searches tracked files only (DESIGN.md, Native MCP client (2026-11-04)). Node has not changed. The decision on whether Node follows is open.
+2. Grep default. Native searches untracked files that git does not ignore; Node searches tracked files only (DESIGN.md, Native MCP client (2026-11-04)). Node has not changed. Decided 2026-11-05 (DESIGN.md, Decided): Node keeps tracked-only grep.
 3. Stopped background fetch: native-ahead. Native kills the fetch's curl with its body, so no request keeps running and the code-call carries the real outcome; Node leaves the request until its 60 s timeout. Recorded in native/tests/parity/run.mjs (NATIVE_AHEAD) and DESIGN.md, "Stopped background fetch: native-ahead row". To match Node, Node would abort fetch on a body stop and the row would be removed. The owner has not chosen.
 4. Client-side roots and elicitation. Not used. Roots and sampling are not used (DESIGN.md decision 4); logging is used. Elicitation is not served, because it is interactive-only in Claude Code and a question becomes a row instead. DESIGN.md marks it "OWNER DECISION if wanted" (decision 2). Current state: neither tree uses either.
-5. Protocol 2026-07-28: not negotiated. Owner decision (DESIGN.md decision 1). Risk noted there: a v2 client may ask for it.
+5. Protocol 2026-07-28: not negotiated. Owner decision (DESIGN.md decision 1), held 2026-11-05 (DESIGN.md, Decided). Risk noted there: a v2 client may ask for it.
 6. Events wait on a new row: work/rows/unknown-mw29a6424ad2.yml asks whether a wait should wake when a PRD or question row is added. Open.
 7. Console output of a body is drained by the session and not returned or logged (stated, not closed). Open.
 8. Minimal tool set is not run, and G3 (cache effect, measured by the gm agent from host transcripts) is not recorded. The project closes when both are recorded.
