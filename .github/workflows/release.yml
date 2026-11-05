@@ -116,9 +116,21 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
-      - name: Publish this build
+      - name: Publish only a build newer than latest
         id: head
-        run: echo "current=true" >> "$GITHUB_OUTPUT"
+        run: |
+          published=$(gh api "repos/$RELEASE_REPO/git/ref/tags/latest" --jq .object.sha 2>/dev/null || true)
+          order=new
+          if [ -n "$published" ]; then
+            order=$(gh api "repos/$RELEASE_REPO/compare/$published...$GITHUB_SHA" --jq .status)
+          fi
+          case "$order" in
+            ahead | identical | new) echo "current=true" >> "$GITHUB_OUTPUT" ;;
+            *)
+              echo "current=false" >> "$GITHUB_OUTPUT"
+              echo "latest is $published; $GITHUB_SHA is $order to it and is not published"
+              ;;
+          esac
       - uses: actions/checkout@v4
         if: steps.head.outputs.current == 'true'
       - name: Version
