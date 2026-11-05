@@ -1622,6 +1622,18 @@ struct Server::State {
         }
     }
 
+    Value remaining_now() {
+        Value open = array();
+        for (const Row& row : open_rows()) open.push(row.id);
+        Value parked = array();
+        for (const ParkedRow& row : parked_rows()) parked.push(row.id);
+        Value jobs = array();
+        for (const Value& job : active_jobs().as_array()) {
+            if (const Value* name = job.find("job")) jobs.push(*name);
+        }
+        return object().set("open", std::move(open)).set("parked", std::move(parked)).set("jobs", std::move(jobs));
+    }
+
     Value context(int step) {
         std::string rules = read_rules();
         std::optional<Value> recovery_now;
@@ -1675,6 +1687,7 @@ struct Server::State {
             reply.set("rulesPending", text);
         }
         reply = merge(std::move(reply), notices);
+        reply.set("remaining", remaining_now());
         PendingTake taken = take_pending(s().run_dir);
         if (!taken.records.empty()) {
             Value records = array();

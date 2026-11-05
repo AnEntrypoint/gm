@@ -690,6 +690,8 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     const jobsEnded = await Promise.all(ended.map((event) => endedJob(runDir, event)));
     const shown = shownTotalOf(log);
     const feed = feedOf(log, current.REGISTRY, { shown });
+    const openRows = await tools.openRows();
+    const parkedRows = await tools.parkedRows();
     const reply = {
       ok: true,
       step,
@@ -719,6 +721,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
       ...(turnedStuck.length ? { jobsStuck: turnedStuck.map(({ seq, job, body, sinceProgressMs }) => ({ seq, job, ...(body === undefined ? {} : { body }), sinceProgressMs })) } : {}),
       ...(progressedAgain.length ? { jobsUnstuck: progressedAgain.map(({ seq, job }) => ({ seq, job })) } : {}),
       ...(open.length ? { jobsOpen: open.slice(0, OPEN_LIST), ...(open.length > OPEN_LIST ? { jobsOpenMore: open.length - OPEN_LIST } : {}) } : {}),
+      remaining: { open: openRows.map((row) => row.id), parked: parkedRows.map((row) => row.id), jobs: open.map((job) => job.job) },
     };
     // The pending events are claimed last: nothing that can throw runs between the claim and the registration of its clear, so a step that
     // fails before this point claims nothing. The clear runs once the reply that carries the events is written, so a crash before that write
