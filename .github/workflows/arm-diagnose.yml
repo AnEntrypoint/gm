@@ -1,0 +1,67 @@
+name: arm-diagnose
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  asan-arm:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: seanmiddleditch/gha-setup-ninja@master
+      - name: Configure and build asan
+        shell: bash
+        run: |
+          cmake --preset asan -DGMNEW_BUILD_TESTS=ON
+          cmake --build build/asan
+      - name: Test asan (worker and mcp)
+        shell: bash
+        env:
+          ASAN_OPTIONS: halt_on_error=1:abort_on_error=0:print_stacktrace=1:detect_leaks=0
+        run: ctest --test-dir build/asan -R "gm_worker_test|gm_mcp_test" --output-on-failure --repeat until-fail:5
+
+  gdb-arm:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: seanmiddleditch/gha-setup-ninja@master
+      - name: Install gdb
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq gdb
+      - name: Configure and build release
+        shell: bash
+        run: |
+          cmake --preset arm64-linux-release -DGMNEW_BUILD_TESTS=ON
+          cmake --build build/arm64-linux-release
+      - name: Run tests under gdb and print a backtrace on a signal
+        shell: bash
+        run: |
+          shopt -s globstar nullglob
+          status=0
+          for name in gm_worker_test gm_mcp_test; do
+            for bin in build/arm64-linux-release/**/$name; do
+              [ -x "$bin" ] || continue
+              echo "== $bin"
+              gdb -batch -nx -ex run -ex "thread apply all bt 40" --args "$bin" > "gdb-$name.log" 2>&1 || true
+              if grep -qE "received signal|SIG[A-Z]+, " "gdb-$name.log"; then
+                echo "signal in $name:"
+                grep -E "received signal|SIG[A-Z]+, |^#" "gdb-$name.log" | head -80
+                status=1
+              else
+                echo "$name exited cleanly under gdb"
+              fi
+            done
+          done
+          exit $status
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gdb-logs
+          path: gdb-*.log
+          if-no-files-found: ignore
