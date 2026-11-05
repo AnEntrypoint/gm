@@ -739,6 +739,39 @@ int main() {
         check(result_of(h, 2).find("warning") == nullptr, "a multi-word task argument gets no warning");
     }
 
+    std::cout << "--- item 5c2: a child context keeps the parent's task, prefix and steps ---\n";
+    {
+        auto options = fresh_options(root, "child-task");
+        Harness h(verbs, options);
+        const std::string run_id = h.server->run_id();
+        const std::string child_args = "{\"child\":true,\"run\":\"" + run_id + "\"}";
+        const std::string run_args = "{\"run\":\"" + run_id + "\"}";
+        h.server->accept(rpc(1, "prompts/get", R"({"name":"gm","arguments":{"task":"parent task text"}})"));
+        Value owner1 = h.call("next_context", "{}");
+        const std::string owner_task = str(owner1, "task");
+        const std::string owner_sha = str(owner1, "prefixSha");
+        Value child1 = h.call("next_context", child_args);
+        h.server->accept(rpc(2, "prompts/get", R"({"name":"gm","arguments":{"task":"read-only child research"}})"));
+        Value child2 = h.call("next_context", child_args);
+        Value owner2 = h.call("next_context", "{}");
+        check(str(child1, "role") == "child" && str(child2, "child_task") == "read-only child research" &&
+                  str(child2, "task") == owner_task && str(child2, "prefixSha") == owner_sha,
+              "a child's task argument is kept as child_task; the child sees the parent's task and prefixSha");
+        check(str(owner2, "task") == owner_task && str(owner2, "prefixSha") == owner_sha && number_at(owner2.find("step")) == 2,
+              "the parent's task, prefixSha and step count are unchanged by child contexts");
+        check(count_kind(log_of(h.server->run_dir()), "task") == 1, "a child prompt writes no task event");
+        h.call("next_context", run_args);
+        Value owner3 = h.call("next_context", "{}");
+        check(number_at(owner3.find("step")) == 3, "a child next_context without child:true takes no step");
+        h.call("next_context", R"({"waitMs":20})");
+        Value owner4 = h.call("next_context", "{}");
+        check(number_at(owner4.find("step")) == 4, "a wait with no pending event takes no step");
+        options.run_dir = h.server->run_dir();
+        Harness resumed(verbs, options);
+        Value after_resume = resumed.call("next_context", "{}");
+        check(number_at(after_resume.find("step")) == 5, "a restart counts real steps only: " + gm::json::dump(after_resume.find("step") ? *after_resume.find("step") : Value()));
+    }
+
     std::cout << "--- item 5d: subscriptions/listen ---\n";
     {
         fs::path skills = root / "skills-listen";

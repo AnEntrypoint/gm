@@ -289,6 +289,8 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
   // carried in the reply of each call and in next_context until the agent loads the skill again, which clears them all.
   const rulesOpen = new Map();
   let runStarted = steps > 0;
+  let childSeen = false;
+  let childTask = '';
   let stepCalls = 0;
   // Rule 1 has no check: a path outside the workspace is allowed, so a refusal of one is not a breach of it.
   const RULE_TEXT = { 2: 'call next_context at the start of every step', 3: 'verify before you finish', 4: 'finish needs a witness' };
@@ -444,7 +446,9 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     log.append('skill-loaded', { via: 'prompt', skill: 'gm', cleared: [...rulesOpen.keys()] });
     clearRules();
     const given = typeof params?.arguments?.task === 'string' ? params.arguments.task.trim() : '';
-    if (given !== '' && ended !== null) endedTask = given;
+    const childSession = ended === null && (runStarted || childSeen);
+    if (given !== '' && childSession) childTask = given;
+    else if (given !== '' && ended !== null) endedTask = given;
     else if (given !== '' && (task === '' || taskInherited)) {
       task = given;
       taskInherited = false;
@@ -614,7 +618,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
       if (unknown.length > 0) return refuse(name, args, `unknown argument ${unknown.join(', ')}; run_code takes ${Object.keys(RUN_CODE_PROPERTIES).join(', ')}`, rpcId);
       return act('run_code', args, access, (actionSeq) => runBody({ body: args.body, timeoutMs: args.timeoutMs, format: args.format, verbs: current.VERBS, call: innerCall, project: workspace, runDir, log, step: steps, background: (handle) => tools.adoptBody(handle) }).then((reply) => ({ ...reply, actionSeq })), (result) => loggedFor('run_code', result), rpcId);
     }
-    if (name === 'next_context') return args.child === true ? childContext(access, rpcId, args) : nextContext(access, rpcId, args);
+    if (name === 'next_context') return args.child === true || args.run !== undefined ? childContext(access, rpcId, args) : nextContext(access, rpcId, args);
     if (name === 'finish') return finish(args, access, rpcId);
     if (Object.hasOwn(handlers, name)) return act(name, args, access, () => handlers[name](args, signalOf(rpcId)), (result) => loggedFor(name, result), rpcId);
     return act(name, args, access, () => tools.run(name, args, { signal: signalOf(rpcId) }), undefined, rpcId);
@@ -623,6 +627,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
   function childContext(access, rpcId, args) {
     if (!runStarted) return refuse('child_context', args, 'no step has started on this connection; the session that owns the run calls next_context first', rpcId);
     if (args.run !== undefined && args.run !== runId) return refuse('child_context', args, `this connection's run is ${runId}, not ${args.run}`, rpcId);
+    childSeen = true;
     return act('child_context', args, access, childRead, ({ ok, error, role, run }) => ({ ok, error, role, run }), rpcId);
   }
 
@@ -639,6 +644,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
       task: task === '' ? null : task,
       prefixSha: prefixShaFor(rules),
       total: log.count(),
+      ...(childTask === '' ? {} : { childTask }),
     };
   }
 
@@ -912,7 +918,7 @@ function recoveryNote(recovery) {
 
 // Where a resumed run stands: the steps it has taken, and whether it already ended.
 function resumeFrom(events) {
-  const steps = events.filter((event) => event.kind === 'result' && event.tool === 'next_context' && event.ok === true).length;
+  const steps = events.filter((event) => event.kind === 'result' && event.tool === 'next_context' && event.ok === true && event.progress === undefined).length;
   const end = events.findLast((event) => event.kind === 'end');
   return { steps, ended: end ? end.status : null };
 }
@@ -1047,7 +1053,7 @@ function requestIdOf(line) {
 function isNextContextCall(line) {
   try {
     const message = JSON.parse(line);
-    return message?.method === 'tools/call' && message.params?.name === 'next_context' && message.params?.arguments?.child !== true;
+    return message?.method === 'tools/call' && message.params?.name === 'next_context' && message.params?.arguments?.child !== true && message.params?.arguments?.run === undefined;
   } catch {
     return false;
   }

@@ -446,6 +446,8 @@ struct Server::State {
         bool end_logged = false;
         std::vector<std::pair<int, std::string>> rules_open;
         bool run_started = false;
+        bool child_seen = false;
+        std::string child_task;
         int step_calls = 0;
         std::deque<std::string> reply_order;
         std::map<std::string, Value> replies;
@@ -857,7 +859,8 @@ struct Server::State {
             for (const Value& event : history) {
                 std::string kind = event.find("kind") ? event.find("kind")->as_string() : "";
                 note_shown(s(), kind, event);
-                if (kind == "result" && event.find("tool") && event.find("tool")->as_string() == "next_context" && is_ok(event)) {
+                if (kind == "result" && event.find("tool") && event.find("tool")->as_string() == "next_context" && is_ok(event) &&
+                    event.find("progress") == nullptr) {
                     s().steps += 1;
                 }
                 if (kind == "end") closed_at_boot = event.find("status") ? event.find("status")->as_string() : "";
@@ -1079,11 +1082,12 @@ struct Server::State {
         if (run != nullptr && !(run->is_string() && run->as_string() == s().run_id)) {
             return refuse("child_context", args, "this connection's run is " + s().run_id + ", not " + text_or_undefined(run));
         }
+        s().child_seen = true;
         return act(
             "child_context", args,
             [&](std::uint64_t) {
                 std::string rules = read_rules();
-                return object()
+                Value reply = object()
                     .set("ok", true)
                     .set("role", "child")
                     .set("run", s().run_id)
@@ -1094,6 +1098,8 @@ struct Server::State {
                     .set("task", task_value())
                     .set("prefixSha", prefix_sha(rules, s().task, served_tools()))
                     .set("total", number_of(s().log->count()));
+                if (!s().child_task.empty()) reply.set("child_task", s().child_task);
+                return reply;
             },
             [](const Value& r) {
                 Value d = object();
@@ -1928,7 +1934,7 @@ struct Server::State {
         bool child = name == "next_context" && args.find("child") && args.find("child")->is_bool() && args.find("child")->as_bool();
         if (s().ended) return refuse(name, args, ended_reason(child));
         if (name == "run_code") return run_code(args);
-        if (name == "next_context") return child ? child_context(args) : next_context(args);
+        if (name == "next_context") return child || args.find("run") != nullptr ? child_context(args) : next_context(args);
         return finish(args);
     }
 
@@ -2190,7 +2196,10 @@ struct Server::State {
         const Value* arguments = params->find("arguments");
         const Value* task = arguments ? arguments->find("task") : nullptr;
         std::string given = task && task->is_string() ? trim(task->as_string()) : "";
-        if (!given.empty() && s().ended) {
+        bool child_session = !s().ended && (s().run_started || s().child_seen);
+        if (!given.empty() && child_session) {
+            s().child_task = given;
+        } else if (!given.empty() && s().ended) {
             s().ended_task = given;
         } else if (!given.empty() && (s().task.empty() || s().task_inherited)) {
             s().task = given;
@@ -2560,7 +2569,8 @@ struct Server::State {
         const Value* name = params->find("name");
         const Value* args = params->find("arguments");
         const Value* child = args ? args->find("child") : nullptr;
-        return name && name->as_string() == "next_context" && !(child && child->is_bool() && child->as_bool());
+        const Value* run = args ? args->find("run") : nullptr;
+        return name && name->as_string() == "next_context" && !(child && child->is_bool() && child->as_bool()) && run == nullptr;
     }
 
     void accept(std::string_view line) {
