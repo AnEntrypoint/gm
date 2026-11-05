@@ -1,0 +1,18 @@
+name: Ninja
+description: Use the Ninja on the runner image, or install it when missing
+runs:
+  using: composite
+  steps:
+    - name: Ninja
+      shell: bash
+      run: |
+        if command -v ninja >/dev/null 2>&1; then
+          ninja --version
+          exit 0
+        fi
+        case "${{ runner.os }}" in
+          Linux) sudo apt-get update -qq && sudo apt-get install -y -qq ninja-build ;;
+          macOS) brew install ninja ;;
+          Windows) choco install ninja -y --no-progress ;;
+        esac
+        ninja --version

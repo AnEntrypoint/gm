@@ -586,3 +586,13 @@ Fix: next_check_delay (update.cpp) gives the time until checked_ms + interval; u
 Witness (scratch /tmp, not the real install): build/release gm copied to a temp install dir with a state of 7 h ago and version empty, GMNEW_UPDATE_URL=file:// to a local manifest for ffff111-99 with an x64-linux archive. Output: {"ok":true,"updated":true,"from":"dev","to":"ffff111-99","commit":"ffff111aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","target":"x64-linux","status":"updated"}. After: install holds defaults, gm, gm-core, leaves, skills, and the state reads {"checked_ms":1793885658820,"etag":"","version":"ffff111-99"}. ctest: 22 of 22 pass.
 
 Not witnessed: the 6 h wait itself (no run waited out the interval), and the install of this machine still has the legacy gmnew name and no gm-core, so it takes a new release or a manual install to apply a7e79db-60 here.
+
+## CI Ninja and the Windows gate (2026-11-05)
+
+- Run 42046550706 (70e4349) failed three of six release build jobs and asan-arm in run 42046550488 at the `seanmiddleditch/gha-setup-ninja@master` step, with `Error: Invalid or unsupported zip format. No END header found` while downloading a Ninja zip from a GitHub release. publish was skipped, so 70e4349 had no release. The action has no retry and pins a mutable branch.
+- The GitHub Ubuntu 24.04, macOS 15 and Windows 2025 runner images list Ninja 1.13.2. Both workflows now use `./.github/actions/ninja`, which uses the image Ninja and installs it from the platform package manager only when it is missing.
+- build-windows no longer uses continue-on-error. Run 42039533532 (409087f) passed Windows x64 and Windows arm64 build and test jobs, so a Windows failure is now a real workflow failure rather than a hidden one.
+- Run 42039533532 (409087f) also passed all four Linux and macOS build jobs and publish, and run 42039533525 passed asan-arm and gdb-arm. Those close the arm64 stack-use-after-scope and monitor-shutdown crashes and the Windows relay fixes.
+- pw on Windows is verified in the pw repo: windows-scan run 42044840454 at 54466df passed on windows-latest; pw DESIGN.md records the browser scan (12 of 12 lifecycle checks and a status --json browser scan) and the Windows fixes it needed.
+- The 383 MB /workspace/gm/core.60199 was an untracked Chromium core dump (file(1) reported chromium.real), not a gm worker core; it was removed so the shared checkout is clean for updates.
+

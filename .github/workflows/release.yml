@@ -44,7 +44,7 @@ jobs:
       - name: Version
         shell: bash
         run: echo "GMNEW_VERSION=${GITHUB_SHA:0:7}-${GITHUB_RUN_NUMBER}" >> "$GITHUB_ENV"
-      - uses: seanmiddleditch/gha-setup-ninja@master
+      - uses: ./.github/actions/ninja
       - uses: hendrikmuhs/ccache-action@v1.2
         if: matrix.ccache
         with:
@@ -71,7 +71,6 @@ jobs:
           compression-level: 0
           retention-days: 1
 
-  # Not published yet: Windows fails most of its test suites. It builds and tests on every push so the failures stay visible.
   build-windows:
     strategy:
       fail-fast: false
@@ -83,7 +82,6 @@ jobs:
             preset: arm64-windows-release
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
-    continue-on-error: true
     concurrency:
       group: build-${{ github.ref }}-${{ matrix.preset }}
       cancel-in-progress: false
@@ -92,7 +90,7 @@ jobs:
       - name: Version
         shell: bash
         run: echo "GMNEW_VERSION=${GITHUB_SHA:0:7}-${GITHUB_RUN_NUMBER}" >> "$GITHUB_ENV"
-      - uses: seanmiddleditch/gha-setup-ninja@master
+      - uses: ./.github/actions/ninja
       - uses: ilammy/msvc-dev-cmd@v1
         with:
           arch: ${{ contains(matrix.preset, 'arm64') && 'arm64' || 'x64' }}
