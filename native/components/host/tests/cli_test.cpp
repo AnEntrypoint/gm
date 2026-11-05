@@ -31,7 +31,14 @@ std::string capture(const std::string& command) {
     return out;
 }
 
-std::string run_gm(const std::string& arguments) { return capture(std::string("\"") + GMNEW_BINARY + "\" " + arguments + " 2>&1"); }
+std::string run_gm(const std::string& arguments) {
+    const std::string command = std::string("\"") + GMNEW_BINARY + "\" " + arguments + " 2>&1";
+#ifdef _WIN32
+    return capture("\"" + command + "\"");
+#else
+    return capture(command);
+#endif
+}
 
 }
 

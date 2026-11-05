@@ -87,7 +87,6 @@ bool acquire_update_lock(const std::filesystem::path& install_dir);
 std::optional<std::string> install_staged(const std::filesystem::path& staged_root,
                                           const std::filesystem::path& install_dir,
                                           const std::function<bool(std::string_view)>& allow = {});
-void remove_retired_executable(const std::filesystem::path& install_dir);
 int run_update_command();
 
 }

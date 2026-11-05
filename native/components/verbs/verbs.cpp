@@ -432,7 +432,7 @@ struct CoreVerbs::Impl {
         if (!at) return refusal("path must be a non-empty string");
         std::error_code ec;
         std::filesystem::directory_iterator it(*at, ec);
-        if (ec) return failure(core::node_error(ec.value(), "scandir", &*at));
+        if (ec) return failure(core::node_error(ec.default_error_condition().value(), "scandir", &*at));
         std::vector<std::string> names;
         for (const auto& entry : it) {
             std::error_code type_error;

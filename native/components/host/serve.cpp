@@ -26,7 +26,6 @@ int run_serve(const HostArgs& args) {
         return 1;
     }
     const std::filesystem::path install_dir = current_executable().parent_path();
-    remove_retired_executable(install_dir);
     RelayOptions options;
     options.worker_argv = {worker_executable(install_dir).string(), "worker"};
     for (std::string& arg : without_flags(args.rest, {"--runs", "--resume", "--run-dir", "--workspace", "--supervised"}))

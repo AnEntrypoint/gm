@@ -17,7 +17,10 @@
 #include "gm/mcp.hpp"
 #include "gm/proc.hpp"
 
-#if !defined(_WIN32)
+#if defined(_WIN32)
+#include <process.h>
+#include <windows.h>
+#else
 #include <signal.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -33,7 +36,6 @@ constexpr std::uint64_t kManifestTimeoutMs = 90000;
 constexpr std::uint64_t kArchiveTimeoutMs = 900000;
 constexpr std::string_view kStagingName = ".gmnew-staging";
 constexpr std::string_view kPreviousName = ".gmnew-previous";
-constexpr std::string_view kRetiredSuffix = ".old";
 constexpr std::string_view kStateName = ".gmnew-update.json";
 constexpr std::string_view kLockName = ".gmnew-update.lock";
 constexpr std::string_view kOwnerName = "owner";
@@ -172,10 +174,7 @@ void undo_renames(std::vector<Rename>& done) {
     done.clear();
 }
 
-fs::path retired_path([[maybe_unused]] const fs::path& install_dir, const fs::path& previous_dir, const std::string& name) {
-#if defined(_WIN32)
-    if (name == executable_name() || name == core_executable_name()) return install_dir / (name + std::string(kRetiredSuffix));
-#endif
+fs::path retired_path(const fs::path& previous_dir, const std::string& name) {
     return previous_dir / name;
 }
 
@@ -330,18 +329,29 @@ std::optional<std::string> etag_from_headers(std::string_view headers) {
     return etag;
 }
 
-void record_lock_owner([[maybe_unused]] const fs::path& lock) {
-#if !defined(_WIN32)
-    std::ofstream(lock / kOwnerName) << ::getpid() << '\n';
+long current_process_id() {
+#if defined(_WIN32)
+    return _getpid();
+#else
+    return ::getpid();
 #endif
 }
 
-bool lock_owner_is_gone([[maybe_unused]] const fs::path& lock) {
-#if defined(_WIN32)
-    return false;
-#else
+void record_lock_owner(const fs::path& lock) {
+    std::ofstream(lock / kOwnerName) << current_process_id() << '\n';
+}
+
+bool lock_owner_is_gone(const fs::path& lock) {
     long pid = 0;
     if (!(std::ifstream(lock / kOwnerName) >> pid) || pid <= 0) return false;
+#if defined(_WIN32)
+    const HANDLE process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, static_cast<DWORD>(pid));
+    if (process == nullptr) return GetLastError() == ERROR_INVALID_PARAMETER;
+    DWORD code = 0;
+    const bool gone = GetExitCodeProcess(process, &code) && code != STILL_ACTIVE;
+    CloseHandle(process);
+    return gone;
+#else
     return ::kill(static_cast<pid_t>(pid), 0) == -1 && errno == ESRCH;
 #endif
 }
@@ -389,7 +399,7 @@ std::optional<std::string> install_staged(const fs::path& staged_root, const fs:
     for (const std::string& name : names) {
         const fs::path installed = install_dir / name;
         if (!fs::exists(installed, ec)) continue;
-        const fs::path retired = retired_path(install_dir, previous, name);
+        const fs::path retired = retired_path(previous, name);
         fs::remove_all(retired, ec);
         if (auto error = move_recorded(installed, retired, done)) {
             undo_renames(done);
@@ -407,14 +417,6 @@ std::optional<std::string> install_staged(const fs::path& staged_root, const fs:
         }
     }
     return std::nullopt;
-}
-
-void remove_retired_executable([[maybe_unused]] const fs::path& install_dir) {
-#if defined(_WIN32)
-    std::error_code ignored;
-    fs::remove(install_dir / (executable_name() + std::string(kRetiredSuffix)), ignored);
-    fs::remove(install_dir / (core_executable_name() + std::string(kRetiredSuffix)), ignored);
-#endif
 }
 
 namespace {
@@ -507,7 +509,6 @@ UpdateResult update_now(const UpdatePolicy& policy) {
 
 int run_update_command() {
     const UpdatePolicy policy = policy_from_environment(current_executable().parent_path());
-    remove_retired_executable(policy.install_dir);
     const UpdateResult result = update_now(policy);
     std::cout << json::dump(result.to_json()) << '\n';
     return result.ok ? 0 : 1;
