@@ -36,9 +36,6 @@ jobs:
             ccache: true
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
-    concurrency:
-      group: build-${{ github.ref }}-${{ matrix.target }}
-      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
       - name: Version
@@ -82,9 +79,6 @@ jobs:
             preset: arm64-windows-release
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
-    concurrency:
-      group: build-${{ github.ref }}-${{ matrix.preset }}
-      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
       - name: Version

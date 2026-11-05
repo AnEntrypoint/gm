@@ -673,3 +673,10 @@ Witness, ctest -R gm_mcp_test -V: "9: bounded event: seq=7 next_contextChars=925
 - Tree difference: Node's built-in fetch serves data: URLs; the native leaf runs system curl with --proto =http,https, so data: and file: URLs both fail there with "request failed: fetch failed". That is why the Node witness used a data: URL and the native witness used https. The installed native MCP server loads leaves from /config/.gmnew/current/leaves, not from the workspace, so its live run_code gm.fetch exposes the cap only after a release update.
 - Not verified: the cap on the installed native build, Windows/macOS/arm curl behaviour, and a multi-byte UTF-8 code point split exactly at the cap boundary (takeUtf8Bytes stops before a code point that would exceed the cap).
 
+
+## Release builds no longer share a concurrency group (2026-11-05)
+
+- Eleven commits landed in about thirty minutes. Every build job in release.yml shared one concurrency group per target (`build-${{ github.ref }}-${{ matrix.target }}`) with cancel-in-progress false. GitHub keeps only one pending job per group, so older pending runs were cancelled; the tip run 42065947157 lost `build (macos-latest, arm64-macos-release, arm64-macos, true)` to a cancellation and publish was skipped, leaving latest at 661f70b-80.
+- The two build jobs have no concurrency block now. Each commit builds all six targets independently and publish stays serialized by the publish-latest group. The compare-API ordering check still lets only a build ahead of latest publish, so rapid pushes cannot publish an older build after a newer one.
+- This reverses the earlier cancel-in-progress false decision (DESIGN.md, release publish concurrency): with many parallel agents that setting cancels the very build that publish needs.
+
