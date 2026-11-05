@@ -8,6 +8,7 @@
 #include "gm/core_verbs.hpp"
 #include "gm/json.hpp"
 #include "gm/log.hpp"
+#include "../condense.hpp"
 
 namespace {
 
@@ -145,6 +146,18 @@ int main() {
 
         auto timed = verbs.call("run_shell", object_of({{"command", sleep_command(5)}, {"timeoutMs", 200}}));
         expect(text_of(timed, "error") == "timed out after 200 ms", "run_shell timeout: " + gm::json::dump(timed));
+
+        auto noise = std::string();
+        for (int i = 0; i < 400; ++i) noise += "progress line\n";
+        noise += "ERROR marker\n";
+        noise += "RESULT ok\n";
+        const auto condensed = gm::verbs::condense_output(noise);
+        expect(condensed.has_value(), "condense_output triggers on a long output");
+        expect(condensed->output.find("ERROR marker") != std::string::npos, "condense_output keeps errors");
+        expect(condensed->output.find("RESULT ok") != std::string::npos, "condense_output keeps the result");
+        expect(condensed->output.find("raw:true") != std::string::npos, "condense_output names the recovery path");
+        expect(condensed->dropped_lines > 300, "condense_output drops progress noise");
+        expect(!gm::verbs::condense_output("short\ntext\n").has_value(), "condense_output leaves small output alone");
 
         auto started = verbs.call("job_start", object_of({{"job", "quick"}, {"command", "echo from-job"}}));
         expect(ok_of(started) && text_of(started, "output").starts_with("started job quick (pid "), "job_start: " + gm::json::dump(started));

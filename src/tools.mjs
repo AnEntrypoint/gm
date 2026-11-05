@@ -11,6 +11,7 @@ import * as fetchModule from './fetch.mjs';
 import * as astModule from './code-ast.mjs';
 import * as wikiModule from './wiki-tools.mjs';
 import { failedOf, outputDigest, resultZone1, resultZone2 } from './compact.mjs';
+import { condenseOutput } from './condense.mjs';
 import * as reviewModule from './review-tools.mjs';
 
 // The leaf modules (src/hot-config.mjs) as they were at boot. A worker passes the modules of its current generation to createTools; the CLI
@@ -208,7 +209,9 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
       }
       if (args.background !== true || !background) {
         const timeoutMs = Math.min(Number(args.timeoutMs) || DEFAULT_TIMEOUT_MS, MAX_TIMEOUT_MS);
-        return runCommand(args.command, [], { cwd: root, timeoutMs, shell: true, signal: ctx?.signal });
+        const result = runCommand(args.command, [], { cwd: root, timeoutMs, shell: true, signal: ctx?.signal });
+        if (result && typeof result.then === 'function') return result.then((r) => condenseShell(r, args.raw === true));
+        return condenseShell(result, args.raw === true);
       }
       if (!JOB_NAME.test(args.job ?? '')) return { ok: false, error: 'a background job needs job: 1 to 64 letters, digits, _ or -' };
       const timeoutMs = Math.min(Number(args.timeoutMs) || DEFAULT_TIMEOUT_MS, MAX_JOB_TIMEOUT_MS);
@@ -642,6 +645,12 @@ function clipped(event) {
     shown = { seq: event.seq, kind: event.kind, truncated: text.slice(0, size) };
   }
   return shown;
+}
+
+function condenseShell(result, raw) {
+  if (raw || typeof result?.output !== 'string') return result;
+  const condensed = condenseOutput(result.output);
+  return condensed === null ? result : { ...result, ...condensed };
 }
 
 const LOGGED_REPLY_CHARS = 1000;

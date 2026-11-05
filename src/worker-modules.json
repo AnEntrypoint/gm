@@ -3,6 +3,7 @@
   "closure.mjs",
   "code-ast.mjs",
   "compact.mjs",
+  "condense.mjs",
   "connect.mjs",
   "exec.mjs",
   "fetch.mjs",

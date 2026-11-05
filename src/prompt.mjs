@@ -37,8 +37,8 @@ export const CLI_TOOLS = [
   { name: 'list_dir', description: 'entries of a directory; directories end with "/".', inputSchema: obj({ path: str }) },
   {
     name: 'run_shell',
-    description: 'run a shell command in the workspace (default timeout 60000 ms). Returns exitCode, signal and output. The command process group is killed when the command returns, so background work must use background true with a job name. Read the job files only after job_status shows exited. A job still running when the run ends is killed.',
-    inputSchema: obj({ command: str, timeoutMs: num, background: { type: 'boolean' }, job: str }, ['command']),
+    description: 'run a shell command in the workspace (default timeout 60000 ms). Returns exitCode, signal and output. Large output is condensed by default; raw:true returns the whole text. The command process group is killed when the command returns, so background work must use background true with a job name. Read the job files only after job_status shows exited. A job still running when the run ends is killed.',
+    inputSchema: obj({ command: str, timeoutMs: num, background: { type: 'boolean' }, job: str, raw: { type: 'boolean' } }, ['command']),
   },
   { name: 'job_status', description: 'state (running, exited or killed), exitCode and the last 20000 characters of output. With waitMs it polls every 100 ms until the job leaves running or waitMs passes (max 30000).', inputSchema: obj({ job: str, waitMs: num }, ['job']) },
   { name: 'query_log', description: 'JavaScript expression over "events", every log event so far (seq, t, mono, kind, ...). Returns JSON. Kinds: start, reply, action, result, refusal, skipped, parse_error, error, retry, job, pending, summary, end.', inputSchema: obj({ js: str }, ['js']) },

@@ -11,6 +11,7 @@
 #include <system_error>
 
 #include "core_internal.hpp"
+#include "condense.hpp"
 #include "engine.hpp"
 #include "gm/proc.hpp"
 
@@ -49,7 +50,7 @@ const std::vector<VerbInfo>& verb_table() {
     {"edit_file", "Replace old with new in a text file, inside or outside the workspace. old must occur once, unless replaceAll is true.", R"json({"type":"object","properties":{"path":{"type":"string"},"old":{"type":"string"},"new":{"type":"string"},"replaceAll":{"type":"boolean"}},"required":["path","old","new"]})json"},
     {"stat_file", "Type, size and mtime of a path, inside or outside the workspace, as JSON.", R"json({"type":"object","properties":{"path":{"type":"string"}},"required":["path"]})json"},
     {"list_dir", "List a directory, inside or outside the workspace. Directories end with \"/\".", R"json({"type":"object","properties":{"path":{"type":"string"}},"required":[]})json"},
-    {"run_shell", "Run a shell command in the workspace and wait for it. Default timeout 60000 ms. Its process group is killed when it returns, so background work must go through job_start.", R"json({"type":"object","properties":{"command":{"type":"string"},"timeoutMs":{"type":"number"}},"required":["command"]})json"},
+    {"run_shell", "Run a shell command in the workspace and wait for it. Default timeout 60000 ms. Its process group is killed when it returns, so background work must go through job_start. Large output is condensed by default; pass raw:true for the whole text, and compressed/originalChars/keptChars/droppedLines report what was dropped.", R"json({"type":"object","properties":{"command":{"type":"string"},"timeoutMs":{"type":"number"},"raw":{"type":"boolean"}},"required":["command"]})json"},
     {"job_start", "Start a shell command as a named background job and return at once. Poll it with job_status. timeoutMs is the job's deadline in milliseconds: default 300000, at most 3600000 (and never past the job lifetime, 3600000 by default). At the deadline the job's process group gets SIGTERM, then SIGKILL, and the job ends killed with reason timeout. job_status reports the deadline as timeoutMs.", R"json({"type":"object","properties":{"job":{"type":"string"},"command":{"type":"string"},"timeoutMs":{"type":"number"}},"required":["job","command"]})json"},
     {"job_status", "State (running, exited or killed), exitCode, signal and output of a job as plain fields, with logPath (the job output file). output is the last 20000 characters, with total (its length) and truncated; with offset, output is the 20000 characters from that offset, with next. waitMs polls until the job leaves running, at most 30000 ms. Offsets and lengths count characters, not lines.", R"json({"type":"object","properties":{"job":{"type":"string"},"waitMs":{"type":"number"},"offset":{"type":"number"}},"required":["job"]})json"},
     {"job_stop", "Stop a background shell job: its process group is killed, and the job ends killed with reason cancelled. The job event is logged before the answer. A job that already ended is an error result. stopBackground stops run_code bodies only.", R"json({"type":"object","properties":{"job":{"type":"string"}},"required":["job"]})json"},
@@ -465,6 +466,22 @@ struct CoreVerbs::Impl {
 #endif
         proc::Outcome outcome = proc::shell(line, root, timeout);
         if (!outcome.started) return failure("spawn of the shell failed");
+        const json::Value* raw = args.find("raw");
+        const bool bypass = raw != nullptr && raw->is_bool() && raw->as_bool();
+        const auto condense = [&](json::Value reply) {
+            if (bypass) return reply;
+            const json::Value* text = reply.find("output");
+            if (text == nullptr || !text->is_string()) return reply;
+            const auto condensed = gm::verbs::condense_output(text->as_string());
+            if (!condensed) return reply;
+            json::Value shown = reply;
+            shown.set("output", condensed->output);
+            shown.set("compressed", true);
+            shown.set("originalChars", json::Value(static_cast<double>(condensed->original_chars)));
+            shown.set("keptChars", json::Value(static_cast<double>(condensed->output.size())));
+            shown.set("droppedLines", json::Value(static_cast<double>(condensed->dropped_lines)));
+            return shown;
+        };
         std::string output = core::to_valid_utf8(outcome.out + outcome.err);
         if (utf16_length(output) > shell_output_cap) output = utf16_slice(output, 0, shell_output_cap);
         json::Value reply;
@@ -473,7 +490,7 @@ struct CoreVerbs::Impl {
             reply.set("timedOut", true);
             reply.set("error", "timed out after " + json::dump(json::Value(timeout_ms)) + " ms");
             reply.set("output", std::move(output));
-            return reply;
+            return condense(reply);
         }
         reply.set("ok", outcome.exit_code == 0);
         if (outcome.signal != 0) {
@@ -485,7 +502,7 @@ struct CoreVerbs::Impl {
             reply.set("signal", nullptr);
         }
         reply.set("output", std::move(output));
-        return reply;
+        return condense(reply);
     }
 
     json::Value job_start(const json::Value& args) {
