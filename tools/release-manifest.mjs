@@ -12,7 +12,7 @@ const { values } = parseArgs({
   },
 });
 
-const expected = ['x64-linux', 'arm64-linux', 'x64-macos', 'arm64-macos'];
+const expected = ['x64-linux', 'arm64-linux', 'x64-macos', 'arm64-macos', 'x64-windows', 'arm64-windows'];
 
 const archives = readdirSync(values.dir)
   .filter((file) => /^gmnew-.+\.(tar\.gz|zip)$/.test(file))

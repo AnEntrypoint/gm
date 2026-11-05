@@ -75,8 +75,10 @@ jobs:
         include:
           - os: windows-latest
             preset: x64-windows-release
+            target: x64-windows
           - os: windows-11-arm
             preset: arm64-windows-release
+            target: arm64-windows
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     steps:
@@ -96,9 +98,19 @@ jobs:
       - name: Test
         shell: bash
         run: ctest --test-dir build/${{ matrix.preset }} --output-on-failure -j "$(nproc 2>/dev/null || sysctl -n hw.ncpu)"
+      - name: Package
+        shell: bash
+        run: node tools/package.mjs --target ${{ matrix.target }} --build-dir build/${{ matrix.preset }} --out dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gmnew-${{ matrix.target }}
+          path: dist/gmnew-${{ matrix.target }}.*
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 1
 
   publish:
-    needs: build
+    needs: [build, build-windows]
     if: github.repository == 'AnEntrypoint/gm'
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -112,7 +124,15 @@ jobs:
         id: head
         run: |
           gh_retry() { for n in 1 2 3 4 5; do "$@" && return 0; echo "retry $n for $1" >&2; sleep $((n * 5)); done; return 1; }
-          published=$(gh api "repos/$RELEASE_REPO/git/ref/tags/latest" --jq .object.sha 2>/dev/null || true)
+          probe="$RUNNER_TEMP/latest-tag.sha"
+          probe_err="$RUNNER_TEMP/latest-tag.err"
+          read_latest_tag() {
+            if gh api "repos/$RELEASE_REPO/git/ref/tags/latest" --jq .object.sha > "$probe" 2> "$probe_err"; then return 0; fi
+            if grep -q 'HTTP 404' "$probe_err"; then : > "$probe"; return 0; fi
+            return 1
+          }
+          gh_retry read_latest_tag || { echo "cannot read the latest tag ref" >&2; cat "$probe_err" >&2; exit 1; }
+          published=$(cat "$probe")
           order=new
           if [ -n "$published" ]; then
             order=$(gh_retry gh api "repos/$RELEASE_REPO/compare/$published...$GITHUB_SHA" --jq .status) || { echo "cannot read the release order"; exit 1; }
@@ -136,15 +156,6 @@ jobs:
           pattern: gmnew-*
           path: dist
           merge-multiple: true
-      - name: Move latest tag
-        if: steps.head.outputs.current == 'true'
-        run: |
-          gh_retry() { for n in 1 2 3 4 5; do "$@" && return 0; echo "retry $n for $1" >&2; sleep $((n * 5)); done; return 1; }
-          if gh api "repos/$RELEASE_REPO/git/ref/tags/latest" >/dev/null 2>&1; then
-            gh_retry gh api -X PATCH "repos/$RELEASE_REPO/git/refs/tags/latest" -f sha="$GITHUB_SHA" -F force=true
-          else
-            gh_retry gh api -X POST "repos/$RELEASE_REPO/git/refs" -f ref=refs/tags/latest -f sha="$GITHUB_SHA"
-          fi
       - name: Version the archive names
         if: steps.head.outputs.current == 'true'
         shell: bash
@@ -169,7 +180,15 @@ jobs:
           gh_retry() { for n in 1 2 3 4 5; do "$@" && return 0; echo "retry $n for $1" >&2; sleep $((n * 5)); done; return 1; }
           notes="$RUNNER_TEMP/notes.md"
           printf 'Version: %s\nCommit: %s\nBuilt: %s\n' "$GMNEW_VERSION" "$GITHUB_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$notes"
-          if gh release view latest --repo "$RELEASE_REPO" >/dev/null 2>&1; then
+          release_state="$RUNNER_TEMP/release.state"
+          release_err="$RUNNER_TEMP/release.err"
+          read_latest_release() {
+            if gh release view latest --repo "$RELEASE_REPO" >/dev/null 2> "$release_err"; then echo exists > "$release_state"; return 0; fi
+            if grep -qiE 'HTTP 404|not found' "$release_err"; then echo missing > "$release_state"; return 0; fi
+            return 1
+          }
+          gh_retry read_latest_release || { echo "cannot read the latest release" >&2; cat "$release_err" >&2; exit 1; }
+          if [ "$(cat "$release_state")" = exists ]; then
             gh_retry gh release upload latest dist/gmnew-"$GMNEW_VERSION"-* --repo "$RELEASE_REPO" --clobber
           else
             gh_retry gh release create latest dist/gmnew-"$GMNEW_VERSION"-* --repo "$RELEASE_REPO" --title "latest $GMNEW_VERSION" --notes-file "$notes" --latest --prerelease=false
@@ -181,6 +200,23 @@ jobs:
           notes="$RUNNER_TEMP/notes.md"
           gh_retry gh release upload latest dist/manifest.json dist/SHA256SUMS --repo "$RELEASE_REPO" --clobber
           gh_retry gh release edit latest --repo "$RELEASE_REPO" --title "latest $GMNEW_VERSION" --notes-file "$notes" --latest --prerelease=false
+      - name: Move latest tag
+        if: steps.head.outputs.current == 'true'
+        run: |
+          gh_retry() { for n in 1 2 3 4 5; do "$@" && return 0; echo "retry $n for $1" >&2; sleep $((n * 5)); done; return 1; }
+          tag_probe="$RUNNER_TEMP/latest-tag.sha"
+          tag_err="$RUNNER_TEMP/latest-tag.err"
+          read_latest_tag() {
+            if gh api "repos/$RELEASE_REPO/git/ref/tags/latest" --jq .object.sha > "$tag_probe" 2> "$tag_err"; then return 0; fi
+            if grep -q 'HTTP 404' "$tag_err"; then : > "$tag_probe"; return 0; fi
+            return 1
+          }
+          gh_retry read_latest_tag || { echo "cannot read the latest tag ref" >&2; cat "$tag_err" >&2; exit 1; }
+          if [ -s "$tag_probe" ]; then
+            gh_retry gh api -X PATCH "repos/$RELEASE_REPO/git/refs/tags/latest" -f sha="$GITHUB_SHA" -F force=true
+          else
+            gh_retry gh api -X POST "repos/$RELEASE_REPO/git/refs" -f ref=refs/tags/latest -f sha="$GITHUB_SHA"
+          fi
       - name: Prune old builds
         if: steps.head.outputs.current == 'true'
         run: |

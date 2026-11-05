@@ -2,10 +2,25 @@ param([string]$McpConfig = '')
 
 $ErrorActionPreference = 'Stop'
 
+function Get-ReleaseFile {
+    param([string]$Uri, [string]$OutFile)
+    for ($attempt = 1; $attempt -le 4; $attempt++) {
+        try {
+            Invoke-WebRequest -UseBasicParsing -Uri $Uri -OutFile $OutFile
+            return
+        }
+        catch {
+            if ($attempt -eq 4) { throw }
+            Start-Sleep -Seconds $attempt
+        }
+    }
+}
+
 $releaseBase = if ($env:GMNEW_RELEASE_BASE) { $env:GMNEW_RELEASE_BASE } else { 'https://github.com/AnEntrypoint/gm/releases/download/latest' }
 $installRoot = Join-Path $env:USERPROFILE '.gmnew'
 $currentDir = Join-Path $installRoot 'current'
-$exeName = 'gmnew.exe'
+$exeNames = @('gm.exe', 'gm-core.exe')
+$exeName = 'gm.exe'
 
 $rawArchitecture = if ($env:PROCESSOR_ARCHITEW6432) { $env:PROCESSOR_ARCHITEW6432 } else { $env:PROCESSOR_ARCHITECTURE }
 $arch = switch ($rawArchitecture) {
@@ -20,7 +35,7 @@ $work = Join-Path ([System.IO.Path]::GetTempPath()) ([guid]::NewGuid().ToString(
 New-Item -ItemType Directory -Path $work | Out-Null
 try {
     $manifestPath = Join-Path $work 'manifest.json'
-    Invoke-WebRequest -UseBasicParsing -Uri "$releaseBase/manifest.json" -OutFile $manifestPath
+    Get-ReleaseFile -Uri "$releaseBase/manifest.json" -OutFile $manifestPath
     $manifest = Get-Content -Raw -LiteralPath $manifestPath | ConvertFrom-Json
 
     $asset = $manifest.assets.$target
@@ -28,7 +43,7 @@ try {
     if ($asset.file -notlike "gmnew-*-$target.zip") { throw "unexpected asset name for ${target}: $($asset.file)" }
 
     $archive = Join-Path $work $asset.file
-    Invoke-WebRequest -UseBasicParsing -Uri "$releaseBase/$($asset.file)" -OutFile $archive
+    Get-ReleaseFile -Uri "$releaseBase/$($asset.file)" -OutFile $archive
 
     $actualSha = (Get-FileHash -Algorithm SHA256 -LiteralPath $archive).Hash.ToLowerInvariant()
     $actualSize = (Get-Item -LiteralPath $archive).Length
@@ -40,7 +55,9 @@ try {
     try {
         Expand-Archive -LiteralPath $archive -DestinationPath $stage -Force
         $newDir = Join-Path $stage $package
-        if (-not (Test-Path -LiteralPath (Join-Path $newDir $exeName))) { throw "archive $($asset.file) does not contain $package\$exeName" }
+        foreach ($name in $exeNames) {
+            if (-not (Test-Path -LiteralPath (Join-Path $newDir $name))) { throw "archive $($asset.file) does not contain $package\$name" }
+        }
 
         $oldDir = Join-Path $installRoot ("previous-" + [guid]::NewGuid().ToString())
         $movedOld = $false
@@ -59,6 +76,16 @@ try {
     }
     finally {
         Remove-Item -LiteralPath $stage -Recurse -Force -ErrorAction SilentlyContinue
+    }
+
+    $statePath = Join-Path $currentDir '.gmnew-update.json'
+    if (-not (Test-Path -LiteralPath $statePath)) {
+        $state = [ordered]@{
+            checked_ms = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
+            etag = ''
+            version = [string]$manifest.version
+        }
+        Set-Content -LiteralPath $statePath -Value ($state | ConvertTo-Json -Compress) -Encoding ascii
     }
 
     $exe = Join-Path $currentDir $exeName

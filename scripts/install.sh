@@ -44,7 +44,7 @@ WORK="$(mktemp -d)"
 STAGE=""
 trap 'rm -rf "$WORK" "$STAGE"' EXIT
 
-curl -fsSL -o "$WORK/manifest.json" "$RELEASE_BASE/manifest.json" || die "cannot fetch $RELEASE_BASE/manifest.json"
+curl --retry 3 --retry-delay 1 --retry-all-errors -fsSL -o "$WORK/manifest.json" "$RELEASE_BASE/manifest.json" || die "cannot fetch $RELEASE_BASE/manifest.json"
 MANIFEST="$(tr -d ' \t\r\n' < "$WORK/manifest.json")"
 
 VERSION="$(printf '%s' "$MANIFEST" | sed -n 's/.*"version":"\([^"]*\)".*/\1/p')"
@@ -57,7 +57,7 @@ EXPECTED_SIZE="$3"
 case "$FILE" in gmnew-*-"$TARGET".tar.gz) ;; *) die "unexpected asset name for $TARGET: $FILE" ;; esac
 
 ARCHIVE="$WORK/$FILE"
-curl -fsSL -o "$ARCHIVE" "$RELEASE_BASE/$FILE" || die "cannot fetch $FILE"
+curl --retry 3 --retry-delay 1 --retry-all-errors -fsSL -o "$ARCHIVE" "$RELEASE_BASE/$FILE" || die "cannot fetch $FILE"
 
 if [ "$OS" = macos ]; then
     ACTUAL_SHA="$(shasum -a 256 "$ARCHIVE" | awk '{print $1}')"
@@ -87,6 +87,15 @@ if ! mv "$STAGE/$PACKAGE" "$CURRENT_DIR"; then
     die "cannot move the new build into $CURRENT_DIR"
 fi
 rm -rf "$OLD_DIR" "$STAGE"
+
+STATE="$CURRENT_DIR/.gmnew-update.json"
+if [ ! -e "$STATE" ]; then
+    [ -n "$VERSION" ] || die "manifest has no version"
+    case "$VERSION" in
+        *[!A-Za-z0-9._-]*) die "unexpected version in manifest: $VERSION" ;;
+    esac
+    printf '{"checked_ms":%s000,"etag":"","version":"%s"}\n' "$(date -u +%s)" "$VERSION" > "$STATE"
+fi
 
 EXE="$CURRENT_DIR/$EXE_NAME"
 printf 'installed gmnew %s (%s) at %s\n' "$VERSION" "$TARGET" "$EXE"
