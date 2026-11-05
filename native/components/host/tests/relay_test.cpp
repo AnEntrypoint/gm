@@ -54,9 +54,19 @@ bool eventually(Predicate predicate, std::chrono::milliseconds timeout) {
     return predicate();
 }
 
+std::vector<std::string> worker_argv(const char* sh_script, const char* mode) {
+#if defined(_WIN32)
+    (void)sh_script;
+    return {GMNEW_RELAY_WORKER, mode};
+#else
+    (void)mode;
+    return {"/bin/sh", "-c", sh_script};
+#endif
+}
+
 gm::host::RelayOptions echo_options(const fs::path& watched) {
     gm::host::RelayOptions options;
-    options.worker_argv = {"/bin/sh", "-c", "while IFS= read -r line; do printf '%s\\n' \"$line\"; done"};
+    options.worker_argv = worker_argv("while IFS= read -r line; do printf '%s\\n' \"$line\"; done", "echo");
     options.runtime_roots = {watched};
     options.poll = 50ms;
     options.retry_min = 100ms;
@@ -108,9 +118,8 @@ void drain_before_restart(const fs::path& root) {
     write_file(watched / "core.cpp", "int a;\n");
     HostSide host;
     auto options = echo_options(watched);
-    options.worker_argv = {"/bin/sh", "-c",
-                           "while IFS= read -r line; do case \"$line\" in *slow*) sleep 1;; esac; printf '%s\\n' "
-                           "\"$line\"; done"};
+    options.worker_argv = worker_argv(
+        "while IFS= read -r line; do case \"$line\" in *slow*) sleep 1;; esac; printf '%s\\n' \"$line\"; done", "slow");
     gm::host::Relay relay(options, [&](std::string_view line) { host.take(line); });
     relay.start();
     relay.host_line(R"({"jsonrpc":"2.0","id":7,"method":"slow"})");
@@ -129,8 +138,8 @@ void stuck_call_gets_retry_error(const fs::path& root) {
     write_file(watched / "core.cpp", "int a;\n");
     HostSide host;
     auto options = echo_options(watched);
-    options.worker_argv = {"/bin/sh", "-c",
-                           R"sh(while IFS= read -r line; do case "$line" in *hang*) sleep 3;; esac; printf '%s\n' "$line"; done)sh"};
+    options.worker_argv = worker_argv(
+        R"sh(while IFS= read -r line; do case "$line" in *hang*) sleep 3;; esac; printf '%s\n' "$line"; done)sh", "hang");
     options.drain_timeout = 300ms;
     gm::host::Relay relay(options, [&](std::string_view line) { host.take(line); });
     relay.start();
@@ -147,22 +156,35 @@ void stuck_call_gets_retry_error(const fs::path& root) {
 void binary_change_restarts_once(const fs::path& root) {
     const fs::path dir = root / "binary";
     fs::create_directories(dir / "leaves");
+#if defined(_WIN32)
+    const fs::path worker = dir / "worker.exe";
+    fs::copy_file(GMNEW_RELAY_WORKER, worker);
+#else
     const fs::path worker = dir / "worker.sh";
     const std::string first = R"sh(#!/bin/sh
 while IFS= read -r line; do printf '%s\n' "$line"; done
 )sh";
     write_file(worker, first);
     fs::permissions(worker, fs::perms::owner_all, fs::perm_options::replace);
+#endif
     HostSide host;
     auto options = echo_options(dir / "leaves");
     options.worker_argv = {worker.string()};
+#if defined(_WIN32)
+    options.worker_argv.push_back("echo");
+#endif
     gm::host::Relay relay(options, [&](std::string_view line) { host.take(line); });
     relay.start();
     relay.host_line(R"({"jsonrpc":"2.0","id":11,"method":"ping"})");
     check(host.wait_for_text(R"("id":11)", 3s), "a worker started from a script answers a call");
     const fs::path next = dir / "worker.next";
+#if defined(_WIN32)
+    fs::copy_file(GMNEW_RELAY_WORKER, next);
+    fs::rename(worker, dir / "worker.old");
+#else
     write_file(next, first + "\n");
     fs::permissions(next, fs::perms::owner_all, fs::perm_options::replace);
+#endif
     fs::rename(next, worker);
     check(eventually([&] { return relay.restarts() == 1 && relay.running(); }, 5s),
           "a new worker binary restarts the worker once");
