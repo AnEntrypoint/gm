@@ -6,6 +6,7 @@
 #include <cctype>
 #include <chrono>
 #include <cmath>
+#include <cstdint>
 #include <cstdio>
 #include <cstring>
 #include <memory>
@@ -34,6 +35,10 @@ constexpr int MAX_K = 50;
 constexpr int DEFAULT_LIMIT = 100;
 constexpr int MAX_LIMIT = 1000;
 constexpr std::size_t MAX_PATTERN_CHARS = 200;
+constexpr std::size_t MAX_MATCH_CHARS = 1024;
+constexpr std::size_t MAX_SCAN_FILES = 4096;
+constexpr std::uint64_t MAX_SCAN_BYTES = 32 * 1024 * 1024;
+constexpr long long SCAN_DEADLINE_MS = 10000;
 constexpr long long STAMP_SETTLE_MS = 3000;
 constexpr std::size_t BINARY_PROBE_BYTES = 8000;
 
@@ -100,6 +105,13 @@ std::string snippet(const std::string& text) {
     std::size_t cut = SNIPPET_CHARS;
     while (cut > 0 && (static_cast<unsigned char>(text[cut]) & 0xC0) == 0x80) --cut;
     return text.substr(0, cut) + " ...";
+}
+
+std::string match_prefix(const std::string& line) {
+    if (line.size() <= MAX_MATCH_CHARS) return line;
+    std::size_t cut = MAX_MATCH_CHARS;
+    while (cut > 0 && (static_cast<unsigned char>(line[cut]) & 0xC0) == 0x80) --cut;
+    return line.substr(0, cut);
 }
 
 bool is_dotenv(const std::string& shown) {
@@ -281,6 +293,23 @@ struct Scan {
     std::vector<std::string> found;
     std::size_t total = 0;
     long long next = -1;
+};
+
+struct ScanBudget {
+    long long deadline = 0;
+    std::size_t listed = 0;
+    std::size_t files = 0;
+    std::uint64_t bytes = 0;
+    bool walk_stopped = false;
+    bool scan_stopped = false;
+
+    void start() { deadline = now_ms() + SCAN_DEADLINE_MS; }
+    bool expired() const { return now_ms() >= deadline; }
+    bool hit() const { return walk_stopped || scan_stopped; }
+    std::string hint() const {
+        return "scan budget hit: stopped after " + std::to_string(files) + " files and " + std::to_string(bytes) +
+               " bytes; narrow the root or pass a path";
+    }
 };
 
 }
@@ -473,6 +502,9 @@ std::string Searcher::grep(const json::Value& args) {
     const json::Value* ignore = args.find("ignoreCase");
     bool ignore_case = ignore && ignore->is_bool() && ignore->as_bool();
 
+    ScanBudget budget;
+    budget.start();
+
     std::unique_ptr<Matcher> matches;
     try {
         matches = std::make_unique<Matcher>(pattern, mode, ignore_case);
@@ -498,11 +530,15 @@ std::string Searcher::grep(const json::Value& args) {
             names.push_back("");
         } else {
             std::vector<std::string> pending = {""};
-            while (!pending.empty()) {
+            while (!pending.empty() && !budget.walk_stopped) {
                 std::string dir = pending.back();
                 pending.pop_back();
                 std::error_code walk_ec;
                 for (const fs::directory_entry& entry : fs::directory_iterator(base / dir, walk_ec)) {
+                    if (budget.expired()) {
+                        budget.walk_stopped = true;
+                        break;
+                    }
                     std::string name = entry.path().filename().string();
                     std::string rel = dir.empty() ? name : dir + "/" + name;
                     std::error_code type_ec;
@@ -513,7 +549,12 @@ std::string Searcher::grep(const json::Value& args) {
                         if (skip) ++skipped_dirs;
                         else pending.push_back(rel);
                     } else if (entry.is_regular_file(type_ec)) {
+                        if (budget.listed >= MAX_SCAN_FILES) {
+                            budget.walk_stopped = true;
+                            break;
+                        }
                         names.push_back(rel);
+                        ++budget.listed;
                     }
                 }
             }
@@ -564,18 +605,29 @@ std::string Searcher::grep(const json::Value& args) {
         Scan result;
         std::size_t size = 0;
         for (const std::string& name : names) {
+            if (budget.scan_stopped || budget.files >= MAX_SCAN_FILES || budget.bytes >= MAX_SCAN_BYTES || budget.expired()) {
+                budget.scan_stopped = true;
+                break;
+            }
+            ++budget.files;
             fs::path at = name.empty() ? base : base / name;
             struct stat info;
             if (!stat_file(at, info) || !is_regular(info) || static_cast<std::uintmax_t>(info.st_size) > MAX_FILE_BYTES) continue;
             std::string data;
             if (!read_text(at, data) || looks_binary(data)) continue;
+            budget.bytes += data.size();
             std::string shown = show_relative ? name : generic(at);
             std::vector<std::string> lines = split_lines(data);
             for (std::size_t i = 0; i < lines.size(); ++i) {
-                if (!matcher(lines[i])) continue;
+                if (i % 256 == 0 && budget.expired()) {
+                    budget.scan_stopped = true;
+                    break;
+                }
+                std::string text = match_prefix(lines[i]);
+                if (!matcher(text)) continue;
                 ++result.total;
                 if (static_cast<long long>(result.total) <= offset || result.next >= 0) continue;
-                std::string row = shown + ":" + std::to_string(i + 1) + " " + shown_text(shown, lines[i]);
+                std::string row = shown + ":" + std::to_string(i + 1) + " " + shown_text(shown, text);
                 if (result.found.size() >= static_cast<std::size_t>(limit) || size + row.size() > OUTPUT_PAGE) {
                     result.next = static_cast<long long>(result.total) - 1;
                     continue;
@@ -583,6 +635,7 @@ std::string Searcher::grep(const json::Value& args) {
                 size += row.size() + 1;
                 result.found.push_back(std::move(row));
             }
+            if (budget.scan_stopped) break;
         }
         return result;
     };
@@ -631,6 +684,8 @@ std::string Searcher::grep(const json::Value& args) {
             }
         }
     }
+
+    if (budget.hit()) hints.push_back(budget.hint());
 
     std::string output;
     std::string joined;

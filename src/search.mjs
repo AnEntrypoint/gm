@@ -20,6 +20,10 @@ const MAX_K = 50;
 const DEFAULT_LIMIT = 100;
 const MAX_LIMIT = 1000;
 const MAX_PATTERN_CHARS = 200;
+const MAX_MATCH_CHARS = 1024;
+const MAX_SCAN_FILES = 4096;
+const MAX_SCAN_BYTES = 32 * 1024 * 1024;
+const SCAN_DEADLINE_MS = 10000;
 const MODES = ['literal', 'regex', 'word'];
 const MODE_ALIASES = new Map([['content', 'literal']]);
 const REGEX_CHARS = /[.|()[\]{}*+?^$\\]/;
@@ -158,6 +162,9 @@ function searcherFor({ root, confine }) {
       } catch (err) {
         return fail(`bad pattern: ${err.message}`);
       }
+      const budget = { listed: 0, files: 0, bytes: 0, deadline: Date.now() + SCAN_DEADLINE_MS, walkStopped: false, scanStopped: false };
+      const budgetHit = () => budget.walkStopped || budget.scanStopped;
+      const budgetHint = () => `scan budget hit: stopped after ${budget.files} files and ${budget.bytes} bytes; narrow the root or pass a path`;
       const scope = resolve(root, path ?? '.');
       if ((await lstat(scope).catch(() => null)) === null) return fail(`no such path: ${path}`);
       const inside = within(root, scope);
@@ -166,7 +173,7 @@ function searcherFor({ root, confine }) {
       const base = listing.error ? scope : root;
       const under = relative(root, scope);
       const all = coverage === 'all';
-      const walked = listing.error ? await walkFiles(scope, all, vendor) : null;
+      const walked = listing.error ? await walkFiles(scope, all, vendor, budget) : null;
       let names;
       if (walked !== null) {
         names = walked.paths;
@@ -185,22 +192,34 @@ function searcherFor({ root, confine }) {
         let size = 0;
         let next = null;
         for (const name of names) {
+          if (budget.scanStopped || budget.files >= MAX_SCAN_FILES || budget.bytes >= MAX_SCAN_BYTES || budgetExpired(budget)) {
+            budget.scanStopped = true;
+            break;
+          }
+          budget.files += 1;
           const at = join(base, name);
-          const lines = await readLines(at, inside);
-          if (lines === null) continue;
+          const read = await readLines(at, inside);
+          if (read === null) continue;
+          budget.bytes += read.bytes;
           const shown = inside && confine !== null ? relative(root, at).split(sep).join('/') : at;
-          lines.forEach((text, i) => {
-            if (!matchesLine(text)) return;
+          for (let i = 0; i < read.lines.length; i += 1) {
+            if (i % 256 === 0 && budgetExpired(budget)) {
+              budget.scanStopped = true;
+              break;
+            }
+            const text = matchPrefix(read.lines[i]);
+            if (!matchesLine(text)) continue;
             total += 1;
-            if (total <= offset || next !== null) return;
+            if (total <= offset || next !== null) continue;
             const row = `${shown}:${i + 1} ${shownText(shown, text)}`;
             if (found.length >= limit || size + row.length > OUTPUT_PAGE) {
               next = total - 1;
-              return;
+              continue;
             }
             found.push(row);
             size += row.length + 1;
-          });
+          }
+          if (budget.scanStopped) break;
         }
         return { found, total, next };
       };
@@ -220,6 +239,7 @@ function searcherFor({ root, confine }) {
       const footer = [`(${total} matches; showing ${found.length ? offset : 0} to ${offset + found.length}; ${next === null ? 'no more' : `next offset ${next}`})`];
       const skipped = all || total > 0 ? null : walked !== null ? walkSkipHint(walked.skippedDirs) : await skippedHint(listing, under, vendor);
       if (skipped !== null) hints.push(skipped);
+      if (budgetHit()) hints.push(budgetHint());
       return { ok: true, files: source, output: [...found, ...footer].join('\n'), ...(hints.length ? { hint: hints.join(' | ') } : {}) };
     },
   };
@@ -292,7 +312,7 @@ function searcherFor({ root, confine }) {
     if (!info.isFile() || info.size > MAX_FILE_BYTES) return null;
     const buffer = await readFile(target.path);
     if (buffer.subarray(0, 8000).includes(0)) return null;
-    return buffer.toString('utf8').split('\n').map((raw) => (raw.endsWith('\r') ? raw.slice(0, -1) : raw));
+    return { bytes: info.size, lines: buffer.toString('utf8').split('\n').map((raw) => (raw.endsWith('\r') ? raw.slice(0, -1) : raw)) };
   }
 
   async function loadFile(rel, known) {
@@ -343,12 +363,16 @@ async function listedFiles(root, listing) {
   return { paths: walked.paths.map((rel) => (under === '' ? rel : `${under}/${rel}`)) };
 }
 
-async function walkFiles(base, all, vendor) {
+async function walkFiles(base, all, vendor, budget = null) {
   if ((await lstat(base).catch(() => null))?.isFile()) return { paths: [''], skippedDirs: 0 };
   const paths = [];
   let skippedDirs = 0;
   const pending = [''];
-  while (pending.length > 0) {
+  while (pending.length > 0 && !budget?.walkStopped) {
+    if (budget && budgetExpired(budget)) {
+      budget.walkStopped = true;
+      break;
+    }
     const dir = pending.pop();
     let entries;
     try {
@@ -357,13 +381,22 @@ async function walkFiles(base, all, vendor) {
       continue;
     }
     for (const entry of entries) {
+      if (budget && budgetExpired(budget)) {
+        budget.walkStopped = true;
+        break;
+      }
       const rel = dir === '' ? entry.name : `${dir}/${entry.name}`;
       if (entry.isDirectory()) {
         if (STATE_DIRS.has(entry.name)) continue;
         if (!all && skippedDirectory(entry.name, vendor)) skippedDirs += 1;
         else pending.push(rel);
       } else if (entry.isFile()) {
+        if (budget && budget.listed >= MAX_SCAN_FILES) {
+          budget.walkStopped = true;
+          break;
+        }
         paths.push(rel);
+        if (budget) budget.listed += 1;
       }
     }
   }
@@ -490,6 +523,17 @@ function escapeRegex(text) {
 
 function snippet(text) {
   return text.length <= SNIPPET_CHARS ? text : `${text.slice(0, SNIPPET_CHARS)} ...`;
+}
+
+function matchPrefix(text) {
+  if (text.length <= MAX_MATCH_CHARS) return text;
+  let cut = MAX_MATCH_CHARS;
+  while (cut > 0 && (text.charCodeAt(cut) & 0xfc00) === 0xdc00) cut -= 1;
+  return text.slice(0, cut);
+}
+
+function budgetExpired(budget) {
+  return Date.now() >= budget.deadline;
 }
 
 function isDotenv(shown) {

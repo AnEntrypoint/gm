@@ -190,6 +190,28 @@ int main() {
     check(concurrent_failures.load() == 0, "concurrent search and grep on one verb table all succeed: " + std::to_string(concurrent_failures.load()) + " failures");
     fs::remove_all(concurrent);
 
+    fs::path wide = fs::temp_directory_path() / ("gm_search_wide_" + std::to_string(std::rand()));
+    fs::remove_all(wide);
+    write(wide / "hit.txt", "npm i install-everything\n");
+    write(wide / "long.txt", "install" + std::string(999000, 'a') + "\n");
+    gm::search::Searcher wide_searcher(wide);
+    Value alternating = parse(wide_searcher.grep(Value(gm::json::Object{{"pattern", "npm i|bun i|install.*gm|gmnew install|install --"}, {"limit", 6}})));
+    check(alternating.find("ok") && alternating.find("ok")->as_bool(), "the exact alternating pattern survives a 999000-character line: " + output_of(alternating));
+    check(output_of(alternating).find("hit.txt:1 npm i install-everything") != std::string::npos, "the short hit is still reported: " + output_of(alternating));
+    check(output_of(alternating).size() < 300, "a long line is truncated in the reply: " + std::to_string(output_of(alternating).size()));
+    check(hint_of(alternating).find("no literal match; matched as regex") != std::string::npos, "the literal fallback still runs: " + hint_of(alternating));
+    fs::remove_all(wide);
+
+    fs::path bulk = fs::temp_directory_path() / ("gm_search_bulk_" + std::to_string(std::rand()));
+    fs::remove_all(bulk);
+    for (int i = 0; i < 40; ++i) write(bulk / ("bulk" + std::to_string(i) + ".txt"), std::string(999000, 'a'));
+    gm::search::Searcher bulk_searcher(bulk);
+    Value bounded = parse(bulk_searcher.grep(Value(gm::json::Object{{"pattern", "needle_not_here"}})));
+    check(bounded.find("ok") && bounded.find("ok")->as_bool(), "a root past the work budget returns normally: " + output_of(bounded));
+    check(hint_of(bounded).find("scan budget hit: stopped after") != std::string::npos, "the work budget is reported in the hint: " + hint_of(bounded));
+    check(output_of(bounded).rfind("(0 matches", 0) == 0, "the budget hit keeps the reply footer: " + output_of(bounded));
+    fs::remove_all(bulk);
+
     fs::remove_all(dir);
     if (failures == 0) std::cout << "search tests passed\n";
     return failures == 0 ? 0 : 1;
