@@ -178,11 +178,18 @@ const handlers = {
   git_status: (dir) => git(dir, ['status', '--porcelain=v1', '--branch']),
   git_rm: withPaths((dir, args) => git(dir, ['rm', ...args])),
   git_add: withPaths((dir, args) => git(dir, ['add', ...args])),
-  git_commit: (dir, { message, paths: list }) => {
+  git_commit: (dir, { message, paths: list, author }) => {
     if (typeof message !== 'string' || message.trim() === '') return fail('message must be a non-empty string');
     const scope = pathArgs(dir, list);
     if (scope.error) return fail(scope.error);
-    const result = git(dir, ['commit', '-m', message, ...scope.args]);
+    if (author !== undefined && (typeof author !== 'string' || author.trim() === '' || /[<>\r\n]/.test(author))) return fail('author must be a name without <, > or line breaks; the configured git email is kept');
+    const authorArgs = [];
+    if (author !== undefined) {
+      const email = gitIn(dir, ['config', 'user.email'], CHECK_TIMEOUT_MS);
+      if (!email.ok || email.output.trim() === '') return fail('author needs user.email set in this repository');
+      authorArgs.push(`--author=${author.trim()} <${email.output.trim()}>`);
+    }
+    const result = git(dir, ['commit', ...authorArgs, '-m', message, ...scope.args]);
     if (result.ok) {
       const head = gitIn(dir, ['rev-parse', '--short', 'HEAD'], CHECK_TIMEOUT_MS);
       host.logAppend({ kind: 'commit', fields: { sha: head.ok ? head.output.trim() : null, message: message.split('\n')[0], paths: scope.args.slice(1) } });
@@ -217,7 +224,7 @@ const DESCRIPTIONS = {
   git_status: ['Working tree status: the branch and the changed paths (porcelain v1).', scoped()],
   git_add: ['Stage the given workspace paths. Each path is explicit; "." is refused.', scoped({ paths }, ['paths'])],
   git_rm: ['Remove the given workspace paths from the disk and the index, with git rm, so the removal is staged. Each path is explicit; "." is refused. Commit it with git_commit.', scoped({ paths }, ['paths'])],
-  git_commit: ['Commit only the given paths, with the message. Stage new files with git_add first.', scoped({ message: str, paths }, ['message', 'paths'])],
+  git_commit: ['Commit only the given paths, with the message. Stage new files with git_add first. author, when given, is the author name; the repository user.email is kept.', scoped({ message: str, paths, author: str }, ['message', 'paths'])],
   git_push: ['Push main to origin and set its upstream. Refused unless the current branch is main.', scoped()],
   git_log: ['The last count commits, one line each, optionally only for one path (count 1 to 200, default 20).', scoped({ count: { type: 'number' }, path: str })],
   git_diff: ['Diff of the given paths (default: all), or of the staged index when staged is true.', scoped({ paths, staged: { type: 'boolean' } })],
