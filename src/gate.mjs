@@ -11,17 +11,13 @@ import { wikiCheck } from './wiki.mjs';
 import { skillCheck } from './skills.mjs';
 import { connectCheck } from './connect.mjs';
 
-// The commit gate. git_commit runs these checks before it commits, with no CI and no test files. A failed check refuses
-// the commit, and every check reports its result and its time in the commit's log event.
 const SCRATCH = join(tmpdir(), 'gm-scratch', 'gm');
 const KEEP = join(SCRATCH, 'KEEP');
 const DOCS = ['DESIGN.md', 'AGENTS.md', 'README.md'];
 const SOURCE = /\.(?:mjs|js|cjs)$/;
 const NODE_TIMEOUT_MS = 20000;
+const SYNTAX_CONCURRENCY = 8;
 const SMOKE_TIMEOUT_MS = 60000;
-// gm's own checks read gm's files: its docs, its skill, its relay and its smoke run. They run only in a gm checkout. In any
-// other workspace they are not run, and notCovered names them, so a commit there is not refused for files it never had. The checkout is
-// recognised by the package name, which a deleted file cannot change, so a damaged gm checkout still fails its own checks.
 const OWN_NAME = 'gm';
 const OWN_CHECKS = ['ascii', 'docs', 'sources', 'wiki', 'skills', 'connect', 'workers', 'prompt', 'smoke'];
 const WORKER_ENTRY = 'mcp.mjs';
@@ -29,17 +25,14 @@ const WORKER_LIST = 'src/worker-modules.json';
 const MODULE_PATH = /^\.\/[\w.-]+\.mjs$/;
 const SESSION_PROMPT = 'we want every possible approach to maximizing the usefulness kept whole, every word of it';
 
-// What the gate does not check. Every git_commit result and its commit event carry this list, so a pass is not read as more
-// than it is. Any gap that survives the checks is recorded here, rather than hidden.
 export const NOT_COVERED = [
   'semantic correctness of the change: the gate parses and runs the code, and it does not judge what the change means',
   'behaviour the smoke run does not exercise: the smoke run is one scripted task, plus a one-step negative control',
   'doc content beyond path existence: the docs check finds the repo paths, not whether a claim in the docs is true',
-  'CI: none is configured, and no CI result is read',
+  'CI: this gate does not read CI results from .github/workflows/release.yml or .github/workflows/arm-diagnose.yml',
+  'test suites: ctest, the parity harness and the Node leaf tests are not run by this gate',
 ];
 
-// scope names the paths of the commit. In a gm checkout the syntax step checks every tracked module. In another workspace it checks only
-// the modules the commit names: the rest of that tree is not gm's to judge, and its files may hold other code, such as evidence files.
 export async function runGate(root, scope = null) {
   const own = isOwnCheckout(root);
   const checks = [];
@@ -72,7 +65,6 @@ function isOwnCheckout(root) {
   }
 }
 
-// A check that throws is a failed check with its message, not an error out of the gate, so a commit is refused with the reason.
 async function timed(name, run) {
   const started = Date.now();
   try {
@@ -96,11 +88,17 @@ function isPlainFile(path) {
   }
 }
 
-// scope is null for the whole tree, or the paths of a commit, where a file is in scope when it is one of them or lies under one.
 async function syntaxCheck(root, scope) {
   const modules = trackedFiles(root).filter((file) => SOURCE.test(file));
   const files = scope === null ? modules : modules.filter((file) => scope.some((rel) => file === rel || file.startsWith(`${rel}/`)));
-  const runs = await Promise.all(files.map((file) => runCommand(process.execPath, ['--check', file], { cwd: root, timeoutMs: NODE_TIMEOUT_MS })));
+  const runs = new Array(files.length);
+  let next = 0;
+  await Promise.all(Array.from({ length: Math.min(SYNTAX_CONCURRENCY, files.length) }, async () => {
+    while (next < files.length) {
+      const index = next++;
+      runs[index] = await runCommand(process.execPath, ['--check', files[index]], { cwd: root, timeoutMs: NODE_TIMEOUT_MS });
+    }
+  }));
   const bad = files.filter((_, i) => !runs[i].ok);
   return bad.length ? { ok: false, detail: `syntax errors in ${bad.join(', ')}` } : { ok: true, detail: `${files.length} modules parse` };
 }
@@ -119,8 +117,6 @@ function asciiCheck(root) {
   return bad.length ? { ok: false, detail: `non-ASCII in ${bad.join(', ')}` } : { ok: true, detail: `${count} text files are ASCII` };
 }
 
-// A backticked token is a repo path when its first segment is a top-level name in the index. Runtime directories,
-// placeholders, URLs, method names and absolute paths are not repo paths. A trailing :line is removed first.
 function docCheck(root) {
   const index = trackedFiles(root);
   const indexed = new Set(index);
@@ -156,9 +152,6 @@ function isRepoPath(token, tops) {
   return token.includes('/') && tops.has(token.split('/')[0]);
 }
 
-// The modules the worker loads, from the import graph of src/mcp.mjs. It follows static imports, literal import() calls and the module paths in
-// string literals (new URL and register entries). The leaves loader in src/mcp.mjs is import(`./${file}`) over RELOADABLE, so that template
-// adds RELOADABLE; the same template anywhere else is an error. An import() of a project file (src/body-worker.mjs) is not a module of src/.
 export async function workerModules(root) {
   const { parse } = createRequire(import.meta.url)('acorn');
   const graph = new Set();
@@ -188,7 +181,6 @@ function importsIn(node, file, found = []) {
   return found;
 }
 
-// The checked-in list must equal the graph. A module the graph reaches and the list lacks would not restart the worker when it changes.
 async function workersCheck(root) {
   const graph = await workerModules(root);
   const listed = JSON.parse(readFileSync(join(root, WORKER_LIST), 'utf8'));
@@ -219,8 +211,6 @@ async function promptCheck(root) {
   }
 }
 
-// The smoke run must finish. The negative control runs the same task with one step, so it must stop at max_steps.
-// Both run in a scratch workspace that is removed afterwards.
 async function smokeCheck(root) {
   const dir = join(SCRATCH, 'gate-smoke', `run-${Date.now()}`);
   mkdirSync(join(dir, 'smoke'), { recursive: true });

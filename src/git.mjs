@@ -1,5 +1,5 @@
 import { statSync } from 'node:fs';
-import { relative, resolve } from 'node:path';
+import { relative, resolve, sep } from 'node:path';
 import { runCommand } from './exec.mjs';
 import { errorTypeOf, retrying } from './retry.mjs';
 import { resultZone1, resultZone2 } from './compact.mjs';
@@ -64,18 +64,19 @@ export function createGitVerbs({ root, confine, log }) {
       },
     });
 
-  async function repoAt(cwd) {
-    if (cwd === undefined) return { dir: root };
-    if (typeof cwd !== 'string' || cwd === '') return { error: 'cwd must be a non-empty path' };
-    const dir = resolve(root, cwd);
-    if (!isDirectory(dir)) return { error: `no such directory: ${cwd}` };
+  async function repoAt(cwd, withTop = false) {
+    const dir = cwd === undefined ? root : typeof cwd !== 'string' || cwd === '' ? null : resolve(root, cwd);
+    if (dir === null) return { error: 'cwd must be a non-empty path' };
+    if (cwd !== undefined && !isDirectory(dir)) return { error: `no such directory: ${cwd}` };
+    if (cwd === undefined && !withTop) return { dir };
     const inside = await gitIn(dir, ['rev-parse', '--show-toplevel'], CHECK_TIMEOUT_MS);
-    return inside.ok ? { dir } : { error: `cwd ${cwd} is not inside a git repository` };
+    if (!inside.ok) return { error: cwd === undefined ? 'workspace is not inside a git repository' : `cwd ${cwd} is not inside a git repository` };
+    return withTop ? { dir, top: resolve(dir, inside.output.trim()) } : { dir };
   }
 
-  const inRepo = (run) => async (args = {}) => {
-    const where = await repoAt(args.cwd);
-    return where.error === undefined ? run(where.dir, args) : fail(where.error);
+  const inRepo = (run, withTop = false) => async (args = {}) => {
+    const where = await repoAt(args.cwd, withTop);
+    return where.error === undefined ? run(where.dir, args, where.top) : fail(where.error);
   };
 
   function pathArgs(dir, list) {
@@ -140,13 +141,15 @@ export function createGitVerbs({ root, confine, log }) {
       return scope.error ? fail(scope.error) : git(dir, ['add', ...scope.args]);
     }),
 
-    git_commit: inRepo(async (dir, args) => {
+    git_commit: inRepo(async (dir, args, top) => {
       const { message, paths } = args;
       if (typeof message !== 'string' || message.trim() === '') return fail('message must be a non-empty string');
       const scope = pathArgs(dir, paths);
       if (scope.error) return fail(scope.error);
       const { runGate } = await import('./gate.mjs');
-      const gate = await runGate(dir, scope.args.slice(1));
+      const scopeRels = scope.args.slice(1);
+      const gateScope = scopeRels.map((rel) => relative(top, resolve(dir, rel)).split(sep).join('/'));
+      const gate = await runGate(top, gateScope);
       if (!gate.ok) {
         const reasons = gate.checks.filter((check) => !check.ok).map((check) => `${check.name}: ${check.detail}`);
         return { ok: false, error: `refused: the commit gate failed: ${reasons.join('; ')}`, gate: gate.checks, notCovered: gate.notCovered };
@@ -157,10 +160,10 @@ export function createGitVerbs({ root, confine, log }) {
       const result = verbOf('commit', await runCommand('git', ['commit', '-m', message, ...scope.args], { cwd: dir, timeoutMs: GIT_TIMEOUT_MS, env }));
       if (result.ok) {
         const head = await gitIn(dir, ['rev-parse', '--short', 'HEAD'], CHECK_TIMEOUT_MS);
-        log.append('commit', { sha: head.ok ? head.output.trim() : null, message: message.split('\n')[0], paths: scope.args.slice(1), gate: gate.checks, notCovered: gate.notCovered });
+        log.append('commit', { sha: head.ok ? head.output.trim() : null, message: message.split('\n')[0], paths: scopeRels, gate: gate.checks, notCovered: gate.notCovered });
       }
       return { ...result, gate: gate.checks, notCovered: gate.notCovered };
-    }),
+    }, true),
 
     git_push: inRepo(async (dir) => {
       const branchStart = log.now();
