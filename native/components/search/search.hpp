@@ -3,6 +3,7 @@
 #include <filesystem>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <string_view>
 #include <vector>
 
@@ -23,6 +24,7 @@ public:
     json::Value call(std::string_view name, const json::Value& args) override;
 
 private:
+    std::mutex mutex_;
     std::filesystem::path workspace_;
     std::map<std::filesystem::path, std::unique_ptr<search::Searcher>> searchers_;
 };

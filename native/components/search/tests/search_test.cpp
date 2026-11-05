@@ -1,8 +1,12 @@
+#include <atomic>
+#include <chrono>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <string>
+#include <thread>
+#include <vector>
 
 #include "gm/json.hpp"
 #include "gm/proc.hpp"
@@ -57,14 +61,26 @@ int main() {
     write(dir / "ignored.log", "needle_in_ignored\n");
     write(dir / "loose.txt", "needle_loose\n");
     write(dir / "blob.bin", std::string("needle\0bin\n", 11));
+    write(dir / ".env", "TOGETHERAI=dummy_not_a_real_key_12345\n");
+    write(dir / ".env.local", "LOCAL_ALIAS=dummy_not_a_real_key_67890\n");
     gm::proc::run({"git", "init", "-q"}, dir);
-    gm::proc::run({"git", "add", "-f", "a.txt", "src", ".gitignore", "node_modules", "blob.bin"}, dir);
+    gm::proc::run({"git", "add", "-f", "a.txt", "src", ".gitignore", "node_modules", "blob.bin", ".env", ".env.local"}, dir);
 
     gm::search::Searcher searcher(dir);
 
     Value ranked = parse(searcher.search(Value(gm::json::Object{{"query", "waves"}})));
     check(ranked.find("ok") && ranked.find("ok")->as_bool(), "search ok");
     check(output_of(ranked).rfind("src/planner.js:1 ", 0) == 0, "search ranks the file with the term first: " + output_of(ranked));
+
+    Value env_grep = parse(searcher.grep(Value(gm::json::Object{{"pattern", "TOGETHERAI"}})));
+    check(output_of(env_grep).find(".env:1 TOGETHERAI=<redacted>") != std::string::npos, "grep masks a .env value: " + output_of(env_grep));
+    check(output_of(env_grep).find("dummy_not_a_real_key_12345") == std::string::npos, "grep does not print a .env value");
+    Value env_local_grep = parse(searcher.grep(Value(gm::json::Object{{"pattern", "LOCAL_ALIAS"}})));
+    check(output_of(env_local_grep).find(".env.local:1 LOCAL_ALIAS=<redacted>") != std::string::npos, "grep masks a .env.local value: " + output_of(env_local_grep));
+    check(output_of(env_local_grep).find("dummy_not_a_real_key_67890") == std::string::npos, "grep does not print a .env.local value");
+    Value env_search = parse(searcher.search(Value(gm::json::Object{{"query", "togetherai"}, {"k", 5}})));
+    check(output_of(env_search).find(".env:1 ") != std::string::npos && output_of(env_search).find("TOGETHERAI=<redacted>") != std::string::npos, "search masks a .env value: " + output_of(env_search));
+    check(output_of(env_search).find("dummy_not_a_real_key_12345") == std::string::npos, "search does not print a .env value");
 
     Value literal = parse(searcher.grep(Value(gm::json::Object{{"pattern", "plain text"}})));
     check(output_of(literal).find("a.txt:2 plain text") != std::string::npos, "grep literal");
@@ -137,6 +153,42 @@ int main() {
     Value plain_empty = parse(gm::search::Searcher(plain / "empty").search(Value(gm::json::Object{{"query", "waves"}})));
     check(plain_empty.find("ok") && !plain_empty.find("ok")->as_bool(), "search refuses a folder with no files");
     fs::remove_all(plain);
+
+    fs::path stable = fs::temp_directory_path() / ("gm_search_stable_" + std::to_string(std::rand()));
+    fs::remove_all(stable);
+    write(stable / "stable.txt", "guest frame peer frames stall tick 810 rotation hero\n");
+    gm::proc::run({"git", "init", "-q"}, stable);
+    gm::proc::run({"git", "add", "-A"}, stable);
+    std::this_thread::sleep_for(std::chrono::milliseconds(3100));
+    gm::search::Searcher stable_searcher(stable);
+    Value first = parse(stable_searcher.search(Value(gm::json::Object{{"query", "guest rotation"}})));
+    Value again = parse(stable_searcher.search(Value(gm::json::Object{{"query", "guest rotation"}})));
+    check(output_of(first).find("stable.txt:1 ") != std::string::npos, "first search on a settled tree ranks the line: " + output_of(first));
+    check(output_of(again) == output_of(first), "a cached index stays valid on a second search: " + output_of(again));
+    fs::remove_all(stable);
+
+    fs::path concurrent = fs::temp_directory_path() / ("gm_search_concurrent_" + std::to_string(std::rand()));
+    fs::remove_all(concurrent);
+    for (int i = 0; i < 6; ++i)
+        write(concurrent / ("root" + std::to_string(i)) / "doc.txt", "guest frame peer frames stall tick 810 rotation hero\n");
+    gm::proc::run({"git", "init", "-q"}, concurrent);
+    gm::proc::run({"git", "add", "-A"}, concurrent);
+    gm::SearchVerbs shared(concurrent);
+    std::atomic<int> concurrent_failures = 0;
+    std::vector<std::thread> threads;
+    for (int t = 0; t < 8; ++t) {
+        threads.emplace_back([&, t] {
+            for (int i = 0; i < 8; ++i) {
+                std::string root = "root" + std::to_string((t + i) % 6);
+                Value grepped = shared.call("grep", Value(gm::json::Object{{"pattern", "guest"}, {"root", root}}));
+                Value ranked = shared.call("search", Value(gm::json::Object{{"query", "guest rotation"}, {"root", root}}));
+                if (!grepped.find("ok") || !grepped.find("ok")->as_bool() || !ranked.find("ok") || !ranked.find("ok")->as_bool()) ++concurrent_failures;
+            }
+        });
+    }
+    for (std::thread& thread : threads) thread.join();
+    check(concurrent_failures.load() == 0, "concurrent search and grep on one verb table all succeed: " + std::to_string(concurrent_failures.load()) + " failures");
+    fs::remove_all(concurrent);
 
     fs::remove_all(dir);
     if (failures == 0) std::cout << "search tests passed\n";

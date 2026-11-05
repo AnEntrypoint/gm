@@ -37,6 +37,7 @@ std::vector<VerbInfo> SearchVerbs::list() const {
 }
 
 json::Value SearchVerbs::call(std::string_view name, const json::Value& args) {
+    std::lock_guard<std::mutex> lock(mutex_);
     std::vector<std::string> takes;
     if (name == "search") takes = {"query", "k"};
     else if (name == "grep") takes = {"pattern", "path", "mode", "scope", "ignoreCase", "limit", "offset", "vendor"};

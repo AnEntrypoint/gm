@@ -102,6 +102,19 @@ std::string snippet(const std::string& text) {
     return text.substr(0, cut) + " ...";
 }
 
+bool is_dotenv(const std::string& shown) {
+    std::size_t slash = shown.find_last_of("/\\");
+    std::string name = lower_ascii(slash == std::string::npos ? shown : shown.substr(slash + 1));
+    return name == ".env" || name.starts_with(".env.");
+}
+
+std::string shown_text(const std::string& shown, const std::string& line) {
+    if (!is_dotenv(shown)) return snippet(line);
+    std::size_t equal = line.find('=');
+    if (equal == std::string::npos) return "<redacted>";
+    return snippet(line.substr(0, equal + 1) + "<redacted>");
+}
+
 std::string plural(std::size_t count, const std::string& one, const std::string& many) {
     return std::to_string(count) + " " + (count == 1 ? one : many);
 }
@@ -315,7 +328,6 @@ bool Searcher::load_tracked(std::string& error) {
             return false;
         }
     }
-    std::map<std::string, FileEntry> next;
     std::string key;
     bool all_settled = true;
     tracked_.clear();
@@ -326,23 +338,28 @@ bool Searcher::load_tracked(std::string& error) {
         long long newest = 0;
         std::string stamp = stamp_of(info, newest);
         long long read_at = now_ms();
+        FileEntry* entry = nullptr;
         auto known = files_.find(rel);
         if (known != files_.end() && known->second.stamp == stamp && known->second.settled) {
-            next[rel] = std::move(known->second);
+            entry = &known->second;
         } else {
             std::string data;
             if (!read_text(at, data)) continue;
-            FileEntry entry;
-            entry.stamp = stamp;
-            entry.settled = newest < read_at - STAMP_SETTLE_MS;
-            if (!looks_binary(data)) entry.lines = split_lines(data);
-            next[rel] = std::move(entry);
+            FileEntry fresh;
+            fresh.stamp = stamp;
+            fresh.settled = newest < read_at - STAMP_SETTLE_MS;
+            if (!looks_binary(data)) fresh.lines = split_lines(data);
+            entry = &files_.insert_or_assign(rel, std::move(fresh)).first->second;
         }
-        all_settled = all_settled && next[rel].settled;
-        key += rel + '\n' + next[rel].stamp + '\n';
+        all_settled = all_settled && entry->settled;
+        key += rel + '\n' + entry->stamp + '\n';
         tracked_.push_back(rel);
     }
-    files_ = std::move(next);
+    std::set<std::string> present(tracked_.begin(), tracked_.end());
+    for (auto it = files_.begin(); it != files_.end();) {
+        if (present.count(it->first)) ++it;
+        else it = files_.erase(it);
+    }
     if (!all_settled || key != index_key_) {
         build_index();
         index_key_ = all_settled ? key : std::string();
@@ -413,7 +430,7 @@ std::string Searcher::search(const json::Value& args) {
         std::snprintf(formatted, sizeof formatted, "%.3f", score);
         std::string shown = absolute ? generic(root_ / *doc.path) : *doc.path;
         if (!output.empty()) output += '\n';
-        output += shown + ":" + std::to_string(doc.line) + " " + formatted + " " + snippet(doc.file->lines[doc.line - 1]);
+        output += shown + ":" + std::to_string(doc.line) + " " + formatted + " " + shown_text(shown, doc.file->lines[doc.line - 1]);
     }
     json::Value out;
     out.set("ok", true);
@@ -558,7 +575,7 @@ std::string Searcher::grep(const json::Value& args) {
                 if (!matcher(lines[i])) continue;
                 ++result.total;
                 if (static_cast<long long>(result.total) <= offset || result.next >= 0) continue;
-                std::string row = shown + ":" + std::to_string(i + 1) + " " + snippet(lines[i]);
+                std::string row = shown + ":" + std::to_string(i + 1) + " " + shown_text(shown, lines[i]);
                 if (result.found.size() >= static_cast<std::size_t>(limit) || size + row.size() > OUTPUT_PAGE) {
                     result.next = static_cast<long long>(result.total) - 1;
                     continue;

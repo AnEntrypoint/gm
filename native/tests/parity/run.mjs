@@ -19,6 +19,9 @@ const STOPPED_PID_FILE = 'stopped-body.pid';
 const STOPPED_SLEEP_S = 4711;
 const STOPPED_FETCH_KIND = 'code-call:stopped-fetch';
 const SUBSCRIBE_ERROR_KIND = 'error:resources/subscribe';
+const DOTENV_KEY = 'TOGETHERAI';
+const DOTENV_LOCAL_KEY = 'LOCAL_ALIAS';
+const DOTENV_DUMMY = 'dummy_not_a_real_key_12345';
 const NATIVE_AHEAD_KINDS = [STOPPED_FETCH_KIND, SUBSCRIBE_ERROR_KIND];
 
 function extractReference() {
@@ -522,6 +525,49 @@ async function mcpPass() {
   return rows;
 }
 
+async function dotenvPass() {
+  const base = join(SCRATCH, 'dotenv');
+  const { spaces } = makeWorkspaces(base);
+  const config = join(base, 'no-default-mcp.json');
+  const task = join(base, 'task.md');
+  for (const side of ['node', 'native']) {
+    const workspace = spaces[side].workspace;
+    writeFileSync(join(workspace, '.env'), `${DOTENV_KEY}=${DOTENV_DUMMY}\n`);
+    writeFileSync(join(workspace, '.env.local'), `${DOTENV_LOCAL_KEY}=${DOTENV_DUMMY}\n`);
+    execFileSync('git', ['-C', workspace, 'add', '-f', '.env', '.env.local']);
+  }
+  const call = (name, args) => ({ method: 'tools/call', params: { name, arguments: args } });
+  const code = (body) => call('run_code', { body });
+  const script = [
+    ['initialize', { method: 'initialize', params: { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'dotenv', version: '1' } } }],
+    ['initialized', { method: 'notifications/initialized', notify: true }],
+    ['next_context', call('next_context', {})],
+    ['grep .env', code(`return await gm.grep({ pattern: '${DOTENV_KEY}' });`)],
+    ['grep .env.local', code(`return await gm.grep({ pattern: '${DOTENV_LOCAL_KEY}' });`)],
+    ['search .env', code(`return await gm.search({ query: '${DOTENV_KEY.toLowerCase()}', k: 5 });`)],
+  ];
+  const node = new Peer(process.execPath, [join(REF, 'src', 'mcp.mjs'), '--workspace', spaces.node.workspace, '--run-dir', spaces.node.runDir, '--task', task, '--mcp-config', config], REF);
+  const nodeReplies = await drive(node, script);
+  await node.stop();
+  const native = new Peer(NATIVE_BIN, ['worker', '--workspace', spaces.native.workspace, '--run-dir', spaces.native.runDir, '--task', task, '--skills', join(REF, 'skills'), '--leaves', join(REPO, 'native', 'leaves'), '--mcp-config', config], REPO);
+  const nativeReplies = await drive(native, script);
+  await native.stop();
+  const rows = [];
+  for (const [side, replies] of [['node', nodeReplies], ['native', nativeReplies]]) {
+    for (const [name, reply] of replies) {
+      if (!name.startsWith('grep .') && !name.startsWith('search .')) continue;
+      const text = reply?.result?.content?.[0]?.text ?? '';
+      let output = text;
+      try { output = JSON.parse(text).output ?? text; } catch {}
+      const masked = typeof output === 'string' && output.includes('<redacted>') && !output.includes(DOTENV_DUMMY);
+      rows.push([`dotenv ${name} ${side}`, masked ? [] : [['.mask', 'masked', String(output).slice(0, VALUE_WIDTH)]]]);
+      const row = String(output).split('\n').find((line) => line.includes('<redacted>'));
+      console.log(`dotenv ${name} ${side}: ${row ?? String(output).slice(0, VALUE_WIDTH)}`);
+    }
+  }
+  return rows;
+}
+
 async function main() {
   if (!existsSync(NATIVE_BIN)) throw new Error(`native binary not found: ${NATIVE_BIN} (build build/integ or pass --bin)`);
   const refHead = extractReference();
@@ -554,6 +600,7 @@ async function main() {
     rows.push(['notifications', differences(toolMethods(node.notifications), toolMethods(native.notifications))]);
     rows.push(['log event kinds', logKindDifferences(logKinds(spaces.node.runDir), logKinds(spaces.native.runDir))]);
     rows.push(...(await mcpPass()));
+    rows.push(...(await dotenvPass()));
     rows.push(...(await stoppedShellRows(spaces)));
 
     const classified = rows.map(([name, diffs]) => {

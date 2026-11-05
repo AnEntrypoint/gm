@@ -193,7 +193,7 @@ function searcherFor({ root, confine }) {
             if (!matchesLine(text)) return;
             total += 1;
             if (total <= offset || next !== null) return;
-            const row = `${shown}:${i + 1} ${snippet(text)}`;
+            const row = `${shown}:${i + 1} ${shownText(shown, text)}`;
             if (found.length >= limit || size + row.length > OUTPUT_PAGE) {
               next = total - 1;
               return;
@@ -245,7 +245,10 @@ function searcherFor({ root, confine }) {
     const indexed = await currentIndex(listing);
     if (indexed.error) return fail(indexed.error);
     const hits = rank(indexed.index, terms, k);
-    const lines = hits.map(({ doc, score }) => `${shownAt(doc.path)}:${doc.line} ${score.toFixed(3)} ${snippet(doc.text)}`);
+    const lines = hits.map(({ doc, score }) => {
+      const shown = shownAt(doc.path);
+      return `${shown}:${doc.line} ${score.toFixed(3)} ${shownText(shown, doc.text)}`;
+    });
     if (closure) lines.push(...closureLines(indexed.entries, hits, { shownAt, snippet }));
     return { ok: true, output: lines.length ? lines.join('\n') : '(no match)' };
   }
@@ -487,6 +490,17 @@ function escapeRegex(text) {
 
 function snippet(text) {
   return text.length <= SNIPPET_CHARS ? text : `${text.slice(0, SNIPPET_CHARS)} ...`;
+}
+
+function isDotenv(shown) {
+  const name = shown.split(/[\\/]/).pop().toLowerCase();
+  return name === '.env' || name.startsWith('.env.');
+}
+
+function shownText(shown, text) {
+  if (!isDotenv(shown)) return snippet(text);
+  const at = text.indexOf('=');
+  return snippet(at < 0 ? '<redacted>' : `${text.slice(0, at + 1)}<redacted>`);
 }
 
 function fail(error) {
