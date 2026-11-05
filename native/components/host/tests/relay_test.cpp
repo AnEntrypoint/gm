@@ -17,6 +17,7 @@ using namespace std::chrono_literals;
 namespace fs = std::filesystem;
 
 int failures = 0;
+std::string self_exe;
 
 void check(bool ok, const std::string& what) {
     std::cout << (ok ? "ok   " : "FAIL ") << what << '\n';
@@ -62,6 +63,36 @@ std::vector<std::string> worker_argv(const char* sh_script, const char* mode) {
     (void)mode;
     return {"/bin/sh", "-c", sh_script};
 #endif
+}
+
+std::vector<std::string> gate_worker_argv(const fs::path& journal, const fs::path& release) {
+    return {self_exe, "--gate-worker", journal.string(), release.string()};
+}
+
+int gate_worker(const fs::path& journal, const fs::path& release) {
+    const auto deadline = std::chrono::steady_clock::now() + 30s;
+    std::string line;
+    while (std::getline(std::cin, line)) {
+        std::ofstream out(journal, std::ios::app);
+        out << line << '\n';
+        out.close();
+        if (line.find("hang") != std::string::npos) {
+            std::error_code ec;
+            while (!fs::exists(release, ec) && std::chrono::steady_clock::now() < deadline)
+                std::this_thread::sleep_for(10ms);
+        }
+        std::cout << line << '\n' << std::flush;
+    }
+    return 0;
+}
+
+int journal_count(const fs::path& journal, const std::string& text) {
+    std::ifstream in(journal);
+    int count = 0;
+    std::string line;
+    while (std::getline(in, line))
+        if (line.find(text) != std::string::npos) ++count;
+    return count;
 }
 
 gm::host::RelayOptions echo_options(const fs::path& watched) {
@@ -155,18 +186,26 @@ void stuck_call_gets_retry_error(const fs::path& root) {
 
 void next_context_resent_after_restart(const fs::path& root) {
     const fs::path watched = root / "resend";
+    const fs::path gate = root / "resend-gate";
     fs::create_directories(watched);
+    fs::create_directories(gate);
     write_file(watched / "core.cpp", "int a;\n");
+    const fs::path journal = gate / "journal";
+    const fs::path release = gate / "release";
+    std::error_code ec;
+    fs::remove(journal, ec);
+    fs::remove(release, ec);
     HostSide host;
     auto options = echo_options(watched);
-    options.worker_argv = worker_argv(
-        R"sh(while IFS= read -r line; do case "$line" in *hang*) sleep 3;; esac; printf '%s\n' "$line"; done)sh", "hang");
+    options.worker_argv = gate_worker_argv(journal, release);
     options.drain_timeout = 300ms;
     gm::host::Relay relay(options, [&](std::string_view line) { host.take(line); });
     relay.start();
     relay.host_line(R"({"jsonrpc":"2.0","id":13,"method":"tools/call","params":{"name":"next_context","arguments":{"hang":true}}})");
-    std::this_thread::sleep_for(100ms);
+    eventually([&] { return journal_count(journal, R"("id":13)") >= 1; }, 8s);
     relay.request_restart("test");
+    eventually([&] { return journal_count(journal, R"("id":13)") >= 2; }, 8s);
+    write_file(release, "go");
     check(host.wait_for_text(R"("id":13,"method")", 8s),
           "a next_context call in flight at a restart is sent again to the new worker");
     {
@@ -259,7 +298,12 @@ void missing_worker_answers_with_failure(const fs::path& root) {
 
 }
 
-int main() {
+int main(int argc, char** argv) {
+    if (argc >= 4 && std::string(argv[1]) == "--gate-worker")
+        return gate_worker(fs::path(argv[2]), fs::path(argv[3]));
+    std::error_code self_ec;
+    self_exe = fs::canonical(fs::path(argv[0]), self_ec).string();
+    if (self_ec) self_exe = fs::absolute(fs::path(argv[0])).string();
     const fs::path root = fs::temp_directory_path() / ("gm-relay-test-" + std::to_string(std::rand()) +
                                                        std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
     fs::create_directories(root);

@@ -394,9 +394,15 @@ void Relay::restart(Lock& lock, const std::string& reason) {
     swapping_ = true;
     stop_worker(lock);
     std::map<std::string, std::string> resend;
+    std::vector<std::string> replay;
     for (const auto& [id, method] : inflight_) {
-        if (resendable_.contains(id)) resend.emplace(id, method);
-        else emit(error_reply(id, kRestartedBeforeAnswer));
+        auto found = resendable_.find(id);
+        if (found != resendable_.end()) {
+            resend.emplace(id, method);
+            replay.push_back(found->second);
+        } else {
+            emit(error_reply(id, kRestartedBeforeAnswer));
+        }
     }
     inflight_ = std::move(resend);
     if (host_gone_) {
@@ -416,8 +422,6 @@ void Relay::restart(Lock& lock, const std::string& reason) {
     mark_running(lock);
     ++restarts_;
     announce_changes(lock);
-    std::vector<std::string> replay;
-    for (const auto& [id, method] : inflight_) replay.push_back(resendable_.at(id));
     for (const std::string& line : replay) send_to_worker(lock, line);
     flush_held(lock);
     swapping_ = false;
