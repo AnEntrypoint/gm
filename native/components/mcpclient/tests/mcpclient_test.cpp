@@ -208,14 +208,21 @@ void test_two_servers(const fs::path& dir) {
     check(ok_of(pinged) && text_of(pinged, "output") == "pinged", "a server-to-client ping is answered and the call still completes");
 
     const Value crashed = verbs.call("playwriter_crash", Value(Object{}));
-    check(!ok_of(crashed) && text_of(crashed, "error") == "MCP server playwriter exited with code 3", "a server that exits fails the call with its exit code");
+    const std::string crash_error = text_of(crashed, "error");
+    check(!ok_of(crashed) && crash_error == "MCP server playwriter exited with code 3", "a server that exits fails the call with its exit code; got: " + crash_error);
     const Value restarted = verbs.call("playwriter_browsers", Value(Object{}));
-    check(ok_of(restarted) && text_of(restarted, "output") == "[]", "the next call restarts the server");
+    const std::string restart_output = text_of(restarted, "output");
+    check(ok_of(restarted) && restart_output == "[]", "the next call restarts the server; got: " + text_of(restarted, "error") + restart_output);
 
     const Events events = recorder.snapshot();
     const Value* down = find_event(events, "mcp-server", "playwriter", "down");
-    check(down != nullptr && field(*down, "reason") == "exited with code 3", "a server that exits logs down with its exit code");
+    const std::string down_reason = down != nullptr ? field(*down, "reason") : std::string("no down event");
+    check(down_reason == "exited with code 3", "a server that exits logs down with its exit code; got: " + down_reason);
+#if defined(_WIN32)
+    check(down != nullptr && field(*down, "stderr").empty(), "the down event carries no stderr on Windows (AGENTS.md: native captures no server stderr there)");
+#else
     check(down != nullptr && field(*down, "stderr").find("fake boot") != std::string::npos, "the down event carries the server's stderr");
+#endif
     check(has_event(events, "mcp-server", "playwriter", "restarted"), "the restart after a crash logs state restarted");
     check(has_event(events, "mcp-server", "second", "connected"), "the second server logs connected");
 }
@@ -354,7 +361,11 @@ void test_startup_timeout_and_exit(const fs::path& dir) {
     const Value* failed = find_event(events, "mcp-server", "quiet", "failed");
     check(listing < std::chrono::milliseconds(500), "list does not wait for a server that is still starting");
     check(failed != nullptr && field(*failed, "error") == "initialize timed out after 1000 ms", "a server that never answers initialize fails after startupTimeoutMs");
+#if defined(_WIN32)
+    check(failed != nullptr && field(*failed, "stderr").empty(), "the failed event carries no stderr on Windows (AGENTS.md: native captures no server stderr there)");
+#else
     check(failed != nullptr && field(*failed, "stderr").find("fake boot") != std::string::npos, "the failed event carries the server's stderr");
+#endif
     const Value* down = find_event(events, "mcp-server", "quiet", "down");
     check(down != nullptr && field(*down, "reason") == "stopped by gm", "the server is stopped before the failed event");
 
