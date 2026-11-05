@@ -394,7 +394,10 @@ void Child::close_input() {
     handles_->input = nullptr;
 }
 
-void Child::terminate() { close_input(); }
+void Child::terminate() {
+    close_input();
+    kill();
+}
 
 std::optional<std::string> Child::read_error_chunk() { return std::nullopt; }
 

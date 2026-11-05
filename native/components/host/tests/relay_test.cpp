@@ -180,6 +180,7 @@ while IFS= read -r line; do printf '%s\n' "$line"; done
     const fs::path next = dir / "worker.next";
 #if defined(_WIN32)
     fs::copy_file(GMNEW_RELAY_WORKER, next);
+    fs::last_write_time(next, fs::file_time_type::clock::now());
     fs::rename(worker, dir / "worker.old");
 #else
     write_file(next, first + "\n");
