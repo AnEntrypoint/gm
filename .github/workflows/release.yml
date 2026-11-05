@@ -117,10 +117,10 @@ jobs:
       - name: Publish only a build newer than latest
         id: head
         run: |
-          published=$(gh api "repos/$RELEASE_REPO/git/ref/tags/latest" --jq .object.sha 2>/dev/null || true)
+          gh_retry() { for n in 1 2 3 4 5; do "$@" && return 0; echo "retry $n for $1" >&2; sleep $((n * 5)); done; return 1; }          published=$(gh api "repos/$RELEASE_REPO/git/ref/tags/latest" --jq .object.sha 2>/dev/null || true)
           order=new
           if [ -n "$published" ]; then
-            order=$(gh api "repos/$RELEASE_REPO/compare/$published...$GITHUB_SHA" --jq .status)
+            order=$(gh_retry gh api "repos/$RELEASE_REPO/compare/$published...$GITHUB_SHA" --jq .status) || { echo "cannot read the release order"; exit 1; }
           fi
           case "$order" in
             ahead | identical | new) echo "current=true" >> "$GITHUB_OUTPUT" ;;
@@ -144,10 +144,10 @@ jobs:
       - name: Move latest tag
         if: steps.head.outputs.current == 'true'
         run: |
-          if gh api "repos/$RELEASE_REPO/git/ref/tags/latest" >/dev/null 2>&1; then
-            gh api -X PATCH "repos/$RELEASE_REPO/git/refs/tags/latest" -f sha="$GITHUB_SHA" -F force=true
+          gh_retry() { for n in 1 2 3 4 5; do "$@" && return 0; echo "retry $n for $1" >&2; sleep $((n * 5)); done; return 1; }          if gh api "repos/$RELEASE_REPO/git/ref/tags/latest" >/dev/null 2>&1; then
+            gh_retry gh api -X PATCH "repos/$RELEASE_REPO/git/refs/tags/latest" -f sha="$GITHUB_SHA" -F force=true
           else
-            gh api -X POST "repos/$RELEASE_REPO/git/refs" -f ref=refs/tags/latest -f sha="$GITHUB_SHA"
+            gh_retry gh api -X POST "repos/$RELEASE_REPO/git/refs" -f ref=refs/tags/latest -f sha="$GITHUB_SHA"
           fi
       - name: Version the archive names
         if: steps.head.outputs.current == 'true'
@@ -170,22 +170,22 @@ jobs:
       - name: Upload the versioned archives
         if: steps.head.outputs.current == 'true'
         run: |
-          notes="$RUNNER_TEMP/notes.md"
+          gh_retry() { for n in 1 2 3 4 5; do "$@" && return 0; echo "retry $n for $1" >&2; sleep $((n * 5)); done; return 1; }          notes="$RUNNER_TEMP/notes.md"
           printf 'Version: %s\nCommit: %s\nBuilt: %s\n' "$GMNEW_VERSION" "$GITHUB_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$notes"
           if gh release view latest --repo "$RELEASE_REPO" >/dev/null 2>&1; then
-            gh release upload latest dist/gmnew-"$GMNEW_VERSION"-* --repo "$RELEASE_REPO"
+            gh_retry gh release upload latest dist/gmnew-"$GMNEW_VERSION"-* --repo "$RELEASE_REPO" --clobber
           else
-            gh release create latest dist/gmnew-"$GMNEW_VERSION"-* --repo "$RELEASE_REPO" --title "latest $GMNEW_VERSION" --notes-file "$notes" --latest --prerelease=false
+            gh_retry gh release create latest dist/gmnew-"$GMNEW_VERSION"-* --repo "$RELEASE_REPO" --title "latest $GMNEW_VERSION" --notes-file "$notes" --latest --prerelease=false
           fi
       - name: Point latest at the new manifest
         if: steps.head.outputs.current == 'true'
         run: |
-          notes="$RUNNER_TEMP/notes.md"
-          gh release upload latest dist/manifest.json dist/SHA256SUMS --repo "$RELEASE_REPO" --clobber
-          gh release edit latest --repo "$RELEASE_REPO" --title "latest $GMNEW_VERSION" --notes-file "$notes" --latest --prerelease=false
+          gh_retry() { for n in 1 2 3 4 5; do "$@" && return 0; echo "retry $n for $1" >&2; sleep $((n * 5)); done; return 1; }          notes="$RUNNER_TEMP/notes.md"
+          gh_retry gh release upload latest dist/manifest.json dist/SHA256SUMS --repo "$RELEASE_REPO" --clobber
+          gh_retry gh release edit latest --repo "$RELEASE_REPO" --title "latest $GMNEW_VERSION" --notes-file "$notes" --latest --prerelease=false
       - name: Prune old builds
         if: steps.head.outputs.current == 'true'
         run: |
-          gh release view latest --repo "$RELEASE_REPO" --json assets --jq '.assets[].name' \
+          gh_retry() { for n in 1 2 3 4 5; do "$@" && return 0; echo "retry $n for $1" >&2; sleep $((n * 5)); done; return 1; }          gh release view latest --repo "$RELEASE_REPO" --json assets --jq '.assets[].name' \
             | node tools/prune-release-assets.mjs --keep 3 \
-            | while read -r name; do gh release delete-asset latest "$name" --repo "$RELEASE_REPO" --yes; done
+            | while read -r name; do gh_retry gh release delete-asset latest "$name" --repo "$RELEASE_REPO" --yes || true; done
