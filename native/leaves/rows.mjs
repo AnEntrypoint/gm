@@ -99,10 +99,16 @@ function commitExists(commit) {
 function removeFile(path) {
   const removed = typeof host.delete_file === 'function' ? host.delete_file({ path }) : null;
   if (removed?.ok === true) return removed;
-  const git = (argv) => host.run({ argv: ['git', '--literal-pathspecs', ...argv, '--', path], cwd: host.workspace, timeoutMs: 15000 });
-  git(['clean', '-f', '-q']);
-  if (host.stat_file({ path })?.ok === false) return { ok: true };
-  return git(['rm', '-f', '-q']);
+  const windowsPath = path.split('/').join('\\');
+  const commands = [
+    ['rm', '-f', '--', path],
+    ['cmd.exe', '/d', '/c', 'del', '/f', '/q', windowsPath],
+  ];
+  for (const argv of commands) {
+    host.run({ argv, cwd: host.workspace, timeoutMs: 15000 });
+    if (host.stat_file({ path })?.ok === false) return { ok: true };
+  }
+  return fail(`row file ${path} could not be removed`);
 }
 
 function addRow(kind, { title, body = '' }) {

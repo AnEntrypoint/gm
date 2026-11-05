@@ -49,3 +49,31 @@ test('add, list, resolve and delete rows', async () => {
     cleanup(dir);
   }
 });
+
+test('delete open and parked PRD rows outside a git repository', async () => {
+  const dir = tempDir();
+  globalThis.host = realHost(dir);
+  try {
+    const { verbs } = await import('../rows.mjs');
+    const call = (name, args) => verbs.find((v) => v.name === name).call(args);
+    assert.equal(existsSync(join(dir, '.git')), false);
+    const open = call('prd_add', { title: 'open drop' }).output;
+    assert.equal(call('prd_delete', { id: open }).output, `${open} deleted`);
+    assert.equal(existsSync(join(dir, 'work/rows', `${open}.yml`)), false);
+    const parked = call('prd_add', { title: 'parked drop' }).output;
+    assert.equal(call('prd_park', { id: parked, reason: 'not needed' }).output, `${parked} parked: not needed`);
+    assert.equal(call('prd_list', { status: 'parked' }).output, `${parked} parked parked drop (parked: not needed)`);
+    assert.equal(call('prd_delete', { id: parked }).output, `${parked} deleted`);
+    assert.equal(existsSync(join(dir, 'work/rows', `${parked}.yml`)), false);
+    const reopened = call('prd_add', { title: 'reopen drop' }).output;
+    assert.equal(call('prd_park', { id: reopened, reason: 'wait' }).output, `${reopened} parked: wait`);
+    assert.equal(call('prd_reopen', { id: reopened }).output, `${reopened} reopened`);
+    assert.equal(call('prd_delete', { id: reopened }).output, `${reopened} deleted`);
+    const question = call('unknown_add', { title: 'which colour?' }).output;
+    assert.equal(call('prd_delete', { id: question }).error, `row ${question} is not a work item`);
+    assert.equal(call('unknown_list', { status: 'open' }).output, `${question} open which colour?`);
+    assert.equal(call('prd_list', { status: 'all' }).output, '(none)');
+  } finally {
+    cleanup(dir);
+  }
+});
