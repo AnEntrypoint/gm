@@ -188,7 +188,7 @@ deoxidene::Result<Skill, std::string> read_skill(const std::filesystem::path& sk
     return skill;
 }
 
-const Skill& SkillCache::get(const std::string& name) {
+Skill SkillCache::get(const std::string& name) {
     auto fresh = read_skill(dir_, name);
     if (fresh) {
         last_[name] = std::move(*fresh);

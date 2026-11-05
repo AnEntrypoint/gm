@@ -86,7 +86,7 @@ deoxidene::Result<Skill, std::string> read_skill(const std::filesystem::path& sk
 class SkillCache {
 public:
     explicit SkillCache(std::filesystem::path dir) : dir_(std::move(dir)) {}
-    const Skill& get(const std::string& name);
+    Skill get(const std::string& name);
     const std::filesystem::path& dir() const { return dir_; }
 
 private:

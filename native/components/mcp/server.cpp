@@ -1934,15 +1934,15 @@ struct Server::State {
         }
     }
 
-    std::optional<std::pair<const Skill*, const SkillFile*>> skill_file_of(const std::string& uri) {
+    std::optional<std::pair<Skill, SkillFile>> skill_file_of(const std::string& uri) {
         static const std::regex kSkillUri(R"(^skill://([^/]+)/)");
         std::smatch match;
         if (!std::regex_search(uri, match, kSkillUri)) return std::nullopt;
         const auto& served = served_skills();
         if (std::find(served.begin(), served.end(), match[1].str()) == served.end()) return std::nullopt;
-        const Skill& skill = skills.get(match[1].str());
+        Skill skill = skills.get(match[1].str());
         for (const SkillFile& file : skill.files) {
-            if (file.uri == uri) return std::pair{&skill, &file};
+            if (file.uri == uri) return std::pair{skill, file};
         }
         return std::nullopt;
     }
@@ -2056,15 +2056,15 @@ struct Server::State {
     std::optional<Value> serve_skill_file(const std::string& uri, const std::string& via) {
         auto found = skill_file_of(uri);
         if (!found) return std::nullopt;
-        auto [skill, file] = *found;
-        bool is_gm = file->uri == kGmSkillUri;
+        auto [skill, file] = std::move(*found);
+        bool is_gm = file.uri == kGmSkillUri;
         append("skill-loaded", object()
                                    .set("via", via)
-                                   .set("skill", skill->name)
-                                   .set("uri", file->uri)
+                                   .set("skill", skill.name)
+                                   .set("uri", file.uri)
                                    .set("cleared", is_gm ? open_rule_numbers() : array()));
         if (is_gm) clear_rules();
-        return object().set("uri", file->uri).set("mimeType", file->mime_type).set("text", file->bytes);
+        return object().set("uri", file.uri).set("mimeType", file.mime_type).set("text", file.bytes);
     }
 
     Value read_resource(const Value* params) {
@@ -2184,7 +2184,8 @@ struct Server::State {
                 const Value* skill_name = args ? args->find("name") : nullptr;
                 if (skill_name && skill_name->is_string() &&
                     std::find(served.begin(), served.end(), skill_name->as_string()) != served.end()) {
-                    for (const SkillFile& file : skills.get(skill_name->as_string()).files) candidates.push_back(file.path);
+                    const Skill listed = skills.get(skill_name->as_string());
+                    for (const SkillFile& file : listed.files) candidates.push_back(file.path);
                 }
             }
         } else if ((uri == "run://{run}/log" || uri == "run://{run}/witness") && arg_name == "run") {
@@ -2234,7 +2235,7 @@ struct Server::State {
         try {
             auto found = skill_file_of(uri);
             if (!found) return std::nullopt;
-            return found->second->digest;
+            return found->second.digest;
         } catch (const std::exception&) {
             return std::nullopt;
         }
@@ -2630,16 +2631,32 @@ Server::State::~State() {
     monitor_wake.notify_all();
     if (monitor.joinable()) monitor.join();
     if (list_watch.joinable()) list_watch.join();
+    stop_bodies("shutdown");
     auto jobs = body_list();
     for (const auto& job : jobs) job->stopped = true;
     {
         std::unique_lock guard(gate->lock);
         gate->alive = false;
     }
+    using namespace std::chrono;
+    constexpr milliseconds kDrain{3000};
+    auto deadline = steady_clock::now() + kDrain;
+    auto still_running = [&] {
+        for (const auto& job : jobs) {
+            if (job->thread.joinable() && !job->exited) return true;
+        }
+        return false;
+    };
+    while (still_running() && steady_clock::now() < deadline) std::this_thread::sleep_for(milliseconds(5));
     for (const auto& job : jobs) {
         if (!job->thread.joinable()) continue;
-        if (job->exited) job->thread.join();
-        else job->thread.detach();
+        if (job->exited) {
+            job->thread.join();
+            continue;
+        }
+        std::cerr << "gm: background body " << job->name << " did not stop within " << kDrain.count()
+                  << " ms of shutdown; detached\n";
+        job->thread.detach();
     }
 }
 
