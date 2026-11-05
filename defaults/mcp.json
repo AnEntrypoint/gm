@@ -2,7 +2,7 @@
   "mcpServers": {
     "playwriter": {
       "command": "npx",
-      "args": ["-y", "-p", "github:AnEntrypoint/pw#bb9bdb5", "playwriter-project"],
+      "args": ["-y", "-p", "github:AnEntrypoint/pw#1488a92", "playwriter-project"],
       "env": {"PLAYWRITER_TELEMETRY": "0"},
       "ignore": [".playwriter/"],
       "deny": ["reset"],
