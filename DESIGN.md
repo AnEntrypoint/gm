@@ -522,3 +522,5 @@ Reported by the spawn session (run 2026-11-05-06-58-25-6b9460), which runs this 
 - Node stays the reference tree and is not part of this change. The registration moves to the launcher alone, with no node relay.
 
 - playwriter_execute was capped at 60 s: the playwriter entry in defaults/mcp.json had no timeoutMs, so the server default (60000, src/mcp-client.mjs CALL_MS and native mcpclient config.cpp CALL_MS) applied to every call. Set to 300000. A per-call timeout argument is not read by gm; the entry sets the limit.
+
+- playwriter_execute still capped at 60 s after the reconnect (2026-11-05). The running server is the installed native binary, /config/.gmnew/current/gmnew, and it reads defaults/mcp.json from its install directory, which is the 09:51 release (pin c318773, no timeoutMs). The checkout change in 6130f62 never reaches it. The browser execute also has its own 10 s default (playwriter PLAYWRITER_EXEC_TIMEOUT, or its timeout argument). Workaround for this project: .gm-new/mcp.json, a per-machine layer restating the entry with timeoutMs 300000 (git-ignored). OPEN: the installed defaults need a release or update that carries the new defaults.
