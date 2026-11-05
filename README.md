@@ -80,4 +80,4 @@ Setup registers only gm with the host, so the worker is the only thing that star
 
 - `scripts/gmnew.sh` and `scripts/gmnew.ps1` run the same steps: `build`, `test`, `doctor` or `all`. `GMNEW_PRESET` picks the preset (default `release`).
 - The binary is build/PRESET/native/components/host/gmnew.
-- `.github/workflows/ci.yml` builds and tests on Linux, macOS and Windows, x64 and arm64. `release.yml` uploads the binary for each target on a `v*.*.*` tag.
+- No CI workflow is configured. `.github/workflows/release.yml` uploads the binary for each target on a `v*.*.*` tag.
