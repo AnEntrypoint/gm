@@ -40,7 +40,7 @@ Both skills are served as MCP skills under SEP-2640 (the `io.modelcontextprotoco
 
 The worker is also an MCP client. It starts the MCP servers that its config names, and adds each of their tools to `gm` inside `run_code` as `gm.<server>_<tool>(args)`, beside the native verbs. `gm.verbs()` and run_code's description list them. The config is three files in the `mcpServers` shape of `.mcp.json`, read in this order. A later entry with the same name replaces the earlier one whole:
 
-1. `defaults/mcp.json` in the checkout. It is required, and a missing file is logged as an `mcp-config` problem. It starts playwriter, as `npx -y -p github:AnEntrypoint/pw#v0.1.0 playwriter-project`, with `PLAYWRITER_TELEMETRY=0` in its environment, which turns off playwriter's anonymous usage stats, and with `"ignore": [".playwriter/"]`. The `pw` package declares `engines` `node >=22`, the same floor setup enforces. A failed start gives its reason in the stderr of the `mcp-server` failed event.
+1. `defaults/mcp.json` in the checkout. It is required, and a missing file is logged as an `mcp-config` problem. It starts playwriter, as `npx -y -p github:AnEntrypoint/pw#38a4e9b playwriter-project` (the commit is pinned in that file), with `PLAYWRITER_TELEMETRY=0` in its environment, which turns off playwriter's anonymous usage stats, and with `"ignore": [".playwriter/"]`. The `pw` package declares `engines` `node >=22`, the same floor setup enforces. A failed start gives its reason in the stderr of the `mcp-server` failed event.
 2. `.gm/mcp.json` in the workspace, if it exists.
 3. The file that `--mcp-config <file>` names, if given. It is required.
 
@@ -50,7 +50,7 @@ A layer that sets `"disabled": true` for a name removes that server, so `{"mcpSe
 
 A Linux container where Chromium's sandbox is blocked makes the browser refuse to start, with `no usable sandbox`. The default entry does not set `PLAYWRITER_NO_SANDBOX`, because that turns off Chromium's sandbox on every machine that runs the default. On the Ubuntu container this work runs in, `/usr/bin/chromium` is a wrapper that adds `--no-sandbox`, so the default starts there without the flag. Where Chromium is not wrapped that way, set it in a layer, restating the whole playwriter entry:
 
-    {"mcpServers":{"playwriter":{"command":"npx","args":["-y","-p","github:AnEntrypoint/pw#v0.1.0","playwriter-project"],"env":{"PLAYWRITER_TELEMETRY":"0","PLAYWRITER_NO_SANDBOX":"1"},"ignore":[".playwriter/"],"startupTimeoutMs":600000}}}
+    {"mcpServers":{"playwriter":{"command":"npx","args":["-y","-p","github:AnEntrypoint/pw#38a4e9b","playwriter-project"],"env":{"PLAYWRITER_TELEMETRY":"0","PLAYWRITER_NO_SANDBOX":"1"},"ignore":[".playwriter/"],"startupTimeoutMs":600000}}}
 
 Setup registers only gm with the host, so the worker is the only thing that starts playwriter.
 
