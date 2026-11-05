@@ -11,7 +11,7 @@ test('add, list, resolve and delete rows', async () => {
   try {
     const { verbs } = await import('../rows.mjs');
     const call = (name, args) => verbs.find((v) => v.name === name).call(args);
-    assert.equal(verbs.length, 7);
+    assert.equal(verbs.length, 9);
     assert.equal(call('prd_list', {}).output, '(none)');
     const id = call('prd_add', { title: ' ship it ', body: 'b' }).output;
     assert.match(id, /^prd-[a-z0-9]+$/);

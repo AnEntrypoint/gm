@@ -310,7 +310,7 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
   // built before it is returned, so a module that fails to build throws before anything is replaced.
   function leafVerbsOf(modules) {
     const verbs = { ...modules['git.mjs'].createGitVerbs({ root, confine, log }), ...modules['rows.mjs'].createRowVerbs({ root, confine, log }), ...modules['wiki-tools.mjs'].createWikiVerbs({ root, log }), ...modules['review-tools.mjs'].createReviewVerbs({ root, log }), ...modules['fetch.mjs'].createFetchVerbs({ log, root }), ...modules['code-ast.mjs'].createAstVerbs({ root, confine }) };
-    return { verbs, rowQueries: { openRows: modules['rows.mjs'].openRows, rowSummary: modules['rows.mjs'].rowSummary } };
+    return { verbs, rowQueries: { openRows: modules['rows.mjs'].openRows, parkedRows: modules['rows.mjs'].parkedRows, rowSummary: modules['rows.mjs'].rowSummary } };
   }
   // Search keeps its own paging state, so it is not a leaf and a reload keeps it as it is.
   const boot = leafVerbsOf(leaves);
@@ -520,6 +520,7 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
     adoptBody,
     activeJobs,
     openRows: () => rowQueries.openRows(confine),
+    parkedRows: () => rowQueries.parkedRows(confine),
     setLeaves,
     callStarted(body) {
       inFlightByBody.set(body, (inFlightByBody.get(body) ?? 0) + 1);

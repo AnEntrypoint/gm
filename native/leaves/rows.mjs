@@ -1,8 +1,8 @@
 const ROW_DIR = 'work/rows';
 const KINDS = { prd: 'work item', unknown: 'open question' };
-const STATUSES = ['open', 'resolved', 'all'];
+const STATUSES = ['open', 'parked', 'resolved', 'all'];
 const STATUS_ALIASES = { pending: 'open', completed: 'resolved' };
-const FIELDS = ['id', 'kind', 'title', 'body', 'status', 'createdAt', 'witnessEvent', 'witnessCommit', 'resolvedAt'];
+const FIELDS = ['id', 'kind', 'title', 'body', 'status', 'createdAt', 'witnessEvent', 'witnessCommit', 'resolvedAt', 'parkReason'];
 const SHA = /^[0-9a-f]{7,40}$/;
 const str = { type: 'string' };
 const obj = (properties, required = []) => ({ type: 'object', properties, required });
@@ -118,7 +118,28 @@ function listRows(kind, { status = 'open' }) {
   const wanted = STATUS_ALIASES[status] ?? status;
   if (!STATUSES.includes(wanted)) return fail(`status must be one of ${[...STATUSES, ...Object.keys(STATUS_ALIASES)].join(', ')}`);
   const rows = sortByCreated(readRows().filter((row) => row.kind === kind && (wanted === 'all' || (STATUS_ALIASES[row.status] ?? row.status) === wanted)));
-  return { ok: true, output: rows.length ? rows.map((row) => `${row.id} ${row.status} ${row.title}`).join('\n') : '(none)' };
+  return { ok: true, output: rows.length ? rows.map((row) => `${row.id} ${row.status} ${row.title}${row.status === 'parked' ? ` (parked: ${row.parkReason})` : ''}`).join('\n') : '(none)' };
+}
+
+function parkRow(id, reason) {
+  if (!validId('prd', id)) return fail('id must name a prd row, with an id that starts prd-');
+  if (typeof reason !== 'string' || reason.trim() === '') return fail('reason must be a non-empty string');
+  const row = readRow(id);
+  if (row === null) return fail(`no row ${id}`);
+  if (row.status !== 'open') return fail(`row ${id} is ${row.status}; only an open row is parked`);
+  Object.assign(row, { status: 'parked', parkReason: reason.trim() });
+  writeRow(row);
+  return { ok: true, output: `${id} parked: ${row.parkReason}` };
+}
+
+function reopenRow({ id }) {
+  if (!validId('prd', id)) return fail('id must name a prd row, with an id that starts prd-');
+  const row = readRow(id);
+  if (row === null) return fail(`no row ${id}`);
+  if (row.status !== 'parked') return fail(`row ${id} is ${row.status}; only a parked row is reopened`);
+  Object.assign(row, { status: 'open', parkReason: undefined });
+  writeRow(row);
+  return { ok: true, output: `${id} reopened` };
 }
 
 function resolveRow(kind, { id, event, commit }) {
@@ -148,7 +169,7 @@ function deleteRow({ id }) {
 export const verbs = [
   ...Object.entries(KINDS).flatMap(([kind, label]) => [
     { name: `${kind}_add`, description: `Add a ${label} row, one file under ${ROW_DIR}. Returns its id.`, inputSchema: obj({ title: str, body: str }, ['title']), call: (args = {}) => addRow(kind, args) },
-    { name: `${kind}_list`, description: `List ${label} rows, one line each: id, status, title. status is open (default), resolved or all.`, inputSchema: obj({ status: str }), call: (args = {}) => listRows(kind, args) },
+    { name: `${kind}_list`, description: `List ${label} rows, one line each: id, status, title. status is open (default), parked, resolved or all.`, inputSchema: obj({ status: str }), call: (args = {}) => listRows(kind, args) },
     {
       name: `${kind}_resolve`,
       description: `Resolve a ${label} row. The witness is a seq of this run's log and a commit that exists in this repository.`,
@@ -161,5 +182,17 @@ export const verbs = [
     description: 'Delete a work item (PRD) row that is not resolved: the work is dropped and its file is removed, and git keeps it. An open question is resolved, not deleted.',
     inputSchema: obj({ id: str }, ['id']),
     call: (args = {}) => deleteRow(args),
+  },
+  {
+    name: 'prd_park',
+    description: 'Park an open work item (PRD) row with a reason. A parked row is not open, and finish lists it with its reason in the witness.',
+    inputSchema: obj({ id: str, reason: str }, ['id', 'reason']),
+    call: (args = {}) => parkRow(args.id, args.reason),
+  },
+  {
+    name: 'prd_reopen',
+    description: 'Move a parked work item (PRD) row back to open.',
+    inputSchema: obj({ id: str }, ['id']),
+    call: (args = {}) => reopenRow(args),
   },
 ];

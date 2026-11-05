@@ -750,6 +750,10 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
       const names = open.slice(0, 5).map((row) => `${row.id} ${row.title}`).join('; ');
       return refuse('finish', args, `${open.length} row(s) open: ${names}${open.length > 5 ? '; ...' : ''}. Resolve each with its witness, or delete a PRD you will not implement with prd_delete. A question for the owner stays open until the owner answers`, rpcId);
     }
+    const parked = (await tools.parkedRows()).filter((row) => !(args.witness.includes(row.id) && args.witness.includes(row.parkReason)));
+    if (parked.length > 0) {
+      return refuse('finish', args, `parked row(s) need their id and reason in the witness: ${parked.map((row) => `${row.id} (${row.parkReason})`).join('; ')}`, rpcId);
+    }
     if (args.stopBackground === true) tools.stopBodies('stopBackground');
     stop('finished');
     const out = await act('finish', args, access, () => tools.run('finish', args), undefined, rpcId);

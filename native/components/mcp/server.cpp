@@ -193,7 +193,7 @@ const std::vector<std::string>& node_verb_order() {
         "review_packet", "review_record", "review_join", "fetch",      "callers",        "impact",      "git_status",
         "git_add",     "git_rm",        "git_commit",  "git_push",     "git_log",        "git_diff",    "git_show",
         "git_fetch",   "git_pull",      "git_checkout", "git_branch",  "ci_status",      "prd_add",     "prd_list",
-        "prd_resolve", "unknown_add",   "unknown_list", "unknown_resolve", "prd_delete"};
+        "prd_resolve", "unknown_add",   "unknown_list", "unknown_resolve", "prd_delete", "prd_park", "prd_reopen"};
     return order;
 }
 
@@ -1405,6 +1405,28 @@ struct Server::State {
         return rows;
     }
 
+    struct ParkedRow {
+        std::string id;
+        std::string reason;
+    };
+
+    std::vector<ParkedRow> parked_rows() {
+        std::vector<ParkedRow> rows;
+        std::set<std::string> served;
+        for (const VerbInfo& verb : verbs.list()) served.insert(verb.name);
+        if (!served.contains("prd_list")) return rows;
+        Value reply = verbs.call("prd_list", object().set("status", "parked"));
+        if (!is_ok(reply)) throw std::runtime_error("prd_list failed: " + text_or_undefined(reply.find("error")));
+        const std::string mark = " (parked: ";
+        for (const auto& line : split_lines(string_of(reply, "output"))) {
+            std::size_t first = line.find(' ');
+            std::size_t at = line.rfind(mark);
+            if (first == std::string::npos || at == std::string::npos) continue;
+            rows.push_back({line.substr(0, first), line.substr(at + mark.size(), line.size() - at - mark.size() - 1)});
+        }
+        return rows;
+    }
+
     std::vector<Row> open_rows() {
         std::set<std::string> served;
         for (const VerbInfo& verb : verbs.list()) served.insert(verb.name);
@@ -1833,6 +1855,13 @@ struct Server::State {
                           std::to_string(open.size()) + " row(s) open: " + names + (open.size() > kRowsNamed ? "; ..." : "") +
                               ". Resolve each with its witness, or delete a PRD you will not implement with prd_delete. A "
                               "question for the owner stays open until the owner answers");
+        }
+        for (const ParkedRow& row : parked_rows()) {
+            if (witness->as_string().find(row.id) == std::string::npos || witness->as_string().find(row.reason) == std::string::npos) {
+                std::string names;
+                for (const ParkedRow& each : parked_rows()) names += (names.empty() ? "" : "; ") + each.id + " (" + each.reason + ")";
+                return refuse("finish", args, "parked row(s) need their id and reason in the witness: " + names, false);
+            }
         }
         if (stopping) stop_bodies("stopBackground");
         s().ended = "finished";

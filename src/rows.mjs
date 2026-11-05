@@ -6,10 +6,9 @@ import { resultZone1, resultZone2 } from './compact.mjs';
 
 export const ROW_DIR = 'work/rows';
 const KINDS = { prd: 'work item', unknown: 'open question' };
-// A row is open until it is implemented (resolved), or, for a PRD, deleted. No row is held in any other state.
-const STATUSES = ['open', 'resolved', 'all'];
+const STATUSES = ['open', 'parked', 'resolved', 'all'];
 const STATUS_ALIASES = { pending: 'open', completed: 'resolved' };
-const FIELDS = ['id', 'kind', 'title', 'body', 'status', 'createdAt', 'witnessEvent', 'witnessCommit', 'resolvedAt'];
+const FIELDS = ['id', 'kind', 'title', 'body', 'status', 'createdAt', 'witnessEvent', 'witnessCommit', 'resolvedAt', 'parkReason'];
 const str = { type: 'string' };
 const obj = (properties, required = []) => ({ type: 'object', properties, required });
 
@@ -19,10 +18,22 @@ const DELETE_TOOL = {
   inputSchema: obj({ id: str }, ['id']),
 };
 
+const PARK_TOOL = {
+  name: 'prd_park',
+  description: 'Park an open work item (PRD) row with a reason. A parked row is not open, and finish lists it with its reason in the witness.',
+  inputSchema: obj({ id: str, reason: str }, ['id', 'reason']),
+};
+
+const REOPEN_TOOL = {
+  name: 'prd_reopen',
+  description: 'Move a parked work item (PRD) row back to open.',
+  inputSchema: obj({ id: str }, ['id']),
+};
+
 export const ROW_TOOLS = [
   ...Object.entries(KINDS).flatMap(([kind, label]) => [
     { name: `${kind}_add`, description: `Add a ${label} row, one file under ${ROW_DIR}. Returns its id.`, inputSchema: obj({ title: str, body: str }, ['title']) },
-    { name: `${kind}_list`, description: `List ${label} rows, one line each: id, status, title. status is open (default), resolved or all.`, inputSchema: obj({ status: str }) },
+    { name: `${kind}_list`, description: `List ${label} rows, one line each: id, status, title. status is open (default), parked, resolved or all.`, inputSchema: obj({ status: str }) },
     {
       name: `${kind}_resolve`,
       description: `Resolve a ${label} row. The witness is a seq of this run's log and a commit that exists in this repository.`,
@@ -30,6 +41,8 @@ export const ROW_TOOLS = [
     },
   ]),
   DELETE_TOOL,
+  PARK_TOOL,
+  REOPEN_TOOL,
 ];
 
 // A row keeps its id and its state in both horizons. A listing of rows is cut in the second horizon.
@@ -37,6 +50,8 @@ export const COMPACT = {
   tools: {
     prd_add: { zone1: resultZone1, zone2: resultZone2 },
     prd_delete: { zone1: resultZone1, zone2: resultZone2 },
+    prd_park: { zone1: resultZone1, zone2: resultZone2 },
+    prd_reopen: { zone1: resultZone1, zone2: resultZone2 },
     prd_resolve: { zone1: resultZone1, zone2: resultZone2 },
     unknown_add: { zone1: resultZone1, zone2: resultZone2 },
     unknown_resolve: { zone1: resultZone1, zone2: resultZone2 },
@@ -53,6 +68,8 @@ export function createRowVerbs({ root, confine, log }) {
     handlers[`${kind}_resolve`] = (args) => resolveRow(kind, args);
   }
   handlers.prd_delete = ({ id }) => deleteRow(id);
+  handlers.prd_park = ({ id, reason }) => parkRow(id, reason);
+  handlers.prd_reopen = ({ id }) => reopenRow(id);
   return handlers;
 
   async function addRow(kind, title, body) {
@@ -68,7 +85,28 @@ export function createRowVerbs({ root, confine, log }) {
     const wanted = STATUS_ALIASES[status] ?? status;
     if (!STATUSES.includes(wanted)) return fail(`status must be one of ${[...STATUSES, ...Object.keys(STATUS_ALIASES)].join(', ')}`);
     const rows = sortByCreated((await readRows(confine)).filter((row) => row.kind === kind && (wanted === 'all' || (STATUS_ALIASES[row.status] ?? row.status) === wanted)));
-    return { ok: true, output: rows.length ? rows.map((row) => `${row.id} ${row.status} ${row.title}`).join('\n') : '(none)' };
+    return { ok: true, output: rows.length ? rows.map((row) => `${row.id} ${row.status} ${row.title}${row.status === 'parked' ? ` (parked: ${row.parkReason})` : ''}`).join('\n') : '(none)' };
+  }
+
+  async function parkRow(id, reason) {
+    if (!validId('prd', id)) return fail('id must name a prd row, with an id that starts prd-');
+    if (typeof reason !== 'string' || reason.trim() === '') return fail('reason must be a non-empty string');
+    const row = await readRow(id);
+    if (row === null) return fail(`no row ${id}`);
+    if (row.status !== 'open') return fail(`row ${id} is ${row.status}; only an open row is parked`);
+    Object.assign(row, { status: 'parked', parkReason: reason.trim() });
+    await writeRow(row);
+    return { ok: true, output: `${id} parked: ${row.parkReason}` };
+  }
+
+  async function reopenRow(id) {
+    if (!validId('prd', id)) return fail('id must name a prd row, with an id that starts prd-');
+    const row = await readRow(id);
+    if (row === null) return fail(`no row ${id}`);
+    if (row.status !== 'parked') return fail(`row ${id} is ${row.status}; only a parked row is reopened`);
+    Object.assign(row, { status: 'open', parkReason: undefined });
+    await writeRow(row);
+    return { ok: true, output: `${id} reopened` };
   }
 
   async function deleteRow(id) {
@@ -129,6 +167,10 @@ export async function rowSummary(confine, kind, limit) {
 // The open rows of every kind, in list order. A finish is refused while any of them is open, and names them.
 export async function openRows(confine) {
   return sortByCreated((await readRows(confine)).filter((row) => row.status === 'open'));
+}
+
+export async function parkedRows(confine) {
+  return sortByCreated((await readRows(confine)).filter((row) => row.status === 'parked'));
 }
 
 async function readRows(confine) {
