@@ -42,6 +42,11 @@ gm is one long-horizon worker: an MCP server that runs a task as one append-only
 - Commit gate: tools/ship.sh runs it through src/gate.mjs runGate. It runs every check only in a checkout whose package.json name is gm; elsewhere it checks syntax and lists the rest as notCovered. A check that throws is a failure.
 - Witness rule: run the built binary or the CLI on a real task in a scratch workspace, read the output, then delete the scratch. `node src/cli.mjs run --task "<text>" --workspace <dir> --model scripted` runs offline.
 
+## Facts found by troubleshooting
+
+- Node CLI needs `npm install` first (acorn is the one dependency; node_modules is git-ignored). Without it: ERR_MODULE_NOT_FOUND for 'acorn'. DESIGN.md, "Setup and troubleshooting facts (2026-11-05)".
+- The native build needs Ninja on PATH (presets use the Ninja generator). On a host where pip is PEP 668 blocked, install it into a venv. DESIGN.md, "Setup and troubleshooting facts (2026-11-05)".
+
 ## Parity harness
 
     node native/tests/parity/run.mjs [--bin <gm>] [--ref /tmp/parity-ref] [--scratch <dir>] [--reply-timeout-ms N]
