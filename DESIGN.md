@@ -794,3 +794,23 @@ Source: a peer 10-angle read-only survey in /workspace/oscraft (7 findings with 
 
 Disposition: items 1, 2, 3 and 5 are small and low risk; item 4 needs a dedicated concurrency pass. The grep-alternation defect, the gm.verbs synchronous throw, the child task/prefix overwrite and the macOS arm64 relay flake were fixed in this run by separate commits rather than deferred.
 
+
+## Architecture review pass: what landed (2026-11-06)
+
+The five-lens review in the section above produced a ranked plan. These commits implement it, all authored lanmower with no trailers, all pushed to origin main, all with a gate of {"gate":true,"failed":[]}:
+
+- 54243df - release publish fails closed when the latest-tag read errors; the tag moves only after the manifest upload; Windows x64 and arm64 .zip assets are packaged and published; install.sh and install.ps1 check gm/gm-core and retry downloads; arm-diagnose cancels superseded runs. Witness: a stubbed gh harness passed 9 scenarios, manifest assets=6, and a scratch install printed "installed gmnew v1".
+- f1a670a - gm-continue no longer tells agents to call the removed stopRows; docs/index.html and README use gm install, the six published targets and the two workflows; AGENTS.md records 63 conformance checks in 23 scenarios and drops settled open items. Witness: conformance 63/63 against native, AGENTS.md 19145 bytes, ASCII true.
+- 086bb47 - update_once refreshes a same-version release by assetSha, so stale leaves/skills/defaults are repaired; gm update forces a check without changing relay pacing. Witness: same version with a changed archive hash returns updated=true, a repeat returns already current, ctest 23/23.
+- 7c58b13 - the Windows relay advances its in-memory policy.current_version after a successful update, so it keeps checking. Witness: ctest 23/23, gm update returned already current on the rebuilt binary.
+- 6bd4b19 - git_commit resolves the repo top level so a cwd in a subdirectory still runs all nine own gate checks; syntaxCheck uses a pool of 8; notCovered names the two workflows. Witness: ownChecks=ascii, docs, sources, wiki, skills, connect, workers, prompt, smoke; parity 0 differ.
+- c74e3a8 - query_log and job_start seek with log.index instead of read_all. Witness: 6/6 query_log replies match a HEAD-built baseline on identical 2205-event logs; ctest 23/23; parity 0 differ.
+- 706b9da - QuickJS bodies get a 60 s JS-active budget and a cancellable stop; a spinning body stops and its thread joins before the job settles, while a body awaiting a long verb still finishes. Witness: CPU while spinning deltaTicks=40, CPU after stop deltaTicks=0; long verb reply ok; ctest 23/23; parity 0 differ.
+- 5036e26 - the restart replay no longer calls map::at on an entry the reader can erase. Repro: std::out_of_range at run 20/40; after the fix gm_relay_test passes 10/10 repeats and 30/30 direct runs.
+- eaa35a5 - the literal-to-regex grep retry gets its own scan budget. Witness: turn_rates|ability_fx hits 0 before and 2 after in both trees; ctest 23/23; parity 24/83 match, 0 differ.
+- caaef35 - bad gm.verbs arguments return {ok:false,error} as data instead of throwing out of a batched body. Witness: native conformance 65/65, ctest 23/23, parity 0 differ.
+- 2d41445 - a child context cannot write the parent run's task or prefixSha, wait replies no longer count as steps, and a child next_context takes no step. Witness: ok the parent's task, prefixSha and step count are unchanged by child contexts; ok a restart counts real steps only: 5; ctest 23/23; parity 0 differ.
+
+Validation at 5036e26: ctest 100% tests passed, 0 tests failed out of 23; node --test native/leaves/tests/*.test.mjs 19 pass / 0 fail; parity 24/83 scenarios match, 0 differ. CI release jobs for 6bd4b19, 706b9da, c74e3a8, caaef35, 5036e26 and 2d41445 all completed success. Published latest 2d41445-119; the local install was brought to that version. The gm-continue setup reports "0 open row(s)" and a clean working tree. The 7 peer survey findings that were not implemented are recorded in the follow-up section above with dispositions.
+
+This run hit the 50-step limit because of the step-counting defect fixed in 2d41445: boot() counted wait replies that explicitly say "no step was used". A restart of the MCP server opens a fresh run that counts steps correctly.
