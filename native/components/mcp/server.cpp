@@ -252,6 +252,8 @@ Value code_tools(const VerbTable& verbs) {
                                       .set("error", str_schema())
                                       .set("truncated", bool_schema())
                                       .set("background", str_schema())
+                                      .set("job", str_schema())
+                                      .set("hint", str_schema())
                                       .set("state", str_schema())
                                       .set("actionSeq", num_schema()),
                                   {"ok"});
@@ -984,9 +986,9 @@ struct Server::State {
                "rules it gives. That one read clears this notice. Do not repeat finished work.";
     }
 
-    Value action_fields(const std::string& tool, const Value& args, bool with_rpc) {
+    Value action_fields(const std::string& tool, const Value& args, bool with_rpc, int ahead = 0) {
         std::lock_guard guard(mu);
-        Value fields = object().set("step", s().steps).set("tool", tool).set("args", args);
+        Value fields = object().set("step", s().steps + ahead).set("tool", tool).set("args", args);
         if (with_rpc && s().rpc_id) {
             fields.set("rpcId", *s().rpc_id);
             fields = merge(std::move(fields), s().trace);
@@ -1009,7 +1011,7 @@ struct Server::State {
     }
 
     template <typename Exec, typename Digest>
-    Value act(const std::string& tool, const Value& args, Exec exec, Digest digest) {
+    Value act(const std::string& tool, const Value& args, Exec exec, Digest digest, int ahead = 0) {
         int step = s().steps;
         double start = s().log->now_ms();
         in_flight += 1;
@@ -1017,7 +1019,7 @@ struct Server::State {
             std::atomic<int>& count;
             ~Leave() { count -= 1; }
         } leave{in_flight};
-        std::uint64_t action = append("action", action_fields(tool, args, true));
+        std::uint64_t action = append("action", action_fields(tool, args, true, ahead));
         if (s().rpc_id) s().call_action_seq = action;
         Value result;
         try {
@@ -1685,7 +1687,7 @@ struct Server::State {
                     if (const Value* v = r.find(key)) d.set(key, *v);
                 }
                 return d;
-            });
+            }, 1);
     }
 
     void log_lint() {
