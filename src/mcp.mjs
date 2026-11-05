@@ -393,7 +393,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
 
   async function route(method, params, rpcId) {
     if (method === 'initialize') return initialize(params);
-    // server/discover is not served (owner decision: -32601 until a modern path exists), so it falls through to method not found.
+    if (method === 'server/discover') return discover(surface);
     if (method === 'ping') return {};
     await mcpReady;
     if (method === 'tools/list') return { tools: servedTools(surface) };
@@ -426,6 +426,10 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     const asked = params?.protocolVersion;
     const version = SUPPORTED_VERSIONS.includes(asked) ? asked : PROTOCOL_VERSION;
     return { protocolVersion: version, ...connectReply(surface), serverInfo: SERVER_INFO };
+  }
+
+  function discover(surface) {
+    return { resultType: 'complete', supportedVersions: SUPPORTED_VERSIONS, ...connectReply(surface), _meta: { 'io.modelcontextprotocol/serverInfo': SERVER_INFO } };
   }
 
   function getPrompt(params) {
