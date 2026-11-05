@@ -8,6 +8,7 @@ export const ROW_DIR = 'work/rows';
 const KINDS = { prd: 'work item', unknown: 'open question' };
 // A row is open until it is implemented (resolved), or, for a PRD, deleted. No row is held in any other state.
 const STATUSES = ['open', 'resolved', 'all'];
+const STATUS_ALIASES = { pending: 'open', completed: 'resolved' };
 const FIELDS = ['id', 'kind', 'title', 'body', 'status', 'createdAt', 'witnessEvent', 'witnessCommit', 'resolvedAt'];
 const str = { type: 'string' };
 const obj = (properties, required = []) => ({ type: 'object', properties, required });
@@ -64,8 +65,9 @@ export function createRowVerbs({ root, confine, log }) {
   }
 
   async function listRows(kind, status) {
-    if (!STATUSES.includes(status)) return fail(`status must be one of ${STATUSES.join(', ')}`);
-    const rows = sortByCreated((await readRows(confine)).filter((row) => row.kind === kind && (status === 'all' || row.status === status)));
+    const wanted = STATUS_ALIASES[status] ?? status;
+    if (!STATUSES.includes(wanted)) return fail(`status must be one of ${[...STATUSES, ...Object.keys(STATUS_ALIASES)].join(', ')}`);
+    const rows = sortByCreated((await readRows(confine)).filter((row) => row.kind === kind && (wanted === 'all' || (STATUS_ALIASES[row.status] ?? row.status) === wanted)));
     return { ok: true, output: rows.length ? rows.map((row) => `${row.id} ${row.status} ${row.title}`).join('\n') : '(none)' };
   }
 

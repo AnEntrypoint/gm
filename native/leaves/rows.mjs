@@ -1,6 +1,7 @@
 const ROW_DIR = 'work/rows';
 const KINDS = { prd: 'work item', unknown: 'open question' };
 const STATUSES = ['open', 'resolved', 'all'];
+const STATUS_ALIASES = { pending: 'open', completed: 'resolved' };
 const FIELDS = ['id', 'kind', 'title', 'body', 'status', 'createdAt', 'witnessEvent', 'witnessCommit', 'resolvedAt'];
 const SHA = /^[0-9a-f]{7,40}$/;
 const str = { type: 'string' };
@@ -114,8 +115,9 @@ function addRow(kind, { title, body = '' }) {
 }
 
 function listRows(kind, { status = 'open' }) {
-  if (!STATUSES.includes(status)) return fail(`status must be one of ${STATUSES.join(', ')}`);
-  const rows = sortByCreated(readRows().filter((row) => row.kind === kind && (status === 'all' || row.status === status)));
+  const wanted = STATUS_ALIASES[status] ?? status;
+  if (!STATUSES.includes(wanted)) return fail(`status must be one of ${[...STATUSES, ...Object.keys(STATUS_ALIASES)].join(', ')}`);
+  const rows = sortByCreated(readRows().filter((row) => row.kind === kind && (wanted === 'all' || (STATUS_ALIASES[row.status] ?? row.status) === wanted)));
   return { ok: true, output: rows.length ? rows.map((row) => `${row.id} ${row.status} ${row.title}`).join('\n') : '(none)' };
 }
 
