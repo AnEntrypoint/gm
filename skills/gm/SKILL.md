@@ -131,7 +131,7 @@ return res.output;
 
 ## Fan out to many agents
 
-Use this for work that splits into independent units: several angles to look up, a set of claims to check, files to review one at a time. Work that is one unit, or a chain where each step needs the last, stays in one run. DESIGN.md (direction 6) keeps the single-worker run as the measured baseline, so fan out when one run is slower or thinner on the task, and quote the measured gain in the witness.
+Use this for work that splits into independent units: several angles to look up, a set of claims to check, files to review one at a time. Work that is one unit, or a chain where each step needs the last, stays in one run. Fan out only when one run would be slower or thinner on the task, and quote the measured gain in the witness.
 
 The shape has five phases. Each phase is one run_code body or one batch of children, and the output of a phase is read before the next phase starts.
 

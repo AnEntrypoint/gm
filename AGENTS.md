@@ -44,11 +44,11 @@ gm is one long-horizon worker: an MCP server that runs a task as one append-only
 
 ## Facts found by troubleshooting
 
-- Node CLI needs `npm install` first (acorn is the one dependency; node_modules is git-ignored). Without it: ERR_MODULE_NOT_FOUND for 'acorn'. DESIGN.md, "Setup and troubleshooting facts (2026-11-05)".
-- The native build needs Ninja on PATH (presets use the Ninja generator). On a host where pip is PEP 668 blocked, install it into a venv. DESIGN.md, "Setup and troubleshooting facts (2026-11-05)".
+- Node CLI needs `npm install` first (acorn is the one dependency; node_modules is git-ignored). Without it: ERR_MODULE_NOT_FOUND for 'acorn'. verified 2026-11-05.
+- The native build needs Ninja on PATH (presets use the Ninja generator). On a host where pip is PEP 668 blocked, install it into a venv. verified 2026-11-05.
 - An installed build from 409087f-77 or earlier cannot self-update: its updater looks for gm-<target> in the unpacked archive, while the archives ship gmnew-<target>. One manual scripts/install.sh run is needed; 70e4349 fixes the updater. DESIGN.md, "Update witness against the published release (2026-11-05)".
-- Concurrent gm.search and gm.grep calls once shared unguarded SearchVerbs and Searcher state, which crashed the worker (exit 139). 5d9e835 serializes SearchVerbs::call, keeps cached index pointers valid, and masks .env values in hit lines. DESIGN.md, "Search verbs under parallel bodies (2026-11-05)".
-- gh run list --commit needs the full 40-character SHA; a 7-character prefix returns no runs. DESIGN.md, "Setup and troubleshooting facts (2026-11-05)".
+- Concurrent gm.search and gm.grep calls once shared unguarded SearchVerbs and Searcher state, which crashed the worker (exit 139). 5d9e835 serializes SearchVerbs::call, keeps cached index pointers valid, and masks .env values in hit lines. commit 5d9e835".
+- gh run list --commit needs the full 40-character SHA; a 7-character prefix returns no runs. verified 2026-11-05.
 
 ## Parity harness
 
@@ -91,15 +91,15 @@ gm is one long-horizon worker: an MCP server that runs a task as one append-only
 - Native grep (native/components/search/search_impl.cpp): the default scope is git-tracked files plus untracked files that git does not ignore. scope "all" adds gitignored files and node_modules. Both skip .git, .gm, .agentplug, .agentplug-kv, .gm, .playwriter and runs unless git tracks the file. vendor and node_modules are skipped unless vendor is true. A zero-match reply starts with a hint counting the skipped files.
 - Node search (src/search.mjs) searches tracked files only (open decision). Its literal pass runs the pattern again as a regex when the literal finds nothing and the pattern has regex characters; an invalid regex is an error (searcherFor).
 - Native search reuses a file's lines only while its stat (device, inode, size, mtime, ctime) is unchanged and settled (STAMP_SETTLE_MS = 3000), so a same-size write in one timestamp tick is not missed.
-- Do not cache the tokenized text of every file. Doing so once put a worker at 1399 MB of heap on a 108 MB tree (DESIGN.md, friction notes).
+- Do not cache the tokenized text of every file. Doing so once put a worker at 1399 MB of heap on a 108 MB tree (verified in the Node tree).
 - grep's root is a directory or one file (a file root must be tracked unless scope is all, and path cannot be combined with it); search's root must be a directory.
 
 ## Updates and hot reload
 
 - tools/update.mjs: a running checkout pulls origin main every DEFAULT_UPDATE_MS (60000 ms; GMNEW_UPDATE_MS overrides). A pull goes only into a clean checkout.
 - A change to a module listed in src/worker-modules.json restarts the worker. A change to a leaf or a skill applies in place. A src module outside the list (cli.mjs) restarts nothing. The gate's workers check fails when the list differs from the import graph.
-- A singleton that imports a reloadable module statically keeps the code it loaded at boot. A batch that changes tools/core.mjs or a singleton restarts each live worker, and background jobs are killed (DESIGN.md, Hot reload in place).
-- tools/relay.mjs is frozen, so a change to it reaches a host only on reconnect (DESIGN.md, Update on push).
+- A singleton that imports a reloadable module statically keeps the code it loaded at boot. A batch that changes tools/core.mjs or a singleton restarts each live worker, and background jobs are killed (DESIGN.md, Hot reload language (2026-11-04)).
+- tools/relay.mjs is frozen, so a change to it reaches a host only on reconnect (see tools/relay.mjs).
 
 ## Retries and network
 
@@ -118,12 +118,12 @@ gm is one long-horizon worker: an MCP server that runs a task as one append-only
 ## Open decisions (owner), with current state
 
 1. Node tree direction. OPEN: work/rows/unknown-mw29a63rd40c.yml asks "native C++ rewrite or Node-only?". State: the native tree builds and passes ctest and the parity harness. It is cut over for /workspace/gm only (DESIGN.md, Local cutover of the native gm, 2026-11-04); the user-wide entry is unchanged, and Node stays the parity reference. Until the owner answers native or node-only, commit df0a6b9 and native/ stay as they are.
-2. Grep default. Native searches untracked files that git does not ignore; Node searches tracked files only (DESIGN.md, Native MCP client, gaps). Node has not changed. The decision on whether Node follows is open.
+2. Grep default. Native searches untracked files that git does not ignore; Node searches tracked files only (DESIGN.md, Native MCP client (2026-11-04)). Node has not changed. The decision on whether Node follows is open.
 3. Stopped background fetch: native-ahead. Native kills the fetch's curl with its body, so no request keeps running and the code-call carries the real outcome; Node leaves the request until its 60 s timeout. Recorded in native/tests/parity/run.mjs (NATIVE_AHEAD) and DESIGN.md, "Stopped background fetch: native-ahead row". To match Node, Node would abort fetch on a body stop and the row would be removed. The owner has not chosen.
 4. Client-side roots and elicitation. Not used. Roots and sampling are not used (DESIGN.md decision 4); logging is used. Elicitation is not served, because it is interactive-only in Claude Code and a question becomes a row instead. DESIGN.md marks it "OWNER DECISION if wanted" (decision 2). Current state: neither tree uses either.
 5. Protocol 2026-07-28: not negotiated. Owner decision (DESIGN.md decision 1). Risk noted there: a v2 client may ask for it.
 6. Events wait on a new row: work/rows/unknown-mw29a6424ad2.yml asks whether a wait should wake when a PRD or question row is added. Open.
-7. Console output of a body is drained by the session and not returned or logged (DESIGN.md, Limits, stated, not closed). Open.
+7. Console output of a body is drained by the session and not returned or logged (stated, not closed). Open.
 8. Minimal tool set is not run, and G3 (cache effect, measured by the gm agent from host transcripts) is not recorded. The project closes when both are recorded.
 9. Native friction, open (DESIGN.md, Native gm friction after the restart): a host may cut a slash-command task to its first word; search and grep without a root fail with "git ls-files failed" on a non-git workspace, without naming the cause; a skill read through the verb does not log skill-loaded.
 
