@@ -6,6 +6,7 @@
       "env": {"PLAYWRITER_TELEMETRY": "0"},
       "ignore": [".playwriter/"],
       "deny": ["reset"],
+      "timeoutMs": 300000,
       "startupTimeoutMs": 600000
     }
   }

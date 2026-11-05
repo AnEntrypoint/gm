@@ -514,3 +514,11 @@ Reported by the spawn session (run 2026-11-05-06-58-25-6b9460), which runs this 
 ## Browser idle stop and the server/discover probe, 2026-11-05
 - pw 30708f1 (AnEntrypoint/pw): the idle stop no longer stops a browser while an MCP session holds its lease. Before, a batch that waited more than PLAYWRITER_IDLE_MS (default 300000) between calls lost its browser and its tab cookies. test/lifecycle.cjs passes 12 of 12 checks. gm defaults/mcp.json pins it.
 - gm connection drop at startup: the host sends server/discover after initialize. src/mcp.mjs answers -32601 (owner decision, not served), and the host drops the connection with "unknown message ID". native/components/mcp/server.cpp serves server/discover. FIXED (2026-11-05): Node answers server/discover the way native does (src/mcp.mjs discover; the reply is resultType complete, supportedVersions, capabilities, instructions and serverInfo). The -32601 reply was the cause of the drop. Protocol 2026-07-28 is still not negotiated (decision 1).
+
+## Two binaries: a launcher that updates, and a worker it runs, 2026-11-05
+
+- Decision (owner): the native gm ships as two executables. `gmnew` is the launcher: it holds the host stdio connection, runs the worker as a child, and does update checks, download, verify and swap for both. `gmnew-core` is the worker. The host connects once, so an update reloads the worker without a reconnect.
+- Today (native/components/host): serve.cpp starts the relay and spawns `gmnew worker` from current_executable(). update.cpp already downloads and swaps the one binary. Change: worker_argv points at the installed `gmnew-core`, and update.cpp fetches and swaps both assets. Release and install.sh publish both.
+- Node stays the reference tree and is not part of this change. The registration moves to the launcher alone, with no node relay.
+
+- playwriter_execute was capped at 60 s: the playwriter entry in defaults/mcp.json had no timeoutMs, so the server default (60000, src/mcp-client.mjs CALL_MS and native mcpclient config.cpp CALL_MS) applied to every call. Set to 300000. A per-call timeout argument is not read by gm; the entry sets the limit.
