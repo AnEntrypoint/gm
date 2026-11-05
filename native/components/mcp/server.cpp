@@ -742,34 +742,6 @@ struct Server::State {
         return static_cast<std::uint64_t>(f->as_number());
     }
 
-    void prefill_answers(const std::vector<Value>& history) {
-        std::map<std::uint64_t, const Value*> ends;
-        for (const Value& event : history) {
-            std::string kind = string_of(event, "kind");
-            auto action = seq_field(event, "actionSeq");
-            if ((kind == "result" || kind == "refusal") && action) ends[*action] = &event;
-        }
-        static const std::set<std::string> kLogFields = {"seq",       "t",     "mono",      "inFlight", "kind", "step",
-                                                         "tool",      "startMono", "durMs", "actionSeq", "rpcId"};
-        for (const Value& action : history) {
-            const Value* rpc = action.find("rpcId");
-            if (string_of(action, "kind") != "action" || rpc == nullptr) continue;
-            std::uint64_t seq = seq_field(action, "seq").value_or(0);
-            auto end = ends.find(seq);
-            Value out = object();
-            if (end == ends.end()) {
-                out.set("ok", false).set("error", "the call was interrupted by a restart; check its outside effects before repeating it");
-            } else if (string_of(*end->second, "kind") == "refusal") {
-                out.set("ok", false).set("refused", true).set("error", end->second->find("error") ? *end->second->find("error") : Value());
-            } else {
-                for (const json::Member& m : end->second->as_object()) {
-                    if (!kLogFields.contains(m.first)) out.set(m.first, m.second);
-                }
-            }
-            remember(id_key(rpc), tool_result(string_of(action, "tool"), out, seq));
-        }
-    }
-
     static std::optional<Value> recovery_of(const std::vector<Value>& history) {
         std::size_t first = history.size();
         for (std::size_t i = 0; i < history.size(); ++i) {
@@ -900,7 +872,6 @@ struct Server::State {
             }
             s().run_started = s().steps > 0;
             s().notice_seq = last_context_seq(history);
-            prefill_answers(history);
         }
         if (!closed_at_boot) {
             auto recovery = resumed ? recovery_of(history) : std::nullopt;

@@ -235,7 +235,7 @@ function queryHintOf(shown, total) {
   return total > shown ? `${reach}. This step's new events are seqs ${shown + 1} to ${total}.` : `${reach}.`;
 }
 
-function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, resume = null, jobLifetimeMs = DEFAULT_JOB_LIFETIME_MS, stuckMs = DEFAULT_STUCK_MS, monitorMs = DEFAULT_MONITOR_MS, noticeMs = BODY_NOTICE_MS, hostIdleMs = DEFAULT_HOST_IDLE_MS, recovery = null, history = [], taskInherited = false, startOverride = null, surface = 'code' }) {
+function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, resume = null, jobLifetimeMs = DEFAULT_JOB_LIFETIME_MS, stuckMs = DEFAULT_STUCK_MS, monitorMs = DEFAULT_MONITOR_MS, noticeMs = BODY_NOTICE_MS, hostIdleMs = DEFAULT_HOST_IDLE_MS, recovery = null, taskInherited = false, startOverride = null, surface = 'code' }) {
   const runId = basename(runDir);
   const runsRoot = dirname(runDir);
   const tools = createTools({ workspace, runDir, log, background: true, jobLifetimeMs, stuckMs, monitorMs, noticeMs, leaves: current.leaves, serveSkill: (uri) => serveSkillFile(uri, 'read_file') });
@@ -246,7 +246,6 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
   const active = new Map();
   const waiting = [];
   const unansweredTurns = new Set();
-  // A repeated tools/call request id is answered from its first reply, never run again. Only the last REPLY_MEMORY requests are kept.
   const replies = new Map();
   const remember = (key, pending) => {
     replies.set(key, pending);
@@ -262,7 +261,6 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     const call = callOf(rpcId);
     if (call !== undefined) call.actionSeq = seq;
   };
-  for (const [key, reply] of answersFrom(history, runId)) remember(key, Promise.resolve(reply));
   let steps = resume?.steps ?? 0;
   let ended = resume?.ended ?? null;
   let stepLimited = false;
@@ -881,30 +879,6 @@ async function bodyResult(runDir, job) {
   return status.value ?? status.error ?? '';
 }
 
-function answersFrom(events, runId) {
-  const ends = new Map();
-  for (const event of events) {
-    if ((event.kind === 'result' || event.kind === 'refusal') && event.actionSeq !== undefined) ends.set(event.actionSeq, event);
-  }
-  const answers = new Map();
-  for (const action of events) {
-    if (action.kind !== 'action' || action.rpcId === undefined) continue;
-    const end = ends.get(action.seq);
-    let out;
-    if (end === undefined) out = { ok: false, error: 'the call was interrupted by a restart; check its outside effects before repeating it' };
-    else if (end.kind === 'refusal') out = { ok: false, refused: true, error: end.error };
-    else out = outputOf(end);
-    answers.set(JSON.stringify(action.rpcId), toolResultOf(action.tool, out, { [RUN_META]: runId, [RUN_SEQ]: action.seq }));
-  }
-  return answers;
-}
-
-const LOG_FIELDS = new Set(['seq', 't', 'mono', 'inFlight', 'kind', 'step', 'tool', 'startMono', 'durMs', 'actionSeq', 'rpcId']);
-
-function outputOf(event) {
-  return Object.fromEntries(Object.entries(event).filter(([key]) => !LOG_FIELDS.has(key)));
-}
-
 // The open actions of a resumed run: actions with no result or refusal. Only runs whose events carry actionSeq are
 // read, because older events cannot say which action an end belongs to.
 function recoveryOf(events) {
@@ -1194,7 +1168,7 @@ async function main(argv) {
   process.on('exit', () => client.stop());
 
   sweepEndedCode(dirname(runDir), runDir);
-  let session = createSession({ ...limits, runDir, log, task, resume, recovery: recovery && recovery.open.length > 0 ? recovery : null, history, startOverride });
+  let session = createSession({ ...limits, runDir, log, task, resume, recovery: recovery && recovery.open.length > 0 ? recovery : null, startOverride });
   let retired = Promise.resolve();
   function reopen(ended) {
     const start = ended.successorStart();

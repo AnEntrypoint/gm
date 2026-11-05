@@ -567,16 +567,15 @@ int main() {
         options.restart_reason = "test restart";
         Harness b(verbs, options);
         b.next_id = 2000;
-        Value repeat = b.call("run_code", R"({"body":"first"})", 77);
-        Value lost = b.call("run_code", R"({"body":"lost"})", 99);
+        Value repeat = b.call("run_code", R"({"body":"return 'second'"})", 77);
+        Value lost = b.call("run_code", R"({"body":"return 'lost-ran'"})", 99);
         Value step = b.call("next_context", "{}");
         std::cout << "resumed step: " << gm::json::dump(step).substr(0, 400) << std::endl;
         if (!step.find("step")) step.set("step", -1);
         check(b.server->run_id() == dir.filename().string() && step.find("step")->as_number() == 3 && str(step, "task") == "resume this task",
               "a resumed run keeps its steps and its task: step " + gm::json::dump(*step.find("step")));
-        check(str(repeat, "output").find("first") != std::string::npos, "a repeated id is answered from the log");
-        check(str(lost, "error") == "the call was interrupted by a restart; check its outside effects before repeating it",
-              "an action with no end is answered as interrupted");
+        check(str(repeat, "output").find("second") != std::string::npos, "an id from an earlier connection is run, not replayed");
+        check(str(lost, "output").find("lost-ran") != std::string::npos, "an action left open by an earlier connection is run again");
         check(step.find("recovery") && str(*step.find("recovery"), "note").find("seq ") != std::string::npos,
               "the first step after a resume carries the recovery note");
         auto events = log_of(dir);
