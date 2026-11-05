@@ -101,13 +101,15 @@ const std::string kFinishDescription =
     "rows. A gap that names an open row is refused too.";
 
 std::string run_code_description(const std::string& verb_names) {
-    return "Run a JavaScript body in the project. The body is an ES module when format is esm and a script when format is cjs. "
+    return "Run a JavaScript body in the project. The body is an ES module when format is esm and CommonJS when format is cjs. "
            "Left out, format follows the project's package.json type (type module is esm, anything else is cjs). "
-           "The body receives gm, with one method per verb: await gm.<name>(args), and gm.project is the project root. "
-           "The body has no require(), and node: builtins cannot be imported. A static import loads a project file as an "
-           "ES module, and a relative specifier resolves against the project root. A cjs body cannot use a static import, "
-           "so it is refused. Each project file is read from disk when the call runs. Paths given to the file verbs may "
-           "point inside or outside the workspace; an outside path should be absolute. The verbs are: " +
+           "A CommonJS body loads with require() and cannot use a static import. Static imports (single or multi-line) load "
+           "ES modules, and require() loads CommonJS; each project file loads in its own format (.mjs is ES module, .cjs is "
+           "CommonJS, .js follows the package.json type), and each file is read from disk when the call runs. Relative paths "
+           "resolve against the project root. Paths may point inside or outside the workspace, for the body's own require and "
+           "import and for the file verbs alike; an outside path should be absolute. A non-literal import() or require() is "
+           "refused. The body receives gm, with one method per verb: await gm.<name>(args), and gm.project is the project root. "
+           "The verbs are: " +
            verb_names +
            ". gm.verbs() returns each verb's description and input schema as data. A failed call returns "
            "{ok:false, error} and does not stop the body. The body's return value comes back as JSON. A body still "
@@ -503,12 +505,14 @@ struct Server::State {
         {
             std::lock_guard guard(turn.mutex);
             busy = turn.inflight.contains(key);
+            if (!busy) turn.inflight.insert(key);
         }
         if (!busy) return;
-        pause_turn();
+        if (Hold::current) Hold::current->release_keep_order();
         {
             std::unique_lock guard(turn.mutex);
             turn.changed.wait(guard, [&] { return !turn.inflight.contains(key); });
+            turn.inflight.insert(key);
         }
         resume_turn();
     }
@@ -516,11 +520,7 @@ struct Server::State {
     struct InFlight {
         State& state;
         std::optional<std::string> key;
-        InFlight(State& s, std::optional<std::string> k) : state(s), key(std::move(k)) {
-            if (!key) return;
-            std::lock_guard guard(state.turn.mutex);
-            state.turn.inflight.insert(*key);
-        }
+        InFlight(State& s, std::optional<std::string> k) : state(s), key(std::move(k)) {}
         ~InFlight() {
             if (!key) return;
             {
@@ -561,6 +561,16 @@ struct Server::State {
                     state_.turn.serving += 1;
                     ordered_ = false;
                 }
+            }
+            held_ = false;
+            state_.turn.changed.notify_all();
+        }
+
+        void release_keep_order() {
+            if (!held_) return;
+            {
+                std::lock_guard guard(state_.turn.mutex);
+                state_.turn.held = false;
             }
             held_ = false;
             state_.turn.changed.notify_all();
