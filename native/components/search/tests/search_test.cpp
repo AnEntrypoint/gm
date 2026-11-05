@@ -222,6 +222,46 @@ int main() {
     check(hint_of(alternation).find("no literal match; matched as regex") != std::string::npos, "the regex retry runs on a budget-capped root: " + hint_of(alternation));
     fs::remove_all(bulk);
 
+    fs::path long_lines = fs::temp_directory_path() / ("gm_search_long_lines_" + std::to_string(std::rand()));
+    fs::remove_all(long_lines);
+    const std::string marker = "LONG_MARK_9f3a";
+    const std::string straddle = "STRADDLE_MARK_7b2c";
+    write(long_lines / "long.txt", std::string(1500, 'x') + " " + marker + " " + std::string(1600, 'y') + "\n");
+    write(long_lines / "boundary.txt", std::string(1018, 'a') + straddle + std::string(1600, 'z') + "\n");
+    write(long_lines / ".env", "KEY=" + std::string(1500, 'v') + "SECRET_LONG_VALUE_7c1d\n");
+    gm::search::Searcher long_searcher(long_lines);
+    Value long_literal = parse(long_searcher.grep(Value(gm::json::Object{{"pattern", marker}})));
+    check(output_of(long_literal).find("long.txt:1") != std::string::npos && output_of(long_literal).find(marker) != std::string::npos,
+          "a literal hit past character 1024 is found and shown: " + output_of(long_literal));
+    check(output_of(long_literal).find("(1 matches;") != std::string::npos, "the long-line literal counts one match: " + output_of(long_literal));
+    check(hint_of(long_literal).find("bounded windows") != std::string::npos, "long lines are named in the hint: " + hint_of(long_literal));
+    Value long_word = parse(long_searcher.grep(Value(gm::json::Object{{"pattern", marker}, {"mode", "word"}})));
+    check(output_of(long_word).find("long.txt:1") != std::string::npos && output_of(long_word).find(marker) != std::string::npos,
+          "a word hit past character 1024 is found and shown: " + output_of(long_word));
+    Value long_regex = parse(long_searcher.grep(Value(gm::json::Object{{"pattern", "LONG_MARK.*9f3a"}, {"mode", "regex"}})));
+    check(output_of(long_regex).find("long.txt:1") != std::string::npos && output_of(long_regex).find(marker) != std::string::npos,
+          "a regex hit past character 1024 is found and shown: " + output_of(long_regex));
+    Value straddle_regex = parse(long_searcher.grep(Value(gm::json::Object{{"pattern", straddle}, {"mode", "regex"}})));
+    check(output_of(straddle_regex).find("boundary.txt:1") != std::string::npos && output_of(straddle_regex).find(straddle) != std::string::npos,
+          "a regex hit across a window boundary is found: " + output_of(straddle_regex));
+    Value long_env = parse(long_searcher.grep(Value(gm::json::Object{{"pattern", "SECRET_LONG_VALUE"}})));
+    check(output_of(long_env).find("<redacted>") != std::string::npos && output_of(long_env).find("SECRET_LONG_VALUE_7c1d") == std::string::npos,
+          "a long .env line never prints its value: " + output_of(long_env));
+    fs::remove_all(long_lines);
+
+    fs::path huge = fs::temp_directory_path() / ("gm_search_huge_" + std::to_string(std::rand()));
+    fs::remove_all(huge);
+    write(huge / "huge.txt", "install" + std::string(999000, 'a') + "\n");
+    gm::search::Searcher huge_searcher(huge);
+    auto begun = std::chrono::steady_clock::now();
+    Value catastrophic = parse(huge_searcher.grep(Value(gm::json::Object{{"pattern", "install.*gm"}, {"mode", "regex"}})));
+    long long elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - begun).count();
+    check(catastrophic.find("ok") && catastrophic.find("ok")->as_bool(), "a catastrophic regex on a 999000-character line returns normally: " + output_of(catastrophic));
+    check(output_of(catastrophic).rfind("(0 matches", 0) == 0, "the catastrophic regex reports no match: " + output_of(catastrophic));
+    check(elapsed < 10000, "the catastrophic regex stays under the scan deadline: " + std::to_string(elapsed) + " ms");
+    check(hint_of(catastrophic).find("bounded windows") != std::string::npos, "the bounded-window hint names the cap: " + hint_of(catastrophic));
+    fs::remove_all(huge);
+
     fs::remove_all(dir);
     if (failures == 0) std::cout << "search tests passed\n";
     return failures == 0 ? 0 : 1;

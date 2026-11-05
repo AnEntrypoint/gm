@@ -36,6 +36,8 @@ constexpr int DEFAULT_LIMIT = 100;
 constexpr int MAX_LIMIT = 1000;
 constexpr std::size_t MAX_PATTERN_CHARS = 200;
 constexpr std::size_t MAX_MATCH_CHARS = 1024;
+constexpr std::size_t MATCH_WINDOW_STEP = MAX_MATCH_CHARS / 2;
+constexpr std::size_t EXCERPT_BEFORE = 60;
 constexpr std::size_t MAX_SCAN_FILES = 4096;
 constexpr std::uint64_t MAX_SCAN_BYTES = 32 * 1024 * 1024;
 constexpr long long SCAN_DEADLINE_MS = 10000;
@@ -107,6 +109,17 @@ std::string snippet(const std::string& text) {
     return text.substr(0, cut) + " ...";
 }
 
+std::string excerpt_at(const std::string& text, std::size_t at) {
+    if (text.size() <= SNIPPET_CHARS || at < SNIPPET_CHARS) return snippet(text);
+    std::size_t start = std::min(at - EXCERPT_BEFORE, text.size() - SNIPPET_CHARS);
+    while (start > 0 && (static_cast<unsigned char>(text[start]) & 0xC0) == 0x80) --start;
+    std::size_t end = std::min(text.size(), start + SNIPPET_CHARS);
+    while (end > 0 && end < text.size() && (static_cast<unsigned char>(text[end]) & 0xC0) == 0x80) --end;
+    std::string out = " ..." + text.substr(start, end - start);
+    if (end < text.size()) out += " ...";
+    return out;
+}
+
 std::string match_prefix(const std::string& line) {
     if (line.size() <= MAX_MATCH_CHARS) return line;
     std::size_t cut = MAX_MATCH_CHARS;
@@ -127,8 +140,17 @@ std::string shown_text(const std::string& shown, const std::string& line) {
     return snippet(line.substr(0, equal + 1) + "<redacted>");
 }
 
+std::string shown_excerpt(const std::string& shown, const std::string& line, std::size_t at) {
+    if (is_dotenv(shown)) return shown_text(shown, match_prefix(line));
+    return excerpt_at(line, at);
+}
+
 std::string plural(std::size_t count, const std::string& one, const std::string& many) {
     return std::to_string(count) + " " + (count == 1 ? one : many);
+}
+
+std::string long_line_hint() {
+    return "long lines were matched in bounded windows; displayed text is an excerpt around the hit";
 }
 
 bool in_vendor(const std::string& rel) {
@@ -251,6 +273,12 @@ std::vector<std::string> tokens_of(const std::string& text) {
     return out;
 }
 
+struct Match {
+    bool matched = false;
+    bool stopped = false;
+    std::size_t at = 0;
+};
+
 class Matcher {
 public:
     Matcher(const std::string& pattern, const std::string& mode, bool ignore_case)
@@ -261,19 +289,31 @@ public:
         }
     }
 
-    bool operator()(const std::string& text) const {
-        if (mode_ == "regex") return std::regex_search(text, regex_);
+    template <class Expired>
+    Match find(const std::string& text, Expired expired) const {
+        if (mode_ == "regex") {
+            std::size_t start = 0;
+            while (true) {
+                if (expired()) return {false, true, 0};
+                std::string window = text.substr(start, MAX_MATCH_CHARS);
+                std::smatch hit;
+                if (std::regex_search(window, hit, regex_)) return {true, false, start + static_cast<std::size_t>(hit.position(0))};
+                if (start + MAX_MATCH_CHARS >= text.size()) break;
+                start += MATCH_WINDOW_STEP;
+            }
+            return {};
+        }
         const std::string& hay = ignore_case_ ? lowered(text) : text;
         std::size_t at = hay.find(needle_);
-        if (mode_ == "literal") return at != std::string::npos;
+        if (mode_ == "literal") return at == std::string::npos ? Match{} : Match{true, false, at};
         while (at != std::string::npos) {
             bool left = at == 0 || !is_word_char(static_cast<unsigned char>(hay[at - 1]));
             std::size_t after = at + needle_.size();
             bool right = after >= hay.size() || !is_word_char(static_cast<unsigned char>(hay[after]));
-            if (left && right) return true;
+            if (left && right) return {true, false, at};
             at = hay.find(needle_, at + 1);
         }
-        return false;
+        return {};
     }
 
 private:
@@ -607,6 +647,7 @@ std::string Searcher::grep(const json::Value& args) {
     }
 
     bool show_relative = inside && root_ == workspace_;
+    bool bounded = false;
     auto scan = [&](const Matcher& matcher) {
         budget.start_scan();
         Scan result;
@@ -630,11 +671,17 @@ std::string Searcher::grep(const json::Value& args) {
                     budget.scan_stopped = true;
                     break;
                 }
-                std::string text = match_prefix(lines[i]);
-                if (!matcher(text)) continue;
+                const std::string& line = lines[i];
+                if (line.size() > MAX_MATCH_CHARS) bounded = true;
+                Match hit = matcher.find(line, [&] { return budget.expired(); });
+                if (hit.stopped) {
+                    budget.scan_stopped = true;
+                    break;
+                }
+                if (!hit.matched) continue;
                 ++result.total;
                 if (static_cast<long long>(result.total) <= offset || result.next >= 0) continue;
-                std::string row = shown + ":" + std::to_string(i + 1) + " " + shown_text(shown, text);
+                std::string row = shown + ":" + std::to_string(i + 1) + " " + shown_excerpt(shown, line, hit.at);
                 if (result.found.size() >= static_cast<std::size_t>(limit) || size + row.size() > OUTPUT_PAGE) {
                     result.next = static_cast<long long>(result.total) - 1;
                     continue;
@@ -693,6 +740,7 @@ std::string Searcher::grep(const json::Value& args) {
     }
 
     if (budget.hit()) hints.push_back(budget.hint());
+    if (bounded) hints.push_back(long_line_hint());
 
     std::string output;
     std::string joined;

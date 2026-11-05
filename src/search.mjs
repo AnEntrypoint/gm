@@ -21,6 +21,8 @@ const DEFAULT_LIMIT = 100;
 const MAX_LIMIT = 1000;
 const MAX_PATTERN_CHARS = 200;
 const MAX_MATCH_CHARS = 1024;
+const MATCH_WINDOW_STEP = MAX_MATCH_CHARS / 2;
+const EXCERPT_BEFORE = 60;
 const MAX_SCAN_FILES = 4096;
 const MAX_SCAN_BYTES = 32 * 1024 * 1024;
 const SCAN_DEADLINE_MS = 10000;
@@ -156,9 +158,9 @@ function searcherFor({ root, confine }) {
       if (!Number.isInteger(limit) || limit < 1 || limit > MAX_LIMIT) return fail(`limit must be an integer from 1 to ${MAX_LIMIT}`);
       if (typeof vendor !== 'boolean') return fail('vendor must be true or false');
       if (path !== undefined && (typeof path !== 'string' || path === '')) return fail('path must be a non-empty string');
-      let matches;
+      let matcher;
       try {
-        matches = matcherFor(pattern, mode, ignoreCase === true);
+        matcher = matcherFor(pattern, mode, ignoreCase === true);
       } catch (err) {
         return fail(`bad pattern: ${err.message}`);
       }
@@ -192,7 +194,8 @@ function searcherFor({ root, confine }) {
         names = trackedUnder(listing.paths, under, vendor);
       }
       if (!Number.isInteger(offset) || offset < 0) return fail('offset must be a whole number, zero or more');
-      const scan = async (matchesLine) => {
+      let bounded = false;
+      const scan = async (finder) => {
         startScan();
         const found = [];
         let total = 0;
@@ -214,11 +217,17 @@ function searcherFor({ root, confine }) {
               budget.scanStopped = true;
               break;
             }
-            const text = matchPrefix(read.lines[i]);
-            if (!matchesLine(text)) continue;
+            const line = read.lines[i];
+            if (line.length > MAX_MATCH_CHARS) bounded = true;
+            const hit = finder.find(line, () => budgetExpired(budget));
+            if (hit.stopped) {
+              budget.scanStopped = true;
+              break;
+            }
+            if (!hit.matched) continue;
             total += 1;
             if (total <= offset || next !== null) continue;
-            const row = `${shown}:${i + 1} ${shownText(shown, text)}`;
+            const row = `${shown}:${i + 1} ${shownExcerpt(shown, line, hit.at)}`;
             if (found.length >= limit || size + row.length > OUTPUT_PAGE) {
               next = total - 1;
               continue;
@@ -230,7 +239,7 @@ function searcherFor({ root, confine }) {
         }
         return { found, total, next };
       };
-      let scanned = await scan(matches);
+      let scanned = await scan(matcher);
       const hints = [];
       if (scanned.total === 0 && mode === 'literal' && REGEX_CHARS.test(pattern)) {
         let asRegex;
@@ -247,6 +256,7 @@ function searcherFor({ root, confine }) {
       const skipped = all || total > 0 ? null : walked !== null ? walkSkipHint(walked.skippedDirs) : await skippedHint(listing, under, vendor);
       if (skipped !== null) hints.push(skipped);
       if (budgetHit()) hints.push(budgetHint());
+      if (bounded) hints.push(longLineHint());
       return { ok: true, files: source, output: [...found, ...footer].join('\n'), ...(hints.length ? { hint: hints.join(' | ') } : {}) };
     },
   };
@@ -427,6 +437,10 @@ function walkSkipHint(dirs) {
   return dirs === 0 ? null : `${plural(dirs, 'directory', 'directories')} skipped (dot-directories, node_modules, vendor or runs); use scope: 'all' to include them`;
 }
 
+function longLineHint() {
+  return 'long lines were matched in bounded windows; displayed text is an excerpt around the hit';
+}
+
 function trackedUnder(paths, dir, vendor) {
   const prefix = dir.split(sep).join('/');
   return paths.filter((rel) => (prefix === '' || rel === prefix || rel.startsWith(`${prefix}/`)) && (vendor || !VENDOR.test(rel)));
@@ -511,25 +525,61 @@ export function tokensOf(text) {
 }
 
 function matcherFor(pattern, mode, ignoreCase) {
-  const flags = ignoreCase ? 'i' : '';
+  const folded = (text) => (ignoreCase ? text.toLowerCase() : text);
   if (mode === 'regex') {
-    const re = new RegExp(pattern, flags);
-    return (text) => re.test(text);
+    const re = new RegExp(pattern, ignoreCase ? 'i' : '');
+    return {
+      find(line, expired) {
+        let start = 0;
+        while (true) {
+          if (expired()) return { stopped: true };
+          const hit = re.exec(line.slice(start, start + MAX_MATCH_CHARS));
+          if (hit !== null) return { matched: true, at: start + hit.index };
+          if (start + MAX_MATCH_CHARS >= line.length) break;
+          start += MATCH_WINDOW_STEP;
+        }
+        return {};
+      },
+    };
   }
-  if (mode === 'word') {
-    const re = new RegExp(`(?<![A-Za-z0-9_])${escapeRegex(pattern)}(?![A-Za-z0-9_])`, flags);
-    return (text) => re.test(text);
-  }
-  const needle = ignoreCase ? pattern.toLowerCase() : pattern;
-  return (text) => (ignoreCase ? text.toLowerCase() : text).includes(needle);
+  const needle = folded(pattern);
+  return {
+    find(line) {
+      const hay = folded(line);
+      let at = hay.indexOf(needle);
+      if (mode === 'literal') return at < 0 ? {} : { matched: true, at };
+      while (at >= 0) {
+        const left = at === 0 || !isWordChar(hay[at - 1]);
+        const after = at + needle.length;
+        const right = after >= hay.length || !isWordChar(hay[after]);
+        if (left && right) return { matched: true, at };
+        at = hay.indexOf(needle, at + 1);
+      }
+      return {};
+    },
+  };
 }
 
-function escapeRegex(text) {
-  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+function isWordChar(char) {
+  return char !== undefined && /[A-Za-z0-9_]/.test(char);
 }
 
 function snippet(text) {
   return text.length <= SNIPPET_CHARS ? text : `${text.slice(0, SNIPPET_CHARS)} ...`;
+}
+
+function excerptText(text, at) {
+  if (text.length <= SNIPPET_CHARS || at < SNIPPET_CHARS) return snippet(text);
+  let start = Math.min(at - EXCERPT_BEFORE, text.length - SNIPPET_CHARS);
+  while (start > 0 && (text.charCodeAt(start) & 0xfc00) === 0xdc00) start -= 1;
+  let end = Math.min(text.length, start + SNIPPET_CHARS);
+  while (end > 0 && end < text.length && (text.charCodeAt(end) & 0xfc00) === 0xdc00) end -= 1;
+  return ` ...${text.slice(start, end)}${end < text.length ? ' ...' : ''}`;
+}
+
+function shownExcerpt(shown, text, at) {
+  if (isDotenv(shown)) return shownText(shown, matchPrefix(text));
+  return excerptText(text, at);
 }
 
 function matchPrefix(text) {
