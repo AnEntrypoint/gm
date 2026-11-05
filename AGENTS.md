@@ -26,12 +26,12 @@ gm is one long-horizon worker: an MCP server that runs a task as one append-only
 ## Layout
 
 - src/ (Node reference, ES modules, Node 22 or later, one runtime dependency: acorn 8.18.0): cli.mjs (run, query, replay, doctor), mcp.mjs (the MCP server and its surfaces, DEFAULT_MAX_STEPS 50, DEFAULT_MAX_INFLIGHT 8), tools.mjs (verbs, adoptBody), runcode.mjs (run_code bodies, the 180 s budget), exec.mjs (killBody), mcp-client.mjs (MCP servers inside run_code, launchOf), search.mjs (grep and search), git.mjs (git verbs, ci_status), gate.mjs (commit gate, runGate), rows.mjs, pending.mjs (PENDING_KINDS), retry.mjs, prompt.mjs (MCP_RULES), run.mjs (run directories, setSuccessor), worker-modules.json (the worker's import graph).
-- tools/: core.mjs (runs the worker as a child and reloads it), update.mjs (DEFAULT_UPDATE_MS = 60000), relay.mjs, supervise.mjs, ship.sh, prefetch.mjs, gm-continue-setup.mjs, mcp-conformance.mjs (`--stdio <program> [args...]`: runs the MCP checks against a stdio server; 56 checks in 22 scenarios; the official conformance package fixtures are not used).
+- tools/: core.mjs (runs the worker as a child and reloads it), update.mjs (DEFAULT_UPDATE_MS = 60000), relay.mjs, supervise.mjs, ship.sh, prefetch.mjs, gm-continue-setup.mjs, mcp-conformance.mjs (`--stdio <program> [args...]`: runs the MCP checks against a stdio server; 60 checks in 22 scenarios; the official conformance package fixtures are not used).
 - native/components/: host (the gm binary, worker.cpp, relay), mcp (server.cpp, skills.cpp, pending.cpp, compact.cpp), mcpclient (native MCP client on the vendored cxxmcp), quickjs (runcode.cpp, the run_code engine), proc (child.cpp, proc.cpp with OwnerScope and kill_owned), search (search_impl.cpp), verbs, json, log. Public headers are in native/include/gm and each component's include/. Component tests sit in <component>/tests/.
 - native/leaves/: JavaScript leaves (git, fetch, rows, review, wiki, code-ast) and vendor/acorn.mjs; tests in leaves/tests/.
 - native/third_party/: cxxmcp v1.3.0 (MIT, stdio only, VERSION.txt holds the commit and a sha256 per file) and quickjs-ng.
 - native/tests/parity/: run.mjs and fake-mcp.mjs (see Parity harness).
-- skills/gm/SKILL.md, skills/gm-continue/SKILL.md, skills/dev/SKILL.md. defaults/mcp.json: the default MCP servers (playwriter). setup.sh. scripts/gm.sh and scripts/gm.ps1. .github/workflows/release.yml (the only workflow; it builds the presets and publishes). docs/index.html (the manual). research/ (evidence). tasks/rewrite/ (rewrite briefs). work/rows/ (PRD and unknown rows).
+- skills/gm/SKILL.md, skills/gm-continue/SKILL.md, skills/dev/SKILL.md. defaults/mcp.json: the default MCP servers (playwriter). setup.sh. scripts/gm.sh and scripts/gm.ps1. .github/workflows/release.yml (six build presets and publish), arm-diagnose.yml (asan and gdb on arm64), and .github/actions/ninja/ (the runner image Ninja). docs/index.html (the manual). research/ (evidence). tasks/rewrite/ (rewrite briefs). work/rows/ (PRD and unknown rows).
 - runs/<id>/ (git-ignored): log.jsonl (append-only), log.index, rules.md, task.json, jobs/.
 
 ## Build and test
@@ -46,6 +46,9 @@ gm is one long-horizon worker: an MCP server that runs a task as one append-only
 
 - Node CLI needs `npm install` first (acorn is the one dependency; node_modules is git-ignored). Without it: ERR_MODULE_NOT_FOUND for 'acorn'. DESIGN.md, "Setup and troubleshooting facts (2026-11-05)".
 - The native build needs Ninja on PATH (presets use the Ninja generator). On a host where pip is PEP 668 blocked, install it into a venv. DESIGN.md, "Setup and troubleshooting facts (2026-11-05)".
+- An installed build from 409087f-77 or earlier cannot self-update: its updater looks for gm-<target> in the unpacked archive, while the archives ship gmnew-<target>. One manual scripts/install.sh run is needed; 70e4349 fixes the updater. DESIGN.md, "Update witness against the published release (2026-11-05)".
+- Concurrent gm.search and gm.grep calls once shared unguarded SearchVerbs and Searcher state, which crashed the worker (exit 139). 5d9e835 serializes SearchVerbs::call, keeps cached index pointers valid, and masks .env values in hit lines. DESIGN.md, "Search verbs under parallel bodies (2026-11-05)".
+- gh run list --commit needs the full 40-character SHA; a 7-character prefix returns no runs. DESIGN.md, "Setup and troubleshooting facts (2026-11-05)".
 
 ## Parity harness
 
