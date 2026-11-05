@@ -8,6 +8,8 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <thread>
+#include <vector>
 
 #include "deoxidene/result.hpp"
 #include "gmnew/json.hpp"
@@ -49,6 +51,7 @@ public:
     ~Server();
 
     void accept(std::string_view line);
+    void dispatch(std::string_view line, std::vector<std::thread>& workers);
     void input_ended();
     std::string run_id() const;
     std::filesystem::path run_dir() const;

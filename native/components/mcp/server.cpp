@@ -453,6 +453,7 @@ struct Server::State {
         int step = 0;
         Session* owner = nullptr;
         std::string name;
+        std::string request_key;
         double start_mono = 0;
         std::chrono::steady_clock::time_point start_wall = std::chrono::steady_clock::now();
         std::atomic<bool> stopped{false};
@@ -485,6 +486,106 @@ struct Server::State {
     std::mutex monitor_mutex;
     std::condition_variable monitor_wake;
     bool shutting_down = false;
+
+    struct Turn {
+        std::mutex mutex;
+        std::condition_variable changed;
+        std::uint64_t issued = 0;
+        std::uint64_t serving = 0;
+        bool held = false;
+        std::set<std::string> inflight;
+    } turn;
+
+    void await_duplicate(const std::string& key) {
+        bool busy;
+        {
+            std::lock_guard guard(turn.mutex);
+            busy = turn.inflight.contains(key);
+        }
+        if (!busy) return;
+        pause_turn();
+        {
+            std::unique_lock guard(turn.mutex);
+            turn.changed.wait(guard, [&] { return !turn.inflight.contains(key); });
+        }
+        resume_turn();
+    }
+
+    struct InFlight {
+        State& state;
+        std::optional<std::string> key;
+        InFlight(State& s, std::optional<std::string> k) : state(s), key(std::move(k)) {
+            if (!key) return;
+            std::lock_guard guard(state.turn.mutex);
+            state.turn.inflight.insert(*key);
+        }
+        ~InFlight() {
+            if (!key) return;
+            {
+                std::lock_guard guard(state.turn.mutex);
+                state.turn.inflight.erase(*key);
+            }
+            state.turn.changed.notify_all();
+        }
+    };
+
+    class Hold {
+    public:
+        Hold(State& state, std::uint64_t ticket, bool ordered)
+            : state_(state), ticket_(ticket), ordered_(ordered), previous_(current) {
+            current = this;
+            take();
+        }
+        ~Hold() {
+            drop();
+            current = previous_;
+        }
+        Hold(const Hold&) = delete;
+        Hold& operator=(const Hold&) = delete;
+
+        void take() {
+            std::unique_lock guard(state_.turn.mutex);
+            state_.turn.changed.wait(guard, [&] { return !state_.turn.held && (!ordered_ || state_.turn.serving == ticket_); });
+            state_.turn.held = true;
+            held_ = true;
+        }
+
+        void drop() {
+            if (!held_) return;
+            {
+                std::lock_guard guard(state_.turn.mutex);
+                state_.turn.held = false;
+                if (ordered_ && state_.turn.serving == ticket_) {
+                    state_.turn.serving += 1;
+                    ordered_ = false;
+                }
+            }
+            held_ = false;
+            state_.turn.changed.notify_all();
+        }
+
+        static inline thread_local Hold* current = nullptr;
+
+    private:
+        State& state_;
+        std::uint64_t ticket_;
+        bool ordered_;
+        bool held_ = false;
+        Hold* previous_;
+    };
+
+    std::uint64_t take_ticket() {
+        std::lock_guard guard(turn.mutex);
+        return turn.issued++;
+    }
+
+    void pause_turn() {
+        if (Hold::current) Hold::current->drop();
+    }
+
+    void resume_turn() {
+        if (Hold::current) Hold::current->take();
+    }
 
     State(VerbTable& v, ServerOptions o, LineWriter w)
         : verbs(v), options(std::move(o)), write(std::move(w)), skills(options.skills) {}
@@ -884,6 +985,7 @@ struct Server::State {
     }
 
     Value action_fields(const std::string& tool, const Value& args, bool with_rpc) {
+        std::lock_guard guard(mu);
         Value fields = object().set("step", s().steps).set("tool", tool).set("args", args);
         if (with_rpc && s().rpc_id) {
             fields.set("rpcId", *s().rpc_id);
@@ -1124,6 +1226,18 @@ struct Server::State {
         write_status(*job.owner, job.name, status);
         append_to(*job.owner, "job", std::move(event));
         job.changed.notify_all();
+    }
+
+    bool cancel_foreground(const std::string& key) {
+        if (key.empty()) return false;
+        for (const auto& job : body_list()) {
+            std::lock_guard guard(job->lock);
+            if (job->adopted || job->settled || job->finished || job->request_key != key) continue;
+            job->stopped = true;
+            proc::kill_owned(job->body);
+            return true;
+        }
+        return false;
     }
 
     void stop_locked(BodyJob& job, const std::string& reason) {
@@ -1768,12 +1882,19 @@ struct Server::State {
         if (!s().run_started && !s().ended && name != "next_context" && name != "finish") {
             note_rule(2, name + " was called before the first next_context of the run");
         }
-        s().rpc_id = rpc_id;
-        s().trace = trace_of(params->find("_meta"));
-        s().call_action_seq.reset();
+        {
+            std::lock_guard guard(mu);
+            s().rpc_id = rpc_id;
+            s().trace = trace_of(params->find("_meta"));
+            s().call_action_seq.reset();
+        }
         Value out = invoke(name, args);
-        auto seq = s().call_action_seq;
-        s().rpc_id.reset();
+        std::optional<std::uint64_t> seq;
+        {
+            std::lock_guard guard(mu);
+            seq = s().call_action_seq;
+            s().rpc_id.reset();
+        }
         watch_call(name, out);
         if (auto notice = rules_notice()) out.set("rulesNotice", *notice);
         return tool_result(name, out, seq);
@@ -2267,6 +2388,7 @@ struct Server::State {
         }
         if (method == "notifications/cancelled") {
             const Value* request = params ? params->find("requestId") : nullptr;
+            if (request && cancel_foreground(id_key(request))) return std::nullopt;
             if (request && end_listen(*request)) return std::nullopt;
             Value fields = object();
             if (request) fields.set("requestId", *request);
@@ -2303,6 +2425,8 @@ struct Server::State {
         const Value* params = message.find("params");
         std::optional<std::string> key;
         if (request && method == "tools/call") key = id_key(id);
+        if (key) await_duplicate(*key);
+        InFlight mark(*this, key);
         try {
             if (key && s().replies.contains(*key)) {
                 const Value* name = params ? params->find("name") : nullptr;
@@ -2326,6 +2450,13 @@ struct Server::State {
         }
     }
 
+    static bool is_method(std::string_view line, std::string_view name) {
+        auto parsed = json::parse(line);
+        if (!parsed) return false;
+        const Value* method = parsed->find("method");
+        return method && method->is_string() && method->as_string() == name;
+    }
+
     bool is_next_context_call(std::string_view line) {
         auto parsed = json::parse(line);
         if (!parsed) return false;
@@ -2340,6 +2471,25 @@ struct Server::State {
 
     void accept(std::string_view line) {
         if (trim(line).empty()) return;
+        process(line, take_ticket(), true);
+    }
+
+    void dispatch(std::string_view line, std::vector<std::thread>& workers) {
+        if (trim(line).empty()) return;
+        if (is_method(line, "notifications/cancelled")) {
+            process(line, 0, false);
+            return;
+        }
+        std::uint64_t ticket = take_ticket();
+        if (is_method(line, "tools/call")) {
+            workers.emplace_back([this, ticket, text = std::string(line)] { process(text, ticket, true); });
+            return;
+        }
+        process(line, ticket, true);
+    }
+
+    void process(std::string_view line, std::uint64_t ticket, bool ordered) {
+        Hold hold(*this, ticket, ordered);
         try {
             if (s().ended && !s().step_limited && is_next_context_call(line)) {
                 reopen();
@@ -2507,6 +2657,7 @@ Value Server::State::run_code(const Value& args) {
             job->start_mono = s().log->now_ms();
             job->name = "body-" + std::to_string(action);
             for (int n = 2; body_named(job->name); ++n) job->name = "body-" + std::to_string(action) + "-" + std::to_string(n);
+            if (s().rpc_id) job->request_key = id_key(&*s().rpc_id);
             {
                 std::lock_guard guard(mu);
                 bodies.push_back(job);
@@ -2523,11 +2674,23 @@ Value Server::State::run_code(const Value& args) {
                 }
                 job->exited = true;
             });
-            std::unique_lock guard(job->lock);
-            bool done = job->changed.wait_for(guard, std::chrono::milliseconds(static_cast<long long>(budget)), [&] { return job->finished; });
+            pause_turn();
+            bool done;
+            {
+                std::unique_lock guard(job->lock);
+                done = job->changed.wait_for(guard, std::chrono::milliseconds(static_cast<long long>(budget)), [&] { return job->finished; });
+                if (!done) {
+                    job->adopted = true;
+                    job->start_wall = std::chrono::steady_clock::now();
+                }
+            }
+            resume_turn();
             if (done) {
-                auto started_jobs = job->started_jobs;
-                guard.unlock();
+                std::vector<std::string> started_jobs;
+                {
+                    std::lock_guard guard(job->lock);
+                    started_jobs = job->started_jobs;
+                }
                 job->thread.join();
                 settle_started_jobs(started_jobs);
                 {
@@ -2543,11 +2706,8 @@ Value Server::State::run_code(const Value& args) {
                                     .set("truncated", length > kOutputCap)
                                     .set("loads", array()));
             }
-            job->adopted = true;
-            job->start_wall = std::chrono::steady_clock::now();
             write_status(*job->owner, job->name, status_of(*job, "running"));
             append("job", object().set("job", job->name).set("body", number_of(job->body)).set("state", "running"));
-            guard.unlock();
             ensure_monitor();
             Value logged_calls = array();
             if (auto after = s().log->read_from(action)) {
@@ -2581,6 +2741,7 @@ deoxidene::Result<std::unique_ptr<Server>, std::string> Server::open(VerbTable& 
 }
 
 void Server::accept(std::string_view line) { state_->accept(line); }
+void Server::dispatch(std::string_view line, std::vector<std::thread>& workers) { state_->dispatch(line, workers); }
 void Server::input_ended() { state_->input_ended(); }
 std::string Server::run_id() const { return state_->session->run_id; }
 std::filesystem::path Server::run_dir() const { return state_->session->run_dir; }
@@ -2594,11 +2755,13 @@ int serve_stream(std::istream& in, std::ostream& out, VerbTable& verbs, ServerOp
         std::cerr << "gm mcp: " << server.error() << '\n';
         return 1;
     }
+    std::vector<std::thread> calls;
     std::string line;
     while (std::getline(in, line)) {
         if (!line.empty() && line.back() == '\r') line.pop_back();
-        (*server)->accept(line);
+        (*server)->dispatch(line, calls);
     }
+    for (auto& call : calls) call.join();
     (*server)->input_ended();
     return 0;
 }
