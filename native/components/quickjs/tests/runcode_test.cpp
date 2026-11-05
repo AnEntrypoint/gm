@@ -176,8 +176,22 @@ void test_verbs_filter() {
     expect(!unknown && unknown.error().rfind("unknown verb: nope", 0) == 0,
            "unknown verb name is reported: " + (unknown ? std::string() : unknown.error()));
     auto bad_shape = gm::run_body(verbs, "return gm.verbs({ names: false });", project_root);
-    expect(!bad_shape && bad_shape.error().find("gm.verbs() takes") != std::string::npos,
-           "a bad filter shape is refused: " + (bad_shape ? std::string() : bad_shape.error()));
+    expect(bad_shape && gm::json::dump(*bad_shape) == R"({"ok":false,"error":"gm.verbs() takes { names: true }"})",
+           "a bad filter shape returns data: " + (bad_shape ? gm::json::dump(*bad_shape) : bad_shape.error()));
+}
+
+void test_verbs_bad_arguments_do_not_abort_body() {
+    FakeVerbs verbs;
+    auto value = run_ok(verbs,
+                        "const empty = gm.verbs({});\n"
+                        "const array = gm.verbs({ names: ['echo'] });\n"
+                        "const unknown = gm.verbs({ nope: 1 });\n"
+                        "const scalar = gm.verbs(7);\n"
+                        "return { empty: empty.length, array, unknown, scalar, tail: 'still here' };",
+                        "bad gm.verbs arguments are data");
+    expect(gm::json::dump(value) ==
+               R"({"empty":3,"array":{"ok":false,"error":"gm.verbs() takes { names: true }"},"unknown":{"ok":false,"error":"gm.verbs() does not take nope"},"scalar":{"ok":false,"error":"gm.verbs() takes { name: <verb name> } or { names: true }"},"tail":"still here"})",
+           "bad arguments return data and the body continues: " + gm::json::dump(value));
 }
 
 void test_fresh_state_and_edges() {
@@ -264,6 +278,7 @@ int main() {
     test_throw_in_body();
     test_top_level_await_and_gm_fields();
     test_verbs_filter();
+    test_verbs_bad_arguments_do_not_abort_body();
     test_fresh_state_and_edges();
     test_js_deadline_stops_spin();
     test_cancel_stops_spin();

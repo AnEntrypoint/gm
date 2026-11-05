@@ -25,20 +25,23 @@ function call(name, args) {
 }
 
 const VERBS_SHAPE = 'gm.verbs() takes { name: <verb name> } or { names: true }';
+const failed = (error) => ({ ok: false, error });
+const all = () => verbs.map((verb) => ({ ...verb }));
 function verbsOf(options) {
-  if (options === undefined) return verbs.map((verb) => ({ ...verb }));
-  if (options === null || typeof options !== 'object' || Array.isArray(options)) throw new TypeError(VERBS_SHAPE);
+  if (options === undefined) return all();
+  if (options === null || typeof options !== 'object' || Array.isArray(options)) return failed(VERBS_SHAPE);
   const keys = Object.keys(options);
   const unknown = keys.find((key) => key !== 'name' && key !== 'names');
-  if (unknown !== undefined) throw new TypeError(`gm.verbs() does not take ${unknown}`);
-  if (keys.includes('names') && options.names !== true) throw new TypeError('gm.verbs() takes { names: true }');
+  if (unknown !== undefined) return failed(`gm.verbs() does not take ${unknown}`);
+  if (keys.includes('names') && options.names !== true) return failed('gm.verbs() takes { names: true }');
+  if (keys.length === 0) return all();
   if (keys.length === 1 && options.names === true) return verbs.map((verb) => verb.name);
   if (keys.length === 1 && typeof options.name === 'string') {
     const found = verbs.find((verb) => verb.name === options.name);
     if (found === undefined) throw new Error(`unknown verb: ${options.name}`);
     return { ...found };
   }
-  throw new TypeError(VERBS_SHAPE);
+  return failed(VERBS_SHAPE);
 }
 
 const gm = { project, verbs: verbsOf };

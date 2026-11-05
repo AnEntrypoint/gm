@@ -206,6 +206,9 @@ const SCENARIOS = [
       ok('gm.verbs({ names: true }) returns just the names', Array.isArray(verbs?.names) && verbs.names.length === verbs.count && verbs.names.every((name) => typeof name === 'string'), short(verbs?.names?.length));
       const unknown = await code("return await gm.try(() => gm.verbs({ name: 'no_such_verb' }));");
       ok('an unknown verb name is a clear error', unknown?.ok === false && String(unknown.error).includes('no_such_verb'), short(unknown));
+      const shapes = await code("const all = gm.verbs({}); const array = gm.verbs({ names: ['read_file'] }); const unknownKey = gm.verbs({ nope: 1 }); const scalar = gm.verbs(7); return { count: all.length, array, unknownKey, scalar, tail: 'still here' };");
+      ok('gm.verbs({}) returns every schema', shapes?.count > 1, short(shapes?.count));
+      ok('bad gm.verbs arguments return data and the body continues', shapes?.tail === 'still here' && [shapes?.array, shapes?.unknownKey, shapes?.scalar].every((r) => r?.ok === false && typeof r.error === 'string'), short(shapes));
     },
   },
   {
