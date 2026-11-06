@@ -1,0 +1,165 @@
+{
+  "build": "41d1d82",
+  "source": "native/tests/parity/run.mjs",
+  "rows": [
+    {
+      "row": "next_context",
+      "verdict": "documented-gap",
+      "reasons": [
+        "documented gap: the served prefix hashes the run_code description, which native words differently (see the tools/list row)"
+      ]
+    },
+    {
+      "row": "run_code esm static import",
+      "verdict": "documented-gap",
+      "reasons": [
+        "documented gap: native runs a body with gm only and passes it no require, and its module loader reads files from disk, so require() and import of node: builtins fail; Node passes require to every body and loads node: builtins"
+      ]
+    },
+    {
+      "row": "run_code esm dynamic import",
+      "verdict": "documented-gap",
+      "reasons": [
+        "documented gap: native runs a body with gm only and passes it no require, and its module loader reads files from disk, so require() and import of node: builtins fail; Node passes require to every body and loads node: builtins"
+      ]
+    },
+    {
+      "row": "run_code esm require",
+      "verdict": "documented-gap",
+      "reasons": [
+        "documented gap: native runs a body with gm only and passes it no require, and its module loader reads files from disk, so require() and import of node: builtins fail; Node passes require to every body and loads node: builtins"
+      ]
+    },
+    {
+      "row": "run_code cjs require",
+      "verdict": "documented-gap",
+      "reasons": [
+        "documented gap: native runs a body with gm only and passes it no require, and its module loader reads files from disk, so require() and import of node: builtins fail; Node passes require to every body and loads node: builtins"
+      ]
+    },
+    {
+      "row": "run_code default require",
+      "verdict": "documented-gap",
+      "reasons": [
+        "documented gap: native runs a body with gm only and passes it no require, and its module loader reads files from disk, so require() and import of node: builtins fail; Node passes require to every body and loads node: builtins"
+      ]
+    },
+    {
+      "row": "run_code cjs static import",
+      "verdict": "documented-gap",
+      "reasons": [
+        "documented gap: native runs a body with gm only and passes it no require, and its module loader reads files from disk, so require() and import of node: builtins fail; Node passes require to every body and loads node: builtins",
+        "documented gap: native does not refuse a static import in a CommonJS body; the body fails in the JS engine with a load error and logs no refusal"
+      ]
+    },
+    {
+      "row": "run_code cjs non-literal require",
+      "verdict": "documented-gap",
+      "reasons": [
+        "documented gap: native runs a body with gm only and passes it no require, and its module loader reads files from disk, so require() and import of node: builtins fail; Node passes require to every body and loads node: builtins",
+        "documented gap: native does not refuse a static import in a CommonJS body; the body fails in the JS engine with a load error and logs no refusal"
+      ]
+    },
+    {
+      "row": "run_code write project module",
+      "verdict": "documented-gap",
+      "reasons": [
+        "documented gap: native logs no refusal event (two here) and no code-load event (one here), so each later sequence number is one or two lower than Node"
+      ]
+    },
+    {
+      "row": "run_code esm project import",
+      "verdict": "documented-gap",
+      "reasons": [
+        "documented gap: native does not list a project file that a body loads, and logs no code-load event for it; Node does both",
+        "documented gap: native logs no refusal event (two here) and no code-load event (one here), so each later sequence number is one or two lower than Node"
+      ]
+    },
+    {
+      "row": "run_code bad format",
+      "verdict": "documented-gap",
+      "reasons": [
+        "documented gap: native logs no refusal event (two here) and no code-load event (one here), so each later sequence number is one or two lower than Node"
+      ]
+    },
+    {
+      "row": "run_code write package type",
+      "verdict": "documented-gap",
+      "reasons": [
+        "documented gap: native logs no refusal event (two here) and no code-load event (one here), so each later sequence number is one or two lower than Node"
+      ]
+    },
+    {
+      "row": "run_code default format follows package type",
+      "verdict": "documented-gap",
+      "reasons": [
+        "documented gap: native runs a body with gm only and passes it no require, and its module loader reads files from disk, so require() and import of node: builtins fail; Node passes require to every body and loads node: builtins",
+        "documented gap: native logs no refusal event (two here) and no code-load event (one here), so each later sequence number is one or two lower than Node"
+      ]
+    },
+    {
+      "row": "run_code console flood",
+      "verdict": "documented-gap",
+      "reasons": [
+        "documented gap: native logs no refusal event (two here) and no code-load event (one here), so each later sequence number is one or two lower than Node"
+      ]
+    },
+    {
+      "row": "run_code console format",
+      "verdict": "documented-gap",
+      "reasons": [
+        "documented gap: native logs no refusal event (two here) and no code-load event (one here), so each later sequence number is one or two lower than Node"
+      ]
+    },
+    {
+      "row": "query_log body-console",
+      "verdict": "documented-gap",
+      "reasons": [
+        "documented gap: native logs no refusal event (two here) and no code-load event (one here), so each later sequence number is one or two lower than Node"
+      ]
+    },
+    {
+      "row": "run_code background console",
+      "verdict": "documented-gap",
+      "reasons": [
+        "documented gap: native logs no refusal event (two here) and no code-load event (one here), so each later sequence number is one or two lower than Node"
+      ]
+    },
+    {
+      "row": "finish",
+      "verdict": "documented-gap",
+      "reasons": [
+        "documented gap: native logs no refusal event (two here) and no code-load event (one here), so each later sequence number is one or two lower than Node"
+      ]
+    },
+    {
+      "row": "next_context after finish",
+      "verdict": "documented-gap",
+      "reasons": [
+        "documented gap: the served prefix hashes the run_code description, which native words differently (see the tools/list row)"
+      ]
+    },
+    {
+      "row": "log event kinds",
+      "verdict": "documented-gap",
+      "reasons": [
+        "documented gap: native does not list a project file that a body loads, and logs no code-load event for it; Node does both"
+      ]
+    },
+    {
+      "row": "mcp tools/list",
+      "verdict": "documented-gap",
+      "reasons": [
+        "documented gap: native's run_code description omits require() and calls a CommonJS body a script, since native has no require(); Node's description names both"
+      ]
+    },
+    {
+      "row": "mcp next_context",
+      "verdict": "documented-gap",
+      "reasons": [
+        "documented gap: the served prefix hashes the run_code description, which native words differently (see the tools/list row)",
+        "documented gap: the MCP server events are recorded after the boot tools event, which native writes before the MCP verbs join, so at this call native holds fewer events than Node"
+      ]
+    }
+  ]
+}
