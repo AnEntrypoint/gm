@@ -940,6 +940,34 @@ int main() {
               "compactChildren shrinks a child-heavy feed, keeps the pending event full and leaves the default feed unchanged");
     }
 
+    std::cout << "--- item 8: step budget handoff ---\n";
+    {
+        auto limits = fresh_options(root, "step-budget");
+        limits.max_steps = 2;
+        Harness h(verbs, limits);
+        Value first = h.call("next_context", "{}");
+        Value second = h.call("next_context", "{}");
+        std::string first_run = h.server->run_id();
+        fs::path dir = h.server->run_dir();
+        check(first.find("step") && first.find("step")->as_number() == 1 && second.find("step") && second.find("step")->as_number() == 2 &&
+                  second.find("stepsLeft") && second.find("stepsLeft")->as_number() == 0,
+              "two next_context calls reach step 2 with stepsLeft 0");
+        Value done = h.call("finish", R"({"witness":"handoff witness: two steps ran"})");
+        check(done.find("finished") && done.find("finished")->as_bool(),
+              "finish with a witness ends the run at stepsLeft 0: " + gm::json::dump(done));
+        Value successor = h.call("next_context", "{}");
+        check(successor.find("ok") && successor.find("ok")->as_bool() && str(successor, "run") != first_run &&
+                  !str(successor, "run").empty() && h.server->run_id() != first_run,
+              "the successor run differs from " + first_run + ": " + str(successor, "run"));
+        auto events = log_of(dir);
+        std::string end_status;
+        for (const Value& e : events) {
+            if (str(e, "kind") == "end") end_status = str(e, "status") + " witness=" + str(e, "witness");
+        }
+        check(count_kind(events, "end") == 1 && end_status == "finished witness=handoff witness: two steps ran",
+              "the first run logs exactly one finished end event: " + end_status);
+    }
+
     std::error_code ec;
     fs::remove_all(root, ec);
     std::cout << (failures == 0 ? "ALL PASSED" : "FAILURES: " + std::to_string(failures)) << '\n';

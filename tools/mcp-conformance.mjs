@@ -9,6 +9,7 @@ const SKILL_URI = 'skill://gm/SKILL.md';
 const HOUR_MS = 3600000;
 const REQUEST_TIMEOUT_MS = 60000;
 const RULES_RUN_DIR = `/tmp/gm-conformance-rules-${process.pid}-${Date.now()}`;
+const HANDOFF_RUN_DIR = `/tmp/gm-conformance-handoff-${process.pid}-${Date.now()}`;
 const INVALID_PARAMS = -32602;
 const METHOD_NOT_FOUND = -32601;
 
@@ -355,6 +356,22 @@ const SCENARIOS = [
       ok('next_context after finish opens a fresh run', successor.run !== first.run && first.run !== undefined, short({ first: first.run, successor: successor.run }));
       const after = await call('run_code', { body: 'return 3' });
       ok('the successor run does not inherit the rule 2 notice', after.rulesNotice === undefined, short(after.rulesNotice));
+    },
+  },
+  {
+    name: 'step budget handoff',
+    args: ['--run-dir', HANDOFF_RUN_DIR],
+    run: async (c, ok) => {
+      const call = async (name, args) => (await c.rpc('tools/call', { name, arguments: args })).result?.structuredContent ?? {};
+      let fiftieth = {};
+      for (let step = 1; step <= 50; step += 1) fiftieth = await call('next_context', {});
+      ok('50 next_context calls reach stepsLeft 0', fiftieth.ok === true && fiftieth.step === 50 && fiftieth.stepsLeft === 0,
+        short({ step: fiftieth.step, stepsLeft: fiftieth.stepsLeft }));
+      const done = await call('finish', { witness: 'step budget handoff witness' });
+      ok('finish with a witness succeeds at stepsLeft 0', done.ok === true, short(done));
+      const successor = await call('next_context', {});
+      ok('the next next_context opens a different run', successor.ok === true && successor.run !== undefined && successor.run !== fiftieth.run,
+        short({ first: fiftieth.run, successor: successor.run }));
     },
   },
 ];
