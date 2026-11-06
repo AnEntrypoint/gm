@@ -14,8 +14,38 @@ const NOTICE_ROOM = 160;
 const cutRunOutput = (text) => `${text.slice(0, OUTPUT_CAP - NOTICE_ROOM)}\n[gm: run_code output cut at ${OUTPUT_CAP - NOTICE_ROOM} of ${text.length} characters; read less, or read the rest with read_file pages]`;
 const BODY_WORKER = new URL('./body-worker.mjs', import.meta.url);
 const BODY_SLOTS = 4;
+const CONSOLE_LINES = 200;
+const CONSOLE_BYTES = 8192;
+const CONSOLE_LINE_BYTES = 512;
 const waiting = [];
 let running = 0;
+
+function cutLine(text) {
+  const raw = Buffer.from(text);
+  if (raw.length <= CONSOLE_LINE_BYTES) return text;
+  let cut = CONSOLE_LINE_BYTES;
+  while (cut > 0 && (raw[cut] & 0xc0) === 0x80) cut -= 1;
+  return raw.subarray(0, cut).toString('utf8');
+}
+
+function consoleBuffer() {
+  const lines = [];
+  let bytes = 0;
+  let dropped = 0;
+  return {
+    add(text) {
+      const line = cutLine(text);
+      const size = Buffer.byteLength(line);
+      if (lines.length >= CONSOLE_LINES || bytes + size > CONSOLE_BYTES) {
+        dropped += 1;
+        return;
+      }
+      lines.push(line);
+      bytes += size;
+    },
+    report: () => ({ lines, dropped, bytes }),
+  };
+}
 
 function takeSlot(log, { body, step }) {
   const slot = { body, step, log, granted: false, released: false, started: false, queued: running >= BODY_SLOTS };
@@ -55,14 +85,16 @@ function cancelSlot(slot) {
   if (at >= 0) waiting.splice(at, 1);
 }
 
-function spawnWorker({ file, kind, project, verbs, call, log, step, startSeq }) {
+function spawnWorker({ file, kind, project, verbs, call, output, startSeq }) {
   const worker = new Worker(BODY_WORKER, { workerData: { file, kind, project, verbs: verbs.map(({ name, description, inputSchema }) => ({ name, description, inputSchema })) }, stdout: true, stderr: true });
   worker.stdout.resume();
   worker.stderr.resume();
   let stopped = false;
   const done = new Promise((resolve) => {
     worker.on('message', (msg) => {
-      if (msg.type === 'call') {
+      if (msg.type === 'console') {
+        output.add(msg.text);
+      } else if (msg.type === 'call') {
         if (stopped) return;
         const work = bodyContext.run({ body: startSeq }, () => Promise.resolve().then(() => call(msg.name, msg.args)));
         work.catch((err) => ({ ok: false, error: err.message })).then((result) => {
@@ -148,7 +180,7 @@ export const COMPACT = {
 export function runCodeTool(verbNames) {
   return {
     name: 'run_code',
-    description: `Run a JavaScript body in the project. The body is an ES module when format is esm and CommonJS when format is cjs. Left out, format follows the project's package.json type (type module is esm, anything else is cjs). A CommonJS body loads with require() and cannot use a static import. Static imports (single or multi-line) load ES modules, and require() loads CommonJS; each project file loads in its own format (.mjs is ES module, .cjs is CommonJS, .js follows the package.json type), and each file is read from disk when the call runs. Relative paths resolve against the project root. Paths may point inside or outside the workspace, for the body's own require and import and for the file verbs alike; an outside path should be absolute. A non-literal import() or require() is refused. The body receives gm, with one method per verb: await gm.<name>(args), and gm.project is the project root. The verbs are: ${verbNames.join(', ')}. gm.verbs() returns each verb's description and input schema as data. gm.verbs({ name: 'read_file' }) returns just that verb's schema, gm.verbs({ names: true }) returns just the names, and an unknown name is an error. Wrap a call that may throw in gm.try(fn), which returns its value or { ok: false, error } as data, so one failure does not hide the rest of a batch. A failed call returns {ok:false, error} and does not stop the body. The body's return value comes back as JSON. A body still running after timeoutMs (default 180000, at most 300000) becomes a background run: the call returns its job id at once, job_status with waitMs returns its value, and finish is refused while it runs unless stopBackground is true. One step is one body: read the inputs in one Promise.all, decide in code, act with the independent writes in one Promise.all, and verify in the same body. The ten most-used verbs: read_file({ path, offset?, limit? }), run_shell({ command, timeoutMs? }), write_file({ path, content }), query_log({ js?, kind?, fromMono?, toMono?, after?, last? }), search({ query, k? }), fetch({ url, timeoutMs? }), job_start({ job, command, timeoutMs? }), job_status({ job, waitMs?, offset? }), callers({ name, limit? }), grep({ pattern, root?, mode?, scope?, ignoreCase?, limit?, offset? }). A file written in this run is untracked; grep it with scope: 'all'. finish is not a verb: end the run with the finish tool. The reply names its own action in actionSeq, the seq of the run_code action event in the log. A body's console output is not returned and is not logged. An argument this tool does not take is refused by name.`,
+    description: `Run a JavaScript body in the project. The body is an ES module when format is esm and CommonJS when format is cjs. Left out, format follows the project's package.json type (type module is esm, anything else is cjs). A CommonJS body loads with require() and cannot use a static import. Static imports (single or multi-line) load ES modules, and require() loads CommonJS; each project file loads in its own format (.mjs is ES module, .cjs is CommonJS, .js follows the package.json type), and each file is read from disk when the call runs. Relative paths resolve against the project root. Paths may point inside or outside the workspace, for the body's own require and import and for the file verbs alike; an outside path should be absolute. A non-literal import() or require() is refused. The body receives gm, with one method per verb: await gm.<name>(args), and gm.project is the project root. The verbs are: ${verbNames.join(', ')}. gm.verbs() returns each verb's description and input schema as data. gm.verbs({ name: 'read_file' }) returns just that verb's schema, gm.verbs({ names: true }) returns just the names, and an unknown name is an error. Wrap a call that may throw in gm.try(fn), which returns its value or { ok: false, error } as data, so one failure does not hide the rest of a batch. A failed call returns {ok:false, error} and does not stop the body. The body's return value comes back as JSON. A body still running after timeoutMs (default 180000, at most 300000) becomes a background run: the call returns its job id at once, job_status with waitMs returns its value, and finish is refused while it runs unless stopBackground is true. One step is one body: read the inputs in one Promise.all, decide in code, act with the independent writes in one Promise.all, and verify in the same body. The ten most-used verbs: read_file({ path, offset?, limit? }), run_shell({ command, timeoutMs? }), write_file({ path, content }), query_log({ js?, kind?, fromMono?, toMono?, after?, last? }), search({ query, k? }), fetch({ url, timeoutMs? }), job_start({ job, command, timeoutMs? }), job_status({ job, waitMs?, offset? }), callers({ name, limit? }), grep({ pattern, root?, mode?, scope?, ignoreCase?, limit?, offset? }). A file written in this run is untracked; grep it with scope: 'all'. finish is not a verb: end the run with the finish tool. The reply names its own action in actionSeq, the seq of the run_code action event in the log. A body's console output is not returned; it is logged once per body as a body-console event, at most 200 lines of 512 bytes and 8 KiB, with a dropped count for the lines past the cap. An argument this tool does not take is refused by name.`,
     inputSchema: { type: 'object', properties: RUN_CODE_PROPERTIES, required: ['body'] },
   };
 }
@@ -183,6 +215,7 @@ export async function runBody({ body, timeoutMs = DEFAULT_TIMEOUT_MS, format, ve
   mkdirSync(dirname(file), { recursive: true });
   writeFileSync(file, source);
   const slot = takeSlot(log, { body: startSeq, step });
+  const output = consoleBuffer();
   let spawned = null;
   let stoppedBeforeStart = false;
   const stop = () => {
@@ -194,7 +227,7 @@ export async function runBody({ body, timeoutMs = DEFAULT_TIMEOUT_MS, format, ve
   const done = slot.ready.then(() => {
     if (stoppedBeforeStart) return { ok: false, error: 'the body was stopped before it started' };
     startSlot(slot);
-    spawned = spawnWorker({ file, kind, project, verbs, call, log, step, startSeq });
+    spawned = spawnWorker({ file, kind, project, verbs, call, output, startSeq });
     spawned.done.then(stop);
     return spawned.done;
   });
@@ -210,10 +243,14 @@ export async function runBody({ body, timeoutMs = DEFAULT_TIMEOUT_MS, format, ve
     killed = true;
     stop();
   };
-  const lost = () => `its return value and console output are lost; ${log.eventsFrom(startSeq + 1).filter((event) => event.kind === 'code-call').length} verb calls completed before the stop, each in query_log as a code-call after seq ${startSeq}`;
+  const lost = () => `its return value is lost;${log.eventsFrom(startSeq + 1).filter((event) => event.kind === 'code-call').length} verb calls completed before the stop, each in query_log as a code-call after seq ${startSeq}`;
   const result = done.then((reply) => (reply.ok
     ? { ok: true, output: reply.text.length > OUTPUT_CAP ? cutRunOutput(reply.text) : reply.text, truncated: reply.text.length > OUTPUT_CAP }
     : { ok: false, error: killed ? `${reply.error}: ${lost()}` : reply.at ? reply.error + locate(reply.at) : reply.error }));
+  result.then(() => {
+    const report = output.report();
+    if (report.lines.length > 0 || report.dropped > 0) log.append('body-console', { body: startSeq, step, ...report });
+  });
   let timer;
   const budget = new Promise((resolve) => {
     timer = setTimeout(() => resolve(BUDGET), timeoutMs);

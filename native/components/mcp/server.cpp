@@ -140,8 +140,9 @@ std::string run_code_description(const std::string& verb_names) {
            "timeoutMs? }), job_start({ job, command, timeoutMs? }), job_status({ job, waitMs?, offset? }), "
            "callers({ name, limit? }), grep({ pattern, root?, mode?, scope?, ignoreCase?, limit?, offset? }). A file written in this run is untracked; grep it with scope: 'all'. finish is not a "
            "verb: end the run with the finish tool. The reply names its own action in actionSeq, the seq of the "
-           "run_code action event in the log. A body's console output is not returned and is not logged. An argument "
-           "this tool does not take is refused by name.";
+           "run_code action event in the log. A body's console output is not returned; it is logged once per body as a "
+           "body-console event, at most 200 lines of 512 bytes and 8 KiB, with a dropped count for the lines past the cap. "
+           "An argument this tool does not take is refused by name.";
 }
 
 const std::set<std::string> kReadOnlyTools = {
@@ -1356,8 +1357,18 @@ struct Server::State {
         if (auto after = job.owner->log->read_from(job.body)) {
             for (const Value& event : *after) calls += string_of(event, "kind") == "code-call" ? 1 : 0;
         }
-        return "the body stopped before it returned: its return value and console output are lost; " + std::to_string(calls) +
+        return "the body stopped before it returned: its return value is lost;" + std::to_string(calls) +
                " verb calls completed before the stop, each in query_log as a code-call after seq " + std::to_string(job.body);
+    }
+
+    void log_console(const BodyJob& job) {
+        const gm::ConsoleBuffer& console = job.controls->console;
+        if (console.lines.empty() && console.dropped == 0) return;
+        Value lines(json::Array{});
+        for (const std::string& line : console.lines) lines.push(line);
+        append_to(*job.owner, "body-console",
+                  object().set("body", number_of(job.body)).set("step", job.step).set("lines", std::move(lines))
+                      .set("dropped", number_of(console.dropped)).set("bytes", number_of(console.bytes)));
     }
 
     void body_finished(const std::shared_ptr<BodyJob>& job, const deoxidene::Result<Value, std::string>& outcome) {
@@ -2893,7 +2904,10 @@ Value Server::State::run_code(const Value& args) {
                 auto outcome = runner(*logged, source, root, format_name);
                 {
                     std::shared_lock guard(shared_gate->lock);
-                    if (shared_gate->alive) body_finished(job, outcome);
+                    if (shared_gate->alive) {
+                        log_console(*job);
+                        body_finished(job, outcome);
+                    }
                 }
                 job->exited = true;
             });

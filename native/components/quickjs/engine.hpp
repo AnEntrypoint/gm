@@ -14,6 +14,10 @@
 #include "gm/verbs.hpp"
 #include "quickjs.h"
 
+namespace gm {
+struct ConsoleBuffer;
+}
+
 namespace gm::engine {
 
 using Clock = std::chrono::steady_clock;
@@ -22,6 +26,7 @@ struct Session {
     VerbTable* gm_verbs = nullptr;
     std::vector<VerbInfo> gm_verb_list;
     const HostServices* host = nullptr;
+    gm::ConsoleBuffer* console = nullptr;
     Clock::time_point deadline = Clock::time_point::max();
     std::chrono::milliseconds deadline_budget{0};
     bool deadline_passed = false;

@@ -8,6 +8,20 @@ const { file, kind, project, verbs } = workerData;
 const waiting = new Map();
 let nextId = 1;
 
+const show = (value) => {
+  if (typeof value === 'string') return value;
+  if (value !== null && typeof value === 'object') {
+    try {
+      return JSON.stringify(value) ?? String(value);
+    } catch {
+      return String(value);
+    }
+  }
+  return String(value);
+};
+const write = (...args) => parentPort.postMessage({ type: 'console', text: args.map(show).join(' ') });
+globalThis.console = { log: write, info: write, debug: write, warn: write, error: write };
+
 parentPort.on('message', (msg) => {
   if (msg.type !== 'reply') return;
   const resolve = waiting.get(msg.id);

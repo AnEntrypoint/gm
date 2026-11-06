@@ -2,12 +2,14 @@
 
 #include <atomic>
 #include <chrono>
+#include <cstddef>
 #include <cstdint>
 #include <filesystem>
 #include <memory>
 #include <string>
 #include <string_view>
 #include <utility>
+#include <vector>
 
 #include "deoxidene/result.hpp"
 #include "gm/json.hpp"
@@ -15,9 +17,22 @@
 
 namespace gm {
 
+struct ConsoleBuffer {
+    static constexpr std::size_t kLines = 200;
+    static constexpr std::size_t kBytes = 8192;
+    static constexpr std::size_t kLineBytes = 512;
+
+    std::vector<std::string> lines;
+    std::size_t bytes = 0;
+    std::size_t dropped = 0;
+
+    void add(std::string_view text);
+};
+
 struct BodyControls {
     std::atomic<bool> stopped{false};
     std::chrono::milliseconds js_budget{60000};
+    ConsoleBuffer console;
 };
 
 using BodyControlsPtr = std::shared_ptr<BodyControls>;

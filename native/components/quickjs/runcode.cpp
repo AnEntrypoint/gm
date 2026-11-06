@@ -113,7 +113,31 @@ std::string verbs_json(const std::vector<VerbInfo>& verb_list) {
     return json::dump(list);
 }
 
-constexpr std::string_view gm_bootstrap = R"JS((function (gm, verbsText) {
+JSValue console_write(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv) {
+    auto* session = static_cast<Session*>(JS_GetContextOpaque(ctx));
+    if (argc < 1 || session->console == nullptr) return JS_UNDEFINED;
+    size_t length = 0;
+    const char* text = JS_ToCStringLen(ctx, &length, argv[0]);
+    if (text == nullptr) return JS_EXCEPTION;
+    session->console->add(std::string_view(text, length));
+    JS_FreeCString(ctx, text);
+    return JS_UNDEFINED;
+}
+
+constexpr std::string_view gm_bootstrap = R"JS((function (gm, verbsText, sink) {
+  const show = (value) => {
+    if (typeof value === 'string') return value;
+    if (value !== null && typeof value === 'object') {
+      try {
+        return JSON.stringify(value) ?? String(value);
+      } catch {
+        return String(value);
+      }
+    }
+    return String(value);
+  };
+  const write = (...args) => sink(args.map(show).join(' '));
+  globalThis.console = { log: write, info: write, debug: write, warn: write, error: write };
   const verbs = JSON.parse(verbsText);
   const shape = 'gm.verbs() takes { name: <verb name> } or { names: true }';
   const failed = (error) => ({ ok: false, error });
@@ -157,8 +181,9 @@ deoxidene::Result<JSValue, std::string> make_gm(Engine& engine, const std::files
     Scoped install(ctx, JS_Eval(ctx, gm_bootstrap.data(), gm_bootstrap.size(), "<gm>", JS_EVAL_TYPE_GLOBAL));
     if (JS_IsException(install.get())) return deoxidene::Err<std::string>(engine::take_exception_text(engine));
     std::string verbs_text = verbs_json(verb_list);
-    JSValue install_args[2] = {gm.get(), JS_NewStringLen(ctx, verbs_text.data(), verbs_text.size())};
-    Scoped installed(ctx, JS_Call(ctx, install.get(), JS_UNDEFINED, 2, install_args));
+    Scoped sink(ctx, JS_NewCFunction(ctx, console_write, "sink", 1));
+    JSValue install_args[3] = {gm.get(), JS_NewStringLen(ctx, verbs_text.data(), verbs_text.size()), sink.get()};
+    Scoped installed(ctx, JS_Call(ctx, install.get(), JS_UNDEFINED, 3, install_args));
     JS_FreeValue(ctx, install_args[1]);
     if (JS_IsException(installed.get())) return deoxidene::Err<std::string>(engine::take_exception_text(engine));
     return gm.take();
@@ -310,6 +335,7 @@ deoxidene::Result<json::Value, std::string> run_body(VerbTable& verbs, std::stri
     session.gm_verbs = &verbs;
     session.gm_verb_list = verbs.list();
     session.cancel = &controls->stopped;
+    session.console = &controls->console;
     session.js_budget = controls->js_budget;
     session.deadline_budget = controls->js_budget;
     session.started = std::chrono::steady_clock::now();
@@ -339,6 +365,24 @@ deoxidene::Result<json::Value, std::string> run_body(VerbTable& verbs, std::stri
     auto converted = engine::js_to_json(ctx, value.get());
     if (!converted) return Fail(converted.error());
     return std::move(*converted);
+}
+
+}
+
+namespace gm {
+
+void ConsoleBuffer::add(std::string_view text) {
+    if (text.size() > kLineBytes) {
+        std::size_t cut = kLineBytes;
+        while (cut > 0 && (static_cast<unsigned char>(text[cut]) & 0xC0) == 0x80) cut -= 1;
+        text = text.substr(0, cut);
+    }
+    if (lines.size() >= kLines || bytes + text.size() > kBytes) {
+        dropped += 1;
+        return;
+    }
+    lines.emplace_back(text);
+    bytes += text.size();
 }
 
 }

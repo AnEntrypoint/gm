@@ -45,8 +45,11 @@ if (inflightCheck.status !== 0) failures.push('inflight check');
 const relayExitCheck = spawnSync(process.execPath, [join(root, 'tools', 'check-relay-exit.mjs'), ...(existsSync(binary) ? [binary] : [])], { cwd: root, stdio: 'inherit', timeout: 180000 });
 if (relayExitCheck.status !== 0) failures.push('relay exit check');
 
+const consoleCheck = spawnSync(process.execPath, [join(root, 'tools', 'check-console.mjs'), ...(existsSync(binary) ? [binary] : [])], { cwd: root, stdio: 'inherit', timeout: 240000 });
+if (consoleCheck.status !== 0) failures.push('console check');
+
 if (failures.length) {
     console.error(`check: ${failures.length} failure(s)\n- ${failures.join('\n- ')}`);
     process.exit(1);
 }
-console.log('check: gate, unit-test scan, g3 snapshot, redaction witness, read truncation, caller, search root, inflight and relay exit checks passed');
+console.log('check: gate, unit-test scan, g3 snapshot, redaction witness, read truncation, caller, search root, inflight, relay exit and console checks passed');
