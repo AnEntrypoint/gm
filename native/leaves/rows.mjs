@@ -182,7 +182,7 @@ function reopenRow({ id }) {
 function closeRow(kind, id, witness) {
   const row = readRow(id);
   if (row === null) return fail(`no row ${id}`);
-  if (row.kind !== kind) return fail(`row ${id} is not a ${KINDS[kind]}`);
+  if (row.kind !== undefined && row.kind !== kind) return fail(`row ${id} is not a ${KINDS[kind]}`);
   if (row.status === 'resolved') return fail(`row ${id} is already resolved`);
   const status = 'resolved';
   const closeRel = `${CLOSE_DIR}/${id}.txt`;
@@ -214,7 +214,7 @@ function resolveRow(kind, { id, event, commit, witness }) {
   if (!commitExists(commit)) return fail(`no commit ${commit} in this repository`);
   const row = readRow(id);
   if (row === null) return fail(`no row ${id}`);
-  if (row.kind !== kind) return fail(`row ${id} is not a ${KINDS[kind]}`);
+  if (row.kind !== undefined && row.kind !== kind) return fail(`row ${id} is not a ${KINDS[kind]}`);
   if (row.status === 'resolved') return fail(`row ${id} is already resolved`);
   Object.assign(row, { status: 'resolved', witnessEvent: event, witnessCommit: commit, resolvedAt: new Date().toISOString() });
   writeRow(row);
