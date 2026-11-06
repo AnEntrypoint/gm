@@ -1,6 +1,6 @@
 # gm: agent instructions
 
-gm is one long-horizon worker: an MCP server that runs a task as one append-only log, with the rules re-read at every step. The host session (Claude Code) is the model. Two trees live in this checkout: the Node reference (src/, tools/) and the native C++23 tree (native/). Which one ships is an open owner question (see Open decisions). Design evidence is in DESIGN.md, in dated sections with witness run ids.
+gm is one long-horizon worker: an MCP server that runs a task as one append-only log, with the rules re-read at every step. The host session (Claude Code) is the model. Two trees live in this checkout: the Node reference (src/, tools/) and the native C++23 tree (native/). Native ships; Node stays the parity reference (DESIGN.md, Local cutover of the native gm, 2026-11-04; Owner decisions on the five open questions, 2026-11-06). Design evidence is in DESIGN.md, in dated sections with witness run ids.
 
 ## Read first
 
@@ -69,7 +69,7 @@ gm is one long-horizon worker: an MCP server that runs a task as one append-only
 - One run belongs to one server connection, and finish ends it for every agent on that connection. The first next_context after a finish opens a fresh run in the same workspace (reopen in src/mcp.mjs; setSuccessor in src/run.mjs writes the successor file). At stepsLeft 0 call finish with a witness, then next_context opens the successor; a next_context at the limit ends the run with status max_steps and no witness, and a later next_context opens the successor run with the same task. skills/gm/SKILL.md and skills/gm/WORKFLOWS.md teach the hand-off.
 - A child agent that shares the connection never sends finish.
 - Skills are served under the io.modelcontextprotocol/skills extension, and each is also a prompt: gm (mcp__gm__gm) and gm-continue (mcp__gm__gm-continue). read_file serves skill:// paths (serveSkillFile in src/mcp.mjs; served_skill_text in native/components/mcp/skills.cpp) and logs skill-loaded.
-- Protocol versions served: 2025-11-25 and 2025-06-18. 2026-07-28 is not negotiated (owner decision, DESIGN.md decision 1).
+- Protocol versions served: 2025-11-25 and 2025-06-18. 2026-07-28 is behind a capability flag that is off by default (DESIGN.md, Owner decisions on the five open questions, 2026-11-06).
 - Declared capabilities: tools, prompts and resources (listChanged), logging, completions, and the skills extension. resources.subscribe is not declared. subscriptions/listen is the only subscription surface; resources/subscribe and resources/unsubscribe are removed and answer -32601.
 - Each next_context returns the rules, the task, the witness requirement, the new events in full up to 20,000 characters, the older events in compact form, and prefixSha. `next_context({ task })` replaces a cut slash-command task. Older events are read with query_log, which reaches every event. The rules are in runs/<id>/rules.md and are never compacted.
 - query_log reads one bounded window of matching events; a count over a whole run pages with next.
@@ -120,7 +120,7 @@ gm is one long-horizon worker: an MCP server that runs a task as one append-only
 
 1. Native ships; Node stays the parity reference. Reversible by one entry change. The user-wide entry is unchanged (DESIGN.md, Local cutover of the native gm, 2026-11-04).
 2. Roots and elicitation stay unused; question rows carry interactivity (DESIGN.md decisions 2 and 4).
-3. Negotiate protocol 2026-07-28 behind a capability flag that is off by default, with a witness test. It does not become the default until a client test exists (DESIGN.md decision 1).
+3. Negotiate protocol 2026-07-28 behind a capability flag that is off by default, with a witness test. It does not become the default until a client test exists (DESIGN.md, Owner decisions on the five open questions, 2026-11-06).
 4. Drain and log a body's console output, capped. Implemented (DESIGN.md, Body console drained and logged, capped).
 5. The project does not close until the minimal tool set is run and G3 (cache effect, measured by the gm agent from host transcripts) is recorded. Both are recorded (DESIGN.md, Item 5).
 
