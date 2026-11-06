@@ -9,6 +9,7 @@ const SPAWN_CLI = process.env.SPAWN_CLI || "/config/.bun/bin/spawn";
 const APP_ID = "d21d322b-4572-4710-a8d5-eaef4e6daa1f";
 const WORLD_ID = "26f64424-cc19-43af-a9c3-666e4559bb05";
 const MOD_VERBS = ["install", "update", "list", "status"];
+const SOCIAL_READS = ["me", "relation", "who", "met", "personas", "places", "hidden"];
 
 const READS = {
   me: () => ({ path: "/api/agent/v1/me" }),
@@ -18,6 +19,21 @@ const READS = {
   rooms: ([world = WORLD_ID]) => ({ path: `/api/sdk/v1/${world}/agent/rooms` }),
   logs: ([world = WORLD_ID]) => ({ path: `/api/sdk/v1/${world}/logs` }),
   health: ([world = WORLD_ID]) => ({ path: `/api/sdk/v1/${world}/agent/health` }),
+  skill: ([skillId, world = WORLD_ID]) => {
+    need(skillId, "skill needs a skill id");
+    return { path: `/api/sdk/v1/${world}/agent/skills/${encodeURIComponent(skillId)}` };
+  },
+  notifications: ([unread]) => ({ path: unread === "unread" ? "/api/notifications?unread=1" : "/api/notifications" }),
+  feed: () => ({ path: "/api/feed" }),
+  invites: () => ({ path: "/api/invites" }),
+  social: ([sub]) => {
+    need(SOCIAL_READS.includes(sub), `social needs one of ${SOCIAL_READS.join("|")}`);
+    return { path: `/api/social/${sub}` };
+  },
+  resolve: ([address]) => {
+    need(address, "resolve needs an address, e.g. @lanmower/<world>");
+    return { path: `/api/resolve-adventure?address=${encodeURIComponent(address)}` };
+  },
 };
 
 const need = (ok, msg) => {
@@ -27,19 +43,22 @@ const need = (ok, msg) => {
 const WRITES = {
   publish: ([appId = APP_ID]) => ({ method: "POST", path: `/api/games/${appId}/publish`, body: {} }),
   "crew-ask": ([appId = APP_ID]) => ({ method: "POST", path: `/api/games/${appId}/crew/ask`, body: {} }),
-  "chat-room": ([text, room = "main", world = WORLD_ID, replyTo]) => {
+  "chat-room": ([text, room = "main", world = WORLD_ID, replyTo, ref]) => {
     need(text, "chat-room needs text");
     const body = { world, room, text };
     if (replyTo !== undefined) body.replyTo = Number(replyTo);
+    if (ref !== undefined) body.ref = ref;
     return { method: "POST", path: "/api/agent/v1/chat/room", body };
   },
   dm: ([to, text]) => {
     need(to && text, "dm needs a recipient and text");
     return { method: "POST", path: "/api/agent/v1/chat/dm", body: { to, text } };
   },
-  exec: ([file, world = WORLD_ID]) => {
+  exec: ([file, world = WORLD_ID, place]) => {
     need(file, "exec needs a script file");
-    return { method: "POST", path: `/api/sdk/v1/${world}/agent/exec`, body: { script: readFileSync(file, "utf8") } };
+    const body = { script: readFileSync(file, "utf8") };
+    if (place !== undefined) body.place = place;
+    return { method: "POST", path: `/api/sdk/v1/${world}/agent/exec`, body };
   },
   "asset-put": ([file, world = WORLD_ID]) => {
     need(file, "asset-put needs a file");
@@ -63,15 +82,19 @@ const [verb, ...rest] = argv.filter((a) => a !== "--yes");
 function usage() {
   return `usage: node tools/spawn.mjs <verb> [args] [--yes]
 reads (GET, always sent):
-  me | worlds | inbox
+  me | worlds | inbox | feed | invites
+  notifications [unread]          notification list, unread only with "unread"
+  social <me|relation|who|met|personas|places|hidden>
+  resolve <@owner/world>          resolve a world's appId from its address
   docs [worldId] [section]        Tome reference, one section or all
   rooms|logs|health [worldId]     live rooms, script log, health
+  skill <skillId> [worldId]       one skill from the world
 writes (dry run unless --yes):
   publish [appId]                 publish the current main to the public page
   crew-ask [appId]                knock to join another person's world
-  chat-room <text> [room] [worldId] [replyTo]
+  chat-room <text> [room] [worldId] [replyTo] [ref]
   dm <to> <text>                  direct message, to is e.g. @alice
-  exec <scriptFile> [worldId]     run a read-only script in the live room
+  exec <scriptFile> [worldId] [place]   run a read-only script in the live room
   asset-put <file> [worldId]      upload bytes as value.<sha256>.<ext>
   mod <install|update|list|status> [name]   the local spawn CLI's mod verbs
   push <cloneDir>                 git push origin HEAD:main in a clone
@@ -115,7 +138,15 @@ function runCli(argvList) {
 }
 
 if (READS[verb]) {
-  await send(READS[verb](rest));
+  let request;
+  try {
+    request = READS[verb](rest);
+  } catch (err) {
+    console.error(`${verb}: ${err.message}`);
+    console.error(usage());
+    process.exit(2);
+  }
+  await send(request);
 } else if (verb === GIT_PUSH_VERB) {
   const [dir] = rest;
   need(dir, "push needs a clone directory");
