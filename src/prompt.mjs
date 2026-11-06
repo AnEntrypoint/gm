@@ -33,7 +33,7 @@ const obj = (properties, required = []) => ({ type: 'object', properties, requir
 
 export const CLI_TOOLS = [
   { name: 'read_file', description: 'text of a file.', inputSchema: obj({ path: str }, ['path']) },
-  { name: 'write_file', description: 'write a file, creating parent directories.', inputSchema: obj({ path: str, content: str }, ['path', 'content']) },
+  { name: 'write_file', description: 'write a file, creating parent directories. Overwriting an existing file with under half its prior bytes adds shrunkByBytes/shrinkRatio/shrinkWarning (non-blocking).', inputSchema: obj({ path: str, content: str }, ['path', 'content']) },
   { name: 'list_dir', description: 'entries of a directory; directories end with "/".', inputSchema: obj({ path: str }) },
   {
     name: 'run_shell',

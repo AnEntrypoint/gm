@@ -155,6 +155,14 @@ int main() {
         auto wrote = verbs.call("write_file", object_of({{"path", "dir/a.txt"}, {"content", "alpha\nbeta\ngamma\n"}}));
         expect(ok_of(wrote) && text_of(wrote, "output") == "wrote " + native_path("dir/a.txt") + " (17 chars)", "write_file: " + gm::json::dump(wrote));
 
+        verbs.call("write_file", object_of({{"path", "shrink.txt"}, {"content", "0123456789abcdefghij"}}));
+        auto shrunk = verbs.call("write_file", object_of({{"path", "shrink.txt"}, {"content", "x"}}));
+        expect(ok_of(shrunk) && number_of(shrunk, "shrunkByBytes") == 19 && !text_of(shrunk, "shrinkWarning").empty(), "write_file shrink warning: " + gm::json::dump(shrunk));
+        auto full = verbs.call("write_file", object_of({{"path", "shrink.txt"}, {"content", "0123456789abcdefghij"}}));
+        expect(ok_of(full) && !full.find("shrinkWarning"), "write_file full rewrite has no warning: " + gm::json::dump(full));
+        auto fresh = verbs.call("write_file", object_of({{"path", "fresh.txt"}, {"content", "hello"}}));
+        expect(ok_of(fresh) && !fresh.find("shrinkWarning"), "write_file new file has no warning: " + gm::json::dump(fresh));
+
         auto read = verbs.call("read_file", object_of({{"path", "dir/a.txt"}}));
         expect(text_of(read, "output") == "alpha\nbeta\ngamma\n" && number_of(read, "total") == 3 && text_of(read, "unit") == "lines",
                "read_file round trip: " + gm::json::dump(read));

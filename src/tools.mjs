@@ -166,9 +166,18 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
       const at = locate(args.path);
       if (at.refused) return refusal(at.refused);
       if (typeof args.content !== 'string') return { ok: false, error: 'content must be a string' };
+      const prior = statSync(at.path, { throwIfNoEntry: false });
+      const priorBytes = prior && prior.isFile() ? prior.size : null;
+      const afterBytes = Buffer.byteLength(args.content);
       await mkdir(dirname(at.path), { recursive: true });
       await writeFile(at.path, args.content);
-      return { ok: true, output: `wrote ${relative(root, at.path)} (${args.content.length} chars)` };
+      const reply = { ok: true, output: `wrote ${relative(root, at.path)} (${args.content.length} chars)` };
+      if (priorBytes !== null && afterBytes * 2 < priorBytes) {
+        reply.shrunkByBytes = priorBytes - afterBytes;
+        reply.shrinkRatio = Math.round((afterBytes / priorBytes) * 1000) / 1000;
+        reply.shrinkWarning = 'content is under half the prior file; check gm.read_file truncated:true before writing back';
+      }
+      return reply;
     },
 
     async edit_file(args) {

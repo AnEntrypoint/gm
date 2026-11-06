@@ -46,7 +46,7 @@ constexpr std::array<std::string_view, 7> query_args = {"js", "kind", "fromMono"
 const std::vector<VerbInfo>& verb_table() {
     static const std::vector<VerbInfo> table = {
     {"read_file", "Read a text file, inside or outside the workspace, one page of at most 20000 characters. Lines are the default unit: offset is a 0-based line index, limit a line count (default: as many whole lines as fit), and total (the file in lines) and next (the line index of the next page, null at the end) count lines. truncated is true when the page stops before the end, totalBytes is the file size in bytes, and hint names the read that gets the rest. A line longer than the page is cut to its first 20000 characters, with cutLine true, and next is the line after it. unit \"chars\" counts offset, limit (1 to 20000, default 20000), total and next in characters instead. A path that starts with skill:// reads a served skill file, the text resources/read returns, and a skill:// uri that no served skill has is an error that names it.", R"json({"type":"object","properties":{"path":{"type":"string"},"offset":{"type":"number"},"limit":{"type":"number"},"unit":{"type":"string"}},"required":["path"]})json"},
-    {"write_file", "Write a text file, inside or outside the workspace, creating parent directories.", R"json({"type":"object","properties":{"path":{"type":"string"},"content":{"type":"string"}},"required":["path","content"]})json"},
+    {"write_file", "Write a text file, inside or outside the workspace, creating parent directories. Replacing an existing file with content less than half its prior byte size adds shrunkByBytes, shrinkRatio and shrinkWarning to the result (never blocks the write); new files and normal rewrites are unchanged.", R"json({"type":"object","properties":{"path":{"type":"string"},"content":{"type":"string"}},"required":["path","content"]})json"},
     {"edit_file", "Replace old with new in a text file, inside or outside the workspace. old must occur once, unless replaceAll is true.", R"json({"type":"object","properties":{"path":{"type":"string"},"old":{"type":"string"},"new":{"type":"string"},"replaceAll":{"type":"boolean"}},"required":["path","old","new"]})json"},
     {"stat_file", "Type, size and mtime of a path, inside or outside the workspace, as JSON.", R"json({"type":"object","properties":{"path":{"type":"string"}},"required":["path"]})json"},
     {"list_dir", "List a directory, inside or outside the workspace. Directories end with \"/\".", R"json({"type":"object","properties":{"path":{"type":"string"}},"required":[]})json"},
@@ -340,6 +340,14 @@ struct CoreVerbs::Impl {
         if (!at) return refusal("path must be a non-empty string");
         const json::Value* content = args.find("content");
         if (content == nullptr || !content->is_string()) return failure("content must be a string");
+        std::error_code size_ec;
+        std::uint64_t prior_bytes = 0;
+        bool existed = false;
+        if (std::filesystem::is_regular_file(*at, size_ec)) {
+            std::uint64_t size = static_cast<std::uint64_t>(std::filesystem::file_size(*at, size_ec));
+            if (!size_ec) { existed = true; prior_bytes = size; }
+        }
+        const std::uint64_t after_bytes = static_cast<std::uint64_t>(content->as_string().size());
         auto parent = at->parent_path();
         std::error_code ec;
         std::filesystem::create_directories(parent, ec);
@@ -349,6 +357,11 @@ struct CoreVerbs::Impl {
         json::Value reply;
         reply.set("ok", true);
         reply.set("output", "wrote " + relative_text(*at) + " (" + std::to_string(utf16_length(content->as_string())) + " chars)");
+        if (existed && after_bytes * 2 < prior_bytes) {
+            reply.set("shrunkByBytes", static_cast<std::uint64_t>(prior_bytes - after_bytes));
+            reply.set("shrinkRatio", json::Value(std::round(static_cast<double>(after_bytes) / static_cast<double>(prior_bytes) * 1000.0) / 1000.0));
+            reply.set("shrinkWarning", std::string("content is under half the prior file; check gm.read_file truncated:true before writing back"));
+        }
         return reply;
     }
 
