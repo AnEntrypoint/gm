@@ -953,3 +953,9 @@ This run hit the 50-step limit because of the step-counting defect fixed in 2d41
 - The scan is committed as tools/transcript-usage.mjs (node, read-only over /config/.claude/projects or the directory given as its argument). It prints gm sessions (a session with at least one mcp__gm__* tool call), gm calls by name, and the median cache-read share for gm host sessions, gm live test runs, and non-gm sessions.
 - Figures drift as transcripts grow. The 2026-11-06 run of the committed script: 182 gm sessions, 14842 gm calls (gm_codemode 8140, run_code 5378, next_context 1089, finish 233); gm host median 0.9685 over 160 sessions; live 0.8305 over 22; non-gm 0.885 over 310. The figures in the item 5 section above came from /tmp scripts with a text-match filter and a 193-session baseline, so they are not exact re-runs; the method and the ordering (gm host above baseline, live below) hold.
 - Author lanmower, no trailers.
+
+## Revert of restored test files (2026-11-06)
+
+- fb7753c and 64cd9e7 (another lane) restored four test files (native/leaves/tests/job-status-cap.test.mjs, native/leaves/tests/write-file-shrink.test.mjs, native/components/mcp/tests/mcp_test.cpp, native/components/verbs/tests/verbs_test.cpp) and added .github/workflows/node-pins.yml, which runs `node --test native/leaves/tests/*.test.mjs`. They cited an owner ruling that conflicts with the permanent no-unit-tests policy (orchestrate, 2026-11-06, after a73f023).
+- Decision: this commit deletes the four files and node-pins.yml as a forward commit; history is not rewritten. The policy stands: no unit tests, checks run on the real tree through tools/check-build.mjs, the gate and parity.
+- Author lanmower, no trailers.
