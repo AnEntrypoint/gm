@@ -100,6 +100,8 @@ When not to bundle: a second run_code body is right when the next action needs a
 
 A file `write_file`, `edit_file` or `run_shell` wrote in this run is untracked: `gm.grep` it as a single-file `root` or `path` with `scope: 'all'`. The default `tracked` scope does not search a single untracked file root, and `gm.search` reads git-tracked files only.
 
+Rows (native server): `prd_add`/`unknown_add` write `work/rows/<id>.yml`; `prd_list`/`unknown_list` read that dir and the legacy `.gm/prd/` but list only rows with `kind` (`status: pending` reads as open). A legacy `.gm/prd/*.yml` with `subject` and no `kind` is invisible to `prd_list`, yet `prd_resolve({ id, witness })` closes it, writing `closes/<id>.txt` and a commit. `.gm/queues/` is not a row store; the Node tree reads `work/rows/` only.
+
 ## After a context compaction
 
 A summary can replace earlier messages, including the rules, the witness requirement and the events of this run. A skill is not summarised, so these steps are the ones to follow after a compaction:
