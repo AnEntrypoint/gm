@@ -38,7 +38,6 @@ constexpr std::size_t MAX_PATTERN_CHARS = 200;
 constexpr std::size_t MAX_MATCH_CHARS = 1024;
 constexpr std::size_t MATCH_WINDOW_STEP = MAX_MATCH_CHARS / 2;
 constexpr std::size_t EXCERPT_BEFORE = 60;
-constexpr std::size_t MAX_SCAN_FILES = 4096;
 constexpr std::uint64_t MAX_SCAN_BYTES = 32 * 1024 * 1024;
 constexpr long long SCAN_DEADLINE_MS = 10000;
 constexpr long long STAMP_SETTLE_MS = 3000;
@@ -596,10 +595,6 @@ std::string Searcher::grep(const json::Value& args) {
                         if (skip) ++skipped_dirs;
                         else pending.push_back(rel);
                     } else if (entry.is_regular_file(type_ec)) {
-                        if (budget.listed >= MAX_SCAN_FILES) {
-                            budget.walk_stopped = true;
-                            break;
-                        }
                         names.push_back(rel);
                         ++budget.listed;
                     }
@@ -658,7 +653,7 @@ std::string Searcher::grep(const json::Value& args) {
         Scan result;
         std::size_t size = 0;
         for (const std::string& name : names) {
-            if (budget.scan_stopped || budget.files >= MAX_SCAN_FILES || budget.bytes >= MAX_SCAN_BYTES || budget.expired()) {
+            if (budget.scan_stopped || budget.bytes >= MAX_SCAN_BYTES || budget.expired()) {
                 budget.scan_stopped = true;
                 break;
             }

@@ -29,6 +29,14 @@ for (let i = 0; i < PACKAGE_FILES; i += 1) writeFileSync(join(workspace, 'node_m
 mkdirSync(join(workspace, 'src'), { recursive: true });
 writeFileSync(join(workspace, 'src', 'token.js'), `export const ${TOKEN} = 1;\n`);
 spawnSync('git', ['add', 'src'], { cwd: workspace });
+const TRACKED_TOKEN = 'SEARCH_ROOT_TRACKED_TOKEN';
+const TRACKED_FILES = 4200;
+mkdirSync(join(workspace, 'tracked'), { recursive: true });
+for (let i = 0; i < TRACKED_FILES; i += 1) writeFileSync(join(workspace, 'tracked', `t${i}.txt`), `${i}\n`);
+mkdirSync(join(workspace, 'zz'), { recursive: true });
+writeFileSync(join(workspace, 'zz', 'last.txt'), `${TRACKED_TOKEN} here\n`);
+spawnSync('git', ['add', 'tracked', 'zz'], { cwd: workspace });
+const trackedFound = (output) => String(output ?? '').includes(`zz/last.txt:1 ${TRACKED_TOKEN}`);
 
 function expectHit(label, output) {
   if (!String(output ?? '').includes(`src/token.js:1 export const ${TOKEN}`)) failures.push(`${label}: a whole-root scope all search missed ${TOKEN}`);
@@ -38,6 +46,8 @@ function expectHit(label, output) {
 const verbs = createSearchVerbs({ root: workspace, confine: (rel) => ({ path: join(workspace, rel) }) });
 const nodeReply = await verbs.grep({ pattern: TOKEN, scope: 'all', limit: 20 });
 expectHit('node grep whole root scope all', nodeReply.output);
+const trackedNode = await verbs.grep({ pattern: TRACKED_TOKEN, scope: 'all', limit: 20 });
+if (!trackedFound(trackedNode.output) || trackedNode.scanTruncated !== false) failures.push(`node: a tracked token past ${TRACKED_FILES} tracked files was missed or the scan was cut`);
 
 function nativeSession() {
   const child = spawn(binary, ['serve', '--workspace', workspace], { stdio: ['pipe', 'pipe', 'pipe'] });
@@ -75,6 +85,10 @@ if (binary !== null && existsSync(binary)) {
     const grep = parsed?.ok === true ? JSON.parse(parsed.output) : null;
     if (grep === null) failures.push(`native: run_code refused: ${parsed?.error ?? 'no reply'}`);
     else expectHit('native grep whole root scope all', grep.output);
+    const tracked = await rpc('tools/call', { name: 'run_code', arguments: { body: `return await gm.grep({ pattern: '${TRACKED_TOKEN}', scope: 'all', limit: 20 });` } });
+    const trackedParsed = JSON.parse(tracked.result?.content?.[0]?.text ?? 'null');
+    const trackedGrep = trackedParsed?.ok === true ? JSON.parse(trackedParsed.output) : null;
+    if (trackedGrep === null || !trackedFound(trackedGrep.output) || trackedGrep.scanTruncated !== false) failures.push(`native: a tracked token past ${TRACKED_FILES} tracked files was missed or the scan was cut`);
   } catch (error) {
     failures.push(`native: ${error.message}`);
   } finally {
@@ -90,4 +104,4 @@ if (failures.length > 0) {
   console.error(`search-root-check: failed: ${failures.join('; ')}`);
   process.exit(1);
 }
-console.log(`search-root-check: passed: a whole-root search with scope all finds a token in a file past the ${PACKAGE_FILES} node_modules files`);
+console.log(`search-root-check: passed: a whole-root search with scope all finds a token past the ${PACKAGE_FILES} node_modules files and past the ${TRACKED_FILES} tracked files, with no scan cut`);

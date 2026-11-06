@@ -23,7 +23,6 @@ const MAX_PATTERN_CHARS = 200;
 const MAX_MATCH_CHARS = 1024;
 const MATCH_WINDOW_STEP = MAX_MATCH_CHARS / 2;
 const EXCERPT_BEFORE = 60;
-const MAX_SCAN_FILES = 4096;
 const MAX_SCAN_BYTES = 32 * 1024 * 1024;
 const SCAN_DEADLINE_MS = 10000;
 const MODES = ['literal', 'regex', 'word'];
@@ -204,7 +203,7 @@ function searcherFor({ root, confine }) {
         let size = 0;
         let next = null;
         for (const name of names) {
-          if (budget.scanStopped || budget.files >= MAX_SCAN_FILES || budget.bytes >= MAX_SCAN_BYTES || budgetExpired(budget)) {
+          if (budget.scanStopped || budget.bytes >= MAX_SCAN_BYTES || budgetExpired(budget)) {
             budget.scanStopped = true;
             break;
           }
@@ -414,10 +413,6 @@ async function walkFiles(base, all, vendor, budget = null) {
         if (!all && skippedDirectory(entry.name, vendor)) skippedDirs += 1;
         else pending.push(rel);
       } else if (entry.isFile()) {
-        if (budget && budget.listed >= MAX_SCAN_FILES) {
-          budget.walkStopped = true;
-          break;
-        }
         paths.push(rel);
         if (budget) budget.listed += 1;
       }
