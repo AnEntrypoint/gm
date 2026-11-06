@@ -36,8 +36,8 @@ export const ROW_TOOLS = [
     { name: `${kind}_list`, description: `List ${label} rows, one line each: id, status, title. status is open (default), parked, resolved or all.`, inputSchema: obj({ status: str }) },
     {
       name: `${kind}_resolve`,
-      description: `Resolve a ${label} row. The witness is a seq of this run's log and a commit that exists in this repository.`,
-      inputSchema: obj({ id: str, event: { type: 'number' }, commit: str }, ['id', 'event', 'commit']),
+      description: `Resolve a ${label} row. The witness is a seq of this run's log and a commit that exists in this repository. push:true asks to push the close by full sha to origin/main in one call.`,
+      inputSchema: obj({ id: str, event: { type: 'number' }, commit: str, push: { type: 'boolean' } }, ['id', 'event', 'commit']),
     },
   ]),
   DELETE_TOOL,

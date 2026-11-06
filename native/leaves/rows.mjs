@@ -179,7 +179,7 @@ function reopenRow({ id }) {
   return { ok: true, output: `${id} reopened` };
 }
 
-function closeRow(kind, id, witness) {
+function closeRow(kind, id, witness, push) {
   const row = readRow(id);
   if (row === null) return fail(`no row ${id}`);
   if (row.kind !== undefined && row.kind !== kind) return fail(`row ${id} is not a ${KINDS[kind]}`);
@@ -197,16 +197,37 @@ function closeRow(kind, id, witness) {
   runGit(['add', '-A', '--', ...paths]);
   if (!runGit(['commit', '-m', message, '--', ...paths])) return fail(`close ${id} has no commit; ${closeRel} is written and the row file is removed`);
   const head = host.run({ argv: ['git', 'rev-parse', '--short', 'HEAD'], cwd: host.workspace, timeoutMs: 15000 });
-  return { ok: true, output: `${id} ${status} by witness ${witness} at commit ${head.out?.trim() ?? 'HEAD'}` };
+  const output = `${id} ${status} by witness ${witness} at commit ${head.out?.trim() ?? 'HEAD'}`;
+  if (!push) return { ok: true, output };
+  const gitOk = (argv) => {
+    const reply = host.run({ argv: ['git', ...argv], cwd: host.workspace, timeoutMs: 60000 });
+    return reply.started && !reply.timedOut && reply.exitCode === 0;
+  };
+  const fullSha = () => {
+    const reply = host.run({ argv: ['git', 'rev-parse', 'HEAD'], cwd: host.workspace, timeoutMs: 15000 });
+    const sha = reply.out?.trim();
+    return reply.exitCode === 0 && typeof sha === 'string' && /^[0-9a-f]{40,64}$/.test(sha) ? sha : null;
+  };
+  const pushSha = (sha) => host.run({ argv: ['git', 'push', 'origin', `${sha}:refs/heads/main`], cwd: host.workspace, timeoutMs: 60000 });
+  const accepted = (reply) => reply.started && !reply.timedOut && reply.exitCode === 0;
+  let sha = fullSha();
+  if (sha === null) return fail(`close ${id} has no full commit sha to push`);
+  if (accepted(pushSha(sha))) return { ok: true, output: `${output} pushed ${sha}`, pushed: sha, recovery: 'none' };
+  if (!gitOk(['fetch', '-q', 'origin', 'main'])) return fail(`close ${id} could not fetch origin/main after a rejected push`);
+  if (!gitOk(['rebase', '-q', 'origin/main'])) return fail(`close ${id} could not rebase onto origin/main after a rejected push`);
+  sha = fullSha();
+  if (sha === null) return fail(`close ${id} has no full commit sha after rebase`);
+  if (!accepted(pushSha(sha))) return fail(`close ${id} could not push ${sha} after rebase`);
+  return { ok: true, output: `${output} pushed ${sha} after rebase`, pushed: sha, recovery: 'fetch-rebase' };
 }
 
-function resolveRow(kind, { id, event, commit, witness }) {
+function resolveRow(kind, { id, event, commit, witness, push }) {
   if (!validId(id)) return fail('id must be a row id');
   const given = typeof witness === 'string' ? witness : (typeof event === 'string' ? event : null);
   if (given !== null) {
     const clean = given.replace(/\s+/g, ' ').trim();
     if (clean === '') return fail('witness must be a non-empty string');
-    return closeRow(kind, id, clean);
+    return closeRow(kind, id, clean, push === true);
   }
   if (!Number.isInteger(event) || event < 1) return fail('event must be a log seq number');
   if (!eventInLog(event)) return fail(`event ${event} is not in this run's log`);
@@ -239,8 +260,8 @@ export const verbs = [
     { name: `${kind}_list`, description: `List ${label} rows, one line each: id, status, title. status is open (default), parked, resolved or all. Reads ${ROW_DIR}/ and the legacy .gm/prd/, but lists only rows with kind: ${kind}; a legacy row with no kind is not listed, and status pending reads as open.`, inputSchema: obj({ status: str }), call: (args = {}) => listRows(kind, args) },
     {
       name: `${kind}_resolve`,
-      description: `Resolve a ${label} row in one call. Pass witness, the evidence string: the row file is removed, one line goes to closes/<id>.txt, and a commit records the row, status and witness. A numeric event seq and an existing commit sha keep the older in-place resolution. Reads ${ROW_DIR}/ and the legacy .gm/prd/, so a legacy row without kind is closable here too.`,
-      inputSchema: obj({ id: str, event: { type: 'number' }, commit: str, witness: str }, ['id']),
+      description: `Resolve a ${label} row in one call. Pass witness, the evidence string: the row file is removed, one line goes to closes/<id>.txt, and a commit records the row, status and witness. With push:true that commit is also pushed by full sha to origin/main in the same call, with fetch and rebase on rejection, so a shared tree closes in one call. A numeric event seq and an existing commit sha keep the older in-place resolution. Reads ${ROW_DIR}/ and the legacy .gm/prd/, so a legacy row without kind is closable here too.`,
+      inputSchema: obj({ id: str, event: { type: 'number' }, commit: str, witness: str, push: { type: 'boolean' } }, ['id']),
       call: (args = {}) => resolveRow(kind, args),
     },
   ]),

@@ -106,6 +106,8 @@ AGENTS.md is updated continuously. Write each note in the fewest words that keep
 
 Rows (native server): `gm.prd_add` and `gm.unknown_add` write `work/rows/<id>.yml`; `gm.prd_list` and `gm.unknown_list` read that dir and the legacy `.gm/prd/` but list only rows with `kind` (`status: pending` reads as open). A legacy `.gm/prd/*.yml` with `subject` and no `kind` is invisible to `gm.prd_list`, yet `gm.prd_resolve` closes it, writing `closes/<id>.txt` and a commit. `.gm/queues/` is not a row store; the Node tree reads `work/rows/` only.
 
+Shared tree: resolve in one call with `gm.prd_resolve({ id, witness, push: true })`; the close commits and pushes by full sha, so a second push call is not needed.
+
 ## After a context compaction
 
 A summary can replace earlier messages, including the rules, the witness requirement and the events of this run. A skill is not summarised, so these steps are the ones to follow after a compaction:
