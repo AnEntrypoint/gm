@@ -218,7 +218,7 @@ struct CoreVerbs::Impl {
     }
 
     std::string relative_text(const std::filesystem::path& target) const {
-        std::string rel = target.lexically_relative(root).string();
+        std::string rel = target.lexically_relative(root).generic_string();
         return rel == "." ? std::string() : rel;
     }
 

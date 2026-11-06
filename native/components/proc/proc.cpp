@@ -1,6 +1,7 @@
 #include "gm/proc.hpp"
 
 #include <chrono>
+#include <cstdlib>
 #include <cstring>
 
 #if defined(_WIN32)
@@ -339,7 +340,19 @@ Outcome run(const std::vector<std::string>& argv, const std::filesystem::path& c
     return outcome;
 }
 
+std::string git_bash() {
+    for (const char* var : {"ProgramFiles", "ProgramW6432", "ProgramFiles(x86)"}) {
+        const char* root = std::getenv(var);
+        if (root == nullptr) continue;
+        const std::filesystem::path candidate = std::filesystem::path(root) / "Git" / "bin" / "bash.exe";
+        if (std::filesystem::exists(candidate)) return candidate.string();
+    }
+    return {};
+}
+
 Outcome shell(std::string_view command, const std::filesystem::path& cwd, std::uint64_t timeout_ms) {
+    const std::string bash = git_bash();
+    if (!bash.empty()) return run({bash, "-c", std::string(command)}, cwd, {}, timeout_ms);
     return run({"cmd", "/c", std::string(command)}, cwd, {}, timeout_ms);
 }
 
