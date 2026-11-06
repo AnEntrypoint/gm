@@ -634,7 +634,30 @@ int main() {
         check(str(refused, "error") == "refused: background run " + job +
                                           " is still running; job_status watches it, and finish with stopBackground: true kills it",
               "finish is refused while a background run is running: " + str(refused, "error"));
-        std::this_thread::sleep_for(std::chrono::milliseconds(300));
+        bool reminded = false;
+        std::vector<std::string> kinds;
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(3);
+        while (std::chrono::steady_clock::now() < deadline) {
+            auto logged = log_of(h.server->run_dir());
+            kinds.clear();
+            for (const Value& event : logged) {
+                std::string kind = str(event, "kind");
+                bool seen = false;
+                for (const std::string& saved : kinds) seen = seen || saved == kind;
+                if (!seen) kinds.push_back(kind);
+                if (kind == "job-running" && str(event, "job") == job) reminded = true;
+            }
+            if (reminded) break;
+            std::this_thread::sleep_for(std::chrono::milliseconds(20));
+        }
+        if (!reminded) {
+            std::string kinds_text;
+            for (const std::string& kind : kinds) {
+                if (!kinds_text.empty()) kinds_text += ",";
+                kinds_text += kind;
+            }
+            std::cout << "reminder timeout: kinds=" << kinds_text << '\n';
+        }
         Value notices = h.call("next_context", "{}");
         check(notices.find("jobsOpen") != nullptr, "the body is still open when next_context reports it");
         std::cout << "notices: jobsOpen=" << (notices.find("jobsOpen") ? gm::json::dump(*notices.find("jobsOpen")) : "-")
