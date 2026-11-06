@@ -39,6 +39,13 @@ constexpr const char* kGmSkillUri = "skill://gm/SKILL.md";
 constexpr std::size_t kReplyMemory = 256;
 constexpr std::size_t kOutputCap = 20000;
 constexpr std::size_t kOutputPage = 20000;
+
+std::string cut_run_output(const std::string& text, std::size_t length) {
+    constexpr std::size_t kNoticeRoom = 160;
+    const std::size_t kept = kOutputCap - kNoticeRoom;
+    return js_prefix(text, kept) + "\n[gm: run_code output cut at " + std::to_string(kept) + " of " + std::to_string(length) +
+           " characters; read less, or read the rest with read_file pages]";
+}
 constexpr std::size_t kTailCap = 2000;
 constexpr std::size_t kLoggedReplyChars = 1000;
 constexpr std::size_t kLogTailBytes = 65536;
@@ -1368,7 +1375,7 @@ struct Server::State {
                 std::size_t length = js_length(text);
                 settle_locked(*job, "exited",
                               object()
-                                  .set("value", length > kOutputCap ? js_prefix(text, kOutputCap) : text)
+                                  .set("value", length > kOutputCap ? cut_run_output(text, length) : text)
                                   .set("truncated", length > kOutputCap));
             } else {
                 settle_locked(*job, "failed", object().set("error", job->error));
@@ -2918,7 +2925,7 @@ Value Server::State::run_code(const Value& args) {
                 std::size_t length = js_length(text);
                 return with_seq(object()
                                     .set("ok", true)
-                                    .set("output", length > kOutputCap ? js_prefix(text, kOutputCap) : text)
+                                    .set("output", length > kOutputCap ? cut_run_output(text, length) : text)
                                     .set("truncated", length > kOutputCap)
                                     .set("loads", array()));
             }

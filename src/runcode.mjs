@@ -10,6 +10,8 @@ const DEFAULT_TIMEOUT_MS = 180000;
 const MAX_TIMEOUT_MS = 300000;
 const BUDGET = Symbol('budget');
 const OUTPUT_CAP = 20000;
+const NOTICE_ROOM = 160;
+const cutRunOutput = (text) => `${text.slice(0, OUTPUT_CAP - NOTICE_ROOM)}\n[gm: run_code output cut at ${OUTPUT_CAP - NOTICE_ROOM} of ${text.length} characters; read less, or read the rest with read_file pages]`;
 const BODY_WORKER = new URL('./body-worker.mjs', import.meta.url);
 const BODY_SLOTS = 4;
 const waiting = [];
@@ -210,7 +212,7 @@ export async function runBody({ body, timeoutMs = DEFAULT_TIMEOUT_MS, format, ve
   };
   const lost = () => `its return value and console output are lost; ${log.eventsFrom(startSeq + 1).filter((event) => event.kind === 'code-call').length} verb calls completed before the stop, each in query_log as a code-call after seq ${startSeq}`;
   const result = done.then((reply) => (reply.ok
-    ? { ok: true, output: reply.text.slice(0, OUTPUT_CAP), truncated: reply.text.length > OUTPUT_CAP }
+    ? { ok: true, output: reply.text.length > OUTPUT_CAP ? cutRunOutput(reply.text) : reply.text, truncated: reply.text.length > OUTPUT_CAP }
     : { ok: false, error: killed ? `${reply.error}: ${lost()}` : reply.at ? reply.error + locate(reply.at) : reply.error }));
   let timer;
   const budget = new Promise((resolve) => {
