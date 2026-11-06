@@ -992,3 +992,83 @@ This run hit the 50-step limit because of the step-counting defect fixed in 2d41
 
 - Decision (orchestrator, under owner delegation, 2026-11-06): keep the three copies of the no-files message, as DESIGN.md:973 already records. The copies are src/search.mjs (noFilesError), native/leaves/wiki.mjs (noFilesError) and native/components/search/search_impl.cpp (load_tracked). The two JS copies are byte-identical, and DESIGN.md:877 gives the reason they stay apart: a QuickJS leaf cannot import src/search.mjs, and src importing native/leaves is cross-tree.
 - No code change. A shared mechanism across the Node tree, the QuickJS leaves and the native C++ is a design change, and nothing in the tree pins the text any more (search_test.cpp and codeast-wiki-review.test.mjs are absent).
+
+## Rationale by module group (2026-11-06)
+
+Rules the comment sweep removed from the code (7985788, 08f328b, 373e8af). Each line was checked against the code by spawn before it was restored here.
+
+### tools/core.mjs
+
+- A worker's work is not interrupted: a tool call in flight is work, and so is a body or job that the current run still has running or queued, as its status files say.
+- The new core answers on fd 3: ready when its worker runs, or failed with the reason. A new core that exits first has failed.
+- Replace returns { ok: false, reason } when the new code did not take over; this core then goes on.
+- The handover is acknowledged on fd 3 once the new worker runs and can read the host's input.
+- Changes under src/ are gathered for one debounce window, and only a module the worker loads counts; a module it does not load restarts nothing.
+
+### tools/gm-continue-setup.mjs
+
+- A row status other than open or resolved is a defect: a row is open until it is implemented or deleted, so every open row is planned.
+- Every actionable row must be attempted in the last pass, and must end resolved.
+
+### tools/supervise.mjs
+
+- inflight holds the request ids sent to the worker and not yet answered; held holds the host lines held while the worker restarts.
+
+### tools/update.mjs
+
+- The timers do not keep the process alive, and the function returned stops them.
+- The worker's module list is null when it cannot be read.
+- With no readable list, every name counts as loaded by the worker, so no change is missed.
+- The clone is removed with its worker when the check ends (the finally block).
+
+### src/code-ast.mjs
+
+- The cache is brought up to date with the disk: a file is parsed again only when its mtime or size changed, and a file that left the repository is dropped.
+- The fallback scan skips a line that starts with a comment marker, and a definition on a line is not a call of its own name.
+- A keyword followed by a parenthesis is not a call.
+
+### src/log.mjs
+
+- Events are written in batches, and at every flush point (flushAllLogs); a batch is one append, not one per event.
+- The offset of each event's line, the file size and the last events are read from the file in chunks.
+- The scan of events after a seq stops after limit matches, or once it has read budget bytes and one event.
+
+### src/mcp.mjs
+
+- A trace context carried in a tools/call request's _meta is copied into that call's action event.
+- The files under a directory are listed relative to it, with / separators on every platform, and sorted.
+- A protocol error's data member, when given, names what was not found (resources/read names the uri).
+- A foreground shell whose request names a progress token reports its elapsed seconds every PROGRESS_MS, and the timer stops when the call ends.
+- A call cancelled while it waited for a slot never starts.
+- A background run's notices: started, still running once per 3 minutes, and ended; a kill is named once, by job-killed.
+- A background run's result comes from its status file: its value, or its error when it failed; the job event carries the state only.
+- readOnlyHint is READ_ONLY_TOOLS, except next_context, which writes a step event.
+- destructiveHint is true for a tool that is not read-only and does not only record the run.
+
+### src/pending.mjs
+
+- The event kinds an agent must act on: a job's start and end, a job killed, a stuck or unstuck job, a rules notice, a recovery, a host-idle notice and a row added.
+- takePending returns null when the queue file is absent, and that is not an error.
+- Removing a file that is already gone is not an error.
+- Removing the copies that takePending read: a copy that is already gone is not an error.
+
+### src/review.mjs
+
+- A record is refused when the packet is not in this log, when the packet already has a record, when the verdict is not one of VERDICTS, when there is no reviewer, or when the spec's sha has changed since the packet.
+- The verdict must be one of VERDICTS.
+- A refusal is logged as review-refused, and nothing else is written.
+- The spec's sha at a commit is the sha in that commit's tree, or null when the commit or the path is not there.
+
+### src/runcode.mjs
+
+- The foreground budget of a body: past it, the body keeps running as a background job, and the call returns at once with its id.
+
+### src/tools.mjs
+
+- A running job with no progress for the stuck threshold is stuck, and the agent is told once; the check runs every monitorMs.
+- ctx carries the abort signal of a cancelled request, which only run_shell reads.
+- The wall time of the newest verb call a body made comes from the log, or 0 when it made none; the walk stops at the first call it finds.
+
+### caller log (src/mcp.mjs, native/components/mcp/server.cpp)
+
+- Each action event carries caller: connection is the pid of the process that logged it, and parent is its parent pid. The parent is the serve process, not the host session, so the host session is not recorded.
