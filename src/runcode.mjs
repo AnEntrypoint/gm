@@ -180,7 +180,7 @@ export function runCodeTool(verbNames) {
 }
 
 // The arguments run_code takes. A call with any other name is refused, so a wrong name is not read as a missing body.
-export const RUN_CODE_PROPERTIES = { body: { type: 'string' }, timeoutMs: { type: 'number' }, format: { type: 'string', enum: ['esm', 'cjs'] } };
+export const RUN_CODE_PROPERTIES = { body: { type: 'string' }, timeoutMs: { type: 'integer', minimum: 1, maximum: MAX_TIMEOUT_MS }, format: { type: 'string', enum: ['esm', 'cjs'] } };
 
 // Runs one body. The body is written as an ES module, or as CommonJS when its format is cjs, under the run directory, and the file is deleted when the call ends, success or
 // failure. A non-literal import() or require() is refused before the body loads, and logged. A literal path loads as it is, inside or outside

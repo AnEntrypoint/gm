@@ -151,6 +151,9 @@ const std::map<int, std::string> kRuleText = {{2, "call next_context at the star
 
 Value str_schema() { return object().set("type", "string"); }
 Value num_schema() { return object().set("type", "number"); }
+Value timeout_schema() {
+    return object().set("type", "integer").set("minimum", 1.0).set("maximum", static_cast<double>(kMaxTimeoutMs));
+}
 Value bool_schema() { return object().set("type", "boolean"); }
 
 Value object_schema(Value properties, std::vector<std::string> required) {
@@ -247,7 +250,7 @@ Value code_tools(const VerbTable& verbs) {
     Value run_code = object()
                          .set("name", "run_code")
                          .set("description", run_code_description(names))
-                         .set("inputSchema", object_schema(object().set("body", str_schema()).set("timeoutMs", num_schema()).set("format", format), {"body"}));
+                         .set("inputSchema", object_schema(object().set("body", str_schema()).set("timeoutMs", timeout_schema()).set("format", format), {"body"}));
     Value next_out = object_schema(object()
                                        .set("ok", bool_schema())
                                        .set("refused", bool_schema())
