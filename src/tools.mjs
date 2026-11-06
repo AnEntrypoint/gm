@@ -3,7 +3,7 @@ import { closeSync, existsSync, lstatSync, mkdirSync, openSync, readdirSync, rea
 import { mkdir, readdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { runQuery } from './log.mjs';
-import { foregroundGroups, killBody, killGroup, runCommand, signalGroup, spawnGroup } from './exec.mjs';
+import { foregroundGroups, killBody, killGroup, runCommand, shellLauncher, signalGroup, spawnGroup } from './exec.mjs';
 import * as gitModule from './git.mjs';
 import * as rowsModule from './rows.mjs';
 import { createSearchVerbs } from './search.mjs';
@@ -226,13 +226,15 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
 
     run_shell(args, ctx) {
       if (typeof args.command !== 'string' || args.command.trim() === '') {
-        return { ok: false, error: 'command must be a non-empty string' };
+        return { ok: false, error: 'command must be a non-empty string', launcher: shellLauncher(args.command, [], true) };
       }
       if (args.background !== true || !background) {
         const timeoutMs = Math.min(Number(args.timeoutMs) || DEFAULT_TIMEOUT_MS, MAX_TIMEOUT_MS);
+        const launcher = shellLauncher(args.command, [], true);
+        const withLauncher = (r) => ({ launcher, ...r });
         const result = runCommand(args.command, [], { cwd: root, timeoutMs, shell: true, signal: ctx?.signal });
-        if (result && typeof result.then === 'function') return result.then((r) => condenseShell(r, args.raw === true));
-        return condenseShell(result, args.raw === true);
+        if (result && typeof result.then === 'function') return result.then((r) => condenseShell(withLauncher(r), args.raw === true));
+        return condenseShell(withLauncher(result), args.raw === true);
       }
       if (!JOB_NAME.test(args.job ?? '')) return { ok: false, error: 'a background job needs job: 1 to 64 letters, digits, _ or -' };
       const timeoutMs = Math.min(Number(args.timeoutMs) || DEFAULT_TIMEOUT_MS, MAX_JOB_TIMEOUT_MS);
