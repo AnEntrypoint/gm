@@ -597,7 +597,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
   }
 
   function stepLimitText() {
-    return `step limit ${maxSteps} reached; a restart of the server opens a new run`;
+    return `step limit ${maxSteps} reached; call finish with your witness to close this run, then call next_context to open a successor run; a run ended here has no witness`;
   }
 
   function endedReason(child = false) {
@@ -857,7 +857,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     return { task: '', taskFrom: 'session prompt', inherited: false };
   }
 
-  return { accept, inputEnded, pause, ended: () => ended, stepLimited: () => stepLimited, settled: () => Promise.allSettled([...unansweredTurns]), successorStart };
+  return { accept, inputEnded, pause, ended: () => ended, stepLimited: () => stepLimited, settled: () => Promise.allSettled([...unansweredTurns]), hasReply: (id) => replies.has(JSON.stringify(id)), successorStart };
 }
 
 // The answer to every request id that a run already received, rebuilt from its log, so a repeated id is answered from
@@ -1199,7 +1199,7 @@ async function main(argv) {
   }
   const acceptLine = (line) => {
     try {
-      if (session.ended() !== null && isNextContextCall(line)) {
+      if (session.ended() !== null && isNextContextCall(line) && !session.hasReply(requestIdOf(line))) {
         retired = Promise.allSettled([retired, session.settled()]);
         session = reopen(session);
         notify(RESOURCES_CHANGED);

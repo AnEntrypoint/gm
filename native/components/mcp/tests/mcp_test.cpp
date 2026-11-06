@@ -242,6 +242,22 @@ const Value* field(const Value* value, std::initializer_list<const char*> keys) 
 
 double number_at(const Value* value) { return value && value->is_number() ? value->as_number() : -1.0; }
 
+bool flag_at(const Value& v, const char* key) {
+    const Value* f = v.find(key);
+    return f && f->is_bool() && f->as_bool();
+}
+
+std::string call_shape(const Value& v) {
+    std::ostringstream out;
+    out << "ok=" << (flag_at(v, "ok") ? "true" : "false")
+        << " refused=" << (flag_at(v, "refused") ? "true" : "false")
+        << " step=" << number_at(v.find("step"))
+        << " stepsLeft=" << number_at(v.find("stepsLeft"))
+        << " run=" << str(v, "run")
+        << " error=" << str(v, "error");
+    return out.str();
+}
+
 Value first_notice(Harness& h, const std::string& method) {
     std::lock_guard guard(h.lock);
     for (const Value& message : h.out) {
@@ -255,6 +271,29 @@ int notice_count(Harness& h, const std::string& method) {
     int n = 0;
     for (const Value& message : h.out) n += str(message, "method") == method ? 1 : 0;
     return n;
+}
+
+int reply_count(Harness& h, int id) {
+    std::lock_guard guard(h.lock);
+    int n = 0;
+    for (const Value& message : h.out) {
+        const Value* rid = message.find("id");
+        if (rid && rid->is_number() && rid->as_number() == id) ++n;
+    }
+    return n;
+}
+
+Value last_structured(Harness& h, int id) {
+    std::lock_guard guard(h.lock);
+    Value out;
+    for (const Value& message : h.out) {
+        const Value* rid = message.find("id");
+        if (!rid || !rid->is_number() || rid->as_number() != id) continue;
+        const Value* result = message.find("result");
+        const Value* structured = result ? result->find("structuredContent") : nullptr;
+        if (structured) out = *structured;
+    }
+    return out;
 }
 
 void append_line(const fs::path& file, const std::string& line) { std::ofstream(file, std::ios::app | std::ios::binary) << line; }
@@ -989,6 +1028,56 @@ int main() {
         }
         check(count_kind(events, "end") == 1 && end_status == "finished witness=handoff witness: two steps ran",
               "the first run logs exactly one finished end event: " + end_status);
+    }
+
+    std::cout << "--- item 9: step limit refusal and successor ---\n";
+    {
+        auto limits = fresh_options(root, "step-limit-refusal");
+        limits.max_steps = 2;
+        Harness h(verbs, limits);
+        Value first = h.call("next_context", "{}");
+        Value second = h.call("next_context", "{}");
+        Value third = h.call("next_context", "{}");
+        Value fourth = h.call("next_context", "{}");
+        Value fifth = h.call("next_context", "{}");
+        std::cout << "native 5-call 1: " << call_shape(first) << '\n';
+        std::cout << "native 5-call 2: " << call_shape(second) << '\n';
+        std::cout << "native 5-call 3: " << call_shape(third) << '\n';
+        std::cout << "native 5-call 4: " << call_shape(fourth) << '\n';
+        std::cout << "native 5-call 5: " << call_shape(fifth) << '\n';
+        std::string first_run = str(first, "run");
+        std::string fourth_run = str(fourth, "run");
+        check(number_at(first.find("step")) == 1 && number_at(first.find("stepsLeft")) == 1 &&
+                  number_at(second.find("step")) == 2 && number_at(second.find("stepsLeft")) == 0 &&
+                  !flag_at(third, "ok") && flag_at(third, "refused") &&
+                  str(third, "error").find("step limit 2 reached") != std::string::npos &&
+                  !fourth_run.empty() && fourth_run != first_run && number_at(fourth.find("step")) == 1 &&
+                  str(fifth, "run") == fourth_run && number_at(fifth.find("step")) == 2,
+              "five calls refuse at step 3 and continue in a different successor run");
+    }
+
+    std::cout << "--- item 10: repeated step-limit id ---\n";
+    {
+        auto limits = fresh_options(root, "step-limit-duplicate");
+        limits.max_steps = 2;
+        Harness h(verbs, limits);
+        Value first = h.call("next_context", "{}", 4101);
+        Value second = h.call("next_context", "{}", 4102);
+        Value refusal = h.call("next_context", "{}", 4103);
+        h.call("next_context", "{}", 4103);
+        Value repeated = last_structured(h, 4103);
+        Value successor = h.call("next_context", "{}", 4104);
+        std::cout << "native duplicate 1: " << call_shape(first) << '\n';
+        std::cout << "native duplicate 2: " << call_shape(second) << '\n';
+        std::cout << "native duplicate 3: " << call_shape(refusal) << '\n';
+        std::cout << "native duplicate 4: " << call_shape(repeated) << '\n';
+        std::cout << "native duplicate 5: " << call_shape(successor) << '\n';
+        std::string first_run = str(first, "run");
+        std::string successor_run = str(successor, "run");
+        check(flag_at(refusal, "refused") && flag_at(repeated, "refused") &&
+                  str(repeated, "error") == str(refusal, "error") && reply_count(h, 4103) == 2 &&
+                  !successor_run.empty() && successor_run != first_run && number_at(successor.find("step")) == 1,
+              "a repeated step-limit id returns the stored refusal and a new id opens the successor");
     }
 
     std::error_code ec;

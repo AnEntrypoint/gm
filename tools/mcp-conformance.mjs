@@ -11,6 +11,7 @@ const HOUR_MS = 3600000;
 const REQUEST_TIMEOUT_MS = 60000;
 const RULES_RUN_DIR = `/tmp/gm-conformance-rules-${process.pid}-${Date.now()}`;
 const HANDOFF_RUN_DIR = `/tmp/gm-conformance-handoff-${process.pid}-${Date.now()}`;
+const STEP_LIMIT_RUN_DIR = `/tmp/gm-conformance-step-limit-${process.pid}-${Date.now()}`;
 const INVALID_PARAMS = -32602;
 const METHOD_NOT_FOUND = -32601;
 
@@ -381,6 +382,29 @@ const SCENARIOS = [
       const successor = await call('next_context', {});
       ok('the next next_context opens a different run', successor.ok === true && successor.run !== undefined && successor.run !== fiftieth.run,
         short({ first: fiftieth.run, successor: successor.run }));
+      const refusalText = 'refused: step limit 50 reached; call finish with your witness to close this run, then call next_context to open a successor run; a run ended here has no witness';
+      const limited = new Client(['--run-dir', STEP_LIMIT_RUN_DIR]);
+      try {
+        await limited.open();
+        const limitedCall = async (name, args) => (await limited.rpc('tools/call', { name, arguments: args })).result?.structuredContent ?? {};
+        let fiftiethLimited = {};
+        for (let step = 1; step <= 50; step += 1) fiftiethLimited = await limitedCall('next_context', {});
+        const retryId = limited.nextId;
+        const refused = await limitedCall('next_context', {});
+        ok('the 51st next_context is refused with the truthful step-limit text', refused.ok === false && refused.refused === true && refused.error === refusalText,
+          short(refused.error));
+        limited.inbox = limited.inbox.filter((message) => message.id !== retryId);
+        limited.send({ jsonrpc: '2.0', id: retryId, method: 'tools/call', params: { name: 'next_context', arguments: {} } });
+        const retryReply = await limited.waitFor((message) => message.id === retryId, 'answer to repeated step-limit id');
+        const retried = retryReply.result?.structuredContent ?? {};
+        ok('a repeated over-limit id answers with the stored refusal', retried.ok === false && retried.refused === true && retried.error === refusalText,
+          short(retried.error));
+        const successorAfterRefusal = await limitedCall('next_context', {});
+        ok('the next new next_context after a step-limit refusal opens a different run', successorAfterRefusal.ok === true && successorAfterRefusal.step === 1 && successorAfterRefusal.run !== undefined && successorAfterRefusal.run !== fiftiethLimited.run,
+          short({ first: fiftiethLimited.run, successor: successorAfterRefusal.run }));
+      } finally {
+        await limited.close();
+      }
     },
   },
 ];

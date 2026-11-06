@@ -1051,7 +1051,7 @@ struct Server::State {
     }
 
     std::string step_limit_text() {
-        return "step limit " + std::to_string(options.max_steps) + " reached; a restart of the server opens a new run";
+        return "step limit " + std::to_string(options.max_steps) + " reached; call finish with your witness to close this run, then call next_context to open a successor run; a run ended here has no witness";
     }
 
     std::string read_rules() {
@@ -2573,6 +2573,13 @@ struct Server::State {
         return name && name->as_string() == "next_context" && !(child && child->is_bool() && child->as_bool()) && run == nullptr;
     }
 
+    bool has_stored_next_context_reply(std::string_view line) {
+        auto parsed = json::parse(line);
+        if (!parsed) return false;
+        const Value* id = parsed->find("id");
+        return id && s().replies.contains(id_key(id));
+    }
+
     void accept(std::string_view line) {
         if (trim(line).empty()) return;
         process(line, take_ticket(), true);
@@ -2595,11 +2602,7 @@ struct Server::State {
     void process(std::string_view line, std::uint64_t ticket, bool ordered) {
         Hold hold(*this, ticket, ordered);
         try {
-            if (is_next_context_call(line) && (s().ended || s().steps >= options.max_steps)) {
-                if (!s().ended) {
-                    s().ended = "max_steps";
-                    end_run("max_steps", Value(nullptr), std::nullopt);
-                }
+            if (s().ended && is_next_context_call(line) && !has_stored_next_context_reply(line)) {
                 reopen();
                 notify(object().set("jsonrpc", "2.0").set("method", "notifications/resources/list_changed"));
             }
