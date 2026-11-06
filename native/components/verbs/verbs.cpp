@@ -7,6 +7,7 @@
 #include <cmath>
 #include <ctime>
 #include <exception>
+#include <fstream>
 #include <limits>
 #include <system_error>
 
@@ -63,9 +64,23 @@ json::Value number_or_null(bool has, std::size_t n) {
     return has ? json::Value(static_cast<std::uint64_t>(n)) : json::Value(nullptr);
 }
 
-void set_cut_notice(json::Value& reply, std::string_view text, const std::string* rest) {
+bool is_binary(const std::filesystem::path& path) {
+    constexpr std::size_t probe_bytes = 8000;
+    std::ifstream in(path, std::ios::binary);
+    std::string probe(probe_bytes, '\0');
+    in.read(probe.data(), static_cast<std::streamsize>(probe.size()));
+    return probe.substr(0, static_cast<std::size_t>(in.gcount())).find('\0') != std::string::npos;
+}
+
+std::uint64_t file_size_of(const std::filesystem::path& path) {
+    std::error_code ec;
+    const auto size = std::filesystem::file_size(path, ec);
+    return ec ? 0 : static_cast<std::uint64_t>(size);
+}
+
+void set_cut_notice(json::Value& reply, std::uint64_t total_bytes, const std::string* rest) {
     reply.set("truncated", rest != nullptr);
-    reply.set("totalBytes", static_cast<std::uint64_t>(text.size()));
+    reply.set("totalBytes", total_bytes);
     if (rest != nullptr) reply.set("hint", *rest);
 }
 
@@ -220,7 +235,7 @@ struct CoreVerbs::Impl {
             std::string uri = path_value->as_string();
             auto text = options.serve_skill ? options.serve_skill(uri) : std::nullopt;
             if (!text) return failure("no served skill file has the uri " + uri);
-            return unit == "chars" ? char_page(*text, args) : line_page(*text, args);
+            return unit == "chars" ? char_page(*text, args, text->size()) : line_page(*text, args, text->size());
         }
         return unit == "chars" ? read_char_page(*at, args) : read_line_page(*at, args);
     }
@@ -238,13 +253,14 @@ struct CoreVerbs::Impl {
     }
 
     json::Value read_char_page(const std::filesystem::path& path, const json::Value& args) {
+        if (is_binary(path)) return refusal("binary file; read_file serves text only");
         if (auto problem = char_args_problem(args)) return failure(*problem);
         auto file = core::read_text(path, "stat");
         if (!file.ok) return failure(file.error);
-        return char_page(file.text, args);
+        return char_page(file.text, args, file_size_of(path));
     }
 
-    json::Value char_page(const std::string& text, const json::Value& args) {
+    json::Value char_page(const std::string& text, const json::Value& args, std::uint64_t total_bytes) {
         const json::Value* offset_value = present(args, "offset");
         const json::Value* limit_value = present(args, "limit");
         std::size_t offset = offset_value != nullptr ? static_cast<std::size_t>(offset_value->as_number()) : 0;
@@ -259,7 +275,7 @@ struct CoreVerbs::Impl {
         reply.set("offset", static_cast<std::uint64_t>(offset));
         reply.set("next", number_or_null(more, end));
         std::string hint = "pass unit: \"chars\", offset: " + std::to_string(end) + " and limit: 20000 to read the rest";
-        set_cut_notice(reply, text, more ? &hint : nullptr);
+        set_cut_notice(reply, total_bytes, more ? &hint : nullptr);
         return reply;
     }
 
@@ -276,13 +292,14 @@ struct CoreVerbs::Impl {
     }
 
     json::Value read_line_page(const std::filesystem::path& path, const json::Value& args) {
+        if (is_binary(path)) return refusal("binary file; read_file serves text only");
         if (auto problem = line_args_problem(args)) return failure(*problem);
         auto file = core::read_text(path, "stat");
         if (!file.ok) return failure(file.error);
-        return line_page(file.text, args);
+        return line_page(file.text, args, file_size_of(path));
     }
 
-    json::Value line_page(const std::string& text, const json::Value& args) {
+    json::Value line_page(const std::string& text, const json::Value& args, std::uint64_t total_bytes) {
         const json::Value* offset_value = present(args, "offset");
         const json::Value* limit_value = present(args, "limit");
         std::size_t offset = offset_value != nullptr ? static_cast<std::size_t>(offset_value->as_number()) : 0;
@@ -297,7 +314,7 @@ struct CoreVerbs::Impl {
             reply.set("total", static_cast<std::uint64_t>(total));
             reply.set("offset", static_cast<std::uint64_t>(offset));
             reply.set("next", nullptr);
-            set_cut_notice(reply, text, nullptr);
+            set_cut_notice(reply, total_bytes, nullptr);
             return reply;
         }
         auto line_end = [&](std::size_t line) { return line + 1 < total ? starts[line + 1] : text.size(); };
@@ -315,7 +332,7 @@ struct CoreVerbs::Impl {
             reply.set("next", number_or_null(offset + 1 < total, offset + 1));
             std::string hint = "line " + std::to_string(offset) + " is longer than a page: pass unit: \"chars\", offset: " +
                                std::to_string(begin_units + output_page) + " and limit: 20000 to read the rest";
-            set_cut_notice(reply, text, &hint);
+            set_cut_notice(reply, total_bytes, &hint);
             return reply;
         }
         std::size_t last = offset + 1;
@@ -331,7 +348,7 @@ struct CoreVerbs::Impl {
         reply.set("offset", static_cast<std::uint64_t>(offset));
         reply.set("next", number_or_null(more, last));
         std::string hint = more ? "pass offset: " + std::to_string(last) + " and limit: " + std::to_string(total - last) + " to read the rest" : std::string();
-        set_cut_notice(reply, text, more ? &hint : nullptr);
+        set_cut_notice(reply, total_bytes, more ? &hint : nullptr);
         return reply;
     }
 

@@ -23,6 +23,7 @@ const BOOT_LEAVES = { 'git.mjs': gitModule, 'rows.mjs': rowsModule, 'fetch.mjs':
 // read does not hold the event loop.
 const READ_BUFFER_BYTES = 4096;
 const READ_SYNC_LIMIT = 1024 * 1024;
+const BINARY_PROBE = 8000;
 let readBuffer = Buffer.allocUnsafe(READ_BUFFER_BYTES);
 async function readText(path) {
   if (statSync(path).size > READ_SYNC_LIMIT) return readFile(path, 'utf8');
@@ -46,35 +47,47 @@ async function readText(path) {
   }
 }
 
-function cutNotice(text, rest) {
-  return { truncated: rest !== null, totalBytes: Buffer.byteLength(text), ...(rest === null ? {} : { hint: rest }) };
+function cutNotice(size, rest) {
+  return { truncated: rest !== null, totalBytes: size, ...(rest === null ? {} : { hint: rest }) };
+}
+
+function isBinary(path) {
+  const fd = openSync(path, 'r');
+  try {
+    const probe = Buffer.alloc(BINARY_PROBE);
+    return probe.subarray(0, readSync(fd, probe, 0, BINARY_PROBE, 0)).includes(0);
+  } finally {
+    closeSync(fd);
+  }
 }
 
 async function readCharPage(path, offset, limit) {
   if (!Number.isInteger(offset) || offset < 0) return { ok: false, error: 'offset must be a whole number of characters, zero or more' };
   if (!Number.isInteger(limit) || limit < 1 || limit > OUTPUT_PAGE) return { ok: false, error: `limit must be a whole number from 1 to ${OUTPUT_PAGE}` };
   const text = await readText(path);
+  const size = statSync(path).size;
   const end = Math.min(offset + limit, text.length);
   const next = end < text.length ? end : null;
-  return { ok: true, output: text.slice(offset, end), total: text.length, offset, next, ...cutNotice(text, next === null ? null : `pass unit: "chars", offset: ${next} and limit: ${OUTPUT_PAGE} to read the rest`) };
+  return { ok: true, output: text.slice(offset, end), total: text.length, offset, next, ...cutNotice(size, next === null ? null : `pass unit: "chars", offset: ${next} and limit: ${OUTPUT_PAGE} to read the rest`) };
 }
 
 async function readLinePage(path, offset, limit) {
   if (!Number.isInteger(offset) || offset < 0) return { ok: false, error: 'offset must be a whole number of lines, zero or more' };
   if (limit !== Infinity && (!Number.isInteger(limit) || limit < 1)) return { ok: false, error: 'limit must be a whole number of lines, one or more' };
   const text = await readText(path);
+  const size = statSync(path).size;
   const starts = lineStarts(text);
   const total = starts.length;
-  if (offset >= total) return { ok: true, unit: 'lines', output: '', total, offset, next: null, ...cutNotice(text, null) };
+  if (offset >= total) return { ok: true, unit: 'lines', output: '', total, offset, next: null, ...cutNotice(size, null) };
   const lineEnd = (line) => (line + 1 < total ? starts[line + 1] : text.length);
   const begin = starts[offset];
   if (lineEnd(offset) - begin > OUTPUT_PAGE) {
-    return { ok: true, unit: 'lines', output: text.slice(begin, begin + OUTPUT_PAGE), cutLine: true, total, offset, next: offset + 1 < total ? offset + 1 : null, ...cutNotice(text, `line ${offset} is longer than a page: pass unit: "chars", offset: ${begin + OUTPUT_PAGE} and limit: ${OUTPUT_PAGE} to read the rest`) };
+    return { ok: true, unit: 'lines', output: text.slice(begin, begin + OUTPUT_PAGE), cutLine: true, total, offset, next: offset + 1 < total ? offset + 1 : null, ...cutNotice(size, `line ${offset} is longer than a page: pass unit: "chars", offset: ${begin + OUTPUT_PAGE} and limit: ${OUTPUT_PAGE} to read the rest`) };
   }
   let last = offset + 1;
   while (last < total && last - offset < limit && lineEnd(last) - begin <= OUTPUT_PAGE) last += 1;
   const next = last < total ? last : null;
-  return { ok: true, unit: 'lines', output: text.slice(begin, lineEnd(last - 1)), total, offset, next, ...cutNotice(text, next === null ? null : `pass offset: ${next} and limit: ${total - next} to read the rest`) };
+  return { ok: true, unit: 'lines', output: text.slice(begin, lineEnd(last - 1)), total, offset, next, ...cutNotice(size, next === null ? null : `pass offset: ${next} and limit: ${total - next} to read the rest`) };
 }
 
 function lineStarts(text) {
@@ -157,8 +170,9 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
       const at = locate(args.path);
       if (at.refused) return refusal(at.refused);
       const unit = args.unit ?? 'lines';
+      if (unit !== 'lines' && unit !== 'chars') return { ok: false, error: 'unit must be lines or chars' };
+      if (isBinary(at.path)) return { ok: false, refused: true, error: 'refused: binary file; read_file serves text only' };
       if (unit === 'chars') return readCharPage(at.path, args.offset ?? 0, args.limit ?? OUTPUT_PAGE);
-      if (unit !== 'lines') return { ok: false, error: 'unit must be lines or chars' };
       return readLinePage(at.path, args.offset ?? 0, args.limit ?? Infinity);
     },
 
