@@ -116,13 +116,18 @@ gm is one long-horizon worker: an MCP server that runs a task as one append-only
 - A Linux container where Chromium's sandbox is blocked refuses to start the browser (`no usable sandbox`). On this Ubuntu container /usr/bin/chromium is a wrapper that adds --no-sandbox.
 - The playwriter execute tool returns a value only for one expression, or for an async arrow that returns. A top-level const or let yields "no output"; keep values in `state`.
 
+## Owner decisions (2026-11-06, through orchestrate)
+
+1. Native ships; Node stays the parity reference. Reversible by one entry change. The user-wide entry is unchanged (DESIGN.md, Local cutover of the native gm, 2026-11-04).
+2. Roots and elicitation stay unused; question rows carry interactivity (DESIGN.md decisions 2 and 4).
+3. Negotiate protocol 2026-07-28 behind a capability flag that is off by default, with a witness test. It does not become the default until a client test exists (DESIGN.md decision 1).
+4. Drain and log a body's console output, capped. Decided, not yet implemented.
+5. The project does not close until the minimal tool set is run and G3 (cache effect, measured by the gm agent from host transcripts) is recorded. Neither is recorded.
+
 ## Open decisions (owner), with current state
 
-1. Node tree direction. OPEN. State: the native tree builds and passes ctest and the parity harness. It is cut over for /workspace/gm only (DESIGN.md, Local cutover of the native gm, 2026-11-04); the user-wide entry is unchanged, and Node stays the parity reference. Until the owner answers native or node-only, commit df0a6b9 and native/ stay as they are.
-2. Client-side roots and elicitation. Not used. Roots and sampling are not used (DESIGN.md decision 4); logging is used. Elicitation is not served, because it is interactive-only in Claude Code and a question becomes a row instead. DESIGN.md marks it "OWNER DECISION if wanted" (decision 2). Current state: neither tree uses either.
-3. Protocol 2026-07-28: not negotiated. Owner decision (DESIGN.md decision 1), held 2026-11-05 (DESIGN.md, Decided). Risk noted there: a v2 client may ask for it.
-4. Console output of a body is drained by the session and not returned or logged (stated, not closed). Open.
-5. Minimal tool set is not run, and G3 (cache effect, measured by the gm agent from host transcripts) is not recorded. The project closes when both are recorded.
+- Console output: decided above; implementation is open.
+- Minimal tool set and G3: decided above; the measurements are open.
 
 ## Known gaps, native against Node
 
