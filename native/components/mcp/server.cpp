@@ -117,7 +117,7 @@ std::string run_code_description(const std::string& verb_names) {
            verb_names +
            ". gm.verbs() returns each verb's description and input schema as data. "
            "gm.verbs({ name: 'read_file' }) returns just that verb's schema, gm.verbs({ names: true }) returns just "
-           "the names, and an unknown name is an error. A failed call returns "
+           "the names, and an unknown name is an error. Wrap a call that may throw in gm.try(fn), which returns its value or { ok: false, error } as data, so one failure does not hide the rest of a batch. A failed call returns "
            "{ok:false, error} and does not stop the body. The body's return value comes back as JSON. A body still "
            "running after timeoutMs (default 180000, at most 300000) becomes a background run: the call returns its "
            "job id at once, job_status with waitMs returns its value, and finish is refused while it runs unless "

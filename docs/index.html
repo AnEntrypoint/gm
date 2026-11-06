@@ -125,7 +125,7 @@ return { a: a.output.length, b: b.output.length };</pre>
 <p>prd_add, prd_list, prd_resolve, prd_delete, unknown_add, unknown_list, unknown_resolve, review_packet, review_record, review_join.</p>
 <h3>Network and logs</h3>
 <p>fetch, query_log (reads the run's own log), and any MCP server configured for the project as <code>gm.&lt;server&gt;_&lt;tool&gt;</code>.</p>
-<p class="note">Call <code>gm.verbs()</code> inside run_code to get each verb's schema as data.</p>
+<p class="note">Call <code>gm.verbs()</code> inside run_code to get each verb's schema as data. Wrap a call that may throw in <code>gm.try(fn)</code> so one failure does not hide the rest of a batch; both helpers are named in run_code's description.</p>
 <h3>Workflow graphs</h3>
 <p>Work that splits into independent units is shaped by <code>skill://gm/WORKFLOWS.md</code>, a served skill file read on demand with <code>gm.read_file({ path: 'skill://gm/WORKFLOWS.md' })</code>. It holds the work order (search and insight, just-in-time execution, elimination waves, validation by running code), the graph shapes (scout then fan out, pipeline over barrier, adversarial refuters, loop until dry, a completeness critic, no silent caps, a budget guard), the map to gm verbs, and the witness counts. The seven rules and the connect-time instructions stay short; a single-file edit stays in one body. Re-read it after a compaction before the next fan-out. When <code>stepsLeft</code> reaches 0, call <code>finish</code> with a witness and then <code>next_context</code> to open a successor run; do not call <code>next_context</code> first.</p>
 </section>

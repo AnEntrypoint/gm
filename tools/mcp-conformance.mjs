@@ -173,6 +173,7 @@ const SCENARIOS = [
       for (const tool of tools.filter((t) => CODE_TOOLS.includes(t.name))) {
         ok(`${tool.name} has a title, an object inputSchema and an object outputSchema`, nonEmpty(tool.title) && tool.inputSchema?.type === 'object' && tool.outputSchema?.type === 'object', short({ title: tool.title, input: tool.inputSchema?.type, output: tool.outputSchema?.type }));
       }
+      ok('run_code names gm.verbs and gm.try', (() => { const d = tools.find((t) => t.name === 'run_code')?.description ?? ''; return d.includes('gm.verbs()') && d.includes('gm.try(fn)'); })(), short(tools.find((t) => t.name === 'run_code')?.description?.slice(0, 120)));
       ok('next_context is read-only', tools.find((t) => t.name === 'next_context')?.annotations?.readOnlyHint === true);
       ok('finish is not destructive', tools.find((t) => t.name === 'finish')?.annotations?.destructiveHint === false);
     },
