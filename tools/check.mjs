@@ -19,6 +19,9 @@ try {
     failures.push(`g3 snapshot: ${error.message}`);
 }
 
+const unitTests = spawnSync(process.execPath, [join(root, 'tools', 'scan-unit-tests.mjs'), root], { cwd: root, stdio: 'inherit', timeout: 60000 });
+if (unitTests.status !== 0) failures.push('unit-test scan');
+
 const binary = join(root, 'build', 'release', 'native', 'components', 'host', process.platform === 'win32' ? 'gm.exe' : 'gm');
 if (!existsSync(binary)) {
     failures.push(`redaction witness: no binary at ${binary}; run cmake --preset release and cmake --build build/release`);
@@ -31,4 +34,4 @@ if (failures.length) {
     console.error(`check: ${failures.length} failure(s)\n- ${failures.join('\n- ')}`);
     process.exit(1);
 }
-console.log('check: gate, g3 snapshot and redaction witness passed');
+console.log('check: gate, unit-test scan, g3 snapshot and redaction witness passed');
