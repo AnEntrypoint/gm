@@ -24,10 +24,8 @@ import { writeSummary } from './summary.mjs';
 import { parseSkill, SERVED_SKILLS } from './skills.mjs';
 import { completionOf, createSubscriptions, readRun, RESOURCE_TEMPLATES, runResources, witnessOf } from './mcp-resources.mjs';
 
-// The protocol versions this server negotiates, newest first. An initialize that asks for another version is answered with the newest.
 const SUPPORTED_VERSIONS = ['2025-11-25', '2025-06-18'];
 const PROTOCOL_VERSION = SUPPORTED_VERSIONS[0];
-// The key of a tools/call result's run id: a vendor key in reverse-DNS form, owner decision O3. Results carry it; errors do not.
 const RUN_META = 'com.anentrypoint.gmnew/run';
 const RUN_SEQ = 'com.anentrypoint.gmnew/seq';
 const TRACE_KEYS = ['traceparent', 'tracestate', 'baggage'];
@@ -35,9 +33,6 @@ const CALLER = { connection: process.pid, parent: process.ppid };
 const PROGRESS_MS = 5000;
 const PROGRESS_TOOLS = new Set(['run_shell', 'run_code']);
 const SERVER_INFO = { name: SERVER_NAME, title: SERVER_TITLE, version: JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')).version };
-// The served skills (SEP-2640) are read on each request, so an edit under skills/ is served without a restart. Each skill's files are listed
-// and read from its directory: every file is a resource with a sha256 digest and a size, and SKILL.md is the skill's uri. A file caught
-// mid-write keeps the last read of that skill that succeeded. Before a skill has read cleanly, the error reaches the caller.
 const GM_SKILL_URI = 'skill://gm/SKILL.md';
 const lastSkill = new Map();
 function skillOf(name) {
@@ -73,7 +68,6 @@ function filesUnder(dir, rel = '') {
 function skillEntry(skill) {
   return { uri: skill.uri, frontmatter: skill.frontmatter, resources: skill.files.map(({ uri, digest, size }) => ({ uri, digest, size })) };
 }
-// The resource of one file. SKILL.md is named by its frontmatter, as the SEP asks, and any other file by its path.
 function resourceOf(skill, file) {
   const annotations = { audience: ['assistant'], priority: file.path === 'SKILL.md' ? 1 : 0.5, lastModified: file.lastModified };
   if (file.path !== 'SKILL.md') return { uri: file.uri, name: file.path, mimeType: file.mimeType, annotations };
@@ -92,7 +86,6 @@ function skillFileOf(uri) {
   const file = skill.files.find((candidate) => candidate.uri === uri);
   return file === undefined ? null : { skill, file };
 }
-// skills/get: the entry of one served skill, named by its SKILL.md uri. Any other uri is -32602, as resources/read refuses an unknown one.
 function skillGet(params) {
   const match = typeof params?.uri === 'string' ? /^skill:\/\/([^/]+)\/SKILL\.md$/.exec(params.uri) : null;
   if (match === null || !SERVED_SKILLS.includes(match[1])) throw new RpcError(-32602, `unknown skill: ${params?.uri}`);
@@ -120,8 +113,6 @@ function unsubscribeFrom(params) {
   subscriptions.unsubscribe(params?.uri);
   return {};
 }
-// The prompts are the served skills, read on each request. The gm prompt takes the run's task, which its session prompt gives to a run
-// started without --task. The gm-continue prompt takes no argument.
 const PROMPT_TITLES = { gm: 'gm run', 'gm-continue': 'gm continue' };
 const TASK_ARGUMENT = { name: 'task', description: 'The task to run. The whole task text is this one argument. Some hosts pass only its first word.', required: false };
 function skillPrompt(name) {
@@ -138,7 +129,6 @@ const DEFAULT_MAX_INFLIGHT = 8;
 const DEFAULT_JOB_LIFETIME_MS = 3600000;
 const OPEN_LIST = 20;
 const USAGE = 'usage: node src/mcp.mjs --workspace <dir> [--task <file-or-text>] [--run-dir <dir>] [--max-steps N] [--max-inflight N] [--job-lifetime-ms N] [--stuck-ms N] [--monitor-ms N] [--notice-ms N] [--host-idle-ms N] [--surface tools|code] [--mcp-config <file>]';
-// A host that stops calling is noticed after this long with no call in flight (--host-idle-ms). next_context waitMs is capped here, because a host cuts a call that runs too long.
 const DEFAULT_HOST_IDLE_MS = 600000;
 const MAX_WAIT_MS = 300000;
 const DEFAULT_MCP_CONFIG = join(ROOT, 'defaults', 'mcp.json');
@@ -163,12 +153,8 @@ const BASE_TOOLS = [
   ...SEARCH_TOOLS,
 ];
 
-// The code surface (--surface code) serves next_context, finish and run_code. Every other verb is called from run_code as
-// gm.<name>(args). The tools surface serves the whole list, as before.
 const SURFACES = ['tools', 'code'];
 const CODE_SURFACE = new Set(['next_context', 'run_code', 'finish']);
-// The surface the worker serves: the tool list, the verbs and the compaction registry. surfaceOf builds it from the leaf modules it is given,
-// so a reload builds the next surface from the new code and swaps it in whole.
 function surfaceOf(leaves) {
   const TOOLS = [
     ...BASE_TOOLS,
@@ -184,7 +170,6 @@ function surfaceOf(leaves) {
   const REGISTRY = registryOf(TOOLS_COMPACT, SEARCH_COMPACT, leaves['fetch.mjs'].COMPACT, leaves['git.mjs'].COMPACT, leaves['code-ast.mjs'].COMPACT, leaves['rows.mjs'].COMPACT, leaves['wiki-tools.mjs'].COMPACT, leaves['review-tools.mjs'].COMPACT, RUNCODE_COMPACT, SELF_COMPACT);
   return { TOOLS, VERBS, CODE_LIST, REGISTRY, leaves };
 }
-// Every reloadable module at the current generation. Boot and each reload read them here, so both take the same path.
 async function loadLeaves() {
   const leaves = {};
   for (const file of RELOADABLE) leaves[file] = await import(`./${file}`);
@@ -203,7 +188,6 @@ class RpcError extends Error {
   }
 }
 
-// The hold next_context takes when waitMs is set. The listener is added before the check, so an event that lands between them is not missed.
 function untilPending(runDir, waitMs) {
   if (waitMs === 0) return Promise.resolve();
   return new Promise((done) => {
@@ -244,8 +228,6 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     replies.set(key, pending);
     if (replies.size > REPLY_MEMORY) replies.delete(replies.keys().next().value);
   };
-  // The tools/call requests in flight, by id: the call's name, its trace context, and the controller that a cancel aborts. A cancelled request
-  // is listed in cancelled, so handleLine drops its reply.
   const inFlightCalls = new Map();
   const cancelled = new Set();
   const callOf = (rpcId) => inFlightCalls.get(JSON.stringify(rpcId));
@@ -259,8 +241,6 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
   let stepLimited = false;
   let endedTask = null;
   let endLogged = ended !== null;
-  // A host that stops calling leaves the run open, and nothing wakes it. After hostIdleMs with no call in flight and none since, one
-  // host-idle event is queued for a watcher on the pending file. It is queued once per quiet spell, and the timer stops when the run ends.
   let quietSince = log.now();
   let idleQueued = false;
   const touch = () => {
@@ -277,15 +257,11 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     log.append('host-idle', { idleMs: Math.round(log.now() - quietSince) });
   }, Math.max(1000, Math.floor(hostIdleMs / 4)));
   idleTimer.unref();
-  // The rules watchdog. It notices the rule breaks it can see: a call before the run's first next_context (rule 2), a finish with no call
-  // in its step (rule 3), and a finish refused for its witness (rule 4). An open notice is
-  // carried in the reply of each call and in next_context until the agent loads the skill again, which clears them all.
   const rulesOpen = new Map();
   let runStarted = steps > 0;
   let childSeen = false;
   let childTask = '';
   let stepCalls = 0;
-  // Rule 1 has no check: a path outside the workspace is allowed, so a refusal of one is not a breach of it.
   const RULE_TEXT = { 2: 'call next_context at the start of every step', 3: 'verify before you finish', 4: 'finish needs a witness' };
   function noteRule(rule, evidence) {
     if (rulesOpen.has(rule)) return;
@@ -316,11 +292,8 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
 
   async function innerCall(name, args) {
     const startMono = log.now();
-    // A call that a background body makes carries the body's seq, so the body's output can be read back from the log. While the call is in
-    // flight, the body counts as progressing (the stuck check reads it).
     const body = bodyContext.getStore()?.body;
     if (body !== undefined) tools.callStarted(body);
-    // A verb that may change something has its start in the file before it runs. Its code-call names that start, as a result names its action.
     const action = READ_ONLY_TOOLS.has(name) ? undefined : log.append('action', { step: steps, tool: name, args, caller: CALLER, ...(body === undefined ? {} : { body }) });
     if (action !== undefined) flushAllLogs();
     const exec = mcp.has(name) ? (value) => mcp.call(name, value) : Object.hasOwn(handlers, name) ? handlers[name] : (value) => tools.run(name, value);
@@ -332,7 +305,6 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     } finally {
       if (body !== undefined) tools.callEnded(body);
     }
-    // The full result is logged, so query_log reaches the output and the exit code of a verb called inside a body.
     const shown = loggedFor(name, result);
     const fields = { ok: shown?.ok === true, args, exitCode: shown?.exitCode, signal: shown?.signal, output: shown?.output, outputChars: shown?.outputChars, outputDigest: shown?.outputDigest, error: shown?.error };
     log.append('code-call', { step: steps, tool: name, startMono, ...fields, ...(body === undefined ? {} : { body }), ...(action === undefined ? {} : { actionSeq: action.seq }) });
@@ -373,7 +345,6 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
       const pending = route(message.method, message.params, message.id);
       if (key !== null) remember(key, pending);
       const result = await pending;
-      // A cancelled foreground shell gets no answer. Its call ended with its kill, and cancelRequest listed its id.
       if (key !== null && cancelled.delete(key)) return null;
       return request ? { jsonrpc: '2.0', id: message.id, result: result ?? {} } : null;
     } catch (err) {
@@ -433,7 +404,6 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
       return promptResult(other, other.body);
     }
     const SKILL = skillOf('gm');
-    // Loading the skill again is what the notice asks for, so it clears the open notices. Each fetch is logged, so a live run can count them.
     log.append('skill-loaded', { via: 'prompt', skill: 'gm', cleared: [...rulesOpen.keys()] });
     clearRules();
     const given = typeof params?.arguments?.task === 'string' ? params.arguments.task.trim() : '';
@@ -454,7 +424,6 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     const run = readRun(runsRoot, params?.uri);
     if (run !== null) return { contents: [run] };
     const served = serveSkillFile(params?.uri, 'resource');
-    // A missing resource is -32002 with its uri, as the 2025-11-25 page says. A uri with a .. segment is not served, so it is not found either.
     if (!served.ok) throw new RpcError(-32002, `resource not found: ${params?.uri}`, { uri: params?.uri });
     return { contents: [{ uri: served.uri, mimeType: served.mimeType, text: served.output }] };
   }
@@ -468,8 +437,6 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     return { ok: true, output: found.file.bytes.toString('utf8'), uri: found.file.uri, mimeType: found.file.mimeType };
   }
 
-  // The checks on one call's result, for the rules the server can see. A finish is judged by its own result. Any other call counts toward the
-  // step that is open, which the next_context call started.
   function watchCall(name, out) {
     if (name === 'next_context') return;
     if (name === 'finish') {
@@ -523,8 +490,6 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     return () => clearInterval(timer);
   }
 
-  // notifications/cancelled. A foreground run_shell is killed, and its request gets no answer (handleLine). Any other cancelled request runs on:
-  // a read-only verb has no effect to undo, and a side-effecting verb must finish its effect. Each cancel that is not honoured is logged.
   function cancelRequest(requestId) {
     const key = JSON.stringify(requestId);
     const call = inFlightCalls.get(key);
@@ -599,7 +564,6 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     if (ended !== null) return refuse(name, args, endedReason(isChildRead(name, args)), rpcId);
     if (signalOf(rpcId)?.aborted === true) return refuse(name, args, 'cancelled before it started', rpcId);
     if (name === 'run_code') {
-      // A wrong argument name is refused by name. The run_code reply names its action, which is the seq of the action event, so a body can cite it.
       const unknown = Object.keys(args).filter((key) => !Object.hasOwn(RUN_CODE_PROPERTIES, key));
       if (unknown.length > 0) return refuse(name, args, `unknown argument ${unknown.join(', ')}; run_code takes ${Object.keys(RUN_CODE_PROPERTIES).join(', ')}`, rpcId);
       return act('run_code', args, access, (actionSeq) => runBody({ body: args.body, timeoutMs: args.timeoutMs, format: args.format, verbs: current.VERBS, call: innerCall, project: workspace, runDir, log, step: steps, background: (handle) => tools.adoptBody(handle) }).then((reply) => ({ ...reply, actionSeq })), (result) => loggedFor('run_code', result), rpcId);
@@ -661,8 +625,6 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     }, ({ ok, error, prefixSha, total }) => ({ ok, error, prefixSha, total }), rpcId);
   }
 
-  // The prefix is the same at every step, except for the rules, which are read again at each step. Its text is built and hashed only when
-  // the rules change. A step whose rules are the same reuses the hash, so no step builds the tool text again.
   let prefixMemo = null;
   function prefixShaFor(rules) {
     if (prefixMemo === null || prefixMemo.surface !== current || prefixMemo.rules !== rules || prefixMemo.task !== task) prefixMemo = { surface: current, rules, task, sha: prefixShaOf({ rules, task, witness: DEFAULT_WITNESS, tools: renderTools(servedTools(surface)) }) };
@@ -679,8 +641,6 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     const killedNames = new Set(killed.map((event) => event.job));
     const started = since.filter((event) => event.kind === 'job' && event.state === 'running' && event.body !== undefined);
     const stillRunning = since.filter((event) => event.kind === 'job-running');
-    // What is still happening: the jobs that turned stuck or progressed again since the last step, and every job still open now, so the agent
-    // can tell whether anything is stuck. The open list is a snapshot of the present, not a notice, so it is not an event.
     const turnedStuck = since.filter((event) => event.kind === 'job-stuck');
     const progressedAgain = since.filter((event) => event.kind === 'job-unstuck');
     const open = tools.activeJobs();
@@ -693,7 +653,6 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     const reply = {
       ok: true,
       step,
-      // The run's id, so a session that hands work to a child session can name the child's log (see query in src/cli.mjs).
       run: runId,
       stepsLeft: maxSteps - step,
       maxSteps,
@@ -703,8 +662,6 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
       witness: DEFAULT_WITNESS,
       prefixSha: prefixShaFor(rules),
       total: log.count(),
-      // The shell command that waits for the next event. It ends when it prints the queued events, and what it prints is cleared, so a host
-      // that runs it as a background task or a Monitor is told each event once. It names the run directory, so it works from any directory.
       pendingCommands: {
         wait: `node "${join(ROOT, 'src', 'cli.mjs')}" events --dir "${runDir}" --wait`,
       },
@@ -721,9 +678,6 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
       ...(open.length ? { jobsOpen: open.slice(0, OPEN_LIST), ...(open.length > OPEN_LIST ? { jobsOpenMore: open.length - OPEN_LIST } : {}) } : {}),
       remaining: { open: openRows.map((row) => row.id), parked: parkedRows.map((row) => row.id), jobs: open.map((job) => job.job) },
     };
-    // The pending events are claimed last: nothing that can throw runs between the claim and the registration of its clear, so a step that
-    // fails before this point claims nothing. The clear runs once the reply that carries the events is written, so a crash before that write
-    // delivers them again.
     const taken = takePending(runDir);
     if (taken.records.length > 0) reply.pending = taken.records;
     if (taken.files.length > 0) afterReply.set(JSON.stringify(rpcId), () => clearPending(taken.files));
@@ -782,7 +736,6 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     log.enter();
     const action = log.append('action', { step, tool, args, caller: CALLER, ...(rpcId === undefined ? {} : { rpcId, ...callOf(rpcId)?.trace }) });
     noteAction(rpcId, action.seq);
-    // A tool that may change something has its start in the file before it runs, so a crash after its effect still leaves the start in the log.
     if (!READ_ONLY_TOOLS.has(tool)) flushAllLogs();
     let result;
     try {
@@ -821,10 +774,6 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     if (!endLogged) await endRun(ended, null);
   }
 
-  // A restart is not a finish. New calls are refused, background jobs and foreground shell groups are killed and logged
-  // first, so no child outlives the worker, and no end event is written, so the next worker resumes this run. The supervisor
-  // sends a restart only after every call has answered, so a call still active here means the worker was stopped
-  // without a drain, such as a crash; its shell is killed, and the call settles with that result.
   async function pause(reason) {
     if (endLogged) return;
     ended = 'restarting';
@@ -844,10 +793,6 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
   return { accept, inputEnded, pause, ended: () => ended, stepLimited: () => stepLimited, settled: () => Promise.allSettled([...unansweredTurns]), hasReply: (id) => replies.has(JSON.stringify(id)), successorStart };
 }
 
-// The answer to every request id that a run already received, rebuilt from its log, so a repeated id is answered from
-// the log and never run again. An action with no end event was interrupted by a restart, and its repeat gets an error.
-// The seq of the last next_context action in the log. A worker reports every job that ended after it, so a job that a
-// restart stopped, which the old worker logged, is named by the first next_context of the new worker.
 function lastContextSeq(events) {
   let seq = 0;
   for (const event of events) if (event.kind === 'action' && event.tool === 'next_context') seq = event.seq;
@@ -874,13 +819,10 @@ async function bodyResult(runDir, job) {
   return status.value ?? status.error ?? '';
 }
 
-// The open actions of a resumed run: actions with no result or refusal. Only runs whose events carry actionSeq are
-// read, because older events cannot say which action an end belongs to.
 function recoveryOf(events) {
   const first = events.findIndex((event) => event.actionSeq !== undefined || event.rpcId !== undefined);
   const lastSeq = events.length ? events.at(-1).seq : 0;
   if (first < 0) return { lastSeq, open: [] };
-  // A body's verb closes its start with a code-call that names the start, as a top-level call closes its start with a result.
   const ended = new Set(events.filter((event) => (event.kind === 'result' || event.kind === 'refusal' || event.kind === 'code-call') && event.actionSeq !== undefined).map((event) => event.actionSeq));
   const open = events.slice(first).filter((event) => event.kind === 'action' && !ended.has(event.seq)).map((event) => ({ seq: event.seq, tool: event.tool, args: event.args }));
   return { lastSeq, open };
@@ -909,14 +851,10 @@ function taskOfRun(events, runDir) {
   return JSON.parse(readFileSync(file, 'utf8')).task ?? '';
 }
 
-// The tools that only read. Every other tool is a side effect: its start is flushed before it runs (see perform and innerCall), so recovery
-// can list it as open after a crash. A tool that is not on this list is treated as a side effect.
 const READ_ONLY_TOOLS = new Set([
   'next_context', 'read_file', 'list_dir', 'stat_file', 'search', 'wiki_search', 'grep', 'callers', 'impact', 'query_log', 'job_status',
   'git_status', 'git_log', 'git_diff', 'git_show', 'ci_status', 'prd_list', 'unknown_list', 'review_join',
 ]);
-// The tools that reach past the workspace: the open-world hint. A tool that only records the run (next_context, finish) is not destructive.
-// Every tool carries a title and all three hints, set explicitly, so no host has to guess them.
 const OPEN_WORLD = new Set(['fetch', 'git_fetch', 'git_pull', 'git_push', 'ci_status']);
 const RECORDS_ONLY = new Set(['next_context', 'finish']);
 function annotated(tool) {
@@ -938,10 +876,7 @@ function titleOf(name) {
   return words[0].toUpperCase() + words.slice(1);
 }
 
-// The actions that run once the reply to a request is written, keyed by the request's id. A next_context reply clears the pending events it
-// delivered, and only after its own write, so a crash before the write delivers them again.
 const afterReply = new Map();
-// A reply is written only after the events so far are in the log, so the log holds every event a reply reports.
 function write(message) {
   flushAllLogs();
   process.stdout.write(`${JSON.stringify(message)}\n`);
@@ -957,7 +892,6 @@ function errorReply(id, code, message, data = undefined) {
   return { jsonrpc: '2.0', id, error: { code, message, ...(data === undefined ? {} : { data }) } };
 }
 
-// A notification goes out on stdout without running afterReply, which holds the actions of a reply that is not yet written.
 function notify(message) {
   process.stdout.write(`${JSON.stringify(message)}\n`);
 }
@@ -1033,11 +967,9 @@ function isNextContextCall(line) {
   }
 }
 
-// The lifecycle events the worker writes. A code call is cut in the second horizon. The other kinds use the defaults in compact.mjs.
 const SELF_COMPACT = {
   tools: { next_context: { zone1: resultZone1, zone2: resultZone2 } },
 };
-// The MCP servers configured for this worker. Until main starts them, there are none, and their tools are not in any surface.
 const NO_MCP = { ready: Promise.resolve(), verbs: () => [], has: () => false, call: () => undefined, stop: () => {} };
 let mcp = NO_MCP;
 let mcpReady = NO_MCP.ready;
@@ -1045,8 +977,6 @@ let current = surfaceOf(await loadLeaves());
 let activeTools = null;
 let activeLog = null;
 
-// A reload applies the leaf modules' new code between calls. The surface and the session's verbs are built from the new modules before anything
-// is replaced, so a build that fails leaves the old code serving, and the core is told why. Runs, jobs and the log are not touched.
 async function reloadLeaves() {
   try {
     const generation = bumpGeneration();
@@ -1071,11 +1001,6 @@ function parseFlags(argv) {
   return flags;
 }
 
-// The hash of the served tool list is logged at each start. A resumed run whose list differs from its last start
-// gets a tools-changed event with both hashes. A changed description invalidates the host's prompt cache, so the
-// log shows when it happens.
-// At a server start, the body directories of runs that have already ended are deleted. A run with no end event is left alone,
-// because it may still be resumed.
 function sweepEndedCode(runsRoot, current) {
   if (!existsSync(runsRoot)) return;
   for (const name of readdirSync(runsRoot)) {
@@ -1114,7 +1039,6 @@ async function main(argv) {
   const surface = flags.surface ?? 'code';
   if (!SURFACES.includes(surface)) throw new Error('--surface takes tools or code');
   const limits = { workspace, maxSteps, maxInflight, jobLifetimeMs, stuckMs, monitorMs, noticeMs, hostIdleMs, surface };
-  // Without --task, the run's task is the prompt the session sends (the gm prompt's task argument), and the run says so in its start event.
   let task = flags.task === undefined ? '' : loadTask(flags.task).trim();
   if (flags.task !== undefined && task === '') throw new Error('--task is empty');
 
@@ -1194,8 +1118,6 @@ async function main(argv) {
   };
   const lines = createInterface({ input: process.stdin, crlfDelay: Infinity });
   lines.on('line', acceptLine);
-  // Under a supervisor, the end of stdin means the supervisor has gone, so the run is paused. Closing it here would end the
-  // run as closed, and a closed run stays closed. A paused run has no end event, and the next start resumes it.
   let pausing = null;
   const pauseRun = (reason) => {
     pausing ??= Promise.all([session.pause(reason), retired]).finally(() => process.exit(0));

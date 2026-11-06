@@ -14,13 +14,8 @@ import { failedOf, outputDigest, resultZone1, resultZone2 } from './compact.mjs'
 import { condenseOutput } from './condense.mjs';
 import * as reviewModule from './review-tools.mjs';
 
-// The leaf modules (src/hot-config.mjs) as they were at boot. A worker passes the modules of its current generation to createTools; the CLI
-// and the gate use these.
 const BOOT_LEAVES = { 'git.mjs': gitModule, 'rows.mjs': rowsModule, 'fetch.mjs': fetchModule, 'code-ast.mjs': astModule, 'wiki-tools.mjs': wikiModule, 'review-tools.mjs': reviewModule };
 
-// read_file reads its file through one buffer that every call reuses. The buffer starts at READ_BUFFER_BYTES, the size of a page, and grows to
-// the largest file read so far, which is the peak, and never shrinks. A file bigger than READ_SYNC_LIMIT is read asynchronously, so a large
-// read does not hold the event loop.
 const READ_BUFFER_BYTES = 4096;
 const LIST_PAGE = 500;
 const READ_SYNC_LIMIT = 1024 * 1024;
@@ -110,8 +105,6 @@ const MAX_WAIT_MS = 30000;
 const JOB_NAME = /^[A-Za-z0-9_-]{1,64}$/;
 const BARRIER = { barrier: true };
 const DEFAULT_JOB_LIFETIME_MS = 3600000;
-// A background run reports that it is still running at each multiple of this, once per multiple. Each report carries the open PRD rows: the
-// first NOTICE_PRD_WINDOW of them, and the counts, read when the report is made.
 export const BODY_NOTICE_MS = 180000;
 const NOTICE_PRD_WINDOW = 5;
 export const DEFAULT_STUCK_MS = 180000;
@@ -122,9 +115,6 @@ const READ_ONLY = new Set(['job_status', 'search', 'wiki_search', 'grep', 'fetch
 const SKILL_URI = /^skill:\/\//;
 const unservedSkill = (uri) => ({ ok: false, error: `no served skill file has the uri ${uri}` });
 
-// The tools this module owns, with their strategies. A file write keeps its path and its size, and an edit keeps its path and the sizes
-// of the old and new text. A listing or a log query is cut in the second horizon. finish keeps its witness and its gaps whole in both
-// horizons, because the gate and the next step depend on them. run_shell keeps its exit code and its error lines.
 const compactBytes = (text) => (typeof text === 'string' ? Buffer.byteLength(text) : undefined);
 const compactWrite = (action) => ({ path: action?.args?.path, bytes: compactBytes(action?.args?.content) });
 const compactEdit = (action) => ({ path: action?.args?.path, oldBytes: compactBytes(action?.args?.old), newBytes: compactBytes(action?.args?.new) });
@@ -277,8 +267,6 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
       };
     },
 
-    // A shell job is stopped by its process group. It ends killed with reason cancelled, and the job event is logged before this answers
-    // (finish writes it when the group has closed). A job that already ended, and a background run, are error results, not throws.
     async job_stop(args) {
       if (!JOB_NAME.test(args.job ?? '')) return { ok: false, error: 'job must be a job name' };
       const job = jobs.get(args.job);
@@ -340,19 +328,15 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
       return { ok: true, finished: true, output: args.witness };
     },
   };
-  // The verbs of a set of leaf modules (src/hot-config.mjs), and the row queries the job reminder and the finish refusal read. The whole set is
-  // built before it is returned, so a module that fails to build throws before anything is replaced.
   function leafVerbsOf(modules) {
     const verbs = { ...modules['git.mjs'].createGitVerbs({ root, confine, log }), ...modules['rows.mjs'].createRowVerbs({ root, confine, log }), ...modules['wiki-tools.mjs'].createWikiVerbs({ root, log }), ...modules['review-tools.mjs'].createReviewVerbs({ root, log }), ...modules['fetch.mjs'].createFetchVerbs({ log, root }), ...modules['code-ast.mjs'].createAstVerbs({ root, confine }) };
     return { verbs, rowQueries: { openRows: modules['rows.mjs'].openRows, parkedRows: modules['rows.mjs'].parkedRows, rowSummary: modules['rows.mjs'].rowSummary } };
   }
-  // Search keeps its own paging state, so it is not a leaf and a reload keeps it as it is.
   const boot = leafVerbsOf(leaves);
   Object.assign(handlers, boot.verbs, createSearchVerbs({ root, confine }));
   let leafNames = Object.keys(boot.verbs);
   let rowQueries = boot.rowQueries;
 
-  // Replaces the leaf verbs and the row queries in one step, after the new set is built. A reload calls it between tool calls.
   function setLeaves(modules) {
     const next = leafVerbsOf(modules);
     for (const name of leafNames) delete handlers[name];
@@ -403,11 +387,6 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
     return { ok: true, state: 'running', output: `started job ${name} (pid ${child.pid})` };
   }
 
-  // A body that ran past its foreground budget becomes a background job, named body-<seq> after its first log event. It has a status file
-  // like a shell job, but no process: its output is its verb calls, read back from the log, and it ends with its result. A stop settles the
-  // job at once and kills the shells the body started; the body's next verb call refuses, so a reply that comes late changes nothing.
-  // A body that waits for a slot is adopted in state queued, and it starts when its slot is granted (started resolves then). Its lifetime and
-  // its notices count from that start, so a body is not killed for the time it waited.
   function adoptBody({ result, cleanup, kill, body, queued = false, started = Promise.resolve() }) {
     let name = `body-${body}`;
     for (let n = 2; jobs.has(name); n += 1) name = `body-${body}-${n}`;
@@ -425,7 +404,6 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
       clearInterval(reminder);
       clearTimeout(lifetime);
       writeStatus(name, { ...status, state, ...fields });
-      // The result stays in the status file, as a shell job's output stays in its file, and reaches the agent once, in the exited notice.
       const { value, error, ...rest } = fields;
       log.append('job', { job: name, body, state, startMono, ...rest });
       cleanup();
@@ -442,13 +420,11 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
     let lifetime;
     let reminder;
     const begin = () => {
-      // The clock of progress and of the lifetime starts with the thread, not with the adoption, so a body that waited is not stuck for the wait.
       job.queued = false;
       job.startWall = Date.now();
       lifetime = setTimeout(() => job.stop('lifetime'), jobLifetimeMs);
       reminder = setInterval(() => {
         const runningMs = Math.round(log.now() - startMono);
-        // The row read is asynchronous, so the job may settle before it returns. A report for a job that has settled is dropped.
         rowQueries.rowSummary(confine, 'prd', NOTICE_PRD_WINDOW)
           .catch((err) => ({ error: err.message }))
           .then((prd) => {
@@ -461,7 +437,6 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
     watchJobs();
     log.append('job', { job: name, body, state: status.state });
     if (queued) {
-      // The job starts when its slot is granted. A stop before that leaves the queue, so the job never starts.
       started.then(() => {
         if (job.settled) return;
         status.state = 'running';
@@ -481,8 +456,6 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
     return text.length > cap ? text.slice(text.length - cap) : text;
   }
 
-  // A job whose status file still says running was started by a worker that stopped without ending it, such as a crash. Its shell group is
-  // killed and it is logged as killed with reason restart, so no child outlives the worker and the next context names it.
   function stopOrphans() {
     const dir = join(runDir, 'jobs');
     if (!existsSync(dir)) return;
@@ -504,8 +477,6 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
     return Math.max(job.startWall, existsSync(job.outputFile) ? statSync(job.outputFile).mtimeMs : 0);
   }
 
-  // The stuck check. A running job that has made no progress for stuckMs is stuck. The agent is told once when a job becomes stuck, and once
-  // when it progresses again, so a stuck job is never reported twice in a row. A queued job is waiting for a slot, not stuck.
   function checkStuck() {
     const now = Date.now();
     for (const job of jobs.values()) {
@@ -525,7 +496,6 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
       monitor = null;
     }
   }
-  // The check runs only while a job or a body is open. checkStuck stops it when none is, so an idle worker does not wake for it.
   let monitor = null;
   function watchJobs() {
     if (monitor === null) monitor = setInterval(checkStuck, monitorMs);
@@ -623,10 +593,6 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
   }
 }
 
-// A query_log reply holds at most 50 events and stays within 20 KB once serialized, because the reply escapes the JSON it carries. When a
-// page of events is cut short, next is the seq of the last event returned, and the caller passes it as after. An event too large for a
-// reply of its own is cut to its head, so the reply is always valid JSON. A log that holds earlier query results has such events.
-// A js expression sees one window of matching events: at most QUERY_WINDOW_EVENTS, read from at most QUERY_WINDOW_BYTES of the log.
 const QUERY_PAGE_EVENTS = 50;
 const QUERY_REPLY_CHARS = 20000;
 const QUERY_WINDOW_EVENTS = 1000;
@@ -690,8 +656,6 @@ function waitOrTimeout(promise, ms) {
   return Promise.race([promise, deadline]).finally(() => clearTimeout(timer));
 }
 
-// The verb calls of a background body, from the log, as JSON lines, oldest first. The calls are found by walking back from the newest
-// event, so a tail reads only the events it needs. cap keeps the last cap characters.
 function bodyText(log, body, cap = Infinity) {
   const lines = [];
   let size = 0;

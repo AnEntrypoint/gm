@@ -21,8 +21,6 @@ const SCRIPT_EXHAUSTED = {
   args: { witness: 'scripted model has no further steps' },
 };
 
-// gm makes no API calls. The model is the host session (Claude Code) in MCP mode, and the only model
-// here is the scripted one, which is offline and deterministic.
 export function createModel(name, options = {}) {
   if (name === 'scripted') return scriptedModel(options.script, options.faults, options.latencyMs);
   throw new Error(`unknown model: ${name}; gm calls no API, so the only model is scripted`);
@@ -45,7 +43,6 @@ function scriptedModel(script, faults = [], latencyMs = 0) {
   };
 }
 
-// A simulated HTTP failure, so the retry policy can be witnessed offline. It never leaves the process.
 function scriptedHttpError(fault) {
   const { status, message, retryAfter } = typeof fault === 'number' ? { status: fault } : fault;
   return httpError(status, message ?? `scripted HTTP ${status}`, {

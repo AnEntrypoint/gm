@@ -11,8 +11,6 @@ export const DEFAULT_RULES = `# Rules
 7. If the task cannot be done, finish with a witness that states why, with the evidence.
 `;
 
-// The rules of an MCP run. They are written to the run's rules.md, served by the server's instructions, and held word for word by the gm
-// skill: the gate checks the skill against this text (src/skills.mjs).
 export const MCP_RULES = `# Rules
 
 1. Paths may point inside or outside the workspace. An outside path should be absolute.

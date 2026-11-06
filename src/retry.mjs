@@ -1,20 +1,13 @@
-// Transient-failure retry for the network tools: fetch, git_fetch, git_push and ci_status. A transient failure (a timeout,
-// a reset or refused connection, the remote hanging up, HTTP 408, 429 or 5xx) is retried three times, with backoff from
-// 1 s doubling to a 16 s cap and plus or minus 20% jitter. A permanent failure fails at once. Each retry is a retry event.
 const RETRIES = 3;
 const BASE_MS = 1000;
 const CAP_MS = 16000;
 const JITTER = 0.2;
 
-// The error codes a retry can fix. fetch reports the code of a failed call (err.cause.code), and that code decides the class. A
-// message never does, so a host name in one cannot decide it.
 const TRANSIENT_CODES = new Set([
   'ECONNRESET', 'ECONNREFUSED', 'ECONNABORTED', 'ETIMEDOUT', 'EAI_AGAIN', 'UND_ERR_SOCKET',
   'UND_ERR_CONNECT_TIMEOUT', 'UND_ERR_HEADERS_TIMEOUT', 'UND_ERR_BODY_TIMEOUT',
 ]);
 
-// git and gh print no error code, so their message is matched for the words they print a transient failure with. Each URL and
-// each dotted host name is removed from the message first, so a host name in it never decides the class.
 const TRANSIENT_TEXT = [
   [/connection refused|econnrefused/i, 'ECONNREFUSED'],
   [/failed to connect|error connecting to/i, 'connect'],

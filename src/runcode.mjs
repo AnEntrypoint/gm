@@ -1,7 +1,3 @@
-// The code surface's run_code tool. A body runs in the project: its static imports load ES modules, its require() loads CommonJS,
-// and each project file loads in its own format. It receives gm, which has one method per verb, and gm.verbs(). Each verb call is
-// a call through the session, so it is logged as a code-call event. A failed call returns {ok:false, error} as data, so one failure
-// does not abort the body. The body runs in the worker's process, so it is trusted as much as run_shell is: it is not sandboxed.
 import { register } from 'node:module';
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
@@ -19,8 +15,6 @@ const BODY_SLOTS = 4;
 const waiting = [];
 let running = 0;
 
-// A slot for one body. It is granted in arrival order, and releasing a slot grants it to the next waiting body. Only a body that waited is
-// logged at its start and finish, so the log of a body that ran at once is unchanged.
 function takeSlot(log, { body, step }) {
   const slot = { body, step, log, granted: false, released: false, started: false, queued: running >= BODY_SLOTS };
   slot.ready = new Promise((resolve) => {
@@ -41,7 +35,6 @@ function serveSlots() {
   }
 }
 
-// A body that waited is logged when its thread starts, not when its slot is granted, so a body stopped in between leaves no start.
 function startSlot(slot) {
   slot.started = true;
   if (slot.queued) slot.log?.append('body-started', { body: slot.body, step: slot.step, running });
@@ -55,18 +48,13 @@ function releaseSlot(slot) {
   serveSlots();
 }
 
-// A body still waiting leaves the queue, so a body stopped before its turn never starts.
 function cancelSlot(slot) {
   const at = waiting.indexOf(slot);
   if (at >= 0) waiting.splice(at, 1);
 }
 
-// Starts the thread that runs one body. The body's verb calls are messages that this session serves in the body's context, so each call is
-// logged with the body's seq and a shell it starts is tagged with it. done resolves with the body's reply: {ok, text} when it returns, and
-// {ok:false, error} when it fails or its thread stops. terminate stops the thread at once, which also stops a loop that never awaits.
 function spawnWorker({ file, kind, project, verbs, call, log, step, startSeq }) {
   const worker = new Worker(BODY_WORKER, { workerData: { file, kind, project, verbs: verbs.map(({ name, description, inputSchema }) => ({ name, description, inputSchema })) }, stdout: true, stderr: true });
-  // The body's console output is drained here, so it cannot reach the session's stdout, which carries the protocol.
   worker.stdout.resume();
   worker.stderr.resume();
   let stopped = false;
@@ -94,15 +82,11 @@ function spawnWorker({ file, kind, project, verbs, call, log, step, startSeq }) 
   };
 }
 
-// Whether a path is inside the root. It decides only how a load is logged, relative to the project or in full: a body may load any path.
 function inside(root, at) {
   const rel = relative(root, at);
   return rel === '' || (rel !== '..' && !rel.startsWith(`..${sep}`) && !isAbsolute(rel));
 }
 
-// The format a project file loads as, read the way Node reads it. .mjs is an ES module and .cjs is CommonJS. A .js file follows the
-// "type" of the nearest package.json at or above it: up to the project root for a file inside it, and up to the filesystem root for one
-// outside it. With none, it is CommonJS.
 export function formatOf(project, file) {
   if (file.endsWith('.mjs')) return 'esm';
   if (file.endsWith('.cjs')) return 'cjs';
@@ -114,11 +98,6 @@ export function formatOf(project, file) {
   }
 }
 
-// The generation is taken only when a project file changed. The resolve hook (freshness.mjs) gives every project file the generation as
-// its query. A fingerprint of the project's files (path, mtime and size) is compared with the last one: a call with no edit keeps the
-// generation, so no module is loaded again and the memory does not grow with the number of calls. One edit gives one new generation,
-// and every project file loads again with it, so a file that imports the edited one is never stale. The hook is registered once; its
-// counter is shared with the hook's thread through a SharedArrayBuffer.
 let generation = null;
 let fingerprint = null;
 const SKIP_DIRS = new Set(['node_modules', 'runs', '.gm', '.git', 'sources', 'vendor']);
@@ -155,10 +134,6 @@ function walkFiles(dir, rel, parts) {
   }
 }
 
-// The tool's description names the verbs and nothing else about them, so a change to a verb's description does not change
-// the served list, or the prefix hash that the list feeds.
-// run_code is the tool the default surface serves. A body's arguments keep their size and their head. Its code-load events list the
-// project files a body loaded, and the second horizon cuts them.
 export const COMPACT = {
   tools: {
     run_code: { zone1: resultZone1, zone2: resultZone2 },
@@ -176,13 +151,8 @@ export function runCodeTool(verbNames) {
   };
 }
 
-// The arguments run_code takes. A call with any other name is refused, so a wrong name is not read as a missing body.
 export const RUN_CODE_PROPERTIES = { body: { type: 'string' }, timeoutMs: { type: 'integer', minimum: 1, maximum: MAX_TIMEOUT_MS }, format: { type: 'string', enum: ['esm', 'cjs'] } };
 
-// Runs one body. The body is written as an ES module, or as CommonJS when its format is cjs, under the run directory, and the file is deleted when the call ends, success or
-// failure. A non-literal import() or require() is refused before the body loads, and logged. A literal path loads as it is, inside or outside
-// the project, and each file it loads is logged with its path and its format. verbs is the list of {name, description, inputSchema}, and
-// call(name, args) runs one verb through the session.
 export async function runBody({ body, timeoutMs = DEFAULT_TIMEOUT_MS, format, verbs, call, project, runDir, log, step, background }) {
   if (typeof body !== 'string' || body.trim() === '') return { ok: false, error: 'body must be a non-empty string' };
   if (!Number.isInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > MAX_TIMEOUT_MS) return { ok: false, error: `timeoutMs must be an integer from 1 to ${MAX_TIMEOUT_MS}` };
@@ -205,15 +175,11 @@ export async function runBody({ body, timeoutMs = DEFAULT_TIMEOUT_MS, format, ve
   const source = kind === 'esm'
     ? `${split.imports}\nexport default async function body(gm, require) {\n${split.code}\n}\n`
     : `module.exports = async function body(gm, require) {\n${split.code}\n};\n`;
-  // The start seq names the body: its verb calls and its shells carry it, and its file is named by it, so two bodies never share a file.
-  // The file is deleted when the body ends, success or failure, or is stopped.
   const startSeq = log.count();
   const digest = createHash('sha1').update(source).digest('hex').slice(0, 16);
   const file = join(runDir, 'code', `body-${startSeq}-${digest}.${kind === 'esm' ? 'mjs' : 'cjs'}`);
   mkdirSync(dirname(file), { recursive: true });
   writeFileSync(file, source);
-  // The body waits for a slot (takeSlot), and its thread starts when it gets one. The slot is held until the thread stops, so the threads
-  // that run at once are the cap. A stop terminates the thread, or, while the body still waits, takes it out of the queue.
   const slot = takeSlot(log, { body: startSeq, step });
   let spawned = null;
   let stoppedBeforeStart = false;
@@ -230,7 +196,6 @@ export async function runBody({ body, timeoutMs = DEFAULT_TIMEOUT_MS, format, ve
     spawned.done.then(stop);
     return spawned.done;
   });
-  // The background run's result has the same shape as a foreground reply, so the job's status and the call's reply agree.
   const head = kind === 'esm' ? split.imports.split('\n').length + 1 : 1;
   const removed = body.split('\n').length - split.code.split('\n').length;
   const bodyLines = body.split('\n').length;
@@ -263,11 +228,6 @@ export async function runBody({ body, timeoutMs = DEFAULT_TIMEOUT_MS, format, ve
   return { ok: true, background: name, job: name, state: queued ? 'queued' : 'running', hint: `job_status({ job: "${name}", waitMs }) returns its state and, once it ends, its value`, logged, loads };
 }
 
-// Static import statements are hoisted to the module's top, and may span lines. Their relative (./, ../) and absolute specifiers become absolute
-// paths, a relative one resolved against the project root. Dynamic import() and require() must take a literal path, and it is resolved the
-// same way. Anything else is a refusal, and a statement that is not closed is an error. Each resolved path is recorded with the way it is loaded.
-// The text with the contents of strings, template literals and comments blanked to spaces, so the length and the positions are
-// unchanged. A quote or a backtick stays, so the masked text still shows where each string begins and ends.
 function maskStrings(text) {
   let out = '';
   let state = 'code';
@@ -352,8 +312,6 @@ function splitBody(body, project) {
   };
   const imports = statements.map((text) => text.replace(/(['"])(\.{0,2}\/[^'"\n]*)\1/g, (match, quote, path) => `${quote}${resolveLoad(path, 'import')}${quote}`));
   let rest = code.join('\n');
-  // A call written inside a string, a template or a comment is not a call. Calls are found in the masked text, and the path is read
-  // from the original text at the same position, so a relative literal can be resolved and rewritten.
   const callsOf = (keyword) => {
     const literal = new RegExp(`${keyword}\\s*\\(\\s*(['"])([^'"\\n]+)\\1\\s*\\)`, 'y');
     const found = [];

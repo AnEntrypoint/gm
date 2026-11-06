@@ -1,7 +1,3 @@
-// The loader hook, run on the loader's own thread. A reloadable module under src/ is loaded at the current generation, through a
-// ?gen=N query. The generation is a counter shared with the worker (src/hot.mjs), so a bump makes the next import of each reloadable
-// module a fresh instance, and every module that imports it at that generation gets fresh instances too. A singleton keeps its one
-// instance, because its URL never changes.
 import { RELOADABLE } from './hot-config.mjs';
 
 const SRC = new URL('./', import.meta.url).href;

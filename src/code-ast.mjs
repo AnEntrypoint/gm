@@ -1,7 +1,3 @@
-// callers and impact over the tracked and untracked JavaScript sources, parsed with acorn. Each file is parsed once and cached by its
-// mtime and size. The cache keeps the file's definitions, its calls by name (with the line, and whether it is a member call), its
-// import specifiers and its lines, so a query reads the cache and resolves import edges inside the repository. A file acorn cannot
-// parse (TypeScript, or a syntax error) is scanned by lines instead, and its answers are marked approximate.
 import { execFile } from 'node:child_process';
 import { lstat, readFile } from 'node:fs/promises';
 import { posix } from 'node:path';
@@ -10,7 +6,6 @@ import { createRequire } from 'node:module';
 import { resultZone1 } from './compact.mjs';
 
 const execFileAsync = promisify(execFile);
-// acorn loads on the first parse, not when the worker starts. createRequire reads the package's CommonJS build, so the parse stays synchronous.
 let acornParse = null;
 function parseSource(text, options) {
   acornParse ??= createRequire(import.meta.url)('acorn').parse;

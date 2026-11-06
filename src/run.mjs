@@ -48,8 +48,6 @@ export function openRun({ runDir, rules, meta }) {
   return { log: createRun({ runDir, rules, meta }), resumed: false };
 }
 
-// A resumed run takes the rules the server holds now. Each step reads rules.md, so an edit to the rules reaches a run in progress at its next
-// step, with no reconnect. The log records the change, with a short hash of the text before and after it.
 function refreshRules(runDir, rules, log) {
   const path = join(runDir, 'rules.md');
   const before = existsSync(path) ? readFileSync(path, 'utf8') : null;

@@ -1,5 +1,3 @@
-// The wiki's write tool. wiki_search is in search.mjs, beside search. wikiWrite refuses a claim whose quote is not in its named
-// source, and it writes nothing when it refuses.
 import { resultZone1 } from './compact.mjs';
 
 const str = { type: 'string' };
@@ -14,7 +12,6 @@ export const WIKI_TOOLS = [
   },
 ];
 
-// wiki_write keeps the page and its number of claims in the second horizon. The page is in the wiki, and its line is in the log.
 export const COMPACT = {
   tools: {
     wiki_write: {
@@ -34,7 +31,6 @@ export const COMPACT = {
 export function createWikiVerbs({ root, log }) {
   return {
     async wiki_write(args) {
-      // wiki.mjs loads on the first write.
       const { wikiWrite } = await import('./wiki.mjs');
       const result = wikiWrite({
         root,

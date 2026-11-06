@@ -8,10 +8,6 @@ const WINDOW = 512;
 const BATCH = 256;
 const writers = new Set();
 
-// The log lives in its file, and its index lives beside it: one fixed record for each event, holding the event's byte offset and length in the
-// log. The worker keeps the last WINDOW events in memory and reads any other event by seeking to its record, so memory does not grow with the
-// length of the run. Events wait in memory only until the next flush point: before any reply is written, before a body, a shell command or a
-// job starts, before the file is read, and at process exit. So nothing is replied before its events are in the file.
 export function openLog(file) {
   const runDir = dirname(file);
   const indexFile = join(runDir, INDEX_FILE);
@@ -26,7 +22,6 @@ export function openLog(file) {
     return [recordBuf.readDoubleLE(0), recordBuf.readUInt32LE(8)];
   };
   const tail = checked.tail ?? readWindow(file, count, size, locate);
-  // The lines and the records not yet written. Each record is written after its line, so the index never names bytes the log lacks.
   let unwritten = [];
   let pendingRecords = 0;
   const pendingIndex = Buffer.alloc(RECORD_BYTES * BATCH);
@@ -77,7 +72,6 @@ export function openLog(file) {
       size += bytes;
       tail.push(event);
       if (tail.length > WINDOW) tail.shift();
-      // The log holds the event before the pending queue names it, so the queue never names an event the log lacks.
       if (PENDING_KINDS.has(kind)) {
         flush();
         appendPending(runDir, event);
@@ -90,16 +84,11 @@ export function openLog(file) {
       for (let s = Math.max(1, seq); s <= count; s += 1) out.push(at(s));
       return out;
     },
-    // The first events after seq that match, in order. The window ends after limit matches, or once it has read budget bytes of lines, and
-    // last is the seq of the last event it read, so a caller that continues from last misses no event. The file is read from the first
-    // event after seq, so a window costs the lines it reads, not the whole log. after is a whole number of events.
     window: (after, limit, match, budget) => {
       flush();
       if (after >= count) return { events: [], last: after };
       return scanWindow(file, locate(after + 1)[0], size, after, limit, match, budget);
     },
-    // The newest events after seq that match, in order, at most limit. The walk goes back from the newest event, so it reads only the
-    // events it needs, and a tail of recent events costs little whatever the length of the log.
     tail: (after, limit, match) => {
       flush();
       const out = [];
@@ -109,7 +98,6 @@ export function openLog(file) {
       }
       return out.reverse();
     },
-    // The whole history, read from the file. Only the callers that need every event use it.
     events: () => {
       flush();
       return readEvents(file);
@@ -168,7 +156,6 @@ function writeAll(fd, buffer, length) {
   while (at < length) at += writeSync(fd, buffer, at, length - at);
 }
 
-// Writes every open log's events to its file. The worker calls it before a reply, and the exit of the process calls it too.
 export function flushAllLogs() {
   for (const flush of writers) flush();
 }
@@ -250,7 +237,6 @@ function scanWindow(file, begin, end, after, limit, match, budget) {
       }
       pending = pending.subarray(start);
     }
-    // The last line has no newline only at the end of the file, so an open line is read only once the file is read to its end.
     if (position >= end && pending.length > 0 && out.length < limit) visit(pending);
   } finally {
     closeSync(fd);

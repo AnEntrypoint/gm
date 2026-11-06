@@ -3,10 +3,6 @@ import { existsSync, readFileSync, statSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { resolve } from 'node:path';
 
-// Review functions. A review packet names a spec, its sha256, and the paths it refers to. A review record is the verdict of
-// a fresh reviewer on one packet, and the host spawns that reviewer and passes its reply here. Both are plain functions with
-// no tool name. gm does not verify the reviewer's isolation: each record says isolation host-attested. The join reads the
-// log, and attributes the outcomes that follow a record, in order, to that record, up to the next record.
 const VERDICTS = ['pass', 'fail', 'needs-changes'];
 
 const sha256 = (bytes) => createHash('sha256').update(bytes).digest('hex');
@@ -23,8 +19,6 @@ function fileAt(root, rel) {
   return existsSync(at) && statSync(at).isFile() ? at : null;
 }
 
-// A packet is the spec's path, the spec's sha256, and the sorted referenced paths. Its hash is the sha256 of that content in
-// canonical JSON, so the same spec and references always give the same hash.
 export function reviewPacket({ root, log, spec, refs = [] }) {
   const refuse = (reason) => {
     log?.append('review-refused', { reason, stage: 'packet' });
@@ -61,10 +55,6 @@ export function reviewRecord({ root, log, packet, verdict, reviewer, notes = '' 
   return { ok: true, packet, verdict };
 }
 
-// The join: one row per record, with the outcomes that follow it, up to the next record. The spec's sha is read at each commit
-// from the commit's own tree (git show <sha>:<spec>), and at the end from the working tree. An outcome whose spec sha is not the
-// packet's sha is after-edit: it goes to unattributed, and it is not attributed to the record. A commit whose spec cannot be read
-// at the commit goes to unattributed too. A git_commit result follows its commit, and it takes the commit's attribution.
 export function reviewJoin(events, root) {
   const packets = new Map();
   for (const event of events) if (event.kind === 'review-packet') packets.set(event.packet, event);
