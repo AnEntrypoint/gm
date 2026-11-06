@@ -399,7 +399,8 @@ bool Searcher::load_tracked(std::string& error) {
     if (!listing.ok) {
         listing = walk_listing(root_);
         if (listing.paths.empty()) {
-            error = "search and grep need a git repository: git ls-files failed";
+            error = "search and grep found no files in " + root_.string() +
+                    ": git ls-files failed (not a git repository or git unavailable) and a directory walk found no files";
             return false;
         }
     }

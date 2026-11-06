@@ -137,11 +137,39 @@ function rank(index, terms, k) {
 
 const snippet = (text) => (text.length <= SNIPPET_CHARS ? text : `${text.slice(0, SNIPPET_CHARS)} ...`);
 
+const STATE_DIRS = new Set(['.git', '.gm', '.agentplug', '.agentplug-kv', '.playwriter', 'runs', 'node_modules', 'vendor']);
+
+function wikiWalk(root) {
+  const paths = [];
+  const pending = [''];
+  while (pending.length > 0) {
+    const dir = pending.pop();
+    for (const name of namesIn(`${root}/wiki/${dir}`)) {
+      const isDir = name.endsWith('/');
+      const bare = isDir ? name.slice(0, -1) : name;
+      if (bare === '') continue;
+      if (isDir) {
+        if (bare.startsWith('.') || STATE_DIRS.has(bare)) continue;
+        pending.push(dir === '' ? bare : `${dir}/${bare}`);
+      } else {
+        paths.push(`wiki/${dir === '' ? bare : `${dir}/${bare}`}`);
+      }
+    }
+  }
+  return paths.sort();
+}
+
+function noFilesError(root) {
+  return `search and grep found no files in ${root}: git ls-files failed (not a git repository or git unavailable) and a directory walk found no files`;
+}
+
 function wikiEntries(root) {
   const listing = host.run({ argv: ['git', 'ls-files', '-z', '-co', '--exclude-standard', '--', 'wiki'], cwd: root, timeoutMs: LIST_TIMEOUT_MS });
-  if (!listing?.started || listing.timedOut || listing.exitCode !== 0) return { error: 'search and grep need a git repository: git ls-files failed' };
+  const gitFailed = !listing?.started || listing.timedOut || listing.exitCode !== 0;
+  const rels = gitFailed ? wikiWalk(root) : listing.out.split('\0').filter((path) => path !== '');
+  if (gitFailed && rels.length === 0) return { error: noFilesError(root) };
   const entries = [];
-  for (const rel of listing.out.split('\0').filter((path) => path !== '')) {
+  for (const rel of rels) {
     const at = `${root}/${rel}`;
     const info = statOf(at);
     if (info === null || info.type !== 'file' || info.size > MAX_FILE_BYTES) continue;

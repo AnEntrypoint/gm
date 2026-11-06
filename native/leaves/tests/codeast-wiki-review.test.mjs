@@ -97,7 +97,31 @@ test('wiki_lint on a workspace with no wiki is skipped', async () => {
     const reply = table.wiki_lint.call({});
     assert.deepEqual({ problems: reply.problems, pages: reply.pages, skipped: reply.skipped }, { problems: [], pages: 0, skipped: true });
     assert.deepEqual(table.callers.call({ name: 'alpha' }), { ok: false, error: 'callers and impact need a git repository: git ls-files failed' });
+    const empty = table.wiki_search.call({ query: 'alpha' });
+    assert.equal(empty.ok, false);
+    assert.match(empty.error, /git ls-files failed/);
+    assert.ok(empty.error.includes(root), `the refusal names the root: ${empty.error}`);
     assert.deepEqual(readdirSync(root), []);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('wiki_search walks wiki/ outside git and names the root when it is empty', async () => {
+  const root = mkdtempSync(join(tmpdir(), 'leaf-cwr-nogit-'));
+  try {
+    globalThis.host = nativeHost(root, root);
+    const table = await leafVerbs();
+    const { mkdirSync, writeFileSync } = await import('node:fs');
+    mkdirSync(join(root, 'wiki'));
+    writeFileSync(join(root, 'wiki', 'page.md'), 'alpha page\n');
+    const found = table.wiki_search.call({ query: 'alpha' });
+    assert.equal(found.ok, true);
+    assert.match(found.output, /wiki\/page\.md:1/);
+    rmSync(join(root, 'wiki'), { recursive: true, force: true });
+    const empty = table.wiki_search.call({ query: 'alpha' });
+    assert.equal(empty.ok, false);
+    assert.match(empty.error, /directory walk found no files/);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

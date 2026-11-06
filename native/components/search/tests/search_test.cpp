@@ -172,6 +172,11 @@ int main() {
     fs::create_directories(plain / "empty");
     Value plain_empty = parse(gm::search::Searcher(plain / "empty").search(Value(gm::json::Object{{"query", "waves"}})));
     check(plain_empty.find("ok") && !plain_empty.find("ok")->as_bool(), "search refuses a folder with no files");
+    const std::string empty_error = plain_empty.find("error") ? plain_empty.find("error")->as_string() : "";
+    check(empty_error.find((plain / "empty").string()) != std::string::npos &&
+              empty_error.find("git ls-files failed") != std::string::npos &&
+              empty_error.find("directory walk found no files") != std::string::npos,
+          "the refusal names the root and the cause: " + empty_error);
     fs::remove_all(plain);
 
     fs::path stable = fs::temp_directory_path() / ("gm_search_stable_" + std::to_string(std::rand()));

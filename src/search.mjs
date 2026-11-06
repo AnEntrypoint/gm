@@ -367,8 +367,12 @@ async function trackedFiles(root, listing) {
     if (listing.cached && index !== null && index.settled) listings.set(listing.name, { key: index.key, root, paths });
     return { paths };
   } catch {
-    return { error: 'search and grep need a git repository: git ls-files failed' };
+    return { error: noFilesError(root) };
   }
+}
+
+function noFilesError(root) {
+  return `search and grep found no files in ${root}: git ls-files failed (not a git repository or git unavailable) and a directory walk found no files`;
 }
 
 async function listedFiles(root, listing) {
