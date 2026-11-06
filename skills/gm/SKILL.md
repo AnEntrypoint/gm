@@ -98,9 +98,13 @@ return { found };
 
 When not to bundle: a second run_code body is right when the next action needs a judgment that code cannot make, such as reading a failing output to choose the fix. Its first comment says why, for example `// Second body: the fix depends on the test output read here.`
 
-A file `write_file`, `edit_file` or `run_shell` wrote in this run is untracked: `gm.grep` it as a single-file `root` or `path` with `scope: 'all'`. The default `tracked` scope does not search a single untracked file root, and `gm.search` reads git-tracked files only.
+A file `gm.write_file`, `gm.edit_file` or `gm.run_shell` wrote in this run is untracked: `gm.grep` it by `path` with `scope: 'all'`. The default `tracked` scope skips untracked files, and `gm.search` reads git-tracked files only.
 
-Rows (native server): `prd_add`/`unknown_add` write `work/rows/<id>.yml`; `prd_list`/`unknown_list` read that dir and the legacy `.gm/prd/` but list only rows with `kind` (`status: pending` reads as open). A legacy `.gm/prd/*.yml` with `subject` and no `kind` is invisible to `prd_list`, yet `prd_resolve({ id, witness })` closes it, writing `closes/<id>.txt` and a commit. `.gm/queues/` is not a row store; the Node tree reads `work/rows/` only.
+## Keeping notes and replies short
+
+AGENTS.md is updated continuously. Write each note in the fewest words that keep it instructive. At the 30 KB limit, compress first, then drop notes in this order: what the code already shows, menial steps, then obvious facts. Keep only what took a long run to learn and cannot be read from the code. Every tool reply carries only what the next step needs: counts, paths, failures and the evidence the witness quotes. Read detail on demand, so a step does not pay for text it will not use. Pass `compactChildren: true` when a feed holds many child events; `gm.query_log` reaches every event. In a host workflow, write each phase result to a file in the project and call log() at each boundary; a journal with only launched entries is not evidence.
+
+Rows (native server): `gm.prd_add` and `gm.unknown_add` write `work/rows/<id>.yml`; `gm.prd_list` and `gm.unknown_list` read that dir and the legacy `.gm/prd/` but list only rows with `kind` (`status: pending` reads as open). A legacy `.gm/prd/*.yml` with `subject` and no `kind` is invisible to `gm.prd_list`, yet `gm.prd_resolve` closes it, writing `closes/<id>.txt` and a commit. `.gm/queues/` is not a row store; the Node tree reads `work/rows/` only.
 
 ## After a context compaction
 

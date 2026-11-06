@@ -30,7 +30,8 @@ How to change this project. Project facts are in AGENTS.md, and decisions with t
 - The shared checkout is live: a worker started from it runs its working tree. Build a change in a copy of the tree (a tar, see Scratch; not a git clone or a worktree), witness it there, and apply it to the checkout in one step once it passes. A half-made edit breaks every worker that restarts. A change to a reloadable leaf reloads in place. A change to another module the worker loads restarts it, and a change to a module it does not load restarts nothing. A batch that restarts a worker kills its background jobs, so apply it when no worker on the checkout is busy, and tell the peers that run it.
 - Change an existing file with Edit only. Never Write over an existing file.
 - On a failed Edit, re-read the region and reapply once. If it fails again, stop and report.
-- Only the single writer commits. A collision is repaired after the fact, not avoided.
+- Single writer commits. A collision is repaired after the fact, not avoided.
+- AGENTS.md is updated continuously: write each note in the fewest words that keep it instructive. At 30 KB, compress first, then drop notes in this order: what the code already shows, menial steps, then obvious facts. Keep only what took a long run to learn and cannot be read from the code. Tool replies carry only what the next step needs. The gm skill holds the same rule.
 - On an index.lock error during a commit, retry the add 3 times, 2 seconds apart. Never delete .git/index.lock. If it persists, report it.
 - Runtime output is not committed. runs/ is git-ignored, and job files stay there.
 - A commit that removes a row state or a row verb also migrates each row file that still carries the old value. Commit 671cbb0 removed the blocked state and migrated none of the nine blocked rows, so the setup reports each of them on every run.
