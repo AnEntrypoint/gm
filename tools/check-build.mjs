@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -16,11 +16,15 @@ if (!binary) {
 }
 
 const workspace = mkdtempSync(join(tmpdir(), 'gm-check-'));
-const run = spawnSync(process.execPath, [join(root, 'tools', 'mcp-conformance.mjs'), '--stdio', binary, 'serve', '--workspace', workspace], {
+const configDir = mkdtempSync(join(tmpdir(), 'gm-check-mcp-'));
+const mcpConfig = join(configDir, 'no-default-mcp.json');
+writeFileSync(mcpConfig, JSON.stringify({ mcpServers: { playwriter: { disabled: true } } }));
+const run = spawnSync(process.execPath, [join(root, 'tools', 'mcp-conformance.mjs'), '--stdio', binary, 'serve', '--workspace', workspace, '--mcp-config', mcpConfig], {
     cwd: root,
     stdio: 'inherit',
     timeout: 600000,
 });
 rmSync(workspace, { recursive: true, force: true });
+rmSync(configDir, { recursive: true, force: true });
 if (run.error) console.error(`check-build: ${run.error.message}`);
 process.exit(run.status ?? 1);
