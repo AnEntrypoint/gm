@@ -1,7 +1,5 @@
-#include <fstream>
 #include <iostream>
 #include <mutex>
-#include <sstream>
 
 #include "gm/core_verbs.hpp"
 #include "gm/host/child.hpp"
@@ -86,20 +84,6 @@ int fail(std::string_view message) {
     return 1;
 }
 
-deoxidene::Result<std::string, std::string> load_task(const HostArgs& args) {
-    auto file = args.flag("--task");
-    if (!file) return std::string{};
-    std::ifstream in(*file, std::ios::binary);
-    if (!in) return deoxidene::Err<std::string>("cannot read the task file " + *file);
-    std::ostringstream text;
-    text << in.rdbuf();
-    std::string task = text.str();
-    const auto first = task.find_first_not_of(" \t\r\n");
-    const auto last = task.find_last_not_of(" \t\r\n");
-    task = first == std::string::npos ? std::string{} : task.substr(first, last - first + 1);
-    if (task.empty()) return deoxidene::Err<std::string>("--task is empty");
-    return task;
-}
 
 }
 
@@ -108,7 +92,7 @@ int run_worker(const HostArgs& args) {
     if (!std::filesystem::is_directory(workspace)) return fail("workspace is not a directory: " + workspace.string());
     auto max_inflight = positive_int_flag(args, "--max-inflight", mcp::ServerOptions{}.max_inflight);
     if (!max_inflight) return fail(max_inflight.error());
-    auto task = load_task(args);
+    auto task = task_of(args);
     if (!task) return fail(task.error());
     auto run_dir = choose_run_dir(args, workspace);
     if (!run_dir) return fail(run_dir.error());

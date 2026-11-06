@@ -26,6 +26,14 @@ int run_serve(const HostArgs& args) {
         return 1;
     }
     const auto workspace = workspace_of(args);
+    if (!std::filesystem::is_directory(workspace)) {
+        std::cerr << "gm relay: workspace is not a directory: " << workspace.string() << '\n';
+        return 1;
+    }
+    if (auto task = task_of(args); !task) {
+        std::cerr << "gm relay: " << task.error() << '\n';
+        return 1;
+    }
     auto run_dir = choose_run_dir(args, workspace);
     if (!run_dir) {
         std::cerr << "gm relay: " << run_dir.error() << '\n';

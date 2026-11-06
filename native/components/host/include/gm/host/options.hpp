@@ -29,6 +29,7 @@ std::filesystem::path source_root();
 std::filesystem::path default_build_dir();
 std::filesystem::path workspace_of(const HostArgs& args);
 deoxidene::Result<int, std::string> positive_int_flag(const HostArgs& args, std::string_view name, int fallback);
+deoxidene::Result<std::string, std::string> task_of(const HostArgs& args);
 std::filesystem::path leaves_dir_of(const HostArgs& args);
 std::filesystem::path skills_dir_of(const HostArgs& args);
 std::filesystem::path defaults_dir_of();

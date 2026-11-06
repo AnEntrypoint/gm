@@ -2,7 +2,9 @@
 
 #include <chrono>
 #include <ctime>
+#include <fstream>
 #include <random>
+#include <sstream>
 #include <system_error>
 
 #include "gm/host/child.hpp"
@@ -87,6 +89,25 @@ std::filesystem::path default_build_dir() { return GMNEW_BUILD_DIR; }
 
 std::filesystem::path workspace_of(const HostArgs& args) {
     return args.path_or("--workspace", std::filesystem::current_path());
+}
+
+deoxidene::Result<std::string, std::string> task_of(const HostArgs& args) {
+    const auto value = args.flag("--task");
+    if (!value) return std::string{};
+    std::string task = *value;
+    std::error_code ec;
+    if (!value->empty() && std::filesystem::is_regular_file(std::filesystem::absolute(*value), ec)) {
+        std::ifstream in(*value, std::ios::binary);
+        if (!in) return deoxidene::Err<std::string>("cannot read the task file " + *value);
+        std::ostringstream text;
+        text << in.rdbuf();
+        task = text.str();
+    }
+    const auto first = task.find_first_not_of(" \t\r\n");
+    const auto last = task.find_last_not_of(" \t\r\n");
+    task = first == std::string::npos ? std::string{} : task.substr(first, last - first + 1);
+    if (task.empty()) return deoxidene::Err<std::string>("--task is empty");
+    return task;
 }
 
 deoxidene::Result<int, std::string> positive_int_flag(const HostArgs& args, std::string_view name, int fallback) {
