@@ -98,6 +98,14 @@ jobs:
       - name: Test
         shell: bash
         run: node tools/check-build.mjs build/${{ matrix.preset }}
+      - name: Host build stamp
+        shell: bash
+        run: |
+          node -e 'const fs = require("fs"); const lines = fs.readFileSync(process.argv[1], "utf8").split("\n"); for (const line of lines) if (/^GMNEW_(COMMIT|VERSION):/.test(line)) console.log(line);' "build/${{ matrix.preset }}/CMakeCache.txt"
+          node -e 'const fs = require("fs"); const db = JSON.parse(fs.readFileSync(process.argv[1], "utf8")); for (const entry of db) { if (!entry.file.endsWith("main.cpp")) continue; const command = entry.command || entry.arguments.join(" "); console.log(entry.file + " " + (command.match(/-DGMNEW_BUILD_[A-Z_]+=[^ ]+/g) || []).join(" ")); }' "build/${{ matrix.preset }}/compile_commands.json"
+      - name: Clean host rebuild
+        shell: bash
+        run: cmake --build "build/${{ matrix.preset }}" --target gm gm-core --clean-first
       - name: Worker binary versions
         shell: bash
         run: |
