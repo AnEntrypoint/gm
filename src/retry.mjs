@@ -27,9 +27,6 @@ const TRANSIENT_TEXT = [
 const URL_TEXT = /[a-z][a-z0-9+.-]*:\/\/\S*/gi;
 const HOST_TEXT = /\b[a-z0-9-]+(?:\.[a-z0-9-]+)+\b/gi;
 
-// attempt() returns { result, errorType }. errorType is null when the result is final: a success or a permanent failure.
-// A transient failure is retried, with a retry event each time, until RETRIES retries have run. Then the last result is
-// returned with exhausted set, so the caller reports the failure.
 export async function retrying({ tool, log, attempt }) {
   for (let n = 1; ; n += 1) {
     const { result, errorType } = await attempt();
@@ -41,17 +38,14 @@ export async function retrying({ tool, log, attempt }) {
   }
 }
 
-// The errorType of a failed fetch call, from its error code, or null when it is final. A call with no code is final.
 export function codeType(code) {
   return TRANSIENT_CODES.has(code) ? code : null;
 }
 
-// The errorType of an HTTP status: 408, 429 and every 5xx is transient, and every other status is an answer, so it is final.
 export function statusType(status) {
   return status === 408 || status === 429 || (status >= 500 && status <= 599) ? `HTTP-${status}` : null;
 }
 
-// The errorType of a failed git or gh result, from its message, or null when it is final. A successful result is final.
 export function errorTypeOf(result) {
   if (result.ok) return null;
   return transientText(`${result.error ?? ''}\n${result.output ?? ''}`);
@@ -62,8 +56,6 @@ export function backoffMs(attempt) {
   return Math.round(base * (1 + JITTER * (2 * Math.random() - 1)));
 }
 
-// The errorType of a transient failure named in a message, or null when the message names none. URLs and dotted host names are
-// removed from it first.
 function transientText(text) {
   const message = text.replace(URL_TEXT, ' ').replace(HOST_TEXT, ' ');
   for (const [pattern, type] of TRANSIENT_TEXT) {

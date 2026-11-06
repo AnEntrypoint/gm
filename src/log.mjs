@@ -4,9 +4,7 @@ import { dirname, join } from 'node:path';
 import { appendPending, PENDING_KINDS } from './pending.mjs';
 
 const QUERY_CAP = 20000;
-// The events kept in memory, the last ones. Any other event is read from the file at its offset.
 const WINDOW = 512;
-// Events are written to the file in batches of this many, and at every flush point (see flushAllLogs). A batch is one append, not one per event.
 const BATCH = 256;
 const writers = new Set();
 
@@ -125,8 +123,6 @@ export function openLog(file) {
 const INDEX_FILE = 'log.index';
 const RECORD_BYTES = 16;
 
-// The index covers the log exactly when it has one record per line and the last record ends where the log ends. Otherwise it is rebuilt from
-// the log, which is the record. The result is the count of events, the size of the log, and the last events when they were read on the way.
 function checkIndex(file, indexFile) {
   const logSize = existsSync(file) ? statSync(file).size : 0;
   if (existsSync(indexFile)) {
@@ -147,7 +143,6 @@ function checkIndex(file, indexFile) {
   return { count: scanned.offsets.length, size: scanned.size, tail: scanned.tail };
 }
 
-// The end of the event whose record is the last one of the index.
 function lastEnd(indexFile, count) {
   const fd = openSync(indexFile, 'r');
   try {
@@ -159,7 +154,6 @@ function lastEnd(indexFile, count) {
   }
 }
 
-// The last WINDOW events, read from the first of them to the end of the log.
 function readWindow(file, count, size, locate) {
   if (count === 0) return [];
   const [begin] = locate(Math.max(1, count - WINDOW + 1));
@@ -169,7 +163,6 @@ function readWindow(file, count, size, locate) {
     .map((line) => JSON.parse(line));
 }
 
-// Writes the first length bytes of a buffer, and goes on until all of them are written.
 function writeAll(fd, buffer, length) {
   let at = 0;
   while (at < length) at += writeSync(fd, buffer, at, length - at);
@@ -181,7 +174,6 @@ export function flushAllLogs() {
 }
 process.on('exit', flushAllLogs);
 
-// The offset of every event's line, the file size, and the last WINDOW events, read from the file in chunks.
 function scanLog(file) {
   const offsets = [];
   if (!existsSync(file)) return { offsets, tail: [], size: 0 };
@@ -212,7 +204,6 @@ function scanLog(file) {
   return { offsets, tail, size };
 }
 
-// The text of the bytes from begin to end of the file. A line read this way parses as its event.
 function readRange(file, begin, end) {
   const fd = openSync(file, 'r');
   try {
@@ -232,8 +223,6 @@ export function readEvents(file) {
     .map((line) => JSON.parse(line));
 }
 
-// The events after seq in the bytes from begin to end that match, in order. The scan stops after limit matches, or once it has read budget
-// bytes and has read one event. last is the seq of the last event it read, matching or not. A line still open at the stop is not read.
 function scanWindow(file, begin, end, after, limit, match, budget) {
   const out = [];
   const fd = openSync(file, 'r');

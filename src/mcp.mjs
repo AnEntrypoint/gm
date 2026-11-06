@@ -30,9 +30,7 @@ const PROTOCOL_VERSION = SUPPORTED_VERSIONS[0];
 // The key of a tools/call result's run id: a vendor key in reverse-DNS form, owner decision O3. Results carry it; errors do not.
 const RUN_META = 'com.anentrypoint.gmnew/run';
 const RUN_SEQ = 'com.anentrypoint.gmnew/seq';
-// Trace context a tools/call request may carry in _meta (W3C Trace Context and Baggage). It is copied into that call's action event.
 const TRACE_KEYS = ['traceparent', 'tracestate', 'baggage'];
-// A foreground run_shell or run_code whose request names a progress token reports its elapsed seconds this often.
 const PROGRESS_MS = 5000;
 const PROGRESS_TOOLS = new Set(['run_shell', 'run_code']);
 const SERVER_INFO = { name: SERVER_NAME, title: SERVER_TITLE, version: JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')).version };
@@ -62,7 +60,6 @@ function readSkill(name) {
   const { frontmatter, body } = parseSkill(skillMd.bytes.toString('utf8'), name);
   return { name, uri: skillMd.uri, frontmatter, body, files };
 }
-// The files under a directory, relative to it with / separators on every platform, sorted.
 function filesUnder(dir, rel = '') {
   const files = [];
   for (const entry of readdirSync(join(dir, rel), { withFileTypes: true })) {
@@ -72,7 +69,6 @@ function filesUnder(dir, rel = '') {
   }
   return files.sort();
 }
-// The entry that skills/list and skills/get return: the uri, the frontmatter as read, and each file with its digest and size.
 function skillEntry(skill) {
   return { uri: skill.uri, frontmatter: skill.frontmatter, resources: skill.files.map(({ uri, digest, size }) => ({ uri, digest, size })) };
 }
@@ -88,7 +84,6 @@ function resourceList() {
     return skill.files.map((file) => resourceOf(skill, file));
   });
 }
-// The served file a skill:// uri names, with its skill, or null when no served skill has that file.
 function skillFileOf(uri) {
   const match = typeof uri === 'string' ? /^skill:\/\/([^/]+)\//.exec(uri) : null;
   if (match === null || !SERVED_SKILLS.includes(match[1])) return null;
@@ -133,7 +128,6 @@ function skillPrompt(name) {
   const prompt = { name, title: PROMPT_TITLES[name], description: SKILL.frontmatter.description };
   return name === 'gm' ? { ...prompt, arguments: [TASK_ARGUMENT] } : prompt;
 }
-// The result of a prompts/get: the skill's description, and its text as one user message.
 function promptResult(SKILL, text) {
   return { description: SKILL.frontmatter.description, messages: [{ role: 'user', content: { type: 'text', text } }] };
 }
@@ -141,7 +135,6 @@ const DEFAULT_MAX_STEPS = 50;
 const REPLY_MEMORY = 256;
 const DEFAULT_MAX_INFLIGHT = 8;
 const DEFAULT_JOB_LIFETIME_MS = 3600000;
-// The most open jobs a next_context reply lists. The rest are counted in jobsOpenMore.
 const OPEN_LIST = 20;
 const USAGE = 'usage: node src/mcp.mjs --workspace <dir> [--task <file-or-text>] [--run-dir <dir>] [--max-steps N] [--max-inflight N] [--job-lifetime-ms N] [--stuck-ms N] [--monitor-ms N] [--notice-ms N] [--host-idle-ms N] [--surface tools|code] [--mcp-config <file>]';
 // A host that stops calling is noticed after this long with no call in flight (--host-idle-ms). next_context waitMs is capped here, because a host cuts a call that runs too long.
@@ -201,7 +194,6 @@ function servedTools(surface) {
 }
 const NO_PATHS = { items: [], free: true };
 
-// A protocol error. data, when given, is the error's data member (resources/read names the uri it did not find).
 class RpcError extends Error {
   constructor(code, message, data = undefined) {
     super(message);
@@ -321,7 +313,6 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     query_log: (args) => tools.run('query_log', args),
   };
 
-  // One verb called from run_code. It runs through the same handler the tool surface uses, and it is logged as code-call.
   async function innerCall(name, args) {
     const startMono = log.now();
     // A call that a background body makes carries the body's seq, so the body's output can be read back from the log. While the call is in
@@ -422,7 +413,6 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     throw new RpcError(-32601, `method not found: ${method}`);
   }
 
-  // The version the host asked for, when this server negotiates it; otherwise the newest version this server speaks (lifecycle page).
   function initialize(params) {
     const asked = params?.protocolVersion;
     const version = SUPPORTED_VERSIONS.includes(asked) ? asked : PROTOCOL_VERSION;
@@ -436,7 +426,6 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
   function getPrompt(params) {
     const name = params?.name;
     if (!SERVED_SKILLS.includes(name)) throw new RpcError(-32602, `unknown prompt: ${name}`);
-    // The gm-continue prompt is the skill's text. It sets no task and clears no notice, so its fetch is logged with no rule cleared: an ordinary load.
     if (name !== 'gm') {
       const other = skillOf(name);
       log.append('skill-loaded', { via: 'prompt', skill: name, cleared: [] });
@@ -497,7 +486,6 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     if (typeof args !== 'object' || args === null || Array.isArray(args)) {
       throw new RpcError(-32602, 'tools/call arguments must be an object');
     }
-    // A name the surface does not serve is a protocol error, not a tool result. A tool that fails keeps isError true (below).
     if (!servedTools(surface).some((tool) => tool.name === name)) throw new RpcError(-32602, unknownToolText(name));
     if (!runStarted && ended === null && name !== 'next_context' && name !== 'finish') noteRule(2, `${name} was called before the first next_context of the run`);
     const meta = params?._meta ?? {};
@@ -518,14 +506,11 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     return toolResultOf(name, payload, { [RUN_META]: runId, [RUN_SEQ]: call.actionSeq });
   }
 
-  // The message of an unknown tool. The code surface keeps its guidance: a verb is a function on gm, called inside run_code.
   function unknownToolText(name) {
     const guidance = surface === 'code' ? '; the code surface serves next_context, run_code and finish; call a verb as gm.<name>(args) inside run_code' : '';
     return `Unknown tool: ${name}${guidance}`;
   }
 
-  // A foreground shell whose request names a progress token reports every PROGRESS_MS: progress is the elapsed seconds, which rise at each
-  // report, and the message says how long the shell has run. The timer stops when the call ends.
   function progressFor(name, token) {
     if (!PROGRESS_TOOLS.has(name) || (typeof token !== 'string' && !Number.isInteger(token))) return () => {};
     const started = Date.now();
@@ -611,7 +596,6 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
 
   function invoke(name, args, access, rpcId) {
     if (ended !== null) return refuse(name, args, endedReason(isChildRead(name, args)), rpcId);
-    // A call cancelled while it waited for a slot never starts.
     if (signalOf(rpcId)?.aborted === true) return refuse(name, args, 'cancelled before it started', rpcId);
     if (name === 'run_code') {
       // A wrong argument name is refused by name. The run_code reply names its action, which is the seq of the action event, so a body can cite it.
@@ -692,7 +676,6 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     noticeSeq = log.count();
     const killed = since.filter((event) => event.kind === 'job-killed');
     const killedNames = new Set(killed.map((event) => event.job));
-    // A background run's notices: it started, it is still running (once per 3 minutes), and it ended. A kill is named once, by job-killed.
     const started = since.filter((event) => event.kind === 'job' && event.state === 'running' && event.body !== undefined);
     const stillRunning = since.filter((event) => event.kind === 'job-running');
     // What is still happening: the jobs that turned stuck or progressed again since the last step, and every job still open now, so the agent
@@ -753,7 +736,6 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     if (args.gaps !== undefined && (!Array.isArray(args.gaps) || args.gaps.some((gap) => typeof gap !== 'string' || gap.trim() === ''))) {
       return refuse('finish', args, 'gaps must be an array of non-empty strings');
     }
-    // A background run still running refuses the finish and is named. stopBackground true kills each one, and each kill is logged.
     const running = tools.runningBodies();
     if (running.length > 0 && args.stopBackground !== true) {
       return refuse('finish', args, `background run ${running.join(', ')} is still running; job_status watches it, and finish with stopBackground: true kills it`);
@@ -774,7 +756,6 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     if (args.stopBackground === true) tools.stopBodies('stopBackground');
     stop('finished');
     const out = await act('finish', args, access, () => tools.run('finish', args), undefined, rpcId);
-    // The wiki lint loads on the first finish.
     const { lintWiki } = await import('./wiki.mjs');
     const lint = lintWiki(workspace);
     log.append('lint', { problems: lint.problems, pages: lint.pages });
@@ -872,8 +853,6 @@ function lastContextSeq(events) {
   return seq;
 }
 
-// A job that ended since the last next_context: its state, exit code, and the first page of its output. next is the offset of the next
-// page for job_status, or null when the output fits on this page.
 async function endedJob(runDir, event) {
   const text = event.body !== undefined
     ? await bodyResult(runDir, event.job)
@@ -889,7 +868,6 @@ async function endedJob(runDir, event) {
   };
 }
 
-// A background run's result, from its status file: its value, or its error when it failed. The job event in the log carries the state only.
 async function bodyResult(runDir, job) {
   const status = JSON.parse(await readFile(join(runDir, 'jobs', `${job}.json`), 'utf8').catch(() => '{}'));
   return status.value ?? status.error ?? '';
@@ -907,8 +885,6 @@ function recoveryOf(events) {
   return { lastSeq, open };
 }
 
-// The recovery note the next next_context carries after a resume. It names the open actions and asks the model to
-// verify their outside effects before repeating any of them.
 function recoveryNote(recovery) {
   const list = recovery.open.map((action) => `seq ${action.seq} ${action.tool} ${JSON.stringify(action.args)}`).join('; ');
   return {
@@ -918,7 +894,6 @@ function recoveryNote(recovery) {
   };
 }
 
-// Where a resumed run stands: the steps it has taken, and whether it already ended.
 function resumeFrom(events) {
   const steps = events.filter((event) => event.kind === 'result' && event.tool === 'next_context' && event.ok === true && event.progress === undefined).length;
   const end = events.findLast((event) => event.kind === 'end');
@@ -943,8 +918,6 @@ const READ_ONLY_TOOLS = new Set([
 // Every tool carries a title and all three hints, set explicitly, so no host has to guess them.
 const OPEN_WORLD = new Set(['fetch', 'git_fetch', 'git_pull', 'git_push', 'ci_status']);
 const RECORDS_ONLY = new Set(['next_context', 'finish']);
-// readOnlyHint is READ_ONLY_TOOLS, except next_context, which writes a step event. destructiveHint is true for a tool that is not read-only
-// and does not only record the run.
 function annotated(tool) {
   const readOnly = READ_ONLY_TOOLS.has(tool.name) && tool.name !== 'next_context';
   const described = { ...tool, title: titleOf(tool.name), annotations: { readOnlyHint: readOnly, destructiveHint: !readOnly && !RECORDS_ONLY.has(tool.name), openWorldHint: OPEN_WORLD.has(tool.name) } };
@@ -959,7 +932,6 @@ function toolResultOf(name, out, meta) {
   const structured = Object.hasOwn(OUTPUT_SCHEMAS, name) ? { structuredContent: out } : {};
   return { content: [{ type: 'text', text: JSON.stringify(out) }], ...structured, isError: out.ok !== true, _meta: meta };
 }
-// A title from a tool's name: read_file is "Read file".
 function titleOf(name) {
   const words = name.replace(/_/g, ' ');
   return words[0].toUpperCase() + words.slice(1);
@@ -1034,7 +1006,6 @@ function setLogLevel(params) {
   return {};
 }
 
-// The trace context a request carries in _meta, the keys TRACE_KEYS that are strings. An absent key is left out.
 function traceOf(meta) {
   return Object.fromEntries(TRACE_KEYS.filter((key) => typeof meta[key] === 'string').map((key) => [key, meta[key]]));
 }
@@ -1069,7 +1040,6 @@ const SELF_COMPACT = {
 const NO_MCP = { ready: Promise.resolve(), verbs: () => [], has: () => false, call: () => undefined, stop: () => {} };
 let mcp = NO_MCP;
 let mcpReady = NO_MCP.ready;
-// The surface of the running worker, built at boot from the leaf modules. activeTools and activeLog are the session's, set when it starts.
 let current = surfaceOf(await loadLeaves());
 let activeTools = null;
 let activeLog = null;
@@ -1162,7 +1132,6 @@ async function main(argv) {
     console.error(`gm mcp: run ${basename(runDir)} (${closedAtBoot}) is closed; the first next_context opens a new run`);
   }
   const history = resumed ? log.events() : [];
-  // A resumed run that was started without a task takes the task its session gave, from its task event.
   if (task === '' && resumed) task = history.findLast((event) => event.kind === 'task')?.text ?? '';
   const recovery = resumed && closedAtBoot === null ? recoveryOf(history) : null;
   if (closedAtBoot === null) {

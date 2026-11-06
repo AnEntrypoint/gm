@@ -9,7 +9,6 @@ import { appendFileSync, closeSync, existsSync, openSync, readdirSync, readFileS
 import { join } from 'node:path';
 
 export const PENDING_FILE = 'pending.jsonl';
-// The event kinds an agent must act on: a job's start and end, a job killed, a stuck or unstuck job, a rules notice, a recovery, a host-idle notice, and a row added.
 export const PENDING_KINDS = new Set(['job', 'job-killed', 'job-stuck', 'job-unstuck', 'rules-notice', 'recovery', 'host-idle', 'row-added']);
 const LOCK_FILE = 'pending.lock';
 // A holder keeps the lock for one append or one rename, so a lock older than LOCK_STALE_MS was left by a holder that died. A waiter that
@@ -57,8 +56,6 @@ export function takePending(runDir) {
   return { records, files };
 }
 
-// Renames one queue file to a copy named with this reader's pid. The rename is the claim: when another reader has renamed the file first, it
-// is absent here and the result is null, which is not an error.
 function claim(runDir, name) {
   const copy = join(runDir, `pending.${Date.now()}-${randomBytes(4).toString('hex')}-${process.pid}.reading`);
   try {
@@ -70,7 +67,6 @@ function claim(runDir, name) {
   }
 }
 
-// A reader is gone when its pid is no longer a process. A copy with no pid is from an earlier version, and counts as gone.
 function readerGone(pid) {
   if (pid === undefined) return true;
   try {
@@ -81,8 +77,6 @@ function readerGone(pid) {
   }
 }
 
-// Runs fn while the queue lock is held. The lock is a file created with 'wx', so one process at a time holds it. A waiter sleeps 1 ms between
-// tries, and removes a lock older than LOCK_STALE_MS, which a holder that died left behind.
 function withQueueLock(runDir, fn) {
   const lock = join(runDir, LOCK_FILE);
   const deadline = Date.now() + LOCK_WAIT_MS;
@@ -112,7 +106,6 @@ function removeStaleLock(lock) {
   }
 }
 
-// Removes a file. A file that is already gone is not an error.
 function removeFile(file) {
   try {
     unlinkSync(file);
@@ -121,12 +114,10 @@ function removeFile(file) {
   }
 }
 
-// True when takePending would return records: the queue has some, or a copy whose reader is gone is waiting.
 export function hasPending(runDir) {
   return existsSync(join(runDir, PENDING_FILE)) || readdirSync(runDir).some((name) => READING.test(name) && readerGone(READING.exec(name)[1]));
 }
 
-// Removes the copies that takePending read. A copy that is already gone is not an error.
 export function clearPending(files) {
   for (const file of files) removeFile(file);
 }

@@ -49,7 +49,6 @@ export const CODE_TOOLS = [
   },
 ];
 
-// callers and impact search the code, so the second horizon cuts their results.
 export const COMPACT = {
   tools: {
     callers: { zone1: resultZone1, zone2: () => null },
@@ -100,8 +99,6 @@ function fail(error) {
   return { ok: false, error };
 }
 
-// The cache is brought up to date with the files on disk. A file is parsed again only when its mtime or size changed, and a file
-// that left the repository is dropped. The import edges are resolved against the files that are present.
 async function loadIndex(root, confine, cache) {
   let listed;
   try {
@@ -149,13 +146,11 @@ function analyse(rel, text) {
   return entry;
 }
 
-// A module first, then a script, so a CommonJS file parses as a script. Null when neither parses.
 function parseJs(text) {
   for (const sourceType of ['module', 'script']) {
     try {
       return parseSource(text, { ecmaVersion: 'latest', sourceType, allowHashBang: true });
     } catch {
-      // try the next source type
     }
   }
   return null;
@@ -225,7 +220,6 @@ function recordCall(entry, name, line, member) {
   entry.calls.get(name).push({ line, member });
 }
 
-// The offset of each line start, so a node's offset maps to its line by binary search.
 function lineStarts(text) {
   const starts = [0];
   for (let i = 0; i < text.length; i += 1) if (text.charCodeAt(i) === 10) starts.push(i + 1);
@@ -243,8 +237,6 @@ function lineAt(starts, offset) {
   return lo + 1;
 }
 
-// The fallback for a file that does not parse. A line that starts with a comment marker is skipped, a definition on the line is not a
-// call of its own name, and a keyword followed by a parenthesis is not a call.
 function scanLines(entry) {
   entry.lines.forEach((text, index) => {
     if (text.trim().startsWith('//')) return;
@@ -289,7 +281,6 @@ function scan(files, name) {
   return { defs, callFiles, sites };
 }
 
-// The importers, level by level: a file imports a file reached at the level before, and each file is listed once, at its first level.
 function impactOf(files, name, depth) {
   const { defs, callFiles } = scan(files, name);
   const reached = new Set([...defs, ...callFiles]);

@@ -10,14 +10,11 @@ import { Worker } from 'node:worker_threads';
 import { resultZone1, resultZone2, shortKind } from './compact.mjs';
 import { bodyContext } from './exec.mjs';
 
-// The foreground budget of a body: past it, the body keeps running as a background job, and the call returns at once with its id.
 const DEFAULT_TIMEOUT_MS = 180000;
 const MAX_TIMEOUT_MS = 300000;
 const BUDGET = Symbol('budget');
 const OUTPUT_CAP = 20000;
-// The thread that runs a body. Each body gets one of its own (body-worker.mjs).
 const BODY_WORKER = new URL('./body-worker.mjs', import.meta.url);
-// The most bodies that run at once in this process. A body beyond the cap waits in arrival order, and its wait is logged as body-queued.
 const BODY_SLOTS = 4;
 const waiting = [];
 let running = 0;
@@ -250,8 +247,6 @@ export async function runBody({ body, timeoutMs = DEFAULT_TIMEOUT_MS, format, ve
   const result = done.then((reply) => (reply.ok
     ? { ok: true, output: reply.text.slice(0, OUTPUT_CAP), truncated: reply.text.length > OUTPUT_CAP }
     : { ok: false, error: killed ? `${reply.error}: ${lost()}` : reply.at ? reply.error + locate(reply.at) : reply.error }));
-  // If the body settles within the budget, the call returns its result. If the budget is spent first, the body is handed to the caller as a
-  // background job, which watches it through the job machinery; its body file stays until the body ends.
   let timer;
   const budget = new Promise((resolve) => {
     timer = setTimeout(() => resolve(BUDGET), timeoutMs);

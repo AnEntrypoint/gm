@@ -41,7 +41,6 @@ async function readText(path) {
       if (n === 0) break;
       got += n;
     }
-    // The bytes are decoded once. The text is the reply's output and the logged output alike.
     return readBuffer.toString('utf8', 0, got);
   } finally {
     closeSync(fd);
@@ -112,8 +111,6 @@ const DEFAULT_JOB_LIFETIME_MS = 3600000;
 // first NOTICE_PRD_WINDOW of them, and the counts, read when the report is made.
 export const BODY_NOTICE_MS = 180000;
 const NOTICE_PRD_WINDOW = 5;
-// A running job with no progress for this long is stuck, and the agent is told once. Progress is output a shell job writes, a verb call a
-// body makes or has in flight, and the start of the job. The check runs every monitorMs.
 export const DEFAULT_STUCK_MS = 180000;
 export const DEFAULT_MONITOR_MS = 15000;
 const PATH_TOOLS = new Set(['read_file', 'write_file', 'edit_file', 'list_dir', 'stat_file']);
@@ -148,7 +145,6 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
   const root = resolve(workspace);
   const realRoot = realpathSync(root);
   const jobs = new Map();
-  // The verb calls a body has in flight, by the body's seq. A body with a call in flight is progressing.
   const inFlightByBody = new Map();
 
   const confine = (rel) => {
@@ -317,15 +313,12 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
         (args.fromMono === undefined || event.mono >= args.fromMono) &&
         (args.toMono === undefined || event.mono <= args.toMono);
       const js = args.js ?? 'events';
-      // last is the newest matching events, oldest first. It is the end of the list, so it has no next.
       if (args.last !== undefined) {
         const newest = log.tail(after, args.last, match);
         if (args.js !== undefined) return runQuery(newest, js);
         const kept = newestOf(newest);
         return { ...runQuery(kept.events, js), ...(kept.omitted === 0 ? {} : { omitted: kept.omitted }) };
       }
-      // The expression sees one window of matching events. A reply without js is a page of that window. When the window ends before the end of
-      // the log, next is the seq to pass back as after, and the next call reads on from it.
       const scan = log.window(after, QUERY_WINDOW_EVENTS, match, QUERY_WINDOW_BYTES);
       const more = scan.last < log.count();
       if (args.js !== undefined) return { ...runQuery(scan.events, js), ...(more ? { next: scan.last } : {}) };
@@ -479,7 +472,6 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
     return name;
   }
 
-  // The output of a job, as text: a body's verb calls from the log, or a shell job's output file. cap keeps the last cap characters.
   function outputOf(status, cap = Infinity) {
     if (status.body !== undefined) return bodyText(log, status.body, cap);
     const text = existsSync(status.output) ? readFileSync(status.output, 'utf8') : '';
@@ -503,8 +495,6 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
     }
   }
 
-  // The progress of a running job: now while a verb call of its body is in flight, otherwise the newest verb call the body made, or the last
-  // write to a shell job's output, or the start, whichever is latest.
   function progressAt(job) {
     if ((inFlightByBody.get(job.body) ?? 0) > 0) return Date.now();
     if (job.body !== undefined) return Math.max(job.startWall, lastCallWall(log, job.body));
@@ -539,7 +529,6 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
     monitor.unref();
   }
 
-  // The jobs still open, for the status the agent reads at each step: how long each has run and how long since it progressed.
   function activeJobs() {
     const now = Date.now();
     return [...jobs.values()].filter((job) => !job.settled).map((job) => ({
@@ -575,7 +564,6 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
       return { items: [{ path: at.path, group: at.group, write: WRITE_TOOLS.has(name) }] };
     },
 
-    // ctx carries what the caller may pass a verb: the abort signal of a cancelled request, which only run_shell reads.
     async run(name, args, ctx) {
       if (!Object.hasOwn(handlers, name)) return { ok: false, error: `unknown tool: ${name}` };
       try {
@@ -656,8 +644,6 @@ function pageOf(events, limit = QUERY_PAGE_EVENTS) {
   return page;
 }
 
-// The newest events of a tail that fit a reply: the oldest are dropped first, and omitted counts them. An event too large for a reply of its
-// own is cut to its head, as pageOf does.
 function newestOf(events) {
   let from = 0;
   while (from < events.length - 1 && replyChars(events.slice(from)) > QUERY_REPLY_CHARS) from += 1;
@@ -665,12 +651,10 @@ function newestOf(events) {
   return { events: [clipped(events[events.length - 1])], omitted: events.length - 1 };
 }
 
-// The length of the reply a page would make: the page as JSON, escaped once more inside the reply.
 function replyChars(page) {
   return JSON.stringify({ ok: true, output: JSON.stringify(page) }).length;
 }
 
-// The head of an event's JSON, cut until a page of that one event fits the reply.
 function clipped(event) {
   const text = JSON.stringify(event);
   let size = Math.min(text.length, QUERY_REPLY_CHARS);
@@ -695,7 +679,6 @@ export function loggedFor(tool, result) {
   return { ...result, output: result.output.slice(0, LOGGED_REPLY_CHARS), outputChars: result.output.length, outputDigest: outputDigest(result.output, failedOf(result)) };
 }
 
-// Waits for the job's completion event, with a deadline. The job settles when its process exits, so no timer polls it.
 function waitOrTimeout(promise, ms) {
   let timer;
   const deadline = new Promise((resolve) => {
@@ -720,7 +703,6 @@ function bodyText(log, body, cap = Infinity) {
   return text.length > cap ? text.slice(text.length - cap) : text;
 }
 
-// The wall time of the newest verb call a body made, from the log, or 0 when it made none. The walk stops at the first call it finds.
 function lastCallWall(log, body) {
   for (let seq = log.count(); seq > body; seq -= 1) {
     const event = log.at(seq);

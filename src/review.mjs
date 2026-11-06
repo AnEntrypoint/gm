@@ -17,7 +17,6 @@ function sortKeys(value) {
   return value;
 }
 
-// The file at a path, inside or outside the workspace, or null. A relative path is taken from the workspace.
 function fileAt(root, rel) {
   if (typeof rel !== 'string' || rel === '') return null;
   const at = resolve(root, rel);
@@ -43,9 +42,6 @@ export function reviewPacket({ root, log, spec, refs = [] }) {
   return { ok: true, packet: hash, spec, specSha, refs: sortedRefs };
 }
 
-// A record is one reviewer's verdict on one packet. It is refused when the packet is not in this log, when the packet already
-// has a record, when the verdict is not one of VERDICTS, when there is no reviewer, or when the spec's sha has changed since
-// the packet. A refusal is logged as review-refused, and nothing else is written.
 export function reviewRecord({ root, log, packet, verdict, reviewer, notes = '' }) {
   const refuse = (reason) => {
     log?.append('review-refused', { packet, reason, stage: 'record' });
@@ -105,14 +101,12 @@ function place(row, covered, item, reason) {
   else row.unattributed.push({ ...item, reason });
 }
 
-// The spec's sha in the commit's tree, or null when the commit or the path is not there.
 function specShaAt(root, commit, spec) {
   if (!root || !commit || !spec) return null;
   const result = spawnSync('git', ['show', `${commit}:${spec}`], { cwd: root, timeout: 10000, maxBuffer: 64 * 1024 * 1024 });
   return result.status === 0 ? sha256(result.stdout) : null;
 }
 
-// The spec's sha in the working tree now, or null when it is missing.
 function currentSpecSha(root, spec) {
   if (!root || !spec) return null;
   const at = fileAt(root, spec);
