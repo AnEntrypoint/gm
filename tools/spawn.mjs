@@ -34,6 +34,13 @@ const READS = {
     need(address, "resolve needs an address, e.g. @lanmower/<world>");
     return { path: `/api/resolve-adventure?address=${encodeURIComponent(address)}` };
   },
+  comments: ([appId = APP_ID]) => ({ path: `/api/games/${appId}/comments` }),
+  api: () => ({ path: "/api/agent/v1/api" }),
+  llms: () => ({ path: "/llms.txt" }),
+  job: ([id]) => {
+    need(id, "job needs a character job id");
+    return { path: `/api/character/jobs/${encodeURIComponent(id)}` };
+  },
 };
 
 const need = (ok, msg) => {
@@ -86,6 +93,9 @@ reads (GET, always sent):
   notifications [unread]          notification list, unread only with "unread"
   social <me|relation|who|met|personas|places|hidden>
   resolve <@owner/world>          resolve a world's appId from its address
+  comments [appId]                comments on a game
+  api | llms                      API door index, public agent guide
+  job <characterJobId>            poll a character job
   docs [worldId] [section]        Tome reference, one section or all
   rooms|logs|health [worldId]     live rooms, script log, health
   skill <skillId> [worldId]       one skill from the world
