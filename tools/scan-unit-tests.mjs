@@ -1,18 +1,11 @@
 #!/usr/bin/env node
 import { readdirSync, readFileSync, statSync } from 'node:fs';
-import { join, relative, resolve, extname, sep } from 'node:path';
+import { join, relative, resolve, extname } from 'node:path';
 
 const RUST_TEST_ATTRIBUTE = `#${'[test]'}`;
 const JS_TEST_CALL = /^\s*(describe|it|test)\s*\(/;
 const JS_EXTENSIONS = new Set(['.js', '.mjs', '.cjs', '.jsx', '.ts', '.tsx', '.mts', '.cts']);
 const SKIP_DIRS = new Set(['.git', 'node_modules', 'build', 'runs', '.playwriter', '.gm', '.agentplug', '.agentplug-kv', 'third_party', 'vendor']);
-const EXEMPT_FILES = new Set([
-    '.github/workflows/node-pins.yml',
-    'native/components/mcp/tests/mcp_test.cpp',
-    'native/components/verbs/tests/verbs_test.cpp',
-    'native/leaves/tests/job-status-cap.test.mjs',
-    'native/leaves/tests/write-file-shrink.test.mjs',
-]);
 const root = resolve(process.argv[2] ?? '.');
 
 const hits = [];
@@ -26,8 +19,7 @@ function visit(dir) {
             continue;
         }
         if (!stat.isFile()) continue;
-        const file = relative(root, full).split(sep).join('/');
-        if (EXEMPT_FILES.has(file)) continue;
+        const file = relative(root, full);
         if (/\.test\./.test(name)) hits.push(`${file}: test file name`);
         let text;
         try {
