@@ -1199,7 +1199,7 @@ async function main(argv) {
   }
   const acceptLine = (line) => {
     try {
-      if (session.ended() !== null && !session.stepLimited() && isNextContextCall(line)) {
+      if (session.ended() !== null && isNextContextCall(line)) {
         retired = Promise.allSettled([retired, session.settled()]);
         session = reopen(session);
         notify(RESOURCES_CHANGED);

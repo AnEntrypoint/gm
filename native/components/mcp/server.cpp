@@ -2595,7 +2595,11 @@ struct Server::State {
     void process(std::string_view line, std::uint64_t ticket, bool ordered) {
         Hold hold(*this, ticket, ordered);
         try {
-            if (s().ended && !s().step_limited && is_next_context_call(line)) {
+            if (is_next_context_call(line) && (s().ended || s().steps >= options.max_steps)) {
+                if (!s().ended) {
+                    s().ended = "max_steps";
+                    end_run("max_steps", Value(nullptr), std::nullopt);
+                }
                 reopen();
                 notify(object().set("jsonrpc", "2.0").set("method", "notifications/resources/list_changed"));
             }
