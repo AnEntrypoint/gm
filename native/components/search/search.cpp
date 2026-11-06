@@ -21,6 +21,14 @@ json::Value refused(const std::string& reason) {
 
 }
 
+void SearchVerbs::evict_least_used() {
+    auto oldest = searchers_.begin();
+    for (auto it = searchers_.begin(); it != searchers_.end(); ++it) {
+        if (it->second->used < oldest->second->used) oldest = it;
+    }
+    searchers_.erase(oldest);
+}
+
 SearchVerbs::SearchVerbs(fs::path workspace) : workspace_(std::move(workspace)) {}
 
 SearchVerbs::~SearchVerbs() = default;
@@ -37,7 +45,6 @@ std::vector<VerbInfo> SearchVerbs::list() const {
 }
 
 json::Value SearchVerbs::call(std::string_view name, const json::Value& args) {
-    std::lock_guard<std::mutex> lock(mutex_);
     std::vector<std::string> takes;
     if (name == "search") takes = {"query", "k"};
     else if (name == "grep") takes = {"pattern", "path", "mode", "scope", "ignoreCase", "limit", "offset", "vendor"};
@@ -72,12 +79,21 @@ json::Value SearchVerbs::call(std::string_view name, const json::Value& args) {
             return refused("root is not a directory: " + given->as_string());
         }
     }
-    auto found = searchers_.find(root);
-    if (found == searchers_.end()) {
-        if (searchers_.size() >= MAX_SEARCH_ROOTS) searchers_.erase(searchers_.begin());
-        found = searchers_.emplace(root, std::make_unique<search::Searcher>(workspace_, root == workspace_ ? fs::path() : root)).first;
+    std::shared_ptr<Root> entry;
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        auto found = searchers_.find(root);
+        if (found == searchers_.end()) {
+            if (searchers_.size() >= MAX_SEARCH_ROOTS) evict_least_used();
+            auto created = std::make_shared<Root>();
+            created->searcher = std::make_unique<search::Searcher>(workspace_, root == workspace_ ? fs::path() : root);
+            found = searchers_.emplace(root, std::move(created)).first;
+        }
+        found->second->used = ++clock_;
+        entry = found->second;
     }
-    std::string reply = name == "search" ? found->second->search(scoped) : found->second->grep(scoped);
+    std::lock_guard<std::mutex> scan(entry->scan);
+    std::string reply = name == "search" ? entry->searcher->search(scoped) : entry->searcher->grep(scoped);
     auto parsed = json::parse(reply);
     return parsed ? *parsed : json::Value(json::Object{{"ok", false}, {"error", "internal: unparsable reply"}});
 }

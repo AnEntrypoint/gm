@@ -906,3 +906,10 @@ This run hit the 50-step limit because of the step-counting defect fixed in 2d41
 - Witness (stdio, both trees, identical): a directory with 1200 f-prefixed files plus sub/ and other.md. Paged with prefix f and limit 500: 500 entries, total 1200, next 500; offset 500: next 1000; offset 1000: 200 entries, next null. Unfiltered: total 1202, next 500. limit 0: "limit must be a whole number from 1 to 500" in both trees.
 - Default page: a directory of more than 500 entries is read in pages by default now, so a reply that once listed everything lists the first 500 and names next. Callers that read the whole directory must page.
 - Validation: ctest 23/23; leaves 33/33; conformance 75 passed, 0 failed of 75 checks in 24 scenarios; gate ok. Parity is run after the commit, since it archives HEAD. Author lanmower, no trailers.
+
+## Item 4e: search lock and LRU cache (2026-11-06)
+
+- Finding (DESIGN.md:795): SearchVerbs::call held one mutex across the whole call, so every search and grep ran one at a time, and the cache evicted an arbitrary entry (begin()) when it reached MAX_SEARCH_ROOTS.
+- Change: the cache maps each root to a shared Root holding its own scan mutex, its Searcher and a last-used stamp. The verb table's mutex covers lookup, insert and LRU eviction only; the scan runs under the root's mutex. An evicted root stays alive for a call still using it, because the call holds its shared_ptr. Native only (native/components/search/search.cpp, search.hpp); the Node search is not changed.
+- Witness: search_test.cpp concurrency case, 8 threads times 8 rounds of grep and search over 6 roots (more than MAX_SEARCH_ROOTS, so eviction runs), each reply must be ok and name its own doc.txt:1 hit: 0 failures in ctest run 2026-11-06. The test asserts results, not the eviction order; LRU order itself is not observed.
+- Validation: ctest 23/23; leaves 33/33 (node --test). Conformance, gate and parity run next; parity is run after the commit, since it archives HEAD. Author lanmower, no trailers.

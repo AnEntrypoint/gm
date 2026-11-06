@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <filesystem>
 #include <map>
 #include <memory>
@@ -24,9 +25,18 @@ public:
     json::Value call(std::string_view name, const json::Value& args) override;
 
 private:
+    struct Root {
+        std::mutex scan;
+        std::unique_ptr<search::Searcher> searcher;
+        std::uint64_t used = 0;
+    };
+
     std::mutex mutex_;
+    std::uint64_t clock_ = 0;
     std::filesystem::path workspace_;
-    std::map<std::filesystem::path, std::unique_ptr<search::Searcher>> searchers_;
+    std::map<std::filesystem::path, std::shared_ptr<Root>> searchers_;
+
+    void evict_least_used();
 };
 
 }

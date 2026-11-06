@@ -207,7 +207,9 @@ int main() {
                 std::string root = "root" + std::to_string((t + i) % 6);
                 Value grepped = shared.call("grep", Value(gm::json::Object{{"pattern", "guest"}, {"root", root}}));
                 Value ranked = shared.call("search", Value(gm::json::Object{{"query", "guest rotation"}, {"root", root}}));
-                if (!grepped.find("ok") || !grepped.find("ok")->as_bool() || !ranked.find("ok") || !ranked.find("ok")->as_bool()) ++concurrent_failures;
+                bool grep_hit = output_of(grepped).find(root + "/doc.txt:1") != std::string::npos;
+                bool search_hit = output_of(ranked).find(root + "/doc.txt:1") != std::string::npos;
+                if (!grepped.find("ok") || !grepped.find("ok")->as_bool() || !ranked.find("ok") || !ranked.find("ok")->as_bool() || !grep_hit || !search_hit) ++concurrent_failures;
             }
         });
     }
