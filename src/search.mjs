@@ -252,12 +252,12 @@ function searcherFor({ root, confine }) {
         hints.push(scanned.total > 0 ? 'no literal match; matched as regex' : 'no match as literal or regex');
       }
       const { found, total, next } = scanned;
-      const footer = [`(${total} matches; showing ${found.length ? offset : 0} to ${offset + found.length}; ${next === null ? 'no more' : `next offset ${next}`})`];
+      const footer = [`(${total} matches; showing ${found.length ? offset : 0} to ${offset + found.length}; ${next === null ? 'no more' : `next offset ${next}`}${budgetHit() ? '; scan incomplete' : ''})`];
       const skipped = all || total > 0 ? null : walked !== null ? walkSkipHint(walked.skippedDirs) : await skippedHint(listing, under, vendor);
       if (skipped !== null) hints.push(skipped);
       if (budgetHit()) hints.push(budgetHint());
       if (bounded) hints.push(longLineHint());
-      return { ok: true, files: source, output: [...found, ...footer].join('\n'), ...(hints.length ? { hint: hints.join(' | ') } : {}) };
+      return { ok: true, files: source, output: [...found, ...footer].join('\n'), scanTruncated: budgetHit(), scannedFiles: budget.files, scannedBytes: budget.bytes, ...(hints.length ? { hint: hints.join(' | ') } : {}) };
     },
   };
 

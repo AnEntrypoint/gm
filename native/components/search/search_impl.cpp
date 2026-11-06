@@ -710,7 +710,8 @@ std::string Searcher::grep(const json::Value& args) {
 
     std::string footer = "(" + std::to_string(scanned.total) + " matches; showing " + std::to_string(scanned.found.empty() ? 0 : offset) +
                          " to " + std::to_string(offset + static_cast<long long>(scanned.found.size())) + "; " +
-                         (scanned.next < 0 ? std::string("no more") : "next offset " + std::to_string(scanned.next)) + ")";
+                         (scanned.next < 0 ? std::string("no more") : "next offset " + std::to_string(scanned.next)) +
+                         (budget.hit() ? std::string("; scan incomplete") : std::string()) + ")";
 
     if (!all && scanned.total == 0) {
         if (!use_git) {
@@ -752,6 +753,9 @@ std::string Searcher::grep(const json::Value& args) {
     out.set("ok", true);
     out.set("files", use_git ? "git" : "walk");
     out.set("output", output);
+    out.set("scanTruncated", budget.hit());
+    out.set("scannedFiles", static_cast<std::uint64_t>(budget.files));
+    out.set("scannedBytes", static_cast<std::uint64_t>(budget.bytes));
     if (!hints.empty()) out.set("hint", joined);
     return json::dump(out);
 }
