@@ -4,6 +4,19 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import readline from 'node:readline';
 
+const removeWorkspace = (path) => {
+    const wait = new Int32Array(new SharedArrayBuffer(4));
+    for (let attempt = 0; attempt < 8; attempt += 1) {
+        try {
+            rmSync(path, { recursive: true, force: true });
+            return;
+        } catch (error) {
+            if (error?.code !== 'ENOTEMPTY' || attempt === 7) throw error;
+            Atomics.wait(wait, 0, 0, 50);
+        }
+    }
+};
+
 export async function openServer(binary, { workspace = mkdtempSync(join(tmpdir(), 'gm-stdio-')), extraArgs = [] } = {}) {
     const child = spawn(binary, ['serve', '--workspace', workspace, ...extraArgs], { stdio: ['pipe', 'pipe', 'pipe'] });
     child.stderr.resume();
@@ -38,7 +51,7 @@ export async function openServer(binary, { workspace = mkdtempSync(join(tmpdir()
         run: (body) => tool('run_code', { body }),
         close() {
             child.kill();
-            rmSync(workspace, { recursive: true, force: true });
+            removeWorkspace(workspace);
         },
     };
 }

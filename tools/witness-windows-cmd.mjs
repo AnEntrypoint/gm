@@ -20,7 +20,9 @@ try {
     await server.tool('next_context', {});
     const control = await server.run(`return await gm.run_shell({ command: ${JSON.stringify(controlCommand)} });`);
     const cmdOnly = await server.run(`return await gm.run_shell({ command: ${JSON.stringify(cmdOnlyCommand)} });`);
-    console.log(JSON.stringify({ platform: process.platform, controlCommand, cmdOnlyCommand, control: decode(control), cmdOnly: decode(cmdOnly) }, null, 2));
+    const cmdOnlyReply = decode(cmdOnly);
+    if (cmdOnlyReply?.ok !== true) throw new Error(`cmd-only run_shell did not succeed: ${JSON.stringify(cmdOnlyReply)}`);
+    console.log(JSON.stringify({ platform: process.platform, controlCommand, cmdOnlyCommand, control: decode(control), cmdOnly: cmdOnlyReply }, null, 2));
 } finally {
     server.close();
     rmSync(configDir, { recursive: true, force: true });

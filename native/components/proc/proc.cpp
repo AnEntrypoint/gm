@@ -340,6 +340,30 @@ Outcome run(const std::vector<std::string>& argv, const std::filesystem::path& c
     return outcome;
 }
 
+bool needs_cmd(std::string_view command) {
+    const std::size_t first = command.find_first_not_of(" \t\r\n");
+    if (first == std::string_view::npos) return false;
+    const std::size_t last = command.find_first_of(" \t\r\n", first);
+    const std::string_view word = command.substr(first, last == std::string_view::npos ? std::string_view::npos : last - first);
+    const auto lower = [](char c) { return c >= 'A' && c <= 'Z' ? static_cast<char>(c + 32) : c; };
+    const auto is = [&](std::string_view name) {
+        if (word.size() != name.size()) return false;
+        for (std::size_t i = 0; i < name.size(); ++i) {
+            if (lower(word[i]) != name[i]) return false;
+        }
+        return true;
+    };
+    if (is("dir") || is("del") || is("set")) return true;
+    for (std::size_t i = 0; i < command.size(); ++i) {
+        if (command[i] != '\\') continue;
+        if (i == 0) continue;
+        const char before = command[i - 1];
+        const bool path = (before >= 'A' && before <= 'Z') || (before >= 'a' && before <= 'z') || (before >= '0' && before <= '9') || before == '.' || before == ':' || before == '\\';
+        if (path) return true;
+    }
+    return false;
+}
+
 std::string git_bash() {
     for (const char* var : {"ProgramFiles", "ProgramW6432", "ProgramFiles(x86)"}) {
         const char* root = std::getenv(var);
@@ -351,6 +375,7 @@ std::string git_bash() {
 }
 
 Outcome shell(std::string_view command, const std::filesystem::path& cwd, std::uint64_t timeout_ms) {
+    if (needs_cmd(command)) return run({"cmd", "/c", std::string(command)}, cwd, {}, timeout_ms);
     const std::string bash = git_bash();
     if (!bash.empty()) return run({bash, "-c", std::string(command)}, cwd, {}, timeout_ms);
     return run({"cmd", "/c", std::string(command)}, cwd, {}, timeout_ms);

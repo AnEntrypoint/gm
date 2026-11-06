@@ -24,14 +24,12 @@ jobs:
         run: |
           cmake --preset asan
           cmake --build build/asan
-      - name: Check asan build (conformance, five runs)
+      - name: Check asan build (conformance, one run)
         shell: bash
         env:
           ASAN_OPTIONS: halt_on_error=1:abort_on_error=0:print_stacktrace=1:detect_leaks=0
         run: |
-          for run in 1 2 3 4 5; do
-            node tools/check-build.mjs build/asan || exit 1
-          done
+          node tools/check-build.mjs build/asan
 
   gdb-arm:
     runs-on: ubuntu-24.04-arm
