@@ -31,7 +31,6 @@ function readRows(dir) {
     });
 }
 
-// The run logs under runs/ with no end event, to depth three.
 function openRuns(dir, depth = 0) {
   if (!existsSync(dir) || depth > 3) return [];
   const found = [];
@@ -53,7 +52,6 @@ const head = git('rev-parse', '--short', 'HEAD');
 const ahead = Number(git('rev-list', '--count', 'origin/main..main'));
 const changed = git('status', '--short').split('\n').filter(Boolean);
 
-// A row is open until it is implemented or deleted, so every open row is planned. Any other status is a defect: nothing holds a row.
 const rows = [...readRows(join(REPO, 'work', 'rows')), ...readRows(EXTRA)];
 const actionable = rows.filter((row) => row.status === 'open');
 const stray = rows.filter((row) => row.status !== 'open' && row.status !== 'resolved');
@@ -72,7 +70,6 @@ const before = BEFORE && existsSync(BEFORE) ? JSON.parse(readFileSync(BEFORE, 'u
 const resolvedNow = rows.filter((row) => row.status === 'resolved').map((row) => row.id).sort();
 const closed = before === null ? null : resolvedNow.filter((id) => !before.includes(id));
 
-// Every actionable row must be attempted in the last pass, and must end resolved.
 const attempted = new Set(pass?.attempted ?? []);
 const defects = [];
 const ended = [];

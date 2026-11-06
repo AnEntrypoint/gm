@@ -27,10 +27,8 @@ const FETCH_MS = 60000;
 const PULL_MS = 60000;
 const INSTALL_MS = 600000;
 const GATE_MS = 600000;
-// How long the check waits for the supervisor to report the worker's start after a pull or a rollback, and how soon a waiting pull is retried.
 const WORKER_MS = 60000;
 const WAIT_RETRY_MS = 60000;
-// How long a candidate's core and worker have to load and answer initialize, and the id of that request.
 const START_MS = 20000;
 const START_ID = 'gm-candidate-start';
 // The targets that were refused by the gate or rolled back, with the reason. Until origin moves to another commit, a refused target is not
@@ -65,8 +63,6 @@ async function gate(root) {
   }
 }
 
-// The modules the worker loads, as src/worker-modules.json lists them (the gate checks the list against the import graph). null when the list
-// cannot be read.
 export function workerModulesOf(root) {
   try {
     return JSON.parse(readFileSync(join(root, 'src', 'worker-modules.json'), 'utf8'));
@@ -75,7 +71,6 @@ export function workerModulesOf(root) {
   }
 }
 
-// The names, among names, that the worker loads. With no readable list, every name counts, so no change is missed.
 export function loadedByWorker(names, list) {
   return list === null ? names : names.filter((name) => list.includes(name));
 }
@@ -113,7 +108,6 @@ async function startProblem(dir) {
   return workerStarts(dir);
 }
 
-// The worker starts in the clone with the arguments a core gives it, and must answer initialize. Its run is in the clone, so it is removed with it.
 async function workerStarts(dir) {
   const noDefaults = join(dir, 'no-default-mcp.json');
   await writeFile(noDefaults, JSON.stringify(disabledServers(join(dir, 'defaults', 'mcp.json'))));
@@ -189,7 +183,6 @@ async function apply(root, prev, target, ahead, log, { busy, nextWorkerEvent, re
   if (waiting) return { state: 'waiting', reason: waiting, head: prev, target, ahead };
   const dirty = await git(root, ['status', '--porcelain', '--untracked-files=no']);
   if (dirty !== '') return { state: 'dirty', head: prev, target, ahead };
-  // Only a module the worker loads restarts it, by the list at the target commit, and a reloadable one is reloaded in place instead.
   const srcFiles = changed.filter((file) => file.startsWith('src/')).map((file) => file.slice('src/'.length));
   const restarts = loadedByWorker(srcFiles, verdict.workers).some((name) => !RELOADABLE.includes(name));
   // The wait for the restart starts before the pull, so the worker's report of it is not missed.
@@ -281,8 +274,6 @@ function describe(result) {
   }
 }
 
-// Starts the checks: the first after FIRST_CHECK_MS, then every everyMs. Zero, or anything that is not a positive number, turns them off. A check
-// that is still running is not started again. The timers do not keep the process alive. It returns a function that stops the checks.
 export function startUpdates({ root, everyMs = DEFAULT_UPDATE_MS, log = () => {}, busy = null, nextWorkerEvent = null, replaceCore = null }) {
   if (!(everyMs > 0)) return () => {};
   let running = false;

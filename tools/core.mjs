@@ -55,13 +55,12 @@ if (argv.includes('--probe')) {
 const TAKEOVER = argv.includes('--takeover');
 const SESSION_OPT = optionValue(argv, '--session');
 const HOST_ARGS = withoutOptions(argv.filter((arg) => arg !== '--takeover'), ['--session']);
-// A session is one relay's run choice and host state. A respawned core finds it by the relay's pid and start time. A handover names it.
 const SESSION_NAME = SESSION_OPT ?? `${process.ppid}-${startTimeOf(process.ppid)}`;
 const SESSION_FILE = join(SESSIONS, `${SESSION_NAME}.json`);
 const LOADED = digestOfFiles();
 
 let child = null;
-let state = 'starting'; // starting, running, draining, restarting, handing-over, stopping, or failed
+let state = 'starting';
 let swapping = false; // true while a restart decides which list notices the host gets
 let runDir = null;
 let hostInitialize = null;
@@ -275,8 +274,6 @@ function flushHeld() {
   for (const line of lines) onHostLine(line);
 }
 
-// The worker's output. A reply to a host request passes to the host; a reply to a core request goes to the function that asked; the
-// list digests of the host's own list requests are recorded; and the worker's list notices are dropped while a restart decides them.
 function onChildLine(line) {
   if (line.trim() === '') return;
   const message = parse(line);
@@ -356,7 +353,6 @@ async function stopWorker() {
   clearTimeout(force);
 }
 
-// The handshake replays the host's initialize to the new worker, as a restart does. With no initialize from the host yet, there is none.
 function replayHandshake() {
   if (hostInitialize === null) return Promise.resolve();
   return new Promise((resolveHandshake, rejectHandshake) => {
@@ -454,7 +450,6 @@ function waitForDrain() {
   });
 }
 
-// The core asks the worker for a list itself. The reply is compared with the digest the host last fetched.
 function askWorker(method) {
   const id = `gm-core:${method}`;
   return new Promise((resolveAsk) => {
@@ -500,7 +495,6 @@ async function reload(reason) {
   return { ok: true };
 }
 
-// A change the worker serves in place: nothing restarts, and the host is told of any list whose content changed.
 async function refresh(reason) {
   if (state !== 'running') return { ok: false, reason: `the worker is ${state}` };
   say(`refreshing the lists (${reason})`);
@@ -531,8 +525,6 @@ async function restart(reason) {
   return { ok: state === 'running' };
 }
 
-// Why the worker's work must not be interrupted now, or null when it may be restarted. A tool call in flight is work. So is a body or job
-// that the current run still has running or queued, which its status files say.
 function busyReason() {
   let calls = 0;
   for (const method of inflight.values()) if (method === 'tools/call') calls += 1;
@@ -553,7 +545,6 @@ function busyReason() {
   return open > 0 ? `${open} body or job(s) running or queued` : null;
 }
 
-// The checks of the new code: a syntax check of both files, then a load of this file, which stops before any side effect.
 async function probeNewCore() {
   for (const file of [CORE_FILE, UPDATE_FILE]) {
     const syntax = await runNode(['--check', file]);
@@ -587,7 +578,6 @@ function runNode(args) {
   });
 }
 
-// The new core's answer on fd 3: ready when its worker runs, or failed with the reason. A new core that exits first has failed.
 function waitForAck(next) {
   return new Promise((resolveAck) => {
     let text = '';
@@ -617,8 +607,6 @@ function acknowledge(message) {
   }
 }
 
-// Replaces this core with the code on disk. It returns { ok: false, reason } when the new code did not take over; this core then goes on.
-// On success this process exits, and the new core owns the host's pipe.
 async function handOver(reason) {
   if (digestOfFiles() === LOADED) return { ok: true, unchanged: true };
   const problem = await probeNewCore();
@@ -686,8 +674,6 @@ async function pump() {
   }
 }
 
-// Starts this core. A fresh start chooses the run. A respawn resumes the run and the host state of its session, and a takeover does the same
-// for a core that handed over, then acknowledges it on fd 3 once its worker runs and it can read the host's input.
 async function begin(mode) {
   const saved = mode === 'fresh' ? null : loadSession();
   if (mode !== 'fresh' && saved === null) throw new Error(`no session ${SESSION_NAME} to resume`);
@@ -736,8 +722,6 @@ async function pause(code) {
   process.exit(code);
 }
 
-// Changes under src/ are gathered for one debounce window. Only a module the worker loads counts: a module it does not load restarts nothing.
-// A window of those that are all reloadable modules is applied in place. Any other window restarts the worker.
 const changedSource = new Set();
 function onSourceChange(_event, file) {
   if (!file || !WATCHED_FILE.test(file)) return;

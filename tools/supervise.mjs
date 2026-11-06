@@ -40,12 +40,12 @@ delete process.env.GMNEW_HOST_INITIALIZE;
 let retryDelay = RETRY_MIN_MS;
 let retryTimer = null;
 let child = null;
-let state = 'starting'; // running, draining, restarting, or failed
+let state = 'starting';
 let hostInitialize = INITIAL_INITIALIZE;
 let failure = '';
 let stderrTail = '';
-const inflight = new Map(); // request ids sent to the worker and not yet answered
-const held = []; // host lines held while the worker restarts
+const inflight = new Map();
+const held = [];
 let handshake = null;
 let onDrained = null;
 let restartBusy = null;
@@ -275,7 +275,6 @@ function shutdown() {
   pause(0);
 }
 
-// A supervisor the relay started after the host's initialize replays the handshake to its worker, as a restart does.
 if (hostInitialize === null) {
   startWorker(START_REASON);
   state = 'running';
