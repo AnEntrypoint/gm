@@ -111,6 +111,7 @@ gm is one long-horizon worker: an MCP server that runs a task as one append-only
 
 - Node, Windows: spawn runs no .cmd or .bat without a shell, so npx and npm start through cmd.exe /d /s /c (launchOf in src/mcp-client.mjs). Not witnessed on Windows.
 - Native, Windows: no server stderr is captured (native/components/proc/child.cpp). Windows and macOS builds and arm are not verified here (DESIGN.md, Local cutover, 2026-11-04); CI covers them.
+- Open, deferred (orchestrate-5b, 2026-11-06; no Windows or arm hardware here): the babbb28 shell switch (cmd-only commands under Git bash), the Windows and macOS check-build run, and the arm64 gdb job are unverified. Clearing needs a Windows host or arm CI run; nothing here changes until then.
 - Process groups: background jobs and foreground shells run in their own group. The group kill is unverified on Windows (doctor reports it).
 - A Linux container where Chromium's sandbox is blocked refuses to start the browser (`no usable sandbox`). On this Ubuntu container /usr/bin/chromium is a wrapper that adds --no-sandbox.
 - The playwriter execute tool returns a value only for one expression, or for an async arrow that returns. A top-level const or let yields "no output"; keep values in `state`.
