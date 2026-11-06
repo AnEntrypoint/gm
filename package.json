@@ -7,6 +7,9 @@
   "bin": {
     "gm": "src/cli.mjs"
   },
+  "scripts": {
+    "check": "node tools/check.mjs"
+  },
   "engines": {
     "node": ">=22"
   },

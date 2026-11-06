@@ -1,0 +1,42 @@
+{
+ "gmSessions": 182,
+ "gmCalls": 14861,
+ "gmToolCounts": {
+  "mcp__gm__gm_codemode": 8140,
+  "mcp__gm__run_code": 5396,
+  "mcp__gm__next_context": 1090,
+  "mcp__gm__finish": 233,
+  "mcp__gm__job_status_wait_placeholder": 1,
+  "mcp__gm__grep": 1
+ },
+ "gmHost": {
+  "sessions": 160,
+  "medianCacheReadShare": 0.9685,
+  "usage": {
+   "input": 109628252,
+   "cacheCreate": 560686976,
+   "cacheRead": 51165852548,
+   "output": 161018784
+  }
+ },
+ "gmLive": {
+  "sessions": 22,
+  "medianCacheReadShare": 0.8305,
+  "usage": {
+   "input": 730,
+   "cacheCreate": 2744528,
+   "cacheRead": 16499623,
+   "output": 309343
+  }
+ },
+ "nonGm": {
+  "sessions": 310,
+  "medianCacheReadShare": 0.885,
+  "usage": {
+   "input": 6152378,
+   "cacheCreate": 45936611,
+   "cacheRead": 1972708637,
+   "output": 10339326
+  }
+ }
+}
