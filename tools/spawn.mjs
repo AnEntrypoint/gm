@@ -35,6 +35,7 @@ const READS = {
     return { path: `/api/resolve-adventure?address=${encodeURIComponent(address)}` };
   },
   comments: ([appId = APP_ID]) => ({ path: `/api/games/${appId}/comments` }),
+  access: ([world = WORLD_ID]) => ({ path: `/api/agent/v1/access?world=${encodeURIComponent(world)}` }),
   api: () => ({ path: "/api/agent/v1/api" }),
   llms: () => ({ path: "/llms.txt" }),
   job: ([id]) => {
@@ -94,6 +95,7 @@ reads (GET, always sent):
   social <me|relation|who|met|personas|places|hidden>
   resolve <@owner/world>          resolve a world's appId from its address
   comments [appId]                comments on a game
+  access [worldId]                world access check
   api | llms                      API door index, public agent guide
   job <characterJobId>            poll a character job
   docs [worldId] [section]        Tome reference, one section or all
