@@ -48,7 +48,7 @@ constexpr std::array<std::string_view, 7> query_args = {"js", "kind", "fromMono"
 
 const std::vector<VerbInfo>& verb_table() {
     static const std::vector<VerbInfo> table = {
-    {"read_file", "Read a text file, inside or outside the workspace, one page of at most 20000 characters. Lines are the default unit: offset is a 0-based line index, limit a line count (default: as many whole lines as fit), and total (the file in lines) and next (the line index of the next page, null at the end) count lines. truncated is true when the page stops before the end, totalBytes is the file size in bytes, and hint names the read that gets the rest. A line longer than the page is cut to its first 20000 characters, with cutLine true, and next is the line after it. unit \"chars\" counts offset, limit (1 to 20000, default 20000), total and next in characters instead. A path that starts with skill:// reads a served skill file, the text resources/read returns, and a skill:// uri that no served skill has is an error that names it.", R"json({"type":"object","properties":{"path":{"type":"string"},"offset":{"type":"number"},"limit":{"type":"number"},"unit":{"type":"string"}},"required":["path"]})json"},
+    {"read_file", "Read a text file, inside or outside the workspace, one page of at most 20000 characters. Lines are the default unit: offset is a 0-based line index, limit a line count (default: as many whole lines as fit), and total (the file in lines) and next (the line index of the next page, null at the end) count lines. truncated is true when the page stops before the end, totalBytes is the file size in bytes, and hint names the read that gets the rest; a truncated output also ends with a [gm-read: truncated at N of M bytes; ...] line that gives the bytes shown, the file size and that read. A line longer than the page is cut to its first 20000 characters, with cutLine true, and next is the line after it. unit \"chars\" counts offset, limit (1 to 20000, default 20000), total and next in characters instead. A path that starts with skill:// reads a served skill file, the text resources/read returns, and a skill:// uri that no served skill has is an error that names it.", R"json({"type":"object","properties":{"path":{"type":"string"},"offset":{"type":"number"},"limit":{"type":"number"},"unit":{"type":"string"}},"required":["path"]})json"},
     {"write_file", "Write a text file, inside or outside the workspace, creating parent directories. Replacing an existing file with content less than half its prior byte size adds shrunkByBytes, shrinkRatio and shrinkWarning to the result (never blocks the write); new files and normal rewrites are unchanged.", R"json({"type":"object","properties":{"path":{"type":"string"},"content":{"type":"string"}},"required":["path","content"]})json"},
     {"edit_file", "Replace old with new in a text file, inside or outside the workspace. old must occur once, unless replaceAll is true.", R"json({"type":"object","properties":{"path":{"type":"string"},"old":{"type":"string"},"new":{"type":"string"},"replaceAll":{"type":"boolean"}},"required":["path","old","new"]})json"},
     {"stat_file", "Type, size and mtime of a path, inside or outside the workspace, as JSON.", R"json({"type":"object","properties":{"path":{"type":"string"}},"required":["path"]})json"},
@@ -83,7 +83,11 @@ std::uint64_t file_size_of(const std::filesystem::path& path) {
 void set_cut_notice(json::Value& reply, std::uint64_t total_bytes, const std::string* rest) {
     reply.set("truncated", rest != nullptr);
     reply.set("totalBytes", total_bytes);
-    if (rest != nullptr) reply.set("hint", *rest);
+    if (rest == nullptr) return;
+    reply.set("hint", *rest);
+    const std::string page = reply.find("output")->as_string();
+    const std::string separator = page.empty() || page.back() == '\n' ? "" : "\n";
+    reply.set("output", page + separator + "[gm-read: truncated at " + std::to_string(page.size()) + " of " + std::to_string(total_bytes) + " bytes; " + *rest + "]");
 }
 
 std::vector<std::size_t> line_starts(std::string_view text) {

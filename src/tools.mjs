@@ -47,8 +47,11 @@ async function readText(path) {
   }
 }
 
-function cutNotice(size, rest) {
-  return { truncated: rest !== null, totalBytes: size, ...(rest === null ? {} : { hint: rest }) };
+function cutPage(page, size, rest) {
+  if (rest === null) return { ...page, truncated: false, totalBytes: size };
+  const shown = Buffer.byteLength(page.output, 'utf8');
+  const separator = page.output === '' || page.output.endsWith('\n') ? '' : '\n';
+  return { ...page, output: `${page.output}${separator}[gm-read: truncated at ${shown} of ${size} bytes; ${rest}]`, truncated: true, totalBytes: size, hint: rest };
 }
 
 function isBinary(path) {
@@ -62,33 +65,33 @@ function isBinary(path) {
   }
 }
 
-async function readCharPage(path, offset, limit) {
+export async function readCharPage(path, offset, limit) {
   if (!Number.isInteger(offset) || offset < 0) return { ok: false, error: 'offset must be a whole number of characters, zero or more' };
   if (!Number.isInteger(limit) || limit < 1 || limit > OUTPUT_PAGE) return { ok: false, error: `limit must be a whole number from 1 to ${OUTPUT_PAGE}` };
   const text = await readText(path);
   const size = statSync(path).size;
   const end = Math.min(offset + limit, text.length);
   const next = end < text.length ? end : null;
-  return { ok: true, output: text.slice(offset, end), total: text.length, offset, next, ...cutNotice(size, next === null ? null : `pass unit: "chars", offset: ${next} and limit: ${OUTPUT_PAGE} to read the rest`) };
+  return cutPage({ ok: true, output: text.slice(offset, end), total: text.length, offset, next }, size, next === null ? null : `pass unit: "chars", offset: ${next} and limit: ${OUTPUT_PAGE} to read the rest`);
 }
 
-async function readLinePage(path, offset, limit) {
+export async function readLinePage(path, offset, limit) {
   if (!Number.isInteger(offset) || offset < 0) return { ok: false, error: 'offset must be a whole number of lines, zero or more' };
   if (limit !== Infinity && (!Number.isInteger(limit) || limit < 1)) return { ok: false, error: 'limit must be a whole number of lines, one or more' };
   const text = await readText(path);
   const size = statSync(path).size;
   const starts = lineStarts(text);
   const total = starts.length;
-  if (offset >= total) return { ok: true, unit: 'lines', output: '', total, offset, next: null, ...cutNotice(size, null) };
+  if (offset >= total) return cutPage({ ok: true, unit: 'lines', output: '', total, offset, next: null }, size, null);
   const lineEnd = (line) => (line + 1 < total ? starts[line + 1] : text.length);
   const begin = starts[offset];
   if (lineEnd(offset) - begin > OUTPUT_PAGE) {
-    return { ok: true, unit: 'lines', output: text.slice(begin, begin + OUTPUT_PAGE), cutLine: true, total, offset, next: offset + 1 < total ? offset + 1 : null, ...cutNotice(size, `line ${offset} is longer than a page: pass unit: "chars", offset: ${begin + OUTPUT_PAGE} and limit: ${OUTPUT_PAGE} to read the rest`) };
+    return cutPage({ ok: true, unit: 'lines', output: text.slice(begin, begin + OUTPUT_PAGE), cutLine: true, total, offset, next: offset + 1 < total ? offset + 1 : null }, size, `line ${offset} is longer than a page: pass unit: "chars", offset: ${begin + OUTPUT_PAGE} and limit: ${OUTPUT_PAGE} to read the rest`);
   }
   let last = offset + 1;
   while (last < total && last - offset < limit && lineEnd(last) - begin <= OUTPUT_PAGE) last += 1;
   const next = last < total ? last : null;
-  return { ok: true, unit: 'lines', output: text.slice(begin, lineEnd(last - 1)), total, offset, next, ...cutNotice(size, next === null ? null : `pass offset: ${next} and limit: ${total - next} to read the rest`) };
+  return cutPage({ ok: true, unit: 'lines', output: text.slice(begin, lineEnd(last - 1)), total, offset, next }, size, next === null ? null : `pass offset: ${next} and limit: ${total - next} to read the rest`);
 }
 
 function lineStarts(text) {

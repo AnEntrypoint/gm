@@ -30,8 +30,11 @@ if (!existsSync(binary)) {
     if (witness.status !== 0) failures.push('redaction witness');
 }
 
+const readCheck = spawnSync(process.execPath, [join(root, 'tools', 'check-read-truncation.mjs'), ...(existsSync(binary) ? [binary] : [])], { cwd: root, stdio: 'inherit', timeout: 120000 });
+if (readCheck.status !== 0) failures.push('read truncation check');
+
 if (failures.length) {
     console.error(`check: ${failures.length} failure(s)\n- ${failures.join('\n- ')}`);
     process.exit(1);
 }
-console.log('check: gate, unit-test scan, g3 snapshot and redaction witness passed');
+console.log('check: gate, unit-test scan, g3 snapshot, redaction witness and read truncation check passed');
