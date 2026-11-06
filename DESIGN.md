@@ -1451,9 +1451,9 @@ Rationale the comment sweep moved out of tools/ (relay.mjs is held and unchanged
 - Effect: a body that waits on a timer fails on native only. The parity harness does not cover it.
 - Recorded for the owner, not implemented in this cycle.
 
-## Documented gaps: console sequence numbers and stop order (2026-11-06)
+## Documented gaps: console sequence numbers, stop order and prefix hash (2026-11-06)
 
 - run_code console flood, run_code console format, run_code background console: documented gap. Node logs refusal and code-load events earlier in the run that native does not, so the sequence number of the body's events is one or two lower in native. The result and the console output match; only the sequence field differs.
 - query_log body-console: documented gap, the same cause. Its seq and body fields are sequence numbers, and native's are one or two lower.
 - finish: documented gap, accepted by the owner. A background body that finish stops logs its last code-call and its body-console after the finish result in Node and before it in native, so native's finish sequence is two higher. Node's order is the reference; nothing here changes it.
-- Not mapped to a category in the Debt review above: next_context prefixSha (parity row 1). It differs by the run_code description hash, not by a sequence number, and it is not an after-finish row.
+- next_context prefixSha (parity row 1): documented gap. The run_code description changed, so the prefix hash differs; it is not a sequence-number gap and not an after-finish row. Not mapped to a category in the Debt review above.
