@@ -119,7 +119,7 @@ gm is one long-horizon worker: an MCP server that runs a task as one append-only
 ## Owner decisions (2026-11-06, through orchestrate)
 
 1. Native ships; Node stays the parity reference. Reversible by one entry change. The user-wide entry is unchanged (DESIGN.md, Local cutover of the native gm, 2026-11-04).
-2. Roots and elicitation stay unused; question rows carry interactivity (DESIGN.md decisions 2 and 4).
+2. Roots and elicitation stay unused; question rows carry interactivity (DESIGN.md, Owner decisions on the five open questions, 2026-11-06).
 3. Negotiate protocol 2026-07-28 behind a capability flag that is off by default, with a witness test. It does not become the default until a client test exists (DESIGN.md, Owner decisions on the five open questions, 2026-11-06).
 4. Drain and log a body's console output, capped. Implemented (DESIGN.md, Body console drained and logged, capped).
 5. The project does not close until the minimal tool set is run and G3 (cache effect, measured by the gm agent from host transcripts) is recorded. Both are recorded (DESIGN.md, Item 5).
