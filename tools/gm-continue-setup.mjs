@@ -1,8 +1,4 @@
 #!/usr/bin/env node
-// gm-continue setup. It reads the rows (work/rows) and the git state, and it writes nothing. It runs before any work starts: it
-// plans the whole batch of actionable rows, and it prints the handoff only after the witness pass has run.
-// Flags: --repo <dir> (default: the current directory), --extra <dir> (more rows), --before <file> (resolved row ids before the
-// last pass), --pass <file> (the last pass record: attempted rows, each row's outcome, and witnessPass).
 import { execFileSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';

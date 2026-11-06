@@ -1,11 +1,4 @@
 #!/usr/bin/env node
-// Supervisor for the worker, run by tools/relay.mjs, which holds the host's stdio. It runs the worker (src/mcp.mjs) as
-// a child. When a file under src/ or skills/ changes, it holds new host requests, waits for calls in flight to answer,
-// asks the worker to pause (SIGTERM, then SIGKILL after EXIT_MS), starts a new worker on the same run directory, replays
-// the MCP handshake, and tells the host that its tool, prompt and resource lists may have changed. The new worker resumes
-// the run from its log. A call in flight is never interrupted or answered with an error: the restart waits until its
-// result is logged. Every exit of this file pauses the worker first, with SIGTERM, so the run stays open: SIGTERM, SIGINT and
-// the end of stdin all pause it. The worker also pauses if this file is killed, because it runs with --supervised yes.
 import { spawn } from 'node:child_process';
 import { existsSync, readFileSync, watch } from 'node:fs';
 import { createInterface } from 'node:readline';
@@ -18,8 +11,6 @@ const WATCHED = [join(ROOT, 'src'), join(ROOT, 'skills')];
 const WATCHED_FILE = /\.(mjs|md)$/;
 const DEBOUNCE_MS = 250;
 const EXIT_MS = 5000;
-// The worker is restarted when its resident memory is above this, checked after each line it sends (see onChildLine). A restart waits
-// for calls in flight, and the run resumes from its log. The limit must be above the worker's own start, about 75 MB.
 const MEMORY_LIMIT_MB = Number(process.env.GMNEW_MEMORY_LIMIT_MB ?? 512);
 const RETRY_MIN_MS = 1000;
 const RETRY_MAX_MS = 30000;
@@ -29,8 +20,6 @@ const HOST_CHANGED = ['notifications/tools/list_changed', 'notifications/prompts
 const DEFAULT_INITIALIZE = { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'gm-supervisor', version: '1' } };
 const READY_METHOD = 'gm/ready';
 
-// The relay passes the run directory and the worker options in argv, and the start reason and the host's initialize
-// in the environment. Both are removed from the environment here, so the worker and its jobs do not inherit them.
 const argv = process.argv.slice(2);
 const START_REASON = process.env.GMNEW_CORE_REASON || null;
 const INITIAL_INITIALIZE = process.env.GMNEW_HOST_INITIALIZE ? JSON.parse(process.env.GMNEW_HOST_INITIALIZE) : null;
@@ -55,8 +44,6 @@ function writeHost(message) {
   process.stdout.write(`${JSON.stringify(message)}\n`);
 }
 
-// The worker's state, for the relay: running when a start or a restart has answered the handshake, failed when it did not. The relay reads
-// this message and does not forward it to the host. The update check waits for it after a pull, to decide whether to roll back.
 function reportWorker(next, reason) {
   writeHost({ jsonrpc: '2.0', method: 'gm/worker', params: reason === undefined ? { state: next } : { state: next, reason } });
 }
@@ -77,7 +64,6 @@ function onHostLine(line) {
   if (line.trim() === '') return;
   const message = parse(line);
   if (message?.method === READY_METHOD) {
-    // The relay's probe. It is answered once this supervisor is running, so the relay knows the message loop is alive.
     if (state === 'running') writeHost({ jsonrpc: '2.0', id: message.id, result: {} });
     else hold(line, message);
     return;
@@ -99,7 +85,6 @@ function hold(line, message) {
   held.push(line);
 }
 
-// The resident memory of a child process in MB, read from /proc. Zero where /proc is missing, so the limit is not applied there.
 function residentMB(proc) {
   try {
     const match = /VmRSS:\s+(\d+)/.exec(readFileSync(`/proc/${proc.pid}/status`, 'utf8'));
@@ -150,8 +135,6 @@ function onWorkerExit(proc, code, signal) {
   if (state === 'running') failWith(`the worker exited unexpectedly (${how})`);
 }
 
-// A failed restart retries by itself, with no source change needed: 1 s, then doubling to a 30 s cap. Calls that arrive
-// while it is failed are answered with the failure text at once, so none is held silently.
 function scheduleRetry() {
   clearTimeout(retryTimer);
   const delay = retryDelay;
@@ -176,7 +159,6 @@ function failWith(reason) {
   scheduleRetry();
 }
 
-// No timeout: a restart waits until every call in flight has its result logged.
 function waitForDrain() {
   if (inflight.size === 0) return Promise.resolve();
   return new Promise((resolveDrain) => {
@@ -269,8 +251,6 @@ function onSourceChange(_event, file) {
   watchTimer = setTimeout(() => scheduleRestart(`changed: ${file}`), DEBOUNCE_MS);
 }
 
-// The end of this file's stdin, or SIGINT, pauses the worker. Ending the worker's stdin would close the run, and a closed
-// run stays closed, so the worker is stopped with SIGTERM instead.
 function shutdown() {
   pause(0);
 }
@@ -286,12 +266,9 @@ for (const dir of WATCHED) if (existsSync(dir)) watch(dir, { recursive: true }, 
 createInterface({ input: process.stdin, crlfDelay: Infinity }).on('line', onHostLine).on('close', shutdown);
 process.once('SIGINT', shutdown);
 process.once('SIGTERM', () => pause(0));
-// A crash this file can catch pauses the worker before it exits, so the run stays open for the next start.
 process.on('uncaughtException', (err) => crash(err));
 process.on('unhandledRejection', (err) => crash(err));
 
-// The relay replaces this supervisor with SIGTERM. The calls in flight have all been answered by then. The worker is
-// paused, so its run stays open for the next start, and its jobs are stopped and logged.
 async function pause(code) {
   await stopWorker();
   process.exit(code);

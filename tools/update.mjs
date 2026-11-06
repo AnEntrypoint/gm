@@ -1,12 +1,3 @@
-// Updates from the repository. A checkout of gm is a clone of origin main, so an update is a fast-forward pull. A check fetches origin.
-// When main is ahead, the checks run on the new commit first, in a clone of the checkout at that commit, so a commit they reject never reaches
-// the checkout. A commit that changes src/ or tools/ must also load its core and start its worker there. The pull waits while a tool call,
-// a body or a job is running, and it never runs in a checkout with changes to tracked files. Then the checkout is fast-forwarded and npm ci
-// runs when the lock file changed. A pull that changes a module the worker loads (src/worker-modules.json) restarts the worker, and the check
-// waits for the worker's report. When the worker does not start after a pull, the pull is rolled back by a reset, except a pull that changed
-// the core too: that one is reported and not reset. A diverged history is reported and left alone. A check that cannot reach origin is reported
-// and skipped. The checks never throw. A pull that changes tools/, other than the relay (tools/relay.mjs), replaces the core, and its check
-// waits for the worker unless the core is the same code.
 import { execFile, spawn } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
@@ -19,7 +10,6 @@ import { RELOADABLE } from '../src/hot-config.mjs';
 import { disabledServers } from '../src/mcp-client.mjs';
 
 const run = promisify(execFile);
-// A push to origin reaches a running checkout within one check. The check is a fetch of origin, which changes nothing when origin has not moved.
 export const DEFAULT_UPDATE_MS = 60000;
 const FIRST_CHECK_MS = 30000;
 const SHORT_MS = 10000;
@@ -31,8 +21,6 @@ const WORKER_MS = 60000;
 const WAIT_RETRY_MS = 60000;
 const START_MS = 20000;
 const START_ID = 'gm-candidate-start';
-// The targets that were refused by the gate or rolled back, with the reason. Until origin moves to another commit, a refused target is not
-// tried again, so a broken commit on main is not pulled, failed and rolled back at every check.
 const refused = new Map();
 
 const firstLine = (err) => String(err?.stderr || err?.message || err).split('\n').find((line) => line.trim() !== '') ?? 'unknown error';
@@ -46,7 +34,6 @@ async function install(root) {
   await run('npm', ['ci', '--no-audit', '--no-fund'], { cwd: root, timeout: INSTALL_MS });
 }
 
-// The gate runs in its own process, so a crash in it cannot take the caller down. It prints its verdict as JSON.
 async function gate(root) {
   const script = `import(${JSON.stringify(pathToFileURL(join(root, 'src', 'gate.mjs')).href)})`
     + `.then((m) => m.runGate(${JSON.stringify(root)}))`
@@ -75,9 +62,6 @@ export function loadedByWorker(names, list) {
   return list === null ? names : names.filter((name) => list.includes(name));
 }
 
-// The commit checked in a clone of the checkout at that commit. The clone shares the checkout's objects, and it creates no branch in the
-// checkout, so the checkout is not touched. Its node_modules is shared with the checkout, or installed when the lock file changed. When the
-// commit changes src/ or tools/, the clone must also start: its core loads, and its worker answers initialize.
 async function candidate(root, target, lockChanged, starts) {
   const dir = await mkdtemp(join(tmpdir(), 'gm-candidate-'));
   try {
@@ -97,8 +81,6 @@ async function candidate(root, target, lockChanged, starts) {
   }
 }
 
-// The new code must load and start before the checkout moves: the core is probed, then the worker must answer initialize. A commit that fails
-// here is refused, so the checkout keeps the code that is running, and its worker keeps running.
 async function startProblem(dir) {
   try {
     await run(process.execPath, ['tools/core.mjs', '--probe'], { cwd: dir, timeout: START_MS });
@@ -139,8 +121,6 @@ async function workerStarts(dir) {
   });
 }
 
-// One check. It returns what it did as { state, ... }. busy() returns why the worker's work must not be interrupted now,
-// or null. nextWorkerEvent(ms) resolves with the supervisor's next report of the worker's state, or null after ms.
 export async function checkForUpdate(root, { log = () => {}, busy = null, nextWorkerEvent = null, replaceCore = null } = {}) {
   try {
     await git(root, ['remote', 'get-url', 'origin']);
@@ -178,14 +158,12 @@ async function apply(root, prev, target, ahead, log, { busy, nextWorkerEvent, re
     refused.set(target, reason);
     return { state: 'rejected', head: prev, target, reason };
   }
-  // Checked again after the candidate: a body or a job may have started while the commit was checked.
   const waiting = busy?.() ?? null;
   if (waiting) return { state: 'waiting', reason: waiting, head: prev, target, ahead };
   const dirty = await git(root, ['status', '--porcelain', '--untracked-files=no']);
   if (dirty !== '') return { state: 'dirty', head: prev, target, ahead };
   const srcFiles = changed.filter((file) => file.startsWith('src/')).map((file) => file.slice('src/'.length));
   const restarts = loadedByWorker(srcFiles, verdict.workers).some((name) => !RELOADABLE.includes(name));
-  // The wait for the restart starts before the pull, so the worker's report of it is not missed.
   const outcome = restarts && nextWorkerEvent ? nextWorkerEvent(WORKER_MS) : null;
   let landed = false;
   try {
@@ -196,8 +174,6 @@ async function apply(root, prev, target, ahead, log, { busy, nextWorkerEvent, re
     if (!landed) return { state: 'failed', error: firstLine(err) };
     return rollback(root, prev, target, lockChanged, restarts, `the install failed (${firstLine(err)})`, { log, nextWorkerEvent });
   }
-  // A pull that changes the core replaces it. The new core is checked and loaded before it takes over, and it starts the worker itself, so its
-  // take-over is the worker's answer. A core that is the same code takes over with nothing to do, so the worker's report decides below.
   if (replaces && replaceCore) {
     const handed = await replaceCore(`pulled ${short(target)}`);
     if (!handed.ok) {
@@ -222,8 +198,6 @@ async function apply(root, prev, target, ahead, log, { busy, nextWorkerEvent, re
   return rollback(root, prev, target, lockChanged, restarts, why, { log, nextWorkerEvent });
 }
 
-// The next report that the worker is running, or null at the deadline. A report that it failed is an old attempt, as the supervisor keeps
-// retrying the broken code until the checkout is reset, so it is not taken as the outcome of the rollback.
 async function untilRunning(nextWorkerEvent, deadline) {
   for (;;) {
     const left = deadline - Date.now();
@@ -234,8 +208,6 @@ async function untilRunning(nextWorkerEvent, deadline) {
   }
 }
 
-// Undoes a pull: the checkout goes back to the commit before it, and the worker is restarted on the old code by the core's watch on src/ and
-// skills/. The rollback is logged. When the worker does not start on the old code either, the state is stuck, for a person to check.
 async function rollback(root, prev, target, lockChanged, restarts, why, { log, nextWorkerEvent }) {
   refused.set(target, why);
   const back =restarts && nextWorkerEvent ? untilRunning(nextWorkerEvent, Date.now() + WORKER_MS) : null;
@@ -287,7 +259,6 @@ export function startUpdates({ root, everyMs = DEFAULT_UPDATE_MS, log = () => {}
     try {
       const result = await checkForUpdate(root, { log, busy, nextWorkerEvent, replaceCore });
       if (result.state === 'waiting') {
-        // The pull waits, and it is tried again soon, so a body or a job that ends does not wait for the next check. It is logged once for each wait.
         if (lastWait !== result.reason) log(describe(result));
         lastWait = result.reason;
         retry = setTimeout(tick, WAIT_RETRY_MS);

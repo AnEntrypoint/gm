@@ -1341,3 +1341,85 @@ Rationale the comment sweep moved out of src/ (one section per module group). Ru
 - At a server start the body directories of runs that have already ended are deleted; a run with no end event is left alone, because it may still be resumed.
 - Without --task, the run's task is the prompt the session sends (the gm prompt's task argument), and the run says so in its start event.
 - Under a supervisor, the end of stdin means the supervisor has gone, so the run is paused, not closed: a closed run stays closed, and a paused run has no end event, so the next start resumes it.
+
+## Knowledge overflow from tools/ (2026-11-06)
+
+Rationale the comment sweep moved out of tools/ (relay.mjs is held and unchanged). Each source comment was removed after its text was written here.
+
+### tools/core.mjs
+
+- tools/relay.mjs runs this file and passes the host's lines through it, so the host's connection never changes.
+- The core runs the worker (src/mcp.mjs) as a child. When a module the worker loads changes (src/worker-modules.json) or a skill changes, the core holds new host requests, waits for the calls in flight to answer, pauses the worker (SIGTERM), starts a new one on the same run directory, replays the MCP handshake, and tells the host which of its lists changed, by comparing digests.
+- The new worker resumes the run from its log. A call in flight is never interrupted or answered with an error.
+- The core also runs the update check (tools/update.mjs). When a file under tools/ changes, the core replaces itself: the new code is checked and loaded first, then this core pauses its worker, and the new core takes over this process's stdin and stdout, so the host's pipe stays open.
+- The new core starts its worker and answers on fd 3, and this process exits with code 75; the relay reads that the pipe is still in use, so it starts no second core.
+- Every exit of this file pauses the worker first, so the run stays open.
+- The probe loads this file and its imports, then stops before any side effect; a handover runs it before the new code takes over.
+- The flag is true while a restart decides which list notices the host gets.
+- The core keeps a digest of each list as the host last fetched it, by kind; host lines are held while the worker starts, restarts or the core hands over; host input after its last line break is kept.
+- The core keeps the ids of host requests sent to the worker, with their methods; the ids of the host's run_shell calls in flight, which a cancel ends with no answer (see cancelShell); and the ids the core sent to the worker itself, with the function that takes each reply.
+- Transitions waiting to run are a restart of the worker, or a handover to new code.
+- --run-dir names the run directory of a fresh session; --runs with --resume resumes it; --runs alone starts a new one under it; with none of them the run is <workspace>/runs/<session>, so a run never lands in the checkout that holds this code.
+- The start time of a process, in clock ticks since boot, is read from /proc; it tells a reused pid from the relay that started the session.
+- The held lines and the input after the last line break are written only by a handover, so a respawn never replays them twice.
+- The resident memory of a child process in MB is read from /proc; zero where /proc is missing, so the limit is not applied there.
+- Host input is framed by the core itself, so the input after the last line break can be handed to a new core.
+- A run_shell call is killed by a cancel, and the worker sends no answer for it (src/mcp.mjs, cancelRequest); the core stops counting such a request when its cancel passes, or a restart would wait for an answer that never comes.
+- Any other request is answered by the worker, so it stays counted until that answer.
+- A worker that exits 0 with the run open paused itself on SIGTERM (src/mcp.mjs pauseRun), so a restart follows at once and new calls are held.
+- The worker's state for the update check: a report is taken once, by the next wait that is still open.
+- A failed start retries by itself, with no change needed: 1 s, then doubling to a 30 s cap; calls that arrive while it is failed are answered with the failure text at once, so none is held silently.
+- There is no timeout on a restart: it waits until every call in flight has its result logged.
+- After a restart, the lists the new worker serves are compared with the lists the host last fetched; a kind that differs gets its list notice, a kind the host has never fetched gets none, and nothing is sent when nothing differs.
+- A change to reloadable modules is applied in the running worker: the worker builds the new code beside the old and swaps it in only when every module loads; a refused reload leaves the old code serving, and the core says why; a worker that does not answer is restarted.
+- A status file that is being written is read again at the next check.
+- Transitions run one at a time: a restart is not queued twice, and a queued handover makes a queued restart unneeded, because the new code starts its worker itself.
+- A refresh is redundant when a transition is queued: a restart announces the lists itself, and a queued refresh already covers this change.
+- The end of this process pauses the worker first, with SIGTERM, so its run stays open for the next start.
+- A skill file is served in place, so a change to it only refreshes the host's lists; it has its own timer, so a change to src/ is not lost.
+- A crash this file can catch pauses the worker before it exits, so the run stays open for the respawn.
+
+### tools/gm-continue-setup.mjs
+
+- It reads the rows (work/rows) and the git state, and writes nothing. It runs before any work starts: it plans the whole batch of actionable rows, and it prints the handoff only after the witness pass has run.
+- Flags: --repo <dir> (default: the current directory), --extra <dir> (more rows), --before <file> (resolved row ids before the last pass), --pass <file> (the last pass record: attempted rows, each row's outcome, and witnessPass).
+
+### tools/supervise.mjs
+
+- Supervisor for the worker, run by tools/relay.mjs, which holds the host's stdio. It runs the worker (src/mcp.mjs) as a child.
+- When a file under src/ or skills/ changes, it holds new host requests, waits for calls in flight to answer, asks the worker to pause (SIGTERM, then SIGKILL after EXIT_MS), starts a new worker on the same run directory, replays the MCP handshake, and tells the host that its tool, prompt and resource lists may have changed.
+- The new worker resumes the run from its log. A call in flight is never interrupted or answered with an error: the restart waits until its result is logged.
+- Every exit of this file pauses the worker first, with SIGTERM, so the run stays open: SIGTERM, SIGINT and the end of stdin all pause it. The worker also pauses if this file is killed, because it runs with --supervised yes.
+- The worker is restarted when its resident memory is above a limit, checked after each line it sends (see onChildLine); a restart waits for calls in flight, and the run resumes from its log. The limit must be above the worker's own start, about 75 MB.
+- The relay passes the run directory and the worker options in argv, and the start reason and the host's initialize in the environment; both are removed from the environment here, so the worker and its jobs do not inherit them.
+- The worker's state, for the relay: running when a start or a restart has answered the handshake, failed when it did not. The relay reads this message and does not forward it to the host; the update check waits for it after a pull, to decide whether to roll back.
+- The relay's probe is answered once this supervisor is running, so the relay knows the message loop is alive.
+- The resident memory of a child process in MB is read from /proc; zero where /proc is missing, so the limit is not applied there.
+- A failed restart retries by itself, with no source change needed: 1 s, then doubling to a 30 s cap; calls that arrive while it is failed are answered with the failure text at once, so none is held silently.
+- There is no timeout on a restart: it waits until every call in flight has its result logged.
+- The end of this file's stdin, or SIGINT, pauses the worker: ending the worker's stdin would close the run, and a closed run stays closed, so the worker is stopped with SIGTERM instead.
+- A crash this file can catch pauses the worker before it exits, so the run stays open for the next start.
+- The relay replaces this supervisor with SIGTERM; the calls in flight have all been answered by then, the worker is paused so its run stays open for the next start, and its jobs are stopped and logged.
+
+### tools/update.mjs
+
+- Updates from the repository. A checkout of gm is a clone of origin main, so an update is a fast-forward pull; a check fetches origin.
+- When main is ahead, the checks run on the new commit first, in a clone of the checkout at that commit, so a commit they reject never reaches the checkout.
+- A commit that changes src/ or tools/ must also load its core and start its worker there.
+- The pull waits while a tool call, a body or a job is running, and it never runs in a checkout with changes to tracked files. Then the checkout is fast-forwarded, and npm ci runs when the lock file changed.
+- A pull that changes a module the worker loads (src/worker-modules.json) restarts the worker, and the check waits for the worker's report.
+- When the worker does not start after a pull, the pull is rolled back by a reset, except a pull that changed the core too: that one is reported and not reset.
+- A diverged history is reported and left alone. A check that cannot reach origin is reported and skipped. The checks never throw.
+- A pull that changes tools/, other than the relay (tools/relay.mjs), replaces the core, and its check waits for the worker unless the core is the same code.
+- A push to origin reaches a running checkout within one check; the check is a fetch of origin, which changes nothing when origin has not moved.
+- The targets refused by the gate or rolled back are kept with the reason. Until origin moves to another commit, a refused target is not tried again, so a broken commit on main is not pulled, failed and rolled back at every check.
+- The gate runs in its own process, so a crash in it cannot take the caller down; it prints its verdict as JSON.
+- The commit is checked in a clone of the checkout at that commit. The clone shares the checkout's objects and creates no branch in the checkout, so the checkout is not touched; its node_modules is shared with the checkout, or installed when the lock file changed.
+- The new code must load and start before the checkout moves: the core is probed, then the worker must answer initialize. A commit that fails here is refused, so the checkout keeps the code that is running, and its worker keeps running.
+- One check returns what it did as { state, ... }. busy() returns why the worker's work must not be interrupted now, or null; nextWorkerEvent(ms) resolves with the supervisor's next report of the worker's state, or null after ms.
+- The candidate is checked again after the commit check, because a body or a job may have started while the commit was checked.
+- The wait for the restart starts before the pull, so the worker's report of it is not missed.
+- A pull that changes the core replaces it: the new core is checked and loaded before it takes over, and it starts the worker itself, so its take-over is the worker's answer; a core that is the same code takes over with nothing to do, so the worker's report decides.
+- The wait returns the next report that the worker is running, or null at the deadline; a report that it failed is an old attempt, because the supervisor keeps retrying the broken code until the checkout is reset, so it is not taken as the outcome of the rollback.
+- A rollback undoes a pull: the checkout goes back to the commit before it, and the worker is restarted on the old code by the core's watch on src/ and skills/. The rollback is logged; when the worker does not start on the old code either, the state is stuck, for a person to check.
+- The pull waits and is tried again soon, so a body or a job that ends does not wait for the next check; it is logged once for each wait.

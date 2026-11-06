@@ -1,14 +1,4 @@
 #!/usr/bin/env node
-// The gm core. tools/relay.mjs runs this file and passes the host's lines through it, so the host's connection never changes.
-// The core runs the worker (src/mcp.mjs) as a child. When a module the worker loads changes (src/worker-modules.json) or a skill changes,
-// the core holds new host requests,
-// waits for the calls in flight to answer, pauses the worker (SIGTERM), starts a new one on the same run directory, replays the MCP
-// handshake, and tells the host which of its lists changed, by comparing digests. The new worker resumes the run from its log. A call
-// in flight is never interrupted or answered with an error.
-// The core also runs the update check (tools/update.mjs). When a file under tools/ changes, the core replaces itself. The new code is
-// checked and loaded first. Then this core pauses its worker, and the new core takes over this process's stdin and stdout, so the host's
-// pipe stays open. The new core starts its worker and answers on fd 3, and this process exits with code 75. The relay reads that the
-// pipe is still in use, so it starts no second core. Every exit of this file pauses the worker first, so the run stays open.
 import { spawn } from 'node:child_process';
 import { createHash, randomBytes } from 'node:crypto';
 import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, watch, writeFileSync, writeSync } from 'node:fs';
@@ -46,7 +36,6 @@ const NOTICE = { tools: 'notifications/tools/list_changed', prompts: 'notificati
 const PAUSED_BEFORE_ANSWER = 'the worker paused before it answered this call; query_log shows what it did, then repeat the call if it did nothing';
 
 const argv = process.argv.slice(2);
-// The probe loads this file and its imports, then stops before any side effect. A handover runs it before the new code takes over.
 if (argv.includes('--probe')) {
   process.stdout.write('probe ok\n');
   process.exit(0);
@@ -61,16 +50,16 @@ const LOADED = digestOfFiles();
 
 let child = null;
 let state = 'starting';
-let swapping = false; // true while a restart decides which list notices the host gets
+let swapping = false;
 let runDir = null;
 let hostInitialize = null;
-let seen = {}; // a digest of each list as the host last fetched it, by kind
-let heldLines = []; // host lines held while the worker starts, restarts or the core hands over
-let inputBuffer = ''; // host input after its last line break
+let seen = {};
+let heldLines = [];
+let inputBuffer = '';
 let inputOn = false;
-const inflight = new Map(); // ids of host requests sent to the worker, with their methods
-const shellCalls = new Set(); // ids of the host's run_shell calls in flight, which a cancel ends with no answer (see cancelShell)
-const coreRequests = new Map(); // ids the core sent to the worker itself, with the function that takes each reply
+const inflight = new Map();
+const shellCalls = new Set();
+const coreRequests = new Map();
 let handshake = null;
 let onDrained = null;
 let failure = '';
@@ -78,7 +67,7 @@ let stderrTail = '';
 let retryDelay = RETRY_MIN_MS;
 let retryTimer = null;
 const workerWaiters = [];
-const pending = []; // transitions waiting to run: a restart of the worker, or a handover to new code
+const pending = [];
 let pumping = false;
 let sourceTimer = null;
 let skillTimer = null;
@@ -136,8 +125,6 @@ function newRunId() {
   return `${stamp}-${randomBytes(3).toString('hex')}`;
 }
 
-// The run directory of a fresh session. --run-dir names it; --runs with --resume resumes it; --runs alone starts a new one under it. With none
-// of them, the run is <workspace>/runs/<session>, so a run never lands in the checkout that holds this code.
 function chooseRunDir(args) {
   const explicit = optionValue(args, '--run-dir');
   if (explicit !== undefined) return resolve(explicit);
@@ -159,7 +146,6 @@ function chooseRunDir(args) {
   return join(root, newRunId());
 }
 
-// The start time of a process, in clock ticks since boot, from /proc. It tells a reused pid from the relay that started the session.
 function startTimeOf(pid) {
   try {
     const text = readFileSync(`/proc/${pid}/stat`, 'utf8');
@@ -177,7 +163,6 @@ function loadSession() {
   }
 }
 
-// The held lines and the input after the last line break are written only by a handover, so a respawn never replays them twice.
 function saveSession(extra = {}) {
   if (runDir === null) return;
   mkdirSync(SESSIONS, { recursive: true });
@@ -186,7 +171,6 @@ function saveSession(extra = {}) {
   renameSync(tmp, SESSION_FILE);
 }
 
-// The resident memory of a child process in MB, read from /proc. Zero where /proc is missing, so the limit is not applied there.
 function residentMB(proc) {
   try {
     const match = /VmRSS:\s+(\d+)/.exec(readFileSync(`/proc/${proc.pid}/status`, 'utf8'));
@@ -200,7 +184,6 @@ function firstLine(text) {
   return String(text).split('\n').find((line) => line.trim() !== '') ?? '';
 }
 
-// Host input. The core frames it itself, so the input after the last line break can be handed to a new core.
 function startInput() {
   if (inputOn) return;
   inputOn = true;
@@ -248,9 +231,6 @@ function onHostLine(line) {
   child.stdin.write(`${line}\n`);
 }
 
-// A run_shell call is killed by a cancel, and the worker sends no answer for it (src/mcp.mjs, cancelRequest). The core stops counting such a
-// request when its cancel passes, or a restart would wait for an answer that never comes. Any other request is answered by the worker, so it
-// stays counted until that answer.
 function isShellCall(message) {
   return message.method === 'tools/call' && message.params?.name === 'run_shell';
 }
@@ -331,7 +311,6 @@ function onWorkerExit(proc, code, signal) {
     return;
   }
   if (state !== 'running') return;
-  // A worker that exits 0 with the run open paused itself on SIGTERM (src/mcp.mjs pauseRun), so a restart follows at once and new calls are held.
   if (signal === null && code === 0) {
     state = 'restarting';
     for (const id of inflight.keys()) writeHost(errorReply(id, PAUSED_BEFORE_ANSWER));
@@ -381,7 +360,6 @@ function replayHandshake() {
   });
 }
 
-// The worker's state for the update check. A report is taken once, by the next wait that is still open.
 function setWorkerState(next, reason) {
   for (const waiter of workerWaiters.splice(0)) waiter.resolve(reason === undefined ? { state: next } : { state: next, reason });
 }
@@ -426,8 +404,6 @@ function failWith(reason) {
   scheduleRetry();
 }
 
-// A failed start retries by itself, with no change needed: 1 s, then doubling to a 30 s cap. Calls that arrive while it is failed are
-// answered with the failure text at once, so none is held silently.
 function scheduleRetry() {
   clearTimeout(retryTimer);
   const delay = retryDelay;
@@ -439,7 +415,6 @@ function scheduleRetry() {
   }, delay);
 }
 
-// No timeout: a restart waits until every call in flight has its result logged.
 function waitForDrain() {
   if (inflight.size === 0) return Promise.resolve();
   return new Promise((resolveDrain) => {
@@ -466,8 +441,6 @@ function askWorker(method) {
   });
 }
 
-// After a restart, the lists the new worker serves are compared with the lists the host last fetched. A kind that differs gets its list
-// notice. A kind the host has never fetched gets none. Nothing is sent when nothing differs.
 async function announceChanges() {
   const now = {};
   for (const [method, kind] of Object.entries(LISTS)) {
@@ -479,8 +452,6 @@ async function announceChanges() {
   }
 }
 
-// A change to reloadable modules is applied in the running worker. The worker builds the new code beside the old and swaps it in only when
-// every module loads. A refused reload leaves the old code serving, and the core says why. A worker that does not answer is restarted.
 async function reload(reason) {
   if (state !== 'running') return { ok: false, reason: `the worker is ${state}` };
   say(`reloading in place (${reason})`);
@@ -539,7 +510,6 @@ function busyReason() {
       const status = JSON.parse(readFileSync(join(jobsDir, name), 'utf8'));
       if (status.state === 'running' || status.state === 'queued') open += 1;
     } catch {
-      // A status file that is being written is read again at the next check.
     }
   }
   return open > 0 ? `${open} body or job(s) running or queued` : null;
@@ -636,11 +606,8 @@ async function handOver(reason) {
   return { ok: false, reason: answer };
 }
 
-// Transitions run one at a time. A restart is not queued twice, and a queued handover makes a queued restart unneeded, because the new
-// code starts its worker itself.
 function requestTransition(kind, reason) {
   if (kind === 'restart' && pending.some((job) => job.kind === 'restart' || job.kind === 'handover')) return Promise.resolve(null);
-  // A refresh is redundant when a transition is queued: a restart announces the lists itself, and a queued refresh already covers this change.
   if (kind === 'refresh' && pending.length > 0) return Promise.resolve(null);
   if (kind === 'reload' && pending.some((job) => job.kind === 'restart' || job.kind === 'handover')) return Promise.resolve(null);
   return new Promise((resolveJob) => {
@@ -715,7 +682,6 @@ function shutdown() {
   pause(0);
 }
 
-// The end of this process: the worker is paused first, with SIGTERM, so its run stays open for the next start.
 async function pause(code) {
   state = 'stopping';
   await stopWorker();
@@ -740,7 +706,6 @@ function onSourceChange(_event, file) {
   }, DEBOUNCE_MS);
 }
 
-// A skill file is served in place, so a change to it only refreshes the host's lists. Its own timer, so a change to src/ is not lost.
 function onSkillChange(_event, file) {
   if (!file || !WATCHED_FILE.test(file)) return;
   clearTimeout(skillTimer);
@@ -757,7 +722,6 @@ for (const dir of WATCHED) if (existsSync(dir)) watch(dir, { recursive: true }, 
 watch(HERE, onCoreChange);
 process.once('SIGINT', () => pause(0));
 process.once('SIGTERM', () => pause(0));
-// A crash this file can catch pauses the worker before it exits, so the run stays open for the respawn.
 process.on('uncaughtException', (err) => {
   say(`crashed: ${err?.stack ?? err}`);
   pause(1);
