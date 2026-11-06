@@ -200,6 +200,10 @@ function scenarios({ head, url }) {
     ['run_code bad format', call('run_code', { body: 'return 1;', format: 'mjs' })],
     ['run_code write package type', code("return await gm.write_file({ path: 'package.json', content: JSON.stringify({ type: 'module' }) + '\\n' });")],
     ['run_code default format follows package type', call('run_code', { body: "import { join } from 'node:path';\nreturn join('a', 'b');" })],
+    ['run_code console flood', code("for (let i = 0; i < 300; i += 1) console.log('line ' + String(i).padStart(3, '0') + ' ' + 'x'.repeat(100)); console.error('an error line'); return 1;")],
+    ['run_code console format', code("console.log({ a: 1 }, 'x', 2, true); console.warn('\\u20ac'.repeat(200)); return 1;")],
+    ['query_log body-console', code("return await gm.query_log({ kind: 'body-console' });")],
+    ['run_code background console', call('run_code', { body: "console.log('before the stop'); return await gm.run_shell({ command: 'sleep 30' });", timeoutMs: 300 })],
     ['finish', call('finish', { witness: 'parity harness witness: every scenario ran', stopBackground: true })],
     ['next_context after finish', call('next_context', {})],
   ];
@@ -358,6 +362,7 @@ const JOIN_GENERATION_REASON = 'native-ahead: native logs one generation event a
 const MCP_ROWS = mcpScenarios().map(([name]) => `mcp ${name}`);
 const MCP_AFTER_BROWSERS = new Set(MCP_ROWS.slice(MCP_ROWS.indexOf('mcp mcp browsers') + 1));
 const REFUSAL_SEQ_REASON ='documented gap: native logs no refusal event (two here) and no code-load event (one here), so each later sequence number is one or two lower than Node';
+const STOP_ORDER_REASON = "documented gap: a background body that finish stops logs its last code-call and its body-console after the finish result in Node and before it in native, so native finish sequence is two higher";
 const NATIVE_AHEAD = [
   { path: /^\.result\.(ttlMs|cacheScope)$/, reason: 'native adds ttlMs and cacheScope to complete list and read results (MCP 2026-07-28 caching)' },
   { path: /^\.result\.tools\[\d+\]\.(title|annotations)(\.|$)/, reason: 'native adds a title and tool annotations (MCP 2026-07-28 tools)' },
@@ -395,6 +400,7 @@ const NATIVE_AHEAD = [
   { row: 'run_code esm project import', path: /^\.result\.(content\[0\]\.text|structuredContent)\.loads\[0\]$/, when: (left, right) => right === undefined, reason: LOAD_EVENT_REASON, gap: true },
   { row: 'log event kinds', path: /^\.count\.(refusal|code-load)$/, when: (left, right) => right === undefined, reason: LOAD_EVENT_REASON, gap: true },
   { row: REFUSAL_ROWS, path: SEQ_PATH, when: (left, right) => Number.isInteger(left) && (left - right === 1 || left - right === 2), reason: REFUSAL_SEQ_REASON, gap: true },
+  { row: "finish", path: /^\.result\._meta\.com\.anentrypoint\.gmnew\/seq$/, when: (left, right) => Number.isInteger(left) && Number.isInteger(right) && right - left === 2, reason: STOP_ORDER_REASON, gap: true },
 ];
 
 function nativeAheadOf(row, path, left, right) {
