@@ -1123,5 +1123,26 @@ int main() {
     std::error_code ec;
     fs::remove_all(root, ec);
     std::cout << (failures == 0 ? "ALL PASSED" : "FAILURES: " + std::to_string(failures)) << '\n';
+    std::cout << "--- item: job_status waitMs cap ---" << std::endl;
+    {
+        auto read_src = [](const char* rel) {
+            std::ifstream f(fs::path(GMNEW_SOURCE_DIR) / rel, std::ios::binary);
+            std::ostringstream ss;
+            ss << f.rdbuf();
+            return ss.str();
+        };
+        std::string server = read_src("native/components/mcp/server.cpp");
+        std::string job = read_src("native/components/verbs/job.cpp");
+        std::string verbs_cpp = read_src("native/components/verbs/verbs.cpp");
+        std::string tools = read_src("src/tools.mjs");
+        std::string mcp = read_src("src/mcp.mjs");
+        std::string skill = read_src("skills/gm/SKILL.md");
+        check(server.find("kMaxJobWaitMs = 30000") != std::string::npos, "native server caps job_status waitMs at 30000 ms");
+        check(job.find("max_wait_ms = 30000") != std::string::npos, "native verbs cap job_status waitMs at 30000 ms");
+        check(tools.find("MAX_WAIT_MS = 30000") != std::string::npos, "Node tools cap job_status waitMs at 30000 ms");
+        check(server.find("kMaxWaitMs = 100000") != std::string::npos && mcp.find("MAX_WAIT_MS = 300000") != std::string::npos, "next_context waitMs is a distinct larger cap");
+        check(verbs_cpp.find("re-arm gm.job_status({ job, waitMs: 30000 })") != std::string::npos && mcp.find("re-arm gm.job_status({ job, waitMs: 30000 })") != std::string::npos, "both served job_status descriptions name the cap and re-arm");
+        check(skill.find("capped at 30000 ms") != std::string::npos && skill.find("at most 300000 ms") != std::string::npos, "the served skill states the 30 s cap and the distinct next_context cap");
+    }
     return failures == 0 ? 0 : 1;
 }
