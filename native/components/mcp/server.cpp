@@ -97,7 +97,7 @@ const std::string kNextContextDescription =
     "with child, names that owning run, and another run is refused. compactChildren: true summarizes child run_code "
     "and code-call generations into counts with a seq range and a gm.query_log note, while pending, parent-action, "
     "job, row and recovery events stay full; the default feed is unchanged. task, when set, replaces the run's "
-    "task text; use it in the first step when a host cut the slash-command task to its first word.";
+    "task text; use it in the first step when a host cut the slash-command task to its first word. A child context (child: true) refuses task: only the run owner sets the task.";
 const std::string kFinishDescription =
     "End the run. witness is one string that quotes the evidence you observed. gaps optionally lists, one string "
     "each, what the run did not check; the end event logs them. finish is refused while a background run is running, "
@@ -1081,6 +1081,9 @@ struct Server::State {
         const Value* run = args.find("run");
         if (run != nullptr && !(run->is_string() && run->as_string() == s().run_id)) {
             return refuse("child_context", args, "this connection's run is " + s().run_id + ", not " + text_or_undefined(run));
+        }
+        if (args.find("task") != nullptr) {
+            return refuse("child_context", args, "a child context cannot set the run task; only the run owner calls next_context({ task })");
         }
         s().child_seen = true;
         return act(

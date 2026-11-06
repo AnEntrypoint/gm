@@ -815,12 +815,16 @@ int main() {
         Value child1 = h.call("next_context", child_args);
         h.server->accept(rpc(2, "prompts/get", R"({"name":"gm","arguments":{"task":"read-only child research"}})"));
         Value child2 = h.call("next_context", child_args);
+        const std::string child_with_task = "{\"child\":true,\"run\":\"" + run_id + "\",\"task\":\"child overwrote the parent task\"}";
+        Value refused_child = h.call("next_context", child_with_task);
+        check(str(refused_child, "error").find("child context cannot set the run task") != std::string::npos,
+              "a child context that passes task is refused: " + str(refused_child, "error"));
         Value owner2 = h.call("next_context", "{}");
         check(str(child1, "role") == "child" && str(child2, "child_task") == "read-only child research" &&
                   str(child2, "task") == owner_task && str(child2, "prefixSha") == owner_sha,
               "a child's task argument is kept as child_task; the child sees the parent's task and prefixSha");
         check(str(owner2, "task") == owner_task && str(owner2, "prefixSha") == owner_sha && number_at(owner2.find("step")) == 2,
-              "the parent's task, prefixSha and step count are unchanged by child contexts");
+              "the parent's task, prefixSha and step count are unchanged by child contexts, including one that passed task");
         check(count_kind(log_of(h.server->run_dir()), "task") == 1, "a child prompt writes no task event");
         h.call("next_context", run_args);
         Value owner3 = h.call("next_context", "{}");
