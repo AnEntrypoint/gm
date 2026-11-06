@@ -1,0 +1,693 @@
+dotenv grep .env node: {"ok":true,"files":"git","output":".env:1 TOGETHERAI=<redacted>\n(1 matches; showing 0 to 1; no more)","scanTruncated":false,"scannedFiles":5,"scannedBytes":185}
+dotenv grep .env.local node: {"ok":true,"files":"git","output":".env.local:1 LOCAL_ALIAS=<redacted>\n(1 matches; showing 0 to 1; no more)","scanTruncated":false,"scannedFiles":5,"scannedBytes":185}
+dotenv search .env node: {"ok":true,"output":".env:1 1.279 TOGETHERAI=<redacted>"}
+dotenv grep .env native: {"ok":true,"files":"git","output":".env:1 TOGETHERAI=<redacted>\n(1 matches; showing 0 to 1; no more)","scanTruncated":false,"scannedFiles":5,"scannedBytes":185}
+dotenv grep .env.local native: {"ok":true,"files":"git","output":".env.local:1 LOCAL_ALIAS=<redacted>\n(1 matches; showing 0 to 1; no more)","scanTruncated":false,"scannedFiles":5,"scannedBytes":185}
+dotenv search .env native: {"ok":true,"output":".env:1 1.279 TOGETHERAI=<redacted>"}
+alternation node: 0000-turn.txt:1 scenarios/moba/turn_rates.lua turn_rates
+alternation native: /tmp/parity-scratch-61249/alternation/native/ws/0000-turn.txt:1 scenarios/moba/turn_rates.lua turn_rates
+parity: reference HEAD acd7a38 at /tmp/parity-ref; native /workspace/gm/build/release/native/components/host/gm
+transcripts: /tmp/parity-scratch-61249/transcript-node.json /tmp/parity-scratch-61249/transcript-native.json
+scenario                                     | result           | first differing field (seq-only: only log seq numbers differ; cutover-expected: not counted; native-ahead: expected, listed below)
+---------------------------------------------|------------------|----------------------
+initialize                                   | native-ahead     | .result.capabilities.resources.subscribe (2 counted, 0 cutover-expected)
+tools/list                                   | native-ahead     | .result.tools[0].description (5 counted, 0 cutover-expected)
+next_context                                 | documented-gap   | .result.content[0].text.prefixSha (4 counted, 2 cutover-expected)
+resources/read missing                       | native-ahead     | .error.code (1 counted, 0 cutover-expected)
+tools/call unknown tool                      | match            | 
+prompts/get unknown                          | match            | 
+skills/get unknown                           | match            | 
+resources/subscribe                          | native-ahead     | .result (2 counted, 0 cutover-expected)
+read_file                                    | native-ahead     | .result.content[0].text.actionSeq (3 counted, 0 cutover-expected)
+read_file offset                             | native-ahead     | .result.content[0].text.actionSeq (3 counted, 0 cutover-expected)
+read_file missing                            | native-ahead     | .result.content[0].text.actionSeq (3 counted, 0 cutover-expected)
+write_file                                   | native-ahead     | .result.content[0].text.actionSeq (3 counted, 0 cutover-expected)
+edit_file                                    | native-ahead     | .result.content[0].text.actionSeq (3 counted, 0 cutover-expected)
+edit_file no match                           | native-ahead     | .result.content[0].text.actionSeq (3 counted, 0 cutover-expected)
+stat_file                                    | native-ahead     | .result.content[0].text.actionSeq (3 counted, 0 cutover-expected)
+list_dir                                     | native-ahead     | .result.content[0].text.actionSeq (3 counted, 0 cutover-expected)
+run_shell                                    | native-ahead     | .result.content[0].text.actionSeq (3 counted, 0 cutover-expected)
+run_shell exit                               | native-ahead     | .result.content[0].text.actionSeq (3 counted, 0 cutover-expected)
+search                                       | native-ahead     | .result.content[0].text.actionSeq (3 counted, 0 cutover-expected)
+grep literal                                 | native-ahead     | .result.content[0].text.output.scannedFiles (7 counted, 0 cutover-expected)
+grep regex                                   | native-ahead     | .result.content[0].text.output.scannedFiles (7 counted, 0 cutover-expected)
+grep word                                    | native-ahead     | .result.content[0].text.output.scannedFiles (7 counted, 0 cutover-expected)
+query_log                                    | native-ahead     | .result.content[0].text.actionSeq (3 counted, 0 cutover-expected)
+query_log js                                 | native-ahead     | .result.content[0].text.actionSeq (3 counted, 0 cutover-expected)
+git_status                                   | native-ahead     | .result.content[0].text.actionSeq (3 counted, 0 cutover-expected)
+git_log                                      | native-ahead     | .result.content[0].text.actionSeq (3 counted, 0 cutover-expected)
+prd_add                                      | native-ahead     | .result.content[0].text.actionSeq (3 counted, 0 cutover-expected)
+prd_list                                     | native-ahead     | .result.content[0].text.actionSeq (3 counted, 0 cutover-expected)
+prd_resolve                                  | native-ahead     | .result.content[0].text.actionSeq (3 counted, 0 cutover-expected)
+prd_delete                                   | native-ahead     | .result.content[0].text.actionSeq (3 counted, 0 cutover-expected)
+unknown_add                                  | native-ahead     | .result.content[0].text.actionSeq (3 counted, 0 cutover-expected)
+unknown_list                                 | native-ahead     | .result.content[0].text.actionSeq (3 counted, 0 cutover-expected)
+unknown_resolve                              | native-ahead     | .result.content[0].text.actionSeq (3 counted, 0 cutover-expected)
+fetch                                        | native-ahead     | .result.content[0].text.actionSeq (3 counted, 0 cutover-expected)
+fetch refused                                | native-ahead     | .result.content[0].text.actionSeq (3 counted, 0 cutover-expected)
+job_start                                    | native-ahead     | .result.content[0].text.actionSeq (3 counted, 0 cutover-expected)
+job_status                                   | native-ahead     | .result.content[0].text.output.timeoutMs (5 counted, 0 cutover-expected)
+job_stop                                     | native-ahead     | .result.content[0].text.actionSeq (3 counted, 0 cutover-expected)
+job_status unknown                           | native-ahead     | .result.content[0].text.actionSeq (3 counted, 0 cutover-expected)
+run_code syntax error                        | native-ahead     | .result.content[0].text.actionSeq (3 counted, 0 cutover-expected)
+run_code background                          | native-ahead     | .result.content[0].text.logged[0].seq (5 counted, 0 cutover-expected)
+job_status background                        | native-ahead     | .result.content[0].text.output.body (7 counted, 0 cutover-expected)
+run_code background shell                    | native-ahead     | .result.content[0].text.actionSeq (3 counted, 0 cutover-expected)
+run_code esm static import                   | documented-gap   | .result.content[0].text.ok (12 counted, 0 cutover-expected)
+run_code esm dynamic import                  | documented-gap   | .result.content[0].text.ok (12 counted, 0 cutover-expected)
+run_code esm require                         | documented-gap   | .result.content[0].text.ok (12 counted, 0 cutover-expected)
+run_code cjs require                         | documented-gap   | .result.content[0].text.ok (12 counted, 0 cutover-expected)
+run_code default require                     | documented-gap   | .result.content[0].text.ok (12 counted, 0 cutover-expected)
+run_code cjs static import                   | documented-gap   | .result.content[0].text.error (7 counted, 0 cutover-expected)
+run_code cjs non-literal require             | documented-gap   | .result.content[0].text.error (4 counted, 0 cutover-expected)
+run_code write project module                | documented-gap   | .result.content[0].text.actionSeq (3 counted, 0 cutover-expected)
+run_code esm project import                  | documented-gap   | .result.content[0].text.loads[0] (5 counted, 0 cutover-expected)
+run_code bad format                          | documented-gap   | .result.content[0].text.actionSeq (3 counted, 0 cutover-expected)
+run_code write package type                  | documented-gap   | .result.content[0].text.actionSeq (3 counted, 0 cutover-expected)
+run_code default format follows package type | documented-gap   | .result.content[0].text.ok (12 counted, 0 cutover-expected)
+finish                                       | match            | 
+next_context after finish                    | documented-gap   | .result.content[0].text.prefixSha (4 counted, 2 cutover-expected)
+notifications                                | match            | 
+log event kinds                              | documented-gap   | .count.refusal (5 counted, 0 cutover-expected)
+mcp initialize                               | native-ahead     | .result.capabilities.resources.subscribe (2 counted, 0 cutover-expected)
+mcp tools/list                               | documented-gap   | .result.tools[0].description (6 counted, 0 cutover-expected)
+mcp next_context                             | documented-gap   | .result.content[0].text.prefixSha (51 counted, 2 cutover-expected)
+mcp mcp echo                                 | match            | 
+mcp mcp browsers                             | match            | 
+mcp mcp fail                                 | match            | 
+mcp mcp denied                               | match            | 
+mcp mcp hang                                 | match            | 
+mcp mcp crash                                | match            | 
+mcp mcp restart                              | match            | 
+mcp finish                                   | match            | 
+mcp notifications                            | native-ahead     | [0] (2 counted, 0 cutover-expected)
+mcp log event kinds                          | native-ahead     | .firstDivergence[4] (1 counted, 0 cutover-expected)
+mcp server events                            | match            | 
+dotenv grep .env node                        | match            | 
+dotenv grep .env.local node                  | match            | 
+dotenv search .env node                      | match            | 
+dotenv grep .env native                      | match            | 
+dotenv grep .env.local native                | match            | 
+dotenv search .env native                    | match            | 
+alternation node                             | match            | 
+alternation native                           | match            | 
+stopped body shell node                      | match            | 
+stopped body shell native                    | match            | 
+
+== initialize
+  .result.capabilities.resources.subscribe [native-ahead]
+    node:   true
+    native: (absent)
+  .result.instructions [native-ahead]
+    node:   "One tool does the work: run_code. Its body is JavaScript in the project, and each verb is a function on gm, for example await gm.read_file({ path }). The verb ...(1329 chars)
+    native: "One tool does the work: run_code. Its body is JavaScript in the project, and each verb is a function on gm, for example await gm.read_file({ path }). The verb ...(1330 chars)
+
+== tools/list
+  .result.tools[0].description [native-ahead]
+    node:   "Begin a step. Returns rules, task, witness requirement, the events new since the last step in full, the older ones in compact form within two horizons, and pre...(1157 chars)
+    native: "Begin a step. Returns rules, task, witness requirement, the events new since the last step in full, the older ones in compact form within two horizons, and pre...(1233 chars)
+  .result.tools[0].annotations.readOnlyHint [native-ahead]
+    node:   false
+    native: true
+  .result.tools[2].annotations.openWorldHint [native-ahead]
+    node:   false
+    native: true
+  .result.ttlMs [native-ahead]
+    node:   (absent)
+    native: 3600000
+  .result.cacheScope [native-ahead]
+    node:   (absent)
+    native: "public"
+
+== next_context
+  .result.content[0].text.prefixSha [documented-gap]
+    node:   "30fbf7fbcfd8c5fc34303b1b8e8e4f452637fcd935b914c9258e17d523560058"
+    native: "e62b93a88b0b02fcbb181a661571ee6c345c8a50e58b4515f55b127df3c17e79"
+  .result.content[0].text.pendingCommands.wait [cutover-expected]
+    node:   "node \"<REF>/src/cli.mjs\" events --dir \"<RUNDIR>\" --wait"
+    native: "\"/workspace/gm/build/release/native/components/host/gm\" events --dir \"<RUNDIR>\" --wait"
+  .result.content[0].text.events[1].sha [native-ahead]
+    node:   "be738d3483a6ce2a3cd9e20b0d6e6aa01d5cb5e7e93c7f35762521bb72f8dd5b"
+    native: "5bd28105f1cb7108c4bbd1ad2125dc87f807166f8a7ff645ce9367b14963f80f"
+
+== resources/read missing
+  .error.code [native-ahead]
+    node:   -32002
+    native: -32602
+
+== resources/subscribe
+  .result [native-ahead]
+    node:   {}
+    native: (absent)
+  .error [native-ahead]
+    node:   (absent)
+    native: {"code":-32601,"message":"method not found: resources/subscribe"}
+
+== read_file
+  .result._meta.com.anentrypoint.gmnew/seq [native-ahead]
+    node:   9
+    native: 10
+
+== read_file offset
+  .result._meta.com.anentrypoint.gmnew/seq [native-ahead]
+    node:   13
+    native: 14
+
+== read_file missing
+  .result._meta.com.anentrypoint.gmnew/seq [native-ahead]
+    node:   16
+    native: 17
+
+== write_file
+  .result._meta.com.anentrypoint.gmnew/seq [native-ahead]
+    node:   19
+    native: 20
+
+== edit_file
+  .result._meta.com.anentrypoint.gmnew/seq [native-ahead]
+    node:   23
+    native: 24
+
+== edit_file no match
+  .result._meta.com.anentrypoint.gmnew/seq [native-ahead]
+    node:   28
+    native: 29
+
+== stat_file
+  .result._meta.com.anentrypoint.gmnew/seq [native-ahead]
+    node:   33
+    native: 34
+
+== list_dir
+  .result._meta.com.anentrypoint.gmnew/seq [native-ahead]
+    node:   36
+    native: 37
+
+== run_shell
+  .result._meta.com.anentrypoint.gmnew/seq [native-ahead]
+    node:   39
+    native: 40
+
+== run_shell exit
+  .result._meta.com.anentrypoint.gmnew/seq [native-ahead]
+    node:   43
+    native: 44
+
+== search
+  .result._meta.com.anentrypoint.gmnew/seq [native-ahead]
+    node:   47
+    native: 48
+
+== grep literal
+  .result.content[0].text.output.scannedFiles [native-ahead]
+    node:   3
+    native: 4
+  .result.content[0].text.output.scannedBytes [native-ahead]
+    node:   108
+    native: 120
+  .result._meta.com.anentrypoint.gmnew/seq [native-ahead]
+    node:   50
+    native: 51
+
+== grep regex
+  .result.content[0].text.output.scannedFiles [native-ahead]
+    node:   3
+    native: 4
+  .result.content[0].text.output.scannedBytes [native-ahead]
+    node:   108
+    native: 120
+  .result._meta.com.anentrypoint.gmnew/seq [native-ahead]
+    node:   53
+    native: 54
+
+== grep word
+  .result.content[0].text.output.scannedFiles [native-ahead]
+    node:   3
+    native: 4
+  .result.content[0].text.output.scannedBytes [native-ahead]
+    node:   108
+    native: 120
+  .result._meta.com.anentrypoint.gmnew/seq [native-ahead]
+    node:   56
+    native: 57
+
+== query_log
+  .result._meta.com.anentrypoint.gmnew/seq [native-ahead]
+    node:   59
+    native: 60
+
+== query_log js
+  .result._meta.com.anentrypoint.gmnew/seq [native-ahead]
+    node:   62
+    native: 63
+
+== git_status
+  .result._meta.com.anentrypoint.gmnew/seq [native-ahead]
+    node:   65
+    native: 66
+
+== git_log
+  .result._meta.com.anentrypoint.gmnew/seq [native-ahead]
+    node:   68
+    native: 69
+
+== prd_add
+  .result._meta.com.anentrypoint.gmnew/seq [native-ahead]
+    node:   71
+    native: 72
+
+== prd_list
+  .result._meta.com.anentrypoint.gmnew/seq [native-ahead]
+    node:   76
+    native: 77
+
+== prd_resolve
+  .result._meta.com.anentrypoint.gmnew/seq [native-ahead]
+    node:   80
+    native: 81
+
+== prd_delete
+  .result._meta.com.anentrypoint.gmnew/seq [native-ahead]
+    node:   87
+    native: 88
+
+== unknown_add
+  .result._meta.com.anentrypoint.gmnew/seq [native-ahead]
+    node:   93
+    native: 94
+
+== unknown_list
+  .result._meta.com.anentrypoint.gmnew/seq [native-ahead]
+    node:   99
+    native: 100
+
+== unknown_resolve
+  .result._meta.com.anentrypoint.gmnew/seq [native-ahead]
+    node:   103
+    native: 104
+
+== fetch
+  .result._meta.com.anentrypoint.gmnew/seq [native-ahead]
+    node:   108
+    native: 109
+
+== fetch refused
+  .result._meta.com.anentrypoint.gmnew/seq [native-ahead]
+    node:   113
+    native: 114
+
+== job_start
+  .result._meta.com.anentrypoint.gmnew/seq [native-ahead]
+    node:   117
+    native: 118
+
+== job_status
+  .result.content[0].text.output.timeoutMs [native-ahead]
+    node:   60000
+    native: 300000
+  .result._meta.com.anentrypoint.gmnew/seq [native-ahead]
+    node:   124
+    native: 125
+
+== job_stop
+  .result._meta.com.anentrypoint.gmnew/seq [native-ahead]
+    node:   127
+    native: 128
+
+== job_status unknown
+  .result._meta.com.anentrypoint.gmnew/seq [native-ahead]
+    node:   136
+    native: 137
+
+== run_code syntax error
+  .result._meta.com.anentrypoint.gmnew/seq [native-ahead]
+    node:   139
+    native: 140
+
+== run_code background
+  .result.content[0].text.logged[0].seq [native-ahead]
+    node:   142
+    native: 143
+  .result._meta.com.anentrypoint.gmnew/seq [native-ahead]
+    node:   141
+    native: 142
+
+== job_status background
+  .result.content[0].text.output.body [native-ahead]
+    node:   141
+    native: 142
+  .result.content[0].text.output.output.seq [native-ahead]
+    node:   142
+    native: 143
+  .result._meta.com.anentrypoint.gmnew/seq [native-ahead]
+    node:   146
+    native: 147
+
+== run_code background shell
+  .result._meta.com.anentrypoint.gmnew/seq [native-ahead]
+    node:   149
+    native: 150
+
+== run_code esm static import
+  .result.content[0].text.ok [documented-gap]
+    node:   true
+    native: false
+  .result.content[0].text.output [documented-gap]
+    node:   "\"a/b\""
+    native: (absent)
+  .result.content[0].text.truncated [documented-gap]
+    node:   false
+    native: (absent)
+  .result.content[0].text.error [documented-gap]
+    node:   (absent)
+    native: "the body does not load: could not load module 'node:path'"
+  .result.isError [documented-gap]
+    node:   false
+    native: true
+  .result._meta.com.anentrypoint.gmnew/seq [native-ahead]
+    node:   153
+    native: 154
+
+== run_code esm dynamic import
+  .result.content[0].text.ok [documented-gap]
+    node:   true
+    native: false
+  .result.content[0].text.output [documented-gap]
+    node:   "\"function\""
+    native: (absent)
+  .result.content[0].text.truncated [documented-gap]
+    node:   false
+    native: (absent)
+  .result.content[0].text.error [documented-gap]
+    node:   (absent)
+    native: "could not load module 'node:os'"
+  .result.isError [documented-gap]
+    node:   false
+    native: true
+  .result._meta.com.anentrypoint.gmnew/seq [native-ahead]
+    node:   156
+    native: 157
+
+== run_code esm require
+  .result.content[0].text.ok [documented-gap]
+    node:   true
+    native: false
+  .result.content[0].text.output [documented-gap]
+    node:   "\"a/b\""
+    native: (absent)
+  .result.content[0].text.truncated [documented-gap]
+    node:   false
+    native: (absent)
+  .result.content[0].text.error [documented-gap]
+    node:   (absent)
+    native: "require is not defined\n    at body (<body>:3:8)"
+  .result.isError [documented-gap]
+    node:   false
+    native: true
+  .result._meta.com.anentrypoint.gmnew/seq [native-ahead]
+    node:   158
+    native: 159
+
+== run_code cjs require
+  .result.content[0].text.ok [documented-gap]
+    node:   true
+    native: false
+  .result.content[0].text.output [documented-gap]
+    node:   "\"a/b\""
+    native: (absent)
+  .result.content[0].text.truncated [documented-gap]
+    node:   false
+    native: (absent)
+  .result.content[0].text.error [documented-gap]
+    node:   (absent)
+    native: "require is not defined\n    at body (<body>:2:8)"
+  .result.isError [documented-gap]
+    node:   false
+    native: true
+  .result._meta.com.anentrypoint.gmnew/seq [native-ahead]
+    node:   160
+    native: 161
+
+== run_code default require
+  .result.content[0].text.ok [documented-gap]
+    node:   true
+    native: false
+  .result.content[0].text.output [documented-gap]
+    node:   "\"a/b\""
+    native: (absent)
+  .result.content[0].text.truncated [documented-gap]
+    node:   false
+    native: (absent)
+  .result.content[0].text.error [documented-gap]
+    node:   (absent)
+    native: "require is not defined\n    at body (<body>:2:8)"
+  .result.isError [documented-gap]
+    node:   false
+    native: true
+  .result._meta.com.anentrypoint.gmnew/seq [native-ahead]
+    node:   162
+    native: 163
+
+== run_code cjs static import
+  .result.content[0].text.error [documented-gap]
+    node:   "refused: a CommonJS body cannot use a static import; load with require()"
+    native: "refused: a CommonJS body cannot use a static import; use format esm"
+  .result.content[0].text.loads [documented-gap]
+    node:   (absent)
+    native: []
+  .result._meta.com.anentrypoint.gmnew/seq [native-ahead]
+    node:   164
+    native: 165
+
+== run_code cjs non-literal require
+  .result.content[0].text.error [documented-gap]
+    node:   "refused: a require() needs a literal path"
+    native: "require is not defined\n    at body (<body>:3:8)"
+  .result.content[0].text.loads [documented-gap]
+    node:   (absent)
+    native: []
+
+== run_code write project module
+  .result._meta.com.anentrypoint.gmnew/seq [documented-gap]
+    node:   170
+    native: 169
+
+== run_code esm project import
+  .result.content[0].text.loads[0] [documented-gap]
+    node:   {"path":"lib/add.mjs","via":"import","format":"esm"}
+    native: (absent)
+  .result._meta.com.anentrypoint.gmnew/seq [documented-gap]
+    node:   174
+    native: 173
+
+== run_code bad format
+  .result._meta.com.anentrypoint.gmnew/seq [documented-gap]
+    node:   178
+    native: 176
+
+== run_code write package type
+  .result._meta.com.anentrypoint.gmnew/seq [documented-gap]
+    node:   180
+    native: 178
+
+== run_code default format follows package type
+  .result.content[0].text.ok [documented-gap]
+    node:   true
+    native: false
+  .result.content[0].text.output [documented-gap]
+    node:   "\"a/b\""
+    native: (absent)
+  .result.content[0].text.truncated [documented-gap]
+    node:   false
+    native: (absent)
+  .result.content[0].text.error [documented-gap]
+    node:   (absent)
+    native: "the body does not load: could not load module 'node:path'"
+  .result.isError [documented-gap]
+    node:   false
+    native: true
+  .result._meta.com.anentrypoint.gmnew/seq [documented-gap]
+    node:   184
+    native: 182
+
+== next_context after finish
+  .result.content[0].text.prefixSha [documented-gap]
+    node:   "30fbf7fbcfd8c5fc34303b1b8e8e4f452637fcd935b914c9258e17d523560058"
+    native: "e62b93a88b0b02fcbb181a661571ee6c345c8a50e58b4515f55b127df3c17e79"
+  .result.content[0].text.pendingCommands.wait [cutover-expected]
+    node:   "node \"<REF>/src/cli.mjs\" events --dir \"<SIDE>/runs/<RUNID>\" --wait"
+    native: "\"/workspace/gm/build/release/native/components/host/gm\" events --dir \"<SIDE>/runs/<RUNID>\" --wait"
+  .result.content[0].text.events[2].sha [native-ahead]
+    node:   "be738d3483a6ce2a3cd9e20b0d6e6aa01d5cb5e7e93c7f35762521bb72f8dd5b"
+    native: "5bd28105f1cb7108c4bbd1ad2125dc87f807166f8a7ff645ce9367b14963f80f"
+
+== log event kinds
+  .count.refusal [documented-gap]
+    node:   2
+    native: (absent)
+  .count.code-load [documented-gap]
+    node:   1
+    native: (absent)
+  .count.error:resources/subscribe [native-ahead]
+    node:   (absent)
+    native: 1
+  .count.code-call:stopped-fetch [native-ahead]
+    node:   (absent)
+    native: 1
+  .firstDivergence[9] [native-ahead]
+    node:   ["action:run_code","generation","code-call","result:run_code","action:run_code","code-call"]
+    native: ["error:resources/subscribe","action:run_code","generation","code-call","result:run_code","action:run_code"]
+
+== mcp initialize
+  .result.capabilities.resources.subscribe [native-ahead]
+    node:   true
+    native: (absent)
+  .result.instructions [native-ahead]
+    node:   "One tool does the work: run_code. Its body is JavaScript in the project, and each verb is a function on gm, for example await gm.read_file({ path }). The verb ...(1329 chars)
+    native: "One tool does the work: run_code. Its body is JavaScript in the project, and each verb is a function on gm, for example await gm.read_file({ path }). The verb ...(1330 chars)
+
+== mcp tools/list
+  .result.tools[0].description [native-ahead]
+    node:   "Begin a step. Returns rules, task, witness requirement, the events new since the last step in full, the older ones in compact form within two horizons, and pre...(1157 chars)
+    native: "Begin a step. Returns rules, task, witness requirement, the events new since the last step in full, the older ones in compact form within two horizons, and pre...(1233 chars)
+  .result.tools[0].annotations.readOnlyHint [native-ahead]
+    node:   false
+    native: true
+  .result.tools[2].description [documented-gap]
+    node:   "Run a JavaScript body in the project. The body is an ES module when format is esm and CommonJS when format is cjs. Left out, format follows the project's packa...(3076 chars)
+    native: "Run a JavaScript body in the project. The body is an ES module when format is esm and CommonJS when format is cjs. Left out, format follows the project's packa...(3004 chars)
+  .result.tools[2].annotations.openWorldHint [native-ahead]
+    node:   false
+    native: true
+  .result.ttlMs [native-ahead]
+    node:   (absent)
+    native: 3600000
+  .result.cacheScope [native-ahead]
+    node:   (absent)
+    native: "public"
+
+== mcp next_context
+  .result.content[0].text.prefixSha [documented-gap]
+    node:   "629a45ab917e6ec719e778919dfed5ef9f94af909c73a6699d05762a5945c529"
+    native: "e62b93a88b0b02fcbb181a661571ee6c345c8a50e58b4515f55b127df3c17e79"
+  .result.content[0].text.total [documented-gap]
+    node:   8
+    native: 5
+  .result.content[0].text.pendingCommands.wait [cutover-expected]
+    node:   "node \"<REF>/src/cli.mjs\" events --dir \"<RUNDIR>\" --wait"
+    native: "\"/workspace/gm/build/release/native/components/host/gm\" events --dir \"<RUNDIR>\" --wait"
+  .result.content[0].text.records [native-ahead]
+    node:   8
+    native: 5
+  .result.content[0].text.fullEvents [native-ahead]
+    node:   8
+    native: 5
+  .result.content[0].text.events[3].kind [native-ahead]
+    node:   "mcp-server"
+    native: "tools"
+  .result.content[0].text.events[3].server [native-ahead]
+    node:   "fake"
+    native: (absent)
+  .result.content[0].text.events[3].state [native-ahead]
+    node:   "connected"
+    native: (absent)
+  .result.content[0].text.events[3].tools [native-ahead]
+    node:   7
+    native: (absent)
+  .result.content[0].text.events[3].protocolVersion [native-ahead]
+    node:   "2025-11-25"
+    native: (absent)
+  .result.content[0].text.events[3].sha [native-ahead]
+    node:   (absent)
+    native: "5bd28105f1cb7108c4bbd1ad2125dc87f807166f8a7ff645ce9367b14963f80f"
+  .result.content[0].text.events[3].count [native-ahead]
+    node:   (absent)
+    native: 3
+  .result.content[0].text.events[4].inFlight [native-ahead]
+    node:   0
+    native: 1
+  .result.content[0].text.events[4].kind [native-ahead]
+    node:   "gitignore"
+    native: "action"
+  .result.content[0].text.events[4].server [native-ahead]
+    node:   "fake"
+    native: (absent)
+  .result.content[0].text.events[4].state [native-ahead]
+    node:   "added"
+    native: (absent)
+  .result.content[0].text.events[4].file [native-ahead]
+    node:   "<WS>/.gitignore"
+    native: (absent)
+  .result.content[0].text.events[4].added [native-ahead]
+    node:   ["cache/"]
+    native: (absent)
+  .result.content[0].text.events[4].step [native-ahead]
+    node:   (absent)
+    native: 1
+  .result.content[0].text.events[4].tool [native-ahead]
+    node:   (absent)
+    native: "next_context"
+  .result.content[0].text.events[4].args [native-ahead]
+    node:   (absent)
+    native: {}
+  .result.content[0].text.events[4].rpcId [native-ahead]
+    node:   (absent)
+    native: 3
+  .result.content[0].text.events[5] [native-ahead]
+    node:   {"seq":6,"t":"<V>","mono":"<V>","inFlight":0,"kind":"mcp-tool-skipped","server":"fake","tool":"hidden","verb":"fake_hidden","reason":"the server entry denies it...(162 chars)
+    native: (absent)
+  .result.content[0].text.events[6] [native-ahead]
+    node:   {"seq":7,"t":"<V>","mono":"<V>","inFlight":0,"kind":"tools","sha":"61080dae5fa88901dc3b82c7a8057eb7b26944b9b7936c17e2a5da8bc1bc82c3","count":3}
+    native: (absent)
+  .result.content[0].text.events[7] [native-ahead]
+    node:   {"seq":8,"t":"<V>","mono":"<V>","inFlight":1,"kind":"action","step":1,"tool":"next_context","args":{},"rpcId":3}
+    native: (absent)
+  .result.content[0].text.query [native-ahead]
+    node:   "query_log reads any event (after: seq - 1 returns it first). This step's new events are seqs 1 to 8."
+    native: "query_log reads any event (after: seq - 1 returns it first). This step's new events are seqs 1 to 5."
+  .result._meta.com.anentrypoint.gmnew/seq [native-ahead]
+    node:   8
+    native: 5
+
+== mcp notifications
+  [0] [native-ahead]
+    node:   "notifications/resources/list_changed"
+    native: "notifications/tools/list_changed"
+  [1] [native-ahead]
+    node:   (absent)
+    native: "notifications/resources/list_changed"
+
+== mcp log event kinds
+  .firstDivergence[4] [native-ahead]
+    node:   ["mcp-server","gitignore","mcp-tool-skipped","tools","action:next_context","result:next_context"]
+    native: ["tools","action:next_context","mcp-server","gitignore","mcp-tool-skipped","result:next_context"]
+native-ahead: ^\.result\.capabilities\.resources\.subscribe$ -- native no longer advertises resources.subscribe, since subscriptions/listen replaces it (2026-07-28 subscriptions page); Node still advertises it
+native-ahead: ^\.result\.instructions$ -- native names subscriptions/listen in the resources pointer of its instructions; Node still names resources/subscribe
+native-ahead: ^\.result\.tools\[0\]\.description$ -- native-ahead: next_context waitMs holds at most 100 s and a hold with nothing pending returns progress without a step (native f9cc7f7); Node still holds at most 300 s
+native-ahead: ^\.result\.tools\[\d+\]\.(title|annotations)(\.|$) -- native adds a title and tool annotations (MCP 2026-07-28 tools)
+native-ahead: ^\.result\.(ttlMs|cacheScope)$ -- native adds ttlMs and cacheScope to complete list and read results (MCP 2026-07-28 caching)
+documented gap: ^\.result\.(content\[0\]\.text|structuredContent)\.prefixSha$ -- documented gap: the served prefix hashes the run_code description, which native words differently (see the tools/list row)
+native-ahead: ^\.result\.(content\[0\]\.text|structuredContent)\.events\[\d+\]\.sha$ -- the tools event sha covers the tool list, which native now titles and annotates
+native-ahead: ^\.error\.code$ -- native answers a missing resource with -32602 and data.uri, never an empty contents (AGENTS.md: -32002 is accepted only by clients); Node answers -32002 as the 2025-11-25 spec page does, and the error data matches
+native-ahead: ^\.count\.error:resources\/subscribe$ -- native removed resources/subscribe: it answers -32601, and subscriptions/listen is the surface (2026-07-28 subscriptions page); Node still serves resources/subscribe
+native-ahead: (^|\.)(seq|actionSeq|body|logged\[\d+\]\.seq)$|\.output\.(output\.)?(seq|body)$|\/seq$ -- native logs one more event than Node, the resources/subscribe error (native-ahead above), so every later sequence number is one higher
+native-ahead: ^\.result\.(content\[0\]\.text|structuredContent)\.output\.(scannedFiles|scannedBytes)$ -- scannedFiles and scannedBytes count the files of the scratch workspace, which holds each tree's own run state, so the two totals differ by the state files; scanTruncated is compared exactly
+native-ahead: ^\.result\.(content\[0\]\.text|structuredContent)\.output\.timeoutMs$ -- native job_start default is 300000; Node 60000 kept until the owner chooses
+documented gap: ^\.result\.(isError|(content\[0\]\.text|structuredContent)\.(ok|output|truncated|error))$ -- documented gap: native runs a body with gm only and passes it no require, and its module loader reads files from disk, so require() and import of node: builtins fail; Node passes require to every body and loads node: builtins
+documented gap: ^\.result\.(content\[0\]\.text|structuredContent)\.loads$ -- documented gap: native does not refuse a static import in a CommonJS body; the body fails in the JS engine with a load error and logs no refusal
+documented gap: ^\.result\.(content\[0\]\.text|structuredContent)\.(error|loads)$ -- documented gap: native does not refuse a non-literal require(); the body reaches the missing require() and fails at run time, and logs no refusal
+documented gap: (^|\.)(seq|actionSeq|body|logged\[\d+\]\.seq)$|\.output\.(output\.)?(seq|body)$|\/seq$ -- documented gap: native logs no refusal event (two here) and no code-load event (one here), so each later sequence number is one or two lower than Node
+documented gap: ^\.count\.(refusal|code-load)$ -- documented gap: native does not list a project file that a body loads, and logs no code-load event for it; Node does both
+native-ahead: ^\.count\.code-call:stopped-fetch$ -- stopBackground kills a fetch that a background body started: native owns its curl to the body (proc::kill_owned) and logs the fetch code-call after the stopBackground job-killed; Node fetch runs in-process, stopBackground does not reach it, so it logs no code-call before end
+native-ahead: ^\.firstDivergence\[\d+\]$ -- the event order follows from the stopped fetch code-call and the resources/subscribe error above
+documented gap: ^\.result\.tools\[\d+\]\.description$ -- documented gap: native's run_code description omits require() and calls a CommonJS body a script, since native has no require(); Node's description names both
+documented gap: ^\.result\.(content\[0\]\.text|structuredContent)\.prefixSha$ -- documented gap: native serves its tool table before the MCP servers join, so the boot tools event and the prefix hash omit the MCP verbs; the body table waits for them
+documented gap: ^\.result\.(content\[0\]\.text|structuredContent)\.total$ -- documented gap: the MCP server events are recorded after the boot tools event, which native writes before the MCP verbs join, so at this call native holds fewer events than Node
+native-ahead: ^\.firstDivergence\[4\]$ -- native-ahead: the handshake no longer waits for MCP, so the boot tools event is written before the MCP verbs join; Node has the verbs at boot and writes the server, gitignore and skipped events before its tools event
+native-ahead: ^\.result\._meta\.com\.anentrypoint\.gmnew\/seq$ -- native-ahead: native writes the MCP join events (mcp-server connected, gitignore added, mcp-tool-skipped) after its first run_code call, so that call is three sequence numbers lower than Node, which writes them at boot
+native-ahead: ^\[0\]$ -- native announces its tool list (notifications/tools/list_changed) first when its MCP servers are ready; Node announces resources first and no tool list
+native-ahead: ^\[1\]$ -- native announces resources (notifications/resources/list_changed) after the tool list on ready; Node sends one resources list_changed
+
+24/83 scenarios match, 0 cutover-expected, 42 native-ahead, 17 documented-gap, 0 differ
+
+node stderr (tail): gm mcp: runrun-parity in /tmp/parity-scratch-61249/node/runs/run-parity | gm mcp: run run-parity has ended; opened run 2026-11-06-12-31-35-2a8638
