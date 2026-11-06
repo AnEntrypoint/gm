@@ -14,7 +14,13 @@ for path in "$@"; do
     exit 1
   fi
 done
-git add -A -- "$@" || exit 1
+for path in "$@"; do
+  if [ -e "$path" ]; then
+    git add -A -- "$path" || exit 1
+  else
+    git rm -q --cached --ignore-unmatch -- "$path" || exit 1
+  fi
+done
 if ! node -e "require.resolve('acorn')" >/dev/null 2>&1; then
   git reset -q -- "$@"
   echo "ship: the gate needs acorn; run npm install in $root and retry" >&2
