@@ -12,6 +12,7 @@
 #include <thread>
 
 #include "gm/json.hpp"
+#include "gm/log.hpp"
 #include "gm/query.hpp"
 
 #if defined(_WIN32)
@@ -36,6 +37,7 @@ constexpr int kPollMs = 200;
 constexpr int kLockStaleMs = 2000;
 constexpr int kLockWaitMs = 5000;
 constexpr long long kDefaultWaitMs = 1800000;
+constexpr long long kDefaultStopIdleMs = 600000;
 constexpr const char* kQueueFile = "pending.jsonl";
 constexpr const char* kLockFile = "pending.lock";
 
@@ -318,6 +320,48 @@ int query_command(const HostArgs& args) {
     return 0;
 }
 
+int stop_command(const HostArgs& args) {
+    const Flags flags = parse_flags(args.rest);
+    const fs::path dir = run_dir_of(flags);
+    const fs::path file = dir / "log.jsonl";
+    if (!fs::exists(file)) throw CliError{"no log at " + file.string()};
+    long long idle_ms = kDefaultStopIdleMs;
+    if (const std::string* value = flags.find("idle-ms")) {
+        try {
+            idle_ms = std::stoll(*value);
+        } catch (const std::exception&) {
+            throw CliError{"--idle-ms needs a whole number of milliseconds"};
+        }
+        if (idle_ms < 0) throw CliError{"--idle-ms needs a whole number of milliseconds"};
+    }
+    const long long idle = std::chrono::duration_cast<std::chrono::milliseconds>(fs::file_time_type::clock::now() - fs::last_write_time(file)).count();
+    if (idle < idle_ms) {
+        throw CliError{"the run was written " + std::to_string(idle) + " ms ago; stop-run needs " + std::to_string(idle_ms) + " ms without a write"};
+    }
+    long long steps = 0;
+    for (const std::string& line : log_lines(file)) {
+        const auto event = json::parse(line);
+        if (!event) continue;
+        const json::Value* kind = event->find("kind");
+        if (kind == nullptr || !kind->is_string()) continue;
+        if (kind->as_string() == "end") throw CliError{"the run already ended; nothing to stop"};
+        const json::Value* tool = event->find("tool");
+        if (kind->as_string() == "action" && tool != nullptr && tool->is_string() && tool->as_string() == "next_context") ++steps;
+    }
+    auto opened = RunLog::open(dir);
+    if (!opened) throw CliError{"cannot open the run log: " + opened.error()};
+    json::Value fields;
+    fields.set("status", "stopped")
+        .set("steps", static_cast<double>(steps))
+        .set("witness", json::Value(nullptr))
+        .set("reason", "stopped by gm stop-run: no write for " + std::to_string(idle) + " ms, owning connection gone");
+    const std::uint64_t seq = opened->append("end", std::move(fields));
+    std::error_code ec;
+    fs::remove_all(dir / "code", ec);
+    write_out("stop-run: " + dir.string() + " closed as stopped at seq " + std::to_string(seq) + "\n");
+    return 0;
+}
+
 template <typename Command>
 int guarded(Command command, const HostArgs& args) {
     try {
@@ -335,5 +379,6 @@ int guarded(Command command, const HostArgs& args) {
 
 int run_events(const HostArgs& args) { return guarded(events_command, args); }
 int run_query_command(const HostArgs& args) { return guarded(query_command, args); }
+int run_stop(const HostArgs& args) { return guarded(stop_command, args); }
 
 }

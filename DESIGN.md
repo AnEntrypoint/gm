@@ -978,3 +978,11 @@ This run hit the 50-step limit because of the step-counting defect fixed in 2d41
 - Gap: the search root cache (native/components/search/search.cpp, MAX_SEARCH_ROOTS 4) evicts the least recently used root, but no check asserts the order. The protocol shows no cache state: a probe that warmed a root, added an untracked file and searched again found the new file at once, so a stale listing cannot be observed.
 - Decision (owner, delegated to orchestrate, 2026-11-06): no reply hook. The gap is recorded here and stays open.
 - Witness that is still possible: the eviction code and the per-root mutex are read in search.cpp; concurrency is covered by the native witness in 4e (fb3f3db), and results are not checked for order.
+
+## stop-run: close a run whose owning connection is gone (2026-11-06, owner approval)
+
+- Verb: `gm stop-run --dir <run dir> [--idle-ms N]` (native/components/host/cli.cpp stop_command; main.cpp dispatch; cli.hpp). It opens exactly the named run's log.jsonl, appends one `end` event with status `stopped`, witness null, the count of next_context actions as steps, and a reason, then removes the run's code directory, as the worker's end_run does. It never finishes a run as passed and writes no other run's log.
+- Guards: refuses a run that already has an `end` event; refuses a run written within N ms (default 600000), so a live connection is not closed under its feet.
+- Witness (scratch run on build/release, stdio driver /tmp/gm-repro/stop-witness.mjs, not committed): the server is killed after one run_code with no finish. `stop-run` with the default guard: exit 1, "the run was written 503 ms ago; stop-run needs 600000 ms without a write". With `--idle-ms 0`: exit 0, "closed as stopped at seq 15". Second stop: exit 1, "the run already ended; nothing to stop". The log then holds one end event (status stopped, witness null, steps 1, seq 15) and no finish event.
+- Node tree: no stop-run; the native binary is the shipped one, so parity is not extended for this verb.
+- Author lanmower, no trailers.

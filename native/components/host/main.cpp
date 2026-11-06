@@ -15,7 +15,8 @@ constexpr std::string_view kUsage =
     "       gm install [--mcp-config <file>]\n"
     "       gm --version\n"
     "       gm events (--run <id> [--workspace <dir>] | --dir <run dir>) [--wait [--timeout-ms N]]\n"
-    "       gm query (--run <id> [--workspace <dir>] | --dir <run dir>) [--js \"<filter>\"]\n";
+    "       gm query (--run <id> [--workspace <dir>] | --dir <run dir>) [--js \"<filter>\"]\n"
+    "       gm stop-run --dir <run dir> [--idle-ms N]\n";
 
 }
 
@@ -26,6 +27,7 @@ int main(int argc, char** argv) {
     if (args.mode == "doctor") return gm::host::run_doctor(args);
     if (args.mode == "events") return gm::host::run_events(args);
     if (args.mode == "query") return gm::host::run_query_command(args);
+    if (args.mode == "stop-run") return gm::host::run_stop(args);
     if (args.mode == "update") return gm::host::run_update_command();
     if (args.mode == "install") return gm::host::run_install_command(args);
     if (args.mode == "--version") {
