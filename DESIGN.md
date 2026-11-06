@@ -892,3 +892,9 @@ This run hit the 50-step limit because of the step-counting defect fixed in 2d41
 - Change: grep replies in both trees carry scanTruncated (true when the walk or the scan budget stopped), scannedFiles and scannedBytes (the counts of the last scan pass, which resets per pass), and the footer gains "; scan incomplete" when scanTruncated is true. ok stays true. Node: src/search.mjs grep reply; native: native/components/search/search_impl.cpp Searcher::grep reply.
 - Witness (stdio, both trees, identical): a scratch git repository with 4200 tracked files, grep needle, limit 5. Both returned scanTruncated true, scannedFiles 4096, tail "(4096 matches; showing 0 to 5; next offset 5; scan incomplete)", hint "scan budget hit: stopped after 4096 files and 28672 bytes; narrow the root or pass a path". The untruncated path is covered by the parity grep scenarios, which pass with 0 differ.
 - Validation: ctest 23/23; leaves 33/33; conformance 75 passed, 0 failed of 75 checks in 24 scenarios; gate ok. Parity run after the commit. Author lanmower, no trailers.
+
+## Item 4c follow-up: parity row for grep scan counts (2026-11-06)
+
+- After c10d17d (pushed) the parity run showed 3 differences: grep literal, regex and word, on .result...output.scannedFiles. Cause: the parity scratch workspace holds each tree's own run-state files, so the two file totals differ by those files, while the scanned tree and the scanTruncated flag match (a live probe on a clean repository gave 325 files and 4511960 bytes in both trees).
+- Change: native/tests/parity/run.mjs gains one NATIVE_AHEAD rule for scannedFiles and scannedBytes (any integer on both sides), recorded with its reason. scanTruncated stays compared exactly.
+- Validation: parity 24/83 match, 42 native-ahead, 17 documented-gap, 0 differ. Author lanmower, no trailers.
