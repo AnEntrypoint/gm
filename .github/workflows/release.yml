@@ -98,6 +98,12 @@ jobs:
       - name: Test
         shell: bash
         run: node tools/check-build.mjs build/${{ matrix.preset }}
+      - name: Worker binary versions
+        shell: bash
+        run: |
+          dir="build/${{ matrix.preset }}/native/components/host"
+          echo "git head: $(git rev-parse --short HEAD)"
+          node -e 'const fs = require("fs"); const cp = require("child_process"); const dir = process.argv[1]; for (const name of ["gm.exe", "gm-core.exe"]) { const p = dir + "/" + name; if (!fs.existsSync(p)) { console.log(name + ": absent"); continue; } const s = fs.statSync(p); let v = ""; try { v = cp.execFileSync(p, ["--version"], { encoding: "utf8" }).trim(); } catch (e) { v = "version failed: " + e.message; } console.log(name + ": " + v + " size=" + s.size + " mtime=" + s.mtime.toISOString()); }' "$dir"
       - name: Windows cmd-only run_shell witness
         shell: bash
         continue-on-error: true
