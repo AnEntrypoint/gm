@@ -978,6 +978,7 @@ This run hit the 50-step limit because of the step-counting defect fixed in 2d41
 - Gap: the search root cache (native/components/search/search.cpp, MAX_SEARCH_ROOTS 4) evicts the least recently used root, but no check asserts the order. The protocol shows no cache state: a probe that warmed a root, added an untracked file and searched again found the new file at once, so a stale listing cannot be observed.
 - Decision (owner, delegated to orchestrate, 2026-11-06): no reply hook. The gap is recorded here and stays open.
 - Witness that is still possible: the eviction code and the per-root mutex are read in search.cpp; concurrency is covered by the native witness in 4e (fb3f3db), and results are not checked for order.
+- Closed as item 4 (orchestrate-5b, 2026-11-06, recommended option kept): no reply hook. Code witness, read: search.cpp:24-27 evicts the root with the lowest `used` stamp, and search.cpp:92 stamps `used = ++clock_` on each use, so the order is least recently used. The order stays unasserted; asserting it needs a hook in the reply contract, which is an owner decision.
 
 ## stop-run: close a run whose owning connection is gone (2026-11-06, owner approval)
 
