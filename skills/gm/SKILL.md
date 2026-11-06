@@ -11,7 +11,7 @@ The served tools are three: next_context, run_code and finish. All the work is d
 
 ## Workflow graph
 
-Before work that splits into independent units, spans more than one phase, or needs a claim checked, read `skill://gm/WORKFLOWS.md` with `gm.read_file({ path: 'skill://gm/WORKFLOWS.md' })` and follow it. It is served on demand: the rules below stay short, and the work order, graph shapes, gm verb mapping and witness counts are read only when a graph is needed. A single-file edit stays in one body. A tool result is summarised, so after a compaction re-read it before the next fan-out. At `stepsLeft` 0, finish the step's last `run_code` body, then call `finish` with a witness that names the work left; call `next_context` only after that to open a successor run. One more `next_context` first ends the run without a witness and refuses every later call.
+Before work that splits into independent units, spans more than one phase, or needs a claim checked, read `skill://gm/WORKFLOWS.md` with `gm.read_file({ path: 'skill://gm/WORKFLOWS.md' })` and follow it. It is served on demand: the rules below stay short, and the work order, graph shapes, gm verb mapping and witness counts are read only when a graph is needed. A single-file edit stays in one body. A tool result is summarised, so after a compaction re-read it before the next fan-out. At `stepsLeft` 0, finish the step's last `run_code` body, then call `finish` with a witness that names the work left; call `next_context` only after that to open a successor run. Calling `next_context` first ends the run without a witness, and a later `next_context` opens the successor run with the same task.
 
 ## Task text
 
