@@ -139,7 +139,7 @@ async function workerStarts(dir) {
   });
 }
 
-// One check. It returns what it did as { state, ... }, and it never throws. busy() returns why the worker's work must not be interrupted now,
+// One check. It returns what it did as { state, ... }. busy() returns why the worker's work must not be interrupted now,
 // or null. nextWorkerEvent(ms) resolves with the supervisor's next report of the worker's state, or null after ms.
 export async function checkForUpdate(root, { log = () => {}, busy = null, nextWorkerEvent = null, replaceCore = null } = {}) {
   try {
