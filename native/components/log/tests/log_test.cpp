@@ -2,6 +2,7 @@
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
+#include <iterator>
 #include <set>
 #include <string>
 #include <thread>
@@ -62,6 +63,27 @@ static bool same_last(const std::vector<json::Value>& got, const std::vector<jso
 }
 
 int main() {
+    {
+        auto secret_dir = std::filesystem::temp_directory_path() / "gm_log_test_secret";
+        std::filesystem::remove_all(secret_dir);
+        auto log = RunLog::open(secret_dir);
+        CHECK(log.has_value());
+        json::Value f;
+        f.set("command", "curl -H 'Authorization: Bearer ya29.a0AbCdEf123456' https://example.test")
+            .set("output", "access_token=sekrit99abc password: hunter2 key AIzaSyA1234567890abcdefghijklmnopqrstuv");
+        CHECK(log->append("action", f) == 1);
+        std::ifstream in(secret_dir / "log.jsonl");
+        std::string text((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+        CHECK(text.find("ya29.a0AbCdEf") == std::string::npos);
+        CHECK(text.find("sekrit99abc") == std::string::npos);
+        CHECK(text.find("hunter2") == std::string::npos);
+        CHECK(text.find("AIzaSyA1234567890") == std::string::npos);
+        CHECK(text.find("[redacted]") != std::string::npos);
+        auto all = log->read_all();
+        CHECK(all && all->size() == 1);
+        CHECK((*all)[0].find("command")->as_string().find("Bearer [redacted]") != std::string::npos);
+        std::filesystem::remove_all(secret_dir);
+    }
     auto dir = std::filesystem::temp_directory_path() / "gm_log_test_run";
     std::filesystem::remove_all(dir);
     double last_mono = 0;

@@ -1,12 +1,14 @@
 #include "gm/log.hpp"
 
 #include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <cstdio>
 #include <cstring>
 #include <fstream>
 #include <limits>
 #include <optional>
+#include <regex>
 #include <sstream>
 #include <system_error>
 #include <utility>
@@ -18,6 +20,49 @@ namespace {
 constexpr std::size_t kRecordBytes = 16;
 
 double round_millis(double ms) { return std::round(ms * 1000) / 1000; }
+
+const std::vector<std::regex>& secret_patterns() {
+    static const std::vector<std::regex> patterns = {
+        std::regex(R"(-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?-----END [A-Z ]*PRIVATE KEY-----)"),
+        std::regex(R"(ya29\.[A-Za-z0-9._\-]+)"),
+        std::regex(R"(AIza[0-9A-Za-z_\-]{30,})"),
+        std::regex(R"(sk-[A-Za-z0-9_\-]{20,})"),
+        std::regex(R"((bearer\s+)[A-Za-z0-9._~+/=\-]+)", std::regex::icase),
+        std::regex(R"re(((?:access_token|refresh_token|id_token|client_secret|api[_-]?key|password)"?\s*[=:]\s*"?)[^\s"&,}]+)re", std::regex::icase),
+    };
+    return patterns;
+}
+
+bool may_hold_secret(const std::string& text) {
+    std::string lower = text;
+    for (char& c : lower) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+    for (const char* marker : {"ya29.", "aiza", "sk-", "private key", "bearer", "token", "secret", "password", "key"}) {
+        if (lower.find(marker) != std::string::npos) return true;
+    }
+    return false;
+}
+
+std::string redact_text(const std::string& text) {
+    if (!may_hold_secret(text)) return text;
+    std::string out = text;
+    for (const std::regex& pattern : secret_patterns()) out = std::regex_replace(out, pattern, "$1[redacted]");
+    return out;
+}
+
+json::Value redact_value(const json::Value& value) {
+    if (value.is_string()) return json::Value(redact_text(value.as_string()));
+    if (value.is_array()) {
+        json::Array out;
+        for (const json::Value& item : value.as_array()) out.push_back(redact_value(item));
+        return json::Value(std::move(out));
+    }
+    if (value.is_object()) {
+        json::Object out;
+        for (const json::Member& m : value.as_object()) out.emplace_back(m.first, redact_value(m.second));
+        return json::Value(std::move(out));
+    }
+    return value;
+}
 
 std::string iso_now() {
     using namespace std::chrono;
@@ -259,10 +304,11 @@ std::uint64_t RunLog::append(std::string_view kind, json::Value fields) {
     std::lock_guard<std::mutex> guard(*lock_);
     double mono = now_ms();
     std::uint64_t seq = next_seq_++;
+    json::Value safe = redact_value(fields);
     json::Value event = json::Object{};
     event.set("seq", seq).set("t", iso_now()).set("mono", mono).set("inFlight", 0).set("kind", std::string(kind));
-    for (const json::Member& m : fields.as_object()) event.set(m.first, m.second);
-    if (const json::Value* start = fields.find("startMono"); start && start->is_number()) {
+    for (const json::Member& m : safe.as_object()) event.set(m.first, m.second);
+    if (const json::Value* start = safe.find("startMono"); start && start->is_number()) {
         event.set("durMs", round_millis(mono - start->as_number()));
     }
     std::string line = json::dump(event) + "\n";
