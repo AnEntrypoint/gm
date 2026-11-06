@@ -30,7 +30,7 @@ export const NOT_COVERED = [
   'behaviour the smoke run does not exercise: the smoke run is one scripted task, plus a one-step negative control',
   'doc content beyond path existence: the docs check finds the repo paths, not whether a claim in the docs is true',
   'CI: this gate does not read CI results from .github/workflows/release.yml or .github/workflows/arm-diagnose.yml',
-  'test suites: ctest, the parity harness and the Node leaf tests are not run by this gate',
+  'the parity harness and tools/check-build.mjs are not run by this gate',
 ];
 
 export async function runGate(root, scope = null) {

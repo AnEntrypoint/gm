@@ -22,13 +22,16 @@ jobs:
       - name: Configure and build asan
         shell: bash
         run: |
-          cmake --preset asan -DGMNEW_BUILD_TESTS=ON
+          cmake --preset asan
           cmake --build build/asan
-      - name: Test asan (worker and mcp)
+      - name: Check asan build (conformance, five runs)
         shell: bash
         env:
           ASAN_OPTIONS: halt_on_error=1:abort_on_error=0:print_stacktrace=1:detect_leaks=0
-        run: ctest --test-dir build/asan -R "gm_worker_test|gm_mcp_test" --output-on-failure --repeat until-fail:5
+        run: |
+          for run in 1 2 3 4 5; do
+            node tools/check-build.mjs build/asan || exit 1
+          done
 
   gdb-arm:
     runs-on: ubuntu-24.04-arm
@@ -41,28 +44,18 @@ jobs:
       - name: Configure and build release
         shell: bash
         run: |
-          cmake --preset arm64-linux-release -DGMNEW_BUILD_TESTS=ON
+          cmake --preset arm64-linux-release
           cmake --build build/arm64-linux-release
-      - name: Run tests under gdb and print a backtrace on a signal
+      - name: Run the conformance check under gdb and print a backtrace on a signal
         shell: bash
         run: |
-          shopt -s globstar nullglob
-          status=0
-          for name in gm_worker_test gm_mcp_test; do
-            for bin in build/arm64-linux-release/**/$name; do
-              [ -x "$bin" ] || continue
-              echo "== $bin"
-              gdb -batch -nx -ex run -ex "thread apply all bt 40" --args "$bin" > "gdb-$name.log" 2>&1 || true
-              if grep -qE "received signal|SIG[A-Z]+, " "gdb-$name.log"; then
-                echo "signal in $name:"
-                grep -E "received signal|SIG[A-Z]+, |^#" "gdb-$name.log" | head -80
-                status=1
-              else
-                echo "$name exited cleanly under gdb"
-              fi
-            done
-          done
-          exit $status
+          gdb -batch -nx -ex 'set follow-fork-mode child' -ex run -ex "thread apply all bt 40" --args node tools/check-build.mjs build/arm64-linux-release > gdb-check.log 2>&1 || true
+          if grep -qE "received signal|SIG[A-Z]+, " gdb-check.log; then
+            echo "signal in the conformance run:"
+            grep -E "received signal|SIG[A-Z]+, |^#" gdb-check.log | head -80
+            exit 1
+          fi
+          echo "conformance run exited without a signal under gdb"
       - uses: actions/upload-artifact@v4
         if: always()
         with:

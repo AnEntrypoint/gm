@@ -13,11 +13,11 @@ function Invoke-Checked {
 }
 
 function Invoke-Build {
-    Invoke-Checked { cmake --preset $Preset -S $Root -DGMNEW_BUILD_TESTS=ON }
+    Invoke-Checked { cmake --preset $Preset -S $Root }
     Invoke-Checked { cmake --build $Build }
 }
 
-function Invoke-Test { Invoke-Checked { ctest --test-dir $Build --output-on-failure } }
+function Invoke-Test { Invoke-Checked { node (Join-Path $Root 'tools/check-build.mjs') $Build } }
 function Invoke-Doctor { Invoke-Checked { & $Binary doctor } }
 
 switch ($Command) {

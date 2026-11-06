@@ -52,11 +52,11 @@ jobs:
         env:
           CCACHE_ARGS: ${{ matrix.ccache && '-DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache' || '' }}
         run: |
-          cmake --preset ${{ matrix.preset }} -DGMNEW_BUILD_TESTS=ON -DGMNEW_VERSION=$GMNEW_VERSION ${{ matrix.extra }} $CCACHE_ARGS
+          cmake --preset ${{ matrix.preset }} -DGMNEW_VERSION=$GMNEW_VERSION ${{ matrix.extra }} $CCACHE_ARGS
           cmake --build build/${{ matrix.preset }}
       - name: Test
         shell: bash
-        run: ctest --test-dir build/${{ matrix.preset }} --output-on-failure -j "$(nproc 2>/dev/null || sysctl -n hw.ncpu)"
+        run: node tools/check-build.mjs build/${{ matrix.preset }}
       - name: Package
         shell: bash
         run: node tools/package.mjs --target ${{ matrix.target }} --build-dir build/${{ matrix.preset }} --out dist
@@ -93,11 +93,11 @@ jobs:
       - name: Configure and build
         shell: bash
         run: |
-          cmake --preset ${{ matrix.preset }} -DGMNEW_BUILD_TESTS=ON -DGMNEW_VERSION=$GMNEW_VERSION
+          cmake --preset ${{ matrix.preset }} -DGMNEW_VERSION=$GMNEW_VERSION
           cmake --build build/${{ matrix.preset }}
       - name: Test
         shell: bash
-        run: ctest --test-dir build/${{ matrix.preset }} --output-on-failure -j "$(nproc 2>/dev/null || sysctl -n hw.ncpu)"
+        run: node tools/check-build.mjs build/${{ matrix.preset }}
       - name: Package
         shell: bash
         run: node tools/package.mjs --target ${{ matrix.target }} --build-dir build/${{ matrix.preset }} --out dist

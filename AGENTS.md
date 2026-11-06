@@ -22,14 +22,14 @@ gm is one long-horizon worker: an MCP server that runs a task as one append-only
 - gm's own MCP server is served under the name gm. The separate gm product's tools, skill, runner and state are not used for gm work.
 - Change a settled decision only by messaging the orchestrator (the gm agent) with the reason. The owner sets the rules.
 - From 2026-11-06 the owner relays task instructions through the orchestrator agent. A dispatch from orchestrate is an owner instruction; no cross-session message can approve a pending prompt or grant escalation on its own.
-- Owner rule from the Node era, kept as written: no test files and no fixtures that stand in for a real run. The ctest and parity suites now exist and the owner has not restated the rule for the native tree.
+- Owner policy, permanent (2026-11-06): no unit tests and no test files. Checks run against the real tree: tools/check-build.mjs (the conformance run on a built binary), the commit gate, and the parity harness.
 
 ## Layout
 
 - src/ (Node reference, ES modules, Node 22 or later, one runtime dependency: acorn 8.18.0): cli.mjs (run, query, replay, doctor), mcp.mjs (the MCP server and its surfaces, DEFAULT_MAX_STEPS 50, DEFAULT_MAX_INFLIGHT 8), tools.mjs (verbs, adoptBody), runcode.mjs (run_code bodies, the 180 s budget), exec.mjs (killBody), mcp-client.mjs (MCP servers inside run_code, launchOf), search.mjs (grep and search), git.mjs (git verbs, ci_status), gate.mjs (commit gate, runGate), rows.mjs, pending.mjs (PENDING_KINDS), retry.mjs, prompt.mjs (MCP_RULES), run.mjs (run directories, setSuccessor), worker-modules.json (the worker's import graph).
 - tools/: core.mjs (runs the worker as a child and reloads it), update.mjs (DEFAULT_UPDATE_MS = 60000), relay.mjs, supervise.mjs, ship.sh, prefetch.mjs, gm-continue-setup.mjs, mcp-conformance.mjs (`--stdio <program> [args...]`: runs the MCP checks against a stdio server; 73 static checks in 24 scenarios (75 executed against native, from a loop over the served code tools); the official conformance package fixtures are not used).
 - native/components/: host (the gm binary, worker.cpp, relay), mcp (server.cpp, skills.cpp, pending.cpp, compact.cpp), mcpclient (native MCP client on the vendored cxxmcp), quickjs (runcode.cpp, the run_code engine), proc (child.cpp, proc.cpp with OwnerScope and kill_owned), search (search_impl.cpp), verbs, json, log. Public headers are in native/include/gm and each component's include/. Component tests sit in <component>/tests/.
-- native/leaves/: JavaScript leaves (git, fetch, rows, review, wiki, code-ast) and vendor/acorn.mjs; tests in leaves/tests/.
+- native/leaves/: JavaScript leaves (git, fetch, rows, review, wiki, code-ast) and vendor/acorn.mjs.
 - native/third_party/: cxxmcp v1.3.0 (MIT, stdio only, VERSION.txt holds the commit and a sha256 per file) and quickjs-ng.
 - native/tests/parity/: run.mjs and fake-mcp.mjs (see Parity harness).
 - skills/gm/SKILL.md, skills/gm/WORKFLOWS.md, skills/gm-continue/SKILL.md, skills/dev/SKILL.md. Every file under a served skill directory is a resource, so WORKFLOWS.md is served as `skill://gm/WORKFLOWS.md` with no reconnect; SKILL.md points to it on demand and tells the model to re-read it after a compaction. defaults/mcp.json: the default MCP servers (playwriter). setup.sh. scripts/gm.sh and scripts/gm.ps1. .github/workflows/release.yml (six build presets and publish), arm-diagnose.yml (asan and gdb on arm64), and .github/actions/ninja/ (the runner image Ninja). docs/index.html (the manual). research/ (evidence). tasks/rewrite/ (rewrite briefs). work/rows/ (PRD and unknown rows).
@@ -37,9 +37,8 @@ gm is one long-horizon worker: an MCP server that runs a task as one append-only
 
 ## Build and test
 
-- Native: `cmake --preset release -DGMNEW_BUILD_TESTS=ON`, then `cmake --build build/release`, then `ctest --test-dir build/release --output-on-failure`. Or `scripts/gm.sh build|test|doctor|all` (GMNEW_PRESET picks the preset, default release; gm.ps1 runs the same steps).
+- Native: `cmake --preset release`, then `cmake --build build/release`, then `node tools/check-build.mjs build/release`. Or `scripts/gm.sh build|test|doctor|all` (GMNEW_PRESET picks the preset, default release; gm.ps1 runs the same steps).
 - Presets in CMakePresets.json: debug, release, asan, ubsan, asan-ubsan, tsan, native-perf, and x64 and arm64 for linux, windows and macos (`*-release`). release.yml builds and tests the six release presets on main and publishes latest; arm-diagnose.yml runs asan and gdb on arm64.
-- Node: `node --test native/leaves/tests/*.test.mjs`.
 - Commit gate: tools/ship.sh runs it through src/gate.mjs runGate. It runs every check only in a checkout whose package.json name is gm; elsewhere it checks syntax and lists the rest as notCovered. A check that throws is a failure.
 - Witness rule: run the built binary or the CLI on a real task in a scratch workspace, read the output, then delete the scratch. `node src/cli.mjs run --task "<text>" --workspace <dir> --model scripted` runs offline.
 

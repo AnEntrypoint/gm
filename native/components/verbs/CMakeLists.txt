@@ -3,8 +3,3 @@ target_include_directories(gm_verbs PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include $
 target_include_directories(gm_verbs PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../quickjs)
 target_link_libraries(gm_verbs PUBLIC gm_json gm_log gm_proc Threads::Threads PRIVATE gm_runcode gm_quickjs_ng)
 
-if(GMNEW_BUILD_TESTS)
-    add_executable(gm_verbs_test tests/verbs_test.cpp)
-    target_link_libraries(gm_verbs_test PRIVATE gm_verbs)
-    add_test(NAME gm_verbs_test COMMAND gm_verbs_test)
-endif()

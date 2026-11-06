@@ -22,12 +22,6 @@ elseif(MSVC)
     target_compile_options(deoxidene INTERFACE /W4 /permissive-)
 endif()
 
-option(GMNEW_BUILD_TESTS "Build the gm and deoxidene test programs (run with ctest)" OFF)
-if(GMNEW_BUILD_TESTS)
-    enable_testing()
-    add_subdirectory(tests)
-endif()
-
 include(cmake/gmnew_build_info.cmake)
 gmnew_configure_build_info("${CMAKE_CURRENT_SOURCE_DIR}")
 

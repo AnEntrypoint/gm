@@ -15,34 +15,6 @@ add_executable(gm-core main.cpp serve.cpp)
 target_link_libraries(gm-core PRIVATE gm_host)
 target_compile_definitions(gm-core PRIVATE GMNEW_HOST_ABI_VERSION=1)
 
-if(GMNEW_BUILD_TESTS)
-    add_executable(gm_relay_test tests/relay_test.cpp)
-    target_link_libraries(gm_relay_test PRIVATE gm_host)
-    add_executable(gm_relay_worker tests/relay_worker.cpp)
-    add_dependencies(gm_relay_test gm_relay_worker)
-    target_compile_definitions(gm_relay_test PRIVATE GMNEW_RELAY_WORKER="$<TARGET_FILE:gm_relay_worker>")
-    add_test(NAME gm_relay_test COMMAND gm_relay_test)
-    add_executable(gm_cli_test tests/cli_test.cpp)
-    target_link_libraries(gm_cli_test PRIVATE gm_host)
-    target_compile_definitions(gm_cli_test PRIVATE GMNEW_BINARY="$<TARGET_FILE:gm>")
-    add_dependencies(gm_cli_test gm)
-    add_test(NAME gm_cli_test COMMAND gm_cli_test)
-    add_test(NAME gm_version_test COMMAND ${CMAKE_COMMAND}
-        "-DGMNEW_MODULE=${CMAKE_SOURCE_DIR}/cmake/gmnew_build_info.cmake"
-        "-DGMNEW_SOURCE_ROOT=${CMAKE_SOURCE_DIR}"
-        "-DGMNEW_GM_BINARY=$<TARGET_FILE:gm>"
-        "-DGMNEW_CORE_BINARY=$<TARGET_FILE:gm-core>"
-        "-DGMNEW_EXPECTED_VERSION=${GMNEW_VERSION}"
-        "-DGMNEW_EXPECTED_COMMIT=${GMNEW_COMMIT}"
-        -P "${CMAKE_CURRENT_SOURCE_DIR}/tests/version_test.cmake")
-    add_executable(gm_update_test tests/update_test.cpp)
-    target_link_libraries(gm_update_test PRIVATE gm_host)
-    add_test(NAME gm_update_test COMMAND gm_update_test)
-    add_executable(gm_install_test tests/install_test.cpp)
-    target_link_libraries(gm_install_test PRIVATE gm_host)
-    add_test(NAME gm_install_test COMMAND gm_install_test)
-endif()
-
 function(gm_host_link_worker)
     get_property(host_dir GLOBAL PROPERTY GMNEW_HOST_DIR)
     set(missing)
@@ -68,14 +40,6 @@ function(gm_host_link_worker)
         target_sources(${exe} PRIVATE ${host_dir}/worker.cpp)
         target_link_libraries(${exe} PRIVATE gm_mcp gm_verbs gm_search gm_runcode gm_mcpclient ${leaf_targets})
     endforeach()
-    if(GMNEW_BUILD_TESTS)
-        add_executable(gm_worker_test ${host_dir}/tests/worker_test.cpp)
-        target_link_libraries(gm_worker_test PRIVATE gm_host gm_runcode)
-        target_compile_definitions(gm_worker_test PRIVATE GMNEW_BINARY="$<TARGET_FILE:gm>"
-                                                             GMNEW_SOURCE_ROOT="${PROJECT_SOURCE_DIR}")
-        add_dependencies(gm_worker_test gm)
-        add_test(NAME gm_worker_test COMMAND gm_worker_test)
-    endif()
 endfunction()
 set_property(GLOBAL PROPERTY GMNEW_HOST_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 cmake_language(DEFER DIRECTORY ${PROJECT_SOURCE_DIR} CALL gm_host_link_worker)
