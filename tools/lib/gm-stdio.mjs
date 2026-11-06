@@ -4,8 +4,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import readline from 'node:readline';
 
-export async function openServer(binary, { workspace = mkdtempSync(join(tmpdir(), 'gm-stdio-')) } = {}) {
-    const child = spawn(binary, ['serve', '--workspace', workspace], { stdio: ['pipe', 'pipe', 'pipe'] });
+export async function openServer(binary, { workspace = mkdtempSync(join(tmpdir(), 'gm-stdio-')), extraArgs = [] } = {}) {
+    const child = spawn(binary, ['serve', '--workspace', workspace, ...extraArgs], { stdio: ['pipe', 'pipe', 'pipe'] });
     child.stderr.resume();
     const pending = new Map();
     let nextId = 1;

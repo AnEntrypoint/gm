@@ -98,6 +98,10 @@ jobs:
       - name: Test
         shell: bash
         run: node tools/check-build.mjs build/${{ matrix.preset }}
+      - name: Windows cmd-only run_shell witness
+        shell: bash
+        continue-on-error: true
+        run: node tools/witness-windows-cmd.mjs "build/${{ matrix.preset }}/native/components/host/gm.exe"
       - name: Package
         shell: bash
         run: node tools/package.mjs --target ${{ matrix.target }} --build-dir build/${{ matrix.preset }} --out dist
