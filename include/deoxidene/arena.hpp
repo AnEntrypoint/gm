@@ -44,4 +44,4 @@ class Arena {
     std::size_t used_ = 0;
 };
 
-}  // namespace deoxidene
+}

@@ -12,7 +12,7 @@ using Result = std::expected<T, E>;
 template <typename E>
 using Err = std::unexpected<E>;
 using std::unexpect;
-}  // namespace deoxidene
+}
 #elif __has_include(<tl/expected.hpp>)
 #include <tl/expected.hpp>
 namespace deoxidene {
@@ -21,7 +21,7 @@ using Result = tl::expected<T, E>;
 template <typename E>
 using Err = tl::unexpected<E>;
 inline constexpr tl::unexpect_t unexpect{};
-}  // namespace deoxidene
+}
 #else
 #error "deoxidene::Result requires <expected> (C++23) or tl::expected as a fallback"
 #endif
@@ -38,4 +38,4 @@ template <typename E, typename T = void>
     return Err<E>{std::move(error)};
 }
 
-}  // namespace deoxidene
+}

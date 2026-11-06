@@ -45,4 +45,4 @@ class Pool {
     std::vector<Index> free_;
 };
 
-}  // namespace deoxidene
+}

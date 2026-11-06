@@ -140,4 +140,4 @@ class JobSystem {
     std::vector<std::thread> threads_;
 };
 
-}  // namespace deoxidene
+}

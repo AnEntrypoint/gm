@@ -32,4 +32,4 @@ enum class ParseError : std::uint8_t { kEmpty, kNotNumeric, kOverflow };
     return Ok<int, ParseError>(value);
 }
 
-}  // namespace deoxidene
+}

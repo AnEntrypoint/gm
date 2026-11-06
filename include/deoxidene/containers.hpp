@@ -55,4 +55,4 @@ class SmallVec {
     bool spilled_ = false;
 };
 
-}  // namespace deoxidene
+}
