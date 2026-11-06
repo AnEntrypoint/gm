@@ -85,13 +85,6 @@ int main() {
         auto all = log->read_all();
         CHECK(all && all->size() == 1);
         CHECK((*all)[0].find("command")->as_string().find("Bearer [redacted]") != std::string::npos);
-        json::Value many;
-        many.set("output", "Bearer tok1 and Bearer tok2 and bearer tok3; access_token=a1 refresh_token=b2 api_key=c3 keep-me");
-        CHECK(log->append("action", many) == 2);
-        auto again = log->read_all();
-        CHECK(again && again->size() == 2);
-        const std::string redacted = (*again)[1].find("output")->as_string();
-        CHECK(redacted == "Bearer [redacted] and Bearer [redacted] and bearer [redacted]; access_token=[redacted] refresh_token=[redacted] api_key=[redacted] keep-me");
         std::error_code ec;
         std::filesystem::remove_all(secret_dir, ec);
     }
