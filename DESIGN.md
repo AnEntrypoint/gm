@@ -1423,3 +1423,10 @@ Rationale the comment sweep moved out of tools/ (relay.mjs is held and unchanged
 - The wait returns the next report that the worker is running, or null at the deadline; a report that it failed is an old attempt, because the supervisor keeps retrying the broken code until the checkout is reset, so it is not taken as the outcome of the rollback.
 - A rollback undoes a pull: the checkout goes back to the commit before it, and the worker is restarted on the old code by the core's watch on src/ and skills/. The rollback is logged; when the worker does not start on the old code either, the state is stuck, for a person to check.
 - The pull waits and is tried again soon, so a body or a job that ends does not wait for the next check; it is logged once for each wait.
+
+## Subagent concurrency cap (2026-11-06)
+
+- Default: 8 in-flight calls, `DEFAULT_MAX_INFLIGHT = 8` (src/mcp.mjs:128). `--max-inflight` overrides it (src/mcp.mjs:1033) and it reaches `createSession` as `maxInflight` (src/mcp.mjs:215).
+- Enforced in `startCall` and `drain` (src/mcp.mjs:509): a call waits while `active.size` is at the cap. Every tools call request enters through src/mcp.mjs:466, so a subagent on the parent's connection (`next_context({ child: true, run })`, `run_code`) takes a slot from the same 8 as the parent.
+- The cap is per serve process. A separate session has its own process and its own 8 slots.
+- Native gap: native/components/mcp/include/gm/mcp.hpp:32 sets `max_inflight = 8`, and server.cpp reports it in the start and status replies (lines 717, 918, 967). No native code reads the value to limit calls, and the host parses no `--max-inflight`. Native runs without the cap; Node enforces it.
