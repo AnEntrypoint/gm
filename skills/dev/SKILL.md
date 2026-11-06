@@ -12,7 +12,7 @@ How to change this project. Project facts are in AGENTS.md, and decisions with t
 
 ## Witnesses
 
-- No unit tests. Do not add a `#[test]` case, a test file, or a `test(`/`describe(`/`it(` block; the owner's invariant is that unit tests drift out of sync as the code changes and degrade the agentic workflow. Validate dynamically instead: run the real tree, drive the real tool, and quote its output in the witness. `tools/scan-unit-tests.mjs` runs inside `npm run check` as a backstop.
+- No unit tests. Do not add a Rust test attribute case, a test file, or a `test(`/`describe(`/`it(` block; the owner's invariant is that unit tests drift out of sync as the code changes and degrade the agentic workflow. Validate dynamically instead: run the real tree, drive the real tool, and quote its output in the witness. `tools/scan-unit-tests.mjs` runs inside `npm run check` as a backstop.
 - Run the real path through the relay, not a unit call. The run's log file is the ground truth; a result a script returns is not.
 - Before a filter on the log, read which kinds the log holds for the call. A body's verb call is `code-call`; a top-level tool call writes `action` and `result`. A filter on the wrong kind returns zero and looks like a pass.
 - Before a filter reads a row or log field, find every writer of that field and check each one. A field no writer sets makes the filter false for every row, and the reader then reports zero as if it were a fact.
