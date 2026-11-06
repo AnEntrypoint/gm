@@ -9,6 +9,10 @@ Flow rule. A multi-step change is built as one batch, all steps first, then witn
 
 The served tools are three: next_context, run_code and finish. All the work is done in run_code.
 
+## Workflow graph
+
+Before work that splits into independent units, spans more than one phase, or needs a claim checked, read `skill://gm/WORKFLOWS.md` with `gm.read_file({ path: 'skill://gm/WORKFLOWS.md' })` and follow it. It is served on demand: the rules below stay short, and the work order, graph shapes, gm verb mapping and witness counts are read only when a graph is needed. A single-file edit stays in one body. A tool result is summarised, so after a compaction re-read it before the next fan-out.
+
 ## Task text
 
 A host may cut a slash-command task to its first word before gm sees it. The server keeps the whole argument it receives, so a one-word task in next_context is a host truncation, not a gm cut. If the task below is shorter than the slash command you were given, pass the whole text as `next_context({ task: '<the whole slash-command text>' })` in your first step. The run logs the correction, next_context then reports the whole task, and successor runs inherit it.
