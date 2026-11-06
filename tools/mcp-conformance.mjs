@@ -6,6 +6,7 @@ const CAPABILITIES = ['tools', 'prompts', 'resources', 'logging', 'completions']
 const LOG_LEVELS = ['debug', 'info', 'notice', 'warning', 'error', 'critical', 'alert', 'emergency'];
 const CODE_TOOLS = ['next_context', 'run_code', 'finish'];
 const SKILL_URI = 'skill://gm/SKILL.md';
+const WORKFLOW_URI = 'skill://gm/WORKFLOWS.md';
 const HOUR_MS = 3600000;
 const REQUEST_TIMEOUT_MS = 60000;
 const RULES_RUN_DIR = `/tmp/gm-conformance-rules-${process.pid}-${Date.now()}`;
@@ -250,6 +251,9 @@ const SCENARIOS = [
       const message = r?.messages?.[0];
       ok('returns a user message', message?.role === 'user', short(message?.role));
       ok('the message content is text', message?.content?.type === 'text' && nonEmpty(message?.content?.text), short(message?.content?.type));
+      const prompt = String(message?.content?.text ?? '');
+      ok('the gm prompt names the workflow graph and its compaction re-read', prompt.includes(WORKFLOW_URI) && prompt.includes('after a compaction re-read'),
+        short({ workflow: prompt.includes(WORKFLOW_URI), reread: prompt.includes('after a compaction re-read') }));
     },
   },
   {
@@ -264,6 +268,7 @@ const SCENARIOS = [
     run: async (c, ok) => {
       const resources = (await c.rpc('resources/list')).result?.resources ?? [];
       ok('lists the gm skill', resources.some((r) => r.uri === SKILL_URI), short(resources.map((r) => r.uri)));
+      ok('lists the workflow graph', resources.some((r) => r.uri === WORKFLOW_URI), short(resources.map((r) => r.uri)));
       ok('every resource has a uri and a name', resources.every((r) => nonEmpty(r.uri) && nonEmpty(r.name)));
     },
   },
@@ -282,6 +287,10 @@ const SCENARIOS = [
       const item = r?.contents?.[0];
       ok('contents is the requested skill uri', item?.uri === SKILL_URI, short(item?.uri));
       ok('the skill text is non-empty', nonEmpty(item?.text));
+      const graph = (await c.rpc('resources/read', { uri: WORKFLOW_URI })).result?.contents?.[0];
+      ok('the workflow graph is served with its work order and step budget',
+        graph?.uri === WORKFLOW_URI && String(graph?.text ?? '').includes('## Work order') && String(graph?.text ?? '').includes('stepsLeft'),
+        short({ uri: graph?.uri, chars: String(graph?.text ?? '').length }));
     },
   },
   {
