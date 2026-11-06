@@ -1154,8 +1154,8 @@ Rationale the comment sweep moved out of src/ (one section per module group). Ru
 ### src/hot-config.mjs, src/hot-hook.mjs, src/hot.mjs (hot reload)
 
 - A reload replaces the tool definitions, compaction tables and verb handlers of the modules under src/ that a running worker reloads in place; tools.mjs builds the handlers from the modules the worker passes.
-- No reloadable module keeps state at module level; a verb's own index (code-ast.mjs) is built again on its next call.
-- Every other module under src/ is a singleton, and a change to it restarts the worker, because it holds state a reload would lose (the log, the jobs, the paging of search results) or it is on the path of every call.
+- code-ast.mjs keeps one value at module level, its acorn parser (acornParse, loaded on the first parse); its file index is held by the verb set that built it, so a reload that replaces the set builds it again.
+- Every other module under src/ that the worker imports is a singleton, and a change to it restarts the worker, because it holds state a reload would lose (the log, the jobs, the paging of search results) or it is on the path of every call. A src module outside the import graph (src/cli.mjs) restarts nothing; src/worker-modules.json lists the modules that restart the worker.
 - The loader hook runs on the loader's own thread. A reloadable module is loaded at the current generation through a ?gen=N query, so a bump makes the next import of each reloadable module, and every module that imports it at that generation, a fresh instance.
 - A singleton keeps its one instance, because its URL never changes.
 - src/hot.mjs registers the loader hook (src/hot-hook.mjs) and owns the generation counter it reads. The worker imports it at boot, so the hook is in place before the first reload.
@@ -1168,12 +1168,12 @@ Rationale the comment sweep moved out of src/ (one section per module group). Ru
 
 ### src/prompt.mjs
 
-- The rules of an MCP run are written to the run's rules.md, served by the server's instructions, and held word for word by the gm skill; the gate checks the skill against this text (src/skills.mjs).
+- The rules of an MCP run are written to the run's rules.md and passed to the run as MCP_RULES; the gm skill holds them word for word, and the gate checks the skill against this text (src/skills.mjs). The server's instructions (src/connect.mjs) do not carry the rules: they carry the surface's description and the pointer to the skill.
 
 ### src/run.mjs
 
 - A resumed run takes the rules the server holds now: each step reads rules.md, so an edit to the rules reaches a run in progress at its next step, with no reconnect.
-- The log records the change, with a short hash of the text before and after it.
+- On a resume the log records the change as rules-updated, with a short hash of the text before and after it (src/run.mjs:51-56); a new run logs no such entry, and a step logs none.
 
 ### src/wiki-tools.mjs
 
@@ -1213,7 +1213,7 @@ Rationale the comment sweep moved out of src/ (one section per module group). Ru
 - A reader claims the queue by renaming pending.jsonl to a copy of its own, and removes the copy (clearPending) after the records are written out.
 - The queue lock is held by an append and by a claim, so a claim never renames the queue while an append writes to it.
 - A copy is named with its reader's pid, and another reader claims a copy only when that pid is gone, so two live readers never deliver one record.
-- A crash between the write and the removal delivers those records once more, and never loses them; a consumer skips an id it has seen.
+- A crash between the write and the removal delivers those records once more, and never loses them, so the same id can reach a consumer twice.
 - A holder keeps the lock for one append or one rename, so a lock older than LOCK_STALE_MS was left by a holder that died; a waiter that waits LOCK_WAIT_MS without a stale lock gives up.
 - A copy is named pending.<ms>-<hex>-<pid>.reading; a copy with no pid is from an earlier version and is treated as abandoned.
 - A listener is called with each record after it is in the file; next_context uses one to hold a call until an event lands.
@@ -1229,14 +1229,14 @@ Rationale the comment sweep moved out of src/ (one section per module group). Ru
 - A packet is the spec's path, the spec's sha256, and the sorted referenced paths; its hash is the sha256 of that content in canonical JSON, so the same spec and references always give the same hash.
 - The join gives one row per record, with the outcomes that follow it up to the next record. The spec's sha is read at each commit from the commit's own tree (git show <sha>:<spec>), and at the end from the working tree.
 - An outcome whose spec sha is not the packet's sha is after-edit and goes to unattributed; a commit whose spec cannot be read at the commit goes to unattributed too.
-- A git_commit result follows its commit and takes the commit's attribution.
+- A failed git_commit result is always counted as covered (src/review.mjs:76-79). A successful one takes the attribution of the last commit event seen, and commitCovered is not reset when a new record starts, so it can carry an earlier record's attribution.
 
 ### src/runcode.mjs
 
 - run_code runs a body in the project: static imports load ES modules, require() loads CommonJS, and each project file loads in its own format.
 - The body receives gm, which has one method per verb, and gm.verbs(); each verb call goes through the session and is logged as a code-call event.
 - A failed call returns {ok:false, error} as data, so one failure does not abort the body.
-- The body runs in the worker's process, so it is trusted as much as run_shell is: it is not sandboxed.
+- The body runs on a thread in the worker process, so it is trusted as much as run_shell is: it is not sandboxed.
 - A slot is granted to a body in arrival order, and releasing a slot grants it to the next waiting body; only a body that waited is logged at its start and finish, so the log of a body that ran at once is unchanged.
 - A body that waited is logged when its thread starts, not when its slot is granted, so a body stopped in between leaves no start.
 - A body still waiting leaves the queue when stopped, so a body stopped before its turn never starts.
@@ -1244,7 +1244,7 @@ Rationale the comment sweep moved out of src/ (one section per module group). Ru
 - done resolves with the body's reply: {ok, text} when it returns, and {ok:false, error} when it fails or its thread stops; terminate stops the thread at once, which also stops a loop that never awaits.
 - The body's console output is drained, so it cannot reach the session's stdout, which carries the protocol.
 - Whether a path is inside the root decides only how a load is logged, relative to the project or in full: a body may load any path.
-- The format of a project file is read the way Node reads it: .mjs is an ES module and .cjs is CommonJS; a .js file follows the "type" of the nearest package.json at or above it (up to the project root inside it, up to the filesystem root outside it); with none, it is CommonJS.
+- The format of a project file is read the way Node reads it: .mjs is an ES module and .cjs is CommonJS; a .js file follows the "type" of the nearest package.json at or above it; inside() sets how far that search goes, to the project root for a file inside the project and to the filesystem root for one outside it (src/runcode.mjs:85-95); with none, it is CommonJS.
 - The generation is taken only when a project file changed: the resolve hook (freshness.mjs) gives every project file the generation as its query; a fingerprint of the project's files (path, mtime and size) is compared with the last one, so a call with no edit keeps the generation and no module loads again.
 - One edit gives one new generation, and every project file loads again with it, so a file that imports the edited one is never stale. The hook is registered once; its counter is shared with the hook's thread through a SharedArrayBuffer.
 - The tool's description names the verbs and nothing else about them, so a change to a verb's description does not change the served list or the prefix hash that the list feeds.
@@ -1268,14 +1268,14 @@ Rationale the comment sweep moved out of src/ (one section per module group). Ru
 - A file bigger than READ_SYNC_LIMIT is read asynchronously, so a large read does not hold the event loop.
 - A background run reports that it is still running at each multiple of BODY_NOTICE_MS, once per multiple; each report carries the open PRD rows: the first NOTICE_PRD_WINDOW of them, and the counts, read when the report is made.
 - The tools this module owns keep their strategies in the second horizon: a file write keeps its path and size; an edit keeps its path and the sizes of the old and new text; a listing or a log query is cut.
-- finish keeps its witness and its gaps whole in both horizons, because the gate and the next step depend on them; run_shell keeps its exit code and its error lines.
+- finish keeps its witness and its gaps whole in both horizons, because the gate and the next step depend on them; run_shell keeps its exit code and its error field in the second horizon, and its error lines only in the first (src/tools.mjs:129, src/compact.mjs:70-80).
 - A shell job is stopped by its process group; it ends killed with reason cancelled, and the job event is logged before the answer (finish writes it when the group has closed).
 - A job that already ended, and a background run, are error results, not throws.
 - The verbs of a set of leaf modules (src/hot-config.mjs), and the row queries the job reminder and the finish refusal read, are built as a whole set before it is returned, so a module that fails to build throws before anything is replaced.
 - Search keeps its own paging state, so it is not a leaf, and a reload keeps it as it is.
-- Replacing the leaf verbs and the row queries happens in one step, after the new set is built; a reload calls it between tool calls.
+- Replacing the leaf verbs and the row queries happens in one step, after the new set is built.
 - A body that ran past its foreground budget becomes a background job named body-<seq> after its first log event; it has a status file like a shell job, but no process: its output is its verb calls, read back from the log, and it ends with its result.
-- A stop settles the job at once and kills the shells the body started; the body's next verb call refuses, so a reply that comes late changes nothing.
+- A stop settles the job at once and kills the shells the body started; a verb call the body sends after the stop is dropped with no reply and no log event (src/runcode.mjs:64), so a late reply changes nothing.
 - A body that waits for a slot is adopted in state queued and starts when its slot is granted (started resolves then); its lifetime and notices count from that start, so a body is not killed for the time it waited.
 - The result stays in the status file, as a shell job's output stays in its file, and reaches the agent once, in the exited notice.
 - The clock of progress and of the lifetime starts with the thread, not with the adoption, so a body that waited is not stuck for the wait.
@@ -1285,7 +1285,7 @@ Rationale the comment sweep moved out of src/ (one section per module group). Ru
 - The stuck check: a running job that has made no progress for stuckMs is stuck; the agent is told once when a job becomes stuck, and once when it progresses again, so a stuck job is never reported twice in a row; a queued job is waiting for a slot, not stuck.
 - The check runs only while a job or a body is open; checkStuck stops it when none is, so an idle worker does not wake for it.
 - A query_log reply holds at most 50 events and stays within 20 KB once serialized, because the reply escapes the JSON it carries; when a page is cut short, next is the seq of the last event returned, and the caller passes it as after.
-- An event too large for a reply of its own is cut to its head, so the reply is always valid JSON; a log that holds earlier query results has such events.
+- An event too large for a reply of its own is cut to its head, so the reply is always valid JSON. A query_log result is logged cut to 1000 characters (loggedFor, src/tools.mjs:645-648), so a query result in the log is not oversize.
 - A js expression sees one window of matching events: at most QUERY_WINDOW_EVENTS, read from at most QUERY_WINDOW_BYTES of the log.
 - The verb calls of a background body are read from the log as JSON lines, oldest first; they are found by walking back from the newest event, so a tail reads only the events it needs; cap keeps the last cap characters.
 
@@ -1296,9 +1296,9 @@ Rationale the comment sweep moved out of src/ (one section per module group). Ru
 - The served skills (SEP-2640) are read on each request, so an edit under skills/ is served without a restart; each skill's files are listed and read from its directory, every file a resource with a sha256 digest and a size, and SKILL.md is the skill's uri.
 - A file caught mid-write keeps the last read of that skill that succeeded; before a skill has read cleanly, the error reaches the caller.
 - A resource is one file: SKILL.md is named by its frontmatter, as the SEP asks, and any other file by its path.
-- skills/get returns the entry of one served skill, named by its SKILL.md uri; any other uri is -32602, as resources/read refuses an unknown one.
+- skills/get returns the entry of one served skill, named by its SKILL.md uri; any other uri is -32602 (src/mcp.mjs:91). resources/read refuses an unknown uri with -32002 (src/mcp.mjs:108).
 - The prompts are the served skills, read on each request: the gm prompt takes the run's task, which its session prompt gives to a run started without --task; the gm-continue prompt takes no argument.
-- A host that stops calling is noticed after --host-idle-ms with no call in flight; next_context waitMs is capped at the same bound, because a host cuts a call that runs too long.
+- A host that stops calling is noticed after --host-idle-ms with no call in flight; next_context waitMs is capped at MAX_WAIT_MS, 300000 ms (src/mcp.mjs:133, 207), because a host cuts a call that runs too long.
 - The code surface (--surface code) serves next_context, finish and run_code; every other verb is called from run_code as gm.<name>(args); the tools surface serves the whole list, as before.
 - The surface the worker serves (the tool list, the verbs and the compaction registry) is built by surfaceOf from the leaf modules it is given, so a reload builds the next surface from the new code and swaps it in whole.
 - Every reloadable module at the current generation is read here; boot and each reload take the same path.
@@ -1310,32 +1310,32 @@ Rationale the comment sweep moved out of src/ (one section per module group). Ru
 - Rule 1 has no check: a path outside the workspace is allowed, so a refusal of one is not a breach of it.
 - A call that a background body makes carries the body's seq, so the body's output can be read back from the log; while the call is in flight the body counts as progressing for the stuck check.
 - A verb that may change something has its start in the file before it runs; its code-call names that start, as a result names its action.
-- The full result is logged, so query_log reaches the output and the exit code of a verb called inside a body.
+- A code-call logs its exit code and its output. For query_log, job_status, run_shell and run_code the output is cut to 1000 characters, with outputChars and an outputDigest (src/mcp.mjs:308-310, src/tools.mjs:645-648).
 - A cancelled foreground shell gets no answer: its call ended with its kill, and cancelRequest listed its id.
 - Loading the skill again is what the notice asks for, so it clears the open notices; each fetch is logged, so a live run can count them.
 - A missing resource is -32002 with its uri, as the 2025-11-25 page says; a uri with a .. segment is not served, so it is not found either.
 - The checks on one call's result cover the rules the server can see: a finish is judged by its own result; any other call counts toward the step that is open, which the next_context call started.
 - notifications/cancelled: a foreground run_shell is killed and its request gets no answer (handleLine); any other cancelled request runs on, because a read-only verb has no effect to undo and a side-effecting verb must finish its effect; each cancel that is not honoured is logged.
 - A wrong argument name is refused by name; the run_code reply names its action, the seq of the action event, so a body can cite it.
-- The prefix is the same at every step except for the rules, which are read again at each step; its text is built and hashed only when the rules change, so a step whose rules are the same reuses the hash.
+- The prefix is the same at every step except for the rules, which are read again at each step; its text is built and hashed again only when the rules, the task or the surface change (src/mcp.mjs:629-632), so a step with none of these changes reuses the hash.
 - The open-state list is what is still happening: the jobs that turned stuck or progressed again since the last step, and every job still open now; it is a snapshot of the present, not a notice, so it is not an event.
 - The run's id lets a session that hands work to a child session name the child's log (see query in src/cli.mjs).
 - The shell command that waits for the next event ends when it prints the queued events, and what it prints is cleared, so a host that runs it as a background task or a Monitor is told each event once; it names the run directory, so it works from any directory.
 - The pending events are claimed last: nothing that can throw runs between the claim and the registration of its clear, so a step that fails before this point claims nothing; the clear runs once the reply carrying the events is written, so a crash before that write delivers them again.
 - A tool that may change something has its start in the file before it runs, so a crash after its effect still leaves the start in the log.
 - A restart is not a finish: new calls are refused, background jobs and foreground shell groups are killed and logged first, and no end event is written, so the next worker resumes this run.
-- The supervisor sends a restart only after every call has answered, so a call still active at a restart means the worker was stopped without a drain (a crash): its shell is killed and the call settles with that result.
-- The answer to every request id a run already received is rebuilt from its log, so a repeated id is answered from the log and never run again; an action with no end event was interrupted by a restart, and its repeat gets an error.
+- The supervisor sends a restart only after every call has answered, so a call still active when the worker stops without a drain (a crash) is answered by the supervisor with an error reply (tools/supervise.mjs:150-153), and the supervisor's state becomes failed. The supervisor kills no shell; the next worker kills a job's shell group (see the job bullets in the tools section).
+- The answer to a request id is kept in memory, for the last REPLY_MEMORY ids (src/mcp.mjs:226-229). A restart does not rebuild it from the log, so a repeated id sent after a restart runs again.
 - The seq of the last next_context action in the log lets a worker report every job that ended after it, so a job a restart stopped is named by the first next_context of the new worker.
-- The open actions of a resumed run are the actions with no result or refusal; only runs whose events carry actionSeq are read, because older events cannot say which action an end belongs to.
+- The open actions of a resumed run are the actions with no result or refusal; recovery starts at the first event that carries actionSeq or rpcId (src/mcp.mjs:823), and a code-call with actionSeq closes an action as a result does (src/mcp.mjs:826).
 - A body's verb closes its start with a code-call that names the start, as a top-level call closes its start with a result.
 - The tools that only read are listed apart; every other tool is a side effect whose start is flushed before it runs (see perform and innerCall), so recovery can list it as open after a crash; a tool not on the read-only list is treated as a side effect.
-- The tools that reach past the workspace carry the open-world hint; a tool that only records the run (next_context, finish) is not destructive; every tool carries a title and all three hints, set explicitly.
+- Only fetch, git_fetch, git_pull, git_push and ci_status carry the open-world hint (src/mcp.mjs:858), and the file verbs that reach outside the workspace are marked false (src/mcp.mjs:860-862); a tool that only records the run (next_context, finish) is not destructive; every tool carries a title and all three hints, set explicitly.
 - The actions that run once the reply to a request is written are keyed by the request's id; a next_context reply clears the pending events it delivered, and only after its own write, so a crash before the write delivers them again.
 - A reply is written only after the events so far are in the log, so the log holds every event a reply reports.
 - A notification goes out on stdout without running afterReply, which holds the actions of a reply that is not yet written.
 - The lifecycle events the worker writes: a code call is cut in the second horizon; the other kinds use the defaults in compact.mjs.
-- The MCP servers configured for this worker are none until main starts them, and their tools are not in any surface.
+- The MCP servers configured for this worker are none until main starts them, and their tools are not in the served tool lists (src/mcp.mjs:169, 178-180); they are verbs on the surface (src/mcp.mjs:168, 170-171).
 - A reload applies the leaf modules' new code between calls; the surface and the session's verbs are built from the new modules before anything is replaced, so a build that fails leaves the old code serving, and the core is told why; runs, jobs and the log are not touched.
 - The hash of the served tool list is logged at each start; a resumed run whose list differs from its last start gets a tools-changed event with both hashes, because a changed description invalidates the host's prompt cache.
 - At a server start the body directories of runs that have already ended are deleted; a run with no end event is left alone, because it may still be resumed.
