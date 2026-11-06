@@ -245,6 +245,10 @@ function parsedDeep(value) {
 
 const VOLATILE_KEYS = new Set(['t', 'mono', 'pid', 'durMs', 'startMono', 'endMono', 'createdAt', 'mtime', 'mtimeMs', 'ctime', 'atime', 'birthtime', 'elapsedMs', 'ms', 'startedAt', 'endedAt', 'time', 'ts']);
 
+function maskedPids(caller) {
+  return Object.fromEntries(Object.entries(caller).map(([key, pid]) => [key, Number.isInteger(pid) ? '<PID>' : pid]));
+}
+
 function normalizer(side, spaces) {
   const { workspace, runDir, root } = spaces[side];
   const swaps = [
@@ -275,7 +279,7 @@ function normalizer(side, spaces) {
     if (typeof value === 'string') return text(value);
     if (Array.isArray(value)) return value.map(walk);
     if (value && typeof value === 'object') {
-      return Object.fromEntries(Object.entries(value).map(([key, inner]) => [key, VOLATILE_KEYS.has(key) && (typeof inner === 'number' || typeof inner === 'string') ? '<V>' : walk(inner)]));
+      return Object.fromEntries(Object.entries(value).map(([key, inner]) => [key, key === 'caller' && inner && typeof inner === 'object' ? maskedPids(inner) : VOLATILE_KEYS.has(key) && (typeof inner === 'number' || typeof inner === 'string') ? '<V>' : walk(inner)]));
     }
     return value;
   };
