@@ -126,7 +126,7 @@ std::string run_code_description(const std::string& verb_names) {
            "read_file({ path, offset?, limit? }), run_shell({ command, timeoutMs? }), write_file({ path, content }), "
            "query_log({ js?, kind?, fromMono?, toMono?, after?, last? }), search({ query, k? }), fetch({ url, "
            "timeoutMs? }), job_start({ job, command, timeoutMs? }), job_status({ job, waitMs?, offset? }), "
-           "callers({ name, limit? }), grep({ pattern, root?, mode?, ignoreCase?, limit?, offset? }). finish is not a "
+           "callers({ name, limit? }), grep({ pattern, root?, mode?, scope?, ignoreCase?, limit?, offset? }). A file written in this run is untracked; grep it with scope: 'all'. finish is not a "
            "verb: end the run with the finish tool. The reply names its own action in actionSeq, the seq of the "
            "run_code action event in the log. A body's console output is not returned and is not logged. An argument "
            "this tool does not take is refused by name.";

@@ -98,6 +98,8 @@ return { found };
 
 When not to bundle: a second run_code body is right when the next action needs a judgment that code cannot make, such as reading a failing output to choose the fix. Its first comment says why, for example `// Second body: the fix depends on the test output read here.`
 
+A file `write_file`, `edit_file` or `run_shell` wrote in this run is untracked: `gm.grep` it as a single-file `root` or `path` with `scope: 'all'`. The default `tracked` scope does not search a single untracked file root, and `gm.search` reads git-tracked files only.
+
 ## After a context compaction
 
 A summary can replace earlier messages, including the rules, the witness requirement and the events of this run. A skill is not summarised, so these steps are the ones to follow after a compaction:

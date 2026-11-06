@@ -135,6 +135,22 @@ int main() {
     check(output_of(file_root_untracked) == "loose.txt is not tracked by git; grep does not search it",
           "file root that is untracked says so: " + output_of(file_root_untracked));
 
+    Value untracked_path_all = parse(searcher.grep(Value(gm::json::Object{{"pattern", "needle_loose"}, {"path", "loose.txt"}, {"scope", "all"}})));
+    check(output_of(untracked_path_all).find("loose.txt:1 needle_loose") != std::string::npos,
+          "scope all finds an untracked file path: " + output_of(untracked_path_all));
+
+    Value ignored_path = parse(searcher.grep(Value(gm::json::Object{{"pattern", "needle_in_ignored"}, {"path", "ignored.log"}})));
+    check(ignored_path.find("ok") && !ignored_path.find("ok")->as_bool() && output_of(ignored_path).find("needle_in_ignored") == std::string::npos,
+          "default scope still excludes a gitignored file path: " + output_of(ignored_path));
+
+    Value ignored_path_all = parse(searcher.grep(Value(gm::json::Object{{"pattern", "needle_in_ignored"}, {"path", "ignored.log"}, {"scope", "all"}})));
+    check(output_of(ignored_path_all).find("ignored.log:1 needle_in_ignored") != std::string::npos,
+          "scope all finds a gitignored file path: " + output_of(ignored_path_all));
+
+    Value file_root_untracked_all = verbs.call("grep", Value(gm::json::Object{{"pattern", "needle_loose"}, {"root", "loose.txt"}, {"scope", "all"}}));
+    check(output_of(file_root_untracked_all).find("loose.txt:1 needle_loose") != std::string::npos,
+          "scope all finds an untracked file root: " + output_of(file_root_untracked_all));
+
     Value file_root_search = verbs.call("search", Value(gm::json::Object{{"query", "planWaves"}, {"root", "src/planner.js"}}));
     check(file_root_search.find("error") && file_root_search.find("error")->as_string() == "refused: root is not a directory: src/planner.js",
           "search still refuses a file root: " + output_of(file_root_search));
