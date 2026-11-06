@@ -1357,7 +1357,7 @@ struct Server::State {
         if (auto after = job.owner->log->read_from(job.body)) {
             for (const Value& event : *after) calls += string_of(event, "kind") == "code-call" ? 1 : 0;
         }
-        return "the body stopped before it returned: its return value is lost;" + std::to_string(calls) +
+        return "the body stopped before it returned: its return value is lost; " + std::to_string(calls) +
                " verb calls completed before the stop, each in query_log as a code-call after seq " + std::to_string(job.body);
     }
 

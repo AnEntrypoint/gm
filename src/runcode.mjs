@@ -243,7 +243,7 @@ export async function runBody({ body, timeoutMs = DEFAULT_TIMEOUT_MS, format, ve
     killed = true;
     stop();
   };
-  const lost = () => `its return value is lost;${log.eventsFrom(startSeq + 1).filter((event) => event.kind === 'code-call').length} verb calls completed before the stop, each in query_log as a code-call after seq ${startSeq}`;
+  const lost = () => `its return value is lost; ${log.eventsFrom(startSeq + 1).filter((event) => event.kind === 'code-call').length} verb calls completed before the stop, each in query_log as a code-call after seq ${startSeq}`;
   const result = done.then((reply) => (reply.ok
     ? { ok: true, output: reply.text.length > OUTPUT_CAP ? cutRunOutput(reply.text) : reply.text, truncated: reply.text.length > OUTPUT_CAP }
     : { ok: false, error: killed ? `${reply.error}: ${lost()}` : reply.at ? reply.error + locate(reply.at) : reply.error }));
