@@ -921,3 +921,9 @@ This run hit the 50-step limit because of the step-counting defect fixed in 2d41
 - G3 cache effect (median cache-read share per session): gm host sessions 0.9655 (159 sessions, 50.9e9 cache-read tokens); gm live test runs 0.8305 (22 sessions); non-gm sessions 0.8645 (193 sessions, p10 0.6407). gm host sessions read the cache more than non-gm sessions (+0.10 median), so the gm skill and rules re-attach from cache rather than being re-sent. Live test runs sit below the baseline; they are short runs, so their cache is not warm.
 - Caveats: totals are dominated by a few very large sessions, so the medians are the comparison. Host sessions may be counted under more than one project directory when a session was resumed. The measure is of this checkout's machine only.
 - Project claim: both measurements are now recorded, so the claim may be closed by the owner. Validation: read-only scan; no code changed in this section. Author lanmower, no trailers.
+
+## Log redaction single pass (2026-11-06)
+
+- Finding (oscraft review of eb0ff3d, valid on origin/main): redact_assignments rebuilt the lowercase copy of the whole text for every key match, and redact_bearer recursed once per replaced token. Both cost CPU on every run-log event.
+- Change: native/components/log/log.cpp keeps one lowercase copy per pass and updates it with each replacement (kRedacted is lowercase, so the two copies stay equal); redact_bearer continues its scan instead of recursing.
+- Witness: log_test adds an event with three bearer tokens and four assignments; redacted output is checked exactly and keep-me is untouched. ctest 23/23 on the rebuilt release tree. Author lanmower, no trailers.

@@ -65,25 +65,32 @@ void redact_prefixed(std::string& text, std::string_view prefix, bool (*accept)(
     }
 }
 
+void replace_span(std::string& text, std::string& lower, std::size_t begin, std::size_t end) {
+    text.replace(begin, end - begin, kRedacted);
+    lower.replace(begin, end - begin, kRedacted);
+}
+
 void redact_bearer(std::string& text) {
-    const std::string lower = lowered(text);
+    std::string lower = lowered(text);
     std::size_t at = lower.find("bearer");
     while (at != std::string::npos) {
         std::size_t begin = at + 6;
         while (begin < text.size() && std::isspace(static_cast<unsigned char>(text[begin]))) ++begin;
         const std::size_t end = run_end(text, begin, token_char);
         if (begin < end && text.compare(begin, end - begin, kRedacted) != 0) {
-            replace_span(text, begin, end);
-            return redact_bearer(text);
+            replace_span(text, lower, begin, end);
+            at = lower.find("bearer", begin + kRedacted.size());
+        } else {
+            at = lower.find("bearer", at + 6);
         }
-        at = lower.find("bearer", at + 6);
     }
 }
 
 void redact_assignments(std::string& text) {
     static const std::vector<std::string> keys = {"access_token", "refresh_token", "id_token", "client_secret", "api_key", "api-key", "apikey", "password"};
+    std::string lower = lowered(text);
     for (const std::string& key : keys) {
-        std::size_t at = lowered(text).find(key);
+        std::size_t at = lower.find(key);
         while (at != std::string::npos) {
             std::size_t cursor = at + key.size();
             if (cursor < text.size() && text[cursor] == '"') ++cursor;
@@ -94,10 +101,10 @@ void redact_assignments(std::string& text) {
                 if (cursor < text.size() && text[cursor] == '"') ++cursor;
                 const std::size_t end = run_end(text, cursor, value_char);
                 if (end > cursor && text.compare(cursor, end - cursor, kRedacted) != 0) {
-                    replace_span(text, cursor, end);
+                    replace_span(text, lower, cursor, end);
                 }
             }
-            at = lowered(text).find(key, at + key.size());
+            at = lower.find(key, at + key.size());
         }
     }
 }
