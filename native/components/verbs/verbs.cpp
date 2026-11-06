@@ -544,6 +544,7 @@ struct CoreVerbs::Impl {
             reply.set("timedOut", true);
             reply.set("error", "timed out after " + json::dump(json::Value(timeout_ms)) + " ms");
             reply.set("output", std::move(output));
+            reply.set("launcher", outcome.launcher);
             return condense(reply);
         }
         reply.set("ok", outcome.exit_code == 0);
@@ -556,6 +557,7 @@ struct CoreVerbs::Impl {
             reply.set("signal", nullptr);
         }
         reply.set("output", std::move(output));
+        reply.set("launcher", outcome.launcher);
         return condense(reply);
     }
 

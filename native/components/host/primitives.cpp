@@ -33,6 +33,7 @@ json::Value outcome_reply(const proc::Outcome& outcome) {
     reply.set("timedOut", outcome.timed_out);
     reply.set("out", outcome.out);
     reply.set("err", outcome.err);
+    reply.set("launcher", outcome.launcher);
     return reply;
 }
 

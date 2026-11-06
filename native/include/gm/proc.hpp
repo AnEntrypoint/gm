@@ -22,6 +22,7 @@ struct Outcome {
     bool timed_out = false;
     std::string out;
     std::string err;
+    std::string launcher;
 };
 
 Outcome run(const std::vector<std::string>& argv, const std::filesystem::path& cwd = {},

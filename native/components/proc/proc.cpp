@@ -220,7 +220,9 @@ Outcome run(const std::vector<std::string>& argv, const std::filesystem::path& c
 
 Outcome shell(std::string_view command, const std::filesystem::path& cwd, std::uint64_t timeout_ms) {
     const std::string sh = std::filesystem::exists("/bin/bash") ? "/bin/bash" : "/bin/sh";
-    return run({sh, "-c", std::string(command)}, cwd, {}, timeout_ms);
+    Outcome outcome = run({sh, "-c", std::string(command)}, cwd, {}, timeout_ms);
+    outcome.launcher = sh;
+    return outcome;
 }
 
 const char* signal_name(int signal_number) {
@@ -375,10 +377,14 @@ std::string git_bash() {
 }
 
 Outcome shell(std::string_view command, const std::filesystem::path& cwd, std::uint64_t timeout_ms) {
-    if (needs_cmd(command)) return run({"cmd", "/c", std::string(command)}, cwd, {}, timeout_ms);
+    const std::string text(command);
     const std::string bash = git_bash();
-    if (!bash.empty()) return run({bash, "-c", std::string(command)}, cwd, {}, timeout_ms);
-    return run({"cmd", "/c", std::string(command)}, cwd, {}, timeout_ms);
+    const bool use_cmd = needs_cmd(command) || bash.empty();
+    Outcome outcome = use_cmd
+        ? run({"cmd", "/c", text}, cwd, {}, timeout_ms)
+        : run({bash, "-c", text}, cwd, {}, timeout_ms);
+    outcome.launcher = use_cmd ? "cmd" : bash;
+    return outcome;
 }
 
 const char* signal_name(int) { return nullptr; }

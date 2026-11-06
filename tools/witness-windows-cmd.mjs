@@ -21,7 +21,7 @@ try {
     const control = await server.run(`return await gm.run_shell({ command: ${JSON.stringify(controlCommand)} });`);
     const cmdOnly = await server.run(`return await gm.run_shell({ command: ${JSON.stringify(cmdOnlyCommand)} });`);
     const cmdOnlyReply = decode(cmdOnly);
-    if (cmdOnlyReply?.ok !== true) throw new Error(`cmd-only run_shell did not succeed: ${JSON.stringify(cmdOnlyReply)}`);
+    if (cmdOnlyReply?.ok !== true || cmdOnlyReply?.launcher !== 'cmd') throw new Error(`cmd-only run_shell did not use cmd.exe: ${JSON.stringify(cmdOnlyReply)}`);
     console.log(JSON.stringify({ platform: process.platform, controlCommand, cmdOnlyCommand, control: decode(control), cmdOnly: cmdOnlyReply }, null, 2));
 } finally {
     server.close();
