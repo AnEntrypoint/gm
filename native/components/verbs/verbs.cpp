@@ -9,6 +9,7 @@
 #include <exception>
 #include <fstream>
 #include <limits>
+#include <set>
 #include <system_error>
 
 #include "core_internal.hpp"
@@ -649,6 +650,21 @@ struct CoreVerbs::Impl {
         }
         std::size_t page_limit = limit != nullptr ? static_cast<std::size_t>(limit->as_number()) : query_page_events;
         json::Array page = page_of(window, page_limit);
+        if (kind != nullptr && page.empty()) {
+            auto all = log.read_all();
+            if (all) {
+                std::set<std::string> kinds;
+                for (const json::Value& event : *all) {
+                    const json::Value* k = event.find("kind");
+                    if (k != nullptr && k->is_string()) kinds.insert(k->as_string());
+                }
+                if (!kinds.contains(kind->as_string())) {
+                    std::string listed;
+                    for (const std::string& name : kinds) listed += (listed.empty() ? "" : ", ") + name;
+                    return refusal("no event has kind " + kind->as_string() + "; kinds in this run: " + listed);
+                }
+            }
+        }
         json::Value reply = run_query_text(page);
         if (page.size() < window.size()) {
             reply.set("next", static_cast<std::uint64_t>(seq_of(page.back())));

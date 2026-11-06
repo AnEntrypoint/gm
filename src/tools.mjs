@@ -52,6 +52,7 @@ function cutNotice(size, rest) {
 }
 
 function isBinary(path) {
+  statSync(path);
   const fd = openSync(path, 'r');
   try {
     const probe = Buffer.alloc(BINARY_PROBE);
@@ -321,6 +322,9 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
       const more = scan.last < log.count();
       if (args.js !== undefined) return { ...runQuery(scan.events, js), ...(more ? { next: scan.last } : {}) };
       const page = pageOf(scan.events, args.limit);
+      if (args.kind !== undefined && page.length === 0 && !log.events().some((event) => event.kind === args.kind)) {
+        return refusal(`no event has kind ${args.kind}; kinds in this run: ${[...new Set(log.events().map((event) => event.kind))].sort().join(', ')}`);
+      }
       const next = page.length < scan.events.length ? page.at(-1).seq : more ? scan.last : null;
       return { ...runQuery(page, js), ...(next === null ? {} : { next }) };
     },

@@ -877,3 +877,11 @@ This run hit the 50-step limit because of the step-counting defect fixed in 2d41
 - Also: the duplicate noFilesError helper from item 2 is not folded. A QuickJS leaf in native/leaves cannot import src/search.mjs, and src importing native/leaves is cross-tree, so both copies stay with the same message text, pinned by search_test.cpp and codeast-wiki-review.test.mjs.
 - Skill text: skills/gm/SKILL.md line 42 named `job_status` without gm. (committed by e69c152); prefixed to gm.job_status so the skills gate passes.
 - Validation: ctest 23/23; leaves 33/33; conformance 75 passed, 0 failed of 75 checks in 24 scenarios; parity 24/83 match, 42 native-ahead, 17 documented-gap, 0 differ; gate {"ok":true,"failed":[]}. Author lanmower, no trailers.
+
+## Item 4b: query_log refuses a kind that no event in the run has (2026-11-06)
+
+- Finding (DESIGN.md:789): query_log with an unknown kind (code_call instead of code-call) returned an empty reply and still advanced the paging cursor.
+- Witness before the change: not repeated live; the finding was witnessed in the 2026-11-06 survey.
+- Change: the paging path (no last, no js) refuses when the page is empty and no event in the whole run has the requested kind; the refusal lists the kinds the run has. The check runs only on an empty page, so a kind that exists later in the log still pages on through next. Node: src/tools.mjs query_log, reading log.events(); native: native/components/verbs/verbs.cpp query_log, reading log.read_all(). Node's isBinary (item 4a) stats the file first, so a missing file keeps its stat message (parity row read_file missing).
+- Witness after the change (stdio, both trees, identical): a run with one code-call; query_log kind code_call -> refused: no event has kind code_call; kinds in this run: action, code-call, generation, mcp-server, mcp-tool-skipped, rules-notice, start, tools. kind code-call -> one event, next null.
+- Validation: ctest 23/23; leaves 33/33; conformance 75 passed, 0 failed of 75 checks in 24 scenarios; gate ok. Parity is run after the commit, because it archives HEAD for its Node reference. Author lanmower, no trailers.
