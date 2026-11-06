@@ -17,7 +17,6 @@ export function sourceIdOf(bytes) {
   return createHash('sha256').update(bytes).digest('hex').slice(0, 12);
 }
 
-// Archives one fetched body and records the fetch in the registry. Returns the id, and whether this call created the file.
 export function archiveSource(root, body, url) {
   const stored = Buffer.from(asciiText(body.toString('utf8')), 'utf8');
   const id = sourceIdOf(stored);

@@ -12,13 +12,11 @@ const isAscii = (text) => /^[\x00-\x7f]*$/.test(text);
 const oneLine = (text) => typeof text === 'string' && text.trim() !== '' && !/[\r\n]/.test(text) && isAscii(text);
 const today = () => new Date().toISOString().slice(0, 10);
 
-// The archived text of a source, or null when it is not in sources/.
 export function sourceText(root, id) {
   const file = join(root, 'sources', `${id}.txt`);
   return SOURCE.test(id) && existsSync(file) ? readFileSync(file, 'utf8') : null;
 }
 
-// Writes one wiki page, updates its line in the index, and appends its line to the log. A page may be written again.
 export function wikiWrite({ root, log, page, title, body, summary, sources, claims = [], kind = 'ingest', contradicts = [], resolves = [] }) {
   const refuse = (error) => ({ ok: false, error: `refused: ${error}` });
   if (typeof page !== 'string' || !PAGE.test(page)) return refuse('page must be lowercase letters, digits and hyphens, at most 64 characters');
@@ -74,8 +72,6 @@ export function wikiWrite({ root, log, page, title, body, summary, sources, clai
 
 const ENTRY = /^- \[\[([a-z0-9][a-z0-9-]{0,63})\]\] - (.+)$/;
 
-// The lint, run by the gate and by finish. Each problem is one line. An absent wiki has no problems. A page is an orphan
-// when no other page links to it; the index does not count. A contradiction is open until a later page resolves it.
 export function lintWiki(root) {
   const dir = join(root, 'wiki');
   if (!existsSync(dir)) return { problems: [], pages: 0, skipped: true };
@@ -123,7 +119,6 @@ export function lintWiki(root) {
     }
   }
 
-  // Staleness: a page is stale when a newer fetch of one of its sources' urls was archived after the page was written.
   const registry = registryOf(root, problems);
   for (const [name, page] of pages) {
     for (const id of page.sources) {
@@ -135,7 +130,6 @@ export function lintWiki(root) {
     }
   }
 
-  // Contradictions: a page names the page it conflicts with, and it stays open until a later page resolves it.
   for (const [name, page] of pages) {
     for (const other of page.contradicts) {
       if (!pages.has(other)) {
@@ -154,7 +148,6 @@ export function lintWiki(root) {
   return { problems, pages: pages.size, claims, skipped: false };
 }
 
-// The gate's wiki check: the lint must have no problems.
 export function wikiCheck(root) {
   const lint = lintWiki(root);
   if (lint.skipped) return { ok: true, detail: 'no wiki' };

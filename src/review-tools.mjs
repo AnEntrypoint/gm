@@ -48,7 +48,6 @@ export const COMPACT = {
 
 export function createReviewVerbs({ root, log }) {
   return {
-    // review.mjs loads on the first review call.
     async review_packet(args) {
       const { reviewPacket } = await import('./review.mjs');
       const result = reviewPacket({ root, log, spec: args.spec, refs: args.refs ?? [] });

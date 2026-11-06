@@ -10,7 +10,6 @@ export const SERVER_NAME = 'gm';
 export const SERVER_TITLE = 'gm run worker';
 export const CAPABILITIES = { tools: { listChanged: true }, prompts: { listChanged: true }, resources: { listChanged: true, subscribe: true }, logging: {}, completions: {}, extensions: { 'io.modelcontextprotocol/skills': {} } };
 
-// The instructions the host sees at initialize. The code surface names run_code, and the verbs are functions on gm.
 const CODE_INSTRUCTIONS = "One tool does the work: run_code. Its body is JavaScript in the project, and each verb is a function on gm, for example await gm.read_file({ path }). The verb list is in run_code's description, gm.verbs() returns each verb's details, and finish ends the run and is not a verb. Start each step with next_context.";
 const TOOLS_INSTRUCTIONS = "Each verb is a tool. Start each step with next_context, and end the run with finish and a witness.";
 const RESOURCES_POINTER = "Resources: skill://<name>/<file> reads a served skill file. run://<run>/log reads a run's event log, and run://<run>/witness its witness; resources/templates/list names the templates. Subscribe to a skill file with resources/subscribe to be told when it changes on disk. Log messages follow logging/setLevel, and completion/complete suggests skill names and run ids.";
@@ -22,7 +21,6 @@ export function connectReply(surface) {
   return { capabilities: CAPABILITIES, instructions: `${surface === 'code' ? CODE_INSTRUCTIONS : TOOLS_INSTRUCTIONS}\n\n${RESOURCES_POINTER}\n\n${SKILL_POINTER}` };
 }
 
-// The value the gate expects: the name and title, the capabilities, the instructions of both surfaces, and the bytes of tools/relay.mjs.
 export function connectSha(root) {
   const text = JSON.stringify({ name: SERVER_NAME, title: SERVER_TITLE, capabilities: CAPABILITIES, code: connectReply('code').instructions, tools: connectReply('tools').instructions });
   return createHash('sha256').update(text).update(readFileSync(join(root, 'tools', 'relay.mjs'))).digest('hex');

@@ -45,7 +45,6 @@ export const ROW_TOOLS = [
   REOPEN_TOOL,
 ];
 
-// A row keeps its id and its state in both horizons. A listing of rows is cut in the second horizon.
 export const COMPACT = {
   tools: {
     prd_add: { zone1: resultZone1, zone2: resultZone2 },

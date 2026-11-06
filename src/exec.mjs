@@ -39,7 +39,6 @@ export function killGroupNow(pid) {
   return undefined;
 }
 
-// Kills the shells that one body started and that are still running. The other runs' shells are not touched.
 export function killBody(body) {
   for (const [pid, owner] of bodyGroups) if (owner === body) killGroupNow(pid);
 }
