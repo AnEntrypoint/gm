@@ -1444,3 +1444,9 @@ Rationale the comment sweep moved out of tools/ (relay.mjs is held and unchanged
 - Native: ConsoleBuffer in native/include/gm/runcode.hpp is held by BodyControls, and native/components/quickjs/engine.hpp points the session at it. The server logs the event on the job thread before body_finished (native/components/mcp/server.cpp, log_console).
 - The run_code description sentence changed, on both trees: the old "is not returned and is not logged" became false. The served tool text changes once, so the prefix hash changes for the first run after this build; G3 numbers across that boundary need that note.
 - Witness, the same flood body on both trees (300 console.log lines of 100 characters and one console.error): 76 lines kept, 225 dropped, 8188 bytes; the reply stays {"ok":true,"output":"1"}. tools/check-console.mjs holds this, the format case and the 512-byte cut (a 600-byte line of three-byte characters keeps 510 bytes), and checks that stdout stays JSON-RPC.
+
+## Native body has no setTimeout (documented gap, 2026-11-06)
+
+- Witness, native serve on build/release, body `await new Promise((r) => setTimeout(r, 60000)); return 1;`: {"ok":false,"error":"setTimeout is not defined ... (<body>:2:58)"}. Node runs the same body with setTimeout defined.
+- Effect: a body that waits on a timer fails on native only. The parity harness does not cover it.
+- Recorded for the owner, not implemented in this cycle.
