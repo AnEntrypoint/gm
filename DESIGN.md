@@ -173,7 +173,7 @@ Question: is playwriter set up on every gm install the way it is on this machine
 
 - Each gm checkout runs the shipped default: `npx -y -p github:AnEntrypoint/pw#v0.1.0 playwriter-project` with telemetry off and no sandbox flag, from `defaults/mcp.json`. Setup registers only gm with the host (`setup.sh` prints add-mcp commands for gm alone), so the worker is the only thing that starts playwriter.
 - This machine adds a layer through the `--mcp-config` file of its gm registration (`/config/.claude.json` points it at `/config/.gm/mcp.json`). That layer runs `/workspace/pw/bin/playwriter-project` with `PLAYWRITER_NO_SANDBOX=1`. The code matches the pinned tag: `git diff --stat v0.1.0 HEAD` in `/workspace/pw` lists only `docs/index.html`.
-- The predecessor gm (`/workspace/gm`) installs no playwriter. Its `install.sh` and `bin/gm-install.js` do not name it, and only `.gitignore` names `.playwriter/`.
+- The predecessor gm (`/workspace/gm`) installs no playwriter. Its install script and its gm-install.js (since removed from the tree) do not name it, and only `.gitignore` names `.playwriter/`.
 
 Decision: the shipped default does not set `PLAYWRITER_NO_SANDBOX`. It turns off Chromium's sandbox on every platform, and pw documents it only for Linux containers. README.md shows the layer that sets it. The owner may reverse this.
 
@@ -1429,4 +1429,4 @@ Rationale the comment sweep moved out of tools/ (relay.mjs is held and unchanged
 - Default: 8 in-flight calls, `DEFAULT_MAX_INFLIGHT = 8` (src/mcp.mjs:128). `--max-inflight` overrides it (src/mcp.mjs:1033) and it reaches `createSession` as `maxInflight` (src/mcp.mjs:215).
 - Enforced in `startCall` and `drain` (src/mcp.mjs:509): a call waits while `active.size` is at the cap. Every tools call request enters through src/mcp.mjs:466, so a subagent on the parent's connection (`next_context({ child: true, run })`, `run_code`) takes a slot from the same 8 as the parent.
 - The cap is per serve process. A separate session has its own process and its own 8 slots.
-- Native gap: native/components/mcp/include/gm/mcp.hpp:32 sets `max_inflight = 8`, and server.cpp reports it in the start and status replies (lines 717, 918, 967). No native code reads the value to limit calls, and the host parses no `--max-inflight`. Native runs without the cap; Node enforces it.
+- Native enforces the same cap. The default is native/components/mcp/include/gm/mcp.hpp:32; `--max-inflight` is parsed in native/components/host/worker.cpp (max_inflight_of) and refused unless it is a positive integer. The queue is in native/components/mcp/server.cpp (pump_calls): tools calls start in arrival order, and at most max_inflight run at once. tools/check-inflight.mjs holds a ninth call until one of eight ends.

@@ -533,6 +533,16 @@ struct Server::State {
         std::set<std::string> inflight;
     } turn;
 
+    struct Calls {
+        std::mutex mutex;
+        std::condition_variable changed;
+        std::deque<std::pair<std::uint64_t, std::string>> queued;
+        int running = 0;
+        bool closed = false;
+        std::vector<std::thread> threads;
+        std::thread pump;
+    } calls;
+
     void await_duplicate(const std::string& key) {
         bool busy;
         {
@@ -2614,7 +2624,7 @@ struct Server::State {
         process(line, take_ticket(), true);
     }
 
-    void dispatch(std::string_view line, std::vector<std::thread>& workers) {
+    void dispatch(std::string_view line) {
         if (trim(line).empty()) return;
         if (is_method(line, "notifications/cancelled")) {
             process(line, 0, false);
@@ -2622,10 +2632,55 @@ struct Server::State {
         }
         std::uint64_t ticket = take_ticket();
         if (is_method(line, "tools/call")) {
-            workers.emplace_back([this, ticket, text = std::string(line)] { process(text, ticket, true); });
+            enqueue_call(ticket, std::string(line));
             return;
         }
         process(line, ticket, true);
+    }
+
+    void enqueue_call(std::uint64_t ticket, std::string text) {
+        {
+            std::lock_guard guard(calls.mutex);
+            calls.queued.emplace_back(ticket, std::move(text));
+        }
+        calls.changed.notify_all();
+    }
+
+    void start_calls() { calls.pump = std::thread([this] { pump_calls(); }); }
+
+    void pump_calls() {
+        const int limit = std::max(1, options.max_inflight);
+        std::unique_lock guard(calls.mutex);
+        for (;;) {
+            calls.changed.wait(guard, [&] {
+                return (!calls.queued.empty() && calls.running < limit) || (calls.closed && calls.queued.empty() && calls.running == 0);
+            });
+            if (calls.closed && calls.queued.empty() && calls.running == 0) return;
+            while (!calls.queued.empty() && calls.running < limit) {
+                auto [ticket, text] = std::move(calls.queued.front());
+                calls.queued.pop_front();
+                calls.running += 1;
+                calls.threads.emplace_back([this, ticket, text = std::move(text)] {
+                    process(text, ticket, true);
+                    {
+                        std::lock_guard done(calls.mutex);
+                        calls.running -= 1;
+                    }
+                    calls.changed.notify_all();
+                });
+            }
+        }
+    }
+
+    void drain_calls() {
+        {
+            std::lock_guard guard(calls.mutex);
+            calls.closed = true;
+        }
+        calls.changed.notify_all();
+        if (calls.pump.joinable()) calls.pump.join();
+        for (auto& thread : calls.threads) thread.join();
+        calls.threads.clear();
     }
 
     void process(std::string_view line, std::uint64_t ticket, bool ordered) {
@@ -2739,6 +2794,7 @@ private:
 }
 
 Server::State::~State() {
+    drain_calls();
     if (options.serve_skill_hook) *options.serve_skill_hook = nullptr;
     {
         std::lock_guard guard(monitor_mutex);
@@ -2899,11 +2955,13 @@ deoxidene::Result<std::unique_ptr<Server>, std::string> Server::open(VerbTable& 
     auto booted = state->boot();
     if (!booted) return deoxidene::Err<std::string>{booted.error()};
     state->start_list_watch();
+    state->start_calls();
     return std::unique_ptr<Server>(new Server(std::move(state)));
 }
 
 void Server::accept(std::string_view line) { state_->accept(line); }
-void Server::dispatch(std::string_view line, std::vector<std::thread>& workers) { state_->dispatch(line, workers); }
+void Server::dispatch(std::string_view line) { state_->dispatch(line); }
+void Server::drain() { state_->drain_calls(); }
 void Server::input_ended() { state_->input_ended(); }
 std::string Server::run_id() const { return state_->session->run_id; }
 std::filesystem::path Server::run_dir() const { return state_->session->run_dir; }
@@ -2917,13 +2975,12 @@ int serve_stream(std::istream& in, std::ostream& out, VerbTable& verbs, ServerOp
         std::cerr << "gm mcp: " << server.error() << '\n';
         return 1;
     }
-    std::vector<std::thread> calls;
     std::string line;
     while (std::getline(in, line)) {
         if (!line.empty() && line.back() == '\r') line.pop_back();
-        (*server)->dispatch(line, calls);
+        (*server)->dispatch(line);
     }
-    for (auto& call : calls) call.join();
+    (*server)->drain();
     (*server)->input_ended();
     return 0;
 }

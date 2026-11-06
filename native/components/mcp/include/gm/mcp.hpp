@@ -52,7 +52,8 @@ public:
     ~Server();
 
     void accept(std::string_view line);
-    void dispatch(std::string_view line, std::vector<std::thread>& workers);
+    void dispatch(std::string_view line);
+    void drain();
     void input_ended();
     std::string run_id() const;
     std::filesystem::path run_dir() const;

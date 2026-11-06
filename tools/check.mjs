@@ -39,8 +39,11 @@ if (callerCheck.status !== 0) failures.push('caller check');
 const searchRootCheck = spawnSync(process.execPath, [join(root, 'tools', 'check-search-root.mjs'), ...(existsSync(binary) ? [binary] : [])], { cwd: root, stdio: 'inherit', timeout: 240000 });
 if (searchRootCheck.status !== 0) failures.push('search root check');
 
+const inflightCheck = spawnSync(process.execPath, [join(root, 'tools', 'check-inflight.mjs'), ...(existsSync(binary) ? [binary] : [])], { cwd: root, stdio: 'inherit', timeout: 240000 });
+if (inflightCheck.status !== 0) failures.push('inflight check');
+
 if (failures.length) {
     console.error(`check: ${failures.length} failure(s)\n- ${failures.join('\n- ')}`);
     process.exit(1);
 }
-console.log('check: gate, unit-test scan, g3 snapshot, redaction witness, read truncation, caller and search root checks passed');
+console.log('check: gate, unit-test scan, g3 snapshot, redaction witness, read truncation, caller, search root and inflight checks passed');
