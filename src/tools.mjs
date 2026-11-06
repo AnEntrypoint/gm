@@ -22,6 +22,7 @@ const BOOT_LEAVES = { 'git.mjs': gitModule, 'rows.mjs': rowsModule, 'fetch.mjs':
 // the largest file read so far, which is the peak, and never shrinks. A file bigger than READ_SYNC_LIMIT is read asynchronously, so a large
 // read does not hold the event loop.
 const READ_BUFFER_BYTES = 4096;
+const LIST_PAGE = 500;
 const READ_SYNC_LIMIT = 1024 * 1024;
 const BINARY_PROBE = 8000;
 let readBuffer = Buffer.allocUnsafe(READ_BUFFER_BYTES);
@@ -221,10 +222,17 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
     async list_dir(args) {
       const at = locate(args.path ?? '.');
       if (at.refused) return refusal(at.refused);
+      if (args.prefix !== undefined && typeof args.prefix !== 'string') return { ok: false, error: 'prefix must be a string' };
+      if (args.offset !== undefined && (!Number.isInteger(args.offset) || args.offset < 0)) return { ok: false, error: 'offset must be a whole number, zero or more' };
+      if (args.limit !== undefined && (!Number.isInteger(args.limit) || args.limit < 1 || args.limit > LIST_PAGE)) return { ok: false, error: `limit must be a whole number from 1 to ${LIST_PAGE}` };
       const entries = (await readdir(at.path, { withFileTypes: true }))
         .map((entry) => (entry.isDirectory() ? `${entry.name}/` : entry.name))
+        .filter((name) => args.prefix === undefined || name.startsWith(args.prefix))
         .sort();
-      return { ok: true, output: entries.join('\n') };
+      const offset = args.offset ?? 0;
+      const page = entries.slice(offset, offset + (args.limit ?? LIST_PAGE));
+      const next = offset + page.length < entries.length ? offset + page.length : null;
+      return { ok: true, output: page.join('\n'), total: entries.length, next };
     },
 
     run_shell(args, ctx) {

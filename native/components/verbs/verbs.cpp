@@ -38,6 +38,7 @@ constexpr double max_timeout_ms = 600000;
 constexpr double max_job_timeout_ms = 3600000;
 constexpr std::size_t shell_output_cap = 200000;
 constexpr std::size_t query_page_events = 50;
+constexpr std::size_t list_page = 500;
 constexpr std::size_t query_reply_chars = 20000;
 constexpr std::size_t query_window_events = 1000;
 constexpr std::size_t query_window_bytes = 4 * 1024 * 1024;
@@ -51,7 +52,7 @@ const std::vector<VerbInfo>& verb_table() {
     {"write_file", "Write a text file, inside or outside the workspace, creating parent directories. Replacing an existing file with content less than half its prior byte size adds shrunkByBytes, shrinkRatio and shrinkWarning to the result (never blocks the write); new files and normal rewrites are unchanged.", R"json({"type":"object","properties":{"path":{"type":"string"},"content":{"type":"string"}},"required":["path","content"]})json"},
     {"edit_file", "Replace old with new in a text file, inside or outside the workspace. old must occur once, unless replaceAll is true.", R"json({"type":"object","properties":{"path":{"type":"string"},"old":{"type":"string"},"new":{"type":"string"},"replaceAll":{"type":"boolean"}},"required":["path","old","new"]})json"},
     {"stat_file", "Type, size and mtime of a path, inside or outside the workspace, as JSON.", R"json({"type":"object","properties":{"path":{"type":"string"}},"required":["path"]})json"},
-    {"list_dir", "List a directory, inside or outside the workspace. Directories end with \"/\".", R"json({"type":"object","properties":{"path":{"type":"string"}},"required":[]})json"},
+    {"list_dir", "List a directory, inside or outside the workspace. Directories end with \"/\". prefix keeps names that start with it, offset and limit page the sorted list, and the reply gives total and next.", R"json({"type":"object","properties":{"path":{"type":"string"},"prefix":{"type":"string"},"offset":{"type":"number"},"limit":{"type":"number"}},"required":[]})json"},
     {"run_shell", "Run a shell command in the workspace and wait for it. Default timeout 60000 ms. Its process group is killed when it returns, so background work must go through job_start. Large output is condensed by default; pass raw:true for the whole text, and compressed/originalChars/keptChars/droppedLines report what was dropped.", R"json({"type":"object","properties":{"command":{"type":"string"},"timeoutMs":{"type":"number"},"raw":{"type":"boolean"}},"required":["command"]})json"},
     {"job_start", "Start a shell command as a named background job and return at once. Poll it with job_status. timeoutMs is the job's deadline in milliseconds: default 300000, at most 3600000 (and never past the job lifetime, 3600000 by default). At the deadline the job's process group gets SIGTERM, then SIGKILL, and the job ends killed with reason timeout. job_status reports the deadline as timeoutMs.", R"json({"type":"object","properties":{"job":{"type":"string"},"command":{"type":"string"},"timeoutMs":{"type":"number"}},"required":["job","command"]})json"},
     {"job_status", "State (running, exited or killed), exitCode, signal and output of a job as plain fields, with logPath (the job output file). output is the last 20000 characters, with total (its length) and truncated; with offset, output is the 20000 characters from that offset, with next. waitMs polls until the job leaves running, capped at 30000 ms (30 s; a larger waitMs is clamped); re-arm gm.job_status({ job, waitMs: 30000 }) while state is running. Offsets and lengths count characters, not lines.", R"json({"type":"object","properties":{"job":{"type":"string"},"waitMs":{"type":"number"},"offset":{"type":"number"}},"required":["job"]})json"},
@@ -462,6 +463,14 @@ struct CoreVerbs::Impl {
         json::Value dot(".");
         auto at = locate(path_value != nullptr ? path_value : &dot);
         if (!at) return refusal("path must be a non-empty string");
+        const json::Value* prefix_value = present(args, "prefix");
+        const json::Value* offset_value = present(args, "offset");
+        const json::Value* limit_value = present(args, "limit");
+        if (prefix_value != nullptr && !prefix_value->is_string()) return failure("prefix must be a string");
+        if (offset_value != nullptr && (!core::is_whole_number(offset_value) || offset_value->as_number() < 0)) return failure("offset must be a whole number, zero or more");
+        if (limit_value != nullptr && (!core::is_whole_number(limit_value) || limit_value->as_number() < 1 || limit_value->as_number() > static_cast<double>(list_page))) {
+            return failure("limit must be a whole number from 1 to " + std::to_string(list_page));
+        }
         std::error_code ec;
         std::filesystem::directory_iterator it(*at, ec);
         if (ec) return failure(core::node_error(ec.default_error_condition().value(), "scandir", &*at));
@@ -472,14 +481,24 @@ struct CoreVerbs::Impl {
             names.push_back(entry.path().filename().string() + (directory ? "/" : ""));
         }
         std::sort(names.begin(), names.end());
+        if (prefix_value != nullptr) {
+            const std::string& prefix = prefix_value->as_string();
+            names.erase(std::remove_if(names.begin(), names.end(), [&](const std::string& name) { return !name.starts_with(prefix); }), names.end());
+        }
+        const std::size_t offset = offset_value != nullptr ? static_cast<std::size_t>(offset_value->as_number()) : 0;
+        const std::size_t limit = limit_value != nullptr ? static_cast<std::size_t>(limit_value->as_number()) : list_page;
+        const std::size_t from = std::min(offset, names.size());
+        const std::size_t to = std::min(names.size(), from + limit);
         std::string output;
-        for (std::size_t i = 0; i < names.size(); ++i) {
-            if (i > 0) output.push_back('\n');
+        for (std::size_t i = from; i < to; ++i) {
+            if (i > from) output.push_back('\n');
             output += names[i];
         }
         json::Value reply;
         reply.set("ok", true);
         reply.set("output", std::move(output));
+        reply.set("total", static_cast<std::uint64_t>(names.size()));
+        reply.set("next", to < names.size() ? json::Value(static_cast<std::uint64_t>(to)) : json::Value(nullptr));
         return reply;
     }
 

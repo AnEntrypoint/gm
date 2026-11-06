@@ -898,3 +898,11 @@ This run hit the 50-step limit because of the step-counting defect fixed in 2d41
 - After c10d17d (pushed) the parity run showed 3 differences: grep literal, regex and word, on .result...output.scannedFiles. Cause: the parity scratch workspace holds each tree's own run-state files, so the two file totals differ by those files, while the scanned tree and the scanTruncated flag match (a live probe on a clean repository gave 325 files and 4511960 bytes in both trees).
 - Change: native/tests/parity/run.mjs gains one NATIVE_AHEAD rule for scannedFiles and scannedBytes (any integer on both sides), recorded with its reason. scanTruncated stays compared exactly.
 - Validation: parity 24/83 match, 42 native-ahead, 17 documented-gap, 0 differ. Author lanmower, no trailers.
+
+## Item 4d: list_dir pages with prefix, offset and limit (2026-11-06)
+
+- Finding (DESIGN.md:792): list_dir had no filter or paging, so a growing .gm state directory dumped every entry in one string.
+- Change: list_dir takes prefix (names that start with it), offset and limit (1 to 500, default 500), and replies with output (the page), total (the filtered count) and next (the offset of the next page, null at the end). Node: src/tools.mjs list_dir and the schema in src/mcp.mjs; native: native/components/verbs/verbs.cpp list_dir, its schema, and list_page 500. Both trees reject a bad prefix, offset or limit with the same text.
+- Witness (stdio, both trees, identical): a directory with 1200 f-prefixed files plus sub/ and other.md. Paged with prefix f and limit 500: 500 entries, total 1200, next 500; offset 500: next 1000; offset 1000: 200 entries, next null. Unfiltered: total 1202, next 500. limit 0: "limit must be a whole number from 1 to 500" in both trees.
+- Default page: a directory of more than 500 entries is read in pages by default now, so a reply that once listed everything lists the first 500 and names next. Callers that read the whole directory must page.
+- Validation: ctest 23/23; leaves 33/33; conformance 75 passed, 0 failed of 75 checks in 24 scenarios; gate ok. Parity is run after the commit, since it archives HEAD. Author lanmower, no trailers.
