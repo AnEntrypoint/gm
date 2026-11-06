@@ -5,6 +5,9 @@ import { tmpdir } from 'node:os';
 import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import readline from 'node:readline';
+import { once } from 'node:events';
+
+const exited = (child) => (child.exitCode !== null || child.signalCode !== null ? Promise.resolve() : once(child, 'exit'));
 import { createSearchVerbs } from '../src/search.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -76,6 +79,7 @@ if (binary !== null && existsSync(binary)) {
     failures.push(`native: ${error.message}`);
   } finally {
     child.kill();
+    await exited(child);
   }
 } else {
   console.log('native grep: skipped (no binary given)');

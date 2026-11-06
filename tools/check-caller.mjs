@@ -4,6 +4,9 @@ import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import readline from 'node:readline';
+import { once } from 'node:events';
+
+const exited = (child) => (child.exitCode !== null || child.signalCode !== null ? Promise.resolve() : once(child, 'exit'));
 
 const binary = process.argv[2] ? resolve(process.argv[2]) : null;
 const WATCHDOG_MS = 90000;
@@ -61,6 +64,7 @@ try {
   failures.push(error.message);
 } finally {
   child.kill();
+  await exited(child);
   rmSync(workspace, { recursive: true, force: true });
 }
 
