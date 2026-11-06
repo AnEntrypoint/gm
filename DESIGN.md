@@ -927,3 +927,10 @@ This run hit the 50-step limit because of the step-counting defect fixed in 2d41
 - Finding (oscraft review of eb0ff3d, valid on origin/main): redact_assignments rebuilt the lowercase copy of the whole text for every key match, and redact_bearer recursed once per replaced token. Both cost CPU on every run-log event.
 - Change: native/components/log/log.cpp keeps one lowercase copy per pass and updates it with each replacement (kRedacted is lowercase, so the two copies stay equal); redact_bearer continues its scan instead of recursing.
 - Witness: log_test adds an event with three bearer tokens and four assignments; redacted output is checked exactly and keep-me is untouched. ctest 23/23 on the rebuilt release tree. Author lanmower, no trailers.
+
+## CI path for the unit-test removal (2026-11-06)
+
+- Commit a73f023 replaced each ctest step with `node tools/check-build.mjs build/<preset>`, which runs tools/mcp-conformance.mjs against the built gm (gm.exe on Windows) on a scratch workspace and exits with its status.
+- Verified on this Linux host: release preset, `node tools/check-build.mjs build/release` exit 0, conformance 75 of 75; asan preset built and run five times over the same path, one run shown here, exit 0, 75 of 75. An asan run needs LD_PRELOAD unset: this container preloads three interposer libraries, and ASan then refuses to start (`ASan runtime does not come first`). CI runners do not preload them.
+- Not verified here: Windows (gm.exe path resolution, and the release.yml Test step under the bash shell on Windows and macOS runners), and the arm64 gdb job in .github/workflows/arm-diagnose.yml. That job now runs the conformance check under gdb with `set follow-fork-mode child`, so a signal in a spawned gm is caught; no arm64 host was available, so the step is unverified until CI runs it.
+- Author lanmower, no trailers.
