@@ -934,3 +934,22 @@ This run hit the 50-step limit because of the step-counting defect fixed in 2d41
 - Verified on this Linux host: release preset, `node tools/check-build.mjs build/release` exit 0, conformance 75 of 75; asan preset built and run five times over the same path, one run shown here, exit 0, 75 of 75. An asan run needs LD_PRELOAD unset: this container preloads three interposer libraries, and ASan then refuses to start (`ASan runtime does not come first`). CI runners do not preload them.
 - Not verified here: Windows (gm.exe path resolution, and the release.yml Test step under the bash shell on Windows and macOS runners), and the arm64 gdb job in .github/workflows/arm-diagnose.yml. That job now runs the conformance check under gdb with `set follow-fork-mode child`, so a signal in a spawned gm is caught; no arm64 host was available, so the step is unverified until CI runs it.
 - Author lanmower, no trailers.
+
+## Spawn friction: live reproduction on the native release build (2026-11-06)
+
+- Method: a stdio driver (kept outside the repo, scratch only) ran `gm serve --workspace <scratch>` from build/release (05ce150 tree) and timed each call. Steps: next_context; run_code with `sleep 300` and timeoutMs 3000 (went to background at 3.0 s, job body-8); finish with a witness while body-8 runs; finish with stopBackground true; run_code on the ended run; next_context; run_code `echo ok`; run_code plain.
+- Result: finish with the background open was refused at 1 ms ("background run body-8 is still running ... finish with stopBackground: true kills it"), not held for 120 s. finish with stopBackground returned at 8 ms. run_code on the ended run was refused at 1 ms ("run ... has ended; call next_context"). After next_context, run_code `echo ok` returned at 5 ms and a plain run_code at 3 ms. No hang.
+- So the 120 s finish hold and the run_code hang after stopped backgrounds are not reproduced here. The spawn session ran a different build (gmc); its build id is not in its report, so this is not an identical repro. Items stay open until the spawn session gives its build id and a timed log.
+- Not covered by this run: next_context waitMs, the timeoutMs 400000 rejection, background duration in the job event, the spawn client lease.
+
+## Windows shell switch, babbb28 (2026-11-06, oscraft review)
+
+- Behaviour change, stated here because the commit message does not: on Windows, run_shell now runs commands through Git for Windows bash when it is installed (proc.cpp git_bash() checks ProgramFiles, ProgramW6432 and ProgramFiles(x86) for Git\bin\bash.exe) and through cmd otherwise. A machine with Git for Windows now runs cmd-only commands (dir, del, set, backslash paths) under bash, where they fail.
+- Path change, same on all platforms: verb replies print relative paths with forward slashes.
+- Not tested on Windows here. An open item: a cmd-only command run on a Windows machine with Git for Windows installed, to confirm the failure and decide whether run_shell should keep cmd for cmd syntax.
+
+## G3 figures are re-runnable from the repo (2026-11-06, oscraft review)
+
+- The scan is committed as tools/transcript-usage.mjs (node, read-only over /config/.claude/projects or the directory given as its argument). It prints gm sessions (a session with at least one mcp__gm__* tool call), gm calls by name, and the median cache-read share for gm host sessions, gm live test runs, and non-gm sessions.
+- Figures drift as transcripts grow. The 2026-11-06 run of the committed script: 182 gm sessions, 14842 gm calls (gm_codemode 8140, run_code 5378, next_context 1089, finish 233); gm host median 0.9685 over 160 sessions; live 0.8305 over 22; non-gm 0.885 over 310. The figures in the item 5 section above came from /tmp scripts with a text-match filter and a 193-session baseline, so they are not exact re-runs; the method and the ordering (gm host above baseline, live below) hold.
+- Author lanmower, no trailers.
