@@ -1080,6 +1080,42 @@ int main() {
               "a repeated step-limit id returns the stored refusal and a new id opens the successor");
     }
 
+    std::cout << "--- item 11: pipelined step-limit calls ---\n";
+    {
+        auto limits = fresh_options(root, "step-limit-pipelined");
+        limits.max_steps = 2;
+        std::string input;
+        for (int id = 1; id <= 5; ++id) input += call(id, "next_context", "{}") + "\n";
+        std::istringstream in(input);
+        std::ostringstream out;
+        gm::mcp::serve_stream(in, out, verbs, limits);
+        std::vector<Value> by_id(6);
+        std::istringstream replies(out.str());
+        std::string line;
+        while (std::getline(replies, line)) {
+            if (line.empty()) continue;
+            auto parsed = gm::json::parse(line);
+            if (!parsed) continue;
+            const Value* rid = parsed->find("id");
+            const Value* result = parsed->find("result");
+            if (!rid || !rid->is_number() || !result) continue;
+            int id = static_cast<int>(rid->as_number());
+            if (id < 1 || id > 5) continue;
+            const Value* structured = result->find("structuredContent");
+            if (structured) by_id[id] = *structured;
+        }
+        for (int id = 1; id <= 5; ++id) std::cout << "native pipelined " << id << ": " << call_shape(by_id[id]) << '\n';
+        std::string first_run = str(by_id[1], "run");
+        std::string fourth_run = str(by_id[4], "run");
+        check(number_at(by_id[1].find("step")) == 1 && number_at(by_id[1].find("stepsLeft")) == 1 &&
+                  number_at(by_id[2].find("step")) == 2 && number_at(by_id[2].find("stepsLeft")) == 0 &&
+                  !flag_at(by_id[3], "ok") && flag_at(by_id[3], "refused") &&
+                  str(by_id[3], "error").find("step limit 2 reached") != std::string::npos &&
+                  !fourth_run.empty() && fourth_run != first_run && number_at(by_id[4].find("step")) == 1 &&
+                  str(by_id[5], "run") == fourth_run && number_at(by_id[5].find("step")) == 2,
+              "five pipelined calls refuse at step 3 and continue in a different successor run");
+    }
+
     std::error_code ec;
     fs::remove_all(root, ec);
     std::cout << (failures == 0 ? "ALL PASSED" : "FAILURES: " + std::to_string(failures)) << '\n';

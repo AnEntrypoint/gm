@@ -348,7 +348,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
   }
 
   function accept(line) {
-    if (line.trim() === '') return;
+    if (line.trim() === '') return Promise.resolve();
     const turn = handleLine(line)
       .then((reply) => {
         if (reply !== null) write(reply);
@@ -356,6 +356,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
       .catch((err) => console.error(`gm: ${err.message}`))
       .finally(() => unansweredTurns.delete(turn));
     unansweredTurns.add(turn);
+    return turn;
   }
 
   async function handleLine(line) {
@@ -1197,19 +1198,28 @@ async function main(argv) {
     console.error(`gm mcp: run ${closedId} has ended; opened run ${basename(runDir)}`);
     return createSession({ ...limits, runDir, log: fresh, task: start.task, taskInherited: start.inherited });
   }
-  const acceptLine = (line) => {
+  let nextContextTail = Promise.resolve();
+  const acceptNow = (line) => {
     try {
       if (session.ended() !== null && isNextContextCall(line) && !session.hasReply(requestIdOf(line))) {
         retired = Promise.allSettled([retired, session.settled()]);
         session = reopen(session);
         notify(RESOURCES_CHANGED);
       }
-      session.accept(line);
+      return session.accept(line);
     } catch (err) {
       console.error(`gm mcp: ${err.message}`);
       const id = requestIdOf(line);
       if (id !== undefined) write(errorReply(id, -32603, err.message));
+      return Promise.resolve();
     }
+  };
+  const acceptLine = (line) => {
+    if (!isNextContextCall(line)) {
+      acceptNow(line);
+      return;
+    }
+    nextContextTail = nextContextTail.then(() => acceptNow(line)).catch((err) => console.error(`gm mcp: ${err.message}`));
   };
   const lines = createInterface({ input: process.stdin, crlfDelay: Infinity });
   lines.on('line', acceptLine);
