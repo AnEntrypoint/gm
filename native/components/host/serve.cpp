@@ -5,6 +5,7 @@
 #include "gm/host/relay.hpp"
 #include "gm/host/update.hpp"
 #include "gm/json.hpp"
+#include "gm/mcp.hpp"
 
 namespace gm::host {
 
@@ -19,6 +20,11 @@ std::filesystem::path worker_executable(const std::filesystem::path& install_dir
 }
 
 int run_serve(const HostArgs& args) {
+    auto max_inflight = positive_int_flag(args, "--max-inflight", mcp::ServerOptions{}.max_inflight);
+    if (!max_inflight) {
+        std::cerr << "gm relay: " << max_inflight.error() << '\n';
+        return 1;
+    }
     const auto workspace = workspace_of(args);
     auto run_dir = choose_run_dir(args, workspace);
     if (!run_dir) {

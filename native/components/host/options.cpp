@@ -89,6 +89,14 @@ std::filesystem::path workspace_of(const HostArgs& args) {
     return args.path_or("--workspace", std::filesystem::current_path());
 }
 
+deoxidene::Result<int, std::string> positive_int_flag(const HostArgs& args, std::string_view name, int fallback) {
+    const auto flag = args.flag(name);
+    if (!flag) return fallback;
+    const bool digits = !flag->empty() && flag->size() <= 9 && flag->find_first_not_of("0123456789") == std::string::npos;
+    if (!digits || std::stoi(*flag) < 1) return deoxidene::Err<std::string>(std::string(name) + " must be a positive integer");
+    return std::stoi(*flag);
+}
+
 std::filesystem::path installed_or(std::string_view name, const std::filesystem::path& fallback) {
     const std::filesystem::path candidate = current_executable().parent_path() / name;
     std::error_code ec;

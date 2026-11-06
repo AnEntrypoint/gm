@@ -101,20 +101,12 @@ deoxidene::Result<std::string, std::string> load_task(const HostArgs& args) {
     return task;
 }
 
-deoxidene::Result<int, std::string> max_inflight_of(const HostArgs& args) {
-    const auto flag = args.flag("--max-inflight");
-    if (!flag) return mcp::ServerOptions{}.max_inflight;
-    const bool digits = !flag->empty() && flag->size() <= 9 && flag->find_first_not_of("0123456789") == std::string::npos;
-    if (!digits || std::stoi(*flag) < 1) return deoxidene::Err<std::string>("--max-inflight must be a positive integer");
-    return std::stoi(*flag);
-}
-
 }
 
 int run_worker(const HostArgs& args) {
     const auto workspace = workspace_of(args);
     if (!std::filesystem::is_directory(workspace)) return fail("workspace is not a directory: " + workspace.string());
-    auto max_inflight = max_inflight_of(args);
+    auto max_inflight = positive_int_flag(args, "--max-inflight", mcp::ServerOptions{}.max_inflight);
     if (!max_inflight) return fail(max_inflight.error());
     auto task = load_task(args);
     if (!task) return fail(task.error());
