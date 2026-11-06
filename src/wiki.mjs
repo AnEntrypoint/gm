@@ -2,8 +2,6 @@ import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync, write
 import { join } from 'node:path';
 import { asciiText } from './sources.mjs';
 
-// The wiki: pages written from quoted sources, an index and a log. These are plain functions, served by wiki_write, and the wiki is
-// searched through retrieve.mjs. wikiWrite refuses a claim whose quote is not in its named source. The gate and finish run lintWiki.
 const PAGE = /^[a-z0-9][a-z0-9-]{0,63}$/;
 const SOURCE = /^[0-9a-f]{12}$/;
 const KINDS = ['ingest', 'answer', 'lint'];

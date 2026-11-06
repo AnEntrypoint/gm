@@ -9,13 +9,8 @@ import { ROW_TOOLS } from './rows.mjs';
 import { SEARCH_TOOLS } from './search.mjs';
 import { MCP_RULES } from './prompt.mjs';
 
-// The skills the server serves over SEP-2640, each by its directory name. skills/dev is a process skill for the checkout, not served.
-// A served skill's frontmatter name is its directory name, which is the final segment of its skill:// URI.
 export const SERVED_SKILLS = ['gm', 'gm-continue'];
 
-// A served SKILL.md's frontmatter, as the SEP needs it: a JSON object of the `key: value` lines between the two --- lines. The server reads
-// plain YAML scalars only. A line that is not key: value, and a value that quotes or holds ': ' or ' #' (YAML reads those as a mapping or a
-// comment), is refused, so a partial object is never returned. name and description are required, and name must equal the directory.
 export function parseSkill(text, dir) {
   const match = /^---\n([\s\S]*?)\n---\n?/.exec(text);
   if (!match) throw new Error(`skills/${dir}/SKILL.md has no frontmatter`);
@@ -41,9 +36,6 @@ function plainProblem(value) {
   return null;
 }
 
-// The default surface serves next_context, run_code and finish, and every other verb is a function on gm inside run_code. A skill
-// that names a verb or a tool without the gm. prefix names a tool the default does not serve, so the gate refuses it. The names are
-// read when the check runs, because git.mjs imports the gate.
 const FILE_TOOLS = ['read_file', 'write_file', 'edit_file', 'stat_file', 'list_dir', 'run_shell', 'job_start', 'job_status', 'job_stop', 'query_log'];
 
 export function unservedNames() {
@@ -54,8 +46,6 @@ export function ruleBodies() {
   return MCP_RULES.split('\n').filter((line) => /^\d+\. /.test(line)).map((line) => line.replace(/^\d+\. /, ''));
 }
 
-// The skills under skills/, each SKILL.md. A bare name of an unserved tool, that is not written as gm.<name>, is a finding. The gm skill
-// holds each rule word for word. The check reads the skill without its gm. prefix, so a verb may be written as gm.query_log.
 function skillFiles(dir, rel = '') {
   const files = [];
   for (const entry of readdirSync(join(dir, rel), { withFileTypes: true })) {

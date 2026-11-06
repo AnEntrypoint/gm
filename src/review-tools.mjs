@@ -1,6 +1,3 @@
-// The review tools: a packet of a spec and its references, a reviewer's record on it, and the join of records with the commits and
-// ends after them. The reviewer is spawned by the host, which passes its reply in. gm records the isolation as host-attested and
-// does not verify it. The functions are in review.mjs.
 import { resultZone1, resultZone2 } from './compact.mjs';
 
 const OUTPUT_PAGE = 20000;
@@ -26,8 +23,6 @@ export const REVIEW_TOOLS = [
   },
 ];
 
-// The review tools keep their witness in both horizons: review_packet keeps the packet hash that a record names. review_join lists the
-// records, so the second horizon cuts it.
 const packetOf = (event) => {
   try {
     return JSON.parse(event.output).packet;

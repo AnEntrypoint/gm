@@ -6,8 +6,6 @@ const POSIX_SHELL = process.platform !== 'win32' && existsSync('/bin/bash') ? '/
 const OUTPUT_CAP = 200000;
 const KILL_GRACE_MS = 500;
 export const foregroundGroups = new Set();
-// The body a call runs for, when a background run's body runs it. A shell that a body starts is recorded with that body, so a stop of
-// the body kills its own shells and no other run's.
 export const bodyContext = new AsyncLocalStorage();
 const bodyGroups = new Map();
 
@@ -52,9 +50,6 @@ export function signalGroup(pid, signal) {
   }
 }
 
-// Runs one command in its own process group and waits for it. With shell true, file is a shell command line.
-// The group is killed when the command returns, so no child outlives the call. An abort signal (a cancel from the host) kills the group the
-// same way, and the call settles as cancelled; the caller decides whether anyone is told.
 export function runCommand(file, args, { cwd, timeoutMs, shell = false, env = {}, signal: abort = undefined }) {
   return new Promise((done) => {
     let output = '';

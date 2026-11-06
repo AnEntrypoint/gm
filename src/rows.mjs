@@ -158,8 +158,6 @@ export function createRowVerbs({ root, confine, log }) {
   }
 }
 
-// The open rows of a kind, for the reminder of a long body: how many rows there are and how many are open, and the first limit open rows in
-// list order. That window is the next rows to do. A row file that cannot be read makes the read throw, and the caller says so.
 export async function rowSummary(confine, kind, limit) {
   const rows = sortByCreated((await readRows(confine)).filter((row) => row.kind === kind));
   const open = rows.filter((row) => row.status === 'open');
@@ -167,7 +165,6 @@ export async function rowSummary(confine, kind, limit) {
   return { total: rows.length, open: open.length, window, more: open.length - window.length };
 }
 
-// The open rows of every kind, in list order. A finish is refused while any of them is open, and names them.
 export async function openRows(confine) {
   return sortByCreated((await readRows(confine)).filter((row) => row.status === 'open'));
 }
@@ -190,7 +187,6 @@ async function readRows(confine) {
   return Promise.all(files.map(async (name) => parseRow(await readFile(join(dir.path, name), 'utf8'))));
 }
 
-// Creation order, then id, so the list order is the same for every reader.
 function sortByCreated(rows) {
   return rows.sort((a, b) => compareText(String(a.createdAt), String(b.createdAt)) || compareText(a.id, b.id));
 }
@@ -203,7 +199,6 @@ function validId(id) {
   return typeof id === 'string' && /^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(id);
 }
 
-// Each value is written as JSON, which is also a valid YAML scalar, so a row file is readable YAML.
 function renderRow(row) {
   const lines = FIELDS.filter((field) => row[field] !== undefined).map((field) => `${field}: ${JSON.stringify(row[field])}`);
   return `${lines.join('\n')}\n`;
@@ -226,7 +221,6 @@ function parseScalar(raw) {
   }
 }
 
-// Code-point order, so the list order does not depend on the host's locale.
 function compareText(a, b) {
   if (a === b) return 0;
   return a < b ? -1 : 1;

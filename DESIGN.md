@@ -1008,7 +1008,7 @@ Rules the comment sweep removed from the code (7985788, 08f328b, 373e8af). Each 
 ### tools/gm-continue-setup.mjs
 
 - A row status other than open or resolved is a defect: a row is open until it is implemented or deleted, so every open row is planned.
-- Every actionable row must be attempted in the last pass, and must end resolved.
+- Every actionable row must be attempted in the last pass, and must end resolved. Code: tools/gm-continue-setup.mjs:78-84.
 
 ### tools/supervise.mjs
 
@@ -1035,11 +1035,11 @@ Rules the comment sweep removed from the code (7985788, 08f328b, 373e8af). Each 
 
 ### src/mcp.mjs
 
-- A trace context carried in a tools/call request's _meta is copied into that call's action event.
+- A trace context carried in a tools/call request's _meta is copied into that call's action event. Code: src/mcp.mjs:1010 (traceOf), 783 and 802 (action events).
 - The files under a directory are listed relative to it, with / separators on every platform, and sorted.
 - A protocol error's data member, when given, names what was not found (resources/read names the uri).
 - A foreground shell whose request names a progress token reports its elapsed seconds every PROGRESS_MS, and the timer stops when the call ends.
-- A call cancelled while it waited for a slot never starts.
+- A call cancelled while it waited for a slot never starts. Code: src/runcode.mjs:59-60 (cancelSlot), src/mcp.mjs:600 (refusal).
 - A background run's notices: started, still running once per 3 minutes, and ended; a kill is named once, by job-killed.
 - A background run's result comes from its status file: its value, or its error when it failed; the job event carries the state only.
 - readOnlyHint is READ_ONLY_TOOLS, except next_context, which writes a step event.
@@ -1054,10 +1054,10 @@ Rules the comment sweep removed from the code (7985788, 08f328b, 373e8af). Each 
 
 ### src/review.mjs
 
-- A record is refused when the packet is not in this log, when the packet already has a record, when the verdict is not one of VERDICTS, when there is no reviewer, or when the spec's sha has changed since the packet.
+- A record is refused when the packet is not in this log, when the packet already has a record, when the verdict is not one of VERDICTS, when there is no reviewer, or when the spec's sha has changed since the packet. Code: src/review.mjs:52-59 (reviewRecord refusals).
 - The verdict must be one of VERDICTS.
 - A refusal is logged as review-refused, and nothing else is written.
-- The spec's sha at a commit is the sha in that commit's tree, or null when the commit or the path is not there.
+- The spec's sha at a commit is the sha in that commit's tree, or null when the commit or the path is not there. Code: src/review.mjs:104-108 (specShaAt).
 
 ### src/runcode.mjs
 
@@ -1065,10 +1065,84 @@ Rules the comment sweep removed from the code (7985788, 08f328b, 373e8af). Each 
 
 ### src/tools.mjs
 
-- A running job with no progress for the stuck threshold is stuck, and the agent is told once; the check runs every monitorMs.
+- A running job with no progress for the stuck threshold is stuck, and the agent is told once; the check runs every monitorMs. Code: src/tools.mjs:509-520 (checkStuck), 531 (monitorMs interval).
 - ctx carries the abort signal of a cancelled request, which only run_shell reads.
-- The wall time of the newest verb call a body made comes from the log, or 0 when it made none; the walk stops at the first call it finds.
+- The wall time of the newest verb call a body made comes from the log, or 0 when it made none; the walk stops at the first call it finds. Code: src/tools.mjs:709 (lastCallWall).
 
 ### caller log (src/mcp.mjs, native/components/mcp/server.cpp)
 
-- Each action event carries caller: connection is the pid of the process that logged it, and parent is its parent pid. The parent is the serve process, not the host session, so the host session is not recorded.
+Each action event carries caller: connection is the pid of the process that logged it, and parent is its parent pid. The parent is the serve process, not the host session, so the host session is not recorded.
+
+## Rationale by module group, batch 2 (2026-11-06)
+
+Rules that the comment sweep held in the source (batch 2: skills, connect, wiki, rows, sources, exec, review-tools, freshness). Each line is one comment's rule; the source comment was removed after its text was written here.
+
+### src/skills.mjs
+
+- The skills under skills/ are served over SEP-2640, each by its directory name; skills/dev is a process skill for the checkout and is not served.
+- A served skill's frontmatter name is its directory name, which is the final segment of its skill:// URI.
+- A served SKILL.md's frontmatter is read as a JSON object of key: value lines between the two --- lines, as plain YAML scalars only.
+- A line that is not key: value, or a value that quotes or holds ': ' or ' #', is refused, so a partial object is never returned.
+- name and description are required, and name must equal the directory.
+- The default surface serves next_context, run_code and finish; every other verb is a function on gm inside run_code.
+- A skill that names a verb or tool without the gm. prefix names a tool the default does not serve, so the gate refuses it.
+- The names are read when the check runs, because git.mjs imports the gate.
+- Each skill's SKILL.md is checked: a bare name of an unserved tool that is not written as gm.<name> is a finding.
+- The check reads the skill without its gm. prefix, so a verb may be written as gm.query_log.
+
+### src/connect.mjs
+
+- The host reads once, at connect: the server name and title, the capabilities and instructions in the initialize reply, and the relay file the host runs.
+- The host does not read them again on reload, so a change to any of them needs a reconnect.
+- connectCheck compares them with CONNECT_SHA, and a change fails the gate until its new value is recorded.
+- Recording the new value is the owner's acceptance of that reconnect (DESIGN.md, Reconnect).
+- The rules of a run and the routes for pending events are in the gm skill, which next_context names each step.
+- They are not repeated in connect.mjs, so a change to the rules or the routes is a change to the skill and needs no reconnect.
+- The connect-time text is recorded when the owner accepts it as it is now; it is the value connectSha returns for this checkout.
+
+### src/wiki.mjs
+
+- The wiki is pages written from quoted sources, an index and a log; these are plain functions served by wiki_write, and the wiki is searched through retrieve.mjs.
+- wikiWrite refuses a claim whose quote is not in its named source; the gate and finish run lintWiki.
+
+### src/rows.mjs
+
+- The open rows of a kind, for the reminder of a long body: how many rows there are and how many are open, and the first limit open rows in list order, which is the next rows to do.
+- A row file that cannot be read makes the read throw, and the caller says so.
+- The open rows of every kind are listed in list order; a finish is refused while any is open, and names them.
+- Creation order, then id, so the list order is the same for every reader.
+- Each value is written as JSON, which is also a valid YAML scalar, so a row file is readable YAML.
+- Code-point order, so the list order does not depend on the host's locale.
+
+### src/sources.mjs
+
+- A fetched body is saved in full as ASCII text: every non-ASCII UTF-16 code unit is written as a \uXXXX escape, so the repo's ASCII rule holds and the text can be recovered.
+- A source file is named by the first 12 hex digits of the sha256 of its bytes.
+- A source file is written once: an existing file is never overwritten.
+- sources/index.jsonl is the append-only registry of fetches: one line per fetch, with its url, source id and time.
+- The gate's check: every file in sources/ is the registry, which must hold one JSON object per line, or a source whose sha256 prefix is its name.
+- An edited source no longer matches its name, so the commit is refused.
+
+### src/exec.mjs
+
+- The body a call runs for, when a background run's body runs it.
+- A shell a body starts is recorded with that body, so a stop of the body kills its own shells and no other run's.
+- runCommand runs one command in its own process group and waits for it; with shell true, file is a shell command line.
+- The group is killed when the command returns, so no child outlives the call.
+- An abort signal (a cancel from the host) kills the group the same way, and the call settles as cancelled; the caller decides whether anyone is told.
+
+### src/review-tools.mjs
+
+- The review tools: a packet of a spec and its references, a reviewer's record on it, and the join of records with the commits and the ends after them.
+- The reviewer is spawned by the host, which passes its reply in; gm records the isolation as host-attested and does not verify it.
+- The functions are in review.mjs.
+- The review tools keep their witness in both horizons: review_packet keeps the packet hash that a record names.
+- review_join lists the records, so the second horizon cuts it.
+
+### src/freshness.mjs
+
+- A resolve hook for run_code.
+- Every project file a body loads gets a query that holds the current generation, a counter run_code bumps when a project file changed.
+- Node caches ES modules by URL, so without this a later call would reuse the modules of an earlier one, including a file that imports an edited file.
+- With a new generation after each edit, every project file loads as it is on disk; files under node_modules are left alone.
+- The hook runs on Node's loader thread; its root and the shared counter come from the data passed to module.register in runcode.mjs.
