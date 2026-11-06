@@ -8,7 +8,6 @@
 #include <fstream>
 #include <limits>
 #include <optional>
-#include <regex>
 #include <sstream>
 #include <system_error>
 #include <utility>
@@ -21,31 +20,113 @@ constexpr std::size_t kRecordBytes = 16;
 
 double round_millis(double ms) { return std::round(ms * 1000) / 1000; }
 
-const std::vector<std::regex>& secret_patterns() {
-    static const std::vector<std::regex> patterns = {
-        std::regex(R"(-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?-----END [A-Z ]*PRIVATE KEY-----)"),
-        std::regex(R"(ya29\.[A-Za-z0-9._\-]+)"),
-        std::regex(R"(AIza[0-9A-Za-z_\-]{30,})"),
-        std::regex(R"(sk-[A-Za-z0-9_\-]{20,})"),
-        std::regex(R"((bearer\s+)[A-Za-z0-9._~+/=\-]+)", std::regex::icase),
-        std::regex(R"re(((?:access_token|refresh_token|id_token|client_secret|api[_-]?key|password)"?\s*[=:]\s*"?)[^\s"&,}]+)re", std::regex::icase),
-    };
-    return patterns;
+constexpr std::string_view kRedacted = "[redacted]";
+
+std::string lowered(std::string text) {
+    for (char& c : text) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+    return text;
 }
 
 bool may_hold_secret(const std::string& text) {
-    std::string lower = text;
-    for (char& c : lower) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+    const std::string lower = lowered(text);
     for (const char* marker : {"ya29.", "aiza", "sk-", "private key", "bearer", "token", "secret", "password", "key"}) {
         if (lower.find(marker) != std::string::npos) return true;
     }
     return false;
 }
 
+bool word_char(char c) { return std::isalnum(static_cast<unsigned char>(c)) || c == '_' || c == '-'; }
+
+bool token_char(char c) { return word_char(c) || c == '.' || c == '~' || c == '+' || c == '/' || c == '='; }
+
+bool value_char(char c) { return !std::isspace(static_cast<unsigned char>(c)) && c != '"' && c != '&' && c != ',' && c != '}'; }
+
+std::size_t run_end(const std::string& text, std::size_t from, bool (*accept)(char)) {
+    std::size_t end = from;
+    while (end < text.size() && accept(text[end])) ++end;
+    return end;
+}
+
+void replace_span(std::string& text, std::size_t begin, std::size_t end) {
+    text.replace(begin, end - begin, kRedacted);
+}
+
+void redact_prefixed(std::string& text, std::string_view prefix, bool (*accept)(char), std::size_t min_token) {
+    std::size_t at = text.find(prefix);
+    while (at != std::string::npos) {
+        const std::size_t end = run_end(text, at + prefix.size(), accept);
+        if (end - at >= min_token) {
+            replace_span(text, at, end);
+            at += kRedacted.size();
+        } else {
+            at += prefix.size();
+        }
+        at = text.find(prefix, at);
+    }
+}
+
+void redact_bearer(std::string& text) {
+    const std::string lower = lowered(text);
+    std::size_t at = lower.find("bearer");
+    while (at != std::string::npos) {
+        std::size_t begin = at + 6;
+        while (begin < text.size() && std::isspace(static_cast<unsigned char>(text[begin]))) ++begin;
+        const std::size_t end = run_end(text, begin, token_char);
+        if (begin < end && text.compare(begin, end - begin, kRedacted) != 0) {
+            replace_span(text, begin, end);
+            return redact_bearer(text);
+        }
+        at = lower.find("bearer", at + 6);
+    }
+}
+
+void redact_assignments(std::string& text) {
+    static const std::vector<std::string> keys = {"access_token", "refresh_token", "id_token", "client_secret", "api_key", "api-key", "apikey", "password"};
+    for (const std::string& key : keys) {
+        std::size_t at = lowered(text).find(key);
+        while (at != std::string::npos) {
+            std::size_t cursor = at + key.size();
+            if (cursor < text.size() && text[cursor] == '"') ++cursor;
+            while (cursor < text.size() && std::isspace(static_cast<unsigned char>(text[cursor]))) ++cursor;
+            if (cursor < text.size() && (text[cursor] == '=' || text[cursor] == ':')) {
+                ++cursor;
+                while (cursor < text.size() && std::isspace(static_cast<unsigned char>(text[cursor]))) ++cursor;
+                if (cursor < text.size() && text[cursor] == '"') ++cursor;
+                const std::size_t end = run_end(text, cursor, value_char);
+                if (end > cursor && text.compare(cursor, end - cursor, kRedacted) != 0) {
+                    replace_span(text, cursor, end);
+                }
+            }
+            at = lowered(text).find(key, at + key.size());
+        }
+    }
+}
+
+void redact_private_keys(std::string& text) {
+    std::size_t begin = text.find("-----BEGIN ");
+    while (begin != std::string::npos) {
+        const std::size_t line_end = text.find('\n', begin);
+        const std::size_t header_end = line_end == std::string::npos ? text.size() : line_end;
+        const std::size_t end_at = text.find("-----END ", begin);
+        if (text.substr(begin, header_end - begin).find("PRIVATE KEY") != std::string::npos && end_at != std::string::npos) {
+            const std::size_t close = text.find("PRIVATE KEY-----", end_at);
+            if (close != std::string::npos) {
+                replace_span(text, begin, close + std::string_view("PRIVATE KEY-----").size());
+            }
+        }
+        begin = text.find("-----BEGIN ", begin + kRedacted.size());
+    }
+}
+
 std::string redact_text(const std::string& text) {
     if (!may_hold_secret(text)) return text;
     std::string out = text;
-    for (const std::regex& pattern : secret_patterns()) out = std::regex_replace(out, pattern, "$1[redacted]");
+    redact_private_keys(out);
+    redact_prefixed(out, "ya29.", [](char c) { return c == '.' || word_char(c); }, 6);
+    redact_prefixed(out, "AIza", word_char, 30);
+    redact_prefixed(out, "sk-", word_char, 20);
+    redact_bearer(out);
+    redact_assignments(out);
     return out;
 }
 

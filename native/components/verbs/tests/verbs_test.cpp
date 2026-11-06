@@ -52,7 +52,7 @@ double number_of(const gm::json::Value& reply, std::string_view key) {
 }
 
 std::string native_path(std::string_view relative) {
-    return (std::filesystem::path(relative)).make_preferred().string();
+    return std::string(relative);
 }
 
 std::string lf_only(std::string text) {
