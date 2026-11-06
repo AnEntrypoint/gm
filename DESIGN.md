@@ -987,3 +987,8 @@ This run hit the 50-step limit because of the step-counting defect fixed in 2d41
 - Witness (scratch run on build/release, stdio driver /tmp/gm-repro/stop-witness.mjs, not committed): the server is killed after one run_code with no finish. `stop-run` with the default guard: exit 1, "the run was written 503 ms ago; stop-run needs 600000 ms without a write". With `--idle-ms 0`: exit 0, "closed as stopped at seq 15". Second stop: exit 1, "the run already ended; nothing to stop". The log then holds one end event (status stopped, witness null, steps 1, seq 15) and no finish event.
 - Node tree: no stop-run; the native binary is the shipped one, so parity is not extended for this verb.
 - Author lanmower, no trailers.
+
+## Duplicate noFilesError: closed as kept (2026-11-06)
+
+- Decision (orchestrator, under owner delegation, 2026-11-06): keep the three copies of the no-files message, as DESIGN.md:973 already records. The copies are src/search.mjs (noFilesError), native/leaves/wiki.mjs (noFilesError) and native/components/search/search_impl.cpp (load_tracked). The two JS copies are byte-identical, and DESIGN.md:877 gives the reason they stay apart: a QuickJS leaf cannot import src/search.mjs, and src importing native/leaves is cross-tree.
+- No code change. A shared mechanism across the Node tree, the QuickJS leaves and the native C++ is a design change, and nothing in the tree pins the text any more (search_test.cpp and codeast-wiki-review.test.mjs are absent).
