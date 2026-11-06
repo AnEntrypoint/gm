@@ -1,4 +1,9 @@
 #include <algorithm>
+#if defined(_WIN32)
+#include <process.h>
+#else
+#include <unistd.h>
+#endif
 #include <atomic>
 #include <condition_variable>
 #include <deque>
@@ -346,6 +351,14 @@ std::string pretty_flat(const Value& object_value) {
     }
     out += first ? "}" : "\n}";
     return out;
+}
+
+Value caller_of_process() {
+#if defined(_WIN32)
+    return object().set("connection", static_cast<std::uint64_t>(_getpid())).set("parent", nullptr);
+#else
+    return object().set("connection", static_cast<std::uint64_t>(getpid())).set("parent", static_cast<std::uint64_t>(getppid()));
+#endif
 }
 
 Value trace_of(const Value* meta) {
@@ -992,7 +1005,7 @@ struct Server::State {
 
     Value action_fields(const std::string& tool, const Value& args, bool with_rpc, int ahead = 0) {
         std::lock_guard guard(mu);
-        Value fields = object().set("step", s().steps + ahead).set("tool", tool).set("args", args);
+        Value fields = object().set("step", s().steps + ahead).set("tool", tool).set("args", args).set("caller", caller_of_process());
         if (with_rpc && s().rpc_id) {
             fields.set("rpcId", *s().rpc_id);
             fields = merge(std::move(fields), s().trace);
@@ -2683,7 +2696,8 @@ public:
                                                            .set("step", job_->step)
                                                            .set("tool", name)
                                                            .set("args", args)
-                                                           .set("body", number_of(job_->body)));
+                                                           .set("body", number_of(job_->body))
+                                                           .set("caller", caller_of_process()));
         }
         job_->in_flight += 1;
         Value result;

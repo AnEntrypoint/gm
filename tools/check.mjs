@@ -33,8 +33,11 @@ if (!existsSync(binary)) {
 const readCheck = spawnSync(process.execPath, [join(root, 'tools', 'check-read-truncation.mjs'), ...(existsSync(binary) ? [binary] : [])], { cwd: root, stdio: 'inherit', timeout: 120000 });
 if (readCheck.status !== 0) failures.push('read truncation check');
 
+const callerCheck = spawnSync(process.execPath, [join(root, 'tools', 'check-caller.mjs'), ...(existsSync(binary) ? [binary] : [])], { cwd: root, stdio: 'inherit', timeout: 120000 });
+if (callerCheck.status !== 0) failures.push('caller check');
+
 if (failures.length) {
     console.error(`check: ${failures.length} failure(s)\n- ${failures.join('\n- ')}`);
     process.exit(1);
 }
-console.log('check: gate, unit-test scan, g3 snapshot, redaction witness and read truncation check passed');
+console.log('check: gate, unit-test scan, g3 snapshot, redaction witness, read truncation and caller checks passed');

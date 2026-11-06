@@ -31,6 +31,7 @@ const PROTOCOL_VERSION = SUPPORTED_VERSIONS[0];
 const RUN_META = 'com.anentrypoint.gmnew/run';
 const RUN_SEQ = 'com.anentrypoint.gmnew/seq';
 const TRACE_KEYS = ['traceparent', 'tracestate', 'baggage'];
+const CALLER = { connection: process.pid, parent: process.ppid };
 const PROGRESS_MS = 5000;
 const PROGRESS_TOOLS = new Set(['run_shell', 'run_code']);
 const SERVER_INFO = { name: SERVER_NAME, title: SERVER_TITLE, version: JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')).version };
@@ -320,7 +321,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     const body = bodyContext.getStore()?.body;
     if (body !== undefined) tools.callStarted(body);
     // A verb that may change something has its start in the file before it runs. Its code-call names that start, as a result names its action.
-    const action = READ_ONLY_TOOLS.has(name) ? undefined : log.append('action', { step: steps, tool: name, args, ...(body === undefined ? {} : { body }) });
+    const action = READ_ONLY_TOOLS.has(name) ? undefined : log.append('action', { step: steps, tool: name, args, caller: CALLER, ...(body === undefined ? {} : { body }) });
     if (action !== undefined) flushAllLogs();
     const exec = mcp.has(name) ? (value) => mcp.call(name, value) : Object.hasOwn(handlers, name) ? handlers[name] : (value) => tools.run(name, value);
     let result;
@@ -779,7 +780,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     const step = steps;
     const startMono = log.now();
     log.enter();
-    const action = log.append('action', { step, tool, args, ...(rpcId === undefined ? {} : { rpcId, ...callOf(rpcId)?.trace }) });
+    const action = log.append('action', { step, tool, args, caller: CALLER, ...(rpcId === undefined ? {} : { rpcId, ...callOf(rpcId)?.trace }) });
     noteAction(rpcId, action.seq);
     // A tool that may change something has its start in the file before it runs, so a crash after its effect still leaves the start in the log.
     if (!READ_ONLY_TOOLS.has(tool)) flushAllLogs();
@@ -798,7 +799,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
   function refuse(tool, args, reason, rpcId) {
     const step = steps;
     const startMono = log.now();
-    const action = log.append('action', { step, tool, args, ...(rpcId === undefined ? {} : { rpcId, ...callOf(rpcId)?.trace }) });
+    const action = log.append('action', { step, tool, args, caller: CALLER, ...(rpcId === undefined ? {} : { rpcId, ...callOf(rpcId)?.trace }) });
     noteAction(rpcId, action.seq);
     const result = { ok: false, refused: true, error: `refused: ${reason}`, actionSeq: action.seq };
     log.append('refusal', { step, tool, error: result.error, startMono, actionSeq: action.seq });
