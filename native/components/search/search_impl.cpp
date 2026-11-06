@@ -611,8 +611,12 @@ std::string Searcher::grep(const json::Value& args) {
         Listing every = list({"ls-files", "-z", "-c", "-o"}, false);
         if (!every.ok) return fail("scope all: git ls-files failed or ran past its 30 s limit");
         std::set<std::string> known(tracked.paths.begin(), tracked.paths.end());
-        for (const std::string& rel : under(every.paths, rel_scope, true))
-            if (rel.back() != '/' && (known.count(rel) || !in_state(rel))) names.push_back(rel);
+        std::vector<std::string> extra;
+        for (const std::string& rel : under(every.paths, rel_scope, true)) {
+            if (rel.back() == '/' || !(known.count(rel) || !in_state(rel))) continue;
+            (known.count(rel) && !in_vendor(rel) ? names : extra).push_back(rel);
+        }
+        names.insert(names.end(), extra.begin(), extra.end());
     } else {
         std::set<std::string> known(tracked.paths.begin(), tracked.paths.end());
         for (const std::string& rel : under(visible.ok ? visible.paths : tracked.paths, rel_scope, vendor))

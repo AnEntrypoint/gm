@@ -189,7 +189,9 @@ function searcherFor({ root, confine }) {
         const every = await trackedFiles(root, ALL_FILES);
         if (every.error) return fail(`scope all: git ls-files failed or ran past its ${LIST_TIMEOUT_MS / 1000} s limit`);
         const tracked = new Set(listing.paths);
-        names = trackedUnder(every.paths, under, true).filter((rel) => !rel.endsWith('/') && (tracked.has(rel) || !inState(rel)));
+        const candidates = trackedUnder(every.paths, under, true).filter((rel) => !rel.endsWith('/') && (tracked.has(rel) || !inState(rel)));
+        const primary = (rel) => tracked.has(rel) && !VENDOR.test(rel);
+        names = [...candidates.filter(primary), ...candidates.filter((rel) => !primary(rel))];
       } else {
         names = trackedUnder(listing.paths, under, vendor);
       }
