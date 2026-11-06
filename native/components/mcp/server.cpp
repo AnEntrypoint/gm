@@ -617,7 +617,9 @@ struct Server::State {
     }
 
     State(VerbTable& v, ServerOptions o, LineWriter w)
-        : verbs(v), options(std::move(o)), write(std::move(w)), skills(options.skills) {}
+        : verbs(v), options(std::move(o)), write(std::move(w)), skills(options.skills) {
+        if (options.serve_skill_hook) *options.serve_skill_hook = [this](const std::string& uri) { return read_skill_for_verb(uri); };
+    }
 
     ~State();
 
@@ -2126,6 +2128,14 @@ struct Server::State {
         return object().set("uri", uri).set("mimeType", "application/x-ndjson").set("text", text.substr(start)).set("_meta", std::move(meta));
     }
 
+    std::optional<std::string> read_skill_for_verb(const std::string& uri) {
+        std::lock_guard guard(mu);
+        if (!session) return std::nullopt;
+        auto served = serve_skill_file(uri, "read_file");
+        if (!served) return std::nullopt;
+        return served->find("text")->as_string();
+    }
+
     std::optional<Value> serve_skill_file(const std::string& uri, const std::string& via) {
         auto found = skill_file_of(uri);
         if (!found) return std::nullopt;
@@ -2712,6 +2722,7 @@ private:
 }
 
 Server::State::~State() {
+    if (options.serve_skill_hook) *options.serve_skill_hook = nullptr;
     {
         std::lock_guard guard(monitor_mutex);
         shutting_down = true;

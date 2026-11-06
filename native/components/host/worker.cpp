@@ -117,9 +117,12 @@ int run_worker(const HostArgs& args) {
         return *current_log;
     };
 
+    auto serve_skill_hook = std::make_shared<std::function<std::optional<std::string>(const std::string&)>>();
     CoreVerbsOptions core_options;
     core_options.workspace = workspace;
-    core_options.serve_skill = [skills = skills_dir_of(args)](const std::string& uri) { return mcp::served_skill_text(skills, uri); };
+    core_options.serve_skill = [serve_skill_hook, skills = skills_dir_of(args)](const std::string& uri) {
+        return *serve_skill_hook ? (*serve_skill_hook)(uri) : mcp::served_skill_text(skills, uri);
+    };
     core_options.on_append = [](const RunLog& log, std::string_view kind, std::uint64_t seq) {
         try {
             mcp::enqueue_pending(log, kind, seq);
@@ -151,6 +154,7 @@ int run_worker(const HostArgs& args) {
     options.workspace = workspace;
     options.runs = run_dir->parent_path();
     options.skills = skills_dir_of(args);
+    options.serve_skill_hook = serve_skill_hook;
     options.task = *task;
     options.run_dir = *run_dir;
     options.supervised = args.flag("--supervised") == "yes";
