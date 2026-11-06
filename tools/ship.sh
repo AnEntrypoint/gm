@@ -1,9 +1,4 @@
 #!/usr/bin/env bash
-# Stages the named paths, runs the gate, then commits and pushes only those paths, and only when the gate's own exit code is zero.
-# Usage: tools/ship.sh "<subject>" <paths...>
-# Only the named paths are staged, and a deleted path is staged as its deletion. The gate lists the tracked files, so the paths are staged
-# before it runs. A gate that fails unstages the named paths again, and leaves the rest of the index as it was.
-# SHIP_ROOT names the checkout (default: the repository this script is in). SHIP_PUSH=0 commits without pushing, for a witness.
 set -o pipefail
 root="${SHIP_ROOT:-$(cd "$(dirname "$0")/.." && pwd)}"
 cd "$root" || exit 1
@@ -14,7 +9,7 @@ fi
 msg="$1"
 shift
 for path in "$@"; do
-  if [ ! -e "$path" ] && ! git ls-files --error-unmatch -- "$path" > /dev/null 2>&1; then
+  if [ ! -e "$path" ] && ! git ls-files --error-unmatch -- "$path" > /dev/null 2>&1 && ! git cat-file -e "HEAD:$path" 2>/dev/null; then
     echo "refused: $path is neither in the tree nor tracked"
     exit 1
   fi

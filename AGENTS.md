@@ -139,7 +139,7 @@ gm is one long-horizon worker: an MCP server that runs a task as one append-only
 
 ## Ship and commits
 
-- tools/ship.sh "<subject>" <paths...>: refuses a path that is neither present nor tracked, stages only the named paths, runs the gate, unstages them if the gate fails, commits, and pushes origin main. SHIP_PUSH=0 commits without pushing; SHIP_ROOT names the checkout; SHIP_OUT names the gate log (default /tmp/ship-gate.out).
+- tools/ship.sh "<subject>" <paths...>: refuses a path that is neither present nor tracked in the index or HEAD, stages only the named paths (a deleted path is staged as its deletion, also when already staged), runs the gate, unstages them if the gate fails, commits, and pushes origin main. SHIP_PUSH=0 commits without pushing; SHIP_ROOT names the checkout; SHIP_OUT names the gate log (default /tmp/ship-gate.out).
 - Attribution: author lanmower; no trailers.
 - Collisions: fetch, reapply on origin's tip, push. Do not clone to get around one.
 - Remote: AnEntrypoint/gm, private, pushed to main. Making it public is the owner's decision.
