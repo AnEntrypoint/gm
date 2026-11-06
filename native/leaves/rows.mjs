@@ -1,4 +1,6 @@
 const ROW_DIR = 'work/rows';
+const LEGACY_ROW_DIR = '.gm/prd';
+const CLOSE_DIR = 'closes';
 const KINDS = { prd: 'work item', unknown: 'open question' };
 const STATUSES = ['open', 'parked', 'resolved', 'all'];
 const STATUS_ALIASES = { pending: 'open', completed: 'resolved' };
@@ -22,6 +24,14 @@ function readText(path) {
 }
 const missing = (reply) => reply?.ok === false && /ENOENT|no such file|not found/i.test(String(reply.error ?? ''));
 const rowPath = (id) => `${host.workspace}/${ROW_DIR}/${id}.yml`;
+const legacyRowPath = (id) => `${host.workspace}/${LEGACY_ROW_DIR}/${id}.yml`;
+
+function rowFile(id) {
+  for (const path of [rowPath(id), legacyRowPath(id)]) {
+    if (host.stat_file({ path })?.ok !== false) return path;
+  }
+  return null;
+}
 
 function parseScalar(raw) {
   try {
@@ -46,19 +56,21 @@ function renderRow(row) {
 }
 
 function readRow(id) {
-  const reply = readText(rowPath(id));
+  const path = rowFile(id);
+  if (path === null) return null;
+  const reply = readText(path);
   if (missing(reply)) return null;
   if (reply?.ok === false) throw new Error(reply.error);
-  return parseRow(textOf(reply));
+  return { ...parseRow(textOf(reply)), file: path };
 }
 
 function writeRow(row) {
-  const reply = host.write_file({ path: rowPath(row.id), content: renderRow(row) });
+  const reply = host.write_file({ path: row.file ?? rowPath(row.id), content: renderRow(row) });
   if (reply?.ok === false) throw new Error(reply.error);
 }
 
-function readRows() {
-  const listing = host.list_dir({ path: `${host.workspace}/${ROW_DIR}` });
+function rowNames(dir) {
+  const listing = host.list_dir({ path: `${host.workspace}/${dir}` });
   if (listing?.ok === false) {
     if (missing(listing)) return [];
     throw new Error(listing.error);
@@ -66,8 +78,20 @@ function readRows() {
   const entries = Array.isArray(listing) ? listing : (listing.entries ?? listing.names ?? String(listing.output ?? '').split('\n'));
   return entries
     .map((entry) => (typeof entry === 'string' ? entry : entry.name))
-    .filter((name) => name.endsWith('.yml'))
-    .map((name) => parseRow(textOf(readText(`${host.workspace}/${ROW_DIR}/${name}`))));
+    .filter((name) => name.endsWith('.yml'));
+}
+
+function readRows() {
+  const seen = new Set();
+  const rows = [];
+  for (const dir of [ROW_DIR, LEGACY_ROW_DIR]) {
+    for (const name of rowNames(dir)) {
+      if (seen.has(name)) continue;
+      seen.add(name);
+      rows.push(parseRow(textOf(readText(`${host.workspace}/${dir}/${name}`))));
+    }
+  }
+  return rows;
 }
 
 const compareText = (a, b) => (a === b ? 0 : a < b ? -1 : 1);
@@ -93,6 +117,11 @@ function eventInLog(event) {
 
 function commitExists(commit) {
   const reply = host.run({ argv: ['git', 'cat-file', '-e', `${commit}^{commit}`], cwd: host.workspace, timeoutMs: 15000 });
+  return reply.started && !reply.timedOut && reply.exitCode === 0;
+}
+
+function runGit(argv) {
+  const reply = host.run({ argv: ['git', ...argv], cwd: host.workspace, timeoutMs: 15000 });
   return reply.started && !reply.timedOut && reply.exitCode === 0;
 }
 
@@ -150,8 +179,35 @@ function reopenRow({ id }) {
   return { ok: true, output: `${id} reopened` };
 }
 
-function resolveRow(kind, { id, event, commit }) {
+function closeRow(kind, id, witness) {
+  const row = readRow(id);
+  if (row === null) return fail(`no row ${id}`);
+  if (row.kind !== kind) return fail(`row ${id} is not a ${KINDS[kind]}`);
+  if (row.status === 'resolved') return fail(`row ${id} is already resolved`);
+  const status = 'resolved';
+  const closeRel = `${CLOSE_DIR}/${id}.txt`;
+  const written = host.write_file({ path: `${host.workspace}/${closeRel}`, content: `${id} ${status} ${witness} ${new Date().toISOString()}\n` });
+  if (written?.ok === false) return fail(`close record ${closeRel} could not be written: ${written.error}`);
+  const rowRel = row.file === legacyRowPath(id) ? `${LEGACY_ROW_DIR}/${id}.yml` : `${ROW_DIR}/${id}.yml`;
+  const removed = removeFile(row.file);
+  if (removed?.ok !== true) return fail(`row ${id} could not be removed`);
+  const paths = [closeRel];
+  if (runGit(['ls-files', '--error-unmatch', '--', rowRel])) paths.push(rowRel);
+  const message = `close ${id}\n\nRow: ${id}\nStatus: ${status}\nWitness: ${witness}`;
+  runGit(['add', '-A', '--', ...paths]);
+  if (!runGit(['commit', '-m', message, '--', ...paths])) return fail(`close ${id} has no commit; ${closeRel} is written and the row file is removed`);
+  const head = host.run({ argv: ['git', 'rev-parse', '--short', 'HEAD'], cwd: host.workspace, timeoutMs: 15000 });
+  return { ok: true, output: `${id} ${status} by witness ${witness} at commit ${head.out?.trim() ?? 'HEAD'}` };
+}
+
+function resolveRow(kind, { id, event, commit, witness }) {
   if (!validId(id)) return fail('id must be a row id');
+  const given = typeof witness === 'string' ? witness : (typeof event === 'string' ? event : null);
+  if (given !== null) {
+    const clean = given.replace(/\s+/g, ' ').trim();
+    if (clean === '') return fail('witness must be a non-empty string');
+    return closeRow(kind, id, clean);
+  }
   if (!Number.isInteger(event) || event < 1) return fail('event must be a log seq number');
   if (!eventInLog(event)) return fail(`event ${event} is not in this run's log`);
   if (typeof commit !== 'string' || !SHA.test(commit)) return fail('commit must be 7 to 40 lowercase hex digits');
@@ -171,8 +227,9 @@ function deleteRow({ id }) {
   if (row === null) return fail(`no row ${id}`);
   if (row.kind !== 'prd') return fail(`row ${id} is not a work item`);
   if (row.status === 'resolved') return fail(`row ${id} is resolved; a resolved PRD is history and stays`);
-  removeFile(rowPath(id));
-  if (host.stat_file({ path: rowPath(id) })?.ok !== false) return fail(`row ${id} could not be removed`);
+  const path = row.file ?? rowPath(id);
+  removeFile(path);
+  if (host.stat_file({ path })?.ok !== false) return fail(`row ${id} could not be removed`);
   return { ok: true, output: `${id} deleted` };
 }
 
@@ -182,8 +239,8 @@ export const verbs = [
     { name: `${kind}_list`, description: `List ${label} rows, one line each: id, status, title. status is open (default), parked, resolved or all.`, inputSchema: obj({ status: str }), call: (args = {}) => listRows(kind, args) },
     {
       name: `${kind}_resolve`,
-      description: `Resolve a ${label} row. The witness is a seq of this run's log and a commit that exists in this repository.`,
-      inputSchema: obj({ id: str, event: { type: 'number' }, commit: str }, ['id', 'event', 'commit']),
+      description: `Resolve a ${label} row in one call. Pass witness, the evidence string: the row file is removed, one line goes to closes/<id>.txt, and a commit records the row, status and witness. A numeric event seq and an existing commit sha keep the older in-place resolution.`,
+      inputSchema: obj({ id: str, event: { type: 'number' }, commit: str, witness: str }, ['id']),
       call: (args = {}) => resolveRow(kind, args),
     },
   ]),
