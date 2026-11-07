@@ -1,1 +1,2 @@
 prd-mw69j59vc62f resolved child-task-overwrite: git show HEAD:src/mcp.mjs line 668 "a task replacement after the first step needs owner:true; child contexts cannot change the run task"; child next_context with task refused. committed HEAD fcb84df parity 23/93 match, 0 differ (/tmp/gm-parity-head.out); tools/ship.sh COMMITTED fcb84dfd03d19e23934dc9f13fae79e65b6174f5 and pushed; gate exit code 0 2026-11-07T16:48:27.634Z
+behavioural witness (122aad3): node tools/check-child-task.mjs -> check-child-task: passed: node and native real-tree checks succeeded
