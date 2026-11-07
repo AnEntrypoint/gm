@@ -206,6 +206,7 @@ struct JobTable::Job {
     json::Value status;
     double start_mono = 0;
     std::filesystem::file_time_type start_file_time;
+    std::optional<std::filesystem::path> progress;
     std::string state = "running";
     bool stuck = false;
     bool settled = false;
@@ -272,7 +273,7 @@ std::optional<json::Value> JobTable::read_status(const std::string& name) {
     return std::move(*parsed);
 }
 
-json::Value JobTable::start(const std::string& name, const std::string& command, std::uint64_t timeout_ms) {
+json::Value JobTable::start(const std::string& name, const std::string& command, std::uint64_t timeout_ms, const std::optional<std::string>& progress) {
     std::unique_lock lock(mutex_);
     if (jobs_.contains(name)) return failure("job " + name + " already exists");
     std::error_code ec;
@@ -312,6 +313,7 @@ json::Value JobTable::start(const std::string& name, const std::string& command,
     job->out = out;
     job->start_mono = *start_mono;
     job->start_file_time = std::filesystem::file_time_type::clock::now();
+    if (progress) job->progress = std::filesystem::path(*progress).is_absolute() ? std::filesystem::path(*progress) : workspace_ / *progress;
     std::uint64_t deadline_ms = std::min(timeout_ms, lifetime_ms_);
     job->lifetime_killed = lifetime_ms_ < timeout_ms;
     job->status.set("job", name);
@@ -431,8 +433,13 @@ json::Value JobTable::snapshot(std::uint64_t stuck_ms) {
     json::Array progressed_again;
     for (auto& [name, job] : jobs_) {
         std::error_code ec;
-        auto written = std::filesystem::last_write_time(job->out, ec);
-        auto progress = ec ? job->start_file_time : std::max(job->start_file_time, written);
+        auto written_at = [&](const std::filesystem::path& file) {
+            std::error_code file_ec;
+            auto written = std::filesystem::last_write_time(file, file_ec);
+            return file_ec ? job->start_file_time : std::max(job->start_file_time, written);
+        };
+        auto progress = written_at(job->out);
+        if (job->progress) progress = std::max(progress, written_at(*job->progress));
         std::int64_t since_progress_ms = whole_ms(now - progress);
         if (!job->settled) {
             bool over = since_progress_ms > static_cast<std::int64_t>(stuck_ms);

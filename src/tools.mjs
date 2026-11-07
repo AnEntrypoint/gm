@@ -242,7 +242,7 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
       }
       if (!JOB_NAME.test(args.job ?? '')) return { ok: false, error: 'a background job needs job: 1 to 64 letters, digits, _ or -' };
       const timeoutMs = Math.min(Number(args.timeoutMs) || DEFAULT_TIMEOUT_MS, MAX_JOB_TIMEOUT_MS);
-      return startJob(args.job, args.command, timeoutMs);
+      return startJob(args.job, args.command, timeoutMs, args.progress);
     },
 
     async job_status(args) {
@@ -352,7 +352,7 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
     rowQueries = next.rowQueries;
   }
 
-  function startJob(name, command, timeoutMs) {
+  function startJob(name, command, timeoutMs, progress) {
     if (jobs.has(name)) return { ok: false, error: `job ${name} already exists` };
     const outputFile = join(runDir, 'jobs', `${name}.out`);
     mkdirSync(join(runDir, 'jobs'), { recursive: true });
@@ -363,7 +363,7 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
     const status = { job: name, command, state: 'running', pid: child.pid, startMono, output: outputFile, timeoutMs: Math.min(timeoutMs, jobLifetimeMs) };
     writeStatus(name, status);
 
-    const job = { name, child, outputFile, startWall: Date.now(), stuck: false, killRequested: false, killReason: undefined, settled: false };
+    const job = { name, child, outputFile, progressFile: progress === undefined ? undefined : resolve(root, progress), startWall: Date.now(), stuck: false, killRequested: false, killReason: undefined, settled: false };
     job.lifetimeKilled = jobLifetimeMs < timeoutMs;
     const timer = setTimeout(() => {
       job.killRequested = true;
@@ -478,10 +478,11 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
     }
   }
 
+  const mtimeOf = (file) => (file !== undefined && existsSync(file) ? statSync(file).mtimeMs : 0);
   function progressAt(job) {
     if ((inFlightByBody.get(job.body) ?? 0) > 0) return Date.now();
     if (job.body !== undefined) return Math.max(job.startWall, lastCallWall(log, job.body));
-    return Math.max(job.startWall, existsSync(job.outputFile) ? statSync(job.outputFile).mtimeMs : 0);
+    return Math.max(job.startWall, mtimeOf(job.outputFile), mtimeOf(job.progressFile));
   }
 
   function checkStuck() {

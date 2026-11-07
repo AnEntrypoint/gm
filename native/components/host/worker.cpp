@@ -92,6 +92,10 @@ int run_worker(const HostArgs& args) {
     if (!std::filesystem::is_directory(workspace)) return fail("workspace is not a directory: " + workspace.string());
     auto max_inflight = positive_int_flag(args, "--max-inflight", mcp::ServerOptions{}.max_inflight);
     if (!max_inflight) return fail(max_inflight.error());
+    auto stuck_ms = positive_int_flag(args, "--stuck-ms", static_cast<int>(mcp::ServerOptions{}.stuck_ms));
+    if (!stuck_ms) return fail(stuck_ms.error());
+    auto monitor_ms = positive_int_flag(args, "--monitor-ms", static_cast<int>(mcp::ServerOptions{}.monitor_ms));
+    if (!monitor_ms) return fail(monitor_ms.error());
     auto task = task_of(args);
     if (!task) return fail(task.error());
     auto run_dir = choose_run_dir(args, workspace);
@@ -106,6 +110,7 @@ int run_worker(const HostArgs& args) {
     auto serve_skill_hook = std::make_shared<std::function<std::optional<std::string>(const std::string&)>>();
     CoreVerbsOptions core_options;
     core_options.workspace = workspace;
+    core_options.job_stuck_ms = static_cast<std::uint64_t>(*stuck_ms);
     core_options.serve_skill = [serve_skill_hook, skills = skills_dir_of(args)](const std::string& uri) {
         return *serve_skill_hook ? (*serve_skill_hook)(uri) : mcp::served_skill_text(skills, uri);
     };
@@ -143,6 +148,8 @@ int run_worker(const HostArgs& args) {
     options.serve_skill_hook = serve_skill_hook;
     options.task = *task;
     options.max_inflight = *max_inflight;
+    options.stuck_ms = static_cast<std::uint64_t>(*stuck_ms);
+    options.monitor_ms = static_cast<std::uint64_t>(*monitor_ms);
     options.run_dir = *run_dir;
     options.supervised = args.flag("--supervised") == "yes";
     if (auto reason = args.flag("--restart-reason")) options.restart_reason = *reason;

@@ -66,7 +66,7 @@ public:
     JobTable(std::filesystem::path workspace, LockedLog& log, std::uint64_t lifetime_ms);
     ~JobTable();
 
-    json::Value start(const std::string& name, const std::string& command, std::uint64_t timeout_ms);
+    json::Value start(const std::string& name, const std::string& command, std::uint64_t timeout_ms, const std::optional<std::string>& progress = std::nullopt);
     json::Value status(const json::Value& args);
     json::Value stop(const json::Value& args);
     void close(std::string_view reason);
