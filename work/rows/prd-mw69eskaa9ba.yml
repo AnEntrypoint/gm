@@ -1,6 +1,0 @@
-id: "prd-mw69eskaa9ba"
-kind: "prd"
-title: "gm tooling fix: prd-refuted-reopen"
-body: "row lifecycle and refuted verdicts: prd_reopen only moves parked rows, so a refuted row cannot be reopened through the verb; spoint edited prd.yml directly to reopen KISS-n-r209-7 after its verdict said needs-design; add a non-destructive reopen path. The first prd.yml edit that dropped a notes field was caught before commit and is not gm friction."
-status: "open"
-createdAt: "2026-11-07T10:27:28.666Z"
