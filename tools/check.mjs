@@ -80,4 +80,4 @@ if (failures.length) {
     console.error(`check: ${failures.length} failure(s)\n- ${failures.join('\n- ')}`);
     process.exit(1);
 }
-console.log('check: gate, unit-test scan, g3 snapshot, redaction witness, read truncation, caller, search root, inflight, relay exit, console, lost wording, prd legacy list, commit digest, task set, child task, output recovery, context feed, grep paging, prd receipt, prd refuted reopen and documented gap checks passed');
+console.log('check: gate, unit-test scan, g3 snapshot, redaction witness, read truncation, caller, search root, inflight, relay exit, console, lost wording, prd legacy list, commit digest, task set, child task, output recovery, context feed, grep paging, prd receipt, prd refuted reopen, instruction automations, job progress and documented gap checks passed');
