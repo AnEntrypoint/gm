@@ -1,6 +1,0 @@
-id: "prd-mw691x2d9b6c"
-kind: "prd"
-title: "gm tooling fix: commit-misread-late-push"
-body: "git verbs and push timing: commit output parsed as evidence of a push, or push delayed by a misread"
-status: "open"
-createdAt: "2026-11-07T10:17:27.973Z"
