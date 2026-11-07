@@ -51,6 +51,9 @@ if (consoleCheck.status !== 0) failures.push('console check');
 const lostWordingCheck = spawnSync(process.execPath, [join(root, 'tools', 'check-lost-wording.mjs')], { cwd: root, stdio: 'inherit', timeout: 60000 });
 if (lostWordingCheck.status !== 0) failures.push('lost wording check');
 
+const prdLegacyListCheck = spawnSync(process.execPath, [join(root, 'tools', 'check-prd-legacy-list.mjs')], { cwd: root, stdio: 'inherit', timeout: 60000 });
+if (prdLegacyListCheck.status !== 0) failures.push('prd legacy list check');
+
 const documentedGapCheck = spawnSync(process.execPath, [join(root, 'tools', 'check-documented-gaps.mjs')], { cwd: root, stdio: 'inherit', timeout: 60000 });
 if (documentedGapCheck.status !== 0) failures.push('documented gap check');
 
@@ -58,4 +61,4 @@ if (failures.length) {
     console.error(`check: ${failures.length} failure(s)\n- ${failures.join('\n- ')}`);
     process.exit(1);
 }
-console.log('check: gate, unit-test scan, g3 snapshot, redaction witness, read truncation, caller, search root, inflight, relay exit, console, lost wording and documented gap checks passed');
+console.log('check: gate, unit-test scan, g3 snapshot, redaction witness, read truncation, caller, search root, inflight, relay exit, console, lost wording, prd legacy list and documented gap checks passed');

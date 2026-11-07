@@ -152,7 +152,7 @@ function addRow(kind, { title, body = '' }) {
 function listRows(kind, { status = 'open' }) {
   const wanted = STATUS_ALIASES[status] ?? status;
   if (!STATUSES.includes(wanted)) return fail(`status must be one of ${[...STATUSES, ...Object.keys(STATUS_ALIASES)].join(', ')}`);
-  const rows = sortByCreated(readRows().filter((row) => row.kind === kind && (wanted === 'all' || (STATUS_ALIASES[row.status] ?? row.status) === wanted)));
+  const rows = sortByCreated(readRows().filter((row) => (row.kind ?? 'prd') === kind && (wanted === 'all' || (STATUS_ALIASES[row.status] ?? row.status) === wanted)));
   return { ok: true, output: rows.length ? rows.map((row) => `${row.id} ${row.status} ${row.title}${row.status === 'parked' ? ` (parked: ${row.parkReason})` : ''}`).join('\n') : '(none)' };
 }
 
@@ -257,7 +257,7 @@ function deleteRow({ id }) {
 export const verbs = [
   ...Object.entries(KINDS).flatMap(([kind, label]) => [
     { name: `${kind}_add`, description: `Add a ${label} row, one file under ${ROW_DIR}/<id>.yml. Returns its id.`, inputSchema: obj({ title: str, body: str }, ['title']), call: (args = {}) => addRow(kind, args) },
-    { name: `${kind}_list`, description: `List ${label} rows, one line each: id, status, title. status is open (default), parked, resolved or all. Reads ${ROW_DIR}/ and the legacy .gm/prd/, but lists only rows with kind: ${kind}; a legacy row with no kind is not listed, and status pending reads as open.`, inputSchema: obj({ status: str }), call: (args = {}) => listRows(kind, args) },
+    { name: `${kind}_list`, description: `List ${label} rows, one line each: id, status, title. status is open (default), parked, resolved or all. Reads ${ROW_DIR}/ and the legacy .gm/prd/, and lists rows with kind: ${kind}; a legacy row with no kind is treated as a prd work item, and status pending reads as open.`, inputSchema: obj({ status: str }), call: (args = {}) => listRows(kind, args) },
     {
       name: `${kind}_resolve`,
       description: `Resolve a ${label} row in one call. Pass witness, the evidence string: the row file is removed, one line goes to closes/<id>.txt, and a commit records the row, status and witness. With push:true that commit is also pushed by full sha to origin/main in the same call, with fetch and rebase on rejection, so a shared tree closes in one call. A numeric event seq and an existing commit sha keep the older in-place resolution. Reads ${ROW_DIR}/ and the legacy .gm/prd/, so a legacy row without kind is closable here too.`,
