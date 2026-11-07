@@ -6,9 +6,9 @@ import { resultZone1, resultZone2 } from './compact.mjs';
 
 export const ROW_DIR = 'work/rows';
 const KINDS = { prd: 'work item', unknown: 'open question' };
-const STATUSES = ['open', 'parked', 'resolved', 'all'];
+const STATUSES = ['open', 'parked', 'refuted', 'resolved', 'all'];
 const STATUS_ALIASES = { pending: 'open', completed: 'resolved' };
-const FIELDS = ['id', 'kind', 'title', 'body', 'status', 'createdAt', 'witnessEvent', 'witnessCommit', 'resolvedAt', 'parkReason'];
+const ROW_KEY = /^[A-Za-z_][A-Za-z0-9_.-]*$/;
 const str = { type: 'string' };
 const obj = (properties, required = []) => ({ type: 'object', properties, required });
 
@@ -26,14 +26,26 @@ const PARK_TOOL = {
 
 const REOPEN_TOOL = {
   name: 'prd_reopen',
-  description: 'Move a parked work item (PRD) row back to open.',
-  inputSchema: obj({ id: str }, ['id']),
+  description: 'Move a parked work item (PRD) row back to open, or reopen a refuted row with from:refuted and a reason.',
+  inputSchema: obj({ id: str, from: str, reason: str }, ['id']),
+};
+
+const RECEIPT_TOOL = {
+  name: 'prd_receipt',
+  description: 'gm.prd_receipt binds a witness receipt to a work item (PRD) row without resolving it or deleting the row file.',
+  inputSchema: obj({ id: str, witness: str, event: { type: 'number' }, commit: str }, ['id', 'witness']),
+};
+
+const REFUTE_TOOL = {
+  name: 'prd_refute',
+  description: 'gm.prd_refute marks an open work item (PRD) row refuted with a reason, verdict, notes and witness receipt.',
+  inputSchema: obj({ id: str, reason: str, verdict: str, notes: str, witness: str }, ['id', 'reason']),
 };
 
 export const ROW_TOOLS = [
   ...Object.entries(KINDS).flatMap(([kind, label]) => [
     { name: `${kind}_add`, description: `Add a ${label} row, one file under ${ROW_DIR}. Returns its id.`, inputSchema: obj({ title: str, body: str }, ['title']) },
-    { name: `${kind}_list`, description: `List ${label} rows, one line each: id, status, title. status is open (default), parked, resolved or all.`, inputSchema: obj({ status: str }) },
+    { name: `${kind}_list`, description: `List ${label} rows, one line each: id, status, title. status is open (default), parked, refuted, resolved or all. A row with receipts carries [receipts:N].`, inputSchema: obj({ status: str }) },
     {
       name: `${kind}_resolve`,
       description: `Resolve a ${label} row. The witness is a seq of this run's log and a commit that exists in this repository. push:true asks to push the close by full sha to origin/main in one call.`,
@@ -43,6 +55,8 @@ export const ROW_TOOLS = [
   DELETE_TOOL,
   PARK_TOOL,
   REOPEN_TOOL,
+  RECEIPT_TOOL,
+  REFUTE_TOOL,
 ];
 
 export const COMPACT = {
@@ -51,6 +65,8 @@ export const COMPACT = {
     prd_delete: { zone1: resultZone1, zone2: resultZone2 },
     prd_park: { zone1: resultZone1, zone2: resultZone2 },
     prd_reopen: { zone1: resultZone1, zone2: resultZone2 },
+    prd_receipt: { zone1: resultZone1, zone2: resultZone2 },
+    prd_refute: { zone1: resultZone1, zone2: resultZone2 },
     prd_resolve: { zone1: resultZone1, zone2: resultZone2 },
     unknown_add: { zone1: resultZone1, zone2: resultZone2 },
     unknown_resolve: { zone1: resultZone1, zone2: resultZone2 },
@@ -68,7 +84,9 @@ export function createRowVerbs({ root, confine, log }) {
   }
   handlers.prd_delete = ({ id }) => deleteRow(id);
   handlers.prd_park = ({ id, reason }) => parkRow(id, reason);
-  handlers.prd_reopen = ({ id }) => reopenRow(id);
+  handlers.prd_receipt = (args) => receiptRow(args);
+  handlers.prd_refute = (args) => refuteRow(args);
+  handlers.prd_reopen = (args) => reopenRow(args);
   return handlers;
 
   async function addRow(kind, title, body) {
@@ -82,11 +100,15 @@ export function createRowVerbs({ root, confine, log }) {
 
   async function listRows(kind, status) {
     const wanted = STATUS_ALIASES[status] ?? status;
-    if (!STATUSES.includes(wanted)) return fail(`status must be one of ${[...STATUSES, ...Object.keys(STATUS_ALIASES)].join(', ')}`);
-    const rows = sortByCreated((await readRows(confine)).filter((row) => row.kind === kind && (wanted === 'all' || (STATUS_ALIASES[row.status] ?? row.status) === wanted)));
-    return { ok: true, output: rows.length ? rows.map((row) => `${row.id} ${row.status} ${row.title}${row.status === 'parked' ? ` (parked: ${row.parkReason})` : ''}`).join('\n') : '(none)' };
+    if (!STATUSES.includes(wanted)) return fail('status must be one of ' + [...STATUSES, ...Object.keys(STATUS_ALIASES)].join(', '));
+    const rows = sortByCreated((await readRows(confine)).filter((row) => (row.kind ?? 'prd') === kind && (wanted === 'all' || (STATUS_ALIASES[row.status] ?? row.status) === wanted)));
+    const shown = rows.map((row) => {
+      const parked = row.status === 'parked' ? ' (parked: ' + row.parkReason + ')' : '';
+      const receipts = Array.isArray(row.receipts) && row.receipts.length > 0 ? ' [receipts:' + row.receipts.length + ']' : '';
+      return row.id + ' ' + row.status + ' ' + row.title + parked + receipts;
+    });
+    return { ok: true, output: shown.length ? shown.join('\n') : '(none)' };
   }
-
   async function parkRow(id, reason) {
     if (!validId(id)) return fail('id must be a row id');
     if (typeof reason !== 'string' || reason.trim() === '') return fail('reason must be a non-empty string');
@@ -99,17 +121,61 @@ export function createRowVerbs({ root, confine, log }) {
     return { ok: true, output: `${id} parked: ${row.parkReason}` };
   }
 
-  async function reopenRow(id) {
+  async function reopenRow({ id, from = 'parked', reason }) {
     if (!validId(id)) return fail('id must be a row id');
+    if (from !== 'parked' && from !== 'refuted') return fail('from must be parked or refuted');
     const row = await readRow(id);
     if (row === null) return fail(`no row ${id}`);
-    if (row.kind !== 'prd') return fail(`row ${id} is not a work item`);
-    if (row.status !== 'parked') return fail(`row ${id} is ${row.status}; only a parked row is reopened`);
-    Object.assign(row, { status: 'open', parkReason: undefined });
+    if (row.kind !== undefined && row.kind !== 'prd') return fail(`row ${id} is not a work item`);
+    if (from === 'parked') {
+      if (row.status !== 'parked') return fail(`row ${id} is ${row.status}; only a parked row is reopened`);
+      Object.assign(row, { status: 'open', parkReason: undefined, reopenedFrom: 'parked', reopenedAt: new Date().toISOString() });
+    } else {
+      if (typeof reason !== 'string' || reason.trim() === '') return fail('reason must be a non-empty string');
+      const body = String(row.body ?? '');
+      const refuted = row.status === 'refuted' || (row.status === 'resolved' && (/^(status|verdict):\s*(refuted|needs-design)\b/m.test(body) || row.verdict === 'refuted' || row.verdict === 'needs-design' || row.bodyStatus === 'refuted'));
+      if (!refuted) return fail(`row ${id} is ${row.status}; only a refuted row is reopened with from:refuted`);
+      Object.assign(row, { status: 'open', reopenedFrom: row.status, reopenReason: reason.trim(), reopenedAt: new Date().toISOString() });
+    }
     await writeRow(row);
-    return { ok: true, output: `${id} reopened` };
+    log.append('row-reopened', { row: id, from, status: row.status, reason: reason ?? '' });
+    return { ok: true, output: `${id} reopened from ${from}` };
   }
 
+  async function receiptRow({ id, witness, event, commit }) {
+    if (!validId(id)) return fail('id must be a row id');
+    if (typeof witness !== 'string' || witness.trim() === '') return fail('witness must be a non-empty string');
+    if (event !== undefined && (!Number.isInteger(event) || event < 1 || !log.events().some((entry) => entry.seq === event))) return fail(`event ${event} is not in this run's log`);
+    if (commit !== undefined && (typeof commit !== 'string' || !SHA.test(commit))) return fail('commit must be 7 to 40 lowercase hex digits');
+    const row = await readRow(id);
+    if (row === null) return fail(`no row ${id}`);
+    if (row.kind !== undefined && row.kind !== 'prd') return fail(`row ${id} is not a work item`);
+    const receipt = { witness: witness.trim() };
+    if (event !== undefined) receipt.event = event;
+    if (commit !== undefined) receipt.commit = commit;
+    row.receipts = [...(Array.isArray(row.receipts) ? row.receipts : []), receipt];
+    if (event !== undefined) row.witnessEvent = event;
+    if (commit !== undefined) row.witnessCommit = commit;
+    await writeRow(row);
+    log.append('row-receipt', { row: id, receipts: row.receipts.length, witness: witness.trim(), commit: commit ?? null });
+    return { ok: true, output: `${id} receipt ${row.receipts.length} bound` };
+  }
+
+  async function refuteRow({ id, reason, verdict, notes, witness }) {
+    if (!validId(id)) return fail('id must be a row id');
+    if (typeof reason !== 'string' || reason.trim() === '') return fail('reason must be a non-empty string');
+    const row = await readRow(id);
+    if (row === null) return fail(`no row ${id}`);
+    if (row.kind !== undefined && row.kind !== 'prd') return fail(`row ${id} is not a work item`);
+    if (row.status !== 'open') return fail(`row ${id} is ${row.status}; only an open row is refuted`);
+    Object.assign(row, { status: 'refuted', refuteReason: reason.trim(), refutedAt: new Date().toISOString() });
+    if (verdict !== undefined) row.verdict = verdict;
+    if (notes !== undefined) row.notes = notes;
+    if (witness !== undefined) row.witness = witness;
+    await writeRow(row);
+    log.append('row-refuted', { row: id, status: row.status, reason: row.refuteReason, verdict: row.verdict ?? null });
+    return { ok: true, output: `${id} refuted: ${row.refuteReason}` };
+  }
   async function deleteRow(id) {
     if (!validId(id)) return fail('id must be a row id');
     const row = await readRow(id);
@@ -200,14 +266,14 @@ function validId(id) {
 }
 
 function renderRow(row) {
-  const lines = FIELDS.filter((field) => row[field] !== undefined).map((field) => `${field}: ${JSON.stringify(row[field])}`);
-  return `${lines.join('\n')}\n`;
+  const lines = Object.keys(row).filter((field) => field !== 'file' && row[field] !== undefined && ROW_KEY.test(field)).map((field) => field + ': ' + JSON.stringify(row[field]));
+  return lines.join('\n') + '\n';
 }
 
 function parseRow(source) {
   const row = {};
   for (const line of source.split('\n')) {
-    const match = /^([A-Za-z]+): (.*)$/.exec(line);
+    const match = /^([A-Za-z_][A-Za-z0-9_.-]*): (.*)$/.exec(line);
     if (match) row[match[1]] = parseScalar(match[2]);
   }
   return row;
@@ -220,7 +286,6 @@ function parseScalar(raw) {
     return raw;
   }
 }
-
 function compareText(a, b) {
   if (a === b) return 0;
   return a < b ? -1 : 1;

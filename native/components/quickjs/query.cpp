@@ -9,6 +9,17 @@ constexpr std::string_view query_runner = R"JS((function (eventsText, js) {
   const cap = 20000;
   try {
     const events = JSON.parse(eventsText);
+    if (typeof js === "string" && js.startsWith("GM_FIELD_PAGE:")) {
+      const spec = JSON.parse(js.slice(14));
+      const event = events.find((e) => e.seq === spec.seq);
+      if (!event) return JSON.stringify({ ok: false, error: "no event at seq " + spec.seq });
+      const text = spec.field.split(".").reduce((v, k) => v && v[k], event);
+      const value = typeof text === "string" ? text : JSON.stringify(text ?? "");
+      const offset = spec.offset || 0;
+      const limit = spec.limit || 20000;
+      const end = Math.min(offset + limit, value.length);
+      return JSON.stringify({ ok: true, output: value.slice(offset, end), total: value.length, next: end < value.length ? end : null, truncated: offset > 0 || end < value.length });
+    }
     let filter;
     try {
       filter = new Function('events', `return (${js});`);

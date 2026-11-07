@@ -197,12 +197,47 @@ function boundedText(text, { maxBytes, match }) {
   return `${kept}${kept.endsWith(NL) ? '' : NL}[gm-fetch: body truncated to ${utf8Length(kept)} bytes of ${original} bytes]`;
 }
 
+function redactArtifact(value) {
+  return value
+    .replace(/Bearer\s+[^\s]+/gi, 'Bearer [redacted]')
+    .replace(/access_token=[^\s&]+/gi, 'access_token=[redacted]')
+    .replace(/refresh_token=[^\s&]+/gi, 'refresh_token=[redacted]')
+    .replace(/api_key=[^\s&]+/gi, 'api_key=[redacted]')
+    .replace(/password=[^\s&]+/gi, 'password=[redacted]');
+}
+
+function storeFetchArtifact(value, label) {
+  const clean = redactArtifact(value);
+  const bounded = clean.length > 20000 ? clean.slice(0, 10000) + NL + '[gm: middle omitted]' + NL + clean.slice(-10000) : clean;
+  const digest = sha256Hex(bounded).slice(0, 12);
+  const outputPath = `${host.runDir}/outputs/${digest}-${label}.txt`;
+  host.write_file({ path: outputPath, content: bounded });
+  return { outputPath, totalChars: clean.length, totalBytes: utf8Length(clean), digest, offset: 0, next: 0, truncated: true, notice: '[gm: full output at ' + outputPath + '; page with gm.read_file({ path: ' + JSON.stringify(outputPath) + ', unit: "chars", offset: 0, limit: 20000 })]' };
+}
 function getOnce({ url, timeoutMs = DEFAULT_TIMEOUT_MS, maxBytes, match }) {
   if (typeof url !== 'string') return fail('url must be a string');
   if (!Number.isInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > MAX_TIMEOUT_MS) return fail(`timeoutMs must be an integer from 1 to ${MAX_TIMEOUT_MS}`);
   const bad = checkLimits({ maxBytes, match });
   if (bad) return bad;
   if (!/^[a-z][a-z0-9+.-]*:\/\/?\S+$/i.test(url) && !/^data:/i.test(url)) return fail('url is not a valid URL');
+  if (/^data:/i.test(url)) {
+    const comma = url.indexOf(',');
+    if (comma < 5) return fail('url is not a valid URL');
+    const meta = url.slice(5, comma);
+    const raw = url.slice(comma + 1);
+    if (/;base64/i.test(meta)) return fail('base64 data URLs are not supported');
+    let body;
+    try { body = decodeURIComponent(raw.replace(/\+/g, ' ')); }
+    catch { return fail('url is not a valid URL'); }
+    const type = meta.split(';')[0] || 'text/plain';
+    const text = type.startsWith('text/') ? body : `(binary content not shown: ${type})`;
+    const bytes = utf8Length(body);
+    const shown = boundedText(text, { maxBytes, match });
+    const full = `200 ${bytes} bytes ${url}${NL}${shown}`;
+    const capped = maxBytes !== undefined && utf8Length(text) > maxBytes;
+    const artifact = capped ? storeFetchArtifact(full, 'fetch') : null;
+    return { ok: true, status: 200, bytes, finalUrl: url, redirects: 0, source: '', sourceNew: false, output: artifact === null ? full : full + NL + artifact.notice, ...(artifact === null ? {} : artifact) };
+  }
   const reply = host.run({
     argv: ['curl', '-sS', '-L', '-i', '--proto', '=http,https', '--proto-redir', '=http,https', '--max-time', (timeoutMs / 1000).toFixed(3), '--max-filesize', String(MAX_BODY_BYTES), '-A', 'gm-fetch/1', '-H', 'accept: text/html,text/plain;q=0.9,*/*;q=0.5', '-w', `${MARK}%{url_effective}\n%{num_redirects}`, '--url', url],
     timeoutMs: timeoutMs + 5000,
@@ -226,7 +261,11 @@ function getOnce({ url, timeoutMs = DEFAULT_TIMEOUT_MS, maxBytes, match }) {
   else text = `(binary content not shown: ${type})`;
   const bytes = utf8Length(body);
   const archived = archiveSource(body, finalUrl);
-  return { ok: status >= 200 && status < 300, status, bytes, finalUrl, redirects, source: archived.id, sourceNew: archived.created, output: `${status} ${bytes} bytes ${finalUrl}\n${boundedText(text, { maxBytes, match })}` };
+  const shown = boundedText(text, { maxBytes, match });
+  const full = `${status} ${bytes} bytes ${finalUrl}\n${shown}`;
+  const capped = maxBytes !== undefined && utf8Length(text) > maxBytes;
+  const artifact = capped ? storeFetchArtifact(full, 'fetch') : null;
+  return { ok: status >= 200 && status < 300, status, bytes, finalUrl, redirects, source: archived.id, sourceNew: archived.created, output: artifact === null ? full : full + NL + artifact.notice, ...(artifact === null ? {} : artifact) };
 }
 
 export const verbs = [

@@ -5,13 +5,17 @@ import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { Worker } from 'node:worker_threads';
 import { resultZone1, resultZone2, shortKind } from './compact.mjs';
 import { bodyContext } from './exec.mjs';
+import { storeArtifact } from './tools.mjs';
 
 const DEFAULT_TIMEOUT_MS = 180000;
 const MAX_TIMEOUT_MS = 300000;
 const BUDGET = Symbol('budget');
 const OUTPUT_CAP = 20000;
 const NOTICE_ROOM = 160;
-const cutRunOutput = (text) => `${text.slice(0, OUTPUT_CAP - NOTICE_ROOM)}\n[gm: run_code output cut at ${OUTPUT_CAP - NOTICE_ROOM} of ${text.length} characters; read less, or read the rest with read_file pages]`;
+const cutRunOutput = (text, runDir) => {
+  const artifact = storeArtifact(text, runDir, 'run_code');
+  return JSON.stringify({ outputPath: artifact.outputPath, totalChars: artifact.totalChars, digest: artifact.digest, offset: artifact.offset, next: artifact.next, truncated: true, notice: artifact.notice });
+};
 const BODY_WORKER = new URL('./body-worker.mjs', import.meta.url);
 const BODY_SLOTS = 4;
 const CONSOLE_LINES = 200;
@@ -244,9 +248,12 @@ export async function runBody({ body, timeoutMs = DEFAULT_TIMEOUT_MS, format, ve
     stop();
   };
   const lost = () => `its return value is lost; ${log.eventsFrom(startSeq + 1).filter((event) => event.kind === 'code-call').length} verb calls completed before the stop, each in query_log as a code-call after seq ${startSeq}`;
-  const result = done.then((reply) => (reply.ok
-    ? { ok: true, output: reply.text.length > OUTPUT_CAP ? cutRunOutput(reply.text) : reply.text, truncated: reply.text.length > OUTPUT_CAP }
-    : { ok: false, error: killed ? `${reply.error}: ${lost()}` : reply.at ? reply.error + locate(reply.at) : reply.error }));
+  const result = done.then((reply) => {
+    if (!reply.ok) return { ok: false, error: killed ? `${reply.error}: ${lost()}` : reply.at ? reply.error + locate(reply.at) : reply.error };
+    if (reply.text.length <= OUTPUT_CAP) return { ok: true, output: reply.text, truncated: false };
+    const artifact = storeArtifact(reply.text, runDir, 'run_code');
+    return { ok: true, output: cutRunOutput(reply.text, runDir), ...artifact, truncated: true };
+  });
   result.then(() => {
     const report = output.report();
     if (report.lines.length > 0 || report.dropped > 0) log.append('body-console', { body: startSeq, step, ...report });

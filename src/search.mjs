@@ -58,7 +58,7 @@ export const SEARCH_TOOLS = [
   {
     name: 'grep',
     description: `Find text in the files under path: the workspace by default, or a file or directory of it. A path inside the workspace searches its git-tracked files (or, outside a git repository, every file under it); a path outside the workspace is walked and its hits show absolute paths. files is git or walk, the source used. mode is literal (default; also named content), regex, or word (a whole identifier). If a literal search finds nothing and the pattern has a regex character, the pattern runs once more as a regex; the hint says which pass matched, and a pattern that is not a valid regex is an error. scope is tracked (default) or all: pass scope: 'all' for a file written in this run; all also searches untracked and gitignored files, node_modules included, and skips .git and the state directories .gm, .agentplug, .agentplug-kv, .gm, .playwriter and runs. A tracked search that skips files says how many in a hint and names scope all. Returns path:line text. ignoreCase is optional; limit is 1 to 1000, default 100. Paths under node_modules/ or vendor/ are skipped by tracked unless vendor is true; a walk also skips dot-directories and runs/. all lists files with git ls-files, which has a 30 s limit, so a large tree can take longer. ${ROOT_NOTE}`,
-    inputSchema: obj({ pattern: str, path: str, mode: str, scope: str, ignoreCase: bool, limit: num, offset: num, vendor: bool, root: str }, ['pattern']),
+    inputSchema: obj({ pattern: str, path: str, mode: str, scope: str, ignoreCase: bool, limit: num, offset: num, vendor: bool, root: str, resumeFrom: { type: 'object' } }, ['pattern']),
   },
 ];
 
@@ -258,7 +258,15 @@ function searcherFor({ root, confine }) {
       if (skipped !== null) hints.push(skipped);
       if (budgetHit()) hints.push(budgetHint());
       if (bounded) hints.push(longLineHint());
-      return { ok: true, files: source, output: [...found, ...footer].join('\n'), scanTruncated: budgetHit(), scannedFiles: budget.files, scannedBytes: budget.bytes, ...(hints.length ? { hint: hints.join(' | ') } : {}) };
+      const resumeFrom = typeof args === 'object' && args !== null ? args.resumeFrom ?? null : null;
+      const digest = createHash('sha256').update(found.join('\n')).digest('hex').slice(0, 12);
+      const scanCursor = {
+        fileIndex: resumeFrom && Number.isInteger(resumeFrom.fileIndex) ? resumeFrom.fileIndex : 0,
+        byteOffset: resumeFrom && Number.isInteger(resumeFrom.byteOffset) ? resumeFrom.byteOffset : 0,
+        scannedFiles: budget.files,
+        scannedBytes: budget.bytes,
+      };
+      return { ok: true, files: source, output: [...found, ...footer].join('\n'), nextOffset: next, scanCursor, scanTruncated: budgetHit(), totalMatches: total, digest, scannedFiles: budget.files, scannedBytes: budget.bytes, resumeFrom, ...(hints.length ? { hint: hints.join(' | ') } : {}) };
     },
   };
 

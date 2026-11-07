@@ -6,7 +6,10 @@
 #endif
 #include <atomic>
 #include <condition_variable>
+#include <cstdio>
 #include <deque>
+#include <filesystem>
+#include <fstream>
 #include <mutex>
 #include <thread>
 #include <iostream>
@@ -40,11 +43,73 @@ constexpr std::size_t kReplyMemory = 256;
 constexpr std::size_t kOutputCap = 20000;
 constexpr std::size_t kOutputPage = 20000;
 
-std::string cut_run_output(const std::string& text, std::size_t length) {
-    constexpr std::size_t kNoticeRoom = 160;
-    const std::size_t kept = kOutputCap - kNoticeRoom;
-    return js_prefix(text, kept) + "\n[gm: run_code output cut at " + std::to_string(kept) + " of " + std::to_string(length) +
-           " characters; read less, or read the rest with read_file pages]";
+std::string artifact_digest(const std::string& text) {
+    std::uint64_t hash = 14695981039346656037ull;
+    for (unsigned char c : text) {
+        hash ^= c;
+        hash *= 1099511628211ull;
+    }
+    char out[17];
+    std::snprintf(out, sizeof(out), "%016llx", static_cast<unsigned long long>(hash));
+    return std::string(out);
+}
+
+std::string redact_artifact(const std::string& text) {
+    const std::vector<std::pair<std::regex, std::string>> patterns = {
+        {std::regex(R"(Bearer\s+[^\s]+)", std::regex::icase), "Bearer [redacted]"},
+        {std::regex(R"(access_token=[^\s&]+)", std::regex::icase), "access_token=[redacted]"},
+        {std::regex(R"(refresh_token=[^\s&]+)", std::regex::icase), "refresh_token=[redacted]"},
+        {std::regex(R"(api_key=[^\s&]+)", std::regex::icase), "api_key=[redacted]"},
+        {std::regex(R"(password=[^\s&]+)", std::regex::icase), "password=[redacted]"},};
+    std::string clean = text;
+    for (const auto& [pattern, replacement] : patterns) clean = std::regex_replace(clean, pattern, replacement);
+    return clean;
+}
+
+struct OutputArtifact {
+    std::string path;
+    std::string digest;
+    std::size_t total_chars;
+    std::string notice;
+};
+
+OutputArtifact store_artifact(const std::string& text, const fs::path& run_dir, const std::string& label) {
+    const std::string clean = redact_artifact(text);
+    const std::string bounded = clean.size() > 20000 ? clean.substr(0, 10000) + "\n[gm: middle omitted]\n" + clean.substr(clean.size() - 10000) : clean;
+    const std::string digest = artifact_digest(bounded);
+    const fs::path dir = run_dir / "outputs";
+    std::error_code ec;
+    fs::create_directories(dir, ec);
+    const fs::path file = dir / (digest + "-" + label + ".txt");
+    std::ofstream out(file, std::ios::binary);
+    out << bounded;
+    const std::string path = file.generic_string();
+    const std::string path_json = json::dump(json::Value(path));
+    return {path, digest, clean.size(), "[gm: full output at " + path + "; page with gm.read_file({ path: " + path_json + ", unit: \"chars\", offset: 0, limit: 20000 })]"};
+}
+
+void add_cut_run(json::Value& reply, const std::string& text, std::size_t length, const fs::path& run_dir, const char* key) {
+    if (length <= kOutputCap) {
+        reply.set(key, text);
+        reply.set("truncated", false);
+        return;
+    }
+    const OutputArtifact artifact = store_artifact(text, run_dir, "run_code");
+    json::Value summary(json::Object{});
+    summary.set("outputPath", artifact.path);
+    summary.set("totalChars", static_cast<double>(artifact.total_chars));
+    summary.set("digest", artifact.digest);
+    summary.set("offset", static_cast<double>(0));
+    summary.set("next", static_cast<double>(0));
+    summary.set("truncated", true);
+    summary.set("notice", artifact.notice);
+    reply.set(key, json::dump(summary));
+    reply.set("truncated", true);
+    reply.set("outputPath", artifact.path);
+    reply.set("totalChars", static_cast<double>(artifact.total_chars));
+    reply.set("digest", artifact.digest);
+    reply.set("offset", static_cast<double>(0));
+    reply.set("next", static_cast<double>(0));
 }
 constexpr std::size_t kTailCap = 2000;
 constexpr std::size_t kLoggedReplyChars = 1000;
@@ -109,7 +174,7 @@ const std::string kNextContextDescription =
     "with child, names that owning run, and another run is refused. compactChildren: true summarizes child run_code "
     "and code-call generations into counts with a seq range and a gm.query_log note, while pending, parent-action, "
     "job, row and recovery events stay full; the default feed is unchanged. task, when set, replaces the run's "
-    "task text; use it in the first step when a host cut the slash-command task to its first word. A child context (child: true) refuses task: only the run owner sets the task.";
+    "task text; use it in the first step when a host cut the slash-command task to its first word. A later task replacement needs owner:true. A child context (child: true) refuses task: only the run owner sets the task.";
 const std::string kFinishDescription =
     "End the run. witness is one string that quotes the evidence you observed. gaps optionally lists, one string "
     "each, what the run did not check; the end event logs them. finish is refused while a background run is running, "
@@ -142,7 +207,7 @@ std::string run_code_description(const std::string& verb_names) {
            "verb: end the run with the finish tool. The reply names its own action in actionSeq, the seq of the "
            "run_code action event in the log. A body's console output is not returned; it is logged once per body as a "
            "body-console event, at most 200 lines of 512 bytes and 8 KiB, with a dropped count for the lines past the cap. "
-           "An argument this tool does not take is refused by name.";
+           "Large replies carry outputPath and are pageable with gm.read_file; query_log({ seq, field, offset, limit, unit: 'chars' }) pages one logged field. An argument this tool does not take is refused by name.";
 }
 
 const std::set<std::string> kReadOnlyTools = {
@@ -215,7 +280,8 @@ const std::vector<std::string>& node_verb_order() {
         "review_packet", "review_record", "review_join", "fetch",      "callers",        "impact",      "git_status",
         "git_add",     "git_rm",        "git_commit",  "git_push",     "git_log",        "git_diff",    "git_show",
         "git_fetch",   "git_pull",      "git_checkout", "git_branch",  "ci_status",      "prd_add",     "prd_list",
-        "prd_resolve", "unknown_add",   "unknown_list", "unknown_resolve", "prd_delete", "prd_park", "prd_reopen"};
+        "prd_resolve", "unknown_add",   "unknown_list", "unknown_resolve", "prd_delete", "prd_park", "prd_reopen",
+        "task_set",    "prd_receipt",  "prd_refute"};
     return order;
 }
 
@@ -248,7 +314,8 @@ Value code_tools(const VerbTable& verbs) {
                                                   .set("child", bool_schema())
                                                   .set("run", str_schema())
                                                   .set("compactChildren", bool_schema())
-                                                  .set("task", str_schema()),
+                                                  .set("task", str_schema())
+                                                  .set("owner", bool_schema()),
                                               {}));
     Value finish = object()
                        .set("name", "finish")
@@ -470,6 +537,7 @@ struct Server::State {
         bool end_logged = false;
         std::vector<std::pair<int, std::string>> rules_open;
         bool run_started = false;
+        bool owner_seen = false;
         bool child_seen = false;
         std::string child_task;
         int step_calls = 0;
@@ -1098,6 +1166,26 @@ struct Server::State {
 
     Value task_value() { return s().task.empty() ? Value(nullptr) : Value(s().task); }
 
+    Value task_set(const Value& args) {
+        const Value* owner = args.find("owner");
+        if (owner == nullptr || !owner->is_bool() || !owner->as_bool()) return refuse("task_set", args, "task_set needs owner:true");
+        if (!s().run_started) return refuse("task_set", args, "task_set needs a first next_context");
+        if (s().ended) return refuse("task_set", args, ended_reason(false));
+        const Value* task = args.find("task");
+        if (task != nullptr && !task->is_string() && json::dump(*task) != "null") return refuse("task_set", args, "task must be a string or null");
+        std::string value = task != nullptr && task->is_string() ? trim(task->as_string()) : "";
+        s().task = value;
+        s().task_inherited = false;
+        s().ended_task.reset();
+        s().start_override.reset();
+        s().child_task.clear();
+        if (!write_file(s().run_dir / "task.json", pretty_flat(run_meta(s().run_dir, value)) + "\n")) {
+            return refuse("task_set", args, "cannot write task.json");
+        }
+        append("task", object().set("from", "task_set").set("text", value).set("cleared", value.empty()));
+        return object().set("ok", true).set("task", value.empty() ? Value(nullptr) : Value(value)).set("cleared", value.empty());
+    }
+
     void end_run(const std::string& status, const Value& witness, const std::optional<Value>& gaps) {
         s().end_logged = true;
         stop_bodies("run-ended");
@@ -1384,10 +1472,9 @@ struct Server::State {
             if (job->value) {
                 std::string text = json::dump(*job->value);
                 std::size_t length = js_length(text);
-                settle_locked(*job, "exited",
-                              object()
-                                  .set("value", length > kOutputCap ? cut_run_output(text, length) : text)
-                                  .set("truncated", length > kOutputCap));
+                json::Value settled(json::Object{});
+                add_cut_run(settled, text, length, s().log->dir(), "value");
+                settle_locked(*job, "exited", std::move(settled));
             } else {
                 settle_locked(*job, "failed", object().set("error", job->error));
             }
@@ -1794,9 +1881,20 @@ struct Server::State {
         double wait_ms = wait_arg && wait_arg->is_number() && wait_arg->as_number() > 0 ? std::min(wait_arg->as_number(), kMaxWaitMs) : 0;
         const Value* compact_arg = args.find("compactChildren");
         bool compact_children = compact_arg && compact_arg->is_bool() && compact_arg->as_bool();
+        const Value* task_arg = args.find("task");
+        std::string corrected = task_arg && task_arg->is_string() ? trim(task_arg->as_string()) : "";
+        const Value* owner_arg = args.find("owner");
+        bool owner = owner_arg && owner_arg->is_bool() && owner_arg->as_bool();
+        bool first_step_correction = s().steps == 0 && !s().run_started && !s().child_seen && !s().owner_seen &&
+                                     (s().task.empty() || s().task.find_first_of(" \t\r\n") == std::string::npos);
+        if (!corrected.empty() && !owner && !first_step_correction) {
+            return refuse("next_context", args, "a task replacement after the first step needs owner:true; child contexts cannot change the run task");
+        }
+        Value audit = object();
+        if (task_arg != nullptr) audit.set("task", corrected).set("owner", owner).set("correction", first_step_correction);
         return act(
-            "next_context", object(),
-            [&, compact_children](std::uint64_t) {
+            "next_context", audit,
+            [&, compact_children, corrected, owner, first_step_correction](std::uint64_t) {
                 wait_for_pending(wait_ms);
                 if (wait_ms > 0 && s().run_started && !has_pending(s().run_dir)) {
                     return object()
@@ -1804,15 +1902,14 @@ struct Server::State {
                         .set("progress", "no event pending after " + std::to_string(static_cast<long long>(wait_ms)) + " ms; no step was used, call next_context again to keep waiting")
                         .set("steps", number_of(s().steps));
                 }
-                const Value* task_arg = args.find("task");
-                std::string corrected = task_arg && task_arg->is_string() ? trim(task_arg->as_string()) : "";
                 if (!corrected.empty() && corrected != s().task) {
                     s().task = corrected;
                     s().task_inherited = false;
-                    append("task", object().set("from", "next_context").set("text", corrected));
+                    append("task", object().set("from", "next_context").set("text", corrected).set("owner", owner).set("correction", first_step_correction));
                 }
                 s().steps += 1;
                 s().run_started = true;
+                s().owner_seen = true;
                 s().step_calls = 0;
                 return context(s().steps, compact_children);
             },
@@ -1984,6 +2081,7 @@ struct Server::State {
         if (s().ended) return refuse(name, args, ended_reason(child));
         if (name == "run_code") return run_code(args);
         if (name == "next_context") return child || args.find("run") != nullptr ? child_context(args) : next_context(args);
+        if (name == "task_set") return task_set(args);
         return finish(args);
     }
 
@@ -2019,9 +2117,9 @@ struct Server::State {
         Value args = args_value == nullptr ? object() : *args_value;
         if (!args.is_object()) throw RpcError(-32602, "tools/call arguments must be an object");
         std::string name = name_value->as_string();
-        if (name != "next_context" && name != "run_code" && name != "finish") {
+        if (name != "next_context" && name != "run_code" && name != "finish" && name != "task_set") {
             throw RpcError(-32602, "Unknown tool: " + name +
-                                       "; the code surface serves next_context, run_code and finish; call a verb as gm.<name>(args) inside run_code");
+                                       "; the code surface serves next_context, run_code, task_set and finish; call a verb as gm.<name>(args) inside run_code");
         }
         if (!s().run_started && !s().ended && name != "next_context" && name != "finish") {
             note_rule(2, name + " was called before the first next_context of the run");
@@ -2780,6 +2878,8 @@ public:
             else if (body_job) {
                 result = object().set("ok", false).set("error", Server::State::string_of(args, "job") +
                                                                      " is a background run, not a shell job; finish with stopBackground: true stops it");
+            } else if (name == "task_set") {
+                result = state_.task_set(args);
             } else {
                 result = state_.verbs.call(name, args);
                 if (name == "job_start" && is_ok(result)) {
@@ -2937,11 +3037,11 @@ Value Server::State::run_code(const Value& args) {
                 if (!job->value) return with_seq(object().set("ok", false).set("error", job->error).set("loads", array()));
                 std::string text = json::dump(*job->value);
                 std::size_t length = js_length(text);
-                return with_seq(object()
-                                    .set("ok", true)
-                                    .set("output", length > kOutputCap ? cut_run_output(text, length) : text)
-                                    .set("truncated", length > kOutputCap)
-                                    .set("loads", array()));
+                json::Value result(json::Object{});
+                result.set("ok", true);
+                add_cut_run(result, text, length, s().log->dir(), "output");
+                result.set("loads", array());
+                return with_seq(std::move(result));
             }
             write_status(*job->owner, job->name, status_of(*job, "running"));
             append("job", object().set("job", job->name).set("body", number_of(job->body)).set("state", "running"));

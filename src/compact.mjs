@@ -7,6 +7,7 @@ const LINE_CAP = 400;
 const ARG_CAP = 200;
 const ARG_HEAD = 80;
 const ERROR = /\b(error|errors|fail|failed|failure|fatal|warn|warning|exception|traceback|denied|not ok)\b/i;
+const COMMIT_STATUS = /^\[[^\]]+ [0-9a-f]{4,40}\]\s/;
 const SKIP = new Set(['t', 'mono', 'inFlight', 'startMono', 'durMs', 'actionSeq', 'step']);
 const KEEP_WHOLE = new Set(['witness', 'error', 'reason', 'gate', 'gaps', 'paths']);
 const KEEP_ZONE2 = new Set(['end', 'commit', 'refusal', 'error', 'restart', 'job-killed', 'review', 'review-packet', 'review-refused', 'lint', 'wiki', 'recovery', 'parse_error']);
@@ -43,7 +44,7 @@ export function outputDigest(text, failed = false) {
   if (typeof text !== 'string' || text === '') return { lines: 0, bytes: 0 };
   const lines = text.split('\n');
   const digest = { lines: lines.length, bytes: Buffer.byteLength(text), head: lines.slice(0, 2).map((line) => clip(line)), tail: lines.slice(-2).map((line) => clip(line)) };
-  const errors = lines.filter((line) => ERROR.test(line));
+  const errors = failed ? lines.filter((line) => ERROR.test(line) && !COMMIT_STATUS.test(line)) : [];
   if (errors.length > 0) {
     digest.errors = errors.slice(0, DIGEST_ERRORS).map((line) => clip(line));
     if (errors.length > DIGEST_ERRORS) digest.moreErrors = errors.length - DIGEST_ERRORS;
@@ -171,6 +172,34 @@ function boundedArgs(args) {
   return out;
 }
 
+const CUT_REF_CAP = 4;
+
+function cutRefsOf(item) {
+  const refs = [];
+  let omitted = 0;
+  const add = (path, chars, cap) => {
+    if (refs.length >= CUT_REF_CAP) {
+      omitted += 1;
+      return;
+    }
+    const limit = Math.min(20000, Math.max(1, chars - cap));
+    refs.push({ seq: item.seq ?? null, path, chars, cap, offset: cap, limit, query: { seq: item.seq ?? null, field: path, offset: cap, limit, unit: 'chars' } });
+  };
+  const visit = (value, path, cap) => {
+    if (typeof value === 'string') {
+      const match = /\.\.\.\[(\d+) chars(?: cut)?/.exec(value);
+      if (match !== null) add(path, Number(match[1]), cap);
+      return;
+    }
+    if (Array.isArray(value) || value === null || typeof value !== 'object') return;
+    if (Number.isInteger(value.chars)) add(path, value.chars, cap);
+    for (const [key, child] of Object.entries(value)) visit(child, path + '.' + key, ARG_CAP);
+  };
+  visit(item.args, 'args', ARG_CAP);
+  visit(item.output, 'output', EVENT_HEAD + EVENT_TAIL);
+  for (const key of TEXT_KEYS) visit(item[key], key, EVENT_TEXT_CAP);
+  return { refs, omitted };
+}
 export function boundedItem(item, cap = NEXT_CONTEXT_EVENT_CAP) {
   const original = costOf(item);
   if (original <= cap) return item;
@@ -200,6 +229,9 @@ export function boundedItem(item, cap = NEXT_CONTEXT_EVENT_CAP) {
     else if (Array.isArray(item[key])) put(key, { items: item[key].length });
     else if (typeof item[key] === 'number' || typeof item[key] === 'boolean') put(key, item[key]);
   }
+  const cuts = cutRefsOf(item);
+  put('cutRefs', cuts.refs);
+  if (cuts.omitted > 0) put('cutRefsOmitted', cuts.omitted);
   return out;
 }
 

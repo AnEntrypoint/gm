@@ -1,4 +1,5 @@
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { closeSync, existsSync, lstatSync, mkdirSync, openSync, readdirSync, readFileSync, readSync, realpathSync, renameSync, statSync, writeFileSync } from 'node:fs';
 import { mkdir, readdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
@@ -42,11 +43,13 @@ async function readText(path) {
   }
 }
 
-function cutPage(page, size, rest) {
-  if (rest === null) return { ...page, truncated: false, totalBytes: size };
+function cutPage(page, size, rest, digestText) {
+  const digest = createHash('sha256').update(digestText ?? page.output).digest('hex').slice(0, 12);
+  const nextOffset = page.next ?? null;
+  if (rest === null) return { ...page, truncated: false, totalBytes: size, nextOffset, digest };
   const shown = Buffer.byteLength(page.output, 'utf8');
   const separator = page.output === '' || page.output.endsWith('\n') ? '' : '\n';
-  return { ...page, output: `${page.output}${separator}[gm-read: truncated at ${shown} of ${size} bytes; ${rest}]`, truncated: true, totalBytes: size, hint: rest };
+  return { ...page, output: `${page.output}${separator}[gm-read: truncated at ${shown} of ${size} bytes; ${rest}]`, truncated: true, totalBytes: size, hint: rest, nextOffset, digest };
 }
 
 function isBinary(path) {
@@ -130,6 +133,7 @@ export const COMPACT = {
     job_start: { zone1: resultZone1, zone2: resultZone2 },
     job_status: { zone1: resultZone1, zone2: resultZone2 },
     query_log: { zone1: resultZone1, zone2: () => null },
+    task_set: { zone1: resultZone1, zone2: resultZone2 },
     finish: { zone1: compactFinish, zone2: compactFinish },
   },
 };
@@ -233,8 +237,8 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
         const launcher = shellLauncher(args.command, [], true);
         const withLauncher = (r) => ({ launcher, ...r });
         const result = runCommand(args.command, [], { cwd: root, timeoutMs, shell: true, signal: ctx?.signal });
-        if (result && typeof result.then === 'function') return result.then((r) => condenseShell(withLauncher(r), args.raw === true));
-        return condenseShell(withLauncher(result), args.raw === true);
+        if (result && typeof result.then === 'function') return result.then((r) => condenseShell(withLauncher(r), args.raw === true, runDir));
+        return condenseShell(withLauncher(result), args.raw === true, runDir);
       }
       if (!JOB_NAME.test(args.job ?? '')) return { ok: false, error: 'a background job needs job: 1 to 64 letters, digits, _ or -' };
       const timeoutMs = Math.min(Number(args.timeoutMs) || DEFAULT_TIMEOUT_MS, MAX_JOB_TIMEOUT_MS);
@@ -285,6 +289,7 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
     query_log(args = {}) {
       const unknown = Object.keys(args).filter((name) => !QUERY_ARGS.includes(name));
       if (unknown.length > 0) return refusal(`unknown argument ${unknown.join(', ')}; query_log takes ${QUERY_ARGS.join(', ')}`);
+      if (args.field !== undefined) return queryField(args, log);
       if (args.js !== undefined && typeof args.js !== 'string') return { ok: false, error: 'js must be a string' };
       if (args.kind !== undefined && typeof args.kind !== 'string') return { ok: false, error: 'kind must be a string' };
       for (const name of ['after', 'fromMono', 'toMono']) {
@@ -331,7 +336,7 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
     },
   };
   function leafVerbsOf(modules) {
-    const verbs = { ...modules['git.mjs'].createGitVerbs({ root, confine, log }), ...modules['rows.mjs'].createRowVerbs({ root, confine, log }), ...modules['wiki-tools.mjs'].createWikiVerbs({ root, log }), ...modules['review-tools.mjs'].createReviewVerbs({ root, log }), ...modules['fetch.mjs'].createFetchVerbs({ log, root }), ...modules['code-ast.mjs'].createAstVerbs({ root, confine }) };
+    const verbs = { ...modules['git.mjs'].createGitVerbs({ root, confine, log }), ...modules['rows.mjs'].createRowVerbs({ root, confine, log }), ...modules['wiki-tools.mjs'].createWikiVerbs({ root, log }), ...modules['review-tools.mjs'].createReviewVerbs({ root, log }), ...modules['fetch.mjs'].createFetchVerbs({ log, root, runDir }), ...modules['code-ast.mjs'].createAstVerbs({ root, confine }) };
     return { verbs, rowQueries: { openRows: modules['rows.mjs'].openRows, parkedRows: modules['rows.mjs'].parkedRows, rowSummary: modules['rows.mjs'].rowSummary } };
   }
   const boot = leafVerbsOf(leaves);
@@ -599,7 +604,47 @@ const QUERY_PAGE_EVENTS = 50;
 const QUERY_REPLY_CHARS = 20000;
 const QUERY_WINDOW_EVENTS = 1000;
 const QUERY_WINDOW_BYTES = 4 * 1024 * 1024;
-const QUERY_ARGS = ['js', 'kind', 'fromMono', 'toMono', 'after', 'last', 'limit'];
+const QUERY_ARGS = ['js', 'kind', 'fromMono', 'toMono', 'after', 'last', 'limit', 'seq', 'field', 'offset', 'unit', 'pageLimit'];
+const QUERY_FIELD_LIMIT = 20000;
+
+function fieldAt(event, path) {
+  let value = event;
+  for (const key of String(path).split('.')) {
+    if (key === '') return undefined;
+    if (value === null || typeof value !== 'object') return undefined;
+    value = value[key];
+    if (value === undefined) return undefined;
+  }
+  return value;
+}
+
+function queryField(args, log) {
+  if (!Number.isInteger(args.seq) || args.seq < 1) return { ok: false, error: 'seq must be a whole number from 1' };
+  if (typeof args.field !== 'string' || args.field.trim() === '') return { ok: false, error: 'field must be a non-empty string' };
+  if (args.unit !== undefined && args.unit !== 'chars') return { ok: false, error: 'unit must be chars' };
+  const offset = args.offset ?? 0;
+  if (!Number.isInteger(offset) || offset < 0) return { ok: false, error: 'offset must be a whole number from 0' };
+  const limit = args.pageLimit ?? args.limit ?? QUERY_FIELD_LIMIT;
+  if (!Number.isInteger(limit) || limit < 1 || limit > QUERY_FIELD_LIMIT) return { ok: false, error: 'limit must be a whole number from 1 to 20000' };
+  const event = log.events().find((entry) => entry.seq === args.seq) ?? null;
+  if (event === null) return { ok: false, error: 'no event with seq ' + args.seq };
+  const value = fieldAt(event, args.field);
+  const text = typeof value === 'string' ? value : JSON.stringify(value ?? null);
+  const end = Math.min(text.length, offset + limit);
+  const next = end < text.length ? end : null;
+  return {
+    ok: true,
+    output: text.slice(offset, end),
+    total: text.length,
+    offset,
+    next,
+    truncated: next !== null,
+    seq: args.seq,
+    field: args.field,
+    unit: 'chars',
+    digest: createHash('sha256').update(text).digest('hex').slice(0, 12),
+  };
+}
 
 function pageOf(events, limit = QUERY_PAGE_EVENTS) {
   const page = [];
@@ -637,10 +682,32 @@ function clipped(event) {
   return shown;
 }
 
-function condenseShell(result, raw) {
+function redactArtifact(text) {
+  return text
+    .replace(/Bearer\s+[^\s]+/gi, 'Bearer [redacted]')
+    .replace(/access_token=[^\s&]+/gi, 'access_token=[redacted]')
+    .replace(/refresh_token=[^\s&]+/gi, 'refresh_token=[redacted]')
+    .replace(/api_key=[^\s&]+/gi, 'api_key=[redacted]')
+    .replace(/password=[^\s&]+/gi, 'password=[redacted]');
+}
+
+export function storeArtifact(text, runDir, label) {
+  const clean = redactArtifact(text);
+  const bounded = clean.length > 20000 ? clean.slice(0, 10000) + '\n[gm: middle omitted]\n' + clean.slice(-10000) : clean;
+  const digest = createHash('sha256').update(bounded).digest('hex').slice(0, 12);
+  const dir = join(runDir, 'outputs');
+  mkdirSync(dir, { recursive: true });
+  const outputPath = join(dir, digest + '-' + label + '.txt');
+  writeFileSync(outputPath, bounded);
+  return { outputPath, totalChars: clean.length, digest, offset: 0, next: 0, truncated: true, notice: '[gm: full output at ' + outputPath + '; page with gm.read_file({ path: ' + JSON.stringify(outputPath) + ', unit: "chars", offset: 0, limit: 20000 })]' };
+}
+
+function condenseShell(result, raw, runDir) {
   if (raw || typeof result?.output !== 'string') return result;
   const condensed = condenseOutput(result.output);
-  return condensed === null ? result : { ...result, ...condensed };
+  if (condensed === null) return result;
+  const artifact = storeArtifact(result.output, runDir, 'run_shell');
+  return { ...result, ...condensed, ...artifact, output: condensed.output + '\n' + artifact.notice };
 }
 
 const LOGGED_REPLY_CHARS = 1000;

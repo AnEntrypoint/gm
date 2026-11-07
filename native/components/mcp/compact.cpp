@@ -27,6 +27,8 @@ constexpr std::size_t kEventArgsCap = 8;
 constexpr std::size_t kDigestLines = 2;
 constexpr std::size_t kDigestClip = 120;
 constexpr const char* kFeedReach = "query_log reads any event (after: seq - 1 returns it first)";
+constexpr std::size_t kCutRefsCap = 4;
+constexpr const char* kCutRefQuery = "gm.query_log({ seq, field, offset, limit, unit: \"chars\" })";
 constexpr const char* kChildReach = "gm.query_log({ after: seqs[0] - 1 }) reaches every event in this range";
 
 const std::set<std::string> kSkip = {"t", "mono", "inFlight", "startMono", "durMs", "actionSeq", "step"};
@@ -138,6 +140,31 @@ void put_if_fits(Value& out, const char* key, Value value, std::size_t cap) {
     if (cost_of(candidate) <= cap) out = std::move(candidate);
 }
 
+Value cut_refs_of(const Value& item) {
+    Value refs = array();
+    std::size_t omitted = 0;
+    std::uint64_t seq = item.find("seq") && item.find("seq")->is_number() ? static_cast<std::uint64_t>(item.find("seq")->as_number()) : 0;
+    auto add = [&](const std::string& path, const std::string& text, std::size_t cap) {
+        if (js_length(text) <= cap) return;
+        if (refs.as_array().size() >= kCutRefsCap) { ++omitted; return; }
+        refs.push(object().set("seq", number_of(seq)).set("path", path).set("chars", number_of(js_length(text)))
+                      .set("cap", number_of(cap)).set("offset", number(0)).set("limit", number_of(js_length(text)))
+                      .set("query", Value(kCutRefQuery)));
+    };
+    for (const char* key : {"output", "error", "witness", "reason", "body", "message", "task"}) {
+        const Value* field = item.find(key);
+        if (field != nullptr && field->is_string()) add(key, field->as_string(), kEventTextCap);
+    }
+    if (const Value* args = item.find("args"); args != nullptr && args->is_object()) {
+        for (const json::Member& member : args->as_object()) {
+            if (member.second.is_string()) add("args." + member.first, member.second.as_string(), kArgCap);
+        }
+    }
+    Value out = object().set("cutRefs", refs);
+    if (omitted > 0) out.set("cutRefsOmitted", number_of(omitted));
+    return out;
+}
+
 Value bounded_item(const Value& item, std::size_t cap = kEventCap) {
     std::size_t original = cost_of(item);
     if (original <= cap) return item;
@@ -189,6 +216,9 @@ Value bounded_item(const Value& item, std::size_t cap = kEventCap) {
         else if (field->is_array()) put(key, object().set("items", number_of(field->as_array().size())));
         else if (field->is_number() || field->is_bool()) put(key, *field);
     }
+    Value refs = cut_refs_of(item);
+    if (const Value* values = refs.find("cutRefs"); values != nullptr && !values->as_array().empty()) put_if_fits(out, "cutRefs", *values, cap);
+    if (const Value* omitted = refs.find("cutRefsOmitted")) put_if_fits(out, "cutRefsOmitted", *omitted, cap);
     return out;
 }
 
@@ -498,6 +528,7 @@ Value output_digest(const std::string& text, bool failed) {
     if (text.empty()) return object().set("lines", 0).set("bytes", 0);
     static const std::regex kError(R"(\b(error|errors|fail|failed|failure|fatal|warn|warning|exception|traceback|denied|not ok)\b)",
                                    std::regex::ECMAScript | std::regex::icase);
+    static const std::regex kCommitStatus(R"(^\[[^\]]+ [0-9a-fA-F]{4,40}\]\s.*$)", std::regex::ECMAScript);
     auto lines = split_lines(text);
     Value head = array();
     for (std::size_t i = 0; i < std::min<std::size_t>(2, lines.size()); ++i) head.push(clip(lines[i]));
@@ -508,15 +539,17 @@ Value output_digest(const std::string& text, bool failed) {
                        .set("bytes", number_of(text.size()))
                        .set("head", std::move(head))
                        .set("tail", std::move(tail));
-    std::vector<std::string> errors;
-    for (const auto& line : lines) {
-        if (std::regex_search(line, kError)) errors.push_back(line);
-    }
-    if (!errors.empty()) {
-        Value shown = array();
-        for (std::size_t i = 0; i < std::min(errors.size(), kDigestErrors); ++i) shown.push(clip(errors[i]));
-        digest.set("errors", std::move(shown));
-        if (errors.size() > kDigestErrors) digest.set("moreErrors", number_of(errors.size() - kDigestErrors));
+    if (failed) {
+        std::vector<std::string> errors;
+        for (const auto& line : lines) {
+            if (std::regex_search(line, kError) && !std::regex_match(line, kCommitStatus)) errors.push_back(line);
+        }
+        if (!errors.empty()) {
+            Value shown = array();
+            for (std::size_t i = 0; i < std::min(errors.size(), kDigestErrors); ++i) shown.push(clip(errors[i]));
+            digest.set("errors", std::move(shown));
+            if (errors.size() > kDigestErrors) digest.set("moreErrors", number_of(errors.size() - kDigestErrors));
+        }
     }
     if (failed) {
         std::size_t shown = 0;

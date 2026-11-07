@@ -39,7 +39,7 @@ export const CLI_TOOLS = [
     inputSchema: obj({ command: str, timeoutMs: num, background: { type: 'boolean' }, job: str, raw: { type: 'boolean' } }, ['command']),
   },
   { name: 'job_status', description: 'state (running, exited or killed), exitCode and the last 20000 characters of output. With waitMs it polls every 100 ms until the job leaves running or waitMs passes (max 30000).', inputSchema: obj({ job: str, waitMs: num }, ['job']) },
-  { name: 'query_log', description: 'JavaScript expression over "events", every log event so far (seq, t, mono, kind, ...). Returns JSON. Kinds: start, reply, action, result, refusal, skipped, parse_error, error, retry, job, pending, summary, end.', inputSchema: obj({ js: str }, ['js']) },
+  { name: 'query_log', description: 'JavaScript expression over "events", every log event so far (seq, t, mono, kind, ...). Returns JSON. Kinds: start, reply, action, result, refusal, skipped, parse_error, error, retry, job, pending, summary, end. With seq, field, offset, limit and unit:"chars", query_log pages one named event field.', inputSchema: obj({ js: str, seq: num, field: str, offset: num, limit: num, unit: str, pageLimit: num, kind: str, fromMono: num, toMono: num, after: num, last: num }, ['js']) },
   { name: 'finish', description: 'end the run. The witness must state the evidence.', inputSchema: obj({ witness: str }, ['witness']) },
 ];
 

@@ -134,11 +134,13 @@ const MAX_WAIT_MS = 300000;
 const DEFAULT_MCP_CONFIG = join(ROOT, 'defaults', 'mcp.json');
 
 const text = { type: 'string' };
+const nullableText = { type: ['string', 'null'] };
 const number = { type: 'number' };
 const objectSchema = (properties, required = []) => ({ type: 'object', properties, required });
 
 const BASE_TOOLS = [
-  { name: 'next_context', description: 'Begin a step. Returns rules, task, witness requirement, the events new since the last step in full, the older ones in compact form within two horizons, and prefixSha. pending lists the events that need you since your last step, each once, with an id. Delivery clears an event, so no later step or wait lists it again. Call it at the start of each step. query_log reaches every event. waitMs, when set, holds this call until an event is pending or that many milliseconds pass, at most 300000. child: true makes the call a read by a subagent on this connection: it takes no step, claims no pending event, and its reply has role child and the owning run. run, with child, names that owning run, and another run is refused. compactChildren: true summarizes child run_code and code-call generations into counts with a seq range and a gm.query_log note, while pending, parent-action, job, row and recovery events stay full; the default feed is unchanged. task, when set, replaces the run\'s task text; use it in the first step when a host cut the slash-command task to its first word. A child context (child: true) refuses task: only the run owner sets the task.', inputSchema: objectSchema({ waitMs: number, child: { type: 'boolean' }, run: text, compactChildren: { type: 'boolean' }, task: text }) },
+  { name: 'next_context', description: 'Begin a step. Returns rules, task, witness requirement, the events new since the last step in full, the older ones in compact form within two horizons, and prefixSha. pending lists the events that need you since your last step, each once, with an id. Delivery clears an event, so no later step or wait lists it again. Call it at the start of each step. query_log reaches every event. waitMs, when set, holds this call until an event is pending or that many milliseconds pass, at most 300000. child: true makes the call a read by a subagent on this connection: it takes no step, claims no pending event, and its reply has role child and the owning run. run, with child, names that owning run, and another run is refused. compactChildren: true summarizes child run_code and code-call generations into counts with a seq range and a gm.query_log note, while pending, parent-action, job, row and recovery events stay full; the default feed is unchanged. task, when set, replaces the run\'s task text; use it in the first step when a host cut the slash-command task to its first word. The first step may correct a one-word host task without owner:true; later task replacements need owner:true. A child context (child: true) refuses task: only the run owner sets the task.', inputSchema: objectSchema({ waitMs: number, child: { type: 'boolean' }, run: text, compactChildren: { type: 'boolean' }, task: text, owner: { type: 'boolean' } }) },
+  { name: 'task_set', description: 'Replace or clear the run task after the first step. owner:true is required; child contexts cannot set the task. An empty string or null clears the task.', inputSchema: objectSchema({ task: nullableText, owner: { type: 'boolean' } }, ['task']) },
   { name: 'read_file', description: 'Read a text file, inside or outside the workspace, one page of at most 20000 characters. Lines are the default unit: offset is a 0-based line index, limit a line count (default: as many whole lines as fit), and total (the file in lines) and next (the line index of the next page, null at the end) count lines. truncated is true when the page stops before the end, totalBytes is the file size in bytes, and hint names the read that gets the rest; a truncated output also ends with a [gm-read: truncated at N of M bytes; ...] line that gives the bytes shown, the file size and that read. A line longer than the page is cut to its first 20000 characters, with cutLine true, and next is the line after it. unit "chars" counts offset, limit (1 to 20000, default 20000), total and next in characters instead. A path that starts with skill:// reads a served skill file, the text resources/read returns, and a skill:// uri that no served skill has is an error that names it.', inputSchema: objectSchema({ path: text, offset: number, limit: number, unit: text }, ['path']) },
   { name: 'write_file', description: 'Write a text file, inside or outside the workspace, creating parent directories. Replacing an existing file with content less than half its prior byte size adds shrunkByBytes, shrinkRatio and shrinkWarning to the result (never blocks the write); new files and normal rewrites are unchanged.', inputSchema: objectSchema({ path: text, content: text }, ['path', 'content']) },
   { name: 'edit_file', description: 'Replace old with new in a text file, inside or outside the workspace. old must occur once, unless replaceAll is true.', inputSchema: objectSchema({ path: text, old: text, new: text, replaceAll: { type: 'boolean' } }, ['path', 'old', 'new']) },
@@ -222,6 +224,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
   let noticeSeq = lastContextSeq(log.events());
   const active = new Map();
   const waiting = [];
+  let callOrder = 0;
   const unansweredTurns = new Set();
   const replies = new Map();
   const remember = (key, pending) => {
@@ -240,6 +243,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
   let ended = resume?.ended ?? null;
   let stepLimited = false;
   let endedTask = null;
+  let ownerToken = null;
   let endLogged = ended !== null;
   let quietSince = log.now();
   let idleQueued = false;
@@ -288,6 +292,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     job_start: ({ job, command, timeoutMs }) => tools.run('run_shell', { job, command, timeoutMs, background: true }),
     job_status: ({ job, waitMs, offset }) => tools.run('job_status', { job, waitMs, offset }),
     query_log: (args) => tools.run('query_log', args),
+    task_set: (args) => applyTaskSet(args),
   };
 
   async function innerCall(name, args) {
@@ -475,7 +480,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
   }
 
   function unknownToolText(name) {
-    const guidance = surface === 'code' ? '; the code surface serves next_context, run_code and finish; call a verb as gm.<name>(args) inside run_code' : '';
+    const guidance = surface === 'code' ? '; the code surface serves next_context, run_code, task_set and finish; call a verb as gm.<name>(args) inside run_code' : '';
     return `Unknown tool: ${name}${guidance}`;
   }
 
@@ -508,7 +513,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
 
   function startCall(name, args, rpcId) {
     return new Promise((resolveCall) => {
-      waiting.push({ name, args, resolveCall, rpcId });
+      waiting.push({ name, args, resolveCall, rpcId, order: ++callOrder });
       drain();
     });
   }
@@ -519,10 +524,21 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
       return;
     }
     while (active.size < maxInflight && waiting.length > 0) {
-      const accesses = waiting.map((call) => accessOf(call.name, call.args));
+      const ordered = [...waiting].sort((a, b) => a.order - b.order);
+      if (!runStarted) {
+        const firstIndex = ordered.findIndex((call) => call.name === 'next_context' && call.args.child !== true && call.args.run === undefined);
+        if (firstIndex < 0) return;
+        const call = ordered[firstIndex];
+        const access = accessOf(call.name, call.args);
+        waiting.splice(waiting.indexOf(call), 1);
+        call.resolveCall(invoke(call.name, call.args, access, call.rpcId));
+        return;
+      }
+      const accesses = ordered.map((call) => accessOf(call.name, call.args));
       const index = startableIndex(accesses);
       if (index < 0) return;
-      const [call] = waiting.splice(index, 1);
+      const call = ordered[index];
+      waiting.splice(waiting.indexOf(call), 1);
       call.resolveCall(invoke(call.name, call.args, accesses[index], call.rpcId));
     }
   }
@@ -562,6 +578,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
 
   function invoke(name, args, access, rpcId) {
     if (ended !== null) return refuse(name, args, endedReason(isChildRead(name, args)), rpcId);
+    if (name === 'task_set') return taskSet(args, access, rpcId);
     if (signalOf(rpcId)?.aborted === true) return refuse(name, args, 'cancelled before it started', rpcId);
     if (name === 'run_code') {
       const unknown = Object.keys(args).filter((key) => !Object.hasOwn(RUN_CODE_PROPERTIES, key));
@@ -599,6 +616,41 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     };
   }
 
+  async function writeTaskFile(text) {
+    const fs = await import('node:fs/promises');
+    const file = join(runDir, 'task.json');
+    let meta = {};
+    try { meta = JSON.parse(await fs.readFile(file, 'utf8')); } catch {}
+    if (meta === null || typeof meta !== 'object' || Array.isArray(meta)) meta = {};
+    meta.task = text;
+    await fs.writeFile(file, JSON.stringify(meta, null, 2) + '\n');
+  }
+  function taskSetProblem(args) {
+    if (!runStarted) return { ok: false, error: 'no step has started; call next_context first' };
+    if (args.child === true || args.run !== undefined) return { ok: false, error: 'a child context cannot set the run task' };
+    if (args.owner !== true || ownerToken !== 'owner') return { ok: false, error: 'task_set needs owner:true on the owning run' };
+    if (args.task !== null && typeof args.task !== 'string') return { ok: false, error: 'task must be a string or null' };
+    return null;
+  }
+  async function applyTaskSet(args) {
+    const problem = taskSetProblem(args);
+    if (problem !== null) return problem;
+    const given = typeof args.task === 'string' ? args.task.trim() : '';
+    task = given;
+    taskInherited = false;
+    endedTask = null;
+    startOverride = null;
+    childTask = '';
+    prefixMemo = null;
+    await writeTaskFile(task);
+    log.append('task', { from: 'task_set', text: task, cleared: task === '', owner: true });
+    return { ok: true, task: task === '' ? null : task, cleared: task === '' };
+  }
+  function taskSet(args, access, rpcId) {
+    const problem = taskSetProblem(args);
+    if (problem !== null) return refuse('task_set', args, problem.error, rpcId);
+    return act('task_set', { task: args.task ?? null, owner: true }, access, () => applyTaskSet(args), undefined, rpcId);
+  }
   async function nextContext(access, rpcId, args = {}) {
     if (steps >= maxSteps) {
       stepLimited = true;
@@ -607,25 +659,37 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
       await endRun('max_steps', null);
       return out;
     }
+    const given = typeof args.task === 'string' ? args.task.trim() : '';
+    const initial = typeof task === 'string' ? task : '';
+    const firstStep = steps === 0 && !runStarted && !childSeen && args.child !== true && args.run === undefined && (initial === '' || !/\s/.test(initial));
+    const ownerMarked = args.owner === true;
+    const correction = given !== '' && firstStep && !ownerMarked;
+    if (given !== '' && args.child === true) return refuse('next_context', args, 'a child context cannot set the run task', rpcId);
+    if (given !== '' && !ownerMarked && !correction) return refuse('next_context', args, 'a task replacement after the first step needs owner:true; child contexts cannot change the run task', rpcId);
     steps += 1;
     runStarted = true;
     stepCalls = 0;
     const step = steps;
+    if (ownerToken === null && (ownerMarked || firstStep || (steps === 1 && !childSeen && args.child !== true && args.run === undefined))) ownerToken = 'owner';
     const waitMs = waitOf(args.waitMs);
     const compactChildren = args.compactChildren === true;
-    const given = typeof args.task === 'string' ? args.task.trim() : '';
     if (given !== '' && given !== task) {
       task = given;
       taskInherited = false;
-      log.append('task', { from: 'next_context', text: task });
+      endedTask = null;
+      startOverride = null;
+      childTask = '';
+      prefixMemo = null;
+      await writeTaskFile(task);
+      log.append('task', { from: 'next_context', text: task, ...(ownerMarked ? { owner: true } : {}), ...(correction ? { correction: true } : {}) });
     }
-    return act('next_context', {}, access, async () => {
+    const shownTask = given === '' ? '' : given.length <= 200 ? given : given.slice(0, 200) + ' ...[' + given.length + ' chars]';
+    const auditArgs = given === '' ? {} : { task: shownTask, owner: ownerMarked, correction };
+    return act('next_context', auditArgs, access, async () => {
       await untilPending(runDir, waitMs);
       return context(step, rpcId, compactChildren);
     }, ({ ok, error, prefixSha, total }) => ({ ok, error, prefixSha, total }), rpcId);
-  }
-
-  let prefixMemo = null;
+  }  let prefixMemo = null;
   function prefixShaFor(rules) {
     if (prefixMemo === null || prefixMemo.surface !== current || prefixMemo.rules !== rules || prefixMemo.task !== task) prefixMemo = { surface: current, rules, task, sha: prefixShaOf({ rules, task, witness: DEFAULT_WITNESS, tools: renderTools(servedTools(surface)) }) };
     return prefixMemo.sha;
@@ -769,7 +833,13 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
   }
 
   async function inputEnded() {
-    if (ended === null) stop('closed');
+    if (ended === null) {
+      while (waiting.length > 0) {
+        drain();
+        await Promise.allSettled([...active.keys()]);
+      }
+      stop('closed');
+    }
     await Promise.allSettled([...unansweredTurns]);
     if (!endLogged) await endRun(ended, null);
   }
@@ -1093,7 +1163,7 @@ async function main(argv) {
     console.error(`gm mcp: run ${closedId} has ended; opened run ${basename(runDir)}`);
     return createSession({ ...limits, runDir, log: fresh, task: start.task, taskInherited: start.inherited });
   }
-  let nextContextTail = Promise.resolve();
+  let acceptTail = Promise.resolve();
   const acceptNow = (line) => {
     try {
       if (session.ended() !== null && isNextContextCall(line) && !session.hasReply(requestIdOf(line))) {
@@ -1110,11 +1180,7 @@ async function main(argv) {
     }
   };
   const acceptLine = (line) => {
-    if (!isNextContextCall(line)) {
-      acceptNow(line);
-      return;
-    }
-    nextContextTail = nextContextTail.then(() => acceptNow(line)).catch((err) => console.error(`gm mcp: ${err.message}`));
+    acceptTail = acceptTail.then(() => acceptNow(line)).catch((err) => console.error(`gm mcp: ${err.message}`));
   };
   const lines = createInterface({ input: process.stdin, crlfDelay: Infinity });
   lines.on('line', acceptLine);
@@ -1123,7 +1189,7 @@ async function main(argv) {
     pausing ??= Promise.all([session.pause(reason), retired]).finally(() => process.exit(0));
     return pausing;
   };
-  lines.on('close', () => (flags.supervised === 'yes' ? pauseRun('the supervisor ended stdin') : session.inputEnded().then(() => retired).catch((err) => console.error(`gm: ${err.message}`)).finally(() => client.stop())));
+  lines.on('close', () => (flags.supervised === 'yes' ? pauseRun('the supervisor ended stdin') : acceptTail.then(() => session.inputEnded()).then(() => retired).catch((err) => console.error(`gm: ${err.message}`)).finally(() => client.stop())));
   process.once('SIGINT', () => lines.close());
   process.once('SIGTERM', () => pauseRun('SIGTERM from the supervisor'));
   process.stdout.on('error', (err) => console.error(`gm: stdout: ${err.message}`));

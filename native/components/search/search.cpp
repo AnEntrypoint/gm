@@ -13,7 +13,7 @@ constexpr std::size_t MAX_SEARCH_ROOTS = 4;
 const char SEARCH_SCHEMA[] =
     R"({"type":"object","properties":{"query":{"type":"string"},"k":{"type":"number"},"root":{"type":"string"}},"required":["query"]})";
 const char GREP_SCHEMA[] =
-    R"({"type":"object","properties":{"pattern":{"type":"string"},"path":{"type":"string"},"mode":{"type":"string"},"scope":{"type":"string"},"ignoreCase":{"type":"boolean"},"limit":{"type":"number"},"offset":{"type":"number"},"vendor":{"type":"boolean"},"root":{"type":"string"}},"required":["pattern"]})";
+    R"({"type":"object","properties":{"pattern":{"type":"string"},"path":{"type":"string"},"mode":{"type":"string"},"scope":{"type":"string"},"ignoreCase":{"type":"boolean"},"limit":{"type":"number"},"offset":{"type":"number"},"vendor":{"type":"boolean"},"root":{"type":"string"},"resumeFrom":{"type":"object"}},"required":["pattern"]})";
 
 json::Value refused(const std::string& reason) {
     return json::Value(json::Object{{"ok", false}, {"refused", true}, {"error", "refused: " + reason}, {"output", "refused: " + reason}});
@@ -47,7 +47,7 @@ std::vector<VerbInfo> SearchVerbs::list() const {
 json::Value SearchVerbs::call(std::string_view name, const json::Value& args) {
     std::vector<std::string> takes;
     if (name == "search") takes = {"query", "k"};
-    else if (name == "grep") takes = {"pattern", "path", "mode", "scope", "ignoreCase", "limit", "offset", "vendor"};
+    else if (name == "grep") takes = {"pattern", "path", "mode", "scope", "ignoreCase", "limit", "offset", "vendor", "resumeFrom"};
     else return json::Value(json::Object{{"ok", false}, {"error", "unknown verb " + std::string(name)}});
 
     std::string unknown;

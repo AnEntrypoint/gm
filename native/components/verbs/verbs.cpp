@@ -5,10 +5,13 @@
 #include <cerrno>
 #include <chrono>
 #include <cmath>
+#include <cstdio>
 #include <ctime>
 #include <exception>
+#include <filesystem>
 #include <fstream>
 #include <limits>
+#include <regex>
 #include <set>
 #include <system_error>
 
@@ -32,6 +35,52 @@ using core::refusal;
 using core::utf16_length;
 using core::utf16_slice;
 
+std::string artifact_digest(const std::string& text) {
+    std::uint64_t hash = 14695981039346656037ull;
+    for (unsigned char c : text) {
+        hash ^= c;
+        hash *= 1099511628211ull;
+    }
+    char out[17];
+    std::snprintf(out, sizeof(out), "%016llx", static_cast<unsigned long long>(hash));
+    return std::string(out);
+}
+
+std::string redact_artifact(const std::string& text) {
+    const std::vector<std::pair<std::regex, std::string>> patterns = {
+        {std::regex(R"(Bearer\s+[^\s]+)", std::regex::icase), "Bearer [redacted]"},
+        {std::regex(R"(access_token=[^\s&]+)", std::regex::icase), "access_token=[redacted]"},
+        {std::regex(R"(refresh_token=[^\s&]+)", std::regex::icase), "refresh_token=[redacted]"},
+        {std::regex(R"(api_key=[^\s&]+)", std::regex::icase), "api_key=[redacted]"},
+        {std::regex(R"(password=[^\s&]+)", std::regex::icase), "password=[redacted]"},};
+    std::string clean = text;
+    for (const auto& [pattern, replacement] : patterns) clean = std::regex_replace(clean, pattern, replacement);
+    return clean;
+}
+
+json::Value store_artifact(const std::string& text, const std::filesystem::path& run_dir, const std::string& label) {
+    const std::string clean = redact_artifact(text);
+    const std::string bounded = clean.size() > 20000 ? clean.substr(0, 10000) + "\n[gm: middle omitted]\n" + clean.substr(clean.size() - 10000) : clean;
+    const std::string digest = artifact_digest(bounded).substr(0, 12);
+    const std::filesystem::path dir = run_dir / "outputs";
+    std::error_code ec;
+    std::filesystem::create_directories(dir, ec);
+    const std::filesystem::path file = dir / (digest + "-" + label + ".txt");
+    std::ofstream out(file, std::ios::binary);
+    out << bounded;
+    const std::string path = file.generic_string();
+    const std::string path_json = json::dump(json::Value(path));
+    json::Value reply(json::Object{});
+    reply.set("outputPath", path);
+    reply.set("totalChars", static_cast<double>(clean.size()));
+    reply.set("digest", digest);
+    reply.set("offset", static_cast<double>(0));
+    reply.set("next", static_cast<double>(0));
+    reply.set("truncated", true);
+    reply.set("notice", "[gm: full output at " + path + "; page with gm.read_file({ path: " + path_json + ", unit: \"chars\", offset: 0, limit: 20000 })]");
+    return reply;
+}
+
 constexpr double default_timeout_ms = 60000;
 constexpr double default_job_timeout_ms = 300000;
 constexpr double max_timeout_ms = 600000;
@@ -44,10 +93,71 @@ constexpr std::size_t query_window_events = 1000;
 constexpr std::size_t query_window_bytes = 4 * 1024 * 1024;
 constexpr std::size_t query_cap = 20000;
 constexpr std::chrono::milliseconds query_js_deadline{5000};
-constexpr std::array<std::string_view, 7> query_args = {"js", "kind", "fromMono", "toMono", "after", "last", "limit"};
+constexpr std::array<std::string_view, 11> query_args = {"js", "kind", "fromMono", "toMono", "after", "last", "limit", "seq", "field", "offset", "unit"};
+
+std::string digest_hex(const std::string& text) {
+    std::uint64_t hash = 14695981039346656037ull;
+    for (unsigned char c : text) {
+        hash ^= c;
+        hash *= 1099511628211ull;
+    }
+    char out[17];
+    std::snprintf(out, sizeof(out), "%016llx", static_cast<unsigned long long>(hash));
+    return std::string(out);
+}
+
+std::string field_text(const json::Value& event, const std::string& path) {
+    const json::Value* value = &event;
+    std::size_t at = 0;
+    while (at < path.size()) {
+        std::size_t dot = path.find('.', at);
+        std::string key = path.substr(at, dot == std::string::npos ? std::string::npos : dot - at);
+        if (!value->is_object()) return std::string();
+        value = value->find(key);
+        if (value == nullptr) return std::string();
+        if (dot == std::string::npos) break;
+        at = dot + 1;
+    }
+    return value->is_string() ? value->as_string() : json::dump(*value);
+}
+
+json::Value field_page(const json::Value& args, auto& log) {
+    const json::Value* seq = present(args, "seq");
+    const json::Value* field = present(args, "field");
+    const json::Value* offset_value = present(args, "offset");
+    const json::Value* limit = present(args, "limit");
+    const json::Value* unit = present(args, "unit");
+    if (seq == nullptr || !core::is_whole_number(seq) || seq->as_number() < 1) return failure("seq must be a whole number from 1");
+    if (field == nullptr || !field->is_string()) return failure("field must be a string");
+    if (unit != nullptr && (!unit->is_string() || unit->as_string() != "chars")) return failure("unit must be chars");
+    if (offset_value != nullptr && (!core::is_whole_number(offset_value) || offset_value->as_number() < 0)) return failure("offset must be a whole number of characters, zero or more");
+    if (limit != nullptr && (!core::is_whole_number(limit) || limit->as_number() < 1)) return failure("limit must be a whole number of characters, one or more");
+    std::size_t offset = offset_value != nullptr ? static_cast<std::size_t>(offset_value->as_number()) : 0;
+    std::size_t width = limit != nullptr ? static_cast<std::size_t>(limit->as_number()) : query_cap;
+    std::uint64_t wanted = static_cast<std::uint64_t>(seq->as_number());
+    auto events = log.read_all();
+    if (!events) return failure(events.error());
+    const json::Value* event = nullptr;
+    for (const json::Value& candidate : *events) {
+        const json::Value* candidate_seq = candidate.find("seq");
+        if (candidate_seq != nullptr && candidate_seq->is_number() && static_cast<std::uint64_t>(candidate_seq->as_number()) == wanted) { event = &candidate; break; }
+    }
+    if (event == nullptr) return failure("no event at seq " + std::to_string(wanted));
+    std::string text = field_text(*event, field->as_string());
+    std::size_t end = std::min(offset + width, text.size());
+    bool truncated = offset > 0 || end < text.size();
+    json::Value reply;
+    reply.set("ok", true);
+    reply.set("output", text.substr(offset, end - offset));
+    reply.set("total", static_cast<std::uint64_t>(text.size()));
+    reply.set("next", end < text.size() ? json::Value(static_cast<std::uint64_t>(end)) : json::Value(nullptr));
+    reply.set("truncated", truncated);
+    return reply;
+}
 
 const std::vector<VerbInfo>& verb_table() {
     static const std::vector<VerbInfo> table = {
+    {"task_set", "Replace or clear this run task after its first next_context. task is a string or null; empty string and null clear it. owner:true is required; child contexts and calls before the first next_context are refused.", R"json({"type":"object","properties":{"task":{"type":["string","null"]},"owner":{"type":"boolean"}},"required":["task","owner"]})json"},
     {"read_file", "Read a text file, inside or outside the workspace, one page of at most 20000 characters. Lines are the default unit: offset is a 0-based line index, limit a line count (default: as many whole lines as fit), and total (the file in lines) and next (the line index of the next page, null at the end) count lines. truncated is true when the page stops before the end, totalBytes is the file size in bytes, and hint names the read that gets the rest; a truncated output also ends with a [gm-read: truncated at N of M bytes; ...] line that gives the bytes shown, the file size and that read. A line longer than the page is cut to its first 20000 characters, with cutLine true, and next is the line after it. unit \"chars\" counts offset, limit (1 to 20000, default 20000), total and next in characters instead. A path that starts with skill:// reads a served skill file, the text resources/read returns, and a skill:// uri that no served skill has is an error that names it.", R"json({"type":"object","properties":{"path":{"type":"string"},"offset":{"type":"number"},"limit":{"type":"number"},"unit":{"type":"string"}},"required":["path"]})json"},
     {"write_file", "Write a text file, inside or outside the workspace, creating parent directories. Replacing an existing file with content less than half its prior byte size adds shrunkByBytes, shrinkRatio and shrinkWarning to the result (never blocks the write); new files and normal rewrites are unchanged.", R"json({"type":"object","properties":{"path":{"type":"string"},"content":{"type":"string"}},"required":["path","content"]})json"},
     {"edit_file", "Replace old with new in a text file, inside or outside the workspace. old must occur once, unless replaceAll is true.", R"json({"type":"object","properties":{"path":{"type":"string"},"old":{"type":"string"},"new":{"type":"string"},"replaceAll":{"type":"boolean"}},"required":["path","old","new"]})json"},
@@ -57,7 +167,7 @@ const std::vector<VerbInfo>& verb_table() {
     {"job_start", "Start a shell command as a named background job and return at once. Poll it with job_status. timeoutMs is the job's deadline in milliseconds: default 300000, at most 3600000 (and never past the job lifetime, 3600000 by default). At the deadline the job's process group gets SIGTERM, then SIGKILL, and the job ends killed with reason timeout. job_status reports the deadline as timeoutMs.", R"json({"type":"object","properties":{"job":{"type":"string"},"command":{"type":"string"},"timeoutMs":{"type":"number"}},"required":["job","command"]})json"},
     {"job_status", "State (running, exited or killed), exitCode, signal and output of a job as plain fields, with logPath (the job output file). output is the last 20000 characters, with total (its length) and truncated; with offset, output is the 20000 characters from that offset, with next. waitMs polls until the job leaves running, capped at 30000 ms (30 s; a larger waitMs is clamped); re-arm gm.job_status({ job, waitMs: 30000 }) while state is running. Offsets and lengths count characters, not lines.", R"json({"type":"object","properties":{"job":{"type":"string"},"waitMs":{"type":"number"},"offset":{"type":"number"}},"required":["job"]})json"},
     {"job_stop", "Stop a background shell job: its process group is killed, and the job ends killed with reason cancelled. The job event is logged before the answer. A job that already ended is an error result. stopBackground stops run_code bodies only.", R"json({"type":"object","properties":{"job":{"type":"string"}},"required":["job"]})json"},
-    {"query_log", "Read the run events, as JSON. after is a seq: only the events after it are read (since), so after the last seq you saw reads on from there. kind keeps events of one kind, and fromMono and toMono keep events in a time window (monotonic milliseconds). last N returns the newest N matching events instead, oldest first, at most 50, and has no next. js is a JavaScript expression over the matching events, and defaults to returning them: js sees one window of at most 1000 events or 4 MB of log. Without js, a reply holds at most 50 events and about 20 KB; limit (1 to 50) lowers that count, and is refused with last or js. When events remain, next is the seq to pass back as after; with js, next is set when the window ends before the end of the log. An unknown argument is refused, and the reply names the arguments query_log takes.", R"json({"type":"object","properties":{"js":{"type":"string"},"kind":{"type":"string"},"fromMono":{"type":"number"},"toMono":{"type":"number"},"after":{"type":"number"},"last":{"type":"number"},"limit":{"type":"number"}},"required":[]})json"},
+    {"query_log", "Read the run events, as JSON. after is a seq: only the events after it are read (since), so after the last seq you saw reads on from there. kind keeps events of one kind, and fromMono and toMono keep events in a time window (monotonic milliseconds). last N returns the newest N matching events instead, oldest first, at most 50, and has no next. js is a JavaScript expression over the matching events, and defaults to returning them: js sees one window of at most 1000 events or 4 MB of log. Without js, a reply holds at most 50 events and about 20 KB; limit (1 to 50) lowers that count, and is refused with last or js. When events remain, next is the seq to pass back as after; with js, next is set when the window ends before the end of the log. An unknown argument is refused, and the reply names the arguments query_log takes.", R"json({"type":"object","properties":{"js":{"type":"string"},"kind":{"type":"string"},"fromMono":{"type":"number"},"toMono":{"type":"number"},"after":{"type":"number"},"last":{"type":"number"},"limit":{"type":"number"},"seq":{"type":"number"},"field":{"type":"string"},"offset":{"type":"number"},"unit":{"type":"string"},"pageLimit":{"type":"number"}},"required":[]})json"},
     };
     return table;
 }
@@ -263,7 +373,10 @@ struct CoreVerbs::Impl {
         if (auto problem = char_args_problem(args)) return failure(*problem);
         auto file = core::read_text(path, "stat");
         if (!file.ok) return failure(file.error);
-        return char_page(file.text, args, file_size_of(path));
+        json::Value reply = char_page(file.text, args, file_size_of(path));
+        if (const json::Value* next = reply.find("next")) reply.set("nextOffset", *next);
+        reply.set("digest", digest_hex(file.text));
+        return reply;
     }
 
     json::Value char_page(const std::string& text, const json::Value& args, std::uint64_t total_bytes) {
@@ -302,7 +415,10 @@ struct CoreVerbs::Impl {
         if (auto problem = line_args_problem(args)) return failure(*problem);
         auto file = core::read_text(path, "stat");
         if (!file.ok) return failure(file.error);
-        return line_page(file.text, args, file_size_of(path));
+        json::Value reply = line_page(file.text, args, file_size_of(path));
+        if (const json::Value* next = reply.find("next")) reply.set("nextOffset", *next);
+        reply.set("digest", digest_hex(file.text));
+        return reply;
     }
 
     json::Value line_page(const std::string& text, const json::Value& args, std::uint64_t total_bytes) {
@@ -528,12 +644,16 @@ struct CoreVerbs::Impl {
             if (text == nullptr || !text->is_string()) return reply;
             const auto condensed = gm::verbs::condense_output(text->as_string());
             if (!condensed) return reply;
+            json::Value artifact = store_artifact(text->as_string(), log.dir(), "run_shell");
             json::Value shown = reply;
-            shown.set("output", condensed->output);
+            shown.set("output", condensed->output + "\n" + artifact.find("notice")->as_string());
             shown.set("compressed", true);
             shown.set("originalChars", json::Value(static_cast<double>(condensed->original_chars)));
             shown.set("keptChars", json::Value(static_cast<double>(condensed->output.size())));
             shown.set("droppedLines", json::Value(static_cast<double>(condensed->dropped_lines)));
+            for (const char* key : {"outputPath", "totalChars", "digest", "offset", "next", "truncated", "notice"}) {
+                if (const json::Value* value = artifact.find(key)) shown.set(key, *value);
+            }
             return shown;
         };
         std::string output = core::to_valid_utf8(outcome.out + outcome.err);
@@ -586,7 +706,7 @@ struct CoreVerbs::Impl {
         if (!unknown.empty()) {
             std::string names;
             for (std::size_t i = 0; i < unknown.size(); ++i) names += (i > 0 ? ", " : "") + unknown[i];
-            return refusal("unknown argument " + names + "; query_log takes js, kind, fromMono, toMono, after, last, limit");
+            return refusal("unknown argument " + names + "; query_log takes js, kind, fromMono, toMono, after, last, limit, seq, field, offset, unit");
         }
         const json::Value* js = present(args, "js");
         const json::Value* kind = present(args, "kind");
@@ -596,6 +716,7 @@ struct CoreVerbs::Impl {
             const json::Value* v = present(args, name);
             if (v != nullptr && (!v->is_number() || !std::isfinite(v->as_number()))) return failure(std::string(name) + " must be a number");
         }
+        if (const json::Value* field = present(args, "field"); field != nullptr) return field_page(args, log);
         const json::Value* last = present(args, "last");
         if (last != nullptr && (!core::is_whole_number(last) || last->as_number() < 1 || last->as_number() > static_cast<double>(query_page_events))) {
             return failure("last must be a whole number from 1 to 50");

@@ -1,0 +1,255 @@
+{
+  "units": [
+    {
+      "id": "commit-misread-late-push",
+      "angle": "git verbs and push timing",
+      "query": "commit output parsed as evidence of a push, or push delayed by a misread"
+    },
+    {
+      "id": "ended-run-stale-task",
+      "angle": "run lifecycle and successor task",
+      "query": "run has ended refusal and stale task text inherited by successor run",
+      "extraEvidence": [
+        "spawn browser refusal: {\"ok\":false,\"refused\":true,\"error\":\"refused: run 2026-11-07-10-29-34-65fd6f has ended; call next_context to open a new run\",\"actionSeq\":19}; next_context opened run 2026-11-07-10-31-27-48064a and the browser then worked; spawn calls the refusal correct, friction is that the ended run was not obvious before the call"
+      ]
+    },
+    {
+      "id": "task-verb",
+      "angle": "run task mutation",
+      "query": "no gm verb to change a run task after next_context"
+    },
+    {
+      "id": "grep-read-truncation",
+      "angle": "broad result transport",
+      "query": "gm.grep 43858 matches showing 0 to 88 scan incomplete and gm.read_file AGENTS.md truncated at 19926 of 43433 bytes"
+    },
+    {
+      "id": "run-code-large-output",
+      "angle": "run_code result transport",
+      "query": "kept 43 of 312 lines dropped 270 5041 chars and kept 41 of 214 lines dropped 174 3419 chars",
+      "extraEvidence": [
+        "fx-19 reports a child run_code result cut at 19840 of 22037 characters; compactChildren is now used as a workaround",
+        "spoint reports run 0f5edf seq 96 showing a run_code result cut to \"[760 chars cut; query_log reads any event...]\"",
+        "spawn run 2026-11-07-10-41-32-040293 seq 48 gm.fetch returned only \"200 175367 bytes <url>\\nSpawn\" for a 175,367-byte body; seq 49 run_code result carried bytes:279 and empty scripts/kw; a browser read of the same URL returned the full DOM/script list. DESIGN.md:691 documents gm.fetch maxBytes and [gm-fetch: body truncated to N bytes of M bytes]; src/fetch.mjs caps returned body text.",
+        "spoint run 0f5edf seq 96 \"[760 chars cut; query_log reads any event (after: seq - 1 returns it first)]\" and seq 115 outputChars:1351 cutting at 760; separate audit run_code result \"[gm: kept 40 of 339 lines; dropped 300; 6829 chars; use raw:true or the job log for the full output]\" lost the middle of a JSON array"
+      ]
+    },
+    {
+      "id": "prd-receipt-binding",
+      "angle": "row lifecycle and witness receipts",
+      "query": "prd_resolve deletes the row file and closes it; bind a witness receipt without deletion instead of editing prd.yml directly for 49 sha bindings"
+    },
+    {
+      "id": "next-context-feed-elision",
+      "angle": "event feed compaction",
+      "query": "next_context elides event and run_code output to [703 chars]/[673 chars]; full output requires query_log; prove same code path as run_code truncation or fix separately with its own witness"
+    },
+    {
+      "id": "fetch-timeout-empty-output",
+      "angle": "shell timeout and git fetch",
+      "query": "fx-19 gm.run_shell git fetch timed out after 60000 ms with empty output while checking remote; no external calls, credentials or secrets; push held because remote classification returned ok:false / owner:null / repo:null / allowed:false; prove network or environment condition versus a gm tool defect with a command-output witness",
+      "witness": {
+        "run": "2026-11-07-10-15-34-64581f",
+        "seq": 15,
+        "command": "git -C /workspace/fx/fx fetch origin main && git -C /workspace/fx/fx merge --ff-only origin/main && git -C /workspace/fx/fx status --short --branch && git -C /workspace/fx/fx rev-parse HEAD",
+        "reply": "{\"ok\":false,\"timedOut\":true,\"error\":\"timed out after 60000 ms\",\"output\":\"\"}",
+        "classification": "{\"ok\":false,\"owner\":null,\"repo\":null}; later {\"owner\":\"vercel-labs\",\"repo\":\"fx\",\"allowed\":false}",
+        "localProbe": "node /tmp/gm-fetch-probe.cjs -> {\"ok\":true,\"status\":0,\"stdout\":\"\",\"stderr\":\"\",\"elapsedMs\":4274}; git ls-remote origin refs/heads/main -> ee07ef913931b5ccc63f046570670575fe483d40 rc=0"
+      },
+      "status": "closed-environment"
+    },
+    {
+      "id": "prd-refuted-reopen",
+      "angle": "row lifecycle and refuted verdicts",
+      "query": "prd_reopen only moves parked rows, so a refuted row cannot be reopened through the verb; spoint edited prd.yml directly to reopen KISS-n-r209-7 after its verdict said needs-design; add a non-destructive reopen path. The first prd.yml edit that dropped a notes field was caught before commit and is not gm friction.",
+      "witness": {
+        "workspace": "/workspace/spoint",
+        "row": "KISS-n-r209-7",
+        "file": ".gm/prd.yml",
+        "verdict": ".gm/witness-out/KISS-n-r209-7-verdict.txt first line \"KISS-n-r209-7 verdict: needs-design\"",
+        "verdictCommit": "a25c109",
+        "bindingSha256": "7901b28dc15fe5a347dd2d279e0cc9f7e148096a91892a798366510920e761e1",
+        "directEditCommit": "a3b6782 status refuted -> open",
+        "fixCommit": "6430e6c",
+        "codeFix": "a7097ed",
+        "currentHead": "a7097ed",
+        "caughtMistake": "first attempt overwrote notes, restored prd.yml from HEAD and redid it before committing; not gm friction"
+      }
+    },
+    {
+      "id": "child-task-overwrite",
+      "angle": "child context task isolation",
+      "query": "a child called next_context with a task argument and overwrote the owner run task text to \"Read-only R7...\"; a child next_context must refuse or ignore task and never mutate the parent task; rename-detection is git behaviour, not gm; command-output witness required",
+      "localSearch": "no child task overwrite in own run 2026-11-07-10-12-28-a2798b: only seq 6 task \"if\" and seq 8 corrected owner task; search acptoapi run logs for \"Read-only R7\"",
+      "rootCause": "src/mcp.mjs:616-621 replaces the run task with any non-empty next_context task argument; the guard at :580 refuses task only on an explicit child context (args.child === true); a plain next_context call from any caller on the same connection can overwrite the owner task. src/mcp.mjs:141 documents task replacement.",
+      "witnessRequirement": "a child caller cannot change the owner task while the owner still can via next_context({ task }) with an explicit owner marker; consider taskFrom/owner-only rule",
+      "crossRunLog": "/workspace/acptoapi/runs/2026-11-07-10-08-57-c18f5e/log.jsonl",
+      "crossRunEvidence": {
+        "run": "2026-11-07-10-08-57-c18f5e",
+        "log": "/workspace/acptoapi/runs/2026-11-07-10-08-57-c18f5e",
+        "actionSeq": 125,
+        "taskSeq": 126,
+        "ownerTaskSeq": 5,
+        "resetSeq": 443,
+        "prefixAfterOverwrite": "9991fa06d78bb1f00c1c598ee4a844d0661456f2d5ab0037362645291b06c20e",
+        "prefixAfterReset": "694e87471110e1db74b844d2fb14ace8f74897483ca5bcbc35e6311d2f1ee296",
+        "childTrue": false,
+        "caller": "connection 993424 / parent 993421, same as owner calls; child:true calls are logged as tool child_context with args {\"child\":true,\"run\":\"2026-11-07-10-08-57-c18f5e\"}",
+        "actionArgsTaskLogged": false,
+        "requiredFix": "log the task argument in next_context action args and reject task on non-owner or child calls; preserve the owner first-step truncation correction",
+        "exactObservation": "all next_context actions show args:{} including legitimate owner next_context({task:...}) calls at seq 5, 80 and 443, so the separate kind:\"task\" event is the only trace"
+      }
+    }
+  ],
+  "createdBy": "gm",
+  "source": "orchestrate dispatch 2026-11-07",
+  "followUps": [
+    {
+      "id": "run-code-background-visibility",
+      "kind": "separate reversible follow-up after the ten-unit patch",
+      "witness": "spoint run 0f5edf steps 8 and 9: \"MCP tool gm/run_code is still running after 120s. It was moved to the background as task kft9c00zd\"; next_context(waitMs 100000) returned {\"ok\":true,\"progress\":\"no event pending after 100000 ms; no step was used\"}; completion arrived only as a host task notification, not a gm pending event",
+      "action": "expose background run_code state in next_context pending events and jobsRunning with a command-output witness"
+    },
+    {
+      "id": "witness-trailer-parsing",
+      "kind": "separate reversible follow-up after the ten-unit patch",
+      "witness": "a7097ed body line \"Witness: ...\" parsed by git as trailers=Witness: scripts/xr-teleport-ground-witness.mjs; commit unamended; later commits 2a4bc24, 675ea85, 5308c52 and 12e50c2 print trailers= empty",
+      "action": "avoid or normalize Witness: body lines in ship/commit tooling and validate with git log --format=\"%(trailers)\""
+    },
+    {
+      "id": "run-code-sigkill-lost-result",
+      "kind": "separate reversible follow-up after the ten-unit patch",
+      "witness": "jayzee-85 run_code body doing git init + npm install jz was SIGKILLed at 6 s and its return value was lost, forcing a redo",
+      "action": "surface killed bodies and preserve return values in query_log/job_status with a command-output witness"
+    },
+    {
+      "id": "large-skill-agents-read",
+      "kind": "separate reversible follow-up after the ten-unit patch",
+      "witness": "jayzee-85 reading skill://gm/SKILL.md plus AGENTS.md dumped about 20k chars into context",
+      "action": "serve compact skill/AGENTS summaries with deterministic field paging"
+    },
+    {
+      "id": "unknown-gm-skill-lane",
+      "kind": "separate reversible follow-up after the ten-unit patch",
+      "witness": "background 3D-relay worker ran `Skill gm` and got \"Unknown skill: gm\" with no gm executable/CLI/MCP tools in that lane; an initial broad Bash find persisted 207.7 KB of output",
+      "action": "install or expose gm MCP tools in relay lanes and bound broad shell output with a witness"
+    },
+    {
+      "id": "grep-pattern-length",
+      "kind": "separate reversible follow-up after the ten-unit patch",
+      "witness": "gm.grep rejected a 567-character pattern with \"pattern must be at most 200 characters\"",
+      "action": "raise or page long grep patterns with parity and a command-output witness",
+      "status": "open",
+      "dataOnly": true,
+      "reportedBy": "fx-19",
+      "run": "2026-11-07-14-14-20-86e0a4",
+      "note": "No config or permission change."
+    },
+    {
+      "id": "playwriter-reconnect-successor",
+      "kind": "separate reversible follow-up after the ten-unit patch",
+      "witness": "acptoapi-7b reports a \"Connection closed\" mid-sweep when the playwriter server reconnected, requiring a successor gm run and full sweep re-run",
+      "action": "preserve sweep state across reconnects or report a deterministic recovery handle with a witness"
+    },
+    {
+      "id": "bash-only-gm-tools",
+      "kind": "separate reversible follow-up after the ten-unit patch",
+      "witness": "thebird reports gm MCP tools were not used during its bash-only rewrite session",
+      "action": "enforce or surface gm MCP tool use in host session setup with a witness"
+    },
+    {
+      "id": "per-session-gm-availability",
+      "kind": "separate reversible follow-up after the ten-unit patch",
+      "witness": "command -v gm/gm-core/gmnew empty; /config/.gmnew/current/gm-core executable gm-core=yes; build/release/native/components/host/gm executable native-gm=yes; node src/cli.mjs doctor exit 0; defaults/mcp.json and .gm/mcp.json exist; skills/gm/SKILL.md has name gm; thebird loaded deferred gm tool schemas with ToolSearch and mcp__gm__next_context returned ok true step 1 run 2026-11-07-12-12-52-8d3000 while mcp__gm__run_code gm.run_shell returned exitCode 0 actionSeq 7",
+      "action": "report gm tool availability as data only; do not ask peers to change MCP entries, config, permissions or CLAUDE.md",
+      "invocation": "data only: this workspace doctor reports gm user entry runs /config/.gmnew/current/gm serve; gm tools may be deferred until host schema loading; use mcp__gm__next_context, mcp__gm__run_code and mcp__gm__finish in a session where they are already available"
+    },
+    {
+      "id": "fetch-summary-only-large-bodies",
+      "kind": "separate reversible follow-up after the ten-unit patch",
+      "witness": "savi reports gm.fetch returns summary-only output for large bodies and needs a browser to see them; related spawn witness shows a 175,367-byte body returned as status line plus title",
+      "action": "make large fetched bodies deterministically pageable without a browser, with a command-output witness"
+    },
+    {
+      "id": "run-shell-timeout-cap",
+      "kind": "separate reversible follow-up after the ten-unit patch",
+      "witness": "jayzee reports gm run_shell rejects timeoutMs above 300000, so a ~2 min full npm test needs the 300000 cap",
+      "action": "raise or document the run_shell timeout cap with parity and a command-output witness"
+    },
+    {
+      "id": "finish-open-row-step-limit",
+      "kind": "separate reversible follow-up after the ten-unit patch",
+      "witness": "step limit 50 reached; call finish with your witness to close this run, then call next_context to open a successor run",
+      "action": "allow an agent to report completion with a documented open row without closing it or weakening finish, with a witness",
+      "status": "open",
+      "dataOnly": true,
+      "reportedBy": "fx-19",
+      "run": "2026-11-07-14-14-20-86e0a4",
+      "note": "Finish also refused with \"refused: gap names open row unknown-mw6bc4mv1c00; a gap cannot stand in for an open row, so resolve it or, for a PRD, delete it\"."
+    },
+    {
+      "id": "long-grep-pattern-and-body-writes",
+      "kind": "separate reversible follow-up after the ten-unit patch",
+      "witness": "fx-19 repeats gm.grep rejecting a 567-character pattern with \"pattern must be at most 200 characters\", two run_code parse failures, and partial-file writes on src/builtins/commands.zig and src/builtins/context.zig repaired with full git show via Node",
+      "action": "page long patterns, surface body parse locations, and make partial file writes recoverable with witnesses"
+    },
+    {
+      "id": "subagent-lane-gm-availability",
+      "kind": "separate reversible follow-up after the ten-unit patch",
+      "witness": "jayzee reports it did not use the gm MCP tools / gm skill at all",
+      "action": "repair per-session and subagent-lane gm tool availability as data-only host diagnostics, without config/permission/CLAUDE.md requests",
+      "status": "open",
+      "dataOnly": true,
+      "reportedBy": "orchestrate",
+      "note": "Report availability as data only; no config or permission change."
+    },
+    {
+      "id": "job-stuck-live-poller",
+      "kind": "separate reversible follow-up after the ten-unit patch",
+      "witness": "oscraft six-repo-head-watch-v3 flagged job-stuck sinceProgressMs 245807 while ps/job_status proved it alive and emitting HEAD_CHANGE plus heartbeats; next_context cut two large events mid-field outputChars 2064/2748; 207.7 KB broad Bash find plus 54.3/117.7/45.2 KB targeted searches persisted",
+      "action": "fix progress heuristic for quiet-but-live pollers and bound large outputs with witnesses"
+    },
+    {
+      "id": "savi-process-learnings",
+      "kind": "separate reversible follow-up after the ten-unit patch",
+      "witness": "gm finish rule fired because verification was run in Bash rather than run_code",
+      "action": "fold real tool behaviours into gm tooling follow-ups only where a witness exists",
+      "status": "open",
+      "dataOnly": true,
+      "reportedBy": "thebird/savi",
+      "note": "Report availability and rule routing as data only."
+    },
+    {
+      "id": "jayzee-cross-map-ownership",
+      "kind": "no action needed from gm tooling",
+      "witness": "jayzee cross-map RESULT: FAIL was caused by checker treating jayzee paths as spoint paths; spoint-88 owns that fix",
+      "action": "none in this workspace"
+    },
+    {
+      "id": "run-code-cjs-require",
+      "status": "open",
+      "dataOnly": true,
+      "reportedBy": "fx-19",
+      "run": "2026-11-07-14-14-20-86e0a4",
+      "witness": "mcp__gm__run_code({format:\"cjs\"}) with const fs = require(\"node:fs\") returned {\"ok\":false,\"error\":\"require is not defined\\n    at body (<body>:2:12)\"}",
+      "note": "No config or permission change."
+    },
+    {
+      "id": "run-code-output-token-limit",
+      "status": "open",
+      "dataOnly": true,
+      "reportedBy": "fx-19",
+      "run": "2026-11-07-14-14-20-86e0a4",
+      "witness": "output token limit hit repeatedly on compact status work, forcing smaller pieces",
+      "note": "No config or permission change."
+    },
+    {
+      "id": "paged-read-marker-pasted-into-file",
+      "status": "open",
+      "dataOnly": true,
+      "reportedBy": "jayzee",
+      "witness": "a paged read of docs/PARITY.md and AGENTS.md pasted literal \"[gm-read: truncated ...]\" lines into both files, which broke their numbering; both were restored from HEAD and rebuilt with trailers stripped before c67d25a",
+      "note": "Keep paged-read markers as tool metadata; no config or permission change."
+    }
+  ]
+}

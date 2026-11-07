@@ -38,7 +38,18 @@ constexpr std::size_t MAX_PATTERN_CHARS = 200;
 constexpr std::size_t MAX_MATCH_CHARS = 1024;
 constexpr std::size_t MATCH_WINDOW_STEP = MAX_MATCH_CHARS / 2;
 constexpr std::size_t EXCERPT_BEFORE = 60;
-constexpr std::uint64_t MAX_SCAN_BYTES = 32 * 1024 * 1024;
+constexpr std::uint64_t MAX_SCAN_BYTES = 256 * 1024 * 1024;
+
+std::string scan_digest(const std::string& text) {
+    std::uint64_t hash = 14695981039346656037ull;
+    for (unsigned char c : text) {
+        hash ^= c;
+        hash *= 1099511628211ull;
+    }
+    char out[17];
+    std::snprintf(out, sizeof(out), "%016llx", static_cast<unsigned long long>(hash));
+    return std::string(out);
+}
 constexpr long long SCAN_DEADLINE_MS = 10000;
 constexpr long long STAMP_SETTLE_MS = 3000;
 constexpr std::size_t BINARY_PROBE_BYTES = 8000;
@@ -752,7 +763,13 @@ std::string Searcher::grep(const json::Value& args) {
     out.set("ok", true);
     out.set("files", use_git ? "git" : "walk");
     out.set("output", output);
+    out.set("nextOffset", scanned.next < 0 ? json::Value(nullptr) : json::Value(static_cast<std::uint64_t>(scanned.next)));
     out.set("scanTruncated", budget.hit());
+    json::Value cursor(json::Object{});
+    cursor.set("fileIndex", static_cast<std::uint64_t>(budget.files)).set("byteOffset", static_cast<std::uint64_t>(budget.bytes)).set("scannedFiles", static_cast<std::uint64_t>(budget.files)).set("scannedBytes", static_cast<std::uint64_t>(budget.bytes));
+    out.set("scanCursor", std::move(cursor));
+    out.set("totalMatches", static_cast<std::uint64_t>(scanned.total));
+    out.set("digest", scan_digest(output));
     out.set("scannedFiles", static_cast<std::uint64_t>(budget.files));
     out.set("scannedBytes", static_cast<std::uint64_t>(budget.bytes));
     if (!hints.empty()) out.set("hint", joined);

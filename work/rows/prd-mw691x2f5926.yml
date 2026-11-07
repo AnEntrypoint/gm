@@ -1,0 +1,6 @@
+id: "prd-mw691x2f5926"
+kind: "prd"
+title: "gm tooling fix: run-code-large-output"
+body: "run_code result transport: kept 43 of 312 lines dropped 270 5041 chars and kept 41 of 214 lines dropped 174 3419 chars"
+status: "open"
+createdAt: "2026-11-07T10:17:27.975Z"

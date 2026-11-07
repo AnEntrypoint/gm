@@ -175,6 +175,10 @@ const SCENARIOS = [
       }
       ok('run_code names gm.verbs and gm.try', (() => { const d = tools.find((t) => t.name === 'run_code')?.description ?? ''; return d.includes('gm.verbs()') && d.includes('gm.try(fn)'); })(), short(tools.find((t) => t.name === 'run_code')?.description?.slice(0, 120)));
       ok('next_context is read-only', tools.find((t) => t.name === 'next_context')?.annotations?.readOnlyHint === true);
+      const nextSchema = tools.find((t) => t.name === 'next_context')?.inputSchema?.properties ?? {};
+      ok('next_context declares task and owner', nextSchema.task?.type === 'string' && nextSchema.owner?.type === 'boolean', short(nextSchema));
+      const runCodeDescription = tools.find((t) => t.name === 'run_code')?.description ?? '';
+      ok('run_code description names outputPath and query_log field paging', runCodeDescription.includes('outputPath') && runCodeDescription.includes('query_log'), short(runCodeDescription.slice(0, 160)));
       ok('finish is not destructive', tools.find((t) => t.name === 'finish')?.annotations?.destructiveHint === false);
     },
   },
@@ -208,6 +212,15 @@ const SCENARIOS = [
       ok('gm.verbs() still returns every schema', verbs?.full === true && verbs?.count > 1, short(verbs?.count));
       ok('gm.verbs({ name }) returns one schema', verbs?.one?.name === 'read_file' && typeof verbs.one.inputSchema === 'object', short(verbs?.one));
       ok('gm.verbs({ names: true }) returns just the names', Array.isArray(verbs?.names) && verbs.names.length === verbs.count && verbs.names.every((name) => typeof name === 'string'), short(verbs?.names?.length));
+      const api = await code(`const names = ['task_set', 'query_log', 'grep', 'fetch', 'prd_receipt', 'prd_refute', 'prd_reopen']; return Object.fromEntries(names.map((name) => [name, gm.verbs({ name })?.inputSchema?.properties ?? {}]));`);
+      const taskType = api?.task_set?.task?.type;
+      const taskIsString = taskType === 'string' || (Array.isArray(taskType) && taskType.includes('string'));
+      ok('task_set declares task and owner', taskIsString && api?.task_set?.owner?.type === 'boolean', short(api?.task_set));
+      ok('query_log declares field paging', ['seq', 'field', 'offset', 'limit', 'unit'].every((name) => api?.query_log?.[name]), short(api?.query_log));
+      ok('grep declares resumeFrom', !!api?.grep?.resumeFrom, short(api?.grep?.resumeFrom));
+      ok('fetch declares maxBytes', !!api?.fetch?.maxBytes, short(api?.fetch?.maxBytes));
+      ok('prd_receipt declares witness and commit', api?.prd_receipt?.witness?.type === 'string' && api?.prd_receipt?.commit?.type === 'string', short(api?.prd_receipt));
+      ok('prd_reopen declares from and reason', !!api?.prd_reopen?.from && api?.prd_reopen?.reason?.type === 'string', short(api?.prd_reopen));
       const unknown = await code("return await gm.try(() => gm.verbs({ name: 'no_such_verb' }));");
       ok('an unknown verb name is a clear error', unknown?.ok === false && String(unknown.error).includes('no_such_verb'), short(unknown));
       const shapes = await code("const all = gm.verbs({}); const array = gm.verbs({ names: ['read_file'] }); const unknownKey = gm.verbs({ nope: 1 }); const scalar = gm.verbs(7); return { count: all.length, array, unknownKey, scalar, tail: 'still here' };");

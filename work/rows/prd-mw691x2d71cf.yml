@@ -1,0 +1,6 @@
+id: "prd-mw691x2d71cf"
+kind: "prd"
+title: "gm tooling fix: ended-run-stale-task"
+body: "run lifecycle and successor task: run has ended refusal and stale task text inherited by successor run"
+status: "open"
+createdAt: "2026-11-07T10:17:27.973Z"

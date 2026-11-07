@@ -54,6 +54,23 @@ if (lostWordingCheck.status !== 0) failures.push('lost wording check');
 const prdLegacyListCheck = spawnSync(process.execPath, [join(root, 'tools', 'check-prd-legacy-list.mjs')], { cwd: root, stdio: 'inherit', timeout: 60000 });
 if (prdLegacyListCheck.status !== 0) failures.push('prd legacy list check');
 
+const toolingChecks = [
+    ['commit digest check', 'check-commit-digest.mjs', 120000],
+    ['task set check', 'check-task-set.mjs', 120000],
+    ['child task check', 'check-child-task.mjs', 120000],
+    ['output recovery check', 'check-output-recovery.mjs', 240000],
+    ['context feed check', 'check-context-feed.mjs', 180000],
+    ['grep paging check', 'check-grep-paging.mjs', 180000],
+    ['prd receipt check', 'check-prd-receipt.mjs', 120000],
+    ['prd refuted reopen check', 'check-prd-refuted-reopen.mjs', 120000],
+];
+for (const [label, file, timeout] of toolingChecks) {
+    const args = [join(root, 'tools', file)];
+    if (existsSync(binary)) args.push(binary);
+    const check = spawnSync(process.execPath, args, { cwd: root, stdio: 'inherit', timeout });
+    if (check.status !== 0) failures.push(label);
+}
+
 const documentedGapCheck = spawnSync(process.execPath, [join(root, 'tools', 'check-documented-gaps.mjs')], { cwd: root, stdio: 'inherit', timeout: 60000 });
 if (documentedGapCheck.status !== 0) failures.push('documented gap check');
 
@@ -61,4 +78,4 @@ if (failures.length) {
     console.error(`check: ${failures.length} failure(s)\n- ${failures.join('\n- ')}`);
     process.exit(1);
 }
-console.log('check: gate, unit-test scan, g3 snapshot, redaction witness, read truncation, caller, search root, inflight, relay exit, console, lost wording, prd legacy list and documented gap checks passed');
+console.log('check: gate, unit-test scan, g3 snapshot, redaction witness, read truncation, caller, search root, inflight, relay exit, console, lost wording, prd legacy list, commit digest, task set, child task, output recovery, context feed, grep paging, prd receipt, prd refuted reopen and documented gap checks passed');

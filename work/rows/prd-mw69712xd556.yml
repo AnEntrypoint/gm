@@ -1,0 +1,6 @@
+id: "prd-mw69712xd556"
+kind: "prd"
+title: "gm tooling fix: prd-receipt-binding"
+body: "row lifecycle and witness receipts: prd_resolve deletes the row file and closes it; bind a witness receipt without deletion instead of editing prd.yml directly for 49 sha bindings"
+status: "open"
+createdAt: "2026-11-07T10:21:26.457Z"

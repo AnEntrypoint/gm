@@ -1,3 +1,6 @@
+import { createHash } from 'node:crypto';
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { archiveSource } from './sources.mjs';
 import { codeType, retrying, statusType } from './retry.mjs';
 import { resultZone1, resultZone2 } from './compact.mjs';
@@ -32,7 +35,7 @@ export const COMPACT = {
   },
 };
 
-export function createFetchVerbs({ log, root }) {
+export function createFetchVerbs({ log, root, runDir }) {
   const verbs = {
     fetch: (args) =>
       retrying({
@@ -84,6 +87,10 @@ export function createFetchVerbs({ log, root }) {
       else if (type === '' || /^text\/|json|xml|javascript/.test(type)) text = body;
       else text = `(binary content not shown: ${type})`;
       const archived = archiveSource(root, Buffer.concat(read.chunks), current.href);
+      const shown = boundedText(text, { maxBytes, match });
+      const full = `${response.status} ${read.bytes} bytes ${current.href}\n${shown}`;
+      const capped = maxBytes !== undefined && utf8Bytes(text) > maxBytes;
+      const artifact = capped ? storeFetchArtifact(full, runDir, 'fetch') : null;
       return {
         ok: response.status >= 200 && response.status < 300,
         status: response.status,
@@ -92,11 +99,32 @@ export function createFetchVerbs({ log, root }) {
         redirects,
         source: archived.id,
         sourceNew: archived.created,
-        output: `${response.status} ${read.bytes} bytes ${current.href}\n${boundedText(text, { maxBytes, match })}`,
+        output: artifact === null ? full : full + '\n' + artifact.notice,
+        ...(artifact === null ? {} : artifact),
       };
     },
   };
   return verbs;
+}
+
+function redactArtifact(text) {
+  return text
+    .replace(/Bearer\s+[^\s]+/gi, 'Bearer [redacted]')
+    .replace(/access_token=[^\s&]+/gi, 'access_token=[redacted]')
+    .replace(/refresh_token=[^\s&]+/gi, 'refresh_token=[redacted]')
+    .replace(/api_key=[^\s&]+/gi, 'api_key=[redacted]')
+    .replace(/password=[^\s&]+/gi, 'password=[redacted]');
+}
+
+function storeFetchArtifact(text, runDir, label) {
+  const clean = redactArtifact(text);
+  const bounded = clean.length > 20000 ? clean.slice(0, 10000) + '\n[gm: middle omitted]\n' + clean.slice(-10000) : clean;
+  const digest = createHash('sha256').update(bounded).digest('hex').slice(0, 12);
+  const dir = join(runDir, 'outputs');
+  mkdirSync(dir, { recursive: true });
+  const outputPath = join(dir, digest + '-' + label + '.txt');
+  writeFileSync(outputPath, bounded);
+  return { outputPath, totalChars: clean.length, totalBytes: Buffer.byteLength(clean), digest, offset: 0, next: 0, truncated: true, notice: '[gm: full output at ' + outputPath + '; page with gm.read_file({ path: ' + JSON.stringify(outputPath) + ', unit: "chars", offset: 0, limit: 20000 })]' };
 }
 
 function checkLimits({ maxBytes, match }) {

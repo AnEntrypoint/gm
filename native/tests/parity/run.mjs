@@ -11,6 +11,7 @@ const argValue = (name, fallback) => {
 };
 const NATIVE_BIN = resolve(argValue('--bin', join(REPO, 'build', 'integ', 'native', 'components', 'host', 'gm')));
 const REF = resolve(argValue('--ref', '/tmp/parity-ref'));
+const REF_SOURCE = argValue('--ref-source', 'head');
 const SCRATCH = resolve(argValue('--scratch', `/tmp/parity-scratch-${process.pid}`));
 const REPLY_TIMEOUT_MS = Number(argValue('--reply-timeout-ms', '30000'));
 const VALUE_WIDTH = 160;
@@ -28,10 +29,14 @@ const NATIVE_AHEAD_KINDS = [STOPPED_FETCH_KIND, SUBSCRIBE_ERROR_KIND];
 function extractReference() {
   rmSync(REF, { recursive: true, force: true });
   mkdirSync(REF, { recursive: true });
-  const archive = execFileSync('git', ['-C', REPO, 'archive', '--format=tar', 'HEAD', 'src', 'tools', 'skills', 'defaults', 'package.json'], { maxBuffer: 1 << 28 });
-  execFileSync('tar', ['-x', '-C', REF], { input: archive });
+  if (REF_SOURCE === 'working') {
+    for (const name of ['src', 'tools', 'skills', 'defaults', 'package.json']) cpSync(join(REPO, name), join(REF, name), { recursive: true });
+  } else {
+    const archive = execFileSync('git', ['-C', REPO, 'archive', '--format=tar', 'HEAD', 'src', 'tools', 'skills', 'defaults', 'package.json'], { maxBuffer: 1 << 28 });
+    execFileSync('tar', ['-x', '-C', REF], { input: archive });
+  }
   symlinkSync(join(REPO, 'node_modules'), join(REF, 'node_modules'));
-  return execFileSync('git', ['-C', REPO, 'rev-parse', '--short', 'HEAD'], { encoding: 'utf8' }).trim();
+  return execFileSync('git', ['-C', REPO, 'rev-parse', '--short', 'HEAD'], { encoding: 'utf8' }).trim() + (REF_SOURCE === 'working' ? '+working' : '');
 }
 
 function makeWorkspaces(base = SCRATCH) {
@@ -174,7 +179,13 @@ function scenarios({ head, url }) {
     ['prd_add', code("return await gm.prd_add({ title: 'parity row A', body: 'first' });")],
     ['prd_list', code('return await gm.prd_list({});')],
     ['prd_resolve', code(`const added = await gm.prd_add({ title: 'parity row B' }); const id = (${idOf('prd')})(added); return { added, resolved: await gm.prd_resolve({ id, event: 1, commit: '${head}' }) };`)],
-    ['prd_delete', code(`const open = await gm.prd_list({ status: 'open' }); const id = (${idOf('prd')})(open); return { open, deleted: await gm.prd_delete({ id }) };`)],
+    ['task_set owner', code(`const r = await gm.task_set({ task: 'parity replacement', owner: true }); const c = await gm.task_set({ task: null, owner: true }); return { replaced: r.task, cleared: c.cleared };` )],
+    ['prd_receipt', code(`const added = await gm.prd_add({ title: 'parity receipt row' }); const id = (${idOf('prd')})(added); const bound = await gm.prd_receipt({ id, witness: 'parity receipt', commit: '${head}' }); const list = String((await gm.prd_list({ status: 'all' })).output); await gm.prd_delete({ id }); return { ok: bound.ok === true, listed: list.includes(id), receipts: list.includes('[receipts:1]') };`)],
+    ['prd_refute reopen', code(`const added = await gm.prd_add({ title: 'parity refuted row' }); const id = (${idOf('prd')})(added); const refuted = await gm.prd_refute({ id, reason: 'needs design', verdict: 'needs-design', notes: 'keep me', witness: 'receipt' }); const reopened = await gm.prd_reopen({ id, from: 'refuted', reason: 'design ready' }); const list = String((await gm.prd_list({ status: 'open' })).output); await gm.prd_delete({ id }); return { refuted: refuted.ok === true, reopened: reopened.ok === true, listed: list.includes(id) };`)],
+    ['query_log field', code(`const out = 'O'.repeat(673); await gm.run_shell({ command: 'printf ' + out }); const events = await gm.query_log({ js: 'events.filter(e => e.kind === ' + String.fromCharCode(34) + 'code-call' + String.fromCharCode(34) + ')' }); const seq = events[events.length - 1]?.seq; const p = await gm.query_log({ seq, field: 'output', offset: 0, limit: 800 }); return { roundTrip: p.output === out };` )],
+    ['output artifact fields', code(`const lines = Array.from({ length: 1399 }, (_, i) => i === 700 ? 'OUTPUT_MIDDLE_MARKER' : 'line ' + i).join(String.fromCharCode(10)); const r = await gm.run_shell({ command: 'printf ' + JSON.stringify(lines) }); const p = r.outputPath ?? r.artifactPath; const page = p ? await gm.read_file({ path: p, unit: 'chars', offset: r.next ?? 0, limit: 20000 }) : null; return { ok: r.ok === true, path: !!p, truncated: r.truncated === true, middle: String(page?.output ?? '').includes('OUTPUT_MIDDLE_MARKER') };` )],
+    ['grep fields', code(`const r = await gm.grep({ pattern: 'hello', limit: 1 }); return { paged: r.nextOffset === null || typeof r.nextOffset === 'number', scanTruncated: r.scanTruncated === false, cursor: !!r.scanCursor, totalMatches: typeof r.totalMatches === 'number', digest: !!r.digest };` )],
+    ['next_context owner task', call('next_context', { task: 'parity owner task', owner: true })],
     ['unknown_add', code("return await gm.unknown_add({ title: 'parity question', body: 'which?' });")],
     ['unknown_list', code('return await gm.unknown_list({});')],
     ['unknown_resolve', code(`const open = await gm.unknown_list({ status: 'open' }); const id = (${idOf('unknown')})(open); return await gm.unknown_resolve({ id, event: 1, commit: '${head}' });`)],
@@ -337,7 +348,7 @@ function withCutoverPlaceholders(value, path = '') {
 }
 
 function isSeqPath(path) {
-  return /(\.actionSeq|gm\/seq)$/.test(path);
+  return /(\.actionSeq|gm\/seq|gmnew\/seq)$/.test(path);
 }
 
 const SUBSCRIPTIONS_REASON = 'native removed resources/subscribe: it answers -32601, and subscriptions/listen is the surface (2026-07-28 subscriptions page); Node still serves resources/subscribe';
@@ -364,6 +375,15 @@ const MCP_AFTER_BROWSERS = new Set(MCP_ROWS.slice(MCP_ROWS.indexOf('mcp mcp brow
 const REFUSAL_SEQ_REASON ='documented gap: native logs no refusal event (two here) and no code-load event (one here), so each later sequence number is one or two lower than Node';
 const STOP_ORDER_REASON = "documented gap: a background body that finish stops logs its last code-call and its body-console after the finish result in Node and before it in native, so native finish sequence is two higher";
 const NATIVE_AHEAD = [
+  { row: CASCADE_ROWS, path: /^\.result\._meta\.com\.anentrypoint\.gmnew\/seq$/, when: (left, right) => Number.isInteger(left) && Number.isInteger(right) && right > left, reason: 'native logs one more event than Node, the resources/subscribe error, so every later sequence number is higher' },
+  { row: /^(tools\/list|mcp tools\/list)$/, path: /^\.result\.tools\[\d+\]\.inputSchema\.properties\.(owner|task|seq|field|offset|unit|pageLimit|resumeFrom)$/, reason: 'native adds the owner marker, task mutation and structured paging schema fields' },
+  { path: /^\.result\.(content\[0\]\.text|structuredContent)\.output\.(digest|nextOffset|scanCursor(\..*)?|totalMatches|resumeFrom|path|totalChars|truncated|next)$/, reason: 'Node and native expose structured paging handles with different digest and scan cursor details' },
+  { row: 'tools/call unknown tool', path: /^\.error\.message$/, when: (left, right) => [left, right].every((text) => typeof text === 'string' && text.startsWith('Unknown tool: no_such_tool;')), reason: 'the code surface tool list wording differs while both name the same unknown tool and the gm. guidance' },
+  { row: 'next_context owner task', path: /^\.result\.(content\[0\].text|structuredContent)\.(prefixSha|total|records|fullEvents|compactFrom|older|query|pending(\\[\\d+\\])?(\\..*)?|events\[\d+\].*)$/, reason: 'one extra resources/subscribe error shifts the event sequence, prefix hash, query hint query hint and event indices in the native feed' },
+  { row: 'next_context after finish', path: /^\.result\.(content\[0\].text|structuredContent)\.(total|older|fullEvents|compactFrom|records|query|pending(\[\d+\])?(\..*)?|jobsOpen(\[\d+\])?(\..*)?|events\[\d+\].*)$/, reason: 'one extra resources/subscribe error plus the owner task guard shift event counts, pending rows, job timing fields and event indices in the native feed' },
+  { row: 'run_code background', path: /^\.result\.(content\[0\].text|structuredContent)\.logged\[\d+\]\.seq$/, when: (left, right) => Number.isInteger(left) && Number.isInteger(right) && right > left, reason: 'the extra resources/subscribe error shifts logged code-call sequence numbers in native' },
+  { row: 'job_status background', path: /^\.result\.(content\[0\].text|structuredContent)\.output\.(body|output\.seq)$/, when: (left, right) => Number.isInteger(left) && Number.isInteger(right) && right > left, reason: 'the extra resources/subscribe error shifts background body sequence numbers in native' },
+  { row: 'log event kinds', path: /^\.(count\.(code-call|task|refusal|summary|end)|firstDivergence\[\d+\])$/, reason: 'the owner task guard and one extra resources/subscribe error change task/refusal/code-call counts, while native writes summary and end events that Node does not' },
   { path: /^\.result\.(ttlMs|cacheScope)$/, reason: 'native adds ttlMs and cacheScope to complete list and read results (MCP 2026-07-28 caching)' },
   { path: /^\.result\.tools\[\d+\]\.(title|annotations)(\.|$)/, reason: 'native adds a title and tool annotations (MCP 2026-07-28 tools)' },
   { path: /^\.result\.(content\[0\]\.text|structuredContent)\.events\[\d+\]\.sha$/, reason: 'the tools event sha covers the tool list, which native now titles and annotates' },
