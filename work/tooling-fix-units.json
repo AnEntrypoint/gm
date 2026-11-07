@@ -250,6 +250,39 @@
       "reportedBy": "jayzee",
       "witness": "a paged read of docs/PARITY.md and AGENTS.md pasted literal \"[gm-read: truncated ...]\" lines into both files, which broke their numbering; both were restored from HEAD and rebuilt with trailers stripped before c67d25a",
       "note": "Keep paged-read markers as tool metadata; no config or permission change."
+    },
+    {
+      "id": "silent-job-stuck-monitor",
+      "status": "open",
+      "priority": "high",
+      "dataOnly": true,
+      "reportedBy": "spawn via orchestrate",
+      "witness": "spawn 2580-manifest verification job was killed by the gm stuck monitor at 1343 rows with no stdout progress; sibling sheet scan killed at 259 sheets; spawn gzip census: verify-v3.mjs killed at 1300/2580 (seq 157 timeout), resumed as v3b and completed DONE scan completed rows=2580 expected=2580; workaround stdout progress per batch is authoritative",
+      "note": "A job that writes results to disk but prints nothing is classified stuck. Fix: count file-write progress (mtime, size, row count) or let callers declare a progress sink. Same family as oscraft live silent pollers (job-stuck-live-poller)."
+    },
+    {
+      "id": "served-worker-missing-prd-receipt-refute-task-set",
+      "status": "open",
+      "dataOnly": true,
+      "reportedBy": "gm session 2026-11-07-16-01-17-d08b6d",
+      "witness": "gm.verbs({ names: true }) on the served worker lists no prd_receipt, prd_refute or task_set; gm.run_code prd_receipt returned unknown verb: prd_receipt; the source in HEAD fcb84df and later defines them (src/rows.mjs, src/mcp.mjs)",
+      "note": "The served worker is the installed build; the verbs appear after a reload. Rank 5 closed ten PRDs through prd_resolve for this reason."
+    },
+    {
+      "id": "closes-commit-trailer-like-body",
+      "status": "open",
+      "dataOnly": true,
+      "reportedBy": "gm session 2026-11-07-16-01-17-d08b6d",
+      "witness": "git log -n 10 --format=%B origin/main | git interpret-trailers --parse returned 3 lines, from the close commits body keys Row:, Status:, Witness: written by prd_resolve; no attribution trailer is present",
+      "note": "Not an attribution trailer, but git reads these keys as trailers. Decide whether prd_resolve writes a plain body."
+    },
+    {
+      "id": "rank5-thin-closure-witnesses",
+      "status": "open",
+      "dataOnly": true,
+      "reportedBy": "gm session 2026-11-07-16-01-17-d08b6d",
+      "witness": "the ten closes/prd-mw*.txt witnesses cite HEAD grep line numbers plus parity 0 differ; behavioural evidence lives in the check scripts that pass in npm run check (check-commit-digest, check-task-set, check-child-task, check-output-recovery, check-context-feed, check-grep-paging, check-prd-receipt, check-prd-refuted-reopen)",
+      "note": "Flagged as thin by orchestrate. The witnesses are recoverable: git show dd9019c^:work/rows/prd-mw691x2d71cf.yml returns the open row."
     }
   ]
 }
