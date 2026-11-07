@@ -14,7 +14,8 @@ for ident in GIT_AUTHOR_IDENT GIT_COMMITTER_IDENT; do
   name="$(git var "$ident" 2>/dev/null | sed 's/ <.*//')"
   [ "$name" = "lanmower" ] || { echo "refused: $ident name must be lanmower"; exit 1; }
 done
-if [ -n "$(printf '%s\n' "$msg" | tail -n +2 | git interpret-trailers --parse)" ] || printf '%s\n' "$msg" | grep -qiE 'co-authored-by|signed-off-by|generated with'; then
+trailers="$(printf '%s\n' "$msg" | tail -n +2 | while IFS= read -r line; do [ -n "$line" ] && printf 'subject\n\n%s\n' "$line" | git interpret-trailers --parse; done)"
+if [ -n "$trailers" ] || printf '%s\n' "$msg" | grep -qiE 'co-authored-by|signed-off-by|generated with'; then
   echo "refused: the commit message carries a trailer"
   exit 1
 fi

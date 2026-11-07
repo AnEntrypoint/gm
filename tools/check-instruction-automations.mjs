@@ -55,6 +55,8 @@ try {
   expect(`ship refuses a non-lanmower identity: ${otherName.text.trim()}`, otherName.status !== 0 && otherName.text.includes('must be lanmower') && otherName.staged === '');
   const trailer = ship('trailer', 'main', 'lanmower', 'subject\n\nbody\n\nCo-Authored-By: someone <someone@example.invalid>');
   expect(`ship refuses a commit trailer: ${trailer.text.trim()}`, trailer.status !== 0 && trailer.text.includes('carries a trailer') && trailer.staged === '');
+  const midBody = ship('mid-body', 'main', 'lanmower', 'subject\n\nRow: closes/x.txt\n\nprose after a trailer-like line');
+  expect(`ship refuses a trailer-like line that is not in the last paragraph: ${midBody.text.trim()}`, midBody.status !== 0 && midBody.text.includes('carries a trailer') && midBody.staged === '');
 } finally {
   rmSync(scratch, { recursive: true, force: true });
 }
