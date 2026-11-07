@@ -1,14 +1,15 @@
 #!/usr/bin/env node
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const buildDir = resolve(process.argv[2] ?? join(root, 'build', 'release'));
-const names = ['gm', 'gm.exe'];
-const binary = names.map((name) => join(buildDir, 'native', 'components', 'host', name)).find((path) => existsSync(path));
+const hostDir = join(buildDir, 'native', 'components', 'host');
+const names = process.platform === 'win32' ? ['gm.exe', 'gm-core.exe'] : ['gm', 'gm-core'];
+const binary = names.map((name) => join(hostDir, name)).find((path) => existsSync(path));
 
 if (!binary) {
     console.error(`check-build: no gm binary under ${buildDir}`);
@@ -27,4 +28,37 @@ const run = spawnSync(process.execPath, [join(root, 'tools', 'mcp-conformance.mj
 rmSync(workspace, { recursive: true, force: true });
 rmSync(configDir, { recursive: true, force: true });
 if (run.error) console.error(`check-build: ${run.error.message}`);
-process.exit(run.status ?? 1);
+if (run.status !== 0) process.exit(run.status ?? 1);
+
+const cachePath = join(buildDir, 'CMakeCache.txt');
+if (!existsSync(cachePath)) {
+    console.error(`check-build: no CMakeCache.txt under ${buildDir}`);
+    process.exit(2);
+}
+const cache = readFileSync(cachePath, 'utf8');
+const cacheValue = (key) => {
+    const line = cache.split('\n').find((entry) => entry.startsWith(`${key}:`));
+    return line ? line.slice(line.indexOf('=') + 1) : '';
+};
+const version = cacheValue('GMNEW_VERSION');
+const commit = cacheValue('GMNEW_COMMIT');
+if (!version || !commit) {
+    console.error(`check-build: CMakeCache.txt under ${buildDir} has no GMNEW_VERSION or GMNEW_COMMIT`);
+    process.exit(2);
+}
+const stamp = `${version} (${commit})`;
+for (const name of names) {
+    const path = join(hostDir, name);
+    if (!existsSync(path)) {
+        console.error(`check-build: missing ${name} under ${buildDir}`);
+        process.exit(2);
+    }
+    const reply = spawnSync(path, ['--version'], { encoding: 'utf8', timeout: 30000 });
+    const actual = (reply.stdout ?? '').trim();
+    if (reply.status !== 0 || actual !== stamp) {
+        console.error(`check-build: ${name} --version is ${JSON.stringify(actual)}, expected ${JSON.stringify(stamp)}`);
+        process.exit(2);
+    }
+    console.log(`check-build: ${name} stamp ${actual}`);
+}
+process.exit(0);
