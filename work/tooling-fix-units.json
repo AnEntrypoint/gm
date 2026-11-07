@@ -167,8 +167,13 @@
     {
       "id": "fetch-summary-only-large-bodies",
       "kind": "separate reversible follow-up after the ten-unit patch",
-      "witness": "savi reports gm.fetch returns summary-only output for large bodies and needs a browser to see them; related spawn witness shows a 175,367-byte body returned as status line plus title",
-      "action": "make large fetched bodies deterministically pageable without a browser, with a command-output witness"
+      "witness": "a data: URL body of 175000 characters returns the full 350034-char output in node and native (probe at 7be1790 era); the savi URL that reported the summary-only case is unrecoverable",
+      "action": "make large fetched bodies deterministically pageable without a browser, with a command-output witness",
+      "status": "open",
+      "scopedOpen": true,
+      "dataOnly": true,
+      "reproduction": "no real-tree reproduction",
+      "note": "Not reproduced; do not guess a URL. Needs the savi URL."
     },
     {
       "id": "run-shell-timeout-cap",
@@ -245,11 +250,12 @@
     },
     {
       "id": "paged-read-marker-pasted-into-file",
-      "status": "open",
+      "status": "fixed",
       "dataOnly": true,
       "reportedBy": "jayzee",
-      "witness": "a paged read of docs/PARITY.md and AGENTS.md pasted literal \"[gm-read: truncated ...]\" lines into both files, which broke their numbering; both were restored from HEAD and rebuilt with trailers stripped before c67d25a",
-      "note": "Keep paged-read markers as tool metadata; no config or permission change."
+      "witness": "read_file truncation moved to a notice metadata field; output text never carries [gm-read:; check-read-truncation passes in node and native",
+      "note": "Keep paged-read markers as tool metadata; no config or permission change.",
+      "fixedIn": "7be1790"
     },
     {
       "id": "silent-job-stuck-monitor",
@@ -283,6 +289,24 @@
       "reportedBy": "gm session 2026-11-07-16-01-17-d08b6d",
       "witness": "the ten closes/prd-mw*.txt witnesses cite HEAD grep line numbers plus parity 0 differ; behavioural evidence lives in the check scripts that pass in npm run check (check-commit-digest, check-task-set, check-child-task, check-output-recovery, check-context-feed, check-grep-paging, check-prd-receipt, check-prd-refuted-reopen)",
       "note": "Flagged as thin by orchestrate. The witnesses are recoverable: git show dd9019c^:work/rows/prd-mw691x2d71cf.yml returns the open row."
+    },
+    {
+      "id": "run-code-parse-locations",
+      "status": "open",
+      "scopedOpen": true,
+      "dataOnly": true,
+      "reproduction": "no real-tree reproduction",
+      "witness": "run_code body \"const x = ;\" returns \"the body does not load: Unexpected token ';' (line 1, column 11)\" in node",
+      "note": "The parse error already reports a line and column; the reported friction is not reproduced. Scoped OPEN."
+    },
+    {
+      "id": "partial-file-writes",
+      "status": "open",
+      "scopedOpen": true,
+      "dataOnly": true,
+      "reproduction": "no real-tree reproduction",
+      "witness": "write_file of 2,200,000 bytes stats at size 2200000 in node and native (7be1790 era probe)",
+      "note": "The reported partial writes on src/builtins/commands.zig and context.zig are not reproduced by this probe. Scoped OPEN."
     }
   ]
 }
