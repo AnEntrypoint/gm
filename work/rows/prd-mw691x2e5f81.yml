@@ -1,6 +1,0 @@
-id: "prd-mw691x2e5f81"
-kind: "prd"
-title: "gm tooling fix: task-verb"
-body: "run task mutation: no gm verb to change a run task after next_context"
-status: "open"
-createdAt: "2026-11-07T10:17:27.974Z"
