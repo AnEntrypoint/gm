@@ -38,7 +38,7 @@ if (!existsSync(cachePath)) {
 const cache = readFileSync(cachePath, 'utf8');
 const cacheValue = (key) => {
     const line = cache.split('\n').find((entry) => entry.startsWith(`${key}:`));
-    return line ? line.slice(line.indexOf('=') + 1) : '';
+    return line ? line.slice(line.indexOf('=') + 1).trim() : '';
 };
 const version = cacheValue('GMNEW_VERSION');
 const commit = cacheValue('GMNEW_COMMIT');

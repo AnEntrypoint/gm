@@ -122,7 +122,7 @@ return { a: a.output.length, b: b.output.length };</pre>
 <h3>Git</h3>
 <p>git_status, git_add, git_rm, git_commit, git_push, git_log, git_diff, git_show, git_fetch, git_pull, git_checkout, git_branch, ci_status.</p>
 <h3>Rows and review</h3>
-<p>prd_add, prd_list, prd_resolve, prd_delete, unknown_add, unknown_list, unknown_resolve, review_packet, review_record, review_join.</p>
+<p>prd_add, prd_list, prd_park, prd_reopen, prd_resolve, prd_delete, unknown_add, unknown_list, unknown_resolve, review_packet, review_record, review_join.</p>
 <h3>Network and logs</h3>
 <p>fetch, query_log (reads the run's own log), and any MCP server configured for the project as <code>gm.&lt;server&gt;_&lt;tool&gt;</code>.</p>
 <p class="note">Call <code>gm.verbs()</code> inside run_code to get each verb's schema as data. Wrap a call that may throw in <code>gm.try(fn)</code> so one failure does not hide the rest of a batch; both helpers are named in run_code's description.</p>
