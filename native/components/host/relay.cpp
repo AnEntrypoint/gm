@@ -532,7 +532,7 @@ void Relay::rebuild(Lock& lock) {
     if (options_.build_dir.empty()) return;
     lock.unlock();
     const proc::Outcome outcome = proc::run(
-        {"cmake", "--build", options_.build_dir.string(), "--target", options_.build_target}, {}, {}, kBuildTimeoutMs);
+        {"cmake", "--build", options_.build_dir.string(), "--target", options_.build_target, "gm-core"}, {}, {}, kBuildTimeoutMs);
     lock.lock();
     if (!outcome.started || outcome.timed_out || outcome.exit_code != 0) {
         ++failed_builds_;

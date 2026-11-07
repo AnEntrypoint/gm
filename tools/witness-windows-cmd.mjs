@@ -15,7 +15,7 @@ const decode = (reply) => {
     if (typeof reply?.output !== 'string') return reply;
     try { return JSON.parse(reply.output); } catch { return reply.output; }
 };
-const server = await openServer(binary, { workspace, extraArgs: ['--mcp-config', mcpConfig] });
+const server = await openServer(binary, { workspace, extraArgs: ['--mcp-config', mcpConfig, '--build-dir', 'none'] });
 try {
     await server.tool('next_context', {});
     const control = await server.run(`return await gm.run_shell({ command: ${JSON.stringify(controlCommand)} });`);

@@ -10,6 +10,7 @@ permissions:
 
 env:
   RELEASE_REPO: AnEntrypoint/gm
+  GMNEW_AUTO_UPDATE: "0"
 
 jobs:
   build:
@@ -93,8 +94,9 @@ jobs:
       - name: Configure and build
         shell: bash
         run: |
-          cmake --preset ${{ matrix.preset }} -DGMNEW_VERSION=$GMNEW_VERSION
+          cmake --preset ${{ matrix.preset }} --fresh -DGMNEW_VERSION=$GMNEW_VERSION
           cmake --build build/${{ matrix.preset }}
+          cmake --build build/${{ matrix.preset }} --target gm-core
       - name: Test
         shell: bash
         run: node tools/check-build.mjs build/${{ matrix.preset }}
