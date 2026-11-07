@@ -1,6 +1,0 @@
-id: "prd-mw69j59vc62f"
-kind: "prd"
-title: "gm tooling fix: child-task-overwrite"
-body: "child context task isolation: a child called next_context with a task argument and overwrote the owner run task text to \"Read-only R7...\"; a child next_context must refuse or ignore task and never mutate the parent task; rename-detection is git behaviour, not gm; command-output witness required"
-status: "open"
-createdAt: "2026-11-07T10:30:51.763Z"
