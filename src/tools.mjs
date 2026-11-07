@@ -48,8 +48,7 @@ function cutPage(page, size, rest, digestText) {
   const nextOffset = page.next ?? null;
   if (rest === null) return { ...page, truncated: false, totalBytes: size, nextOffset, digest };
   const shown = Buffer.byteLength(page.output, 'utf8');
-  const separator = page.output === '' || page.output.endsWith('\n') ? '' : '\n';
-  return { ...page, output: `${page.output}${separator}[gm-read: truncated at ${shown} of ${size} bytes; ${rest}]`, truncated: true, totalBytes: size, hint: rest, nextOffset, digest };
+  return { ...page, truncated: true, totalBytes: size, hint: rest, notice: `truncated at ${shown} of ${size} bytes; ${rest}`, nextOffset, digest };
 }
 
 function isBinary(path) {

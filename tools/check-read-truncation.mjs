@@ -18,7 +18,8 @@ const watchdog = setTimeout(() => {
   process.exit(1);
 }, WATCHDOG_MS);
 watchdog.unref();
-const NOTICE = /\[gm-read: truncated at (\d+) of (\d+) bytes; [^\]]+\]$/;
+const NOTICE = /^truncated at (\d+) of (\d+) bytes; [^\]]+$/;
+const MARKER = '[gm-read:';
 const workspace = mkdtempSync(join(tmpdir(), 'gm-read-check-'));
 const failures = [];
 const bigText = Array.from({ length: 3000 }, (_, i) => `line ${String(i).padStart(5, '0')} of the big file`).join('\n') + '\n';
@@ -30,14 +31,15 @@ const SMALL_BYTES = Buffer.byteLength(smallText);
 
 function expectPage(label, page, bytes, mustTruncate) {
   if (mustTruncate && page.truncated !== true) failures.push(`${label}: a ${bytes}-byte file read past one page was not reported truncated`);
+  if (String(page.output ?? '').includes(MARKER)) failures.push(`${label}: the returned output text carries a [gm-read: marker`);
   if (page.truncated === true) {
-    const match = NOTICE.exec(page.output ?? '');
-    if (!match) failures.push(`${label}: truncated output has no [gm-read: truncated ...] notice at its end`);
+    const match = NOTICE.exec(page.notice ?? '');
+    if (!match) failures.push(`${label}: truncated read has no notice field naming the bytes shown and the rest`);
     else if (match[2] !== String(bytes)) failures.push(`${label}: the notice names ${match[2]} bytes, the file is ${bytes}`);
-  } else if (String(page.output ?? '').includes('[gm-read:')) {
-    failures.push(`${label}: untruncated output carries a [gm-read: notice`);
+  } else if (page.notice !== undefined) {
+    failures.push(`${label}: untruncated read carries a notice`);
   }
-  console.log(JSON.stringify({ label, truncated: page.truncated, totalBytes: page.totalBytes ?? null, notice: NOTICE.exec(page.output ?? '')?.[0] ?? null }));
+  console.log(JSON.stringify({ label, truncated: page.truncated, totalBytes: page.totalBytes ?? null, notice: page.notice ?? null }));
 }
 
 const nodeBig = await readLinePage(join(workspace, 'big.txt'), 0, Infinity);
@@ -88,7 +90,7 @@ if (binary === null || !existsSync(binary)) {
     await rpc('initialize', { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'read-truncation-check', version: '1' } });
     child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' })}\n`);
     await rpc('tools/call', { name: 'next_context', arguments: { task: 'read truncation check' } });
-    const probe = (path, args) => `const r = await gm.read_file({ path: '${path}'${args} }); return { truncated: r.truncated, totalBytes: r.totalBytes, output: String(r.output).slice(-400) };`;
+    const probe = (path, args) => `const r = await gm.read_file({ path: '${path}'${args} }); return { truncated: r.truncated, totalBytes: r.totalBytes, notice: r.notice, output: String(r.output).slice(-400) };`;
     const bigLines = await nativeRead(rpc, probe('big.txt', ''));
     expectPage('native read_file lines big.txt', bigLines, BIG_BYTES, true);
     const bigChars = await nativeRead(rpc, probe('big.txt', ", unit: 'chars'"));
@@ -115,4 +117,4 @@ if (failures.length > 0) {
   console.error(`read-truncation: failed: ${failures.join('; ')}`);
   process.exit(1);
 }
-console.log('read-truncation: passed: a read past one page reports truncation, the bytes shown, the file size and the read that gets the rest; a read within a page carries no notice');
+console.log('read-truncation: passed: a read past one page reports truncation, the bytes shown, the file size and the read that gets the rest in metadata, and the returned output text never carries the marker');
