@@ -1,6 +1,0 @@
-id: "prd-mw698vaf1e27"
-kind: "prd"
-title: "gm tooling fix: fetch-timeout-empty-output"
-body: "shell timeout and git fetch: fx-19 gm.run_shell git fetch timed out after 60000 ms with empty output while checking remote; no external calls, credentials or secrets; push held because remote classification returned ok:false / owner:null / repo:null / allowed:false; prove network or environment condition versus a gm tool defect with a command-output witness"
-status: "open"
-createdAt: "2026-11-07T10:22:52.263Z"
