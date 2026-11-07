@@ -1635,6 +1635,12 @@ struct Server::State {
         monitor = std::thread([this] { monitor_loop(); });
     }
 
+    bool shell_jobs_open() {
+        if (!options.job_snapshot) return false;
+        Value open = options.job_snapshot();
+        return open.is_array() && !open.as_array().empty();
+    }
+
     void monitor_loop() {
         while (true) {
             {
@@ -1642,7 +1648,7 @@ struct Server::State {
                 monitor_wake.wait_for(guard, std::chrono::milliseconds(options.monitor_ms), [&] { return shutting_down; });
                 if (shutting_down) break;
             }
-            if (!check_bodies()) {
+            if (!check_bodies() && !shell_jobs_open()) {
                 std::lock_guard guard(mu);
                 bool open = false;
                 for (const auto& job : bodies) open = open || (job->adopted && !job->exited && !job->settled);
@@ -3030,6 +3036,7 @@ Value Server::State::run_code(const Value& args) {
                 }
                 if (job->thread.joinable()) job->thread.join();
                 settle_started_jobs(started_jobs);
+                if (shell_jobs_open()) ensure_monitor();
                 {
                     std::lock_guard list_guard(mu);
                     std::erase(bodies, job);

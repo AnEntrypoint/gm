@@ -49,7 +49,8 @@ const jobsIn = (node, out = []) => {
 };
 
 const COMMAND = 'for i in 1 2 3 4 5 6 7 8 9 10 11 12; do echo row >> results.jsonl; sleep 0.5; done';
-const body = `await gm.job_start({ job: 'sink', command: ${JSON.stringify(COMMAND)}, progress: 'results.jsonl' }); await gm.job_start({ job: 'blind', command: ${JSON.stringify(COMMAND)} }); await gm.run_shell({ command: 'sleep 3.5' }); return { started: true };`;
+const startBody = `await gm.job_start({ job: 'sink', command: ${JSON.stringify(COMMAND)}, progress: 'results.jsonl' }); await gm.job_start({ job: 'blind', command: ${JSON.stringify(COMMAND)} }); return { started: true };`;
+const waitBody = 'await gm.run_shell({ command: "sleep 3.5" }); return await gm.query_log({ kind: "job-stuck" });';
 
 async function arm(label, command, args) {
   const server = start(command, args);
@@ -57,9 +58,16 @@ async function arm(label, command, args) {
     await server.rpc('initialize', { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'progress-check', version: '1' } });
     server.child.stdin.write(JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' }) + '\n');
     await server.rpc('tools/call', { name: 'next_context', arguments: { task: 'job progress check' } });
-    const ran = await server.rpc('tools/call', { name: 'run_code', arguments: { body } });
-    const runned = JSON.parse(ran.result?.content?.[0]?.text ?? 'null');
-    if (runned?.ok !== true) throw new Error('run_code refused: ' + JSON.stringify(runned).slice(0, 200));
+    const runBody = async (code) => {
+      const ran = await server.rpc('tools/call', { name: 'run_code', arguments: { body: code } });
+      const runned = JSON.parse(ran.result?.content?.[0]?.text ?? 'null');
+      if (runned?.ok !== true) throw new Error('run_code refused: ' + JSON.stringify(runned).slice(0, 200));
+      return runned.output;
+    };
+    await runBody(startBody);
+    const logged = String(await runBody(waitBody));
+    if (!logged.includes('blind')) failures.push(label + ': the run log has no job-stuck event for the silent job, from the monitor alone: ' + logged.slice(0, 400));
+    if (logged.includes('sink')) failures.push(label + ': the run log has a job-stuck event for a job that writes its progress file');
     const step = await server.rpc('tools/call', { name: 'next_context', arguments: {} });
     const reply = JSON.parse(step.result?.content?.[0]?.text ?? 'null');
     const jobs = jobsIn(reply);
