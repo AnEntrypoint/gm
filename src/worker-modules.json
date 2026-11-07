@@ -30,6 +30,7 @@
   "sources.mjs",
   "summary.mjs",
   "tools.mjs",
+  "unit-tests.mjs",
   "wiki-tools.mjs",
   "wiki.mjs"
 ]

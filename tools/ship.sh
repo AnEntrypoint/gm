@@ -8,6 +8,16 @@ if [ "$#" -lt 2 ]; then
 fi
 msg="$1"
 shift
+branch="$(git symbolic-ref --short -q HEAD)"
+[ "$branch" = "main" ] || { echo "refused: ship commits on main, not on '${branch:-a detached HEAD}'"; exit 1; }
+for ident in GIT_AUTHOR_IDENT GIT_COMMITTER_IDENT; do
+  name="$(git var "$ident" 2>/dev/null | sed 's/ <.*//')"
+  [ "$name" = "lanmower" ] || { echo "refused: $ident name must be lanmower"; exit 1; }
+done
+if [ -n "$(printf '%s\n' "$msg" | tail -n +2 | git interpret-trailers --parse)" ] || printf '%s\n' "$msg" | grep -qiE 'co-authored-by|signed-off-by|generated with'; then
+  echo "refused: the commit message carries a trailer"
+  exit 1
+fi
 for path in "$@"; do
   if [ ! -e "$path" ] && ! git ls-files --error-unmatch -- "$path" > /dev/null 2>&1 && ! git cat-file -e "HEAD:$path" 2>/dev/null; then
     echo "refused: $path is neither in the tree nor tracked"

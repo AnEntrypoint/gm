@@ -10,6 +10,7 @@ import { sourcesCheck } from './sources.mjs';
 import { wikiCheck } from './wiki.mjs';
 import { skillCheck } from './skills.mjs';
 import { connectCheck } from './connect.mjs';
+import { scanUnitTests } from './unit-tests.mjs';
 
 const SCRATCH = join(tmpdir(), 'gm-scratch', 'gm');
 const KEEP = join(SCRATCH, 'KEEP');
@@ -19,7 +20,8 @@ const NODE_TIMEOUT_MS = 20000;
 const SYNTAX_CONCURRENCY = 8;
 const SMOKE_TIMEOUT_MS = 60000;
 const OWN_NAME = 'gm';
-const OWN_CHECKS = ['ascii', 'docs', 'sources', 'wiki', 'skills', 'connect', 'workers', 'prompt', 'smoke'];
+const OWN_CHECKS = ['ascii', 'docs', 'sources', 'wiki', 'skills', 'connect', 'workers', 'prompt', 'agents-size', 'unit-tests', 'staged-comments', 'smoke'];
+const AGENTS_MAX_BYTES = 30 * 1024;
 const WORKER_ENTRY = 'mcp.mjs';
 const WORKER_LIST = 'src/worker-modules.json';
 const MODULE_PATH = /^\.\/[\w.-]+\.mjs$/;
@@ -31,6 +33,7 @@ export const NOT_COVERED = [
   'doc content beyond path existence: the docs check finds the repo paths, not whether a claim in the docs is true',
   'CI: this gate does not read CI results from .github/workflows/release.yml or .github/workflows/arm-diagnose.yml',
   'the parity harness and tools/check-build.mjs are not run by this gate',
+  'comments in staged files that are not JavaScript modules: staged-comments reads .mjs, .js and .cjs only',
 ];
 
 export async function runGate(root, scope = null) {
@@ -46,6 +49,9 @@ export async function runGate(root, scope = null) {
     checks.push(await timed('connect', async () => connectCheck(root)));
     checks.push(await timed('workers', () => workersCheck(root)));
     checks.push(await timed('prompt', () => promptCheck(root)));
+    checks.push(await timed('agents-size', () => agentsSizeCheck(root)));
+    checks.push(await timed('unit-tests', () => unitTestsCheck(root)));
+    checks.push(await timed('staged-comments', () => stagedCommentsCheck(root)));
     checks.push(await timed('smoke', () => smokeCheck(root)));
   }
   const failed = checks.filter((check) => !check.ok).map((check) => check.name);
@@ -115,6 +121,42 @@ function asciiCheck(root) {
     if (/[^\x00-\x7f]/.test(buffer.toString('utf8'))) bad.push(rel);
   }
   return bad.length ? { ok: false, detail: `non-ASCII in ${bad.join(', ')}` } : { ok: true, detail: `${count} text files are ASCII` };
+}
+
+export function agentsSizeCheck(root) {
+  const bytes = lstatSync(join(root, 'AGENTS.md')).size;
+  return bytes > AGENTS_MAX_BYTES
+    ? { ok: false, detail: `AGENTS.md is ${bytes} bytes; the limit is ${AGENTS_MAX_BYTES}` }
+    : { ok: true, detail: `AGENTS.md is ${bytes} bytes, within ${AGENTS_MAX_BYTES}` };
+}
+
+export function unitTestsCheck(root) {
+  const hits = scanUnitTests(root);
+  return hits.length === 0
+    ? { ok: true, detail: 'no unit tests or test files' }
+    : { ok: false, detail: `${hits.length} unit-test hit(s): ${hits.slice(0, 5).join(' | ')}` };
+}
+
+export function stagedCommentsCheck(root) {
+  const { parse } = createRequire(import.meta.url)('acorn');
+  const files = stagedFiles(root).filter((file) => SOURCE.test(file));
+  const hits = [];
+  for (const file of files) {
+    const text = execFileSync('git', ['show', `:${file}`], { cwd: root, encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 });
+    const found = [];
+    parse(text, { ecmaVersion: 'latest', sourceType: file.endsWith('.cjs') ? 'script' : 'module', allowHashBang: true, locations: true, onComment: found });
+    for (const comment of found) {
+      if (comment.start === 0 && text.startsWith('#!')) continue;
+      hits.push(`${file}:${comment.loc.start.line}`);
+    }
+  }
+  return hits.length === 0
+    ? { ok: true, detail: `${files.length} staged JavaScript modules have no comments` }
+    : { ok: false, detail: `comments in staged modules: ${hits.join(', ')}` };
+}
+
+function stagedFiles(root) {
+  return execFileSync('git', ['diff', '--cached', '--name-only', '--diff-filter=ACMR', '-z'], { cwd: root, encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 }).split('\0').filter(Boolean);
 }
 
 function docCheck(root) {
