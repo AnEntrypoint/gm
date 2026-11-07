@@ -1,6 +1,0 @@
-id: "prd-mw69712yd44f"
-kind: "prd"
-title: "gm tooling fix: next-context-feed-elision"
-body: "event feed compaction: next_context elides event and run_code output to [703 chars]/[673 chars]; full output requires query_log; prove same code path as run_code truncation or fix separately with its own witness"
-status: "open"
-createdAt: "2026-11-07T10:21:26.458Z"
