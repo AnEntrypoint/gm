@@ -144,11 +144,12 @@ json::Value field_page(const json::Value& args, auto& log) {
     }
     if (event == nullptr) return failure("no event at seq " + std::to_string(wanted));
     std::string text = field_text(*event, field->as_string());
-    std::size_t end = std::min(offset + width, text.size());
+    const std::size_t from = std::min(offset, text.size());
+    std::size_t end = std::min(from + width, text.size());
     bool truncated = end < text.size();
     json::Value reply;
     reply.set("ok", true);
-    reply.set("output", text.substr(offset, end - offset));
+    reply.set("output", text.substr(from, end - from));
     reply.set("total", static_cast<std::uint64_t>(text.size()));
     reply.set("next", end < text.size() ? json::Value(static_cast<std::uint64_t>(end)) : json::Value(nullptr));
     reply.set("truncated", truncated);

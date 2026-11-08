@@ -1522,7 +1522,7 @@ Job of 30000 characters, `gm.job_status({ job, offset })`:
 - before, native: offset 6 `{"ok":true,"output":"atus","total":10,"next":null,"truncated":true}`; offset 10 `{"ok":true,"output":"","total":10,"next":null,"truncated":true}`.
 - after, native: the same two calls return `"truncated":false` with `next` null.
 - Fix: native/components/verbs/verbs.cpp:148 (field_page) and native/components/quickjs/query.cpp:21 (the GM_FIELD_PAGE branch). The Node queryField (src/tools.mjs, `truncated: next !== null`) was already right.
-- Not fixed, found while testing: native field_page throws when offset is past the field end (`basic_string::substr: __pos (which is 50) > this->size() (which is 10)`); the verb returns it as ok:false.
+- Fixed in the section below: native field_page threw `basic_string::substr` when offset was past the field end.
 
 ## Node skill:// read honours offset, limit and unit (2026-11-08)
 
@@ -1537,4 +1537,17 @@ Job of 30000 characters, `gm.job_status({ job, offset })`:
 ## update.cpp helpers removed (2026-11-08)
 
 native/components/host/update.cpp: `commit_prefix` and `newer_build` had no callers (grep found only their definitions). `build_number` was used only by `newer_build`, so it went too. The release build after the change exits 0 with no warning lines.
+
+
+## query_log field page past the end returns an empty page (2026-11-08)
+
+`gm.query_log({ seq, field: "tool", offset })` on a 9-character field ("read_file"), before on the installed build 5492923-262 and after on a native build of 26dad3c plus this change:
+- before, offset 50: `{"ok":false,"error":"basic_string::substr: __pos (which is 50) > this->size() (which is 9)"}`
+- before, offset 9: `{"ok":true,"output":"","total":9,"next":null,"truncated":true}`
+- before, offset 4: `{"ok":true,"output":"_file","total":9,"next":null,"truncated":true}`
+- after, offset 50: `{"ok":true,"output":"","total":9,"next":null,"truncated":false}`
+- after, offset 9: `{"ok":true,"output":"","total":9,"next":null,"truncated":false}`
+- after, offset 4: `{"ok":true,"output":"_file","total":9,"next":null,"truncated":false}`
+- Fix: native/components/verbs/verbs.cpp:148-149 (field_page) clamps the start to the field length before slicing: `from = min(offset, size)`, `end = min(from + width, size)`, `substr(from, end - from)`.
+- The quickjs GM_FIELD_PAGE branch (native/components/quickjs/query.cpp:21) already returned an empty page: JavaScript slice with a start past the end gives "", so it needed no change.
 
