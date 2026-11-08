@@ -87,6 +87,13 @@ OutputArtifact store_artifact(const std::string& text, const fs::path& run_dir, 
     return {path, digest, clean.size(), "[gm: full output at " + path + "; page with gm.read_file({ path: " + path_json + ", unit: \"chars\", offset: 0, limit: 20000 }) and read on from next until next is null]"};
 }
 
+std::string utf8_head(const std::string& text, std::size_t bytes) {
+    if (text.size() <= bytes) return text;
+    std::size_t cut = bytes;
+    while (cut > 0 && (static_cast<unsigned char>(text[cut]) & 0xC0) == 0x80) cut -= 1;
+    return text.substr(0, cut);
+}
+
 void add_cut_run(json::Value& reply, const std::string& text, std::size_t length, const fs::path& run_dir, const char* key) {
     if (length <= kOutputCap) {
         reply.set(key, text);
@@ -94,21 +101,21 @@ void add_cut_run(json::Value& reply, const std::string& text, std::size_t length
         return;
     }
     const OutputArtifact artifact = store_artifact(text, run_dir, "run_code");
-    json::Value summary(json::Object{});
-    summary.set("outputPath", artifact.path);
-    summary.set("totalChars", static_cast<double>(artifact.total_chars));
-    summary.set("digest", artifact.digest);
-    summary.set("offset", static_cast<double>(0));
-    summary.set("next", static_cast<double>(0));
-    summary.set("truncated", true);
-    summary.set("notice", artifact.notice);
-    reply.set(key, json::dump(summary));
+    const std::string clean = redact_artifact(text);
+    const std::string page = utf8_head(clean, kOutputPage);
+    const std::size_t shown = js_length(page);
+    const std::size_t total = js_length(clean);
+    const std::string path_json = json::dump(json::Value(artifact.path));
+    reply.set(key, page);
     reply.set("truncated", true);
     reply.set("outputPath", artifact.path);
-    reply.set("totalChars", static_cast<double>(artifact.total_chars));
+    reply.set("totalChars", static_cast<double>(total));
     reply.set("digest", artifact.digest);
     reply.set("offset", static_cast<double>(0));
-    reply.set("next", static_cast<double>(0));
+    reply.set("next", static_cast<double>(shown));
+    reply.set("notice", "[gm: output is " + std::to_string(total) + " characters; the first " + std::to_string(shown) +
+                            " are in output. Read on with gm.read_file({ path: " + path_json + ", unit: \"chars\", offset: " +
+                            std::to_string(shown) + ", limit: 20000 }) until next is null]");
 }
 constexpr std::size_t kTailCap = 2000;
 constexpr std::size_t kTaskPage = 4000;
@@ -1166,13 +1173,7 @@ struct Server::State {
         return rules;
     }
 
-    std::string task_head() {
-        const std::string& task = s().task;
-        if (task.size() <= kTaskPage) return task;
-        std::size_t cut = kTaskPage;
-        while (cut > 0 && (static_cast<unsigned char>(task[cut]) & 0xC0) == 0x80) cut -= 1;
-        return task.substr(0, cut);
-    }
+    std::string task_head() { return utf8_head(s().task, kTaskPage); }
 
     Value task_value() { return s().task.empty() ? Value(nullptr) : Value(task_head()); }
 
