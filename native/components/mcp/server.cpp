@@ -75,17 +75,16 @@ struct OutputArtifact {
 
 OutputArtifact store_artifact(const std::string& text, const fs::path& run_dir, const std::string& label) {
     const std::string clean = redact_artifact(text);
-    const std::string bounded = clean.size() > 20000 ? clean.substr(0, 10000) + "\n[gm: middle omitted]\n" + clean.substr(clean.size() - 10000) : clean;
-    const std::string digest = artifact_digest(bounded);
+    const std::string digest = artifact_digest(clean);
     const fs::path dir = run_dir / "outputs";
     std::error_code ec;
     fs::create_directories(dir, ec);
     const fs::path file = dir / (digest + "-" + label + ".txt");
     std::ofstream out(file, std::ios::binary);
-    out << bounded;
+    out << clean;
     const std::string path = file.generic_string();
     const std::string path_json = json::dump(json::Value(path));
-    return {path, digest, clean.size(), "[gm: full output at " + path + "; page with gm.read_file({ path: " + path_json + ", unit: \"chars\", offset: 0, limit: 20000 })]"};
+    return {path, digest, clean.size(), "[gm: full output at " + path + "; page with gm.read_file({ path: " + path_json + ", unit: \"chars\", offset: 0, limit: 20000 }) and read on from next until next is null]"};
 }
 
 void add_cut_run(json::Value& reply, const std::string& text, std::size_t length, const fs::path& run_dir, const char* key) {
