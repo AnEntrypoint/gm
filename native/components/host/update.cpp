@@ -154,10 +154,6 @@ bool newer_build(std::string_view offered, std::string_view current_version) {
     return !have || *offered_build > *have;
 }
 
-bool superseded(const UpdateState& state, std::string_view current_version) {
-    return !state.version.empty() && state.version != current_version && newer_build(state.version, current_version);
-}
-
 std::optional<std::string> move_recorded(const fs::path& from, const fs::path& to, std::vector<Rename>& done) {
     std::error_code ec;
     fs::rename(from, to, ec);
@@ -444,11 +440,6 @@ UpdateResult update_once(const UpdatePolicy& policy, UpdateResult result) {
     state = read_update_state(policy.install_dir);
     if (!policy.force && checked_recently(state, now_ms(), policy.interval))
         return current_build(std::move(result), policy, "already current");
-    if (superseded(state, policy.current_version)) {
-        result = current_build(std::move(result), policy, "installed by another process");
-        result.to = state.version;
-        return result;
-    }
 
     auto reply = policy.fetch(policy.url, state.etag, staging);
     if (!reply) return failed(std::move(result), reply.error());
