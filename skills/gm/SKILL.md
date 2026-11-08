@@ -32,6 +32,13 @@ A host may cut a slash-command task to its first word before gm sees it. The ser
 
 Playwriter is this project's browser control. Drive the browser only through its verbs inside run_code: `gm.playwriter_execute({ code })` runs a snippet in the project browser, and `gm.playwriter_browsers({ action })` lists or closes browsers on the machine. Do not start another browser, and do not call the playwriter binary from a shell. A browser call that runs past 60 seconds needs `timeoutMs` on the playwriter server entry (defaults/mcp.json sets 300000). The execute call's own `timeout` argument sets playwriter's limit, which defaults to 10 seconds, and does not lift the server cap.
 
+Each run has its own browser context. Its first execute call creates it, and `context` in the snippet is that context, so `context.newPage()` opens a tab the run owns. Other runs and other projects have their own tabs, which this run does not list or close.
+
+- `next_context` returns `tabs`: the tabs this run owns, with url and title, and a count of the others. When nothing changed it says unchanged.
+- `playwriter_browsers({ action: "close" })` closes only this run's context. It does not close the project browser.
+- `finish` closes this run's context and its tabs, and the reply says how many.
+- `gm.browser_close_machine({ confirm: true })` closes the whole project browser, with every run's tabs. Use it only when the owner asks for it.
+
 ## Rules
 
 These are the rules of every run. next_context returns them with each step, and this skill holds them word for word as well, because a skill is re-attached after a compaction.
