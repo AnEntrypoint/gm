@@ -206,7 +206,7 @@ const SCENARIOS = [
       const code = async (body) => {
         const reply = (await c.rpc('tools/call', { name: 'run_code', arguments: { body } })).result;
         const raw = reply?.structuredContent?.output ?? JSON.parse(reply?.content?.[0]?.text ?? '{}').output;
-        return typeof raw === 'string' ? JSON.parse(raw) : null;
+        return typeof raw === 'string' ? JSON.parse(raw) : raw ?? null;
       };
       const verbs = await code("const all = gm.verbs(); const one = gm.verbs({ name: 'read_file' }); const names = gm.verbs({ names: true }); return { count: all.length, full: all.every((v) => typeof v.description === 'string' && v.inputSchema !== null && typeof v.inputSchema === 'object'), one, names };");
       ok('gm.verbs() still returns every schema', verbs?.full === true && verbs?.count > 1, short(verbs?.count));

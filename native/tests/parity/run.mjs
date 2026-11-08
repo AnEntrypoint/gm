@@ -557,6 +557,14 @@ async function mcpPass() {
   return rows;
 }
 
+function verbOutput(text) {
+  let value = JSON.parse(text).output;
+  if (typeof value === 'string') {
+    try { value = JSON.parse(value); } catch { return value; }
+  }
+  return value !== null && typeof value === 'object' ? value.output : value;
+}
+
 async function dotenvPass() {
   const base = join(SCRATCH, 'dotenv');
   const { spaces } = makeWorkspaces(base);
@@ -590,7 +598,7 @@ async function dotenvPass() {
       if (!name.startsWith('grep .') && !name.startsWith('search .')) continue;
       const text = reply?.result?.content?.[0]?.text ?? '';
       let output = text;
-      try { output = JSON.parse(text).output ?? text; } catch {}
+      try { output = verbOutput(text) ?? text; } catch {}
       const masked = typeof output === 'string' && output.includes('<redacted>') && !output.includes(DOTENV_DUMMY);
       rows.push([`dotenv ${name} ${side}`, masked ? [] : [['.mask', 'masked', String(output).slice(0, VALUE_WIDTH)]]]);
       const row = String(output).split('\n').find((line) => line.includes('<redacted>'));
@@ -633,7 +641,7 @@ return r.map(x => String(x.output ?? ''));`;
     const reply = replies.at(-1)?.[1];
     const text = reply?.result?.content?.[0]?.text ?? '';
     let parsed = [];
-    try { parsed = JSON.parse(text).output; } catch {}
+    try { const value = JSON.parse(text).output; parsed = typeof value === 'string' ? JSON.parse(value) : value; } catch {}
     const outputs = Array.isArray(parsed) ? parsed.map((value) => typeof value === 'string' ? value : '') : [];
     const [turn, fx, alt, reversed] = outputs;
     const ok = (turn ?? '').includes('0000-turn.txt:1') && (fx ?? '').includes('0001-fx.txt:1')
