@@ -49,6 +49,8 @@ gm is one long-horizon worker: an MCP server that runs a task as one append-only
 - An installed build from 409087f-77 or earlier cannot self-update: its updater looks for gm-<target> in the unpacked archive, while the archives ship gmnew-<target>. One manual scripts/install.sh run is needed; 70e4349 fixes the updater. DESIGN.md, "Update witness against the published release (2026-11-05)".
 - Concurrent gm.search and gm.grep calls once shared unguarded SearchVerbs and Searcher state, which crashed the worker (exit 139). 5d9e835 serializes SearchVerbs::call, keeps cached index pointers valid, and masks .env values in hit lines. commit 5d9e835".
 - gh run list --commit needs the full 40-character SHA; a 7-character prefix returns no runs. verified 2026-11-05.
+- The foreground-to-background switch at 120 s is the MCP client's ("still running after 120s ... moved to the background"), not gm's. gm returns a run_code result at its own timeoutMs: a 150 s body with timeoutMs 300000 returned its value at 150.006 s (verified 2026-11-08). While a run_code body runs, native sends notifications/progress every 5 s when the request has a progressToken, as Node does; tools/check-run-code-progress.mjs pins it.
+- ssh reads the stdin it is given. In `while read h; do ssh host ...; done < hosts.txt` an ssh without `</dev/null` eats the loop's remaining lines: only the first host ran (verified 2026-11-08 against a local sshd). gm's shell gives each child EOF, not the MCP pipe; tools/check-shell-stdin.mjs pins that.
 
 ## Parity harness
 
