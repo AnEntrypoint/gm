@@ -472,11 +472,12 @@ bool failed_of(const Value& result) {
 
 Value logged_for(const std::string& tool, const Value& result) {
     const Value* output = result.find("output");
-    if (!kLoggedOutputTools.contains(tool) || output == nullptr || !output->is_string()) return result;
-    const std::string& text = output->as_string();
+    if (!kLoggedOutputTools.contains(tool) || output == nullptr) return result;
+    const std::string text = output->is_string() ? output->as_string() : json::dump(*output);
     std::size_t length = js_length(text);
-    if (length <= kLoggedReplyChars) return result;
     Value shown = result;
+    shown.set("output", text);
+    if (length <= kLoggedReplyChars) return shown;
     shown.set("output", js_prefix(text, kLoggedReplyChars));
     shown.set("outputChars", number_of(length));
     shown.set("outputDigest", output_digest(text, failed_of(result)));
@@ -3046,7 +3047,12 @@ Value Server::State::run_code(const Value& args) {
                 std::size_t length = js_length(text);
                 json::Value result(json::Object{});
                 result.set("ok", true);
-                add_cut_run(result, text, length, s().log->dir(), "output");
+                if ((job->value->is_object() || job->value->is_array()) && length <= kOutputCap) {
+                    result.set("output", *job->value);
+                    result.set("truncated", false);
+                } else {
+                    add_cut_run(result, text, length, s().log->dir(), "output");
+                }
                 result.set("loads", array());
                 return with_seq(std::move(result));
             }

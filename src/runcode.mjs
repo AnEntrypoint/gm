@@ -250,7 +250,7 @@ export async function runBody({ body, timeoutMs = DEFAULT_TIMEOUT_MS, format, ve
   const lost = () => `its return value is lost; ${log.eventsFrom(startSeq + 1).filter((event) => event.kind === 'code-call').length} verb calls completed before the stop, each in query_log as a code-call after seq ${startSeq}`;
   const result = done.then((reply) => {
     if (!reply.ok) return { ok: false, error: killed ? `${reply.error}: ${lost()}` : reply.at ? reply.error + locate(reply.at) : reply.error };
-    if (reply.text.length <= OUTPUT_CAP) return { ok: true, output: reply.text, truncated: false };
+    if (reply.text.length <= OUTPUT_CAP) return { ok: true, output: /^[[{]/.test(reply.text) ? JSON.parse(reply.text) : reply.text, truncated: false };
     const artifact = storeArtifact(reply.text, runDir, 'run_code');
     return { ok: true, output: cutRunOutput(reply.text, runDir), ...artifact, truncated: true };
   });

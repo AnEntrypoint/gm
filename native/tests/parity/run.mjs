@@ -633,7 +633,7 @@ return r.map(x => String(x.output ?? ''));`;
     const reply = replies.at(-1)?.[1];
     const text = reply?.result?.content?.[0]?.text ?? '';
     let parsed = [];
-    try { parsed = JSON.parse(JSON.parse(text).output); } catch {}
+    try { parsed = JSON.parse(text).output; } catch {}
     const outputs = Array.isArray(parsed) ? parsed.map((value) => typeof value === 'string' ? value : '') : [];
     const [turn, fx, alt, reversed] = outputs;
     const ok = (turn ?? '').includes('0000-turn.txt:1') && (fx ?? '').includes('0001-fx.txt:1')
