@@ -124,6 +124,7 @@ constexpr long long kStartedJobGraceMs = 100;
 constexpr std::size_t kCompletionCap = 100;
 constexpr std::size_t kQueueMax = 64;
 constexpr int kMaxTimeoutMs = 300000;
+constexpr long long kProgressMs = 5000;
 constexpr double kListTtlMs = 3600000;
 constexpr double kVolatileTtlMs = 0;
 constexpr const char* kCachePublic = "public";
@@ -2117,6 +2118,48 @@ struct Server::State {
         return result.set("isError", !is_ok(out)).set("_meta", std::move(meta));
     }
 
+    class ProgressTicker {
+    public:
+        ProgressTicker(State& state, Value token) : state_(state), token_(std::move(token)), thread_([this] { run(); }) {}
+        ~ProgressTicker() {
+            {
+                std::lock_guard guard(lock_);
+                stopped_ = true;
+            }
+            wake_.notify_all();
+            thread_.join();
+        }
+        ProgressTicker(const ProgressTicker&) = delete;
+        ProgressTicker& operator=(const ProgressTicker&) = delete;
+
+    private:
+        void run() {
+            const auto started = std::chrono::steady_clock::now();
+            long long last = 0;
+            std::unique_lock guard(lock_);
+            while (!wake_.wait_for(guard, std::chrono::milliseconds(kProgressMs), [&] { return stopped_; })) {
+                const long long elapsed = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - started).count();
+                last = std::max(last + 1, elapsed);
+                guard.unlock();
+                state_.notify(object()
+                                  .set("jsonrpc", "2.0")
+                                  .set("method", "notifications/progress")
+                                  .set("params", object()
+                                                     .set("progressToken", token_)
+                                                     .set("progress", number_of(static_cast<std::uint64_t>(last)))
+                                                     .set("message", "running " + std::to_string(last) + " s")));
+                guard.lock();
+            }
+        }
+
+        State& state_;
+        Value token_;
+        std::mutex lock_;
+        std::condition_variable wake_;
+        bool stopped_ = false;
+        std::thread thread_;
+    };
+
     Value call_tool(const Value* params, const Value& rpc_id) {
         const Value* name_value = params ? params->find("name") : nullptr;
         const Value* args_value = params ? params->find("arguments") : nullptr;
@@ -2137,7 +2180,14 @@ struct Server::State {
             s().trace = trace_of(params->find("_meta"));
             s().call_action_seq.reset();
         }
+        std::optional<ProgressTicker> ticker;
+        if (name == "run_code") {
+            const Value* meta = params->find("_meta");
+            const Value* token = meta != nullptr ? meta->find("progressToken") : nullptr;
+            if (token != nullptr && (token->is_string() || token->is_number())) ticker.emplace(*this, *token);
+        }
         Value out = invoke(name, args);
+        ticker.reset();
         std::optional<std::uint64_t> seq;
         {
             std::lock_guard guard(mu);

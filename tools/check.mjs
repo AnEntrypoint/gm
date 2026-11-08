@@ -42,6 +42,9 @@ if (searchRootCheck.status !== 0) failures.push('search root check');
 const inflightCheck = spawnSync(process.execPath, [join(root, 'tools', 'check-inflight.mjs'), ...(existsSync(binary) ? [binary] : [])], { cwd: root, stdio: 'inherit', timeout: 240000 });
 if (inflightCheck.status !== 0) failures.push('inflight check');
 
+const progressCheck = spawnSync(process.execPath, [join(root, 'tools', 'check-run-code-progress.mjs'), ...(existsSync(binary) ? [binary] : [])], { cwd: root, stdio: 'inherit', timeout: 120000 });
+if (progressCheck.status !== 0) failures.push('run_code progress and budget check');
+
 const relayExitCheck = spawnSync(process.execPath, [join(root, 'tools', 'check-relay-exit.mjs'), ...(existsSync(binary) ? [binary] : [])], { cwd: root, stdio: 'inherit', timeout: 180000 });
 if (relayExitCheck.status !== 0) failures.push('relay exit check');
 

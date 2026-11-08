@@ -30,6 +30,11 @@ rmSync(configDir, { recursive: true, force: true });
 if (run.error) console.error(`check-build: ${run.error.message}`);
 if (run.status !== 0) process.exit(run.status ?? 1);
 
+for (const check of ['check-run-code-progress.mjs']) {
+    const result = spawnSync(process.execPath, [join(root, 'tools', check), binary], { cwd: root, stdio: 'inherit', timeout: 300000 });
+    if (result.status !== 0) process.exit(result.status ?? 1);
+}
+
 const cachePath = join(buildDir, 'CMakeCache.txt');
 if (!existsSync(cachePath)) {
     console.error(`check-build: no CMakeCache.txt under ${buildDir}`);
