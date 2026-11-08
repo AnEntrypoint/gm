@@ -132,7 +132,7 @@ return { a: a.output.length, b: b.output.length };</pre>
 
 <section class="chapter">
 <h2>6. Updates</h2>
-<p>The server checks the <code>latest</code> release when it starts and then every six hours. It downloads a build only when the release has changed, and only one check runs at a time across processes. Each build is published under its own file names, the manifest is uploaded last, and the last three builds stay on the release.</p>
+<p>The server checks the <code>latest</code> release when it starts and then every 15 minutes. Each check is a conditional request, so an unchanged release costs one small response. It downloads a build only when that target's archive has changed, and only one check runs at a time across processes. Each build is published under its own file names, the manifest is uploaded last, and the last three builds stay on the release.</p>
 <p>A development build never updates itself. Set <code>GMNEW_AUTO_UPDATE=0</code> to turn updates off.</p>
 <p>To check now:</p>
 <pre>~/.gmnew/current/gm update</pre>

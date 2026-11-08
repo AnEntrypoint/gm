@@ -131,7 +131,7 @@ jobs:
 
   publish:
     needs: [build, build-windows]
-    if: github.repository == 'AnEntrypoint/gm'
+    if: ${{ always() && github.repository == 'AnEntrypoint/gm' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     concurrency:
@@ -164,6 +164,20 @@ jobs:
               echo "latest is $published; $GITHUB_SHA is $order to it and is not published"
               ;;
           esac
+      - name: Read the published release
+        if: steps.head.outputs.current == 'true'
+        run: |
+          gh_retry() { for n in 1 2 3 4 5; do "$@" && return 0; echo "retry $n for $1" >&2; sleep $((n * 5)); done; return 1; }
+          read_present() {
+            gh release view latest --repo "$RELEASE_REPO" --json assets --jq '.assets[].name' > "$RUNNER_TEMP/present.txt" 2> "$RUNNER_TEMP/present.err" && return 0
+            if grep -qiE 'HTTP 404|not found' "$RUNNER_TEMP/present.err"; then : > "$RUNNER_TEMP/present.txt"; return 0; fi
+            return 1
+          }
+          gh_retry read_present || { echo "cannot list the release assets" >&2; cat "$RUNNER_TEMP/present.err" >&2; exit 1; }
+          mkdir -p "$RUNNER_TEMP/previous"
+          if grep -qx manifest.json "$RUNNER_TEMP/present.txt"; then
+            gh_retry gh release download latest --repo "$RELEASE_REPO" --pattern manifest.json --dir "$RUNNER_TEMP/previous" --clobber
+          fi
       - uses: actions/checkout@v4
         if: steps.head.outputs.current == 'true'
       - name: Version
@@ -193,7 +207,7 @@ jobs:
           done
       - name: Manifest and checksums
         if: steps.head.outputs.current == 'true'
-        run: node tools/release-manifest.mjs --dir dist --version "$GMNEW_VERSION" --commit "$GITHUB_SHA" --repo "$RELEASE_REPO"
+        run: node tools/release-manifest.mjs --dir dist --version "$GMNEW_VERSION" --commit "$GITHUB_SHA" --repo "$RELEASE_REPO" --previous "$RUNNER_TEMP/previous/manifest.json" --present "$RUNNER_TEMP/present.txt" --summary "$GITHUB_STEP_SUMMARY"
       - name: Upload the versioned archives
         if: steps.head.outputs.current == 'true'
         run: |

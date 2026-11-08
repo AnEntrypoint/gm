@@ -38,7 +38,7 @@ gm is one long-horizon worker: an MCP server that runs a task as one append-only
 ## Build and test
 
 - Native: `cmake --preset release`, then `cmake --build build/release`, then `node tools/check-build.mjs build/release`. Or `scripts/gm.sh build|test|doctor|all` (GMNEW_PRESET picks the preset, default release; gm.ps1 runs the same steps).
-- Presets in CMakePresets.json: debug, release, asan, ubsan, asan-ubsan, tsan, native-perf, and x64 and arm64 for linux, windows and macos (`*-release`). release.yml builds and tests the six release presets on main and publishes latest; arm-diagnose.yml runs asan and gdb on arm64.
+- Presets in CMakePresets.json: debug, release, asan, ubsan, asan-ubsan, tsan, native-perf, and x64 and arm64 for linux, windows and macos (`*-release`). release.yml builds and tests the six release presets on main and publishes latest for every target that built (publish runs with always(); a failed target keeps its earlier build, carried in the manifest, and the run summary names it); arm-diagnose.yml runs asan and gdb on arm64.
 - Commit gate: tools/ship.sh runs it through src/gate.mjs runGate. It runs every check only in a checkout whose package.json name is gm; elsewhere it checks syntax and lists the rest as notCovered. A check that throws is a failure.
 - Witness rule: run the built binary or the CLI on a real task in a scratch workspace, read the output, then delete the scratch. `node src/cli.mjs run --task "<text>" --workspace <dir> --model scripted` runs offline.
 
@@ -99,6 +99,7 @@ gm is one long-horizon worker: an MCP server that runs a task as one append-only
 ## Updates and hot reload
 
 - tools/update.mjs: a running checkout pulls origin main every DEFAULT_UPDATE_MS (60000 ms; GMNEW_UPDATE_MS overrides). A pull goes only into a clean checkout.
+- Installed gm: the relay checks the latest manifest every 15 minutes (kUpdateInterval in update.hpp) with If-None-Match, and downloads a target's archive only when its sha256 changes. Each manifest entry has its own version, so a target that failed to build is not re-downloaded. Publish keeps the newest 3 versions (tools/prune-release-assets.mjs --keep 3).
 - A change to a module listed in src/worker-modules.json restarts the worker. A change to a leaf or a skill applies in place. A src module outside the list (cli.mjs) restarts nothing. The gate's workers check fails when the list differs from the import graph.
 - A singleton that imports a reloadable module statically keeps the code it loaded at boot. A batch that changes tools/core.mjs or a singleton restarts each live worker, and background jobs are killed (DESIGN.md, Hot reload language (2026-11-04)).
 - tools/relay.mjs is frozen, so a change to it reaches a host only on reconnect (see tools/relay.mjs).

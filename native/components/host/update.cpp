@@ -239,18 +239,13 @@ deoxidene::Result<Manifest, std::string> parse_manifest(std::string_view text) {
         ManifestAsset asset;
         asset.file = text_member(entry, "file");
         asset.sha256 = text_member(entry, "sha256");
+        asset.version = text_member(entry, "version");
+        if (asset.version.empty()) asset.version = manifest.version;
         const json::Value* size = entry.find("size");
         if (size != nullptr && size->is_number()) asset.size = static_cast<std::uintmax_t>(size->as_number());
         manifest.assets[target] = std::move(asset);
     }
     return manifest;
-}
-
-bool is_newer(const Manifest& manifest, std::string_view current_version) {
-    if (manifest.version == current_version) return false;
-    const std::string_view current_commit = commit_prefix(current_version);
-    if (!current_commit.empty() && manifest.commit.starts_with(current_commit)) return false;
-    return newer_build(manifest.version, current_version);
 }
 
 deoxidene::Result<ManifestReply, std::string> fetch_manifest_over_http(const std::string& url, const std::string& etag,
@@ -310,7 +305,7 @@ bool write_update_state(const fs::path& install_dir, const UpdateState& state) {
     return !ec;
 }
 
-bool checked_recently(const UpdateState& state, std::int64_t now, std::chrono::hours interval) {
+bool checked_recently(const UpdateState& state, std::int64_t now, std::chrono::minutes interval) {
     const std::int64_t age = now - state.checked_ms;
     return state.checked_ms > 0 && age >= 0 && age < std::chrono::duration_cast<std::chrono::milliseconds>(interval).count();
 }
@@ -464,7 +459,6 @@ UpdateResult update_once(const UpdatePolicy& policy, UpdateResult result) {
     }
     auto manifest = parse_manifest(reply->body);
     if (!manifest) return failed(std::move(result), manifest.error());
-    result.to = manifest->version;
     result.commit = manifest->commit;
     result.ok = true;
     state.etag = reply->etag;
@@ -474,10 +468,11 @@ UpdateResult update_once(const UpdatePolicy& policy, UpdateResult result) {
     if (asset == manifest->assets.end()) return failed(std::move(result), "the manifest has no build for " + target);
     if (!plain_file_name(asset->second.file))
         return failed(std::move(result), "the manifest names " + asset->second.file + ", which is not a file name");
+    result.to = asset->second.version;
     const bool asset_unchanged = !state.asset_sha.empty() && lower(state.asset_sha) == lower(asset->second.sha256);
-    if (!is_newer(*manifest, policy.current_version) && asset_unchanged) {
+    if (asset_unchanged) {
         state.checked_ms = now_ms();
-        state.version = manifest->version;
+        state.version = asset->second.version;
         state.asset_sha = asset->second.sha256;
         write_update_state(policy.install_dir, state);
         result.status = "already current";
@@ -493,7 +488,7 @@ UpdateResult update_once(const UpdatePolicy& policy, UpdateResult result) {
     if (auto error = install_staged(unpacked / ("gmnew-" + target), policy.install_dir))
         return failed(std::move(result), *error);
     state.checked_ms = now_ms();
-    state.version = manifest->version;
+    state.version = asset->second.version;
     state.asset_sha = asset->second.sha256;
     write_update_state(policy.install_dir, state);
     result.updated = true;

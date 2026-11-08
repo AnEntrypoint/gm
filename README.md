@@ -14,7 +14,7 @@ To register gm with a playwriter config, pass the path through `sh -s --`:
 
 On Windows, run `scripts/install.ps1`; its `-McpConfig` argument does the same. Both installers retry downloads and write `.gmnew-update.json` when it is missing.
 
-Each build is versioned as `gmnew-<version>-<target>.tar.gz` (`.zip` on Windows), and the manifest is uploaded last, so an install never mixes two builds. The last three builds stay on `latest`.
+Each build is versioned as `gmnew-<version>-<target>.tar.gz` (`.zip` on Windows), and the manifest is uploaded last, so an install never mixes two builds. The last three builds stay on `latest`. A push publishes every target that built; a target that failed keeps the build it had, and the run summary names it.
 
 Windows x64 and arm64 build and test jobs pass in CI, and the release publishes their `.zip` assets. `scripts/install.ps1` installs them.
 
@@ -22,7 +22,7 @@ The registration is written by the binary itself: `<path-to-gm> install [--mcp-c
 
 The entry is the same one add-mcp wrote, so installs made with add-mcp stay valid. Remove the entry by deleting `mcpServers.gm` from `~/.claude.json`.
 
-Auto-update: the server checks the `latest` release at start and every six hours, and downloads a build only when the release has changed. Set `GMNEW_AUTO_UPDATE=0` to turn that off. Development builds never update.
+Auto-update: the server checks the `latest` release at start and then every 15 minutes. Each check is a conditional request for the manifest (`If-None-Match`), so an unchanged release costs one small response, and a build is downloaded only when its target's archive has changed. Set `GMNEW_AUTO_UPDATE=0` to turn that off. Development builds never update.
 
 The served tools are listed in `DESIGN.md`, Decisions. `search` and `wiki_search` rank by BM25 in process, over the tracked files and the wiki pages. `callers` and `impact` parse the JavaScript with acorn. `wiki_write` and the three `review_*` tools write to the run log and the wiki.
 

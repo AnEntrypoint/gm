@@ -22,11 +22,12 @@ inline constexpr bool is_dev_version(std::string_view version) {
 }
 inline constexpr std::string_view kDefaultUpdateUrl =
     "https://github.com/AnEntrypoint/gm/releases/download/latest/manifest.json";
-inline constexpr std::chrono::hours kUpdateInterval{6};
+inline constexpr std::chrono::minutes kUpdateInterval{15};
 
 struct ManifestAsset {
     std::string file;
     std::string sha256;
+    std::string version;
     std::uintmax_t size = 0;
 };
 
@@ -54,7 +55,7 @@ struct UpdatePolicy {
     std::string url = std::string(kDefaultUpdateUrl);
     std::filesystem::path install_dir;
     std::string current_version = std::string(kBuildVersion);
-    std::chrono::hours interval = kUpdateInterval;
+    std::chrono::minutes interval = kUpdateInterval;
     bool enabled = true;
     bool force = false;
     ManifestFetcher fetch = fetch_manifest_over_http;
@@ -83,12 +84,11 @@ std::string target_name();
 std::string executable_name();
 std::string core_executable_name();
 deoxidene::Result<Manifest, std::string> parse_manifest(std::string_view text);
-bool is_newer(const Manifest& manifest, std::string_view current_version);
 UpdatePolicy policy_from_environment(const std::filesystem::path& install_dir);
 UpdateResult update_now(const UpdatePolicy& policy);
 UpdateState read_update_state(const std::filesystem::path& install_dir);
 bool write_update_state(const std::filesystem::path& install_dir, const UpdateState& state);
-bool checked_recently(const UpdateState& state, std::int64_t now_ms, std::chrono::hours interval);
+bool checked_recently(const UpdateState& state, std::int64_t now_ms, std::chrono::minutes interval);
 std::chrono::milliseconds next_check_delay(const UpdatePolicy& policy);
 std::optional<std::string> etag_from_headers(std::string_view headers);
 bool acquire_update_lock(const std::filesystem::path& install_dir);
