@@ -9,7 +9,7 @@ import { connectReply, SERVER_NAME, SERVER_TITLE } from './connect.mjs';
 import { currentRunDir, isDirectory, loadTask, newRunId, openRun, ROOT, setSuccessor } from './run.mjs';
 import { flushAllLogs } from './log.mjs';
 import { clearPending, hasPending, offPendingAppended, onPendingAppended, takePending } from './pending.mjs';
-import { conflicts, createTools, loggedFor, OUTPUT_PAGE, DEFAULT_STUCK_MS, DEFAULT_MONITOR_MS, BODY_NOTICE_MS } from './tools.mjs';
+import { conflicts, createTools, headChars, loggedFor, OUTPUT_PAGE, DEFAULT_STUCK_MS, DEFAULT_MONITOR_MS, BODY_NOTICE_MS } from './tools.mjs';
 import { bumpGeneration } from './hot.mjs';
 import { RELOADABLE } from './hot-config.mjs';
 import { SEARCH_TOOLS } from './search.mjs';
@@ -141,7 +141,7 @@ const objectSchema = (properties, required = []) => ({ type: 'object', propertie
 const BASE_TOOLS = [
   { name: 'next_context', description: 'Begin a step. Returns rules, task, witness requirement, the events new since the last step in full, the older ones in compact form within two horizons, and prefixSha. pending lists the events that need you since your last step, each once, with an id. Delivery clears an event, so no later step or wait lists it again. Call it at the start of each step. query_log reaches every event. waitMs, when set, holds this call until an event is pending or that many milliseconds pass, at most 300000. child: true makes the call a read by a subagent on this connection: it takes no step, claims no pending event, and its reply has role child and the owning run. run, with child, names that owning run, and another run is refused. compactChildren: true summarizes child run_code and code-call generations into counts with a seq range and a gm.query_log note, while pending, parent-action, job, row and recovery events stay full; the default feed is unchanged. task, when set, replaces the run\'s task text; use it in the first step when a host cut the slash-command task to its first word. The first step may correct a one-word host task without owner:true; later task replacements need owner:true. A child context (child: true) refuses task: only the run owner sets the task.', inputSchema: objectSchema({ waitMs: number, child: { type: 'boolean' }, run: text, compactChildren: { type: 'boolean' }, task: text, owner: { type: 'boolean' } }) },
   { name: 'task_set', description: 'Replace or clear the run task after the first step. owner:true is required; child contexts cannot set the task. An empty string or null clears the task.', inputSchema: objectSchema({ task: nullableText, owner: { type: 'boolean' } }, ['task']) },
-  { name: 'read_file', description: 'Read a text file, inside or outside the workspace, one page of at most 20000 characters. Lines are the default unit: offset is a 0-based line index, limit a line count (default: as many whole lines as fit), and total (the file in lines) and next (the line index of the next page, null at the end) count lines. truncated is true when the page stops before the end, totalBytes is the file size in bytes, and hint names the read that gets the rest; a truncated read also has notice, a string that gives the bytes shown, the file size and that read; the output text holds only the page. A line longer than the page is cut to its first 20000 characters, with cutLine true, and next is the line after it. unit "chars" counts offset, limit (1 to 20000, default 20000), total and next in characters instead. A path that starts with skill:// reads a served skill file, the text resources/read returns, and a skill:// uri that no served skill has is an error that names it.', inputSchema: objectSchema({ path: text, offset: number, limit: number, unit: text }, ['path']) },
+  { name: 'read_file', description: 'Read a text file, inside or outside the workspace. With no offset or limit it returns the whole file when it is at most 1048576 bytes, and fails with the file size when it is larger. With offset or limit it returns one page of at most 20000 characters. Lines are the default unit: offset is a 0-based line index, limit a line count (default: as many whole lines as fit), and total (the file in lines) and next (the line index of the next page, null at the end) count lines. truncated is true when the page stops before the end, totalBytes is the file size in bytes, and hint names the read that gets the rest; a truncated read also has notice, a string that gives the bytes shown, the file size and that read; the output text holds only the page. A line longer than the page is cut to its first 20000 characters, with cutLine true, and next is the line after it. unit "chars" counts offset, limit (1 to 20000; with neither set, the whole file), total and next in characters instead. A path that starts with skill:// reads a served skill file, the text resources/read returns, and a skill:// uri that no served skill has is an error that names it.', inputSchema: objectSchema({ path: text, offset: number, limit: number, unit: text }, ['path']) },
   { name: 'write_file', description: 'Write a text file, inside or outside the workspace, creating parent directories. Replacing an existing file with content less than half its prior byte size adds shrunkByBytes, shrinkRatio and shrinkWarning to the result (never blocks the write); new files and normal rewrites are unchanged.', inputSchema: objectSchema({ path: text, content: text }, ['path', 'content']) },
   { name: 'edit_file', description: 'Replace old with new in a text file, inside or outside the workspace. old must occur once, unless replaceAll is true.', inputSchema: objectSchema({ path: text, old: text, new: text, replaceAll: { type: 'boolean' } }, ['path', 'old', 'new']) },
   { name: 'stat_file', description: 'Type, size and mtime of a path, inside or outside the workspace, as JSON.', inputSchema: objectSchema({ path: text }, ['path']) },
@@ -157,6 +157,11 @@ const BASE_TOOLS = [
 
 const SURFACES = ['tools', 'code'];
 const CODE_SURFACE = new Set(['next_context', 'run_code', 'finish']);
+const TASK_PAGE = 4000;
+const taskRestNotice = (text) => {
+  const shown = headChars(text, TASK_PAGE).length;
+  return `[gm: the task is ${text.length} characters; the first ${shown} are shown. Read the rest with gm.query_log({ kind: 'task', last: 1 }) for the task event's seq, then gm.query_log({ seq, field: 'text', offset: ${shown}, limit: 20000 }) and read on from next until next is null.]`;
+};
 function surfaceOf(leaves) {
   const TOOLS = [
     ...BASE_TOOLS,
@@ -609,7 +614,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
       stepsLeft: maxSteps - steps,
       maxSteps,
       rules,
-      task: task === '' ? null : task,
+      task: task === '' ? null : headChars(task, TASK_PAGE),
       prefixSha: prefixShaFor(rules),
       total: log.count(),
       ...(childTask === '' ? {} : { childTask }),
@@ -721,8 +726,9 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
       stepsLeft: maxSteps - step,
       maxSteps,
       rules,
-      task: task === '' ? null : task,
+      task: task === '' ? null : headChars(task, TASK_PAGE),
       ...(task === '' ? { taskNotice: 'No task yet. The gm skill prompt, with its task argument, gives the task of this run.' } : {}),
+      ...(task.length > TASK_PAGE ? { taskChars: task.length, taskTruncated: true, taskNotice: taskRestNotice(task) } : {}),
       witness: DEFAULT_WITNESS,
       prefixSha: prefixShaFor(rules),
       total: log.count(),
@@ -759,16 +765,18 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     if (running.length > 0 && args.stopBackground !== true) {
       return refuse('finish', args, `background run ${running.join(', ')} is still running; job_status watches it, and finish with stopBackground: true kills it`);
     }
-    const open = await tools.openRows();
-    const gapOnOpen = open.find((row) => (args.gaps ?? []).some((gap) => gap.split(/[^A-Za-z0-9-]+/).includes(row.id)));
+    const rows = await tools.openRows();
+    const gapOnOpen = rows.find((row) => (args.gaps ?? []).some((gap) => gap.split(/[^A-Za-z0-9-]+/).includes(row.id)));
     if (gapOnOpen !== undefined) {
       return refuse('finish', args, `gap names open row ${gapOnOpen.id}; a gap cannot stand in for an open row, so resolve it or, for a PRD, delete it`, rpcId);
     }
+    const added = new Set(log.eventsFrom(1).filter((event) => event.kind === 'row-added').map((event) => event.row));
+    const open = rows.filter((row) => added.has(row.id));
     if (open.length > 0) {
       const names = open.slice(0, 5).map((row) => `${row.id} ${row.title}`).join('; ');
       return refuse('finish', args, `${open.length} row(s) open: ${names}${open.length > 5 ? '; ...' : ''}. Resolve each with its witness, or delete a PRD you will not implement with prd_delete. A question for the owner stays open until the owner answers`, rpcId);
     }
-    const parked = (await tools.parkedRows()).filter((row) => !(args.witness.includes(row.id) && args.witness.includes(row.parkReason)));
+    const parked = (await tools.parkedRows()).filter((row) => added.has(row.id) && !(args.witness.includes(row.id) && args.witness.includes(row.parkReason)));
     if (parked.length > 0) {
       return refuse('finish', args, `parked row(s) need their id and reason in the witness: ${parked.map((row) => `${row.id} (${row.parkReason})`).join('; ')}`, rpcId);
     }
