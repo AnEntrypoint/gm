@@ -70,7 +70,7 @@ Setup registers only gm with the host, so the worker is the only thing that star
 - A background job and a foreground shell run in their own process group. A job kill (`job_stop`), a cancel of a foreground shell, a foreground timeout, the end of a run and an interrupt all end the group.
 - The server speaks protocol versions 2025-11-25 and 2025-06-18. An `initialize` that asks for another version is answered with 2025-11-25. Each tools/call result carries the run id in `_meta` under `com.anentrypoint.gmnew/run`, and the `traceparent`, `tracestate` and `baggage` of a call's `_meta` are copied into its action event.
 - A `notifications/cancelled` for a `run_shell` call kills its process group, and that call gets no answer. A cancel of any other call is logged as `cancel-ignored`, and the call runs on. A `run_shell` call whose `_meta` has a `progressToken` gets `notifications/progress` every 5 seconds, with the elapsed seconds.
-- The repository is pushed privately to `AnEntrypoint/gm`.
+- The repository is pushed publicly to `AnEntrypoint/gm`.
 
 ## Native build
 
