@@ -1595,6 +1595,17 @@ struct Server::State {
         return rows;
     }
 
+    std::set<std::string> rows_added_here() {
+        std::set<std::string> ids;
+        for (const Value& event : events()) {
+            if (string_of(event, "kind") != "row-added") continue;
+            if (const Value* row = event.find("row")) {
+                if (row->is_string()) ids.insert(row->as_string());
+            }
+        }
+        return ids;
+    }
+
     std::vector<Row> open_rows() {
         std::set<std::string> served;
         for (const VerbInfo& verb : verbs.list()) served.insert(verb.name);
@@ -2070,6 +2081,8 @@ struct Server::State {
                 }
             }
         }
+        const std::set<std::string> added = rows_added_here();
+        std::erase_if(open, [&](const Row& row) { return !added.contains(row.id); });
         if (!open.empty()) {
             std::string names;
             for (std::size_t i = 0; i < std::min(open.size(), kRowsNamed); ++i) {
@@ -2080,10 +2093,12 @@ struct Server::State {
                               ". Resolve each with its witness, or delete a PRD you will not implement with prd_delete. A "
                               "question for the owner stays open until the owner answers");
         }
-        for (const ParkedRow& row : parked_rows()) {
+        std::vector<ParkedRow> parked = parked_rows();
+        std::erase_if(parked, [&](const ParkedRow& row) { return !added.contains(row.id); });
+        for (const ParkedRow& row : parked) {
             if (witness->as_string().find(row.id) == std::string::npos || witness->as_string().find(row.reason) == std::string::npos) {
                 std::string names;
-                for (const ParkedRow& each : parked_rows()) names += (names.empty() ? "" : "; ") + each.id + " (" + each.reason + ")";
+                for (const ParkedRow& each : parked) names += (names.empty() ? "" : "; ") + each.id + " (" + each.reason + ")";
                 return refuse("finish", args, "parked row(s) need their id and reason in the witness: " + names, false);
             }
         }
