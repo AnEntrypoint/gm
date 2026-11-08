@@ -430,6 +430,7 @@ struct CoreVerbs::Impl {
         reply.set("ok", true);
         reply.set("output", text);
         reply.set("total", static_cast<std::uint64_t>(lines ? line_starts(text).size() : utf16_length(text)));
+        reply.set("offset", static_cast<std::uint64_t>(0));
         reply.set("next", nullptr);
         reply.set("truncated", false);
         reply.set("totalBytes", bytes);
