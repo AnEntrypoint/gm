@@ -189,6 +189,83 @@ deoxidene::Result<JSValue, std::string> make_gm(Engine& engine, const std::files
     return gm.take();
 }
 
+constexpr std::string_view require_bootstrap = R"JS((function (readText, root) {
+  const cache = new Map();
+  const dirOf = (path) => path.slice(0, path.lastIndexOf('/')) || '/';
+  const normal = (path) => {
+    const parts = [];
+    for (const part of path.split('/')) {
+      if (part === '' || part === '.') continue;
+      if (part === '..') parts.pop();
+      else parts.push(part);
+    }
+    return '/' + parts.join('/');
+  };
+  const exists = (path) => readText(path) !== null;
+  const asFile = (path) => [path, path + '.js', path + '.cjs', path + '.json', path + '/index.js', path + '/index.cjs', path + '/index.json'].find(exists);
+  const asPackage = (dir) => {
+    const manifest = readText(dir + '/package.json');
+    const main = manifest === null ? undefined : JSON.parse(manifest).main;
+    return (main !== undefined && asFile(normal(dir + '/' + main))) || asFile(dir);
+  };
+  const resolve = (spec, base) => {
+    if (spec.startsWith('/') || spec.startsWith('./') || spec.startsWith('../')) return asFile(normal(spec.startsWith('/') ? spec : base + '/' + spec));
+    for (let dir = base; ; dir = dirOf(dir)) {
+      const found = asPackage(normal(dir + '/node_modules/' + spec));
+      if (found) return found;
+      if (dir === '/') return undefined;
+    }
+  };
+  const load = (file) => {
+    if (cache.has(file)) return cache.get(file).exports;
+    const source = readText(file);
+    if (file.endsWith('.json')) {
+      const value = JSON.parse(source);
+      cache.set(file, { exports: value });
+      return value;
+    }
+    const module = { exports: {} };
+    cache.set(file, module);
+    const wrapper = (0, eval)('(function (exports, require, module, __filename, __dirname) {' + source + '\n})');
+    wrapper.call(module.exports, module.exports, requireFrom(dirOf(file)), module, file, dirOf(file));
+    return module.exports;
+  };
+  const requireFrom = (base) => (spec) => {
+    if (typeof spec !== 'string') throw new TypeError('require needs a string path');
+    const file = resolve(spec, base);
+    if (file === undefined) throw new Error(`Cannot find module '${spec}'`);
+    return load(file);
+  };
+  return requireFrom(root);
+}))JS";
+
+JSValue read_text_call(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv) {
+    if (argc < 1 || !JS_IsString(argv[0])) return JS_NULL;
+    size_t length = 0;
+    const char* text = JS_ToCStringLen(ctx, &length, argv[0]);
+    if (text == nullptr) return JS_EXCEPTION;
+    const std::string path(text, length);
+    JS_FreeCString(ctx, text);
+    std::error_code ec;
+    if (!fs::is_regular_file(path, ec)) return JS_NULL;
+    auto content = read_text(path);
+    if (!content) return JS_NULL;
+    return JS_NewStringLen(ctx, content->data(), content->size());
+}
+
+deoxidene::Result<JSValue, std::string> make_require(Engine& engine, const std::filesystem::path& project_root) {
+    JSContext* ctx = engine.ctx();
+    Scoped factory(ctx, JS_Eval(ctx, require_bootstrap.data(), require_bootstrap.size(), "<require>", JS_EVAL_TYPE_GLOBAL));
+    if (JS_IsException(factory.get())) return deoxidene::Err<std::string>(engine::take_exception_text(engine));
+    Scoped reader(ctx, JS_NewCFunction(ctx, read_text_call, "readText", 1));
+    std::string root = project_root.generic_string();
+    Scoped root_value(ctx, JS_NewStringLen(ctx, root.data(), root.size()));
+    JSValue factory_args[2] = {reader.get(), root_value.get()};
+    Scoped require(ctx, JS_Call(ctx, factory.get(), JS_UNDEFINED, 2, factory_args));
+    if (JS_IsException(require.get())) return deoxidene::Err<std::string>(engine::take_exception_text(engine));
+    return require.take();
+}
+
 bool is_quote(char c) { return c == '\'' || c == '"'; }
 
 bool is_space(char c) { return std::isspace(static_cast<unsigned char>(c)) != 0; }
@@ -296,7 +373,7 @@ deoxidene::Result<ModuleSplit, std::string> split_module_body(std::string_view b
 
 deoxidene::Result<JSValue, std::string> load_script_body(Engine& engine, std::string_view body) {
     JSContext* ctx = engine.ctx();
-    std::string source = "(async function body(gm) {\n";
+    std::string source = "(async function body(gm, require) {\n";
     source.append(body);
     source.append("\n})");
     JSValue function = JS_Eval(ctx, source.c_str(), source.size(), "<body>", JS_EVAL_TYPE_GLOBAL);
@@ -309,7 +386,7 @@ deoxidene::Result<JSValue, std::string> load_module_body(Engine& engine, std::st
     JSContext* ctx = engine.ctx();
     auto split = split_module_body(body, project_root);
     if (!split) return Fail("the body does not load: " + split.error());
-    const std::string source = split->imports + "\nexport default async function body(gm) {\n" + split->code + "\n}\n";
+    const std::string source = split->imports + "\nexport default async function body(gm, require) {\n" + split->code + "\n}\n";
     const std::size_t head = count_newlines(split->imports) + 2;
     Scoped compiled(ctx, JS_Eval(ctx, source.c_str(), source.size(), "<body>", JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY));
     if (JS_IsException(compiled.get())) return Fail(load_error(engine::take_exception_text(engine), body, head, split->removed_lines));
@@ -346,6 +423,9 @@ deoxidene::Result<json::Value, std::string> run_body(VerbTable& verbs, std::stri
     auto gm = make_gm(engine, project_root);
     if (!gm) return Fail(gm.error());
     Scoped gm_value(ctx, *gm);
+    auto require = make_require(engine, project_root);
+    if (!require) return Fail(require.error());
+    Scoped require_value(ctx, *require);
 
     const bool esm = format.empty() ? project_is_module(project_root) : format == "esm";
     if (!esm) {
@@ -356,8 +436,8 @@ deoxidene::Result<json::Value, std::string> run_body(VerbTable& verbs, std::stri
     if (!loaded) return Fail(loaded.error());
     Scoped function(ctx, *loaded);
 
-    JSValue call_args[1] = {gm_value.get()};
-    engine::Settled settled = engine::settle(engine, JS_Call(ctx, function.get(), JS_UNDEFINED, 1, call_args));
+    JSValue call_args[2] = {gm_value.get(), require_value.get()};
+    engine::Settled settled = engine::settle(engine, JS_Call(ctx, function.get(), JS_UNDEFINED, 2, call_args));
     Scoped value(ctx, settled.value);
     if (settled.outcome == engine::Outcome::Rejected) return Fail(engine::deadline_or(engine, engine::error_text(ctx, value.get())));
     if (settled.outcome == engine::Outcome::Pending) return Fail("the body stopped before it returned");
