@@ -92,6 +92,7 @@ constexpr std::size_t query_reply_chars = 20000;
 constexpr std::size_t query_window_events = 1000;
 constexpr std::size_t query_window_bytes = 4 * 1024 * 1024;
 constexpr std::size_t query_cap = 20000;
+constexpr std::size_t whole_file_cap = 1048576;
 constexpr std::chrono::milliseconds query_js_deadline{5000};
 constexpr std::array<std::string_view, 11> query_args = {"js", "kind", "fromMono", "toMono", "after", "last", "limit", "seq", "field", "offset", "unit"};
 
@@ -159,7 +160,7 @@ json::Value field_page(const json::Value& args, auto& log) {
 const std::vector<VerbInfo>& verb_table() {
     static const std::vector<VerbInfo> table = {
     {"task_set", "Replace or clear this run task after its first next_context. task is a string or null; empty string and null clear it. owner:true is required; child contexts and calls before the first next_context are refused.", R"json({"type":"object","properties":{"task":{"type":["string","null"]},"owner":{"type":"boolean"}},"required":["task","owner"]})json"},
-    {"read_file", "Read a text file, inside or outside the workspace, one page of at most 20000 characters. Lines are the default unit: offset is a 0-based line index, limit a line count (default: as many whole lines as fit), and total (the file in lines) and next (the line index of the next page, null at the end) count lines. truncated is true when the page stops before the end, totalBytes is the file size in bytes, and hint names the read that gets the rest; a truncated read also has notice, a string that gives the bytes shown, the file size and that read; the output text holds only the page. A line longer than the page is cut to its first 20000 characters, with cutLine true, and next is the line after it. unit \"chars\" counts offset, limit (1 to 20000, default 20000), total and next in characters instead. A path that starts with skill:// reads a served skill file, the text resources/read returns, and a skill:// uri that no served skill has is an error that names it.", R"json({"type":"object","properties":{"path":{"type":"string"},"offset":{"type":"number"},"limit":{"type":"number"},"unit":{"type":"string"}},"required":["path"]})json"},
+    {"read_file", "Read a text file, inside or outside the workspace. With no offset or limit it returns the whole file when it is at most 1048576 bytes, and fails with the file size when it is larger. With offset or limit it returns one page of at most 20000 characters. Lines are the default unit: offset is a 0-based line index, limit a line count (default: as many whole lines as fit), and total (the file in lines) and next (the line index of the next page, null at the end) count lines. truncated is true when the page stops before the end, totalBytes is the file size in bytes, and hint names the read that gets the rest; a truncated read also has notice, a string that gives the bytes shown, the file size and that read; the output text holds only the page. A line longer than the page is cut to its first 20000 characters, with cutLine true, and next is the line after it. unit \"chars\" counts offset, limit (1 to 20000; with neither set, the whole file), total and next in characters instead. A path that starts with skill:// reads a served skill file, the text resources/read returns, and a skill:// uri that no served skill has is an error that names it.", R"json({"type":"object","properties":{"path":{"type":"string"},"offset":{"type":"number"},"limit":{"type":"number"},"unit":{"type":"string"}},"required":["path"]})json"},
     {"write_file", "Write a text file, inside or outside the workspace, creating parent directories. Replacing an existing file with content less than half its prior byte size adds shrunkByBytes, shrinkRatio and shrinkWarning to the result (never blocks the write); new files and normal rewrites are unchanged.", R"json({"type":"object","properties":{"path":{"type":"string"},"content":{"type":"string"}},"required":["path","content"]})json"},
     {"edit_file", "Replace old with new in a text file, inside or outside the workspace. old must occur once, unless replaceAll is true.", R"json({"type":"object","properties":{"path":{"type":"string"},"old":{"type":"string"},"new":{"type":"string"},"replaceAll":{"type":"boolean"}},"required":["path","old","new"]})json"},
     {"stat_file", "Type, size and mtime of a path, inside or outside the workspace, as JSON.", R"json({"type":"object","properties":{"path":{"type":"string"}},"required":["path"]})json"},
@@ -381,6 +382,7 @@ struct CoreVerbs::Impl {
         if (auto problem = char_args_problem(args)) return failure(*problem);
         auto file = core::read_text(path, "stat");
         if (!file.ok) return failure(file.error);
+        if (present(args, "offset") == nullptr && present(args, "limit") == nullptr) return whole_file_reply(file.text, path, false);
         json::Value reply = char_page(file.text, args, file_size_of(path));
         if (const json::Value* next = reply.find("next")) reply.set("nextOffset", *next);
         reply.set("digest", digest_hex(file.text));
@@ -418,11 +420,30 @@ struct CoreVerbs::Impl {
         return std::nullopt;
     }
 
+    json::Value whole_file_reply(const std::string& text, const std::filesystem::path& path, bool lines) {
+        const std::uint64_t bytes = file_size_of(path);
+        if (bytes > whole_file_cap) {
+            return failure("file is " + std::to_string(bytes) + " bytes, over the " + std::to_string(whole_file_cap) +
+                           "-byte whole-file read; page it with offset and limit, and read on from next until next is null");
+        }
+        json::Value reply;
+        reply.set("ok", true);
+        reply.set("output", text);
+        reply.set("total", static_cast<std::uint64_t>(lines ? line_starts(text).size() : utf16_length(text)));
+        reply.set("next", nullptr);
+        reply.set("truncated", false);
+        reply.set("totalBytes", bytes);
+        reply.set("digest", digest_hex(text));
+        if (lines) reply.set("unit", "lines");
+        return reply;
+    }
+
     json::Value read_line_page(const std::filesystem::path& path, const json::Value& args) {
         if (is_binary(path)) return refusal("binary file; read_file serves text only");
         if (auto problem = line_args_problem(args)) return failure(*problem);
         auto file = core::read_text(path, "stat");
         if (!file.ok) return failure(file.error);
+        if (present(args, "offset") == nullptr && present(args, "limit") == nullptr) return whole_file_reply(file.text, path, true);
         json::Value reply = line_page(file.text, args, file_size_of(path));
         if (const json::Value* next = reply.find("next")) reply.set("nextOffset", *next);
         reply.set("digest", digest_hex(file.text));
