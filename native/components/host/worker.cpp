@@ -2,6 +2,7 @@
 #include <mutex>
 
 #include "gm/core_verbs.hpp"
+#include "gm/host/browser_scope.hpp"
 #include "gm/host/child.hpp"
 #include "gm/host/composed_verbs.hpp"
 #include "gm/host/options.hpp"
@@ -139,7 +140,8 @@ int run_worker(const HostArgs& args) {
     mcpclient::McpVerbs mcp_verbs(std::move(mcp_options));
     auto all = ComposedVerbs::compose({native->get(), &mcp_verbs, &leaves});
     if (!all) return fail(all.error());
-    GatedVerbs served(mcp_verbs, boot_events, **all);
+    BrowserScope browser(**all);
+    GatedVerbs served(mcp_verbs, boot_events, browser);
 
     mcp::ServerOptions options;
     options.workspace = workspace;
