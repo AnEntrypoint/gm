@@ -349,6 +349,7 @@ Value code_tools(const VerbTable& verbs) {
                                        .set("maxSteps", num_schema())
                                        .set("total", num_schema())
                                        .set("prefixSha", str_schema())
+                                       .set("tabs", str_schema())
                                        .set("actionSeq", num_schema()),
                                    {"ok"});
     Value run_out = object_schema(object()
@@ -1905,11 +1906,24 @@ struct Server::State {
         return reply;
     }
 
+    std::string browser_tabs_text() {
+        Value view = verbs.call("browser_tabs", object());
+        const Value* text = view.find("text");
+        return text != nullptr && text->is_string() ? text->as_string() : std::string("tabs: unavailable");
+    }
+
+    Value close_browser_run() {
+        Value closed = verbs.call("browser_close_run", object());
+        append("browser-closed", closed);
+        return closed;
+    }
+
     Value next_context(const Value& args) {
         if (s().steps >= options.max_steps) {
             s().step_limited = true;
             s().ended = "max_steps";
             Value out = refuse("next_context", object(), step_limit_text());
+            close_browser_run();
             end_run("max_steps", Value(nullptr), std::nullopt);
             return out;
         }
@@ -1947,7 +1961,10 @@ struct Server::State {
                 s().run_started = true;
                 s().owner_seen = true;
                 s().step_calls = 0;
-                return context(s().steps, compact_children);
+                Value reply = context(s().steps, compact_children);
+                reply.set("tabs", browser_tabs_text());
+                append("context-reply", object().set("step", number_of(s().steps)).set("text", json::dump(reply)));
+                return reply;
             },
             [](const Value& r) {
                 Value d = object();
@@ -2107,7 +2124,10 @@ struct Server::State {
         s().ended = "finished";
         Value out = act(
             "finish", args,
-            [&](std::uint64_t) { return object().set("ok", true).set("finished", true).set("output", *witness); },
+            [&](std::uint64_t) {
+                Value browser = close_browser_run();
+                return object().set("ok", true).set("finished", true).set("output", *witness).set("browser", browser);
+            },
             [](const Value& r) { return r; });
         log_lint();
         end_run("finished", *out.find("output"), gaps ? std::optional<Value>(*gaps) : std::nullopt);
