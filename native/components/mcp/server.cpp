@@ -111,6 +111,7 @@ void add_cut_run(json::Value& reply, const std::string& text, std::size_t length
     reply.set("next", static_cast<double>(0));
 }
 constexpr std::size_t kTailCap = 2000;
+constexpr std::size_t kTaskPage = 4000;
 constexpr std::size_t kLoggedReplyChars = 1000;
 constexpr std::size_t kLogTailBytes = 65536;
 constexpr std::size_t kOpenList = 20;
@@ -1165,7 +1166,15 @@ struct Server::State {
         return rules;
     }
 
-    Value task_value() { return s().task.empty() ? Value(nullptr) : Value(s().task); }
+    std::string task_head() {
+        const std::string& task = s().task;
+        if (task.size() <= kTaskPage) return task;
+        std::size_t cut = kTaskPage;
+        while (cut > 0 && (static_cast<unsigned char>(task[cut]) & 0xC0) == 0x80) cut -= 1;
+        return task.substr(0, cut);
+    }
+
+    Value task_value() { return s().task.empty() ? Value(nullptr) : Value(task_head()); }
 
     Value task_set(const Value& args) {
         const Value* owner = args.find("owner");
@@ -1846,6 +1855,14 @@ struct Server::State {
                           .set("task", task_value());
         if (s().task.empty()) {
             reply.set("taskNotice", "No task yet. The gm skill prompt, with its task argument, gives the task of this run.");
+        }
+        if (s().task.size() > kTaskPage) {
+            const std::string head = task_head();
+            reply.set("taskChars", number_of(js_length(s().task)))
+                .set("taskTruncated", true)
+                .set("taskNotice", "[gm: the task is " + std::to_string(js_length(s().task)) + " characters; the first " + std::to_string(js_length(head)) +
+                                       " are shown. Read the rest with gm.query_log({ kind: 'task', last: 1 }) for the task event's seq, then gm.query_log({ seq, field: 'text', offset: " +
+                                       std::to_string(js_length(head)) + ", limit: 20000 }) and read on from next until next is null.]");
         }
         reply.set("witness", kDefaultWitness)
             .set("prefixSha", prefix_sha(rules, s().task, served_tools()))
