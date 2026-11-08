@@ -9,6 +9,17 @@ Flow rule. A multi-step change is built as one batch, all steps first, then witn
 
 The served tools are three: next_context, run_code and finish. All the work is done in run_code.
 
+This skill is not listed in the host Skill tool, so do not call it with the Skill tool. Read it with ReadMcpResourceTool (server gm, uri skill://gm/SKILL.md), or run the gm prompt (mcp__gm__gm).
+
+## Run modes
+
+A task is marked in its first line. The mark decides which steps run.
+
+- Phase A: gm does not run build, test, gate, witness or browser steps. Make the changes, commit each change locally as lanmower with no trailers, and do not push. For each change, add a line to docs/PENDING_VALIDATION.md with the file, the row or phase, and the witness it needs. Then finish with a witness that lists the commits and the pending lines.
+- Phase B: gm runs every witness recorded in docs/PENDING_VALIDATION.md for this peer, reading its output. It fixes what fails, runs the failing witnesses again, and pushes once every witness is green. The peer starts Phase B when its own Phase A is done, and does not wait on other peers.
+
+Phase A and Phase B are per peer. A peer's Phase B covers only its own pending lines.
+
 ## Workflow graph
 
 Before work that splits into independent units, spans more than one phase, or needs a claim checked, read `skill://gm/WORKFLOWS.md` with `gm.read_file({ path: 'skill://gm/WORKFLOWS.md' })` and follow it. It is served on demand: the rules below stay short, and the work order, graph shapes, gm verb mapping and witness counts are read only when a graph is needed. A single-file edit stays in one body. A tool result is summarised, so after a compaction re-read it before the next fan-out. At `stepsLeft` 0, finish the step's last `run_code` body, then call `finish` with a witness that names the work left; call `next_context` only after that to open a successor run. Calling `next_context` first ends the run without a witness, and a later `next_context` opens the successor run with the same task.
