@@ -3,7 +3,20 @@ import { spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
+import { once } from 'node:events';
 import readline from 'node:readline';
+
+const removeTree = async (path) => {
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      rmSync(path, { recursive: true, force: true });
+      return;
+    } catch (error) {
+      if (error?.code !== 'ENOTEMPTY' || attempt === 50) throw error;
+      await new Promise((done) => setTimeout(done, 100));
+    }
+  }
+};
 
 const binary = process.argv[2] ? resolve(process.argv[2]) : null;
 if (binary === null || !existsSync(binary)) {
@@ -100,8 +113,10 @@ try {
     console.log(`run-code-progress-check: ok (7 s foreground body gave ${own.length} progress notice(s); a 2000 ms budget backgrounded in ${short.elapsed} ms; a 30000 ms budget returned foreground)`);
   }
 } finally {
+  const exited = child.exitCode !== null || child.signalCode !== null ? Promise.resolve() : once(child, 'exit');
   child.kill();
-  rmSync(workspace, { recursive: true, force: true });
-  rmSync(configDir, { recursive: true, force: true });
+  await Promise.race([exited, new Promise((done) => setTimeout(done, 5000))]);
+  await removeTree(workspace);
+  await removeTree(configDir);
 }
 process.exit(process.exitCode ?? 0);
