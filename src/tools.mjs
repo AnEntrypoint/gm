@@ -20,6 +20,7 @@ const BOOT_LEAVES = { 'git.mjs': gitModule, 'rows.mjs': rowsModule, 'fetch.mjs':
 const READ_BUFFER_BYTES = 4096;
 const LIST_PAGE = 500;
 const READ_SYNC_LIMIT = 1024 * 1024;
+const WHOLE_FILE_CAP = 1024 * 1024;
 const BINARY_PROBE = 8000;
 let readBuffer = Buffer.allocUnsafe(READ_BUFFER_BYTES);
 async function readText(path) {
@@ -60,6 +61,15 @@ function isBinary(path) {
   } finally {
     closeSync(fd);
   }
+}
+
+async function wholeFileReply(path, lines, source = null) {
+  const bytes = source === null ? statSync(path).size : Buffer.byteLength(source);
+  if (bytes > WHOLE_FILE_CAP) return { ok: false, error: `file is ${bytes} bytes, over the ${WHOLE_FILE_CAP}-byte whole-file read; page it with offset and limit, and read on from next until next is null` };
+  const text = source ?? (await readText(path));
+  const reply = { ok: true, output: text, total: lines ? lineStarts(text).length : text.length, offset: 0, next: null, truncated: false, totalBytes: bytes, digest: createHash('sha256').update(text).digest('hex').slice(0, 12) };
+  if (lines) reply.unit = 'lines';
+  return reply;
 }
 
 export async function readCharPage(path, offset, limit, source = null) {
@@ -142,6 +152,7 @@ async function readServedSkill(args, serveSkill) {
   if (unit !== 'lines' && unit !== 'chars') return { ok: false, error: 'unit must be lines or chars' };
   const served = serveSkill(args.path);
   if (!served.ok) return served;
+  if (args.offset === undefined && args.limit === undefined) return wholeFileReply(args.path, unit === 'lines', served.output);
   if (unit === 'chars') {
     const page = await readCharPage(args.path, args.offset ?? 0, args.limit ?? OUTPUT_PAGE, served.output);
     return page.ok ? { unit, ...page } : page;
@@ -178,6 +189,7 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
       const unit = args.unit ?? 'lines';
       if (unit !== 'lines' && unit !== 'chars') return { ok: false, error: 'unit must be lines or chars' };
       if (isBinary(at.path)) return { ok: false, refused: true, error: 'refused: binary file; read_file serves text only' };
+      if (args.offset === undefined && args.limit === undefined) return wholeFileReply(at.path, unit === 'lines');
       if (unit === 'chars') return readCharPage(at.path, args.offset ?? 0, args.limit ?? OUTPUT_PAGE);
       return readLinePage(at.path, args.offset ?? 0, args.limit ?? Infinity);
     },
@@ -694,7 +706,12 @@ function clipped(event) {
   return shown;
 }
 
-function redactArtifact(text) {
+export function headChars(text, count) {
+  const cut = count < text.length && /[\uD800-\uDBFF]/.test(text[count - 1]) ? count - 1 : count;
+  return text.slice(0, cut);
+}
+
+export function redactArtifact(text) {
   return text
     .replace(/Bearer\s+[^\s]+/gi, 'Bearer [redacted]')
     .replace(/access_token=[^\s&]+/gi, 'access_token=[redacted]')
@@ -705,13 +722,12 @@ function redactArtifact(text) {
 
 export function storeArtifact(text, runDir, label) {
   const clean = redactArtifact(text);
-  const bounded = clean.length > 20000 ? clean.slice(0, 10000) + '\n[gm: middle omitted]\n' + clean.slice(-10000) : clean;
-  const digest = createHash('sha256').update(bounded).digest('hex').slice(0, 12);
+  const digest = createHash('sha256').update(clean).digest('hex').slice(0, 12);
   const dir = join(runDir, 'outputs');
   mkdirSync(dir, { recursive: true });
   const outputPath = join(dir, digest + '-' + label + '.txt');
-  writeFileSync(outputPath, bounded);
-  return { outputPath, totalChars: clean.length, digest, offset: 0, next: 0, truncated: true, notice: '[gm: full output at ' + outputPath + '; page with gm.read_file({ path: ' + JSON.stringify(outputPath) + ', unit: "chars", offset: 0, limit: 20000 })]' };
+  writeFileSync(outputPath, clean);
+  return { outputPath, totalChars: clean.length, digest, offset: 0, next: 0, truncated: true, notice: '[gm: full output at ' + outputPath + '; page with gm.read_file({ path: ' + JSON.stringify(outputPath) + ', unit: "chars", offset: 0, limit: 20000 }) and read on from next until next is null]' };
 }
 
 function condenseShell(result, raw, runDir) {
