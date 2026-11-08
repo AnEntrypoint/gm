@@ -54,10 +54,10 @@ gm is one long-horizon worker: an MCP server that runs a task as one append-only
 
     node native/tests/parity/run.mjs [--bin <gm>] [--ref /tmp/parity-ref] [--scratch <dir>] [--reply-timeout-ms N]
 
-- The default --bin is build/integ/native/components/host/gm. build/integ is a build directory that no preset names, so configure it yourself or pass --bin.
+- The default --bin is build/integ/native/components/host/gm. build/integ is a build directory that no preset names, so configure it yourself or pass --bin. Run `npm ci --ignore-scripts` in the repo first; the harness stops at startup and names that step when node_modules/acorn is missing.
 - It extracts HEAD's src, tools, skills, defaults and package.json with git archive into --ref (no clone), runs the same JSON-RPC scenarios through the Node reference and the native binary, and prints one row per scenario and a total: "N/M scenarios match, X cutover-expected, Y native-ahead, Z differ".
 - mcpPass (run.mjs) runs the MCP scenarios against fake-mcp.mjs: two servers, deny, ignore, a missing ${VAR}, a non-stdio entry. NATIVE_AHEAD lists the accepted differences, each with a path pattern.
-- Last witness (DESIGN.md, Native MCP client, 2026-11-04): 52 of 55 match, 3 cutover-expected, 0 differ. Changing Node to match native is a decision, not a fix.
+- Last witness (2026-11-08, run on the tree at the commit that adds this line, `node native/tests/parity/run.mjs --bin build/release/native/components/host/gm` after `npm ci --ignore-scripts`): 23 of 93 match, 47 native-ahead, 23 documented-gap, 0 differ. Changing Node to match native is a decision, not a fix.
 
 ## Runtime and MCP surface
 

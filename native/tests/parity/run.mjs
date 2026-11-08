@@ -656,6 +656,7 @@ return r.map(x => String(x.output ?? ''));`;
 
 async function main() {
   if (!existsSync(NATIVE_BIN)) throw new Error(`native binary not found: ${NATIVE_BIN} (build build/integ or pass --bin)`);
+  if (!existsSync(join(REPO, 'node_modules', 'acorn'))) throw new Error(`parity: the Node reference needs its dependencies; run "npm ci --ignore-scripts" in ${REPO} first`);
   const refHead = extractReference();
   const { spaces, head } = makeWorkspaces();
   const http = await startHttp();
