@@ -62,21 +62,21 @@ function isBinary(path) {
   }
 }
 
-export async function readCharPage(path, offset, limit) {
+export async function readCharPage(path, offset, limit, source = null) {
   if (!Number.isInteger(offset) || offset < 0) return { ok: false, error: 'offset must be a whole number of characters, zero or more' };
   if (!Number.isInteger(limit) || limit < 1 || limit > OUTPUT_PAGE) return { ok: false, error: `limit must be a whole number from 1 to ${OUTPUT_PAGE}` };
-  const text = await readText(path);
-  const size = statSync(path).size;
+  const text = source ?? (await readText(path));
+  const size = source === null ? statSync(path).size : Buffer.byteLength(source);
   const end = Math.min(offset + limit, text.length);
   const next = end < text.length ? end : null;
   return cutPage({ ok: true, output: text.slice(offset, end), total: text.length, offset, next }, size, next === null ? null : `pass unit: "chars", offset: ${next} and limit: ${OUTPUT_PAGE} to read the rest`);
 }
 
-export async function readLinePage(path, offset, limit) {
+export async function readLinePage(path, offset, limit, source = null) {
   if (!Number.isInteger(offset) || offset < 0) return { ok: false, error: 'offset must be a whole number of lines, zero or more' };
   if (limit !== Infinity && (!Number.isInteger(limit) || limit < 1)) return { ok: false, error: 'limit must be a whole number of lines, one or more' };
-  const text = await readText(path);
-  const size = statSync(path).size;
+  const text = source ?? (await readText(path));
+  const size = source === null ? statSync(path).size : Buffer.byteLength(source);
   const starts = lineStarts(text);
   const total = starts.length;
   if (offset >= total) return cutPage({ ok: true, unit: 'lines', output: '', total, offset, next: null }, size, null);
@@ -137,6 +137,18 @@ export const COMPACT = {
   },
 };
 
+async function readServedSkill(args, serveSkill) {
+  const unit = args.unit ?? 'lines';
+  if (unit !== 'lines' && unit !== 'chars') return { ok: false, error: 'unit must be lines or chars' };
+  const served = serveSkill(args.path);
+  if (!served.ok) return served;
+  if (unit === 'chars') {
+    const page = await readCharPage(args.path, args.offset ?? 0, args.limit ?? OUTPUT_PAGE, served.output);
+    return page.ok ? { unit, ...page } : page;
+  }
+  return readLinePage(args.path, args.offset ?? 0, args.limit ?? Infinity, served.output);
+}
+
 export function createTools({ workspace, runDir, log, background = true, jobLifetimeMs = DEFAULT_JOB_LIFETIME_MS, stuckMs = DEFAULT_STUCK_MS, monitorMs = DEFAULT_MONITOR_MS, noticeMs = BODY_NOTICE_MS, leaves = BOOT_LEAVES, serveSkill = unservedSkill }) {
   const root = resolve(workspace);
   const realRoot = realpathSync(root);
@@ -160,7 +172,7 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
 
   const handlers = {
     async read_file(args) {
-      if (SKILL_URI.test(args.path ?? '')) return serveSkill(args.path);
+      if (SKILL_URI.test(args.path ?? '')) return readServedSkill(args, serveSkill);
       const at = locate(args.path);
       if (at.refused) return refusal(at.refused);
       const unit = args.unit ?? 'lines';
@@ -265,7 +277,7 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
         signal: status.signal ?? null,
         output: text.slice(from, end),
         total: text.length,
-        truncated: from > 0 || end < text.length,
+        truncated: end < text.length,
         offset: from,
         next: end < text.length ? end : null,
         logPath: logPath ?? null,

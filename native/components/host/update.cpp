@@ -134,26 +134,6 @@ std::optional<std::string> unpack(const fs::path& archive, const fs::path& desti
     return std::nullopt;
 }
 
-std::optional<long long> build_number(std::string_view version) {
-    const std::size_t dash = version.rfind('-');
-    if (dash == std::string_view::npos || dash + 1 >= version.size() || version.size() - dash - 1 > 15) return std::nullopt;
-    const std::string_view digits = version.substr(dash + 1);
-    if (!std::all_of(digits.begin(), digits.end(), [](unsigned char c) { return std::isdigit(c); })) return std::nullopt;
-    return std::stoll(std::string(digits));
-}
-
-std::string_view commit_prefix(std::string_view version) {
-    const std::size_t dash = version.rfind('-');
-    return dash == std::string_view::npos ? version : version.substr(0, dash);
-}
-
-bool newer_build(std::string_view offered, std::string_view current_version) {
-    const auto offered_build = build_number(offered);
-    if (!offered_build) return false;
-    const auto have = build_number(current_version);
-    return !have || *offered_build > *have;
-}
-
 std::optional<std::string> move_recorded(const fs::path& from, const fs::path& to, std::vector<Rename>& done) {
     std::error_code ec;
     fs::rename(from, to, ec);

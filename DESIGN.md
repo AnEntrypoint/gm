@@ -1506,4 +1506,35 @@ Decision: no read_file change. `tools/check-read-truncation.mjs` read the native
 
 Witness: `node tools/check-build.mjs build/release` gave "conformance: 83 passed, 0 failed of 83 checks in 24 scenarios" and "check-build: gm stamp 5492923-dev". Parity: "23/93 scenarios match, 0 cutover-expected, 47 native-ahead, 23 documented-gap, 0 differ", the same match and differ counts as the baseline.
 
-Open, not changed: `job_status` (src/tools.mjs, native job.cpp) and `query_log` field pages (native verbs.cpp field_page, quickjs query.cpp) set `truncated` true when the page starts after 0, even when nothing remains after the slice. The Node `read_file` skill:// path (src/tools.mjs, serveSkill) ignores offset, limit and unit and returns the whole file with no `truncated`; this is from reading the source, not run.
+Fixed after this check, one section each below. Before lines were read on the installed build 5492923-262; after lines on a native build of c894b4c plus these changes, and on the Node tree.
+
+## job_status truncated only while content remains (2026-11-08)
+
+Job of 30000 characters, `gm.job_status({ job, offset })`:
+- before, native: offset 20000 `{"ok":true,"state":"exited","total":30000,"offset":20000,"next":null,"truncated":true,"outLen":10000}`; offset 30000 `{"ok":true,"state":"exited","total":30000,"offset":30000,"next":null,"truncated":true,"outLen":0}`. Node: offset 20000 and 30000 both `truncated` true.
+- after, native and Node: offset 20000 `"offset":20000,"next":null,"truncated":false,"outLen":10000`; offset 30000 `"offset":30000,"next":null,"truncated":false,"outLen":0`.
+- Fix: `truncated` is `end < length` in src/tools.mjs:280 and native/components/verbs/job.cpp:524.
+- Judgment call: a default tail read (no offset, output over 20000 characters) now reports `truncated:false` with `offset` above 0. The omitted head is before the slice, not after it; read from `offset:0` to get it.
+
+## query_log field pages truncated only while content remains (2026-11-08)
+
+`gm.query_log({ seq: 904, field: "tool", offset })` on the 10-character field "job_status":
+- before, native: offset 6 `{"ok":true,"output":"atus","total":10,"next":null,"truncated":true}`; offset 10 `{"ok":true,"output":"","total":10,"next":null,"truncated":true}`.
+- after, native: the same two calls return `"truncated":false` with `next` null.
+- Fix: native/components/verbs/verbs.cpp:148 (field_page) and native/components/quickjs/query.cpp:21 (the GM_FIELD_PAGE branch). The Node queryField (src/tools.mjs, `truncated: next !== null`) was already right.
+- Not fixed, found while testing: native field_page throws when offset is past the field end (`basic_string::substr: __pos (which is 50) > this->size() (which is 10)`); the verb returns it as ok:false.
+
+## Node skill:// read honours offset, limit and unit (2026-11-08)
+
+`gm.read_file({ path: "skill://gm/SKILL.md", offset: 2, limit: 3 })` on a 12-line served text:
+- before, Node: `{"ok":true,"output":"line 0\nline 1\n...line 11\n","uri":"skill://gm/SKILL.md","mimeType":"text/markdown"}`, the whole text and no paging fields.
+- after, Node: `{"ok":true,"unit":"lines","output":"line 2\nline 3\nline 4\n","total":12,"offset":2,"next":5,"truncated":true,"totalBytes":86,"hint":"pass offset: 5 and limit: 7 to read the rest","notice":"truncated at 21 of 86 bytes; pass offset: 5 and limit: 7 to read the rest","nextOffset":5,"digest":"4dbf95dac7b2"}`. Offset 10 limit 5 returns the last two lines with `truncated:false`, `next:null`. `unit:"chars"` pages by characters. `unit:"bytes"` is refused with `unit must be lines or chars`.
+- before, native, installed build: `gm.read_file({ path: "skill://gm/SKILL.md", offset: 5, limit: 3 })` gave `"unit":"lines",...,"total":149,"offset":5,"next":8,"truncated":true,"totalBytes":18713,"hint":...,"notice":...`, with no `nextOffset` and no `digest`; a `unit:"chars"` read had no `unit` field.
+- after, native: the same call adds `"nextOffset":8,"digest":"d51255f82df04019"`. A chars read adds `"unit":"chars"`, `nextOffset` and `digest`. Offset 148 limit 5 returns the last line with `truncated:false`, `next:null`.
+- Fix: src/tools.mjs:140 (readServedSkill, new), :175 (read_file routes skill:// there), :65 and :75 (readCharPage and readLinePage take the served text as `source`); native/components/verbs/verbs.cpp:353 (the served branch of read_file, which now also checks offset and limit, as file reads do).
+- The Node skill reply drops `uri` and `mimeType`; the native reply never had them.
+
+## update.cpp helpers removed (2026-11-08)
+
+native/components/host/update.cpp: `commit_prefix` and `newer_build` had no callers (grep found only their definitions). `build_number` was used only by `newer_build`, so it went too. The release build after the change exits 0 with no warning lines.
+

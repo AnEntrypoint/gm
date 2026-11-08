@@ -145,7 +145,7 @@ json::Value field_page(const json::Value& args, auto& log) {
     if (event == nullptr) return failure("no event at seq " + std::to_string(wanted));
     std::string text = field_text(*event, field->as_string());
     std::size_t end = std::min(offset + width, text.size());
-    bool truncated = offset > 0 || end < text.size();
+    bool truncated = end < text.size();
     json::Value reply;
     reply.set("ok", true);
     reply.set("output", text.substr(offset, end - offset));
@@ -350,7 +350,15 @@ struct CoreVerbs::Impl {
             std::string uri = path_value->as_string();
             auto text = options.serve_skill ? options.serve_skill(uri) : std::nullopt;
             if (!text) return failure("no served skill file has the uri " + uri);
-            return unit == "chars" ? char_page(*text, args, text->size()) : line_page(*text, args, text->size());
+            if (auto problem = unit == "chars" ? char_args_problem(args) : line_args_problem(args)) return failure(*problem);
+            json::Value page = unit == "chars" ? char_page(*text, args, text->size()) : line_page(*text, args, text->size());
+            if (unit == "chars") page.set("unit", "chars");
+            if (const json::Value* next = page.find("next")) {
+                const json::Value next_offset = *next;
+                page.set("nextOffset", next_offset);
+            }
+            page.set("digest", digest_hex(*text));
+            return page;
         }
         return unit == "chars" ? read_char_page(*at, args) : read_line_page(*at, args);
     }

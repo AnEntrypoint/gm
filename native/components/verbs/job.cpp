@@ -521,7 +521,7 @@ json::Value JobTable::status(const json::Value& args) {
     std::size_t end = std::min(from + output_page, length);
     reply.set("output", utf16_slice(text, from, end));
     reply.set("total", static_cast<std::uint64_t>(length));
-    reply.set("truncated", from > 0 || end < length);
+    reply.set("truncated", end < length);
     reply.set("offset", static_cast<std::uint64_t>(from));
     reply.set("next", end < length ? json::Value(static_cast<std::uint64_t>(end)) : json::Value(nullptr));
     reply.set("logPath", has_log_path ? json::Value(log_path) : json::Value(nullptr));
