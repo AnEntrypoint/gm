@@ -41,6 +41,7 @@ export function session(workspace, program) {
 export function initialize(s) {
   s.rpc('initialize', { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'gm-check', version: '1' } });
   s.notify('notifications/initialized');
+  s.rpc('resources/read', { uri: 'skill://gm/SKILL.md' });
 }
 
 export function value(replies, id) {

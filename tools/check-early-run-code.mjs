@@ -66,6 +66,7 @@ const expect = (condition, text) => {
 try {
   await rpc('initialize', { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'gm-early-run-code-check', version: '1' } });
   child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' })}\n`);
+  await rpc('resources/read', { uri: 'skill://gm/SKILL.md' });
 
   const started = Date.now();
   const reply = await Promise.race([

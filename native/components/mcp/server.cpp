@@ -44,6 +44,7 @@ constexpr const char* kLogMeta = "com.anentrypoint.gmnew/log";
 constexpr const char* kServerName = "gm";
 constexpr const char* kServerTitle = "gm run worker";
 constexpr const char* kGmSkillUri = "skill://gm/SKILL.md";
+constexpr const char* kSkillReadRefusal = "run_code refused: read skill://gm/SKILL.md first in this connection. Call resources/read with {\"uri\":\"skill://gm/SKILL.md\"} (ReadMcpResourceTool with server gm and that uri), then call run_code again.";
 constexpr std::size_t kReplyMemory = 256;
 constexpr std::size_t kOutputCap = 20000;
 constexpr std::size_t kOutputPage = 20000;
@@ -650,6 +651,7 @@ struct Server::State {
     std::thread subscription_watch;
     std::map<std::string, std::string> file_subscriptions;
     bool monitor_running = false;
+    bool gm_skill_read = false;
     std::mutex monitor_mutex;
     std::condition_variable monitor_wake;
     bool shutting_down = false;
@@ -2285,6 +2287,10 @@ struct Server::State {
     }
 
     Value run_code(const Value& args);
+    Value skill_read_refused() {
+        append("refusal", object().set("tool", "run_code").set("stage", "skill-read").set("error", kSkillReadRefusal));
+        return object().set("ok", false).set("error", kSkillReadRefusal);
+    }
 
     Value invoke(const std::string& name, const Value& args) {
         bool child = name == "next_context" && args.find("child") && args.find("child")->is_bool() && args.find("child")->as_bool();
@@ -2388,7 +2394,7 @@ struct Server::State {
             const Value* token = meta != nullptr ? meta->find("progressToken") : nullptr;
             if (token != nullptr && (token->is_string() || token->is_number())) ticker.emplace(*this, *token);
         }
-        Value out = invoke(name, args);
+        Value out = name == "run_code" && !gm_skill_read ? skill_read_refused() : invoke(name, args);
         ticker.reset();
         std::optional<std::uint64_t> seq;
         {
@@ -2547,7 +2553,10 @@ struct Server::State {
                                    .set("skill", skill.name)
                                    .set("uri", file.uri)
                                    .set("cleared", is_gm ? open_rule_numbers() : array()));
-        if (is_gm) clear_rules();
+        if (is_gm) {
+            clear_rules();
+            gm_skill_read = true;
+        }
         return object().set("uri", file.uri).set("mimeType", file.mime_type).set("text", file.bytes);
     }
 

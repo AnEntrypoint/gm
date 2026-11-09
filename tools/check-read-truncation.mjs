@@ -90,6 +90,7 @@ if (binary === null || !existsSync(binary)) {
   try {
     await rpc('initialize', { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'read-truncation-check', version: '1' } });
     child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' })}\n`);
+    await rpc('resources/read', { uri: 'skill://gm/SKILL.md' });
     await rpc('tools/call', { name: 'next_context', arguments: { task: 'read truncation check' } });
     const probe = (path, args) => `const r = await gm.read_file({ path: '${path}'${args} }); return { truncated: r.truncated, totalBytes: r.totalBytes, notice: r.notice, output: String(r.output).slice(-400) };`;
     const bigWhole = await nativeRead(rpc, probe('big.txt', ''));

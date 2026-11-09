@@ -49,6 +49,7 @@ const rpc = (method, params) => {
 try {
   await rpc('initialize', { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'caller-check', version: '1' } });
   child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' })}\n`);
+  await rpc('resources/read', { uri: 'skill://gm/SKILL.md' });
   await rpc('tools/call', { name: 'next_context', arguments: { task: 'caller check' } });
   await rpc('tools/call', { name: 'run_code', arguments: { body: "return await gm.write_file({ path: 'probe.txt', content: 'x' });" } });
   const runs = join(workspace, 'runs');

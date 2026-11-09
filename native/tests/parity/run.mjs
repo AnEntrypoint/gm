@@ -150,6 +150,7 @@ function scenarios({ head, url }) {
   return [
     ['initialize', { method: 'initialize', params: { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'parity', version: '1' } } }],
     ['initialized', { method: 'notifications/initialized', notify: true }],
+    ['skill read', { method: 'resources/read', params: { uri: 'skill://gm/SKILL.md' } }],
     ['tools/list', { method: 'tools/list', params: {} }],
     ['next_context', call('next_context', {})],
     ['resources/read missing', { method: 'resources/read', params: { uri: 'skill://gm/NOPE.md' } }],
@@ -469,6 +470,7 @@ function mcpScenarios() {
   return [
     ['initialize', { method: 'initialize', params: { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'parity', version: '1' } } }],
     ['initialized', { method: 'notifications/initialized', notify: true }],
+    ['skill read', { method: 'resources/read', params: { uri: 'skill://gm/SKILL.md' } }],
     ['tools/list', { method: 'tools/list', params: {} }],
     ['next_context', call('next_context', {})],
     ['mcp echo', code("return await gm.fake_echo({ text: 'hello mcp', n: 2 });")],
@@ -578,6 +580,7 @@ async function dotenvPass() {
   const script = [
     ['initialize', { method: 'initialize', params: { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'dotenv', version: '1' } } }],
     ['initialized', { method: 'notifications/initialized', notify: true }],
+    ['skill read', { method: 'resources/read', params: { uri: 'skill://gm/SKILL.md' } }],
     ['next_context', call('next_context', {})],
     ['grep .env', code(`return await gm.grep({ pattern: '${DOTENV_KEY}' });`)],
     ['grep .env.local', code(`return await gm.grep({ pattern: '${DOTENV_LOCAL_KEY}' });`)],
@@ -624,6 +627,7 @@ return r.map(x => String(x.output ?? ''));`;
   const script = [
     ['initialize', { method: 'initialize', params: { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'alternation', version: '1' } } }],
     ['initialized', { method: 'notifications/initialized', notify: true }],
+    ['skill read', { method: 'resources/read', params: { uri: 'skill://gm/SKILL.md' } }],
     ['next_context', call('next_context', {})],
     ['alternation terms', call('run_code', { body })],
   ];

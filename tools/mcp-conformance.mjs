@@ -105,6 +105,7 @@ class Client {
     });
     this.initResult = init.result ?? null;
     await this.notify('notifications/initialized');
+    await this.rpc('resources/read', { uri: 'skill://gm/SKILL.md' });
   }
 
   async close() {

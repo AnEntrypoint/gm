@@ -68,6 +68,7 @@ async function arm(label, command, args) {
   try {
     await server.rpc('initialize', { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'startup-check', version: '1' } });
     server.child.stdin.write(JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' }) + '\n');
+    await server.rpc('resources/read', { uri: 'skill://gm/SKILL.md' });
     await server.rpc('tools/call', { name: 'next_context', arguments: { task: 'startup attempts check', owner: true } });
     const ran = await server.rpc('tools/call', { name: 'run_code', arguments: { body: 'return await gm.query_log({ kind: "mcp-server" });' } });
     const events = eventsOf(ran);

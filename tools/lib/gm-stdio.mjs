@@ -42,6 +42,7 @@ export async function openServer(binary, { workspace = withoutPlaywriter(mkdtemp
     };
     await rpc('initialize', { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'gm-stdio', version: '1' } });
     child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' })}\n`);
+    await rpc('resources/read', { uri: 'skill://gm/SKILL.md' });
     const tool = async (name, args) => {
         const reply = await rpc('tools/call', { name, arguments: args });
         return JSON.parse(reply.result.content[0].text);

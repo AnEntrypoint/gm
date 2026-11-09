@@ -80,6 +80,7 @@ if (binary !== null && existsSync(binary)) {
   try {
     await rpc('initialize', { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'search-root-check', version: '1' } });
     child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' })}\n`);
+    await rpc('resources/read', { uri: 'skill://gm/SKILL.md' });
     await rpc('tools/call', { name: 'next_context', arguments: { task: 'search root check' } });
     const reply = await rpc('tools/call', { name: 'run_code', arguments: { body: `return await gm.grep({ pattern: '${TOKEN}', scope: 'all', limit: 20 });` } });
     const parsed = JSON.parse(reply.result?.content?.[0]?.text ?? 'null');

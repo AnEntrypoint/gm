@@ -43,6 +43,7 @@ async function session(label) {
   try {
     const init = await rpc('initialize', { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'reconnect-check', version: '1' } });
     child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' })}\n`);
+    await rpc('resources/read', { uri: 'skill://gm/SKILL.md' });
     const list = await rpc('tools/list', {});
     const tools = list.result?.tools?.map((tool) => tool.name) ?? [];
     for (const name of EXPECTED_TOOLS) {

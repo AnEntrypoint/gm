@@ -121,6 +121,18 @@ When not to bundle: a second run_code body is right when the next action needs a
 
 A file `gm.write_file`, `gm.edit_file` or `gm.run_shell` wrote in this run is untracked: `gm.grep` it by `path` with `scope: 'all'`. The default `tracked` scope skips untracked files, and `gm.search` reads git-tracked files only.
 
+## Validation
+
+First action. The first tool call of every session is a read of skill://gm/SKILL.md, before any other work: ReadMcpResourceTool (server gm, uri skill://gm/SKILL.md), or resources/read with {"uri":"skill://gm/SKILL.md"}. The server enforces it: run_code refuses until that read has happened on the connection, and the refusal names the exact read call. The read is per connection, so a new connection reads again.
+
+Order of work:
+
+1. Debugging and live troubleshooting come before tests. Reproduce the one failing path, read its output, fix it. Do not write or run a test to find out what is wrong.
+2. Unit tests are not part of the iteration loop. Never run the full suite, npm test, cargo test or any other test runner between edits. Tests run once per push, and only the targeted witnesses listed in docs/PENDING_VALIDATION.md.
+3. Iterate with HMR or a dev server left running, and debug live: playwriter for browser state, a one-off script for logic. Reload rather than rebuild wherever HMR works. Start a dev server only when needed, and stop it by its own PID.
+4. Before adding any check, ask whether a live probe or a one-off script answers the question faster. Keep a check only when it guards a regression a live probe cannot cover, and record why in docs/PENDING_VALIDATION.md.
+5. Stop processes only by PID: read the PID with `pgrep -f` or `ps`, then `kill <pid>`. Never `pkill`, `killall` or `pkill -0`.
+
 ## Memory rules
 
 These four rules say what a run keeps and where.

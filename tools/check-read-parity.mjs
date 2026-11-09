@@ -111,6 +111,7 @@ const probeBody = (args) => `const r = await gm.read_file({ path: 'fixed.txt'${a
 try {
   await rpc('initialize', { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'gm-read-parity-check', version: '1' } });
   child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' })}\n`);
+  await rpc('resources/read', { uri: 'skill://gm/SKILL.md' });
 
   for (const [label, args] of Object.entries(PROBES)) {
     const reply = await Promise.race([

@@ -61,6 +61,7 @@ function session(label, command, args) {
   const start = async () => {
     await rpc('initialize', { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'console-check', version: '1' } });
     child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' })}\n`);
+    await rpc('resources/read', { uri: 'skill://gm/SKILL.md' });
     await rpc('tools/call', { name: 'next_context', arguments: { task: 'console check' } });
   };
   const stop = async () => {

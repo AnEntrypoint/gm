@@ -54,6 +54,7 @@ const parsedOf = (reply) => JSON.parse(reply.result?.content?.[0]?.text ?? 'null
 try {
   await rpc('initialize', { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'inflight-check', version: '1' } });
   child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' })}\n`);
+  await rpc('resources/read', { uri: 'skill://gm/SKILL.md' });
   await rpc('tools/call', { name: 'next_context', arguments: { task: 'inflight check' } });
   const replies = await Promise.all(Array.from({ length: CAP + 1 }, () => run(busy)));
   const bodies = replies.map((reply, index) => {

@@ -83,6 +83,7 @@ let browserPhase = 'skipped: playwriter_execute is not served on this engine';
 try {
   await rpc('initialize', { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'gm-browser-scope-check', version: '1' } }, CALL_MS);
   child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' })}\n`);
+  await rpc('resources/read', { uri: 'skill://gm/SKILL.md' });
 
   const first = await toolReply('next_context', {});
   expect(first.ok === true, `next_context did not start: ${JSON.stringify(first).slice(0, 200)}`);

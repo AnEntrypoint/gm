@@ -91,6 +91,7 @@ const expect = (condition, text) => {
 try {
   await rpc('initialize', { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'gm-job-bounds-check', version: '1' } });
   child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' })}\n`);
+  await rpc('resources/read', { uri: 'skill://gm/SKILL.md' });
   await rpc('tools/call', { name: 'next_context', arguments: {} });
 
   const [byTimeout, byLifetime, exited] = await Promise.all([

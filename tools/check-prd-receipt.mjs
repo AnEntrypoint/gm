@@ -52,6 +52,7 @@ async function arm(label, command, args, body, check) {
   try {
     await server.rpc('initialize', { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'prd-check', version: '1' } });
     server.child.stdin.write(JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' }) + '\n');
+    await server.rpc('resources/read', { uri: 'skill://gm/SKILL.md' });
     await server.rpc('tools/call', { name: 'next_context', arguments: { task: 'prd check' } });
     const result = await call(server, body);
     check(label, result);

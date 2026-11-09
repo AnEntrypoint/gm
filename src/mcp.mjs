@@ -160,6 +160,7 @@ const BASE_TOOLS = [
 
 const SURFACES = ['tools', 'code'];
 const CODE_SURFACE = new Set(['next_context', 'run_code', 'finish']);
+const SKILL_READ_REFUSAL = 'run_code refused: read skill://gm/SKILL.md first in this connection. Call resources/read with {"uri":"skill://gm/SKILL.md"} (ReadMcpResourceTool with server gm and that uri), then call run_code again.';
 const TASK_PAGE = 4000;
 const taskRestNotice = (text) => {
   const shown = headChars(text, TASK_PAGE).length;
@@ -273,6 +274,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
   }, Math.max(1000, Math.floor(hostIdleMs / 4)));
   idleTimer.unref();
   const rulesOpen = new Map();
+  let gmSkillRead = false;
   let runStarted = steps > 0;
   let childSeen = false;
   let childTask = '';
@@ -449,7 +451,10 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     if (found === null) return { ok: false, error: `no served skill file has the uri ${uri}` };
     const isGm = found.file.uri === GM_SKILL_URI;
     log.append('skill-loaded', { via, skill: found.skill.name, uri: found.file.uri, cleared: isGm ? [...rulesOpen.keys()] : [] });
-    if (isGm) clearRules();
+    if (isGm) {
+      clearRules();
+      gmSkillRead = true;
+    }
     return { ok: true, output: found.file.bytes.toString('utf8'), uri: found.file.uri, mimeType: found.file.mimeType };
   }
 
@@ -471,6 +476,10 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
       throw new RpcError(-32602, 'tools/call arguments must be an object');
     }
     if (!servedTools(surface).some((tool) => tool.name === name)) throw new RpcError(-32602, unknownToolText(name));
+    if (name === 'run_code' && !gmSkillRead) {
+      log.append('refusal', { tool: name, stage: 'skill-read', error: SKILL_READ_REFUSAL });
+      return toolResultOf(name, { ok: false, error: SKILL_READ_REFUSAL }, {});
+    }
     if (!runStarted && ended === null && name !== 'next_context' && name !== 'finish') noteRule(2, `${name} was called before the first next_context of the run`);
     const meta = params?._meta ?? {};
     const key = JSON.stringify(rpcId);
