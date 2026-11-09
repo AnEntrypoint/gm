@@ -251,3 +251,10 @@ Kept as-is: the Node job_start default of 60000 (row 38) was an owner choice in 
 | 56 | mcp log event kinds | `.count.context-reply` | JOURNAL: native journals each next_context reply body as a context-reply event; Node has none |
 
 Retired by: tasks/rewrite/PLAN.md Gates line and AGENTS.md owner decision 1 for all 56 rows.
+
+### Phase B results (2026-11-09, build stamp 251503b, code commit 251503b)
+
+- Conformance: `conformance: 83 passed, 0 failed of 83 checks in 24 scenarios`, `check-build: gm stamp 251503b-dev (251503b)`, exit 0.
+- Gate (tools/ship.sh, src/gate.mjs runGate): `{"gate":true,"failed":[]}`, `gate exit code: 0`.
+- Parity before the retirement: `22/93 scenarios match, 0 cutover-expected, 56 native-ahead, 15 documented-gap, 0 differ`.
+- Parity after the retirement (same tree, same harness): `22/93 scenarios match, 0 cutover-expected, 56 native-ahead, 15 documented-gap, 0 differ`. The counts do not change because no source changed and the harness classifies diffs, not retirement; the retirement is the 56-row table above.
