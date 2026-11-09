@@ -388,9 +388,18 @@ const SCENARIOS = [
     run: async (c, ok) => {
       const call = async (name, args) => (await c.rpc('tools/call', { name, arguments: args })).result?.structuredContent ?? {};
       let fiftieth = {};
-      for (let step = 1; step <= 50; step += 1) fiftieth = await call('next_context', {});
+      let fortyninth = {};
+      for (let step = 1; step <= 50; step += 1) {
+        fortyninth = fiftieth;
+        fiftieth = await call('next_context', {});
+      }
       ok('50 next_context calls reach stepsLeft 0', fiftieth.ok === true && fiftieth.step === 50 && fiftieth.stepsLeft === 0,
         short({ step: fiftieth.step, stepsLeft: fiftieth.stepsLeft }));
+      ok('the 50th next_context at stepsLeft 0 warns that the next next_context ends the run without a witness',
+        fiftieth.warning === 'stepsLeft is 0: the next next_context call ends this run without a witness. To close it with a witness, call finish now, while stepsLeft is 0.',
+        short(fiftieth.warning));
+      ok('the 49th next_context at stepsLeft 1 carries no warning', fortyninth.stepsLeft === 1 && fortyninth.warning === undefined,
+        short({ stepsLeft: fortyninth.stepsLeft, warning: fortyninth.warning }));
       const done = await call('finish', { witness: 'step budget handoff witness' });
       ok('finish with a witness succeeds at stepsLeft 0', done.ok === true, short(done));
       const successor = await call('next_context', {});

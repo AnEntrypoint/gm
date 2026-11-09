@@ -621,3 +621,13 @@ Defect found in Phase B: `tools/mcp-conformance.mjs` still asserted the pre-fede
 Parity on d7eca35 (`node native/tests/parity/run.mjs --bin build/release/native/components/host/gm`): `22/93 scenarios match, 0 cutover-expected, 56 native-ahead, 15 documented-gap, 0 differ`, PARITY_EXIT 0. Same counts as the 2ebce71 witness.
 
 Item 7 (Windows and macOS builds, V4 CRLF) stays open: it needs a Windows CI run of release.yml.
+
+## gm pass, Phase A (2026-11-09): next_context at stepsLeft 0 warns that the next call ends the run
+
+Ranked remaining work, with status: 1. Item 7 (Windows and macOS builds, V4 CRLF), open and blocked on a Windows CI run of release.yml. The deferred warning from the step-limit pass is taken now.
+
+Change, both trees, same text: a next_context reply whose stepsLeft is 0 carries `warning`: `stepsLeft is 0: the next next_context call ends this run without a witness. To close it with a witness, call finish now, while stepsLeft is 0.` The field is absent at every earlier step. src/mcp.mjs (STEP_ZERO_WARNING, context reply, next_context schema) and native/components/mcp/server.cpp (kStepZeroWarning, context reply, next_context schema).
+
+Conformance: tools/mcp-conformance.mjs, scenario "step budget handoff". Adds two checks: the 50th next_context at stepsLeft 0 carries the warning text, and the 49th at stepsLeft 1 carries no warning.
+
+Witness (Phase B): `/tmp/gm-defects/w6/wwarn.mjs` on both trees (--max-steps 3), printing FIRST, SECOND, THIRD and AFTER_ZERO; `/tmp/gm-defects/w6/wzero.mjs` on both trees, printing FINISH_AT_ZERO, which proves finish is still accepted at stepsLeft 0 after the warning.

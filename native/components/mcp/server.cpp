@@ -154,6 +154,9 @@ const std::string kDefaultWitness =
     "Finish only with a witness: one string that states the evidence (command output, file content or query result) "
     "showing the task is done.";
 
+const std::string kStepZeroWarning =
+    "stepsLeft is 0: the next next_context call ends this run without a witness. To close it with a witness, call finish now, while stepsLeft is 0.";
+
 const std::string kReplyText =
     "## Reply\n\nOne JSON object {\"tool\": \"...\", \"args\": {...}}, or a JSON array of them when the actions are "
     "independent. Nothing else.";
@@ -353,6 +356,7 @@ Value code_tools(const VerbTable& verbs) {
                                        .set("run", str_schema())
                                        .set("stepsLeft", num_schema())
                                        .set("maxSteps", num_schema())
+                                       .set("warning", str_schema())
                                        .set("total", num_schema())
                                        .set("prefixSha", str_schema())
                                        .set("tabs", str_schema())
@@ -1966,6 +1970,7 @@ struct Server::State {
                           .set("run", s().run_id)
                           .set("stepsLeft", options.max_steps - step)
                           .set("maxSteps", options.max_steps);
+        if (options.max_steps - step == 0) reply.set("warning", kStepZeroWarning);
         if (waiting) {
             reply.set("rulesPath", (s().run_dir / "rules.md").string());
         } else {

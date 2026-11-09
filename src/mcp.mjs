@@ -132,6 +132,7 @@ const USAGE = 'usage: node src/mcp.mjs --workspace <dir> [--task <file-or-text>]
 const DEFAULT_HOST_IDLE_MS = 600000;
 const MAX_WAIT_MS = 300000;
 const DEFAULT_MCP_CONFIG = join(ROOT, 'defaults', 'mcp.json');
+const STEP_ZERO_WARNING = 'stepsLeft is 0: the next next_context call ends this run without a witness. To close it with a witness, call finish now, while stepsLeft is 0.';
 
 const text = { type: 'string' };
 const nullableText = { type: ['string', 'null'] };
@@ -732,6 +733,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
       run: runId,
       stepsLeft: maxSteps - step,
       maxSteps,
+      ...(maxSteps - step === 0 ? { warning: STEP_ZERO_WARNING } : {}),
       ...(waiting ? { rulesPath: join(runDir, 'rules.md') } : {
         rules,
         task: task === '' ? null : headChars(task, TASK_PAGE),
@@ -956,7 +958,7 @@ function annotated(tool) {
   return Object.hasOwn(OUTPUT_SCHEMAS, tool.name) ? { ...described, outputSchema: OUTPUT_SCHEMAS[tool.name] } : described;
 }
 const OUTPUT_SCHEMAS = {
-  next_context: objectSchema({ ok: { type: 'boolean' }, refused: { type: 'boolean' }, error: text, step: number, run: text, stepsLeft: number, maxSteps: number, total: number, prefixSha: text, actionSeq: number }, ['ok']),
+  next_context: objectSchema({ ok: { type: 'boolean' }, refused: { type: 'boolean' }, error: text, step: number, run: text, stepsLeft: number, maxSteps: number, warning: text, total: number, prefixSha: text, actionSeq: number }, ['ok']),
   run_code: objectSchema({ ok: { type: 'boolean' }, refused: { type: 'boolean' }, error: text, truncated: { type: 'boolean' }, background: text, job: text, hint: text, state: text, actionSeq: number }, ['ok']),
   finish: objectSchema({ ok: { type: 'boolean' }, refused: { type: 'boolean' }, error: text, finished: { type: 'boolean' }, actionSeq: number }, ['ok']),
 };
