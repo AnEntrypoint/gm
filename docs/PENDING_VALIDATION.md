@@ -1244,3 +1244,15 @@ Blocked: no Windows host is available here, so these witnesses cannot run in thi
 - B2 (Windows arm64 browser-scope, G2): the diagnostic step in item 2 needs a Windows run. Witness needed: the printed path, `browser path exists` or `missing`, and browser-scope-check ok. Blocked: no Windows host.
 
 Open, found this pass, not fixed: the gm connection of a long-running host serves the skill text it loaded at its start. On this host the served `skill://gm/SKILL.md` still has the rule-5 wording and no `## Stopping Processes` section, though the file on disk and commit 6af2bd1 have it. A fresh serve process (the live witness of b182209) serves the new text. Witness needed to close it: a re-read on a connection started after 6af2bd1 shows the section, or the served resource is refreshed when the file changes. Local item; it is a skill-serving freshness question, not a code change in this pass.
+
+## gm pass, Phase B (2026-11-10, local, release and asan at 9eb219b)
+
+Witnesses, output read in full:
+- W1 release, `node tools/check-protocol-versions.mjs build/release/native/components/host/gm`: exit 0, `protocol-versions-check: ok`.
+- W2 asan with this host's LD_PRELOAD, same check: exit 1 in 1 s, `14 failure(s)`, each row `engine exited with code 1 before it answered; stderr: ==...==ASan runtime does not come first in initial library list`. Before f951a4f the same run took 60 s and printed only `no initialize result: null`.
+- W3 asan with `env -u LD_PRELOAD`: exit 0, `protocol-versions-check: ok`.
+- W4 restart-jobs, native: exit 0, `ok (native: binary mtime changed ... killed with reason restart 0)`; node: exit 0, `ok (node: SIGTERM to the Node worker pid ...; killed with reason restart 0)`.
+- W5 check-build build/release: exit 0, `conformance: 86 passed, 0 failed of 86 checks in 24 scenarios`, both restart arms ok, `check-build: gm stamp 9eb219b-dev (9eb219b)`.
+- W6 release.yml parses as YAML (38 steps), and the new step `Check the browser path for the browser-scope check (arm64-windows)` is present.
+- Blocked, not run: B1 (Windows x64 restart-jobs) and B2 (Windows arm64 browser path); no Windows host here.
+- Open, not fixed: the stale served skill (Phase A note), a local item.
