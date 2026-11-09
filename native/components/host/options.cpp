@@ -129,7 +129,10 @@ std::filesystem::path leaves_dir_of(const HostArgs& args) {
 }
 
 std::filesystem::path skills_dir_of(const HostArgs& args) {
-    return args.path_or("--skills", installed_or("skills", source_root() / "skills"));
+    std::error_code ec;
+    const auto checkout = source_root() / "skills";
+    const auto fallback = std::filesystem::is_directory(checkout, ec) ? checkout : installed_or("skills", checkout);
+    return args.path_or("--skills", fallback);
 }
 
 std::filesystem::path defaults_dir_of() { return installed_or("defaults", source_root() / "defaults"); }
