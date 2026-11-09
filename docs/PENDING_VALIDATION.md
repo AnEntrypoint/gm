@@ -421,4 +421,37 @@ Witnesses (scripts in /tmp/gm-defects/w3, outside the repo):
 
 Status: finished. The run_shell cap (both trees), the body reaping (native), the wait override and default, conformance and parity are all witnessed above.
 
+## Commits on origin/main from another session, reviewed (2026-11-09, Phase A)
+
+These three landed on origin/main after 14d4350 and before fc63749. All three are authored by lanmower (657315+lanmower@users.noreply.github.com). Not rewritten or reverted here.
+
+| commit | date (UTC) | files | changes gm behaviour? |
+|---|---|---|---|
+| e78de46 | 2026-11-09 08:20:13 | AGENTS.md; native/components/mcp/server.cpp; native/components/quickjs/leaves.cpp; native/include/gm/runcode.hpp; src/unit-tests.mjs; tools/check-build.mjs; tools/check-run-code-budget.mjs (new); tools/check-shell-stdin.mjs; tools/check.mjs | yes, native run_code: the default JS budget (BodyControls js_budget) goes from 60000 to 3600000 ms (runcode.hpp); a run_code body's budget is set to job_lifetime_ms (server.cpp run_code); the leaf call deadline goes from a fixed 120000 to 3600000 ms, or the body's budget when one is set (leaves.cpp start_deadline). This touches run_code, witness and lifetime code. Node's run_code is not in the diff. Also adds check-run-code-budget.mjs to check-build and check, and the AGENTS note that job_start stdin is /dev/null (job.cpp:181, confirmed). src/unit-tests.mjs skips a name that statSync cannot stat; tooling only. |
+| 4e82f40 | 2026-11-09 08:26:59 | tools/check-shell-stdin.mjs | no. Check-only: the job stdin comparison ignores CR and trailing blanks. |
+| f80cd46 | 2026-11-09 08:41:25 | tools/check-run-code-budget.mjs | no change to gm. Check-only, and weaker: the leaf assertion passes on a status 200 or on a background run, and fails only on the old fixed-limit text. |
+
+Rows to verify in the next Phase B:
+
+| row | what to verify | status |
+|---|---|---|
+| V1 | e78de46 native: a 65 s JavaScript body with timeoutMs 100000 returns, and a fetch leaf is not cut at 120000 ms (tools/check-run-code-budget.mjs on a binary built at fc63749) | open: Phase B |
+| V2 | e78de46 Node: run_code's budget is unchanged by the commit, so native and Node may now differ on a long JavaScript body; the parity run records any difference | open: Phase B |
+| V3 | f80cd46 weakened the leaf assertion: a witness that a leaf runs past 120000 ms and returns status 200 on native, not only a background result | open: Phase B |
+| V4 | 4e82f40 and f80cd46 are check-only; the CRLF comparison is covered by Windows CI | blocked: CI |
+
+Ranked remaining work (2026-11-09, after this review):
+
+| rank | item | status | blocker |
+|---|---|---|---|
+| 1 | V1 to V3: verify the run_code budget change of e78de46 on a binary built at fc63749 | Phase A recorded; Phase B this pass | none |
+| 2 | V2 follow-up: Node run_code budget parity with native | open | owner decision (native-ahead or port) |
+| 3 | server.cpp:976 stop_orphans writes body kills without reap_ledger; a crashed run can keep its children if this path runs first | open gap; fix is one call plus a witness | none; next pass |
+| 4 | rows.mjs:196 message "no commit X in this repository" also covers a non-repository root | open defect | none; next pass |
+| 5 | f80cd46 leaf assertion accepts a background run; tighten it to require status 200 within the body budget | open | none; next pass |
+| 6 | fx row unknown-mw6bc4mv1c00 | open, cause recorded | the fx workspace owner resolves or parks it |
+| 7 | Shell-job lifetime equals the job_start cap, so the lifetime reason is unreachable for shell jobs | open | owner decision |
+| 8 | The .mcp.json pass | not started | owner schedules it |
+| 9 | Windows and macOS builds are not verified here | open | CI runs |
+
 Final run on the stamped binary 94c6a89 (its sources equal 1af49a1; the commit after 1af49a1 changes only docs): conformance 83 passed, 0 failed of 83 in 24 scenarios, run-code-progress-check and shell-stdin-check ok; parity 22/93 match, 56 native-ahead, 15 documented-gap, 0 differ. Native and Node witnesses re-run with the same results as the table above (job kills 7 cancelled, 10 restart, 4 run-ended, 6 timeout statements; run_shell QUIET and PARTIAL with statements; rules notice before end and none in the finish reply; feed second call 0 replayed, third call 3 events on native and 2 on Node; jobsKilled statement present; body stopBackground and restart statements).
