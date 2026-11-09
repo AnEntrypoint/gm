@@ -124,3 +124,11 @@ Nothing here is pushed until Phase B. Witnesses are run on build/release after t
 | 37 | AGENTS.md, Owner rules | the test-file line stays: its sources are AGENTS.md at 38ff9c3 (2026-11-01: "No test files and no fixtures that stand in for a real run") and DESIGN.md "Revert of restored test files (2026-11-06)"; tools/scan-unit-tests.mjs enforces the no-unit-tests part | read it |
 
 Node gap, not fixed: src/ sends a playwriter snippet without the awaiting wrapper, so the same unawaited-rejection crash can happen on the Node path. A Node fix is a decision (AGENTS says changing Node is a decision)..
+
+### Phase B results (2026-11-09, build stamp 9d4095c, HEAD 9d4095c)
+
+- W4 playwriter crash witness (/tmp/gmfix/fix.mjs crash, outside the repo): `[return value] value-ok` for the bare async value snippet; the throwing snippet returns an execute error and the server stays up; `[return value] ran` for the state read after it.
+- Browser witnesses on the same binary: profile-witness distinctProfilePaths, distinctBrowserPids, distinctPageSets, alphaOwnsOnlyAlphaPage, bravoOwnsOnlyBravoPage all true; tabs (A closedPages 2, B kept); browsers (run-scoped close, machine close refused without confirm); other (2 other pages); skill (served text holds Memory rules and PLAYWRITER_PROJECT_DIR).
+- Conformance: `conformance: 83 passed, 0 failed of 83 checks in 24 scenarios`, `check-build: gm stamp 9d4095c-dev (9d4095c)`, exit 0.
+- Gate: `{"gate":true,"failed":[]}`, exit 0.
+- AGENTS.md: 14511 bytes, under 30 KB.
