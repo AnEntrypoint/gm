@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
-import { appendFileSync, cpSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { appendFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import readline from 'node:readline';
@@ -24,6 +24,7 @@ const sleep = (ms) => new Promise((done) => setTimeout(done, ms));
 const openConnection = (args) => {
   const child = spawn(binary, ['serve', ...args], { stdio: ['pipe', 'pipe', 'pipe'] });
   let stderr = '';
+  child.stdin.on('error', () => {});
   child.stderr.on('data', (chunk) => {
     stderr = (stderr + String(chunk)).slice(-2000);
   });
@@ -86,6 +87,7 @@ const expect = (condition, text) => {
 const scratch = mkdtempSync(join(tmpdir(), 'gm-skill-serve-'));
 try {
   const workspace = join(scratch, 'ws');
+  mkdirSync(workspace);
   const quiet = join(scratch, 'quiet-mcp.json');
   writeFileSync(quiet, JSON.stringify({ mcpServers: { playwriter: { disabled: true } } }));
   const initialize = { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: CHECK, version: '1' } };
