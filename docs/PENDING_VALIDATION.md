@@ -631,3 +631,21 @@ Change, both trees, same text: a next_context reply whose stepsLeft is 0 carries
 Conformance: tools/mcp-conformance.mjs, scenario "step budget handoff". Adds two checks: the 50th next_context at stepsLeft 0 carries the warning text, and the 49th at stepsLeft 1 carries no warning.
 
 Witness (Phase B): `/tmp/gm-defects/w6/wwarn.mjs` on both trees (--max-steps 3), printing FIRST, SECOND, THIRD and AFTER_ZERO; `/tmp/gm-defects/w6/wzero.mjs` on both trees, printing FINISH_AT_ZERO, which proves finish is still accepted at stepsLeft 0 after the warning.
+
+## gm pass, Phase B (2026-11-09, binary d0ad0a2, fresh build): next_context at stepsLeft 0 warns
+
+Build: `rm -rf build/release`, `cmake --preset release`, `cmake --build build/release -j 4`, BUILD_EXIT 0, 0 FAILED. Stamp `gm d0ad0a2-dev (d0ad0a2)`.
+
+Witness `/tmp/gm-defects/w6/wwarn.mjs` (--max-steps 3), both trees, output quoted:
+- native: `FIRST {"stepsLeft":2,"warning":null}`, `SECOND {"stepsLeft":1,"warning":null}`, `THIRD {"stepsLeft":0,"warning":"stepsLeft is 0: the next next_context call ends this run without a witness. To close it with a witness, call finish now, while stepsLeft is 0."}`, `AFTER_ZERO {"refused":true,"error":"refused: step limit 3 reached and this run ended without a witness; call next_context to open a successor run. To close a run with a witness, call finish while stepsLeft is 0, before the next next_context call"}`.
+- node: the same four lines, with the same warning text and refusal text.
+
+Witness `/tmp/gm-defects/w6/wzero.mjs` (--max-steps 3), both trees: `FINISH_AT_ZERO {"ok":true,"finished":true,...,"warningOnContext":"stepsLeft is 0: the next next_context call ends this run without a witness. To close it with a witness, call finish now, while stepsLeft is 0."}` on native and on Node. A finish at stepsLeft 0 after the warning is accepted on both trees.
+
+Conformance (`node tools/check-build.mjs build/release`): new checks in "step budget handoff" are `ok the 50th next_context at stepsLeft 0 warns that the next next_context ends the run without a witness` and `ok the 49th next_context at stepsLeft 1 carries no warning`. Result: `conformance: 85 passed, 0 failed of 85 checks in 24 scenarios`, CONFORM_EXIT 0.
+
+Parity (`node native/tests/parity/run.mjs --bin build/release/native/components/host/gm`): `22/93 scenarios match, 0 cutover-expected, 56 native-ahead, 15 documented-gap, 0 differ`, PARITY_EXIT 0. Same counts as the d7eca35 witness, so the new field did not move any parity key.
+
+Not run: a negative control for the new conformance checks. They were added with the change, so no earlier binary exists to show them failing. Their passing is the witness above.
+
+Item 7 (Windows and macOS builds, V4 CRLF) stays open: it needs a Windows CI run of release.yml.
