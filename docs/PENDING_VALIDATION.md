@@ -662,3 +662,17 @@ Changes:
 | 7 | .github/workflows/release.yml | workflow_dispatch takes a boolean input `publish` (default true, so an unchanged dispatch still publishes); the publish job runs on a dispatch only when `inputs.publish` is true, and on push it runs as before | dispatch with `publish=false`: build and build-windows run, publish is skipped and the latest tag and release are unchanged |
 
 The Phase A commit subject ends with `[skip ci]`: a push to main would otherwise start a push-triggered release.yml run, and that run includes publish. Dispatching with `publish=false` is the build-only path that runs without publish.
+
+| # | File | Change | Witness needed |
+|---|---|---|---|
+| 8 | tools/witness-windows-cmd.mjs | decode unwraps an object `output` as well as a string one: the run_shell wrapper is the run_code reply's `output`, so `launcher` is read at the right level | dispatch with `publish=false`: the `Windows cmd-only run_shell witness` step passes on both Windows jobs, with no `did not use cmd.exe` error in the log |
+
+## Item 7 Phase B record (2026-11-09): run 42615572769
+
+Dispatch `gh workflow run release.yml --ref main -f publish=false` on 6ef6c1fc454efcda587317b80c21ba5781db29e4. `gh run watch --exit-status` exit 0; `gh run view` conclusion success. Jobs: build linux x64, linux arm64, macOS x64, macOS arm64, build-windows x64 and arm64 all success; publish skipped. The public latest tag stayed at 78ca5a1 and the latest release stayed published 2026-11-04T23:41:31Z.
+
+macOS x64 Test: `conformance: 85 passed, 0 failed of 85 checks in 24 scenarios`; `run-code-budget-check: ok (... a catastrophic regex in the fetch leaf ended in 233216 ms ...)`.
+
+Windows cmd-only run_shell witness: failed on both Windows jobs at tools/witness-windows-cmd.mjs:24 (job build-windows x64 and arm64), and the job stayed green because the step is continue-on-error. The log reads: `Error: cmd-only run_shell did not use cmd.exe: {"ok":true,"output":{"ok":true,"exitCode":0,"signal":null,"output":"runs\r\n","launcher":"cmd"},"truncated":false,"loads":[],"actionSeq":11}`. Cause: decode unwrapped only a string `output`, so the object run_shell wrapper stayed nested and `launcher` read as undefined; the shell did run under cmd. Fixed in row 8. It is not witnessed on a runner until a dispatch after this commit.
+
+Budget check margin (fetch leaf, `gm.fetch` with `match: '(a+)+$'` on a 31-a line): CPU-bound, so the duration follows the runner's speed. Measured on macOS x64: 193313 ms (a681ef4, run 42601864942, passed in a 200000 ms window); 200085 ms (78ca5a1, run 42603306835, failed in a 200000 ms window); 233216 ms (6ef6c1f, run 42615572769, passed in the 400000 ms window from row 6). The 400000 ms window is 1.72 times the worst measured run. Not deterministic: a slower runner can exceed the window again. Open: make the leaf independent of CPU speed (for example a local server that holds its response for a fixed time, with a matching fetch timeout); not done here.

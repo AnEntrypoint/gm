@@ -12,6 +12,7 @@ writeFileSync(mcpConfig, JSON.stringify({ mcpServers: { playwriter: { disabled: 
 const controlCommand = 'echo gm-windows-cmd-witness-ok';
 const cmdOnlyCommand = 'dir /b';
 const decode = (reply) => {
+    if (reply?.output !== null && typeof reply?.output === 'object') return reply.output;
     if (typeof reply?.output !== 'string') return reply;
     try { return JSON.parse(reply.output); } catch { return reply.output; }
 };
