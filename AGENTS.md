@@ -26,13 +26,11 @@ gm is one long-horizon worker: an MCP server that runs a task as one append-only
 
 ## Layout
 
-- Module roles for src/, tools/ and native/components/ were listed here before 409c3f3; git show 409c3f3^:AGENTS.md has the old map.
 - Every file under a served skill directory is a resource: skills/gm/WORKFLOWS.md is served as `skill://gm/WORKFLOWS.md` with no reconnect. SKILL.md points to it on demand and tells the model to re-read it after a compaction.
 
 ## Build and test
 
 - Witness rule: run the built binary or the CLI on a real task in a scratch workspace, read the output, then delete the scratch. `--model scripted` runs offline.
-- Native steps: `scripts/gm.sh build|test|doctor|all` (GMNEW_PRESET picks the preset; gm.ps1 is the same). Presets are in CMakePresets.json; CI is .github/workflows/release.yml and arm-diagnose.yml. README's Native build section names ctest and GMNEW_BUILD_TESTS, which no CMake file defines.
 
 ## Facts found by troubleshooting
 
@@ -48,6 +46,7 @@ gm is one long-horizon worker: an MCP server that runs a task as one append-only
 - Open: fx's "another worker's events twice" (2026-11-08). No run log delivers one event twice: the repeats are repeated finish refusals and read_file skill-loaded calls. The fx journal (hyperagent .orch afca55c2) holds fx's text and tool names, not reply bodies, so the duplicate needs fx's reply text. An open unknown row, unknown-mw6bc4mv1c00 (push target AnEntrypoint/gmfx), is in several /workspace/fx/runs logs. At HEAD, two peers in one workspace do not see each other's row-added events in next_context, and peer A's reply repeats a title across its action, code-call, row-added and result events.
 - Browser tabs (2026-11-09, native only): pw (pinned in defaults/mcp.json) runs one Chrome per project, and its browsers close closes that whole browser. native/components/host/browser_scope.cpp gives each run its own context: the first playwriter_execute creates state.gmRun with browser.newContext() and rebinds context to it on every call, since the playwriter sandbox builds a new vm context per execute. Closing the context closes only the run's tabs. next_context returns tabs; finish, max_steps and playwriter_browsers close close the run context; browser_close_machine is the explicit whole-browser close. Each run has its own CDP connection, so browser.contexts() lists another run's page under the default context; the tabs line therefore counts every page outside this run as "other pages" and does not split them. Node has none of this: changing src/ is a decision.
 - Browser profile per project (2026-11-09): pw's projectRoot takes PLAYWRITER_PROJECT_DIR first, then climbs from its cwd to the nearest .playwriter, so every project under /workspace shared /workspace/.playwriter's Chrome. native/components/mcpclient/client.cpp spawn() and src/mcp-client.mjs start() set that variable to the run's workspace unless the server entry sets it.
+- Playwriter crash (thebird run 2026-11-09-01-18-47-08c828, seq 78, 83, 98): an unawaited async snippet that rejected ended the playwriter server with exit 1, and bare async snippets returned no value. browser_scope.cpp now runs a multi-statement snippet as an awaited async body (verified 2026-11-09, witness in docs/PENDING_VALIDATION.md row 31).
 - The build stamps GMNEW_COMMIT from CMakeCache, so a moved tree builds with the old commit until `cmake --preset release` reruns (verified 2026-11-09: 7be1790 stamped at HEAD 2cf0709).
 - Node matches native for read, task, run_code and finish (2026-11-09, Phase A), with two kept differences: digests (Node is sha256 cut to 12 hex, native FNV-1a 64) and bounds (native counts bytes, Node counts UTF-16 characters). Node was not changed when the native fixes landed.
 

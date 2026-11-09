@@ -107,4 +107,20 @@ Nothing here is built or witnessed; Phase A is docs only. The check covered the 
 
 Not restored, with the reason: "Component tests sit in <component>/tests/" (no such directories exist); "stop_locked" (the function is stop_body, already correct in the current file); "resources/subscribe answers -32601 in both servers" (Node still serves it, and the current Known-gaps line is correct); "rebuilt by the gate at 30 KB ... owner invariant 3" (CLAUDE.md invariant 3 is about concurrency; the gate enforces the limit, so the current text is enough).
 
-Found, not changed (outside AGENTS.md): conformance counts disagree, DESIGN.md:478 says 56 checks in 22 scenarios while the binary reports 83 in 24; README's Native build section is stale (see row 28).
+Found, not changed (outside AGENTS.md): conformance counts disagree, DESIGN.md:478 says 56 checks in 22 scenarios while the binary reports 83 in 24; README's Native build section is stale (see row 28)
+
+## Audit follow-up, the README and DESIGN defects, and the playwriter crash (2026-11-09, Phase A)
+
+Nothing here is pushed until Phase B. Witnesses are run on build/release after the build.
+
+| # | File | Change | Witness needed |
+|---|---|---|---|
+| 31 | native/components/host/browser_scope.cpp (user_execute) | defect: a snippet that starts async work, such as `(async () => { throw ... })()`, was sent to playwriter unawaited. Its rejection was unhandled in the playwriter process and ended it with exit 1; a bare async snippet returned "no output", so browser calls returned empty values. Cause: a parenthesised snippet was not treated as an expression, so gm did not `return await (...)` it. Fix: a snippet that starts with ( and ends with ) takes the same `return await (...)` form as a single expression. Multi-statement snippets still go through unchanged. Found in thebird run 2026-11-09-01-18-47-08c828: seq 78 and 98 ("exited with code 1"), seq 83 restart, seq 93 probe "no output" | W4: `playwriter_execute` with `(async () => { state.probe = 'ran'; return 'value-ok'; })()` returns "[return value] value-ok"; with `(async () => { throw new Error('probe-throw'); })()` returns an execute error and the server stays up; `String(state.probe ?? 'none')` then returns "ran" |
+| 32 | native/components/host/browser_scope.cpp | the same rule for the profile witness, tabs, browsers and other witnesses: they go through the same wrapper | P1, tabs, browsers, other |
+| 33 | README.md (Native build) | defect: the block named `cmake --preset release -DGMNEW_BUILD_TESTS=ON` and `ctest --test-dir ...`; no CMake file defines GMNEW_BUILD_TESTS, and no enable_testing or ctest exists. Now: cmake --preset release, cmake --build build/release, node tools/check-build.mjs build/release. scripts/gm.sh test is the build plus check-build.mjs; the no-unit-tests policy is stated | read it; scripts/gm.sh test is the same steps |
+| 34 | DESIGN.md:478 (Conformance runner) | defect: the count 56 checks in 22 scenarios was copied from a report and marked not re-run. Now the runner's count is printed by tools/check-build.mjs and the line records the 2026-11-09 witness: 83 checks in 24 scenarios | conformance output below |
+| 35 | AGENTS.md, Layout and Build and test | the two restorations from the audit check are removed: the code shows the module roles (file names and headers) and the build steps (scripts/gm.sh, CMakePresets.json, the workflows). The stale README sentence is gone with the README fix (row 33) | read it |
+| 36 | AGENTS.md, Facts found by troubleshooting | one line for the thebird crash: the cause, the run id, the seq numbers, and the fix in row 31 | read it |
+| 37 | AGENTS.md, Owner rules | the test-file line stays: its sources are AGENTS.md at 38ff9c3 (2026-11-01: "No test files and no fixtures that stand in for a real run") and DESIGN.md "Revert of restored test files (2026-11-06)"; tools/scan-unit-tests.mjs enforces the no-unit-tests part | read it |
+
+Node gap, not fixed: src/ sends a playwriter snippet without the awaiting wrapper, so the same unawaited-rejection crash can happen on the Node path. A Node fix is a decision (AGENTS says changing Node is a decision)..

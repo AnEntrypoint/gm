@@ -74,10 +74,10 @@ Setup registers only gm with the host, so the worker is the only thing that star
 
 ## Native build
 
-    cmake --preset release -DGMNEW_BUILD_TESTS=ON
+    cmake --preset release
     cmake --build build/release
-    ctest --test-dir build/release --output-on-failure
+    node tools/check-build.mjs build/release
 
-- `scripts/gm.sh` and `scripts/gm.ps1` run the same steps: `build`, `test`, `doctor` or `all`. `GMNEW_PRESET` picks the preset (default `release`).
+- `scripts/gm.sh` and `scripts/gm.ps1` run the same steps: `build`, `test` (the build, then `tools/check-build.mjs`), `doctor` or `all`. `GMNEW_PRESET` picks the preset (default `release`). The project has no unit tests; checks run on the built binary.
 - The binary is build/PRESET/native/components/host/gm.
 - Two workflows run on pushes to main: `.github/workflows/release.yml` builds and tests six targets and publishes `latest`; `.github/workflows/arm-diagnose.yml` runs asan and gdb on arm64. There is no ci.yml.

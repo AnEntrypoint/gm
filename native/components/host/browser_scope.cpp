@@ -147,7 +147,8 @@ json::Value BrowserScope::user_execute(const json::Value& args) {
         trimmed.pop_back();
     }
     const bool single_expression = !trimmed.empty() && trimmed.find_first_of(";\n") == std::string::npos && trimmed.find("return") == std::string::npos;
-    const std::string body = single_expression ? "return await (" + trimmed + ");" : code;
+    const bool parenthesized = !trimmed.empty() && trimmed.front() == '(' && trimmed.back() == ')';
+    const std::string body = single_expression || parenthesized ? "return await (" + trimmed + ");" : code;
     json::Value forwarded = args;
     forwarded.set("code", std::string(kOpenRunContext) + body);
     {
