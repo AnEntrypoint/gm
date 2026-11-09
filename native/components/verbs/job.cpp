@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "core_internal.hpp"
+#include "gm/job_text.hpp"
 #include "gm/proc.hpp"
 
 #if defined(_WIN32)
@@ -29,6 +30,8 @@ extern char** environ;
 
 namespace gm::core {
 
+using gm::jobs::kill_statement;
+
 namespace {
 
 #if !defined(_WIN32)
@@ -36,15 +39,6 @@ constexpr std::uint64_t kill_grace_ms = 500;
 #endif
 constexpr double max_wait_ms = 30000;
 constexpr std::uint64_t ended_event_grace_ms = 250;
-
-std::string kill_statement(const std::string& name, const std::string& reason, std::uint64_t timeout_ms, std::uint64_t lifetime_ms) {
-    if (reason == "timeout") return "job " + name + " stopped: timeout after " + std::to_string(timeout_ms) + " ms";
-    if (reason == "lifetime") return "job " + name + " stopped: the job lifetime of " + std::to_string(lifetime_ms) + " ms ended before it finished";
-    if (reason == "cancelled") return "job " + name + " stopped by job_stop";
-    if (reason == "restart") return "job " + name + " killed: the gm worker restarted while it ran, and a restart kills the process group of every job that was running";
-    if (reason == "run-ended") return "job " + name + " killed: its run ended while it ran (the run finished or its host closed), and ending a run kills the process group of every running job";
-    return "job " + name + " killed: " + reason;
-}
 
 bool is_job_name(const json::Value* v) {
     if (v == nullptr || !v->is_string()) return false;

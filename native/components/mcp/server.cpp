@@ -22,6 +22,7 @@
 #include <shared_mutex>
 
 #include "gm/log.hpp"
+#include "gm/job_text.hpp"
 #include "gm/mcp.hpp"
 #include "gm/proc.hpp"
 #include "gm/runcode.hpp"
@@ -989,12 +990,13 @@ struct Server::State {
             auto body = seq_field(*status, "body").value_or(0);
             std::string tail = body_text(s(), body, kTailCap);
             Value killed = *status;
-            killed.set("state", "killed").set("reason", "restart");
+            const std::string statement = ::gm::jobs::kill_statement(job, "restart", 0, 0);
+            killed.set("state", "killed").set("reason", "restart").set("statement", statement);
             write_status(s(), job, killed);
             Value fields = object().set("job", job).set("body", number_of(body)).set("state", "killed");
             if (const Value* start = status->find("startMono")) fields.set("startMono", *start);
-            append("job", fields.set("reason", "restart"));
-            append("job-killed", object().set("job", job).set("reason", "restart").set("tail", tail));
+            append("job", fields.set("reason", "restart").set("statement", statement));
+            append("job-killed", object().set("job", job).set("reason", "restart").set("statement", statement).set("tail", tail));
         }
     }
 
@@ -1492,14 +1494,15 @@ struct Server::State {
             if (!job->adopted) return;
             job->killing = true;
             std::string tail = body_text(*job->owner, job->body, kTailCap);
-            Value killed = object().set("job", job->name).set("reason", reason).set("tail", tail);
+            const std::string statement = ::gm::jobs::kill_statement(job->name, reason, 0, options.job_lifetime_ms);
+            Value killed = object().set("job", job->name).set("reason", reason).set("statement", statement).set("tail", tail);
             if (reason == "lifetime") killed.set("lifetimeMs", number_of(options.job_lifetime_ms));
             append_to(*job->owner, "job-killed", std::move(killed));
         }
         join_body(job);
         std::lock_guard guard(job->lock);
         if (job->settled) return;
-        settle_locked(*job, "killed", object().set("reason", reason));
+        settle_locked(*job, "killed", object().set("reason", reason).set("statement", ::gm::jobs::kill_statement(job->name, reason, 0, options.job_lifetime_ms)));
     }
 
     std::vector<std::shared_ptr<BodyJob>> body_list() {
