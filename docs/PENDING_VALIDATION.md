@@ -601,3 +601,23 @@ All other rows of the earlier lists are done or decided (items 1 to 6 are in dee
 Change: src/mcp.mjs (stepLimitText) and native/components/mcp/server.cpp (step_limit_text). Before: "step limit N reached; call finish with your witness to close this run, then call next_context to open a successor run; a run ended here has no witness". That text is returned by the refused next_context and by every later refusal, and finish is among them. Cause: the limit ends the run at the first next_context call made after stepsLeft reaches 0, so the run has already ended when the text is read, and finish is refused as ended. The text told the agent to call finish, which cannot work at that point. After: "step limit N reached and this run ended without a witness; call next_context to open a successor run. To close a run with a witness, call finish while stepsLeft is 0, before the next next_context call".
 
 Witness (Phase B): the openRows sequence from wfinish.mjs on both trees, extended with one more next_context after stepsLeft 0, then a finish. Expected: the refused next_context and the refused finish both carry the new text; the earlier openRows finish at stepsLeft 0 is still accepted.
+
+## gm pass, Phase B (2026-11-09, binary d7eca35): the step-limit refusal names the real way to close a run
+
+Build: `cmake --preset release`, `cmake --build build/release -j 4`, BUILD_EXIT 0, 0 FAILED. Stamp `gm d7eca35-dev (d7eca35)`.
+
+Witness `/tmp/gm-defects/w5/wstep.mjs` (--max-steps 3), both trees, output quoted:
+- native: `NEXT_CONTEXT {"stepsLeft":1}`, `NEXT_CONTEXT {"stepsLeft":0}`, `NEXT_CONTEXT_AFTER_ZERO {"refused":true,"error":"refused: step limit 3 reached and this run ended without a witness; call next_context to open a successor run. To close a run with a witness, call finish while stepsLeft is 0, before the next next_context call"}`, `FINISH_AFTER_LIMIT {"refused":true,"ok":false,"error":"refused: step limit 3 reached and this run ended without a witness; call next_context to open a successor run. To close a run with a witness, call finish while stepsLeft is 0, before the next next_context call"}`.
+- node: the same four lines with the same text.
+The new text is returned by both trees, and a run past its limit is reported as ended without a witness.
+
+Witness `/tmp/gm-defects/w5/wfinish.mjs` (the openRows sequence, --max-steps 3), re-run on d7eca35 because the step-limit change touches the same code path:
+- native: `FINISH_OPENROWS_AT_LIMIT {"ok":true,"finished":true,"output":"w4 at limit","browser":{"ok":true,"closedPages":0,"skipped":true}}`; `ROW_STATUS_AFTER status: "open"`; `EVENT {"seq":25,"kind":"finish-open-rows","rows":[{"id":"unknown-mw94j76p05ba","reason":"open at the step limit, not closed"}],"steps":3}`.
+- node: `FINISH_OPENROWS_AT_LIMIT {"ok":true,"finished":true,"output":"w4 at limit"}`; `ROW_STATUS_AFTER status: "open"`; `EVENT {"seq":19,"kind":"finish-open-rows","rows":[{"id":"unknown-mw94jaode8be","reason":"open at the step limit, not closed"}],"steps":3}`.
+- Both trees refuse a plain finish and an early openRows finish while the row is open (`refused: 1 row(s) open: ... witness row. Resolve each with its witness ...`).
+
+Defect found in Phase B: `tools/mcp-conformance.mjs` still asserted the pre-fede5c6 step-limit text (`refused: step limit 50 reached; call finish with your witness to close this run, ...`). Cause: fede5c6 changed `stepLimitText` in both trees without updating the conformance expectation. Fixed in this commit: `refusalText` now equals the text in src/mcp.mjs:573 and the native step_limit_text. Before the fix: `conformance: 81 passed, 2 failed of 83 checks in 24 scenarios`, with the two FAIL lines "the 51st next_context is refused with the truthful step-limit text" and "a repeated over-limit id answers with the stored refusal" (CONFORM_EXIT 1). After the fix: `conformance: 83 passed, 0 failed of 83 checks in 24 scenarios`, CONFORM_EXIT 0 (log /tmp/gm-defects/conform2.log).
+
+Parity on d7eca35 (`node native/tests/parity/run.mjs --bin build/release/native/components/host/gm`): `22/93 scenarios match, 0 cutover-expected, 56 native-ahead, 15 documented-gap, 0 differ`, PARITY_EXIT 0. Same counts as the 2ebce71 witness.
+
+Item 7 (Windows and macOS builds, V4 CRLF) stays open: it needs a Windows CI run of release.yml.

@@ -396,7 +396,7 @@ const SCENARIOS = [
       const successor = await call('next_context', {});
       ok('the next next_context opens a different run', successor.ok === true && successor.run !== undefined && successor.run !== fiftieth.run,
         short({ first: fiftieth.run, successor: successor.run }));
-      const refusalText = 'refused: step limit 50 reached; call finish with your witness to close this run, then call next_context to open a successor run; a run ended here has no witness';
+      const refusalText = 'refused: step limit 50 reached and this run ended without a witness; call next_context to open a successor run. To close a run with a witness, call finish while stepsLeft is 0, before the next next_context call';
       const limited = new Client(['--run-dir', STEP_LIMIT_RUN_DIR]);
       try {
         await limited.open();
