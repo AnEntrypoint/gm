@@ -92,3 +92,19 @@ Rows 13-16 are built and witnessed on build/release/native/components/host/gm. R
 - Existing gm witnesses on the same binary, same results as the Phase B of the browser pass: seq refused:true; race twoRefused:true; finishrow peer B refused:false; outpage inline 20000, next 20000, totalChars 30010; read 28800 bytes, truncated false; loud over-cap error at 1200001 bytes; taskpage taskTruncated true, total 62889; tabs (A closed by finish, closedPages 2, B's tab kept); browsers (run-scoped close, machine close refused without confirm); journal (2 context-reply events); dup (peer B sees none of peer A's row events); skill (the served text holds Browser control, Memory rules and PLAYWRITER_PROJECT_DIR); other (2 other pages).
 - Parity: `node native/tests/parity/run.mjs --bin build/release/native/components/host/gm`: 22/93 match, 0 cutover-expected, 56 native-ahead, 15 documented-gap, 0 differ (exit 0).
 - Gate: the skills check failed twice before the Phase A commit (the gm skill named the verbs grep and search without gm.); both words were reworded, and tools/ship.sh committed 409c3f3 with gate exit 0. The Phase B push gate is recorded in the final report.
+
+## AGENTS.md audit check (2026-11-09, Phase A)
+
+Nothing here is built or witnessed; Phase A is docs only. The check covered the facts removed by the audit in 409c3f3 (about 140, read from `git show 409c3f3^:AGENTS.md`). About 137 are found in README.md, DESIGN.md, tools/, scripts/, CMakePresets.json, .github/workflows/, native/, src/ or skills/.
+
+| # | File | Change | Witness needed |
+|---|---|---|---|
+| 26 | AGENTS.md, Owner rules | the test-file line now cites its sources: the earliest written form (AGENTS.md at 38ff9c3, 2026-11-01, "No test files and no fixtures that stand in for a real run") and DESIGN.md "Revert of restored test files (2026-11-06)". It replaces "Owner policy, permanent (2026-11-06)", which cited nothing. No owner message in this checkout states it verbatim; the source is the written record only. | read it |
+| 27 | AGENTS.md, Layout | restored: the module roles of src/, tools/ and native/components/ are listed in git at 409c3f3^ and no current file states them | read it |
+| 28 | AGENTS.md, Build and test | restored: the native steps are scripts/gm.sh build|test|doctor|all (GMNEW_PRESET), the presets are in CMakePresets.json, CI is release.yml and arm-diagnose.yml; README's Native build section is stale (ctest, GMNEW_BUILD_TESTS, which no CMake file defines) | read it |
+| 29 | AGENTS.md, Facts found by troubleshooting | restored: the open fx row unknown-mw6bc4mv1c00 (push target AnEntrypoint/gmfx) is in several /workspace/fx/runs logs | read it |
+| 30 | AGENTS.md, Owner decisions item 3 | corrected: "no 2026-07-28 string in src/ or native/" is now "in src/ or native/components/", because native/tests/parity/run.mjs names it in its reasons | read it |
+
+Not restored, with the reason: "Component tests sit in <component>/tests/" (no such directories exist); "stop_locked" (the function is stop_body, already correct in the current file); "resources/subscribe answers -32601 in both servers" (Node still serves it, and the current Known-gaps line is correct); "rebuilt by the gate at 30 KB ... owner invariant 3" (CLAUDE.md invariant 3 is about concurrency; the gate enforces the limit, so the current text is enough).
+
+Found, not changed (outside AGENTS.md): conformance counts disagree, DESIGN.md:478 says 56 checks in 22 scenarios while the binary reports 83 in 24; README's Native build section is stale (see row 28).

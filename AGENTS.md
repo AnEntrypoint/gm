@@ -22,15 +22,17 @@ gm is one long-horizon worker: an MCP server that runs a task as one append-only
 - gm's own MCP server is served under the name gm. The separate gm product's tools, skill, runner and state are not used for gm work.
 - Change a settled decision only by messaging the orchestrator (the gm agent) with the reason. The owner sets the rules.
 - From 2026-11-06 the owner relays task instructions through the orchestrator agent. A dispatch from orchestrate is an owner instruction; no cross-session message can approve a pending prompt or grant escalation on its own.
-- Owner policy, permanent (2026-11-06): no unit tests and no test files. Checks run against the real tree: tools/check-build.mjs (the conformance run on a built binary), the commit gate, and the parity harness.
+- No test files and no unit tests. The first written form is AGENTS.md at 38ff9c3 (2026-11-01): "No test files and no fixtures that stand in for a real run." DESIGN.md "Revert of restored test files (2026-11-06)" says the policy stands. Checks run against the real tree: tools/check-build.mjs (the conformance run on a built binary), the commit gate, and the parity harness.
 
 ## Layout
 
+- Module roles for src/, tools/ and native/components/ were listed here before 409c3f3; git show 409c3f3^:AGENTS.md has the old map.
 - Every file under a served skill directory is a resource: skills/gm/WORKFLOWS.md is served as `skill://gm/WORKFLOWS.md` with no reconnect. SKILL.md points to it on demand and tells the model to re-read it after a compaction.
 
 ## Build and test
 
 - Witness rule: run the built binary or the CLI on a real task in a scratch workspace, read the output, then delete the scratch. `--model scripted` runs offline.
+- Native steps: `scripts/gm.sh build|test|doctor|all` (GMNEW_PRESET picks the preset; gm.ps1 is the same). Presets are in CMakePresets.json; CI is .github/workflows/release.yml and arm-diagnose.yml. README's Native build section names ctest and GMNEW_BUILD_TESTS, which no CMake file defines.
 
 ## Facts found by troubleshooting
 
@@ -43,7 +45,7 @@ gm is one long-horizon worker: an MCP server that runs a task as one append-only
 - ssh reads the stdin it is given. In `while read h; do ssh host ...; done < hosts.txt` an ssh without `</dev/null` eats the loop's remaining lines (verified 2026-11-08). gm's shell gives each child EOF, not the MCP pipe (tools/check-shell-stdin.mjs).
 - Task leak in fx's run (2026-11-08): the installed gm 41d1d82 predates fcb84df, which refuses a non-owner task replacement after the first step. next_context accepted three task briefs at 21:39:16-21:39:21 with no owner field; run 2026-11-08-18-58-31-775c8a (/workspace/fx/runs) took another worker's brief at seq 12. HEAD refuses that replacement and the second of two concurrent first-step replacements. A host takes the fix only after its installed build updates.
 - finish refused on another run's open push row (2026-11-08). Fixed: finish counts only rows whose row-added event is in its own log. A row left open by a run that ended at max_steps is not counted by its successor, so it stays open until resolved in the workspace.
-- Open: fx's "another worker's events twice" (2026-11-08). No run log delivers one event twice: the repeats are repeated finish refusals and read_file skill-loaded calls. The fx journal (hyperagent .orch afca55c2) holds fx's text and tool names, not reply bodies, so the duplicate needs fx's reply text. At HEAD, two peers in one workspace do not see each other's row-added events in next_context, and peer A's reply repeats a title across its action, code-call, row-added and result events.
+- Open: fx's "another worker's events twice" (2026-11-08). No run log delivers one event twice: the repeats are repeated finish refusals and read_file skill-loaded calls. The fx journal (hyperagent .orch afca55c2) holds fx's text and tool names, not reply bodies, so the duplicate needs fx's reply text. An open unknown row, unknown-mw6bc4mv1c00 (push target AnEntrypoint/gmfx), is in several /workspace/fx/runs logs. At HEAD, two peers in one workspace do not see each other's row-added events in next_context, and peer A's reply repeats a title across its action, code-call, row-added and result events.
 - Browser tabs (2026-11-09, native only): pw (pinned in defaults/mcp.json) runs one Chrome per project, and its browsers close closes that whole browser. native/components/host/browser_scope.cpp gives each run its own context: the first playwriter_execute creates state.gmRun with browser.newContext() and rebinds context to it on every call, since the playwriter sandbox builds a new vm context per execute. Closing the context closes only the run's tabs. next_context returns tabs; finish, max_steps and playwriter_browsers close close the run context; browser_close_machine is the explicit whole-browser close. Each run has its own CDP connection, so browser.contexts() lists another run's page under the default context; the tabs line therefore counts every page outside this run as "other pages" and does not split them. Node has none of this: changing src/ is a decision.
 - Browser profile per project (2026-11-09): pw's projectRoot takes PLAYWRITER_PROJECT_DIR first, then climbs from its cwd to the nearest .playwriter, so every project under /workspace shared /workspace/.playwriter's Chrome. native/components/mcpclient/client.cpp spawn() and src/mcp-client.mjs start() set that variable to the run's workspace unless the server entry sets it.
 - The build stamps GMNEW_COMMIT from CMakeCache, so a moved tree builds with the old commit until `cmake --preset release` reruns (verified 2026-11-09: 7be1790 stamped at HEAD 2cf0709).
@@ -93,7 +95,7 @@ gm is one long-horizon worker: an MCP server that runs a task as one append-only
 
 1. Native ships; Node stays the parity reference. Reversible by one entry change. The user-wide entry is unchanged (DESIGN.md, Local cutover of the native gm, 2026-11-04).
 2. Roots and elicitation stay unused; question rows carry interactivity (DESIGN.md, Owner decisions on the five open questions, 2026-11-06).
-3. Protocol 2026-07-28 may be negotiated behind a capability flag that is off by default, with a witness test; it does not become the default until a client test exists. Not implemented at this commit: no 2026-07-28 string in src/ or native/.
+3. Protocol 2026-07-28 may be negotiated behind a capability flag that is off by default, with a witness test; it does not become the default until a client test exists. Not implemented at this commit: no 2026-07-28 string in src/ or native/components/ (native/tests/parity names it in its reasons).
 4. Drain and log a body's console output, capped. Implemented (DESIGN.md, Body console drained and logged, capped).
 5. The project does not close until the minimal tool set is run and G3 (cache effect, measured by the gm agent from host transcripts) is recorded. Both are recorded (DESIGN.md, Item 5).
 
