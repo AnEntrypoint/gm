@@ -466,3 +466,15 @@ Ranked remaining work (2026-11-09, after this review):
 Status: V1, V2 (this case) and V3 verified on 0a9bb65; V4 open, blocked on CI. Rank 1 is done; rank 2 (Node budget parity, owner decision) is open only for cases other than the 65 s body.
 
 Final run on the stamped binary 94c6a89 (its sources equal 1af49a1; the commit after 1af49a1 changes only docs): conformance 83 passed, 0 failed of 83 in 24 scenarios, run-code-progress-check and shell-stdin-check ok; parity 22/93 match, 56 native-ahead, 15 documented-gap, 0 differ. Native and Node witnesses re-run with the same results as the table above (job kills 7 cancelled, 10 restart, 4 run-ended, 6 timeout statements; run_shell QUIET and PARTIAL with statements; rules notice before end and none in the finish reply; feed second call 0 replayed, third call 3 events on native and 2 on Node; jobsKilled statement present; body stopBackground and restart statements).
+
+## gm pass, rerun of Phase B on binary 0a9bb65 (2026-11-09, source at f2bb5a6; code unchanged since 0a9bb65)
+
+Recovery run after an API error ended the previous turn. The release build had finished (BUILD_EXIT 0); the binary stamp is `gm 0a9bb65-dev (0a9bb65)`. Everything after 0a9bb65 is documentation, so the code under test is current.
+
+- V1, `node tools/check-run-code-budget.mjs build/release/native/components/host/gm`: `run-code-budget-check: ok (a 65 s JavaScript body with timeoutMs 100000 returned in 65004 ms; a catastrophic regex in the fetch leaf ended in 123102 ms with no old fixed limit)`; V1_EXIT 0.
+- Conformance, `node tools/check-build.mjs build/release`: `check-build: gm-core stamp 0a9bb65-dev (0a9bb65)`, `conformance: 83 passed, 0 failed of 83 checks in 24 scenarios`; CONF_EXIT 0. Its embedded budget check printed `... ended in 126047 ms with no old fixed limit`.
+- Parity, `node native/tests/parity/run.mjs --bin build/release/native/components/host/gm`: `22/93 scenarios match, 0 cutover-expected, 56 native-ahead, 15 documented-gap, 0 differ`; PARITY_EXIT 0.
+- V3, leaf past the old 120 s limit (v3-leaf.mjs): `V3_ELAPSED_S 225`, `V3_REPLY {"ok":true,"output":{"ok":true,"status":200,"bytes":34,...}}`; V3_EXIT 0. The first run took 343 s on the same binary; the catastrophic-regex time varies with load, and both runs exceeded 120 s with status 200.
+- V2, the same 65 s JavaScript body on the Node host (v2-node.mjs): `V2_NODE_ELAPSED_S 65`, `V2_NODE_REPLY {"ok":true,"output":{"spun":true},...}`; V2_EXIT 0.
+
+Status: V1, V2 (this case) and V3 verified again on 0a9bb65. V4 (CRLF, 4e82f40) remains blocked on CI.
