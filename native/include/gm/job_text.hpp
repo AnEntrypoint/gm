@@ -11,6 +11,8 @@ inline std::string kill_statement(const std::string& name, const std::string& re
     if (reason == "cancelled") return "job " + name + " stopped by job_stop";
     if (reason == "restart") return "job " + name + " killed: the gm worker restarted while it ran, and a restart kills the process group of every job that was running";
     if (reason == "run-ended") return "job " + name + " killed: its run ended while it ran (the run finished or its host closed), and ending a run kills the process group of every running job";
+    if (reason == "stopBackground") return "job " + name + " stopped: finish was called with stopBackground: true, which stops the run background jobs";
+    if (reason == "shutdown") return "job " + name + " killed: the gm worker shut down while it ran";
     return "job " + name + " killed: " + reason;
 }
 
