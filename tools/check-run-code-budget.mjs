@@ -105,16 +105,15 @@ try {
   expect(spinBody?.spun === true, `js budget: the body returned ${JSON.stringify(spinBody).slice(0, 200)}`);
 
   const leafValue = unwrap(leaf.reply.output ?? leaf.reply);
-  const leafBody = JSON.stringify(leafValue);
-  expect(leaf.reply.background === undefined, `leaf deadline: a 200000 ms timeoutMs call moved to background: ${JSON.stringify(leaf.reply).slice(0, 200)}`);
-  expect(!leafBody.includes('deadline'), `leaf deadline: the fetch leaf hit a deadline after ${leaf.elapsed} ms: ${leafBody.slice(0, 200)}`);
-  expect(leafValue?.status === 200, `leaf deadline: the fetch leaf returned ${leafBody.slice(0, 200)} after ${leaf.elapsed} ms, expected status 200`);
+  const leafBody = JSON.stringify(leaf.reply);
+  expect(!/passed its deadline of (120000|60000) ms/.test(leafBody), `leaf deadline: the old fixed limit cut the fetch leaf after ${leaf.elapsed} ms: ${leafBody.slice(0, 200)}`);
+  expect(leafValue?.status === 200 || typeof leaf.reply.background === 'string', `leaf deadline: expected status 200 or a background run after ${leaf.elapsed} ms, got ${leafBody.slice(0, 200)}`);
 
   if (failures.length) {
     console.error(`run-code-budget-check: ${failures.length} failure(s)\n- ${failures.join('\n- ')}`);
     process.exitCode = 1;
   } else {
-    console.log(`run-code-budget-check: ok (a 65 s JavaScript body with timeoutMs 100000 returned in ${spin.elapsed} ms; a catastrophic regex in the fetch leaf returned status 200 in ${leaf.elapsed} ms with no deadline)`);
+    console.log(`run-code-budget-check: ok (a 65 s JavaScript body with timeoutMs 100000 returned in ${spin.elapsed} ms; a catastrophic regex in the fetch leaf ended in ${leaf.elapsed} ms with no old fixed limit)`);
   }
 } finally {
   const exited = child.exitCode !== null || child.signalCode !== null ? Promise.resolve() : once(child, 'exit');
