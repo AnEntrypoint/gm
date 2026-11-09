@@ -31,7 +31,7 @@ struct ConsoleBuffer {
 
 struct BodyControls {
     std::atomic<bool> stopped{false};
-    std::chrono::milliseconds js_budget{60000};
+    std::chrono::milliseconds js_budget{3600000};
     ConsoleBuffer console;
 };
 

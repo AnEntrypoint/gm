@@ -15,7 +15,12 @@ export function scanUnitTests(root) {
 function visit(root, dir, hits) {
   for (const name of readdirSync(dir).sort()) {
     const full = join(dir, name);
-    const stat = statSync(full);
+    let stat;
+    try {
+      stat = statSync(full);
+    } catch {
+      continue;
+    }
     if (stat.isDirectory()) {
       if (!SKIP_DIRS.has(name)) visit(root, full, hits);
       continue;

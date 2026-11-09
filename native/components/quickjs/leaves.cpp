@@ -12,6 +12,7 @@
 #include <system_error>
 
 #include "engine.hpp"
+#include "gm/runcode.hpp"
 
 namespace gm {
 namespace {
@@ -20,7 +21,7 @@ using engine::Engine;
 using engine::Scoped;
 using engine::Session;
 
-constexpr std::chrono::milliseconds leaf_call_deadline{120000};
+constexpr std::chrono::milliseconds leaf_call_deadline{3600000};
 
 struct FileKey {
     std::int64_t mtime = 0;
@@ -51,8 +52,10 @@ std::optional<std::string> read_file(const std::filesystem::path& file) {
 }
 
 void start_deadline(Session& session) {
-    session.deadline_budget = leaf_call_deadline;
-    session.deadline = engine::Clock::now() + leaf_call_deadline;
+    const auto body = thread_body_controls();
+    const std::chrono::milliseconds budget = body ? body->js_budget : leaf_call_deadline;
+    session.deadline_budget = budget;
+    session.deadline = engine::Clock::now() + budget;
 }
 
 deoxidene::Result<JSValue, std::string> verbs_export(Engine& engine, const std::vector<std::uint8_t>& bytecode) {

@@ -3187,6 +3187,7 @@ Value Server::State::run_code(const Value& args) {
             next_generation();
             auto job = std::make_shared<BodyJob>();
             job->controls = std::make_shared<gm::BodyControls>();
+            job->controls->js_budget = std::chrono::milliseconds(static_cast<long long>(options.job_lifetime_ms));
             job->body = action;
             job->step = s().steps;
             job->owner = &s();

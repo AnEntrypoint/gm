@@ -69,7 +69,11 @@ const unwrap = (value) => {
 const BODY = `const cat = await gm.run_shell({ command: 'cat', timeoutMs: 10000 });
 const read = await gm.run_shell({ command: "echo remote-line | sh -c 'read x; echo got:$x'", timeoutMs: 10000 });
 const pipe = await gm.run_shell({ command: 'echo payload | cat', timeoutMs: 10000 });
-return { cat, read: read.output, pipe: pipe.output };`;
+await gm.job_start({ job: 'stdin-cat', command: 'cat', timeoutMs: 10000 });
+await gm.job_start({ job: 'stdin-read', command: "echo remote-line | sh -c 'read x; echo got:$x'", timeoutMs: 10000 });
+const jobCat = await gm.job_status({ job: 'stdin-cat', waitMs: 10000 });
+const jobRead = await gm.job_status({ job: 'stdin-read', waitMs: 10000 });
+return { cat, read: read.output, pipe: pipe.output, jobCat: { state: jobCat.state, exitCode: jobCat.exitCode, output: jobCat.output }, jobRead: { state: jobRead.state, exitCode: jobRead.exitCode, output: jobRead.output } };`;
 
 const failures = [];
 const expect = (condition, text) => {
@@ -89,6 +93,8 @@ try {
   expect(elapsed < 9000, `the three shell calls took ${elapsed} ms; a hang would hit the 10000 ms shell timeout`);
   expect(result?.read === 'got:remote-line\n', `a stdin-reading command returned ${JSON.stringify(result?.read)}, expected got:remote-line`);
   expect(result?.pipe === 'payload\n', `piped input returned ${JSON.stringify(result?.pipe)}, expected payload`);
+  expect(result?.jobCat?.state === 'exited' && result?.jobCat?.exitCode === 0 && result?.jobCat?.output === '', `job cat with no input did not exit cleanly: ${JSON.stringify(result?.jobCat).slice(0, 200)}`);
+  expect(result?.jobRead?.state === 'exited' && result?.jobRead?.output === 'got:remote-line\n', `a job that reads stdin returned ${JSON.stringify(result?.jobRead).slice(0, 200)}`);
 
   if (failures.length) {
     console.error(`shell-stdin-check: ${failures.length} failure(s)\n- ${failures.join('\n- ')}`);
