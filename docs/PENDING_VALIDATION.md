@@ -301,3 +301,29 @@ Witness: each entry was read back from disk, then its command and args were laun
 - tools/list: next_context, finish, run_code.
 
 The backups are byte-identical to the originals (cmp).
+
+## Cross-project browser isolation on the installed native host (2026-11-09)
+
+Phase A: nothing to fix. The isolation held on every check, so no code changed. The first probe failed only in the witness helper (it did not split Chromium's rewritten argv); the product was not at fault.
+
+Host witnessed: `/config/.gmnew/current/gm` (`ae4ef46-278 (ae4ef46)`), the entry agents start. Each project was run with `gm serve --workspace <project>` from its own cwd. Each run called `gm.playwriter_execute` with a page titled per project.
+
+Real project cwds (live gates and browsers of the running workers were reused; each run's own tab was closed with `gm.playwriter_browsers({ action: 'close' })`, which is run-scoped):
+
+| project | browser profile (from /proc cmdline) | browser pid | page list (from /json/list) |
+|---|---|---|---|
+| thebird | /workspace/thebird/.playwriter/browser-profile | 3998103 | "ISO-THEBIRD-mw8psvnm", "about:blank" |
+| jayzee | /workspace/jayzee/.playwriter/browser-profile | 4095470 | "ISO-JAYZEE-mw8psvnm", "about:blank" |
+
+Checks: distinct profile paths, distinct pids, each page set holds only its own project's tab. After the witness both browsers had the same pids and only "about:blank" again.
+
+Close check, on scratch roots /tmp/iso/close/thebird and /tmp/iso/close/jayzee (not the live projects, because a whole-browser close would kill a running worker's tabs):
+
+| root | browser profile | browser pid | pages before close |
+|---|---|---|---|
+| /tmp/iso/close/thebird | /tmp/iso/close/thebird/.playwriter/browser-profile | 4118278 | "ISO-CLOSE-THEBIRD-mw8puk1m", "about:blank" |
+| /tmp/iso/close/jayzee | /tmp/iso/close/jayzee/.playwriter/browser-profile | 4119366 | "ISO-CLOSE-JAYZEE-mw8puk1m", "about:blank" |
+
+`gm.browser_close_machine({ confirm: true })` in the thebird run closed pid 4118278 (not alive afterwards). Pid 4119366 stayed alive and its tab "ISO-CLOSE-JAYZEE-mw8puk1m" was still listed. The jayzee browser was then closed the same way and confirmed gone.
+
+Phase B: the witness scripts ran in /tmp/iso (outside the repo) and were removed after this record.
