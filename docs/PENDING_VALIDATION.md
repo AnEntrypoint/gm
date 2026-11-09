@@ -707,3 +707,10 @@ Cause: `reopen()` in native/components/mcp/server.cpp opens a successor run with
 | 10 | tools/witness-next-context-replay.mjs | new witness: a run holding a 30 KB brief is closed with finish; the successor's first next_context `events` must not contain the brief; the run ids must differ | as row 9 |
 
 Recorded gap: Node (src/mcp.mjs reopen, line 884 inherits the task) still replays the inherited task event. Changing src/ is a decision for the orchestrator, so Node is unchanged here.
+
+Phase B (2026-11-09, build stamp 7de4f40, HEAD 7de4f40): `cmake --preset release` and `cmake --build build/release -j 4` exit 0 with no FAILED line; `gm --version` prints `7de4f40-dev (7de4f40)`.
+
+- Failing witness, before the change: `node tools/witness-next-context-replay.mjs /config/.gmnew/current/gm` (the installed binary, which predates row 9) exits 1. Output: `"firstRun": "2026-11-09-12-54-34-151815", "finished": true, "successorRun": "2026-11-09-12-54-34-6ba413", "briefChars": 32442, "feedChars": 1353, "feedHasBrief": true, "taskChars": 32441`, then `next-context-replay: the successor run replayed the closed run brief in its events`.
+- Passing witness, after the change: `node tools/witness-next-context-replay.mjs build/release/native/components/host/gm` exits 0. Output: `"firstRun": "2026-11-09-12-55-53-e598b1", "finished": true, "successorRun": "2026-11-09-12-55-53-dbc470", "briefChars": 32442, "feedChars": 183, "feedHasBrief": false, "taskChars": 32441`.
+- Conformance, `node tools/check-build.mjs build/release`: `conformance: 85 passed, 0 failed of 85 checks in 24 scenarios`, exit 0. Its budget check printed `run-code-budget-check: ok ... a catastrophic regex in the fetch leaf ended in 105338 ms`, a third measured value for the open risk in the item 7 closure record.
+- Parity, `node native/tests/parity/run.mjs --bin build/release/native/components/host/gm`: `22/93 scenarios match, 0 cutover-expected, 56 native-ahead, 15 documented-gap, 0 differ`, exit 0. The counts equal the 2026-11-09 witness, so the successor change moved no parity key.
