@@ -1233,7 +1233,9 @@ struct Server::State {
     }
 
     std::string step_limit_text() {
-        return "step limit " + std::to_string(options.max_steps) + " reached; call finish with your witness to close this run, then call next_context to open a successor run; a run ended here has no witness";
+        return "step limit " + std::to_string(options.max_steps) +
+               " reached and this run ended without a witness; call next_context to open a successor run. To close a run with a witness, "
+               "call finish while stepsLeft is 0, before the next next_context call";
     }
 
     std::string read_rules() {

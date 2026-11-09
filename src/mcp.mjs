@@ -570,7 +570,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
   }
 
   function stepLimitText() {
-    return `step limit ${maxSteps} reached; call finish with your witness to close this run, then call next_context to open a successor run; a run ended here has no witness`;
+    return `step limit ${maxSteps} reached and this run ended without a witness; call next_context to open a successor run. To close a run with a witness, call finish while stepsLeft is 0, before the next next_context call`;
   }
 
   function endedReason(child = false) {
