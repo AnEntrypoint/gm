@@ -258,3 +258,17 @@ Retired by: tasks/rewrite/PLAN.md Gates line and AGENTS.md owner decision 1 for 
 - Gate (tools/ship.sh, src/gate.mjs runGate): `{"gate":true,"failed":[]}`, `gate exit code: 0`.
 - Parity before the retirement: `22/93 scenarios match, 0 cutover-expected, 56 native-ahead, 15 documented-gap, 0 differ`.
 - Parity after the retirement (same tree, same harness): `22/93 scenarios match, 0 cutover-expected, 56 native-ahead, 15 documented-gap, 0 differ`. The counts do not change because no source changed and the harness classifies diffs, not retirement; the retirement is the 56-row table above.
+
+## Native cutover of the gm entry (2026-11-09, Phase A)
+
+Decision (owner): native ships and Node stays the parity reference. The gm entry that a new setup registers now runs the native binary. Before this change, setup.sh printed `npx add-mcp ... "node <checkout>/tools/relay.mjs" -n gm -g -a claude-code`, so a fresh install started the Node host. The live user entry in /config/.claude.json already ran `/config/.gmnew/current/gm serve` (ae4ef46-278) when this change was made; the change makes every new install do the same, and it leaves the Node host in place as the reference.
+
+Parity gate, before the cutover: `22/93 scenarios match, 0 cutover-expected, 56 native-ahead, 15 documented-gap, 0 differ` (native/tests/parity/run.mjs, Node reference from HEAD).
+
+| # | File | Change | Witness needed |
+|---|---|---|---|
+| 47 | setup.sh | step 5 prints `sh "<checkout>/scripts/install.sh"` (the native release install, which runs `gm install`) instead of the three add-mcp commands; the Node relay is no longer registered. Step 6 is the native build for the parity reference. Comments removed (AGENTS invariant 2); the facts they carried are in AGENTS.md "Setup and the host entry" | Phase B fresh install into a scratch HOME: the entry it writes launches native and answers initialize |
+| 48 | README.md (install section) | the add-mcp sentence now says earlier add-mcp installs registered the Node relay, and that running the install again replaces it with the native binary | read it |
+| 49 | src/registration.mjs | the INSTALL_HINT names one command (the install command setup.sh prints) instead of remove and install | gate |
+| 50 | DESIGN.md "Question: is playwriter set up on every gm install" | the setup.sh sentence states what setup printed before and after the cutover | read it |
+| 51 | AGENTS.md | new section "Setup and the host entry": the entry agents start is the native binary; setup writes only the playwriter fetch outside the checkout | read it |

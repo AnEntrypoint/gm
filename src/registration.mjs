@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 
-const INSTALL_HINT = 'Run the remove and install commands that setup.sh prints.';
+const INSTALL_HINT = 'Run the install command that setup.sh prints.';
 
 export function claudeConfigFile(env = process.env) {
   return join(env.CLAUDE_CONFIG_DIR ?? homedir(), '.claude.json');

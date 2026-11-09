@@ -20,7 +20,7 @@ Windows x64 and arm64 build and test jobs pass in CI, and the release publishes 
 
 The registration is written by the binary itself: `<path-to-gm> install [--mcp-config <file>]`. It sets `mcpServers.gm` in `~/.claude.json` (on Windows, `%USERPROFILE%\.claude.json`) to `{"command": "<path-to-gm>", "args": ["serve"]}`, with `--mcp-config <file>` appended to args when given. Every other key is kept. The file is written to a temp file, re-read, and renamed over the original; a file that changed meanwhile is re-merged, and a file that is not a JSON object is refused and left alone. Running it again replaces the gm entry, so running the installer again updates the path.
 
-The entry is the same one add-mcp wrote, so installs made with add-mcp stay valid. Remove the entry by deleting `mcpServers.gm` from `~/.claude.json`.
+Installs made earlier with add-mcp registered `node <checkout>/tools/relay.mjs` (the Node host). Running the install again replaces that entry with the native binary. Remove the entry by deleting `mcpServers.gm` from `~/.claude.json`.
 
 Auto-update: the server checks the `latest` release at start and then every 15 minutes. Each check is a conditional request for the manifest (`If-None-Match`), so an unchanged release costs one small response, and a build is downloaded only when its target's archive has changed. Set `GMNEW_AUTO_UPDATE=0` to turn that off. Development builds never update.
 

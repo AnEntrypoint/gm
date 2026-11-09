@@ -114,6 +114,11 @@ Node-missing items are retired, not ported: native ships and Node is the parity 
 - Commit only through tools/ship.sh (see Owner rules). On a collision, fetch, reapply on origin's tip, and push. Do not clone to get around one.
 - Remote: AnEntrypoint/gm, public (the owner decided the repository is public), pushed to main.
 
+## Setup and the host entry
+
+- The gm entry agents start is the native binary: `mcpServers.gm` in `~/.claude.json` runs `<install>/gm serve`, written by `gm install` (scripts/install.sh runs it). tools/relay.mjs is the Node host and runs only in the parity reference.
+- setup.sh writes outside the checkout only the playwriter fetch (into the npm cache); its gate runs use the OS temporary directory. It prints the install command and runs nothing itself.
+
 ## Keeping this file
 
 - A note names a path or a command. Check it against the code before keeping it, with gm.grep or gm.read_file.

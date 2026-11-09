@@ -171,7 +171,7 @@ Decision: the search default is unchanged. On 15 functions, with descriptions wr
 
 Question: is playwriter set up on every gm install the way it is on this machine? No. Three things differ.
 
-- Each gm checkout runs the shipped default: `npx -y -p github:AnEntrypoint/pw#v0.1.0 playwriter-project` with telemetry off and no sandbox flag, from `defaults/mcp.json`. Setup registers only gm with the host (`setup.sh` prints add-mcp commands for gm alone), so the worker is the only thing that starts playwriter.
+- Each gm checkout runs the shipped default: `npx -y -p github:AnEntrypoint/pw#v0.1.0 playwriter-project` with telemetry off and no sandbox flag, from `defaults/mcp.json`. Setup registers only gm with the host (`setup.sh` printed add-mcp commands for gm alone until the 2026-11-09 cutover, which made it print `scripts/install.sh`), so the worker is the only thing that starts playwriter.
 - This machine adds a layer through the `--mcp-config` file of its gm registration (`/config/.claude.json` points it at `/config/.gm/mcp.json`). That layer runs `/workspace/pw/bin/playwriter-project` with `PLAYWRITER_NO_SANDBOX=1`. The code matches the pinned tag: `git diff --stat v0.1.0 HEAD` in `/workspace/pw` lists only `docs/index.html`.
 - The predecessor gm (`/workspace/gm`) installs no playwriter. Its install script and its gm-install.js (since removed from the tree) do not name it, and only `.gitignore` names `.playwriter/`.
 
