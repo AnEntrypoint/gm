@@ -748,7 +748,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
       query: queryHintOf(shown, log.count()),
       ...(recoveryNow ? { recovery: recoveryNow } : {}),
       ...(rulesOpen.size > 0 ? { rulesPending: rulesNotice() } : {}),
-      ...(killed.length ? { jobsKilled: killed.map(({ seq, job, reason, lifetimeMs, tail }) => ({ seq, job, reason, lifetimeMs, tail })) } : {}),
+      ...(killed.length ? { jobsKilled: killed.map(({ seq, job, reason, statement, lifetimeMs, tail }) => ({ seq, job, reason, statement, lifetimeMs, tail })) } : {}),
       ...(started.length ? { jobsStarted: started.map(({ seq, job }) => ({ seq, job })) } : {}),
       ...(stillRunning.length ? { jobsRunning: stillRunning.map(({ seq, job, runningMs, prd }) => ({ seq, job, runningMs, prd })) } : {}),
       ...(jobsEnded.length ? { jobsEnded } : {}),

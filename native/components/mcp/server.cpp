@@ -1828,7 +1828,7 @@ struct Server::State {
         for (const Value& event : since) {
             std::string kind = string_of(event, "kind");
             std::string state = string_of(event, "state");
-            if (kind == "job-killed") killed.push(pick(event, {"seq", "job", "reason", "lifetimeMs", "tail"}));
+            if (kind == "job-killed") killed.push(pick(event, {"seq", "job", "reason", "statement", "lifetimeMs", "tail"}));
             if (kind == "job" && state == "running" && event.find("body")) started.push(pick(event, {"seq", "job"}));
             if (kind == "job-running") running.push(pick(event, {"seq", "job", "runningMs", "prd"}));
             if (kind == "job" && state != "running" && !(state == "killed" && killed_names.contains(string_of(event, "job")))) {
