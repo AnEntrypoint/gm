@@ -454,4 +454,15 @@ Ranked remaining work (2026-11-09, after this review):
 | 8 | The .mcp.json pass | not started | owner schedules it |
 | 9 | Windows and macOS builds are not verified here | open | CI runs |
 
+## gm pass, Phase B (2026-11-09, commit 0a9bb65, build stamp 0a9bb65-dev): rows V1 to V4
+
+- V1, native run_code budget (e78de46), `node tools/check-run-code-budget.mjs build/release/native/components/host/gm`, exit 0: `run-code-budget-check: ok (a 65 s JavaScript body with timeoutMs 100000 returned in 65004 ms; a catastrophic regex in the fetch leaf ended in 118083 ms with no old fixed limit)`. Verified.
+- V3, leaf past the old 120 s limit (f80cd46 weakened the check, so it was witnessed separately; v3-leaf.mjs in /tmp/gm-defects/w3): a local server answered a 32-a catastrophic regex line, run_code timeoutMs 400000, `V3_ELAPSED_S 343`, `V3_REPLY {"ok":true,"output":{"ok":true,"status":200,"bytes":34,...}}`. The leaf ran 343 s, past the old 120000 ms deadline, and returned status 200. Verified.
+- V2, Node run_code budget (e78de46 did not change Node): the same 65 s JavaScript body on the Node host, timeoutMs 100000, `V2_NODE_ELAPSED_S 65`, `V2_NODE_REPLY {"ok":true,"output":{"spun":true},...}`. Node did not cut it at 60 s, so for this case native and Node agree. Parity does not cover the JavaScript budget (its run is below), so this direct measurement is the witness. Verified for this case.
+- V4, the CRLF comparison in 4e82f40: CI only. Not verifiable here; open, blocked on CI.
+- Conformance, `node tools/check-build.mjs build/release`: `check-build: gm-core stamp 0a9bb65-dev (0a9bb65)`, `conformance: 83 passed, 0 failed of 83 checks in 24 scenarios`, exit 0.
+- Parity, `node native/tests/parity/run.mjs --bin build/release/native/components/host/gm`: `22/93 scenarios match, 0 cutover-expected, 56 native-ahead, 15 documented-gap, 0 differ`, exit 0.
+
+Status: V1, V2 (this case) and V3 verified on 0a9bb65; V4 open, blocked on CI. Rank 1 is done; rank 2 (Node budget parity, owner decision) is open only for cases other than the 65 s body.
+
 Final run on the stamped binary 94c6a89 (its sources equal 1af49a1; the commit after 1af49a1 changes only docs): conformance 83 passed, 0 failed of 83 in 24 scenarios, run-code-progress-check and shell-stdin-check ok; parity 22/93 match, 56 native-ahead, 15 documented-gap, 0 differ. Native and Node witnesses re-run with the same results as the table above (job kills 7 cancelled, 10 restart, 4 run-ended, 6 timeout statements; run_shell QUIET and PARTIAL with statements; rules notice before end and none in the finish reply; feed second call 0 replayed, third call 3 events on native and 2 on Node; jobsKilled statement present; body stopBackground and restart statements).
