@@ -16,6 +16,7 @@ import { SEARCH_TOOLS } from './search.mjs';
 import { runBody, runCodeTool, RUN_CODE_PROPERTIES } from './runcode.mjs';
 import { bodyContext } from './exec.mjs';
 import { readServerConfig, startMcpClients } from './mcp-client.mjs';
+import { BROWSER_VERBS, createBrowserScope } from './browser-scope.mjs';
 import { COMPACT as SEARCH_COMPACT } from './search.mjs';
 import { COMPACT as RUNCODE_COMPACT } from './runcode.mjs';
 import { COMPACT as TOOLS_COMPACT } from './tools.mjs';
@@ -25,6 +26,7 @@ import { parseSkill, SERVED_SKILLS } from './skills.mjs';
 import { completionOf, createSubscriptions, readRun, RESOURCE_TEMPLATES, runResources, witnessOf } from './mcp-resources.mjs';
 
 const SUPPORTED_VERSIONS = ['2025-11-25', '2025-06-18'];
+const ACCEPTED_VERSIONS = ['2025-11-25', '2025-06-18', '2025-03-26', '2024-11-05', '2024-10-07'];
 const PROTOCOL_VERSION = SUPPORTED_VERSIONS[0];
 const RUN_META = 'com.anentrypoint.gmnew/run';
 const RUN_SEQ = 'com.anentrypoint.gmnew/seq';
@@ -173,7 +175,7 @@ function surfaceOf(leaves) {
     ...leaves['git.mjs'].GIT_TOOLS,
     ...leaves['rows.mjs'].ROW_TOOLS,
   ].map(annotated);
-  const VERBS = [...TOOLS.filter((tool) => !CODE_SURFACE.has(tool.name)), ...mcp.verbs()];
+  const VERBS = [...TOOLS.filter((tool) => !CODE_SURFACE.has(tool.name)), ...mcp.verbs(), ...BROWSER_VERBS];
   const CODE_LIST = [...TOOLS.filter((tool) => tool.name === 'next_context' || tool.name === 'finish'), annotated(runCodeTool(VERBS.map((tool) => tool.name)))];
   const REGISTRY = registryOf(TOOLS_COMPACT, SEARCH_COMPACT, leaves['fetch.mjs'].COMPACT, leaves['git.mjs'].COMPACT, leaves['code-ast.mjs'].COMPACT, leaves['rows.mjs'].COMPACT, leaves['wiki-tools.mjs'].COMPACT, leaves['review-tools.mjs'].COMPACT, RUNCODE_COMPACT, SELF_COMPACT);
   return { TOOLS, VERBS, CODE_LIST, REGISTRY, leaves };
@@ -224,6 +226,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
   const runId = basename(runDir);
   const runsRoot = dirname(runDir);
   const tools = createTools({ workspace, runDir, log, background: true, jobLifetimeMs, stuckMs, monitorMs, noticeMs, leaves: current.leaves, serveSkill: (uri) => serveSkillFile(uri, 'read_file') });
+  const browser = createBrowserScope({ inner: (name, args) => (mcp.has(name) ? mcp.call(name, args) : { ok: false, error: `unknown tool: ${name}` }), log });
   activeTools = tools;
   activeLog = log;
   let pendingRecovery = recovery;
@@ -307,7 +310,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     if (body !== undefined) tools.callStarted(body);
     const action = READ_ONLY_TOOLS.has(name) ? undefined : log.append('action', { step: steps, tool: name, args, caller: CALLER, ...(body === undefined ? {} : { body }) });
     if (action !== undefined) flushAllLogs();
-    const exec = mcp.has(name) ? (value) => mcp.call(name, value) : Object.hasOwn(handlers, name) ? handlers[name] : (value) => tools.run(name, value);
+    const exec = browser.handles(name) ? (value) => browser.call(name, value) : mcp.has(name) ? (value) => mcp.call(name, value) : Object.hasOwn(handlers, name) ? handlers[name] : (value) => tools.run(name, value);
     let result;
     try {
       result = await exec(args);
@@ -398,7 +401,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
 
   function initialize(params) {
     const asked = params?.protocolVersion;
-    const version = SUPPORTED_VERSIONS.includes(asked) ? asked : PROTOCOL_VERSION;
+    const version = ACCEPTED_VERSIONS.includes(asked) ? asked : PROTOCOL_VERSION;
     return { protocolVersion: version, ...connectReply(surface), serverInfo: SERVER_INFO };
   }
 
@@ -685,6 +688,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
       stepLimited = true;
       stop('max_steps');
       const out = refuse('next_context', {}, stepLimitText(), rpcId);
+      await browser.closeForRun();
       await endRun('max_steps', null);
       return out;
     }
@@ -710,7 +714,8 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
       const step = steps;
       if (ownerToken === null && (ownerMarked || firstStep || (steps === 1 && !childSeen && args.child !== true && args.run === undefined))) ownerToken = 'owner';
       if (given !== '' && given !== task) await replaceTask(given, { ...(ownerMarked ? { owner: true } : {}), ...(correction ? { correction: true } : {}) });
-      return context(step, rpcId, compactChildren, waitMs > 0);
+      const reply = await context(step, rpcId, compactChildren, waitMs > 0);
+      return { ...reply, tabs: await browser.tabsText() };
     }, ({ ok, error, prefixSha, total, progress }) => ({ ok, error, prefixSha, total, progress }), rpcId, 1);
   }  let prefixMemo = null;
   function prefixShaFor(rules) {
@@ -809,7 +814,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     }
     if (args.stopBackground === true) tools.stopBodies('stopBackground');
     stop('finished');
-    const out = await act('finish', args, access, () => tools.run('finish', args), undefined, rpcId);
+    const out = await act('finish', args, access, async () => ({ ...(await tools.run('finish', args)), browser: await browser.closeForRun() }), undefined, rpcId);
     const { lintWiki } = await import('./wiki.mjs');
     const lint = lintWiki(workspace);
     log.append('lint', { problems: lint.problems, pages: lint.pages });
@@ -1174,7 +1179,7 @@ async function main(argv) {
   if (mcpFlag !== undefined) mcpFiles.push({ file: resolve(mcpFlag), required: true });
   const { servers, problems } = readServerConfig(mcpFiles, workspace);
   const depth = Number.parseInt(process.env.GMNEW_MCP_DEPTH ?? '0', 10) || 0;
-  const client = startMcpClients({ servers, problems, log, depth, reserved: new Set(current.TOOLS.map((tool) => tool.name)) });
+  const client = startMcpClients({ servers, problems, log, depth, reserved: new Set([...current.TOOLS.map((tool) => tool.name), ...BROWSER_VERBS.map((verb) => verb.name)]) });
   mcp = client;
   mcpReady = client.ready.then(() => {
     current = surfaceOf(current.leaves);

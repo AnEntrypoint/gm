@@ -126,7 +126,7 @@ const SCENARIOS = [
       ok('serverInfo has a name and a version', nonEmpty(r.serverInfo?.name) && nonEmpty(r.serverInfo?.version), short(r.serverInfo));
       ok('declares tools, prompts, resources, logging and completions', CAPABILITIES.every((k) => k in (r.capabilities ?? {})), short(r.capabilities));
       ok('tools, prompts and resources declare listChanged', r.capabilities?.tools?.listChanged === true && r.capabilities?.prompts?.listChanged === true && r.capabilities?.resources?.listChanged === true);
-      ok('resources declares no subscribe, since subscriptions/listen replaces resources/subscribe', r.capabilities?.resources?.subscribe === undefined, short(r.capabilities?.resources));
+      ok('resources declares subscribe', r.capabilities?.resources?.subscribe === true, short(r.capabilities?.resources));
       ok('instructions are a non-empty string', nonEmpty(r.instructions));
     },
   },
@@ -139,7 +139,7 @@ const SCENARIOS = [
       ok('resultType is complete', d?.resultType === 'complete', short(d?.resultType));
       ok('supportedVersions lists the served versions', sameList(d?.supportedVersions, SERVED_VERSIONS), short(d?.supportedVersions));
       ok('declares the served capabilities', CAPABILITIES.every((k) => k in (d?.capabilities ?? {})), short(d?.capabilities));
-      ok('declares no resources.subscribe', d?.capabilities?.resources?.subscribe === undefined, short(d?.capabilities?.resources));
+      ok('declares resources.subscribe', d?.capabilities?.resources?.subscribe === true, short(d?.capabilities?.resources));
       ok('carries instructions', nonEmpty(d?.instructions));
       ok('carries ttlMs 3600000 and cacheScope public', d?.ttlMs === HOUR_MS && d?.cacheScope === 'public', `ttlMs=${d?.ttlMs} cacheScope=${d?.cacheScope}`);
       ok('serverInfo in _meta names gm', d?._meta?.['io.modelcontextprotocol/serverInfo']?.name === 'gm', short(d?._meta));
@@ -336,12 +336,14 @@ const SCENARIOS = [
     },
   },
   {
-    name: 'resources/subscribe replaced',
+    name: 'resources/subscribe',
     run: async (c, ok) => {
       const sub = await c.rpc('resources/subscribe', { uri: SKILL_URI });
       const unsub = await c.rpc('resources/unsubscribe', { uri: SKILL_URI });
-      ok('resources/subscribe answers method not found, since subscriptions/listen replaces it', sub.error?.code === METHOD_NOT_FOUND, short(sub));
-      ok('resources/unsubscribe answers method not found, since subscriptions/listen replaces it', unsub.error?.code === METHOD_NOT_FOUND, short(unsub));
+      const missing = await c.rpc('resources/subscribe', { uri: 'skill://gm/NOPE.md' });
+      ok('resources/subscribe of a served skill answers an empty result', sub.error === undefined && sub.result !== undefined && Object.keys(sub.result).length === 0, short(sub));
+      ok('resources/unsubscribe of the same skill answers an empty result', unsub.error === undefined && unsub.result !== undefined && Object.keys(unsub.result).length === 0, short(unsub));
+      ok('resources/subscribe of a missing resource is refused', missing.error !== undefined, short(missing));
     },
   },
   {

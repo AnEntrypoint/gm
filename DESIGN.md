@@ -349,7 +349,7 @@ What shipped, by item (src/mcp.mjs, src/connect.mjs, the new src/mcp-resources.m
 - E. The gm prompt's task argument reads: "The task to run. The whole task text is this one argument. Some hosts pass only its first word." Observed 2026-11-04: a /mcp__gm__gm command with words after the first gave the gm prompt the task "make" only, which is the host passing the first word. Not worked around in the server beyond this text.
 - F. Logging: capability logging {}, logging/setLevel, and notifications/message at the level of each event: notice for restart, reload, tools-changed and end; info for paused, cancel and job-unstuck; warning for recovery, job-stuck, job-killed and rules-notice; error for error. With no level set, events wait in a queue of 64 and are sent when a host sets a level. The event log stays the record.
 - G. Completions: completion/complete suggests the skill name, and the skill file path given the name, for skill:// templates, and the run id for run:// templates. Run ids come from runs/, newest first, at most 100.
-- H. Subscriptions: subscriptions/listen is the only subscription surface (native/components/mcp/server.cpp:2223). resources/subscribe and resources/unsubscribe, which this item first shipped, are removed and answer -32601 (native/components/mcp/tests/spec_test.cpp:235), and resources.subscribe is not declared. The fs.watch and sha256 digest mechanism described for the removed methods is not confirmed for subscriptions/listen.
+- H. Subscriptions: subscriptions/listen is the only subscription surface (native/components/mcp/server.cpp:2223). resources/subscribe and resources/unsubscribe, which this item first shipped, were removed and answered -32601 (native/components/mcp/tests/spec_test.cpp:235). Superseded 2026-11-09: both are served again on both engines and resources.subscribe is declared. The fs.watch and sha256 digest mechanism described for the removed methods is not confirmed for subscriptions/listen.
 - I. The connect text gains a resources pointer (RESOURCES_POINTER, src/connect.mjs). serverInfo gains the title "gm run worker", and connectSha covers the title.
 
 Reconnect and gate: CAPABILITIES, the instructions and the title changed. The host reads them once, at connect, so a host reconnects to see A to I. CONNECT_SHA is recorded as 9b707f4390fef8d4e21d4d661e636260ea830e228fddd8c26b5b34924914705f, the value connectSha returns for this checkout.
@@ -457,7 +457,7 @@ Parity: the job_start scenario of native/tests/parity/run.mjs now waits for the 
 
 Gaps against Node, open:
 - The SDK requires capabilities and serverInfo.version in the initialize result. Node has not been checked to accept a result without them.
-- The SDK accepts six protocol versions. Our client checks the two Node speaks itself after initialize.
+- The SDK accepts five protocol versions (2025-11-25, 2025-06-18, 2025-03-26, 2024-11-05, 2024-10-07). Both servers echo any of them and both clients connect all five (tools/check-protocol-versions.mjs, 2026-11-09). The earlier "six" was cxxmcp's list, which includes 2026-07-28 and a draft, and is not the SDK's.
 - A server killed by a signal reports 128 plus the signal number, not Node text. A spawn failure reports the OS text.
 - Windows captures no server stderr. Windows is not built here.
 - A server request other than ping gets the SDK method-not-found text.
@@ -476,7 +476,7 @@ Superseded 2026-11-09: Node aborts the body's fetch on a body stop (trackBodyAbo
 
 - Relay (40c94df): the relay restarts only when a runtime source changes (leaves dir, skills dir, worker binary), the binary must settle for 250 ms, in-flight calls drain for up to 30 s, and any still open get "the worker restarted before it answered this call; the call may be retried" (native/components/host/include/gm/host/relay.hpp:33-34, relay.cpp:22, 321-360). Before this, restarts dropped in-flight requests; the conformance agent counted 140 restarts in about 30 minutes (reported, not re-measured).
 - Search and jobs (6d708a2): gm.grep takes a file root, and its pattern is capped at 200 characters and refused with "pattern must be at most 200 characters; got N", as the verb description states (search.cpp:34). job_start defaults to 300000 ms and caps at 600000 ms (verbs.cpp:33-34); job_status reports timeoutMs, and a timed-out job ends with reason timeout.
-- MCP surface: subscriptions/listen is the only subscription surface (server.cpp:2223). resources/subscribe and resources/unsubscribe are removed and answer -32601 (spec_test.cpp:235), and resources.subscribe is not declared.
+- MCP surface (superseded 2026-11-09, see "Restart keeps shell jobs (2026-11-09)" and the item 6 record in docs/PENDING_VALIDATION.md): resources/subscribe and resources/unsubscribe are served again on both engines, resources.subscribe is declared, and an unknown uri answers -32002. subscriptions/listen remains.
 - Conformance runner: tools/mcp-conformance.mjs --stdio <program> [args...] runs under tools/check-build.mjs, which prints the count; the count is not kept in this file. Witness 2026-11-09, build/release: "conformance: 83 passed, 0 failed of 83 checks in 24 scenarios". It no longer takes --url, and the official conformance package fixtures are not used.
 - Esm: run_code takes format esm or cjs. Left out, the format follows package.json type (type module is esm, anything else is cjs; server.cpp:103-106), so the default is not always cjs. Esm and cjs files load through the QuickJS module loader (quickjs/engine.cpp:144).
 - Parity harness (native/tests/parity/run.mjs): the normaliser maps body-<N> (line 262). NATIVE_AHEAD (lines 336-348) accepts the stopped-fetch code-call (a count rule, narrowed in code at line 370 to a fetch to /hang), the instructions text, job_status timeoutMs, and a broad path-based sequence rule (when right === left + 1). Open: the broad sequence rule is weak evidence and can hide real drift; narrow it to the fields one dropped event moves.
@@ -1301,7 +1301,7 @@ Rationale the comment sweep moved out of src/ (one section per module group). Ru
 - The clock of progress and of the lifetime starts with the thread, not with the adoption, so a body that waited is not stuck for the wait.
 - The row read is asynchronous, so the job may settle before it returns; a report for a job that has settled is dropped.
 - The job starts when its slot is granted; a stop before that leaves the queue, so the job never starts.
-- A job whose status file still says running was started by a worker that stopped without ending it (a crash): its shell group is killed and it is logged as killed with reason restart, so no child outlives the worker and the next context names it.
+- A job whose status file still says running was started by a worker that stopped without ending it. Since 2026-11-09 a shell job is adopted instead of killed: when its process is alive the new worker keeps it running with its remaining timeout, and when its exit file exists it settles the job with that exit code; only a job with no exit file and no live process is logged as killed with reason restart. Background bodies are still killed at a restart. See "Restart keeps shell jobs (2026-11-09)" at the end of this file.
 - The stuck check: a running job that has made no progress for stuckMs is stuck; the agent is told once when a job becomes stuck, and once when it progresses again, so a stuck job is never reported twice in a row; a queued job is waiting for a slot, not stuck.
 - The check runs only while a job or a body is open; checkStuck stops it when none is, so an idle worker does not wake for it.
 - A query_log reply holds at most 50 events and stays within 20 KB once serialized, because the reply escapes the JSON it carries; when a page is cut short, next is the seq of the last event returned, and the caller passes it as after.
@@ -1591,3 +1591,21 @@ Decision: one job lifetime, 3600000 ms, in both trees and for both shell jobs an
 Cause of the disagreement: three constants, one per layer, set independently. The witness that reported "not killed after 34 minutes" was a shell job (job_start, JobTable, 3600000 ms), which is correct at its own value.
 
 Consequence: a shell job's lifetime equals the largest timeoutMs job_start accepts (3600000), so the job reaches its deadline first and reports reason "timeout", never "lifetime". The lifetime reason is reachable only for background bodies. This is recorded, not changed: a lower job lifetime would change what job_start accepts, which is a decision for the owner.
+
+## Restart keeps shell jobs (2026-11-09)
+
+Decision: a worker restart does not end a shell job. The job's shell runs through a wrapper that writes its exit code to jobs/<name>.exit (native spawn_shell_job in native/components/verbs/job.cpp; wrapShell in src/tools.mjs). The restarted worker adopts a job whose pid is alive (native adopt_orphan/adopt_job, Node adoptShell) and keeps its remaining timeout, computed from the startWall in the status file; it settles a job whose exit file exists with that exit code. Only a job with no exit file and no live process is logged as killed with reason restart. Background bodies are still killed at a restart (their stop_orphans path is unchanged), and the body reaping ledger is unchanged.
+
+Cause: a restart killed every running job in the worker's process group, so a long build or test started with job_start ended with reason restart and empty output, even though the job's own process was still running. The owner asked for this to be a gm defect, not a documented behaviour.
+
+Witness, before, native (tools/check-restart-jobs.mjs build/release/native/components/host/gm, before this change): the job was killed with reason restart and its output was "". Node before (same check, node): 6 failures, including "after the restart the job's process is gone" and "after the restart job_status reports killed, expected running".
+
+Witness, after, native: restart-jobs-check: ok (native: binary mtime changed ... the job's process was alive 614 ms after the trigger; the restart answered in 594 ms; the job exited 0 with output "done" at 8003 ms; carry-over events 1; killed with reason restart 0).
+
+Witness, after, node: restart-jobs-check: ok (node: SIGTERM to the Node worker ... alive 227 ms after the trigger; exited 0 with output "done" at 7969 ms; carry-over events 1; killed with reason restart 0).
+
+Regressions after the change: check-job-bounds.mjs and check-stop-fetch.mjs pass on both engines, and tools/check-build.mjs runs check-restart-jobs.mjs in its list.
+
+Parity: status now carries startWall on both engines, so the job_status row no longer differs (Node previously lacked it). startWall is a volatile key in native/tests/parity/run.mjs. The harness reference defaults to the committed HEAD (--ref-source head), so uncommitted Node edits are not compared unless --ref-source working is given; the score with --ref-source working is 17 match, 54 native-ahead, 22 documented-gap, 0 differ, identical on two consecutive runs.
+
+Caveats, recorded: adoption trusts kill(pid, 0), so a pid reused by another process is adopted until the exit file appears; the native poller stops 10 ticks after a kill request, so a process that ignores the kill is left running; an adopted job whose timeoutMs equals the lifetime reports lifetime, where a fresh job reports timeout (the status does not record which limit applied); Windows has no wrapper and a job orphaned there settles as killed (not witnessed on Windows).

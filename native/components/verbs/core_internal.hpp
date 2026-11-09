@@ -84,6 +84,11 @@ private:
     void flush_after_grace();
     void settle(Job& job, std::optional<int> exit_code, json::Value signal);
     void watch(Job& job, std::uint64_t deadline_ms);
+    bool adopt_orphan(const std::string& name, const json::Value& status);
+    bool adopt_job(const std::string& name, const json::Value& status);
+    void poll_adopted(Job& job);
+    std::optional<int> read_exit_code(const std::string& name) const;
+    std::filesystem::path exit_file_of(const std::string& name) const;
     double mono_now();
     void write_status(const std::filesystem::path& dir, const std::string& name, const json::Value& status);
     std::optional<json::Value> read_status(const std::string& name);

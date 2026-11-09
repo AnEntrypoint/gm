@@ -19,12 +19,11 @@ const FIXED_DATE = '2026-01-01T00:00:00Z';
 const STOPPED_PID_FILE = 'stopped-body.pid';
 const STOPPED_SLEEP_S = 4711;
 const STOPPED_FETCH_KIND = 'code-call:stopped-fetch';
-const SUBSCRIBE_ERROR_KIND = 'error:resources/subscribe';
 const DOTENV_KEY = 'TOGETHERAI';
 const DOTENV_LOCAL_KEY = 'LOCAL_ALIAS';
 const DOTENV_DUMMY = 'dummy_not_a_real_key_12345';
 const ALT_FILES = 4096;
-const NATIVE_AHEAD_KINDS = [STOPPED_FETCH_KIND, SUBSCRIBE_ERROR_KIND];
+const NATIVE_AHEAD_KINDS = [STOPPED_FETCH_KIND];
 
 function extractReference() {
   rmSync(REF, { recursive: true, force: true });
@@ -258,7 +257,7 @@ function parsedDeep(value) {
   return value;
 }
 
-const VOLATILE_KEYS = new Set(['t', 'mono', 'pid', 'durMs', 'startMono', 'endMono', 'createdAt', 'mtime', 'mtimeMs', 'ctime', 'atime', 'birthtime', 'elapsedMs', 'ms', 'startedAt', 'endedAt', 'time', 'ts']);
+const VOLATILE_KEYS = new Set(['t', 'mono', 'pid', 'durMs', 'startMono', 'startWall', 'endMono', 'createdAt', 'mtime', 'mtimeMs', 'ctime', 'atime', 'birthtime', 'elapsedMs', 'ms', 'startedAt', 'endedAt', 'time', 'ts']);
 
 function maskedPids(caller) {
   return Object.fromEntries(Object.entries(caller).map(([key, pid]) => [key, Number.isInteger(pid) ? '<PID>' : pid]));
@@ -351,13 +350,11 @@ function isSeqPath(path) {
   return /(\.actionSeq|gm\/seq|gmnew\/seq)$/.test(path);
 }
 
-const SUBSCRIPTIONS_REASON = 'native removed resources/subscribe: it answers -32601, and subscriptions/listen is the surface (2026-07-28 subscriptions page); Node still serves resources/subscribe';
-const CAPABILITY_REASON = 'native no longer advertises resources.subscribe, since subscriptions/listen replaces it (2026-07-28 subscriptions page); Node still advertises it';
 const namesAfter = (name) => {
   const names = scenarios({ head: '', url: '' }).map(([row]) => row);
   return new Set(names.slice(names.indexOf(name) + 1));
 };
-const CASCADE_ROWS = namesAfter('resources/subscribe');
+const CONTEXT_REPLY_ROWS = namesAfter('next_context');
 const REFUSAL_ROWS = namesAfter('run_code cjs static import');
 const SEQ_PATH = /(^|\.)(seq|actionSeq|body|logged\[\d+\]\.seq)$|\.output\.(output\.)?(seq|body)$|\/seq$/;
 const BODY_RESULT_PATH = /^\.result\.(isError|(content\[0\]\.text|structuredContent)\.(ok|output|truncated|error))$/;
@@ -375,7 +372,6 @@ const MCP_AFTER_BROWSERS = new Set(MCP_ROWS.slice(MCP_ROWS.indexOf('mcp mcp brow
 const REFUSAL_SEQ_REASON ='documented gap: native logs no refusal event (two here) and no code-load event (one here), so each later sequence number is one or two lower than Node';
 const STOP_ORDER_REASON = "documented gap: a background body that finish stops logs its last code-call and its body-console after the finish result in Node and before it in native, so native finish sequence is two higher";
 const NATIVE_AHEAD = [
-  { row: CASCADE_ROWS, path: /^\.result\._meta\.com\.anentrypoint\.gmnew\/seq$/, when: (left, right) => Number.isInteger(left) && Number.isInteger(right) && right > left, reason: 'native logs one more event than Node, the resources/subscribe error, so every later sequence number is higher' },
   { row: /^(tools\/list|mcp tools\/list)$/, path: /^\.result\.tools\[\d+\]\.inputSchema\.properties\.(owner|task|seq|field|offset|unit|pageLimit|resumeFrom)$/, reason: 'native adds the owner marker, task mutation and structured paging schema fields' },
   { row: /^(tools\/list|mcp tools\/list)$/, path: /^\.result\.tools\[\d+\]\.outputSchema\.properties\.tabs$/, reason: 'native next_context lists the browser tabs field; Node has no browser scope (AGENTS: recorded gap)' },
   { path: /^\.result\.(content\[0\]\.text|structuredContent)\.tabs$/, reason: 'native next_context carries the browser tabs field; Node has no browser scope (AGENTS: recorded gap)' },
@@ -389,20 +385,17 @@ const NATIVE_AHEAD = [
   { row: 'next_context after finish', path: /^\.result\.(content\[0\].text|structuredContent)\.(total|older|fullEvents|compactFrom|records|query|pending(\[\d+\])?(\..*)?|jobsOpen(\[\d+\])?(\..*)?|events\[\d+\].*)$/, reason: 'one extra resources/subscribe error plus the owner task guard shift event counts, pending rows, job timing fields and event indices in the native feed' },
   { row: 'run_code background', path: /^\.result\.(content\[0\].text|structuredContent)\.logged\[\d+\]\.seq$/, when: (left, right) => Number.isInteger(left) && Number.isInteger(right) && right > left, reason: 'the extra resources/subscribe error shifts logged code-call sequence numbers in native' },
   { row: 'job_status background', path: /^\.result\.(content\[0\].text|structuredContent)\.output\.(body|output\.seq)$/, when: (left, right) => Number.isInteger(left) && Number.isInteger(right) && right > left, reason: 'the extra resources/subscribe error shifts background body sequence numbers in native' },
-  { row: 'log event kinds', path: /^\.(count\.(code-call|task|refusal|summary|end)|firstDivergence\[\d+\])$/, reason: 'the owner task guard and one extra resources/subscribe error change task/refusal/code-call counts, while native writes summary and end events that Node does not' },
+  { row: 'log event kinds', path: /^\.(count\.(code-call|task|refusal|summary|end)|firstDivergence\[\d+\])$/, reason: 'the owner task guard changes task/refusal/code-call counts, while native writes summary and end events that Node does not' },
   { path: /^\.result\.(ttlMs|cacheScope)$/, reason: 'native adds ttlMs and cacheScope to complete list and read results (MCP 2026-07-28 caching)' },
   { path: /^\.result\.tools\[\d+\]\.(title|annotations)(\.|$)/, reason: 'native adds a title and tool annotations (MCP 2026-07-28 tools)' },
   { path: /^\.result\.(content\[0\]\.text|structuredContent)\.events\[\d+\]\.sha$/, reason: 'the tools event sha covers the tool list, which native now titles and annotates' },
   { path: /^\.result\.(content\[0\]\.text|structuredContent)\.output\.(scannedFiles|scannedBytes)$/, when: (left, right) => Number.isInteger(left) && Number.isInteger(right), reason: 'scannedFiles and scannedBytes count the files of the scratch workspace, which holds each tree\'s own run state, so the two totals differ by the state files; scanTruncated is compared exactly' },
   { row: 'resources/read missing', path: /^\.error\.code$/, when: (left, right) => left === -32002 && right === -32602, reason: 'native answers a missing resource with -32602 and data.uri, never an empty contents (AGENTS.md: -32002 is accepted only by clients); Node answers -32002 as the 2025-11-25 spec page does, and the error data matches' },
-  { row: 'log event kinds', path: /^\.count\.error:resources\/subscribe$/, when: (left, right) => left === undefined && right === 1, reason: SUBSCRIPTIONS_REASON },
-  { row: 'resources/subscribe', path: /^\.result$/, when: (left, right) => right === undefined, reason: SUBSCRIPTIONS_REASON },
-  { row: 'resources/subscribe', path: /^\.error$/, when: (left, right) => left === undefined && right?.code === -32601, reason: SUBSCRIPTIONS_REASON },
   { row: 'log event kinds', path: /^\.firstDivergence\[\d+\]$/, when: (left, right) => [left, right].some((window) => NATIVE_AHEAD_KINDS.some((kind) => window.includes(kind))), reason: 'the event order follows from the stopped fetch code-call and the resources/subscribe error above' },
   { row: /^(initialize|mcp initialize)$/, path: /^\.result\.instructions$/, reason: 'native names subscriptions/listen in the resources pointer of its instructions; Node still names resources/subscribe' },
   { row: 'job_status', path: /^\.result\.(content\[0\]\.text|structuredContent)\.output\.timeoutMs$/, when: (left, right) => left === 60000 && right === 300000, reason: 'native job_start default is 300000; Node 60000 kept until the owner chooses' },
-  { row: CASCADE_ROWS, path: SEQ_PATH, when: (left, right) => Number.isInteger(left) && right === left + 1, reason: 'native logs one more event than Node, the resources/subscribe error (native-ahead above), so every later sequence number is one higher' },
-  { row: /^(initialize|mcp initialize)$/, path: /^\.result\.capabilities\.resources\.subscribe$/, when: (left, right) => right === undefined, reason: CAPABILITY_REASON },
+  { row: CONTEXT_REPLY_ROWS, path: /^\.result\._meta\.com\.anentrypoint\.gmnew\/seq$/, when: (left, right) => Number.isInteger(left) && Number.isInteger(right) && right > left, reason: 'native journals each next_context reply as a context-reply event, so every later seq is one higher' },
+  { row: CONTEXT_REPLY_ROWS, path: SEQ_PATH, when: (left, right) => Number.isInteger(left) && right === left + 1, reason: 'native journals each next_context reply as a context-reply event, so every later seq is one higher' },
   { row: BUILTIN_IMPORT_ROWS, path: BODY_RESULT_PATH, when: nativeFailed, reason: BUILTIN_REASON, gap: true },
   { row: 'run_code cjs static import', path: /^\.result\.(content\[0\]\.text|structuredContent)\.error$/, when: (left, right) => [left, right].every((text) => typeof text === 'string' && text.startsWith('refused: a CommonJS body cannot use a static import;')), reason: STATIC_REFUSAL_REASON, gap: true },
   { row: 'run_code cjs static import', path: /^\.result\.(content\[0\]\.text|structuredContent)\.loads$/, when: (left, right) => left === undefined && Array.isArray(right), reason: STATIC_REFUSAL_REASON, gap: true },
@@ -448,7 +441,6 @@ function logKinds(runDir) {
       const event = JSON.parse(line);
       if (event.kind === 'job-killed' && event.reason === 'stopBackground') stopped = true;
       if (event.kind === 'code-call' && stopped && event.tool === 'fetch' && /\/hang$/.test(event.args?.url ?? '')) return STOPPED_FETCH_KIND;
-      if (event.kind === 'error' && event.method === 'resources/subscribe') return SUBSCRIBE_ERROR_KIND;
       return event.kind === 'action' || event.kind === 'result' ? `${event.kind}:${event.tool ?? event.name ?? ''}` : event.kind;
     } catch {
       return 'unparsed';

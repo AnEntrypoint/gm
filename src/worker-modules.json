@@ -1,5 +1,6 @@
 [
   "body-worker.mjs",
+  "browser-scope.mjs",
   "closure.mjs",
   "code-ast.mjs",
   "compact.mjs",

@@ -37,6 +37,7 @@ namespace {
 namespace fs = std::filesystem;
 
 const std::vector<std::string> kSupportedVersions = {"2025-11-25", "2025-06-18"};
+const std::vector<std::string> kAcceptedVersions = {"2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05", "2024-10-07"};
 constexpr const char* kRunMeta = "com.anentrypoint.gmnew/run";
 constexpr const char* kRunSeq = "com.anentrypoint.gmnew/seq";
 constexpr const char* kLogMeta = "com.anentrypoint.gmnew/log";
@@ -646,6 +647,8 @@ struct Server::State {
     std::map<std::string, std::function<void()>> after_reply;
     std::thread monitor;
     std::thread list_watch;
+    std::thread subscription_watch;
+    std::map<std::string, std::string> file_subscriptions;
     bool monitor_running = false;
     std::mutex monitor_mutex;
     std::condition_variable monitor_wake;
@@ -2733,6 +2736,20 @@ struct Server::State {
         list_watch = std::thread([this] { watch_list(); });
     }
 
+    void start_subscription_watch() {
+        subscription_watch = std::thread([this] { watch_subscriptions(); });
+    }
+
+    void watch_subscriptions() {
+        constexpr auto kInterval = std::chrono::milliseconds(250);
+        std::unique_lock guard(monitor_mutex);
+        while (!monitor_wake.wait_for(guard, kInterval, [&] { return shutting_down; })) {
+            guard.unlock();
+            check_file_subscriptions();
+            guard.lock();
+        }
+    }
+
     void watch_list() {
         constexpr auto kFirst = std::chrono::milliseconds(50);
         constexpr auto kLast = std::chrono::milliseconds(2000);
@@ -2797,6 +2814,46 @@ struct Server::State {
         return std::nullopt;
     }
 
+    Value subscribe_resource(const Value* params) {
+        const Value* uri = params ? params->find("uri") : nullptr;
+        std::lock_guard guard(mu);
+        auto digest = uri && uri->is_string() ? digest_of(uri->as_string()) : std::nullopt;
+        if (!digest) {
+            throw RpcError(-32002, "resource not found: " + text_or_undefined(uri),
+                           uri ? object().set("uri", *uri) : object());
+        }
+        file_subscriptions[uri->as_string()] = *digest;
+        return object();
+    }
+
+    Value unsubscribe_resource(const Value* params) {
+        const Value* uri = params ? params->find("uri") : nullptr;
+        if (uri && uri->is_string()) {
+            std::lock_guard guard(mu);
+            file_subscriptions.erase(uri->as_string());
+        }
+        return object();
+    }
+
+    void check_file_subscriptions() {
+        std::vector<std::string> changed;
+        {
+            std::lock_guard guard(mu);
+            for (auto& [uri, seen] : file_subscriptions) {
+                std::string now = digest_of(uri).value_or("");
+                if (now == seen) continue;
+                seen = now;
+                changed.push_back(uri);
+            }
+        }
+        for (const auto& uri : changed) {
+            notify(object()
+                       .set("jsonrpc", "2.0")
+                       .set("method", "notifications/resources/updated")
+                       .set("params", object().set("uri", uri)));
+        }
+    }
+
     bool end_listen(const Value& request_id) {
         auto found = listens.find(id_key(&request_id));
         if (found == listens.end()) return false;
@@ -2827,7 +2884,7 @@ struct Server::State {
         return object()
             .set("tools", object().set("listChanged", true))
             .set("prompts", object().set("listChanged", true))
-            .set("resources", object().set("listChanged", true))
+            .set("resources", object().set("listChanged", true).set("subscribe", true))
             .set("logging", object())
             .set("completions", object())
             .set("extensions", object().set("io.modelcontextprotocol/skills", object()));
@@ -2837,9 +2894,9 @@ struct Server::State {
 
     Value initialize(const Value* params) {
         const Value* asked = params ? params->find("protocolVersion") : nullptr;
-        std::string version = kSupportedVersions.front();
+        std::string version = kAcceptedVersions.front();
         if (asked && asked->is_string() &&
-            std::find(kSupportedVersions.begin(), kSupportedVersions.end(), asked->as_string()) != kSupportedVersions.end()) {
+            std::find(kAcceptedVersions.begin(), kAcceptedVersions.end(), asked->as_string()) != kAcceptedVersions.end()) {
             version = asked->as_string();
         }
         return object()
@@ -2887,6 +2944,8 @@ struct Server::State {
         if (method == "skills/get") return skills_get(params);
         if (method == "resources/templates/list") return cacheable(resource_templates(), kListTtlMs);
         if (method == "subscriptions/listen") return open_listen(params, rpc_id);
+        if (method == "resources/subscribe") return subscribe_resource(params);
+        if (method == "resources/unsubscribe") return unsubscribe_resource(params);
         if (method == "completion/complete") return completion(params);
         if (method == "logging/setLevel") {
             const Value* level = params ? params->find("level") : nullptr;
@@ -3176,6 +3235,7 @@ Server::State::~State() {
     monitor_wake.notify_all();
     if (monitor.joinable()) monitor.join();
     if (list_watch.joinable()) list_watch.join();
+    if (subscription_watch.joinable()) subscription_watch.join();
     stop_bodies("shutdown");
     auto jobs = body_list();
     for (const auto& job : jobs) job->stopped = true;
@@ -3339,6 +3399,7 @@ deoxidene::Result<std::unique_ptr<Server>, std::string> Server::open(VerbTable& 
     auto booted = state->boot();
     if (!booted) return deoxidene::Err<std::string>{booted.error()};
     state->start_list_watch();
+    state->start_subscription_watch();
     state->start_calls();
     return std::unique_ptr<Server>(new Server(std::move(state)));
 }

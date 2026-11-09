@@ -91,9 +91,11 @@ if (binary === null || !existsSync(binary)) {
     child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' })}\n`);
     await rpc('tools/call', { name: 'next_context', arguments: { task: 'read truncation check' } });
     const probe = (path, args) => `const r = await gm.read_file({ path: '${path}'${args} }); return { truncated: r.truncated, totalBytes: r.totalBytes, notice: r.notice, output: String(r.output).slice(-400) };`;
-    const bigLines = await nativeRead(rpc, probe('big.txt', ''));
+    const bigWhole = await nativeRead(rpc, probe('big.txt', ''));
+    expectPage('native read_file whole big.txt', bigWhole, BIG_BYTES, false);
+    const bigLines = await nativeRead(rpc, probe('big.txt', ', offset: 0'));
     expectPage('native read_file lines big.txt', bigLines, BIG_BYTES, true);
-    const bigChars = await nativeRead(rpc, probe('big.txt', ", unit: 'chars'"));
+    const bigChars = await nativeRead(rpc, probe('big.txt', ", offset: 0, unit: 'chars'"));
     expectPage('native read_file chars big.txt', bigChars, BIG_BYTES, true);
     const smallLines = await nativeRead(rpc, probe('small.txt', ''));
     expectPage('native read_file lines small.txt', smallLines, SMALL_BYTES, false);
@@ -101,7 +103,7 @@ if (binary === null || !existsSync(binary)) {
     const cutReply = JSON.parse(returned.result?.content?.[0]?.text ?? 'null');
     if (cutReply?.ok !== true) failures.push(`a returned page over the reply cap was refused: ${cutReply?.error ?? 'no reply'}`);
     else if (cutReply.truncated !== true || typeof cutReply.outputPath !== 'string' || cutReply.outputPath === '') failures.push('a returned page cut by the reply cap carries no bounded artifact path');
-    else if (!String(cutReply.output).includes('outputPath') || !String(cutReply.output).includes('gm.read_file')) failures.push('a returned page cut by the reply cap carries no paging notice');
+    else if (!String(cutReply.notice).includes(cutReply.outputPath) || !String(cutReply.notice).includes('gm.read_file')) failures.push('a returned page cut by the reply cap carries no paging notice');
     else if (cutReply.output.length > 20000) failures.push(`a cut reply is ${cutReply.output.length} characters, over the 20000 cap`);
     console.log(JSON.stringify({ label: 'native run_code returned page', replyChars: cutReply?.output?.length ?? null, outputPath: cutReply?.outputPath ?? null, truncated: cutReply?.truncated ?? null }));
   } catch (error) {

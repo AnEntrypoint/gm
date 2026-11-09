@@ -96,7 +96,7 @@ std::vector<wchar_t> environment_block_without_api_key() {
     return block;
 }
 
-Spawned spawn_shell_job(const std::string& command, const std::filesystem::path& cwd, const std::filesystem::path& out) {
+Spawned spawn_shell_job(const std::string& command, const std::filesystem::path& cwd, const std::filesystem::path& out, const std::filesystem::path&) {
     Spawned result;
     SECURITY_ATTRIBUTES inherit{sizeof inherit, nullptr, TRUE};
     HANDLE output = CreateFileW(out.c_str(), GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_DELETE, &inherit, CREATE_ALWAYS,
@@ -159,7 +159,7 @@ void kill_group(int pid) {
 
 void kill_group_now(int pid) { ::kill(-pid, SIGKILL); }
 
-Spawned spawn_shell_job(const std::string& command, const std::filesystem::path& cwd, const std::filesystem::path& out) {
+Spawned spawn_shell_job(const std::string& command, const std::filesystem::path& cwd, const std::filesystem::path& out, const std::filesystem::path& exit_file) {
     Spawned result;
     std::vector<std::string> env_strings;
     for (char** entry = environ; entry != nullptr && *entry != nullptr; ++entry) {
@@ -173,8 +173,11 @@ Spawned spawn_shell_job(const std::string& command, const std::filesystem::path&
 
     std::string shell = std::filesystem::exists("/bin/bash") ? "/bin/bash" : "/bin/sh";
     std::string dash_c = "-c";
-    std::string line = command;
-    char* argv[] = {shell.data(), dash_c.data(), line.data(), nullptr};
+    std::string line = "(eval \"$1\"); s=$?; echo $s > \"$2\"; exit $s";
+    std::string script_name = "gm-job";
+    std::string command_arg = command;
+    std::string exit_arg = exit_file.string();
+    char* argv[] = {shell.data(), dash_c.data(), line.data(), script_name.data(), command_arg.data(), exit_arg.data(), nullptr};
 
     posix_spawn_file_actions_t actions;
     posix_spawn_file_actions_init(&actions);
@@ -278,6 +281,19 @@ std::optional<json::Value> JobTable::read_status(const std::string& name) {
     return std::move(*parsed);
 }
 
+double wall_ms_now() {
+    return std::chrono::duration<double, std::milli>(std::chrono::system_clock::now().time_since_epoch()).count();
+}
+
+std::filesystem::path JobTable::exit_file_of(const std::string& name) const { return jobs_dir() / (name + ".exit"); }
+
+std::optional<int> JobTable::read_exit_code(const std::string& name) const {
+    std::ifstream in(exit_file_of(name));
+    int code = 0;
+    if (!(in >> code)) return std::nullopt;
+    return code;
+}
+
 json::Value JobTable::start(const std::string& name, const std::string& command, std::uint64_t timeout_ms, const std::optional<std::string>& progress) {
     std::unique_lock lock(mutex_);
     if (jobs_.contains(job_key(name))) return failure("job " + name + " already exists");
@@ -285,9 +301,12 @@ json::Value JobTable::start(const std::string& name, const std::string& command,
     std::filesystem::create_directories(jobs_dir(), ec);
     auto out = jobs_dir() / (name + ".out");
     { std::ofstream create(out, std::ios::binary | std::ios::trunc); }
+    auto exit_file = exit_file_of(name);
+    std::filesystem::remove(exit_file, ec);
     std::optional<double> start_mono;
     if (mono_offset_) start_mono = mono_now();
-    Spawned spawned = spawn_shell_job(command, workspace_, out);
+    const double start_wall = wall_ms_now();
+    Spawned spawned = spawn_shell_job(command, workspace_, out, exit_file);
     if (spawned.pid < 0) return failure(spawned.error);
 
     json::Value running;
@@ -328,6 +347,7 @@ json::Value JobTable::start(const std::string& name, const std::string& command,
     job->status.set("state", "running");
     job->status.set("pid", spawned.pid);
     job->status.set("startMono", *start_mono);
+    job->status.set("startWall", start_wall);
     job->status.set("output", out.string());
     job->status.set("timeoutMs", deadline_ms);
     write_status(jobs_dir(), name, job->status);
@@ -593,6 +613,97 @@ void JobTable::close(std::string_view reason) {
     flush_ended_locked();
 }
 
+bool JobTable::adopt_orphan(const std::string& name, const json::Value& status) {
+#if defined(_WIN32)
+    (void)name;
+    (void)status;
+    return false;
+#else
+    {
+        std::lock_guard lock(mutex_);
+        if (jobs_.contains(job_key(name))) return true;
+    }
+    const json::Value* pid = status.find("pid");
+    if (pid == nullptr || !pid->is_number()) return false;
+    const int id = static_cast<int>(pid->as_number());
+    if (::kill(id, 0) == 0 || errno == EPERM) return adopt_job(name, status);
+    auto code = read_exit_code(name);
+    if (!code) return false;
+    json::Value ended = status;
+    ended.set("state", "exited");
+    ended.set("exitCode", *code);
+    write_status(jobs_dir(), name, ended);
+    json::Value event;
+    event.set("job", name);
+    event.set("state", "exited");
+    event.set("exitCode", *code);
+    log_.append("job", std::move(event));
+    return true;
+#endif
+}
+
+bool JobTable::adopt_job(const std::string& name, const json::Value& status) {
+#if defined(_WIN32)
+    (void)name;
+    (void)status;
+    return false;
+#else
+    const json::Value* pid = status.find("pid");
+    const json::Value* start_mono = status.find("startMono");
+    const json::Value* output = status.find("output");
+    const json::Value* timeout = status.find("timeoutMs");
+    if (pid == nullptr || start_mono == nullptr || output == nullptr || timeout == nullptr) return false;
+    if (!pid->is_number() || !start_mono->is_number() || !output->is_string() || !timeout->is_number()) return false;
+    std::unique_lock lock(mutex_);
+    if (jobs_.contains(job_key(name))) return true;
+    auto job = std::make_unique<Job>();
+    job->name = name;
+    job->pid = static_cast<int>(pid->as_number());
+    job->dir = jobs_dir();
+    job->out = output->as_string();
+    job->status = status;
+    job->start_mono = start_mono->as_number();
+    job->start_file_time = std::filesystem::file_time_type::clock::now();
+    const auto timeout_ms = static_cast<std::uint64_t>(timeout->as_number());
+    job->timeout_ms = timeout_ms;
+    job->lifetime_killed = timeout_ms >= lifetime_ms_;
+    double elapsed_ms = 0;
+    if (const json::Value* wall = status.find("startWall"); wall != nullptr && wall->is_number()) elapsed_ms = wall_ms_now() - wall->as_number();
+    const double left = static_cast<double>(timeout_ms) - elapsed_ms;
+    const std::uint64_t left_ms = left >= 1 ? static_cast<std::uint64_t>(left) : 1;
+    Job& ref = *job;
+    jobs_.emplace(job_key(name), std::move(job));
+    ref.waiter = std::thread([this, &ref] { poll_adopted(ref); });
+    ref.timer = std::thread([this, &ref, left_ms] { watch(ref, left_ms); });
+    json::Value event;
+    event.set("job", name);
+    event.set("state", "running");
+    event.set("pid", ref.pid);
+    event.set("carried", true);
+    log_.append("job", std::move(event));
+    return true;
+#endif
+}
+
+void JobTable::poll_adopted(Job& job) {
+#if !defined(_WIN32)
+    std::optional<int> code;
+    int ticks_after_kill = 0;
+    for (;;) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        code = read_exit_code(job.name);
+        if (code) break;
+        if (::kill(job.pid, 0) != 0 && errno == ESRCH) break;
+        std::lock_guard lock(mutex_);
+        if (job.kill_requested && ++ticks_after_kill > 10) break;
+    }
+    settle(job, code, nullptr);
+    flush_after_grace();
+#else
+    (void)job;
+#endif
+}
+
 void JobTable::stop_orphans() {
     std::error_code ec;
     if (log_.dir().empty() || !std::filesystem::is_directory(jobs_dir(), ec)) return;
@@ -607,6 +718,7 @@ void JobTable::stop_orphans() {
         bool is_body = body != nullptr && !body->is_null();
         std::string tail;
         if (is_body) proc::reap_ledger(jobs_dir() / (name + ".pids"));
+        if (!is_body && adopt_orphan(name, *status)) continue;
         if (!is_body) {
             if (const json::Value* output = status->find("output"); output != nullptr && output->is_string()) {
                 tail = utf16_tail(read_bytes(output->as_string()), tail_cap);

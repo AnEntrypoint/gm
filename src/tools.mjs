@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { closeSync, existsSync, lstatSync, mkdirSync, openSync, readdirSync, readFileSync, readSync, realpathSync, renameSync, statSync, writeFileSync } from 'node:fs';
+import { closeSync, existsSync, lstatSync, mkdirSync, openSync, readdirSync, readFileSync, readSync, realpathSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { mkdir, readdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { runQuery } from './log.mjs';
@@ -44,8 +44,26 @@ async function readText(path) {
   }
 }
 
-function cutPage(page, size, rest, digestText) {
-  const digest = createHash('sha256').update(digestText ?? page.output).digest('hex').slice(0, 12);
+function fnv1a64Hex(text) {
+  let hi = 0xcbf29ce4;
+  let lo = 0x84222325;
+  for (const byte of Buffer.from(text, 'utf8')) {
+    lo = (lo ^ byte) >>> 0;
+    const low = lo * 0x1b3;
+    hi = (hi * 0x1b3 + lo * 0x100 + Math.floor(low / 0x100000000)) >>> 0;
+    lo = low >>> 0;
+  }
+  return hi.toString(16).padStart(8, '0') + lo.toString(16).padStart(8, '0');
+}
+
+function unitBoundary(text, index) {
+  const high = index > 0 && index < text.length && text.charCodeAt(index - 1) >= 0xd800 && text.charCodeAt(index - 1) <= 0xdbff;
+  const low = index > 0 && index < text.length && text.charCodeAt(index) >= 0xdc00 && text.charCodeAt(index) <= 0xdfff;
+  return high && low ? index - 1 : index;
+}
+
+function cutPage(page, size, rest, text) {
+  const digest = fnv1a64Hex(text);
   const nextOffset = page.next ?? null;
   if (rest === null) return { ...page, truncated: false, totalBytes: size, nextOffset, digest };
   const shown = Buffer.byteLength(page.output, 'utf8');
@@ -67,7 +85,7 @@ async function wholeFileReply(path, lines, source = null) {
   const bytes = source === null ? statSync(path).size : Buffer.byteLength(source);
   if (bytes > WHOLE_FILE_CAP) return { ok: false, error: `file is ${bytes} bytes, over the ${WHOLE_FILE_CAP}-byte whole-file read; page it with offset and limit, and read on from next until next is null` };
   const text = source ?? (await readText(path));
-  const reply = { ok: true, output: text, total: lines ? lineStarts(text).length : text.length, offset: 0, next: null, truncated: false, totalBytes: bytes, digest: createHash('sha256').update(text).digest('hex').slice(0, 12) };
+  const reply = { ok: true, output: text, total: lines ? lineStarts(text).length : text.length, offset: 0, next: null, truncated: false, totalBytes: bytes, digest: fnv1a64Hex(text) };
   if (lines) reply.unit = 'lines';
   return reply;
 }
@@ -79,7 +97,8 @@ export async function readCharPage(path, offset, limit, source = null) {
   const size = source === null ? statSync(path).size : Buffer.byteLength(source);
   const end = Math.min(offset + limit, text.length);
   const next = end < text.length ? end : null;
-  return cutPage({ ok: true, output: text.slice(offset, end), total: text.length, offset, next }, size, next === null ? null : `pass unit: "chars", offset: ${next} and limit: ${OUTPUT_PAGE} to read the rest`);
+  const output = text.slice(unitBoundary(text, offset), unitBoundary(text, end));
+  return cutPage({ ok: true, output, total: text.length, offset, next }, size, next === null ? null : `pass unit: "chars", offset: ${next} and limit: ${OUTPUT_PAGE} to read the rest`, text);
 }
 
 export async function readLinePage(path, offset, limit, source = null) {
@@ -89,16 +108,16 @@ export async function readLinePage(path, offset, limit, source = null) {
   const size = source === null ? statSync(path).size : Buffer.byteLength(source);
   const starts = lineStarts(text);
   const total = starts.length;
-  if (offset >= total) return cutPage({ ok: true, unit: 'lines', output: '', total, offset, next: null }, size, null);
+  if (offset >= total) return cutPage({ ok: true, unit: 'lines', output: '', total, offset, next: null }, size, null, text);
   const lineEnd = (line) => (line + 1 < total ? starts[line + 1] : text.length);
   const begin = starts[offset];
   if (lineEnd(offset) - begin > OUTPUT_PAGE) {
-    return cutPage({ ok: true, unit: 'lines', output: text.slice(begin, begin + OUTPUT_PAGE), cutLine: true, total, offset, next: offset + 1 < total ? offset + 1 : null }, size, `line ${offset} is longer than a page: pass unit: "chars", offset: ${begin + OUTPUT_PAGE} and limit: ${OUTPUT_PAGE} to read the rest`);
+    return cutPage({ ok: true, unit: 'lines', output: text.slice(begin, unitBoundary(text, begin + OUTPUT_PAGE)), cutLine: true, total, offset, next: offset + 1 < total ? offset + 1 : null }, size, `line ${offset} is longer than a page: pass unit: "chars", offset: ${begin + OUTPUT_PAGE} and limit: ${OUTPUT_PAGE} to read the rest`, text);
   }
   let last = offset + 1;
   while (last < total && last - offset < limit && lineEnd(last) - begin <= OUTPUT_PAGE) last += 1;
   const next = last < total ? last : null;
-  return cutPage({ ok: true, unit: 'lines', output: text.slice(begin, lineEnd(last - 1)), total, offset, next }, size, next === null ? null : `pass offset: ${next} and limit: ${total - next} to read the rest`);
+  return cutPage({ ok: true, unit: 'lines', output: text.slice(begin, lineEnd(last - 1)), total, offset, next }, size, next === null ? null : `pass offset: ${next} and limit: ${total - next} to read the rest`, text);
 }
 
 function lineStarts(text) {
@@ -112,6 +131,9 @@ const DEFAULT_TIMEOUT_MS = 60000;
 const MAX_TIMEOUT_MS = 3600000;
 const MAX_JOB_TIMEOUT_MS = 7200000;
 const TAIL_CAP = 2000;
+const ADOPT_POLL_MS = 200;
+const ADOPT_KILL_CHECK_MS = 2000;
+const EXIT_SCRIPT = '(eval "$1"); s=$?; echo $s > "$2"; exit $s';
 export const OUTPUT_PAGE = 20000;
 const MAX_WAIT_MS = 30000;
 const JOB_NAME = /^[A-Za-z0-9_-]{1,64}$/;
@@ -304,7 +326,7 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
       if (job.settled) return { ok: false, error: `job ${args.job} already ended (${readStatus(args.job)?.state})` };
       job.killRequested = true;
       job.killReason ??= 'cancelled';
-      killGroup(job.child.pid);
+      killGroup(job.pid);
       await job.done;
       return { ok: true, state: 'killed', reason: job.killReason, statement: jobKillStatement(args.job, job.killReason, 0, jobLifetimeMs), output: `stopped job ${args.job}` };
     },
@@ -378,45 +400,85 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
   function startJob(name, command, timeoutMs, progress) {
     if (jobs.has(name)) return { ok: false, error: `job ${name} already exists` };
     const outputFile = join(runDir, 'jobs', `${name}.out`);
+    const exitFile = exitFileOf(name);
     mkdirSync(join(runDir, 'jobs'), { recursive: true });
+    rmSync(exitFile, { force: true });
     const out = openSync(outputFile, 'w');
     const startMono = log.now();
-    const child = spawnGroup(command, [], root, ['ignore', out, out], { shell: true });
+    const startWall = Date.now();
+    const child = spawnGroup(process.platform === 'win32' ? command : wrapShell(command, exitFile), [], root, ['ignore', out, out], { shell: true });
     closeSync(out);
-    const status = { job: name, command, state: 'running', pid: child.pid, startMono, output: outputFile, timeoutMs: Math.min(timeoutMs, jobLifetimeMs) };
+    const status = { job: name, command, state: 'running', pid: child.pid, startMono, startWall, output: outputFile, timeoutMs: Math.min(timeoutMs, jobLifetimeMs) };
     writeStatus(name, status);
 
-    const job = { name, child, outputFile, progressFile: progress === undefined ? undefined : resolve(root, progress), startWall: Date.now(), stuck: false, killRequested: false, killReason: undefined, settled: false };
+    const job = { name, pid: child.pid, status, outputFile, exitFile, startMono, progressFile: progress === undefined ? undefined : resolve(root, progress), startWall, stuck: false, killRequested: false, killReason: undefined, settled: false };
     job.lifetimeKilled = jobLifetimeMs < timeoutMs;
-    const timer = setTimeout(() => {
-      job.killRequested = true;
-      job.killReason = job.lifetimeKilled ? 'lifetime' : 'timeout';
-      killGroup(child.pid);
-    }, Math.min(timeoutMs, jobLifetimeMs));
-    job.done = new Promise((settle) => {
-      const finish = (exitCode, signal) => {
-        if (job.settled) return;
-        job.settled = true;
-        clearTimeout(timer);
-        const state = exitCode !== null && !job.killRequested ? 'exited' : 'killed';
-        const reason = state === 'killed' ? job.killReason : undefined;
-        const statementFields = reason === undefined ? {} : { statement: jobKillStatement(name, reason, status.timeoutMs, jobLifetimeMs) };
-        const timeoutFields = reason === 'timeout' ? { timedOut: true, timeoutMs: status.timeoutMs } : {};
-        const ended = { ...status, state, exitCode, signal, ...(reason === undefined ? {} : { reason }), ...statementFields, ...timeoutFields };
-        writeStatus(name, ended);
-        log.append('job', { job: name, state, exitCode, signal, startMono, ...(reason === undefined ? {} : { reason }), ...statementFields, ...timeoutFields });
-        if (job.killReason !== undefined) {
-          log.append('job-killed', { job: name, reason: job.killReason, statement: jobKillStatement(name, job.killReason, status.timeoutMs, jobLifetimeMs), ...(job.killReason === 'lifetime' ? { lifetimeMs: jobLifetimeMs } : {}), tail: readTail(outputFile, TAIL_CAP) });
-        }
-        settle();
-      };
-      child.on('error', (err) => finish(null, err.message));
-      child.on('close', (exitCode, signal) => finish(exitCode, signal));
+    job.timer = setTimeout(() => expireShell(job), Math.min(timeoutMs, jobLifetimeMs));
+    job.done = new Promise((resolveDone) => {
+      job.resolve = resolveDone;
     });
+    child.on('error', (err) => endShell(job, null, err.message));
+    child.on('close', (exitCode, signal) => endShell(job, exitCode, signal));
     jobs.set(name, job);
     watchJobs();
     log.append('job', { job: name, state: 'running', pid: child.pid });
     return { ok: true, state: 'running', output: `started job ${name} (pid ${child.pid})` };
+  }
+
+  function exitFileOf(name) {
+    return join(runDir, 'jobs', `${name}.exit`);
+  }
+
+  function endShell(job, exitCode, signal) {
+    if (job.settled) return;
+    job.settled = true;
+    clearTimeout(job.timer);
+    clearInterval(job.poll);
+    const { name, status, startMono, outputFile } = job;
+    const state = exitCode !== null && !job.killRequested ? 'exited' : 'killed';
+    const reason = state === 'killed' ? job.killReason : undefined;
+    const statementFields = reason === undefined ? {} : { statement: jobKillStatement(name, reason, status.timeoutMs, jobLifetimeMs) };
+    const timeoutFields = reason === 'timeout' ? { timedOut: true, timeoutMs: status.timeoutMs } : {};
+    const ended = { ...status, state, exitCode, signal, ...(reason === undefined ? {} : { reason }), ...statementFields, ...timeoutFields };
+    writeStatus(name, ended);
+    log.append('job', { job: name, state, exitCode, signal, startMono, ...(reason === undefined ? {} : { reason }), ...statementFields, ...timeoutFields });
+    if (job.killReason !== undefined) {
+      log.append('job-killed', { job: name, reason: job.killReason, statement: jobKillStatement(name, job.killReason, status.timeoutMs, jobLifetimeMs), ...(job.killReason === 'lifetime' ? { lifetimeMs: jobLifetimeMs } : {}), tail: readTail(outputFile, TAIL_CAP) });
+    }
+    job.resolve();
+  }
+
+  function expireShell(job) {
+    job.killRequested = true;
+    job.killReason = job.lifetimeKilled ? 'lifetime' : 'timeout';
+    killGroup(job.pid);
+  }
+
+  function adoptShell(status) {
+    const name = status.job;
+    const startWall = status.startWall ?? Date.now() - Math.max(0, log.now() - status.startMono);
+    const job = { name, pid: status.pid, status, outputFile: status.output, exitFile: exitFileOf(name), startMono: status.startMono, startWall, stuck: false, killRequested: false, killReason: undefined, settled: false };
+    job.lifetimeKilled = status.timeoutMs >= jobLifetimeMs;
+    job.done = new Promise((resolveDone) => {
+      job.resolve = resolveDone;
+    });
+    job.timer = setTimeout(() => {
+      expireShell(job);
+      job.timer = setTimeout(() => {
+        if (processAlive(job.pid)) endShell(job, null, null);
+      }, ADOPT_KILL_CHECK_MS);
+    }, Math.max(0, status.timeoutMs - (Date.now() - startWall)));
+    job.poll = setInterval(() => pollShell(job), ADOPT_POLL_MS);
+    jobs.set(name, job);
+    watchJobs();
+    log.append('job', { job: name, state: 'running', carried: true, pid: status.pid });
+  }
+
+  function pollShell(job) {
+    if (job.settled) return;
+    const exitCode = readExitCode(job.exitFile);
+    if (exitCode !== null) endShell(job, exitCode, null);
+    else if (!processAlive(job.pid)) endShell(job, null, null);
   }
 
   function adoptBody({ result, cleanup, kill, body, queued = false, started = Promise.resolve() }) {
@@ -495,8 +557,20 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
       if (!file.endsWith('.json')) continue;
       const status = JSON.parse(readFileSync(join(dir, file), 'utf8'));
       if (status.state !== 'running' && status.state !== 'queued') continue;
+      if (status.body === undefined) {
+        if (processAlive(status.pid)) {
+          adoptShell(status);
+          continue;
+        }
+        const exitCode = readExitCode(exitFileOf(status.job));
+        if (exitCode !== null) {
+          writeStatus(status.job, { ...status, state: 'exited', exitCode, signal: null });
+          log.append('job', { job: status.job, state: 'exited', exitCode, signal: null, startMono: status.startMono });
+          continue;
+        }
+        signalGroup(status.pid, 'SIGKILL');
+      }
       const tail = status.body !== undefined ? bodyText(log, status.body, TAIL_CAP) : readTail(status.output, TAIL_CAP);
-      if (status.body === undefined) signalGroup(status.pid, 'SIGKILL');
       const statement = jobKillStatement(status.job, 'restart', 0, 0);
       writeStatus(status.job, { ...status, state: 'killed', reason: 'restart', statement });
       log.append('job', { job: status.job, body: status.body, state: 'killed', startMono: status.startMono, reason: 'restart', statement });
@@ -583,13 +657,14 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
     async close(reason = 'run-ended') {
       clearInterval(monitor);
       for (const job of jobs.values()) if (!job.settled && job.body !== undefined) job.stop(reason);
-      const running = [...jobs.values()].filter((job) => !job.settled && job.child !== undefined);
-      for (const job of running) {
+      const shells = [...jobs.values()].filter((job) => !job.settled && job.pid !== undefined);
+      const stopping = reason === 'restart' ? [] : shells;
+      for (const job of stopping) {
         job.killRequested = true;
         job.killReason ??= reason;
       }
-      await Promise.all(liveGroups().map((pid) => killGroup(pid)));
-      await Promise.all(running.map((job) => job.done));
+      await Promise.all([...stopping.map((job) => job.pid), ...foregroundGroups].map((pid) => killGroup(pid)));
+      await Promise.all(stopping.map((job) => job.done));
     },
     runningBodies,
     stopBodies(reason) {
@@ -606,7 +681,7 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
   };
 
   function liveGroups() {
-    return [...jobs.values()].filter((job) => job.child !== undefined).map((job) => job.child.pid).concat([...foregroundGroups]);
+    return [...jobs.values()].filter((job) => job.pid !== undefined).map((job) => job.pid).concat([...foregroundGroups]);
   }
 
   function runningBodies() {
@@ -756,6 +831,34 @@ function jobKillStatement(name, reason, timeoutMs, lifetimeMs) {
   if (reason === 'restart') return `job ${name} killed: the gm worker restarted while it ran, and a restart kills the process group of every job that was running`;
   if (reason === 'run-ended') return `job ${name} killed: its run ended while it ran (the run finished or its host closed), and ending a run kills the process group of every running job`;
   return `job ${name} killed: ${reason}`;
+}
+
+function quoteArg(text) {
+  return `'${text.replaceAll("'", `'\\''`)}'`;
+}
+
+function wrapShell(command, exitFile) {
+  return `sh -c '${EXIT_SCRIPT}' sh ${quoteArg(command)} ${quoteArg(exitFile)}`;
+}
+
+function readExitCode(file) {
+  if (!existsSync(file)) return null;
+  const text = readFileSync(file, 'utf8');
+  return /^-?\d+\n$/.test(text) ? Number(text) : null;
+}
+
+function processAlive(pid) {
+  try {
+    process.kill(pid, 0);
+  } catch (err) {
+    return err.code === 'EPERM';
+  }
+  try {
+    const stat = readFileSync(`/proc/${pid}/stat`, 'utf8');
+    return !stat.slice(stat.lastIndexOf(')') + 2).startsWith('Z');
+  } catch {
+    return existsSync('/proc') === false;
+  }
 }
 
 function shellTimeoutStatement(output, timeoutMs) {

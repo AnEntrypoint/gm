@@ -3,7 +3,7 @@ import { appendFileSync, existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { killGroupNow } from './exec.mjs';
 
-const PROTOCOL_VERSIONS = ['2025-11-25', '2025-06-18'];
+const PROTOCOL_VERSIONS = ['2025-11-25', '2025-06-18', '2025-03-26', '2024-11-05', '2024-10-07'];
 const CLIENT_INFO = { name: 'gm', version: '0.1.0' };
 const STARTUP_MS = 30000;
 const CALL_MS = 60000;
@@ -38,6 +38,14 @@ function awaitedExecuteArgs(verb, args) {
   const parenthesized = trimmed.startsWith('(') && trimmed.endsWith(')');
   if (!single && !parenthesized) return args;
   return { ...args, code: `return await (${trimmed});` };
+}
+
+function refusalOf(init) {
+  if (init === null || typeof init !== 'object' || Array.isArray(init)) return 'initialize result is not an object';
+  if (!PROTOCOL_VERSIONS.includes(init.protocolVersion)) return `protocol version ${init.protocolVersion} is not one gm speaks`;
+  if (init.capabilities === null || typeof init.capabilities !== 'object' || Array.isArray(init.capabilities)) return 'initialize result has no capabilities object';
+  if (typeof init.serverInfo?.version !== 'string') return 'initialize result has no serverInfo.version string';
+  return null;
 }
 
 export function readServerConfig(files, workspace) {
@@ -184,7 +192,8 @@ class ServerProcess {
     try {
       this.start();
       const init = await this.request('initialize', { protocolVersion: PROTOCOL_VERSIONS[0], capabilities: {}, clientInfo: CLIENT_INFO }, this.spec.startupMs);
-      if (!PROTOCOL_VERSIONS.includes(init.protocolVersion)) throw new Error(`protocol version ${init.protocolVersion} is not one gm speaks`);
+      const refusal = refusalOf(init);
+      if (refusal !== null) throw new Error(refusal);
       this.notify('notifications/initialized');
       this.tools = await this.listTools();
       this.log.append('mcp-server', { server: this.spec.name, state: again ? 'restarted' : 'connected', tools: this.tools.length, protocolVersion: init.protocolVersion });

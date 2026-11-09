@@ -38,7 +38,7 @@ struct Core {
 
 namespace {
 
-constexpr const char* PROTOCOL_VERSIONS[] = {"2025-11-25", "2025-06-18"};
+constexpr const char* PROTOCOL_VERSIONS[] = {"2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05", "2024-10-07"};
 constexpr const char* DEPTH_VARIABLE = "GMNEW_MCP_DEPTH";
 constexpr const char* PROJECT_VARIABLE = "PLAYWRITER_PROJECT_DIR";
 constexpr const char* CLIENT_NAME = "gm";
@@ -279,24 +279,32 @@ std::optional<std::string> list_tools(const std::shared_ptr<Session>& session, s
 std::optional<std::string> handshake(const std::shared_ptr<Core>& core, const std::shared_ptr<Session>& session, bool again, std::vector<json::Value>& tools) {
     {
         CallBudget budget(std::chrono::milliseconds(core->spec.startup_ms));
-        mcp::RequestOptions options;
-        options.protocol_version = std::string(PROTOCOL_VERSIONS[0]);
-        const auto init = session->client->initialize(CLIENT_NAME, CLIENT_VERSION, options);
-        if (!init) {
-            if (init.error().category == "transport") {
+        mcp::protocol::Json params = mcp::protocol::Json::object();
+        params["protocolVersion"] = std::string(PROTOCOL_VERSIONS[0]);
+        params["capabilities"] = mcp::protocol::Json::object();
+        params["clientInfo"] = mcp::protocol::Json::object();
+        params["clientInfo"]["name"] = CLIENT_NAME;
+        params["clientInfo"]["version"] = CLIENT_VERSION;
+        const auto raw = session->client->raw_request(mcp::protocol::make_request("initialize", std::int64_t{0}, params));
+        if (!raw) {
+            if (raw.error().category == "transport") {
                 const std::string reason = exit_reason(*session->child);
                 if (reason != "exited") return "MCP server " + core->spec.name + " " + reason;
             }
-            return init.error().message;
+            return raw.error().message;
         }
+        const json::Value init = from_wire(*raw);
+        if (!init.is_object()) return "initialize result is not an object";
         std::string version = "undefined";
-        if (init->contains("protocolVersion")) {
-            const auto& value = (*init)["protocolVersion"];
-            version = value.is_string() ? value.get<std::string>() : value.dump();
-        }
+        if (const json::Value* value = init.find("protocolVersion")) version = value->is_string() ? value->as_string() : json::dump(*value);
         if (std::find_if(std::begin(PROTOCOL_VERSIONS), std::end(PROTOCOL_VERSIONS), [&](const char* known) { return version == known; }) ==
             std::end(PROTOCOL_VERSIONS))
             return "protocol version " + version + " is not one gm speaks";
+        const json::Value* capabilities = init.find("capabilities");
+        if (capabilities == nullptr || !capabilities->is_object()) return "initialize result has no capabilities object";
+        const json::Value* server_info = init.find("serverInfo");
+        const json::Value* server_version = server_info != nullptr && server_info->is_object() ? server_info->find("version") : nullptr;
+        if (server_version == nullptr || !server_version->is_string()) return "initialize result has no serverInfo.version string";
         (void)session->client->notify_initialized();
         if (const auto listed = list_tools(session, tools)) return listed;
         json::Value fields;

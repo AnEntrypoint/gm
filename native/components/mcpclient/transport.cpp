@@ -13,16 +13,6 @@ thread_local std::optional<std::chrono::milliseconds> budget_on_thread;
 
 std::string limit_text(std::chrono::milliseconds limit) { return std::to_string(limit.count()) + " ms"; }
 
-void accept_initialize(mcp::protocol::JsonRpcResponse& response, const std::string& server) {
-    if (!response.result || !response.result->is_object()) return;
-    mcp::protocol::Json& result = *response.result;
-    if (!result.contains("capabilities") || !result["capabilities"].is_object()) result["capabilities"] = mcp::protocol::Json::object();
-    mcp::protocol::Json& info = result["serverInfo"];
-    if (!info.is_object()) info = mcp::protocol::Json::object();
-    if (!info.contains("name") || !info["name"].is_string()) info["name"] = server;
-    if (!info.contains("version") || !info["version"].is_string()) info["version"] = "";
-}
-
 }
 
 CallBudget::CallBudget(std::chrono::milliseconds limit) : previous_(budget_on_thread) { budget_on_thread = limit; }
@@ -113,7 +103,6 @@ mcp::core::Result<mcp::protocol::JsonRpcResponse> ChildTransport::send(const mcp
         mcp::protocol::JsonRpcResponse response = std::move(*found->second);
         pending_.erase(found);
         response.id = request.id;
-        if (request.method == "initialize") accept_initialize(response, server_);
         return response;
     }
     const bool timed_out = alive_ && limit.has_value();
