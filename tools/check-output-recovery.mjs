@@ -101,7 +101,7 @@ if (isMain) {
     }).verify = (failures, replies, ids, program) => {
       const shell = bodyValue(replies, ids.shell);
       assert(failures, shell?.outputPath && shell.truncated === true && shell.middle === true, program + ': run_shell artifact did not page the middle marker');
-      const topText = String(value(replies, ids.top) ?? '');
+      const topText = JSON.stringify(replies.get(ids.top)?.result?.structuredContent ?? {});
       assert(failures, topText.includes('outputPath') && topText.includes('OUTPUT_TAIL_MARKER') === false, program + ': top-level run_code reply did not expose a bounded artifact path');
       const fetched = bodyValue(replies, ids.fetched);
       assert(failures, fetched?.outputPath && fetched.marker === true, program + ': fetch artifact did not page DOM_MARKER');

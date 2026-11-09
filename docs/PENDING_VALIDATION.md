@@ -1025,3 +1025,24 @@ Issues in issues.md (the record at 94c5e04):
 Process defect (ledger): e4aba20 was pushed in the middle of its pass, before that pass's Phase B had finished. The release run on that push then failed for the reasons above. Going forward a push waits for the end of Phase B.
 
 Phase B witness plan: a fresh build of build/release at this commit; `node tools/check-build.mjs build/release` (conformance 86 of 86 expected, plus the listed checks); `npm run check` with its failure count; `ctest --test-dir build/release` with check-build registered; `node src/cli.mjs --help` exit code; the parity usage message; `node tools/release-manifest.mjs` on a missing dir (designed message, exit 1) and on a real packaged archive; `node tools/check-task-set.mjs` on both trees; the release run and arm-diagnose on the push.
+
+## gm pass, Phase B (2026-11-10, binary 31a50b8, fresh build): witnesses for the release, arm and issues.md fixes
+
+Build: `rm -rf build/release`, `cmake --preset release`, `cmake --build build/release -j 4`, BUILD_EXIT 0, 0 FAILED. Stamp `gm 31a50b8-dev (31a50b8)`.
+
+Witnesses (outputs quoted):
+- Conformance, `node tools/check-build.mjs build/release`: `conformance: 86 passed, 0 failed of 86 checks in 24 scenarios`, CONFORM_EXIT 0. These include the resources/subscribe checks (issue 2).
+- Parity, `node native/tests/parity/run.mjs --bin build/release/native/components/host/gm`: `17/93 scenarios match, 0 cutover-expected, 54 native-ahead, 22 documented-gap, 0 differ`, PARITY_EXIT 0. The AGENTS.md note cites 22 of 93; the issues.md run at 94c5e04 (before this pass) recorded the same 17 of 93, so the count predates this pass. Not caused here, and not yet traced to a commit.
+- ctest, `ctest --test-dir build/release --output-on-failure`: `1/1 Test #1: check-build ...... Passed 379.66 sec`, `100% tests passed, 0 tests failed out of 1`, CTEST_EXIT 0 (issue 3; before, it reported `No tests were found!!!`).
+- `npm run check`: first run after the query_log, JSON-shape, job-progress and task changes printed `check: 1 failure(s) - output recovery check` (CHECK_EXIT 1). Cause: tools/check-output-recovery.mjs read only `value()` (the body's output), not the top-level run_code reply, and then `String()`ed it. The top-level reply, which carries `outputPath`, is the envelope. Fix: the assertion reads `JSON.stringify(replies.get(ids.top)?.result?.structuredContent)`. The fixture change (marker at 20500, past the 20000-character inline page) was also needed; with the old fixture the envelope held the marker. After the fix: `check-output-recovery: passed: node and native real-tree checks succeeded`, and the full run prints CHECK_EXIT 0.
+- check-task-set (issue 1, task set): `check-task-set: passed: node and native real-tree checks succeeded`, exit 0, after the Node scheduler fix (finish holds the scheduler; a queued next_context is requeued to the successor).
+- CLI (issue 5): `node src/cli.mjs --help` exit 0, usage on stdout, stderr empty; `node src/cli.mjs` with no arguments exit 2.
+- Conformance usage (issue 4): `usage: node tools/mcp-conformance.mjs --stdio <gm binary> serve --workspace <dir>` / `to run it on a built tree: node tools/check-build.mjs <build dir>`, exit 2.
+- Parity usage (issue 4), `--bin /nonexistent/gm`: `parity: Error: native binary not found: /nonexistent/gm (build it with cmake --preset release and cmake --build build/release, or pass --bin)`.
+- Release manifest, no archive (publish fix): `Error: no target built in this push`, exit 1 (was `ENOENT: scandir 'dist'`).
+- Release manifest, real archive: `node tools/package.mjs --target x64-linux --build-dir build/release --out <scratch>` produced `gmnew-x64-linux.tar.gz`; `node tools/release-manifest.mjs --dir <scratch> ...` exit 0, row `| x64-linux | built this push | gmnew-x64-linux.tar.gz |`, the other five targets reported `::error::<target> did not build and has no earlier build on the release`, manifest assets `x64-linux`.
+- Gate: `tools/ship.sh` gate `{"gate":true,"failed":[]}`, exit 0 on each commit (31a50b8 and the Phase B commit).
+
+Release and arm-diagnose on the push that carries this commit: see the entry that records the run after the push.
+
+Process defect (ledger): e4aba20 was pushed in the middle of its pass, before Phase B had finished. That push's release run (42668295795) and arm-diagnose run (42668295820) both failed for the acorn reasons above. A push now waits until Phase B has finished.
