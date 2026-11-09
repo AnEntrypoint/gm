@@ -960,4 +960,14 @@ Node regression witnesses on this change (node tree only; no native source chang
 - `node tools/check-job-bounds.mjs node`: `job-bounds-check: ok (a 2000 ms job timeout ended as timeout in 2044 ms; a 7200000 ms job timeout ended as lifetime at 5016 ms under a 5000 ms lifetime; a 1000 ms job exited 0 in 1154 ms)`
 - Parity, after row 37: `22/93 scenarios match, 0 cutover-expected, 56 native-ahead, 15 documented-gap, 0 differ`
 
-Not run in this pass: check-build on the rebuilt binary (no native source changed; the native side of check-stop-fetch passed before the Node change), and any push.
+Phase B (2026-11-09, `cmake --preset release` and `cmake --build build/release`, binary stamped 66763db-dev, then `node tools/check-build.mjs build/release`, exit 0):
+
+- `conformance: 85 passed, 0 failed of 85 checks in 24 scenarios`
+- `run-code-budget-check: ok (a 65 s JavaScript body with timeoutMs 100000 returned in 65006 ms; a fetch leaf held by the server for 50000 ms ended in 50038 ms with no old fixed limit; a 3000 ms fetch with a catastrophic match timed out in 3011 ms in one attempt; a 3000 ms fetch that timed out ended in 3034 ms in one attempt)`
+- `job-bounds-check: ok (a 2000 ms job timeout ended as timeout in 2008 ms; a 7200000 ms job timeout ended as lifetime at 5007 ms under a 5000 ms lifetime; a 1000 ms job exited 0 in 1079 ms)`
+- `early-run-code-check: ok (a run_code sent before the first next_context ran at once in 3 ms, with the rules notice; an early finish ended the run in 3 ms)`
+- `stop-fetch-check: ok (a background fetch in a body closed its connection 6 ms after finish stopped the run; the server answers at 50000 ms)`
+- `check-build: gm stamp 66763db-dev (66763db)` and `check-build: gm-core stamp 66763db-dev (66763db)`
+- Node parity, `node native/tests/parity/run.mjs --bin build/release/native/components/host/gm`: `22/93 scenarios match, 0 cutover-expected, 56 native-ahead, 15 documented-gap, 0 differ`
+
+Rank 1 of the ranked list is deferred, not done: the installed binary at /config/.gmnew/current/gm (stamp 78ca5a1) is the one every peer's gm skill calls, so replacing it while peers are running would break them. The install (scripts/install.sh, which fixes the updater and takes fcb84df and 70e4349) runs in a quiet window, when no peer has an open run and no peer is busy. Until then the peers keep the older binary, and the task-replacement guard fixed by fcb84df is not live for them.
