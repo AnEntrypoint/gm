@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <chrono>
 #include <condition_variable>
+#include <filesystem>
 #include <cstdlib>
 #include <fstream>
 #include <map>
@@ -46,6 +47,8 @@ constexpr const char* CLIENT_VERSION = "0.1.0";
 constexpr std::size_t STDERR_BYTES = 2000;
 constexpr auto ERROR_DRAIN = std::chrono::milliseconds(1000);
 constexpr auto EXIT_WAIT = std::chrono::milliseconds(5000);
+constexpr int STARTUP_ATTEMPTS = 3;
+constexpr std::size_t STARTUP_TAIL_CHARS = 500;
 
 json::Value failure(const std::string& text) {
     json::Value reply;
@@ -111,6 +114,21 @@ std::string stderr_of(Core& core) {
 
 void announce(Core& core, std::string_view kind, json::Value fields) {
     if (core.emit) core.emit(kind, std::move(fields));
+}
+
+std::string trim_text(const std::string& text) {
+    const auto first = text.find_first_not_of(" \t\r\n\f\v");
+    if (first == std::string::npos) return {};
+    return text.substr(first, text.find_last_not_of(" \t\r\n\f\v") - first + 1);
+}
+
+std::string startup_failure(const ServerSpec& spec, const std::vector<std::string>& attempts, const std::string& stderr_text) {
+    std::string joined;
+    for (const std::string& attempt : attempts) joined += (joined.empty() ? "" : "; then ") + attempt;
+    const std::string trimmed = trim_text(stderr_text);
+    const std::string tail = trimmed.size() > STARTUP_TAIL_CHARS ? trimmed.substr(trimmed.size() - STARTUP_TAIL_CHARS) : trimmed;
+    return "MCP server " + spec.name + " did not start after " + std::to_string(attempts.size()) + " attempt(s): " + joined + ". Startup budget " +
+           std::to_string(spec.startup_ms) + " ms (" + (spec.startup_default ? "default" : "startupTimeoutMs") + "). stderr: " + (tail.empty() ? "(empty)" : tail);
 }
 
 std::string exit_reason(proc::Child& child) {
@@ -332,24 +350,39 @@ std::optional<std::string> StdioClient::connect(bool again) {
     std::lock_guard start(start_mutex_);
     if (running(core_)) return std::nullopt;
     if (const std::shared_ptr<Session> old = current(core_)) lose(core_, old, exit_reason(*old->child));
-    std::string error;
-    const std::shared_ptr<Session> session = spawn(core_, error);
-    std::vector<json::Value> tools;
-    const std::optional<std::string> problem = session ? handshake(core_, session, again, tools) : std::optional<std::string>(error);
-    if (!problem) {
-        tools_ = std::move(tools);
-        return std::nullopt;
+    std::vector<std::string> attempts;
+    for (int attempt = 1;; attempt += 1) {
+        std::string error;
+        const std::shared_ptr<Session> session = spawn(core_, error);
+        std::vector<json::Value> tools;
+        const std::optional<std::string> problem = session ? handshake(core_, session, again, tools) : std::optional<std::string>(error);
+        if (!problem) {
+            tools_ = std::move(tools);
+            return std::nullopt;
+        }
+        bool exited = false;
+        if (session) {
+            std::string reason = "stopped by gm";
+            if (const auto code = session->child->wait_for(std::chrono::milliseconds(300))) {
+                reason = "exited with code " + std::to_string(*code);
+                exited = true;
+            }
+            lose(core_, session, reason);
+            session->child->kill();
+        }
+        attempts.push_back(*problem);
+        if (exited && attempt < STARTUP_ATTEMPTS) {
+            json::Value retry;
+            retry.set("server", core_->spec.name).set("state", "retrying").set("attempt", static_cast<std::uint64_t>(attempt)).set("error", *problem);
+            announce(*core_, "mcp-server", retry);
+            continue;
+        }
+        const std::string message = startup_failure(core_->spec, attempts, stderr_of(*core_));
+        json::Value fields;
+        fields.set("server", core_->spec.name).set("state", "failed").set("error", message).set("stderr", stderr_of(*core_));
+        announce(*core_, "mcp-server", fields);
+        return message;
     }
-    if (session) {
-        std::string reason = "stopped by gm";
-        if (const auto code = session->child->wait_for(std::chrono::milliseconds(300))) reason = "exited with code " + std::to_string(*code);
-        lose(core_, session, reason);
-        session->child->kill();
-    }
-    json::Value fields;
-    fields.set("server", core_->spec.name).set("state", "failed").set("error", *problem).set("stderr", stderr_of(*core_));
-    announce(*core_, "mcp-server", fields);
-    return problem;
 }
 
 json::Value StdioClient::call_tool(const std::string& tool, const json::Value& args) {

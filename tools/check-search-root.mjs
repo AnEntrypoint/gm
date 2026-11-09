@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { withoutPlaywriter } from './lib/no-playwriter.mjs';
 import { spawn, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -20,7 +21,7 @@ const watchdog = setTimeout(() => {
 watchdog.unref();
 
 const TOKEN = 'SEARCH_ROOT_FIXTURE_TOKEN';
-const workspace = mkdtempSync(join(tmpdir(), 'gm-search-root-'));
+const workspace = withoutPlaywriter(mkdtempSync(join(tmpdir(), 'gm-search-root-')));
 const failures = [];
 const PACKAGE_FILES = 4400;
 spawnSync('git', ['init', '-q'], { cwd: workspace });

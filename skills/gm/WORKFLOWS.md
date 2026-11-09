@@ -35,7 +35,7 @@ Keep the model in the loop between phases: read each workflow's result before de
 
 ## Mapping to gm
 
-The unit is one child. A separate session has its own connection, run and log, and calls `next_context` first. A subagent on this connection calls `next_context({ child: true, run: '<parent run id>' })` at each of its steps; that call takes no step, claims no pending event, and its reply has `role` child. A child never sends `finish`. It reports one line of JSON to the session that started it, and that session decides when the run ends.
+The unit is one child. A separate session has its own connection, run and log, and calls `next_context` first. A subagent on this connection calls `next_context({ child: true, run: '<parent run id>' })` at each of its steps; that call takes no step, claims no pending event, and its reply has `role` child. A child never sends `finish`. It reports one line of JSON to the session that started it, and that session decides when the run ends. A subagent does its file work through `run_code` (`gm.read_file`, `gm.write_file`, `gm.edit_file`, `gm.grep`), not the host's built-in file tools, so its calls land in the run log; the one exception is a subagent with no gm connection, which says so in its reply.
 
 Long work goes to `gm.job_start` and is polled with `gm.job_status` in a bounded loop. A body that passes its budget becomes a background run; `finish` is refused while it runs unless `stopBackground` is true. Evidence older than the window is read with `gm.query_log`, never guessed. Use `compactChildren` for a wide child feed and the condensed `gm.run_shell` output by default; pass `raw: true` only when the whole text is needed. Return compact values from a body.
 

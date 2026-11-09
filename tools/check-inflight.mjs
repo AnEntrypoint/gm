@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { withoutPlaywriter } from './lib/no-playwriter.mjs';
 import { spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -23,7 +24,7 @@ if (binary === null || !existsSync(binary)) {
 
 const CAP = 8;
 const BODY_MS = 1500;
-const workspace = mkdtempSync(join(tmpdir(), 'gm-inflight-check-'));
+const workspace = withoutPlaywriter(mkdtempSync(join(tmpdir(), 'gm-inflight-check-')));
 const failures = [];
 const child = spawn(binary, ['serve', '--workspace', workspace], { stdio: ['pipe', 'pipe', 'pipe'] });
 child.stderr.resume();

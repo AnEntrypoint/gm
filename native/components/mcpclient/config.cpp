@@ -17,6 +17,7 @@ namespace {
 
 constexpr std::uint64_t CALL_MS = 60000;
 constexpr std::uint64_t STARTUP_MS = 30000;
+constexpr std::uint64_t LAUNCHER_STARTUP_MS = 600000;
 constexpr double MAX_EXACT_INTEGER = 9007199254740992.0;
 constexpr const char* WHITESPACE = " \t\r\n\f\v";
 
@@ -25,6 +26,11 @@ bool ascii_letter(char c) { return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= '
 bool identifier_start(char c) { return c == '_' || ascii_letter(c); }
 
 bool identifier_part(char c) { return identifier_start(c) || (c >= '0' && c <= '9'); }
+
+bool batch_launcher(const std::string& command) {
+    const std::string name = std::filesystem::path(command).filename().string();
+    return name == "npx" || name == "npm";
+}
 
 std::string trim(const std::string& text) {
     const auto first = text.find_first_not_of(WHITESPACE);
@@ -142,7 +148,8 @@ std::optional<ServerSpec> server_of(const std::string& name, const json::Value& 
         for (const auto& [key, value] : env->as_object()) server.env.emplace_back(key, expand_variables(value.as_string(), missing));
     server.cwd = cwd == nullptr ? workspace : (workspace / expand_variables(cwd->as_string(), missing)).lexically_normal();
     server.timeout_ms = timeout == nullptr ? CALL_MS : static_cast<std::uint64_t>(timeout->as_number());
-    server.startup_ms = startup == nullptr ? STARTUP_MS : static_cast<std::uint64_t>(startup->as_number());
+    server.startup_default = startup == nullptr;
+    server.startup_ms = startup == nullptr ? (batch_launcher(server.command) ? LAUNCHER_STARTUP_MS : STARTUP_MS) : static_cast<std::uint64_t>(startup->as_number());
     if (deny != nullptr)
         for (const json::Value& tool : deny->as_array()) server.deny.push_back(tool.as_string());
     if (ignore != nullptr)

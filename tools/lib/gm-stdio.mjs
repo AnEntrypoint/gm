@@ -1,3 +1,4 @@
+import { withoutPlaywriter } from './no-playwriter.mjs';
 import { spawn } from 'node:child_process';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -17,7 +18,7 @@ const removeWorkspace = (path) => {
     }
 };
 
-export async function openServer(binary, { workspace = mkdtempSync(join(tmpdir(), 'gm-stdio-')), extraArgs = [], lead = ['serve'] } = {}) {
+export async function openServer(binary, { workspace = withoutPlaywriter(mkdtempSync(join(tmpdir(), 'gm-stdio-'))), extraArgs = [], lead = ['serve'] } = {}) {
     const child = spawn(binary, [...lead, '--workspace', workspace, ...extraArgs], { stdio: ['pipe', 'pipe', 'pipe'] });
     child.stderr.resume();
     const pending = new Map();

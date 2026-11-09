@@ -63,6 +63,16 @@ jobs:
       - name: Node dependencies
         shell: bash
         run: npm ci --ignore-scripts
+      - name: Chromium for the browser-scope check (linux-arm64)
+        if: matrix.target == 'arm64-linux'
+        shell: bash
+        run: |
+          dir="$RUNNER_TEMP/playwright-chromium"
+          mkdir -p "$dir" && cd "$dir"
+          npm init -y >/dev/null
+          npm install --no-audit --no-fund playwright-core@1.65.0
+          npx playwright-core install --with-deps chromium
+          echo "PLAYWRITER_BROWSER_PATH=$(node -p "require('$dir/node_modules/playwright-core').chromium.executablePath()")" >> "$GITHUB_ENV"
       - name: Test
         shell: bash
         run: node tools/check-build.mjs build/${{ matrix.preset }}

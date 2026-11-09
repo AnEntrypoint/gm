@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { withoutPlaywriter } from './lib/no-playwriter.mjs';
 import { spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -20,7 +21,7 @@ const watchdog = setTimeout(() => {
 watchdog.unref();
 const NOTICE = /^truncated at (\d+) of (\d+) bytes; [^\]]+$/;
 const MARKER = '[gm-read:';
-const workspace = mkdtempSync(join(tmpdir(), 'gm-read-check-'));
+const workspace = withoutPlaywriter(mkdtempSync(join(tmpdir(), 'gm-read-check-')));
 const failures = [];
 const bigText = Array.from({ length: 3000 }, (_, i) => `line ${String(i).padStart(5, '0')} of the big file`).join('\n') + '\n';
 const smallText = 'one\ntwo\n';

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { withoutPlaywriter } from './lib/no-playwriter.mjs';
 import { spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -70,7 +71,7 @@ function session(label, command, args) {
 }
 
 async function check(label, command, argsOf) {
-  const workspace = mkdtempSync(join(tmpdir(), 'gm-console-check-'));
+  const workspace = withoutPlaywriter(mkdtempSync(join(tmpdir(), 'gm-console-check-')));
   writeFileSync(join(workspace, 'a.txt'), 'probe\n');
   const s = session(label, command, argsOf(workspace));
   try {

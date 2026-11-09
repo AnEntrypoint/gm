@@ -1,11 +1,14 @@
 import { spawn } from 'node:child_process';
 import { appendFileSync, existsSync, readFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { basename, join, resolve } from 'node:path';
 import { killGroupNow } from './exec.mjs';
 
 const PROTOCOL_VERSIONS = ['2025-11-25', '2025-06-18', '2025-03-26', '2024-11-05', '2024-10-07'];
 const CLIENT_INFO = { name: 'gm', version: '0.1.0' };
 const STARTUP_MS = 30000;
+const LAUNCHER_STARTUP_MS = 600000;
+const STARTUP_ATTEMPTS = 3;
+const STARTUP_TAIL_CHARS = 500;
 const CALL_MS = 60000;
 const STDERR_CHARS = 2000;
 const DESCRIPTION_CHARS = 300;
@@ -57,6 +60,12 @@ export function readServerConfig(files, workspace) {
   return { servers: [...specs.values()].filter((server) => server !== null), problems };
 }
 
+function startupFailure(spec, attempts, stderr) {
+  const budget = `${spec.startupMs} ms (${spec.startupDefault ? 'default' : 'startupTimeoutMs'})`;
+  const tail = stderr.trim().slice(-STARTUP_TAIL_CHARS) || '(empty)';
+  return `MCP server ${spec.name} did not start after ${attempts.length} attempt(s): ${attempts.join('; then ')}. Startup budget ${budget}. stderr: ${tail}`;
+}
+
 export function disabledServers(file) {
   const names = Object.keys(JSON.parse(readFileSync(file, 'utf8')).mcpServers ?? {});
   return { mcpServers: Object.fromEntries(names.map((name) => [name, { disabled: true }])) };
@@ -96,7 +105,8 @@ function serverOf(name, spec, workspace, problems) {
   const ignoreFault = ignoreProblem(spec.ignore ?? []);
   if (ignoreFault !== null) return fail(ignoreFault);
   const timeoutMs = spec.timeoutMs ?? CALL_MS;
-  const startupMs = spec.startupTimeoutMs ?? STARTUP_MS;
+  const startupDefault = spec.startupTimeoutMs === undefined;
+  const startupMs = spec.startupTimeoutMs ?? (BATCH_LAUNCHERS.has(basename(String(spec.command))) ? LAUNCHER_STARTUP_MS : STARTUP_MS);
   if (!Number.isInteger(timeoutMs) || timeoutMs < 1 || !Number.isInteger(startupMs) || startupMs < 1) return fail('timeoutMs and startupTimeoutMs must be positive integers');
   const deny = spec.deny ?? [];
   if (!Array.isArray(deny) || deny.some((tool) => typeof tool !== 'string' || tool === '')) return fail('deny must be an array of non-empty tool names');
@@ -116,6 +126,7 @@ function serverOf(name, spec, workspace, problems) {
     cwd: spec.cwd === undefined ? workspace : resolve(workspace, expand(spec.cwd)),
     timeoutMs,
     startupMs,
+    startupDefault,
     deny,
     ignore: (spec.ignore ?? []).map((line) => line.trim()),
     workspace,
@@ -174,6 +185,7 @@ class ServerProcess {
     this.starting = null;
     this.up = false;
     this.stderr = '';
+    this.exited = null;
     this.pending = new Map();
     this.nextId = 1;
     this.buffer = '';
@@ -189,20 +201,31 @@ class ServerProcess {
   }
 
   async handshake(again) {
-    try {
-      this.start();
-      const init = await this.request('initialize', { protocolVersion: PROTOCOL_VERSIONS[0], capabilities: {}, clientInfo: CLIENT_INFO }, this.spec.startupMs);
-      const refusal = refusalOf(init);
-      if (refusal !== null) throw new Error(refusal);
-      this.notify('notifications/initialized');
-      this.tools = await this.listTools();
-      this.log.append('mcp-server', { server: this.spec.name, state: again ? 'restarted' : 'connected', tools: this.tools.length, protocolVersion: init.protocolVersion });
-      this.ignoreWorkspace();
-      return null;
-    } catch (err) {
-      this.stop();
-      this.log.append('mcp-server', { server: this.spec.name, state: 'failed', error: err.message, stderr: this.stderr });
-      return err.message;
+    const attempts = [];
+    for (let attempt = 1; ; attempt += 1) {
+      this.exited = null;
+      try {
+        this.start();
+        const init = await this.request('initialize', { protocolVersion: PROTOCOL_VERSIONS[0], capabilities: {}, clientInfo: CLIENT_INFO }, this.spec.startupMs);
+        const refusal = refusalOf(init);
+        if (refusal !== null) throw new Error(refusal);
+        this.notify('notifications/initialized');
+        this.tools = await this.listTools();
+        this.log.append('mcp-server', { server: this.spec.name, state: again ? 'restarted' : 'connected', tools: this.tools.length, protocolVersion: init.protocolVersion, attempts: attempt });
+        this.ignoreWorkspace();
+        return null;
+      } catch (err) {
+        const exited = this.exited;
+        this.stop();
+        attempts.push(err.message);
+        if (exited !== null && attempt < STARTUP_ATTEMPTS) {
+          this.log.append('mcp-server', { server: this.spec.name, state: 'retrying', attempt, error: err.message, stderr: this.stderr });
+          continue;
+        }
+        const message = startupFailure(this.spec, attempts, this.stderr);
+        this.log.append('mcp-server', { server: this.spec.name, state: 'failed', error: message, stderr: this.stderr });
+        return message;
+      }
     }
   }
 
@@ -245,6 +268,7 @@ class ServerProcess {
     if (this.child !== child) return;
     this.child = null;
     this.up = false;
+    if (reason.startsWith('exited')) this.exited = reason;
     const error = new Error(`MCP server ${this.spec.name} ${reason}`);
     for (const waiting of this.pending.values()) waiting.reject(error);
     this.pending.clear();

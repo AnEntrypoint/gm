@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { withoutPlaywriter } from './lib/no-playwriter.mjs';
 import { spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -18,7 +19,7 @@ if (binary === null || !existsSync(binary)) {
 }
 
 const MESSAGE = '--max-inflight must be a positive integer';
-const workspace = mkdtempSync(join(tmpdir(), 'gm-relay-exit-check-'));
+const workspace = withoutPlaywriter(mkdtempSync(join(tmpdir(), 'gm-relay-exit-check-')));
 const failures = [];
 
 function serveWith(flags, dir = workspace) {

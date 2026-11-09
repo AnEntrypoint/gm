@@ -1046,3 +1046,55 @@ Witnesses (outputs quoted):
 Release and arm-diagnose on the push that carries this commit: see the entry that records the run after the push.
 
 Process defect (ledger): e4aba20 was pushed in the middle of its pass, before Phase B had finished. That push's release run (42668295795) and arm-diagnose run (42668295820) both failed for the acorn reasons above. A push now waits until Phase B has finished.
+
+## gm pass, Phase A (2026-11-09): release 42678069415, arm-diagnose 42678068838, and the six playwriter and gm defects
+
+Every file in this commit is listed here with the item it serves. pw is a separate repository (AnEntrypoint/pw), pushed at ebbba11; its change is listed under item 5.
+
+Release 42678069415 (on 1f589cb) failed on Windows x64, Windows arm64 and arm64 Linux. arm-diagnose 42678068838 failed on asan-arm.
+
+1. Release and arm-diagnose.
+   - Cause, read from the failing logs: the read-truncation check (and the other checks that start `serve` in a fresh workspace) started the default playwriter entry from defaults/mcp.json. That entry runs `npx -y -p github:AnEntrypoint/pw#...`, and the first start of it is a cold install. The next_context in read-truncation took 5198 ms with the default config and 4 ms with playwriter disabled, so the single 90 s watchdog was hit on Windows x64, Windows arm64 and asan-arm. The same cause hit arm-diagnose.
+   - Fix (Windows, asan-arm): tools/lib/no-playwriter.mjs writes `<workspace>/.gm/mcp.json` with playwriter disabled. Each check that starts `serve` in a fresh workspace calls it: tools/check-read-truncation.mjs, check-caller.mjs, check-inflight.mjs, check-relay-exit.mjs, check-search-root.mjs, check-console.mjs, and tools/lib/gm-stdio.mjs (which the conformance tooling uses). tools/check-browser-scope.mjs keeps the default playwriter on purpose, because it tests the browser.
+   - Fix (Linux arm64 browser-scope): `browser install failed (exit 1)`. Cause: pw's install fallback runs `playwriter browser install`, which fetches Chrome for Testing, and that has no linux-arm64 build. Fix in .github/workflows/release.yml: on arm64-linux, before Test, a step installs playwright-core 1.65.0 and its chromium with deps into `$RUNNER_TEMP/playwright-chromium`, and writes PLAYWRITER_BROWSER_PATH to GITHUB_ENV.
+   - Files: .github/workflows/release.yml, tools/lib/no-playwriter.mjs (new), tools/check-read-truncation.mjs, tools/check-caller.mjs, tools/check-inflight.mjs, tools/check-relay-exit.mjs, tools/check-search-root.mjs, tools/check-console.mjs, tools/lib/gm-stdio.mjs.
+   - Witness: the Node read-truncation check runs in 0.06 s with no playwriter start. The release run on the pushed commit is the native witness (see the Phase B record).
+
+2. Connect timeout (jayzee: 30 s).
+   - Cause: a cold npx install of the pinned github package takes longer than the 30 s default startup budget. Measured here: `npx -y -p github:AnEntrypoint/pw#1488a92 playwriter-project status` took 26.8 s on one start, 50 s on a cold start with a private cache, and a cold start of a new pin ran past 150 s. defaults/mcp.json sets startupTimeoutMs 600000, but a layer that restates the entry without that field, or an installed gm that predates the default, falls back to 30 s. The failure text said only that the server timed out.
+   - Fix: the startup budget defaults to 600000 ms when the command is npx or npm and startupTimeoutMs is unset (src/mcp-client.mjs serverOf; native/components/mcpclient/config.cpp). A startup failure now names every attempt, its exit code or timeout, the startup budget and whether it came from startupTimeoutMs or the default, and the stderr tail (startupFailure in src/mcp-client.mjs; startup_failure in native/components/mcpclient/client.cpp).
+   - Files: src/mcp-client.mjs, native/components/mcpclient/client.cpp, native/components/mcpclient/config.cpp, native/components/mcpclient/config.hpp, tools/check-build.mjs (adds the check to the run), tools/check-startup-attempts.mjs (new).
+   - Witness: tools/check-startup-attempts.mjs, node and native (quoted in the Phase B record).
+
+3. Staged site (oscraft, port 8832): exit 128 on one start, then exit 0, then startup not reproducible.
+   - Observed: `npx -y -p github:AnEntrypoint/pw#1488a92 playwriter-project status` with a cold private cache returned exit 128 after 50 s. The npm debug log has only `verbose exit 128` and no git or npm error line, so the cause is not named. Three concurrent cold starts with one shared private cache all reached the 400 s timeout (exit 124); one of their npm logs shows `EAI_AGAIN` (DNS lookup failed). So a cold start depends on the network, and it can fail with a code that does not say why.
+   - Fix: a server that exits before it answers initialize is started again, up to three attempts in all. Each attempt's exit code is logged as `retrying`, and the final failure names all of them with the stderr tail. A timeout is not retried, because the server may still be installing. The retry is in src/mcp-client.mjs (handshake) and native/components/mcpclient/client.cpp (connect).
+   - Files: src/mcp-client.mjs, native/components/mcpclient/client.cpp.
+   - Witness: tools/check-startup-attempts.mjs runs a real `sh` server that exits 128 and a real `sh` server that sleeps past its budget, on node and native.
+
+4. One playwriter server, shared tabs (thebird and jayzee).
+   - Cause: pw's projectRoot takes PLAYWRITER_PROJECT_DIR first, and otherwise climbs from its cwd to the nearest .playwriter or .git. A gm that did not set the variable therefore put every project under /workspace on /workspace/.playwriter, one Chrome and one profile.
+   - Fix: already at 409c3f3 (2026-11-09, "Browser profile per project root"). src/mcp-client.mjs start() and native client.cpp spawn() set PLAYWRITER_PROJECT_DIR to the run's workspace unless the entry's env sets it. Nothing new in this pass.
+   - Witness: in this pass, four projects each have their own gate, debug port and profile. `gm.playwriter_browsers({ action: "list" })` from the probe run listed `owner gate ... for /workspace/gm, profile /workspace/gm/.playwriter/browser-profile`, `/workspace/oscraft ... /workspace/oscraft/.playwriter/browser-profile` and `/tmp/gm-defects/w6/webgpu-fresh/.playwriter/browser-profile`, and a fourth for the probe workspace, with different debug ports.
+
+5. WebGPU adapter on a fresh profile (jayzee).
+   - Cause: jayzee's labs (enable-unsafe-webgpu, enable-vulkan@1, enable-webgpu-developer-features) were written into Local State only by its wrapper scripts/browser/chromium-webgpu.sh, and only into the project profile. A fresh profile has none, so `navigator.gpu` exists and `requestAdapter()` returns null.
+   - Fix (in pw, AnEntrypoint/pw ebbba11): `PLAYWRITER_WEBGPU=1` seeds the same three labs into the project profile's Local State before Chromium starts, fresh or not (seedLabs in bin/playwriter-project). The usage text lists it. gm passes the env through the playwriter entry, so a workspace turns it on in its .gm/mcp.json.
+   - Pin: defaults/mcp.json and README.md now pin pw#ebbba11.
+   - Files: defaults/mcp.json, README.md (pw repo: bin/playwriter-project).
+   - Witness (real gm runs, the playwriter tools inside run_code, a page on http://localhost:8765 so the page is a secure context):
+     - with PLAYWRITER_WEBGPU=1, fresh profile: `{ secure: true, hasGpu: true, adapter: { vendor: 'nvidia', architecture: 'ampere', isFallbackAdapter: false } }`
+     - control, same fresh profile without PLAYWRITER_WEBGPU: `{ secure: true, hasGpu: true, adapter: null }`
+
+6. Playwriter failures with no cause.
+   - Cause: pw's failures named the step but not the reason, and the reason was only in browser.log or gate.log. A browser install failure read `browser install failed (exit 1); see <log>`.
+   - Fix (pw ebbba11): the browser install failure, the debug-port failure and the gate start failure append the tail of the log they name. gm's side is item 2: a server that fails to start returns its stderr tail and its attempts.
+   - Witness (real gm run, PLAYWRITER_BROWSER_PATH pointing at a missing file, no network in the sandbox): the caller's error reads `browser install failed (exit 1); see /tmp/gm-defects/w6/fail-browser/.playwriter/browser.log: Fetching latest Chrome for Testing version... | Error: fetch failed`, so the cause is in the error text.
+
+Also in this pass, for the jayzee subagent report (gm skill guidance):
+- Cause: skills/gm/SKILL.md told a subagent to hand its task in a file and did not say which tools its file work used, so jayzee's subagents used the host's built-in Read, Edit, Write and Grep, and their calls were not in the run log.
+- Fix: skills/gm/SKILL.md (Handing work to a child session, step 1) and skills/gm/WORKFLOWS.md (Mapping to gm): file work goes through run_code (gm.read_file, gm.write_file, gm.edit_file, gm.grep, gm.run_shell). The exception is a subagent with no gm connection, which says so in its reply.
+- Witness: a real gm run reads skill://gm/SKILL.md and skill://gm/WORKFLOWS.md and finds the rule: `{"skillHasRule":true,"workflowsHasRule":true,"skillTruncated":false}`.
+
+Files in this commit (17 modified or new in the tree, plus this file):
+.github/workflows/release.yml (item 1), README.md (items 2 and 5), defaults/mcp.json (item 5), native/components/mcpclient/client.cpp (items 2 and 3), native/components/mcpclient/config.cpp (item 2), native/components/mcpclient/config.hpp (item 2), skills/gm/SKILL.md (subagent file work), skills/gm/WORKFLOWS.md (subagent file work), src/mcp-client.mjs (items 2 and 3), tools/check-build.mjs (item 2), tools/check-caller.mjs (item 1), tools/check-console.mjs (item 1), tools/check-inflight.mjs (item 1), tools/check-read-truncation.mjs (item 1), tools/check-relay-exit.mjs (item 1), tools/check-search-root.mjs (item 1), tools/lib/gm-stdio.mjs (item 1), tools/check-startup-attempts.mjs (new, items 2 and 3), tools/lib/no-playwriter.mjs (new, item 1), docs/PENDING_VALIDATION.md (this record).
