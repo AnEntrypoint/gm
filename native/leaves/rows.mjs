@@ -119,6 +119,11 @@ function commitExists(commit) {
   return reply.started && !reply.timedOut && reply.exitCode === 0;
 }
 
+function isRepository() {
+  const reply = host.run({ argv: ['git', 'rev-parse', '--is-inside-work-tree'], cwd: host.workspace, timeoutMs: 15000 });
+  return reply.started && !reply.timedOut && reply.exitCode === 0;
+}
+
 function runGit(argv) {
   const reply = host.run({ argv: ['git', ...argv], cwd: host.workspace, timeoutMs: 15000 });
   return reply.started && !reply.timedOut && reply.exitCode === 0;
@@ -279,7 +284,9 @@ function resolveRow(kind, { id, event, commit, witness, push }) {
   if (!Number.isInteger(event) || event < 1) return fail('event must be a log seq number');
   if (!eventInLog(event)) return fail(`event ${event} is not in this run's log`);
   if (typeof commit !== 'string' || !SHA.test(commit)) return fail('commit must be 7 to 40 lowercase hex digits');
-  if (!commitExists(commit)) return fail(`no commit ${commit} in this repository`);
+  if (!commitExists(commit)) {
+    return fail(isRepository() ? `no commit ${commit} in the repository at ${host.workspace}` : `cannot check commit ${commit}: ${host.workspace} is not a git repository`);
+  }
   const row = readRow(id);
   if (row === null) return fail(`no row ${id}`);
   if (row.kind !== undefined && row.kind !== kind) return fail(`row ${id} is not a ${KINDS[kind]}`);

@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { mkdir, readdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
-import { commitExists, SHA } from './git.mjs';
+import { commitExists, isRepository, SHA } from './git.mjs';
 import { resultZone1, resultZone2 } from './compact.mjs';
 
 export const ROW_DIR = 'work/rows';
@@ -193,7 +193,9 @@ export function createRowVerbs({ root, confine, log }) {
     if (!Number.isInteger(event) || event < 1) return fail('event must be a log seq number');
     if (!log.events().some((entry) => entry.seq === event)) return fail(`event ${event} is not in this run's log`);
     if (typeof commit !== 'string' || !SHA.test(commit)) return fail('commit must be 7 to 40 lowercase hex digits');
-    if (!(await commitExists(root, commit))) return fail(`no commit ${commit} in this repository`);
+    if (!(await commitExists(root, commit))) {
+      return fail((await isRepository(root)) ? `no commit ${commit} in the repository at ${root}` : `cannot check commit ${commit}: ${root} is not a git repository`);
+    }
     const row = await readRow(id);
     if (row === null) return fail(`no row ${id}`);
     if (row.kind !== kind) return fail(`row ${id} is not a ${KINDS[kind]}`);

@@ -41,6 +41,10 @@ export function commitExists(root, sha) {
   return runCommand('git', ['cat-file', '-e', `${sha}^{commit}`], { cwd: root, timeoutMs: CHECK_TIMEOUT_MS, env: GIT_ENV }).then((result) => result.ok);
 }
 
+export function isRepository(root) {
+  return runCommand('git', ['rev-parse', '--is-inside-work-tree'], { cwd: root, timeoutMs: CHECK_TIMEOUT_MS, env: GIT_ENV }).then((result) => result.ok);
+}
+
 const GIT_RESULTS = ['git_status', 'git_add', 'git_rm', 'git_commit', 'git_push', 'git_fetch', 'git_pull', 'git_checkout', 'git_branch', 'ci_status'];
 const GIT_LISTINGS = ['git_log', 'git_diff', 'git_show'];
 export const COMPACT = {
