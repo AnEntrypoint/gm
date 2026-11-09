@@ -590,3 +590,14 @@ Build: `cmake --preset release`, `cmake --build build/release -j 4`, BUILD_EXIT 
 Real checks on 2ebce71: conformance `conformance: 83 passed, 0 failed of 83 checks in 24 scenarios`, CONF_EXIT 0. Parity `22/93 scenarios match, 0 cutover-expected, 56 native-ahead, 15 documented-gap, 0 differ`, PARITY_EXIT 0.
 
 Item 7 (Windows and macOS builds, V4 CRLF) stays open: it needs Windows CI.
+
+## gm pass, Phase A (2026-11-09): the step-limit refusal names the real way to close a run
+
+Ranked remaining work, with status, after dee9c8e:
+1. Step-limit refusal wording (this pass). Open, unblocked. Taken now.
+2. Windows and macOS builds, and the V4 CRLF check from 4e82f40. Open, blocked on a Windows CI run of release.yml.
+All other rows of the earlier lists are done or decided (items 1 to 6 are in dee9c8e).
+
+Change: src/mcp.mjs (stepLimitText) and native/components/mcp/server.cpp (step_limit_text). Before: "step limit N reached; call finish with your witness to close this run, then call next_context to open a successor run; a run ended here has no witness". That text is returned by the refused next_context and by every later refusal, and finish is among them. Cause: the limit ends the run at the first next_context call made after stepsLeft reaches 0, so the run has already ended when the text is read, and finish is refused as ended. The text told the agent to call finish, which cannot work at that point. After: "step limit N reached and this run ended without a witness; call next_context to open a successor run. To close a run with a witness, call finish while stepsLeft is 0, before the next next_context call".
+
+Witness (Phase B): the openRows sequence from wfinish.mjs on both trees, extended with one more next_context after stepsLeft 0, then a finish. Expected: the refused next_context and the refused finish both carry the new text; the earlier openRows finish at stepsLeft 0 is still accepted.
