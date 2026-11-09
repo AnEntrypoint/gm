@@ -478,3 +478,29 @@ Recovery run after an API error ended the previous turn. The release build had f
 - V2, the same 65 s JavaScript body on the Node host (v2-node.mjs): `V2_NODE_ELAPSED_S 65`, `V2_NODE_REPLY {"ok":true,"output":{"spun":true},...}`; V2_EXIT 0.
 
 Status: V1, V2 (this case) and V3 verified again on 0a9bb65. V4 (CRLF, 4e82f40) remains blocked on CI.
+
+## V4 decided: CI-only witness (2026-11-09)
+
+V4 is the CRLF comparison in tools/check-shell-stdin.mjs from 4e82f40 (job output compared with CR and trailing blanks removed).
+
+- Exact check command: `node tools/check-build.mjs build/x64-windows-release`, and `node tools/check-build.mjs build/arm64-windows-release`. check-build runs check-shell-stdin.mjs against the built binary. The windows-latest and windows-11-arm jobs in .github/workflows/release.yml (line 102) run these.
+- Why it cannot run on this host: the CRLF output is produced by a Windows job's stdin, and this Linux host has no Windows runner and builds no Windows preset. A Linux run cannot reproduce CRLF output, so a local run would prove nothing.
+- Status: a CI item, removed from the Phase B blocking list. It stays open until a Windows CI run of release.yml passes; the result belongs in this doc when CI reports it.
+
+## Ranked remaining work (2026-11-09, after V4 was decided)
+
+| rank | item | status | blocker |
+|---|---|---|---|
+| 1 | server.cpp stop_orphans reaps body children before it marks a body killed (the open gap from the Phase B record) | Phase A this pass; Phase B this pass | none |
+| 2 | rows.mjs:196 message "no commit X in this repository" also covers a non-repository root | open | none; next pass |
+| 3 | f80cd46 leaf assertion accepts a background run; tighten it to require status 200 within the body budget | open | none; next pass |
+| 4 | Node run_code budget parity with native (V2 case verified; other cases unmeasured) | open | owner decision (native-ahead or port) |
+| 5 | fx row unknown-mw6bc4mv1c00 | open, cause recorded | the fx workspace owner resolves or parks it |
+| 6 | Shell-job lifetime equals the job_start cap, so the lifetime reason is unreachable for shell jobs | open | owner decision |
+| 7 | The .mcp.json pass | not started | owner schedules it |
+| 8 | Windows and macOS builds are unverified here; V4 CRLF check | CI | a Windows CI run of release.yml |
+
+## gm pass, Phase A (2026-11-09): stop_orphans reaps on the server path
+
+- native/components/mcp/server.cpp, the server-side stop_orphans (line ~976): before a body's status is rewritten as killed, it calls `proc::reap_ledger(dir / (job + ".pids"))`, where dir is the run's jobs directory. Before this, only JobTable::stop_orphans (job.cpp) reaped, so if the server path ran first on a crashed run its body children were not killed.
+- Witness plan for Phase B: rebuild; run wreap.mjs (worker SIGKILL, restart, the recorded child must be dead and the ledger gone); conformance; parity. The log cannot show which of the two stop_orphans ran, so the witness proves that reaping happens, not which path did it.
