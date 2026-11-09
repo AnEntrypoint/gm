@@ -873,3 +873,12 @@ G8 on Node: the Node side of G8 is closed by row 29. The Node match and attempts
 Found, not fixed (G9): Node holds a run_code call that arrives before the first next_context until that step runs, so a body sent first never replies. Native runs it at once with the rules notice. Witness: a run_code sent before next_context got no reply in 20 s, and the server only logged it after the probe killed the process. Owner decision: let calls before the first step run (as native does), or keep the step gate and say so in the rules.
 
 Ranked status after this pass: G2 closed (row 25); G4 closed for the budget (rows 27, 28, 30; G9 is a separate gap); G5 closed (row 31); G7 closed (no change needed); G8 closed on both engines (rows 21, 22, 29); G6 unchanged (fx workspace, not in this checkout).
+
+Phase B record (2026-11-09, `node tools/check-build.mjs build/release`, exit 0, binary stamped b7b2c5a-dev; the native source did not change in this pass):
+
+- `conformance: 85 passed, 0 failed of 85 checks in 24 scenarios`
+- `run-code-budget-check: ok (a 65 s JavaScript body with timeoutMs 100000 returned in 65013 ms; a fetch leaf held by the server for 50000 ms ended in 50039 ms with no old fixed limit; a 3000 ms fetch with a catastrophic match timed out in 3005 ms in one attempt; a 3000 ms fetch that timed out ended in 3028 ms in one attempt)`
+- `job-bounds-check: ok (a 2000 ms job timeout ended as timeout in 2005 ms; a 7200000 ms job timeout ended as lifetime at 5006 ms under a 5000 ms lifetime; a 1000 ms job exited 0 in 1045 ms)`
+- run-code-progress and shell-stdin checks ok; replay witness `"feedHasBrief": false`.
+
+Node, the same tree, the checks that are not in check-build: `node tools/check-run-code-budget.mjs node`: `run-code-budget-check: ok (a 65 s JavaScript body with timeoutMs 100000 returned in 65051 ms; a fetch leaf held by the server for 50000 ms ended in 50103 ms with no old fixed limit; a 3000 ms fetch with a catastrophic match timed out in 3094 ms in one attempt; a 3000 ms fetch that timed out ended in 3069 ms in one attempt)`; `node tools/check-job-bounds.mjs node`: `job-bounds-check: ok (a 2000 ms job timeout ended as timeout in 2016 ms; a 7200000 ms job timeout ended as lifetime at 5015 ms under a 5000 ms lifetime; a 1000 ms job exited 0 in 1059 ms)`; `node native/tests/parity/run.mjs --bin build/release/native/components/host/gm`: `22/93 scenarios match, 0 cutover-expected, 56 native-ahead, 15 documented-gap, 0 differ`; `node tools/witness-ci-replay-step.mjs` exit 0.
