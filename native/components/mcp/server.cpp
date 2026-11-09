@@ -1133,6 +1133,7 @@ struct Server::State {
                             .set("taskFrom", task_from));
         if (!task.empty()) append("task", object().set("from", task_from).set("text", task));
         log_tools();
+        if (inherited) s().shown = s().log->count();
         return true;
     }
 

@@ -676,3 +676,34 @@ macOS x64 Test: `conformance: 85 passed, 0 failed of 85 checks in 24 scenarios`;
 Windows cmd-only run_shell witness: failed on both Windows jobs at tools/witness-windows-cmd.mjs:24 (job build-windows x64 and arm64), and the job stayed green because the step is continue-on-error. The log reads: `Error: cmd-only run_shell did not use cmd.exe: {"ok":true,"output":{"ok":true,"exitCode":0,"signal":null,"output":"runs\r\n","launcher":"cmd"},"truncated":false,"loads":[],"actionSeq":11}`. Cause: decode unwrapped only a string `output`, so the object run_shell wrapper stayed nested and `launcher` read as undefined; the shell did run under cmd. Fixed in row 8. It is not witnessed on a runner until a dispatch after this commit.
 
 Budget check margin (fetch leaf, `gm.fetch` with `match: '(a+)+$'` on a 31-a line): CPU-bound, so the duration follows the runner's speed. Measured on macOS x64: 193313 ms (a681ef4, run 42601864942, passed in a 200000 ms window); 200085 ms (78ca5a1, run 42603306835, failed in a 200000 ms window); 233216 ms (6ef6c1f, run 42615572769, passed in the 400000 ms window from row 6). The 400000 ms window is 1.72 times the worst measured run. Not deterministic: a slower runner can exceed the window again. Open: make the leaf independent of CPU speed (for example a local server that holds its response for a fixed time, with a matching fetch timeout); not done here.
+
+## Item 7 closure record (2026-11-09)
+
+Item 7 (Windows and macOS builds, V4 CRLF) is closed on run 42617531301, dispatched with `publish=false` on d9876a4c59cd414a801ef5df9aaa20c756b8062f. `gh run view` conclusion success; publish skipped; the public latest tag stayed at 78ca5a1 and the latest release stayed published 2026-11-04T23:41:31Z.
+
+| Job | Conclusion | Evidence |
+|---|---|---|
+| build-windows x64 (x64-windows-release) | success | Windows cmd-only run_shell witness: `exitCode 0`, `output "runs\r\n"`, `launcher "cmd"` |
+| build-windows arm64 (arm64-windows-release) | success | Windows cmd-only run_shell witness: `exitCode 0`, `output "runs\r\n"`, `launcher "cmd"` |
+| build linux x64 | success | build job |
+| build linux arm64 | success | build job |
+| build macOS x64 | success | Test: `conformance: 85 passed, 0 failed of 85 checks in 24 scenarios`; `run-code-budget-check: ok` (run 42615572769 measured the leaf at 233216 ms) |
+| build macOS arm64 | success | build job |
+| publish | skipped | `publish=false` |
+
+The Windows CMD witness failed on run 42615572769 (quoted in the Phase B record above) and passed on run 42617531301 after commit d9876a4.
+
+Correction: run 42617510474 is `pages-build-deployment` (jobs build, deploy, report-build-status), not a release build. It is not counted as build evidence.
+
+Open risk, recorded and not closed by a change: the budget check's fetch leaf is CPU-bound and took 193313, 200085 and 233216 ms on macOS x64 runs. The 400000 ms window is 1.72 times the worst run. A slower runner can exceed it.
+
+## next_context successor replay (2026-11-09, Phase A)
+
+Cause: `reopen()` in native/components/mcp/server.cpp opens a successor run with the closed run's task (taskFrom `closed run <id>`) and appends that task as a `task` event with the full text. The successor's first `next_context` fed every event since seq 0, so the closed run's brief came back in `events` (bounded to the events cap, about 8k tokens). This is the replay the ACP implementation agent reported. Task inheritance itself is designed and tested (skills/gm/SKILL.md, tools/check-task-set.mjs), so it stays.
+
+| # | File | Change | Witness needed |
+|---|---|---|---|
+| 9 | native/components/mcp/server.cpp | reopen(): when the successor inherits the task, the feed cursor moves past its own start, task and tools events, so the first next_context does not replay the inherited brief; the task still reaches the run through `reply.task` (capped at 4000 characters) | tools/witness-next-context-replay.mjs fails (`feedHasBrief: true`) on the binary before this change and passes on the built binary |
+| 10 | tools/witness-next-context-replay.mjs | new witness: a run holding a 30 KB brief is closed with finish; the successor's first next_context `events` must not contain the brief; the run ids must differ | as row 9 |
+
+Recorded gap: Node (src/mcp.mjs reopen, line 884 inherits the task) still replays the inherited task event. Changing src/ is a decision for the orchestrator, so Node is unchanged here.
