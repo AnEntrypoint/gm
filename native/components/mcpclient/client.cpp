@@ -40,6 +40,7 @@ namespace {
 
 constexpr const char* PROTOCOL_VERSIONS[] = {"2025-11-25", "2025-06-18"};
 constexpr const char* DEPTH_VARIABLE = "GMNEW_MCP_DEPTH";
+constexpr const char* PROJECT_VARIABLE = "PLAYWRITER_PROJECT_DIR";
 constexpr const char* CLIENT_NAME = "gm";
 constexpr const char* CLIENT_VERSION = "0.1.0";
 constexpr std::size_t STDERR_BYTES = 2000;
@@ -227,6 +228,8 @@ std::shared_ptr<Session> spawn(const std::shared_ptr<Core>& core, std::string& e
     options.own_group = true;
     options.capture_stderr = true;
     options.env = core->spec.env;
+    if (std::none_of(options.env.begin(), options.env.end(), [](const auto& entry) { return entry.first == PROJECT_VARIABLE; }))
+        options.env.emplace_back(PROJECT_VARIABLE, core->spec.workspace.string());
     options.env.emplace_back(DEPTH_VARIABLE, std::to_string(core->depth + 1));
     auto spawned = proc::Child::spawn(launch_argv(core->spec), options);
     if (!spawned) {

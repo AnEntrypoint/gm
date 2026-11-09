@@ -32,6 +32,8 @@ A host may cut a slash-command task to its first word before gm sees it. The ser
 
 Playwriter is this project's browser control. Drive the browser only through its verbs inside run_code: `gm.playwriter_execute({ code })` runs a snippet in the project browser, and `gm.playwriter_browsers({ action })` lists or closes browsers on the machine. Do not start another browser, and do not call the playwriter binary from a shell. A browser call that runs past 60 seconds needs `timeoutMs` on the playwriter server entry (defaults/mcp.json sets 300000). The execute call's own `timeout` argument sets playwriter's limit, which defaults to 10 seconds, and does not lift the server cap.
 
+Each project root has its own browser: its own Chrome, its own profile at `<root>/.playwriter/browser-profile`, and its own page set. The project root is the run's workspace, the cwd the run starts in; gm passes it to the playwriter server as `PLAYWRITER_PROJECT_DIR` unless the server entry sets that variable itself. So one project's runs never share a browser with another project.
+
 Each run has its own browser context. Its first execute call creates it, and `context` in the snippet is that context, so `context.newPage()` opens a tab the run owns. Other runs and other projects have their own tabs, which this run does not list or close.
 
 - `next_context` returns `tabs`: the tabs this run owns, with url and title, and a count of the others. When nothing changed it says unchanged.
@@ -119,9 +121,18 @@ When not to bundle: a second run_code body is right when the next action needs a
 
 A file `gm.write_file`, `gm.edit_file` or `gm.run_shell` wrote in this run is untracked: `gm.grep` it by `path` with `scope: 'all'`. The default `tracked` scope skips untracked files, and `gm.search` reads git-tracked files only.
 
+## Memory rules
+
+These four rules say what a run keeps and where.
+
+(a) A memory process or workflow generalization is codified as a skill, not left as a note. A lesson about how work is done (a review method, a checklist, a rule for one kind of change) goes into the skill a future run reads, in the section it belongs to. A line that only says "remember to do X" is not kept.
+(b) Project-specific memory that is not mundane goes into AGENTS.md: a fact a run had to execute to learn, such as an environment gotcha, a measured result or an owner decision with its reason. A path, a default or a function name is not kept, because the code shows it.
+(c) Every edit to AGENTS.md includes a full audit, made before the edit. Read the whole file and check each line. Remove a line that the code, README.md, DESIGN.md or a skill already states, once the code has been read and confirms it; check that every path, function and flag a kept line names still exists. Add only what needs code execution to discover. Report the audit with the change: the size before and after, and what was removed.
+(d) AGENTS.md stays under 30 KB in 99% of cases. Memory tooling (indexes, stores, extra memory files) is seldom needed: the audit in (c) keeps the file under the limit. If the file is still over 30 KB after the audit, compress first, then drop notes in this order: what the code already shows, menial steps, then obvious facts.
+
 ## Keeping notes and replies short
 
-AGENTS.md is updated continuously. Write each note in the fewest words that keep it instructive. At the 30 KB limit, compress first, then drop notes in this order: what the code already shows, menial steps, then obvious facts. Keep only what took a long run to learn and cannot be read from the code. Every tool reply carries only what the next step needs: counts, paths, failures and the evidence the witness quotes. Read detail on demand, so a step does not pay for text it will not use. Pass `compactChildren: true` when a feed holds many child events; `gm.query_log` reaches every event. In a host workflow, write each phase result to a file in the project and call log() at each boundary; a journal with only launched entries is not evidence.
+AGENTS.md follows the memory rules above. Write each note in the fewest words that keep it instructive. Every tool reply carries only what the next step needs: counts, paths, failures and the evidence the witness quotes. Read detail on demand, so a step does not pay for text it will not use. Pass `compactChildren: true` when a feed holds many child events; `gm.query_log` reaches every event. In a host workflow, write each phase result to a file in the project and call log() at each boundary; a journal with only launched entries is not evidence.
 
 Rows (native server): `gm.prd_add` and `gm.unknown_add` write `work/rows/<id>.yml`; `gm.prd_list` and `gm.unknown_list` read that dir and the legacy `.gm/prd/` but list only rows with `kind` (`status: pending` reads as open). A legacy `.gm/prd/*.yml` with `subject` and no `kind` is invisible to `gm.prd_list`, yet `gm.prd_resolve` closes it, writing `closes/<id>.txt` and a commit. `.gm/queues/` is not a row store; the Node tree reads `work/rows/` only.
 

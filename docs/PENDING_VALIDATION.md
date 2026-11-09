@@ -40,3 +40,17 @@ Phase B (2026-11-09, build stamp 0797aff, HEAD 0797aff). Rows 6-10 are built and
 | 12 | docs/PENDING_VALIDATION.md | this section | read it |
 
 Node (src/) has no browser scope, no tabs field and no context-reply event. That is a recorded gap, not a fix: AGENTS says changing Node is a decision.
+
+## Per-project browser profile and the memory rules (2026-11-09, Phase A)
+
+Nothing here is built or witnessed yet. Phase A is code and docs only; nothing is pushed.
+
+| # | File | Change | Witness needed |
+|---|---|---|---|
+| 13 | native/components/mcpclient/client.cpp | spawn() sets PLAYWRITER_PROJECT_DIR to the run's workspace (spec.workspace) for every stdio server, unless the server entry's env already sets it. pw's projectRoot reads that variable first, so each project root gets its own gate, Chrome and profile at <root>/.playwriter/browser-profile. Before: pw climbed from /workspace to /workspace/.playwriter and every project under /workspace shared one browser. | P1: two projects (two workspace dirs, each with a run) run gm.playwriter_execute; the report shows distinct profile paths (--user-data-dir), distinct browser pids (browser.pid) and distinct page sets (pages per debug port) |
+| 14 | skills/gm/SKILL.md | Browser control: each project root has its own browser and profile; gm passes the workspace as PLAYWRITER_PROJECT_DIR unless the entry sets it. New "Memory rules" section: (a) a generalization is codified as a skill, (b) non-mundane project memory goes to AGENTS.md, (c) every AGENTS.md edit carries a full audit, (d) AGENTS.md stays under 30 KB in 99% of cases, memory tooling seldom needed. | the served text (read_file skill://gm/SKILL.md) contains "Memory rules" and "PLAYWRITER_PROJECT_DIR" |
+| 15 | skills/gm-continue/SKILL.md | the notes step follows the memory rules in skill://gm/SKILL.md; a process lesson is codified as a skill, never left as a note | the served text contains "memory rules" |
+| 16 | AGENTS.md | audit pass: lines the code, README, DESIGN.md or a skill already state are removed, after a grep confirmed each; the browser profile fact is recorded | read AGENTS.md; the audit numbers are in the commit message |
+| 17 | docs/PENDING_VALIDATION.md | this section | read it |
+
+Node (src/) still shares one browser per /workspace tree: src/mcp-client.mjs does not set PLAYWRITER_PROJECT_DIR. That is a recorded gap, not a fix: AGENTS says changing Node is a decision.
