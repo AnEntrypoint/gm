@@ -123,7 +123,7 @@ A file `gm.write_file`, `gm.edit_file` or `gm.run_shell` wrote in this run is un
 
 ## Validation
 
-First action. The first tool call of every session is a read of skill://gm/SKILL.md, before any other work: ReadMcpResourceTool (server gm, uri skill://gm/SKILL.md), or resources/read with {"uri":"skill://gm/SKILL.md"}. The server enforces it: run_code refuses until that read has happened on the connection, and the refusal names the exact read call. The read is per connection, so a new connection reads again.
+First action. The first tool call of every session is a read of skill://gm/SKILL.md, before any other work: ReadMcpResourceTool (server gm, uri skill://gm/SKILL.md), or resources/read with {"uri":"skill://gm/SKILL.md"}. The server enforces it: the first run_code on a connection that has not read the skill is refused once, and that refusal carries the skill text in `skill`, so a client with no resource-read tool is not locked out. The gm prompt counts as the read too. The read is per connection, so a new connection reads again.
 
 Order of work:
 
@@ -161,7 +161,7 @@ A summary can replace earlier messages, including the rules, the witness require
 1. Call `next_context` at once. It returns the rules, the task, the witness requirement and the events new since your last step.
 2. Follow the rules it returns. They are the same rules as before the compaction.
 3. Do not rely on a summary for a rule, the witness requirement or an event. Use `gm.query_log` for any event the summary does not give exactly.
-4. If a reply carries `rulesNotice`, or `next_context` carries `rulesPending`, read the gm skill again with ReadMcpResourceTool (server gm, uri skill://gm/SKILL.md), or with `gm.read_file({ path: 'skill://gm/SKILL.md' })` in a run_code body, and follow it. That one read clears the notice, and it is the only extra step the notice needs. Do not repeat finished work.
+4. If a reply carries `rulesNotice`, or `next_context` carries `rulesPending`, read the gm skill again with ReadMcpResourceTool (server gm, uri skill://gm/SKILL.md), or with `gm.read_file({ path: 'skill://gm/SKILL.md' })` in a run_code body, and follow it. That one read clears the notice, and it is the only extra step the notice needs. A rule 2 notice (a call before next_context) is reported once in the next next_context reply as `rulesPending`, and that call clears it. Do not repeat finished work.
 
 ## Pending events
 
