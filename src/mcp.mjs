@@ -273,7 +273,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
   let stepCalls = 0;
   const RULE_TEXT = { 2: 'call next_context at the start of every step', 3: 'verify before you finish', 4: 'finish needs a witness' };
   function noteRule(rule, evidence) {
-    if (rulesOpen.has(rule)) return;
+    if (ended !== null || rulesOpen.has(rule)) return;
     const entry = log.append('rules-notice', { step: steps, rule, evidence });
     rulesOpen.set(rule, { seq: entry.seq, evidence });
   }
@@ -284,7 +284,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     log.append('rules-cleared', { step: steps, rules });
   }
   function rulesNotice() {
-    if (rulesOpen.size === 0) return null;
+    if (ended !== null || rulesOpen.size === 0) return null;
     const lines = [...rulesOpen].map(([rule, { evidence }]) => `rule ${rule} (${RULE_TEXT[rule]}): ${evidence}`);
     return `The rules check found: ${lines.join('; ')}. Read the gm skill again with ReadMcpResourceTool (server gm, uri skill://gm/SKILL.md) and follow the rules it gives. That one read clears this notice. Do not repeat finished work.`;
   }

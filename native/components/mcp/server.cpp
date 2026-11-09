@@ -1128,6 +1128,7 @@ struct Server::State {
     }
 
     void note_rule(int rule, const std::string& evidence) {
+        if (s().ended) return;
         for (const auto& open : s().rules_open) {
             if (open.first == rule) return;
         }
@@ -1149,7 +1150,7 @@ struct Server::State {
     }
 
     std::optional<std::string> rules_notice() {
-        if (s().rules_open.empty()) return std::nullopt;
+        if (s().ended || s().rules_open.empty()) return std::nullopt;
         std::string lines;
         for (const auto& [rule, evidence] : s().rules_open) {
             if (!lines.empty()) lines += "; ";

@@ -327,3 +327,11 @@ Close check, on scratch roots /tmp/iso/close/thebird and /tmp/iso/close/jayzee (
 `gm.browser_close_machine({ confirm: true })` in the thebird run closed pid 4118278 (not alive afterwards). Pid 4119366 stayed alive and its tab "ISO-CLOSE-JAYZEE-mw8puk1m" was still listed. The jayzee browser was then closed the same way and confirmed gone.
 
 Phase B: the witness scripts ran in /tmp/iso (outside the repo) and were removed after this record.
+
+## gm defects from jayzee (2026-11-09, Phase A)
+
+Phase A: the four defects fixed at their cause, rows numbered as in the owner list (1 feed, 2 job kill, 3 run_shell, 4 rules notice), one commit per defect where the files allow. The job-kill and run_shell statements share src/tools.mjs, so rows 2 and 3 share one commit. Nothing pushed; Phase B builds, witnesses and pushes.
+
+| # | Commit | File | Change | Witness needed |
+|---|---|---|---|---|
+| 4 | Rules notice after end | native/components/mcp/server.cpp, src/mcp.mjs | note_rule and rules_notice (native), noteRule and rulesNotice (Node), return at once once the run has ended, so finish raises no rules notice after its end event | finish then next_context on a scratch run in each tree: no rules-notice event after the end event, no rulesPending in the reply |
