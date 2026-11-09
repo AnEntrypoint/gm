@@ -1201,3 +1201,25 @@ Windows and macOS gaps (cannot be built or run here; recorded with the cause as 
 - G1. build-windows x64-windows: check-restart-jobs (item 2 above). Fixed in code; not run on Windows. The binary-change restart in the relay on Windows is unverified: if the worker is still not replaced after the process-table fix, the cause is the relay's binary-change path on Windows.
 - G2. build-windows arm64-windows: browser-scope-check. The Playwright Chromium step (release.yml, "Chromium for the browser-scope check (arm64-windows)") downloads Chrome for Testing 158 and writes PLAYWRITER_BROWSER_PATH to GITHUB_ENV, but pw's installer still ran: `browser install failed (exit 1) ... Unsupported platform for Chrome for Testing download: win32/arm64`. pw's browser-config.js throws when PLAYWRITER_BROWSER_PATH is missing or does not exist, which starts the installer. The step never prints the value it writes, so it is not known whether the variable reached the check or pointed at a missing path (node -p under Git bash may produce a POSIX-style path). Not changed: needs one Windows run that prints the value and checks it exists. Release runs 42706661863 and 42699019720.
 - G3. macOS: the macOS x64 and arm64 release jobs succeeded on 17959f7 and c378ba0; no gap recorded.
+
+## gm pass, Phase B (2026-11-10, local only, release and asan builds at 7232577)
+
+Correction to Phase A item 1: the asan-arm failure that item 1 describes came from arm-diagnose run 42699019924 (c378ba0). Run 42706662337 is the arm-diagnose run for 17959f7, which the watcher stopped before it finished.
+
+Witnesses run locally, output read in full:
+- `cmake --build build/release`: exit 0; `gm stamp 7232577-dev (7232577)`.
+- `cmake --build build/asan`: exit 0.
+- `node tools/check-protocol-versions.mjs build/release/native/components/host/gm`: exit 0, all five versions and the refusals pass.
+- `node tools/check-restart-jobs.mjs build/release/native/components/host/gm`: exit 0, `ok (native: binary mtime changed ... the job's process ... was alive 543 ms after the trigger ... killed with reason restart 0)`.
+- `node tools/check-restart-jobs.mjs node`: exit 0, `ok (node: SIGTERM to the Node worker pid ...; killed with reason restart 0)`.
+- `node tools/check-build.mjs build/release`: exit 0, `conformance: 86 passed, 0 failed of 86 checks in 24 scenarios`, protocol-versions ok, restart-jobs native ok.
+- asan, protocol-versions: the first run failed with `no initialize result` for every server case and `no mcp-server event after 60000 ms` for every client case. The asan binary printed `ASan runtime does not come first in initial library list` and exited 1. This host's shell sets LD_PRELOAD to /usr/lib/selkies_input_interposer.so, /opt/lib/libudev.so.1.0.0-fake and /usr/lib/selkies_v4l2_interposer.so, and ASan refuses to start behind them. With `env -u LD_PRELOAD` the same binary answers `initialize`. This is a property of this host, not of the code, and the hosted asan runner has no such preload. The CI failure of 42699019924 is therefore not explained by this run; the 60 s wait change is kept as the fix for the slow-start case.
+- `env -u LD_PRELOAD ... node tools/check-protocol-versions.mjs build/asan/native/components/host/gm`: exit 0.
+- `env -u LD_PRELOAD ... node tools/check-build.mjs build/asan`: exit 0, `conformance: 86 passed, 0 failed of 86 checks in 24 scenarios`.
+
+Gap list for what only Windows and macOS can build (recorded in Phase A items G1 to G3, not waited on):
+- G1 (Windows x64 restart-jobs): code fixed in 235493f; not run on Windows. Cause established: POSIX ps, absent on Windows. The relay's binary-change restart on Windows is unverified.
+- G2 (Windows arm64 browser-scope): cause not established. The Chromium step downloads, but pw still runs its installer. Needs one Windows run that prints PLAYWRITER_BROWSER_PATH and checks the path exists.
+- G3 (macOS): no gap; the macOS release jobs passed on the previous push.
+
+Commits in this pass: e83228f (protocol-version wait), 235493f (restart-jobs Windows process table), 7232577 (Phase A ledger), and this Phase B entry.
