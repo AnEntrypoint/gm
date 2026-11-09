@@ -342,3 +342,34 @@ Phase A: the four defects fixed at their cause, rows numbered as in the owner li
 | 2d | Job kill cause | native/include/gm/job_text.hpp, native/components/mcp/server.cpp, native/components/verbs/job.cpp | stopBackground and shutdown kills of background bodies name their cause in words (not the bare reason); a body killed by a worker restart says that its child processes are not tracked across a crash | finish with stopBackground: true on a run with a running body: job-killed statement names stopBackground; kill the worker with a body child running: body restart statement says children are not tracked |
 | 3 | run_shell timeout | native/components/verbs/verbs.cpp, src/tools.mjs | a run_shell that hits its timeout adds a statement with the timeout in ms and, when nothing was printed, that the command printed nothing before the deadline | run_shell "sleep 5; echo x" with timeoutMs 2000: error and statement present, output empty; then "echo a; sleep 5" with timeoutMs 2000: output "a" and the statement; both trees |
 | 4 | Rules notice after end | native/components/mcp/server.cpp, src/mcp.mjs | note_rule and rules_notice (native), noteRule and rulesNotice (Node), return at once once the run has ended, so finish raises no rules notice after its end event | finish then next_context on a scratch run in each tree: no rules-notice event after the end event, no rulesPending in the reply |
+
+## gm pass witness record (2026-11-09, binary 1af49a1)
+
+Binary: build/release/native/components/host/gm, stamped 1af49a1 (HEAD at build). Commits of this pass, in order: 6524887 (rules notice), cc3496a (job kill and run_shell statements), c4e4f7d and 4e5200b (feed delta, and its brace fix), 38c2db5 (job_stop reply statement), dbed8fb (jobsKilled statement), b24d506, b933360 and 0fffe53 (body kill statements), 1af49a1 (one job lifetime).
+
+Checks on 1af49a1: conformance `tools/check-build.mjs build/release`: 83 passed, 0 failed of 83 checks in 24 scenarios; run-code-progress-check ok; shell-stdin-check ok. Parity `native/tests/parity/run.mjs --bin build/release/native/components/host/gm`: 22/93 scenarios match, 0 cutover-expected, 56 native-ahead, 15 documented-gap, 0 differ.
+
+Witness results, native build (scratch workspaces under /tmp/gm-defects/w, deleted after the run) and Node host (node src/mcp.mjs through the same client):
+
+| row | native result | Node result |
+|---|---|---|
+| 1 feed | 25 run_shell calls, then next_context: second call 77 events, 21400 bytes, 0 replayed from before; third call 3 events, 2921 bytes, 0 replayed. Installed f14c5b7-281 before: third call 16 events, 5760 bytes, 13 replayed | second call 103 events, 21268 bytes, 0 replayed; third call 2 events, 1837 bytes, 0 replayed |
+| 2 job kills | timeout (to): reason timeout, statement "job to stopped: timeout after 2000 ms"; job_stop (stp): reply statement "job stp stopped by job_stop"; restart (rst, rend): reason restart with statement; run-ended (rend2): reason run-ended with statement; 10 job-killed records with statement | timeout, cancelled and run-ended kills each carry statement; job_stop reply carries statement |
+| 2 next_context jobsKilled | each entry carries statement next to reason (native and Node) | same |
+| 2 body kills | background body killed by finish with stopBackground: true: reason stopBackground, statement "job body-9 stopped: finish was called with stopBackground: true, which stops the run background jobs"; body killed by a worker SIGTERM: reason restart, statement names the crash case | not separately checked: Node sets the statement through job.stop |
+| 3 run_shell | "sleep 5; echo x" with timeoutMs 2000: error, statement "...with no output...", output ""; "echo a; sleep 5": output "a\n" with statement; "sleep 2; echo done": ok, output "done\n". Installed before: no statement | same, with statements |
+| 4 rules notice | refused finish opens rule 4 at seq 11; end at seq 17; no event after end; finish reply has no rulesNotice. Installed before: rules-notice at seq 18 after end at seq 17, finish reply carried rulesNotice | notice seq 7, end seq 12, nothing after |
+
+Defect records (cause and state):
+
+1. The 1800 s turn timeout and the lost lifetime run. Cause: the previous turn waited in foreground loops (sleep up to 600 s per call, repeated) and the turn exceeded its budget; the interrupted call's output file was empty, and the run it watched was a shell job, not a body, so the file was empty until the script ended. Fix: poll in short steps with the Monitor tool (process-level), not inside one turn.
+2. Witness design error, not a product defect: a body running `run_shell` with timeoutMs 7200000 ended at 603 s with "timed out after 600000 ms", because run_shell caps timeoutMs at 600000. The body loop in the final witness re-runs run_shell so it keeps running.
+3. Three lifetime constants disagreed: mcp.hpp 1800000 (native background bodies, check_bodies), core_verbs.hpp 3600000 (JobTable, shell jobs), src/mcp.mjs and src/tools.mjs 3600000 (Node). Cause: each layer set its own default. Fix: 1af49a1 sets mcp.hpp to 3600000, the Node value and the JobTable value; DESIGN.md "Job and body lifetime (2026-11-09)" records it.
+4. A shell job's lifetime equals the largest timeoutMs that job_start accepts (3600000), so the job reaches its deadline first and reports reason timeout; the lifetime reason is reachable only for background bodies. Recorded, not changed: lowering the job lifetime would change what job_start accepts, an owner decision.
+5. Open: a worker killed without a graceful stop (SIGKILL or SIGTERM) leaves its body's child processes running; the restart record marks the body killed and says so. Cause: a body's child processes have no recorded pid or process group in the body status, so stop_orphans cannot kill them; only stop_bodies (graceful supervised stop, stdin EOF) kills them through proc::kill_owned. Not fixed in this pass.
+
+Lifetime witness (background body, native, binary 1af49a1, no rebuild or restart during the run): see row 5 below.
+
+| row | witness | status |
+|---|---|---|
+| 5 | background body lifetime, native, binary 1af49a1 (expected lifetime 3600000 ms): run_code body loops over run_shell sleeps of 600 s, started at 06:33:08 (body adopted at about 06:33:46); polls every 120 s of job_status; ELAPSED_S and KILLED_RECORD from /tmp/gm-defects/w/life-body2.out | running (pid 398609 at 07:06:23, 1924 s of polls, all running); expected kill near 07:33:46 |
