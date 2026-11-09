@@ -700,7 +700,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
       if (ownerToken === null && (ownerMarked || firstStep || (steps === 1 && !childSeen && args.child !== true && args.run === undefined))) ownerToken = 'owner';
       if (given !== '' && given !== task) await replaceTask(given, { ...(ownerMarked ? { owner: true } : {}), ...(correction ? { correction: true } : {}) });
       return context(step, rpcId, compactChildren, waitMs > 0);
-    }, ({ ok, error, prefixSha, total, progress }) => ({ ok, error, prefixSha, total, progress }), rpcId);
+    }, ({ ok, error, prefixSha, total, progress }) => ({ ok, error, prefixSha, total, progress }), rpcId, 1);
   }  let prefixMemo = null;
   function prefixShaFor(rules) {
     if (prefixMemo === null || prefixMemo.surface !== current || prefixMemo.rules !== rules || prefixMemo.task !== task) prefixMemo = { surface: current, rules, task, sha: prefixShaOf({ rules, task, witness: DEFAULT_WITNESS, tools: renderTools(servedTools(surface)) }) };
@@ -799,8 +799,8 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     return out;
   }
 
-  function act(tool, args, access, exec, digest = (result) => result, rpcId = undefined) {
-    const work = perform(tool, args, exec, digest, rpcId);
+  function act(tool, args, access, exec, digest = (result) => result, rpcId = undefined, ahead = 0) {
+    const work = perform(tool, args, exec, digest, rpcId, ahead);
     active.set(work, access);
     const forget = () => {
       active.delete(work);
@@ -811,8 +811,8 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     return work;
   }
 
-  async function perform(tool, args, exec, digest, rpcId) {
-    const step = steps;
+  async function perform(tool, args, exec, digest, rpcId, ahead = 0) {
+    const step = steps + ahead;
     const startMono = log.now();
     log.enter();
     const action = log.append('action', { step, tool, args, caller: CALLER, ...(rpcId === undefined ? {} : { rpcId, ...callOf(rpcId)?.trace }) });
