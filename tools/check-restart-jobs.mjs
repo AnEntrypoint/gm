@@ -96,7 +96,15 @@ const listOf = (value) => {
   return body?.events ?? body?.records ?? [];
 };
 
+const windowsProcesses = () => {
+  const script = 'Get-CimInstance Win32_Process | Select-Object ProcessId,CommandLine | ConvertTo-Json -Compress';
+  const out = spawnSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script], { encoding: 'utf8', timeout: 30000 }).stdout ?? '';
+  const rows = out.trim() === '' ? [] : [JSON.parse(out)].flat();
+  return rows.map((row) => ({ pid: Number(row.ProcessId), args: String(row.CommandLine ?? '') }));
+};
+
 const processOf = (pid) => {
+  if (process.platform === 'win32') return windowsProcesses().some((row) => row.pid === pid) ? { pgid: null, stat: 'R' } : null;
   const out = spawnSync('ps', ['-o', 'pid=,pgid=,stat=', '-p', String(pid)], { encoding: 'utf8', timeout: 5000 }).stdout ?? '';
   const [, pgid, stat] = out.trim().split(/\s+/);
   if (pgid === undefined || stat === undefined || stat.startsWith('Z')) return null;
@@ -104,6 +112,11 @@ const processOf = (pid) => {
 };
 
 const engineProcesses = () => {
+  if (process.platform === 'win32') {
+    return windowsProcesses()
+      .filter((row) => row.args.includes(workspace) && (onNode ? row.args.includes('mcp.mjs') : /(^|\s)worker(\s|$)/.test(row.args)))
+      .map((row) => row.pid);
+  }
   const out = spawnSync('ps', ['-eo', 'pid=,args='], { encoding: 'utf8', timeout: 5000 }).stdout ?? '';
   return out
     .split('\n')
@@ -199,7 +212,7 @@ try {
   const exited = child.exitCode !== null || child.signalCode !== null ? Promise.resolve() : once(child, 'exit');
   child.kill();
   await Promise.race([exited, sleep(5000)]);
-  if (jobPid !== null && processOf(jobPid) !== null) process.kill(-jobPid, 'SIGKILL');
+  if (jobPid !== null && processOf(jobPid) !== null) process.kill(process.platform === 'win32' ? jobPid : -jobPid, 'SIGKILL');
   for (const pid of engineProcesses()) {
     try {
       process.kill(pid, 'SIGKILL');
