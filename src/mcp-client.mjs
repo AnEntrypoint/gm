@@ -11,6 +11,7 @@ const STDERR_CHARS = 2000;
 const DESCRIPTION_CHARS = 300;
 const VARIABLE = /\$\{([A-Za-z_][A-Za-z0-9_]*)\}/g;
 const DEPTH_VARIABLE = 'GMNEW_MCP_DEPTH';
+const PROJECT_VARIABLE = 'PLAYWRITER_PROJECT_DIR';
 const MAX_DEPTH = 2;
 const BATCH_LAUNCHERS = new Set(['npx', 'npm']);
 const IGNORE_ABSOLUTE = /^(?:[\\/]|[A-Za-z]:)/;
@@ -201,7 +202,8 @@ class ServerProcess {
   }
 
   start() {
-    const env = { ...process.env, ...this.spec.env, [DEPTH_VARIABLE]: String(this.depth + 1) };
+    const project = this.spec.env?.[PROJECT_VARIABLE] === undefined ? { [PROJECT_VARIABLE]: this.spec.workspace } : {};
+    const env = { ...process.env, ...project, ...this.spec.env, [DEPTH_VARIABLE]: String(this.depth + 1) };
     const { command, args } = launchOf(this.spec);
     const child = spawn(command, args, { cwd: this.spec.cwd, env, detached: true, windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'] });
     this.child = child;

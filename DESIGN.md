@@ -1551,3 +1551,11 @@ native/components/host/update.cpp: `commit_prefix` and `newer_build` had no call
 - Fix: native/components/verbs/verbs.cpp:148-149 (field_page) clamps the start to the field length before slicing: `from = min(offset, size)`, `end = min(from + width, size)`, `substr(from, end - from)`.
 - The quickjs GM_FIELD_PAGE branch (native/components/quickjs/query.cpp:21) already returned an empty page: JavaScript slice with a start past the end gives "", so it needed no change.
 
+## Four fixes from fx's run: run owner, child task, job names, profile per project (2026-11-09)
+
+- Run owner (native only). next_context followed a run's successor with no owner check, so a second connection pointed at a live run got that run's task and events. Each run now records its owner (the relay pid, passed as --owner to the worker); a connection adopts only an unowned run or one whose owner is dead, and a foreign run is refused with "this connection cannot continue it". Node (src/run.mjs currentRunDir, src/mcp.mjs reopen) still follows successors blindly: its owner token has to come from tools/core.mjs, a singleton whose change restarts live workers, so it is a decision.
+- Child task (decision, reverses 2d41445's "a child context cannot write the parent run's task" for owner replacements). A child context (child: true) may replace the run task with owner:true, in both trees, under the same rules as the owner. An unmarked child replacement is still refused, because a child cannot reach the first-step correction (child_context needs run_started). task_set still refuses children. This is the owner's decision as fx reported it.
+- Job names are per run. The job table is keyed by the run's jobs dir plus the name, so two runs may each start a job "build". finish, max_steps and stdin EOF now close a run's running shell jobs (close_jobs, run-ended), which Node's endRun already does. Node has no collision and is unchanged.
+- Browser profile per project in Node too: src/mcp-client.mjs sets PLAYWRITER_PROJECT_DIR to the spec workspace, unless the entry's env sets it, as native does. Witness: the profile witness on /tmp/gmfix/nodegm passes.
+- README.md pin: pw#1488a92 everywhere (defaults/mcp.json, README, AGENTS.md no longer names a number).
+

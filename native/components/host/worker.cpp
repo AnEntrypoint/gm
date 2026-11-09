@@ -154,6 +154,7 @@ int run_worker(const HostArgs& args) {
     options.monitor_ms = static_cast<std::uint64_t>(*monitor_ms);
     options.run_dir = *run_dir;
     options.supervised = args.flag("--supervised") == "yes";
+    if (auto owner = args.flag("--owner")) options.connection = *owner;
     if (auto reason = args.flag("--restart-reason")) options.restart_reason = *reason;
     options.on_run_open = [&core, &leaves, &boot_events, current_log, current_log_mutex](std::shared_ptr<RunLog> log) {
         boot_events.bind(log);
@@ -175,6 +176,7 @@ int run_worker(const HostArgs& args) {
         }
         return open;
     };
+    options.close_jobs = [&core](const std::string& reason) { core.close(reason); };
     options.flush_job_events = [&core] { core.flush_job_events(); };
     options.wait_program = current_executable().string();
     options.run_body = [&mcp_verbs, &boot_events](VerbTable& verbs, std::string_view body, const std::filesystem::path& root,

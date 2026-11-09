@@ -1,5 +1,11 @@
 #include <iostream>
 
+#if defined(_WIN32)
+#include <process.h>
+#else
+#include <unistd.h>
+#endif
+
 #include "gm/host/child.hpp"
 #include "gm/host/options.hpp"
 #include "gm/host/relay.hpp"
@@ -15,6 +21,14 @@ std::filesystem::path worker_executable(const std::filesystem::path& install_dir
     std::error_code ec;
     const std::filesystem::path core = install_dir / core_executable_name();
     return std::filesystem::exists(core, ec) ? core : current_executable();
+}
+
+std::string relay_process_id() {
+#if defined(_WIN32)
+    return std::to_string(_getpid());
+#else
+    return std::to_string(getpid());
+#endif
 }
 
 }
@@ -42,10 +56,11 @@ int run_serve(const HostArgs& args) {
     const std::filesystem::path install_dir = current_executable().parent_path();
     RelayOptions options;
     options.worker_argv = {worker_executable(install_dir).string(), "worker"};
-    for (std::string& arg : without_flags(args.rest, {"--runs", "--resume", "--run-dir", "--workspace", "--supervised"}))
+    for (std::string& arg : without_flags(args.rest, {"--runs", "--resume", "--run-dir", "--workspace", "--supervised", "--owner"}))
         options.worker_argv.push_back(std::move(arg));
     options.worker_argv.insert(options.worker_argv.end(), {"--workspace", workspace.string(), "--run-dir",
-                                                           run_dir->string(), "--supervised", "yes"});
+                                                           run_dir->string(), "--supervised", "yes", "--owner",
+                                                           relay_process_id()});
     options.reexec_argv = {current_executable().string(), "serve"};
     for (std::string& arg : without_flags(args.rest, {"--runs", "--resume", "--run-dir", "--workspace", "--handshake"}))
         options.reexec_argv.push_back(std::move(arg));

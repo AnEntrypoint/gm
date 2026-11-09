@@ -31,6 +31,7 @@ struct ServerOptions {
     int max_steps = 50;
     int max_inflight = 8;
     bool supervised = false;
+    std::string connection;
     std::string restart_reason = "restarted without a reason";
     std::string version = GMNEW_MCP_VERSION;
     std::uint64_t job_lifetime_ms = 1800000;
@@ -41,6 +42,7 @@ struct ServerOptions {
     BodyRunner run_body;
     std::function<void(std::shared_ptr<RunLog> log)> on_run_open;
     std::function<json::Value()> job_snapshot;
+    std::function<void(const std::string& reason)> close_jobs;
     std::function<void()> flush_job_events;
     std::shared_ptr<std::function<std::optional<std::string>(const std::string& uri)>> serve_skill_hook;
 };

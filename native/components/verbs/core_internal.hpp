@@ -85,16 +85,17 @@ private:
     void settle(Job& job, std::optional<int> exit_code, json::Value signal);
     void watch(Job& job, std::uint64_t deadline_ms);
     double mono_now();
-    void write_status(const std::string& name, const json::Value& status);
+    void write_status(const std::filesystem::path& dir, const std::string& name, const json::Value& status);
     std::optional<json::Value> read_status(const std::string& name);
     std::filesystem::path jobs_dir() const { return log_.dir() / "jobs"; }
+    std::filesystem::path job_key(const std::string& name) const { return jobs_dir() / name; }
 
     std::filesystem::path workspace_;
     LockedLog& log_;
     std::uint64_t lifetime_ms_;
     std::mutex mutex_;
     std::condition_variable changed_;
-    std::map<std::string, std::unique_ptr<Job>> jobs_;
+    std::map<std::filesystem::path, std::unique_ptr<Job>> jobs_;
     std::vector<UnloggedEvent> unlogged_;
     std::optional<double> mono_offset_;
 };

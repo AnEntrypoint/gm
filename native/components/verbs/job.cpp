@@ -202,6 +202,7 @@ Spawned spawn_shell_job(const std::string& command, const std::filesystem::path&
 struct JobTable::Job {
     std::string name;
     int pid = -1;
+    std::filesystem::path dir;
     std::filesystem::path out;
     json::Value status;
     double start_mono = 0;
@@ -246,8 +247,8 @@ JobTable::~JobTable() {
 
 double JobTable::mono_now() { return round_mono(*mono_offset_ + steady_ms()); }
 
-void JobTable::write_status(const std::string& name, const json::Value& status) {
-    auto file = jobs_dir() / (name + ".json");
+void JobTable::write_status(const std::filesystem::path& dir, const std::string& name, const json::Value& status) {
+    auto file = dir / (name + ".json");
 #if defined(_WIN32)
     auto temp = file;
     temp += ".tmp";
@@ -275,7 +276,7 @@ std::optional<json::Value> JobTable::read_status(const std::string& name) {
 
 json::Value JobTable::start(const std::string& name, const std::string& command, std::uint64_t timeout_ms, const std::optional<std::string>& progress) {
     std::unique_lock lock(mutex_);
-    if (jobs_.contains(name)) return failure("job " + name + " already exists");
+    if (jobs_.contains(job_key(name))) return failure("job " + name + " already exists");
     std::error_code ec;
     std::filesystem::create_directories(jobs_dir(), ec);
     auto out = jobs_dir() / (name + ".out");
@@ -310,6 +311,7 @@ json::Value JobTable::start(const std::string& name, const std::string& command,
     job->process = spawned.process;
     job->job_object = spawned.job;
 #endif
+    job->dir = jobs_dir();
     job->out = out;
     job->start_mono = *start_mono;
     job->start_file_time = std::filesystem::file_time_type::clock::now();
@@ -323,10 +325,10 @@ json::Value JobTable::start(const std::string& name, const std::string& command,
     job->status.set("startMono", *start_mono);
     job->status.set("output", out.string());
     job->status.set("timeoutMs", deadline_ms);
-    write_status(name, job->status);
+    write_status(jobs_dir(), name, job->status);
 
     Job& ref = *job;
-    jobs_.emplace(name, std::move(job));
+    jobs_.emplace(job_key(name), std::move(job));
     ref.waiter = std::thread([this, &ref] {
 #if defined(_WIN32)
         WaitForSingleObject(ref.process, INFINITE);
@@ -379,7 +381,7 @@ void JobTable::settle(Job& job, std::optional<int> exit_code, json::Value signal
     ended.set("exitCode", exit_value);
     ended.set("signal", signal);
     if (reason) ended.set("reason", *reason);
-    write_status(job.name, ended);
+    write_status(job.dir, job.name, ended);
 
     json::Value event;
     event.set("job", job.name);
@@ -431,7 +433,9 @@ json::Value JobTable::snapshot(std::uint64_t stuck_ms) {
     json::Array listed;
     json::Array turned_stuck;
     json::Array progressed_again;
-    for (auto& [name, job] : jobs_) {
+    for (auto& [key, job] : jobs_) {
+        if (job->dir != jobs_dir()) continue;
+        const std::string& name = job->name;
         std::error_code ec;
         auto written_at = [&](const std::filesystem::path& file) {
             std::error_code file_ec;
@@ -481,7 +485,7 @@ json::Value JobTable::status(const json::Value& args) {
     }
     {
         std::unique_lock lock(mutex_);
-        auto found = jobs_.find(name);
+        auto found = jobs_.find(job_key(name));
         if (found != jobs_.end() && !found->second->settled && wait_ms > 0) {
             Job& job = *found->second;
             changed_.wait_for(lock, std::chrono::duration<double, std::milli>(wait_ms), [&] { return job.settled; });
@@ -533,7 +537,7 @@ json::Value JobTable::stop(const json::Value& args) {
     if (!is_job_name(name_value)) return failure("job must be a job name");
     const std::string& name = name_value->as_string();
     std::unique_lock lock(mutex_);
-    auto found = jobs_.find(name);
+    auto found = jobs_.find(job_key(name));
     if (found == jobs_.end()) return failure("no job named " + name);
     Job& job = *found->second;
     if (job.settled) {
@@ -602,7 +606,7 @@ void JobTable::stop_orphans() {
         ended.set("reason", "restart");
         const json::Value* job_name = status->find("job");
         std::string written_name = job_name != nullptr && job_name->is_string() ? job_name->as_string() : name;
-        write_status(written_name, ended);
+        write_status(jobs_dir(), written_name, ended);
         json::Value event;
         event.set("job", written_name);
         if (is_body) event.set("body", *body);

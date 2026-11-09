@@ -5,8 +5,11 @@
 #include <unistd.h>
 #endif
 #include <atomic>
+#include <cerrno>
 #include <condition_variable>
+#include <csignal>
 #include <cstdio>
+#include <cstdlib>
 #include <deque>
 #include <filesystem>
 #include <fstream>
@@ -182,7 +185,7 @@ const std::string kNextContextDescription =
     "with child, names that owning run, and another run is refused. compactChildren: true summarizes child run_code "
     "and code-call generations into counts with a seq range and a gm.query_log note, while pending, parent-action, "
     "job, row and recovery events stay full; the default feed is unchanged. task, when set, replaces the run's "
-    "task text; use it in the first step when a host cut the slash-command task to its first word. A later task replacement needs owner:true. A child context (child: true) refuses task: only the run owner sets the task.";
+    "task text; use it in the first step when a host cut the slash-command task to its first word. A later task replacement needs owner:true, from the owning run or from a child context (child: true) alike.";
 const std::string kFinishDescription =
     "End the run. witness is one string that quotes the evidence you observed. gaps optionally lists, one string "
     "each, what the run did not check; the end event logs them. finish is refused while a background run is running, "
@@ -404,9 +407,39 @@ std::string new_run_id() {
     return stamp + "-" + hex;
 }
 
-fs::path current_run_dir(fs::path dir) {
+std::string owner_of(const fs::path& run_dir) {
+    std::string text;
+    read_file(run_dir / "owner", text);
+    return trim(text);
+}
+
+void set_owner(const fs::path& run_dir, const std::string& connection) {
+    write_file(run_dir / "owner", connection + "\n");
+}
+
+bool connection_alive(const std::string& connection) {
+#if defined(_WIN32)
+    return !connection.empty();
+#else
+    const long pid = std::strtol(connection.c_str(), nullptr, 10);
+    if (pid <= 0) return false;
+    return kill(static_cast<pid_t>(pid), 0) == 0 || errno == EPERM;
+#endif
+}
+
+bool adoptable(const fs::path& run_dir, const std::string& connection) {
+    const std::string owner = owner_of(run_dir);
+    return owner.empty() || owner == connection || !connection_alive(owner);
+}
+
+std::string foreign_run_text(const std::string& run_id) {
+    return "run " + run_id + " belongs to another live connection; this connection cannot continue it";
+}
+
+fs::path current_run_dir(fs::path dir, const std::string& connection) {
     std::set<fs::path> seen;
     while (!seen.contains(dir) && fs::exists(dir / "successor")) {
+        if (!adoptable(dir, connection)) break;
         seen.insert(dir);
         std::string name;
         read_file(dir / "successor", name);
@@ -527,6 +560,7 @@ struct Server::State {
     };
     std::map<std::string, Listen> listens;
     std::optional<std::string> log_level;
+    std::optional<std::string> ended_note;
     std::vector<Value> queued_notices;
     std::string announced_tools;
     std::string announced_prompts;
@@ -736,6 +770,15 @@ struct Server::State {
     ~State();
 
     Session& s() { return *session; }
+
+    std::string connection_id() const {
+        if (!options.connection.empty()) return options.connection;
+#if defined(_WIN32)
+        return std::to_string(_getpid());
+#else
+        return std::to_string(getpid());
+#endif
+    }
 
     void emit(const std::string& line) {
         std::lock_guard guard(mu);
@@ -959,7 +1002,7 @@ struct Server::State {
         using Fail = deoxidene::Err<std::string>;
         std::error_code ec;
         if (!fs::is_directory(options.workspace, ec)) return Fail{"workspace is not a directory: " + options.workspace.string()};
-        fs::path dir = current_run_dir(options.run_dir ? *options.run_dir : options.runs / new_run_id());
+        fs::path dir = current_run_dir(options.run_dir ? *options.run_dir : options.runs / new_run_id(), connection_id());
         auto fresh = std::make_unique<Session>();
         fresh->task = trim(options.task);
         auto opened = open_run(*fresh, dir, fresh->task);
@@ -987,6 +1030,10 @@ struct Server::State {
                     has_task_event = true;
                 }
             }
+            if (!adoptable(dir, connection_id())) {
+                ended_note = foreign_run_text(dir.filename().string());
+                if (!closed_at_boot) closed_at_boot = std::string("foreign");
+            }
             if (closed_at_boot) {
                 s().ended = closed_at_boot;
                 s().end_logged = true;
@@ -1006,6 +1053,7 @@ struct Server::State {
             s().notice_seq = last_context_seq(history);
         }
         if (!closed_at_boot) {
+            set_owner(dir, connection_id());
             auto recovery = resumed ? recovery_of(history) : std::nullopt;
             if (resumed) append("restart", object().set("reason", options.restart_reason));
             else append("start", object()
@@ -1028,7 +1076,16 @@ struct Server::State {
         return true;
     }
 
-    void reopen() {
+    bool reopen() {
+        const std::string me = connection_id();
+        if (!adoptable(s().run_dir, me)) {
+            ended_note = foreign_run_text(s().run_id);
+            return false;
+        }
+        if (fs::exists(s().run_dir / "successor")) {
+            ended_note = "run " + s().run_id + " already has a successor; this connection opens no second one";
+            return false;
+        }
         std::string task;
         std::string task_from;
         bool inherited = false;
@@ -1049,7 +1106,10 @@ struct Server::State {
         auto fresh = std::make_unique<Session>();
         auto opened = open_run(*fresh, next_dir, task);
         if (!opened) throw std::runtime_error(opened.error());
+        set_owner(next_dir, me);
+        set_owner(s().run_dir, me);
         set_successor(s().run_dir, next_dir);
+        ended_note.reset();
         {
             std::lock_guard guard(mu);
             retired.push_back(std::move(session));
@@ -1064,6 +1124,7 @@ struct Server::State {
                             .set("taskFrom", task_from));
         if (!task.empty()) append("task", object().set("from", task_from).set("text", task));
         log_tools();
+        return true;
     }
 
     void note_rule(int rule, const std::string& evidence) {
@@ -1157,6 +1218,7 @@ struct Server::State {
     }
 
     std::string ended_reason(bool child) {
+        if (ended_note) return *ended_note;
         if (s().step_limited) return step_limit_text();
         if (*s().ended == "closed") return "stdin closed before the call started";
         if (*s().ended == "restarting") return "the server is restarting; repeat the call";
@@ -1201,6 +1263,7 @@ struct Server::State {
     void end_run(const std::string& status, const Value& witness, const std::optional<Value>& gaps) {
         s().end_logged = true;
         stop_bodies("run-ended");
+        if (options.close_jobs) options.close_jobs("run-ended");
         write_summary();
         Value fields = object().set("status", status).set("steps", s().steps).set("witness", witness);
         if (gaps) fields.set("gaps", *gaps);
@@ -1218,13 +1281,24 @@ struct Server::State {
         if (run != nullptr && !(run->is_string() && run->as_string() == s().run_id)) {
             return refuse("child_context", args, "this connection's run is " + s().run_id + ", not " + text_or_undefined(run));
         }
-        if (args.find("task") != nullptr) {
-            return refuse("child_context", args, "a child context cannot set the run task; only the run owner calls next_context({ task })");
+        const Value* task_arg = args.find("task");
+        std::string corrected = task_arg && task_arg->is_string() ? trim(task_arg->as_string()) : "";
+        const Value* owner_arg = args.find("owner");
+        bool owner = owner_arg && owner_arg->is_bool() && owner_arg->as_bool();
+        if (!corrected.empty() && !owner) {
+            return refuse("child_context", args, "a task replacement after the first step needs owner:true");
         }
         s().child_seen = true;
         return act(
             "child_context", args,
-            [&](std::uint64_t) {
+            [&, corrected](std::uint64_t) {
+                if (!corrected.empty() && corrected != s().task) {
+                    s().task = corrected;
+                    s().task_inherited = false;
+                    s().child_task.clear();
+                    write_file(s().run_dir / "task.json", pretty_flat(run_meta(s().run_dir, corrected)) + "\n");
+                    append("task", object().set("from", "next_context").set("text", corrected).set("owner", true).set("child", true));
+                }
                 std::string rules = read_rules();
                 Value reply = object()
                     .set("ok", true)
@@ -1938,7 +2012,7 @@ struct Server::State {
         bool first_step_correction = s().steps == 0 && !s().run_started && !s().child_seen && !s().owner_seen &&
                                      (s().task.empty() || s().task.find_first_of(" \t\r\n") == std::string::npos);
         if (!corrected.empty() && !owner && !first_step_correction) {
-            return refuse("next_context", args, "a task replacement after the first step needs owner:true; child contexts cannot change the run task");
+            return refuse("next_context", args, "a task replacement after the first step needs owner:true");
         }
         Value audit = object();
         if (task_arg != nullptr) audit.set("task", corrected).set("owner", owner).set("correction", first_step_correction);
@@ -2911,8 +2985,7 @@ struct Server::State {
     void process(std::string_view line, std::uint64_t ticket, bool ordered) {
         Hold hold(*this, ticket, ordered);
         try {
-            if (s().ended && is_next_context_call(line) && !has_stored_next_context_reply(line)) {
-                reopen();
+            if (s().ended && is_next_context_call(line) && !has_stored_next_context_reply(line) && reopen()) {
                 notify(object().set("jsonrpc", "2.0").set("method", "notifications/resources/list_changed"));
             }
             auto reply = handle_line(line);
