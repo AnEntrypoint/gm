@@ -34,7 +34,7 @@ struct ServerOptions {
     std::string connection;
     std::string restart_reason = "restarted without a reason";
     std::string version = GMNEW_MCP_VERSION;
-    std::uint64_t job_lifetime_ms = 1800000;
+    std::uint64_t job_lifetime_ms = 3600000;
     std::uint64_t stuck_ms = 180000;
     std::uint64_t monitor_ms = 15000;
     std::uint64_t notice_ms = 180000;

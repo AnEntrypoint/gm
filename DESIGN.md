@@ -1559,3 +1559,33 @@ native/components/host/update.cpp: `commit_prefix` and `newer_build` had no call
 - Browser profile per project in Node too: src/mcp-client.mjs sets PLAYWRITER_PROJECT_DIR to the spec workspace, unless the entry's env sets it, as native does. Witness: the profile witness on /tmp/gmfix/nodegm passes.
 - README.md pin: pw#1488a92 everywhere (defaults/mcp.json, README, AGENTS.md no longer names a number).
 
+
+## Feed delta (2026-11-09)
+
+Decision: next_context returns the events since the last step in full, and nothing else from the log. The two-horizon replay (H1 14 and H2 12 events, compact records of earlier events) is removed in both trees, with its zone-2 record path. query_log reaches every older event. The native window read starts at the step's shown total, so it reads no event before it except an action that a new result names.
+
+Cause: the replay put the events of the last 26 steps back into every reply, so each step paid for them again (about 5.8 KB of which 13 of 16 events were repeats in the witness below).
+
+Witness, the same 25 run_shell calls on each host, then two plain next_context calls (scratch workspaces, deleted after the run):
+
+| host | first call total | second call events, bytes, replayed | third call events, bytes, replayed |
+|---|---|---|---|
+| installed f14c5b7-281 (before) | 110 | 79, 21505, 2 | 16, 5760, 13 |
+| native dbed8fb (after) | 110 | 77, 21406, 0 | 3, 2920, 0 |
+| Node (after) | 106 | 103, 21268, 0 | 2, 1837, 0 |
+
+Native and Node differ in total because native logs a few startup events that Node does not (parity native-ahead). Each event remains bounded by the 2000-character cap, so the second call is still up to 20000 characters when a step covers many new events.
+
+## Job kill statements (2026-11-09)
+
+Decision: every job kill names its cause in a statement field: timeout, lifetime, cancelled by job_stop, restart, run ended. The statement goes on the job status, the job event, the job-killed record, the job_stop reply and each entry of next_context jobsKilled. The reason stays as it was.
+
+Cause: only the timeout kill had a statement; the other reasons were a bare word in the log and in the reply.
+
+## Job and body lifetime (2026-11-09)
+
+Decision: one job lifetime, 3600000 ms, in both trees and for both shell jobs and background bodies. It is the Node default (DEFAULT_JOB_LIFETIME_MS in src/mcp.mjs and src/tools.mjs) and the default of the native JobTable (core_verbs.hpp). The native body lifetime was 1800000 ms in mcp.hpp, a separate constant: a background body was killed at 30 minutes in native and at 60 minutes in Node.
+
+Cause of the disagreement: three constants, one per layer, set independently. The witness that reported "not killed after 34 minutes" was a shell job (job_start, JobTable, 3600000 ms), which is correct at its own value.
+
+Consequence: a shell job's lifetime equals the largest timeoutMs job_start accepts (3600000), so the job reaches its deadline first and reports reason "timeout", never "lifetime". The lifetime reason is reachable only for background bodies. This is recorded, not changed: a lower job lifetime would change what job_start accepts, which is a decision for the owner.
