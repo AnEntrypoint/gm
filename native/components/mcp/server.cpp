@@ -1568,6 +1568,14 @@ struct Server::State {
                 json::Value settled(json::Object{});
                 add_cut_run(settled, text, length, s().log->dir(), "value");
                 settle_locked(*job, "exited", std::move(settled));
+            } else if (job->controls && job->error.find("JavaScript deadline") != std::string::npos &&
+                       static_cast<std::uint64_t>(job->controls->js_budget.count()) == options.job_lifetime_ms) {
+                const std::string statement = ::gm::jobs::kill_statement(job->name, "lifetime", 0, options.job_lifetime_ms);
+                std::string tail = body_text(*job->owner, job->body, kTailCap);
+                append_to(*job->owner, "job-killed",
+                          object().set("job", job->name).set("reason", "lifetime").set("statement", statement).set("tail", tail)
+                              .set("lifetimeMs", number_of(options.job_lifetime_ms)));
+                settle_locked(*job, "killed", object().set("reason", "lifetime").set("statement", statement));
             } else {
                 settle_locked(*job, "failed", object().set("error", job->error));
             }
