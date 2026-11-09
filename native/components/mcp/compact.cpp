@@ -526,5 +526,3 @@ Value feed_of(const EventAt& at, std::uint64_t count, std::uint64_t shown, bool 
 }
 
 }
-
-}
