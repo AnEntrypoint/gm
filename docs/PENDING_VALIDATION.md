@@ -901,3 +901,24 @@ Phase B (2026-11-09, `node tools/check-build.mjs build/release`, exit 0, binary 
 - Node, same pass: `node native/tests/parity/run.mjs --bin build/release/native/components/host/gm` (run against the Node parity reference): `22/93 scenarios match, 0 cutover-expected, 56 native-ahead, 15 documented-gap, 0 differ`; `node tools/check-run-code-budget.mjs node` ok (65044 ms, leaf 50077 ms, match 3073 ms, timeout 3074 ms); `node tools/check-job-bounds.mjs node` ok; `node tools/check-early-run-code.mjs node` ok; the Node replay witness exit 0.
 
 Other differences seen while probing, unchanged: the read_file digest differs between engines (native FNV-1a 64, Node sha256 cut to 12 hex), recorded since 2026-11-09; Node's finish reply has no `browser` key, which native sends.
+
+## CI evidence for fc170fc (2026-11-09)
+
+The subject of fc170fc carries `[skip ci]`, so the push started no release run. The evidence below is from a dispatch of release.yml on fc170fc with publish=false, which builds without publishing.
+
+| Run | Event | Head | Conclusion |
+|---|---|---|---|
+| release 42642584672 | workflow_dispatch, publish=false | fc170fc | success |
+| pages build and deployment 42642555292 | push | fc170fc | success (build, report-build-status, deploy) |
+
+| Job | Job id | Result |
+|---|---|---|
+| build (ubuntu-latest, x64-linux-release) | 129247297305 | success |
+| build (ubuntu-24.04-arm, arm64-linux-release) | 129247297194 | success |
+| build (macos-latest, x64-macos-release) | 129247297376 | success |
+| build (macos-latest, arm64-macos-release) | 129247297173 | success |
+| build-windows (windows-latest, x64-windows-release) | 129247297375 | success; Windows cmd-only run_shell witness success |
+| build-windows (windows-11-arm, arm64-windows-release) | 129247297333 | success; Windows cmd-only run_shell witness success |
+| publish | 129252308805 | skipped (publish=false) |
+
+Windows CMD witness output, both Windows jobs: `"cmdOnly": {"ok": true, "exitCode": 0, "signal": null, "output": "runs\r\n", "launcher": "cmd"}`. The Test steps of both Windows jobs succeed. Row 25 made this step blocking from 4c2c056, so this run is the first recorded run with the step blocking, and it passed.
