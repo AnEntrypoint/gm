@@ -32,8 +32,9 @@ const removeTree = async (path) => {
   }
 };
 
+const HOLD_MS = 50000;
 const SLOW_LINE = `${'a'.repeat(31)}b`;
-const slow = http.createServer((req, res) => res.end(`${SLOW_LINE}\n`));
+const slow = http.createServer((req, res) => setTimeout(() => res.end(`${SLOW_LINE}\n`), HOLD_MS));
 await new Promise((done) => slow.listen(0, '127.0.0.1', done));
 const port = slow.address().port;
 
@@ -95,7 +96,7 @@ try {
     runCode({
       format: 'esm',
       timeoutMs: 400000,
-      body: `return await gm.fetch({ url: 'http://127.0.0.1:${port}/', match: '(a+)+$', timeoutMs: 60000 });`,
+      body: `return await gm.fetch({ url: 'http://127.0.0.1:${port}/', timeoutMs: 60000 });`,
     }),
   ]);
 
@@ -107,13 +108,14 @@ try {
   const leafValue = unwrap(leaf.reply.output ?? leaf.reply);
   const leafBody = JSON.stringify(leaf.reply);
   expect(!/passed its deadline of (120000|60000) ms/.test(leafBody), `leaf deadline: the old fixed limit cut the fetch leaf after ${leaf.elapsed} ms: ${leafBody.slice(0, 200)}`);
+  expect(leaf.elapsed >= HOLD_MS, `leaf deadline: the server held the fetch for ${HOLD_MS} ms but the leaf returned after ${leaf.elapsed} ms`);
   expect(leaf.reply.background === undefined && leafValue?.status === 200, `leaf deadline: expected status 200 in the foreground reply after ${leaf.elapsed} ms, got ${leafBody.slice(0, 200)}`);
 
   if (failures.length) {
     console.error(`run-code-budget-check: ${failures.length} failure(s)\n- ${failures.join('\n- ')}`);
     process.exitCode = 1;
   } else {
-    console.log(`run-code-budget-check: ok (a 65 s JavaScript body with timeoutMs 100000 returned in ${spin.elapsed} ms; a catastrophic regex in the fetch leaf ended in ${leaf.elapsed} ms with no old fixed limit)`);
+    console.log(`run-code-budget-check: ok (a 65 s JavaScript body with timeoutMs 100000 returned in ${spin.elapsed} ms; a fetch leaf held by the server for ${HOLD_MS} ms ended in ${leaf.elapsed} ms with no old fixed limit)`);
   }
 } finally {
   const exited = child.exitCode !== null || child.signalCode !== null ? Promise.resolve() : once(child, 'exit');

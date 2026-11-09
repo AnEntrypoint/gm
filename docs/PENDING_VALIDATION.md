@@ -808,3 +808,17 @@ Ranked remaining work (current item and status, after this pass):
 | 6 | G5: shell-job lifetime equals the job_start cap, so the lifetime reason is unreachable for shell jobs | open | owner decision |
 | 7 | G6: open row unknown-mw6bc4mv1c00 (push target AnEntrypoint/gmfx) | open; the row lives in the fx workspace | the fx workspace owner resolves or parks it |
 | 8 | G7: the .mcp.json pass | not started | owner schedules it |
+
+## Fetch leaf made deterministic: G1 (2026-11-09, Phase A)
+
+Cause: the budget check's fetch leaf used `match: '(a+)+$'` on a 32-character line. `native/leaves/fetch.mjs` applies `match` in JavaScript after curl returns, so the time is host CPU. The fetch `timeoutMs` feeds only curl's `--max-time`, so the match was never bounded by it. Measured leaf times, all on the same check: 193313, 200085, 233216 (macOS x64), 105338, 107018, 116602 ms.
+
+| # | File | Change | Witness needed |
+|---|---|---|---|
+| 20 | tools/check-run-code-budget.mjs | the local server holds each response for `HOLD_MS` = 50000 ms with setTimeout, the leaf fetches with `timeoutMs: 60000` (the fetch maximum) and no `match`, and the check asserts `leaf.elapsed >= HOLD_MS` in addition to the existing foreground status 200 assertion | `node tools/check-build.mjs build/release` exits 0; its budget line reads `a fetch leaf held by the server for 50000 ms ended in N ms` with N near 50000 |
+
+Margin: the hold is wall-clock time, not CPU, so the leaf takes about 50 s on any host. curl's `--max-time` is 60000 ms, which leaves 10 s over the hold. The run_code foreground window stays 400000 ms.
+
+Coverage given up: the leaf no longer runs past 60 s. The old fixed-limit text (120000 or 60000 ms) is still checked as a regression guard, but the case above 60 s is now covered only by the JavaScript body (65 s, timeoutMs 100000), which is the job-lifetime case.
+
+Found while reading the fetch verb (new gap G8): the verb's description says `timeoutMs` "bounds the whole call", but the `match` filter runs after the curl deadline with no time bound, so a catastrophic pattern can run for minutes past `timeoutMs`. Cause: `boundedText` in native/leaves/fetch.mjs. Status: open; owner decision (bound the match, or document that it is not bounded).
