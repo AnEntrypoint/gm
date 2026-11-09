@@ -272,3 +272,13 @@ Parity gate, before the cutover: `22/93 scenarios match, 0 cutover-expected, 56 
 | 49 | src/registration.mjs | the INSTALL_HINT names one command (the install command setup.sh prints) instead of remove and install | gate |
 | 50 | DESIGN.md "Question: is playwriter set up on every gm install" | the setup.sh sentence states what setup printed before and after the cutover | read it |
 | 51 | AGENTS.md | new section "Setup and the host entry": the entry agents start is the native binary; setup writes only the playwriter fetch outside the checkout | read it |
+
+### Phase B results (2026-11-09, build stamp dac6dab, code commit dac6dab)
+
+- Fresh install (the command setup.sh now prints, `sh <checkout>/scripts/install.sh`, run with HOME set to an empty scratch directory): installed `gmnew ae4ef46-278 (x64-linux)`, and `gm install` wrote `mcpServers.gm = {"command": "<scratch>/.gmnew/current/gm", "args": ["serve"]}` into the scratch `.claude.json`. The scratch directory was removed afterwards.
+- Launch of that entry as a fresh stdio host (command and args taken from the file, cwd a new empty workspace): the process is an x86-64 ELF; `--version` prints `ae4ef46-278 (ae4ef46)`; initialize answers serverInfo gm, protocolVersion 2025-11-25; tools/list answers the code surface `next_context`, `finish`, `run_code`.
+- The live user entry in /config/.claude.json was not written by this change. It already runs `/config/.gmnew/current/gm serve`.
+- Conformance: `conformance: 83 passed, 0 failed of 83 checks in 24 scenarios`, `check-build: gm stamp dac6dab-dev (dac6dab)`, exit 0.
+- Gate (tools/ship.sh, src/gate.mjs runGate): `{"gate":true,"failed":[]}`, `gate exit code: 0`.
+- Node-reference parity (native/tests/parity/run.mjs, Node reference from HEAD): `22/93 scenarios match, 0 cutover-expected, 56 native-ahead, 15 documented-gap, 0 differ`, exit 0. Unchanged from before the cutover, as expected: the Node host is untouched.
+- Left open, not changed: /config/.gemini/settings.json and /config/.config/zed/settings.json register `node /workspace/gm-new/tools/relay.mjs` for gm. /workspace/gm-new does not exist, so those entries do not start at all. They are other hosts' configs and need the owner's decision.
