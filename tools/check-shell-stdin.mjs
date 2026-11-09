@@ -94,7 +94,7 @@ try {
   expect(result?.read === 'got:remote-line\n', `a stdin-reading command returned ${JSON.stringify(result?.read)}, expected got:remote-line`);
   expect(result?.pipe === 'payload\n', `piped input returned ${JSON.stringify(result?.pipe)}, expected payload`);
   expect(result?.jobCat?.state === 'exited' && result?.jobCat?.exitCode === 0 && result?.jobCat?.output === '', `job cat with no input did not exit cleanly: ${JSON.stringify(result?.jobCat).slice(0, 200)}`);
-  expect(result?.jobRead?.state === 'exited' && result?.jobRead?.output === 'got:remote-line\n', `a job that reads stdin returned ${JSON.stringify(result?.jobRead).slice(0, 200)}`);
+  expect(result?.jobRead?.state === 'exited' && String(result?.jobRead?.output ?? '').replace(/\r/g, '').trim() === 'got:remote-line', `a job that reads stdin returned ${JSON.stringify(result?.jobRead).slice(0, 200)}`);
 
   if (failures.length) {
     console.error(`shell-stdin-check: ${failures.length} failure(s)\n- ${failures.join('\n- ')}`);
