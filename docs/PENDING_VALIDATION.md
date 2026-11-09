@@ -1133,3 +1133,13 @@ Release 42694076006 (commit 4ebe4aa) completed with failure. Four build jobs fai
 Confirmation across the four: no two failing jobs share a cause. Jobs 1 and 2 share the symptom (connectOverCDP 503) but not the cause (sandbox versus missing installer build). Jobs 3 and 4 are not browser failures.
 
 arm-diagnose 42694075619: gdb-arm passed; asan-arm was still running when this record was written, and its result is recorded in the Phase B entry.
+
+5. arm-diagnose 42694075619, asan-arm (failure after the release push's arm run finished). Cause: read-truncation hit its single 90 s watchdog: `read-truncation: failed: no completion within 90000 ms`. The asan build is about ten times slower than release on this host (read-parity's eight probes took 51 s on asan), and read-truncation's probes took 5 to 7 s each; the last probe (the run_code cut-reply) had printed nothing when the watchdog fired. The cause is the watchdog budget, which is sized for release. Fix: tools/check-read-truncation.mjs WATCHDOG_MS is 300000 ms, still inside check-build's 600000 ms per-check timeout. Not verified on asan here: a local asan build was not made in this pass. gdb-arm passed.
+
+Phase B (this pass, binary built from df45387 plus the watchdog change; fresh build of build/release):
+- `cmake --build build/release -j 4`: BUILD_EXIT 0.
+- `node tools/check-build.mjs build/release`: `conformance: 86 passed, 0 failed of 86 checks in 24 scenarios`; `read-truncation: passed: ...`; `check-startup-attempts: passed: ...`; CHECK_BUILD_EXIT 0.
+- `node tools/check-browser-scope.mjs build/release/native/components/host/gm` (run locally, the browser-scope check on this host with the playwriter browser): `browser-scope-check: ok (build/release/native/components/host/gm: finish browser key, browser_tabs, playwriter_browsers close, browser_close_machine guard; browser run: ran: the run page was listed, closed by finish, and gone from the browser after finish)`; BROWSER_SCOPE_EXIT 0.
+- `npm run check`: `check: gate, unit-test scan, ..., job progress and documented gap checks passed`; NPM_CHECK_EXIT 0.
+- Parity, `node native/tests/parity/run.mjs --bin build/release/native/components/host/gm`: `17/93 scenarios match, 0 cutover-expected, 54 native-ahead, 22 documented-gap, 0 differ`; PARITY_EXIT 0.
+- Install reason reproduced (item 2 above): `Unsupported platform for Chrome for Testing download: win32/arm64. Install Chromium manually and use PLAYWRITER_BROWSER_PATH to point to it.`

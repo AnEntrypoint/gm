@@ -13,7 +13,7 @@ import { OUTPUT_PAGE, readCharPage, readLinePage } from '../src/tools.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const binary = process.argv[2] ? resolve(process.argv[2]) : null;
-const WATCHDOG_MS = 90000;
+const WATCHDOG_MS = 300000;
 const watchdog = setTimeout(() => {
   console.error(`read-truncation: failed: no completion within ${WATCHDOG_MS} ms`);
   process.exit(1);
