@@ -1,7 +1,5 @@
 export const NEXT_CONTEXT_EVENTS_CAP = 20000;
 export const NEXT_CONTEXT_EVENT_CAP = 2000;
-export const H1 = 14;
-export const H2 = 12;
 
 const LINE_CAP = 400;
 const ARG_CAP = 200;
@@ -10,7 +8,6 @@ const ERROR = /\b(error|errors|fail|failed|failure|fatal|warn|warning|exception|
 const COMMIT_STATUS = /^\[[^\]]+ [0-9a-f]{4,40}\]\s/;
 const SKIP = new Set(['t', 'mono', 'inFlight', 'startMono', 'durMs', 'actionSeq', 'step']);
 const KEEP_WHOLE = new Set(['witness', 'error', 'reason', 'gate', 'gaps', 'paths']);
-const KEEP_ZONE2 = new Set(['end', 'commit', 'refusal', 'error', 'restart', 'job-killed', 'review', 'review-packet', 'review-refused', 'lint', 'wiki', 'recovery', 'parse_error']);
 const EVENT_HEAD = 160;
 const EVENT_TAIL = 80;
 const EVENT_TEXT_CAP = 200;
@@ -95,16 +92,6 @@ export function shortKind(event) {
   return record;
 }
 
-export function keptKind(event) {
-  if (!KEEP_ZONE2.has(event.kind)) return null;
-  const record = { seq: event.seq, kind: event.kind };
-  for (const [key, value] of Object.entries(event)) {
-    if (SKIP.has(key) || key === 'seq' || key === 'kind') continue;
-    record[key] = KEEP_WHOLE.has(key) || typeof value !== 'string' ? value : clip(value, ARG_CAP);
-  }
-  return record;
-}
-
 export function registryOf(...compacts) {
   const tools = {};
   const kinds = {};
@@ -130,7 +117,6 @@ export function shownTotalOf(events) {
 }
 
 const ARRAY_OVERHEAD = 2;
-const NO_ANSWERS = new Set();
 
 const costOf = (value) => JSON.stringify(value).length + 1;
 const sumCost = (items) => items.reduce((sum, item) => sum + costOf(item), 0);
@@ -261,27 +247,6 @@ function childSummaryOf(marks, itemCap) {
   }, itemCap);
 }
 
-function collapseSeen(seen, itemCap) {
-  const out = [];
-  let group = [];
-  const flush = () => {
-    if (group.length === 0) return;
-    const item = childSummaryOf(group, itemCap);
-    out.push({ index: group[0].index, item, cost: costOf(item) });
-    group = [];
-  };
-  for (const entry of seen) {
-    if (entry.child !== null) {
-      group.push(entry.child);
-      continue;
-    }
-    flush();
-    if (entry.item !== null) out.push(entry);
-  }
-  flush();
-  return out;
-}
-
 function collapseFresh(fresh, itemCap) {
   const out = [];
   let group = [];
@@ -303,53 +268,32 @@ function collapseFresh(fresh, itemCap) {
   return out;
 }
 
-export function feedOf(events, registry, { shown = 0, cap = NEXT_CONTEXT_EVENTS_CAP, eventCap = NEXT_CONTEXT_EVENT_CAP, h1 = H1, h2 = H2, compactChildren = false } = {}) {
+export function feedOf(events, registry, { shown = 0, cap = NEXT_CONTEXT_EVENTS_CAP, eventCap = NEXT_CONTEXT_EVENT_CAP, compactChildren = false } = {}) {
   const source = asSource(events);
   const n = source.count();
   const itemCap = Math.min(cap, eventCap);
   const newStart = Math.min(shown, n);
-  const zone1Start = Math.max(0, newStart - h1);
-  const zone2Start = Math.max(0, zone1Start - h2);
-  const answered = new Set();
-  for (let seq = zone2Start + 1; seq <= n; seq += 1) {
-    const event = source.at(seq);
-    if (event.actionSeq !== undefined) answered.add(event.actionSeq);
-  }
-  const seen = [];
-  for (let i = zone2Start; i < newStart; i += 1) {
-    const event = source.at(i + 1);
-    const child = compactChildren ? childMarkOf(event, i) : null;
-    const record = recordOf(event, i >= zone1Start ? 1 : 2, source, answered, registry);
-    if (record !== null) {
-      const bounded = boundedItem(record, itemCap);
-      seen.push({ index: i, item: bounded, cost: costOf(bounded), child });
-    } else if (child !== null) seen.push({ index: i, item: null, cost: 0, child });
-  }
   const fresh = [];
   for (let i = newStart; i < n; i += 1) {
     const event = source.at(i + 1);
-    const shown = boundedItem(event, itemCap);
+    const full = boundedItem(event, itemCap);
     const record = boundedItem(freshRecordOf(event, source, registry), itemCap);
-    fresh.push({ index: i, shown, cost: costOf(shown), record, recordCost: costOf(record), child: compactChildren ? childMarkOf(event, i) : null });
+    fresh.push({ index: i, shown: full, cost: costOf(full), record, recordCost: costOf(record), child: compactChildren ? childMarkOf(event, i) : null });
   }
-  const seenPlan = compactChildren ? collapseSeen(seen, itemCap) : seen;
   const freshPlan = compactChildren ? collapseFresh(fresh, itemCap) : fresh;
-  const room = cap - ARRAY_OVERHEAD;
-  const plan = planFresh(freshPlan, n, room);
-  const kept = keptSeen(seenPlan, room - plan.used);
-  const items = [...kept.map((entry) => entry.item), ...plan.items];
+  const plan = planFresh(freshPlan, n, cap - ARRAY_OVERHEAD);
   return {
-    older: kept.length > 0 ? kept[0].index : newStart,
-    records: items.length,
+    older: newStart,
+    records: plan.items.length,
     fullEvents: plan.full,
     compactFrom: plan.full < freshPlan.length ? freshPlan[plan.full].index + 1 : null,
-    events: items,
+    events: plan.items,
   };
 }
 
 function freshRecordOf(event, source, registry) {
   if (event.kind === 'action') return { seq: event.seq, kind: 'action', tool: event.tool, args: argsOf(event.args) };
-  return recordOf(event, 1, source, NO_ANSWERS, registry) ?? shortKind(event);
+  return recordOf(event, source, registry) ?? shortKind(event);
 }
 
 function planFresh(fresh, lastSeq, room) {
@@ -375,30 +319,12 @@ function planFresh(fresh, lastSeq, room) {
   return { full, items: [...fresh.slice(0, full).map((entry) => entry.shown), ...tail], used: used + sumCost(tail) };
 }
 
-function keptSeen(seen, room) {
-  const kept = [];
-  let spare = room;
-  for (let j = seen.length - 1; j >= 0 && seen[j].cost <= spare; j -= 1) {
-    spare -= seen[j].cost;
-    kept.unshift(seen[j]);
-  }
-  return kept;
-}
-
-function recordOf(event, zone, source, answered, registry) {
-  if (event.kind === 'action') {
-    if (answered.has(event.seq)) return null;
-    return zone === 1 ? { seq: event.seq, kind: 'action', tool: event.tool, args: argsOf(event.args), unanswered: true } : null;
-  }
+function recordOf(event, source, registry) {
   if (event.kind === 'result' || event.kind === 'code-call') {
     const action = event.kind === 'code-call' ? event : event.actionSeq !== undefined ? source.at(event.actionSeq) : undefined;
-    const owned = registry.tools[event.tool];
-    const fn = owned ? (zone === 1 ? owned.zone1 : owned.zone2) : undefined;
-    if (fn) return fn(event, action);
-    return zone === 1 ? resultZone1(event, action) : resultZone2(event, action);
+    const fn = registry.tools[event.tool]?.zone1;
+    return fn ? fn(event, action) : resultZone1(event, action);
   }
-  const owned = registry.kinds[event.kind];
-  const fn = owned ? (zone === 1 ? owned.zone1 : owned.zone2) : undefined;
-  if (fn) return fn(event);
-  return zone === 1 ? shortKind(event) : keptKind(event);
+  const fn = registry.kinds[event.kind]?.zone1;
+  return fn ? fn(event) : shortKind(event);
 }

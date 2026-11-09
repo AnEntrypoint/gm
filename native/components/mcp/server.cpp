@@ -175,8 +175,8 @@ const std::string kSkillPointer =
     "(mcp__gm__gm-continue). The host's Skill tool does not list it, so do not call it with the Skill tool.";
 
 const std::string kNextContextDescription =
-    "Begin a step. Returns rules, task, witness requirement, the events new since the last step in full, the older "
-    "ones in compact form within two horizons, and prefixSha. pending lists the events that need you since your last "
+    "Begin a step. Returns rules, task, witness requirement, the events new since the last step in full, and "
+    "prefixSha. Events from earlier steps are not repeated; query_log reaches them. pending lists the events that need you since your last "
     "step, each once, with an id. Delivery clears an event, so no later step or wait lists it again. Call it at the "
     "start of each step. query_log reaches every event. waitMs, when set, holds this call until an event is pending "
     "or that many milliseconds pass, at most 100000. A hold that passes with nothing pending takes no step and "
@@ -1928,7 +1928,7 @@ struct Server::State {
         Value notices = job_notices(since);
         std::uint64_t total = s().log->count();
         std::uint64_t shown = std::min(s().shown, total);
-        std::uint64_t reach = shown > 26 ? shown - 26 : 0;
+        std::uint64_t reach = shown;
         std::map<std::uint64_t, Value> cache;
         if (auto window = s().log->read_from(reach)) {
             for (Value& event : *window) {

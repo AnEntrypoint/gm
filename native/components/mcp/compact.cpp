@@ -11,8 +11,6 @@ namespace gm::mcp::detail {
 namespace {
 
 constexpr std::size_t kEventsCap = 20000;
-constexpr std::uint64_t kHorizon1 = 14;
-constexpr std::uint64_t kHorizon2 = 12;
 constexpr std::size_t kArgCap = 200;
 constexpr std::size_t kArgHead = 80;
 constexpr std::size_t kListCap = 10;
@@ -32,11 +30,6 @@ constexpr const char* kCutRefQuery = "gm.query_log({ seq, field, offset, limit, 
 constexpr const char* kChildReach = "gm.query_log({ after: seqs[0] - 1 }) reaches every event in this range";
 
 const std::set<std::string> kSkip = {"t", "mono", "inFlight", "startMono", "durMs", "actionSeq", "step"};
-const std::set<std::string> kKeepWhole = {"witness", "error", "reason", "gate", "gaps", "paths"};
-const std::set<std::string> kKeepZone2 = {"end",  "commit", "refusal", "error",  "restart",     "job-killed", "review",
-                                          "review-packet", "review-refused", "lint", "wiki", "recovery", "abandoned", "parse_error"};
-const std::set<std::string> kCutInZone2 = {"list_dir", "query_log", "prd_list", "unknown_list", "callers", "impact", "git_log",
-                                           "git_diff", "git_show", "review_join", "search",    "grep",    "wiki_search"};
 
 std::vector<std::string> split_lines(const std::string& text) {
     std::vector<std::string> lines;
@@ -233,16 +226,14 @@ Value full_of(const Value& event) {
 
 const Value* args_in(const Value* action) { return action ? action->find("args") : nullptr; }
 
-Value result_record(const Value& event, const Value* action, int zone) {
+Value result_record(const Value& event, const Value* action) {
     Value record = object().set("seq", *event.find("seq"));
     copy_if(record, event, "tool");
     copy_if(record, event, "ok");
     record.set("args", args_of(args_in(action)));
     copy_if(record, event, "exitCode", "exit");
     copy_if(record, event, "error");
-    if (zone == 1) {
-        if (auto digest = digest_of(event)) record.set("out", *digest);
-    }
+    if (auto digest = digest_of(event)) record.set("out", *digest);
     record.set("full", full_of(event));
     return record;
 }
@@ -273,38 +264,15 @@ Value finish_record(const Value& event, const Value* action) {
     return record;
 }
 
-std::optional<Value> packet_of(const Value& event) {
-    const Value* output = event.find("output");
-    if (!output || !output->is_string()) return std::nullopt;
-    auto parsed = json::parse(output->as_string());
-    if (!parsed) return std::nullopt;
-    const Value* packet = parsed->find("packet");
-    return packet ? std::optional<Value>(*packet) : std::nullopt;
-}
-
-std::optional<Value> tool_record(const Value& event, const Value* action, int zone) {
+std::optional<Value> tool_record(const Value& event, const Value* action) {
     std::string tool = string_field(event, "tool");
     if (tool == "finish") return finish_record(event, action);
-    if (zone == 2 && kCutInZone2.contains(tool)) return std::nullopt;
-    if (zone == 2 && tool == "wiki_write") {
-        Value record = object().set("seq", *event.find("seq")).set("tool", "wiki_write");
-        copy_if(record, event, "ok");
-        const Value* args = args_in(action);
-        if (args) copy_if(record, *args, "page");
-        const Value* claims = args ? args->find("claims") : nullptr;
-        record.set("claims", claims && claims->is_array() ? number_of(claims->as_array().size()) : number(0));
-        record.set("full", object().set("seq", *event.find("seq")).set("bytes", bytes_of(event.find("output")).value_or(0)));
-        return record;
-    }
-    Value record = result_record(event, action, zone);
+    Value record = result_record(event, action);
     if (tool == "write_file") record.set("args", path_and_sizes(action, {{"content", "bytes"}}));
     if (tool == "edit_file") record.set("args", path_and_sizes(action, {{"old", "oldBytes"}, {"new", "newBytes"}}));
     if (tool == "fetch") {
         copy_if(record, event, "source");
         copy_if(record, event, "sourceNew");
-    }
-    if (tool == "review_packet" && zone == 2) {
-        if (auto packet = packet_of(event)) record.set("packet", *packet);
     }
     return record;
 }
@@ -318,45 +286,20 @@ Value short_kind(const Value& event) {
     return record;
 }
 
-std::optional<Value> kept_kind(const Value& event) {
-    if (!kKeepZone2.contains(string_field(event, "kind"))) return std::nullopt;
-    Value record = object().set("seq", *event.find("seq")).set("kind", *event.find("kind"));
-    for (const json::Member& m : event.as_object()) {
-        if (kSkip.contains(m.first) || m.first == "seq" || m.first == "kind") continue;
-        bool whole = kKeepWhole.contains(m.first) || !m.second.is_string();
-        record.set(m.first, whole ? m.second : Value(clip(m.second.as_string(), kArgCap)));
-    }
-    return record;
-}
-
 std::uint64_t seq_of(const Value& event) {
     const Value* seq = event.find("seq");
     return seq ? static_cast<std::uint64_t>(seq->as_number()) : 0;
 }
 
-std::optional<Value> record_of(const Value& event, int zone, const EventAt& at, const std::set<std::uint64_t>& answered) {
+std::optional<Value> record_of(const Value& event, const EventAt& at) {
     std::string kind = string_field(event, "kind");
-    if (kind == "action") {
-        if (answered.contains(seq_of(event)) || zone != 1) return std::nullopt;
-        return object()
-            .set("seq", *event.find("seq"))
-            .set("kind", "action")
-            .set("tool", event.find("tool") ? *event.find("tool") : Value())
-            .set("args", args_of(event.find("args")))
-            .set("unanswered", true);
-    }
     if (kind == "result" || kind == "code-call") {
         const Value* action = nullptr;
         if (kind == "code-call") action = &event;
         else if (const Value* seq = event.find("actionSeq")) action = at(static_cast<std::uint64_t>(seq->as_number()));
-        return tool_record(event, action, zone);
+        return tool_record(event, action);
     }
-    if (kind == "code-load") {
-        if (zone == 2) return std::nullopt;
-        return short_kind(event);
-    }
-    if (zone == 1) return short_kind(event);
-    return kept_kind(event);
+    return short_kind(event);
 }
 
 Value fresh_record_of(const Value& event, const EventAt& at) {
@@ -367,8 +310,7 @@ Value fresh_record_of(const Value& event, const EventAt& at) {
             .set("tool", event.find("tool") ? *event.find("tool") : Value())
             .set("args", args_of(event.find("args")));
     }
-    static const std::set<std::uint64_t> none;
-    auto record = record_of(event, 1, at, none);
+    auto record = record_of(event, at);
     return record ? *record : short_kind(event);
 }
 
@@ -419,35 +361,6 @@ struct Fresh {
     std::size_t record_cost;
     std::optional<ChildMark> child;
 };
-
-struct Seen {
-    std::uint64_t index;
-    Value item;
-    std::size_t cost;
-    std::optional<ChildMark> child;
-};
-
-std::vector<Seen> collapse_seen(const std::vector<Seen>& seen) {
-    std::vector<Seen> out;
-    std::vector<ChildMark> group;
-    auto flush = [&]() {
-        if (group.empty()) return;
-        Value item = bounded_item(child_summary(group));
-        std::size_t cost = cost_of(item);
-        out.push_back({group.front().index, std::move(item), cost, std::nullopt});
-        group.clear();
-    };
-    for (const Seen& entry : seen) {
-        if (entry.child) {
-            group.push_back(*entry.child);
-            continue;
-        }
-        flush();
-        if (!entry.item.is_null()) out.push_back(entry);
-    }
-    flush();
-    return out;
-}
 
 std::vector<Fresh> collapse_fresh(const std::vector<Fresh>& fresh) {
     std::vector<Fresh> out;
@@ -586,29 +499,6 @@ Value args_of(const Value* args) {
 
 Value feed_of(const EventAt& at, std::uint64_t count, std::uint64_t shown, bool compact_children) {
     std::uint64_t new_start = std::min(shown, count);
-    std::uint64_t zone1_start = new_start > kHorizon1 ? new_start - kHorizon1 : 0;
-    std::uint64_t zone2_start = zone1_start > kHorizon2 ? zone1_start - kHorizon2 : 0;
-    std::set<std::uint64_t> answered;
-    for (std::uint64_t seq = zone2_start + 1; seq <= count; ++seq) {
-        const Value* event = at(seq);
-        if (event == nullptr) continue;
-        if (const Value* action = event->find("actionSeq")) answered.insert(static_cast<std::uint64_t>(action->as_number()));
-    }
-    std::vector<Seen> seen;
-    for (std::uint64_t i = zone2_start; i < new_start; ++i) {
-        const Value* event = at(i + 1);
-        if (event == nullptr) continue;
-        std::optional<ChildMark> child;
-        if (compact_children) child = child_mark_of(*event, i);
-        auto record = record_of(*event, i >= zone1_start ? 1 : 2, at, answered);
-        if (record) {
-            Value bounded = bounded_item(*record);
-            std::size_t cost = cost_of(bounded);
-            seen.push_back({i, std::move(bounded), cost, std::move(child)});
-        } else if (child) {
-            seen.push_back({i, Value(), 0, std::move(child)});
-        }
-    }
     std::vector<Fresh> fresh;
     for (std::uint64_t i = new_start; i < count; ++i) {
         const Value* event = at(i + 1);
@@ -621,28 +511,20 @@ Value feed_of(const EventAt& at, std::uint64_t count, std::uint64_t shown, bool 
         if (compact_children) child = child_mark_of(*event, i);
         fresh.push_back({i, std::move(bounded), bounded_cost, std::move(record), record_cost, std::move(child)});
     }
-    if (compact_children) {
-        seen = collapse_seen(seen);
-        fresh = collapse_fresh(fresh);
-    }
+    if (compact_children) fresh = collapse_fresh(fresh);
     std::size_t room = kEventsCap - kArrayOverhead;
     Plan plan = plan_fresh(fresh, count, room);
-    std::size_t spare = room - std::min(room, plan.used);
-    std::size_t first_kept = seen.size();
-    while (first_kept > 0 && seen[first_kept - 1].cost <= spare) {
-        spare -= seen[first_kept - 1].cost;
-        first_kept -= 1;
-    }
     Value items = array();
-    for (std::size_t j = first_kept; j < seen.size(); ++j) items.push(seen[j].item);
     for (auto& item : plan.items) items.push(std::move(item));
     std::size_t records = items.as_array().size();
     return object()
-        .set("older", number_of(first_kept < seen.size() ? seen[first_kept].index : new_start))
+        .set("older", number_of(new_start))
         .set("records", number_of(records))
         .set("fullEvents", number_of(plan.full))
         .set("compactFrom", plan.full < fresh.size() ? number_of(fresh[plan.full].index + 1) : Value(nullptr))
         .set("events", std::move(items));
+}
+
 }
 
 }
