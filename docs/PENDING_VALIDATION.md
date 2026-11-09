@@ -560,3 +560,33 @@ Each change below is committed locally. Phase B runs the listed witness for each
 6. The .mcp.json pass (item 6). Decision: no project .mcp.json is added. The gate in docs/PENDING_VALIDATION.md (the parity-harness cutover M5) is met, and the user-wide entry already runs the native binary. Reason: a project .mcp.json would start a second gm beside the user-wide one. Witness (Phase B): read /config/.claude.json (mcpServers.gm) and confirm the checkout has no .mcp.json.
 
 Item 7 (Windows and macOS builds, V4 CRLF) stays open: it needs Windows CI.
+
+## gm pass, Phase B (2026-11-09, binary 2ebce71): witnesses for items 1 to 6
+
+Build: `cmake --preset release`, `cmake --build build/release -j 4`, BUILD_EXIT 0, 0 FAILED. Stamp `gm 2ebce71-dev (2ebce71)`. The release build stamped 3d7b551 first; the native body-lifetime fix (2ebce71) was committed and built after it.
+
+1. Commit-check wording (both trees). unknown_resolve, commit 40 zeros:
+   - native, non-repository workspace: `{"ok":false,"error":"cannot check commit 0000000000000000000000000000000000000000: /tmp/gm-defects/w5/rown-nonrepo is not a git repository"}`
+   - native, git repository: `{"ok":false,"error":"no commit 0000000000000000000000000000000000000000 in the repository at /tmp/gm-defects/w5/rown-repo"}`
+   - Node, non-repository: `cannot check commit 0000...: /tmp/gm-defects/w5/rowj-nonrepo is not a git repository`; Node, repository: `no commit 0000... in the repository at /tmp/gm-defects/w5/rowj-repo`.
+   Verified on both trees.
+
+2. Leaf assertion. Real check (`node tools/check-run-code-budget.mjs build/release/native/components/host/gm`): `run-code-budget-check: ok (a 65 s JavaScript body with timeoutMs 100000 returned in 65003 ms; a catastrophic regex in the fetch leaf ended in 120553 ms with no old fixed limit)`, exit 0. Negative control (a temporary copy with the leaf timeoutMs at 60000, removed afterwards): `run-code-budget-check: 1 failure(s)` / `- leaf deadline: expected status 200 in the foreground reply after 60002 ms, got {"ok":true,"background":"body-6",...}`, exit 1. Verified: the tightened check rejects a background run.
+
+3. Node run_code budget parity. Decision: no change to Node. Reasoning: the body-lifetime witness, with --job-lifetime-ms 8000 and a 60 s spin in a background body, gives Node `BODY_STATUS {"state":"killed","reason":"lifetime"}` at 10 s (3 s poll steps), and native before the fix gave `{"state":"failed","error":"the body passed its JavaScript deadline of 8000 ms"}`. The defect was native, not Node: the QuickJS budget equals the lifetime, so the budget interrupt wins the race against the monitor's lifetime check, and body_finished settled the job as failed. Fixed in native (2ebce71): an adopted body whose error is the JavaScript deadline at the lifetime budget settles as killed, reason lifetime, with the shared statement and a job-killed record. After the fix native gives `BODY_STATUS {"state":"killed","reason":"lifetime","statement":"job body-9 stopped: the job lifetime of 8000 ms ended before it finished"}` at 8 s. Node and native now agree on state, reason and statement. The earlier 65 s Node case (V2) is unchanged.
+
+4. finish openRows at the step limit (both trees, --max-steps 3). Sequence: next_context, unknown_add, finish plain, finish with openRows before the limit, next_context until stepsLeft 0, finish with openRows at the limit.
+   - Plain finish, early: `refused: 1 row(s) open: <id> witness row. Resolve each with its witness, ...` (both trees).
+   - openRows finish, early: the same refusal (both trees), so openRows is not accepted before the limit.
+   - openRows finish at stepsLeft 0: native `{"ok":true,"finished":true,"output":"w4 at limit",...}`; Node `{"ok":true,"finished":true,"output":"w4 at limit"}`.
+   - Row file after finish: `status: "open"` on both trees (the row stays open).
+   - Event: native `{"seq":25,"kind":"finish-open-rows","rows":[{"id":"unknown-mw93ynhe2fef","reason":"open at the step limit, not closed"}],"steps":3}`; Node `{"seq":19,"kind":"finish-open-rows","rows":[{"id":"unknown-mw93ynnt9ce4","reason":"open at the step limit, not closed"}],"steps":3}`.
+   Defect found in the witness, not in the product: a next_context call made after stepsLeft 0 ends the run at the limit, so a finish after it is refused as ended. The witness now stops at stepsLeft 0, the state where the run may still be finished. The step-limit text ("call finish with your witness to close this run") is accurate only before that call; recorded as a wording issue for the next pass.
+
+5. Shell-job lifetime reason (both trees, --job-lifetime-ms 5000, job_start timeoutMs 7200000): native `LIFE_ELAPSED_S 5` and `LIFE_STATUS {"state":"killed","reason":"lifetime","statement":"job lt stopped: the job lifetime of 5000 ms ended before it finished","timeoutMs":5000}`; Node the same fields. Verified on both trees. The job_start cap is 7200000 on both.
+
+6. The .mcp.json pass. No project .mcp.json is added. Read: /config/.claude.json `mcpServers.gm` = `{"command": "/config/.gmnew/current/gm", "args": ["serve"]}` (the native binary). The checkout has no .mcp.json (`ls: cannot access '.mcp.json'`). Reasoning: the cutover gate is met, and a project entry would start a second gm beside the user-wide one.
+
+Real checks on 2ebce71: conformance `conformance: 83 passed, 0 failed of 83 checks in 24 scenarios`, CONF_EXIT 0. Parity `22/93 scenarios match, 0 cutover-expected, 56 native-ahead, 15 documented-gap, 0 differ`, PARITY_EXIT 0.
+
+Item 7 (Windows and macOS builds, V4 CRLF) stays open: it needs Windows CI.
