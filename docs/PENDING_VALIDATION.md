@@ -892,4 +892,12 @@ Cause: src/mcp.mjs `drain` held every call until the first `next_context` had st
 | 32 | src/mcp.mjs | before the first step, a call that is not `next_context` starts in arrival order, subject to the same conflict check as later calls. The first `next_context` still opens the run, and its position in the queue is unchanged. `finish` is included, as native does | `node tools/check-early-run-code.mjs node` |
 | 33 | tools/check-early-run-code.mjs (new); tools/check-build.mjs | sends a run_code body and then a finish before any next_context; each must answer within 10 s, the body must run and carry the rules notice, and the finish must end the run. It runs on either engine, and check-build runs it on native | failing-then-passing: on the Node tree before row 32 the check failed with `early call: a run_code sent before the first next_context got no reply in 10000 ms`; after row 32 it passes on both engines |
 
+Phase B (2026-11-09, `node tools/check-build.mjs build/release`, exit 0, binary stamped b7b2c5a-dev; no native source changed in this pass):
+
+- `conformance: 85 passed, 0 failed of 85 checks in 24 scenarios`
+- `run-code-budget-check: ok (a 65 s JavaScript body with timeoutMs 100000 returned in 65002 ms; a fetch leaf held by the server for 50000 ms ended in 50020 ms with no old fixed limit; a 3000 ms fetch with a catastrophic match timed out in 3004 ms in one attempt; a 3000 ms fetch that timed out ended in 3015 ms in one attempt)`
+- `job-bounds-check: ok (a 2000 ms job timeout ended as timeout in 2005 ms; a 7200000 ms job timeout ended as lifetime at 5006 ms under a 5000 ms lifetime; a 1000 ms job exited 0 in 1043 ms)`
+- `early-run-code-check: ok (a run_code sent before the first next_context ran at once in 4 ms, with the rules notice; an early finish ended the run in 3 ms)`
+- Node, same pass: `node native/tests/parity/run.mjs --bin build/release/native/components/host/gm` (run against the Node parity reference): `22/93 scenarios match, 0 cutover-expected, 56 native-ahead, 15 documented-gap, 0 differ`; `node tools/check-run-code-budget.mjs node` ok (65044 ms, leaf 50077 ms, match 3073 ms, timeout 3074 ms); `node tools/check-job-bounds.mjs node` ok; `node tools/check-early-run-code.mjs node` ok; the Node replay witness exit 0.
+
 Other differences seen while probing, unchanged: the read_file digest differs between engines (native FNV-1a 64, Node sha256 cut to 12 hex), recorded since 2026-11-09; Node's finish reply has no `browser` key, which native sends.
