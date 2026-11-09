@@ -851,3 +851,25 @@ Witness after row 24 (`cmake --build build/release` exit 0, then `node tools/che
 - `check-build: gm-core stamp b7b2c5a-dev (b7b2c5a)`
 
 G1 is closed: the leaf is a fixed 50 s hold, measured at 50024 ms. G8 is closed: a catastrophic match is cut at 3004 ms, and a timed-out call returns in 3014 ms with one attempt, where the code before row 22 allowed about four times `timeoutMs` (read from the retry loop; not timed). The pre-fix binary was not rerun for the failing-then-passing pair; the failing run above is the pre-row-24 binary.
+
+## G2, G4, G5, G7 and the Node fetch port (2026-11-09, Phase A)
+
+| # | File | Change | Witness needed |
+|---|---|---|---|
+| 25 | .github/workflows/release.yml | G2: `continue-on-error: true` removed from the "Windows cmd-only run_shell witness" step. The witness is green: run 42617531301 (head d9876a4) has both build-windows jobs (x64 and arm64) with this step `success`. tools/witness-windows-cmd.mjs has not changed since d9876a4. The step is blocking from this commit, so a failure now fails its job; publish still needs all build jobs | `node tools/witness-ci-replay-step.mjs` exits 0 on the worktree and 1 on `git show HEAD:.github/workflows/release.yml` (the old copy) |
+| 26 | tools/witness-ci-replay-step.mjs | the Windows witness step must exist and must not carry `continue-on-error` (a `forbid` list) | the pair in row 25 |
+| 27 | src/mcp.mjs | Node read every request only after the previous request's whole answer (`acceptTail` chained the lines), so a run_code body held all other calls. Each line now starts when it arrives (`accepting` set; shutdown waits for it). Admission order is the arrival order | probe in tools/check-run-code-budget.mjs: a trivial body sent 2 s into a 20 s spin returned in 42 ms (it returned after 18 s before) |
+| 28 | src/tools.mjs | access for run_code is free, not the barrier, so bodies run side by side as they do on native (BODY_SLOTS 4 bounds them) | the budget check on node |
+| 29 | src/fetch.mjs, src/retry.mjs | the Node port of the native deadline: one deadline per call, shared by the attempts and the match. Each attempt's signal is the time left. Retries stop when the next delay would pass the deadline. The match runs in a worker thread that is terminated at the deadline, since Node cannot interrupt a regex on the main thread. The tool description states the bound. `retrying` takes an optional `deadlineAt` (default: none), so other callers are unchanged | probe of the Node fetch: catastrophic match `timed out after 3000 ms`, ETIMEDOUT, attempts 1, in 3003 ms; timeout in 3004 ms, attempts 1; an ordinary match in 97 ms |
+| 30 | tools/check-run-code-budget.mjs | takes `node` as its target (runs src/mcp.mjs with the same flags). It opens the first step with next_context, as a host does. Its cases are the same on both engines | `node tools/check-run-code-budget.mjs node` exits 0 (see the Phase B record) |
+| 31 | tools/check-job-bounds.mjs (new); tools/check-build.mjs | G5 witness: with `--job-lifetime-ms 5000`, a job with timeoutMs 2000 ends as reason timeout; a job with timeoutMs 7200000 ends as reason lifetime at about 5 s with the lifetime statement; a 1000 ms job exits 0. It runs on either engine, and check-build runs it on the native binary | `node tools/check-job-bounds.mjs node` and `... build/release/native/components/host/gm` both exit 0 |
+
+G5 detail: the two bounds were already separate values (job_start accepts timeoutMs up to 7200000; the lifetime flag defaults to 3600000), and the code takes the smaller of the two (native job.cpp and Node tools.mjs). No code change was needed. The check now proves each bound on its own.
+
+G7 (the .mcp.json pass): no change. Checks: the checkout has no `.mcp.json`; `/config/.claude.json` `mcpServers.gm` is `{"command":"/config/.gmnew/current/gm","args":["serve"]}`; no project entry under `projects` defines a gm server. The decision of 54ac290 stands: a project entry would start a second gm.
+
+G8 on Node: the Node side of G8 is closed by row 29. The Node match and attempts now have the same bound as native.
+
+Found, not fixed (G9): Node holds a run_code call that arrives before the first next_context until that step runs, so a body sent first never replies. Native runs it at once with the rules notice. Witness: a run_code sent before next_context got no reply in 20 s, and the server only logged it after the probe killed the process. Owner decision: let calls before the first step run (as native does), or keep the step gate and say so in the rules.
+
+Ranked status after this pass: G2 closed (row 25); G4 closed for the budget (rows 27, 28, 30; G9 is a separate gap); G5 closed (row 31); G7 closed (no change needed); G8 closed on both engines (rows 21, 22, 29); G6 unchanged (fx workspace, not in this checkout).

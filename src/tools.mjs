@@ -563,7 +563,7 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
       inFlightByBody.set(body, Math.max(0, (inFlightByBody.get(body) ?? 0) - 1));
     },
     access(name, args) {
-      if (READ_ONLY.has(name)) return { items: [] };
+      if (READ_ONLY.has(name) || name === 'run_code') return { items: [] };
       if (!PATH_TOOLS.has(name)) return BARRIER;
       const rel = name === 'list_dir' ? (args.path ?? '.') : args.path;
       const at = planPath(root, rel);

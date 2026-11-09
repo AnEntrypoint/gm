@@ -19,6 +19,11 @@ const required = [
         name: 'Node parity',
         commands: ['node native/tests/parity/run.mjs --bin build/${{ matrix.preset }}/native/components/host/gm'],
     },
+    {
+        name: 'Windows cmd-only run_shell witness',
+        commands: ['node tools/witness-windows-cmd.mjs'],
+        forbid: ['continue-on-error'],
+    },
 ];
 
 const failures = [];
@@ -33,7 +38,9 @@ for (const step of required) {
     while (end < lines.length && !/^(      - |  \S|\S)/.test(lines[end])) end += 1;
     const block = lines.slice(start, end).join('\n');
     const missing = step.commands.filter((text) => !block.includes(text));
+    const forbidden = (step.forbid ?? []).filter((text) => block.includes(text));
     if (missing.length > 0) failures.push(`the "${step.name}" step lacks: ${missing.join('; ')}`);
+    else if (forbidden.length > 0) failures.push(`the "${step.name}" step has ${forbidden.join('; ')}, so a failure would not fail its job`);
     else found.push({ step: step.name, lines: end - start, commands: step.commands.length });
 }
 

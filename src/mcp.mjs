@@ -1189,7 +1189,7 @@ async function main(argv) {
     console.error(`gm mcp: run ${closedId} has ended; opened run ${basename(runDir)}`);
     return createSession({ ...limits, runDir, log: fresh, task: start.task, taskInherited: start.inherited, shownFloor });
   }
-  let acceptTail = Promise.resolve();
+  const accepting = new Set();
   const acceptNow = (line) => {
     try {
       if (session.ended() !== null && isNextContextCall(line) && !session.hasReply(requestIdOf(line))) {
@@ -1206,7 +1206,11 @@ async function main(argv) {
     }
   };
   const acceptLine = (line) => {
-    acceptTail = acceptTail.then(() => acceptNow(line)).catch((err) => console.error(`gm mcp: ${err.message}`));
+    const turn = Promise.resolve()
+      .then(() => acceptNow(line))
+      .catch((err) => console.error(`gm mcp: ${err.message}`))
+      .finally(() => accepting.delete(turn));
+    accepting.add(turn);
   };
   const lines = createInterface({ input: process.stdin, crlfDelay: Infinity });
   lines.on('line', acceptLine);
@@ -1215,7 +1219,7 @@ async function main(argv) {
     pausing ??= Promise.all([session.pause(reason), retired]).finally(() => process.exit(0));
     return pausing;
   };
-  lines.on('close', () => (flags.supervised === 'yes' ? pauseRun('the supervisor ended stdin') : acceptTail.then(() => session.inputEnded()).then(() => retired).catch((err) => console.error(`gm: ${err.message}`)).finally(() => client.stop())));
+  lines.on('close', () => (flags.supervised === 'yes' ? pauseRun('the supervisor ended stdin') : Promise.allSettled([...accepting]).then(() => session.inputEnded()).then(() => retired).catch((err) => console.error(`gm: ${err.message}`)).finally(() => client.stop())));
   process.once('SIGINT', () => lines.close());
   process.once('SIGTERM', () => pauseRun('SIGTERM from the supervisor'));
   process.stdout.on('error', (err) => console.error(`gm: stdout: ${err.message}`));

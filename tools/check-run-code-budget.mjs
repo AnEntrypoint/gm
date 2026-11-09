@@ -4,11 +4,16 @@ import { once } from 'node:events';
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import http from 'node:http';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import readline from 'node:readline';
+import { fileURLToPath } from 'node:url';
 
-const binary = process.argv[2] ? resolve(process.argv[2]) : null;
-if (binary === null || !existsSync(binary)) {
+const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const target = process.argv[2] ?? null;
+const onNode = target === 'node';
+const binary = onNode ? process.execPath : target === null ? null : resolve(target);
+const lead = onNode ? [join(root, 'src', 'mcp.mjs')] : ['serve'];
+if (binary === null || (!onNode && !existsSync(binary))) {
   console.log('run-code-budget-check: skipped (no binary given)');
   process.exit(0);
 }
@@ -43,7 +48,7 @@ const configDir = mkdtempSync(join(tmpdir(), 'gm-budget-config-'));
 const mcpConfig = join(configDir, 'no-default-mcp.json');
 writeFileSync(mcpConfig, JSON.stringify({ mcpServers: { playwriter: { disabled: true } } }));
 
-const child = spawn(binary, ['serve', '--workspace', workspace, '--mcp-config', mcpConfig], { stdio: ['pipe', 'pipe', 'pipe'] });
+const child = spawn(binary, [...lead, '--workspace', workspace, '--mcp-config', mcpConfig], { stdio: ['pipe', 'pipe', 'pipe'] });
 child.stderr.resume();
 const pending = new Map();
 let nextId = 1;
@@ -86,6 +91,7 @@ const expect = (condition, text) => {
 try {
   await rpc('initialize', { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'gm-budget-check', version: '1' } });
   child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' })}\n`);
+  await rpc('tools/call', { name: 'next_context', arguments: {} });
 
   const [spin, leaf, matched, timedOutCall] = await Promise.all([
     runCode({

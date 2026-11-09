@@ -20,12 +20,13 @@ const TRANSIENT_TEXT = [
 const URL_TEXT = /[a-z][a-z0-9+.-]*:\/\/\S*/gi;
 const HOST_TEXT = /\b[a-z0-9-]+(?:\.[a-z0-9-]+)+\b/gi;
 
-export async function retrying({ tool, log, attempt }) {
+export async function retrying({ tool, log, attempt, deadlineAt = Infinity }) {
   for (let n = 1; ; n += 1) {
     const { result, errorType } = await attempt();
     if (errorType === null) return { ...result, attempts: n };
     if (n > RETRIES) return { ...result, attempts: n, exhausted: true };
     const delayMs = backoffMs(n);
+    if (Date.now() + delayMs >= deadlineAt) return { ...result, attempts: n, exhausted: true };
     log.append('retry', { tool, attempt: n, errorType, delayMs });
     await sleep(delayMs);
   }
