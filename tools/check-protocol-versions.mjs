@@ -25,8 +25,8 @@ const VERSIONS = ['2025-11-25', '2025-06-18', '2025-03-26', '2024-11-05', '2024-
 const LATEST = VERSIONS[0];
 const UNKNOWN = '1999-01-01';
 const REFUSED = '2024-01-01';
-const REPLY_MS = 10000;
-const SETTLE_MS = 5000;
+const REPLY_MS = 60000;
+const EVENT_MS = 60000;
 
 const FAKE_SERVER = String.raw`import readline from 'node:readline';
 const [version, mode] = process.argv.slice(2);
@@ -132,12 +132,19 @@ const clientCase = async (scratch, { version, mode }) => {
   const config = join(workspace, 'mcp.json');
   writeFileSync(config, JSON.stringify({ mcpServers: { playwriter: { disabled: true }, fake: { command: process.execPath, args: [join(scratch, 'fake-server.mjs'), version, mode] } } }));
   const engine = spawnEngine(['--workspace', workspace, '--run-dir', runDir, '--mcp-config', config]);
+  const matches = (entry) => entry.kind === 'mcp-server' && entry.server === 'fake' && (entry.state === 'connected' || entry.state === 'failed');
+  const logFile = join(runDir, 'log.jsonl');
+  const deadline = Date.now() + EVENT_MS;
   try {
-    await sleep(SETTLE_MS);
+    let event = findEvent(logFile, matches);
+    while (event === null && Date.now() < deadline) {
+      await sleep(100);
+      event = findEvent(logFile, matches);
+    }
+    return event;
   } finally {
     await engine.stop();
   }
-  return findEvent(join(runDir, 'log.jsonl'), (entry) => entry.kind === 'mcp-server' && entry.server === 'fake' && (entry.state === 'connected' || entry.state === 'failed'));
 };
 
 const failures = [];
@@ -175,7 +182,7 @@ try {
     const event = events[index];
     const label = item.label;
     if (event === null) {
-      failures.push(`${label}: no mcp-server event after ${SETTLE_MS} ms`);
+      failures.push(`${label}: no mcp-server event after ${EVENT_MS} ms`);
       return;
     }
     if (item.mode === 'ok' && VERSIONS.includes(item.version)) {
