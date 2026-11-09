@@ -34,6 +34,8 @@ for (const check of ['check-run-code-progress.mjs', 'check-shell-stdin.mjs', 'ch
     const result = spawnSync(process.execPath, [join(root, 'tools', check), binary], { cwd: root, stdio: 'inherit', timeout: 600000 });
     if (result.status !== 0) process.exit(result.status ?? 1);
 }
+const nodeRestart = spawnSync(process.execPath, [join(root, 'tools', 'check-restart-jobs.mjs'), 'node'], { cwd: root, stdio: 'inherit', timeout: 600000 });
+if (nodeRestart.status !== 0) process.exit(nodeRestart.status ?? 1);
 
 const cachePath = join(buildDir, 'CMakeCache.txt');
 if (!existsSync(cachePath)) {
