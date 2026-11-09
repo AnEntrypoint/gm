@@ -211,7 +211,7 @@ class ServerProcess {
         if (refusal !== null) throw new Error(refusal);
         this.notify('notifications/initialized');
         this.tools = await this.listTools();
-        this.log.append('mcp-server', { server: this.spec.name, state: again ? 'restarted' : 'connected', tools: this.tools.length, protocolVersion: init.protocolVersion, attempts: attempt });
+        this.log.append('mcp-server', { server: this.spec.name, state: again ? 'restarted' : 'connected', tools: this.tools.length, protocolVersion: init.protocolVersion });
         this.ignoreWorkspace();
         return null;
       } catch (err) {
