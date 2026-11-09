@@ -691,6 +691,20 @@ Item 7 (Windows and macOS builds, V4 CRLF) is closed on run 42617531301, dispatc
 | build macOS arm64 | success | build job |
 | publish | skipped | `publish=false` |
 
+Build results of run 42615572769 (dispatch with `publish=false`, head 6ef6c1fc454efcda587317b80c21ba5781db29e4; `gh run view` conclusion success):
+
+| Job | Conclusion (run 42615572769) |
+|---|---|
+| build-windows x64 (windows-latest, x64-windows-release) | success |
+| build-windows arm64 (windows-11-arm, arm64-windows-release) | success |
+| build linux x64 (ubuntu-latest, x64-linux-release) | success |
+| build linux arm64 (ubuntu-24.04-arm, arm64-linux-release) | success |
+| build macOS x64 (macos-latest, x64-macos-release) | success |
+| build macOS arm64 (macos-latest, arm64-macos-release) | success |
+| publish | skipped |
+
+V4 CRLF evidence, run 42617531301: the `Test` step of both Windows jobs prints `shell-stdin-check: ok` (the CRLF comparison in tools/check-shell-stdin.mjs), and `conformance: 85 passed, 0 failed of 85 checks in 24 scenarios`.
+
 The Windows CMD witness failed on run 42615572769 (quoted in the Phase B record above) and passed on run 42617531301 after commit d9876a4.
 
 Correction: run 42617510474 is `pages-build-deployment` (jobs build, deploy, report-build-status), not a release build. It is not counted as build evidence.
@@ -772,4 +786,25 @@ Cause: the replay witness ran only in tools/check-build.mjs, and release.yml did
 | 15 | .github/workflows/release.yml | the build job has a `Replay witness` step after Test, on `x64-linux` only: `npm ci --ignore-scripts`, `node tools/witness-next-context-replay.mjs node`, then the same witness on `build/<preset>/native/components/host/gm`. The native command repeats the check-build run, so it is explicit in the workflow even though check-build also covers it | the dispatched run's `Replay witness` step prints the Node JSON with `feedHasBrief: false`, then the native JSON with `feedHasBrief: false`, and the step exits 0 |
 | 16 | tools/witness-ci-replay-step.mjs | fails (exit 1) if release.yml has no `Replay witness` step, or the step lacks one of its three commands; it reads the workflow file given as an argument, so the failing check runs on a copy with the step removed | exit 0 on .github/workflows/release.yml; exit 1 on a copy made with the step removed (failing-then-passing) |
 
-Gap G3 is closed for the replay witness by row 15 (the Node witness now runs in CI). The Node parity run is still not in CI.
+Gap G3 is closed for the replay witness by row 15 (the Node witness now runs in CI), and for the Node parity run by row 17.
+
+## Node parity in CI and the closure record (2026-11-09, Phase A)
+
+| # | File | Change | Witness needed |
+|---|---|---|---|
+| 17 | .github/workflows/release.yml | the build job has a `Node parity` step after the replay witness, on `x64-linux` only: `node native/tests/parity/run.mjs --bin build/<preset>/native/components/host/gm`. The step reuses the `npm ci --ignore-scripts` of the replay step. Local timing: 18 s | the dispatched run's `Node parity` step exits 0 and its log shows `22/93 scenarios match, 0 cutover-expected, 56 native-ahead, 15 documented-gap, 0 differ` |
+| 18 | tools/witness-ci-replay-step.mjs | now requires both the `Replay witness` and the `Node parity` steps in the release workflow, with their commands | exit 0 on .github/workflows/release.yml (local: steps Replay witness 7 lines, Node parity 4 lines); exit 1 on a copy with the Node parity step removed (local: `no "Node parity" step`) |
+| 19 | docs/PENDING_VALIDATION.md | the item 7 closure record now lists the build results of run 42615572769 for all six builds, and the V4 CRLF evidence of run 42617531301 | read the closure record |
+
+Ranked remaining work (current item and status, after this pass):
+
+| rank | item | status | blocker or next step |
+|---|---|---|---|
+| 1 | Item 7: Windows and macOS builds, V4 CRLF | closed (closure record: run 42615572769 for the six builds, run 42617531301 for the Windows CMD witness and V4) | none |
+| 2 | Replay witness and Node parity in CI | closed by rows 15 and 17; the run result is in the Phase B record of this pass | none |
+| 3 | G1: the budget check's fetch leaf is CPU-bound and can exceed its 400000 ms window (measured 193313, 200085, 233216, 105338, 107018 ms) | open risk | a deterministic leaf: a local server holding a fixed-time response, with a matching fetch timeout; next pass |
+| 4 | G2: the Windows CMD witness is `continue-on-error` (release.yml) | open | owner decision: making it blocking also gates publish |
+| 5 | G4: Node run_code budget is measured only for the 65 s body | open | owner decision: port to Node or record as native-ahead |
+| 6 | G5: shell-job lifetime equals the job_start cap, so the lifetime reason is unreachable for shell jobs | open | owner decision |
+| 7 | G6: open row unknown-mw6bc4mv1c00 (push target AnEntrypoint/gmfx) | open; the row lives in the fx workspace | the fx workspace owner resolves or parks it |
+| 8 | G7: the .mcp.json pass | not started | owner schedules it |

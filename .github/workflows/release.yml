@@ -70,6 +70,10 @@ jobs:
           npm ci --ignore-scripts
           node tools/witness-next-context-replay.mjs node
           node tools/witness-next-context-replay.mjs build/${{ matrix.preset }}/native/components/host/gm
+      - name: Node parity
+        if: matrix.target == 'x64-linux'
+        shell: bash
+        run: node native/tests/parity/run.mjs --bin build/${{ matrix.preset }}/native/components/host/gm
       - name: Package
         shell: bash
         run: node tools/package.mjs --target ${{ matrix.target }} --build-dir build/${{ matrix.preset }} --out dist
