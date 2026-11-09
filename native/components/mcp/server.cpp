@@ -133,7 +133,7 @@ constexpr double kMaxJobWaitMs = 30000;
 constexpr long long kStartedJobGraceMs = 100;
 constexpr std::size_t kCompletionCap = 100;
 constexpr std::size_t kQueueMax = 64;
-constexpr int kMaxTimeoutMs = 300000;
+constexpr int kMaxTimeoutMs = 3600000;
 constexpr long long kProgressMs = 5000;
 constexpr double kListTtlMs = 3600000;
 constexpr double kVolatileTtlMs = 0;
@@ -207,7 +207,7 @@ std::string run_code_description(const std::string& verb_names) {
            "gm.verbs({ name: 'read_file' }) returns just that verb's schema, gm.verbs({ names: true }) returns just "
            "the names, and an unknown name is an error. Wrap a call that may throw in gm.try(fn), which returns its value or { ok: false, error } as data, so one failure does not hide the rest of a batch. A failed call returns "
            "{ok:false, error} and does not stop the body. The body's return value comes back as JSON. A body still "
-           "running after timeoutMs (default 180000, at most 300000) becomes a background run: the call returns its "
+           "running after timeoutMs (default 180000, at most 3600000) becomes a background run: the call returns its "
            "job id at once, job_status with waitMs returns its value, and finish is refused while it runs unless "
            "stopBackground is true. One step is one body: read the inputs in one Promise.all, decide in code, act "
            "with the independent writes in one Promise.all, and verify in the same body. The ten most-used verbs: "
@@ -806,7 +806,7 @@ struct Server::State {
         target.count = seq;
         std::string k(kind);
         note_shown(target, k, kept);
-        if (is_pending_kind(k)) {
+        if (is_pending_event(k, kept)) {
             auto written = target.log->read_from(seq - 1);
             if (written && !written->empty()) {
                 try {
@@ -1905,7 +1905,18 @@ struct Server::State {
         return object().set("open", std::move(open)).set("parked", std::move(parked)).set("jobs", std::move(jobs));
     }
 
-    Value context(int step, bool compact_children = false) {
+    void attach_job_output(Value& record) {
+        if (string_of(record, "kind") != "job" || record.find("body") != nullptr) return;
+        const std::string state = string_of(record, "state");
+        if (state != "exited" && state != "killed") return;
+        Value status = verbs.call("job_status", object().set("job", string_of(record, "job")));
+        if (!is_ok(status)) return;
+        for (const char* key : {"output", "total", "truncated", "offset", "next", "logPath"}) {
+            if (const Value* value = status.find(key)) record.set(key, *value);
+        }
+    }
+
+    Value context(int step, bool compact_children = false, bool waiting = false) {
         std::string rules = read_rules();
         std::optional<Value> recovery_now;
         if (s().recovery) recovery_now = recovery_note(*s().recovery);
@@ -1937,25 +1948,28 @@ struct Server::State {
                           .set("step", step)
                           .set("run", s().run_id)
                           .set("stepsLeft", options.max_steps - step)
-                          .set("maxSteps", options.max_steps)
-                          .set("rules", rules)
-                          .set("task", task_value());
-        if (s().task.empty()) {
-            reply.set("taskNotice", "No task yet. The gm skill prompt, with its task argument, gives the task of this run.");
-        }
-        if (s().task.size() > kTaskPage) {
-            const std::string head = task_head();
-            reply.set("taskChars", number_of(js_length(s().task)))
-                .set("taskTruncated", true)
-                .set("taskNotice", "[gm: the task is " + std::to_string(js_length(s().task)) + " characters; the first " + std::to_string(js_length(head)) +
-                                       " are shown. Read the rest with gm.query_log({ kind: 'task', last: 1 }) for the task event's seq, then gm.query_log({ seq, field: 'text', offset: " +
-                                       std::to_string(js_length(head)) + ", limit: 20000 }) and read on from next until next is null.]");
+                          .set("maxSteps", options.max_steps);
+        if (waiting) {
+            reply.set("rulesPath", (s().run_dir / "rules.md").string());
+        } else {
+            reply.set("rules", rules).set("task", task_value());
+            if (s().task.empty()) {
+                reply.set("taskNotice", "No task yet. The gm skill prompt, with its task argument, gives the task of this run.");
+            }
+            if (s().task.size() > kTaskPage) {
+                const std::string head = task_head();
+                reply.set("taskChars", number_of(js_length(s().task)))
+                    .set("taskTruncated", true)
+                    .set("taskNotice", "[gm: the task is " + std::to_string(js_length(s().task)) + " characters; the first " + std::to_string(js_length(head)) +
+                                           " are shown. Read the rest with gm.query_log({ kind: 'task', last: 1 }) for the task event's seq, then gm.query_log({ seq, field: 'text', offset: " +
+                                           std::to_string(js_length(head)) + ", limit: 20000 }) and read on from next until next is null.]");
+            }
         }
         reply.set("witness", kDefaultWitness)
             .set("prefixSha", prefix_sha(rules, s().task, served_tools()))
             .set("total", number_of(total))
             .set("pendingCommands", object().set("wait", "\"" + options.wait_program + "\" events --dir \"" + s().run_dir.string() + "\" --wait"));
-        reply = merge(std::move(reply), feed_of(at, total, shown, compact_children));
+        if (!waiting) reply = merge(std::move(reply), feed_of(at, total, shown, compact_children));
         reply.set("query", query_hint(shown, total));
         if (recovery_now) reply.set("recovery", *recovery_now);
         auto notice = rules_notice();
@@ -1970,7 +1984,10 @@ struct Server::State {
         PendingTake taken = take_pending(s().run_dir);
         if (!taken.records.empty()) {
             Value records = array();
-            for (Value& record : taken.records) records.push(std::move(record));
+            for (Value& record : taken.records) {
+                if (waiting) attach_job_output(record);
+                records.push(std::move(record));
+            }
             reply.set("pending", std::move(records));
         }
         if (!taken.files.empty()) {
@@ -2035,7 +2052,7 @@ struct Server::State {
                 s().run_started = true;
                 s().owner_seen = true;
                 s().step_calls = 0;
-                Value reply = context(s().steps, compact_children);
+                Value reply = context(s().steps, compact_children, wait_ms > 0);
                 reply.set("tabs", browser_tabs_text());
                 append("context-reply", object().set("step", number_of(s().steps)).set("text", json::dump(reply)));
                 return reply;

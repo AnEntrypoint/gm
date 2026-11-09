@@ -118,7 +118,7 @@ return { a: a.output.length, b: b.output.length };</pre>
 <h3>Search</h3>
 <p>search (BM25 over tracked files), grep, wiki_search, wiki_write, callers, impact.</p>
 <h3>Jobs</h3>
-<p>job_start, job_status, job_stop. A body that runs past its budget (180 seconds by default, at most 300000) becomes a background run; <code>job_status</code> with <code>waitMs</code> waits for it.</p>
+<p>job_start, job_status, job_stop. A body that runs past its budget (180 seconds by default, at most 3600000) becomes a background run; <code>job_status</code> with <code>waitMs</code> waits for it.</p>
 <h3>Git</h3>
 <p>git_status, git_add, git_rm, git_commit, git_push, git_log, git_diff, git_show, git_fetch, git_pull, git_checkout, git_branch, ci_status.</p>
 <h3>Rows and review</h3>

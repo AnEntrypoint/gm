@@ -60,24 +60,45 @@ std::string redact_artifact(const std::string& text) {
 
 json::Value store_artifact(const std::string& text, const std::filesystem::path& run_dir, const std::string& label) {
     const std::string clean = redact_artifact(text);
-    const std::string bounded = clean.size() > 20000 ? clean.substr(0, 10000) + "\n[gm: middle omitted]\n" + clean.substr(clean.size() - 10000) : clean;
-    const std::string digest = artifact_digest(bounded).substr(0, 12);
+    const std::string digest = artifact_digest(clean).substr(0, 12);
     const std::filesystem::path dir = run_dir / "outputs";
     std::error_code ec;
     std::filesystem::create_directories(dir, ec);
     const std::filesystem::path file = dir / (digest + "-" + label + ".txt");
     std::ofstream out(file, std::ios::binary);
-    out << bounded;
+    out << clean;
     const std::string path = file.generic_string();
     const std::string path_json = json::dump(json::Value(path));
     json::Value reply(json::Object{});
     reply.set("outputPath", path);
-    reply.set("totalChars", static_cast<double>(clean.size()));
+    reply.set("totalChars", static_cast<double>(utf16_length(clean)));
     reply.set("digest", digest);
     reply.set("offset", static_cast<double>(0));
     reply.set("next", static_cast<double>(0));
     reply.set("truncated", true);
     reply.set("notice", "[gm: full output at " + path + "; page with gm.read_file({ path: " + path_json + ", unit: \"chars\", offset: 0, limit: 20000 })]");
+    return reply;
+}
+
+json::Value cut_shell_output(json::Value reply, const std::string& text, const std::filesystem::path& run_dir) {
+    if (utf16_length(text) <= output_page) return reply;
+    const json::Value artifact = store_artifact(text, run_dir, "run_shell");
+    const std::string clean = redact_artifact(text);
+    const std::string page = utf16_slice(clean, 0, output_page);
+    const std::size_t total = utf16_length(clean);
+    const std::size_t shown = utf16_length(page);
+    const std::string path = artifact.find("outputPath")->as_string();
+    reply.set("output", page);
+    reply.set("truncated", true);
+    reply.set("outputPath", path);
+    reply.set("totalChars", static_cast<double>(total));
+    reply.set("digest", artifact.find("digest")->as_string());
+    reply.set("offset", static_cast<double>(0));
+    reply.set("next", static_cast<double>(shown));
+    reply.set("notice", "[gm: output is " + std::to_string(total) + " characters; the first " + std::to_string(shown) +
+                            " are in output. Read on with gm.read_file({ path: " + json::dump(json::Value(path)) +
+                            ", unit: \"chars\", offset: " + std::to_string(shown) + ", limit: " + std::to_string(output_page) +
+                            " }) until next is null]");
     return reply;
 }
 
@@ -165,7 +186,7 @@ const std::vector<VerbInfo>& verb_table() {
     {"edit_file", "Replace old with new in a text file, inside or outside the workspace. old must occur once, unless replaceAll is true.", R"json({"type":"object","properties":{"path":{"type":"string"},"old":{"type":"string"},"new":{"type":"string"},"replaceAll":{"type":"boolean"}},"required":["path","old","new"]})json"},
     {"stat_file", "Type, size and mtime of a path, inside or outside the workspace, as JSON.", R"json({"type":"object","properties":{"path":{"type":"string"}},"required":["path"]})json"},
     {"list_dir", "List a directory, inside or outside the workspace. Directories end with \"/\". prefix keeps names that start with it, offset and limit page the sorted list, and the reply gives total and next.", R"json({"type":"object","properties":{"path":{"type":"string"},"prefix":{"type":"string"},"offset":{"type":"number"},"limit":{"type":"number"}},"required":[]})json"},
-    {"run_shell", "Run a shell command in the workspace and wait for it. Default timeout 60000 ms. Its process group is killed when it returns, so background work must go through job_start. Large output is condensed by default; pass raw:true for the whole text, and compressed/originalChars/keptChars/droppedLines report what was dropped.", R"json({"type":"object","properties":{"command":{"type":"string"},"timeoutMs":{"type":"number"},"raw":{"type":"boolean"}},"required":["command"]})json"},
+    {"run_shell", "Run a shell command in the workspace and wait for it. Default timeout 60000 ms. Its process group is killed when it returns, so background work must go through job_start. Large output is condensed by default; raw:true skips condensing. The reply carries at most 20000 characters inline; longer output adds outputPath (the whole text), totalChars, digest, offset, next and truncated, and read_file pages the rest. compressed/originalChars/keptChars/droppedLines report what condensing dropped.", R"json({"type":"object","properties":{"command":{"type":"string"},"timeoutMs":{"type":"number"},"raw":{"type":"boolean"}},"required":["command"]})json"},
     {"job_start", "Start a shell command as a named background job and return at once. Poll it with job_status. timeoutMs is the job's deadline in milliseconds: default 300000, at most 3600000 (and never past the job lifetime, 3600000 by default). At the deadline the job's process group gets SIGTERM, then SIGKILL, and the job ends killed with reason timeout. job_status reports the deadline as timeoutMs. progress is an optional file path whose modification time counts as job progress, so a job that writes results without printing is not reported stuck.", R"json({"type":"object","properties":{"job":{"type":"string"},"command":{"type":"string"},"timeoutMs":{"type":"number"},"progress":{"type":"string"}},"required":["job","command"]})json"},
     {"job_status", "State (running, exited or killed), exitCode, signal and output of a job as plain fields, with logPath (the job output file). output is the last 20000 characters, with total (its length) and truncated; with offset, output is the 20000 characters from that offset, with next. waitMs polls until the job leaves running, capped at 30000 ms (30 s; a larger waitMs is clamped); re-arm gm.job_status({ job, waitMs: 30000 }) while state is running. Offsets and lengths count characters, not lines.", R"json({"type":"object","properties":{"job":{"type":"string"},"waitMs":{"type":"number"},"offset":{"type":"number"}},"required":["job"]})json"},
     {"job_stop", "Stop a background shell job: its process group is killed, and the job ends killed with reason cancelled. The job event is logged before the answer. A job that already ended is an error result. stopBackground stops run_code bodies only.", R"json({"type":"object","properties":{"job":{"type":"string"}},"required":["job"]})json"},
@@ -668,13 +689,14 @@ struct CoreVerbs::Impl {
         if (!outcome.started) return failure("spawn of the shell failed");
         const json::Value* raw = args.find("raw");
         const bool bypass = raw != nullptr && raw->is_bool() && raw->as_bool();
-        const auto condense = [&](json::Value reply) {
-            if (bypass) return reply;
+        const auto bound = [&](json::Value reply) {
             const json::Value* text = reply.find("output");
             if (text == nullptr || !text->is_string()) return reply;
-            const auto condensed = gm::verbs::condense_output(text->as_string());
-            if (!condensed) return reply;
-            json::Value artifact = store_artifact(text->as_string(), log.dir(), "run_shell");
+            const std::string full = text->as_string();
+            std::optional<gm::verbs::Condensed> condensed;
+            if (!bypass) condensed = gm::verbs::condense_output(full);
+            if (!condensed) return cut_shell_output(reply, full, log.dir());
+            json::Value artifact = store_artifact(full, log.dir(), "run_shell");
             json::Value shown = reply;
             shown.set("output", condensed->output + "\n" + artifact.find("notice")->as_string());
             shown.set("compressed", true);
@@ -695,7 +717,7 @@ struct CoreVerbs::Impl {
             reply.set("error", "timed out after " + json::dump(json::Value(timeout_ms)) + " ms");
             reply.set("output", std::move(output));
             reply.set("launcher", outcome.launcher);
-            return condense(reply);
+            return bound(reply);
         }
         reply.set("ok", outcome.exit_code == 0);
         if (outcome.signal != 0) {
@@ -708,7 +730,7 @@ struct CoreVerbs::Impl {
         }
         reply.set("output", std::move(output));
         reply.set("launcher", outcome.launcher);
-        return condense(reply);
+        return bound(reply);
     }
 
     json::Value job_start(const json::Value& args) {

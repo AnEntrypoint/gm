@@ -72,7 +72,7 @@ export function openLog(file) {
       size += bytes;
       tail.push(event);
       if (tail.length > WINDOW) tail.shift();
-      if (PENDING_KINDS.has(kind)) {
+      if (PENDING_KINDS.has(kind) && !(kind === 'job' && event.state === 'running')) {
         flush();
         appendPending(runDir, event);
       }

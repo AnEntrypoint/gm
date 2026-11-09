@@ -146,7 +146,7 @@ const BASE_TOOLS = [
   { name: 'edit_file', description: 'Replace old with new in a text file, inside or outside the workspace. old must occur once, unless replaceAll is true.', inputSchema: objectSchema({ path: text, old: text, new: text, replaceAll: { type: 'boolean' } }, ['path', 'old', 'new']) },
   { name: 'stat_file', description: 'Type, size and mtime of a path, inside or outside the workspace, as JSON.', inputSchema: objectSchema({ path: text }, ['path']) },
   { name: 'list_dir', description: 'List a directory, inside or outside the workspace. Directories end with "/". prefix keeps names that start with it, offset and limit page the sorted list, and the reply gives total and next.', inputSchema: objectSchema({ path: text, prefix: text, offset: number, limit: number }) },
-  { name: 'run_shell', description: 'Run a shell command in the workspace and wait for it. Default timeout 60000 ms. Its process group is killed when it returns, so background work must go through job_start. Large output is condensed by default; pass raw:true for the whole text, and compressed/originalChars/keptChars/droppedLines report what was dropped.', inputSchema: objectSchema({ command: text, timeoutMs: number, raw: { type: 'boolean' } }, ['command']) },
+  { name: 'run_shell', description: 'Run a shell command in the workspace and wait for it. Default timeout 60000 ms. Its process group is killed when it returns, so background work must go through job_start. Large output is condensed by default; raw:true skips condensing. The reply carries at most 20000 characters inline; longer output adds outputPath (the whole text), totalChars, digest, offset, next and truncated, and read_file pages the rest. compressed/originalChars/keptChars/droppedLines report what condensing dropped.', inputSchema: objectSchema({ command: text, timeoutMs: number, raw: { type: 'boolean' } }, ['command']) },
   { name: 'job_start', description: 'Start a shell command as a named background job and return at once. Poll it with job_status. timeoutMs is the job deadline: default 300000 ms, at most 3600000 ms; the job is killed at its deadline (reason timeout). progress is an optional file path whose modification time counts as job progress, so a job that writes results without printing is not reported stuck.', inputSchema: objectSchema({ job: text, command: text, timeoutMs: number, progress: text }, ['job', 'command']) },
   { name: 'job_status', description: 'State (running, exited or killed), exitCode, signal and output of a job as plain fields, with logPath (the job output file). output is the last 20000 characters, with total (its length) and truncated; with offset, output is the 20000 characters from that offset, with next. waitMs polls until the job leaves running, capped at 30000 ms (30 s; a larger waitMs is clamped); re-arm gm.job_status({ job, waitMs: 30000 }) while state is running. Offsets and lengths count characters, not lines.', inputSchema: objectSchema({ job: text, waitMs: number, offset: number }, ['job']) },
   { name: 'job_stop', description: 'Stop a background shell job: its process group is killed, and the job ends killed with reason cancelled. The job event is logged before the answer. A job that already ended is an error result. stopBackground stops run_code bodies only.', inputSchema: objectSchema({ job: text }, ['job']) },
@@ -695,7 +695,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     const auditArgs = given === '' ? {} : { task: shownTask, owner: ownerMarked, correction };
     return act('next_context', auditArgs, access, async () => {
       await untilPending(runDir, waitMs);
-      return context(step, rpcId, compactChildren);
+      return context(step, rpcId, compactChildren, waitMs > 0);
     }, ({ ok, error, prefixSha, total }) => ({ ok, error, prefixSha, total }), rpcId);
   }  let prefixMemo = null;
   function prefixShaFor(rules) {
@@ -703,7 +703,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     return prefixMemo.sha;
   }
 
-  async function context(step, rpcId, compactChildren = false) {
+  async function context(step, rpcId, compactChildren = false, waiting = false) {
     const rules = await readFile(join(runDir, 'rules.md'), 'utf8');
     const recoveryNow = pendingRecovery === null ? undefined : recoveryNote(pendingRecovery);
     pendingRecovery = null;
@@ -728,17 +728,19 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
       run: runId,
       stepsLeft: maxSteps - step,
       maxSteps,
-      rules,
-      task: task === '' ? null : headChars(task, TASK_PAGE),
-      ...(task === '' ? { taskNotice: 'No task yet. The gm skill prompt, with its task argument, gives the task of this run.' } : {}),
-      ...(task.length > TASK_PAGE ? { taskChars: task.length, taskTruncated: true, taskNotice: taskRestNotice(task) } : {}),
+      ...(waiting ? { rulesPath: join(runDir, 'rules.md') } : {
+        rules,
+        task: task === '' ? null : headChars(task, TASK_PAGE),
+        ...(task === '' ? { taskNotice: 'No task yet. The gm skill prompt, with its task argument, gives the task of this run.' } : {}),
+        ...(task.length > TASK_PAGE ? { taskChars: task.length, taskTruncated: true, taskNotice: taskRestNotice(task) } : {}),
+      }),
       witness: DEFAULT_WITNESS,
       prefixSha: prefixShaFor(rules),
       total: log.count(),
       pendingCommands: {
         wait: `node "${join(ROOT, 'src', 'cli.mjs')}" events --dir "${runDir}" --wait`,
       },
-      ...feed,
+      ...(waiting ? {} : feed),
       query: queryHintOf(shown, log.count()),
       ...(recoveryNow ? { recovery: recoveryNow } : {}),
       ...(rulesOpen.size > 0 ? { rulesPending: rulesNotice() } : {}),

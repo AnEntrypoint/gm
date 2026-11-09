@@ -213,6 +213,7 @@ struct JobTable::Job {
     bool settled = false;
     bool kill_requested = false;
     bool lifetime_killed = false;
+    std::uint64_t timeout_ms = 0;
     std::optional<std::string> kill_reason;
 #if defined(_WIN32)
     HANDLE process = nullptr;
@@ -318,6 +319,7 @@ json::Value JobTable::start(const std::string& name, const std::string& command,
     if (progress) job->progress = std::filesystem::path(*progress).is_absolute() ? std::filesystem::path(*progress) : workspace_ / *progress;
     std::uint64_t deadline_ms = std::min(timeout_ms, lifetime_ms_);
     job->lifetime_killed = lifetime_ms_ < timeout_ms;
+    job->timeout_ms = deadline_ms;
     job->status.set("job", name);
     job->status.set("command", command);
     job->status.set("state", "running");
@@ -374,6 +376,10 @@ void JobTable::settle(Job& job, std::optional<int> exit_code, json::Value signal
     bool exited = exit_code.has_value() && !job.kill_requested;
     std::string state = exited ? "exited" : "killed";
     std::optional<std::string> reason = exited ? std::nullopt : job.kill_reason;
+    std::optional<std::string> statement;
+    if (reason && *reason == "timeout") {
+        statement = "job " + job.name + " stopped: timeout after " + std::to_string(job.timeout_ms) + " ms";
+    }
     json::Value exit_value = exit_code ? json::Value(*exit_code) : json::Value(nullptr);
 
     json::Value ended = job.status;
@@ -381,6 +387,10 @@ void JobTable::settle(Job& job, std::optional<int> exit_code, json::Value signal
     ended.set("exitCode", exit_value);
     ended.set("signal", signal);
     if (reason) ended.set("reason", *reason);
+    if (statement) {
+        ended.set("timedOut", true);
+        ended.set("statement", *statement);
+    }
     write_status(job.dir, job.name, ended);
 
     json::Value event;
@@ -390,6 +400,11 @@ void JobTable::settle(Job& job, std::optional<int> exit_code, json::Value signal
     event.set("signal", signal);
     event.set("startMono", job.start_mono);
     if (reason) event.set("reason", *reason);
+    if (statement) {
+        event.set("timedOut", true);
+        event.set("timeoutMs", job.timeout_ms);
+        event.set("statement", *statement);
+    }
     unlogged_.push_back({"job", std::move(event)});
     if (job.kill_reason) {
         json::Value killed;
@@ -525,7 +540,7 @@ json::Value JobTable::status(const json::Value& args) {
     std::size_t end = std::min(from + output_page, length);
     reply.set("output", utf16_slice(text, from, end));
     reply.set("total", static_cast<std::uint64_t>(length));
-    reply.set("truncated", end < length);
+    reply.set("truncated", from > 0 || end < length);
     reply.set("offset", static_cast<std::uint64_t>(from));
     reply.set("next", end < length ? json::Value(static_cast<std::uint64_t>(end)) : json::Value(nullptr));
     reply.set("logPath", has_log_path ? json::Value(log_path) : json::Value(nullptr));

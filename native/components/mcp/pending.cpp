@@ -141,6 +141,12 @@ bool is_pending_kind(std::string_view kind) {
     return kinds.contains(kind);
 }
 
+bool is_pending_event(std::string_view kind, const Value& event) {
+    if (!is_pending_kind(kind)) return false;
+    const Value* state = event.find("state");
+    return !(kind == "job" && state != nullptr && state->is_string() && state->as_string() == "running");
+}
+
 void append_pending(const fs::path& run_dir, const Value& event) {
     Value record = object();
     if (const Value* seq = event.find("seq")) record.set("id", *seq);
@@ -213,6 +219,7 @@ void enqueue_pending(const RunLog& log, std::string_view kind, std::uint64_t seq
     if (seq == 0 || !detail::is_pending_kind(kind)) return;
     auto written = log.read_from(seq - 1);
     if (!written || written->empty()) return;
+    if (!detail::is_pending_event(kind, written->front())) return;
     detail::append_pending(log.dir(), written->front());
 }
 

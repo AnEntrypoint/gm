@@ -289,7 +289,7 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
         signal: status.signal ?? null,
         output: text.slice(from, end),
         total: text.length,
-        truncated: end < text.length,
+        truncated: from > 0 || end < text.length,
         offset: from,
         next: end < text.length ? end : null,
         logPath: logPath ?? null,
@@ -390,7 +390,7 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
     job.lifetimeKilled = jobLifetimeMs < timeoutMs;
     const timer = setTimeout(() => {
       job.killRequested = true;
-      if (job.lifetimeKilled) job.killReason = 'lifetime';
+      job.killReason = job.lifetimeKilled ? 'lifetime' : 'timeout';
       killGroup(child.pid);
     }, Math.min(timeoutMs, jobLifetimeMs));
     job.done = new Promise((settle) => {
@@ -400,9 +400,10 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
         clearTimeout(timer);
         const state = exitCode !== null && !job.killRequested ? 'exited' : 'killed';
         const reason = state === 'killed' ? job.killReason : undefined;
-        const ended = { ...status, state, exitCode, signal, ...(reason === undefined ? {} : { reason }) };
+        const timeoutFields = reason === 'timeout' ? { timedOut: true, timeoutMs: status.timeoutMs, statement: `job ${name} stopped: timeout after ${status.timeoutMs} ms` } : {};
+        const ended = { ...status, state, exitCode, signal, ...(reason === undefined ? {} : { reason }), ...timeoutFields };
         writeStatus(name, ended);
-        log.append('job', { job: name, state, exitCode, signal, startMono, ...(reason === undefined ? {} : { reason }) });
+        log.append('job', { job: name, state, exitCode, signal, startMono, ...(reason === undefined ? {} : { reason }), ...timeoutFields });
         if (job.killReason !== undefined) {
           log.append('job-killed', { job: name, reason: job.killReason, ...(job.killReason === 'lifetime' ? { lifetimeMs: jobLifetimeMs } : {}), tail: readTail(outputFile, TAIL_CAP) });
         }
@@ -731,11 +732,18 @@ export function storeArtifact(text, runDir, label) {
 }
 
 function condenseShell(result, raw, runDir) {
-  if (raw || typeof result?.output !== 'string') return result;
-  const condensed = condenseOutput(result.output);
-  if (condensed === null) return result;
+  if (typeof result?.output !== 'string') return result;
+  const condensed = raw ? null : condenseOutput(result.output);
+  if (condensed === null) return cutShellOutput(result, runDir);
   const artifact = storeArtifact(result.output, runDir, 'run_shell');
   return { ...result, ...condensed, ...artifact, output: condensed.output + '\n' + artifact.notice };
+}
+
+function cutShellOutput(result, runDir) {
+  if (result.output.length <= OUTPUT_PAGE) return result;
+  const artifact = storeArtifact(result.output, runDir, 'run_shell');
+  const page = headChars(redactArtifact(result.output), OUTPUT_PAGE);
+  return { ...result, output: page, outputPath: artifact.outputPath, totalChars: artifact.totalChars, digest: artifact.digest, offset: 0, next: page.length, truncated: true, notice: `[gm: output is ${artifact.totalChars} characters; the first ${page.length} are in output. Read on with gm.read_file({ path: ${JSON.stringify(artifact.outputPath)}, unit: "chars", offset: ${page.length}, limit: ${OUTPUT_PAGE} }) until next is null]` };
 }
 
 const LOGGED_REPLY_CHARS = 1000;

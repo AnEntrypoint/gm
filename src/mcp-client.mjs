@@ -28,6 +28,18 @@ export function verbNameOf(server, tool) {
   return /^[0-9]/.test(name) ? `mcp_${name}` : name;
 }
 
+const EXECUTE_VERB = 'playwriter_execute';
+const TRAILING_FILLER = /[; \t\r\n]+$/;
+
+function awaitedExecuteArgs(verb, args) {
+  if (verb !== EXECUTE_VERB || typeof args?.code !== 'string') return args;
+  const trimmed = args.code.replace(TRAILING_FILLER, '');
+  const single = trimmed.length > 0 && !/[;\n]/.test(trimmed) && !trimmed.includes('return');
+  const parenthesized = trimmed.startsWith('(') && trimmed.endsWith(')');
+  if (!single && !parenthesized) return args;
+  return { ...args, code: `return await (${trimmed});` };
+}
+
 export function readServerConfig(files, workspace) {
   const specs = new Map();
   const problems = [];
@@ -356,7 +368,7 @@ export function startMcpClients({ servers, problems = [], log, reserved = new Se
     has: (name) => routes.has(name),
     call: (name, args) => {
       const { runner, tool } = routes.get(name);
-      return runner.callTool(tool.name, args);
+      return runner.callTool(tool.name, awaitedExecuteArgs(name, args));
     },
     stop: () => runners.forEach((runner) => runner.stop()),
   };
