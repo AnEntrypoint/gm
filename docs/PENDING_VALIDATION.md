@@ -282,3 +282,22 @@ Parity gate, before the cutover: `22/93 scenarios match, 0 cutover-expected, 56 
 - Gate (tools/ship.sh, src/gate.mjs runGate): `{"gate":true,"failed":[]}`, `gate exit code: 0`.
 - Node-reference parity (native/tests/parity/run.mjs, Node reference from HEAD): `22/93 scenarios match, 0 cutover-expected, 56 native-ahead, 15 documented-gap, 0 differ`, exit 0. Unchanged from before the cutover, as expected: the Node host is untouched.
 - Left open, not changed: /config/.gemini/settings.json and /config/.config/zed/settings.json register `node /workspace/gm-new/tools/relay.mjs` for gm. /workspace/gm-new does not exist, so those entries do not start at all. They are other hosts' configs and need the owner's decision.
+
+## Gemini and Zed gm entries point at the native host (2026-11-09)
+
+The "left open" note in the Phase B results above is superseded by this section.
+
+Before: both entries ran `node /workspace/gm-new/tools/relay.mjs --mcp-config /config/.gm-new/mcp.json`. /workspace/gm-new does not exist, so neither host ever started gm.
+
+After: both entries run `/config/.gmnew/current/gm serve`, the same entry shape as the Claude Code entry in /config/.claude.json. The `--mcp-config /config/.gm-new/mcp.json` layer is no longer passed. That layer only added a playwriter server from /workspace/pw with PLAYWRITER_NO_SANDBOX=1. The Claude Code entry never passed it, so these hosts now get the same playwriter setup as Claude Code (defaults/mcp.json).
+
+| # | File | Backup (copied before the edit, cp -p) | Before | After |
+|---|---|---|---|---|
+| 52 | /config/.gemini/settings.json, mcpServers.gm | /config/.gemini/settings.json.bak-2026-11-09T051916 | `{"command":"node","args":["/workspace/gm-new/tools/relay.mjs","--mcp-config","/config/.gm-new/mcp.json"]}` | `{"command":"/config/.gmnew/current/gm","args":["serve"]}` |
+| 53 | /config/.config/zed/settings.json, context_servers.gm | /config/.config/zed/settings.json.bak-2026-11-09T051916 | `{"source":"custom","command":"node","args":["/workspace/gm-new/tools/relay.mjs","--mcp-config","/config/.gm-new/mcp.json"],"env":{}}` | `{"source":"custom","command":"/config/.gmnew/current/gm","args":["serve"],"env":{}}` |
+
+Witness: each entry was read back from disk, then its command and args were launched as a stdio host from a new empty workspace. Both answered the same:
+- initialize: protocolVersion 2025-11-25, serverInfo name gm, title "gm run worker", version 0.1.0 (MCP protocol level; the build is ae4ef46-278).
+- tools/list: next_context, finish, run_code.
+
+The backups are byte-identical to the originals (cmp).
