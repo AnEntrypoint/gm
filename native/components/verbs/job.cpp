@@ -580,6 +580,7 @@ json::Value JobTable::stop(const json::Value& args) {
     reply.set("ok", true);
     reply.set("state", "killed");
     reply.set("reason", *job.kill_reason);
+    reply.set("statement", kill_statement(name, *job.kill_reason, 0, lifetime_ms_));
     reply.set("output", "stopped job " + name);
     return reply;
 }
