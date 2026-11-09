@@ -1098,3 +1098,22 @@ Also in this pass, for the jayzee subagent report (gm skill guidance):
 
 Files in this commit (17 modified or new in the tree, plus this file):
 .github/workflows/release.yml (item 1), README.md (items 2 and 5), defaults/mcp.json (item 5), native/components/mcpclient/client.cpp (items 2 and 3), native/components/mcpclient/config.cpp (item 2), native/components/mcpclient/config.hpp (item 2), skills/gm/SKILL.md (subagent file work), skills/gm/WORKFLOWS.md (subagent file work), src/mcp-client.mjs (items 2 and 3), tools/check-build.mjs (item 2), tools/check-caller.mjs (item 1), tools/check-console.mjs (item 1), tools/check-inflight.mjs (item 1), tools/check-read-truncation.mjs (item 1), tools/check-relay-exit.mjs (item 1), tools/check-search-root.mjs (item 1), tools/lib/gm-stdio.mjs (item 1), tools/check-startup-attempts.mjs (new, items 2 and 3), tools/lib/no-playwriter.mjs (new, item 1), docs/PENDING_VALIDATION.md (this record).
+
+## gm pass, Phase B (2026-11-09, Phase A commit 746c4b8): witnesses for the release, arm and playwriter items
+
+Build: `rm -rf build/release`, `cmake --preset release`, `cmake --build build/release -j 4`, BUILD_EXIT 0.
+
+Witnesses (quoted from the runs):
+- Conformance and the real-tree checks, `node tools/check-build.mjs build/release` (one clean run; an earlier run was overlapped by a stale process on the same log and is not counted): `conformance: 86 passed, 0 failed of 86 checks in 24 scenarios`; `read-truncation: passed: ...`; `check-startup-attempts: passed: a server that exits before it answers is retried and each attempt's exit code is named, and a timed-out server names its startup budget, in node and native`; `CHECK_BUILD_EXIT=0`.
+- `npm run check`: `check: gate, unit-test scan, g3 snapshot, redaction witness, read truncation, caller, search root, inflight, relay exit, console, lost wording, prd legacy list, commit digest, task set, child task, output recovery, context feed, grep paging, prd receipt, prd refuted reopen, instruction automations, job progress and documented gap checks passed`, CHECK_EXIT 0.
+- ctest, `ctest --test-dir build/release --output-on-failure`: `1/1 Test #1: check-build ...... Passed  304.34 sec`, `100% tests passed, 0 tests failed out of 1`, CTEST_EXIT 0.
+- Startup retry and named causes (items 2 and 3), `node tools/check-startup-attempts.mjs build/release/native/components/host/gm`: `node: 8 mcp-server events, all expectations hold`, `native: 8 mcp-server events, all expectations hold`, passed. A cold `npx -y -p github:AnEntrypoint/pw#ebbba11 playwriter-project status` with a private cache ran past 150 s (exit 124), so the pin's first start is slow here; the default launcher budget is 600000 ms.
+- Release manifest on a real archive: `node tools/package.mjs --target x64-linux --build-dir build/release --out <scratch>` wrote `gmnew-x64-linux.tar.gz`, then `node tools/release-manifest.mjs --dir <scratch> ...` exited 0 with the row `| x64-linux | built this push | gmnew-x64-linux.tar.gz |`, and the other five targets as `failed this push` (no archive in the scratch dir).
+- Read-truncation without a playwriter start (release blocker): `node tools/check-read-truncation.mjs` passed in 0.06 s on Node; the native run is in check-build.
+- WebGPU on a fresh profile (item 5, pw ebbba11): with `PLAYWRITER_WEBGPU=1`, adapter `{ vendor: 'nvidia', architecture: 'ampere', isFallbackAdapter: false }`; control without it, `{ secure: true, hasGpu: true, adapter: null }`. The gate log has `seeded WebGPU labs into .../browser-profile/Local State`.
+- Failure cause visible to the caller (item 6): `browser install failed (exit 1); see .../browser.log: Fetching latest Chrome for Testing version... | Error: fetch failed`.
+- Per-project isolation (item 4): four projects, four gates, four profiles and debug ports (see item 4 above).
+- Subagent file work (item 5): `{"skillHasRule":true,"workflowsHasRule":true,"skillTruncated":false}`.
+- Gate: `tools/ship.sh` on 746c4b8 `{"gate":true,"failed":[]}`, exit 0.
+
+Release run: see the entry after the push.
