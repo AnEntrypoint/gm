@@ -834,3 +834,20 @@ Cause: fetch's `timeoutMs` bounded only curl. The `match` filter ran in-process 
 | 23 | tools/check-run-code-budget.mjs | two cases added: a 3000 ms fetch with a catastrophic match against a fast route, and a 3000 ms fetch against the held route. Each must return ETIMEDOUT with `attempts` 1. The match case must return within 20000 ms and the timeout case within 15000 ms | the budget check below |
 
 Node: src/fetch.mjs is unchanged. Its match runs with no deadline (`boundedText`, src/fetch.mjs:90), and each attempt inside `retrying` (src/fetch.mjs:41) gets its own `AbortSignal.timeout(timeoutMs)` (src/fetch.mjs:60), so the whole-call bound does not hold there either. This is a native-ahead difference; owner decision: port to Node or record it as native-ahead.
+
+## G1 and G8 witnesses (2026-11-09, Phase B)
+
+First witness run, before row 24 (`node tools/check-build.mjs build/release`, binary from b7b2c5a): `run-code-budget-check: 1 failure(s)`, `match bound: expected a 3000 ms timeout in one attempt, got {"ok":false,"error":"the bounded call passed its deadline"}`. Cause: `throw_text` in engine.cpp builds a JS_ThrowInternalError, and native/third_party/quickjs-ng/quickjs.h says an InternalError "cannot be caught by JS code", so fetch's catch never ran and the body failed.
+
+| # | File | Change | Witness needed |
+|---|---|---|---|
+| 24 | native/components/quickjs/engine.cpp | call_deadline throws a plain Error (JS_ThrowPlainError) when the bound fires, so the fetch leaf catches it | the check below, exit 0 |
+
+Witness after row 24 (`cmake --build build/release` exit 0, then `node tools/check-build.mjs build/release`, exit 0):
+
+- `conformance: 85 passed, 0 failed of 85 checks in 24 scenarios`
+- `run-code-budget-check: ok (a 65 s JavaScript body with timeoutMs 100000 returned in 65020 ms; a fetch leaf held by the server for 50000 ms ended in 50024 ms with no old fixed limit; a 3000 ms fetch with a catastrophic match timed out in 3004 ms in one attempt; a 3000 ms fetch that timed out ended in 3014 ms in one attempt)`
+- `run-code-progress-check: ok`, `shell-stdin-check: ok`, and the replay witness with `"feedHasBrief": false`
+- `check-build: gm-core stamp b7b2c5a-dev (b7b2c5a)`
+
+G1 is closed: the leaf is a fixed 50 s hold, measured at 50024 ms. G8 is closed: a catastrophic match is cut at 3004 ms, and a timed-out call returns in 3014 ms with one attempt, where the code before row 22 allowed about four times `timeoutMs` (read from the retry loop; not timed). The pre-fix binary was not rerun for the failing-then-passing pair; the failing run above is the pre-row-24 binary.

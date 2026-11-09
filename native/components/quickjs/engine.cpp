@@ -111,7 +111,7 @@ JSValue call_deadline(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv
     if (JS_IsException(result) && bound <= outer && Clock::now() >= bound) {
         JS_FreeValue(ctx, JS_GetException(ctx));
         session->deadline_passed = outer_passed;
-        return throw_text(ctx, "the bounded call passed its deadline");
+        return JS_ThrowPlainError(ctx, "the bounded call passed its deadline");
     }
     return result;
 }
