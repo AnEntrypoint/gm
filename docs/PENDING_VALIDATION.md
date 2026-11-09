@@ -513,3 +513,32 @@ V4 is the CRLF comparison in tools/check-shell-stdin.mjs from 4e82f40 (job outpu
 - Parity, `node native/tests/parity/run.mjs --bin build/release/native/components/host/gm`: `22/93 scenarios match, 0 cutover-expected, 56 native-ahead, 15 documented-gap, 0 differ`; PARITY_EXIT 0.
 
 Status: finished for rank 1 (server-path reap). V4 remains a CI item (see "V4 decided"), not in this blocking list.
+
+## Row unknown-mw6bc4mv1c00: closed stale (2026-11-09)
+
+Decision: the row is stale and is closed. The fx peer closed it, and gm records that close here; gm did not force finish or change fx's state.
+
+Evidence:
+- The fx close file, /workspace/fx/closes/unknown-mw6bc4mv1c00.txt, written 2026-11-09T09:50:59.092Z: "unknown-mw6bc4mv1c00 resolved Stale: the push target is reachable now. git ls-remote --heads origin main (run event 21) = 8ba14479454cfd2efb395d8bcdabf57036e2cd66 refs/heads/main, and git push origin main a4a8e963..8ba14479 returned PUSH_EXIT=0 (run 2026-11-09-09-35-53-9ce83e)."
+- Checked here, in /workspace/fx/fx: `git ls-remote origin main` returns `a5b47122b7b9da4f4a2fc1b5feb5e44da3bd2b9e refs/heads/main`, so the push target is reachable. `8ba14479` is a commit and an ancestor of `a5b47122` (`git merge-base --is-ancestor` passes).
+- fx's own head `a5b47122` has the commit message "Record fresh zig build test witnesses and the stale push-target row".
+- /workspace/fx/rows has no file for the row.
+- The row's blocker, "push target AnEntrypoint/gmfx unavailable", does not hold now, so the row is stale.
+
+Inconsistency found (a defect): this ledger still listed the row as open in the Phase B and ranked tables (lines ~377, 389, 452 and 498 of this doc) and in the AGENTS.md note. Cause: gm's records were written from fx's run logs (log.jsonl) and never reread fx's closes/ directory, and nothing syncs the fx workspace into this checkout. Fixed by this record and by the AGENTS.md note, which now says the row was closed stale on 2026-11-09. The older pass records above stay as history.
+
+work/tooling-fix-units.json: the row is not a unit there. Its one mention is in unit finish-open-row-step-limit, whose note quotes fx's 2026-11-07 finish refusal. That unit's status (open) is about finish's refusal rule, not this row, so it is left unchanged.
+
+## Ranked remaining work (2026-11-09, after the reconciliation)
+
+| rank | item | status | blocker |
+|---|---|---|---|
+| 1 | rows.mjs:196 message "no commit X in this repository" also covers a non-repository root | open, unblocked | none |
+| 2 | f80cd46 leaf assertion accepts a background run; tighten it to require status 200 within the body budget | open, unblocked | none |
+| 3 | Node run_code budget parity with native beyond the 65 s case (the V2 case is verified) | open | owner decision: native-ahead or port |
+| 4 | finish-open-row-step-limit (work/tooling-fix-units.json): let a report close with a documented open row without weakening finish | open | owner decision on finish semantics |
+| 5 | Shell-job lifetime equals the job_start cap, so the lifetime reason is unreachable for shell jobs | open | owner decision |
+| 6 | The .mcp.json pass | not started | owner schedules it |
+| 7 | Windows and macOS builds; V4 CRLF check from 4e82f40 | CI | a Windows CI run of release.yml |
+| done | fx row unknown-mw6bc4mv1c00 | closed stale, 2026-11-09 | none |
+| done | body children reaped on the server stop_orphans path | 9314e6f, witnessed on 608d03c | none |
