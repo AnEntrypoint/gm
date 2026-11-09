@@ -1117,3 +1117,19 @@ Witnesses (quoted from the runs):
 - Gate: `tools/ship.sh` on 746c4b8 `{"gate":true,"failed":[]}`, exit 0.
 
 Release run: see the entry after the push.
+
+## gm pass, release 42694076006 on 4ebe4aa: causes of the four failing jobs (2026-11-09, Phase A)
+
+Release 42694076006 (commit 4ebe4aa) completed with failure. Four build jobs failed; macOS arm64 and x64 succeeded, and gdb-arm passed in arm-diagnose 42694075619 (asan-arm was still running when this record was written). The four causes are different. They are not one cause.
+
+1. build (ubuntu-24.04-arm, arm64-linux), browser-scope-check. Cause: `playwriter_execute did not open the marker page` with `connectOverCDP: WebSocket error: ... 503 Service Unavailable` and `browser refused to start: no usable sandbox. Set PLAYWRITER_NO_SANDBOX=1`. The 503 is the symptom: the browser never started, so its DevTools socket refused the connect. The sandbox is the cause on this runner. Fix: 81c9df6 sets PLAYWRITER_NO_SANDBOX=1 in the arm64-linux Chromium step in .github/workflows/release.yml. (The 4ebe4aa step had already put PLAYWRITER_BROWSER_PATH in place, so the install path was no longer the failure here.)
+
+2. build-windows (windows-11-arm, arm64-windows), browser-scope-check. Cause: `browser install failed (exit 1)`. The step ran pw's Chrome for Testing installer, which has no arm64 Windows build. Reproduced here by running playwriter's installer with the platform reported as win32/arm64 (its own code path, /workspace/pw/node_modules/playwriter/dist/browser-install.js, getPlatformKey): `Unsupported platform for Chrome for Testing download: win32/arm64. Install Chromium manually and use PLAYWRITER_BROWSER_PATH to point to it.` The reason itself was hidden: tools/check-browser-scope.mjs cut every failure message to 200 or 300 characters, so the `browser.log` path was printed but its tail was cut off. Fixes: 362294a adds an arm64-windows step in .github/workflows/release.yml that installs playwright-core 1.65.0 and its Chromium, and sets PLAYWRITER_BROWSER_PATH (the same pattern as the arm64-linux step; the Windows arm64 build is not verified by a run yet). This pass: tools/check-browser-scope.mjs no longer truncates the playwriter reply in its five failure messages, so the install reason is printed in full.
+
+3. build-windows (windows-latest, x64-windows), check-restart-jobs. Cause: `spawn C:\...\gm-restart-jobs-bin-.../gm ENOENT`. tools/check-restart-jobs.mjs copied the binary to the temp directory under the fixed name `gm`, so on Windows the copy had no `.exe` and the spawn of `gm` found nothing. Fix: 992fea4 keeps the source file's name (`basename(resolve(target))`), so `gm.exe` stays `gm.exe`. Witness on Linux: `restart-jobs-check: ok (native: binary mtime changed ...)`.
+
+4. build (ubuntu-latest, x64-linux), Node parity step. Cause: `parity: 16/93 scenarios match, ... 1 differ`; the differing row was `mcp server events`, field `[2].attempts`. My JS startup change (746c4b8) added an `attempts` field to the Node `mcp-server` connected event; native does not write it. Fix: b3a9890 removes the field from the Node connected event, so the two engines match again. Witness on Linux: `17/93 scenarios match, 0 cutover-expected, 54 native-ahead, 22 documented-gap, 0 differ` (PARITY_EXIT 0). Note: the parity harness reads the Node reference from committed HEAD, so the fix had to be committed before the rerun.
+
+Confirmation across the four: no two failing jobs share a cause. Jobs 1 and 2 share the symptom (connectOverCDP 503) but not the cause (sandbox versus missing installer build). Jobs 3 and 4 are not browser failures.
+
+arm-diagnose 42694075619: gdb-arm passed; asan-arm was still running when this record was written, and its result is recorded in the Phase B entry.

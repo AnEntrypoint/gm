@@ -108,12 +108,12 @@ try {
   if (served.ok === true && outputOf(served).execute === true) {
     const opened = await runCode(`return { exec: await gm.playwriter_execute({ code: ${JSON.stringify(OPEN_CODE)} }), tabs: await gm.browser_tabs({}) };`);
     if (opened.ok !== true) {
-      browserPhase = `failed: the browser open did not run: ${String(opened.error ?? JSON.stringify(opened)).slice(0, 200)}`;
+      browserPhase = `failed: the browser open did not run: ${String(opened.error ?? JSON.stringify(opened))}`;
       failures.push(`browser phase: ${browserPhase}`);
     } else {
       const { exec, tabs } = outputOf(opened);
-      expect(exec?.ok === true && String(exec.output).includes(MARKER), `playwriter_execute did not open the marker page: ${JSON.stringify(exec).slice(0, 300)}`);
-      expect(tabs?.state === 'changed' && String(tabs.text).includes('tabs: 1 in this run'), `browser_tabs did not list the run's page: ${JSON.stringify(tabs).slice(0, 300)}`);
+      expect(exec?.ok === true && String(exec.output).includes(MARKER), `playwriter_execute did not open the marker page: ${JSON.stringify(exec)}`);
+      expect(tabs?.state === 'changed' && String(tabs.text).includes('tabs: 1 in this run'), `browser_tabs did not list the run's page: ${JSON.stringify(tabs)}`);
       const finishUsed = await toolReply('finish', { witness: 'browser-scope check: browser phase, page opened in the run' });
       expect(finishUsed.ok === true && sameKeys(finishUsed.browser, ['ok', 'closedPages']) && finishUsed.browser.ok === true && finishUsed.browser.closedPages >= 1, `finish reply browser key must be {ok, closedPages >= 1} after the run opened a page: ${JSON.stringify(finishUsed.browser)}`);
       await toolReply('next_context', {});
@@ -121,10 +121,10 @@ try {
       if (counted.ok === true) {
         const { count, close } = outputOf(counted);
         const match = /\[return value\] (-?\d+)/.exec(String(count?.output ?? ''));
-        expect(match !== null && Number(match[1]) === 0, `the run's page is still open after finish: ${String(count?.output ?? '').slice(0, 200)}`);
+        expect(match !== null && Number(match[1]) === 0, `the run's page is still open after finish: ${String(count?.output ?? '')}`);
         expect(close?.ok === true, `browser_close_machine with confirm did not close the scratch browser: ${JSON.stringify(close).slice(0, 200)}`);
       } else {
-        failures.push(`browser phase: the page count did not run: ${String(counted.error ?? '').slice(0, 200)}`);
+        failures.push(`browser phase: the page count did not run: ${String(counted.error ?? '')}`);
       }
       await toolReply('finish', { witness: 'browser-scope check: browser phase closed' });
       if (failures.every((text) => !text.startsWith('browser phase'))) browserPhase = 'ran: the run page was listed, closed by finish, and gone from the browser after finish';
