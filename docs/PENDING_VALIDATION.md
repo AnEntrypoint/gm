@@ -760,3 +760,5 @@ Fixed in this pass:
 | # | File | Change | Witness needed |
 |---|---|---|---|
 | 14 | tools/check-build.mjs | the post-conformance loop also runs tools/witness-next-context-replay.mjs on the built binary, so CI runs the replay witness (native path only) | `node tools/check-build.mjs build/release` prints the witness JSON with `feedHasBrief: false` and exits 0 |
+
+Phase B (2026-11-09, binary d5423f3, build unchanged since d5423f3; the commit after it changes only tools and docs): `node tools/check-build.mjs build/release` exits 0: `conformance: 85 passed, 0 failed of 85 checks in 24 scenarios`; `run-code-budget-check: ok (... ended in 116602 ms ...)`; the replay witness printed `"feedHasBrief": false`; `check-build: gm stamp d5423f3-dev (d5423f3)`. Parity from the same day's run, `22/93 scenarios match, 0 cutover-expected, 56 native-ahead, 15 documented-gap, 0 differ`, is unchanged because no src/ or native/ code changed in this pass.
