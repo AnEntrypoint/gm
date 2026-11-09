@@ -623,7 +623,7 @@ void JobTable::stop_orphans() {
         ended.set("reason", "restart");
         const json::Value* job_name = status->find("job");
         std::string written_name = job_name != nullptr && job_name->is_string() ? job_name->as_string() : name;
-        const std::string statement = kill_statement(written_name, "restart", 0, 0);
+        const std::string statement = is_body ? gm::jobs::body_restart_statement(written_name) : kill_statement(written_name, "restart", 0, 0);
         ended.set("statement", statement);
         write_status(jobs_dir(), written_name, ended);
         json::Value event;

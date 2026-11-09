@@ -990,7 +990,7 @@ struct Server::State {
             auto body = seq_field(*status, "body").value_or(0);
             std::string tail = body_text(s(), body, kTailCap);
             Value killed = *status;
-            const std::string statement = "job " + job + " killed: the gm worker restarted while it ran; a worker that died without a graceful stop leaves its body child processes running, and they are not tracked across the restart";
+            const std::string statement = ::gm::jobs::body_restart_statement(job);
             killed.set("state", "killed").set("reason", "restart").set("statement", statement);
             write_status(s(), job, killed);
             Value fields = object().set("job", job).set("body", number_of(body)).set("state", "killed");

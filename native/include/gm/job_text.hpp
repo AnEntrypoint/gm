@@ -5,6 +5,10 @@
 
 namespace gm::jobs {
 
+inline std::string body_restart_statement(const std::string& name) {
+    return "job " + name + " killed: the gm worker restarted while it ran; a worker that died without a graceful stop leaves its body child processes running, and they are not tracked across the restart";
+}
+
 inline std::string kill_statement(const std::string& name, const std::string& reason, std::uint64_t timeout_ms, std::uint64_t lifetime_ms) {
     if (reason == "timeout") return "job " + name + " stopped: timeout after " + std::to_string(timeout_ms) + " ms";
     if (reason == "lifetime") return "job " + name + " stopped: the job lifetime of " + std::to_string(lifetime_ms) + " ms ended before it finished";
