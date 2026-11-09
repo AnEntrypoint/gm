@@ -1287,3 +1287,12 @@ Blocked, with the reason and the install step:
 
 Changes in this pass:
 1. tools/check-restart-jobs.mjs, commit (see git log). Row: `windowsProcesses`. Before: a missing or failing `powershell.exe` gave an empty process table, and an empty table reads as "process gone", so a post-restart assertion could pass without reading the table. Change: a spawn error or a non-zero exit throws `cannot read the process table: ...` with the OS text or powershell's exit code and stderr. Witness (Phase B): `node tools/check-restart-jobs.mjs build/release/native/components/host/gm` still passes on Linux (the Windows branch is not taken); a one-off probe on Linux that runs the function's source with a missing `powershell.exe` must throw `cannot read the process table: spawnSync powershell.exe ENOENT`. On Windows, B1 above is the real witness.
+
+## gm pass, Phase B (2026-11-10, local, release at 4a7f2bc): the Windows guard, and B1 and B2 still blocked
+
+Witnesses, output read in full:
+- W1 restart-jobs, native, Linux: `node tools/check-restart-jobs.mjs build/release/native/components/host/gm`: exit 0, `restart-jobs-check: ok (native: ... killed with reason restart 0)`.
+- W2 restart-jobs, node, Linux: exit 0, `restart-jobs-check: ok (node: ... killed with reason restart 0)`.
+- W3 Windows process-table guard, one-off probe in the OS temporary directory (not committed): the function from tools/check-restart-jobs.mjs run with PATH=/usr/bin:/bin, where powershell.exe is absent: `THREW: cannot read the process table: spawnSync powershell.exe ENOENT`. Before the change the same call returned an empty table.
+- W4 check-build build/release: exit 0; `conformance: 86 passed, 0 failed of 86 checks in 24 scenarios`; both restart arms, the skill-serve witness and the other listed checks passed; `check-build: gm stamp 4a7f2bc-dev (4a7f2bc)`.
+- B1 and B2: not run. No Windows or arm64 Windows host here (see the Phase A entry for the probe and the install steps).
