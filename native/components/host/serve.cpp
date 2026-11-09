@@ -62,13 +62,15 @@ int run_serve(const HostArgs& args) {
                                                            run_dir->string(), "--supervised", "yes", "--owner",
                                                            relay_process_id()});
     options.reexec_argv = {current_executable().string(), "serve"};
-    for (std::string& arg : without_flags(args.rest, {"--runs", "--resume", "--run-dir", "--workspace", "--handshake"}))
+    for (std::string& arg : without_flags(args.rest, {"--runs", "--resume", "--run-dir", "--workspace", "--handshake", "--skill-read"}))
         options.reexec_argv.push_back(std::move(arg));
     options.reexec_argv.insert(options.reexec_argv.end(), {"--workspace", workspace.string(), "--run-dir",
                                                            run_dir->string()});
     if (const auto handshake = args.flag("--handshake")) {
         if (auto parsed = json::parse(*handshake)) options.initialize = std::move(*parsed);
     }
+    const auto skill_read = args.flag("--skill-read");
+    options.skill_read = skill_read && *skill_read == "yes";
     const auto build_flag = args.flag("--build-dir");
     options.build_dir = build_flag && *build_flag == "none" ? std::filesystem::path{}
                                                             : args.path_or("--build-dir", default_build_dir());

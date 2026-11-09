@@ -19,6 +19,7 @@ namespace gm::host {
 namespace {
 
 constexpr std::string_view kHandshakeId = "gm-core-handshake";
+constexpr std::string_view kGmSkillUri = "skill://gm/SKILL.md";
 constexpr std::string_view kPausedBeforeAnswer =
     "the worker paused before it answered this call; query_log shows what it did, then repeat the call if it did "
     "nothing";
@@ -120,6 +121,7 @@ void pump_host_stdin(Relay& relay) {
 Relay::Relay(RelayOptions options, std::function<void(std::string_view)> to_host)
     : options_(std::move(options)), to_host_(std::move(to_host)), retry_delay_(options_.retry_min) {
     host_initialize_ = options_.initialize;
+    skill_read_ = options_.skill_read;
 }
 
 Relay::~Relay() {
@@ -224,6 +226,11 @@ void Relay::route_host_line(Lock& lock, std::string line) {
     if (method == "initialize") {
         const json::Value* params = message->find("params");
         host_initialize_ = params != nullptr ? *params : json::Value(json::Object{});
+    }
+    if (method == "resources/read") {
+        const json::Value* params = message->find("params");
+        const json::Value* uri = params != nullptr ? params->find("uri") : nullptr;
+        if (uri != nullptr && uri->is_string() && uri->as_string() == kGmSkillUri) skill_read_ = true;
     }
     if (state_ != State::Running) {
         if (state_ == State::Failed) {
@@ -333,7 +340,11 @@ bool Relay::replay_handshake(Lock& lock) {
     auto reply = ask_worker(lock, std::string(kHandshakeId), "initialize", *host_initialize_, options_.handshake_timeout);
     if (!reply || reply->find("error") != nullptr) return false;
     send_to_worker(lock, "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\"}");
-    return true;
+    if (!skill_read_) return true;
+    json::Value params;
+    params.set("uri", std::string(kGmSkillUri));
+    auto read = ask_worker(lock, "gm-core:resources/read", "resources/read", std::move(params), options_.handshake_timeout);
+    return read && read->find("error") == nullptr;
 }
 
 void Relay::announce_changes(Lock& lock) {
@@ -453,6 +464,7 @@ void Relay::reexec() {
         argv.emplace_back("--handshake");
         argv.push_back(json::dump(*host_initialize_));
     }
+    if (skill_read_) argv.insert(argv.end(), {"--skill-read", "yes"});
     std::vector<char*> arguments;
     for (std::string& argument : argv) arguments.push_back(argument.data());
     arguments.push_back(nullptr);

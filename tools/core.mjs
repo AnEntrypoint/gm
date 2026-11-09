@@ -25,6 +25,7 @@ const ACK_MS = 30000;
 const LIST_MS = 5000;
 const HANDSHAKE_MS = 10000;
 const HANDSHAKE_ID = 'gm-core-handshake';
+const SKILL_URI = 'skill://gm/SKILL.md';
 const RETRY_MIN_MS = 1000;
 const RETRY_MAX_MS = 30000;
 const HANDOVER_EXIT = 75;
@@ -53,6 +54,7 @@ let state = 'starting';
 let swapping = false;
 let runDir = null;
 let hostInitialize = null;
+let skillRead = false;
 let seen = {};
 let heldLines = [];
 let inputBuffer = '';
@@ -167,7 +169,7 @@ function saveSession(extra = {}) {
   if (runDir === null) return;
   mkdirSync(SESSIONS, { recursive: true });
   const tmp = `${SESSION_FILE}.tmp`;
-  writeFileSync(tmp, JSON.stringify({ runDir, hostInitialize, seen, held: [], leftover: '', ...extra }));
+  writeFileSync(tmp, JSON.stringify({ runDir, hostInitialize, skillRead, seen, held: [], leftover: '', ...extra }));
   renameSync(tmp, SESSION_FILE);
 }
 
@@ -217,6 +219,10 @@ function onHostLine(line) {
   const message = parse(line);
   if (message?.method === 'initialize') {
     hostInitialize = message.params ?? {};
+    saveSession();
+  }
+  if (message?.method === 'resources/read' && message.params?.uri === SKILL_URI && !skillRead) {
+    skillRead = true;
     saveSession();
   }
   if (state !== 'running') {
@@ -357,7 +363,12 @@ function replayHandshake() {
       },
     };
     child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id: HANDSHAKE_ID, method: 'initialize', params: hostInitialize ?? DEFAULT_INITIALIZE })}\n`);
-  });
+  }).then(() => (skillRead ? replaySkillRead() : null));
+}
+
+async function replaySkillRead() {
+  const result = await askWorker('resources/read', { uri: SKILL_URI });
+  if (result === null) throw new Error('the worker did not answer the skill read');
 }
 
 function setWorkerState(next, reason) {
@@ -425,7 +436,7 @@ function waitForDrain() {
   });
 }
 
-function askWorker(method) {
+function askWorker(method, params = {}) {
   const id = `gm-core:${method}`;
   return new Promise((resolveAsk) => {
     const timer = setTimeout(() => {
@@ -437,7 +448,7 @@ function askWorker(method) {
       coreRequests.delete(id);
       resolveAsk(message.error === undefined ? (message.result ?? null) : null);
     });
-    child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id, method, params: {} })}\n`);
+    child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id, method, params })}\n`);
   });
 }
 
@@ -646,6 +657,7 @@ async function begin(mode) {
   if (mode !== 'fresh' && saved === null) throw new Error(`no session ${SESSION_NAME} to resume`);
   runDir = saved?.runDir ?? chooseRunDir(HOST_ARGS);
   hostInitialize = saved?.hostInitialize ?? null;
+  skillRead = saved?.skillRead ?? false;
   seen = saved?.seen ?? {};
   heldLines = mode === 'takeover' ? [...(saved.held ?? [])] : [];
   inputBuffer = mode === 'takeover' ? (saved.leftover ?? '') : '';

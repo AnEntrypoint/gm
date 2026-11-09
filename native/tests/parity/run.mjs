@@ -365,7 +365,7 @@ const BUILTIN_REASON = 'documented gap: native runs a body with gm only and pass
 const STATIC_REFUSAL_REASON = 'documented gap: native does not refuse a static import in a CommonJS body; the body fails in the JS engine with a load error and logs no refusal';
 const REQUIRE_REFUSAL_REASON = 'documented gap: native does not refuse a non-literal require(); the body reaches the missing require() and fails at run time, and logs no refusal';
 const LOAD_EVENT_REASON = 'documented gap: native does not list a project file that a body loads, and logs no code-load event for it; Node does both';
-const BOOT_SURFACE_REASON = 'native-ahead: the handshake no longer waits for MCP, so the boot tools event is written before the MCP verbs join; Node has the verbs at boot and writes the server, gitignore and skipped events before its tools event';
+const BOOT_SURFACE_REASON = 'native-ahead: the handshake no longer waits for MCP, so the boot tools event is written before the MCP verbs join; Node has the verbs at boot and writes the server, gitignore and skipped events before its tools event; the skill read adds a skill-loaded event that native writes before the join events, so the window runs to index 9';
 const JOIN_SEQ_REASON = 'native-ahead: native writes the MCP join events (mcp-server connected, gitignore added, mcp-tool-skipped) after its first run_code call, so that call is three sequence numbers lower than Node, which writes them at boot';
 const JOIN_GENERATION_REASON = 'native-ahead: native logs one generation event after the first MCP run, when the .gitignore the join adds changes the project fingerprint, so every later sequence number is one higher than Node';
 const MCP_ROWS = mcpScenarios().map(([name]) => `mcp ${name}`);
@@ -405,7 +405,7 @@ const NATIVE_AHEAD = [
   { row: /^(tools\/list|mcp tools\/list)$/, path: /^\.result\.tools\[0\]\.description$/, when: (left, right) => left.includes('at most 300000') && right.includes('at most 100000'), reason: 'native-ahead: next_context waitMs holds at most 100 s and a hold with nothing pending returns progress without a step (native f9cc7f7); Node still holds at most 300 s' },
   { row: 'mcp next_context', path: /^\.result\._meta\.com\.anentrypoint\.gmnew\/seq$/, when: (left, right) => Number.isInteger(left) && Number.isInteger(right) && left - right >= 1 && left - right <= 3, reason: JOIN_SEQ_REASON },
   { row: 'mcp next_context', path: /^\.result\.(content\[0\]\.text|structuredContent)\.(records|fullEvents)$/, when: (left, right) => Number.isInteger(left) && Number.isInteger(right) && left > right, reason: BOOT_SURFACE_REASON },
-  { row: 'mcp next_context', path: /^\.result\.(content\[0\]\.text|structuredContent)\.events\[[3-7]\](\.[A-Za-z]+)?$/, reason: BOOT_SURFACE_REASON },
+  { row: 'mcp next_context', path: /^\.result\.(content\[0\]\.text|structuredContent)\.events\[[3-9]\](\.[A-Za-z]+)?$/, reason: BOOT_SURFACE_REASON },
   { row: 'mcp next_context', path: /^\.result\.(content\[0\]\.text|structuredContent)\.query$/, when: (left, right) => typeof left === 'string' && typeof right === 'string', reason: BOOT_SURFACE_REASON },
   { row: 'mcp log event kinds', path: /^\.firstDivergence\[4\]$/, when: (left, right) => left[0] === 'mcp-server' && right[0] === 'tools', reason: BOOT_SURFACE_REASON },
   { row: 'mcp mcp echo', path: SEQ_PATH, when: (left, right) => Number.isInteger(left) && left - right === 3, reason: JOIN_SEQ_REASON },

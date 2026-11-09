@@ -42,6 +42,7 @@ struct RelayOptions {
     std::function<void(std::string_view)> say;
     std::vector<std::string> reexec_argv;
     std::optional<json::Value> initialize;
+    bool skill_read = false;
     std::optional<UpdatePolicy> update;
 };
 
@@ -112,6 +113,7 @@ private:
     std::map<std::string, std::shared_ptr<Waiter>> waiters_;
     std::vector<std::string> held_;
     std::optional<json::Value> host_initialize_;
+    bool skill_read_ = false;
     std::map<std::string, std::string> seen_lists_;
     std::optional<std::string> pending_restart_;
     std::string failure_;
