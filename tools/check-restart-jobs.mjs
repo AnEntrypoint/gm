@@ -98,8 +98,12 @@ const listOf = (value) => {
 
 const windowsProcesses = () => {
   const script = 'Get-CimInstance Win32_Process | Select-Object ProcessId,CommandLine | ConvertTo-Json -Compress';
-  const out = spawnSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script], { encoding: 'utf8', timeout: 30000 }).stdout ?? '';
-  const rows = out.trim() === '' ? [] : [JSON.parse(out)].flat();
+  const reply = spawnSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script], { encoding: 'utf8', timeout: 30000 });
+  if (reply.error || reply.status !== 0) {
+    throw new Error(`cannot read the process table: ${reply.error?.message ?? `powershell.exe exit ${reply.status}: ${reply.stderr.trim()}`}`);
+  }
+  const out = reply.stdout.trim();
+  const rows = out === '' ? [] : [JSON.parse(out)].flat();
   return rows.map((row) => ({ pid: Number(row.ProcessId), args: String(row.CommandLine ?? '') }));
 };
 
