@@ -3,7 +3,7 @@ import { chmodSync, copyFileSync, existsSync, mkdtempSync, readdirSync, rmSync, 
 import { spawn, spawnSync } from 'node:child_process';
 import { once } from 'node:events';
 import { tmpdir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
+import { basename, dirname, join, resolve } from 'node:path';
 import readline from 'node:readline';
 import { fileURLToPath } from 'node:url';
 
@@ -34,7 +34,7 @@ const configDir = mkdtempSync(join(tmpdir(), 'gm-restart-jobs-config-'));
 const binDir = onNode ? null : mkdtempSync(join(tmpdir(), 'gm-restart-jobs-bin-'));
 const mcpConfig = join(configDir, 'no-default-mcp.json');
 writeFileSync(mcpConfig, JSON.stringify({ mcpServers: { playwriter: { disabled: true } } }));
-const copied = onNode ? null : join(binDir, 'gm');
+const copied = onNode ? null : join(binDir, basename(resolve(target)));
 if (!onNode) {
   copyFileSync(resolve(target), copied);
   chmodSync(copied, 0o755);
