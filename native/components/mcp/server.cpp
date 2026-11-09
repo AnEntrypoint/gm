@@ -989,6 +989,7 @@ struct Server::State {
             std::string job = string_of(*status, "job");
             auto body = seq_field(*status, "body").value_or(0);
             std::string tail = body_text(s(), body, kTailCap);
+            proc::reap_ledger(dir / (job + ".pids"));
             Value killed = *status;
             const std::string statement = ::gm::jobs::body_restart_statement(job);
             killed.set("state", "killed").set("reason", "restart").set("statement", statement);
