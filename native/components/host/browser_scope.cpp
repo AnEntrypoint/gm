@@ -16,10 +16,10 @@ const char* kOpenRunContext =
     "if (!state.gmRun) { state.gmRun = await browser.newContext(); state.gmRun.setDefaultTimeout(60000); "
     "state.gmRun.setDefaultNavigationTimeout(10000); } context = state.gmRun; ";
 const char* kTabsCode =
-    "const rows = []; const counts = { projectDefault: 0, otherRun: 0 }; "
+    "const rows = []; const counts = { others: 0 }; "
     "for (const c of browser.contexts()) { for (const p of c.pages()) { if (p.isClosed()) continue; "
     "if (c === state.gmRun) rows.push({ url: p.url(), title: await p.title().catch(() => '') }); "
-    "else if (c === context) counts.projectDefault += 1; else counts.otherRun += 1; } } "
+    "else counts.others += 1; } } "
     "return 'GMTABS' + JSON.stringify({ rows, counts }) + 'GMTABS';";
 const char* kCloseCode =
     "let n = 0; if (state.gmRun) { try { n = state.gmRun.pages().filter((p) => !p.isClosed()).length; "
@@ -86,11 +86,9 @@ std::string render_view(const json::Value& view, std::size_t& count) {
     std::string text = count == 0 ? std::string("tabs: none in this run")
                                   : "tabs: " + std::to_string(count) + " in this run, safe to close on finish: " + listed;
     if (counts != nullptr && counts->is_object()) {
-        const std::size_t project = number_field(*counts, "projectDefault");
-        const std::size_t others = number_field(*counts, "otherRun");
-        if (project + others > 0) {
-            text += "; not this run and not closable by it: " + std::to_string(project) + " project default, " +
-                    std::to_string(others) + " other run";
+        const std::size_t others = number_field(*counts, "others");
+        if (others > 0) {
+            text += "; not this run and not closable by it: " + std::to_string(others) + " other pages";
         }
     }
     return text;
