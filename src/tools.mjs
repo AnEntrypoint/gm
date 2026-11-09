@@ -110,7 +110,7 @@ function lineStarts(text) {
 
 const DEFAULT_TIMEOUT_MS = 60000;
 const MAX_TIMEOUT_MS = 3600000;
-const MAX_JOB_TIMEOUT_MS = 3600000;
+const MAX_JOB_TIMEOUT_MS = 7200000;
 const TAIL_CAP = 2000;
 export const OUTPUT_PAGE = 20000;
 const MAX_WAIT_MS = 30000;

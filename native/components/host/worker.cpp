@@ -95,6 +95,10 @@ int run_worker(const HostArgs& args) {
     if (!max_inflight) return fail(max_inflight.error());
     auto stuck_ms = positive_int_flag(args, "--stuck-ms", static_cast<int>(mcp::ServerOptions{}.stuck_ms));
     if (!stuck_ms) return fail(stuck_ms.error());
+    auto max_steps = positive_int_flag(args, "--max-steps", mcp::ServerOptions{}.max_steps);
+    if (!max_steps) return fail(max_steps.error());
+    auto job_lifetime = positive_int_flag(args, "--job-lifetime-ms", static_cast<int>(mcp::ServerOptions{}.job_lifetime_ms));
+    if (!job_lifetime) return fail(job_lifetime.error());
     auto monitor_ms = positive_int_flag(args, "--monitor-ms", static_cast<int>(mcp::ServerOptions{}.monitor_ms));
     if (!monitor_ms) return fail(monitor_ms.error());
     auto task = task_of(args);
@@ -112,6 +116,7 @@ int run_worker(const HostArgs& args) {
     CoreVerbsOptions core_options;
     core_options.workspace = workspace;
     core_options.job_stuck_ms = static_cast<std::uint64_t>(*stuck_ms);
+    core_options.job_lifetime_ms = static_cast<std::uint64_t>(*job_lifetime);
     core_options.serve_skill = [serve_skill_hook, skills = skills_dir_of(args)](const std::string& uri) {
         return *serve_skill_hook ? (*serve_skill_hook)(uri) : mcp::served_skill_text(skills, uri);
     };
@@ -150,6 +155,8 @@ int run_worker(const HostArgs& args) {
     options.serve_skill_hook = serve_skill_hook;
     options.task = *task;
     options.max_inflight = *max_inflight;
+    options.max_steps = *max_steps;
+    options.job_lifetime_ms = static_cast<std::uint64_t>(*job_lifetime);
     options.stuck_ms = static_cast<std::uint64_t>(*stuck_ms);
     options.monitor_ms = static_cast<std::uint64_t>(*monitor_ms);
     options.run_dir = *run_dir;

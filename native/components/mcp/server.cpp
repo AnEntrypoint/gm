@@ -191,7 +191,8 @@ const std::string kFinishDescription =
     "End the run. witness is one string that quotes the evidence you observed. gaps optionally lists, one string "
     "each, what the run did not check; the end event logs them. finish is refused while a background run is running, "
     "and stopBackground true kills it first. finish is refused while a PRD or question row is open, and names the "
-    "rows. A gap that names an open row is refused too.";
+    "rows. A gap that names an open row is refused too. At the step limit only, openRows lists each open row of this run "
+    "with a reason, and finish proceeds while those rows stay open.";
 
 std::string run_code_description(const std::string& verb_names) {
     return "Run a JavaScript body in the project. The body is an ES module when format is esm and CommonJS when format is cjs. "
@@ -336,7 +337,8 @@ Value code_tools(const VerbTable& verbs) {
                             object_schema(object()
                                               .set("witness", str_schema())
                                               .set("gaps", object().set("type", "array").set("items", str_schema()))
-                                              .set("stopBackground", bool_schema()),
+                                              .set("stopBackground", bool_schema())
+                                              .set("openRows", object().set("type", "array").set("items", object().set("type", "object"))),
                                           {"witness"}));
     Value format = object().set("type", "string").set("enum", string_array({"esm", "cjs"}));
     Value run_code = object()
@@ -2197,7 +2199,33 @@ struct Server::State {
         }
         const std::set<std::string> added = rows_added_here();
         std::erase_if(open, [&](const Row& row) { return !added.contains(row.id); });
-        if (!open.empty()) {
+        const Value* documented = args.find("openRows");
+        bool documented_ok = documented == nullptr || documented->is_array();
+        if (documented != nullptr && documented->is_array()) {
+            for (const Value& entry : documented->as_array()) {
+                const Value* id = entry.find("id");
+                const Value* reason = entry.find("reason");
+                documented_ok = documented_ok && entry.is_object() && id != nullptr && id->is_string() && reason != nullptr &&
+                                reason->is_string() && !trim(reason->as_string()).empty();
+            }
+        }
+        if (!documented_ok) return refuse("finish", args, "openRows must be an array of {id, reason} with a non-empty reason", false);
+        const auto listed = [&](const std::string& id) {
+            if (documented == nullptr) return false;
+            for (const Value& entry : documented->as_array()) {
+                if (entry.find("id")->as_string() == id) return true;
+            }
+            return false;
+        };
+        bool documented_all = documented != nullptr && s().steps >= options.max_steps;
+        for (const Row& row : open) documented_all = documented_all && listed(row.id);
+        if (documented != nullptr) {
+            for (const Value& entry : documented->as_array()) {
+                const std::string& id = entry.find("id")->as_string();
+                documented_all = documented_all && std::any_of(open.begin(), open.end(), [&](const Row& row) { return row.id == id; });
+            }
+        }
+        if (!open.empty() && !documented_all) {
             std::string names;
             for (std::size_t i = 0; i < std::min(open.size(), kRowsNamed); ++i) {
                 names += (i == 0 ? "" : "; ") + open[i].id + " " + open[i].title;
@@ -2206,6 +2234,13 @@ struct Server::State {
                           std::to_string(open.size()) + " row(s) open: " + names + (open.size() > kRowsNamed ? "; ..." : "") +
                               ". Resolve each with its witness, or delete a PRD you will not implement with prd_delete. A "
                               "question for the owner stays open until the owner answers");
+        }
+        if (!open.empty()) {
+            json::Array documented_rows;
+            for (const Value& entry : documented->as_array()) {
+                documented_rows.push_back(object().set("id", *entry.find("id")).set("reason", *entry.find("reason")));
+            }
+            append("finish-open-rows", object().set("rows", Value(std::move(documented_rows))).set("steps", s().steps));
         }
         std::vector<ParkedRow> parked = parked_rows();
         std::erase_if(parked, [&](const ParkedRow& row) { return !added.contains(row.id); });
