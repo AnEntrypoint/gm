@@ -649,3 +649,16 @@ Parity (`node native/tests/parity/run.mjs --bin build/release/native/components/
 Not run: a negative control for the new conformance checks. They were added with the change, so no earlier binary exists to show them failing. Their passing is the witness above.
 
 Item 7 (Windows and macOS builds, V4 CRLF) stays open: it needs a Windows CI run of release.yml.
+
+## Item 7 build-only path (2026-11-09, Phase A)
+
+Cause of the failed x64-macos Test step in release run 42603306835 (job 129112817900): `run-code-budget-check` in `tools/check-run-code-budget.mjs` expects the catastrophic-regex fetch leaf (`gm.fetch` with `match: '(a+)+$'`) to return in the foreground reply. Its `run_code` timeoutMs was 200000, the foreground cutoff. On the macOS x64 runner the leaf took 193313 ms on a681ef4 (run 42601864942, passed) and 200085 ms on 78ca5a1 (run 42603306835, the reply went background with `body-6` still running). Run 42600258579 (dee9c8e) also failed the x64-macos job at its Test step; its log was not read. The product did not change: the margin under the window is the cause.
+
+Changes:
+
+| # | File | Change | Witness needed |
+|---|---|---|---|
+| 6 | tools/check-run-code-budget.mjs | the fetch leaf's run_code timeoutMs goes from 200000 to 400000, so the foreground window covers a slow runner; the watchdog (540000 ms) still covers it | release run: the x64-macos Test step passes and prints `run-code-budget-check: ok` with the leaf ended in under 400000 ms |
+| 7 | .github/workflows/release.yml | workflow_dispatch takes a boolean input `publish` (default true, so an unchanged dispatch still publishes); the publish job runs on a dispatch only when `inputs.publish` is true, and on push it runs as before | dispatch with `publish=false`: build and build-windows run, publish is skipped and the latest tag and release are unchanged |
+
+The Phase A commit subject ends with `[skip ci]`: a push to main would otherwise start a push-triggered release.yml run, and that run includes publish. Dispatching with `publish=false` is the build-only path that runs without publish.

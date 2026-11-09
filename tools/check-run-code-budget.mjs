@@ -94,7 +94,7 @@ try {
     }),
     runCode({
       format: 'esm',
-      timeoutMs: 200000,
+      timeoutMs: 400000,
       body: `return await gm.fetch({ url: 'http://127.0.0.1:${port}/', match: '(a+)+$', timeoutMs: 60000 });`,
     }),
   ]);

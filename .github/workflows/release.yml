@@ -4,6 +4,11 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      publish:
+        description: "Publish the release after the builds; false runs the builds only"
+        type: boolean
+        default: true
 
 permissions:
   contents: write
@@ -131,7 +136,7 @@ jobs:
 
   publish:
     needs: [build, build-windows]
-    if: ${{ always() && github.repository == 'AnEntrypoint/gm' }}
+    if: ${{ always() && github.repository == 'AnEntrypoint/gm' && (github.event_name != 'workflow_dispatch' || inputs.publish) }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     concurrency:
