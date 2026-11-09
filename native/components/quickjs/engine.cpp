@@ -97,8 +97,27 @@ JSValue host_names(JSContext* ctx, JSValueConst, int, JSValueConst*) {
     return json_to_js(ctx, names);
 }
 
-constexpr std::string_view host_bootstrap = R"JS((function (callHost, hostNames, workspace, runDir) {
-  const data = { workspace, runDir };
+JSValue call_deadline(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv) {
+    auto* session = static_cast<Session*>(JS_GetContextOpaque(ctx));
+    if (session == nullptr || argc < 2 || !JS_IsFunction(ctx, argv[1])) return throw_text(ctx, "deadlineCall needs a budget in milliseconds and a function");
+    int64_t budget = 0;
+    if (JS_ToInt64(ctx, &budget, argv[0]) < 0) return JS_EXCEPTION;
+    const Clock::time_point bound = Clock::now() + std::chrono::milliseconds(budget > 0 ? budget : 0);
+    const Clock::time_point outer = session->deadline;
+    const bool outer_passed = session->deadline_passed;
+    session->deadline = bound < outer ? bound : outer;
+    JSValue result = JS_Call(ctx, argv[1], JS_UNDEFINED, 0, nullptr);
+    session->deadline = outer;
+    if (JS_IsException(result) && bound <= outer && Clock::now() >= bound) {
+        JS_FreeValue(ctx, JS_GetException(ctx));
+        session->deadline_passed = outer_passed;
+        return throw_text(ctx, "the bounded call passed its deadline");
+    }
+    return result;
+}
+
+constexpr std::string_view host_bootstrap = R"JS((function (callHost, hostNames, workspace, runDir, deadlineCall) {
+  const data = { workspace, runDir, deadlineCall };
   let functions = null;
   const known = () => {
     if (functions === null) {
@@ -257,8 +276,9 @@ bool install_host(Engine& engine) {
     Scoped workspace_js(ctx, JS_NewStringLen(ctx, workspace.data(), workspace.size()));
     Scoped run_dir_js(ctx, JS_NewStringLen(ctx, run_dir.data(), run_dir.size()));
     Scoped names_call(ctx, JS_NewCFunction(ctx, host_names, "hostNames", 0));
-    JSValue factory_args[4] = {native_call.get(), names_call.get(), workspace_js.get(), run_dir_js.get()};
-    JSValue host = JS_Call(ctx, factory.get(), JS_UNDEFINED, 4, factory_args);
+    Scoped deadline_call(ctx, JS_NewCFunction(ctx, call_deadline, "deadlineCall", 2));
+    JSValue factory_args[5] = {native_call.get(), names_call.get(), workspace_js.get(), run_dir_js.get(), deadline_call.get()};
+    JSValue host = JS_Call(ctx, factory.get(), JS_UNDEFINED, 5, factory_args);
     if (JS_IsException(host)) return false;
     Scoped global(ctx, JS_GetGlobalObject(ctx));
     return JS_SetPropertyStr(ctx, global.get(), "host", host) >= 0;

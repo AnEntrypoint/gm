@@ -34,7 +34,7 @@ const removeTree = async (path) => {
 
 const HOLD_MS = 50000;
 const SLOW_LINE = `${'a'.repeat(31)}b`;
-const slow = http.createServer((req, res) => setTimeout(() => res.end(`${SLOW_LINE}\n`), HOLD_MS));
+const slow = http.createServer((req, res) => (req.url === '/fast' ? res.end(`${SLOW_LINE}\n`) : setTimeout(() => res.end(`${SLOW_LINE}\n`), HOLD_MS)));
 await new Promise((done) => slow.listen(0, '127.0.0.1', done));
 const port = slow.address().port;
 
@@ -87,7 +87,7 @@ try {
   await rpc('initialize', { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'gm-budget-check', version: '1' } });
   child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' })}\n`);
 
-  const [spin, leaf] = await Promise.all([
+  const [spin, leaf, matched, timedOutCall] = await Promise.all([
     runCode({
       format: 'esm',
       timeoutMs: 100000,
@@ -97,6 +97,16 @@ try {
       format: 'esm',
       timeoutMs: 400000,
       body: `return await gm.fetch({ url: 'http://127.0.0.1:${port}/', timeoutMs: 60000 });`,
+    }),
+    runCode({
+      format: 'esm',
+      timeoutMs: 100000,
+      body: `return await gm.fetch({ url: 'http://127.0.0.1:${port}/fast', match: '(a+)+$', timeoutMs: 3000 });`,
+    }),
+    runCode({
+      format: 'esm',
+      timeoutMs: 100000,
+      body: `return await gm.fetch({ url: 'http://127.0.0.1:${port}/', timeoutMs: 3000 });`,
     }),
   ]);
 
@@ -111,11 +121,19 @@ try {
   expect(leaf.elapsed >= HOLD_MS, `leaf deadline: the server held the fetch for ${HOLD_MS} ms but the leaf returned after ${leaf.elapsed} ms`);
   expect(leaf.reply.background === undefined && leafValue?.status === 200, `leaf deadline: expected status 200 in the foreground reply after ${leaf.elapsed} ms, got ${leafBody.slice(0, 200)}`);
 
+  const matchValue = unwrap(matched.reply.output ?? matched.reply);
+  expect(matched.elapsed < 20000, `match bound: a 3000 ms fetch with a catastrophic match returned after ${matched.elapsed} ms`);
+  expect(matchValue?.code === 'ETIMEDOUT' && matchValue?.error === 'timed out after 3000 ms' && matchValue?.attempts === 1, `match bound: expected a 3000 ms timeout in one attempt, got ${JSON.stringify(matchValue).slice(0, 200)}`);
+
+  const timeoutValue = unwrap(timedOutCall.reply.output ?? timedOutCall.reply);
+  expect(timedOutCall.elapsed < 15000, `whole call: a 3000 ms fetch that times out returned after ${timedOutCall.elapsed} ms`);
+  expect(timeoutValue?.code === 'ETIMEDOUT' && timeoutValue?.attempts === 1, `whole call: expected a timeout in one attempt, got ${JSON.stringify(timeoutValue).slice(0, 200)}`);
+
   if (failures.length) {
     console.error(`run-code-budget-check: ${failures.length} failure(s)\n- ${failures.join('\n- ')}`);
     process.exitCode = 1;
   } else {
-    console.log(`run-code-budget-check: ok (a 65 s JavaScript body with timeoutMs 100000 returned in ${spin.elapsed} ms; a fetch leaf held by the server for ${HOLD_MS} ms ended in ${leaf.elapsed} ms with no old fixed limit)`);
+    console.log(`run-code-budget-check: ok (a 65 s JavaScript body with timeoutMs 100000 returned in ${spin.elapsed} ms; a fetch leaf held by the server for ${HOLD_MS} ms ended in ${leaf.elapsed} ms with no old fixed limit; a 3000 ms fetch with a catastrophic match timed out in ${matched.elapsed} ms in one attempt; a 3000 ms fetch that timed out ended in ${timedOutCall.elapsed} ms in one attempt)`);
   }
 } finally {
   const exited = child.exitCode !== null || child.signalCode !== null ? Promise.resolve() : once(child, 'exit');

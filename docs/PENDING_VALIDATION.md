@@ -821,4 +821,16 @@ Margin: the hold is wall-clock time, not CPU, so the leaf takes about 50 s on an
 
 Coverage given up: the leaf no longer runs past 60 s. The old fixed-limit text (120000 or 60000 ms) is still checked as a regression guard, but the case above 60 s is now covered only by the JavaScript body (65 s, timeoutMs 100000), which is the job-lifetime case.
 
-Found while reading the fetch verb (new gap G8): the verb's description says `timeoutMs` "bounds the whole call", but the `match` filter runs after the curl deadline with no time bound, so a catastrophic pattern can run for minutes past `timeoutMs`. Cause: `boundedText` in native/leaves/fetch.mjs. Status: open; owner decision (bound the match, or document that it is not bounded).
+Found while reading the fetch verb (new gap G8): the verb's description says `timeoutMs` "bounds the whole call", but the `match` filter runs after the curl deadline with no time bound, so a catastrophic pattern can run for minutes past `timeoutMs`. Cause: `boundedText` in native/leaves/fetch.mjs. Status: fixed in Phase A of this pass (section "Fetch call bounded by timeoutMs: G8" below).
+
+## Fetch call bounded by timeoutMs: G8 (2026-11-09, Phase A)
+
+Cause: fetch's `timeoutMs` bounded only curl. The `match` filter ran in-process after curl with no deadline; QuickJS's regex engine polls the session interrupt handler (native/components/quickjs/engine.cpp, interrupt_on_deadline), so a session deadline can stop it. Separately, `retrying` retried ETIMEDOUT up to three more times, so a timed-out call could take about four times `timeoutMs`. The description said "bounds the whole call", and both paths broke that claim.
+
+| # | File | Change | Witness needed |
+|---|---|---|---|
+| 21 | native/components/quickjs/engine.cpp | new host function `deadlineCall(ms, fn)` (call_deadline): narrows the session deadline to `ms` while `fn` runs. If the bound fires, it clears the uncatchable interrupt and throws a catchable "the bounded call passed its deadline", and restores the outer deadline. Exposed on the host object as `host.deadlineCall` | the budget check below, on a binary built from this commit |
+| 22 | native/leaves/fetch.mjs | one deadline per call (`deadlineAt`) shared by the attempts and the match. Retries stop when the next delay would pass it, and curl's `--max-time` is the time left. A match cut by `deadlineCall` returns `timed out after <timeoutMs> ms` with code ETIMEDOUT. The description now says the bound covers redirects, retries and the match | the budget check below |
+| 23 | tools/check-run-code-budget.mjs | two cases added: a 3000 ms fetch with a catastrophic match against a fast route, and a 3000 ms fetch against the held route. Each must return ETIMEDOUT with `attempts` 1. The match case must return within 20000 ms and the timeout case within 15000 ms | the budget check below |
+
+Node: src/fetch.mjs is unchanged. Its match runs with no deadline (`boundedText`, src/fetch.mjs:90), and each attempt inside `retrying` (src/fetch.mjs:41) gets its own `AbortSignal.timeout(timeoutMs)` (src/fetch.mjs:60), so the whole-call bound does not hold there either. This is a native-ahead difference; owner decision: port to Node or record it as native-ahead.
