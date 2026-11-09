@@ -131,7 +131,11 @@ Order of work:
 2. Unit tests are not part of the iteration loop. Never run the full suite, npm test, cargo test or any other test runner between edits. Tests run once per push, and only the targeted witnesses listed in docs/PENDING_VALIDATION.md.
 3. Iterate with HMR or a dev server left running, and debug live: playwriter for browser state, a one-off script for logic. Reload rather than rebuild wherever HMR works. Start a dev server only when needed, and stop it by its own PID.
 4. Before adding any check, ask whether a live probe or a one-off script answers the question faster. Keep a check only when it guards a regression a live probe cannot cover, and record why in docs/PENDING_VALIDATION.md.
-5. Stop processes only by PID: read the PID with `pgrep -f` or `ps`, then `kill <pid>`. Never `pkill`, `killall` or `pkill -0`.
+5. Stop processes as the Stopping Processes section says: a PID you have read first in the output of `ps` or `pgrep`, then `kill <pid>`. Never `pkill`, `killall`, `pkill -0`, or a kill over a pattern match.
+
+## Stopping Processes
+
+Stop a process only by a PID you have read first, in the output of `ps` or `pgrep`, and then run `kill <pid>` with that number. Read the command line in the same output, and kill only a PID you started. Never stop a process with a pattern match: not `pkill`, `killall`, `pkill -0`, and not a loop that kills what a `pgrep -f` pattern matches. A pattern can match your own shell, because the shell's command line contains the pattern, so the kill can end the shell that runs it. Exit 144 is SIGTERM to such a shell.
 
 ## Memory rules
 
