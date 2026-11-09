@@ -706,7 +706,7 @@ Cause: `reopen()` in native/components/mcp/server.cpp opens a successor run with
 | 9 | native/components/mcp/server.cpp | reopen(): when the successor inherits the task, the feed cursor moves past its own start, task and tools events, so the first next_context does not replay the inherited brief; the task still reaches the run through `reply.task` (capped at 4000 characters) | tools/witness-next-context-replay.mjs fails (`feedHasBrief: true`) on the binary before this change and passes on the built binary |
 | 10 | tools/witness-next-context-replay.mjs | new witness: a run holding a 30 KB brief is closed with finish; the successor's first next_context `events` must not contain the brief; the run ids must differ | as row 9 |
 
-Recorded gap: Node (src/mcp.mjs reopen, line 884 inherits the task) still replays the inherited task event. Changing src/ is a decision for the orchestrator, so Node is unchanged here.
+Recorded gap, closed by the next section: Node (src/mcp.mjs reopen) still replayed the inherited task event.
 
 Phase B (2026-11-09, build stamp 7de4f40, HEAD 7de4f40): `cmake --preset release` and `cmake --build build/release -j 4` exit 0 with no FAILED line; `gm --version` prints `7de4f40-dev (7de4f40)`.
 
@@ -714,3 +714,13 @@ Phase B (2026-11-09, build stamp 7de4f40, HEAD 7de4f40): `cmake --preset release
 - Passing witness, after the change: `node tools/witness-next-context-replay.mjs build/release/native/components/host/gm` exits 0. Output: `"firstRun": "2026-11-09-12-55-53-e598b1", "finished": true, "successorRun": "2026-11-09-12-55-53-dbc470", "briefChars": 32442, "feedChars": 183, "feedHasBrief": false, "taskChars": 32441`.
 - Conformance, `node tools/check-build.mjs build/release`: `conformance: 85 passed, 0 failed of 85 checks in 24 scenarios`, exit 0. Its budget check printed `run-code-budget-check: ok ... a catastrophic regex in the fetch leaf ended in 105338 ms`, a third measured value for the open risk in the item 7 closure record.
 - Parity, `node native/tests/parity/run.mjs --bin build/release/native/components/host/gm`: `22/93 scenarios match, 0 cutover-expected, 56 native-ahead, 15 documented-gap, 0 differ`, exit 0. The counts equal the 2026-11-09 witness, so the successor change moved no parity key.
+
+## Node successor replay (2026-11-09, Phase A)
+
+Dispatcher decision: src/ is in scope for this fix, because the owner's inefficiency rule applies to every gm path. Cause, the same as native row 9: `reopen()` in src/mcp.mjs gives the successor the closed run's task (`taskFrom: closed run <id>`) and appends it as a `task` event. The successor's first `next_context` builds its feed from `shownTotalOf(log)`, which is 0 when the successor has no earlier `next_context` result, so the whole log, including the inherited brief, is replayed in `items`.
+
+| # | File | Change | Witness needed |
+|---|---|---|---|
+| 11 | src/mcp.mjs | createSession takes `shownFloor` (default 0). reopen() sets it to the successor log's count after its own start and task events when the task was inherited. context() feeds from `Math.max(shownTotalOf(log), shownFloor)`, so the first next_context does not replay the inherited brief; the task still reaches the run through `reply.task` (capped at 4000 characters) | `node tools/witness-next-context-replay.mjs node` fails (`feedHasBrief: true`) before the change and passes after it |
+| 12 | tools/lib/gm-stdio.mjs | openServer takes `lead` (the arguments before `--workspace`, default `['serve']`), so a witness can start `node src/mcp.mjs` | the native witness and witness-windows-cmd.mjs still start `gm serve` by default |
+| 13 | tools/witness-next-context-replay.mjs | takes `node` as its target to run src/mcp.mjs, otherwise a native binary path; it reads the feed from `events` (native) or `items` (Node) | row 11 and row 9's witness on both paths: the failing run on the pre-change tree, the passing run on the built tree |

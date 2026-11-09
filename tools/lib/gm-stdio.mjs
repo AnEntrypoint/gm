@@ -17,8 +17,8 @@ const removeWorkspace = (path) => {
     }
 };
 
-export async function openServer(binary, { workspace = mkdtempSync(join(tmpdir(), 'gm-stdio-')), extraArgs = [] } = {}) {
-    const child = spawn(binary, ['serve', '--workspace', workspace, ...extraArgs], { stdio: ['pipe', 'pipe', 'pipe'] });
+export async function openServer(binary, { workspace = mkdtempSync(join(tmpdir(), 'gm-stdio-')), extraArgs = [], lead = ['serve'] } = {}) {
+    const child = spawn(binary, [...lead, '--workspace', workspace, ...extraArgs], { stdio: ['pipe', 'pipe', 'pipe'] });
     child.stderr.resume();
     const pending = new Map();
     let nextId = 1;

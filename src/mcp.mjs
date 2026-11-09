@@ -220,7 +220,7 @@ function queryHintOf(shown, total) {
   return total > shown ? `${reach}. This step's new events are seqs ${shown + 1} to ${total}.` : `${reach}.`;
 }
 
-function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, resume = null, jobLifetimeMs = DEFAULT_JOB_LIFETIME_MS, stuckMs = DEFAULT_STUCK_MS, monitorMs = DEFAULT_MONITOR_MS, noticeMs = BODY_NOTICE_MS, hostIdleMs = DEFAULT_HOST_IDLE_MS, recovery = null, taskInherited = false, startOverride = null, surface = 'code' }) {
+function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, resume = null, jobLifetimeMs = DEFAULT_JOB_LIFETIME_MS, stuckMs = DEFAULT_STUCK_MS, monitorMs = DEFAULT_MONITOR_MS, noticeMs = BODY_NOTICE_MS, hostIdleMs = DEFAULT_HOST_IDLE_MS, recovery = null, taskInherited = false, shownFloor = 0, startOverride = null, surface = 'code' }) {
   const runId = basename(runDir);
   const runsRoot = dirname(runDir);
   const tools = createTools({ workspace, runDir, log, background: true, jobLifetimeMs, stuckMs, monitorMs, noticeMs, leaves: current.leaves, serveSkill: (uri) => serveSkillFile(uri, 'read_file') });
@@ -723,7 +723,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     const open = tools.activeJobs();
     const ended = since.filter((event) => event.kind === 'job' && event.state !== 'running' && !(event.state === 'killed' && killedNames.has(event.job)));
     const jobsEnded = await Promise.all(ended.map((event) => endedJob(runDir, event)));
-    const shown = shownTotalOf(log);
+    const shown = Math.max(shownTotalOf(log), shownFloor);
     const feed = feedOf(log, current.REGISTRY, { shown, compactChildren });
     const openRows = await tools.openRows();
     const parkedRows = await tools.parkedRows();
@@ -1184,9 +1184,10 @@ async function main(argv) {
     runDir = nextDir;
     fresh.append('start', { mode: 'mcp', maxSteps, maxInflight, taskFrom: start.taskFrom });
     if (start.task !== '') fresh.append('task', { from: start.taskFrom, text: start.task });
+    const shownFloor = start.inherited ? fresh.count() : 0;
     mcpReady.then(() => logTools(fresh, false, servedTools(surface)));
     console.error(`gm mcp: run ${closedId} has ended; opened run ${basename(runDir)}`);
-    return createSession({ ...limits, runDir, log: fresh, task: start.task, taskInherited: start.inherited });
+    return createSession({ ...limits, runDir, log: fresh, task: start.task, taskInherited: start.inherited, shownFloor });
   }
   let acceptTail = Promise.resolve();
   const acceptNow = (line) => {
