@@ -139,6 +139,13 @@ jobs:
           npm install --no-audit --no-fund playwright-core@1.65.0
           npx playwright-core install chromium
           echo "PLAYWRITER_BROWSER_PATH=$(node -p "require('$dir/node_modules/playwright-core').chromium.executablePath()")" >> "$GITHUB_ENV"
+      - name: Check the browser path for the browser-scope check (arm64-windows)
+        if: matrix.target == 'arm64-windows'
+        shell: bash
+        run: |
+          printf 'PLAYWRITER_BROWSER_PATH=[%s]\n' "$PLAYWRITER_BROWSER_PATH"
+          if [ -e "$PLAYWRITER_BROWSER_PATH" ]; then echo "browser path exists"; else echo "browser path missing"; fi
+          if command -v cygpath >/dev/null; then cygpath -w "$PLAYWRITER_BROWSER_PATH"; fi
       - name: Test
         shell: bash
         run: node tools/check-build.mjs build/${{ matrix.preset }}
