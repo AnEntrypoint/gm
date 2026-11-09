@@ -107,7 +107,7 @@ try {
   const leafValue = unwrap(leaf.reply.output ?? leaf.reply);
   const leafBody = JSON.stringify(leaf.reply);
   expect(!/passed its deadline of (120000|60000) ms/.test(leafBody), `leaf deadline: the old fixed limit cut the fetch leaf after ${leaf.elapsed} ms: ${leafBody.slice(0, 200)}`);
-  expect(leafValue?.status === 200 || typeof leaf.reply.background === 'string', `leaf deadline: expected status 200 or a background run after ${leaf.elapsed} ms, got ${leafBody.slice(0, 200)}`);
+  expect(leaf.reply.background === undefined && leafValue?.status === 200, `leaf deadline: expected status 200 in the foreground reply after ${leaf.elapsed} ms, got ${leafBody.slice(0, 200)}`);
 
   if (failures.length) {
     console.error(`run-code-budget-check: ${failures.length} failure(s)\n- ${failures.join('\n- ')}`);
