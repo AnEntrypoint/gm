@@ -683,20 +683,24 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     const ownerMarked = args.owner === true;
     const correction = given !== '' && firstStep && !ownerMarked;
     if (given !== '' && !ownerMarked && !correction) return refuse('next_context', args, 'a task replacement after the first step needs owner:true', rpcId);
-    steps += 1;
-    runStarted = true;
-    stepCalls = 0;
-    const step = steps;
-    if (ownerToken === null && (ownerMarked || firstStep || (steps === 1 && !childSeen && args.child !== true && args.run === undefined))) ownerToken = 'owner';
     const waitMs = waitOf(args.waitMs);
     const compactChildren = args.compactChildren === true;
-    if (given !== '' && given !== task) await replaceTask(given, { ...(ownerMarked ? { owner: true } : {}), ...(correction ? { correction: true } : {}) });
+    const waitedFromStart = runStarted;
     const shownTask = given === '' ? '' : given.length <= 200 ? given : given.slice(0, 200) + ' ...[' + given.length + ' chars]';
     const auditArgs = given === '' ? {} : { task: shownTask, owner: ownerMarked, correction };
     return act('next_context', auditArgs, access, async () => {
-      await untilPending(runDir, waitMs);
+      if (waitMs > 0) await untilPending(runDir, waitMs);
+      if (waitMs > 0 && waitedFromStart && !hasPending(runDir)) {
+        return { ok: true, progress: `no event pending after ${waitMs} ms; no step was used, call next_context again to keep waiting`, steps };
+      }
+      steps += 1;
+      runStarted = true;
+      stepCalls = 0;
+      const step = steps;
+      if (ownerToken === null && (ownerMarked || firstStep || (steps === 1 && !childSeen && args.child !== true && args.run === undefined))) ownerToken = 'owner';
+      if (given !== '' && given !== task) await replaceTask(given, { ...(ownerMarked ? { owner: true } : {}), ...(correction ? { correction: true } : {}) });
       return context(step, rpcId, compactChildren, waitMs > 0);
-    }, ({ ok, error, prefixSha, total }) => ({ ok, error, prefixSha, total }), rpcId);
+    }, ({ ok, error, prefixSha, total, progress }) => ({ ok, error, prefixSha, total, progress }), rpcId);
   }  let prefixMemo = null;
   function prefixShaFor(rules) {
     if (prefixMemo === null || prefixMemo.surface !== current || prefixMemo.rules !== rules || prefixMemo.task !== task) prefixMemo = { surface: current, rules, task, sha: prefixShaOf({ rules, task, witness: DEFAULT_WITNESS, tools: renderTools(servedTools(surface)) }) };

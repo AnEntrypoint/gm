@@ -159,3 +159,14 @@ Node gap, not changed: a timed-out wait on the Node path takes a step and return
 - Regression witnesses on the same binary: seq refused:true; race twoRefused:true; finishrow peer B refused:false; outpage inline 20000, next 20000, totalChars 30010; read 28800 bytes, truncated false; loud over-cap error; taskpage taskTruncated true, total 62889; profile-witness all true; journal, dup, browsers, tabs, skill, other as before.
 - Conformance: `conformance: 83 passed, 0 failed of 83 checks in 24 scenarios`, `check-build: gm stamp 08286e7-dev (08286e7)`, exit 0.
 - Parity: `22/93 scenarios match, 0 cutover-expected, 56 native-ahead, 15 documented-gap, 0 differ`, exit 0.
+
+## Node timed-out wait returns progress; the mcp-parity brief maximum (2026-11-09, Phase A)
+
+Nothing here is built or witnessed yet. Phase A is code and docs; nothing is pushed.
+
+| # | File | Change | Witness needed |
+|---|---|---|---|
+| 44 | src/mcp.mjs (nextContext) | defect: a timed-out next_context wait on the Node path took a step and returned the full reply; native returns progress with no step. Now the wait runs inside the action, before the step is counted. A timed-out wait that started from a live run returns { ok, progress: "no event pending after N ms; no step was used, call next_context again to keep waiting", steps }. The step, the owner marker and the task replacement run after the wait, in native's order. The summarizer passes progress through | W10: a Node and a native next_context {waitMs: 3000} after step 1 return the same progress reply (same keys, same text, same steps) |
+| 45 | tasks/rewrite/mcp-parity.md (item 4) | defect: the brief stated the run_code maximum as 300000. It now states 3600000, with the cause: run_code's limit was set to the job cap (native/components/mcp/server.cpp kMaxTimeoutMs, src/runcode.mjs MAX_TIMEOUT_MS), 2026-11-09 | read it |
+
+Node and native now use the same progress text and the same keys. A timed-out wait that wakes with an event still takes a step, on both paths.
