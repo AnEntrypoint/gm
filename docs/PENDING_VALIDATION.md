@@ -1223,3 +1223,11 @@ Gap list for what only Windows and macOS can build (recorded in Phase A items G1
 - G3 (macOS): no gap; the macOS release jobs passed on the previous push.
 
 Commits in this pass: e83228f (protocol-version wait), 235493f (restart-jobs Windows process table), 7232577 (Phase A ledger), and this Phase B entry.
+
+## gm pass, Phase A (2026-11-10, closing the local inventory items): Node arm, stopping rule
+
+Phase A ran no build, test, gate or witness. Each change is one local commit by lanmower with no trailer, not pushed. The witnesses run in Phase B on HEAD.
+
+1. tools/check-build.mjs, commit 2bf9851. Row: the restart-jobs check, Node arm. Before: check-build ran `check-restart-jobs.mjs` only with the native binary, so the Node arm (SIGTERM pause) was run by hand. Change: after the list loop, check-build runs `check-restart-jobs.mjs node` and exits with its status. No reason it cannot run here: the Node arm reads tools/relay.mjs and src/ from the checkout and needs no build output. Witness (Phase B): `node tools/check-build.mjs build/release` prints `restart-jobs-check: ok (node: SIGTERM to the Node worker pid ...)` after the native arm, exit 0.
+2. skills/gm/SKILL.md, commit 6af2bd1. Row: new section `## Stopping Processes` and Validation rule 5. Change: the section says a process is stopped only by a PID read first in `ps` or `pgrep` output, then `kill <pid>`; the command line is read in the same output; only PIDs the run started are killed; pattern kills (`pkill`, `killall`, `pkill -0`, a kill loop over a `pgrep -f` pattern) are not used, because a pattern can match the run's own shell (exit 144 is SIGTERM to such a shell). Rule 5 of Validation now points to the section with the same wording. Witness (Phase B): the served skill, read with ReadMcpResourceTool (server gm), contains `## Stopping Processes`, and the live read in Phase B step 5 quotes it.
+3. No code comments were added in either change; the two diffs have only code lines and skill prose.
