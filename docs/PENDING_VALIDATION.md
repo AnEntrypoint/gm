@@ -733,3 +733,30 @@ Phase B (2026-11-09, build stamp d5423f3, HEAD d5423f3): `cmake --preset release
 - Native, before row 9: the installed binary `/config/.gmnew/current/gm` exits 1: `"firstRun": "2026-11-09-13-10-24-51306a"`, `"successorRun": "2026-11-09-13-10-24-16ada1"`, `"feedChars": 1350`, `"feedHasBrief": true`.
 - Conformance, `node tools/check-build.mjs build/release`: `conformance: 85 passed, 0 failed of 85 checks in 24 scenarios`, exit 0. Its budget check printed `a catastrophic regex in the fetch leaf ended in 107018 ms`, a fourth measured value for the open risk.
 - Parity, `node native/tests/parity/run.mjs --bin build/release/native/components/host/gm`: `22/93 scenarios match, 0 cutover-expected, 56 native-ahead, 15 documented-gap, 0 differ`, exit 0. The Node change moved no parity key.
+
+## Status and open gaps (2026-11-09, Phase A)
+
+Item 7 closure evidence, corrected. Only run 42617531301 is release build evidence (`release` workflow, dispatch, publish=false, d9876a4). Runs 42617510474 and 42623538587 are `pages-build-deployment` runs, not build runs, and are not counted. On 42617531301 the Windows x64 and arm64 `Test` steps both print `conformance: 85 passed, 0 failed of 85 checks in 24 scenarios` and `shell-stdin-check: ok` (the CRLF comparison, V4). The Windows CMD witness passed on both jobs (recorded above). Item 7 stays closed on this evidence.
+
+Stale entries closed by code already on main (checked this pass):
+- stop_orphans reaps body children before it marks a body killed: native/components/mcp/server.cpp:998 calls proc::reap_ledger in stop_orphans (the open gap from the Phase B record and rank 3 of the old table).
+- rows.mjs commit message: src/rows.mjs:196 checks isRepository before naming "no commit X in the repository", so a non-repository root gets its own message (rank 4 of the old table).
+- f80cd46 leaf assertion: tools/check-run-code-budget.mjs requires `leaf.reply.background === undefined && status === 200` in the foreground (rank 5 of the old table).
+
+Open gaps, each with its cause:
+
+| # | Gap | Cause | Status |
+|---|---|---|---|
+| G1 | The budget check's fetch leaf can exceed its 400000 ms foreground window | The leaf is a CPU-bound catastrophic regex; measured 193313, 200085, 233216, 105338, 107018 ms on macOS x64 runs. The window is 1.72 times the worst run. | open risk; the fix is a deterministic leaf (a local server holding a fixed-time response), not made here |
+| G2 | The Windows CMD witness in release.yml is continue-on-error | The step is marked `continue-on-error: true` (release.yml:124), so a failure does not fail its job; a regression would leave the job green | open; owner decision whether to make it blocking, because that also gates publish |
+| G3 | The Node replay witness and the Node parity run are not in CI | release.yml has no `npm ci`, and src/mcp.mjs needs acorn; the Node witness runs locally only | open; owner decision whether to install dependencies in CI |
+| G4 | Node run_code budget differs from native outside the 65 s case | Node's JavaScript budget was measured only for one case (V2) | open; owner decision (port or record as native-ahead) |
+| G5 | Shell-job lifetime equals the job_start cap, so the lifetime reason is unreachable for shell jobs | The cap is set once for both kinds of job | open; owner decision |
+| G6 | Open row unknown-mw6bc4mv1c00 (push target AnEntrypoint/gmfx) | The row lives in the fx workspace state (/workspace/fx), outside this checkout | open; the fx workspace owner resolves or parks it |
+| G7 | The .mcp.json pass | Not started | owner schedules it |
+
+Fixed in this pass:
+
+| # | File | Change | Witness needed |
+|---|---|---|---|
+| 14 | tools/check-build.mjs | the post-conformance loop also runs tools/witness-next-context-replay.mjs on the built binary, so CI runs the replay witness (native path only) | `node tools/check-build.mjs build/release` prints the witness JSON with `feedHasBrief: false` and exits 0 |
