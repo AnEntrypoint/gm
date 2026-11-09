@@ -533,6 +533,16 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
       const ordered = [...waiting].sort((a, b) => a.order - b.order);
       if (!runStarted) {
         const firstIndex = ordered.findIndex((call) => call.name === 'next_context' && call.args.child !== true && call.args.run === undefined);
+        const early = ordered.filter((call) => call.name !== 'next_context');
+        if (early.length > 0 && (firstIndex < 0 || ordered.indexOf(early[0]) < firstIndex)) {
+          const accesses = early.map((call) => accessOf(call.name, call.args));
+          const index = startableIndex(accesses);
+          if (index < 0) return;
+          const call = early[index];
+          waiting.splice(waiting.indexOf(call), 1);
+          call.resolveCall(invoke(call.name, call.args, accesses[index], call.rpcId));
+          continue;
+        }
         if (firstIndex < 0) return;
         const call = ordered[firstIndex];
         const access = accessOf(call.name, call.args);
