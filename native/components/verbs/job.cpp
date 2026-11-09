@@ -37,6 +37,15 @@ constexpr std::uint64_t kill_grace_ms = 500;
 constexpr double max_wait_ms = 30000;
 constexpr std::uint64_t ended_event_grace_ms = 250;
 
+std::string kill_statement(const std::string& name, const std::string& reason, std::uint64_t timeout_ms, std::uint64_t lifetime_ms) {
+    if (reason == "timeout") return "job " + name + " stopped: timeout after " + std::to_string(timeout_ms) + " ms";
+    if (reason == "lifetime") return "job " + name + " stopped: the job lifetime of " + std::to_string(lifetime_ms) + " ms ended before it finished";
+    if (reason == "cancelled") return "job " + name + " stopped by job_stop";
+    if (reason == "restart") return "job " + name + " killed: the gm worker restarted while it ran, and a restart kills the process group of every job that was running";
+    if (reason == "run-ended") return "job " + name + " killed: its run ended while it ran (the run finished or its host closed), and ending a run kills the process group of every running job";
+    return "job " + name + " killed: " + reason;
+}
+
 bool is_job_name(const json::Value* v) {
     if (v == nullptr || !v->is_string()) return false;
     const std::string& name = v->as_string();
@@ -377,9 +386,8 @@ void JobTable::settle(Job& job, std::optional<int> exit_code, json::Value signal
     std::string state = exited ? "exited" : "killed";
     std::optional<std::string> reason = exited ? std::nullopt : job.kill_reason;
     std::optional<std::string> statement;
-    if (reason && *reason == "timeout") {
-        statement = "job " + job.name + " stopped: timeout after " + std::to_string(job.timeout_ms) + " ms";
-    }
+    if (reason) statement = kill_statement(job.name, *reason, job.timeout_ms, lifetime_ms_);
+    const bool timed_out = reason && *reason == "timeout";
     json::Value exit_value = exit_code ? json::Value(*exit_code) : json::Value(nullptr);
 
     json::Value ended = job.status;
@@ -387,10 +395,8 @@ void JobTable::settle(Job& job, std::optional<int> exit_code, json::Value signal
     ended.set("exitCode", exit_value);
     ended.set("signal", signal);
     if (reason) ended.set("reason", *reason);
-    if (statement) {
-        ended.set("timedOut", true);
-        ended.set("statement", *statement);
-    }
+    if (statement) ended.set("statement", *statement);
+    if (timed_out) ended.set("timedOut", true);
     write_status(job.dir, job.name, ended);
 
     json::Value event;
@@ -400,16 +406,17 @@ void JobTable::settle(Job& job, std::optional<int> exit_code, json::Value signal
     event.set("signal", signal);
     event.set("startMono", job.start_mono);
     if (reason) event.set("reason", *reason);
-    if (statement) {
+    if (statement) event.set("statement", *statement);
+    if (timed_out) {
         event.set("timedOut", true);
         event.set("timeoutMs", job.timeout_ms);
-        event.set("statement", *statement);
     }
     unlogged_.push_back({"job", std::move(event)});
     if (job.kill_reason) {
         json::Value killed;
         killed.set("job", job.name);
         killed.set("reason", *job.kill_reason);
+        killed.set("statement", *statement);
         if (*job.kill_reason == "lifetime") killed.set("lifetimeMs", static_cast<std::uint64_t>(lifetime_ms_));
         killed.set("tail", utf16_tail(read_bytes(job.out), tail_cap));
         unlogged_.push_back({"job-killed", std::move(killed)});
@@ -621,6 +628,8 @@ void JobTable::stop_orphans() {
         ended.set("reason", "restart");
         const json::Value* job_name = status->find("job");
         std::string written_name = job_name != nullptr && job_name->is_string() ? job_name->as_string() : name;
+        const std::string statement = kill_statement(written_name, "restart", 0, 0);
+        ended.set("statement", statement);
         write_status(jobs_dir(), written_name, ended);
         json::Value event;
         event.set("job", written_name);
@@ -628,10 +637,12 @@ void JobTable::stop_orphans() {
         event.set("state", "killed");
         if (const json::Value* start_mono = status->find("startMono")) event.set("startMono", *start_mono);
         event.set("reason", "restart");
+        event.set("statement", statement);
         log_.append("job", std::move(event));
         json::Value killed;
         killed.set("job", written_name);
         killed.set("reason", "restart");
+        killed.set("statement", statement);
         killed.set("tail", tail);
         log_.append("job-killed", std::move(killed));
     }

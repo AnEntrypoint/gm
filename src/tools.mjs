@@ -258,7 +258,7 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
       if (args.background !== true || !background) {
         const timeoutMs = Math.min(Number(args.timeoutMs) || DEFAULT_TIMEOUT_MS, MAX_TIMEOUT_MS);
         const launcher = shellLauncher(args.command, [], true);
-        const withLauncher = (r) => ({ launcher, ...r });
+        const withLauncher = (r) => ({ launcher, ...(r.timedOut === true ? { statement: shellTimeoutStatement(r.output, timeoutMs) } : {}), ...r });
         const result = runCommand(args.command, [], { cwd: root, timeoutMs, shell: true, signal: ctx?.signal });
         if (result && typeof result.then === 'function') return result.then((r) => condenseShell(withLauncher(r), args.raw === true, runDir));
         return condenseShell(withLauncher(result), args.raw === true, runDir);
@@ -306,7 +306,7 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
       job.killReason ??= 'cancelled';
       killGroup(job.child.pid);
       await job.done;
-      return { ok: true, state: 'killed', reason: job.killReason, output: `stopped job ${args.job}` };
+      return { ok: true, state: 'killed', reason: job.killReason, statement: jobKillStatement(args.job, job.killReason, 0, jobLifetimeMs), output: `stopped job ${args.job}` };
     },
 
     query_log(args = {}) {
@@ -400,12 +400,13 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
         clearTimeout(timer);
         const state = exitCode !== null && !job.killRequested ? 'exited' : 'killed';
         const reason = state === 'killed' ? job.killReason : undefined;
-        const timeoutFields = reason === 'timeout' ? { timedOut: true, timeoutMs: status.timeoutMs, statement: `job ${name} stopped: timeout after ${status.timeoutMs} ms` } : {};
-        const ended = { ...status, state, exitCode, signal, ...(reason === undefined ? {} : { reason }), ...timeoutFields };
+        const statementFields = reason === undefined ? {} : { statement: jobKillStatement(name, reason, status.timeoutMs, jobLifetimeMs) };
+        const timeoutFields = reason === 'timeout' ? { timedOut: true, timeoutMs: status.timeoutMs } : {};
+        const ended = { ...status, state, exitCode, signal, ...(reason === undefined ? {} : { reason }), ...statementFields, ...timeoutFields };
         writeStatus(name, ended);
-        log.append('job', { job: name, state, exitCode, signal, startMono, ...(reason === undefined ? {} : { reason }), ...timeoutFields });
+        log.append('job', { job: name, state, exitCode, signal, startMono, ...(reason === undefined ? {} : { reason }), ...statementFields, ...timeoutFields });
         if (job.killReason !== undefined) {
-          log.append('job-killed', { job: name, reason: job.killReason, ...(job.killReason === 'lifetime' ? { lifetimeMs: jobLifetimeMs } : {}), tail: readTail(outputFile, TAIL_CAP) });
+          log.append('job-killed', { job: name, reason: job.killReason, statement: jobKillStatement(name, job.killReason, status.timeoutMs, jobLifetimeMs), ...(job.killReason === 'lifetime' ? { lifetimeMs: jobLifetimeMs } : {}), tail: readTail(outputFile, TAIL_CAP) });
         }
         settle();
       };
@@ -446,7 +447,7 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
       killBody(body);
       const tail = bodyText(log, body, TAIL_CAP);
       settle('killed', { reason });
-      log.append('job-killed', { job: name, reason, tail, ...(reason === 'lifetime' ? { lifetimeMs: jobLifetimeMs } : {}) });
+      log.append('job-killed', { job: name, reason, statement: jobKillStatement(name, reason, 0, jobLifetimeMs), tail, ...(reason === 'lifetime' ? { lifetimeMs: jobLifetimeMs } : {}) });
     };
     let lifetime;
     let reminder;
@@ -496,9 +497,10 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
       if (status.state !== 'running' && status.state !== 'queued') continue;
       const tail = status.body !== undefined ? bodyText(log, status.body, TAIL_CAP) : readTail(status.output, TAIL_CAP);
       if (status.body === undefined) signalGroup(status.pid, 'SIGKILL');
-      writeStatus(status.job, { ...status, state: 'killed', reason: 'restart' });
-      log.append('job', { job: status.job, body: status.body, state: 'killed', startMono: status.startMono, reason: 'restart' });
-      log.append('job-killed', { job: status.job, reason: 'restart', tail });
+      const statement = jobKillStatement(status.job, 'restart', 0, 0);
+      writeStatus(status.job, { ...status, state: 'killed', reason: 'restart', statement });
+      log.append('job', { job: status.job, body: status.body, state: 'killed', startMono: status.startMono, reason: 'restart', statement });
+      log.append('job-killed', { job: status.job, reason: 'restart', statement, tail });
     }
   }
 
@@ -747,6 +749,20 @@ function cutShellOutput(result, runDir) {
 }
 
 const LOGGED_REPLY_CHARS = 1000;
+function jobKillStatement(name, reason, timeoutMs, lifetimeMs) {
+  if (reason === 'timeout') return `job ${name} stopped: timeout after ${timeoutMs} ms`;
+  if (reason === 'lifetime') return `job ${name} stopped: the job lifetime of ${lifetimeMs} ms ended before it finished`;
+  if (reason === 'cancelled') return `job ${name} stopped by job_stop`;
+  if (reason === 'restart') return `job ${name} killed: the gm worker restarted while it ran, and a restart kills the process group of every job that was running`;
+  if (reason === 'run-ended') return `job ${name} killed: its run ended while it ran (the run finished or its host closed), and ending a run kills the process group of every running job`;
+  return `job ${name} killed: ${reason}`;
+}
+
+function shellTimeoutStatement(output, timeoutMs) {
+  if (output === '') return `run_shell stopped: timeout after ${timeoutMs} ms with no output; the command was still running and printed nothing before the deadline (a sleep or wait prints nothing until it ends). Pass timeoutMs (up to 600000) or start it with job_start.`;
+  return `run_shell stopped: timeout after ${timeoutMs} ms; the output shown is what it printed before the deadline. Pass timeoutMs (up to 600000) or start it with job_start.`;
+}
+
 const LOGGED_OUTPUT_TOOLS = new Set(['query_log', 'job_status', 'run_shell', 'run_code']);
 export function loggedFor(tool, result) {
   if (!LOGGED_OUTPUT_TOOLS.has(tool) || result?.output === undefined) return result;

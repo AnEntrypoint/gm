@@ -714,7 +714,11 @@ struct CoreVerbs::Impl {
         if (outcome.timed_out) {
             reply.set("ok", false);
             reply.set("timedOut", true);
-            reply.set("error", "timed out after " + json::dump(json::Value(timeout_ms)) + " ms");
+            const std::string limit = json::dump(json::Value(timeout_ms));
+            reply.set("error", "timed out after " + limit + " ms");
+            reply.set("statement", output.empty()
+                                       ? "run_shell stopped: timeout after " + limit + " ms with no output; the command was still running and printed nothing before the deadline (a sleep or wait prints nothing until it ends). Pass timeoutMs (up to 600000) or start it with job_start."
+                                       : "run_shell stopped: timeout after " + limit + " ms; the output shown is what it printed before the deadline. Pass timeoutMs (up to 600000) or start it with job_start.");
             reply.set("output", std::move(output));
             reply.set("launcher", outcome.launcher);
             return bound(reply);
