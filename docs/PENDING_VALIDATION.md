@@ -1308,3 +1308,14 @@ Cause (/workspace/fx/issues.md, issue 1). The skill-read gate cleared only on re
 3. tools/check-no-resource-client.mjs and tools/check-build.mjs, commit (see git log). Row: new witness, in the check-build list on the native binary and on node. The client sends only initialize, tools/list and tools/call (any other method throws in the client). Witness: the first run_code is refused with `skill` equal to skills/gm/SKILL.md; the second run_code returns the file text and carries the rule 2 notice; next_context opens step 1 with rulesPending naming rule 2; the next run_code has no rulesNotice; gm.read_file of the skill uri works in a body; the second next_context has no rulesPending; finish ends the run. Phase B: `node tools/check-no-resource-client.mjs build/release/native/components/host/gm` and `node tools/check-no-resource-client.mjs node`, each `no-resource-client-check: ok`, exit 0. Why a kept check: the gate is per connection and a live probe from this host always has a resource-read tool, so only a tool-only client covers the regression.
 4. Also to run in Phase B: check-build (conformance and the listed checks) and the parity harness, since the refusal text and the notice text changed in both engines.
 5. The gm connection of a running host, and fx's, takes the fix only after its installed build updates.
+
+## gm pass, Phase B (2026-11-10, local, release at 399b026): the run_code deadlock for a client with no resource-read tool
+
+Witnesses, output read in full:
+- W1 native, `node tools/check-no-resource-client.mjs build/release/native/components/host/gm`: exit 0, `no-resource-client-check: ok`.
+- W2 node, `node tools/check-no-resource-client.mjs node`: exit 0, `no-resource-client-check: ok`.
+- W3 before state, the same witness on the installed build `9670d03-308`: exit 1, 7 failures; every run_code answers `run_code refused: read skill://gm/SKILL.md first in this connection...` and the second next_context still has rulesPending for rule 2. This is fx issue 1.
+- W4 restart, one-off probe in the OS temporary directory (not committed), native: a tool-only client, first run_code refused with `skill` a string, run_code ok, binary mtime changed, `gm relay: restarting the worker (changed: gm)`, then run_code answers `{"ok":true,"output":"3",...}`. The restarted worker is not gated again.
+- W5 check-build build/release: exit 0; `conformance: 86 passed, 0 failed of 86 checks in 24 scenarios`; the new witness ok on the native binary and on node; `check-build: gm stamp 399b026-dev (399b026)`.
+- W6 parity, `node native/tests/parity/run.mjs`: exit 0, `17/95 scenarios match, 0 cutover-expected, 56 native-ahead, 22 documented-gap, 0 differ`.
+- Not done here: no install was run, so the gm connection on this host and fx's connection keep the old gate until their installed build updates.
