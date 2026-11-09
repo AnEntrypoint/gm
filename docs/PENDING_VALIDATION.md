@@ -762,3 +762,14 @@ Fixed in this pass:
 | 14 | tools/check-build.mjs | the post-conformance loop also runs tools/witness-next-context-replay.mjs on the built binary, so CI runs the replay witness (native path only) | `node tools/check-build.mjs build/release` prints the witness JSON with `feedHasBrief: false` and exits 0 |
 
 Phase B (2026-11-09, binary d5423f3, build unchanged since d5423f3; the commit after it changes only tools and docs): `node tools/check-build.mjs build/release` exits 0: `conformance: 85 passed, 0 failed of 85 checks in 24 scenarios`; `run-code-budget-check: ok (... ended in 116602 ms ...)`; the replay witness printed `"feedHasBrief": false`; `check-build: gm stamp d5423f3-dev (d5423f3)`. Parity from the same day's run, `22/93 scenarios match, 0 cutover-expected, 56 native-ahead, 15 documented-gap, 0 differ`, is unchanged because no src/ or native/ code changed in this pass.
+
+## Replay witness in CI (2026-11-09, Phase A)
+
+Cause: the replay witness ran only in tools/check-build.mjs, and release.yml did not run the Node path at all (no `npm ci`, so acorn is missing), so a regression on the Node path would not be caught in CI. Gap G3 in the status record is the Node half of this; the native half was row 14.
+
+| # | File | Change | Witness needed |
+|---|---|---|---|
+| 15 | .github/workflows/release.yml | the build job has a `Replay witness` step after Test, on `x64-linux` only: `npm ci --ignore-scripts`, `node tools/witness-next-context-replay.mjs node`, then the same witness on `build/<preset>/native/components/host/gm`. The native command repeats the check-build run, so it is explicit in the workflow even though check-build also covers it | the dispatched run's `Replay witness` step prints the Node JSON with `feedHasBrief: false`, then the native JSON with `feedHasBrief: false`, and the step exits 0 |
+| 16 | tools/witness-ci-replay-step.mjs | fails (exit 1) if release.yml has no `Replay witness` step, or the step lacks one of its three commands; it reads the workflow file given as an argument, so the failing check runs on a copy with the step removed | exit 0 on .github/workflows/release.yml; exit 1 on a copy made with the step removed (failing-then-passing) |
+
+Gap G3 is closed for the replay witness by row 15 (the Node witness now runs in CI). The Node parity run is still not in CI.
