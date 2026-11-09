@@ -1256,3 +1256,13 @@ Witnesses, output read in full:
 - W6 release.yml parses as YAML (38 steps), and the new step `Check the browser path for the browser-scope check (arm64-windows)` is present.
 - Blocked, not run: B1 (Windows x64 restart-jobs) and B2 (Windows arm64 browser path); no Windows host here.
 - Open, not fixed: the stale served skill (Phase A note), a local item.
+
+## gm pass, Phase A (2026-11-10): the stale served skill
+
+Phase A ran no build, test or push. Each change is one local commit by lanmower with no trailer. Phase B builds HEAD and runs the witness below.
+
+Cause, measured on this host. The default skill source is the directory beside the running binary (native/components/host/options.cpp, skills_dir_of): `/config/.gmnew/current/skills`. That copy changes only on install or update, so a commit to skills/gm/SKILL.md never reaches the served resource. Probe with the installed binary: no `--skills` serves text without `## Stopping Processes`; `--skills /workspace/gm/skills` serves it. The reader itself does not cache: SkillCache::get reads the file on every call. Node already reads SKILLS_DIR from the checkout (tools/core.mjs).
+
+1. native/components/host/options.cpp, commit (see git log). Row: `skills_dir_of`. Change: the order is `--skills`, then the checkout's `skills/` when it is a directory (source_root, GMNEW_SOURCE_DIR), then the installed copy. A binary built from a checkout serves that checkout's skill files; a release binary built elsewhere, where the source path is absent, keeps the installed copy.
+2. tools/check-skill-serve.mjs and tools/check-build.mjs, commit (see git log). Row: new witness, added to the check-build list. Witness: (a) the default `serve` returns `skill://gm/SKILL.md` byte-equal to the checkout's skills/gm/SKILL.md; (b) on one live connection, against a copy of skills/ passed with `--skills`, a read, a change to the copied file, and a read on the same connection returns the new text; a second change is served the same way. Phase B: `node tools/check-skill-serve.mjs build/release/native/components/host/gm` prints `skill-serve-check: ok` and exits 0.
+3. Not closed by this change: the gm connection on this host runs `/config/.gmnew/current/gm`, which is built from older source. It serves the new order only after a rebuild and `scripts/install.sh`. Until then the served copy stays stale. No install was run in this pass.
