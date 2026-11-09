@@ -82,12 +82,12 @@ if (binary !== null && existsSync(binary)) {
     await rpc('tools/call', { name: 'next_context', arguments: { task: 'search root check' } });
     const reply = await rpc('tools/call', { name: 'run_code', arguments: { body: `return await gm.grep({ pattern: '${TOKEN}', scope: 'all', limit: 20 });` } });
     const parsed = JSON.parse(reply.result?.content?.[0]?.text ?? 'null');
-    const grep = parsed?.ok === true ? JSON.parse(parsed.output) : null;
+    const grep = parsed?.ok === true ? (typeof parsed.output === 'string' ? JSON.parse(parsed.output) : parsed.output) : null;
     if (grep === null) failures.push(`native: run_code refused: ${parsed?.error ?? 'no reply'}`);
     else expectHit('native grep whole root scope all', grep.output);
     const tracked = await rpc('tools/call', { name: 'run_code', arguments: { body: `return await gm.grep({ pattern: '${TRACKED_TOKEN}', scope: 'all', limit: 20 });` } });
     const trackedParsed = JSON.parse(tracked.result?.content?.[0]?.text ?? 'null');
-    const trackedGrep = trackedParsed?.ok === true ? JSON.parse(trackedParsed.output) : null;
+    const trackedGrep = trackedParsed?.ok === true ? (typeof trackedParsed.output === 'string' ? JSON.parse(trackedParsed.output) : trackedParsed.output) : null;
     if (trackedGrep === null || !trackedFound(trackedGrep.output) || trackedGrep.scanTruncated !== false) failures.push(`native: a tracked token past ${TRACKED_FILES} tracked files was missed or the scan was cut`);
   } catch (error) {
     failures.push(`native: ${error.message}`);

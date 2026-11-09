@@ -21,7 +21,7 @@ try {
     await server.tool('next_context', {});
     await server.run(`return (await gm.run_shell({ command: ${JSON.stringify(command)} })).output;`);
     const log = await server.run('return await gm.query_log({ kind: "action", limit: 50 });');
-    const events = JSON.parse(JSON.parse(log.output).output);
+    const events = JSON.parse(log.output.output);
     const text = JSON.stringify(events);
     const artifactTexts = [];
     const runs = join(server.workspace, 'runs');

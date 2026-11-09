@@ -21,9 +21,10 @@ const present = values.present && existsSync(values.present)
   ? new Set(readFileSync(values.present, 'utf8').split('\n').map((line) => line.trim()).filter(Boolean))
   : new Set();
 
-const archives = readdirSync(values.dir)
-  .filter((file) => /^gmnew-.+\.(tar\.gz|zip)$/.test(file))
-  .sort();
+const archives = existsSync(values.dir)
+  ? readdirSync(values.dir).filter((file) => /^gmnew-.+\.(tar\.gz|zip)$/.test(file)).sort()
+  : [];
+if (archives.length === 0) throw new Error('no target built in this push');
 
 const assets = {};
 const sums = [];
@@ -51,8 +52,6 @@ for (const target of expected) {
     console.log(`::error::${target} did not build and has no earlier build on the release`);
   }
 }
-
-if (Object.keys(assets).length === 0) throw new Error('no target built in this push');
 
 const manifest = {
   version: values.version,

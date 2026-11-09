@@ -60,6 +60,9 @@ jobs:
         run: |
           cmake --preset ${{ matrix.preset }} -DGMNEW_VERSION=$GMNEW_VERSION ${{ matrix.extra }} $CCACHE_ARGS
           cmake --build build/${{ matrix.preset }}
+      - name: Node dependencies
+        shell: bash
+        run: npm ci --ignore-scripts
       - name: Test
         shell: bash
         run: node tools/check-build.mjs build/${{ matrix.preset }}
@@ -67,7 +70,6 @@ jobs:
         if: matrix.target == 'x64-linux'
         shell: bash
         run: |
-          npm ci --ignore-scripts
           node tools/witness-next-context-replay.mjs node
           node tools/witness-next-context-replay.mjs build/${{ matrix.preset }}/native/components/host/gm
       - name: Node parity
@@ -113,6 +115,9 @@ jobs:
           cmake --preset ${{ matrix.preset }} --fresh -DGMNEW_VERSION=$GMNEW_VERSION
           cmake --build build/${{ matrix.preset }}
           cmake --build build/${{ matrix.preset }} --target gm-core
+      - name: Node dependencies
+        shell: bash
+        run: npm ci --ignore-scripts
       - name: Test
         shell: bash
         run: node tools/check-build.mjs build/${{ matrix.preset }}

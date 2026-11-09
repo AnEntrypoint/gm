@@ -44,7 +44,7 @@ async function call(server, body) {
   const text = reply.result?.content?.[0]?.text ?? 'null';
   const parsed = JSON.parse(text);
   if (parsed.ok !== true) throw new Error('run_code refused: ' + (parsed.error ?? text.slice(0, 200)));
-  return JSON.parse(parsed.output);
+  return typeof parsed.output === 'string' ? JSON.parse(parsed.output) : parsed.output;
 }
 
 async function arm(label, command, args, body, check) {

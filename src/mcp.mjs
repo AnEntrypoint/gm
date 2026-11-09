@@ -222,7 +222,7 @@ function queryHintOf(shown, total) {
   return total > shown ? `${reach}. This step's new events are seqs ${shown + 1} to ${total}.` : `${reach}.`;
 }
 
-function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, resume = null, jobLifetimeMs = DEFAULT_JOB_LIFETIME_MS, stuckMs = DEFAULT_STUCK_MS, monitorMs = DEFAULT_MONITOR_MS, noticeMs = BODY_NOTICE_MS, hostIdleMs = DEFAULT_HOST_IDLE_MS, recovery = null, taskInherited = false, shownFloor = 0, startOverride = null, surface = 'code' }) {
+function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, resume = null, jobLifetimeMs = DEFAULT_JOB_LIFETIME_MS, stuckMs = DEFAULT_STUCK_MS, monitorMs = DEFAULT_MONITOR_MS, noticeMs = BODY_NOTICE_MS, hostIdleMs = DEFAULT_HOST_IDLE_MS, recovery = null, taskInherited = false, shownFloor = 0, startOverride = null, surface = 'code', requeue = null }) {
   const runId = basename(runDir);
   const runsRoot = dirname(runDir);
   const tools = createTools({ workspace, runDir, log, background: true, jobLifetimeMs, stuckMs, monitorMs, noticeMs, leaves: current.leaves, serveSkill: (uri) => serveSkillFile(uri, 'read_file') });
@@ -232,6 +232,8 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
   let pendingRecovery = recovery;
   let noticeSeq = lastContextSeq(log.events());
   const active = new Map();
+  const holds = new Map();
+  let finishing = Promise.resolve();
   const waiting = [];
   let callOrder = 0;
   const unansweredTurns = new Set();
@@ -529,7 +531,10 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
 
   function drain() {
     if (ended !== null) {
-      for (const call of waiting.splice(0)) call.resolveCall(refuse(call.name, call.args, endedReason(isChildRead(call.name, call.args)), call.rpcId));
+      for (const call of waiting.splice(0)) {
+        if (ended === 'finished' && requeue !== null && call.name === 'next_context' && call.args.child !== true && call.args.run === undefined) requeue(call);
+        else call.resolveCall(refuse(call.name, call.args, endedReason(isChildRead(call.name, call.args)), call.rpcId));
+      }
       return;
     }
     while (active.size < maxInflight && waiting.length > 0) {
@@ -563,7 +568,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
   }
 
   function startableIndex(accesses) {
-    const running = [...active.values()];
+    const running = [...active.values(), ...holds.values()];
     return accesses.findIndex(
       (access, i) =>
         access.free || (!running.some((other) => conflicts(other, access)) && !accesses.slice(0, i).some((earlier) => conflicts(earlier, access))),
@@ -780,7 +785,17 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     return reply;
   }
 
-  async function finish(args, access, rpcId) {
+  function finish(args, access, rpcId) {
+    const hold = {};
+    holds.set(hold, access);
+    const done = finishRun(args, access, rpcId).finally(() => {
+      holds.delete(hold);
+      drain();
+    });
+    finishing = done;
+    return done;
+  }
+  async function finishRun(args, access, rpcId) {
     if (typeof args.witness !== 'string' || args.witness.trim() === '') {
       return refuse('finish', args, 'finish needs a non-empty witness string');
     }
@@ -876,7 +891,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     if (ended === null) {
       while (waiting.length > 0) {
         drain();
-        await Promise.allSettled([...active.keys()]);
+        await Promise.allSettled([...active.keys(), finishing]);
       }
       stop('closed');
     }
@@ -1188,7 +1203,8 @@ async function main(argv) {
   process.on('exit', () => client.stop());
 
   sweepEndedCode(dirname(runDir), runDir);
-  let session = createSession({ ...limits, runDir, log, task, resume, recovery: recovery && recovery.open.length > 0 ? recovery : null, startOverride });
+  const requeueNext = (call) => acceptNow(JSON.stringify({ jsonrpc: '2.0', id: call.rpcId, method: 'tools/call', params: { name: 'next_context', arguments: call.args } }));
+  let session = createSession({ ...limits, runDir, log, task, resume, recovery: recovery && recovery.open.length > 0 ? recovery : null, startOverride, requeue: requeueNext });
   let retired = Promise.resolve();
   function reopen(ended) {
     const start = ended.successorStart();
@@ -1202,7 +1218,7 @@ async function main(argv) {
     const shownFloor = start.inherited ? fresh.count() : 0;
     mcpReady.then(() => logTools(fresh, false, servedTools(surface)));
     console.error(`gm mcp: run ${closedId} has ended; opened run ${basename(runDir)}`);
-    return createSession({ ...limits, runDir, log: fresh, task: start.task, taskInherited: start.inherited, shownFloor });
+    return createSession({ ...limits, runDir, log: fresh, task: start.task, taskInherited: start.inherited, shownFloor, requeue: requeueNext });
   }
   const accepting = new Set();
   const acceptNow = (line) => {

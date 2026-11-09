@@ -79,7 +79,7 @@ async function check(label, command, argsOf) {
     if (flood.output !== '1') failures.push(`${label}: a body that logs returned ${flood.output}, not 1`);
     const format = await s.run(FORMAT);
     if (format.output !== '1') failures.push(`${label}: a body with objects and a long line returned ${format.output}, not 1`);
-    const events = JSON.parse(JSON.parse((await s.run(QUERY)).output).output);
+    const events = JSON.parse((await s.run(QUERY)).output.output);
     if (events.length !== 2) failures.push(`${label}: ${events.length} body-console events, expected one per logging body`);
     const [first, second] = events;
     if (first) {

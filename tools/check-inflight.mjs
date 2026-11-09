@@ -58,7 +58,7 @@ try {
   const bodies = replies.map((reply, index) => {
     const parsed = parsedOf(reply);
     if (parsed?.ok !== true) throw new Error(`call ${index} refused: ${parsed?.error ?? 'no reply'}`);
-    return JSON.parse(parsed.output);
+    return typeof parsed.output === 'string' ? JSON.parse(parsed.output) : parsed.output;
   });
   const ends = bodies.slice(0, CAP).map((body) => body.end);
   const ninth = bodies[CAP];

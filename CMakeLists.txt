@@ -26,3 +26,8 @@ include(cmake/gmnew_build_info.cmake)
 gmnew_configure_build_info("${CMAKE_CURRENT_SOURCE_DIR}")
 
 add_subdirectory(native)
+
+enable_testing()
+find_program(GMNEW_NODE node REQUIRED)
+add_test(NAME check-build COMMAND ${GMNEW_NODE} ${CMAKE_CURRENT_SOURCE_DIR}/tools/check-build.mjs ${CMAKE_BINARY_DIR})
+set_tests_properties(check-build PROPERTIES TIMEOUT 1500)

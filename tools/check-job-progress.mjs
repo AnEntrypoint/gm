@@ -62,7 +62,7 @@ async function arm(label, command, args) {
       const ran = await server.rpc('tools/call', { name: 'run_code', arguments: { body: code } });
       const runned = JSON.parse(ran.result?.content?.[0]?.text ?? 'null');
       if (runned?.ok !== true) throw new Error('run_code refused: ' + JSON.stringify(runned).slice(0, 200));
-      return runned.output;
+      return typeof runned.output === 'string' ? runned.output : JSON.stringify(runned.output);
     };
     await runBody(startBody);
     const logged = String(await runBody(waitBody));

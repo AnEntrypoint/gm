@@ -9,7 +9,7 @@ const argValue = (name, fallback) => {
   const at = process.argv.indexOf(name);
   return at >= 0 ? process.argv[at + 1] : fallback;
 };
-const NATIVE_BIN = resolve(argValue('--bin', join(REPO, 'build', 'integ', 'native', 'components', 'host', 'gm')));
+const NATIVE_BIN = resolve(argValue('--bin', join(REPO, 'build', 'release', 'native', 'components', 'host', 'gm')));
 const REF = resolve(argValue('--ref', '/tmp/parity-ref'));
 const REF_SOURCE = argValue('--ref-source', 'head');
 const SCRATCH = resolve(argValue('--scratch', `/tmp/parity-scratch-${process.pid}`));
@@ -652,7 +652,7 @@ return r.map(x => String(x.output ?? ''));`;
 }
 
 async function main() {
-  if (!existsSync(NATIVE_BIN)) throw new Error(`native binary not found: ${NATIVE_BIN} (build build/integ or pass --bin)`);
+  if (!existsSync(NATIVE_BIN)) throw new Error(`native binary not found: ${NATIVE_BIN} (build it with cmake --preset release and cmake --build build/release, or pass --bin)`);
   if (!existsSync(join(REPO, 'node_modules', 'acorn'))) throw new Error(`parity: the Node reference needs its dependencies; run "npm ci --ignore-scripts" in ${REPO} first`);
   const refHead = extractReference();
   const { spaces, head } = makeWorkspaces();

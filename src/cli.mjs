@@ -23,6 +23,10 @@ const USAGE = `usage:
 
 async function main(argv) {
   const [command, ...rest] = argv;
+  if (command === '--help' || command === '-h' || command === 'help') {
+    console.log(USAGE);
+    return 0;
+  }
   if (command === 'run') return run(parseFlags(rest));
   if (command === 'query') return query(parseFlags(rest));
   if (command === 'events') return events(parseFlags(rest));

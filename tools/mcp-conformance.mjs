@@ -19,7 +19,7 @@ const argv = process.argv.slice(2);
 const stdioAt = argv.indexOf('--stdio');
 const command = stdioAt >= 0 ? argv.slice(stdioAt + 1) : [];
 if (command.length === 0) {
-  console.error('usage: node tools/mcp-conformance.mjs --stdio <program> [args...]');
+  console.error('usage: node tools/mcp-conformance.mjs --stdio <gm binary> serve --workspace <dir>\n  to run it on a built tree: node tools/check-build.mjs <build dir>');
   process.exit(2);
 }
 

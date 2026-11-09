@@ -91,7 +91,7 @@ function run(name, fn, verify) {
 if (isMain) {
   direct('check-output-recovery', (s, workspace) => {
       const lines = Array.from({ length: 1399 }, (_, i) => i === 700 ? 'OUTPUT_MIDDLE_MARKER' : 'line ' + i).join('\n') + '\n';
-      const big = 'A'.repeat(12000) + 'OUTPUT_TAIL_MARKER' + 'B'.repeat(12000);
+      const big = 'A'.repeat(20500) + 'OUTPUT_TAIL_MARKER' + 'B'.repeat(3000);
       writeFileSync(join(workspace, 'lines.txt'), lines);
       writeFileSync(join(workspace, 'big.txt'), big);
       const shell = s.rpc('tools/call', { name: 'run_code', arguments: { body: "const r = await gm.run_shell({ command: 'cat lines.txt' }); const p = r.outputPath ?? r.artifactPath; const page = p ? await gm.read_file({ path: p, unit: 'chars', offset: r.next ?? 0, limit: 20000 }) : null; return { ok: r.ok, outputPath: p, totalChars: r.totalChars, next: r.next, truncated: r.truncated, middle: String(page?.output ?? '').includes('OUTPUT_MIDDLE_MARKER') };" } });
