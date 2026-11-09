@@ -64,7 +64,7 @@ gm is one long-horizon worker: an MCP server that runs a task as one append-only
 
 - Browser work uses the playwriter setup inside gm first, through gm.playwriter_execute and gm.playwriter_browsers (skills/gm/SKILL.md, Browser control). Headless Chromium, Claude in Chrome and the built-in browser are fallbacks: use one only when the playwriter setup cannot do the job, and say why.
 - Where Chromium has no sandbox wrapper, a layer may set PLAYWRITER_NO_SANDBOX=1 by restating the whole playwriter entry. The default does not set it.
-- A stopped background body: stop_body in native/components/mcp/server.cpp calls proc::kill_owned on the body's owner, and the body thread holds a proc::OwnerScope, so its child processes are killed. Node's killBody (src/exec.mjs) kills shells only (see the native-ahead decision).
+- A stopped background body: stop_body in native/components/mcp/server.cpp calls proc::kill_owned on the body's owner, and the body thread holds a proc::OwnerScope, so its child processes are killed. Node's killBody (src/exec.mjs) kills the body's shell groups and aborts its fetch calls (trackBodyAbort; tools/check-stop-fetch.mjs).
 
 ## Search and grep
 
@@ -108,7 +108,7 @@ Node-missing items are retired, not ported: native ships and Node is the parity 
 - A server killed by a signal reports 128 plus the signal number in native. A spawn failure reports the OS text in native.
 - Native answers server requests other than ping with the SDK's method-not-found text.
 - Native answers resources/subscribe with -32601; Node still serves it (parity native-ahead, SUBSCRIBE_ERROR_KIND in native/tests/parity/run.mjs).
-- A stopped background fetch follows native: the body stop kills the curl; Node parity is scheduled (DESIGN.md, Decided).
+- A stopped background fetch closes its connection on both engines: native kills the body's curl, Node aborts the body's fetch (tools/check-stop-fetch.mjs).
 
 ## Ship and commits
 

@@ -922,3 +922,42 @@ The subject of fc170fc carries `[skip ci]`, so the push started no release run. 
 | publish | 129252308805 | skipped (publish=false) |
 
 Windows CMD witness output, both Windows jobs: `"cmdOnly": {"ok": true, "exitCode": 0, "signal": null, "output": "runs\r\n", "launcher": "cmd"}`. The Test steps of both Windows jobs succeed. Row 25 made this step blocking from 4c2c056, so this run is the first recorded run with the step blocking, and it passed.
+
+## Ranked remaining work (2026-11-09, after the CI record for fc170fc)
+
+| rank | item | status | blocker or next step |
+|---|---|---|---|
+| 1 | The installed host build is behind two fixes: /config/.gmnew/current/gm stamps 78ca5a1, which predates fcb84df (a non-owner task replacement is refused) and 70e4349 (the updater finds gmnew-<target>) | open; the fixes are in HEAD | one `scripts/install.sh` run replaces the binary the live session serves, so it is an owner step, not Phase A. Not done in this pass |
+| 2 | Two peers in one workspace: row-added events of one run are not in the other run's next_context, and a peer's reply repeats a title across its events; fx's "another worker's events twice" | open (AGENTS.md, 2026-11-08) | needs fx's reply bodies; no gm reproduction yet |
+| 3 | Node stopped background fetch: a stop left the fetch's connection open until its 60 s timeout | done in this pass, Phase A, committed locally, not pushed (next section) | Phase B witnesses and a push, when the owner asks |
+| 4 | Node-vs-native differences kept as decisions: read_file digest (Node sha256 cut to 12 hex, native FNV-1a 64), bounds (Node UTF-16 units, native bytes), the finish reply's `browser` key | owner decision under the parity standard | Node's browser isolation is needed for the key (rank 5) |
+| 5 | Node has no per-run browser context (native browser_scope.cpp), so Node cannot close a run's tabs | owner decision (changing src/ is a decision) | none recorded |
+| 6 | Native answers resources/subscribe with -32601 while Node serves it; the stopped-fetch error text differs ("curl exited 137" native, "timed out after 60000 ms" Node) | owner decision | none recorded |
+| 7 | Protocol 2026-07-28 behind a capability flag, off by default (owner decision 3) | not started | the owner schedules it; a client test is the gate for default |
+| 8 | Native client checks two protocol versions, the SDK six; Node is not checked to accept an initialize result without capabilities and serverInfo | open, unverified | a witness run on both trees |
+| 9 | Windows process-group kill and Windows/macOS runtime behavior beyond the build and the CMD witness | open | a Windows and a macOS runtime witness; `doctor` reports the group kill |
+| 10 | G6: open row unknown-mw6bc4mv1c00 (push target AnEntrypoint/gmfx) | outside this checkout; AGENTS.md records it closed stale by fx on 2026-11-09 | the fx owner; not touched here |
+
+Closed since the last list, each with its record above: the replay witness and the Node parity run in CI (rows 15 and 17), item 7 (Windows and macOS builds, V4 CRLF), G1, G2 (row 25), G4, G5, G7, G8, G9, the commit-check wording (item 1 of the items 1 to 6 pass), the leaf assertion (item 2), the finish openRows (item 4), the shell-job lifetime (item 5), the .mcp.json pass (item 6, no change), and the CI record for fc170fc.
+
+## Node stopped background fetch (2026-11-09, Phase A)
+
+Cause: a background body's fetch ran in the main thread (the body's worker calls the verb through `call`), and `killBody` in src/exec.mjs signalled only the body's shell groups. A stopped body therefore left its fetch's socket open until the server answered or the 60 s timeout fired. Native's stop kills the body's curl (OwnerScope and proc::kill_owned). Measured before the change, with a server that answers after 50 s: the Node socket was still open 6 s after `finish` with stopBackground (the check's first run failed on it), and native closed it in 6 to 10 ms.
+
+| # | File | Change | Witness needed |
+|---|---|---|---|
+| 34 | src/exec.mjs | `trackBodyAbort(body, controller)` registers a fetch's AbortController under its body; `killBody` aborts every controller of that body and clears them. The map is `bodyAborts` | tools/check-stop-fetch.mjs on node |
+| 35 | src/fetch.mjs | the fetch verb makes one AbortController per call, tracks it under the body from `bodyContext`, and untracks it when the call ends. The request signal is `AbortSignal.any` of the timeout and that controller. The retry gate stops once the controller is aborted, so a stopped body does not retry | tools/check-stop-fetch.mjs on node; tools/check-run-code-budget.mjs node (unchanged figures) |
+| 36 | tools/check-stop-fetch.mjs (new); tools/check-build.mjs | a background run_code fetch to a server that answers after 50 s; `finish` with stopBackground; the socket must close within 5 s. It runs on either engine, and check-build runs it on the native binary | failing-then-passing: before row 34 the Node check failed with `the stopped body's fetch kept its connection open for 5000 ms after finish (the server answers at 50000 ms)`; after rows 34 and 35 it passes on node ("closed its connection 13 ms after finish"); native passes ("10 ms after finish") |
+| 37 | native/tests/parity/run.mjs | the NATIVE_AHEAD row `.count.code-call:stopped-fetch` is removed. Node now logs the fetch code-call before `end`, after `job-killed`, as native does, so the row no longer applies. The row's `firstDivergence` entry still names the kind | `node native/tests/parity/run.mjs --bin build/release/native/components/host/gm` stays at `22/93 scenarios match, 0 cutover-expected, 56 native-ahead, 15 documented-gap, 0 differ`. The harness output has no `.count.code-call:stopped-fetch` line, before or after the removal, so the removal changes no count |
+| 38 | AGENTS.md; DESIGN.md | AGENTS.md: the two notes about the stopped fetch and killBody now state the new behavior. DESIGN.md: the native-ahead decision in the parity section gets a dated "Superseded 2026-11-09" note (the decision text is kept); the open owner item about the stopped fetch is removed | read both notes |
+
+Residual difference, kept: the fetch code-call's error text. Node logs `timed out after 60000 ms` (an AbortError maps to ETIMEDOUT in failureOf) and native logs `curl exited 137`. The text is not compared by the parity harness.
+
+Node regression witnesses on this change (node tree only; no native source changed):
+- `node tools/check-run-code-budget.mjs node`: `run-code-budget-check: ok (a 65 s JavaScript body with timeoutMs 100000 returned in 65113 ms; a fetch leaf held by the server for 50000 ms ended in 50272 ms with no old fixed limit; a 3000 ms fetch with a catastrophic match timed out in 3259 ms in one attempt; a 3000 ms fetch that timed out ended in 3172 ms in one attempt)`
+- `node tools/check-early-run-code.mjs node`: `early-run-code-check: ok (a run_code sent before the first next_context ran at once in 68 ms, with the rules notice; an early finish ended the run in 31 ms)`
+- `node tools/check-job-bounds.mjs node`: `job-bounds-check: ok (a 2000 ms job timeout ended as timeout in 2044 ms; a 7200000 ms job timeout ended as lifetime at 5016 ms under a 5000 ms lifetime; a 1000 ms job exited 0 in 1154 ms)`
+- Parity, after row 37: `22/93 scenarios match, 0 cutover-expected, 56 native-ahead, 15 documented-gap, 0 differ`
+
+Not run in this pass: check-build on the rebuilt binary (no native source changed; the native side of check-stop-fetch passed before the Node change), and any push.

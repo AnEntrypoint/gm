@@ -30,7 +30,7 @@ rmSync(configDir, { recursive: true, force: true });
 if (run.error) console.error(`check-build: ${run.error.message}`);
 if (run.status !== 0) process.exit(run.status ?? 1);
 
-for (const check of ['check-run-code-progress.mjs', 'check-shell-stdin.mjs', 'check-run-code-budget.mjs', 'check-job-bounds.mjs', 'check-early-run-code.mjs', 'witness-next-context-replay.mjs']) {
+for (const check of ['check-run-code-progress.mjs', 'check-shell-stdin.mjs', 'check-run-code-budget.mjs', 'check-job-bounds.mjs', 'check-early-run-code.mjs', 'check-stop-fetch.mjs', 'witness-next-context-replay.mjs']) {
     const result = spawnSync(process.execPath, [join(root, 'tools', check), binary], { cwd: root, stdio: 'inherit', timeout: 600000 });
     if (result.status !== 0) process.exit(result.status ?? 1);
 }

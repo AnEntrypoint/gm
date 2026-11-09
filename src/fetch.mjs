@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Worker } from 'node:worker_threads';
+import { bodyContext, trackBodyAbort } from './exec.mjs';
 import { archiveSource } from './sources.mjs';
 import { codeType, retrying, statusType } from './retry.mjs';
 import { resultZone1, resultZone2 } from './compact.mjs';
@@ -40,17 +41,19 @@ export function createFetchVerbs({ log, root, runDir }) {
   const verbs = {
     fetch: (args) => {
       const deadlineAt = Date.now() + (args.timeoutMs ?? DEFAULT_TIMEOUT_MS);
+      const stop = new AbortController();
+      const untrack = trackBodyAbort(bodyContext.getStore()?.body, stop);
       return retrying({
         tool: 'fetch',
         log,
         deadlineAt,
         attempt: async () => {
-          const result = await verbs.getOnce(args, deadlineAt);
-          return { result, errorType: classify(result) };
+          const result = await verbs.getOnce(args, deadlineAt, stop.signal);
+          return { result, errorType: stop.signal.aborted ? null : classify(result) };
         },
-      });
+      }).finally(untrack);
     },
-    async getOnce({ url, timeoutMs = DEFAULT_TIMEOUT_MS, maxBytes, match }, deadlineAt = Date.now() + timeoutMs) {
+    async getOnce({ url, timeoutMs = DEFAULT_TIMEOUT_MS, maxBytes, match }, deadlineAt = Date.now() + timeoutMs, stop = new AbortController().signal) {
       if (typeof url !== 'string') return fail('url must be a string');
       if (!Number.isInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > MAX_TIMEOUT_MS) return fail(`timeoutMs must be an integer from 1 to ${MAX_TIMEOUT_MS}`);
       const bad = checkLimits({ maxBytes, match });
@@ -63,7 +66,7 @@ export function createFetchVerbs({ log, root, runDir }) {
       }
       const left = deadlineAt - Date.now();
       if (left < 1) return timedOut(timeoutMs);
-      const signal = AbortSignal.timeout(left);
+      const signal = AbortSignal.any([AbortSignal.timeout(left), stop]);
 
       let redirects = 0;
       let response;

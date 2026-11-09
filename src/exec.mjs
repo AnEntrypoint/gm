@@ -27,6 +27,7 @@ const KILL_GRACE_MS = 500;
 export const foregroundGroups = new Set();
 export const bodyContext = new AsyncLocalStorage();
 const bodyGroups = new Map();
+const bodyAborts = new Map();
 
 export function childEnv(extra = {}) {
   const env = { ...process.env, ...extra };
@@ -60,8 +61,21 @@ export function killGroupNow(pid) {
   return undefined;
 }
 
+export function trackBodyAbort(body, controller) {
+  if (body === undefined) return () => {};
+  if (!bodyAborts.has(body)) bodyAborts.set(body, new Set());
+  bodyAborts.get(body).add(controller);
+  return () => {
+    const set = bodyAborts.get(body);
+    set?.delete(controller);
+    if (set?.size === 0) bodyAborts.delete(body);
+  };
+}
+
 export function killBody(body) {
   for (const [pid, owner] of bodyGroups) if (owner === body) killGroupNow(pid);
+  for (const controller of bodyAborts.get(body) ?? []) controller.abort();
+  bodyAborts.delete(body);
 }
 
 export function signalGroup(pid, signal) {
