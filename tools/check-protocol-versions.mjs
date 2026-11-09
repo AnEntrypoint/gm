@@ -27,6 +27,7 @@ const UNKNOWN = '1999-01-01';
 const REFUSED = '2024-01-01';
 const REPLY_MS = 60000;
 const EVENT_MS = 60000;
+const STDERR_TAIL = 2000;
 
 const FAKE_SERVER = String.raw`import readline from 'node:readline';
 const [version, mode] = process.argv.slice(2);
@@ -63,7 +64,16 @@ const removeTree = async (path) => {
 const spawnEngine = (args) => {
   const leading = onNode ? [join(root, 'src', 'mcp.mjs')] : ['serve'];
   const child = spawn(onNode ? process.execPath : binary, [...leading, ...args], { stdio: ['pipe', 'pipe', 'pipe'] });
-  child.stderr.resume();
+  let stderr = '';
+  child.stderr.on('data', (chunk) => {
+    stderr = (stderr + String(chunk)).slice(-STDERR_TAIL);
+  });
+  let exit = null;
+  child.once('exit', (code, signal) => {
+    exit = { code, signal };
+    for (const done of pending.values()) done(null);
+    pending.clear();
+  });
   const pending = new Map();
   let nextId = 1;
   readline.createInterface({ input: child.stdout }).on('line', (line) => {
@@ -80,6 +90,10 @@ const spawnEngine = (args) => {
   });
   const rpc = (method, params) =>
     new Promise((done) => {
+      if (exit !== null) {
+        done(null);
+        return;
+      }
       const id = nextId++;
       const timer = setTimeout(() => {
         pending.delete(id);
@@ -96,7 +110,12 @@ const spawnEngine = (args) => {
     child.kill();
     await Promise.race([exited, sleep(5000)]);
   };
-  return { rpc, stop };
+  const cause = () => {
+    if (exit === null) return '';
+    const how = exit.signal !== null ? `signal ${exit.signal}` : `code ${exit.code}`;
+    return `engine exited with ${how} before it answered; stderr: ${stderr.trim() || '(empty)'}`;
+  };
+  return { rpc, stop, cause, exited: () => exit !== null };
 };
 
 const findEvent = (logFile, predicate) => {
@@ -120,7 +139,8 @@ const serverCase = async (scratch, asked) => {
   const workspace = mkdtempSync(join(scratch, 'server-'));
   const engine = spawnEngine(['--workspace', workspace, '--run-dir', join(workspace, 'run'), '--mcp-config', join(scratch, 'quiet-mcp.json')]);
   try {
-    return await engine.rpc('initialize', { protocolVersion: asked, capabilities: {}, clientInfo: { name: CHECK, version: '1' } });
+    const reply = await engine.rpc('initialize', { protocolVersion: asked, capabilities: {}, clientInfo: { name: CHECK, version: '1' } });
+    return { reply, cause: engine.cause() };
   } finally {
     await engine.stop();
   }
@@ -137,11 +157,11 @@ const clientCase = async (scratch, { version, mode }) => {
   const deadline = Date.now() + EVENT_MS;
   try {
     let event = findEvent(logFile, matches);
-    while (event === null && Date.now() < deadline) {
+    while (event === null && !engine.exited() && Date.now() < deadline) {
       await sleep(100);
       event = findEvent(logFile, matches);
     }
-    return event;
+    return { event, cause: engine.cause() };
   } finally {
     await engine.stop();
   }
@@ -157,12 +177,12 @@ try {
   writeFileSync(join(scratch, 'quiet-mcp.json'), JSON.stringify({ mcpServers: { playwriter: { disabled: true } } }));
   writeFileSync(join(scratch, 'fake-server.mjs'), FAKE_SERVER);
 
-  const served = await Promise.all([...VERSIONS, UNKNOWN].map(async (asked) => ({ asked, reply: await serverCase(scratch, asked) })));
-  for (const { asked, reply } of served) {
+  const served = await Promise.all([...VERSIONS, UNKNOWN].map(async (asked) => ({ asked, ...(await serverCase(scratch, asked)) })));
+  for (const { asked, reply, cause } of served) {
     const expected = VERSIONS.includes(asked) ? asked : LATEST;
     const label = `server asked ${asked}`;
     if (reply === null || reply.error !== undefined) {
-      failures.push(`${label}: no initialize result: ${JSON.stringify(reply)}`);
+      failures.push(`${label}: no initialize result: ${JSON.stringify(reply)}${cause ? `; ${cause}` : ''}`);
       continue;
     }
     const result = reply.result ?? {};
@@ -179,10 +199,10 @@ try {
   ];
   const events = await Promise.all(cases.map((item) => clientCase(scratch, item)));
   cases.forEach((item, index) => {
-    const event = events[index];
+    const { event, cause } = events[index];
     const label = item.label;
     if (event === null) {
-      failures.push(`${label}: no mcp-server event after ${EVENT_MS} ms`);
+      failures.push(`${label}: no mcp-server event after ${EVENT_MS} ms${cause ? `; ${cause}` : ''}`);
       return;
     }
     if (item.mode === 'ok' && VERSIONS.includes(item.version)) {
