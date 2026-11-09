@@ -606,6 +606,7 @@ void JobTable::stop_orphans() {
         const json::Value* body = status->find("body");
         bool is_body = body != nullptr && !body->is_null();
         std::string tail;
+        if (is_body) proc::reap_ledger(jobs_dir() / (name + ".pids"));
         if (!is_body) {
             if (const json::Value* output = status->find("output"); output != nullptr && output->is_string()) {
                 tail = utf16_tail(read_bytes(output->as_string()), tail_cap);

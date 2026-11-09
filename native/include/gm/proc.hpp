@@ -36,16 +36,18 @@ using Owner = std::uint64_t;
 
 class OwnerScope {
 public:
-    explicit OwnerScope(Owner owner);
+    explicit OwnerScope(Owner owner, std::filesystem::path ledger = {});
     ~OwnerScope();
     OwnerScope(const OwnerScope&) = delete;
     OwnerScope& operator=(const OwnerScope&) = delete;
 
 private:
     Owner previous_;
+    std::filesystem::path previous_ledger_;
 };
 
 void kill_owned(Owner owner);
+void reap_ledger(const std::filesystem::path& ledger);
 
 struct SpawnOptions {
     std::filesystem::path cwd;

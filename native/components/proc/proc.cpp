@@ -3,6 +3,7 @@
 #include <chrono>
 #include <cstdlib>
 #include <cstring>
+#include <fstream>
 
 #if defined(_WIN32)
 #define WIN32_LEAN_AND_MEAN
@@ -23,6 +24,7 @@ namespace gm::proc {
 namespace {
 
 thread_local Owner current_owner = 0;
+thread_local std::filesystem::path current_ledger;
 std::mutex registry_mutex;
 std::vector<std::pair<Owner, long long>> registry;
 
@@ -34,17 +36,42 @@ void kill_tree(long long pid) {
 #endif
 }
 
+void append_ledger(const std::filesystem::path& ledger, long long pid) {
+    std::error_code ec;
+    std::filesystem::create_directories(ledger.parent_path(), ec);
+    std::ofstream(ledger, std::ios::app) << pid << '\n';
+}
+
+void forget_ledger(const std::filesystem::path& ledger, long long pid) {
+    std::ifstream in(ledger);
+    std::vector<std::string> kept;
+    const std::string gone = std::to_string(pid);
+    for (std::string line; std::getline(in, line);) {
+        if (line != gone) kept.push_back(line);
+    }
+    in.close();
+    std::error_code ec;
+    if (kept.empty()) {
+        std::filesystem::remove(ledger, ec);
+        return;
+    }
+    std::ofstream out(ledger, std::ios::trunc);
+    for (const auto& line : kept) out << line << '\n';
+}
+
 class Enrolment {
 public:
-    explicit Enrolment(long long pid) : pid_(pid), owner_(current_owner) {
+    explicit Enrolment(long long pid) : pid_(pid), owner_(current_owner), ledger_(current_ledger) {
         if (owner_ == 0) return;
         std::lock_guard guard(registry_mutex);
         registry.emplace_back(owner_, pid_);
+        if (!ledger_.empty()) append_ledger(ledger_, pid_);
     }
     ~Enrolment() {
         if (owner_ == 0) return;
         std::lock_guard guard(registry_mutex);
         std::erase_if(registry, [this](const auto& entry) { return entry.second == pid_; });
+        if (!ledger_.empty()) forget_ledger(ledger_, pid_);
     }
     Enrolment(const Enrolment&) = delete;
     Enrolment& operator=(const Enrolment&) = delete;
@@ -52,19 +79,37 @@ public:
 private:
     long long pid_;
     Owner owner_;
+    std::filesystem::path ledger_;
 };
 
 }
 
-OwnerScope::OwnerScope(Owner owner) : previous_(std::exchange(current_owner, owner)) {}
+OwnerScope::OwnerScope(Owner owner, std::filesystem::path ledger)
+    : previous_(std::exchange(current_owner, owner)), previous_ledger_(std::exchange(current_ledger, std::move(ledger))) {}
 
-OwnerScope::~OwnerScope() { current_owner = previous_; }
+OwnerScope::~OwnerScope() {
+    current_owner = previous_;
+    current_ledger = previous_ledger_;
+}
 
 void kill_owned(Owner owner) {
     std::lock_guard guard(registry_mutex);
     for (const auto& [entry_owner, pid] : registry) {
         if (entry_owner == owner) kill_tree(pid);
     }
+}
+
+void reap_ledger(const std::filesystem::path& ledger) {
+    std::vector<long long> pids;
+    std::ifstream in(ledger);
+    for (std::string line; std::getline(in, line);) {
+        const long long pid = std::atoll(line.c_str());
+        if (pid > 0) pids.push_back(pid);
+    }
+    in.close();
+    for (long long pid : pids) kill_tree(pid);
+    std::error_code ec;
+    std::filesystem::remove(ledger, ec);
 }
 
 #if !defined(_WIN32)

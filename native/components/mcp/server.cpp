@@ -3199,11 +3199,12 @@ Value Server::State::run_code(const Value& args) {
                 bodies.push_back(job);
             }
             auto logged = std::make_shared<LoggedVerbs>(*this, job, gate);
+            auto ledger = s().log->dir() / "jobs" / (job->name + ".pids");
             job->thread = std::thread([this, job, logged, runner = options.run_body, source = body->as_string(), root = options.workspace,
                                        format_name = format == nullptr ? std::string() : std::string(format->as_string()),
-                                       shared_gate = gate] {
+                                       shared_gate = gate, ledger] {
                 gm::BodyControlsScope controls_scope(job->controls);
-                proc::OwnerScope owner(job->body);
+                proc::OwnerScope owner(job->body, ledger);
                 auto outcome = runner(*logged, source, root, format_name);
                 {
                     std::shared_lock guard(shared_gate->lock);

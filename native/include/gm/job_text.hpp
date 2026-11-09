@@ -6,7 +6,7 @@
 namespace gm::jobs {
 
 inline std::string body_restart_statement(const std::string& name) {
-    return "job " + name + " killed: the gm worker restarted while it ran; a worker that died without a graceful stop leaves its body child processes running, and they are not tracked across the restart";
+    return "job " + name + " killed: the gm worker restarted while it ran; the body child processes recorded for it were killed with it";
 }
 
 inline std::string kill_statement(const std::string& name, const std::string& reason, std::uint64_t timeout_ms, std::uint64_t lifetime_ms) {
