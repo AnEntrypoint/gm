@@ -172,3 +172,11 @@ Nothing here is built or witnessed yet. Phase A is code and docs; nothing is pus
 | 46 | src/mcp.mjs (act, perform, nextContext) | defect: with the wait moved into the action, the Node action event for next_context logged the step before the count (0 on the first call), where native logs steps + 1 (native act is called with ahead 1). act and perform take an ahead offset; nextContext passes 1; the step on the action and result events is steps + ahead. The parity row next_context events[2].step (Node 0, native 1) is the witness | parity: 0 differ |
 
 Node and native now use the same progress text and the same keys. A timed-out wait that wakes with an event still takes a step, on both paths.
+
+### Phase B results (2026-11-09, build stamp 8b5116b, code commit 8b5116b)
+
+- Timed-out wait (`next_context` with waitMs 3000 after step 1), native and Node: `{"ok":true,"progress":"no event pending after 3000 ms; no step was used, call next_context again to keep waiting","steps":1}`, 124 bytes each, byte-identical. Witness: /tmp/gmfix/p2.mjs wait with GM_BIN set to the release binary and to the Node wrapper.
+- Job wait (gate job started with run_code, next_context waitMs 20000), native: 1143 bytes, output "gate-done\n" in both jobsEnded and pending. Node: 950 bytes, output "gate-done\n" in jobsEnded (exitCode 0); pending carries the job record without output. Documented difference, not changed: the output is delivered on both paths; the Node pending record is the one without it.
+- Conformance: `conformance: 83 passed, 0 failed of 83 checks in 24 scenarios`, `check-build: gm stamp 8b5116b-dev (8b5116b)`, exit 0.
+- Gate (tools/ship.sh, src/gate.mjs runGate): `{"gate":true,"failed":[]}`, `gate exit code: 0`.
+- Parity: `22/93 scenarios match, 0 cutover-expected, 56 native-ahead, 15 documented-gap, 0 differ`, exit 0. The one differ from the Phase B run before row 46 (next_context events[2].step, Node 0, native 1) is gone.
