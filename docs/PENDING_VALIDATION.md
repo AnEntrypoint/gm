@@ -504,3 +504,12 @@ V4 is the CRLF comparison in tools/check-shell-stdin.mjs from 4e82f40 (job outpu
 
 - native/components/mcp/server.cpp, the server-side stop_orphans (line ~976): before a body's status is rewritten as killed, it calls `proc::reap_ledger(dir / (job + ".pids"))`, where dir is the run's jobs directory. Before this, only JobTable::stop_orphans (job.cpp) reaped, so if the server path ran first on a crashed run its body children were not killed.
 - Witness plan for Phase B: rebuild; run wreap.mjs (worker SIGKILL, restart, the recorded child must be dead and the ledger gone); conformance; parity. The log cannot show which of the two stop_orphans ran, so the witness proves that reaping happens, not which path did it.
+
+## gm pass, Phase B (2026-11-09, binary 608d03c): stop_orphans reaps on the server path
+
+- Build: `cmake --preset release`, then `cmake --build build/release -j 4`, BUILD_EXIT 0, 0 FAILED. A first build at -j 8 had two cc1plus processes end on SIGTERM ("c++: fatal error: Terminated signal terminated program cc1plus"); the same sources compiled cleanly at -j 4. Stamp: `608d03c-dev (608d03c)`.
+- Reaping witness, native, worker SIGKILL then restart (wreap.mjs): `LEDGER_FILE <ws>/runs/<run>/jobs/body-9.pids PIDS 849110`; `CHILD_ALIVE_BEFORE_KILL 849110:true`; `WORKER_PIDS 848869`; `WORKER_PIDS_AFTER_KILL 849756`; `CHILD_ALIVE_AFTER_WORKER_KILL 849110:false`; `LEDGER_AFTER_WORKER_KILL gone`; `KILLED_RECORD` seq 14 `"kind":"job","state":"killed","reason":"restart","statement":"job body-9 killed: the gm worker restarted while it ran; the body child processes recorded for it were killed with it"`; seq 15 `"kind":"job-killed"` with the same statement. Verified. The log cannot show which stop_orphans ran, as the Phase A plan said.
+- Conformance, `node tools/check-build.mjs build/release`: `conformance: 83 passed, 0 failed of 83 checks in 24 scenarios`; CONF_EXIT 0.
+- Parity, `node native/tests/parity/run.mjs --bin build/release/native/components/host/gm`: `22/93 scenarios match, 0 cutover-expected, 56 native-ahead, 15 documented-gap, 0 differ`; PARITY_EXIT 0.
+
+Status: finished for rank 1 (server-path reap). V4 remains a CI item (see "V4 decided"), not in this blocking list.
