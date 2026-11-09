@@ -52,7 +52,7 @@ gm is one long-horizon worker: an MCP server that runs a task as one append-only
 ## Parity harness
 
 - Run `npm ci --ignore-scripts` first; the harness stops at startup and names that step when node_modules/acorn is missing. The default --bin is build/integ, which no preset names, so configure it or pass --bin.
-- Last witness (2026-11-08, `--bin build/release/native/components/host/gm`, after `npm ci --ignore-scripts`): 23 of 93 match, 47 native-ahead, 23 documented-gap, 0 differ. Changing Node to match native is a decision, not a fix.
+- Last witness (2026-11-09, `--bin build/release/native/components/host/gm`, after `npm ci --ignore-scripts`): 22 of 93 match, 56 native-ahead, 15 documented-gap, 0 differ. The native-only browser keys and the sequence shift they cause are native-ahead entries. Changing Node to match native is a decision, not a fix.
 
 ## Runtime and MCP surface
 
