@@ -70,6 +70,19 @@ Nothing here is built or witnessed yet. Phase A is code and docs only; nothing i
 
 Still a gap: the run owner on Node (src/run.mjs currentRunDir, src/mcp.mjs reopen). AGENTS says changing Node is a decision.
 
+### Phase B results (2026-11-09, build stamp 871a482, HEAD 871a482)
+
+Rows 18-22 are built and witnessed on build/release/native/components/host/gm and, for row 22, on /tmp/gmfix/nodegm (the Node MCP path).
+
+- P1 profile witness (native): `{"check":"profile-witness","distinctProfilePaths":true,"distinctBrowserPids":true,"distinctPageSets":true,"alphaOwnsOnlyAlphaPage":true,"bravoOwnsOnlyBravoPage":true}`.
+- P2 profile witness (Node path, GM_BIN=/tmp/gmfix/nodegm): the same line, all five true.
+- W1 run owner: a second serve on run first prints `refused: run first belongs to another live connection; this connection cannot continue it` and no "owner witness" text; a serve on run second replies ok true, run second.
+- W2 child task: owner step 1 ok true; child next_context task "Build X" after step 1 refused with `refused: a task replacement after the first step needs owner:true`; child with owner:true task "Y" replies ok true, role child, task Y.
+- W3 job names per run: run 1 job build "echo one" output "one\n"; finish ok; run 2 job build "echo two" started (ok true, not "already exists"); run 2 job_status output "two\n", logPath in run 2's jobs dir.
+- Conformance: `conformance: 83 passed, 0 failed of 83 checks in 24 scenarios`; `check-build: gm stamp 871a482-dev (871a482)`; exit 0.
+- Parity: `22/93 scenarios match, 0 cutover-expected, 56 native-ahead, 15 documented-gap, 0 differ` (exit 0).
+- Existing gm witnesses on the same binary: seq refused:true; race twoRefused:true; finishrow peer B refused:false; outpage inline 20000 next 20000 totalChars 30010; read 28800 truncated false; loud over-cap error; taskpage taskTruncated true total 62889; tabs (A closed, closedPages 2, B kept); browsers; journal (2 context-reply events); dup; skill (served text holds Memory rules and PLAYWRITER_PROJECT_DIR); other (2 other pages).
+
 ### Phase B results (2026-11-09, build stamp 409c3f3, HEAD 409c3f3)
 
 Rows 13-16 are built and witnessed on build/release/native/components/host/gm. Row 17 is this section.
