@@ -542,3 +542,21 @@ work/tooling-fix-units.json: the row is not a unit there. Its one mention is in 
 | 7 | Windows and macOS builds; V4 CRLF check from 4e82f40 | CI | a Windows CI run of release.yml |
 | done | fx row unknown-mw6bc4mv1c00 | closed stale, 2026-11-09 | none |
 | done | body children reaped on the server stop_orphans path | 9314e6f, witnessed on 608d03c | none |
+
+## gm pass, Phase A (2026-11-09): items 1 to 6 of the ranked list
+
+Each change below is committed locally. Phase B runs the listed witness for each and records its output.
+
+1. Row commit check names the cause (item 1). Changed: src/rows.mjs (unknown_resolve), src/git.mjs (new isRepository), native/leaves/rows.mjs (unknown_resolve and a new isRepository). Before: "no commit X in this repository" for every failure, including a root that is not a git repository. After: "cannot check commit X: <root> is not a git repository" when the root is not a repository, and "no commit X in the repository at <root>" otherwise. Cause of the old wording: the check ran in the workspace root and printed one message for every cat-file failure. Witness (Phase B): unknown_resolve with a commit of 40 zeros, once in a non-repository workspace and once in a git repository, on native and Node.
+
+2. Leaf assertion tightened (item 2). Changed: tools/check-run-code-budget.mjs. Before: the leaf passed on status 200 or on a background run. After: the leaf must return status 200 in the foreground (reply.background undefined). Witness (Phase B): the check passes on the built binary; a negative control copy with the leaf timeoutMs at 60000 must fail, because the leaf then backgrounds.
+
+3. Node run_code budget parity beyond the 65 s case (item 3). Not changed yet. Decision method: the witness for it needs a background body that outlives its lifetime. Native's JavaScript budget is the job lifetime; Node's background bodies are jobs with the same lifetime (tools.mjs). Witness (Phase B): with --job-lifetime-ms 8000 on both trees, a background body spinning for 60 s must end at about 8 s with reason lifetime. If Node does not, Node is changed in Phase B and the change is recorded there.
+
+4. finish accepts openRows at the step limit (item 4). Changed: native/components/mcp/server.cpp (finish, the schema, the description), src/mcp.mjs (finish, schema, description). Design: openRows is an array of {id, reason}. It is accepted only when the run has reached --max-steps, and it must name every open row of this run with a non-empty reason, so an open row can be documented but not closed. Finish logs a finish-open-rows event with the rows and the step count. Finish still refuses open rows without openRows, before the limit, and when a listed row is not open here. Witness (Phase B): on both trees with --max-steps 3: finish without openRows refused; finish with openRows before the limit refused; at the limit finish with openRows accepted; the row still open in unknown_list; the finish-open-rows event in the log.
+
+5. Shell-job lifetime reason reachable (item 5). Changed: native/components/verbs/verbs.cpp (max_job_timeout_ms 7200000, the job_start description), src/tools.mjs (MAX_JOB_TIMEOUT_MS 7200000), src/mcp.mjs (job_start description). Cause: job_start's cap (3600000) equalled the job lifetime, and watch() sets reason lifetime only when the lifetime is below the timeout, so the reason could never be reached. Native's --job-lifetime-ms flag is now parsed by the worker (native/components/host/worker.cpp), so the lifetime can be witnessed in seconds. Witness (Phase B): with --job-lifetime-ms 5000, job_start timeoutMs 7200000 is accepted, and the job ends killed with reason lifetime at about 5 s with statement "job <name> stopped: the job lifetime of 5000 ms ended before it finished", on both trees.
+
+6. The .mcp.json pass (item 6). Decision: no project .mcp.json is added. The gate in docs/PENDING_VALIDATION.md (the parity-harness cutover M5) is met, and the user-wide entry already runs the native binary. Reason: a project .mcp.json would start a second gm beside the user-wide one. Witness (Phase B): read /config/.claude.json (mcpServers.gm) and confirm the checkout has no .mcp.json.
+
+Item 7 (Windows and macOS builds, V4 CRLF) stays open: it needs Windows CI.
