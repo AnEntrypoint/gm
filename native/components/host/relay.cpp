@@ -232,6 +232,12 @@ void Relay::route_host_line(Lock& lock, std::string line) {
         const json::Value* uri = params != nullptr ? params->find("uri") : nullptr;
         if (uri != nullptr && uri->is_string() && uri->as_string() == kGmSkillUri) skill_read_ = true;
     }
+    if (method == "prompts/get" || method == "tools/call") {
+        const json::Value* params = message->find("params");
+        const json::Value* name = params != nullptr ? params->find("name") : nullptr;
+        const std::string_view delivers_skill = method == "prompts/get" ? "gm" : "run_code";
+        if (name != nullptr && name->is_string() && name->as_string() == delivers_skill) skill_read_ = true;
+    }
     if (state_ != State::Running) {
         if (state_ == State::Failed) {
             auto id = message ? id_key(*message) : std::nullopt;

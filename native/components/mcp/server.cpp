@@ -44,7 +44,8 @@ constexpr const char* kLogMeta = "com.anentrypoint.gmnew/log";
 constexpr const char* kServerName = "gm";
 constexpr const char* kServerTitle = "gm run worker";
 constexpr const char* kGmSkillUri = "skill://gm/SKILL.md";
-constexpr const char* kSkillReadRefusal = "run_code refused: read skill://gm/SKILL.md first in this connection. Call resources/read with {\"uri\":\"skill://gm/SKILL.md\"} (ReadMcpResourceTool with server gm and that uri), then call run_code again.";
+constexpr int kStepStartRule = 2;
+constexpr const char* kSkillReadRefusal = "run_code refused: skill://gm/SKILL.md had not been read in this connection, so this reply carries its text in skill. Read it and follow it, then call run_code again. This refusal is sent once per connection.";
 constexpr std::size_t kReplyMemory = 256;
 constexpr std::size_t kOutputCap = 20000;
 constexpr std::size_t kOutputPage = 20000;
@@ -1157,6 +1158,15 @@ struct Server::State {
         return out;
     }
 
+    void clear_rule(int rule) {
+        auto open = std::find_if(s().rules_open.begin(), s().rules_open.end(), [rule](const auto& entry) { return entry.first == rule; });
+        if (open == s().rules_open.end()) return;
+        s().rules_open.erase(open);
+        Value rules = array();
+        rules.push(rule);
+        append("rules-cleared", object().set("step", s().steps).set("rules", std::move(rules)));
+    }
+
     void clear_rules() {
         if (s().rules_open.empty()) return;
         Value rules = open_rule_numbers();
@@ -1172,8 +1182,9 @@ struct Server::State {
             lines += "rule " + std::to_string(rule) + " (" + kRuleText.at(rule) + "): " + evidence;
         }
         return "The rules check found: " + lines +
-               ". Read the gm skill again with ReadMcpResourceTool (server gm, uri skill://gm/SKILL.md) and follow the "
-               "rules it gives. That one read clears this notice. Do not repeat finished work.";
+               ". Read the gm skill again with ReadMcpResourceTool (server gm, uri skill://gm/SKILL.md), or with "
+               "gm.read_file({ path: 'skill://gm/SKILL.md' }) in a run_code body, and follow the rules it gives. That one read clears "
+               "this notice, and the next next_context clears a rule 2 notice. Do not repeat finished work.";
     }
 
     Value action_fields(const std::string& tool, const Value& args, bool with_rpc, int ahead = 0) {
@@ -2081,6 +2092,7 @@ struct Server::State {
                 s().owner_seen = true;
                 s().step_calls = 0;
                 Value reply = context(s().steps, compact_children, wait_ms > 0);
+                clear_rule(kStepStartRule);
                 reply.set("tabs", browser_tabs_text());
                 append("context-reply", object().set("step", number_of(s().steps)).set("text", json::dump(reply)));
                 return reply;
@@ -2287,9 +2299,12 @@ struct Server::State {
     }
 
     Value run_code(const Value& args);
-    Value skill_read_refused() {
+    std::optional<Value> skill_read_refused() {
+        auto served = serve_skill_file(kGmSkillUri, "run_code");
+        gm_skill_read = true;
+        if (!served) return std::nullopt;
         append("refusal", object().set("tool", "run_code").set("stage", "skill-read").set("error", kSkillReadRefusal));
-        return object().set("ok", false).set("error", kSkillReadRefusal);
+        return object().set("ok", false).set("error", kSkillReadRefusal).set("skill", *served->find("text"));
     }
 
     Value invoke(const std::string& name, const Value& args) {
@@ -2379,8 +2394,9 @@ struct Server::State {
             throw RpcError(-32602, "Unknown tool: " + name +
                                        "; the code surface serves next_context, run_code, task_set and finish; call a verb as gm.<name>(args) inside run_code");
         }
-        if (!s().run_started && !s().ended && name != "next_context" && name != "finish") {
-            note_rule(2, name + " was called before the first next_context of the run");
+        std::optional<Value> gated = name == "run_code" && !gm_skill_read ? skill_read_refused() : std::nullopt;
+        if (!gated && !s().run_started && !s().ended && name != "next_context" && name != "finish") {
+            note_rule(kStepStartRule, name + " was called before the first next_context of the run");
         }
         {
             std::lock_guard guard(mu);
@@ -2394,7 +2410,7 @@ struct Server::State {
             const Value* token = meta != nullptr ? meta->find("progressToken") : nullptr;
             if (token != nullptr && (token->is_string() || token->is_number())) ticker.emplace(*this, *token);
         }
-        Value out = name == "run_code" && !gm_skill_read ? skill_read_refused() : invoke(name, args);
+        Value out = gated ? std::move(*gated) : invoke(name, args);
         ticker.reset();
         std::optional<std::uint64_t> seq;
         {
@@ -2616,6 +2632,7 @@ struct Server::State {
         const Skill& skill = skills.get("gm");
         append("skill-loaded", object().set("via", "prompt").set("skill", "gm").set("cleared", open_rule_numbers()));
         clear_rules();
+        gm_skill_read = true;
         const Value* arguments = params->find("arguments");
         const Value* task = arguments ? arguments->find("task") : nullptr;
         std::string given = task && task->is_string() ? trim(task->as_string()) : "";

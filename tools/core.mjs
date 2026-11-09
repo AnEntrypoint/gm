@@ -215,13 +215,19 @@ function onInput(chunk) {
   }
 }
 
+function deliversSkill(message) {
+  if (message?.method === 'resources/read') return message.params?.uri === SKILL_URI;
+  if (message?.method === 'prompts/get') return message.params?.name === 'gm';
+  return message?.method === 'tools/call' && message.params?.name === 'run_code';
+}
+
 function onHostLine(line) {
   const message = parse(line);
   if (message?.method === 'initialize') {
     hostInitialize = message.params ?? {};
     saveSession();
   }
-  if (message?.method === 'resources/read' && message.params?.uri === SKILL_URI && !skillRead) {
+  if (deliversSkill(message) && !skillRead) {
     skillRead = true;
     saveSession();
   }

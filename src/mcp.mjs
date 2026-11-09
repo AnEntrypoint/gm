@@ -160,7 +160,8 @@ const BASE_TOOLS = [
 
 const SURFACES = ['tools', 'code'];
 const CODE_SURFACE = new Set(['next_context', 'run_code', 'finish']);
-const SKILL_READ_REFUSAL = 'run_code refused: read skill://gm/SKILL.md first in this connection. Call resources/read with {"uri":"skill://gm/SKILL.md"} (ReadMcpResourceTool with server gm and that uri), then call run_code again.';
+const SKILL_READ_REFUSAL = 'run_code refused: skill://gm/SKILL.md had not been read in this connection, so this reply carries its text in skill. Read it and follow it, then call run_code again. This refusal is sent once per connection.';
+const STEP_START_RULE = 2;
 const TASK_PAGE = 4000;
 const taskRestNotice = (text) => {
   const shown = headChars(text, TASK_PAGE).length;
@@ -285,6 +286,10 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     const entry = log.append('rules-notice', { step: steps, rule, evidence });
     rulesOpen.set(rule, { seq: entry.seq, evidence });
   }
+  function clearRule(rule) {
+    if (!rulesOpen.delete(rule)) return;
+    log.append('rules-cleared', { step: steps, rules: [rule] });
+  }
   function clearRules() {
     if (rulesOpen.size === 0) return;
     const rules = [...rulesOpen.keys()];
@@ -294,7 +299,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
   function rulesNotice() {
     if (ended !== null || rulesOpen.size === 0) return null;
     const lines = [...rulesOpen].map(([rule, { evidence }]) => `rule ${rule} (${RULE_TEXT[rule]}): ${evidence}`);
-    return `The rules check found: ${lines.join('; ')}. Read the gm skill again with ReadMcpResourceTool (server gm, uri skill://gm/SKILL.md) and follow the rules it gives. That one read clears this notice. Do not repeat finished work.`;
+    return `The rules check found: ${lines.join('; ')}. Read the gm skill again with ReadMcpResourceTool (server gm, uri skill://gm/SKILL.md), or with gm.read_file({ path: 'skill://gm/SKILL.md' }) in a run_code body, and follow the rules it gives. That one read clears this notice, and the next next_context clears a rule 2 notice. Do not repeat finished work.`;
   }
 
   const handlers = {
@@ -424,6 +429,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     const SKILL = skillOf('gm');
     log.append('skill-loaded', { via: 'prompt', skill: 'gm', cleared: [...rulesOpen.keys()] });
     clearRules();
+    gmSkillRead = true;
     const given = typeof params?.arguments?.task === 'string' ? params.arguments.task.trim() : '';
     const childSession = ended === null && (runStarted || childSeen);
     if (given !== '' && childSession) childTask = given;
@@ -477,10 +483,14 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     }
     if (!servedTools(surface).some((tool) => tool.name === name)) throw new RpcError(-32602, unknownToolText(name));
     if (name === 'run_code' && !gmSkillRead) {
-      log.append('refusal', { tool: name, stage: 'skill-read', error: SKILL_READ_REFUSAL });
-      return toolResultOf(name, { ok: false, error: SKILL_READ_REFUSAL }, {});
+      const served = serveSkillFile(GM_SKILL_URI, 'run_code');
+      gmSkillRead = true;
+      if (served.ok) {
+        log.append('refusal', { tool: name, stage: 'skill-read', error: SKILL_READ_REFUSAL });
+        return toolResultOf(name, { ok: false, error: SKILL_READ_REFUSAL, skill: served.output }, {});
+      }
     }
-    if (!runStarted && ended === null && name !== 'next_context' && name !== 'finish') noteRule(2, `${name} was called before the first next_context of the run`);
+    if (!runStarted && ended === null && name !== 'next_context' && name !== 'finish') noteRule(STEP_START_RULE, `${name} was called before the first next_context of the run`);
     const meta = params?._meta ?? {};
     const key = JSON.stringify(rpcId);
     const call = { name, trace: traceOf(meta), controller: new AbortController() };
@@ -729,6 +739,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
       if (ownerToken === null && (ownerMarked || firstStep || (steps === 1 && !childSeen && args.child !== true && args.run === undefined))) ownerToken = 'owner';
       if (given !== '' && given !== task) await replaceTask(given, { ...(ownerMarked ? { owner: true } : {}), ...(correction ? { correction: true } : {}) });
       const reply = await context(step, rpcId, compactChildren, waitMs > 0);
+      clearRule(STEP_START_RULE);
       return { ...reply, tabs: await browser.tabsText() };
     }, ({ ok, error, prefixSha, total, progress }) => ({ ok, error, prefixSha, total, progress }), rpcId, 1);
   }  let prefixMemo = null;
