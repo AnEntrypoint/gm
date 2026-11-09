@@ -180,3 +180,74 @@ Node and native now use the same progress text and the same keys. A timed-out wa
 - Conformance: `conformance: 83 passed, 0 failed of 83 checks in 24 scenarios`, `check-build: gm stamp 8b5116b-dev (8b5116b)`, exit 0.
 - Gate (tools/ship.sh, src/gate.mjs runGate): `{"gate":true,"failed":[]}`, `gate exit code: 0`.
 - Parity: `22/93 scenarios match, 0 cutover-expected, 56 native-ahead, 15 documented-gap, 0 differ`, exit 0. The one differ from the Phase B run before row 46 (next_context events[2].step, Node 0, native 1) is gone.
+
+## Node-missing native-ahead items: retired, not ported (2026-11-09, Phase A)
+
+Decision: retire. The 56 native-ahead scenarios of the parity harness are Node-missing items on the Node reference. They are not ported to Node and are no longer defects.
+
+Reading of the brief: it names native as the host that replaces Node. Its gate is the cutover, "cutover (M5, .mcp.json points at the native binary) only after the parity harness (M3) shows no diffs on the verb groups and the MCP script" (tasks/rewrite/PLAN.md, Gates line). DESIGN.md "Rewrite on deoxidene (2026-11-04)", decision 2, says Node stays the live runtime until native reaches parity and is witnessed, and that cutover is one commit that points .mcp.json at the native binary. The owner decision "Native ships; Node stays the parity reference" (AGENTS.md, owner decisions, item 1) makes Node the reference, not the shipping host. The served host is already native: the user-wide mcpServers.gm entry in /config/.claude.json runs /config/.gmnew/current/gm serve, and that binary does not spawn Node (native/components/host/serve.cpp). Parity has 0 differ (row 46 witness), so the gate holds.
+
+Cause for every row: tasks/rewrite/PLAN.md Gates line plus AGENTS.md owner decision 1. The per-row cause is the parity harness reason (native/tests/parity/run.mjs) for the field that differs. Reversal is one decision: porting a row means reopening it here.
+
+Kept as-is: the Node job_start default of 60000 (row 38) was an owner choice in DESIGN.md (job_status note, 2026-11-06); retirement does not change it, so the default stays 60000 on Node.
+
+| # | scenario | differing field | cause (harness reason) |
+|---|---|---|---|
+| 1 | initialize | `.result.capabilities.resources.subscribe` | SUBSCRIPTIONS: native no longer advertises resources.subscribe, since subscriptions/listen replaces it; Node still advertises it |
+| 2 | resources/read missing | `.error.code` | ERRCODE: native answers a missing resource with -32602 and data.uri; Node answers -32002 |
+| 3 | resources/subscribe | `.result` | SUBSCRIPTIONS: native removed resources/subscribe and answers -32601; Node still serves it |
+| 4 | read_file | `.result.content[0].text.output.digest` | DIGEST: native paging digests are FNV-1a 64 and Node sha256 cut to 12 hex (kept difference, AGENTS.md) |
+| 5 | read_file offset | `.result.content[0].text.output.digest` | DIGEST: native paging digests are FNV-1a 64 and Node sha256 cut to 12 hex (kept difference, AGENTS.md) |
+| 6 | read_file missing | `.result.content[0].text.actionSeq` | SEQ: native logs one more event than Node (the resources/subscribe error) and journals each next_context reply as a context-reply event, so its action sequence numbers are higher |
+| 7 | write_file | `.result.content[0].text.actionSeq` | SEQ: native logs one more event than Node (the resources/subscribe error) and journals each next_context reply as a context-reply event, so its action sequence numbers are higher |
+| 8 | edit_file | `.result.content[0].text.actionSeq` | SEQ: native logs one more event than Node (the resources/subscribe error) and journals each next_context reply as a context-reply event, so its action sequence numbers are higher |
+| 9 | edit_file no match | `.result.content[0].text.actionSeq` | SEQ: native logs one more event than Node (the resources/subscribe error) and journals each next_context reply as a context-reply event, so its action sequence numbers are higher |
+| 10 | stat_file | `.result.content[0].text.actionSeq` | SEQ: native logs one more event than Node (the resources/subscribe error) and journals each next_context reply as a context-reply event, so its action sequence numbers are higher |
+| 11 | list_dir | `.result.content[0].text.actionSeq` | SEQ: native logs one more event than Node (the resources/subscribe error) and journals each next_context reply as a context-reply event, so its action sequence numbers are higher |
+| 12 | run_shell | `.result.content[0].text.actionSeq` | SEQ: native logs one more event than Node (the resources/subscribe error) and journals each next_context reply as a context-reply event, so its action sequence numbers are higher |
+| 13 | run_shell exit | `.result.content[0].text.actionSeq` | SEQ: native logs one more event than Node (the resources/subscribe error) and journals each next_context reply as a context-reply event, so its action sequence numbers are higher |
+| 14 | search | `.result.content[0].text.actionSeq` | SEQ: native logs one more event than Node (the resources/subscribe error) and journals each next_context reply as a context-reply event, so its action sequence numbers are higher |
+| 15 | grep literal | `.result.content[0].text.output.scanCursor.fileIndex` | SCAN: native grep returns a scan cursor (fileIndex, byteOffset, scannedFiles, scannedBytes) that Node does not return |
+| 16 | grep regex | `.result.content[0].text.output.scanCursor.fileIndex` | SCAN: native grep returns a scan cursor (fileIndex, byteOffset, scannedFiles, scannedBytes) that Node does not return |
+| 17 | grep word | `.result.content[0].text.output.scanCursor.fileIndex` | SCAN: native grep returns a scan cursor (fileIndex, byteOffset, scannedFiles, scannedBytes) that Node does not return |
+| 18 | query_log | `.result.content[0].text.actionSeq` | SEQ: native logs one more event than Node (the resources/subscribe error) and journals each next_context reply as a context-reply event, so its action sequence numbers are higher |
+| 19 | query_log js | `.result.content[0].text.actionSeq` | SEQ: native logs one more event than Node (the resources/subscribe error) and journals each next_context reply as a context-reply event, so its action sequence numbers are higher |
+| 20 | git_status | `.result.content[0].text.actionSeq` | SEQ: native logs one more event than Node (the resources/subscribe error) and journals each next_context reply as a context-reply event, so its action sequence numbers are higher |
+| 21 | git_log | `.result.content[0].text.actionSeq` | SEQ: native logs one more event than Node (the resources/subscribe error) and journals each next_context reply as a context-reply event, so its action sequence numbers are higher |
+| 22 | prd_add | `.result.content[0].text.actionSeq` | SEQ: native logs one more event than Node (the resources/subscribe error) and journals each next_context reply as a context-reply event, so its action sequence numbers are higher |
+| 23 | prd_list | `.result.content[0].text.actionSeq` | SEQ: native logs one more event than Node (the resources/subscribe error) and journals each next_context reply as a context-reply event, so its action sequence numbers are higher |
+| 24 | prd_resolve | `.result.content[0].text.actionSeq` | SEQ: native logs one more event than Node (the resources/subscribe error) and journals each next_context reply as a context-reply event, so its action sequence numbers are higher |
+| 25 | task_set owner | `.result.content[0].text.actionSeq` | SEQ: native logs one more event than Node (the resources/subscribe error) and journals each next_context reply as a context-reply event, so its action sequence numbers are higher |
+| 26 | prd_receipt | `.result.content[0].text.actionSeq` | SEQ: native logs one more event than Node (the resources/subscribe error) and journals each next_context reply as a context-reply event, so its action sequence numbers are higher |
+| 27 | prd_refute reopen | `.result.content[0].text.actionSeq` | SEQ: native logs one more event than Node (the resources/subscribe error) and journals each next_context reply as a context-reply event, so its action sequence numbers are higher |
+| 28 | query_log field | `.result.content[0].text.actionSeq` | SEQ: native logs one more event than Node (the resources/subscribe error) and journals each next_context reply as a context-reply event, so its action sequence numbers are higher |
+| 29 | output artifact fields | `.result.content[0].text.actionSeq` | SEQ: native logs one more event than Node (the resources/subscribe error) and journals each next_context reply as a context-reply event, so its action sequence numbers are higher |
+| 30 | grep fields | `.result.content[0].text.actionSeq` | SEQ: native logs one more event than Node (the resources/subscribe error) and journals each next_context reply as a context-reply event, so its action sequence numbers are higher |
+| 31 | next_context owner task | `.result.content[0].text.prefixSha` | SEQ: one extra resources/subscribe error shifts the native event sequence and the prefix hash |
+| 32 | unknown_add | `.result.content[0].text.actionSeq` | SEQ: native logs one more event than Node (the resources/subscribe error) and journals each next_context reply as a context-reply event, so its action sequence numbers are higher |
+| 33 | unknown_list | `.result.content[0].text.actionSeq` | SEQ: native logs one more event than Node (the resources/subscribe error) and journals each next_context reply as a context-reply event, so its action sequence numbers are higher |
+| 34 | unknown_resolve | `.result.content[0].text.actionSeq` | SEQ: native logs one more event than Node (the resources/subscribe error) and journals each next_context reply as a context-reply event, so its action sequence numbers are higher |
+| 35 | fetch | `.result.content[0].text.actionSeq` | SEQ: native logs one more event than Node (the resources/subscribe error) and journals each next_context reply as a context-reply event, so its action sequence numbers are higher |
+| 36 | fetch refused | `.result.content[0].text.actionSeq` | SEQ: native logs one more event than Node (the resources/subscribe error) and journals each next_context reply as a context-reply event, so its action sequence numbers are higher |
+| 37 | job_start | `.result.content[0].text.actionSeq` | SEQ: native logs one more event than Node (the resources/subscribe error) and journals each next_context reply as a context-reply event, so its action sequence numbers are higher |
+| 38 | job_status | `.result.content[0].text.output.timeoutMs` | TIMEOUT: native job_start default is 300000; Node 60000 kept by the owner (DESIGN.md, job_status note, accepted as native-ahead) |
+| 39 | job_stop | `.result.content[0].text.actionSeq` | SEQ: native logs one more event than Node (the resources/subscribe error) and journals each next_context reply as a context-reply event, so its action sequence numbers are higher |
+| 40 | job_status unknown | `.result.content[0].text.actionSeq` | SEQ: native logs one more event than Node (the resources/subscribe error) and journals each next_context reply as a context-reply event, so its action sequence numbers are higher |
+| 41 | run_code syntax error | `.result.content[0].text.actionSeq` | SEQ: native logs one more event than Node (the resources/subscribe error) and journals each next_context reply as a context-reply event, so its action sequence numbers are higher |
+| 42 | run_code background | `.result.content[0].text.logged[0].seq` | SEQ: native logs the extra resources/subscribe error, so background body sequence numbers are higher |
+| 43 | job_status background | `.result.content[0].text.output.body` | SEQ: native logs the extra resources/subscribe error, so background body sequence numbers are higher |
+| 44 | run_code background shell | `.result.content[0].text.actionSeq` | SEQ: native logs one more event than Node (the resources/subscribe error) and journals each next_context reply as a context-reply event, so its action sequence numbers are higher |
+| 45 | run_code write project module | `.result.content[0].text.actionSeq` | SEQ: native logs one more event than Node (the resources/subscribe error) and journals each next_context reply as a context-reply event, so its action sequence numbers are higher |
+| 46 | mcp initialize | `.result.capabilities.resources.subscribe` | SUBSCRIPTIONS: native no longer advertises resources.subscribe, since subscriptions/listen replaces it; Node still advertises it |
+| 47 | mcp mcp echo | `.result.content[0].text.actionSeq` | SEQ: native logs one more event than Node (the resources/subscribe error) and journals each next_context reply as a context-reply event, so its action sequence numbers are higher |
+| 48 | mcp mcp browsers | `.result.content[0].text.actionSeq` | SEQ: native logs one more event than Node (the resources/subscribe error) and journals each next_context reply as a context-reply event, so its action sequence numbers are higher |
+| 49 | mcp mcp fail | `.result.content[0].text.actionSeq` | SEQ: native logs one more event than Node (the resources/subscribe error) and journals each next_context reply as a context-reply event, so its action sequence numbers are higher |
+| 50 | mcp mcp denied | `.result.content[0].text.actionSeq` | SEQ: native logs one more event than Node (the resources/subscribe error) and journals each next_context reply as a context-reply event, so its action sequence numbers are higher |
+| 51 | mcp mcp hang | `.result.content[0].text.actionSeq` | SEQ: native logs one more event than Node (the resources/subscribe error) and journals each next_context reply as a context-reply event, so its action sequence numbers are higher |
+| 52 | mcp mcp crash | `.result.content[0].text.actionSeq` | SEQ: native logs one more event than Node (the resources/subscribe error) and journals each next_context reply as a context-reply event, so its action sequence numbers are higher |
+| 53 | mcp mcp restart | `.result.content[0].text.actionSeq` | SEQ: native logs one more event than Node (the resources/subscribe error) and journals each next_context reply as a context-reply event, so its action sequence numbers are higher |
+| 54 | mcp finish | `.result.content[0].text.browser` | BROWSER: native finish reports the closed run browser context; Node has no browser scope (AGENTS.md recorded gap) |
+| 55 | mcp notifications | `[0]` | NOTIFY: native announces its tool list first when its MCP servers are ready; Node announces resources first |
+| 56 | mcp log event kinds | `.count.context-reply` | JOURNAL: native journals each next_context reply body as a context-reply event; Node has none |
+
+Retired by: tasks/rewrite/PLAN.md Gates line and AGENTS.md owner decision 1 for all 56 rows.

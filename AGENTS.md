@@ -100,6 +100,8 @@ gm is one long-horizon worker: an MCP server that runs a task as one append-only
 
 ## Known gaps, native against Node
 
+Node-missing items are retired, not ported: native ships and Node is the parity reference (docs/PENDING_VALIDATION.md, 2026-11-09, the retirement table).
+
 - The SDK requires capabilities and serverInfo.version in initialize. accept_initialize fills them in. Node has not been checked to accept a result without them.
 - The SDK accepts six protocol versions; the native client checks only the two Node speaks.
 - A server killed by a signal reports 128 plus the signal number in native. A spawn failure reports the OS text in native.
