@@ -36,7 +36,7 @@ struct CliError {
 constexpr int kPollMs = 200;
 constexpr int kLockStaleMs = 2000;
 constexpr int kLockWaitMs = 5000;
-constexpr long long kDefaultWaitMs = 1800000;
+constexpr long long kDefaultWaitMs = 3600000;
 constexpr long long kDefaultStopIdleMs = 600000;
 constexpr const char* kQueueFile = "pending.jsonl";
 constexpr const char* kLockFile = "pending.lock";

@@ -104,7 +104,7 @@ json::Value cut_shell_output(json::Value reply, const std::string& text, const s
 
 constexpr double default_timeout_ms = 60000;
 constexpr double default_job_timeout_ms = 300000;
-constexpr double max_timeout_ms = 600000;
+constexpr double max_timeout_ms = 3600000;
 constexpr double max_job_timeout_ms = 3600000;
 constexpr std::size_t shell_output_cap = 200000;
 constexpr std::size_t query_page_events = 50;
@@ -717,8 +717,8 @@ struct CoreVerbs::Impl {
             const std::string limit = json::dump(json::Value(timeout_ms));
             reply.set("error", "timed out after " + limit + " ms");
             reply.set("statement", output.empty()
-                                       ? "run_shell stopped: timeout after " + limit + " ms with no output; the command was still running and printed nothing before the deadline (a sleep or wait prints nothing until it ends). Pass timeoutMs (up to 600000) or start it with job_start."
-                                       : "run_shell stopped: timeout after " + limit + " ms; the output shown is what it printed before the deadline. Pass timeoutMs (up to 600000) or start it with job_start.");
+                                       ? "run_shell stopped: timeout after " + limit + " ms with no output; the command was still running and printed nothing before the deadline (a sleep or wait prints nothing until it ends). Pass timeoutMs (up to 3600000) or start it with job_start."
+                                       : "run_shell stopped: timeout after " + limit + " ms; the output shown is what it printed before the deadline. Pass timeoutMs (up to 3600000) or start it with job_start.");
             reply.set("output", std::move(output));
             reply.set("launcher", outcome.launcher);
             return bound(reply);

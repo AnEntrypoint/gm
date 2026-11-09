@@ -150,7 +150,7 @@ function runDirOf(flags) {
 }
 
 function timeoutMs(flags) {
-  const ms = Number(flags['timeout-ms'] ?? 1800000);
+  const ms = Number(flags['timeout-ms'] ?? 3600000);
   if (!Number.isInteger(ms) || ms < 1) throw new Error('--timeout-ms must be a positive integer');
   return ms;
 }

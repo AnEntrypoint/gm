@@ -109,7 +109,7 @@ function lineStarts(text) {
 }
 
 const DEFAULT_TIMEOUT_MS = 60000;
-const MAX_TIMEOUT_MS = 600000;
+const MAX_TIMEOUT_MS = 3600000;
 const MAX_JOB_TIMEOUT_MS = 3600000;
 const TAIL_CAP = 2000;
 export const OUTPUT_PAGE = 20000;
@@ -759,8 +759,8 @@ function jobKillStatement(name, reason, timeoutMs, lifetimeMs) {
 }
 
 function shellTimeoutStatement(output, timeoutMs) {
-  if (output === '') return `run_shell stopped: timeout after ${timeoutMs} ms with no output; the command was still running and printed nothing before the deadline (a sleep or wait prints nothing until it ends). Pass timeoutMs (up to 600000) or start it with job_start.`;
-  return `run_shell stopped: timeout after ${timeoutMs} ms; the output shown is what it printed before the deadline. Pass timeoutMs (up to 600000) or start it with job_start.`;
+  if (output === '') return `run_shell stopped: timeout after ${timeoutMs} ms with no output; the command was still running and printed nothing before the deadline (a sleep or wait prints nothing until it ends). Pass timeoutMs (up to 3600000) or start it with job_start.`;
+  return `run_shell stopped: timeout after ${timeoutMs} ms; the output shown is what it printed before the deadline. Pass timeoutMs (up to 3600000) or start it with job_start.`;
 }
 
 const LOGGED_OUTPUT_TOOLS = new Set(['query_log', 'job_status', 'run_shell', 'run_code']);
