@@ -73,6 +73,7 @@ jobs:
           npm install --no-audit --no-fund playwright-core@1.65.0
           npx playwright-core install --with-deps chromium
           echo "PLAYWRITER_BROWSER_PATH=$(node -p "require('$dir/node_modules/playwright-core').chromium.executablePath()")" >> "$GITHUB_ENV"
+          echo "PLAYWRITER_NO_SANDBOX=1" >> "$GITHUB_ENV"
       - name: Test
         shell: bash
         run: node tools/check-build.mjs build/${{ matrix.preset }}
