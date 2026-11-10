@@ -19,6 +19,8 @@ if (binary === null || (!onNode && !existsSync(binary))) {
 const CALL_MS = 180000;
 const MARKER = 'gm-browser-scope-marker';
 const OPEN_CODE = `const p = await context.newPage(); state.gmScopeCheck = p; await p.goto('data:text/html,<title>${MARKER}</title>'); return p.url();`;
+const SIDE_CODE = "const other = await browser.newContext(); await (await other.newPage()).goto('data:text/html,<title>side</title>'); const project = browser.contexts().find((c) => c !== state.gmRun); const projectPage = await project.newPage(); state.gmSideCheck = { other, projectPage }; return 'sided';";
+const UNDO_CODE = "const side = state.gmSideCheck; if (side) { await side.projectPage.close(); await side.other.close(); } delete state.gmSideCheck; return 'undone';";
 const COUNT_CODE = `let n = -1; for (let i = 0; i < 10; i += 1) { n = 0; for (const c of browser.contexts()) for (const p of c.pages()) if (!p.isClosed() && p.url().includes('${MARKER}')) n += 1; if (n === 0) break; await new Promise((done) => setTimeout(done, 1000)); } return n;`;
 
 const removeTree = async (path) => {
@@ -115,6 +117,19 @@ try {
       const { exec, tabs } = outputOf(opened);
       expect(exec?.ok === true && String(exec.output).includes(MARKER), `playwriter_execute did not open the marker page: ${JSON.stringify(exec)}`);
       expect(tabs?.state === 'changed' && String(tabs.text).includes('tabs: 1 in this run'), `browser_tabs did not list the run's page: ${JSON.stringify(tabs)}`);
+      const sided = await runCode('return { side: await gm.playwriter_execute({ code: ' + JSON.stringify(SIDE_CODE) + ' }), tabs: await gm.browser_tabs({}), undo: await gm.playwriter_execute({ code: ' + JSON.stringify(UNDO_CODE) + ' }) };');
+      if (sided.ok === true) {
+        const got = outputOf(sided);
+        const text = String(got.tabs?.text ?? '');
+        const otherRuns = /(\d+) in other runs/.exec(text);
+        const projectTabs = /(\d+) in the project browser/.exec(text);
+        expect(got.side?.ok === true, 'the side pages did not open: ' + JSON.stringify(got.side));
+        expect(text.includes('tabs: 1 in this run'), 'browser_tabs lost the run page after the side pages: ' + text);
+        expect(otherRuns !== null && Number(otherRuns[1]) >= 1, 'browser_tabs did not count the page of another context: ' + text);
+        expect(projectTabs !== null && Number(projectTabs[1]) >= 1, 'browser_tabs did not count the project browser page: ' + text);
+      } else {
+        failures.push('browser phase: the tab split did not run: ' + String(sided.error ?? ''));
+      }
       const finishUsed = await toolReply('finish', { witness: 'browser-scope check: browser phase, page opened in the run' });
       expect(finishUsed.ok === true && sameKeys(finishUsed.browser, ['ok', 'closedPages']) && finishUsed.browser.ok === true && finishUsed.browser.closedPages >= 1, `finish reply browser key must be {ok, closedPages >= 1} after the run opened a page: ${JSON.stringify(finishUsed.browser)}`);
       await toolReply('next_context', {});

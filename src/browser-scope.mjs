@@ -4,7 +4,7 @@ const BROWSER_MS = 10000;
 const TITLE_CHARS = 80;
 const URL_CHARS = 200;
 const OPEN_RUN = "if (!state.gmRun) { state.gmRun = await browser.newContext(); state.gmRun.setDefaultTimeout(60000); state.gmRun.setDefaultNavigationTimeout(10000); } context = state.gmRun; ";
-const TABS_CODE = "const rows = []; const counts = { others: 0 }; for (const c of browser.contexts()) { for (const p of c.pages()) { if (p.isClosed()) continue; if (c === state.gmRun) rows.push({ url: p.url(), title: await p.title().catch(() => '') }); else counts.others += 1; } } return 'GMTABS' + JSON.stringify({ rows, counts }) + 'GMTABS';";
+const TABS_CODE = "const cdp = await browser.newBrowserCDPSession(); const { targetInfos } = await cdp.send('Target.getTargets'); const { browserContextIds } = await cdp.send('Target.getBrowserContexts'); const created = new Set(browserContextIds); const rows = []; let own = null; if (state.gmRun) { for (const p of state.gmRun.pages()) { if (p.isClosed()) continue; if (own === null) { const s = await state.gmRun.newCDPSession(p); own = (await s.send('Target.getTargetInfo')).targetInfo.browserContextId; await s.detach(); } rows.push({ url: p.url(), title: await p.title().catch(() => '') }); } } const counts = { otherRuns: 0, projectTabs: 0 }; for (const t of targetInfos) { if (t.type !== 'page' || t.browserContextId === own) continue; if (created.has(t.browserContextId)) counts.otherRuns += 1; else counts.projectTabs += 1; } await cdp.detach(); return 'GMTABS' + JSON.stringify({ rows, counts }) + 'GMTABS';";
 const CLOSE_CODE = "let n = 0; if (state.gmRun) { try { n = state.gmRun.pages().filter((p) => !p.isClosed()).length; await state.gmRun.close(); } finally { delete state.gmRun; } } return 'GMCLOSED' + n + 'GMCLOSED';";
 
 export const BROWSER_VERBS = [
@@ -38,8 +38,9 @@ function renderView(view) {
   const rows = Array.isArray(view.rows) ? view.rows : [];
   const listed = rows.map((row, index) => `${index === 0 ? '' : '; '}[${index + 1}] ${headChars(textOf(row.url), URL_CHARS)} "${headChars(textOf(row.title), TITLE_CHARS)}"`).join('');
   let text = rows.length === 0 ? 'tabs: none in this run' : `tabs: ${rows.length} in this run, safe to close on finish: ${listed}`;
-  const others = typeof view.counts?.others === 'number' ? view.counts.others : 0;
-  if (others > 0) text += `; not this run and not closable by it: ${others} other pages`;
+  const otherRuns = typeof view.counts?.otherRuns === 'number' ? view.counts.otherRuns : 0;
+  const projectTabs = typeof view.counts?.projectTabs === 'number' ? view.counts.projectTabs : 0;
+  if (otherRuns + projectTabs > 0) text += `; not this run and not closable by it: ${otherRuns} in other runs and ${projectTabs} in the project browser`;
   return { text, count: rows.length };
 }
 

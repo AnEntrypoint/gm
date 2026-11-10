@@ -16,11 +16,16 @@ const char* kOpenRunContext =
     "if (!state.gmRun) { state.gmRun = await browser.newContext(); state.gmRun.setDefaultTimeout(60000); "
     "state.gmRun.setDefaultNavigationTimeout(10000); } context = state.gmRun; ";
 const char* kTabsCode =
-    "const rows = []; const counts = { others: 0 }; "
-    "for (const c of browser.contexts()) { for (const p of c.pages()) { if (p.isClosed()) continue; "
-    "if (c === state.gmRun) rows.push({ url: p.url(), title: await p.title().catch(() => '') }); "
-    "else counts.others += 1; } } "
-    "return 'GMTABS' + JSON.stringify({ rows, counts }) + 'GMTABS';";
+    "const cdp = await browser.newBrowserCDPSession(); const { targetInfos } = await cdp.send('Target.getTargets'); "
+    "const { browserContextIds } = await cdp.send('Target.getBrowserContexts'); const created = new Set(browserContextIds); "
+    "const rows = []; let own = null; "
+    "if (state.gmRun) { for (const p of state.gmRun.pages()) { if (p.isClosed()) continue; "
+    "if (own === null) { const s = await state.gmRun.newCDPSession(p); own = (await s.send('Target.getTargetInfo')).targetInfo.browserContextId; await s.detach(); } "
+    "rows.push({ url: p.url(), title: await p.title().catch(() => '') }); } } "
+    "const counts = { otherRuns: 0, projectTabs: 0 }; "
+    "for (const t of targetInfos) { if (t.type !== 'page' || t.browserContextId === own) continue; "
+    "if (created.has(t.browserContextId)) counts.otherRuns += 1; else counts.projectTabs += 1; } "
+    "await cdp.detach(); return 'GMTABS' + JSON.stringify({ rows, counts }) + 'GMTABS';";
 const char* kCloseCode =
     "let n = 0; if (state.gmRun) { try { n = state.gmRun.pages().filter((p) => !p.isClosed()).length; "
     "await state.gmRun.close(); } finally { delete state.gmRun; } } return 'GMCLOSED' + n + 'GMCLOSED';";
@@ -86,9 +91,11 @@ std::string render_view(const json::Value& view, std::size_t& count) {
     std::string text = count == 0 ? std::string("tabs: none in this run")
                                   : "tabs: " + std::to_string(count) + " in this run, safe to close on finish: " + listed;
     if (counts != nullptr && counts->is_object()) {
-        const std::size_t others = number_field(*counts, "others");
-        if (others > 0) {
-            text += "; not this run and not closable by it: " + std::to_string(others) + " other pages";
+        const std::size_t other_runs = number_field(*counts, "otherRuns");
+        const std::size_t project_tabs = number_field(*counts, "projectTabs");
+        if (other_runs + project_tabs > 0) {
+            text += "; not this run and not closable by it: " + std::to_string(other_runs) + " in other runs and " +
+                    std::to_string(project_tabs) + " in the project browser";
         }
     }
     return text;

@@ -28,7 +28,7 @@ if (version === 'dev' || version.endsWith('-dev')) {
   process.exit(0);
 }
 
-const WAIT_MS = 10000;
+const WAIT_MS = 30000;
 const REEXEC_LIMIT_MS = 5000;
 const REPLY_MS = 60000;
 const OFFERED = 'ffff111-99';
