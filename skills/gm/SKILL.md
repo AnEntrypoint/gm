@@ -1,6 +1,6 @@
 ---
 name: gm
-description: Runs a long task as a gm worker. Each step calls next_context, does the work in one run_code body, and ends with finish and a witness. Use when a task should run under the gm MCP server.
+description: Runs a long task as a gm worker. A run starts with next_context, does each step's work in one run_code body, and ends with finish and a witness. Use when a task should run under the gm MCP server.
 ---
 
 # gm loop
@@ -46,7 +46,7 @@ Each run has its own browser context. Its first execute call creates it, and `co
 These are the rules of every run. next_context returns them with each step, and this skill holds them word for word as well, because a skill is re-attached after a compaction.
 
 - Paths may point inside or outside the workspace. An outside path should be absolute.
-- Call next_context at the start of every step. Each call is one step; stepsLeft counts the steps the run has left.
+- Call next_context at the start of a run, after a compaction, and when a reply reports pendingEvents; not before every step. Each full reply is one step; stepsLeft counts the steps the run has left.
 - Verify before you finish: run what you built and read its output.
 - finish needs a witness: one string that quotes the evidence you observed. Calls sent with finish may be refused.
 - Events older than the window are not in next_context. Query them with gm.query_log. Do not guess.
@@ -55,11 +55,11 @@ These are the rules of every run. next_context returns them with each step, and 
 
 A subagent never calls `finish` and never closes a run. It reports its result to the session that started it, and that session decides when the run ends.
 
-1. Start every step with `next_context`. It returns the rules, the task, the witness requirement, the events new since your last step in full up to 20,000 characters, the rest of those events and the older events in compact form, `query` (the seq range of the step, and how to read any event by seq), `run` (this run's id), `stepsLeft` and `prefixSha`. `gm.query_log` reaches every event. Follow the rules it returns.
+1. Start a run with `next_context`, and call it again after a compaction (with `full: true`), when a `run_code` reply carries `pendingEvents`, and to wait for an event (`waitMs`). Do not call it before every step: a call with nothing new takes no step and answers `unchanged: true` in one line. A full reply returns the rules, the task, the witness requirement, the events new since your last step in full up to 20,000 characters, the rest of those events and the older events in compact form, `query` (the seq range of the step, and how to read any event by seq), `run` (this run's id), `stepsLeft` and `prefixSha`. `gm.query_log` reaches every event. Follow the rules it returns.
 2. Do the work in one `run_code` call. Its body is JavaScript in the project, and each verb is a function on `gm`: `await gm.read_file({ path: 'a.txt' })`, `await gm.write_file({ path: 'c.txt', content })`, `await gm.run_shell({ command: 'npm test' })`. The verb list is in run_code's description, and `gm.verbs()` returns each verb's description and input schema as data. The tools of the MCP servers that the project configures are verbs too, named `gm.<server>_<tool>`.
 3. Put independent calls in one body with `Promise.all`, for example `const [a, b] = await Promise.all([gm.read_file({ path: 'a.txt' }), gm.read_file({ path: 'b.txt' })]);`. Do not put a call in the body that needs the result of another call in the same batch.
 4. A failed verb call returns `{ ok: false, error }` as data, and it does not stop the body. For per-call isolation, wrap any step that may throw in `gm.try`: `await gm.try(async () => ...)` returns the value, or `{ ok: false, error }` if the function throws.
-5. Background work: `await gm.job_start({ job: 'build', command })` starts a job, and `await gm.job_status({ job: 'build', waitMs: 30000 })` waits for it. `gm.job_status` `waitMs` is capped at 30000 ms (30 s), declared in both trees; a larger `waitMs` is clamped, so re-arm `gm.job_status({ job, waitMs: 30000 })` until the job exits. This is distinct from `next_context` `waitMs` (at most 300000 ms). `await gm.job_stop({ job: 'build' })` kills a shell job that is no longer needed. A body still running after its budget (180 seconds by default, `timeoutMs` at most 300000) becomes a background run: run_code returns its job id at once, with the verb results logged so far. `gm.job_status` with that id and `waitMs` returns its value when it ends. Each step's next_context also lists `jobsOpen`: every open job with its state and `sinceProgressMs`, and `stuck` is true for a job that has made no progress for three minutes. `jobsStuck` and `jobsUnstuck` name the jobs that changed since your last step. `jobsRunning` carries each reminder that a background run has made, and each reminder has `prd`: the PRD rows' `total`, the `open` count, the first five open rows as `window` (`id` and `title`), and `more`, the number of open rows past the window. A shell pipeline's exit status is its last command's unless the command sets `set -o pipefail`, so after `cmd | tail`, read the test's own result line rather than `$?`.
+5. Background work: `await gm.job_start({ job: 'build', command, timeoutMs })` starts a job, and one `await gm.job_status({ job: 'build', waitMs, tail: 2000 })` waits for it: the call blocks until the job ends or `waitMs` passes (at most 3600000 ms) and returns `state`, `exitCode` and the last `tail` characters. Do not sleep and poll. A job is stopped at `timeoutMs` (default 300000 ms, at most the job lifetime of 3600000 ms), so pass `timeoutMs` for a long build; the stop statement names the limit and how to raise it. `gm.job_status({ pid, waitMs })` waits for a process gm did not start. `await gm.job_stop({ job: 'build' })` kills a shell job that is no longer needed. A body still running after its budget (180 seconds by default; `timeoutMs` at most 3600000) becomes a background run: run_code returns its job id at once, with the verb results logged so far, and the body keeps waiting. Its end is an event: `next_context({ waitMs: 300000 })` returns when it lands, and `gm.job_status` with that id returns its value. Each full next_context also lists `jobsOpen`: every open job with its state and `sinceProgressMs`, and `stuck` is true for a job that has made no progress for three minutes. `jobsStuck` and `jobsUnstuck` name the jobs that changed since your last step. `jobsRunning` carries each reminder that a background run has made, and each reminder has `prd`: the PRD rows' `total`, the `open` count, the first five open rows as `window` (`id` and `title`), and `more`, the number of open rows past the window. A shell pipeline's exit status is its last command's unless the command sets `set -o pipefail`, so after `cmd | tail`, read the test's own result line rather than `$?`.
 6. Send `finish` outside `run_code`, after the run_code calls in the step have returned, with a witness. A finish call is refused without a witness, while a background run is running, or while a PRD or question row is open. stopBackground, which kills a background run, is the way past a background run. No argument ends a run with a row open, and a gap that names an open row is refused. A PRD you will not implement is deleted with `gm.prd_delete({ id })`; any other open row is implemented and resolved, never held. A question for the owner is an open question row (`gm.unknown_add({ title, body })`): the run stays open, you ask the owner in prose and keep a wait running, and when the owner answers you resolve the row with `gm.unknown_resolve({ id, event, commit })`, where event is a seq of this run's log and commit is a commit that carries the answer. The witness quotes the evidence you observed: command output, file content or a query result. Quote only tool output, labelled with the tool that returned it. If gm.search did not return the target, say so. Never present a gm.read_file result as a gm.search result. A run belongs to one server connection, and every agent on that connection shares it: `finish` closes that run for all of them. A child agent that shares your connection must not send `finish`. After a `finish`, every call on that run is refused with "run <id> has ended; call next_context to open a new run", and the run id does not change. The first `next_context` on the same connection opens a fresh run in the same workspace. A run has its own log and seqs: a seq from an earlier run names a different event, so cite a seq from your own run's log, and `gm.query_log` reads only that run's log.
    In gm, before finish, read skill://gm-continue/SKILL.md with ReadMcpResourceTool (server gm), or with `gm.read_file({ path: 'skill://gm-continue/SKILL.md' })`, or run the gm-continue prompt, and keep working while it lists open rows.
 7. Overwriting an existing file with under half its prior bytes adds shrunkByBytes, shrinkRatio and shrinkWarning to the gm.write_file result (non-blocking); before writing back a gm.read_file result, check truncated:true and page until false.
@@ -82,15 +82,12 @@ const count = await gm.run_shell({ command: 'wc -l < todo.txt' });
 return { todo: todo.length, wc: count.output.trim() };
 ```
 
-Polling a job inside the body, in a bounded loop, so the body never waits without a limit:
+Waiting for a job inside the body, in one call with a limit, so the body never sleeps or polls:
 
 ```
-await gm.job_start({ job: 'build', command: 'npm test' });
-let state = 'running';
-for (let round = 0; round < 10 && state === 'running'; round += 1) {
-  state = (await gm.job_status({ job: 'build', waitMs: 30000 })).state;
-}
-return { state };
+await gm.job_start({ job: 'build', command: 'cmake --build build/release', timeoutMs: 1800000 });
+const built = await gm.job_status({ job: 'build', waitMs: 1800000, tail: 2000 });
+return { state: built.state, exitCode: built.exitCode, wallMs: built.durMs, tail: built.output };
 ```
 
 Fan out with gm.try and return the failures with the successes, so one failure does not hide the rest:
@@ -120,6 +117,19 @@ return { found };
 When not to bundle: a second run_code body is right when the next action needs a judgment that code cannot make, such as reading a failing output to choose the fix. Its first comment says why, for example `// Second body: the fix depends on the test output read here.`
 
 A file `gm.write_file`, `gm.edit_file` or `gm.run_shell` wrote in this run is untracked: `gm.grep` it by `path` with `scope: 'all'`. The default `tracked` scope skips untracked files, and `gm.search` reads git-tracked files only.
+
+## Spending turns and tokens
+
+Measured across the fx, gm, jayzee and spoint transcripts (2026-11-10): run_code took about 548 minutes over thousands of calls (spoint 3920, jayzee 2630), mostly one verb per call; next_context took about 327 minutes, called before every step; sleep-and-poll loops took about 274 minutes at about two minutes a loop; builds and checks were rerun several times per pass. Each rule below removes one of these costs, and the server helps where it can.
+
+1. One body per step, many verbs per body. Every run_code call is a model turn, so a verb per call multiplies turns. A good batch reads all its inputs in one `Promise.all`, decides in code, makes its writes, runs the check, and returns counts, paths and failures. After three bodies in a row with one verb call each, the reply carries `batchNotice`.
+2. next_context only when the state changed: at the start of a run, after a compaction (`full: true`), when a run_code reply carries `pendingEvents: true`, and to wait (`waitMs`). Your own run_code results are already in your context, so a call before every step tells you nothing. A redundant call answers `unchanged: true` in one line and takes no step.
+3. No sleep-and-poll. `gm.job_status({ job, waitMs, tail })` blocks until the job ends and returns the exit code and the tail, and `gm.job_status({ pid, waitMs })` does the same for a process gm did not start. A loop of `sleep` and a status read costs a turn every round. A turn never ends on "waiting for the build": wait in the body, or hold `next_context({ waitMs })`, which returns when the job's exit event lands.
+4. Set the job limit. A job stops at `timeoutMs`, default 300000 ms, which is shorter than many builds and test runs. Pass `timeoutMs` (up to 3600000 ms) to `gm.job_start` for a long run. A stopped job's statement names the limit and says this.
+5. Build and check once per Phase B, after the last change. A build or a check between edits is paid again after the next edit. Reuse the build directory and its caches: when the build directory already has its cache (for cmake, `CMakeCache.txt`), run only the build step and do not configure again.
+6. Work the whole queue. A peer that is given an ordered queue works it from top to bottom without waiting for the dispatcher: one Phase A for every item, one Phase B, one push. It stops only for a decision that belongs to the owner.
+7. Record each witness's wall time in docs/PENDING_VALIDATION.md beside its output (`durMs` of the job, or the measured time), so the next pass can see what a check costs before it runs it.
+8. Compact output by default. Return from a body only what the next decision needs, read a long output by `tail` or by page, and do not read or request the same result twice: a result that is already in your context is not fetched again.
 
 ## Validation
 
@@ -158,7 +168,7 @@ Shared tree: resolve in one call with `gm.prd_resolve({ id, witness, push: true 
 
 A summary can replace earlier messages, including the rules, the witness requirement and the events of this run. A skill is not summarised, so these steps are the ones to follow after a compaction:
 
-1. Call `next_context` at once. It returns the rules, the task, the witness requirement and the events new since your last step.
+1. Call `next_context({ full: true })` at once. It returns the rules, the task, the witness requirement and the events new since your last step.
 2. Follow the rules it returns. They are the same rules as before the compaction.
 3. Do not rely on a summary for a rule, the witness requirement or an event. Use `gm.query_log` for any event the summary does not give exactly.
 4. If a reply carries `rulesNotice`, or `next_context` carries `rulesPending`, read the gm skill again with ReadMcpResourceTool (server gm, uri skill://gm/SKILL.md), or with `gm.read_file({ path: 'skill://gm/SKILL.md' })` in a run_code body, and follow it. That one read clears the notice, and it is the only extra step the notice needs. A rule 2 notice (a call before next_context) is reported once in the next next_context reply as `rulesPending`, and that call clears it. Do not repeat finished work.

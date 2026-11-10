@@ -87,7 +87,7 @@ footer { border-top: 4px solid #000; margin-top: 2em; padding-top: 0.5em; font-s
 <h2>3. Use it</h2>
 <p>Start a Claude Code session in a project. The session calls gm's three tools, and gm works in the session's folder unless told otherwise. Every run writes an append-only log under <code>runs/</code> in the workspace.</p>
 <ol>
-  <li>The model calls <code>next_context</code> at the start of each step. The reply carries the rules, the task, and the events since the last step.</li>
+  <li>The model calls <code>next_context</code> at the start of a run, after a compaction, and when a reply reports pending events. A full reply carries the rules, the task, and the events since the last step; a call with nothing new answers in one line and takes no step.</li>
   <li>The model does the work in one <code>run_code</code> call. Its body is JavaScript with a <code>gm</code> object whose methods are the verbs.</li>
   <li>The model calls <code>finish</code> with a witness: one string quoting the output it actually saw. A finish without a witness is refused.</li>
 </ol>
