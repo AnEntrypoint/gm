@@ -2015,3 +2015,19 @@ Queue status after Phase B:
 Installed build: pending. The installed gm does not carry this pass or fcb84df (task leak). It is not installed over the shared gm while peers are busy; the dispatcher installs it when no peer is busy.
 
 Commits on main for this stretch: 92c2873 (decisions), d2c2c4f (Phase A record), d6a9538 (Node annotations, stale parity rules), 91d4fab (parity reason), and this Phase B record. Pushed to origin main once after the fetch showed a fast-forward.
+
+## Jayzee project browser (2026-11-10): started through the playwriter setup
+
+Requested by the owner (pasted queue 834f). jayzee's stretch 1 was blocked on its browser, which reported stopped with the controlled-run harness refusing to start one itself.
+
+Start command, run in /workspace/jayzee (the gate resolves the project from its .playwriter directory and reads debug port 10221 from .playwriter/debug-port):
+
+    cd /workspace/jayzee && node /data/cache/npm/_npx/bc63b05df76aa536/node_modules/pw/bin/playwriter-project start
+
+Output: playwriter-project: browser ready (profile /workspace/jayzee/.playwriter/browser-profile). Exit 0.
+
+PIDs: gate pid 172748 (port 9721, started 2026-11-10 08:39); browser pid 189245, owned by that gate, debug port 10221, profile /workspace/jayzee/.playwriter/browser-profile.
+
+Witness: curl -s http://127.0.0.1:10221/json/version returned "Browser": "Chrome/155.0.8059.39" and a webSocketDebuggerUrl on ws://127.0.0.1:10221/devtools/browser/519118b6-e7d5-464a-ad82-672cce422cfe (curl exit 0). playwriter-project status: "debug port 10221, browser running pid 189245 (gate), leases 2".
+
+Left running. It stops on its own after 300000 ms with no traffic (PLAYWRITER_IDLE_MS default), so a restart is needed if jayzee is idle that long. Stop it only by PID 189245 and gate 172748 once the owner says so.
