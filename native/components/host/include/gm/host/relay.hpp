@@ -35,7 +35,7 @@ struct RelayOptions {
     std::chrono::milliseconds settle{250};
     std::chrono::milliseconds stop_grace{5000};
     std::chrono::milliseconds exit_grace{10000};
-    std::chrono::milliseconds handshake_timeout{10000};
+    std::chrono::milliseconds handshake_timeout{90000};
     std::chrono::milliseconds list_timeout{5000};
     std::chrono::milliseconds retry_min{1000};
     std::chrono::milliseconds retry_max{30000};

@@ -17,6 +17,8 @@ if (binary === null || (!onNode && !existsSync(binary))) {
 }
 
 const REPLY_MS = 10000;
+const BOOT_MS = 180000;
+const RESTART_MS = 180000;
 const ARRIVE_MS = 5000;
 const URI = 'skill://gm-continue/SKILL.md';
 const UPDATED = 'notifications/resources/updated';
@@ -35,7 +37,9 @@ const originalText = readFileSync(served, 'utf8');
 
 const lead = onNode ? [join(root, 'src', 'mcp.mjs')] : ['serve'];
 const skillsFlag = onNode ? [] : ['--skills', skillsDir];
-const child = spawn(binary, [...lead, '--workspace', workspace, '--mcp-config', mcpConfig, ...skillsFlag], { stdio: ['pipe', 'pipe', 'pipe'] });
+const runDir = join(scratch, 'run');
+const runLog = join(runDir, 'log.jsonl');
+const child = spawn(binary, [...lead, '--workspace', workspace, '--run-dir', runDir, '--mcp-config', mcpConfig, ...skillsFlag], { stdio: ['pipe', 'pipe', 'pipe'] });
 child.stderr.resume();
 const pending = new Map();
 const notes = [];
@@ -73,6 +77,16 @@ const failures = [];
 const expect = (condition, text) => {
   if (!condition) failures.push(text);
 };
+const answering = async () => {
+  const until = Date.now() + RESTART_MS;
+  while (Date.now() < until) {
+    const reply = await rpc('tools/list', {});
+    if (reply?.result !== undefined) return true;
+    await sleep(250);
+  }
+  failures.push(`the worker did not answer tools/list within ${RESTART_MS} ms after a change to ${URI}`);
+  return false;
+};
 let edits = 0;
 let written = null;
 const change = () => {
@@ -83,6 +97,9 @@ const change = () => {
 
 let elapsed = null;
 try {
+  const bootUntil = Date.now() + BOOT_MS;
+  while (!existsSync(runLog) && Date.now() < bootUntil) await sleep(50);
+  if (!existsSync(runLog)) throw new Error(`resources-subscribe-check: the worker wrote no run log within ${BOOT_MS} ms of spawn`);
   const init = await rpc('initialize', { protocolVersion: '2025-11-25', capabilities: {}, clientInfo: { name: 'gm-resources-subscribe-check', version: '1' } });
   expect(init?.result?.capabilities?.resources?.subscribe === true, `initialize: resources.subscribe is not advertised, capabilities.resources is ${short(init?.result?.capabilities?.resources)}`);
   child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' })}\n`);
@@ -100,6 +117,7 @@ try {
     expect(JSON.stringify(params) === JSON.stringify({ uri: URI }), `the update notification params are ${short(params)}, expected {"uri":"${URI}"}`);
   }
 
+  await answering();
   const unsub = await rpc('resources/unsubscribe', { uri: URI });
   expect(unsub?.error === undefined && JSON.stringify(unsub?.result) === '{}', `resources/unsubscribe ${URI}: expected an ok {} result, got ${short(unsub)}`);
   const seen = updatesFor(URI).length;
@@ -107,6 +125,7 @@ try {
   await sleep(1500);
   expect(updatesFor(URI).length === seen, `after resources/unsubscribe a change to ${URI} still sent notifications/resources/updated`);
 
+  await answering();
   const bad = await rpc('resources/subscribe', { uri: 'skill://nope/SKILL.md' });
   expect(bad?.error?.code === -32002 && bad.error.message === 'resource not found: skill://nope/SKILL.md' && JSON.stringify(bad.error.data) === '{"uri":"skill://nope/SKILL.md"}', `resources/subscribe to an unknown uri: expected -32002 resource not found, got ${short(bad)}`);
 

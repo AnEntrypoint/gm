@@ -166,7 +166,7 @@ const clientCase = async (scratch, { version, mode }) => {
     const logTail = event === null && existsSync(logFile) ? readFileSync(logFile, 'utf8').slice(-600) : '';
     const layout = event === null ? `workspace: ${layoutOf(workspace)}; run: ${layoutOf(runDir)}` : '';
     const timeline = `relay said worker running at ${engine.relayAt() ?? 'never'} ms after spawn; run log created at ${logAt ?? 'never'} ms`;
-    return { event, cause: engine.cause(), stderr: event === null ? engine.stderrTail() : '', logTail, layout, timeline, logAt };
+    return { event, cause: engine.cause(), stderr: engine.stderrTail(), logTail, layout, timeline, logAt };
   } finally {
     await engine.stop();
   }
@@ -219,11 +219,13 @@ try {
 
   const boots = events.map((item) => item.logAt).filter((ms) => ms !== null);
   const slowestBoot = boots.length ? Math.max(...boots) : null;
+  const slowest = events.reduce((a, b) => ((b.logAt ?? 0) > (a.logAt ?? 0) ? b : a));
+  const traces = slowest.stderr.split('\n').filter((line) => line.startsWith('gm trace:')).join(' | ');
   if (failures.length) {
     console.error(`${CHECK}: ${failures.length} failure(s) on ${target}\n- ${failures.join('\n- ')}`);
     process.exitCode = 1;
   } else {
-    console.log(`${CHECK}: ok (${target}: server echoes the ${VERSIONS.length} supported versions, answers ${UNKNOWN} with ${LATEST}, every initialize result has capabilities and serverInfo.version; client connects all ${VERSIONS.length} versions, refuses ${REFUSED}, refuses a result without capabilities and one without serverInfo.version; the run log of each of ${boots.length} client engines was created within ${slowestBoot} ms of spawn)`);
+    console.log(`${CHECK}: ok (${target}: server echoes the ${VERSIONS.length} supported versions, answers ${UNKNOWN} with ${LATEST}, every initialize result has capabilities and serverInfo.version; client connects all ${VERSIONS.length} versions, refuses ${REFUSED}, refuses a result without capabilities and one without serverInfo.version; the run log of each of ${boots.length} client engines was created within ${slowestBoot} ms of spawn; slowest engine trace: ${traces || 'no trace lines'})`);
   }
 } finally {
   await removeTree(scratch);
