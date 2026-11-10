@@ -211,7 +211,7 @@ void Relay::stop_worker(Lock& lock) {
     if (!child) return;
     lock.unlock();
     child->close_input();
-    child->terminate();
+    if (!child->wait_for(options_.exit_grace)) child->terminate();
     if (!child->wait_for(options_.stop_grace)) {
         child->kill();
         child->wait_for(std::chrono::milliseconds(2000));
