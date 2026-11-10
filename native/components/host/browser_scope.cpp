@@ -13,6 +13,8 @@ constexpr std::size_t kUrlChars = 200;
 constexpr int kBrowserTimeoutMs = 10000;
 
 const char* kOpenRunContext =
+    "if (!state.gmProject) { state.gmProject = await browser.newContext(); } "
+    "if (!state.gmPage || state.gmPage.isClosed()) { state.gmPage = await state.gmProject.newPage(); } var page = state.gmPage; "
     "if (!state.gmRun) { state.gmRun = await browser.newContext(); state.gmRun.setDefaultTimeout(60000); "
     "state.gmRun.setDefaultNavigationTimeout(10000); } context = state.gmRun; ";
 const char* kTabsCode =
