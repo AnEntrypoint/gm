@@ -20,7 +20,7 @@ if (!onNode && !existsSync(resolve(target))) {
 }
 
 const JOB = 'carry';
-const JOB_COMMAND = 'sleep 8; echo done';
+const JOB_COMMAND = process.platform === 'win32' ? 'sleep 8 & echo done' : 'sleep 8; echo done';
 const CALL_MS = 90000;
 const WATCHDOG_MS = 240000;
 const watchdog = setTimeout(() => {
