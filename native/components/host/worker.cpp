@@ -120,18 +120,19 @@ int run_worker(const HostArgs& args) {
     core_options.serve_skill = [serve_skill_hook, skills = skills_dir_of(args)](const std::string& uri) {
         return *serve_skill_hook ? (*serve_skill_hook)(uri) : mcp::served_skill_text(skills, uri);
     };
-    core_options.on_append = [](const RunLog& log, std::string_view kind, std::uint64_t seq) {
+    const auto queue_pending = [](const RunLog& log, std::string_view kind, std::uint64_t seq) {
         try {
             mcp::enqueue_pending(log, kind, seq);
         } catch (const std::exception& error) {
             std::cerr << "gm mcp: " << error.what() << '\n';
         }
     };
+    core_options.on_append = queue_pending;
     CoreVerbs core(std::move(core_options));
     SearchVerbs search(workspace);
     auto native = ComposedVerbs::compose({&core, &search});
     if (!native) return fail(native.error());
-    HostServices services{workspace, *run_dir, native->get(), make_primitives(workspace, read_current_log)};
+    HostServices services{workspace, *run_dir, native->get(), make_primitives(workspace, read_current_log, queue_pending)};
     LeafVerbs leaves(leaves_dir_of(args), services);
     BootEvents boot_events;
     mcpclient::Options mcp_options;

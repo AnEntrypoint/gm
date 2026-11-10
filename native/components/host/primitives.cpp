@@ -39,7 +39,7 @@ json::Value outcome_reply(const proc::Outcome& outcome) {
 
 }
 
-std::map<std::string, Primitive> make_primitives(std::filesystem::path workspace, CurrentLog current_log) {
+std::map<std::string, Primitive> make_primitives(std::filesystem::path workspace, CurrentLog current_log, LeafAppended leaf_appended) {
     std::map<std::string, Primitive> primitives;
     primitives["run"] = [workspace](const json::Value& args) {
         const json::Value* argv = args.find("argv");
@@ -59,7 +59,7 @@ std::map<std::string, Primitive> make_primitives(std::filesystem::path workspace
         if (command == nullptr || !command->is_string()) return failure("shell needs command, a string");
         return outcome_reply(proc::shell(command->as_string(), cwd_of(args, workspace), timeout_of(args)));
     };
-    primitives["logAppend"] = [current_log](const json::Value& args) {
+    primitives["logAppend"] = [current_log, leaf_appended](const json::Value& args) {
         const json::Value* kind = args.find("kind");
         if (kind == nullptr || !kind->is_string() || kind->as_string().empty())
             return failure("logAppend needs { kind, fields }, with kind a non-empty string");
@@ -68,6 +68,7 @@ std::map<std::string, Primitive> make_primitives(std::filesystem::path workspace
         const auto log = current_log ? current_log() : nullptr;
         if (log == nullptr) return failure("logAppend has no run log");
         const std::uint64_t seq = log->append(kind->as_string(), fields != nullptr ? *fields : json::Value(json::Object{}));
+        if (leaf_appended) leaf_appended(*log, kind->as_string(), seq);
         json::Value reply;
         reply.set("ok", true);
         reply.set("seq", seq);
