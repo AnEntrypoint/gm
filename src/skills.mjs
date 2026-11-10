@@ -36,7 +36,7 @@ function plainProblem(value) {
   return null;
 }
 
-const FILE_TOOLS = ['read_file', 'write_file', 'edit_file', 'stat_file', 'list_dir', 'run_shell', 'job_start', 'job_status', 'job_stop', 'query_log', 'task_set'];
+const FILE_TOOLS = ['read_file', 'write_file', 'edit_file', 'stat_file', 'list_dir', 'fs_op', 'run_shell', 'job_start', 'job_status', 'job_stop', 'query_log', 'task_set'];
 
 export function unservedNames() {
   return [...FILE_TOOLS, ...SEARCH_TOOLS, ...WIKI_TOOLS, ...REVIEW_TOOLS,...FETCH_TOOLS, ...CODE_TOOLS, ...GIT_TOOLS, ...ROW_TOOLS].map((tool) => (typeof tool === 'string' ? tool : tool.name));

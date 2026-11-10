@@ -33,6 +33,7 @@ export const CLI_TOOLS = [
   { name: 'read_file', description: 'text of a file.', inputSchema: obj({ path: str }, ['path']) },
   { name: 'write_file', description: 'write a file, creating parent directories. Overwriting an existing file with under half its prior bytes adds shrunkByBytes/shrinkRatio/shrinkWarning (non-blocking).', inputSchema: obj({ path: str, content: str }, ['path', 'content']) },
   { name: 'list_dir', description: 'entries of a directory; directories end with "/".', inputSchema: obj({ path: str }) },
+  { name: 'fs_op', description: 'Create, copy, move or delete a path inside or outside the workspace. op is mkdir (creates parents), cp (recursive; an existing directory is merged), mv (rename) or rm (recursive). to is the second path for cp and mv. rm refuses the filesystem root and the workspace root.', inputSchema: obj({ op: str, path: str, to: str }, ['op', 'path']) },
   {
     name: 'run_shell',
     description: 'run a shell command in the workspace (default timeout 300000 ms). Returns exitCode, signal and output. Large output is condensed by default; raw:true skips condensing. The reply carries at most 20000 characters inline; longer output adds outputPath (the whole text), totalChars, digest, offset, next and truncated, and read_file pages the rest. The command process group is killed when the command returns, so background work must use background true with a job name. Read the job files only after job_status shows exited. A job still running when the run ends is killed.',

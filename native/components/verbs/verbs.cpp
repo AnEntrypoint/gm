@@ -186,6 +186,7 @@ const std::vector<VerbInfo>& verb_table() {
     {"edit_file", "Replace old with new in a text file, inside or outside the workspace. old must occur once, unless replaceAll is true.", R"json({"type":"object","properties":{"path":{"type":"string"},"old":{"type":"string"},"new":{"type":"string"},"replaceAll":{"type":"boolean"}},"required":["path","old","new"]})json"},
     {"stat_file", "Type, size and mtime of a path, inside or outside the workspace, as JSON.", R"json({"type":"object","properties":{"path":{"type":"string"}},"required":["path"]})json"},
     {"list_dir", "List a directory, inside or outside the workspace. Directories end with \"/\". prefix keeps names that start with it, offset and limit page the sorted list, and the reply gives total and next.", R"json({"type":"object","properties":{"path":{"type":"string"},"prefix":{"type":"string"},"offset":{"type":"number"},"limit":{"type":"number"}},"required":[]})json"},
+    {"fs_op", "Create, copy, move or delete a path inside or outside the workspace. op is mkdir (creates parents), cp (recursive; an existing directory is merged), mv (rename) or rm (recursive). to is the second path for cp and mv. rm refuses the filesystem root and the workspace root.", R"json({"type":"object","properties":{"op":{"type":"string","enum":["mkdir","cp","mv","rm"]},"path":{"type":"string"},"to":{"type":"string"}},"required":["op","path"]})json"},
     {"run_shell", "Run a shell command in the workspace and wait for it. Default timeout 300000 ms. Its process group is killed when it returns, so background work must go through job_start. Large output is condensed by default; raw:true skips condensing. The reply carries at most 20000 characters inline; longer output adds outputPath (the whole text), totalChars, digest, offset, next and truncated, and read_file pages the rest. compressed/originalChars/keptChars/droppedLines report what condensing dropped.", R"json({"type":"object","properties":{"command":{"type":"string"},"timeoutMs":{"type":"number"},"raw":{"type":"boolean"}},"required":["command"]})json"},
     {"job_start", "Start a shell command as a named background job and return at once. Wait for it with one job_status({ job, waitMs, tail }) call. timeoutMs is the job's deadline in milliseconds: default 300000, at most 7200000. A deadline past the job lifetime (3600000 ms by default) ends the job at the lifetime with reason lifetime. At the deadline the job's process group gets SIGTERM, then SIGKILL, and the job ends killed with reason timeout. job_status reports the deadline as timeoutMs. progress is an optional file path whose modification time counts as job progress, so a job that writes results without printing is not reported stuck.", R"json({"type":"object","properties":{"job":{"type":"string"},"command":{"type":"string"},"timeoutMs":{"type":"number"},"progress":{"type":"string"}},"required":["job","command"]})json"},
     {"job_status", "State (running, exited or killed), exitCode, signal and output of a job as plain fields, with logPath (the job output file). output is the last 20000 characters, with total (its length) and truncated; with offset, output is the 20000 characters from that offset, with next. waitMs blocks until the job leaves running or that many milliseconds pass, at most 3600000, so one call waits for a job and no sleep or poll loop is needed. tail, a number, returns only the last tail characters, which keeps a wait reply short. pid, in place of job, waits for a process gm did not start to disappear; it has no exit code. Offsets and lengths count characters, not lines.", R"json({"type":"object","properties":{"job":{"type":"string"},"pid":{"type":"number"},"waitMs":{"type":"number"},"tail":{"type":"number"},"offset":{"type":"number"}},"required":[]})json"},
@@ -555,6 +556,34 @@ struct CoreVerbs::Impl {
         return reply;
     }
 
+    json::Value fs_op(const json::Value& args) {
+        const json::Value* op = args.find("op");
+        if (op == nullptr || !op->is_string()) return failure("op must be mkdir, cp, mv or rm");
+        const std::string kind = op->as_string();
+        if (kind != "mkdir" && kind != "cp" && kind != "mv" && kind != "rm") return failure("op must be mkdir, cp, mv or rm");
+        auto at = locate(args.find("path"));
+        if (!at) return refusal("path must be a non-empty string");
+        std::error_code ec;
+        std::string text = relative_text(*at);
+        if (kind == "mkdir") {
+            std::filesystem::create_directories(*at, ec);
+        } else if (kind == "rm") {
+            if (at->parent_path() == *at || *at == root) return refusal("refusing to remove the filesystem root or the workspace root");
+            std::filesystem::remove_all(*at, ec);
+        } else {
+            auto to = locate(args.find("to"));
+            if (!to) return refusal("to must be a non-empty string for " + kind);
+            text += " to " + relative_text(*to);
+            if (kind == "cp") std::filesystem::copy(*at, *to, std::filesystem::copy_options::recursive | std::filesystem::copy_options::overwrite_existing, ec);
+            else std::filesystem::rename(*at, *to, ec);
+        }
+        if (ec) return failure(core::node_error(ec.value(), kind, &*at));
+        json::Value reply;
+        reply.set("ok", true);
+        reply.set("output", kind + " " + text);
+        return reply;
+    }
+
     json::Value edit_file(const json::Value& args) {
         const json::Value* path_value = args.find("path");
         auto at = locate(path_value);
@@ -916,6 +945,7 @@ json::Value CoreVerbs::call(std::string_view name, const json::Value& raw_args) 
         if (name == "edit_file") return impl_->edit_file(args);
         if (name == "stat_file") return impl_->stat_file(args);
         if (name == "list_dir") return impl_->list_dir(args);
+        if (name == "fs_op") return impl_->fs_op(args);
         if (name == "run_shell") return impl_->run_shell(args);
         if (name == "job_start") return impl_->job_start(args);
         if (name == "job_status") return impl_->jobs.status(args);

@@ -301,7 +301,7 @@ Value cacheable(Value result, double ttl_ms) {
 
 const std::vector<std::string>& node_verb_order() {
     static const std::vector<std::string> order = {
-        "read_file",   "write_file",    "edit_file",   "stat_file",    "list_dir",       "run_shell",   "job_start",
+        "read_file",   "write_file",    "edit_file",   "stat_file",    "list_dir",       "fs_op",          "run_shell",   "job_start",
         "job_status",  "job_stop",      "query_log",   "search",       "wiki_search",    "grep",        "wiki_write",
         "review_packet", "review_record", "review_join", "fetch",      "callers",        "impact",      "git_status",
         "git_state",

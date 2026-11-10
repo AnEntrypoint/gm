@@ -1,7 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { closeSync, existsSync, lstatSync, mkdirSync, openSync, readdirSync, readFileSync, readSync, realpathSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
-import { mkdir, readdir, readFile, stat, writeFile } from 'node:fs/promises';
+import { cp, mkdir, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { runQuery } from './log.mjs';
 import { foregroundGroups, killBody, killGroup, runCommand, shellLauncher, signalGroup, spawnGroup } from './exec.mjs';
@@ -259,6 +259,25 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
       return { ok: true, output: JSON.stringify({ type, size: info.size, mtime: info.mtime.toISOString() }) };
     },
 
+    async fs_op(args) {
+      if (!['mkdir', 'cp', 'mv', 'rm'].includes(args.op)) return { ok: false, error: 'op must be mkdir, cp, mv or rm' };
+      const at = locate(args.path);
+      if (at.refused) return refusal(at.refused);
+      const target = at.path;
+      let text = relative(root, target);
+      if (args.op === 'mkdir') await mkdir(target, { recursive: true });
+      else if (args.op === 'rm') {
+        if (dirname(target) === target || target === root) return refusal('refusing to remove the filesystem root or the workspace root');
+        await rm(target, { recursive: true, force: true });
+      } else {
+        const to = locate(args.to);
+        if (to.refused || !to.path) return refusal(`to must be a non-empty string for ${args.op}`);
+        text += ` to ${relative(root, to.path)}`;
+        if (args.op === 'cp') await cp(target, to.path, { recursive: true, force: true });
+        else await rename(target, to.path);
+      }
+      return { ok: true, output: `${args.op} ${text}` };
+    },
     async list_dir(args) {
       const at = locate(args.path ?? '.');
       if (at.refused) return refusal(at.refused);
