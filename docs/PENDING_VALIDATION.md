@@ -2197,3 +2197,31 @@ Rows still open, each with its reason (none reachable without a build, a push, a
 - 16, asan full check-build: needs a build (Phase B).
 - txiki import rerun (cdf218f): held until thebird pushes and the dispatcher sends the go-ahead.
 - ship.sh bypass and run_code structuredContent text (rows 5 and the owner list): owner decisions.
+
+## gm pass, Phase B (2026-11-10): thebird's f716451 build, the four import checks, and the txiki runner fixes at 916aefe
+
+Input: thebird origin/main at 6faf4c5 (pin scripts/txiki/pin.json, tjsWasmSha256 f716451387bd721e1b0cede84cc5ab44b10c6087e16dde78e206e12e70b1f296). /workspace/thebird/web/vendor/txiki/tjs.wasm is untracked there; its sha256 is f716451387bd721e1b0cede84cc5ab44b10c6087e16dde78e206e12e70b1f296, the pinned value. gm ran it through txiki/node.mjs against the four probe files of thebird's scripts/witness.mjs (lines 363 to 366), staged in /tmp/gm-import-probe (scratch, removed by nothing; outside the checkout).
+
+Defects found by the first run, both in gm's own txiki runner, fixed in 916aefe:
+
+1. The runner called tjs_browser_eval with the code pointer only. thebird's entry takes a second argument, the module label (its web runner passes it, txiki-in-page.js callEval). Without it relative imports had no base: script-imports failed with "Uncaught ReferenceError: could not load 'm.mjs'", and eval-import printed nothing. Fix: txiki/host.mjs run() takes name (the entry's absolute project path) and passes it as the label; txiki/node.mjs and txiki/site.mjs pass the entry name.
+2. The runner had no tjs_fs_realpath, so the wasm stubbed it to -1 (node.mjs reports "stubbed": ["tjs_fs_realpath", "tjs_fs_rename"]). realpath printed nothing and exited 0. Fix: txiki/fs.mjs implements tjs_fs_realpath against the project (the path when project.stat finds it, else -1). tjs_fs_rename remains stubbed; no probe uses it.
+
+Four import checks, after the fix, each through node txiki/node.mjs against thebird's f716451 build (pinned true, status 0):
+
+- script-imports: stdout "script-imports 42 lib" (expected "script-imports 42 lib").
+- eval-import: stdout "eval-import 42" (expected "eval-import 42").
+- missing-import: stdout "missing-import could not load '/import-probe/nope.mjs'" (expected to match /^missing-import could not load/m).
+- realpath: stdout "realpath /import-probe/m.mjs". thebird's expected line is "realpath /workspace/import-probe/m.mjs"; the difference is the project root (the scratch directory here, /workspace in thebird's shell), so the resolved file is the same. Recorded as a root difference, not a defect.
+
+Witnesses (run on build/release at 916aefe-1 (916aefe), one build of 13 s, BUILD_EXIT=0; job b8-build, pid 524605):
+
+- txiki/build-site.mjs --out /tmp/gm-txiki-site: pinned true, actual f716451..., 993 files; the scratch output was removed. Wall 2.9 s.
+- check-installed-build on build/release gm, stamp 916aefe: ok (version "916aefe-1 (916aefe)"; skill equals the checkout copy with ttlMs 0). Wall 0.16 s.
+- check-skill-serve on build/release gm: ok. Wall 0.25 s.
+- check-no-resource-client native: ok (12045 bytes for an 11397-byte skill). Wall 1.26 s. Node: ok (12011 bytes). Wall 0.77 s.
+- parity, build/release gm: 20/97 scenarios match, 0 cutover-expected, 55 native-ahead, 22 documented-gap, 0 differ. Wall 16.5 s.
+- gm_txiki_ declarations in txiki_shim.h: 7 (the seven thebird exports). Wall 0.02 s.
+- DESIGN.md -32002 line (fbdcb89) and the ledger closures (747e3dd): committed; their witnesses are the greps and checks named in those records.
+
+Not run here: tools/check-txiki-wasi.mjs and the gm reactor wasm (the gm wasm32-wasi build is blocked at libuv, see the 2026-11-10 wasm32-wasi record), and the in-browser run of the txiki site. Blocked rows stay open with their causes.
