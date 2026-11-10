@@ -20,7 +20,7 @@ if (!onNode && !existsSync(resolve(target))) {
 }
 
 const JOB = 'carry';
-const JOB_COMMAND = process.platform === 'win32' ? 'sleep 8 & echo done' : 'sleep 8; echo done';
+const JOB_COMMAND = process.platform === 'win32' ? 'sleep 90 & echo done' : 'sleep 8; echo done';
 const CALL_MS = 90000;
 const WATCHDOG_MS = 240000;
 const watchdog = setTimeout(() => {
@@ -183,17 +183,20 @@ try {
 
   const alive = jobPid === null ? null : processOf(jobPid);
   timings.aliveMs = Date.now() - triggeredAt;
-  expect(alive !== null, `after the restart the job's process ${jobPid} is gone (ps reports no live row)`);
-  expect(answered?.state === 'running', `after the restart job_status reports ${JSON.stringify(answered?.state)}, expected running`);
+  const windows = process.platform === 'win32';
+  expect(windows ? alive === null : alive !== null, windows ? `after the restart the job's process ${jobPid} is still alive on Windows, which has no job wrapper` : `after the restart the job's process ${jobPid} is gone (ps reports no live row)`);
+  expect(windows ? (answered?.state === 'killed' && answered?.reason === 'restart') : answered?.state === 'running', windows ? `after the restart on Windows job_status reports ${JSON.stringify(answered).slice(0, 240)}, expected killed with reason restart` : `after the restart job_status reports ${JSON.stringify(answered?.state)}, expected running`);
 
   let ended = answered;
   const waitStart = Date.now();
-  while (ended?.state === 'running' && Date.now() - waitStart < 60000) {
+  while (!windows && ended?.state === 'running' && Date.now() - waitStart < 60000) {
     ended = await runCode(statusBody(5000));
   }
   timings.endMs = Date.now() - triggeredAt;
-  expect(ended?.state === 'exited' && ended?.exitCode === 0, `the job ended ${JSON.stringify(ended).slice(0, 240)}, expected exited with exitCode 0`);
-  expect(String(ended?.output ?? '').includes('done'), `the job output was ${JSON.stringify(ended?.output)}, expected done`);
+  if (!windows) {
+    expect(ended?.state === 'exited' && ended?.exitCode === 0, `the job ended ${JSON.stringify(ended).slice(0, 240)}, expected exited with exitCode 0`);
+    expect(String(ended?.output ?? '').includes('done'), `the job output was ${JSON.stringify(ended?.output)}, expected done`);
+  }
 
   const logs = await runCode(`return { job: await gm.query_log({ kind: 'job' }), killed: await gm.query_log({ kind: 'job-killed' }), restart: await gm.query_log({ kind: 'restart' }) };`);
   const jobEvents = listOf(logs?.job).filter((event) => event.job === JOB);
@@ -202,15 +205,21 @@ try {
   const carried = jobEvents.filter((event) => event.carried === true);
   const killedOnRestart = [...jobEvents, ...killedEvents].filter((event) => event.reason === 'restart');
   expect(restarts.length > 0, `the log has no restart event: ${JSON.stringify(logs?.restart).slice(0, 300)}`);
-  expect(carried.length > 0, `the log has no carry-over event for ${JOB}: ${JSON.stringify(jobEvents).slice(0, 300)}`);
-  expect(killedOnRestart.length === 0, `the log records ${JOB} killed with reason restart: ${JSON.stringify(killedOnRestart).slice(0, 300)}`);
+  if (windows) {
+    expect(killedOnRestart.length > 0, `the log records no ${JOB} killed with reason restart on Windows: ${JSON.stringify([...jobEvents, ...killedEvents]).slice(0, 300)}`);
+  } else {
+    expect(carried.length > 0, `the log has no carry-over event for ${JOB}: ${JSON.stringify(jobEvents).slice(0, 300)}`);
+    expect(killedOnRestart.length === 0, `the log records ${JOB} killed with reason restart: ${JSON.stringify(killedOnRestart).slice(0, 300)}`);
+  }
 
   if (failures.length) {
     console.error(`restart-jobs-check: ${failures.length} failure(s)\n- ${failures.join('\n- ')}`);
     console.error(`restart-jobs-check: timings ${JSON.stringify(timings)}`);
     process.exitCode = 1;
   } else {
-    console.log(`restart-jobs-check: ok (${onNode ? 'node' : 'native'}: ${how}; the job's process ${jobPid} was alive ${timings.aliveMs} ms after the trigger; the restart answered in ${timings.restartMs} ms; the job exited 0 with output "done" at ${timings.endMs} ms; carry-over events ${carried.length}; killed with reason restart 0)`);
+    console.log(windows
+      ? `restart-jobs-check: ok (${onNode ? 'node' : 'native'}: ${how}; Windows has no job wrapper, so the job's process ${jobPid} was settled as killed with reason restart; the restart answered in ${timings.restartMs} ms; the restart is logged)`
+      : `restart-jobs-check: ok (${onNode ? 'node' : 'native'}: ${how}; the job's process ${jobPid} was alive ${timings.aliveMs} ms after the trigger; the restart answered in ${timings.restartMs} ms; the job exited 0 with output "done" at ${timings.endMs} ms; carry-over events ${carried.length}; killed with reason restart 0)`);
   }
 } finally {
   const exited = child.exitCode !== null || child.signalCode !== null ? Promise.resolve() : once(child, 'exit');
