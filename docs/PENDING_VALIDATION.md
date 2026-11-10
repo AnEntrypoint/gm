@@ -1,5 +1,21 @@
 # Pending validation
 
+## Stretch 2026-11-10 (txiki verbs and imports, run 2): Phase A and Phase B
+
+Changes in txiki/: host.mjs (run loop waits on pending verb calls with a clearable timer; tjs_bridge_send answers op 'builtin' name 'gm' from verbs.mjs and queues the reply for tjs_browser_resume; a gm.* prelude sets __thebirdBridge.onResult), fs.mjs (tjs_fs_* over the project, with the out layouts of thebird web/txiki-in-page.js), verbs.mjs (stat_file, read_file, list_dir), project.mjs (path and file-map helpers), node.mjs and build-site.mjs (no bundler, the pin read from thebird scripts/vendor-txiki.mjs and checked before any run; --allow-unpinned is labelled and is not a pin pass), site.mjs and site.html. txiki/bundle.mjs is removed. The seven gm_txiki_* exports are unchanged and thebird is not edited. No native code changed.
+
+Pin: sha256 of /workspace/thebird/web/vendor/txiki/tjs.wasm is 137c08f6db9969194c917384172794173a31642b7d51d2aac6c598d1c4475a28, equal to TXIKI_WASM_SHA256 in thebird scripts/vendor-txiki.mjs, checked with sha256sum on 2026-11-10. The earlier digest dcd3a434 is no longer the artifact. Every witness below ran without --allow-unpinned and reports pinned true. Thebird should confirm this artifact is the one it means to vendor.
+
+| witness | command | result |
+|---|---|---|
+| S5a verbs, Node | node txiki/node.mjs /tmp/gm-witness/txiki-verb/entry.mjs --root /tmp/gm-witness/txiki-verb | exit 0, status 0, pinned true, 36 ms, stdout {"file":"file","fileSize":46,"dir":"dir","textBytes":46,"names":"add.mjs\n","missing":"ENOENT: no such file or directory, stat nope.mjs"}; wall 0.195 s |
+| S5b verbs, built site | node txiki/build-site.mjs --root /tmp/gm-witness/txiki-verb --entry entry.mjs --out /tmp/gm-witness/site-verb (pinned true, 2 files), serve.mjs on 127.0.0.1:18765, playwriter_execute loads the page in a run context | data-state done, pinned true, status 0, stdout identical to S5a, 58 ms |
+| S5c imports, Node | node txiki/node.mjs /tmp/gm-witness/txiki-proj/entry.mjs --root /tmp/gm-witness/txiki-proj | BLOCKED: status 1, "Uncaught ReferenceError: could not load 'lib/add.mjs'" |
+
+S5c cause: the artifact's file loader calls uv_fs_* (open, read, realpath, stat, readdir), which thebird scripts/txiki/stubs.tsv lists as stubs in the browser build ("no host file access yet (OPFS bridge pending)"). A trace of the tjs_fs_* imports showed no call before the failure, so the tjs_fs_* implementation is not the cause. Project imports therefore do not resolve through the artifact's loader yet. The bundler is removed, so no host-side fallback exists; the owner's rule is loader-only. Thebird owns the artifact; the fix is for thebird to back uv_fs_* with the tjs_fs_* bridge (or a module source hook). Re-run S5c after that fix.
+
+Differences between engines, recorded: the site's project map has no mtimes and no directory sizes (mtime 1970-01-01, dir size 0), while Node reports the real stat. S5a and S5b print only type and size of the file, which agree.
+
 ## Stretch 2026-11-10 (skill follow-up): Phase B witnessed
 
 S4a on fc5fede: skillCheck ok (every MCP_RULES line still in the skill, gm.fs_op prefixed, both served skills parse); check-skill-serve build/release ok; skills/gm/SKILL.md 9843 bytes. The static server on 18765 was stopped as a job.
@@ -25,16 +41,18 @@ S2a and S2b on e0f3663 and 1a5f3bf, on build/release (cmake --build build/releas
 
 Defects found in Phase B: none in the two stretch 2 changes.
 
-## Stretch 2026-11-10 (txiki on thebird artifact): Phase B witnessed
+## Stretch 2026-11-10 (txiki on thebird artifact): Phase B, pin check OPEN at this run
 
-S3a on ed97869, run on the thebird artifact /workspace/thebird/web/vendor/txiki/tjs.wasm (sha256 dcd3a4342705967bfd4188aea39a4c7d368cfd7c90a42918e6fc72f83da656c1), pin read from /workspace/thebird/scripts/vendor-txiki.mjs:
+The run below is withdrawn as a pass. Its --allow-unpinned witnesses did not pass the pin check, and the owner ruled they are defects. The current state is in the txiki verbs and imports section above.
+
+S3a on ed97869, run on the thebird artifact /workspace/thebird/web/vendor/txiki/tjs.wasm (sha256 dcd3a4342705967bfd4188aea39a4c7d368cfd7c90a42918e6fc72f83da656c1 at that time), pin read from /workspace/thebird/scripts/vendor-txiki.mjs:
 - node txiki/node.mjs without a flag, scratch project /tmp/gm-witness/txiki-proj: exit 1, "tjs.wasm sha256 dcd3a434... does not match the pin 137c08f6... in /workspace/thebird/scripts/vendor-txiki.mjs" (S3b).
-- node txiki/node.mjs --allow-unpinned (labelled: unpinned artifact): status 0, stdout "add 5", "shout GM!", "tools add,version", "timer ok", 77 ms. Imports covered: named, default, namespace, export star, export from in the entry, timer.
+- node txiki/node.mjs --allow-unpinned (not a pin pass, unpinned artifact): status 0, stdout "add 5", "shout GM!", "tools add,version", "timer ok", 77 ms. Imports covered: named, default, namespace, export star, export from in the entry, timer.
 - node txiki/node.mjs on a body "while (true) {}" with the default 120000 ms: status 124 at 120005 ms, stdout "spinning". The artifact interrupt handler enforces the deadline.
-- node txiki/build-site.mjs --allow-unpinned: build/txiki-site with tjs.wasm, shims/wasi-preview1.js from thebird, host.mjs, bundle.mjs, site.mjs, acorn.mjs, pin.json, project.json (4 files).
+- node txiki/build-site.mjs --allow-unpinned (not a pin pass): build/txiki-site with tjs.wasm, shims/wasi-preview1.js from thebird, host.mjs, bundle.mjs, site.mjs, acorn.mjs, pin.json, project.json (4 files). The bundle.mjs and acorn.mjs files were removed in stretch 1.
 - browser: build/txiki-site served by /tmp/gm-witness/serve.mjs on 127.0.0.1:18765 (port 8765 is held by a python3 process, pid 2211868, not this run; the first attempt reached that page and was discarded), playwriter_execute in the gm run: data-state done, title "gm run_code on txiki", status 0, the same four stdout lines as the Node run, 73 ms.
 
-Not done: a txiki body has no gm verbs (the artifact has no bridge op for verb calls); the browser refusal path (pin mismatch without the flag) is not witnessed because build-site refuses before it writes; a body that imports a node: builtin is refused by the bundler (only ./ and ../ specifiers resolve). The artifact is stale against its pin: thebird must rebuild web/vendor/txiki/tjs.wasm.
+Not done: a txiki body has no gm verbs (the artifact has no bridge op for verb calls); the browser refusal path (pin mismatch without the flag) is not witnessed because build-site refuses before it writes; a body that imports a node: builtin is refused by the bundler (only ./ and ../ specifiers resolve). At run 1 the artifact did not match its pin (dcd3a434 against 137c08f6); see the stretch 1 section above for the current state.
 
 ## Stretch 2026-11-10: open rows in this ledger, accounting
 

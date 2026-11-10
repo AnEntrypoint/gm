@@ -35,9 +35,8 @@ const collect = (dir, files = {}) => {
 mkdirSync(join(out, 'shims'), { recursive: true });
 copyFileSync(wasmPath, join(out, 'tjs.wasm'));
 copyFileSync(resolve(pinPath, '..', '..', 'web', 'shims', 'wasi-preview1.js'), join(out, 'shims', 'wasi-preview1.js'));
-for (const name of ['host.mjs', 'bundle.mjs', 'site.mjs']) copyFileSync(join(here, name), join(out, name));
+for (const name of ['host.mjs', 'fs.mjs', 'verbs.mjs', 'project.mjs', 'site.mjs']) copyFileSync(join(here, name), join(out, name));
 copyFileSync(join(here, 'site.html'), join(out, 'index.html'));
-copyFileSync(join(repo, 'node_modules', 'acorn', 'dist', 'acorn.mjs'), join(out, 'acorn.mjs'));
 const files = collect(root);
 writeFileSync(join(out, 'project.json'), JSON.stringify({ entry: '/' + relative(root, entry).split(sep).join('/'), timeoutMs, files }));
 writeFileSync(join(out, 'pin.json'), JSON.stringify({ pin, actual: digest, allowUnpinned }));

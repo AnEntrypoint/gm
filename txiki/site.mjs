@@ -1,5 +1,5 @@
-import { bundle } from './bundle.mjs';
 import { openTxiki } from './host.mjs';
+import { filesProject, resolvePath } from './project.mjs';
 import { createWasi } from './shims/wasi-preview1.js';
 
 const hex = (buffer) => [...new Uint8Array(buffer)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
@@ -19,8 +19,8 @@ try {
     show({ refused: true, wasmSha256: digest, pin: pin.pin });
     document.body.dataset.state = 'refused';
   } else {
-    const source = bundle(project.entry, (path) => project.files[path] ?? null);
-    const txiki = await openTxiki({ wasm, createWasi });
+    const source = project.files[project.entry];
+    const txiki = await openTxiki({ wasm, createWasi, project: filesProject(project.files) });
     const started = performance.now();
     const result = await txiki.run(source, { timeoutMs: project.timeoutMs });
     show({ wasmSha256: digest, pinned, stubbed: txiki.stubbed, ms: Math.round(performance.now() - started), ...result });

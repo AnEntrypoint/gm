@@ -1,9 +1,9 @@
 import { createHash } from 'node:crypto';
-import { readFileSync } from 'node:fs';
-import { relative, resolve, sep } from 'node:path';
+import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { join, relative, resolve, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { bundle } from './bundle.mjs';
 import { openTxiki } from './host.mjs';
+import { resolvePath } from './project.mjs';
 
 const args = process.argv.slice(2);
 const flag = (name, fallback) => (args.includes(name) ? args[args.indexOf(name) + 1] : fallback);
@@ -22,16 +22,25 @@ const digest = createHash('sha256').update(wasm).digest('hex');
 if (digest !== pin && !allowUnpinned) throw new Error('tjs.wasm sha256 ' + digest + ' does not match the pin ' + pin + ' in ' + pinPath);
 
 const { createWasi } = await import(pathToFileURL(resolve(pinPath, '..', '..', 'web', 'shims', 'wasi-preview1.js')).href);
-const read = (path) => {
-  try {
-    return readFileSync(resolve(root, '.' + path), 'utf8');
-  } catch {
-    return null;
-  }
+const project = {
+  stat(path) {
+    const info = statSync(join(root, path), { throwIfNoEntry: false });
+    return info === undefined ? null : { dir: info.isDirectory(), size: info.size, mtimeMs: info.mtimeMs };
+  },
+  bytes(path) {
+    return new Uint8Array(readFileSync(join(root, path)));
+  },
+  names(path) {
+    try {
+      return readdirSync(join(root, path));
+    } catch {
+      return null;
+    }
+  },
 };
-const entryPath = '/' + relative(root, resolve(root, entry)).split(sep).join('/');
-const source = bundle(entryPath, read);
-const txiki = await openTxiki({ wasm, createWasi });
+const entryPath = resolvePath(relative(root, resolve(root, entry)).split(sep).join('/'));
+const source = new TextDecoder().decode(project.bytes(entryPath));
+const txiki = await openTxiki({ wasm, createWasi, project });
 const started = Date.now();
 const result = await txiki.run(source, { timeoutMs });
 console.log(JSON.stringify({ engine: 'thebird-txiki', wasmSha256: digest, pin, pinned: digest === pin, stubbed: txiki.stubbed, ms: Date.now() - started, ...result }, null, 2));
