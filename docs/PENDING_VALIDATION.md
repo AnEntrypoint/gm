@@ -1,5 +1,11 @@
 # Pending validation
 
+## Stretch 2026-11-10 (habit skill, Bash gap, txiki): Phase A
+
+| # | Commit | File | Change | Witness needed |
+|---|---|---|---|---|
+| S1 | local, Phase A | skills/gm/SKILL.md | rewritten as habits (do each thing once, batch a step, let a job run, keep what you carry small, work through gm, debug live then test once, stop only what you started); the seven run rules kept verbatim; the Spending turns list and the bundling examples removed | Phase B: src/skills.mjs skillCheck ok (every rule of MCP_RULES in the skill, no bare tool name); tools/check-skill-serve.mjs; a live skill://gm/SKILL.md read equals the checkout file; wc -c below 12000 |
+
 Phase A changes, not yet built, tested or witnessed. Each row names the file and the witness Phase B runs. Owner policy: no test files; witnesses run through the built binary or the CLI, and the parity harness.
 
 | # | Commit | File | Change | Witness needed |
