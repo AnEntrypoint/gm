@@ -1,0 +1,102 @@
+/*
+ * txiki.js
+ *
+ * Copyright (c) 2023-present Saul Ibarra Corretge <s@saghul.net>
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+ * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
+#include "bundles/c/internal/home.c"
+#include "bundles/c/internal/path.c"
+#include "bundles/c/stdlib/assert.c"
+#ifdef TJS_HAVE_FFI
+#include "bundles/c/stdlib/ffi.c"
+#endif
+#include "bundles/c/stdlib/getopts.c"
+#include "bundles/c/stdlib/hashing.c"
+#include "bundles/c/stdlib/ipaddr.c"
+#include "bundles/c/stdlib/path.c"
+#include "bundles/c/stdlib/posix-socket.c"
+#include "bundles/c/stdlib/readline.c"
+#ifdef TJS_HAVE_SQLITE
+#include "bundles/c/stdlib/sqlite.c"
+#endif
+#include "bundles/c/stdlib/utils.c"
+#include "bundles/c/stdlib/uuid.c"
+#ifdef TJS_HAVE_WASM
+#include "bundles/c/stdlib/wasi.c"
+#endif
+#include "private.h"
+
+
+typedef struct {
+    const char *name;
+    const uint8_t *data;
+    uint32_t data_size;
+} tjs_builtin_t;
+
+static tjs_builtin_t builtins[] = {
+    { "tjs:assert", tjs__assert, sizeof(tjs__assert) },
+#ifdef TJS_HAVE_FFI
+    { "tjs:ffi", tjs__ffi, sizeof(tjs__ffi) },
+#endif
+    { "tjs:getopts", tjs__getopts, sizeof(tjs__getopts) },
+    { "tjs:hashing", tjs__hashing, sizeof(tjs__hashing) },
+    { "tjs:internal/home", tjs__internal_home, sizeof(tjs__internal_home) },
+    { "tjs:internal/path", tjs__internal_path, sizeof(tjs__internal_path) },
+    { "tjs:ipaddr", tjs__ipaddr, sizeof(tjs__ipaddr) },
+    { "tjs:path", tjs__path, sizeof(tjs__path) },
+    { "tjs:posix-socket", tjs__posix_socket, sizeof(tjs__posix_socket) },
+    { "tjs:readline", tjs__readline, sizeof(tjs__readline) },
+#ifdef TJS_HAVE_SQLITE
+    { "tjs:sqlite", tjs__sqlite, sizeof(tjs__sqlite) },
+#endif
+    { "tjs:utils", tjs__utils, sizeof(tjs__utils) },
+    { "tjs:uuid", tjs__uuid, sizeof(tjs__uuid) },
+#ifdef TJS_HAVE_WASM
+    { "tjs:wasi", tjs__wasi, sizeof(tjs__wasi) },
+#endif
+    { NULL, NULL, 0 },
+};
+
+JSModuleDef *tjs__load_builtin(JSContext *ctx, const char *name) {
+    tjs_builtin_t *item = NULL;
+
+    for (tjs_builtin_t *p = builtins; p->name != NULL; ++p) {
+        if (strcmp(p->name, name) == 0) {
+            item = p;
+            break;
+        }
+    }
+
+    if (item == NULL) {
+        JS_ThrowReferenceError(ctx, "could not load '%s'", name);
+        return NULL;
+    }
+
+    JSValue obj = JS_ReadObject(ctx, item->data, item->data_size, JS_READ_OBJ_BYTECODE);
+
+    CHECK_EQ(JS_IsException(obj), 0);
+    CHECK_EQ(JS_VALUE_GET_TAG(obj), JS_TAG_MODULE);
+
+    JSModuleDef *m = JS_VALUE_GET_PTR(obj);
+    JS_FreeValue(ctx, obj);
+
+    return m;
+}

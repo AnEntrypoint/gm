@@ -1,0 +1,15 @@
+txiki: txiki.js v26.11.0
+url: https://codeload.github.com/saghul/txiki.js/legacy.tar.gz/refs/tags/v26.11.0
+sha256: 763025ac98e4d6629f9ebe8396c027ff22966a6322b0dc43e442d45c6d7f8059
+libuv: libuv dd9f081cc55a4d83e2a976848d074f28ee5f34eb
+url: https://codeload.github.com/libuv/libuv/legacy.tar.gz/dd9f081cc55a4d83e2a976848d074f28ee5f34eb
+sha256: f5185440ee939936d6375755498b7f07915f747bd9bbfe6ea058a9ee173f88d0
+quickjs: quickjs-ng 7b5f588e0f9b643e2996f291bfc861abeaceddc2
+url: https://codeload.github.com/quickjs-ng/quickjs/legacy.tar.gz/7b5f588e0f9b643e2996f291bfc861abeaceddc2
+sha256: f27b2e93647e73f91201e12c4f2ee0c0d07e2f6dc06b539422bf03269d601366
+written by: node tools/vendor-txiki.mjs (downloads each archive, checks its sha256, copies the files below)
+txiki files: src/*.h except cacert.h, ed25519.h, mbedtls_config.h, wasm.h; src/{vm.c, timers.c, utils.c, modules.c, error.c, mem.c, text-coding.c, tbuf.c, builtins.c, signals.c, mod_os.c, mod_sys.c, mod_fs.c, mod_streams.c, worker.c, eval.c, url.c, mod_engine.c, version.c, mod_channel.c, mod_dns.c, mod_fswatch.c, mod_process.c, mod_udp.c, mod_posix-socket.c}; src/bundles/c/{core/core.c, core/polyfills.c, core/run-main.c, core/worker-bootstrap.c, internal/home.c, internal/path.c, stdlib/assert.c, stdlib/getopts.c, stdlib/hashing.c, stdlib/ipaddr.c, stdlib/path.c, stdlib/posix-socket.c, stdlib/readline.c, stdlib/utils.c, stdlib/uuid.c}; deps/ada/{ada.cpp, ada.h, ada_c.h}; LICENSE; src/version.h is version.h.in with 26.11.0 filled in.
+txiki files left out: the modules that need libwebsockets, mbedtls, wamr, libffi, sqlite3, miniz or mimalloc (httpclient, httpserver, ws, tls, webcrypto, hashing, wasm, ffi, sqlite3, miniz), the CLI, and the JavaScript sources of the bundles. native/components/quickjs/txiki_stubs.c answers their entry points.
+libuv files: include/, src/, CMakeLists.txt, the two .pc.in files it configures, and the licence files.
+quickjs-ng files: quickjs.c, dtoa.c, libregexp.c, libunicode.c, every top-level header except quickjs-libc.h, and LICENSE.
+ASCII-normalized: 91 non-ASCII characters in comments and licence text are written as plain ASCII (accented letters without the accent, dashes as -, arrows as ->, the copyright sign as (c), anything else as ?). The tool refuses a non-ASCII character outside a comment in a source file, so no code changed.

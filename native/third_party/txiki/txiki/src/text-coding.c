@@ -1,0 +1,530 @@
+
+/*
+ * txiki.js
+ *
+ * Copyright (c) 2024-present lal12
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+ * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
+#include "private.h"
+
+
+#define TJS_TEXT_CODING_RESULT_CODEPOINT 1
+#define TJS_TEXT_CODING_RESULT_CONTINUE  2
+#define TJS_TEXT_CODING_RESULT_FINISHED  3
+#define TJS_TEXT_CODING_RESULT_ERROR     4
+
+#define TJS_TEXT_CODING_OPTION_STREAM     (1 << 0)
+#define TJS_TEXT_CODING_OPTION_FATAL      (1 << 1)
+#define TJS_TEXT_CODING_OPTION_IGNORE_BOM (1 << 2)
+
+#define TJS_TEXT_CODING_OPTIONS_MASK                                                                                   \
+    (TJS_TEXT_CODING_OPTION_STREAM | TJS_TEXT_CODING_OPTION_FATAL | TJS_TEXT_CODING_OPTION_IGNORE_BOM)
+
+typedef struct {
+    void *(*create)(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv);
+    JSValue (*decode)(void *ref, uint8_t **data, size_t len);
+    JSValue (*free)(JSContext *ctx, void *ref);
+    char **names;
+} decoder_t;
+
+#pragma region "UTF8 Coder"
+
+#define TJS_UTF8_DECODER_FLAG_DO_NOT_FLUSH (1 << 0)
+#define TJS_UTF8_DECODER_FLAG_BOM_SEEN     (1 << 1)
+
+typedef struct {
+    JSContext *ctx;
+    uint32_t bytes_seen;
+    uint32_t bytes_needed;
+    uint32_t lower_bound;
+    uint32_t upper_bound;
+    uint32_t code_point;
+    uint32_t flags;
+
+    uint8_t leftover[6];  // only 3 bytes can be leftover, but for continuation it needs less allocation when having 3
+                          // additional bytes.
+    uint32_t leftover_len;
+} TJS_utf8_decoder;
+
+static JSValue tjs_utf8_decoder_create(JSContext *ctx, JSValueConst new_target, int argc, JSValueConst *argv) {
+    JSValue obj = JS_NewObjectClass(ctx, tjs__class_id(ctx, TJS_CLASS_UTF8_DECODER));
+    if (JS_IsException(obj)) {
+        return obj;
+    }
+    TJS_utf8_decoder *d = js_malloc(ctx, sizeof(*d));
+    if (!d) {
+        JS_FreeValue(ctx, obj);
+        return JS_EXCEPTION;
+    }
+    d->bytes_seen = 0;
+    d->bytes_needed = 0;
+    d->code_point = 0;
+    d->lower_bound = 0x80;
+    d->upper_bound = 0xbf;
+    d->flags = 0;
+    JS_SetOpaque(obj, d);
+    return obj;
+}
+
+static void tjs_utf8_decoder_finalizer(JSRuntime *rt, JSValue val) {
+    TJS_utf8_decoder *d = JS_GetOpaque(val, tjs__class_id_rt(rt, TJS_CLASS_UTF8_DECODER));
+    if (d) {
+        js_free_rt(rt, d);
+    }
+}
+
+static JSClassDef tjs_utf8_decoder_class = {
+    "Utf8Decoder",
+    .finalizer = tjs_utf8_decoder_finalizer,
+};
+
+static const JSCFunctionListEntry tjs_utf8_decoder_opts[] = {
+    JS_PROP_INT32_DEF("stream", TJS_TEXT_CODING_OPTION_STREAM, JS_PROP_ENUMERABLE),
+    JS_PROP_INT32_DEF("fatal", TJS_TEXT_CODING_OPTION_FATAL, JS_PROP_ENUMERABLE),
+    JS_PROP_INT32_DEF("ignoreBOM", TJS_TEXT_CODING_OPTION_IGNORE_BOM, JS_PROP_ENUMERABLE),
+};
+
+static inline uint8_t tjs_utf8_decoder_handler(TJS_utf8_decoder *d, uint8_t **data, bool is_eoq) {
+    if (is_eoq) {  // end of queue
+        if (d->bytes_needed != 0) {
+            d->bytes_needed = 0;
+            return TJS_TEXT_CODING_RESULT_ERROR;
+        } else {
+            return TJS_TEXT_CODING_RESULT_FINISHED;
+        }
+    }
+    uint8_t byte = **data;
+    if (d->bytes_needed == 0) {
+        if (byte <= 0x7f) {  // 0x00 to 0x7F
+            d->code_point = byte;
+            return TJS_TEXT_CODING_RESULT_CODEPOINT;
+        } else if (byte <= 0xc1) {  // 0x80 to 0xc1 -> invalid
+            return TJS_TEXT_CODING_RESULT_ERROR;
+        } else if (byte <= 0xdf) {  // 0xC2 to 0xDF
+            d->bytes_needed = 1;
+            d->code_point = byte & 0x1f;
+        } else if (byte <= 0xef) {  // 0xE0 to 0xEF
+            if (byte == 0xe0) {
+                d->lower_bound = 0xa0;
+            } else if (byte == 0xed) {
+                d->upper_bound = 0x9f;
+            }
+            d->bytes_needed = 2;
+            d->code_point = byte & 0x0f;
+        } else if (byte <= 0xf4) {  // 0xF0 to 0xF4
+            if (byte == 0xf0) {
+                d->lower_bound = 0x90;
+            } else if (byte == 0xf4) {
+                d->upper_bound = 0x8f;
+            }
+            d->bytes_needed = 3;
+            d->code_point = byte & 0x07;
+        } else {
+            return TJS_TEXT_CODING_RESULT_ERROR;
+        }
+        return TJS_TEXT_CODING_RESULT_CONTINUE;
+    } else if (byte < d->lower_bound || byte > d->upper_bound) {
+        d->bytes_needed = 0;
+        d->lower_bound = 0x80;
+        d->upper_bound = 0xbf;
+        (*data)--;  // rewind one
+        return TJS_TEXT_CODING_RESULT_ERROR;
+    }
+    d->lower_bound = 0x80;
+    d->upper_bound = 0xbf;
+    d->code_point = (d->code_point << 6) | (byte & 0x3f);
+    d->bytes_seen++;
+    if (d->bytes_seen != d->bytes_needed) {
+        return TJS_TEXT_CODING_RESULT_CONTINUE;
+    }
+    d->bytes_seen = 0;
+    d->bytes_needed = 0;
+    return TJS_TEXT_CODING_RESULT_CODEPOINT;
+}
+
+static int tjs_utf8_encoder_handler(uint32_t cp, bool eoq, uint8_t buf[4]);
+
+static int string_buffer_putc(TBuf *s, uint32_t cp) {
+    uint8_t buf[4];
+    int res = tjs_utf8_encoder_handler(cp, false, buf);
+    if (res < 0) {
+        return -1;
+    }
+    tbuf_put(s, buf, res);
+    return 0;
+}
+
+static inline int tjs_utf8_decoder_process_item(JSContext *ctx,
+                                                TJS_utf8_decoder *d,
+                                                uint8_t **ptr,
+                                                uint8_t *end,
+                                                uint32_t opts,
+                                                TBuf *s) {
+    bool is_eoq = *ptr >= end;
+    uint32_t res = tjs_utf8_decoder_handler(d, ptr, is_eoq);
+    switch (res) {
+        case TJS_TEXT_CODING_RESULT_FINISHED:
+            return 1;  // finished
+            break;
+        case TJS_TEXT_CODING_RESULT_CODEPOINT:
+            if (!((opts & TJS_TEXT_CODING_OPTION_IGNORE_BOM) == 0 &&
+                  d->code_point == 0xFEFF)) {  // do not add BOM, if ignoreBOM is set
+                if (string_buffer_putc(s, d->code_point)) {
+                    return -2;
+                }
+            }
+            return 0;  // continue
+            break;
+        case TJS_TEXT_CODING_RESULT_ERROR:
+            if (opts & TJS_TEXT_CODING_OPTION_FATAL) {
+                return -1;
+            } else {
+                if (string_buffer_putc(s, 0xfffd)) {  // TODO check if this is correct (was string_buffer_putc16 before)
+                    return -2;
+                }
+                return 0;  // continue
+            }
+            break;
+        case TJS_TEXT_CODING_RESULT_CONTINUE:
+            return 0;  // continue
+            break;
+        default:
+            return -2;
+    }
+}
+
+static JSValue tjs_utf8_decoder_decode(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
+    TJS_utf8_decoder *d = JS_GetOpaque2(ctx, this_val, tjs__class_id(ctx, TJS_CLASS_UTF8_DECODER));
+    if (!d) {
+        return JS_ThrowTypeError(ctx, "object is not a Utf8Decoder");
+    }
+
+    if (argc != 2) {
+        return JS_ThrowRangeError(ctx, "invalid arguments");
+    }
+
+    size_t bufsz = 0;
+    uint8_t *buf = JS_GetUint8Array(ctx, &bufsz, argv[0]);
+    if (!buf) {
+        return JS_EXCEPTION;
+    }
+
+    uint32_t opts = 0;
+    if (!JS_IsUndefined(argv[1]) && JS_ToUint32(ctx, &opts, argv[1])) {
+        return JS_ThrowTypeError(ctx, "invalid arguments");
+    }
+    opts = opts & TJS_TEXT_CODING_OPTIONS_MASK;
+
+    if (!(d->flags & TJS_UTF8_DECODER_FLAG_DO_NOT_FLUSH)) {
+        d->bytes_seen = 0;
+        d->bytes_needed = 0;
+        d->code_point = 0;
+        d->lower_bound = 0x80;
+        d->upper_bound = 0xbf;
+        d->flags = 0;
+    }
+
+    if (opts & TJS_TEXT_CODING_OPTION_STREAM) {
+        d->flags |= TJS_UTF8_DECODER_FLAG_DO_NOT_FLUSH;
+    } else {
+        d->flags &= ~TJS_UTF8_DECODER_FLAG_DO_NOT_FLUSH;
+    }
+
+    TBuf s;
+    tbuf_init(ctx, &s);
+    if (tbuf_claim(&s, bufsz) < 0) {
+        return JS_ThrowOutOfMemory(ctx);
+    }
+    if (bufsz == 0) {
+        if (!(opts & TJS_TEXT_CODING_OPTION_STREAM) && d->bytes_needed != 0) {
+            d->bytes_needed = 0;
+            if (opts & TJS_TEXT_CODING_OPTION_FATAL) {
+                JSValue err = JS_ThrowTypeError(ctx, "decoding error");
+                tbuf_free(&s);
+                return err;
+            } else if (string_buffer_putc(&s, 0xfffd)) {
+                tbuf_free(&s);
+                return JS_ThrowOutOfMemory(ctx);
+            }
+        }
+        goto end_ok;
+    }
+    uint8_t *ptr = buf - 1;
+    uint8_t *end = buf + bufsz;
+    JSValue err = JS_NULL;
+    do {
+        ptr++;                                                              // next item
+        if (ptr >= end && d->flags & TJS_UTF8_DECODER_FLAG_DO_NOT_FLUSH) {  // end of queue
+            goto end_ok;
+        } else {  // otherwise eoq is handled in decoder_handler, so skip this for streaming mode
+            uint32_t res = tjs_utf8_decoder_process_item(ctx, d, &ptr, end, opts, &s);
+            switch (res) {
+                case 1:  // finished
+                    goto end_ok;
+                case -1:  // error
+                    err = JS_ThrowTypeError(ctx, "decoding error");
+                    goto end_error;
+                case -2:  // internal error
+                    err = JS_ThrowPlainError(ctx, "internal error");
+                    goto end_error;
+                case 0:  // continue
+                    break;
+            }
+        }
+    } while (true);
+
+end_ok:;
+    JSValue str = JS_NewStringLen(ctx, (const char *) s.buf, s.size);
+    tbuf_free(&s);
+    return str;
+
+end_error:
+    if (JS_IsNull(err)) {
+        err = JS_ThrowPlainError(ctx, "unknown error");
+    }
+    tbuf_free(&s);
+    return err;
+}
+
+static const JSCFunctionListEntry tjs_utf8_decoder_proto_funcs[] = {
+    TJS_CFUNC_DEF("decode", 2, tjs_utf8_decoder_decode),
+};
+
+static void init_tjs_utf8_decoder_class(JSContext *ctx, JSValue obj) {
+    CHECK_EQ(tjs__class_register(ctx, TJS_CLASS_UTF8_DECODER, &tjs_utf8_decoder_class), 0);
+    JSValue tjs_utf8_decoder_proto = JS_NewObject(ctx);
+    JS_SetPropertyFunctionList(ctx,
+                               tjs_utf8_decoder_proto,
+                               tjs_utf8_decoder_proto_funcs,
+                               countof(tjs_utf8_decoder_proto_funcs));
+    JS_SetClassProto(ctx, tjs__class_id(ctx, TJS_CLASS_UTF8_DECODER), tjs_utf8_decoder_proto);
+    JSValue tjs_utf8_decoder_constructor =
+        JS_NewCFunction2(ctx, tjs_utf8_decoder_create, tjs_utf8_decoder_class.class_name, 1, JS_CFUNC_constructor, 0);
+    JS_DefinePropertyValueStr(ctx,
+                              obj,
+                              tjs_utf8_decoder_class.class_name,
+                              tjs_utf8_decoder_constructor,
+                              JS_PROP_CONFIGURABLE | JS_PROP_WRITABLE | JS_PROP_ENUMERABLE);
+    JSValue flags_obj = JS_NewObject(ctx);
+    JS_SetPropertyFunctionList(ctx, flags_obj, tjs_utf8_decoder_opts, countof(tjs_utf8_decoder_opts));
+    JS_SetPropertyStr(ctx, tjs_utf8_decoder_constructor, "opts", flags_obj);
+}
+
+#pragma endregion "UTF8 Decoder"
+
+#pragma region "UTF8 Encoder"
+
+static uint32_t tjs__utf8_decode(const uint8_t *p, const uint8_t **pp) {
+    uint32_t c;
+    uint8_t lower, upper;
+
+    c = *p++;
+    if (c < 0x80) {
+        *pp = p;
+        return c;
+    }
+    switch (c) {
+        case 0xC2:
+        case 0xC3:
+        case 0xC4:
+        case 0xC5:
+        case 0xC6:
+        case 0xC7:
+        case 0xC8:
+        case 0xC9:
+        case 0xCA:
+        case 0xCB:
+        case 0xCC:
+        case 0xCD:
+        case 0xCE:
+        case 0xCF:
+        case 0xD0:
+        case 0xD1:
+        case 0xD2:
+        case 0xD3:
+        case 0xD4:
+        case 0xD5:
+        case 0xD6:
+        case 0xD7:
+        case 0xD8:
+        case 0xD9:
+        case 0xDA:
+        case 0xDB:
+        case 0xDC:
+        case 0xDD:
+        case 0xDE:
+        case 0xDF:
+            if (*p >= 0x80 && *p <= 0xBF) {
+                *pp = p + 1;
+                return ((c - 0xC0) << 6) + (*p - 0x80);
+            }
+            break;
+        case 0xE0:
+            lower = 0xA0;
+            goto need2;
+        case 0xE1:
+        case 0xE2:
+        case 0xE3:
+        case 0xE4:
+        case 0xE5:
+        case 0xE6:
+        case 0xE7:
+        case 0xE8:
+        case 0xE9:
+        case 0xEA:
+        case 0xEB:
+        case 0xEC:
+        case 0xED:
+        case 0xEE:
+        case 0xEF:
+            lower = 0x80;
+        need2:
+            if (*p >= lower && *p <= 0xBF && p[1] >= 0x80 && p[1] <= 0xBF) {
+                *pp = p + 2;
+                return ((c - 0xE0) << 12) + ((*p - 0x80) << 6) + (p[1] - 0x80);
+            }
+            break;
+        case 0xF0:
+            lower = 0x90;
+            upper = 0xBF;
+            goto need3;
+        case 0xF4:
+            lower = 0x80;
+            upper = 0x8F;
+            goto need3;
+        case 0xF1:
+        case 0xF2:
+        case 0xF3:
+            lower = 0x80;
+            upper = 0xBF;
+        need3:
+            if (*p >= lower && *p <= upper && p[1] >= 0x80 && p[1] <= 0xBF && p[2] >= 0x80 && p[2] <= 0xBF) {
+                *pp = p + 3;
+                return ((c - 0xF0) << 18) + ((*p - 0x80) << 12) + ((p[1] - 0x80) << 6) + (p[2] - 0x80);
+            }
+            break;
+        default:
+            break;
+    }
+    *pp = p;
+    return 0xFFFD;
+}
+
+static int tjs_utf8_encoder_handler(uint32_t cp, bool eoq, uint8_t buf[4]) {
+    if (eoq) {
+        return 0;
+    }
+    size_t sz = 0;
+    if (cp <= 0x7f) {  // 0x00 to 0x7F
+        buf[0] = cp;
+        return 1;
+    } else if (cp <= 0x7ff) {  // 0x80 to 0x7FF
+        buf[0] = 0xc0 | (cp >> 6);
+        buf[1] = 0x80 | (cp & 0x3f);
+        sz = 2;
+    } else if (cp <= 0xffff) {  // 0x800 to 0xFFFF
+        buf[0] = 0xe0 | (cp >> 12);
+        buf[1] = 0x80 | ((cp >> 6) & 0x3f);
+        buf[2] = 0x80 | (cp & 0x3f);
+        sz = 3;
+    } else if (cp <= 0x10ffff) {  // 0x10000 to 0x10FFFF
+        buf[0] = 0xf0 | (cp >> 18);
+        buf[1] = 0x80 | ((cp >> 12) & 0x3f);
+        buf[2] = 0x80 | ((cp >> 6) & 0x3f);
+        buf[3] = 0x80 | (cp & 0x3f);
+        sz = 4;
+    } else {
+        return -1;
+    }
+    return sz;
+}
+
+static JSValue tjs_utf8_encoder_encode(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
+    if (argc != 1) {
+        return JS_ThrowRangeError(ctx, "invalid arguments");
+    }
+
+    if (!JS_IsString(argv[0])) {
+        return JS_ThrowTypeError(ctx, "invalid arguments");
+    }
+
+    size_t len;
+    const char *str = JS_ToCStringLen2(ctx, &len, argv[0], false);
+    if (!str) {
+        return JS_EXCEPTION;
+    }
+    const uint8_t *buf = (const uint8_t *) str;
+    TBuf dbuf;
+    tbuf_init(ctx, &dbuf);
+    tbuf_claim(&dbuf, len * 1.5);
+    JSValue ret = JS_NULL;
+
+    const uint8_t *ptr = buf;
+    while (true) {
+        bool eoq = ptr == (buf + len);
+        uint32_t cp = 0;
+        if (!eoq) {
+            cp = tjs__utf8_decode(ptr, &ptr);
+        }
+        if ((cp >= 0xD800 && cp <= 0xDBFF) || (cp >= 0xDC00 && cp <= 0xDFFF)) {  // surrogate
+            cp = 0xfffd;
+        }
+        uint8_t buf2[4];
+        int res = tjs_utf8_encoder_handler(cp, eoq, buf2);
+        if (TJS__LIKELY(res > 0)) {
+            if (tbuf_put(&dbuf, buf2, res)) {
+                ret = JS_ThrowOutOfMemory(ctx);
+                tbuf_free(&dbuf);
+                break;
+            }
+        } else if (TJS__UNLIKELY(res < 0)) {
+            if (res <= -2) {
+                ret = JS_ThrowPlainError(ctx, "unknown decoding error");
+            } else {
+                ret = JS_ThrowTypeError(ctx, "decoder error");
+            }
+            tbuf_free(&dbuf);
+            break;
+        } else if (TJS__UNLIKELY(res == 0)) {
+            ret = TJS_NewUint8Array(ctx, dbuf.buf, dbuf.size);
+            if (JS_IsException(ret)) {
+                tbuf_free(&dbuf);
+            }
+            break;
+        }
+        if (eoq) {
+            break;
+        }
+    }
+    JS_FreeCString(ctx, str);
+    return ret;
+}
+
+#pragma endregion "UTF8 Encoder"
+
+void tjs__mod_text_coding_init(JSContext *ctx, JSValue ns) {
+    JSValue obj = JS_NewObject(ctx);
+    JS_SetPropertyStr(ctx, ns, "textCoding", obj);
+    init_tjs_utf8_decoder_class(ctx, obj);
+
+    JSValue utf8_encode2 = JS_NewCFunction2(ctx, tjs_utf8_encoder_encode, "utf8_encode2", 1, JS_CFUNC_generic, 0);
+    JS_SetPropertyStr(ctx, obj, "utf8_encode", utf8_encode2);
+}

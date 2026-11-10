@@ -1,0 +1,253 @@
+/*
+ * txiki.js
+ *
+ * Copyright (c) 2022-present Saul Ibarra Corretge <s@saghul.net>
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+ * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
+#include "mem.h"
+#include "private.h"
+#include "utils.h"
+
+typedef struct {
+    TJSHandlePin pin;
+    JSContext *ctx;
+    uv_fs_event_t handle;
+    JSValue callback;
+    int closed;
+    int finalized;
+} TJSFsWatch;
+
+static TJSFsWatch *tjs_fswatch_get(JSContext *ctx, JSValue obj) {
+    return JS_GetOpaque(obj, tjs__class_id(ctx, TJS_CLASS_FSWATCH));
+}
+
+static void uv__fsevent_close_cb(uv_handle_t *handle) {
+    TJSFsWatch *fw = handle->data;
+    if (fw) {
+        fw->closed = 1;
+        if (fw->finalized) {
+            tjs__free(fw);
+        }
+    }
+}
+
+static void maybe_close(TJSFsWatch *fw) {
+    if (!uv_is_closing((uv_handle_t *) &fw->handle)) {
+        uv_close((uv_handle_t *) &fw->handle, uv__fsevent_close_cb);
+    }
+}
+
+/* Begin closing the handle at teardown (see TJSHandlePin.detach), so it is
+ * closed without relying on the GC to collect and finalize the wrapper. */
+static void tjs_fswatch_detach(TJSHandlePin *pin) {
+    maybe_close(list_entry(pin, TJSFsWatch, pin));
+}
+
+static void tjs_fswatch_finalizer(JSRuntime *rt, JSValue val) {
+    TJSFsWatch *fw = JS_GetOpaque(val, tjs__class_id_rt(rt, TJS_CLASS_FSWATCH));
+    if (fw) {
+        JS_FreeValueRT(rt, fw->callback);
+        /* A pinned watcher holds a ref to itself, so it can't be finalized until
+         * the pin is released (on close or at teardown). */
+        CHECK(JS_IsUndefined(fw->pin.obj));
+        fw->finalized = 1;
+        if (fw->closed) {
+            tjs__free(fw);
+        } else {
+            maybe_close(fw);
+        }
+    }
+}
+
+static void tjs_fswatch_mark(JSRuntime *rt, JSValue val, JS_MarkFunc *mark_func) {
+    TJSFsWatch *fw = JS_GetOpaque(val, tjs__class_id_rt(rt, TJS_CLASS_FSWATCH));
+    if (fw) {
+        JS_MarkValue(rt, fw->callback, mark_func);
+    }
+}
+
+static JSClassDef tjs_fswatch_class = {
+    "FsWatcher",
+    .finalizer = tjs_fswatch_finalizer,
+    .gc_mark = tjs_fswatch_mark,
+};
+
+static JSValue tjs_fswatch_close(JSContext *ctx, JSValue this_val, int argc, JSValue *argv) {
+    TJSFsWatch *fw = tjs_fswatch_get(ctx, this_val);
+    if (!fw) {
+        return JS_EXCEPTION;
+    }
+    maybe_close(fw);
+
+    /* Release the GC-prevention self-reference so the object can be collected. */
+    tjs__handle_unpin(ctx, &fw->pin);
+
+    return JS_UNDEFINED;
+}
+
+static JSValue tjs_fswatch_path_get(JSContext *ctx, JSValue this_val) {
+    TJSFsWatch *fw = tjs_fswatch_get(ctx, this_val);
+    if (!fw) {
+        return JS_UNDEFINED;
+    }
+
+    char buf[1024];
+    size_t size = sizeof(buf);
+    char *dbuf = buf;
+    int r;
+
+    r = uv_fs_event_getpath(&fw->handle, dbuf, &size);
+    if (r != 0) {
+        if (r != UV_ENOBUFS) {
+            return tjs_throw_errno(ctx, r);
+        }
+        dbuf = js_malloc(ctx, size);
+        if (!dbuf) {
+            return JS_EXCEPTION;
+        }
+        uv_fs_event_getpath(&fw->handle, dbuf, &size);
+        if (r != 0) {
+            js_free(ctx, dbuf);
+            return tjs_throw_errno(ctx, r);
+        }
+    }
+
+    JSValue ret = JS_NewStringLen(ctx, dbuf, size);
+
+    if (dbuf != buf) {
+        js_free(ctx, dbuf);
+    }
+
+    return ret;
+}
+
+static void uv__fs_event_cb(uv_fs_event_t *handle, const char *filename, int events, int status) {
+    TJSFsWatch *fw = handle->data;
+    CHECK_NOT_NULL(fw);
+    JSContext *ctx = fw->ctx;
+
+    // TODO: handle error case?
+    if (status != 0) {
+        return;
+    }
+
+    // libuv could set both, if we get rename, ignore change.
+
+    JSValue event;
+    if (events & UV_RENAME) {
+        event = JS_NewString(ctx, "rename");
+    } else if (events & UV_CHANGE) {
+        event = JS_NewString(ctx, "change");
+    } else {
+        // This shouldn't happen.
+        CHECK(0 && "invalid fs events");
+        return;
+    }
+
+    JSValue args[2] = {
+        JS_NewString(ctx, filename),
+        event,
+    };
+
+    tjs_call_handler(ctx, fw->callback, countof(args), args);
+
+    JS_FreeValue(ctx, args[0]);
+    JS_FreeValue(ctx, args[1]);
+}
+
+static JSValue tjs_fs_watch(JSContext *ctx, JSValue this_val, int argc, JSValue *argv) {
+    const char *path = JS_ToCString(ctx, argv[0]);
+    if (!path) {
+        return JS_EXCEPTION;
+    }
+
+    if (!JS_IsFunction(ctx, argv[1])) {
+        JS_FreeCString(ctx, path);
+        return JS_ThrowTypeError(ctx, "no callback function provided");
+    }
+
+    JSValue obj = JS_NewObjectClass(ctx, tjs__class_id(ctx, TJS_CLASS_FSWATCH));
+    if (JS_IsException(obj)) {
+        JS_FreeCString(ctx, path);
+        return JS_EXCEPTION;
+    }
+
+    TJSFsWatch *fw = tjs__mallocz(sizeof(*fw));
+    if (!fw) {
+        JS_FreeCString(ctx, path);
+        JS_FreeValue(ctx, obj);
+        return JS_ThrowOutOfMemory(ctx);
+    }
+
+    int r = uv_fs_event_init(tjs_get_loop(ctx), &fw->handle);
+    if (r != 0) {
+        JS_FreeCString(ctx, path);
+        JS_FreeValue(ctx, obj);
+        tjs__free(fw);
+        return JS_ThrowPlainError(ctx, "couldn't initialize handle");
+    }
+
+    r = uv_fs_event_start(&fw->handle, uv__fs_event_cb, path, UV_FS_EVENT_RECURSIVE);
+    if (r != 0) {
+        JS_FreeCString(ctx, path);
+        JS_FreeValue(ctx, obj);
+        /* The handle is already in the loop. Close it and let the close callback free fw. */
+        fw->handle.data = fw;
+        fw->finalized = 1;
+        uv_close((uv_handle_t *) &fw->handle, uv__fsevent_close_cb);
+        return tjs_throw_errno(ctx, r);
+    }
+
+    JS_FreeCString(ctx, path);
+
+    fw->ctx = ctx;
+    fw->handle.data = fw;
+    fw->pin.obj = JS_UNDEFINED;
+    fw->pin.detach = tjs_fswatch_detach;
+    fw->callback = JS_DupValue(ctx, argv[1]);
+
+    JS_SetOpaque(obj, fw);
+
+    /* Prevent GC while the watcher is active. */
+    tjs__handle_pin(ctx, &fw->pin, obj);
+
+    return obj;
+}
+
+static const JSCFunctionListEntry tjs_fswatch_proto_funcs[] = {
+    TJS_CFUNC_DEF("close", 0, tjs_fswatch_close),
+    JS_CGETSET_DEF("path", tjs_fswatch_path_get, NULL),
+    JS_PROP_STRING_DEF("[Symbol.toStringTag]", "FsWatcher", JS_PROP_CONFIGURABLE),
+    JS_CFUNC_DEF("[Symbol.dispose]", 0, tjs_fswatch_close),
+};
+
+static const JSCFunctionListEntry tjs_fswatch_funcs[] = {
+    TJS_CFUNC_DEF("watch", 2, tjs_fs_watch),
+};
+
+void tjs__mod_fswatch_init(JSContext *ctx, JSValue ns) {
+    CHECK_EQ(tjs__class_register(ctx, TJS_CLASS_FSWATCH, &tjs_fswatch_class), 0);
+    JSValue proto = JS_NewObject(ctx);
+    JS_SetPropertyFunctionList(ctx, proto, tjs_fswatch_proto_funcs, countof(tjs_fswatch_proto_funcs));
+    JS_SetClassProto(ctx, tjs__class_id(ctx, TJS_CLASS_FSWATCH), proto);
+
+    JS_SetPropertyFunctionList(ctx, ns, tjs_fswatch_funcs, countof(tjs_fswatch_funcs));
+}
