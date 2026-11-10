@@ -575,6 +575,7 @@ std::string Searcher::grep(const json::Value& args) {
     std::string rel_scope = generic(scope.lexically_relative(root_));
     if (rel_scope == ".") rel_scope.clear();
     bool inside = rel_scope.compare(0, 2, "..") != 0 && !scope.lexically_relative(root_).empty();
+    const bool named_state = all && !rel_scope.empty();
 
     Listing tracked = inside ? list({"ls-files", "-z"}, true) : Listing{};
     bool use_git = tracked.ok;
@@ -619,7 +620,7 @@ std::string Searcher::grep(const json::Value& args) {
         std::set<std::string> known(tracked.paths.begin(), tracked.paths.end());
         std::vector<std::string> extra;
         for (const std::string& rel : under(every.paths, rel_scope, true)) {
-            if (rel.back() == '/' || !(known.count(rel) || !in_state(rel))) continue;
+            if (rel.back() == '/' || !(known.count(rel) || !in_state(rel) || named_state)) continue;
             (known.count(rel) && !in_vendor(rel) ? names : extra).push_back(rel);
         }
         names.insert(names.end(), extra.begin(), extra.end());

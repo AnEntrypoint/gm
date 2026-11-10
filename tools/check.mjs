@@ -51,6 +51,9 @@ if (stdinCheck.status !== 0) failures.push('shell stdin check');
 const budgetCheck = spawnSync(process.execPath, [join(root, 'tools', 'check-run-code-budget.mjs'), ...(existsSync(binary) ? [binary] : [])], { cwd: root, stdio: 'inherit', timeout: 600000 });
 if (budgetCheck.status !== 0) failures.push('run_code budget check');
 
+const grepStateCheck = spawnSync(process.execPath, [join(root, 'tools', 'check-grep-state-scope.mjs'), ...(existsSync(binary) ? [binary] : [])], { cwd: root, stdio: 'inherit', timeout: 300000 });
+if (grepStateCheck.status !== 0) failures.push('grep state-directory scope check');
+
 const relayExitCheck = spawnSync(process.execPath, [join(root, 'tools', 'check-relay-exit.mjs'), ...(existsSync(binary) ? [binary] : [])], { cwd: root, stdio: 'inherit', timeout: 180000 });
 if (relayExitCheck.status !== 0) failures.push('relay exit check');
 

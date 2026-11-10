@@ -71,6 +71,7 @@ gm is one long-horizon worker: an MCP server that runs a task as one append-only
 
 - Native search reuses a file's lines only while its stat is unchanged and settled (STAMP_SETTLE_MS), so a same-size write within one timestamp tick is not missed.
 - Node search (src/search.mjs) searches tracked files only (decision 2026-11-05).
+- grep with scope all and a named path reads a state-directory path (.gm/witness-out from aloop; the default scope still refuses it). A whole-root scope all still skips .gm, .agentplug, .agentplug-kv, .playwriter and runs. Before this, a named state path was refused even with scope all, and the refusal said so. tools/check-grep-state-scope.mjs pins both; Node is unchanged.
 - Do not cache the tokenized text of every file: one worker reached 1399 MB of heap on a 108 MB tree (verified in the Node tree).
 
 ## Updates and hot reload
