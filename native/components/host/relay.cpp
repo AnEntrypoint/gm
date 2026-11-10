@@ -222,7 +222,7 @@ void Relay::stop_worker(Lock& lock) {
     if (!child) return;
     lock.unlock();
     child->close_input();
-    if (!child->wait_for(options_.exit_grace)) child->terminate();
+    child->terminate();
     if (!child->wait_for(options_.stop_grace)) {
         child->kill();
         child->wait_for(std::chrono::milliseconds(2000));
@@ -708,6 +708,7 @@ void Relay::control_loop() {
         lock.lock();
         if (!changed || host_gone_) continue;
         say("changed: " + *changed);
+        ask_worker(lock, "gm-core-flush", "gm-core-flush", json::Value(json::Object{}), std::chrono::milliseconds{2000});
         restart(lock, "changed: " + *changed);
     }
 }
