@@ -1918,3 +1918,38 @@ Defects the witnesses found, each with its cause:
 The measurement rerun does not measure this change. waste.py reads the last eight hours from the moment it runs, so waste-after.txt and waste-before.txt cover different windows. Read it as the current baseline only.
 
 Item 8 (browser isolation) was already fixed at 409c3f3, as the Phase A row says. The witness above is its first run on the built binary with two projects.
+
+## Stretch 2026-11-10 (run 2): Phase B witnesses at 566fc80, and the Node skill gate
+
+Builds: cmake --preset stamped and asan at HEAD 566fc80 (stamp 566fc80-1), cmake --build build/release, and cmake --preset release, which left the release stamp at 472aaec-dev and did not reconfigure it to 566fc80-1. Every build exited 0. Nothing was installed over the shared gm.
+
+Defect the Phase B witness found, fixed in the Phase A commit below:
+
+1. Node skill gate re-armed on every run. src/mcp.mjs kept gmSkillRead inside createSession, and createSession is called again for each successor run after finish. A run_code after finish and a successor next_context was refused once with the skill text, although the connection had already read the skill. Native keeps the flag on the connection (native/components/mcp/server.cpp, gm_skill_read). Witness before the fix: node tools/check-browser-scope.mjs node printed "browser run: skipped: playwriter_execute is not served on this engine"; the probe served call after finish was refused by the gate. Fix: skillGate = { read: false } is created once per connection in the serve function and passed to every createSession call; the flag is read and set through skillGate.read.
+
+| witness | command | result |
+|---|---|---|
+| conformance, release | node tools/check-build.mjs (build/release gm) | 86 passed, 0 failed of 86 checks in 24 scenarios |
+| conformance, asan | same, on build/asan with env -u LD_PRELOAD | 86 passed, 0 failed of 86 checks in 24 scenarios |
+| browser scope, release | node tools/check-browser-scope.mjs build/release/native/components/host/gm | ok; browser run: ran (the run page was listed, closed by finish, and gone from the browser after finish) |
+| browser scope, asan | same, on build/asan | ok; browser run: ran |
+| browser scope, node, before the fix | node tools/check-browser-scope.mjs node | ok; browser run: skipped (defect 1) |
+| browser scope, node, after the fix | node tools/check-browser-scope.mjs node | ok; browser run: ran (the run page was listed, closed by finish, and gone from the browser after finish) |
+| browser isolation per project, release | node tools/check-browser-project.mjs build/release/native/components/host/gm | ok: alpha and beta each returned their own page title; their browser lists were separate |
+| relay re-exec, stamped build | node tools/check-relay-reexec.mjs build/stamped/native/components/host/gm | ok: 566fc80-1; re-exec 114 ms after the update; the 30000 ms wait answered once at 1941 ms; run_code ran on the new relay |
+| relay re-exec, asan build | node tools/check-relay-reexec.mjs build/asan/native/components/host/gm | ok: 566fc80-1; re-exec 179 ms after the update; the wait answered once at 15977 ms |
+| relay re-exec, release build | node tools/check-relay-reexec.mjs build/release/native/components/host/gm | skipped: 472aaec-dev is a development stamp; the check needs -DGMNEW_VERSION=<commit>-1 |
+| no resource client, node, after the fix | node tools/check-no-resource-client.mjs node | ok: the first run_code is refused once with one copy of the skill text (10670 bytes for a 10032-byte skill); the next run_code runs; finish ends the run |
+| parity, release | node native/tests/parity/run.mjs --bin build/release/native/components/host/gm | 17/97 scenarios match, 0 cutover-expected, 58 native-ahead, 22 documented-gap, 0 differ, before and after the Node fix |
+
+Not rerun in this pass: tools/check-restart-skill-read.mjs takes a native binary (its node argument is a usage error), and the Node change does not reach native. Its last native witness is the 2026-11-10 run in the restart section above.
+
+Stretch 4 items left open, each with its blocker:
+
+- Owner decisions: resources/read of an unknown uri answers -32602 in native and -32002 in Node (which code to keep); the run_code skill-read refusal carries the skill text twice (about 48 KB) for a host that cannot read resources; Node run_code budget parity beyond 65 s; finish open-row step limit; shell-job lifetime equal to the job_start cap; decision 3 (protocol 2026-07-28 behind a capability flag) is not implemented; the Node playwriter snippet wrapper; the budget-check margin window. Blocker: each needs the owner to choose.
+- Windows and macOS hosts: native Windows stderr capture (child.cpp), the Windows process-group kill, the B1 and B2 Windows witnesses, and the txiki and libuv build on Windows, macOS and arm64. Blocker: this checkout has no such host; hosted CI builds them and is not watched here.
+- fx reply text: fx "another worker's events twice" (2026-11-08). Blocker: the duplicate needs fx reply text, and the unknown row unknown-mw6bc4mv1c00 was closed as stale on 2026-11-09.
+- Installed build: served-skill freshness on an old connection; the task-leak fix (fcb84df) and the dispatcher install rows. Blocker: the installed gm must update, and it is not installed over here (owner).
+- run_code no-result (rank 15): not reproduced. Blocker: a run that hits it.
+- txiki project imports (S5c) and the import witness on Node and in the built site: blocked. Blocker: thebird must report that uv_fs_* is backed by the bridge (tjs.wasm pin 137c08f6 accepted; the import stubs remain).
+
