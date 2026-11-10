@@ -145,6 +145,55 @@ export const BODY_NOTICE_MS = 180000;
 const NOTICE_PRD_WINDOW = 5;
 export const DEFAULT_STUCK_MS = 180000;
 export const DEFAULT_MONITOR_MS = 15000;
+const FIND_SKIP = new Set(['.git', '.gm', '.agentplug', '.agentplug-kv', '.playwriter', 'runs', 'node_modules']);
+const FIND_KINDS = ['file', 'dir', 'any'];
+
+function globMatch(pattern, text) {
+  let p = 0;
+  let t = 0;
+  let star = -1;
+  let mark = 0;
+  while (t < text.length) {
+    if (p < pattern.length && pattern[p] === '*') {
+      star = p;
+      p += 1;
+      mark = t;
+    } else if (p < pattern.length && pattern[p] === text[t]) {
+      p += 1;
+      t += 1;
+    } else if (star >= 0 && text[mark] !== '/') {
+      p = star + 1;
+      mark += 1;
+      t = mark;
+    } else {
+      return false;
+    }
+  }
+  while (p < pattern.length && pattern[p] === '*') p += 1;
+  return p === pattern.length;
+}
+
+function findMatch(glob, kind) {
+  return (name, rel, directory, plain) => (kind === 'any' || (kind === 'file' ? plain : directory)) && (glob === undefined || globMatch(glob, glob.includes('/') ? rel : name));
+}
+
+async function findWalk(dir, prefix, match, found) {
+  let entries;
+  try {
+    entries = await readdir(dir, { withFileTypes: true });
+  } catch {
+    return false;
+  }
+  for (const entry of entries) {
+    if (FIND_SKIP.has(entry.name)) continue;
+    const rel = prefix + entry.name;
+    const directory = entry.isDirectory();
+    if (match(entry.name, rel, directory, entry.isFile())) found.push(directory ? rel + '/' : rel);
+    if (directory) await findWalk(join(dir, entry.name), rel + '/', match, found);
+  }
+  return true;
+}
+
 const PATH_TOOLS = new Set(['read_file', 'write_file', 'edit_file', 'list_dir', 'stat_file']);
 const WRITE_TOOLS = new Set(['write_file', 'edit_file']);
 const READ_ONLY = new Set(['job_status', 'search', 'wiki_search', 'grep', 'fetch', 'callers', 'impact', 'review_join']);
@@ -292,6 +341,22 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
       const page = entries.slice(offset, offset + (args.limit ?? LIST_PAGE));
       const next = offset + page.length < entries.length ? offset + page.length : null;
       return { ok: true, output: page.join('\n'), total: entries.length, next };
+    },
+
+    async find(args) {
+      const at = locate(args.path ?? '.');
+      if (at.refused) return refusal(at.refused);
+      if (args.glob !== undefined && typeof args.glob !== 'string') return { ok: false, error: 'glob must be a string' };
+      if (args.kind !== undefined && !FIND_KINDS.includes(args.kind)) return { ok: false, error: 'kind must be file, dir or any' };
+      if (args.offset !== undefined && (!Number.isInteger(args.offset) || args.offset < 0)) return { ok: false, error: 'offset must be a whole number, zero or more' };
+      if (args.limit !== undefined && (!Number.isInteger(args.limit) || args.limit < 1 || args.limit > LIST_PAGE)) return { ok: false, error: 'limit must be a whole number from 1 to ' + LIST_PAGE };
+      const found = [];
+      if (!(await findWalk(at.path, '', findMatch(args.glob, args.kind ?? 'any'), found))) return { ok: false, error: 'find: cannot read ' + (args.path ?? '.') };
+      found.sort((a, b) => Buffer.compare(Buffer.from(a), Buffer.from(b)));
+      const offset = args.offset ?? 0;
+      const page = found.slice(offset, offset + (args.limit ?? LIST_PAGE));
+      const next = offset + page.length < found.length ? offset + page.length : null;
+      return { ok: true, output: page.join('\n'), total: found.length, next };
     },
 
     run_shell(args, ctx) {

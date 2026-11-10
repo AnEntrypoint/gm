@@ -32,6 +32,7 @@ const obj = (properties, required = []) => ({ type: 'object', properties, requir
 export const CLI_TOOLS = [
   { name: 'read_file', description: 'text of a file.', inputSchema: obj({ path: str }, ['path']) },
   { name: 'write_file', description: 'write a file, creating parent directories. Overwriting an existing file with under half its prior bytes adds shrunkByBytes/shrinkRatio/shrinkWarning (non-blocking).', inputSchema: obj({ path: str, content: str }, ['path', 'content']) },
+  { name: 'find', description: 'entries under a directory matching glob and kind; directories end with "/".', inputSchema: obj({ path: str, glob: str, kind: str }) },
   { name: 'list_dir', description: 'entries of a directory; directories end with "/".', inputSchema: obj({ path: str }) },
   { name: 'fs_op', description: 'Create, copy, move or delete a path inside or outside the workspace. op is mkdir (creates parents), cp (recursive; an existing directory is merged), mv (rename) or rm (recursive). to is the second path for cp and mv. rm refuses the filesystem root and the workspace root.', inputSchema: obj({ op: str, path: str, to: str }, ['op', 'path']) },
   {

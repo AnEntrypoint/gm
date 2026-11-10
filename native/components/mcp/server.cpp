@@ -237,7 +237,7 @@ std::string run_code_description(const std::string& verb_names) {
 }
 
 const std::set<std::string> kReadOnlyTools = {
-    "next_context", "read_file", "list_dir",  "stat_file", "search",     "wiki_search",  "grep",
+    "next_context", "read_file", "list_dir",  "find", "stat_file", "search",     "wiki_search",  "grep",
     "callers",      "impact",    "query_log", "job_status", "git_status", "git_state", "git_log",     "git_diff",
     "git_show",     "ci_status", "prd_list",  "unknown_list", "review_join"};
 const std::set<std::string> kLoggedOutputTools = {"query_log", "job_status", "run_shell", "run_code"};
@@ -301,7 +301,7 @@ Value cacheable(Value result, double ttl_ms) {
 
 const std::vector<std::string>& node_verb_order() {
     static const std::vector<std::string> order = {
-        "read_file",   "write_file",    "edit_file",   "stat_file",    "list_dir",       "fs_op",          "run_shell",   "job_start",
+        "read_file",   "write_file",    "edit_file",   "stat_file",    "list_dir",       "find",          "fs_op",          "run_shell",   "job_start",
         "job_status",  "job_stop",      "query_log",   "search",       "wiki_search",    "grep",        "wiki_write",
         "review_packet", "review_record", "review_join", "fetch",      "callers",        "impact",      "git_status",
         "git_state",

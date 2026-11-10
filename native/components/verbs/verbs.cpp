@@ -186,6 +186,7 @@ const std::vector<VerbInfo>& verb_table() {
     {"edit_file", "Replace old with new in a text file, inside or outside the workspace. old must occur once, unless replaceAll is true.", R"json({"type":"object","properties":{"path":{"type":"string"},"old":{"type":"string"},"new":{"type":"string"},"replaceAll":{"type":"boolean"}},"required":["path","old","new"]})json"},
     {"stat_file", "Type, size and mtime of a path, inside or outside the workspace, as JSON.", R"json({"type":"object","properties":{"path":{"type":"string"}},"required":["path"]})json"},
     {"list_dir", "List a directory, inside or outside the workspace. Directories end with \"/\". prefix keeps names that start with it, offset and limit page the sorted list, and the reply gives total and next.", R"json({"type":"object","properties":{"path":{"type":"string"},"prefix":{"type":"string"},"offset":{"type":"number"},"limit":{"type":"number"}},"required":[]})json"},
+    {"find", "Find entries under a directory, inside or outside the workspace, by name. glob matches the entry name, or the path relative to the directory when it contains a slash; * matches any run of characters except a slash. kind is file, dir or any (default any). Directories end with a slash. The walk skips .git, .gm, .agentplug, .agentplug-kv, .playwriter, runs and node_modules, and does not follow symlinks. offset and limit page the sorted list, and the reply gives total and next.", R"json({"type":"object","properties":{"path":{"type":"string"},"glob":{"type":"string"},"kind":{"type":"string"},"offset":{"type":"number"},"limit":{"type":"number"}},"required":[]})json"},
     {"fs_op", "Create, copy, move or delete a path inside or outside the workspace. op is mkdir (creates parents), cp (recursive; an existing directory is merged), mv (rename) or rm (recursive). to is the second path for cp and mv. rm refuses the filesystem root and the workspace root.", R"json({"type":"object","properties":{"op":{"type":"string","enum":["mkdir","cp","mv","rm"]},"path":{"type":"string"},"to":{"type":"string"}},"required":["op","path"]})json"},
     {"run_shell", "Run a shell command in the workspace and wait for it. Default timeout 300000 ms. Its process group is killed when it returns, so background work must go through job_start. Large output is condensed by default; raw:true skips condensing. The reply carries at most 20000 characters inline; longer output adds outputPath (the whole text), totalChars, digest, offset, next and truncated, and read_file pages the rest. compressed/originalChars/keptChars/droppedLines report what condensing dropped.", R"json({"type":"object","properties":{"command":{"type":"string"},"timeoutMs":{"type":"number"},"raw":{"type":"boolean"}},"required":["command"]})json"},
     {"job_start", "Start a shell command as a named background job and return at once. Wait for it with one job_status({ job, waitMs, tail }) call. timeoutMs is the job's deadline in milliseconds: default 300000, at most 7200000. A deadline past the job lifetime (3600000 ms by default) ends the job at the lifetime with reason lifetime. At the deadline the job's process group gets SIGTERM, then SIGKILL, and the job ends killed with reason timeout. job_status reports the deadline as timeoutMs. progress is an optional file path whose modification time counts as job progress, so a job that writes results without printing is not reported stuck.", R"json({"type":"object","properties":{"job":{"type":"string"},"command":{"type":"string"},"timeoutMs":{"type":"number"},"progress":{"type":"string"}},"required":["job","command"]})json"},
@@ -658,6 +659,99 @@ struct CoreVerbs::Impl {
         return reply;
     }
 
+    static bool find_skip(const std::string& name) {
+        static const std::set<std::string> skip = {".git", ".gm", ".agentplug", ".agentplug-kv", ".playwriter", "runs", "node_modules"};
+        return skip.count(name) > 0;
+    }
+
+    static bool find_glob_match(const std::string& pattern, const std::string& text) {
+        std::size_t p = 0;
+        std::size_t t = 0;
+        std::size_t star = std::string::npos;
+        std::size_t mark = 0;
+        while (t < text.size()) {
+            if (p < pattern.size() && pattern[p] == '*') {
+                star = p;
+                ++p;
+                mark = t;
+            } else if (p < pattern.size() && pattern[p] == text[t]) {
+                ++p;
+                ++t;
+            } else if (star != std::string::npos && text[mark] != '/') {
+                p = star + 1;
+                ++mark;
+                t = mark;
+            } else {
+                return false;
+            }
+        }
+        while (p < pattern.size() && pattern[p] == '*') ++p;
+        return p == pattern.size();
+    }
+
+    static bool find_walk(const std::filesystem::path& dir, const std::string& prefix, const std::optional<std::string>& glob, const std::string& kind, std::vector<std::string>& found) {
+        std::error_code ec;
+        std::filesystem::directory_iterator it(dir, ec);
+        if (ec) return false;
+        for (std::filesystem::directory_iterator end; !ec && it != end; it.increment(ec)) {
+            const std::string name = it->path().filename().string();
+            if (find_skip(name)) continue;
+            std::error_code type_error;
+            const std::filesystem::file_type type = it->symlink_status(type_error).type();
+            const bool directory = type == std::filesystem::file_type::directory;
+            const bool plain = type == std::filesystem::file_type::regular;
+            const std::string rel = prefix + name;
+            const bool kind_ok = kind == "any" || (kind == "file" ? plain : directory);
+            const bool glob_ok = !glob || find_glob_match(*glob, glob->find('/') != std::string::npos ? rel : name);
+            if (kind_ok && glob_ok) found.push_back(directory ? rel + "/" : rel);
+            if (directory) find_walk(it->path(), rel + "/", glob, kind, found);
+        }
+        return true;
+    }
+
+    json::Value find(const json::Value& args) {
+        const json::Value* path_value = present(args, "path");
+        json::Value dot(".");
+        auto at = locate(path_value != nullptr ? path_value : &dot);
+        if (!at) return refusal("path must be a non-empty string");
+        const json::Value* glob_value = present(args, "glob");
+        const json::Value* kind_value = present(args, "kind");
+        const json::Value* offset_value = present(args, "offset");
+        const json::Value* limit_value = present(args, "limit");
+        if (glob_value != nullptr && !glob_value->is_string()) return failure("glob must be a string");
+        std::string kind = "any";
+        if (kind_value != nullptr) {
+            if (!kind_value->is_string() || (kind_value->as_string() != "file" && kind_value->as_string() != "dir" && kind_value->as_string() != "any")) {
+                return failure("kind must be file, dir or any");
+            }
+            kind = kind_value->as_string();
+        }
+        if (offset_value != nullptr && (!core::is_whole_number(offset_value) || offset_value->as_number() < 0)) return failure("offset must be a whole number, zero or more");
+        if (limit_value != nullptr && (!core::is_whole_number(limit_value) || limit_value->as_number() < 1 || limit_value->as_number() > static_cast<double>(list_page))) {
+            return failure("limit must be a whole number from 1 to " + std::to_string(list_page));
+        }
+        std::optional<std::string> glob;
+        if (glob_value != nullptr) glob = glob_value->as_string();
+        std::vector<std::string> found;
+        if (!find_walk(*at, "", glob, kind, found)) return failure("find: cannot read " + (path_value != nullptr ? path_value->as_string() : std::string(".")));
+        std::sort(found.begin(), found.end());
+        const std::size_t offset = offset_value != nullptr ? static_cast<std::size_t>(offset_value->as_number()) : 0;
+        const std::size_t limit = limit_value != nullptr ? static_cast<std::size_t>(limit_value->as_number()) : list_page;
+        const std::size_t from = std::min(offset, found.size());
+        const std::size_t to = std::min(found.size(), from + limit);
+        std::string output;
+        for (std::size_t i = from; i < to; ++i) {
+            if (i > from) output.push_back('\n');
+            output += found[i];
+        }
+        json::Value reply;
+        reply.set("ok", true);
+        reply.set("output", std::move(output));
+        reply.set("total", static_cast<std::uint64_t>(found.size()));
+        reply.set("next", to < found.size() ? json::Value(static_cast<std::uint64_t>(to)) : json::Value(nullptr));
+        return reply;
+    }
+
     json::Value list_dir(const json::Value& args) {
         const json::Value* path_value = present(args, "path");
         json::Value dot(".");
@@ -945,6 +1039,7 @@ json::Value CoreVerbs::call(std::string_view name, const json::Value& raw_args) 
         if (name == "edit_file") return impl_->edit_file(args);
         if (name == "stat_file") return impl_->stat_file(args);
         if (name == "list_dir") return impl_->list_dir(args);
+        if (name == "find") return impl_->find(args);
         if (name == "fs_op") return impl_->fs_op(args);
         if (name == "run_shell") return impl_->run_shell(args);
         if (name == "job_start") return impl_->job_start(args);

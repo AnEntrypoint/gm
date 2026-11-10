@@ -166,6 +166,7 @@ function scenarios({ head, url }) {
     ['edit_file no match', code("return await gm.edit_file({ path: 'out/new.txt', old: 'zzz', new: 'y' });")],
     ['stat_file', code("return await gm.stat_file({ path: 'out/new.txt' });")],
     ['list_dir', code("return await gm.list_dir({ path: '.' });")],
+    ['find', code("return await gm.find({ path: 'native/leaves', glob: '*.mjs', kind: 'file' });")],
     ['run_shell', code("return await gm.run_shell({ command: 'echo parity && printf tail' });")],
     ['run_shell exit', code("return await gm.run_shell({ command: 'echo oops 1>&2; exit 3' });")],
     ['search', code("return await gm.search({ query: 'hello function', k: 3 });")],

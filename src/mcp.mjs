@@ -148,6 +148,7 @@ const BASE_TOOLS = [
   { name: 'write_file', description: 'Write a text file, inside or outside the workspace, creating parent directories. Replacing an existing file with content less than half its prior byte size adds shrunkByBytes, shrinkRatio and shrinkWarning to the result (never blocks the write); new files and normal rewrites are unchanged.', inputSchema: objectSchema({ path: text, content: text }, ['path', 'content']) },
   { name: 'edit_file', description: 'Replace old with new in a text file, inside or outside the workspace. old must occur once, unless replaceAll is true.', inputSchema: objectSchema({ path: text, old: text, new: text, replaceAll: { type: 'boolean' } }, ['path', 'old', 'new']) },
   { name: 'stat_file', description: 'Type, size and mtime of a path, inside or outside the workspace, as JSON.', inputSchema: objectSchema({ path: text }, ['path']) },
+  { name: 'find', description: 'Find entries under a directory, inside or outside the workspace, by name. glob matches the entry name, or the path relative to the directory when it contains a slash; * matches any run of characters except a slash. kind is file, dir or any (default any). Directories end with a slash. The walk skips .git, .gm, .agentplug, .agentplug-kv, .playwriter, runs and node_modules, and does not follow symlinks. offset and limit page the sorted list, and the reply gives total and next.', inputSchema: objectSchema({ path: text, glob: text, kind: text, offset: number, limit: number }) },
   { name: 'list_dir', description: 'List a directory, inside or outside the workspace. Directories end with "/". prefix keeps names that start with it, offset and limit page the sorted list, and the reply gives total and next.', inputSchema: objectSchema({ path: text, prefix: text, offset: number, limit: number }) },
   { name: 'fs_op', description: 'Create, copy, move or delete a path inside or outside the workspace. op is mkdir (creates parents), cp (recursive; an existing directory is merged), mv (rename) or rm (recursive). to is the second path for cp and mv. rm refuses the filesystem root and the workspace root.', inputSchema: objectSchema({ op: { type: 'string', enum: ['mkdir', 'cp', 'mv', 'rm'] }, path: text, to: text }, ['op', 'path']) },
   { name: 'run_shell', description: 'Run a shell command in the workspace and wait for it. Default timeout 300000 ms. Its process group is killed when it returns, so background work must go through job_start. Large output is condensed by default; raw:true skips condensing. The reply carries at most 20000 characters inline; longer output adds outputPath (the whole text), totalChars, digest, offset, next and truncated, and read_file pages the rest. compressed/originalChars/keptChars/droppedLines report what condensing dropped.', inputSchema: objectSchema({ command: text, timeoutMs: number, raw: { type: 'boolean' } }, ['command']) },
@@ -313,6 +314,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     read_file: (args) => tools.run('read_file', args),
     write_file: (args) => tools.run('write_file', args),
     fs_op: (args) => tools.run('fs_op', args),
+    find: (args) => tools.run('find', args),
     list_dir: (args) => tools.run('list_dir', args),
     run_shell: ({ command, timeoutMs }, signal) => tools.run('run_shell', { command, timeoutMs }, { signal }),
     job_start: ({ job, command, timeoutMs, progress }) => tools.run('run_shell', { job, command, timeoutMs, progress, background: true }),
@@ -1026,7 +1028,7 @@ function taskOfRun(events, runDir) {
 }
 
 const READ_ONLY_TOOLS = new Set([
-  'next_context', 'read_file', 'list_dir', 'stat_file', 'search', 'wiki_search', 'grep', 'callers', 'impact', 'query_log', 'job_status',
+  'next_context', 'read_file', 'list_dir', 'find', 'stat_file', 'search', 'wiki_search', 'grep', 'callers', 'impact', 'query_log', 'job_status',
   'git_status', 'git_state', 'git_log', 'git_diff', 'git_show', 'ci_status', 'prd_list', 'unknown_list', 'review_join',
 ]);
 const OPEN_WORLD = new Set(['fetch', 'git_fetch', 'git_pull', 'git_push', 'ci_status']);
