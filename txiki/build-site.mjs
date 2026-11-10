@@ -12,12 +12,12 @@ const root = resolve(flag('--root', repo));
 const entry = resolve(root, flag('--entry', 'index.mjs'));
 const out = resolve(flag('--out', join(repo, 'build', 'txiki-site')));
 const wasmPath = resolve(flag('--wasm', thebird + '/web/vendor/txiki/tjs.wasm'));
-const pinPath = resolve(flag('--pin', thebird + '/scripts/vendor-txiki.mjs'));
+const pinPath = resolve(flag('--pin', thebird + '/scripts/txiki/pin.json'));
 const timeoutMs = Number(flag('--timeout-ms', '120000'));
 const allowUnpinned = args.includes('--allow-unpinned');
 
-const pin = /export const TXIKI_WASM_SHA256 = '([0-9a-f]{64})'/.exec(readFileSync(pinPath, 'utf8'))?.[1];
-if (pin === undefined) throw new Error('no TXIKI_WASM_SHA256 in ' + pinPath);
+const pin = JSON.parse(readFileSync(pinPath, 'utf8')).tjsWasmSha256;
+if (!/^[0-9a-f]{64}$/.test(pin ?? '')) throw new Error('no tjsWasmSha256 in ' + pinPath);
 const digest = createHash('sha256').update(readFileSync(wasmPath)).digest('hex');
 if (digest !== pin && !allowUnpinned) throw new Error('tjs.wasm sha256 ' + digest + ' does not match the pin ' + pin + ' in ' + pinPath);
 
@@ -34,7 +34,7 @@ const collect = (dir, files = {}) => {
 
 mkdirSync(join(out, 'shims'), { recursive: true });
 copyFileSync(wasmPath, join(out, 'tjs.wasm'));
-copyFileSync(resolve(pinPath, '..', '..', 'web', 'shims', 'wasi-preview1.js'), join(out, 'shims', 'wasi-preview1.js'));
+copyFileSync(resolve(thebird, 'web', 'shims', 'wasi-preview1.js'), join(out, 'shims', 'wasi-preview1.js'));
 for (const name of ['host.mjs', 'fs.mjs', 'verbs.mjs', 'project.mjs', 'site.mjs']) copyFileSync(join(here, name), join(out, name));
 copyFileSync(join(here, 'site.html'), join(out, 'index.html'));
 const files = collect(root);

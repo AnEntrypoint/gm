@@ -11,17 +11,17 @@ const thebird = '/workspace/thebird';
 const entry = args[0];
 const root = resolve(flag('--root', process.cwd()));
 const wasmPath = resolve(flag('--wasm', thebird + '/web/vendor/txiki/tjs.wasm'));
-const pinPath = resolve(flag('--pin', thebird + '/scripts/vendor-txiki.mjs'));
+const pinPath = resolve(flag('--pin', thebird + '/scripts/txiki/pin.json'));
 const timeoutMs = Number(flag('--timeout-ms', '120000'));
 const allowUnpinned = args.includes('--allow-unpinned');
 
-const pin = /export const TXIKI_WASM_SHA256 = '([0-9a-f]{64})'/.exec(readFileSync(pinPath, 'utf8'))?.[1];
-if (pin === undefined) throw new Error('no TXIKI_WASM_SHA256 in ' + pinPath);
+const pin = JSON.parse(readFileSync(pinPath, 'utf8')).tjsWasmSha256;
+if (!/^[0-9a-f]{64}$/.test(pin ?? '')) throw new Error('no tjsWasmSha256 in ' + pinPath);
 const wasm = readFileSync(wasmPath);
 const digest = createHash('sha256').update(wasm).digest('hex');
 if (digest !== pin && !allowUnpinned) throw new Error('tjs.wasm sha256 ' + digest + ' does not match the pin ' + pin + ' in ' + pinPath);
 
-const { createWasi } = await import(pathToFileURL(resolve(pinPath, '..', '..', 'web', 'shims', 'wasi-preview1.js')).href);
+const { createWasi } = await import(pathToFileURL(resolve(thebird, 'web', 'shims', 'wasi-preview1.js')).href);
 const project = {
   stat(path) {
     const info = statSync(join(root, path), { throwIfNoEntry: false });
