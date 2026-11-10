@@ -115,7 +115,7 @@ const spawnEngine = (args) => {
     const how = exit.signal !== null ? `signal ${exit.signal}` : `code ${exit.code}`;
     return `engine exited with ${how} before it answered; stderr: ${stderr.trim() || '(empty)'}`;
   };
-  return { rpc, stop, cause, exited: () => exit !== null };
+  return { rpc, stop, cause, stderrTail: () => stderr.trim() || '(empty)', exited: () => exit !== null };
 };
 
 const findEvent = (logFile, predicate) => {
@@ -161,7 +161,8 @@ const clientCase = async (scratch, { version, mode }) => {
       await sleep(100);
       event = findEvent(logFile, matches);
     }
-    return { event, cause: engine.cause() };
+    const logTail = event === null && existsSync(logFile) ? readFileSync(logFile, 'utf8').slice(-600) : '';
+    return { event, cause: engine.cause(), stderr: event === null ? engine.stderrTail() : '', logTail };
   } finally {
     await engine.stop();
   }
@@ -199,10 +200,10 @@ try {
   ];
   const events = await Promise.all(cases.map((item) => clientCase(scratch, item)));
   cases.forEach((item, index) => {
-    const { event, cause } = events[index];
+    const { event, cause, stderr, logTail } = events[index];
     const label = item.label;
     if (event === null) {
-      failures.push(`${label}: no mcp-server event after ${EVENT_MS} ms${cause ? `; ${cause}` : ''}`);
+      failures.push(`${label}: no mcp-server event after ${EVENT_MS} ms${cause ? `; ${cause}` : ''}; engine stderr: ${stderr || '(none)'}; log tail: ${JSON.stringify(logTail || '(no log)')}`);
       return;
     }
     if (item.mode === 'ok' && VERSIONS.includes(item.version)) {
