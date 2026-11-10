@@ -16,6 +16,10 @@ const PINS = [
   { name: 'quickjs', label: 'quickjs-ng 7b5f588e0f9b643e2996f291bfc861abeaceddc2', url: 'https://codeload.github.com/quickjs-ng/quickjs/legacy.tar.gz/7b5f588e0f9b643e2996f291bfc861abeaceddc2', sha256: 'f27b2e93647e73f91201e12c4f2ee0c0d07e2f6dc06b539422bf03269d601366' },
 ];
 const TXIKI_VERSION = { major: '26', minor: '11', patch: '0', suffix: '' };
+const BROWSER_PORT = [
+  { file: 'uv-browser.c', origin: 'thebird b5ec730 scripts/txiki/browser/uv-browser.c', sha256: '89d228c3fd5ede105029e6c586a903ecb7d8f3ac75841f9e8844ea6ddaa72a50' },
+  { file: 'uv/browser.h', origin: 'thebird b5ec730 scripts/txiki/include/uv/browser.h', sha256: 'feee1d8eee76d0518107be49bceb7d8e8901a7a82d621e00787212d67aba7ccd' },
+];
 
 const TXIKI_SOURCES = [
   'vm.c', 'timers.c', 'utils.c', 'modules.c', 'error.c', 'mem.c', 'text-coding.c', 'tbuf.c', 'builtins.c', 'signals.c',
@@ -88,7 +92,11 @@ try {
     run('tar', ['-xzf', archive, '-C', trees[pin.name], '--strip-components=1']);
   }
 
-  rmSync(TARGET, { recursive: true, force: true });
+  for (const entry of BROWSER_PORT) {
+    const digest = sha256Of(join(TARGET, 'browser', entry.file));
+    if (digest !== entry.sha256) throw new Error(`browser/${entry.file} sha256 ${digest} does not match the pin ${entry.sha256}`);
+  }
+  for (const generated of ['txiki', 'libuv', 'quickjs', 'VERSION.txt']) rmSync(join(TARGET, generated), { recursive: true, force: true });
   const counts = { files: 0, replaced: 0 };
   const add = ({ files, replaced }) => {
     counts.files += files;
@@ -119,6 +127,7 @@ try {
     join(TARGET, 'VERSION.txt'),
     [
       ...PINS.flatMap((pin) => [`${pin.name}: ${pin.label}`, `url: ${pin.url}`, `sha256: ${pin.sha256}`]),
+      ...BROWSER_PORT.map((entry) => `browser port: ${entry.origin}, copied to browser/${entry.file}, sha256: ${entry.sha256}`),
       'written by: node tools/vendor-txiki.mjs (downloads each archive, checks its sha256, copies the files below)',
       `txiki files: src/*.h except ${[...TXIKI_HEADERS_SKIPPED].join(', ')}; src/{${TXIKI_SOURCES.join(', ')}}; src/bundles/c/{${TXIKI_BUNDLES.join(', ')}}; deps/ada/{${ADA_FILES.join(', ')}}; LICENSE; src/version.h is version.h.in with ${TXIKI_VERSION.major}.${TXIKI_VERSION.minor}.${TXIKI_VERSION.patch} filled in.`,
       'txiki files left out: the modules that need libwebsockets, mbedtls, wamr, libffi, sqlite3, miniz or mimalloc (httpclient, httpserver, ws, tls, webcrypto, hashing, wasm, ffi, sqlite3, miniz), the CLI, and the JavaScript sources of the bundles. native/components/quickjs/txiki_stubs.c answers their entry points.',
