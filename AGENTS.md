@@ -52,7 +52,7 @@ gm is one long-horizon worker: an MCP server that runs a task as one append-only
 
 ## Parity harness
 
-- Last witness (2026-11-10, after the find verb, `--bin build/release/native/components/host/gm`): 17 of 97 match, 0 cutover-expected, 58 native-ahead, 22 documented-gap, 0 differ. The native-only keys and the sequence shifts they cause are native-ahead entries. Changing Node to match native is a decision, not a fix.
+- Last witness (2026-11-10, at 91d4fab, `--bin build/release/native/components/host/gm`): 20 of 97 match, 0 cutover-expected, 55 native-ahead, 22 documented-gap, 0 differ. The native-only keys and the sequence shifts they cause are native-ahead entries. Changing Node to match native is a decision, not a fix.
 
 ## Known gaps, native against Node
 

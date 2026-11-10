@@ -1979,3 +1979,39 @@ Queue, in the order of the dispatcher's list:
 7. Installed build: pending. The installed gm does not carry this pass or fcb84df (task leak). It is not installed over the shared gm, because jayzee-74 and fx-3d were busy at 08:3x. Record the update as pending until no peer is busy, then the dispatcher installs it.
 
 
+
+## gm pass, Phase B (2026-11-10): build, witnesses and defects
+
+Build: cmake -S . -B build/release -DGMNEW_VERSION=d2c2c4f-1 (the CI shape, so the relay re-exec check does not skip on a dev stamp), then the build: 47 s. The native binary carries d2c2c4f. The later commits d6a9538 and 91d4fab change only Node source and the parity harness, so every native row below is at HEAD.
+
+| witness | engine | result | wall |
+|---|---|---|---|
+| tools/check-build.mjs on build/release (conformance, then the Node arms) | native, Node | EXIT=0. conformance: 86 passed, 0 failed of 86 checks in 24 scenarios. Stamps d2c2c4f-1 (d2c2c4f). Node turn-economy, no-resource-client and restart-jobs arms ok. The step includes the update download from the GitHub release at about 24 KB/s, which is environmental | 519 s |
+| tools/check-turn-economy.mjs node (rerun alone, after its arm was still running in check-build) | Node | turn-economy-check: ok. A next_context with nothing new answers in 401 bytes against 2279 for a full reply and takes no step; a job_status wait returned its exit code, tail and wall time; the job body took 31057 ms. EXIT=0 | 32 s |
+| tools/check-no-resource-client.mjs | native, Node | native: refusal reply 10680 bytes with one copy of the skill, wall 1 s. Node: 10646 bytes, wall 2 s. Both refuse the first run_code once and run the next one | 1 s, 2 s |
+| tools/check-restart-skill-read.mjs (queue item 4) | native | ok: a worker restarted under the same host process runs run_code with no replayed skill read | 1 s |
+| tools/check-run-code-lifetime.mjs (--job-lifetime-ms 4000) | native, Node | native: spin body killed with reason lifetime after 4013 ms; a 6 s run_shell host call returned done after 6161 ms. Node: killed after 5043 ms; host call done after 6081 ms. Both ok | 21 s, 20 s |
+| tools/check-decision-parity.mjs (job_start timeoutMs 7200000 reports 3600000; playwriter 1 + 1 returns 2; finish without openRows refused at max-steps 2) | native, Node | both ok | 35 s, 23 s |
+| tools/check-relay-reexec.mjs on the non-dev stamp d2c2c4f-1 (queue item 3) | release relay | ok: the relay re-executed 144 ms after the update, with the 30 s next_context wait in flight | 13 s |
+| tools/check-run-code-budget.mjs (rank 15 run_code no-result) | native | ok: a 65 s body returned 65014 ms; a fetch held 50 s ended at 50064 ms | 65 s |
+| tools/check-browser-scope.mjs | Node | ok: the run page was listed, closed by finish, and gone from the browser after finish | 189 s |
+| native/tests/parity/run.mjs --bin build/release/native/components/host/gm, on committed HEAD 91d4fab | both | 20/97 match, 0 cutover-expected, 55 native-ahead, 22 documented-gap, 0 differ | 15 s |
+| tools/mcp-conformance.mjs against Node | Node | not a Node witness: the harness targets native. Run against Node it reports 3 description failures (next_context read-only; run_code description; query_log field paging) and stalled. Its job (pid 146104) was stopped by its own PID | n/a |
+
+Defects found in this pass, and their fixes:
+
+- Node tool annotations did not follow native: next_context was not read-only, and finish was not non-destructive. The parity rules for ttlMs and cacheScope, for tools title and annotations, and for the resources/read code hid the difference. Fixed in d6a9538: Node annotations follow native, and the stale rules are dropped. Parity is 0 differ after the fix (before it, readOnlyHint differed on tools[0]).
+- The parity rule for the events sha gave a wrong cause. Removing the rule produced 1 differ, so the rule stays, with the reason now naming the tool list, whose descriptions differ between the engines (91d4fab).
+
+Queue status after Phase B:
+
+1. The decisions: applied in Phase A and witnessed above (-32002 both engines, one skill copy in the refusal, the Node budget excluding host-call time, the native playwriter wrapper and step limit already the same).
+2. Rank 15, run_code no-result: not reproduced. check-run-code-budget returned a 65 s body at 65014 ms. Reopen when a run returns without a result; capture its run log.
+3. Release relay re-exec: run on the non-dev stamp d2c2c4f-1, ok (144 ms).
+4. check-restart-skill-read on the native binary: ok, 1 s.
+5. fx duplicate events: open. The input is fx's reply text, which has not arrived. fx-3d was busy at 08:3x; the question goes through the dispatcher when fx-3d is idle, and nothing waits on it.
+6. Windows, macOS and arm64: open and blocked on their hosts (Phase A item 6). Not verified here.
+
+Installed build: pending. The installed gm does not carry this pass or fcb84df (task leak). It is not installed over the shared gm while peers are busy; the dispatcher installs it when no peer is busy.
+
+Commits on main for this stretch: 92c2873 (decisions), d2c2c4f (Phase A record), d6a9538 (Node annotations, stale parity rules), 91d4fab (parity reason), and this Phase B record. Pushed to origin main once after the fetch showed a fast-forward.
