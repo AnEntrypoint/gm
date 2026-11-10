@@ -49,8 +49,24 @@ if [ "$rc" -ne 0 ]; then
 fi
 git commit -q -m "$msg" -- "$@" || exit 1
 if [ "${SHIP_PUSH:-1}" = "1" ]; then
-  git push -q origin main || exit 1
-  echo "COMMITTED $(git rev-parse HEAD) and pushed; gate exit code $rc"
+  sha="$(git rev-parse HEAD)"
+  candidate="gm-ci-${sha:0:12}"
+  cleanup() { git push -q origin ":refs/tags/$candidate" >/dev/null 2>&1; }
+  git push -q origin "$sha:refs/tags/$candidate" || { echo "NOT PUSHED: the candidate ref $candidate could not be created; the commit stays local"; exit 1; }
+  if ! gh workflow run release.yml --ref "$candidate" -f publish=false >/dev/null || ! gh workflow run arm-diagnose.yml --ref "$candidate" >/dev/null; then
+    cleanup
+    echo "NOT PUSHED: the CI dispatch on $candidate failed; the commit stays local"
+    exit 1
+  fi
+  node "$root/tools/ci-candidate.mjs" "$sha" "$candidate" "${SHIP_CI_TIMEOUT_MIN:-120}"
+  ci=$?
+  cleanup
+  if [ "$ci" -ne 0 ]; then
+    echo "NOT PUSHED: CI for $sha is not green (ci-candidate exit $ci); the commit stays local"
+    exit 1
+  fi
+  git push -q origin main || { echo "NOT PUSHED: origin/main moved; fetch, rebase and ship again"; exit 1; }
+  echo "COMMITTED $sha, CI green on $candidate, and pushed; gate exit code $rc"
 else
   echo "COMMITTED $(git rev-parse HEAD), not pushed; gate exit code $rc"
 fi
