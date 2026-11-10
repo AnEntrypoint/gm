@@ -3248,6 +3248,7 @@ struct Server::State {
 
     void input_ended() {
         if (s().end_logged) return;
+        check_file_subscriptions();
         if (options.supervised) {
             s().ended = "restarting";
             stop_bodies("restart");
