@@ -94,14 +94,15 @@ export async function openTxiki({ wasm, createWasi, project }) {
   };
   return {
     stubbed,
-    async run(source, { timeoutMs = 120000 } = {}) {
+    async run(source, { timeoutMs = 120000, name = '/entry.mjs' } = {}) {
       output.stdout.length = 0;
       output.stderr.length = 0;
       state.events.length = 0;
       state.pending = 0;
       const deadline = Date.now() + timeoutMs;
       exports.tjs_browser_set_deadline(deadline);
-      let status = withBytes(encoder.encode('(' + installGm.toString() + ')();\n' + source + '\u0000'), exports.tjs_browser_eval);
+      const code = encoder.encode('(' + installGm.toString() + ')();\n' + source + '\u0000');
+      let status = withBytes(code, (codePtr) => withBytes(encoder.encode(name + '\u0000'), (labelPtr) => exports.tjs_browser_eval(codePtr, labelPtr)));
       while (status === 2 || (status === 0 && (state.pending > 0 || state.events.length > 0))) {
         if (state.events.length > 0) {
           const bytes = encoder.encode(state.events.shift());

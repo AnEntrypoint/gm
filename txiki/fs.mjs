@@ -82,5 +82,12 @@ export function createFsImports(project, { bytesAt, float64At }) {
       bytesAt(out, bytes.length).set(bytes);
       return bytes.length;
     },
+    tjs_fs_realpath(ptr, len, out, cap) {
+      const path = absolute(ptr, len);
+      const bytes = encoder.encode(path);
+      if (project.stat(path) === null || bytes.length >= cap) return -1;
+      bytesAt(out, bytes.length).set(bytes);
+      return bytes.length;
+    },
   };
 }

@@ -42,6 +42,6 @@ const entryPath = resolvePath(relative(root, resolve(root, entry)).split(sep).jo
 const source = new TextDecoder().decode(project.bytes(entryPath));
 const txiki = await openTxiki({ wasm, createWasi, project });
 const started = Date.now();
-const result = await txiki.run(source, { timeoutMs });
+const result = await txiki.run(source, { timeoutMs, name: entryPath });
 console.log(JSON.stringify({ engine: 'thebird-txiki', wasmSha256: digest, pin, pinned: digest === pin, stubbed: txiki.stubbed, ms: Date.now() - started, ...result }, null, 2));
 process.exitCode = result.status === 0 ? 0 : 1;

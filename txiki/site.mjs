@@ -22,7 +22,7 @@ try {
     const source = project.files[project.entry];
     const txiki = await openTxiki({ wasm, createWasi, project: filesProject(project.files) });
     const started = performance.now();
-    const result = await txiki.run(source, { timeoutMs: project.timeoutMs });
+    const result = await txiki.run(source, { timeoutMs: project.timeoutMs, name: project.entry });
     show({ wasmSha256: digest, pinned, stubbed: txiki.stubbed, ms: Math.round(performance.now() - started), ...result });
     document.body.dataset.state = 'done';
   }
