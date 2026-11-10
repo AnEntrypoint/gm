@@ -27,6 +27,7 @@ const LATEST = VERSIONS[0];
 const UNKNOWN = '1999-01-01';
 const REFUSED = '2024-01-01';
 const REPLY_MS = 60000;
+const BOOT_MS = 180000;
 const EVENT_MS = 60000;
 const STDERR_TAIL = 2000;
 
@@ -52,7 +53,7 @@ const sleep = (ms) => new Promise((done) => setTimeout(done, ms));
 
 const spawnEngine = (args) => {
   const leading = onNode ? [join(root, 'src', 'mcp.mjs')] : ['serve'];
-  const child = spawn(onNode ? process.execPath : binary, [...leading, ...args], { stdio: ['pipe', 'pipe', 'pipe'] });
+  const child = spawn(onNode ? process.execPath : binary, [...leading, ...args], { stdio: ['pipe', 'pipe', 'pipe'], env: { ...process.env, GMNEW_TRACE_STARTUP: '1' } });
   let stderr = '';
   const startedAt = Date.now();
   let relayAt = null;
@@ -149,19 +150,23 @@ const clientCase = async (scratch, { version, mode }) => {
   const engine = spawnEngine(['--workspace', workspace, '--run-dir', runDir, '--mcp-config', config]);
   const matches = (entry) => entry.kind === 'mcp-server' && entry.server === 'fake' && (entry.state === 'connected' || entry.state === 'failed');
   const logFile = join(runDir, 'log.jsonl');
-  const deadline = Date.now() + EVENT_MS;
+  const bootDeadline = Date.now() + BOOT_MS;
   try {
     let logAt = null;
-    let event = findEvent(logFile, matches);
-    while (event === null && !engine.exited() && Date.now() < deadline) {
+    while (logAt === null && !engine.exited() && Date.now() < bootDeadline) {
+      if (existsSync(logFile)) logAt = Date.now() - engine.startedAt;
+      else await sleep(50);
+    }
+    let event = logAt === null ? null : findEvent(logFile, matches);
+    const deadline = Date.now() + EVENT_MS;
+    while (logAt !== null && event === null && !engine.exited() && Date.now() < deadline) {
       await sleep(100);
-      if (logAt === null && existsSync(logFile)) logAt = Date.now() - engine.startedAt;
       event = findEvent(logFile, matches);
     }
     const logTail = event === null && existsSync(logFile) ? readFileSync(logFile, 'utf8').slice(-600) : '';
     const layout = event === null ? `workspace: ${layoutOf(workspace)}; run: ${layoutOf(runDir)}` : '';
     const timeline = `relay said worker running at ${engine.relayAt() ?? 'never'} ms after spawn; run log created at ${logAt ?? 'never'} ms`;
-    return { event, cause: engine.cause(), stderr: event === null ? engine.stderrTail() : '', logTail, layout, timeline };
+    return { event, cause: engine.cause(), stderr: event === null ? engine.stderrTail() : '', logTail, layout, timeline, logAt };
   } finally {
     await engine.stop();
   }
@@ -199,10 +204,10 @@ try {
   ];
   const events = await Promise.all(cases.map((item) => clientCase(scratch, item)));
   cases.forEach((item, index) => {
-    const { event, cause, stderr, logTail, layout, timeline } = events[index];
+    const { event, cause, stderr, logTail, layout, timeline, logAt } = events[index];
     const label = item.label;
     if (event === null) {
-      failures.push(`${label}: no mcp-server event after ${EVENT_MS} ms${cause ? `; ${cause}` : ''}; engine stderr: ${stderr || '(none)'}; log tail: ${JSON.stringify(logTail || '(no log)')}; layout ${layout}; ${timeline}`);
+      failures.push(`${label}: ${logAt === null ? `no run log within ${BOOT_MS} ms of spawn` : `no mcp-server event within ${EVENT_MS} ms of the run log (created at ${logAt} ms)`}${cause ? `; ${cause}` : ''}; engine stderr: ${stderr || '(none)'}; log tail: ${JSON.stringify(logTail || '(no log)')}; layout ${layout}; ${timeline}`);
       return;
     }
     if (item.mode === 'ok' && VERSIONS.includes(item.version)) {
@@ -212,11 +217,13 @@ try {
     }
   });
 
+  const boots = events.map((item) => item.logAt).filter((ms) => ms !== null);
+  const slowestBoot = boots.length ? Math.max(...boots) : null;
   if (failures.length) {
     console.error(`${CHECK}: ${failures.length} failure(s) on ${target}\n- ${failures.join('\n- ')}`);
     process.exitCode = 1;
   } else {
-    console.log(`${CHECK}: ok (${target}: server echoes the ${VERSIONS.length} supported versions, answers ${UNKNOWN} with ${LATEST}, every initialize result has capabilities and serverInfo.version; client connects all ${VERSIONS.length} versions, refuses ${REFUSED}, refuses a result without capabilities and one without serverInfo.version)`);
+    console.log(`${CHECK}: ok (${target}: server echoes the ${VERSIONS.length} supported versions, answers ${UNKNOWN} with ${LATEST}, every initialize result has capabilities and serverInfo.version; client connects all ${VERSIONS.length} versions, refuses ${REFUSED}, refuses a result without capabilities and one without serverInfo.version; the run log of each of ${boots.length} client engines was created within ${slowestBoot} ms of spawn)`);
   }
 } finally {
   await removeTree(scratch);
