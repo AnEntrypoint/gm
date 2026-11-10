@@ -98,9 +98,9 @@ try {
   expect(own.length >= 1, 'progress: no notifications/progress with progressToken tick-1 arrived during the 7 s body');
   expect(own.every((notice, index) => index === 0 || notice.progress > own[index - 1].progress), 'progress: progress values must increase');
 
-  const short = await runCode({ format: 'esm', timeoutMs: 2000, body: "return await gm.run_shell({ command: 'sleep 4; echo late', timeoutMs: 10000 });" });
+  const short = await runCode({ format: 'esm', timeoutMs: 2000, body: "return await gm.run_shell({ command: 'sleep 10; echo late', timeoutMs: 20000 });" });
   expect(typeof short.reply.background === 'string' && short.reply.state === 'running', `budget: a 2000 ms timeoutMs call should move to background, got ${JSON.stringify(short.reply).slice(0, 200)}`);
-  expect(short.elapsed < 3500, `budget: background reply took ${short.elapsed} ms, expected about 2 s`);
+  expect(short.elapsed < 6000, `budget: background reply took ${short.elapsed} ms; a call that waited for the 10 s body would take about 10 s, so a reply near the 2 s budget is expected`);
 
   const longer = await runCode({ format: 'esm', timeoutMs: 30000, body: "return await gm.run_shell({ command: 'sleep 4; echo inside', timeoutMs: 10000 });" });
   const longerBody = unwrap(longer.reply.output);
