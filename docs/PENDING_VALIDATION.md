@@ -1,5 +1,23 @@
 # Pending validation
 
+## Stretch 2026-11-10 (find verb, run 2): Phase A and Phase B
+
+Phase A, local: 8586281 adds the find verb on both engines (src/tools.mjs find, findWalk, findMatch, globMatch; native/components/verbs/verbs.cpp find, find_walk, find_glob_match, find_skip; the TOOLS entry and dispatch in src/mcp.mjs and the native table and order in native/components/mcp/server.cpp; the CLI entry in src/prompt.mjs; a parity row; tools/check-find.mjs, which seeds one tree per engine and compares 14 replies with sorted keys). find is not in skills.mjs FILE_TOOLS: the gate would flag the English word find in served skill text. Semantics: the path is located as list_dir locates it; glob supports * only, matched against the entry name, or against the path relative to the located directory when the glob contains a slash, and * never crosses a slash; kind is file, dir or any (default any); directories end with a slash; .git, .gm, .agentplug, .agentplug-kv, .playwriter, runs and node_modules are skipped at any depth; symlinks are listed and not followed; output is sorted by UTF-8 bytes; offset and limit page as list_dir does, with limit at most 500.
+
+Phase A, local: 83369aa restores the sentence "after a compaction re-read WORKFLOWS.md" in the gm skill's fan-out section. Cause: the 28bb712 habit rewrite dropped the phrase that tools/mcp-conformance.mjs checks. check-build failed 85 of 86 before this commit and passes 86 of 86 after it.
+
+Defects found in Phase B and fixed before the witness below: the glob matcher received its arguments in the wrong order (globMatch(text, pattern)), so b/*.mjs matched nothing on either engine; gm's own runs/ directory appeared in the seeded tree and made the walks differ, so runs is now skipped on both engines, as search already skips it; the parity find row differed at 445f001 only because the harness's Node reference is the committed HEAD and that HEAD had no find, so the row passes after the commit.
+
+| witness | command | result |
+|---|---|---|
+| find, identical replies | node tools/check-find.mjs build/release/native/components/host/gm | exit 0; 14 queries, identical on node and native. Replies quoted from the run: {path:a, glob:b/*.mjs} gives b/c.mjs; {path:a, glob:*.mjs} gives b/c.mjs, b/deep/e.mjs, x.mjs; {path:a, glob:linked*} gives linked (not followed); {path:., kind:file, glob:*.js} gives top.js only (node_modules skipped); {path:a, glob:*x*, kind:any, limit:2, offset:1} gives total 4 and next 3, output caf\u00e9.txt, x.mjs; {path:missing} gives find: cannot read missing on both |
+| parity | node native/tests/parity/run.mjs --bin build/release/native/components/host/gm | exit 0; 17/97 match, 0 cutover-expected, 58 native-ahead, 22 documented-gap, 0 differ |
+| conformance | node tools/check-build.mjs build/release | exit 0; 86 passed, 0 failed of 86 checks |
+
+Built: cmake --build build/release (job build-find-2, BUILD_EXIT=0) after the last native change; the skill commit needed no build (the served skill is read from the checkout).
+
+Open from this stretch: none in find. The find verb does not reach the txiki bodies: a txiki body gets stat_file, read_file and list_dir only (see the stretch 1 section).
+
 ## Stretch 2026-11-10 (txiki verbs and imports, run 2): Phase A and Phase B
 
 Changes in txiki/: host.mjs (run loop waits on pending verb calls with a clearable timer; tjs_bridge_send answers op 'builtin' name 'gm' from verbs.mjs and queues the reply for tjs_browser_resume; a gm.* prelude sets __thebirdBridge.onResult), fs.mjs (tjs_fs_* over the project, with the out layouts of thebird web/txiki-in-page.js), verbs.mjs (stat_file, read_file, list_dir), project.mjs (path and file-map helpers), node.mjs and build-site.mjs (no bundler, the pin read from thebird scripts/vendor-txiki.mjs and checked before any run; --allow-unpinned is labelled and is not a pin pass), site.mjs and site.html. txiki/bundle.mjs is removed. The seven gm_txiki_* exports are unchanged and thebird is not edited. No native code changed.
