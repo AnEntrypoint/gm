@@ -1,6 +1,6 @@
 #!/usr/bin/env node
+import { removeTree, stopTree } from './lib/tree.mjs';
 import { spawn } from 'node:child_process';
-import { once } from 'node:events';
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import http from 'node:http';
 import { tmpdir } from 'node:os';
@@ -24,18 +24,6 @@ const watchdog = setTimeout(() => {
   process.exit(1);
 }, WATCHDOG_MS);
 watchdog.unref();
-
-const removeTree = async (path) => {
-  for (let attempt = 1; ; attempt += 1) {
-    try {
-      rmSync(path, { recursive: true, force: true });
-      return;
-    } catch (error) {
-      if (error?.code !== 'ENOTEMPTY' || attempt === 50) throw error;
-      await new Promise((done) => setTimeout(done, 100));
-    }
-  }
-};
 
 const HOLD_MS = 50000;
 const SLOW_LINE = `${'a'.repeat(31)}b`;
@@ -144,9 +132,7 @@ try {
     console.log(`run-code-budget-check: ok (a 65 s JavaScript body with timeoutMs 100000 returned in ${spin.elapsed} ms; a fetch leaf held by the server for ${HOLD_MS} ms ended in ${leaf.elapsed} ms with no old fixed limit; a 3000 ms fetch with a catastrophic match timed out in ${matched.elapsed} ms in one attempt; a 3000 ms fetch that timed out ended in ${timedOutCall.elapsed} ms in one attempt)`);
   }
 } finally {
-  const exited = child.exitCode !== null || child.signalCode !== null ? Promise.resolve() : once(child, 'exit');
-  child.kill();
-  await Promise.race([exited, new Promise((done) => setTimeout(done, 5000))]);
+  await stopTree(child);
   slow.close();
   await removeTree(workspace);
   await removeTree(configDir);

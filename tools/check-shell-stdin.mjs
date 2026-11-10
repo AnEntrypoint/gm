@@ -1,22 +1,10 @@
 #!/usr/bin/env node
+import { removeTree, stopTree } from './lib/tree.mjs';
 import { spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { once } from 'node:events';
 import readline from 'node:readline';
-
-const removeTree = async (path) => {
-  for (let attempt = 1; ; attempt += 1) {
-    try {
-      rmSync(path, { recursive: true, force: true });
-      return;
-    } catch (error) {
-      if (error?.code !== 'ENOTEMPTY' || attempt === 50) throw error;
-      await new Promise((done) => setTimeout(done, 100));
-    }
-  }
-};
 
 const binary = process.argv[2] ? resolve(process.argv[2]) : null;
 if (binary === null || !existsSync(binary)) {
@@ -104,9 +92,7 @@ try {
     console.log(`shell-stdin-check: ok (cat with no input returned in under ${elapsed} ms; a stdin-reading command got its input and printed its output)`);
   }
 } finally {
-  const exited = child.exitCode !== null || child.signalCode !== null ? Promise.resolve() : once(child, 'exit');
-  child.kill();
-  await Promise.race([exited, new Promise((done) => setTimeout(done, 5000))]);
+  await stopTree(child);
   await removeTree(workspace);
   await removeTree(configDir);
 }

@@ -18,7 +18,10 @@ if (target === null || !existsSync(resolve(target))) {
 const binary = resolve(target);
 const hostDir = dirname(binary);
 if (process.platform !== 'linux') {
-  console.log(`${CHECK}: skipped (${process.platform}: the check packs a linux archive; the relay does not re-execute on win32)`);
+  const why = process.platform === 'win32'
+    ? 'win32: Relay::reexec is compiled only for POSIX (native/components/host/relay.cpp, the #if !defined(_WIN32) block at reexec); on win32 the relay keeps its build after an update and the worker restarts on the new binary, which restart-jobs-check witnesses ("the relay\'s binary-change restart")'
+    : `${process.platform}: this check packs a linux archive; the relay re-executes on ${process.platform} through the POSIX path in relay.cpp, which this check does not witness`;
+  console.log(`${CHECK}: skipped (${why})`);
   process.exit(0);
 }
 const stamp = (spawnSync(binary, ['--version'], { encoding: 'utf8', timeout: 30000 }).stdout ?? '').trim();

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { removeTree } from './lib/tree.mjs';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
@@ -24,18 +25,6 @@ const watchdog = setTimeout(() => {
   process.exit(1);
 }, WATCHDOG_MS);
 watchdog.unref();
-
-const removeTree = async (path) => {
-  for (let attempt = 1; ; attempt += 1) {
-    try {
-      rmSync(path, { recursive: true, force: true });
-      return;
-    } catch (error) {
-      if (error?.code !== 'ENOTEMPTY' || attempt === 50) throw error;
-      await new Promise((done) => setTimeout(done, 100));
-    }
-  }
-};
 
 const workspace = mkdtempSync(join(tmpdir(), 'gm-job-bounds-'));
 const configDir = mkdtempSync(join(tmpdir(), 'gm-job-bounds-config-'));

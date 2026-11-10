@@ -12,7 +12,7 @@ const removeWorkspace = (path) => {
             rmSync(path, { recursive: true, force: true });
             return;
         } catch (error) {
-            if (error?.code !== 'ENOTEMPTY' || attempt === 7) throw error;
+            if (!['ENOTEMPTY', 'EBUSY', 'EPERM'].includes(error?.code) || attempt === 7) throw error;
             Atomics.wait(wait, 0, 0, 50);
         }
     }

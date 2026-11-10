@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { removeTree } from './lib/tree.mjs';
 import { spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -22,18 +23,6 @@ const OPEN_CODE = `const p = await context.newPage(); state.gmScopeCheck = p; aw
 const SIDE_CODE = "const other = await browser.newContext(); await (await other.newPage()).goto('data:text/html,<title>side</title>'); const project = browser.contexts().find((c) => c !== state.gmRun); const projectPage = await project.newPage(); state.gmSideCheck = { other, projectPage }; return 'sided';";
 const UNDO_CODE = "const side = state.gmSideCheck; if (side) { await side.projectPage.close(); await side.other.close(); } delete state.gmSideCheck; return 'undone';";
 const COUNT_CODE = `let n = -1; for (let i = 0; i < 10; i += 1) { n = 0; for (const c of browser.contexts()) for (const p of c.pages()) if (!p.isClosed() && p.url().includes('${MARKER}')) n += 1; if (n === 0) break; await new Promise((done) => setTimeout(done, 1000)); } return n;`;
-
-const removeTree = async (path) => {
-  for (let attempt = 1; ; attempt += 1) {
-    try {
-      rmSync(path, { recursive: true, force: true });
-      return;
-    } catch (error) {
-      if (error?.code !== 'ENOTEMPTY' || attempt === 50) throw error;
-      await new Promise((done) => setTimeout(done, 100));
-    }
-  }
-};
 
 const workspace = mkdtempSync(join(tmpdir(), 'gm-browser-scope-'));
 const child = spawn(binary, [...lead, '--workspace', workspace], { stdio: ['pipe', 'pipe', 'pipe'] });

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
+import { removeTree, stopTree } from './lib/tree.mjs';
 import { spawn } from 'node:child_process';
-import { once } from 'node:events';
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
@@ -18,18 +18,6 @@ if (binary === null || (!onNode && !existsSync(binary))) {
 }
 
 const REPLY_MS = 10000;
-
-const removeTree = async (path) => {
-  for (let attempt = 1; ; attempt += 1) {
-    try {
-      rmSync(path, { recursive: true, force: true });
-      return;
-    } catch (error) {
-      if (error?.code !== 'ENOTEMPTY' || attempt === 50) throw error;
-      await new Promise((done) => setTimeout(done, 100));
-    }
-  }
-};
 
 const workspace = mkdtempSync(join(tmpdir(), 'gm-early-run-code-'));
 const configDir = mkdtempSync(join(tmpdir(), 'gm-early-run-code-config-'));
@@ -100,9 +88,7 @@ try {
     console.log(`early-run-code-check: ok (a run_code sent before the first next_context ran at once in ${elapsed} ms, with the rules notice; an early finish ended the run in ${Date.now() - finishStarted} ms)`);
   }
 } finally {
-  const exited = child.exitCode !== null || child.signalCode !== null ? Promise.resolve() : once(child, 'exit');
-  child.kill();
-  await Promise.race([exited, new Promise((done) => setTimeout(done, 5000))]);
+  await stopTree(child);
   await removeTree(workspace);
   await removeTree(configDir);
 }

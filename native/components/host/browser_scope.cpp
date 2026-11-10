@@ -11,6 +11,7 @@ constexpr const char* kBrowsers = "playwriter_browsers";
 constexpr std::size_t kTitleChars = 80;
 constexpr std::size_t kUrlChars = 200;
 constexpr int kBrowserTimeoutMs = 10000;
+constexpr int kConnectRetries = 2;
 
 const char* kOpenRunContext =
     "if (!state.gmProject) { state.gmProject = await browser.newContext(); } "
@@ -164,7 +165,12 @@ json::Value BrowserScope::user_execute(const json::Value& args) {
         std::lock_guard lock(mutex_);
         used_ = true;
     }
-    return inner_.call(kExecute, forwarded);
+    json::Value reply = inner_.call(kExecute, forwarded);
+    for (int retry = 1; retry <= kConnectRetries && !ok_of(reply) && output_of(reply).find("connectOverCDP: Timeout") != std::string::npos; ++retry) {
+        reply = inner_.call(kExecute, forwarded);
+        reply.set("connectRetry", static_cast<std::uint64_t>(retry));
+    }
+    return reply;
 }
 
 json::Value BrowserScope::browsers(const json::Value& args) {

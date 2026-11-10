@@ -1,7 +1,8 @@
 #!/usr/bin/env node
+import { removeTree, stopTree } from './lib/tree.mjs';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import readline from 'node:readline';
@@ -49,18 +50,6 @@ readline.createInterface({ input: process.stdin }).on('line', (line) => {
 
 const sleep = (ms) => new Promise((done) => setTimeout(done, ms));
 
-const removeTree = async (path) => {
-  for (let attempt = 1; ; attempt += 1) {
-    try {
-      rmSync(path, { recursive: true, force: true });
-      return;
-    } catch (error) {
-      if (error?.code !== 'ENOTEMPTY' || attempt === 50) throw error;
-      await sleep(100);
-    }
-  }
-};
-
 const spawnEngine = (args) => {
   const leading = onNode ? [join(root, 'src', 'mcp.mjs')] : ['serve'];
   const child = spawn(onNode ? process.execPath : binary, [...leading, ...args], { stdio: ['pipe', 'pipe', 'pipe'] });
@@ -106,9 +95,7 @@ const spawnEngine = (args) => {
       child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id, method, params })}\n`);
     });
   const stop = async () => {
-    const exited = child.exitCode !== null || child.signalCode !== null ? Promise.resolve() : once(child, 'exit');
-    child.kill();
-    await Promise.race([exited, sleep(5000)]);
+    await stopTree(child);
   };
   const cause = () => {
     if (exit === null) return '';
@@ -116,6 +103,11 @@ const spawnEngine = (args) => {
     return `engine exited with ${how} before it answered; stderr: ${stderr.trim() || '(empty)'}`;
   };
   return { rpc, stop, cause, stderrTail: () => stderr.trim() || '(empty)', exited: () => exit !== null };
+};
+
+const layoutOf = (dir) => {
+  if (!existsSync(dir)) return 'missing';
+  return readdirSync(dir, { withFileTypes: true }).map((entry) => (entry.isDirectory() ? `${entry.name}/` : entry.name)).join(' ') || '(empty)';
 };
 
 const findEvent = (logFile, predicate) => {
@@ -162,7 +154,8 @@ const clientCase = async (scratch, { version, mode }) => {
       event = findEvent(logFile, matches);
     }
     const logTail = event === null && existsSync(logFile) ? readFileSync(logFile, 'utf8').slice(-600) : '';
-    return { event, cause: engine.cause(), stderr: event === null ? engine.stderrTail() : '', logTail };
+    const layout = event === null ? `workspace: ${layoutOf(workspace)}; run: ${layoutOf(runDir)}` : '';
+    return { event, cause: engine.cause(), stderr: event === null ? engine.stderrTail() : '', logTail, layout };
   } finally {
     await engine.stop();
   }
@@ -200,10 +193,10 @@ try {
   ];
   const events = await Promise.all(cases.map((item) => clientCase(scratch, item)));
   cases.forEach((item, index) => {
-    const { event, cause, stderr, logTail } = events[index];
+    const { event, cause, stderr, logTail, layout } = events[index];
     const label = item.label;
     if (event === null) {
-      failures.push(`${label}: no mcp-server event after ${EVENT_MS} ms${cause ? `; ${cause}` : ''}; engine stderr: ${stderr || '(none)'}; log tail: ${JSON.stringify(logTail || '(no log)')}`);
+      failures.push(`${label}: no mcp-server event after ${EVENT_MS} ms${cause ? `; ${cause}` : ''}; engine stderr: ${stderr || '(none)'}; log tail: ${JSON.stringify(logTail || '(no log)')}; layout ${layout}`);
       return;
     }
     if (item.mode === 'ok' && VERSIONS.includes(item.version)) {

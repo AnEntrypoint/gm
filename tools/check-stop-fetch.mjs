@@ -1,6 +1,6 @@
 #!/usr/bin/env node
+import { removeTree, stopTree } from './lib/tree.mjs';
 import { spawn } from 'node:child_process';
-import { once } from 'node:events';
 import { createServer } from 'node:http';
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -20,18 +20,6 @@ if (binary === null || (!onNode && !existsSync(binary))) {
 
 const HOLD_MS = 50000;
 const CLOSE_MS = 5000;
-
-const removeTree = async (path) => {
-  for (let attempt = 1; ; attempt += 1) {
-    try {
-      rmSync(path, { recursive: true, force: true });
-      return;
-    } catch (error) {
-      if (error?.code !== 'ENOTEMPTY' || attempt === 50) throw error;
-      await new Promise((done) => setTimeout(done, 100));
-    }
-  }
-};
 
 const sleep = (ms) => new Promise((done) => setTimeout(done, ms));
 let requestSeen = false;
@@ -108,9 +96,7 @@ try {
     console.log(`stop-fetch-check: ok (a background fetch in a body closed its connection ${closeMs} ms after finish stopped the run; the server answers at ${HOLD_MS} ms)`);
   }
 } finally {
-  const exited = child.exitCode !== null || child.signalCode !== null ? Promise.resolve() : once(child, 'exit');
-  child.kill();
-  await Promise.race([exited, sleep(5000)]);
+  await stopTree(child);
   server.close();
   await removeTree(workspace);
   await removeTree(configDir);

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
+import { removeTree, stopTree } from './lib/tree.mjs';
 import { spawn } from 'node:child_process';
-import { once } from 'node:events';
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
@@ -61,18 +61,6 @@ const EXPECTED = {
   'lines first page': { ok: true, unit: 'lines', total: 3, offset: 0, next: 1, nextOffset: 1, truncated: true, totalBytes: 20048, digest: DIGEST, cutLine: null, hint: hintLines(1, 2), notice: `truncated at 37 of 20048 bytes; ${hintLines(1, 2)}`, outLen: 25, outHead: head(WHOLE_OUTPUT), outTail: tail(`${ACCENTED}${EMOJI}${REPLACEMENT}\n`) },
   'lines long line cut': { ok: true, unit: 'lines', total: 3, offset: 1, next: 2, nextOffset: 2, truncated: true, totalBytes: 20048, digest: DIGEST, cutLine: true, hint: LONG_HINT, notice: `truncated at 19999 of 20048 bytes; ${LONG_HINT}`, outLen: 19999, outHead: 'x'.repeat(24), outTail: 'x'.repeat(24) },
   'lines past the end': { ok: true, unit: 'lines', total: 3, offset: 9, next: null, nextOffset: null, truncated: false, totalBytes: 20048, digest: DIGEST, cutLine: null, hint: null, notice: null, outLen: 0, outHead: '', outTail: '' },
-};
-
-const removeTree = async (path) => {
-  for (let attempt = 1; ; attempt += 1) {
-    try {
-      rmSync(path, { recursive: true, force: true });
-      return;
-    } catch (error) {
-      if (error?.code !== 'ENOTEMPTY' || attempt === 50) throw error;
-      await new Promise((done) => setTimeout(done, 100));
-    }
-  }
 };
 
 const workspace = mkdtempSync(join(tmpdir(), 'gm-read-parity-'));
@@ -143,9 +131,7 @@ try {
 } catch (error) {
   failures.push(`engine: ${error.message}`);
 } finally {
-  const exited = child.exitCode !== null || child.signalCode !== null ? Promise.resolve() : once(child, 'exit');
-  child.kill();
-  await Promise.race([exited, new Promise((done) => setTimeout(done, 5000))]);
+  await stopTree(child);
   await removeTree(workspace);
   await removeTree(configDir);
 }

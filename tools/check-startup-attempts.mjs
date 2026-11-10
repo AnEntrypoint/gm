@@ -1,17 +1,16 @@
 #!/usr/bin/env node
+import { removeTree, stopTree } from './lib/tree.mjs';
 import { spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import readline from 'node:readline';
-import { once } from 'node:events';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const binary = process.argv[2] ? resolve(process.argv[2]) : null;
 const failures = [];
 const arms = [];
-const exited = (child) => (child.exitCode !== null || child.signalCode !== null ? Promise.resolve() : once(child, 'exit'));
 const watchdog = setTimeout(() => {
   console.error('check-startup-attempts: failed: no completion within 120000 ms');
   process.exit(1);
@@ -92,8 +91,7 @@ async function arm(label, command, args) {
   } catch (error) {
     failures.push(`${label}: ${error.message}`);
   } finally {
-    server.child.kill();
-    await exited(server.child);
+    await stopTree(server.child);
   }
 }
 
@@ -108,17 +106,7 @@ if (binary !== null && existsSync(binary)) {
 } else {
   console.log('native: skipped (no binary given)');
 }
-for (const dir of workspaces) {
-  for (let attempt = 1; ; attempt += 1) {
-    try {
-      rmSync(dir, { recursive: true, force: true });
-      break;
-    } catch (error) {
-      if (error?.code !== 'ENOTEMPTY' || attempt === 50) throw error;
-      await new Promise((done) => setTimeout(done, 100));
-    }
-  }
-}
+for (const dir of workspaces) await removeTree(dir);
 clearTimeout(watchdog);
 if (failures.length > 0) {
   console.error('check-startup-attempts: failed: ' + failures.join('; '));
