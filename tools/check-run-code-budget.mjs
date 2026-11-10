@@ -80,6 +80,7 @@ const unwrap = (value) => {
 const runCode = async (args) => {
   const started = Date.now();
   const reply = await rpc('tools/call', { name: 'run_code', arguments: args });
+  if (!reply.result) throw new Error(`run_code had no result: ${JSON.stringify(reply).slice(0, 400)}`);
   return { elapsed: Date.now() - started, reply: JSON.parse(reply.result.content[0].text) };
 };
 
