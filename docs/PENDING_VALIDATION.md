@@ -2242,3 +2242,15 @@ Not run here: tools/check-txiki-wasi.mjs and the gm reactor wasm (the gm wasm32-
 
 - Decision: a resources/read of a served skill file carries ttlMs 0 and cacheScope public. Reason: the cost of a stale skill is larger than the cost of an uncached read, and tools/check-installed-build.mjs already requires ttlMs 0 so an open connection re-reads an edited skill. tools/mcp-conformance.mjs now expects ttlMs 0 for that read; it previously expected 3600000.
 - tools/check-build.mjs build/release (binary 916aefe-1), run once after the change: conformance 86 passed, 0 failed of 86 checks in 24 scenarios; the full check exited 0 in 498.95 s, with the gm and gm-core stamps 916aefe-1 (916aefe). A 400 s cap killed the first run during the browser checks, so it was rerun with a 590 s cap.
+
+## Tooling fix units: child task decision and witnesses (2026-11-10, Phase B)
+
+- Decision (dispatcher, 2026-11-10): a child context may not replace the run task without owner:true, as native/components/mcp/server.cpp:201 states. Reason: the native component is the reference, and a child overwrite of the owner task was the defect in the child-task-overwrite unit. The Node side already matches: src/mcp.mjs childContext refuses a non-owner task replacement (line 657) and childRead passes owner:true only when the caller sent it. No source edit was needed, so none was made.
+- Phase A: no source change. The five ranked units in work/tooling-fix-units.json are marked with their status and the witness that covers each.
+- Phase B witnesses on build/release/native/components/host/gm, each run once:
+  - tools/check-child-task.mjs: passed (node and native real-tree checks), wall 93.63 s.
+  - tools/check-task-set.mjs: passed (node and native real-tree checks), wall 0.43 s. Covers task-verb and ended-run-stale-task.
+  - tools/check-grep-paging.mjs: passed (node and native real-tree checks), wall 0.75 s.
+  - tools/check-read-truncation.mjs: passed, wall 0.24 s.
+  - tools/check-output-recovery.mjs: passed (node and native real-tree checks), wall 0.52 s. Covers run-code-large-output.
+  - tools/check-job-reply-git-state.mjs: ok, wall 102.33 s. It covers the git state a job reply reports, not the push timing; commit-misread-late-push has no separate witness.

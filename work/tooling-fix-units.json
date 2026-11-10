@@ -3,7 +3,9 @@
     {
       "id": "commit-misread-late-push",
       "angle": "git verbs and push timing",
-      "query": "commit output parsed as evidence of a push, or push delayed by a misread"
+      "query": "commit output parsed as evidence of a push, or push delayed by a misread",
+      "status": "fixed-witnessed",
+      "witness": "tools/check-job-reply-git-state.mjs passed on build/release/native/components/host/gm (git_state reply, 102.33 s); the push-timing misread has no separate witness"
     },
     {
       "id": "ended-run-stale-task",
@@ -11,17 +13,23 @@
       "query": "run has ended refusal and stale task text inherited by successor run",
       "extraEvidence": [
         "spawn browser refusal: {\"ok\":false,\"refused\":true,\"error\":\"refused: run 2026-11-07-10-29-34-65fd6f has ended; call next_context to open a new run\",\"actionSeq\":19}; next_context opened run 2026-11-07-10-31-27-48064a and the browser then worked; spawn calls the refusal correct, friction is that the ended run was not obvious before the call"
-      ]
+      ],
+      "status": "fixed-witnessed",
+      "witness": "tools/check-task-set.mjs passed on native (successor inherits no task; ended-run refusal text checked), 0.43 s"
     },
     {
       "id": "task-verb",
       "angle": "run task mutation",
-      "query": "no gm verb to change a run task after next_context"
+      "query": "no gm verb to change a run task after next_context",
+      "status": "fixed-witnessed",
+      "witness": "task_set verb present in src/mcp.mjs (fcb84df); tools/check-task-set.mjs passed on native, 0.43 s"
     },
     {
       "id": "grep-read-truncation",
       "angle": "broad result transport",
-      "query": "gm.grep 43858 matches showing 0 to 88 scan incomplete and gm.read_file AGENTS.md truncated at 19926 of 43433 bytes"
+      "query": "gm.grep 43858 matches showing 0 to 88 scan incomplete and gm.read_file AGENTS.md truncated at 19926 of 43433 bytes",
+      "status": "fixed-witnessed",
+      "witness": "tools/check-grep-paging.mjs passed on native, 0.75 s; tools/check-read-truncation.mjs passed on native, 0.24 s"
     },
     {
       "id": "run-code-large-output",
@@ -32,7 +40,9 @@
         "spoint reports run 0f5edf seq 96 showing a run_code result cut to \"[760 chars cut; query_log reads any event...]\"",
         "spawn run 2026-11-07-10-41-32-040293 seq 48 gm.fetch returned only \"200 175367 bytes <url>\\nSpawn\" for a 175,367-byte body; seq 49 run_code result carried bytes:279 and empty scripts/kw; a browser read of the same URL returned the full DOM/script list. DESIGN.md:691 documents gm.fetch maxBytes and [gm-fetch: body truncated to N bytes of M bytes]; src/fetch.mjs caps returned body text.",
         "spoint run 0f5edf seq 96 \"[760 chars cut; query_log reads any event (after: seq - 1 returns it first)]\" and seq 115 outputChars:1351 cutting at 760; separate audit run_code result \"[gm: kept 40 of 339 lines; dropped 300; 6829 chars; use raw:true or the job log for the full output]\" lost the middle of a JSON array"
-      ]
+      ],
+      "status": "fixed-witnessed",
+      "witness": "tools/check-output-recovery.mjs passed on native, 0.52 s"
     },
     {
       "id": "prd-receipt-binding",
