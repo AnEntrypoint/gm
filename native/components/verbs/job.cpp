@@ -37,7 +37,8 @@ namespace {
 #if !defined(_WIN32)
 constexpr std::uint64_t kill_grace_ms = 500;
 #endif
-constexpr double max_wait_ms = 30000;
+constexpr double max_wait_ms = 3600000;
+constexpr int pid_poll_ms = 100;
 constexpr std::uint64_t ended_event_grace_ms = 250;
 
 bool is_job_name(const json::Value* v) {
@@ -411,6 +412,7 @@ void JobTable::settle(Job& job, std::optional<int> exit_code, json::Value signal
     if (reason) ended.set("reason", *reason);
     if (statement) ended.set("statement", *statement);
     if (timed_out) ended.set("timedOut", true);
+    if (mono_offset_) ended.set("durMs", std::round(mono_now() - job.start_mono));
     write_status(job.dir, job.name, ended);
 
     json::Value event;
@@ -511,7 +513,31 @@ json::Value JobTable::snapshot(std::uint64_t stuck_ms) {
     return reply;
 }
 
+json::Value wait_for_pid(const json::Value& pid_value, double wait_ms) {
+    if (!is_whole_number(&pid_value) || pid_value.as_number() < 1) return failure("pid must be a whole number above zero");
+#if defined(_WIN32)
+    return failure("a pid wait is not served on Windows; start the command with job_start and pass job");
+#else
+    const auto pid = static_cast<pid_t>(pid_value.as_number());
+    const auto alive = [pid] { return ::kill(pid, 0) == 0 || errno == EPERM; };
+    const double started = steady_ms();
+    while (alive() && steady_ms() - started < wait_ms) std::this_thread::sleep_for(std::chrono::milliseconds(pid_poll_ms));
+    json::Value reply;
+    reply.set("ok", true);
+    reply.set("pid", pid_value);
+    reply.set("state", alive() ? "running" : "gone");
+    reply.set("exitCode", json::Value(nullptr));
+    reply.set("waitedMs", static_cast<std::uint64_t>(steady_ms() - started));
+    reply.set("output", "gm did not start this process, so it has no exit code or output for it");
+    return reply;
+#endif
+}
+
 json::Value JobTable::status(const json::Value& args) {
+    if (const json::Value* pid_value = present(args, "pid"); pid_value != nullptr && present(args, "job") == nullptr) {
+        const json::Value* w = args.find("waitMs");
+        return wait_for_pid(*pid_value, w != nullptr && w->is_number() && std::isfinite(w->as_number()) ? std::clamp(w->as_number(), 0.0, max_wait_ms) : 0.0);
+    }
     const json::Value* name_value = args.find("job");
     if (!is_job_name(name_value)) return failure("job must be a job name");
     const std::string& name = name_value->as_string();
@@ -556,9 +582,14 @@ json::Value JobTable::status(const json::Value& args) {
     reply.set("signal", signal != nullptr ? *signal : json::Value(nullptr));
     std::string text = has_log_path ? read_bytes(log_path) : std::string();
     std::size_t length = utf16_length(text);
+    const json::Value* tail_value = present(args, "tail");
+    if (tail_value != nullptr && (!is_whole_number(tail_value) || tail_value->as_number() < 0)) {
+        return failure("tail must be a whole number of characters, zero or more");
+    }
+    const std::size_t page = tail_value != nullptr ? std::min(static_cast<std::size_t>(tail_value->as_number()), static_cast<std::size_t>(output_page)) : output_page;
     std::size_t from = offset_value != nullptr ? static_cast<std::size_t>(offset_value->as_number())
-                                               : (length > output_page ? length - output_page : 0);
-    std::size_t end = std::min(from + output_page, length);
+                                               : (length > page ? length - page : 0);
+    std::size_t end = std::min(from + page, length);
     reply.set("output", utf16_slice(text, from, end));
     reply.set("total", static_cast<std::uint64_t>(length));
     reply.set("truncated", from > 0 || end < length);

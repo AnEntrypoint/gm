@@ -135,7 +135,8 @@ const ADOPT_POLL_MS = 200;
 const ADOPT_KILL_CHECK_MS = 2000;
 const EXIT_SCRIPT = '(eval "$1"); s=$?; echo $s > "$2"; exit $s';
 export const OUTPUT_PAGE = 20000;
-const MAX_WAIT_MS = 30000;
+const MAX_WAIT_MS = 3600000;
+const PID_POLL_MS = 100;
 const JOB_NAME = /^[A-Za-z0-9_-]{1,64}$/;
 const BARRIER = { barrier: true };
 const DEFAULT_JOB_LIFETIME_MS = 3600000;
@@ -291,8 +292,9 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
     },
 
     async job_status(args) {
-      if (!JOB_NAME.test(args.job ?? '')) return { ok: false, error: 'job must be a job name' };
       const waitMs = Math.min(Math.max(Number(args.waitMs) || 0, 0), MAX_WAIT_MS);
+      if (args.pid !== undefined && args.job === undefined) return waitForPid(args.pid, waitMs);
+      if (!JOB_NAME.test(args.job ?? '')) return { ok: false, error: 'job must be a job name' };
       const job = jobs.get(args.job);
       if (job && !job.settled && waitMs > 0) await waitOrTimeout(job.done, waitMs);
       const status = readStatus(args.job);
@@ -302,8 +304,12 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
       }
       const { output: logPath, ...meta } = status;
       const text = outputOf(status);
-      const from = args.offset ?? Math.max(0, text.length - OUTPUT_PAGE);
-      const end = Math.min(from + OUTPUT_PAGE, text.length);
+      if (args.tail !== undefined && (!Number.isInteger(args.tail) || args.tail < 0)) {
+        return { ok: false, error: 'tail must be a whole number of characters, zero or more' };
+      }
+      const page = args.tail === undefined ? OUTPUT_PAGE : Math.min(args.tail, OUTPUT_PAGE);
+      const from = args.offset ?? Math.max(0, text.length - page);
+      const end = Math.min(from + page, text.length);
       return {
         ok: true,
         ...meta,
@@ -439,7 +445,7 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
     const reason = state === 'killed' ? job.killReason : undefined;
     const statementFields = reason === undefined ? {} : { statement: jobKillStatement(name, reason, status.timeoutMs, jobLifetimeMs) };
     const timeoutFields = reason === 'timeout' ? { timedOut: true, timeoutMs: status.timeoutMs } : {};
-    const ended = { ...status, state, exitCode, signal, ...(reason === undefined ? {} : { reason }), ...statementFields, ...timeoutFields };
+    const ended = { ...status, state, exitCode, signal, ...(reason === undefined ? {} : { reason }), ...statementFields, ...timeoutFields, durMs: Math.round(log.now() - startMono) };
     writeStatus(name, ended);
     log.append('job', { job: name, state, exitCode, signal, startMono, ...(reason === undefined ? {} : { reason }), ...statementFields, ...timeoutFields });
     if (job.killReason !== undefined) {
@@ -824,8 +830,25 @@ function cutShellOutput(result, runDir) {
 }
 
 const LOGGED_REPLY_CHARS = 1000;
+async function waitForPid(pid, waitMs) {
+  if (!Number.isInteger(pid) || pid < 1) return { ok: false, error: 'pid must be a whole number above zero' };
+  if (process.platform === 'win32') return { ok: false, error: 'a pid wait is not served on Windows; start the command with job_start and pass job' };
+  const started = Date.now();
+  while (pidAlive(pid) && Date.now() - started < waitMs) await new Promise((done) => setTimeout(done, PID_POLL_MS));
+  return { ok: true, pid, state: pidAlive(pid) ? 'running' : 'gone', exitCode: null, waitedMs: Date.now() - started, output: 'gm did not start this process, so it has no exit code or output for it' };
+}
+
+function pidAlive(pid) {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    return error?.code === 'EPERM';
+  }
+}
+
 function jobKillStatement(name, reason, timeoutMs, lifetimeMs) {
-  if (reason === 'timeout') return `job ${name} stopped: timeout after ${timeoutMs} ms`;
+  if (reason === 'timeout') return `job ${name} stopped: timeout after ${timeoutMs} ms. The limit is job_start's timeoutMs (default ${DEFAULT_TIMEOUT_MS}); pass timeoutMs, up to the job lifetime of ${lifetimeMs} ms, for a longer run`;
   if (reason === 'lifetime') return `job ${name} stopped: the job lifetime of ${lifetimeMs} ms ended before it finished`;
   if (reason === 'cancelled') return `job ${name} stopped by job_stop`;
   if (reason === 'restart') return `job ${name} killed: the gm worker restarted while it ran, and a restart kills the process group of every job that was running`;
