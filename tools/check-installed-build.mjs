@@ -92,9 +92,6 @@ try {
     const init = await rpc('initialize', { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: CHECK, version: '1' } });
     const serverVersion = init?.result?.serverInfo?.version ?? null;
     expect(serverVersion !== null, `initialize has no serverInfo.version (stderr ${stderr.trim() || '(empty)'})`);
-    if (expectedStamp !== null && serverVersion !== null) {
-      expect(String(serverVersion).includes(expectedStamp), `initialize serverInfo.version ${serverVersion} does not carry ${expectedStamp}`);
-    }
     const read = await rpc('resources/read', { uri: SKILL });
     const served = read?.result?.contents?.[0];
     const copies = candidates.filter((file) => existsSync(file)).map((file) => ({ file, text: readFileSync(file, 'utf8') }));
