@@ -161,7 +161,7 @@ const SCENARIOS = [
       ok('prompts/list carries ttlMs 3600000 and cacheScope public', cached(prompts, HOUR_MS), short({ ttlMs: prompts?.ttlMs, cacheScope: prompts?.cacheScope }));
       ok('resources/list carries ttlMs 0 and cacheScope public', cached(resources, 0), short({ ttlMs: resources?.ttlMs, cacheScope: resources?.cacheScope }));
       ok('resources/templates/list carries ttlMs 3600000 and cacheScope public', cached(templates, HOUR_MS), short({ ttlMs: templates?.ttlMs, cacheScope: templates?.cacheScope }));
-      ok('resources/read of a skill file carries ttlMs 3600000 and cacheScope public', cached(skill, HOUR_MS), short({ ttlMs: skill?.ttlMs, cacheScope: skill?.cacheScope }));
+      ok('resources/read of a skill file carries ttlMs 0 and cacheScope public', cached(skill, 0), short({ ttlMs: skill?.ttlMs, cacheScope: skill?.cacheScope }));
       ok('resources/read of a run log carries ttlMs 0 and cacheScope public', cached(log, 0), short({ run, ttlMs: log?.ttlMs, cacheScope: log?.cacheScope }));
     },
   },

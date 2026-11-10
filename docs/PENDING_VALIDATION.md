@@ -2237,3 +2237,8 @@ Not run here: tools/check-txiki-wasi.mjs and the gm reactor wasm (the gm wasm32-
 - cmake --build build/release: no work to do, BUILD_EXIT=0, GMNEW_TXIKI ON.
 - tools/check-embedded-runtime.mjs build/release/native/components/host/gm: ok, wall 0.77 s.
 - tools/check-build.mjs build/release: 85 passed, 1 failed of 86 checks, wall 124.8 s. The failure is "resources/read of a skill file carries ttlMs 3600000" (tools/mcp-conformance.mjs:164): the binary returns ttlMs 0, which tools/check-installed-build.mjs:101 requires so an open connection re-reads an edited skill. The two witnesses conflict; the owner decides which holds.
+
+## Skill read cache decision (2026-11-10)
+
+- Decision: a resources/read of a served skill file carries ttlMs 0 and cacheScope public. Reason: the cost of a stale skill is larger than the cost of an uncached read, and tools/check-installed-build.mjs already requires ttlMs 0 so an open connection re-reads an edited skill. tools/mcp-conformance.mjs now expects ttlMs 0 for that read; it previously expected 3600000.
+- tools/check-build.mjs build/release (binary 916aefe-1), run once after the change: conformance 86 passed, 0 failed of 86 checks in 24 scenarios; the full check exited 0 in 498.95 s, with the gm and gm-core stamps 916aefe-1 (916aefe). A 400 s cap killed the first run during the browser checks, so it was rerun with a 590 s cap.
