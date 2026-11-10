@@ -1,5 +1,9 @@
 # Pending validation
 
+## Stretch 2026-11-10 (skill follow-up): Phase B witnessed
+
+S4a on fc5fede: skillCheck ok (every MCP_RULES line still in the skill, gm.fs_op prefixed, both served skills parse); check-skill-serve build/release ok; skills/gm/SKILL.md 9843 bytes. The static server on 18765 was stopped as a job.
+
 ## Stretch 2026-11-10 (habit skill): Phase B witnessed
 
 S1 on 28bb712: skillCheck ok (every MCP_RULES line in the skill, no bare tool name, both served skills parse); check-skill-serve build/release ok (served text equals the checkout file, a live edit is served on the next read); skills/gm/SKILL.md 9747 bytes.
