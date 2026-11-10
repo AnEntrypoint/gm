@@ -2254,3 +2254,10 @@ Not run here: tools/check-txiki-wasi.mjs and the gm reactor wasm (the gm wasm32-
   - tools/check-read-truncation.mjs: passed, wall 0.24 s.
   - tools/check-output-recovery.mjs: passed (node and native real-tree checks), wall 0.52 s. Covers run-code-large-output.
   - tools/check-job-reply-git-state.mjs: ok, wall 102.33 s. It covers the git state a job reply reports, not the push timing; commit-misread-late-push has no separate witness.
+
+## Queue pass: push timing, node:fs, page binding, child task (2026-11-10, Phase A)
+
+- native/components/quickjs/engine.cpp (load_module_from_disk): an import of node:* throws a ReferenceError naming gm.read_file, gm.write_file, gm.fs_op and gm.run_shell. Witness: tools/check-node-fs-import.mjs <native gm>.
+- tools/check-push-timing.mjs (new): checks ship.sh runs the gate before the commit and the push after it, and that a commit is an ancestor of origin/main only when it is claimed pushed. Witness: node tools/check-push-timing.mjs [sha] (CLAIM_PUSHED=1 when the push is claimed).
+- Child task (src/mcp.mjs childContext, line 657): no change; the Node side already refuses a non-owner task replacement, as native/components/mcp/server.cpp:201 states. Witness: tools/check-child-task.mjs (passed in the prior pass).
+- Playwriter page binding: not changed. The page global is set by the external playwriter server, and the Node browser scope gives each run its own context that finish closes (src/browser-scope.mjs). Keeping the page across runs changes that per-run design, so it needs an owner decision. Witness, once decided: a second run_code reads the page bound by the first.
