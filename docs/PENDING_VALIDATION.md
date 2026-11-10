@@ -2093,3 +2093,35 @@ Phase B, on HEAD 3fcb810 (release build reconfigured with -DGMNEW_VERSION=3fcb81
 - parity, build/release gm: 20/97 scenarios match, 0 cutover-expected, 55 native-ahead, 22 documented-gap, 0 differ. Wall 16 s.
 
 The installed build is not installed. Its install waits for a moment when no peer is busy, and for a release that carries 626f8e0, 40feed3, 3fcb810 and cc80361.
+
+## gm pass, Phase A (2026-11-10): wall-clock and token waste in the gm skill
+
+Measured from the transcripts and run logs with two scratch scripts in /tmp/gm-waste (outside the checkout, not committed): analyze.mjs (per Claude Code session: turn gaps, repeated tool calls, tool results over 20000 characters) and runs.mjs (per gm run log: repeated actions).
+
+Session transcripts (/config/.claude/projects/-workspace-gm/<session>.jsonl):
+
+| session | records | tool uses | user prompts | gap median | gap p90 | gaps over 10 min | results over 20000 chars (total) | most repeated call |
+|---|---|---|---|---|---|---|---|---|
+| 526213ff-cae8-4f7a-8382-45270c027a27 | 4179 | 399 | 10 | 117 s | 222 s | 0 | 5 (123259 chars) | next_context waitMs 100000, 14 times |
+| 179378d2-64e5-4eb4-9e82-50c37acd8977 | 1744 | 156 | 3 | 508 s | 1588 s | 1 | 2 (54970 chars) | next_context waitMs 100000, 16 times |
+| 7ae15e26-0cdd-470c-8de1-bbfaa49f567c | 27890 | 2562 | 135 | 172 s | 607 s | 15 | 23 (622227 chars) | next_context waitMs 100000, 18 times; ReadMcpResourceTool skill://gm/SKILL.md, 13 times; a job_status run_code body, 5 times |
+
+Gap: the time from an assistant record's end to the next user prompt. It mixes the user's time away with time a job spent running after the turn ended, so it does not isolate the waste.
+
+gm run logs (/workspace/gm/runs, 444 runs, 9346 actions):
+
+- 1699 actions repeat an earlier action in the same run (same tool and arguments). By tool: child_context 768, next_context 367, run_shell 297, run_code 185, write_file 48, edit_file 11, others under 10.
+- Run 2026-11-05-19-07-15-bce32b: 472 repeated actions. Its top call is child_context with the child and run arguments, 264 times, with no wait. That is a polling loop.
+- Run 2026-11-05-15-30-50-484992: 393 repeated actions.
+- skill-loaded events: 157 across the 444 runs.
+- next_context with a waitMs argument: 1 in the run logs. The transcripts show the wait form is used (14 to 18 times per session), so the run logs and the transcripts count different things; the transcript count is the measured wait use.
+
+Three waste sources, each with the habit that addresses it (skills/gm/SKILL.md, Habits):
+
+1. Zero-wait polling (child_context 264 times in one run, next_context repeated across runs): habit "Wait in one call, do not poll".
+2. Repeated skill reads (13 in session 7ae15e26; 157 skill-loaded events): habit "Read the served skill once per connection".
+3. Turns that end while their own job runs (median gap 117 to 508 s, p90 222 to 1588 s across the three sessions, which mix user time with job time): habit "Keep the wait in the turn that started the job".
+
+Not addressed by a new habit: the 2562 tool uses and 623 KB of results over 20000 characters in session 7ae15e26. The existing habit "Keep what you carry small" covers them; the measured repeat is in the next line.
+
+Phase B for this item: the gm witnesses that cover the skill change, with wall times, are recorded in the Phase B section that follows.
