@@ -113,7 +113,7 @@ if(GMNEW_TXIKI_WASI)
     target_compile_options(gm_runcode PRIVATE -include ${GMNEW_TXIKI_ROOT}/browser/txiki-browser.h)
     target_link_libraries(gm_runcode PRIVATE gm_txiki_core_wasi)
 
-    add_executable(gm_txiki_wasi ${GMNEW_TXIKI_GLUE_DIR}/txiki_shim.c)
+    add_executable(gm_txiki_wasi ${GMNEW_TXIKI_GLUE_DIR}/txiki_shim.c ${GMNEW_TXIKI_GLUE_DIR}/run_entry.cpp)
     set_target_properties(gm_txiki_wasi PROPERTIES SUFFIX ".wasm" C_STANDARD 11 C_EXTENSIONS ON CXX_STANDARD 20)
     target_compile_definitions(gm_txiki_wasi PRIVATE ${GMNEW_TXIKI_WASI_DEFINES})
     target_include_directories(gm_txiki_wasi SYSTEM PRIVATE ${GMNEW_TXIKI_WASI_INCLUDES})
@@ -123,7 +123,7 @@ if(GMNEW_TXIKI_WASI)
         -mexec-model=reactor -Wl,--no-entry -Wl,--export-dynamic -Wl,--no-gc-sections
         -Wl,--export=gm_txiki_new -Wl,--export=gm_txiki_free -Wl,--export=gm_txiki_context
         -Wl,--export=gm_txiki_loop_alive -Wl,--export=gm_txiki_loop_turn -Wl,--export=gm_txiki_load_builtin
-        -Wl,--export=gm_txiki_refresh_loop_time
+        -Wl,--export=gm_txiki_refresh_loop_time -Wl,--export=gm_run_body
         -Wl,--export=malloc -Wl,--export=free -Wl,--export=realloc -Wl,--export=calloc
         -lc++ -lc++abi -lwasi-emulated-signal -lwasi-emulated-process-clocks -lwasi-emulated-getpid -lm
     )

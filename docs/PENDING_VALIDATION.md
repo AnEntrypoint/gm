@@ -1626,3 +1626,15 @@ Native regression, after the shared changes (platform layer, root Threads): `cma
 Open:
 - The engine is linked but unreachable from the reactor's exports. To put run_code in the binary, either pull the archive with --whole-archive (size grows, nothing can call it), or export a body-run entry (new surface; owner decision). The 120 s interrupt deadline and the module loader are in the engine code and are not witnessed in the wasm until one of these is chosen.
 - Browser module loading has no filesystem: the page has no preopened directory, so a module import fails to load there by design.
+
+## gm pass, Phase A: run_code reachable from the wasm exports, with the 120 s deadline (2026-11-10)
+
+Code and build configuration only; no build or witness in this stretch. The witnesses for each change run in Phase B of this pass.
+
+| change | file | witness (Phase B) |
+|---|---|---|
+| New C-ABI entry `gm_run_body(const char *body, const char *format)`. It runs gm::run_body with an empty verb table, a 120000 ms JavaScript budget (BodyControls.js_budget), and project root "" (no filesystem in the browser). It returns a malloc'd NUL-terminated JSON text, `{"ok":true,"value":...}` or `{"ok":false,"error":...}`; the caller frees it with the exported free. | native/components/quickjs/txiki/run_entry.cpp (new) | txiki-wasi-browser-check and txiki-wasi-check: run_code calls through gm_run_body (value, timer, and a body that never returns, which must end with the 120 s deadline text). |
+| The wasm reactor compiles run_entry.cpp next to txiki_shim.c, so the engine's references to gm_txiki_new and the other shim functions resolve in the executable. | native/components/quickjs/CMakeLists.txt, gm_txiki_wasi add_executable | cmake --build build/wasi --target gm_txiki_wasi (Phase B, build). |
+| The export list adds gm_run_body to the seven gm_txiki_* exports, malloc, free, realloc and calloc. No export is removed. | native/components/quickjs/CMakeLists.txt, gm_txiki_wasi target_link_options | Phase B: the export list of the built wasm, quoted. |
+
+Not changed in this stretch: the platform layer (fcf85cd), the Threads alias, gm_runcode and gm_json on the link line, and the seven shim functions.
