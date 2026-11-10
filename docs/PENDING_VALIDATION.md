@@ -9,6 +9,18 @@ S1 on 28bb712: skillCheck ok (every MCP_RULES line in the skill, no bare tool na
 | # | Commit | File | Change | Witness needed |
 |---|---|---|---|---|
 | S1 | local, Phase A | skills/gm/SKILL.md | rewritten as habits (do each thing once, batch a step, let a job run, keep what you carry small, work through gm, debug live then test once, stop only what you started); the seven run rules kept verbatim; the Spending turns list and the bundling examples removed | Phase B: src/skills.mjs skillCheck ok (every rule of MCP_RULES in the skill, no bare tool name); tools/check-skill-serve.mjs; a live skill://gm/SKILL.md read equals the checkout file; wc -c below 12000 |
+## Stretch 2026-11-10 (Bash gap): Phase B witnessed
+
+S2a and S2b on e0f3663 and 1a5f3bf, on build/release (cmake --build build/release -j 8, exit 0, linking gm and gm-core):
+- node --check on src/tools.mjs, src/mcp.mjs, src/prompt.mjs, src/skills.mjs: ok.
+- default foreground timeout: `sleep 62; echo finished-after-62s` with no timeoutMs: native exit 0 in 62022 ms, Node exit 0 in 62055 ms, output finished-after-62s (driver /tmp/gm-witness/s2.mjs). The installed gm, whose default is 60000 ms, returned no output for the same command.
+- default at the limit: `sleep 305; echo should-not-print` with no timeoutMs, native: the job value is `timed out after 300000 ms`, statement "run_shell stopped: timeout after 300000 ms with no output ... Pass timeoutMs (up to 3600000) or start it with job_start." (driver /tmp/gm-witness/s4.mjs).
+- fs_op, the same script on both engines: mkdir fsop/a/b/c, cp fsop/a to fsop/d, mv fsop/d to fsop/e, rm fsop/e each return ok with their output string; rm of "/" is refused; list_dir fsop shows a/; stat of fsop/e is ENOENT. The two engines give identical replies.
+- parity: node native/tests/parity/run.mjs --bin build/release/native/components/host/gm: 17/96 match, 0 differ (57 native-ahead, 22 documented-gap). Same counts as the last witness with one more scenario.
+- Node restart orphan (from the open list): node tools/check-restart-body-orphan.mjs, exit 0.
+
+Defects found in Phase B: none in the two stretch 2 changes.
+
 ## Stretch 2026-11-10 (txiki on thebird artifact): Phase B witnessed
 
 S3a on ed97869, run on the thebird artifact /workspace/thebird/web/vendor/txiki/tjs.wasm (sha256 dcd3a4342705967bfd4188aea39a4c7d368cfd7c90a42918e6fc72f83da656c1), pin read from /workspace/thebird/scripts/vendor-txiki.mjs:
