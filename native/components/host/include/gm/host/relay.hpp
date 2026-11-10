@@ -43,6 +43,7 @@ struct RelayOptions {
     std::vector<std::string> reexec_argv;
     std::optional<json::Value> initialize;
     bool skill_read = false;
+    std::vector<std::string> resend;
     std::optional<UpdatePolicy> update;
 };
 
@@ -58,6 +59,7 @@ public:
     void host_closed();
     void request_restart(std::string reason);
     void reexec();
+    bool only_resendable_in_flight() const;
 
     std::uint64_t restarts() const;
     std::uint64_t failed_builds() const;

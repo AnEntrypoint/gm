@@ -154,8 +154,11 @@ void Relay::start() {
         fail_with(lock, failure_);
     else if (!replay_handshake(lock))
         fail_with(lock, "the worker did not answer the handshake");
-    else
+    else {
         mark_running(lock);
+        for (std::string& line : options_.resend) route_host_line(lock, std::move(line));
+        options_.resend.clear();
+    }
     control_ = std::thread([this] { control_loop(); });
     if (options_.update && options_.update->enabled) updater_ = std::thread([this] { update_loop(); });
 }
@@ -450,10 +453,14 @@ void Relay::request_restart(std::string reason) {
     changed_.notify_all();
 }
 
+bool Relay::only_resendable_in_flight() const {
+    return std::all_of(inflight_.begin(), inflight_.end(), [&](const auto& call) { return resendable_.contains(call.first); });
+}
+
 void Relay::reexec() {
 #if !defined(_WIN32)
     Lock lock(mutex_);
-    if (!reexec_pending_ || options_.reexec_argv.empty() || state_ != State::Running || !inflight_.empty() || swapping_ ||
+    if (!reexec_pending_ || options_.reexec_argv.empty() || state_ != State::Running || !only_resendable_in_flight() || swapping_ ||
         host_gone_)
         return;
     reexec_pending_ = false;
@@ -461,6 +468,15 @@ void Relay::reexec() {
     say("re-executing the relay on the new build");
     stop_worker(lock);
     std::vector<std::string> argv = options_.reexec_argv;
+    json::Array carried;
+    for (const auto& [id, method] : inflight_) {
+        if (auto line = resendable_.find(id); line != resendable_.end()) carried.emplace_back(line->second);
+    }
+    if (!carried.empty()) {
+        say("carrying " + std::to_string(carried.size()) + " waiting next_context call(s) to the new relay");
+        argv.emplace_back("--resend");
+        argv.push_back(json::dump(json::Value(std::move(carried))));
+    }
     if (options_.update) {
         const std::filesystem::path installed = options_.update->install_dir / executable_name();
         std::error_code ec;

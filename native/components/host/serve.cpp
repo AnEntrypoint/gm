@@ -56,18 +56,25 @@ int run_serve(const HostArgs& args) {
     const std::filesystem::path install_dir = current_executable().parent_path();
     RelayOptions options;
     options.worker_argv = {worker_executable(install_dir).string(), "worker"};
-    for (std::string& arg : without_flags(args.rest, {"--runs", "--resume", "--run-dir", "--workspace", "--supervised", "--owner"}))
+    for (std::string& arg : without_flags(args.rest, {"--runs", "--resume", "--run-dir", "--workspace", "--supervised", "--owner", "--resend"}))
         options.worker_argv.push_back(std::move(arg));
     options.worker_argv.insert(options.worker_argv.end(), {"--workspace", workspace.string(), "--run-dir",
                                                            run_dir->string(), "--supervised", "yes", "--owner",
                                                            relay_process_id()});
     options.reexec_argv = {current_executable().string(), "serve"};
-    for (std::string& arg : without_flags(args.rest, {"--runs", "--resume", "--run-dir", "--workspace", "--handshake", "--skill-read"}))
+    for (std::string& arg : without_flags(args.rest, {"--runs", "--resume", "--run-dir", "--workspace", "--handshake", "--skill-read", "--resend"}))
         options.reexec_argv.push_back(std::move(arg));
     options.reexec_argv.insert(options.reexec_argv.end(), {"--workspace", workspace.string(), "--run-dir",
                                                            run_dir->string()});
     if (const auto handshake = args.flag("--handshake")) {
         if (auto parsed = json::parse(*handshake)) options.initialize = std::move(*parsed);
+    }
+    if (const auto resend = args.flag("--resend")) {
+        if (auto parsed = json::parse(*resend); parsed && parsed->is_array()) {
+            for (const json::Value& line : parsed->as_array()) {
+                if (line.is_string()) options.resend.push_back(line.as_string());
+            }
+        }
     }
     const auto skill_read = args.flag("--skill-read");
     options.skill_read = skill_read && *skill_read == "yes";
