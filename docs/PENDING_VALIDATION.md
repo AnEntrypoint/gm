@@ -2139,3 +2139,17 @@ The skill is read at run time from the checkout (native default source, skills_d
 Cost of the change, measured: the skill grew from 9940 to 11302 bytes (+1362), so the one refusal a connection receives is about 1.4 KB larger. The three habits are the cost; the habit against each measured waste source is the reason.
 
 Defects found in Phase B: none. The installed-build step is not run and waits for the dispatcher's go.
+
+## gm pass, installed build (2026-11-10): the owner's go, installed at 4101e4a-1
+
+Owner instruction (pasted, 2026-11-10): install the new gm build now. The install is the owner's direct request; fx was busy on stretch 9 and thebird was idle, and neither was waited on.
+
+Build (once): cmake -S . -B build/release -DGMNEW_VERSION=4101e4a-1, then cmake --build build/release -j. BUILD_EXIT=0, wall 15 s (job pid 416124). Stamp: `gm --version` prints "4101e4a-1 (4101e4a)".
+
+Install (once). scripts/install.sh fetches the published release, so it cannot install a local build. The same layout was staged by hand: ~/.gmnew/stage-4101e4a holds gm, gm-core, defaults, leaves and skills copied from build/release/native/components/host; the old ~/.gmnew/current moved to /config/.gmnew/previous-6582078-339 (the build it replaced, stamp 6582078-339); the stage moved to ~/.gmnew/current; ~/.gmnew/current/.gmnew-update.json was written as {"checked_ms":...,"etag":"","version":"4101e4a-1"}. Output: INSTALLED=4101e4a-1 (4101e4a). The user-level registration was not rewritten: ~/.claude.json mcpServers.gm is {"command":"/config/.gmnew/current/gm","args":["serve"]} before and after, so it already points at the installed path.
+
+Installed-build check: node tools/check-installed-build.mjs /config/.gmnew/current/gm 4101e4a: installed-build-check: ok (version "4101e4a-1 (4101e4a)"; skill://gm/SKILL.md equals /workspace/gm/skills/gm/SKILL.md with ttlMs 0). Wall 0.15 s.
+
+Fresh gm session serving the skill habits: a new serve process (quiet MCP config, scratch workspace) answered resources/read with ttlMs 0; the text contains "Wait in one call, do not poll" and "Read the served skill once per connection". A first probe with --mcp-config /dev/null and no workspace directory timed out; that was the probe's own setup, not the install, and the second probe with a real quiet config answered at once.
+
+Not done: the release channel. The next update check fetches the published release, which does not carry 4101e4a yet; when that release exists, scripts/install.sh replaces this local build with it.
