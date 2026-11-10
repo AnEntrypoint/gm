@@ -123,7 +123,7 @@ A file `gm.write_file`, `gm.edit_file` or `gm.run_shell` wrote in this run is un
 
 ## Validation
 
-First action. The first tool call of every session is a read of skill://gm/SKILL.md, before any other work: ReadMcpResourceTool (server gm, uri skill://gm/SKILL.md), or resources/read with {"uri":"skill://gm/SKILL.md"}. The server enforces it: the first run_code on a connection that has not read the skill is refused once, and that refusal carries the skill text in `skill`, so a client with no resource-read tool is not locked out. The gm prompt counts as the read too. The read is per connection, so a new connection reads again.
+First action. The first tool call of every session is a read of skill://gm/SKILL.md, before any other work: ReadMcpResourceTool (server gm, uri skill://gm/SKILL.md), or resources/read with {"uri":"skill://gm/SKILL.md"}. The server enforces it: the first run_code on a connection that has not read the skill is refused once, and that refusal carries the skill text once, as its second content block, so a client with no resource-read tool is not locked out. The gm prompt counts as the read too. The read is per connection, so a new connection reads again.
 
 Order of work:
 

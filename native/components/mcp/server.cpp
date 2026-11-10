@@ -45,7 +45,7 @@ constexpr const char* kServerName = "gm";
 constexpr const char* kServerTitle = "gm run worker";
 constexpr const char* kGmSkillUri = "skill://gm/SKILL.md";
 constexpr int kStepStartRule = 2;
-constexpr const char* kSkillReadRefusal = "run_code refused: skill://gm/SKILL.md had not been read in this connection, so this reply carries its text in skill. Read it and follow it, then call run_code again. This refusal is sent once per connection.";
+constexpr const char* kSkillReadRefusal = "run_code refused: skill://gm/SKILL.md had not been read in this connection, so its text is the second content block of this reply. Read it and follow it, then call run_code again. This refusal is sent once per connection.";
 constexpr std::size_t kReplyMemory = 256;
 constexpr std::size_t kOutputCap = 20000;
 constexpr std::size_t kOutputPage = 20000;
@@ -2320,12 +2320,12 @@ struct Server::State {
     }
 
     Value run_code(const Value& args);
-    std::optional<Value> skill_read_refused() {
+    std::optional<std::string> skill_text_for_refusal() {
         auto served = serve_skill_file(kGmSkillUri, "run_code");
         gm_skill_read = true;
         if (!served) return std::nullopt;
         append("refusal", object().set("tool", "run_code").set("stage", "skill-read").set("error", kSkillReadRefusal));
-        return object().set("ok", false).set("error", kSkillReadRefusal).set("skill", *served->find("text"));
+        return served->find("text")->as_string();
     }
 
     Value invoke(const std::string& name, const Value& args) {
@@ -2352,9 +2352,10 @@ struct Server::State {
         s().step_calls += 1;
     }
 
-    Value tool_result(const std::string& name, const Value& out, std::optional<std::uint64_t> seq) {
+    Value tool_result(const std::string& name, const Value& out, std::optional<std::uint64_t> seq, const std::optional<std::string>& attached_text = std::nullopt) {
         Value content = array();
         content.push(object().set("type", "text").set("text", json::dump(out)));
+        if (attached_text) content.push(object().set("type", "text").set("text", *attached_text));
         Value meta = object().set(kRunMeta, s().run_id);
         if (seq) meta.set(kRunSeq, number_of(*seq));
         Value result = object().set("content", std::move(content));
@@ -2415,7 +2416,8 @@ struct Server::State {
             throw RpcError(-32602, "Unknown tool: " + name +
                                        "; the code surface serves next_context, run_code, task_set and finish; call a verb as gm.<name>(args) inside run_code");
         }
-        std::optional<Value> gated = name == "run_code" && !gm_skill_read ? skill_read_refused() : std::nullopt;
+        std::optional<std::string> undelivered_skill = name == "run_code" && !gm_skill_read ? skill_text_for_refusal() : std::nullopt;
+        const bool gated = undelivered_skill.has_value();
         if (!gated && !s().run_started && !s().ended && name != "next_context" && name != "finish") {
             note_rule(kStepStartRule, name + " was called before the first next_context of the run");
         }
@@ -2431,7 +2433,7 @@ struct Server::State {
             const Value* token = meta != nullptr ? meta->find("progressToken") : nullptr;
             if (token != nullptr && (token->is_string() || token->is_number())) ticker.emplace(*this, *token);
         }
-        Value out = gated ? std::move(*gated) : invoke(name, args);
+        Value out = gated ? object().set("ok", false).set("error", kSkillReadRefusal) : invoke(name, args);
         ticker.reset();
         std::optional<std::uint64_t> seq;
         {
@@ -2441,7 +2443,7 @@ struct Server::State {
         }
         watch_call(name, out);
         if (auto notice = rules_notice()) out.set("rulesNotice", *notice);
-        return tool_result(name, out, seq);
+        return tool_result(name, out, seq, undelivered_skill);
     }
 
     void remember(const std::string& key, const Value& result) {
