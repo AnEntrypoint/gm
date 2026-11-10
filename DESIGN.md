@@ -1316,7 +1316,7 @@ Rationale the comment sweep moved out of src/ (one section per module group). Ru
 - The served skills (SEP-2640) are read on each request, so an edit under skills/ is served without a restart; each skill's files are listed and read from its directory, every file a resource with a sha256 digest and a size, and SKILL.md is the skill's uri.
 - A file caught mid-write keeps the last read of that skill that succeeded; before a skill has read cleanly, the error reaches the caller.
 - A resource is one file: SKILL.md is named by its frontmatter, as the SEP asks, and any other file by its path.
-- skills/get returns the entry of one served skill, named by its SKILL.md uri; any other uri is -32602 (src/mcp.mjs:91). resources/read refuses an unknown uri with -32002 (src/mcp.mjs:108).
+- skills/get returns the entry of one served skill, named by its SKILL.md uri; any other uri is -32002 with data.uri (src/mcp.mjs:93), as resources/read is (src/mcp.mjs:467). Decided 2026-11-10; a missing or non-string uri argument stays -32602.
 - The prompts are the served skills, read on each request: the gm prompt takes the run's task, which its session prompt gives to a run started without --task; the gm-continue prompt takes no argument.
 - A host that stops calling is noticed after --host-idle-ms with no call in flight; next_context waitMs is capped at MAX_WAIT_MS, 300000 ms (src/mcp.mjs:133, 207), because a host cuts a call that runs too long.
 - The code surface (--surface code) serves next_context, finish and run_code; every other verb is called from run_code as gm.<name>(args); the tools surface serves the whole list, as before.
