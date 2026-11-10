@@ -14,6 +14,7 @@ namespace gm::engine {
 namespace {
 
 constexpr std::string_view embedded_builtin_prefix = "tjs:";
+constexpr std::string_view node_builtin_prefix = "node:";
 constexpr std::chrono::milliseconds idle_loop_pause{1};
 
 platform::SharedMutex& sessions_mutex() {
@@ -63,6 +64,10 @@ JSModuleDef* load_module_from_disk(JSContext* ctx, const char* module_name, void
 #if defined(GM_HAVE_TXIKI)
     if (std::string_view(module_name).starts_with(embedded_builtin_prefix)) return gm_txiki_load_builtin(ctx, module_name);
 #endif
+    if (std::string_view(module_name).starts_with(node_builtin_prefix)) {
+        JS_ThrowReferenceError(ctx, "'%s' is not available in run_code; use gm.read_file, gm.write_file, gm.fs_op or gm.run_shell", module_name);
+        return nullptr;
+    }
     auto source = platform::read_file(module_name);
     if (!source) {
         JS_ThrowReferenceError(ctx, "could not load module '%s'", module_name);
