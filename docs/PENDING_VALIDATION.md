@@ -1,5 +1,17 @@
 # Pending validation
 
+## AGENTS.md audit and last-witness line (2026-11-10, run 2, stretch 4 item 1): Phase A
+
+The audit ran before the edit, on the file as it stood at 03be6c7 (19 KB). Method: every path, check name and symbol the file named was looked up in the tree (80 names; 76 found, 4 not at the named place); each note was then read against the code, README, DESIGN.md and the served skill.
+
+Kept (a rule, or a fact a run, witness or measurement revealed): the owner rules and the read-first list; the witness rule; the install and tool facts (npm install, ninja in a venv, the 409087f-77 updater, the gh full-SHA rule); the 120 s client backgrounding and the timeoutMs cutoff; the ssh stdin rule; the job-lifetime budget; the task leak, open until the installed build updates; fx's events-twice row, open on fx's reply text; the browser tabs limitation, open on a page-identity design; the build stamp rule; the body reap at restart; shell-job adoption with its caveats; the skill gate and the skill read across a restart; the relay re-exec; the ASan library order; the load-error frame; the tokenized-text heap measurement; the known gaps, with fetch added; the platform notes, with the Windows stderr line reworded to what child.cpp shows under _WIN32.
+
+Removed, stated by the code, README, DESIGN.md or the skill: the browser profile note (PLAYWRITER_PROJECT_DIR is set in src/mcp-client.mjs and native/components/mcpclient/client.cpp, and README and DESIGN state it); the served-skills and native-leaves ordering notes (skills_dir_of and leaves_dir_of in native/components/host/options.cpp); the search and grep notes (src/search.mjs STATE_DIRS, native search_impl.cpp STAMP_SETTLE_MS, the scope-all rule, the tracked default); the hot-reload section (it repeats the owner rule and the shell-job note); the MCP-servers section (the skill's Browser section states the playwriter rule, and stop_body is code); the setup and remote lines (setup.sh and git remote); the Node read, task, run_code and finish parity note (fnv1a64Hex and unitBoundary in src/tools.mjs), the claim that Node's finish reply carries the browser key (src/mcp.mjs:883 sets it, so the parity 'native-ahead' browser key row is the stale part, not this); the "first-step host truncation correction is unmarked" line (next_context's description states the owner:true rule); the playwriter crash history (the fix is in code and its one-line rule stays under Platform notes); the progress-notification note (tools/check-run-code-progress.mjs pins it); the finish row refusal and the concurrent-search crash (both fixed, the code states the lock); the test-file history line was condensed, not removed.
+
+Corrected: the last-witness line. It said 17 of 95 and 22 documented-gap, from the 2026-11-10 run before the find verb. It now says the run after the find verb (8586281): 17 of 97 match, 0 cutover-expected, 58 native-ahead, 22 documented-gap, 0 differ. Phase B reruns the parity harness to confirm the figure on the committed state.
+
+Measured size: AGENTS.md is 12234 bytes after the edit (gate limit 30 KB).
+
 ## Stretch 2026-11-10: stretch 4 accounting (run 2)
 
 Read the ranked tables (the 2026-11-10 "ranked open work" block and the "ranked reachable items" block) against this pass. Already closed with their own witnesses: G9 (rows 32 and 33), the SIGKILL body reap (wreap, the body-9 record), the ci_status no-commit message (41c0640), and the Node arm of the tool-only client (tools/check-no-resource-client.mjs, run by check-build).
