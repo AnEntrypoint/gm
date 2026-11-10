@@ -131,7 +131,7 @@ constexpr std::size_t kLogTailBytes = 65536;
 constexpr std::size_t kOpenList = 20;
 constexpr std::size_t kNoticePrdWindow = 5;
 constexpr std::size_t kRowsNamed = 5;
-constexpr double kDefaultBodyTimeoutMs = 180000;
+constexpr double kDefaultBodyTimeoutMs = 100000;
 constexpr double kMaxWaitMs = 100000;
 constexpr double kMaxJobWaitMs = 3600000;
 constexpr std::uint64_t kSingleVerbBodiesBeforeNotice = 3;
@@ -221,7 +221,7 @@ std::string run_code_description(const std::string& verb_names) {
            "gm.verbs({ name: 'read_file' }) returns just that verb's schema, gm.verbs({ names: true }) returns just "
            "the names, and an unknown name is an error. Wrap a call that may throw in gm.try(fn), which returns its value or { ok: false, error } as data, so one failure does not hide the rest of a batch. A failed call returns "
            "{ok:false, error} and does not stop the body. The body's return value comes back as JSON. A body still "
-           "running after timeoutMs (default 180000, at most 3600000) becomes a background run: the call returns its "
+           "running after timeoutMs (default 100000, at most 3600000) becomes a background run: the call returns its "
            "job id at once, job_status with waitMs returns its value, and finish is refused while it runs unless "
            "stopBackground is true. To wait for a job, call job_status({ job, waitMs, tail }) once: it blocks until the job ends or waitMs "
            "passes (at most 3600000) and returns exitCode and the last tail characters, so no sleep or poll loop is needed. One step is one body: read the inputs in one Promise.all, decide in code, act "
@@ -1017,6 +1017,7 @@ struct Server::State {
         fs::path dir = s().run_dir / "jobs";
         std::error_code ec;
         if (!fs::is_directory(dir, ec)) return;
+        proc::reap_ledgers(dir);
         for (const auto& entry : fs::directory_iterator(dir, ec)) {
             if (entry.path().extension() != ".json") continue;
             std::string text;
@@ -1029,7 +1030,6 @@ struct Server::State {
             std::string job = string_of(*status, "job");
             auto body = seq_field(*status, "body").value_or(0);
             std::string tail = body_text(s(), body, kTailCap);
-            proc::reap_ledger(dir / (job + ".pids"));
             Value killed = *status;
             const std::string statement = ::gm::jobs::body_restart_statement(job);
             killed.set("state", "killed").set("reason", "restart").set("statement", statement);

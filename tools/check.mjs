@@ -77,6 +77,8 @@ const toolingChecks = [
     ['prd refuted reopen check', 'check-prd-refuted-reopen.mjs', 120000],
     ['instruction automations check', 'check-instruction-automations.mjs', 180000],
     ['job progress check', 'check-job-progress.mjs', 180000],
+    ['restart body orphan check', 'check-restart-body-orphan.mjs', 240000],
+    ['foreground hold check', 'check-foreground-hold.mjs', 360000],
 ];
 for (const [label, file, timeout] of toolingChecks) {
     const args = [join(root, 'tools', file)];
