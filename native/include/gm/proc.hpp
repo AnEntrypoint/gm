@@ -46,6 +46,10 @@ long long resident_kb(long long pid);
 
 unsigned long hidden_creation_flags(unsigned long flags);
 
+#if defined(_WIN32)
+long long parent_pid_of_self();
+#endif
+
 using Owner = std::uint64_t;
 
 class OwnerScope {

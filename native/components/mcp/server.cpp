@@ -523,7 +523,14 @@ std::string pretty_flat(const Value& object_value) {
 
 Value caller_of_process() {
 #if defined(_WIN32)
-    return object().set("connection", static_cast<std::uint64_t>(_getpid())).set("parent", nullptr);
+    const long long parent = proc::parent_pid_of_self();
+    Value caller = object().set("connection", static_cast<std::uint64_t>(_getpid()));
+    if (parent > 0) {
+        caller.set("parent", static_cast<std::uint64_t>(parent));
+    } else {
+        caller.set("parent", nullptr);
+    }
+    return caller;
 #else
     return object().set("connection", static_cast<std::uint64_t>(getpid())).set("parent", static_cast<std::uint64_t>(getppid()));
 #endif
@@ -2902,7 +2909,7 @@ struct Server::State {
         if (auto served = serve_skill_file(uri, "resource")) {
             Value contents = array();
             contents.push(*served);
-            return cacheable(object().set("contents", std::move(contents)), kVolatileTtlMs);
+            return cacheable(object().set("contents", std::move(contents)), kListTtlMs);
         }
         throw RpcError(-32002, "resource not found: " + uri, object().set("uri", uri));
     }
