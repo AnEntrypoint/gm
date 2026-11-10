@@ -2887,7 +2887,7 @@ struct Server::State {
         if (auto served = serve_skill_file(uri, "resource")) {
             Value contents = array();
             contents.push(*served);
-            return cacheable(object().set("contents", std::move(contents)), kListTtlMs);
+            return cacheable(object().set("contents", std::move(contents)), kVolatileTtlMs);
         }
         throw RpcError(-32002, "resource not found: " + uri, object().set("uri", uri));
     }
