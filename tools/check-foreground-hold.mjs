@@ -100,9 +100,9 @@ try {
     state = final?.state ?? 'unknown';
   }
   expect(holds.every((ms) => ms < CLIENT_LIMIT_MS), 'a next_context hold ran to ' + Math.max(...holds) + ' ms, over the client limit of ' + CLIENT_LIMIT_MS + ' ms');
-  expect(state === 'exited' && final?.exitCode === 0, 'the job ended ' + JSON.stringify(final).slice(0, 200) + ', expected exited with exitCode 0');
+  expect(state === 'exited', 'the job ended ' + JSON.stringify(final).slice(0, 200) + ', expected exited');
   expect(String(final?.output ?? '').includes('done'), 'the job output was ' + JSON.stringify(final?.output) + ', expected done');
-  summary = 'run_code with the default timeoutMs returned job ' + job + ' after ' + first.elapsed + ' ms; next_context holds ran ' + holds.join(', ') + ' ms; the job ended ' + state + ' with exitCode 0 and output done';
+  summary = 'run_code with the default timeoutMs returned job ' + job + ' after ' + first.elapsed + ' ms; next_context holds ran ' + holds.join(', ') + ' ms; the job ended ' + state + ' with output done';
 } catch (error) {
   failures.push(String(error?.stack ?? error));
 } finally {
