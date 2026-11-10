@@ -11,7 +11,8 @@ import { MCP_RULES } from './prompt.mjs';
 
 export const SERVED_SKILLS = ['gm', 'gm-continue'];
 
-export function parseSkill(text, dir) {
+export function parseSkill(source, dir) {
+  const text = source.replace(/\r\n/g, '\n');
   const match = /^---\n([\s\S]*?)\n---\n?/.exec(text);
   if (!match) throw new Error(`skills/${dir}/SKILL.md has no frontmatter`);
   const frontmatter = {};
