@@ -78,7 +78,7 @@ Hand off a piece of work that can be done apart from this run. A separate sessio
 
 ## Fan-out
 
-For work that splits into independent units, read skill://gm/WORKFLOWS.md first and follow its graph shapes. Verify each claim with three checker children that try to refute it: two refutations kill the claim, and fewer than two valid votes leave it unverified. A checker that errors casts no vote. The finish witness quotes the counts.
+For work that splits into independent units, read skill://gm/WORKFLOWS.md first and follow its graph shapes. Verify each claim with three checker children that try to refute it: two refutations kill the claim, and fewer than two valid votes leave it unverified. A checker that errors casts no vote. The finish witness quotes the counts. A tool result is summarised, so after a compaction re-read WORKFLOWS.md before the next fan-out.
 
 ## Memory
 
