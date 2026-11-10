@@ -27,6 +27,18 @@ jobs:
       - name: Node dependencies
         shell: bash
         run: npm ci --ignore-scripts
+      - name: Chromium for the browser-scope check (linux-arm64)
+        shell: bash
+        run: |
+          dir="$RUNNER_TEMP/playwright-chromium"
+          mkdir -p "$dir" && cd "$dir"
+          npm init -y >/dev/null
+          npm install --no-audit --no-fund playwright-core@1.65.0
+          npx playwright-core install --with-deps chromium
+          browser=$(node -p "require('$dir/node_modules/playwright-core').chromium.executablePath()")
+          test -x "$browser" || { echo "browser path missing: $browser" >&2; exit 1; }
+          echo "PLAYWRITER_BROWSER_PATH=$browser" >> "$GITHUB_ENV"
+          echo "PLAYWRITER_NO_SANDBOX=1" >> "$GITHUB_ENV"
       - name: Check asan build (conformance, one run)
         shell: bash
         env:
@@ -50,6 +62,18 @@ jobs:
       - name: Node dependencies for the gdb run
         shell: bash
         run: npm ci --ignore-scripts
+      - name: Chromium for the browser-scope check (linux-arm64)
+        shell: bash
+        run: |
+          dir="$RUNNER_TEMP/playwright-chromium"
+          mkdir -p "$dir" && cd "$dir"
+          npm init -y >/dev/null
+          npm install --no-audit --no-fund playwright-core@1.65.0
+          npx playwright-core install --with-deps chromium
+          browser=$(node -p "require('$dir/node_modules/playwright-core').chromium.executablePath()")
+          test -x "$browser" || { echo "browser path missing: $browser" >&2; exit 1; }
+          echo "PLAYWRITER_BROWSER_PATH=$browser" >> "$GITHUB_ENV"
+          echo "PLAYWRITER_NO_SANDBOX=1" >> "$GITHUB_ENV"
       - name: Run the conformance check under gdb and print a backtrace on a signal
         shell: bash
         run: |
