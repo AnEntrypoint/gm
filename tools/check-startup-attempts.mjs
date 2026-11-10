@@ -64,6 +64,7 @@ function eventsOf(reply) {
 }
 
 async function arm(label, command, args) {
+  const failuresBefore = failures.length;
   const server = start(command, args);
   try {
     await server.rpc('initialize', { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'startup-check', version: '1' } });
@@ -87,7 +88,7 @@ async function arm(label, command, args) {
     for (const [what, ok] of expect) if (!ok) failures.push(`${label}: ${what}`);
     arms.push(label);
     if (expect.some(([, ok]) => !ok)) console.log(`${label} diagnostics: ${events.length} events; the run_code reply was ${JSON.stringify(ran).slice(0, 800)}`);
-    console.log(`${label}: ${events.length} mcp-server events, ${failures.length === 0 ? 'all expectations hold' : 'see failures'}`);
+    console.log(`${label}: ${events.length} mcp-server events, ${failures.length === failuresBefore ? 'all expectations hold' : 'see failures'}`);
   } catch (error) {
     failures.push(`${label}: ${error.message}`);
   } finally {
