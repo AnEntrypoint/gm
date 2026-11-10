@@ -138,14 +138,13 @@ jobs:
           npm init -y >/dev/null
           npm install --no-audit --no-fund playwright-core@1.65.0
           npx playwright-core install chromium
-          echo "PLAYWRITER_BROWSER_PATH=$(node -p "require('$dir/node_modules/playwright-core').chromium.executablePath()")" >> "$GITHUB_ENV"
+          browser=$(PW_DIR="$dir" node -p "require(require('path').join(process.env.PW_DIR, 'node_modules', 'playwright-core')).chromium.executablePath()")
+          echo "PLAYWRITER_BROWSER_PATH=$browser" >> "$GITHUB_ENV"
       - name: Check the browser path for the browser-scope check (arm64-windows)
         if: matrix.target == 'arm64-windows'
         shell: bash
         run: |
-          printf 'PLAYWRITER_BROWSER_PATH=[%s]\n' "$PLAYWRITER_BROWSER_PATH"
-          if [ -e "$PLAYWRITER_BROWSER_PATH" ]; then echo "browser path exists"; else echo "browser path missing"; fi
-          if command -v cygpath >/dev/null; then cygpath -w "$PLAYWRITER_BROWSER_PATH"; fi
+          node -e 'const fs = require("fs"); const p = process.env.PLAYWRITER_BROWSER_PATH || ""; console.log("PLAYWRITER_BROWSER_PATH=[" + p + "]"); if (p === "" || !fs.existsSync(p)) { console.error("browser path missing: the browser-scope check needs the Chromium that the step above provisions"); process.exit(1); } console.log("browser path exists");'
       - name: Test
         shell: bash
         run: node tools/check-build.mjs build/${{ matrix.preset }}
