@@ -394,7 +394,7 @@ const SCENARIOS = [
       let fortyninth = {};
       for (let step = 1; step <= 50; step += 1) {
         fortyninth = fiftieth;
-        fiftieth = await call('next_context', {});
+        fiftieth = await call('next_context', { full: true });
       }
       ok('50 next_context calls reach stepsLeft 0', fiftieth.ok === true && fiftieth.step === 50 && fiftieth.stepsLeft === 0,
         short({ step: fiftieth.step, stepsLeft: fiftieth.stepsLeft }));
@@ -414,7 +414,7 @@ const SCENARIOS = [
         await limited.open();
         const limitedCall = async (name, args) => (await limited.rpc('tools/call', { name, arguments: args })).result?.structuredContent ?? {};
         let fiftiethLimited = {};
-        for (let step = 1; step <= 50; step += 1) fiftiethLimited = await limitedCall('next_context', {});
+        for (let step = 1; step <= 50; step += 1) fiftiethLimited = await limitedCall('next_context', { full: true });
         const retryId = limited.nextId;
         const refused = await limitedCall('next_context', {});
         ok('the 51st next_context is refused with the truthful step-limit text', refused.ok === false && refused.refused === true && refused.error === refusalText,
