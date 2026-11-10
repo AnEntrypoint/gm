@@ -224,6 +224,7 @@ struct Child::Handles {
     PROCESS_INFORMATION process{};
     HANDLE input = nullptr;
     HANDLE output = nullptr;
+    HANDLE error = nullptr;
 };
 
 namespace {
@@ -295,10 +296,22 @@ deoxidene::Result<std::shared_ptr<Child>, std::string> Child::spawn(const std::v
     SetHandleInformation(out_read, HANDLE_FLAG_INHERIT, 0);
     SetHandleInformation(in_read, HANDLE_FLAG_INHERIT, HANDLE_FLAG_INHERIT);
     SetHandleInformation(out_write, HANDLE_FLAG_INHERIT, HANDLE_FLAG_INHERIT);
+    HANDLE error_read = nullptr;
     HANDLE error_inherit = nullptr;
     const HANDLE std_error = GetStdHandle(STD_ERROR_HANDLE);
-    if (std_error && std_error != INVALID_HANDLE_VALUE)
+    if (options.capture_stderr) {
+        if (!CreatePipe(&error_read, &error_inherit, &none, 0)) {
+            CloseHandle(in_read);
+            CloseHandle(in_write);
+            CloseHandle(out_read);
+            CloseHandle(out_write);
+            return deoxidene::Err<std::string>("pipe failed");
+        }
+        SetHandleInformation(error_read, HANDLE_FLAG_INHERIT, 0);
+        SetHandleInformation(error_inherit, HANDLE_FLAG_INHERIT, HANDLE_FLAG_INHERIT);
+    } else if (std_error && std_error != INVALID_HANDLE_VALUE) {
         DuplicateHandle(GetCurrentProcess(), std_error, GetCurrentProcess(), &error_inherit, 0, TRUE, DUPLICATE_SAME_ACCESS);
+    }
     std::vector<HANDLE> inherited{in_read, out_write};
     if (error_inherit) inherited.push_back(error_inherit);
     SIZE_T attribute_size = 0;
@@ -335,6 +348,7 @@ deoxidene::Result<std::shared_ptr<Child>, std::string> Child::spawn(const std::v
     if (!ok) {
         CloseHandle(in_write);
         CloseHandle(out_read);
+        if (error_read) CloseHandle(error_read);
         return deoxidene::Err<std::string>("cannot start " + argv[0]);
     }
     std::shared_ptr<Child> child(new Child());
@@ -342,6 +356,7 @@ deoxidene::Result<std::shared_ptr<Child>, std::string> Child::spawn(const std::v
     child->handles_->process = process;
     child->handles_->input = in_write;
     child->handles_->output = out_read;
+    child->handles_->error = error_read;
     child->own_group_ = options.own_group;
     return child;
 }
@@ -349,6 +364,7 @@ deoxidene::Result<std::shared_ptr<Child>, std::string> Child::spawn(const std::v
 Child::~Child() {
     close_input();
     if (handles_->output) CloseHandle(handles_->output);
+    if (handles_->error) CloseHandle(handles_->error);
     if (!exit_code_) {
         kill();
         wait_for(std::chrono::milliseconds(2000));
@@ -399,7 +415,13 @@ void Child::terminate() {
     kill();
 }
 
-std::optional<std::string> Child::read_error_chunk() { return std::nullopt; }
+std::optional<std::string> Child::read_error_chunk() {
+    if (!handles_->error) return std::nullopt;
+    char chunk[65536];
+    DWORD n = 0;
+    if (!ReadFile(handles_->error, chunk, sizeof chunk, &n, nullptr) || n == 0) return std::nullopt;
+    return std::string(chunk, n);
+}
 
 void Child::kill() {
     if (!exit_code_) TerminateProcess(handles_->process.hProcess, 137);
