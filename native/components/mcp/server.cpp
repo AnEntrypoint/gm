@@ -3249,6 +3249,10 @@ struct Server::State {
         if (method == "skills/get") return skills_get(params);
         if (method == "resources/templates/list") return cacheable(resource_templates(), kListTtlMs);
         if (method == "subscriptions/listen") return open_listen(params, rpc_id);
+        if (method == "gm-core-flush") {
+            check_file_subscriptions();
+            return object();
+        }
         if (method == "resources/subscribe") return subscribe_resource(params);
         if (method == "resources/unsubscribe") return unsubscribe_resource(params);
         if (method == "completion/complete") return completion(params);
@@ -3470,7 +3474,6 @@ struct Server::State {
 
     void input_ended() {
         if (s().end_logged) return;
-        check_file_subscriptions();
         if (options.supervised) {
             s().ended = "restarting";
             stop_bodies("restart");
