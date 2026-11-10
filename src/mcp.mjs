@@ -465,7 +465,7 @@ function createSession({ workspace, runDir, skillGate, log, task, maxSteps, maxI
     if (run !== null) return cacheable({ contents: [run] }, VOLATILE_TTL_MS);
     const served = serveSkillFile(params?.uri, 'resource');
     if (!served.ok) throw new RpcError(-32002, `resource not found: ${params?.uri}`, { uri: params?.uri });
-    return cacheable({ contents: [{ uri: served.uri, mimeType: served.mimeType, text: served.output }] }, LIST_TTL_MS);
+    return cacheable({ contents: [{ uri: served.uri, mimeType: served.mimeType, text: served.output }] }, VOLATILE_TTL_MS);
   }
 
   function serveSkillFile(uri, via) {
