@@ -137,6 +137,7 @@ jobs:
           npx playwright-core install chromium
           browser=$(PW_DIR="$dir" node -p "require(require('path').join(process.env.PW_DIR, 'node_modules', 'playwright-core')).chromium.executablePath()")
           echo "PLAYWRITER_BROWSER_PATH=$browser" >> "$GITHUB_ENV"
+          PW_DIR="$dir" PW_BROWSER="$browser" node -e 'const { chromium } = require(require("path").join(process.env.PW_DIR, "node_modules", "playwright-core")); (async () => { const started = Date.now(); const b = await chromium.launch({ executablePath: process.env.PW_BROWSER, headless: true, timeout: 180000 }); const page = await b.newPage(); await page.goto("data:text/html,warm"); await b.close(); console.log("warm launch of the provisioned Chromium answered in " + (Date.now() - started) + " ms"); })().catch((error) => { console.error("warm launch failed: " + error.message); process.exit(1); });'
       - name: Check the browser path for the browser-scope check (arm64-windows)
         if: matrix.target == 'arm64-windows'
         shell: bash
