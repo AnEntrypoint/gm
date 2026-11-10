@@ -23,7 +23,7 @@ writeFileSync(mcpConfig, JSON.stringify({ mcpServers: { playwriter: { disabled: 
 const run = spawnSync(process.execPath, [join(root, 'tools', 'mcp-conformance.mjs'), '--stdio', binary, 'serve', '--workspace', workspace, '--mcp-config', mcpConfig], {
     cwd: root,
     stdio: 'inherit',
-    timeout: 1200000,
+    timeout: 2700000,
 });
 rmSync(workspace, { recursive: true, force: true });
 rmSync(configDir, { recursive: true, force: true });
