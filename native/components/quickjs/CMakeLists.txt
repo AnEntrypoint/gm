@@ -25,16 +25,14 @@ if(WIN32)
 else()
     target_link_libraries(gm_quickjs_ng PUBLIC m)
 endif()
-if(NOT GMNEW_TXIKI_WASI)
-    target_link_libraries(gm_quickjs_ng PUBLIC ${CMAKE_DL_LIBS} Threads::Threads)
-endif()
+target_link_libraries(gm_quickjs_ng PUBLIC ${CMAKE_DL_LIBS} Threads::Threads)
 if(MSVC)
     target_compile_options(gm_quickjs_ng PRIVATE /experimental:c11atomics /wd4018 /wd4061 /wd4100 /wd4200 /wd4242 /wd4244 /wd4245 /wd4267 /wd4388 /wd4389 /wd4456 /wd4457 /wd4996)
 else()
     target_compile_options(gm_quickjs_ng PRIVATE -funsigned-char -w)
 endif()
 
-add_library(gm_runcode STATIC engine.cpp runcode.cpp leaves.cpp query.cpp)
+add_library(gm_runcode STATIC engine.cpp runcode.cpp leaves.cpp query.cpp platform.cpp)
 target_link_libraries(gm_runcode PUBLIC gm_json PRIVATE gm_quickjs_ng)
 add_library(gm_leaves ALIAS gm_runcode)
 
@@ -120,7 +118,7 @@ if(GMNEW_TXIKI_WASI)
     target_compile_definitions(gm_txiki_wasi PRIVATE ${GMNEW_TXIKI_WASI_DEFINES})
     target_include_directories(gm_txiki_wasi SYSTEM PRIVATE ${GMNEW_TXIKI_WASI_INCLUDES})
     target_compile_options(gm_txiki_wasi PRIVATE ${GMNEW_TXIKI_WASI_OPTIONS})
-    target_link_libraries(gm_txiki_wasi PRIVATE gm_txiki_core_wasi)
+    target_link_libraries(gm_txiki_wasi PRIVATE gm_runcode gm_txiki_core_wasi gm_json gm_quickjs_ng)
     target_link_options(gm_txiki_wasi PRIVATE
         -mexec-model=reactor -Wl,--no-entry -Wl,--export-dynamic -Wl,--no-gc-sections
         -Wl,--export=gm_txiki_new -Wl,--export=gm_txiki_free -Wl,--export=gm_txiki_context

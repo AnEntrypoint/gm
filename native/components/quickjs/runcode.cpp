@@ -6,14 +6,12 @@
 #include <cstddef>
 #include <exception>
 #include <filesystem>
-#include <fstream>
-#include <iterator>
 #include <optional>
 #include <string>
-#include <system_error>
 #include <vector>
 
 #include "engine.hpp"
+#include "platform.hpp"
 
 namespace gm {
 namespace {
@@ -68,9 +66,7 @@ std::string load_error(const std::string& text, std::string_view body, std::size
 }
 
 std::optional<std::string> read_text(const fs::path& path) {
-    std::ifstream in(path, std::ios::binary);
-    if (!in) return std::nullopt;
-    return std::string(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());
+    return platform::read_file(path);
 }
 
 bool project_is_module(const fs::path& project_root) {
@@ -246,8 +242,7 @@ JSValue read_text_call(JSContext* ctx, JSValueConst, int argc, JSValueConst* arg
     if (text == nullptr) return JS_EXCEPTION;
     const std::string path(text, length);
     JS_FreeCString(ctx, text);
-    std::error_code ec;
-    if (!fs::is_regular_file(path, ec)) return JS_NULL;
+    if (!platform::is_regular_file(path)) return JS_NULL;
     auto content = read_text(path);
     if (!content) return JS_NULL;
     return JS_NewStringLen(ctx, content->data(), content->size());

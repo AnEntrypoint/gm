@@ -7,7 +7,12 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-find_package(Threads REQUIRED)
+if(CMAKE_SYSTEM_NAME STREQUAL "WASI")
+    add_library(gm_no_threads INTERFACE)
+    add_library(Threads::Threads ALIAS gm_no_threads)
+else()
+    find_package(Threads REQUIRED)
+endif()
 
 add_library(deoxidene INTERFACE)
 add_library(deoxidene::deoxidene ALIAS deoxidene)

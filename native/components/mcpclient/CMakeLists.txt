@@ -1,4 +1,3 @@
-find_package(Threads REQUIRED)
 
 set(CXXMCP_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../../third_party/cxxmcp)
 add_library(gm_cxxmcp STATIC

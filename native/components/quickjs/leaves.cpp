@@ -3,16 +3,13 @@
 #include <algorithm>
 #include <atomic>
 #include <chrono>
-#include <fstream>
-#include <iterator>
 #include <map>
-#include <mutex>
 #include <optional>
 #include <string>
-#include <system_error>
 
 #include "engine.hpp"
 #include "gm/runcode.hpp"
+#include "platform.hpp"
 
 namespace gm {
 namespace {
@@ -23,33 +20,12 @@ using engine::Session;
 
 constexpr std::chrono::milliseconds leaf_call_deadline{3600000};
 
-struct FileKey {
-    std::int64_t mtime = 0;
-    std::uintmax_t size = 0;
-    bool operator==(const FileKey&) const = default;
-};
-
 struct Leaf {
-    FileKey key;
+    platform::FileStamp key;
     std::shared_ptr<const std::vector<std::uint8_t>> bytecode;
     std::vector<VerbInfo> verbs;
     std::optional<std::string> unreported_error;
 };
-
-std::optional<FileKey> key_of(const std::filesystem::path& file) {
-    std::error_code ec;
-    auto mtime = std::filesystem::last_write_time(file, ec);
-    if (ec) return std::nullopt;
-    auto size = std::filesystem::file_size(file, ec);
-    if (ec) return std::nullopt;
-    return FileKey{static_cast<std::int64_t>(mtime.time_since_epoch().count()), size};
-}
-
-std::optional<std::string> read_file(const std::filesystem::path& file) {
-    std::ifstream in(file, std::ios::binary);
-    if (!in) return std::nullopt;
-    return std::string(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());
-}
 
 void start_deadline(Session& session) {
     const auto body = thread_body_controls();
@@ -140,7 +116,7 @@ json::Value run_leaf_verb(const HostServices& host, const std::vector<std::uint8
 struct LeafVerbs::State {
     std::filesystem::path leaves_dir;
     HostServices host;
-    mutable std::mutex mutex;
+    mutable platform::Mutex mutex;
     mutable std::map<std::filesystem::path, Leaf> leaves;
     mutable std::atomic<std::uint64_t> generation{0};
 
@@ -161,9 +137,8 @@ struct LeafVerbs::State {
 
     std::vector<std::filesystem::path> leaf_files() const {
         std::vector<std::filesystem::path> files;
-        std::error_code ec;
-        for (const auto& entry : std::filesystem::directory_iterator(leaves_dir, ec)) {
-            if (entry.path().extension() == ".mjs" && entry.is_regular_file(ec)) files.push_back(entry.path());
+        for (auto& file : platform::regular_files_in(leaves_dir)) {
+            if (file.extension() == ".mjs") files.push_back(file);
         }
         std::sort(files.begin(), files.end());
         return files;
@@ -180,7 +155,7 @@ struct LeafVerbs::State {
             }
         }
         for (const auto& file : files) {
-            auto key = key_of(file);
+            auto key = platform::stamp_of(file);
             if (!key) continue;
             auto existing = leaves.find(file);
             if (existing != leaves.end() && existing->second.key == *key) continue;
@@ -201,9 +176,9 @@ struct LeafVerbs::State {
     }
 
     deoxidene::Result<std::pair<std::vector<std::uint8_t>, std::vector<VerbInfo>>, std::string> load(const std::filesystem::path& file) const {
-        auto source = read_file(file);
+        auto source = platform::read_file(file);
         if (!source) return deoxidene::Err<std::string>("the file cannot be read");
-        auto bytecode = engine::compile_module(*source, std::filesystem::absolute(file).generic_string());
+        auto bytecode = engine::compile_module(*source, platform::absolute_path(file).generic_string());
         if (!bytecode) return deoxidene::Err<std::string>(bytecode.error());
         auto metadata = read_metadata(host, *bytecode);
         if (!metadata) return deoxidene::Err<std::string>(metadata.error());
@@ -219,7 +194,7 @@ LeafVerbs::LeafVerbs(std::filesystem::path leaves_dir, const HostServices& host)
 LeafVerbs::~LeafVerbs() = default;
 
 std::vector<VerbInfo> LeafVerbs::list() const {
-    std::lock_guard lock(state_->mutex);
+    platform::LockGuard<platform::Mutex> lock(state_->mutex);
     state_->refresh_locked();
     std::vector<VerbInfo> out;
     for (const auto& [file, leaf] : state_->leaves) {
@@ -232,7 +207,7 @@ json::Value LeafVerbs::call(std::string_view name, const json::Value& args) {
     std::shared_ptr<const std::vector<std::uint8_t>> bytecode;
     HostServices host;
     {
-        std::lock_guard lock(state_->mutex);
+        platform::LockGuard<platform::Mutex> lock(state_->mutex);
         host = state_->host;
         state_->refresh_locked();
         for (auto& [file, leaf] : state_->leaves) {
@@ -258,12 +233,12 @@ json::Value LeafVerbs::call(std::string_view name, const json::Value& args) {
 }
 
 void LeafVerbs::set_run_dir(std::filesystem::path run_dir) {
-    std::lock_guard lock(state_->mutex);
+    platform::LockGuard<platform::Mutex> lock(state_->mutex);
     state_->host.run_dir = std::move(run_dir);
 }
 
 std::uint64_t LeafVerbs::generation() const {
-    std::lock_guard lock(state_->mutex);
+    platform::LockGuard<platform::Mutex> lock(state_->mutex);
     state_->refresh_locked();
     return state_->generation.load();
 }

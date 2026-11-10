@@ -2,12 +2,9 @@
 
 #include <cstring>
 #include <exception>
-#include <fstream>
-#include <iterator>
-#include <mutex>
-#include <shared_mutex>
-#include <thread>
 #include <unordered_map>
+
+#include "platform.hpp"
 
 #if defined(GM_HAVE_TXIKI)
 #include "txiki_shim.h"
@@ -19,8 +16,8 @@ namespace {
 constexpr std::string_view embedded_builtin_prefix = "tjs:";
 constexpr std::chrono::milliseconds idle_loop_pause{1};
 
-std::shared_mutex& sessions_mutex() {
-    static std::shared_mutex mutex;
+platform::SharedMutex& sessions_mutex() {
+    static platform::SharedMutex mutex;
     return mutex;
 }
 
@@ -30,12 +27,12 @@ std::unordered_map<JSContext*, Session*>& sessions() {
 }
 
 void remember_session(JSContext* ctx, Session* session) {
-    std::unique_lock lock(sessions_mutex());
+    platform::ExclusiveLock<platform::SharedMutex> lock(sessions_mutex());
     sessions()[ctx] = session;
 }
 
 void forget_session(JSContext* ctx) {
-    std::unique_lock lock(sessions_mutex());
+    platform::ExclusiveLock<platform::SharedMutex> lock(sessions_mutex());
     sessions().erase(ctx);
 }
 
@@ -62,23 +59,16 @@ int interrupt_on_deadline(JSContext*, void* opaque) {
     return deadline_reached(static_cast<Session*>(opaque)) ? 1 : 0;
 }
 
-bool read_text_file(const std::string& path, std::string& out) {
-    std::ifstream in(path, std::ios::binary);
-    if (!in) return false;
-    out.assign(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());
-    return true;
-}
-
 JSModuleDef* load_module_from_disk(JSContext* ctx, const char* module_name, void*) {
 #if defined(GM_HAVE_TXIKI)
     if (std::string_view(module_name).starts_with(embedded_builtin_prefix)) return gm_txiki_load_builtin(ctx, module_name);
 #endif
-    std::string source;
-    if (!read_text_file(module_name, source)) {
+    auto source = platform::read_file(module_name);
+    if (!source) {
         JS_ThrowReferenceError(ctx, "could not load module '%s'", module_name);
         return nullptr;
     }
-    JSValue compiled = JS_Eval(ctx, source.c_str(), source.size(), module_name, JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
+    JSValue compiled = JS_Eval(ctx, source->c_str(), source->size(), module_name, JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
     if (JS_IsException(compiled)) return nullptr;
     auto* module = static_cast<JSModuleDef*>(JS_VALUE_GET_PTR(compiled));
     JS_FreeValue(ctx, compiled);
@@ -236,7 +226,7 @@ bool reset_embedded_globals(JSContext* ctx) {
 }
 
 Session* session_of(JSContext* ctx) {
-    std::shared_lock lock(sessions_mutex());
+    platform::SharedLock<platform::SharedMutex> lock(sessions_mutex());
     auto found = sessions().find(ctx);
     return found == sessions().end() ? nullptr : found->second;
 }
@@ -405,7 +395,7 @@ Settled settle(Engine& engine, JSValue maybe_promise) {
         if (past_deadline(engine.session())) return {Outcome::Rejected, JS_NewString(ctx, "the call did not finish")};
         engine.turn_loop();
         engine.drain_jobs();
-        if (JS_PromiseState(ctx, promise.get()) == JS_PROMISE_PENDING) std::this_thread::sleep_for(idle_loop_pause);
+        if (JS_PromiseState(ctx, promise.get()) == JS_PROMISE_PENDING) platform::idle_pause(idle_loop_pause);
     }
     switch (JS_PromiseState(ctx, promise.get())) {
         case JS_PROMISE_FULFILLED:

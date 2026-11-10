@@ -1601,3 +1601,28 @@ Open, run_code on wasm32-wasi (the engine is not built). `cmake --build build/wa
 Needed before this links: a wasi branch for the sync primitives (single-threaded, no locks), a host-supplied module source instead of the filesystem (the browser has none), an exported eval entry for a witness, and a decision on leaves.cpp (LeafVerbs depends on gm::verbs and host, and was to stay unchanged). The 120 s interrupt deadline cannot be witnessed until the engine runs. Not built in this pass.
 
 Ship: commit through tools/ship.sh as lanmower with no trailer; see the REPORT line.
+
+## gm pass, Phase B completed: run_code compiles for wasm32-wasi, and the Chromium witness runs (2026-11-10)
+
+Compile. The engine's blockers were the C++ facilities that the WASI libc++ here does not provide: std::mutex, std::shared_mutex, std::this_thread, std::ifstream and the std::filesystem directory and stat operations. std::filesystem::path itself compiles for wasi. The fix is at the cause, one platform layer for the two OS facilities the engine uses: native/components/quickjs/platform.hpp and platform.cpp. Native keeps std::filesystem, std::ifstream and the std mutex types. WASI uses stdio, POSIX stat, opendir and nanosleep, and single-threaded no-op locks (WASI here has no threads). engine.cpp, runcode.cpp and leaves.cpp call platform:: and no longer include the std headers for those facilities. platform.cpp is added to gm_runcode.
+
+The Threads error was a second cause. The root CMakeLists linked Threads::Threads into deoxidene for every platform, and wasi-libc here has no pthread library, so the reactor link failed with `unable to find dynamic system library "pthreads"`. On WASI, Threads::Threads is now an empty interface target; the mcp and mcpclient find_package calls are gone (the root call runs first). This is why the earlier quickjs-only conditional was reverted.
+
+Link. gm_txiki_wasi links gm_runcode, gm_txiki_core_wasi, gm_json and gm_quickjs_ng again. Build: `cmake --build build/wasi --target gm_txiki_wasi -j 8`, foreground, timeout 900 s, exit 0. Caveat, measured below: a static archive member is linked only when something references it, and no export reaches the engine, so the reactor contains no engine code. The sizes did not change. A body-run export is a new surface and needs the owner's decision.
+
+Witness 1, Node (tools/check-txiki-wasi.mjs), foreground, timeout 120 s:
+`txiki-wasi-check: ok (build/wasi/native/components/quickjs/gm_txiki_wasi.wasm: runtime created, context read, loop turned, tjs:path loaded through gm_txiki_load_builtin, unknown module refused, runtime freed; 57 ms)`
+Wall time (shell, including Node start and the WASI warning): 149 ms.
+
+Witness 2, headless Chromium (tools/check-txiki-wasi-chromium.mjs with tools/check-txiki-wasi-browser.html and .js), /usr/bin/chromium, --headless --dump-dom --allow-file-access-from-files --virtual-time-budget=60000, foreground, timeout 120 s. The page instantiates the reactor with a browser WASI shim (unimplemented imports answer ENOSYS, poll_oneoff returns no events, fd 1 and 2 are accepted, and fd 2 text is reported on failure) and runs the same seven-export sequence:
+`txiki-wasi-browser-check: ok (/workspace/gm/build/wasi/native/components/quickjs/gm_txiki_wasi.wasm: runtime created, context read, loop turned, tjs:path loaded through gm_txiki_load_builtin, unknown module refused, runtime freed)`
+`txiki-wasi-chromium-check: wall 496 ms` (runner run); a separate timing run: wall 546 ms. The page's own clock is virtual under --virtual-time-budget, so no page elapsed time is reported.
+Negative check: `node tools/check-txiki-wasi-chromium.mjs package.json` prints `txiki-wasi-browser-check: 1 failure(s)` with `the page threw: WebAssembly.compile(): expected magic word 00 61 73 6d, found 7b 0a 20 20 @+0` and exits 1.
+
+Size, after the relink (scripts/measure-txiki-wasm.mjs): raw 9328581 bytes, sha256 9e2e5ae88b47f7ebd51ffaa3358485c671c7ea41f01861d87f9f1a89ad1d8d4e, stripped 2498054, gzip -9 3066066, gzip -9 stripped 893294. Unchanged from the Phase B figures, because the engine objects are not referenced. Against ba8a863 QuickJS-only (raw 5326939, stripped 1319372, gzip 1872613, gzip stripped 458979), the difference is still +4001642 raw, +1178682 stripped, +1193453 gzip, +434315 gzip stripped.
+
+Native regression, after the shared changes (platform layer, root Threads): `cmake --build build/release -j 8`, foreground, exit 0, 16.3 s. `node tools/check-embedded-runtime.mjs build/release/native/components/host/gm`, exit 0: `embedded-runtime-check: ok (build/release/native/components/host/gm: a body awaited a 300 ms timer for 300 ms; URL and TextEncoder work; a body cannot name the runtime's own host API; console output stays off the protocol stream; a relative import loads; native and leaf verbs answer; a never-settling promise ends with an error; a trivial body takes 8 ms with a fresh runtime each time)`. `node tools/check-build.mjs build/release`, foreground, exit 0, 6 min 15 s: `check-build: gm stamp 423a935-dev (423a935)` and the no-resource-client and turn-economy checks ok.
+
+Open:
+- The engine is linked but unreachable from the reactor's exports. To put run_code in the binary, either pull the archive with --whole-archive (size grows, nothing can call it), or export a body-run entry (new surface; owner decision). The 120 s interrupt deadline and the module loader are in the engine code and are not witnessed in the wasm until one of these is chosen.
+- Browser module loading has no filesystem: the page has no preopened directory, so a module import fails to load there by design.
