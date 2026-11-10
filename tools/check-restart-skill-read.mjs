@@ -13,10 +13,6 @@ if (worker === null || !existsSync(worker)) {
   console.error(`${CHECK}: usage: node tools/check-restart-skill-read.mjs <path-to-native-binary> (gm-core is read from the same directory)`);
   process.exit(2);
 }
-if (process.platform === 'win32') {
-  console.log(`${CHECK}: skipped (win32: the worker records no host pid, so a restarted worker asks for the skill once)`);
-  process.exit(0);
-}
 const REPLY_MS = 120000;
 const SKILL = 'skill://gm/SKILL.md';
 const OTHER_HOST = "const child = require('node:child_process').spawn(process.argv[1], process.argv.slice(2), { stdio: 'inherit' }); child.on('exit', (code) => process.exit(code ?? 0));";

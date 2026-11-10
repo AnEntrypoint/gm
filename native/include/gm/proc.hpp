@@ -32,6 +32,10 @@ Outcome shell(std::string_view command, const std::filesystem::path& cwd = {}, s
 
 const char* signal_name(int signal_number);
 
+#if defined(_WIN32)
+long long parent_pid_of_self();
+#endif
+
 using Owner = std::uint64_t;
 
 class OwnerScope {

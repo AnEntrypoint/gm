@@ -178,7 +178,7 @@ jobs:
 
   publish:
     needs: [build, build-windows]
-    if: ${{ always() && github.repository == 'AnEntrypoint/gm' && (github.event_name != 'workflow_dispatch' || inputs.publish) }}
+    if: ${{ needs.build.result == 'success' && needs.build-windows.result == 'success' && github.repository == 'AnEntrypoint/gm' && (github.event_name != 'workflow_dispatch' || inputs.publish) }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     concurrency:
