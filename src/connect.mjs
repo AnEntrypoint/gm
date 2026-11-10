@@ -6,8 +6,8 @@ export const SERVER_NAME = 'gm';
 export const SERVER_TITLE = 'gm run worker';
 export const CAPABILITIES = { tools: { listChanged: true }, prompts: { listChanged: true }, resources: { listChanged: true, subscribe: true }, logging: {}, completions: {}, extensions: { 'io.modelcontextprotocol/skills': {} } };
 
-const CODE_INSTRUCTIONS = "One tool does the work: run_code. Its body is JavaScript in the project, and each verb is a function on gm, for example await gm.read_file({ path }). The verb list is in run_code's description, gm.verbs() returns each verb's details, and finish ends the run and is not a verb. Start each step with next_context.";
-const TOOLS_INSTRUCTIONS = "Each verb is a tool. Start each step with next_context, and end the run with finish and a witness.";
+const CODE_INSTRUCTIONS = "One tool does the work: run_code. Its body is JavaScript in the project, and each verb is a function on gm, for example await gm.read_file({ path }). The verb list is in run_code's description, gm.verbs() returns each verb's details, and finish ends the run and is not a verb. Start a run with next_context; call it again only when a reply reports pendingEvents, after a compaction, or to wait.";
+const TOOLS_INSTRUCTIONS = "Each verb is a tool. Start a run with next_context, call it again only when a reply reports pendingEvents, after a compaction, or to wait, and end the run with finish and a witness.";
 const RESOURCES_POINTER = "Resources: skill://<name>/<file> reads a served skill file. run://<run>/log reads a run's event log, and run://<run>/witness its witness; resources/templates/list names the templates. Subscribe to a skill file with resources/subscribe to be told when it changes on disk. Log messages follow logging/setLevel, and completion/complete suggests skill names and run ids.";
 const SKILL_POINTER = 'The gm skill holds the rules of a run, the routes for pending events, and the way to hand work to a child session. Read it when a run starts, and read it again after a compaction. Read skill://gm/SKILL.md with ReadMcpResourceTool (server gm), or run the gm prompt (mcp__gm__gm). The host\'s Skill tool does not list it, so do not call it with the Skill tool. The gm-continue skill plans the open rows of gm and hands them to the gm skill. Read skill://gm-continue/SKILL.md with ReadMcpResourceTool (server gm), or run the gm-continue prompt (mcp__gm__gm-continue). The host\'s Skill tool does not list it, so do not call it with the Skill tool.';
 
@@ -20,7 +20,7 @@ export function connectSha(root) {
   return createHash('sha256').update(text).update(readFileSync(join(root, 'tools', 'relay.mjs'))).digest('hex');
 }
 
-export const CONNECT_SHA = '5b5766751cef2d91697a89fd339f41b832eb1eed629ce6ba6ce34c97c63d642a';
+export const CONNECT_SHA = '3ca6ca2d0c5584d3b8c46cc62661d55cb461e5e57df12c5e5378548d97ac2466';
 
 export function connectCheck(root) {
   const sha = connectSha(root);

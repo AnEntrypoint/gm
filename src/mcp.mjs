@@ -142,7 +142,7 @@ const number = { type: 'number' };
 const objectSchema = (properties, required = []) => ({ type: 'object', properties, required });
 
 const BASE_TOOLS = [
-  { name: 'next_context', description: 'Begin a step. Returns rules, task, witness requirement, the events new since the last step in full, and prefixSha. Events from earlier steps are not repeated; query_log reaches them. pending lists the events that need you since your last step, each once, with an id. Delivery clears an event, so no later step or wait lists it again. Call it at the start of each step. query_log reaches every event. waitMs, when set, holds this call until an event is pending or that many milliseconds pass, at most 300000. child: true makes the call a read by a subagent on this connection: it takes no step, claims no pending event, and its reply has role child and the owning run. run, with child, names that owning run, and another run is refused. compactChildren: true summarizes child run_code and code-call generations into counts with a seq range and a gm.query_log note, while pending, parent-action, job, row and recovery events stay full; the default feed is unchanged. task, when set, replaces the run\'s task text; use it in the first step when a host cut the slash-command task to its first word. The first step may correct a one-word host task without owner:true; later task replacements need owner:true, from the owning run or from a child context (child: true) alike.', inputSchema: objectSchema({ waitMs: number, child: { type: 'boolean' }, run: text, compactChildren: { type: 'boolean' }, task: text, owner: { type: 'boolean' } }) },
+  { name: 'next_context', description: 'Begin a step. Returns rules, task, witness requirement, the events new since the last step in full, and prefixSha. Events from earlier steps are not repeated; query_log reaches them. pending lists the events that need you since your last step, each once, with an id. Delivery clears an event, so no later step or wait lists it again. Call it at the start of a run, after a compaction, and when a run_code reply carries pendingEvents; not before every step. A call with nothing new since the last reply (no pending event, the same rules and task) takes no step and answers unchanged: true in one short line; full: true returns the rules, the task and the feed anyway. query_log reaches every event. waitMs, when set, holds this call until an event is pending or that many milliseconds pass, at most 300000. child: true makes the call a read by a subagent on this connection: it takes no step, claims no pending event, and its reply has role child and the owning run. run, with child, names that owning run, and another run is refused. compactChildren: true summarizes child run_code and code-call generations into counts with a seq range and a gm.query_log note, while pending, parent-action, job, row and recovery events stay full; the default feed is unchanged. task, when set, replaces the run\'s task text; use it in the first step when a host cut the slash-command task to its first word. The first step may correct a one-word host task without owner:true; later task replacements need owner:true, from the owning run or from a child context (child: true) alike.', inputSchema: objectSchema({ waitMs: number, full: { type: 'boolean' }, child: { type: 'boolean' }, run: text, compactChildren: { type: 'boolean' }, task: text, owner: { type: 'boolean' } }) },
   { name: 'task_set', description: 'Replace or clear the run task after the first step. owner:true is required; child contexts cannot set the task. An empty string or null clears the task.', inputSchema: objectSchema({ task: nullableText, owner: { type: 'boolean' } }, ['task']) },
   { name: 'read_file', description: 'Read a text file, inside or outside the workspace. With no offset or limit it returns the whole file when it is at most 1048576 bytes, and fails with the file size when it is larger. With offset or limit it returns one page of at most 20000 characters. Lines are the default unit: offset is a 0-based line index, limit a line count (default: as many whole lines as fit), and total (the file in lines) and next (the line index of the next page, null at the end) count lines. truncated is true when the page stops before the end, totalBytes is the file size in bytes, and hint names the read that gets the rest; a truncated read also has notice, a string that gives the bytes shown, the file size and that read; the output text holds only the page. A line longer than the page is cut to its first 20000 characters, with cutLine true, and next is the line after it. unit "chars" counts offset, limit (1 to 20000; with neither set, the whole file), total and next in characters instead. A path that starts with skill:// reads a served skill file, the text resources/read returns, and a skill:// uri that no served skill has is an error that names it.', inputSchema: objectSchema({ path: text, offset: number, limit: number, unit: text }, ['path']) },
   { name: 'write_file', description: 'Write a text file, inside or outside the workspace, creating parent directories. Replacing an existing file with content less than half its prior byte size adds shrunkByBytes, shrinkRatio and shrinkWarning to the result (never blocks the write); new files and normal rewrites are unchanged.', inputSchema: objectSchema({ path: text, content: text }, ['path', 'content']) },
@@ -150,8 +150,8 @@ const BASE_TOOLS = [
   { name: 'stat_file', description: 'Type, size and mtime of a path, inside or outside the workspace, as JSON.', inputSchema: objectSchema({ path: text }, ['path']) },
   { name: 'list_dir', description: 'List a directory, inside or outside the workspace. Directories end with "/". prefix keeps names that start with it, offset and limit page the sorted list, and the reply gives total and next.', inputSchema: objectSchema({ path: text, prefix: text, offset: number, limit: number }) },
   { name: 'run_shell', description: 'Run a shell command in the workspace and wait for it. Default timeout 60000 ms. Its process group is killed when it returns, so background work must go through job_start. Large output is condensed by default; raw:true skips condensing. The reply carries at most 20000 characters inline; longer output adds outputPath (the whole text), totalChars, digest, offset, next and truncated, and read_file pages the rest. compressed/originalChars/keptChars/droppedLines report what condensing dropped.', inputSchema: objectSchema({ command: text, timeoutMs: number, raw: { type: 'boolean' } }, ['command']) },
-  { name: 'job_start', description: 'Start a shell command as a named background job and return at once. Poll it with job_status. timeoutMs is the job deadline: default 300000 ms, at most 7200000 ms. A deadline past the job lifetime (3600000 ms by default) ends the job at the lifetime (reason lifetime); the job is killed at its deadline (reason timeout). progress is an optional file path whose modification time counts as job progress, so a job that writes results without printing is not reported stuck.', inputSchema: objectSchema({ job: text, command: text, timeoutMs: number, progress: text }, ['job', 'command']) },
-  { name: 'job_status', description: 'State (running, exited or killed), exitCode, signal and output of a job as plain fields, with logPath (the job output file). output is the last 20000 characters, with total (its length) and truncated; with offset, output is the 20000 characters from that offset, with next. waitMs polls until the job leaves running, capped at 30000 ms (30 s; a larger waitMs is clamped); re-arm gm.job_status({ job, waitMs: 30000 }) while state is running. Offsets and lengths count characters, not lines.', inputSchema: objectSchema({ job: text, waitMs: number, offset: number }, ['job']) },
+  { name: 'job_start', description: 'Start a shell command as a named background job and return at once. Wait for it with one job_status({ job, waitMs, tail }) call. timeoutMs is the job deadline: default 300000 ms, at most 7200000 ms. A deadline past the job lifetime (3600000 ms by default) ends the job at the lifetime (reason lifetime); the job is killed at its deadline (reason timeout). progress is an optional file path whose modification time counts as job progress, so a job that writes results without printing is not reported stuck.', inputSchema: objectSchema({ job: text, command: text, timeoutMs: number, progress: text }, ['job', 'command']) },
+  { name: 'job_status', description: 'State (running, exited or killed), exitCode, signal and output of a job as plain fields, with logPath (the job output file). output is the last 20000 characters, with total (its length) and truncated; with offset, output is the 20000 characters from that offset, with next. waitMs blocks until the job leaves running or that many milliseconds pass, at most 3600000, so one call waits for a job and no sleep or poll loop is needed. tail, a number, returns only the last tail characters, which keeps a wait reply short. pid, in place of job, waits for a process gm did not start to disappear; it has no exit code. Offsets and lengths count characters, not lines.', inputSchema: objectSchema({ job: text, pid: number, waitMs: number, tail: number, offset: number }) },
   { name: 'job_stop', description: 'Stop a background shell job: its process group is killed, and the job ends killed with reason cancelled. The job event is logged before the answer. A job that already ended is an error result. stopBackground stops run_code bodies only.', inputSchema: objectSchema({ job: text }, ['job']) },
   { name: 'query_log', description: 'Read the run events, as JSON. after is a seq: only the events after it are read (since), so after the last seq you saw reads on from there. kind keeps events of one kind, and fromMono and toMono keep events in a time window (monotonic milliseconds). last N returns the newest N matching events instead, oldest first, at most 50, and has no next. js is a JavaScript expression over the matching events, and defaults to returning them: js sees one window of at most 1000 events or 4 MB of log. Without js, a reply holds at most 50 events and about 20 KB; limit (1 to 50) lowers that count, and is refused with last or js. When events remain, next is the seq to pass back as after; with js, next is set when the window ends before the end of the log. An unknown argument is refused, and the reply names the arguments query_log takes.', inputSchema: objectSchema({ js: text, kind: text, fromMono: number, toMono: number, after: number, last: number, limit: number }, []) },
   { name: 'finish', description: 'End the run. witness is one string that quotes the evidence you observed. gaps optionally lists, one string each, what the run did not check; the end event logs them. finish is refused while a background run is running, and stopBackground true kills it first. finish is refused while a PRD or question row is open, and names the rows. A gap that names an open row is refused too. At the step limit only, openRows lists each open row of this run with a reason, and finish proceeds while those rows stay open.', inputSchema: objectSchema({ witness: text, gaps: { type: 'array', items: text }, stopBackground: { type: 'boolean' }, openRows: { type: 'array', items: { type: 'object' } } }, ['witness']) },
@@ -162,6 +162,10 @@ const SURFACES = ['tools', 'code'];
 const CODE_SURFACE = new Set(['next_context', 'run_code', 'finish']);
 const SKILL_READ_REFUSAL = 'run_code refused: skill://gm/SKILL.md had not been read in this connection, so its text is the second content block of this reply. Read it and follow it, then call run_code again. This refusal is sent once per connection.';
 const STEP_START_RULE = 2;
+const SINGLE_VERB_BODIES_BEFORE_NOTICE = 3;
+const SINGLE_VERB_NOTICE_EVERY = 10;
+const BATCH_NOTICE = "The last run_code bodies made one verb call each. Each body costs a model turn. Put a step's calls in one body: independent calls in one Promise.all, dependent calls in sequence, a check of the result in the same body, and return only what the next decision needs.";
+const UNCHANGED_PROGRESS = 'nothing changed since the last next_context reply: no pending event, and the rules and the task are the same. No step was used. Keep working. Call next_context again when a run_code reply carries pendingEvents, with waitMs to wait for an event, or with full: true for the rules, the task and the feed (after a compaction).';
 const TASK_PAGE = 4000;
 const taskRestNotice = (text) => {
   const shown = headChars(text, TASK_PAGE).length;
@@ -276,11 +280,13 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
   idleTimer.unref();
   const rulesOpen = new Map();
   let gmSkillRead = false;
+  let bodyVerbCalls = 0;
+  let singleVerbBodies = 0;
   let runStarted = steps > 0;
   let childSeen = false;
   let childTask = '';
   let stepCalls = 0;
-  const RULE_TEXT = { 2: 'call next_context at the start of every step', 3: 'verify before you finish', 4: 'finish needs a witness' };
+  const RULE_TEXT = { 2: 'call next_context at the start of a run', 3: 'verify before you finish', 4: 'finish needs a witness' };
   function noteRule(rule, evidence) {
     if (ended !== null || rulesOpen.has(rule)) return;
     const entry = log.append('rules-notice', { step: steps, rule, evidence });
@@ -308,7 +314,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     list_dir: (args) => tools.run('list_dir', args),
     run_shell: ({ command, timeoutMs }, signal) => tools.run('run_shell', { command, timeoutMs }, { signal }),
     job_start: ({ job, command, timeoutMs, progress }) => tools.run('run_shell', { job, command, timeoutMs, progress, background: true }),
-    job_status: ({ job, waitMs, offset }) => tools.run('job_status', { job, waitMs, offset }),
+    job_status: ({ job, pid, waitMs, tail, offset }) => tools.run('job_status', { job, pid, waitMs, tail, offset }),
     query_log: (args) => tools.run('query_log', args),
     task_set: (args) => applyTaskSet(args),
   };
@@ -317,6 +323,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     const startMono = log.now();
     const body = bodyContext.getStore()?.body;
     if (body !== undefined) tools.callStarted(body);
+    if (body !== undefined) bodyVerbCalls += 1;
     const action = READ_ONLY_TOOLS.has(name) ? undefined : log.append('action', { step: steps, tool: name, args, caller: CALLER, ...(body === undefined ? {} : { body }) });
     if (action !== undefined) flushAllLogs();
     const exec = browser.handles(name) ? (value) => browser.call(name, value) : mcp.has(name) ? (value) => mcp.call(name, value) : Object.hasOwn(handlers, name) ? handlers[name] : (value) => tools.run(name, value);
@@ -496,6 +503,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     const call = { name, trace: traceOf(meta), controller: new AbortController() };
     inFlightCalls.set(key, call);
     const stopProgress = progressFor(name, meta.progressToken);
+    const verbCallsBefore = bodyVerbCalls;
     let out;
     try {
       out = await startCall(name, args, rpcId);
@@ -503,6 +511,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
       inFlightCalls.delete(key);
       stopProgress();
     }
+    if (name === 'run_code') out = noteBodyShape(out, bodyVerbCalls - verbCallsBefore);
     watchCall(name, out);
     const notice = rulesNotice();
     const payload = notice === null ? out : { ...out, rulesNotice: notice };
@@ -732,6 +741,9 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
       if (waitMs > 0 && waitedFromStart && !hasPending(runDir)) {
         return { ok: true, progress: `no event pending after ${waitMs} ms; no step was used, call next_context again to keep waiting`, steps };
       }
+      if (args.full !== true && waitMs === 0 && given === '' && nothingChangedSinceReply()) {
+        return { ok: true, unchanged: true, progress: UNCHANGED_PROGRESS, run: runId, steps, stepsLeft: maxSteps - steps };
+      }
       steps += 1;
       runStarted = true;
       stepCalls = 0;
@@ -742,7 +754,22 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
       clearRule(STEP_START_RULE);
       return { ...reply, tabs: await browser.tabsText() };
     }, ({ ok, error, prefixSha, total, progress }) => ({ ok, error, prefixSha, total, progress }), rpcId, 1);
-  }  let prefixMemo = null;
+  }  const OWN_CALL_KINDS = new Set(['action', 'result', 'code-call', 'code-load', 'context-reply', 'generation', 'body-console', 'refusal', 'skill-loaded', 'rules-cleared', 'tools']);
+  function nothingChangedSinceReply() {
+    if (!runStarted || pendingRecovery !== null || rulesOpen.size > 0 || hasPending(runDir)) return false;
+    return log.eventsFrom(noticeSeq + 1).every((event) => OWN_CALL_KINDS.has(event.kind));
+  }
+  function noteBodyShape(out, verbCallsMade) {
+    const notes = {};
+    if (out.background === undefined) {
+      if (verbCallsMade === 1) singleVerbBodies += 1;
+      else if (verbCallsMade > 1) singleVerbBodies = 0;
+      if (verbCallsMade === 1 && (singleVerbBodies === SINGLE_VERB_BODIES_BEFORE_NOTICE || singleVerbBodies % SINGLE_VERB_NOTICE_EVERY === 0)) notes.batchNotice = BATCH_NOTICE;
+    }
+    if (ended === null && hasPending(runDir)) notes.pendingEvents = true;
+    return { ...out, ...notes };
+  }
+  let prefixMemo = null;
   function prefixShaFor(rules) {
     if (prefixMemo === null || prefixMemo.surface !== current || prefixMemo.rules !== rules || prefixMemo.task !== task) prefixMemo = { surface: current, rules, task, sha: prefixShaOf({ rules, task, witness: DEFAULT_WITNESS, tools: renderTools(servedTools(surface)) }) };
     return prefixMemo.sha;

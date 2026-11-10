@@ -133,7 +133,11 @@ constexpr std::size_t kNoticePrdWindow = 5;
 constexpr std::size_t kRowsNamed = 5;
 constexpr double kDefaultBodyTimeoutMs = 180000;
 constexpr double kMaxWaitMs = 100000;
-constexpr double kMaxJobWaitMs = 30000;
+constexpr double kMaxJobWaitMs = 3600000;
+constexpr std::uint64_t kSingleVerbBodiesBeforeNotice = 3;
+constexpr std::uint64_t kSingleVerbNoticeEvery = 10;
+constexpr const char* kBatchNotice = "The last run_code bodies made one verb call each. Each body costs a model turn. Put a step's calls in one body: independent calls in one Promise.all, dependent calls in sequence, a check of the result in the same body, and return only what the next decision needs.";
+constexpr const char* kUnchangedProgress = "nothing changed since the last next_context reply: no pending event, and the rules and the task are the same. No step was used. Keep working. Call next_context again when a run_code reply carries pendingEvents, with waitMs to wait for an event, or with full: true for the rules, the task and the feed (after a compaction).";
 constexpr long long kStartedJobGraceMs = 100;
 constexpr std::size_t kCompletionCap = 100;
 constexpr std::size_t kQueueMax = 64;
@@ -146,7 +150,7 @@ constexpr const char* kCachePublic = "public";
 const std::string kMcpRules =
     "# Rules\n\n"
     "1. Paths may point inside or outside the workspace. An outside path should be absolute.\n"
-    "2. Call next_context at the start of every step. Each call is one step; stepsLeft counts the steps the run has left.\n"
+    "2. Call next_context at the start of a run, after a compaction, and when a reply reports pendingEvents; not before every step. Each full reply is one step; stepsLeft counts the steps the run has left.\n"
     "3. Verify before you finish: run what you built and read its output.\n"
     "4. finish needs a witness: one string that quotes the evidence you observed. Calls sent with finish may be refused.\n"
     "5. Events older than the window are not in next_context. Query them with query_log. Do not guess.\n"
@@ -167,7 +171,7 @@ const std::string kReplyText =
 const std::string kCodeInstructions =
     "One tool does the work: run_code. Its body is JavaScript in the project, and each verb is a function on gm, for "
     "example await gm.read_file({ path }). The verb list is in run_code's description, gm.verbs() returns each verb's "
-    "details, and finish ends the run and is not a verb. Start each step with next_context.";
+    "details, and finish ends the run and is not a verb. Start a run with next_context; call it again only when a reply reports pendingEvents, after a compaction, or to wait.";
 const std::string kResourcesPointer =
     "Resources: skill://<name>/<file> reads a served skill file. run://<run>/log reads a run's event log, and "
     "run://<run>/witness its witness; resources/templates/list names the templates. Subscribe to a skill file with "
@@ -185,7 +189,9 @@ const std::string kNextContextDescription =
     "Begin a step. Returns rules, task, witness requirement, the events new since the last step in full, and "
     "prefixSha. Events from earlier steps are not repeated; query_log reaches them. pending lists the events that need you since your last "
     "step, each once, with an id. Delivery clears an event, so no later step or wait lists it again. Call it at the "
-    "start of each step. query_log reaches every event. waitMs, when set, holds this call until an event is pending "
+    "start of a run, after a compaction, and when a run_code reply carries pendingEvents; not before every step. A call with nothing new "
+    "since the last reply (no pending event, the same rules and task) takes no step and answers unchanged: true in one short line; "
+    "full: true returns the rules, the task and the feed anyway. query_log reaches every event. waitMs, when set, holds this call until an event is pending "
     "or that many milliseconds pass, at most 100000. A hold that passes with nothing pending takes no step and "
     "returns progress. child: true makes the call a read by a subagent on this "
     "connection: it takes no step, claims no pending event, and its reply has role child and the owning run. run, "
@@ -217,11 +223,12 @@ std::string run_code_description(const std::string& verb_names) {
            "{ok:false, error} and does not stop the body. The body's return value comes back as JSON. A body still "
            "running after timeoutMs (default 180000, at most 3600000) becomes a background run: the call returns its "
            "job id at once, job_status with waitMs returns its value, and finish is refused while it runs unless "
-           "stopBackground is true. One step is one body: read the inputs in one Promise.all, decide in code, act "
+           "stopBackground is true. To wait for a job, call job_status({ job, waitMs, tail }) once: it blocks until the job ends or waitMs "
+           "passes (at most 3600000) and returns exitCode and the last tail characters, so no sleep or poll loop is needed. One step is one body: read the inputs in one Promise.all, decide in code, act "
            "with the independent writes in one Promise.all, and verify in the same body. The ten most-used verbs: "
            "read_file({ path, offset?, limit? }), run_shell({ command, timeoutMs? }), write_file({ path, content }), "
            "query_log({ js?, kind?, fromMono?, toMono?, after?, last? }), search({ query, k? }), fetch({ url, "
-           "timeoutMs? }), job_start({ job, command, timeoutMs? }), job_status({ job, waitMs?, offset? }), "
+           "timeoutMs? }), job_start({ job, command, timeoutMs? }), job_status({ job, waitMs?, tail?, offset? }), "
            "callers({ name, limit? }), grep({ pattern, root?, mode?, scope?, ignoreCase?, limit?, offset? }). A file written in this run is untracked; grep it with scope: 'all'. finish is not a "
            "verb: end the run with the finish tool. The reply names its own action in actionSeq, the seq of the "
            "run_code action event in the log. A body's console output is not returned; it is logged once per body as a "
@@ -242,7 +249,7 @@ const std::map<std::string, std::string> kNoticeLevels = {
     {"job-stuck", "warning"}, {"job-killed", "warning"}, {"rules-notice", "warning"}, {"error", "error"}};
 const std::vector<std::string> kDetailFields = {"job",    "tool",  "state",  "code",           "method", "message",
                                                 "error",  "reason", "status", "rules", "sinceProgressMs", "lastSeq"};
-const std::map<int, std::string> kRuleText = {{2, "call next_context at the start of every step"},
+const std::map<int, std::string> kRuleText = {{2, "call next_context at the start of a run"},
                                               {3, "verify before you finish"},
                                               {4, "finish needs a witness"}};
 
@@ -330,6 +337,7 @@ Value code_tools(const VerbTable& verbs) {
             .set("description", kNextContextDescription)
             .set("inputSchema", object_schema(object()
                                                   .set("waitMs", num_schema())
+                                                  .set("full", bool_schema())
                                                   .set("child", bool_schema())
                                                   .set("run", str_schema())
                                                   .set("compactChildren", bool_schema())
@@ -613,6 +621,7 @@ struct Server::State {
         bool child_seen = false;
         std::string child_task;
         int step_calls = 0;
+        std::uint64_t single_verb_bodies = 0;
         std::deque<std::string> reply_order;
         std::map<std::string, Value> replies;
         std::optional<Value> rpc_id;
@@ -671,6 +680,7 @@ struct Server::State {
     std::map<std::string, std::string> file_subscriptions;
     bool monitor_running = false;
     bool gm_skill_read = false;
+    std::atomic<std::uint64_t> body_verb_calls{0};
     std::mutex monitor_mutex;
     std::condition_variable monitor_wake;
     bool shutting_down = false;
@@ -1645,8 +1655,10 @@ struct Server::State {
         }
         std::string text = body_text(s(), seq_field(*status, "body").value_or(0), std::numeric_limits<std::size_t>::max());
         std::size_t total = js_length(text);
-        std::size_t from = offset_arg ? static_cast<std::size_t>(offset_arg->as_number()) : (total > kOutputPage ? total - kOutputPage : 0);
-        std::size_t end = std::min(from + kOutputPage, total);
+        const Value* tail_arg = args.find("tail");
+        const std::size_t page = tail_arg && tail_arg->is_number() && tail_arg->as_number() >= 0 ? std::min(static_cast<std::size_t>(tail_arg->as_number()), kOutputPage) : kOutputPage;
+        std::size_t from = offset_arg ? static_cast<std::size_t>(offset_arg->as_number()) : (total > page ? total - page : 0);
+        std::size_t end = std::min(from + page, total);
         if (from > end) from = end;
         Value reply = object().set("ok", true);
         for (const json::Member& m : status->as_object()) {
@@ -1933,6 +1945,28 @@ struct Server::State {
         return out.set("output", js_prefix(text, kOutputPage)).set("next", length > kOutputPage ? number_of(kOutputPage) : Value(nullptr));
     }
 
+    bool nothing_changed_since_reply() {
+        static const std::set<std::string> kOwnCallKinds = {"action", "result", "code-call", "code-load", "context-reply", "generation", "body-console", "refusal", "skill-loaded", "rules-cleared", "tools"};
+        if (!s().run_started || s().recovery || !s().rules_open.empty() || has_pending(s().run_dir)) return false;
+        if (read_rules() != s().rules_baseline) return false;
+        auto since = s().log->read_from(s().notice_seq);
+        if (!since) return false;
+        return std::all_of(since->begin(), since->end(), [](const Value& event) {
+            const Value* kind = event.find("kind");
+            return kind != nullptr && kind->is_string() && kOwnCallKinds.contains(kind->as_string());
+        });
+    }
+
+    void note_body_shape(Value& out, std::uint64_t verb_calls_made) {
+        if (out.find("background") == nullptr) {
+            if (verb_calls_made == 1) s().single_verb_bodies += 1;
+            else if (verb_calls_made > 1) s().single_verb_bodies = 0;
+            const std::uint64_t streak = s().single_verb_bodies;
+            if (verb_calls_made == 1 && (streak == kSingleVerbBodiesBeforeNotice || (streak > 0 && streak % kSingleVerbNoticeEvery == 0))) out.set("batchNotice", kBatchNotice);
+        }
+        if (!s().ended && has_pending(s().run_dir)) out.set("pendingEvents", true);
+    }
+
     std::optional<std::string> rules_change(const std::string& rules) {
         if (rules == s().rules_baseline) return std::nullopt;
         append("rules-changed", object().set("from", sha256_hex(s().rules_baseline).substr(0, 12)).set("to", sha256_hex(rules).substr(0, 12)));
@@ -2102,6 +2136,17 @@ struct Server::State {
                         .set("ok", true)
                         .set("progress", "no event pending after " + std::to_string(static_cast<long long>(wait_ms)) + " ms; no step was used, call next_context again to keep waiting")
                         .set("steps", number_of(s().steps));
+                }
+                const Value* full_arg = args.find("full");
+                const bool full = full_arg != nullptr && full_arg->is_bool() && full_arg->as_bool();
+                if (!full && wait_ms == 0 && corrected.empty() && nothing_changed_since_reply()) {
+                    return object()
+                        .set("ok", true)
+                        .set("unchanged", true)
+                        .set("progress", kUnchangedProgress)
+                        .set("run", s().run_id)
+                        .set("steps", number_of(s().steps))
+                        .set("stepsLeft", number_of(options.max_steps - s().steps));
                 }
                 if (!corrected.empty() && corrected != s().task) {
                     s().task = corrected;
@@ -2433,7 +2478,9 @@ struct Server::State {
             const Value* token = meta != nullptr ? meta->find("progressToken") : nullptr;
             if (token != nullptr && (token->is_string() || token->is_number())) ticker.emplace(*this, *token);
         }
+        const std::uint64_t verb_calls_before = body_verb_calls.load();
         Value out = gated ? object().set("ok", false).set("error", kSkillReadRefusal) : invoke(name, args);
+        if (name == "run_code" && !gated) note_body_shape(out, body_verb_calls.load() - verb_calls_before);
         ticker.reset();
         std::optional<std::uint64_t> seq;
         {
@@ -3235,6 +3282,7 @@ public:
                                                            .set("caller", caller_of_process()));
         }
         job_->in_flight += 1;
+        state_.body_verb_calls += 1;
         Value result;
         try {
             bool body_job = (name == "job_status" || name == "job_stop") && state_.is_body_job(args);
