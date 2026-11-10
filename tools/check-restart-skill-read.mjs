@@ -72,7 +72,8 @@ const openWorker = (args, { throughOtherHost = false } = {}) => {
     child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' })}\n`);
     return init?.result !== undefined;
   };
-  const tool = async (name, toolArgs) => (await rpc('tools/call', { name, arguments: toolArgs }))?.result?.structuredContent ?? {};
+  const toolReply = (name, toolArgs) => rpc('tools/call', { name, arguments: toolArgs });
+  const tool = async (name, toolArgs) => (await toolReply(name, toolArgs))?.result?.structuredContent ?? {};
   const close = async () => {
     const gone = child.exitCode !== null || child.signalCode !== null ? Promise.resolve() : once(child, 'exit');
     child.stdin.end();
@@ -80,7 +81,7 @@ const openWorker = (args, { throughOtherHost = false } = {}) => {
     if (child.exitCode === null && child.signalCode === null) child.kill();
     await Promise.race([gone, sleep(5000)]);
   };
-  return { rpc, connect, tool, close, stderr: () => stderr.trim() || '(empty)' };
+  return { rpc, connect, tool, toolReply, close, stderr: () => stderr.trim() || '(empty)' };
 };
 
 const failures = [];
@@ -130,8 +131,9 @@ try {
   const underOtherHost = openWorker(args, { throughOtherHost: true });
   try {
     expect(await underOtherHost.connect(), `the worker under another host did not answer initialize (stderr ${underOtherHost.stderr()})`);
-    const gated = await underOtherHost.tool('run_code', { body: 'return 3' });
-    expect(gated.ok === false && typeof gated.skill === 'string' && gated.skill.length > 0, `a worker under another host process ran run_code without delivering the skill: ${short(gated)}`);
+    const refusal = (await underOtherHost.toolReply('run_code', { body: 'return 3' }))?.result ?? {};
+    const skillBlock = refusal.content?.[1]?.text;
+    expect(refusal.structuredContent?.ok === false && typeof skillBlock === 'string' && skillBlock.length > 0, `a worker under another host process ran run_code without delivering the skill: ${short(refusal.structuredContent)}`);
     const restarts = restartEvents();
     expect(restarts.length === 2 && restarts[1].skillRead === false, `the second restart event does not carry skillRead false: ${short(restarts)}`);
     const ran = await underOtherHost.tool('run_code', { body: 'return 4' });

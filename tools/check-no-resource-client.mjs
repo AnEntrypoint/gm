@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { chmodSync, copyFileSync, existsSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
+import { basename, dirname, join, resolve } from 'node:path';
 import readline from 'node:readline';
 import { fileURLToPath } from 'node:url';
 
@@ -16,13 +17,14 @@ if (target === null || (!onNode && !existsSync(resolve(target)))) {
   process.exit(2);
 }
 const REPLY_MS = 120000;
+const RESTART_MS = 60000;
+const REFUSAL_OVERHEAD_BYTES = 2000;
 const TOOL_ONLY_METHODS = new Set(['initialize', 'tools/list', 'tools/call']);
 
 const sleep = (ms) => new Promise((done) => setTimeout(done, ms));
 
-const openToolOnlyClient = (args) => {
-  const command = onNode ? process.execPath : resolve(target);
-  const lead = onNode ? [join(root, 'src', 'mcp.mjs')] : ['serve'];
+const openToolOnlyClient = (command, args) => {
+  const lead = onNode ? [join(root, 'tools', 'relay.mjs')] : ['serve'];
   const child = spawn(command, [...lead, ...args], { stdio: ['pipe', 'pipe', 'pipe'] });
   let stderr = '';
   child.stdin.on('error', () => {});
@@ -69,13 +71,14 @@ const openToolOnlyClient = (args) => {
       });
       child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id, method, params })}\n`);
     });
-  const tool = async (name, args) => (await rpc('tools/call', { name, arguments: args }))?.result?.structuredContent ?? {};
+  const toolReply = (name, args) => rpc('tools/call', { name, arguments: args });
+  const tool = async (name, args) => (await toolReply(name, args))?.result?.structuredContent ?? {};
   const close = async () => {
     const gone = child.exitCode !== null || child.signalCode !== null ? Promise.resolve() : once(child, 'exit');
     child.kill();
     await Promise.race([gone, sleep(5000)]);
   };
-  return { rpc, tool, close, sent, initialized: () => child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' })}\n`), stderr: () => stderr.trim() || '(empty)' };
+  return { rpc, tool, toolReply, close, sent, initialized: () => child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' })}\n`), stderr: () => stderr.trim() || '(empty)' };
 };
 
 const failures = [];
@@ -84,13 +87,40 @@ const expect = (condition, text) => {
 };
 const short = (value) => JSON.stringify(value ?? null).slice(0, 300);
 
+const refusalSize = { bytes: 0, skill: 0 };
 const scratch = mkdtempSync(join(tmpdir(), 'gm-no-resource-client-'));
 try {
   const workspace = mkdtempSync(join(scratch, 'ws-'));
   const quiet = join(scratch, 'quiet-mcp.json');
   writeFileSync(quiet, JSON.stringify({ mcpServers: { playwriter: { disabled: true } } }));
   writeFileSync(join(workspace, 'sample.txt'), 'tool-only client\n');
-  const client = openToolOnlyClient(['--workspace', workspace, '--run-dir', join(workspace, 'run'), '--mcp-config', quiet]);
+  const runDir = join(workspace, 'run');
+  const engine = onNode ? process.execPath : join(mkdtempSync(join(scratch, 'bin-')), basename(resolve(target)));
+  if (!onNode) {
+    copyFileSync(resolve(target), engine);
+    chmodSync(engine, 0o755);
+  }
+  const restartCount = () =>
+    readFileSync(join(runDir, 'log.jsonl'), 'utf8')
+      .split('\n')
+      .filter((line) => line.includes('"kind":"restart"')).length;
+  const nodeWorkers = () =>
+    (spawnSync('ps', ['-eo', 'pid=,args='], { encoding: 'utf8', timeout: 5000 }).stdout ?? '')
+      .split('\n')
+      .map((line) => line.trim())
+      .filter((line) => line.includes(workspace) && line.includes('mcp.mjs'))
+      .map((line) => Number(line.split(/\s+/)[0]));
+  const restartWorker = () => {
+    if (!onNode) {
+      const future = new Date(Date.now() + 60000);
+      utimesSync(engine, future, future);
+      return;
+    }
+    const [workerPid] = nodeWorkers();
+    if (workerPid === undefined) throw new Error('no Node worker process found for the workspace');
+    process.kill(workerPid, 'SIGTERM');
+  };
+  const client = openToolOnlyClient(engine, ['--workspace', workspace, '--run-dir', runDir, '--mcp-config', quiet]);
   try {
     const init = await client.rpc('initialize', { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: CHECK, version: '1' } });
     expect(init?.result !== undefined, `no initialize result (stderr ${client.stderr()})`);
@@ -98,10 +128,18 @@ try {
     const listed = (await client.rpc('tools/list', {}))?.result?.tools?.map((entry) => entry.name) ?? [];
     expect(listed.includes('run_code') && listed.includes('next_context'), `tools/list lacks run_code or next_context: ${short(listed)}`);
 
-    const gated = await client.tool('run_code', { body: "return (await gm.read_file({ path: 'sample.txt' })).output;" });
+    const refusal = await client.toolReply('run_code', { body: "return (await gm.read_file({ path: 'sample.txt' })).output;" });
+    const gated = refusal?.result?.structuredContent ?? {};
+    const blocks = refusal?.result?.content ?? [];
     const disk = readFileSync(join(root, 'skills', 'gm', 'SKILL.md'), 'utf8');
+    const refusalBytes = Buffer.byteLength(JSON.stringify(refusal ?? null));
+    const skillBytes = Buffer.byteLength(JSON.stringify(disk));
+    const marker = disk.split('\n').find((line) => line.startsWith('description:'));
+    Object.assign(refusalSize, { bytes: refusalBytes, skill: skillBytes });
     expect(gated.ok === false && String(gated.error).startsWith('run_code refused:'), `the first run_code was not refused: ${short(gated)}`);
-    expect(gated.skill === disk, `the refusal does not carry the served skill text (skill is ${typeof gated.skill === 'string' ? `${gated.skill.length} chars` : short(gated.skill)}, disk ${disk.length})`);
+    expect(blocks.length === 2 && blocks[1]?.text === disk, `the refusal's second content block is not the served skill text (${blocks.length} blocks, disk ${disk.length} chars)`);
+    expect(JSON.stringify(refusal ?? null).split(JSON.stringify(marker).slice(1, -1)).length - 1 === 1, 'the refusal does not hold the skill text exactly once');
+    expect(refusalBytes <= skillBytes + REFUSAL_OVERHEAD_BYTES, `the refusal is ${refusalBytes} bytes; one copy of the skill is ${skillBytes} bytes`);
     expect(gated.rulesNotice === undefined, `the refusal carries a rules notice: ${short(gated.rulesNotice)}`);
 
     const early = await client.tool('run_code', { body: "return (await gm.read_file({ path: 'sample.txt' })).output;" });
@@ -123,6 +161,14 @@ try {
     expect(second.ok === true && second.step === 2, `the second next_context did not open step 2: ${short({ ok: second.ok, step: second.step })}`);
     expect(second.rulesPending === undefined, `the second next_context still has rulesPending: ${short(second.rulesPending)}`);
 
+    const restartsBefore = restartCount();
+    restartWorker();
+    const restartDeadline = Date.now() + RESTART_MS;
+    while (restartCount() === restartsBefore && Date.now() < restartDeadline) await sleep(100);
+    expect(restartCount() > restartsBefore, `no restart event in the run log within ${RESTART_MS} ms of the trigger`);
+    const afterRestart = await client.tool('run_code', { body: "return (await gm.read_file({ path: 'sample.txt' })).output;" });
+    expect(afterRestart.ok === true && short(afterRestart).includes('tool-only client'), `run_code after a worker restart did not run for the tool-only client: ${short(afterRestart)}`);
+
     const finished = await client.tool('finish', { witness: 'run_code returned "tool-only client" from sample.txt with no resources/read on the connection' });
     expect(finished.ok === true && finished.finished === true, `finish was refused: ${short(finished)}`);
     expect(client.sent.every((method) => TOOL_ONLY_METHODS.has(method)), `the client sent a method outside initialize, tools/list and tools/call: ${short(client.sent)}`);
@@ -134,7 +180,7 @@ try {
     console.error(`${CHECK}: ${failures.length} failure(s) on ${target}\n- ${failures.join('\n- ')}`);
     process.exitCode = 1;
   } else {
-    console.log(`${CHECK}: ok (${target}: with only initialize, tools/list and tools/call, the first run_code is refused once with the skill text, the next run_code runs, the rule 2 notice is reported by the next next_context and is gone after it, and finish ends the run)`);
+    console.log(`${CHECK}: ok (${target}: with only initialize, tools/list and tools/call, the first run_code is refused once with one copy of the skill text (${refusalSize.bytes} bytes for a ${refusalSize.skill}-byte skill), the next run_code runs, the rule 2 notice is reported by the next next_context and is gone after it, run_code runs after a worker restart, and finish ends the run)`);
   }
 } finally {
   rmSync(scratch, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 });
