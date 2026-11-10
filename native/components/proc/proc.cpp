@@ -9,8 +9,8 @@
 
 #if defined(_WIN32)
 #define WIN32_LEAN_AND_MEAN
-#include <tlhelp32.h>
 #include <windows.h>
+#include <tlhelp32.h>
 #else
 #include <errno.h>
 #include <fcntl.h>
