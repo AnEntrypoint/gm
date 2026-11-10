@@ -1609,3 +1609,13 @@ Regressions after the change: check-job-bounds.mjs and check-stop-fetch.mjs pass
 Parity: status now carries startWall on both engines, so the job_status row no longer differs (Node previously lacked it). startWall is a volatile key in native/tests/parity/run.mjs. The harness reference defaults to the committed HEAD (--ref-source head), so uncommitted Node edits are not compared unless --ref-source working is given; the score with --ref-source working is 17 match, 54 native-ahead, 22 documented-gap, 0 differ, identical on two consecutive runs.
 
 Caveats, recorded: adoption trusts kill(pid, 0), so a pid reused by another process is adopted until the exit file appears; the native poller stops 10 ticks after a kill request, so a process that ignores the kill is left running; an adopted job whose timeoutMs equals the lifetime reports lifetime, where a fresh job reports timeout (the status does not record which limit applied); Windows has no wrapper and a job orphaned there settles as killed (not witnessed on Windows).
+
+## Embedded txiki.js runtime (2026-11-10)
+
+Owner instruction: swap the embedded QuickJS-NG engine for an embedded txiki.js runtime, keeping run_code, the LeafVerbs, the per-call deadline and the module loader as they are.
+
+- Pins (the ones thebird's scripts/vendor-txiki.mjs verified): txiki.js v26.11.0, libuv dd9f081cc55a4d83e2a976848d074f28ee5f34eb, quickjs-ng 7b5f588e0f9b643e2996f291bfc861abeaceddc2. tools/vendor-txiki.mjs checks each sha256 and writes native/third_party/txiki; native/third_party/quickjs-ng is removed.
+- Only txiki's runtime core is built. Its http client and server, websocket, tls, webcrypto, hashing, wasm, ffi, sqlite and miniz modules need libwebsockets, mbedtls, wamr, libffi, sqlite3, miniz and mimalloc, which are submodules the pins do not cover; their entry points are stubs (native/components/quickjs/txiki/txiki_stubs.c). gm.fetch stays the curl leaf.
+- gm does not call TJS_Initialize or TJS_Run: the first makes stdout unbuffered and the second owns the loop. The engine creates one runtime per call and turns its loop between job drains, so a body can await a timer.
+- A body sees the web globals (timers, URL, TextEncoder, structuredClone and the rest of txiki's polyfills) and not txiki's host API: `tjs`, alert, confirm and prompt are removed and console is gm's sink, so the host is still reached only through logged gm verbs and nothing writes to the protocol stream.
+- MSVC builds keep plain QuickJS-NG from the same pin (GMNEW_TXIKI OFF), because txiki's C sources are not built with MSVC. Windows, macOS and arm64 are not verified here.

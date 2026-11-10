@@ -19,7 +19,7 @@ Read this whole file, then your own brief (named at the end of your prompt). Do 
 - native/include/gm/host.hpp: HostServices, what a leaf can reach (native verbs and extra primitives).
 - native/include/gm/leaves.hpp: LeafVerbs, the hot-reloaded JavaScript leaves in native/leaves.
 - native/include/gm/proc.hpp: process spawn with timeout (proc::run, proc::shell).
-- native/include/gm/runcode.hpp: run_body, the QuickJS-NG run_code engine.
+- native/include/gm/runcode.hpp: run_body, the run_code engine (embedded txiki.js over QuickJS-NG; tasks/rewrite/quickjs.md).
 - DESIGN.md section "Rewrite on deoxidene (2026-11-04)" holds the decisions. Read it.
 
 ## The spec
