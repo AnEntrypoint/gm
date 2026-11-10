@@ -4,6 +4,8 @@
 #include <cstdlib>
 #include <cstring>
 #include <fstream>
+#include <iterator>
+#include <sstream>
 
 #if defined(_WIN32)
 #define WIN32_LEAN_AND_MEAN
@@ -36,10 +38,27 @@ void kill_tree(long long pid) {
 #endif
 }
 
+long long start_time_of(long long pid) {
+#if defined(__linux__)
+    std::ifstream stat("/proc/" + std::to_string(pid) + "/stat");
+    std::string text((std::istreambuf_iterator<char>(stat)), std::istreambuf_iterator<char>());
+    const std::size_t close = text.rfind(')');
+    if (close == std::string::npos) return 0;
+    std::istringstream fields(text.substr(close + 2));
+    std::string field;
+    for (int index = 3; fields >> field; ++index) {
+        if (index == 22) return std::atoll(field.c_str());
+    }
+#else
+    (void)pid;
+#endif
+    return 0;
+}
+
 void append_ledger(const std::filesystem::path& ledger, long long pid) {
     std::error_code ec;
     std::filesystem::create_directories(ledger.parent_path(), ec);
-    std::ofstream(ledger, std::ios::app) << pid << '\n';
+    std::ofstream(ledger, std::ios::app) << pid << ' ' << start_time_of(pid) << '\n';
 }
 
 void forget_ledger(const std::filesystem::path& ledger, long long pid) {
@@ -47,7 +66,7 @@ void forget_ledger(const std::filesystem::path& ledger, long long pid) {
     std::vector<std::string> kept;
     const std::string gone = std::to_string(pid);
     for (std::string line; std::getline(in, line);) {
-        if (line != gone) kept.push_back(line);
+        if (line.substr(0, line.find(' ')) != gone) kept.push_back(line);
     }
     in.close();
     std::error_code ec;
@@ -100,16 +119,27 @@ void kill_owned(Owner owner) {
 }
 
 void reap_ledger(const std::filesystem::path& ledger) {
-    std::vector<long long> pids;
     std::ifstream in(ledger);
     for (std::string line; std::getline(in, line);) {
         const long long pid = std::atoll(line.c_str());
-        if (pid > 0) pids.push_back(pid);
+        const std::size_t space = line.find(' ');
+        const long long started = space == std::string::npos ? 0 : std::atoll(line.c_str() + space + 1);
+        if (pid <= 0) continue;
+        const long long now = start_time_of(pid);
+        if (started != 0 && now != 0 && now != started) continue;
+        kill_tree(pid);
     }
     in.close();
-    for (long long pid : pids) kill_tree(pid);
     std::error_code ec;
     std::filesystem::remove(ledger, ec);
+}
+
+void reap_ledgers(const std::filesystem::path& dir) {
+    std::error_code ec;
+    if (!std::filesystem::is_directory(dir, ec)) return;
+    for (const auto& entry : std::filesystem::directory_iterator(dir, ec)) {
+        if (entry.path().extension() == ".pids") reap_ledger(entry.path());
+    }
 }
 
 #if !defined(_WIN32)

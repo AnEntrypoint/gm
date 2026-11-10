@@ -48,6 +48,7 @@ private:
 
 void kill_owned(Owner owner);
 void reap_ledger(const std::filesystem::path& ledger);
+void reap_ledgers(const std::filesystem::path& dir);
 
 struct SpawnOptions {
     std::filesystem::path cwd;

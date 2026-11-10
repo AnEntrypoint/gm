@@ -733,6 +733,7 @@ void JobTable::poll_adopted(Job& job) {
 void JobTable::stop_orphans() {
     std::error_code ec;
     if (log_.dir().empty() || !std::filesystem::is_directory(jobs_dir(), ec)) return;
+    proc::reap_ledgers(jobs_dir());
     for (const auto& entry : std::filesystem::directory_iterator(jobs_dir(), ec)) {
         if (entry.path().extension() != ".json") continue;
         std::string name = entry.path().stem().string();
@@ -743,7 +744,6 @@ void JobTable::stop_orphans() {
         const json::Value* body = status->find("body");
         bool is_body = body != nullptr && !body->is_null();
         std::string tail;
-        if (is_body) proc::reap_ledger(jobs_dir() / (name + ".pids"));
         if (!is_body && adopt_orphan(name, *status)) continue;
         if (!is_body) {
             if (const json::Value* output = status->find("output"); output != nullptr && output->is_string()) {
