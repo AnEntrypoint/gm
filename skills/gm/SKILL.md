@@ -32,6 +32,10 @@ Each habit is stated once, with its reason.
 - **Wait in one call, do not poll.** A status you need later (a child run's progress, a job, a next event) is read by one call that holds a wait, not by repeated calls with no wait. A zero-wait call in a loop costs a model turn each time it answers nothing new. Measured: one child session called child_context 264 times with no wait in run 2026-11-05-19-07-15-bce32b, and next_context was called again and again with no wait across the 444 runs in /workspace/gm/runs.
 - **Read the served skill once per connection.** Read it again only after a compaction or a rules notice. Measured: one session (7ae15e26) read skill://gm/SKILL.md 13 times, and the run logs hold 157 skill-loaded events across 444 runs. Each read returns the same text, so each repeat spends context for nothing.
 - **Keep the wait in the turn that started the job.** When a job you started can still finish, hold its wait in the same turn and end the turn only when no reachable step is left. Measured in three sessions (526213ff, 179378d2, 7ae15e26): the gap from a turn's end to the next prompt had a median of 117 to 508 seconds and a 90th percentile of 222 to 1588 seconds, those gaps mix the user's time away with the time a job spent running after the turn ended, so the measure cannot split them. A turn that ends while its own job still runs leaves that job's wait to the next prompt.
+- **Put shell text with quotes, pipes or sed expressions in a script file.** Write the script with gm.write_file and start it with gm.run_shell. Inline quoting that fails costs a turn for each try.
+- **Start a build or test that can outlive a turn with gm.job_start, never a shell `&`.** A job records its log, exit code and tail in the run log. A background shell can leave an empty log, and then there is nothing to read.
+- **A job's result is valid only for the tree it started on.** When an edit lands after the job starts, stop the job with gm.job_stop and start one job on the final tree.
+- **A loop tick with nothing to do ends that tick, not the run.** Keep the run's waits open, and handle any pending prompt before a loop is stopped.
 
 ## Rules
 

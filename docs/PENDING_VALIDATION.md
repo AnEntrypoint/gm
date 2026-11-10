@@ -2225,3 +2225,7 @@ Witnesses (run on build/release at 916aefe-1 (916aefe), one build of 13 s, BUILD
 - DESIGN.md -32002 line (fbdcb89) and the ledger closures (747e3dd): committed; their witnesses are the greps and checks named in those records.
 
 Not run here: tools/check-txiki-wasi.mjs and the gm reactor wasm (the gm wasm32-wasi build is blocked at libuv, see the 2026-11-10 wasm32-wasi record), and the in-browser run of the txiki site. Blocked rows stay open with their causes.
+
+## gm skill habits: scripts, jobs, tree validity, loop ticks (2026-11-10, Phase A)
+
+- skills/gm/SKILL.md Habits: four bullets added (script files for quoted shell text, gm.job_start instead of a shell `&`, a job valid only for its start tree, a loop tick ends that tick). Witness: ReadMcpResourceTool skill://gm/SKILL.md on the served gm returns the four bullets and the rest of the file unchanged; tools/check-skill-serve.mjs on build/release gm.
