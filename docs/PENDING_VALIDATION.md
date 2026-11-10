@@ -1517,3 +1517,36 @@ Change 1, ci_status for a root that is not a repository:
 2. native/leaves/git.mjs, ciStatus (line 157): the same split. A helper `isRepository(dir)` sits after gitIn: `rev-parse --is-inside-work-tree` with the same timeout.
 Witness needed (Phase B): call ci_status with sha HEAD in a scratch directory that is not a git repository, on the Node engine and on the native binary; each must return `cannot check commit HEAD: <dir> is not a git repository`. In a repository with no commits, the same call must return `no commit HEAD in this repository`. Both engines must agree (native/tests/parity/run.mjs, if a row covers ci_status; otherwise the two calls are read by hand).
 Changes are in files: src/git.mjs, native/leaves/git.mjs. No comments were added.
+
+## gm pass, Phase B (2026-11-10, commit 41c0640, pushed once): the ci_status no-commit message, and the held choices
+
+Build (release preset, HEAD 41c0640): `cmake --preset release`, exit 0, 0.2 s. `cmake --build build/release -j 4`, exit 0, 18.9 s, 0 warning or error lines. `build/release/native/components/host/gm --version`: `41c0640-dev (41c0640)`.
+
+Witness: a real MCP session, scratch in /tmp (not committed), that runs `return await gm.ci_status({});` in run_code (the default sha is HEAD; a sha must be hex, so the literal "HEAD" fails the SHA check). Two roots: a plain directory, and an empty repository (`git init`, no commit).
+
+| engine | root | wall | result |
+|---|---|---|---|
+| native, before the leaf refresh (stale copy) | plain | - | `no commit HEAD in this repository` (the defect) |
+| native | plain | 163 ms | `cannot check commit HEAD: <dir> is not a git repository` |
+| native | empty repository | 149 ms | `no commit HEAD in this repository` |
+| node | plain | 210 ms | `cannot check commit HEAD: <dir> is not a git repository` |
+| node | empty repository | 233 ms | `no commit HEAD in this repository` |
+
+Defect found, fixed for this tree: the native binary loads its leaves from `leaves/` beside the executable (native/components/host/options.cpp, leaves_dir_of and installed_or), not from the checkout. `build/release/native/components/host/leaves/git.mjs` was a stale copy (04:18, before 41c0640), so the first witness ran the old message. `diff -rq` showed that git.mjs was the only file that differed; the copy was refreshed from native/leaves/git.mjs and the four cases above ran after it. No build rule in this tree writes that directory (no CMake, tool or script step copies leaves beside the binary; checked by grep), so the copy's origin is unknown. The same trap will catch the next leaf change on a dev build. Open: a decision on whether dev builds stage leaves beside the binary, or pass `--leaves` (the option exists). Not changed in this pass.
+
+Regression: `node native/tests/parity/run.mjs --bin build/release/native/components/host/gm`, exit 0, 14.9 s: `17/95 scenarios match, 0 cutover-expected, 56 native-ahead, 22 documented-gap, 0 differ`. Unchanged from the last witness.
+
+Held choices, decided in this pass (no code unless noted):
+1. "Replay growth (120/40/6)": this question is not in the repo, its docs, the memory notes or the git history. Nearest recorded policy: DESIGN.md "next_context returns events since the last step" (around line 1567), which removed the two-horizon replay (H1 14, H2 12). Choice: no replay growth; next_context stays bounded to the events since the last step. Reason: the removal is the one recorded replay policy and it already bounds growth.
+2. "SES bypass": not found anywhere. The only bypass in the ledger is the ship.sh bypass (ranked list item 8, "waits for the owner"). Choice: no bypass; every commit keeps the gate. Reason: owner rules allow commits only through tools/ship.sh, and a bypass would change a rule the owner sets.
+3. resources/read unknown uri, native -32602 against Node -32002: keep native's -32602. Reason: it is deliberate and recorded in parity row 2; no client evidence asks for a change.
+4. Node run_code budget beyond the 65 s case: keep native-ahead; Node stays the parity reference and is not ported. Reason: the 65 s case is witnessed on both engines; a port is a larger change than this pass.
+5. finish open-row step limit: keep finish strict. Reason: loosening the finish check weakens the commit gate.
+6. Shell-job lifetime reason, unreachable for shell jobs: keep as is. Reason: no run has hit it, so no change is supported.
+7. Protocol 2026-07-28 behind a capability flag (owner decision 3): not implemented in this pass. Reason: the ledger's gate for default is a client test, and no client is available here.
+8. Refusal text duplicated (ranked item 5): already done in 3ffda38 (one copy; 25640 bytes for a 24968-byte skill). The ranked table was stale on this item.
+
+Blocked, excluded from this Phase B (no host here):
+- Windows, macOS and arm64 builds and runs of libuv and txiki: blocked, no such host in this checkout; hosted CI builds them and is not watched here.
+- B1 (Windows x64 restart-jobs) and B2 (Windows arm64 browser path): blocked, no Windows host.
+- The run_code wasm32-wasi Phase B: gated on thebird's origin/main exporting the seven gm_txiki_* functions. Checked with one git fetch after the push (see the REPORT line).
