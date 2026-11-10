@@ -373,7 +373,7 @@ deoxidene::Result<ModuleSplit, std::string> split_module_body(std::string_view b
 
 deoxidene::Result<JSValue, std::string> load_script_body(Engine& engine, std::string_view body) {
     JSContext* ctx = engine.ctx();
-    std::string source = "(async function body(gm, require) {\n";
+    std::string source = "(async function body(gm, require, tjs) {\n";
     source.append(body);
     source.append("\n})");
     JSValue function = JS_Eval(ctx, source.c_str(), source.size(), "<body>", JS_EVAL_TYPE_GLOBAL);
@@ -386,7 +386,7 @@ deoxidene::Result<JSValue, std::string> load_module_body(Engine& engine, std::st
     JSContext* ctx = engine.ctx();
     auto split = split_module_body(body, project_root);
     if (!split) return Fail("the body does not load: " + split.error());
-    const std::string source = split->imports + "\nexport default async function body(gm, require) {\n" + split->code + "\n}\n";
+    const std::string source = split->imports + "\nexport default async function body(gm, require, tjs) {\n" + split->code + "\n}\n";
     const std::size_t head = count_newlines(split->imports) + 2;
     Scoped compiled(ctx, JS_Eval(ctx, source.c_str(), source.size(), "<body>", JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY));
     if (JS_IsException(compiled.get())) return Fail(load_error(engine::take_exception_text(engine), body, head, split->removed_lines));

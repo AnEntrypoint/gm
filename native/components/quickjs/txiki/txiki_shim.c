@@ -28,6 +28,14 @@ void gm_txiki_loop_turn(TJSRuntime *runtime) {
     uv_run(&runtime->loop, UV_RUN_NOWAIT);
 }
 
+JSValue gm_txiki_refresh_loop_time(JSContext *ctx, JSValueConst this_value, int argc, JSValueConst *argv) {
+    (void) this_value;
+    (void) argc;
+    (void) argv;
+    uv_update_time(&TJS_GetRuntime(ctx)->loop);
+    return JS_UNDEFINED;
+}
+
 JSModuleDef *gm_txiki_load_builtin(JSContext *ctx, const char *module_name) {
     return tjs_module_loader(ctx, module_name, TJS_GetRuntime(ctx), JS_UNDEFINED);
 }

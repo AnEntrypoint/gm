@@ -210,16 +210,25 @@ constexpr std::string_view stringify_bootstrap = R"JS((function (parameter, sour
 namespace {
 
 #if defined(GM_HAVE_TXIKI)
-constexpr std::string_view embedded_globals_reset = R"JS((function () {
+constexpr std::string_view embedded_globals_reset = R"JS((function (refreshLoopTime) {
   const silent = () => {};
   globalThis.console = { log: silent, info: silent, debug: silent, warn: silent, error: silent };
-  for (const name of ['tjs', 'alert', 'confirm', 'prompt']) delete globalThis[name];
+  for (const name of ['setTimeout', 'setInterval']) {
+    const start = globalThis[name];
+    globalThis[name] = (...args) => {
+      refreshLoopTime();
+      return start(...args);
+    };
+  }
+  for (const name of ['alert', 'confirm', 'prompt']) delete globalThis[name];
 }))JS";
 
 bool reset_embedded_globals(JSContext* ctx) {
     Scoped reset(ctx, JS_Eval(ctx, embedded_globals_reset.data(), embedded_globals_reset.size(), "<embedded>", JS_EVAL_TYPE_GLOBAL));
     if (JS_IsException(reset.get())) return false;
-    Scoped done(ctx, JS_Call(ctx, reset.get(), JS_UNDEFINED, 0, nullptr));
+    Scoped refresh(ctx, JS_NewCFunction(ctx, gm_txiki_refresh_loop_time, "refreshLoopTime", 0));
+    JSValue reset_args[1] = {refresh.get()};
+    Scoped done(ctx, JS_Call(ctx, reset.get(), JS_UNDEFINED, 1, reset_args));
     return !JS_IsException(done.get());
 }
 #endif
