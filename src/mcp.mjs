@@ -1036,11 +1036,11 @@ const READ_ONLY_TOOLS = new Set([
   'next_context', 'read_file', 'list_dir', 'find', 'stat_file', 'search', 'wiki_search', 'grep', 'callers', 'impact', 'query_log', 'job_status',
   'git_status', 'git_state', 'git_log', 'git_diff', 'git_show', 'ci_status', 'prd_list', 'unknown_list', 'review_join',
 ]);
-const OPEN_WORLD = new Set(['fetch', 'git_fetch', 'git_pull', 'git_push', 'ci_status']);
-const RECORDS_ONLY = new Set(['next_context', 'finish']);
 function annotated(tool) {
-  const readOnly = READ_ONLY_TOOLS.has(tool.name) && tool.name !== 'next_context';
-  const described = { ...tool, title: titleOf(tool.name), annotations: { readOnlyHint: readOnly, destructiveHint: !readOnly && !RECORDS_ONLY.has(tool.name), openWorldHint: OPEN_WORLD.has(tool.name) } };
+  const annotations = tool.name === 'next_context'
+    ? { readOnlyHint: true, destructiveHint: false, openWorldHint: false }
+    : tool.name === 'finish' ? { readOnlyHint: false, destructiveHint: false, openWorldHint: false } : { readOnlyHint: false, destructiveHint: true, openWorldHint: true };
+  const described = { ...tool, title: titleOf(tool.name), annotations };
   return Object.hasOwn(OUTPUT_SCHEMAS, tool.name) ? { ...described, outputSchema: OUTPUT_SCHEMAS[tool.name] } : described;
 }
 const OUTPUT_SCHEMAS = {
