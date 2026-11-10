@@ -1319,3 +1319,21 @@ Witnesses, output read in full:
 - W5 check-build build/release: exit 0; `conformance: 86 passed, 0 failed of 86 checks in 24 scenarios`; the new witness ok on the native binary and on node; `check-build: gm stamp 399b026-dev (399b026)`.
 - W6 parity, `node native/tests/parity/run.mjs`: exit 0, `17/95 scenarios match, 0 cutover-expected, 56 native-ahead, 22 documented-gap, 0 differ`.
 - Not done here: no install was run, so the gm connection on this host and fx's connection keep the old gate until their installed build updates.
+
+## gm pass, Phase A (2026-11-10): ranked open work, and the repeated skill re-read after a worker restart
+
+Phase A ran no build, test or push. Each change is one local commit by lanmower with no trailer. Phase B builds HEAD and runs the witnesses below.
+
+Open work, ranked (reachable here first):
+1. Taken in this pass: the repeated skill re-read after a worker restart (jayzee). Evidence: /workspace/jayzee/runs/2026-11-09-23-06-24-82b1f1/log.jsonl, restart at seq 179 and 213, each followed by a run_code refusal with stage skill-read (seq 192, 221) and a new skill-loaded (196, 222). The relay (parent pid 2497409, started 2026-11-10 00:13 local) is the same process across both restarts and did not replay the read: the replay lives in the relay, and a relay that predates 98d0505, or one whose re-exec is held back, never sends it.
+2. Reachable, not taken: the relay re-executes onto a new build only when no host call is in flight (native/components/host/relay.cpp, the reexec check `!inflight_.empty()`). A host that keeps a next_context wait in flight can hold an old relay for a long time. Needs a measured reproduction before a change.
+3. Reachable, not taken: the one run_code refusal carries the skill text twice (content text and structuredContent), about 48 KB.
+4. Reachable, not taken: AGENTS.md "Last witness" for the parity harness says 22 of 93; the run at 399b026 printed 17/95, 0 differ. The edit needs the full AGENTS.md audit.
+5. Reachable, not taken: the Node arm of a tool-only client across a worker restart was not probed (native was, W4 of the previous Phase B).
+6. Not reachable here: this host's gm connection and fx's serve the installed build, which is older than HEAD; the served skill text on this connection still has the old Validation wording. Closes when a release is installed; no install is run by this peer.
+7. Blocked: B1 (Windows x64 restart-jobs, G1) and B2 (Windows arm64 browser path, G2). No Windows host (see the B1 and B2 entry above for the install steps).
+8. Waits for the owner: the ship.sh bypass.
+
+Changes for item 1:
+1. native/components/mcp/server.cpp and src/mcp.mjs, commit (see git log). Rows: skill_read_by_this_host, boot (the restart event), serve_skill_file and get_prompt (skill-loaded). Change: a skill-loaded event records its caller (worker pid and host pid). When a native worker resumes a run, it takes the skill as read if the run's log holds a gm skill-loaded event whose host pid is its own parent, and the restart event records `skillRead`. The read stays per host connection: a worker under another host process is gated once. Windows records no host pid, so nothing is carried there. Node logs the caller too; Node's carry stays in tools/core.mjs.
+2. tools/check-restart-skill-read.mjs and tools/check-build.mjs, commit (see git log). Row: new witness in the check-build list. The check is the worker's parent and replays nothing: worker 1 reads the skill and runs a body; worker 2 on the same run directory gets initialize only and must run run_code, with restart `skillRead` true; worker 3, started through another process, must refuse the first run_code once with the skill text, with restart `skillRead` false, and then run. Phase B: `node tools/check-restart-skill-read.mjs build/release/native/components/host/gm`, `restart-skill-read-check: ok`, exit 0. Why a kept check: every relay built from HEAD replays the read, so only a parent that does not replay covers this path.
