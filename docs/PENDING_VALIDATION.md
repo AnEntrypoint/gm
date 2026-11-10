@@ -2230,3 +2230,10 @@ Not run here: tools/check-txiki-wasi.mjs and the gm reactor wasm (the gm wasm32-
 
 - skills/gm/SKILL.md Habits: four bullets added (script files for quoted shell text, gm.job_start instead of a shell `&`, a job valid only for its start tree, a loop tick ends that tick). Witness: ReadMcpResourceTool skill://gm/SKILL.md on the served gm returns the four bullets and the rest of the file unchanged; tools/check-skill-serve.mjs on build/release gm.
 - Served-copy read-back: tools/check-skill-serve.mjs build/release/native/components/host/gm returned ok on 2026-11-10 (the default serve returns the checkout copy). The installed server still serves the pre-edit skill, so the read-back of skill://gm/SKILL.md for the four habits is pending the dispatcher go. Reinstall command, not run: sh scripts/install.sh (it fetches the published release from GMNEW_RELEASE_BASE, so the habits reach the served skill only after a release carrying commit 7dd04f8 is cut).
+
+## Embedded txiki.js engine, witness run (2026-11-10, Phase B)
+
+- Phase A: no code change. native/components/quickjs/engine.cpp already creates the embedded txiki runtime (gm_txiki_new, line 248) and GMNEW_TXIKI defaults ON outside MSVC; the pins match tools/vendor-txiki.mjs and native/third_party/txiki/VERSION.txt, which already records them.
+- cmake --build build/release: no work to do, BUILD_EXIT=0, GMNEW_TXIKI ON.
+- tools/check-embedded-runtime.mjs build/release/native/components/host/gm: ok, wall 0.77 s.
+- tools/check-build.mjs build/release: 85 passed, 1 failed of 86 checks, wall 124.8 s. The failure is "resources/read of a skill file carries ttlMs 3600000" (tools/mcp-conformance.mjs:164): the binary returns ttlMs 0, which tools/check-installed-build.mjs:101 requires so an open connection re-reads an edited skill. The two witnesses conflict; the owner decides which holds.
