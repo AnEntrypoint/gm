@@ -2169,3 +2169,31 @@ The four import checks thebird expects are in /workspace/thebird/scripts/witness
 Not changed here, with the reason: tools/check-txiki-wasi.mjs and tools/check-txiki-wasi-browser.js take the wasm path as an argument and carry no pin, so they need no edit for the new pin. native/third_party/txiki (the vendored native tree) has its own pins in gm's tools/vendor-txiki.mjs (txiki v26.11.0 and the other two archives); the wasm pin is a separate artifact and is not in that list.
 
 Held: the import witness rerun (the four checks above, on gm's side) waits until thebird pushes the pin commit and the dispatcher sends the go-ahead. Nothing was built, run or pushed in this pass.
+
+## gm pass, Phase A (2026-11-10): ledger closures and the DESIGN.md stale uri code
+
+Ranked reachable items (no build, no push), read from this ledger's open rows, the Phase A tables of 2026-11-10 and the gm skill:
+
+1. DESIGN.md line 1319 said skills/get answers any other uri with -32602 (src/mcp.mjs:91) and resources/read with -32002 (src/mcp.mjs:108). The code answers -32002 for both (src/mcp.mjs:93 skillGet, src/mcp.mjs:467 readResource; native server.cpp read_resource and skills_get), decided 2026-11-10. Taken: the line now says -32002 with data.uri at the current lines, and that a missing or non-string uri stays -32602. Witness: grep -n "RpcError(-32002" src/mcp.mjs prints lines 93, 110 and 467; a Phase B run of tools/mcp-conformance.mjs on native checks the same code.
+
+Ledger rows closed by commits already in history (each row's own witness is named; no new code):
+
+| row | closed by | witness |
+|---|---|---|
+| 4, unknown uri -32602 against -32002 | owner decision 2026-11-10, applied in 92c2873 | tools/mcp-conformance.mjs expectations and the uri probe |
+| 5, the refusal carries the skill twice | one copy in 3ffda38 (measured 25640 bytes for a 24968-byte skill, then 10680 bytes native) | tools/check-no-resource-client.mjs, native and node |
+| 6, Node run_code budget beyond 65 s | 92c2873 and d6a9538, with BODY_BUDGET_POLL_MS | tools/check-run-code-budget.mjs and tools/check-run-code-lifetime.mjs on both engines |
+| 7, finish open-row step limit | already the same on both engines (decision table, 2026-11-10) | tools/check-decision-parity.mjs, node and native |
+| 8, shell-job lifetime | already the same: min(timeoutMs, 3600000) on both (decision table) | tools/check-decision-parity.mjs |
+| 10, relay re-exec under a held wait | b23984b and the Phase B witnesses in ea79901 | tools/check-relay-reexec.mjs, release d2c2c4f-1, 144 ms |
+| 13, browser tab count across runs | 566fc80, split by run and project | tools/check-browser-scope.mjs, node ok (189 s) |
+| 19, served-skill freshness on an old connection | 626f8e0 (skill read volatile on both engines), installed 4101e4a-1 | tools/check-installed-build.mjs ok on the installed build (ttlMs 0); the 78ca5a1 build fails it on ttlMs 3600000 |
+
+Rows still open, each with its reason (none reachable without a build, a push, a host or an owner decision):
+
+- 9, decision 3 (protocol 2026-07-28 behind a capability flag): owner decision; a new protocol surface that needs a build to check.
+- 14, fx's events twice: needs fx's reply text (fx-e1 busy on stretch 9; the dispatcher sends the question).
+- 11, 12, 17, 18, Windows and macOS items: no Windows or macOS host here.
+- 16, asan full check-build: needs a build (Phase B).
+- txiki import rerun (cdf218f): held until thebird pushes and the dispatcher sends the go-ahead.
+- ship.sh bypass and run_code structuredContent text (rows 5 and the owner list): owner decisions.
