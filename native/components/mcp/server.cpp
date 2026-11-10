@@ -3524,6 +3524,7 @@ struct Server::State {
     void input_ended() {
         if (options.release_leases) options.release_leases("released when the session closed", false);
         if (s().end_logged) return;
+        check_file_subscriptions();
         if (options.supervised) {
             s().ended = "restarting";
             stop_bodies("restart");
