@@ -1768,3 +1768,32 @@ Measured by /tmp/waste.py over the last eight hours of the fx, jayzee, spoint, t
 | 8 | (none, already fixed at 409c3f3) | browser isolation: the pinned pw gate picks its port from a hash of the project root (lib loadPorts: pickPort(9400, 500, offset) and pickPort(9900, 500, offset)), and both clients set PLAYWRITER_PROJECT_DIR to the run's workspace, so each project has its own gate, Chrome and profile at <root>/.playwriter/browser-profile. The 2026-11-09 hypothesis of a shared fixed relay port 19988 does not hold for the gate: 19988 is upstream playwriter's relay default | Phase B: two projects each run gm.playwriter_execute; output shows distinct profile paths, browser pids and tab lists |
 
 Checks: tools/check-job-reply-git-state.mjs takes the target as an argument (node by default, or the built binary path). Its run on the Node tree in Phase A (2026-11-10): ok, with pid 3887653 and doneFile w1.exit, a 2 s job settled in a 2009 ms wait, and the capped wait returned after 100041 ms with state running.
+
+## gm pass, Phase B: witnesses for the repeated-work queue (2026-11-10)
+
+Build: `cmake --build build/release` after the Phase A commit (472aaec), then `cmake --preset release` to restamp it (472aaec-dev), then one incremental build after the two native fixes below. Every build exited 0. The binary is build/release/native/components/host/gm, ready and not installed over the shared gm.
+
+Defects the witnesses found, each with its cause:
+
+1. Node job_start without timeoutMs ran on the 60000 ms run_shell default (src/tools.mjs, background path). Cause: the background branch used DEFAULT_TIMEOUT_MS, not the 300000 ms job default that the description and native use. Witness before the fix: a 130 s job was killed at 60004 ms. Fix: DEFAULT_JOB_TIMEOUT_MS = 300000, used by the background path and the timeout message.
+2. Node job_status waitMs was capped at 3600000 ms by src/tools.mjs MAX_WAIT_MS, separate from the 100000 ms cap in src/mcp.mjs. Witness before the fix: waitMs 200000 returned after 130019 ms. Fix: 100000 ms.
+3. Native job_status waitMs was capped at 3600000 ms on two paths: server.cpp kMaxJobWaitMs and verbs/job.cpp max_wait_ms, which the run_code verb path uses. Witness before the fix: waitMs 200000 returned after 129923 ms. Fix: kMaxJobWaitMs = kMaxWaitMs (100000) and max_wait_ms = 100000.
+4. Native gm.git_state was "not a function" inside run_code. Cause: leaves_dir_of preferred any leaves/ directory beside the binary, and build/release/native/components/host/leaves is a copy dated 05:13 that a build does not refresh; it had no git_state. skills_dir_of already prefers the checkout (2026-11-10). Fix: native/components/host/options.cpp leaves_dir_of prefers the checkout's native/leaves when it exists. Witness: the probe's git_state reply carries the four lines.
+5. The gate's skills check failed on three rule lines that named run_shell, grep and git_status without the gm. prefix. Fix: the prefix, then the gate passed on 472aaec.
+6. Witness only, not a product defect: the check's workspace counted gm's own runs/ directory as untracked. The check's .gitignore now lists .gm/ and runs/. git_state reports runs/ correctly when a project does not ignore it.
+
+| witness | command | result | wall |
+|---|---|---|---|
+| job reply, git_state and wait cap, native | node tools/check-job-reply-git-state.mjs build/release/native/components/host/gm | ok: git_state four lines; job_start pid and doneFile; a 2 s job settled in a 1906 ms wait; waitMs 200000 returned after 100020 ms, state running | 102 s |
+| job reply, git_state and wait cap, node | node tools/check-job-reply-git-state.mjs | ok: settled in 2020 ms; cap returned after 100040 ms; status.timeoutMs 300000 | 103 s |
+| browser isolation per project | node tools/check-browser-project.mjs build/release/native/components/host/gm | ok: alpha and beta each returned their own page title; gate ports 9509 and 9720; browser pids 3927637 and 3927638; profiles /tmp/gm-browser-alpha-*/.playwriter/browser-profile and beta's, distinct | 60 s |
+| foreground hold, the 6e84b04 fix | node tools/check-foreground-hold.mjs build/release/native/components/host/gm | ok: run_code with the default timeoutMs returned body-7 after 100001 ms; holds 50030 ms; the job exited with output done | 151 s |
+| restart keeps jobs | node tools/check-restart-jobs.mjs build/release/native/components/host/gm | ok: the restart answered in 565 ms; the job exited 0 with output done | 8 s |
+| skill served | node tools/check-skill-serve.mjs build/release/native/components/host/gm | ok | 1 s |
+| parity | node native/tests/parity/run.mjs --bin build/release/native/components/host/gm | 17/96 match, 0 cutover-expected, 57 native-ahead, 22 documented-gap, 0 differ | 14 s |
+| measurement rerun | python3 -I /tmp/waste.py, from /workspace/hyperagent | ran, output /tmp/gm-analysis/waste-after.txt | 3 s |
+| gate on the Phase A commit | tools/ship.sh (SHIP_PUSH=0) | 13 checks ok, commit 472aaec | n/a |
+
+The measurement rerun does not measure this change. waste.py reads the last eight hours from the moment it runs, so waste-after.txt and waste-before.txt cover different windows. Read it as the current baseline only.
+
+Item 8 (browser isolation) was already fixed at 409c3f3, as the Phase A row says. The witness above is its first run on the built binary with two projects.

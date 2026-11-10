@@ -125,7 +125,10 @@ std::filesystem::path installed_or(std::string_view name, const std::filesystem:
 }
 
 std::filesystem::path leaves_dir_of(const HostArgs& args) {
-    return args.path_or("--leaves", installed_or("leaves", source_root() / "native" / "leaves"));
+    std::error_code ec;
+    const auto checkout = source_root() / "native" / "leaves";
+    const auto fallback = std::filesystem::is_directory(checkout, ec) ? checkout : installed_or("leaves", checkout);
+    return args.path_or("--leaves", fallback);
 }
 
 std::filesystem::path skills_dir_of(const HostArgs& args) {
