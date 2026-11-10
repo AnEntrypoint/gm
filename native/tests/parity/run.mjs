@@ -175,6 +175,7 @@ function scenarios({ head, url }) {
     ['query_log', code("return await gm.query_log({ kind: 'start' });")],
     ['query_log js', code("return await gm.query_log({ js: 'e => e.kind === \"tools\"' });")],
     ['git_status', code('return await gm.git_status({});')],
+    ['git_state', code('return await gm.git_state({});')],
     ['git_log', code('return await gm.git_log({ count: 5 });')],
     ['prd_add', code("return await gm.prd_add({ title: 'parity row A', body: 'first' });")],
     ['prd_list', code('return await gm.prd_list({});')],

@@ -133,7 +133,7 @@ constexpr std::size_t kNoticePrdWindow = 5;
 constexpr std::size_t kRowsNamed = 5;
 constexpr double kDefaultBodyTimeoutMs = 100000;
 constexpr double kMaxWaitMs = 100000;
-constexpr double kMaxJobWaitMs = 3600000;
+constexpr double kMaxJobWaitMs = kMaxWaitMs;
 constexpr std::uint64_t kSingleVerbBodiesBeforeNotice = 3;
 constexpr std::uint64_t kSingleVerbNoticeEvery = 10;
 constexpr const char* kBatchNotice = "The last run_code bodies made one verb call each. Each body costs a model turn. Put a step's calls in one body: independent calls in one Promise.all, dependent calls in sequence, a check of the result in the same body, and return only what the next decision needs.";
@@ -238,7 +238,7 @@ std::string run_code_description(const std::string& verb_names) {
 
 const std::set<std::string> kReadOnlyTools = {
     "next_context", "read_file", "list_dir",  "stat_file", "search",     "wiki_search",  "grep",
-    "callers",      "impact",    "query_log", "job_status", "git_status", "git_log",     "git_diff",
+    "callers",      "impact",    "query_log", "job_status", "git_status", "git_state", "git_log",     "git_diff",
     "git_show",     "ci_status", "prd_list",  "unknown_list", "review_join"};
 const std::set<std::string> kLoggedOutputTools = {"query_log", "job_status", "run_shell", "run_code"};
 const std::string kAbandonedReason = "abandoned: the worker restarted before it answered";
@@ -304,6 +304,7 @@ const std::vector<std::string>& node_verb_order() {
         "read_file",   "write_file",    "edit_file",   "stat_file",    "list_dir",       "run_shell",   "job_start",
         "job_status",  "job_stop",      "query_log",   "search",       "wiki_search",    "grep",        "wiki_write",
         "review_packet", "review_record", "review_join", "fetch",      "callers",        "impact",      "git_status",
+        "git_state",
         "git_add",     "git_rm",        "git_commit",  "git_push",     "git_log",        "git_diff",    "git_show",
         "git_fetch",   "git_pull",      "git_checkout", "git_branch",  "ci_status",      "prd_add",     "prd_list",
         "prd_resolve", "unknown_add",   "unknown_list", "unknown_resolve", "prd_delete", "prd_park", "prd_reopen",

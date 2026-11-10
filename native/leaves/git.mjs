@@ -98,6 +98,32 @@ function exec(program, argv, cwd, timeoutMs) {
 const gitIn = (dir, argv, timeoutMs = GIT_TIMEOUT_MS) => exec('git', argv, dir, timeoutMs);
 const isRepository = (dir) => gitIn(dir, ['rev-parse', '--is-inside-work-tree'], CHECK_TIMEOUT_MS).ok;
 
+const gitState = (dir) => {
+  const status = gitIn(dir, ['status', '--porcelain=v1', '--branch']);
+  if (!status.ok) return verbOf('status', status);
+  const shortstat = (args) => {
+    const stat = gitIn(dir, ['diff', '--shortstat', ...args]);
+    return stat.ok && stat.output.trim() !== '' ? stat.output.trim() : 'none';
+  };
+  const [head = '', ...lines] = status.output.split(/\r?\n/).filter((line) => line !== '');
+  const tracking = /^## (\S+?)(?:\.\.\.(\S+))?(?: \[([^\]]*)\])?$/.exec(head);
+  const counts = tracking?.[3]?.match(/(?:ahead|behind) \d+/g) ?? [];
+  const count = (word) => Number(counts.find((item) => item.startsWith(word))?.split(' ')[1] ?? 0);
+  const tracked = lines.filter((line) => !line.startsWith('??'));
+  const untracked = lines.length - tracked.length;
+  const staged = tracked.filter((line) => line[0] !== ' ').length;
+  const unstaged = tracked.filter((line) => line[1] !== ' ').length;
+  const branch = (tracking ? tracking[1] : head.replace(/^## /, '')) + (tracking?.[2] ? ' upstream ' + tracking[2] : '');
+  const unstagedStat = shortstat([]);
+  const stagedStat = shortstat(['--cached']);
+  return { ok: true, output: [
+    'branch ' + branch + ' ahead ' + count('ahead') + ' behind ' + count('behind'),
+    'changed ' + lines.length + ' staged ' + staged + ' unstaged ' + unstaged + ' untracked ' + untracked,
+    'diff unstaged: ' + unstagedStat,
+    'diff staged: ' + stagedStat,
+  ].join('\n') };
+};
+
 function verbOf(sub, result) {
   if (result.ok) return { ok: true, output: result.output.trim() || '(no output)' };
   return { ok: false, error: result.error ?? `git ${sub} exited ${result.exitCode}`, output: result.output.trim() };
@@ -187,6 +213,7 @@ const withPaths = (run) => (dir, { paths: list }) => {
 
 const handlers = {
   git_status: (dir) => git(dir, ['status', '--porcelain=v1', '--branch']),
+  git_state: (dir) => gitState(dir),
   git_rm: withPaths((dir, args) => git(dir, ['rm', ...args])),
   git_add: withPaths((dir, args) => git(dir, ['add', ...args])),
   git_commit: (dir, { message, paths: list, author }) => {
@@ -233,6 +260,7 @@ const handlers = {
 
 const DESCRIPTIONS = {
   git_status: ['Working tree status: the branch and the changed paths (porcelain v1).', scoped()],
+  git_state: ['Repository state in four lines: the branch with its upstream and its ahead and behind counts; the changed path count, split into staged, unstaged and untracked; the diff stat of the unstaged changes; the diff stat of the staged changes. Read it once per phase instead of running git_status, git_log and git_diff.', scoped()],
   git_add: ['Stage the given workspace paths. Each path is explicit; "." is refused.', scoped({ paths }, ['paths'])],
   git_rm: ['Remove the given workspace paths from the disk and the index, with git rm, so the removal is staged. Each path is explicit; "." is refused. Commit it with git_commit.', scoped({ paths }, ['paths'])],
   git_commit: ['Commit only the given paths, with the message. Stage new files with git_add first. author, when given, is the author name; the repository user.email is kept.', scoped({ message: str, paths, author: str }, ['message', 'paths'])],

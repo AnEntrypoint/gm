@@ -1751,3 +1751,20 @@ Open:
 - The installed gm does not carry these commits. A host gets the default cutoff and the reaper after its installed build updates.
 - Two worker restarts "without a reason" hit this run during long run_code bodies (restart event at 04:59:06 UTC; the run log says "restarted without a reason"). The second restart left a Node hold check orphaned on the old code; it was stopped by PID.
 - AGENTS.md: one note rewritten and one added (18621 to 19199 bytes). The full line-by-line audit the notes rule asks for was not done.
+
+## gm pass, Phase A: repeated work, turns and tokens (2026-11-10)
+
+Measured by /tmp/waste.py over the last eight hours of the fx, jayzee, spoint, thebird and gm transcripts (baseline /tmp/gm-analysis/waste-before.txt): fx 2043 API turns, 583 Bash calls against 32 run_code; jayzee 258 Bash and 66 run_code; spoint 573 Bash and 49 run_code; thebird 294 Bash and 35 run_code; 18 long calls in fx totalled 6382 s. The measurement reads past transcripts, so it is the same before and after this pass.
+
+| # | File | Change | Witness |
+|---|---|---|---|
+| 1 | native/components/verbs/job.cpp, src/tools.mjs | job_start reply carries pid, doneFile (jobs/<name>.exit, the exit code once the job ends) and logPath beside the output text | tools/check-job-reply-git-state.mjs, both engines |
+| 2 | native/components/mcp/server.cpp, src/tools.mjs | job_status waitMs is capped at 100000 ms on both engines. Cause: native kMaxJobWaitMs was 3600000 and Node's MAX_WAIT_MS in src/tools.mjs was 3600000, so a wait past the 120 s client limit was held | same check: waitMs 200000 returns after about 100 s with state running |
+| 3 | src/tools.mjs | job_start without timeoutMs defaults to 300000 ms on Node (DEFAULT_JOB_TIMEOUT_MS). Cause: the background path fell back to the 60000 ms run_shell default, so a 130 s job was killed at 60 s; native already used 300000 | same check: status.timeoutMs 300000 and the 130 s job is still running at the capped wait |
+| 4 | native/leaves/git.mjs, src/git.mjs, native/components/mcp/server.cpp, src/mcp.mjs, README.md, native/tests/parity/run.mjs | git_state verb: branch with upstream and ahead and behind, changed count split into staged, unstaged and untracked, diff stat of unstaged and staged changes, in four lines; read-only in both trees | same check on a seeded repo: four expected lines; parity row git_state |
+| 5 | skills/gm/SKILL.md | rules 9 to 15 in Spending turns and tokens: detached job with pid and doneFile, one wait sized from the ledger, git_state once per phase, edit in place, long output to a file, shell through gm, Phase B witnesses once; the wait cap line now says 100000 ms | skill://gm/SKILL.md read in Phase B; tools/check-skill-serve.mjs |
+| 6 | (none) | child sessions for reading: the Handing work to a child session section already covers it; no text change | read in Phase B |
+| 7 | (none) | Bash in place of gm: rule 14 names run_shell as the shell path and its 60000 ms foreground default; the default itself is unchanged, because a longer foreground command goes through timeoutMs or job_start | read in Phase B |
+| 8 | (none, already fixed at 409c3f3) | browser isolation: the pinned pw gate picks its port from a hash of the project root (lib loadPorts: pickPort(9400, 500, offset) and pickPort(9900, 500, offset)), and both clients set PLAYWRITER_PROJECT_DIR to the run's workspace, so each project has its own gate, Chrome and profile at <root>/.playwriter/browser-profile. The 2026-11-09 hypothesis of a shared fixed relay port 19988 does not hold for the gate: 19988 is upstream playwriter's relay default | Phase B: two projects each run gm.playwriter_execute; output shows distinct profile paths, browser pids and tab lists |
+
+Checks: tools/check-job-reply-git-state.mjs takes the target as an argument (node by default, or the built binary path). Its run on the Node tree in Phase A (2026-11-10): ok, with pid 3887653 and doneFile w1.exit, a 2 s job settled in a 2009 ms wait, and the capped wait returned after 100041 ms with state running.

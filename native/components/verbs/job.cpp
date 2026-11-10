@@ -377,6 +377,9 @@ json::Value JobTable::start(const std::string& name, const std::string& command,
     reply.set("ok", true);
     reply.set("state", "running");
     reply.set("output", "started job " + name + " (pid " + std::to_string(spawned.pid) + ")");
+    reply.set("pid", spawned.pid);
+    reply.set("doneFile", exit_file.string());
+    reply.set("logPath", out.string());
     return reply;
 }
 

@@ -128,6 +128,7 @@ function lineStarts(text) {
 }
 
 const DEFAULT_TIMEOUT_MS = 60000;
+const DEFAULT_JOB_TIMEOUT_MS = 300000;
 const MAX_TIMEOUT_MS = 3600000;
 const MAX_JOB_TIMEOUT_MS = 7200000;
 const TAIL_CAP = 2000;
@@ -135,7 +136,7 @@ const ADOPT_POLL_MS = 200;
 const ADOPT_KILL_CHECK_MS = 2000;
 const EXIT_SCRIPT = '(eval "$1"); s=$?; echo $s > "$2"; exit $s';
 export const OUTPUT_PAGE = 20000;
-const MAX_WAIT_MS = 3600000;
+const MAX_WAIT_MS = 100000;
 const PID_POLL_MS = 100;
 const JOB_NAME = /^[A-Za-z0-9_-]{1,64}$/;
 const BARRIER = { barrier: true };
@@ -287,7 +288,7 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
         return condenseShell(withLauncher(result), args.raw === true, runDir);
       }
       if (!JOB_NAME.test(args.job ?? '')) return { ok: false, error: 'a background job needs job: 1 to 64 letters, digits, _ or -' };
-      const timeoutMs = Math.min(Number(args.timeoutMs) || DEFAULT_TIMEOUT_MS, MAX_JOB_TIMEOUT_MS);
+      const timeoutMs = Math.min(Number(args.timeoutMs) || DEFAULT_JOB_TIMEOUT_MS, MAX_JOB_TIMEOUT_MS);
       return startJob(args.job, args.command, timeoutMs, args.progress);
     },
 
@@ -428,7 +429,7 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
     jobs.set(name, job);
     watchJobs();
     log.append('job', { job: name, state: 'running', pid: child.pid });
-    return { ok: true, state: 'running', output: `started job ${name} (pid ${child.pid})` };
+    return { ok: true, state: 'running', output: `started job ${name} (pid ${child.pid})`, pid: child.pid, doneFile: exitFile, logPath: outputFile };
   }
 
   function exitFileOf(name) {
@@ -848,7 +849,7 @@ function pidAlive(pid) {
 }
 
 function jobKillStatement(name, reason, timeoutMs, lifetimeMs) {
-  if (reason === 'timeout') return `job ${name} stopped: timeout after ${timeoutMs} ms. The limit is job_start's timeoutMs (default ${DEFAULT_TIMEOUT_MS}); pass timeoutMs, up to the job lifetime of ${lifetimeMs} ms, for a longer run`;
+  if (reason === 'timeout') return `job ${name} stopped: timeout after ${timeoutMs} ms. The limit is job_start's timeoutMs (default ${DEFAULT_JOB_TIMEOUT_MS}); pass timeoutMs, up to the job lifetime of ${lifetimeMs} ms, for a longer run`;
   if (reason === 'lifetime') return `job ${name} stopped: the job lifetime of ${lifetimeMs} ms ended before it finished`;
   if (reason === 'cancelled') return `job ${name} stopped by job_stop`;
   if (reason === 'restart') return `job ${name} killed: the gm worker restarted while it ran, and a restart kills the process group of every job that was running`;

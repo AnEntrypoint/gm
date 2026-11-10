@@ -1025,7 +1025,7 @@ function taskOfRun(events, runDir) {
 
 const READ_ONLY_TOOLS = new Set([
   'next_context', 'read_file', 'list_dir', 'stat_file', 'search', 'wiki_search', 'grep', 'callers', 'impact', 'query_log', 'job_status',
-  'git_status', 'git_log', 'git_diff', 'git_show', 'ci_status', 'prd_list', 'unknown_list', 'review_join',
+  'git_status', 'git_state', 'git_log', 'git_diff', 'git_show', 'ci_status', 'prd_list', 'unknown_list', 'review_join',
 ]);
 const OPEN_WORLD = new Set(['fetch', 'git_fetch', 'git_pull', 'git_push', 'ci_status']);
 const RECORDS_ONLY = new Set(['next_context', 'finish']);

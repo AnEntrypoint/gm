@@ -22,6 +22,7 @@ const obj = (properties, required = []) => ({ type: 'object', properties, requir
 const scoped = (properties = {}, required = []) => obj({ cwd: str, ...properties }, required);
 
 export const GIT_TOOLS = [
+  { name: 'git_state', description: 'Repository state in four lines: the branch with its upstream and its ahead and behind counts; the changed path count, split into staged, unstaged and untracked; the diff stat of the unstaged changes; the diff stat of the staged changes. Read it once per phase instead of running git_status, git_log and git_diff. cwd, when given, is the directory whose repository the verb acts on: absolute, or relative to the workspace root; a directory outside a git repository is refused. Omitted, the workspace is used.', inputSchema: scoped() },
   { name: 'git_status', description: 'Working tree status: the branch and the changed paths (porcelain v1). cwd, when given, is the directory whose repository the verb acts on: absolute, or relative to the workspace root; a directory outside a git repository is refused. Omitted, the workspace is used.', inputSchema: scoped() },
   { name: 'git_add', description: 'Stage the given workspace paths. Each path is explicit; "." is refused. cwd, when given, is the directory whose repository the verb acts on: absolute, or relative to the workspace root; a directory outside a git repository is refused. Omitted, the workspace is used.', inputSchema: scoped({ paths: strings }, ['paths']) },
   { name: 'git_rm', description: 'Remove the given workspace paths from the disk and the index, with git rm, so the removal is staged. Each path is explicit; "." is refused. Commit it with git_commit, which runs the commit gate. cwd, when given, is the directory whose repository the verb acts on: absolute, or relative to the workspace root; a directory outside a git repository is refused. Omitted, the workspace is used.', inputSchema: scoped({ paths: strings }, ['paths']) },
@@ -45,7 +46,7 @@ export function isRepository(root) {
   return runCommand('git', ['rev-parse', '--is-inside-work-tree'], { cwd: root, timeoutMs: CHECK_TIMEOUT_MS, env: GIT_ENV }).then((result) => result.ok);
 }
 
-const GIT_RESULTS = ['git_status', 'git_add', 'git_rm', 'git_commit', 'git_push', 'git_fetch', 'git_pull', 'git_checkout', 'git_branch', 'ci_status'];
+const GIT_RESULTS = ['git_status', 'git_state', 'git_add', 'git_rm', 'git_commit', 'git_push', 'git_fetch', 'git_pull', 'git_checkout', 'git_branch', 'ci_status'];
 const GIT_LISTINGS = ['git_log', 'git_diff', 'git_show'];
 export const COMPACT = {
   tools: {
@@ -67,6 +68,32 @@ function ciRuns(output) {
 export function createGitVerbs({ root, confine, log }) {
   const gitIn = (dir, args, timeoutMs = GIT_TIMEOUT_MS) => runCommand('git', args, { cwd: dir, timeoutMs, env: GIT_ENV });
   const git = async (dir, args, timeoutMs) => verbOf(args[0], await gitIn(dir, args, timeoutMs));
+
+  const gitState = async (dir) => {
+    const status = await gitIn(dir, ['status', '--porcelain=v1', '--branch']);
+    if (!status.ok) return verbOf('status', status);
+    const shortstat = async (args) => {
+      const stat = await gitIn(dir, ['diff', '--shortstat', ...args]);
+      return stat.ok && stat.output.trim() !== '' ? stat.output.trim() : 'none';
+    };
+    const [head = '', ...lines] = status.output.split(/\r?\n/).filter((line) => line !== '');
+    const tracking = /^## (\S+?)(?:\.\.\.(\S+))?(?: \[([^\]]*)\])?$/.exec(head);
+    const counts = tracking?.[3]?.match(/(?:ahead|behind) \d+/g) ?? [];
+    const count = (word) => Number(counts.find((item) => item.startsWith(word))?.split(' ')[1] ?? 0);
+    const tracked = lines.filter((line) => !line.startsWith('??'));
+    const untracked = lines.length - tracked.length;
+    const staged = tracked.filter((line) => line[0] !== ' ').length;
+    const unstaged = tracked.filter((line) => line[1] !== ' ').length;
+    const branch = (tracking ? tracking[1] : head.replace(/^## /, '')) + (tracking?.[2] ? ' upstream ' + tracking[2] : '');
+    const unstagedStat = await shortstat([]);
+    const stagedStat = await shortstat(['--cached']);
+    return { ok: true, output: [
+      'branch ' + branch + ' ahead ' + count('ahead') + ' behind ' + count('behind'),
+      'changed ' + lines.length + ' staged ' + staged + ' unstaged ' + unstaged + ' untracked ' + untracked,
+      'diff unstaged: ' + unstagedStat,
+      'diff staged: ' + stagedStat,
+    ].join('\n') };
+  };
 
   const retried = (tool, attempt) =>
     retrying({
@@ -144,6 +171,7 @@ export function createGitVerbs({ root, confine, log }) {
 
   return {
     git_status: inRepo((dir) => git(dir, ['status', '--porcelain=v1', '--branch'])),
+  git_state: inRepo((dir) => gitState(dir)),
 
     git_rm: inRepo((dir, { paths }) => {
       const scope = pathArgs(dir, paths);
