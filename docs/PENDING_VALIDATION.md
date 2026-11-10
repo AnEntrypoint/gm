@@ -1728,3 +1728,26 @@ Open: the installed gm of a host still refuses without the named call until its 
 | 7 | AGENTS.md, DESIGN.md | Notes for the 120 s client limit, the 100 s default and the restart reaper. AGENTS.md: 18621 bytes before, 19199 after. The audit covers the notes this change touches; a full line-by-line audit is not done. | none (text) |
 
 Open for Phase B: whether the Node tree has the same restart orphan. Its foreground groups live in memory (src/exec.mjs bodyGroups), and stopOrphans reads only jobs/*.json. The Node check is node tools/check-restart-body-orphan.mjs.
+
+## Body ledgers at a restart and the run_code cutoff: Phase B witnesses (2026-11-10)
+
+Built at 601547c (the three Phase A commits): cmake --preset release and cmake --build build/release exit 0; the release stamp is 601547c-dev. The wasm target (build/wasi) reports up to date; none of the changed files is in its graph, so gm_txiki_wasi.wasm is unchanged (5176695 bytes, built 06:31).
+
+Witnesses:
+- Before the fix (the 83192c1 binary): node tools/check-restart-body-orphan.mjs build/release/native/components/host/gm exit 1: after the restart the body shell 3712101 and its sleep 3712102 were both alive (stat S).
+- After the fix, native: exit 0, "the body shell 3718637 and its sleep 3718638 were alive before the restart (binary mtime changed) and are gone after it; next_context answered the restarted run in 30591 ms".
+- After the fix, Node: node tools/check-restart-body-orphan.mjs node, exit 0: body shell 3719986 and sleep 3719987 gone after a SIGTERM to the Node worker; next_context answered in 624 ms. The Node mechanism was not traced; the check passes.
+- node tools/check-foreground-hold.mjs build/release/native/components/host/gm, exit 0: run_code with the default timeoutMs returned job body-7 after 100003 ms; next_context holds ran 50029 ms; the job ended exited with output done.
+- node tools/check-foreground-hold.mjs node, exit 0: job body-7 after 100009 ms; holds ran 50054 ms; the job ended exited with output done.
+- Existing witnesses on build/release, all exit 0: check-restart-jobs native and node ("the job exited 0 with output done"); check-run-code-budget native ("a 65 s JavaScript body with timeoutMs 100000 returned in 65007 ms"); check-run-code-progress native; check-turn-economy native; check-build build/release (conformance 86 passed, 0 failed of 86 checks; stamp 601547c-dev).
+- Parity: node native/tests/parity/run.mjs --bin build/release/native/components/host/gm, exit 0: 17/95 match, 0 cutover-expected, 56 native-ahead, 22 documented-gap, 0 differ. Same counts as the 2026-11-10 witness. The next_context description row (tools/list, .result.tools[0].description) is now a documented gap, because both engines hold waitMs at most 100 s and only the wording differs.
+
+Defects found and fixed in Phase B:
+- tools/check-foreground-hold.mjs asserted exitCode 0 for a body job, whose job_status has exitCode null; the body's output is the evidence. Fixed in the check.
+- The parity row for the next_context description was native-ahead for 300000 against 100000; after the Node cap change it differed. Reclassified as documented gap (native/tests/parity/run.mjs).
+
+Open:
+- The MCP client's limit is the notice text, "still running after 120s", which this session saw. The exact trigger time was not measured; the prior default of 180000 ms let the client background the call first.
+- The installed gm does not carry these commits. A host gets the default cutoff and the reaper after its installed build updates.
+- Two worker restarts "without a reason" hit this run during long run_code bodies (restart event at 04:59:06 UTC; the run log says "restarted without a reason"). The second restart left a Node hold check orphaned on the old code; it was stopped by PID.
+- AGENTS.md: one note rewritten and one added (18621 to 19199 bytes). The full line-by-line audit the notes rule asks for was not done.
