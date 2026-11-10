@@ -127,7 +127,7 @@ function lineStarts(text) {
   return starts;
 }
 
-const DEFAULT_TIMEOUT_MS = 60000;
+const DEFAULT_TIMEOUT_MS = 300000;
 const DEFAULT_JOB_TIMEOUT_MS = 300000;
 const MAX_TIMEOUT_MS = 3600000;
 const MAX_JOB_TIMEOUT_MS = 7200000;
