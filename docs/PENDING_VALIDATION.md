@@ -2054,3 +2054,42 @@ Changes:
 Not done in this pass: no build, no test, no push, no install. Phase B builds HEAD, runs node tools/check-installed-build.mjs on the built binary (expected to pass for the built binary: ttlMs 0) and node tools/check-skill-serve.mjs build/release/native/components/host/gm, then the parity harness.
 
 Blocker for the install: a peer is busy (fx-e1 at 08:4x). The install is waiting for no peer to be busy.
+
+## gm pass, stretch 5 (2026-11-10): reachable ledger rows, Phase A and Phase B
+
+Phase A reviewed the ranked ledger (the 2026-11-10 ranked open work at line 1444, the ranked reachable items at line 1608, and the 2026-11-09 ranked remaining work at line 1047) against the code and the witnesses. Every row that is reachable without a Windows, macOS or arm64 host, fx's duplicate-events reply, or thebird's uv_fs bridge is already closed in HEAD, or is a decision that the owner has taken. No new code change was needed for a ledger row. The one defect found in this stretch is in the new check itself (below).
+
+| row | status | reason or witness |
+|---|---|---|
+| relay re-exec under a held next_context wait | closed (Phase B b23984b) | check-relay-reexec passes on a non-dev stamp |
+| one skill copy in the run_code refusal | closed (3ffda38) | check-no-resource-client native 10680 bytes, node 10646 bytes |
+| AGENTS.md Last witness for parity | closed (91d4fab) | 20 of 97 match, 0 differ |
+| Node arm of a tool-only client across a restart | closed | check-no-resource-client drives both engines |
+| repeated skill re-read after a worker restart | closed (stretch 4) | check-restart-skill-read ok |
+| served-skill freshness on an old connection | closed in code this stretch (626f8e0), witnessed below | check-installed-build on the built binary: ttlMs 0 |
+| ci_status no-commit wording, leaf assertion, finish openRows, Node stopped background fetch | closed in earlier stretches | see their records |
+| resources/read of an unknown uri (-32602 or -32002) | closed by owner decision 2026-11-10 (-32002 on both) | check-build conformance |
+| run_code skill text in structuredContent | owner decision, not taken | the protocol shape on both engines |
+| Native resources/subscribe -32601 against Node | closed; AGENTS.md records subscribe on both engines | not reproduced in this pass |
+| protocol 2026-07-28 behind a capability flag | owner decision 3, not started | the owner schedules it |
+| Two peers in one workspace; fx duplicate events | blocked: needs fx's reply text | fx-e1 was busy, nothing sent |
+| run_code no-result (rank 15) | not reproduced | check-run-code-budget ok at 65014 ms; reopen when a run hits it |
+| txiki uv_fs_* imports and the import witness | blocked: needs thebird's bridge report | not in this checkout's reach |
+| Windows B1 (restart-jobs), B2 (arm64 browser), process-group kill, MSVC build | blocked: no Windows host | install steps in the Phase A entry at line 1405 |
+| macOS and arm64 build and runtime | blocked: no host | not verified here |
+| installed build (626f8e0, 40feed3, 3fcb810, cc80361) | pending the install | waits for no peer to be busy; the release must carry these commits first |
+| ship.sh bypass | owner decision | not taken |
+
+Defect found and fixed in this stretch (Phase A, commit 3fcb810): tools/check-installed-build.mjs compared the served skill to the binary's own skills directory, so on a built binary (which serves the checkout) it could not match, and it expected the build stamp in serverInfo.version, which reports the protocol version 0.1.0. Fix: the served text may match either the binary's skills copy or the checkout's skills/gm/SKILL.md, and the stamp is checked only in the --version output.
+
+Phase B, on HEAD 3fcb810 (release build reconfigured with -DGMNEW_VERSION=3fcb810-1):
+
+- build: cmake --build build/release, BUILD_EXIT=0, wall 45 s; gm --version prints "3fcb810-1 (3fcb810)".
+- check-installed-build on build/release gm 3fcb810: installed-build-check: ok (version "3fcb810-1 (3fcb810)"; skill://gm/SKILL.md equals /workspace/gm/skills/gm/SKILL.md with ttlMs 0). Wall under 1 s.
+- check-installed-build on the installed /config/.gmnew/current/gm (78ca5a1, negative witness): 1 failure: skill://gm/SKILL.md read has ttlMs 3600000, expected 0. This is the freshness defect the check measures. Wall under 1 s.
+- check-skill-serve on build/release gm: skill-serve-check: ok (the default serve returns the checkout's skill://gm/SKILL.md, and a live connection returns each change on the next read). Wall under 1 s.
+- check-no-resource-client native: ok (10680 bytes for a 10032-byte skill). Wall 2 s.
+- check-no-resource-client node: ok (10646 bytes). Wall under 1 s.
+- parity, build/release gm: 20/97 scenarios match, 0 cutover-expected, 55 native-ahead, 22 documented-gap, 0 differ. Wall 16 s.
+
+The installed build is not installed. Its install waits for a moment when no peer is busy, and for a release that carries 626f8e0, 40feed3, 3fcb810 and cc80361.
