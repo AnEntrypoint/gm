@@ -107,7 +107,7 @@ try {
   await toolReply('next_context', {});
   const served = await runCode(`return { execute: typeof gm.playwriter_execute === 'function' };`);
   if (served.ok === true && outputOf(served).execute === true) {
-    const opened = await runCode(`return { exec: await gm.playwriter_execute({ code: ${JSON.stringify(OPEN_CODE)} }), tabs: await gm.browser_tabs({}) };`);
+    const opened = await runCode(`return { exec: await gm.playwriter_execute({ code: ${JSON.stringify(OPEN_CODE)}, timeout: 60000 }), tabs: await gm.browser_tabs({}) };`);
     if (opened.ok !== true) {
       browserPhase = `failed: the browser open did not run: ${String(opened.error ?? JSON.stringify(opened))}`;
       failures.push(`browser phase: ${browserPhase}`);
