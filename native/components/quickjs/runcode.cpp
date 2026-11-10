@@ -50,10 +50,10 @@ std::size_t count_newlines(std::string_view text) {
 }
 
 std::string load_error(const std::string& text, std::string_view body, std::size_t head, std::size_t removed) {
-    constexpr std::string_view marker = "\n    at <body>:";
+    constexpr std::string_view marker = "<body>:";
     const std::size_t at = text.find(marker);
     if (at == std::string::npos) return "the body does not load: " + text;
-    const std::string message = "the body does not load: " + text.substr(0, at);
+    const std::string message = "the body does not load: " + text.substr(0, text.find('\n'));
     const std::string_view rest = std::string_view(text).substr(at + marker.size());
     const char* end = rest.data() + rest.size();
     std::size_t line = 0;
