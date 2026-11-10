@@ -18,6 +18,7 @@ if (target === null || (!onNode && !existsSync(resolve(target)))) {
 const REPLY_MS = 180000;
 const OLD_WAIT_CAP_MS = 30000;
 const SLOW_JOB_SECONDS = 31;
+const SLOW_COMMAND = process.platform === 'win32' ? `sleep ${SLOW_JOB_SECONDS} & echo slow` : `sleep ${SLOW_JOB_SECONDS}; echo slow`;
 const UNCHANGED_REPLY_BYTES = 1200;
 
 const sleep = (ms) => new Promise((done) => setTimeout(done, ms));
@@ -120,7 +121,7 @@ try {
     const startedAt = Date.now();
     const jobs = await code(
       `const [slow, short, gone] = await Promise.all([
-        (async () => { await gm.job_start({ job: 'slow', command: 'sleep ${SLOW_JOB_SECONDS}; echo slow', timeoutMs: 120000 }); const began = Date.now(); const ended = await gm.job_status({ job: 'slow', waitMs: 120000, tail: 5 }); return { state: ended.state, exitCode: ended.exitCode, output: ended.output, durMs: ended.durMs, waitedMs: Date.now() - began }; })(),
+        (async () => { await gm.job_start({ job: 'slow', command: ${JSON.stringify(SLOW_COMMAND)}, timeoutMs: 120000 }); const began = Date.now(); const ended = await gm.job_status({ job: 'slow', waitMs: 120000, tail: 5 }); return { state: ended.state, exitCode: ended.exitCode, output: ended.output, durMs: ended.durMs, waitedMs: Date.now() - began }; })(),
         (async () => { await gm.job_start({ job: 'short', command: 'sleep 30', timeoutMs: 500 }); const ended = await gm.job_status({ job: 'short', waitMs: 20000, tail: 200 }); return { state: ended.state, reason: ended.reason, statement: ended.statement }; })(),
         (async () => { await gm.job_start({ job: 'quick', command: 'sleep 2' }); const pid = (await gm.job_status({ job: 'quick' })).pid; const waited = await gm.job_status({ pid, waitMs: 20000 }); return { pid, state: waited.state, waitedMs: waited.waitedMs, exitCode: waited.exitCode }; })(),
       ]);

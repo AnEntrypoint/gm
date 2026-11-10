@@ -108,7 +108,17 @@ if (binary !== null && existsSync(binary)) {
 } else {
   console.log('native: skipped (no binary given)');
 }
-for (const dir of workspaces) rmSync(dir, { recursive: true, force: true });
+for (const dir of workspaces) {
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      rmSync(dir, { recursive: true, force: true });
+      break;
+    } catch (error) {
+      if (error?.code !== 'ENOTEMPTY' || attempt === 50) throw error;
+      await new Promise((done) => setTimeout(done, 100));
+    }
+  }
+}
 clearTimeout(watchdog);
 if (failures.length > 0) {
   console.error('check-startup-attempts: failed: ' + failures.join('; '));
