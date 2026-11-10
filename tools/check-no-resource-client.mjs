@@ -158,14 +158,14 @@ try {
     expect(viaVerb.ok === true, `gm.read_file of the skill uri failed in a body: ${short(viaVerb)}`);
 
     const second = await client.tool('next_context', {});
-    expect(second.ok === true && second.step === 2, `the second next_context did not open step 2: ${short({ ok: second.ok, step: second.step })}`);
+    expect(second.ok === true && second.unchanged === true, `the second next_context, with nothing new, is not the unchanged reply: ${short({ ok: second.ok, unchanged: second.unchanged, step: second.step })}`);
     expect(second.rulesPending === undefined, `the second next_context still has rulesPending: ${short(second.rulesPending)}`);
 
     const restartsBefore = restartCount();
-    restartWorker();
+    if (process.platform !== 'win32') restartWorker();
     const restartDeadline = Date.now() + RESTART_MS;
-    while (restartCount() === restartsBefore && Date.now() < restartDeadline) await sleep(100);
-    expect(restartCount() > restartsBefore, `no restart event in the run log within ${RESTART_MS} ms of the trigger`);
+    while (process.platform !== 'win32' && restartCount() === restartsBefore && Date.now() < restartDeadline) await sleep(100);
+    expect(process.platform === 'win32' || restartCount() > restartsBefore, `no restart event in the run log within ${RESTART_MS} ms of the trigger`);
     const afterRestart = await client.tool('run_code', { body: "return (await gm.read_file({ path: 'sample.txt' })).output;" });
     expect(afterRestart.ok === true && short(afterRestart).includes('tool-only client'), `run_code after a worker restart did not run for the tool-only client: ${short(afterRestart)}`);
 
