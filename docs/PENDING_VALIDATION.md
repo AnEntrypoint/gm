@@ -1691,3 +1691,12 @@ Native regression after the shared changes: `cmake --build build/release -j 8` e
 Open:
 - Chromium's --dump-dom runs at load, so the page must finish synchronously; a larger reactor would need an async page (the 8 MB limit) and a DevTools-driven runner. Not done.
 - The reactor's exports are the seven gm_txiki_* functions and gm_run_body. The browser entry (thebird) and the gm-in-page consumer are not checked against this list; no consumer code is in this checkout.
+
+## Task refusal names the call that unblocks it (2026-11-10, Phase A)
+
+| # | File | Change | Witness needed |
+|---|---|---|---|
+| 1 | src/mcp.mjs, native/components/mcp/server.cpp | The refusal of a task replacement after the first step (next_context, child_context) names the exact call that unblocks it: next_context({ task, owner: true }), next_context({ child: true, run, task, owner: true }), or gm.task_set({ task, owner: true }) from run_code. The owner gate stays: accepting an unmarked replacement reverses the task-leak fix fcb84df. | Phase B: on build/release, a run past step one that calls next_context({ task: "replacement" }) is refused with the named call in its error, and next_context({ task: "replacement", owner: true }) returns task "replacement". Witness: node tools/check-child-task.mjs build/release/native/components/host/gm |
+| 2 | tools/check-child-task.mjs | The check asserts that the plain refusal and the child refusal after step one name the owner call, and keeps the owner replacement check. | Phase B: node tools/check-child-task.mjs (Node engine) exit 0, and node tools/check-child-task.mjs build/release/native/components/host/gm exit 0 |
+| 3 | DESIGN.md | Decision bullet after the child task decision: the owner gate is kept, the refusal names the call, with the reason. | Read-only; covered by rows 1 and 2 |
+| 4 | (no edit) | Phase B reruns the existing witnesses on the built binaries: node tools/check-build.mjs build/release, node tools/check-txiki-wasi.mjs build/wasi/native/components/quickjs/gm_txiki_wasi.wasm, node tools/check-txiki-wasi-chromium.mjs build/wasi/native/components/quickjs/gm_txiki_wasi.wasm, all in the foreground. | Phase B: each exit 0, output read |
