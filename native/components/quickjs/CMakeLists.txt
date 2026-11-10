@@ -25,7 +25,9 @@ if(WIN32)
 else()
     target_link_libraries(gm_quickjs_ng PUBLIC m)
 endif()
-target_link_libraries(gm_quickjs_ng PUBLIC ${CMAKE_DL_LIBS} Threads::Threads)
+if(NOT GMNEW_TXIKI_WASI)
+    target_link_libraries(gm_quickjs_ng PUBLIC ${CMAKE_DL_LIBS} Threads::Threads)
+endif()
 if(MSVC)
     target_compile_options(gm_quickjs_ng PRIVATE /experimental:c11atomics /wd4018 /wd4061 /wd4100 /wd4200 /wd4242 /wd4244 /wd4245 /wd4267 /wd4388 /wd4389 /wd4456 /wd4457 /wd4996)
 else()
@@ -91,30 +93,34 @@ if(GMNEW_TXIKI_WASI)
         ${GMNEW_TXIKI_GLUE_DIR}/overlay ${GMNEW_TXIKI_DIR}/src ${GMNEW_TXIKI_DIR}/deps/ada ${GMNEW_QUICKJS_DIR}
     )
     set(GMNEW_TXIKI_WASI_DEFINES _GNU_SOURCE _WASI_EMULATED_SIGNAL _WASI_EMULATED_PROCESS_CLOCKS _WASI_EMULATED_GETPID TJS__PLATFORM="wasi")
+    set(GMNEW_TXIKI_WASI_OPTIONS -O2 -w -include ${GMNEW_TXIKI_ROOT}/browser/txiki-browser.h)
 
+    set_source_files_properties(${GMNEW_TXIKI_DIR}/deps/ada/ada.cpp PROPERTIES COMPILE_OPTIONS "-fno-exceptions;-fno-rtti")
     add_library(gm_txiki_core_wasi STATIC
         ${GMNEW_TXIKI_WASI_SOURCES}
         ${GMNEW_TXIKI_DIR}/deps/ada/ada.cpp
         ${GMNEW_TXIKI_GLUE_DIR}/txiki_stubs.c
         ${GMNEW_TXIKI_ROOT}/browser/uv-browser.c
+        ${GMNEW_TXIKI_ROOT}/browser/stubs.c
     )
     set_target_properties(gm_txiki_core_wasi PROPERTIES C_STANDARD 11 C_EXTENSIONS ON C_VISIBILITY_PRESET hidden CXX_STANDARD 20)
     target_compile_definitions(gm_txiki_core_wasi PRIVATE ${GMNEW_TXIKI_WASI_DEFINES})
     target_include_directories(gm_txiki_core_wasi SYSTEM PRIVATE ${GMNEW_TXIKI_WASI_INCLUDES})
     target_include_directories(gm_txiki_core_wasi PUBLIC ${GMNEW_TXIKI_GLUE_DIR})
-    target_compile_options(gm_txiki_core_wasi PRIVATE -O2 -w)
+    target_compile_options(gm_txiki_core_wasi PRIVATE ${GMNEW_TXIKI_WASI_OPTIONS})
     target_link_libraries(gm_txiki_core_wasi PUBLIC gm_quickjs_ng)
 
     target_compile_definitions(gm_runcode PRIVATE GM_HAVE_TXIKI)
     target_include_directories(gm_runcode PRIVATE ${GMNEW_TXIKI_GLUE_DIR})
+    target_compile_options(gm_runcode PRIVATE -include ${GMNEW_TXIKI_ROOT}/browser/txiki-browser.h)
     target_link_libraries(gm_runcode PRIVATE gm_txiki_core_wasi)
 
     add_executable(gm_txiki_wasi ${GMNEW_TXIKI_GLUE_DIR}/txiki_shim.c)
     set_target_properties(gm_txiki_wasi PROPERTIES SUFFIX ".wasm" C_STANDARD 11 C_EXTENSIONS ON CXX_STANDARD 20)
     target_compile_definitions(gm_txiki_wasi PRIVATE ${GMNEW_TXIKI_WASI_DEFINES})
     target_include_directories(gm_txiki_wasi SYSTEM PRIVATE ${GMNEW_TXIKI_WASI_INCLUDES})
-    target_compile_options(gm_txiki_wasi PRIVATE -O2 -w)
-    target_link_libraries(gm_txiki_wasi PRIVATE gm_runcode gm_txiki_core_wasi gm_json gm_quickjs_ng)
+    target_compile_options(gm_txiki_wasi PRIVATE ${GMNEW_TXIKI_WASI_OPTIONS})
+    target_link_libraries(gm_txiki_wasi PRIVATE gm_txiki_core_wasi)
     target_link_options(gm_txiki_wasi PRIVATE
         -mexec-model=reactor -Wl,--no-entry -Wl,--export-dynamic -Wl,--no-gc-sections
         -Wl,--export=gm_txiki_new -Wl,--export=gm_txiki_free -Wl,--export=gm_txiki_context

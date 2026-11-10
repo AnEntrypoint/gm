@@ -1550,3 +1550,54 @@ Blocked, excluded from this Phase B (no host here):
 - Windows, macOS and arm64 builds and runs of libuv and txiki: blocked, no such host in this checkout; hosted CI builds them and is not watched here.
 - B1 (Windows x64 restart-jobs) and B2 (Windows arm64 browser path): blocked, no Windows host.
 - The run_code wasm32-wasi Phase B: gated on thebird's origin/main exporting the seven gm_txiki_* functions. Checked with one git fetch after the push (see the REPORT line).
+
+## gm pass, Phase B for the txiki wasm32-wasi target (2026-11-10, thebird origin/main 579e2e6)
+
+Gate: `git -C /workspace/thebird fetch origin` once, exit 0. origin/main is 579e2e6. `scripts/txiki/browser/entry.c` there defines the seven exports (gm_txiki_new, gm_txiki_free, gm_txiki_context, gm_txiki_loop_alive, gm_txiki_loop_turn, gm_txiki_load_builtin, gm_txiki_refresh_loop_time), lines 212-243. Gate met.
+
+Pins, gm against thebird origin/main scripts/vendor-txiki.mjs and the local wasm:
+
+| item | gm native/third_party/txiki | thebird origin/main | match |
+|---|---|---|---|
+| txiki sha256 | 763025ac98e4d6629f9ebe8396c027ff22966a6322b0dc43e442d45c6d7f8059 | TXIKI_SHA256 same | yes |
+| libuv commit / sha256 | dd9f081c... / f5185440... | LIBUV_COMMIT / LIBUV_SHA256 same | yes |
+| quickjs-ng commit / sha256 | 7b5f588e... / f27b2e93... | QUICKJS_NG_COMMIT / QUICKJS_NG_SHA256 same | yes |
+| browser stubs.tsv | 0531146a... | scripts/txiki/stubs.tsv 0531146a... | yes |
+| txiki-browser.h | d20dec81... | scripts/txiki/include/txiki-browser.h d20dec81... | yes |
+| uv-browser.c | 89d228c3... | scripts/txiki/browser/uv-browser.c 89d228c3... | yes |
+| tjs.wasm | (not vendored in gm) | TXIKI_WASM_SHA256 dcd3a434...; web/vendor/txiki/tjs.wasm sha256 dcd3a434..., 14177014 bytes | yes |
+
+Changes in this pass (uncommitted until the ship below):
+- tools/browser-stubs.mjs (new): generates native/third_party/txiki/browser/stubs.c from stubs.tsv with thebird's writeStubs rule. It checks the table's sha256 against the pin first. Output: 91 stubs, sha256 f66f1f77e9a8d812b6789b152eeebbd2e15f9525571cd23f0b75e96b3dd66b6d. Symbols defined in native/components/quickjs/txiki/txiki_stubs.c are skipped.
+- tools/vendor-txiki.mjs: BROWSER_PORT lists stubs.tsv (sha pinned); the vendor run regenerates stubs.c through tools/browser-stubs.mjs and records its sha in VERSION.txt. The vendor run itself was not executed in this pass (network); VERSION.txt lines were written by hand to the same format.
+- native/components/quickjs/CMakeLists.txt, wasi branch: browser/stubs.c added to gm_txiki_core_wasi; ada.cpp compiled with -fno-exceptions -fno-rtti; gm_quickjs_ng does not link Threads::Threads or CMAKE_DL_LIBS under GMNEW_TXIKI_WASI (the link failed with `unable to find dynamic system library "pthreads"`); gm_txiki_wasi links gm_txiki_core_wasi only (gm_runcode and gm_json dropped until the engine compiles).
+- tools/check-txiki-wasi.mjs (new): the Node witness. It instantiates a wasm reactor with WASI preview1 and the env imports (every env function import is supplied as a stub, tjs_host_write collects stderr), then runs the seven-export sequence.
+
+Build: `cmake --build build/wasi --target gm_txiki_wasi -j 8` in the foreground, timeout 900 s, exit 0. Built after one failed link (the pthreads line above). Output: build/wasi/native/components/quickjs/gm_txiki_wasi.wasm, 9328581 bytes, sha256 9e2e5ae88b47f7ebd51ffaa3358485c671c7ea41f01861d87f9f1a89ad1d8d4e.
+
+Witness 1, Node, gm reactor and thebird tjs.wasm: `timeout 120 node tools/check-txiki-wasi.mjs <wasm>`, both exit 0:
+- gm: `txiki-wasi-check: ok (build/wasi/native/components/quickjs/gm_txiki_wasi.wasm: runtime created, context read, loop turned, tjs:path loaded through gm_txiki_load_builtin, unknown module refused, runtime freed; 57 ms)`, wall 174 ms.
+- thebird: `txiki-wasi-check: ok (/workspace/thebird/web/vendor/txiki/tjs.wasm: runtime created, context read, loop turned, tjs:path loaded through gm_txiki_load_builtin, unknown module refused, runtime freed; 69 ms)`, wall 185 ms.
+Wall time includes the Node start and the ExperimentalWarning for WASI.
+
+Witness 2, headless Chromium of the built site: blocked. gm has no page that instantiates gm_txiki_wasi.wasm, so there is no site to load. thebird's page instantiates its own tjs.wasm through its tjs_browser_* host, not gm's exports, so it does not witness this build. Playwriter (invariant 11, inside gm) needs such a page first. Not built in this pass: a page is a new surface, and the owner has not asked for one.
+
+Size, against the QuickJS-only numbers from ba8a863:
+
+| build | raw | stripped | gzip -9 | gzip -9 stripped |
+|---|---|---|---|---|
+| QuickJS-only (ba8a863) | 5326939 | 1319372 | 1872613 | 458979 |
+| gm txiki-only reactor (this build) | 9328581 | 2498054 | 3066066 | 893294 |
+| difference | +4001642 | +1178682 | +1193453 | +434315 |
+| thebird tjs.wasm (current, Phase A figures) | 14177014 | 3872224 | 4937897 | 1399493 |
+
+The gm reactor excludes the run_code engine and the sqlite, webcrypto and httpclient modules, which thebird's build includes. Its code is 1590576 bytes; its data is 896884 bytes; its debug custom sections are 6830314 bytes of the raw size. The family names in the measurement (sqlite3, webcrypto, httpclient, libwebsockets, mbedtls) match only names in the link and the name section, not linked code.
+
+Open, run_code on wasm32-wasi (the engine is not built). `cmake --build build/wasi --target gm_runcode -- -k 0` fails with 15 errors, all C++ standard library features that the WASI libc++ here lacks:
+- engine.cpp:22,23,239 std::shared_mutex and std::shared_lock; engine.cpp:408 std::this_thread; engine.cpp:66 std::ifstream.
+- leaves.cpp:143 std::mutex; leaves.cpp:41,43,165,206,250 std::filesystem (last_write_time, file_size, directory_iterator, absolute, is_regular_file); leaves.cpp:49 and runcode.cpp:71 std::ifstream.
+- runcode.cpp:250 std::filesystem::is_regular_file.
+- unique_lock.h:44,67: the mutex type is int when the mutex is missing.
+Needed before this links: a wasi branch for the sync primitives (single-threaded, no locks), a host-supplied module source instead of the filesystem (the browser has none), an exported eval entry for a witness, and a decision on leaves.cpp (LeafVerbs depends on gm::verbs and host, and was to stay unchanged). The 120 s interrupt deadline cannot be witnessed until the engine runs. Not built in this pass.
+
+Ship: commit through tools/ship.sh as lanmower with no trailer; see the REPORT line.

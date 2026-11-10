@@ -1,0 +1,104 @@
+symbol	reason
+lws_context_destroy	websocket and http client (libwebsockets): not vendored, browser fetch replaces it later
+lws_get_library_version	websocket and http client (libwebsockets): not vendored, browser fetch replaces it later
+tjs__channel_mailbox_pair	channel: worker message ports are not in the browser build
+tjs__channel_mailbox_unref	channel: worker message ports are not in the browser build
+tjs__channel_port_close	channel: worker message ports are not in the browser build
+tjs__channel_port_flush	channel: worker message ports are not in the browser build
+tjs__channel_port_new	channel: worker message ports are not in the browser build
+tjs__channel_port_post_error	channel: worker message ports are not in the browser build
+tjs__channel_port_unref	channel: worker message ports are not in the browser build
+tjs__lws_init_log_cx	websocket and http client (libwebsockets): not vendored, browser fetch replaces it later
+tjs__lws_keepalive_init	websocket and http client (libwebsockets): not vendored, browser fetch replaces it later
+tjs__lws_load_http	websocket and http client (libwebsockets): not vendored, browser fetch replaces it later
+tjs__lws_setup	websocket and http client (libwebsockets): not vendored, browser fetch replaces it later
+tjs__mod_channel_init	mod_channel: module excluded from the browser build
+tjs__mod_dns_init	mod_dns: module excluded from the browser build
+tjs__mod_fswatch_init	mod_fswatch: module excluded from the browser build
+tjs__mod_hashing_init	mod_hashing: module excluded from the browser build
+tjs__mod_httpserver_init	mod_httpserver: module excluded from the browser build
+tjs__mod_miniz_init	mod_miniz: module excluded from the browser build
+tjs__mod_posix_socket_init	mod_posix_socket: module excluded from the browser build
+tjs__mod_process_init	mod_process: module excluded from the browser build
+tjs__mod_tls_cleanup	mod_tls: module excluded from the browser build
+tjs__mod_tls_init	mod_tls: module excluded from the browser build
+tjs__mod_udp_init	mod_udp: module excluded from the browser build
+tjs__mod_ws_init	mod_ws: module excluded from the browser build
+uv_accept	tcp: no sockets in the browser
+uv_available_parallelism	os: no host process, network or CPU information in the browser
+uv_chdir	fs: no host working directory
+uv_cpu_info	os: no host process, network or CPU information in the browser
+uv_cwd	fs: no host working directory
+uv_exepath	fs: no host working directory
+uv_free_cpu_info	os: no host process, network or CPU information in the browser
+uv_free_interface_addresses	os: no host process, network or CPU information in the browser
+uv_fs_chmod	fs: no host file access yet (OPFS bridge pending)
+uv_fs_chown	fs: no host file access yet (OPFS bridge pending)
+uv_fs_close	fs: no host file access yet (OPFS bridge pending)
+uv_fs_closedir	fs: no host file access yet (OPFS bridge pending)
+uv_fs_copyfile	fs: no host file access yet (OPFS bridge pending)
+uv_fs_fchmod	fs: no host file access yet (OPFS bridge pending)
+uv_fs_fchown	fs: no host file access yet (OPFS bridge pending)
+uv_fs_fdatasync	fs: no host file access yet (OPFS bridge pending)
+uv_fs_fstat	fs: no host file access yet (OPFS bridge pending)
+uv_fs_fsync	fs: no host file access yet (OPFS bridge pending)
+uv_fs_ftruncate	fs: no host file access yet (OPFS bridge pending)
+uv_fs_futime	fs: no host file access yet (OPFS bridge pending)
+uv_fs_lchown	fs: no host file access yet (OPFS bridge pending)
+uv_fs_link	fs: no host file access yet (OPFS bridge pending)
+uv_fs_lstat	fs: no host file access yet (OPFS bridge pending)
+uv_fs_lutime	fs: no host file access yet (OPFS bridge pending)
+uv_fs_mkdir	fs: no host file access yet (OPFS bridge pending)
+uv_fs_mkdtemp	fs: no host file access yet (OPFS bridge pending)
+uv_fs_mkstemp	fs: no host file access yet (OPFS bridge pending)
+uv_fs_open	fs: no host file access yet (OPFS bridge pending)
+uv_fs_opendir	fs: no host file access yet (OPFS bridge pending)
+uv_fs_read	fs: no host file access yet (OPFS bridge pending)
+uv_fs_readdir	fs: no host file access yet (OPFS bridge pending)
+uv_fs_readlink	fs: no host file access yet (OPFS bridge pending)
+uv_fs_realpath	fs: no host file access yet (OPFS bridge pending)
+uv_fs_rename	fs: no host file access yet (OPFS bridge pending)
+uv_fs_req_cleanup	fs: no host file access yet (OPFS bridge pending)
+uv_fs_rmdir	fs: no host file access yet (OPFS bridge pending)
+uv_fs_stat	fs: no host file access yet (OPFS bridge pending)
+uv_fs_statfs	fs: no host file access yet (OPFS bridge pending)
+uv_fs_symlink	fs: no host file access yet (OPFS bridge pending)
+uv_fs_unlink	fs: no host file access yet (OPFS bridge pending)
+uv_fs_utime	fs: no host file access yet (OPFS bridge pending)
+uv_fs_write	fs: no host file access yet (OPFS bridge pending)
+uv_inet_pton	os: no host process, network or CPU information in the browser
+uv_interface_addresses	os: no host process, network or CPU information in the browser
+uv_ip4_name	os: no host process, network or CPU information in the browser
+uv_ip6_name	os: no host process, network or CPU information in the browser
+uv_listen	tcp: no sockets in the browser
+uv_loadavg	os: no host process, network or CPU information in the browser
+uv_os_environ	os: no host process, network or CPU information in the browser
+uv_os_free_environ	os: no host process, network or CPU information in the browser
+uv_os_free_passwd	os: no host process, network or CPU information in the browser
+uv_os_getenv	os: no host process, network or CPU information in the browser
+uv_os_gethostname	os: no host process, network or CPU information in the browser
+uv_os_get_passwd	os: no host process, network or CPU information in the browser
+uv_os_getpid	os: no host process, network or CPU information in the browser
+uv_os_getppid	os: no host process, network or CPU information in the browser
+uv_os_setenv	os: no host process, network or CPU information in the browser
+uv_os_tmpdir	os: no host process, network or CPU information in the browser
+uv_os_unsetenv	os: no host process, network or CPU information in the browser
+uv_pipe_bind2	pipe: no pipes or process handles in the browser
+uv_pipe_connect2	pipe: no pipes or process handles in the browser
+uv_pipe_getpeername	pipe: no pipes or process handles in the browser
+uv_pipe_getsockname	pipe: no pipes or process handles in the browser
+uv_pipe_init	pipe: no pipes or process handles in the browser
+uv_pipe_open	pipe: no pipes or process handles in the browser
+uv_queue_work	thread: the page is single-threaded
+uv_random	random: no entropy source wired into the browser build yet
+uv_signal_start	signal: no host signals in the browser
+uv_tcp_bind	tcp: no sockets in the browser
+uv_tcp_connect	tcp: no sockets in the browser
+uv_tcp_getpeername	tcp: no sockets in the browser
+uv_tcp_getsockname	tcp: no sockets in the browser
+uv_tcp_init_ex	tcp: no sockets in the browser
+uv_tcp_keepalive	tcp: no sockets in the browser
+uv_tcp_nodelay	tcp: no sockets in the browser
+uv_thread_create	thread: the page is single-threaded
+uv_thread_join	thread: the page is single-threaded
+uv_uptime	os: no host process, network or CPU information in the browser
