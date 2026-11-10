@@ -1337,3 +1337,12 @@ Open work, ranked (reachable here first):
 Changes for item 1:
 1. native/components/mcp/server.cpp and src/mcp.mjs, commit (see git log). Rows: skill_read_by_this_host, boot (the restart event), serve_skill_file and get_prompt (skill-loaded). Change: a skill-loaded event records its caller (worker pid and host pid). When a native worker resumes a run, it takes the skill as read if the run's log holds a gm skill-loaded event whose host pid is its own parent, and the restart event records `skillRead`. The read stays per host connection: a worker under another host process is gated once. Windows records no host pid, so nothing is carried there. Node logs the caller too; Node's carry stays in tools/core.mjs.
 2. tools/check-restart-skill-read.mjs and tools/check-build.mjs, commit (see git log). Row: new witness in the check-build list. The check is the worker's parent and replays nothing: worker 1 reads the skill and runs a body; worker 2 on the same run directory gets initialize only and must run run_code, with restart `skillRead` true; worker 3, started through another process, must refuse the first run_code once with the skill text, with restart `skillRead` false, and then run. Phase B: `node tools/check-restart-skill-read.mjs build/release/native/components/host/gm`, `restart-skill-read-check: ok`, exit 0. Why a kept check: every relay built from HEAD replays the read, so only a parent that does not replay covers this path.
+
+## gm pass, Phase B (2026-11-10, local, release at 3a81089): the skill read across a worker restart
+
+Witnesses, output read in full:
+- W1 `node tools/check-restart-skill-read.mjs build/release/native/components/host/gm`: exit 0, `restart-skill-read-check: ok`.
+- W2 before state, the same witness on the installed build `c9a9688-310`: exit 1, 5 failures; the restarted worker answers `run_code refused: read skill://gm/SKILL.md first in this connection...`, as in the jayzee log.
+- W3 check-build build/release: exit 0; `conformance: 86 passed, 0 failed of 86 checks in 24 scenarios`; the new witness ok; `check-build: gm stamp 3a81089-dev (3a81089)`.
+- W4 parity, `node native/tests/parity/run.mjs`: exit 0, `17/95 scenarios match, 0 cutover-expected, 56 native-ahead, 22 documented-gap, 0 differ`.
+- Not done here: no install was run, so jayzee's connection takes the fix when its installed build updates and its worker restarts onto it.
