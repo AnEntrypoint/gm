@@ -1,5 +1,9 @@
 # Pending validation
 
+## Stretch 2026-11-10 (habit skill): Phase B witnessed
+
+S1 on 28bb712: skillCheck ok (every MCP_RULES line in the skill, no bare tool name, both served skills parse); check-skill-serve build/release ok (served text equals the checkout file, a live edit is served on the next read); skills/gm/SKILL.md 9747 bytes.
+
 ## Stretch 2026-11-10 (habit skill, Bash gap, txiki): Phase A
 
 | # | Commit | File | Change | Witness needed |
