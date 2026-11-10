@@ -24,12 +24,12 @@ const TXIKI_SOURCES = [
 ];
 const TXIKI_HEADERS_SKIPPED = new Set(['cacert.h', 'ed25519.h', 'mbedtls_config.h', 'wasm.h']);
 const TXIKI_BUNDLES = ['core/core.c', 'core/polyfills.c', 'core/run-main.c', 'core/worker-bootstrap.c', 'internal/home.c', 'internal/path.c', 'stdlib/assert.c', 'stdlib/getopts.c', 'stdlib/hashing.c', 'stdlib/ipaddr.c', 'stdlib/path.c', 'stdlib/posix-socket.c', 'stdlib/readline.c', 'stdlib/utils.c', 'stdlib/uuid.c'];
-const LIBUV_BUILD_FILES = new Set(['CMakeLists.txt', 'libuv.pc.in', 'libuv-static.pc.in']);
+const LIBUV_BUILD_FILES = new Set(['CMakeLists.txt', 'configure.ac', 'libuv.pc.in', 'libuv-static.pc.in']);
 const ADA_FILES = ['ada.cpp', 'ada.h', 'ada_c.h'];
 const QUICKJS_SOURCES = ['quickjs.c', 'dtoa.c', 'libregexp.c', 'libunicode.c'];
 const QUICKJS_HEADERS_SKIPPED = new Set(['quickjs-libc.h']);
 const LICENSE_NAME = /^(LICENSE|LICENSE-.*|COPYING)(\.txt|\.md)?$/i;
-const TEXT_SOURCE = /\.(c|h|cpp|hpp|txt|md|in)$|^LICENSE/i;
+const TEXT_SOURCE = /\.(c|h|cpp|hpp|txt|md|in|ac)$|^LICENSE/i;
 const ASCII_FOR = new Map(
   [[0xe1, 'a'], [0xe9, 'e'], [0xed, 'i'], [0xf3, 'o'], [0xfa, 'u'], [0xf1, 'n'], [0xfc, 'u'], [0xf6, 'o'], [0xe4, 'a'], [0xa9, '(c)'], [0x2014, '-'], [0x2013, '-'], [0x2192, '->'], [0x2190, '<-'], [0x2018, "'"], [0x2019, "'"], [0x201c, '"'], [0x201d, '"'], [0x2026, '...'], [0xd7, 'x'], [0x2265, '>='], [0x2264, '<='], [0x2260, '!='], [0xa0, ' '], [0xb5, 'u'], [0x2022, '*']].map(([codePoint, ascii]) => [String.fromCodePoint(codePoint), ascii]),
 );
@@ -122,7 +122,7 @@ try {
       'written by: node tools/vendor-txiki.mjs (downloads each archive, checks its sha256, copies the files below)',
       `txiki files: src/*.h except ${[...TXIKI_HEADERS_SKIPPED].join(', ')}; src/{${TXIKI_SOURCES.join(', ')}}; src/bundles/c/{${TXIKI_BUNDLES.join(', ')}}; deps/ada/{${ADA_FILES.join(', ')}}; LICENSE; src/version.h is version.h.in with ${TXIKI_VERSION.major}.${TXIKI_VERSION.minor}.${TXIKI_VERSION.patch} filled in.`,
       'txiki files left out: the modules that need libwebsockets, mbedtls, wamr, libffi, sqlite3, miniz or mimalloc (httpclient, httpserver, ws, tls, webcrypto, hashing, wasm, ffi, sqlite3, miniz), the CLI, and the JavaScript sources of the bundles. native/components/quickjs/txiki_stubs.c answers their entry points.',
-      'libuv files: include/, src/, CMakeLists.txt, the two .pc.in files it configures, and the licence files.',
+      'libuv files: include/, src/, CMakeLists.txt, configure.ac (the build file reads the version from it), the two .pc.in files it configures, and the licence files.',
       `quickjs-ng files: ${QUICKJS_SOURCES.join(', ')}, every top-level header except quickjs-libc.h, and LICENSE.`,
       `ASCII-normalized: ${counts.replaced} non-ASCII characters in comments and licence text are written as plain ASCII (accented letters without the accent, dashes as -, arrows as ->, the copyright sign as (c), anything else as ?). The tool refuses a non-ASCII character outside a comment in a source file, so no code changed.`,
       '',
