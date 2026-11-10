@@ -427,7 +427,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
       return promptResult(other, other.body);
     }
     const SKILL = skillOf('gm');
-    log.append('skill-loaded', { via: 'prompt', skill: 'gm', cleared: [...rulesOpen.keys()] });
+    log.append('skill-loaded', { via: 'prompt', skill: 'gm', caller: CALLER, cleared: [...rulesOpen.keys()] });
     clearRules();
     gmSkillRead = true;
     const given = typeof params?.arguments?.task === 'string' ? params.arguments.task.trim() : '';
@@ -456,7 +456,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     const found = skillFileOf(uri);
     if (found === null) return { ok: false, error: `no served skill file has the uri ${uri}` };
     const isGm = found.file.uri === GM_SKILL_URI;
-    log.append('skill-loaded', { via, skill: found.skill.name, uri: found.file.uri, cleared: isGm ? [...rulesOpen.keys()] : [] });
+    log.append('skill-loaded', { via, skill: found.skill.name, uri: found.file.uri, caller: CALLER, cleared: isGm ? [...rulesOpen.keys()] : [] });
     if (isGm) {
       clearRules();
       gmSkillRead = true;

@@ -488,6 +488,24 @@ Value caller_of_process() {
 #endif
 }
 
+bool skill_read_by_this_host(const std::vector<Value>& history) {
+    const Value me = caller_of_process();
+    const Value* my_host = me.find("parent");
+    if (my_host == nullptr || !my_host->is_number()) return false;
+    return std::any_of(history.begin(), history.end(), [&](const Value& event) {
+        const Value* kind = event.find("kind");
+        const Value* skill = event.find("skill");
+        const Value* uri = event.find("uri");
+        const Value* via = event.find("via");
+        const Value* caller = event.find("caller");
+        const Value* host = caller != nullptr ? caller->find("parent") : nullptr;
+        const bool gm_text = (uri != nullptr && uri->is_string() && uri->as_string() == kGmSkillUri) ||
+                             (via != nullptr && via->is_string() && via->as_string() == "prompt");
+        return kind != nullptr && kind->as_string() == "skill-loaded" && skill != nullptr && skill->is_string() && skill->as_string() == "gm" &&
+               gm_text && host != nullptr && host->is_number() && host->as_number() == my_host->as_number();
+    });
+}
+
 Value trace_of(const Value* meta) {
     Value out = object();
     if (meta == nullptr) return out;
@@ -1070,7 +1088,10 @@ struct Server::State {
         if (!closed_at_boot) {
             set_owner(dir, connection_id());
             auto recovery = resumed ? recovery_of(history) : std::nullopt;
-            if (resumed) append("restart", object().set("reason", options.restart_reason));
+            if (resumed) {
+                gm_skill_read = gm_skill_read || skill_read_by_this_host(history);
+                append("restart", object().set("reason", options.restart_reason).set("skillRead", gm_skill_read));
+            }
             else append("start", object()
                                      .set("mode", "mcp")
                                      .set("maxSteps", options.max_steps)
@@ -2568,6 +2589,7 @@ struct Server::State {
                                    .set("via", via)
                                    .set("skill", skill.name)
                                    .set("uri", file.uri)
+                                   .set("caller", caller_of_process())
                                    .set("cleared", is_gm ? open_rule_numbers() : array()));
         if (is_gm) {
             clear_rules();
@@ -2630,7 +2652,7 @@ struct Server::State {
             return prompt_result(other, other.body);
         }
         const Skill& skill = skills.get("gm");
-        append("skill-loaded", object().set("via", "prompt").set("skill", "gm").set("cleared", open_rule_numbers()));
+        append("skill-loaded", object().set("via", "prompt").set("skill", "gm").set("caller", caller_of_process()).set("cleared", open_rule_numbers()));
         clear_rules();
         gm_skill_read = true;
         const Value* arguments = params->find("arguments");
