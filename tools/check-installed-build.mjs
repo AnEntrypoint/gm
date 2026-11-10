@@ -18,9 +18,10 @@ if (target === null || !existsSync(resolve(target))) {
 }
 const binary = resolve(target);
 const expectedStamp = process.argv[3] ?? null;
-const skillsDir = join(dirname(binary), 'skills');
-const diskSkill = join(skillsDir, 'gm', 'SKILL.md');
+const checkout = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const candidates = [join(dirname(binary), 'skills', 'gm', 'SKILL.md'), join(checkout, 'skills', 'gm', 'SKILL.md')];
 const failures = [];
+let servedFrom = null;
 const expect = (condition, text) => {
   if (!condition) failures.push(text);
 };
@@ -96,9 +97,10 @@ try {
     }
     const read = await rpc('resources/read', { uri: SKILL });
     const served = read?.result?.contents?.[0];
-    const disk = existsSync(diskSkill) ? readFileSync(diskSkill, 'utf8') : null;
-    expect(disk !== null, `no skill file at ${diskSkill}`);
-    expect(served?.text === disk, `${SKILL} served ${served?.text === undefined ? JSON.stringify(read) : `${served.text.length} bytes`}, expected the binary's skills copy ${disk === null ? 'missing' : `${disk.length} bytes`}`);
+    const copies = candidates.filter((file) => existsSync(file)).map((file) => ({ file, text: readFileSync(file, 'utf8') }));
+    const match = copies.find((copy) => copy.text === served?.text) ?? null;
+    servedFrom = match?.file ?? null;
+    expect(match !== null, `${SKILL} served ${served?.text === undefined ? JSON.stringify(read) : `${served.text.length} bytes`}, matching no skills copy (${copies.map((copy) => `${copy.file} ${copy.text.length} bytes`).join('; ') || 'none found'})`);
     expect(read?.result?.ttlMs === 0, `${SKILL} read has ttlMs ${read?.result?.ttlMs}, expected 0 so an open connection re-reads it`);
   } finally {
     child.kill();
@@ -112,6 +114,6 @@ if (failures.length) {
   console.error(`${CHECK}: ${failures.length} failure(s) on ${target}\n- ${failures.join('\n- ')}`);
   process.exitCode = 1;
 } else {
-  console.log(`${CHECK}: ok (${target}: version "${versionText.split('\n')[0]}"; ${SKILL} equals ${diskSkill} with ttlMs 0)`);
+  console.log(`${CHECK}: ok (${target}: version "${versionText.split('\n')[0]}"; ${SKILL} equals ${servedFrom} with ttlMs 0)`);
 }
 process.exit(process.exitCode ?? 0);
