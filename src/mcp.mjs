@@ -230,7 +230,7 @@ function queryHintOf(shown, total) {
   return total > shown ? `${reach}. This step's new events are seqs ${shown + 1} to ${total}.` : `${reach}.`;
 }
 
-function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, resume = null, jobLifetimeMs = DEFAULT_JOB_LIFETIME_MS, stuckMs = DEFAULT_STUCK_MS, monitorMs = DEFAULT_MONITOR_MS, noticeMs = BODY_NOTICE_MS, hostIdleMs = DEFAULT_HOST_IDLE_MS, recovery = null, taskInherited = false, shownFloor = 0, startOverride = null, surface = 'code', requeue = null }) {
+function createSession({ workspace, runDir, skillGate, log, task, maxSteps, maxInflight, resume = null, jobLifetimeMs = DEFAULT_JOB_LIFETIME_MS, stuckMs = DEFAULT_STUCK_MS, monitorMs = DEFAULT_MONITOR_MS, noticeMs = BODY_NOTICE_MS, hostIdleMs = DEFAULT_HOST_IDLE_MS, recovery = null, taskInherited = false, shownFloor = 0, startOverride = null, surface = 'code', requeue = null }) {
   const runId = basename(runDir);
   const runsRoot = dirname(runDir);
   const tools = createTools({ workspace, runDir, log, background: true, jobLifetimeMs, stuckMs, monitorMs, noticeMs, leaves: current.leaves, serveSkill: (uri) => serveSkillFile(uri, 'read_file') });
@@ -281,7 +281,6 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
   }, Math.max(1000, Math.floor(hostIdleMs / 4)));
   idleTimer.unref();
   const rulesOpen = new Map();
-  let gmSkillRead = false;
   let bodyVerbCalls = 0;
   let singleVerbBodies = 0;
   let runStarted = steps > 0;
@@ -440,7 +439,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     const SKILL = skillOf('gm');
     log.append('skill-loaded', { via: 'prompt', skill: 'gm', caller: CALLER, cleared: [...rulesOpen.keys()] });
     clearRules();
-    gmSkillRead = true;
+    skillGate.read = true;
     const given = typeof params?.arguments?.task === 'string' ? params.arguments.task.trim() : '';
     const childSession = ended === null && (runStarted || childSeen);
     if (given !== '' && childSession) childTask = given;
@@ -470,7 +469,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     log.append('skill-loaded', { via, skill: found.skill.name, uri: found.file.uri, caller: CALLER, cleared: isGm ? [...rulesOpen.keys()] : [] });
     if (isGm) {
       clearRules();
-      gmSkillRead = true;
+      skillGate.read = true;
     }
     return { ok: true, output: found.file.bytes.toString('utf8'), uri: found.file.uri, mimeType: found.file.mimeType };
   }
@@ -493,9 +492,9 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
       throw new RpcError(-32602, 'tools/call arguments must be an object');
     }
     if (!servedTools(surface).some((tool) => tool.name === name)) throw new RpcError(-32602, unknownToolText(name));
-    if (name === 'run_code' && !gmSkillRead) {
+    if (name === 'run_code' && !skillGate.read) {
       const served = serveSkillFile(GM_SKILL_URI, 'run_code');
-      gmSkillRead = true;
+      skillGate.read = true;
       if (served.ok) {
         log.append('refusal', { tool: name, stage: 'skill-read', error: SKILL_READ_REFUSAL });
         return toolResultOf(name, { ok: false, error: SKILL_READ_REFUSAL }, {}, served.output);
@@ -1256,7 +1255,8 @@ async function main(argv) {
 
   sweepEndedCode(dirname(runDir), runDir);
   const requeueNext = (call) => acceptNow(JSON.stringify({ jsonrpc: '2.0', id: call.rpcId, method: 'tools/call', params: { name: 'next_context', arguments: call.args } }));
-  let session = createSession({ ...limits, runDir, log, task, resume, recovery: recovery && recovery.open.length > 0 ? recovery : null, startOverride, requeue: requeueNext });
+  const skillGate = { read: false };
+  let session = createSession({ ...limits, runDir, skillGate, log, task, resume, recovery: recovery && recovery.open.length > 0 ? recovery : null, startOverride, requeue: requeueNext });
   let retired = Promise.resolve();
   function reopen(ended) {
     const start = ended.successorStart();
@@ -1270,7 +1270,7 @@ async function main(argv) {
     const shownFloor = start.inherited ? fresh.count() : 0;
     mcpReady.then(() => logTools(fresh, false, servedTools(surface)));
     console.error(`gm mcp: run ${closedId} has ended; opened run ${basename(runDir)}`);
-    return createSession({ ...limits, runDir, log: fresh, task: start.task, taskInherited: start.inherited, shownFloor, requeue: requeueNext });
+    return createSession({ ...limits, runDir, skillGate, log: fresh, task: start.task, taskInherited: start.inherited, shownFloor, requeue: requeueNext });
   }
   const accepting = new Set();
   const acceptNow = (line) => {
