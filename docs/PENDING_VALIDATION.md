@@ -2031,3 +2031,26 @@ PIDs: gate pid 172748 (port 9721, started 2026-11-10 08:39); browser pid 189245,
 Witness: curl -s http://127.0.0.1:10221/json/version returned "Browser": "Chrome/155.0.8059.39" and a webSocketDebuggerUrl on ws://127.0.0.1:10221/devtools/browser/519118b6-e7d5-464a-ad82-672cce422cfe (curl exit 0). playwriter-project status: "debug port 10221, browser running pid 189245 (gate), leases 2".
 
 Left running. It stops on its own after 300000 ms with no traffic (PLAYWRITER_IDLE_MS default), so a restart is needed if jayzee is idle that long. Stop it only by PID 189245 and gate 172748 once the owner says so.
+
+## gm pass, Phase A (2026-11-10): installed-build update prepared, not installed
+
+Owner instruction (pasted queue, 2026-11-10): prepare the installed-build update as Phase A only: code, docs and tests, committed locally, nothing pushed, no install. The install touches every peer, so it waits until no peer is busy.
+
+Changes:
+
+1. Served-skill freshness on an old connection. Cause: resources/read of a skill returned ttlMs 3600000 with cacheScope public, so a client holding a connection that started before an update kept the old skill text for up to an hour, and the new skill was not served on that connection. Change: the skill read is volatile (ttlMs 0) on both engines. native/components/mcp/server.cpp read_resource uses kVolatileTtlMs; src/mcp.mjs readResource uses VOLATILE_TTL_MS. The reader itself already re-reads the file on each call (SkillCache::get, skillOf), so the stale part was the cache hint.
+   Witness (Phase B, after the install): node tools/check-installed-build.mjs /config/.gmnew/current/gm <sha> asserts resources/read of skill://gm/SKILL.md has ttlMs 0 and equals the binary's skills copy. Before the install the installed build returns ttlMs 3600000, so the check fails there, which is the defect it measures.
+
+2. fcb84df task-leak install rows, as exact install steps. Cause: the installed gm 78ca5a1 predates fcb84df (a non-owner task replacement is refused after the first step) and 70e4349 (the updater finds gmnew-<target>). Steps, in order:
+   a. Check that no peer is busy: ListAgents shows no peer as busy. At 08:4x fx-e1 was busy, so this step waits.
+   b. Check that the published release carries the fixes: scripts/install.sh fetches manifest.json from GMNEW_RELEASE_BASE (default https://github.com/AnEntrypoint/gm/releases/download/latest). Run curl -fsSL that URL and read the version. Proceed only when the version is the release cut from a main commit at or after this pass (the fcb84df, 70e4349 and the change 1 commit). If it is older, the install would put back the old build: wait for the release.
+   c. Run sh scripts/install.sh. It verifies sha256 and size from the manifest, stages the archive, and keeps the previous install in ~/.gmnew/previous.<pid>.
+   d. Run node tools/check-installed-build.mjs /config/.gmnew/current/gm <release sha> (change 3 below). Expect installed-build-check: ok.
+   e. Peers reload on a binary change (native peers reload on a leaf, skill or binary change), so no peer restarts by hand. Re-read the task-leak refusal with a non-owner next_context task replacement after one step; it must be refused.
+   Witness: the step d output, and the step e refusal text quoted from the run log.
+
+3. A check that runs the installed build's version and skill serve: tools/check-installed-build.mjs (new). Usage: node tools/check-installed-build.mjs <installed gm> [expected stamp prefix]. It runs <binary> --version, opens serve on a scratch workspace with playwriter disabled, reads initialize serverInfo.version, reads skill://gm/SKILL.md, and requires the text to equal <binary dir>/skills/gm/SKILL.md and ttlMs 0. Witness (Phase B): run it on /config/.gmnew/current/gm after step 2c; it must print installed-build-check: ok. Before the install it fails on ttlMs and on the skill text, which is the point.
+
+Not done in this pass: no build, no test, no push, no install. Phase B builds HEAD, runs node tools/check-installed-build.mjs on the built binary (expected to pass for the built binary: ttlMs 0) and node tools/check-skill-serve.mjs build/release/native/components/host/gm, then the parity harness.
+
+Blocker for the install: a peer is busy (fx-e1 at 08:4x). The install is waiting for no peer to be busy.
