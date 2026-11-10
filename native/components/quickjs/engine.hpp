@@ -69,12 +69,18 @@ public:
     JSRuntime* rt() const { return runtime_; }
     Session& session() const { return session_; }
     void drain_jobs();
+    bool loop_alive() const;
+    void turn_loop();
 
 private:
     Session& session_;
     JSRuntime* runtime_ = nullptr;
     JSContext* context_ = nullptr;
+    void* embedded_runtime_ = nullptr;
 };
+
+Session* session_of(JSContext* ctx);
+bool past_deadline(Session& session);
 
 class Scoped {
 public:

@@ -4,28 +4,62 @@
 #include <exception>
 #include <fstream>
 #include <iterator>
+#include <mutex>
+#include <shared_mutex>
+#include <thread>
+#include <unordered_map>
+
+#if defined(GM_HAVE_TXIKI)
+#include "txiki_shim.h"
+#endif
 
 namespace gm::engine {
 namespace {
 
-int interrupt_on_deadline(JSContext*, void* opaque) {
-    auto* session = static_cast<Session*>(opaque);
+constexpr std::string_view embedded_builtin_prefix = "tjs:";
+constexpr std::chrono::milliseconds idle_loop_pause{1};
+
+std::shared_mutex& sessions_mutex() {
+    static std::shared_mutex mutex;
+    return mutex;
+}
+
+std::unordered_map<JSContext*, Session*>& sessions() {
+    static std::unordered_map<JSContext*, Session*> by_context;
+    return by_context;
+}
+
+void remember_session(JSContext* ctx, Session* session) {
+    std::unique_lock lock(sessions_mutex());
+    sessions()[ctx] = session;
+}
+
+void forget_session(JSContext* ctx) {
+    std::unique_lock lock(sessions_mutex());
+    sessions().erase(ctx);
+}
+
+bool deadline_reached(Session* session) {
     const auto now = Clock::now();
     if (session->cancel != nullptr && session->cancel->load(std::memory_order_relaxed)) {
         session->cancelled = true;
-        return 1;
+        return true;
     }
     if (session->js_budget.count() > 0) {
         Clock::duration paused = session->paused;
         if (session->host_depth > 0) paused += now - session->host_start;
         if (now - session->started - paused >= session->js_budget) {
             session->deadline_passed = true;
-            return 1;
+            return true;
         }
     }
-    if (session->deadline == Clock::time_point::max() || now < session->deadline) return 0;
+    if (session->deadline == Clock::time_point::max() || now < session->deadline) return false;
     session->deadline_passed = true;
-    return 1;
+    return true;
+}
+
+int interrupt_on_deadline(JSContext*, void* opaque) {
+    return deadline_reached(static_cast<Session*>(opaque)) ? 1 : 0;
 }
 
 bool read_text_file(const std::string& path, std::string& out) {
@@ -36,6 +70,9 @@ bool read_text_file(const std::string& path, std::string& out) {
 }
 
 JSModuleDef* load_module_from_disk(JSContext* ctx, const char* module_name, void*) {
+#if defined(GM_HAVE_TXIKI)
+    if (std::string_view(module_name).starts_with(embedded_builtin_prefix)) return gm_txiki_load_builtin(ctx, module_name);
+#endif
     std::string source;
     if (!read_text_file(module_name, source)) {
         JS_ThrowReferenceError(ctx, "could not load module '%s'", module_name);
@@ -53,7 +90,7 @@ JSValue throw_text(JSContext* ctx, const std::string& text) {
 }
 
 JSValue call_host(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv) {
-    auto* session = static_cast<Session*>(JS_GetContextOpaque(ctx));
+    auto* session = session_of(ctx);
     if (session == nullptr || session->host == nullptr) return throw_text(ctx, "host services are not available here");
     std::string name = argc > 0 ? to_std_string(ctx, argv[0]) : std::string();
     json::Value args(json::Object{});
@@ -81,7 +118,7 @@ JSValue call_host(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv) {
 }
 
 JSValue host_names(JSContext* ctx, JSValueConst, int, JSValueConst*) {
-    auto* session = static_cast<Session*>(JS_GetContextOpaque(ctx));
+    auto* session = session_of(ctx);
     json::Value names(json::Array{});
     if (session == nullptr || session->host == nullptr) return json_to_js(ctx, names);
     for (const auto& [name, primitive] : session->host->extra) names.push(name);
@@ -98,7 +135,7 @@ JSValue host_names(JSContext* ctx, JSValueConst, int, JSValueConst*) {
 }
 
 JSValue call_deadline(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv) {
-    auto* session = static_cast<Session*>(JS_GetContextOpaque(ctx));
+    auto* session = session_of(ctx);
     if (session == nullptr || argc < 2 || !JS_IsFunction(ctx, argv[1])) return throw_text(ctx, "deadlineCall needs a budget in milliseconds and a function");
     int64_t budget = 0;
     if (JS_ToInt64(ctx, &budget, argv[0]) < 0) return JS_EXCEPTION;
@@ -170,24 +207,89 @@ constexpr std::string_view stringify_bootstrap = R"JS((function (parameter, sour
 
 }
 
+namespace {
+
+#if defined(GM_HAVE_TXIKI)
+constexpr std::string_view embedded_globals_reset = R"JS((function () {
+  const silent = () => {};
+  globalThis.console = { log: silent, info: silent, debug: silent, warn: silent, error: silent };
+  for (const name of ['tjs', 'alert', 'confirm', 'prompt']) delete globalThis[name];
+}))JS";
+
+bool reset_embedded_globals(JSContext* ctx) {
+    Scoped reset(ctx, JS_Eval(ctx, embedded_globals_reset.data(), embedded_globals_reset.size(), "<embedded>", JS_EVAL_TYPE_GLOBAL));
+    if (JS_IsException(reset.get())) return false;
+    Scoped done(ctx, JS_Call(ctx, reset.get(), JS_UNDEFINED, 0, nullptr));
+    return !JS_IsException(done.get());
+}
+#endif
+
+}
+
+Session* session_of(JSContext* ctx) {
+    std::shared_lock lock(sessions_mutex());
+    auto found = sessions().find(ctx);
+    return found == sessions().end() ? nullptr : found->second;
+}
+
+bool past_deadline(Session& session) {
+    return deadline_reached(&session);
+}
+
 Engine::Engine(Session& session) : session_(session) {
+#if defined(GM_HAVE_TXIKI)
+    TJSRuntime* embedded = gm_txiki_new();
+    if (embedded == nullptr) return;
+    embedded_runtime_ = embedded;
+    JSContext* ctx = gm_txiki_context(embedded);
+    runtime_ = JS_GetRuntime(ctx);
+    JS_SetInterruptHandler(runtime_, interrupt_on_deadline, &session_);
+    JS_SetModuleLoaderFunc(runtime_, nullptr, load_module_from_disk, nullptr);
+    remember_session(ctx, &session_);
+    if (reset_embedded_globals(ctx)) {
+        context_ = ctx;
+    } else {
+        JS_FreeValue(ctx, JS_GetException(ctx));
+        forget_session(ctx);
+    }
+#else
     runtime_ = JS_NewRuntime();
     if (runtime_ == nullptr) return;
     JS_SetInterruptHandler(runtime_, interrupt_on_deadline, &session_);
     JS_SetModuleLoaderFunc(runtime_, nullptr, load_module_from_disk, nullptr);
     context_ = JS_NewContext(runtime_);
-    if (context_ != nullptr) JS_SetContextOpaque(context_, &session_);
+    if (context_ != nullptr) remember_session(context_, &session_);
+#endif
 }
 
 Engine::~Engine() {
+    if (context_ != nullptr) forget_session(context_);
+#if defined(GM_HAVE_TXIKI)
+    if (embedded_runtime_ != nullptr) gm_txiki_free(static_cast<TJSRuntime*>(embedded_runtime_));
+#else
     if (context_ != nullptr) JS_FreeContext(context_);
     if (runtime_ != nullptr) JS_FreeRuntime(runtime_);
+#endif
 }
 
 void Engine::drain_jobs() {
     JSContext* job_ctx = nullptr;
     while (JS_ExecutePendingJob(runtime_, &job_ctx) > 0) {
     }
+}
+
+bool Engine::loop_alive() const {
+#if defined(GM_HAVE_TXIKI)
+    return embedded_runtime_ != nullptr && gm_txiki_loop_alive(static_cast<TJSRuntime*>(embedded_runtime_)) != 0;
+#else
+    return false;
+#endif
+}
+
+void Engine::turn_loop() {
+#if defined(GM_HAVE_TXIKI)
+    gm_txiki_loop_turn(static_cast<TJSRuntime*>(embedded_runtime_));
+#endif
 }
 
 std::string to_std_string(JSContext* ctx, JSValueConst value) {
@@ -290,6 +392,12 @@ Settled settle(Engine& engine, JSValue maybe_promise) {
     if (!JS_IsPromise(maybe_promise)) return {Outcome::Fulfilled, maybe_promise};
     Scoped promise(ctx, maybe_promise);
     engine.drain_jobs();
+    while (JS_PromiseState(ctx, promise.get()) == JS_PROMISE_PENDING && !JS_HasException(ctx) && engine.loop_alive()) {
+        if (past_deadline(engine.session())) return {Outcome::Rejected, JS_NewString(ctx, "the call did not finish")};
+        engine.turn_loop();
+        engine.drain_jobs();
+        if (JS_PromiseState(ctx, promise.get()) == JS_PROMISE_PENDING) std::this_thread::sleep_for(idle_loop_pause);
+    }
     switch (JS_PromiseState(ctx, promise.get())) {
         case JS_PROMISE_FULFILLED:
             return {Outcome::Fulfilled, JS_PromiseResult(ctx, promise.get())};

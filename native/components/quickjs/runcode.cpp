@@ -83,7 +83,7 @@ bool project_is_module(const fs::path& project_root) {
 }
 
 JSValue call_verb(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv, int verb_index, JSValueConst*) {
-    auto* session = static_cast<Session*>(JS_GetContextOpaque(ctx));
+    auto* session = engine::session_of(ctx);
     const std::string& name = session->gm_verb_list[static_cast<size_t>(verb_index)].name;
     json::Value args = args_from_js(ctx, argc, argv);
     json::Value reply;
@@ -114,7 +114,7 @@ std::string verbs_json(const std::vector<VerbInfo>& verb_list) {
 }
 
 JSValue console_write(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv) {
-    auto* session = static_cast<Session*>(JS_GetContextOpaque(ctx));
+    auto* session = engine::session_of(ctx);
     if (argc < 1 || session->console == nullptr) return JS_UNDEFINED;
     size_t length = 0;
     const char* text = JS_ToCStringLen(ctx, &length, argv[0]);
