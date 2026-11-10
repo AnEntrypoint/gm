@@ -121,6 +121,6 @@ try {
   const exited = child.exitCode !== null || child.signalCode !== null ? Promise.resolve() : once(child, 'exit');
   child.kill();
   await Promise.race([exited, sleep(5000)]);
-  rmSync(scratch, { recursive: true, force: true });
+  rmSync(scratch, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 });
 }
 process.exit(process.exitCode ?? 0);
