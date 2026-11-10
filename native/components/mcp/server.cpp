@@ -1346,7 +1346,7 @@ struct Server::State {
         const Value* owner_arg = args.find("owner");
         bool owner = owner_arg && owner_arg->is_bool() && owner_arg->as_bool();
         if (!corrected.empty() && !owner) {
-            return refuse("child_context", args, "a task replacement after the first step needs owner:true");
+            return refuse("child_context", args, "a task replacement after the first step needs owner:true; retry with next_context({ child: true, run: \"<run id>\", task: \"<new task>\", owner: true })");
         }
         s().child_seen = true;
         return act(
@@ -2123,7 +2123,7 @@ struct Server::State {
         bool first_step_correction = s().steps == 0 && !s().run_started && !s().child_seen && !s().owner_seen &&
                                      (s().task.empty() || s().task.find_first_of(" \t\r\n") == std::string::npos);
         if (!corrected.empty() && !owner && !first_step_correction) {
-            return refuse("next_context", args, "a task replacement after the first step needs owner:true");
+            return refuse("next_context", args, "a task replacement after the first step needs owner:true; retry with next_context({ task: \"<new task>\", owner: true }), or call gm.task_set({ task: \"<new task>\", owner: true }) from run_code");
         }
         Value audit = object();
         if (task_arg != nullptr) audit.set("task", corrected).set("owner", owner).set("correction", first_step_correction);

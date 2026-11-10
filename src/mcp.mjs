@@ -647,7 +647,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     if (!runStarted) return refuse('child_context', args, 'no step has started on this connection; the session that owns the run calls next_context first', rpcId);
     if (args.run !== undefined && args.run !== runId) return refuse('child_context', args, `this connection's run is ${runId}, not ${args.run}`, rpcId);
     const given = typeof args.task === 'string' ? args.task.trim() : '';
-    if (given !== '' && args.owner !== true) return refuse('child_context', args, 'a task replacement after the first step needs owner:true', rpcId);
+    if (given !== '' && args.owner !== true) return refuse('child_context', args, 'a task replacement after the first step needs owner:true; retry with next_context({ child: true, run: "<run id>", task: "<new task>", owner: true })', rpcId);
     childSeen = true;
     return act('child_context', args, access, () => childRead(given), ({ ok, error, role, run }) => ({ ok, error, role, run }), rpcId);
   }
@@ -730,7 +730,7 @@ function createSession({ workspace, runDir, log, task, maxSteps, maxInflight, re
     const firstStep = steps === 0 && !runStarted && !childSeen && args.child !== true && args.run === undefined && (initial === '' || !/\s/.test(initial));
     const ownerMarked = args.owner === true;
     const correction = given !== '' && firstStep && !ownerMarked;
-    if (given !== '' && !ownerMarked && !correction) return refuse('next_context', args, 'a task replacement after the first step needs owner:true', rpcId);
+    if (given !== '' && !ownerMarked && !correction) return refuse('next_context', args, 'a task replacement after the first step needs owner:true; retry with next_context({ task: "<new task>", owner: true }), or call gm.task_set({ task: "<new task>", owner: true }) from run_code', rpcId);
     const waitMs = waitOf(args.waitMs);
     const compactChildren = args.compactChildren === true;
     const waitedFromStart = runStarted;
