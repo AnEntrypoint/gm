@@ -1714,3 +1714,17 @@ Witnesses (foreground unless the MCP client moved the body to background at 120 
 - `node tools/check-txiki-wasi-chromium.mjs build/wasi/native/components/quickjs/gm_txiki_wasi.wasm`, exit 0: txiki-wasi-browser-check: ok (same checks in Chromium); wall 120732 ms.
 
 Open: the installed gm of a host still refuses without the named call until its build takes this commit (the installed build of this run predates it). No witness on the Node relay beyond check-child-task.
+
+## Body ledgers at a restart and the run_code cutoff (2026-11-10, Phase A)
+
+| # | File | Change | Witness needed |
+|---|---|---|---|
+| 1 | native/components/proc/proc.cpp, native/include/gm/proc.hpp | Each body child's ledger line is "pid starttime" (starttime from /proc/<pid>/stat on Linux, 0 elsewhere). reap_ledger skips a pid whose start time changed (a reused pid); reap_ledgers(dir) reaps every *.pids file in a directory. | Phase B: node tools/check-restart-body-orphan.mjs build/release/native/components/host/gm exit 0. Pre-fix on 83192c1 the same check exited 1: the body shell 3712101 and its sleep 3712102 were both alive after the restart. |
+| 2 | native/components/verbs/job.cpp | JobTable::stop_orphans reaps every ledger in jobs/ before it reads the status files, so a foreground body with no status file is reaped too. | Same check as row 1. |
+| 3 | native/components/mcp/server.cpp | Server::stop_orphans reaps every ledger too. kDefaultBodyTimeoutMs and the run_code description say 100000 ms. | Phase B: node tools/check-foreground-hold.mjs build/release/native/components/host/gm exit 0: run_code with the default timeoutMs returns a job id before 110 s, every next_context waitMs hold stays under 120 s, and the job ends exited with exitCode 0 and output done. |
+| 4 | src/runcode.mjs, src/mcp.mjs | Node: DEFAULT_TIMEOUT_MS and the run_code description are 100000 ms; waitOf caps next_context waitMs at 100000 ms (was 300000). | Phase B: node tools/check-foreground-hold.mjs exit 0 (Node engine). |
+| 5 | skills/gm/SKILL.md | The served rule says a body runs 100 seconds by default before it becomes a background run. | Phase B: the served text of skill://gm/SKILL.md reads 100 seconds (read in the run). |
+| 6 | tools/check-restart-body-orphan.mjs, tools/check-foreground-hold.mjs, tools/check.mjs | New checks, registered in the gate list. Each takes node (default) or the path of a native binary. | Phase B: both checks on node and on build/release, exit 0. |
+| 7 | AGENTS.md, DESIGN.md | Notes for the 120 s client limit, the 100 s default and the restart reaper. AGENTS.md: 18621 bytes before, 19199 after. The audit covers the notes this change touches; a full line-by-line audit is not done. | none (text) |
+
+Open for Phase B: whether the Node tree has the same restart orphan. Its foreground groups live in memory (src/exec.mjs bodyGroups), and stopOrphans reads only jobs/*.json. The Node check is node tools/check-restart-body-orphan.mjs.
