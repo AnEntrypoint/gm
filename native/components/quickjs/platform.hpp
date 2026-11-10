@@ -5,6 +5,7 @@
 #include <filesystem>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #if !defined(__wasi__)
@@ -65,6 +66,8 @@ std::optional<std::string> read_file(const std::filesystem::path& file);
 std::optional<FileStamp> stamp_of(const std::filesystem::path& file);
 bool is_regular_file(const std::filesystem::path& file);
 std::vector<std::filesystem::path> regular_files_in(const std::filesystem::path& dir);
+std::filesystem::path join_path(const std::filesystem::path& dir, std::string_view name);
+std::filesystem::path normal_path(const std::filesystem::path& file);
 std::filesystem::path absolute_path(const std::filesystem::path& file);
 void idle_pause(std::chrono::milliseconds duration);
 

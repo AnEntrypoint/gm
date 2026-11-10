@@ -1,6 +1,5 @@
 #include "platform.hpp"
 
-#include <algorithm>
 #include <cstdio>
 #include <cstring>
 
@@ -48,11 +47,44 @@ std::vector<std::filesystem::path> regular_files_in(const std::filesystem::path&
     if (listing == nullptr) return files;
     while (struct dirent* entry = readdir(listing)) {
         if (std::strcmp(entry->d_name, ".") == 0 || std::strcmp(entry->d_name, "..") == 0) continue;
-        std::filesystem::path child = dir / entry->d_name;
+        std::filesystem::path child = join_path(dir, entry->d_name);
         if (is_regular_file(child)) files.push_back(child);
     }
     closedir(listing);
     return files;
+}
+
+std::filesystem::path join_path(const std::filesystem::path& dir, std::string_view name) {
+    if (!name.empty() && name.front() == '/') return std::string(name);
+    if (dir.empty()) return std::string(name);
+    return dir.string() + "/" + std::string(name);
+}
+
+std::filesystem::path normal_path(const std::filesystem::path& file) {
+    const std::string text = file.string();
+    const bool absolute = !text.empty() && text.front() == '/';
+    std::vector<std::string> parts;
+    std::string segment;
+    auto flush = [&] {
+        if (segment == "..") {
+            if (!parts.empty() && parts.back() != "..") parts.pop_back();
+            else if (!absolute) parts.push_back(segment);
+        } else if (!segment.empty() && segment != ".") {
+            parts.push_back(segment);
+        }
+        segment.clear();
+    };
+    for (char letter : text) {
+        if (letter == '/') flush();
+        else segment.push_back(letter);
+    }
+    flush();
+    std::string out = absolute ? "/" : "";
+    for (std::size_t index = 0; index < parts.size(); ++index) {
+        if (index > 0) out += "/";
+        out += parts[index];
+    }
+    return out.empty() ? std::string(".") : out;
 }
 
 std::filesystem::path absolute_path(const std::filesystem::path& file) {
@@ -96,6 +128,14 @@ std::vector<std::filesystem::path> regular_files_in(const std::filesystem::path&
         if (entry.is_regular_file(ec)) files.push_back(entry.path());
     }
     return files;
+}
+
+std::filesystem::path join_path(const std::filesystem::path& dir, std::string_view name) {
+    return dir / std::filesystem::path(name);
+}
+
+std::filesystem::path normal_path(const std::filesystem::path& file) {
+    return file.lexically_normal();
 }
 
 std::filesystem::path absolute_path(const std::filesystem::path& file) {

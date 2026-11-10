@@ -129,10 +129,14 @@ struct LeafVerbs::State {
         json::Value event;
         event.set("kind", "leaf-refused");
         event.set("fields", std::move(fields));
+#if defined(__cpp_exceptions)
         try {
+#endif
             log->second(event);
+#if defined(__cpp_exceptions)
         } catch (...) {
         }
+#endif
     }
 
     std::vector<std::filesystem::path> leaf_files() const {

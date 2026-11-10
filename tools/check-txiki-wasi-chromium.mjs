@@ -7,7 +7,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const CHROMIUM = '/usr/bin/chromium';
-const TIMEOUT_MS = 120000;
+const TIMEOUT_MS = 420000;
 const page = join(root, 'tools', 'check-txiki-wasi-browser.html');
 const target = process.argv[2];
 if (!target || !existsSync(target)) {
@@ -28,7 +28,6 @@ const args = [
   '--allow-file-access-from-files',
   '--disable-background-networking',
   `--user-data-dir=${profile}`,
-  '--virtual-time-budget=60000',
   '--dump-dom',
   address,
 ];

@@ -70,7 +70,7 @@ std::optional<std::string> read_text(const fs::path& path) {
 }
 
 bool project_is_module(const fs::path& project_root) {
-    const auto text = read_text(project_root / "package.json");
+    const auto text = read_text(platform::join_path(project_root, "package.json"));
     if (!text) return false;
     auto parsed = json::parse(*text);
     if (!parsed) return false;
@@ -83,14 +83,18 @@ JSValue call_verb(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv, in
     const std::string& name = session->gm_verb_list[static_cast<size_t>(verb_index)].name;
     json::Value args = args_from_js(ctx, argc, argv);
     json::Value reply;
+#if defined(__cpp_exceptions)
     try {
+#endif
         engine::HostPause paused(*session);
         reply = session->gm_verbs->call(name, args);
+#if defined(__cpp_exceptions)
     } catch (const std::exception& err) {
         reply = engine::failed_reply(err.what());
     } catch (...) {
         reply = engine::failed_reply("the verb failed");
     }
+#endif
     JSValue reply_js = engine::json_to_js(ctx, reply);
     if (JS_IsException(reply_js)) return reply_js;
     return resolved_promise(ctx, reply_js);
@@ -307,7 +311,7 @@ std::string absolute_specifiers(const std::string& statement, const fs::path& pr
                 const std::string_view path = std::string_view(statement).substr(at + 1, close - at - 1);
                 if (is_local_specifier(path)) {
                     const std::string quote(1, statement[at]);
-                    out += quote + (project / fs::path(path)).lexically_normal().generic_string() + quote;
+                    out += quote + platform::normal_path(platform::join_path(project, path)).generic_string() + quote;
                     at = close + 1;
                     continue;
                 }

@@ -90,7 +90,9 @@ JSValue call_host(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv) {
         if (!converted->is_null()) args = std::move(*converted);
     }
     json::Value reply;
+#if defined(__cpp_exceptions)
     try {
+#endif
         HostPause paused(*session);
         if (auto extra = session->host->extra.find(name); extra != session->host->extra.end()) {
             reply = extra->second(args);
@@ -99,11 +101,13 @@ JSValue call_host(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv) {
         } else {
             return throw_text(ctx, "host has no verb " + name);
         }
+#if defined(__cpp_exceptions)
     } catch (const std::exception& err) {
         return throw_text(ctx, "host." + name + " failed: " + err.what());
     } catch (...) {
         return throw_text(ctx, "host." + name + " failed");
     }
+#endif
     return json_to_js(ctx, reply);
 }
 
@@ -113,13 +117,17 @@ JSValue host_names(JSContext* ctx, JSValueConst, int, JSValueConst*) {
     if (session == nullptr || session->host == nullptr) return json_to_js(ctx, names);
     for (const auto& [name, primitive] : session->host->extra) names.push(name);
     if (session->host->native != nullptr) {
+#if defined(__cpp_exceptions)
         try {
+#endif
             for (const auto& verb : session->host->native->list()) names.push(verb.name);
+#if defined(__cpp_exceptions)
         } catch (const std::exception& err) {
             return throw_text(ctx, std::string("the host verb list failed: ") + err.what());
         } catch (...) {
             return throw_text(ctx, "the host verb list failed");
         }
+#endif
     }
     return json_to_js(ctx, names);
 }

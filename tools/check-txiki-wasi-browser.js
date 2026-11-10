@@ -20,6 +20,8 @@ const memoryBytes = () => new Uint8Array(instance.exports.memory.buffer);
 const memoryView = () => new DataView(instance.exports.memory.buffer);
 const decodeAt = (base, length) => new TextDecoder().decode(memoryBytes().subarray(base, base + length));
 
+const toPerformanceTime = (clockId, timeMs) => (clockId === 0 ? performance.now() + (timeMs - Date.now()) : timeMs);
+
 const implemented = {
   args_sizes_get(countPtr, sizePtr) {
     memoryView().setUint32(countPtr, 0, true);
@@ -79,7 +81,36 @@ const implemented = {
     return 0;
   },
   poll_oneoff(inPtr, outPtr, subscriptions, eventsPtr) {
-    memoryView().setUint32(eventsPtr, 0, true);
+    const view = memoryView();
+    const clocks = [];
+    const ready = [];
+    for (let index = 0; index < subscriptions; index += 1) {
+      const base = inPtr + index * 48;
+      const userdata = view.getBigUint64(base, true);
+      const tag = view.getUint8(base + 8);
+      if (tag === 0) {
+        const clockId = view.getUint32(base + 16, true);
+        const timeout = Number(view.getBigUint64(base + 24, true)) / 1e6;
+        const abstime = (view.getUint16(base + 40, true) & 1) === 1;
+        clocks.push({ userdata, tag, at: abstime ? toPerformanceTime(clockId, timeout) : performance.now() + timeout });
+      } else {
+        ready.push({ userdata, tag });
+      }
+    }
+    if (clocks.length && ready.length === 0) {
+      const wakeAt = Math.min(...clocks.map((clock) => clock.at));
+      while (performance.now() < wakeAt) continue;
+    }
+    const expired = clocks.filter((clock) => clock.at <= performance.now());
+    const events = [...ready, ...expired];
+    events.forEach((event, index) => {
+      const base = outPtr + index * 32;
+      view.setBigUint64(base, event.userdata, true);
+      view.setUint16(base + 8, 0, true);
+      view.setUint8(base + 10, event.tag);
+      view.setBigUint64(base + 16, 0n, true);
+    });
+    view.setUint32(eventsPtr, events.length, true);
     return 0;
   },
   sched_yield: () => 0,
@@ -91,17 +122,27 @@ const implemented = {
   },
 };
 
-const run = async () => {
-  const response = await fetch(wasmUrl);
-  if (!response.ok) throw new Error(`fetch ${wasmUrl} returned ${response.status}`);
-  const module = await WebAssembly.compile(await response.arrayBuffer());
+const readBinary = (url) => {
+  const request = new XMLHttpRequest();
+  request.open('GET', url, false);
+  request.overrideMimeType('text/plain; charset=x-user-defined');
+  request.send();
+  if (request.status !== 0 && (request.status < 200 || request.status >= 300)) throw new Error(`fetch ${url} returned ${request.status}`);
+  const text = request.responseText;
+  const bytes = new Uint8Array(text.length);
+  for (let index = 0; index < text.length; index += 1) bytes[index] = text.charCodeAt(index) & 0xff;
+  return bytes;
+};
+
+const run = () => {
+  const module = new WebAssembly.Module(readBinary(wasmUrl));
   const imports = {};
   for (const entry of WebAssembly.Module.imports(module)) {
     const target = entry.module === 'env' ? (imports.env ??= {}) : (imports.wasi_snapshot_preview1 ??= {});
     if (entry.kind !== 'function') continue;
     target[entry.name] = implemented[entry.name] ?? (entry.module === 'env' ? () => 0 : () => ENOSYS);
   }
-  instance = await WebAssembly.instantiate(module, imports);
+  instance = new WebAssembly.Instance(module, imports);
   if (instance.exports._initialize) instance.exports._initialize();
   const exp = instance.exports;
 
@@ -124,14 +165,39 @@ const run = async () => {
   const missing = ctx !== 0 ? exp.gm_txiki_load_builtin(ctx, allocString('tjs:gm-no-such-module')) : 0;
   expect(missing === 0, `gm_txiki_load_builtin returned ${missing} for an unknown module`);
   if (rt !== 0) exp.gm_txiki_free(rt);
+
+  const readCString = (pointer) => {
+    const bytes = memoryBytes();
+    let end = pointer;
+    while (bytes[end] !== 0) end += 1;
+    return new TextDecoder().decode(bytes.subarray(pointer, end));
+  };
+  const runBody = (body) => {
+    const bodyPtr = allocString(body);
+    const replyPtr = exp.gm_run_body(bodyPtr, 0);
+    exp.free(bodyPtr);
+    const text = readCString(replyPtr);
+    exp.free(replyPtr);
+    return JSON.parse(text);
+  };
+
+  const sum = runBody('return 1 + 2;');
+  expect(sum.ok === true && sum.value === 3, `run_code returned ${JSON.stringify(sum)} for 1 + 2`);
+  const timer = runBody('return (async () => { await new Promise((done) => setTimeout(done, 20)); return "timer"; })();');
+  expect(timer.ok === true && timer.value === 'timer', `run_code returned ${JSON.stringify(timer)} for a 20 ms timer`);
+  const stuck = runBody('for (;;) {}');
+  expect(stuck.ok === false && String(stuck.error).includes('JavaScript deadline of 120000 ms'), `run_code returned ${JSON.stringify(stuck)} for a body that never returns`);
+  return `run_code: 1 + 2 = ${sum.value}; a 20 ms timer settled as ${timer.value}; a body that never returns stopped with "${stuck.error}"`;
 };
 
-run()
-  .catch((error) => failures.push(`the page threw: ${error.message}`))
-  .then(() => {
-    if (failures.length) {
-      finish(`txiki-wasi-browser-check: ${failures.length} failure(s)\n- ${failures.join('\n- ')}${stderr ? `\nstderr: ${stderr}` : ''}`);
-      return;
-    }
-    finish(`txiki-wasi-browser-check: ok (${wasmPath}: runtime created, context read, loop turned, tjs:path loaded through gm_txiki_load_builtin, unknown module refused, runtime freed)`);
-  });
+let runCodeLine = '';
+try {
+  runCodeLine = run();
+} catch (error) {
+  failures.push(`the page threw: ${error.message}`);
+}
+if (failures.length) {
+  finish(`txiki-wasi-browser-check: ${failures.length} failure(s)\n- ${failures.join('\n- ')}${stderr ? `\nstderr: ${stderr}` : ''}`);
+} else {
+  finish(`txiki-wasi-browser-check: ok (${wasmPath}: runtime created, context read, loop turned, tjs:path loaded through gm_txiki_load_builtin, unknown module refused, runtime freed; ${runCodeLine})`);
+}

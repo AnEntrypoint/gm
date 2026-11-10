@@ -1638,3 +1638,56 @@ Code and build configuration only; no build or witness in this stretch. The witn
 | The export list adds gm_run_body to the seven gm_txiki_* exports, malloc, free, realloc and calloc. No export is removed. | native/components/quickjs/CMakeLists.txt, gm_txiki_wasi target_link_options | Phase B: the export list of the built wasm, quoted. |
 
 Not changed in this stretch: the platform layer (fcf85cd), the Threads alias, gm_runcode and gm_json on the link line, and the seven shim functions.
+
+## gm pass, Phase B: run_code and its 120 s deadline in the wasm32-wasi reactor (2026-11-10)
+
+Build fixes, each at its cause (the wasi toolchain here is zig 0.17.1 with its wasi libc++ and libc++abi):
+- Exceptions. The wasi libc++abi has no exception runtime (__cxa_throw and friends are undefined), the same reason thebird compiles ada with -fno-exceptions. Root CMakeLists.txt adds -fno-exceptions to C++ and -g0 to every wasi compile. The four C++ try sites in engine.cpp (call_host, host_names), leaves.cpp (log_refusal) and runcode.cpp (call_verb) compile only when __cpp_exceptions is defined; the wasi build runs the same bodies without the catch, and no wasi verb or host can throw.
+- Thread-local destructors. thread_body_controls in native/include/gm/runcode.hpp is a plain static on __wasi__: wasi libc++abi has no __cxa_thread_atexit, and the reactor has one thread.
+- Path library. Zig's wasi libc++ lacks the out-of-line std::filesystem::path members (lexically_normal, __root_directory, __filename). Two uses reach the reactor: the project package.json join and the ESM specifier normalizer. platform.hpp gains join_path and normal_path: native uses / and lexically_normal (unchanged behaviour); wasi joins strings and normalizes segments (a '..' above the root is dropped for an absolute path).
+- Witness code. The browser page compiles the module synchronously (XMLHttpRequest with x-user-defined), because the page's dump is taken at load and Chromium's async compile is not waited on. Chromium refuses a synchronous compile above 8 MB on the main thread; -g0 brings the reactor under it (raw 5176695, from 12048363). --enable-features=WebAssemblyUnlimitedSyncCompilation was tried first and had no effect: /etc/chromium.d/90-gpu appends its own --enable-features, which wins.
+- poll_oneoff. The page's shim waits for clock subscriptions by busy-waiting on performance.now and reports the expired ones; the Node witness uses node:wasi.
+
+Changes in this phase, file and witness:
+
+| change | file | witness |
+|---|---|---|
+| -g0 and -fno-exceptions for the wasi build; no C++ exceptions in the wasm | CMakeLists.txt | build/wasi (exit 0); both witnesses; size |
+| try/catch sites compile only with exceptions | native/components/quickjs/engine.cpp, leaves.cpp, runcode.cpp | native check-embedded-runtime (exit 0); check-build (exit 0) |
+| plain static body-controls on wasi | native/include/gm/runcode.hpp | build/wasi link (no __cxa_thread_atexit) |
+| join_path and normal_path in the platform layer | native/components/quickjs/platform.hpp, platform.cpp, runcode.cpp | build/wasi link; both witnesses (the 20 ms timer runs the module and settle path) |
+| Browser witness: run_code through gm_run_body (1 + 2, a 20 ms timer, a body that never returns), synchronous module load, wasi poll_oneoff for clocks | tools/check-txiki-wasi-browser.js | tools/check-txiki-wasi-chromium.mjs (exit 0) |
+| Node witness: the same three run_code calls | tools/check-txiki-wasi.mjs | node tools/check-txiki-wasi.mjs (exit 0) |
+| Chromium runner: no virtual-time budget (the 120 s deadline would stop the clock), 420 s timeout | tools/check-txiki-wasi-chromium.mjs | the runner's wall times below |
+
+Phase A (62bd1ae, local): gm_run_body in native/components/quickjs/txiki/run_entry.cpp; gm_txiki_wasi compiles it and exports it. Witness: the export list below.
+
+Export list of the built wasm (build/wasi/native/components/quickjs/gm_txiki_wasi.wasm, 157 exports; the uv_* helpers are omitted here):
+```
+memory:memory
+global:__stack_pointer
+function:_initialize
+function:malloc
+function:calloc
+function:realloc
+function:free
+function:gm_txiki_new
+function:gm_txiki_free
+function:gm_txiki_context
+function:gm_txiki_loop_alive
+function:gm_txiki_loop_turn
+function:gm_txiki_refresh_loop_time
+function:gm_txiki_load_builtin
+function:gm_run_body
+```
+Sha256 2918dec85c3b589eb6605e15f526fd939e438ea4e449b5aa594d72c4851e7595. Raw 5176695 bytes, stripped 2783164, gzip -9 1672754, gzip -9 stripped 1003787 (measure-txiki-wasm.mjs). The engine code is in the binary: stringify_function_of and compile_module are present in the name section.
+
+Witnesses (foreground):
+- Node, `timeout 300 node tools/check-txiki-wasi.mjs build/wasi/native/components/quickjs/gm_txiki_wasi.wasm`, exit 0. Output: `txiki-wasi-check: ok (build/wasi/native/components/quickjs/gm_txiki_wasi.wasm: runtime created, context read, loop turned, tjs:path loaded through gm_txiki_load_builtin, unknown module refused, runtime freed; run_code: 1 + 2 = 3; a 20 ms timer settled as timer; a body that never returns stopped with "the body passed its JavaScript deadline of 120000 ms"; 120084 ms)`. Wall 120130 ms.
+- Chromium, `timeout 480 node tools/check-txiki-wasi-chromium.mjs build/wasi/native/components/quickjs/gm_txiki_wasi.wasm`, exit 0. Output: `txiki-wasi-browser-check: ok (/workspace/gm/build/wasi/native/components/quickjs/gm_txiki_wasi.wasm: runtime created, context read, loop turned, tjs:path loaded through gm_txiki_load_builtin, unknown module refused, runtime freed; run_code: 1 + 2 = 3; a 20 ms timer settled as timer; a body that never returns stopped with "the body passed its JavaScript deadline of 120000 ms")` and `txiki-wasi-chromium-check: wall 120575 ms`. Process wall 120634 ms.
+
+Native regression after the shared changes: `cmake --build build/release -j 8` exit 0; `node tools/check-embedded-runtime.mjs build/release/native/components/host/gm` exit 0 (ok); `node tools/check-build.mjs build/release` exit 0 (check-build: gm stamp 62bd1ae-dev).
+
+Open:
+- Chromium's --dump-dom runs at load, so the page must finish synchronously; a larger reactor would need an async page (the 8 MB limit) and a DevTools-driven runner. Not done.
+- The reactor's exports are the seven gm_txiki_* functions and gm_run_body. The browser entry (thebird) and the gm-in-page consumer are not checked against this list; no consumer code is in this checkout.

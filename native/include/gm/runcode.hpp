@@ -38,7 +38,11 @@ struct BodyControls {
 using BodyControlsPtr = std::shared_ptr<BodyControls>;
 
 inline BodyControlsPtr& thread_body_controls() {
+#if defined(__wasi__)
+    static BodyControlsPtr controls;
+#else
     static thread_local BodyControlsPtr controls;
+#endif
     return controls;
 }
 
