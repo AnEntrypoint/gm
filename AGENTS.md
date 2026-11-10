@@ -106,7 +106,7 @@ Node-missing items are retired, not ported: native ships and Node is the parity 
 
 ## Ship and commits
 
-- Commit only through tools/ship.sh (see Owner rules). On a collision, fetch, reapply on origin's tip, and push. Do not clone to get around one.
+- Commit only through tools/ship.sh (see Owner rules). On a collision, fetch, reapply on origin's tip, and push. Do not clone to get around one. ship.sh pushes main only after CI is green on the same SHA: it pushes the commit to a candidate tag gm-ci-<sha12>, dispatches release (publish=false) and arm-diagnose on it, and waits in tools/ci-candidate.mjs (run it in the background; SHIP_CI_TIMEOUT_MIN, default 120). A red or timed-out candidate leaves the commit local. SHIP_PUSH=0 commits only.
 - Remote: AnEntrypoint/gm, public (the owner decided the repository is public), pushed to main.
 
 ## Setup and the host entry
