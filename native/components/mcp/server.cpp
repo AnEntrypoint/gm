@@ -45,7 +45,7 @@ constexpr const char* kServerName = "gm";
 constexpr const char* kServerTitle = "gm run worker";
 constexpr const char* kGmSkillUri = "skill://gm/SKILL.md";
 constexpr int kStepStartRule = 2;
-constexpr const char* kSkillReadRefusal = "run_code refused: skill://gm/SKILL.md had not been read in this connection, so its text is the second content block of this reply. Read it and follow it, then call run_code again. This refusal is sent once per connection.";
+constexpr const char* kSkillReadRefusal = "run_code refused: skill://gm/SKILL.md had not been read in this connection, so its text is the second content block of this reply. Follow it, then call run_code again. This refusal is sent once per connection.";
 constexpr std::size_t kReplyMemory = 256;
 constexpr std::size_t kOutputCap = 20000;
 constexpr std::size_t kOutputPage = 20000;
@@ -2662,7 +2662,7 @@ struct Server::State {
             contents.push(*served);
             return cacheable(object().set("contents", std::move(contents)), kListTtlMs);
         }
-        throw RpcError(-32602, "resource not found: " + uri, object().set("uri", uri));
+        throw RpcError(-32002, "resource not found: " + uri, object().set("uri", uri));
     }
 
     Value skill_prompt(const std::string& name) {
@@ -2738,7 +2738,7 @@ struct Server::State {
         const auto& served = served_skills();
         if (!uri_value || !uri_value->is_string() || !std::regex_match(uri, match, kSkillMd) ||
             std::find(served.begin(), served.end(), match[1].str()) == served.end()) {
-            throw RpcError(-32602, "unknown skill: " + text_or_undefined(uri_value));
+            throw RpcError(-32002, "resource not found: " + uri, object().set("uri", uri));
         }
         return object().set("resultType", "complete").set("skill", skill_entry(skills.get(match[1].str())));
     }
@@ -2896,7 +2896,7 @@ struct Server::State {
             for (const Value& item : wanted->as_array()) {
                 auto digest = item.is_string() ? digest_of(item.as_string()) : std::nullopt;
                 if (!digest) {
-                    throw RpcError(-32602, "resource not found: " + text_or_undefined(&item), object().set("uri", item));
+                    throw RpcError(-32002, "resource not found: " + text_or_undefined(&item), object().set("uri", item));
                 }
                 digests[item.as_string()] = *digest;
                 honored.push(item);

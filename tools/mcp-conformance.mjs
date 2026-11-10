@@ -313,7 +313,7 @@ const SCENARIOS = [
     name: 'resources/read missing',
     run: async (c, ok) => {
       const r = await c.rpc('resources/read', { uri: 'skill://gm/NOPE.md' });
-      ok('a missing resource is -32602 with data.uri and no contents', r.error?.code === INVALID_PARAMS && r.error?.data?.uri === 'skill://gm/NOPE.md' && r.result === undefined, short(r));
+      ok('a missing resource is -32002 with data.uri and no contents', r.error?.code === -32002 && r.error?.data?.uri === 'skill://gm/NOPE.md' && r.result === undefined, short(r));
     },
   },
   {
@@ -333,7 +333,7 @@ const SCENARIOS = [
     name: 'subscriptions/listen missing',
     run: async (c, ok) => {
       const r = await c.rpc('subscriptions/listen', { notifications: { resourceSubscriptions: ['skill://gm/NOPE.md'] } });
-      ok('subscriptions/listen of a missing resource is -32602', r.error?.code === INVALID_PARAMS, short(r));
+      ok('subscriptions/listen of a missing resource is -32002', r.error?.code === -32002, short(r));
     },
   },
   {

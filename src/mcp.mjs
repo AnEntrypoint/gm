@@ -90,7 +90,7 @@ function skillFileOf(uri) {
 }
 function skillGet(params) {
   const match = typeof params?.uri === 'string' ? /^skill:\/\/([^/]+)\/SKILL\.md$/.exec(params.uri) : null;
-  if (match === null || !SERVED_SKILLS.includes(match[1])) throw new RpcError(-32602, `unknown skill: ${params?.uri}`);
+  if (match === null || !SERVED_SKILLS.includes(match[1])) throw new RpcError(-32002, `resource not found: ${params?.uri}`, { uri: params?.uri });
   return { resultType: 'complete', skill: skillEntry(skillOf(match[1])) };
 }
 const subscriptions = createSubscriptions({
@@ -129,6 +129,8 @@ const DEFAULT_MAX_STEPS = 50;
 const REPLY_MEMORY = 256;
 const DEFAULT_MAX_INFLIGHT = 8;
 const DEFAULT_JOB_LIFETIME_MS = 3600000;
+const LIST_TTL_MS = 3600000;
+const VOLATILE_TTL_MS = 0;
 const OPEN_LIST = 20;
 const USAGE = 'usage: node src/mcp.mjs --workspace <dir> [--task <file-or-text>] [--run-dir <dir>] [--max-steps N] [--max-inflight N] [--job-lifetime-ms N] [--stuck-ms N] [--monitor-ms N] [--notice-ms N] [--host-idle-ms N] [--surface tools|code] [--mcp-config <file>]';
 const DEFAULT_HOST_IDLE_MS = 600000;
@@ -162,7 +164,7 @@ const BASE_TOOLS = [
 
 const SURFACES = ['tools', 'code'];
 const CODE_SURFACE = new Set(['next_context', 'run_code', 'finish']);
-const SKILL_READ_REFUSAL = 'run_code refused: skill://gm/SKILL.md had not been read in this connection, so its text is the second content block of this reply. Read it and follow it, then call run_code again. This refusal is sent once per connection.';
+const SKILL_READ_REFUSAL = 'run_code refused: skill://gm/SKILL.md had not been read in this connection, so its text is the second content block of this reply. Follow it, then call run_code again. This refusal is sent once per connection.';
 const STEP_START_RULE = 2;
 const SINGLE_VERB_BODIES_BEFORE_NOTICE = 3;
 const SINGLE_VERB_NOTICE_EVERY = 10;
@@ -393,18 +395,18 @@ function createSession({ workspace, runDir, skillGate, log, task, maxSteps, maxI
     if (method === 'server/discover') return discover(surface);
     if (method === 'ping') return {};
     await mcpReady;
-    if (method === 'tools/list') return { tools: servedTools(surface) };
+    if (method === 'tools/list') return cacheable({ tools: servedTools(surface) }, LIST_TTL_MS);
     if (method === 'tools/call') {
       touch();
       return callTool(params, rpcId);
     }
-    if (method === 'prompts/list') return { prompts: SERVED_SKILLS.map((name) => skillPrompt(name)) };
+    if (method === 'prompts/list') return cacheable({ prompts: SERVED_SKILLS.map((name) => skillPrompt(name)) }, LIST_TTL_MS);
     if (method === 'prompts/get') return getPrompt(params);
-    if (method === 'resources/list') return { resources: [...resourceList(), ...runResources(runsRoot, runId, witnessOf(runsRoot, runId))] };
+    if (method === 'resources/list') return cacheable({ resources: [...resourceList(), ...runResources(runsRoot, runId, witnessOf(runsRoot, runId))] }, VOLATILE_TTL_MS);
     if (method === 'resources/read') return readResource(params);
     if (method === 'skills/list') return { resultType: 'complete', skills: SERVED_SKILLS.map((name) => skillEntry(skillOf(name))) };
     if (method === 'skills/get') return skillGet(params);
-    if (method === 'resources/templates/list') return { resourceTemplates: RESOURCE_TEMPLATES };
+    if (method === 'resources/templates/list') return cacheable({ resourceTemplates: RESOURCE_TEMPLATES }, LIST_TTL_MS);
     if (method === 'resources/subscribe') return subscribeTo(params);
     if (method === 'resources/unsubscribe') return unsubscribeFrom(params);
     if (method === 'completion/complete') return completionOf(params, { skills: SERVED_SKILLS, filesOf: (name) => skillOf(name).files.map((file) => file.path), runsRoot });
@@ -424,8 +426,12 @@ function createSession({ workspace, runDir, skillGate, log, task, maxSteps, maxI
     return { protocolVersion: version, ...connectReply(surface), serverInfo: SERVER_INFO };
   }
 
+  function cacheable(result, ttlMs) {
+    return { ...result, ttlMs, cacheScope: 'public' };
+  }
+
   function discover(surface) {
-    return { resultType: 'complete', supportedVersions: SUPPORTED_VERSIONS, ...connectReply(surface), _meta: { 'io.modelcontextprotocol/serverInfo': SERVER_INFO } };
+    return cacheable({ resultType: 'complete', supportedVersions: SUPPORTED_VERSIONS, ...connectReply(surface), _meta: { 'io.modelcontextprotocol/serverInfo': SERVER_INFO } }, LIST_TTL_MS);
   }
 
   function getPrompt(params) {
@@ -456,10 +462,10 @@ function createSession({ workspace, runDir, skillGate, log, task, maxSteps, maxI
 
   function readResource(params) {
     const run = readRun(runsRoot, params?.uri);
-    if (run !== null) return { contents: [run] };
+    if (run !== null) return cacheable({ contents: [run] }, VOLATILE_TTL_MS);
     const served = serveSkillFile(params?.uri, 'resource');
     if (!served.ok) throw new RpcError(-32002, `resource not found: ${params?.uri}`, { uri: params?.uri });
-    return { contents: [{ uri: served.uri, mimeType: served.mimeType, text: served.output }] };
+    return cacheable({ contents: [{ uri: served.uri, mimeType: served.mimeType, text: served.output }] }, LIST_TTL_MS);
   }
 
   function serveSkillFile(uri, via) {

@@ -133,6 +133,7 @@ const MAX_TIMEOUT_MS = 3600000;
 const MAX_JOB_TIMEOUT_MS = 7200000;
 const TAIL_CAP = 2000;
 const ADOPT_POLL_MS = 200;
+const BODY_BUDGET_POLL_MS = 100;
 const ADOPT_KILL_CHECK_MS = 2000;
 const EXIT_SCRIPT = '(eval "$1"); s=$?; echo $s > "$2"; exit $s';
 export const OUTPUT_PAGE = 20000;
@@ -238,6 +239,8 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
   const realRoot = realpathSync(root);
   const jobs = new Map();
   const inFlightByBody = new Map();
+  const pausedMs = new Map();
+  const pausedSince = new Map();
 
   const confine = (rel) => {
     if (typeof rel !== 'string' || rel === '') return { refused: 'path must be a non-empty string' };
@@ -587,7 +590,7 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
       if (job.settled) return;
       job.settled = true;
       clearInterval(reminder);
-      clearTimeout(lifetime);
+      clearInterval(lifetime);
       writeStatus(name, { ...status, state, ...fields });
       const { value, error, ...rest } = fields;
       log.append('job', { job: name, body, state, startMono, ...rest });
@@ -607,7 +610,9 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
     const begin = () => {
       job.queued = false;
       job.startWall = Date.now();
-      lifetime = setTimeout(() => job.stop('lifetime'), jobLifetimeMs);
+      lifetime = setInterval(() => {
+        if (budgetSpent(body, job.startWall) >= jobLifetimeMs) job.stop('lifetime');
+      }, BODY_BUDGET_POLL_MS);
       reminder = setInterval(() => {
         const runningMs = Math.round(log.now() - startMono);
         rowQueries.rowSummary(confine, 'prd', NOTICE_PRD_WINDOW)
@@ -722,10 +727,12 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
     parkedRows: () => rowQueries.parkedRows(confine),
     setLeaves,
     callStarted(body) {
+      if ((inFlightByBody.get(body) ?? 0) === 0) pausedSince.set(body, Date.now());
       inFlightByBody.set(body, (inFlightByBody.get(body) ?? 0) + 1);
     },
     callEnded(body) {
       inFlightByBody.set(body, Math.max(0, (inFlightByBody.get(body) ?? 0) - 1));
+      if ((inFlightByBody.get(body) ?? 0) === 0) pausedMs.set(body, (pausedMs.get(body) ?? 0) + Date.now() - pausedSince.get(body));
     },
     access(name, args) {
       if (READ_ONLY.has(name) || name === 'run_code') return { items: [] };
@@ -773,6 +780,11 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
 
   function liveGroups() {
     return [...jobs.values()].filter((job) => job.pid !== undefined).map((job) => job.pid).concat([...foregroundGroups]);
+  }
+
+  function budgetSpent(body, startWall) {
+    const inCall = (inFlightByBody.get(body) ?? 0) > 0 ? Date.now() - pausedSince.get(body) : 0;
+    return Date.now() - startWall - (pausedMs.get(body) ?? 0) - inCall;
   }
 
   function runningBodies() {
