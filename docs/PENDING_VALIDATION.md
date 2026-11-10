@@ -2276,3 +2276,11 @@ Not run here: tools/check-txiki-wasi.mjs and the gm reactor wasm (the gm wasm32-
 - Decision (dispatcher, reversible): the playwriter page stays bound for the session, per project. Each run still gets its own browser context, and finish closes only that run context, not the page. Reason: the page global is a defect jayzee reported, and the owner record says tabs are shared across projects; pages are never shared across projects because each project root has its own browser.
 - src/browser-scope.mjs OPEN_RUN and native/components/host/browser_scope.cpp kOpenRunContext: create state.gmProject once and state.gmPage in it, and bind page to state.gmPage on every execute. Limit: a close of the whole project browser (browser_close_machine) closes the project context too; the next execute then creates a new one only if the page is closed, so a closed project context is not re-created by the isClosed check alone.
 - Witness: node tools/check-project-page.mjs <native gm>: a page opened in one run_code is read back by a second run_code, and a second project session starts on its own page.
+
+## Playwriter page witness record (2026-11-11, Phase B, build/release gm)
+
+- cmake --build build/release: BUILD_EXIT=0, wall 3.96 s.
+- tools/check-project-page.mjs build/release/native/components/host/gm: exit 0, wall 7.86 s. The page opened in one run_code is read back by a second run_code; a second project session starts at about:blank.
+- tools/check-skill-serve.mjs: exit 0, wall 0.23 s.
+- tools/check-browser-scope.mjs: exit 0, wall 193.11 s.
+- tools/check-build.mjs build/release: exit 0, wall 381.97 s; conformance 86 passed, 0 failed of 86 checks in 24 scenarios.

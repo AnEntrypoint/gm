@@ -13,7 +13,7 @@ if (target === null || !existsSync(resolve(target))) {
 }
 const REPLY_MS = 180000;
 const MARKER = 'gm-project-page';
-const OPEN = `(await page.goto('data:text/html,<title>${MARKER}</title>')).url()`;
+const OPEN = `(await page.goto('data:text/html,<title>${MARKER}</title>'), page.url())`;
 const TITLE = 'page.title()';
 const URL = 'page.url()';
 
@@ -61,8 +61,10 @@ function serve(workspace) {
   const runCode = async (body) => (await rpc('tools/call', { name: 'run_code', arguments: { body } }))?.result?.structuredContent ?? {};
   const execute = async (expression) => {
     const reply = await runCode(`return await gm.playwriter_execute({ code: ${JSON.stringify(expression)} });`);
-    const value = reply?.output?.result ?? reply?.output ?? reply?.value ?? reply?.error ?? null;
-    return { reply, text: typeof value === 'string' ? value : JSON.stringify(value) };
+    const payload = reply?.output !== null && typeof reply?.output === 'object' ? reply.output.output : reply?.output;
+    const output = typeof payload === 'string' ? payload : String(reply?.error ?? '');
+    const returned = /\[return value\] (.*)/.exec(output);
+    return { reply, text: returned === null ? output : returned[1] };
   };
   const start = async () => {
     const init = await rpc('initialize', { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: CHECK, version: '1' } });
