@@ -213,6 +213,7 @@ struct JobTable::Job {
     std::filesystem::path out;
     json::Value status;
     double start_mono = 0;
+    std::optional<double> mono_offset;
     std::filesystem::file_time_type start_file_time;
     std::optional<std::filesystem::path> progress;
     std::string state = "running";
@@ -252,8 +253,6 @@ JobTable::~JobTable() {
 #endif
     }
 }
-
-double JobTable::mono_now() { return round_mono(*mono_offset_ + steady_ms()); }
 
 void JobTable::write_status(const std::filesystem::path& dir, const std::string& name, const json::Value& status) {
     auto file = dir / (name + ".json");
@@ -304,8 +303,6 @@ json::Value JobTable::start(const std::string& name, const std::string& command,
     { std::ofstream create(out, std::ios::binary | std::ios::trunc); }
     auto exit_file = exit_file_of(name);
     std::filesystem::remove(exit_file, ec);
-    std::optional<double> start_mono;
-    if (mono_offset_) start_mono = mono_now();
     const double start_wall = wall_ms_now();
     Spawned spawned = spawn_shell_job(command, workspace_, out, exit_file);
     if (spawned.pid < 0) return failure(spawned.error);
@@ -315,18 +312,15 @@ json::Value JobTable::start(const std::string& name, const std::string& command,
     running.set("state", "running");
     running.set("pid", spawned.pid);
     std::uint64_t seq = log_.append("job", std::move(running));
-    if (!start_mono) {
-        double mono = 0;
-        if (auto events = log_.read_last(1); events && !events->empty()) {
-            const json::Value& last = events->back();
-            const json::Value* s = last.find("seq");
-            if (s != nullptr && s->as_number() == static_cast<double>(seq)) {
-                if (const json::Value* m = last.find("mono")) mono = m->as_number();
-            }
+    double start_mono = 0;
+    if (auto events = log_.read_last(1); events && !events->empty()) {
+        const json::Value& last = events->back();
+        const json::Value* s = last.find("seq");
+        if (s != nullptr && s->as_number() == static_cast<double>(seq)) {
+            if (const json::Value* m = last.find("mono")) start_mono = m->as_number();
         }
-        mono_offset_ = mono - steady_ms();
-        start_mono = mono;
     }
+    const double mono_offset = start_mono - steady_ms();
 
     auto job = std::make_unique<Job>();
     job->name = name;
@@ -337,7 +331,8 @@ json::Value JobTable::start(const std::string& name, const std::string& command,
 #endif
     job->dir = jobs_dir();
     job->out = out;
-    job->start_mono = *start_mono;
+    job->start_mono = start_mono;
+    job->mono_offset = mono_offset;
     job->start_file_time = std::filesystem::file_time_type::clock::now();
     if (progress) job->progress = std::filesystem::path(*progress).is_absolute() ? std::filesystem::path(*progress) : workspace_ / *progress;
     std::uint64_t deadline_ms = std::min(timeout_ms, lifetime_ms_);
@@ -347,7 +342,7 @@ json::Value JobTable::start(const std::string& name, const std::string& command,
     job->status.set("command", command);
     job->status.set("state", "running");
     job->status.set("pid", spawned.pid);
-    job->status.set("startMono", *start_mono);
+    job->status.set("startMono", start_mono);
     job->status.set("startWall", start_wall);
     job->status.set("output", out.string());
     job->status.set("timeoutMs", deadline_ms);
@@ -412,7 +407,7 @@ void JobTable::settle(Job& job, std::optional<int> exit_code, json::Value signal
     if (reason) ended.set("reason", *reason);
     if (statement) ended.set("statement", *statement);
     if (timed_out) ended.set("timedOut", true);
-    if (mono_offset_) ended.set("durMs", std::round(mono_now() - job.start_mono));
+    if (job.mono_offset) ended.set("durMs", std::round(round_mono(*job.mono_offset + steady_ms()) - job.start_mono));
     write_status(job.dir, job.name, ended);
 
     json::Value event;

@@ -89,7 +89,6 @@ private:
     void poll_adopted(Job& job);
     std::optional<int> read_exit_code(const std::string& name) const;
     std::filesystem::path exit_file_of(const std::string& name) const;
-    double mono_now();
     void write_status(const std::filesystem::path& dir, const std::string& name, const json::Value& status);
     std::optional<json::Value> read_status(const std::string& name);
     std::filesystem::path jobs_dir() const { return log_.dir() / "jobs"; }
@@ -102,7 +101,6 @@ private:
     std::condition_variable changed_;
     std::map<std::filesystem::path, std::unique_ptr<Job>> jobs_;
     std::vector<UnloggedEvent> unlogged_;
-    std::optional<double> mono_offset_;
 };
 
 }
