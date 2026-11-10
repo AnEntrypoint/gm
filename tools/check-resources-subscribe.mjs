@@ -40,7 +40,11 @@ const skillsFlag = onNode ? [] : ['--skills', skillsDir];
 const runDir = join(scratch, 'run');
 const runLog = join(runDir, 'log.jsonl');
 const child = spawn(binary, [...lead, '--workspace', workspace, '--run-dir', runDir, '--mcp-config', mcpConfig, ...skillsFlag], { stdio: ['pipe', 'pipe', 'pipe'] });
-child.stderr.resume();
+const relayLines = [];
+const t0 = Date.now();
+child.stderr.on('data', (chunk) => {
+  for (const line of String(chunk).split('\n')) if (line.trim() !== '') relayLines.push(`${Date.now() - t0} ms ${line.trim()}`);
+});
 const pending = new Map();
 const notes = [];
 let nextId = 1;
@@ -77,14 +81,21 @@ const failures = [];
 const expect = (condition, text) => {
   if (!condition) failures.push(text);
 };
-const answering = async () => {
+const restartLines = () => (existsSync(runLog) ? readFileSync(runLog, 'utf8').split('\n').filter((line) => line.includes('"kind":"restart"')) : []);
+const restarted = async (before) => {
   const until = Date.now() + RESTART_MS;
-  while (Date.now() < until) {
+  while (restartLines().length <= before && Date.now() < until) await sleep(100);
+  if (restartLines().length <= before) {
+    failures.push(`a change to ${URI} on disk did not restart the worker: no restart event in the run log within ${RESTART_MS} ms`);
+    return false;
+  }
+  const again = Date.now() + RESTART_MS;
+  while (Date.now() < again) {
     const reply = await rpc('tools/list', {});
     if (reply?.result !== undefined) return true;
     await sleep(250);
   }
-  failures.push(`the worker did not answer tools/list within ${RESTART_MS} ms after a change to ${URI}`);
+  failures.push(`the restarted worker did not answer tools/list within ${RESTART_MS} ms`);
   return false;
 };
 let edits = 0;
@@ -107,6 +118,7 @@ try {
   const sub = await rpc('resources/subscribe', { uri: URI });
   expect(sub?.error === undefined && JSON.stringify(sub?.result) === '{}', `resources/subscribe ${URI}: expected an ok {} result, got ${short(sub)}`);
 
+  const before1 = restartLines().length;
   change();
   const started = Date.now();
   const arrived = await waitFor(() => updatesFor(URI).length > 0, ARRIVE_MS);
@@ -117,20 +129,24 @@ try {
     expect(JSON.stringify(params) === JSON.stringify({ uri: URI }), `the update notification params are ${short(params)}, expected {"uri":"${URI}"}`);
   }
 
-  await answering();
+  await restarted(before1);
   const unsub = await rpc('resources/unsubscribe', { uri: URI });
   expect(unsub?.error === undefined && JSON.stringify(unsub?.result) === '{}', `resources/unsubscribe ${URI}: expected an ok {} result, got ${short(unsub)}`);
   const seen = updatesFor(URI).length;
+  const before2 = restartLines().length;
   change();
   await sleep(1500);
   expect(updatesFor(URI).length === seen, `after resources/unsubscribe a change to ${URI} still sent notifications/resources/updated`);
 
-  await answering();
+  await restarted(before2);
   const bad = await rpc('resources/subscribe', { uri: 'skill://nope/SKILL.md' });
   expect(bad?.error?.code === -32002 && bad.error.message === 'resource not found: skill://nope/SKILL.md' && JSON.stringify(bad.error.data) === '{"uri":"skill://nope/SKILL.md"}', `resources/subscribe to an unknown uri: expected -32002 resource not found, got ${short(bad)}`);
 
   if (failures.length) {
     console.error(`resources-subscribe-check: ${failures.length} failure(s)\n- ${failures.join('\n- ')}`);
+    console.error(`relay stderr: ${relayLines.slice(-30).join(' | ')}`);
+    console.error(`notifications: ${JSON.stringify(notes.map((note) => [note.method, note.params ?? null])).slice(0, 1200)}`);
+    console.error(`run log restart events: ${restartLines().map((line) => line.slice(0, 160)).join(' | ') || 'none'}`);
     process.exitCode = 1;
   } else {
     console.log(`resources-subscribe-check: ok (initialize advertises resources.subscribe; resources/subscribe to ${URI} answers {}; a change on disk sent notifications/resources/updated with params {"uri":"${URI}"} in ${elapsed} ms; resources/unsubscribe answers {} and a later change sent nothing; an unknown uri answers -32002 resource not found)`);
