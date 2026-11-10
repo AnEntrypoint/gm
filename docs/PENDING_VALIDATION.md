@@ -9,6 +9,23 @@ S1 on 28bb712: skillCheck ok (every MCP_RULES line in the skill, no bare tool na
 | # | Commit | File | Change | Witness needed |
 |---|---|---|---|---|
 | S1 | local, Phase A | skills/gm/SKILL.md | rewritten as habits (do each thing once, batch a step, let a job run, keep what you carry small, work through gm, debug live then test once, stop only what you started); the seven run rules kept verbatim; the Spending turns list and the bundling examples removed | Phase B: src/skills.mjs skillCheck ok (every rule of MCP_RULES in the skill, no bare tool name); tools/check-skill-serve.mjs; a live skill://gm/SKILL.md read equals the checkout file; wc -c below 12000 |
+## Stretch 2026-11-10 (txiki on thebird artifact): Phase B witnessed
+
+S3a on ed97869, run on the thebird artifact /workspace/thebird/web/vendor/txiki/tjs.wasm (sha256 dcd3a4342705967bfd4188aea39a4c7d368cfd7c90a42918e6fc72f83da656c1), pin read from /workspace/thebird/scripts/vendor-txiki.mjs:
+- node txiki/node.mjs without a flag, scratch project /tmp/gm-witness/txiki-proj: exit 1, "tjs.wasm sha256 dcd3a434... does not match the pin 137c08f6... in /workspace/thebird/scripts/vendor-txiki.mjs" (S3b).
+- node txiki/node.mjs --allow-unpinned (labelled: unpinned artifact): status 0, stdout "add 5", "shout GM!", "tools add,version", "timer ok", 77 ms. Imports covered: named, default, namespace, export star, export from in the entry, timer.
+- node txiki/node.mjs on a body "while (true) {}" with the default 120000 ms: status 124 at 120005 ms, stdout "spinning". The artifact interrupt handler enforces the deadline.
+- node txiki/build-site.mjs --allow-unpinned: build/txiki-site with tjs.wasm, shims/wasi-preview1.js from thebird, host.mjs, bundle.mjs, site.mjs, acorn.mjs, pin.json, project.json (4 files).
+- browser: build/txiki-site served by /tmp/gm-witness/serve.mjs on 127.0.0.1:18765 (port 8765 is held by a python3 process, pid 2211868, not this run; the first attempt reached that page and was discarded), playwriter_execute in the gm run: data-state done, title "gm run_code on txiki", status 0, the same four stdout lines as the Node run, 73 ms.
+
+Not done: a txiki body has no gm verbs (the artifact has no bridge op for verb calls); the browser refusal path (pin mismatch without the flag) is not witnessed because build-site refuses before it writes; a body that imports a node: builtin is refused by the bundler (only ./ and ../ specifiers resolve). The artifact is stale against its pin: thebird must rebuild web/vendor/txiki/tjs.wasm.
+
+## Stretch 2026-11-10: open rows in this ledger, accounting
+
+Closed in this pass, each with its witness: the stale served skill (served text equals the checkout file, check-skill-serve); the Node restart orphan (Node arm exit 0 in the body ledgers Phase B block); the wasm32-wasi run_code blockers and the 120 s deadline (the txiki Phase B block at the wasm32-wasi section); server.cpp stop_orphans reaps the ledgers (server.cpp:1017-1021); the fx row unknown-mw6bc4mv1c00 (fx closes file resolved, 2026-11-09).
+
+Still open, with the blocker: the installed gm does not carry the task-refusal and body-ledger commits until the dispatcher installs (two rows); Windows and macOS builds and CI (blocked on a Windows CI run); the budget-check margin (CPU-bound, measured 193313 to 233216 ms against a 400000 ms window); the Node playwriter snippet without the awaiting wrapper (a decision, AGENTS); the Node run_code that holds a body before the first next_context (found, not fixed); a SIGKILL restart (the restart witnesses cover SIGTERM and a native restart); the ranked open work list at the Phase A block near line 1346; the AGENTS.md line-by-line audit that the body-ledger block did not do; txiki bodies have no gm verbs (new, this stretch).
+
 ## Stretch 2026-11-10 (txiki on thebird artifact): Phase A
 
 | # | Commit | File | Change | Witness needed |
