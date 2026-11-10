@@ -96,6 +96,7 @@ function exec(program, argv, cwd, timeoutMs) {
 }
 
 const gitIn = (dir, argv, timeoutMs = GIT_TIMEOUT_MS) => exec('git', argv, dir, timeoutMs);
+const isRepository = (dir) => gitIn(dir, ['rev-parse', '--is-inside-work-tree'], CHECK_TIMEOUT_MS).ok;
 
 function verbOf(sub, result) {
   if (result.ok) return { ok: true, output: result.output.trim() || '(no output)' };
@@ -154,7 +155,7 @@ function ciStatus(dir, sha, repo) {
   if (sha !== undefined && !SHA.test(sha)) return fail('sha must be 7 to 40 lowercase hex digits');
   if (repo !== undefined && !REPO.test(repo)) return fail('repo must be owner/name');
   const head = gitIn(dir, ['rev-parse', '--verify', `${sha ?? 'HEAD'}^{commit}`], CHECK_TIMEOUT_MS);
-  if (!head.ok) return fail(`no commit ${sha ?? 'HEAD'} in this repository`);
+  if (!head.ok) return fail(isRepository(dir) ? `no commit ${sha ?? 'HEAD'} in this repository` : `cannot check commit ${sha ?? 'HEAD'}: ${dir} is not a git repository`);
   let origin = { host: null, name: repo };
   if (repo === undefined) {
     const url = gitIn(dir, ['remote', 'get-url', 'origin'], CHECK_TIMEOUT_MS);

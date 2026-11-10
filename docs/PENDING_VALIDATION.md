@@ -1481,3 +1481,39 @@ Scope: code, docs and tests only. Nothing here was built, run, or witnessed in t
 6. Not vendored and not compiled in this stretch: fs-browser.c, entry.c, webcrypto-browser.c, httpclient-browser.c, sqlite-vfs.c, http-client.js (thebird's other browser sources). mod_fs and mod_os call uv_fs_* and similar, and the browser port may not define all of them. Expect a link check to name missing symbols (Phase B).
 7. mod_channel, mod_dns, mod_fswatch, mod_process and mod_udp are left out of the wasi core (thebird's list leaves them out too). Their entry points are answered by txiki_stubs.c or are not reached. Witness needed: the link output of item 4(b).
 8. Phase B is gated on thebird's origin/main carrying a browser entry that exports the seven gm_txiki_* functions. The gate is checked after the Phase A commit (see the Phase B note in the REPORT line).
+
+Gate for that stretch, checked in this pass: `git -C /workspace/thebird fetch origin` once; origin/main is b5ec730, and `git grep -l gm_txiki origin/main` lists 0 files. Phase B (the run_code wasm32-wasi build) stays gated and is not built.
+
+## gm pass, Phase A (2026-11-10): ranked reachable items, and the ci_status no-commit message
+
+Phase A ran no build, test, gate or witness, and pushed nothing. Each change is one local commit by lanmower with no trailer. The witnesses below run in Phase B on HEAD.
+
+Ranked open items. "Reachable" excludes the txiki wasm32-wasi Phase B (gated on thebird's gm_txiki export) and anything that needs a Windows, macOS or arm64 host.
+
+| rank | item | status in this pass | reason |
+|---|---|---|---|
+| 1 | ci_status says "no commit X in this repository" for a root that is not a git repository (rows.mjs:196 in the earlier list; the same wording sits in git.mjs in both trees) | done, see change 1 | none |
+| 2 | f80cd46, the run_code leaf assertion accepts a background run | already in HEAD: tools/check-run-code-budget.mjs requires status 200 and no background | none |
+| 3 | Node arm of a tool-only client across a worker restart (not probed, 2026-11-10) | already covered: tools/check-no-resource-client.mjs drives both engines, and check-build.mjs:37 runs it; the Node arm is in the Phase B list | witness only, Phase B |
+| 4 | resources/read of an unknown uri: native -32602, Node -32002 | not taken: native's -32602 is deliberate (parity row 2, "native answers a missing resource with -32602 and data.uri"; AGENTS: -32002 is accepted only by clients). Changing it is an owner decision | owner |
+| 5 | The run_code refusal carries the skill text twice (content and structuredContent, ~48 KB) | not taken: structuredContent with the text block is the form the tool output schema uses; trimming it changes the protocol shape on both engines | owner |
+| 6 | Node run_code budget parity beyond the 65 s case | not taken: native-ahead or port is an owner decision | owner |
+| 7 | finish open-row step limit (work/tooling-fix-units.json) | not taken: finish semantics are an owner decision | owner |
+| 8 | Shell-job lifetime equals the job_start cap, so the lifetime reason is unreachable for shell jobs | not taken: owner decision | owner |
+| 9 | Decision 3, protocol 2026-07-28 behind a capability flag; server/discover lists two versions while the SDK accepts five | not taken: a new protocol surface, large, and not checkable without a build | owner, then build |
+| 10 | Relay re-executes only with no call in flight (native/components/host/relay.cpp, the inflight_ check) | not taken: needs a measured reproduction first | measurement, then build |
+| 11 | Native Windows captures no server stderr (native/components/proc/child.cpp) | not taken: Windows-only code that cannot be compiled here | Windows CI |
+| 12 | Windows process-group kill unverified (only the Node doctor reports it) | not taken | Windows host |
+| 13 | Native browser tabs line counts every page outside this run as other pages | not taken: splitting pages needs a page-identity design | design |
+| 14 | fx's "another worker's events twice" | not taken: needs fx's reply text | fx reply text |
+| 15 | run_code had no result (check-run-code-budget, 9cf86cb gap 3), not reproduced | the diagnostic is in place (09af517); no change here | a build run that hits it |
+| 16 | asan full check-build not run (9cf86cb gap 4) | not taken: a build | Phase B build |
+| 17 | Windows, macOS and arm64 builds and runs of libuv and txiki (9cf86cb gap 8; AGENTS platform notes) | not taken | no host; hosted CI, not watched |
+| 18 | B1 and B2, the Windows witnesses (restart-jobs, browser path) | not taken | no Windows host |
+| 19 | Served skill freshness on a connection that started before a commit | not taken: closes on the next installed release | install |
+
+Change 1, ci_status for a root that is not a repository:
+1. src/git.mjs, ciStatus (line 126): when rev-parse fails, the message is `no commit X in this repository` only if isRepository(dir) is true; otherwise `cannot check commit X: <dir> is not a git repository`. This is the wording rows.mjs already uses for a non-repository root.
+2. native/leaves/git.mjs, ciStatus (line 157): the same split. A helper `isRepository(dir)` sits after gitIn: `rev-parse --is-inside-work-tree` with the same timeout.
+Witness needed (Phase B): call ci_status with sha HEAD in a scratch directory that is not a git repository, on the Node engine and on the native binary; each must return `cannot check commit HEAD: <dir> is not a git repository`. In a repository with no commits, the same call must return `no commit HEAD in this repository`. Both engines must agree (native/tests/parity/run.mjs, if a row covers ci_status; otherwise the two calls are read by hand).
+Changes are in files: src/git.mjs, native/leaves/git.mjs. No comments were added.

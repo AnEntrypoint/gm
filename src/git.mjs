@@ -123,7 +123,7 @@ export function createGitVerbs({ root, confine, log }) {
     if (sha !== undefined && !SHA.test(sha)) return fail('sha must be 7 to 40 lowercase hex digits');
     if (repo !== undefined && !REPO.test(repo)) return fail('repo must be owner/name');
     const head = await gitIn(dir, ['rev-parse', '--verify', `${sha ?? 'HEAD'}^{commit}`], CHECK_TIMEOUT_MS);
-    if (!head.ok) return fail(`no commit ${sha ?? 'HEAD'} in this repository`);
+    if (!head.ok) return fail((await isRepository(dir)) ? `no commit ${sha ?? 'HEAD'} in this repository` : `cannot check commit ${sha ?? 'HEAD'}: ${dir} is not a git repository`);
     const origin = repo === undefined ? await originRepo(dir) : { host: null, name: repo };
     if (origin === null) return fail('origin has no owner/name path; pass repo as owner/name');
     const { host, name } = origin;
