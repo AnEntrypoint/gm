@@ -16,27 +16,37 @@ if (!binary) {
     process.exit(2);
 }
 
+const failed = (step, result) => {
+    const how = result.signal ? `signal ${result.signal}` : `status ${result.status}`;
+    const hint = result.status === 13 ? ' (Node exits 13 when a top-level await never settles, so the step stopped before it reported)' : '';
+    console.error(`check-build: failed: ${step} ended with ${how}${hint}`);
+    process.exit(result.status ?? 1);
+};
+const runStep = (step, script, args) => {
+    const result = spawnSync(process.execPath, [script, ...args], { cwd: root, stdio: 'inherit', timeout: 600000 });
+    if (result.error) console.error(`check-build: ${step}: ${result.error.message}`);
+    if (result.status !== 0) failed(step, result);
+};
+
 const workspace = mkdtempSync(join(tmpdir(), 'gm-check-'));
 const configDir = mkdtempSync(join(tmpdir(), 'gm-check-mcp-'));
 const mcpConfig = join(configDir, 'no-default-mcp.json');
 writeFileSync(mcpConfig, JSON.stringify({ mcpServers: { playwriter: { disabled: true } } }));
-const run = spawnSync(process.execPath, [join(root, 'tools', 'mcp-conformance.mjs'), '--stdio', binary, 'serve', '--workspace', workspace, '--mcp-config', mcpConfig], {
+const conformance = spawnSync(process.execPath, [join(root, 'tools', 'mcp-conformance.mjs'), '--stdio', binary, 'serve', '--workspace', workspace, '--mcp-config', mcpConfig], {
     cwd: root,
     stdio: 'inherit',
     timeout: 2700000,
 });
 rmSync(workspace, { recursive: true, force: true });
 rmSync(configDir, { recursive: true, force: true });
-if (run.error) console.error(`check-build: ${run.error.message}`);
-if (run.status !== 0) process.exit(run.status ?? 1);
+if (conformance.error) console.error(`check-build: mcp-conformance: ${conformance.error.message}`);
+if (conformance.status !== 0) failed('mcp-conformance', conformance);
 
 for (const check of ['check-run-code-progress.mjs', 'check-shell-stdin.mjs', 'check-run-code-budget.mjs', 'check-grep-state-scope.mjs', 'check-job-bounds.mjs', 'check-early-run-code.mjs', 'check-stop-fetch.mjs', 'check-read-parity.mjs', 'check-read-truncation.mjs', 'check-protocol-versions.mjs', 'check-resources-subscribe.mjs', 'check-browser-scope.mjs', 'check-restart-jobs.mjs', 'check-startup-attempts.mjs', 'check-skill-serve.mjs', 'check-no-resource-client.mjs', 'check-restart-skill-read.mjs', 'check-relay-reexec.mjs', 'check-turn-economy.mjs', 'check-embedded-runtime.mjs', 'witness-next-context-replay.mjs']) {
-    const result = spawnSync(process.execPath, [join(root, 'tools', check), binary], { cwd: root, stdio: 'inherit', timeout: 600000 });
-    if (result.status !== 0) process.exit(result.status ?? 1);
+    runStep(check, join(root, 'tools', check), [binary]);
 }
 for (const check of ['check-restart-jobs.mjs', 'check-no-resource-client.mjs', 'check-turn-economy.mjs']) {
-    const onNode = spawnSync(process.execPath, [join(root, 'tools', check), 'node'], { cwd: root, stdio: 'inherit', timeout: 600000 });
-    if (onNode.status !== 0) process.exit(onNode.status ?? 1);
+    runStep(`${check} node`, join(root, 'tools', check), ['node']);
 }
 
 const cachePath = join(buildDir, 'CMakeCache.txt');

@@ -54,8 +54,11 @@ const spawnEngine = (args) => {
   const leading = onNode ? [join(root, 'src', 'mcp.mjs')] : ['serve'];
   const child = spawn(onNode ? process.execPath : binary, [...leading, ...args], { stdio: ['pipe', 'pipe', 'pipe'] });
   let stderr = '';
+  const startedAt = Date.now();
+  let relayAt = null;
   child.stderr.on('data', (chunk) => {
     stderr = (stderr + String(chunk)).slice(-STDERR_TAIL);
+    if (relayAt === null && stderr.includes('worker running')) relayAt = Date.now() - startedAt;
   });
   let exit = null;
   child.once('exit', (code, signal) => {
@@ -102,7 +105,7 @@ const spawnEngine = (args) => {
     const how = exit.signal !== null ? `signal ${exit.signal}` : `code ${exit.code}`;
     return `engine exited with ${how} before it answered; stderr: ${stderr.trim() || '(empty)'}`;
   };
-  return { rpc, stop, cause, stderrTail: () => stderr.trim() || '(empty)', exited: () => exit !== null };
+  return { rpc, stop, cause, stderrTail: () => stderr.trim() || '(empty)', exited: () => exit !== null, startedAt, relayAt: () => relayAt };
 };
 
 const layoutOf = (dir) => {
@@ -148,14 +151,17 @@ const clientCase = async (scratch, { version, mode }) => {
   const logFile = join(runDir, 'log.jsonl');
   const deadline = Date.now() + EVENT_MS;
   try {
+    let logAt = null;
     let event = findEvent(logFile, matches);
     while (event === null && !engine.exited() && Date.now() < deadline) {
       await sleep(100);
+      if (logAt === null && existsSync(logFile)) logAt = Date.now() - engine.startedAt;
       event = findEvent(logFile, matches);
     }
     const logTail = event === null && existsSync(logFile) ? readFileSync(logFile, 'utf8').slice(-600) : '';
     const layout = event === null ? `workspace: ${layoutOf(workspace)}; run: ${layoutOf(runDir)}` : '';
-    return { event, cause: engine.cause(), stderr: event === null ? engine.stderrTail() : '', logTail, layout };
+    const timeline = `relay said worker running at ${engine.relayAt() ?? 'never'} ms after spawn; run log created at ${logAt ?? 'never'} ms`;
+    return { event, cause: engine.cause(), stderr: event === null ? engine.stderrTail() : '', logTail, layout, timeline };
   } finally {
     await engine.stop();
   }
@@ -193,10 +199,10 @@ try {
   ];
   const events = await Promise.all(cases.map((item) => clientCase(scratch, item)));
   cases.forEach((item, index) => {
-    const { event, cause, stderr, logTail, layout } = events[index];
+    const { event, cause, stderr, logTail, layout, timeline } = events[index];
     const label = item.label;
     if (event === null) {
-      failures.push(`${label}: no mcp-server event after ${EVENT_MS} ms${cause ? `; ${cause}` : ''}; engine stderr: ${stderr || '(none)'}; log tail: ${JSON.stringify(logTail || '(no log)')}; layout ${layout}`);
+      failures.push(`${label}: no mcp-server event after ${EVENT_MS} ms${cause ? `; ${cause}` : ''}; engine stderr: ${stderr || '(none)'}; log tail: ${JSON.stringify(logTail || '(no log)')}; layout ${layout}; ${timeline}`);
       return;
     }
     if (item.mode === 'ok' && VERSIONS.includes(item.version)) {

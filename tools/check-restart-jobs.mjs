@@ -14,6 +14,10 @@ if (target === null) {
   process.exit(1);
 }
 const onNode = target === 'node';
+if (onNode && process.platform === 'win32') {
+  console.log('restart-jobs-check: skipped (node: tools/relay.mjs makes its input pipe with mkfifo, which win32 lacks, so the Node relay exits 1 there; the native variant witnesses the relay restart on win32)');
+  process.exit(0);
+}
 if (!onNode && !existsSync(resolve(target))) {
   console.error(`restart-jobs-check: failed: no native binary at ${resolve(target)}`);
   process.exit(1);

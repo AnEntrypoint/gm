@@ -12,6 +12,10 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const CHECK = 'no-resource-client-check';
 const target = process.argv[2] ?? null;
 const onNode = target === 'node';
+if (onNode && process.platform === 'win32') {
+  console.log(`${CHECK}: skipped (node: tools/relay.mjs makes its input pipe with mkfifo, which win32 lacks, so the Node relay exits 1 there; the native variant runs on win32)`);
+  process.exit(0);
+}
 if (target === null || (!onNode && !existsSync(resolve(target)))) {
   console.error(`${CHECK}: usage: node tools/check-no-resource-client.mjs <node|path-to-native-binary>`);
   process.exit(2);
