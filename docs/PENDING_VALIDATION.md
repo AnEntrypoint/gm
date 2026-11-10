@@ -2261,3 +2261,12 @@ Not run here: tools/check-txiki-wasi.mjs and the gm reactor wasm (the gm wasm32-
 - tools/check-push-timing.mjs (new): checks ship.sh runs the gate before the commit and the push after it, and that a commit is an ancestor of origin/main only when it is claimed pushed. Witness: node tools/check-push-timing.mjs [sha] (CLAIM_PUSHED=1 when the push is claimed).
 - Child task (src/mcp.mjs childContext, line 657): no change; the Node side already refuses a non-owner task replacement, as native/components/mcp/server.cpp:201 states. Witness: tools/check-child-task.mjs (passed in the prior pass).
 - Playwriter page binding: not changed. The page global is set by the external playwriter server, and the Node browser scope gives each run its own context that finish closes (src/browser-scope.mjs). Keeping the page across runs changes that per-run design, so it needs an owner decision. Witness, once decided: a second run_code reads the page bound by the first.
+
+## Queue pass witness record (2026-11-10, Phase B, build/release gm)
+
+- cmake --build build/release: BUILD_EXIT=0, 5 steps linked.
+- tools/check-node-fs-import.mjs: ok, wall 0.15 s.
+- tools/check-push-timing.mjs: ok (gate line 41 < commit line 50 < push line 52), wall 0.07 s.
+- tools/check-skill-serve.mjs: ok, wall 0.22 s.
+- tools/check-build.mjs build/release: exit 0, wall 389.73 s; conformance 86 passed, 0 failed of 86 checks in 24 scenarios; gm stamp 916aefe-1 (916aefe).
+- Not done: the playwriter page binding (decision pending, see the Phase A record).
