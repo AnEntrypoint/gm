@@ -1,14 +1,12 @@
 #!/usr/bin/env node
 import { withoutPlaywriter } from './lib/no-playwriter.mjs';
+import { removeTree, stopTree } from './lib/tree.mjs';
 import { spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import readline from 'node:readline';
-import { once } from 'node:events';
-
-const exited = (child) => (child.exitCode !== null || child.signalCode !== null ? Promise.resolve() : once(child, 'exit'));
 import { OUTPUT_PAGE, readCharPage, readLinePage } from '../src/tools.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -111,12 +109,11 @@ if (binary === null || !existsSync(binary)) {
   } catch (error) {
     failures.push(`native: ${error.message}`);
   } finally {
-    child.kill();
-    await exited(child);
+    await stopTree(child);
   }
 }
 
-rmSync(workspace, { recursive: true, force: true });
+await removeTree(workspace);
 if (failures.length > 0) {
   console.error(`read-truncation: failed: ${failures.join('; ')}`);
   process.exit(1);

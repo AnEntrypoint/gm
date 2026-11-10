@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
 import readline from 'node:readline';
 import { fileURLToPath } from 'node:url';
+import { removeTree, stopTree } from './lib/tree.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const target = process.argv[2] ?? null;
@@ -24,7 +25,6 @@ if (!onNode && !existsSync(resolve(target))) {
 }
 
 const JOB = 'carry';
-const JOB_COMMAND = process.platform === 'win32' ? 'sleep 90 & echo done' : 'sleep 8; echo done';
 const CALL_MS = 90000;
 const WATCHDOG_MS = 240000;
 const watchdog = setTimeout(() => {
@@ -35,6 +35,8 @@ watchdog.unref();
 
 const workspace = mkdtempSync(join(tmpdir(), 'gm-restart-jobs-'));
 const configDir = mkdtempSync(join(tmpdir(), 'gm-restart-jobs-config-'));
+const gate = join(configDir, 'carry.gate');
+const JOB_COMMAND = process.platform === 'win32' ? 'sleep 90 & echo done' : `while [ ! -f "${gate}" ]; do sleep 1; done; echo done`;
 const binDir = onNode ? null : mkdtempSync(join(tmpdir(), 'gm-restart-jobs-bin-'));
 const mcpConfig = join(configDir, 'no-default-mcp.json');
 writeFileSync(mcpConfig, JSON.stringify({ mcpServers: { playwriter: { disabled: true } } }));
@@ -191,6 +193,7 @@ try {
   expect(windows ? alive === null : alive !== null, windows ? `after the restart the job's process ${jobPid} is still alive on Windows, which has no job wrapper` : `after the restart the job's process ${jobPid} is gone (ps reports no live row)`);
   expect(windows ? (answered?.state === 'killed' && answered?.reason === 'restart') : answered?.state === 'running', windows ? `after the restart on Windows job_status reports ${JSON.stringify(answered).slice(0, 240)}, expected killed with reason restart` : `after the restart job_status reports ${JSON.stringify(answered?.state)}, expected running`);
 
+  if (!windows) writeFileSync(gate, 'go\n');
   let ended = answered;
   const waitStart = Date.now();
   while (!windows && ended?.state === 'running' && Date.now() - waitStart < 60000) {
@@ -226,9 +229,7 @@ try {
       : `restart-jobs-check: ok (${onNode ? 'node' : 'native'}: ${how}; the job's process ${jobPid} was alive ${timings.aliveMs} ms after the trigger; the restart answered in ${timings.restartMs} ms; the job exited 0 with output "done" at ${timings.endMs} ms; carry-over events ${carried.length}; killed with reason restart 0)`);
   }
 } finally {
-  const exited = child.exitCode !== null || child.signalCode !== null ? Promise.resolve() : once(child, 'exit');
-  child.kill();
-  await Promise.race([exited, sleep(5000)]);
+  await stopTree(child);
   if (jobPid !== null && processOf(jobPid) !== null) process.kill(process.platform === 'win32' ? jobPid : -jobPid, 'SIGKILL');
   for (const pid of engineProcesses()) {
     try {
@@ -239,8 +240,8 @@ try {
   if (onNode && existsSync(sessions)) {
     for (const entry of readdirSync(sessions)) if (entry.startsWith(`${child.pid}-`)) rmSync(join(sessions, entry), { force: true });
   }
-  rmSync(workspace, { recursive: true, force: true });
-  rmSync(configDir, { recursive: true, force: true });
-  if (binDir !== null) rmSync(binDir, { recursive: true, force: true });
+  await removeTree(workspace);
+  await removeTree(configDir);
+  if (binDir !== null) await removeTree(binDir);
 }
 process.exit(process.exitCode ?? 0);

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { removeTree, stopTree } from './lib/tree.mjs';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { appendFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -134,6 +135,6 @@ try {
     console.log(`${CHECK}: ok (${target}: the default serve returns the checkout's ${SKILL}, and a live connection returns each change to the copied file on the next read)`);
   }
 } finally {
-  rmSync(scratch, { recursive: true, force: true });
+  await removeTree(scratch);
 }
 process.exit(process.exitCode ?? 0);

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { removeTree, stopTree } from './lib/tree.mjs';
 import { withoutPlaywriter } from './lib/no-playwriter.mjs';
 import { spawn, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
@@ -80,9 +81,8 @@ try {
   const plain = await grepBody('named file, default scope', `return await gm.grep({ pattern: '${TOKEN}', path: '.gm/witness-out/aloop.log', limit: 20 });`);
   if (plain !== null && (plain.ok !== false || String(plain.output ?? '').includes(TOKEN))) failures.push(`named file, default scope: expected a refusal, got ${JSON.stringify(plain).slice(0, 300)}`);
 } finally {
-  child.kill();
-  await Promise.race([once(child, 'exit').catch(() => {}), new Promise((done) => setTimeout(done, 5000))]);
-  rmSync(workspace, { recursive: true, force: true });
+  await stopTree(child);
+  await removeTree(workspace);
 }
 
 if (failures.length > 0) {

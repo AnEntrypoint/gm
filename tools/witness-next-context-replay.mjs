@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { removeTree, stopTree } from './lib/tree.mjs';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
@@ -42,5 +43,5 @@ try {
     }
 } finally {
     server.close();
-    rmSync(configDir, { recursive: true, force: true });
+    await removeTree(configDir);
 }
