@@ -1700,3 +1700,17 @@ Open:
 | 2 | tools/check-child-task.mjs | The check asserts that the plain refusal and the child refusal after step one name the owner call, and keeps the owner replacement check. | Phase B: node tools/check-child-task.mjs (Node engine) exit 0, and node tools/check-child-task.mjs build/release/native/components/host/gm exit 0 |
 | 3 | DESIGN.md | Decision bullet after the child task decision: the owner gate is kept, the refusal names the call, with the reason. | Read-only; covered by rows 1 and 2 |
 | 4 | (no edit) | Phase B reruns the existing witnesses on the built binaries: node tools/check-build.mjs build/release, node tools/check-txiki-wasi.mjs build/wasi/native/components/quickjs/gm_txiki_wasi.wasm, node tools/check-txiki-wasi-chromium.mjs build/wasi/native/components/quickjs/gm_txiki_wasi.wasm, all in the foreground. | Phase B: each exit 0, output read |
+
+## Task refusal names the call that unblocks it: Phase B witnesses (2026-11-10)
+
+Built at 83192c1 (HEAD of the three Phase A commits): `cmake --preset release` and `cmake --build build/release`, ninja then reports no work to do (exit 0). `cmake -S /workspace/gm -B build/wasi` and `cmake --build build/wasi --target gm_txiki_wasi` exit 0; the wasm is 5176695 bytes raw, the size of the earlier witness, since the wasm does not carry the changed refusal text.
+
+Witnesses (foreground unless the MCP client moved the body to background at 120 s; each exit read from its own output):
+- `node tools/check-build.mjs build/release`, exit 0: check-build: gm stamp 83192c1-dev (83192c1), gm-core stamp 83192c1-dev (83192c1).
+- `node tools/check-child-task.mjs`, exit 0: check-child-task: passed (Node).
+- `node tools/check-child-task.mjs build/release/native/components/host/gm`, exit 0: check-child-task: passed (node and native real-tree checks).
+- Real run on build/release (scratch script /tmp/gm-witness/refusal-witness.mjs, outside the checkout, a fresh workspace): {"first":{"ok":true,"step":1,"task":null},"refused":{"ok":false,"refused":true,"error":"refused: a task replacement after the first step needs owner:true; retry with next_context({ task: \"<new task>\", owner: true }), or call gm.task_set({ task: \"<new task>\", owner: true }) from run_code"},"accepted":{"ok":true,"step":2,"task":"replacement after step one"},"childRefused":{"ok":false,"refused":true,"error":"refused: a task replacement after the first step needs owner:true; retry with next_context({ child: true, run: \"<run id>\", task: \"<new task>\", owner: true })"}}
+- `node tools/check-txiki-wasi.mjs build/wasi/native/components/quickjs/gm_txiki_wasi.wasm`, exit 0: txiki-wasi-check: ok (runtime created, context read, loop turned, tjs:path loaded, unknown module refused, runtime freed; run_code 1 + 2 = 3; a 20 ms timer settled; a body that never returns stopped at its 120000 ms deadline, 120106 ms).
+- `node tools/check-txiki-wasi-chromium.mjs build/wasi/native/components/quickjs/gm_txiki_wasi.wasm`, exit 0: txiki-wasi-browser-check: ok (same checks in Chromium); wall 120732 ms.
+
+Open: the installed gm of a host still refuses without the named call until its build takes this commit (the installed build of this run predates it). No witness on the Node relay beyond check-child-task.
