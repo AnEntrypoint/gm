@@ -2125,3 +2125,17 @@ Three waste sources, each with the habit that addresses it (skills/gm/SKILL.md, 
 Not addressed by a new habit: the 2562 tool uses and 623 KB of results over 20000 characters in session 7ae15e26. The existing habit "Keep what you carry small" covers them; the measured repeat is in the next line.
 
 Phase B for this item: the gm witnesses that cover the skill change, with wall times, are recorded in the Phase B section that follows.
+
+## gm pass, Phase B (2026-11-10): the gm skill habits, witnesses at eaa8fce
+
+The skill is read at run time from the checkout (native default source, skills_dir_of), so the release binary at 3fcb810-1 serves the new text without a rebuild. Witnesses, run concurrently:
+
+- check-installed-build on build/release gm, expected stamp 3fcb810: ok (version "3fcb810-1 (3fcb810)"; skill://gm/SKILL.md equals the checkout copy with ttlMs 0). Wall 0.19 s.
+- check-skill-serve on build/release gm: ok (the default serve returns the checkout's skill://gm/SKILL.md, and a live connection returns each change on the next read). Wall 0.27 s.
+- check-no-resource-client native: ok (the first run_code is refused once with one copy of the skill, 12045 bytes for an 11397-byte skill). Wall 1.22 s.
+- check-no-resource-client node: ok (12011 bytes for 11397). Wall 0.85 s.
+- parity, build/release gm: 20/97 scenarios match, 0 cutover-expected, 55 native-ahead, 22 documented-gap, 0 differ. Wall 19.6 s.
+
+Cost of the change, measured: the skill grew from 9940 to 11302 bytes (+1362), so the one refusal a connection receives is about 1.4 KB larger. The three habits are the cost; the habit against each measured waste source is the reason.
+
+Defects found in Phase B: none. The installed-build step is not run and waits for the dispatcher's go.
