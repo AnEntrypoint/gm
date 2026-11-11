@@ -83,7 +83,7 @@ try {
       const elapsed = Date.now() - bodyStarted;
       expect(woke.unchanged !== true, `next_context with waitMs returned unchanged, so the body's end was not delivered: ${JSON.stringify(woke).slice(0, 300)}`);
       expect(elapsed < UNDER_MS, `the wait ran ${elapsed} ms; the body ends after ${BODY_MS} ms and the wait should return then`);
-      const settled = await tool('job_status', { job, waitMs: 5000 });
+      const settled = await tool('run_code', { body: `return await gm.job_status({ job: ${JSON.stringify(job)}, waitMs: 5000 });` });
       expect(JSON.stringify(settled).includes('slow-done'), `the background body's value is not readable through job_status: ${JSON.stringify(settled).slice(0, 300)}`);
     }
   } finally {

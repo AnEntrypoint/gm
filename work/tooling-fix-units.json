@@ -127,8 +127,12 @@
       "kind": "separate reversible follow-up after the ten-unit patch",
       "witness": "spoint run 0f5edf steps 8 and 9: \"MCP tool gm/run_code is still running after 120s. It was moved to the background as task kft9c00zd\"; next_context(waitMs 100000) returned {\"ok\":true,\"progress\":\"no event pending after 100000 ms; no step was used\"}; completion arrived only as a host task notification, not a gm pending event",
       "action": "expose background run_code state in next_context pending events and jobsRunning with a command-output witness",
-      "status": "witness-pending",
-      "verified": "Probe on build/release at cc9ece3: next_context while the background body runs names it in jobsOpen and jobsStarted, and the body end wakes a waiting next_context (job event is a pending kind on both engines). No engine change needed; the witness is tools/check-background-visibility.mjs."
+      "status": "fixed-witnessed",
+      "verified": "Probe on build/release at cc9ece3: next_context while the background body runs names it in jobsOpen and jobsStarted, and the body end wakes a waiting next_context (job event is a pending kind on both engines). No engine change needed; the witness is tools/check-background-visibility.mjs.",
+      "witnessWall": {
+        "native": "4.18 s",
+        "node": "4.23 s"
+      }
     },
     {
       "id": "witness-trailer-parsing",

@@ -2372,3 +2372,11 @@ Not run here: tools/check-txiki-wasi.mjs and the gm reactor wasm (the gm wasm32-
 - Finding: no engine change is needed. A background run_code is named in next_context while it runs (native: jobsOpen and jobsStarted, with the body id; Node: the same fields from activeJobs), and its end is logged as a job event, which is a pending kind on both engines, so a waiting next_context returns at the end. The follow-up asked for a jobsRunning key; jobsOpen already carries that state, so no duplicate field is added.
 - Witness: node tools/check-background-visibility.mjs <native gm | node>: run_code returns a background job; next_context full names it while it runs; next_context with waitMs returns when the body ends (before 15 s for a 4 s body); job_status returns the value slow-done.
 - Queue: followUps run-code-background-visibility is witness-pending until the Phase B run.
+
+## Background run_code visibility witness record (2026-11-11, Phase B)
+
+- cmake --build build/release: BUILD_EXIT=0.
+- tools/check-background-visibility.mjs build/release/native/components/host/gm: exit 0, wall 4.18 s. Output: background-visibility-check: ok (... a background run_code is named in next_context while it runs, its end wakes a waiting next_context, and its value is readable through job_status; wall 4.13 s).
+- tools/check-background-visibility.mjs node: exit 0, wall 4.23 s. Output: background-visibility-check: ok (node: ...; wall 4.18 s).
+- Witness fix: job_status is a verb inside run_code, not a top-level tool; the first run of the witness failed on that read, and the engines themselves passed the rest.
+- tools/check-build.mjs build/release: exit 0, wall 378.86 s; conformance 86 passed, 0 failed of 86 checks in 24 scenarios.
