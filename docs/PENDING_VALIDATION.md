@@ -2336,3 +2336,9 @@ Not run here: tools/check-txiki-wasi.mjs and the gm reactor wasm (the gm wasm32-
 - The changed-step check in tools/measure-next-context.mjs averages five runs of the 20-step changed series, and the threshold is 3760 bytes. Measured single runs: 3752 and 3753 bytes, from 4300 bytes, a 12.7 percent reduction. The 3760 is that mean plus about 0.2 percent for run-to-run noise from ids and timestamps in the replies.
 - Cause of the remaining size: the rules text stays on changed steps (AGENTS.md: rules are re-read at every step), and the MCP content duplicate stays because peers read the content text. Both are decisions, and a follow-up for the dispatcher would be a transport change, not built here.
 - The unchanged-reply and full-reply checks are unchanged and exact.
+
+## Browser tab identity (2026-11-11, Phase A)
+
+- Design: each tab has an id, t1, t2 and so on, assigned on first listing and kept for that page for the life of the project browser (a WeakMap on the playwriter state, per project; the counter is per project too). browser_tabs renders [id] url title, so a tab keeps its id on every reply, and a changed tab reads as a changed field with its new value. Unchanged replies say unchanged, as before.
+- src/browser-scope.mjs TABS_CODE and renderView, and native/components/host/browser_scope.cpp (its tabs script and render_view): assign and render the id. Ids are per project because the state is per project; a different project never lists this project tabs (its browser is separate).
+- Witness: node tools/check-tab-identity.mjs <native gm>: a tab opened in one run keeps the same id on the next browser_tabs reply, and a second project session never lists it.
