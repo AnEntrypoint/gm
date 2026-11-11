@@ -760,6 +760,10 @@ struct Server::State {
     std::string skill_refusal_ = kSkillReadRefusal;
     std::optional<std::string> handover_notice_;
     Value client_info_ = Value(nullptr);
+    std::mutex waits_mu_;
+    std::map<std::string, bool> open_waits_;
+    std::set<std::string> dropped_replies_;
+    std::optional<Value> cancel_notice_;
     std::atomic<std::uint64_t> body_verb_calls{0};
     std::mutex monitor_mutex;
     std::condition_variable monitor_wake;
@@ -2067,13 +2071,36 @@ struct Server::State {
         return "rules.md changed since the run started. The rules that hold from this step on are:\n\n" + rules;
     }
 
-    void wait_for_pending(double wait_ms) {
+    bool wait_cancelled(const std::string& key) {
+        std::lock_guard guard(waits_mu_);
+        auto found = open_waits_.find(key);
+        return found != open_waits_.end() && found->second;
+    }
+
+    bool cancel_wait(const Value& request_id, const Value* why) {
+        const std::string key = id_key(&request_id);
+        std::lock_guard guard(waits_mu_);
+        auto found = open_waits_.find(key);
+        if (found == open_waits_.end() || found->second) return false;
+        found->second = true;
+        dropped_replies_.insert(key);
+        cancel_notice_ = object().set("requestId", request_id).set("by", client_info_).set("why", why ? *why : Value(nullptr));
+        return true;
+    }
+
+    bool dropped_reply(const Value* id) {
+        if (id == nullptr) return false;
+        std::lock_guard guard(waits_mu_);
+        return dropped_replies_.erase(id_key(id)) > 0;
+    }
+
+    void wait_for_pending(double wait_ms, const std::string& key) {
         if (wait_ms <= 0) return;
         using namespace std::chrono;
         auto deadline = steady_clock::now() + milliseconds(static_cast<long long>(wait_ms));
         while (true) {
             std::uint64_t seen = pending_generation();
-            if (has_pending(s().run_dir) || steady_clock::now() >= deadline) return;
+            if (has_pending(s().run_dir) || steady_clock::now() >= deadline || wait_cancelled(key)) return;
             wait_pending_change(seen, std::min(deadline, steady_clock::now() + milliseconds(250)));
         }
     }
@@ -2223,10 +2250,22 @@ struct Server::State {
         }
         Value audit = object();
         if (task_arg != nullptr) audit.set("task", corrected).set("owner", owner).set("correction", first_step_correction);
-        return act(
+        const std::string wait_key = s().rpc_id ? id_key(&*s().rpc_id) : std::string();
+        {
+            std::lock_guard guard(waits_mu_);
+            open_waits_[wait_key] = false;
+        }
+        Value out = act(
             "next_context", audit,
-            [&, compact_children, corrected, owner, first_step_correction](std::uint64_t) {
-                wait_for_pending(wait_ms);
+            [&, compact_children, corrected, owner, first_step_correction, wait_key](std::uint64_t) {
+                wait_for_pending(wait_ms, wait_key);
+                std::unique_lock waits(waits_mu_);
+                struct CloseWait {
+                    std::map<std::string, bool>& open;
+                    const std::string& key;
+                    ~CloseWait() { open.erase(key); }
+                } close_wait{open_waits_, wait_key};
+                if (open_waits_[wait_key]) return object().set("ok", true).set("cancelled", true);
                 if (wait_ms > 0 && s().run_started && !has_pending(s().run_dir)) {
                     return object()
                         .set("ok", true)
@@ -2265,6 +2304,14 @@ struct Server::State {
                 }
                 return d;
             }, 1);
+        if (out.find("cancelled") == nullptr) {
+            std::lock_guard guard(waits_mu_);
+            if (cancel_notice_) {
+                out.set("previousWaitCancelled", *cancel_notice_);
+                cancel_notice_.reset();
+            }
+        }
+        return out;
     }
 
     void log_lint() {
@@ -3183,6 +3230,7 @@ struct Server::State {
             std::string outcome = "no call in flight with that id";
             if (request && cancel_foreground(id_key(request))) outcome = "stopped the call in flight";
             else if (request && end_listen(*request)) outcome = "ended the listen";
+            else if (request && cancel_wait(*request, why)) outcome = "ended the next_context wait; no reply is sent";
             else if (request && call_running(*request)) outcome = "the call is still running; gm does not stop it";
             Value fields = object();
             if (request) fields.set("requestId", *request);
@@ -3347,7 +3395,7 @@ struct Server::State {
                 notify(object().set("jsonrpc", "2.0").set("method", "notifications/resources/list_changed"));
             }
             auto reply = handle_line(line);
-            if (reply) {
+            if (reply && !dropped_reply(reply->find("id"))) {
                 emit(json::dump(*reply));
                 auto done = after_reply.find(id_key(reply->find("id")));
                 if (done != after_reply.end()) {
