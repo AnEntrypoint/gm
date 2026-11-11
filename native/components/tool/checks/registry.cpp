@@ -13,6 +13,7 @@ const std::vector<Registered>& checks() {
         {"check-git", check_git},
         {"check-review", check_review},
         {"check-code-ast", check_code_ast},
+        {"check-quickjs-baseline", check_quickjs_baseline},
     };
     return all;
 }
