@@ -5,6 +5,8 @@
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
+#include <future>
+#include <memory>
 #include <fstream>
 #include <map>
 #include <random>
@@ -289,6 +291,15 @@ std::string shown_text(const std::string& text, const json::Value& args) {
     return kept + (kept.empty() || kept.back() == '\n' ? "" : "\n") + "[gm-fetch: body truncated to " + std::to_string(utf8_length(kept)) + " bytes of " + std::to_string(utf8_length(shown)) + " bytes]";
 }
 
+std::optional<std::string> shown_before(const std::string& text, const json::Value& args, std::chrono::steady_clock::time_point deadline) {
+    if (args.find("match") == nullptr) return shown_text(text, args);
+    auto task = std::make_shared<std::packaged_task<std::string()>>([text, args] { return shown_text(text, args); });
+    std::future<std::string> done = task->get_future();
+    std::thread([task] { (*task)(); }).detach();
+    if (done.wait_until(deadline) != std::future_status::ready) return std::nullopt;
+    return done.get();
+}
+
 bool capped(const std::string& text, const json::Value& args) {
     const json::Value* max = args.find("maxBytes");
     return max != nullptr && max->is_number() && utf8_length(text) > static_cast<std::size_t>(max->as_number());
@@ -330,7 +341,7 @@ std::string percent_decode(const std::string& raw, bool& valid) {
     return out;
 }
 
-json::Value get_data_url(const std::string& url, const json::Value& args) {
+json::Value get_data_url(const std::string& url, const json::Value& args, std::uint64_t timeout_ms, std::chrono::steady_clock::time_point deadline) {
     const auto comma = url.find(',');
     if (comma == std::string::npos || comma < 5) return error_of("url is not a valid URL");
     const std::string meta = url.substr(5, comma - 5);
@@ -340,8 +351,9 @@ json::Value get_data_url(const std::string& url, const json::Value& args) {
     if (!valid) return error_of("url is not a valid URL");
     const std::string type = meta.substr(0, meta.find(';')).empty() ? "text/plain" : meta.substr(0, meta.find(';'));
     const std::string text = type.rfind("text/", 0) == 0 ? body : "(binary content not shown: " + type + ")";
-    const std::string shown = shown_text(text, args);
-    const std::string full = "200 " + std::to_string(utf8_length(body)) + " bytes " + url + "\n" + shown;
+    const auto shown = shown_before(text, args, deadline);
+    if (!shown) return timed_out(timeout_ms);
+    const std::string full = "200 " + std::to_string(utf8_length(body)) + " bytes " + url + "\n" + *shown;
     json::Value reply;
     reply.set("ok", true);
     reply.set("status", 200);
@@ -383,8 +395,9 @@ json::Value get_http(const fs::path& workspace, const fs::path& run_dir, const s
     else if (type.empty() || type.rfind("text/", 0) == 0 || type.find("json") != std::string::npos || type.find("xml") != std::string::npos || type.find("javascript") != std::string::npos) text = parsed.body;
     else text = "(binary content not shown: " + type + ")";
     const Archive archived = archive_source(workspace, parsed.body, final_url);
-    const std::string shown = shown_text(text, args);
-    const std::string full = std::to_string(parsed.status) + " " + std::to_string(utf8_length(parsed.body)) + " bytes " + final_url + "\n" + shown;
+    const auto shown = shown_before(text, args, deadline);
+    if (!shown) return timed_out(timeout_ms);
+    const std::string full = std::to_string(parsed.status) + " " + std::to_string(utf8_length(parsed.body)) + " bytes " + final_url + "\n" + *shown;
     json::Value reply;
     reply.set("ok", parsed.status >= 200 && parsed.status < 300);
     reply.set("status", parsed.status);
@@ -455,7 +468,7 @@ json::Value fetch_call(const json::Value& args, const fs::path& workspace, Locke
     int attempt = 0;
     for (;;) {
         ++attempt;
-        json::Value result = data ? get_data_url(url, args) : get_http(workspace, run_dir, url, args, timeout_ms, deadline);
+        json::Value result = data ? get_data_url(url, args, timeout_ms, deadline) : get_http(workspace, run_dir, url, args, timeout_ms, deadline);
         const auto error_type = classify(result);
         if (!error_type) {
             result.set("attempts", attempt);
