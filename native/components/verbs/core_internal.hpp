@@ -1,6 +1,9 @@
 #pragma once
 
+#include <chrono>
 #include <condition_variable>
+#include <cstdio>
+#include <ctime>
 #include <functional>
 #include <cstddef>
 #include <cstdint>
@@ -21,9 +24,26 @@ namespace gm::core {
 
 class LockedLog;
 
+inline std::string iso_now() {
+    const auto now = std::chrono::system_clock::now();
+    const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count() % 1000;
+    const std::time_t secs = std::chrono::system_clock::to_time_t(now);
+    std::tm utc{};
+#if defined(_WIN32)
+    gmtime_s(&utc, &secs);
+#else
+    gmtime_r(&secs, &utc);
+#endif
+    char buf[32];
+    std::snprintf(buf, sizeof(buf), "%04d-%02d-%02dT%02d:%02d:%02d.%03lldZ", utc.tm_year + 1900, utc.tm_mon + 1, utc.tm_mday, utc.tm_hour, utc.tm_min, utc.tm_sec, static_cast<long long>(ms));
+    return buf;
+}
+
+
 bool is_row_verb(std::string_view name);
 const std::vector<VerbInfo>& row_verbs();
 json::Value row_call(std::string_view name, const json::Value& args, const std::filesystem::path& workspace, LockedLog& log);
+json::Value fetch_call(const json::Value& args, const std::filesystem::path& workspace, LockedLog& log, const std::filesystem::path& run_dir);
 
 inline constexpr std::size_t output_page = 20000;
 inline constexpr std::size_t tail_cap = 2000;

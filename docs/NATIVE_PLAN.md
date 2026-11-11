@@ -34,7 +34,7 @@ Scope: each script tracked in git (`git ls-files`) and each script in the instal
 | File | What it does now | Destination |
 |---|---|---|
 | `native/leaves/code-ast.mjs` | AST search and edit over source files. | leaf (native), item 2d, first of six in order |
-| `native/leaves/fetch.mjs` | HTTP(S) and data URL fetch, 16 MiB cap. | leaf (native), item 2d |
+| `native/leaves/fetch.mjs` | HTTP(S) and data URL fetch, 16 MiB cap. | done: native/components/verbs/fetch.cpp, checked by gm-tool check-fetch; the .mjs is removed (item 2d) |
 | `native/leaves/git.mjs` | Git state reads for the run. | leaf (native), item 2d |
 | `native/leaves/review.mjs` | Review of diffs for the run. | leaf (native), item 2d |
 | `native/leaves/rows.mjs` | Row-table reads and writes. | done: native/components/verbs/rows.cpp, checked by gm-tool check-rows; the .mjs is removed (item 2d, first leaf) |

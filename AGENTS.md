@@ -62,7 +62,7 @@ Node-missing items are retired, not ported: native ships; the Node engine was re
 - A server killed by a signal reports 128 plus the signal number in native. A spawn failure reports the OS text in native.
 - Native answers server requests other than ping with the SDK's method-not-found text.
 - resources/subscribe and resources/unsubscribe are served by both engines and resources.subscribe is declared. An unknown uri answers -32002 on both engines (resources/read, skills/get and subscriptions/listen; decided 2026-11-10).
-- fetch (native/leaves/fetch.mjs) allows http, https and data URLs, caps the body at 16 MiB, and uses curl's default redirect limit. Timeouts apply on both.
+- fetch (the fetch verb (native/components/verbs/fetch.cpp)) allows http, https and data URLs, caps the body at 16 MiB, and uses curl's default redirect limit. Timeouts apply on both.
 - ci_status needs only `gh api --paginate --jq`, so gh 2.46.0 works.
 
 ## Platform notes
