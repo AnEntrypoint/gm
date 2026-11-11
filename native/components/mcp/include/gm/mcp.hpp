@@ -47,6 +47,9 @@ struct ServerOptions {
     std::shared_ptr<std::function<std::optional<std::string>(const std::string& uri)>> serve_skill_hook;
 };
 
+std::string process_identity();
+bool process_identity_alive(const std::string& identity);
+
 class Server {
 public:
     static deoxidene::Result<std::unique_ptr<Server>, std::string> open(VerbTable& verbs, ServerOptions options,

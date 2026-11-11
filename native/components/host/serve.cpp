@@ -23,13 +23,7 @@ std::filesystem::path worker_executable(const std::filesystem::path& install_dir
     return std::filesystem::exists(core, ec) ? core : current_executable();
 }
 
-std::string relay_process_id() {
-#if defined(_WIN32)
-    return std::to_string(_getpid());
-#else
-    return std::to_string(getpid());
-#endif
-}
+std::string relay_process_id() { return gm::mcp::process_identity(); }
 
 }
 

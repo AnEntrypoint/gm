@@ -2492,3 +2492,9 @@ Not run here: tools/check-txiki-wasi.mjs and the gm reactor wasm (the gm wasm32-
 - tools/check-build.mjs: a scenario that fails in the pool is rerun alone once; a pass is printed as "passed alone after a pool failure" and counted in the summary; the summary prints the host load and cores. Witness: check-build summary line shows the rescued count and the load.
 - skills/gm/SKILL.md: habits for commit-as-made, run continuity (names the stopping row), usage-limit block, off-host measurement with load-independent budgets, slow-check scenario first, bounded PID wait only, and the child model set at launch. Witness: the skill is served and matches HEAD (check-skill-serve, installed skill hash equals HEAD).
 - No gm code change for item 7 (gm does not launch child sessions with a model; the model is set by the host at launch), and none for item 6 (gm has no sleep verb; the job wait is job_status by PID).
+
+## Reboot and stale pid files (2026-11-11, Phase A)
+
+- native/components/mcp/server.cpp and include/gm/mcp.hpp: a connection (run owner, worker owner) is now "pid:start-time" from /proc/<pid>/stat field 22; process_identity_alive requires the pid to be alive and its start time to match. A bare pid (an owner file from an older build) is not alive on Linux, so the run is adoptable. macOS and Windows keep the pid check. native/components/host/serve.cpp relay_process_id uses process_identity, so the --owner the serve process passes to its worker has the same form. Witness: check-restart-jobs and check-restart-body-orphan (in check-build) and parity W14 (pid wait).
+- skills/gm/SKILL.md: three habits for the reboot finding (read the saved state and carry on; a liveness claim is checked by a call that answers; the install survives a reboot and is checked against the checkout).
+- Phase B also checks that `gm --version` and the served skill match the checkout after the install (check-install-switch --installed).

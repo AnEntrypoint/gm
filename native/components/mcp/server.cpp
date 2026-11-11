@@ -20,6 +20,7 @@
 #include <regex>
 #include <set>
 #include <shared_mutex>
+#include <sstream>
 
 #include "gm/log.hpp"
 #include "gm/job_text.hpp"
@@ -31,6 +32,46 @@
 namespace gm::mcp {
 
 using namespace detail;
+
+namespace {
+
+std::string proc_start_time(long pid) {
+    std::ifstream stat("/proc/" + std::to_string(pid) + "/stat");
+    std::string line;
+    if (!std::getline(stat, line)) return "";
+    const std::size_t close = line.rfind(')');
+    if (close == std::string::npos) return "";
+    std::istringstream fields(line.substr(close + 2));
+    std::string token;
+    for (int field = 3; fields >> token; ++field)
+        if (field == 22) return token;
+    return "";
+}
+
+}
+
+std::string process_identity() {
+#if defined(_WIN32)
+    return std::to_string(_getpid());
+#else
+    const long pid = static_cast<long>(getpid());
+    const std::string start = proc_start_time(pid);
+    return start.empty() ? std::to_string(pid) : std::to_string(pid) + ":" + start;
+#endif
+}
+
+bool process_identity_alive(const std::string& identity) {
+#if defined(_WIN32)
+    return !identity.empty();
+#else
+    const long pid = std::strtol(identity.c_str(), nullptr, 10);
+    if (pid <= 0) return false;
+    if (kill(static_cast<pid_t>(pid), 0) != 0 && errno != EPERM) return false;
+    const std::size_t colon = identity.find(':');
+    if (colon != std::string::npos) return proc_start_time(pid) == identity.substr(colon + 1);
+    return !std::filesystem::exists("/proc/self/stat");
+#endif
+}
 
 namespace {
 
@@ -435,15 +476,7 @@ void set_owner(const fs::path& run_dir, const std::string& connection) {
     write_file(run_dir / "owner", connection + "\n");
 }
 
-bool connection_alive(const std::string& connection) {
-#if defined(_WIN32)
-    return !connection.empty();
-#else
-    const long pid = std::strtol(connection.c_str(), nullptr, 10);
-    if (pid <= 0) return false;
-    return kill(static_cast<pid_t>(pid), 0) == 0 || errno == EPERM;
-#endif
-}
+bool connection_alive(const std::string& connection) { return process_identity_alive(connection); }
 
 bool adoptable(const fs::path& run_dir, const std::string& connection) {
     const std::string owner = owner_of(run_dir);
@@ -816,11 +849,7 @@ struct Server::State {
 
     std::string connection_id() const {
         if (!options.connection.empty()) return options.connection;
-#if defined(_WIN32)
-        return std::to_string(_getpid());
-#else
-        return std::to_string(getpid());
-#endif
+        return process_identity();
     }
 
     void emit(const std::string& line) {
