@@ -204,6 +204,73 @@ try {
   expect(workerExe().includes(join('versions', second)), 'a broken build must leave the worker on its build');
   expect(stderr.join('').includes(`refused build ${broken}`), `the relay should name the refused build: ${stderr.join('').slice(-300)}`);
 
+  const leafSandbox = join(sandbox, 'leaf');
+  const leavesDir = join(leafSandbox, 'leaves');
+  const skillsDir = join(leafSandbox, 'skills', 'gm');
+  const leafWorkspace = join(leafSandbox, 'ws');
+  mkdirSync(leavesDir, { recursive: true });
+  mkdirSync(skillsDir, { recursive: true });
+  mkdirSync(leafWorkspace, { recursive: true });
+  writeFileSync(join(leavesDir, 'probe.mjs'), 'export const v = 1;\n');
+  writeFileSync(join(skillsDir, 'SKILL.md'), '# skill\n');
+  point(stamp);
+  const leaf = spawn(join(install, 'current', 'gm'), ['serve', '--workspace', leafWorkspace, '--run-dir', join(leafWorkspace, 'runs', 'leaf'), '--mcp-config', quiet, '--leaves', leavesDir, '--skills', join(leafSandbox, 'skills')], { stdio: ['pipe', 'pipe', 'pipe'] });
+  leaf.stdin.on('error', () => {});
+  const leafWaiting = new Map();
+  let leafNext = 1;
+  readline.createInterface({ input: leaf.stdout }).on('line', (line) => {
+    let message;
+    try {
+      message = JSON.parse(line);
+    } catch {
+      return;
+    }
+    if (message.id !== undefined && leafWaiting.has(message.id)) {
+      leafWaiting.get(message.id)(message);
+      leafWaiting.delete(message.id);
+    }
+  });
+  const leafRpc = (method, params, ms = 90000) =>
+    new Promise((done) => {
+      const id = leafNext++;
+      const timer = setTimeout(() => done(null), ms);
+      leafWaiting.set(id, (m) => {
+        clearTimeout(timer);
+        done(m);
+      });
+      leaf.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id, method, params })}\n`);
+    });
+  const leafWorkers = () => spawnSync('pgrep', ['-P', String(leaf.pid)], { encoding: 'utf8' }).stdout.trim().split('\n').filter(Boolean).sort();
+  try {
+    await leafRpc('initialize', { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: CHECK, version: '1' } });
+    leaf.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' })}\n`);
+    await leafRpc('resources/read', { uri: 'skill://gm/SKILL.md' });
+    await leafRpc('tools/call', { name: 'next_context', arguments: {} });
+    const workersBeforeSkill = leafWorkers();
+    writeFileSync(join(skillsDir, 'SKILL.md'), '# a skill-only edit\n');
+    await sleep(3000);
+    expect(JSON.stringify(leafWorkers()) === JSON.stringify(workersBeforeSkill), `a skill-only change must not restart the worker: before ${workersBeforeSkill} after ${leafWorkers()}`);
+    const waitInFlight = leafRpc('tools/call', { name: 'next_context', arguments: { waitMs: 32000 } }, 60000);
+    await sleep(1500);
+    writeFileSync(join(leavesDir, 'probe.mjs'), 'export const v = 2;\n');
+    const waited = await waitInFlight;
+    expect(waited?.result !== undefined && !JSON.stringify(waited).includes('restarted before it answered'), `a next_context wait in flight at a leaf restart must be answered, not abandoned: ${JSON.stringify(waited)?.slice(0, 200)}`);
+    await sleep(2000);
+    expect(JSON.stringify(leafWorkers()) !== JSON.stringify(workersBeforeSkill), 'a leaf change should restart the worker');
+  } finally {
+    leaf.kill('SIGKILL');
+  }
+
+  const third = `${'9' === stamp[0] || '9' === second[0] ? '8' : '9'}${stamp.slice(1)}`;
+  place(third, true);
+  const longCall = call('run_code', { body: 'return (await gm.run_shell({ command: "sleep 35; echo install-done", timeoutMs: 120000 })).output;' }, 150000);
+  await sleep(1500);
+  point(third);
+  const longReply = await longCall;
+  expect(String(longReply?.output ?? '').includes('install-done') && longReply?.ok === true, `a 35 s shell call in flight must finish on the build it started on, not be cut by the install: ${JSON.stringify(longReply)?.slice(0, 200)}`);
+  await sleep(4000);
+  expect(workerExe().includes(join('versions', third)), `the worker should run ${third} once the shell call finished, runs ${workerExe()}`);
+
   const home = join(sandbox, 'home');
   mkdirSync(home);
   const env = { ...process.env, HOME: home, USERPROFILE: home };

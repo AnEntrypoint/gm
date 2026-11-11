@@ -31,7 +31,7 @@ struct RelayOptions {
     std::filesystem::path build_dir;
     std::string build_target = "gm";
     std::chrono::milliseconds poll{500};
-    std::chrono::milliseconds drain_timeout{30000};
+    std::chrono::milliseconds drain_timeout{3700000};
     std::chrono::milliseconds settle{250};
     std::chrono::milliseconds stop_grace{5000};
     std::chrono::milliseconds exit_grace{10000};

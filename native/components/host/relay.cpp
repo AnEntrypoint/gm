@@ -433,7 +433,7 @@ void Relay::restart(Lock& lock, const std::string& reason) {
     say("restarting the worker (" + reason + ")");
     if (state_ == State::Running) {
         state_ = State::Draining;
-        changed_.wait_for(lock, options_.drain_timeout, [&] { return inflight_.empty() || host_gone_; });
+        changed_.wait_for(lock, options_.drain_timeout, [&] { return only_resendable_in_flight() || host_gone_; });
     }
     if (host_gone_) return;
     state_ = State::Restarting;

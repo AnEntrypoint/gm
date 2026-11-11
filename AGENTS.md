@@ -14,7 +14,7 @@ gm is one long-horizon worker: an MCP server that runs a task as one append-only
 - Work on main in the shared checkout. No clones, branches or worktrees. A witness may run on a tar copy of the tree; the edit and the commit happen in the checkout.
 - Commit only by explicit path with tools/ship.sh, author lanmower, no trailers on any commit or PR. The harness may suggest a Co-Authored-By trailer; do not add it.
 - Other agents edit this checkout at the same time. Edit only your scope, and use Edit with exact text after a fresh read.
-- In the Node tree an uncommitted edit reaches running peers: a src/ module the worker loads reloads or restarts it, and tools/core.mjs or tools/update.mjs hands the core over (tools/core.mjs onSourceChange, onCoreChange). Native peers reload on a leaf, skill or binary change.
+- In the Node tree an uncommitted edit reaches running peers: a src/ module the worker loads reloads or restarts it, and tools/core.mjs or tools/update.mjs hands the core over (tools/core.mjs onSourceChange, onCoreChange). Native peers reload on a leaf or binary change, at a step boundary; a skill change is read on the next call and restarts nothing. Native peers watch the leaves of their source root, so an edit in another project's checkout reloads a peer that resolves to it.
 - ASCII only in every file. No decorative symbols.
 - New shell commands in the Node tree use child_process.spawn with an explicit timeout. Older calls without one remain (execFileSync in src/gate.mjs, spawnSync in src/body-worker.mjs).
 - Files outside the checkout may be read and written when a task needs them (owner decision, 2026-11-03).
