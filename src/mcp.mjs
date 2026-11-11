@@ -304,6 +304,7 @@ function createSession({ workspace, runDir, skillGate, log, task, maxSteps, maxI
   };
   const inFlightCalls = new Map();
   const cancelled = new Set();
+  let clientInfo = null;
   const callOf = (rpcId) => inFlightCalls.get(JSON.stringify(rpcId));
   const signalOf = (rpcId) => callOf(rpcId)?.controller.signal;
   const noteAction = (rpcId, seq) => {
@@ -482,7 +483,7 @@ function createSession({ workspace, runDir, skillGate, log, task, maxSteps, maxI
     if (method === 'logging/setLevel') return setLogLevel(params);
     if (method === 'core/reload') return reloadLeaves();
     if (method === 'notifications/cancelled') {
-      cancelRequest(params?.requestId);
+      cancelRequest(params?.requestId, params?.reason);
       return null;
     }
     if (method.startsWith('notifications/')) return null;
@@ -490,6 +491,7 @@ function createSession({ workspace, runDir, skillGate, log, task, maxSteps, maxI
   }
 
   function initialize(params) {
+    clientInfo = params?.clientInfo ?? null;
     const asked = params?.protocolVersion;
     const version = ACCEPTED_VERSIONS.includes(asked) ? asked : PROTOCOL_VERSION;
     return { protocolVersion: version, ...connectReply(surface), serverInfo: SERVER_INFO };
@@ -612,20 +614,18 @@ function createSession({ workspace, runDir, skillGate, log, task, maxSteps, maxI
     return () => clearInterval(timer);
   }
 
-  function cancelRequest(requestId) {
+  function cancelRequest(requestId, why) {
     const key = JSON.stringify(requestId);
     const call = inFlightCalls.get(key);
-    if (call === undefined) {
-      log.append('cancel-ignored', { requestId, reason: 'no call in flight with that id' });
-      return;
-    }
-    if (call.name === 'run_shell') {
+    let outcome = 'no call in flight with that id';
+    if (call !== undefined && call.name === 'run_shell') {
       cancelled.add(key);
       call.controller.abort();
-      log.append('cancel', { requestId, tool: call.name, reason: 'foreground shell killed; no answer is sent' });
-      return;
+      outcome = 'stopped the call in flight';
+    } else if (call !== undefined) {
+      outcome = 'the call is still running; gm does not stop it';
     }
-    log.append('cancel-ignored', { requestId, tool: call.name, reason: READ_ONLY_TOOLS.has(call.name) ? 'read-only verb' : 'side-effecting verb' });
+    log.append('cancel', { requestId, by: clientInfo, why: why ?? null, outcome });
   }
 
   function startCall(name, args, rpcId) {

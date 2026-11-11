@@ -2,11 +2,14 @@
 import { spawn } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import readline from 'node:readline';
 
 const CHECK = 'check-cancel-record';
-const binary = resolve(process.argv[2] ?? 'build/release/native/components/host/gm');
+const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const onNode = process.argv[2] === 'node';
+const binary = onNode ? process.execPath : resolve(process.argv[2] ?? 'build/release/native/components/host/gm');
 const started = Date.now();
 const failures = [];
 const expect = (condition, text) => {
@@ -18,7 +21,7 @@ const runDir = join(workspace, 'runs', 'cancel');
 mkdirSync(workspace);
 const quiet = join(sandbox, 'quiet.json');
 writeFileSync(quiet, JSON.stringify({ mcpServers: { playwriter: { disabled: true } } }));
-const relay = spawn(binary, ['serve', '--workspace', workspace, '--run-dir', runDir, '--mcp-config', quiet], { stdio: ['pipe', 'pipe', 'pipe'], env: { ...process.env, HOME: sandbox } });
+const relay = spawn(binary, [...(onNode ? [join(root, 'tools', 'relay.mjs')] : ['serve']), '--workspace', workspace, '--run-dir', runDir, '--mcp-config', quiet], { stdio: ['pipe', 'pipe', 'pipe'], env: { ...process.env, HOME: sandbox } });
 relay.stdin.on('error', () => {});
 const waiting = new Map();
 let nextId = 1;
@@ -76,6 +79,9 @@ try {
   console.log(`${CHECK}: matched outcome "${matched?.outcome}" by ${matched?.by?.name} why "${matched?.why}"; unmatched outcome "${unmatched?.outcome}"`);
 } finally {
   relay.kill('SIGKILL');
+  relay.stdout.destroy();
+  relay.stderr.destroy();
+  relay.stdin.destroy();
   rmSync(sandbox, { recursive: true, force: true });
 }
 
