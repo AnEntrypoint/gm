@@ -2,6 +2,7 @@
 
 #include <chrono>
 #include <cstdio>
+#include <future>
 #include <fstream>
 #include <regex>
 #include <sstream>
@@ -92,12 +93,15 @@ int phase_b_command(const fs::path& root, const fs::path& build) {
         }
         std::printf("phase-b: %s ok (%s)\n", native.name.c_str(), result.summary.c_str());
     }
+    auto parity_run = std::async(std::launch::async, [&root, &gm] {
+        return run_in(root, {"node", (root / "tools" / "parity-contract.mjs").string(), gm.string(), "all"});
+    });
     const auto check = run_in(root, {"node", (root / "tools" / "check-build.mjs").string(), build.string()});
+    const auto parity = parity_run.get();
     if (!succeeded(check)) {
         std::printf("phase-b: check-build failed; nothing marked, nothing to push\n%s", tail_of(check.out + check.err, 40).c_str());
         return 1;
     }
-    const auto parity = run_in(root, {"node", (root / "tools" / "parity-contract.mjs").string(), gm.string(), "all"});
     if (!succeeded(parity)) {
         std::printf("phase-b: parity contract failed; nothing marked\n%s", tail_of(parity.out + parity.err, 40).c_str());
         return 1;
