@@ -48,7 +48,7 @@ Reply on success: `ok: true, output` (the body's return value), `truncated`, `lo
 Error cases:
 - The body throws: `ok: false`, `error` with the message, then a stack line `at body (<body>:L:C)`.
 - The body does not load (syntax): `ok: false`, `error` starting `the body does not load:`.
-- First run_code on a connection before the skill was read: refused once, `ok: false`, with the text naming skill://gm/SKILL.md; the skill text is the second content block. A second run_code then runs.
+- First run_code on a connection before the skill was read: refused once, `ok: false`, with the text naming skill://gm/SKILL.md; the skill text is the `skill` field of the reply JSON. A second run_code then runs.
 - A call after the run has ended: `ok: false, refused: true`, `error` `refused: run <id> has ended; call next_context to open a new run`.
 
 Witness (W2):

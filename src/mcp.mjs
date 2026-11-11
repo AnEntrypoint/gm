@@ -165,7 +165,7 @@ const BASE_TOOLS = [
 
 const SURFACES = ['tools', 'code'];
 const CODE_SURFACE = new Set(['next_context', 'run_code', 'finish']);
-const SKILL_READ_REFUSAL = 'run_code refused: skill://gm/SKILL.md had not been read in this connection, so its text is the second content block of this reply. Follow it, then call run_code again. This refusal is sent once per connection.';
+const SKILL_READ_REFUSAL = 'run_code refused: skill://gm/SKILL.md had not been read in this connection, so its text is the skill field of this reply. Follow it, then call run_code again. This refusal is sent once per connection.';
 const STEP_START_RULE = 2;
 const SINGLE_VERB_BODIES_BEFORE_NOTICE = 3;
 const SINGLE_VERB_NOTICE_EVERY = 10;
@@ -572,7 +572,7 @@ function createSession({ workspace, runDir, skillGate, log, task, maxSteps, maxI
       skillGate.read = true;
       if (served.ok) {
         log.append('refusal', { tool: name, stage: 'skill-read', error: SKILL_READ_REFUSAL });
-        return toolResultOf(name, { ok: false, error: SKILL_READ_REFUSAL }, {}, served.output);
+        return toolResultOf(name, { ok: false, error: SKILL_READ_REFUSAL }, {}, { ok: false, error: SKILL_READ_REFUSAL, skill: served.output });
       }
     }
     if (!runStarted && ended === null && name !== 'next_context' && name !== 'finish') noteRule(STEP_START_RULE, `${name} was called before the first next_context of the run`);
@@ -1119,10 +1119,9 @@ const OUTPUT_SCHEMAS = {
   run_code: objectSchema({ ok: { type: 'boolean' }, refused: { type: 'boolean' }, error: text, truncated: { type: 'boolean' }, background: text, job: text, hint: text, state: text, actionSeq: number }, ['ok']),
   finish: objectSchema({ ok: { type: 'boolean' }, refused: { type: 'boolean' }, error: text, finished: { type: 'boolean' }, actionSeq: number }, ['ok']),
 };
-function toolResultOf(name, out, meta, attachedText = null) {
+function toolResultOf(name, out, meta, carried = out) {
   const structured = Object.hasOwn(OUTPUT_SCHEMAS, name) ? { structuredContent: out } : {};
-  const attached = attachedText === null ? [] : [{ type: 'text', text: attachedText }];
-  return { content: [{ type: 'text', text: JSON.stringify(out) }, ...attached], ...structured, isError: out.ok !== true, _meta: meta };
+  return { content: [{ type: 'text', text: JSON.stringify(carried) }], ...structured, isError: out.ok !== true, _meta: meta };
 }
 function titleOf(name) {
   const words = name.replace(/_/g, ' ');
