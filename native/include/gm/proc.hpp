@@ -32,6 +32,18 @@ Outcome shell(std::string_view command, const std::filesystem::path& cwd = {}, s
 
 const char* signal_name(int signal_number);
 
+struct ProcessRow {
+    long long pid = 0;
+    long long parent = 0;
+    bool zombie = false;
+};
+
+std::vector<ProcessRow> process_table();
+std::filesystem::path process_exe(long long pid);
+std::vector<std::string> command_of(long long pid);
+long long start_time_of(long long pid);
+long long resident_kb(long long pid);
+
 unsigned long hidden_creation_flags(unsigned long flags);
 
 using Owner = std::uint64_t;

@@ -25,9 +25,7 @@ std::string tail_of(const std::string& text, std::size_t count) {
 }
 
 std::string exe_of(long long pid) {
-    std::error_code ec;
-    const fs::path exe = fs::read_symlink("/proc/" + std::to_string(pid) + "/exe", ec);
-    return ec ? std::string() : exe.string();
+    return proc::process_exe(pid).string();
 }
 
 std::vector<fs::path> files_under(const fs::path& dir) {

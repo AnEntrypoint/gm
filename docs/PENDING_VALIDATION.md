@@ -2728,3 +2728,14 @@ Run 43115733632: Linux and publish passed; the Windows and macOS builds failed. 
 
 Still open, macOS (not reproduced here, no macOS host): the same runtime checks as in the previous entry (check-protocol-versions "engine exited before it answered", check-install-switch, check-restart-jobs, check-restart-skill-read, check-run-code-budget, check-worker-growth). Owner decision needed, as recorded above.
 
+## Round e6b5, macOS runtime checks made platform-correct (Phase A)
+
+Run 43115733632 (macOS x64): six checks failed. Causes from the log, and the change for each (no check is skipped):
+
+- check-run-code-budget: the macOS regex engine stops a catastrophic match with "exceeded a pre-set level" in well under the bound, not ETIMEDOUT. Change: a regex-limit error that returns inside the 20 s bound passes (checks/run_code_budget.cpp). A hang still fails.
+- check-install-switch, check-worker-growth, check-protocol-versions, check-build-handover, check-restart-jobs: read /proc (exe, stat, status, process list), which macOS does not have, so the relay exe was empty, workers were not found and live processes read as exited. Change: gm::proc helpers process_exe (proc_pidpath on macOS), process_table (ps on macOS), resident_kb (ps rss on macOS), command_of (ps command on macOS), and start_time_of (sysctl kinfo_proc on macOS). The checks call them (process_tree.cpp, protocol_versions.cpp, install_switch.cpp, worker_growth.cpp, quickjs_baseline.cpp, install_follows.cpp, build_handover.cpp, restart_jobs.cpp).
+- check-restart-skill-read: the worker identity is pid plus process start time; macOS had no start time, so a restarted worker was not matched. Change: native/components/mcp/server.cpp takes the start time from gm::proc::start_time_of.
+- build_handover runs on macOS again (its earlier skip is reverted; the guard is !defined(_WIN32)).
+
+Witness: the next macOS release job. Phase A ran gm-tool build only; the Linux phase-b run is in the Phase B entry.
+

@@ -74,9 +74,7 @@ bool alive(long long pid) { return pid > 0 && !alive_of({pid}).empty(); }
 std::vector<long long> engine_processes(const fs::path& workspace) {
     std::vector<long long> found;
     for (const long long pid : alive_of(processes_mentioning(workspace.string()))) {
-        std::ifstream cmdline(fs::path("/proc") / std::to_string(pid) / "cmdline", std::ios::binary);
-        const std::string bytes((std::istreambuf_iterator<char>(cmdline)), std::istreambuf_iterator<char>());
-        for (const std::string& arg : nul_split(bytes)) {
+        for (const std::string& arg : proc::command_of(pid)) {
             if (arg == "worker") {
                 found.push_back(pid);
                 break;

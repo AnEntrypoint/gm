@@ -16,20 +16,13 @@ constexpr long long kLimitKb = 2048;
 
 long long worker_pid(const Session& session) {
     for (const long long pid : session.descendants()) {
-        std::error_code ec;
-        const fs::path exe = fs::read_symlink("/proc/" + std::to_string(pid) + "/exe", ec);
-        if (!ec && exe.filename() == "gm-core") return pid;
+        if (proc::process_exe(pid).filename() == "gm-core") return pid;
     }
     return -1;
 }
 
 long long resident_kb(long long pid) {
-    std::ifstream status("/proc/" + std::to_string(pid) + "/status");
-    std::string line;
-    while (std::getline(status, line)) {
-        if (line.rfind("VmRSS:", 0) == 0) return std::stoll(line.substr(6));
-    }
-    return -1;
+    return proc::resident_kb(pid);
 }
 
 }

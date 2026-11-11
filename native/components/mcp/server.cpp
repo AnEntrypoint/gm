@@ -32,6 +32,8 @@
 #include "gm/runcode.hpp"
 #include "internal.hpp"
 
+#include "gm/proc.hpp"
+
 namespace gm::mcp {
 
 using namespace detail;
@@ -39,16 +41,8 @@ using namespace detail;
 namespace {
 
 std::string proc_start_time(long pid) {
-    std::ifstream stat("/proc/" + std::to_string(pid) + "/stat");
-    std::string line;
-    if (!std::getline(stat, line)) return "";
-    const std::size_t close = line.rfind(')');
-    if (close == std::string::npos) return "";
-    std::istringstream fields(line.substr(close + 2));
-    std::string token;
-    for (int field = 3; fields >> token; ++field)
-        if (field == 22) return token;
-    return "";
+    const long long start = proc::start_time_of(pid);
+    return start == 0 ? std::string() : std::to_string(start);
 }
 
 }

@@ -50,11 +50,10 @@ bool supported(const std::string& version) {
 
 bool alive(long long pid) {
     if (pid <= 0) return false;
-    std::ifstream stat("/proc/" + std::to_string(pid) + "/stat");
-    std::string line;
-    if (!std::getline(stat, line)) return false;
-    const auto close = line.rfind(')');
-    return close != std::string::npos && close + 2 < line.size() && line[close + 2] != 'Z';
+    for (const auto& row : proc::process_table()) {
+        if (row.pid == pid) return !row.zombie;
+    }
+    return false;
 }
 
 std::string tail(const std::string& text) {

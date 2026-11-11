@@ -7,6 +7,10 @@
 #include <iterator>
 #include <sstream>
 
+#if defined(__APPLE__)
+#include <libproc.h>
+#include <sys/sysctl.h>
+#endif
 #if defined(_WIN32)
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -46,6 +50,8 @@ void kill_tree(long long pid) {
 #endif
 }
 
+}
+
 long long start_time_of(long long pid) {
 #if defined(__linux__)
     std::ifstream stat("/proc/" + std::to_string(pid) + "/stat");
@@ -57,11 +63,111 @@ long long start_time_of(long long pid) {
     for (int index = 3; fields >> field; ++index) {
         if (index == 22) return std::atoll(field.c_str());
     }
+#elif defined(__APPLE__)
+    int mib[4] = {CTL_KERN, KERN_PROC, KERN_PROC_PID, static_cast<int>(pid)};
+    struct kinfo_proc info {};
+    std::size_t size = sizeof info;
+    if (sysctl(mib, 4, &info, &size, nullptr, 0) != 0 || size == 0) return 0;
+    return static_cast<long long>(info.kp_proc.p_starttime.tv_sec) * 1000000LL + info.kp_proc.p_starttime.tv_usec;
 #else
     (void)pid;
 #endif
     return 0;
 }
+
+std::vector<ProcessRow> process_table() {
+    std::vector<ProcessRow> rows;
+#if defined(_WIN32)
+#elif defined(__linux__)
+    std::error_code ec;
+    for (const auto& entry : std::filesystem::directory_iterator("/proc", ec)) {
+        const std::string name = entry.path().filename().string();
+        if (name.empty() || name.find_first_not_of("0123456789") != std::string::npos) continue;
+        std::ifstream stat(entry.path() / "stat");
+        std::string line;
+        std::getline(stat, line);
+        const auto close = line.rfind(')');
+        if (close == std::string::npos) continue;
+        std::istringstream rest(line.substr(close + 2));
+        std::string state;
+        ProcessRow row;
+        row.pid = std::stoll(name);
+        rest >> state >> row.parent;
+        row.zombie = state == "Z";
+        rows.push_back(row);
+    }
+#else
+    const auto listed = run({"ps", "-axo", "pid=,ppid=,stat="});
+    std::istringstream lines(listed.out);
+    std::string line;
+    while (std::getline(lines, line)) {
+        std::istringstream fields(line);
+        ProcessRow row;
+        std::string state;
+        if (fields >> row.pid >> row.parent >> state) {
+            row.zombie = state[0] == 'Z';
+            rows.push_back(row);
+        }
+    }
+#endif
+    return rows;
+}
+
+std::filesystem::path process_exe(long long pid) {
+#if defined(__linux__)
+    std::error_code ec;
+    const auto exe = std::filesystem::read_symlink("/proc/" + std::to_string(pid) + "/exe", ec);
+    return ec ? std::filesystem::path{} : exe;
+#elif defined(__APPLE__)
+    char buffer[PROC_PIDPATHINFO_MAXSIZE];
+    const int length = proc_pidpath(static_cast<int>(pid), buffer, sizeof buffer);
+    return length > 0 ? std::filesystem::path(std::string(buffer, static_cast<std::size_t>(length))) : std::filesystem::path{};
+#else
+    (void)pid;
+    return {};
+#endif
+}
+
+std::vector<std::string> command_of(long long pid) {
+    std::vector<std::string> args;
+#if defined(__linux__)
+    std::ifstream cmdline("/proc/" + std::to_string(pid) + "/cmdline", std::ios::binary);
+    const std::string bytes((std::istreambuf_iterator<char>(cmdline)), std::istreambuf_iterator<char>());
+    std::string arg;
+    for (const char ch : bytes) {
+        if (ch == '\0') {
+            args.push_back(arg);
+            arg.clear();
+        } else {
+            arg += ch;
+        }
+    }
+    if (!arg.empty()) args.push_back(arg);
+#else
+    const auto listed = run({"ps", "-ww", "-o", "command=", "-p", std::to_string(pid)});
+    std::istringstream words(listed.out);
+    std::string word;
+    while (words >> word) args.push_back(word);
+#endif
+    return args;
+}
+
+long long resident_kb(long long pid) {
+#if defined(__linux__)
+    std::ifstream status("/proc/" + std::to_string(pid) + "/status");
+    std::string line;
+    while (std::getline(status, line)) {
+        if (line.rfind("VmRSS:", 0) == 0) return std::stoll(line.substr(6));
+    }
+    return -1;
+#else
+    const auto listed = run({"ps", "-o", "rss=", "-p", std::to_string(pid)});
+    if (!listed.started || listed.exit_code != 0 || listed.out.empty()) return -1;
+    return std::stoll(listed.out);
+#endif
+}
+
+namespace {
 
 void append_ledger(const std::filesystem::path& ledger, long long pid) {
     std::error_code ec;

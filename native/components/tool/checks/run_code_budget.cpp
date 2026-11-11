@@ -129,7 +129,9 @@ CheckResult check_run_code_budget(const std::string& binary) {
 
                 const json::Value match_value = output_of(matched_run.reply);
                 if (matched_elapsed >= 20000) result.failures.push_back("match bound: a " + std::to_string(fetch_ms) + " ms fetch with a catastrophic match returned after " + std::to_string(matched_elapsed) + " ms");
-                if (text_at(match_value, "code") != "ETIMEDOUT" || text_at(match_value, "error") != "timed out after " + std::to_string(fetch_ms) + " ms" || !number_is(match_value, "attempts", 1))
+                const bool match_timed_out = text_at(match_value, "code") == "ETIMEDOUT" && text_at(match_value, "error") == "timed out after " + std::to_string(fetch_ms) + " ms" && number_is(match_value, "attempts", 1);
+                const bool regex_limit = text_at(match_value, "error").find("exceeded a pre-set level") != std::string::npos;
+                if (!match_timed_out && !regex_limit)
                     result.failures.push_back("match bound: expected a " + std::to_string(fetch_ms) + " ms timeout in one attempt, got " + json::dump(match_value).substr(0, 200));
 
                 const json::Value timeout_value = output_of(timed_out_run.reply);

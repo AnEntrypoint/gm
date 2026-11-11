@@ -24,21 +24,7 @@ struct Proc {
 
 std::map<long long, Proc> snapshot() {
     std::map<long long, Proc> table;
-    std::error_code ec;
-    for (const auto& entry : fs::directory_iterator("/proc", ec)) {
-        const std::string name = entry.path().filename().string();
-        if (name.empty() || name.find_first_not_of("0123456789") != std::string::npos) continue;
-        std::ifstream stat(entry.path() / "stat");
-        std::string line;
-        std::getline(stat, line);
-        const auto close = line.rfind(')');
-        if (close == std::string::npos) continue;
-        std::istringstream rest(line.substr(close + 2));
-        std::string state;
-        long long parent = 0;
-        rest >> state >> parent;
-        table[std::stoll(name)] = Proc{parent, state == "Z"};
-    }
+    for (const auto& row : proc::process_table()) table[row.pid] = Proc{row.parent, row.zombie};
     return table;
 }
 
@@ -74,14 +60,25 @@ void kill_processes(const std::vector<long long>& pids) {
 
 std::vector<long long> processes_mentioning(const std::string& text) {
     std::vector<long long> found;
+    if (text.empty()) return found;
+#if defined(__linux__)
     std::error_code ec;
     for (const auto& entry : fs::directory_iterator("/proc", ec)) {
         const std::string name = entry.path().filename().string();
         if (name.empty() || name.find_first_not_of("0123456789") != std::string::npos) continue;
         std::ifstream cmdline(entry.path() / "cmdline", std::ios::binary);
         const std::string bytes((std::istreambuf_iterator<char>(cmdline)), std::istreambuf_iterator<char>());
-        if (!text.empty() && bytes.find(text) != std::string::npos) found.push_back(std::stoll(name));
+        if (bytes.find(text) != std::string::npos) found.push_back(std::stoll(name));
     }
+#else
+    std::istringstream lines(proc::run({"ps", "-axww", "-o", "pid=,command="}).out);
+    std::string line;
+    while (std::getline(lines, line)) {
+        std::istringstream fields(line);
+        long long pid = 0;
+        if (fields >> pid && line.find(text) != std::string::npos) found.push_back(pid);
+    }
+#endif
     return found;
 }
 

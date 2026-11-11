@@ -87,18 +87,14 @@ std::string offline_playwriter_path(const fs::path& sandbox) {
 
 long long worker_pid(const Session& session) {
     for (const long long pid : session.descendants()) {
-        std::error_code ec;
-        const auto exe = fs::read_symlink("/proc/" + std::to_string(pid) + "/exe", ec);
-        if (!ec && exe.filename() == "gm-core") return pid;
+        if (proc::process_exe(pid).filename() == "gm-core") return pid;
     }
     return -1;
 }
 
 std::string running_core(long long pid) {
     if (pid < 0) return "";
-    std::error_code ec;
-    const auto exe = fs::read_symlink("/proc/" + std::to_string(pid) + "/exe", ec);
-    return ec ? "" : exe.string();
+    return proc::process_exe(pid).string();
 }
 
 }

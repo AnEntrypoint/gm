@@ -22,21 +22,13 @@ std::string last_line(const std::string& text) {
 
 long long worker_pid(const Session& session) {
     for (const long long pid : session.descendants()) {
-        std::error_code ec;
-        const auto exe = std::filesystem::read_symlink("/proc/" + std::to_string(pid) + "/exe", ec);
-        if (!ec && exe.filename() == "gm-core") return pid;
+        if (proc::process_exe(pid).filename() == "gm-core") return pid;
     }
     return -1;
 }
 
 long long resident_kb(long long pid) {
-    if (pid < 0) return -1;
-    std::ifstream in("/proc/" + std::to_string(pid) + "/status");
-    std::string line;
-    while (std::getline(in, line)) {
-        if (line.rfind("VmRSS:", 0) == 0) return std::stoll(line.substr(6));
-    }
-    return -1;
+    return proc::resident_kb(pid);
 }
 
 }

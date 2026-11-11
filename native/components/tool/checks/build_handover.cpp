@@ -1,5 +1,5 @@
 #include "gm/tool.hpp"
-#if defined(__linux__)
+#if !defined(_WIN32)
 
 #include <algorithm>
 #include <chrono>
@@ -91,22 +91,9 @@ void point(const fs::path& install, const std::string& version) {
 
 std::vector<long long> children_of(long long pid) {
     std::vector<long long> found;
-    std::error_code ec;
-    for (const auto& entry : fs::directory_iterator("/proc", ec)) {
-        const std::string name = entry.path().filename().string();
-        if (name.empty() || name.find_first_not_of("0123456789") != std::string::npos) continue;
-        std::ifstream stat(entry.path() / "stat");
-        std::string line;
-        std::getline(stat, line);
-        const auto close = line.rfind(')');
-        if (close == std::string::npos || close + 2 > line.size()) continue;
-        std::istringstream rest(line.substr(close + 2));
-        std::string state;
-        long long parent = 0;
-        rest >> state >> parent;
-        if (parent == pid) found.push_back(std::stoll(name));
+    for (const auto& row : proc::process_table()) {
+        if (row.parent == pid) found.push_back(row.pid);
     }
-    std::sort(found.begin(), found.end());
     return found;
 }
 
@@ -121,9 +108,8 @@ std::string pids_text(const std::vector<long long>& pids) {
 
 std::string worker_exe(const Session& relay) {
     for (long long pid : children_of(relay.pid())) {
-        std::error_code ec;
-        const fs::path exe = fs::read_symlink("/proc/" + std::to_string(pid) + "/exe", ec);
-        if (!ec) return exe.string();
+        const fs::path exe = proc::process_exe(pid);
+        if (!exe.empty()) return exe.string();
     }
     return "no worker";
 }
@@ -490,7 +476,7 @@ namespace gm::tool {
 
 CheckResult check_build_handover(const std::string&) {
     CheckResult result;
-    result.summary = "skipped: needs /proc, runs on Linux only";
+    result.summary = "skipped: POSIX-only check, runs on Linux and macOS";
     return result;
 }
 
