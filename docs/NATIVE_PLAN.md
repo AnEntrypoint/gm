@@ -109,3 +109,9 @@ native. `.gmnew-update.json` stays as data.
 | launchers | scripts/gm.sh, scripts/gm.ps1 | They ran tools/check-build.mjs through node and were not called by CI, ship or the build. The README paragraph now names the cmake commands. |
 | txiki helpers | every file under txiki/ (seven .mjs modules and site.html) | A Node site builder for txiki with no code or CI reference outside its folder; the vendored runtime is native/third_party/txiki. |
 | kept, not dead | the six research/dep-recall .cjs files, the tools measure-* scripts, and the tools check-* scripts not run by check-build | DESIGN.md cites the research files as the evidence behind decided results, and PENDING_VALIDATION cites the checks and measurements as the method of each recorded witness. Each moves to gm-tool or is deleted in item 4 with its group. |
+
+## Playwriter pin (round e6b5, item 7)
+
+- Pin: defaults/mcp.json runs github:AnEntrypoint/pw#24646cc through npx, the install form gm already uses for pinned servers. pw's working tree is not touched; no npm ci runs there.
+- Tool cache: defaults/mcp-tools/playwriter.json is lib/mcp-tools.json at 24646cc (initialize and two tools), read with git show. The client reads only the tools array, so the shape change is safe.
+- Blocked, direct entry: {"command": "node", "args": [install/pw/bin/playwriter-project]} needs a checkout of pw with its node_modules at a path gm installs to. gm has no install step for that yet, so the npx form stays. Witness needed: a gm step that fetches 24646cc and runs npm ci in its own install directory.
