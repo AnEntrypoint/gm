@@ -2296,3 +2296,9 @@ Not run here: tools/check-txiki-wasi.mjs and the gm reactor wasm (the gm wasm32-
 - tools/check-browser-scope.mjs: exit 0, wall 188.81 s.
 - tools/check-build.mjs build/release: exit 0, wall 508.22 s; conformance 86 passed, 0 failed of 86 checks in 24 scenarios.
 - tools/check-skill-serve.mjs: exit 0, wall 0.21 s.
+
+## Compact next_context reply (2026-11-11, Phase A)
+
+- Measured before the change (build/release at d2dc250, 20 next_context calls per series after a run_code each): normal series mean 1168 bytes, total 23355, first reply 4907, later unchanged replies 971; full:true series mean 7422 bytes, total 148443. Recorded here as the baseline.
+- native/components/mcp/server.cpp and src/mcp.mjs: the unchanged reply no longer carries the progress prose, which repeats rules the skill holds (the Waits and events section). It keeps unchanged, run, steps and stepsLeft. Estimated 346 bytes for the reply, a 20-step normal mean of about 574, which is 51elow baseline. Witness: node tools/measure-next-context.mjs <native gm>, which asserts the normal mean is at most 584 bytes and that every unchanged reply keeps run, steps and stepsLeft.
+- Not changed: rules stay on each changed step (AGENTS.md, rules re-read at every step); full:true replies are not changed, because after a compaction they are the recovery path. The full series is reported, not asserted.
