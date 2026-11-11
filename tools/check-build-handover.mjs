@@ -59,7 +59,7 @@ const workspace = join(sandbox, 'ws');
 mkdirSync(workspace);
 const quiet = join(sandbox, 'quiet.json');
 writeFileSync(quiet, JSON.stringify({ mcpServers: { playwriter: { disabled: true } } }));
-const relay = spawn(join(install, 'current', 'gm'), ['serve', '--workspace', workspace, '--run-dir', join(workspace, 'runs', 'hand'), '--mcp-config', quiet], { stdio: ['pipe', 'pipe', 'pipe'] });
+const relay = spawn(join(install, 'current', 'gm'), ['serve', '--workspace', workspace, '--run-dir', join(workspace, 'runs', 'hand'), '--mcp-config', quiet, '--skill-read', 'yes'], { stdio: ['pipe', 'pipe', 'pipe'] });
 relay.stdin.on('error', () => {});
 const stderr = [];
 relay.stderr.on('data', (chunk) => stderr.push(chunk.toString()));
@@ -125,6 +125,8 @@ try {
   expect(notices.some((text) => text.includes(`gm build changed from ${stamp} to ${second}`)), `the session should get one notice of the change: ${JSON.stringify(notices)}`);
   const log = runLog();
   const restarts = log.filter((event) => event.kind === 'restart');
+  const restartAt = log.findIndex((event) => event.kind === 'restart');
+  expect(restartAt > 0 && log.slice(restartAt).every((event) => event.kind !== 'skill-loaded'), `an unchanged skill should not be read again after the hand-over: ${JSON.stringify(log.slice(restartAt).filter((event) => event.kind === 'skill-loaded'))}`);
   expect(restarts.length === 1 && restarts[0].skillRead === true && restarts[0].skillChanged === false, `an unchanged skill should carry over without a re-read: ${JSON.stringify(restarts)}`);
   expect(restarts.length === 1 && typeof restarts[0].skillSha === 'string' && restarts[0].skillSha === restarts[0].skillWas, `the restart should record the fingerprint it matched: ${JSON.stringify(restarts)}`);
   expect(log.filter((event) => event.kind === 'start').length === 1, 'the run should keep one start event across the hand-over');
