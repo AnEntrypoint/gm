@@ -2446,7 +2446,15 @@ struct Server::State {
 
     Value tool_result(const std::string& name, const Value& out, std::optional<std::uint64_t> seq, const std::optional<std::string>& attached_text = std::nullopt) {
         Value content = array();
-        content.push(object().set("type", "text").set("text", json::dump(out)));
+        const Value* text_output = out.find("output");
+        if (name == "run_code" && text_output != nullptr && text_output->is_string()) {
+            Value shell = out;
+            shell.set("output", "[the output is the text block after this one]");
+            content.push(object().set("type", "text").set("text", json::dump(shell)));
+            content.push(object().set("type", "text").set("text", text_output->as_string()));
+        } else {
+            content.push(object().set("type", "text").set("text", json::dump(out)));
+        }
         if (attached_text) content.push(object().set("type", "text").set("text", *attached_text));
         Value meta = object().set(kRunMeta, s().run_id);
         if (seq) meta.set(kRunSeq, number_of(*seq));
@@ -3612,11 +3620,11 @@ Value Server::State::run_code(const Value& args) {
                     std::erase(bodies, job);
                 }
                 if (!job->value) return with_seq(object().set("ok", false).set("error", job->error).set("loads", array()));
-                std::string text = json::dump(*job->value);
+                const std::string text = job->value->is_string() ? job->value->as_string() : json::dump(*job->value);
                 std::size_t length = js_length(text);
                 json::Value result(json::Object{});
                 result.set("ok", true);
-                if ((job->value->is_object() || job->value->is_array()) && length <= kOutputCap) {
+                if ((job->value->is_object() || job->value->is_array() || job->value->is_string()) && length <= kOutputCap) {
                     result.set("output", *job->value);
                     result.set("truncated", false);
                 } else {
