@@ -7,6 +7,7 @@
 #include <cstring>
 #include <iostream>
 
+#include "gm/clock.hpp"
 #include "gm/proc.hpp"
 
 #if !defined(_WIN32)
@@ -548,7 +549,7 @@ void Relay::reexec() {
 
 namespace {
 
-constexpr std::chrono::milliseconds kInstallPoll{2000};
+const std::chrono::milliseconds kInstallPoll{static_cast<std::int64_t>(2000 * clock_scale())};
 
 bool installed_elsewhere(const UpdatePolicy& policy) {
     const auto root = install_root_of(policy.install_dir);
