@@ -85,6 +85,13 @@ const openWorker = (args, { throughOtherHost = false } = {}) => {
 };
 
 const failures = [];
+const carriedOf = (reply) => {
+  try {
+    return JSON.parse(reply?.content?.[0]?.text ?? 'null');
+  } catch {
+    return null;
+  }
+};
 const expect = (condition, text) => {
   if (!condition) failures.push(text);
 };
@@ -132,7 +139,7 @@ try {
   try {
     expect(await underOtherHost.connect(), `the worker under another host did not answer initialize (stderr ${underOtherHost.stderr()})`);
     const refusal = (await underOtherHost.toolReply('run_code', { body: 'return 3' }))?.result ?? {};
-    const skillBlock = refusal.content?.[1]?.text;
+    const skillBlock = carriedOf(refusal)?.skill ?? refusal.content?.[1]?.text;
     expect(refusal.structuredContent?.ok === false && typeof skillBlock === 'string' && skillBlock.length > 0, `a worker under another host process ran run_code without delivering the skill: ${short(refusal.structuredContent)}`);
     const restarts = restartEvents();
     expect(restarts.length === 2 && restarts[1].skillRead === false, `the second restart event does not carry skillRead false: ${short(restarts)}`);

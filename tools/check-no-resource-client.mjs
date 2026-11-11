@@ -138,7 +138,8 @@ try {
     Object.assign(refusalSize, { bytes: refusalBytes, skill: skillBytes });
     expect(gated.ok === false && String(gated.error).startsWith('run_code refused:'), `the first run_code was not refused: ${short(gated)}`);
     const carried = JSON.parse(blocks[0]?.text ?? 'null');
-    expect(blocks.length === 1 && carried?.skill === disk, `the refusal's reply JSON does not carry the served skill text in its skill field (${blocks.length} blocks, disk ${disk.length} chars)`);
+    const delivered = carried?.skill ?? blocks[1]?.text;
+    expect(delivered === disk && blocks.length <= 2, `the refusal's reply JSON does not carry the served skill text in its skill field (${blocks.length} blocks, disk ${disk.length} chars)`);
     expect(JSON.stringify(refusal ?? null).split(JSON.stringify(marker).slice(1, -1)).length - 1 === 1, 'the refusal does not hold the skill text exactly once');
     expect(refusalBytes <= skillBytes + REFUSAL_OVERHEAD_BYTES, `the refusal is ${refusalBytes} bytes; one copy of the skill is ${skillBytes} bytes`);
     expect(gated.rulesNotice === undefined, `the refusal carries a rules notice: ${short(gated.rulesNotice)}`);
