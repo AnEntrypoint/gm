@@ -9,6 +9,7 @@
 #include <condition_variable>
 #include <csignal>
 #include <cstdio>
+#include <cctype>
 #include <cstdlib>
 #include <deque>
 #include <filesystem>
@@ -3302,6 +3303,12 @@ namespace {
 constexpr std::size_t kInlineVerbChars = 6000;
 constexpr std::size_t kInlineHeadChars = 4500;
 constexpr std::size_t kInlineTailChars = 1500;
+constexpr std::size_t kSearchHeadChars = 2000;
+constexpr std::size_t kTestFailureLines = 30;
+constexpr std::size_t kTestTailLines = 10;
+const std::regex kSearchCommand(R"((^|[\s|&;(])(grep|rg)\s)");
+const std::regex kDumpCommand(R"(^\s*(cd [^;&|]*&&\s*)?(cat|sed -n|head|tail)\s)");
+const std::regex kTestCommand(R"((^|[\s|&;(])(test|pytest|jest|vitest|mocha|tsc)\b)");
 const std::set<std::string> kBoundedVerbs = {"read_file", "run_shell"};
 const std::set<std::string> kRepeatableVerbs = {"read_file"};
 const std::set<std::string> kWriteVerbs = {"write_file", "edit_file", "fs_op", "run_shell"};
@@ -3309,6 +3316,53 @@ const std::set<std::string> kWriteVerbs = {"write_file", "edit_file", "fs_op", "
 bool flag_set(const Value& args, const char* key) {
     const Value* value = args.find(key);
     return value != nullptr && value->is_bool() && value->as_bool();
+}
+
+std::string join_lines(const std::vector<std::string>& lines, std::size_t from, std::size_t to) {
+    std::string out;
+    for (std::size_t i = from; i < to; ++i) out += lines[i] + "\n";
+    return out;
+}
+
+bool mentions_failure(const std::string& line) {
+    std::string lower = line;
+    std::transform(lower.begin(), lower.end(), lower.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    for (const char* word : {"fail", "error", "not ok", "panic"}) {
+        if (lower.find(word) != std::string::npos) return true;
+    }
+    return false;
+}
+
+struct ShownPart {
+    std::string body;
+    std::size_t next;
+};
+
+ShownPart shown_part(const std::string& text, const std::string& command, const std::string& name) {
+    const std::size_t total = js_length(text);
+    if (name == "run_shell" && std::regex_search(command, kSearchCommand)) {
+        std::string head = js_prefix(text, kSearchHeadChars);
+        const std::size_t cut = head.rfind('\n');
+        if (head.size() < text.size() && cut != std::string::npos) head.resize(cut + 1);
+        return {head, js_length(head)};
+    }
+    if (name == "run_shell" && std::regex_search(command, kTestCommand)) {
+        const std::vector<std::string> lines = split_lines(text);
+        std::vector<std::string> failures;
+        for (const std::string& line : lines) {
+            if (failures.size() < kTestFailureLines && mentions_failure(line)) failures.push_back(line);
+        }
+        if (!failures.empty()) {
+            const std::size_t tail_from = lines.size() > kTestTailLines ? lines.size() - kTestTailLines : 0;
+            std::string body = join_lines(failures, 0, failures.size()) + "...\n" + join_lines(lines, tail_from, lines.size());
+            if (js_length(body) > kInlineVerbChars) body = js_prefix(body, kInlineVerbChars);
+            return {body, js_length(body)};
+        }
+    }
+    const std::string head = js_prefix(text, kInlineHeadChars);
+    if (name == "run_shell" && std::regex_search(command, kDumpCommand)) return {head, js_length(head)};
+    const std::string tail = text.substr(js_prefix(text, total - kInlineTailChars).size());
+    return {head + "\n...\n" + tail, js_length(head)};
 }
 
 Value bounded_output(Value result, const Value& args, const fs::path& run_dir, const std::string& name) {
@@ -3321,15 +3375,20 @@ Value bounded_output(Value result, const Value& args, const fs::path& run_dir, c
     const Value* existing = result.find("outputPath");
     if (existing != nullptr && existing->is_string()) path = existing->as_string();
     else path = store_artifact(text, run_dir, name).path;
-    const std::string head = js_prefix(text, kInlineHeadChars);
-    const std::string tail = text.substr(js_prefix(text, total - kInlineTailChars).size());
-    const std::size_t omitted = total - js_length(head) - js_length(tail);
-    result.set("output", head + "\n[gm: " + std::to_string(omitted) + " characters omitted; the whole output is at " + path + "; call again with full: true for it inline]\n" + tail);
+    const std::string command = [&] {
+        const Value* value = args.find("command");
+        return value != nullptr && value->is_string() ? value->as_string() : std::string();
+    }();
+    const ShownPart part = shown_part(text, command, name);
+    const std::size_t shown = js_length(part.body);
+    const std::size_t omitted = total - shown;
+    result.set("output", part.body + "\n[gm: " + std::to_string(omitted) + " characters not shown; the whole output is at " + path + "; call again with full: true for it inline]");
     result.set("truncated", true);
     result.set("outputPath", path);
     result.set("totalChars", static_cast<double>(total));
     result.set("omittedChars", static_cast<double>(omitted));
-    result.set("next", static_cast<double>(js_length(head)));
+    result.set("lines", static_cast<double>(split_lines(text).size()));
+    result.set("next", static_cast<double>(part.next));
     return result;
 }
 

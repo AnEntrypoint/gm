@@ -309,6 +309,24 @@ def('W23', async () => {
   return `bounded first read ${v.first} chars truncated=${v.truncated} omitted=${v.omitted}; identical repeat is a pointer=${v.pointer}; fresh read ${v.fresh} chars; full read ${v.whole} chars`;
 });
 
+def('W24', async () => {
+  const s = session('w24');
+  await s.open();
+  await s.rpc('resources/read', { uri: 'skill://gm/SKILL.md' });
+  await s.call('next_context', {});
+  const body = [
+    "await gm.run_shell({ command: 'seq 1 3000 | sed \"s/^/match /\" > many.txt' });",
+    "const g = await gm.run_shell({ command: 'grep match many.txt' });",
+    "const t = await gm.run_shell({ command: 'echo test-run; seq 1 2000 | sed \"s/^/ok /\"; echo \"FAIL case x\"' });",
+    "const d = await gm.run_shell({ command: 'cat many.txt', raw: true });",
+    'return { grepLen: g.output.length, grepOutPath: g.outputPath !== undefined, testLen: t.output.length, testHasFailure: t.output.includes("FAIL case x"), dumpLen: d.output.length, dumpPath: d.outputPath !== undefined };',
+  ].join('\n');
+  const r = await s.call('run_code', { body });
+  s.close();
+  const v = r.output;
+  return `grep inline ${v.grepLen} chars, outputPath=${v.grepOutPath}; test inline ${v.testLen} chars, failure line kept=${v.testHasFailure}; file dump inline ${v.dumpLen} chars, outputPath=${v.dumpPath}`;
+});
+
 const ids = which === 'all' ? Object.keys(witnesses) : [which];
 const SHARED_CHECK_BUILD = new Set(['W19', 'W20']);
 const runOne = async (id) => {
