@@ -3382,7 +3382,9 @@ Value bounded_output(Value result, const Value& args, const fs::path& run_dir, c
     const ShownPart part = shown_part(text, command, name);
     const std::size_t shown = js_length(part.body);
     const std::size_t omitted = total - shown;
-    result.set("output", part.body + "\n[gm: " + std::to_string(omitted) + " characters not shown; the whole output is at " + path + "; call again with full: true for it inline]");
+    const bool dump = name == "run_shell" && std::regex_search(command, kDumpCommand);
+    const std::string range = dump ? "[gm: gm.read_file with offset and limit gives the same lines by range; a repeat of that read gets a pointer]\n" : "";
+    result.set("output", part.body + "\n" + range + "[gm: " + std::to_string(omitted) + " characters not shown; the whole output is at " + path + "; call again with full: true for it inline]");
     result.set("truncated", true);
     result.set("outputPath", path);
     result.set("totalChars", static_cast<double>(total));

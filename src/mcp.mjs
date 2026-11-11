@@ -215,7 +215,8 @@ function boundedOutput(result, args, runDir, name) {
   const path = typeof result.outputPath === 'string' ? result.outputPath : storeArtifact(text, runDir, name).outputPath;
   const { body, next } = shownPart(text, typeof args?.command === 'string' ? args.command : '', name);
   const omitted = text.length - body.length;
-  return { ...result, output: `${body}\n[gm: ${omitted} characters not shown; the whole output is at ${path}; call again with full: true for it inline]`, truncated: true, outputPath: path, totalChars: text.length, omittedChars: omitted, lines: text.split('\n').length, next };
+  const range = name === 'run_shell' && DUMP_COMMAND.test(typeof args?.command === 'string' ? args.command : '') ? '[gm: gm.read_file with offset and limit gives the same lines by range; a repeat of that read gets a pointer]\n' : '';
+  return { ...result, output: `${body}\n${range}[gm: ${omitted} characters not shown; the whole output is at ${path}; call again with full: true for it inline]`, truncated: true, outputPath: path, totalChars: text.length, omittedChars: omitted, lines: text.split('\n').length, next };
 }
 
 const TASK_PAGE = 4000;
