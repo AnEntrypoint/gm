@@ -2704,3 +2704,18 @@ Run 43112393061 showed three failures: the macOS build, the Linux build's phase-
 - native/components/tool/driver.cpp: the mtime is cast to long long before to_string; the macOS compiler found the call ambiguous (macOS arm64 and x64 builds failed). Witness: the Linux gm-tool build exits 0 with no errors; the macOS build of the same line is the release run's witness.
 - native/components/tool/ship.cpp: phase-b accepts a built stamp of the CI shape (`<HEAD sha7>-<run>`, from GMNEW_VERSION in release.yml) as well as the tree stamp; before, the CI build (Linux and Windows) failed the stamp check. Local builds still need the exact tree stamp. Witness: the local phase-b run (dev stamp path); the CI shape is the release run's witness.
 
+## Round e6b5, release run 43113846346 on 1fbe3e7: what passed, what is still open (Phase A)
+
+Run 1fbe3e7 (release run 43112393061 was on 339c582): the Linux builds and publish passed, so the stamp fix works. Still failing: both Windows jobs and both macOS jobs.
+
+Changes in this round:
+- .github/workflows/release.yml: the Windows build job no longer runs `gm-tool phase-b`, because phase-b runs on Linux and macOS only (its Windows branch exits 2). Windows is still checked by the witness-windows-cmd step and the package step. Witness: the next release run's Windows job, which must pass without the Test step.
+- native/components/tool/checks/build_handover.cpp: guarded to `__linux__` (it reads /proc, which macOS does not have) and skipped elsewhere. Witness: the next macOS run.
+
+Open, macOS phase-b, from the run log (not reproduced here; no macOS host):
+- check-protocol-versions: "engine exited before it answered; stderr: (empty)" for every client version: the gm engine exits on macOS before it answers an initialize.
+- check-install-switch: the relay did not start from the installed version, and did not re-execute onto switched-dev.
+- check-restart-jobs: the job's process was not alive before the restart; no replacement worker within 90 s.
+- check-restart-skill-read, check-worker-growth (no gm-core worker process under the session), check-turn-economy (job_status did not return the exit), check-run-code-budget.
+Owner decision needed: fix these on macOS (needs a macOS host or a witness there), or keep macOS phase-b to the checks that pass there.
+

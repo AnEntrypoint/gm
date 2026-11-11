@@ -143,9 +143,6 @@ jobs:
           printf 'PLAYWRITER_BROWSER_PATH=[%s]\n' "$PLAYWRITER_BROWSER_PATH"
           if [ -e "$PLAYWRITER_BROWSER_PATH" ]; then echo "browser path exists"; else echo "browser path missing"; fi
           if command -v cygpath >/dev/null; then cygpath -w "$PLAYWRITER_BROWSER_PATH"; fi
-      - name: Test
-        shell: bash
-        run: build/${{ matrix.preset }}/native/components/tool/gm-tool phase-b build/${{ matrix.preset }}
       - name: Host build stamp
         shell: bash
         run: |

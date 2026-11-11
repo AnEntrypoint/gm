@@ -1,5 +1,5 @@
 #include "gm/tool.hpp"
-#if !defined(_WIN32)
+#if defined(__linux__)
 
 #include <algorithm>
 #include <chrono>
@@ -490,7 +490,7 @@ namespace gm::tool {
 
 CheckResult check_build_handover(const std::string&) {
     CheckResult result;
-    result.summary = "skipped: POSIX-only check, runs on Linux and macOS";
+    result.summary = "skipped: needs /proc, runs on Linux only";
     return result;
 }
 
