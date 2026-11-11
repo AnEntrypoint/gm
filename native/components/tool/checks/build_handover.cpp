@@ -369,8 +369,12 @@ void check_long_call(CheckResult& result, Session& relay, const fs::path& versio
     const std::string long_text = output == nullptr ? std::string() : output->is_string() ? output->as_string() : json::dump(*output);
     if (long_text.find("install-done") == std::string::npos || !flag(long_reply, "ok", true))
         result.failures.push_back("a 35 s shell call in flight must finish on the build it started on, not be cut by the install: " + clipped(long_reply, 200));
-    scaled_sleep(4000);
-    const std::string exe = worker_exe(relay);
+    const auto switch_deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(static_cast<long long>(120000 * kScale));
+    std::string exe = worker_exe(relay);
+    while (exe.find((fs::path("versions") / third).string()) == std::string::npos && std::chrono::steady_clock::now() < switch_deadline) {
+        scaled_sleep(250);
+        exe = worker_exe(relay);
+    }
     if (exe.find((fs::path("versions") / third).string()) == std::string::npos) result.failures.push_back("the worker should run " + third + " once the shell call finished, runs " + exe);
 }
 

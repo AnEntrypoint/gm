@@ -2750,3 +2750,11 @@ Run 43118182667: Windows (both) and Linux passed. On macOS, install-switch, prot
 
 Witness: the next macOS release job.
 
+## Round e6b5, macOS x64 turn-economy and build-handover: the races (Phase A)
+
+Run 43120046392 on f43b25f: macOS x64 failed two checks, arm64 passed. Causes, and the fixes (no check budget was loosened):
+
+- check-turn-economy, "job_status did not return the slow job's exit": job_status clamps waitMs to 60000 * clock_scale(), which is 1000 ms under the test clock. The slow job sleeps 750 ms plus shell start-up, so on x64 it exited just after the clamp expired, and the reply read the status file before the settle. Change: a job_status wait is capped at the real 60000 ms (job_wait_ceiling_ms in verbs/job.cpp) and returns when the job settles; the pid wait keeps the scaled clamp. Witness on Linux: check-turn-economy ok.
+- check-build-handover, "the worker should run ... once the shell call finished": after the 35 s shell call the check slept 400 ms (4000 * 0.1) and read the worker's exe once, but the handover to the new build takes longer on x64. Change: the check polls the worker's exe until it runs the new build, bounded by the shell call's own timeoutMs (120000 at the same scale). Witness on Linux: check-build-handover ok.
+- Witness on macOS: the next release run, both x64 and arm64.
+

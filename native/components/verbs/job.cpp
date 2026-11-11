@@ -39,6 +39,7 @@ namespace {
 constexpr std::uint64_t kill_grace_ms = 500;
 #endif
 const double max_wait_ms = 60000 * clock_scale();
+constexpr double job_wait_ceiling_ms = 60000;
 constexpr int pid_poll_ms = 100;
 constexpr std::uint64_t ended_event_grace_ms = 250;
 
@@ -548,7 +549,7 @@ json::Value JobTable::status(const json::Value& args) {
     const std::string& name = name_value->as_string();
     double wait_ms = 0;
     if (const json::Value* w = args.find("waitMs"); w != nullptr && w->is_number() && std::isfinite(w->as_number())) {
-        wait_ms = std::clamp(w->as_number(), 0.0, max_wait_ms);
+        wait_ms = std::clamp(w->as_number(), 0.0, job_wait_ceiling_ms);
     }
     {
         std::unique_lock lock(mutex_);
