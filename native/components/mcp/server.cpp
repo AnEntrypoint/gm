@@ -759,6 +759,7 @@ struct Server::State {
     bool gm_skill_read = false;
     std::string skill_refusal_ = kSkillReadRefusal;
     std::optional<std::string> handover_notice_;
+    Value client_info_ = Value(nullptr);
     std::atomic<std::uint64_t> body_verb_calls{0};
     std::mutex monitor_mutex;
     std::condition_variable monitor_wake;
@@ -1199,7 +1200,7 @@ struct Server::State {
                 append("recovery", *recovery);
                 s().recovery = recovery;
                 for (const Value& action : recovery->find("open")->as_array()) {
-                    Value close = object().set("actionSeq", *action.find("seq")).set("reason", kAbandonedReason);
+                    Value close = object().set("actionSeq", *action.find("seq")).set("reason", kAbandonedReason).set("restartReason", options.restart_reason);
                     if (const Value* tool = action.find("tool")) close.set("tool", *tool);
                     append("abandoned", std::move(close));
                 }
@@ -3103,7 +3104,13 @@ struct Server::State {
 
     static std::string instructions() { return kCodeInstructions + "\n\n" + kResourcesPointer + "\n\n" + kSkillPointer; }
 
+    bool call_running(const Value& id) {
+        std::lock_guard guard(turn.mutex);
+        return turn.inflight.contains(id_key(&id));
+    }
+
     Value initialize(const Value* params) {
+        if (const Value* info = params ? params->find("clientInfo") : nullptr; info != nullptr) client_info_ = *info;
         const Value* asked = params ? params->find("protocolVersion") : nullptr;
         std::string version = kAcceptedVersions.front();
         if (asked && asked->is_string() &&
@@ -3172,12 +3179,17 @@ struct Server::State {
         }
         if (method == "notifications/cancelled") {
             const Value* request = params ? params->find("requestId") : nullptr;
-            if (request && cancel_foreground(id_key(request))) return std::nullopt;
-            if (request && end_listen(*request)) return std::nullopt;
+            const Value* why = params ? params->find("reason") : nullptr;
+            std::string outcome = "no call in flight with that id";
+            if (request && cancel_foreground(id_key(request))) outcome = "stopped the call in flight";
+            else if (request && end_listen(*request)) outcome = "ended the listen";
+            else if (request && call_running(*request)) outcome = "the call is still running; gm does not stop it";
             Value fields = object();
             if (request) fields.set("requestId", *request);
-            fields.set("reason", "no call in flight with that id");
-            append("cancel-ignored", std::move(fields));
+            fields.set("by", client_info_);
+            fields.set("why", why ? *why : Value(nullptr));
+            fields.set("outcome", outcome);
+            append("cancel", std::move(fields));
             return std::nullopt;
         }
         if (method.starts_with("notifications/")) return std::nullopt;
@@ -3269,7 +3281,10 @@ struct Server::State {
     void dispatch(std::string_view line) {
         if (trim(line).empty()) return;
         if (is_method(line, "notifications/cancelled")) {
-            process(line, 0, false);
+            try {
+                handle_line(line);
+            } catch (const std::exception&) {
+            }
             return;
         }
         std::uint64_t ticket = take_ticket();

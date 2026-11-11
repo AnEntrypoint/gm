@@ -455,6 +455,7 @@ void Relay::restart(Lock& lock, const std::string& reason) {
         swapping_ = false;
         return;
     }
+    handover_reason_ = reason;
     if (!spawn_worker(lock)) {
         swapping_ = false;
         fail_with(lock, failure_);
