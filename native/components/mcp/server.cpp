@@ -25,6 +25,7 @@
 
 #include "gm/clock.hpp"
 #include "gm/log.hpp"
+#include "gm/marker.hpp"
 #include "gm/job_text.hpp"
 #include "gm/mcp.hpp"
 #include "gm/proc.hpp"
@@ -148,6 +149,7 @@ void add_cut_run(json::Value& reply, const std::string& text, std::size_t length
     if (length <= kOutputCap) {
         reply.set(key, text);
         reply.set("truncated", false);
+        reply.set("complete", true);
         return;
     }
     const OutputArtifact artifact = store_artifact(text, run_dir, "run_code");
@@ -158,6 +160,7 @@ void add_cut_run(json::Value& reply, const std::string& text, std::size_t length
     const std::string path_json = json::dump(json::Value(artifact.path));
     reply.set(key, page);
     reply.set("truncated", true);
+    reply.set("complete", false);
     reply.set("outputPath", artifact.path);
     reply.set("totalChars", static_cast<double>(total));
     reply.set("digest", artifact.digest);
@@ -3418,7 +3421,7 @@ ShownPart shown_part(const std::string& text, const std::string& command, const 
         }
         if (!failures.empty()) {
             const std::size_t tail_from = lines.size() > kTestTailLines ? lines.size() - kTestTailLines : 0;
-            std::string body = join_lines(failures, 0, failures.size()) + "...\n" + join_lines(lines, tail_from, lines.size());
+            std::string body = join_lines(failures, 0, failures.size()) + "\n" + std::string(gm::marker::kCutHere) + "\n" + join_lines(lines, tail_from, lines.size());
             if (js_length(body) > kInlineVerbChars) body = js_prefix(body, kInlineVerbChars);
             return {body, js_length(body)};
         }
@@ -3426,7 +3429,7 @@ ShownPart shown_part(const std::string& text, const std::string& command, const 
     const std::string head = js_prefix(text, kInlineHeadChars);
     if (name == "run_shell" && std::regex_search(command, kDumpCommand)) return {head, js_length(head)};
     const std::string tail = text.substr(js_prefix(text, total - kInlineTailChars).size());
-    return {head + "\n...\n" + tail, js_length(head)};
+    return {head + "\n" + std::string(gm::marker::kCutHere) + "\n" + tail, js_length(head)};
 }
 
 Value bounded_output(Value result, const Value& args, const fs::path& run_dir, const std::string& name) {
@@ -3448,8 +3451,13 @@ Value bounded_output(Value result, const Value& args, const fs::path& run_dir, c
     const std::size_t omitted = total - shown;
     const bool dump = name == "run_shell" && std::regex_search(command, kDumpCommand);
     const std::string range = dump ? "[gm: gm.read_file with offset and limit gives the same lines by range; a repeat of that read gets a pointer]\n" : "";
-    result.set("output", part.body + "\n" + range + "[gm: " + std::to_string(omitted) + " characters not shown; the whole output is at " + path + "; call again with full: true for it inline]");
+    const std::string cut = gm::marker::cut_line(omitted, path);
+    std::string body = part.body;
+    if (const std::size_t at = body.find(gm::marker::kCutHere); at != std::string::npos) body.replace(at, gm::marker::kCutHere.size(), cut);
+    else body += "\n" + range + cut;
+    result.set("output", body);
     result.set("truncated", true);
+    result.set("complete", false);
     result.set("outputPath", path);
     result.set("totalChars", static_cast<double>(total));
     result.set("omittedChars", static_cast<double>(omitted));
@@ -3466,8 +3474,7 @@ Value body_call(VerbTable& verbs, const std::string& name, const Value& args, Se
         if (found != owner.read_marks.end() && found->second.writes == owner.writes_seen) {
             Value reply = object().set("ok", true).set("step", static_cast<double>(found->second.step));
             if (found->second.action) reply.set("action", static_cast<double>(*found->second.action));
-            return reply.set("output", "[gm: the same call was made at step " + std::to_string(found->second.step) +
-                                           " and no write has happened since, so its result is not sent again; call again with fresh: true to read it again]");
+            return reply.set("output", gm::marker::pointer_line(found->second.step)).set("pointer", true).set("complete", false);
         }
     }
     Value result = verbs.call(name, args);

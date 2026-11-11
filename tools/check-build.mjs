@@ -27,7 +27,7 @@ const NATIVE = [
     'check-shell-stdin.mjs', 'check-grep-state-scope.mjs', 'check-job-bounds.mjs', 'check-early-run-code.mjs', 'check-stop-fetch.mjs',
     'check-read-parity.mjs', 'check-read-truncation.mjs', 'check-protocol-versions.mjs', 'check-resources-subscribe.mjs', 'check-startup-attempts.mjs',
     'check-skill-serve.mjs', 'check-no-resource-client.mjs', 'check-restart-skill-read.mjs', 'check-relay-reexec.mjs', 'check-embedded-runtime.mjs',
-    'witness-next-context-replay.mjs', 'check-install-switch.mjs', 'check-repeated-checks.mjs', 'check-owner-identity.mjs', 'check-build-handover.mjs', 'check-cli-flags.mjs',
+    'witness-next-context-replay.mjs', 'check-install-switch.mjs', 'check-repeated-checks.mjs', 'check-owner-identity.mjs', 'check-build-handover.mjs', 'check-cli-flags.mjs', 'check-cut-marker.mjs',
 ];
 const NODE = ['check-turn-economy.mjs', 'check-restart-jobs.mjs', 'check-no-resource-client.mjs', 'check-repeated-checks.mjs'];
 const EXCLUSIVE = new Set(['check-relay-reexec.mjs']);

@@ -1,4 +1,5 @@
 #include "gm/core_verbs.hpp"
+#include "gm/marker.hpp"
 
 #include <algorithm>
 #include <array>
@@ -532,6 +533,7 @@ struct CoreVerbs::Impl {
         if (!at) return refusal("path must be a non-empty string");
         const json::Value* content = args.find("content");
         if (content == nullptr || !content->is_string()) return failure("content must be a string");
+        if (auto refused = gm::marker::write_refusal(content->as_string(), "write_file")) return failure(*refused);
         std::error_code size_ec;
         std::uint64_t prior_bytes = 0;
         bool existed = false;
@@ -593,6 +595,8 @@ struct CoreVerbs::Impl {
         const json::Value* new_value = args.find("new");
         if (old_value == nullptr || !old_value->is_string() || old_value->as_string().empty()) return failure("edit_file needs old, the exact text to replace (a non-empty string), and new, its replacement (a string); old was missing or empty");
         if (new_value == nullptr || !new_value->is_string()) return failure("edit_file needs new, the replacement text (a string); new was missing or not a string");
+        if (auto refused = gm::marker::write_refusal(old_value->as_string(), "edit_file")) return failure(*refused);
+        if (auto refused = gm::marker::write_refusal(new_value->as_string(), "edit_file")) return failure(*refused);
         auto file = core::read_text(*at, "open");
         if (!file.ok) return failure(file.error);
         const std::string& old_text = old_value->as_string();
