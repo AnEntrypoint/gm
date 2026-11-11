@@ -330,6 +330,11 @@ def('W24', async () => {
   return `grep inline ${v.grepLen} chars, outputPath=${v.grepOutPath}; test inline ${v.testLen} chars, failure line kept=${v.testHasFailure}; file dump inline ${v.dumpLen} chars, outputPath=${v.dumpPath}`;
 });
 
+def('W25', async () => {
+  const r = spawnSync(process.execPath, [join(root, 'tools', 'check-build-handover.mjs'), hostDir], { encoding: 'utf8', timeout: 300000 });
+  return `build hand-over: exit ${r.status}; the body in flight finished on the old build, the next call ran on the new one, a broken build was refused: ${r.stdout.includes('the broken build broken-dev was refused') ? 'yes' : 'no'}`;
+});
+
 const ids = which === 'all' ? Object.keys(witnesses) : [which];
 const SHARED_CHECK_BUILD = new Set(['W19', 'W20']);
 const runOne = async (id) => {

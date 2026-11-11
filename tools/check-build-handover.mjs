@@ -1,0 +1,146 @@
+#!/usr/bin/env node
+import { spawnSync, spawn } from 'node:child_process';
+import { chmodSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readlinkSync, readdirSync, renameSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join, resolve } from 'node:path';
+import readline from 'node:readline';
+import { fileURLToPath } from 'node:url';
+
+const CHECK = 'build-handover-check';
+const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const hostDir = resolve(process.argv[2] ?? join(root, 'build', 'release', 'native', 'components', 'host'));
+const started = Date.now();
+const failures = [];
+const expect = (condition, text) => {
+  if (!condition) failures.push(text);
+};
+const stampOf = (path) => spawnSync(path, ['--version'], { encoding: 'utf8', timeout: 20000 }).stdout.trim().split(' ')[0];
+const stamp = stampOf(join(hostDir, 'gm'));
+expect(/-dev$/.test(stamp) || stamp.length > 0, `the build under test reports no stamp: ${stamp}`);
+
+const sandbox = mkdtempSync(join(tmpdir(), 'gm-handover-'));
+const install = join(sandbox, 'install');
+const versions = join(install, 'versions');
+const second = `${stamp.slice(0, -3)}tst`;
+const broken = 'broken-dev';
+const place = (version, patch) => {
+  const dir = join(versions, version);
+  mkdirSync(dir, { recursive: true });
+  for (const name of ['gm', 'gm-core']) {
+    const from = join(hostDir, name);
+    if (patch) {
+      const bytes = readFileSync(from).toString('latin1').split(stamp).join(version);
+      writeFileSync(join(dir, name), Buffer.from(bytes, 'latin1'));
+      chmodSync(join(dir, name), 0o755);
+    } else {
+      copyFileSync(from, join(dir, name));
+    }
+  }
+  return dir;
+};
+const brokenDir = join(versions, broken);
+mkdirSync(brokenDir, { recursive: true });
+for (const name of ['gm', 'gm-core']) {
+  writeFileSync(join(brokenDir, name), '#!/bin/sh\necho broken\nexit 1\n');
+  chmodSync(join(brokenDir, name), 0o755);
+}
+place(stamp, false);
+place(second, true);
+const point = (version) => {
+  const link = join(install, `current.${process.pid}`);
+  rmSync(link, { force: true });
+  symlinkSync(join('versions', version), link);
+  renameSync(link, join(install, 'current'));
+};
+point(stamp);
+
+const workspace = join(sandbox, 'ws');
+mkdirSync(workspace);
+const quiet = join(sandbox, 'quiet.json');
+writeFileSync(quiet, JSON.stringify({ mcpServers: { playwriter: { disabled: true } } }));
+const relay = spawn(join(install, 'current', 'gm'), ['serve', '--workspace', workspace, '--run-dir', join(workspace, 'runs', 'hand'), '--mcp-config', quiet], { stdio: ['pipe', 'pipe', 'pipe'] });
+relay.stdin.on('error', () => {});
+const stderr = [];
+relay.stderr.on('data', (chunk) => stderr.push(chunk.toString()));
+const notices = [];
+const pending = new Map();
+readline.createInterface({ input: relay.stdout }).on('line', (line) => {
+  let message;
+  try {
+    message = JSON.parse(line);
+  } catch {
+    return;
+  }
+  if (message.method === 'notifications/message') notices.push(message.params?.data ?? '');
+  if (message.id !== undefined && pending.has(message.id)) {
+    pending.get(message.id)(message);
+    pending.delete(message.id);
+  }
+});
+let nextId = 1;
+const rpc = (method, params, ms = 60000) =>
+  new Promise((done) => {
+    const id = nextId++;
+    const timer = setTimeout(() => done(null), ms);
+    pending.set(id, (m) => {
+      clearTimeout(timer);
+      done(m);
+    });
+    relay.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id, method, params })}\n`);
+  });
+const call = async (name, args, ms) => (await rpc('tools/call', { name, arguments: args }, ms))?.result?.structuredContent ?? null;
+const sleep = (ms) => new Promise((done) => setTimeout(done, ms));
+const workerExe = () => {
+  const pids = spawnSync('pgrep', ['-P', String(relay.pid)], { encoding: 'utf8' }).stdout.trim().split('\n').filter(Boolean);
+  const worker = pids.find((pid) => existsSync(`/proc/${pid}/exe`));
+  return worker ? readlinkSync(`/proc/${worker}/exe`) : 'no worker';
+};
+const runLog = () => {
+  const dir = join(workspace, 'runs', 'hand');
+  return existsSync(join(dir, 'log.jsonl')) ? readFileSync(join(dir, 'log.jsonl'), 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l)) : [];
+};
+
+try {
+  await rpc('initialize', { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: CHECK, version: '1' } });
+  relay.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' })}\n`);
+  await rpc('resources/read', { uri: 'skill://gm/SKILL.md' });
+  await call('next_context', {});
+  const before = runLog().length;
+  const onA = workerExe();
+  expect(onA.includes(join('versions', stamp)), `the first worker should run ${stamp}, runs ${onA}`);
+
+  const held = call('run_code', { body: 'const end = Date.now() + 5000; while (Date.now() < end) {} return "held on A";' }, 60000);
+  await sleep(1500);
+  point(second);
+  const body = await held;
+  expect(body?.output === 'held on A', `the body in flight should finish on the old build: ${JSON.stringify(body)?.slice(0, 200)}`);
+
+  await sleep(4000);
+  const after = await call('run_code', { body: 'return (await gm.run_shell({ command: "echo answered" })).output;' }, 60000);
+  expect(after?.ok === true && String(after?.output).includes('answered'), `the next call should be answered by the new build: ${JSON.stringify(after)?.slice(0, 200)}`);
+  const onB = workerExe();
+  expect(onB.includes(join('versions', second)), `the worker should run ${second} after the hand-over, runs ${onB}`);
+  expect(notices.some((text) => text.includes(`gm build changed from ${stamp} to ${second}`)), `the session should get one notice of the change: ${JSON.stringify(notices)}`);
+  const log = runLog();
+  expect(log.filter((event) => event.kind === 'start').length === 1, 'the run should keep one start event across the hand-over');
+  expect(log.length > before, 'the run log should keep growing across the hand-over');
+  expect(log.every((event, index) => index === 0 || event.seq === log[index - 1].seq + 1), 'the run log seq should stay continuous across the hand-over');
+
+  point(broken);
+  await sleep(4000);
+  const still = await call('run_code', { body: 'return "still on B";' }, 60000);
+  expect(still?.output === 'still on B', `a broken build must not take the session: ${JSON.stringify(still)?.slice(0, 200)}`);
+  expect(workerExe().includes(join('versions', second)), 'a broken build must leave the worker on its build');
+  expect(stderr.join('').includes(`refused build ${broken}`), `the relay should name the refused build: ${stderr.join('').slice(-300)}`);
+} finally {
+  relay.kill('SIGKILL');
+  rmSync(sandbox, { recursive: true, force: true });
+}
+
+const wall = ((Date.now() - started) / 1000).toFixed(2);
+if (failures.length > 0) {
+  console.error(`${CHECK}: ${failures.length} failure(s) (wall ${wall} s)\n- ${failures.join('\n- ')}`);
+  process.exitCode = 1;
+} else {
+  console.log(`${CHECK}: ok (${stamp} -> ${second}: the body in flight finished on the old build, the next call ran on the new one, the run log carried over, and the broken build ${broken} was refused; wall ${wall} s)`);
+}
