@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { chmodSync, copyFileSync, existsSync, mkdtempSync, readdirSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
+import { chmodSync, copyFileSync, cpSync, existsSync, mkdtempSync, readdirSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { spawn, spawnSync } from 'node:child_process';
 import { once } from 'node:events';
 import { tmpdir } from 'node:os';
@@ -37,6 +37,7 @@ writeFileSync(mcpConfig, JSON.stringify({ mcpServers: { playwriter: { disabled: 
 const copied = onNode ? null : join(binDir, basename(resolve(target)));
 if (!onNode) {
   copyFileSync(resolve(target), copied);
+  for (const sub of ['leaves', 'skills', 'defaults']) cpSync(join(dirname(resolve(target)), sub), join(dirname(copied), sub), { recursive: true });
   chmodSync(copied, 0o755);
 }
 const common = ['--workspace', workspace, '--mcp-config', mcpConfig];

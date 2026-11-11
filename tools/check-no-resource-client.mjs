@@ -2,7 +2,7 @@
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { spawnSync } from 'node:child_process';
-import { chmodSync, copyFileSync, existsSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
+import { chmodSync, copyFileSync, cpSync, existsSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
 import readline from 'node:readline';
@@ -98,6 +98,7 @@ try {
   const engine = onNode ? process.execPath : join(mkdtempSync(join(scratch, 'bin-')), basename(resolve(target)));
   if (!onNode) {
     copyFileSync(resolve(target), engine);
+    for (const sub of ['leaves', 'skills', 'defaults']) cpSync(join(dirname(resolve(target)), sub), join(dirname(engine), sub), { recursive: true });
     chmodSync(engine, 0o755);
   }
   const restartCount = () =>

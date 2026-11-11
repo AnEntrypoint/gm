@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { spawnSync, spawn } from 'node:child_process';
-import { chmodSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readlinkSync, readdirSync, renameSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { chmodSync, copyFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readlinkSync, readdirSync, renameSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import readline from 'node:readline';
@@ -37,6 +37,7 @@ const place = (version, patch) => {
       copyFileSync(from, join(dir, name));
     }
   }
+  for (const sub of ['leaves', 'skills', 'defaults']) cpSync(join(hostDir, sub), join(dir, sub), { recursive: true });
   return dir;
 };
 const brokenDir = join(versions, broken);
