@@ -196,6 +196,57 @@ try {
   expect(still?.output === 'still on B', `a broken build must not take the session: ${JSON.stringify(still)?.slice(0, 200)}`);
   expect(workerExe().includes(join('versions', second)), 'a broken build must leave the worker on its build');
   expect(stderr.join('').includes(`refused build ${broken}`), `the relay should name the refused build: ${stderr.join('').slice(-300)}`);
+
+  const home = join(sandbox, 'home');
+  mkdirSync(home);
+  const env = { ...process.env, HOME: home, USERPROFILE: home };
+  const buildDir = join(hostDir, '..', '..', '..');
+  const installOnce = () => spawnSync('sh', [join(root, 'scripts', 'install.sh'), '--local', buildDir], { env, encoding: 'utf8', timeout: 120000 });
+  const first = installOnce();
+  expect(first.status === 0, `the first local install should succeed: ${first.stderr}`);
+  const homeWorkspace = join(sandbox, 'home-ws');
+  mkdirSync(homeWorkspace);
+  const homeRelay = spawn(join(home, '.gmnew', 'current', 'gm'), ['serve', '--workspace', homeWorkspace, '--run-dir', join(homeWorkspace, 'runs', 'same'), '--mcp-config', quiet, '--skill-read', 'yes'], { env, stdio: ['pipe', 'pipe', 'pipe'] });
+  homeRelay.stdin.on('error', () => {});
+  const homeWaiting = new Map();
+  let homeNext = 1;
+  readline.createInterface({ input: homeRelay.stdout }).on('line', (line) => {
+    let message;
+    try {
+      message = JSON.parse(line);
+    } catch {
+      return;
+    }
+    if (message.id !== undefined && homeWaiting.has(message.id)) {
+      homeWaiting.get(message.id)(message);
+      homeWaiting.delete(message.id);
+    }
+  });
+  const homeRpc = (method, params) =>
+    new Promise((done) => {
+      const id = homeNext++;
+      const timer = setTimeout(() => done(null), 60000);
+      homeWaiting.set(id, (m) => {
+        clearTimeout(timer);
+        done(m);
+      });
+      homeRelay.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id, method, params })}\n`);
+    });
+  const workersOf = () => spawnSync('pgrep', ['-P', String(homeRelay.pid)], { encoding: 'utf8' }).stdout.trim().split('\n').filter(Boolean).sort();
+  try {
+    await homeRpc('initialize', { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: CHECK, version: '1' } });
+    homeRelay.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' })}\n`);
+    await homeRpc('tools/call', { name: 'next_context', arguments: {} });
+    const workersBefore = workersOf();
+    expect(workersBefore.length > 0, 'the home relay should have a worker before the identical install');
+    const again = installOnce();
+    expect(again.status === 0, `the identical install should succeed: ${again.stderr}`);
+    expect(again.stdout.includes('the binaries and their processes were kept'), `the identical install should keep the binaries: ${again.stdout}`);
+    await sleep(3000);
+    expect(JSON.stringify(workersOf()) === JSON.stringify(workersBefore), `an identical install must leave every worker pid unchanged: before ${workersBefore} after ${workersOf()}`);
+  } finally {
+    homeRelay.kill('SIGKILL');
+  }
 } finally {
   relay.kill('SIGKILL');
   rmSync(sandbox, { recursive: true, force: true });

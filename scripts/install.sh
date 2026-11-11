@@ -74,6 +74,16 @@ install_local() {
         ""|*[!A-Za-z0-9._-]*) die "unexpected build version: $VERSION" ;;
     esac
 
+    if [ -L "$CURRENT_DIR" ] && [ "$(readlink "$CURRENT_DIR")" = "versions/$VERSION" ]; then
+        rm -rf "$CURRENT_DIR/skills" "$CURRENT_DIR/leaves" "$CURRENT_DIR/defaults"
+        cp -R "$HOST/skills" "$CURRENT_DIR/skills"
+        cp -R "$SOURCE_ROOT/native/leaves" "$CURRENT_DIR/leaves"
+        cp -R "$SOURCE_ROOT/defaults" "$CURRENT_DIR/defaults"
+        printf 'installed local build %s from %s at %s; the stamp is unchanged, so the binaries and their processes were kept\n' "$VERSION" "$LOCAL_BUILD" "$CURRENT_DIR/gm"
+        register
+        return
+    fi
+
     mkdir -p "$INSTALL_ROOT"
     STAGE="$(mktemp -d "$INSTALL_ROOT/stage.XXXXXX")"
     trap 'rm -rf "$STAGE"' EXIT
