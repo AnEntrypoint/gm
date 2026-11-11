@@ -5,6 +5,7 @@
 #include <fstream>
 #include <regex>
 #include <system_error>
+#include <thread>
 
 namespace gm::tool {
 namespace fs = std::filesystem;
@@ -29,8 +30,16 @@ CheckResult check_lazy_browser(const std::string& binary) {
     const fs::path source = build.parent_path().parent_path();
     const fs::path installed = sandbox / ".gmnew" / "current" / "gm";
     std::vector<std::string> started_pids;
+    std::vector<long long> tree;
     const auto install = proc::run({"env", "HOME=" + sandbox.string(), (host / "gm").string(), "install", "--local", build.string(), "--source", source.string()}, sandbox, {}, 900000);
     if (!install.started || install.exit_code != 0) result.failures.push_back("the sandbox install failed: " + (install.err.empty() ? install.out : install.err).substr(0, 400));
+    const fs::path pin_marker = installed.parent_path() / "pw" / "gm-pin";
+    std::ifstream pin_in(pin_marker);
+    std::string pin_text;
+    std::getline(pin_in, pin_text);
+    if (pin_text != "24646cc") result.failures.push_back("the install did not write the pin marker " + pin_marker.string() + " as 24646cc (read '" + pin_text + "')");
+    const fs::path entry = sandbox / ".gmnew" / "current" / "pw" / "bin" / "playwriter-project";
+    if (!fs::exists(entry)) result.failures.push_back("the playwriter entry from defaults/mcp.json does not resolve under the install tree: " + entry.string());
     {
         Session session(installed.string(), workspace, sandbox, 180000, false);
         if (!session.started()) {
@@ -57,10 +66,19 @@ CheckResult check_lazy_browser(const std::string& binary) {
             if (first_call.find("[return value] 1") == std::string::npos) result.failures.push_back("the first browser call did not run through the installed playwriter launcher: " + first_call.substr(0, 300));
             result.summary = "a fresh session has no browser tooling process; its verb playwriter_execute is listed without a start, and the first browser call runs through the launcher that a clean install placed under the sandbox HOME (playwriter_browsers is optional at the pin)";
         }
+        std::vector<long long> roots = session.descendants();
+        for (const std::string& pid : started_pids) roots.push_back(std::stoll(pid));
+        for (const long long pid : processes_mentioning(sandbox.string())) roots.push_back(pid);
+        tree = process_tree(roots);
         session.stop();
     }
-    for (const std::string& pid : started_pids) {
-        if (fs::exists("/proc/" + pid)) proc::run({"kill", "-TERM", pid}, sandbox, {}, 10000);
+    kill_processes(tree);
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    const auto survivors = alive_of(tree);
+    if (!survivors.empty()) {
+        std::string ids;
+        for (const long long pid : survivors) ids += (ids.empty() ? "" : " ") + std::to_string(pid);
+        result.failures.push_back(std::to_string(survivors.size()) + " process(es) started by this check are still alive: " + ids);
     }
     std::error_code ignored;
     fs::remove_all(sandbox, ignored);

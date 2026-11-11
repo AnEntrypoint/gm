@@ -1,4 +1,4 @@
-add_library(gm_tool_checks STATIC session.cpp gate.cpp ship.cpp checks/registry.cpp checks/read_after_write.cpp checks/spawn_sites.cpp checks/lazy_browser.cpp checks/rows.cpp checks/fetch.cpp checks/wiki.cpp checks/git.cpp checks/review.cpp checks/code_ast.cpp checks/quickjs_baseline.cpp checks/install_follows.cpp checks/cli_flags.cpp)
+add_library(gm_tool_checks STATIC session.cpp gate.cpp ship.cpp checks/registry.cpp checks/read_after_write.cpp checks/spawn_sites.cpp checks/lazy_browser.cpp checks/browser_scope.cpp checks/rows.cpp checks/fetch.cpp checks/wiki.cpp checks/git.cpp checks/review.cpp checks/code_ast.cpp checks/quickjs_baseline.cpp checks/install_follows.cpp checks/cli_flags.cpp checks/process_tree.cpp checks/worker_growth.cpp checks/feed_reference.cpp)
 target_include_directories(gm_tool_checks PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../include)
 target_link_libraries(gm_tool_checks PUBLIC deoxidene::deoxidene gm_json gm_proc)
 

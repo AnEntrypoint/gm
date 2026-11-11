@@ -119,7 +119,7 @@ native. `.gmnew-update.json` stays as data.
 - Clean install witness (empty HOME, 2026-11-11): gm install --local build/release --source . took 7.04 s in total; the playwriter step took 6.94 s; its longest part was the clone at 5.35 s, then the checkout and npm ci.
 - Browser calls to a tool the pinned cache does not list go through VerbTable::call_sibling, routed to the client that serves the listed sibling (playwriter_execute). That is how browser_close_machine reaches the launcher's browsers tool at 24646cc.
 
-## Checks moved to gm-tool (round e6b5, item 5)
+## Checks moved to gm-tool (round e6b5, item 5; continued in the teardown round)
 
 | Node check (phase B, check-build) | native check | wall (ok run) | state |
 |---|---|---|---|
@@ -129,5 +129,21 @@ native. `.gmnew-update.json` stays as data.
 | (new) | check-skill-reload | 5.2 s | refusal witness, item 4 |
 | (new) | check-code-ast | under 1 s | item 1 |
 | (new) | check-quickjs-baseline | under 1 s | item 2, measurement |
+| check-browser-scope.mjs | check-browser-scope | 7.3 s | moved; .mjs deleted; survivors counted by tree and PID |
+| check-worker-growth.mjs | check-worker-growth | 4.7 s | moved; .mjs deleted; 2048 KB limit over 400 calls |
+| check-feed-reference.mjs | check-feed-reference | 0.37 s | moved; .mjs deleted |
+| check-lazy-browser (native) | check-lazy-browser | 7.5 s | teardown by tree, PID survivor count, pin marker assert |
 
-Still on Node, run by check-build and parity-contract: the other 30-odd check-*.mjs and witness-*.mjs in the NATIVE list, the conformance run, and tools/parity-contract.mjs. Node stays in phase B and check-build until each has a native replacement; the group-by-group list continues in the next round.
+Still on Node, run by check-build and parity-contract: the other 27 check-*.mjs and witness-*.mjs in the NATIVE list, the conformance run, and tools/parity-contract.mjs. Node is not removed from phase B: ship.cpp and check-build still need it for those. Node stays in phase B and check-build until each has a native replacement; the group-by-group list continues in the next round.
+
+## Phase B timing (round e6b5, install step, dded62a)
+
+- Phase B passed at dded62a in 3 min 54 s wall (exit 0).
+- Longest step: check-skill-reload, 106.3 s wall inside Phase B (5.2 s alone). Next: check-install-follows 45.5 s; cli-flags 0.11 s.
+- Install step: 6.9 s of the clean install (clone 5.35 s longest).
+
+## Browser teardown and pin marker (round e6b5, items 1 and 3)
+
+- Teardown: check-lazy-browser and check-browser-scope take the process tree (Session descendants, the PIDs the reply names, and processes whose command line names the sandbox HOME) before session.stop(), kill it, wait 200 ms, and fail with the count and PIDs of any survivor. Witness on check-browser-scope: with kill disabled it failed with "3 process(es) started by this check are still alive"; with a 1500 ms watchdog it failed on the browser open only, with zero survivors. Restored, both pass in about 7 s.
+- Pin marker: gm reads the pin only in install_playwriter (native/components/host/install.cpp), to skip the clone when current/pw/gm-pin already says 24646cc. The launcher runs from the direct node entry in defaults/mcp.json, so no runtime path reads the marker. The marker is at current/pw/gm-pin, which is versions/<stamp>/pw/gm-pin; /config/.gmnew/current/gm-pin was never the right path. check-lazy-browser asserts the marker reads 24646cc and that ${HOME}/.gmnew/current/pw/bin/playwriter-project exists in the sandbox. Witness: with the expected pin changed to 00000000 it fails and prints the marker it read.
+

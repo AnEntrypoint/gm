@@ -7,6 +7,7 @@ const std::vector<Registered>& checks() {
         {"check-read-after-write", check_read_after_write},
         {"check-spawn-sites", check_spawn_sites},
         {"check-lazy-browser", check_lazy_browser},
+        {"check-browser-scope", check_browser_scope},
         {"check-rows", check_rows},
         {"check-fetch", check_fetch},
         {"check-wiki", check_wiki},
@@ -17,6 +18,8 @@ const std::vector<Registered>& checks() {
         {"check-install-follows", check_install_follows},
         {"check-skill-reload", check_skill_reload},
         {"check-cli-flags", check_cli_flags},
+        {"check-worker-growth", check_worker_growth},
+        {"check-feed-reference", check_feed_reference},
     };
     return all;
 }

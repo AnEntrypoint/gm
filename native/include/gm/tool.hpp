@@ -30,6 +30,7 @@ struct Registered {
 CheckResult check_read_after_write(const std::string& binary);
 CheckResult check_spawn_sites(const std::string& binary);
 CheckResult check_lazy_browser(const std::string& binary);
+CheckResult check_browser_scope(const std::string& binary);
 CheckResult check_rows(const std::string& binary);
 CheckResult check_fetch(const std::string& binary);
 CheckResult check_wiki(const std::string& binary);
@@ -40,6 +41,12 @@ CheckResult check_quickjs_baseline(const std::string& binary);
 CheckResult check_install_follows(const std::string& binary);
 CheckResult check_skill_reload(const std::string& binary);
 CheckResult check_cli_flags(const std::string& binary);
+CheckResult check_worker_growth(const std::string& binary);
+CheckResult check_feed_reference(const std::string& binary);
+std::vector<long long> process_tree(const std::vector<long long>& roots);
+void kill_processes(const std::vector<long long>& pids);
+std::vector<long long> alive_of(const std::vector<long long>& pids);
+std::vector<long long> processes_mentioning(const std::string& text);
 
 const std::vector<Registered>& checks();
 
@@ -69,6 +76,8 @@ private:
 
 std::optional<std::string> git_output(const std::filesystem::path& root, const std::vector<std::string>& args);
 std::vector<std::string> nul_split(const std::string& text);
+std::string tool_text(Session& session, const std::string& name, json::Value args);
+json::Value tool_json(Session& session, const std::string& name, json::Value args);
 
 struct GateCheck {
     std::string name;

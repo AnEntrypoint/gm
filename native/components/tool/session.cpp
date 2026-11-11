@@ -113,4 +113,25 @@ std::string Session::body(const std::string& source) {
     return text.empty() ? json::dump(reply) : text;
 }
 
+std::string tool_text(Session& session, const std::string& name, json::Value args) {
+    const json::Value reply = session.rpc("tools/call", json::Object{{"name", name}, {"arguments", std::move(args)}});
+    const json::Value* result = reply.find("result");
+    const json::Value* content = result ? result->find("content") : nullptr;
+    if (!content || !content->is_array()) return json::dump(reply);
+    std::string text;
+    for (const json::Value& block : content->as_array()) {
+        const json::Value* part = block.find("text");
+        if (!part || !part->is_string()) continue;
+        if (!text.empty()) text.push_back('\n');
+        text += part->as_string();
+    }
+    return text.empty() ? json::dump(reply) : text;
+}
+
+json::Value tool_json(Session& session, const std::string& name, json::Value args) {
+    const std::string text = tool_text(session, name, std::move(args));
+    if (auto parsed = json::parse(text)) return *parsed;
+    return json::Object{{"ok", false}, {"error", name + " reply was not JSON: " + text.substr(0, 200)}};
+}
+
 }
