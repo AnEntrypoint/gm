@@ -2488,7 +2488,11 @@ struct Server::State {
         s().step_calls += 1;
     }
 
-    Value tool_result(const std::string& name, const Value& out, std::optional<std::uint64_t> seq, const std::optional<std::string>& attached_text = std::nullopt) {
+    Value tool_result(const std::string& name, const Value& out_in, std::optional<std::uint64_t> seq, const std::optional<std::string>& attached_text = std::nullopt) {
+        Value out = out_in;
+        if (handover_notice_) {
+            out.set("handover", *handover_notice_);
+        }
         Value content = array();
         const Value* text_output = out.find("output");
         if (name == "run_code" && text_output != nullptr && text_output->is_string()) {

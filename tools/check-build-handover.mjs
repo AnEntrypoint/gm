@@ -183,6 +183,8 @@ try {
   const noticeLine = `gm build changed from ${older} to ${stamp}; this session now runs ${stamp}, and its run carries over`;
   const noticesIn = (reply) => (reply?.result?.content ?? []).filter((block) => block.text === noticeLine).length;
   expect(noticesIn(firstReply) === 1, `the first reply after a hand-over should carry the notice once: ${JSON.stringify(firstReply)?.slice(0, 300)}`);
+  expect(firstReply?.result?.structuredContent?.handover === noticeLine, `the first reply's JSON should carry the notice in handover, which the host keeps: ${JSON.stringify(firstReply?.result?.structuredContent)?.slice(0, 300)}`);
+  expect(secondReply?.result?.structuredContent?.handover === undefined, 'the handover field should not repeat on the next reply');
   expect(noticesIn(secondReply) === 0, 'the notice should not repeat on the next reply');
   const directRestarts = existsSync(join(directRun, 'log.jsonl')) ? readFileSync(join(directRun, 'log.jsonl'), 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l)).filter((e) => e.kind === 'restart') : [];
   expect(directRestarts.length === 1 && directRestarts[0].reason === `build ${older} -> ${stamp}`, `the restart should name the build change: ${JSON.stringify(directRestarts)}`);
