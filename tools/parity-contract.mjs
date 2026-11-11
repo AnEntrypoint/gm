@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { spawn, spawnSync } from 'node:child_process';
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, readlinkSync, renameSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { cpus, tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import readline from 'node:readline';
 import { fileURLToPath } from 'node:url';
@@ -278,9 +278,14 @@ def('W19', async () => {
 });
 
 def('W20', async () => {
-  const r = spawnSync(process.execPath, [join(root, 'tools', 'check-build.mjs'), buildDir, '--only', 'check-repeated-checks.mjs'], { encoding: 'utf8', timeout: 600000 });
+  const env = { ...process.env };
+  delete env.GM_CHECK_JOBS;
+  spawnSync(process.execPath, [join(root, 'tools', 'check-build.mjs'), buildDir, '--only', 'check-repeated-checks.mjs'], { encoding: 'utf8', env, timeout: 600000 });
+  const r = spawnSync(process.execPath, [join(root, 'tools', 'check-build.mjs'), buildDir, '--only', 'check-repeated-checks.mjs'], { encoding: 'utf8', env, timeout: 600000 });
   const summary = r.stdout.split('\n').find((l) => l.includes(' run, ')) ?? '';
-  return `cache: second --only run ${summary.includes('0 run') ? 'runs 0 scenarios' : 'runs scenarios'}; pool default jobs ${summary.match(/jobs (\d+)/)?.[1] ?? 'unknown'} (min 6, cores/2)`;
+  const jobs = Number(summary.match(/jobs (\d+)/)?.[1]);
+  const expected = Math.min(6, Math.floor(cpus().length / 2));
+  return `cache: second --only run ${summary.includes('0 run') ? 'runs 0 scenarios' : 'runs scenarios'}; pool default jobs match min(6, floor(cores/2)) on this host: ${jobs === expected}`;
 });
 
 def('W21', async () => {

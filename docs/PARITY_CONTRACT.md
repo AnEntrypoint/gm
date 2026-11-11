@@ -173,10 +173,10 @@ Witness (W19), `--only` selects one scenario:
     node tools/parity-contract.mjs <bin> W19
     W19 pass --only lists ["check-repeated-checks.mjs"]; exit 0
 
-Witness (W20), the cache and the default pool size (host-dependent: on a host with 12 or more cores the pool is 6):
+Witness (W20), the cache and the default pool size. The pool size is host-dependent, so the witness compares it with min(6, floor(cores/2)) on the host it runs on, and the line ends `true` on any host. It warms the cache with one `--only` run, then reads the second run's summary.
 
     node tools/parity-contract.mjs <bin> W20
-    W20 pass cache: second --only run runs 0 scenarios; pool default jobs 6 (min 6, cores/2)
+    W20 pass cache: second --only run runs 0 scenarios; pool default jobs match min(6, floor(cores/2)) on this host: true
 
 ## 6. Relay re-exec on the stable path
 

@@ -2459,3 +2459,10 @@ Not run here: tools/check-txiki-wasi.mjs and the gm reactor wasm (the gm wasm32-
 - check-build: 28 run, 0 failed, wall 103.0 s, from an empty cache at cfccb39.
 - Full parity contract at cfccb39: 22 of 22 lines match docs/PARITY_CONTRACT.md, wall 19 s (W15 7.3 s of it).
 - The installed build stays 794ffbc until the next install; it has the old descriptions.
+
+## W20 is host-independent (2026-11-11, Phase A)
+
+- W20 used to expect "pool default jobs 6 (min 6, cores/2)", which holds only on a host with 12 or more cores. It now warms the cache with one `--only` run, reads the second run's summary, and checks the pool default against min(6, floor(cores/2)) on the host it runs on.
+- tools/parity-contract.mjs W20: rewritten (GM_CHECK_JOBS removed from the env; the second check-build run's summary is parsed for jobs and cache state).
+- docs/PARITY_CONTRACT.md section 5: the W20 expected line now says "pool default jobs match min(6, floor(cores/2)) on this host: true".
+- Witness to rerun in Phase B: node tools/parity-contract.mjs build/release/native/components/host/gm W20 (0.7 s wall on this host).
