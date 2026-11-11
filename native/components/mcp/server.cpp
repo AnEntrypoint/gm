@@ -530,11 +530,17 @@ Value caller_of_process() {
 #endif
 }
 
-bool skill_read_by_this_host(const std::vector<Value>& history) {
+std::string skill_refusal_about(const std::string& change) {
+    return "run_code refused: skill://gm/SKILL.md " + change +
+           ", so its text is the second content block of this reply. Follow it, then call run_code again. This refusal is sent once per connection.";
+}
+
+const Value* last_skill_read_by_this_host(const std::vector<Value>& history) {
     const Value me = caller_of_process();
     const Value* my_host = me.find("parent");
-    if (my_host == nullptr || !my_host->is_number()) return false;
-    return std::any_of(history.begin(), history.end(), [&](const Value& event) {
+    if (my_host == nullptr || !my_host->is_number()) return nullptr;
+    const Value* last = nullptr;
+    for (const Value& event : history) {
         const Value* kind = event.find("kind");
         const Value* skill = event.find("skill");
         const Value* uri = event.find("uri");
@@ -543,9 +549,32 @@ bool skill_read_by_this_host(const std::vector<Value>& history) {
         const Value* host = caller != nullptr ? caller->find("parent") : nullptr;
         const bool gm_text = (uri != nullptr && uri->is_string() && uri->as_string() == kGmSkillUri) ||
                              (via != nullptr && via->is_string() && via->as_string() == "prompt");
-        return kind != nullptr && kind->as_string() == "skill-loaded" && skill != nullptr && skill->is_string() && skill->as_string() == "gm" &&
-               gm_text && host != nullptr && host->is_number() && host->as_number() == my_host->as_number();
-    });
+        const bool matches = kind != nullptr && kind->as_string() == "skill-loaded" && skill != nullptr && skill->is_string() &&
+                             skill->as_string() == "gm" && gm_text && host != nullptr && host->is_number() &&
+                             host->as_number() == my_host->as_number();
+        if (matches) last = &event;
+    }
+    return last;
+}
+
+bool skill_read_by_this_host(const std::vector<Value>& history) { return last_skill_read_by_this_host(history) != nullptr; }
+
+std::optional<std::string> skill_digest_read_by_this_host(const std::vector<Value>& history) {
+    const Value* read = last_skill_read_by_this_host(history);
+    const Value* sha = read != nullptr ? read->find("sha") : nullptr;
+    if (sha == nullptr || !sha->is_string()) return std::nullopt;
+    return sha->as_string();
+}
+
+Value value_or_null(const std::optional<std::string>& text) { return text ? Value(*text) : Value(nullptr); }
+
+std::string handover_line(const std::string& reason) {
+    const std::string arrow = " -> ";
+    const std::size_t split = reason.find(arrow);
+    if (reason.rfind("build ", 0) != 0 || split == std::string::npos) return "";
+    const std::string from = reason.substr(6, split - 6);
+    const std::string to = reason.substr(split + arrow.size());
+    return "gm build changed from " + from + " to " + to + "; this session now runs " + to + ", and its run carries over";
 }
 
 Value trace_of(const Value* meta) {
@@ -725,6 +754,8 @@ struct Server::State {
     std::map<std::string, std::string> file_subscriptions;
     bool monitor_running = false;
     bool gm_skill_read = false;
+    std::string skill_refusal_ = kSkillReadRefusal;
+    std::optional<std::string> handover_notice_;
     std::atomic<std::uint64_t> body_verb_calls{0};
     std::mutex monitor_mutex;
     std::condition_variable monitor_wake;
@@ -1140,8 +1171,21 @@ struct Server::State {
             set_owner(dir, connection_id());
             auto recovery = resumed ? recovery_of(history) : std::nullopt;
             if (resumed) {
-                gm_skill_read = gm_skill_read || skill_read_by_this_host(history);
-                append("restart", object().set("reason", options.restart_reason).set("skillRead", gm_skill_read));
+                const bool read_before = gm_skill_read || skill_read_by_this_host(history);
+                const std::optional<std::string> now = digest_of(kGmSkillUri);
+                const std::optional<std::string> was = skill_digest_read_by_this_host(history);
+                const bool changed = read_before && now && was && *now != *was;
+                const bool unverified = read_before && !(now && was);
+                gm_skill_read = read_before && !changed && !unverified;
+                if (changed) skill_refusal_ = skill_refusal_about("changed since this run read it (" + *was + " -> " + *now + ")");
+                if (unverified) skill_refusal_ = skill_refusal_about("was read before its text was fingerprinted, so it is read again");
+                if (std::string line = handover_line(options.restart_reason); !line.empty()) handover_notice_ = line;
+                append("restart", object()
+                                      .set("reason", options.restart_reason)
+                                      .set("skillRead", gm_skill_read)
+                                      .set("skillChanged", changed)
+                                      .set("skillSha", value_or_null(now))
+                                      .set("skillWas", value_or_null(was)));
             }
             else append("start", object()
                                      .set("mode", "mcp")
@@ -2416,7 +2460,7 @@ struct Server::State {
         auto served = serve_skill_file(kGmSkillUri, "run_code");
         gm_skill_read = true;
         if (!served) return std::nullopt;
-        append("refusal", object().set("tool", "run_code").set("stage", "skill-read").set("error", kSkillReadRefusal));
+        append("refusal", object().set("tool", "run_code").set("stage", "skill-read").set("error", skill_refusal_));
         return served->find("text")->as_string();
     }
 
@@ -2456,6 +2500,10 @@ struct Server::State {
             content.push(object().set("type", "text").set("text", json::dump(out)));
         }
         if (attached_text) content.push(object().set("type", "text").set("text", *attached_text));
+        if (handover_notice_) {
+            content.push(object().set("type", "text").set("text", *handover_notice_));
+            handover_notice_.reset();
+        }
         Value meta = object().set(kRunMeta, s().run_id);
         if (seq) meta.set(kRunSeq, number_of(*seq));
         Value result = object().set("content", std::move(content));
@@ -2534,7 +2582,7 @@ struct Server::State {
             if (token != nullptr && (token->is_string() || token->is_number())) ticker.emplace(*this, *token);
         }
         const std::uint64_t verb_calls_before = body_verb_calls.load();
-        Value out = gated ? object().set("ok", false).set("error", kSkillReadRefusal) : invoke(name, args);
+        Value out = gated ? object().set("ok", false).set("error", skill_refusal_) : invoke(name, args);
         if (name == "run_code" && !gated) note_body_shape(out, body_verb_calls.load() - verb_calls_before);
         ticker.reset();
         std::optional<std::uint64_t> seq;
@@ -2694,6 +2742,7 @@ struct Server::State {
                                    .set("skill", skill.name)
                                    .set("uri", file.uri)
                                    .set("caller", caller_of_process())
+                                   .set("sha", file.digest)
                                    .set("cleared", is_gm ? open_rule_numbers() : array()));
         if (is_gm) {
             clear_rules();
@@ -2756,7 +2805,12 @@ struct Server::State {
             return prompt_result(other, other.body);
         }
         const Skill& skill = skills.get("gm");
-        append("skill-loaded", object().set("via", "prompt").set("skill", "gm").set("caller", caller_of_process()).set("cleared", open_rule_numbers()));
+        append("skill-loaded", object()
+                                   .set("via", "prompt")
+                                   .set("skill", "gm")
+                                   .set("caller", caller_of_process())
+                                   .set("sha", value_or_null(digest_of(kGmSkillUri)))
+                                   .set("cleared", open_rule_numbers()));
         clear_rules();
         gm_skill_read = true;
         const Value* arguments = params->find("arguments");
