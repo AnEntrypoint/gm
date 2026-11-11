@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto';
 import { closeSync, existsSync, lstatSync, mkdirSync, openSync, readdirSync, readFileSync, readSync, realpathSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { cp, mkdir, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
-import { runQuery } from './log.mjs';
+import { checkKey, runQuery } from './log.mjs';
 import { foregroundGroups, killBody, killGroup, runCommand, shellLauncher, signalGroup, spawnGroup } from './exec.mjs';
 import * as gitModule from './git.mjs';
 import * as rowsModule from './rows.mjs';
@@ -370,9 +370,14 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
         const timeoutMs = Math.min(Number(args.timeoutMs) || DEFAULT_TIMEOUT_MS, MAX_TIMEOUT_MS);
         const launcher = shellLauncher(args.command, [], true);
         const withLauncher = (r) => ({ launcher, ...(r.timedOut === true ? { statement: shellTimeoutStatement(r.output, timeoutMs) } : {}), ...r });
+        const startMono = log.now();
+        const logged = (r) => {
+          log.append('check', { command: checkKey(args.command), exitCode: r.exitCode ?? null, startMono });
+          return r;
+        };
         const result = runCommand(args.command, [], { cwd: root, timeoutMs, shell: true, signal: ctx?.signal });
-        if (result && typeof result.then === 'function') return result.then((r) => condenseShell(withLauncher(r), args.raw === true, runDir));
-        return condenseShell(withLauncher(result), args.raw === true, runDir);
+        if (result && typeof result.then === 'function') return result.then((r) => condenseShell(withLauncher(logged(r)), args.raw === true, runDir));
+        return condenseShell(withLauncher(logged(result)), args.raw === true, runDir);
       }
       if (!JOB_NAME.test(args.job ?? '')) return { ok: false, error: 'a background job needs job: 1 to 64 letters, digits, _ or -' };
       const timeoutMs = Math.min(Number(args.timeoutMs) || DEFAULT_JOB_TIMEOUT_MS, MAX_JOB_TIMEOUT_MS);
@@ -536,6 +541,7 @@ export function createTools({ workspace, runDir, log, background = true, jobLife
     const ended = { ...status, state, exitCode, signal, ...(reason === undefined ? {} : { reason }), ...statementFields, ...timeoutFields, durMs: Math.round(log.now() - startMono) };
     writeStatus(name, ended);
     log.append('job', { job: name, state, exitCode, signal, startMono, ...(reason === undefined ? {} : { reason }), ...statementFields, ...timeoutFields });
+    log.append('check', { command: checkKey(status.command), job: name, exitCode, startMono });
     if (job.killReason !== undefined) {
       log.append('job-killed', { job: name, reason: job.killReason, statement: jobKillStatement(name, job.killReason, status.timeoutMs, jobLifetimeMs), ...(job.killReason === 'lifetime' ? { lifetimeMs: jobLifetimeMs } : {}), tail: readTail(outputFile, TAIL_CAP) });
     }

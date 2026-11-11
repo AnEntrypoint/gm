@@ -425,6 +425,12 @@ void JobTable::settle(Job& job, std::optional<int> exit_code, json::Value signal
         event.set("timedOut", true);
         event.set("timeoutMs", job.timeout_ms);
     }
+    json::Value check;
+    check.set("command", core::check_key(job.status.find("command") && job.status.find("command")->is_string() ? job.status.find("command")->as_string() : std::string()));
+    check.set("job", job.name);
+    check.set("exitCode", exit_value);
+    if (const json::Value* duration = ended.find("durMs")) check.set("durMs", *duration);
+    unlogged_.push_back({"check", std::move(check)});
     unlogged_.push_back({"job", std::move(event)});
     if (job.kill_reason) {
         json::Value killed;

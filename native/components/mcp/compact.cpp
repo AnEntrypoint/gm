@@ -1,5 +1,7 @@
 #include <algorithm>
+#include <cmath>
 #include <initializer_list>
+#include <map>
 #include <regex>
 #include <set>
 #include <utility>
@@ -542,6 +544,46 @@ Value feed_of(const EventAt& at, std::uint64_t count, std::uint64_t shown, SentF
         .set("fullEvents", number_of(plan.full))
         .set("compactFrom", plan.full < fresh.size() ? number_of(fresh[plan.full].index + 1) : Value(nullptr))
         .set("events", std::move(items));
+}
+
+constexpr std::size_t kRepeatedCheckRows = 8;
+
+Value repeated_checks(const std::vector<Value>& events) {
+    struct Row {
+        std::string command;
+        std::uint64_t count = 0;
+        double total_ms = 0;
+        double last_ms = 0;
+    };
+    std::map<std::string, Row> rows;
+    for (const Value& event : events) {
+        if (string_field(event, "kind") != "check") continue;
+        const std::string command = string_field(event, "command");
+        Row& row = rows[command];
+        row.command = command;
+        row.count += 1;
+        const Value* duration = event.find("durMs");
+        const double ms = duration != nullptr && duration->is_number() ? duration->as_number() : 0;
+        row.total_ms += ms;
+        row.last_ms = ms;
+    }
+    std::vector<Row> ranked;
+    for (auto& [command, row] : rows) {
+        if (row.count >= 2) ranked.push_back(row);
+    }
+    std::sort(ranked.begin(), ranked.end(), [](const Row& a, const Row& b) {
+        return a.count != b.count ? a.count > b.count : a.total_ms > b.total_ms;
+    });
+    if (ranked.size() > kRepeatedCheckRows) ranked.resize(kRepeatedCheckRows);
+    json::Array out;
+    for (const Row& row : ranked) {
+        out.push_back(object()
+                          .set("command", row.command)
+                          .set("count", number_of(row.count))
+                          .set("totalMs", number_of(static_cast<std::uint64_t>(std::llround(row.total_ms))))
+                          .set("lastMs", number_of(static_cast<std::uint64_t>(std::llround(row.last_ms)))));
+    }
+    return Value(std::move(out));
 }
 
 }

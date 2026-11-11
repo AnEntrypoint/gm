@@ -265,3 +265,27 @@ function compile(js) {
     return new Function('events', js);
   }
 }
+
+export const CHECK_KEY_CHARS = 120;
+export const REPEATED_CHECK_ROWS = 8;
+
+export function checkKey(command) {
+  return String(command).replace(/\s+/g, ' ').trim().slice(0, CHECK_KEY_CHARS);
+}
+
+export function repeatedChecks(events) {
+  const rows = new Map();
+  for (const event of events) {
+    if (event.kind !== 'check') continue;
+    const row = rows.get(event.command) ?? { command: event.command, count: 0, totalMs: 0, lastMs: 0 };
+    row.count += 1;
+    row.totalMs += event.durMs ?? 0;
+    row.lastMs = event.durMs ?? 0;
+    rows.set(event.command, row);
+  }
+  return [...rows.values()]
+    .filter((row) => row.count >= 2)
+    .sort((a, b) => b.count - a.count || b.totalMs - a.totalMs)
+    .slice(0, REPEATED_CHECK_ROWS)
+    .map((row) => ({ ...row, totalMs: Math.round(row.totalMs) }));
+}

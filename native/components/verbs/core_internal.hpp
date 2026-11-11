@@ -41,6 +41,23 @@ struct FileText {
 FileText read_text(const std::filesystem::path& path, std::string_view open_syscall);
 std::string write_text(const std::filesystem::path& path, std::string_view content);
 
+inline std::string check_key(const std::string& command) {
+    std::string out;
+    bool gap = false;
+    for (char c : command) {
+        if (c == ' ' || c == '\t' || c == '\n' || c == '\r') {
+            gap = true;
+            continue;
+        }
+        if (gap && !out.empty()) out += ' ';
+        gap = false;
+        out += c;
+        if (out.size() >= 120) break;
+    }
+    if (out.size() > 120) out.resize(120);
+    return out;
+}
+
 class LockedLog {
 public:
     using AppendHook = std::function<void(const RunLog& log, std::string_view kind, std::uint64_t seq)>;

@@ -72,6 +72,7 @@ struct SentFeed {
     std::string prefix_sha;
 };
 Value feed_of(const EventAt& at, std::uint64_t count, std::uint64_t shown, SentFeed& sent, bool compact_children = false);
+Value repeated_checks(const std::vector<Value>& events);
 
 bool is_pending_kind(std::string_view kind);
 bool is_pending_event(std::string_view kind, const Value& event);

@@ -2065,6 +2065,7 @@ struct Server::State {
             .set("total", number_of(total))
             .set("pendingCommands", object().set("wait", "\"" + options.wait_program + "\" events --dir \"" + s().run_dir.string() + "\" --wait"));
         if (!waiting) reply = merge(std::move(reply), feed_of(at, total, shown, s().sent_feed, compact_children));
+        if (Value checks = repeated_checks(events()); !checks.as_array().empty()) reply.set("checks", std::move(checks));
         reply.set("query", query_hint(shown, total));
         if (recovery_now) reply.set("recovery", *recovery_now);
         auto notice = rules_notice();

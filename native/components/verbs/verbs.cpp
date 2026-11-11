@@ -808,8 +808,14 @@ struct CoreVerbs::Impl {
 #else
         std::string line = "exec 2>&1\n" + command->as_string();
 #endif
+        const auto began = std::chrono::steady_clock::now();
         proc::Outcome outcome = proc::shell(line, root, timeout);
         if (!outcome.started) return failure("spawn of the shell failed");
+        json::Value check;
+        check.set("command", core::check_key(command->as_string()))
+            .set("exitCode", json::Value(static_cast<double>(outcome.exit_code)))
+            .set("durMs", json::Value(std::round(std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - began).count())));
+        log.append("check", std::move(check));
         const json::Value* raw = args.find("raw");
         const bool bypass = raw != nullptr && raw->is_bool() && raw->as_bool();
         const auto bound = [&](json::Value reply) {
