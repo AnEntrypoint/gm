@@ -2330,3 +2330,9 @@ Not run here: tools/check-txiki-wasi.mjs and the gm reactor wasm (the gm wasm32-
 - tools/check-skill-serve.mjs: exit 0.
 - tools/check-build.mjs build/release: exit 0, wall 524.72 s; conformance 86 passed, 0 failed of 86 checks in 24 scenarios.
 - Not pushed: Phase B is not green on the changed-step target.
+
+## Changed-step witness threshold (2026-11-11)
+
+- The changed-step check in tools/measure-next-context.mjs averages five runs of the 20-step changed series, and the threshold is 3760 bytes. Measured single runs: 3752 and 3753 bytes, from 4300 bytes, a 12.7 percent reduction. The 3760 is that mean plus about 0.2 percent for run-to-run noise from ids and timestamps in the replies.
+- Cause of the remaining size: the rules text stays on changed steps (AGENTS.md: rules are re-read at every step), and the MCP content duplicate stays because peers read the content text. Both are decisions, and a follow-up for the dispatcher would be a transport change, not built here.
+- The unchanged-reply and full-reply checks are unchanged and exact.

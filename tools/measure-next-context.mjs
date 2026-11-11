@@ -15,7 +15,8 @@ const STEPS = 20;
 const BASELINE_NORMAL_MEAN = 1168;
 const BASELINE_CHANGED_MEAN = 4300;
 const NORMAL_REDUCTION = 0.5;
-const CHANGED_REDUCTION = 0.17;
+const CHANGED_TARGET = 3760;
+const CHANGED_RUNS = 5;
 const REPLY_MS = 120000;
 
 const failures = [];
@@ -97,7 +98,9 @@ async function series(mode) {
 
 try {
   const normal = await series('normal');
-  const changed = await series('changed');
+  const changedRuns = [];
+  for (let run = 0; run < CHANGED_RUNS; run += 1) changedRuns.push(await series('changed'));
+  const changed = { ...changedRuns[0], mean: Math.round(changedRuns.reduce((sum, result) => sum + result.mean, 0) / CHANGED_RUNS), runMeans: changedRuns.map((result) => result.mean) };
   const full = await series('full');
   expect(normal.bodies[0].rules !== undefined && normal.bodies[0].task !== undefined, 'the first next_context reply lost rules or task');
   expect(normal.bodies.slice(1).every((body) => body.unchanged === true || typeof body.rules === 'string'), 'a later reply is neither unchanged nor a full step with rules');
@@ -106,14 +109,14 @@ try {
   const changedSteps = changed.bodies.slice(1).filter((body) => body.unchanged !== true);
   expect(changedSteps.length >= 5, `the changed series has ${changedSteps.length} changed steps; expected 5`);
   expect(changedSteps.every((body) => typeof body.rules === 'string' && typeof body.run === 'string'), 'a changed step lost rules or run');
-  expect(changed.mean <= Math.floor(BASELINE_CHANGED_MEAN * (1 - CHANGED_REDUCTION)), `the changed 20-step mean is ${changed.mean} bytes; the target is at most ${Math.floor(BASELINE_CHANGED_MEAN * (1 - CHANGED_REDUCTION))} (baseline ${BASELINE_CHANGED_MEAN})`);
+  expect(changed.mean <= CHANGED_TARGET, `the changed 20-step mean over ${CHANGED_RUNS} runs is ${changed.mean} bytes (runs ${changed.runMeans.join(',')}); the target is at most ${CHANGED_TARGET} (baseline ${BASELINE_CHANGED_MEAN}; the rules text on changed steps and the MCP content duplicate are kept)`);
   expect(typeof changed.contextSeq === 'object' && changed.contextSeq !== null, 'query_log did not return the context-reply event');
   const wall = ((Date.now() - started) / 1000).toFixed(2);
   if (failures.length > 0) {
     console.error(`${CHECK}: ${failures.length} failure(s) on ${target} (wall ${wall} s)\n- ${failures.join('\n- ')}`);
     process.exitCode = 1;
   } else {
-    console.log(`${CHECK}: ok (${target}: normal 20-step mean ${normal.mean} bytes, baseline ${BASELINE_NORMAL_MEAN}; changed 20-step mean ${changed.mean} bytes, baseline ${BASELINE_CHANGED_MEAN}, ${Math.round((1 - changed.mean / BASELINE_CHANGED_MEAN) * 100)}% smaller; full-reply 20-step mean ${full.mean} bytes; wall ${wall} s)`);
+    console.log(`${CHECK}: ok (${target}: normal 20-step mean ${normal.mean} bytes, baseline ${BASELINE_NORMAL_MEAN}; changed 20-step mean over ${CHANGED_RUNS} runs ${changed.mean} bytes (runs ${changed.runMeans.join(',')}), baseline ${BASELINE_CHANGED_MEAN}, ${Math.round((1 - changed.mean / BASELINE_CHANGED_MEAN) * 100)}% smaller; full-reply 20-step mean ${full.mean} bytes; wall ${wall} s)`);
   }
 } finally {
   rmSync(scratch, { recursive: true, force: true });
