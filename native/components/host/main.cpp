@@ -62,7 +62,7 @@ std::optional<std::string> flag_error_for(const gm::host::HostArgs& args) {
 int main(int argc, char** argv) {
     const gm::host::HostArgs args = gm::host::parse_args(argc, argv);
     if (auto error = flag_error_for(args)) {
-        std::cerr << "gm " << args.mode << ": " << *error << "; nothing was changed\n" << kUsage;
+        std::cerr << "gm " << args.mode << ": " << *error << "; this call changed nothing\n" << kUsage;
         return 2;
     }
     if (args.mode == "serve") return gm::host::run_serve(args);
