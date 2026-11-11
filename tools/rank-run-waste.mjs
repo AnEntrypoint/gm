@@ -22,9 +22,6 @@ const runs = [];
 for (const root of defaults) {
   if (!existsSync(root)) continue;
   for (const name of readdirSync(root).filter((name) => name.startsWith(`${day}-`)).sort()) {
-    const clock = name.slice(11, 16);
-    if (after !== null && clock < after) continue;
-    if (before !== null && clock >= before) continue;
     const file = join(root, name, 'log.jsonl');
     if (!existsSync(file)) continue;
     const events = readFileSync(file, 'utf8').split('\n').filter(Boolean).flatMap((line) => {
@@ -48,8 +45,18 @@ const add = (cause, turns, tokens, detail) => {
   causes.set(cause, row);
 };
 
-const totals = { runs: runs.length, calls: 0, codeCalls: 0, waitMs: 0, outputChars: 0, fullCalls: 0, freshCalls: 0, readOrShellCalls: 0 };
+const totals = { runs: 0, calls: 0, codeCalls: 0, waitMs: 0, outputChars: 0, fullCalls: 0, freshCalls: 0, readOrShellCalls: 0 };
+const inWindow = (event) => {
+  if (after === null && before === null) return true;
+  const clock = typeof event.t === 'string' ? event.t.slice(11, 16).replace(':', '-') : '';
+  if (after !== null && clock < after) return false;
+  if (before !== null && clock >= before) return false;
+  return true;
+};
 for (const run of runs) {
+  run.events = run.events.filter(inWindow);
+  if (run.events.length === 0) continue;
+  totals.runs += 1;
   const actions = new Map();
   const seenCalls = new Map();
   const lastWrite = new Map();
