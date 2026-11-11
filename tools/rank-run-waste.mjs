@@ -5,7 +5,14 @@ import { join, resolve } from 'node:path';
 const argv = process.argv.slice(2);
 const dayAt = argv.indexOf('--day');
 const day = dayAt === -1 ? new Date().toISOString().slice(0, 10) : argv[dayAt + 1];
-const roots = argv.filter((arg, index) => arg !== '--day' && index !== dayAt + 1).map((arg) => resolve(arg));
+const timeArg = (flag) => {
+  const at = argv.indexOf(flag);
+  return at === -1 ? null : argv[at + 1].replace(':', '-');
+};
+const after = timeArg('--after');
+const before = timeArg('--before');
+const valued = new Set(['--day', '--after', '--before'].map((f) => argv[argv.indexOf(f) + 1]));
+const roots = argv.filter((arg) => !arg.startsWith('--') && !valued.has(arg)).map((arg) => resolve(arg));
 const defaults = roots.length > 0 ? roots : ['/workspace/fx/runs', '/workspace/jayzee/runs', '/workspace/thebird/runs'];
 const TOKEN_CHARS = 4;
 const SMALL_OUTPUT = 2000;
@@ -15,6 +22,9 @@ const runs = [];
 for (const root of defaults) {
   if (!existsSync(root)) continue;
   for (const name of readdirSync(root).filter((name) => name.startsWith(`${day}-`)).sort()) {
+    const clock = name.slice(11, 16);
+    if (after !== null && clock < after) continue;
+    if (before !== null && clock >= before) continue;
     const file = join(root, name, 'log.jsonl');
     if (!existsSync(file)) continue;
     const events = readFileSync(file, 'utf8').split('\n').filter(Boolean).flatMap((line) => {
@@ -38,7 +48,7 @@ const add = (cause, turns, tokens, detail) => {
   causes.set(cause, row);
 };
 
-const totals = { runs: runs.length, calls: 0, codeCalls: 0, waitMs: 0, outputChars: 0 };
+const totals = { runs: runs.length, calls: 0, codeCalls: 0, waitMs: 0, outputChars: 0, fullCalls: 0, freshCalls: 0, readOrShellCalls: 0 };
 for (const run of runs) {
   const actions = new Map();
   const seenCalls = new Map();
@@ -61,6 +71,9 @@ for (const run of runs) {
     }
     if (event.kind === 'code-call') {
       totals.codeCalls += 1;
+      if (event.args?.full === true) totals.fullCalls += 1;
+      if (event.args?.fresh === true) totals.freshCalls += 1;
+      if (event.tool === 'read_file' || event.tool === 'run_shell') totals.readOrShellCalls += 1;
       if (!innerByAction.has(openRunCode)) innerByAction.set(openRunCode, []);
       innerByAction.get(openRunCode).push(event);
       const key = `${event.tool}:${stable(event.args)}`;
@@ -103,7 +116,9 @@ for (const run of runs) {
 }
 
 const rows = [...causes.values()].sort((a, b) => b.tokens - a.tokens || b.turns - a.turns);
-console.log(`day ${day}: ${totals.runs} runs, ${totals.calls} model calls, ${totals.codeCalls} verb calls in run_code, ${totals.outputChars} output chars, ${Math.round(totals.waitMs)} ms in job waits`);
+const window = `${after ? ` from ${after.replace('-', ':')}` : ''}${before ? ` before ${before.replace('-', ':')}` : ''}`;
+console.log(`day ${day}${window}: ${totals.runs} runs, ${totals.calls} model calls, ${totals.codeCalls} verb calls in run_code, ${totals.outputChars} output chars, ${Math.round(totals.waitMs)} ms in job waits`);
+console.log(`read_file and run_shell calls in run_code: ${totals.readOrShellCalls}; with full: true: ${totals.fullCalls}; with fresh: true: ${totals.freshCalls}`);
 console.log('rank | cause | turns lost | tokens lost (approx) | example');
 rows.forEach((row, index) => {
   console.log(`${index + 1} | ${row.cause} | ${row.turns} | ${row.tokens} | ${row.examples[0] ?? ''}`);
