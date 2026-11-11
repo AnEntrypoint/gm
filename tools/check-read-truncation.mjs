@@ -92,7 +92,7 @@ if (binary === null || !existsSync(binary)) {
     child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' })}\n`);
     await rpc('resources/read', { uri: 'skill://gm/SKILL.md' });
     await rpc('tools/call', { name: 'next_context', arguments: { task: 'read truncation check' } });
-    const probe = (path, args) => `const r = await gm.read_file({ path: '${path}'${args} }); return { truncated: r.truncated, totalBytes: r.totalBytes, notice: r.notice, output: String(r.output).slice(-400) };`;
+    const probe = (path, args) => `const r = await gm.read_file({ path: '${path}'${args}, full: true, fresh: true }); return { truncated: r.truncated, totalBytes: r.totalBytes, notice: r.notice, output: String(r.output).slice(-400) };`;
     const bigWhole = await nativeRead(rpc, probe('big.txt', ''));
     expectPage('native read_file whole big.txt', bigWhole, BIG_BYTES, false);
     const bigLines = await nativeRead(rpc, probe('big.txt', ', offset: 0'));
@@ -101,7 +101,7 @@ if (binary === null || !existsSync(binary)) {
     expectPage('native read_file chars big.txt', bigChars, BIG_BYTES, true);
     const smallLines = await nativeRead(rpc, probe('small.txt', ''));
     expectPage('native read_file lines small.txt', smallLines, SMALL_BYTES, false);
-    const returned = await rpc('tools/call', { name: 'run_code', arguments: { body: "const r = await gm.read_file({ path: 'big.txt' }); return r.output;" } });
+    const returned = await rpc('tools/call', { name: 'run_code', arguments: { body: "const r = await gm.read_file({ path: 'big.txt', full: true }); return r.output;" } });
     const cutReply = JSON.parse(returned.result?.content?.[0]?.text ?? 'null');
     if (cutReply?.ok !== true) failures.push(`a returned page over the reply cap was refused: ${cutReply?.error ?? 'no reply'}`);
     else if (cutReply.truncated !== true || typeof cutReply.outputPath !== 'string' || cutReply.outputPath === '') failures.push('a returned page cut by the reply cap carries no bounded artifact path');

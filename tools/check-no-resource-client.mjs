@@ -128,7 +128,7 @@ try {
     const listed = (await client.rpc('tools/list', {}))?.result?.tools?.map((entry) => entry.name) ?? [];
     expect(listed.includes('run_code') && listed.includes('next_context'), `tools/list lacks run_code or next_context: ${short(listed)}`);
 
-    const refusal = await client.toolReply('run_code', { body: "return (await gm.read_file({ path: 'sample.txt' })).output;" });
+    const refusal = await client.toolReply('run_code', { body: "return (await gm.read_file({ path: 'sample.txt', fresh: true })).output;" });
     const gated = refusal?.result?.structuredContent ?? {};
     const blocks = refusal?.result?.content ?? [];
     const disk = readFileSync(join(root, 'skills', 'gm', 'SKILL.md'), 'utf8');
@@ -142,7 +142,7 @@ try {
     expect(refusalBytes <= skillBytes + REFUSAL_OVERHEAD_BYTES, `the refusal is ${refusalBytes} bytes; one copy of the skill is ${skillBytes} bytes`);
     expect(gated.rulesNotice === undefined, `the refusal carries a rules notice: ${short(gated.rulesNotice)}`);
 
-    const early = await client.tool('run_code', { body: "return (await gm.read_file({ path: 'sample.txt' })).output;" });
+    const early = await client.tool('run_code', { body: "return (await gm.read_file({ path: 'sample.txt', fresh: true })).output;" });
     expect(early.ok === true && short(early).includes('tool-only client'), `the second run_code did not run its body: ${short(early)}`);
     expect(String(early.rulesNotice ?? '').includes('rule 2'), `run_code before next_context has no rule 2 notice: ${short(early.rulesNotice)}`);
 
@@ -150,7 +150,7 @@ try {
     expect(first.ok === true && first.step === 1, `next_context did not open step 1: ${short({ ok: first.ok, step: first.step, error: first.error })}`);
     expect(String(first.rulesPending ?? '').includes('rule 2'), `the first next_context does not report rule 2 once: ${short(first.rulesPending)}`);
 
-    const after = await client.tool('run_code', { body: "return (await gm.read_file({ path: 'sample.txt' })).output;" });
+    const after = await client.tool('run_code', { body: "return (await gm.read_file({ path: 'sample.txt', fresh: true })).output;" });
     expect(after.ok === true && short(after).includes('tool-only client'), `run_code after next_context did not run: ${short(after)}`);
     expect(after.rulesNotice === undefined, `the rule 2 notice is still on run_code after a correct next_context: ${short(after.rulesNotice)}`);
 
@@ -166,7 +166,7 @@ try {
     const restartDeadline = Date.now() + RESTART_MS;
     while (process.platform !== 'win32' && restartCount() === restartsBefore && Date.now() < restartDeadline) await sleep(100);
     expect(process.platform === 'win32' || restartCount() > restartsBefore, `no restart event in the run log within ${RESTART_MS} ms of the trigger`);
-    const afterRestart = await client.tool('run_code', { body: "return (await gm.read_file({ path: 'sample.txt' })).output;" });
+    const afterRestart = await client.tool('run_code', { body: "return (await gm.read_file({ path: 'sample.txt', fresh: true })).output;" });
     expect(afterRestart.ok === true && short(afterRestart).includes('tool-only client'), `run_code after a worker restart did not run for the tool-only client: ${short(afterRestart)}`);
 
     const finished = await client.tool('finish', { witness: 'run_code returned "tool-only client" from sample.txt with no resources/read on the connection' });

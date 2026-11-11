@@ -106,7 +106,7 @@ const rpc = (method, params) => {
 const failures = [];
 const observedOf = {};
 
-const probeBody = (args) => `const r = await gm.read_file({ path: 'fixed.txt'${args} }); const out = String(r.output ?? ''); return { ok: r.ok === true, unit: r.unit ?? null, total: r.total ?? null, offset: r.offset ?? null, next: r.next ?? null, nextOffset: r.nextOffset ?? null, truncated: r.truncated ?? null, totalBytes: r.totalBytes ?? null, digest: r.digest ?? null, cutLine: r.cutLine ?? null, hint: r.hint ?? null, notice: r.notice ?? null, outLen: out.length, outHead: out.slice(0, 24), outTail: out.slice(-24) };`;
+const probeBody = (args) => `const r = await gm.read_file({ path: 'fixed.txt'${args}, full: true, fresh: true }); const out = String(r.output ?? ''); return { ok: r.ok === true, unit: r.unit ?? null, total: r.total ?? null, offset: r.offset ?? null, next: r.next ?? null, nextOffset: r.nextOffset ?? null, truncated: r.truncated ?? null, totalBytes: r.totalBytes ?? null, digest: r.digest ?? null, cutLine: r.cutLine ?? null, hint: r.hint ?? null, notice: r.notice ?? null, outLen: out.length, outHead: out.slice(0, 24), outTail: out.slice(-24) };`;
 
 try {
   await rpc('initialize', { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'gm-read-parity-check', version: '1' } });
