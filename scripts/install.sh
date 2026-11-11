@@ -5,6 +5,8 @@ RELEASE_BASE="${GMNEW_RELEASE_BASE:-https://github.com/AnEntrypoint/gm/releases/
 INSTALL_ROOT="$HOME/.gmnew"
 CURRENT_DIR="$INSTALL_ROOT/current"
 MCP_CONFIG=""
+LOCAL_BUILD=""
+SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
 die() {
     printf 'install: %s\n' "$*" >&2
@@ -14,10 +16,71 @@ die() {
 while [ $# -gt 0 ]; do
     case "$1" in
         --mcp-config) [ $# -ge 2 ] || die "--mcp-config needs a path"; MCP_CONFIG="$2"; shift ;;
+        --local) [ $# -ge 2 ] || die "--local needs a build directory, e.g. build/release"; LOCAL_BUILD="$2"; shift ;;
         *) die "unknown argument: $1" ;;
     esac
     shift
 done
+
+register() {
+    EXE="$CURRENT_DIR/gm"
+    if [ "${GMNEW_SKIP_REGISTER:-0}" = 1 ]; then
+        printf 'registration skipped (GMNEW_SKIP_REGISTER=1)\n'
+    elif [ -n "$MCP_CONFIG" ]; then
+        "$EXE" install --mcp-config "$MCP_CONFIG" || die "gm install failed"
+    else
+        "$EXE" install || die "gm install failed"
+    fi
+}
+
+install_local() {
+    HOST="$LOCAL_BUILD/native/components/host"
+    [ -x "$HOST/gm" ] && [ -x "$HOST/gm-core" ] || die "no gm and gm-core in $HOST: build the gm target first"
+    [ -d "$HOST/skills" ] || die "no skills in $HOST: build the gm_skills target first"
+    [ -d "$SOURCE_ROOT/native/leaves" ] && [ -d "$SOURCE_ROOT/defaults" ] || die "no native/leaves or defaults in $SOURCE_ROOT"
+    VERSION="$("$HOST/gm" --version | awk '{print $1}')"
+    case "$VERSION" in
+        ""|*[!A-Za-z0-9._-]*) die "unexpected build version: $VERSION" ;;
+    esac
+
+    mkdir -p "$INSTALL_ROOT"
+    STAGE="$(mktemp -d "$INSTALL_ROOT/stage.XXXXXX")"
+    trap 'rm -rf "$STAGE"' EXIT
+    mkdir "$STAGE/current"
+    cp "$HOST/gm" "$HOST/gm-core" "$STAGE/current/"
+    cp -R "$HOST/skills" "$STAGE/current/skills"
+    cp -R "$SOURCE_ROOT/native/leaves" "$STAGE/current/leaves"
+    cp -R "$SOURCE_ROOT/defaults" "$STAGE/current/defaults"
+    printf '{"checked_ms":%s000,"etag":"","version":"%s"}\n' "$(date -u +%s)" "$VERSION" > "$STAGE/current/.gmnew-update.json"
+
+    PREVIOUS=""
+    if [ -e "$CURRENT_DIR" ]; then
+        OLD_ID="$("$CURRENT_DIR/gm" --version 2>/dev/null | awk '{print $1}')" || OLD_ID=""
+        [ -n "$OLD_ID" ] || OLD_ID="unknown-$(date -u +%s)"
+        PREVIOUS="$INSTALL_ROOT/previous-$OLD_ID"
+        if [ -e "$PREVIOUS" ]; then
+            mv "$PREVIOUS" "$PREVIOUS.$(date -u +%s)"
+        fi
+        mv "$CURRENT_DIR" "$PREVIOUS"
+    fi
+    if ! mv "$STAGE/current" "$CURRENT_DIR"; then
+        if [ -n "$PREVIOUS" ] && [ -e "$PREVIOUS" ]; then
+            mv "$PREVIOUS" "$CURRENT_DIR"
+        fi
+        die "cannot move the new build into $CURRENT_DIR"
+    fi
+
+    printf 'installed local build %s from %s at %s\n' "$VERSION" "$LOCAL_BUILD" "$CURRENT_DIR/gm"
+    if [ -n "$PREVIOUS" ]; then
+        printf 'kept the previous install at %s\n' "$PREVIOUS"
+    fi
+    register
+}
+
+if [ -n "$LOCAL_BUILD" ]; then
+    install_local
+    exit 0
+fi
 
 case "$(uname -s)" in
     Linux) OS=linux ;;
@@ -97,13 +160,5 @@ if [ ! -e "$STATE" ]; then
     printf '{"checked_ms":%s000,"etag":"","version":"%s"}\n' "$(date -u +%s)" "$VERSION" > "$STATE"
 fi
 
-EXE="$CURRENT_DIR/$EXE_NAME"
-printf 'installed gmnew %s (%s) at %s\n' "$VERSION" "$TARGET" "$EXE"
-
-if [ "${GMNEW_SKIP_REGISTER:-0}" = 1 ]; then
-    printf 'registration skipped (GMNEW_SKIP_REGISTER=1)\n'
-elif [ -n "$MCP_CONFIG" ]; then
-    "$EXE" install --mcp-config "$MCP_CONFIG" || die "gm install failed"
-else
-    "$EXE" install || die "gm install failed"
-fi
+printf 'installed gmnew %s (%s) at %s\n' "$VERSION" "$TARGET" "$CURRENT_DIR/$EXE_NAME"
+register
