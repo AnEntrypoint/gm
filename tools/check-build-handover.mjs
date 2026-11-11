@@ -22,7 +22,7 @@ expect(/-dev$/.test(stamp) || stamp.length > 0, `the build under test reports no
 const sandbox = mkdtempSync(join(tmpdir(), 'gm-handover-'));
 const install = join(sandbox, 'install');
 const versions = join(install, 'versions');
-const second = `${stamp.slice(0, -3)}tst`;
+const second = `${stamp[0] === '0' ? '1' : '0'}${stamp.slice(1)}`;
 const broken = 'broken-dev';
 const place = (version, patch) => {
   const dir = join(versions, version);
@@ -188,7 +188,8 @@ try {
   expect(directRestarts.length === 1 && directRestarts[0].reason === `build ${older} -> ${stamp}`, `the restart should name the build change: ${JSON.stringify(directRestarts)}`);
 
   point(broken);
-  await sleep(4000);
+  const refusalDeadline = Date.now() + 60000;
+  while (!stderr.join('').includes(`refused build ${broken}`) && Date.now() < refusalDeadline) await sleep(250);
   const still = await call('run_code', { body: 'return "still on B";' }, 60000);
   expect(still?.output === 'still on B', `a broken build must not take the session: ${JSON.stringify(still)?.slice(0, 200)}`);
   expect(workerExe().includes(join('versions', second)), 'a broken build must leave the worker on its build');
