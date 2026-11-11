@@ -2697,3 +2697,10 @@ Release run 43101203063 failed in build-windows at ab5e2aa: the Windows build co
 - Guarded for Windows with `#if !defined(_WIN32)`, the Windows branch returns "skipped" (or is empty): driver.cpp (phase-b prints that it runs on Linux and macOS only, exit 2), checks/hold_server.cpp, checks/process_tree.cpp, checks/restart_jobs.cpp, checks/restart_skill_read.cpp, checks/build_handover.cpp, checks/stop_fetch.cpp, checks/run_code_budget.cpp, checks/lazy_browser.cpp, checks/browser_scope.cpp. These use unistd.h, sys/socket.h, signal.h, kill and getpid. Witness: the Linux build of gm-tool exits 0 with no errors. The Windows compile is NOT checked here (no Windows or cross compiler on this host); the release run on the pushed commit is its witness.
 - Not guarded and not verified for Windows: any POSIX-only code outside those ten files. The release run will show it.
 
+## Round e6b5, release run 43112393061 on 339c582: two fixes (Phase A)
+
+Run 43112393061 showed three failures: the macOS build, the Linux build's phase-b step and the Windows build's phase-b step. Each change, and its witness:
+
+- native/components/tool/driver.cpp: the mtime is cast to long long before to_string; the macOS compiler found the call ambiguous (macOS arm64 and x64 builds failed). Witness: the Linux gm-tool build exits 0 with no errors; the macOS build of the same line is the release run's witness.
+- native/components/tool/ship.cpp: phase-b accepts a built stamp of the CI shape (`<HEAD sha7>-<run>`, from GMNEW_VERSION in release.yml) as well as the tree stamp; before, the CI build (Linux and Windows) failed the stamp check. Local builds still need the exact tree stamp. Witness: the local phase-b run (dev stamp path); the CI shape is the release run's witness.
+

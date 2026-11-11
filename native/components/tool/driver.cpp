@@ -62,7 +62,7 @@ std::string stat_of(const fs::path& path) {
     const auto size = fs::file_size(path, ec);
     if (ec) return "missing";
     const auto mtime = fs::last_write_time(path, ec).time_since_epoch().count();
-    return std::to_string(size) + ":" + std::to_string(mtime);
+    return std::to_string(size) + ":" + std::to_string(static_cast<long long>(mtime));
 }
 
 std::map<std::string, std::string> tree_state(const fs::path& root) {

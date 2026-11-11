@@ -70,7 +70,13 @@ int phase_b_command(const fs::path& root, const fs::path& build) {
     std::istringstream words(version.out);
     std::string built_stamp;
     words >> built_stamp;
-    if (built_stamp != *tree_stamp) {
+    const auto stamp_head = git_output(root, {"rev-parse", "HEAD"});
+    if (!stamp_head || stamp_head->size() < 7) {
+        std::puts("phase-b: git rev-parse HEAD failed");
+        return 1;
+    }
+    const bool ci_shape = built_stamp.rfind(stamp_head->substr(0, 7) + "-", 0) == 0;
+    if (built_stamp != *tree_stamp && !ci_shape) {
         std::printf("phase-b: built stamp '%s' does not match the tree stamp '%s'\n", built_stamp.c_str(), tree_stamp->c_str());
         return 1;
     }
