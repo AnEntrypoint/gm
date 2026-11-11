@@ -2620,3 +2620,21 @@ Not run here: tools/check-txiki-wasi.mjs and the gm reactor wasm (the gm wasm32-
 - Phase B (round e6b5, install step): pass at dded62a, 3 min 54 s wall; longest step check-skill-reload 106.3 s inside Phase B (5.2 s alone).
 - Phase A (round e6b5, teardown and item 5 continuation): check-browser-scope is native (native/components/tool/checks/browser_scope.cpp); tools/check-browser-scope.mjs is deleted. Survivor witness: kill disabled, 3 survivors, check fails; 1500 ms watchdog, first call fails with zero survivors; both restored and ok in about 7 s. check-lazy-browser asserts the pin marker (current/pw/gm-pin = 24646cc) and the entry path; a wrong expected pin fails it. check-worker-growth and check-feed-reference are native and the Node scripts are deleted; witnesses: growth limit -1 fails with 336 KB growth reported, feed job-name and size mutants fail, restored ok at 4.7 s and 0.37 s. Shared helpers tool_text and tool_json are in session.cpp.
 - Leaked browser trees: 12 stale /tmp/gm-browser-scope-*, /tmp/gm-lazy-browser-* and /tmp/gm-browser-home-* dirs removed after a /proc check found no live process using them. /tmp/gm-browser-witness.mjs (owner abc, 10 Nov) is not from these checks and was left alone.
+
+## Round e6b5: remaining Node checks in gm-tool (Phase A, 57fd18494d81-dev)
+
+Witnesses run on build/release with `build/release/native/components/tool/gm-tool check build/release/native/components/host/gm <name>`. Each line is the check's own output.
+
+- check-run-code-budget: ok (a 1083 ms JavaScript body with timeoutMs 1667 returned in 1093 ms; a fetch leaf held for 833 ms ended in 864 ms; a 300 ms fetch with a catastrophic match timed out in 311 ms in one attempt; a 300 ms fetch that timed out ended in 321 ms in one attempt; wall 1.12 s). Mutant (job lifetime 60 s, check-clock-mutations): fails as expected.
+- check-turn-economy: ok (unchanged reply 67 bytes against 2279 for a full reply; one job_status call waited 760 ms; wall 0.94 s). Mutant (job wait cap 30 s): fails as expected.
+- check-restart-jobs: ok (the job's process alive 675 ms after the trigger; exited 0 with output "done" at 8020 ms; wall 8.44 s).
+- check-run-code-progress: ok (3 progress notices; wall 0.46 s).
+- check-read-parity: ok (8 probes match; wall 0.25 s).
+- check-protocol-versions: ok (5 versions echoed, 1999-01-01 answered with 2025-11-25; client connects 5, refuses 3; wall 0.44 s).
+- check-relay-reexec: ok, skipped on the dev stamp (57fd18494d81-dev). It runs for real only on a build with -DGMNEW_VERSION=<commit>-1.
+- check-witness-next-context-replay: ok (first run finished; successor run; brief 32442 chars; wall 0.07 s).
+- check-build-handover: ok (the body in flight finished on the old build, the next call ran on the new one, broken-dev refused; wall 15.57 s).
+- check-console: ok (flood kept 76 lines, 8188 bytes, dropped 225; format line cut at 510 bytes; wall 0.13 s).
+- mcp-conformance: ok (86 passed, 0 failed of 86 checks in 24 scenarios; wall 1.17 s).
+- parity-contract: ok (18 witness groups, W1 to W18, W23, W24, pass on the native binary; wall 23.40 s). W19, W20, W21, W22 and W25 are not in the native set: W19 and W20 test check-build's `--only` mode, and W21 and W22 wrap the native checks.
+

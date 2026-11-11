@@ -293,12 +293,14 @@ def('W20', async () => {
 });
 
 def('W21', async () => {
-  const r = spawnSync(process.execPath, [join(root, 'tools', 'check-install-switch.mjs'), binary], { encoding: 'utf8', timeout: 300000 });
+  const tool = join(dirname(binary), '..', '..', 'tool', 'gm-tool');
+  const r = spawnSync(tool, ['check', binary, 'check-install-switch'], { encoding: 'utf8', timeout: 300000 });
   return `relay re-exec on the stable path: exit ${r.status}; ${r.stdout.includes('re-executed through the stable path on the same pid') ? 'same pid switched' : 'not seen'}`;
 });
 
 def('W22', async () => {
-  const r = spawnSync(process.execPath, [join(root, 'tools', 'check-skill-serve.mjs'), binary], { encoding: 'utf8', timeout: 300000 });
+  const tool = join(dirname(binary), '..', '..', 'tool', 'gm-tool');
+  const r = spawnSync(tool, ['check', binary, 'check-skill-serve'], { encoding: 'utf8', timeout: 300000 });
   return `skill-serve default: exit ${r.status}; default serve returns the binary's skill: ${r.stdout.includes("the default serve returns the binary's")}`;
 });
 
@@ -332,7 +334,7 @@ def('W24', async () => {
 });
 
 def('W25', async () => {
-  const r = spawnSync(process.execPath, [join(root, 'tools', 'check-build-handover.mjs'), hostDir], { encoding: 'utf8', timeout: 300000 });
+  const r = spawnSync(join(dirname(binary), '..', '..', 'tool', 'gm-tool'), ['check', binary, 'check-build-handover'], { encoding: 'utf8', timeout: 300000 });
   return `build hand-over: exit ${r.status}; the body in flight finished on the old build, the next call ran on the new one, a broken build was refused: ${r.stdout.includes('the broken build broken-dev was refused') ? 'yes' : 'no'}`;
 });
 

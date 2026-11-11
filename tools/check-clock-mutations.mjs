@@ -72,14 +72,16 @@ const MUTANTS = [
     file: join(root, 'native', 'components', 'mcp', 'include', 'gm', 'mcp.hpp'),
     from: 'std::uint64_t job_lifetime_ms = 3600000;',
     to: 'std::uint64_t job_lifetime_ms = 60000;',
-    check: 'check-run-code-budget.mjs',
+    check: 'check-run-code-budget',
+    command: (binary) => [join(buildDir, 'native', 'components', 'tool', 'gm-tool'), 'check', binary, 'check-run-code-budget'],
   },
   {
     name: 'job wait cap 30 s',
     file: join(root, 'native', 'components', 'verbs', 'job.cpp'),
     from: 'const double max_wait_ms = 60000 * clock_scale();',
     to: 'const double max_wait_ms = 30000 * clock_scale();',
-    check: 'check-turn-economy.mjs',
+    check: 'check-turn-economy',
+    command: (binary) => [join(buildDir, 'native', 'components', 'tool', 'gm-tool'), 'check', binary, 'check-turn-economy'],
   },
 ];
 
@@ -93,7 +95,8 @@ try {
       writeFileSync(mutant.file, source.replace(mutant.from, mutant.to));
       const built = build();
       expect(built.status === 0, `${mutant.name}: the mutant did not build: ${String(built.stderr).slice(-300)}`);
-      const run = spawnSync(process.execPath, [join(root, 'tools', mutant.check), binary], { encoding: 'utf8', timeout: 300000 });
+      const [program, ...args] = mutant.command(binary);
+      const run = spawnSync(program, args, { encoding: 'utf8', timeout: 300000 });
       expect(run.status !== 0, `${mutant.name}: ${mutant.check} passed on the mutant, so the scaled check does not prove this regression`);
       console.log(`${CHECK}: ${mutant.name}: ${mutant.check} ${run.status === 0 ? 'passed (not caught)' : `failed as expected (exit ${run.status})`}`);
     } finally {

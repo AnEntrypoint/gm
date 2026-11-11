@@ -134,7 +134,7 @@ native. `.gmnew-update.json` stays as data.
 | check-feed-reference.mjs | check-feed-reference | 0.37 s | moved; .mjs deleted |
 | check-lazy-browser (native) | check-lazy-browser | 7.5 s | teardown by tree, PID survivor count, pin marker assert |
 
-Still on Node, run by check-build and parity-contract: the other 27 check-*.mjs and witness-*.mjs in the NATIVE list, the conformance run, and tools/parity-contract.mjs. Node is not removed from phase B: ship.cpp and check-build still need it for those. Node stays in phase B and check-build until each has a native replacement; the group-by-group list continues in the next round.
+Still on Node at the start of this round (the next section records what moved after it):  the other 27 check-*.mjs and witness-*.mjs in the NATIVE list, the conformance run, and tools/parity-contract.mjs. Node is not removed from phase B: ship.cpp and check-build still need it for those. Node stays in phase B and check-build until each has a native replacement; the group-by-group list continues in the next round.
 
 ## Phase B timing (round e6b5, install step, dded62a)
 
@@ -147,3 +147,27 @@ Still on Node, run by check-build and parity-contract: the other 27 check-*.mjs 
 - Teardown: check-lazy-browser and check-browser-scope take the process tree (Session descendants, the PIDs the reply names, and processes whose command line names the sandbox HOME) before session.stop(), kill it, wait 200 ms, and fail with the count and PIDs of any survivor. Witness on check-browser-scope: with kill disabled it failed with "3 process(es) started by this check are still alive"; with a 1500 ms watchdog it failed on the browser open only, with zero survivors. Restored, both pass in about 7 s.
 - Pin marker: gm reads the pin only in install_playwriter (native/components/host/install.cpp), to skip the clone when current/pw/gm-pin already says 24646cc. The launcher runs from the direct node entry in defaults/mcp.json, so no runtime path reads the marker. The marker is at current/pw/gm-pin, which is versions/<stamp>/pw/gm-pin; /config/.gmnew/current/gm-pin was never the right path. check-lazy-browser asserts the marker reads 24646cc and that ${HOME}/.gmnew/current/pw/bin/playwriter-project exists in the sandbox. Witness: with the expected pin changed to 00000000 it fails and prints the marker it read.
 
+## Remaining Node checks ported (round e6b5, items 1 to 3)
+
+Each check ran alone against build/release (build 57fd18494d81-dev, check on the built gm) and passed. Wall time is the check's own measure.
+
+| Node check | native check | wall |
+|---|---|---|
+| check-run-code-budget.mjs | check-run-code-budget | 1.12 s |
+| check-turn-economy.mjs | check-turn-economy | 0.94 s |
+| check-restart-jobs.mjs | check-restart-jobs | 8.44 s |
+| check-run-code-progress.mjs | check-run-code-progress | 0.46 s |
+| check-read-parity.mjs | check-read-parity | 0.25 s |
+| check-protocol-versions.mjs | check-protocol-versions | 0.44 s |
+| check-relay-reexec.mjs | check-relay-reexec | skipped (dev stamp) |
+| witness-next-context-replay.mjs | check-witness-next-context-replay | 0.07 s |
+| check-build-handover.mjs | check-build-handover | 15.57 s |
+| check-console.mjs | check-console | 0.13 s |
+| mcp-conformance.mjs | mcp-conformance | 1.17 s (86 of 86 in 24 scenarios) |
+| parity-contract.mjs (19 of 25 rows) | parity-contract | 23.40 s (18 witness groups over 20 witnesses) |
+
+- Mutant witnesses: `tools/check-clock-mutations.mjs build/release` reinstates the 60 s job lifetime and the 30 s job wait cap. The native check-run-code-budget and check-turn-economy both fail on their mutant, and the sources are restored (84.25 s wall).
+- Not ported: the `--real-clock` run of check-turn-economy (the native checks use the 1/60 scale only). parity-contract W19 and W20 test check-build's `--only` mode and name check-repeated-checks.mjs, which is deleted, so both fail until they are rewritten; W21 and W22 wrap the native check-install-switch and check-skill-serve; W25 wraps check-build-handover.
+- Still Node, so Node stays in phase B: tools/check-build.mjs (the driver: pool, cache, the exclusive relay check, and the clock mutations under --mutations), tools/check-clock-mutations.mjs, and tools/parity-contract.mjs (W19 and W20). Phase B also still calls `node tools/check-build.mjs` and `node tools/parity-contract.mjs` from native/components/tool/ship.cpp.
+- check-skill-reload, cause: the check waited for a restart with next_context waitMs 30000. The worker returns that wait only when an event is pending or the wait ends, so with no restart pending the check sat out the full 30 s, several times per run. It now polls next_context with waitMs 250 (await_restart, 30 s cap). Measured: 84 s to 17.6 s in the native run; 82.7 s inside Phase B before the change.
+- gm-pin: the playwriter pin marker is current/pw/gm-pin. Only install_playwriter reads it (native/components/host/install.cpp, the pin_file in current/pw); lazy_browser asserts that path. A file named gm-pin directly under current (current/gm-pin) is not a path anything reads.

@@ -78,7 +78,7 @@ jobs:
         if: matrix.target == 'x64-linux'
         shell: bash
         run: |
-          node tools/witness-next-context-replay.mjs build/${{ matrix.preset }}/native/components/host/gm
+          build/${{ matrix.preset }}/native/components/tool/gm-tool check build/${{ matrix.preset }}/native/components/host/gm check-witness-next-context-replay
       - name: Package
         shell: bash
         run: node tools/package.mjs --target ${{ matrix.target }} --build-dir build/${{ matrix.preset }} --out dist

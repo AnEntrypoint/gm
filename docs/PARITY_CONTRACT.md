@@ -8,7 +8,7 @@ Witness command form, from the gm checkout:
 
 It starts a gm server in a scratch workspace (the binary is started as `<binary> serve --workspace <dir> --run-dir <dir>/run --mcp-config <file>`, with playwriter disabled), drives it over JSON-RPC on stdio, and prints `<Wn> pass <observed>` or `<Wn> FAIL <reason>`. Items W17 to W22 run the install, check-build and relay tools from this checkout. The build directory they install from is the binary's own build tree (`native/components/host` under it) when the binary is in one, and this checkout's `build/release` otherwise. Expected lines are exact, byte for byte, unless marked host-dependent.
 
-Protocol version negotiated by the witnesses: 2025-06-18. Both engines serve 2025-11-25, 2025-06-18, 2025-03-26, 2024-11-05 and 2024-10-07 (tools/check-protocol-versions.mjs).
+Protocol version negotiated by the witnesses: 2025-06-18. Both engines serve 2025-11-25, 2025-06-18, 2025-03-26, 2024-11-05 and 2024-10-07 (gm-tool check-protocol-versions).
 
 ## 1. Tools
 
@@ -180,14 +180,14 @@ Witness (W20), the cache and the default pool size. The pool size is host-depend
 
 ## 6. Relay re-exec on the stable path
 
-After an install moves `current`, a relay started from `versions/<old>` re-executes through `<home>/.gmnew/current/gm` on the same pid, carrying any waiting next_context call. Witness (W21) runs tools/check-install-switch.mjs against your binary:
+After an install moves `current`, a relay started from `versions/<old>` re-executes through `<home>/.gmnew/current/gm` on the same pid, carrying any waiting next_context call. Witness (W21) runs `gm-tool check <bin> check-install-switch` against your binary:
 
     node tools/parity-contract.mjs <bin> W21
     W21 pass relay re-exec on the stable path: exit 0; same pid switched
 
 ## 7. skill-serve default
 
-With no `--skills` argument, the served skill is `skills/gm/SKILL.md` in the directory of the binary (the install, or the build tree's copy), and a live connection returns each change to the copied file on the next read (tools/check-skill-serve.mjs).
+With no `--skills` argument, the served skill is `skills/gm/SKILL.md` in the directory of the binary (the install, or the build tree's copy), and a live connection returns each change to the copied file on the next read (`gm-tool check <bin> check-skill-serve`).
 
     node tools/parity-contract.mjs <bin> W22
     W22 pass skill-serve default: exit 0; default serve returns the binary's skill: true

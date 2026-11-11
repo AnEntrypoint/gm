@@ -11,7 +11,8 @@ int usage() {
     std::fputs("usage: gm-tool check <gm binary> [check name ...]\n"
                "       gm-tool gate\n"
                "       gm-tool phase-b [build dir]\n"
-               "       gm-tool ship \"<subject>\" <paths...>  |  gm-tool ship --push\n",
+               "       gm-tool ship \"<subject>\" <paths...>  |  gm-tool ship --push\n"
+               "       gm-tool installed\n",
                stderr);
     return 2;
 }
@@ -69,5 +70,6 @@ int main(int argc, char** argv) {
         return gm::tool::phase_b_command(root, std::filesystem::absolute(build));
     }
     if (command == "ship") return gm::tool::ship_command(root, std::vector<std::string>(args.begin() + 1, args.end()));
+    if (command == "installed") return gm::tool::installed_command(root);
     return usage();
 }

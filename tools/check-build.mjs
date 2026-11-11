@@ -23,14 +23,13 @@ if (!binary) {
 }
 
 const CONFORMANCE = 'conformance';
+const GM_TOOL = join(buildDir, 'native', 'components', 'tool', 'gm-tool');
 const NATIVE = [
-    'check-run-code-budget.mjs', 'check-turn-economy.mjs', 'check-restart-jobs.mjs', 'check-run-code-progress.mjs',
-    'check-shell-stdin.mjs', 'check-grep-state-scope.mjs', 'check-job-bounds.mjs', 'check-early-run-code.mjs', 'check-stop-fetch.mjs',
-    'check-read-parity.mjs', 'check-protocol-versions.mjs', 'check-resources-subscribe.mjs', 'check-startup-attempts.mjs',
-    'check-skill-serve.mjs', 'check-no-resource-client.mjs', 'check-restart-skill-read.mjs', 'check-relay-reexec.mjs', 'check-embedded-runtime.mjs',
-    'witness-next-context-replay.mjs', 'check-install-switch.mjs', 'check-repeated-checks.mjs', 'check-owner-identity.mjs', 'check-build-handover.mjs', 'check-cut-marker.mjs', 'check-cancel-record.mjs', 'check-job-status-cancel.mjs', 'check-cancel-wait.mjs', 'check-console.mjs',
+    'check-turn-economy', 'check-restart-jobs', 'check-run-code-progress', 'check-read-parity',
+    'check-protocol-versions', 'check-relay-reexec', 'check-witness-next-context-replay',
+    'check-build-handover', 'check-console',
 ];
-const EXCLUSIVE = new Set(['check-relay-reexec.mjs']);
+const EXCLUSIVE = new Set(['check-relay-reexec']);
 const JOBS = Math.max(1, Number(process.env.GM_CHECK_JOBS ?? Math.min(6, Math.floor(cpus().length / 2))));
 const CACHE = join(buildDir, 'check-build-cache.json');
 const LOGS = join(buildDir, 'check-build-logs');
@@ -69,19 +68,10 @@ const treeState = () => {
     }
     return state;
 };
-const importClosure = (file, seen) => {
-    if (seen.has(file) || !existsSync(file)) return seen;
-    seen.add(file);
-    for (const [, spec] of readFileSync(file, 'utf8').matchAll(/(?:from|import\()\s*'(\.{1,2}\/[^']+)'/g)) importClosure(resolve(dirname(file), spec), seen);
-    return seen;
-};
 const cache = existsSync(CACHE) ? JSON.parse(readFileSync(CACHE, 'utf8')) : {};
 const print = (text) => process.stdout.write(`${text}\n`);
 
 const workspace = mkdtempSync(join(tmpdir(), 'gm-check-'));
-const configDir = mkdtempSync(join(tmpdir(), 'gm-check-mcp-'));
-const mcpConfig = join(configDir, 'no-default-mcp.json');
-writeFileSync(mcpConfig, JSON.stringify({ mcpServers: { playwriter: { disabled: true } } }));
 const timings = [];
 const failures = [];
 const started = Date.now();
@@ -119,7 +109,8 @@ const runOne = (label, script, args, key) =>
         const at = Date.now();
         const log = logPath(label);
         const out = [];
-        const child = spawn(process.execPath, [script, ...args], { cwd: root, detached: true, env: { ...process.env, GM_CHECK_TREE: TREE }, stdio: ['ignore', 'pipe', 'pipe'] });
+        const native = script === GM_TOOL;
+        const child = spawn(native ? script : process.execPath, native ? args : [script, ...args], { cwd: root, detached: true, env: { ...process.env, GM_CHECK_TREE: TREE }, stdio: ['ignore', 'pipe', 'pipe'] });
         child.stdout.on('data', (chunk) => out.push(chunk));
         child.stderr.on('data', (chunk) => out.push(chunk));
         const timer = setTimeout(() => child.kill('SIGKILL'), 600000);
@@ -171,11 +162,6 @@ const selected = (name) => only === null || only === name || only === name.repla
 
 const pipeline = async () => {
     const fp = fingerprint();
-    const keyOf = (label, script) => {
-        const hash = createHash('sha256').update(`${label}:${fp}`);
-        for (const file of [...importClosure(join(root, 'tools', script), new Set())].sort()) hash.update(`${file}:${readFileSync(file)}`);
-        return hash.digest('hex');
-    };
     const cached = (label, key) => cache[label] === key && !failures.includes(label);
 
     const jobs = [];
@@ -189,16 +175,10 @@ const pipeline = async () => {
     };
 
     if (only === null || only === CONFORMANCE) {
-        plan(CONFORMANCE, createHash('sha256').update(`conformance:${fp}`).digest('hex'), { script: join(root, 'tools', 'mcp-conformance.mjs'), args: ['--stdio', binary, 'serve', '--workspace', workspace, '--mcp-config', mcpConfig] }, jobs);
+        plan(CONFORMANCE, createHash('sha256').update(`conformance:${fp}`).digest('hex'), { script: GM_TOOL, args: ['check', binary, 'mcp-conformance'] }, jobs);
     }
     for (const name of NATIVE.filter(selected)) {
-        plan(name, keyOf(name, name), { script: join(root, 'tools', name), args: [binary] }, EXCLUSIVE.has(name) ? exclusive : jobs);
-    }
-    if (process.argv.includes('--slow')) {
-        for (const name of ['check-run-code-budget.mjs', 'check-turn-economy.mjs']) {
-            const label = `${name} (real clock)`;
-            plan(label, keyOf(label, name), { script: join(root, 'tools', name), args: [binary, '--real-clock'] }, jobs);
-        }
+        plan(name, createHash('sha256').update(`${name}:${fp}`).digest('hex'), { script: GM_TOOL, args: ['check', binary, name] }, EXCLUSIVE.has(name) ? exclusive : jobs);
     }
     if (process.argv.includes('--mutations')) {
         exclusive.push({ label: 'check-clock-mutations.mjs', script: join(root, 'tools', 'check-clock-mutations.mjs'), args: [buildDir], key: null });
@@ -221,7 +201,6 @@ try {
         print(`check-build: a check changed tracked files in the checkout: ${touched.slice(0, 10).join(", ")}${touched.length > 10 ? " ..." : ""}`);
     }
     rmSync(workspace, { recursive: true, force: true });
-    rmSync(configDir, { recursive: true, force: true });
     writeFileSync(CACHE, JSON.stringify(cache, null, 2));
     writeFileSync(DURATIONS, JSON.stringify(durations, null, 2));
     const wall = ((Date.now() - started) / 1000).toFixed(1);

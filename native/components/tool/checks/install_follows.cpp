@@ -64,6 +64,16 @@ std::vector<json::Value> restart_events(const fs::path& log) {
     return events;
 }
 
+std::size_t await_restart(Session& session, const fs::path& log, std::size_t before) {
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(30);
+    std::size_t count = restart_events(log).size();
+    while (count <= before && std::chrono::steady_clock::now() < deadline) {
+        session.rpc("tools/call", json::Object{{"name", "next_context"}, {"arguments", json::Object{{"waitMs", 250}}}});
+        count = restart_events(log).size();
+    }
+    return count;
+}
+
 long long worker_pid(const Session& session) {
     for (const long long pid : session.descendants()) {
         std::error_code ec;
@@ -156,12 +166,13 @@ CheckResult check_install_follows(const std::string& binary) {
                 }
                 fs::remove_all(build_host / "skills");
                 fs::copy(tree / "skills", build_host / "skills", fs::copy_options::recursive);
+                const std::size_t before_second = restart_events(log).size();
                 const auto second = install();
                 if (!second.started || second.exit_code != 0) result.failures.push_back("the second install failed: " + tail(second.out + second.err));
                 const std::string second_version = version_of(installed_gm);
                 if (second_version == first_version) result.failures.push_back("the second install did not change the installed version");
 
-                session.rpc("tools/call", json::Object{{"name", "next_context"}, {"arguments", json::Object{{"waitMs", 30000}}}});
+                await_restart(session, log, before_second);
                 const auto restarts = restart_events(log);
                 if (restarts.empty()) {
                     result.failures.push_back("the running session did not restart onto the installed build");
@@ -252,7 +263,7 @@ CheckResult check_skill_reload(const std::string& binary) {
 
             const std::size_t before_move = restart_events(log).size();
             variant(old_stamp[0] == '3' ? '4' : '3');
-            session.rpc("tools/call", json::Object{{"name", "next_context"}, {"arguments", json::Object{{"waitMs", 30000}}}});
+            await_restart(session, log, before_move);
             const auto moved = restart_events(log);
             if (moved.size() == before_move) {
                 result.failures.push_back("the path-only move did not restart the worker");
@@ -269,7 +280,7 @@ CheckResult check_skill_reload(const std::string& binary) {
             write_bytes(tree / "skills" / "gm" / "SKILL.md", read_bytes(tree / "skills" / "gm" / "SKILL.md") + "\nskill-reload scratch edit\n");
             const std::size_t before_edit = restart_events(log).size();
             variant(old_stamp[0] == '5' ? '6' : '5');
-            session.rpc("tools/call", json::Object{{"name", "next_context"}, {"arguments", json::Object{{"waitMs", 30000}}}});
+            await_restart(session, log, before_edit);
             const auto edited = restart_events(log);
             if (edited.size() == before_edit) {
                 result.failures.push_back("the real edit did not restart the worker");

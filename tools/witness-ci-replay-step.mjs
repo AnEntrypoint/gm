@@ -11,8 +11,7 @@ const required = [
         name: 'Replay witness',
         commands: [
             'npm ci --ignore-scripts',
-            'node tools/witness-next-context-replay.mjs node',
-            'node tools/witness-next-context-replay.mjs build/${{ matrix.preset }}/native/components/host/gm',
+            'build/${{ matrix.preset }}/native/components/tool/gm-tool check build/${{ matrix.preset }}/native/components/host/gm check-witness-next-context-replay',
         ],
     },
     {
