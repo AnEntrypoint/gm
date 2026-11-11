@@ -22,7 +22,7 @@ const char* kTabsCode =
     "const rows = []; let own = null; "
     "if (state.gmRun) { for (const p of state.gmRun.pages()) { if (p.isClosed()) continue; "
     "if (own === null) { const s = await state.gmRun.newCDPSession(p); own = (await s.send('Target.getTargetInfo')).targetInfo.browserContextId; await s.detach(); } "
-    "rows.push({ url: p.url(), title: await p.title().catch(() => '') }); } } "
+    "if (!state.gmTabIds) { state.gmTabIds = new WeakMap(); state.gmTabSeq = 0; } let id = state.gmTabIds.get(p); if (id === undefined) { state.gmTabSeq += 1; id = 't' + state.gmTabSeq; state.gmTabIds.set(p, id); } rows.push({ id, url: p.url(), title: await p.title().catch(() => '') }); } } "
     "const counts = { otherRuns: 0, projectTabs: 0 }; "
     "for (const t of targetInfos) { if (t.type !== 'page' || t.browserContextId === own) continue; "
     "if (created.has(t.browserContextId)) counts.otherRuns += 1; else counts.projectTabs += 1; } "
@@ -85,7 +85,8 @@ std::string render_view(const json::Value& view, std::size_t& count) {
     if (rows != nullptr && rows->is_array()) {
         for (const json::Value& row : rows->as_array()) {
             count += 1;
-            listed += (count == 1 ? "" : "; ") + std::string("[") + std::to_string(count) + "] " +
+            const std::string id = string_field(row, "id");
+            listed += (count == 1 ? "" : "; ") + std::string("[") + (id.empty() ? std::to_string(count) : id) + "] " +
                       head_chars(string_field(row, "url"), kUrlChars) + " \"" + head_chars(string_field(row, "title"), kTitleChars) + "\"";
         }
     }
