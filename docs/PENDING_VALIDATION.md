@@ -2195,7 +2195,7 @@ Rows still open, each with its reason (none reachable without a build, a push, a
 - 14, fx's events twice: needs fx's reply text (fx-e1 busy on stretch 9; the dispatcher sends the question).
 - 11, 12, 17, 18, Windows and macOS items: no Windows or macOS host here.
 - 16, asan full check-build: needs a build (Phase B).
-- txiki import rerun (cdf218f): held until thebird pushes and the dispatcher sends the go-ahead.
+- txiki import rerun (cdf218f): closed, see the Phase B-witness line for the rerun against thebird 6639c6b.
 - ship.sh bypass and run_code structuredContent text (rows 5 and the owner list): owner decisions.
 
 ## gm pass, Phase B (2026-11-10): thebird's f716451 build, the four import checks, and the txiki runner fixes at 916aefe
