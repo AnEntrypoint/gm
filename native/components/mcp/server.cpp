@@ -88,7 +88,7 @@ constexpr const char* kServerName = "gm";
 constexpr const char* kServerTitle = "gm run worker";
 constexpr const char* kGmSkillUri = "skill://gm/SKILL.md";
 constexpr int kStepStartRule = 2;
-constexpr const char* kSkillReadRefusal = "run_code refused: skill://gm/SKILL.md had not been read in this connection, so its text is the second content block of this reply. Follow it, then call run_code again. This refusal is sent once per connection.";
+constexpr const char* kSkillReadRefusal = "run_code refused: skill://gm/SKILL.md had not been read in this connection, so its text is the skill field of this reply. Follow it, then call run_code again. This refusal is sent once per connection.";
 constexpr std::size_t kReplyMemory = 256;
 constexpr std::size_t kOutputCap = 20000;
 constexpr std::size_t kOutputPage = 20000;
@@ -532,7 +532,7 @@ Value caller_of_process() {
 
 std::string skill_refusal_about(const std::string& change) {
     return "run_code refused: skill://gm/SKILL.md " + change +
-           ", so its text is the second content block of this reply. Follow it, then call run_code again. This refusal is sent once per connection.";
+           ", so its text is the skill field of this reply. Follow it, then call run_code again. This refusal is sent once per connection.";
 }
 
 const Value* last_skill_read_by_this_host(const std::vector<Value>& history) {
@@ -2488,22 +2488,20 @@ struct Server::State {
         s().step_calls += 1;
     }
 
-    Value tool_result(const std::string& name, const Value& out_in, std::optional<std::uint64_t> seq, const std::optional<std::string>& attached_text = std::nullopt) {
-        Value out = out_in;
-        if (handover_notice_) {
-            out.set("handover", *handover_notice_);
-        }
+    Value tool_result(const std::string& name, const Value& out, std::optional<std::uint64_t> seq, const std::optional<std::string>& attached_text = std::nullopt) {
+        Value carried = out;
+        if (handover_notice_) carried.set("handover", *handover_notice_);
+        if (attached_text) carried.set("skill", *attached_text);
         Value content = array();
         const Value* text_output = out.find("output");
         if (name == "run_code" && text_output != nullptr && text_output->is_string()) {
-            Value shell = out;
+            Value shell = carried;
             shell.set("output", "[the output is the text block after this one]");
             content.push(object().set("type", "text").set("text", json::dump(shell)));
             content.push(object().set("type", "text").set("text", text_output->as_string()));
         } else {
-            content.push(object().set("type", "text").set("text", json::dump(out)));
+            content.push(object().set("type", "text").set("text", json::dump(carried)));
         }
-        if (attached_text) content.push(object().set("type", "text").set("text", *attached_text));
         if (handover_notice_) {
             content.push(object().set("type", "text").set("text", *handover_notice_));
             handover_notice_.reset();
