@@ -38,6 +38,7 @@ CheckResult check_review(const std::string& binary);
 CheckResult check_code_ast(const std::string& binary);
 CheckResult check_quickjs_baseline(const std::string& binary);
 CheckResult check_install_follows(const std::string& binary);
+CheckResult check_skill_reload(const std::string& binary);
 
 const std::vector<Registered>& checks();
 

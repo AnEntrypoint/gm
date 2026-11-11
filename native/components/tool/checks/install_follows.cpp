@@ -149,7 +149,8 @@ CheckResult check_install_follows(const std::string& binary) {
                 const std::string new_stamp = (old_stamp[0] == '0' ? "1" : "0") + old_stamp.substr(1);
                 for (const char* name : {"gm", "gm-core"}) {
                     std::string bytes = read_bytes(host / name);
-                    if (replace_all(bytes, old_stamp, new_stamp) == 0) result.failures.push_back(std::string("the build stamp was not found in ") + name);
+                    const std::size_t patched = replace_all(bytes, old_stamp, new_stamp);
+                    if (std::string(name) == "gm" && patched == 0) result.failures.push_back("the build stamp was not found in gm");
                     write_bytes(build_host / name, bytes);
                     fs::permissions(build_host / name, fs::perms::owner_all | fs::perms::group_read | fs::perms::group_exec | fs::perms::others_read | fs::perms::others_exec, fs::perm_options::replace);
                 }
@@ -183,6 +184,110 @@ CheckResult check_install_follows(const std::string& binary) {
     result.summary = "a scratch skill edit leaves the installed skill and the worker unchanged; a second install with a new build stamp restarts the live worker onto the installed gm-core, checked through /proc (wall " + std::to_string(wall) + " s)";
 #else
     result.summary = "not measured: the reach witness reads /proc, which this platform does not have";
+#endif
+    return result;
+}
+
+CheckResult check_skill_reload(const std::string& binary) {
+    CheckResult result;
+#if defined(__linux__)
+    const auto started = std::chrono::steady_clock::now();
+    const fs::path root = repo_root();
+    if (root.empty()) {
+        result.failures.push_back("run from the checkout: no skills/gm/SKILL.md in the working directory or its parents");
+        return result;
+    }
+    const fs::path host = fs::path(binary).parent_path();
+    const auto stamp = started.time_since_epoch().count();
+    const fs::path sandbox = fs::temp_directory_path() / ("gm-skill-reload-" + std::to_string(stamp));
+    const fs::path home = sandbox / "home";
+    const fs::path workspace = sandbox / "ws";
+    const fs::path tree = sandbox / "tree";
+    const fs::path build = sandbox / "build";
+    const fs::path build_host = build / "native" / "components" / "host";
+    fs::create_directories(build_host);
+    fs::create_directories(home);
+    fs::create_directories(workspace);
+    fs::create_directories(tree / "native" / "leaves");
+    fs::copy(root / "skills", tree / "skills", fs::copy_options::recursive);
+    fs::copy(root / "defaults", tree / "defaults", fs::copy_options::recursive);
+    const auto executable = fs::perms::owner_all | fs::perms::group_read | fs::perms::group_exec | fs::perms::others_read | fs::perms::others_exec;
+    const std::string original_gm = read_bytes(host / "gm");
+    const std::string original_core = read_bytes(host / "gm-core");
+    const std::string original_version = version_of(host / "gm");
+    const std::string old_stamp = original_version.substr(0, 12);
+    write_bytes(home / "quiet.json", R"({"mcpServers":{"playwriter":{"disabled":true}}})");
+
+    const auto variant = [&](char first) {
+        const std::string new_stamp = std::string(1, first) + old_stamp.substr(1);
+        std::string gm_bytes = original_gm;
+        std::string core_bytes = original_core;
+        const std::size_t patched_gm = replace_all(gm_bytes, old_stamp, new_stamp);
+        replace_all(core_bytes, old_stamp, new_stamp);
+        if (patched_gm == 0) result.failures.push_back("the build stamp was not found in gm");
+        write_bytes(build_host / "gm", gm_bytes);
+        write_bytes(build_host / "gm-core", core_bytes);
+        fs::permissions(build_host / "gm", executable, fs::perm_options::replace);
+        fs::permissions(build_host / "gm-core", executable, fs::perm_options::replace);
+        fs::remove_all(build_host / "skills");
+        fs::copy(tree / "skills", build_host / "skills", fs::copy_options::recursive);
+        const auto done = proc::run({"env", "HOME=" + home.string(), (build_host / "gm").string(), "install", "--local", build.string(), "--source", tree.string()}, sandbox, {}, 300000);
+        if (!done.started || done.exit_code != 0) result.failures.push_back("an install failed: " + tail(done.out + done.err));
+    };
+    const fs::path installed = home / ".gmnew" / "current";
+    const fs::path log = workspace / "runs" / "check" / "log.jsonl";
+    variant(old_stamp[0] == '1' ? '2' : '1');
+    if (result.failures.empty()) {
+        Session session(installed / "gm", workspace, home);
+        if (!session.started()) result.failures.push_back("the installed gm did not start");
+        if (session.started()) {
+            session.rpc("initialize", json::Object{{"protocolVersion", "2025-06-18"}, {"capabilities", json::Object{}},
+                                                  {"clientInfo", json::Object{{"name", "gm-tool"}, {"version", "1"}}}});
+            session.notify("notifications/initialized", json::Object{});
+            session.rpc("resources/read", json::Object{{"uri", "skill://gm/SKILL.md"}});
+            session.rpc("tools/call", json::Object{{"name", "next_context"}, {"arguments", json::Object{}}});
+            const auto reads = log.empty() ? std::string() : read_bytes(log);
+            if (reads.find("\"kind\":\"skill-loaded\"") == std::string::npos) result.failures.push_back("the skill read logged no skill-loaded event");
+            if (reads.find("\"sha\":\"sha256:") == std::string::npos) result.failures.push_back("the skill-loaded event carries no sha");
+
+            const std::size_t before_move = restart_events(log).size();
+            variant(old_stamp[0] == '3' ? '4' : '3');
+            session.rpc("tools/call", json::Object{{"name", "next_context"}, {"arguments", json::Object{{"waitMs", 30000}}}});
+            const auto moved = restart_events(log);
+            if (moved.size() == before_move) {
+                result.failures.push_back("the path-only move did not restart the worker");
+            } else {
+                const json::Value& event = moved.back();
+                const json::Value* changed = event.find("skillChanged");
+                const json::Value* read = event.find("skillRead");
+                if (changed == nullptr || changed->as_bool(true)) result.failures.push_back("a path-only move reported the skill changed");
+                if (read == nullptr || !read->as_bool(false)) result.failures.push_back("a path-only move lost the skill read");
+            }
+            const std::string moved_reply = session.body("return 1;");
+            if (moved_reply.find("refused") != std::string::npos) result.failures.push_back("a path-only move refused the next run_code: " + moved_reply.substr(0, 200));
+
+            write_bytes(tree / "skills" / "gm" / "SKILL.md", read_bytes(tree / "skills" / "gm" / "SKILL.md") + "\nskill-reload scratch edit\n");
+            const std::size_t before_edit = restart_events(log).size();
+            variant(old_stamp[0] == '5' ? '6' : '5');
+            session.rpc("tools/call", json::Object{{"name", "next_context"}, {"arguments", json::Object{{"waitMs", 30000}}}});
+            const auto edited = restart_events(log);
+            if (edited.size() == before_edit) {
+                result.failures.push_back("the real edit did not restart the worker");
+            } else {
+                const json::Value* changed = edited.back().find("skillChanged");
+                if (changed == nullptr || !changed->as_bool(false)) result.failures.push_back("a real skill edit did not report the skill changed");
+            }
+            const std::string edited_reply = session.body("return 1;");
+            if (edited_reply.find("changed since this run read it") == std::string::npos) result.failures.push_back("the next run_code after a real edit was not refused with the changed-skill reason: " + edited_reply.substr(0, 200));
+        }
+        session.stop();
+    }
+    std::error_code ignored;
+    fs::remove_all(sandbox, ignored);
+    const double wall = std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
+    result.summary = "a path-only move restarts the worker with the skill unchanged and no refusal; a real skill edit restarts it with skillChanged set, and the next run_code is refused once with the changed-skill reason (wall " + std::to_string(wall) + " s)";
+#else
+    result.summary = "not measured: the reload witness reads /proc, which this platform does not have";
 #endif
     return result;
 }

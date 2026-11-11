@@ -15,6 +15,7 @@ const std::vector<Registered>& checks() {
         {"check-code-ast", check_code_ast},
         {"check-quickjs-baseline", check_quickjs_baseline},
         {"check-install-follows", check_install_follows},
+        {"check-skill-reload", check_skill_reload},
     };
     return all;
 }
