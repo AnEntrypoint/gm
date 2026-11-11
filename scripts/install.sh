@@ -4,6 +4,7 @@ set -eu
 RELEASE_BASE="${GMNEW_RELEASE_BASE:-https://github.com/AnEntrypoint/gm/releases/download/latest}"
 INSTALL_ROOT="$HOME/.gmnew"
 CURRENT_DIR="$INSTALL_ROOT/current"
+VERSIONS_DIR="$INSTALL_ROOT/versions"
 MCP_CONFIG=""
 LOCAL_BUILD=""
 SOURCE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -22,6 +23,11 @@ while [ $# -gt 0 ]; do
     shift
 done
 
+case "$(uname -s)" in
+    Darwin) MV_NOFOLLOW="-fh" ;;
+    *) MV_NOFOLLOW="-fT" ;;
+esac
+
 register() {
     EXE="$CURRENT_DIR/gm"
     if [ "${GMNEW_SKIP_REGISTER:-0}" = 1 ]; then
@@ -33,10 +39,35 @@ register() {
     fi
 }
 
+swap_in() {
+    NEW_ID="$2"
+    mkdir -p "$VERSIONS_DIR"
+    PREV=""
+    if [ -L "$CURRENT_DIR" ]; then
+        PREV="$(readlink "$CURRENT_DIR")"
+        PREV="${PREV##*/}"
+    elif [ -d "$CURRENT_DIR" ]; then
+        PREV="$(sed -n 's/.*"version":"\([^"]*\)".*/\1/p' "$CURRENT_DIR/.gmnew-update.json" 2>/dev/null | head -1)"
+        [ -n "$PREV" ] || PREV="legacy-$(date -u +%s)"
+        mv "$CURRENT_DIR" "$VERSIONS_DIR/$PREV"
+    fi
+    if [ -e "$VERSIONS_DIR/$NEW_ID" ]; then
+        mv "$VERSIONS_DIR/$NEW_ID" "$VERSIONS_DIR/$NEW_ID.retired-$(date -u +%s)"
+    fi
+    mv "$1" "$VERSIONS_DIR/$NEW_ID"
+    if [ -n "$PREV" ] && [ "$PREV" != "$NEW_ID" ]; then
+        ln -sfn "versions/$PREV" "$INSTALL_ROOT/previous-$PREV"
+        printf 'kept the previous install at %s\n' "$INSTALL_ROOT/previous-$PREV"
+    fi
+    ln -sfn "versions/$NEW_ID" "$INSTALL_ROOT/current.next"
+    mv $MV_NOFOLLOW "$INSTALL_ROOT/current.next" "$CURRENT_DIR"
+}
+
 install_local() {
     HOST="$LOCAL_BUILD/native/components/host"
     [ -x "$HOST/gm" ] && [ -x "$HOST/gm-core" ] || die "no gm and gm-core in $HOST: build the gm target first"
     [ -d "$HOST/skills" ] || die "no skills in $HOST: build the gm_skills target first"
+    diff -r "$HOST/skills" "$SOURCE_ROOT/skills" >/dev/null 2>&1 || die "the build skills in $HOST differ from $SOURCE_ROOT/skills: run cmake --build with the gm_skills target, then install again"
     [ -d "$SOURCE_ROOT/native/leaves" ] && [ -d "$SOURCE_ROOT/defaults" ] || die "no native/leaves or defaults in $SOURCE_ROOT"
     VERSION="$("$HOST/gm" --version | awk '{print $1}')"
     case "$VERSION" in
@@ -46,34 +77,15 @@ install_local() {
     mkdir -p "$INSTALL_ROOT"
     STAGE="$(mktemp -d "$INSTALL_ROOT/stage.XXXXXX")"
     trap 'rm -rf "$STAGE"' EXIT
-    mkdir "$STAGE/current"
-    cp "$HOST/gm" "$HOST/gm-core" "$STAGE/current/"
-    cp -R "$HOST/skills" "$STAGE/current/skills"
-    cp -R "$SOURCE_ROOT/native/leaves" "$STAGE/current/leaves"
-    cp -R "$SOURCE_ROOT/defaults" "$STAGE/current/defaults"
-    printf '{"checked_ms":%s000,"etag":"","version":"%s"}\n' "$(date -u +%s)" "$VERSION" > "$STAGE/current/.gmnew-update.json"
+    mkdir "$STAGE/new"
+    cp "$HOST/gm" "$HOST/gm-core" "$STAGE/new/"
+    cp -R "$HOST/skills" "$STAGE/new/skills"
+    cp -R "$SOURCE_ROOT/native/leaves" "$STAGE/new/leaves"
+    cp -R "$SOURCE_ROOT/defaults" "$STAGE/new/defaults"
+    printf '{"checked_ms":%s000,"etag":"","version":"%s"}\n' "$(date -u +%s)" "$VERSION" > "$STAGE/new/.gmnew-update.json"
 
-    PREVIOUS=""
-    if [ -e "$CURRENT_DIR" ]; then
-        OLD_ID="$("$CURRENT_DIR/gm" --version 2>/dev/null | awk '{print $1}')" || OLD_ID=""
-        [ -n "$OLD_ID" ] || OLD_ID="unknown-$(date -u +%s)"
-        PREVIOUS="$INSTALL_ROOT/previous-$OLD_ID"
-        if [ -e "$PREVIOUS" ]; then
-            mv "$PREVIOUS" "$PREVIOUS.$(date -u +%s)"
-        fi
-        mv "$CURRENT_DIR" "$PREVIOUS"
-    fi
-    if ! mv "$STAGE/current" "$CURRENT_DIR"; then
-        if [ -n "$PREVIOUS" ] && [ -e "$PREVIOUS" ]; then
-            mv "$PREVIOUS" "$CURRENT_DIR"
-        fi
-        die "cannot move the new build into $CURRENT_DIR"
-    fi
-
+    swap_in "$STAGE/new" "$VERSION"
     printf 'installed local build %s from %s at %s\n' "$VERSION" "$LOCAL_BUILD" "$CURRENT_DIR/gm"
-    if [ -n "$PREVIOUS" ]; then
-        printf 'kept the previous install at %s\n' "$PREVIOUS"
-    fi
     register
 }
 
@@ -118,6 +130,10 @@ FILE="$1"
 EXPECTED_SHA="$2"
 EXPECTED_SIZE="$3"
 case "$FILE" in gmnew-*-"$TARGET".tar.gz) ;; *) die "unexpected asset name for $TARGET: $FILE" ;; esac
+[ -n "$VERSION" ] || die "manifest has no version"
+case "$VERSION" in
+    *[!A-Za-z0-9._-]*) die "unexpected version in manifest: $VERSION" ;;
+esac
 
 ARCHIVE="$WORK/$FILE"
 curl --retry 3 --retry-delay 1 --retry-all-errors -fsSL -o "$ARCHIVE" "$RELEASE_BASE/$FILE" || die "cannot fetch $FILE"
@@ -139,24 +155,9 @@ for name in "$EXE_NAME" "$CORE_NAME"; do
     chmod +x "$STAGE/$PACKAGE/$name"
 done
 
-OLD_DIR="$INSTALL_ROOT/previous.$$"
-if [ -e "$CURRENT_DIR" ]; then
-    mv "$CURRENT_DIR" "$OLD_DIR"
-fi
-if ! mv "$STAGE/$PACKAGE" "$CURRENT_DIR"; then
-    if [ -e "$OLD_DIR" ]; then
-        mv "$OLD_DIR" "$CURRENT_DIR"
-    fi
-    die "cannot move the new build into $CURRENT_DIR"
-fi
-rm -rf "$OLD_DIR" "$STAGE"
-
+swap_in "$STAGE/$PACKAGE" "$VERSION"
 STATE="$CURRENT_DIR/.gmnew-update.json"
 if [ ! -e "$STATE" ]; then
-    [ -n "$VERSION" ] || die "manifest has no version"
-    case "$VERSION" in
-        *[!A-Za-z0-9._-]*) die "unexpected version in manifest: $VERSION" ;;
-    esac
     printf '{"checked_ms":%s000,"etag":"","version":"%s"}\n' "$(date -u +%s)" "$VERSION" > "$STATE"
 fi
 

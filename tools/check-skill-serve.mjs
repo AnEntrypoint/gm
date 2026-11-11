@@ -134,6 +134,6 @@ try {
     console.log(`${CHECK}: ok (${target}: the default serve returns the checkout's ${SKILL}, and a live connection returns each change to the copied file on the next read)`);
   }
 } finally {
-  rmSync(scratch, { recursive: true, force: true });
+  rmSync(scratch, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
 }
 process.exit(process.exitCode ?? 0);

@@ -36,6 +36,7 @@ constexpr std::uint64_t kManifestTimeoutMs = 90000;
 constexpr std::uint64_t kArchiveTimeoutMs = 900000;
 constexpr std::string_view kStagingName = ".gmnew-staging";
 constexpr std::string_view kPreviousName = ".gmnew-previous";
+constexpr std::string_view kCurrentName = "current";
 constexpr std::string_view kStateName = ".gmnew-update.json";
 constexpr std::string_view kLockName = ".gmnew-update.lock";
 constexpr std::string_view kOwnerName = "owner";
@@ -391,6 +392,64 @@ std::optional<std::string> install_staged(const fs::path& staged_root, const fs:
     return std::nullopt;
 }
 
+std::optional<fs::path> install_root_of(const fs::path& version_dir) {
+    const fs::path versions = version_dir.parent_path();
+    if (versions.filename() != "versions") return std::nullopt;
+    return versions.parent_path();
+}
+
+std::string linked_version(const fs::path& root) {
+    std::error_code ec;
+    if (!fs::is_symlink(root / kCurrentName, ec)) return {};
+    return fs::read_symlink(root / kCurrentName, ec).filename().string();
+}
+
+fs::path stable_executable(const fs::path& executable) {
+    const auto root = install_root_of(executable.parent_path());
+    if (!root) return executable;
+    return *root / kCurrentName / executable.filename();
+}
+
+std::optional<std::string> switch_version(const fs::path& staged_root, const fs::path& root, const std::string& version) {
+    if (!plain_file_name(version)) return "the version " + version + " is not a file name";
+    const fs::path versions = root / "versions";
+    const fs::path target = versions / version;
+    const fs::path current = root / kCurrentName;
+    std::error_code ec;
+    fs::create_directories(versions, ec);
+    if (ec) return "cannot create " + versions.string() + ": " + ec.message();
+    std::string previous = linked_version(root);
+    if (previous.empty() && fs::is_directory(current, ec)) {
+        previous = read_update_state(current).version;
+        if (previous.empty()) previous = "legacy-" + std::to_string(now_ms());
+        fs::rename(current, versions / previous, ec);
+        if (ec) return "cannot move the install into " + (versions / previous).string() + ": " + ec.message();
+    }
+    if (fs::exists(target, ec)) {
+        fs::rename(target, versions / (version + ".retired-" + std::to_string(now_ms())), ec);
+        if (ec) return "cannot retire " + target.string() + ": " + ec.message();
+    }
+    fs::rename(staged_root, target, ec);
+    if (ec) {
+        fs::copy(staged_root, target, fs::copy_options::recursive, ec);
+        if (ec) return "cannot place " + version + " in " + versions.string() + ": " + ec.message();
+        fs::remove_all(staged_root, ec);
+    }
+    if (!previous.empty() && previous != version) {
+        const fs::path link = root / ("previous-" + previous);
+        fs::remove(link, ec);
+        fs::create_directory_symlink(fs::path("versions") / previous, link, ec);
+        if (ec) return "cannot link " + link.string() + ": " + ec.message();
+    }
+    const fs::path next = root / (std::string(kCurrentName) + ".next");
+    fs::remove(next, ec);
+    fs::create_directory_symlink(fs::path("versions") / version, next, ec);
+    if (ec) return "cannot link " + next.string() + ": " + ec.message();
+    fs::rename(next, current, ec);
+    if (ec) return "cannot switch " + current.string() + ": " + ec.message();
+    return std::nullopt;
+}
+
 namespace {
 
 UpdateResult failed(UpdateResult result, std::string error) {
@@ -456,12 +515,18 @@ UpdateResult update_once(const UpdatePolicy& policy, UpdateResult result) {
     if (auto error = verify_archive(archive, asset->second)) return failed(std::move(result), *error);
     const fs::path unpacked = staging / "unpacked";
     if (auto error = unpack(archive, unpacked)) return failed(std::move(result), *error);
-    if (auto error = install_staged(unpacked / ("gmnew-" + target), policy.install_dir))
+    fs::path installed = policy.install_dir;
+    if (const auto root = install_root_of(policy.install_dir)) {
+        if (auto error = switch_version(unpacked / ("gmnew-" + target), *root, asset->second.version))
+            return failed(std::move(result), *error);
+        installed = *root / "versions" / asset->second.version;
+    } else if (auto error = install_staged(unpacked / ("gmnew-" + target), policy.install_dir)) {
         return failed(std::move(result), *error);
+    }
     state.checked_ms = now_ms();
     state.version = asset->second.version;
     state.asset_sha = asset->second.sha256;
-    write_update_state(policy.install_dir, state);
+    write_update_state(installed, state);
     result.updated = true;
     result.status = "updated";
     return result;

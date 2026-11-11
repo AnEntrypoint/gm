@@ -71,7 +71,7 @@ try {
   const started = Date.now();
   const reply = await Promise.race([
     rpc('tools/call', { name: 'run_code', arguments: { format: 'esm', timeoutMs: 60000, body: 'return { early: 1 };' } }),
-    new Promise((done) => setTimeout(() => done(null), REPLY_MS)),
+    new Promise((done) => setTimeout(() => done(null), REPLY_MS).unref()),
   ]);
   const elapsed = Date.now() - started;
   expect(reply !== null, `early call: a run_code sent before the first next_context got no reply in ${REPLY_MS} ms`);
@@ -85,7 +85,7 @@ try {
   const finishStarted = Date.now();
   const finished = await Promise.race([
     rpc('tools/call', { name: 'finish', arguments: { witness: 'early finish check' } }),
-    new Promise((done) => setTimeout(() => done(null), REPLY_MS)),
+    new Promise((done) => setTimeout(() => done(null), REPLY_MS).unref()),
   ]);
   expect(finished !== null, `early finish: a finish sent before the first next_context got no reply in ${REPLY_MS} ms`);
   if (finished !== null) {

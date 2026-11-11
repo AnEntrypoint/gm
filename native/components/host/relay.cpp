@@ -1,6 +1,7 @@
 #include "gm/host/relay.hpp"
 
 #include <algorithm>
+#include <chrono>
 #include <cerrno>
 #include <cstdio>
 #include <cstring>
@@ -160,7 +161,7 @@ void Relay::start() {
         options_.resend.clear();
     }
     control_ = std::thread([this] { control_loop(); });
-    if (options_.update && options_.update->enabled) updater_ = std::thread([this] { update_loop(); });
+    if (options_.update && (options_.update->enabled || install_root_of(options_.update->install_dir))) updater_ = std::thread([this] { update_loop(); });
 }
 
 bool Relay::spawn_worker(Lock&) {
@@ -477,7 +478,7 @@ void Relay::reexec() {
         argv.emplace_back("--resend");
         argv.push_back(json::dump(json::Value(std::move(carried))));
     }
-    if (options_.update) {
+    if (options_.update && !install_root_of(options_.update->install_dir)) {
         const std::filesystem::path installed = options_.update->install_dir / executable_name();
         std::error_code ec;
         if (std::filesystem::exists(installed, ec)) argv.front() = installed.string();
@@ -501,16 +502,31 @@ void Relay::reexec() {
 #endif
 }
 
+namespace {
+
+constexpr std::chrono::milliseconds kInstallPoll{2000};
+
+bool installed_elsewhere(const UpdatePolicy& policy) {
+    const auto root = install_root_of(policy.install_dir);
+    if (!root) return false;
+    const std::string linked = linked_version(*root);
+    return !linked.empty() && linked != policy.install_dir.filename().string();
+}
+
+}
+
 void Relay::update_loop() {
     UpdatePolicy policy = *options_.update;
     Lock lock(mutex_);
     while (!host_gone_) {
         lock.unlock();
-        const UpdateResult result = update_now(policy);
+        UpdateResult result;
+        result.ok = true;
+        if (policy.enabled) result = update_now(policy);
 #if defined(_WIN32)
         if (result.updated) policy.current_version = result.to;
 #endif
-        const std::chrono::milliseconds wait = result.ok ? std::max(next_check_delay(policy), kUpdateRetryWait) : kUpdateRetryWait;
+        const std::chrono::milliseconds wait = !policy.enabled ? kInstallPoll : result.ok ? std::max(next_check_delay(policy), kUpdateRetryWait) : kUpdateRetryWait;
         lock.lock();
         if (host_gone_) break;
         if (!result.ok) {
@@ -524,7 +540,16 @@ void Relay::update_loop() {
 #endif
             changed_.notify_all();
         }
-        changed_.wait_for(lock, wait, [&] { return host_gone_; });
+        const auto deadline = std::chrono::steady_clock::now() + wait;
+        while (!host_gone_ && std::chrono::steady_clock::now() < deadline) {
+            changed_.wait_for(lock, kInstallPoll, [&] { return host_gone_; });
+            if (!host_gone_ && installed_elsewhere(policy)) {
+                say("the install now points at " + linked_version(*install_root_of(policy.install_dir)) + "; re-executing on it");
+                reexec_pending_ = true;
+                changed_.notify_all();
+                break;
+            }
+        }
     }
 }
 

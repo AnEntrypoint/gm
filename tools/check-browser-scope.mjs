@@ -55,10 +55,13 @@ readline.createInterface({ input: child.stdout }).on('line', (line) => {
 const rpc = (method, params, ms) => {
   const id = nextId++;
   child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id, method, params })}\n`);
+  let timer;
   return Promise.race([
     new Promise((done) => pending.set(id, done)),
-    new Promise((done) => setTimeout(() => done(null), ms)),
-  ]);
+    new Promise((done) => {
+      timer = setTimeout(() => done(null), ms);
+    }),
+  ]).finally(() => clearTimeout(timer));
 };
 
 const failures = [];

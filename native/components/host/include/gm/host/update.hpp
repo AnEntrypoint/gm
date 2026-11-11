@@ -95,6 +95,10 @@ bool acquire_update_lock(const std::filesystem::path& install_dir);
 std::optional<std::string> install_staged(const std::filesystem::path& staged_root,
                                           const std::filesystem::path& install_dir,
                                           const std::function<bool(std::string_view)>& allow = {});
+std::optional<std::filesystem::path> install_root_of(const std::filesystem::path& version_dir);
+std::string linked_version(const std::filesystem::path& root);
+std::filesystem::path stable_executable(const std::filesystem::path& executable);
+std::optional<std::string> switch_version(const std::filesystem::path& staged_root, const std::filesystem::path& root, const std::string& version);
 int run_update_command();
 
 }

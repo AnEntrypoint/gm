@@ -116,7 +116,7 @@ try {
   for (const [label, args] of Object.entries(PROBES)) {
     const reply = await Promise.race([
       rpc('tools/call', { name: 'run_code', arguments: { format: 'esm', timeoutMs: 60000, body: probeBody(args) } }),
-      new Promise((done) => setTimeout(() => done(null), REPLY_MS)),
+      new Promise((done) => setTimeout(() => done(null), REPLY_MS).unref()),
     ]);
     if (reply === null) {
       failures.push(`${label}: no reply within ${REPLY_MS} ms`);

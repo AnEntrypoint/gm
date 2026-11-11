@@ -61,7 +61,7 @@ int run_serve(const HostArgs& args) {
     options.worker_argv.insert(options.worker_argv.end(), {"--workspace", workspace.string(), "--run-dir",
                                                            run_dir->string(), "--supervised", "yes", "--owner",
                                                            relay_process_id()});
-    options.reexec_argv = {current_executable().string(), "serve"};
+    options.reexec_argv = {stable_executable(current_executable()).string(), "serve"};
     for (std::string& arg : without_flags(args.rest, {"--runs", "--resume", "--run-dir", "--workspace", "--handshake", "--skill-read", "--resend"}))
         options.reexec_argv.push_back(std::move(arg));
     options.reexec_argv.insert(options.reexec_argv.end(), {"--workspace", workspace.string(), "--run-dir",
