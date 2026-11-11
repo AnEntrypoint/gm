@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
-import { spawn } from 'node:child_process';
+import { spawn } from './lib/group.mjs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import readline from 'node:readline';

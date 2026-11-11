@@ -1,4 +1,4 @@
-import { spawn } from 'node:child_process';
+import { spawn } from './lib/group.mjs';
 
 const PROTOCOL = '2025-06-18';
 const SERVED_VERSIONS = ['2025-11-25', '2025-06-18'];

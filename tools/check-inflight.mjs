@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { withoutPlaywriter } from './lib/no-playwriter.mjs';
-import { spawn } from 'node:child_process';
+import { spawn } from './lib/group.mjs';
 import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';

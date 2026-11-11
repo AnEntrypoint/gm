@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { chmodSync, copyFileSync, cpSync, existsSync, mkdtempSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
-import { spawn, spawnSync } from 'node:child_process';
+import { spawn } from './lib/group.mjs';
+import { spawnSync } from 'node:child_process';
 import { once } from 'node:events';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';

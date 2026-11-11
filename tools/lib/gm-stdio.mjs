@@ -1,5 +1,5 @@
 import { withoutPlaywriter } from './no-playwriter.mjs';
-import { spawn } from 'node:child_process';
+import { spawn } from './group.mjs';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
