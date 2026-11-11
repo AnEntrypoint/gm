@@ -3465,7 +3465,7 @@ const std::regex kDumpCommand(R"(^\s*(cd [^;&|]*&&\s*)?(cat|sed -n|head|tail)\s)
 const std::regex kTestCommand(R"((^|[\s|&;(])(test|pytest|jest|vitest|mocha|tsc)\b)");
 const std::set<std::string> kBoundedVerbs = {"read_file", "run_shell"};
 const std::set<std::string> kRepeatableVerbs = {"read_file"};
-const std::set<std::string> kWriteVerbs = {"write_file", "edit_file", "fs_op", "run_shell"};
+const std::set<std::string> kWriteVerbs = {"write_file", "edit_file", "fs_op", "run_shell", "job_start", "js", "wiki_write"};
 
 bool flag_set(const Value& args, const char* key) {
     const Value* value = args.find(key);
@@ -3553,9 +3553,9 @@ Value bounded_output(Value result, const Value& args, const fs::path& run_dir, c
     return result;
 }
 
-Value body_call(VerbTable& verbs, const std::string& name, const Value& args, Server::State::Session& owner, int step, std::optional<std::uint64_t> action) {
+Value body_call(VerbTable& verbs, const std::string& name, const Value& args, Server::State::Session& owner, int step, std::optional<std::uint64_t> action, const std::function<bool()>& quiet) {
     const std::string key = name + json::dump(args);
-    if (kRepeatableVerbs.contains(name) && !flag_set(args, "fresh")) {
+    if (kRepeatableVerbs.contains(name) && !flag_set(args, "fresh") && quiet()) {
         std::lock_guard guard(owner.marks_lock);
         const auto found = owner.read_marks.find(key);
         if (found != owner.read_marks.end() && found->second.writes == owner.writes_seen) {
@@ -3564,10 +3564,16 @@ Value body_call(VerbTable& verbs, const std::string& name, const Value& args, Se
             return reply.set("output", gm::marker::pointer_line(found->second.step)).set("pointer", true).set("complete", false);
         }
     }
+    std::uint64_t sampled = 0;
+    {
+        std::lock_guard guard(owner.marks_lock);
+        sampled = owner.writes_seen;
+    }
+    const bool before_quiet = quiet();
     Value result = verbs.call(name, args);
     if (kBoundedVerbs.contains(name)) result = bounded_output(std::move(result), args, owner.run_dir, name);
     std::lock_guard guard(owner.marks_lock);
-    if (kRepeatableVerbs.contains(name) && is_ok(result)) owner.read_marks[key] = {step, action, owner.writes_seen};
+    if (kRepeatableVerbs.contains(name) && is_ok(result) && before_quiet && quiet()) owner.read_marks[key] = {step, action, sampled};
     if (kWriteVerbs.contains(name)) owner.writes_seen += 1;
     return result;
 }
@@ -3612,7 +3618,7 @@ public:
             } else if (name == "task_set") {
                 result = state_.task_set(args);
             } else {
-                result = body_call(state_.verbs, name, args, owner, job_->step, action);
+                result = body_call(state_.verbs, name, args, owner, job_->step, action, [&] { return !state_.shell_jobs_open(); });
                 if (name == "job_start" && is_ok(result)) {
                     std::lock_guard job_guard(job_->lock);
                     job_->started_jobs.push_back(Server::State::string_of(args, "job"));
