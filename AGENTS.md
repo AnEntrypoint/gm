@@ -73,7 +73,7 @@ Node-missing items are retired, not ported: native ships; the Node engine was re
 
 ## Owner decisions (2026-11-06, through orchestrate)
 
-- The five decisions are in DESIGN.md, "Owner decisions on the five open questions (2026-11-06)". Decision 3 (protocol 2026-07-28 behind a capability flag) is not implemented: both engines negotiate only the 2025 versions. The 2026-11-10 decision to follow native applies the 2026-07-28 result fields on both: ttlMs and cacheScope on list, discover and read results.
+- The five decisions are in DESIGN.md, "Owner decisions on the five open questions (2026-11-06)". Decision 3 (protocol 2026-07-28 behind a capability flag) is not implemented: both engines negotiate only the 2025 versions. The 2026-11-10 decision to follow native applies the 2026-07-28 result fields on both: ttlMs and cacheScope "public" on server/discover, tools/list, prompts/list and resources/templates/list (3600000 ms); resources/list, and resources/read of a skill file or a run log, are volatile (ttlMs 0), so an open connection re-reads an edited skill (owner decision, 2026-11-11).
 
 ## Ship and commits
 
