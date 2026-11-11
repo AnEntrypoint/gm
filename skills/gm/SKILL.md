@@ -36,6 +36,13 @@ Each habit is stated once, with its reason.
 - **Start a build or test that can outlive a turn with gm.job_start, never a shell `&`.** A job records its log, exit code and tail in the run log. A background shell can leave an empty log, and then there is nothing to read.
 - **A job's result is valid only for the tree it started on.** When an edit lands after the job starts, stop the job with gm.job_stop and start one job on the final tree.
 - **A loop tick with nothing to do ends that tick, not the run.** Keep the run's waits open, and handle any pending prompt before a loop is stopped.
+- **Keep the iteration time in view.** Each run records the wall time of every build and check it runs, and names the step that dominates its loop. When one step dominates, shorten it, split it or narrow it in the same run, before the next change.
+- **Prove a change with the narrowest check that can fail for it.** A failing row is rerun alone. The full set runs once before a push. A check that already passed on a tree is not run again on that tree.
+- **Wait for a started job by its PID, with a bounded timeout, in the same turn.** Never sleep to wait. For a process gm did not start, gm.job_status({ pid, waitMs }) waits on it; do other reachable work while it runs.
+- **Build a reachable ranked item in the pass that ranks it.** A turn does not end while reachable work remains. Work that waits on a person, a credential or a host is held, and is reported as held.
+- **Report a held item once, with its cause, then name it in one line.** Later reports name it in one line and do not repeat its cause.
+- **Bound every read of state and output to the summary and the failing rows.** Page the rest only when a decision needs it.
+- **Name the longest step in each report, and what was done about it.**
 
 ## Rules
 
