@@ -220,7 +220,7 @@ def('W15', async () => {
   await s.call('next_context', {});
   const described = await s.call('run_code', { body: 'return gm.verbs().find((v) => v.name === "job_status").description;' });
   const gone = [];
-  for (const waitMs of [99999, 100001]) {
+  for (const waitMs of [59999, 60001]) {
     const proc = spawn('sleep', ['2']);
     const r = await s.call('run_code', { body: `return await gm.job_status({ pid: ${proc.pid}, waitMs: ${waitMs} });` });
     gone.push(r.output?.state === 'gone' && r.output?.waitedMs < 3000);
@@ -230,7 +230,7 @@ def('W15', async () => {
   live.kill();
   s.close();
   const waited = held.output?.waitedMs ?? 0;
-  return `cap 100000 in the verb description: ${String(described.output).includes('at most 100000')}; waitMs below and above the cap on a 2 s process: gone ${gone.join(' ')}; a live process with waitMs 3000: state=${held.output?.state} waited-3s=${waited >= 2900 && waited < 3500}`;
+  return `cap 60000 in the verb description: ${String(described.output).includes('at most 60000')}; waitMs below and above the cap on a 2 s process: gone ${gone.join(' ')}; a live process with waitMs 3000: state=${held.output?.state} waited-3s=${waited >= 2900 && waited < 3500}`;
 });
 
 def('W16', async () => {

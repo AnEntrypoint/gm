@@ -77,7 +77,7 @@ const MUTANTS = [
   {
     name: 'job wait cap 30 s',
     file: join(root, 'native', 'components', 'verbs', 'job.cpp'),
-    from: 'const double max_wait_ms = 100000 * clock_scale();',
+    from: 'const double max_wait_ms = 60000 * clock_scale();',
     to: 'const double max_wait_ms = 30000 * clock_scale();',
     check: 'check-turn-economy.mjs',
   },

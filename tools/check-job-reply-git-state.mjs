@@ -115,7 +115,7 @@ try {
 
   await runCode("return { job: await gm.job_start({ job: 'w2', command: 'sleep 130' }) };");
   const capped = await runCode("return { status: await gm.job_status({ job: 'w2', waitMs: 200000 }) };", 200000);
-  expect(capped.elapsed >= 95000 && capped.elapsed < 115000, 'job_status with waitMs 200000 returned after ' + capped.elapsed + ' ms, expected the 100000 ms cap');
+  expect(capped.elapsed >= 55000 && capped.elapsed < 75000, 'job_status with waitMs 200000 returned after ' + capped.elapsed + ' ms, expected the 60000 ms cap');
   expect(capped.value?.status?.state === 'running', 'the capped wait returned state ' + JSON.stringify(capped.value?.status?.state));
   summary.push('wait cap: waitMs 200000 returned after ' + capped.elapsed + ' ms, state ' + capped.value?.status?.state);
   await runCode("return { stopped: await gm.job_stop({ job: 'w2' }) };");

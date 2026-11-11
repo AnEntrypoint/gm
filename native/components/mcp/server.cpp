@@ -178,7 +178,7 @@ constexpr std::size_t kOpenList = 20;
 constexpr std::size_t kNoticePrdWindow = 5;
 constexpr std::size_t kRowsNamed = 5;
 constexpr double kDefaultBodyTimeoutMs = 100000;
-constexpr double kMaxWaitMs = 100000;
+constexpr double kMaxWaitMs = 60000;
 constexpr double kMaxJobWaitMs = kMaxWaitMs;
 constexpr std::uint64_t kSingleVerbBodiesBeforeNotice = 3;
 constexpr std::uint64_t kSingleVerbNoticeEvery = 10;
@@ -237,7 +237,7 @@ const std::string kNextContextDescription =
     "start of a run, after a compaction, and when a run_code reply carries pendingEvents; not before every step. A call with nothing new "
     "since the last reply (no pending event, the same rules and task) takes no step and answers unchanged: true in one short line; "
     "full: true returns the rules, the task and the feed anyway. query_log reaches every event. waitMs, when set, holds this call until an event is pending "
-    "or that many milliseconds pass, at most 100000. A hold that passes with nothing pending takes no step and "
+    "or that many milliseconds pass, at most 60000. A hold that passes with nothing pending takes no step and "
     "returns progress. child: true makes the call a read by a subagent on this "
     "connection: it takes no step, claims no pending event, and its reply has role child and the owning run. run, "
     "with child, names that owning run, and another run is refused. compactChildren: true summarizes child run_code "
@@ -268,7 +268,7 @@ std::string run_code_description(const std::string& verb_names) {
            "{ok:false, error} and does not stop the body. The body's return value comes back as JSON. A body still "
            "running after timeoutMs (default 100000, at most 3600000) becomes a background run: the call returns its "
            "job id at once, job_status with waitMs returns its value, and finish is refused while it runs unless "
-           "stopBackground is true. A wait for a job is one job_status call (waitMs at most 100000). One step is one body: read the inputs in one Promise.all, decide in code, act "
+           "stopBackground is true. A wait for a job is one job_status call (waitMs at most 60000; a reply that says running needs another job_status call to keep waiting). One step is one body: read the inputs in one Promise.all, decide in code, act "
            "with the independent writes in one Promise.all, and verify in the same body. The ten most-used verbs: "
            "read_file({ path, offset?, limit? }), run_shell({ command, timeoutMs? }), write_file({ path, content }), "
            "query_log({ js?, kind?, fromMono?, toMono?, after?, last? }), search({ query, k? }), fetch({ url, "
@@ -1767,6 +1767,9 @@ struct Server::State {
         }
         reply.set("exitCode", status->find("exitCode") ? *status->find("exitCode") : Value(nullptr));
         reply.set("signal", status->find("signal") ? *status->find("signal") : Value(nullptr));
+        const Value* state = status->find("state");
+        if (wait > 0 && state && state->is_string() && state->as_string() == "running")
+            reply.set("hint", "the job is still running: call job_status again with waitMs to keep waiting");
         return reply.set("output", js_slice(text, from, end))
             .set("total", number_of(total))
             .set("truncated", from > 0 || end < total)

@@ -38,7 +38,7 @@ namespace {
 #if !defined(_WIN32)
 constexpr std::uint64_t kill_grace_ms = 500;
 #endif
-const double max_wait_ms = 100000 * clock_scale();
+const double max_wait_ms = 60000 * clock_scale();
 constexpr int pid_poll_ms = 100;
 constexpr std::uint64_t ended_event_grace_ms = 250;
 
@@ -561,6 +561,11 @@ json::Value JobTable::status(const json::Value& args) {
     }
     auto status = read_status(name);
     if (!status) return failure("no job named " + name);
+    if (wait_ms > 0 && status->is_object()) {
+        const json::Value* state = status->find("state");
+        if (state && state->is_string() && state->as_string() == "running")
+            status->set("hint", "the job is still running: call job_status again with waitMs to keep waiting");
+    }
     const json::Value* offset_value = present(args, "offset");
     if (offset_value != nullptr && (!is_whole_number(offset_value) || offset_value->as_number() < 0)) {
         return failure("offset must be a whole number of characters, zero or more");
