@@ -11,6 +11,9 @@ const CHECK = 'build-handover-check';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const given = resolve(process.argv[2] ?? join(root, 'build', 'release', 'native', 'components', 'host'));
 const hostDir = existsSync(join(given, 'gm')) ? given : dirname(given);
+const SCALE = 0.25;
+process.env.GMNEW_TEST_CLOCK = '1';
+process.env.GM_CLOCK_SCALE = String(SCALE);
 const started = Date.now();
 const failures = [];
 const expect = (condition, text) => {
@@ -92,7 +95,7 @@ const rpc = (method, params, ms = 60000) =>
     relay.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id, method, params })}\n`);
   });
 const call = async (name, args, ms) => (await rpc('tools/call', { name, arguments: args }, ms))?.result?.structuredContent ?? null;
-const sleep = (ms) => new Promise((done) => setTimeout(done, ms));
+const sleep = (ms) => new Promise((done) => setTimeout(done, ms * SCALE));
 const workerExe = () => {
   const pids = spawnSync('pgrep', ['-P', String(relay.pid)], { encoding: 'utf8' }).stdout.trim().split('\n').filter(Boolean);
   const worker = pids.find((pid) => existsSync(`/proc/${pid}/exe`));
@@ -112,7 +115,7 @@ try {
   const onA = workerExe();
   expect(onA.includes(join('versions', stamp)), `the first worker should run ${stamp}, runs ${onA}`);
 
-  const held = call('run_code', { body: 'const end = Date.now() + 5000; while (Date.now() < end) {} return "held on A";' }, 60000);
+  const held = call('run_code', { body: 'const end = Date.now() + ' + Math.round(5000 * SCALE) + '; while (Date.now() < end) {} return "held on A";' }, 60000);
   await sleep(1500);
   point(second);
   const body = await held;
@@ -265,7 +268,7 @@ try {
 
   const third = `${'9' === stamp[0] || '9' === second[0] ? '8' : '9'}${stamp.slice(1)}`;
   place(third, true);
-  const longCall = call('run_code', { body: 'return (await gm.run_shell({ command: "sleep 35; echo install-done", timeoutMs: 120000 })).output;' }, 150000);
+  const longCall = call('run_code', { body: 'return (await gm.run_shell({ command: "sleep ' + (35 * SCALE).toFixed(2) + '; echo install-done", timeoutMs: 120000 })).output;' }, 150000);
   await sleep(1500);
   point(third);
   const longReply = await longCall;
