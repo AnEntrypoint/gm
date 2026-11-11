@@ -11,6 +11,8 @@ Install the latest release, once per machine, on Linux, macOS or Windows (x64 or
 
 To register gm with a playwriter config, add `--mcp-config <path>`. On Windows, unzip the `.zip` and run `gm.exe install --local <dir>` the same way. A second install of the same build rewrites nothing and keeps the running processes. Node and npm are not needed.
 
+To build from a checkout (CMake and Ninja, no Node, no npm), run `cmake --preset release && cmake --build build/release`, then install the build with `build/release/native/components/host/gm install --local build/release --source .`. The commit gate, Phase B and shipping are `build/release/native/components/tool/gm-tool gate`, `... phase-b` and `... ship`.
+
 Each build is versioned as `gmnew-<version>-<target>.tar.gz` (`.zip` on Windows), and the manifest is uploaded last, so an install never mixes two builds. The last three builds stay on `latest`. A push publishes every target that built; a target that failed keeps the build it had, and the run summary names it.
 
 Windows x64 and arm64 build and test jobs pass in CI, and the release publishes their `.zip` assets. Their install is the same `gm install --local` command, which has not been run on a Windows machine here.

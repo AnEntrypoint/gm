@@ -8,7 +8,7 @@ The choice is whether both engines negotiate the 2026-07-28 protocol version beh
 
 ## ship.sh bypass
 
-The choice is whether a push may skip the Phase B pass that tools/ship.sh --push requires at HEAD. Option A: keep the refusal as it is, so every push follows a passing tools/phase-b.sh at HEAD. It costs about 54 s per round. Option B: add a flag that pushes without the marker, for emergencies only. It saves that wait, but it lets an unchecked tree reach origin, and a peer may install it. Recommended: A. Keep the refusal, and when the wait is the problem, shorten Phase B rather than bypass it.
+The choice is whether a push may skip the Phase B pass that gm-tool ship --push requires at HEAD. Option A: keep the refusal as it is, so every push follows a passing gm-tool phase-b at HEAD. It costs about 54 s per round. Option B: add a flag that pushes without the marker, for emergencies only. It saves that wait, but it lets an unchecked tree reach origin, and a peer may install it. Recommended: A. Keep the refusal, and when the wait is the problem, shorten Phase B rather than bypass it.
 
 ## run_code structuredContent
 

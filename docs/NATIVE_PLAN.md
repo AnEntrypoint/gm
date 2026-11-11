@@ -46,9 +46,9 @@ Scope: each script tracked in git (`git ls-files`) and each script in the instal
 
 | File | What it does now | Destination |
 |---|---|---|
-| `tools/gate.mjs` | Commit gate: syntax, ASCII, docs path check, AGENTS size, staged comments. | gm-tool: gate (item 2c) |
-| `tools/phase-b.sh` | Clean-tree build, stamp check, check-build, parity contract, writes `phase-b.pass`. | gm-tool: phase B (item 2c) |
-| `tools/ship.sh` | Runs the gate, refuses trailers, commits by path, `--push` needs a matching `phase-b.pass`. | gm-tool: ship (item 2c) |
+| `tools/gate.mjs` | Commit gate: syntax, ASCII, docs path check, AGENTS size, staged comments. | done: gm-tool gate (item 2c); the syntax check goes with the JavaScript |
+| `tools/phase-b.sh` | Clean-tree build, stamp check, check-build, parity contract, writes `phase-b.pass`. | done: gm-tool phase-b (item 2c); still runs check-build.mjs and parity-contract.mjs until 2e |
+| `tools/ship.sh` | Runs the gate, refuses trailers, commits by path, `--push` needs a matching `phase-b.pass`. | done: gm-tool ship (item 2c) |
 | `tools/package.mjs`, `tools/release-manifest.mjs`, `tools/prune-release-assets.mjs` | Release packaging and manifest. | gm-tool: release (item 2e) |
 | `tools/prefetch.mjs` | Fetches the release assets for setup. | gm: install (item 2b) |
 | `tools/vendor-txiki.mjs` | Vendors the txiki source. | gm-tool: vendoring (item 2e) |

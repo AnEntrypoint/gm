@@ -4,6 +4,7 @@
 #include <condition_variable>
 #include <filesystem>
 #include <memory>
+#include <optional>
 #include <mutex>
 #include <string>
 #include <thread>
@@ -50,5 +51,19 @@ private:
     bool done_ = false;
     std::thread watchdog_;
 };
+
+std::optional<std::string> git_output(const std::filesystem::path& root, const std::vector<std::string>& args);
+std::vector<std::string> nul_split(const std::string& text);
+
+struct GateCheck {
+    std::string name;
+    bool ok = false;
+    std::string detail;
+};
+
+std::vector<GateCheck> run_gate(const std::filesystem::path& root);
+int gate_command(const std::filesystem::path& root);
+int phase_b_command(const std::filesystem::path& root, const std::filesystem::path& build);
+int ship_command(const std::filesystem::path& root, const std::vector<std::string>& args);
 
 }

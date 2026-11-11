@@ -12,7 +12,7 @@ gm is one long-horizon worker: an MCP server that runs a task as one append-only
 ## Owner rules
 
 - Work on main in the shared checkout. No clones, branches or worktrees. A witness may run on a tar copy of the tree; the edit and the commit happen in the checkout.
-- Commit only by explicit path with tools/ship.sh, author lanmower, no trailers on any commit or PR. The harness may suggest a Co-Authored-By trailer; do not add it.
+- Commit only by explicit path with build/release/native/components/tool/gm-tool ship, author lanmower, no trailers on any commit or PR. The harness may suggest a Co-Authored-By trailer; do not add it.
 - Other agents edit this checkout at the same time. Edit only your scope, and use Edit with exact text after a fresh read.
 - Native peers reload on a leaf or binary change, at a step boundary; a skill change is read on the next call and restarts nothing. A peer reads its leaves, skills and defaults only from the directory of its own executable (the install, ~/.gmnew/current) and watches only that, so a checkout edit reaches a peer only through an install (tools/check-install-follows.mjs).
 - ASCII only in every file. No decorative symbols.
@@ -77,11 +77,11 @@ Node-missing items are retired, not ported: native ships; the Node engine was re
 
 ## Ship and commits
 
-- Commit only through tools/ship.sh (see Owner rules). On a collision, fetch, reapply on origin's tip, and push. Do not clone to get around one.
+- Commit only through gm-tool ship (see Owner rules). On a collision, fetch, reapply on origin's tip, and push. Do not clone to get around one.
 
 ## Keeping this file
 
 - A note names a path or a command. Check it against the code before keeping it, with gm.grep or gm.read_file.
 - New code gets no comments. A reason that cannot be read from the code goes here, after it is checked.
 - Each edit to this file audits every note: facts that the code, README, DESIGN.md or a skill already state go, and only facts that a run, witness or measurement could reveal stay.
-- The gate (tools/gate.mjs agents-size) fails above 30 KB. At the limit, compress first, then drop what the code shows, menial steps and obvious facts.
+- The gate (gm-tool gate, agents-size) fails above 30 KB. At the limit, compress first, then drop what the code shows, menial steps and obvious facts.
