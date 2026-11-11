@@ -8,13 +8,12 @@ import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const target = process.argv[2] ?? null;
-const onNode = target === 'node';
-const binary = onNode ? process.execPath : target === null ? null : resolve(target);
-if (binary === null || (!onNode && !existsSync(binary))) {
+const binary = target === null ? null : resolve(target);
+if (binary === null || (!existsSync(binary))) {
   console.error('measure-checks-cost: usage: node tools/measure-checks-cost.mjs <path-to-native-binary | node> [commands]');
   process.exit(2);
 }
-const lead = onNode ? [join(root, 'src', 'mcp.mjs')] : ['serve'];
+const lead = ['serve'];
 const COMMANDS = Number(process.argv[3] ?? 2000);
 const SAMPLES = 5;
 const REPLY_MS = 600000;

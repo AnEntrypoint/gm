@@ -1,5 +1,4 @@
-file(READ ${CMAKE_CURRENT_LIST_DIR}/../../../package.json GMNEW_MCP_PACKAGE_JSON)
-string(JSON GMNEW_MCP_PACKAGE_VERSION GET ${GMNEW_MCP_PACKAGE_JSON} version)
+set(GMNEW_MCP_PACKAGE_VERSION "0.1.0")
 
 add_library(gm_mcp STATIC ${CMAKE_CURRENT_LIST_DIR}/server.cpp ${CMAKE_CURRENT_LIST_DIR}/skills.cpp ${CMAKE_CURRENT_LIST_DIR}/sha256.cpp ${CMAKE_CURRENT_LIST_DIR}/entry.cpp ${CMAKE_CURRENT_LIST_DIR}/compact.cpp ${CMAKE_CURRENT_LIST_DIR}/pending.cpp)
 target_include_directories(gm_mcp PUBLIC ${CMAKE_CURRENT_LIST_DIR}/include ${CMAKE_CURRENT_LIST_DIR}/../../include)

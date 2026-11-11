@@ -8,8 +8,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const target = process.argv[2] ?? 'node';
-const onNode = target === 'node';
-if (!onNode && !existsSync(resolve(target))) {
+if (!existsSync(resolve(target))) {
   console.error('restart-body-orphan-check: failed: no native binary at ' + resolve(target));
   process.exit(1);
 }
@@ -23,18 +22,16 @@ watchdog.unref();
 
 const workspace = mkdtempSync(join(tmpdir(), 'gm-restart-orphan-'));
 const configDir = mkdtempSync(join(tmpdir(), 'gm-restart-orphan-config-'));
-const binDir = onNode ? null : mkdtempSync(join(tmpdir(), 'gm-restart-orphan-bin-'));
+const binDir = mkdtempSync(join(tmpdir(), 'gm-restart-orphan-bin-'));
 const mcpConfig = join(configDir, 'no-default-mcp.json');
 writeFileSync(mcpConfig, JSON.stringify({ mcpServers: { playwriter: { disabled: true } } }));
-const copied = onNode ? null : join(binDir, basename(resolve(target)));
-if (!onNode) {
-  copyFileSync(resolve(target), copied);
-  for (const sub of ['leaves', 'skills', 'defaults']) cpSync(join(dirname(resolve(target)), sub), join(dirname(copied), sub), { recursive: true });
-  chmodSync(copied, 0o755);
-}
+const copied = join(binDir, basename(resolve(target)));
+copyFileSync(resolve(target), copied);
+for (const sub of ['leaves', 'skills', 'defaults']) cpSync(join(dirname(resolve(target)), sub), join(dirname(copied), sub), { recursive: true });
+chmodSync(copied, 0o755);
 const common = ['--workspace', workspace, '--mcp-config', mcpConfig];
-const file = onNode ? process.execPath : copied;
-const argv = onNode ? [join(root, 'tools', 'relay.mjs'), ...common] : ['serve', ...common];
+const file = copied;
+const argv = ['serve', ...common];
 
 const child = spawn(file, argv, { stdio: ['pipe', 'pipe', 'pipe'] });
 child.stderr.resume();
@@ -80,16 +77,10 @@ const engineProcesses = () => {
   return out
     .split('\n')
     .map((line) => line.trim())
-    .filter((line) => line.includes(workspace) && (onNode ? line.includes('mcp.mjs') : /(^|\s)worker(\s|$)/.test(line)))
+    .filter((line) => line.includes(workspace) && (/(^|\s)worker(\s|$)/.test(line)))
     .map((line) => Number(line.split(/\s+/)[0]));
 };
 const triggerRestart = () => {
-  if (onNode) {
-    const [worker] = engineProcesses();
-    if (worker === undefined) throw new Error('no Node worker process found for the workspace');
-    process.kill(worker, 'SIGTERM');
-    return 'SIGTERM to the Node worker pid ' + worker;
-  }
   const future = new Date(Date.now() + 60000);
   utimesSync(copied, future, future);
   return 'binary mtime changed at ' + copied + ' (the relay binary-change restart)';

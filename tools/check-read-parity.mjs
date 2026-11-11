@@ -13,13 +13,12 @@ if (target === null) {
   console.error('read-parity-check: usage: node tools/check-read-parity.mjs (node | path-to-native-gm)');
   process.exit(2);
 }
-const onNode = target === 'node';
-const binary = onNode ? process.execPath : resolve(target);
-if (!onNode && !existsSync(binary)) {
+const binary = resolve(target);
+if (!existsSync(binary)) {
   console.error(`read-parity-check: no native binary at ${binary}`);
   process.exit(2);
 }
-const lead = onNode ? [join(root, 'src', 'mcp.mjs')] : ['serve'];
+const lead = ['serve'];
 
 const REPLY_MS = 20000;
 const EMOJI = String.fromCodePoint(0x1f600);

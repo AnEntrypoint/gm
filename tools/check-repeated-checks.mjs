@@ -9,13 +9,12 @@ import { fileURLToPath } from 'node:url';
 const CHECK = 'repeated-checks-check';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const target = process.argv[2] ?? null;
-const onNode = target === 'node';
-const binary = onNode ? process.execPath : target === null ? null : resolve(target);
-if (binary === null || (!onNode && !existsSync(binary))) {
+const binary = target === null ? null : resolve(target);
+if (binary === null || (!existsSync(binary))) {
   console.error(`${CHECK}: usage: node tools/check-repeated-checks.mjs <path-to-native-binary | node>`);
   process.exit(2);
 }
-const lead = onNode ? [join(root, 'src', 'mcp.mjs')] : ['serve'];
+const lead = ['serve'];
 const REPEATED = 'echo gm-repeated-check';
 const ONCE = 'echo gm-single-check';
 const JOB = 'echo gm-job-check';

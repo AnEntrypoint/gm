@@ -8,8 +8,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const target = process.argv[2] ?? 'node';
-const onNode = target === 'node';
-if (!onNode && !existsSync(resolve(target))) {
+if (!existsSync(resolve(target))) {
   console.error('foreground-hold-check: failed: no native binary at ' + resolve(target));
   process.exit(1);
 }
@@ -29,8 +28,8 @@ const configDir = mkdtempSync(join(tmpdir(), 'gm-foreground-hold-config-'));
 const mcpConfig = join(configDir, 'no-default-mcp.json');
 writeFileSync(mcpConfig, JSON.stringify({ mcpServers: { playwriter: { disabled: true } } }));
 const common = ['--workspace', workspace, '--mcp-config', mcpConfig];
-const file = onNode ? process.execPath : resolve(target);
-const argv = onNode ? [join(root, 'tools', 'relay.mjs'), ...common] : ['serve', ...common];
+const file = resolve(target);
+const argv = ['serve', ...common];
 
 const child = spawn(file, argv, { stdio: ['pipe', 'pipe', 'pipe'] });
 child.stderr.resume();

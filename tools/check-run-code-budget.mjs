@@ -15,10 +15,9 @@ process.env.GMNEW_TEST_CLOCK = '1';
 process.env.GM_CLOCK_SCALE = String(CLOCK);
 const scaled = (ms) => Math.max(1, Math.round(ms * CLOCK));
 const FETCH_MS = Math.max(300, scaled(3000));
-const onNode = target === 'node';
-const binary = onNode ? process.execPath : target === null ? null : resolve(target);
-const lead = onNode ? [join(root, 'src', 'mcp.mjs')] : ['serve'];
-if (binary === null || (!onNode && !existsSync(binary))) {
+const binary = target === null ? null : resolve(target);
+const lead = ['serve'];
+if (binary === null || (!existsSync(binary))) {
   console.log('run-code-budget-check: skipped (no binary given)');
   process.exit(0);
 }

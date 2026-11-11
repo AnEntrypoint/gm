@@ -9,8 +9,7 @@ import { fileURLToPath } from 'node:url';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const CHECK = 'run-code-lifetime-check';
 const target = process.argv[2] ?? null;
-const onNode = target === 'node';
-if (target === null || (!onNode && !existsSync(resolve(target)))) {
+if (target === null || (!existsSync(resolve(target)))) {
   console.error(`${CHECK}: usage: node tools/check-run-code-lifetime.mjs <node|path-to-native-binary>`);
   process.exit(2);
 }
@@ -27,9 +26,7 @@ const parse = (reply) => JSON.parse(reply?.result?.content?.[0]?.text ?? 'null')
 
 const workspace = mkdtempSync(join(tmpdir(), 'gm-lifetime-'));
 const args = ['--workspace', workspace, '--job-lifetime-ms', String(LIFETIME_MS)];
-const child = onNode
-  ? spawn(process.execPath, [join(root, 'src', 'mcp.mjs'), ...args], { stdio: ['pipe', 'pipe', 'pipe'] })
-  : spawn(resolve(target), ['serve', ...args], { stdio: ['pipe', 'pipe', 'pipe'] });
+const child = spawn(resolve(target), ['serve', ...args], { stdio: ['pipe', 'pipe', 'pipe'] });
 child.stdin.on('error', () => {});
 child.stderr.on('data', () => {});
 const pending = new Map();

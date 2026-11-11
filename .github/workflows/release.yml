@@ -60,9 +60,6 @@ jobs:
         run: |
           cmake --preset ${{ matrix.preset }} -DGMNEW_VERSION=$GMNEW_VERSION ${{ matrix.extra }} $CCACHE_ARGS
           cmake --build build/${{ matrix.preset }}
-      - name: Node dependencies
-        shell: bash
-        run: npm ci --ignore-scripts
       - name: Chromium for the browser-scope check (linux-arm64)
         if: matrix.target == 'arm64-linux'
         shell: bash
@@ -81,12 +78,7 @@ jobs:
         if: matrix.target == 'x64-linux'
         shell: bash
         run: |
-          node tools/witness-next-context-replay.mjs node
           node tools/witness-next-context-replay.mjs build/${{ matrix.preset }}/native/components/host/gm
-      - name: Node parity
-        if: matrix.target == 'x64-linux'
-        shell: bash
-        run: node native/tests/parity/run.mjs --bin build/${{ matrix.preset }}/native/components/host/gm
       - name: Package
         shell: bash
         run: node tools/package.mjs --target ${{ matrix.target }} --build-dir build/${{ matrix.preset }} --out dist
@@ -126,9 +118,6 @@ jobs:
           cmake --preset ${{ matrix.preset }} --fresh -DGMNEW_VERSION=$GMNEW_VERSION
           cmake --build build/${{ matrix.preset }}
           cmake --build build/${{ matrix.preset }} --target gm-core
-      - name: Node dependencies
-        shell: bash
-        run: npm ci --ignore-scripts
       - name: Chromium for the browser-scope check (arm64-windows)
         if: matrix.target == 'arm64-windows'
         shell: bash

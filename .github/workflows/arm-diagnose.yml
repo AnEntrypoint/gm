@@ -24,9 +24,6 @@ jobs:
         run: |
           cmake --preset asan
           cmake --build build/asan
-      - name: Node dependencies
-        shell: bash
-        run: npm ci --ignore-scripts
       - name: Check asan build (conformance, one run)
         shell: bash
         env:
@@ -47,9 +44,6 @@ jobs:
         run: |
           cmake --preset arm64-linux-release
           cmake --build build/arm64-linux-release
-      - name: Node dependencies for the gdb run
-        shell: bash
-        run: npm ci --ignore-scripts
       - name: Run the conformance check under gdb and print a backtrace on a signal
         shell: bash
         run: |

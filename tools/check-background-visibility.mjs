@@ -9,13 +9,12 @@ import { fileURLToPath } from 'node:url';
 const CHECK = 'background-visibility-check';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const target = process.argv[2] ?? null;
-const onNode = target === 'node';
-const binary = onNode ? process.execPath : target === null ? null : resolve(target);
-if (binary === null || (!onNode && !existsSync(binary))) {
+const binary = target === null ? null : resolve(target);
+if (binary === null || (!existsSync(binary))) {
   console.error(`${CHECK}: usage: node tools/check-background-visibility.mjs <path-to-native-binary | node>`);
   process.exit(2);
 }
-const lead = onNode ? [join(root, 'src', 'mcp.mjs')] : ['serve'];
+const lead = ['serve'];
 const REPLY_MS = 120000;
 const BODY_MS = 4000;
 const WAIT_MS = 20000;

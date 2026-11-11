@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { chmodSync, copyFileSync, cpSync, existsSync, mkdtempSync, readdirSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
+import { chmodSync, copyFileSync, cpSync, existsSync, mkdtempSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { spawn, spawnSync } from 'node:child_process';
 import { once } from 'node:events';
 import { tmpdir } from 'node:os';
@@ -13,8 +13,7 @@ if (target === null) {
   console.error('restart-jobs-check: failed: give the target: node, or the path of the native gm binary');
   process.exit(1);
 }
-const onNode = target === 'node';
-if (!onNode && !existsSync(resolve(target))) {
+if (!existsSync(resolve(target))) {
   console.error(`restart-jobs-check: failed: no native binary at ${resolve(target)}`);
   process.exit(1);
 }
@@ -31,18 +30,16 @@ watchdog.unref();
 
 const workspace = mkdtempSync(join(tmpdir(), 'gm-restart-jobs-'));
 const configDir = mkdtempSync(join(tmpdir(), 'gm-restart-jobs-config-'));
-const binDir = onNode ? null : mkdtempSync(join(tmpdir(), 'gm-restart-jobs-bin-'));
+const binDir = mkdtempSync(join(tmpdir(), 'gm-restart-jobs-bin-'));
 const mcpConfig = join(configDir, 'no-default-mcp.json');
 writeFileSync(mcpConfig, JSON.stringify({ mcpServers: { playwriter: { disabled: true } } }));
-const copied = onNode ? null : join(binDir, basename(resolve(target)));
-if (!onNode) {
-  copyFileSync(resolve(target), copied);
-  for (const sub of ['leaves', 'skills', 'defaults']) cpSync(join(dirname(resolve(target)), sub), join(dirname(copied), sub), { recursive: true });
-  chmodSync(copied, 0o755);
-}
+const copied = join(binDir, basename(resolve(target)));
+copyFileSync(resolve(target), copied);
+for (const sub of ['leaves', 'skills', 'defaults']) cpSync(join(dirname(resolve(target)), sub), join(dirname(copied), sub), { recursive: true });
+chmodSync(copied, 0o755);
 const common = ['--workspace', workspace, '--mcp-config', mcpConfig];
-const file = onNode ? process.execPath : copied;
-const argv = onNode ? [join(root, 'tools', 'relay.mjs'), ...common] : ['serve', ...common];
+const file = copied;
+const argv = ['serve', ...common];
 
 const child = spawn(file, argv, { stdio: ['pipe', 'pipe', 'pipe'] });
 child.stderr.resume();
@@ -119,24 +116,18 @@ const processOf = (pid) => {
 const engineProcesses = () => {
   if (process.platform === 'win32') {
     return windowsProcesses()
-      .filter((row) => row.args.includes(workspace) && (onNode ? row.args.includes('mcp.mjs') : /(^|\s)worker(\s|$)/.test(row.args)))
+      .filter((row) => row.args.includes(workspace) && (/(^|\s)worker(\s|$)/.test(row.args)))
       .map((row) => row.pid);
   }
   const out = spawnSync('ps', ['-eo', 'pid=,args='], { encoding: 'utf8', timeout: 5000 }).stdout ?? '';
   return out
     .split('\n')
     .map((line) => line.trim())
-    .filter((line) => line.includes(workspace) && (onNode ? line.includes('mcp.mjs') : /(^|\s)worker(\s|$)/.test(line)))
+    .filter((line) => line.includes(workspace) && (/(^|\s)worker(\s|$)/.test(line)))
     .map((line) => Number(line.split(/\s+/)[0]));
 };
 
 const triggerRestart = () => {
-  if (onNode) {
-    const [worker] = engineProcesses();
-    if (worker === undefined) throw new Error('no Node worker process found for the workspace');
-    process.kill(worker, 'SIGTERM');
-    return `SIGTERM to the Node worker pid ${worker} (the supervisor's pause signal)`;
-  }
   const future = new Date(Date.now() + 60000);
   utimesSync(copied, future, future);
   return `binary mtime changed at ${copied} (the relay's binary-change restart)`;
@@ -211,7 +202,7 @@ try {
     console.error(`restart-jobs-check: timings ${JSON.stringify(timings)}`);
     process.exitCode = 1;
   } else {
-    console.log(`restart-jobs-check: ok (${onNode ? 'node' : 'native'}: ${how}; the job's process ${jobPid} was alive ${timings.aliveMs} ms after the trigger; the restart answered in ${timings.restartMs} ms; the job exited 0 with output "done" at ${timings.endMs} ms; carry-over events ${carried.length}; killed with reason restart 0)`);
+    console.log(`restart-jobs-check: ok (${'native'}: ${how}; the job's process ${jobPid} was alive ${timings.aliveMs} ms after the trigger; the restart answered in ${timings.restartMs} ms; the job exited 0 with output "done" at ${timings.endMs} ms; carry-over events ${carried.length}; killed with reason restart 0)`);
   }
 } finally {
   const exited = child.exitCode !== null || child.signalCode !== null ? Promise.resolve() : once(child, 'exit');
@@ -222,10 +213,6 @@ try {
     try {
       process.kill(pid, 'SIGKILL');
     } catch {}
-  }
-  const sessions = join(root, 'runs', '.sessions');
-  if (onNode && existsSync(sessions)) {
-    for (const entry of readdirSync(sessions)) if (entry.startsWith(`${child.pid}-`)) rmSync(join(sessions, entry), { force: true });
   }
   rmSync(workspace, { recursive: true, force: true });
   rmSync(configDir, { recursive: true, force: true });

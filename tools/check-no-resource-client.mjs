@@ -11,8 +11,7 @@ import { fileURLToPath } from 'node:url';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const CHECK = 'no-resource-client-check';
 const target = process.argv[2] ?? null;
-const onNode = target === 'node';
-if (target === null || (!onNode && !existsSync(resolve(target)))) {
+if (target === null || (!existsSync(resolve(target)))) {
   console.error(`${CHECK}: usage: node tools/check-no-resource-client.mjs <node|path-to-native-binary>`);
   process.exit(2);
 }
@@ -24,7 +23,7 @@ const TOOL_ONLY_METHODS = new Set(['initialize', 'tools/list', 'tools/call']);
 const sleep = (ms) => new Promise((done) => setTimeout(done, ms));
 
 const openToolOnlyClient = (command, args) => {
-  const lead = onNode ? [join(root, 'tools', 'relay.mjs')] : ['serve'];
+  const lead = ['serve'];
   const child = spawn(command, [...lead, ...args], { stdio: ['pipe', 'pipe', 'pipe'] });
   let stderr = '';
   child.stdin.on('error', () => {});
@@ -95,31 +94,17 @@ try {
   writeFileSync(quiet, JSON.stringify({ mcpServers: { playwriter: { disabled: true } } }));
   writeFileSync(join(workspace, 'sample.txt'), 'tool-only client\n');
   const runDir = join(workspace, 'run');
-  const engine = onNode ? process.execPath : join(mkdtempSync(join(scratch, 'bin-')), basename(resolve(target)));
-  if (!onNode) {
-    copyFileSync(resolve(target), engine);
-    for (const sub of ['leaves', 'skills', 'defaults']) cpSync(join(dirname(resolve(target)), sub), join(dirname(engine), sub), { recursive: true });
-    chmodSync(engine, 0o755);
-  }
+  const engine = join(mkdtempSync(join(scratch, 'bin-')), basename(resolve(target)));
+  copyFileSync(resolve(target), engine);
+  for (const sub of ['leaves', 'skills', 'defaults']) cpSync(join(dirname(resolve(target)), sub), join(dirname(engine), sub), { recursive: true });
+  chmodSync(engine, 0o755);
   const restartCount = () =>
     readFileSync(join(runDir, 'log.jsonl'), 'utf8')
       .split('\n')
       .filter((line) => line.includes('"kind":"restart"')).length;
-  const nodeWorkers = () =>
-    (spawnSync('ps', ['-eo', 'pid=,args='], { encoding: 'utf8', timeout: 5000 }).stdout ?? '')
-      .split('\n')
-      .map((line) => line.trim())
-      .filter((line) => line.includes(workspace) && line.includes('mcp.mjs'))
-      .map((line) => Number(line.split(/\s+/)[0]));
   const restartWorker = () => {
-    if (!onNode) {
-      const future = new Date(Date.now() + 60000);
-      utimesSync(engine, future, future);
-      return;
-    }
-    const [workerPid] = nodeWorkers();
-    if (workerPid === undefined) throw new Error('no Node worker process found for the workspace');
-    process.kill(workerPid, 'SIGTERM');
+    const future = new Date(Date.now() + 60000);
+    utimesSync(engine, future, future);
   };
   const client = openToolOnlyClient(engine, ['--workspace', workspace, '--run-dir', runDir, '--mcp-config', quiet]);
   try {

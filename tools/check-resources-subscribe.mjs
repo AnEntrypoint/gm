@@ -9,9 +9,8 @@ import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const target = process.argv[2] ?? null;
-const onNode = target === 'node';
-const binary = onNode ? process.execPath : target === null ? null : resolve(target);
-if (binary === null || (!onNode && !existsSync(binary))) {
+const binary = target === null ? null : resolve(target);
+if (binary === null || (!existsSync(binary))) {
   console.log('resources-subscribe-check: skipped (no binary given)');
   process.exit(0);
 }
@@ -30,11 +29,11 @@ const skillsDir = join(scratch, 'skills');
 mkdirSync(workspace);
 cpSync(join(root, 'skills'), skillsDir, { recursive: true });
 writeFileSync(mcpConfig, JSON.stringify({ mcpServers: { playwriter: { disabled: true } } }));
-const served = onNode ? join(root, 'skills', 'gm-continue', 'SKILL.md') : join(skillsDir, 'gm-continue', 'SKILL.md');
+const served = join(skillsDir, 'gm-continue', 'SKILL.md');
 const originalText = readFileSync(served, 'utf8');
 
-const lead = onNode ? [join(root, 'src', 'mcp.mjs')] : ['serve'];
-const skillsFlag = onNode ? [] : ['--skills', skillsDir];
+const lead = ['serve'];
+const skillsFlag = ['--skills', skillsDir];
 const child = spawn(binary, [...lead, '--workspace', workspace, '--mcp-config', mcpConfig, ...skillsFlag], { stdio: ['pipe', 'pipe', 'pipe'] });
 child.stderr.resume();
 const pending = new Map();

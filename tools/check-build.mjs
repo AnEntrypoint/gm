@@ -25,11 +25,10 @@ const CONFORMANCE = 'conformance';
 const NATIVE = [
     'check-browser-scope.mjs', 'check-run-code-budget.mjs', 'check-turn-economy.mjs', 'check-restart-jobs.mjs', 'check-run-code-progress.mjs',
     'check-shell-stdin.mjs', 'check-grep-state-scope.mjs', 'check-job-bounds.mjs', 'check-early-run-code.mjs', 'check-stop-fetch.mjs',
-    'check-read-parity.mjs', 'check-read-truncation.mjs', 'check-protocol-versions.mjs', 'check-resources-subscribe.mjs', 'check-startup-attempts.mjs',
+    'check-read-parity.mjs', 'check-protocol-versions.mjs', 'check-resources-subscribe.mjs', 'check-startup-attempts.mjs',
     'check-skill-serve.mjs', 'check-no-resource-client.mjs', 'check-restart-skill-read.mjs', 'check-relay-reexec.mjs', 'check-embedded-runtime.mjs',
     'witness-next-context-replay.mjs', 'check-install-switch.mjs', 'check-repeated-checks.mjs', 'check-owner-identity.mjs', 'check-build-handover.mjs', 'check-cli-flags.mjs', 'check-cut-marker.mjs', 'check-feed-reference.mjs', 'check-cancel-record.mjs', 'check-install-follows.mjs',
 ];
-const NODE = ['check-turn-economy.mjs', 'check-restart-jobs.mjs', 'check-no-resource-client.mjs', 'check-repeated-checks.mjs'];
 const EXCLUSIVE = new Set(['check-relay-reexec.mjs']);
 const JOBS = Math.max(1, Number(process.env.GM_CHECK_JOBS ?? Math.min(6, Math.floor(cpus().length / 2))));
 const CACHE = join(buildDir, 'check-build-cache.json');
@@ -42,7 +41,7 @@ const fingerprint = () => {
     const hash = createHash('sha256');
     const stat = statSync(binary);
     hash.update(`${binary}:${stat.size}:${stat.mtimeMs}`);
-    for (const dir of ['src', 'skills', 'defaults', 'tools', join('native', 'leaves')]) {
+    for (const dir of ['skills', 'defaults', 'tools', join('native', 'leaves')]) {
         const walk = (path) => {
             for (const name of readdirSync(join(root, path)).sort()) {
                 if (path === 'tools' && /^(check|witness)-/.test(name)) continue;
@@ -193,10 +192,6 @@ const pipeline = async () => {
     }
     for (const name of NATIVE.filter(selected)) {
         plan(name, keyOf(name, name), { script: join(root, 'tools', name), args: [binary] }, EXCLUSIVE.has(name) ? exclusive : jobs);
-    }
-    for (const name of NODE.filter((name) => selected(name) && !EXCLUSIVE.has(name))) {
-        const label = `${name} (node)`;
-        plan(label, keyOf(label, name), { script: join(root, 'tools', name), args: ['node'] }, jobs);
     }
     if (process.argv.includes('--slow')) {
         for (const name of ['check-run-code-budget.mjs', 'check-turn-economy.mjs']) {

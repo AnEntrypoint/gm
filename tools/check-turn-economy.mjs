@@ -10,8 +10,7 @@ import { fileURLToPath } from 'node:url';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const CHECK = 'turn-economy-check';
 const target = process.argv[2] ?? null;
-const onNode = target === 'node';
-if (target === null || (!onNode && !existsSync(resolve(target)))) {
+if (target === null || (!existsSync(resolve(target)))) {
   console.error(`${CHECK}: usage: node tools/check-turn-economy.mjs <node|path-to-native-binary>`);
   process.exit(2);
 }
@@ -39,8 +38,8 @@ try {
   writeFileSync(quiet, JSON.stringify({ mcpServers: { playwriter: { disabled: true } } }));
   writeFileSync(join(workspace, 'a.txt'), 'alpha\n');
   writeFileSync(join(workspace, 'b.txt'), 'beta\n');
-  const lead = onNode ? [join(root, 'src', 'mcp.mjs')] : ['serve'];
-  const child = spawn(onNode ? process.execPath : resolve(target), [...lead, '--workspace', workspace, '--run-dir', join(workspace, 'run'), '--mcp-config', quiet], { stdio: ['pipe', 'pipe', 'pipe'] });
+  const lead = ['serve'];
+  const child = spawn(resolve(target), [...lead, '--workspace', workspace, '--run-dir', join(workspace, 'run'), '--mcp-config', quiet], { stdio: ['pipe', 'pipe', 'pipe'] });
   child.stdin.on('error', () => {});
   let stderr = '';
   child.stderr.on('data', (chunk) => {

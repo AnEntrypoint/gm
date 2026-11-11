@@ -1,6 +1,6 @@
 # gm: agent instructions
 
-gm is one long-horizon worker: an MCP server that runs a task as one append-only log, with the rules re-read at every step. The host session (Claude Code) is the model. Two trees live in this checkout: the Node reference (src/, tools/) and the native C++23 tree (native/). Native ships; Node stays the parity reference (DESIGN.md, Local cutover of the native gm, 2026-11-04; Owner decisions on the five open questions, 2026-11-06).
+gm is one long-horizon worker: an MCP server that runs a task as one append-only log, with the rules re-read at every step. The host session (Claude Code) is the model. The product is the native C++23 tree (native/). The Node engine was retired on 2026-11-11 in one removal commit: src/, tools/core.mjs, relay.mjs, supervise.mjs, update.mjs and package.json are gone; git revert of that commit restores them (DESIGN.md, Local cutover of the native gm, 2026-11-04; Owner decisions on the five open questions, 2026-11-06).
 
 ## Read first
 
@@ -14,9 +14,8 @@ gm is one long-horizon worker: an MCP server that runs a task as one append-only
 - Work on main in the shared checkout. No clones, branches or worktrees. A witness may run on a tar copy of the tree; the edit and the commit happen in the checkout.
 - Commit only by explicit path with tools/ship.sh, author lanmower, no trailers on any commit or PR. The harness may suggest a Co-Authored-By trailer; do not add it.
 - Other agents edit this checkout at the same time. Edit only your scope, and use Edit with exact text after a fresh read.
-- In the Node tree an uncommitted edit reaches running peers: a src/ module the worker loads reloads or restarts it, and tools/core.mjs or tools/update.mjs hands the core over (tools/core.mjs onSourceChange, onCoreChange). Native peers reload on a leaf or binary change, at a step boundary; a skill change is read on the next call and restarts nothing. A peer reads its leaves, skills and defaults only from the directory of its own executable (the install, ~/.gmnew/current) and watches only that, so a checkout edit reaches a peer only through an install (tools/check-install-follows.mjs).
+- Native peers reload on a leaf or binary change, at a step boundary; a skill change is read on the next call and restarts nothing. A peer reads its leaves, skills and defaults only from the directory of its own executable (the install, ~/.gmnew/current) and watches only that, so a checkout edit reaches a peer only through an install (tools/check-install-follows.mjs).
 - ASCII only in every file. No decorative symbols.
-- New shell commands in the Node tree use child_process.spawn with an explicit timeout. Older calls without one remain (execFileSync in src/gate.mjs, spawnSync in src/body-worker.mjs).
 - Files outside the checkout may be read and written when a task needs them (owner decision, 2026-11-03).
 - gm makes no API calls. The only model in the CLI is `scripted`, which is offline and deterministic.
 - gm's own MCP server is served under the name gm. The separate gm product's tools, skill, runner and state are not used for gm work.
@@ -27,11 +26,10 @@ gm is one long-horizon worker: an MCP server that runs a task as one append-only
 
 ## Build and test
 
-- Witness rule: run the built binary or the CLI on a real task in a scratch workspace, read the output, then delete the scratch. `--model scripted` (Node CLI only) runs offline.
+- Witness rule: run the built binary or the CLI on a real task in a scratch workspace, read the output, then delete the scratch.
 
 ## Facts found by troubleshooting
 
-- Node CLI needs `npm install` first (acorn is the one dependency; node_modules is git-ignored). Without it: ERR_MODULE_NOT_FOUND for 'acorn' (verified 2026-11-05).
 - The native build needs Ninja on PATH. On a host where pip is PEP 668 blocked, install it into a venv (verified 2026-11-05).
 - An installed build from 409087f-77 or earlier cannot self-update: its updater looks for gm-<target> in the archive, which ships gmnew-<target>. One manual scripts/install.sh run is needed; 70e4349 fixes the updater (DESIGN.md, "Update witness against the published release (2026-11-05)").
 - gh run list --commit needs the full 40-character SHA; a 7-character prefix returns no runs (verified 2026-11-05).
@@ -49,29 +47,28 @@ gm is one long-horizon worker: an MCP server that runs a task as one append-only
 - Relay re-exec (2026-11-10): on release 6a09d8b-311 the relay re-executed 10086 ms after an update, because a host held a next_context wait for 10000 ms and the relay moved only with no call in flight. The relay now re-executes while only next_context calls are in flight and passes them to the new relay with --resend (tools/check-relay-reexec.mjs skips on a dev stamp).
 - ASan on this host: LD_PRELOAD holds three interposer libraries, and an asan build then exits at startup with `ASan runtime does not come first in initial library list`. Run asan checks with `env -u LD_PRELOAD`.
 - A body's load-error frame (2026-11-10): the vendored quickjs-ng (7b5f588) prints `at <anonymous> (<body>:L:C)`, where QuickJS-NG printed `at <body>:L:C`. load_error in native/components/quickjs/runcode.cpp matches `<body>:`; the parity row `run_code syntax error` checks the line (DESIGN.md, "Embedded txiki.js runtime (2026-11-10)").
-- Do not cache the tokenized text of every file: one worker reached 1399 MB of heap on a 108 MB tree (verified in the Node tree).
+- Do not cache the tokenized text of every file: one worker reached 1399 MB of heap on a 108 MB tree.
 
 ## Parity harness
 
 - Last witness (2026-11-10, at 91d4fab, `--bin build/release/native/components/host/gm`): 20 of 97 match, 0 cutover-expected, 55 native-ahead, 22 documented-gap, 0 differ. The native-only keys and the sequence shifts they cause are native-ahead entries. Changing Node to match native is a decision, not a fix.
 
-## Known gaps, native against Node
+## Known gaps, native (the Node figures are in docs/PENDING_VALIDATION.md)
 
-Node-missing items are retired, not ported: native ships and Node is the parity reference (docs/PENDING_VALIDATION.md, 2026-11-09, the retirement table).
+Node-missing items are retired, not ported: native ships; the Node engine was removed 2026-11-11 (docs/PENDING_VALIDATION.md, 2026-11-09, the retirement table).
 
-- Both clients refuse an initialize result with no capabilities object or no serverInfo.version (native/components/mcpclient/client.cpp; refusalOf in src/mcp-client.mjs; tools/check-protocol-versions.mjs).
+- Both clients refuse an initialize result with no capabilities object or no serverInfo.version (native/components/mcpclient/client.cpp; tools/check-protocol-versions.mjs).
 - The SDK accepts five protocol versions (2025-11-25, 2025-06-18, 2025-03-26, 2024-11-05, 2024-10-07). Both servers echo any of the five on initialize and both clients connect all five (tools/check-protocol-versions.mjs). server/discover still lists the two versions Node speaks, on both engines.
 - A server killed by a signal reports 128 plus the signal number in native. A spawn failure reports the OS text in native.
 - Native answers server requests other than ping with the SDK's method-not-found text.
 - resources/subscribe and resources/unsubscribe are served by both engines and resources.subscribe is declared. An unknown uri answers -32002 on both engines (resources/read, skills/get and subscriptions/listen; decided 2026-11-10).
-- fetch differs by engine. Node serves any host and scheme its fetch serves, with no redirect count and the whole body archived. Native (native/leaves/fetch.mjs) allows http, https and data URLs, caps the body at 16 MiB, and uses curl's default redirect limit. Timeouts apply on both.
+- fetch (native/leaves/fetch.mjs) allows http, https and data URLs, caps the body at 16 MiB, and uses curl's default redirect limit. Timeouts apply on both.
 - ci_status needs only `gh api --paginate --jq`, so gh 2.46.0 works.
 
 ## Platform notes
 
-- Node, Windows: spawn runs no .cmd or .bat without a shell, so npx and npm start through cmd.exe. Not witnessed on Windows.
 - Native, Windows: child.cpp does not capture server stderr under _WIN32. Windows, macOS and arm64 builds are not verified here, because this checkout has no such host (DESIGN.md, Local cutover, 2026-11-04). The txiki and libuv build on them is unbuilt for the same reason, and MSVC keeps QuickJS-NG (GMNEW_TXIKI OFF, native/components/quickjs/CMakeLists.txt). Hosted CI builds them and is not watched here.
-- The process-group kill is unverified on Windows; only the Node doctor reports it (src/cli.mjs).
+- The process-group kill is unverified on Windows.
 - The playwriter execute tool returns a value only for one expression, or for an async arrow that returns. A top-level const or let yields "no output"; keep values in `state`.
 
 ## Owner decisions (2026-11-06, through orchestrate)
@@ -87,4 +84,4 @@ Node-missing items are retired, not ported: native ships and Node is the parity 
 - A note names a path or a command. Check it against the code before keeping it, with gm.grep or gm.read_file.
 - New code gets no comments. A reason that cannot be read from the code goes here, after it is checked.
 - Each edit to this file audits every note: facts that the code, README, DESIGN.md or a skill already state go, and only facts that a run, witness or measurement could reveal stay.
-- The gate (src/gate.mjs agents-size) fails above 30 KB. At the limit, compress first, then drop what the code shows, menial steps and obvious facts.
+- The gate (tools/gate.mjs agents-size) fails above 30 KB. At the limit, compress first, then drop what the code shows, menial steps and obvious facts.

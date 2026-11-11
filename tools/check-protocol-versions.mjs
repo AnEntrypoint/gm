@@ -14,9 +14,8 @@ if (target === null) {
   console.error(`${CHECK}: usage: node tools/check-protocol-versions.mjs <node|path-to-native-binary>`);
   process.exit(2);
 }
-const onNode = target === 'node';
-const binary = onNode ? process.execPath : resolve(target);
-if (!onNode && !existsSync(binary)) {
+const binary = resolve(target);
+if (!existsSync(binary)) {
   console.error(`${CHECK}: failed: no native binary at ${binary}`);
   process.exit(2);
 }
@@ -62,8 +61,8 @@ const removeTree = async (path) => {
 };
 
 const spawnEngine = (args) => {
-  const leading = onNode ? [join(root, 'src', 'mcp.mjs')] : ['serve'];
-  const child = spawn(onNode ? process.execPath : binary, [...leading, ...args], { stdio: ['pipe', 'pipe', 'pipe'] });
+  const leading = ['serve'];
+  const child = spawn(binary, [...leading, ...args], { stdio: ['pipe', 'pipe', 'pipe'] });
   let stderr = '';
   child.stderr.on('data', (chunk) => {
     stderr = (stderr + String(chunk)).slice(-STDERR_TAIL);

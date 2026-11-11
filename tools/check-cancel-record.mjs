@@ -8,8 +8,7 @@ import readline from 'node:readline';
 
 const CHECK = 'check-cancel-record';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const onNode = process.argv[2] === 'node';
-const binary = onNode ? process.execPath : resolve(process.argv[2] ?? 'build/release/native/components/host/gm');
+const binary = resolve(process.argv[2] ?? 'build/release/native/components/host/gm');
 const started = Date.now();
 const failures = [];
 const expect = (condition, text) => {
@@ -21,7 +20,7 @@ const runDir = join(workspace, 'runs', 'cancel');
 mkdirSync(workspace);
 const quiet = join(sandbox, 'quiet.json');
 writeFileSync(quiet, JSON.stringify({ mcpServers: { playwriter: { disabled: true } } }));
-const relay = spawn(binary, [...(onNode ? [join(root, 'tools', 'relay.mjs')] : ['serve']), '--workspace', workspace, '--run-dir', runDir, '--mcp-config', quiet], { detached: true, stdio: ['pipe', 'pipe', 'pipe'], env: { ...process.env, HOME: sandbox } });
+const relay = spawn(binary, [...(['serve']), '--workspace', workspace, '--run-dir', runDir, '--mcp-config', quiet], { detached: true, stdio: ['pipe', 'pipe', 'pipe'], env: { ...process.env, HOME: sandbox } });
 relay.stdin.on('error', () => {});
 const waiting = new Map();
 let nextId = 1;

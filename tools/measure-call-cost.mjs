@@ -8,13 +8,12 @@ import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const target = process.argv[2] ?? null;
-const onNode = target === 'node';
-const binary = onNode ? process.execPath : target === null ? null : resolve(target);
-if (binary === null || (!onNode && !existsSync(binary))) {
+const binary = target === null ? null : resolve(target);
+if (binary === null || (!existsSync(binary))) {
   console.error('measure-call-cost: usage: node tools/measure-call-cost.mjs <native binary | node> [calls]');
   process.exit(2);
 }
-const lead = onNode ? [join(root, 'src', 'mcp.mjs')] : ['serve'];
+const lead = ['serve'];
 const CALLS = Number(process.argv[3] ?? 40);
 const scratch = mkdtempSync(join(tmpdir(), 'gm-measure-call-'));
 const workspace = mkdtempSync(join(scratch, 'ws-'));

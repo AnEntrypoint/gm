@@ -43,13 +43,8 @@ for path in "$@"; do
     git rm -q --cached --ignore-unmatch -- "$path" || exit 1
   fi
 done
-if ! node -e "require.resolve('acorn')" >/dev/null 2>&1; then
-  git reset -q -- "$@"
-  echo "ship: the gate needs acorn; run npm install in $root and retry" >&2
-  exit 1
-fi
 out="${SHIP_OUT:-/tmp/ship-gate.out}"
-node -e "import('./src/gate.mjs').then(async (m) => { const r = await m.runGate(process.cwd()); console.log(JSON.stringify({ gate: r.ok, failed: r.failed })); process.exit(r.ok ? 0 : 1); })" > "$out" 2>&1
+node tools/gate.mjs "$@" > "$out" 2>&1
 rc=$?
 tail -n 1 "$out"
 echo "gate exit code: $rc"

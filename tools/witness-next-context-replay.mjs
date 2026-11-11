@@ -7,10 +7,7 @@ import { openServer } from './lib/gm-stdio.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const target = process.argv[2] ?? 'build/release/native/components/host/gm';
-const onNode = target === 'node';
-const launch = onNode
-    ? { binary: process.execPath, lead: [join(root, 'src', 'mcp.mjs')], extraArgs: [] }
-    : { binary: resolve(target), lead: ['serve'], extraArgs: ['--build-dir', 'none'] };
+const launch = { binary: resolve(target), lead: ['serve'], extraArgs: ['--build-dir', 'none'] };
 const workspace = mkdtempSync(join(tmpdir(), 'gm-replay-'));
 const configDir = mkdtempSync(join(tmpdir(), 'gm-replay-mcp-'));
 const mcpConfig = join(configDir, 'no-default-mcp.json');
@@ -25,7 +22,7 @@ try {
     const items = successor.events ?? successor.items ?? [];
     const feed = JSON.stringify(items);
     const summary = {
-        path: onNode ? 'node src/mcp.mjs' : 'native',
+        path: 'native',
         target,
         firstRun: first.run,
         finished: finished.finished === true,

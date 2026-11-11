@@ -9,8 +9,7 @@ import { fileURLToPath } from 'node:url';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const CHECK = 'decision-parity-check';
 const target = process.argv[2] ?? null;
-const onNode = target === 'node';
-if (target === null || (!onNode && !existsSync(resolve(target)))) {
+if (target === null || (!existsSync(resolve(target)))) {
   console.error(`${CHECK}: usage: node tools/check-decision-parity.mjs <node|path-to-native-binary>`);
   process.exit(2);
 }
@@ -27,9 +26,7 @@ const parse = (reply) => JSON.parse(reply?.result?.content?.[0]?.text ?? 'null')
 const session = (lifetime) => {
   const workspace = mkdtempSync(join(tmpdir(), 'gm-decision-'));
   const args = ['--workspace', workspace, '--max-steps', String(MAX_STEPS)];
-  const child = onNode
-    ? spawn(process.execPath, [join(root, 'src', 'mcp.mjs'), ...args], { stdio: ['pipe', 'pipe', 'pipe'] })
-    : spawn(resolve(target), ['serve', ...args], { stdio: ['pipe', 'pipe', 'pipe'] });
+  const child = spawn(resolve(target), ['serve', ...args], { stdio: ['pipe', 'pipe', 'pipe'] });
   child.stdin.on('error', () => {});
   child.stderr.on('data', () => {});
   const pending = new Map();

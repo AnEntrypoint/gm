@@ -8,10 +8,9 @@ import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const target = process.argv[2] ?? null;
-const onNode = target === 'node';
-const binary = onNode ? process.execPath : target === null ? null : resolve(target);
-const lead = onNode ? [join(root, 'src', 'mcp.mjs')] : ['serve'];
-if (binary === null || (!onNode && !existsSync(binary))) {
+const binary = target === null ? null : resolve(target);
+const lead = ['serve'];
+if (binary === null || (!existsSync(binary))) {
   console.log('browser-scope-check: skipped (no binary given)');
   process.exit(0);
 }
