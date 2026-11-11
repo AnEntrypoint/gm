@@ -2380,3 +2380,15 @@ Not run here: tools/check-txiki-wasi.mjs and the gm reactor wasm (the gm wasm32-
 - tools/check-background-visibility.mjs node: exit 0, wall 4.23 s. Output: background-visibility-check: ok (node: ...; wall 4.18 s).
 - Witness fix: job_status is a verb inside run_code, not a top-level tool; the first run of the witness failed on that read, and the engines themselves passed the rest.
 - tools/check-build.mjs build/release: exit 0, wall 378.86 s; conformance 86 passed, 0 failed of 86 checks in 24 scenarios.
+
+## Iteration-time habits and defect audit (2026-11-11, Phase A)
+
+- skills/gm/SKILL.md Habits: seven general habits added (iteration time kept in view; the narrowest check that can fail, a failing row rerun alone, the full set once before a push; a started job waited on by PID with a bounded timeout; a reachable ranked item built in its pass; a held item reported once with its cause; bounded reads; the longest step named in each report). Witness: ReadMcpResourceTool skill://gm/SKILL.md shows them, and tools/check-skill-serve.mjs passes on the built binary.
+- Defect audit (reported 2026-11-08), each against the current code:
+  - gm.read_file over about 19.6 KB: closed by 2f3c819 (a truncated page ends with a truncated-at notice). Witness: tools/check-read-truncation.mjs.
+  - run_code has no require: closed. require is a function in a run_code body (native/components/quickjs/runcode.cpp require bootstrap). Witness: tools/check-run-code-require.mjs.
+  - skill://gm/SKILL.md through the host Skill tool: a host limit, not a gm defect. The host Skill tool lists only the skills the host installs; gm serves the skill through resources (ReadMcpResourceTool, skill://gm/SKILL.md). Witness: tools/check-skill-serve.mjs. Nothing in gm can close it.
+  - next_context returned another run task: closed by 871a482 and fcb84df (a child task replacement needs owner:true). Witnesses: tools/check-task-set.mjs and tools/check-child-task.mjs.
+  - the first step returns too much output: bounded by fcb84df (bound tool replies). The first next_context reply measures 4905 bytes (rules, task and the first feed). Witness: tools/measure-next-context.mjs (its first-reply check).
+- Not built in this pass: the next_context surface for the repeated command count and the wall time per check. It needs a run-log aggregation in both engines, so it is the next item, not closed here.
+- Install: scripts/install.sh fetches the published release from GMNEW_RELEASE_BASE, and it has no argument for a local build, so a local build cannot be installed through it. Installing the pushed build needs a published release, which the owner-held release path produces.
