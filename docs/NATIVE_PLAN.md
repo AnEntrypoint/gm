@@ -37,7 +37,7 @@ Scope: each script tracked in git (`git ls-files`) and each script in the instal
 | `native/leaves/fetch.mjs` | HTTP(S) and data URL fetch, 16 MiB cap. | leaf (native), item 2d |
 | `native/leaves/git.mjs` | Git state reads for the run. | leaf (native), item 2d |
 | `native/leaves/review.mjs` | Review of diffs for the run. | leaf (native), item 2d |
-| `native/leaves/rows.mjs` | Row-table reads and writes. | leaf (native), item 2d |
+| `native/leaves/rows.mjs` | Row-table reads and writes. | done: native/components/verbs/rows.cpp, checked by gm-tool check-rows; the .mjs is removed (item 2d, first leaf) |
 | `native/leaves/wiki.mjs` | Wiki read and write. | leaf (native), item 2d |
 | `native/leaves/vendor/acorn.mjs` | Vendored JavaScript parser, used by the commit gate's staged-comments check and by code-ast. | external until code-ast and the gate are native; then drop |
 | install `leaves/*.mjs` and `leaves/vendor/acorn.mjs` | Copies of the six leaves and acorn. | removed from the install as each native leaf passes |
@@ -82,7 +82,7 @@ Each check is proven to fail on the fault it caught before its script is deleted
 | skills and resources | `check-skill-serve.mjs`, `check-no-resource-client.mjs`, `check-restart-skill-read.mjs`, `check-resources-subscribe.mjs`, `check-protocol-versions.mjs`, `check-decision-parity.mjs`, `check-documented-gaps.mjs` |
 | browser | `check-browser-project.mjs`, `check-browser-scope.mjs`, `check-background-visibility.mjs`, `check-tab-identity.mjs`, `check-console.mjs` |
 | grep and output | `check-grep-paging.mjs`, `check-grep-state-scope.mjs` |
-| hygiene (text and layout) | `check-lost-wording.mjs`, `check-node-fs-import.mjs`, `check-project-page.mjs`, `check-prd-legacy-list.mjs`, `check-prd-receipt.mjs`, `check-prd-refuted-reopen.mjs`, `check-worker-growth.mjs` |
+| hygiene (text and layout) | `check-lost-wording.mjs`, `check-node-fs-import.mjs`, `check-project-page.mjs`, `check-prd-receipt.mjs`, `check-prd-refuted-reopen.mjs`, `check-worker-growth.mjs` |
 
 Each file above is a check the gate runs. `check-node-fs-import.mjs` checks for a
 Node import in the tree and is removed with the rest once the group is native.

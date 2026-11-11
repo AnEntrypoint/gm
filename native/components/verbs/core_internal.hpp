@@ -15,8 +15,15 @@
 
 #include "gm/json.hpp"
 #include "gm/log.hpp"
+#include "gm/verbs.hpp"
 
 namespace gm::core {
+
+class LockedLog;
+
+bool is_row_verb(std::string_view name);
+const std::vector<VerbInfo>& row_verbs();
+json::Value row_call(std::string_view name, const json::Value& args, const std::filesystem::path& workspace, LockedLog& log);
 
 inline constexpr std::size_t output_page = 20000;
 inline constexpr std::size_t tail_cap = 2000;

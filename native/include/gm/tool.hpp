@@ -30,6 +30,7 @@ struct Registered {
 CheckResult check_read_after_write(const std::string& binary);
 CheckResult check_spawn_sites(const std::string& binary);
 CheckResult check_lazy_browser(const std::string& binary);
+CheckResult check_rows(const std::string& binary);
 
 const std::vector<Registered>& checks();
 

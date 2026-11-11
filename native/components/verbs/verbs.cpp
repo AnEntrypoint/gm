@@ -1031,7 +1031,12 @@ void CoreVerbs::bind_run(std::shared_ptr<RunLog> log) {
 
 CoreVerbs::~CoreVerbs() = default;
 
-std::vector<VerbInfo> CoreVerbs::list() const { return verb_table(); }
+std::vector<VerbInfo> CoreVerbs::list() const {
+    std::vector<VerbInfo> all = verb_table();
+    const auto& rows = core::row_verbs();
+    all.insert(all.end(), rows.begin(), rows.end());
+    return all;
+}
 
 void CoreVerbs::close(std::string_view reason) { impl_->jobs.close(reason); }
 
@@ -1056,6 +1061,7 @@ json::Value CoreVerbs::call(std::string_view name, const json::Value& raw_args) 
         if (name == "job_status") return impl_->jobs.status(args);
         if (name == "job_stop") return impl_->jobs.stop(args);
         if (name == "query_log") return impl_->query_log(args);
+        if (core::is_row_verb(name)) return core::row_call(name, args, impl_->root, impl_->log);
     } catch (const std::exception& error) {
         return failure(error.what());
     }

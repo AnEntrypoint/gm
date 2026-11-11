@@ -7,6 +7,7 @@ const std::vector<Registered>& checks() {
         {"check-read-after-write", check_read_after_write},
         {"check-spawn-sites", check_spawn_sites},
         {"check-lazy-browser", check_lazy_browser},
+        {"check-rows", check_rows},
     };
     return all;
 }
