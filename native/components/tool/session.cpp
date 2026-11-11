@@ -92,21 +92,7 @@ std::vector<long long> Session::descendants() const {
     std::vector<long long> found;
     if (!child_) return found;
     std::map<long long, std::vector<long long>> children;
-    std::error_code ec;
-    for (const auto& entry : std::filesystem::directory_iterator("/proc", ec)) {
-        const std::string name = entry.path().filename().string();
-        if (name.empty() || name.find_first_not_of("0123456789") != std::string::npos) continue;
-        std::ifstream stat(entry.path() / "stat");
-        std::string line;
-        std::getline(stat, line);
-        const auto close = line.rfind(')');
-        if (close == std::string::npos) continue;
-        std::istringstream rest(line.substr(close + 2));
-        std::string state;
-        long long parent = 0;
-        rest >> state >> parent;
-        children[parent].push_back(std::stoll(name));
-    }
+    for (const auto& row : proc::process_table()) children[row.parent].push_back(row.pid);
     std::vector<long long> frontier{child_->pid()};
     while (!frontier.empty()) {
         const long long current = frontier.back();

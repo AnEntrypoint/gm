@@ -2739,3 +2739,14 @@ Run 43115733632 (macOS x64): six checks failed. Causes from the log, and the cha
 
 Witness: the next macOS release job. Phase A ran gm-tool build only; the Linux phase-b run is in the Phase B entry.
 
+## Round e6b5, macOS run 43118182667 on 496a600: second pass (Phase A)
+
+Run 43118182667: Windows (both) and Linux passed. On macOS, install-switch, protocol-versions, restart-jobs, run-code-budget and turn-economy passed; these still fail on macOS:
+
+- check-lazy-browser: "15 process(es) started by this check are still alive". processes_mentioning now finds them on macOS (ps), but kill_processes did nothing outside Linux. Change: kill_processes sends SIGKILL on every POSIX platform (checks/process_tree.cpp).
+- check-worker-growth: "no gm-core worker process was found". Session::descendants still read /proc. Change: it uses gm::proc::process_table (session.cpp).
+- check-restart-skill-read: the other host was `/bin/sh -c '"$0" "$@"'`, and both sh implementations exec the last command, so the worker took the check's own parent pid and looked like the same host. Change: the shell command ends with `; exit $?`, so the shell stays as a separate host (checks/restart_skill_read.cpp).
+- check-build-handover: still "the worker should run 996a600-426 once the shell call finished, runs 496a600-426" on macOS. Not explained by the log. Open: needs a macOS run with the per-check log.
+
+Witness: the next macOS release job.
+

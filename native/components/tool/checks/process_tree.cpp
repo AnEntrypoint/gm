@@ -2,9 +2,7 @@
 #if !defined(_WIN32)
 
 #include <csignal>
-#if defined(__linux__)
 #include <signal.h>
-#endif
 #include <filesystem>
 #include <fstream>
 #include <iterator>
@@ -51,11 +49,7 @@ std::vector<long long> process_tree(const std::vector<long long>& roots) {
 }
 
 void kill_processes(const std::vector<long long>& pids) {
-#if defined(__linux__)
     for (const long long pid : pids) ::kill(static_cast<pid_t>(pid), SIGKILL);
-#else
-    (void)pids;
-#endif
 }
 
 std::vector<long long> processes_mentioning(const std::string& text) {

@@ -57,7 +57,7 @@ CheckResult check_restart_skill_read(const std::string& binary) {
     }
     const std::vector<std::string> args{worker.string(), "worker", "--mcp-config", (scratch / "quiet-mcp.json").string(), "--workspace", workspace.string(),
                                         "--run-dir", run_dir.string(), "--supervised", "yes", "--owner", std::to_string(getpid())};
-    const std::vector<std::string> through_other_host{"/bin/sh", "-c", "\"$0\" \"$@\"", worker.string(), "worker", "--mcp-config", (scratch / "quiet-mcp.json").string(),
+    const std::vector<std::string> through_other_host{"/bin/sh", "-c", "\"$0\" \"$@\"; exit $?", worker.string(), "worker", "--mcp-config", (scratch / "quiet-mcp.json").string(),
                                                       "--workspace", workspace.string(), "--run-dir", run_dir.string(), "--supervised", "yes", "--owner", std::to_string(getpid())};
     const fs::path log = run_dir / "log.jsonl";
     {
