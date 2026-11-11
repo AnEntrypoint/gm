@@ -236,7 +236,7 @@ const std::string kNextContextDescription =
     "step, each once, with an id. Delivery clears an event, so no later step or wait lists it again. Call it at the "
     "start of a run, after a compaction, and when a run_code reply carries pendingEvents; not before every step. A call with nothing new "
     "since the last reply (no pending event, the same rules and task) takes no step and answers unchanged: true in one short line; "
-    "full: true returns the rules, the task and the feed anyway. query_log reaches every event. waitMs, when set, holds this call until an event is pending "
+    "full: true returns every field anyway. A reply lists in same the volatile fields (tabs, pendingCommands, query, witness, prefixSha, total) that equal the last reply, and their last values stand. query_log reaches every event. waitMs, when set, holds this call until an event is pending "
     "or that many milliseconds pass, at most 60000. A hold that passes with nothing pending takes no step and "
     "returns progress. child: true makes the call a read by a subagent on this "
     "connection: it takes no step, claims no pending event, and its reply has role child and the owning run. run, "
@@ -677,6 +677,7 @@ struct Server::State {
         fs::path run_dir;
         std::string run_id;
         SentFeed sent_feed;
+        std::map<std::string, std::string> sent_fields;
         CheckTally checks;
         std::shared_ptr<RunLog> log;
         std::uint64_t count = 0;
@@ -2228,6 +2229,29 @@ struct Server::State {
         return reply;
     }
 
+    Value changed_fields_only(Value reply, bool full) {
+        static const std::vector<std::string> kVolatile{"tabs", "pendingCommands", "query", "witness", "prefixSha", "total"};
+        Value kept = object();
+        Value same = array();
+        for (const json::Member& member : reply.as_object()) {
+            const bool volatile_field = std::find(kVolatile.begin(), kVolatile.end(), member.first) != kVolatile.end();
+            if (!volatile_field) {
+                kept.set(member.first, member.second);
+                continue;
+            }
+            const std::string text = json::dump(member.second);
+            auto sent = s().sent_fields.find(member.first);
+            if (!full && sent != s().sent_fields.end() && sent->second == text) {
+                same.push(member.first);
+            } else {
+                kept.set(member.first, member.second);
+            }
+            s().sent_fields[member.first] = text;
+        }
+        if (!same.as_array().empty()) kept.set("same", std::move(same));
+        return kept;
+    }
+
     std::string browser_tabs_text() {
         Value view = verbs.call("browser_tabs", object());
         const Value* text = view.find("text");
@@ -2308,6 +2332,7 @@ struct Server::State {
                 Value reply = context(s().steps, compact_children, wait_ms > 0);
                 clear_rule(kStepStartRule);
                 reply.set("tabs", browser_tabs_text());
+                reply = changed_fields_only(std::move(reply), full);
                 append("context-reply", object().set("step", number_of(s().steps)).set("text", json::dump(reply)));
                 return reply;
             },
