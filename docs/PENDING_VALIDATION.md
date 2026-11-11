@@ -2309,3 +2309,11 @@ Not run here: tools/check-txiki-wasi.mjs and the gm reactor wasm (the gm wasm32-
 - tools/measure-next-context.mjs: exit 0, wall 0.83 s. Normal 20-step mean 528 bytes against baseline 1168 (55maller); full-reply series mean 7474 against baseline 7422 (not targeted).
 - tools/check-skill-serve.mjs: exit 0, wall 0.23 s.
 - tools/check-build.mjs build/release: exit 0, wall 508.89 s; conformance 86 passed, 0 failed of 86 checks in 24 scenarios.
+
+## Feed digest and once-per-run repeats (2026-11-11, Phase A)
+
+- Consumer check (none read head, tail or textDigest from the feed): searched src/ and tools/ and native/components/. Only the producers read them: src/compact.mjs boundedItem and native/components/mcp/compact.cpp bounded_item. Nothing else reads them, so no consumer changed.
+- Feed change, both engines: a context-reply event in the next_context feed keeps textChars and a feedCut reference, and drops head, tail and textDigest. The full text stays readable with gm.query_log({ seq, field: text }). Witness: node tools/measure-next-context.mjs <native gm> (its changed series reads the context-reply through query_log).
+- Repeats, both engines: a caller and a prefixSha equal to the one last sent in the same run are sent as the string same. native: SentFeed on the run session, mark_repeats in compact.cpp. Node: a WeakMap keyed by the run log, markRepeats in src/compact.mjs. Witness: the same measurement script, changed series.
+- Changed-step target, lowered by the dispatcher to 17 percent: baseline 4300 bytes, target at most 3569. Measured in Phase B.
+- Not changed, by decision: the MCP reply transport (the duplicate content text stays; a follow-up for the dispatcher), and rules on changed steps.
