@@ -79,6 +79,6 @@ Setup registers only gm with the host, so the worker is the only thing that star
     cmake --build build/release
     node tools/check-build.mjs build/release
 
-- `scripts/gm.sh` and `scripts/gm.ps1` run the same steps: `build`, `test` (the build, then `tools/check-build.mjs`), `doctor` or `all`. `GMNEW_PRESET` picks the preset (default `release`). The project has no unit tests; checks run on the built binary.
+- Build with `cmake --preset release` and `cmake --build build/release`; `GMNEW_PRESET` names the preset to use in its place. The project has no unit tests; checks run on the built binary through `gm-tool check`.
 - The binary is build/PRESET/native/components/host/gm.
 - Two workflows run on pushes to main: `.github/workflows/release.yml` builds and tests six targets and publishes `latest`; `.github/workflows/arm-diagnose.yml` runs asan and gdb on arm64. There is no ci.yml.
