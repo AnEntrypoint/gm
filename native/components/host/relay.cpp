@@ -65,6 +65,28 @@ bool resendable_call(const json::Value& message) {
     return name != nullptr && name->is_string() && name->as_string() == "next_context";
 }
 
+constexpr std::uint64_t kStartCheckMs = 20000;
+
+bool build_starts(const std::filesystem::path& dir, const std::string& stamp) {
+    for (const std::string& name : {executable_name(), core_executable_name()}) {
+        const gm::proc::Outcome outcome = gm::proc::run({(dir / name).string(), "--version"}, {}, {}, kStartCheckMs);
+        if (!outcome.started || outcome.timed_out || outcome.exit_code != 0 || outcome.out.rfind(stamp, 0) != 0) return false;
+    }
+    return true;
+}
+
+std::string build_notice(const std::string& from, const std::string& to) {
+    json::Value params(json::Object{});
+    params.set("level", "notice");
+    params.set("logger", "gm");
+    params.set("data", "gm build changed from " + from + " to " + to + "; this session now runs " + to + ", and its run carries over");
+    json::Value message(json::Object{});
+    message.set("jsonrpc", "2.0");
+    message.set("method", "notifications/message");
+    message.set("params", std::move(params));
+    return json::dump(message);
+}
+
 std::string error_reply(const std::string& id_json, std::string_view message) {
     return "{\"jsonrpc\":\"2.0\",\"id\":" + id_json + ",\"error\":{\"code\":-32000,\"message\":" + json::quote(message) +
            "}}";
@@ -461,12 +483,29 @@ bool Relay::only_resendable_in_flight() const {
 void Relay::reexec() {
 #if !defined(_WIN32)
     Lock lock(mutex_);
-    if (!reexec_pending_ || options_.reexec_argv.empty() || state_ != State::Running || !only_resendable_in_flight() || swapping_ ||
-        host_gone_)
+    auto ready = [&] { return reexec_pending_ && !options_.reexec_argv.empty() && state_ == State::Running && only_resendable_in_flight() && !swapping_ && !host_gone_; };
+    if (!ready()) return;
+    std::error_code canonical_error;
+    const std::filesystem::path build_dir = std::filesystem::canonical(options_.reexec_argv.front(), canonical_error).parent_path();
+    const std::string stamp = build_dir.filename().string();
+    if (canonical_error || stamp == refused_build_) {
+        reexec_pending_ = false;
         return;
+    }
+    lock.unlock();
+    const bool starts = build_starts(build_dir, stamp);
+    lock.lock();
+    if (!ready()) return;
+    if (!starts) {
+        reexec_pending_ = false;
+        refused_build_ = stamp;
+        say("refused build " + stamp + ": its start check failed; this run stays on " + std::string(kBuildVersion));
+        return;
+    }
     reexec_pending_ = false;
     state_ = State::Restarting;
     say("re-executing the relay on the new build");
+    emit(build_notice(std::string(kBuildVersion), stamp));
     stop_worker(lock);
     std::vector<std::string> argv = options_.reexec_argv;
     json::Array carried;

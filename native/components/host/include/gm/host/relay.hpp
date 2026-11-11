@@ -110,6 +110,7 @@ private:
     std::thread control_;
     std::thread updater_;
     bool reexec_pending_ = false;
+    std::string refused_build_;
     std::map<std::string, std::string> inflight_;
     std::map<std::string, std::string> resendable_;
     std::map<std::string, std::shared_ptr<Waiter>> waiters_;
