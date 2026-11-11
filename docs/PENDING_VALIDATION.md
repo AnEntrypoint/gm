@@ -2392,3 +2392,15 @@ Not run here: tools/check-txiki-wasi.mjs and the gm reactor wasm (the gm wasm32-
   - the first step returns too much output: bounded by fcb84df (bound tool replies). The first next_context reply measures 4905 bytes (rules, task and the first feed). Witness: tools/measure-next-context.mjs (its first-reply check).
 - Not built in this pass: the next_context surface for the repeated command count and the wall time per check. It needs a run-log aggregation in both engines, so it is the next item, not closed here.
 - Install: scripts/install.sh fetches the published release from GMNEW_RELEASE_BASE, and it has no argument for a local build, so a local build cannot be installed through it. Installing the pushed build needs a published release, which the owner-held release path produces.
+
+## Iteration-time and defect audit witness record (2026-11-11, Phase B)
+
+- cmake --build build/release: BUILD_EXIT=0. The skill-serve check failed first because the build copies skills at configure time; cmake -S . -B build/release reconfigured it, and the rebuild passed.
+- tools/check-run-code-require.mjs: exit 0, wall 0.18 s.
+- tools/check-read-truncation.mjs: exit 0, wall 0.28 s.
+- tools/check-task-set.mjs: exit 0, wall 141.53 s.
+- tools/check-child-task.mjs: exit 0, wall 0.58 s.
+- tools/check-skill-serve.mjs: exit 0, output: skill-serve-check: ok (... the default serve returns the checkout skill://gm/SKILL.md ...).
+- tools/measure-next-context.mjs: exit 0, wall 4.74 s.
+- tools/check-build.mjs build/release: exit 0, wall 385.39 s; conformance 86 passed, 0 failed of 86 checks in 24 scenarios; gm stamp 6217efc-dev (6217efc).
+- Install: not done. scripts/install.sh has no local-build option; it installs the published release, which needs the owner-held release path.
