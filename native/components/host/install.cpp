@@ -110,7 +110,9 @@ std::optional<std::string> register_mcp_server(const fs::path& config, const std
 }
 
 int run_install_command(const HostArgs& args) {
-    const auto config = claude_config_path();
+    const auto default_config = claude_config_path();
+    const auto config = args.flag("--config") ? std::optional<fs::path>(fs::absolute(*args.flag("--config")))
+                                              : default_config;
     if (!config) {
         std::cerr << "gm: install: neither HOME nor USERPROFILE is set\n";
         return 1;
