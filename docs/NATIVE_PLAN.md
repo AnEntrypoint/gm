@@ -33,14 +33,14 @@ Scope: each script tracked in git (`git ls-files`) and each script in the instal
 
 | File | What it does now | Destination |
 |---|---|---|
-| `native/leaves/code-ast.mjs` | AST search and edit over source files. | leaf (native), item 2d, first of six in order |
+| the code-ast leaf (formerly `native/leaves/code-ast.mjs`) | `callers` and `impact` over JavaScript and TypeScript. | done: native/components/verbs/code_ast.cpp on the vendored tree-sitter (native/third_party/tree-sitter, MIT, with its grammar licences), checked by gm-tool check-code-ast; the .mjs is removed (item 1 of round e6b5). Decision: tree-sitter for both grammars; no other native parser was needed. The gate skips third_party/ and vendor/ for the ASCII and comment rules (as it already did for the script rule), because upstream licence text and comments are not ours to rewrite. TypeScript is now parsed, not line-scanned; the line scan remains for a file that does not parse cleanly. Sites sort by byte order, where the leaf used localeCompare; the two have not been compared on this repository. |
 | `native/leaves/fetch.mjs` | HTTP(S) and data URL fetch, 16 MiB cap. | done: native/components/verbs/fetch.cpp, checked by gm-tool check-fetch; the .mjs is removed (item 2d) |
 | the git leaf | Git state reads for the run. | done: native/components/verbs/git.cpp (14 verbs), checked by gm-tool check-git; the .mjs is removed (item 2d) |
 | the review leaf | Review of diffs for the run. | done: native/components/verbs/review.cpp (review_packet, review_record, review_join), checked by gm-tool check-review; the .mjs is removed (item 2d) |
 | `native/leaves/rows.mjs` | Row-table reads and writes. | done: native/components/verbs/rows.cpp, checked by gm-tool check-rows; the .mjs is removed (item 2d, first leaf) |
 | the wiki leaf (formerly native/leaves) | Wiki read and write. | done: native/components/verbs/wiki.cpp (wiki_search, wiki_write, wiki_lint), checked by gm-tool check-wiki; the .mjs is removed (item 2d) |
-| `native/leaves/vendor/acorn.mjs` | Vendored JavaScript parser, used by the commit gate's staged-comments check and by code-ast. | external until code-ast and the gate are native; then drop |
-| install `leaves/*.mjs` and `leaves/vendor/acorn.mjs` | Copies of the six leaves and acorn. | removed from the install as each native leaf passes |
+| `native/leaves/vendor/acorn.mjs` | Vendored JavaScript parser. | done: removed with code-ast; the gate was already native and has no acorn reference |
+| install `leaves/*.mjs` and `leaves/vendor/acorn.mjs` | Copies of the six leaves and acorn. | done once the next install runs: the source directory `native/leaves/` no longer exists; the install check that follows the next install is the witness |
 
 ## Gate, phase B, ship (second tool)
 

@@ -70,7 +70,7 @@ inline std::string iso_now() {
 #else
     gmtime_r(&secs, &utc);
 #endif
-    char buf[32];
+    char buf[48];
     std::snprintf(buf, sizeof(buf), "%04d-%02d-%02dT%02d:%02d:%02d.%03lldZ", utc.tm_year + 1900, utc.tm_mon + 1, utc.tm_mday, utc.tm_hour, utc.tm_min, utc.tm_sec, static_cast<long long>(ms));
     return buf;
 }
@@ -84,6 +84,8 @@ bool is_wiki_verb(std::string_view name);
 bool is_git_verb(std::string_view name);
 bool is_review_verb(std::string_view name);
 json::Value review_call(std::string_view name, const json::Value& args, const std::filesystem::path& workspace, LockedLog& log);
+bool is_code_ast_verb(std::string_view name);
+json::Value code_ast_call(std::string_view name, const json::Value& args, const std::filesystem::path& root);
 json::Value git_call(std::string_view name, const json::Value& args, const std::filesystem::path& workspace, LockedLog& log);
 json::Value fetch_call(const json::Value& args, const std::filesystem::path& workspace, LockedLog& log, const std::filesystem::path& run_dir);
 

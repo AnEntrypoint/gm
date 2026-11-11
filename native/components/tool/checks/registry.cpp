@@ -12,6 +12,7 @@ const std::vector<Registered>& checks() {
         {"check-wiki", check_wiki},
         {"check-git", check_git},
         {"check-review", check_review},
+        {"check-code-ast", check_code_ast},
     };
     return all;
 }

@@ -28,6 +28,8 @@ std::string read_file(const fs::path& path) {
     return text.str();
 }
 
+bool vendored(const std::string& rel) { return rel.find("third_party/") != std::string::npos || rel.find("vendor/") != std::string::npos; }
+
 bool text_file(const std::string& bytes) { return bytes.substr(0, 8000).find('\0') == std::string::npos; }
 
 bool added_comment(const std::string& line) {
@@ -57,6 +59,7 @@ GateCheck ascii_check(const fs::path& root, const std::vector<std::string>& file
     std::vector<std::string> bad;
     std::size_t count = 0;
     for (const auto& rel : files) {
+        if (vendored(rel)) continue;
         std::error_code ec;
         if (!fs::is_regular_file(root / rel, ec)) continue;
         const std::string bytes = read_file(root / rel);
@@ -124,12 +127,13 @@ GateCheck added_lines_check(const fs::path& root, const std::vector<std::string>
     std::vector<std::string> hits;
     std::vector<std::string> scripts;
     for (const auto& file : added) {
-        if (file.find("third_party/") == std::string::npos && file.find("vendor/") == std::string::npos) {
+        if (!vendored(file)) {
             for (const auto& ext : kScriptExtensions)
                 if (has_suffix(file, ext)) scripts.push_back(file);
         }
     }
     for (const auto& file : staged) {
+        if (vendored(file)) continue;
         const auto diff = git_output(root, {"diff", "--cached", "-U0", "--", file});
         if (!diff) continue;
         std::istringstream lines(*diff);
