@@ -591,8 +591,8 @@ struct CoreVerbs::Impl {
         if (!at) return refusal("path must be a non-empty string");
         const json::Value* old_value = args.find("old");
         const json::Value* new_value = args.find("new");
-        if (old_value == nullptr || !old_value->is_string() || old_value->as_string().empty()) return failure("old must be a non-empty string");
-        if (new_value == nullptr || !new_value->is_string()) return failure("new must be a string");
+        if (old_value == nullptr || !old_value->is_string() || old_value->as_string().empty()) return failure("edit_file needs old, the exact text to replace (a non-empty string), and new, its replacement (a string); old was missing or empty");
+        if (new_value == nullptr || !new_value->is_string()) return failure("edit_file needs new, the replacement text (a string); new was missing or not a string");
         auto file = core::read_text(*at, "open");
         if (!file.ok) return failure(file.error);
         const std::string& old_text = old_value->as_string();
