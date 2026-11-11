@@ -42,6 +42,12 @@ Each habit is stated once, with its reason.
 - **Build a reachable ranked item in the pass that ranks it.** A turn does not end while reachable work remains. Work that waits on a person, a credential or a host is held, and is reported as held.
 - **Report a held item once, with its cause, then name it in one line.** Later reports name it in one line and do not repeat its cause.
 - **Bound every read of state and output to the summary and the failing rows.** Page the rest only when a decision needs it.
+- **Commit each change as it is made.** A Phase A change is committed locally right after its edit and witness, not at the end of the run, so a stop before the end loses nothing that was done. Measured: a peer stopped without warning and left 123 files uncommitted.
+- **Keep the run going until no reachable row is left.** A run that ends early names the row that stopped it and why. Measured: seven of fx's thirteen turns and six of gm's fourteen ended in under five minutes with work left.
+- **A usage or credit limit is a block, not a finish.** A turn that ends on a limit message is reported as blocked on the owner, with the limit's text, and the reachable rows it left are named.
+- **Measure heavy things off the host, in one run.** Heavy measurement runs off the loaded host, in one run that carries every configuration and prints one result line each. A load-sensitive check uses a budget that does not depend on load. A sampler is suspect before the code: a 50 ms `ps` sampler caused the frame gaps it measured (measured: the host reached load 25 on 12 cores, and one check failed under load and passed alone).
+- **Examine a slow check's scenario before its code.** Measured: two checks went from 88 s to 12.5 s and from 79 s to 4.6 s once the scenario matched the real one, and the code had not changed.
+- **A wait is one bounded wait on the job's PID.** No sleep loop inside a shell call or a body is a wait, so the bounded PID wait is the only wait used.
 - **Name the longest step in each report, and what was done about it.**
 
 ## Rules
@@ -88,7 +94,7 @@ Each project root has its own browser and profile. Each run has its own tab cont
 
 ## Child sessions
 
-Hand off a piece of work that can be done apart from this run. A separate session has its own run, and its witness comes from `node src/cli.mjs query --dir "<child workspace>/runs/<child run>" --js "..."`, read through gm.run_shell. A subagent on this connection calls `next_context({ child: true, run })` at the start of each step, does its file work through run_code, does not send finish, and passes no task. Children share the workspace, so do not branch or use worktrees. When they finish, run the check the task names once over the whole result.
+Hand off a piece of work that can be done apart from this run. A separate session has its own run, and its witness comes from `node src/cli.mjs query --dir "<child workspace>/runs/<child run>" --js "..."`, read through gm.run_shell. A subagent on this connection calls `next_context({ child: true, run })` at the start of each step, does its file work through run_code, does not send finish, and passes no task. Children share the workspace, so do not branch or use worktrees. A child's model is set in the project's configuration and applied at launch, not chosen inside the conversation: a session relaunched or resumed takes its model from there, so the model does not reset to the default on a relaunch. Measured: a model set inside the conversation was lost on every relaunch. When they finish, run the check the task names once over the whole result.
 
 ## Fan-out
 
