@@ -74,7 +74,7 @@ Each check is proven to fail on the fault it caught before its script is deleted
 | Group | Files |
 |---|---|
 | read and write | `check-read-after-write.mjs` (untracked; first native check, item 2a), `check-read-parity.mjs` |
-| install and build | `check-build-handover.mjs`, `check-install-switch.mjs`, `check-install-follows.mjs`, `check-installed-build.mjs`, `check-startup-attempts.mjs`, `check-cli-flags.mjs`, `check-owner-identity.mjs` |
+| install and build | `check-build-handover.mjs`, `check-install-switch.mjs`, `check-install-follows` (native, gm-tool), `check-installed-build.mjs`, `check-startup-attempts.mjs`, `check-cli-flags.mjs`, `check-owner-identity.mjs` |
 | next_context and feed | `check-context-feed.mjs`, `check-feed-reference.mjs`, `check-repeated-checks.mjs`, `check-cut-marker.mjs` |
 | run_code | `check-run-code-budget.mjs`, `check-run-code-lifetime.mjs`, `check-run-code-progress.mjs`, `check-run-code-require.mjs`, `check-early-run-code.mjs`, `check-embedded-runtime.mjs`, `check-clock-mutations.mjs` |
 | jobs and shell | `check-job-bounds.mjs`, `check-job-progress.mjs`, `check-job-reply-git-state.mjs`, `check-job-status-cancel.mjs`, `check-shell-stdin.mjs`, `check-restart-jobs.mjs`, `check-restart-body-orphan.mjs`, `check-inflight.mjs`, `check-child-task.mjs`, `check-task-set.mjs`, `check-foreground-hold.mjs`, `check-turn-economy.mjs`, `check-caller.mjs` |

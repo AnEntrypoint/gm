@@ -14,6 +14,7 @@ const std::vector<Registered>& checks() {
         {"check-review", check_review},
         {"check-code-ast", check_code_ast},
         {"check-quickjs-baseline", check_quickjs_baseline},
+        {"check-install-follows", check_install_follows},
     };
     return all;
 }
