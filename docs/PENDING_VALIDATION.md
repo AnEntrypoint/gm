@@ -2427,3 +2427,11 @@ Not run here: tools/check-txiki-wasi.mjs and the gm reactor wasm (the gm wasm32-
 - Job-end path: tools/check-repeated-checks.mjs runs two job_start jobs of one command and expects count 2 for the job command.
 - Check events stay out of the raw feed (src/compact.mjs feedOf, native/components/mcp/compact.cpp feed_of).
 - Incremental checks aggregation: Node repeatedChecks(log, tally) and native CheckTally on the session fold only new events. Measured with tools/measure-checks-cost.mjs (2000 run_shell calls, next_context full, median of 5): native 27 ms before, 20 ms after; Node 73 ms before, 2 ms after.
+
+## Fixed cost of a gm call and the process wait (2026-11-11, Phase A, item 7)
+
+- Measured with tools/measure-call-cost.mjs (native, 40 calls each, medians): trivial run_code 8.7 ms, reply 336 bytes; next_context with nothing new 1.0 ms, 331 bytes; next_context full 17.4 ms, about 4.7 KB; the full reply's largest fields are rules 758 bytes, events 553, witness 138, pendingCommands 139, query 104. Node: 31.9 ms, 0.2 ms, 0.7 ms.
+- Conclusion from the measurement: the wall-time fixed cost per call is milliseconds, and the full reply is paid once per run, so no change to next_context or run_code startup. Their cost in turns is the peers' cost, not their wall time.
+- gm.job_status({ pid, waitMs }) returns on exit: a 2 s process returned at 2.01 s (median of 3) and a 4 s process at 4.03 s with waitMs 1000 in a loop.
+- Change: skills/gm/SKILL.md, two job-wait habits, now say a longer wait is one run_code body that loops job_status until the state is not running (the loop is in the skill text, with the measured numbers). Wall time of the change: the loop body returned at 4.03 s for a 4 s process; no code change in either engine, no new verb.
+- Witness: tools/measure-call-cost.mjs build/release/native/components/host/gm 5 (prints the looped-wait line for a 60 s process; the reply arrives at about 60.1 s in one call).
