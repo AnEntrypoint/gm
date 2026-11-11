@@ -8,7 +8,8 @@ import { fileURLToPath } from 'node:url';
 
 const CHECK = 'build-handover-check';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const hostDir = resolve(process.argv[2] ?? join(root, 'build', 'release', 'native', 'components', 'host'));
+const given = resolve(process.argv[2] ?? join(root, 'build', 'release', 'native', 'components', 'host'));
+const hostDir = existsSync(join(given, 'gm')) ? given : dirname(given);
 const started = Date.now();
 const failures = [];
 const expect = (condition, text) => {

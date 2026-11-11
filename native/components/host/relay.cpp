@@ -67,10 +67,10 @@ bool resendable_call(const json::Value& message) {
 
 constexpr std::uint64_t kStartCheckMs = 20000;
 
-bool build_starts(const std::filesystem::path& dir, const std::string& stamp) {
+bool build_starts(const std::filesystem::path& dir) {
     for (const std::string& name : {executable_name(), core_executable_name()}) {
         const gm::proc::Outcome outcome = gm::proc::run({(dir / name).string(), "--version"}, {}, {}, kStartCheckMs);
-        if (!outcome.started || outcome.timed_out || outcome.exit_code != 0 || outcome.out.rfind(stamp, 0) != 0) return false;
+        if (!outcome.started || outcome.timed_out || outcome.exit_code != 0 || outcome.out.empty()) return false;
     }
     return true;
 }
@@ -493,7 +493,7 @@ void Relay::reexec() {
         return;
     }
     lock.unlock();
-    const bool starts = build_starts(build_dir, stamp);
+    const bool starts = build_starts(build_dir);
     lock.lock();
     if (!ready()) return;
     if (!starts) {
