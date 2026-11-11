@@ -36,7 +36,7 @@ Scope: each script tracked in git (`git ls-files`) and each script in the instal
 | `native/leaves/code-ast.mjs` | AST search and edit over source files. | leaf (native), item 2d, first of six in order |
 | `native/leaves/fetch.mjs` | HTTP(S) and data URL fetch, 16 MiB cap. | done: native/components/verbs/fetch.cpp, checked by gm-tool check-fetch; the .mjs is removed (item 2d) |
 | the git leaf | Git state reads for the run. | done: native/components/verbs/git.cpp (14 verbs), checked by gm-tool check-git; the .mjs is removed (item 2d) |
-| `native/leaves/review.mjs` | Review of diffs for the run. | leaf (native), item 2d |
+| the review leaf | Review of diffs for the run. | done: native/components/verbs/review.cpp (review_packet, review_record, review_join), checked by gm-tool check-review; the .mjs is removed (item 2d) |
 | `native/leaves/rows.mjs` | Row-table reads and writes. | done: native/components/verbs/rows.cpp, checked by gm-tool check-rows; the .mjs is removed (item 2d, first leaf) |
 | the wiki leaf (formerly native/leaves) | Wiki read and write. | done: native/components/verbs/wiki.cpp (wiki_search, wiki_write, wiki_lint), checked by gm-tool check-wiki; the .mjs is removed (item 2d) |
 | `native/leaves/vendor/acorn.mjs` | Vendored JavaScript parser, used by the commit gate's staged-comments check and by code-ast. | external until code-ast and the gate are native; then drop |

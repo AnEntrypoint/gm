@@ -34,6 +34,7 @@ CheckResult check_rows(const std::string& binary);
 CheckResult check_fetch(const std::string& binary);
 CheckResult check_wiki(const std::string& binary);
 CheckResult check_git(const std::string& binary);
+CheckResult check_review(const std::string& binary);
 
 const std::vector<Registered>& checks();
 

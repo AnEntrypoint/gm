@@ -156,38 +156,6 @@ json::Value retrying(LockedLog& log, const std::string& tool, const std::functio
     }
 }
 
-std::string normalize_path(const std::string& path) {
-    std::string drive;
-    std::string rest = path;
-    if (path.size() >= 2 && path[1] == ':') {
-        drive = path.substr(0, 2);
-        rest = path.substr(2);
-    }
-    std::vector<std::string> parts;
-    std::string piece;
-    for (std::size_t i = 0; i <= rest.size(); ++i) {
-        const char c = i < rest.size() ? rest[i] : '/';
-        if (c == '/' || c == '\\') {
-            if (piece == "..") {
-                if (!parts.empty()) parts.pop_back();
-            } else if (!piece.empty() && piece != ".") {
-                parts.push_back(piece);
-            }
-            piece.clear();
-        } else {
-            piece += c;
-        }
-    }
-    std::string out = drive;
-    if (!rest.empty() && (rest[0] == '/' || rest[0] == '\\')) out += "/";
-    for (std::size_t i = 0; i < parts.size(); ++i) out += (i ? "/" : "") + parts[i];
-    return out;
-}
-
-bool is_absolute(const std::string& path) {
-    return (!path.empty() && path[0] == '/') || (path.size() >= 3 && std::isalpha(static_cast<unsigned char>(path[0])) && path[1] == ':' && (path[2] == '\\' || path[2] == '/'));
-}
-
 std::string resolve_path(const fs::path& base, const std::string& path) { return normalize_path(is_absolute(path) ? path : (base / path).string()); }
 
 std::string relative_path(const std::string& base, const std::string& path) {
