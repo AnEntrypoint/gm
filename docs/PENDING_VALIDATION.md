@@ -2466,3 +2466,9 @@ Not run here: tools/check-txiki-wasi.mjs and the gm reactor wasm (the gm wasm32-
 - tools/parity-contract.mjs W20: rewritten (GM_CHECK_JOBS removed from the env; the second check-build run's summary is parsed for jobs and cache state).
 - docs/PARITY_CONTRACT.md section 5: the W20 expected line now says "pool default jobs match min(6, floor(cores/2)) on this host: true".
 - Witness to rerun in Phase B: node tools/parity-contract.mjs build/release/native/components/host/gm W20 (0.7 s wall on this host).
+
+## Phase B installs the validated build (2026-11-11, Phase A)
+
+- skills/gm/SKILL.md, Phase B: the last step is `scripts/install.sh --local build/release` on the validated build, then `node tools/check-install-switch.mjs build/release --installed`. A dispatcher turn is no longer needed for each push to be installed.
+- tools/check-install-switch.mjs: a new `--installed` mode compares the live ~/.gmnew/current gm version with the build's and each installed skill file with the checkout's, and exits 1 with the differences when the install is stale. The default mode (the install switch test in check-build) is unchanged.
+- Witness to run in Phase B, after the install: node tools/check-install-switch.mjs build/release --installed (prints ok; exits 1 when stale).

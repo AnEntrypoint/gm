@@ -18,6 +18,24 @@ if (!existsSync(join(hostDir, 'gm'))) {
   process.exit(2);
 }
 const started = Date.now();
+if (process.argv.includes('--installed')) {
+  const current = join(process.env.HOME, '.gmnew', 'current');
+  const version = (exe) => (existsSync(exe) ? spawnSync(exe, ['--version'], { encoding: 'utf8', timeout: 30000 }).stdout.trim() : '');
+  const built = version(join(hostDir, 'gm'));
+  const live = version(join(current, 'gm'));
+  const stale = [];
+  if (live !== built) stale.push(`installed gm reports "${live}", the validated build reports "${built}"`);
+  for (const file of filesUnder(join(root, 'skills'))) {
+    const installedFile = join(current, 'skills', file);
+    if (!existsSync(installedFile) || !readFileSync(installedFile).equals(readFileSync(join(root, 'skills', file)))) stale.push(`installed skills/${file} is not the checkout's`);
+  }
+  if (stale.length > 0) {
+    console.error(`${CHECK}: stale install, ${stale.length} difference(s)\n- ${stale.join('\n- ')}`);
+    process.exit(1);
+  }
+  console.log(`${CHECK}: ok (the installed build ${live} and its skills equal the validated build and the checkout; wall ${((Date.now() - started) / 1000).toFixed(2)} s)`);
+  process.exit(0);
+}
 const filesUnder = (dir) => readdirSync(dir).flatMap((name) => (statSync(join(dir, name)).isDirectory() ? filesUnder(join(dir, name)).map((file) => join(name, file)) : [name]));
 const scratch = mkdtempSync(join(tmpdir(), 'gm-install-switch-'));
 const home = join(scratch, 'home');

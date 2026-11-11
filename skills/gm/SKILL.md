@@ -16,7 +16,7 @@ This skill is not in the host Skill tool. Read it with ReadMcpResourceTool (serv
 The first line of a task names its phase.
 
 - Phase A: make the changes and commit each one locally as lanmower, with no trailers and no push. For each change, add a line to docs/PENDING_VALIDATION.md naming the file, the row and the witness it needs. Build, test, gate and browser steps wait for Phase B. Finish with a witness that lists the commits and the pending lines.
-- Phase B: run each witness recorded for this peer in docs/PENDING_VALIDATION.md, read its output, fix what fails, and rerun only what failed. Push once every witness is green. A peer's Phase B covers only its own lines, and it does not wait on other peers.
+- Phase B: run each witness recorded for this peer in docs/PENDING_VALIDATION.md, read its output, fix what fails, and rerun only what failed. Push once every witness is green. A peer's Phase B covers only its own lines, and it does not wait on other peers. Then install the build that was just validated: `scripts/install.sh --local build/release` on it, and check the install with `node tools/check-install-switch.mjs build/release --installed`, which fails on a stale install. The install is the last step of Phase B, so the dispatcher does not need a turn to install a pushed build.
 
 ## Habits
 
