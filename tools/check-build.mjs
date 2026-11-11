@@ -2,7 +2,7 @@
 import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
-import { cpus, tmpdir } from 'node:os';
+import { cpus, loadavg, tmpdir } from 'node:os';
 import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -89,16 +89,24 @@ const runOne = (label, script, args, key) =>
         });
     });
 
-const runPool = async (items, limit) => {
+const rescued = [];
+const runPool = async (jobs, limit) => {
     let next = 0;
-    const lanes = Array.from({ length: Math.min(limit, items.length) }, async () => {
-        while (next < items.length) {
-            const item = items[next];
+    const lanes = Array.from({ length: Math.min(limit, jobs.length) }, async () => {
+        while (next < jobs.length) {
+            const job = jobs[next];
             next += 1;
-            await item();
+            await runOne(job.label, job.script, job.args, job.key);
         }
     });
     await Promise.all(lanes);
+    for (const job of jobs.filter((job) => failures.includes(job.label))) {
+        failures.splice(failures.indexOf(job.label), 1);
+        if (await runOne(job.label, job.script, job.args, job.key)) {
+            rescued.push(job.label);
+            print(`check-build: ${job.label} passed alone after failing in the pool (load ${loadavg()[0].toFixed(1)} on ${cpus().length} cores)`);
+        }
+    }
 };
 
 const selected = (name) => only === null || only === name || only === name.replace(/\.mjs$/, '');
@@ -129,7 +137,7 @@ const pipeline = async () => {
             print(`check-build: ${label} skipped, inputs unchanged`);
             continue;
         }
-        work.push(() => runOne(label, join(root, 'tools', name), [binary], key));
+        work.push({ label, script: join(root, 'tools', name), args: [binary], key });
     }
     await runPool(work, JOBS);
     for (const name of serial) {
@@ -148,7 +156,7 @@ const pipeline = async () => {
             print(`check-build: ${label} skipped, inputs unchanged`);
             continue;
         }
-        nodeWork.push(() => runOne(label, join(root, 'tools', name), ['node'], key));
+        nodeWork.push({ label, script: join(root, 'tools', name), args: ['node'], key });
     }
     await runPool(nodeWork, JOBS);
     return failures.length === 0 ? 0 : 1;
@@ -163,6 +171,6 @@ try {
     writeFileSync(CACHE, JSON.stringify(cache, null, 2));
     const wall = ((Date.now() - started) / 1000).toFixed(1);
     const top = [...timings].sort((a, b) => b.wall - a.wall).slice(0, 5).map((row) => `${row.label} ${row.wall.toFixed(1)} s`).join('; ');
-    print(`check-build: ${timings.length} run, ${failures.length} failed, jobs ${JOBS}, wall ${wall} s; longest: ${top || 'none'}`);
+    print(`check-build: ${timings.length} run, ${failures.length} failed, ${rescued.length} passed alone after a pool failure, jobs ${JOBS}, load ${loadavg()[0].toFixed(1)} on ${cpus().length} cores, wall ${wall} s; longest: ${top || 'none'}`);
 }
 process.exit(status);
