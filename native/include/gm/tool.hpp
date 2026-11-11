@@ -62,6 +62,7 @@ CheckResult check_console(const std::string& binary);
 CheckResult check_mcp_conformance(const std::string& binary);
 CheckResult check_parity_contract(const std::string& binary);
 CheckResult check_clock_mutations(const std::string& binary);
+CheckResult check_witness_windows_cmd(const std::string& binary);
 int run_phase_b_checks(const std::filesystem::path& root, const std::filesystem::path& build, const std::string& gm);
 CheckResult check_embedded_runtime(const std::string& binary);
 CheckResult check_skill_serve(const std::string& binary);
@@ -171,5 +172,8 @@ int gate_command(const std::filesystem::path& root);
 int phase_b_command(const std::filesystem::path& root, const std::filesystem::path& build);
 int ship_command(const std::filesystem::path& root, const std::vector<std::string>& args);
 int installed_command(const std::filesystem::path& root);
+int package_command(const std::filesystem::path& root, const std::vector<std::string>& args);
+int release_manifest_command(const std::vector<std::string>& args);
+int prune_assets_command(const std::vector<std::string>& args);
 
 }

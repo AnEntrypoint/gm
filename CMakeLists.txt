@@ -7,7 +7,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-set(GM_COMPILE_JOBS 4 CACHE STRING "Ninja compile pool size")
+set(GM_COMPILE_JOBS 3 CACHE STRING "Ninja compile pool size")
 set_property(GLOBAL APPEND PROPERTY JOB_POOLS compile_pool=${GM_COMPILE_JOBS})
 set(CMAKE_JOB_POOL_COMPILE compile_pool)
 

@@ -20,7 +20,7 @@ const required = [
     },
     {
         name: 'Windows cmd-only run_shell witness',
-        commands: ['node tools/witness-windows-cmd.mjs'],
+        commands: ['gm-tool.exe check "build/${{ matrix.preset }}/native/components/host/gm.exe" witness-windows-cmd'],
         forbid: ['continue-on-error'],
     },
 ];

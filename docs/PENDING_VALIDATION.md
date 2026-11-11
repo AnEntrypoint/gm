@@ -2651,3 +2651,21 @@ Each change, and its witness:
 - docs/PARITY_CONTRACT.md section 5: states that check-build.mjs is removed.
 - tools/check-build.mjs: removed (git rm). No caller remains except the historical notes in DESIGN.md.
 
+## Round e6b5 close-out, cap 3 and the remaining Node in CI (Phase A)
+
+Each change, and its witness:
+
+- CMakeLists.txt: GM_COMPILE_JOBS default 3. Witness: the batch with peak 3 concurrent cc1plus and 1306 MiB total (docs/NATIVE_PLAN.md, cap 3).
+- native/components/tool/release.cpp (new): `gm-tool package`, `gm-tool release-manifest` and `gm-tool prune-release-assets`, ports of tools/package.mjs, tools/release-manifest.mjs and tools/prune-release-assets.mjs. Witness: Phase B below runs the three commands on a scratch tree.
+- native/components/tool/checks/witness_windows_cmd.cpp (new): the `witness-windows-cmd` check, port of tools/witness-windows-cmd.mjs. On Linux it reports "skipped". It has NOT run on Windows; the first Windows release run is its witness.
+- native/components/tool/main.cpp, native/include/gm/tool.hpp, checks/registry.cpp, native/components/tool/CMakeLists.txt: the new commands and check registered.
+- .github/workflows/release.yml: the two package steps run gm-tool (gm-tool.exe on Windows); the Windows witness runs `gm-tool.exe check ... witness-windows-cmd`; the x64-linux build uploads gm-tool as the artifact `gm-tool`; the publish job downloads it and runs `tool/gm-tool release-manifest` and `tool/gm-tool prune-release-assets`. Witness: the next release run; not run here.
+- tools/witness-ci-replay-step.mjs: the expected Windows command is the gm-tool form.
+- Deleted (git rm): tools/package.mjs, tools/release-manifest.mjs, tools/prune-release-assets.mjs, tools/witness-windows-cmd.mjs.
+- docs/NATIVE_PLAN.md: the cap 3 measurement.
+
+Node still in CI, with cause and owner decision:
+- playwright-core install and the `node -p` path lookup in release.yml (both build jobs): playwriter is a Node package, so the browser-scope and lazy-browser checks need Node. Owner decision: keep Node for the browser runtime, or drop those checks from CI.
+- Three inline `node -e` steps in release.yml (host build stamp, worker binary versions on Windows): small, but they read CMakeCache and compile_commands.json with Node. Owner decision: replace with shell, or keep.
+- tools/witness-ci-replay-step.mjs was already failing before this change (it expects two steps the workflow no longer has); nothing in CI calls it.
+

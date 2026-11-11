@@ -195,3 +195,14 @@ The total peak is about 80 MiB above the 1.5 GB target. The cap of 4 is kept as 
 - Parity rows: no parity-contract row still needs Node; the native parity-contract check covers them.
 - Node still in CI, outside this step, with the cause for each: playwright-core install for the playwriter browser runtime (npx playwright-core install chromium, needed by the browser checks that launch playwriter); tools/package.mjs; tools/witness-windows-cmd.mjs; tools/release-manifest.mjs; tools/prune-release-assets.mjs; and inline node -e steps in release.yml that read the build's info, the compile database and the Windows exe paths. Replacing those is a separate port.
 
+## Compile cap 3, measured (round e6b5, cap close-out)
+
+GM_COMPILE_JOBS is now 3 (CMakeLists.txt). A set(... CACHE ...) default does not change an existing build directory, so an existing build/release must be configured with -DGM_COMPILE_JOBS=3; fresh configures take the default. Measured on this host with one batch: cmake --build build/release --target gm_tool_checks after deleting that library's object directory; 56 cc1plus processes from this checkout, sampled every 0.2 s from /proc VmRSS, filtered to command lines under /workspace/gm/.
+
+- Peak concurrent cc1plus: 3 (the cap held).
+- Peak resident memory per cc1plus: 486 MiB (max); 337 MiB (median).
+- Peak total resident memory of the concurrent cc1plus processes: 1306 MiB (about 1.28 GiB), under the 1.5 GB target.
+- Batch exit 0 (58 steps).
+
+The cap-4 figures above (480 MiB per process, 1581 MiB total) were taken with cap 4 and are superseded; a cap-4 batch that was started earlier was stopped as a tree.
+

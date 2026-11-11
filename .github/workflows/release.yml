@@ -60,6 +60,14 @@ jobs:
         run: |
           cmake --preset ${{ matrix.preset }} -DGMNEW_VERSION=$GMNEW_VERSION ${{ matrix.extra }} $CCACHE_ARGS
           cmake --build build/${{ matrix.preset }}
+      - name: gm-tool for the publish job
+        if: matrix.target == 'x64-linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: gm-tool
+          path: build/${{ matrix.preset }}/native/components/tool/gm-tool
+          if-no-files-found: error
+          retention-days: 1
       - name: Chromium for the browser-scope check (linux-arm64)
         if: matrix.target == 'arm64-linux'
         shell: bash
@@ -81,7 +89,7 @@ jobs:
           build/${{ matrix.preset }}/native/components/tool/gm-tool check build/${{ matrix.preset }}/native/components/host/gm check-witness-next-context-replay
       - name: Package
         shell: bash
-        run: node tools/package.mjs --target ${{ matrix.target }} --build-dir build/${{ matrix.preset }} --out dist
+        run: build/${{ matrix.preset }}/native/components/tool/gm-tool package --target ${{ matrix.target }} --build-dir build/${{ matrix.preset }} --out dist
       - uses: actions/upload-artifact@v4
         with:
           name: gmnew-${{ matrix.target }}
@@ -154,10 +162,10 @@ jobs:
           node -e 'const fs = require("fs"); const cp = require("child_process"); const dir = process.argv[1]; for (const name of ["gm.exe", "gm-core.exe"]) { const p = dir + "/" + name; if (!fs.existsSync(p)) { console.log(name + ": absent"); continue; } const s = fs.statSync(p); let v = ""; try { v = cp.execFileSync(p, ["--version"], { encoding: "utf8" }).trim(); } catch (e) { v = "version failed: " + e.message; } console.log(name + ": " + v + " size=" + s.size + " mtime=" + s.mtime.toISOString()); }' "$dir"
       - name: Windows cmd-only run_shell witness
         shell: bash
-        run: node tools/witness-windows-cmd.mjs "build/${{ matrix.preset }}/native/components/host/gm.exe"
+        run: build/${{ matrix.preset }}/native/components/tool/gm-tool.exe check "build/${{ matrix.preset }}/native/components/host/gm.exe" witness-windows-cmd
       - name: Package
         shell: bash
-        run: node tools/package.mjs --target ${{ matrix.target }} --build-dir build/${{ matrix.preset }} --out dist
+        run: build/${{ matrix.preset }}/native/components/tool/gm-tool.exe package --target ${{ matrix.target }} --build-dir build/${{ matrix.preset }} --out dist
       - uses: actions/upload-artifact@v4
         with:
           name: gmnew-${{ matrix.target }}
@@ -242,9 +250,17 @@ jobs:
             fi
             mv "$file" "dist/gmnew-$GMNEW_VERSION-$target.$ext"
           done
+      - uses: actions/download-artifact@v4
+        if: steps.head.outputs.current == 'true'
+        with:
+          name: gm-tool
+          path: tool
+      - name: Make gm-tool runnable
+        if: steps.head.outputs.current == 'true'
+        run: chmod +x tool/gm-tool
       - name: Manifest and checksums
         if: steps.head.outputs.current == 'true'
-        run: node tools/release-manifest.mjs --dir dist --version "$GMNEW_VERSION" --commit "$GITHUB_SHA" --repo "$RELEASE_REPO" --previous "$RUNNER_TEMP/previous/manifest.json" --present "$RUNNER_TEMP/present.txt" --summary "$GITHUB_STEP_SUMMARY"
+        run: tool/gm-tool release-manifest --dir dist --version "$GMNEW_VERSION" --commit "$GITHUB_SHA" --repo "$RELEASE_REPO" --previous "$RUNNER_TEMP/previous/manifest.json" --present "$RUNNER_TEMP/present.txt" --summary "$GITHUB_STEP_SUMMARY"
       - name: Upload the versioned archives
         if: steps.head.outputs.current == 'true'
         run: |
@@ -293,5 +309,5 @@ jobs:
         run: |
           gh_retry() { for n in 1 2 3 4 5; do "$@" && return 0; echo "retry $n for $1" >&2; sleep $((n * 5)); done; return 1; }
           gh release view latest --repo "$RELEASE_REPO" --json assets --jq '.assets[].name' \
-            | node tools/prune-release-assets.mjs --keep 3 \
+            | tool/gm-tool prune-release-assets --keep 3 \
             | while read -r name; do gh_retry gh release delete-asset latest "$name" --repo "$RELEASE_REPO" --yes || true; done

@@ -12,7 +12,10 @@ int usage() {
                "       gm-tool gate\n"
                "       gm-tool phase-b [build dir]\n"
                "       gm-tool ship \"<subject>\" <paths...>  |  gm-tool ship --push\n"
-               "       gm-tool installed\n",
+               "       gm-tool installed\n"
+               "       gm-tool package --target <t> --build-dir <dir> --out <dir>\n"
+               "       gm-tool release-manifest --dir <dir> --version <v> --commit <sha> --repo <r> [--previous f] [--present f] [--summary f]\n"
+               "       gm-tool prune-release-assets [--keep n] < names\n",
                stderr);
     return 2;
 }
@@ -72,5 +75,8 @@ int main(int argc, char** argv) {
     }
     if (command == "ship") return gm::tool::ship_command(root, std::vector<std::string>(args.begin() + 1, args.end()));
     if (command == "installed") return gm::tool::installed_command(root);
+    if (command == "package") return gm::tool::package_command(root, args);
+    if (command == "release-manifest") return gm::tool::release_manifest_command(args);
+    if (command == "prune-release-assets") return gm::tool::prune_assets_command(args);
     return usage();
 }

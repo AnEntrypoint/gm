@@ -17,6 +17,7 @@ const std::vector<Registered>& checks() {
         {"mcp-conformance", check_mcp_conformance},
         {"parity-contract", check_parity_contract},
         {"clock-mutations", check_clock_mutations},
+        {"witness-windows-cmd", check_witness_windows_cmd},
         {"check-stop-fetch", check_stop_fetch},
         {"check-install-switch", check_install_switch},
         {"check-restart-skill-read", check_restart_skill_read},
