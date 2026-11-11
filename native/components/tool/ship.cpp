@@ -2,7 +2,6 @@
 
 #include <chrono>
 #include <cstdio>
-#include <future>
 #include <fstream>
 #include <regex>
 #include <sstream>
@@ -26,15 +25,6 @@ bool gate_passed(const std::vector<GateCheck>& checks) {
     for (const auto& check : checks)
         if (!check.ok) return false;
     return true;
-}
-
-std::string tail_of(const std::string& text, std::size_t lines) {
-    std::vector<std::string> all;
-    std::istringstream in(text);
-    for (std::string line; std::getline(in, line);) all.push_back(line);
-    std::string out;
-    for (std::size_t i = all.size() > lines ? all.size() - lines : 0; i < all.size(); ++i) out += all[i] + "\n";
-    return out;
 }
 
 std::optional<std::string> stamp_of(const fs::path& root) {
@@ -84,26 +74,8 @@ int phase_b_command(const fs::path& root, const fs::path& build) {
         std::printf("phase-b: built stamp '%s' does not match the tree stamp '%s'\n", built_stamp.c_str(), tree_stamp->c_str());
         return 1;
     }
-    for (const auto& native : checks()) {
-        const auto result = native.run(gm.string());
-        if (!result.failures.empty()) {
-            std::printf("phase-b: %s failed; nothing marked\n", native.name.c_str());
-            for (const auto& failure : result.failures) std::printf("- %s\n", failure.c_str());
-            return 1;
-        }
-        std::printf("phase-b: %s ok (%s)\n", native.name.c_str(), result.summary.c_str());
-    }
-    auto parity_run = std::async(std::launch::async, [&root, &gm] {
-        return run_in(root, {"node", (root / "tools" / "parity-contract.mjs").string(), gm.string(), "all"});
-    });
-    const auto check = run_in(root, {"node", (root / "tools" / "check-build.mjs").string(), build.string()});
-    const auto parity = parity_run.get();
-    if (!succeeded(check)) {
-        std::printf("phase-b: check-build failed; nothing marked, nothing to push\n%s", tail_of(check.out + check.err, 40).c_str());
-        return 1;
-    }
-    if (!succeeded(parity)) {
-        std::printf("phase-b: parity contract failed; nothing marked\n%s", tail_of(parity.out + parity.err, 40).c_str());
+    if (run_phase_b_checks(root, build, gm.string()) != 0) {
+        std::puts("phase-b: checks failed; nothing marked, nothing to push");
         return 1;
     }
     const auto head = git_output(root, {"rev-parse", "HEAD"});

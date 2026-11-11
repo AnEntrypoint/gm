@@ -7,6 +7,10 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+set(GM_COMPILE_JOBS 4 CACHE STRING "Ninja compile pool size")
+set_property(GLOBAL APPEND PROPERTY JOB_POOLS compile_pool=${GM_COMPILE_JOBS})
+set(CMAKE_JOB_POOL_COMPILE compile_pool)
+
 if(CMAKE_SYSTEM_NAME STREQUAL "WASI")
     add_library(gm_no_threads INTERFACE)
     add_library(Threads::Threads ALIAS gm_no_threads)

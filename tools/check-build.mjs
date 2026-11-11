@@ -181,7 +181,7 @@ const pipeline = async () => {
         plan(name, createHash('sha256').update(`${name}:${fp}`).digest('hex'), { script: GM_TOOL, args: ['check', binary, name] }, EXCLUSIVE.has(name) ? exclusive : jobs);
     }
     if (process.argv.includes('--mutations')) {
-        exclusive.push({ label: 'check-clock-mutations.mjs', script: join(root, 'tools', 'check-clock-mutations.mjs'), args: [buildDir], key: null });
+        exclusive.push({ label: 'clock-mutations', script: GM_TOOL, args: ['check', binary, 'clock-mutations'], key: null });
     }
     jobs.sort((a, b) => (durations[b.label] ?? 30) - (durations[a.label] ?? 30));
     await runPool(jobs, JOBS);

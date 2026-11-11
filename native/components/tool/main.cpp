@@ -39,6 +39,7 @@ int run_checks(const std::vector<std::string>& args) {
     int ran = 0;
     for (const auto& check : gm::tool::checks()) {
         if (!selected(names, check.name)) continue;
+        if (names.empty() && check.name == "clock-mutations") continue;
         ++ran;
         const auto result = check.run(binary);
         if (result.failures.empty()) {

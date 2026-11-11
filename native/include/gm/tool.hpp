@@ -61,6 +61,8 @@ CheckResult check_build_handover(const std::string& binary);
 CheckResult check_console(const std::string& binary);
 CheckResult check_mcp_conformance(const std::string& binary);
 CheckResult check_parity_contract(const std::string& binary);
+CheckResult check_clock_mutations(const std::string& binary);
+int run_phase_b_checks(const std::filesystem::path& root, const std::filesystem::path& build, const std::string& gm);
 CheckResult check_embedded_runtime(const std::string& binary);
 CheckResult check_skill_serve(const std::string& binary);
 CheckResult check_resources_subscribe(const std::string& binary);
