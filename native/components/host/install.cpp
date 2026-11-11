@@ -113,6 +113,54 @@ std::optional<std::string> register_mcp_server(const fs::path& config, const std
     return "the config kept changing while it was being written; nothing was written";
 }
 
+std::optional<std::string> unregister_mcp_server(const fs::path& config, const std::string& name) {
+    const fs::path temp = config.string() + ".gm-tmp";
+    for (int attempt = 0; attempt < kMergeAttempts; ++attempt) {
+        std::string before;
+        if (auto error = read_if_exists(config, before)) return error;
+        if (blank(before)) return std::nullopt;
+        auto parsed = json::parse(before);
+        if (!parsed) return "config is not JSON, left untouched: " + parsed.error();
+        if (!parsed->is_object()) return "config is not a JSON object, left untouched";
+        const json::Value* found = parsed->find("mcpServers");
+        if (found == nullptr) return std::nullopt;
+        if (!found->is_object()) return "mcpServers is not an object, left untouched";
+        if (found->find(name) == nullptr) return std::nullopt;
+        json::Object kept;
+        for (const auto& member : found->as_object())
+            if (member.first != name) kept.push_back(member);
+        json::Value root = *parsed;
+        root.set("mcpServers", json::Value(kept));
+        const std::string text = json::dump(root) + "\n";
+        {
+            std::ofstream out(temp, std::ios::binary | std::ios::trunc);
+            if (!out) return "cannot write " + temp.string();
+            out << text;
+            if (!out) return "cannot write " + temp.string();
+        }
+        std::string now;
+        if (auto error = read_if_exists(config, now)) {
+            std::error_code ignored;
+            fs::remove(temp, ignored);
+            return error;
+        }
+        if (now != before) {
+            std::error_code ignored;
+            fs::remove(temp, ignored);
+            continue;
+        }
+        std::error_code ec;
+        fs::rename(temp, config, ec);
+        if (ec) {
+            std::error_code ignored;
+            fs::remove(temp, ignored);
+            return "cannot replace " + config.string() + ": " + ec.message();
+        }
+        return std::nullopt;
+    }
+    return "the config kept changing while it was being written; nothing was written";
+}
+
 std::string exe_name(const std::string& name) {
 #if defined(_WIN32)
     return name + ".exe";
@@ -291,6 +339,20 @@ int install_local(const HostArgs& args, const fs::path& local) {
     }
     if (start_check(current / exe_name("gm"), version) != 0) return 1;
     return register_installed(args, current / exe_name("gm"));
+}
+
+int run_uninstall_command(const HostArgs& args) {
+    const auto config = args.flag("--config") ? std::optional<fs::path>(fs::absolute(*args.flag("--config"))) : claude_config_path();
+    if (!config) {
+        std::cerr << "gm: uninstall: neither HOME nor USERPROFILE is set\n";
+        return 1;
+    }
+    if (auto error = unregister_mcp_server(*config, "gm")) {
+        std::cerr << "gm: uninstall: " << *error << "\n";
+        return 1;
+    }
+    std::cout << "removed the gm MCP server entry from " << config->string() << "; the installed binaries were kept\n";
+    return 0;
 }
 
 int run_install_command(const HostArgs& args) {

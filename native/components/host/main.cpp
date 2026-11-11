@@ -16,6 +16,7 @@ constexpr std::string_view kUsage =
     "       gm doctor [--leaves <dir>]\n"
     "       gm update\n"
     "       gm install [--local <build dir> [--source <checkout>]] [--config <file>] [--mcp-config <file>]\n"
+    "       gm uninstall [--config <file>]\n"
     "       gm --version\n"
     "       gm events (--run <id> [--workspace <dir>] | --dir <run dir>) [--wait [--timeout-ms N]]\n"
     "       gm query (--run <id> [--workspace <dir>] | --dir <run dir>) [--js \"<filter>\"]\n"
@@ -50,6 +51,7 @@ std::optional<std::string> flag_error_for(const gm::host::HostArgs& args) {
     }
     if (args.mode == "doctor") return flag_error(args.rest, {"leaves"}, {});
     if (args.mode == "install") return flag_error(args.rest, {"config", "mcp-config", "local", "source"}, {});
+    if (args.mode == "uninstall") return flag_error(args.rest, {"config"}, {});
     if (args.mode == "events") return flag_error(args.rest, {"run", "workspace", "dir", "timeout-ms"}, {"wait", "read-clear"});
     if (args.mode == "query") return flag_error(args.rest, {"run", "workspace", "dir", "js"}, {"read-clear"});
     if (args.mode == "stop-run") return flag_error(args.rest, {"dir", "idle-ms"}, {});
@@ -73,6 +75,7 @@ int main(int argc, char** argv) {
     if (args.mode == "stop-run") return gm::host::run_stop(args);
     if (args.mode == "update") return gm::host::run_update_command();
     if (args.mode == "install") return gm::host::run_install_command(args);
+    if (args.mode == "uninstall") return gm::host::run_uninstall_command(args);
     if (args.mode == "--version") {
         std::cout << gm::host::kBuildVersion << " (" << gm::host::kBuildCommit << ")\n";
         return 0;
