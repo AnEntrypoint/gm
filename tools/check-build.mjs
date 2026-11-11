@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { cpus, loadavg, tmpdir } from 'node:os';
 import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -73,10 +73,12 @@ const timings = [];
 const failures = [];
 const started = Date.now();
 
+const logPath = (label) => join(LOGS, `${label.replace(/[^A-Za-z0-9.-]+/g, '_')}.log`);
+
 const runOne = (label, script, args, key) =>
     new Promise((done) => {
         const at = Date.now();
-        const log = join(LOGS, `${label.replace(/[^A-Za-z0-9.-]+/g, '_')}.log`);
+        const log = logPath(label);
         const out = [];
         const child = spawn(process.execPath, [script, ...args], { cwd: root, stdio: ['ignore', 'pipe', 'pipe'] });
         child.stdout.on('data', (chunk) => out.push(chunk));
@@ -112,6 +114,8 @@ const runPool = async (jobs, limit) => {
     await Promise.all(lanes);
     for (const job of jobs.filter((job) => failures.includes(job.label))) {
         failures.splice(failures.indexOf(job.label), 1);
+        const first = logPath(job.label);
+        if (existsSync(first)) renameSync(first, first.replace(/\.log$/, '.first-failure.log'));
         if (await runOne(job.label, job.script, job.args, job.key)) {
             rescued.push(job.label);
             print(`check-build: ${job.label} passed alone after failing in the pool (load ${loadavg()[0].toFixed(1)} on ${cpus().length} cores)`);
