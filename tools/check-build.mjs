@@ -45,6 +45,7 @@ const fingerprint = () => {
     for (const dir of ['src', 'skills', 'defaults', 'tools', join('native', 'leaves')]) {
         const walk = (path) => {
             for (const name of readdirSync(join(root, path)).sort()) {
+                if (path === 'tools' && /^(check|witness)-/.test(name)) continue;
                 const full = join(root, path, name);
                 const info = statSync(full);
                 if (info.isDirectory()) walk(join(path, name));
@@ -54,6 +55,12 @@ const fingerprint = () => {
         if (existsSync(join(root, dir))) walk(dir);
     }
     return hash.digest('hex');
+};
+const importClosure = (file, seen) => {
+    if (seen.has(file) || !existsSync(file)) return seen;
+    seen.add(file);
+    for (const [, spec] of readFileSync(file, 'utf8').matchAll(/(?:from|import\()\s*'(\.{1,2}\/[^']+)'/g)) importClosure(resolve(dirname(file), spec), seen);
+    return seen;
 };
 const cache = existsSync(CACHE) ? JSON.parse(readFileSync(CACHE, 'utf8')) : {};
 const print = (text) => process.stdout.write(`${text}\n`);
@@ -116,7 +123,11 @@ const selected = (name) => only === null || only === name || only === name.repla
 
 const pipeline = async () => {
     const fp = fingerprint();
-    const keyOf = (label, script) => createHash('sha256').update(`${label}:${fp}:${readFileSync(join(root, 'tools', script))}`).digest('hex');
+    const keyOf = (label, script) => {
+        const hash = createHash('sha256').update(`${label}:${fp}`);
+        for (const file of [...importClosure(join(root, 'tools', script), new Set())].sort()) hash.update(`${file}:${readFileSync(file)}`);
+        return hash.digest('hex');
+    };
     const cached = (label, key) => cache[label] === key && !failures.includes(label);
 
     const jobs = [];

@@ -2511,3 +2511,8 @@ Not run here: tools/check-txiki-wasi.mjs and the gm reactor wasm (the gm wasm32-
 - Before: 115.4 s wall at load 36.9 on 16 cores (26 run, 0 failed; /tmp run at 14:47). After: 100.8 s wall at load 20.6 (30 run, 0 failed, 1 passed alone after a pool failure: check-turn-economy.mjs, rescued by the alone rerun, +34.4 s).
 - Floors that remain: check-run-code-budget 68.5 s (a 65 s body is the regression test for the 60 s budget); check-turn-economy 31.9 to 34.4 s, whose 31 s job is the regression test for the old 30 s job wait (OLD_WAIT_CAP_MS, line 19). Shortening either removes its coverage, so neither is shortened.
 - tools/check-owner-identity.mjs added to the native list.
+
+## check-build cache keys each scenario by its own imports (2026-11-11, Phase A)
+
+- tools/check-build.mjs: the fingerprint leaves out tools/check-* and tools/witness-* (a scenario's own file no longer invalidates every scenario); each scenario's key hashes its relative import closure (importClosure), so a helper it imports still invalidates it. Non-scenario tools files (relay.mjs, ship.sh, lib/) and src, skills, defaults and native/leaves still invalidate all.
+- Measured: one run after the change, 29 run, 0 failed, wall 65.4 s at load 10.8 (before this change, a tools edit reran all scenarios: 100.8 s at load 20.6 with a rescue). A second run with nothing changed: 0 run, wall 0.06 s.
