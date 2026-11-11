@@ -16,6 +16,7 @@ const std::vector<Registered>& checks() {
         {"check-quickjs-baseline", check_quickjs_baseline},
         {"check-install-follows", check_install_follows},
         {"check-skill-reload", check_skill_reload},
+        {"check-cli-flags", check_cli_flags},
     };
     return all;
 }

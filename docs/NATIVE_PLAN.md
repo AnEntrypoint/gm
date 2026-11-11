@@ -116,3 +116,16 @@ native. `.gmnew-update.json` stays as data.
 - Tool cache: defaults/mcp-tools/playwriter.json is lib/mcp-tools.json at 24646cc (execute and reset), ASCII-escaped with the same parsed content. The pin serves no browsers tool.
 - playwriter_browsers is optional. BrowserScope lists it only when the launcher serves it; the browsers verb and browser_close_machine fail with a named reason when it does not (native/components/host/browser_scope.cpp). check-lazy-browser requires only playwriter_execute in the listing and asserts that the first browser call is the one that starts the launcher.
 - Remaining gap, the install step: nothing creates ~/.gmnew/current/pw (a checkout of AnEntrypoint/pw at 24646cc with npm ci run in it). Until that step exists, the direct entry does not start, and the browser tools fail on the first call with the launcher error. The npx form was the working entry before this change; it is not kept.
+
+## Checks moved to gm-tool (round e6b5, item 5)
+
+| Node check (phase B, check-build) | native check | wall (ok run) | state |
+|---|---|---|---|
+| check-install-follows.mjs | check-install-follows | 4.5 s | moved; .mjs deleted |
+| check-cli-flags.mjs | check-cli-flags | 0.08 s | moved; .mjs deleted |
+| check-lazy-browser (native) | check-lazy-browser | 1.0 s | revised for the optional browsers verb |
+| (new) | check-skill-reload | 5.2 s | refusal witness, item 4 |
+| (new) | check-code-ast | under 1 s | item 1 |
+| (new) | check-quickjs-baseline | under 1 s | item 2, measurement |
+
+Still on Node, run by check-build and parity-contract: the other 30-odd check-*.mjs and witness-*.mjs in the NATIVE list, the conformance run, and tools/parity-contract.mjs. Node stays in phase B and check-build until each has a native replacement; the group-by-group list continues in the next round.

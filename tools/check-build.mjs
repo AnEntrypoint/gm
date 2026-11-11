@@ -28,7 +28,7 @@ const NATIVE = [
     'check-shell-stdin.mjs', 'check-grep-state-scope.mjs', 'check-job-bounds.mjs', 'check-early-run-code.mjs', 'check-stop-fetch.mjs',
     'check-read-parity.mjs', 'check-protocol-versions.mjs', 'check-resources-subscribe.mjs', 'check-startup-attempts.mjs',
     'check-skill-serve.mjs', 'check-no-resource-client.mjs', 'check-restart-skill-read.mjs', 'check-relay-reexec.mjs', 'check-embedded-runtime.mjs',
-    'witness-next-context-replay.mjs', 'check-install-switch.mjs', 'check-repeated-checks.mjs', 'check-owner-identity.mjs', 'check-build-handover.mjs', 'check-cli-flags.mjs', 'check-cut-marker.mjs', 'check-feed-reference.mjs', 'check-cancel-record.mjs', 'check-worker-growth.mjs', 'check-job-status-cancel.mjs', 'check-cancel-wait.mjs', 'check-console.mjs',
+    'witness-next-context-replay.mjs', 'check-install-switch.mjs', 'check-repeated-checks.mjs', 'check-owner-identity.mjs', 'check-build-handover.mjs', 'check-cut-marker.mjs', 'check-feed-reference.mjs', 'check-cancel-record.mjs', 'check-worker-growth.mjs', 'check-job-status-cancel.mjs', 'check-cancel-wait.mjs', 'check-console.mjs',
 ];
 const EXCLUSIVE = new Set(['check-relay-reexec.mjs']);
 const JOBS = Math.max(1, Number(process.env.GM_CHECK_JOBS ?? Math.min(6, Math.floor(cpus().length / 2))));
