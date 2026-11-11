@@ -3493,6 +3493,7 @@ const std::regex kDumpCommand(R"(^\s*(cd [^;&|]*&&\s*)?(cat|sed -n|head|tail)\s)
 const std::regex kTestCommand(R"((^|[\s|&;(])(test|pytest|jest|vitest|mocha|tsc)\b)");
 const std::set<std::string> kBoundedVerbs = {"read_file", "run_shell"};
 const std::set<std::string> kRepeatableVerbs = {"read_file"};
+constexpr std::size_t kReadMarkLimit = 512;
 const std::set<std::string> kWriteVerbs = {"write_file", "edit_file", "fs_op", "run_shell", "job_start", "js", "wiki_write"};
 
 bool flag_set(const Value& args, const char* key) {
@@ -3601,7 +3602,10 @@ Value body_call(VerbTable& verbs, const std::string& name, const Value& args, Se
     Value result = verbs.call(name, args);
     if (kBoundedVerbs.contains(name)) result = bounded_output(std::move(result), args, owner.run_dir, name);
     std::lock_guard guard(owner.marks_lock);
-    if (kRepeatableVerbs.contains(name) && is_ok(result) && before_quiet && quiet()) owner.read_marks[key] = {step, action, sampled};
+    if (kRepeatableVerbs.contains(name) && is_ok(result) && before_quiet && quiet()) {
+        if (owner.read_marks.size() >= kReadMarkLimit && !owner.read_marks.contains(key)) owner.read_marks.clear();
+        owner.read_marks[key] = {step, action, sampled};
+    }
     if (kWriteVerbs.contains(name)) owner.writes_seen += 1;
     return result;
 }

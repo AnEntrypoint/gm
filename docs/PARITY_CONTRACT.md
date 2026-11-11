@@ -129,7 +129,7 @@ Exactly these four, in this order:
     node tools/parity-contract.mjs <bin> W14
     W14 pass pid wait state=gone returned-before-20s=true exitCode=null
 
-### 3.2 The 100 s cap (W15)
+### 3.2 The 60 s cap (W15)
 
 A job or pid wait is clamped to 60000 ms: `waitMs` above 60000 is accepted and behaves as 60000, not refused. A reply that says running carries a hint line: call job_status again to keep waiting. The reply does not carry the clamp, so the cap is stated in the verb's description (`gm.verbs()`), which says "at most 60000". The witness checks that text, a 2 s process with `waitMs` just below (59999) and just above (60001) the cap, which must both return `gone` before 3 s, and a live process with `waitMs` 3000, which must hold for about 3 s and return `running`. It takes about 7 s; a witness that waits out the cap itself would take 60 s.
 
