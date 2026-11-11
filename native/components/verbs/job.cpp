@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "core_internal.hpp"
+#include "gm/clock.hpp"
 #include "gm/job_text.hpp"
 #include "gm/proc.hpp"
 
@@ -37,7 +38,7 @@ namespace {
 #if !defined(_WIN32)
 constexpr std::uint64_t kill_grace_ms = 500;
 #endif
-constexpr double max_wait_ms = 100000;
+const double max_wait_ms = 100000 * clock_scale();
 constexpr int pid_poll_ms = 100;
 constexpr std::uint64_t ended_event_grace_ms = 250;
 

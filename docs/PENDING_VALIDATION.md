@@ -2516,3 +2516,9 @@ Not run here: tools/check-txiki-wasi.mjs and the gm reactor wasm (the gm wasm32-
 
 - tools/check-build.mjs: the fingerprint leaves out tools/check-* and tools/witness-* (a scenario's own file no longer invalidates every scenario); each scenario's key hashes its relative import closure (importClosure), so a helper it imports still invalidates it. Non-scenario tools files (relay.mjs, ship.sh, lib/) and src, skills, defaults and native/leaves still invalidate all.
 - Measured: one run after the change, 29 run, 0 failed, wall 65.4 s at load 10.8 (before this change, a tools edit reran all scenarios: 100.8 s at load 20.6 with a rescue). A second run with nothing changed: 0 run, wall 0.06 s.
+
+## A clock the checks can drive (2026-11-11, Phase A)
+
+- native/include/gm/clock.hpp (new): clock_scale() reads GM_CLOCK_SCALE once (default 1; a non-positive or unparsable value is 1). native/components/verbs/job.cpp max_wait_ms and native/components/mcp/server.cpp (run_code default budget, job_status cap, the wait clamp) multiply by it. The tool descriptions still say 100000; the default with the variable unset is unchanged.
+- src/mcp.mjs and src/tools.mjs: MAX_WAIT_MS scaled by the same variable on the Node engine.
+- Witness: the scaled checks in the next commit; with the variable unset, parity W14, W15 and W16 are unchanged (Phase B runs the parity contract).

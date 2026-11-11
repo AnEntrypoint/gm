@@ -22,6 +22,7 @@
 #include <shared_mutex>
 #include <sstream>
 
+#include "gm/clock.hpp"
 #include "gm/log.hpp"
 #include "gm/job_text.hpp"
 #include "gm/mcp.hpp"
@@ -1676,7 +1677,7 @@ struct Server::State {
         static const std::regex kJobName(R"(^[A-Za-z0-9_-]{1,64}$)");
         std::string name = string_of(args, "job");
         if (!std::regex_match(name, kJobName)) return object().set("ok", false).set("error", "job must be a job name");
-        double wait = std::clamp(args.find("waitMs") ? args.find("waitMs")->as_number(0) : 0.0, 0.0, kMaxJobWaitMs);
+        double wait = std::clamp(args.find("waitMs") ? args.find("waitMs")->as_number(0) : 0.0, 0.0, kMaxJobWaitMs * clock_scale());
         if (auto job = body_named(name); job && wait > 0) {
             std::unique_lock guard(job->lock);
             job->changed.wait_for(guard, std::chrono::milliseconds(static_cast<long long>(wait)), [&] { return job->settled; });
@@ -2151,7 +2152,7 @@ struct Server::State {
             return out;
         }
         const Value* wait_arg = args.find("waitMs");
-        double wait_ms = wait_arg && wait_arg->is_number() && wait_arg->as_number() > 0 ? std::min(wait_arg->as_number(), kMaxWaitMs) : 0;
+        double wait_ms = wait_arg && wait_arg->is_number() && wait_arg->as_number() > 0 ? std::min(wait_arg->as_number(), kMaxWaitMs * clock_scale()) : 0;
         const Value* compact_arg = args.find("compactChildren");
         bool compact_children = compact_arg && compact_arg->is_bool() && compact_arg->as_bool();
         const Value* task_arg = args.find("task");
@@ -3418,7 +3419,7 @@ Value Server::State::run_code(const Value& args) {
                 return with_seq(object().set("ok", false).set("error", "body must be a non-empty string"));
             }
             const Value* timeout = args.find("timeoutMs");
-            double budget = kDefaultBodyTimeoutMs;
+            double budget = kDefaultBodyTimeoutMs * clock_scale();
             if (timeout != nullptr) {
                 double ms = timeout->as_number(-1);
                 if (!timeout->is_number() || ms != static_cast<double>(static_cast<long long>(ms)) || ms < 1 || ms > kMaxTimeoutMs) {
