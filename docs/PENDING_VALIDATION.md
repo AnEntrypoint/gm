@@ -2480,3 +2480,8 @@ Not run here: tools/check-txiki-wasi.mjs and the gm reactor wasm (the gm wasm32-
 - tools/check-install-switch.mjs: the `--installed` mode computes the same hash from the checkout and fails when the live `gm --version` first token differs. The default mode is unchanged.
 - skills/gm/SKILL.md (Phase B): records the stamp rule. skills/dev/SKILL.md (its build line) and AGENTS.md (the stamp note) state the new rule in place of the old one.
 - Witness to run in Phase B: after the build, `gm --version` shows the tree hash; after the install, node tools/check-install-switch.mjs build/release --installed (prints ok).
+
+## Witness-only push keeps the stamp (2026-11-11, Phase A)
+
+- This entry is the only change: it touches docs/PENDING_VALIDATION.md, not native, src or defaults, so the native-tree stamp stays c0bc98b6d07f-dev.
+- Phase B: build (no native change, so nothing recompiles), check-build once, one push, no reinstall. Then `gm --version` on the installed build must still report c0bc98b6d07f-dev (c0bc98b6d07f), and node tools/check-install-switch.mjs build/release --installed must pass against the new HEAD.
