@@ -48,6 +48,9 @@ Each habit is stated once, with its reason.
 - **Measure heavy things off the host, in one run.** Heavy measurement runs off the loaded host, in one run that carries every configuration and prints one result line each. A load-sensitive check uses a budget that does not depend on load. A sampler is suspect before the code: a 50 ms `ps` sampler caused the frame gaps it measured (measured: the host reached load 25 on 12 cores, and one check failed under load and passed alone).
 - **Examine a slow check's scenario before its code.** Measured: two checks went from 88 s to 12.5 s and from 79 s to 4.6 s once the scenario matched the real one, and the code had not changed.
 - **A wait is one bounded wait on the job's PID.** No sleep loop inside a shell call or a body is a wait, so the bounded PID wait is the only wait used.
+- **After a reboot, read the saved state and carry on.** A run starts by reading its own saved log and rows, and it continues from the last recorded step; it does not restart the task. Measured: a reboot cut four sessions mid-turn.
+- **A liveness claim is checked by a call that answers.** A pid file alone is not proof that a process is alive, because a reboot reuses pids: a stale pid file made a server look up when it was not. The check is a call to the process, or a pid with its start time, never the pid alone.
+- **An install survives a reboot.** After a reboot, `gm --version` and the served skill must match the checkout's; a mismatch is a stale install and is reported as one.
 - **Name the longest step in each report, and what was done about it.**
 
 ## Rules
