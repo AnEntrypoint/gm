@@ -43,6 +43,7 @@ struct RelayOptions {
     std::vector<std::string> reexec_argv;
     std::optional<json::Value> initialize;
     bool skill_read = false;
+    std::string from_build;
     std::vector<std::string> resend;
     std::optional<UpdatePolicy> update;
 };
@@ -111,6 +112,7 @@ private:
     std::thread updater_;
     bool reexec_pending_ = false;
     std::string refused_build_;
+    std::string handover_reason_;
     std::map<std::string, std::string> inflight_;
     std::map<std::string, std::string> resendable_;
     std::map<std::string, std::shared_ptr<Waiter>> waiters_;

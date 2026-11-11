@@ -145,6 +145,8 @@ Relay::Relay(RelayOptions options, std::function<void(std::string_view)> to_host
     : options_(std::move(options)), to_host_(std::move(to_host)), retry_delay_(options_.retry_min) {
     host_initialize_ = options_.initialize;
     skill_read_ = options_.skill_read;
+    if (!options_.from_build.empty() && options_.from_build != kBuildVersion)
+        handover_reason_ = "build " + options_.from_build + " -> " + std::string(kBuildVersion);
 }
 
 Relay::~Relay() {
@@ -187,7 +189,12 @@ void Relay::start() {
 }
 
 bool Relay::spawn_worker(Lock&) {
-    auto spawned = Child::spawn(options_.worker_argv, options_.worker_cwd);
+    std::vector<std::string> argv = options_.worker_argv;
+    if (!handover_reason_.empty()) {
+        argv.insert(argv.end(), {"--restart-reason", handover_reason_});
+        handover_reason_.clear();
+    }
+    auto spawned = Child::spawn(argv, options_.worker_cwd);
     if (!spawned) {
         failure_ = "the worker did not start (" + spawned.error() + ")";
         return false;
@@ -527,6 +534,7 @@ void Relay::reexec() {
         argv.push_back(json::dump(*host_initialize_));
     }
     if (skill_read_) argv.insert(argv.end(), {"--skill-read", "yes"});
+    argv.insert(argv.end(), {"--from-build", std::string(kBuildVersion)});
     std::vector<char*> arguments;
     for (std::string& argument : argv) arguments.push_back(argument.data());
     arguments.push_back(nullptr);

@@ -50,13 +50,13 @@ int run_serve(const HostArgs& args) {
     const std::filesystem::path install_dir = current_executable().parent_path();
     RelayOptions options;
     options.worker_argv = {worker_executable(install_dir).string(), "worker"};
-    for (std::string& arg : without_flags(args.rest, {"--runs", "--resume", "--run-dir", "--workspace", "--supervised", "--owner", "--resend"}))
+    for (std::string& arg : without_flags(args.rest, {"--runs", "--resume", "--run-dir", "--workspace", "--supervised", "--owner", "--resend", "--from-build"}))
         options.worker_argv.push_back(std::move(arg));
     options.worker_argv.insert(options.worker_argv.end(), {"--workspace", workspace.string(), "--run-dir",
                                                            run_dir->string(), "--supervised", "yes", "--owner",
                                                            relay_process_id()});
     options.reexec_argv = {stable_executable(current_executable()).string(), "serve"};
-    for (std::string& arg : without_flags(args.rest, {"--runs", "--resume", "--run-dir", "--workspace", "--handshake", "--skill-read", "--resend"}))
+    for (std::string& arg : without_flags(args.rest, {"--runs", "--resume", "--run-dir", "--workspace", "--handshake", "--skill-read", "--resend", "--from-build"}))
         options.reexec_argv.push_back(std::move(arg));
     options.reexec_argv.insert(options.reexec_argv.end(), {"--workspace", workspace.string(), "--run-dir",
                                                            run_dir->string()});
@@ -72,6 +72,7 @@ int run_serve(const HostArgs& args) {
     }
     const auto skill_read = args.flag("--skill-read");
     options.skill_read = skill_read && *skill_read == "yes";
+    if (const auto from_build = args.flag("--from-build")) options.from_build = *from_build;
     const auto build_flag = args.flag("--build-dir");
     options.build_dir = build_flag && *build_flag == "none" ? std::filesystem::path{}
                                                             : args.path_or("--build-dir", default_build_dir());
