@@ -124,7 +124,7 @@ Spawned spawn_shell_job(const std::string& command, const std::filesystem::path&
     PROCESS_INFORMATION process{};
     const HANDLE job = CreateJobObjectW(nullptr, nullptr);
     const BOOL created = CreateProcessW(nullptr, line_buffer.data(), nullptr, nullptr, TRUE,
-                                        CREATE_SUSPENDED | CREATE_NO_WINDOW | CREATE_UNICODE_ENVIRONMENT, environment.data(),
+                                        static_cast<DWORD>(gm::proc::hidden_creation_flags(CREATE_SUSPENDED | CREATE_UNICODE_ENVIRONMENT)), environment.data(),
                                         dir.empty() ? nullptr : dir.c_str(), &startup, &process);
     CloseHandle(input);
     CloseHandle(output);

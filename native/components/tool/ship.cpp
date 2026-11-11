@@ -83,6 +83,15 @@ int phase_b_command(const fs::path& root, const fs::path& build) {
         std::printf("phase-b: built stamp '%s' does not match the tree stamp '%s'\n", built_stamp.c_str(), tree_stamp->c_str());
         return 1;
     }
+    for (const auto& native : checks()) {
+        const auto result = native.run(gm.string());
+        if (!result.failures.empty()) {
+            std::printf("phase-b: %s failed; nothing marked\n", native.name.c_str());
+            for (const auto& failure : result.failures) std::printf("- %s\n", failure.c_str());
+            return 1;
+        }
+        std::printf("phase-b: %s ok (%s)\n", native.name.c_str(), result.summary.c_str());
+    }
     const auto check = run_in(root, {"node", (root / "tools" / "check-build.mjs").string(), build.string()});
     if (!succeeded(check)) {
         std::printf("phase-b: check-build failed; nothing marked, nothing to push\n%s", tail_of(check.out + check.err, 40).c_str());

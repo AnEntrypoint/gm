@@ -22,7 +22,9 @@ std::filesystem::path make_sandbox() {
     return root;
 }
 
-CheckResult read_after_write(const std::string& binary) {
+}
+
+CheckResult check_read_after_write(const std::string& binary) {
     CheckResult result;
     const auto started = std::chrono::steady_clock::now();
     const auto sandbox = make_sandbox();
@@ -70,13 +72,6 @@ CheckResult read_after_write(const std::string& binary) {
     result.summary = "an edit, a shell write and a finished job's write each reached the next read in fresh content, never a pointer; wall " +
                      std::to_string(wall).substr(0, 4) + " s";
     return result;
-}
-
-}
-
-const std::vector<Registered>& checks() {
-    static const std::vector<Registered> all{{"check-read-after-write", read_after_write}};
-    return all;
 }
 
 }

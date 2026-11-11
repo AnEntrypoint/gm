@@ -323,7 +323,7 @@ deoxidene::Result<std::shared_ptr<Child>, std::string> Child::spawn(const std::v
     PROCESS_INFORMATION process{};
     const std::wstring dir = options.cwd.wstring();
     std::wstring block = options.env.empty() ? std::wstring() : environment_block(options.env);
-    DWORD flags = CREATE_NEW_PROCESS_GROUP | EXTENDED_STARTUPINFO_PRESENT;
+    DWORD flags = static_cast<DWORD>(hidden_creation_flags(CREATE_NEW_PROCESS_GROUP | EXTENDED_STARTUPINFO_PRESENT));
     if (!block.empty()) flags |= CREATE_UNICODE_ENVIRONMENT;
     const BOOL ok = CreateProcessW(nullptr, command.data(), nullptr, nullptr, TRUE, flags,
                                    block.empty() ? nullptr : block.data(), dir.empty() ? nullptr : dir.c_str(),

@@ -32,6 +32,8 @@ Outcome shell(std::string_view command, const std::filesystem::path& cwd = {}, s
 
 const char* signal_name(int signal_number);
 
+unsigned long hidden_creation_flags(unsigned long flags);
+
 using Owner = std::uint64_t;
 
 class OwnerScope {

@@ -23,6 +23,14 @@ extern char** environ;
 
 namespace gm::proc {
 
+unsigned long hidden_creation_flags(unsigned long flags) {
+#if defined(_WIN32)
+    return flags | CREATE_NO_WINDOW;
+#else
+    return flags;
+#endif
+}
+
 namespace {
 
 thread_local Owner current_owner = 0;
@@ -374,7 +382,7 @@ Outcome run(const std::vector<std::string>& argv, const std::filesystem::path& c
     for (const auto& a : argv) command_line += (command_line.empty() ? "" : " ") + quote(a);
     std::string dir = cwd.string();
     BOOL ok = CreateProcessA(nullptr, command_line.data(), nullptr, nullptr, TRUE,
-                             CREATE_NEW_PROCESS_GROUP | CREATE_NO_WINDOW, nullptr, dir.empty() ? nullptr : dir.c_str(),
+                             static_cast<DWORD>(hidden_creation_flags(CREATE_NEW_PROCESS_GROUP)), nullptr, dir.empty() ? nullptr : dir.c_str(),
                              &si, &pi);
     CloseHandle(in_r);
     CloseHandle(out_w);
