@@ -1,6 +1,7 @@
 #include "gm/tool.hpp"
 
 #include <chrono>
+#include <cstdlib>
 #include <fstream>
 #include <map>
 #include <sstream>
@@ -218,6 +219,22 @@ json::Value tool_json(Session& session, const std::string& name, json::Value arg
         else envelope.set("output", value);
     }
     return envelope;
+}
+
+void set_env(const char* name, const char* value) {
+#if defined(_WIN32)
+    _putenv_s(name, value);
+#else
+    setenv(name, value, 1);
+#endif
+}
+
+void unset_env(const char* name) {
+#if defined(_WIN32)
+    _putenv_s(name, "");
+#else
+    unsetenv(name);
+#endif
 }
 
 std::vector<json::Value> run_events(const std::filesystem::path& log, const std::string& kind) {

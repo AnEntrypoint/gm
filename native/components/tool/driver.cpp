@@ -1,4 +1,5 @@
 #include "gm/tool.hpp"
+#if !defined(_WIN32)
 
 #include <algorithm>
 #include <atomic>
@@ -369,3 +370,15 @@ int run_phase_b_checks(const fs::path& root, const fs::path& build, const std::s
 }
 
 }
+#else
+#include <iostream>
+
+namespace gm::tool {
+
+int run_phase_b_checks(const std::filesystem::path&, const std::filesystem::path&, const std::string&) {
+    std::cerr << "gm-tool phase-b: runs on Linux and macOS only\n";
+    return 2;
+}
+
+}
+#endif

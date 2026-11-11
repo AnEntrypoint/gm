@@ -157,6 +157,8 @@ std::vector<std::string> nul_split(const std::string& text);
 std::string tool_text(Session& session, const std::string& name, json::Value args);
 json::Value tool_json(Session& session, const std::string& name, json::Value args);
 std::vector<json::Value> run_events(const std::filesystem::path& log, const std::string& kind);
+void set_env(const char* name, const char* value);
+void unset_env(const char* name);
 json::Value output_value(const json::Value& reply);
 std::string text_at(const json::Value& value, const std::string& dotted);
 const json::Value* value_at(const json::Value& value, const std::string& dotted);

@@ -1,4 +1,5 @@
 #include "gm/tool.hpp"
+#if !defined(_WIN32)
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
@@ -95,3 +96,4 @@ std::optional<std::chrono::steady_clock::time_point> HoldServer::closed_at() con
 }
 
 }
+#endif

@@ -1,4 +1,5 @@
 #include "gm/tool.hpp"
+#if !defined(_WIN32)
 
 #include <chrono>
 #include <filesystem>
@@ -123,3 +124,15 @@ CheckResult check_restart_skill_read(const std::string& binary) {
 }
 
 }
+#else
+
+namespace gm::tool {
+
+CheckResult check_restart_skill_read(const std::string&) {
+    CheckResult result;
+    result.summary = "skipped: POSIX-only check, runs on Linux and macOS";
+    return result;
+}
+
+}
+#endif

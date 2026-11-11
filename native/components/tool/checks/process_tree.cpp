@@ -1,4 +1,5 @@
 #include "gm/tool.hpp"
+#if !defined(_WIN32)
 
 #include <csignal>
 #if defined(__linux__)
@@ -95,3 +96,4 @@ std::vector<long long> alive_of(const std::vector<long long>& pids) {
 }
 
 }
+#endif

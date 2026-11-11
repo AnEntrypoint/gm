@@ -91,8 +91,8 @@ CheckResult check_run_code_progress(const std::string& binary) {
     const fs::path workspace = sandbox / "ws";
     fs::create_directories(workspace);
     std::ofstream(sandbox / "quiet.json") << R"({"mcpServers":{"playwriter":{"disabled":true}}})";
-    setenv("GMNEW_TEST_CLOCK", "1", 1);
-    setenv("GM_CLOCK_SCALE", "0.016666666666666666", 1);
+    set_env("GMNEW_TEST_CLOCK", "1");
+    set_env("GM_CLOCK_SCALE", "0.016666666666666666");
     std::size_t own_count = 0;
     {
         Session session(binary, workspace, sandbox, 90000, true);
@@ -139,8 +139,8 @@ CheckResult check_run_code_progress(const std::string& binary) {
         }
         session.stop();
     }
-    unsetenv("GMNEW_TEST_CLOCK");
-    unsetenv("GM_CLOCK_SCALE");
+    unset_env("GMNEW_TEST_CLOCK");
+    unset_env("GM_CLOCK_SCALE");
     std::error_code ignored;
     fs::remove_all(sandbox, ignored);
     const double wall = std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();

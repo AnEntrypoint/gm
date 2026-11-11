@@ -1,4 +1,5 @@
 #include "gm/tool.hpp"
+#if !defined(_WIN32)
 
 #include <algorithm>
 #include <chrono>
@@ -67,8 +68,8 @@ CheckResult check_run_code_budget(const std::string& binary) {
     std::ofstream(sandbox / "quiet.json") << R"({"mcpServers":{"playwriter":{"disabled":true}}})";
     const std::int64_t hold_ms = scaled(50000);
     const std::int64_t fetch_ms = std::max<std::int64_t>(300, scaled(3000));
-    setenv("GMNEW_TEST_CLOCK", "1", 1);
-    setenv("GM_CLOCK_SCALE", "0.016666666666666666", 1);
+    set_env("GMNEW_TEST_CLOCK", "1");
+    set_env("GM_CLOCK_SCALE", "0.016666666666666666");
     long long spin_elapsed = -1;
     long long leaf_elapsed = -1;
     long long matched_elapsed = -1;
@@ -139,8 +140,8 @@ CheckResult check_run_code_budget(const std::string& binary) {
             session.stop();
         }
     }
-    unsetenv("GMNEW_TEST_CLOCK");
-    unsetenv("GM_CLOCK_SCALE");
+    unset_env("GMNEW_TEST_CLOCK");
+    unset_env("GM_CLOCK_SCALE");
     std::error_code ignored;
     fs::remove_all(sandbox, ignored);
     const double wall = std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
@@ -152,3 +153,15 @@ CheckResult check_run_code_budget(const std::string& binary) {
 }
 
 }
+#else
+
+namespace gm::tool {
+
+CheckResult check_run_code_budget(const std::string&) {
+    CheckResult result;
+    result.summary = "skipped: POSIX-only check, runs on Linux and macOS";
+    return result;
+}
+
+}
+#endif

@@ -2689,3 +2689,11 @@ Each change, and its witness:
 - tools/witness-ci-replay-step.mjs: deleted (git rm). It checked release.yml for a `Replay witness` step and a `Node parity` step that the workflow no longer has, so it failed before this round, and nothing in CI or the tree called it. Witness: `grep -rn witness-ci-replay-step` outside build/ and .git/ returns only the historical ledger rows above, which record past runs and are left as they were.
 - docs/NATIVE_PLAN.md: the witness inventory row now names only tools/witness-redaction.mjs, the file on disk. It had also named witness-next-context-replay and witness-windows-cmd, which were already deleted.
 
+## Round e6b5, Windows gm-tool compile on main (Phase A, not yet pushed)
+
+Release run 43101203063 failed in build-windows at ab5e2aa: the Windows build compiles gm-tool for the first time, and it hit POSIX-only code. Each change, and its witness:
+
+- native/components/tool/session.cpp, native/include/gm/tool.hpp, checks/run_code_budget.cpp, checks/build_handover.cpp, checks/run_code_progress.cpp, checks/turn_economy.cpp, checks/clock_mutations.cpp: setenv/unsetenv go through set_env/unset_env (_putenv_s on Windows). Witness: the Linux build of gm-tool exits 0, and `gm-tool check build/release/native/components/host/gm check-run-code-budget` exits 0 with "ok".
+- Guarded for Windows with `#if !defined(_WIN32)`, the Windows branch returns "skipped" (or is empty): driver.cpp (phase-b prints that it runs on Linux and macOS only, exit 2), checks/hold_server.cpp, checks/process_tree.cpp, checks/restart_jobs.cpp, checks/restart_skill_read.cpp, checks/build_handover.cpp, checks/stop_fetch.cpp, checks/run_code_budget.cpp, checks/lazy_browser.cpp, checks/browser_scope.cpp. These use unistd.h, sys/socket.h, signal.h, kill and getpid. Witness: the Linux build of gm-tool exits 0 with no errors. The Windows compile is NOT checked here (no Windows or cross compiler on this host); the release run on the pushed commit is its witness.
+- Not guarded and not verified for Windows: any POSIX-only code outside those ten files. The release run will show it.
+

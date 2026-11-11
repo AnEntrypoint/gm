@@ -61,12 +61,12 @@ class EnvOverride {
 public:
     EnvOverride(const char* name, const char* value) : name_(name) {
         if (const char* old = std::getenv(name)) previous_ = std::string(old);
-        if (value) setenv(name, value, 1);
-        else unsetenv(name);
+        if (value) set_env(name, value);
+        else unset_env(name);
     }
     ~EnvOverride() {
-        if (previous_) setenv(name_, previous_->c_str(), 1);
-        else unsetenv(name_);
+        if (previous_) set_env(name_, previous_->c_str());
+        else unset_env(name_);
     }
     EnvOverride(const EnvOverride&) = delete;
     EnvOverride& operator=(const EnvOverride&) = delete;

@@ -114,8 +114,8 @@ CheckResult check_turn_economy(const std::string& binary) {
     std::ofstream(workspace / "b.txt") << "beta\n";
     const std::int64_t old_wait_cap_ms = scaled(30000);
     const std::int64_t slow_job_ms = scaled(45000);
-    setenv("GMNEW_TEST_CLOCK", "1", 1);
-    setenv("GM_CLOCK_SCALE", "0.016666666666666666", 1);
+    set_env("GMNEW_TEST_CLOCK", "1");
+    set_env("GM_CLOCK_SCALE", "0.016666666666666666");
     std::size_t full_reply_bytes = 0;
     std::size_t unchanged_reply_bytes = 0;
     long long slow_waited_ms = -1;
@@ -212,8 +212,8 @@ CheckResult check_turn_economy(const std::string& binary) {
         }
         session.stop();
     }
-    unsetenv("GMNEW_TEST_CLOCK");
-    unsetenv("GM_CLOCK_SCALE");
+    unset_env("GMNEW_TEST_CLOCK");
+    unset_env("GM_CLOCK_SCALE");
     std::error_code ignored;
     fs::remove_all(sandbox, ignored);
     const double wall = std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();

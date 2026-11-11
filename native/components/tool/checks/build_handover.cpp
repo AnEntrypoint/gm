@@ -1,4 +1,5 @@
 #include "gm/tool.hpp"
+#if !defined(_WIN32)
 
 #include <algorithm>
 #include <chrono>
@@ -429,13 +430,13 @@ CheckResult check_build_handover(const std::string& binary) {
         result.failures.push_back("run from the checkout: no skills/gm/SKILL.md in the working directory or its parents");
         return result;
     }
-    setenv("GMNEW_TEST_CLOCK", "1", 1);
-    setenv("GM_CLOCK_SCALE", "0.1", 1);
+    set_env("GMNEW_TEST_CLOCK", "1");
+    set_env("GM_CLOCK_SCALE", "0.1");
     const std::string stamp = stamp_of(host / "gm");
     if (stamp.empty()) {
         result.failures.push_back("the build under test reports no stamp: " + stamp);
-        unsetenv("GMNEW_TEST_CLOCK");
-        unsetenv("GM_CLOCK_SCALE");
+        unset_env("GMNEW_TEST_CLOCK");
+        unset_env("GM_CLOCK_SCALE");
         return result;
     }
     const fs::path sandbox = fs::temp_directory_path() / ("gm-handover-" + std::to_string(started.time_since_epoch().count()));
@@ -472,8 +473,8 @@ CheckResult check_build_handover(const std::string& binary) {
         }
         relay.stop();
     }
-    unsetenv("GMNEW_TEST_CLOCK");
-    unsetenv("GM_CLOCK_SCALE");
+    unset_env("GMNEW_TEST_CLOCK");
+    unset_env("GM_CLOCK_SCALE");
     std::error_code ignored;
     fs::remove_all(sandbox, ignored);
     const double wall = std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
@@ -483,3 +484,15 @@ CheckResult check_build_handover(const std::string& binary) {
 }
 
 }
+#else
+
+namespace gm::tool {
+
+CheckResult check_build_handover(const std::string&) {
+    CheckResult result;
+    result.summary = "skipped: POSIX-only check, runs on Linux and macOS";
+    return result;
+}
+
+}
+#endif
