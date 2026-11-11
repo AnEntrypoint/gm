@@ -53,9 +53,13 @@ function session(label, command, args) {
   };
   const run = async (body) => {
     const reply = await rpc('tools/call', { name: 'run_code', arguments: { body } });
-    const text = reply.result?.content?.[0]?.text ?? 'null';
+    const blocks = reply.result?.content ?? [];
+    const text = blocks[0]?.text ?? 'null';
     const parsed = JSON.parse(text);
     if (parsed.ok !== true) throw new Error(`run_code refused: ${parsed.error ?? text.slice(0, 200)}`);
+    if (blocks.length > 1 && parsed.output === '[the output is the text block after this one]') {
+      parsed.output = blocks[1].text;
+    }
     return parsed;
   };
   const start = async () => {
