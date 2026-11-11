@@ -702,6 +702,9 @@ struct Server::State {
         Value trace;
         std::optional<std::uint64_t> call_action_seq;
         std::uint64_t notice_seq = 0;
+        std::uint64_t own_base = 0;
+        std::uint64_t own_scan = 0;
+        bool own_only = true;
         std::optional<Value> recovery;
         std::string rules_baseline;
         std::uint64_t writes_seen = 0;
@@ -784,7 +787,8 @@ struct Server::State {
         std::deque<std::pair<std::uint64_t, std::string>> queued;
         int running = 0;
         bool closed = false;
-        std::vector<std::thread> threads;
+        std::map<std::uint64_t, std::thread> threads;
+        std::vector<std::uint64_t> finished;
         std::thread pump;
     } calls;
 
@@ -2046,12 +2050,19 @@ struct Server::State {
         static const std::set<std::string> kOwnCallKinds = {"action", "result", "code-call", "code-load", "context-reply", "generation", "body-console", "refusal", "skill-loaded", "rules-cleared", "tools"};
         if (!s().run_started || s().recovery || !s().rules_open.empty() || has_pending(s().run_dir)) return false;
         if (read_rules() != s().rules_baseline) return false;
-        auto since = s().log->read_from(s().notice_seq);
-        if (!since) return false;
-        return std::all_of(since->begin(), since->end(), [](const Value& event) {
+        if (s().own_base != s().notice_seq) {
+            s().own_base = s().notice_seq;
+            s().own_scan = s().notice_seq;
+            s().own_only = true;
+        }
+        auto fresh = s().log->read_from(s().own_scan);
+        if (!fresh) return false;
+        for (const Value& event : *fresh) {
             const Value* kind = event.find("kind");
-            return kind != nullptr && kind->is_string() && kOwnCallKinds.contains(kind->as_string());
-        });
+            if (kind == nullptr || !kind->is_string() || !kOwnCallKinds.contains(kind->as_string())) s().own_only = false;
+        }
+        s().own_scan = s().log->count();
+        return s().own_only;
     }
 
     void note_body_shape(Value& out, std::uint64_t verb_calls_made) {
@@ -3358,23 +3369,35 @@ struct Server::State {
         std::unique_lock guard(calls.mutex);
         for (;;) {
             calls.changed.wait(guard, [&] {
-                return (!calls.queued.empty() && calls.running < limit) || (calls.closed && calls.queued.empty() && calls.running == 0);
+                return !calls.finished.empty() || (!calls.queued.empty() && calls.running < limit) || (calls.closed && calls.queued.empty() && calls.running == 0);
             });
+            reap_calls();
             if (calls.closed && calls.queued.empty() && calls.running == 0) return;
             while (!calls.queued.empty() && calls.running < limit) {
                 auto [ticket, text] = std::move(calls.queued.front());
                 calls.queued.pop_front();
                 calls.running += 1;
-                calls.threads.emplace_back([this, ticket, text = std::move(text)] {
+                calls.threads.emplace(ticket, std::thread([this, ticket, text = std::move(text)] {
                     process(text, ticket, true);
                     {
                         std::lock_guard done(calls.mutex);
                         calls.running -= 1;
+                        calls.finished.push_back(ticket);
                     }
                     calls.changed.notify_all();
-                });
+                }));
             }
         }
+    }
+
+    void reap_calls() {
+        for (std::uint64_t ticket : calls.finished) {
+            auto found = calls.threads.find(ticket);
+            if (found == calls.threads.end()) continue;
+            found->second.join();
+            calls.threads.erase(found);
+        }
+        calls.finished.clear();
     }
 
     void drain_calls() {
@@ -3384,8 +3407,9 @@ struct Server::State {
         }
         calls.changed.notify_all();
         if (calls.pump.joinable()) calls.pump.join();
-        for (auto& thread : calls.threads) thread.join();
+        for (auto& [ticket, thread] : calls.threads) thread.join();
         calls.threads.clear();
+        calls.finished.clear();
     }
 
     void process(std::string_view line, std::uint64_t ticket, bool ordered) {
