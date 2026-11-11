@@ -9,7 +9,7 @@ import { connectReply, SERVER_NAME, SERVER_TITLE } from './connect.mjs';
 import { currentRunDir, isDirectory, loadTask, newRunId, openRun, ROOT, setSuccessor } from './run.mjs';
 import { checkTally, flushAllLogs, repeatedChecks } from './log.mjs';
 import { clearPending, hasPending, offPendingAppended, onPendingAppended, takePending } from './pending.mjs';
-import { conflicts, createTools, headChars, loggedFor, OUTPUT_PAGE, DEFAULT_STUCK_MS, DEFAULT_MONITOR_MS, BODY_NOTICE_MS } from './tools.mjs';
+import { conflicts, createTools, headChars, loggedFor, OUTPUT_PAGE, DEFAULT_STUCK_MS, DEFAULT_MONITOR_MS, BODY_NOTICE_MS, storeArtifact } from './tools.mjs';
 import { bumpGeneration } from './hot.mjs';
 import { RELOADABLE } from './hot-config.mjs';
 import { SEARCH_TOOLS } from './search.mjs';
@@ -147,14 +147,14 @@ const objectSchema = (properties, required = []) => ({ type: 'object', propertie
 const BASE_TOOLS = [
   { name: 'next_context', description: 'Begin a step. Returns rules, task, witness requirement, the events new since the last step in full, and prefixSha. Events from earlier steps are not repeated; query_log reaches them. pending lists the events that need you since your last step, each once, with an id. Delivery clears an event, so no later step or wait lists it again. Call it at the start of a run, after a compaction, and when a run_code reply carries pendingEvents; not before every step. A call with nothing new since the last reply (no pending event, the same rules and task) takes no step and answers unchanged: true in one short line; full: true returns the rules, the task and the feed anyway. query_log reaches every event. waitMs, when set, holds this call until an event is pending or that many milliseconds pass, at most 100000. child: true makes the call a read by a subagent on this connection: it takes no step, claims no pending event, and its reply has role child and the owning run. run, with child, names that owning run, and another run is refused. compactChildren: true summarizes child run_code and code-call generations into counts with a seq range and a gm.query_log note, while pending, parent-action, job, row and recovery events stay full; the default feed is unchanged. task, when set, replaces the run\'s task text; use it in the first step when a host cut the slash-command task to its first word. The first step may correct a one-word host task without owner:true; later task replacements need owner:true, from the owning run or from a child context (child: true) alike.', inputSchema: objectSchema({ waitMs: number, full: { type: 'boolean' }, child: { type: 'boolean' }, run: text, compactChildren: { type: 'boolean' }, task: text, owner: { type: 'boolean' } }) },
   { name: 'task_set', description: 'Replace or clear the run task after the first step. owner:true is required; child contexts cannot set the task. An empty string or null clears the task.', inputSchema: objectSchema({ task: nullableText, owner: { type: 'boolean' } }, ['task']) },
-  { name: 'read_file', description: 'Read a text file, inside or outside the workspace. With no offset or limit it returns the whole file when it is at most 1048576 bytes, and fails with the file size when it is larger. With offset or limit it returns one page of at most 20000 characters. Lines are the default unit: offset is a 0-based line index, limit a line count (default: as many whole lines as fit), and total (the file in lines) and next (the line index of the next page, null at the end) count lines. truncated is true when the page stops before the end, totalBytes is the file size in bytes, and hint names the read that gets the rest; a truncated read also has notice, a string that gives the bytes shown, the file size and that read; the output text holds only the page. A line longer than the page is cut to its first 20000 characters, with cutLine true, and next is the line after it. unit "chars" counts offset, limit (1 to 20000; with neither set, the whole file), total and next in characters instead. A path that starts with skill:// reads a served skill file, the text resources/read returns, and a skill:// uri that no served skill has is an error that names it.', inputSchema: objectSchema({ path: text, offset: number, limit: number, unit: text }, ['path']) },
+  { name: 'read_file', description: 'Read a text file, inside or outside the workspace. With no offset or limit it returns the whole file when it is at most 1048576 bytes (inside run_code the reply is bounded as described below), and fails with the file size when it is larger. With offset or limit it returns one page of at most 20000 characters. Lines are the default unit: offset is a 0-based line index, limit a line count (default: as many whole lines as fit), and total (the file in lines) and next (the line index of the next page, null at the end) count lines. truncated is true when the page stops before the end, totalBytes is the file size in bytes, and hint names the read that gets the rest; a truncated read also has notice, a string that gives the bytes shown, the file size and that read; the output text holds only the page. A line longer than the page is cut to its first 20000 characters, with cutLine true, and next is the line after it. unit "chars" counts offset, limit (1 to 20000; with neither set, the whole file), total and next in characters instead. Inside run_code a result over 6000 characters is cut to its first 4500 and last 1500 characters, with outputPath holding the whole text; full: true returns it all, and fresh: true reads again when an identical earlier call would be answered with a pointer. A path that starts with skill:// reads a served skill file, the text resources/read returns, and a skill:// uri that no served skill has is an error that names it.', inputSchema: objectSchema({ path: text, offset: number, limit: number, unit: text, full: { type: 'boolean' }, fresh: { type: 'boolean' } }, ['path']) },
   { name: 'write_file', description: 'Write a text file, inside or outside the workspace, creating parent directories. Replacing an existing file with content less than half its prior byte size adds shrunkByBytes, shrinkRatio and shrinkWarning to the result (never blocks the write); new files and normal rewrites are unchanged.', inputSchema: objectSchema({ path: text, content: text }, ['path', 'content']) },
   { name: 'edit_file', description: 'Replace old with new in a text file, inside or outside the workspace. old must occur once, unless replaceAll is true.', inputSchema: objectSchema({ path: text, old: text, new: text, replaceAll: { type: 'boolean' } }, ['path', 'old', 'new']) },
   { name: 'stat_file', description: 'Type, size and mtime of a path, inside or outside the workspace, as JSON.', inputSchema: objectSchema({ path: text }, ['path']) },
   { name: 'find', description: 'Find entries under a directory, inside or outside the workspace, by name. glob matches the entry name, or the path relative to the directory when it contains a slash; * matches any run of characters except a slash. kind is file, dir or any (default any). Directories end with a slash. The walk skips .git, .gm, .agentplug, .agentplug-kv, .playwriter, runs and node_modules, and does not follow symlinks. offset and limit page the sorted list, and the reply gives total and next.', inputSchema: objectSchema({ path: text, glob: text, kind: text, offset: number, limit: number }) },
   { name: 'list_dir', description: 'List a directory, inside or outside the workspace. Directories end with "/". prefix keeps names that start with it, offset and limit page the sorted list, and the reply gives total and next.', inputSchema: objectSchema({ path: text, prefix: text, offset: number, limit: number }) },
   { name: 'fs_op', description: 'Create, copy, move or delete a path inside or outside the workspace. op is mkdir (creates parents), cp (recursive; an existing directory is merged), mv (rename) or rm (recursive). to is the second path for cp and mv. rm refuses the filesystem root and the workspace root.', inputSchema: objectSchema({ op: { type: 'string', enum: ['mkdir', 'cp', 'mv', 'rm'] }, path: text, to: text }, ['op', 'path']) },
-  { name: 'run_shell', description: 'Run a shell command in the workspace and wait for it. Default timeout 300000 ms. Its process group is killed when it returns, so background work must go through job_start. Large output is condensed by default; raw:true skips condensing. The reply carries at most 20000 characters inline; longer output adds outputPath (the whole text), totalChars, digest, offset, next and truncated, and read_file pages the rest. compressed/originalChars/keptChars/droppedLines report what condensing dropped.', inputSchema: objectSchema({ command: text, timeoutMs: number, raw: { type: 'boolean' } }, ['command']) },
+  { name: 'run_shell', description: 'Run a shell command in the workspace and wait for it. Default timeout 300000 ms. Its process group is killed when it returns, so background work must go through job_start. Large output is condensed by default; raw:true skips condensing. Inside run_code a result over 6000 characters is cut to its first 4500 and last 1500, with outputPath holding the whole text; full: true returns it all. A reply that is still over 20000 characters adds outputPath (the whole text), totalChars, digest, offset, next and truncated, and read_file pages the rest. compressed/originalChars/keptChars/droppedLines report what condensing dropped.', inputSchema: objectSchema({ command: text, timeoutMs: number, raw: { type: 'boolean' } }, ['command']) },
   { name: 'job_start', description: 'Start a shell command as a named background job and return at once. Wait for it with one job_status({ job, waitMs, tail }) call. timeoutMs is the job deadline: default 300000 ms, at most 7200000 ms. A deadline past the job lifetime (3600000 ms by default) ends the job at the lifetime (reason lifetime); the job is killed at its deadline (reason timeout). progress is an optional file path whose modification time counts as job progress, so a job that writes results without printing is not reported stuck.', inputSchema: objectSchema({ job: text, command: text, timeoutMs: number, progress: text }, ['job', 'command']) },
   { name: 'job_status', description: 'State (running, exited or killed), exitCode, signal and output of a job as plain fields, with logPath (the job output file). output is the last 20000 characters, with total (its length) and truncated; with offset, output is the 20000 characters from that offset, with next. waitMs blocks until the job leaves running or that many milliseconds pass, at most 100000, so one call waits for a job and no sleep or poll loop is needed. tail, a number, returns only the last tail characters, which keeps a wait reply short. pid, in place of job, waits for a process gm did not start to disappear; it has no exit code. Offsets and lengths count characters, not lines.', inputSchema: objectSchema({ job: text, pid: number, waitMs: number, tail: number, offset: number }) },
   { name: 'job_stop', description: 'Stop a background shell job: its process group is killed, and the job ends killed with reason cancelled. The job event is logged before the answer. A job that already ended is an error result. stopBackground stops run_code bodies only.', inputSchema: objectSchema({ job: text }, ['job']) },
@@ -169,7 +169,55 @@ const SKILL_READ_REFUSAL = 'run_code refused: skill://gm/SKILL.md had not been r
 const STEP_START_RULE = 2;
 const SINGLE_VERB_BODIES_BEFORE_NOTICE = 3;
 const SINGLE_VERB_NOTICE_EVERY = 10;
-const BATCH_NOTICE = "The last run_code bodies made one verb call each. Each body costs a model turn. Put a step's calls in one body: independent calls in one Promise.all, dependent calls in sequence, a check of the result in the same body, and return only what the next decision needs.";
+const BATCH_NOTICE = "The last run_code bodies each made one verb call; put a step's calls in one body.";
+const INLINE_CHARS = 6000;
+const INLINE_HEAD = 4500;
+const INLINE_TAIL = 1500;
+const SEARCH_HEAD = 2000;
+const TEST_FAILURE_LINES = 30;
+const TEST_TAIL_LINES = 10;
+const SEARCH_COMMAND = /(^|[\s|&;(])(grep|rg)\s/;
+const DUMP_COMMAND = /^\s*(cd [^;&|]*&&\s*)?(cat|sed -n|head|tail)\s/;
+const TEST_COMMAND = /(^|[\s|&;(])(test|pytest|jest|vitest|mocha|tsc)\b/;
+const BOUNDED_VERBS = new Set(['read_file', 'run_shell']);
+const REPEATABLE_VERBS = new Set(['read_file']);
+const WRITE_VERBS = new Set(['write_file', 'edit_file', 'fs_op', 'run_shell']);
+
+function failureLine(line) {
+  const lower = line.toLowerCase();
+  return ['fail', 'error', 'not ok', 'panic'].some((word) => lower.includes(word));
+}
+
+function shownPart(text, command, name) {
+  if (name === 'run_shell' && SEARCH_COMMAND.test(command)) {
+    let head = text.slice(0, SEARCH_HEAD);
+    const cut = head.lastIndexOf('\n');
+    if (head.length < text.length && cut !== -1) head = head.slice(0, cut + 1);
+    return { body: head, next: head.length };
+  }
+  if (name === 'run_shell' && TEST_COMMAND.test(command)) {
+    const lines = text.split('\n');
+    const failures = lines.filter(failureLine).slice(0, TEST_FAILURE_LINES);
+    if (failures.length > 0) {
+      const tail = lines.slice(Math.max(0, lines.length - TEST_TAIL_LINES));
+      const body = `${failures.map((line) => `${line}\n`).join('')}...\n${tail.map((line) => `${line}\n`).join('')}`;
+      return { body: body.slice(0, INLINE_CHARS), next: body.length };
+    }
+  }
+  const head = text.slice(0, INLINE_HEAD);
+  if (name === 'run_shell' && DUMP_COMMAND.test(command)) return { body: head, next: head.length };
+  return { body: `${head}\n...\n${text.slice(text.length - INLINE_TAIL)}`, next: head.length };
+}
+
+function boundedOutput(result, args, runDir, name) {
+  const text = result?.output;
+  if (args?.full === true || typeof text !== 'string' || text.length <= INLINE_CHARS) return result;
+  const path = typeof result.outputPath === 'string' ? result.outputPath : storeArtifact(text, runDir, name).outputPath;
+  const { body, next } = shownPart(text, typeof args?.command === 'string' ? args.command : '', name);
+  const omitted = text.length - body.length;
+  return { ...result, output: `${body}\n[gm: ${omitted} characters not shown; the whole output is at ${path}; call again with full: true for it inline]`, truncated: true, outputPath: path, totalChars: text.length, omittedChars: omitted, lines: text.split('\n').length, next };
+}
+
 const TASK_PAGE = 4000;
 const taskRestNotice = (text) => {
   const shown = headChars(text, TASK_PAGE).length;
@@ -286,6 +334,25 @@ function createSession({ workspace, runDir, skillGate, log, task, maxSteps, maxI
   const rulesOpen = new Map();
   let bodyVerbCalls = 0;
   let singleVerbBodies = 0;
+  const readMarks = new Map();
+  let writesSeen = 0;
+  async function bodyVerb(name, args, exec, step, action) {
+    const key = `${name}${JSON.stringify(args)}`;
+    if (REPEATABLE_VERBS.has(name) && args?.fresh !== true) {
+      const mark = readMarks.get(key);
+      if (mark !== undefined && mark.writes === writesSeen) {
+        return { ok: true, step: mark.step, ...(mark.action === undefined ? {} : { action: mark.action }), output: `[gm: the same call was made at step ${mark.step} and no write has happened since, so its result is not sent again; call again with fresh: true to read it again]` };
+      }
+    }
+    try {
+      let result = await exec(args);
+      if (BOUNDED_VERBS.has(name)) result = boundedOutput(result, args, runDir, name);
+      if (REPEATABLE_VERBS.has(name) && result?.ok === true) readMarks.set(key, { step, action, writes: writesSeen });
+      return result;
+    } finally {
+      if (WRITE_VERBS.has(name)) writesSeen += 1;
+    }
+  }
   let runStarted = steps > 0;
   let childSeen = false;
   let childTask = '';
@@ -318,7 +385,7 @@ function createSession({ workspace, runDir, skillGate, log, task, maxSteps, maxI
     fs_op: (args) => tools.run('fs_op', args),
     find: (args) => tools.run('find', args),
     list_dir: (args) => tools.run('list_dir', args),
-    run_shell: ({ command, timeoutMs }, signal) => tools.run('run_shell', { command, timeoutMs }, { signal }),
+    run_shell: ({ command, timeoutMs, raw }, signal) => tools.run('run_shell', { command, timeoutMs, raw }, { signal }),
     job_start: ({ job, command, timeoutMs, progress }) => tools.run('run_shell', { job, command, timeoutMs, progress, background: true }),
     job_status: ({ job, pid, waitMs, tail, offset }) => tools.run('job_status', { job, pid, waitMs, tail, offset }),
     query_log: (args) => tools.run('query_log', args),
@@ -335,7 +402,7 @@ function createSession({ workspace, runDir, skillGate, log, task, maxSteps, maxI
     const exec = browser.handles(name) ? (value) => browser.call(name, value) : mcp.has(name) ? (value) => mcp.call(name, value) : Object.hasOwn(handlers, name) ? handlers[name] : (value) => tools.run(name, value);
     let result;
     try {
-      result = await exec(args);
+      result = body === undefined ? await exec(args) : await bodyVerb(name, args, exec, steps, action);
     } catch (err) {
       result = { ok: false, error: err.message };
     } finally {
