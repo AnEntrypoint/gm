@@ -187,10 +187,10 @@ After an install moves `current`, a relay started from `versions/<old>` re-execu
 
 ## 7. skill-serve default
 
-With no `--skills` argument, the served skill is the checkout's `skills/gm/SKILL.md` when a checkout is present, and a live connection returns each change to the copied file on the next read (tools/check-skill-serve.mjs).
+With no `--skills` argument, the served skill is `skills/gm/SKILL.md` in the directory of the binary (the install, or the build tree's copy), and a live connection returns each change to the copied file on the next read (tools/check-skill-serve.mjs).
 
     node tools/parity-contract.mjs <bin> W22
-    W22 pass skill-serve default: exit 0; default serve returns checkout skill: true
+    W22 pass skill-serve default: exit 0; default serve returns the binary's skill: true
 
 ## 8. bounded verb output and repeat pointers
 

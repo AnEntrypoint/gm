@@ -298,7 +298,7 @@ def('W21', async () => {
 
 def('W22', async () => {
   const r = spawnSync(process.execPath, [join(root, 'tools', 'check-skill-serve.mjs'), binary], { encoding: 'utf8', timeout: 300000 });
-  return `skill-serve default: exit ${r.status}; default serve returns checkout skill: ${r.stdout.includes('the default serve returns the checkout')}`;
+  return `skill-serve default: exit ${r.status}; default serve returns the binary's skill: ${r.stdout.includes("the default serve returns the binary's")}`;
 });
 
 def('W23', async () => {

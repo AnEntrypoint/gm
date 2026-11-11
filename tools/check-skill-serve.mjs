@@ -17,7 +17,7 @@ if (target === null || !existsSync(resolve(target))) {
 const binary = resolve(target);
 const REPLY_MS = 60000;
 const SKILL = 'skill://gm/SKILL.md';
-const checkoutSkill = join(root, 'skills', 'gm', 'SKILL.md');
+const binarySkill = join(dirname(binary), 'skills', 'gm', 'SKILL.md');
 
 const sleep = (ms) => new Promise((done) => setTimeout(done, ms));
 
@@ -97,8 +97,8 @@ try {
     const init = await defaults.rpc('initialize', initialize);
     expect(init?.result !== undefined, `default serve: no initialize result (stderr ${defaults.stderr()})`);
     const served = await readSkill(defaults);
-    const disk = readFileSync(checkoutSkill, 'utf8');
-    expect(served.text === disk, `default serve: ${SKILL} is not the checkout's skills/gm/SKILL.md (served ${served.text === null ? JSON.stringify(served.reply) : `${served.text.length} bytes`}, disk ${disk.length} bytes)`);
+    const disk = readFileSync(binarySkill, 'utf8');
+    expect(served.text === disk, `default serve: ${SKILL} is not the binary's skills/gm/SKILL.md (served ${served.text === null ? JSON.stringify(served.reply) : `${served.text.length} bytes`}, disk ${disk.length} bytes)`);
   } finally {
     await defaults.close();
   }
@@ -131,7 +131,7 @@ try {
     console.error(`${CHECK}: ${failures.length} failure(s) on ${target}\n- ${failures.join('\n- ')}`);
     process.exitCode = 1;
   } else {
-    console.log(`${CHECK}: ok (${target}: the default serve returns the checkout's ${SKILL}, and a live connection returns each change to the copied file on the next read)`);
+    console.log(`${CHECK}: ok (${target}: the default serve returns the binary's ${SKILL}, and a live connection returns each change to the copied file on the next read)`);
   }
 } finally {
   rmSync(scratch, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
