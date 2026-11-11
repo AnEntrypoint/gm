@@ -110,8 +110,9 @@ native. `.gmnew-update.json` stays as data.
 | txiki helpers | every file under txiki/ (seven .mjs modules and site.html) | A Node site builder for txiki with no code or CI reference outside its folder; the vendored runtime is native/third_party/txiki. |
 | kept, not dead | the six research/dep-recall .cjs files, the tools measure-* scripts, and the tools check-* scripts not run by check-build | DESIGN.md cites the research files as the evidence behind decided results, and PENDING_VALIDATION cites the checks and measurements as the method of each recorded witness. Each moves to gm-tool or is deleted in item 4 with its group. |
 
-## Playwriter pin (round e6b5, item 7)
+## Playwriter pin (round e6b5, items 7 and 2 of the later round)
 
-- Blocked, not applied. The pin github:AnEntrypoint/pw#24646cc was applied and reverted. Its static tool list (lib/mcp-tools.json) has execute and reset only; the list at ebbba11 also has browsers, which gm serves as playwriter_browsers. check-lazy-browser fails on the missing verb (phase B of round e6b5), and the consumers note says to re-pin only after the tools test passes.
-- Owner decision needed: keep ebbba11 until pw serves browsers at its pin, or accept the loss of playwriter_browsers and change check-lazy-browser and browser_scope.cpp to match.
-- The direct node entry is blocked as well: gm has no install step that creates a pw checkout with node_modules.
+- Pin: defaults/mcp.json runs pw at 24646cc through the direct node entry: {"command": "node", "args": ["${HOME}/.gmnew/current/pw/bin/playwriter-project"]}. The config loader expands ${HOME} (native/components/mcpclient/config.cpp).
+- Tool cache: defaults/mcp-tools/playwriter.json is lib/mcp-tools.json at 24646cc (execute and reset), ASCII-escaped with the same parsed content. The pin serves no browsers tool.
+- playwriter_browsers is optional. BrowserScope lists it only when the launcher serves it; the browsers verb and browser_close_machine fail with a named reason when it does not (native/components/host/browser_scope.cpp). check-lazy-browser requires only playwriter_execute in the listing and asserts that the first browser call is the one that starts the launcher.
+- Remaining gap, the install step: nothing creates ~/.gmnew/current/pw (a checkout of AnEntrypoint/pw at 24646cc with npm ci run in it). Until that step exists, the direct entry does not start, and the browser tools fail on the first call with the launcher error. The npx form was the working entry before this change; it is not kept.

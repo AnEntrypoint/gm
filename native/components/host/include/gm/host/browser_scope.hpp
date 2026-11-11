@@ -20,6 +20,7 @@ public:
 
 private:
     json::Value user_execute(const json::Value& args);
+    bool serves_browsers() const;
     json::Value browsers(const json::Value& args);
     json::Value close_machine(const json::Value& args);
     json::Value tabs();

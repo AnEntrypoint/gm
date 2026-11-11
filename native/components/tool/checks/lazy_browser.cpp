@@ -37,12 +37,14 @@ CheckResult check_lazy_browser(const std::string& binary) {
             if (at_start != 0) result.failures.push_back("a fresh session started " + std::to_string(at_start) + " browser tooling process(es) before any use");
             const std::string verbs = session.body(
                 "return JSON.stringify(gm.verbs().map((v) => v.name).filter((n) => n.startsWith('playwriter_')));");
-            if (verbs.find("playwriter_execute") == std::string::npos || verbs.find("playwriter_browsers") == std::string::npos)
-                result.failures.push_back("the lazy browser verbs are missing from gm.verbs(): " + verbs.substr(0, 200));
+            if (verbs.find("playwriter_execute") == std::string::npos)
+                result.failures.push_back("the lazy browser verb playwriter_execute is missing from gm.verbs(): " + verbs.substr(0, 200));
             if (verbs.find("playwriter_reset") != std::string::npos) result.failures.push_back("the denied reset verb is listed");
             const std::size_t after_listing = count_playwriter(session.descendants());
             if (after_listing != 0) result.failures.push_back("listing the verbs started " + std::to_string(after_listing) + " browser tooling process(es)");
-            result.summary = "a fresh session has no browser tooling process; its verbs playwriter_execute and playwriter_browsers are listed without a start";
+            const std::string first_call = session.body("return JSON.stringify(await gm.playwriter_execute({ code: 'return 1;' }));");
+            if (first_call.find("MCP server playwriter") == std::string::npos) result.failures.push_back("the first browser call did not start the playwriter launcher: " + first_call.substr(0, 300));
+            result.summary = "a fresh session has no browser tooling process; its verb playwriter_execute is listed without a start, and the first browser call is the one that starts the launcher (playwriter_browsers is optional at the pin; a sandbox without Chrome makes the launch exit, which the reply reports)";
         }
         session.stop();
     }

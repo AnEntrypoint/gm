@@ -167,9 +167,17 @@ json::Value BrowserScope::user_execute(const json::Value& args) {
     return inner_.call(kExecute, forwarded);
 }
 
+bool BrowserScope::serves_browsers() const {
+    for (const VerbInfo& verb : inner_.list()) {
+        if (verb.name == kBrowsers) return true;
+    }
+    return false;
+}
+
 json::Value BrowserScope::browsers(const json::Value& args) {
     const json::Value* action = args.find("action");
     if (action != nullptr && action->is_string() && action->as_string() == "close") return close_run();
+    if (!serves_browsers()) return failure("playwriter_browsers is not served by the playwriter launcher at its pin, so the list and close actions are unavailable");
     return inner_.call(kBrowsers, args);
 }
 
@@ -178,6 +186,7 @@ json::Value BrowserScope::close_machine(const json::Value& args) {
     if (confirm == nullptr || !confirm->is_bool() || !confirm->as_bool()) {
         return failure("browser_close_machine needs confirm true: it closes the whole project browser, with every run's tabs in it");
     }
+    if (!serves_browsers()) return failure("playwriter_browsers is not served by the playwriter launcher at its pin, so the project browser cannot be closed through it");
     json::Value request;
     request.set("action", "close");
     const json::Value* target = args.find("target");

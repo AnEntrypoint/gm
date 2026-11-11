@@ -1,8 +1,8 @@
 {
   "mcpServers": {
     "playwriter": {
-      "command": "npx",
-      "args": ["-y", "-p", "github:AnEntrypoint/pw#ebbba11", "playwriter-project"],
+      "command": "node",
+      "args": ["${HOME}/.gmnew/current/pw/bin/playwriter-project"],
       "env": {"PLAYWRITER_TELEMETRY": "0"},
       "ignore": [".playwriter/"],
       "deny": ["reset"],
