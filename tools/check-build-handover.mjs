@@ -117,15 +117,73 @@ try {
   expect(body?.output === 'held on A', `the body in flight should finish on the old build: ${JSON.stringify(body)?.slice(0, 200)}`);
 
   await sleep(4000);
-  const after = await call('run_code', { body: 'return (await gm.run_shell({ command: "echo answered" })).output;' }, 60000);
+  const afterReply = await rpc('tools/call', { name: 'run_code', arguments: { body: 'return (await gm.run_shell({ command: "echo answered" })).output;' } }, 60000);
+  const after = afterReply?.result?.structuredContent ?? null;
   expect(after?.ok === true && String(after?.output).includes('answered'), `the next call should be answered by the new build: ${JSON.stringify(after)?.slice(0, 200)}`);
   const onB = workerExe();
   expect(onB.includes(join('versions', second)), `the worker should run ${second} after the hand-over, runs ${onB}`);
   expect(notices.some((text) => text.includes(`gm build changed from ${stamp} to ${second}`)), `the session should get one notice of the change: ${JSON.stringify(notices)}`);
   const log = runLog();
+  const restarts = log.filter((event) => event.kind === 'restart');
+  expect(restarts.length === 1 && restarts[0].skillRead === true && restarts[0].skillChanged === false, `an unchanged skill should carry over without a re-read: ${JSON.stringify(restarts)}`);
+  expect(restarts.length === 1 && typeof restarts[0].skillSha === 'string' && restarts[0].skillSha === restarts[0].skillWas, `the restart should record the fingerprint it matched: ${JSON.stringify(restarts)}`);
   expect(log.filter((event) => event.kind === 'start').length === 1, 'the run should keep one start event across the hand-over');
   expect(log.length > before, 'the run log should keep growing across the hand-over');
   expect(log.every((event, index) => index === 0 || event.seq === log[index - 1].seq + 1), 'the run log seq should stay continuous across the hand-over');
+
+  const older = '0b7a16b961ae-dev';
+  const directRun = join(workspace, 'runs', 'direct');
+  const serve = (fromBuild) => {
+    const args = ['serve', '--workspace', workspace, '--run-dir', directRun, '--mcp-config', quiet, ...(fromBuild ? ['--from-build', fromBuild] : [])];
+    const child = spawn(join(hostDir, 'gm'), args, { stdio: ['pipe', 'pipe', 'pipe'] });
+    child.stdin.on('error', () => {});
+    const waiting = new Map();
+    let next = 1;
+    readline.createInterface({ input: child.stdout }).on('line', (line) => {
+      let message;
+      try {
+        message = JSON.parse(line);
+      } catch {
+        return;
+      }
+      if (message.id !== undefined && waiting.has(message.id)) {
+        waiting.get(message.id)(message);
+        waiting.delete(message.id);
+      }
+    });
+    const send = (method, params) =>
+      new Promise((done) => {
+        const id = next++;
+        const timer = setTimeout(() => done(null), 60000);
+        waiting.set(id, (m) => {
+          clearTimeout(timer);
+          done(m);
+        });
+        child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id, method, params })}\n`);
+      });
+    const start = async () => {
+      await send('initialize', { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: CHECK, version: '1' } });
+      child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' })}\n`);
+    };
+    return { send, start, stop: () => child.kill('SIGKILL') };
+  };
+  const firstRun = serve(null);
+  await firstRun.start();
+  await firstRun.send('tools/call', { name: 'next_context', arguments: {} });
+  firstRun.stop();
+  await sleep(500);
+  const restarted = serve(older);
+  await restarted.start();
+  await restarted.send('resources/read', { uri: 'skill://gm/SKILL.md' });
+  const firstReply = await restarted.send('tools/call', { name: 'run_code', arguments: { body: 'return "direct";' } });
+  const secondReply = await restarted.send('tools/call', { name: 'run_code', arguments: { body: 'return "again";' } });
+  restarted.stop();
+  const noticeLine = `gm build changed from ${older} to ${stamp}; this session now runs ${stamp}, and its run carries over`;
+  const noticesIn = (reply) => (reply?.result?.content ?? []).filter((block) => block.text === noticeLine).length;
+  expect(noticesIn(firstReply) === 1, `the first reply after a hand-over should carry the notice once: ${JSON.stringify(firstReply)?.slice(0, 300)}`);
+  expect(noticesIn(secondReply) === 0, 'the notice should not repeat on the next reply');
+  const directRestarts = existsSync(join(directRun, 'log.jsonl')) ? readFileSync(join(directRun, 'log.jsonl'), 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l)).filter((e) => e.kind === 'restart') : [];
+  expect(directRestarts.length === 1 && directRestarts[0].reason === `build ${older} -> ${stamp}`, `the restart should name the build change: ${JSON.stringify(directRestarts)}`);
 
   point(broken);
   await sleep(4000);
