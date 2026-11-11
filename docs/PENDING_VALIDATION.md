@@ -2435,3 +2435,9 @@ Not run here: tools/check-txiki-wasi.mjs and the gm reactor wasm (the gm wasm32-
 - gm.job_status({ pid, waitMs }) returns on exit: a 2 s process returned at 2.01 s (median of 3) and a 4 s process at 4.03 s with waitMs 1000 in a loop.
 - Change: skills/gm/SKILL.md, two job-wait habits, now say a longer wait is one run_code body that loops job_status until the state is not running (the loop is in the skill text, with the measured numbers). Wall time of the change: the loop body returned at 4.03 s for a 4 s process; no code change in either engine, no new verb.
 - Witness: tools/measure-call-cost.mjs build/release/native/components/host/gm 5 (prints the looped-wait line for a 60 s process; the reply arrives at about 60.1 s in one call).
+
+## Parity contract for the native rewrite (2026-11-11, Phase A)
+
+- docs/PARITY_CONTRACT.md: the observable contract of gm (three tools with arguments, reply shapes and error cases; resources and templates; the process wait and its 100 s cap; the one-body loop; the install switch with previous-<id>; the check-build cache, pool and --only; the relay re-exec on the stable path; the skill-serve default), each item with one witness command and its expected line.
+- tools/parity-contract.mjs: the witnesses W1 to W22, run as `node tools/parity-contract.mjs <binary> <Wn|all>`. W15 takes 100 s of wall time; W17 to W22 run the install, check-build, relay and skill-serve tools from this checkout against the binary.
+- Phase B will run every witness against the installed build (/config/.gmnew/current/gm), fix any witness whose line does not match, and push once.
