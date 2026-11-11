@@ -178,7 +178,7 @@ constexpr double kMaxWaitMs = 100000;
 constexpr double kMaxJobWaitMs = kMaxWaitMs;
 constexpr std::uint64_t kSingleVerbBodiesBeforeNotice = 3;
 constexpr std::uint64_t kSingleVerbNoticeEvery = 10;
-constexpr const char* kBatchNotice = "The last run_code bodies made one verb call each. Each body costs a model turn. Put a step's calls in one body: independent calls in one Promise.all, dependent calls in sequence, a check of the result in the same body, and return only what the next decision needs.";
+constexpr const char* kBatchNotice = "The last run_code bodies each made one verb call; put a step's calls in one body.";
 constexpr long long kStartedJobGraceMs = 100;
 constexpr std::size_t kCompletionCap = 100;
 constexpr std::size_t kQueueMax = 64;
@@ -634,6 +634,12 @@ struct Server::State {
     std::string announced_tools;
     std::string announced_prompts;
 
+    struct ReadMark {
+        int step = 0;
+        std::optional<std::uint64_t> action;
+        std::uint64_t writes = 0;
+    };
+
     struct Session {
         fs::path run_dir;
         std::string run_id;
@@ -665,6 +671,9 @@ struct Server::State {
         std::uint64_t notice_seq = 0;
         std::optional<Value> recovery;
         std::string rules_baseline;
+        std::uint64_t writes_seen = 0;
+        std::map<std::string, ReadMark> read_marks;
+        std::mutex marks_lock;
     };
     std::unique_ptr<Session> session;
     std::vector<std::unique_ptr<Session>> retired;
@@ -3290,6 +3299,60 @@ struct Server::State {
 
 namespace {
 
+constexpr std::size_t kInlineVerbChars = 6000;
+constexpr std::size_t kInlineHeadChars = 4500;
+constexpr std::size_t kInlineTailChars = 1500;
+const std::set<std::string> kBoundedVerbs = {"read_file", "run_shell"};
+const std::set<std::string> kRepeatableVerbs = {"read_file"};
+const std::set<std::string> kWriteVerbs = {"write_file", "edit_file", "fs_op", "run_shell"};
+
+bool flag_set(const Value& args, const char* key) {
+    const Value* value = args.find(key);
+    return value != nullptr && value->is_bool() && value->as_bool();
+}
+
+Value bounded_output(Value result, const Value& args, const fs::path& run_dir, const std::string& name) {
+    const Value* output = result.find("output");
+    if (flag_set(args, "full") || output == nullptr || !output->is_string()) return result;
+    const std::string text = output->as_string();
+    const std::size_t total = js_length(text);
+    if (total <= kInlineVerbChars) return result;
+    std::string path;
+    const Value* existing = result.find("outputPath");
+    if (existing != nullptr && existing->is_string()) path = existing->as_string();
+    else path = store_artifact(text, run_dir, name).path;
+    const std::string head = js_prefix(text, kInlineHeadChars);
+    const std::string tail = text.substr(js_prefix(text, total - kInlineTailChars).size());
+    const std::size_t omitted = total - js_length(head) - js_length(tail);
+    result.set("output", head + "\n[gm: " + std::to_string(omitted) + " characters omitted; the whole output is at " + path + "; call again with full: true for it inline]\n" + tail);
+    result.set("truncated", true);
+    result.set("outputPath", path);
+    result.set("totalChars", static_cast<double>(total));
+    result.set("omittedChars", static_cast<double>(omitted));
+    result.set("next", static_cast<double>(js_length(head)));
+    return result;
+}
+
+Value body_call(VerbTable& verbs, const std::string& name, const Value& args, Server::State::Session& owner, int step, std::optional<std::uint64_t> action) {
+    const std::string key = name + json::dump(args);
+    if (kRepeatableVerbs.contains(name) && !flag_set(args, "fresh")) {
+        std::lock_guard guard(owner.marks_lock);
+        const auto found = owner.read_marks.find(key);
+        if (found != owner.read_marks.end() && found->second.writes == owner.writes_seen) {
+            Value reply = object().set("ok", true).set("step", static_cast<double>(found->second.step));
+            if (found->second.action) reply.set("action", static_cast<double>(*found->second.action));
+            return reply.set("output", "[gm: the same call was made at step " + std::to_string(found->second.step) +
+                                           " and no write has happened since, so its result is not sent again; call again with fresh: true to read it again]");
+        }
+    }
+    Value result = verbs.call(name, args);
+    if (kBoundedVerbs.contains(name)) result = bounded_output(std::move(result), args, owner.run_dir, name);
+    std::lock_guard guard(owner.marks_lock);
+    if (kRepeatableVerbs.contains(name) && is_ok(result)) owner.read_marks[key] = {step, action, owner.writes_seen};
+    if (kWriteVerbs.contains(name)) owner.writes_seen += 1;
+    return result;
+}
+
 class LoggedVerbs : public VerbTable {
 public:
     LoggedVerbs(Server::State& state, std::shared_ptr<Server::State::BodyJob> job, std::shared_ptr<Server::State::Gate> gate)
@@ -3330,7 +3393,7 @@ public:
             } else if (name == "task_set") {
                 result = state_.task_set(args);
             } else {
-                result = state_.verbs.call(name, args);
+                result = body_call(state_.verbs, name, args, owner, job_->step, action);
                 if (name == "job_start" && is_ok(result)) {
                     std::lock_guard job_guard(job_->lock);
                     job_->started_jobs.push_back(Server::State::string_of(args, "job"));

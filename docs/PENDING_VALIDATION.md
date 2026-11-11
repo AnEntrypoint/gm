@@ -2552,3 +2552,7 @@ Not run here: tools/check-txiki-wasi.mjs and the gm reactor wasm (the gm wasm32-
 
 - tools/parity-contract.mjs: `all` runs the witnesses in a pool of six lanes, printed in the original order; W19 and W20 stay serial (both run check-build --only and share its cache). Each witness already uses its own scratch directory, so the lanes do not share state.
 - Measured: `all` took 17.0 s serially and 12.0 s in the pool; 22 of 22 pass. The rest of the time is W15's real waits.
+- Phase A (run-log waste, 2026-11-11): a run_shell or read_file result inside run_code is cut to its first 4500 and last 1500 characters when it is over 6000 characters (native/components/mcp/server.cpp, bounded_output); the whole text is kept at outputPath, and full: true returns it inline. Bound choice: 6000 keeps 154 of 202 run_shell results from 2026-11-11 whole, and saves 189,031 of 782,375 characters.
+- Phase A: an identical read_file call in the same run, with no write verb (write_file, edit_file, fs_op, run_shell) between, is answered with a pointer to its step (body_call in server.cpp); fresh: true reads again. run_shell is not repeated this way, because a shell command can change state the run cannot see.
+- Phase A: the batching notice is one line (kBatchNotice); it already fires after three single-verb bodies in a row.
+- Witness: W23 in tools/parity-contract.mjs drives the bounded first read, the pointer, the fresh read and the full read on the built binary (pass, 6174 / 18000 chars).

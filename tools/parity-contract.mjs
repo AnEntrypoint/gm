@@ -298,6 +298,17 @@ def('W22', async () => {
   return `skill-serve default: exit ${r.status}; default serve returns checkout skill: ${r.stdout.includes('the default serve returns the checkout')}`;
 });
 
+def('W23', async () => {
+  const s = session('w23');
+  await s.open();
+  await s.rpc('resources/read', { uri: 'skill://gm/SKILL.md' });
+  await s.call('next_context', {});
+  const r = await s.call('run_code', { body: "await gm.run_shell({ command: 'yes a | head -c 18000 > big.txt' });\nconst first = await gm.read_file({ path: 'big.txt' });\nconst again = await gm.read_file({ path: 'big.txt' });\nconst fresh = await gm.read_file({ path: 'big.txt', fresh: true });\nconst whole = await gm.read_file({ path: 'big.txt', full: true });\nreturn { first: first.output.length, truncated: first.truncated, omitted: first.omittedChars, pointer: again.step !== undefined && again.output.length < 200, fresh: fresh.output.length, whole: whole.output.length };" });
+  s.close();
+  const v = r.output;
+  return `bounded first read ${v.first} chars truncated=${v.truncated} omitted=${v.omitted}; identical repeat is a pointer=${v.pointer}; fresh read ${v.fresh} chars; full read ${v.whole} chars`;
+});
+
 const ids = which === 'all' ? Object.keys(witnesses) : [which];
 const SHARED_CHECK_BUILD = new Set(['W19', 'W20']);
 const runOne = async (id) => {

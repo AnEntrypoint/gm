@@ -191,3 +191,10 @@ With no `--skills` argument, the served skill is the checkout's `skills/gm/SKILL
 
     node tools/parity-contract.mjs <bin> W22
     W22 pass skill-serve default: exit 0; default serve returns checkout skill: true
+
+## 8. bounded verb output and repeat pointers
+
+Inside run_code a read_file or run_shell result over 6000 characters is cut to its first 4500 and last 1500 characters, the whole text is kept at outputPath, and full: true returns it inline. An identical read_file call with no write verb between is answered with a pointer to its step; fresh: true reads again (server.cpp body_call, bounded_output; W23 in tools/parity-contract.mjs).
+
+    node tools/parity-contract.mjs <bin> W23
+    W23 pass bounded first read 6174 chars truncated=true omitted=12000; identical repeat is a pointer=true; fresh read 6174 chars; full read 18000 chars
