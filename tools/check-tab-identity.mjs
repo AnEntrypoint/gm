@@ -13,7 +13,7 @@ if (target === null || !existsSync(resolve(target))) {
 }
 const REPLY_MS = 180000;
 const MARKER = 'gm-tab-identity';
-const OPEN = `(await page.goto('data:text/html,<title>${MARKER}</title>'), page.url())`;
+const OPEN = `(await (await context.newPage()).goto('data:text/html,<title>${MARKER}</title>'), 'opened')`;
 const TITLE = 'page.title()';
 const TABS_RE = new RegExp(`\\[(t\\d+)\\] data:text/html,<title>${MARKER}`);
 

@@ -2342,3 +2342,12 @@ Not run here: tools/check-txiki-wasi.mjs and the gm reactor wasm (the gm wasm32-
 - Design: each tab has an id, t1, t2 and so on, assigned on first listing and kept for that page for the life of the project browser (a WeakMap on the playwriter state, per project; the counter is per project too). browser_tabs renders [id] url title, so a tab keeps its id on every reply, and a changed tab reads as a changed field with its new value. Unchanged replies say unchanged, as before.
 - src/browser-scope.mjs TABS_CODE and renderView, and native/components/host/browser_scope.cpp (its tabs script and render_view): assign and render the id. Ids are per project because the state is per project; a different project never lists this project tabs (its browser is separate).
 - Witness: node tools/check-tab-identity.mjs <native gm>: a tab opened in one run keeps the same id on the next browser_tabs reply, and a second project session never lists it.
+
+## Browser tab identity witness record (2026-11-11, Phase B, build/release gm)
+
+- Fix in the witness: the tab is opened in the run context (context.newPage), because the project page is not a run tab; the first run of the witness found that.
+- tools/check-tab-identity.mjs: exit 0, wall 6.96 s.
+- tools/check-project-page.mjs: exit 0, wall 7.15 s.
+- tools/check-browser-scope.mjs: exit 0, wall 187.33 s.
+- tools/check-skill-serve.mjs: exit 0.
+- tools/check-build.mjs build/release: exit 0, wall 519.49 s; conformance 86 passed, 0 failed of 86 checks in 24 scenarios.
