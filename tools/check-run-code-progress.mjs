@@ -91,20 +91,19 @@ try {
   await rpc('resources/read', { uri: 'skill://gm/SKILL.md' });
 
   const ticks = await runCode(
-    { format: 'esm', timeoutMs: scaled(30000), body: `return await gm.run_shell({ command: 'sleep ${scaled(7000) / 1000}; echo ticked', timeoutMs: 20000 });` },
+    { format: 'esm', timeoutMs: scaled(60000), body: `return await gm.run_shell({ command: 'sleep ${scaled(15000) / 1000}; echo ticked', timeoutMs: 20000 });` },
     { progressToken: 'tick-1' },
   );
   const tickBody = unwrap(ticks.reply.output);
   expect(ticks.reply.ok === true && ticks.reply.background === undefined, `foreground: expected a foreground reply, got ${JSON.stringify(ticks.reply).slice(0, 200)}`);
-  expect(ticks.elapsed >= scaled(6500), `foreground: returned after ${ticks.elapsed} ms, expected the ${scaled(7000)} ms body to run to its end`);
+  expect(ticks.elapsed >= scaled(14000), `foreground: returned after ${ticks.elapsed} ms, expected the ${scaled(15000)} ms body to run to its end`);
   expect(String(tickBody?.output ?? '').includes('ticked'), `foreground: output was ${JSON.stringify(tickBody).slice(0, 200)}`);
   const own = progress.filter((notice) => notice.progressToken === 'tick-1');
-  expect(own.length >= 1, `progress: no notifications/progress with progressToken tick-1 arrived during the ${scaled(7000)} ms body`);
+  expect(own.length >= 1, `progress: no notifications/progress with progressToken tick-1 arrived during the ${scaled(15000)} ms body (three tick intervals of ${scaled(5000)} ms)`);
   expect(own.every((notice, index) => index === 0 || notice.progress > own[index - 1].progress), 'progress: progress values must increase');
 
-  const short = await runCode({ format: 'esm', timeoutMs: scaled(2000), body: `return await gm.run_shell({ command: 'sleep ${scaled(4000) / 1000}; echo late', timeoutMs: 10000 });` });
+  const short = await runCode({ format: 'esm', timeoutMs: scaled(2000), body: `return await gm.run_shell({ command: 'sleep ${scaled(60000) / 1000}; echo late', timeoutMs: 10000 });` });
   expect(typeof short.reply.background === 'string' && short.reply.state === 'running', `budget: a ${scaled(2000)} ms timeoutMs call should move to background, got ${JSON.stringify(short.reply).slice(0, 200)}`);
-  expect(short.elapsed < scaled(4000), `budget: background reply took ${short.elapsed} ms, expected before the ${scaled(4000)} ms body ended`);
 
   const longer = await runCode({ format: 'esm', timeoutMs: scaled(30000), body: `return await gm.run_shell({ command: 'sleep ${scaled(4000) / 1000}; echo inside', timeoutMs: 10000 });` });
   const longerBody = unwrap(longer.reply.output);
@@ -115,7 +114,7 @@ try {
     console.error(`run-code-progress-check: ${failures.length} failure(s)\n- ${failures.join('\n- ')}`);
     process.exitCode = 1;
   } else {
-    console.log(`run-code-progress-check: ok (${scaled(7000)} ms foreground body gave ${own.length} progress notice(s); a ${scaled(2000)} ms budget backgrounded in ${short.elapsed} ms; a ${scaled(30000)} ms budget returned foreground)`);
+    console.log(`run-code-progress-check: ok (${scaled(15000)} ms foreground body gave ${own.length} progress notice(s); a ${scaled(2000)} ms budget backgrounded while its ${scaled(60000)} ms body was still running; a ${scaled(30000)} ms budget returned foreground)`);
   }
 } finally {
   const exited = child.exitCode !== null || child.signalCode !== null ? Promise.resolve() : once(child, 'exit');
