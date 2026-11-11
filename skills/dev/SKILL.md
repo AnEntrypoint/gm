@@ -41,7 +41,8 @@ How to change this project. Project facts are in AGENTS.md, and decisions with t
 
 ## Commit and push
 
-- Commit with `tools/ship.sh "<subject>" <explicit paths>`. It stages those paths, runs the gate, and commits and pushes main only when the gate passes. SHIP_PUSH=0 commits without pushing, for a witness.
+- Commit with `tools/ship.sh "<subject>" <explicit paths>`. It stages those paths, runs the gate, and commits on main only when the gate passes. A commit never pushes.
+- Push once per Phase B: `tools/phase-b.sh` reconfigures, builds, runs check-build and the parity contract, and records the HEAD that passed; then `tools/ship.sh --push` pushes only if that record names HEAD.
 - Author lanmower. The subject states the change. No trailers of any kind.
 - Work on main. Do not create branches or worktrees.
 - A refusal from the gate names each failing check and its detail. Fix the cause and run it again. Do not commit around the gate.

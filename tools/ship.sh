@@ -2,8 +2,19 @@
 set -o pipefail
 root="${SHIP_ROOT:-$(cd "$(dirname "$0")/.." && pwd)}"
 cd "$root" || exit 1
+if [ "$1" = "--push" ]; then
+  head="$(git rev-parse HEAD)"
+  marker="${SHIP_BUILD:-$root/build/release}/phase-b.pass"
+  if [ ! -f "$marker" ] || [ "$(cat "$marker")" != "$head" ]; then
+    echo "refused: no passing Phase B at HEAD $head; run tools/phase-b.sh first"
+    exit 1
+  fi
+  git push -q origin main || exit 1
+  echo "PUSHED $head"
+  exit 0
+fi
 if [ "$#" -lt 2 ]; then
-  echo "usage: tools/ship.sh \"<subject>\" <paths...>"
+  echo "usage: tools/ship.sh \"<subject>\" <paths...>  |  tools/ship.sh --push"
   exit 2
 fi
 msg="$1"
@@ -48,9 +59,4 @@ if [ "$rc" -ne 0 ]; then
   exit 1
 fi
 git commit -q -m "$msg" -- "$@" || exit 1
-if [ "${SHIP_PUSH:-1}" = "1" ]; then
-  git push -q origin main || exit 1
-  echo "COMMITTED $(git rev-parse HEAD) and pushed; gate exit code $rc"
-else
-  echo "COMMITTED $(git rev-parse HEAD), not pushed; gate exit code $rc"
-fi
+echo "COMMITTED $(git rev-parse HEAD), local only; gate exit code $rc"
