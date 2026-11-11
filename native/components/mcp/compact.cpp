@@ -319,6 +319,17 @@ Value fresh_record_of(const Value& event, const EventAt& at) {
     return record ? *record : short_kind(event);
 }
 
+bool replied_in_this_step(const Value& event) {
+    const std::string kind = string_field(event, "kind");
+    return kind == "action" || kind == "result" || kind == "code-call" || kind == "context-reply" || kind == "generation";
+}
+
+Value reference_of(const Value& event) {
+    Value reference = object().set("seq", *event.find("seq")).set("replied", true);
+    for (const char* key : {"kind", "tool", "ok", "actionSeq", "step", "exitCode", "exit"}) copy_if(reference, event, key);
+    return reference;
+}
+
 struct ChildMark {
     std::uint64_t index;
     std::uint64_t seq;
@@ -521,10 +532,11 @@ Value feed_of(const EventAt& at, std::uint64_t count, std::uint64_t shown, SentF
     for (std::uint64_t i = new_start; i < count; ++i) {
         const Value* event = at(i + 1);
         if (event == nullptr || string_field(*event, "kind") == "check") continue;
-        Value bounded = bounded_item(*event);
-        std::size_t bounded_cost = cost_of(bounded);
-        Value record = bounded_item(fresh_record_of(*event, at));
+        const bool answered = replied_in_this_step(*event);
+        Value record = answered ? reference_of(*event) : bounded_item(fresh_record_of(*event, at));
         std::size_t record_cost = cost_of(record);
+        Value bounded = answered ? record : bounded_item(*event);
+        std::size_t bounded_cost = answered ? record_cost : cost_of(bounded);
         std::optional<ChildMark> child;
         if (compact_children) child = child_mark_of(*event, i);
         fresh.push_back({i, std::move(bounded), bounded_cost, std::move(record), record_cost, std::move(child)});
