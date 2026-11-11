@@ -379,11 +379,7 @@ bool Relay::replay_handshake(Lock& lock) {
     auto reply = ask_worker(lock, std::string(kHandshakeId), "initialize", *host_initialize_, options_.handshake_timeout);
     if (!reply || reply->find("error") != nullptr) return false;
     send_to_worker(lock, "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\"}");
-    if (!skill_read_) return true;
-    json::Value params;
-    params.set("uri", std::string(kGmSkillUri));
-    auto read = ask_worker(lock, "gm-core:resources/read", "resources/read", std::move(params), options_.handshake_timeout);
-    return read && read->find("error") == nullptr;
+    return true;
 }
 
 void Relay::announce_changes(Lock& lock) {
