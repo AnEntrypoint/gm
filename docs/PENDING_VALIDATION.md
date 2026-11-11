@@ -2681,3 +2681,11 @@ Each change, and its witness:
 Node still in CI after this change:
 - playwright-core install and the `node -p` PLAYWRITER_BROWSER_PATH lookup in release.yml (both build jobs). Decision 1: kept, because playwriter is a Node package.
 - tools/witness-ci-replay-step.mjs is stale (it was failing before this round) and nothing in CI calls it.
+
+## Round e6b5, stale witness script removed (Phase A)
+
+Each change, and its witness:
+
+- tools/witness-ci-replay-step.mjs: deleted (git rm). It checked release.yml for a `Replay witness` step and a `Node parity` step that the workflow no longer has, so it failed before this round, and nothing in CI or the tree called it. Witness: `grep -rn witness-ci-replay-step` outside build/ and .git/ returns only the historical ledger rows above, which record past runs and are left as they were.
+- docs/NATIVE_PLAN.md: the witness inventory row now names only tools/witness-redaction.mjs, the file on disk. It had also named witness-next-context-replay and witness-windows-cmd, which were already deleted.
+

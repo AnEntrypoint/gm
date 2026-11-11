@@ -65,7 +65,7 @@ Scope: each script tracked in git (`git ls-files`) and each script in the instal
 | `tools/lib/group.mjs` | Process groups for every spawn, exit sweep. | gm: process-group lifecycle (item 2a, in gm-tool first, then into gm as a shared library) |
 | `tools/lib/gm-stdio.mjs`, `tools/lib/no-playwriter.mjs` | Shared stdio and playwriter-off helpers. | gm-tool (item 2e) |
 | `tools/browser-stubs.mjs`, `tools/check-txiki-wasi-browser.js`, `tools/check-txiki-wasi-browser.html`, `tools/check-txiki-wasi-chromium.mjs`, `tools/check-txiki-wasi.mjs` | Browser and WASI runtime checks. | gm-tool (item 2e) |
-| `tools/witness-*.mjs` (4): `witness-ci-replay-step`, `witness-next-context-replay`, `witness-redaction`, `witness-windows-cmd` | Witnesses: replay, redaction, Windows command quoting. | gm-tool (item 2e) |
+| `tools/witness-redaction.mjs` | Redaction witness. | gm-tool (item 2e) |
 
 ## Checks (second tool, one group at a time, item 2e)
 
