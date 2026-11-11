@@ -385,6 +385,11 @@ std::optional<std::string> StdioClient::connect(bool again) {
     }
 }
 
+void StdioClient::preload_tools(std::vector<json::Value> tools) {
+    tools_ = std::move(tools);
+    preloaded_ = true;
+}
+
 json::Value StdioClient::call_tool(const std::string& tool, const json::Value& args) {
     if (auto error = connect(true)) return failure("MCP server " + core_->spec.name + " is not running: " + *error);
     const std::shared_ptr<Session> session = current(core_);

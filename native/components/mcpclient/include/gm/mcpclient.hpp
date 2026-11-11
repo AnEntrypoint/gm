@@ -26,6 +26,7 @@ struct Options {
     std::vector<ConfigFile> config_files;
     std::set<std::string, std::less<>> reserved;
     std::size_t depth = 0;
+    std::filesystem::path tool_cache;
     Emit emit;
 };
 

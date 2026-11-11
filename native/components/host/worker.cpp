@@ -141,6 +141,7 @@ int run_worker(const HostArgs& args) {
     mcp_options.config_files = {{defaults_dir_of() / "mcp.json", true}, {workspace / ".gm" / "mcp.json", false}};
     if (auto config = args.flag("--mcp-config")) mcp_options.config_files.push_back({std::filesystem::absolute(*config), true});
     mcp_options.depth = mcpclient::depth_from_environment();
+    mcp_options.tool_cache = defaults_dir_of() / "mcp-tools";
     for (const VerbInfo& verb : (*native)->list()) mcp_options.reserved.insert(verb.name);
     for (const VerbInfo& verb : leaves.list()) mcp_options.reserved.insert(verb.name);
     mcp_options.emit = [&boot_events](std::string_view kind, json::Value fields) { boot_events.emit(kind, std::move(fields)); };

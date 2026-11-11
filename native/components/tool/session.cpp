@@ -1,18 +1,23 @@
 #include "gm/tool.hpp"
 
 #include <chrono>
+#include <fstream>
+#include <map>
+#include <sstream>
+#include <system_error>
 
 namespace gm::tool {
 
 Session::Session(const std::string& binary, const std::filesystem::path& workspace, const std::filesystem::path& home,
-                 std::uint64_t watchdog_ms) {
+                 std::uint64_t watchdog_ms, bool quiet) {
     proc::SpawnOptions options(workspace);
     options.own_group = true;
     options.env = {{"HOME", home.string()}};
-    const std::vector<std::string> argv{binary,           "serve",
-                                        "--workspace",    workspace.string(),
-                                        "--run-dir",      (workspace / "runs" / "check").string(),
-                                        "--mcp-config",   (home / "quiet.json").string()};
+    std::vector<std::string> argv{binary, "serve", "--workspace", workspace.string(), "--run-dir", (workspace / "runs" / "check").string()};
+    if (quiet) {
+        argv.push_back("--mcp-config");
+        argv.push_back((home / "quiet.json").string());
+    }
     auto spawned = proc::Child::spawn(argv, options);
     if (!spawned) return;
     child_ = *spawned;
@@ -39,6 +44,37 @@ void Session::stop() {
         child_->wait_for(std::chrono::milliseconds(2000));
         child_.reset();
     }
+}
+
+std::vector<long long> Session::descendants() const {
+    std::vector<long long> found;
+    if (!child_) return found;
+    std::map<long long, std::vector<long long>> children;
+    std::error_code ec;
+    for (const auto& entry : std::filesystem::directory_iterator("/proc", ec)) {
+        const std::string name = entry.path().filename().string();
+        if (name.empty() || name.find_first_not_of("0123456789") != std::string::npos) continue;
+        std::ifstream stat(entry.path() / "stat");
+        std::string line;
+        std::getline(stat, line);
+        const auto close = line.rfind(')');
+        if (close == std::string::npos) continue;
+        std::istringstream rest(line.substr(close + 2));
+        std::string state;
+        long long parent = 0;
+        rest >> state >> parent;
+        children[parent].push_back(std::stoll(name));
+    }
+    std::vector<long long> frontier{child_->pid()};
+    while (!frontier.empty()) {
+        const long long current = frontier.back();
+        frontier.pop_back();
+        for (long long next : children[current]) {
+            found.push_back(next);
+            frontier.push_back(next);
+        }
+    }
+    return found;
 }
 
 void Session::notify(const std::string& method, json::Value params) {

@@ -25,12 +25,15 @@ public:
     const ServerSpec& spec() const;
     const std::vector<json::Value>& tools() const { return tools_; }
     json::Value call_tool(const std::string& tool, const json::Value& args);
+    void preload_tools(std::vector<json::Value> tools);
+    bool preloaded() const { return preloaded_; }
     void stop();
 
 private:
     std::shared_ptr<Core> core_;
     std::mutex start_mutex_;
     std::vector<json::Value> tools_;
+    bool preloaded_ = false;
 };
 
 }

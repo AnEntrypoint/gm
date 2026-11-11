@@ -29,18 +29,20 @@ struct Registered {
 
 CheckResult check_read_after_write(const std::string& binary);
 CheckResult check_spawn_sites(const std::string& binary);
+CheckResult check_lazy_browser(const std::string& binary);
 
 const std::vector<Registered>& checks();
 
 class Session {
 public:
     Session(const std::string& binary, const std::filesystem::path& workspace, const std::filesystem::path& home,
-            std::uint64_t watchdog_ms = 180000);
+            std::uint64_t watchdog_ms = 180000, bool quiet = true);
     ~Session();
     Session(const Session&) = delete;
     Session& operator=(const Session&) = delete;
 
     bool started() const { return child_ != nullptr; }
+    std::vector<long long> descendants() const;
     json::Value rpc(const std::string& method, json::Value params);
     void notify(const std::string& method, json::Value params);
     std::string body(const std::string& source);

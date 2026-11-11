@@ -20,6 +20,7 @@ struct ServerSpec {
     std::uint64_t timeout_ms = 0;
     std::uint64_t startup_ms = 0;
     bool startup_default = false;
+    bool lazy = false;
     std::vector<std::string> deny;
     std::vector<std::string> ignore;
 };

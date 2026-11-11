@@ -3,8 +3,11 @@
 #include <algorithm>
 #include <condition_variable>
 #include <cstdlib>
+#include <fstream>
 #include <map>
 #include <mutex>
+#include <optional>
+#include <sstream>
 #include <thread>
 
 #include "client.hpp"
@@ -79,6 +82,22 @@ struct Route {
     std::string tool;
 };
 
+namespace {
+
+std::optional<std::vector<json::Value>> read_tool_cache(const std::filesystem::path& file) {
+    std::ifstream in(file, std::ios::binary);
+    if (!in) return std::nullopt;
+    std::ostringstream text;
+    text << in.rdbuf();
+    auto parsed = json::parse(text.str());
+    if (!parsed || !parsed->is_object()) return std::nullopt;
+    const json::Value* tools = parsed->find("tools");
+    if (tools == nullptr || !tools->is_array()) return std::nullopt;
+    return tools->as_array();
+}
+
+}
+
 struct McpVerbs::Impl {
     Emit emit;
     std::set<std::string, std::less<>> reserved;
@@ -96,7 +115,10 @@ struct McpVerbs::Impl {
 
     void start_all() {
         std::vector<std::thread> connects;
-        for (const std::unique_ptr<StdioClient>& client : clients) connects.emplace_back([c = client.get()] { c->connect(false); });
+        for (const std::unique_ptr<StdioClient>& client : clients) {
+            if (client->preloaded()) continue;
+            connects.emplace_back([c = client.get()] { c->connect(false); });
+        }
         for (std::thread& connect : connects) connect.join();
         build_routes();
         {
@@ -161,7 +183,15 @@ McpVerbs::McpVerbs(Options options) : impl_(std::make_unique<Impl>()) {
         }
         specs.clear();
     }
-    for (ServerSpec& spec : specs) impl_->clients.push_back(std::make_unique<StdioClient>(std::move(spec), options.depth, impl_->emit));
+    for (ServerSpec& spec : specs) {
+        const bool lazy = spec.lazy;
+        const std::string name = spec.name;
+        auto client = std::make_unique<StdioClient>(std::move(spec), options.depth, impl_->emit);
+        if (lazy && !options.tool_cache.empty()) {
+            if (auto tools = read_tool_cache(options.tool_cache / (name + ".json"))) client->preload_tools(std::move(*tools));
+        }
+        impl_->clients.push_back(std::move(client));
+    }
     impl_->starter = std::thread([impl = impl_.get()] { impl->start_all(); });
 }
 
