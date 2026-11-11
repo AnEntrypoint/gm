@@ -130,7 +130,7 @@ jobs:
         if: matrix.target == 'arm64-windows'
         shell: bash
         run: |
-          dir="$RUNNER_TEMP/playwright-chromium"
+          dir="$(cygpath -m "$RUNNER_TEMP/playwright-chromium")"
           mkdir -p "$dir" && cd "$dir"
           npm init -y >/dev/null
           npm install --no-audit --no-fund playwright-core@1.65.0
@@ -150,7 +150,9 @@ jobs:
           awk '/"command":/ { cmd = $0 } /"file":/ { f = $0; sub(/.*"file": *"/, "", f); sub(/".*/, "", f); if (f ~ /main\.cpp$/) { out = f; s = cmd; while (match(s, /-DGMNEW_BUILD_[A-Z_]+=[^ "\\]+/)) { out = out " " substr(s, RSTART, RLENGTH); s = substr(s, RSTART + RLENGTH) }; print out } cmd = "" }' "build/${{ matrix.preset }}/compile_commands.json"
       - name: Clean host rebuild
         shell: bash
-        run: cmake --build "build/${{ matrix.preset }}" --target gm gm-core --clean-first
+        run: |
+          cmake --build "build/${{ matrix.preset }}" --target gm gm-core --clean-first
+          cmake --build "build/${{ matrix.preset }}" --target gm-tool
       - name: Worker binary versions
         shell: bash
         run: |

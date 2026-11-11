@@ -2719,3 +2719,12 @@ Open, macOS phase-b, from the run log (not reproduced here; no macOS host):
 - check-restart-skill-read, check-worker-growth (no gm-core worker process under the session), check-turn-economy (job_status did not return the exit), check-run-code-budget.
 Owner decision needed: fix these on macOS (needs a macOS host or a witness there), or keep macOS phase-b to the checks that pass there.
 
+## Round e6b5, release run 43115733632 on 88d9391: Windows fixes (Phase A)
+
+Run 43115733632: Linux and publish passed; the Windows and macOS builds failed. Each Windows cause and its change:
+
+- .github/workflows/release.yml, Clean host rebuild (build-windows): `cmake --build --clean-first` cleans the whole build tree, so gm-tool.exe was deleted before the witness-windows-cmd and package steps (x64: "gm-tool.exe: No such file or directory"). Change: gm-tool is rebuilt right after the clean. Witness: the next Windows job's witness step.
+- .github/workflows/release.yml, Chromium for the browser-scope check (arm64-windows): the directory was passed to node as C:\a\_temp, which node read as a relative path ("Cannot find module 'C:a_temp/...'"). Change: the directory is converted with cygpath -m. Witness: the next arm64 job's browser path line.
+
+Still open, macOS (not reproduced here, no macOS host): the same runtime checks as in the previous entry (check-protocol-versions "engine exited before it answered", check-install-switch, check-restart-jobs, check-restart-skill-read, check-run-code-budget, check-worker-growth). Owner decision needed, as recorded above.
+
