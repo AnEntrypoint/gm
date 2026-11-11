@@ -2453,3 +2453,9 @@ Not run here: tools/check-txiki-wasi.mjs and the gm reactor wasm (the gm wasm32-
 - tools/parity-contract.mjs W15: now asserts the cap text from gm.verbs(), a 2 s process with waitMs 99999 and 100001 (both gone before 3 s), and a live process with waitMs 3000 held about 3 s. Wall: before 101 s (it waited out the cap); after 7.3 s.
 - docs/PARITY_CONTRACT.md section 3.2 states the clamp and the new witness line.
 - Witness to rerun in Phase B: node tools/parity-contract.mjs build/release/native/components/host/gm W15.
+
+## W15 change Phase B (2026-11-11)
+
+- check-build: 28 run, 0 failed, wall 103.0 s, from an empty cache at cfccb39.
+- Full parity contract at cfccb39: 22 of 22 lines match docs/PARITY_CONTRACT.md, wall 19 s (W15 7.3 s of it).
+- The installed build stays 794ffbc until the next install; it has the old descriptions.
