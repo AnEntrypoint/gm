@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { spawn, spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, readlinkSync, renameSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
@@ -22,10 +23,11 @@ const filesUnder = (dir) => readdirSync(dir).flatMap((name) => (statSync(join(di
 if (process.argv.includes('--installed')) {
   const current = join(process.env.HOME, '.gmnew', 'current');
   const version = (exe) => (existsSync(exe) ? spawnSync(exe, ['--version'], { encoding: 'utf8', timeout: 30000 }).stdout.trim() : '');
-  const built = version(join(hostDir, 'gm'));
-  const live = version(join(current, 'gm'));
+  const trees = ['native', 'src', 'defaults'].map((dir) => spawnSync('git', ['rev-parse', `HEAD:${dir}`], { cwd: root, encoding: 'utf8', timeout: 30000 }).stdout.trim()).join('');
+  const expected = `${createHash('sha256').update(trees).digest('hex').slice(0, 12)}-dev`;
+  const live = version(join(current, 'gm')).split(' ')[0];
   const stale = [];
-  if (live !== built) stale.push(`installed gm reports "${live}", the validated build reports "${built}"`);
+  if (live !== expected) stale.push(`installed gm reports "${live}", the checkout's native tree is "${expected}"`);
   for (const file of filesUnder(join(root, 'skills'))) {
     const installedFile = join(current, 'skills', file);
     if (!existsSync(installedFile) || !readFileSync(installedFile).equals(readFileSync(join(root, 'skills', file)))) stale.push(`installed skills/${file} is not the checkout's`);

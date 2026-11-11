@@ -2473,3 +2473,10 @@ Not run here: tools/check-txiki-wasi.mjs and the gm reactor wasm (the gm wasm32-
 - tools/check-install-switch.mjs: a new `--installed` mode compares the live ~/.gmnew/current gm version with the build's and each installed skill file with the checkout's, and exits 1 with the differences when the install is stale. The default mode (the install switch test in check-build) is unchanged.
 - Witness to run in Phase B, after the install: node tools/check-install-switch.mjs build/release --installed (prints ok; exits 1 when stale).
 - Phase B fix (2026-11-11): the first e05734e push carried a --installed block that ran before filesUnder was defined; it crashed with ReferenceError. Moved the definition above it. Rerun: installed witness ok at e05734e; with HOME pointed at an empty directory it exits 1 (stale).
+
+## Build stamp is the native tree hash (2026-11-11, Phase A)
+
+- cmake/gmnew_build_info.cmake: the stamp is the first 12 hex digits of SHA-256 over the git tree ids of HEAD:native, HEAD:src and HEAD:defaults, shown as `<tree12>-dev`. It was the short HEAD sha, so a witness-only push left `gm --version` naming a sha that no longer matched. The CI override (`-DGMNEW_VERSION=<head-sha>-1`) still matches the short HEAD sha.
+- tools/check-install-switch.mjs: the `--installed` mode computes the same hash from the checkout and fails when the live `gm --version` first token differs. The default mode is unchanged.
+- skills/gm/SKILL.md (Phase B): records the stamp rule. skills/dev/SKILL.md (its build line) and AGENTS.md (the stamp note) state the new rule in place of the old one.
+- Witness to run in Phase B: after the build, `gm --version` shows the tree hash; after the install, node tools/check-install-switch.mjs build/release --installed (prints ok).
