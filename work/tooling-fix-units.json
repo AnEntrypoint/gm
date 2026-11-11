@@ -47,12 +47,16 @@
     {
       "id": "prd-receipt-binding",
       "angle": "row lifecycle and witness receipts",
-      "query": "prd_resolve deletes the row file and closes it; bind a witness receipt without deletion instead of editing prd.yml directly for 49 sha bindings"
+      "query": "prd_resolve deletes the row file and closes it; bind a witness receipt without deletion instead of editing prd.yml directly for 49 sha bindings",
+      "status": "fixed-witnessed",
+      "verified": "tools/check-prd-receipt.mjs exit 0 on native: a receipt binds to the row, which stays open with one receipt and no close record"
     },
     {
       "id": "next-context-feed-elision",
       "angle": "event feed compaction",
-      "query": "next_context elides event and run_code output to [703 chars]/[673 chars]; full output requires query_log; prove same code path as run_code truncation or fix separately with its own witness"
+      "query": "next_context elides event and run_code output to [703 chars]/[673 chars]; full output requires query_log; prove same code path as run_code truncation or fix separately with its own witness",
+      "status": "fixed-witnessed",
+      "verified": "tools/check-context-feed.mjs, witness now reads a full next_context: a plain reply after the own run_code is unchanged by the turn-economy rule; cutRefs present in the full reply"
     },
     {
       "id": "fetch-timeout-empty-output",
@@ -84,7 +88,9 @@
         "codeFix": "a7097ed",
         "currentHead": "a7097ed",
         "caughtMistake": "first attempt overwrote notes, restored prd.yml from HEAD and redid it before committing; not gm friction"
-      }
+      },
+      "status": "fixed-witnessed",
+      "verified": "tools/check-prd-refuted-reopen.mjs exit 0 on native: reopen with from:refuted keeps the fields and returns the row open"
     },
     {
       "id": "child-task-overwrite",
@@ -108,7 +114,9 @@
         "actionArgsTaskLogged": false,
         "requiredFix": "log the task argument in next_context action args and reject task on non-owner or child calls; preserve the owner first-step truncation correction",
         "exactObservation": "all next_context actions show args:{} including legitimate owner next_context({task:...}) calls at seq 5, 80 and 443, so the separate kind:\"task\" event is the only trace"
-      }
+      },
+      "status": "fixed-witnessed",
+      "verified": "tools/check-child-task.mjs passed on node and native: a non-owner task replacement from a child is refused, matching native/components/mcp/server.cpp:201"
     }
   ],
   "createdBy": "gm",
