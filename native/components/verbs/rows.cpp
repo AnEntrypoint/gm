@@ -71,20 +71,6 @@ bool valid_sha(const std::string& text) {
     return std::regex_match(text, pattern);
 }
 
-std::string iso_now() {
-    const auto now = std::chrono::system_clock::now();
-    const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count() % 1000;
-    const std::time_t secs = std::chrono::system_clock::to_time_t(now);
-    std::tm utc{};
-#if defined(_WIN32)
-    gmtime_s(&utc, &secs);
-#else
-    gmtime_r(&secs, &utc);
-#endif
-    char buf[32];
-    std::snprintf(buf, sizeof(buf), "%04d-%02d-%02dT%02d:%02d:%02d.%03lldZ", utc.tm_year + 1900, utc.tm_mon + 1, utc.tm_mday, utc.tm_hour, utc.tm_min, utc.tm_sec, static_cast<long long>(ms));
-    return buf;
-}
 
 std::string base36(std::uint64_t value) {
     static const char digits[] = "0123456789abcdefghijklmnopqrstuvwxyz";
