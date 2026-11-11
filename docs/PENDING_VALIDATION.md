@@ -2524,3 +2524,12 @@ Not run here: tools/check-txiki-wasi.mjs and the gm reactor wasm (the gm wasm32-
 - Witness: the scaled checks in the next commit; with the variable unset, parity W14, W15 and W16 are unchanged (Phase B runs the parity contract).
 - tools/check-run-code-budget.mjs and tools/check-turn-economy.mjs: run at 1/60 of the real clock by default (CLOCK; scaled() for every wait, budget and fetch limit; FETCH_MS floored at 300 ms). The 65 s body becomes 1083 ms against the 1667 ms cap; the 31 s job becomes a 750 ms job against the 500 ms old cap (SLOW_JOB_MS = 45 s scaled, so the job outlives the old cap by 250 ms, not 1 s). `--real-clock` runs both at scale 1. Witness: each check prints ok; check-build --slow runs the real-clock pair once.
 - tools/check-build.mjs: `--slow` adds the two --real-clock runs to the pool (outside the default set).
+
+## Prompt-side cost of the skill and the tool descriptions (2026-11-11, Phase A)
+
+- tools/measure-prompt-cost.mjs (new): prints the bytes and approximate tokens (bytes / 4) of each tool description and schema from tools/list, of skills/gm/SKILL.md, and of the first full and the repeated next_context replies.
+- Before: SKILL.md 16678 bytes (~4170 tokens); run_code description 3611 (~903); tools/list total 7714 (~1929); next_context full reply 2082 (~521); repeated reply 65 (~17).
+- After: SKILL.md 16220 bytes (~4055); run_code description 3462 (~866); tools/list total 7565 (~1892); the two next_context replies unchanged.
+- skills/gm/SKILL.md: the duplicate wait habit (the bounded PID wait, restated as a separate habit) is merged into the PID habit; the commit-as-made habit is merged into the Phase A line; the continuation sentence duplicated in the ranked-item habit is removed; the stamp paragraph states the rule once. No habit is dropped.
+- native/components/mcp/server.cpp run_code description: the job_status wait text (duplicated in the verb's own description) is cut to one sentence; "at most 100000" stays.
+- Witness: parity contract all, 22 of 22 (Phase B).
