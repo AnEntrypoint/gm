@@ -65,14 +65,15 @@ for (const run of runs) {
       innerByAction.get(openRunCode).push(event);
       const key = `${event.tool}:${stable(event.args)}`;
       const size = typeof event.outputChars === 'number' ? event.outputChars : String(event.output ?? '').length;
+      const pointer = typeof event.output === 'string' && event.output.startsWith('[gm: the same call');
       if (seenCalls.has(key)) {
-        add('repeated identical call', 1, seenCalls.get(key) / TOKEN_CHARS, `${event.tool} ${stable(event.args).slice(0, 80)}`);
+        add('repeated identical call', 1, pointer ? 0 : seenCalls.get(key) / TOKEN_CHARS, `${event.tool} ${stable(event.args).slice(0, 80)}`);
       } else {
         seenCalls.set(key, size);
       }
       if (event.tool === 'read_file' && event.args?.path) {
         const path = event.args.path;
-        if (readsSinceWrite.get(path)) add('same file read again with no write between', 1, size / TOKEN_CHARS, `${run.name} ${path}`);
+        if (readsSinceWrite.get(path) && event.args?.fresh !== true && !pointer) add('same file read again with no write between', 1, size / TOKEN_CHARS, `${run.name} ${path}`);
         readsSinceWrite.set(path, true);
       }
       if (WRITE_TOOLS.has(event.tool) && event.args?.path) readsSinceWrite.delete(event.args.path);
