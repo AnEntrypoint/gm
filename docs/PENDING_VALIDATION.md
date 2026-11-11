@@ -2366,3 +2366,9 @@ Not run here: tools/check-txiki-wasi.mjs and the gm reactor wasm (the gm wasm32-
 - tools/check-prd-refuted-reopen.mjs: exit 0, wall 0.35 s.
 - tools/check-prd-receipt.mjs: exit 0, wall 0.34 s.
 - tools/check-build.mjs build/release: exit 0, wall 380.70 s; conformance 86 passed, 0 failed of 86 checks in 24 scenarios.
+
+## Background run_code visibility (2026-11-11, Phase A)
+
+- Finding: no engine change is needed. A background run_code is named in next_context while it runs (native: jobsOpen and jobsStarted, with the body id; Node: the same fields from activeJobs), and its end is logged as a job event, which is a pending kind on both engines, so a waiting next_context returns at the end. The follow-up asked for a jobsRunning key; jobsOpen already carries that state, so no duplicate field is added.
+- Witness: node tools/check-background-visibility.mjs <native gm | node>: run_code returns a background job; next_context full names it while it runs; next_context with waitMs returns when the body ends (before 15 s for a 4 s body); job_status returns the value slow-done.
+- Queue: followUps run-code-background-visibility is witness-pending until the Phase B run.
