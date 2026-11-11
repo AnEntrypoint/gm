@@ -115,7 +115,9 @@ native. `.gmnew-update.json` stays as data.
 - Pin: defaults/mcp.json runs pw at 24646cc through the direct node entry: {"command": "node", "args": ["${HOME}/.gmnew/current/pw/bin/playwriter-project"]}. The config loader expands ${HOME} (native/components/mcpclient/config.cpp).
 - Tool cache: defaults/mcp-tools/playwriter.json is lib/mcp-tools.json at 24646cc (execute and reset), ASCII-escaped with the same parsed content. The pin serves no browsers tool.
 - playwriter_browsers is optional. BrowserScope lists it only when the launcher serves it; the browsers verb and browser_close_machine fail with a named reason when it does not (native/components/host/browser_scope.cpp). check-lazy-browser requires only playwriter_execute in the listing and asserts that the first browser call is the one that starts the launcher.
-- Remaining gap, the install step: nothing creates ~/.gmnew/current/pw (a checkout of AnEntrypoint/pw at 24646cc with npm ci run in it). Until that step exists, the direct entry does not start, and the browser tools fail on the first call with the launcher error. The npx form was the working entry before this change; it is not kept.
+- Install step (built this round): gm install runs install_playwriter after the version switch (native/components/host/install.cpp). It clones AnEntrypoint/pw into current/pw, checks out 24646cc, runs npm ci there, and writes current/pw/gm-pin. A second install skips it when the pin and bin/playwriter-project are already there. The sandbox checks (check-lazy-browser, check-browser-scope) install into their own HOME, so the entry resolves under that install tree.
+- Clean install witness (empty HOME, 2026-11-11): gm install --local build/release --source . took 7.04 s in total; the playwriter step took 6.94 s; its longest part was the clone at 5.35 s, then the checkout and npm ci.
+- Browser calls to a tool the pinned cache does not list go through VerbTable::call_sibling, routed to the client that serves the listed sibling (playwriter_execute). That is how browser_close_machine reaches the launcher's browsers tool at 24646cc.
 
 ## Checks moved to gm-tool (round e6b5, item 5)
 

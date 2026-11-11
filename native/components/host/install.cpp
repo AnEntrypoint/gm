@@ -2,8 +2,9 @@
 
 #include <chrono>
 #include <cstdlib>
-#include <fstream>
 #include <map>
+#include <vector>
+#include <fstream>
 #include <utility>
 #include <iostream>
 #include <sstream>
@@ -245,6 +246,47 @@ int start_check(const fs::path& exe, const std::string& version) {
     return 0;
 }
 
+constexpr const char* kPlaywriterRepo = "https://github.com/AnEntrypoint/pw.git";
+constexpr const char* kPlaywriterPin = "24646cc";
+
+std::optional<std::string> playwriter_step(const std::string& what, const std::vector<std::string>& argv, const fs::path& cwd, std::uint64_t timeout_ms,
+                                           std::map<std::string, std::int64_t>& wall) {
+    const std::int64_t began = wall_ms();
+    const auto outcome = proc::run(argv, cwd, {}, timeout_ms);
+    wall[what] = wall_ms() - began;
+    if (!outcome.started || outcome.timed_out || outcome.exit_code != 0) {
+        const std::string detail = outcome.timed_out ? std::string("timed out") : outcome.err.empty() ? outcome.out : outcome.err;
+        return "playwriter " + what + " failed: " + detail.substr(0, 400);
+    }
+    return std::nullopt;
+}
+
+std::optional<std::string> install_playwriter(const fs::path& current) {
+    const fs::path dir = current / "pw";
+    const fs::path pin_file = dir / "gm-pin";
+    std::ifstream known(pin_file);
+    std::string pinned;
+    std::getline(known, pinned);
+    if (pinned == kPlaywriterPin && fs::exists(dir / "bin" / "playwriter-project")) {
+        std::cout << "playwriter " << kPlaywriterPin << " is already in " << dir.string() << "\n";
+        return std::nullopt;
+    }
+    std::error_code ec;
+    fs::remove_all(dir, ec);
+    std::map<std::string, std::int64_t> wall;
+    const std::int64_t began = wall_ms();
+    if (auto error = playwriter_step("clone", {"git", "clone", "--quiet", kPlaywriterRepo, dir.string()}, current, 900000, wall)) return error;
+    if (auto error = playwriter_step("checkout", {"git", "-C", dir.string(), "checkout", "--quiet", "--detach", kPlaywriterPin}, current, 120000, wall)) return error;
+    if (auto error = playwriter_step("npm ci", {"npm", "ci", "--no-audit", "--no-fund"}, dir, 1200000, wall)) return error;
+    std::ofstream(pin_file) << kPlaywriterPin << "\n";
+    std::string longest;
+    for (const auto& [name, ms] : wall) {
+        if (longest.empty() || ms > wall[longest]) longest = name;
+    }
+    std::cout << "installed playwriter " << kPlaywriterPin << " at " << dir.string() << " in " << (wall_ms() - began) << " ms; longest step: " << longest << " (" << wall[longest] << " ms)\n";
+    return std::nullopt;
+}
+
 int register_installed(const HostArgs& args, const fs::path& exe) {
     if (std::getenv("GMNEW_SKIP_REGISTER") != nullptr && std::string_view(std::getenv("GMNEW_SKIP_REGISTER")) == "1") {
         std::cout << "registration skipped (GMNEW_SKIP_REGISTER=1)\n";
@@ -336,6 +378,10 @@ int install_local(const HostArgs& args, const fs::path& local) {
         }
         fs::remove_all(stage, ec);
         std::cout << "installed local build " << version << " from " << local.string() << " at " << (current / exe_name("gm")).string() << "\n";
+    }
+    if (auto error = install_playwriter(current)) {
+        std::cerr << "gm: install: " << *error << "\n";
+        return 1;
     }
     if (start_check(current / exe_name("gm"), version) != 0) return 1;
     return register_installed(args, current / exe_name("gm"));

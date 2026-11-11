@@ -225,6 +225,21 @@ json::Value McpVerbs::call(std::string_view name, const json::Value& args) {
     return client->call_tool(tool, args.is_null() ? json::Value(json::Object{}) : args);
 }
 
+json::Value McpVerbs::call_sibling(std::string_view sibling, std::string_view tool, const json::Value& args) {
+    StdioClient* client = nullptr;
+    {
+        std::lock_guard lock(impl_->mutex);
+        const auto found = impl_->routes.find(sibling);
+        if (found != impl_->routes.end()) client = found->second.client;
+    }
+    if (client == nullptr) {
+        json::Value reply;
+        reply.set("ok", false).set("error", "unknown tool: " + std::string(sibling));
+        return reply;
+    }
+    return client->call_tool(std::string(tool), args.is_null() ? json::Value(json::Object{}) : args);
+}
+
 void McpVerbs::wait_ready() const {
     std::unique_lock lock(impl_->mutex);
     impl_->ready_changed.wait(lock, [this] { return impl_->ready; });

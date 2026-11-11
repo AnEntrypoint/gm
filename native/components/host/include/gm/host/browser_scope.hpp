@@ -16,11 +16,12 @@ public:
     explicit BrowserScope(VerbTable& inner);
 
     std::vector<VerbInfo> list() const override;
+    json::Value call_sibling(std::string_view sibling, std::string_view tool, const json::Value& args) override;
     json::Value call(std::string_view name, const json::Value& args) override;
 
 private:
     json::Value user_execute(const json::Value& args);
-    bool serves_browsers() const;
+    json::Value browsers_call(const json::Value& args);
     json::Value browsers(const json::Value& args);
     json::Value close_machine(const json::Value& args);
     json::Value tabs();

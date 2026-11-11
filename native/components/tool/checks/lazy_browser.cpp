@@ -3,6 +3,7 @@
 #include <chrono>
 #include <filesystem>
 #include <fstream>
+#include <regex>
 #include <system_error>
 
 namespace gm::tool {
@@ -23,10 +24,17 @@ CheckResult check_lazy_browser(const std::string& binary) {
         }
         return count;
     };
+    const fs::path host = fs::path(binary).parent_path();
+    const fs::path build = host.parent_path().parent_path().parent_path();
+    const fs::path source = build.parent_path().parent_path();
+    const fs::path installed = sandbox / ".gmnew" / "current" / "gm";
+    std::vector<std::string> started_pids;
+    const auto install = proc::run({"env", "HOME=" + sandbox.string(), (host / "gm").string(), "install", "--local", build.string(), "--source", source.string()}, sandbox, {}, 900000);
+    if (!install.started || install.exit_code != 0) result.failures.push_back("the sandbox install failed: " + (install.err.empty() ? install.out : install.err).substr(0, 400));
     {
-        Session session(binary, workspace, sandbox, 180000, false);
+        Session session(installed.string(), workspace, sandbox, 180000, false);
         if (!session.started()) {
-            result.failures.push_back("gm serve did not start from " + binary);
+            result.failures.push_back("gm serve did not start from " + installed.string());
         } else {
             session.rpc("initialize", json::Object{{"protocolVersion", "2025-06-18"}, {"capabilities", json::Object{}},
                                                   {"clientInfo", json::Object{{"name", "gm-tool"}, {"version", "1"}}}});
@@ -43,10 +51,16 @@ CheckResult check_lazy_browser(const std::string& binary) {
             const std::size_t after_listing = count_playwriter(session.descendants());
             if (after_listing != 0) result.failures.push_back("listing the verbs started " + std::to_string(after_listing) + " browser tooling process(es)");
             const std::string first_call = session.body("return JSON.stringify(await gm.playwriter_execute({ code: 'return 1;' }));");
-            if (first_call.find("MCP server playwriter") == std::string::npos) result.failures.push_back("the first browser call did not start the playwriter launcher: " + first_call.substr(0, 300));
-            result.summary = "a fresh session has no browser tooling process; its verb playwriter_execute is listed without a start, and the first browser call is the one that starts the launcher (playwriter_browsers is optional at the pin; a sandbox without Chrome makes the launch exit, which the reply reports)";
+            const std::regex launched("(?:gate pid|browser running pid) ([0-9]+)");
+            for (auto it = std::sregex_iterator(first_call.begin(), first_call.end(), launched); it != std::sregex_iterator(); ++it)
+                started_pids.push_back((*it)[1].str());
+            if (first_call.find("[return value] 1") == std::string::npos) result.failures.push_back("the first browser call did not run through the installed playwriter launcher: " + first_call.substr(0, 300));
+            result.summary = "a fresh session has no browser tooling process; its verb playwriter_execute is listed without a start, and the first browser call runs through the launcher that a clean install placed under the sandbox HOME (playwriter_browsers is optional at the pin)";
         }
         session.stop();
+    }
+    for (const std::string& pid : started_pids) {
+        if (fs::exists("/proc/" + pid)) proc::run({"kill", "-TERM", pid}, sandbox, {}, 10000);
     }
     std::error_code ignored;
     fs::remove_all(sandbox, ignored);

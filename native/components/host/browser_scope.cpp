@@ -167,18 +167,21 @@ json::Value BrowserScope::user_execute(const json::Value& args) {
     return inner_.call(kExecute, forwarded);
 }
 
-bool BrowserScope::serves_browsers() const {
+json::Value BrowserScope::call_sibling(std::string_view sibling, std::string_view tool, const json::Value& args) {
+    return inner_.call_sibling(sibling, tool, args);
+}
+
+json::Value BrowserScope::browsers_call(const json::Value& args) {
     for (const VerbInfo& verb : inner_.list()) {
-        if (verb.name == kBrowsers) return true;
+        if (verb.name == kBrowsers) return inner_.call(kBrowsers, args);
     }
-    return false;
+    return inner_.call_sibling(kExecute, "browsers", args);
 }
 
 json::Value BrowserScope::browsers(const json::Value& args) {
     const json::Value* action = args.find("action");
     if (action != nullptr && action->is_string() && action->as_string() == "close") return close_run();
-    if (!serves_browsers()) return failure("playwriter_browsers is not served by the playwriter launcher at its pin, so the list and close actions are unavailable");
-    return inner_.call(kBrowsers, args);
+    return browsers_call(args);
 }
 
 json::Value BrowserScope::close_machine(const json::Value& args) {
@@ -186,14 +189,13 @@ json::Value BrowserScope::close_machine(const json::Value& args) {
     if (confirm == nullptr || !confirm->is_bool() || !confirm->as_bool()) {
         return failure("browser_close_machine needs confirm true: it closes the whole project browser, with every run's tabs in it");
     }
-    if (!serves_browsers()) return failure("playwriter_browsers is not served by the playwriter launcher at its pin, so the project browser cannot be closed through it");
     json::Value request;
     request.set("action", "close");
     const json::Value* target = args.find("target");
     request.set("target", target != nullptr && target->is_string() ? target->as_string() : std::string("project"));
     const json::Value* force = args.find("force");
     request.set("force", force != nullptr && force->is_bool() && force->as_bool());
-    json::Value reply = inner_.call(kBrowsers, request);
+    json::Value reply = browsers_call(request);
     if (ok_of(reply)) {
         std::lock_guard lock(mutex_);
         used_ = false;

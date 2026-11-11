@@ -42,6 +42,7 @@ public:
 
     std::vector<VerbInfo> list() const override;
     json::Value call(std::string_view name, const json::Value& args) override;
+    json::Value call_sibling(std::string_view sibling, std::string_view tool, const json::Value& args) override;
     void wait_ready() const;
 
 private:

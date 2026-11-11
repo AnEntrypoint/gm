@@ -44,6 +44,21 @@ std::vector<VerbInfo> ComposedVerbs::list() const {
     return all;
 }
 
+json::Value ComposedVerbs::call_sibling(std::string_view sibling, std::string_view tool, const json::Value& args) {
+    VerbTable* table = route(sibling);
+    if (table == nullptr) {
+        reindex();
+        table = route(sibling);
+    }
+    if (table == nullptr) {
+        json::Value reply;
+        reply.set("ok", false);
+        reply.set("error", "unknown tool: " + std::string(tool));
+        return reply;
+    }
+    return table->call_sibling(sibling, tool, args);
+}
+
 json::Value ComposedVerbs::call(std::string_view name, const json::Value& args) {
     VerbTable* table = route(name);
     if (table == nullptr) {

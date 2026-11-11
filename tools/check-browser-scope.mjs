@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { spawn } from './lib/group.mjs';
+import { spawnSync } from 'node:child_process';
 import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
@@ -35,7 +36,15 @@ const removeTree = async (path) => {
 };
 
 const workspace = mkdtempSync(join(tmpdir(), 'gm-browser-scope-'));
-const child = spawn(binary, [...lead, '--workspace', workspace], { stdio: ['pipe', 'pipe', 'pipe'] });
+const home = mkdtempSync(join(tmpdir(), 'gm-browser-home-'));
+const buildDir = resolve(dirname(binary), '..', '..', '..');
+const installing = spawnSync(binary, ['install', '--local', buildDir, '--source', resolve(buildDir, '..', '..')], { env: { ...process.env, HOME: home }, encoding: 'utf8', timeout: 900000 });
+if (installing.status !== 0) {
+  console.error(`browser-scope-check: the clean install failed: ${(installing.stderr || installing.stdout).slice(-400)}`);
+  process.exit(1);
+}
+const installedGm = join(home, '.gmnew', 'current', 'gm');
+const child = spawn(installedGm, [...lead, '--workspace', workspace], { stdio: ['pipe', 'pipe', 'pipe'], env: { ...process.env, HOME: home } });
 child.stderr.resume();
 const pending = new Map();
 let nextId = 1;
@@ -154,6 +163,7 @@ try {
   child.kill();
   await new Promise((done) => setTimeout(done, 300));
   await removeTree(workspace).catch(() => {});
+  await removeTree(home).catch(() => {});
 }
 
 if (failures.length > 0) {
