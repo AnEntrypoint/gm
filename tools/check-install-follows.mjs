@@ -58,7 +58,7 @@ const env = { ...process.env, HOME: home };
 const installed = join(home, '.gmnew', 'current');
 const quiet = join(scratch, 'quiet.json');
 writeFileSync(quiet, JSON.stringify({ mcpServers: { playwriter: { disabled: true } } }));
-const leafPath = join(tree, 'native', 'leaves', 'git.mjs');
+const leafPath = join(tree, 'native', 'leaves', 'review.mjs');
 const skillPath = join(tree, 'skills', 'gm', 'SKILL.md');
 const leafOriginal = readFileSync(leafPath, 'utf8');
 const skillOriginal = readFileSync(skillPath, 'utf8');
@@ -112,7 +112,7 @@ try {
   await rpc('initialize', { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: CHECK, version: '1' } });
   relay.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' })}\n`);
   await rpc('tools/call', { name: 'next_context', arguments: {} });
-  const installedLeaf = hash(join(installed, 'leaves', 'git.mjs'));
+  const installedLeaf = hash(join(installed, 'leaves', 'review.mjs'));
   const installedSkill = hash(join(installed, 'skills', 'gm', 'SKILL.md'));
   expect(installedLeaf === textHash(leafOriginal), 'the first install did not copy the scratch leaf');
   const before = log().length;
@@ -120,7 +120,7 @@ try {
   writeFileSync(leafPath, leafOriginal + leafMarker);
   writeFileSync(skillPath, skillOriginal + skillMarker);
   await sleep(6000);
-  expect(hash(join(installed, 'leaves', 'git.mjs')) === installedLeaf, 'the installed leaf changed on a scratch edit');
+  expect(hash(join(installed, 'leaves', 'review.mjs')) === installedLeaf, 'the installed leaf changed on a scratch edit');
   expect(hash(join(installed, 'skills', 'gm', 'SKILL.md')) === installedSkill, 'the installed skill changed on a scratch edit');
   expect(log().slice(before).every((event) => event.kind !== 'restart'), `a scratch edit restarted the installed worker: ${JSON.stringify(restarts())}`);
   expect(!(await skillText()).includes(CHECK), 'the session read the scratch skill edit before an install');
@@ -129,10 +129,10 @@ try {
   refreshBuildSkills();
   const second = await install();
   expect(second.code === 0, `the second install failed (${second.code}): ${second.out.slice(-400)}`);
-  expect(hash(join(installed, 'leaves', 'git.mjs')) === textHash(leafOriginal + leafMarker), 'the install did not copy the edited leaf');
+  expect(hash(join(installed, 'leaves', 'review.mjs')) === textHash(leafOriginal + leafMarker), 'the install did not copy the edited leaf');
   for (let i = 0; i < 40 && !picked; i += 1) {
     await sleep(500);
-    picked = restarts().find((event) => String(event.reason ?? '').includes('git.mjs')) ?? null;
+    picked = restarts().find((event) => String(event.reason ?? '').includes('review.mjs')) ?? null;
   }
   expect(picked !== null, `the running session did not pick up the installed leaf: ${JSON.stringify(restarts().slice(-2))}`);
   expect((await skillText()).includes(CHECK), 'the installed skill edit is not what the session reads on its next read');

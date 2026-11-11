@@ -45,6 +45,8 @@ const std::vector<VerbInfo>& row_verbs();
 json::Value row_call(std::string_view name, const json::Value& args, const std::filesystem::path& workspace, LockedLog& log);
 json::Value wiki_call(std::string_view name, const json::Value& args, const std::filesystem::path& workspace, LockedLog& log);
 bool is_wiki_verb(std::string_view name);
+bool is_git_verb(std::string_view name);
+json::Value git_call(std::string_view name, const json::Value& args, const std::filesystem::path& workspace, LockedLog& log);
 json::Value fetch_call(const json::Value& args, const std::filesystem::path& workspace, LockedLog& log, const std::filesystem::path& run_dir);
 
 inline constexpr std::size_t output_page = 20000;
