@@ -77,7 +77,7 @@ Setup registers only gm with the host, so the worker is the only thing that star
 
     cmake --preset release
     cmake --build build/release
-    node tools/check-build.mjs build/release
+    build/release/native/components/tool/gm-tool phase-b build/release
 
 - Build with `cmake --preset release` and `cmake --build build/release`; `GMNEW_PRESET` names the preset to use in its place. The project has no unit tests; checks run on the built binary through `gm-tool check`.
 - The binary is build/PRESET/native/components/host/gm.

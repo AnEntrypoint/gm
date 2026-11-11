@@ -73,7 +73,7 @@ jobs:
           echo "PLAYWRITER_NO_SANDBOX=1" >> "$GITHUB_ENV"
       - name: Test
         shell: bash
-        run: node tools/check-build.mjs build/${{ matrix.preset }}
+        run: build/${{ matrix.preset }}/native/components/tool/gm-tool phase-b build/${{ matrix.preset }}
       - name: Replay witness
         if: matrix.target == 'x64-linux'
         shell: bash
@@ -137,7 +137,7 @@ jobs:
           if command -v cygpath >/dev/null; then cygpath -w "$PLAYWRITER_BROWSER_PATH"; fi
       - name: Test
         shell: bash
-        run: node tools/check-build.mjs build/${{ matrix.preset }}
+        run: build/${{ matrix.preset }}/native/components/tool/gm-tool phase-b build/${{ matrix.preset }}
       - name: Host build stamp
         shell: bash
         run: |

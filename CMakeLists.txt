@@ -44,6 +44,5 @@ add_custom_target(gmnew_stamp ALL
 add_subdirectory(native)
 
 enable_testing()
-find_program(GMNEW_NODE node REQUIRED)
-add_test(NAME check-build COMMAND ${GMNEW_NODE} ${CMAKE_CURRENT_SOURCE_DIR}/tools/check-build.mjs ${CMAKE_BINARY_DIR})
+add_test(NAME check-build COMMAND $<TARGET_FILE:gm-tool> phase-b ${CMAKE_BINARY_DIR} WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 set_tests_properties(check-build PROPERTIES TIMEOUT 1500)

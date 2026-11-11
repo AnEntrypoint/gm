@@ -161,7 +161,7 @@ Running relays are not restarted by an install. A relay started from a versioned
 
 ## 5. Phase B driver
 
-`gm-tool phase-b` (native/components/tool/driver.cpp) runs every registered native check through `gm-tool check`, in a pool of min(6, floor(cores/2)) lanes (GM_CHECK_JOBS overrides), longest first. A check that fails in the pool is rerun alone. A run fails when a check changes a tracked file in the checkout. The clock-mutation check runs last, only with GM_CHECK_MUTATIONS=1, and a bare `gm-tool check <bin>` never runs it. tools/check-build.mjs remains as the CI driver (.github/workflows/release.yml and arm-diagnose.yml); Phase B no longer calls node.
+`gm-tool phase-b` (native/components/tool/driver.cpp) runs every registered native check through `gm-tool check`, in a pool of min(6, floor(cores/2)) lanes (GM_CHECK_JOBS overrides), longest first. A check that fails in the pool is rerun alone. A run fails when a check changes a tracked file in the checkout. The clock-mutation check runs last, only with GM_CHECK_MUTATIONS=1, and a bare `gm-tool check <bin>` never runs it. tools/check-build.mjs is removed: CI (release.yml, arm-diagnose.yml) and the CMake check-build test run `gm-tool phase-b <build dir>`, so none of them calls node for this step.
 
 Parity rows W19 and W20 (the check-build `--only` and cache witnesses) were removed with tools/parity-contract.mjs: they tested the Node driver, and the native driver's pool and cache are checked inside phase-b itself.
 

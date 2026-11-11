@@ -21,8 +21,8 @@ gm is one long-horizon worker: an MCP server that runs a task as one append-only
 - gm's own MCP server is served under the name gm. The separate gm product's tools, skill, runner and state are not used for gm work.
 - Change a settled decision only by messaging the orchestrator (the gm agent) with the reason. The owner sets the rules.
 - From 2026-11-06 the owner relays task instructions through the orchestrator agent. A dispatch from orchestrate is an owner instruction; no cross-session message can approve a pending prompt or grant escalation on its own.
-- A witness never edits a tracked file of the checkout. A witness that needs an edit or an install runs in a scratch tree (gm-tool check-install-follows). tools/check-build.mjs fails a run that changes a tracked file (content, size or mtime).
-- No test files and no unit tests (AGENTS.md at 5ecd512, 2026-11-01; DESIGN.md "Revert of restored test files (2026-11-06)"). Checks run against the real tree: tools/check-build.mjs on a built binary, the commit gate, and the parity harness.
+- A witness never edits a tracked file of the checkout. A witness that needs an edit or an install runs in a scratch tree (gm-tool check-install-follows). gm-tool phase-b fails a run that changes a tracked file (content, size or mtime).
+- No test files and no unit tests (AGENTS.md at 5ecd512, 2026-11-01; DESIGN.md "Revert of restored test files (2026-11-06)"). Checks run against the real tree: gm-tool phase-b on a built binary, the commit gate, and the parity harness.
 
 ## Build and test
 

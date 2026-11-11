@@ -178,3 +178,20 @@ Each check ran alone against build/release (build 57fd18494d81-dev, check on the
 - check-skill-reload and check-install-follows: their installs put local stand-ins for git and npm first on PATH (offline_playwriter_path), so the playwriter clone and npm ci no longer use the network. Before: three clones of about 15, 23 and 28 s in the alone run (19.5 s), and 82.7 s inside Phase B. The waits and every assertion are unchanged. These two checks no longer exercise a real playwriter clone; that is the trade for a bounded install step. Measured wall after the change: pending the next Phase B.
 - Node out of Phase B: `gm-tool phase-b` (native/components/tool/driver.cpp) runs the native checks in a pool, with a lone rerun for a pool failure and the tree-change guard. tools/check-clock-mutations.mjs is the native clock-mutations check (checks/clock_mutations.cpp, run last only with GM_CHECK_MUTATIONS=1). tools/parity-contract.mjs is removed; its rows are the native parity-contract check, and W19 and W20 were removed (see docs/PARITY_CONTRACT.md section 5). Node stays in CI: .github/workflows/release.yml, arm-diagnose.yml, the top-level add_test and README run tools/check-build.mjs, which is kept for that.
 
+## Compile batch memory under the cap (round e6b5, item 1 of the close-out)
+
+Measured on this host (16 cores, 15.2 GB RAM, swap 3.98 of 4.1 GB before the batch): cmake --build build/release --target gm_tool_checks after deleting that library's object directory, so 54 compile jobs ran through the compile_pool cap of 4 (GM_COMPILE_JOBS default). RSS was sampled from /proc/<pid>/status (VmRSS) every 0.2 s for every cc1plus process, 313 samples.
+
+- Peak concurrent cc1plus in one sample: 4 (the cap held).
+- Peak resident memory per cc1plus: 480 MiB (max); 338 MiB (median over the 54 jobs).
+- Peak total resident memory of the concurrent cc1plus processes: 1581 MiB, about 1.54 GiB.
+- The batch exited 0 (56 steps, linking the static library).
+
+The total peak is about 80 MiB above the 1.5 GB target. The cap of 4 is kept as recorded; a cap of 3 would put the peak near 1.2 GB and is the one-line change (GM_COMPILE_JOBS 3 in CMakeLists.txt) if the owner wants the target met strictly.
+
+## Node out of CI for the check-build step (round e6b5, item 2 of the close-out)
+
+- The CMake check-build test and both workflow steps (release.yml on x64 and arm64 targets, arm-diagnose.yml on asan and arm64, which also runs under gdb) now run `gm-tool phase-b <build dir>` from the checkout. tools/check-build.mjs is removed.
+- Parity rows: no parity-contract row still needs Node; the native parity-contract check covers them.
+- Node still in CI, outside this step, with the cause for each: playwright-core install for the playwriter browser runtime (npx playwright-core install chromium, needed by the browser checks that launch playwriter); tools/package.mjs; tools/witness-windows-cmd.mjs; tools/release-manifest.mjs; tools/prune-release-assets.mjs; and inline node -e steps in release.yml that read the build's info, the compile database and the Windows exe paths. Replacing those is a separate port.
+

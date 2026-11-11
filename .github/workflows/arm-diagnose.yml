@@ -29,7 +29,7 @@ jobs:
         env:
           ASAN_OPTIONS: halt_on_error=1:abort_on_error=0:print_stacktrace=1:detect_leaks=0
         run: |
-          node tools/check-build.mjs build/asan
+          build/asan/native/components/tool/gm-tool phase-b build/asan
 
   gdb-arm:
     runs-on: ubuntu-24.04-arm
@@ -47,7 +47,7 @@ jobs:
       - name: Run the conformance check under gdb and print a backtrace on a signal
         shell: bash
         run: |
-          gdb -batch -nx -ex 'set follow-fork-mode child' -ex run -ex "thread apply all bt 40" --args node tools/check-build.mjs build/arm64-linux-release > gdb-check.log 2>&1 || true
+          gdb -batch -nx -ex 'set follow-fork-mode child' -ex run -ex "thread apply all bt 40" --args build/arm64-linux-release/native/components/tool/gm-tool phase-b build/arm64-linux-release > gdb-check.log 2>&1 || true
           if grep -qE "received signal|SIG[A-Z]+, " gdb-check.log; then
             echo "signal in the conformance run:"
             grep -E "received signal|SIG[A-Z]+, |^#" gdb-check.log | head -80

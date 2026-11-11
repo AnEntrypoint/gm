@@ -2638,3 +2638,16 @@ Witnesses run on build/release with `build/release/native/components/tool/gm-too
 - mcp-conformance: ok (86 passed, 0 failed of 86 checks in 24 scenarios; wall 1.17 s).
 - parity-contract: ok (18 witness groups, W1 to W18, W23, W24, pass on the native binary; wall 23.40 s). W19, W20, W21, W22 and W25 are not in the native set: W19 and W20 test check-build's `--only` mode, and W21 and W22 wrap the native checks.
 
+## Round e6b5 close-out: compile batch memory and Node out of the check-build step
+
+Each change, and its witness:
+
+- docs/NATIVE_PLAN.md: the batch memory record (peak 480 MiB per cc1plus, 1581 MiB total across 4 concurrent). Witness: /tmp/e6b5-mem.log sampler, /tmp/e6b5-batch.log `BATCH_EXIT=0`.
+- CMakeLists.txt: the check-build test runs `$<TARGET_FILE:gm-tool> phase-b <build dir>` in the source directory; find_program(node) removed. Witness: Phase B run on this commit.
+- .github/workflows/release.yml: both check-build steps run `gm-tool phase-b`. Witness: Phase B run; the workflow itself runs on push in CI.
+- .github/workflows/arm-diagnose.yml: the asan step and the gdb arm64 step run `gm-tool phase-b`. Witness: CI run of arm-diagnose.
+- README.md: the build step in the README runs `gm-tool phase-b build/release`.
+- AGENTS.md: the tree-change rule and the build rule name `gm-tool phase-b` instead of tools/check-build.mjs.
+- docs/PARITY_CONTRACT.md section 5: states that check-build.mjs is removed.
+- tools/check-build.mjs: removed (git rm). No caller remains except the historical notes in DESIGN.md.
+
