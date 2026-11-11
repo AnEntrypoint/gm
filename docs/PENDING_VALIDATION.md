@@ -2288,3 +2288,11 @@ Not run here: tools/check-txiki-wasi.mjs and the gm reactor wasm (the gm wasm32-
 ## Project page reopen after a close (2026-11-11, Phase A)
 
 - src/browser-scope.mjs OPEN_RUN and native/components/host/browser_scope.cpp kOpenRunContext: when the project page is closed, the next run creates a new project context and a new page together, so a closed page is not reused and the context is not re-created on a closed page. Witness: node tools/check-project-page.mjs <native gm>: after page.close() in one run, the next run_code evaluates on a reopened page and returns 1.
+
+## Project page reopen witness record (2026-11-11, Phase B, build/release gm)
+
+- cmake --build build/release: BUILD_EXIT=0, wall 3.67 s.
+- tools/check-project-page.mjs: exit 0, wall 12.41 s (includes the reopen after page.close).
+- tools/check-browser-scope.mjs: exit 0, wall 188.81 s.
+- tools/check-build.mjs build/release: exit 0, wall 508.22 s; conformance 86 passed, 0 failed of 86 checks in 24 scenarios.
+- tools/check-skill-serve.mjs: exit 0, wall 0.21 s.
