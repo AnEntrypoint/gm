@@ -9,6 +9,7 @@ const std::vector<Registered>& checks() {
         {"check-lazy-browser", check_lazy_browser},
         {"check-rows", check_rows},
         {"check-fetch", check_fetch},
+        {"check-wiki", check_wiki},
     };
     return all;
 }

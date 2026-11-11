@@ -38,7 +38,7 @@ Scope: each script tracked in git (`git ls-files`) and each script in the instal
 | `native/leaves/git.mjs` | Git state reads for the run. | leaf (native), item 2d |
 | `native/leaves/review.mjs` | Review of diffs for the run. | leaf (native), item 2d |
 | `native/leaves/rows.mjs` | Row-table reads and writes. | done: native/components/verbs/rows.cpp, checked by gm-tool check-rows; the .mjs is removed (item 2d, first leaf) |
-| `native/leaves/wiki.mjs` | Wiki read and write. | leaf (native), item 2d |
+| the wiki leaf (formerly native/leaves) | Wiki read and write. | done: native/components/verbs/wiki.cpp (wiki_search, wiki_write, wiki_lint), checked by gm-tool check-wiki; the .mjs is removed (item 2d) |
 | `native/leaves/vendor/acorn.mjs` | Vendored JavaScript parser, used by the commit gate's staged-comments check and by code-ast. | external until code-ast and the gate are native; then drop |
 | install `leaves/*.mjs` and `leaves/vendor/acorn.mjs` | Copies of the six leaves and acorn. | removed from the install as each native leaf passes |
 

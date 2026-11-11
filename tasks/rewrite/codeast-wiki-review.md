@@ -1,6 +1,6 @@
 # Brief: codeast-wiki-review (native/leaves)
 
-Read tasks/rewrite/common.md (its build rules do not apply: these are JavaScript leaves) and tasks/rewrite/leaves.md (the leaf rules). Build dir not needed. Files you own: native/leaves/code-ast.mjs, native/leaves/wiki.mjs, native/leaves/review.mjs, native/leaves/vendor/, native/leaves/tests/ (new files only).
+Read tasks/rewrite/common.md (its build rules do not apply: these are JavaScript leaves) and tasks/rewrite/leaves.md (the leaf rules). Build dir not needed. Files you own: native/leaves/code-ast.mjs, the wiki leaf, native/leaves/review.mjs, native/leaves/vendor/, native/leaves/tests/ (new files only).
 
 Spec: src/code-ast.mjs (callers, impact), src/wiki.mjs and src/wiki-tools.mjs (wiki_search, wiki_write, and lintWiki that finish uses), src/review.mjs and src/review-tools.mjs (review_packet, review_record, review_join), src/search.mjs for the BM25 scoring of wiki_search.
 
