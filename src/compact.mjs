@@ -203,10 +203,12 @@ export function boundedItem(item, cap = NEXT_CONTEXT_EVENT_CAP) {
     put('outputDigest', compactDigest(digestOf(item)));
   } else {
     const text = JSON.stringify(item);
-    put('head', text.slice(0, EVENT_HEAD));
-    put('tail', text.slice(-EVENT_TAIL));
     put('textChars', text.length);
-    put('textDigest', compactDigest(outputDigest(text, failedOf(item))));
+    if (item.kind !== 'context-reply') {
+      put('head', text.slice(0, EVENT_HEAD));
+      put('tail', text.slice(-EVENT_TAIL));
+      put('textDigest', compactDigest(outputDigest(text, failedOf(item))));
+    }
   }
   if (item.out !== undefined) put('out', compactDigest(item.out));
   if (item.args !== undefined) put('args', boundedArgs(item.args));
@@ -268,8 +270,26 @@ function collapseFresh(fresh, itemCap) {
   return out;
 }
 
+const sentByRun = new WeakMap();
+
+function markRepeats(item, sent) {
+  const out = { ...item };
+  if (item.caller !== undefined) {
+    const text = JSON.stringify(item.caller);
+    if (text === sent.caller) out.caller = 'same';
+    else sent.caller = text;
+  }
+  if (item.prefixSha !== undefined) {
+    if (item.prefixSha === sent.prefixSha) out.prefixSha = 'same';
+    else sent.prefixSha = item.prefixSha;
+  }
+  return out;
+}
+
 export function feedOf(events, registry, { shown = 0, cap = NEXT_CONTEXT_EVENTS_CAP, eventCap = NEXT_CONTEXT_EVENT_CAP, compactChildren = false } = {}) {
   const source = asSource(events);
+  if (!sentByRun.has(events)) sentByRun.set(events, { caller: '', prefixSha: '' });
+  const sent = sentByRun.get(events);
   const n = source.count();
   const itemCap = Math.min(cap, eventCap);
   const newStart = Math.min(shown, n);
@@ -287,7 +307,7 @@ export function feedOf(events, registry, { shown = 0, cap = NEXT_CONTEXT_EVENTS_
     records: plan.items.length,
     fullEvents: plan.full,
     compactFrom: plan.full < freshPlan.length ? freshPlan[plan.full].index + 1 : null,
-    events: plan.items,
+    events: plan.items.map((item) => markRepeats(item, sent)),
   };
 }
 

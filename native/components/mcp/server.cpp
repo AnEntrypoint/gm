@@ -604,6 +604,7 @@ struct Server::State {
     struct Session {
         fs::path run_dir;
         std::string run_id;
+        SentFeed sent_feed;
         std::shared_ptr<RunLog> log;
         std::uint64_t count = 0;
         std::uint64_t shown = 0;
@@ -2063,7 +2064,7 @@ struct Server::State {
             .set("prefixSha", prefix_sha(rules, s().task, served_tools()))
             .set("total", number_of(total))
             .set("pendingCommands", object().set("wait", "\"" + options.wait_program + "\" events --dir \"" + s().run_dir.string() + "\" --wait"));
-        if (!waiting) reply = merge(std::move(reply), feed_of(at, total, shown, compact_children));
+        if (!waiting) reply = merge(std::move(reply), feed_of(at, total, shown, s().sent_feed, compact_children));
         reply.set("query", query_hint(shown, total));
         if (recovery_now) reply.set("recovery", *recovery_now);
         auto notice = rules_notice();

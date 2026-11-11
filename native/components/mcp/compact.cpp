@@ -187,12 +187,15 @@ Value bounded_item(const Value& item, std::size_t cap = kEventCap) {
         }
     } else {
         std::string text = json::dump(item);
-        put("head", Value(js_prefix(text, kEventHead)));
-        put("tail", Value(js_suffix(text, kEventTail)));
         put("textChars", number(static_cast<double>(js_length(text))));
-        Value digest = output_digest(text, failed_of(item));
-        Value compact = compact_digest(&digest);
-        put("textDigest", std::move(compact));
+        const Value* kind = item.find("kind");
+        if (kind == nullptr || !kind->is_string() || kind->as_string() != "context-reply") {
+            put("head", Value(js_prefix(text, kEventHead)));
+            put("tail", Value(js_suffix(text, kEventTail)));
+            Value digest = output_digest(text, failed_of(item));
+            Value compact = compact_digest(&digest);
+            put("textDigest", std::move(compact));
+        }
     }
     if (const Value* digest = item.find("out")) {
         Value compact = compact_digest(digest);
@@ -497,7 +500,20 @@ Value args_of(const Value* args) {
     return out;
 }
 
-Value feed_of(const EventAt& at, std::uint64_t count, std::uint64_t shown, bool compact_children) {
+void mark_repeats(Value& item, SentFeed& sent) {
+    if (const Value* caller = item.find("caller")) {
+        std::string text = json::dump(*caller);
+        if (text == sent.caller) item.set("caller", Value("same"));
+        else sent.caller = text;
+    }
+    if (const Value* prefix = item.find("prefixSha")) {
+        std::string text = json::dump(*prefix);
+        if (text == sent.prefix_sha) item.set("prefixSha", Value("same"));
+        else sent.prefix_sha = text;
+    }
+}
+
+Value feed_of(const EventAt& at, std::uint64_t count, std::uint64_t shown, SentFeed& sent, bool compact_children) {
     std::uint64_t new_start = std::min(shown, count);
     std::vector<Fresh> fresh;
     for (std::uint64_t i = new_start; i < count; ++i) {
@@ -515,7 +531,10 @@ Value feed_of(const EventAt& at, std::uint64_t count, std::uint64_t shown, bool 
     std::size_t room = kEventsCap - kArrayOverhead;
     Plan plan = plan_fresh(fresh, count, room);
     Value items = array();
-    for (auto& item : plan.items) items.push(std::move(item));
+    for (auto& item : plan.items) {
+        mark_repeats(item, sent);
+        items.push(std::move(item));
+    }
     std::size_t records = items.as_array().size();
     return object()
         .set("older", number_of(new_start))

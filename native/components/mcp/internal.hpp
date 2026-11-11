@@ -67,7 +67,11 @@ Value output_digest(const std::string& text, bool failed);
 Value args_of(const Value* args);
 
 using EventAt = std::function<const Value*(std::uint64_t seq)>;
-Value feed_of(const EventAt& at, std::uint64_t count, std::uint64_t shown, bool compact_children = false);
+struct SentFeed {
+    std::string caller;
+    std::string prefix_sha;
+};
+Value feed_of(const EventAt& at, std::uint64_t count, std::uint64_t shown, SentFeed& sent, bool compact_children = false);
 
 bool is_pending_kind(std::string_view kind);
 bool is_pending_event(std::string_view kind, const Value& event);
