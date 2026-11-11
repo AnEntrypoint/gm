@@ -2317,3 +2317,16 @@ Not run here: tools/check-txiki-wasi.mjs and the gm reactor wasm (the gm wasm32-
 - Repeats, both engines: a caller and a prefixSha equal to the one last sent in the same run are sent as the string same. native: SentFeed on the run session, mark_repeats in compact.cpp. Node: a WeakMap keyed by the run log, markRepeats in src/compact.mjs. Witness: the same measurement script, changed series.
 - Changed-step target, lowered by the dispatcher to 17 percent: baseline 4300 bytes, target at most 3569. Measured in Phase B.
 - Not changed, by decision: the MCP reply transport (the duplicate content text stays; a follow-up for the dispatcher), and rules on changed steps.
+
+## Feed digest witness record (2026-11-11, Phase B, build/release gm)
+
+- cmake --build build/release: BUILD_EXIT=0, wall 31.35 s.
+- tools/measure-next-context.mjs: exit 1, wall 1.16 s. Normal mean passed; the changed 20-step mean is 3752 bytes against the 4300 baseline, 12.7maller, and the lowered target is at most 3569 (17
+## Feed digest witness record (2026-11-11, Phase B, build/release gm)
+
+- cmake --build build/release: BUILD_EXIT=0, wall 31.35 s.
+- tools/measure-next-context.mjs: exit 1, wall 1.16 s. Normal mean passed; the changed 20-step mean is 3752 bytes against the 4300 baseline, 12.7 percent smaller; the lowered target is at most 3569 (17 percent). Not met. The failure is recorded here, not fixed.
+- query_log({ kind: context-reply, last: 1 }) then query_log({ seq, field: text }) returns the full 2667-character reply text, which parses as JSON.
+- tools/check-skill-serve.mjs: exit 0.
+- tools/check-build.mjs build/release: exit 0, wall 524.72 s; conformance 86 passed, 0 failed of 86 checks in 24 scenarios.
+- Not pushed: Phase B is not green on the changed-step target.
