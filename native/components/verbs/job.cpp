@@ -332,6 +332,7 @@ json::Value JobTable::start(const std::string& name, const std::string& command,
     auto exit_file = exit_file_of(name);
     std::filesystem::remove(exit_file, ec);
     const double start_wall = wall_ms_now();
+    const double spawn_steady = steady_ms();
     Spawned spawned = spawn_shell_job(command, workspace_, out, exit_file);
     if (spawned.pid < 0) return failure(spawned.error);
 
@@ -349,6 +350,7 @@ json::Value JobTable::start(const std::string& name, const std::string& command,
         }
     }
     const double mono_offset = start_mono - steady_ms();
+    start_mono = spawn_steady + mono_offset;
 
     auto job = std::make_unique<Job>();
     job->name = name;
