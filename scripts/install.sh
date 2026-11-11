@@ -63,6 +63,12 @@ swap_in() {
     mv $MV_NOFOLLOW "$INSTALL_ROOT/current.next" "$CURRENT_DIR"
 }
 
+refresh_tree() {
+    if [ -d "$2" ] && diff -r "$1" "$2" >/dev/null 2>&1; then return; fi
+    rm -rf "$2"
+    cp -R "$1" "$2"
+}
+
 install_local() {
     HOST="$LOCAL_BUILD/native/components/host"
     [ -x "$HOST/gm" ] && [ -x "$HOST/gm-core" ] || die "no gm and gm-core in $HOST: build the gm target first"
@@ -75,10 +81,9 @@ install_local() {
     esac
 
     if [ -L "$CURRENT_DIR" ] && [ "$(readlink "$CURRENT_DIR")" = "versions/$VERSION" ]; then
-        rm -rf "$CURRENT_DIR/skills" "$CURRENT_DIR/leaves" "$CURRENT_DIR/defaults"
-        cp -R "$HOST/skills" "$CURRENT_DIR/skills"
-        cp -R "$SOURCE_ROOT/native/leaves" "$CURRENT_DIR/leaves"
-        cp -R "$SOURCE_ROOT/defaults" "$CURRENT_DIR/defaults"
+        refresh_tree "$HOST/skills" "$CURRENT_DIR/skills"
+        refresh_tree "$SOURCE_ROOT/native/leaves" "$CURRENT_DIR/leaves"
+        refresh_tree "$SOURCE_ROOT/defaults" "$CURRENT_DIR/defaults"
         printf 'installed local build %s from %s at %s; the stamp is unchanged, so the binaries and their processes were kept\n' "$VERSION" "$LOCAL_BUILD" "$CURRENT_DIR/gm"
         register
         return
