@@ -112,6 +112,6 @@ native. `.gmnew-update.json` stays as data.
 
 ## Playwriter pin (round e6b5, item 7)
 
-- Pin: defaults/mcp.json runs github:AnEntrypoint/pw#24646cc through npx, the install form gm already uses for pinned servers. pw's working tree is not touched; no npm ci runs there.
-- Tool cache: defaults/mcp-tools/playwriter.json is lib/mcp-tools.json at 24646cc (initialize and two tools), read with git show. The client reads only the tools array, so the shape change is safe.
-- Blocked, direct entry: {"command": "node", "args": [install/pw/bin/playwriter-project]} needs a checkout of pw with its node_modules at a path gm installs to. gm has no install step for that yet, so the npx form stays. Witness needed: a gm step that fetches 24646cc and runs npm ci in its own install directory.
+- Blocked, not applied. The pin github:AnEntrypoint/pw#24646cc was applied and reverted. Its static tool list (lib/mcp-tools.json) has execute and reset only; the list at ebbba11 also has browsers, which gm serves as playwriter_browsers. check-lazy-browser fails on the missing verb (phase B of round e6b5), and the consumers note says to re-pin only after the tools test passes.
+- Owner decision needed: keep ebbba11 until pw serves browsers at its pin, or accept the loss of playwriter_browsers and change check-lazy-browser and browser_scope.cpp to match.
+- The direct node entry is blocked as well: gm has no install step that creates a pw checkout with node_modules.
