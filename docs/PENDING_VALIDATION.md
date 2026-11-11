@@ -2410,3 +2410,11 @@ Not run here: tools/check-txiki-wasi.mjs and the gm reactor wasm (the gm wasm32-
 - native/components/host/CMakeLists.txt: gm_skills target copies skills/ into the build's skills directory on every build (cmake --build), not at configure time. Witness: cmake --build build/release --target gm_skills, then cmp of skills/gm/SKILL.md and skills/gm-continue/SKILL.md with the build copy (both match); tools/check-skill-serve.mjs build/release/native/components/host/gm.
 - scripts/install.sh --local <build-dir>: installs the build's gm and gm-core, skills, native/leaves and defaults; keeps the current install as previous-<its id>; stages the whole tree before the two renames. Witness: two runs in a scratch HOME with GMNEW_SKIP_REGISTER=1 (second run keeps previous-c28b03e-dev), then the installed skills/gm/SKILL.md matches the checkout.
 - src/log.mjs, src/tools.mjs, src/mcp.mjs (Node) and native/components/verbs/verbs.cpp, job.cpp, core_internal.hpp, native/components/mcp/compact.cpp, internal.hpp, server.cpp (native): each run_shell and each finished job logs a `check` event {command, exitCode, durMs}; next_context adds `checks` with each command run twice or more: count, totalMs, lastMs (at most 8 rows). Witness: tools/check-repeated-checks.mjs build/release/native/components/host/gm and tools/check-repeated-checks.mjs node.
+
+## Phase B record (2026-11-11)
+
+- tools/check-skill-serve.mjs build/release/native/components/host/gm: ok, and against the installed copy /config/.gmnew/current/gm: ok.
+- tools/check-repeated-checks.mjs build/release/native/components/host/gm: ok, wall 0.19 s; tools/check-repeated-checks.mjs node: ok, wall 0.27 s.
+- Local install: scripts/install.sh --local build/release run in a scratch HOME twice (second keeps previous-c28b03e-dev): ok; in the real HOME with GMNEW_SKIP_REGISTER=1, installed db20be0-dev (db20be0), previous-c28b03e-dev kept.
+- tools/check-build.mjs build/release: exit 0, wall about 385 s, run before the stamp was refreshed (stamp c28b03e-dev); after reconfigure gm --version prints db20be0-dev (db20be0).
+- Longest step: tools/check-build.mjs, about 385 s.
