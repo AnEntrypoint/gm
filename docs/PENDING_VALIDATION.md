@@ -2504,3 +2504,10 @@ Not run here: tools/check-txiki-wasi.mjs and the gm reactor wasm (the gm wasm32-
 - tools/check-owner-identity.mjs: SIGKILLs a serve that owns a run, writes the run's owner as a live node pid with another start time ("<pid>:1"), restarts serve on the same run directory and requires the run to be adopted (its id resumes; no "belongs to another live connection").
 - Witness, run on both binaries: build/release/native/components/host/gm gives "ok ... wall 1.39 s"; the previous install ~/.gmnew/previous-c0bc98b6d07f-dev/gm gives 2 failures (not adopted, foreign). The witness fails on the pid-only check.
 - Phase B adds it to check-build's native list.
+
+## check-build: one pool, longest first, witness for the reused pid (2026-11-11, Phase A)
+
+- tools/check-build.mjs: conformance, the native scenarios and the node scenarios run in one pool, longest first by the wall times in build/release/check-build-durations.json (30 s when unknown). The exclusive check-relay-reexec runs alone after the pool. Before: conformance alone, then the native pool, then the exclusive check, then the node pool (four barriers). A scenario that fails in the pool is rerun alone after the pool; the summary prints the rescued count and the load.
+- Before: 115.4 s wall at load 36.9 on 16 cores (26 run, 0 failed; /tmp run at 14:47). After: 100.8 s wall at load 20.6 (30 run, 0 failed, 1 passed alone after a pool failure: check-turn-economy.mjs, rescued by the alone rerun, +34.4 s).
+- Floors that remain: check-run-code-budget 68.5 s (a 65 s body is the regression test for the 60 s budget); check-turn-economy 31.9 to 34.4 s, whose 31 s job is the regression test for the old 30 s job wait (OLD_WAIT_CAP_MS, line 19). Shortening either removes its coverage, so neither is shortened.
+- tools/check-owner-identity.mjs added to the native list.

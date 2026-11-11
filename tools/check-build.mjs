@@ -27,13 +27,15 @@ const NATIVE = [
     'check-shell-stdin.mjs', 'check-grep-state-scope.mjs', 'check-job-bounds.mjs', 'check-early-run-code.mjs', 'check-stop-fetch.mjs',
     'check-read-parity.mjs', 'check-read-truncation.mjs', 'check-protocol-versions.mjs', 'check-resources-subscribe.mjs', 'check-startup-attempts.mjs',
     'check-skill-serve.mjs', 'check-no-resource-client.mjs', 'check-restart-skill-read.mjs', 'check-relay-reexec.mjs', 'check-embedded-runtime.mjs',
-    'witness-next-context-replay.mjs', 'check-install-switch.mjs', 'check-repeated-checks.mjs',
+    'witness-next-context-replay.mjs', 'check-install-switch.mjs', 'check-repeated-checks.mjs', 'check-owner-identity.mjs',
 ];
 const NODE = ['check-turn-economy.mjs', 'check-restart-jobs.mjs', 'check-no-resource-client.mjs', 'check-repeated-checks.mjs'];
 const EXCLUSIVE = new Set(['check-relay-reexec.mjs']);
 const JOBS = Math.max(1, Number(process.env.GM_CHECK_JOBS ?? Math.min(6, Math.floor(cpus().length / 2))));
 const CACHE = join(buildDir, 'check-build-cache.json');
 const LOGS = join(buildDir, 'check-build-logs');
+const DURATIONS = join(buildDir, 'check-build-durations.json');
+const durations = existsSync(DURATIONS) ? JSON.parse(readFileSync(DURATIONS, 'utf8')) : {};
 mkdirSync(LOGS, { recursive: true });
 
 const fingerprint = () => {
@@ -78,6 +80,7 @@ const runOne = (label, script, args, key) =>
             const wall = (Date.now() - at) / 1000;
             writeFileSync(log, Buffer.concat(out));
             timings.push({ label, wall, status });
+            durations[label] = wall;
             if (status === 0) {
                 if (key) cache[label] = key;
                 print(`check-build: ${label} ok ${wall.toFixed(1)} s`);
@@ -116,49 +119,29 @@ const pipeline = async () => {
     const keyOf = (label, script) => createHash('sha256').update(`${label}:${fp}:${readFileSync(join(root, 'tools', script))}`).digest('hex');
     const cached = (label, key) => cache[label] === key && !failures.includes(label);
 
-    if (only === null || only === CONFORMANCE) {
-        const key = createHash('sha256').update(`conformance:${fp}`).digest('hex');
-        if (cached(CONFORMANCE, key)) {
-            print(`check-build: ${CONFORMANCE} skipped, inputs unchanged`);
-        } else {
-            const ok = await runOne(CONFORMANCE, join(root, 'tools', 'mcp-conformance.mjs'), ['--stdio', binary, 'serve', '--workspace', workspace, '--mcp-config', mcpConfig], key);
-            if (!ok) return 1;
+    const jobs = [];
+    const exclusive = [];
+    const plan = (label, key, job, into) => {
+        if (cached(label, key)) {
+            print(`check-build: ${label} skipped, inputs unchanged`);
+            return;
         }
-    }
+        into.push({ label, key, ...job });
+    };
 
-    const native = NATIVE.filter((name) => selected(name) && !EXCLUSIVE.has(name));
-    const serial = NATIVE.filter((name) => selected(name) && EXCLUSIVE.has(name));
-    const node = NODE.filter((name) => selected(name) && !EXCLUSIVE.has(name));
-    const work = [];
-    for (const name of native) {
-        const label = name;
-        const key = keyOf(label, name);
-        if (cached(label, key)) {
-            print(`check-build: ${label} skipped, inputs unchanged`);
-            continue;
-        }
-        work.push({ label, script: join(root, 'tools', name), args: [binary], key });
+    if (only === null || only === CONFORMANCE) {
+        plan(CONFORMANCE, createHash('sha256').update(`conformance:${fp}`).digest('hex'), { script: join(root, 'tools', 'mcp-conformance.mjs'), args: ['--stdio', binary, 'serve', '--workspace', workspace, '--mcp-config', mcpConfig] }, jobs);
     }
-    await runPool(work, JOBS);
-    for (const name of serial) {
-        const key = keyOf(name, name);
-        if (cached(name, key)) {
-            print(`check-build: ${name} skipped, inputs unchanged`);
-            continue;
-        }
-        await runOne(name, join(root, 'tools', name), [binary], key);
+    for (const name of NATIVE.filter(selected)) {
+        plan(name, keyOf(name, name), { script: join(root, 'tools', name), args: [binary] }, EXCLUSIVE.has(name) ? exclusive : jobs);
     }
-    const nodeWork = [];
-    for (const name of node) {
+    for (const name of NODE.filter((name) => selected(name) && !EXCLUSIVE.has(name))) {
         const label = `${name} (node)`;
-        const key = keyOf(label, name);
-        if (cached(label, key)) {
-            print(`check-build: ${label} skipped, inputs unchanged`);
-            continue;
-        }
-        nodeWork.push({ label, script: join(root, 'tools', name), args: ['node'], key });
+        plan(label, keyOf(label, name), { script: join(root, 'tools', name), args: ['node'] }, jobs);
     }
-    await runPool(nodeWork, JOBS);
+    jobs.sort((a, b) => (durations[b.label] ?? 30) - (durations[a.label] ?? 30));
+    await runPool(jobs, JOBS);
+    for (const job of exclusive) await runOne(job.label, job.script, job.args, job.key);
     return failures.length === 0 ? 0 : 1;
 };
 
@@ -169,6 +152,7 @@ try {
     rmSync(workspace, { recursive: true, force: true });
     rmSync(configDir, { recursive: true, force: true });
     writeFileSync(CACHE, JSON.stringify(cache, null, 2));
+    writeFileSync(DURATIONS, JSON.stringify(durations, null, 2));
     const wall = ((Date.now() - started) / 1000).toFixed(1);
     const top = [...timings].sort((a, b) => b.wall - a.wall).slice(0, 5).map((row) => `${row.label} ${row.wall.toFixed(1)} s`).join('; ');
     print(`check-build: ${timings.length} run, ${failures.length} failed, ${rescued.length} passed alone after a pool failure, jobs ${JOBS}, load ${loadavg()[0].toFixed(1)} on ${cpus().length} cores, wall ${wall} s; longest: ${top || 'none'}`);
