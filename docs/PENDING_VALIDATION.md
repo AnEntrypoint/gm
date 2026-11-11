@@ -2357,3 +2357,12 @@ Not run here: tools/check-txiki-wasi.mjs and the gm reactor wasm (the gm wasm32-
 - Ranked reachable items: (1) next-context-feed-elision: its witness read a plain next_context after the caller own run_code, which the turn-economy rule reports as unchanged; the witness now reads a full reply (tools/check-context-feed.mjs). (2) child-task-overwrite, prd-refuted-reopen and prd-receipt-binding: their existing witnesses pass; the queue marks them with a verified key and keeps their original evidence.
 - Held, with cause: fx duplicate events (no reply text in the journals or fx/issues.md; needs fx reply text). Served skill release cut (three peers busy; the dispatcher runs it). Windows, macOS and arm64 verification and the MSVC QuickJS-NG keep (need those hosts). Gate through airc (needs a live session). Parity documented gaps and fetch scheme and size differences (owner decisions). run-code-background-visibility follow-up (reachable, but it changes next_context pending events on both engines; not built in this pass).
 - Witness for item 1: node tools/check-context-feed.mjs <native gm>. Witnesses for item 2: node tools/check-child-task.mjs, tools/check-prd-refuted-reopen.mjs and tools/check-prd-receipt.mjs against the native gm.
+
+## Ranked queue pass witness record (2026-11-11, Phase B)
+
+- cmake --build build/release: BUILD_EXIT=0.
+- tools/check-context-feed.mjs: exit 0, wall 0.42 s. Output: check-context-feed: passed: node and native real-tree checks succeeded.
+- tools/check-child-task.mjs: exit 0, wall 0.32 s.
+- tools/check-prd-refuted-reopen.mjs: exit 0, wall 0.35 s.
+- tools/check-prd-receipt.mjs: exit 0, wall 0.34 s.
+- tools/check-build.mjs build/release: exit 0, wall 380.70 s; conformance 86 passed, 0 failed of 86 checks in 24 scenarios.
