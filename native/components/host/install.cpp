@@ -1,7 +1,10 @@
 #include "gm/host/install.hpp"
 
+#include <chrono>
 #include <cstdlib>
 #include <fstream>
+#include <map>
+#include <utility>
 #include <iostream>
 #include <sstream>
 #include <system_error>
@@ -9,6 +12,7 @@
 #include "gm/host/child.hpp"
 #include "gm/host/update.hpp"
 #include "gm/json.hpp"
+#include "gm/proc.hpp"
 
 namespace gm::host {
 namespace {
@@ -109,7 +113,188 @@ std::optional<std::string> register_mcp_server(const fs::path& config, const std
     return "the config kept changing while it was being written; nothing was written";
 }
 
+std::string exe_name(const std::string& name) {
+#if defined(_WIN32)
+    return name + ".exe";
+#else
+    return name;
+#endif
+}
+
+std::optional<fs::path> install_root() {
+#if defined(_WIN32)
+    const char* home = std::getenv("USERPROFILE");
+#else
+    const char* home = std::getenv("HOME");
+#endif
+    if (home == nullptr || *home == '\0') return std::nullopt;
+    return fs::path(home) / ".gmnew";
+}
+
+std::optional<std::map<std::string, std::string>> tree_bytes(const fs::path& root) {
+    std::error_code ec;
+    if (!fs::is_directory(root, ec)) return std::nullopt;
+    std::map<std::string, std::string> files;
+    for (fs::recursive_directory_iterator it(root, ec), end; !ec && it != end; it.increment(ec)) {
+        if (!it->is_regular_file(ec)) continue;
+        std::ifstream in(it->path(), std::ios::binary);
+        std::ostringstream text;
+        text << in.rdbuf();
+        files[it->path().lexically_relative(root).generic_string()] = text.str();
+    }
+    if (ec) return std::nullopt;
+    return files;
+}
+
+bool same_tree(const fs::path& a, const fs::path& b) {
+    const auto left = tree_bytes(a);
+    const auto right = tree_bytes(b);
+    return left && right && *left == *right;
+}
+
+std::optional<std::string> copy_tree(const fs::path& from, const fs::path& to) {
+    std::error_code ec;
+    if (!fs::exists(from, ec)) return std::nullopt;
+    fs::copy(from, to, fs::copy_options::recursive | fs::copy_options::overwrite_existing, ec);
+    if (ec) return "cannot copy " + from.string() + ": " + ec.message();
+    return std::nullopt;
+}
+
+std::optional<std::string> refresh_tree(const fs::path& from, const fs::path& to) {
+    if (!fs::is_directory(from) || same_tree(from, to)) return std::nullopt;
+    std::error_code ec;
+    fs::remove_all(to, ec);
+    return copy_tree(from, to);
+}
+
+deoxidene::Result<std::string, std::string> build_version(const fs::path& exe) {
+    const auto outcome = proc::run({exe.string(), "--version"}, {}, {}, 20000);
+    if (!outcome.started || outcome.exit_code != 0) return deoxidene::Err<std::string>("cannot run " + exe.string() + " --version");
+    std::istringstream words(outcome.out);
+    std::string version;
+    words >> version;
+    if (version.empty() || version.find_first_not_of("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._-") != std::string::npos)
+        return deoxidene::Err<std::string>("unexpected build version from " + exe.string() + ": '" + version + "'");
+    return version;
+}
+
+std::int64_t wall_ms() {
+    return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+}
+
+std::string linked_to(const fs::path& link) {
+    std::error_code ec;
+    if (!fs::is_symlink(link, ec)) return {};
+    return fs::read_symlink(link, ec).filename().string();
+}
+
+int start_check(const fs::path& exe, const std::string& version) {
+    const auto outcome = proc::run({exe.string(), "--version"}, {}, {}, 20000);
+    if (!outcome.started || outcome.exit_code != 0 || outcome.out.find(version) == std::string::npos) {
+        std::cerr << "gm: install: the installed " << exe.string() << " did not answer --version with " << version << "\n";
+        return 1;
+    }
+    return 0;
+}
+
+int register_installed(const HostArgs& args, const fs::path& exe) {
+    if (std::getenv("GMNEW_SKIP_REGISTER") != nullptr && std::string_view(std::getenv("GMNEW_SKIP_REGISTER")) == "1") {
+        std::cout << "registration skipped (GMNEW_SKIP_REGISTER=1)\n";
+        return 0;
+    }
+    const auto config = args.flag("--config") ? std::optional<fs::path>(fs::absolute(*args.flag("--config"))) : claude_config_path();
+    if (!config) {
+        std::cerr << "gm: install: neither HOME nor USERPROFILE is set\n";
+        return 1;
+    }
+    std::vector<std::string> server_args{"serve"};
+    if (auto mcp_config = args.flag("--mcp-config")) {
+        server_args.push_back("--mcp-config");
+        server_args.push_back(*mcp_config);
+    }
+    if (auto error = register_mcp_server(*config, "gm", exe.string(), server_args)) {
+        std::cerr << "gm: install: " << *error << "\n";
+        return 1;
+    }
+    std::cout << "registered gm MCP server (user scope) at " << exe.string() << " in " << config->string() << "\n";
+    return 0;
+}
+
+int install_local(const HostArgs& args, const fs::path& local) {
+    const fs::path nested = local / "native" / "components" / "host";
+    const fs::path host = fs::exists(nested / exe_name("gm")) ? nested : local;
+    std::error_code ec;
+    if (!fs::exists(host / exe_name("gm"), ec) || !fs::exists(host / exe_name("gm-core"), ec)) {
+        std::cerr << "gm: install: no gm and gm-core in " << host.string() << ": build the gm target first\n";
+        return 1;
+    }
+    if (!fs::is_directory(host / "skills", ec)) {
+        std::cerr << "gm: install: no skills in " << host.string() << ": build the gm_skills target first\n";
+        return 1;
+    }
+    if (auto source = args.flag("--source")) {
+        if (!same_tree(host / "skills", fs::path(*source) / "skills")) {
+            std::cerr << "gm: install: the build skills in " << host.string() << " differ from " << *source
+                      << "/skills: run cmake --build with the gm_skills target, then install again\n";
+            return 1;
+        }
+    }
+    const auto root = install_root();
+    if (!root) {
+        std::cerr << "gm: install: neither HOME nor USERPROFILE is set\n";
+        return 1;
+    }
+    const std::optional<fs::path> source = args.flag("--source") ? std::optional<fs::path>(fs::absolute(*args.flag("--source"))) : std::nullopt;
+    const fs::path leaves_from = source ? *source / "native" / "leaves" : host / "leaves";
+    const fs::path defaults_from = source ? *source / "defaults" : host / "defaults";
+    const auto built = build_version(host / exe_name("gm"));
+    if (!built) {
+        std::cerr << "gm: install: " << built.error() << "\n";
+        return 1;
+    }
+    const std::string version = *built;
+    const fs::path current = *root / "current";
+    if (linked_to(current) == version) {
+        const std::pair<fs::path, const char*> trees[] = {{host / "skills", "skills"}, {leaves_from, "leaves"}, {defaults_from, "defaults"}};
+        for (const auto& [from, name] : trees) {
+            if (auto error = refresh_tree(from, current / name)) {
+                std::cerr << "gm: install: " << *error << "\n";
+                return 1;
+            }
+        }
+        std::cout << "installed local build " << version << " from " << local.string() << " at " << (current / exe_name("gm")).string()
+                  << "; the stamp is unchanged, so the binaries and their processes were kept\n";
+    } else {
+        const fs::path stage = *root / ("stage." + version + ".new");
+        fs::remove_all(stage, ec);
+        fs::create_directories(stage / "new", ec);
+        fs::copy_file(host / exe_name("gm"), stage / "new" / exe_name("gm"), fs::copy_options::overwrite_existing, ec);
+        fs::copy_file(host / exe_name("gm-core"), stage / "new" / exe_name("gm-core"), fs::copy_options::overwrite_existing, ec);
+        if (ec) {
+            std::cerr << "gm: install: cannot stage the binaries: " << ec.message() << "\n";
+            return 1;
+        }
+        const std::pair<fs::path, const char*> trees[] = {{host / "skills", "skills"}, {leaves_from, "leaves"}, {defaults_from, "defaults"}};
+        for (const auto& [from, name] : trees) {
+            if (auto error = copy_tree(from, stage / "new" / name)) {
+                std::cerr << "gm: install: " << *error << "\n";
+                return 1;
+            }
+        }
+        write_update_state(stage / "new", UpdateState{wall_ms(), "", version, ""});
+        if (auto error = switch_version(stage / "new", *root, version)) {
+            std::cerr << "gm: install: " << *error << "\n";
+            return 1;
+        }
+        fs::remove_all(stage, ec);
+        std::cout << "installed local build " << version << " from " << local.string() << " at " << (current / exe_name("gm")).string() << "\n";
+    }
+    if (start_check(current / exe_name("gm"), version) != 0) return 1;
+    return register_installed(args, current / exe_name("gm"));
+}
+
 int run_install_command(const HostArgs& args) {
+    if (auto local = args.flag("--local")) return install_local(args, fs::absolute(*local));
     const auto default_config = claude_config_path();
     const auto config = args.flag("--config") ? std::optional<fs::path>(fs::absolute(*args.flag("--config")))
                                               : default_config;

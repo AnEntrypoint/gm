@@ -15,7 +15,7 @@ constexpr std::string_view kUsage =
     "[--skills <dir>] [--leaves <dir>] [--build-dir <dir>]\n"
     "       gm doctor [--leaves <dir>]\n"
     "       gm update\n"
-    "       gm install [--config <file>] [--mcp-config <file>]\n"
+    "       gm install [--local <build dir> [--source <checkout>]] [--config <file>] [--mcp-config <file>]\n"
     "       gm --version\n"
     "       gm events (--run <id> [--workspace <dir>] | --dir <run dir>) [--wait [--timeout-ms N]]\n"
     "       gm query (--run <id> [--workspace <dir>] | --dir <run dir>) [--js \"<filter>\"]\n"
@@ -49,7 +49,7 @@ std::optional<std::string> flag_error_for(const gm::host::HostArgs& args) {
                           {});
     }
     if (args.mode == "doctor") return flag_error(args.rest, {"leaves"}, {});
-    if (args.mode == "install") return flag_error(args.rest, {"config", "mcp-config"}, {});
+    if (args.mode == "install") return flag_error(args.rest, {"config", "mcp-config", "local", "source"}, {});
     if (args.mode == "events") return flag_error(args.rest, {"run", "workspace", "dir", "timeout-ms"}, {"wait", "read-clear"});
     if (args.mode == "query") return flag_error(args.rest, {"run", "workspace", "dir", "js"}, {"read-clear"});
     if (args.mode == "stop-run") return flag_error(args.rest, {"dir", "idle-ms"}, {});

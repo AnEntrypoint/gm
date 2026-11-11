@@ -26,8 +26,8 @@ fi
 
 node --input-type=module -e "import('./tools/prefetch.mjs').then((m) => m.prefetch())"
 
-echo "setup: install the native gm with this command. It writes the release into ~/.gmnew/current and sets mcpServers.gm in ~/.claude.json to that binary, so each new session starts native. It runs no build and no npm install."
-echo "  sh \"$here/scripts/install.sh\""
+echo "setup: install the native gm with this command. It copies the build into ~/.gmnew/current and sets mcpServers.gm in ~/.claude.json to that binary, so each new session starts native. It runs no npm install."
+echo "  \"$here/build/release/native/components/host/gm\" install --local \"$here/build/release\" --source \"$here\""
 echo "setup: done. The manual is in docs/index.html, and README.md has the same command."
 
 if command -v cmake >/dev/null 2>&1 && command -v ninja >/dev/null 2>&1; then

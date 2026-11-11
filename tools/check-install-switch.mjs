@@ -50,13 +50,13 @@ const expect = (condition, text) => {
 
 try {
   mkdirSync(home);
-  const install = spawnSync('sh', [join(root, 'scripts', 'install.sh'), '--local', buildDir], {
+  const install = spawnSync(join(buildDir, 'native', 'components', 'host', 'gm'), ['install', '--local', buildDir, '--source', root], {
     cwd: root,
     env: { ...process.env, HOME: home, GMNEW_SKIP_REGISTER: '1' },
     encoding: 'utf8',
     timeout: 120000,
   });
-  expect(install.status === 0, `install.sh --local failed: ${install.stderr}`);
+  expect(install.status === 0, `gm install --local failed: ${install.stderr}`);
   const installedSkills = join(home, '.gmnew', 'current', 'skills');
   const checkoutSkills = join(root, 'skills');
   const checkoutFiles = filesUnder(checkoutSkills);

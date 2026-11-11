@@ -249,7 +249,7 @@ def('W17', async () => {
   const home = join(scratch, 'home17');
   mkdirSync(home, { recursive: true });
   const env = { ...process.env, HOME: home, GMNEW_SKIP_REGISTER: '1' };
-  const run = () => spawnSync('sh', [join(root, 'scripts', 'install.sh'), '--local', buildDir], { cwd: root, env, encoding: 'utf8', timeout: 120000 });
+  const run = () => spawnSync(join(buildDir, 'native', 'components', 'host', 'gm'), ['install', '--local', buildDir, '--source', root], { cwd: root, env, encoding: 'utf8', timeout: 120000 });
   const first = run();
   const current = join(home, '.gmnew', 'current');
   const id = readlinkSync(current).split('/').pop();
@@ -268,7 +268,7 @@ def('W18', async () => {
   const home = join(scratch, 'home18');
   mkdirSync(home, { recursive: true });
   const env = { ...process.env, HOME: home, GMNEW_SKIP_REGISTER: '1' };
-  const installed = spawnSync('sh', [join(root, 'scripts', 'install.sh'), '--local', buildDir], { cwd: root, env, encoding: 'utf8', timeout: 120000 });
+  const installed = spawnSync(join(buildDir, 'native', 'components', 'host', 'gm'), ['install', '--local', buildDir, '--source', root], { cwd: root, env, encoding: 'utf8', timeout: 120000 });
   const skills = join(home, '.gmnew', 'current', 'skills');
   const files = (dir) => readdirSync(dir).flatMap((n) => (statSync(join(dir, n)).isDirectory() ? files(join(dir, n)).map((f) => join(n, f)) : [n])).sort();
   const same = JSON.stringify(files(skills)) === JSON.stringify(files(join(root, 'skills'))) && files(skills).every((f) => readFileSync(join(skills, f)).equals(readFileSync(join(root, 'skills', f))));

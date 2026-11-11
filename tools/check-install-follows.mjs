@@ -42,8 +42,8 @@ mkdirSync(join(tree, 'scripts'), { recursive: true });
 mkdirSync(sandboxHost, { recursive: true });
 mkdirSync(home);
 mkdirSync(workspace);
-copyFileSync(join(root, 'scripts', 'install.sh'), join(tree, 'scripts', 'install.sh'));
 for (const dir of ['native/leaves', 'skills', 'defaults']) cpSync(join(root, dir), join(tree, dir), { recursive: true });
+cpSync(join(root, 'skills'), join(sandboxHost, 'skills'), { recursive: true });
 for (const name of ['gm', 'gm-core']) {
   copyFileSync(join(hostDir, name), join(sandboxHost, name));
   chmodSync(join(sandboxHost, name), 0o755);
@@ -101,7 +101,7 @@ const log = () => {
 };
 const restarts = () => log().filter((event) => event.kind === 'restart');
 const skillText = async () => (await rpc('resources/read', { uri: 'skill://gm/SKILL.md' }))?.result?.contents?.[0]?.text ?? '';
-const install = () => run('bash', [join(tree, 'scripts', 'install.sh'), '--local', sandboxBuild], env, 300000, tree);
+const install = () => run(join(sandboxHost, 'gm'), ['install', '--local', sandboxBuild, '--source', tree], env, 300000, tree);
 
 let picked = null;
 try {

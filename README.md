@@ -4,19 +4,16 @@ A single-worker long-horizon loop: one worker, one append-only log, governance r
 
 Status: the MCP server, the skill, the CLI wrapper, the measurement tools, and the search, wiki, review and call-site tools are built and witnessed. The live comparison with gm is closed, with its results in DESIGN.md.
 
-Install the latest release, once per machine, on Linux, macOS or Windows (x64 or arm64). The installers fetch the release manifest, verify the archive's sha256 and size, unpack into `~/.gmnew/current` (or `%USERPROFILE%\.gmnew\current`), and run the installed binary's `install` subcommand, which registers gm for Claude Code at user level. The POSIX installer needs curl, tar and sha256sum or shasum; the Windows installer uses PowerShell. Node and npm are not needed.
+Install the latest release, once per machine, on Linux, macOS or Windows (x64 or arm64). Download `gmnew-<target>.tar.gz` (`.zip` on Windows) for your target from the release manifest, extract it, and install from the extracted directory. The install verifies nothing itself beyond the archive's unpacking, so check the archive's sha256 against `manifest.json` first. The install copies the binaries, skills, leaves and defaults into `~/.gmnew/current` (or `%USERPROFILE%\.gmnew\current`), keeps the previous build, and registers gm for Claude Code at user level:
 
-    curl -fsSL https://raw.githubusercontent.com/AnEntrypoint/gm/main/scripts/install.sh | sh
+    tar -xzf gmnew-<target>.tar.gz
+    ./gmnew-<target>/gm install --local ./gmnew-<target>
 
-To register gm with a playwriter config, pass the path through `sh -s --`:
-
-    curl -fsSL https://raw.githubusercontent.com/AnEntrypoint/gm/main/scripts/install.sh | sh -s -- --mcp-config <path>
-
-On Windows, run `scripts/install.ps1`; its `-McpConfig` argument does the same. Both installers retry downloads and write `.gmnew-update.json` when it is missing.
+To register gm with a playwriter config, add `--mcp-config <path>`. On Windows, unzip the `.zip` and run `gm.exe install --local <dir>` the same way. A second install of the same build rewrites nothing and keeps the running processes. Node and npm are not needed.
 
 Each build is versioned as `gmnew-<version>-<target>.tar.gz` (`.zip` on Windows), and the manifest is uploaded last, so an install never mixes two builds. The last three builds stay on `latest`. A push publishes every target that built; a target that failed keeps the build it had, and the run summary names it.
 
-Windows x64 and arm64 build and test jobs pass in CI, and the release publishes their `.zip` assets. `scripts/install.ps1` installs them.
+Windows x64 and arm64 build and test jobs pass in CI, and the release publishes their `.zip` assets. Their install is the same `gm install --local` command, which has not been run on a Windows machine here.
 
 The registration is written by the binary itself: `<path-to-gm> install [--config <file>] [--mcp-config <file>]`. `--config <file>` names the file to register in; without it the file is `~/.claude.json` (on Windows, `%USERPROFILE%\.claude.json`). `--mcp-config <file>` is the server's config, appended to the args. Any other flag is an error and nothing is written. It sets `mcpServers.gm` in that file to `{"command": "<path-to-gm>", "args": ["serve"]}`, with `--mcp-config <file>` appended to args when given. Every other key is kept. The file is written to a temp file, re-read, and renamed over the original; a file that changed meanwhile is re-merged, and a file that is not a JSON object is refused and left alone. Running it again replaces the gm entry, so running the installer again updates the path.
 

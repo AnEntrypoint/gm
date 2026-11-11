@@ -280,7 +280,7 @@ try {
   mkdirSync(home);
   const env = { ...process.env, HOME: home, USERPROFILE: home };
   const buildDir = join(hostDir, '..', '..', '..');
-  const installOnce = () => spawnSync('sh', [join(root, 'scripts', 'install.sh'), '--local', buildDir], { env, encoding: 'utf8', timeout: 120000 });
+  const installOnce = () => spawnSync(join(buildDir, 'native', 'components', 'host', 'gm'), ['install', '--local', buildDir, '--source', root], { env, encoding: 'utf8', timeout: 120000 });
   const first = installOnce();
   expect(first.status === 0, `the first local install should succeed: ${first.stderr}`);
   const homeWorkspace = join(sandbox, 'home-ws');
