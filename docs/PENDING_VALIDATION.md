@@ -2485,3 +2485,10 @@ Not run here: tools/check-txiki-wasi.mjs and the gm reactor wasm (the gm wasm32-
 
 - This entry is the only change: it touches docs/PENDING_VALIDATION.md, not native, src or defaults, so the native-tree stamp stays c0bc98b6d07f-dev.
 - Phase B: build (no native change, so nothing recompiles), check-build once, one push, no reinstall. Then `gm --version` on the installed build must still report c0bc98b6d07f-dev (c0bc98b6d07f), and node tools/check-install-switch.mjs build/release --installed must pass against the new HEAD.
+
+## Dispatcher measurements applied to gm (2026-11-11, Phase A)
+
+- native/components/mcp/server.cpp step_limit_text: a run that ends at the step limit names its open rows ("Open row(s) at the limit: <ids>."). Witness: a run with an open row driven to stepsLeft 0 returns the row id in the ended reply; Phase B runs check-restart-skill-read and parity W4/W7 for the ended-run path.
+- tools/check-build.mjs: a scenario that fails in the pool is rerun alone once; a pass is printed as "passed alone after a pool failure" and counted in the summary; the summary prints the host load and cores. Witness: check-build summary line shows the rescued count and the load.
+- skills/gm/SKILL.md: habits for commit-as-made, run continuity (names the stopping row), usage-limit block, off-host measurement with load-independent budgets, slow-check scenario first, bounded PID wait only, and the child model set at launch. Witness: the skill is served and matches HEAD (check-skill-serve, installed skill hash equals HEAD).
+- No gm code change for item 7 (gm does not launch child sessions with a model; the model is set by the host at launch), and none for item 6 (gm has no sleep verb; the job wait is job_status by PID).

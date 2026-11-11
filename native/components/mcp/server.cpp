@@ -1287,8 +1287,12 @@ struct Server::State {
     }
 
     std::string step_limit_text() {
+        std::string names;
+        for (const Row& row : open_rows()) names += names.empty() ? row.id : ", " + row.id;
+        std::string stopped = names.empty() ? "" : " Open row(s) at the limit: " + names + ".";
         return "step limit " + std::to_string(options.max_steps) +
-               " reached and this run ended without a witness; call next_context to open a successor run. To close a run with a witness, "
+               " reached and this run ended without a witness;" + stopped +
+               " call next_context to open a successor run. To close a run with a witness, "
                "call finish while stepsLeft is 0, before the next next_context call";
     }
 
