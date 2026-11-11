@@ -100,3 +100,12 @@ native. `.gmnew-update.json` stays as data.
 3. Item 2c: gate, phase B, ship in `gm-tool`; `tools/gate.mjs`, `tools/phase-b.sh`, `tools/ship.sh` removed.
 4. Item 2d: leaves in order.
 5. Item 2e: checks group by group.
+
+## Dead-file groups (round e6b5, item 3)
+
+| Group | Files | Reason |
+|---|---|---|
+| broken checks | tools/check-child-task.mjs, tools/check-grep-paging.mjs, tools/check-task-set.mjs | Each imports ./check-output-recovery.mjs, which is not in the tree, so none could run; nothing references them in code. |
+| launchers | scripts/gm.sh, scripts/gm.ps1 | They ran tools/check-build.mjs through node and were not called by CI, ship or the build. The README paragraph now names the cmake commands. |
+| txiki helpers | every file under txiki/ (seven .mjs modules and site.html) | A Node site builder for txiki with no code or CI reference outside its folder; the vendored runtime is native/third_party/txiki. |
+| kept, not dead | the six research/dep-recall .cjs files, the tools measure-* scripts, and the tools check-* scripts not run by check-build | DESIGN.md cites the research files as the evidence behind decided results, and PENDING_VALIDATION cites the checks and measurements as the method of each recorded witness. Each moves to gm-tool or is deleted in item 4 with its group. |
