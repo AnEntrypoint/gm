@@ -206,3 +206,9 @@ GM_COMPILE_JOBS is now 3 (CMakeLists.txt). A set(... CACHE ...) default does not
 
 The cap-4 figures above (480 MiB per process, 1581 MiB total) were taken with cap 4 and are superseded; a cap-4 batch that was started earlier was stopped as a tree.
 
+
+## Node kept for the playwriter runtime, inline steps in shell (round e6b5, last two Node uses)
+
+Owner decision 1: Node stays for the playwriter browser runtime. Cause: playwriter is a Node package, so its playwright-core install and the `node -p` path lookup in release.yml (both build jobs) stay, and the browser-scope and lazy-browser checks run under Node. This is the only Node left in CI.
+
+Owner decision 2: the three inline `node -e` steps in release.yml are shell now. The host build stamp greps CMakeCache.txt for GMNEW_COMMIT and GMNEW_VERSION and awks compile_commands.json for each main.cpp entry's -DGMNEW_BUILD_ flags; the worker binary versions loop over gm.exe and gm-core.exe with wc, date -u -r and --version.

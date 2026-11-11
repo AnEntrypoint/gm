@@ -2669,3 +2669,15 @@ Node still in CI, with cause and owner decision:
 - Three inline `node -e` steps in release.yml (host build stamp, worker binary versions on Windows): small, but they read CMakeCache and compile_commands.json with Node. Owner decision: replace with shell, or keep.
 - tools/witness-ci-replay-step.mjs was already failing before this change (it expects two steps the workflow no longer has); nothing in CI calls it.
 
+## Round e6b5, last two Node uses in CI (Phase A)
+
+Each change, and its witness:
+
+- .github/workflows/release.yml: the host build stamp step reads CMakeCache.txt with grep and compile_commands.json with awk (was `node -e`). Witness: on this host the grep prints GMNEW_COMMIT and GMNEW_VERSION, and the awk prints the three main.cpp entries with their -DGMNEW_BUILD_ flags, the same shape as the Node version.
+- .github/workflows/release.yml: the worker binary versions step loops over gm.exe and gm-core.exe with --version, wc -c and date -u -r (was `node -e`). Witness: the same loop run on this host's gm and gm-core prints version, size and mtime. The Windows Git Bash form is NOT run here; the first Windows release run is its witness.
+- docs/NATIVE_PLAN.md: the playwriter Node decision and its cause, and the inline steps moved to shell.
+- docs/PENDING_VALIDATION.md: this entry.
+
+Node still in CI after this change:
+- playwright-core install and the `node -p` PLAYWRITER_BROWSER_PATH lookup in release.yml (both build jobs). Decision 1: kept, because playwriter is a Node package.
+- tools/witness-ci-replay-step.mjs is stale (it was failing before this round) and nothing in CI calls it.

@@ -149,8 +149,8 @@ jobs:
       - name: Host build stamp
         shell: bash
         run: |
-          node -e 'const fs = require("fs"); const lines = fs.readFileSync(process.argv[1], "utf8").split("\n"); for (const line of lines) if (/^GMNEW_(COMMIT|VERSION):/.test(line)) console.log(line);' "build/${{ matrix.preset }}/CMakeCache.txt"
-          node -e 'const fs = require("fs"); const db = JSON.parse(fs.readFileSync(process.argv[1], "utf8")); for (const entry of db) { if (!entry.file.endsWith("main.cpp")) continue; const command = entry.command || entry.arguments.join(" "); console.log(entry.file + " " + (command.match(/-DGMNEW_BUILD_[A-Z_]+=[^ ]+/g) || []).join(" ")); }' "build/${{ matrix.preset }}/compile_commands.json"
+          grep -E '^GMNEW_(COMMIT|VERSION):' "build/${{ matrix.preset }}/CMakeCache.txt"
+          awk '/"command":/ { cmd = $0 } /"file":/ { f = $0; sub(/.*"file": *"/, "", f); sub(/".*/, "", f); if (f ~ /main\.cpp$/) { out = f; s = cmd; while (match(s, /-DGMNEW_BUILD_[A-Z_]+=[^ "\\]+/)) { out = out " " substr(s, RSTART, RLENGTH); s = substr(s, RSTART + RLENGTH) }; print out } cmd = "" }' "build/${{ matrix.preset }}/compile_commands.json"
       - name: Clean host rebuild
         shell: bash
         run: cmake --build "build/${{ matrix.preset }}" --target gm gm-core --clean-first
@@ -159,7 +159,14 @@ jobs:
         run: |
           dir="build/${{ matrix.preset }}/native/components/host"
           echo "git head: $(git rev-parse --short HEAD)"
-          node -e 'const fs = require("fs"); const cp = require("child_process"); const dir = process.argv[1]; for (const name of ["gm.exe", "gm-core.exe"]) { const p = dir + "/" + name; if (!fs.existsSync(p)) { console.log(name + ": absent"); continue; } const s = fs.statSync(p); let v = ""; try { v = cp.execFileSync(p, ["--version"], { encoding: "utf8" }).trim(); } catch (e) { v = "version failed: " + e.message; } console.log(name + ": " + v + " size=" + s.size + " mtime=" + s.mtime.toISOString()); }' "$dir"
+          for name in gm.exe gm-core.exe; do
+            p="$dir/$name"
+            if [ ! -f "$p" ]; then echo "$name: absent"; continue; fi
+            if v=$("$p" --version 2>/dev/null); then :; else v="version failed"; fi
+            size=$(wc -c < "$p" | tr -d ' ')
+            mtime=$(date -u -r "$p" +%Y-%m-%dT%H:%M:%S.000Z)
+            echo "$name: $v size=$size mtime=$mtime"
+          done
       - name: Windows cmd-only run_shell witness
         shell: bash
         run: build/${{ matrix.preset }}/native/components/tool/gm-tool.exe check "build/${{ matrix.preset }}/native/components/host/gm.exe" witness-windows-cmd
