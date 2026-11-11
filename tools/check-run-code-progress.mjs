@@ -24,6 +24,10 @@ if (binary === null || !existsSync(binary)) {
   process.exit(0);
 }
 
+const CLOCK = process.argv.includes('--real-clock') ? 1 : 1 / 60;
+process.env.GMNEW_TEST_CLOCK = '1';
+process.env.GM_CLOCK_SCALE = String(CLOCK);
+const scaled = (ms) => Math.max(1, Math.round(ms * CLOCK));
 const WATCHDOG_MS = 90000;
 const watchdog = setTimeout(() => {
   console.error(`run-code-progress-check: failed: no completion within ${WATCHDOG_MS} ms`);
@@ -87,31 +91,31 @@ try {
   await rpc('resources/read', { uri: 'skill://gm/SKILL.md' });
 
   const ticks = await runCode(
-    { format: 'esm', timeoutMs: 30000, body: "return await gm.run_shell({ command: 'sleep 7; echo ticked', timeoutMs: 20000 });" },
+    { format: 'esm', timeoutMs: scaled(30000), body: `return await gm.run_shell({ command: 'sleep ${scaled(7000) / 1000}; echo ticked', timeoutMs: 20000 });` },
     { progressToken: 'tick-1' },
   );
   const tickBody = unwrap(ticks.reply.output);
   expect(ticks.reply.ok === true && ticks.reply.background === undefined, `foreground: expected a foreground reply, got ${JSON.stringify(ticks.reply).slice(0, 200)}`);
-  expect(ticks.elapsed >= 6500, `foreground: returned after ${ticks.elapsed} ms, expected the 7 s body to run to its end`);
+  expect(ticks.elapsed >= scaled(6500), `foreground: returned after ${ticks.elapsed} ms, expected the ${scaled(7000)} ms body to run to its end`);
   expect(String(tickBody?.output ?? '').includes('ticked'), `foreground: output was ${JSON.stringify(tickBody).slice(0, 200)}`);
   const own = progress.filter((notice) => notice.progressToken === 'tick-1');
-  expect(own.length >= 1, 'progress: no notifications/progress with progressToken tick-1 arrived during the 7 s body');
+  expect(own.length >= 1, `progress: no notifications/progress with progressToken tick-1 arrived during the ${scaled(7000)} ms body`);
   expect(own.every((notice, index) => index === 0 || notice.progress > own[index - 1].progress), 'progress: progress values must increase');
 
-  const short = await runCode({ format: 'esm', timeoutMs: 2000, body: "return await gm.run_shell({ command: 'sleep 4; echo late', timeoutMs: 10000 });" });
-  expect(typeof short.reply.background === 'string' && short.reply.state === 'running', `budget: a 2000 ms timeoutMs call should move to background, got ${JSON.stringify(short.reply).slice(0, 200)}`);
-  expect(short.elapsed < 3500, `budget: background reply took ${short.elapsed} ms, expected about 2 s`);
+  const short = await runCode({ format: 'esm', timeoutMs: scaled(2000), body: `return await gm.run_shell({ command: 'sleep ${scaled(4000) / 1000}; echo late', timeoutMs: 10000 });` });
+  expect(typeof short.reply.background === 'string' && short.reply.state === 'running', `budget: a ${scaled(2000)} ms timeoutMs call should move to background, got ${JSON.stringify(short.reply).slice(0, 200)}`);
+  expect(short.elapsed < scaled(4000), `budget: background reply took ${short.elapsed} ms, expected before the ${scaled(4000)} ms body ended`);
 
-  const longer = await runCode({ format: 'esm', timeoutMs: 30000, body: "return await gm.run_shell({ command: 'sleep 4; echo inside', timeoutMs: 10000 });" });
+  const longer = await runCode({ format: 'esm', timeoutMs: scaled(30000), body: `return await gm.run_shell({ command: 'sleep ${scaled(4000) / 1000}; echo inside', timeoutMs: 10000 });` });
   const longerBody = unwrap(longer.reply.output);
-  expect(longer.reply.ok === true && longer.reply.background === undefined, `budget: a 30000 ms timeoutMs call moved to background: ${JSON.stringify(longer.reply).slice(0, 200)}`);
-  expect(String(longerBody?.output ?? '').includes('inside'), `budget: a 30000 ms timeoutMs call returned ${JSON.stringify(longerBody).slice(0, 200)}`);
+  expect(longer.reply.ok === true && longer.reply.background === undefined, `budget: a ${scaled(30000)} ms timeoutMs call moved to background: ${JSON.stringify(longer.reply).slice(0, 200)}`);
+  expect(String(longerBody?.output ?? '').includes('inside'), `budget: a ${scaled(30000)} ms timeoutMs call returned ${JSON.stringify(longerBody).slice(0, 200)}`);
 
   if (failures.length) {
     console.error(`run-code-progress-check: ${failures.length} failure(s)\n- ${failures.join('\n- ')}`);
     process.exitCode = 1;
   } else {
-    console.log(`run-code-progress-check: ok (7 s foreground body gave ${own.length} progress notice(s); a 2000 ms budget backgrounded in ${short.elapsed} ms; a 30000 ms budget returned foreground)`);
+    console.log(`run-code-progress-check: ok (${scaled(7000)} ms foreground body gave ${own.length} progress notice(s); a ${scaled(2000)} ms budget backgrounded in ${short.elapsed} ms; a ${scaled(30000)} ms budget returned foreground)`);
   }
 } finally {
   const exited = child.exitCode !== null || child.signalCode !== null ? Promise.resolve() : once(child, 'exit');

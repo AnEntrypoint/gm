@@ -16,6 +16,7 @@ if (target === null || (!onNode && !existsSync(resolve(target)))) {
   process.exit(2);
 }
 const CLOCK = process.argv.includes('--real-clock') ? 1 : 1 / 60;
+process.env.GMNEW_TEST_CLOCK = '1';
 process.env.GM_CLOCK_SCALE = String(CLOCK);
 const scaled = (ms) => Math.max(1, Math.round(ms * CLOCK));
 const REPLY_MS = 180000;

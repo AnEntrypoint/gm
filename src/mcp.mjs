@@ -134,7 +134,8 @@ const VOLATILE_TTL_MS = 0;
 const OPEN_LIST = 20;
 const USAGE = 'usage: node src/mcp.mjs --workspace <dir> [--task <file-or-text>] [--run-dir <dir>] [--max-steps N] [--max-inflight N] [--job-lifetime-ms N] [--stuck-ms N] [--monitor-ms N] [--notice-ms N] [--host-idle-ms N] [--surface tools|code] [--mcp-config <file>]';
 const DEFAULT_HOST_IDLE_MS = 600000;
-const MAX_WAIT_MS = 100000 * (Number(process.env.GM_CLOCK_SCALE) > 0 ? Number(process.env.GM_CLOCK_SCALE) : 1);
+const CLOCK_SCALE = process.env.GMNEW_TEST_CLOCK === '1' && Number(process.env.GM_CLOCK_SCALE) > 0 && Number(process.env.GM_CLOCK_SCALE) <= 1 ? Number(process.env.GM_CLOCK_SCALE) : 1;
+const MAX_WAIT_MS = 100000 * CLOCK_SCALE;
 const DEFAULT_MCP_CONFIG = join(ROOT, 'defaults', 'mcp.json');
 const STEP_ZERO_WARNING = 'stepsLeft is 0: the next next_context call ends this run without a witness. To close it with a witness, call finish now, while stepsLeft is 0.';
 

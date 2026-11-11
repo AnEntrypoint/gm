@@ -11,6 +11,7 @@ import { fileURLToPath } from 'node:url';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const target = process.argv[2] ?? null;
 const CLOCK = process.argv.includes('--real-clock') ? 1 : 1 / 60;
+process.env.GMNEW_TEST_CLOCK = '1';
 process.env.GM_CLOCK_SCALE = String(CLOCK);
 const scaled = (ms) => Math.max(1, Math.round(ms * CLOCK));
 const FETCH_MS = Math.max(300, scaled(3000));

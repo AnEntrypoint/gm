@@ -2464,7 +2464,7 @@ struct Server::State {
             const auto started = std::chrono::steady_clock::now();
             long long last = 0;
             std::unique_lock guard(lock_);
-            while (!wake_.wait_for(guard, std::chrono::milliseconds(kProgressMs), [&] { return stopped_; })) {
+            while (!wake_.wait_for(guard, std::chrono::milliseconds(static_cast<long long>(kProgressMs * clock_scale())), [&] { return stopped_; })) {
                 const long long elapsed = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - started).count();
                 last = std::max(last + 1, elapsed);
                 guard.unlock();

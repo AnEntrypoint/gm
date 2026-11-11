@@ -2533,3 +2533,11 @@ Not run here: tools/check-txiki-wasi.mjs and the gm reactor wasm (the gm wasm32-
 - skills/gm/SKILL.md: the duplicate wait habit (the bounded PID wait, restated as a separate habit) is merged into the PID habit; the commit-as-made habit is merged into the Phase A line; the continuation sentence duplicated in the ranked-item habit is removed; the stamp paragraph states the rule once. No habit is dropped.
 - native/components/mcp/server.cpp run_code description: the job_status wait text (duplicated in the verb's own description) is cut to one sentence; "at most 100000" stays.
 - Witness: parity contract all, 22 of 22 (Phase B).
+
+## The clock knob is guarded, and the progress interval is on the clock (2026-11-11, Phase A)
+
+- Where it is read: native/include/gm/clock.hpp, clock_scale(), once, on first use. It is honoured only when GMNEW_TEST_CLOCK is exactly "1" and GM_CLOCK_SCALE parses to a value in (0, 1]; anything else is 1. Node: the CLOCK_SCALE lines in src/mcp.mjs and src/tools.mjs use the same rule.
+- A peer's environment with GM_CLOCK_SCALE alone changes nothing; a peer would need both variables, and the only things that set GMNEW_TEST_CLOCK are the checks. The scale can only shorten, so the flag gate is the only way a real run's timers move.
+- native/components/mcp/server.cpp: the run_code progress notice interval (kProgressMs, 5000 ms) is multiplied by clock_scale() in the wait.
+- tools/check-run-code-progress.mjs: scaled like the other two (body 117 ms, 33 ms budget, 500 ms budget). Measured: ok in 0.40 s, one progress notice (was 13.3 s).
+- check-browser-scope is not on the clock: its 12.7 s is browser work in external processes (the playwriter browser start and close), not a timer. Not changed.
