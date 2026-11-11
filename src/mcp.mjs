@@ -169,7 +169,6 @@ const STEP_START_RULE = 2;
 const SINGLE_VERB_BODIES_BEFORE_NOTICE = 3;
 const SINGLE_VERB_NOTICE_EVERY = 10;
 const BATCH_NOTICE = "The last run_code bodies made one verb call each. Each body costs a model turn. Put a step's calls in one body: independent calls in one Promise.all, dependent calls in sequence, a check of the result in the same body, and return only what the next decision needs.";
-const UNCHANGED_PROGRESS = 'nothing changed since the last next_context reply: no pending event, and the rules and the task are the same. No step was used. Keep working. Call next_context again when a run_code reply carries pendingEvents, with waitMs to wait for an event, or with full: true for the rules, the task and the feed (after a compaction).';
 const TASK_PAGE = 4000;
 const taskRestNotice = (text) => {
   const shown = headChars(text, TASK_PAGE).length;
@@ -751,7 +750,7 @@ function createSession({ workspace, runDir, skillGate, log, task, maxSteps, maxI
         return { ok: true, progress: `no event pending after ${waitMs} ms; no step was used, call next_context again to keep waiting`, steps };
       }
       if (args.full !== true && waitMs === 0 && given === '' && nothingChangedSinceReply()) {
-        return { ok: true, unchanged: true, progress: UNCHANGED_PROGRESS, run: runId, steps, stepsLeft: maxSteps - steps };
+        return { ok: true, unchanged: true, run: runId, steps, stepsLeft: maxSteps - steps };
       }
       steps += 1;
       runStarted = true;

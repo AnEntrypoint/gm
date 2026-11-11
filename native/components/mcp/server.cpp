@@ -137,7 +137,6 @@ constexpr double kMaxJobWaitMs = kMaxWaitMs;
 constexpr std::uint64_t kSingleVerbBodiesBeforeNotice = 3;
 constexpr std::uint64_t kSingleVerbNoticeEvery = 10;
 constexpr const char* kBatchNotice = "The last run_code bodies made one verb call each. Each body costs a model turn. Put a step's calls in one body: independent calls in one Promise.all, dependent calls in sequence, a check of the result in the same body, and return only what the next decision needs.";
-constexpr const char* kUnchangedProgress = "nothing changed since the last next_context reply: no pending event, and the rules and the task are the same. No step was used. Keep working. Call next_context again when a run_code reply carries pendingEvents, with waitMs to wait for an event, or with full: true for the rules, the task and the feed (after a compaction).";
 constexpr long long kStartedJobGraceMs = 100;
 constexpr std::size_t kCompletionCap = 100;
 constexpr std::size_t kQueueMax = 64;
@@ -2144,7 +2143,6 @@ struct Server::State {
                     return object()
                         .set("ok", true)
                         .set("unchanged", true)
-                        .set("progress", kUnchangedProgress)
                         .set("run", s().run_id)
                         .set("steps", number_of(s().steps))
                         .set("stepsLeft", number_of(options.max_steps - s().steps));
