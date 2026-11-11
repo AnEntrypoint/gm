@@ -14,7 +14,8 @@ if (!given) {
 }
 const binary = resolve(given);
 const hostDir = dirname(binary);
-const buildDir = resolve(hostDir, '..', '..', '..');
+const inBuildTree = hostDir.endsWith(join('native', 'components', 'host'));
+const buildDir = inBuildTree ? resolve(hostDir, '..', '..', '..') : join(root, 'build', 'release');
 const scratch = mkdtempSync(join(tmpdir(), 'gm-parity-'));
 
 const session = (label) => {

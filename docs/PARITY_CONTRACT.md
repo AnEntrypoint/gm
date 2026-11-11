@@ -6,7 +6,7 @@ Witness command form, from the gm checkout:
 
     node tools/parity-contract.mjs <your binary> <Wn>
 
-It starts a gm server in a scratch workspace (the binary is started as `<binary> serve --workspace <dir> --run-dir <dir>/run --mcp-config <file>`, with playwriter disabled), drives it over JSON-RPC on stdio, and prints `<Wn> pass <observed>` or `<Wn> FAIL <reason>`. Items W17 to W22 run the install, check-build and relay tools from this checkout against your binary. Expected lines are exact, byte for byte, unless marked host-dependent.
+It starts a gm server in a scratch workspace (the binary is started as `<binary> serve --workspace <dir> --run-dir <dir>/run --mcp-config <file>`, with playwriter disabled), drives it over JSON-RPC on stdio, and prints `<Wn> pass <observed>` or `<Wn> FAIL <reason>`. Items W17 to W22 run the install, check-build and relay tools from this checkout. The build directory they install from is the binary's own build tree (`native/components/host` under it) when the binary is in one, and this checkout's `build/release` otherwise. Expected lines are exact, byte for byte, unless marked host-dependent.
 
 Protocol version negotiated by the witnesses: 2025-06-18. Both engines serve 2025-11-25, 2025-06-18, 2025-03-26, 2024-11-05 and 2024-10-07 (tools/check-protocol-versions.mjs).
 

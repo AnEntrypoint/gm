@@ -2441,3 +2441,8 @@ Not run here: tools/check-txiki-wasi.mjs and the gm reactor wasm (the gm wasm32-
 - docs/PARITY_CONTRACT.md: the observable contract of gm (three tools with arguments, reply shapes and error cases; resources and templates; the process wait and its 100 s cap; the one-body loop; the install switch with previous-<id>; the check-build cache, pool and --only; the relay re-exec on the stable path; the skill-serve default), each item with one witness command and its expected line.
 - tools/parity-contract.mjs: the witnesses W1 to W22, run as `node tools/parity-contract.mjs <binary> <Wn|all>`. W15 takes 100 s of wall time; W17 to W22 run the install, check-build, relay and skill-serve tools from this checkout against the binary.
 - Phase B will run every witness against the installed build (/config/.gmnew/current/gm), fix any witness whose line does not match, and push once.
+
+## Parity contract Phase B (2026-11-11)
+
+- Ran `node tools/parity-contract.mjs /config/.gmnew/current/gm all` (installed 9702c50-dev): 22 of 22 lines match docs/PARITY_CONTRACT.md, wall 110 s (W15 is 100 s of it).
+- First run: W17, W18, W19, W20, W21 failed because the witness derived the build directory from the installed binary's path (under ~/.gmnew). Fixed: the build directory is the binary's build tree when it has one, else this checkout's build/release (tools/parity-contract.mjs, tools/check-install-switch.mjs). W17 also now switches to an older version before the second install, so previous-<id> is actually tested.

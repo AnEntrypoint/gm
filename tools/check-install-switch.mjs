@@ -9,7 +9,9 @@ import { fileURLToPath } from 'node:url';
 const CHECK = 'install-switch-check';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const given = resolve(process.argv[2] ?? join(root, 'build', 'release'));
-const hostDir = existsSync(given) && statSync(given).isFile() ? dirname(given) : join(given, 'native', 'components', 'host');
+const fromBuild = existsSync(given) && statSync(given).isFile() ? dirname(given) : join(given, 'native', 'components', 'host');
+const inBuildTree = fromBuild.endsWith(join('native', 'components', 'host'));
+const hostDir = inBuildTree ? fromBuild : join(root, 'build', 'release', 'native', 'components', 'host');
 const buildDir = resolve(hostDir, '..', '..', '..');
 if (!existsSync(join(hostDir, 'gm'))) {
   console.error(`${CHECK}: usage: node tools/check-install-switch.mjs [build-dir | gm binary]`);
