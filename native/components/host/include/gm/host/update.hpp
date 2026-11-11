@@ -11,11 +11,10 @@
 
 #include "deoxidene/result.hpp"
 #include "gm/json.hpp"
+#include "gmnew_build_info.hpp"
 
 namespace gm::host {
 
-inline constexpr std::string_view kBuildVersion = GMNEW_BUILD_VERSION;
-inline constexpr std::string_view kBuildCommit = GMNEW_BUILD_COMMIT;
 inline constexpr bool is_dev_version(std::string_view version) {
     return version == "dev" ||
            (version.size() >= 4 && version.substr(version.size() - 4) == "-dev");

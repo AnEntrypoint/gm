@@ -30,8 +30,12 @@ elseif(MSVC)
     target_compile_options(deoxidene INTERFACE /W4 /permissive-)
 endif()
 
-include(cmake/gmnew_build_info.cmake)
-gmnew_configure_build_info("${CMAKE_CURRENT_SOURCE_DIR}")
+set(GMNEW_STAMP_HEADER "${CMAKE_BINARY_DIR}/gmnew/gmnew_build_info.hpp")
+add_custom_target(gmnew_stamp ALL
+    COMMAND ${CMAKE_COMMAND} -DSOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR} -DOUTPUT=${GMNEW_STAMP_HEADER} -DOVERRIDE=${GMNEW_VERSION}
+            -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/gmnew_stamp.cmake
+    BYPRODUCTS ${GMNEW_STAMP_HEADER}
+    VERBATIM)
 
 add_subdirectory(native)
 

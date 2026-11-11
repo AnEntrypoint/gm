@@ -1,11 +1,9 @@
 add_library(gm_host STATIC child.cpp composed_verbs.cpp browser_scope.cpp relay.cpp options.cpp primitives.cpp cli.cpp update.cpp install.cpp)
-target_include_directories(gm_host PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_CURRENT_SOURCE_DIR}/../../include)
+target_include_directories(gm_host PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_CURRENT_SOURCE_DIR}/../../include
+                                          ${CMAKE_BINARY_DIR}/gmnew)
 target_link_libraries(gm_host PUBLIC deoxidene::deoxidene gm_json gm_log gm_proc gm_runcode
                                         $<TARGET_NAME_IF_EXISTS:gm_mcp>)
-target_compile_definitions(gm_host PRIVATE GMNEW_SOURCE_DIR="${PROJECT_SOURCE_DIR}"
-                                              GMNEW_BUILD_DIR="${PROJECT_BINARY_DIR}")
-target_compile_definitions(gm_host PUBLIC GMNEW_BUILD_VERSION="${GMNEW_VERSION}"
-                                              GMNEW_BUILD_COMMIT="${GMNEW_COMMIT}")
+add_dependencies(gm_host gmnew_stamp)
 
 add_executable(gm main.cpp serve.cpp)
 target_link_libraries(gm PRIVATE gm_host)
