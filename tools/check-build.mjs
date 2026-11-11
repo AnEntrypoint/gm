@@ -150,6 +150,12 @@ const pipeline = async () => {
         const label = `${name} (node)`;
         plan(label, keyOf(label, name), { script: join(root, 'tools', name), args: ['node'] }, jobs);
     }
+    if (process.argv.includes('--slow')) {
+        for (const name of ['check-run-code-budget.mjs', 'check-turn-economy.mjs']) {
+            const label = `${name} (real clock)`;
+            plan(label, keyOf(label, name), { script: join(root, 'tools', name), args: [binary, '--real-clock'] }, jobs);
+        }
+    }
     jobs.sort((a, b) => (durations[b.label] ?? 30) - (durations[a.label] ?? 30));
     await runPool(jobs, JOBS);
     for (const job of exclusive) await runOne(job.label, job.script, job.args, job.key);

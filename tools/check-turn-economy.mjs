@@ -15,9 +15,12 @@ if (target === null || (!onNode && !existsSync(resolve(target)))) {
   console.error(`${CHECK}: usage: node tools/check-turn-economy.mjs <node|path-to-native-binary>`);
   process.exit(2);
 }
+const CLOCK = process.argv.includes('--real-clock') ? 1 : 1 / 60;
+process.env.GM_CLOCK_SCALE = String(CLOCK);
+const scaled = (ms) => Math.max(1, Math.round(ms * CLOCK));
 const REPLY_MS = 180000;
-const OLD_WAIT_CAP_MS = 30000;
-const SLOW_JOB_SECONDS = 31;
+const OLD_WAIT_CAP_MS = scaled(30000);
+const SLOW_JOB_MS = scaled(45000);
 const UNCHANGED_REPLY_BYTES = 1200;
 
 const sleep = (ms) => new Promise((done) => setTimeout(done, ms));
@@ -120,9 +123,9 @@ try {
     const startedAt = Date.now();
     const jobs = await code(
       `const [slow, short, gone] = await Promise.all([
-        (async () => { await gm.job_start({ job: 'slow', command: 'sleep ${SLOW_JOB_SECONDS}; echo slow', timeoutMs: 120000 }); const began = Date.now(); const ended = await gm.job_status({ job: 'slow', waitMs: 120000, tail: 5 }); return { state: ended.state, exitCode: ended.exitCode, output: ended.output, durMs: ended.durMs, waitedMs: Date.now() - began }; })(),
+        (async () => { await gm.job_start({ job: 'slow', command: 'sleep ${SLOW_JOB_MS / 1000}; echo slow', timeoutMs: 120000 }); const began = Date.now(); const ended = await gm.job_status({ job: 'slow', waitMs: 120000, tail: 5 }); return { state: ended.state, exitCode: ended.exitCode, output: ended.output, durMs: ended.durMs, waitedMs: Date.now() - began }; })(),
         (async () => { await gm.job_start({ job: 'short', command: 'sleep 30', timeoutMs: 500 }); const ended = await gm.job_status({ job: 'short', waitMs: 20000, tail: 200 }); return { state: ended.state, reason: ended.reason, statement: ended.statement }; })(),
-        (async () => { await gm.job_start({ job: 'quick', command: 'sleep 2' }); const pid = (await gm.job_status({ job: 'quick' })).pid; const waited = await gm.job_status({ pid, waitMs: 20000 }); return { pid, state: waited.state, waitedMs: waited.waitedMs, exitCode: waited.exitCode }; })(),
+        (async () => { await gm.job_start({ job: 'quick', command: 'sleep ${scaled(2000) / 1000}' }); const pid = (await gm.job_status({ job: 'quick' })).pid; const waited = await gm.job_status({ pid, waitMs: 20000 }); return { pid, state: waited.state, waitedMs: waited.waitedMs, exitCode: waited.exitCode }; })(),
       ]);
       return { slow, short, gone };`,
       150000,
@@ -132,7 +135,7 @@ try {
     measured.slowWaitedMs = slow?.waitedMs ?? null;
     expect(slow?.state === 'exited' && slow?.exitCode === 0 && String(slow?.output).trim() === 'slow', `one job_status call did not return the slow job's exit and its 5-character tail: ${short(slow)}`);
     expect(typeof slow?.waitedMs === 'number' && slow.waitedMs > OLD_WAIT_CAP_MS, `the wait returned after ${slow?.waitedMs} ms, not past the old ${OLD_WAIT_CAP_MS} ms cap`);
-    expect(typeof slow?.durMs === 'number' && slow.durMs >= SLOW_JOB_SECONDS * 1000, `the ended job has no wall time: durMs ${slow?.durMs}`);
+    expect(typeof slow?.durMs === 'number' && slow.durMs >= SLOW_JOB_MS, `the ended job has no wall time: durMs ${slow?.durMs}`);
     expect(stopped?.state === 'killed' && stopped?.reason === 'timeout' && String(stopped?.statement).includes('pass timeoutMs'), `a job stopped at its limit does not say how to raise it: ${short(stopped)}`);
     expect(process.platform === 'win32' || (gone?.state === 'gone' && gone?.exitCode === null && typeof gone?.waitedMs === 'number' && gone.waitedMs < 15000), `job_status with a pid did not wait for the process to end: ${short(gone)}`);
     expect(jobs.reply.pendingEvents === true, `a run_code reply with job events queued has no pendingEvents: ${short({ pendingEvents: jobs.reply.pendingEvents })}`);
