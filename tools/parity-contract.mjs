@@ -17,6 +17,7 @@ const hostDir = dirname(binary);
 const inBuildTree = hostDir.endsWith(join('native', 'components', 'host'));
 const buildDir = inBuildTree ? resolve(hostDir, '..', '..', '..') : join(root, 'build', 'release');
 const scratch = mkdtempSync(join(tmpdir(), 'gm-parity-'));
+const children = [];
 
 const session = (label) => {
   const dir = mkdtempSync(join(scratch, `${label}-`));
@@ -26,6 +27,8 @@ const session = (label) => {
   const child = spawn(binary, ['serve', '--workspace', dir, '--run-dir', join(dir, 'run'), '--mcp-config', quiet], { stdio: ['pipe', 'pipe', 'pipe'] });
   child.stdin.on('error', () => {});
   child.stderr.resume();
+  child.exited = new Promise((resolveExit) => child.once('exit', resolveExit));
+  children.push(child);
   const pending = new Map();
   readline.createInterface({ input: child.stdout }).on('line', (line) => {
     let m;
@@ -55,7 +58,7 @@ const session = (label) => {
     await rpc('initialize', { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'parity-contract', version: '1' } });
     child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' })}\n`);
   };
-  return { dir, child, rpc, call, open, close: () => child.kill() };
+  return { dir, child, rpc, call, open, close: () => { child.kill(); return child.exited; } };
 };
 
 const witnesses = {};
@@ -356,5 +359,7 @@ for (const id of ids) {
   console.log(result.line);
   if (!result.ok) failed += 1;
 }
+for (const child of children) if (child.exitCode === null && child.signalCode === null) child.kill();
+await Promise.all(children.map((child) => child.exited));
 rmSync(scratch, { recursive: true, force: true });
 process.exitCode = failed === 0 ? 0 : 1;
