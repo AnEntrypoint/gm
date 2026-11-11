@@ -2498,3 +2498,9 @@ Not run here: tools/check-txiki-wasi.mjs and the gm reactor wasm (the gm wasm32-
 - native/components/mcp/server.cpp and include/gm/mcp.hpp: a connection (run owner, worker owner) is now "pid:start-time" from /proc/<pid>/stat field 22; process_identity_alive requires the pid to be alive and its start time to match. A bare pid (an owner file from an older build) is not alive on Linux, so the run is adoptable. macOS and Windows keep the pid check. native/components/host/serve.cpp relay_process_id uses process_identity, so the --owner the serve process passes to its worker has the same form. Witness: check-restart-jobs and check-restart-body-orphan (in check-build) and parity W14 (pid wait).
 - skills/gm/SKILL.md: three habits for the reboot finding (read the saved state and carry on; a liveness claim is checked by a call that answers; the install survives a reboot and is checked against the checkout).
 - Phase B also checks that `gm --version` and the served skill match the checkout after the install (check-install-switch --installed).
+
+## Reused-pid witness (2026-11-11, Phase A)
+
+- tools/check-owner-identity.mjs: SIGKILLs a serve that owns a run, writes the run's owner as a live node pid with another start time ("<pid>:1"), restarts serve on the same run directory and requires the run to be adopted (its id resumes; no "belongs to another live connection").
+- Witness, run on both binaries: build/release/native/components/host/gm gives "ok ... wall 1.39 s"; the previous install ~/.gmnew/previous-c0bc98b6d07f-dev/gm gives 2 failures (not adopted, foreign). The witness fails on the pid-only check.
+- Phase B adds it to check-build's native list.
