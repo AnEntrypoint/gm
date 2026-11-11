@@ -7,7 +7,7 @@ import { createInterface } from 'node:readline';
 import { DEFAULT_WITNESS, MCP_RULES, prefixShaOf, renderTools } from './prompt.mjs';
 import { connectReply, SERVER_NAME, SERVER_TITLE } from './connect.mjs';
 import { currentRunDir, isDirectory, loadTask, newRunId, openRun, ROOT, setSuccessor } from './run.mjs';
-import { flushAllLogs, repeatedChecks } from './log.mjs';
+import { checkTally, flushAllLogs, repeatedChecks } from './log.mjs';
 import { clearPending, hasPending, offPendingAppended, onPendingAppended, takePending } from './pending.mjs';
 import { conflicts, createTools, headChars, loggedFor, OUTPUT_PAGE, DEFAULT_STUCK_MS, DEFAULT_MONITOR_MS, BODY_NOTICE_MS } from './tools.mjs';
 import { bumpGeneration } from './hot.mjs';
@@ -239,6 +239,7 @@ function createSession({ workspace, runDir, skillGate, log, task, maxSteps, maxI
   activeTools = tools;
   activeLog = log;
   let pendingRecovery = recovery;
+  const checkTallyOf = checkTally();
   let noticeSeq = lastContextSeq(log.events());
   const active = new Map();
   const holds = new Map();
@@ -800,7 +801,7 @@ function createSession({ workspace, runDir, skillGate, log, task, maxSteps, maxI
     const jobsEnded = await Promise.all(ended.map((event) => endedJob(runDir, event)));
     const shown = Math.max(shownTotalOf(log), shownFloor);
     const feed = feedOf(log, current.REGISTRY, { shown, compactChildren });
-    const checks = repeatedChecks(log.eventsFrom(0));
+    const checks = repeatedChecks(log, checkTallyOf);
     const openRows = await tools.openRows();
     const parkedRows = await tools.parkedRows();
     const reply = {

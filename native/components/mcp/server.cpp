@@ -605,6 +605,7 @@ struct Server::State {
         fs::path run_dir;
         std::string run_id;
         SentFeed sent_feed;
+        CheckTally checks;
         std::shared_ptr<RunLog> log;
         std::uint64_t count = 0;
         std::uint64_t shown = 0;
@@ -2065,7 +2066,9 @@ struct Server::State {
             .set("total", number_of(total))
             .set("pendingCommands", object().set("wait", "\"" + options.wait_program + "\" events --dir \"" + s().run_dir.string() + "\" --wait"));
         if (!waiting) reply = merge(std::move(reply), feed_of(at, total, shown, s().sent_feed, compact_children));
-        if (Value checks = repeated_checks(events()); !checks.as_array().empty()) reply.set("checks", std::move(checks));
+        if (auto fresh = s().log->read_from(s().checks.seen)) tally_checks(s().checks, *fresh);
+        s().checks.seen = s().log->count();
+        if (Value checks = checks_of(s().checks); !checks.as_array().empty()) reply.set("checks", std::move(checks));
         reply.set("query", query_hint(shown, total));
         if (recovery_now) reply.set("recovery", *recovery_now);
         auto notice = rules_notice();

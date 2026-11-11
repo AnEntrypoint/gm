@@ -520,7 +520,7 @@ Value feed_of(const EventAt& at, std::uint64_t count, std::uint64_t shown, SentF
     std::vector<Fresh> fresh;
     for (std::uint64_t i = new_start; i < count; ++i) {
         const Value* event = at(i + 1);
-        if (event == nullptr) continue;
+        if (event == nullptr || string_field(*event, "kind") == "check") continue;
         Value bounded = bounded_item(*event);
         std::size_t bounded_cost = cost_of(bounded);
         Value record = bounded_item(fresh_record_of(*event, at));
@@ -548,18 +548,11 @@ Value feed_of(const EventAt& at, std::uint64_t count, std::uint64_t shown, SentF
 
 constexpr std::size_t kRepeatedCheckRows = 8;
 
-Value repeated_checks(const std::vector<Value>& events) {
-    struct Row {
-        std::string command;
-        std::uint64_t count = 0;
-        double total_ms = 0;
-        double last_ms = 0;
-    };
-    std::map<std::string, Row> rows;
+void tally_checks(CheckTally& tally, const std::vector<Value>& events) {
     for (const Value& event : events) {
         if (string_field(event, "kind") != "check") continue;
         const std::string command = string_field(event, "command");
-        Row& row = rows[command];
+        CheckRow& row = tally.rows[command];
         row.command = command;
         row.count += 1;
         const Value* duration = event.find("durMs");
@@ -567,21 +560,24 @@ Value repeated_checks(const std::vector<Value>& events) {
         row.total_ms += ms;
         row.last_ms = ms;
     }
-    std::vector<Row> ranked;
-    for (auto& [command, row] : rows) {
-        if (row.count >= 2) ranked.push_back(row);
+}
+
+Value checks_of(const CheckTally& tally) {
+    std::vector<const CheckRow*> ranked;
+    for (const auto& [command, row] : tally.rows) {
+        if (row.count >= 2) ranked.push_back(&row);
     }
-    std::sort(ranked.begin(), ranked.end(), [](const Row& a, const Row& b) {
-        return a.count != b.count ? a.count > b.count : a.total_ms > b.total_ms;
+    std::sort(ranked.begin(), ranked.end(), [](const CheckRow* a, const CheckRow* b) {
+        return a->count != b->count ? a->count > b->count : a->total_ms > b->total_ms;
     });
     if (ranked.size() > kRepeatedCheckRows) ranked.resize(kRepeatedCheckRows);
     json::Array out;
-    for (const Row& row : ranked) {
+    for (const CheckRow* row : ranked) {
         out.push_back(object()
-                          .set("command", row.command)
-                          .set("count", number_of(row.count))
-                          .set("totalMs", number_of(static_cast<std::uint64_t>(std::llround(row.total_ms))))
-                          .set("lastMs", number_of(static_cast<std::uint64_t>(std::llround(row.last_ms)))));
+                          .set("command", row->command)
+                          .set("count", number_of(row->count))
+                          .set("totalMs", number_of(static_cast<std::uint64_t>(std::llround(row->total_ms))))
+                          .set("lastMs", number_of(static_cast<std::uint64_t>(std::llround(row->last_ms)))));
     }
     return Value(std::move(out));
 }

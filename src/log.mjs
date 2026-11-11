@@ -273,17 +273,21 @@ export function checkKey(command) {
   return String(command).replace(/\s+/g, ' ').trim().slice(0, CHECK_KEY_CHARS);
 }
 
-export function repeatedChecks(events) {
-  const rows = new Map();
-  for (const event of events) {
+export function checkTally() {
+  return { seen: 0, rows: new Map() };
+}
+
+export function repeatedChecks(log, tally) {
+  for (const event of log.eventsFrom(tally.seen + 1)) {
     if (event.kind !== 'check') continue;
-    const row = rows.get(event.command) ?? { command: event.command, count: 0, totalMs: 0, lastMs: 0 };
+    const row = tally.rows.get(event.command) ?? { command: event.command, count: 0, totalMs: 0, lastMs: 0 };
     row.count += 1;
     row.totalMs += event.durMs ?? 0;
     row.lastMs = event.durMs ?? 0;
-    rows.set(event.command, row);
+    tally.rows.set(event.command, row);
   }
-  return [...rows.values()]
+  tally.seen = log.count();
+  return [...tally.rows.values()]
     .filter((row) => row.count >= 2)
     .sort((a, b) => b.count - a.count || b.totalMs - a.totalMs)
     .slice(0, REPEATED_CHECK_ROWS)

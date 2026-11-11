@@ -72,7 +72,18 @@ struct SentFeed {
     std::string prefix_sha;
 };
 Value feed_of(const EventAt& at, std::uint64_t count, std::uint64_t shown, SentFeed& sent, bool compact_children = false);
-Value repeated_checks(const std::vector<Value>& events);
+struct CheckRow {
+    std::string command;
+    std::uint64_t count = 0;
+    double total_ms = 0;
+    double last_ms = 0;
+};
+struct CheckTally {
+    std::uint64_t seen = 0;
+    std::map<std::string, CheckRow> rows;
+};
+void tally_checks(CheckTally& tally, const std::vector<Value>& events);
+Value checks_of(const CheckTally& tally);
 
 bool is_pending_kind(std::string_view kind);
 bool is_pending_event(std::string_view kind, const Value& event);

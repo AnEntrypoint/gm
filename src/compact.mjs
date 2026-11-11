@@ -296,6 +296,7 @@ export function feedOf(events, registry, { shown = 0, cap = NEXT_CONTEXT_EVENTS_
   const fresh = [];
   for (let i = newStart; i < n; i += 1) {
     const event = source.at(i + 1);
+    if (event.kind === 'check') continue;
     const full = boundedItem(event, itemCap);
     const record = boundedItem(freshRecordOf(event, source, registry), itemCap);
     fresh.push({ index: i, shown: full, cost: costOf(full), record, recordCost: costOf(record), child: compactChildren ? childMarkOf(event, i) : null });

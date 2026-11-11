@@ -18,6 +18,7 @@ if (binary === null || (!onNode && !existsSync(binary))) {
 const lead = onNode ? [join(root, 'src', 'mcp.mjs')] : ['serve'];
 const REPEATED = 'echo gm-repeated-check';
 const ONCE = 'echo gm-single-check';
+const JOB = 'echo gm-job-check';
 const REPLY_MS = 120000;
 
 const failures = [];
@@ -75,12 +76,20 @@ try {
       body: `for (let i = 0; i < 3; i += 1) await gm.run_shell({ command: ${JSON.stringify(REPEATED)} }); await gm.run_shell({ command: ${JSON.stringify(ONCE)} }); return 'ran';`,
     });
     expect(ran.ok === true, `run_code did not run: ${JSON.stringify(ran).slice(0, 300)}`);
+    const jobs = await tool('run_code', {
+      body: `for (const job of ['gm-job-a', 'gm-job-b']) await gm.job_start({ job, command: ${JSON.stringify(JOB)}, timeoutMs: 20000 }); for (const job of ['gm-job-a', 'gm-job-b']) await gm.job_status({ job, waitMs: 20000 }); return 'jobs';`,
+    });
+    expect(jobs.ok === true, `the jobs run did not run: ${JSON.stringify(jobs).slice(0, 300)}`);
     const reply = await tool('next_context', { full: true });
     const checks = Array.isArray(reply.checks) ? reply.checks : [];
+    expect(!JSON.stringify(reply).includes('"kind":"check"'), 'a check event is in the raw feed of next_context');
     const repeated = checks.find((row) => row.command === REPEATED);
     expect(repeated !== undefined, `next_context does not list the repeated command: ${JSON.stringify(checks).slice(0, 400)}`);
     expect(repeated?.count === 3, `the repeated command's count is not 3: ${JSON.stringify(repeated).slice(0, 200)}`);
     expect(Number.isFinite(repeated?.totalMs) && Number.isFinite(repeated?.lastMs), `the repeated command has no wall time: ${JSON.stringify(repeated).slice(0, 200)}`);
+    const job = checks.find((row) => row.command === JOB);
+    expect(job?.count === 2, `the job command's count is not 2 after two job ends: ${JSON.stringify(job).slice(0, 200)}`);
+    expect(Number.isFinite(job?.totalMs) && Number.isFinite(job?.lastMs), `the job command has no wall time: ${JSON.stringify(job).slice(0, 200)}`);
     expect(!checks.some((row) => row.command === ONCE), `a command run once is listed as repeated: ${JSON.stringify(checks).slice(0, 400)}`);
   } finally {
     child.kill();
@@ -93,5 +102,5 @@ if (failures.length > 0) {
   console.error(`${CHECK}: ${failures.length} failure(s) on ${target} (wall ${wall} s)\n- ${failures.join('\n- ')}`);
   process.exitCode = 1;
 } else {
-  console.log(`${CHECK}: ok (${target}: next_context lists a run_shell command run three times with its count and wall time, and leaves out a command run once; wall ${wall} s)`);
+  console.log(`${CHECK}: ok (${target}: next_context lists a run_shell command run three times and a job command ended twice, each with its count and wall time, and leaves out a command run once; wall ${wall} s)`);
 }

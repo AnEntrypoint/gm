@@ -2418,3 +2418,12 @@ Not run here: tools/check-txiki-wasi.mjs and the gm reactor wasm (the gm wasm32-
 - Local install: scripts/install.sh --local build/release run in a scratch HOME twice (second keeps previous-c28b03e-dev): ok; in the real HOME with GMNEW_SKIP_REGISTER=1, installed db20be0-dev (db20be0), previous-c28b03e-dev kept.
 - tools/check-build.mjs build/release: exit 0, wall about 385 s, run before the stamp was refreshed (stamp c28b03e-dev); after reconfigure gm --version prints db20be0-dev (db20be0).
 - Longest step: tools/check-build.mjs, about 385 s.
+
+## Atomic install, check-build time, job-end witness, feed and incremental checks (2026-11-11, Phase A)
+
+- Install swap (scripts/install.sh, native/components/host/update.cpp, relay.cpp, serve.cpp, include/gm/host/update.hpp): installs go to versions/<id>, and current is a symlink switched by one rename; the previous install is kept as previous-<id> (a link). The updater uses the same switch, and the relay re-execs through the stable current path. A legacy real current directory is moved into versions once; that one move is the only moment without a current. Witness: tools/check-install-switch.mjs build/release (the relay moves to switched-dev on the same pid, about 2 s after the switch).
+- Install witness compares every installed skill file with the checkout (tools/check-install-switch.mjs), and install.sh --local refuses a build whose skills differ from the checkout.
+- check-build (tools/check-build.mjs): per-scenario wall time, a bounded pool (GM_CHECK_JOBS, default 6), a content-and-stat cache in build/release/check-build-cache.json, and --only <scenario>. Measured before: serial 407 s, of which check-browser-scope was 205 s; the browser witness's rpc timer kept the process alive for 180 s after its last call (fixed by clearing the timer, tools/check-browser-scope.mjs; check-early-run-code.mjs and check-read-parity.mjs timers are unref'd).
+- Job-end path: tools/check-repeated-checks.mjs runs two job_start jobs of one command and expects count 2 for the job command.
+- Check events stay out of the raw feed (src/compact.mjs feedOf, native/components/mcp/compact.cpp feed_of).
+- Incremental checks aggregation: Node repeatedChecks(log, tally) and native CheckTally on the session fold only new events. Measured with tools/measure-checks-cost.mjs (2000 run_shell calls, next_context full, median of 5): native 27 ms before, 20 ms after; Node 73 ms before, 2 ms after.
