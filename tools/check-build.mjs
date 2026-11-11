@@ -88,18 +88,49 @@ const started = Date.now();
 
 const logPath = (label) => join(LOGS, `${label.replace(/[^A-Za-z0-9.-]+/g, '_')}.log`);
 
+const TREE = `${process.pid}-${Date.now()}`;
+const treeMember = (pid) => {
+    try {
+        return readFileSync(`/proc/${pid}/environ`).toString().split('\0').includes(`GM_CHECK_TREE=${TREE}`);
+    } catch {
+        return false;
+    }
+};
+const liveTree = () => (process.platform === 'linux' ? readdirSync('/proc').filter((name) => /^\d+$/.test(name) && treeMember(name)).map(Number) : []);
+const stopTree = (child) => {
+    try {
+        process.kill(-child.pid, 'SIGKILL');
+    } catch {}
+    let leftover = liveTree();
+    for (let tries = 0; leftover.length > 0 && tries < 20; tries += 1) {
+        for (const pid of leftover) {
+            try {
+                process.kill(pid, 'SIGKILL');
+            } catch {}
+        }
+        Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 100);
+        leftover = liveTree();
+    }
+    return leftover;
+};
+
 const runOne = (label, script, args, key) =>
     new Promise((done) => {
         const at = Date.now();
         const log = logPath(label);
         const out = [];
-        const child = spawn(process.execPath, [script, ...args], { cwd: root, stdio: ['ignore', 'pipe', 'pipe'] });
+        const child = spawn(process.execPath, [script, ...args], { cwd: root, detached: true, env: { ...process.env, GM_CHECK_TREE: TREE }, stdio: ['ignore', 'pipe', 'pipe'] });
         child.stdout.on('data', (chunk) => out.push(chunk));
         child.stderr.on('data', (chunk) => out.push(chunk));
         const timer = setTimeout(() => child.kill('SIGKILL'), 600000);
         child.on('close', (status) => {
             clearTimeout(timer);
             const wall = (Date.now() - at) / 1000;
+            const leftover = stopTree(child);
+            if (leftover.length > 0) {
+                status = 1;
+                out.push(Buffer.from(`check-build: ${label} left ${leftover.length} process(es) alive: ${leftover.join(', ')}\n`));
+            }
             writeFileSync(log, Buffer.concat(out));
             timings.push({ label, wall, status });
             durations[label] = wall;

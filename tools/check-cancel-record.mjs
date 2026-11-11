@@ -21,7 +21,7 @@ const runDir = join(workspace, 'runs', 'cancel');
 mkdirSync(workspace);
 const quiet = join(sandbox, 'quiet.json');
 writeFileSync(quiet, JSON.stringify({ mcpServers: { playwriter: { disabled: true } } }));
-const relay = spawn(binary, [...(onNode ? [join(root, 'tools', 'relay.mjs')] : ['serve']), '--workspace', workspace, '--run-dir', runDir, '--mcp-config', quiet], { stdio: ['pipe', 'pipe', 'pipe'], env: { ...process.env, HOME: sandbox } });
+const relay = spawn(binary, [...(onNode ? [join(root, 'tools', 'relay.mjs')] : ['serve']), '--workspace', workspace, '--run-dir', runDir, '--mcp-config', quiet], { detached: true, stdio: ['pipe', 'pipe', 'pipe'], env: { ...process.env, HOME: sandbox } });
 relay.stdin.on('error', () => {});
 const waiting = new Map();
 let nextId = 1;
@@ -73,12 +73,14 @@ try {
   expect(cancels.length === 2, `expected 2 cancel events, found ${cancels.length}`);
   expect(matched?.by?.name === CHECK && matched?.by?.version === '1', `the cancel event must name the client that cancelled: ${JSON.stringify(matched)}`);
   expect(matched?.why === 'client gave up', `the cancel event must carry the client's reason: ${JSON.stringify(matched)}`);
-  expect(matched?.outcome === 'the call is still running; gm does not stop it', `the matched cancel must say what gm did: ${JSON.stringify(matched)}`);
+  expect(matched?.outcome === 'ended the next_context wait; no reply is sent',`the matched cancel must say what gm did: ${JSON.stringify(matched)}`);
   expect(unmatched?.outcome === 'no call in flight with that id' && unmatched?.why === 'stale', `the unmatched cancel must say so: ${JSON.stringify(unmatched)}`);
   expect(events('cancel-ignored').length === 0, 'the cancel-ignored event is replaced by cancel');
   console.log(`${CHECK}: matched outcome "${matched?.outcome}" by ${matched?.by?.name} why "${matched?.why}"; unmatched outcome "${unmatched?.outcome}"`);
 } finally {
-  relay.kill('SIGKILL');
+  try {
+    process.kill(-relay.pid, 'SIGKILL');
+  } catch {}
   relay.stdout.destroy();
   relay.stderr.destroy();
   relay.stdin.destroy();
