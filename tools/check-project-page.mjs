@@ -92,6 +92,9 @@ try {
     await b.start();
     const other = await b.execute(URL);
     expect(other.reply.ok === true && !other.text.includes(MARKER), `the second project's session reused the first project's page: ${other.text.slice(0, 300)}`);
+    await a.execute('(await page.close(), "closed")');
+    const reopened = await a.execute('(await page.evaluate(() => 1))');
+    expect(reopened.reply.ok === true && reopened.text === '1', `a closed project page was not reopened by the next run: ${reopened.text.slice(0, 300)}`);
   } finally {
     a.child.kill();
     b.child.kill();
