@@ -1,6 +1,7 @@
 #include <iostream>
 #include <mutex>
 
+#include "gm/clock.hpp"
 #include "gm/core_verbs.hpp"
 #include "gm/host/browser_scope.hpp"
 #include "gm/host/child.hpp"
@@ -116,7 +117,7 @@ int run_worker(const HostArgs& args) {
     CoreVerbsOptions core_options;
     core_options.workspace = workspace;
     core_options.job_stuck_ms = static_cast<std::uint64_t>(*stuck_ms);
-    core_options.job_lifetime_ms = static_cast<std::uint64_t>(*job_lifetime);
+    core_options.job_lifetime_ms = static_cast<std::uint64_t>(*job_lifetime * clock_scale());
     core_options.serve_skill = [serve_skill_hook, skills = skills_dir_of(args)](const std::string& uri) {
         return *serve_skill_hook ? (*serve_skill_hook)(uri) : mcp::served_skill_text(skills, uri);
     };
@@ -157,7 +158,7 @@ int run_worker(const HostArgs& args) {
     options.task = *task;
     options.max_inflight = *max_inflight;
     options.max_steps = *max_steps;
-    options.job_lifetime_ms = static_cast<std::uint64_t>(*job_lifetime);
+    options.job_lifetime_ms = static_cast<std::uint64_t>(*job_lifetime * clock_scale());
     options.stuck_ms = static_cast<std::uint64_t>(*stuck_ms);
     options.monitor_ms = static_cast<std::uint64_t>(*monitor_ms);
     options.run_dir = *run_dir;

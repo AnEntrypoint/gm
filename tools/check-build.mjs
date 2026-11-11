@@ -156,6 +156,9 @@ const pipeline = async () => {
             plan(label, keyOf(label, name), { script: join(root, 'tools', name), args: [binary, '--real-clock'] }, jobs);
         }
     }
+    if (process.argv.includes('--mutations')) {
+        exclusive.push({ label: 'check-clock-mutations.mjs', script: join(root, 'tools', 'check-clock-mutations.mjs'), args: [buildDir], key: null });
+    }
     jobs.sort((a, b) => (durations[b.label] ?? 30) - (durations[a.label] ?? 30));
     await runPool(jobs, JOBS);
     for (const job of exclusive) await runOne(job.label, job.script, job.args, job.key);

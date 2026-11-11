@@ -2541,3 +2541,9 @@ Not run here: tools/check-txiki-wasi.mjs and the gm reactor wasm (the gm wasm32-
 - native/components/mcp/server.cpp: the run_code progress notice interval (kProgressMs, 5000 ms) is multiplied by clock_scale() in the wait.
 - tools/check-run-code-progress.mjs: scaled like the other two (body 117 ms, 33 ms budget, 500 ms budget). Measured: ok in 0.40 s, one progress notice (was 13.3 s).
 - check-browser-scope is not on the clock: its 12.7 s is browser work in external processes (the playwriter browser start and close), not a timer. Not changed.
+
+## Mutation check for the scaled budgets (2026-11-11, Phase A)
+
+- native/components/host/worker.cpp: the --job-lifetime-ms value (and the default) is multiplied by clock_scale(), so the JS body budget moves with GM_CLOCK_SCALE under the test flag. The guard is the same as for the other two knobs.
+- tools/check-clock-mutations.mjs (new): a guard run (a 2000 ms body with no timeoutMs must stay foreground when GM_CLOCK_SCALE is set without GMNEW_TEST_CLOCK), then two mutants, each applied to the source, built, run against its scaled check (which must fail), and reverted, with a rebuild after: the job lifetime back to 60 s (check-run-code-budget.mjs) and the job wait cap back to 30 s (check-turn-economy.mjs). Measured: both mutants fail with exit 1; the guard passes; wall 122.2 s (two mutant builds and the restore).
+- tools/check-build.mjs: `--mutations` adds the mutation check as an exclusive scenario (never cached, outside the default set).
