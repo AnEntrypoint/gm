@@ -7,6 +7,7 @@
 #include <system_error>
 
 #include "gm/host/child.hpp"
+#include "gm/host/update.hpp"
 #include "gm/json.hpp"
 
 namespace gm::host {
@@ -75,6 +76,7 @@ std::optional<std::string> register_mcp_server(const fs::path& config, const std
         if (auto error = read_if_exists(config, before)) return error;
         std::string text;
         if (auto error = merged_config(before, name, entry, text)) return error;
+        if (text == before) return std::nullopt;
 
         {
             std::ofstream out(temp, std::ios::binary | std::ios::trunc);
@@ -118,7 +120,7 @@ int run_install_command(const HostArgs& args) {
         server_args.push_back("--mcp-config");
         server_args.push_back(*mcp_config);
     }
-    const std::string exe = current_executable().string();
+    const std::string exe = stable_executable(current_executable()).string();
     if (auto error = register_mcp_server(*config, "gm", exe, server_args)) {
         std::cerr << "gm: install: " << *error << "\n";
         return 1;
