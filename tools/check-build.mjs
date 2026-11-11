@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { spawn } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { cpus, loadavg, tmpdir } from 'node:os';
@@ -27,7 +27,7 @@ const NATIVE = [
     'check-shell-stdin.mjs', 'check-grep-state-scope.mjs', 'check-job-bounds.mjs', 'check-early-run-code.mjs', 'check-stop-fetch.mjs',
     'check-read-parity.mjs', 'check-read-truncation.mjs', 'check-protocol-versions.mjs', 'check-resources-subscribe.mjs', 'check-startup-attempts.mjs',
     'check-skill-serve.mjs', 'check-no-resource-client.mjs', 'check-restart-skill-read.mjs', 'check-relay-reexec.mjs', 'check-embedded-runtime.mjs',
-    'witness-next-context-replay.mjs', 'check-install-switch.mjs', 'check-repeated-checks.mjs', 'check-owner-identity.mjs', 'check-build-handover.mjs', 'check-cli-flags.mjs', 'check-cut-marker.mjs', 'check-feed-reference.mjs', 'check-cancel-record.mjs',
+    'witness-next-context-replay.mjs', 'check-install-switch.mjs', 'check-repeated-checks.mjs', 'check-owner-identity.mjs', 'check-build-handover.mjs', 'check-cli-flags.mjs', 'check-cut-marker.mjs', 'check-feed-reference.mjs', 'check-cancel-record.mjs', 'check-install-follows.mjs',
 ];
 const NODE = ['check-turn-economy.mjs', 'check-restart-jobs.mjs', 'check-no-resource-client.mjs', 'check-repeated-checks.mjs'];
 const EXCLUSIVE = new Set(['check-relay-reexec.mjs']);
@@ -55,6 +55,19 @@ const fingerprint = () => {
         if (existsSync(join(root, dir))) walk(dir);
     }
     return hash.digest('hex');
+};
+const treeState = () => {
+    const state = new Map();
+    for (const name of execFileSync('git', ['ls-files', '-z'], { cwd: root, maxBuffer: 1 << 28 }).toString().split('\0').filter(Boolean)) {
+        const full = join(root, name);
+        if (!existsSync(full)) {
+            state.set(name, 'missing');
+            continue;
+        }
+        const info = statSync(full);
+        state.set(name, `${info.size}:${info.mtimeMs}:${createHash('sha256').update(readFileSync(full)).digest('hex')}`);
+    }
+    return state;
 };
 const importClosure = (file, seen) => {
     if (seen.has(file) || !existsSync(file)) return seen;
@@ -169,10 +182,17 @@ const pipeline = async () => {
     return failures.length === 0 ? 0 : 1;
 };
 
+const trackedBefore = treeState();
 let status = 1;
 try {
     status = await pipeline();
 } finally {
+    const trackedAfter = treeState();
+    const touched = [...new Set([...trackedBefore.keys(), ...trackedAfter.keys()])].filter((name) => trackedBefore.get(name) !== trackedAfter.get(name));
+    if (touched.length > 0) {
+        status = 1;
+        print(`check-build: a check changed tracked files in the checkout: ${touched.slice(0, 10).join(", ")}${touched.length > 10 ? " ..." : ""}`);
+    }
     rmSync(workspace, { recursive: true, force: true });
     rmSync(configDir, { recursive: true, force: true });
     writeFileSync(CACHE, JSON.stringify(cache, null, 2));

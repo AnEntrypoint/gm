@@ -1,15 +1,16 @@
 #!/usr/bin/env node
 import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, copyFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import readline from 'node:readline';
+import { fileURLToPath } from 'node:url';
 
 const CHECK = 'check-install-follows';
-const root = resolve('.');
-const buildDir = resolve(process.argv[2] ?? 'build/release');
-const host = join(buildDir, 'native/components/host');
+const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const target = resolve(process.argv[2] ?? join(root, 'build', 'release', 'native', 'components', 'host', 'gm'));
+const hostDir = dirname(target);
 const started = Date.now();
 const failures = [];
 const expect = (condition, text) => {
@@ -17,9 +18,10 @@ const expect = (condition, text) => {
 };
 const sleep = (ms) => new Promise((done) => setTimeout(done, ms));
 const hash = (path) => (existsSync(path) ? createHash('sha256').update(readFileSync(path)).digest('hex') : 'missing');
-const run = (command, args, env, ms) =>
+const textHash = (text) => createHash('sha256').update(text).digest('hex');
+const run = (command, args, env, ms, cwd) =>
   new Promise((done) => {
-    const child = spawn(command, args, { cwd: root, env, stdio: ['ignore', 'pipe', 'pipe'] });
+    const child = spawn(command, args, { cwd, env, stdio: ['ignore', 'pipe', 'pipe'] });
     let out = '';
     child.stdout.on('data', (d) => (out += d));
     child.stderr.on('data', (d) => (out += d));
@@ -30,21 +32,38 @@ const run = (command, args, env, ms) =>
     });
   });
 
-const leafPath = join(root, 'native/leaves/fetch.mjs');
-const skillPath = join(root, 'skills/gm/SKILL.md');
+const scratch = mkdtempSync(join(tmpdir(), 'gm-install-follows-'));
+const tree = join(scratch, 'tree');
+const home = join(scratch, 'home');
+const workspace = join(scratch, 'ws');
+const sandboxBuild = join(tree, 'build');
+const sandboxHost = join(sandboxBuild, 'native', 'components', 'host');
+mkdirSync(join(tree, 'scripts'), { recursive: true });
+mkdirSync(sandboxHost, { recursive: true });
+mkdirSync(home);
+mkdirSync(workspace);
+copyFileSync(join(root, 'scripts', 'install.sh'), join(tree, 'scripts', 'install.sh'));
+for (const dir of ['native/leaves', 'skills', 'defaults']) cpSync(join(root, dir), join(tree, dir), { recursive: true });
+for (const name of ['gm', 'gm-core']) {
+  copyFileSync(join(hostDir, name), join(sandboxHost, name));
+  chmodSync(join(sandboxHost, name), 0o755);
+}
+const refreshBuildSkills = () => {
+  rmSync(join(sandboxHost, 'skills'), { recursive: true, force: true });
+  cpSync(join(tree, 'skills'), join(sandboxHost, 'skills'), { recursive: true });
+};
+refreshBuildSkills();
+
+const env = { ...process.env, HOME: home };
+const installed = join(home, '.gmnew', 'current');
+const quiet = join(scratch, 'quiet.json');
+writeFileSync(quiet, JSON.stringify({ mcpServers: { playwriter: { disabled: true } } }));
+const leafPath = join(tree, 'native', 'leaves', 'fetch.mjs');
+const skillPath = join(tree, 'skills', 'gm', 'SKILL.md');
 const leafOriginal = readFileSync(leafPath, 'utf8');
 const skillOriginal = readFileSync(skillPath, 'utf8');
 const leafMarker = '\nexport const checkInstallFollows = 1;\n';
 const skillMarker = `\n${CHECK}\n`;
-const sandbox = mkdtempSync(join(tmpdir(), 'gm-install-follows-'));
-const home = join(sandbox, 'home');
-const workspace = join(sandbox, 'ws');
-mkdirSync(home);
-mkdirSync(workspace);
-const env = { ...process.env, HOME: home };
-const installed = join(home, '.gmnew', 'current');
-const quiet = join(sandbox, 'quiet.json');
-writeFileSync(quiet, JSON.stringify({ mcpServers: { playwriter: { disabled: true } } }));
 let relay = null;
 let stderr = '';
 const waiting = new Map();
@@ -82,44 +101,35 @@ const log = () => {
 };
 const restarts = () => log().filter((event) => event.kind === 'restart');
 const skillText = async () => (await rpc('resources/read', { uri: 'skill://gm/SKILL.md' }))?.result?.contents?.[0]?.text ?? '';
+const install = () => run('bash', [join(tree, 'scripts', 'install.sh'), '--local', sandboxBuild], env, 300000, tree);
 
 let picked = null;
 try {
-  const first = await run('bash', ['scripts/install.sh', '--local', buildDir], env, 300000);
+  const first = await install();
   expect(first.code === 0, `the first install failed (${first.code}): ${first.out.slice(-400)}`);
   expect(existsSync(join(installed, 'gm')), 'the first install did not create current/gm in the sandbox HOME');
   start(join(installed, 'gm'));
   await rpc('initialize', { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: CHECK, version: '1' } });
   relay.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' })}\n`);
   await rpc('tools/call', { name: 'next_context', arguments: {} });
-  const installedLeaf = hash(join(installed, 'leaves/fetch.mjs'));
-  const installedSkill = hash(join(installed, 'skills/gm/SKILL.md'));
-  expect(installedLeaf === createHash('sha256').update(leafOriginal).digest('hex'), 'the first install did not copy the checkout leaf');
+  const installedLeaf = hash(join(installed, 'leaves', 'fetch.mjs'));
+  const installedSkill = hash(join(installed, 'skills', 'gm', 'SKILL.md'));
+  expect(installedLeaf === textHash(leafOriginal), 'the first install did not copy the scratch leaf');
   const before = log().length;
 
   writeFileSync(leafPath, leafOriginal + leafMarker);
   writeFileSync(skillPath, skillOriginal + skillMarker);
   await sleep(6000);
-  const quietPhase = {
-    leafUnchanged: hash(join(installed, 'leaves/fetch.mjs')) === installedLeaf,
-    skillUnchanged: hash(join(installed, 'skills/gm/SKILL.md')) === installedSkill,
-    noRestart: restarts().length === 0,
-    noNewEvents: log().slice(before).every((event) => event.kind !== 'restart'),
-    skillText: (await skillText()).includes(CHECK) === false,
-  };
-  expect(quietPhase.leafUnchanged, 'the installed leaf changed on a checkout edit');
-  expect(quietPhase.skillUnchanged, 'the installed skill changed on a checkout edit');
-  expect(quietPhase.noRestart, `a checkout edit restarted the installed worker: ${JSON.stringify(restarts())}`);
-  expect(quietPhase.skillText, 'the session read the checkout skill edit before an install');
-  expect(!stderr.includes('restarting the worker'), `the relay reacted to a checkout edit: ${stderr.slice(-300)}`);
+  expect(hash(join(installed, 'leaves', 'fetch.mjs')) === installedLeaf, 'the installed leaf changed on a scratch edit');
+  expect(hash(join(installed, 'skills', 'gm', 'SKILL.md')) === installedSkill, 'the installed skill changed on a scratch edit');
+  expect(log().slice(before).every((event) => event.kind !== 'restart'), `a scratch edit restarted the installed worker: ${JSON.stringify(restarts())}`);
+  expect(!(await skillText()).includes(CHECK), 'the session read the scratch skill edit before an install');
+  expect(!stderr.includes('restarting the worker'), `the relay reacted to a scratch edit: ${stderr.slice(-300)}`);
 
-  const build = await run('cmake', ['--build', buildDir, '--target', 'gm_skills'], env, 300000);
-  expect(build.code === 0, `refreshing the build skills failed: ${build.out.slice(-300)}`);
-  const second = await run('bash', ['scripts/install.sh', '--local', buildDir], env, 300000);
+  refreshBuildSkills();
+  const second = await install();
   expect(second.code === 0, `the second install failed (${second.code}): ${second.out.slice(-400)}`);
-  const leafNow = hash(join(installed, 'leaves/fetch.mjs'));
-  expect(leafNow === createHash('sha256').update(leafOriginal + leafMarker).digest('hex'), 'the install did not copy the edited leaf');
-  picked = null;
+  expect(hash(join(installed, 'leaves', 'fetch.mjs')) === textHash(leafOriginal + leafMarker), 'the install did not copy the edited leaf');
   for (let i = 0; i < 40 && !picked; i += 1) {
     await sleep(500);
     picked = restarts().find((event) => String(event.reason ?? '').includes('fetch.mjs')) ?? null;
@@ -128,10 +138,7 @@ try {
   expect((await skillText()).includes(CHECK), 'the installed skill edit is not what the session reads on its next read');
 } finally {
   if (relay) relay.kill('SIGKILL');
-  writeFileSync(leafPath, leafOriginal);
-  writeFileSync(skillPath, skillOriginal);
-  await run('cmake', ['--build', buildDir, '--target', 'gm_skills'], env, 300000);
-  rmSync(sandbox, { recursive: true, force: true });
+  rmSync(scratch, { recursive: true, force: true });
 }
 
 const wall = ((Date.now() - started) / 1000).toFixed(2);
@@ -139,5 +146,5 @@ if (failures.length > 0) {
   console.error(`${CHECK}: ${failures.length} failure(s) (wall ${wall} s)\n- ${failures.join('\n- ')}`);
   process.exitCode = 1;
 } else {
-  console.log(`${CHECK}: ok (a checkout leaf and skill edit left the installed files and session unchanged; the install then reached the session through a restart, reason "${picked?.reason}"; wall ${wall} s)`);
+  console.log(`${CHECK}: ok (a scratch leaf and skill edit left the sandbox install and its session unchanged; the install then reached the session through a restart, reason "${picked?.reason}"; wall ${wall} s)`);
 }
