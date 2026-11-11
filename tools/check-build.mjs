@@ -10,7 +10,7 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const argv = process.argv.slice(2);
 const onlyAt = argv.indexOf('--only');
 const only = onlyAt === -1 ? null : argv[onlyAt + 1];
-const buildArg = argv.find((arg, index) => arg !== '--only' && index !== onlyAt + 1 && !arg.startsWith('--'));
+const buildArg = argv.find((arg, index) => arg !== '--only' && (onlyAt === -1 || index !== onlyAt + 1) && !arg.startsWith('--'));
 const buildDir = resolve(buildArg ?? join(root, 'build', 'release'));
 const hostDir = join(buildDir, 'native', 'components', 'host');
 const names = process.platform === 'win32' ? ['gm.exe', 'gm-core.exe'] : ['gm', 'gm-core'];
