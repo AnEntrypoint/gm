@@ -96,9 +96,6 @@ async function arm(label, command, args) {
 }
 
 const workspaces = [];
-const nodeWorkspace = fresh('node');
-workspaces.push(nodeWorkspace);
-await arm('node', process.execPath, [join(root, 'src', 'mcp.mjs'), '--workspace', nodeWorkspace, '--run-dir', join(nodeWorkspace, 'node-run')]);
 if (binary !== null && existsSync(binary)) {
   const nativeWorkspace = fresh('native');
   workspaces.push(nativeWorkspace);

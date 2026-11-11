@@ -75,8 +75,6 @@ function check(label, result) {
 }
 
 const body = "const added = await gm.prd_add({ title: 'receipt probe' }); const id = String(added.output); const receipt = await gm.prd_receipt({ id, witness: 'delivered sha', commit: 'abcdef0' }); const file = await gm.read_file({ path: 'work/rows/' + id + '.yml' }); const list = await gm.prd_list({ status: 'all' }); const close = await gm.stat_file({ path: 'closes/' + id + '.txt' }); return { id, receiptOk: receipt.ok === true, file: String(file.output), list: String(list.output), closePresent: close.ok !== false };";
-const nodeArgs = [join(root, 'src', 'mcp.mjs'), '--workspace', workspace, '--run-dir', join(workspace, 'node-run'), '--mcp-config', mcpConfig];
-await arm('node', process.execPath, nodeArgs, body, check);
 if (binary !== null && existsSync(binary)) {
   const nativeArgs = ['serve', '--workspace', workspace, '--run-dir', join(workspace, 'native-run'), '--mcp-config', mcpConfig];
   await arm('native', binary, nativeArgs, body, check);

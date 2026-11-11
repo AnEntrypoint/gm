@@ -93,8 +93,6 @@ const fresh = (name) => {
   workspaces.push(dir);
   return dir;
 };
-const nodeWorkspace = fresh('node');
-await arm('node', process.execPath, [join(root, 'src', 'mcp.mjs'), '--workspace', nodeWorkspace, '--run-dir', join(nodeWorkspace, 'node-run'), '--mcp-config', mcpConfig, '--stuck-ms', '2000', '--monitor-ms', '300']);
 if (binary !== null && existsSync(binary)) {
   const nativeWorkspace = fresh('native');
   await arm('native', binary, ['serve', '--workspace', nativeWorkspace, '--run-dir', join(nativeWorkspace, 'native-run'), '--mcp-config', mcpConfig, '--stuck-ms', '2000', '--monitor-ms', '300']);

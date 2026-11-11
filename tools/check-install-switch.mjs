@@ -24,7 +24,7 @@ const filesUnder = (dir) => readdirSync(dir).flatMap((name) => (statSync(join(di
 if (process.argv.includes('--installed')) {
   const current = join(process.env.HOME, '.gmnew', 'current');
   const version = (exe) => (existsSync(exe) ? spawnSync(exe, ['--version'], { encoding: 'utf8', timeout: 30000 }).stdout.trim() : '');
-  const trees = ['native', 'src', 'defaults'].map((dir) => spawnSync('git', ['rev-parse', `HEAD:${dir}`], { cwd: root, encoding: 'utf8', timeout: 30000 }).stdout.trim()).join('');
+  const trees = ['native', 'defaults'].map((dir) => spawnSync('git', ['rev-parse', `HEAD:${dir}`], { cwd: root, encoding: 'utf8', timeout: 30000 }).stdout.trim()).join('');
   const expected = `${createHash('sha256').update(trees).digest('hex').slice(0, 12)}-dev`;
   const live = version(join(current, 'gm')).split(' ')[0];
   const stale = [];

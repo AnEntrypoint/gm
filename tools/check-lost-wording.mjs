@@ -6,7 +6,6 @@ import { fileURLToPath } from 'node:url';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const FRAGMENTS = ['its return value is lost; ', ' verb calls completed before the stop, each in query_log as a code-call after seq '];
 const TREES = [
-  ['node', join(root, 'src', 'runcode.mjs')],
   ['native', join(root, 'native', 'components', 'mcp', 'server.cpp')],
 ];
 const failures = [];

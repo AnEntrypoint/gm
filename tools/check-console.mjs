@@ -109,7 +109,6 @@ async function check(label, command, argsOf) {
   }
 }
 
-await check('node', process.execPath, (workspace) => [join(root, 'src', 'mcp.mjs'), '--workspace', workspace]);
 if (binary === null || !existsSync(binary)) {
   console.log('native console: skipped (no binary given)');
 } else {

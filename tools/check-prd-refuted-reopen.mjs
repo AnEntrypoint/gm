@@ -77,8 +77,6 @@ function check(label, result) {
 }
 
 const body = "const added = await gm.prd_add({ title: 'refute probe', body: 'status: refuted\\nverdict: needs-design\\nnotes: keep me' }); const id = String(added.output); const refuted = await gm.prd_refute({ id, reason: 'needs design', verdict: 'needs-design', notes: 'preserve this note', witness: 'receipt' }); const refutedList = await gm.prd_list({ status: 'refuted' }); const reopened = await gm.prd_reopen({ id, from: 'refuted', reason: 'design ready' }); const openList = await gm.prd_list({ status: 'open' }); const file = await gm.read_file({ path: 'work/rows/' + id + '.yml' }); const row = await gm.stat_file({ path: 'work/rows/' + id + '.yml' }); return { id, refutedOk: refuted.ok === true, refutedList: String(refutedList.output), reopenedOk: reopened.ok === true, openList: String(openList.output), file: String(file.output), rowPresent: row.ok !== false };";
-const nodeArgs = [join(root, 'src', 'mcp.mjs'), '--workspace', workspace, '--run-dir', join(workspace, 'node-run'), '--mcp-config', mcpConfig];
-await arm('node', process.execPath, nodeArgs, body, check);
 if (binary !== null && existsSync(binary)) {
   const nativeArgs = ['serve', '--workspace', workspace, '--run-dir', join(workspace, 'native-run'), '--mcp-config', mcpConfig];
   await arm('native', binary, nativeArgs, body, check);

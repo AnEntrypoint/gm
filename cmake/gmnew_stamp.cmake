@@ -15,7 +15,7 @@ if(GIT_FOUND)
     endif()
     set(trees "")
     set(ok TRUE)
-    foreach(dir native src defaults)
+    foreach(dir native defaults)
         execute_process(
             COMMAND "${GIT_EXECUTABLE}" rev-parse "HEAD:${dir}"
             WORKING_DIRECTORY "${SOURCE_DIR}"
