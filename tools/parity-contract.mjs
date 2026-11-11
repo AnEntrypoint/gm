@@ -299,20 +299,33 @@ def('W22', async () => {
 });
 
 const ids = which === 'all' ? Object.keys(witnesses) : [which];
+const SHARED_CHECK_BUILD = new Set(['W19', 'W20']);
+const runOne = async (id) => {
+  const fn = witnesses[id];
+  if (!fn) return { ok: false, line: `${id} unknown` };
+  try {
+    return { ok: true, line: `${id} pass ${await fn()}` };
+  } catch (error) {
+    return { ok: false, line: `${id} FAIL ${error.message}` };
+  }
+};
+const results = new Map();
+const parallel = ids.filter((id) => !SHARED_CHECK_BUILD.has(id));
+let next = 0;
+const lanes = Array.from({ length: Math.min(6, parallel.length) }, async () => {
+  while (next < parallel.length) {
+    const id = parallel[next];
+    next += 1;
+    results.set(id, await runOne(id));
+  }
+});
+await Promise.all(lanes);
+for (const id of ids.filter((id) => SHARED_CHECK_BUILD.has(id))) results.set(id, await runOne(id));
 let failed = 0;
 for (const id of ids) {
-  const fn = witnesses[id];
-  if (!fn) {
-    console.error(`${id} unknown`);
-    failed += 1;
-    continue;
-  }
-  try {
-    console.log(`${id} pass ${await fn()}`);
-  } catch (error) {
-    failed += 1;
-    console.log(`${id} FAIL ${error.message}`);
-  }
+  const result = results.get(id);
+  console.log(result.line);
+  if (!result.ok) failed += 1;
 }
 rmSync(scratch, { recursive: true, force: true });
 process.exitCode = failed === 0 ? 0 : 1;

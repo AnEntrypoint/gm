@@ -2547,3 +2547,8 @@ Not run here: tools/check-txiki-wasi.mjs and the gm reactor wasm (the gm wasm32-
 - native/components/host/worker.cpp: the --job-lifetime-ms value (and the default) is multiplied by clock_scale(), so the JS body budget moves with GM_CLOCK_SCALE under the test flag. The guard is the same as for the other two knobs.
 - tools/check-clock-mutations.mjs (new): a guard run (a 2000 ms body with no timeoutMs must stay foreground when GM_CLOCK_SCALE is set without GMNEW_TEST_CLOCK), then two mutants, each applied to the source, built, run against its scaled check (which must fail), and reverted, with a rebuild after: the job lifetime back to 60 s (check-run-code-budget.mjs) and the job wait cap back to 30 s (check-turn-economy.mjs). Measured: both mutants fail with exit 1; the guard passes; wall 122.2 s (two mutant builds and the restore).
 - tools/check-build.mjs: `--mutations` adds the mutation check as an exclusive scenario (never cached, outside the default set).
+
+## The parity contract runs its witnesses in a pool (2026-11-11, Phase A)
+
+- tools/parity-contract.mjs: `all` runs the witnesses in a pool of six lanes, printed in the original order; W19 and W20 stay serial (both run check-build --only and share its cache). Each witness already uses its own scratch directory, so the lanes do not share state.
+- Measured: `all` took 17.0 s serially and 12.0 s in the pool; 22 of 22 pass. The rest of the time is W15's real waits.
