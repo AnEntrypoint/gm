@@ -214,13 +214,19 @@ def('W15', async () => {
   await s.open();
   await s.rpc('resources/read', { uri: 'skill://gm/SKILL.md' });
   await s.call('next_context', {});
-  const proc = spawn('sleep', ['300']);
-  const started = Date.now();
-  const r = await s.call('run_code', { body: `return await gm.job_status({ pid: ${proc.pid}, waitMs: 500000 });` });
-  const wall = (Date.now() - started) / 1000;
-  proc.kill();
+  const described = await s.call('run_code', { body: 'return gm.verbs().find((v) => v.name === "job_status").description;' });
+  const gone = [];
+  for (const waitMs of [99999, 100001]) {
+    const proc = spawn('sleep', ['2']);
+    const r = await s.call('run_code', { body: `return await gm.job_status({ pid: ${proc.pid}, waitMs: ${waitMs} });` });
+    gone.push(r.output?.state === 'gone' && r.output?.waitedMs < 3000);
+  }
+  const live = spawn('sleep', ['300']);
+  const held = await s.call('run_code', { body: `return await gm.job_status({ pid: ${live.pid}, waitMs: 3000 });` });
+  live.kill();
   s.close();
-  return `pid wait with waitMs 500000: state=${r.state ?? r.output?.state} background=${r.background === true}; wall within the 100 s cap: ${wall >= 95 && wall <= 115}`;
+  const waited = held.output?.waitedMs ?? 0;
+  return `cap 100000 in the verb description: ${String(described.output).includes('at most 100000')}; waitMs below and above the cap on a 2 s process: gone ${gone.join(' ')}; a live process with waitMs 3000: state=${held.output?.state} waited-3s=${waited >= 2900 && waited < 3500}`;
 });
 
 def('W16', async () => {

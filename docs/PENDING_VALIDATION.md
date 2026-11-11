@@ -2446,3 +2446,10 @@ Not run here: tools/check-txiki-wasi.mjs and the gm reactor wasm (the gm wasm32-
 
 - Ran `node tools/parity-contract.mjs /config/.gmnew/current/gm all` (installed 9702c50-dev): 22 of 22 lines match docs/PARITY_CONTRACT.md, wall 110 s (W15 is 100 s of it).
 - First run: W17, W18, W19, W20, W21 failed because the witness derived the build directory from the installed binary's path (under ~/.gmnew). Fixed: the build directory is the binary's build tree when it has one, else this checkout's build/release (tools/parity-contract.mjs, tools/check-install-switch.mjs). W17 also now switches to an older version before the second install, so previous-<id> is actually tested.
+
+## W15 checks the job-wait cap without waiting it out (2026-11-11, Phase A)
+
+- The job_status wait is clamped to 100000 ms in both engines (native job.cpp max_wait_ms, Node src/mcp.mjs MAX_WAIT_MS). Three descriptions said "at most 3600000": native verbs.cpp job_status, native server.cpp run_code text, Node src/mcp.mjs job_status. Corrected to 100000 in all three.
+- tools/parity-contract.mjs W15: now asserts the cap text from gm.verbs(), a 2 s process with waitMs 99999 and 100001 (both gone before 3 s), and a live process with waitMs 3000 held about 3 s. Wall: before 101 s (it waited out the cap); after 7.3 s.
+- docs/PARITY_CONTRACT.md section 3.2 states the clamp and the new witness line.
+- Witness to rerun in Phase B: node tools/parity-contract.mjs build/release/native/components/host/gm W15.

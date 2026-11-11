@@ -131,10 +131,10 @@ Exactly these four, in this order:
 
 ### 3.2 The 100 s cap (W15)
 
-A single wait is capped at 100000 ms. A process still running after the cap returns `state: "running"` at about 100 s, although `waitMs` was 500000. This witness takes 100 s of wall time.
+A job or pid wait is clamped to 100000 ms: `waitMs` above 100000 is accepted and behaves as 100000, not refused. The reply does not carry the clamp, so the cap is stated in the verb's description (`gm.verbs()`), which says "at most 100000". The witness checks that text, a 2 s process with `waitMs` just below (99999) and just above (100001) the cap, which must both return `gone` before 3 s, and a live process with `waitMs` 3000, which must hold for about 3 s and return `running`. It takes about 7 s; a witness that waits out the cap itself would take 100 s.
 
     node tools/parity-contract.mjs <bin> W15
-    W15 pass pid wait with waitMs 500000: state=running background=false; wall within the 100 s cap: true
+    W15 pass cap 100000 in the verb description: true; waitMs below and above the cap on a 2 s process: gone true true; a live process with waitMs 3000: state=running waited-3s=true
 
 ### 3.3 One-body loop (W16)
 
