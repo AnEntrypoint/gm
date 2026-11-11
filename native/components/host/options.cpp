@@ -83,9 +83,7 @@ deoxidene::Result<std::filesystem::path, std::string> choose_run_dir(const HostA
     return root / new_run_id();
 }
 
-std::filesystem::path source_root() { return GMNEW_SOURCE_DIR; }
-
-std::filesystem::path default_build_dir() { return GMNEW_BUILD_DIR; }
+static std::filesystem::path install_dir() { return current_executable().parent_path(); }
 
 std::filesystem::path workspace_of(const HostArgs& args) {
     return args.path_or("--workspace", std::filesystem::current_path());
@@ -118,26 +116,10 @@ deoxidene::Result<int, std::string> positive_int_flag(const HostArgs& args, std:
     return std::stoi(*flag);
 }
 
-std::filesystem::path installed_or(std::string_view name, const std::filesystem::path& fallback) {
-    const std::filesystem::path candidate = current_executable().parent_path() / name;
-    std::error_code ec;
-    return std::filesystem::is_directory(candidate, ec) ? candidate : fallback;
-}
+std::filesystem::path leaves_dir_of(const HostArgs& args) { return args.path_or("--leaves", install_dir() / "leaves"); }
 
-std::filesystem::path leaves_dir_of(const HostArgs& args) {
-    std::error_code ec;
-    const auto checkout = source_root() / "native" / "leaves";
-    const auto fallback = std::filesystem::is_directory(checkout, ec) ? checkout : installed_or("leaves", checkout);
-    return args.path_or("--leaves", fallback);
-}
+std::filesystem::path skills_dir_of(const HostArgs& args) { return args.path_or("--skills", install_dir() / "skills"); }
 
-std::filesystem::path skills_dir_of(const HostArgs& args) {
-    std::error_code ec;
-    const auto checkout = source_root() / "skills";
-    const auto fallback = std::filesystem::is_directory(checkout, ec) ? checkout : installed_or("skills", checkout);
-    return args.path_or("--skills", fallback);
-}
-
-std::filesystem::path defaults_dir_of() { return installed_or("defaults", source_root() / "defaults"); }
+std::filesystem::path defaults_dir_of() { return install_dir() / "defaults"; }
 
 }

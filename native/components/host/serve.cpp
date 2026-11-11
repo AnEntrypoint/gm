@@ -73,12 +73,8 @@ int run_serve(const HostArgs& args) {
     const auto skill_read = args.flag("--skill-read");
     options.skill_read = skill_read && *skill_read == "yes";
     if (const auto from_build = args.flag("--from-build")) options.from_build = *from_build;
-    const auto build_flag = args.flag("--build-dir");
-    options.build_dir = build_flag && *build_flag == "none" ? std::filesystem::path{}
-                                                            : args.path_or("--build-dir", default_build_dir());
-    const auto root = source_root();
+    options.build_dir = args.path_or("--build-dir", {});
     options.runtime_roots = {leaves_dir_of(args)};
-    options.build_roots = {root / "native" / "components", root / "native" / "include", root / "include"};
     options.update = policy_from_environment(install_dir);
     return serve_stdio(std::move(options));
 }

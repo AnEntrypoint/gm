@@ -87,7 +87,7 @@ fs::path run_dir_of(const Flags& flags) {
     }
     const std::string* run = flags.find("run");
     if (run == nullptr || !valid_run_id(*run)) throw CliError{"--run <id> or --dir <run dir> is required"};
-    const fs::path root = flags.has("workspace") ? fs::absolute(*flags.find("workspace")) : source_root();
+    const fs::path root = flags.has("workspace") ? fs::absolute(*flags.find("workspace")) : fs::current_path();
     const fs::path path = root / "runs" / *run;
     if (!fs::is_directory(path)) throw CliError{"no run " + *run};
     return path;

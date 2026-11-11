@@ -12,7 +12,9 @@ target_link_libraries(gm PRIVATE gm_host)
 target_compile_definitions(gm PRIVATE GMNEW_HOST_ABI_VERSION=1)
 
 add_custom_target(gm_skills ALL
-    COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/skills ${CMAKE_CURRENT_BINARY_DIR}/skills)
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/skills ${CMAKE_CURRENT_BINARY_DIR}/skills
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/native/leaves ${CMAKE_CURRENT_BINARY_DIR}/leaves
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/defaults ${CMAKE_CURRENT_BINARY_DIR}/defaults)
 
 add_executable(gm-core main.cpp serve.cpp)
 target_link_libraries(gm-core PRIVATE gm_host)
