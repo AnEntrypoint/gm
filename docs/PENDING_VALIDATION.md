@@ -3006,3 +3006,11 @@ Decided here by the worker, with the reason, so the owner can overturn any of th
 - Witness: native check check-browser-first-open (native/components/tool/checks/browser_first_open.cpp), run as gm-tool check <built gm> check-browser-first-open. Scenario 1: start, a first open through gm.playwriter_execute, 20 s, page open and crossOriginIsolated, close, then the browser released. Scenario 2: the gate SIGKILLed with a page open, and the next call reaches the page without ECONNREFUSED. Scenario 3: a browser started outside the launcher on the project port is replaced by one started through PLAYWRITER_BROWSER_PATH (wrapper called, SwiftShader flags in the cmdline).
 - Phase B order: build the native tree (cmake --build build/release, then phase-b); push pw to AnEntrypoint/pw main first, because the pin must name a commit that GitHub serves; then move kPlaywriterPin in native/components/host/install.cpp to that commit; gm install --local, check-install-switch --installed, the new check, and pw npm test (test/leases.cjs and test/lifecycle.cjs assert the old release rule and are updated where they do); then ship --push for gm.
 
+
+## Round playwriter first open: pin f26b5ce (2026-11-12, Phase A)
+
+- The pw changes are on AnEntrypoint/pw main as f26b5ce (one push, made after pw's own witnesses were green): the start holds the browser until a caller page is open, a lease release keeps it while such a page is open, the executor is retired on lease loss, an adopted browser is relaunched with PLAYWRITER_BROWSER_PATH, and a start replaces a gate whose browser was started with a different browser path or flags while no other lease holds it.
+- pw witness: `npm test` (tools, lifecycle, leases) in /workspace/pw at f26b5ce: all checks passed, wall 125 s.
+- Scratch witness for the gate replacement (a start with wrapper w1, then a start with wrapper w2 whose flags differ, no lease held): calls.txt lists "w1" then "w2", and the running browser's command line carries --use-angle=swiftshader.
+- The gm pin moves from 24646cc to f26b5ce in native/components/host/install.cpp. 24646cc is an ancestor of origin/main, so the shipped pw did not have these changes.
+- Witness: gm-tool check check-browser-first-open, run in Phase B on the release build (output quoted in the Phase B record).
