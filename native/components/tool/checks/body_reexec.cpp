@@ -183,7 +183,6 @@ CheckResult check_body_reexec(const std::string& binary) {
             }
 
             if (worker && !job.empty()) {
-                const std::int64_t waiting = session.send("tools/call", json::Object{{"name", "job_status"}, {"arguments", json::Object{{"job", job}, {"waitMs", 60000}}}});
                 const auto pointed_at = Clock::now();
                 point(install, second);
 
@@ -196,14 +195,15 @@ CheckResult check_body_reexec(const std::string& binary) {
                 if (session.stderr_text().contains(kReexecMarker)) result.failures.push_back("the relay re-executed while the body was still running");
                 if (alive_of({*worker}).empty()) result.failures.push_back("the worker " + std::to_string(*worker) + " ended while the body ran");
 
-                const std::optional<json::Value> answer = session.await_reply(waiting, std::chrono::milliseconds(kAnswerLimitMs));
+                const std::string fetch_source =
+                    "const ended = await gm.job_status({ job: '" + job + "', waitMs: 60000 }); return { state: ended.state, value: ended.value || ended.output };";
+                const json::Value answer = output_value(tool_json(session, "run_code", json::Object{{"body", fetch_source}, {"timeoutMs", static_cast<std::int64_t>(kAnswerLimitMs)}}));
                 answered_ms = ms_since(pointed_at);
-                const std::string answer_text = answer ? json::dump(*answer) : std::string{};
-                if (!answer) {
-                    result.failures.push_back("the in-flight job_status did not answer: the worker ended or the wait ran out");
-                } else if (answer_text.find("\"exited\"") == std::string::npos || answer_text.find("ended") == std::string::npos) {
-                    result.failures.push_back("the body did not finish with its value: " + answer_text.substr(0, 300));
-                }
+                const json::Value* state_value = answer.find("state");
+                const json::Value* value_text = answer.find("value");
+                const bool exited = state_value != nullptr && state_value->is_string() && state_value->as_string() == "exited";
+                const bool valued = value_text != nullptr && value_text->is_string() && value_text->as_string().find("ended") != std::string::npos;
+                if (!exited || !valued) result.failures.push_back("the body did not finish with its value: " + json::dump(answer).substr(0, 300));
 
                 const auto reexec_deadline = Clock::now() + std::chrono::milliseconds(kReexecLimitMs);
                 while (!session.stderr_text().contains(kReexecMarker) && Clock::now() < reexec_deadline) std::this_thread::sleep_for(std::chrono::milliseconds(50));
