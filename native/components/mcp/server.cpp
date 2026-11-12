@@ -743,6 +743,7 @@ struct Server::State {
     std::optional<std::string> fingerprint;
     std::shared_ptr<Gate> gate = std::make_shared<Gate>();
     std::vector<std::shared_ptr<BodyJob>> bodies;
+    std::mutex bodies_notify;
     std::map<std::string, std::function<void()>> after_reply;
     std::thread monitor;
     std::thread list_watch;
@@ -1667,6 +1668,12 @@ struct Server::State {
             if (job->adopted && !job->settled) names.push_back(job->name);
         }
         return names;
+    }
+
+    void publish_bodies() {
+        std::lock_guard guard(bodies_notify);
+        const std::uint64_t running = running_bodies().size();
+        notify(object().set("jsonrpc", "2.0").set("method", "gm/bodies").set("params", object().set("running", number_of(running))));
     }
 
     void stop_bodies(const std::string& reason) {
@@ -3781,6 +3788,7 @@ Value Server::State::run_code(const Value& args) {
                     }
                 }
                 job->exited = true;
+                publish_bodies();
             });
             pause_turn();
             bool done;
@@ -3822,6 +3830,7 @@ Value Server::State::run_code(const Value& args) {
             }
             write_status(*job->owner, job->name, status_of(*job, "running"));
             append("job", object().set("job", job->name).set("body", number_of(job->body)).set("state", "running"));
+            publish_bodies();
             ensure_monitor();
             Value logged_calls = array();
             if (auto after = s().log->read_from(action)) {

@@ -59,6 +59,14 @@ std::string method_of(const json::Value& message) {
     return method != nullptr && method->is_string() ? method->as_string() : std::string{};
 }
 
+constexpr std::string_view kBodiesMethod = "gm/bodies";
+
+std::uint64_t bodies_running(const json::Value& message) {
+    const json::Value* params = message.find("params");
+    const json::Value* running = params != nullptr ? params->find("running") : nullptr;
+    return running != nullptr && running->is_number() ? static_cast<std::uint64_t>(running->as_number()) : 0;
+}
+
 bool resendable_call(const json::Value& message) {
     if (method_of(message) != "tools/call") return false;
     const json::Value* params = message.find("params");
@@ -203,6 +211,8 @@ bool Relay::spawn_worker(Lock&) {
     }
     child_ = *spawned;
     child_ended_ = false;
+    bodies_running_ = 0;
+    body_wait_said_ = false;
     reader_ = std::thread([this, child = child_] { read_loop(child); });
     return true;
 }
@@ -333,6 +343,12 @@ void Relay::read_loop(std::shared_ptr<Child> child) {
                 resendable_.erase(*id);
             }
             method = method_of(*message);
+            if (method == kBodiesMethod) {
+                bodies_running_ = bodies_running(*message);
+                if (bodies_running_ == 0) body_wait_said_ = false;
+                changed_.notify_all();
+                continue;
+            }
         }
         const bool list_notice = method.size() >= 12 && method.ends_with("list_changed");
         if (swapping_ && list_notice) continue;
@@ -489,8 +505,15 @@ bool Relay::only_resendable_in_flight() const {
 void Relay::reexec() {
 #if !defined(_WIN32)
     Lock lock(mutex_);
-    auto ready = [&] { return reexec_pending_ && !options_.reexec_argv.empty() && state_ == State::Running && only_resendable_in_flight() && !swapping_ && !host_gone_; };
-    if (!ready()) return;
+    auto calls_settled = [&] { return reexec_pending_ && !options_.reexec_argv.empty() && state_ == State::Running && only_resendable_in_flight() && !swapping_ && !host_gone_; };
+    auto ready = [&] { return calls_settled() && bodies_running_ == 0; };
+    if (!ready()) {
+        if (calls_settled() && bodies_running_ > 0 && !body_wait_said_) {
+            body_wait_said_ = true;
+            say("re-executing waits for " + std::to_string(bodies_running_) + " running body job(s); it follows when they end");
+        }
+        return;
+    }
     std::error_code canonical_error;
     const std::filesystem::path build_dir = std::filesystem::canonical(options_.reexec_argv.front(), canonical_error).parent_path();
     const std::string stamp = build_dir.filename().string();
@@ -578,6 +601,8 @@ void Relay::update_loop() {
         if (host_gone_) break;
         if (!result.ok) {
             say("update skipped: " + result.error);
+        } else if (result.status.starts_with("kept") || result.status.starts_with("refused")) {
+            say(result.status);
         } else if (result.updated) {
             say("updated " + result.from + " -> " + result.to);
 #if defined(_WIN32)

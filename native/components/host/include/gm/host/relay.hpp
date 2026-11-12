@@ -113,6 +113,8 @@ private:
     std::thread updater_;
     std::thread watcher_;
     bool reexec_pending_ = false;
+    std::uint64_t bodies_running_ = 0;
+    bool body_wait_said_ = false;
     std::string refused_build_;
     std::string handover_reason_;
     std::map<std::string, std::string> inflight_;

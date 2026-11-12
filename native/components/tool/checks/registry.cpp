@@ -13,6 +13,7 @@ const std::vector<Registered>& checks() {
         {"check-relay-reexec", check_relay_reexec},
         {"check-handover-in-flight", check_handover_in_flight},
         {"check-update-order", check_update_order},
+        {"check-body-reexec", check_body_reexec},
         {"check-witness-next-context-replay", check_witness_next_context_replay},
         {"check-build-handover", check_build_handover},
         {"check-console", check_console},
