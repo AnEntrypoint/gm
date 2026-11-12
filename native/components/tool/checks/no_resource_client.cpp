@@ -129,6 +129,7 @@ CheckResult check_no_resource_client(const std::string& binary) {
                 if (!flag(gated, "ok", false) || error.rfind("run_code refused:", 0) != 0) result.failures.push_back(label + " was not refused: " + json::dump(gated).substr(0, 300));
                 if (error.find("skill://gm/SKILL.md") == std::string::npos || error.find('\n') != std::string::npos)
                     result.failures.push_back(label + " does not name the skill read in one line: " + error);
+                if (error.find("/skills/gm/SKILL.md") == std::string::npos) result.failures.push_back(label + " does not name the skill's path on disk: " + error);
                 const std::string dump = json::dump(rpc);
                 if (dump.size() > kRefusalLimitBytes) result.failures.push_back(label + " is " + std::to_string(dump.size()) + " bytes; it names the read and must not carry the skill");
                 if (count_of(dump, escaped) != 0) result.failures.push_back(label + " embeds the skill text");

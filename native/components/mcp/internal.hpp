@@ -41,6 +41,7 @@ public:
 
 struct SkillFile {
     std::string path;
+    std::string disk;
     std::string uri;
     std::string bytes;
     std::string digest;

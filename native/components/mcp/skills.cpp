@@ -169,6 +169,7 @@ deoxidene::Result<Skill, std::string> read_skill(const std::filesystem::path& sk
     for (const std::string& path : paths) {
         SkillFile file;
         file.path = path;
+        file.disk = (dir / path).string();
         file.uri = "skill://" + name + "/" + path;
         if (!read_file(dir / path, file.bytes)) return Fail{"cannot read " + (dir / path).string()};
         file.digest = "sha256:" + sha256_hex(file.bytes);

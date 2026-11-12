@@ -83,7 +83,6 @@ constexpr const char* kServerName = "gm";
 constexpr const char* kServerTitle = "gm run worker";
 constexpr const char* kGmSkillUri = "skill://gm/SKILL.md";
 constexpr int kStepStartRule = 2;
-constexpr const char* kSkillReadRefusal = "run_code refused: read skill://gm/SKILL.md first (resources/read, or ReadMcpResourceTool with server gm). Every run_code is refused until that read is on this connection.";
 constexpr std::size_t kReplyMemory = 256;
 constexpr std::size_t kOutputCap = 20000;
 constexpr std::size_t kOutputPage = 20000;
@@ -528,11 +527,6 @@ Value caller_of_process() {
 #endif
 }
 
-std::string skill_refusal_about(const std::string& change) {
-    return "run_code refused: skill://gm/SKILL.md " + change +
-           ", so read it first (resources/read, or ReadMcpResourceTool with server gm). Every run_code is refused until that read is on this connection.";
-}
-
 const Value* last_skill_read_by_this_host(const std::vector<Value>& history) {
     const Value me = caller_of_process();
     const Value* my_host = me.find("parent");
@@ -756,7 +750,8 @@ struct Server::State {
     std::map<std::string, std::string> file_subscriptions;
     bool monitor_running = false;
     bool gm_skill_read = false;
-    std::string skill_refusal_ = kSkillReadRefusal;
+    std::string skill_change_;
+    std::string skill_refusal_;
     std::optional<std::string> handover_notice_;
     Value client_info_ = Value(nullptr);
     std::mutex waits_mu_;
@@ -1185,8 +1180,8 @@ struct Server::State {
                 const bool changed = read_before && now && was && *now != *was;
                 const bool unverified = read_before && !(now && was);
                 gm_skill_read = read_before && !changed && !unverified;
-                if (changed) skill_refusal_ = skill_refusal_about("changed since this run read it (" + *was + " -> " + *now + ")");
-                if (unverified) skill_refusal_ = skill_refusal_about("was read before its text was fingerprinted, so it is read again");
+                if (changed) skill_change_ = "skill://gm/SKILL.md changed since this run read it (" + *was + " -> " + *now + ")";
+                if (unverified) skill_change_ = "skill://gm/SKILL.md was read before its text was fingerprinted, so it is read again";
                 if (std::string line = handover_line(options.restart_reason); !line.empty()) handover_notice_ = line;
                 append("restart", object()
                                       .set("reason", options.restart_reason)
@@ -2543,8 +2538,16 @@ struct Server::State {
     Value run_code(const Value& args);
     bool skill_refusal_due() {
         if (!skill_file_of(kGmSkillUri)) return false;
+        skill_refusal_ = skill_refusal_text();
         append("refusal", object().set("tool", "run_code").set("stage", "skill-read").set("error", skill_refusal_));
         return true;
+    }
+    std::string skill_refusal_text() {
+        const auto found = skill_file_of(kGmSkillUri);
+        const std::string cause = skill_change_.empty() ? "the gm skill has not been read on this connection" : skill_change_;
+        const std::string on_disk = found ? found->second.disk : std::string("the gm skill file");
+        return "run_code refused: " + cause + "; read skill://gm/SKILL.md first (resources/read, or ReadMcpResourceTool with server gm, or your file tool on " + on_disk +
+               "). Every run_code is refused until that read is on this connection.";
     }
 
     Value invoke(const std::string& name, const Value& args) {
