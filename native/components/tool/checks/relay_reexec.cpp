@@ -16,9 +16,9 @@ namespace {
 namespace fs = std::filesystem;
 using Clock = std::chrono::steady_clock;
 
-constexpr std::int64_t kWaitMs = 30000;
+constexpr std::int64_t kWaitMs = 45000;
 constexpr long long kReexecLimitMs = 5000;
-constexpr std::chrono::milliseconds kReplyWait{60000};
+constexpr std::chrono::milliseconds kReplyWait{90000};
 constexpr const char* kOffered = "ffff111-99";
 constexpr const char* kUpdatedMarker = "-> ffff111-99";
 constexpr const char* kReexecMarker = "re-executing the relay";

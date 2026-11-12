@@ -25,6 +25,11 @@ long long worker_pid(const Session& session) {
     return -1;
 }
 
+#if defined(_WIN32)
+long long live_bytes(const Session&, long long) {
+    return -1;
+}
+#else
 long long live_bytes(const Session& session, long long pid) {
     ::kill(static_cast<pid_t>(pid), SIGUSR2);
     std::this_thread::sleep_for(std::chrono::milliseconds(300));
@@ -33,6 +38,7 @@ long long live_bytes(const Session& session, long long pid) {
     if (at == std::string::npos) return -1;
     return std::atoll(text.c_str() + at + std::strlen("asan-heap live "));
 }
+#endif
 
 }
 

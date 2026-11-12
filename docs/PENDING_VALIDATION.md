@@ -2991,3 +2991,10 @@ Decided here by the worker, with the reason, so the owner can overturn any of th
 - Cause: these are timing-bound checks. Under ASan on an arm runner a body that finishes in well under its timeoutMs is slower, so it crosses its foreground cutoff and returns as a background job. That is the sanitizer's slowdown, not a product defect, which is why they stay out of the asan default (see the owner decision above).
 - Fix: none to the product. The push default in .github/workflows/arm-diagnose.yml does not contain these names, so the restore was never in the default and the push run is unaffected. The failure came only from the explicit dispatch input. Timing checks are run on the normal release arm and the release build, not under ASan.
 - Hosted run 43184757032: asan-arm failed, gdb-arm succeeded.
+
+## Round hosted release run 43188977416 for 37c1da7 (2026-11-12)
+
+- Read once from --log-failed. Two failures:
+  - build-windows (x64 and arm64): asan_retention.cpp:29 used POSIX kill and pid_t, which MSVC does not declare (error C2039, C2061). Cause: the ASan probe check was compiled on every platform. Fix: on _WIN32 live_bytes returns -1, so the check reports "did not answer the probe" and no POSIX call is compiled. Windows never sets GMNEW_ASAN_PROBE, so the check skips there before this.
+  - build (ubuntu x64 release) phase-b: check-relay-reexec failed, "the relay re-executed only after the next_context wait had answered" (1 failure, 12.7 s). The update lands on the relay's first check at start, and on a 4-core runner that can be late enough to fall in the last 5 s of the 30 s held wait, so the re-exec mark came after the held reply. Fix: the held wait is 45000 ms (reply wait 90000 ms); the 5000 ms re-exec limit is unchanged. Inference: the CI log has only the one ordering line, so the late landing is not measured on CI; it is the only assertion that failed.
+- Witness: phase-b on the local release build (see the Phase B line in the commit log), plus the check-relay-reexec and check-asan-retention summaries.
