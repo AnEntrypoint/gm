@@ -422,11 +422,13 @@ CheckResult check_build_handover(const std::string& binary) {
     }
     set_env("GMNEW_TEST_CLOCK", "1");
     set_env("GM_CLOCK_SCALE", "0.1");
+    set_env("GMNEW_AUTO_UPDATE", "0");
     const std::string stamp = stamp_of(host / "gm");
     if (stamp.empty()) {
         result.failures.push_back("the build under test reports no stamp: " + stamp);
         unset_env("GMNEW_TEST_CLOCK");
         unset_env("GM_CLOCK_SCALE");
+        unset_env("GMNEW_AUTO_UPDATE");
         return result;
     }
     const fs::path sandbox = fs::temp_directory_path() / ("gm-handover-" + std::to_string(started.time_since_epoch().count()));
@@ -465,6 +467,7 @@ CheckResult check_build_handover(const std::string& binary) {
     }
     unset_env("GMNEW_TEST_CLOCK");
     unset_env("GM_CLOCK_SCALE");
+    unset_env("GMNEW_AUTO_UPDATE");
     std::error_code ignored;
     fs::remove_all(sandbox, ignored);
     const double wall = std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();

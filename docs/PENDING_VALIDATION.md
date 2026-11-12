@@ -1,5 +1,17 @@
 # Pending validation
 
+## Round 2026-11-13 (queue e6b5, Phase B on ecf1ecf: check-build-handover): the check's relays downloaded a release
+
+Full Phase B at ecf1ecf-1 exited 1 after 261.1 s: 55 checks, one failed. check-build-handover failed in the pool (94.9 s) and alone (87.4 s), 8 failures each, all in the relay hand-over: "the worker should run 0cf1ecf-1 after the hand-over, runs .../versions/ecf1ecf-1/gm-core", and the later "should run 9cf1ecf-1 once the shell call finished". The expected builds are right: the check makes its second and third builds by replacing the first character of the build id (0cf1ecf-1, 9cf1ecf-1). The worker stayed on the build under test, ecf1ecf-1, and the relay logged nothing about the install pointer.
+
+Cause: the check's relay runs with auto-update on. Its update loop calls update_once before it checks the install pointer, and for a build whose commit is not the published release (manifest version be9909f-460) it starts a release download: a curl child with --max-time 900. The pointer check runs only between update passes, so the hand-over waited behind the download. Measured with the same layout outside the check: the relay's children were the worker and "curl -fsSL --max-time 900 ... gmnew-db264f6-457-x64-linux.tar"; in 25 s and in 100 s the relay wrote nothing after the pointer change. With GMNEW_AUTO_UPDATE=0 in the environment, the same layout re-executed 0.2 s after the change and the worker ran 0cf1ecf-1.
+
+Fix (build_handover.cpp): the check sets GMNEW_AUTO_UPDATE=0 for its run and unsets it on every exit path, as it already does for GMNEW_TEST_CLOCK and GM_CLOCK_SCALE. The pointer check still runs with auto-update off. check-build-handover alone at ecf1ecf-1: ok, 14.9 s (ecf1ecf-1 -> 0cf1ecf-1).
+
+Not changed: the update loop does not look at the install pointer while a release download is in flight (up to 900 s). That is a latency question for the owner; the check no longer exercises it. Why check-build-handover passed at be9909f-1 is not established.
+
+Sandbox: the check's own sandbox is /tmp/gm-handover-<clock ticks>; it is removed on every path after creation (both numeric sandboxes of the failing runs were gone afterwards). Nothing under /config/.gmnew/current is written: the relay's HOME is the sandbox.
+
 ## Round 2026-11-12 (queue e6b5, relay-reexec x64 hosted failure, run 43291764113): cause not found, no code change
 
 Hosted: run 43291764113, x64 Linux job 131439522324 (build 846da95-458). check-relay-reexec failed at 13.7 s. The job log gives "phase-b: check-relay-reexec FAILED 13.7 s" (line 703) and "- the relay re-executed only after the next_context wait had answered" (line 705). Its other four assertions passed: re-exec within 5 s of the update (line 215), held wait ok (221), run_code after re-exec ok (228), answered once (232). Only the ordering assertion failed (re-exec marker before the held reply). The job log holds no reply text, so it does not say which worker answered the wait.
