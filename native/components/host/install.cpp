@@ -292,6 +292,11 @@ std::optional<std::string> install_playwriter(const fs::path& current) {
     return std::nullopt;
 }
 
+void print_turn_end_hook(const fs::path& exe) {
+    const std::string command = json::dump(json::Value(exe.string() + " turn-end"));
+    std::cout << "turn-end release stays off until gm serve runs with --release-at-turn-end yes. To release a lazy server's lease at the end of each turn, add this under the hooks key of the Claude settings file (install does not write it): \"Stop\": [{\"hooks\": [{\"type\": \"command\", \"command\": " << command << "}]}]\n";
+}
+
 int register_installed(const HostArgs& args, const fs::path& exe) {
     if (std::getenv("GMNEW_SKIP_REGISTER") != nullptr && std::string_view(std::getenv("GMNEW_SKIP_REGISTER")) == "1") {
         std::cout << "registration skipped (GMNEW_SKIP_REGISTER=1)\n";
@@ -312,6 +317,7 @@ int register_installed(const HostArgs& args, const fs::path& exe) {
         return 1;
     }
     std::cout << "registered gm MCP server (user scope) at " << exe.string() << " in " << config->string() << "\n";
+    print_turn_end_hook(exe);
     return 0;
 }
 

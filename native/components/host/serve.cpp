@@ -72,6 +72,8 @@ int run_serve(const HostArgs& args) {
     }
     const auto skill_read = args.flag("--skill-read");
     options.skill_read = skill_read && *skill_read == "yes";
+    const auto release_at_turn_end = args.flag("--release-at-turn-end");
+    options.release_at_turn_end = release_at_turn_end && *release_at_turn_end == "yes";
     if (const auto from_build = args.flag("--from-build")) options.from_build = *from_build;
     options.build_dir = args.path_or("--build-dir", {});
     options.runtime_roots = {leaves_dir_of(args)};

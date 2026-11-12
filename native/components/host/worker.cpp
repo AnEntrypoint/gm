@@ -9,6 +9,7 @@
 #include "gm/host/composed_verbs.hpp"
 #include "gm/host/options.hpp"
 #include "gm/host/primitives.hpp"
+#include "gm/host/turn_end.hpp"
 #include "gm/leaves.hpp"
 #include "gm/log.hpp"
 #include "gm/mcp.hpp"
@@ -148,6 +149,8 @@ int run_worker(const HostArgs& args) {
     for (const VerbInfo& verb : (*native)->list()) mcp_options.reserved.insert(verb.name);
     for (const VerbInfo& verb : leaves.list()) mcp_options.reserved.insert(verb.name);
     mcp_options.emit = [&boot_events](std::string_view kind, json::Value fields) { boot_events.emit(kind, std::move(fields)); };
+    mcp_options.release_at_turn_end = args.flag("--release-at-turn-end") == "yes";
+    mcp_options.turn_ended_ms = [workspace] { return turn_ended_ms(workspace); };
     mcpclient::McpVerbs mcp_verbs(std::move(mcp_options));
     auto all = ComposedVerbs::compose({native->get(), &mcp_verbs, &leaves});
     if (!all) return fail(all.error());

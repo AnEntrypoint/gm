@@ -532,6 +532,7 @@ void Relay::reexec() {
         argv.push_back(json::dump(*host_initialize_));
     }
     if (skill_read_) argv.insert(argv.end(), {"--skill-read", "yes"});
+    if (options_.release_at_turn_end) argv.insert(argv.end(), {"--release-at-turn-end", "yes"});
     argv.insert(argv.end(), {"--from-build", std::string(kBuildVersion)});
     std::vector<char*> arguments;
     for (std::string& argument : argv) arguments.push_back(argument.data());
