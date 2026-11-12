@@ -74,6 +74,7 @@ CheckResult check_run_code_budget(const std::string& binary) {
     long long leaf_elapsed = -1;
     long long matched_elapsed = -1;
     long long timed_out_elapsed = -1;
+    long long capped_elapsed = -1;
     {
         HoldServer server(std::chrono::milliseconds(hold_ms), slow_line() + "\n");
         if (server.port() == 0) {
@@ -89,6 +90,7 @@ CheckResult check_run_code_budget(const std::string& binary) {
                 session.rpc("resources/read", json::Object{{"uri", "skill://gm/SKILL.md"}});
                 tool_json(session, "next_context", json::Object{});
                 const std::string port = std::to_string(server.port());
+                const std::string capped_body = "const end = Date.now() + " + std::to_string(scaled(115000)) + "; let n = 0; while (Date.now() < end) { n += 1; } return { spun: n > 0 };";
                 const std::string spin_body = "const end = Date.now() + " + std::to_string(scaled(65000)) + "; let n = 0; while (Date.now() < end) { n += 1; } return { spun: n > 0 };";
                 const std::string leaf_body = "return await gm.fetch({ url: 'http://127.0.0.1:" + port + "/', timeoutMs: " + std::to_string(scaled(60000)) + " });";
                 const std::string match_body = "return await gm.fetch({ url: 'http://127.0.0.1:" + port + "/fast', match: '(a+)+$', timeoutMs: " + std::to_string(fetch_ms) + " });";
@@ -99,6 +101,9 @@ CheckResult check_run_code_budget(const std::string& binary) {
                 auto leaf = std::async(std::launch::async, [&] {
                     return run_timed(session, json::Object{{"format", "esm"}, {"timeoutMs", scaled(400000)}, {"body", leaf_body}});
                 });
+                auto capped = std::async(std::launch::async, [&] {
+                    return run_timed(session, json::Object{{"format", "esm"}, {"timeoutMs", 300000}, {"body", capped_body}});
+                });
                 auto matched = std::async(std::launch::async, [&] {
                     return run_timed(session, json::Object{{"format", "esm"}, {"timeoutMs", 100000}, {"body", match_body}});
                 });
@@ -108,10 +113,12 @@ CheckResult check_run_code_budget(const std::string& binary) {
                 const Timed spin_run = spin.get();
                 const Timed leaf_run = leaf.get();
                 const Timed matched_run = matched.get();
+                const Timed capped_run = capped.get();
                 const Timed timed_out_run = timed_out.get();
                 spin_elapsed = spin_run.elapsed;
                 leaf_elapsed = leaf_run.elapsed;
                 matched_elapsed = matched_run.elapsed;
+                capped_elapsed = capped_run.elapsed;
                 timed_out_elapsed = timed_out_run.elapsed;
 
                 const json::Value spin_value = output_of(spin_run.reply);
@@ -126,6 +133,9 @@ CheckResult check_run_code_budget(const std::string& binary) {
                 if (leaf_elapsed < hold_ms) result.failures.push_back("leaf deadline: the server held the fetch for " + std::to_string(hold_ms) + " ms but the leaf returned after " + std::to_string(leaf_elapsed) + " ms");
                 if (!absent(leaf_run.reply, "background") || !number_is(output_of(leaf_run.reply), "status", 200))
                     result.failures.push_back("leaf deadline: expected status 200 in the foreground reply after " + std::to_string(leaf_elapsed) + " ms, got " + leaf_dump.substr(0, 200));
+
+                if (absent(capped_run.reply, "background") || capped_elapsed < scaled(95000) || capped_elapsed >= scaled(115000))
+                    result.failures.push_back("foreground cap: a 300000 ms timeoutMs body that runs " + std::to_string(scaled(115000)) + " ms returned after " + std::to_string(capped_elapsed) + " ms without a background run: " + json::dump(capped_run.reply).substr(0, 200));
 
                 const json::Value match_value = output_of(matched_run.reply);
                 if (matched_elapsed >= 20000) result.failures.push_back("match bound: a " + std::to_string(fetch_ms) + " ms fetch with a catastrophic match returned after " + std::to_string(matched_elapsed) + " ms");

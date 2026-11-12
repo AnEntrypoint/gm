@@ -172,6 +172,7 @@ constexpr std::size_t kOpenList = 20;
 constexpr std::size_t kNoticePrdWindow = 5;
 constexpr std::size_t kRowsNamed = 5;
 constexpr double kDefaultBodyTimeoutMs = 100000;
+constexpr double kForegroundCapMs = 100000;
 constexpr double kMaxWaitMs = 60000;
 constexpr double kMaxJobWaitMs = kMaxWaitMs;
 constexpr std::uint64_t kSingleVerbBodiesBeforeNotice = 3;
@@ -260,7 +261,7 @@ std::string run_code_description(const std::string& verb_names) {
            "gm.verbs({ name: 'read_file' }) returns just that verb's schema, gm.verbs({ names: true }) returns just "
            "the names, and an unknown name is an error. Wrap a call that may throw in gm.try(fn), which returns its value or { ok: false, error } as data, so one failure does not hide the rest of a batch. A failed call returns "
            "{ok:false, error} and does not stop the body. The body's return value comes back as JSON. A body still "
-           "running after timeoutMs (default 100000, at most 3600000) becomes a background run: the call returns its "
+           "running after timeoutMs (default 100000; a larger value waits no longer than 100000, so the call returns before the 120 s call limit) becomes a background run: the call returns its "
            "job id at once, job_status with waitMs returns its value, and finish is refused while it runs unless "
            "stopBackground is true. A wait for a job is one job_status call (waitMs at most 60000; a reply that says running needs another job_status call to keep waiting). One step is one body: read the inputs in one Promise.all, decide in code, act "
            "with the independent writes in one Promise.all, and verify in the same body. The ten most-used verbs: "
@@ -3740,6 +3741,7 @@ Value Server::State::run_code(const Value& args) {
                 }
                 budget = ms;
             }
+            budget = std::min(budget, kForegroundCapMs * clock_scale());
             const Value* format = args.find("format");
             if (format != nullptr && !(format->is_string() && (format->as_string() == "esm" || format->as_string() == "cjs"))) {
                 return with_seq(object().set("ok", false).set("error", "format must be esm or cjs"));
