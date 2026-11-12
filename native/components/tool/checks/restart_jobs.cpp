@@ -16,7 +16,7 @@ namespace {
 namespace fs = std::filesystem;
 
 constexpr const char* kJob = "carry";
-constexpr const char* kJobCommand = "sleep 8; echo done";
+constexpr const char* kJobCommand = "sleep 30; echo done";
 constexpr std::int64_t kCallMs = 90000;
 constexpr std::uint64_t kWatchdogMs = 240000;
 

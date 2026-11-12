@@ -2835,3 +2835,10 @@ Witnesses, local build/asan, env -u LD_PRELOAD, ASAN_OPTIONS=halt_on_error=1:abo
 - check-browser-scope: ok (browser scope: finish browser key, browser_tabs, playwriter_browsers close, browser_close_machine guard; browser run: ran: the run page was listed, closed by finish, and gone from the browser after finish (wall 7.276252 s)).
 
 Open: the hosted "Unsupported platform" is the playwriter Chrome installer on the arm runner, a product question for the browser launcher on linux arm64, not an ASan effect. Not changed here.
+
+## Round close items 1 and 2: hosted causes (2026-11-12)
+
+Read once: asan-arm log of run 43140275825 (785e8e1), cancelled at its 15-minute limit (gh run view --log).
+
+- Item 1, relay re-exec: check-relay-reexec did not run its re-exec there. Its log line is "skipped (9da0005eef29-dev ...: a development build never updates itself)", the dev-stamp skip. The "did not finish" is check-install-switch, the check after check-stop-fetch, which had no result when the job was cancelled at 02:32:03 (check-stop-fetch ok at 02:28:20; about 3.7 min with no result), and "Terminate orphan process" for a gm-tool and a gm shows a relay still running at the cancel. The log does not show the rpc or the step it waited on, so the cause is open, not closed. Not changed. Next: a hosted run of check-install-switch alone on the asan build, with its per-rpc log.
+- Item 2, check-restart-jobs under ASan (runs 43140275825 and 43142719018): "after the restart the job's process ... is gone" and job_status "exited", expected "running". The probe job is "sleep 8; echo done" (native/components/tool/checks/restart_jobs.cpp). On the hosted ASan runner the restart answered after the 8 s sleep had ended, so the probe found the job already exited. This is a timing cause in the check's fixture, not a product fault: the job must outlive the restart probe. Fix: the probe job is "sleep 30; echo done"; the assertions are unchanged, and the end wait still allows 60 s from the restart.
