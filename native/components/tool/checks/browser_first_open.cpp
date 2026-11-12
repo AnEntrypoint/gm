@@ -186,7 +186,7 @@ CheckResult check_browser_first_open(const std::string& binary) {
             } else {
                 init_session(session);
                 session.body(exec_body(open_code(page_url)));
-                const long long gate_pid = first_number(status_of(launcher, sandbox, workspace), "\"gate\":\\{\"pid\":([0-9]+)");
+                const long long gate_pid = first_number(status_of(launcher, sandbox, workspace), "\"gate\":\\s*\\{\\s*\"pid\":\\s*([0-9]+)");
                 if (gate_pid > 0) {
                     ::kill(static_cast<pid_t>(gate_pid), SIGKILL);
                 } else {
@@ -223,7 +223,7 @@ CheckResult check_browser_first_open(const std::string& binary) {
             const auto adopted = proc::run({"env", "HOME=" + sandbox.string(), "PLAYWRITER_PROJECT_DIR=" + adopt_workspace.string(), "PLAYWRITER_TELEMETRY=0", "PLAYWRITER_BROWSER_PATH=" + wrapper.string(), "node", launcher.string(), "start"}, adopt_workspace, {}, 180000);
             if (!adopted.started || adopted.exit_code != 0) failures.push_back("start with PLAYWRITER_BROWSER_PATH failed: " + adopted.err.substr(0, 300));
             const std::string calls_text = read_text(calls);
-            const long long browser_pid = first_number(status_of(launcher, sandbox, adopt_workspace), "\"browser\":\\{\"pid\":([0-9]+)");
+            const long long browser_pid = first_number(status_of(launcher, sandbox, adopt_workspace), "\"browser\":\\s*\\{\\s*\"pid\":\\s*([0-9]+)");
             roots.push_back(browser_pid);
             std::string cmdline = browser_pid > 0 ? read_text("/proc/" + std::to_string(browser_pid) + "/cmdline") : std::string();
             std::replace(cmdline.begin(), cmdline.end(), '\0', ' ');
