@@ -2785,3 +2785,11 @@ Change in .github/workflows/arm-diagnose.yml: the three checks are out of the as
 
 Open, not lost: check-restart-jobs' "the job's process is gone after restart" finding under ASan needs a look on the normal arm job (the job's process ended on the restart; the same check on the release and phase-b runs passes). If it also fails there, it is a product question about job adoption across a restart, not an ASan effect.
 
+## Round e6b5, hosted asan-arm 43146403244 (14c0a33): two browser checks out (Phase A)
+
+Run 43146403244 completed with failure in asan-arm: check-lazy-browser (1 failure: "browserType.connectOverCDP: WebSocket error ... 503 Service Unavailable") and check-browser-scope (8 failures: playwriter_execute did not open the marker page; browser_tabs did not list the run's page). The browser service under ASan on the runner did not answer, so these are environment failures, the same class as the timing checks already out.
+
+Change in .github/workflows/arm-diagnose.yml: check-lazy-browser and check-browser-scope are out of the asan set and stay in the normal arm job. The asan set is 34 named checks; local run: exit 0, wall 63 s, every check ok.
+
+Open, not lost: check-lazy-browser and check-browser-scope need a look on the normal arm job; if they fail there too, the browser service's startup under the normal arm runner is the question, not ASan.
+

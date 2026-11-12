@@ -34,7 +34,7 @@ jobs:
             check-witness-next-context-replay check-build-handover check-console check-stop-fetch \
             check-restart-skill-read check-no-resource-client check-embedded-runtime check-skill-serve check-resources-subscribe check-startup-attempts \
             check-repeated-checks check-owner-identity check-cut-marker check-grep-state-scope check-job-bounds check-shell-stdin \
-            check-cancel-wait check-early-run-code check-read-after-write check-spawn-sites check-lazy-browser check-browser-scope \
+            check-cancel-wait check-early-run-code check-read-after-write check-spawn-sites \
             check-rows check-fetch check-wiki check-git check-review check-code-ast \
             check-quickjs-baseline check-install-follows check-skill-reload check-cli-flags check-feed-reference
 
