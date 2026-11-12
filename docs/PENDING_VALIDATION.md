@@ -2767,3 +2767,13 @@ Run 43129887842 (4b74e21): asan-arm ran the whole phase-b under ASan. mcp-confor
 - Witness: the local run of the 41 checks exited 0 (wall 112 s, every check "ok"). The hosted asan-arm job for this change is its witness on the next arm-diagnose run.
 - Decision for the user: check-worker-growth is out of the sanitizer set. Reversible; the ASan RSS limit could be made sanitizer-aware instead.
 
+## Round e6b5, hosted asan-arm 43140275825 (785e8e1): the cancel cause and the set (Phase A)
+
+Run 43140275825 was cancelled by its 15-minute limit (started 02:16:51Z, cancelled 02:32:03Z). The log shows: check-stop-fetch ok at 02:28:20; the next check in the set, check-install-switch, had no result before the cancel; "Terminate orphan process" for a gm-tool and a gm, so a relay was still running. Earlier in the same log, parity-contract reported 4 failures (W16 one-body loop not ended, W24 background bodies still "running" after their waits). The checks through check-stop-fetch took 9 min 15 s on the runner; the same checks ran in about 1 min here.
+
+Change in .github/workflows/arm-diagnose.yml:
+- check-install-switch and parity-contract are out of the sanitizer set. Both are timing checks: install-switch has a 15 s relay re-exec budget and each of its rpc calls waits up to a 180 s watchdog, so the hung relay under ASan held the job; parity-contract failed under ASan on background bodies that were still running after their waits. Product lead, not fixed here: a relay re-exec under ASan did not finish on the hosted runner.
+- The set is 39 named checks. Local run of the same set: exit 0, wall 88 s, every check ok.
+- timeout-minutes 15 -> 30. Measured: the build step 2.3 min on the runner; the checks through check-stop-fetch 9.25 min on the runner (about 0.46 min per check); 39 checks at that rate is about 18 min, plus the build, about 21 min; 30 leaves about 1.4 times that.
+- Witness: the hosted asan-arm run for this commit, on the next arm-diagnose run.
+
