@@ -247,7 +247,7 @@ int start_check(const fs::path& exe, const std::string& version) {
 }
 
 constexpr const char* kPlaywriterRepo = "https://github.com/AnEntrypoint/pw.git";
-constexpr const char* kPlaywriterPin = "f26b5ce";
+constexpr const char* kPlaywriterPin = "b6b8939";
 
 std::optional<std::string> playwriter_step(const std::string& what, const std::vector<std::string>& argv, const fs::path& cwd, std::uint64_t timeout_ms,
                                            std::map<std::string, std::int64_t>& wall) {

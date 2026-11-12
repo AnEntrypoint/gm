@@ -42,7 +42,7 @@ std::string open_code(const std::string& url) {
 }
 
 std::string check_code(const std::string& url) {
-    return "(async () => { const page = context.pages().find((p) => p.url() === '" + url + "'); if (!page || page.isClosed()) return 'WITNESS open=false'; return 'WITNESS open=true coi=' + (await page.evaluate(() => crossOriginIsolated)); })()";
+    return "(async () => { const page = context.pages().find((p) => p.url() === '" + url + "'); if (!page || page.isClosed()) return 'WITNESS open=false pages=' + JSON.stringify(context.pages().map((p) => p.url())) + ' contexts=' + JSON.stringify(context.browser().contexts().map((c) => c.pages().length)); return 'WITNESS open=true coi=' + (await page.evaluate(() => crossOriginIsolated)); })()";
 }
 
 std::string close_code(const std::string& url) {
@@ -59,6 +59,11 @@ std::string outside_browser_command(const std::string& chromium, const fs::path&
 
 std::string wrapper_script(const fs::path& calls, const std::string& chromium) {
     return "#!/bin/sh\necho \"wrapper $@\" >> '" + calls.string() + "'\nexec '" + chromium + "' --use-angle=swiftshader --enable-unsafe-swiftshader \"$@\"\n";
+}
+
+std::string witness_of(const std::string& text) {
+    const auto at = text.find("WITNESS");
+    return text.substr(at == std::string::npos ? 0 : at, 400);
 }
 
 std::string read_text(const fs::path& file) {
@@ -199,7 +204,7 @@ CheckResult check_browser_first_open(const std::string& binary) {
                 if (after.find("ECONNREFUSED") != std::string::npos) {
                     failures.push_back("the call after the gate loss reached a stale endpoint: " + after.substr(0, 300));
                 } else if (!reached) {
-                    failures.push_back("the page was not open after the gate restarted: " + after.substr(0, 300));
+                    failures.push_back("the page was not open after the gate restarted: " + witness_of(after));
                 }
                 session.body(exec_body(close_code(page_url)));
                 session.stop();
