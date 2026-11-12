@@ -2955,3 +2955,9 @@ Witness: clock-mutations full run on build/asan: "clock-mutations: ok (the scale
 - Change (README.md, local commit 96b31f0 plus this edit): the install section keeps `gm install --local` as the setup for gm alone, and states the playwriter registration as an optional step. The add-mcp command is one line, `npx -y add-mcp "npx -y github:AnEntrypoint/pw" -n playwriter --all -g -y`, and needs Node 22 or later for that step only. `-a claude-code` replaces `--all` for one agent, and a Linux container adds `--env PLAYWRITER_NO_SANDBOX=1`.
 - Witness: the README's install section is the only text changed (2 lines removed, 2 added, plus the 96b31f0 block); gm-tool gate (ascii, docs paths, added lines) passes on the commit; the command text in the README matches the one used by the install step in the doc (no other change in behaviour).
 - Not witnessed here: running the add-mcp command, which registers playwriter in user-level agent configs; this host is not a clean user setup for that, and the command is unchanged from the earlier round.
+
+## Round arm-diagnose dispatch concurrency (2026-11-12)
+
+- Cause: the concurrency group was arm-diagnose-<ref> for every event. On main, cancel-in-progress is false, so a queued workflow_dispatch run was replaced when a newer push queued in the same group. Runs 43166024906 and 43166694461 were cancelled with no jobs that way.
+- Change (.github/workflows/arm-diagnose.yml): the group is arm-diagnose-<run_id> for workflow_dispatch and arm-diagnose-<ref> for push, so a dispatched run has its own group and a newer push cannot cancel it. cancel-in-progress is unchanged.
+- Local witness: the YAML parses, and the group expression resolves per event: for workflow_dispatch the group carries the run id (unique per run), and for push it carries the ref (the same group as before).
