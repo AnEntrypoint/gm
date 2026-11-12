@@ -200,7 +200,7 @@ CheckResult check_turn_economy(const std::string& binary) {
             const json::Value* gone_exit = value_at(gone, "exitCode");
             if (text_at(gone, "state") != "gone" || gone_exit == nullptr || !gone_exit->is_null() || !is_number(gone, "waitedMs") || number_at(gone, "waitedMs") >= 15000)
                 result.failures.push_back("job_status with a pid did not wait for the process to end: " + brief(gone));
-            const Code alive_code = code(session, "const began = Date.now(); const waited = await gm.job_status({ pid: " + std::to_string(session.pid()) + ", waitMs: 120000 }); return { state: waited.state, waitedMs: Date.now() - began };", 150000);
+            const Code alive_code = code(session, "const began = Date.now(); const waited = await gm.job_status({ pid: " + std::to_string(session.pid()) + ", waitMs: " + std::to_string(scaled(90000)) + " }); return { state: waited.state, waitedMs: Date.now() - began };", 150000);
             const json::Value alive_wait = alive_code.value;
             if (text_at(alive_wait, "state") != "running" || !is_number(alive_wait, "waitedMs") || number_at(alive_wait, "waitedMs") < static_cast<double>(scaled(45000)))
                 result.failures.push_back("a pid wait on a live process did not last to the wait cap: " + brief(alive_wait));

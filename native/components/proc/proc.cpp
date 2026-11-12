@@ -287,8 +287,8 @@ bool make_pipe(Fd& read_end, Fd& write_end) {
 
 }
 
-Outcome run(const std::vector<std::string>& argv, const std::filesystem::path& cwd, std::string_view stdin_text,
-            std::uint64_t timeout_ms) {
+static Outcome run_impl(const std::vector<std::string>& argv, const std::filesystem::path& cwd, std::string_view stdin_text,
+                        std::uint64_t timeout_ms, bool reap_children) {
     Outcome outcome;
     if (argv.empty()) return outcome;
 
@@ -397,7 +397,7 @@ Outcome run(const std::vector<std::string>& argv, const std::filesystem::path& c
     in_write.close();
 
     while (::waitid(P_PID, pid, &info, WEXITED | WNOWAIT) < 0 && errno == EINTR) {}
-    ::kill(-pid, SIGKILL);
+    if (reap_children) ::kill(-pid, SIGKILL);
     while (::waitpid(pid, &status, 0) < 0 && errno == EINTR) {}
     if (WIFEXITED(status)) outcome.exit_code = WEXITSTATUS(status);
     else if (WIFSIGNALED(status)) {
@@ -407,9 +407,14 @@ Outcome run(const std::vector<std::string>& argv, const std::filesystem::path& c
     return outcome;
 }
 
+Outcome run(const std::vector<std::string>& argv, const std::filesystem::path& cwd, std::string_view stdin_text,
+            std::uint64_t timeout_ms) {
+    return run_impl(argv, cwd, stdin_text, timeout_ms, false);
+}
+
 Outcome shell(std::string_view command, const std::filesystem::path& cwd, std::uint64_t timeout_ms) {
     const std::string sh = std::filesystem::exists("/bin/bash") ? "/bin/bash" : "/bin/sh";
-    Outcome outcome = run({sh, "-c", std::string(command)}, cwd, {}, timeout_ms);
+    Outcome outcome = run_impl({sh, "-c", std::string(command)}, cwd, {}, timeout_ms, true);
     outcome.launcher = sh;
     return outcome;
 }
