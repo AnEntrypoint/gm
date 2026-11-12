@@ -4,12 +4,58 @@ A single-worker long-horizon loop: one worker, one append-only log, governance r
 
 Status: the MCP server, the skill, the CLI wrapper, the measurement tools, and the search, wiki, review and call-site tools are built and witnessed. The live comparison with gm is closed, with its results in DESIGN.md.
 
-Install the latest release, once per machine, on Linux, macOS or Windows (x64 or arm64). Download `gmnew-<target>.tar.gz` (`.zip` on Windows) for your target from the release manifest, extract it, and install from the extracted directory. The install verifies nothing itself beyond the archive's unpacking, so check the archive's sha256 against `manifest.json` first. The install copies the binaries, skills, leaves and defaults into `~/.gmnew/current` (or `%USERPROFILE%\.gmnew\current`), keeps the previous build, and registers gm for Claude Code at user level:
+## Install
 
-    tar -xzf gmnew-<target>.tar.gz
+One install, once per machine, sets up gm and its browser. It puts the binaries, skills, leaves and defaults in `~/.gmnew/current`, keeps the previous build, installs playwriter (AnEntrypoint/pw, pinned) inside gm at `~/.gmnew/current/pw`, and registers gm for Claude Code at user level. Playwriter is not registered with Claude Code: gm starts it, and its tools are `gm.playwriter_*` inside `run_code`. Do not add pw with add-mcp as well.
+
+It needs curl, tar, git, and Node 22 or later with npm. Git and npm are used once, to install playwriter, and Node runs it; the rest of gm runs without Node.
+
+### Claude Code (Linux or macOS)
+
+Set `T` to your target (`x64-linux`, `arm64-linux`, `x64-macos` or `arm64-macos`), paste this in a terminal, then restart Claude Code. On macOS, use `shasum -a 256 -c -` in place of `sha256sum -c -`.
+
+    T=x64-linux
+    BASE="https://github.com/AnEntrypoint/gm/releases/download/latest"
+    cd "$(mktemp -d)"
+    M=$(curl -fsSL "$BASE/manifest.json" | grep -o "\"$T\":{[^}]*}")
+    F=$(echo "$M" | sed 's/.*"file":"\([^"]*\)".*/\1/')
+    S=$(echo "$M" | sed 's/.*"sha256":"\([^"]*\)".*/\1/')
+    curl -fsSLO "$BASE/$F"
+    echo "$S  $F" | sha256sum -c -
+    tar -xzf "$F"
+    "./gmnew-$T/gm" install --local "./gmnew-$T"
+    echo "{\"checked_ms\":0,\"etag\":\"\",\"version\":\"\",\"assetSha\":\"$S\"}" > ~/.gmnew/current/.gmnew-update.json
+
+### Claude Code on the web
+
+Paste this as the setup script of the cloud environment (the environment's settings, Setup script). It is the same install, for the x64 Linux container, and it runs each time a container is built, so every session starts with gm connected. The environment's network must allow github.com and the npm registry.
+
+    #!/bin/bash
+    set -euo pipefail
+    T=x64-linux
+    BASE="https://github.com/AnEntrypoint/gm/releases/download/latest"
+    cd "$(mktemp -d)"
+    M=$(curl -fsSL "$BASE/manifest.json" | grep -o "\"$T\":{[^}]*}")
+    F=$(echo "$M" | sed 's/.*"file":"\([^"]*\)".*/\1/')
+    S=$(echo "$M" | sed 's/.*"sha256":"\([^"]*\)".*/\1/')
+    curl -fsSLO "$BASE/$F"
+    echo "$S  $F" | sha256sum -c -
+    tar -xzf "$F"
+    "./gmnew-$T/gm" install --local "./gmnew-$T"
+    echo "{\"checked_ms\":0,\"etag\":\"\",\"version\":\"\",\"assetSha\":\"$S\"}" > ~/.gmnew/current/.gmnew-update.json
+
+The last line records the archive's sha256 for the updater. Without it, the first update check of release dd41d5f-452 downloads the build it already runs and leaves `~/.gmnew/current` pointing at a directory it has moved, so gm stops starting (reproduced with `gm update` after a plain install, 2026-11-12). With it, that check answers `already current`.
+
+Witnessed on a Claude Code cloud container (x64 Linux, 2026-11-12): the install registered `mcpServers.gm`, the session listed gm's three tools, and gm's playwriter opened a page in the container's Chrome with no sandbox flag set.
+
+### Windows, and the steps by hand
+
+The archive for each target is named in `manifest.json` of the `latest` release, as `gmnew-<version>-<target>.tar.gz` (`.zip` on Windows), with its sha256. The install verifies nothing itself beyond the archive's unpacking, so check the sha256 first. Extract the archive and install from the extracted directory (on Windows, `%USERPROFILE%\.gmnew\current` is the install directory):
+
+    tar -xzf gmnew-<version>-<target>.tar.gz
     ./gmnew-<target>/gm install --local ./gmnew-<target>
 
-To register gm with a playwriter config, add `--mcp-config <path>`. On Windows, unzip the `.zip` and run `gm.exe install --local <dir>` the same way. A second install of the same build rewrites nothing and keeps the running processes. Node and npm are not needed.
+To register gm with one more MCP config layer, add `--mcp-config <path>`. On Windows, unzip the `.zip` and run `gm.exe install --local <dir>` the same way. A second install of the same build rewrites nothing and keeps the running processes.
 
 To build from a checkout (CMake and Ninja, no Node, no npm), run `cmake --preset release && cmake --build build/release`, then install the build with `build/release/native/components/host/gm install --local build/release --source .`. The commit gate, Phase B and shipping are `build/release/native/components/tool/gm-tool gate`, `... phase-b` and `... ship`.
 
@@ -41,7 +87,7 @@ The gm skill also serves `skills/gm/WORKFLOWS.md` as `skill://gm/WORKFLOWS.md`, 
 
 The worker is also an MCP client. It starts the MCP servers that its config names, and adds each of their tools to `gm` inside `run_code` as `gm.<server>_<tool>(args)`, beside the native verbs. `gm.verbs()` and run_code's description list them. run_code's description also names `gm.try(fn)`, which wraps a call that may throw and returns its value or `{ ok: false, error }` as data. The config is three files in the `mcpServers` shape of `.mcp.json`, read in this order. A later entry with the same name replaces the earlier one whole:
 
-1. `defaults/mcp.json` in the checkout. It is required, and a missing file is logged as an `mcp-config` problem. It starts playwriter, as `npx -y -p github:AnEntrypoint/pw#ebbba11 playwriter-project` (the commit is pinned in that file), with `PLAYWRITER_TELEMETRY=0` in its environment, which turns off playwriter's anonymous usage stats, and with `"ignore": [".playwriter/"]`. Each server starts with `PLAYWRITER_PROJECT_DIR` set to the run's workspace unless its entry sets that variable, so each project root gets its own playwriter gate, Chrome and profile at `<root>/.playwriter/browser-profile`. The `pw` package declares `engines` `node >=22`, the same floor setup enforces. A failed start gives its reason in the stderr of the `mcp-server` failed event.
+1. `defaults/mcp.json` in the checkout. It is required, and a missing file is logged as an `mcp-config` problem. It starts playwriter from the copy the install put at `~/.gmnew/current/pw` (AnEntrypoint/pw at a pinned commit), as `node ${HOME}/.gmnew/current/pw/bin/playwriter-project`, on the first browser call (`"lazy": true`), with `PLAYWRITER_TELEMETRY=0` in its environment, which turns off playwriter's anonymous usage stats, with `"ignore": [".playwriter/"]`, and with `"deny": ["reset"]`. Each server starts with `PLAYWRITER_PROJECT_DIR` set to the run's workspace unless its entry sets that variable, so each project root gets its own playwriter gate, Chrome and profile at `<root>/.playwriter/browser-profile`. The `pw` package declares `engines` `node >=22`, the same floor setup enforces. A failed start gives its reason in the stderr of the `mcp-server` failed event.
 2. `.gm/mcp.json` in the workspace, if it exists.
 3. The file that `--mcp-config <file>` names, if given. It is required.
 
@@ -51,9 +97,9 @@ A layer that sets `"disabled": true` for a name removes that server, so `{"mcpSe
 
 A Linux container where Chromium's sandbox is blocked makes the browser refuse to start, with `no usable sandbox`. The default entry does not set `PLAYWRITER_NO_SANDBOX`, because that turns off Chromium's sandbox on every machine that runs the default. On the Ubuntu container this work runs in, `/usr/bin/chromium` is a wrapper that adds `--no-sandbox`, so the default starts there without the flag. Where Chromium is not wrapped that way, set it in a layer, restating the whole playwriter entry:
 
-    {"mcpServers":{"playwriter":{"command":"npx","args":["-y","-p","github:AnEntrypoint/pw#ebbba11","playwriter-project"],"env":{"PLAYWRITER_TELEMETRY":"0","PLAYWRITER_NO_SANDBOX":"1"},"ignore":[".playwriter/"],"startupTimeoutMs":600000}}}
+    {"mcpServers":{"playwriter":{"command":"node","args":["${HOME}/.gmnew/current/pw/bin/playwriter-project"],"env":{"PLAYWRITER_TELEMETRY":"0","PLAYWRITER_NO_SANDBOX":"1"},"ignore":[".playwriter/"],"deny":["reset"],"lazy":true,"timeoutMs":300000,"startupTimeoutMs":600000}}}
 
-Setup registers only gm with the host, so the worker is the only thing that starts playwriter.
+The install registers only gm with the host, so the worker is the only thing that starts playwriter.
 
 - `ignore` lists gitignore lines for the workspace's `.gitignore`. When the server connects in a git repository (a `.git` file or directory exists in the workspace), each line the file does not already hold is appended, and the file is created when it is missing. Existing lines and their line endings are kept, and no line is removed. Each change is logged as a `gitignore` event with the lines added, and a connect with nothing to add logs nothing. A workspace that is not a git repository gets one `gitignore` event with state `skipped`, and no file is written. Each line must be relative, with no `..` segment, and a leading slash makes a line absolute, so an anchored pattern is written without it. A bad `ignore` fails that server only, with its problem in the log.
 - Only stdio servers run, from `command`, `args`, `env` and `cwd`; a relative `cwd` is taken from the workspace. A server with a `url` is not supported yet. A `${NAME}` in a value takes the environment variable NAME, and a missing variable stops that server from starting, with the reason in the log. On Windows, a command of `npx` or `npm` starts through `cmd.exe`. `disabled: true` keeps an entry without starting it, and in a later layer it removes the server.

@@ -66,20 +66,50 @@ footer { border-top: 4px solid #000; margin-top: 2em; padding-top: 0.5em; font-s
 
 <section class="chapter">
 <h2>1. Install</h2>
-<p>Linux, macOS and Windows, x64 or arm64. On Linux and macOS, one command, once per machine. It downloads the latest release, checks its sha256 and size, unpacks into <code>~/.gmnew/current</code>, then runs the installed binary's <code>gm install</code> subcommand, which registers gm for Claude Code at user level.</p>
-<pre>curl -fsSL https://raw.githubusercontent.com/AnEntrypoint/gm/main/scripts/install.sh | sh</pre>
-<p>Needs curl, tar, and sha256sum or shasum. Node is not needed to run gm.</p>
-<p>The archive holds <code>gm</code> and <code>gm-core</code> (<code>gm.exe</code> and <code>gm-core.exe</code> on Windows) and the <code>leaves</code>, <code>skills</code> and <code>defaults</code> directories. Both installers check the two binaries, retry downloads, and write <code>.gmnew-update.json</code> when it is missing.</p>
-<p>To register gm with a playwriter config:</p>
-<pre>curl -fsSL https://raw.githubusercontent.com/AnEntrypoint/gm/main/scripts/install.sh | sh -s -- --mcp-config &lt;path&gt;</pre>
-<p>Windows x64 and arm64 build and test in CI and are published as <code>.zip</code>. Run <code>scripts/install.ps1</code> with PowerShell; it unpacks into <code>%USERPROFILE%\.gmnew\current</code> and runs <code>gm.exe install</code>. Its <code>-McpConfig</code> argument forwards the config to <code>gm.exe install</code>.</p>
+<p>Linux, macOS and Windows, x64 or arm64. One install, once per machine, sets up gm and its browser. It puts the binaries and the <code>leaves</code>, <code>skills</code> and <code>defaults</code> directories in <code>~/.gmnew/current</code>, keeps the previous build, installs playwriter (AnEntrypoint/pw, pinned) inside gm at <code>~/.gmnew/current/pw</code>, and registers gm for Claude Code at user level.</p>
+<p>Playwriter is part of gm. It is not registered with Claude Code: gm starts it on the first browser call, and its tools are <code>gm.playwriter_*</code> inside <code>run_code</code>. Do not add pw with add-mcp as well.</p>
+<p>Needs curl, tar, git, and Node 22 or later with npm. Git and npm are used once, to install playwriter, and Node runs it; the rest of gm runs without Node.</p>
+<h3>Claude Code (Linux or macOS)</h3>
+<p>Set <code>T</code> to your target: <code>x64-linux</code>, <code>arm64-linux</code>, <code>x64-macos</code> or <code>arm64-macos</code>. Paste this in a terminal, then restart Claude Code. On macOS, use <code>shasum -a 256 -c -</code> in place of <code>sha256sum -c -</code>.</p>
+<pre>T=x64-linux
+BASE="https://github.com/AnEntrypoint/gm/releases/download/latest"
+cd "$(mktemp -d)"
+M=$(curl -fsSL "$BASE/manifest.json" | grep -o "\"$T\":{[^}]*}")
+F=$(echo "$M" | sed 's/.*"file":"\([^"]*\)".*/\1/')
+S=$(echo "$M" | sed 's/.*"sha256":"\([^"]*\)".*/\1/')
+curl -fsSLO "$BASE/$F"
+echo "$S  $F" | sha256sum -c -
+tar -xzf "$F"
+"./gmnew-$T/gm" install --local "./gmnew-$T"
+echo "{\"checked_ms\":0,\"etag\":\"\",\"version\":\"\",\"assetSha\":\"$S\"}" &gt; ~/.gmnew/current/.gmnew-update.json</pre>
+<h3>Claude Code on the web</h3>
+<p>Paste this as the setup script of the cloud environment (the environment's settings, Setup script). It is the same install, for the x64 Linux container. It runs each time a container is built, so every session starts with gm connected. The environment's network must allow github.com and the npm registry.</p>
+<pre>#!/bin/bash
+set -euo pipefail
+T=x64-linux
+BASE="https://github.com/AnEntrypoint/gm/releases/download/latest"
+cd "$(mktemp -d)"
+M=$(curl -fsSL "$BASE/manifest.json" | grep -o "\"$T\":{[^}]*}")
+F=$(echo "$M" | sed 's/.*"file":"\([^"]*\)".*/\1/')
+S=$(echo "$M" | sed 's/.*"sha256":"\([^"]*\)".*/\1/')
+curl -fsSLO "$BASE/$F"
+echo "$S  $F" | sha256sum -c -
+tar -xzf "$F"
+"./gmnew-$T/gm" install --local "./gmnew-$T"
+echo "{\"checked_ms\":0,\"etag\":\"\",\"version\":\"\",\"assetSha\":\"$S\"}" &gt; ~/.gmnew/current/.gmnew-update.json</pre>
+<p>The last line of each script records the archive's sha256 for the updater. Without it, the first update check of release dd41d5f-452 downloads the build it already runs and leaves <code>~/.gmnew/current</code> pointing at a directory it has moved, so gm stops starting. With it, that check answers <code>already current</code>.</p>
+<h3>Windows, and the steps by hand</h3>
+<p>The archive for each target is named in <code>manifest.json</code> of the <code>latest</code> release, as <code>gmnew-&lt;version&gt;-&lt;target&gt;.tar.gz</code> (<code>.zip</code> on Windows), with its sha256. Check the sha256, extract the archive, and install from the extracted directory. On Windows, unzip and run <code>gm.exe install --local &lt;dir&gt;</code>; the install directory is <code>%USERPROFILE%\.gmnew\current</code>.</p>
+<pre>tar -xzf gmnew-&lt;version&gt;-&lt;target&gt;.tar.gz
+./gmnew-&lt;target&gt;/gm install --local ./gmnew-&lt;target&gt;</pre>
+<p>To register gm with one more MCP config layer, add <code>--mcp-config &lt;path&gt;</code> to the install command.</p>
 </section>
 
 <section class="chapter">
 <h2>2. Connect Claude Code</h2>
-<p>The installer runs <code>~/.gmnew/current/gm install</code> (on Windows, <code>%USERPROFILE%\.gmnew\current\gm.exe install</code>). The binary writes <code>mcpServers.gm</code> in <code>~/.claude.json</code> (on Windows, <code>%USERPROFILE%\.claude.json</code>) at user scope, with <code>command</code> set to its own path and <code>args</code> starting with <code>serve</code>. Every other key is kept; running it again replaces the gm entry.</p>
+<p>The install registers gm itself. To register again later, run <code>~/.gmnew/current/gm install</code> (on Windows, <code>%USERPROFILE%\.gmnew\current\gm.exe install</code>). The binary writes <code>mcpServers.gm</code> in <code>~/.claude.json</code> (on Windows, <code>%USERPROFILE%\.claude.json</code>) at user scope, with <code>command</code> set to its own path and <code>args</code> starting with <code>serve</code>. Every other key is kept; running it again replaces the gm entry.</p>
 <pre>~/.gmnew/current/gm install [--mcp-config &lt;path&gt;]</pre>
-<p>With <code>--mcp-config &lt;path&gt;</code>, those two arguments are appended to <code>args</code>. With <code>GMNEW_SKIP_REGISTER=1</code>, the installer leaves the files in place and skips this step; run the command above later to register.</p>
+<p>With <code>--mcp-config &lt;path&gt;</code>, those two arguments are appended to <code>args</code>. With <code>GMNEW_SKIP_REGISTER=1</code>, <code>gm install --local</code> leaves the files in place and skips this step; run the command above later to register.</p>
 <p>Check <code>mcpServers.gm</code> in <code>~/.claude.json</code> for the command path. Remove the same key to disconnect. A project <code>.mcp.json</code> with its own <code>gm</code> entry overrides this one in that project. Keep such a file out of the gm checkout.</p>
 </section>
 
@@ -156,8 +186,7 @@ return { a: a.output.length, b: b.output.length };</pre>
   <tr><th>Variable</th><th>Effect</th></tr>
   <tr><td>GMNEW_AUTO_UPDATE=0</td><td>Turn off the background update check.</td></tr>
   <tr><td>GMNEW_UPDATE_URL</td><td>Read the manifest from this URL instead of the default release.</td></tr>
-  <tr><td>GMNEW_RELEASE_BASE</td><td>Installer only: the release directory to download from.</td></tr>
-  <tr><td>GMNEW_SKIP_REGISTER=1</td><td>Installer only: unpack the files and skip the <code>gm install</code> registration.</td></tr>
+  <tr><td>GMNEW_SKIP_REGISTER=1</td><td><code>gm install --local</code> only: copy the files and skip the registration.</td></tr>
 </table>
 </section>
 
@@ -170,7 +199,7 @@ return { a: a.output.length, b: b.output.length };</pre>
 <h3>gm does not connect</h3>
 <p>Check <code>mcpServers.gm</code> in <code>~/.claude.json</code> (on Windows, <code>%USERPROFILE%\.claude.json</code>): <code>command</code> should name the installed gm and <code>args</code> should start with <code>serve</code>. Run the installed <code>gm install</code> again to replace a stale path, then <code>gm doctor</code>. If a project <code>.mcp.json</code> defines its own gm entry, that entry is the one Claude Code uses in that project.</p>
 <h3>Windows</h3>
-<p>Windows x64 and arm64 build and test jobs pass in CI and are published as <code>.zip</code>. Use <code>scripts/install.ps1</code>; <code>-McpConfig</code> forwards a worker config.</p>
+<p>Windows x64 and arm64 build and test jobs pass in CI and are published as <code>.zip</code>. Unzip the archive and run <code>gm.exe install --local &lt;dir&gt;</code>; <code>--mcp-config</code> forwards a worker config.</p>
 </section>
 
 <section class="chapter">
