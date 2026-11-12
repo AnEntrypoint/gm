@@ -3040,3 +3040,32 @@ Decided here by the worker, with the reason, so the owner can overturn any of th
 - Why the gm flow loses the page: the gate SIGKILL retires the proxy's child (the executor), which closes the executor's CDP connection. Chrome disposes the non-default contexts that connection created. The next call starts a new executor, which has no pages (CHECK above).
 - Not traced: which call in the executor or in connectOverCDP creates the non-default context that the caller's page lands in. executor.js takes contexts[0] when browser.contexts() is non-empty, and an earlier shim log showed one context with one page at connect, so the cause is not fully explained. This is open for the playwriter peer, who owns the fix.
 - Consequence: a gm-side change cannot keep the page. The page must be created in a context that outlives the executor's connection (the default context, or a context without disposeOnDetach). The owner's requirement that an opened page stays open is the criterion for the peer's change.
+
+## Round playwriter turn-end lease signal: design (2026-11-12, Phase A)
+
+- Problem: the playwriter lease is the MCP connection that gm's StdioClient holds to the gate launcher. The client lives in McpVerbs, which run_worker owns (native/components/host/worker.cpp, mcpclient::McpVerbs at line 151). It is released only when the worker stops, so it spans the caller's turns. Nothing in gm sees a turn boundary today.
+- Signals considered:
+  - next_context wait: it runs while the turn is still going, so it marks a wait, not an end.
+  - finish: it ends the run, and a run spans many turns.
+  - MCP connection close: it happens at worker stop, not at turn end.
+  - Gate idle timer (300 s in the launcher): it is elapsed time, so it can drop a lease in the middle of a turn or hold one for 5 minutes after the turn ends. It stays as the backstop.
+  - Claude Code Stop hook (chosen): it fires when the main agent ends a response. The bundled CLI on this host names the Stop and SubagentStop hook events, and its hook input carries stop_hook_active. The evidence is a string search of the bundled CLI, not a hook run. The first implementation run must confirm the payload fields (session_id, cwd).
+- Hook entry: /config/.claude/settings.json already has a "hooks" object (a PreToolUse entry runs rtk). A Stop entry takes the same shape: "Stop": [{"hooks": [{"type": "command", "command": "<gm turn-end command>"}]}]. Stop has no matcher.
+- Hook command: reads the hook JSON from stdin and writes a marker under the gm state directory (turn-end/<key>.json with cwd, session_id and the time in ms). It writes to a temp file and renames it, so a reader never sees a partial file, then exits 0 at once. It makes no network call and returns no decision, so it cannot keep the turn running, including when stop_hook_active is true.
+- Key: the workspace (cwd), since one worker serves one workspace. Two sessions in one workspace share the marker. One session's turn end then releases the other's lease; the lazy reconnect recovers, but the page is lost unless the pw change below is in place (owner decision 2).
+- Worker side: a release thread owned by McpVerbs, woken every 5 s. It must not be the MCP monitor thread. mcp::Server's monitor_loop (native/components/mcp/server.cpp, about line 1904) returns when no body or shell job is open and restarts only on demand, so it cannot run an unconditional tick. Each tick, for each playwriter client that holds a lease: if the marker time is later than the client's last call start and no call is in flight, call StdioClient::release().
+- StdioClient::release(): close the child's stdin (the launcher's proxy sees EOF and drops the lease), call lose() with the reason "released at the end of the caller's turn", and leave core_->closing unset. stop() sets closing and connect() refuses while it is set (native/components/mcpclient/client.cpp, the accepted check near line 265), so release must not call stop(). The next call_tool reconnects through the lazy path (native/components/mcpclient/mcpclient.cpp, lazy start near lines 187-194).
+- Race: a call can start between the marker check and the release. release takes the client's call lock, re-checks that the last call started before the marker, and refuses when a call is in flight.
+- Expected: the gate and browser stay up; only the lease ends. Not yet observed. The witness below must show it.
+- Dependency: release must not ship before the playwriter peer's change that keeps an opened page across the executor connection (see the cause section above). Today a release at turn end drops the caller's page at the next turn, which is the scenario 2 failure in normal use. So the release waits for the pin move (kPlaywriterPin in native/components/host/install.cpp, and the marker in lazy_browser.cpp).
+- Witness plan (check-turn-end-release, a new check; not written in this round):
+  1. Sandbox install at the pin; gm serve; playwriter_execute opens a page on a local URL and waits 2 s.
+  2. Run the hook command with stdin {"session_id":"t1","cwd":"<workspace>"}.
+  3. Poll the status JSON of playwriter-project for up to 10 s until its lease count is 0. Print WITNESS released=<count> gate=<pid> browser=<pid>. The field name is to be checked against pw's status output at implementation.
+  4. The next playwriter_execute reads the page URL. It must still be the local URL after the pw change. Print WITNESS page=<url>.
+  5. Stop the sandbox and check for survivors, as check_lazy_browser does.
+- Owner decisions:
+  1. Writing a Stop entry into /config/.claude/settings.json changes the user's Claude settings outside the checkout. Recommendation: gm install adds it only with the owner's yes; otherwise the owner adds the entry by hand.
+  2. Key: workspace (recommended) or session_id. The workspace matches one worker per workspace. Session keying needs the session id to reach the worker, which it does not have today.
+  3. Timing: implement after the peer's pw change lands and the pin moves, not now. Recommendation: after.
+- This round: design only. No code, hook, settings or pw change was made.
