@@ -9,11 +9,11 @@ Install the latest release, once per machine, on Linux, macOS or Windows (x64 or
     tar -xzf gmnew-<target>.tar.gz
     ./gmnew-<target>/gm install --local ./gmnew-<target>
 
-To set up playwriter (AnEntrypoint/pw) in the same step, one command registers it for every agent at user level, through add-mcp (Node 22 or later and npx are needed for this step only):
+Optional, for playwriter (AnEntrypoint/pw), which needs Node 22 or later:
 
     npx -y add-mcp "npx -y github:AnEntrypoint/pw" -n playwriter --all -g -y
 
-Use `-a claude-code` in place of `--all` for one agent. In a Linux container, add `--env PLAYWRITER_NO_SANDBOX=1`. Setup for gm alone is the `gm install` above.
+Use `-a claude-code` in place of `--all` for one agent. In a Linux container, add `--env PLAYWRITER_NO_SANDBOX=1`.
 
 To register gm with a playwriter config, add `--mcp-config <path>`. On Windows, unzip the `.zip` and run `gm.exe install --local <dir>` the same way. A second install of the same build rewrites nothing and keeps the running processes. Node and npm are not needed.
 
