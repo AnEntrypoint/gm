@@ -3,9 +3,11 @@
 #include <chrono>
 #include <cstdio>
 #include <fstream>
+#include <map>
 #include <regex>
 #include <sstream>
 #include <system_error>
+#include <thread>
 
 namespace gm::tool {
 namespace fs = std::filesystem;
@@ -42,6 +44,53 @@ std::optional<std::string> stamp_of(const fs::path& root) {
     std::error_code ec;
     fs::remove(temp, ec);
     return stamp;
+}
+
+std::string trimmed(std::string text) {
+    while (!text.empty() && (text.back() == '\n' || text.back() == '\r')) text.pop_back();
+    return text;
+}
+
+bool origin_main_contains_head(const fs::path& root) {
+    if (!git_output(root, {"fetch", "-q", "origin", "main"})) return false;
+    return git_output(root, {"merge-base", "--is-ancestor", "origin/main", "HEAD"}).has_value();
+}
+
+enum class CiState { green, pending, red, unknown };
+
+CiState ci_state(const fs::path& root, const std::string& sha) {
+    const auto reply = proc::run({"gh", "run", "list", "--commit", sha, "--limit", "30", "--json", "name,status,conclusion", "--jq", ".[] | .name + \" \" + .status + \" \" + .conclusion"}, root, {}, 120000);
+    if (!reply.started || reply.exit_code != 0) return CiState::unknown;
+    std::map<std::string, std::pair<std::string, std::string>> newest;
+    std::istringstream lines(reply.out);
+    std::string line;
+    while (std::getline(lines, line)) {
+        std::istringstream words(line);
+        std::string name, status, conclusion;
+        words >> name >> status >> conclusion;
+        newest.emplace(name, std::make_pair(status, conclusion));
+    }
+    CiState state = CiState::green;
+    for (const char* name : {"release", "arm-diagnose"}) {
+        const auto found = newest.find(name);
+        if (found == newest.end() || found->second.first != "completed") {
+            state = CiState::pending;
+        } else if (found->second.second != "success") {
+            return CiState::red;
+        }
+    }
+    return state;
+}
+
+bool wait_for_green(const fs::path& root, const std::string& sha, int minutes) {
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::minutes(minutes);
+    for (;;) {
+        const CiState state = ci_state(root, sha);
+        if (state == CiState::green) return true;
+        if (state == CiState::red || state == CiState::unknown) return false;
+        if (std::chrono::steady_clock::now() >= deadline) return false;
+        std::this_thread::sleep_for(std::chrono::seconds(60));
+    }
 }
 
 }
@@ -97,16 +146,20 @@ int ship_command(const fs::path& root, const std::vector<std::string>& args) {
     if (args.size() == 1 && args[0] == "--push") {
         const auto head = git_output(root, {"rev-parse", "HEAD"});
         if (!head) return 1;
-        std::string commit = *head;
-        while (!commit.empty() && (commit.back() == '\n' || commit.back() == '\r')) commit.pop_back();
-        std::ifstream marker_in(root / "build" / "release" / "phase-b.pass");
-        std::string marked;
-        std::getline(marker_in, marked);
-        if (marked != commit) {
-            std::printf("refused: no passing Phase B at HEAD %s; run phase-b first\n", commit.c_str());
+        const std::string commit = trimmed(*head);
+        if (!origin_main_contains_head(root)) {
+            std::printf("refused: origin main moved or could not be fetched; HEAD %s is not on top of it; nothing pushed, nothing forced\n", commit.c_str());
             return 1;
         }
-        if (!git_output(root, {"push", "-q", "origin", "main"})) return 1;
+        if (!wait_for_green(root, commit, 120)) {
+            std::printf("refused: release and arm-diagnose are not both green on %s; nothing pushed\n", commit.c_str());
+            return 1;
+        }
+        if (!origin_main_contains_head(root)) {
+            std::printf("refused: origin main moved during the CI wait; HEAD %s is not on top of it; nothing pushed, nothing forced\n", commit.c_str());
+            return 1;
+        }
+        if (!git_output(root, {"push", "-q", "origin", "HEAD:main"})) return 1;
         std::printf("PUSHED %s\n", commit.c_str());
         return 0;
     }
