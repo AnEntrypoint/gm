@@ -2821,3 +2821,17 @@ Done for (1) and (2): both checks run against build/asan on this host, with env 
 - check-restart-jobs: ok. The binary mtime change restarted the relay; the job's process 2484055 was alive 496 ms after the trigger; the restart answered in 492 ms; the job exited 0 with output "done" at 7950 ms. No ASan report.
 
 Finding: neither hosted failure reproduces on this host under ASan. The hosted hang of the relay re-exec and the hosted "process gone after restart" are still unexplained, so the hosted runner's timing (not a memory fault: no ASan report was recorded for either run) remains the open question. Not changed: the asan job's set. Next item to do: a hosted ASan run with the per-check log, which needs a dispatch the owner authorises.
+
+## Round queue item 3: hosted asan-arm logs, browser checks under ASan (2026-11-12)
+
+Read once each: asan-arm logs of runs 43142719018 and 43146403244 (gh run view --log).
+
+- Relay re-exec: in both logs check-relay-reexec ran and was skipped ("a development build never updates itself, so its relay never re-executes"; stamp 9da0005eef29-dev). Neither log shows a relay re-exec hang, so the "did not finish on the hosted runner" note comes from a run not read here. Its cause stays open. Not changed.
+- check-restart-jobs under ASan (run 43142719018): "after the restart the job's process 3488 is gone (ps reports no live row)", 2 failures. Local build/asan run passes (see the earlier entry). Cause stays open.
+- check-lazy-browser and check-browser-scope (both runs): the hosted failure is the browser install, not ASan. The install step fails with "Fetching latest Chrome for Testing version... | Error: Unsupported platform" on the hosted arm runner, and the connect then gets "503 Service Unavailable". Local build/asan run: both ok.
+
+Witnesses, local build/asan, env -u LD_PRELOAD, ASAN_OPTIONS=halt_on_error=1:abort_on_error=0:print_stacktrace=1:detect_leaks=0:
+- check-lazy-browser: ok (a fresh session has no browser tooling process; its verb playwriter_execute is listed without a start, and the first browser call runs through the launcher that a clean install placed under the sandbox HOME (playwriter_browsers is optional at the pin)).
+- check-browser-scope: ok (browser scope: finish browser key, browser_tabs, playwriter_browsers close, browser_close_machine guard; browser run: ran: the run page was listed, closed by finish, and gone from the browser after finish (wall 7.276252 s)).
+
+Open: the hosted "Unsupported platform" is the playwriter Chrome installer on the arm runner, a product question for the browser launcher on linux arm64, not an ASan effect. Not changed here.
