@@ -2849,3 +2849,12 @@ Read once: asan-arm log of run 43140275825 (785e8e1), cancelled at its 15-minute
 - native/components/tool/checks/install_switch.cpp: each rpc of the check is wrapped by traced(), which writes "install-switch: <label> start" and "install-switch: <label> done in <ms> ms" to stderr; each switch-wait tick also writes "install-switch: tick <n> exe <path>". A hung call shows its label as the last start with no done line.
 - Witness, local build/asan, env -u LD_PRELOAD and the ASAN_OPTIONS of the asan job: check-install-switch: ok (the install link moved from versions/9da0005eef29-dev to switched-dev in 2110 ms ...); 21 trace lines.
 - Hosted run of check-install-switch alone: dispatched after this change ships; its per-rpc log is recorded in the next entry.
+
+## Round item 1 result: hosted check-install-switch alone (run 43157368074, 9c5f690, asan-arm)
+
+Read once: gh run view 43157368074 --log, grep "install-switch".
+
+- Result: check-install-switch: ok. The install link moved from versions/4fa40c84cb62-dev to switched-dev in 15414 ms; the running relay re-executed through the stable path on the same pid.
+- Per-rpc: initialize 4946 ms; resources/read 4478 ms; next_context before switch 3579 ms; tick 0 195 ms (relay still on 4fa40c84cb62-dev); tick 1 14214 ms (the call that spans the re-execution; the exe at tick 1 is switched-dev); next_context after switch 1706 ms.
+- Reading: the slow phase is one next_context call of 14.2 s that spans the relay's re-execution under ASan on the hosted runner. It completed; no rpc waited on the 180 s watchdog. The earlier stall (run 43140275825, check-install-switch with no result for about 3.7 min before the cancel) did not recur in this run, so it is not reproduced here. No code cause shows in this log: nothing pushed for item 1.
+- Noted, not changed: the check's loop is bounded by 30 ticks, not by the 15 s its message names, so a 15.4 s switch passes; the message "within 15 s" is a label, not a limit.
