@@ -31,10 +31,10 @@ gm is one long-horizon worker: an MCP server that runs a task as one append-only
 ## Facts found by troubleshooting
 
 - The native build needs Ninja on PATH. On a host where pip is PEP 668 blocked, install it into a venv (verified 2026-11-05).
-- An installed build from 409087f-77 or earlier cannot self-update: its updater looks for gm-<target> in the archive, which ships gmnew-<target>. One manual install run is needed; 70e4349 fixes the updater (DESIGN.md, "Update witness against the published release (2026-11-05)").
 - gh run list --commit needs the full 40-character SHA; a 7-character prefix returns no runs (verified 2026-11-05).
-- The MCP client backgrounds a call still running at 120 s (its notice says so). A run_code body that outlives its timeoutMs returns its job id; its value comes from job_status with waitMs (at most 60000). The foreground wait is capped at 100000 ms (kForegroundCapMs, native/components/mcp/server.cpp), so the call returns before that limit: a 150 s body with timeoutMs 300000 now returns as a background run at 100 s, where it returned at 150.006 s before the cap (verified 2026-11-08). The cap is witnessed by check-run-code-budget.
+- The MCP client backgrounds a call still running at 120 s (its notice says so). A run_code body that outlives its timeoutMs returns its job id; its value comes from job_status with waitMs, which is capped at 100000 ms (kMaxJobWaitMs = kForegroundCapMs in native/components/mcp/server.cpp; job.cpp uses the same value for the MCP verb). The foreground wait is capped at 100000 ms (kForegroundCapMs), so the call returns before the client's 120 s. A body whose wait reaches its budget returns as a background run at that budget, so inside a body ask for less than the cap (check-turn-economy waits a scaled 90000 ms; check-job-wait waits 65 s in one call). A 150 s body with timeoutMs 300000 returns as a background run at 100 s, where it returned at 150.006 s before the cap (verified 2026-11-08; check-run-code-budget).
 - ssh reads the stdin it is given. In `while read h; do ssh host ...; done < hosts.txt` an ssh without `</dev/null` eats the loop's remaining lines (verified 2026-11-08). run_shell gives each child EOF and job_start gives it /dev/null (native/components/verbs/job.cpp); gm-tool check-shell-stdin pins both. child.cpp's open write end is the JSON-RPC path to MCP servers and the relay, so it stays open.
+- run_shell reaps its command when the shell exits: after the shell's exit the command's process group gets SIGKILL, so a background child with redirected output does not outlive the call (native/components/proc/proc.cpp, shell only; proc::run keeps its children, which the browser checks use to start servers). A command killed by a signal reports exitCode null and its signal name (measured 2026-11-12). Witness: gm-tool check-run-child-reap. The reap is POSIX only.
 - A run_code body's JavaScript budget and each leaf call's deadline are the job lifetime (3600000 ms, native/components/quickjs/leaves.cpp), not 60 s and 120 s. timeoutMs governs only the foreground cutoff: a backgrounded body keeps running to its lifetime, so a budget equal to timeoutMs would stop it (gm-tool check-run-code-budget). Time in host calls does not count against it (tools/check-run-code-lifetime.mjs; not a registered check).
 - Task leak (fx's run, 2026-11-08): the installed gm 41d1d82 predates fcb84df, which refuses a non-owner task replacement after the first step. Until the installed build updates, a host can take another worker's task brief; HEAD refuses it.
 - Two gm serve processes in one workspace: the default run directory is runs/check, which a live connection owns, so the second is refused as belonging to another live connection. A second connection needs its own --run-dir (check-browser-scope does this, 2026-11-12).
@@ -54,23 +54,21 @@ gm is one long-horizon worker: an MCP server that runs a task as one append-only
 
 ## Parity harness
 
-- The parity figures are recorded in docs/PENDING_VALIDATION.md. The Node-era comparison at 91d4fab (2026-11-10, `--bin build/release/native/components/host/gm`) was 20 of 97 match, 0 cutover-expected, 55 native-ahead, 22 documented-gap, 0 differ. The latest recorded run, after the find verb at 8586281, is 17 of 97 match, 0 cutover-expected, 58 native-ahead, 22 documented-gap, 0 differ.
-- The native witness is the parity-contract check (gm-tool check <binary> parity-contract). The native-only keys and the sequence shifts they cause are native-ahead entries.
+- The 97-row count, measured 2026-11-12: 20 of 97 match, 0 cutover-expected, 52 native-ahead, 15 documented-gap, 10 differ. It runs the pre-removal harness (native/tests/parity/run.mjs at 9a4e074^) in a scratch tree against the native build. The command, its setup and the 91d4fab record it replaces are in docs/PENDING_VALIDATION.md, round 2026-11-12. The Node engine is removed, so the 97 rows are not a gate.
+- The native witness is the parity-contract check (gm-tool check <binary> parity-contract; 18 of 18 witnesses on 2026-11-12). It does not use Node and does not count the 97 rows. The native-only keys and the sequence shifts they cause are native-ahead entries.
 
 ## Known gaps, native
 
 - Node-missing items are retired, not ported: native ships; the Node engine was removed 2026-11-11 (docs/PENDING_VALIDATION.md, 2026-11-09, the retirement table).
 - The native client refuses an initialize result with no capabilities object or no serverInfo (native/components/mcpclient/client.cpp:326-327; gm-tool check-protocol-versions).
 - The SDK (native/third_party/cxxmcp/include/cxxmcp/protocol/serialization.hpp) lists six protocol versions: 2024-11-05, 2025-03-26, 2025-06-18, 2025-11-25, 2026-07-28 and DRAFT-2026-v1. The native server accepts five on initialize (2025-11-25, 2025-06-18, 2025-03-26, 2024-11-05, 2024-10-07; kAcceptedVersions in native/components/mcp/server.cpp), and server/discover lists two (2025-11-25 and 2025-06-18; kSupportedVersions).
-- A server killed by a signal reports 128 plus the signal number (native/components/proc/proc.cpp). A spawn failure reports the OS text.
-- Native answers server requests other than ping with JSON-RPC error -32601 (native/components/mcp/server.cpp).
-- resources/subscribe and resources/unsubscribe are served, and resources.subscribe is declared (check-resources-subscribe). An unknown uri answers -32002 (resources/read, skills/get and subscriptions/listen; decided 2026-11-10).
-- fetch (native/components/verbs/fetch.cpp) allows http, https and data URLs, caps the body at 16 MiB, and uses curl's default redirect limit. Timeouts apply: 15000 ms by default, at most 60000 ms.
-- ci_status needs only `gh api --paginate --jq`, so gh 2.46.0 works.
+- Native answers an unknown request method with JSON-RPC error -32601 (measured 2026-11-12: "method not found: nonexistent/method").
+- resources/subscribe and resources/unsubscribe are served, and resources.subscribe is declared (check-resources-subscribe). An unknown uri answers -32002 (measured 2026-11-12 on resources/read: "resource not found", with data.uri; decided 2026-11-10 for resources/read, skills/get and subscriptions/listen).
+- fetch (native/components/verbs/fetch.cpp): check-fetch (ok, 6.4 s on 2026-11-12) witnesses data URLs (text, cut and match), refuses base64 data URLs and invalid input, rejects timeoutMs outside 1 to 60000, and retries an unreachable http host 3 times before it reports exhaustion. https, file: URLs, the 16 MiB body cap and the redirect limit have no witness.
 
 ## Platform notes
 
-- Native, Windows: child.cpp does not capture server stderr under _WIN32. Windows, macOS and arm64 builds are not verified here, because this checkout has no such host (DESIGN.md, Local cutover, 2026-11-04). The txiki and libuv build on them is unbuilt for the same reason, and MSVC keeps QuickJS-NG (GMNEW_TXIKI OFF, native/components/quickjs/CMakeLists.txt). Hosted CI builds them and is not watched here.
+- Windows, macOS and arm64 builds are not verified here. Measured 2026-11-12: this host is Linux x86_64, and no Windows, macOS, arm64 or clang toolchain is on PATH (x86_64-w64-mingw32-g++, aarch64-linux-gnu-g++, xcrun and clang++ are all absent). Hosted CI builds them: .github/workflows/release.yml has windows- and macos- runners, and gh run list shows its runs.
 - The process-group kill is unverified on Windows.
 - The playwriter execute tool returns a value only for one expression, or for an async arrow that returns. A top-level const or let yields "no output"; keep values in `state`.
 

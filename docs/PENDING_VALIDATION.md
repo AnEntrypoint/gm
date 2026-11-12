@@ -1,5 +1,60 @@
 # Pending validation
 
+## Round 2026-11-12 (queue e6b5: parity count, AGENTS measurements, mktemp logs, run_shell reap, job wait cap)
+
+Result: four queue items done. Phase B on the committed tree 0f15785: gm-tool phase-b pass, 52 run, 0 failed, 135.1 s of checks (150.8 s wall). Every touched witness row is green (table below). Nothing else is claimed.
+
+Commits this round (author lanmower, no trailer):
+- fdd7d34: proc reaps a run_shell command's children; job_status waits up to 100000 ms; job names documented; check-run-child-reap; parity-contract W15 wording.
+- 0f15785: the reap is scoped to shell (proc::run keeps its children); check-turn-economy requests a scaled 90000 ms wait. Both fixes are needed: fdd7d34 failed phase-b on two rows, described below.
+- The docs commit that carries this section and the AGENTS.md changes follows 0f15785; phase-b runs again on that HEAD before the push.
+
+1. Parity count, one number. Command and setup (run in a mktemp directory; the harness is the one removed in 9a4e074, and the Node engine comes from its last commit):
+   - S=$(mktemp -d); git archive 9a4e074^ | tar -x -C "$S"; git -C "$S" init -q; git -C "$S" add -A; git -C "$S" commit -qm snapshot (scratch history, so the runner's git archive works); (cd "$S" && npm ci --ignore-scripts) installs acorn 8.18.0 from the lock.
+   - rm -rf "$S/native/leaves" && cp -r native/leaves "$S/native/leaves" (the checkout's leaves: vendor/ only; the snapshot's leaves carry a callers leaf that 44d459a moved into the native core, and the native worker then refuses to start with "verb callers is defined by two verb tables").
+   - P=$(mktemp -d); node "$S/native/tests/parity/run.mjs" --bin build/release/native/components/host/gm --ref-source working --ref "$P/ref" --scratch "$P/scratch" > "$P/parity.out" 2>&1
+   - Output, verbatim: "20/97 scenarios match, 0 cutover-expected, 52 native-ahead, 15 documented-gap, 10 differ"; exit 1. Measured twice with the setup above: on the 846da95 build (wall 13.7 s) and on the fdd7d34 build (wall 15.3 s). An earlier attempt with the snapshot's own leaves stopped at 3.7 s with the duplicate-callers refusal, so it is not a count.
+   - The 10 differ rows, by first differing field: tools/list (.result.tools[0].description), next_context (.result.content[0].text.events[3].t), next_context owner task (witness), run_code esm project import (output), run_code console flood (output), run_code console format (output), next_context after finish (witness), mcp tools/list (description), mcp mcp echo (output.ok), mcp mcp denied (output). Not triaged in this round.
+   - Superseded: 17 of 97 at 8586281 and 20 of 97 at 91d4fab. Those records are history. The number above is the current measurement. The 20 matches the old 91d4fab figure, but the rest differs (91d4fab: 55 native-ahead, 22 documented-gap, 0 differ), and the setup differs (the current tree's leaves and skills), so the two are not comparable.
+   - Relation to the parity-contract check: parity-contract (gm-tool check <binary> parity-contract) is native-only. It runs 18 witness groups over W1 to W18, W23 and W24 without Node, and it passes 18 of 18 on this build. It does not compare with Node and does not count the 97 rows. The 97-row count is the comparison with the removed Node engine.
+
+2. AGENTS.md notes that had no re-check, each measured on 2026-11-12:
+   - Windows and macOS: kept, rewritten. Measured: uname -sm gives Linux x86_64; command -v for x86_64-w64-mingw32-g++, aarch64-linux-gnu-g++, xcrun and clang++ finds none. Hosted CI does build them: .github/workflows/release.yml has windows- and macos- runners, and gh run list shows its runs. The "child.cpp does not capture stderr under _WIN32" and "MSVC keeps QuickJS-NG" lines are code-stated (child.cpp, CMakeLists.txt), so they are removed.
+   - The CI run for 846da95 is red (not changed here): release run 43291764113 fails the Test step on four hosted builds (ubuntu-24.04-arm arm64-linux, macos-latest arm64-macos, macos-latest x64-macos, ubuntu-latest x64-linux). The failing check is check-browser-first-open on all four (99 s, 119 s, 117 s, 102 s on those runners), and check-relay-reexec also fails on ubuntu-latest x64-linux. Windows builds and publish succeeded. On this host the same rows pass (check-browser-first-open 50.9 s in phase-b at 0f15785), so the hosted runners differ in a way not yet known.
+   - fetch schemes: rewritten to what check-fetch witnesses (data URLs, base64 and invalid-input refusals, the timeoutMs range 1 to 60000, the 3-retry exhaustion on an unreachable http host). https, file:, the 16 MiB cap and the redirect limit have no witness, so they are not claimed. check-fetch ran ok in 6.4 s.
+   - gh 2.46.0 note: removed. Measured: gh is 2.102.0 here, 2.46.0 is not installed, and no check runs ci_status (grep over native/components/tool/checks finds none). The version claim cannot be measured on this host.
+   - 409087f-77 note: removed. Measured: ~/.gmnew/current is versions/57fd18494d81-dev, so no 409087f-77 build is on this host. HEAD's updater takes each archive's name from the release manifest (native/components/host/update.cpp: verify_archive(archive, asset) with asset.file, the target map at lines 214-223), so the gm-<target> lookup the note describes is not in HEAD. The note described an installed build that no longer exists here.
+   - Also measured in passing, kept: the signal-killed and unknown-method/-uri notes were replaced by what the probe showed (run_shell on kill -9 reports exitCode null and signal SIGKILL; method not found is -32601; an unknown skill uri is -32002). The old "128 plus signal" note described the MCP client path, which this probe did not exercise, so it is removed.
+
+3. Phase B logs under mktemp. gm-tool phase-b writes its per-check logs to build/release/phase-b-logs (inside the build tree, not /tmp). Each run's stdout, phase-b-logs, phase-b-durations.txt and phase-b.pass were copied into a mktemp -d directory (for 0f15785: /tmp/tmp.f843zRPXTm). The earlier fixed names I used (/tmp/gm-phase-b-433.log and similar) are removed.
+
+4. run_code and children.
+   - Cause: proc::run (native/components/proc/proc.cpp) ended its loop 100 ms after the shell exited, when the pipes had closed. It never signalled the command's process group, so a background child that redirected its output (for example grep > file &) survived the call.
+   - Fix (0f15785 for the scope): the loop observes the exit with waitid(WNOWAIT) without reaping, the group is killed after the leader has exited, then the leader is reaped. This avoids a pid reuse race. The group kill applies to proc::shell only (run_shell and the shell primitive); proc::run keeps its children, because the browser checks start their page server and an outside browser with sh -c ... & through proc::run, and fdd7d34 killed both (see below).
+   - Witness: check-run-child-reap starts a child with redirected output through run_shell and requires it gone when run_shell returns. Red on the old proc.cpp: "still running 3021 ms after run_shell returned: pid 795327" (the check then killed that pid). Green with the fix: gone in 2 ms (summary "polled 2 ms").
+   - Cap: job_status waitMs is 100000 ms, equal to kForegroundCapMs (native/components/mcp/server.cpp kMaxJobWaitMs = kForegroundCapMs; native/components/verbs/job.cpp max_wait_ms = 100000 * clock_scale). It was 60000. The foreground cap for a run_code body is 100000 ms (kForegroundCapMs). next_context's hold stays at 60000 (kMaxWaitMs). Witness: check-job-wait, one job_status call waits 65000 ms for a 65 s job (kMinWaitMs 64000).
+   - A body whose wait reaches its budget returns as background at that budget, so inside a body the wait must be below the cap. Under GM_CLOCK_SCALE the budget and the cap are scaled by the same factor, but a request is not, so check-turn-economy's request is scaled too (scaled(90000)).
+   - Job names: documented, not widened. The rule is letters, digits, _ and -, up to 64 characters (job.cpp is_job_name). It is in the job_start description and in skills/gm/SKILL.md, where the job_status cap is now 100000 ms. Dots were not accepted because a job name is the file stem of jobs/<name>.exit, so dots would need path checks.
+   - parity-contract W15 asserted the description says "at most 60000"; it now says "at most 100000", since that is the contract this round changes.
+
+5. Failed intermediate commit fdd7d34 and its fix 0f15785. Phase B on fdd7d34 failed two rows: check-turn-economy (a pid wait on the live session did not last; the body had waitMs 120000, which is above the new cap, and under GM_CLOCK_SCALE the request was clamped to the scaled cap, so the body waited exactly its foreground budget and went background) and check-browser-first-open (the page server and the outside browser, started by proc::run with sh -c ... &, were killed when the command returned). Fix: reap only in proc::shell, and request a scaled 90000 ms in check-turn-economy, with the same 45 s assertion.
+
+Witness rows on the committed tree 0f15785 (wall times as measured in the lane runs and phase-b):
+- check-run-child-reap: ok, 0.0 s
+- check-shell-stdin: ok, 0.1 s
+- check-job-wait: ok, 65.0 s
+- check-job-bounds: ok, 5.0 s
+- check-job-status-cancel: ok, 3.0 s
+- check-cancel-wait: ok, 3.8 s
+- check-run-code-budget: ok, 1.7 s
+- check-turn-economy: ok, 2.3 s
+- check-browser-first-open: ok, 51.2 s (phase-b: 50.9 s)
+- parity-contract: ok, 18 of 18, 31.8 s (lane run)
+- check-fetch: ok, 6.4 s (lane run on the pre-scope tree; phase-b at 0f15785 includes it and passed)
+- phase-b at 0f15785: pass, 52 run, 0 failed, 135.1 s of checks, 150.8 s wall. Longest: check-job-wait 65.1 s, check-browser-first-open 50.9 s, check-turn-end-release 40.4 s, check-restart-jobs 30.4 s.
+
+Processes and files: after the last run, no process started from build/release by these checks or probes was left. The gm serve processes under /config/.gmnew/current belong to other sessions and were not touched; pid 88264 (playwriter-ws-server on 19988) was not touched. The fixed /tmp names this round used (gm-build-release.log, gm-phase-b-433.log and similar) are removed. 1411 gm- entries from earlier check runs remain in /tmp and were not deleted, because their owners were not confirmed.
+
 ## Round 2026-11-12 (page-level browser isolation, decisions, AGENTS audit): Phase A
 
 Decisions, applied as the dispatcher wrote them:
