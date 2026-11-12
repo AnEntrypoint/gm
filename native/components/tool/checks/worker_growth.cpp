@@ -1,6 +1,7 @@
 #include "gm/tool.hpp"
 
 #include <chrono>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <system_error>
@@ -37,6 +38,9 @@ CheckResult check_worker_growth(const std::string& binary) {
     long long growth = -1;
     long long before = -1;
     long long after = -1;
+    const char* prior_asan = std::getenv("ASAN_OPTIONS");
+    const std::string asan_options = std::string(prior_asan != nullptr ? prior_asan : "") + (prior_asan != nullptr && *prior_asan != '\0' ? ":" : "") + "quarantine_size_mb=0";
+    set_env("ASAN_OPTIONS", asan_options.c_str());
     {
         Session session(binary, workspace, sandbox, 180000, true);
         if (!session.started()) {
@@ -63,6 +67,11 @@ CheckResult check_worker_growth(const std::string& binary) {
             }
         }
         session.stop();
+    }
+    if (prior_asan != nullptr) {
+        set_env("ASAN_OPTIONS", prior_asan);
+    } else {
+        unset_env("ASAN_OPTIONS");
     }
     std::error_code ignored;
     fs::remove_all(sandbox, ignored);

@@ -2864,3 +2864,16 @@ Read once: gh run view 43157368074 --log, grep "install-switch".
 - Defect: the switch loop ran at most 30 ticks of 500 ms plus each call's own time, while the failure message said "within 15 s". A slow tick could push the wait past 15 s without the message being true, and the bound did not match the stated limit.
 - Change: native/components/tool/checks/install_switch.cpp: kSwitchBudget (15000 ms) bounds the loop by time from the switch; the failure message is built from the same constant. The hosted run (43157368074) passed under this bound: its slow next_context tick ended at about 14.9 s from the switch, before the bound.
 - Witness, local build/asan, ASan options as the asan job: check-install-switch: ok (the install link moved from versions/9da0005eef29-dev to switched-dev in 2116 ms; the running relay re-executed through the stable path on the same pid (wall 7.445093 s)).
+
+## Round item 3 result: excluded timing checks on build/asan, and the two defects (2026-11-12)
+
+Item 3, local build/asan, env -u LD_PRELOAD and the asan job's ASAN_OPTIONS, one run each:
+- pass: check-run-code-budget (1.4 s), check-run-code-progress (0.6 s), parity-contract (9.8 s), check-turn-economy (passed before the change below), check-cancel-record (1.6 s), check-job-status-cancel (3.3 s), mcp-conformance (6.5 s).
+- fail: check-worker-growth; clock-mutations (the job wait cap mutant passed check-turn-economy).
+Wall times are the ones each log records; the per-check runs of this round did not all record one.
+
+Fix 1, check-worker-growth (native/components/tool/checks/worker_growth.cpp): the check sets ASAN_OPTIONS to add quarantine_size_mb=0 for its own session and restores it after. Measured on build/asan: growth 18124 KB with the default quarantine, 4620 KB with it disabled; the release build grows 352 KB. The limit is unchanged.
+Open, not fixed: 4612 KB of growth remains under ASan with the quarantine off (about 11.5 KB per run_code call, against about 0.9 KB per call on release). The cause is not established: detect_leaks=0 in the asan job, so a leak in the worker has not been ruled out, and the limit is not raised to pass it.
+
+Fix 2, clock-mutations: the job wait cap mutant (native/components/verbs/job.cpp, the pid wait's clamp max_wait_ms at line 545) passed check-turn-economy, because the pid step waited on a job's pid that was already dead (reply {"state":"gone","waitedMs":0}). The witness now waits on the relay's own pid, which stays alive for the session: job_status({pid, waitMs:120000}) must return "running" after at least scaled(45000) ms. Unmutated: 504 ms threshold is not reached only under the mutant (mutant reply {"state":"running","waitedMs":504}; the threshold is 750 ms). The live-pid step is its own run_code call, since in one body the verbs run one after another and the 1 s wait delayed the slow job's own wait.
+Witness: clock-mutations full run on build/asan: "clock-mutations: ok (the scale is not honoured without GMNEW_TEST_CLOCK; job lifetime 60 s failed check-run-code-budget (exit 1); job wait cap 30 s failed check-turn-economy (exit 1); the sources and their mtimes are restored and the binary rebuilt (wall 41.7593 s))", CM_EXIT 0.

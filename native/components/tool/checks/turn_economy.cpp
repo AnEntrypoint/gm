@@ -177,7 +177,7 @@ CheckResult check_turn_economy(const std::string& binary) {
                 "  (async () => { await gm.job_start({ job: 'slow', command: 'sleep " + seconds_of(slow_job_ms) + "; echo slow', timeoutMs: 120000 }); const began = Date.now(); const ended = await gm.job_status({ job: 'slow', waitMs: 120000, tail: 5 }); return { state: ended.state, exitCode: ended.exitCode, output: ended.output, durMs: ended.durMs, waitedMs: Date.now() - began }; })(),\n"
                 "  (async () => { await gm.job_start({ job: 'short', command: 'sleep 30', timeoutMs: 500 }); const ended = await gm.job_status({ job: 'short', waitMs: 20000, tail: 200 }); return { state: ended.state, reason: ended.reason, statement: ended.statement }; })(),\n"
                 "  (async () => { await gm.job_start({ job: 'quick', command: 'sleep " + seconds_of(scaled(2000)) + "' }); const pid = (await gm.job_status({ job: 'quick' })).pid; const waited = await gm.job_status({ pid, waitMs: 20000 }); return { pid, state: waited.state, waitedMs: waited.waitedMs, exitCode: waited.exitCode }; })(),\n"
-                "]);\n"
+                                "]);\n"
                 "return { slow, short, gone };";
             const auto jobs_began = std::chrono::steady_clock::now();
             const Code jobs = code(session, jobs_body, 150000);
@@ -200,6 +200,10 @@ CheckResult check_turn_economy(const std::string& binary) {
             const json::Value* gone_exit = value_at(gone, "exitCode");
             if (text_at(gone, "state") != "gone" || gone_exit == nullptr || !gone_exit->is_null() || !is_number(gone, "waitedMs") || number_at(gone, "waitedMs") >= 15000)
                 result.failures.push_back("job_status with a pid did not wait for the process to end: " + brief(gone));
+            const Code alive_code = code(session, "const began = Date.now(); const waited = await gm.job_status({ pid: " + std::to_string(session.pid()) + ", waitMs: 120000 }); return { state: waited.state, waitedMs: Date.now() - began };", 150000);
+            const json::Value alive_wait = alive_code.value;
+            if (text_at(alive_wait, "state") != "running" || !is_number(alive_wait, "waitedMs") || number_at(alive_wait, "waitedMs") < static_cast<double>(scaled(45000)))
+                result.failures.push_back("a pid wait on a live process did not last to the wait cap: " + brief(alive_wait));
             if (!flag(jobs.reply, "pendingEvents", true))
                 result.failures.push_back("a run_code reply with job events queued has no pendingEvents: pendingEvents " + field(jobs.reply, "pendingEvents"));
 
