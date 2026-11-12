@@ -178,10 +178,14 @@ void w4(const Context& context, Row& row) {
     if (!session) return;
     const json::Value first = run_body(*session, "return 1;");
     const json::Value again = run_body(*session, "return 2;");
-    const bool refused = text_at(first, "error").find("had not been read") != std::string::npos;
-    row.line = std::string("first refused ") + (refused ? "once" : "no") + "; second ok " + (is_true(again, "ok") ? "true" : "false");
+    const bool refused = text_at(first, "error").find("read skill://gm/SKILL.md") != std::string::npos;
+    const bool refused_again = text_at(again, "error").find("read skill://gm/SKILL.md") != std::string::npos;
+    read_resource(*session, "skill://gm/SKILL.md");
+    const json::Value after = run_body(*session, "return 3;");
+    row.line = std::string("first refused ") + (refused ? "yes" : "no") + "; second refused " + (refused_again ? "yes" : "no") + "; after the read ok " + (is_true(after, "ok") ? "true" : "false");
     row.expect(is_false(first, "ok") && refused, "the first run_code before the skill read was not refused: " + clip(first));
-    row.expect(is_true(again, "ok"), "the second run_code was refused: " + clip(again));
+    row.expect(is_false(again, "ok") && refused_again, "the second run_code before the skill read passed; every run_code is refused until the read: " + clip(again));
+    row.expect(is_true(after, "ok"), "the run_code after the skill read was refused: " + clip(after));
 }
 
 void w5(const Context& context, Row& row) {

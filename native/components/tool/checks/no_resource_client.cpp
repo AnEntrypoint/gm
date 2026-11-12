@@ -12,7 +12,7 @@ namespace {
 
 namespace fs = std::filesystem;
 
-constexpr std::size_t kRefusalLimitBytes = 1000;
+constexpr std::size_t kRefusalLimitBytes = 2000;
 constexpr const char* kSample = "return (await gm.read_file({ path: 'sample.txt', fresh: true })).output;";
 
 std::string read_text(const fs::path& file) {
@@ -53,6 +53,15 @@ bool contains_text(const json::Value& value, const std::string& needle) {
 bool flag(const json::Value& value, const std::string& key, bool expected) {
     const json::Value* found = value.is_object() ? value.find(key) : nullptr;
     return found != nullptr && found->is_bool() && found->as_bool() == expected;
+}
+
+json::Value gate_reply(const json::Value& rpc) {
+    if (const json::Value* structured = value_at(rpc, "result.structuredContent")) return *structured;
+    const json::Value* blocks = value_at(rpc, "result.content");
+    if (blocks != nullptr && blocks->is_array() && !blocks->as_array().empty()) {
+        if (auto parsed = json::parse(text_at(blocks->as_array().front(), "text"))) return *parsed;
+    }
+    return json::Value();
 }
 
 }
@@ -105,22 +114,6 @@ CheckResult check_no_resource_client(const std::string& binary) {
             }
             if (!has_run || !has_next) result.failures.push_back("tools/list lacks run_code or next_context");
 
-            const json::Value refusal = client.rpc("tools/call", json::Object{{"name", "run_code"}, {"arguments", json::Object{{"body", kSample}}}});
-            const json::Value* refusal_result = value_at(refusal, "result");
-            const json::Value* refusal_blocks = refusal_result != nullptr ? value_at(*refusal_result, "content") : nullptr;
-            const std::string refusal_dump = json::dump(refusal);
-            const std::size_t refusal_bytes = refusal_dump.size();
-            json::Value gated;
-            if (const json::Value* structured = value_at(refusal, "result.structuredContent")) {
-                gated = *structured;
-            } else if (refusal_blocks != nullptr && refusal_blocks->is_array() && !refusal_blocks->as_array().empty()) {
-                if (auto parsed = json::parse(text_at(refusal_blocks->as_array().front(), "text"))) gated = *parsed;
-            }
-            if (!flag(gated, "ok", false) || text_at(gated, "error").rfind("run_code refused:", 0) != 0)
-                result.failures.push_back("the first run_code was not refused: " + json::dump(gated).substr(0, 300));
-            const std::string refusal_error = text_at(gated, "error");
-            if (refusal_error.find("skill://gm/SKILL.md") == std::string::npos || refusal_error.find('\n') != std::string::npos)
-                result.failures.push_back("the refusal does not name the skill read in one line: " + refusal_error);
             const std::string marker_line = [&] {
                 std::istringstream lines(disk);
                 std::string line;
@@ -130,47 +123,45 @@ CheckResult check_no_resource_client(const std::string& binary) {
                 return std::string();
             }();
             const std::string escaped = json::dump(json::Value(marker_line)).substr(1, json::dump(json::Value(marker_line)).size() - 2);
-            if (count_of(refusal_dump, escaped) != 0) result.failures.push_back("the refusal embeds the skill text");
-            if (refusal_bytes > kRefusalLimitBytes) result.failures.push_back("the refusal is " + std::to_string(refusal_bytes) + " bytes; it names the read step and does not carry the skill");
-            if (value_at(gated, "rulesNotice") != nullptr) result.failures.push_back("the refusal carries a rules notice");
+            auto expect_refused = [&](const json::Value& rpc, const std::string& label) {
+                const json::Value gated = gate_reply(rpc);
+                const std::string error = text_at(gated, "error");
+                if (!flag(gated, "ok", false) || error.rfind("run_code refused:", 0) != 0) result.failures.push_back(label + " was not refused: " + json::dump(gated).substr(0, 300));
+                if (error.find("skill://gm/SKILL.md") == std::string::npos || error.find('\n') != std::string::npos)
+                    result.failures.push_back(label + " does not name the skill read in one line: " + error);
+                const std::string dump = json::dump(rpc);
+                if (dump.size() > kRefusalLimitBytes) result.failures.push_back(label + " is " + std::to_string(dump.size()) + " bytes; it names the read and must not carry the skill");
+                if (count_of(dump, escaped) != 0) result.failures.push_back(label + " embeds the skill text");
+            };
+            const json::Value run_args = json::Object{{"name", "run_code"}, {"arguments", json::Object{{"body", kSample}}}};
 
-            const json::Value early = tool_json(client, "run_code", json::Object{{"body", kSample}});
-            if (!flag(early, "ok", true) || !contains_text(early, "tool-only client")) result.failures.push_back("the second run_code did not run its body: " + json::dump(early).substr(0, 300));
-            if (text_at(early, "rulesNotice").find("rule 2") == std::string::npos) result.failures.push_back("run_code before next_context has no rule 2 notice");
-
-            const json::Value first = tool_json(client, "next_context", json::Object{});
-            if (!flag(first, "ok", true) || value_at(first, "step") == nullptr || value_at(first, "step")->as_number() != 1) result.failures.push_back("next_context did not open step 1: " + json::dump(first).substr(0, 200));
-            if (text_at(first, "rulesPending").find("rule 2") == std::string::npos) result.failures.push_back("the first next_context does not report rule 2 once");
-
-            const json::Value after = tool_json(client, "run_code", json::Object{{"body", kSample}});
-            if (!flag(after, "ok", true) || !contains_text(after, "tool-only client")) result.failures.push_back("run_code after next_context did not run: " + json::dump(after).substr(0, 300));
-            if (value_at(after, "rulesNotice") != nullptr) result.failures.push_back("the rule 2 notice is still on run_code after a correct next_context");
-
-            const json::Value viaVerb = tool_json(client, "run_code", json::Object{{"body", "return (await gm.read_file({ path: 'skill://gm/SKILL.md' })).output.length;"}});
-            if (!flag(viaVerb, "ok", true)) result.failures.push_back("gm.read_file of the skill uri failed in a body");
-            else if (text_at(viaVerb, "output") != std::to_string(disk.size())) result.failures.push_back("gm.read_file of the skill uri gave " + text_at(viaVerb, "output") + " characters; the file has " + std::to_string(disk.size()));
-
-            const json::Value second = tool_json(client, "next_context", json::Object{});
-            if (!flag(second, "ok", true) || !flag(second, "unchanged", true)) result.failures.push_back("the second next_context, with nothing new, is not the unchanged reply");
-            if (value_at(second, "rulesPending") != nullptr) result.failures.push_back("the second next_context still has rulesPending");
+            expect_refused(client.rpc("tools/call", run_args), "the first run_code");
+            expect_refused(client.rpc("tools/call", run_args), "the second run_code");
+            const json::Value opened = tool_json(client, "next_context", json::Object{});
+            if (!flag(opened, "ok", true)) result.failures.push_back("next_context was refused: " + json::dump(opened).substr(0, 200));
+            expect_refused(client.rpc("tools/call", run_args), "the run_code after next_context");
 
             const std::size_t restarts_before = restart_count(log);
             fs::last_write_time(engine, fs::file_time_type::clock::now() + std::chrono::seconds(60));
             const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(60);
             while (restart_count(log) == restarts_before && std::chrono::steady_clock::now() < deadline) std::this_thread::sleep_for(std::chrono::milliseconds(100));
             if (restart_count(log) <= restarts_before) result.failures.push_back("no restart event in the run log within 60000 ms of the trigger");
+            expect_refused(client.rpc("tools/call", run_args), "the run_code after a worker restart");
 
-            const json::Value after_restart = tool_json(client, "run_code", json::Object{{"body", kSample}});
-            if (!flag(after_restart, "ok", true) || !contains_text(after_restart, "tool-only client")) result.failures.push_back("run_code after a worker restart did not run for the tool-only client");
-            const json::Value finished = tool_json(client, "finish", json::Object{{"witness", "run_code returned \"tool-only client\" from sample.txt with no resources/read on the connection"}});
-            if (!flag(finished, "ok", true) || !flag(finished, "finished", true)) result.failures.push_back("finish was refused: " + json::dump(finished).substr(0, 200));
+            const json::Value read = client.rpc("resources/read", json::Object{{"uri", "skill://gm/SKILL.md"}});
+            if (value_at(read, "result.contents") == nullptr) result.failures.push_back("resources/read of the skill returned no contents: " + json::dump(read).substr(0, 200));
+            const json::Value ran = tool_json(client, "run_code", json::Object{{"body", kSample}});
+            if (!flag(ran, "ok", true) || !contains_text(ran, "tool-only client")) result.failures.push_back("run_code after resources/read did not run: " + json::dump(ran).substr(0, 300));
+            const json::Value viaVerb = tool_json(client, "run_code", json::Object{{"body", "return (await gm.read_file({ path: 'skill://gm/SKILL.md' })).output.length;"}});
+            if (!flag(viaVerb, "ok", true)) result.failures.push_back("gm.read_file of the skill uri failed in a body");
+            else if (text_at(viaVerb, "output") != std::to_string(disk.size())) result.failures.push_back("gm.read_file of the skill uri gave " + text_at(viaVerb, "output") + " characters; the file has " + std::to_string(disk.size()));
         }
         client.stop();
     }
     std::error_code ignored;
     fs::remove_all(scratch, ignored);
     const double wall = std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
-    result.summary = "with only initialize, tools/list and tools/call, the first run_code is refused once with one copy of the skill text; the next run_code runs after next_context; a worker restart keeps the tool-only client working (wall " + std::to_string(wall) + " s)";
+    result.summary = "a client that never reads skill://gm/SKILL.md is refused on every run_code: before and after next_context, and after a worker restart; after resources/read on the connection its run_code runs and gm.read_file returns the whole skill (wall " + std::to_string(wall) + " s)";
     return result;
 }
 

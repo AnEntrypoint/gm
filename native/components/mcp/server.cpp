@@ -83,7 +83,7 @@ constexpr const char* kServerName = "gm";
 constexpr const char* kServerTitle = "gm run worker";
 constexpr const char* kGmSkillUri = "skill://gm/SKILL.md";
 constexpr int kStepStartRule = 2;
-constexpr const char* kSkillReadRefusal = "run_code refused: read skill://gm/SKILL.md first (resources/read, or ReadMcpResourceTool with server gm), then call run_code again. This refusal is sent once per connection.";
+constexpr const char* kSkillReadRefusal = "run_code refused: read skill://gm/SKILL.md first (resources/read, or ReadMcpResourceTool with server gm). Every run_code is refused until that read is on this connection.";
 constexpr std::size_t kReplyMemory = 256;
 constexpr std::size_t kOutputCap = 20000;
 constexpr std::size_t kOutputPage = 20000;
@@ -530,7 +530,7 @@ Value caller_of_process() {
 
 std::string skill_refusal_about(const std::string& change) {
     return "run_code refused: skill://gm/SKILL.md " + change +
-           ", so read it first (resources/read, or ReadMcpResourceTool with server gm), then call run_code again. This refusal is sent once per connection.";
+           ", so read it first (resources/read, or ReadMcpResourceTool with server gm). Every run_code is refused until that read is on this connection.";
 }
 
 const Value* last_skill_read_by_this_host(const std::vector<Value>& history) {
@@ -2542,9 +2542,7 @@ struct Server::State {
 
     Value run_code(const Value& args);
     bool skill_refusal_due() {
-        auto served = serve_skill_file(kGmSkillUri, "run_code");
-        gm_skill_read = true;
-        if (!served) return false;
+        if (!skill_file_of(kGmSkillUri)) return false;
         append("refusal", object().set("tool", "run_code").set("stage", "skill-read").set("error", skill_refusal_));
         return true;
     }
