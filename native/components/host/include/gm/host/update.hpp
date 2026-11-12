@@ -85,6 +85,7 @@ std::string core_executable_name();
 deoxidene::Result<Manifest, std::string> parse_manifest(std::string_view text);
 UpdatePolicy policy_from_environment(const std::filesystem::path& install_dir);
 UpdateResult update_now(const UpdatePolicy& policy);
+void cancel_download();
 UpdateState read_update_state(const std::filesystem::path& install_dir);
 bool write_update_state(const std::filesystem::path& install_dir, const UpdateState& state);
 bool checked_recently(const UpdateState& state, std::int64_t now_ms, std::chrono::minutes interval);

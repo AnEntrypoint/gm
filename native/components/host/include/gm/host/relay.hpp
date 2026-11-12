@@ -76,6 +76,7 @@ private:
 
     void control_loop();
     void update_loop();
+    void watch_install_loop();
     void read_loop(std::shared_ptr<Child> child);
     void route_host_line(Lock& lock, std::string line);
     void send_to_worker(Lock& lock, const std::string& line);
@@ -110,6 +111,7 @@ private:
     std::thread reader_;
     std::thread control_;
     std::thread updater_;
+    std::thread watcher_;
     bool reexec_pending_ = false;
     std::string refused_build_;
     std::string handover_reason_;

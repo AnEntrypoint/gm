@@ -187,6 +187,7 @@ void Relay::start() {
     }
     control_ = std::thread([this] { control_loop(); });
     if (options_.update && (options_.update->enabled || install_root_of(options_.update->install_dir))) updater_ = std::thread([this] { update_loop(); });
+    if (options_.update && install_root_of(options_.update->install_dir)) watcher_ = std::thread([this] { watch_install_loop(); });
 }
 
 bool Relay::spawn_worker(Lock&) {
@@ -537,6 +538,7 @@ void Relay::reexec() {
     for (std::string& argument : argv) arguments.push_back(argument.data());
     arguments.push_back(nullptr);
     lock.unlock();
+    cancel_download();
     {
         std::lock_guard out(output_mutex_);
         std::fflush(stdout);
@@ -586,15 +588,23 @@ void Relay::update_loop() {
             changed_.notify_all();
         }
         const auto deadline = std::chrono::steady_clock::now() + wait;
-        while (!host_gone_ && std::chrono::steady_clock::now() < deadline) {
-            changed_.wait_for(lock, kInstallPoll, [&] { return host_gone_; });
-            if (!host_gone_ && installed_elsewhere(policy)) {
-                say("the install now points at " + linked_version(*install_root_of(policy.install_dir)) + "; re-executing on it");
-                reexec_pending_ = true;
-                changed_.notify_all();
-                break;
-            }
-        }
+        changed_.wait_until(lock, deadline, [&] { return host_gone_; });
+    }
+}
+
+void Relay::watch_install_loop() {
+    const UpdatePolicy policy = *options_.update;
+    std::string handled;
+    Lock lock(mutex_);
+    while (!host_gone_) {
+        changed_.wait_for(lock, kInstallPoll, [&] { return host_gone_; });
+        if (host_gone_ || !installed_elsewhere(policy)) continue;
+        const std::string linked = linked_version(*install_root_of(policy.install_dir));
+        if (linked == handled) continue;
+        handled = linked;
+        say("the install now points at " + linked + "; re-executing on it");
+        reexec_pending_ = true;
+        changed_.notify_all();
     }
 }
 
@@ -686,7 +696,9 @@ void Relay::host_closed() {
     say("host closed the connection; ending the worker");
     lock.unlock();
     if (control_.joinable()) control_.join();
+    cancel_download();
     if (updater_.joinable()) updater_.join();
+    if (watcher_.joinable()) watcher_.join();
     lock.lock();
     std::shared_ptr<Child> child = child_;
     lock.unlock();

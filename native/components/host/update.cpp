@@ -4,11 +4,14 @@
 #include <cctype>
 #include <cerrno>
 #include <chrono>
+#include <condition_variable>
 #include <cstdlib>
 #include <exception>
 #include <fstream>
 #include <iostream>
 #include <iterator>
+#include <memory>
+#include <mutex>
 #include <optional>
 #include <system_error>
 #include <vector>
@@ -107,10 +110,29 @@ std::int64_t now_ms() {
     return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 }
 
+std::mutex download_mutex;
+std::condition_variable download_finished;
+std::shared_ptr<proc::Child> active_download;
+
 std::optional<std::string> download(const std::string& url, const fs::path& destination) {
-    const proc::Outcome outcome =
-        proc::run({"curl", "-fsSL", "--max-time", "900", "-o", destination.string(), url}, {}, {}, kArchiveTimeoutMs);
-    if (!outcome.started || outcome.timed_out || outcome.exit_code != 0) return failure_of("download " + url, outcome);
+    auto spawned = proc::Child::spawn({"curl", "-fsSL", "--max-time", "900", "-o", destination.string(), url});
+    if (!spawned) return "download " + url + ": " + spawned.error();
+    const std::shared_ptr<proc::Child> child = *spawned;
+    {
+        std::lock_guard lock(download_mutex);
+        active_download = child;
+    }
+    const std::optional<int> exit_code = child->wait_for(std::chrono::milliseconds(kArchiveTimeoutMs));
+    {
+        std::lock_guard lock(download_mutex);
+        active_download.reset();
+    }
+    download_finished.notify_all();
+    if (!exit_code) {
+        child->kill();
+        return "download " + url + ": timed out";
+    }
+    if (*exit_code != 0) return "download " + url + ": curl exited with " + std::to_string(*exit_code);
     return std::nullopt;
 }
 
@@ -532,6 +554,13 @@ UpdateResult update_once(const UpdatePolicy& policy, UpdateResult result) {
     return result;
 }
 
+}
+
+void cancel_download() {
+    std::unique_lock lock(download_mutex);
+    if (!active_download) return;
+    active_download->kill();
+    download_finished.wait_for(lock, std::chrono::seconds(5), [] { return !active_download; });
 }
 
 std::chrono::milliseconds next_check_delay(const UpdatePolicy& policy) {
