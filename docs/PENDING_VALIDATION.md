@@ -2758,3 +2758,12 @@ Run 43120046392 on f43b25f: macOS x64 failed two checks, arm64 passed. Causes, a
 - check-build-handover, "the worker should run ... once the shell call finished": after the 35 s shell call the check slept 400 ms (4000 * 0.1) and read the worker's exe once, but the handover to the new build takes longer on x64. Change: the check polls the worker's exe until it runs the new build, bounded by the shell call's own timeoutMs (120000 at the same scale). Witness on Linux: check-build-handover ok.
 - Witness on macOS: the next release run, both x64 and arm64.
 
+## Round e6b5, asan-arm runs only the memory-safety checks (Phase A)
+
+Run 43129887842 (4b74e21): asan-arm ran the whole phase-b under ASan. mcp-conformance hit its 600 s budget, four timing checks failed, and the job reached its 40-minute limit (started 01:15:37, cancelled 01:55:51), with no ASan report. Change in .github/workflows/arm-diagnose.yml:
+
+- The asan job runs `gm-tool check build/asan/native/components/host/gm` with 41 named checks, not phase-b. Left out: mcp-conformance, check-turn-economy, check-cancel-record and check-job-status-cancel (timing checks that fail under ASan), check-worker-growth (its 2048 KB RSS limit is exceeded under ASan's allocator: 17596 KB growth, a sanitizer effect, not a leak), clock-mutations (needs GM_CHECK_MUTATIONS) and witness-windows-cmd (Windows only).
+- timeout-minutes 40 -> 15. Measured: the asan build step ran 2.3 min on the CI runner (01:15:39 to 01:17:58, run 43129887842); the 41 checks ran 112 s here (x64 Linux, env -u LD_PRELOAD, ASAN_OPTIONS as in the job). Total about 4.2 min; 15 leaves about 3.5 times that for a slower arm runner.
+- Witness: the local run of the 41 checks exited 0 (wall 112 s, every check "ok"). The hosted asan-arm job for this change is its witness on the next arm-diagnose run.
+- Decision for the user: check-worker-growth is out of the sanitizer set. Reversible; the ASan RSS limit could be made sanitizer-aware instead.
+
