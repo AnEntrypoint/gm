@@ -38,10 +38,10 @@ struct Leg {
 };
 
 constexpr Leg kLegs[] = {
-    {"a published commit older than the build's own", "ffff333-14", Commit::Older, "kept"},
-    {"a published commit equal to the build's own", "ffff333-15", Commit::Equal, "taken"},
-    {"a published commit newer than the build's own", "ffff333-16", Commit::Newer, "taken"},
-    {"a published build without a commit time", "ffff333-x", Commit::Absent, "refused"},
+    {"older commit, higher serial", "ffff333-99", Commit::Older, "kept"},
+    {"equal commit, lower serial", "ffff333-0", Commit::Equal, "taken"},
+    {"newer commit, lower serial", "ffff333-0", Commit::Newer, "taken"},
+    {"no commit time, serial not numeric", "ffff333-x", Commit::Absent, "refused"},
 };
 
 std::string first_word(const std::string& text) {
@@ -49,6 +49,16 @@ std::string first_word(const std::string& text) {
     if (start == std::string::npos) return {};
     const auto end = text.find_first_of(" \t\r\n", start);
     return text.substr(start, end == std::string::npos ? std::string::npos : end - start);
+}
+
+std::optional<std::int64_t> whole_number(const std::string& text) {
+    if (text.empty() || text.size() > 18 || text.find_first_not_of("0123456789") != std::string::npos) return std::nullopt;
+    return std::stoll(text);
+}
+
+std::optional<std::int64_t> commit_time_of(const std::string& commit) {
+    const auto logged = git_output(fs::current_path(), {"log", "-1", "--format=%ct", commit});
+    return logged ? whole_number(first_word(*logged)) : std::nullopt;
 }
 
 void make_executable(const fs::path& file) {
@@ -100,19 +110,22 @@ CheckResult check_update_order(const std::string& binary) {
 #else
     const auto started = Clock::now();
     const std::string version_line = proc::run({binary, "--version"}, {}, {}, kStampLimitMs).out;
-    const std::string stamp = first_word(version_line);
     std::istringstream words(version_line);
     std::vector<std::string> fields;
     for (std::string field; words >> field;) fields.push_back(field);
-    if (stamp.empty()) {
+    if (fields.empty()) {
         result.failures.push_back("the build reports no stamp: " + version_line.substr(0, 200));
         return result;
     }
-    if (fields.size() < 3 || fields.back().empty() || fields.back().size() > 18 || fields.back().find_first_not_of("0123456789") != std::string::npos) {
-        result.failures.push_back("the build prints no commit time after its stamp: " + version_line.substr(0, 200));
+    const std::string stamp = fields.front();
+    std::string commit = fields.size() >= 2 ? fields[1] : std::string{};
+    if (commit.size() >= 2 && commit.front() == '(' && commit.back() == ')') commit = commit.substr(1, commit.size() - 2);
+    std::optional<std::int64_t> built = fields.size() >= 3 ? whole_number(fields.back()) : std::nullopt;
+    if (!built && !commit.empty()) built = commit_time_of(commit);
+    if (!built) {
+        result.failures.push_back("the build prints no commit time, and git has none for its commit '" + commit + "': " + version_line.substr(0, 200));
         return result;
     }
-    const std::int64_t built = std::stoll(fields.back());
     const std::string archive_name = std::string("gmnew-") + kPlatformTarget + ".tar.gz";
     const fs::path scratch = fs::temp_directory_path() / ("gm-update-order-" + std::to_string(started.time_since_epoch().count()));
     const Scratch guard{scratch};
@@ -155,9 +168,9 @@ CheckResult check_update_order(const std::string& binary) {
         fs::create_directory_symlink(fs::path("versions") / stamp, install / "current", ec);
 
         json::Object asset{{"file", archive_name}, {"sha256", digest}, {"size", static_cast<std::uint64_t>(size)}, {"version", leg.offered}};
-        if (leg.commit == Commit::Older) asset.push_back({"committed", static_cast<std::uint64_t>(built - kCommitStep)});
-        if (leg.commit == Commit::Equal) asset.push_back({"committed", static_cast<std::uint64_t>(built)});
-        if (leg.commit == Commit::Newer) asset.push_back({"committed", static_cast<std::uint64_t>(built + kCommitStep)});
+        if (leg.commit == Commit::Older) asset.push_back({"committed", static_cast<std::uint64_t>(*built - kCommitStep)});
+        if (leg.commit == Commit::Equal) asset.push_back({"committed", static_cast<std::uint64_t>(*built)});
+        if (leg.commit == Commit::Newer) asset.push_back({"committed", static_cast<std::uint64_t>(*built + kCommitStep)});
         json::Value manifest = json::Object{
             {"version", leg.offered},
             {"commit", std::string(40, 'd')},
@@ -190,7 +203,7 @@ CheckResult check_update_order(const std::string& binary) {
 
     const double wall = std::chrono::duration<double>(Clock::now() - started).count();
     if (result.failures.empty()) {
-        std::string summary = stamp + " (commit time " + std::to_string(built) + "):";
+        std::string summary = stamp + " (commit time " + std::to_string(*built) + "):";
         for (const std::string& outcome : outcomes) summary += " " + outcome + ";";
         result.summary = summary + " (wall " + std::to_string(wall) + " s)";
     }
