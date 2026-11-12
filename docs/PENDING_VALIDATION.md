@@ -1,6 +1,21 @@
 # Pending validation
 
-## Round 2026-11-12 (scenario 2: cause, gm fix, refusal path): Phase A; Phase B blocked
+## Round 2026-11-12 (page-level browser isolation, decisions, AGENTS audit): Phase A
+
+Decisions, applied as the dispatcher wrote them:
+- Shared default context kept. check-browser-scope no longer asserts a tab split by context. It asserts page-level isolation: a run closes only the pages it created through its context view, and no run lists, counts as its own, or closes another run's page.
+- Refusal stays strict: run_code is refused until resources/read of the gm skill on this connection. A host's file read does not count, because gm cannot observe it. Hosts without resource reads are out of scope. The refusal keeps the skill's path on disk for such a host. Recorded as a known limit in AGENTS.md.
+- Port 19988 is held by pid 88264, another session's playwriter-ws-server. It was not touched; checks run on another port slot.
+- The pin stays a41c6af with pw's patch. Nothing was reverted on AnEntrypoint/pw origin/main, and the dispatcher cancelled the revert.
+
+Phase A changes:
+1. check-browser-scope rewrite, commit 303de6a (native/components/tool/checks/browser_scope.cpp; native/components/host/browser_scope.cpp). Before and after assertions, from 293e153 (before) and 303de6a (after):
+   - Kept with the same wording and the same condition: the clean install; gm serve start; next_context start and tabs field; run_code probe; browser_tabs none before any use; browser_close_machine without confirm refused; playwriter_browsers close with no use {ok, closedPages 0, skipped}; finish ends the run; finish browser key with no use {ok, closedPages 0, skipped}; playwriter_execute opens the marker page; browser_tabs lists the run's page; browser_tabs keeps the run page after the side pages; browser_tabs counts the page of another context; browser_tabs counts the project browser page; the run's page is closed after finish; browser_close_machine with confirm closes the scratch browser; the survivor check.
+   - Changed, stricter: the finish reply after the run opened a page was {ok, closedPages >= 1}; it is now {ok, closedPages == 1}, because the run owns exactly one page in the check.
+   - Added, none of them in 293e153: the second run starts and opens its own page; the second run's browser_tabs lists exactly its own page and does not read the first run's page; the second run's finish closes exactly its own page; the first run's finish does not close the second run's page or any side page; browser_tabs does not list another run's page or a side page; browser_tabs does not list a project browser page as this run's; the side pages are undone and closed, and no run's page stays open after the browser closes.
+   - Dropped: none.
+   Mutation check: a mutant whose finish closes every default-context page fails six assertions. The mutant was reverted, and the rewritten check passed again at 8.8 s, 10.3 s and 11.9 s.
+2. AGENTS.md audit, applied in this commit. Removed: the sentence that the only CLI model is `scripted` (no such model in native/; the word appears only in defaults/mcp-tools/playwriter.json); the scripts/install.sh and tools/phase-b.sh references (both absent); the "on both engines" wording, since the Node engine is gone; the "not yet run" status of check-run-code-budget; the tools/parity-contract.mjs reference, replaced by the parity-contract check. Corrected: the SDK lists six protocol versions, not five; the native server accepts five and lists two in server/discover; the stamp hashes native and defaults only; the gate-stamp command is gm --version (installed.cpp, ship.cpp); the parity figures show both records. Added: the skill-gate path clause, the known limit for hosts without resource reads, and the browser-context and browser-ownership notes. Kept without a re-check this round: the Windows and macOS notes, the fetch allowed-schemes claim, the gh 2.46.0 note, the 409087f-77 note, and the process-group note.
 
 Result: scenario 2 is fixed in gm and passes on the pin with pw's patch and on the pre-patch pin f26b5ce. Phase B is blocked, for two reasons. pw's revert is not on origin/main, so the pin cannot move. check-browser-scope now fails, because its tab split assumed one browser context per run. Nothing is pushed. This section supersedes the cause and fix notes under "Round playwriter scenario 2: cause" and "Round playwriter first open" below.
 
