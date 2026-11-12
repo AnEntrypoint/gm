@@ -1,5 +1,61 @@
 # Pending validation
 
+## Round 2026-11-12 (scenario 2: cause, gm fix, refusal path): Phase A; Phase B blocked
+
+Result: scenario 2 is fixed in gm and passes on the pin with pw's patch and on the pre-patch pin f26b5ce. Phase B is blocked, for two reasons. pw's revert is not on origin/main, so the pin cannot move. check-browser-scope now fails, because its tab split assumed one browser context per run. Nothing is pushed. This section supersedes the cause and fix notes under "Round playwriter scenario 2: cause" and "Round playwriter first open" below.
+
+1. Scenario 2 on a41c6af with the patch in place, before the fix. Three runs: 54 s, 52.8 s and 78.7 s. Final output, verbatim:
+
+       check-browser-first-open: 1 failure(s)
+       - the page was not open after the gate restarted: WITNESS open=false pages=[] contexts=[1,1,0] executorIndex=2\nplaywriter-project /tmp/gm-first-open-8436696130023/ws: gate pid 538059 port 19023, debug port 19323, browser running pid 538190 (gate), leases 1\nbrowsers: 2 open on this machine (scan 31 ms)\n  pid 538066, owner gate pid 537976 for /tmp/pw-lease-ZNqFrM, profile /tmp/pw-lease-ZNqFrM/.playwriter/browser-profile, debug port 9996, pages 1
+       exit=1 wall=78.739284696 s
+
+   The patch is not the fix. Scenario 2 fails with it in place, and the same WITNESS failed at f26b5ce, which has no patch (round "Round playwriter scenario 2: cause").
+
+2. Cause, corrected. The contexts are made by gm's own code. kOpenRunContext in native/components/host/browser_scope.cpp called browser.newContext() for the project page and for the run context. Playwright's doCreateNewContext sends Target.createBrowserContext with disposeOnDetach: true (lib/server/chromium/crBrowser.js:110). Chrome disposes such a context when the connection that created it closes, and the gate SIGKILL closes that connection. The Chrome listing after the first open shows the two non-default contexts those calls make; after the kill both are gone. Only the default context outlives the kill, so the page has to be in it. The earlier note that a gm-side change cannot keep the page is wrong.
+
+3. Fix (commit 23a88df, native/components/host/browser_scope.cpp).
+   - kOpenRunContext uses the browser's default context (browser.contexts()[0]). It waits up to 10 s if the list is still empty, and throws if there is none.
+   - The project page reuses the default context's first open page, and creates a page only when there is none. Creating a page on each executor kept the browser up after the session ended, and scenario 1's release check failed.
+   - The run context is the default context.
+   - kCloseCode closes only the pages the run opened since its snapshot (state.gmRunPages), and never the default context. Playwright closes a context without a browser context id by calling browser.close() (crBrowser.js:464-470), which would have closed the whole project browser.
+
+4. The pw patch. f26b5ce is on origin and has no patches/ directory. The diff from there to a41c6af is the defensive patch (patches/playwriter+0.9.0.patch), its patch-package install (package.json) and a test (test/patch.cjs). Witnesses on the committed code:
+   - check-browser-first-open, pin a41c6af with the patch: ok, 41.6 s. Start, first open cross-origin isolated, 20 s still open, closed, browser released after the session, gate SIGKILL with the next call reaching the open page, and scenario 3 (wrapper called, SwiftShader flags) all true.
+   - check-browser-first-open, pin f26b5ce without the patch: ok, 41.7 s. Same five scenarios.
+   The pin was set to f26b5ce only for the no-patch run and restored; install.cpp is clean at HEAD.
+
+5. Refusal path (commit 3e0758f). The refusal names the skill's absolute path on disk (SkillFile.disk, set in native/components/mcp/skills.cpp), so a host that cannot read resources can open the file with its own file tool. The dispatcher's decision is recorded here so it is not reopened: every run_code is refused until resources/read on the connection, and the path is only a pointer to the rules.
+   Open point, not decided here: gm cannot see a host's file read, so reading the file does not clear run_code. A host without resource reads is still refused every run_code after it reads the file. The dispatcher has to say whether a file read should count; gm does not credit it.
+
+6. Regression, decision open. check-browser-scope fails on the committed code (13.5 s):
+
+       check-browser-scope: 3 failure(s)
+       - browser_tabs did not list the run's page
+       - browser_tabs lost the run page after the side pages: tabs: 2 in this run, safe to close on finish: [t1] about:blank ""; [t2] data:text/html,<title>gm-browser-scope-marker</title> "gm-browser-scope-marker"; not this run and not closable by it: 2 in other runs and 0 in the project browser
+       - browser_tabs did not count the project browser page: tabs: 2 in this run, safe to close on finish: [t1] about:blank ""; [t2] data:text/html,<title>gm-browser-scope-marker</title> "gm-browser-scope-marker"; not this run and not closable by it: 2 in other runs and 0 in the project browser
+
+   Cause: runs now share the project's default context, so the tab split (this run's context, other runs' contexts, the project browser's default context) no longer holds. Under this Playwright, scenario 2 cannot pass with a separate context per run. A context made through the executor dies with its connection. A context made some other way is not given a handle: Playwright attaches the pages of an unknown context to the default context or detaches them (crBrowser.js, _onAttachedToTarget). Choices for the dispatcher: (a) keep the shared default context and rewrite the tab split to the new model, which this commit does not do; or (b) keep per-run contexts and change scenario 2's expectation. The user asked to keep scenario 2, so this commit takes (a). The check is not weakened, and its failure stands.
+
+7. Witnesses on the committed code (HEAD 3e0758f, ledger commit follows):
+   - build, release tree: exit 0; incremental after each edit, 5 to 51 s.
+   - check-no-resource-client: ok, 0.91 s. The refusal names the skill's path on disk.
+   - check-restart-skill-read: ok, 0.08 s.
+   - check-run-code-budget: ok, 1.70 s. The cap case: a 1917 ms body with timeoutMs 300000 became a background run at 1667 ms.
+   - check-turn-end-release: ok, 40.3 s. Released 4.07 s after gm turn-end.
+   - parity-contract: ok, 18 of 18, 17.6 s.
+   - check-lazy-browser (pin marker a41c6af): ok, 14.2 s.
+   - check-browser-first-open, pin a41c6af with the patch: ok, 41.6 s.
+   - check-browser-first-open, pin f26b5ce without the patch: ok, 41.7 s.
+   - check-browser-scope: FAIL, 13.5 s (item 6).
+   - commit gate, gm-tool ship for 23a88df and 3e0758f: ascii, docs, agents-size and added-lines all ok.
+
+8. Blocked: the pin step. origin/main of AnEntrypoint/pw is still a41c6af (git ls-remote, 2026-11-12). Commit 33d11b1 (the patch) and commit 146b3ae (its install hook) are not reverted on main; the only reverts there are 4f9e78620 and 001cf633d. The pin stays at a41c6af. Phase B as specified was not run, and nothing is pushed.
+
+9. Processes. None of mine is left running. Port 19988 is held by pid 88264, a playwriter-ws-server from another session. It made the first no-patch run's scenario 3 fail with EADDRINUSE; the rerun on another port slot passed. pid 88264 was not touched.
+
+10. AGENTS.md. Its skill gate note does not yet say the refusal names the skill's path on disk. That edit needs the full audit of every note in AGENTS.md, which this round did not run, so the file is unchanged.
+
 ## Stretch 2026-11-12 (pin, every-call skill gate, turn-end witness, Stop fields): Phase A and Phase B
 
 Result: Phase B is not green. check-browser-first-open scenario 2 fails on the pin a41c6af with the defensive default-context patch in place, on three runs. Nothing is pushed. The check was not weakened.
