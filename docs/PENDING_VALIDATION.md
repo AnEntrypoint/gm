@@ -2908,3 +2908,8 @@ Witness: clock-mutations full run on build/asan: "clock-mutations: ok (the scale
 - Witness, Linux release: check-worker-growth: ok (... over the second 400 run_code calls, after 400 more and 100 warm calls (growth -16 KB; wall 6.4 s)).
 - Open, ASan only: the same check on build/asan with the quarantine disabled still grows 3400 KB over the second window (58636 KB then 62036 KB), so the ASan residual is per-call retention of about 8.5 KB per call. It is absent in the release build and the asan job excludes this check. Cause not established (ASan allocator metadata or a real retention that only ASan's allocator exposes).
 - Open, macOS: the next release run decides it. If macOS's second window stays near 3 MB, macOS retains per call, and that is a product defect to investigate in the worker. If the second window is near 0, the first window was allocator warm-up.
+
+## Round hosted verification 43161954533 (fixed arm-diagnose input): closed (2026-11-12)
+
+- Reported as passed: asan-arm and gdb-arm both success on the workflow that takes the checks input with commas or spaces (commit 77ab64e, cause in the earlier entry). The comma-joined input item is closed.
+- Not changed by this result: the asan set still excludes the timing checks, and the ASan per-call retention of check-worker-growth stays open.
