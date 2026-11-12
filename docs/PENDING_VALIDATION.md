@@ -1,5 +1,47 @@
 # Pending validation
 
+## Stretch 2026-11-12 (pin, every-call skill gate, turn-end witness, Stop fields): Phase A and Phase B
+
+Result: Phase B is not green. check-browser-first-open scenario 2 fails on the pin a41c6af with the defensive default-context patch in place, on three runs. Nothing is pushed. The check was not weakened.
+
+Phase A changes:
+1. Playwriter pin moved to a41c6af (commit 4cd9cd3; kPlaywriterPin in native/components/host/install.cpp:250; the pin marker in native/components/tool/checks/lazy_browser.cpp:41). a41c6af is origin/main of AnEntrypoint/pw (read with git rev-parse only; /workspace/pw was not changed). The patch (patches/playwriter+0.9.0.patch) and its postinstall stay until scenario 2 shows whether the patch is the fix.
+   Witness: check-lazy-browser passes on the pin (see Phase B). Scenario 2 fails on the pin (see Phase B).
+2. Skill refusal on every run_code (commits c2ec399, 28266e7 for the foreground cap, 7d8bac5 for the gate, a5f22d8 for the checks). A run_code is refused until the gm skill (SKILL.md, served as the gm skill resource) is read on this connection, on every run_code. A refusal does not credit a read, so a second run_code does not pass after one refusal. The refusal is one line that names the read and does not carry the skill text (native/components/mcp/server.cpp, kSkillReadRefusal). Checks: check-no-resource-client (refused before and after next_context, and after a worker restart; runs after resources/read), check-restart-skill-read (a connection under another host is refused until resources/read on that connection, then runs), parity-contract W4 (refused before and after the read). AGENTS.md and docs/PARITY_CONTRACT.md state the rule.
+   Consequence for the dispatcher: a host that cannot read a resource can never run run_code under this rule. That reopens fx issue 1 (/workspace/fx/issues.md, issue 1). The rule is kept as decided; the consequence needs the dispatcher's decision.
+3. check-turn-end-release (commit 0a10885; later edits in a5f22d8). Test code only. It starts a Node stub lazy server (stub.cjs; node is resolved to an absolute path, because a Session child env is HOME only). With the flag off, the lazy client stays up after gm turn-end. With --release-at-turn-end yes, gm turn-end for the workspace releases it within 15 s, the next call reconnects, and a marker for another workspace does not release it.
+   Witness: check-turn-end-release ok, 40.3 s, released 4.06 s after gm turn-end (see Phase B).
+4. The MCP entry keeps release_at_turn_end off. install.cpp writes the server args {"serve"} only (install.cpp:310 and :424). The flag is read in serve.cpp:75 and forwarded by relay.cpp:535 and worker.cpp:152. Searching defaults/ and install.cpp for release-at-turn-end finds only the printed hint at install.cpp:297, which says install does not write the Stop entry.
+   Witness: the flag-off case of check-turn-end-release (the lazy client stays alive after gm turn-end), and the grep above.
+5. Stop input fields, verdict: confirmed in the bundled CLI schema. The base hook input is u({session_id:o(), transcript_path:o(), cwd:o(), ...}), and the Stop input extends it with u({hook_event_name: A("Stop"), stop_hook_active: M(), last_assistant_message: o().optional(), ...}). o() is the required-string form, because the optional fields are written o().optional(). Source: /data/cache/node/node-v24.22.0-linux-x64/lib/node_modules/@anthropic-ai/claude-code/bin/claude.exe (267955384 bytes), read with grep -a -o. The live hook run is the release gate and was not done in this stretch.
+
+Phase B (HEAD a5f22d8; the full release build rebuilt the host objects and relinked gm and gm-core, because the build stamp follows the native tree):
+
+- build, full release tree: exit 0, 19.0 s (the first build of this stretch took 252 s).
+- check-no-resource-client: ok, 1.01 s.
+- check-run-code-budget, with the foreground cap case: ok, 1.71 s. The 115000 ms body (1917 ms scaled) with timeoutMs 300000 became a background run at 1668 ms, the 100000 ms cap (1667 ms scaled).
+- check-restart-skill-read: ok, 0.09 s.
+- check-turn-end-release: ok, 40.3 s, released 4.06 s after gm turn-end.
+- parity-contract: ok, 18 of 18, 62.9 s (run beside check-turn-end-release).
+- check-browser-first-open, scenario 2 on the pin: FAIL, three runs (54 s, 52.8 s, and 78.7 s on the final build). Final output, verbatim:
+
+      check-browser-first-open: 1 failure(s)
+      - the page was not open after the gate restarted: WITNESS open=false pages=[] contexts=[1,1,0] executorIndex=2\nplaywriter-project /tmp/gm-first-open-8436696130023/ws: gate pid 538059 port 19023, debug port 19323, browser running pid 538190 (gate), leases 1\nbrowsers: 2 open on this machine (scan 31 ms)\n  pid 538066, owner gate pid 537976 for /tmp/pw-lease-ZNqFrM, profile /tmp/pw-lease-ZNqFrM/.playwriter/browser-profile, debug port 9996, pages 1
+      exit=1 wall=78.739284696 s
+
+  The 52.8 s run had its browser adopted (pid 529110 (adopted), owner gate pid 529408, leases 1) and the same WITNESS line. The browser pid 538066 above belongs to another session's gate (537976); it was not touched.
+- check-lazy-browser (pin marker a41c6af): ok on the final build, 54.6 s (an earlier run on the pre-stamp binary took 217 s).
+- commit gate, gm-tool ship a5f22d8: gate ascii ok, docs ok, agents-size ok (12901 bytes, limit 30720), added-lines ok; wall 0.17 s. Ship committed locally and did not push; ship --push needs a phase-b pass.
+
+Not pushed: Phase B is not green, because scenario 2 fails on the pin.
+
+Open:
+- Scenario 2 fails on the pin with the patch in place. The check is not weakened and nothing is pushed. The page-survival fix from the playwriter peer is still open.
+- The every-call skill refusal and its consequence for hosts without resource read (fx issue 1): the dispatcher's decision.
+- The live Stop hook run (the release gate for item 5).
+- Owner decisions unchanged: install does not write the Stop entry; the MCP entry does not carry the flag.
+- Process check: a /proc scan after the runs found no process left by the checks (scratch paths gm-first-open-, gm-turn-end-release-, gm-budget-check-, gm-restart-skill-read-, gm-no-resource-client-).
+
 ## Stretch 2026-11-10 (run 2, stretch 4 items): browser tabs split, check timing, asan conformance: Phase A
 
 Changes:
