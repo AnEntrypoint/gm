@@ -17,6 +17,30 @@ Phase A changes:
    Mutation check: a mutant whose finish closes every default-context page fails six assertions. The mutant was reverted, and the rewritten check passed again at 8.8 s, 10.3 s and 11.9 s.
 2. AGENTS.md audit, applied in this commit. Removed: the sentence that the only CLI model is `scripted` (no such model in native/; the word appears only in defaults/mcp-tools/playwriter.json); the scripts/install.sh and tools/phase-b.sh references (both absent); the "on both engines" wording, since the Node engine is gone; the "not yet run" status of check-run-code-budget; the tools/parity-contract.mjs reference, replaced by the parity-contract check. Corrected: the SDK lists six protocol versions, not five; the native server accepts five and lists two in server/discover; the stamp hashes native and defaults only; the gate-stamp command is gm --version (installed.cpp, ship.cpp); the parity figures show both records. Added: the skill-gate path clause, the known limit for hosts without resource reads, and the browser-context and browser-ownership notes. Kept without a re-check this round: the Windows and macOS notes, the fetch allowed-schemes claim, the gh 2.46.0 note, the 409087f-77 note, and the process-group note.
 
+## Phase B, 2026-11-12, at 433f63a (the Phase A commit): the pin a41c6af with pw's patch
+
+Build: cmake --build build/release exit 0, 14.5 s real.
+
+Witnesses, each `gm-tool check build/release/native/components/host/gm <name>`, run in two lanes (the browser-exclusive checks in one lane, as phase-b does); wall time as measured:
+- check-browser-first-open: ok, 53.8 s. Scenario 2, the gate SIGKILL with the next call reaching the open page, passes on the pin with the patch.
+- check-browser-scope: ok, 12.2 s. Two runs share one browser; each run's browser_tabs lists only its own page, and each finish closes exactly its own page.
+- check-lazy-browser: ok, 33.8 s.
+- check-no-resource-client: ok, 0.9 s. A client that never reads the skill is refused on every run_code; after resources/read it runs.
+- check-run-code-budget: ok, 1.7 s. The cap case: a 1917 ms body with timeoutMs 300000 became a background run at 1667 ms.
+- check-restart-skill-read: ok, 0.1 s.
+- check-turn-end-release: ok, 40.3 s. Released 4.08 s after gm turn-end.
+- parity-contract: ok, 14.6 s. 18 of 18 contract witnesses hold on the native binary (W1 to W18, W23, W24; W21 and W22 are check-install-switch and check-skill-serve).
+
+Full gate: gm-tool phase-b build/release, pass at 433f63ae969c332d515464fff77b921f80a6cef8: 51 run, 0 failed, wall 223.6 s (3 min 43.8 s real). Longest under phase-b's load: check-lazy-browser 75.0 s, parity-contract 70.2 s, check-job-wait 65.1 s, check-browser-first-open 62.4 s.
+
+Commit gate: gm-tool ship for 433f63a (AGENTS.md and docs/PENDING_VALIDATION.md): ascii, docs, agents-size (14638 bytes of 30720) and added-lines ok.
+
+Processes: none left from these checks (a /proc scan by the sandbox path prefixes found none). Port 19988 is still held by pid 88264, another session's playwriter-ws-server, which was not touched.
+
+Parity: the parity-contract row above is 18 of 18. The 17 of 97 and 20 of 97 harness figures in AGENTS.md and in the older rounds below are earlier records; they were not rerun in this round.
+
+## Round 2026-11-12 (scenario 2: cause, gm fix, refusal path): Phase A; Phase B blocked
+
 Result: scenario 2 is fixed in gm and passes on the pin with pw's patch and on the pre-patch pin f26b5ce. Phase B is blocked, for two reasons. pw's revert is not on origin/main, so the pin cannot move. check-browser-scope now fails, because its tab split assumed one browser context per run. Nothing is pushed. This section supersedes the cause and fix notes under "Round playwriter scenario 2: cause" and "Round playwriter first open" below.
 
 1. Scenario 2 on a41c6af with the patch in place, before the fix. Three runs: 54 s, 52.8 s and 78.7 s. Final output, verbatim:
