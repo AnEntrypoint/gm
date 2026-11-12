@@ -2885,3 +2885,9 @@ Witness: clock-mutations full run on build/asan: "clock-mutations: ok (the scale
 - Fix: .github/workflows/arm-diagnose.yml passes the input through an env variable (CHECKS) and runs gm-tool check on the variable after a tr that turns commas into spaces, so commas and spaces both work. The input's default is unchanged.
 - Witness of the expansion: CHECKS="check-restart-jobs,check-install-switch"; tr ',' ' ' <<< "$CHECKS" prints "check-restart-jobs check-install-switch". The YAML parses.
 - Open: the hosted run of these two checks has not happened yet; it needs one more dispatch, which this round did not authorise.
+
+## Round hosted dispatch 43159800334: cause confirmed from the asan-arm step log (2026-11-12)
+
+- The step log (gh run view --job 130992586922 --log) shows the step's command as "gm-tool check build/asan/native/components/host/gm" followed by one argument, "check-restart-jobs,check-install-switch", then "gm-tool: no check matched" and "Process completed with exit code 2", 0.2 s after the step started. gm-tool takes each check name as its own argument, so the comma-joined token matched no check.
+- Reproduced locally with the release build: gm-tool check <gm> "check-restart-jobs,check-install-switch" prints "gm-tool: no check matched" and exits 2; the tr expansion in the workflow gives "check-restart-jobs check-install-switch".
+- Fix: the workflow expansion in commit 77ab64e (tr turns commas into spaces before gm-tool sees the names). The hosted run of the two checks has not happened with this fix; it needs one more dispatch.
