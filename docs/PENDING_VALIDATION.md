@@ -3069,3 +3069,35 @@ Decided here by the worker, with the reason, so the owner can overturn any of th
   2. Key: workspace (recommended) or session_id. The workspace matches one worker per workspace. Session keying needs the session id to reach the worker, which it does not have today.
   3. Timing: implement after the peer's pw change lands and the pin moves, not now. Recommendation: after.
 - This round: design only. No code, hook, settings or pw change was made.
+
+## Round gm skill refusal, run_code wait and turn-end lease: code (2026-11-12, Phase A)
+
+- Scope of this round: code and text only. No build, test or gate was run, as instructed. Each commit below was made with git commit by explicit path, as lanmower, with no trailer. The commit gate (gm-tool ship) was not run, so none of these commits has passed it. Phase B and the gate must run before any push. Nothing was pushed.
+- Witness column: "not run" means the named check or gate has not been run for this change. The rows say what Phase B must run.
+
+### Item 1: skill serving and the run_code wait
+
+- c2ec399 (the refusal and the skill read). The refusal is one line naming the read step (kSkillReadRefusal and skill_refusal_about in native/components/mcp/server.cpp) and carries no skill text. skill_refusal_due replaces skill_text_for_refusal, and tool_result no longer attaches a skill field. Cause as found in the code: the refusal reply carried the whole skill text in one JSON block. gm's serving (read_file and serve_skill_file) returns the whole file, and I found no gm path that cuts the refusal copy. Whether the host shortens such a reply is not verified; removing the copy removes the case. Witness: check no-resource-client, which now asserts a one-line refusal naming skill://gm/SKILL.md, a refusal under 1000 bytes, and no skill marker line in it. Not run.
+- c2ec399 (the skill:// read inside run_code). bounded_output no longer cuts a gm.read_file of a skill:// path at 6000 characters (kInlineVerbChars); the head-and-tail cut was the one place a skill copy was cut mid-file. Witness: check no-resource-client, through the viaVerb case of 6d6effc, which compares the body's read with the size of the file (17297 bytes today). Not run.
+- 28266e7 (the foreground cap). The foreground wait of run_code is capped at 100000 ms (kForegroundCapMs, scaled by clock_scale), so a body still running at the cap becomes a background run before the client's 120 s limit. A larger timeoutMs is accepted and held to the cap; the schema still allows up to 3600000. Witness: check run-code-budget, new case "foreground cap": a body that spins scaled(115000) ms at timeoutMs 300000 must return with background set, after at least scaled(95000) ms and before scaled(115000) ms. Not run.
+- b05e286 (the skill and AGENTS text). The job_status and next_context waits are 60000 ms, the limit the code clamps to (kMaxJobWaitMs, kMaxWaitMs); the skill said 100000. The skill now says a body still running at 100 seconds becomes a background run, whose value comes from job_status with its job id, and that a gm.read_file of a skill:// file is returned whole. AGENTS.md records the cap in place of the 150 s fact of 2026-11-08. Witness: read against the code. The gate (gm-tool gate, agents-size) has not run.
+- Open: the 20000-character run_code reply cap still applies to a body that returns the whole skill. The skill is 17297 bytes, under the cap; a larger skill would be cut at that reply, not at serving.
+- Decision for the owner: the refusal no longer carries the skill text, and the gate still credits the read once per connection, so run_code passes on the second call. A host that cannot read resources (fx) keeps working. A host that does not read the skill gets no rules from the refusal. Keeping the pass-through, or requiring a read that is recorded, is the owner's call.
+
+### Item 2: turn-end lease (code only, release gated off)
+
+- 9a35aa1 (StdioClient::release and the release tick). StdioClient::release(ended_ms) takes the use lock exclusively with try_lock, so it skips a client with a call in flight. It skips a client whose last use (call or connect) is after the turn's end time. Otherwise it closes stdin through lose(), with the reason "released at the end of the caller's turn", waits up to 5 s for the launcher to exit, and kills it if it has not. It does not set core_->closing, so the next call reconnects through connect(true). McpVerbs runs a release tick every 5 s only when Options.release_at_turn_end is set, and it releases only lazy servers (the playwriter entry is lazy). Off by default. Witness: check-turn-end-release, to be written; not run.
+- 82dfa2c (the hook, the marker and the flag). gm turn-end reads the Stop hook JSON from stdin, takes cwd and session_id, and writes $HOME/.gmnew/turn-end/<hash of the canonical workspace>.json with workspace, session_id and ended_ms, through a temp file and a rename. It exits 0 in every case. The worker reads the marker through turn_ended_ms, and gm serve forwards --release-at-turn-end yes to the worker (relay.cpp, serve.cpp, worker.cpp). gm install prints the Stop entry and leaves the Claude settings file unchanged (register_installed, print_turn_end_hook). Witness: not run. check-turn-end-release must start gm serve with the flag, run a playwriter call, run the hook with the workspace in its JSON, and confirm the lease count drops and the page is still there after the next call.
+- Gate: the release stays off until pw's page-survival commit lands and the pin moves. Release before that commit drops the caller's page at the turn end, which is scenario 2 in normal use. Do not pass --release-at-turn-end yes in the gm MCP entry until that commit is pinned.
+- Not verified on this host: that the Stop hook input carries cwd and session_id. The marker falls back to the process's current directory when cwd is absent. The first run of the hook confirms the fields.
+- Decision for the owner: whether gm install may write the Stop entry into the Claude settings file. This round does not write it; the entry is printed.
+- Decision for the owner: whether the flag belongs in the gm MCP entry, which the install writes. This round does not change that entry.
+
+### Commits this round
+
+- c2ec399: refusal one line, no skill in it; skill:// read not cut in run_code (witness not run)
+- 28266e7: foreground cap at 100000 ms, with the run-code-budget case (witness not run)
+- b05e286: skill and AGENTS text for waits and the background run (read against the code)
+- 6d6effc: no-resource-client asserts the whole skill read by size (witness not run)
+- 9a35aa1: StdioClient::release and the gated release tick (witness not run)
+- 82dfa2c: gm turn-end hook, marker, flag forwarding, install prints the Stop entry (witness not run)
