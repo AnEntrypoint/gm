@@ -2982,3 +2982,12 @@ Decided here by the worker, with the reason, so the owner can overturn any of th
 
 - The Chrome installer refuses linux arm ("Unsupported platform"). The launcher is in AnEntrypoint/pw, outside this checkout. Invariant 7 forbids cloning it, so nothing in this checkout can change the launcher.
 - Status: blocked. What unblocks it: a change to the pw launcher on that repo, then a hosted run of arm-diagnose on the browser check.
+
+## Round asan-arm failure on run 43184757032 (2026-11-12)
+
+- Read once from job 131069069501 (--log-failed). The asan-arm dispatch ran with the explicit checks input: check-run-code-budget check-run-code-progress parity-contract check-turn-economy check-cancel-record check-job-status-cancel mcp-conformance check-restart-jobs check-install-switch.
+- Failing checks: check-run-code-budget (2 failures: a 1667 ms timeoutMs body moved to background; the body returned null), check-turn-economy (the ended job has no wall time: durMs 732), check-run-code-progress (4 failures: foreground replies went to background under the asan build), parity-contract (4 failures: W16, W24 x3), check-job-status-cancel (the cancel event does not say what gm did), check-cancel-record (expected 2 cancel events, found 1). The job exit code was 1 from gm-tool check.
+- Passing in the same run: mcp-conformance (86 of 86), check-restart-jobs, check-install-switch.
+- Cause: these are timing-bound checks. Under ASan on an arm runner a body that finishes in well under its timeoutMs is slower, so it crosses its foreground cutoff and returns as a background job. That is the sanitizer's slowdown, not a product defect, which is why they stay out of the asan default (see the owner decision above).
+- Fix: none to the product. The push default in .github/workflows/arm-diagnose.yml does not contain these names, so the restore was never in the default and the push run is unaffected. The failure came only from the explicit dispatch input. Timing checks are run on the normal release arm and the release build, not under ASan.
+- Hosted run 43184757032: asan-arm failed, gdb-arm succeeded.
