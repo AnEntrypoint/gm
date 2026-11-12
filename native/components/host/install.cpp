@@ -272,10 +272,15 @@ std::optional<std::string> install_playwriter(const fs::path& current) {
         return std::nullopt;
     }
     std::error_code ec;
-    fs::remove_all(dir, ec);
     std::map<std::string, std::int64_t> wall;
     const std::int64_t began = wall_ms();
-    if (auto error = playwriter_step("clone", {"git", "clone", "--quiet", kPlaywriterRepo, dir.string()}, current, 900000, wall)) return error;
+    constexpr int kCloneAttempts = 3;
+    for (int attempt = 1;; ++attempt) {
+        fs::remove_all(dir, ec);
+        const auto cloned = playwriter_step("clone", {"git", "clone", "--quiet", kPlaywriterRepo, dir.string()}, current, 900000, wall);
+        if (!cloned) break;
+        if (attempt == kCloneAttempts) return cloned;
+    }
     if (auto error = playwriter_step("checkout", {"git", "-C", dir.string(), "checkout", "--quiet", "--detach", kPlaywriterPin}, current, 120000, wall)) return error;
     if (auto error = playwriter_step("npm ci", {"npm", "ci", "--no-audit", "--no-fund"}, dir, 1200000, wall)) return error;
     std::ofstream(pin_file) << kPlaywriterPin << "\n";
