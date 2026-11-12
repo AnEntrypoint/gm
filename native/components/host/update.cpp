@@ -500,7 +500,10 @@ UpdateResult update_once(const UpdatePolicy& policy, UpdateResult result) {
         return failed(std::move(result), "the manifest names " + asset->second.file + ", which is not a file name");
     result.to = asset->second.version;
     const bool asset_unchanged = !state.asset_sha.empty() && lower(state.asset_sha) == lower(asset->second.sha256);
-    if (asset_unchanged) {
+    const auto install_root = install_root_of(policy.install_dir);
+    const std::string on_disk = install_root ? linked_version(*install_root) : policy.current_version;
+    const bool same_build = !on_disk.empty() && asset->second.version == on_disk;
+    if (asset_unchanged || same_build) {
         state.checked_ms = now_ms();
         state.version = asset->second.version;
         state.asset_sha = asset->second.sha256;

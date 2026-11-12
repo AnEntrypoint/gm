@@ -97,7 +97,7 @@ echo "$S  $F" | sha256sum -c -
 tar -xzf "$F"
 "./gmnew-$T/gm" install --local "./gmnew-$T"
 echo "{\"checked_ms\":0,\"etag\":\"\",\"version\":\"\",\"assetSha\":\"$S\"}" &gt; ~/.gmnew/current/.gmnew-update.json</pre>
-<p>The last line of each script records the archive's sha256 for the updater. Without it, the first update check of release dd41d5f-452 downloads the build it already runs and leaves <code>~/.gmnew/current</code> pointing at a directory it has moved, so gm stops starting. With it, that check answers <code>already current</code>.</p>
+<p>The last line of each script records the archive's sha256 for the updater. Without it, the first update check of release dd41d5f-452 downloads the build it already runs and leaves <code>~/.gmnew/current</code> pointing at a directory it has moved, so gm stops starting. With it, that check answers <code>already current</code>. A later build compares the manifest's version with the installed one and needs no such line.</p>
 <h3>Windows, and the steps by hand</h3>
 <p>The archive for each target is named in <code>manifest.json</code> of the <code>latest</code> release, as <code>gmnew-&lt;version&gt;-&lt;target&gt;.tar.gz</code> (<code>.zip</code> on Windows), with its sha256. Check the sha256, extract the archive, and install from the extracted directory. On Windows, unzip and run <code>gm.exe install --local &lt;dir&gt;</code>; the install directory is <code>%USERPROFILE%\.gmnew\current</code>.</p>
 <pre>tar -xzf gmnew-&lt;version&gt;-&lt;target&gt;.tar.gz

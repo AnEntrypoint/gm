@@ -26,5 +26,9 @@ Run on a Windows x64 machine (and once on arm64):
 4. gm.exe install --local build\release --source . --config <scratch>\claude.json. Expect the same messages as on POSIX, the installed path under %USERPROFILE%\.gmnew\current, and a second run that keeps the binaries.
 5. gm.exe uninstall --config <scratch>\claude.json removes only the gm entry.
 
+6. gm.exe install --local with no `pw` directory yet. Expect the playwriter step to pass: on Windows it runs `cmd /d /c npm ci`, because npm is `npm.cmd` there and CreateProcess does not find it by the bare name (install.cpp, written 2026-11-12, not run on Windows).
+7. With HOME unset (the Windows default), start gm.exe serve and call `gm.playwriter_execute`. Expect playwriter to start: `${HOME}` in defaults/mcp.json falls back to USERPROFILE on Windows (mcpclient/config.cpp, written 2026-11-12, not run on Windows).
+8. During step 7, expect no console window from playwriter: the pw launcher at the pin sets windowsHide on its gate and children and preloads lib/hide-windows.cjs into playwriter's own children (not run on Windows).
+
 Not covered here: the process-group kill on Windows (DESIGN.md), and the Windows
 stdin pipe closing when the relay dies.

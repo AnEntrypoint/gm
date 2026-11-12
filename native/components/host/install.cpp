@@ -247,7 +247,7 @@ int start_check(const fs::path& exe, const std::string& version) {
 }
 
 constexpr const char* kPlaywriterRepo = "https://github.com/AnEntrypoint/pw.git";
-constexpr const char* kPlaywriterPin = "24646cc";
+constexpr const char* kPlaywriterPin = "43b53dc";
 
 std::optional<std::string> playwriter_step(const std::string& what, const std::vector<std::string>& argv, const fs::path& cwd, std::uint64_t timeout_ms,
                                            std::map<std::string, std::int64_t>& wall) {
@@ -277,7 +277,12 @@ std::optional<std::string> install_playwriter(const fs::path& current) {
     const std::int64_t began = wall_ms();
     if (auto error = playwriter_step("clone", {"git", "clone", "--quiet", kPlaywriterRepo, dir.string()}, current, 900000, wall)) return error;
     if (auto error = playwriter_step("checkout", {"git", "-C", dir.string(), "checkout", "--quiet", "--detach", kPlaywriterPin}, current, 120000, wall)) return error;
-    if (auto error = playwriter_step("npm ci", {"npm", "ci", "--no-audit", "--no-fund"}, dir, 1200000, wall)) return error;
+#if defined(_WIN32)
+    const std::vector<std::string> npm_ci{"cmd", "/d", "/c", "npm", "ci", "--no-audit", "--no-fund"};
+#else
+    const std::vector<std::string> npm_ci{"npm", "ci", "--no-audit", "--no-fund"};
+#endif
+    if (auto error = playwriter_step("npm ci", npm_ci, dir, 1200000, wall)) return error;
     std::ofstream(pin_file) << kPlaywriterPin << "\n";
     std::string longest;
     for (const auto& [name, ms] : wall) {

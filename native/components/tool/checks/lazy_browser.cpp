@@ -38,7 +38,7 @@ CheckResult check_lazy_browser(const std::string& binary) {
     std::ifstream pin_in(pin_marker);
     std::string pin_text;
     std::getline(pin_in, pin_text);
-    if (pin_text != "24646cc") result.failures.push_back("the install did not write the pin marker " + pin_marker.string() + " as 24646cc (read '" + pin_text + "')");
+    if (pin_text != "43b53dc") result.failures.push_back("the install did not write the pin marker " + pin_marker.string() + " as 43b53dc (read '" + pin_text + "')");
     const fs::path entry = sandbox / ".gmnew" / "current" / "pw" / "bin" / "playwriter-project";
     if (!fs::exists(entry)) result.failures.push_back("the playwriter entry from defaults/mcp.json does not resolve under the install tree: " + entry.string());
     {

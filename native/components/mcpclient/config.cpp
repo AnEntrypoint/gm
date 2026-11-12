@@ -92,7 +92,11 @@ std::string expand_variables(const std::string& text, std::vector<std::string>& 
             while (end < text.size() && identifier_part(text[end])) ++end;
             if (end < text.size() && text[end] == '}') {
                 const std::string variable = text.substr(start, end - start);
-                if (const char* value = std::getenv(variable.c_str())) {
+                const char* value = std::getenv(variable.c_str());
+#if defined(_WIN32)
+                if (value == nullptr && variable == "HOME") value = std::getenv("USERPROFILE");
+#endif
+                if (value != nullptr) {
                     out += value;
                 } else {
                     missing.push_back(variable);

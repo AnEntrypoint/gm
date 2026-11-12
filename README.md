@@ -44,7 +44,7 @@ Paste this as the setup script of the cloud environment (the environment's setti
     "./gmnew-$T/gm" install --local "./gmnew-$T"
     echo "{\"checked_ms\":0,\"etag\":\"\",\"version\":\"\",\"assetSha\":\"$S\"}" > ~/.gmnew/current/.gmnew-update.json
 
-The last line records the archive's sha256 for the updater. Without it, the first update check of release dd41d5f-452 downloads the build it already runs and leaves `~/.gmnew/current` pointing at a directory it has moved, so gm stops starting (reproduced with `gm update` after a plain install, 2026-11-12). With it, that check answers `already current`.
+The last line records the archive's sha256 for the updater. Without it, the first update check of release dd41d5f-452 downloads the build it already runs and leaves `~/.gmnew/current` pointing at a directory it has moved, so gm stops starting (reproduced with `gm update` after a plain install, 2026-11-12). With it, that check answers `already current`. A build with the updater fix (it compares the manifest's version with the installed one) answers the same without the line, so the line can go once such a build is the `latest` release.
 
 Witnessed on a Claude Code cloud container (x64 Linux, 2026-11-12): the install registered `mcpServers.gm`, the session listed gm's three tools, and gm's playwriter opened a page in the container's Chrome with no sandbox flag set.
 
