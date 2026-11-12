@@ -105,19 +105,20 @@ CheckResult check_turn_end_release(const std::string& binary) {
     const fs::path workspace = scratch / "ws";
     const fs::path home = scratch / "home";
     const fs::path other = scratch / "other";
-    const fs::path stub = scratch / "stub.js";
+    const fs::path stub = scratch / "stub.cjs";
     const fs::path pids = scratch / "stub.pids";
     const fs::path log = workspace / "runs" / "check" / "log.jsonl";
     fs::create_directories(workspace / ".gm");
     fs::create_directories(home);
     fs::create_directories(other);
     std::ofstream(stub) << kStubScript;
-    std::ofstream(workspace / ".gm" / "mcp.json") << R"({"mcpServers":{"playwriter":{"disabled":true},"stub":{"command":"node","args":[")" << stub.string() << R"(",")" << pids.string() << R"("],"lazy":true}}})";
-
-    const auto node = proc::run({"node", "--version"}, scratch, {}, 20000);
-    if (!node.started || node.exit_code != 0) {
-        result.failures.push_back("node is needed for the stub lazy server and did not run");
+    const auto located = proc::run({"sh", "-c", "command -v node"}, scratch, {}, 20000);
+    std::string node_path = located.out;
+    while (!node_path.empty() && (node_path.back() == '\n' || node_path.back() == ' ')) node_path.pop_back();
+    if (!located.started || located.exit_code != 0 || node_path.empty()) {
+        result.failures.push_back("node is needed for the stub lazy server and was not found on PATH");
     } else {
+        std::ofstream(workspace / ".gm" / "mcp.json") << R"({"mcpServers":{"playwriter":{"disabled":true},"stub":{"command":")" << node_path << R"(","args":[")" << stub.string() << R"(",")" << pids.string() << R"("],"lazy":true}}})";
         {
             Session off(binary, workspace, home, 180000, false);
             if (!off.started()) {
@@ -134,17 +135,17 @@ CheckResult check_turn_end_release(const std::string& binary) {
             }
             off.stop();
         }
+        const std::size_t before_session = stub_pids(pids).size();
         {
             Session on(binary, workspace, home, 180000, false, {"--release-at-turn-end", "yes"});
             if (!on.started()) {
                 result.failures.push_back("gm serve did not start from " + binary + " with --release-at-turn-end yes");
             } else {
                 prepare(on);
-                const std::size_t before_boot = stub_pids(pids).size();
                 const json::Value first = call_stub(on);
                 if (!flag(first, "ok", true)) result.failures.push_back("the stub verb did not run with the flag on: " + json::dump(first).substr(0, 300));
                 const std::vector<long long> live = stub_pids(pids);
-                if (live.size() <= before_boot) {
+                if (live.size() <= before_session) {
                     result.failures.push_back("the stub server did not start for the flagged worker");
                 } else {
                     const long long pid = live.back();

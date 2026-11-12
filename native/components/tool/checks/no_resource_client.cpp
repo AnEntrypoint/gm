@@ -154,7 +154,7 @@ CheckResult check_no_resource_client(const std::string& binary) {
             if (!flag(ran, "ok", true) || !contains_text(ran, "tool-only client")) result.failures.push_back("run_code after resources/read did not run: " + json::dump(ran).substr(0, 300));
             const json::Value viaVerb = tool_json(client, "run_code", json::Object{{"body", "return (await gm.read_file({ path: 'skill://gm/SKILL.md' })).output.length;"}});
             if (!flag(viaVerb, "ok", true)) result.failures.push_back("gm.read_file of the skill uri failed in a body");
-            else if (text_at(viaVerb, "output") != std::to_string(disk.size())) result.failures.push_back("gm.read_file of the skill uri gave " + text_at(viaVerb, "output") + " characters; the file has " + std::to_string(disk.size()));
+            else if (!output_value(viaVerb).is_number() || output_value(viaVerb).as_number() != static_cast<double>(disk.size())) result.failures.push_back("gm.read_file of the skill uri gave " + json::dump(output_value(viaVerb)) + " in a body; the file has " + std::to_string(disk.size()) + " bytes");
         }
         client.stop();
     }

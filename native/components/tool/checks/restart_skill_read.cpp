@@ -96,30 +96,28 @@ CheckResult check_restart_skill_read(const std::string& binary) {
         } else {
             connect(other);
             const json::Value refusal = other.rpc("tools/call", json::Object{{"name", "run_code"}, {"arguments", json::Object{{"body", "return 3"}}}});
-            const json::Value* structured = value_at(refusal, "result.structuredContent");
-            std::string skill_block;
-            const json::Value* blocks = value_at(refusal, "result.content");
-            if (blocks != nullptr && blocks->is_array() && !blocks->as_array().empty()) {
-                if (auto carried = json::parse(text_at(blocks->as_array().front(), "text"))) {
-                    if (const json::Value* skill = carried->find("skill"); skill != nullptr && skill->is_string()) skill_block = skill->as_string();
-                }
-                if (skill_block.empty() && blocks->as_array().size() > 1) skill_block = text_at(blocks->as_array()[1], "text");
-            }
-            if (structured == nullptr || !flag(*structured, "ok", false) || skill_block.empty())
-                result.failures.push_back("a worker under another host process ran run_code without delivering the skill: " + json::dump(structured != nullptr ? *structured : json::Value()).substr(0, 200));
+            auto refused_reply = [](const json::Value& rpc) {
+                const json::Value* structured = value_at(rpc, "result.structuredContent");
+                return structured != nullptr && flag(*structured, "ok", false) && text_at(*structured, "error").find("read skill://gm/SKILL.md") != std::string::npos;
+            };
+            if (!refused_reply(refusal)) result.failures.push_back("a worker under another host process ran run_code before the skill was read: " + json::dump(refusal).substr(0, 200));
+            if (!refused_reply(other.rpc("tools/call", json::Object{{"name", "run_code"}, {"arguments", json::Object{{"body", "return 5"}}}})))
+                result.failures.push_back("the second run_code under another host process was not refused before the read");
             const auto restarts = restart_events(log);
             if (restarts.size() != 2 || !flag(restarts[1], "skillRead", false)) result.failures.push_back("the second restart event does not carry skillRead false: " + std::to_string(restarts.size()) + " restart event(s)");
+            const json::Value read = other.rpc("resources/read", json::Object{{"uri", kSkill}});
+            if (value_at(read, "result.contents") == nullptr) result.failures.push_back("the skill read under another host process failed: " + json::dump(read).substr(0, 200));
             const json::Value ran = tool_json(other, "run_code", json::Object{{"body", "return 4"}});
             const json::Value* output = value_at(ran, "output");
             if (!flag(ran, "ok", true) || output == nullptr || !output->is_number() || output->as_number() != 4)
-                result.failures.push_back("run_code after the one refusal did not run: " + json::dump(ran).substr(0, 200));
+                result.failures.push_back("run_code after the skill read under another host process did not run: " + json::dump(ran).substr(0, 200));
         }
         other.stop();
     }
     std::error_code ignored;
     fs::remove_all(scratch, ignored);
     const double wall = std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
-    result.summary = "a worker restarted under the same host process runs run_code with no replayed skill read and logs restart skillRead true; under another host process the first run_code is refused once with the skill (wall " + std::to_string(wall) + " s)";
+    result.summary = "a worker restarted under the same host process runs run_code with no replayed skill read and logs restart skillRead true; under another host process every run_code is refused until resources/read on that connection, and then runs (wall" + std::to_string(wall) + " s)";
     return result;
 }
 

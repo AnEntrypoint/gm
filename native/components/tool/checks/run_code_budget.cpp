@@ -157,7 +157,7 @@ CheckResult check_run_code_budget(const std::string& binary) {
     std::error_code ignored;
     fs::remove_all(sandbox, ignored);
     const double wall = std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
-    result.summary = "a " + std::to_string(scaled(65000)) + " ms JavaScript body with timeoutMs " + std::to_string(scaled(100000)) + " returned in " + std::to_string(spin_elapsed) +
+    result.summary = "a " + std::to_string(scaled(115000)) + " ms body with timeoutMs 300000 became a background run at " + std::to_string(capped_elapsed) + " ms (the foreground cap); a " + std::to_string(scaled(65000)) + " ms JavaScript body with timeoutMs " + std::to_string(scaled(100000)) + " returned in " + std::to_string(spin_elapsed) +
                      " ms; a fetch leaf held for " + std::to_string(hold_ms) + " ms ended in " + std::to_string(leaf_elapsed) + " ms with no old fixed limit; a " + std::to_string(fetch_ms) +
                      " ms fetch with a catastrophic match timed out in " + std::to_string(matched_elapsed) + " ms in one attempt; a " + std::to_string(fetch_ms) + " ms fetch that timed out ended in " +
                      std::to_string(timed_out_elapsed) + " ms in one attempt (wall " + std::to_string(wall) + " s)";
