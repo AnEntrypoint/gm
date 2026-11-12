@@ -16,22 +16,24 @@ const char* kOpenRunContext =
     "{ let home = browser.contexts()[0]; for (let i = 0; !home && i < 100; i += 1) { await new Promise((r) => setTimeout(r, 100)); home = browser.contexts()[0]; } "
     "if (!home) throw new Error('the browser lists no default context'); "
     "if (!state.gmPage || state.gmPage.isClosed()) { state.gmProject = home; state.gmPage = home.pages().find((p) => !p.isClosed()) || await home.newPage(); } "
-    "if (!state.gmRun) { state.gmRun = home; state.gmRun.setDefaultTimeout(60000); state.gmRun.setDefaultNavigationTimeout(10000); state.gmRunPages = new Set(home.pages()); } } "
-    "var page = state.gmPage; context = state.gmRun; ";
+    "if (!state.gmRun) { state.gmRun = home; state.gmRun.setDefaultTimeout(60000); state.gmRun.setDefaultNavigationTimeout(10000); "
+    "const owned = state.gmRunPages = new Set(); "
+    "state.gmRunView = new Proxy(home, { get(target, key) { if (key === 'newPage') return async (...args) => { const made = await target.newPage(...args); owned.add(made); return made; }; const value = Reflect.get(target, key, target); return typeof value === 'function' ? value.bind(target) : value; } }); } } "
+    "var page = state.gmPage; context = state.gmRunView; ";
 const char* kTabsCode =
     "const cdp = await browser.newBrowserCDPSession(); const { targetInfos } = await cdp.send('Target.getTargets'); "
     "const { browserContextIds } = await cdp.send('Target.getBrowserContexts'); const created = new Set(browserContextIds); "
-    "const rows = []; let own = null; "
-    "if (state.gmRun) { for (const p of state.gmRun.pages()) { if (p.isClosed()) continue; "
-    "if (own === null) { const s = await state.gmRun.newCDPSession(p); own = (await s.send('Target.getTargetInfo')).targetInfo.browserContextId; await s.detach(); } "
-    "if (!state.gmTabIds) { state.gmTabIds = new WeakMap(); state.gmTabSeq = 0; } let id = state.gmTabIds.get(p); if (id === undefined) { state.gmTabSeq += 1; id = 't' + state.gmTabSeq; state.gmTabIds.set(p, id); } rows.push({ id, url: p.url(), title: await p.title().catch(() => '') }); } } "
+    "const rows = []; const own = new Set(); const owned = [...(state.gmRunPages || [])].filter((p) => !p.isClosed()); "
+    "if (!state.gmTabIds) { state.gmTabIds = new WeakMap(); state.gmTabSeq = 0; } "
+    "for (const p of owned) { const s = await state.gmRun.newCDPSession(p); own.add((await s.send('Target.getTargetInfo')).targetInfo.targetId); await s.detach(); "
+    "let id = state.gmTabIds.get(p); if (id === undefined) { state.gmTabSeq += 1; id = 't' + state.gmTabSeq; state.gmTabIds.set(p, id); } rows.push({ id, url: p.url(), title: await p.title().catch(() => '') }); } "
     "const counts = { otherRuns: 0, projectTabs: 0 }; "
-    "for (const t of targetInfos) { if (t.type !== 'page' || t.browserContextId === own) continue; "
+    "for (const t of targetInfos) { if (t.type !== 'page' || own.has(t.targetId)) continue; "
     "if (created.has(t.browserContextId)) counts.otherRuns += 1; else counts.projectTabs += 1; } "
     "await cdp.detach(); return 'GMTABS' + JSON.stringify({ rows, counts }) + 'GMTABS';";
 const char* kCloseCode =
-    "let n = 0; if (state.gmRun) { try { const seen = state.gmRunPages || new Set(); const opened = state.gmRun.pages().filter((p) => !p.isClosed() && p !== state.gmPage && !seen.has(p)); "
-    "for (const p of opened) { await p.close(); } n = opened.length; } finally { delete state.gmRun; delete state.gmRunPages; } } return 'GMCLOSED' + n + 'GMCLOSED';";
+    "let n = 0; if (state.gmRun) { try { const opened = [...(state.gmRunPages || [])].filter((p) => !p.isClosed()); "
+    "for (const p of opened) { await p.close(); } n = opened.length; } finally { delete state.gmRun; delete state.gmRunView; delete state.gmRunPages; } } return 'GMCLOSED' + n + 'GMCLOSED';";
 
 json::Value failure(std::string message) {
     json::Value reply;
