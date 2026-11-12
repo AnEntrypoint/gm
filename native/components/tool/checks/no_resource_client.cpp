@@ -148,6 +148,7 @@ CheckResult check_no_resource_client(const std::string& binary) {
 
             const json::Value viaVerb = tool_json(client, "run_code", json::Object{{"body", "return (await gm.read_file({ path: 'skill://gm/SKILL.md' })).output.length;"}});
             if (!flag(viaVerb, "ok", true)) result.failures.push_back("gm.read_file of the skill uri failed in a body");
+            else if (text_at(viaVerb, "output") != std::to_string(disk.size())) result.failures.push_back("gm.read_file of the skill uri gave " + text_at(viaVerb, "output") + " characters; the file has " + std::to_string(disk.size()));
 
             const json::Value second = tool_json(client, "next_context", json::Object{});
             if (!flag(second, "ok", true) || !flag(second, "unchanged", true)) result.failures.push_back("the second next_context, with nothing new, is not the unchanged reply");
