@@ -13,9 +13,11 @@ constexpr std::size_t kUrlChars = 200;
 constexpr int kBrowserTimeoutMs = 10000;
 
 const char* kOpenRunContext =
-    "if (!state.gmPage || state.gmPage.isClosed()) { state.gmProject = await browser.newContext(); state.gmPage = await state.gmProject.newPage(); } var page = state.gmPage; "
-    "if (!state.gmRun) { state.gmRun = await browser.newContext(); state.gmRun.setDefaultTimeout(60000); "
-    "state.gmRun.setDefaultNavigationTimeout(10000); } context = state.gmRun; ";
+    "{ let home = browser.contexts()[0]; for (let i = 0; !home && i < 100; i += 1) { await new Promise((r) => setTimeout(r, 100)); home = browser.contexts()[0]; } "
+    "if (!home) throw new Error('the browser lists no default context'); "
+    "if (!state.gmPage || state.gmPage.isClosed()) { state.gmProject = home; state.gmPage = home.pages().find((p) => !p.isClosed()) || await home.newPage(); } "
+    "if (!state.gmRun) { state.gmRun = home; state.gmRun.setDefaultTimeout(60000); state.gmRun.setDefaultNavigationTimeout(10000); state.gmRunPages = new Set(home.pages()); } } "
+    "var page = state.gmPage; context = state.gmRun; ";
 const char* kTabsCode =
     "const cdp = await browser.newBrowserCDPSession(); const { targetInfos } = await cdp.send('Target.getTargets'); "
     "const { browserContextIds } = await cdp.send('Target.getBrowserContexts'); const created = new Set(browserContextIds); "
@@ -28,8 +30,8 @@ const char* kTabsCode =
     "if (created.has(t.browserContextId)) counts.otherRuns += 1; else counts.projectTabs += 1; } "
     "await cdp.detach(); return 'GMTABS' + JSON.stringify({ rows, counts }) + 'GMTABS';";
 const char* kCloseCode =
-    "let n = 0; if (state.gmRun) { try { n = state.gmRun.pages().filter((p) => !p.isClosed()).length; "
-    "await state.gmRun.close(); } finally { delete state.gmRun; } } return 'GMCLOSED' + n + 'GMCLOSED';";
+    "let n = 0; if (state.gmRun) { try { const seen = state.gmRunPages || new Set(); const opened = state.gmRun.pages().filter((p) => !p.isClosed() && p !== state.gmPage && !seen.has(p)); "
+    "for (const p of opened) { await p.close(); } n = opened.length; } finally { delete state.gmRun; delete state.gmRunPages; } } return 'GMCLOSED' + n + 'GMCLOSED';";
 
 json::Value failure(std::string message) {
     json::Value reply;
