@@ -12,7 +12,7 @@ namespace {
 
 namespace fs = std::filesystem;
 
-constexpr std::int64_t kRefusalOverheadBytes = 2000;
+constexpr std::size_t kRefusalLimitBytes = 1000;
 constexpr const char* kSample = "return (await gm.read_file({ path: 'sample.txt', fresh: true })).output;";
 
 std::string read_text(const fs::path& file) {
@@ -110,7 +110,6 @@ CheckResult check_no_resource_client(const std::string& binary) {
             const json::Value* refusal_blocks = refusal_result != nullptr ? value_at(*refusal_result, "content") : nullptr;
             const std::string refusal_dump = json::dump(refusal);
             const std::size_t refusal_bytes = refusal_dump.size();
-            const std::size_t skill_bytes = json::dump(json::Value(disk)).size();
             json::Value gated;
             if (const json::Value* structured = value_at(refusal, "result.structuredContent")) {
                 gated = *structured;
@@ -119,15 +118,9 @@ CheckResult check_no_resource_client(const std::string& binary) {
             }
             if (!flag(gated, "ok", false) || text_at(gated, "error").rfind("run_code refused:", 0) != 0)
                 result.failures.push_back("the first run_code was not refused: " + json::dump(gated).substr(0, 300));
-            std::string skill_block;
-            if (refusal_blocks != nullptr && refusal_blocks->is_array() && !refusal_blocks->as_array().empty()) {
-                if (auto carried = json::parse(text_at(refusal_blocks->as_array().front(), "text"))) {
-                    if (const json::Value* skill = carried->find("skill"); skill != nullptr && skill->is_string()) skill_block = skill->as_string();
-                }
-                if (skill_block.empty() && refusal_blocks->as_array().size() > 1) skill_block = text_at(refusal_blocks->as_array()[1], "text");
-            }
-            const bool block_count_ok = refusal_blocks == nullptr || !refusal_blocks->is_array() || refusal_blocks->as_array().size() <= 2;
-            if (skill_block != disk || !block_count_ok) result.failures.push_back("the refusal's reply JSON does not carry the served skill text in its skill field");
+            const std::string refusal_error = text_at(gated, "error");
+            if (refusal_error.find("skill://gm/SKILL.md") == std::string::npos || refusal_error.find('\n') != std::string::npos)
+                result.failures.push_back("the refusal does not name the skill read in one line: " + refusal_error);
             const std::string marker_line = [&] {
                 std::istringstream lines(disk);
                 std::string line;
@@ -137,8 +130,8 @@ CheckResult check_no_resource_client(const std::string& binary) {
                 return std::string();
             }();
             const std::string escaped = json::dump(json::Value(marker_line)).substr(1, json::dump(json::Value(marker_line)).size() - 2);
-            if (count_of(refusal_dump, escaped) != 1) result.failures.push_back("the refusal does not hold the skill text exactly once");
-            if (refusal_bytes > skill_bytes + kRefusalOverheadBytes) result.failures.push_back("the refusal is " + std::to_string(refusal_bytes) + " bytes; one copy of the skill is " + std::to_string(skill_bytes) + " bytes");
+            if (count_of(refusal_dump, escaped) != 0) result.failures.push_back("the refusal embeds the skill text");
+            if (refusal_bytes > kRefusalLimitBytes) result.failures.push_back("the refusal is " + std::to_string(refusal_bytes) + " bytes; it names the read step and does not carry the skill");
             if (value_at(gated, "rulesNotice") != nullptr) result.failures.push_back("the refusal carries a rules notice");
 
             const json::Value early = tool_json(client, "run_code", json::Object{{"body", kSample}});

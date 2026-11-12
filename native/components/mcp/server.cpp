@@ -83,7 +83,7 @@ constexpr const char* kServerName = "gm";
 constexpr const char* kServerTitle = "gm run worker";
 constexpr const char* kGmSkillUri = "skill://gm/SKILL.md";
 constexpr int kStepStartRule = 2;
-constexpr const char* kSkillReadRefusal = "run_code refused: skill://gm/SKILL.md had not been read in this connection, so its text is the skill field of this reply. Follow it, then call run_code again. This refusal is sent once per connection.";
+constexpr const char* kSkillReadRefusal = "run_code refused: read skill://gm/SKILL.md first (resources/read, or ReadMcpResourceTool with server gm), then call run_code again. This refusal is sent once per connection.";
 constexpr std::size_t kReplyMemory = 256;
 constexpr std::size_t kOutputCap = 20000;
 constexpr std::size_t kOutputPage = 20000;
@@ -529,7 +529,7 @@ Value caller_of_process() {
 
 std::string skill_refusal_about(const std::string& change) {
     return "run_code refused: skill://gm/SKILL.md " + change +
-           ", so its text is the skill field of this reply. Follow it, then call run_code again. This refusal is sent once per connection.";
+           ", so read it first (resources/read, or ReadMcpResourceTool with server gm), then call run_code again. This refusal is sent once per connection.";
 }
 
 const Value* last_skill_read_by_this_host(const std::vector<Value>& history) {
@@ -2540,12 +2540,12 @@ struct Server::State {
     }
 
     Value run_code(const Value& args);
-    std::optional<std::string> skill_text_for_refusal() {
+    bool skill_refusal_due() {
         auto served = serve_skill_file(kGmSkillUri, "run_code");
         gm_skill_read = true;
-        if (!served) return std::nullopt;
+        if (!served) return false;
         append("refusal", object().set("tool", "run_code").set("stage", "skill-read").set("error", skill_refusal_));
-        return served->find("text")->as_string();
+        return true;
     }
 
     Value invoke(const std::string& name, const Value& args) {
@@ -2572,10 +2572,9 @@ struct Server::State {
         s().step_calls += 1;
     }
 
-    Value tool_result(const std::string& name, const Value& out, std::optional<std::uint64_t> seq, const std::optional<std::string>& attached_text = std::nullopt) {
+    Value tool_result(const std::string& name, const Value& out, std::optional<std::uint64_t> seq) {
         Value carried = out;
         if (handover_notice_) carried.set("handover", *handover_notice_);
-        if (attached_text) carried.set("skill", *attached_text);
         Value content = array();
         const Value* text_output = out.find("output");
         if (name == "run_code" && text_output != nullptr && text_output->is_string()) {
@@ -2650,8 +2649,7 @@ struct Server::State {
             throw RpcError(-32602, "Unknown tool: " + name +
                                        "; the code surface serves next_context, run_code, task_set and finish; call a verb as gm.<name>(args) inside run_code");
         }
-        std::optional<std::string> undelivered_skill = name == "run_code" && !gm_skill_read ? skill_text_for_refusal() : std::nullopt;
-        const bool gated = undelivered_skill.has_value();
+        const bool gated = name == "run_code" && !gm_skill_read && skill_refusal_due();
         if (!gated && !s().run_started && !s().ended && name != "next_context" && name != "finish") {
             note_rule(kStepStartRule, name + " was called before the first next_context of the run");
         }
@@ -2679,7 +2677,7 @@ struct Server::State {
         }
         watch_call(name, out);
         if (auto notice = rules_notice()) out.set("rulesNotice", *notice);
-        return tool_result(name, out, seq, undelivered_skill);
+        return tool_result(name, out, seq);
     }
 
     void remember(const std::string& key, const Value& result) {
@@ -3544,7 +3542,9 @@ ShownPart shown_part(const std::string& text, const std::string& command, const 
 
 Value bounded_output(Value result, const Value& args, const fs::path& run_dir, const std::string& name) {
     const Value* output = result.find("output");
-    if (flag_set(args, "full") || output == nullptr || !output->is_string()) return result;
+    const Value* target = args.find("path");
+    const bool skill_file = name == "read_file" && target != nullptr && target->is_string() && target->as_string().rfind("skill://", 0) == 0;
+    if (flag_set(args, "full") || skill_file || output == nullptr || !output->is_string()) return result;
     const std::string text = output->as_string();
     const std::size_t total = js_length(text);
     if (total <= kInlineVerbChars) return result;
