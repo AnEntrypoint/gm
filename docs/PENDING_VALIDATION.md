@@ -1,5 +1,22 @@
 # Pending validation
 
+## Round 2026-11-12 (queue e6b5, relay-reexec x64 hosted failure, run 43291764113): cause not found, no code change
+
+Hosted: run 43291764113, x64 Linux job 131439522324 (build 846da95-458). check-relay-reexec failed at 13.7 s. The job log gives "phase-b: check-relay-reexec FAILED 13.7 s" (line 703) and "- the relay re-executed only after the next_context wait had answered" (line 705). Its other four assertions passed: re-exec within 5 s of the update (line 215), held wait ok (221), run_code after re-exec ok (228), answered once (232). Only the ordering assertion failed (re-exec marker before the held reply). The job log holds no reply text, so it does not say which worker answered the wait.
+
+What the ordering assertion compares: the time a watcher thread (20 ms poll of the relay's stderr) first sees the re-exec marker, against the time the main thread receives the held reply. A reply that arrives within the poll window after the marker, or before it, fails the assertion.
+
+Measured here, release stamp be9909f-1, check-relay-reexec:
+- One run with a diagnostic dump of the held reply: ok, 9.8 s; re-exec 140 ms after the update; answered once at 1628 ms. The reply was from the new worker: step 2, a recovery note ("This run resumed after a restart, at last seq 7"), and a pending recovery event at seq 9 with no pending event from the old worker. The diagnostic is removed.
+- Four concurrent runs on the committed code: all ok; re-exec 40 to 140 ms after the update; answered at 2613 to 3117 ms.
+- Three concurrent runs with a candidate relay change (a held-back reply to next_context during Restarting): all ok; re-exec 120 to 140 ms; answered at 1826 to 1827 ms. The change was not kept, because the probe below did not show the path it targets.
+- Probe (scratch script, not kept): gm-core worker with --supervised yes, a next_context wait of 45000 ms open, then stdin closed. Three trials: no reply to the held call within 8 s, and the worker did not exit within 15 s (it was killed by pid).
+
+Ruled out: the supervised worker answering the held wait when its stdin closes (probe, 3 of 3). Local timings show the answer comes after the re-exec, not in the window before it.
+Not measured: the gap between the re-exec marker and the new worker's answer; a reply from the old worker to SIGTERM (the relay sends SIGTERM straight after closing stdin); a scheduling stall of the watcher thread on the hosted runner.
+
+No code change. The check's failure message names the reply that answered the wait (committed in be9909f), so the next hosted failure shows which worker answered and in what state. Until then the cause stays open.
+
 ## Round 2026-11-12 (queue e6b5, third part: Phase B failure on 9efeb37, browser scope, scoped kills)
 
 Phase B on 9efeb37 failed one row, check-browser-scope (6 failures in the pool). Nothing was pushed; build/release/phase-b.pass still holds the old 73ccd2c marker.
