@@ -39,7 +39,6 @@ namespace {
 constexpr std::uint64_t kill_grace_ms = 500;
 #endif
 const double max_wait_ms = 60000 * clock_scale();
-constexpr double job_wait_ceiling_ms = 60000;
 constexpr int pid_poll_ms = 100;
 constexpr std::uint64_t ended_event_grace_ms = 250;
 
@@ -547,13 +546,17 @@ json::Value JobTable::status(const json::Value& args) {
     const json::Value* name_value = args.find("job");
     if (!is_job_name(name_value)) return failure("job must be a job name");
     const std::string& name = name_value->as_string();
-    double wait_ms = 0;
+    double requested_ms = 0;
     if (const json::Value* w = args.find("waitMs"); w != nullptr && w->is_number() && std::isfinite(w->as_number())) {
-        wait_ms = std::clamp(w->as_number(), 0.0, job_wait_ceiling_ms);
+        requested_ms = w->as_number();
     }
+    double wait_ms = 0;
     {
         std::unique_lock lock(mutex_);
         auto found = jobs_.find(job_key(name));
+        if (found != jobs_.end()) {
+            wait_ms = std::clamp(requested_ms, 0.0, static_cast<double>(found->second->timeout_ms + ended_event_grace_ms));
+        }
         if (found != jobs_.end() && !found->second->settled && wait_ms > 0) {
             Job& job = *found->second;
             changed_.wait_for(lock, std::chrono::duration<double, std::milli>(wait_ms), [&] { return job.settled; });

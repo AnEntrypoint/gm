@@ -80,6 +80,7 @@ CheckResult check_cancel_record(const std::string& binary);
 CheckResult check_early_run_code(const std::string& binary);
 CheckResult check_worker_growth(const std::string& binary);
 CheckResult check_feed_reference(const std::string& binary);
+CheckResult check_job_wait(const std::string& binary);
 std::vector<long long> process_tree(const std::vector<long long>& roots);
 void kill_processes(const std::vector<long long>& pids);
 std::vector<long long> alive_of(const std::vector<long long>& pids);

@@ -52,6 +52,7 @@ const std::vector<Registered>& checks() {
         {"check-cli-flags", check_cli_flags},
         {"check-worker-growth", check_worker_growth},
         {"check-feed-reference", check_feed_reference},
+        {"check-job-wait", check_job_wait},
     };
     return all;
 }
