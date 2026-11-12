@@ -2,6 +2,7 @@
 find_package(Git QUIET)
 set(commit "unknown")
 set(head "unknown")
+set(committed "unknown")
 if(GIT_FOUND)
     execute_process(
         COMMAND "${GIT_EXECUTABLE}" rev-parse --short HEAD
@@ -12,6 +13,16 @@ if(GIT_FOUND)
         RESULT_VARIABLE rc)
     if(rc EQUAL 0 AND "${short_head}" MATCHES "^[0-9a-f]+$")
         set(head "${short_head}")
+    endif()
+    execute_process(
+        COMMAND "${GIT_EXECUTABLE}" log -1 --format=%ct HEAD
+        WORKING_DIRECTORY "${SOURCE_DIR}"
+        OUTPUT_VARIABLE commit_time
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET
+        RESULT_VARIABLE committed_rc)
+    if(committed_rc EQUAL 0 AND "${commit_time}" MATCHES "^[0-9]+$")
+        set(committed "${commit_time}")
     endif()
     set(trees "")
     set(ok TRUE)
@@ -37,7 +48,7 @@ set(version "${commit}-dev")
 if(NOT "${head}" STREQUAL "unknown" AND DEFINED OVERRIDE AND "${OVERRIDE}" MATCHES "^${head}(-|$)")
     set(version "${OVERRIDE}")
 endif()
-set(text "#pragma once\n\n#include <string_view>\n\nnamespace gm::host {\n\ninline constexpr std::string_view kBuildVersion = \"${version}\";\ninline constexpr std::string_view kBuildCommit = \"${commit}\";\n\n}\n")
+set(text "#pragma once\n\n#include <string_view>\n\nnamespace gm::host {\n\ninline constexpr std::string_view kBuildVersion = \"${version}\";\ninline constexpr std::string_view kBuildCommit = \"${commit}\";\ninline constexpr std::string_view kBuildCommitTime = \"${committed}\";\n\n}\n")
 set(current "")
 if(EXISTS "${OUTPUT}")
     file(READ "${OUTPUT}" current)

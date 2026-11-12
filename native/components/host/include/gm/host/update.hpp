@@ -28,6 +28,7 @@ struct ManifestAsset {
     std::string sha256;
     std::string version;
     std::uintmax_t size = 0;
+    std::optional<std::int64_t> committed;
 };
 
 struct Manifest {
@@ -54,6 +55,7 @@ struct UpdatePolicy {
     std::string url = std::string(kDefaultUpdateUrl);
     std::filesystem::path install_dir;
     std::string current_version = std::string(kBuildVersion);
+    std::optional<std::int64_t> committed;
     std::chrono::minutes interval = kUpdateInterval;
     bool enabled = true;
     bool force = false;

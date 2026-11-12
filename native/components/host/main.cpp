@@ -77,7 +77,7 @@ int main(int argc, char** argv) {
     if (args.mode == "install") return gm::host::run_install_command(args);
     if (args.mode == "uninstall") return gm::host::run_uninstall_command(args);
     if (args.mode == "--version") {
-        std::cout << gm::host::kBuildVersion << " (" << gm::host::kBuildCommit << ")\n";
+        std::cout << gm::host::kBuildVersion << " (" << gm::host::kBuildCommit << ") " << gm::host::kBuildCommitTime << "\n";
         return 0;
     }
     std::cerr << kUsage;

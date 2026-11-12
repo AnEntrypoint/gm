@@ -111,21 +111,28 @@ std::int64_t now_ms() {
     return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 }
 
-std::optional<std::int64_t> build_number(std::string_view version) {
-    const std::size_t dash = version.rfind('-');
-    if (dash == std::string_view::npos) return std::nullopt;
-    const std::string_view digits = version.substr(dash + 1);
+std::optional<std::int64_t> parse_int64(std::string_view text) {
     std::int64_t number = 0;
-    const char* last = digits.data() + digits.size();
-    const auto [end, error] = std::from_chars(digits.data(), last, number);
+    const char* last = text.data() + text.size();
+    const auto [end, error] = std::from_chars(text.data(), last, number);
     if (error != std::errc{} || end != last) return std::nullopt;
     return number;
 }
 
-bool older_build(const std::string& published, const std::string& installed) {
-    const std::optional<std::int64_t> published_number = build_number(published);
-    const std::optional<std::int64_t> installed_number = build_number(installed);
-    return published_number && installed_number && *published_number < *installed_number;
+std::optional<std::int64_t> build_number(std::string_view version) {
+    const std::size_t dash = version.rfind('-');
+    if (dash == std::string_view::npos) return std::nullopt;
+    return parse_int64(version.substr(dash + 1));
+}
+
+enum class Order { Newer, Older, Unordered };
+
+Order order_against(const UpdatePolicy& policy, const ManifestAsset& asset) {
+    if (policy.committed && asset.committed) return *asset.committed < *policy.committed ? Order::Older : Order::Newer;
+    const std::optional<std::int64_t> installed = build_number(policy.current_version);
+    const std::optional<std::int64_t> published = build_number(asset.version);
+    if (!installed || !published || *installed == 1) return Order::Unordered;
+    return *published < *installed ? Order::Older : Order::Newer;
 }
 
 std::mutex download_mutex;
@@ -260,6 +267,8 @@ deoxidene::Result<Manifest, std::string> parse_manifest(std::string_view text) {
         if (asset.version.empty()) asset.version = manifest.version;
         const json::Value* size = entry.find("size");
         if (size != nullptr && size->is_number()) asset.size = static_cast<std::uintmax_t>(size->as_number());
+        const json::Value* committed = entry.find("committed");
+        if (committed != nullptr && committed->is_number()) asset.committed = static_cast<std::int64_t>(committed->as_number());
         manifest.assets[target] = std::move(asset);
     }
     return manifest;
@@ -390,6 +399,7 @@ UpdatePolicy policy_from_environment(const fs::path& install_dir) {
     if (url != nullptr && *url != '\0') policy.url = url;
     const char* auto_update = std::getenv("GMNEW_AUTO_UPDATE");
     policy.enabled = !is_dev_version(kBuildVersion) && !(auto_update != nullptr && std::string_view(auto_update) == "0");
+    policy.committed = parse_int64(kBuildCommitTime);
     return policy;
 }
 
@@ -539,10 +549,13 @@ UpdateResult update_once(const UpdatePolicy& policy, UpdateResult result) {
     if (!plain_file_name(asset->second.file))
         return failed(std::move(result), "the manifest names " + asset->second.file + ", which is not a file name");
     result.to = asset->second.version;
-    if (older_build(asset->second.version, policy.current_version)) {
+    const Order order = order_against(policy, asset->second);
+    if (order != Order::Newer) {
         state.checked_ms = now_ms();
         write_update_state(policy.install_dir, state);
-        result.status = "kept " + policy.current_version + ": the published " + asset->second.version + " is older";
+        result.status = order == Order::Older
+                            ? "kept " + policy.current_version + ": the published " + asset->second.version + " is older"
+                            : "refused " + policy.current_version + ": the published " + asset->second.version + " cannot be ordered against this build";
         return result;
     }
     const bool asset_unchanged = !state.asset_sha.empty() && lower(state.asset_sha) == lower(asset->second.sha256);

@@ -79,6 +79,15 @@ std::string trimmed(const std::string& text) {
     return text.substr(first, last - first + 1);
 }
 
+std::optional<std::int64_t> committed_of(const std::string& commit) {
+    if (commit.empty()) return std::nullopt;
+    const auto logged = proc::run({"git", "log", "-1", "--format=%ct", commit});
+    if (!logged.started || logged.exit_code != 0) return std::nullopt;
+    const std::string digits = trimmed(logged.out);
+    if (digits.empty() || digits.find_first_not_of("0123456789") != std::string::npos) return std::nullopt;
+    return std::stoll(digits);
+}
+
 std::string text_of(const json::Value* value) {
     return value != nullptr && value->is_string() ? value->as_string() : std::string();
 }
@@ -151,6 +160,7 @@ int release_manifest_command(const std::vector<std::string>& args) {
     const std::string previous_path = option(values, "previous");
     const std::string present_path = option(values, "present");
     const std::string summary_path = option(values, "summary");
+    const std::optional<std::int64_t> committed = committed_of(commit);
 
     std::optional<json::Value> previous;
     if (!previous_path.empty() && fs::exists(previous_path)) {
@@ -198,7 +208,9 @@ int release_manifest_command(const std::vector<std::string>& args) {
         const std::string target = match.str(0);
         const fs::path path = dir / file;
         const std::string sha = sha256_of(path);
-        assets.push_back({target, json::Object{{"file", file}, {"sha256", sha}, {"size", static_cast<std::int64_t>(fs::file_size(path))}, {"version", version}}});
+        json::Object entry{{"file", file}, {"sha256", sha}, {"size", static_cast<std::int64_t>(fs::file_size(path))}, {"version", version}};
+        if (committed) entry.push_back({"committed", *committed});
+        assets.push_back({target, json::Value(entry)});
         sums.push_back(sha + "  " + file);
         rows.push_back("| " + target + " | built this push | " + file + " |");
     }

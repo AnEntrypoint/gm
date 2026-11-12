@@ -3411,3 +3411,11 @@ Decided here by the worker, with the reason, so the owner can overturn any of th
 - 6d6effc: no-resource-client asserts the whole skill read by size (witness not run)
 - 9a35aa1: StdioClient::release and the gated release tick (witness not run)
 - 82dfa2c: gm turn-end hook, marker, flag forwarding, install prints the Stop entry (witness not run)
+
+## Round 2026-11-13 (queue e6b5, Phase A): update order by commit time
+
+- Scope: a local build decides whether to take a published build by commit time when both carry one. A build with no commit time to compare (serial 1 or no numeric serial) refuses a published build it cannot order, instead of taking it.
+- Commit A: the commit time in the build (cmake/gmnew_stamp.cmake writes kBuildCommitTime; native/components/host/main.cpp prints it after the commit id in --version); ManifestAsset and UpdatePolicy carry committed (native/components/host/include/gm/host/update.hpp); order_against in native/components/host/update.cpp decides Newer, Older or Unordered; native/components/tool/release.cpp writes committed into each asset; native/components/tool/checks/update_order.cpp is the check; AGENTS.md states the rule.
+- Witness: gm-tool check build/release/native/components/host/gm check-update-order, on a serial-1 build with a commit time. Four legs: a published commit older than the build's is kept; an equal and a newer commit are taken; a published asset with no commit time is refused. Before the commit: ok, all four legs (0.32 s wall).
+- Red control: the serial-only ordering of 3971b52 took serial 14 over 15 (AGENTS.md, the update order note as committed in 3971b52).
+- Not claimed: a published asset from before this change has no committed field, so a serial-1 build refuses it until a CI publish writes committed.
