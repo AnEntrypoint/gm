@@ -19,8 +19,9 @@ using Clock = std::chrono::steady_clock;
 constexpr std::int64_t kWaitMs = 45000;
 constexpr long long kReexecLimitMs = 5000;
 constexpr std::chrono::milliseconds kReplyWait{90000};
-constexpr const char* kOffered = "ffff111-99";
-constexpr const char* kUpdatedMarker = "-> ffff111-99";
+constexpr const char* kOffered = "ffff111-9999999999";
+constexpr std::uint64_t kOfferedCommitted = 4102444800;
+constexpr const char* kUpdatedMarker = "-> ffff111-9999999999";
 constexpr const char* kReexecMarker = "re-executing the relay";
 
 #if defined(__aarch64__)
@@ -83,7 +84,7 @@ struct Marks {
 CheckResult check_relay_reexec(const std::string& binary) {
     CheckResult result;
 #if !defined(__linux__)
-    result.summary = "skipped (the check packs a linux archive; the relay does not re-execute on win32)";
+    result.summary = "skipped (not on this platform: the check packs a linux archive; the relay does not re-execute on win32)";
     return result;
 #else
     const auto started = Clock::now();
@@ -146,7 +147,7 @@ CheckResult check_relay_reexec(const std::string& binary) {
             {"commit", "ffff111" + std::string(33, 'a')},
             {"built", iso_now()},
             {"repo", "AnEntrypoint/gm"},
-            {"assets", json::Object{{kPlatformTarget, json::Object{{"file", archive_name}, {"sha256", digest}, {"size", static_cast<std::uint64_t>(size)}, {"version", kOffered}}}}}};
+            {"assets", json::Object{{kPlatformTarget, json::Object{{"file", archive_name}, {"sha256", digest}, {"size", static_cast<std::uint64_t>(size)}, {"version", kOffered}, {"committed", kOfferedCommitted}}}}}};
         std::ofstream(published / "manifest.json") << json::dump(manifest);
 
         const fs::path install = scratch / "install";

@@ -20,7 +20,8 @@ namespace {
 namespace fs = std::filesystem;
 using Clock = std::chrono::steady_clock;
 
-constexpr const char* kOffered = "ffff222-99";
+constexpr const char* kOffered = "ffff222-9999999999";
+constexpr std::uint64_t kOfferedCommitted = 4102444800;
 constexpr long long kDownloadWaitMs = 20000;
 constexpr long long kReexecLimitMs = 10000;
 constexpr long long kWorkerLimitMs = 15000;
@@ -112,7 +113,7 @@ std::vector<long long> children_of(long long pid) {
 CheckResult check_handover_in_flight(const std::string& binary) {
     CheckResult result;
 #if !defined(__linux__)
-    result.summary = "skipped (the check stages a fifo archive and watches /proc, which this platform lacks)";
+    result.summary = "skipped (not on this platform: the check stages a fifo archive and watches /proc, which this platform lacks)";
     return result;
 #else
     const auto started = Clock::now();
@@ -164,7 +165,7 @@ CheckResult check_handover_in_flight(const std::string& binary) {
         {"commit", "ffff222" + std::string(33, 'b')},
         {"built", "2026-11-12T00:00:00Z"},
         {"repo", "AnEntrypoint/gm"},
-        {"assets", json::Object{{kPlatformTarget, json::Object{{"file", archive_name}, {"sha256", std::string(64, '0')}, {"size", static_cast<std::uint64_t>(1)}, {"version", kOffered}}}}}};
+        {"assets", json::Object{{kPlatformTarget, json::Object{{"file", archive_name}, {"sha256", std::string(64, '0')}, {"size", static_cast<std::uint64_t>(1)}, {"version", kOffered}, {"committed", kOfferedCommitted}}}}}};
     std::ofstream(published / "manifest.json") << json::dump(manifest);
     std::ofstream(quiet) << R"({"mcpServers":{"playwriter":{"disabled":true}}})";
 

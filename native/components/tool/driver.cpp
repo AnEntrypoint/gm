@@ -290,6 +290,10 @@ private:
         std::string text = outcome.out + outcome.err;
         bool ok = outcome.started && outcome.exit_code == 0 && !outcome.timed_out;
         if (outcome.timed_out) text += "phase-b: " + job.name + " timed out after " + std::to_string(kCheckTimeoutMs) + " ms\n";
+        if (ok && outcome.out.find("ok (skipped (") != std::string::npos && outcome.out.find("ok (skipped (not on this platform") == std::string::npos) {
+            ok = false;
+            text += "phase-b: " + job.name + " was skipped; a row that gates a change must run in the set, so build with -DGMNEW_VERSION=<sha>-1\n";
+        }
         if (!leftover.empty()) {
             ok = false;
             std::string pids;
