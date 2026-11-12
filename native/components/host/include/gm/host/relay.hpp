@@ -43,7 +43,6 @@ struct RelayOptions {
     std::vector<std::string> reexec_argv;
     std::optional<json::Value> initialize;
     bool skill_read = false;
-    bool release_at_turn_end = false;
     std::string from_build;
     std::vector<std::string> resend;
     std::optional<UpdatePolicy> update;

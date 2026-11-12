@@ -30,8 +30,6 @@ struct Options {
     std::size_t depth = 0;
     std::filesystem::path tool_cache;
     Emit emit;
-    bool release_at_turn_end = false;
-    std::function<std::optional<std::int64_t>()> turn_ended_ms;
 };
 
 std::size_t depth_from_environment();
@@ -48,6 +46,8 @@ public:
     json::Value call(std::string_view name, const json::Value& args) override;
     json::Value call_sibling(std::string_view sibling, std::string_view tool, const json::Value& args) override;
     void wait_ready() const;
+    void release_leases(const std::string& reason);
+    bool serves(std::string_view name) const;
 
 private:
     struct Impl;

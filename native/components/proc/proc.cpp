@@ -238,9 +238,8 @@ void reap_ledger(const std::filesystem::path& ledger) {
         const long long pid = std::atoll(line.c_str());
         const std::size_t space = line.find(' ');
         const long long started = space == std::string::npos ? 0 : std::atoll(line.c_str() + space + 1);
-        if (pid <= 0) continue;
-        const long long now = start_time_of(pid);
-        if (started != 0 && now != 0 && now != started) continue;
+        if (pid <= 0 || started <= 0) continue;
+        if (start_time_of(pid) != started) continue;
         kill_tree(pid);
     }
     in.close();

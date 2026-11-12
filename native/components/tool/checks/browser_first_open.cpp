@@ -6,6 +6,7 @@
 #include <chrono>
 #include <csignal>
 #include <cstdint>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <functional>
@@ -110,6 +111,24 @@ void init_session(Session& session) {
     session.rpc("tools/call", json::Object{{"name", "next_context"}, {"arguments", json::Object{}}});
 }
 
+constexpr int kIdleMs = 20000;
+
+std::string chromium_binary() {
+    if (const char* given = std::getenv("PLAYWRITER_BROWSER_PATH"); given && fs::exists(given)) return given;
+    for (const char* candidate : {"/opt/google/chrome/chrome", "/usr/lib/chromium/chromium.real", "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+                                  "/Applications/Chromium.app/Contents/MacOS/Chromium"}) {
+        if (fs::exists(candidate)) return candidate;
+    }
+    const char* path_env = std::getenv("PATH");
+    std::istringstream dirs(path_env ? path_env : "");
+    for (std::string dir; std::getline(dirs, dir, ':');) {
+        for (const char* name : {"google-chrome", "google-chrome-stable", "chromium", "chromium-browser"}) {
+            if (!dir.empty() && fs::exists(fs::path(dir) / name)) return (fs::path(dir) / name).string();
+        }
+    }
+    return {};
+}
+
 void write_ports(const fs::path& workspace, int gate, int debug) {
     fs::create_directories(workspace / ".playwriter");
     std::ofstream(workspace / ".playwriter" / "port") << gate << "\n";
@@ -139,7 +158,11 @@ CheckResult check_browser_first_open(const std::string& binary) {
     const fs::path source = build.parent_path().parent_path();
     const fs::path installed = sandbox / ".gmnew" / "current" / "gm";
     const fs::path launcher = sandbox / ".gmnew" / "current" / "pw" / "bin" / "playwriter-project";
-    const std::string chromium = fs::exists("/opt/google/chrome/chrome") ? "/opt/google/chrome/chrome" : fs::exists("/usr/lib/chromium/chromium.real") ? "/usr/lib/chromium/chromium.real" : "";
+    const std::string chromium = chromium_binary();
+    const std::string idle_assignment = "PLAYWRITER_IDLE_MS=" + std::to_string(kIdleMs);
+    const std::string browser_assignment = "PLAYWRITER_BROWSER_PATH=" + chromium;
+    const std::vector<std::pair<std::string, std::string>> launcher_env{{"PLAYWRITER_IDLE_MS", std::to_string(kIdleMs)}, {"PLAYWRITER_BROWSER_PATH", chromium}};
+    summary << "Chromium " << (chromium.empty() ? std::string("none") : chromium) << "; ";
     const std::string page_url = "http://127.0.0.1:" + std::to_string(page_port) + "/";
     std::vector<long long> roots;
 
@@ -152,14 +175,14 @@ CheckResult check_browser_first_open(const std::string& binary) {
         write_ports(adopt_workspace, adopt_gate_port, adopt_debug_port);
         roots.push_back(first_number(proc::run({"sh", "-c", page_server_command(page_port)}, sandbox, {}, 20000).out, "([0-9]+)"));
 
-        const auto started = proc::run({"env", "HOME=" + sandbox.string(), "PLAYWRITER_PROJECT_DIR=" + workspace.string(), "PLAYWRITER_TELEMETRY=0", "node", launcher.string(), "start"}, workspace, {}, 120000);
+        const auto started = proc::run({"env", "HOME=" + sandbox.string(), "PLAYWRITER_PROJECT_DIR=" + workspace.string(), "PLAYWRITER_TELEMETRY=0", idle_assignment, browser_assignment, "node", launcher.string(), "start"}, workspace, {}, 120000);
         if (!started.started || started.exit_code != 0 || started.err.find("browser ready") == std::string::npos) failures.push_back("start did not report a ready browser: " + started.err.substr(0, 300));
         std::this_thread::sleep_for(std::chrono::seconds(8));
         const bool held = listening(debug_port);
         summary << "start: browser up 8 s after start " << (held ? "true" : "false");
         if (!held) failures.push_back("the browser stopped between start and the first open");
         {
-            Session session(installed.string(), workspace, sandbox, 180000, false);
+            Session session(installed.string(), workspace, sandbox, 180000, false, {}, launcher_env);
             if (!session.started()) {
                 failures.push_back("gm serve did not start from " + installed.string());
             } else {
@@ -185,7 +208,7 @@ CheckResult check_browser_first_open(const std::string& binary) {
         if (!released) failures.push_back("the browser was not released after its page closed and the session ended");
 
         {
-            Session session(installed.string(), workspace, sandbox, 180000, false);
+            Session session(installed.string(), workspace, sandbox, 180000, false, {}, launcher_env);
             if (!session.started()) {
                 failures.push_back("gm serve did not start for the gate-loss scenario");
             } else {
@@ -212,7 +235,7 @@ CheckResult check_browser_first_open(const std::string& binary) {
         }
 
         if (chromium.empty()) {
-            failures.push_back("no Chromium at /opt/google/chrome/chrome or /usr/lib/chromium/chromium.real");
+            failures.push_back("no Chromium: set PLAYWRITER_BROWSER_PATH, or install one at /opt/google/chrome/chrome, /usr/lib/chromium/chromium.real, a macOS app bundle, or on PATH");
         } else {
             const fs::path profile = adopt_workspace / ".playwriter" / "browser-profile";
             fs::create_directories(profile);
@@ -225,7 +248,7 @@ CheckResult check_browser_first_open(const std::string& binary) {
             const long long outside_pid = first_number(proc::run({"sh", "-c", outside_browser_command(chromium, profile, adopt_debug_port)}, adopt_workspace, {}, 20000).out, "([0-9]+)");
             roots.push_back(outside_pid);
             if (!wait_until([&] { return listening(adopt_debug_port); }, 30)) failures.push_back("the browser started outside the launcher did not open its debug port");
-            const auto adopted = proc::run({"env", "HOME=" + sandbox.string(), "PLAYWRITER_PROJECT_DIR=" + adopt_workspace.string(), "PLAYWRITER_TELEMETRY=0", "PLAYWRITER_BROWSER_PATH=" + wrapper.string(), "node", launcher.string(), "start"}, adopt_workspace, {}, 180000);
+            const auto adopted = proc::run({"env", "HOME=" + sandbox.string(), "PLAYWRITER_PROJECT_DIR=" + adopt_workspace.string(), "PLAYWRITER_TELEMETRY=0", idle_assignment, "PLAYWRITER_BROWSER_PATH=" + wrapper.string(), "node", launcher.string(), "start"}, adopt_workspace, {}, 180000);
             if (!adopted.started || adopted.exit_code != 0) failures.push_back("start with PLAYWRITER_BROWSER_PATH failed: " + adopted.err.substr(0, 300));
             const std::string calls_text = read_text(calls);
             const long long browser_pid = first_number(status_of(launcher, sandbox, adopt_workspace), "\"browser\":\\s*\\{\\s*\"pid\":\\s*([0-9]+)");

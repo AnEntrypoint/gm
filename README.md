@@ -4,7 +4,7 @@ A single-worker long-horizon loop: one worker, one append-only log, governance r
 
 Status: the MCP server, the skill, the CLI wrapper, the measurement tools, and the search, wiki, review and call-site tools are built and witnessed. The live comparison with gm is closed, with its results in DESIGN.md.
 
-Install the latest release, once per machine, on Linux, macOS or Windows (x64 or arm64). Download `gmnew-<target>.tar.gz` (`.zip` on Windows) for your target from the release manifest, extract it, and install from the extracted directory. The install verifies nothing itself beyond the archive's unpacking, so check the archive's sha256 against `manifest.json` first. The install copies the binaries, skills, leaves and defaults into `~/.gmnew/current` (or `%USERPROFILE%\.gmnew\current`), keeps the previous build, and registers gm for Claude Code at user level:
+Install the latest release, once per machine, on Linux, macOS or Windows (x64 or arm64). Download `gmnew-<target>.tar.gz` (`.zip` on Windows) for your target from the release manifest, extract it, and install from the extracted directory. The install verifies nothing itself beyond the archive's unpacking, so check the archive's sha256 against `manifest.json` first. The install copies the binaries, skills, leaves and defaults into `~/.gmnew/current` (or `%USERPROFILE%\.gmnew\current`), keeps the previous build, and prints the gm MCP server entry for your MCP client. It writes no harness settings file:
 
     tar -xzf gmnew-<target>.tar.gz
     ./gmnew-<target>/gm install --local ./gmnew-<target>
@@ -23,9 +23,9 @@ Each build is versioned as `gmnew-<version>-<target>.tar.gz` (`.zip` on Windows)
 
 Windows x64 and arm64 build and test jobs pass in CI, and the release publishes their `.zip` assets. Their install is the same `gm install --local` command, which has not been run on a Windows machine here.
 
-The registration is written by the binary itself: `<path-to-gm> install [--config <file>] [--mcp-config <file>]`. `--config <file>` names the file to register in; without it the file is `~/.claude.json` (on Windows, `%USERPROFILE%\.claude.json`). `--mcp-config <file>` is the server's config, appended to the args. Any other flag is an error and nothing is written. It sets `mcpServers.gm` in that file to `{"command": "<path-to-gm>", "args": ["serve"]}`, with `--mcp-config <file>` appended to args when given. Every other key is kept. The file is written to a temp file, re-read, and renamed over the original; a file that changed meanwhile is re-merged, and a file that is not a JSON object is refused and left alone. Running it again replaces the gm entry, so running the installer again updates the path.
+The entry is printed by the binary: `<path-to-gm> install [--mcp-config <file>]`. It prints `{"mcpServers":{"gm":{"command":"<path-to-gm>","args":["serve"]}}}`, with `--mcp-config <file>` appended to args when given, and you add it to your MCP client's configuration yourself. Every install and uninstall lists the files it touched under `~/.gmnew`; the install touches no file outside that directory. `gm uninstall` changes nothing; remove the `mcpServers.gm` entry from your client's configuration. Any flag other than the ones listed is an error and nothing is written.
 
-Installs made earlier with add-mcp registered `node <checkout>/tools/relay.mjs` (the Node host). Running the install again replaces that entry with the native binary. Remove the entry by deleting `mcpServers.gm` from `~/.claude.json`.
+Installs made earlier with add-mcp registered `node <checkout>/tools/relay.mjs` (the Node host). Remove that entry from your client's configuration and add the entry that install prints.
 
 Auto-update: the server checks the `latest` release at start and then every 15 minutes. Each check is a conditional request for the manifest (`If-None-Match`), so an unchanged release costs one small response, and a build is downloaded only when its target's archive has changed. Set `GMNEW_AUTO_UPDATE=0` to turn that off. Development builds never update.
 

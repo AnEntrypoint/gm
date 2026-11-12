@@ -9,7 +9,6 @@
 #include "gm/host/composed_verbs.hpp"
 #include "gm/host/options.hpp"
 #include "gm/host/primitives.hpp"
-#include "gm/host/turn_end.hpp"
 #include "gm/leaves.hpp"
 #include "gm/log.hpp"
 #include "gm/mcp.hpp"
@@ -63,7 +62,9 @@ public:
     json::Value call(std::string_view name, const json::Value& args) override {
         gate_.wait_ready();
         events_.release();
-        if (auto refusal = refuse_unknown_keys(inner_, name, args)) return std::move(*refusal);
+        if (!gate_.serves(name)) {
+            if (auto refusal = refuse_unknown_keys(inner_, name, args)) return std::move(*refusal);
+        }
         return inner_.call(name, args);
     }
 
@@ -149,8 +150,6 @@ int run_worker(const HostArgs& args) {
     for (const VerbInfo& verb : (*native)->list()) mcp_options.reserved.insert(verb.name);
     for (const VerbInfo& verb : leaves.list()) mcp_options.reserved.insert(verb.name);
     mcp_options.emit = [&boot_events](std::string_view kind, json::Value fields) { boot_events.emit(kind, std::move(fields)); };
-    mcp_options.release_at_turn_end = args.flag("--release-at-turn-end") == "yes";
-    mcp_options.turn_ended_ms = [workspace] { return turn_ended_ms(workspace); };
     mcpclient::McpVerbs mcp_verbs(std::move(mcp_options));
     auto all = ComposedVerbs::compose({native->get(), &mcp_verbs, &leaves});
     if (!all) return fail(all.error());
@@ -193,6 +192,7 @@ int run_worker(const HostArgs& args) {
         return open;
     };
     options.close_jobs = [&core](const std::string& reason) { core.close(reason); };
+    options.release_leases = [&mcp_verbs](const std::string& reason) { mcp_verbs.release_leases(reason); };
     options.flush_job_events = [&core] { core.flush_job_events(); };
     options.wait_program = current_executable().string();
     options.run_body = [&mcp_verbs, &boot_events](VerbTable& verbs, std::string_view body, const std::filesystem::path& root,

@@ -20,7 +20,6 @@ namespace {
 
 constexpr std::size_t MAX_DEPTH = 2;
 constexpr std::size_t DESCRIPTION_UNITS = 300;
-constexpr std::chrono::milliseconds RELEASE_TICK{5000};
 
 std::size_t sequence_length(unsigned char lead) {
     if (lead < 0x80) return 1;
@@ -110,9 +109,6 @@ struct McpVerbs::Impl {
     bool ready = false;
     std::vector<VerbInfo> verbs;
     std::map<std::string, Route, std::less<>> routes;
-    std::condition_variable releases_changed;
-    std::thread releaser;
-    bool stopping = false;
 
     void announce(std::string_view kind, json::Value fields) const {
         if (emit) emit(kind, std::move(fields));
@@ -163,22 +159,9 @@ struct McpVerbs::Impl {
         routes = std::move(table);
     }
 
-    void release_ended_turns(const std::function<std::optional<std::int64_t>()>& turn_ended) {
-        const std::optional<std::int64_t> ended = turn_ended();
-        if (!ended) return;
+    void release_leases(const std::string& reason) {
         for (const std::unique_ptr<StdioClient>& client : clients) {
-            if (client->spec().lazy) client->release(*ended);
-        }
-    }
-
-    void release_loop(const std::function<std::optional<std::int64_t>()>& turn_ended) {
-        std::unique_lock lock(mutex);
-        while (!stopping) {
-            releases_changed.wait_for(lock, RELEASE_TICK, [this] { return stopping; });
-            if (stopping) break;
-            lock.unlock();
-            release_ended_turns(turn_ended);
-            lock.lock();
+            if (client->spec().lazy) client->release(reason);
         }
     }
 
@@ -217,21 +200,19 @@ McpVerbs::McpVerbs(Options options) : impl_(std::make_unique<Impl>()) {
         impl_->clients.push_back(std::move(client));
     }
     impl_->starter = std::thread([impl = impl_.get()] { impl->start_all(); });
-    if (options.release_at_turn_end && options.turn_ended_ms) {
-        impl_->releaser = std::thread([impl = impl_.get(), turn_ended = options.turn_ended_ms] { impl->release_loop(turn_ended); });
-    }
 }
 
 McpVerbs::~McpVerbs() {
     if (!impl_) return;
-    {
-        std::lock_guard lock(impl_->mutex);
-        impl_->stopping = true;
-    }
-    impl_->releases_changed.notify_all();
-    if (impl_->releaser.joinable()) impl_->releaser.join();
     for (const std::unique_ptr<StdioClient>& client : impl_->clients) client->stop();
     if (impl_->starter.joinable()) impl_->starter.join();
+}
+
+void McpVerbs::release_leases(const std::string& reason) { impl_->release_leases(reason); }
+
+bool McpVerbs::serves(std::string_view name) const {
+    std::lock_guard lock(impl_->mutex);
+    return impl_->routes.find(name) != impl_->routes.end();
 }
 
 std::vector<VerbInfo> McpVerbs::list() const {

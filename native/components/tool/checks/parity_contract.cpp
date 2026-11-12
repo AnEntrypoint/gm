@@ -364,7 +364,7 @@ void w17_w18(const Context& context, Row& row) {
     const fs::path root = home / ".gmnew";
     fs::create_directories(home);
     const auto install = [&] {
-        return proc::run({"env", "HOME=" + home.string(), "GMNEW_SKIP_REGISTER=1", (host / "gm").string(), "install", "--local", build.string(), "--source", context.repo.string()}, context.repo, {}, 120000);
+        return proc::run({"env", "HOME=" + home.string(), (host / "gm").string(), "install", "--local", build.string(), "--source", context.repo.string()}, context.repo, {}, 120000);
     };
     const auto first = install();
     if (!first.started || first.exit_code != 0) {

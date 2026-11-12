@@ -6,7 +6,6 @@
 #include "gm/host/cli.hpp"
 #include "gm/host/install.hpp"
 #include "gm/host/options.hpp"
-#include "gm/host/turn_end.hpp"
 #include "gm/host/update.hpp"
 
 namespace {
@@ -16,13 +15,12 @@ constexpr std::string_view kUsage =
     "[--skills <dir>] [--leaves <dir>] [--build-dir <dir>]\n"
     "       gm doctor [--leaves <dir>]\n"
     "       gm update\n"
-    "       gm install [--local <build dir> [--source <checkout>]] [--config <file>] [--mcp-config <file>]\n"
-    "       gm uninstall [--config <file>]\n"
+    "       gm install [--local <build dir> [--source <checkout>]] [--mcp-config <file>]\n"
+    "       gm uninstall\n"
     "       gm --version\n"
     "       gm events (--run <id> [--workspace <dir>] | --dir <run dir>) [--wait [--timeout-ms N]]\n"
     "       gm query (--run <id> [--workspace <dir>] | --dir <run dir>) [--js \"<filter>\"]\n"
-    "       gm stop-run --dir <run dir> [--idle-ms N]\n"
-    "       gm turn-end (the Stop hook input on stdin)\n";
+    "       gm stop-run --dir <run dir> [--idle-ms N]\n";
 
 using Names = std::initializer_list<std::string_view>;
 
@@ -48,16 +46,15 @@ std::optional<std::string> flag_error_for(const gm::host::HostArgs& args) {
         return flag_error(args.rest,
                           {"workspace", "runs", "run-dir", "resume", "task", "skills", "leaves", "build-dir", "mcp-config",
                            "max-inflight", "max-steps", "stuck-ms", "job-lifetime-ms", "monitor-ms", "handshake",
-                           "skill-read", "resend", "supervised", "owner", "restart-reason", "from-build", "release-at-turn-end"},
+                           "skill-read", "resend", "supervised", "owner", "restart-reason", "from-build"},
                           {});
     }
     if (args.mode == "doctor") return flag_error(args.rest, {"leaves"}, {});
-    if (args.mode == "install") return flag_error(args.rest, {"config", "mcp-config", "local", "source"}, {});
-    if (args.mode == "uninstall") return flag_error(args.rest, {"config"}, {});
+    if (args.mode == "install") return flag_error(args.rest, {"mcp-config", "local", "source"}, {});
+    if (args.mode == "uninstall") return flag_error(args.rest, {}, {});
     if (args.mode == "events") return flag_error(args.rest, {"run", "workspace", "dir", "timeout-ms"}, {"wait", "read-clear"});
     if (args.mode == "query") return flag_error(args.rest, {"run", "workspace", "dir", "js"}, {"read-clear"});
     if (args.mode == "stop-run") return flag_error(args.rest, {"dir", "idle-ms"}, {});
-    if (args.mode == "turn-end") return flag_error(args.rest, {}, {});
     if (args.mode == "update" || args.mode == "--version") return flag_error(args.rest, {}, {});
     return std::nullopt;
 }
@@ -76,7 +73,6 @@ int main(int argc, char** argv) {
     if (args.mode == "events") return gm::host::run_events(args);
     if (args.mode == "query") return gm::host::run_query_command(args);
     if (args.mode == "stop-run") return gm::host::run_stop(args);
-    if (args.mode == "turn-end") return gm::host::run_turn_end(args);
     if (args.mode == "update") return gm::host::run_update_command();
     if (args.mode == "install") return gm::host::run_install_command(args);
     if (args.mode == "uninstall") return gm::host::run_uninstall_command(args);

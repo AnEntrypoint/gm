@@ -23,8 +23,8 @@ Run on a Windows x64 machine (and once on arm64):
 1. cmake --preset release, then cmake --build build/release. Expect a clean build of gm.exe, gm-core.exe and gm-tool.exe.
 2. gm-tool.exe check build\release\native\components\host\gm.exe check-spawn-sites. Expect ok.
 3. From a process with no console (for example `powershell -WindowStyle Hidden`), start `gm.exe serve --workspace <ws>` and send one run_code body that calls run_shell with `cmd /c echo hi` and a job_start with `ping -n 3 127.0.0.1`. Expect: no new console window appears during the run (watch with `Get-Process | Where-Object MainWindowHandle -ne 0`, or by eye), both outputs return, and the job state is exited.
-4. gm.exe install --local build\release --source . --config <scratch>\claude.json. Expect the same messages as on POSIX, the installed path under %USERPROFILE%\.gmnew\current, and a second run that keeps the binaries.
-5. gm.exe uninstall --config <scratch>\claude.json removes only the gm entry.
+4. gm.exe install --local build\release --source . Expect the same messages as on POSIX: the installed path under %USERPROFILE%\.gmnew\current, the MCP server entry to add by hand, "files touched: 0" for any harness file, and a second run that keeps the binaries.
+5. gm.exe uninstall removes the install under %USERPROFILE%\.gmnew and lists the files it touched; it writes no harness file.
 
 Not covered here: the process-group kill on Windows (DESIGN.md), and the Windows
 stdin pipe closing when the relay dies.

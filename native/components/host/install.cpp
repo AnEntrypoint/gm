@@ -1,5 +1,6 @@
 #include "gm/host/install.hpp"
 
+#include <algorithm>
 #include <chrono>
 #include <cstdlib>
 #include <map>
@@ -19,147 +20,6 @@ namespace gm::host {
 namespace {
 
 namespace fs = std::filesystem;
-constexpr int kMergeAttempts = 5;
-
-std::optional<std::string> read_if_exists(const fs::path& file, std::string& text) {
-    std::error_code ec;
-    text.clear();
-    if (!fs::exists(file, ec)) return std::nullopt;
-    std::ifstream in(file, std::ios::binary);
-    if (!in) return "cannot read " + file.string();
-    std::ostringstream buffer;
-    buffer << in.rdbuf();
-    text = buffer.str();
-    return std::nullopt;
-}
-
-bool blank(const std::string& text) { return text.find_first_not_of(" \t\r\n") == std::string::npos; }
-
-std::optional<std::string> merged_config(const std::string& existing, const std::string& name,
-                                         const json::Value& entry, std::string& out) {
-    json::Value root = json::Object{};
-    if (!blank(existing)) {
-        auto parsed = json::parse(existing);
-        if (!parsed) return "config is not JSON, left untouched: " + parsed.error();
-        root = *parsed;
-    }
-    if (!root.is_object()) return "config is not a JSON object, left untouched";
-    json::Value servers = json::Object{};
-    if (const json::Value* found = root.find("mcpServers")) {
-        if (!found->is_object()) return "mcpServers is not an object, left untouched";
-        servers = *found;
-    }
-    servers.set(name, entry);
-    root.set("mcpServers", servers);
-    out = json::dump(root) + "\n";
-    return std::nullopt;
-}
-
-}
-
-std::optional<fs::path> claude_config_path() {
-#if defined(_WIN32)
-    const char* home = std::getenv("USERPROFILE");
-#else
-    const char* home = std::getenv("HOME");
-#endif
-    if (home == nullptr || *home == '\0') return std::nullopt;
-    return fs::path(home) / ".claude.json";
-}
-
-std::optional<std::string> register_mcp_server(const fs::path& config, const std::string& name,
-                                               const std::string& command, const std::vector<std::string>& args) {
-    json::Array argv;
-    for (const std::string& arg : args) argv.push_back(json::Value(arg));
-    json::Value entry = json::Object{};
-    entry.set("command", json::Value(command));
-    entry.set("args", json::Value(argv));
-
-    const fs::path temp = config.string() + ".gm-tmp";
-    for (int attempt = 0; attempt < kMergeAttempts; ++attempt) {
-        std::string before;
-        if (auto error = read_if_exists(config, before)) return error;
-        std::string text;
-        if (auto error = merged_config(before, name, entry, text)) return error;
-        if (text == before) return std::nullopt;
-
-        {
-            std::ofstream out(temp, std::ios::binary | std::ios::trunc);
-            if (!out) return "cannot write " + temp.string();
-            out << text;
-            if (!out) return "cannot write " + temp.string();
-        }
-
-        std::string now;
-        if (auto error = read_if_exists(config, now)) {
-            std::error_code ignored;
-            fs::remove(temp, ignored);
-            return error;
-        }
-        if (now != before) {
-            std::error_code ignored;
-            fs::remove(temp, ignored);
-            continue;
-        }
-
-        std::error_code ec;
-        fs::rename(temp, config, ec);
-        if (ec) {
-            std::error_code ignored;
-            fs::remove(temp, ignored);
-            return "cannot replace " + config.string() + ": " + ec.message();
-        }
-        return std::nullopt;
-    }
-    return "the config kept changing while it was being written; nothing was written";
-}
-
-std::optional<std::string> unregister_mcp_server(const fs::path& config, const std::string& name) {
-    const fs::path temp = config.string() + ".gm-tmp";
-    for (int attempt = 0; attempt < kMergeAttempts; ++attempt) {
-        std::string before;
-        if (auto error = read_if_exists(config, before)) return error;
-        if (blank(before)) return std::nullopt;
-        auto parsed = json::parse(before);
-        if (!parsed) return "config is not JSON, left untouched: " + parsed.error();
-        if (!parsed->is_object()) return "config is not a JSON object, left untouched";
-        const json::Value* found = parsed->find("mcpServers");
-        if (found == nullptr) return std::nullopt;
-        if (!found->is_object()) return "mcpServers is not an object, left untouched";
-        if (found->find(name) == nullptr) return std::nullopt;
-        json::Object kept;
-        for (const auto& member : found->as_object())
-            if (member.first != name) kept.push_back(member);
-        json::Value root = *parsed;
-        root.set("mcpServers", json::Value(kept));
-        const std::string text = json::dump(root) + "\n";
-        {
-            std::ofstream out(temp, std::ios::binary | std::ios::trunc);
-            if (!out) return "cannot write " + temp.string();
-            out << text;
-            if (!out) return "cannot write " + temp.string();
-        }
-        std::string now;
-        if (auto error = read_if_exists(config, now)) {
-            std::error_code ignored;
-            fs::remove(temp, ignored);
-            return error;
-        }
-        if (now != before) {
-            std::error_code ignored;
-            fs::remove(temp, ignored);
-            continue;
-        }
-        std::error_code ec;
-        fs::rename(temp, config, ec);
-        if (ec) {
-            std::error_code ignored;
-            fs::remove(temp, ignored);
-            return "cannot replace " + config.string() + ": " + ec.message();
-        }
-        return std::nullopt;
-    }
-    return "the config kept changing while it was being written; nothing was written";
 }
 
 std::string exe_name(const std::string& name) {
@@ -292,33 +152,49 @@ std::optional<std::string> install_playwriter(const fs::path& current) {
     return std::nullopt;
 }
 
-void print_turn_end_hook(const fs::path& exe) {
-    const std::string command = json::dump(json::Value(exe.string() + " turn-end"));
-    std::cout << "turn-end release stays off until gm serve runs with --release-at-turn-end yes. To release a lazy server's lease at the end of each turn, add this under the hooks key of the Claude settings file (install does not write it): \"Stop\": [{\"hooks\": [{\"type\": \"command\", \"command\": " << command << "}]}]\n";
+std::map<std::string, std::string> tree_marks(const fs::path& root) {
+    std::map<std::string, std::string> marks;
+    std::error_code ec;
+    for (fs::recursive_directory_iterator it(root, ec), end; !ec && it != end; it.increment(ec)) {
+        std::error_code entry_ec;
+        if (!it->is_regular_file(entry_ec)) continue;
+        marks[it->path().lexically_relative(root).generic_string()] =
+            std::to_string(it->file_size(entry_ec)) + ":" + std::to_string(it->last_write_time(entry_ec).time_since_epoch().count());
+    }
+    return marks;
 }
 
-int register_installed(const HostArgs& args, const fs::path& exe) {
-    if (std::getenv("GMNEW_SKIP_REGISTER") != nullptr && std::string_view(std::getenv("GMNEW_SKIP_REGISTER")) == "1") {
-        std::cout << "registration skipped (GMNEW_SKIP_REGISTER=1)\n";
-        return 0;
+void report_touched(const fs::path& root, const std::map<std::string, std::string>& before) {
+    const auto after = tree_marks(root);
+    std::vector<std::string> touched;
+    for (const auto& [path, mark] : after) {
+        const auto known = before.find(path);
+        if (known == before.end() || known->second != mark) touched.push_back(path);
     }
-    const auto config = args.flag("--config") ? std::optional<fs::path>(fs::absolute(*args.flag("--config"))) : claude_config_path();
-    if (!config) {
-        std::cerr << "gm: install: neither HOME nor USERPROFILE is set\n";
-        return 1;
+    for (const auto& [path, mark] : before) {
+        if (after.find(path) == after.end()) touched.push_back(path);
     }
-    std::vector<std::string> server_args{"serve"};
+    std::sort(touched.begin(), touched.end());
+    std::cout << "files touched under " << root.string() << ": " << touched.size() << "\n";
+    for (const std::string& path : touched) std::cout << "  " << (root / path).string() << "\n";
+}
+
+void print_server_entry(const HostArgs& args, const fs::path& exe) {
+    json::Array argv;
+    argv.push_back(json::Value(std::string("serve")));
     if (auto mcp_config = args.flag("--mcp-config")) {
-        server_args.push_back("--mcp-config");
-        server_args.push_back(*mcp_config);
+        argv.push_back(json::Value(std::string("--mcp-config")));
+        argv.push_back(json::Value(*mcp_config));
     }
-    if (auto error = register_mcp_server(*config, "gm", exe.string(), server_args)) {
-        std::cerr << "gm: install: " << *error << "\n";
-        return 1;
-    }
-    std::cout << "registered gm MCP server (user scope) at " << exe.string() << " in " << config->string() << "\n";
-    print_turn_end_hook(exe);
-    return 0;
+    json::Value entry = json::Object{};
+    entry.set("command", json::Value(exe.string()));
+    entry.set("args", json::Value(argv));
+    json::Value servers = json::Object{};
+    servers.set("gm", entry);
+    json::Value root = json::Object{};
+    root.set("mcpServers", servers);
+    std::cout << "gm writes no harness settings file. Add this entry to the mcpServers object of your MCP client's configuration:\n"
+              << json::dump(root) << "\n";
 }
 
 int install_local(const HostArgs& args, const fs::path& local) {
@@ -345,6 +221,7 @@ int install_local(const HostArgs& args, const fs::path& local) {
         std::cerr << "gm: install: neither HOME nor USERPROFILE is set\n";
         return 1;
     }
+    const auto before_marks = tree_marks(*root);
     const std::optional<fs::path> source = args.flag("--source") ? std::optional<fs::path>(fs::absolute(*args.flag("--source"))) : std::nullopt;
     const fs::path leaves_from = source ? *source / "native" / "leaves" : host / "leaves";
     const fs::path defaults_from = source ? *source / "defaults" : host / "defaults";
@@ -395,44 +272,23 @@ int install_local(const HostArgs& args, const fs::path& local) {
         return 1;
     }
     if (start_check(current / exe_name("gm"), version) != 0) return 1;
-    return register_installed(args, current / exe_name("gm"));
+    report_touched(*root, before_marks);
+    print_server_entry(args, current / exe_name("gm"));
+    return 0;
 }
 
-int run_uninstall_command(const HostArgs& args) {
-    const auto config = args.flag("--config") ? std::optional<fs::path>(fs::absolute(*args.flag("--config"))) : claude_config_path();
-    if (!config) {
-        std::cerr << "gm: uninstall: neither HOME nor USERPROFILE is set\n";
-        return 1;
-    }
-    if (auto error = unregister_mcp_server(*config, "gm")) {
-        std::cerr << "gm: uninstall: " << *error << "\n";
-        return 1;
-    }
-    std::cout << "removed the gm MCP server entry from " << config->string() << "; the installed binaries were kept\n";
+int run_uninstall_command(const HostArgs&) {
+    std::cout << "gm writes no harness settings file, so uninstall changed nothing. Remove the gm entry from the mcpServers object of your MCP client's configuration; the installed binaries were kept\n";
+    std::cout << "files touched: 0\n";
     return 0;
 }
 
 int run_install_command(const HostArgs& args) {
     if (auto local = args.flag("--local")) return install_local(args, fs::absolute(*local));
-    const auto default_config = claude_config_path();
-    const auto config = args.flag("--config") ? std::optional<fs::path>(fs::absolute(*args.flag("--config")))
-                                              : default_config;
-    if (!config) {
-        std::cerr << "gm: install: neither HOME nor USERPROFILE is set\n";
-        return 1;
-    }
-    std::vector<std::string> server_args{"serve"};
-    if (auto mcp_config = args.flag("--mcp-config")) {
-        server_args.push_back("--mcp-config");
-        server_args.push_back(*mcp_config);
-    }
-    const std::string exe = stable_executable(current_executable()).string();
-    if (auto error = register_mcp_server(*config, "gm", exe, server_args)) {
-        std::cerr << "gm: install: " << *error << "\n";
-        return 1;
-    }
-    std::cout << "registered gm MCP server (user scope) at " << exe << " in " << config->string() << "\n";
+    print_server_entry(args, stable_executable(current_executable()));
+    std::cout << "files touched: 0\n";
     return 0;
 }
 
 }
+

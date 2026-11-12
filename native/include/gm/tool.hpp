@@ -51,6 +51,7 @@ CheckResult check_install_switch(const std::string& binary);
 CheckResult check_restart_skill_read(const std::string& binary);
 CheckResult check_no_resource_client(const std::string& binary);
 CheckResult check_turn_end_release(const std::string& binary);
+CheckResult check_mcp_args(const std::string& binary);
 CheckResult check_run_code_budget(const std::string& binary);
 CheckResult check_turn_economy(const std::string& binary);
 CheckResult check_restart_jobs(const std::string& binary);
@@ -77,6 +78,7 @@ CheckResult check_grep_state_scope(const std::string& binary);
 CheckResult check_job_bounds(const std::string& binary);
 CheckResult check_shell_stdin(const std::string& binary);
 CheckResult check_run_child_reap(const std::string& binary);
+CheckResult check_reap_identity(const std::string& binary);
 CheckResult check_job_status_cancel(const std::string& binary);
 CheckResult check_cancel_wait(const std::string& binary);
 CheckResult check_cancel_record(const std::string& binary);
@@ -127,7 +129,8 @@ struct Inbox {
 class Session {
 public:
     Session(const std::string& binary, const std::filesystem::path& workspace, const std::filesystem::path& home,
-            std::uint64_t watchdog_ms = 180000, bool quiet = true, std::vector<std::string> extra = {});
+            std::uint64_t watchdog_ms = 180000, bool quiet = true, std::vector<std::string> extra = {},
+            std::vector<std::pair<std::string, std::string>> env = {});
     Session(std::vector<std::string> argv, const std::filesystem::path& workspace, const std::filesystem::path& home, std::uint64_t watchdog_ms = 180000);
     ~Session();
     Session(const Session&) = delete;
@@ -145,6 +148,7 @@ public:
     void notify(const std::string& method, json::Value params);
     std::string body(const std::string& source);
     void stop();
+    void close_input();
 
 private:
     std::shared_ptr<proc::Child> child_;
@@ -154,7 +158,8 @@ private:
     std::condition_variable done_cv_;
     bool done_ = false;
     std::thread watchdog_;
-    void start(const std::vector<std::string>& argv, const std::filesystem::path& workspace, const std::filesystem::path& home, std::uint64_t watchdog_ms);
+    void start(const std::vector<std::string>& argv, const std::filesystem::path& workspace, const std::filesystem::path& home, std::uint64_t watchdog_ms,
+               std::vector<std::pair<std::string, std::string>> env = {});
 };
 
 std::optional<std::string> git_output(const std::filesystem::path& root, const std::vector<std::string>& args);

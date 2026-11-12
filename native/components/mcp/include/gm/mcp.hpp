@@ -43,6 +43,7 @@ struct ServerOptions {
     std::function<void(std::shared_ptr<RunLog> log)> on_run_open;
     std::function<json::Value()> job_snapshot;
     std::function<void(const std::string& reason)> close_jobs;
+    std::function<void(const std::string& reason)> release_leases;
     std::function<void()> flush_job_events;
     std::shared_ptr<std::function<std::optional<std::string>(const std::string& uri)>> serve_skill_hook;
 };

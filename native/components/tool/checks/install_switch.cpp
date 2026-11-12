@@ -78,7 +78,7 @@ CheckResult check_install_switch(const std::string& binary) {
     std::string first;
     long long switched_ms = -1;
     {
-        const auto installed = proc::run({"env", "HOME=" + home.string(), "GMNEW_SKIP_REGISTER=1", (host / "gm").string(), "install", "--local", build.string(), "--source", repo.string()}, repo, {}, 120000);
+        const auto installed = proc::run({"env", "HOME=" + home.string(), (host / "gm").string(), "install", "--local", build.string(), "--source", repo.string()}, repo, {}, 120000);
         if (!installed.started || installed.exit_code != 0) {
             result.failures.push_back("gm install --local failed: " + (installed.err.empty() ? installed.out : installed.err).substr(0, 300));
         } else {

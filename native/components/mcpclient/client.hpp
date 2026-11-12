@@ -1,6 +1,5 @@
 #pragma once
 
-#include <atomic>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -31,13 +30,12 @@ public:
     void preload_tools(std::vector<json::Value> tools);
     bool preloaded() const { return preloaded_; }
     void stop();
-    bool release(std::int64_t ended_ms);
+    bool release(const std::string& reason);
 
 private:
     std::shared_ptr<Core> core_;
     std::mutex start_mutex_;
     std::shared_mutex use_;
-    std::atomic<std::int64_t> last_use_ms_{0};
     std::vector<json::Value> tools_;
     bool preloaded_ = false;
 };

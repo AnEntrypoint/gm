@@ -77,20 +77,11 @@ json::Value call_stub(Session& session) {
     return tool_json(session, "run_code", json::Object{{"body", "return await gm.stub_echo({});"}});
 }
 
-bool turn_end(const fs::path& binary, const fs::path& home, const fs::path& cwd, const std::string& session_id) {
-    json::Value hook;
-    hook.set("cwd", cwd.string()).set("session_id", session_id);
-    const fs::path input = home / ("hook-" + session_id + ".json");
-    std::ofstream(input) << json::dump(hook);
-    const auto run = proc::run({"env", "HOME=" + home.string(), "sh", "-c", "exec \"$0\" turn-end < \"$1\"", binary, input.string()}, home, {}, 20000);
-    return run.started && run.exit_code == 0;
-}
-
 bool wait_for_exit(const std::vector<long long>& pids, std::chrono::milliseconds limit) {
     const auto deadline = std::chrono::steady_clock::now() + limit;
     while (!alive_of(pids).empty()) {
         if (std::chrono::steady_clock::now() >= deadline) return false;
-        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
     return true;
 }
@@ -104,13 +95,11 @@ CheckResult check_turn_end_release(const std::string& binary) {
     const fs::path scratch = fs::temp_directory_path() / ("gm-turn-end-release-" + std::to_string(stamp));
     const fs::path workspace = scratch / "ws";
     const fs::path home = scratch / "home";
-    const fs::path other = scratch / "other";
     const fs::path stub = scratch / "stub.cjs";
     const fs::path pids = scratch / "stub.pids";
     const fs::path log = workspace / "runs" / "check" / "log.jsonl";
     fs::create_directories(workspace / ".gm");
     fs::create_directories(home);
-    fs::create_directories(other);
     std::ofstream(stub) << kStubScript;
     const auto located = proc::run({"sh", "-c", "command -v node"}, scratch, {}, 20000);
     std::string node_path = located.out;
@@ -119,64 +108,64 @@ CheckResult check_turn_end_release(const std::string& binary) {
         result.failures.push_back("node is needed for the stub lazy server and was not found on PATH");
     } else {
         std::ofstream(workspace / ".gm" / "mcp.json") << R"({"mcpServers":{"playwriter":{"disabled":true},"stub":{"command":")" << node_path << R"(","args":[")" << stub.string() << R"(",")" << pids.string() << R"("],"lazy":true}}})";
+        double finish_seconds = -1;
+        double close_seconds = -1;
         {
-            Session off(binary, workspace, home, 180000, false);
-            if (!off.started()) {
-                result.failures.push_back("gm serve did not start from " + binary + " without the flag");
+            Session run(binary, workspace, home, 180000, false);
+            if (!run.started()) {
+                result.failures.push_back("gm serve did not start from " + binary);
             } else {
-                prepare(off);
-                const json::Value first = call_stub(off);
-                if (!flag(first, "ok", true) || json::dump(first).find("stub-echo") == std::string::npos) result.failures.push_back("the stub verb did not run with the flag off: " + json::dump(first).substr(0, 300));
+                prepare(run);
+                const json::Value first = call_stub(run);
+                if (!flag(first, "ok", true) || json::dump(first).find("stub-echo") == std::string::npos) result.failures.push_back("the stub verb did not run: " + json::dump(first).substr(0, 300));
                 const std::vector<long long> started_pids = stub_pids(pids);
-                if (started_pids.empty()) result.failures.push_back("the stub server did not start");
-                if (!turn_end(binary, home, workspace, "check-off")) result.failures.push_back("gm turn-end failed with the flag off");
-                std::this_thread::sleep_for(std::chrono::seconds(12));
-                if (!started_pids.empty() && alive_of(started_pids).empty()) result.failures.push_back("the lazy client was released at the turn end with release_at_turn_end off");
-            }
-            off.stop();
-        }
-        const std::size_t before_session = stub_pids(pids).size();
-        {
-            Session on(binary, workspace, home, 180000, false, {"--release-at-turn-end", "yes"});
-            if (!on.started()) {
-                result.failures.push_back("gm serve did not start from " + binary + " with --release-at-turn-end yes");
-            } else {
-                prepare(on);
-                const json::Value first = call_stub(on);
-                if (!flag(first, "ok", true)) result.failures.push_back("the stub verb did not run with the flag on: " + json::dump(first).substr(0, 300));
-                const std::vector<long long> live = stub_pids(pids);
-                if (live.size() <= before_session) {
-                    result.failures.push_back("the stub server did not start for the flagged worker");
+                if (started_pids.empty()) {
+                    result.failures.push_back("the stub server did not start");
                 } else {
-                    const long long pid = live.back();
-                    std::this_thread::sleep_for(std::chrono::seconds(6));
-                    if (alive_of({pid}).empty()) result.failures.push_back("the client connected after the earlier turn end was released by that marker");
-                    if (!turn_end(binary, home, workspace, "check-on")) result.failures.push_back("gm turn-end failed with the flag on");
-                    const auto released_at = std::chrono::steady_clock::now();
+                    const long long pid = started_pids.back();
+                    std::this_thread::sleep_for(std::chrono::seconds(2));
+                    if (alive_of({pid}).empty()) result.failures.push_back("the lazy client was gone before the run finished");
+                    const json::Value finished = tool_json(run, "finish", json::Object{{"witness", "turn-end release check: finish releases the lease"}});
+                    const auto finished_at = std::chrono::steady_clock::now();
+                    if (!flag(finished, "finished", true)) result.failures.push_back("finish did not end the run: " + json::dump(finished).substr(0, 300));
                     if (!wait_for_exit({pid}, std::chrono::seconds(15))) {
-                        result.failures.push_back("the lazy client was not released within 15000 ms of the turn end");
+                        result.failures.push_back("the lazy client was not released by finish within 15000 ms");
                     } else {
-                        const double seconds = std::chrono::duration<double>(std::chrono::steady_clock::now() - released_at).count();
-                        result.summary += "released " + std::to_string(seconds) + " s after gm turn-end; ";
+                        finish_seconds = std::chrono::duration<double>(std::chrono::steady_clock::now() - finished_at).count();
                     }
-                    if (read_text(log).find("released at the end of the caller's turn") == std::string::npos) result.failures.push_back("the run log has no down event with the release reason");
-                    const json::Value again = call_stub(on);
-                    if (!flag(again, "ok", true) || json::dump(again).find("stub-echo") == std::string::npos) result.failures.push_back("the stub verb did not reconnect after the release: " + json::dump(again).substr(0, 300));
-                    const std::vector<long long> reconnected = stub_pids(pids);
-                    if (reconnected.size() <= live.size()) {
-                        result.failures.push_back("no new stub process after the reconnect");
-                    } else {
-                        const long long next = reconnected.back();
-                        std::this_thread::sleep_for(std::chrono::seconds(6));
-                        if (alive_of({next}).empty()) result.failures.push_back("a call after the turn end was released by the earlier marker");
-                        if (!turn_end(binary, home, other, "check-other")) result.failures.push_back("gm turn-end failed for another workspace");
-                        std::this_thread::sleep_for(std::chrono::seconds(12));
-                        if (alive_of({next}).empty()) result.failures.push_back("a marker for another workspace released this workspace's client");
-                    }
+                    if (read_text(log).find("released when the run ended") == std::string::npos) result.failures.push_back("the run log has no down event with the run-end reason");
                 }
             }
-            on.stop();
+            run.stop();
         }
+        {
+            Session second(binary, workspace, home, 180000, false);
+            if (!second.started()) {
+                result.failures.push_back("gm serve did not start for the second connection");
+            } else {
+                prepare(second);
+                const json::Value again = call_stub(second);
+                if (!flag(again, "ok", true) || json::dump(again).find("stub-echo") == std::string::npos) result.failures.push_back("the stub verb did not run on the second connection: " + json::dump(again).substr(0, 300));
+                const std::vector<long long> live = stub_pids(pids);
+                if (live.empty() || alive_of({live.back()}).empty()) {
+                    result.failures.push_back("the stub server did not start for the second connection");
+                } else {
+                    const long long pid = live.back();
+                    const auto closed_at = std::chrono::steady_clock::now();
+                    second.close_input();
+                    if (!wait_for_exit({second.pid()}, std::chrono::seconds(15))) result.failures.push_back("gm serve did not exit after its transport closed");
+                    if (!wait_for_exit({pid}, std::chrono::seconds(15))) {
+                        result.failures.push_back("the lazy client was not released when the transport closed");
+                    } else {
+                        close_seconds = std::chrono::duration<double>(std::chrono::steady_clock::now() - closed_at).count();
+                    }
+                    if (read_text(log).find("released when the session closed") == std::string::npos) result.failures.push_back("the run log has no down event with the session-close reason");
+                }
+            }
+            second.stop();
+        }
+        if (finish_seconds >= 0) result.summary += "finish released the lease " + std::to_string(finish_seconds) + " s after it was called; ";
+        if (close_seconds >= 0) result.summary += "a closed transport released it " + std::to_string(close_seconds) + " s after close; ";
     }
     const std::vector<long long> all = stub_pids(pids);
     if (!wait_for_exit(all, std::chrono::seconds(5))) {
@@ -187,7 +176,7 @@ CheckResult check_turn_end_release(const std::string& binary) {
     std::error_code ignored;
     fs::remove_all(scratch, ignored);
     const double wall = std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
-    result.summary += "release is off by default; with --release-at-turn-end yes a workspace-keyed turn-end marker releases the lazy client, the next call reconnects, and another workspace's marker does not release it (wall " + std::to_string(wall) + " s)";
+    result.summary += "the MCP path: a run's finish and a closed transport each release the lazy client, with its own reason in the run log (wall " + std::to_string(wall) + " s)";
     return result;
 }
 

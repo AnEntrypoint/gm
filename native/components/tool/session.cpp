@@ -10,25 +10,27 @@
 namespace gm::tool {
 
 Session::Session(const std::string& binary, const std::filesystem::path& workspace, const std::filesystem::path& home,
-                 std::uint64_t watchdog_ms, bool quiet, std::vector<std::string> extra) {
+                 std::uint64_t watchdog_ms, bool quiet, std::vector<std::string> extra, std::vector<std::pair<std::string, std::string>> env) {
     std::vector<std::string> argv{binary, "serve", "--workspace", workspace.string(), "--run-dir", (workspace / "runs" / "check").string()};
     if (quiet) {
         argv.push_back("--mcp-config");
         argv.push_back((home / "quiet.json").string());
     }
     argv.insert(argv.end(), extra.begin(), extra.end());
-    start(argv, workspace, home, watchdog_ms);
+    start(argv, workspace, home, watchdog_ms, std::move(env));
 }
 
 Session::Session(std::vector<std::string> argv, const std::filesystem::path& workspace, const std::filesystem::path& home, std::uint64_t watchdog_ms) {
     start(argv, workspace, home, watchdog_ms);
 }
 
-void Session::start(const std::vector<std::string>& argv, const std::filesystem::path& workspace, const std::filesystem::path& home, std::uint64_t watchdog_ms) {
+void Session::start(const std::vector<std::string>& argv, const std::filesystem::path& workspace, const std::filesystem::path& home, std::uint64_t watchdog_ms,
+                    std::vector<std::pair<std::string, std::string>> env) {
     proc::SpawnOptions options(workspace);
     options.own_group = true;
     options.capture_stderr = true;
     options.env = {{"HOME", home.string()}};
+    options.env.insert(options.env.end(), env.begin(), env.end());
     auto spawned = proc::Child::spawn(argv, options);
     if (!spawned) return;
     child_ = *spawned;
@@ -72,6 +74,10 @@ void Session::start(const std::vector<std::string>& argv, const std::filesystem:
 }
 
 Session::~Session() { stop(); }
+
+void Session::close_input() {
+    if (child_) child_->close_input();
+}
 
 void Session::stop() {
     {
