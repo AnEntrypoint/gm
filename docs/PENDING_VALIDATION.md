@@ -2918,3 +2918,11 @@ Witness: clock-mutations full run on build/asan: "clock-mutations: ok (the scale
 
 - .github/workflows/arm-diagnose.yml: both names are added to the default asan-arm set (the input default and the fallback expression). Witness: hosted verification 43161954533 (asan-arm success with checks=check-restart-jobs,check-install-switch, reported passed).
 - Not restored, pending a hosted run of the seven timing checks: check-run-code-budget, check-run-code-progress, parity-contract, check-turn-economy, check-cancel-record, check-job-status-cancel, mcp-conformance. Their local ASan results are in the item 3 entry. check-worker-growth and clock-mutations stay out (per-call retention; the mutation check rebuilds the tree).
+
+## Round item 3: LeakSanitizer on the ASan worker, 8.5 KB per call (2026-11-12)
+
+- Method (scratch driver in /tmp, not in the repo): the ASan relay (build/asan gm serve, the check's argv) driven over stdio with 100 warm-up and 400 to 500 run_code calls ("return 1;"), then stdin closed so the worker exits on its own. The worker's stderr is the driver's file (checked through /proc fd 2). The worker's LeakSanitizer runs at its exit: verbosity=1 prints "LeakSanitizer: checking for leaks" from the worker process, and with detect_leaks=1 the 500-call run printed no "detected memory leaks" report.
+- Control: a deliberate 4096-byte leak in a sanitizer test program is reported by the same LeakSanitizer on this host, so the silence is not a missing sanitizer.
+- Result: no unreachable leaked blocks after 500 calls. The growth is reachable memory (or allocator overhead), not leaked objects.
+- Not established: whether the reachable growth is allocator metadata or the worker's own per-call state. ASan's exit statistics did not print in this build, so live-object counts could not be read. The release build measured 4000 calls with 396 KB growth (no per-call growth), so this is an ASan-build effect that the release build does not show.
+- Decision: the 8.5 KB per call is not a leak and not a release defect. It stays open as an ASan-build measurement item; check-worker-growth stays out of the asan-arm set.
