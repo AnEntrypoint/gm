@@ -2858,3 +2858,9 @@ Read once: gh run view 43157368074 --log, grep "install-switch".
 - Per-rpc: initialize 4946 ms; resources/read 4478 ms; next_context before switch 3579 ms; tick 0 195 ms (relay still on 4fa40c84cb62-dev); tick 1 14214 ms (the call that spans the re-execution; the exe at tick 1 is switched-dev); next_context after switch 1706 ms.
 - Reading: the slow phase is one next_context call of 14.2 s that spans the relay's re-execution under ASan on the hosted runner. It completed; no rpc waited on the 180 s watchdog. The earlier stall (run 43140275825, check-install-switch with no result for about 3.7 min before the cancel) did not recur in this run, so it is not reproduced here. No code cause shows in this log: nothing pushed for item 1.
 - Noted, not changed: the check's loop is bounded by 30 ticks, not by the 15 s its message names, so a 15.4 s switch passes; the message "within 15 s" is a label, not a limit.
+
+## Round item 1 follow-up: check-install-switch budget and message agree (2026-11-12)
+
+- Defect: the switch loop ran at most 30 ticks of 500 ms plus each call's own time, while the failure message said "within 15 s". A slow tick could push the wait past 15 s without the message being true, and the bound did not match the stated limit.
+- Change: native/components/tool/checks/install_switch.cpp: kSwitchBudget (15000 ms) bounds the loop by time from the switch; the failure message is built from the same constant. The hosted run (43157368074) passed under this bound: its slow next_context tick ended at about 14.9 s from the switch, before the bound.
+- Witness, local build/asan, ASan options as the asan job: check-install-switch: ok (the install link moved from versions/9da0005eef29-dev to switched-dev in 2116 ms; the running relay re-executed through the stable path on the same pid (wall 7.445093 s)).

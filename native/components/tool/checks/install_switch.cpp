@@ -14,6 +14,8 @@ namespace {
 
 namespace fs = std::filesystem;
 
+constexpr std::chrono::milliseconds kSwitchBudget{15000};
+
 std::string read_text(const fs::path& file) {
     std::ifstream in(file, std::ios::binary);
     std::ostringstream text;
@@ -110,14 +112,14 @@ CheckResult check_install_switch(const std::string& binary) {
                 fs::rename(next, install_root / "current");
                 const auto switch_at = std::chrono::steady_clock::now();
                 std::string after;
-                for (int tick = 0; tick < 30 && after.find("switched-dev") == std::string::npos; ++tick) {
+                for (int tick = 0; after.find("switched-dev") == std::string::npos && std::chrono::steady_clock::now() - switch_at < kSwitchBudget; ++tick) {
                     std::this_thread::sleep_for(std::chrono::milliseconds(500));
                     traced(session, "next_context tick " + std::to_string(tick), "tools/call", json::Object{{"name", "next_context"}, {"arguments", json::Object{}}});
                     after = exe_of(session.pid());
                     std::fprintf(stderr, "install-switch: tick %d exe %s\n", tick, after.c_str());
                 }
                 switched_ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - switch_at).count();
-                if (after.find("switched-dev") == std::string::npos) result.failures.push_back("the relay did not re-execute onto switched-dev within 15 s: exe " + after + "; stderr " + tail_of(session.stderr_text(), 300));
+                if (after.find("switched-dev") == std::string::npos) result.failures.push_back("the relay did not re-execute onto switched-dev within " + std::to_string(kSwitchBudget.count() / 1000) + " s: exe " + after + "; stderr " + tail_of(session.stderr_text(), 300));
                 if (session.stderr_text().find("re-executing") == std::string::npos) result.failures.push_back("the relay did not say it re-executed: " + tail_of(session.stderr_text(), 300));
                 const json::Value alive = traced(session, "next_context after switch", "tools/call", json::Object{{"name", "next_context"}, {"arguments", json::Object{}}});
                 if (alive.find("result") == nullptr) result.failures.push_back("the re-executed relay does not answer next_context");
