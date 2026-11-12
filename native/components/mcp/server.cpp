@@ -173,7 +173,7 @@ constexpr std::size_t kRowsNamed = 5;
 constexpr double kDefaultBodyTimeoutMs = 100000;
 constexpr double kForegroundCapMs = 100000;
 constexpr double kMaxWaitMs = 60000;
-constexpr double kMaxJobWaitMs = kMaxWaitMs;
+constexpr double kMaxJobWaitMs = kForegroundCapMs;
 constexpr std::uint64_t kSingleVerbBodiesBeforeNotice = 3;
 constexpr std::uint64_t kSingleVerbNoticeEvery = 10;
 constexpr const char* kBatchNotice = "The last run_code bodies each made one verb call; put a step's calls in one body.";
@@ -262,7 +262,7 @@ std::string run_code_description(const std::string& verb_names) {
            "{ok:false, error} and does not stop the body. The body's return value comes back as JSON. A body still "
            "running after timeoutMs (default 100000; a larger value waits no longer than 100000, so the call returns before the 120 s call limit) becomes a background run: the call returns its "
            "job id at once, job_status with waitMs returns its value, and finish is refused while it runs unless "
-           "stopBackground is true. A wait for a job is one job_status call (waitMs at most 60000; a reply that says running needs another job_status call to keep waiting). One step is one body: read the inputs in one Promise.all, decide in code, act "
+           "stopBackground is true. A wait for a job is one job_status call (waitMs at most 100000; a reply that says running needs another job_status call to keep waiting). One step is one body: read the inputs in one Promise.all, decide in code, act "
            "with the independent writes in one Promise.all, and verify in the same body. The ten most-used verbs: "
            "read_file({ path, offset?, limit? }), run_shell({ command, timeoutMs? }), write_file({ path, content }), "
            "query_log({ js?, kind?, fromMono?, toMono?, after?, last? }), search({ query, k? }), fetch({ url, "

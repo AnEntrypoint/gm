@@ -313,7 +313,7 @@ void w15(const Context& context, Row& row) {
     ready(*session);
     const json::Value described = run_body(*session, "return gm.verbs().find((v) => v.name === \"job_status\").description;");
     const std::string description = text_at(described, "output");
-    row.expect(description.find("at most 60000") != std::string::npos, "the job_status description does not state 'at most 60000': " + description.substr(0, 200));
+    row.expect(description.find("at most 100000") != std::string::npos, "the job_status description does not state 'at most 100000': " + description.substr(0, 200));
     std::string gone;
     for (long long wait_ms : {59999LL, 60001LL}) {
         Sleeper sleeper("2");

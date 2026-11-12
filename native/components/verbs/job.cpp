@@ -38,7 +38,7 @@ namespace {
 #if !defined(_WIN32)
 constexpr std::uint64_t kill_grace_ms = 500;
 #endif
-const double max_wait_ms = 60000 * clock_scale();
+const double max_wait_ms = 100000 * clock_scale();
 constexpr int pid_poll_ms = 100;
 constexpr std::uint64_t ended_event_grace_ms = 250;
 

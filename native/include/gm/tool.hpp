@@ -76,6 +76,7 @@ CheckResult check_cut_marker(const std::string& binary);
 CheckResult check_grep_state_scope(const std::string& binary);
 CheckResult check_job_bounds(const std::string& binary);
 CheckResult check_shell_stdin(const std::string& binary);
+CheckResult check_run_child_reap(const std::string& binary);
 CheckResult check_job_status_cancel(const std::string& binary);
 CheckResult check_cancel_wait(const std::string& binary);
 CheckResult check_cancel_record(const std::string& binary);

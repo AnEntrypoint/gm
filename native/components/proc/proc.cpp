@@ -333,9 +333,9 @@ Outcome run(const std::vector<std::string>& argv, const std::filesystem::path& c
     if (stdin_text.empty()) in_write.close();
 
     const auto deadline = Clock::now() + std::chrono::milliseconds(timeout_ms);
-    bool killed = false;
     bool reaped = false;
     int status = 0;
+    siginfo_t info{};
     auto idle_since = Clock::now();
     char buffer[65536];
 
@@ -352,13 +352,12 @@ Outcome run(const std::vector<std::string>& argv, const std::filesystem::path& c
             auto left = std::chrono::duration_cast<std::chrono::milliseconds>(deadline - Clock::now()).count();
             if (left <= 0) {
                 ::kill(-pid, SIGKILL);
-                killed = true;
                 outcome.timed_out = true;
                 break;
             }
             wait_ms = static_cast<int>(left > 1000000 ? 1000000 : left);
         }
-        if (!reaped && ::waitpid(pid, &status, WNOHANG) == pid) {
+        if (!reaped && ::waitid(P_PID, pid, &info, WEXITED | WNOHANG | WNOWAIT) == 0 && info.si_pid == pid) {
             reaped = true;
             idle_since = Clock::now();
         }
@@ -393,12 +392,13 @@ Outcome run(const std::vector<std::string>& argv, const std::filesystem::path& c
         }
     }
 
-    if (killed) ::kill(-pid, SIGKILL);
     out_read.close();
     err_read.close();
     in_write.close();
 
-    while (!reaped && ::waitpid(pid, &status, 0) < 0 && errno == EINTR) {}
+    while (::waitid(P_PID, pid, &info, WEXITED | WNOWAIT) < 0 && errno == EINTR) {}
+    ::kill(-pid, SIGKILL);
+    while (::waitpid(pid, &status, 0) < 0 && errno == EINTR) {}
     if (WIFEXITED(status)) outcome.exit_code = WEXITSTATUS(status);
     else if (WIFSIGNALED(status)) {
         outcome.exit_code = 128 + WTERMSIG(status);

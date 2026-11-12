@@ -33,6 +33,7 @@ const std::vector<Registered>& checks() {
         {"check-grep-state-scope", check_grep_state_scope},
         {"check-job-bounds", check_job_bounds},
         {"check-shell-stdin", check_shell_stdin},
+        {"check-run-child-reap", check_run_child_reap},
         {"check-job-status-cancel", check_job_status_cancel},
         {"check-cancel-wait", check_cancel_wait},
         {"check-cancel-record", check_cancel_record},
