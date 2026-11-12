@@ -2934,3 +2934,10 @@ Witness: clock-mutations full run on build/asan: "clock-mutations: ok (the scale
 - Files: native/components/tool/repos.cpp (new; repos_command), native/include/gm/tool.hpp (declaration), native/components/tool/main.cpp (dispatch of `repos`), native/components/tool/CMakeLists.txt (repos.cpp in gm_tool_checks), skills/dev/SKILL.md (end-of-stretch rule in the commit section).
 - Witness at the time of writing (report mode): gm 4 uncommitted (this round's files); fx absent from this tree; jayzee 0 uncommitted, 8 ahead; thebird 0 uncommitted, 1 ahead; hy4-relay 16 uncommitted, no upstream; hyperagent 1 uncommitted. `--strict` exits 1 while gm is not clean and pushed.
 - Not covered: fx is not a checkout in this tree, so its state is reported as absent; a repo elsewhere needs its path added to the list.
+
+## Round stretch-end scope change: gm checks only its own repo (2026-11-12)
+
+- Requirement change: gm-tool repos checks only the repo gm is working in (the checkout the tool runs from, root). It no longer reads or checks fx, thebird, jayzee, hy4-relay or hyperagent, and no peer path appears in the code or the skill.
+- Code: native/components/tool/repos.cpp takes the root (repos_command(root, strict)); native/include/gm/tool.hpp and native/components/tool/main.cpp pass it. Report mode exits 0; --strict exits 1 when the root repo has uncommitted files or commits ahead of origin, or has no upstream.
+- Phase B: the Phase B step reports the root repo's state through repos --strict and does not commit unlisted paths. Committing every uncommitted file in a repo would sweep in changes gm did not make, so the commit stays explicit (ship with listed paths) and the push stays in ship --push after Phase B.
+- Skill: skills/dev/SKILL.md's end-of-stretch rule names the cwd repo only.

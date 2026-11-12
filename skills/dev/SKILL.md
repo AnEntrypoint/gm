@@ -43,7 +43,7 @@ How to change this project. Project facts are in AGENTS.md, and decisions with t
 
 - Commit with `build/release/native/components/tool/gm-tool ship "<subject>" <explicit paths>`. It stages those paths, runs the gate, and commits on main only when the gate passes. A commit never pushes.
 - Push once per Phase B: `gm-tool phase-b` reconfigures, builds, runs check-build and the parity contract, and records the HEAD that passed; then `gm-tool ship --push` pushes only if that record names HEAD.
-- End of a stretch: `build/release/native/components/tool/gm-tool repos --strict` lists the gm checkout and each peer repo (fx, jayzee, thebird, hy4-relay, hyperagent) with uncommitted files and commits ahead of origin, and exits 1 when gm itself is not clean and pushed. Commit and push gm's own work with ship; a peer listed as blocked is reported to its owner, not committed here, because its changes are another session's work.
+- End of a stretch: `build/release/native/components/tool/gm-tool repos --strict` checks the repo gm is working in (its cwd checkout) for uncommitted files and commits ahead of origin, and exits 1 when it is not clean and pushed. Commit and push that work with ship; other repos are not checked.
 - Author lanmower. The subject states the change. No trailers of any kind.
 - Work on main. Do not create branches or worktrees.
 - A refusal from the gate names each failing check and its detail. Fix the cause and run it again. Do not commit around the gate.
