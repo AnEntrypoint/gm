@@ -22,6 +22,7 @@ const std::vector<Registered>& checks() {
         {"check-install-switch", check_install_switch},
         {"check-restart-skill-read", check_restart_skill_read},
         {"check-no-resource-client", check_no_resource_client},
+        {"check-turn-end-release", check_turn_end_release},
         {"check-embedded-runtime", check_embedded_runtime},
         {"check-skill-serve", check_skill_serve},
         {"check-resources-subscribe", check_resources_subscribe},
