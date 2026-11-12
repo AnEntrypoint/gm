@@ -2799,5 +2799,5 @@ Checks moved out of the asan-arm set: check-run-code-budget, check-restart-jobs,
 
 Where they run on arm: arm-diagnose's gdb-arm job does not run phase-b, so the seven names do not appear in arm-diagnose run 43149998911 (log read once: zero lines for each name). The arm build that runs the full phase-b is `build (ubuntu-24.04-arm, arm64-linux-release)` in release run 43149998872 on 2e2f8cc.
 
-Verdict: release run 43149998872 completed with success (run level, read from gh run list). Per-check lines of that job were not read, so the per-name verdict is "the job passed, which includes phase-b with these checks"; the local phase-b on 2e2f8cc (x64 Linux, 47 checks, 0 failed) is the same binary family. No defect found, so no fix. Note closed.
+Verdict: release run 43149998872 completed with success (run level, read from gh run list). Per-check lines of that job were not read (gh was not called again after the single log read), so no per-name verdict for the seven checks is recorded; the run-level result is the only witness here. Open: read that job's log for the seven names to close this per name.
 
