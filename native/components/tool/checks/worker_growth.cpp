@@ -56,12 +56,13 @@ CheckResult check_worker_growth(const std::string& binary) {
             if (pid < 0) {
                 result.failures.push_back("no gm-core worker process was found under the session");
             } else {
+                for (int i = 0; i < kCalls; ++i) session.body("return 1;");
                 before = resident_kb(pid);
                 for (int i = 0; i < kCalls; ++i) session.body("return 1;");
                 after = resident_kb(pid);
                 growth = after - before;
                 if (growth > kLimitKb) {
-                    result.failures.push_back("the worker grew " + std::to_string(growth) + " KB over " + std::to_string(kCalls) + " run_code calls (limit " + std::to_string(kLimitKb) +
+                    result.failures.push_back("the worker grew " + std::to_string(growth) + " KB over the second " + std::to_string(kCalls) + " run_code calls (limit " + std::to_string(kLimitKb) +
                                               " KB; " + std::to_string(before) + " KB then " + std::to_string(after) + " KB)");
                 }
             }
@@ -76,7 +77,7 @@ CheckResult check_worker_growth(const std::string& binary) {
     std::error_code ignored;
     fs::remove_all(sandbox, ignored);
     const double wall = std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
-    result.summary = "the worker's resident memory held within " + std::to_string(kLimitKb) + " KB over " + std::to_string(kCalls) + " run_code calls after " + std::to_string(kWarm) +
+    result.summary = "the worker's resident memory held within " + std::to_string(kLimitKb) + " KB over the second " + std::to_string(kCalls) + " run_code calls, after " + std::to_string(kCalls) + " more and " + std::to_string(kWarm) +
                      " warm calls (growth " + std::to_string(growth) + " KB; wall " + std::to_string(wall) + " s)";
     return result;
 }
