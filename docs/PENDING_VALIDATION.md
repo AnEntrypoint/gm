@@ -2913,3 +2913,8 @@ Witness: clock-mutations full run on build/asan: "clock-mutations: ok (the scale
 
 - Reported as passed: asan-arm and gdb-arm both success on the workflow that takes the checks input with commas or spaces (commit 77ab64e, cause in the earlier entry). The comma-joined input item is closed.
 - Not changed by this result: the asan set still excludes the timing checks, and the ASan per-call retention of check-worker-growth stays open.
+
+## Round asan-arm default set: check-restart-jobs and check-install-switch restored (2026-11-12)
+
+- .github/workflows/arm-diagnose.yml: both names are added to the default asan-arm set (the input default and the fallback expression). Witness: hosted verification 43161954533 (asan-arm success with checks=check-restart-jobs,check-install-switch, reported passed).
+- Not restored, pending a hosted run of the seven timing checks: check-run-code-budget, check-run-code-progress, parity-contract, check-turn-economy, check-cancel-record, check-job-status-cancel, mcp-conformance. Their local ASan results are in the item 3 entry. check-worker-growth and clock-mutations stay out (per-call retention; the mutation check rebuilds the tree).
