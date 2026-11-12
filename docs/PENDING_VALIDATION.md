@@ -2961,3 +2961,10 @@ Witness: clock-mutations full run on build/asan: "clock-mutations: ok (the scale
 - Cause: the concurrency group was arm-diagnose-<ref> for every event. On main, cancel-in-progress is false, so a queued workflow_dispatch run was replaced when a newer push queued in the same group. Runs 43166024906 and 43166694461 were cancelled with no jobs that way.
 - Change (.github/workflows/arm-diagnose.yml): the group is arm-diagnose-<run_id> for workflow_dispatch and arm-diagnose-<ref> for push, so a dispatched run has its own group and a newer push cannot cancel it. cancel-in-progress is unchanged.
 - Local witness: the YAML parses, and the group expression resolves per event: for workflow_dispatch the group carries the run id (unique per run), and for push it carries the ref (the same group as before).
+
+## Round ASan per-call retention: cause from the live heap (2026-11-12)
+
+- Change: an ASan-only probe (native/components/host/asan_probe.cpp, installed by run_worker only when GMNEW_ASAN_PROBE=1 and only in a build compiled with AddressSanitizer). On SIGUSR2 the worker writes "asan-heap live <bytes> heap <bytes>" to stderr from __sanitizer_get_current_allocated_bytes and __sanitizer_get_heap_size. The release build compiles the probe to a no-op.
+- Check: check-asan-retention (native/components/tool/checks/asan_retention.cpp, registered) reads the live heap after 100 warm calls and after each 400-call window. It is skipped unless GMNEW_ASAN_PROBE=1, so Phase B on the release build does not run it.
+- Witness, build/asan, GMNEW_ASAN_PROBE=1, quarantine_size_mb=0, wall 71 s: "check-asan-retention: ok (live heap per run_code call over the second 400 calls: 9.800000 bytes (live 441688 after warm-up, 689577 then 693497 bytes))".
+- Cause: the live heap grows about 10 bytes per call in the second window, so the earlier 8.5 KB per call was not live objects. It is allocator metadata and resident memory that ASan keeps (heap size minus live bytes), not retained state. LeakSanitizer was already clean at exit (an earlier round). The release build shows no per-call growth over 4000 calls. Item closed: no product change is needed for it.

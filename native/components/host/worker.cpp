@@ -4,6 +4,7 @@
 #include "gm/clock.hpp"
 #include "gm/core_verbs.hpp"
 #include "gm/host/browser_scope.hpp"
+#include "gm/host/asan_probe.hpp"
 #include "gm/host/child.hpp"
 #include "gm/host/composed_verbs.hpp"
 #include "gm/host/options.hpp"
@@ -91,6 +92,7 @@ int fail(std::string_view message) {
 }
 
 int run_worker(const HostArgs& args) {
+    install_asan_probe();
     const auto workspace = workspace_of(args);
     if (!std::filesystem::is_directory(workspace)) return fail("workspace is not a directory: " + workspace.string());
     auto max_inflight = positive_int_flag(args, "--max-inflight", mcp::ServerOptions{}.max_inflight);

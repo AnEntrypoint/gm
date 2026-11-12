@@ -53,6 +53,7 @@ const std::vector<Registered>& checks() {
         {"check-worker-growth", check_worker_growth},
         {"check-feed-reference", check_feed_reference},
         {"check-job-wait", check_job_wait},
+        {"check-asan-retention", check_asan_retention},
     };
     return all;
 }
