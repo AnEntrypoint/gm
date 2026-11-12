@@ -61,6 +61,7 @@ public:
     json::Value call(std::string_view name, const json::Value& args) override {
         gate_.wait_ready();
         events_.release();
+        if (auto refusal = refuse_unknown_keys(inner_, name, args)) return std::move(*refusal);
         return inner_.call(name, args);
     }
 

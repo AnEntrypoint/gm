@@ -2,6 +2,7 @@
 
 #include <map>
 #include <memory>
+#include <optional>
 #include <shared_mutex>
 #include <string>
 #include <string_view>
@@ -29,5 +30,7 @@ private:
     mutable std::shared_mutex index_mutex_;
     mutable std::map<std::string, VerbTable*, std::less<>> index_;
 };
+
+std::optional<json::Value> refuse_unknown_keys(const VerbTable& verbs, std::string_view name, const json::Value& args);
 
 }

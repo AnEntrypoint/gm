@@ -74,4 +74,40 @@ json::Value ComposedVerbs::call(std::string_view name, const json::Value& args) 
     return table->call(name, args);
 }
 
+namespace {
+
+std::optional<json::Value> schema_of(const VerbTable& verbs, std::string_view name) {
+    for (const VerbInfo& verb : verbs.list()) {
+        if (verb.name != name) continue;
+        auto schema = json::parse(verb.input_schema_json.empty() ? std::string_view("{}") : std::string_view(verb.input_schema_json));
+        if (!schema) return std::nullopt;
+        return std::move(*schema);
+    }
+    return std::nullopt;
+}
+
+}
+
+std::optional<json::Value> refuse_unknown_keys(const VerbTable& verbs, std::string_view name, const json::Value& args) {
+    if (!args.is_object() || args.as_object().empty()) return std::nullopt;
+    const std::optional<json::Value> schema = schema_of(verbs, name);
+    if (!schema) return std::nullopt;
+    const json::Value* properties = schema->find("properties");
+    if (properties == nullptr || !properties->is_object()) return std::nullopt;
+    std::string unknown;
+    for (const json::Member& member : args.as_object()) {
+        if (properties->find(member.first) != nullptr) continue;
+        unknown += (unknown.empty() ? "" : ", ") + member.first;
+    }
+    if (unknown.empty()) return std::nullopt;
+    std::string accepted;
+    for (const json::Member& declared : properties->as_object()) {
+        accepted += (accepted.empty() ? "" : ", ") + declared.first;
+    }
+    json::Value reply;
+    reply.set("ok", false);
+    reply.set("error", "refused: unknown argument " + unknown + "; " + std::string(name) + " takes " + (accepted.empty() ? std::string("none") : accepted));
+    return reply;
+}
+
 }
