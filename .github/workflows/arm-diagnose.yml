@@ -33,9 +33,9 @@ jobs:
         shell: bash
         env:
           ASAN_OPTIONS: halt_on_error=1:abort_on_error=0:print_stacktrace=1:detect_leaks=0
+          CHECKS: ${{ inputs.checks || 'check-read-parity check-protocol-versions check-relay-reexec check-witness-next-context-replay check-build-handover check-console check-stop-fetch check-restart-skill-read check-no-resource-client check-embedded-runtime check-skill-serve check-resources-subscribe check-startup-attempts check-repeated-checks check-owner-identity check-cut-marker check-grep-state-scope check-job-bounds check-shell-stdin check-cancel-wait check-early-run-code check-read-after-write check-spawn-sites check-rows check-fetch check-wiki check-git check-review check-code-ast check-quickjs-baseline check-install-follows check-skill-reload check-cli-flags check-feed-reference' }}
         run: |
-          build/asan/native/components/tool/gm-tool check build/asan/native/components/host/gm \
-            ${{ inputs.checks || 'check-read-parity check-protocol-versions check-relay-reexec check-witness-next-context-replay check-build-handover check-console check-stop-fetch check-restart-skill-read check-no-resource-client check-embedded-runtime check-skill-serve check-resources-subscribe check-startup-attempts check-repeated-checks check-owner-identity check-cut-marker check-grep-state-scope check-job-bounds check-shell-stdin check-cancel-wait check-early-run-code check-read-after-write check-spawn-sites check-rows check-fetch check-wiki check-git check-review check-code-ast check-quickjs-baseline check-install-follows check-skill-reload check-cli-flags check-feed-reference' }}
+          build/asan/native/components/tool/gm-tool check build/asan/native/components/host/gm $(tr ',' ' ' <<< "$CHECKS")
 
   gdb-arm:
     runs-on: ubuntu-24.04-arm
