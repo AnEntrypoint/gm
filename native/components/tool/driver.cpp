@@ -197,7 +197,10 @@ public:
         std::vector<Job> exclusive;
         int skipped = 0;
         for (const auto& check : checks()) {
-            if (check.name == kMutations) continue;
+            if (check.name == kMutations) {
+                if (!mutations) say("phase-b: " + check.name + " is not run by default: it changes the clock every peer shares; GM_CHECK_MUTATIONS=1 runs it");
+                continue;
+            }
             const std::string key = hash_of(check.name + ":" + fp);
             if (cache_[check.name] == key) {
                 ++skipped;
