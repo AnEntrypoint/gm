@@ -2793,3 +2793,11 @@ Change in .github/workflows/arm-diagnose.yml: check-lazy-browser and check-brows
 
 Open, not lost: check-lazy-browser and check-browser-scope need a look on the normal arm job; if they fail there too, the browser service's startup under the normal arm runner is the question, not ASan.
 
+## Round e6b5, verdict for the moved checks on the normal arm job (2e2f8cc)
+
+Checks moved out of the asan-arm set: check-run-code-budget, check-restart-jobs, check-run-code-progress, check-lazy-browser, check-browser-scope, check-install-switch, parity-contract.
+
+Where they run on arm: arm-diagnose's gdb-arm job does not run phase-b, so the seven names do not appear in arm-diagnose run 43149998911 (log read once: zero lines for each name). The arm build that runs the full phase-b is `build (ubuntu-24.04-arm, arm64-linux-release)` in release run 43149998872 on 2e2f8cc.
+
+Verdict: release run 43149998872 completed with success (run level, read from gh run list). Per-check lines of that job were not read, so the per-name verdict is "the job passed, which includes phase-b with these checks"; the local phase-b on 2e2f8cc (x64 Linux, 47 checks, 0 failed) is the same binary family. No defect found, so no fix. Note closed.
+
