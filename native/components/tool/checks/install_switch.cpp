@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cstdio>
 #include <filesystem>
 #include <fstream>
 #include <sstream>
@@ -36,6 +37,15 @@ std::vector<fs::path> files_under(const fs::path& dir) {
     }
     std::sort(files.begin(), files.end());
     return files;
+}
+
+json::Value traced(Session& session, const std::string& label, const std::string& method, json::Value params) {
+    const auto began = std::chrono::steady_clock::now();
+    std::fprintf(stderr, "install-switch: %s start\n", label.c_str());
+    json::Value reply = session.rpc(method, std::move(params));
+    const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - began).count();
+    std::fprintf(stderr, "install-switch: %s done in %lld ms\n", label.c_str(), static_cast<long long>(ms));
+    return reply;
 }
 
 }
@@ -86,11 +96,11 @@ CheckResult check_install_switch(const std::string& binary) {
             if (!session.started()) {
                 result.failures.push_back("the installed gm did not start");
             } else {
-                session.rpc("initialize", json::Object{{"protocolVersion", "2025-06-18"}, {"capabilities", json::Object{}},
-                                                      {"clientInfo", json::Object{{"name", "install-switch-check"}, {"version", "1"}}}});
+                traced(session, "initialize", "initialize", json::Object{{"protocolVersion", "2025-06-18"}, {"capabilities", json::Object{}},
+                                                                         {"clientInfo", json::Object{{"name", "install-switch-check"}, {"version", "1"}}}});
                 session.notify("notifications/initialized", json::Object{});
-                session.rpc("resources/read", json::Object{{"uri", "skill://gm/SKILL.md"}});
-                session.rpc("tools/call", json::Object{{"name", "next_context"}, {"arguments", json::Object{}}});
+                traced(session, "resources/read", "resources/read", json::Object{{"uri", "skill://gm/SKILL.md"}});
+                traced(session, "next_context before switch", "tools/call", json::Object{{"name", "next_context"}, {"arguments", json::Object{}}});
                 const std::string before = exe_of(session.pid());
                 if (before.find(first) == std::string::npos) result.failures.push_back("the relay did not start from the installed version " + first + ": " + before);
 
@@ -102,13 +112,14 @@ CheckResult check_install_switch(const std::string& binary) {
                 std::string after;
                 for (int tick = 0; tick < 30 && after.find("switched-dev") == std::string::npos; ++tick) {
                     std::this_thread::sleep_for(std::chrono::milliseconds(500));
-                    session.rpc("tools/call", json::Object{{"name", "next_context"}, {"arguments", json::Object{}}});
+                    traced(session, "next_context tick " + std::to_string(tick), "tools/call", json::Object{{"name", "next_context"}, {"arguments", json::Object{}}});
                     after = exe_of(session.pid());
+                    std::fprintf(stderr, "install-switch: tick %d exe %s\n", tick, after.c_str());
                 }
                 switched_ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - switch_at).count();
                 if (after.find("switched-dev") == std::string::npos) result.failures.push_back("the relay did not re-execute onto switched-dev within 15 s: exe " + after + "; stderr " + tail_of(session.stderr_text(), 300));
                 if (session.stderr_text().find("re-executing") == std::string::npos) result.failures.push_back("the relay did not say it re-executed: " + tail_of(session.stderr_text(), 300));
-                const json::Value alive = session.rpc("tools/call", json::Object{{"name", "next_context"}, {"arguments", json::Object{}}});
+                const json::Value alive = traced(session, "next_context after switch", "tools/call", json::Object{{"name", "next_context"}, {"arguments", json::Object{}}});
                 if (alive.find("result") == nullptr) result.failures.push_back("the re-executed relay does not answer next_context");
             }
             session.stop();
