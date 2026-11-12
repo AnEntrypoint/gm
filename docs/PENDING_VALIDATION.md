@@ -2810,3 +2810,14 @@ Verdict per name, from release run 43149998872, job `build (ubuntu-24.04-arm, ar
 - parity-contract: ok 8.4 s
 
 The same job reports `checks: 47 run, 0 failed, 0 passed alone after a pool failure, 0 skipped` and `pass at 2e2f8ccfc9bb8b7e3d8eeb5191b5b1bf1784f3a0`. Note closed.
+
+## Round ranked-work: local ASan witnesses for the two open ASan items (2026-11-12)
+
+Ranked remaining work for the owner, by gain: (1) the relay re-exec under ASan that did not finish on the hosted runner; (2) check-restart-jobs' "process gone after restart" under ASan; (3) the normal arm job, which has no open check (seven moved checks all ok on 43149998872, see the earlier entry); (4) the timing-check set for the asan job, an owner decision; (5) macOS items, which need a macOS host.
+
+Done for (1) and (2): both checks run against build/asan on this host, with env -u LD_PRELOAD and ASAN_OPTIONS=halt_on_error=1:abort_on_error=0:print_stacktrace=1:detect_leaks=0.
+
+- check-install-switch: ok. The install link moved from versions/9da0005eef29-dev to switched-dev in 2116 ms; the running relay re-executed through the stable path on the same pid (wall 7.49 s). No ASan report.
+- check-restart-jobs: ok. The binary mtime change restarted the relay; the job's process 2484055 was alive 496 ms after the trigger; the restart answered in 492 ms; the job exited 0 with output "done" at 7950 ms. No ASan report.
+
+Finding: neither hosted failure reproduces on this host under ASan. The hosted hang of the relay re-exec and the hosted "process gone after restart" are still unexplained, so the hosted runner's timing (not a memory fault: no ASan report was recorded for either run) remains the open question. Not changed: the asan job's set. Next item to do: a hosted ASan run with the per-check log, which needs a dispatch the owner authorises.
