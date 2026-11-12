@@ -42,7 +42,7 @@ std::string open_code(const std::string& url) {
 }
 
 std::string check_code(const std::string& url) {
-    return "(async () => { const page = context.pages().find((p) => p.url() === '" + url + "'); if (!page || page.isClosed()) return 'WITNESS open=false pages=' + JSON.stringify(context.pages().map((p) => p.url())) + ' contexts=' + JSON.stringify(context.browser().contexts().map((c) => c.pages().length)); return 'WITNESS open=true coi=' + (await page.evaluate(() => crossOriginIsolated)); })()";
+    return "(async () => { const page = context.pages().find((p) => p.url() === '" + url + "'); if (!page || page.isClosed()) return 'WITNESS open=false pages=' + JSON.stringify(context.pages().map((p) => p.url())) + ' contexts=' + JSON.stringify(context.browser().contexts().map((c) => c.pages().length)) + ' executorIndex=' + context.browser().contexts().indexOf(context); return 'WITNESS open=true coi=' + (await page.evaluate(() => crossOriginIsolated)); })()";
 }
 
 std::string close_code(const std::string& url) {

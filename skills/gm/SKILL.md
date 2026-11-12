@@ -90,6 +90,8 @@ A host may cut a slash-command task to its first word. If the task in the run is
 
 ## Browser
 
+For an HTTP-level question (a status code, headers, a page's HTML, an API response), use curl or curl-impersonate first. Use playwriter only where JavaScript must run in the page.
+
 Playwriter is the browser control, used only through its verbs inside run_code: `gm.playwriter_execute({ code })` runs a snippet, and `gm.playwriter_browsers({ action })` lists or closes browsers. Do not start another browser, and do not call the playwriter binary from a shell. A browser call past 60 seconds needs timeoutMs on the playwriter server entry (defaults/mcp.json sets it).
 
 Each project root has its own browser and profile. Each run has its own tab context, which its first execute call creates, and next_context reports the run's tabs. `playwriter_browsers` close and finish close only this run's context. `gm.browser_close_machine({ confirm: true })` closes the whole project browser, and it is for the owner's request only.
