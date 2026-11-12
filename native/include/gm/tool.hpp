@@ -177,5 +177,6 @@ int installed_command(const std::filesystem::path& root);
 int package_command(const std::filesystem::path& root, const std::vector<std::string>& args);
 int release_manifest_command(const std::vector<std::string>& args);
 int prune_assets_command(const std::vector<std::string>& args);
+int repos_command(bool strict);
 
 }

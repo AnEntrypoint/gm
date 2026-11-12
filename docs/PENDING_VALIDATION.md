@@ -2926,3 +2926,11 @@ Witness: clock-mutations full run on build/asan: "clock-mutations: ok (the scale
 - Result: no unreachable leaked blocks after 500 calls. The growth is reachable memory (or allocator overhead), not leaked objects.
 - Not established: whether the reachable growth is allocator metadata or the worker's own per-call state. ASan's exit statistics did not print in this build, so live-object counts could not be read. The release build measured 4000 calls with 396 KB growth (no per-call growth), so this is an ASan-build effect that the release build does not show.
 - Decision: the 8.5 KB per call is not a leak and not a release defect. It stays open as an ASan-build measurement item; check-worker-growth stays out of the asan-arm set.
+
+## Round stretch-end enforcement: gm-tool repos (2026-11-12)
+
+- Design: `gm-tool repos` lists six repos (gm, fx, jayzee, thebird, hy4-relay, hyperagent) with uncommitted files (git status --porcelain) and commits ahead of the upstream (rev-list @{u}..HEAD). A repo with no upstream is reported as blocked. Report mode exits 0; `--strict` exits 1 when gm itself is not clean and pushed.
+- Scope decision: the Phase B step does not commit or push peers' work. Their uncommitted changes and ahead commits belong to their owners, and the owner rules forbid committing another session's work under lanmower. The step reports each peer with its cause (uncommitted count, ahead count, or no upstream); gm's own work is committed with ship and pushed through its Phase B.
+- Files: native/components/tool/repos.cpp (new; repos_command), native/include/gm/tool.hpp (declaration), native/components/tool/main.cpp (dispatch of `repos`), native/components/tool/CMakeLists.txt (repos.cpp in gm_tool_checks), skills/dev/SKILL.md (end-of-stretch rule in the commit section).
+- Witness at the time of writing (report mode): gm 4 uncommitted (this round's files); fx absent from this tree; jayzee 0 uncommitted, 8 ahead; thebird 0 uncommitted, 1 ahead; hy4-relay 16 uncommitted, no upstream; hyperagent 1 uncommitted. `--strict` exits 1 while gm is not clean and pushed.
+- Not covered: fx is not a checkout in this tree, so its state is reported as absent; a repo elsewhere needs its path added to the list.

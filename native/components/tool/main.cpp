@@ -78,5 +78,6 @@ int main(int argc, char** argv) {
     if (command == "package") return gm::tool::package_command(root, args);
     if (command == "release-manifest") return gm::tool::release_manifest_command(args);
     if (command == "prune-release-assets") return gm::tool::prune_assets_command(args);
+    if (command == "repos") return gm::tool::repos_command(args.size() > 1 && args[1] == "--strict");
     return usage();
 }
