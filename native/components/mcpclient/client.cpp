@@ -143,6 +143,10 @@ json::Value from_wire(const mcp::protocol::Json& value) {
     return parsed ? *parsed : json::Value();
 }
 
+std::int64_t wall_ms() {
+    return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+}
+
 std::shared_ptr<Session> current(const std::shared_ptr<Core>& core) {
     std::lock_guard lock(core->mutex);
     return core->current;
@@ -358,6 +362,7 @@ std::optional<std::string> StdioClient::connect(bool again) {
         const std::optional<std::string> problem = session ? handshake(core_, session, again, tools) : std::optional<std::string>(error);
         if (!problem) {
             tools_ = std::move(tools);
+            last_use_ms_ = wall_ms();
             return std::nullopt;
         }
         bool exited = false;
@@ -391,6 +396,8 @@ void StdioClient::preload_tools(std::vector<json::Value> tools) {
 }
 
 json::Value StdioClient::call_tool(const std::string& tool, const json::Value& args) {
+    std::shared_lock use(use_);
+    last_use_ms_ = wall_ms();
     if (auto error = connect(true)) return failure("MCP server " + core_->spec.name + " is not running: " + *error);
     const std::shared_ptr<Session> session = current(core_);
     if (!session) return failure("MCP server " + core_->spec.name + " is not running");
@@ -413,6 +420,17 @@ void StdioClient::stop() {
     if (!session) return;
     lose(core_, session, "stopped by gm");
     session->child->kill();
+}
+
+bool StdioClient::release(std::int64_t ended_ms) {
+    std::unique_lock use(use_, std::try_to_lock);
+    if (!use.owns_lock() || last_use_ms_ > ended_ms) return false;
+    std::lock_guard start(start_mutex_);
+    const std::shared_ptr<Session> session = current(core_);
+    if (!session) return false;
+    lose(core_, session, "released at the end of the caller's turn");
+    if (!session->child->wait_for(EXIT_WAIT)) session->child->kill();
+    return true;
 }
 
 }

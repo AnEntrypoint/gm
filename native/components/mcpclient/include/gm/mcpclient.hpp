@@ -1,9 +1,11 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
 #include <filesystem>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <set>
 #include <string>
 #include <string_view>
@@ -28,6 +30,8 @@ struct Options {
     std::size_t depth = 0;
     std::filesystem::path tool_cache;
     Emit emit;
+    bool release_at_turn_end = false;
+    std::function<std::optional<std::int64_t>()> turn_ended_ms;
 };
 
 std::size_t depth_from_environment();
