@@ -2968,3 +2968,17 @@ Witness: clock-mutations full run on build/asan: "clock-mutations: ok (the scale
 - Check: check-asan-retention (native/components/tool/checks/asan_retention.cpp, registered) reads the live heap after 100 warm calls and after each 400-call window. It is skipped unless GMNEW_ASAN_PROBE=1, so Phase B on the release build does not run it.
 - Witness, build/asan, GMNEW_ASAN_PROBE=1, quarantine_size_mb=0, wall 71 s: "check-asan-retention: ok (live heap per run_code call over the second 400 calls: 9.800000 bytes (live 441688 after warm-up, 689577 then 693497 bytes))".
 - Cause: the live heap grows about 10 bytes per call in the second window, so the earlier 8.5 KB per call was not live objects. It is allocator metadata and resident memory that ASan keeps (heap size minus live bytes), not retained state. LeakSanitizer was already clean at exit (an earlier round). The release build shows no per-call growth over 4000 calls. Item closed: no product change is needed for it.
+
+## Round owner decisions taken in Phase A (2026-11-12)
+
+Decided here by the worker, with the reason, so the owner can overturn any of them.
+
+- ASan job policy: the asan-arm job keeps memory-safety checks plus the checks that pass hosted. The seven timing checks stay out of the asan default until their hosted run passes. Reason: a timing check under ASan measures the sanitizer's slowdown, not the product.
+- Protocol 2026-07-28 capability flag: stays unimplemented. Reason: no client we connect to advertises it, and both engines negotiate only the 2025 versions, so a flag with no caller adds code with no witness.
+- next_context cancel behaviour: unchanged. The relay stops resending a cancelled next_context, and the wait runs to its own bound. Reason: the bound already limits the wait, and a resend on cancel would replay events the client already received.
+- Shared rules text: unchanged. Re-reading the rules at every step is the design (AGENTS.md, "gm: agent instructions"). Reason: the rules are short and the re-read is what keeps a long run on them.
+
+## Round browser launcher on linux arm: blocked (2026-11-12)
+
+- The Chrome installer refuses linux arm ("Unsupported platform"). The launcher is in AnEntrypoint/pw, outside this checkout. Invariant 7 forbids cloning it, so nothing in this checkout can change the launcher.
+- Status: blocked. What unblocks it: a change to the pw launcher on that repo, then a hosted run of arm-diagnose on the browser check.
