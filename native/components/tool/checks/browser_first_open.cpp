@@ -10,6 +10,7 @@
 #include <filesystem>
 #include <fstream>
 #include <functional>
+#include <memory>
 #include <netinet/in.h>
 #include <regex>
 #include <sstream>
@@ -79,6 +80,15 @@ long long first_number(const std::string& text, const std::string& pattern) {
     if (std::regex_search(text, match, std::regex(pattern))) return std::stoll(match[1].str());
     return 0;
 }
+
+struct Owned {
+    long long pid = 0;
+    long long start = 0;
+};
+
+Owned own(long long pid) { return Owned{pid, pid > 0 ? proc::start_time_of(pid) : 0}; }
+
+bool still_ours(const Owned& owned) { return owned.pid > 0 && owned.start > 0 && proc::start_time_of(owned.pid) == owned.start; }
 
 bool listening(int port) {
     const int fd = ::socket(AF_INET, SOCK_STREAM, 0);
@@ -164,7 +174,15 @@ CheckResult check_browser_first_open(const std::string& binary) {
     const std::vector<std::pair<std::string, std::string>> launcher_env{{"PLAYWRITER_IDLE_MS", std::to_string(kIdleMs)}, {"PLAYWRITER_BROWSER_PATH", chromium}};
     summary << "Chromium " << (chromium.empty() ? std::string("none") : chromium) << "; ";
     const std::string page_url = "http://127.0.0.1:" + std::to_string(page_port) + "/";
-    std::vector<long long> roots;
+    std::vector<Owned> roots;
+    const fs::path foreign = fs::temp_directory_path() / ("gm-foreign-gate-" + std::to_string(stamp));
+    fs::create_directories(foreign);
+    proc::SpawnOptions foreign_options(foreign);
+    foreign_options.own_group = true;
+    const auto foreign_spawned = proc::Child::spawn({"sh", "-c", "sleep 300; true", "playwriter-project", foreign.string()}, foreign_options);
+    const std::shared_ptr<proc::Child> foreign_gate = foreign_spawned ? *foreign_spawned : nullptr;
+    const long long foreign_pid = foreign_gate ? foreign_gate->pid() : 0;
+    if (foreign_pid <= 0) failures.push_back("could not start the stand-in gate of another project");
 
     const auto install = proc::run({"env", "HOME=" + sandbox.string(), (host / "gm").string(), "install", "--local", build.string(), "--source", source.string()}, sandbox, {}, 900000);
     if (!install.started || install.exit_code != 0) failures.push_back("the sandbox install failed: " + (install.err.empty() ? install.out : install.err).substr(0, 400));
@@ -173,7 +191,7 @@ CheckResult check_browser_first_open(const std::string& binary) {
     if (failures.empty()) {
         write_ports(workspace, gate_port, debug_port);
         write_ports(adopt_workspace, adopt_gate_port, adopt_debug_port);
-        roots.push_back(first_number(proc::run({"sh", "-c", page_server_command(page_port)}, sandbox, {}, 20000).out, "([0-9]+)"));
+        roots.push_back(own(first_number(proc::run({"sh", "-c", page_server_command(page_port)}, sandbox, {}, 20000).out, "([0-9]+)")));
 
         const auto started = proc::run({"env", "HOME=" + sandbox.string(), "PLAYWRITER_PROJECT_DIR=" + workspace.string(), "PLAYWRITER_TELEMETRY=0", idle_assignment, browser_assignment, "node", launcher.string(), "start"}, workspace, {}, 120000);
         if (!started.started || started.exit_code != 0 || started.err.find("browser ready") == std::string::npos) failures.push_back("start did not report a ready browser: " + started.err.substr(0, 300));
@@ -214,9 +232,9 @@ CheckResult check_browser_first_open(const std::string& binary) {
             } else {
                 init_session(session);
                 session.body(exec_body(open_code(page_url)));
-                const long long gate_pid = first_number(status_of(launcher, sandbox, workspace), "\"gate\":\\s*\\{\\s*\"pid\":\\s*([0-9]+)");
-                if (gate_pid > 0) {
-                    ::kill(static_cast<pid_t>(gate_pid), SIGKILL);
+                const Owned gate = own(first_number(status_of(launcher, sandbox, workspace), "\"gate\":\\s*\\{\\s*\"pid\":\\s*([0-9]+)"));
+                if (still_ours(gate)) {
+                    ::kill(static_cast<pid_t>(gate.pid), SIGKILL);
                 } else {
                     failures.push_back("there was no gate to stop after the first open");
                 }
@@ -246,13 +264,13 @@ CheckResult check_browser_first_open(const std::string& binary) {
             std::ofstream(wrapper) << wrapper_script(calls, chromium);
             fs::permissions(wrapper, fs::perms::owner_all | fs::perms::group_read | fs::perms::group_exec | fs::perms::others_read | fs::perms::others_exec);
             const long long outside_pid = first_number(proc::run({"sh", "-c", outside_browser_command(chromium, profile, adopt_debug_port)}, adopt_workspace, {}, 20000).out, "([0-9]+)");
-            roots.push_back(outside_pid);
+            roots.push_back(own(outside_pid));
             if (!wait_until([&] { return listening(adopt_debug_port); }, 30)) failures.push_back("the browser started outside the launcher did not open its debug port");
             const auto adopted = proc::run({"env", "HOME=" + sandbox.string(), "PLAYWRITER_PROJECT_DIR=" + adopt_workspace.string(), "PLAYWRITER_TELEMETRY=0", idle_assignment, "PLAYWRITER_BROWSER_PATH=" + wrapper.string(), "node", launcher.string(), "start"}, adopt_workspace, {}, 180000);
             if (!adopted.started || adopted.exit_code != 0) failures.push_back("start with PLAYWRITER_BROWSER_PATH failed: " + adopted.err.substr(0, 300));
             const std::string calls_text = read_text(calls);
             const long long browser_pid = first_number(status_of(launcher, sandbox, adopt_workspace), "\"browser\":\\s*\\{\\s*\"pid\":\\s*([0-9]+)");
-            roots.push_back(browser_pid);
+            roots.push_back(own(browser_pid));
             std::string cmdline = browser_pid > 0 ? read_text("/proc/" + std::to_string(browser_pid) + "/cmdline") : std::string();
             std::replace(cmdline.begin(), cmdline.end(), '\0', ' ');
             const bool wrapper_called = calls_text.find("wrapper") != std::string::npos;
@@ -264,10 +282,10 @@ CheckResult check_browser_first_open(const std::string& binary) {
         }
     }
 
-    for (const long long pid : processes_mentioning(sandbox.string())) roots.push_back(pid);
+    for (const long long pid : processes_mentioning(sandbox.string())) roots.push_back(own(pid));
     std::vector<long long> live;
-    for (const long long pid : roots) {
-        if (pid > 0) live.push_back(pid);
+    for (const Owned& root : roots) {
+        if (still_ours(root)) live.push_back(root.pid);
     }
     const auto tree = process_tree(live);
     kill_processes(tree);
@@ -278,7 +296,14 @@ CheckResult check_browser_first_open(const std::string& binary) {
         for (const long long pid : survivors) ids += (ids.empty() ? "" : " ") + std::to_string(pid);
         failures.push_back(std::to_string(survivors.size()) + " process(es) started by this check are still alive: " + ids);
     }
+    if (foreign_gate) {
+        const bool survived = !alive_of({foreign_pid}).empty();
+        summary << "; a gate of another project survived " << (survived ? "true" : "false");
+        if (!survived) failures.push_back("this check stopped a gate that another project started");
+        foreign_gate->kill();
+    }
     std::error_code ignored;
+    fs::remove_all(foreign, ignored);
     fs::remove_all(sandbox, ignored);
     result.summary = summary.str();
     return result;

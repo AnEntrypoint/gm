@@ -138,6 +138,8 @@ std::optional<ServerSpec> server_of(const std::string& name, const json::Value& 
     if (deny != nullptr && !string_array(*deny, true)) return fail("deny must be an array of non-empty tool names");
     const json::Value* lazy = field(spec, "lazy");
     if (lazy != nullptr && !lazy->is_bool()) return fail("lazy must be true or false");
+    const json::Value* release_at_run_end = field(spec, "releaseAtRunEnd");
+    if (release_at_run_end != nullptr && !release_at_run_end->is_bool()) return fail("releaseAtRunEnd must be true or false");
 
     std::vector<std::string> missing;
     ServerSpec server;
@@ -151,6 +153,7 @@ std::optional<ServerSpec> server_of(const std::string& name, const json::Value& 
     server.cwd = cwd == nullptr ? workspace : (workspace / expand_variables(cwd->as_string(), missing)).lexically_normal();
     server.timeout_ms = timeout == nullptr ? CALL_MS : static_cast<std::uint64_t>(timeout->as_number());
     server.lazy = lazy != nullptr && lazy->as_bool();
+    server.release_at_run_end = release_at_run_end == nullptr || release_at_run_end->as_bool();
     server.startup_default = startup == nullptr;
     server.startup_ms = startup == nullptr ? (batch_launcher(server.command) ? LAUNCHER_STARTUP_MS : STARTUP_MS) : static_cast<std::uint64_t>(startup->as_number());
     if (deny != nullptr)

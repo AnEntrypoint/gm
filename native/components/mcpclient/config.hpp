@@ -21,6 +21,7 @@ struct ServerSpec {
     std::uint64_t startup_ms = 0;
     bool startup_default = false;
     bool lazy = false;
+    bool release_at_run_end = true;
     std::vector<std::string> deny;
     std::vector<std::string> ignore;
 };

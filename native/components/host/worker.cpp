@@ -192,7 +192,7 @@ int run_worker(const HostArgs& args) {
         return open;
     };
     options.close_jobs = [&core](const std::string& reason) { core.close(reason); };
-    options.release_leases = [&mcp_verbs](const std::string& reason) { mcp_verbs.release_leases(reason); };
+    options.release_leases = [&mcp_verbs](const std::string& reason, bool run_end) { mcp_verbs.release_leases(reason, run_end); };
     options.flush_job_events = [&core] { core.flush_job_events(); };
     options.wait_program = current_executable().string();
     options.run_body = [&mcp_verbs, &boot_events](VerbTable& verbs, std::string_view body, const std::filesystem::path& root,

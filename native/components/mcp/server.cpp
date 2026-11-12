@@ -1416,7 +1416,7 @@ struct Server::State {
         s().end_logged = true;
         stop_bodies("run-ended");
         if (options.close_jobs) options.close_jobs("run-ended");
-        if (options.release_leases) options.release_leases("released when the run ended");
+        if (options.release_leases) options.release_leases("released when the run ended", true);
         write_summary();
         Value fields = object().set("status", status).set("steps", s().steps).set("witness", witness);
         if (gaps) fields.set("gaps", *gaps);
@@ -3463,7 +3463,7 @@ struct Server::State {
     }
 
     void input_ended() {
-        if (options.release_leases) options.release_leases("released when the session closed");
+        if (options.release_leases) options.release_leases("released when the session closed", false);
         if (s().end_logged) return;
         if (options.supervised) {
             s().ended = "restarting";

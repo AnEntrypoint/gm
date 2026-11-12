@@ -244,7 +244,7 @@ CheckResult check_browser_scope(const std::string& binary) {
                     if (flag(cleanup, "ok")) {
                         const json::Value both = output_of(cleanup);
                         expect(flag(part(both, "undo"), "ok"), "the side pages were not undone");
-                        expect(returned(part(both, "sides")) == 0, "the side pages are still open after undo");
+                        expect(returned(part(both, "sides")) == 0, "the side pages are still open after undo: " + json::dump(both).substr(0, 500));
                         expect(returned(part(both, "mine")) == 0 && returned(part(both, "peer")) == 0, "a run's page is still open after the browser was closed");
                         expect(flag(part(both, "close"), "ok"), "browser_close_machine with confirm did not close the scratch browser");
                     } else {

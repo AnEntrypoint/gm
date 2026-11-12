@@ -159,9 +159,9 @@ struct McpVerbs::Impl {
         routes = std::move(table);
     }
 
-    void release_leases(const std::string& reason) {
+    void release_leases(const std::string& reason, bool run_end) {
         for (const std::unique_ptr<StdioClient>& client : clients) {
-            if (client->spec().lazy) client->release(reason);
+            if (client->spec().lazy && (!run_end || client->spec().release_at_run_end)) client->release(reason);
         }
     }
 
@@ -208,7 +208,7 @@ McpVerbs::~McpVerbs() {
     if (impl_->starter.joinable()) impl_->starter.join();
 }
 
-void McpVerbs::release_leases(const std::string& reason) { impl_->release_leases(reason); }
+void McpVerbs::release_leases(const std::string& reason, bool run_end) { impl_->release_leases(reason, run_end); }
 
 bool McpVerbs::serves(std::string_view name) const {
     std::lock_guard lock(impl_->mutex);

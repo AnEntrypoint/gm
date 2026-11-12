@@ -1,5 +1,36 @@
 # Pending validation
 
+## Round 2026-11-12 (queue e6b5, third part: Phase B failure on 9efeb37, browser scope, scoped kills)
+
+Phase B on 9efeb37 failed one row, check-browser-scope (6 failures in the pool). Nothing was pushed; build/release/phase-b.pass still holds the old 73ccd2c marker.
+
+Cause, measured alone (not a pool interference). check-browser-scope failed alone 3 of 3 with the run-end release in place: 30.0 s and 24.4 s runs ("finish closed a side page the run does not own" twice, with "the side pages are still open after undo"). The side pages are contexts made with browser.newContext() on the run's own playwriter connection. Chrome disposes a context when the connection that made it closes (AGENTS.md, browser contexts). The run-end release (9efeb37, the owner's run-end decision) closes the playwriter connection at finish, so finish closed other runs' side contexts. A diagnostic on the undo step showed the handle was gone after finish: typeof state.gmSideCheck was "undefined", and the state keys were gmProject, gmPage, gmRun, gmRunPages, gmRunView.
+
+Measurements that separate the two causes:
+- Run-end release removed (one line in end_run, temporary): alone, 4 of 4 runs passed after one earlier run failed "still open after undo" (that run had no diagnostic; it is not explained; the four later runs did not reproduce it).
+- Release restored: alone, 2 of 2 failed the same way (exact failures above).
+- Fix (below), alone: 3 of 3 passed (9.5 s, 10.1 s, 13.9 s).
+
+Fix, Phase A. Two settled rules conflicted: the run-end release (owner, 2026-11-12) and the browser ownership rule (finish closes only the run's own pages; pages in other contexts are not closed by it). Chosen default, for the owner to confirm: the release at run end stays for every lazy MCP server except one whose config sets releaseAtRunEnd false. defaults/mcp.json sets it for playwriter, so its connection stays up across a run end and is released at session close, when Chrome disposes its contexts anyway. Trade-off, stated plainly: while a session is open, the playwriter lease is held, so the gate's idle release does not run between runs. The old Stop-hook path released the browser every turn. Alternative: release playwriter at run end and accept that finish closes other contexts; that breaks the ownership rule that check-browser-scope encodes.
+
+Phase A changes (each one, with its file):
+1. native/components/mcpclient/config.hpp, config.cpp: ServerSpec.release_at_run_end, read from "releaseAtRunEnd" (bool, default true; a non-bool is refused).
+2. defaults/mcp.json: playwriter has "releaseAtRunEnd": false.
+3. native/components/mcpclient/mcpclient.cpp and include/gm/mcpclient.hpp: McpVerbs::release_leases(reason, run_end). With run_end, a lazy server with release_at_run_end false is kept.
+4. native/components/mcp/include/gm/mcp.hpp: ServerOptions::release_leases takes (reason, run_end).
+5. native/components/mcp/server.cpp: end_run passes run_end true; input_ended passes false.
+6. native/components/host/worker.cpp: the lambda forwards run_end.
+7. native/components/tool/checks/browser_scope.cpp: the undo assertion prints the cleanup reply. The assertions are unchanged; the diagnostic return text was removed again.
+8. native/components/tool/checks/browser_first_open.cpp: each pid the check records (page server, outside browser, project browser, gate) carries its start time (Owned, own(), still_ours()). Cleanup kills only roots whose pid and start time still match; processes_mentioning(sandbox) is recorded the same way. The gate-loss SIGKILL needs still_ours(). A stand-in gate of another project (sh -c "sleep 300; true" playwriter-project <dir outside the sandbox>, its own group) is started before the run; the check reports whether it survived, fails if it did not, and kills it by its own pid at the end. The check adds <memory>.
+9. AGENTS.md: the turn-end note states the releaseAtRunEnd exemption and its reason.
+10. docs/PENDING_VALIDATION.md: this section.
+
+Item 2, the kill scope of browser_first_open.cpp. Before this change the kills were already scoped by sandbox path and by descendants of recorded roots; the only pid-only kill was the gate-loss SIGKILL, on a pid read from the check's own launcher status. The change adds the start-time identity to every recorded pid, and the foreign-gate witness is the check: "a gate of another project survived true" must appear in the ok line.
+
+Item 3, "0 passed alone after a pool failure". The phrase is phase-b's rescue count (native/components/tool/driver.cpp:336-338): a check that failed in the pool is run alone, and it counts as rescued if it passes. Zero rescued means check-browser-scope failed alone too, which the measurements above confirm. It is not a pool leak.
+
+Item 4, relay-reexec, hosted x64 run 43291764113. Still open; the cause is not found in this stretch. The hosted log has the failure line only, without the reply that answered the wait, and the check now prints that reply on failure. Nothing new was measured for it here.
+
 ## Round 2026-11-12 (queue e6b5, second part: reaper identity, lazy browser, turn-end release, parity triage, hosted CI)
 
 Result: items 1, 2, 3, 4, 6 done and witnessed on the final tree. Item 5 is open for check-relay-reexec (cause not found); the check-browser-first-open cause is found and fixed. Phase B result: in the REPORT line of the session, not here, because phase-b runs on the commit that carries this section.
