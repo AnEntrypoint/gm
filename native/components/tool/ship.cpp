@@ -147,6 +147,13 @@ int ship_command(const fs::path& root, const std::vector<std::string>& args) {
         const auto head = git_output(root, {"rev-parse", "HEAD"});
         if (!head) return 1;
         const std::string commit = trimmed(*head);
+        std::ifstream marker_in(root / "build" / "release" / "phase-b.pass");
+        std::string marked;
+        std::getline(marker_in, marked);
+        if (marked != commit) {
+            std::printf("refused: no passing Phase B at HEAD %s; run phase-b first\n", commit.c_str());
+            return 1;
+        }
         if (!origin_main_contains_head(root)) {
             std::printf("refused: origin main moved or could not be fetched; HEAD %s is not on top of it; nothing pushed, nothing forced\n", commit.c_str());
             return 1;
@@ -159,7 +166,7 @@ int ship_command(const fs::path& root, const std::vector<std::string>& args) {
             std::printf("refused: origin main moved during the CI wait; HEAD %s is not on top of it; nothing pushed, nothing forced\n", commit.c_str());
             return 1;
         }
-        if (!git_output(root, {"push", "-q", "origin", "HEAD:main"})) return 1;
+        if (!git_output(root, {"push", "-q", "origin", "main"})) return 1;
         std::printf("PUSHED %s\n", commit.c_str());
         return 0;
     }
