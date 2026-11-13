@@ -1,7 +1,9 @@
 #include "gm/host/browser_scope.hpp"
 
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
+#include <thread>
 
 namespace gm::host {
 namespace {
@@ -11,10 +13,14 @@ constexpr const char* kBrowsers = "playwriter_browsers";
 constexpr std::size_t kTitleChars = 80;
 constexpr std::size_t kUrlChars = 200;
 constexpr int kBrowserTimeoutMs = 10000;
+constexpr const char* kGoneMarker = "gm-browser-gone-before-body";
+constexpr int kGoneAttempts = 5;
+constexpr int kGoneBackoffMs = 250;
 
 const char* kOpenRunContext =
-    "{ const sleep = (ms) => new Promise((done) => setTimeout(done, ms)); "
-    "const live = async () => { let last = null; for (let attempt = 0; attempt < 5; attempt += 1) { for (const c of browser.contexts()) { try { const open = c.pages().find((p) => !p.isClosed()); return { home: c, page: open || await c.newPage() }; } catch (e) { last = e; } } try { const fresh = await browser.newContext(); try { return { home: fresh, page: await fresh.newPage() }; } catch (e) { last = e; await fresh.close().catch(() => {}); } } catch (e) { last = e; } await sleep(200 * 2 ** attempt); } throw last || new Error('the browser lists no context a run can open a page in'); }; "
+    "{ if (typeof browser.isConnected === 'function' && !browser.isConnected()) throw new Error('gm-browser-gone-before-body: the project browser stopped under this executor, before the body ran; the host resends the call'); "
+    "const sleep = (ms) => new Promise((done) => setTimeout(done, ms)); "
+    "const live = async () => { let last = null; for (let attempt = 0; attempt < 5; attempt += 1) { for (const c of browser.contexts()) { try { const open = c.pages().find((p) => !p.isClosed()); return { home: c, page: open || await c.newPage() }; } catch (e) { last = e; } } try { const fresh = await browser.newContext(); try { return { home: fresh, page: await fresh.newPage() }; } catch (e) { last = e; await fresh.close().catch(() => {}); } } catch (e) { last = e; } await sleep(200 * 2 ** attempt); } throw new Error('gm-browser-gone-before-body: no listed context takes a page: ' + String(last && last.message)); }; "
     "const gmNewPage = async (first, args) => { let last = null; for (let attempt = 0; attempt < 5; attempt += 1) { const order = [first, ...browser.contexts()].filter((c, i, all) => c && all.indexOf(c) === i); for (const c of order) { try { return await c.newPage(...args); } catch (e) { last = e; } } try { const fresh = await browser.newContext(); try { return await fresh.newPage(...args); } catch (e) { last = e; await fresh.close().catch(() => {}); } } catch (e) { last = e; } await sleep(200 * 2 ** attempt); } throw last || new Error('no browser context accepted a new page'); }; "
     "if (!state.gmPage || state.gmPage.isClosed() || !state.gmProject) { const got = await live(); state.gmProject = got.home; state.gmPage = got.page; } "
     "if (!state.gmRun || state.gmRunFor !== state.gmProject) { const home = state.gmProject; state.gmRun = home; state.gmRunFor = home; state.gmRun.setDefaultTimeout(60000); state.gmRun.setDefaultNavigationTimeout(10000); "
@@ -169,7 +175,12 @@ json::Value BrowserScope::user_execute(const json::Value& args) {
         std::lock_guard lock(mutex_);
         used_ = true;
     }
-    return inner_.call(kExecute, forwarded);
+    json::Value reply = inner_.call(kExecute, forwarded);
+    for (int attempt = 1; attempt < kGoneAttempts && json::dump(reply).find(kGoneMarker) != std::string::npos; ++attempt) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(kGoneBackoffMs << attempt));
+        reply = inner_.call(kExecute, forwarded);
+    }
+    return reply;
 }
 
 json::Value BrowserScope::call_sibling(std::string_view sibling, std::string_view tool, const json::Value& args) {
