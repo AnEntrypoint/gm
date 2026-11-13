@@ -12,8 +12,9 @@ inline std::string body_restart_statement(const std::string& name) {
 inline std::string kill_statement(const std::string& name, const std::string& reason, std::uint64_t timeout_ms, std::uint64_t lifetime_ms) {
     if (reason == "timeout") {
         return "job " + name + " stopped: timeout after " + std::to_string(timeout_ms) + " ms. The limit is job_start's timeoutMs (default 300000); pass timeoutMs, up to the job lifetime of " +
-               std::to_string(lifetime_ms) + " ms, for a longer run";
+               std::to_string(lifetime_ms) + " ms, or extendOnProgress: true for a job that keeps writing output";
     }
+    if (reason == "idle") return "job " + name + " stopped: no output and no progress file change for " + std::to_string(timeout_ms) + " ms; extendOnProgress keeps a job running while it writes";
     if (reason == "lifetime") return "job " + name + " stopped: the job lifetime of " + std::to_string(lifetime_ms) + " ms ended before it finished";
     if (reason == "cancelled") return "job " + name + " stopped by job_stop";
     if (reason == "restart") return "job " + name + " killed: the gm worker restarted while it ran, and a restart kills the process group of every job that was running";

@@ -154,7 +154,7 @@ public:
     JobTable(std::filesystem::path workspace, LockedLog& log, std::uint64_t lifetime_ms);
     ~JobTable();
 
-    json::Value start(const std::string& name, const std::string& command, std::uint64_t timeout_ms, const std::optional<std::string>& progress = std::nullopt);
+    json::Value start(const std::string& name, const std::string& command, std::uint64_t timeout_ms, const std::optional<std::string>& progress = std::nullopt, bool extend_on_progress = false);
     json::Value status(const json::Value& args);
     json::Value stop(const json::Value& args);
     void close(std::string_view reason);
@@ -171,7 +171,7 @@ private:
     void flush_ended_locked();
     void flush_after_grace();
     void settle(Job& job, std::optional<int> exit_code, json::Value signal);
-    void watch(Job& job, std::uint64_t deadline_ms);
+    void watch(Job& job, std::uint64_t wait_ms);
     bool adopt_orphan(const std::string& name, const json::Value& status);
     bool adopt_job(const std::string& name, const json::Value& status);
     void poll_adopted(Job& job);

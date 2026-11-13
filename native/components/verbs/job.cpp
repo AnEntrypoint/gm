@@ -222,6 +222,7 @@ struct JobTable::Job {
     bool settled = false;
     bool kill_requested = false;
     bool lifetime_killed = false;
+    bool extend_on_progress = false;
     std::uint64_t timeout_ms = 0;
     std::optional<std::string> kill_reason;
 #if defined(_WIN32)
@@ -239,6 +240,17 @@ struct JobTable::Job {
 #endif
     }
 };
+
+static std::filesystem::file_time_type progress_time(const std::filesystem::file_time_type& started, const std::filesystem::path& out, const std::optional<std::filesystem::path>& progress) {
+    auto written_at = [&](const std::filesystem::path& file) {
+        std::error_code ec;
+        auto written = std::filesystem::last_write_time(file, ec);
+        return ec ? started : std::max(started, written);
+    };
+    auto last = written_at(out);
+    if (progress) last = std::max(last, written_at(*progress));
+    return last;
+}
 
 JobTable::JobTable(std::filesystem::path workspace, LockedLog& log, std::uint64_t lifetime_ms)
     : workspace_(std::move(workspace)), log_(log), lifetime_ms_(lifetime_ms) {}
@@ -295,7 +307,7 @@ std::optional<int> JobTable::read_exit_code(const std::string& name) const {
     return code;
 }
 
-json::Value JobTable::start(const std::string& name, const std::string& command, std::uint64_t timeout_ms, const std::optional<std::string>& progress) {
+json::Value JobTable::start(const std::string& name, const std::string& command, std::uint64_t timeout_ms, const std::optional<std::string>& progress, bool extend_on_progress) {
     std::unique_lock lock(mutex_);
     if (jobs_.contains(job_key(name))) return failure("job " + name + " already exists");
     std::error_code ec;
@@ -336,8 +348,9 @@ json::Value JobTable::start(const std::string& name, const std::string& command,
     job->mono_offset = mono_offset;
     job->start_file_time = std::filesystem::file_time_type::clock::now();
     if (progress) job->progress = std::filesystem::path(*progress).is_absolute() ? std::filesystem::path(*progress) : workspace_ / *progress;
-    std::uint64_t deadline_ms = std::min(timeout_ms, lifetime_ms_);
-    job->lifetime_killed = lifetime_ms_ < timeout_ms;
+    job->extend_on_progress = extend_on_progress;
+    const std::uint64_t deadline_ms = extend_on_progress ? timeout_ms : std::min(timeout_ms, lifetime_ms_);
+    job->lifetime_killed = !extend_on_progress && lifetime_ms_ < timeout_ms;
     job->timeout_ms = deadline_ms;
     job->status.set("job", name);
     job->status.set("command", command);
@@ -347,6 +360,7 @@ json::Value JobTable::start(const std::string& name, const std::string& command,
     job->status.set("startWall", start_wall);
     job->status.set("output", out.string());
     job->status.set("timeoutMs", deadline_ms);
+    if (extend_on_progress) job->status.set("extendOnProgress", true);
     write_status(jobs_dir(), name, job->status);
 
     Job& ref = *job;
@@ -384,13 +398,25 @@ json::Value JobTable::start(const std::string& name, const std::string& command,
     return reply;
 }
 
-void JobTable::watch(Job& job, std::uint64_t deadline_ms) {
+void JobTable::watch(Job& job, std::uint64_t wait_ms) {
     std::unique_lock lock(mutex_);
-    if (changed_.wait_for(lock, std::chrono::milliseconds(deadline_ms), [&] { return job.settled; })) return;
-    job.kill_requested = true;
-    job.kill_reason = job.lifetime_killed ? "lifetime" : "timeout";
-    lock.unlock();
-    job.kill_tree();
+    while (!changed_.wait_for(lock, std::chrono::milliseconds(wait_ms), [&] { return job.settled; })) {
+        if (job.extend_on_progress) {
+            const auto since = std::chrono::duration_cast<std::chrono::milliseconds>(std::filesystem::file_time_type::clock::now() - progress_time(job.start_file_time, job.out, job.progress));
+            const auto idle_ms = static_cast<std::uint64_t>(std::max<std::int64_t>(0, since.count()));
+            if (idle_ms < job.timeout_ms) {
+                wait_ms = job.timeout_ms - idle_ms;
+                continue;
+            }
+            job.kill_reason = "idle";
+        } else {
+            job.kill_reason = job.lifetime_killed ? "lifetime" : "timeout";
+        }
+        job.kill_requested = true;
+        lock.unlock();
+        job.kill_tree();
+        return;
+    }
 }
 
 void JobTable::settle(Job& job, std::optional<int> exit_code, json::Value signal) {
@@ -401,7 +427,7 @@ void JobTable::settle(Job& job, std::optional<int> exit_code, json::Value signal
     std::optional<std::string> reason = exited ? std::nullopt : job.kill_reason;
     std::optional<std::string> statement;
     if (reason) statement = kill_statement(job.name, *reason, job.timeout_ms, lifetime_ms_);
-    const bool timed_out = reason && *reason == "timeout";
+    const bool timed_out = reason && (*reason == "timeout" || *reason == "idle");
     json::Value exit_value = exit_code ? json::Value(*exit_code) : json::Value(nullptr);
 
     json::Value ended = job.status;
@@ -479,14 +505,7 @@ json::Value JobTable::snapshot(std::uint64_t stuck_ms) {
     for (auto& [key, job] : jobs_) {
         if (job->dir != jobs_dir()) continue;
         const std::string& name = job->name;
-        std::error_code ec;
-        auto written_at = [&](const std::filesystem::path& file) {
-            std::error_code file_ec;
-            auto written = std::filesystem::last_write_time(file, file_ec);
-            return file_ec ? job->start_file_time : std::max(job->start_file_time, written);
-        };
-        auto progress = written_at(job->out);
-        if (job->progress) progress = std::max(progress, written_at(*job->progress));
+        auto progress = progress_time(job->start_file_time, job->out, job->progress);
         std::int64_t since_progress_ms = whole_ms(now - progress);
         if (!job->settled) {
             bool over = since_progress_ms > static_cast<std::int64_t>(stuck_ms);
@@ -711,7 +730,9 @@ bool JobTable::adopt_job(const std::string& name, const json::Value& status) {
     job->start_file_time = std::filesystem::file_time_type::clock::now();
     const auto timeout_ms = static_cast<std::uint64_t>(timeout->as_number());
     job->timeout_ms = timeout_ms;
-    job->lifetime_killed = timeout_ms >= lifetime_ms_;
+    const json::Value* extend = status.find("extendOnProgress");
+    job->extend_on_progress = extend != nullptr && extend->is_bool() && extend->as_bool();
+    job->lifetime_killed = !job->extend_on_progress && timeout_ms >= lifetime_ms_;
     double elapsed_ms = 0;
     if (const json::Value* wall = status.find("startWall"); wall != nullptr && wall->is_number()) elapsed_ms = wall_ms_now() - wall->as_number();
     const double left = static_cast<double>(timeout_ms) - elapsed_ms;
@@ -719,7 +740,8 @@ bool JobTable::adopt_job(const std::string& name, const json::Value& status) {
     Job& ref = *job;
     jobs_.emplace(job_key(name), std::move(job));
     ref.waiter = std::thread([this, &ref] { poll_adopted(ref); });
-    ref.timer = std::thread([this, &ref, left_ms] { watch(ref, left_ms); });
+    const std::uint64_t first_wait_ms = ref.extend_on_progress ? timeout_ms : left_ms;
+    ref.timer = std::thread([this, &ref, first_wait_ms] { watch(ref, first_wait_ms); });
     json::Value event;
     event.set("job", name);
     event.set("state", "running");
