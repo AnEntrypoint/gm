@@ -176,9 +176,10 @@ bool under(const std::string& path, const fs::path& root) {
 }
 
 std::string environment_of(long long pid, const std::string& key) {
+    const std::string prefix = key + "=";
+#if defined(__linux__)
     std::ifstream file("/proc/" + std::to_string(pid) + "/environ", std::ios::binary);
     const std::string bytes((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-    const std::string prefix = key + "=";
     std::size_t at = 0;
     while (at < bytes.size()) {
         std::size_t end = bytes.find('\0', at);
@@ -187,6 +188,14 @@ std::string environment_of(long long pid, const std::string& key) {
         if (entry.rfind(prefix, 0) == 0) return entry.substr(prefix.size());
         at = end + 1;
     }
+#else
+    const auto listed = proc::run({"ps", "eww", "-p", std::to_string(pid)});
+    std::istringstream words(listed.out);
+    std::string word;
+    while (words >> word) {
+        if (word.rfind(prefix, 0) == 0) return word.substr(prefix.size());
+    }
+#endif
     return std::string();
 }
 
