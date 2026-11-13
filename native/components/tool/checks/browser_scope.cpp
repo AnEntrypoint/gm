@@ -1,8 +1,10 @@
 #include "gm/tool.hpp"
 #if !defined(_WIN32)
 
+#include <algorithm>
 #include <chrono>
 #include <filesystem>
+#include <memory>
 #include <regex>
 #include <system_error>
 #include <thread>
@@ -11,6 +13,9 @@ namespace gm::tool {
 namespace {
 
 namespace fs = std::filesystem;
+
+constexpr int kSettleMs = 3000;
+constexpr int kPollMs = 50;
 
 const std::string kMarker = "gm-browser-scope-marker";
 const std::string kPeerMarker = "gm-browser-scope-run-b";
@@ -93,6 +98,39 @@ void connect(Session& session) {
     session.rpc("resources/read", json::Object{{"uri", "skill://gm/SKILL.md"}});
 }
 
+struct Owned {
+    long long pid = 0;
+    long long start = 0;
+};
+
+std::vector<Owned> owned_of(const std::vector<long long>& roots) {
+    std::vector<Owned> owned;
+    for (const long long pid : process_tree(roots)) {
+        const long long start = proc::start_time_of(pid);
+        if (start > 0) owned.push_back(Owned{pid, start});
+    }
+    return owned;
+}
+
+bool still_ours(const Owned& owned) { return owned.start > 0 && proc::start_time_of(owned.pid) == owned.start; }
+
+std::vector<long long> stop_owned(const std::vector<Owned>& owned) {
+    std::vector<long long> stopping;
+    for (const Owned& each : owned) {
+        if (still_ours(each)) stopping.push_back(each.pid);
+    }
+    kill_processes(stopping);
+    std::vector<long long> survivors = alive_of(stopping);
+    const auto began = std::chrono::steady_clock::now();
+    while (!survivors.empty() && std::chrono::steady_clock::now() - began < std::chrono::milliseconds(kSettleMs)) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(kPollMs));
+        survivors = alive_of(stopping);
+    }
+    return survivors;
+}
+
+std::vector<Owned> serve_tree(const Session& session) { return owned_of(session.descendants()); }
+
 json::Value install_sandbox(const fs::path& binary, const fs::path& home) {
     const fs::path host = binary.parent_path();
     const fs::path build = host.parent_path().parent_path().parent_path();
@@ -117,7 +155,7 @@ CheckResult check_browser_scope(const std::string& binary) {
     auto expect = [&](bool condition, const std::string& text) {
         if (!condition) result.failures.push_back(text);
     };
-    std::vector<long long> tree;
+    std::vector<Owned> tree;
     std::string browser_phase = "skipped: playwriter_execute is not served on this engine";
     const json::Value installed_reply = install_sandbox(binary, home);
     expect(flag(installed_reply, "ok"), "the clean install failed: " + json::dump(part(installed_reply, "error")));
@@ -240,12 +278,12 @@ CheckResult check_browser_scope(const std::string& binary) {
                         }
                     }
 
-                    const json::Value cleanup = run_code(session, "return { undo: await gm.playwriter_execute({ code: " + json::quote(kUndoCode) + " }), sides: await gm.playwriter_execute({ code: " + json::quote(count_code(kSideMarker, false)) + " }), mine: await gm.playwriter_execute({ code: " + json::quote(count_code(kMarker, false)) + " }), peer: await gm.playwriter_execute({ code: " + json::quote(count_code(kPeerMarker, false)) + " }), close: await gm.browser_close_machine({ confirm: true, force: true }) };");
+                    const json::Value cleanup = run_code(session, "return { undo: await gm.playwriter_execute({ code: " + json::quote(kUndoCode) + " }), sides: await gm.playwriter_execute({ code: " + json::quote(count_code(kSideMarker, true)) + " }), mine: await gm.playwriter_execute({ code: " + json::quote(count_code(kMarker, true)) + " }), peer: await gm.playwriter_execute({ code: " + json::quote(count_code(kPeerMarker, true)) + " }), close: await gm.browser_close_machine({ confirm: true, force: true }) };");
                     if (flag(cleanup, "ok")) {
                         const json::Value both = output_of(cleanup);
                         expect(flag(part(both, "undo"), "ok"), "the side pages were not undone");
-                        expect(returned(part(both, "sides")) == 0, "the side pages are still open after undo: " + json::dump(both).substr(0, 500));
-                        expect(returned(part(both, "mine")) == 0 && returned(part(both, "peer")) == 0, "a run's page is still open after the browser was closed");
+                        expect(returned(part(both, "sides")) == 0, "the side pages are still open after undo: count " + std::to_string(returned(part(both, "sides"))) + " " + json::dump(part(both, "sides")).substr(0, 300));
+                        expect(returned(part(both, "mine")) == 0 && returned(part(both, "peer")) == 0, "a run's page is still open at cleanup, before the browser is closed: mine " + std::to_string(returned(part(both, "mine"))) + ", peer " + std::to_string(returned(part(both, "peer"))));
                         expect(flag(part(both, "close"), "ok"), "browser_close_machine with confirm did not close the scratch browser");
                     } else {
                         result.failures.push_back("browser phase: the cleanup did not run: " + json::dump(part(cleanup, "error")));
@@ -254,15 +292,11 @@ CheckResult check_browser_scope(const std::string& binary) {
                     if (result.failures.size() == before_phase) browser_phase = "ran: two runs share one browser; each run's browser_tabs listed only its own page, each finish closed exactly that page, and no side page or other run's page was closed by a finish";
                 }
             }
-            std::vector<long long> roots = session.descendants();
-            for (const long long pid : processes_mentioning(home.string())) roots.push_back(pid);
-            tree = process_tree(roots);
+            tree = serve_tree(session);
         }
         session.stop();
     }
-    kill_processes(tree);
-    std::this_thread::sleep_for(std::chrono::milliseconds(200));
-    const auto survivors = alive_of(tree);
+    const std::vector<long long> survivors = stop_owned(tree);
     if (!survivors.empty()) {
         std::string ids;
         for (const long long pid : survivors) ids += (ids.empty() ? "" : " ") + std::to_string(pid);
@@ -278,12 +312,78 @@ CheckResult check_browser_scope(const std::string& binary) {
     return result;
 }
 
+CheckResult check_browser_scope_identity(const std::string& binary) {
+    CheckResult result;
+#if defined(__linux__)
+    const auto started = std::chrono::steady_clock::now();
+    const auto stamp = started.time_since_epoch().count();
+    const fs::path sandbox = fs::temp_directory_path() / ("gm-browser-scope-identity-" + std::to_string(stamp));
+    const fs::path home = sandbox / "home";
+    fs::create_directories(home);
+    const fs::path workspace = sandbox / "ws";
+    fs::create_directories(workspace);
+    const auto spawn = [&sandbox](const std::vector<std::string>& argv) -> std::shared_ptr<proc::Child> {
+        proc::SpawnOptions options(sandbox);
+        options.own_group = true;
+        auto spawned = proc::Child::spawn(argv, options);
+        return spawned ? *spawned : nullptr;
+    };
+    const auto reused = spawn({"sleep", "300"});
+    const auto foreign = spawn({"sh", "-c", "sleep 300; true", home.string()});
+    Session session(binary, workspace, home, 120000, true);
+    if (!reused || !foreign) {
+        result.failures.push_back("could not start the processes the witness stops");
+    } else if (!session.started()) {
+        result.failures.push_back("gm serve did not start from " + binary);
+    } else {
+        connect(session);
+        const long long reused_pid = reused->pid();
+        const long long foreign_pid = foreign->pid();
+        const std::vector<Owned> served = serve_tree(session);
+        if (served.empty()) result.failures.push_back("the serve has no process to record, so the witness proves nothing");
+        std::vector<long long> served_pids;
+        for (const Owned& each : served) served_pids.push_back(each.pid);
+        std::vector<Owned> recorded = served;
+        recorded.push_back(Owned{reused_pid, proc::start_time_of(reused_pid) + 1});
+        const std::vector<long long> mentioned = processes_mentioning(home.string());
+        if (std::find(mentioned.begin(), mentioned.end(), foreign_pid) == mentioned.end()) {
+            result.failures.push_back("the foreign process does not mention the home path, so the witness proves nothing");
+        }
+        session.stop();
+        stop_owned(recorded);
+        if (!alive_of(served_pids).empty()) result.failures.push_back("a process the serve started survived the stop");
+        const std::vector<long long> kept = alive_of({reused_pid, foreign_pid});
+        const auto is_kept = [&kept](long long pid) { return std::find(kept.begin(), kept.end(), pid) != kept.end(); };
+        if (!is_kept(reused_pid)) result.failures.push_back("a pid whose recorded start time differs was stopped: pid " + std::to_string(reused_pid));
+        if (!is_kept(foreign_pid)) result.failures.push_back("a foreign process that mentions the home path was stopped: pid " + std::to_string(foreign_pid));
+    }
+    for (const std::shared_ptr<proc::Child>& child : {reused, foreign}) {
+        if (child) child->kill();
+    }
+    std::error_code ignored;
+    fs::remove_all(sandbox, ignored);
+    const double wall = std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
+    if (result.failures.empty()) {
+        result.summary = "kill identity: the serve's processes were stopped, a foreign process whose command line mentions the home path survived, and a pid whose recorded start time differs survived (wall " + std::to_string(wall) + " s)";
+    }
+#else
+    result.summary = "not measured: the identity witness runs under a Linux process tree";
+#endif
+    return result;
+}
+
 }
 #else
 
 namespace gm::tool {
 
 CheckResult check_browser_scope(const std::string&) {
+    CheckResult result;
+    result.summary = "skipped: POSIX-only check, runs on Linux and macOS";
+    return result;
+}
+
+CheckResult check_browser_scope_identity(const std::string&) {
     CheckResult result;
     result.summary = "skipped: POSIX-only check, runs on Linux and macOS";
     return result;

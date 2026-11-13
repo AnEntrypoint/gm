@@ -35,6 +35,7 @@ CheckResult check_read_after_write(const std::string& binary);
 CheckResult check_spawn_sites(const std::string& binary);
 CheckResult check_lazy_browser(const std::string& binary);
 CheckResult check_browser_scope(const std::string& binary);
+CheckResult check_browser_scope_identity(const std::string& binary);
 CheckResult check_browser_first_open(const std::string& binary);
 CheckResult check_rows(const std::string& binary);
 CheckResult check_fetch(const std::string& binary);
