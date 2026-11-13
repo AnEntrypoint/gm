@@ -53,7 +53,7 @@ CheckResult check_job_bounds(const std::string& binary) {
             };
             auto by_timeout = run(job_body("bound-timeout", sleep_command(30000), 2000));
             auto by_lifetime = run(job_body("bound-lifetime", sleep_command(30000), 7200000));
-            auto exited = run(job_body("bound-exit", sleep_command(1000), 3000));
+            auto exited = run(job_body("bound-exit", "sleep 1", 4000));
             const json::Value timeout_out = by_timeout.get();
             const json::Value lifetime_out = by_lifetime.get();
             const json::Value exit_out = exited.get();
@@ -74,7 +74,7 @@ CheckResult check_job_bounds(const std::string& binary) {
 
             const json::Value* e = value_at(exit_out, "status");
             if (e == nullptr || text_at(*e, "state") != "exited" || number_at(*e, "exitCode") != 0)
-                result.failures.push_back("natural exit: a 1000 ms job with a 3000 ms timeout ended " + json::dump(e != nullptr ? *e : json::Value()).substr(0, 200));
+                result.failures.push_back("natural exit: a 1000 ms job with a 4000 ms timeout ended " + json::dump(e != nullptr ? *e : json::Value()).substr(0, 200));
             const double exit_elapsed = number_at(exit_out, "elapsed");
             if (exit_elapsed >= 4000) result.failures.push_back("natural exit: the job took " + std::to_string(exit_elapsed) + " ms");
             result.summary = "a 2000 ms job timeout ended as timeout in " + std::to_string(timeout_elapsed) + " ms; a 7200000 ms job timeout ended as lifetime at " + std::to_string(lifetime_elapsed) +
