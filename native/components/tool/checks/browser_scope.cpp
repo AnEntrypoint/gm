@@ -220,7 +220,7 @@ CheckResult check_browser_scope(const std::string& binary) {
                             const json::Value peer_got = output_of(peer_opened);
                             const json::Value peer_exec = part(peer_got, "exec");
                             const json::Value peer_tabs = part(peer_got, "tabs");
-                            expect(flag(peer_exec, "ok") && text_has(peer_exec, "output", kPeerMarker), "the second run did not open its page");
+                            expect(flag(peer_exec, "ok") && text_has(peer_exec, "output", kPeerMarker), "the second run did not open its page: " + json::dump(peer_exec).substr(0, 300));
                             expect(text_equals(peer_tabs, "state", "changed") && text_has(peer_tabs, "text", "tabs: 1 in this run"), "the second run's browser_tabs did not list exactly its own page");
                             expect(!text_has(peer_tabs, "text", kMarker), "the second run's browser_tabs read the first run's page");
                         }
