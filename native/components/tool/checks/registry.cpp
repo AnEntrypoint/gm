@@ -57,6 +57,7 @@ const std::vector<Registered>& checks() {
         {"check-rows", check_rows},
         {"check-row-peer", check_row_peer},
         {"check-fetch", check_fetch},
+        {"check-fetch-transport", check_fetch_transport},
         {"check-wiki", check_wiki},
         {"check-git", check_git},
         {"check-review", check_review},

@@ -29,12 +29,13 @@ constexpr std::uint64_t kMaxTimeoutMs = 60000;
 constexpr std::uint64_t kMaxBodyBytes = 16777216;
 constexpr std::size_t kMaxMatchChars = 4096;
 constexpr int kRetries = 3;
+constexpr int kMaxRedirects = 30;
 constexpr double kBaseMs = 1000;
 constexpr double kCapMs = 16000;
 constexpr double kJitter = 0.2;
 const std::string kMark = "\n--gm-fetch-meta--";
 
-const std::map<int, std::string> kCurlCodes{{6, "ENOTFOUND"}, {7, "ECONNREFUSED"}, {28, "ETIMEDOUT"}, {35, "ECONNRESET"}, {52, "ECONNRESET"}, {56, "ECONNRESET"}};
+const std::map<int, std::string> kCurlCodes{{6, "ENOTFOUND"}, {7, "ECONNREFUSED"}, {28, "ETIMEDOUT"}, {35, "ECONNRESET"}, {47, "ETOOMANYREDIRECTS"}, {52, "ECONNRESET"}, {56, "ECONNRESET"}, {63, "EFBIG"}};
 const std::vector<std::string> kTransient{"ECONNRESET", "ECONNREFUSED", "ECONNABORTED", "ETIMEDOUT", "EAI_AGAIN"};
 
 std::size_t utf8_length(std::string_view text) { return text.size(); }
@@ -334,7 +335,7 @@ json::Value get_http(const fs::path& workspace, const fs::path& run_dir, const s
     if (left < 1) return timed_out(timeout_ms);
     char max_time[32];
     std::snprintf(max_time, sizeof(max_time), "%.3f", static_cast<double>(left) / 1000.0);
-    const auto outcome = proc::run({"curl", "-sS", "-L", "-i", "--proto", "=http,https", "--proto-redir", "=http,https", "--max-time", max_time, "--max-filesize", std::to_string(kMaxBodyBytes), "-A", "gm-fetch/1", "-H", "accept: text/html,text/plain;q=0.9,*/*;q=0.5", "-w", kMark + "%{url_effective}\n%{num_redirects}", "--url", url}, workspace, {}, static_cast<std::uint64_t>(left) + 5000);
+    const auto outcome = proc::run({"curl", "-sS", "-L", "--max-redirs", std::to_string(kMaxRedirects), "-i", "--proto", "=http,https", "--proto-redir", "=http,https", "--max-time", max_time, "--max-filesize", std::to_string(kMaxBodyBytes), "-A", "gm-fetch/1", "-H", "accept: text/html,text/plain;q=0.9,*/*;q=0.5", "-w", kMark + "%{url_effective}\n%{num_redirects}", "--url", url}, workspace, {}, static_cast<std::uint64_t>(left) + 5000);
     if (!outcome.started) return error_of("request failed: could not start curl");
     if (outcome.timed_out || outcome.exit_code == 28) return timed_out(timeout_ms);
     if (outcome.exit_code == 1 || outcome.exit_code == 3) return error_of("request failed: fetch failed");
@@ -423,10 +424,12 @@ json::Value fetch_call(const json::Value& args, const fs::path& workspace, Locke
             return error_of(std::string("match is not a valid regular expression: ") + error.what());
         }
     }
-    std::string scheme = url.substr(0, 5);
+    std::string scheme = url.substr(0, 8);
     std::transform(scheme.begin(), scheme.end(), scheme.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
-    const bool data = scheme == "data:";
+    const bool data = scheme.rfind("data:", 0) == 0;
+    const bool web = scheme.rfind("http:", 0) == 0 || scheme.rfind("https:", 0) == 0;
     if (!data && !std::regex_match(url, std::regex(R"(^[a-zA-Z][a-zA-Z0-9+.-]*:\/\/?\S+$)"))) return error_of("url is not a valid URL");
+    if (!data && !web) return error_of("url must be an http, https or data URL");
     const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(timeout_ms);
     int attempt = 0;
     for (;;) {
