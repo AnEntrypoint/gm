@@ -1,3 +1,5 @@
+#include <chrono>
+#include <cstdlib>
 #include <iostream>
 #include <mutex>
 
@@ -90,12 +92,20 @@ int fail(std::string_view message) {
     return 1;
 }
 
+const auto kTraceStart = std::chrono::steady_clock::now();
+
+void trace_phase(std::string_view phase) {
+    if (std::getenv("GMNEW_TRACE_STARTUP") == nullptr) return;
+    const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - kTraceStart).count();
+    std::cerr << "gm trace: " << phase << " at " << ms << " ms\n";
+}
 
 }
 
 int run_worker(const HostArgs& args) {
     install_asan_probe();
     const auto workspace = workspace_of(args);
+    trace_phase("worker start");
     if (!std::filesystem::is_directory(workspace)) return fail("workspace is not a directory: " + workspace.string());
     auto max_inflight = positive_int_flag(args, "--max-inflight", mcp::ServerOptions{}.max_inflight);
     if (!max_inflight) return fail(max_inflight.error());
@@ -149,10 +159,13 @@ int run_worker(const HostArgs& args) {
     mcp_options.tool_cache = defaults_dir_of() / "mcp-tools";
     for (const VerbInfo& verb : (*native)->list()) mcp_options.reserved.insert(verb.name);
     for (const VerbInfo& verb : leaves.list()) mcp_options.reserved.insert(verb.name);
+    trace_phase("leaf verbs listed");
     mcp_options.emit = [&boot_events](std::string_view kind, json::Value fields) { boot_events.emit(kind, std::move(fields)); };
     mcpclient::McpVerbs mcp_verbs(std::move(mcp_options));
+    trace_phase("MCP client constructed");
     auto all = ComposedVerbs::compose({native->get(), &mcp_verbs, &leaves});
     if (!all) return fail(all.error());
+    trace_phase("verbs composed");
     BrowserScope browser(**all, *run_dir / "browser-pages.txt");
     GatedVerbs served(mcp_verbs, boot_events, browser);
 
@@ -201,6 +214,7 @@ int run_worker(const HostArgs& args) {
         boot_events.release();
         return gm::run_body(verbs, body, root, format);
     };
+    trace_phase("serving");
     return mcp::serve_stream(std::cin, std::cout, served, std::move(options));
 }
 

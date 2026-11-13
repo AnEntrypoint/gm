@@ -87,7 +87,7 @@ gm is one long-horizon worker: an MCP server that runs a task as one append-only
 
 ## Owner decisions (2026-11-06, through orchestrate)
 
-- The five decisions are in DESIGN.md, "Owner decisions on the five open questions (2026-11-06)". Decision 3 (protocol 2026-07-28 behind a capability flag) is not implemented: the native server's server/discover lists only the 2025 versions, although the SDK lists 2026-07-28. The 2026-11-10 decision to follow native applies the 2026-07-28 result fields: ttlMs and cacheScope on list, discover and read results.
+- The five decisions are in DESIGN.md, "Owner decisions on the five open questions (2026-11-06)". Decision 3 (protocol 2026-07-28 behind a capability flag) is not implemented: the native server's server/discover lists only the 2025 versions, although the SDK lists 2026-07-28. The 2026-11-10 decision to follow native applies the 2026-07-28 result fields: ttlMs and cacheScope on list, discover and read results. resources/list, and resources/read of a skill file or a run log, are volatile (ttlMs 0); server/discover, tools/list, prompts/list and resources/templates/list carry ttlMs 3600000 and cacheScope "public" (owner decision 2026-11-11).
 
 ## Ship and commits
 
