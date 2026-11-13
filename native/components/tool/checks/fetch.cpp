@@ -15,6 +15,9 @@ const out = {};
 out.plain = await gm.fetch({ url: 'data:text/plain,hello%20world' });
 out.cut = await gm.fetch({ url: 'data:text/plain,abcdefghij', maxBytes: 4 });
 out.match = await gm.fetch({ url: 'data:text/plain,a%0Ab%0Aa2', match: '^a' });
+const large = await gm.fetch({ url: 'data:text/html,<script>' + 'a'.repeat(120000) + '</script><p>visible</p>' });
+const long = await gm.fetch({ url: 'data:text/html,<!--' + 'b'.repeat(120000) + '--><p>after</p>' });
+out.largehtml = large.ok && String(large.output).includes('visible') && long.ok && String(long.output).includes('after') ? 'kept' : 'failed';
 out.base64 = await gm.fetch({ url: 'data:text/plain;base64,aGk=' });
 out.invalid = await gm.fetch({ url: 'not a url' });
 out.timeout = await gm.fetch({ url: 'data:text/plain,x', timeoutMs: 0 });
@@ -99,6 +102,7 @@ CheckResult check_fetch(const std::string& binary) {
     expect(contains(text, "200 11 bytes data:text/plain,hello%20world\\nhello world"), "a data URL was not returned as its text body");
     expect(contains(text, "body truncated to 4 bytes of 10 bytes"), "maxBytes did not cut the body with its marker");
     expect(contains(text, "a\\na2"), "match did not keep only the lines that match, in order");
+    expect(contains(text, "\"largehtml\":\"kept\""), "large text/html data URLs did not convert their script block and long comment without crashing the worker");
     expect(contains(text, "base64 data URLs are not supported"), "a base64 data URL was not refused");
     expect(contains(text, "url is not a valid URL"), "an invalid url was not refused");
     expect(contains(text, "timeoutMs must be an integer from 1 to 60000"), "timeoutMs 0 was not refused");
@@ -106,7 +110,7 @@ CheckResult check_fetch(const std::string& binary) {
     expect(contains(text, "ECONNREFUSED"), "an unreachable host did not report ECONNREFUSED");
     std::error_code ignored;
     std::filesystem::remove_all(sandbox, ignored);
-    result.summary = "data URLs return their text, cut and match, refuse base64 and bad input, and an unreachable host retries 3 times then reports exhaustion";
+    result.summary = "data URLs return their text, cut and match, large text/html bodies convert without crashing the worker, base64 and bad input are refused, and an unreachable host retries 3 times then reports exhaustion";
     return result;
 }
 

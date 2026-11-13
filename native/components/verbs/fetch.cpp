@@ -110,34 +110,97 @@ std::string decode_entity(const std::string& code, const std::string& match) {
     return found == named.end() ? match : found->second;
 }
 
-std::string html_to_text(const std::string& html) {
-    static const std::regex comment(R"(<!--[\s\S]*?-->)");
-    static const std::regex hidden(R"(<(script|style|noscript)\b[^>]*>[\s\S]*?<\/\1\s*>)", std::regex::icase);
-    static const std::regex block(R"(<\/?(p|div|br|li|tr|h[1-6]|section|article|header|footer|table|ul|ol|pre|blockquote)\b[^>]*>)", std::regex::icase);
-    static const std::regex tag(R"(<[^>]+>)");
-    static const std::regex entity(R"(&(#x[0-9a-f]+|#\d+|[a-z]+);)", std::regex::icase);
-    static const std::regex spaces(R"(\s+)");
-    std::string text = std::regex_replace(html, comment, " ");
-    text = std::regex_replace(text, hidden, " ");
-    text = std::regex_replace(text, block, "\n");
-    text = std::regex_replace(text, tag, " ");
-    std::string decoded;
-    std::sregex_iterator at(text.begin(), text.end(), entity), end;
-    std::size_t last = 0;
-    for (; at != end; ++at) {
-        decoded += text.substr(last, at->position() - last);
-        decoded += decode_entity((*at)[1].str(), at->str());
-        last = at->position() + at->length();
+std::string lower_copy(std::string_view text) {
+    std::string out(text);
+    std::transform(out.begin(), out.end(), out.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    return out;
+}
+
+bool word_byte(char c) { return std::isalnum(static_cast<unsigned char>(c)) != 0 || c == '_'; }
+
+bool entity_code(const std::string& code) {
+    if (code.empty()) return false;
+    if (code[0] != '#') {
+        for (const char c : code) if (!std::isalpha(static_cast<unsigned char>(c))) return false;
+        return true;
     }
-    decoded += text.substr(last);
+    const bool hex = code.size() > 1 && (code[1] == 'x' || code[1] == 'X');
+    const std::size_t start = hex ? 2 : 1;
+    if (start == code.size()) return false;
+    for (std::size_t i = start; i < code.size(); ++i) {
+        const unsigned char c = static_cast<unsigned char>(code[i]);
+        if (!(hex ? std::isxdigit(c) : std::isdigit(c))) return false;
+    }
+    return true;
+}
+
+std::string html_to_text(const std::string& html) {
+    static const std::string kBlocks = " p div br li tr h1 h2 h3 h4 h5 h6 section article header footer table ul ol pre blockquote ";
+    const std::string lower = lower_copy(html);
+    std::string decoded;
+    decoded.reserve(html.size());
+    std::size_t at = 0;
+    while (at < html.size()) {
+        if (lower.compare(at, 4, "<!--") == 0) {
+            const auto end = lower.find("-->", at + 4);
+            decoded += ' ';
+            at = end == std::string::npos ? html.size() : end + 3;
+            continue;
+        }
+        if (lower[at] == '<' && at + 1 < html.size()) {
+            std::size_t name_at = at + 1;
+            const bool closing = lower[name_at] == '/';
+            if (closing) ++name_at;
+            std::size_t name_end = name_at;
+            while (name_end < html.size() && word_byte(lower[name_end])) ++name_end;
+            const std::string name = lower.substr(name_at, name_end - name_at);
+            const bool boundary = name_end == html.size() || !word_byte(lower[name_end]);
+            const auto gt = lower.find('>', name_end);
+            if (gt == std::string::npos) { decoded += html[at++]; continue; }
+            if (!closing && boundary && (name == "script" || name == "style" || name == "noscript")) {
+                const std::string needle = "</" + name;
+                std::size_t seek = gt + 1;
+                std::size_t close = std::string::npos;
+                while ((seek = lower.find(needle, seek)) != std::string::npos) {
+                    std::size_t p = seek + needle.size();
+                    while (p < html.size() && std::isspace(static_cast<unsigned char>(lower[p]))) ++p;
+                    if (p < html.size() && lower[p] == '>') { close = p + 1; break; }
+                    ++seek;
+                }
+                decoded += ' ';
+                at = close == std::string::npos ? gt + 1 : close;
+                continue;
+            }
+            decoded += boundary && kBlocks.find(" " + name + " ") != std::string::npos ? '\n' : ' ';
+            at = gt + 1;
+            continue;
+        }
+        if (html[at] == '&') {
+            const auto semi = html.find(';', at + 1);
+            if (semi != std::string::npos && semi - at <= 32) {
+                const std::string code = html.substr(at + 1, semi - at - 1);
+                if (entity_code(code)) {
+                    decoded += decode_entity(code, html.substr(at, semi - at + 1));
+                    at = semi + 1;
+                    continue;
+                }
+            }
+        }
+        decoded += html[at++];
+    }
     std::string out;
     std::istringstream lines(decoded);
     for (std::string line; std::getline(lines, line);) {
-        line = std::regex_replace(line, spaces, " ");
-        const auto first = line.find_first_not_of(' ');
-        if (first == std::string::npos) continue;
-        if (!out.empty()) out += "\n";
-        out += line.substr(first, line.find_last_not_of(' ') - first + 1);
+        std::string spaced;
+        bool pending = false;
+        for (const char c : line) {
+            if (std::isspace(static_cast<unsigned char>(c))) { if (!spaced.empty()) pending = true; continue; }
+            if (pending) { spaced += ' '; pending = false; }
+            spaced += c;
+        }
+        if (spaced.empty()) continue;
+        if (!out.empty()) out += '\n';
+        out += spaced;
     }
     return out;
 }
@@ -314,7 +377,8 @@ json::Value get_data_url(const std::string& url, const json::Value& args, std::u
     const std::string body = percent_decode(url.substr(comma + 1), valid);
     if (!valid) return error_of("url is not a valid URL");
     const std::string type = meta.substr(0, meta.find(';')).empty() ? "text/plain" : meta.substr(0, meta.find(';'));
-    const std::string text = type.rfind("text/", 0) == 0 ? body : "(binary content not shown: " + type + ")";
+    const bool html = type.rfind("text/html", 0) == 0 || type.rfind("application/xhtml", 0) == 0;
+    const std::string text = html ? html_to_text(body) : type.rfind("text/", 0) == 0 ? body : "(binary content not shown: " + type + ")";
     const auto shown = shown_before(text, args, deadline);
     if (!shown) return timed_out(timeout_ms);
     const std::string full = "200 " + std::to_string(utf8_length(body)) + " bytes " + url + "\n" + *shown;
