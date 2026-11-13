@@ -280,7 +280,7 @@ CheckResult check_browser_first_open(const std::string& binary) {
             const bool command_read = !cmdline.empty();
             const bool wrapper_called = calls_text.find("wrapper") != std::string::npos;
             const bool swiftshader = cmdline.find("--use-angle=swiftshader") != std::string::npos;
-            summary << "; outside browser pid " << outside_pid << " became project browser pid " << browser_pid << ", wrapper called " << (wrapper_called ? "true" : "false") << ", SwiftShader flags " << (swiftshader ? "true" : "false");
+            summary << "; outside browser pid " << outside_pid << " became project browser pid " << browser_pid << ", wrapper called " << (wrapper_called ? "true" : "false") << ", command line read " << (command_read ? "true" : "false") << " (" << command.size() << " elements, " << cmdline.size() << " chars), SwiftShader flags " << (swiftshader ? "true" : "false");
             if (!wrapper_called) failures.push_back("PLAYWRITER_BROWSER_PATH was not used: the browser started outside the launcher was adopted");
             if (browser_pid <= 0 || browser_pid == outside_pid) failures.push_back("the browser started outside the launcher stayed the project browser");
             if (!swiftshader) failures.push_back("the project browser was not started with the configured wrapper flags");
