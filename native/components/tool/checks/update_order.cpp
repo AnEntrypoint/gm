@@ -57,6 +57,8 @@ std::optional<std::int64_t> whole_number(const std::string& text) {
 }
 
 std::optional<std::int64_t> commit_time_of(const std::string& commit) {
+    const auto kind = git_output(fs::current_path(), {"cat-file", "-t", commit});
+    if (!kind || first_word(*kind) != "commit") return std::nullopt;
     const auto logged = git_output(fs::current_path(), {"log", "-1", "--format=%ct", commit});
     return logged ? whole_number(first_word(*logged)) : std::nullopt;
 }
@@ -123,7 +125,9 @@ CheckResult check_update_order(const std::string& binary) {
     std::optional<std::int64_t> built = fields.size() >= 3 ? whole_number(fields.back()) : std::nullopt;
     if (!built && !commit.empty()) built = commit_time_of(commit);
     if (!built) {
-        result.failures.push_back("the build prints no commit time, and git has none for its commit '" + commit + "': " + version_line.substr(0, 200));
+        const std::string cause = commit.empty() ? std::string("the build prints neither a commit nor a commit time")
+                                                 : "the build prints '" + commit + "', which git does not know as a commit in this checkout (a tree digest prints this way), and no commit time";
+        result.failures.push_back("the update order cannot be checked: " + cause + ": " + version_line.substr(0, 200));
         return result;
     }
     const std::string archive_name = std::string("gmnew-") + kPlatformTarget + ".tar.gz";
