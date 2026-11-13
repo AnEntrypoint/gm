@@ -153,7 +153,7 @@ int run_worker(const HostArgs& args) {
     mcpclient::McpVerbs mcp_verbs(std::move(mcp_options));
     auto all = ComposedVerbs::compose({native->get(), &mcp_verbs, &leaves});
     if (!all) return fail(all.error());
-    BrowserScope browser(**all);
+    BrowserScope browser(**all, *run_dir / "browser-pages.txt");
     GatedVerbs served(mcp_verbs, boot_events, browser);
 
     mcp::ServerOptions options;

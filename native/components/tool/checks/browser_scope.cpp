@@ -620,6 +620,66 @@ CheckResult check_browser_scope_tree(const std::string& binary) {
     return result;
 }
 
+CheckResult check_browser_dead_executor(const std::string& binary) {
+    CheckResult result;
+#if defined(__linux__)
+    const auto started = std::chrono::steady_clock::now();
+    const auto stamp = started.time_since_epoch().count();
+    const fs::path sandbox = fs::temp_directory_path() / ("gm-browser-dead-executor-" + std::to_string(stamp));
+    const fs::path home = sandbox / "home";
+    const fs::path workspace = sandbox / "ws";
+    const fs::path pages_file = workspace / "runs" / "check" / "browser-pages.txt";
+    const std::string dead_marker = "gm-browser-dead-executor-marker";
+    fs::create_directories(home);
+    fs::create_directories(workspace);
+    auto expect = [&](bool condition, const std::string& text) {
+        if (!condition) result.failures.push_back(text);
+    };
+    const json::Value installed_reply = install_sandbox(binary, home);
+    expect(flag(installed_reply, "ok"), "the clean install failed: " + json::dump(part(installed_reply, "error")));
+    if (result.failures.empty()) {
+        const fs::path installed = home / ".gmnew" / "current" / "gm";
+        {
+            Session first(installed.string(), workspace, home, 900000, false);
+            if (!first.started()) {
+                result.failures.push_back("gm serve did not start from " + installed.string());
+            } else {
+                connect(first);
+                tool_json(first, "next_context", json::Object{});
+                const json::Value opened = output_of(run_code(first, "return { exec: await gm.playwriter_execute({ code: " + json::quote(open_code(dead_marker)) + " }) };"));
+                const json::Value exec = part(opened, "exec");
+                expect(flag(exec, "ok") && text_has(exec, "output", dead_marker), "the first serve did not open its marker page: " + json::dump(opened).substr(0, 300));
+                expect(fs::exists(pages_file) && fs::file_size(pages_file) > 0, "the first serve did not record its page in runs/check/browser-pages.txt");
+            }
+            first.stop();
+        }
+        {
+            Session second(installed.string(), workspace, home, 900000, false);
+            if (!second.started()) {
+                result.failures.push_back("the restarted serve did not start from " + installed.string());
+            } else {
+                connect(second);
+                tool_json(second, "next_context", json::Object{});
+                const json::Value closed = output_of(run_code(second, "return await gm.browser_close_run({});"));
+                expect(flag(closed, "ok") && number(closed, "closedPages") == 1, "finish on a restarted serve did not close the page the dead executor opened: " + json::dump(closed).substr(0, 300));
+                const json::Value counted = output_of(run_code(second, "return { mine: await gm.playwriter_execute({ code: " + json::quote(count_code(dead_marker, true)) + " }) };"));
+                expect(returned(part(counted, "mine")) == 0, "the page of the dead executor is still open after finish: " + json::dump(counted).substr(0, 300));
+            }
+            second.stop();
+        }
+        stop_run_tree(sandbox);
+    }
+    std::error_code ignored;
+    if (result.failures.empty()) fs::remove_all(sandbox, ignored);
+    const double wall = std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
+    result.summary = "a page opened by a serve whose executor then went away is closed by browser_close_run on a restarted serve of the same run (wall " + std::to_string(wall) + " s)";
+#else
+    result.summary = "skipped: the dead-executor browser check runs on Linux";
+#endif
+    (void)binary;
+    return result;
+}
+
 }
 #else
 
@@ -638,6 +698,12 @@ CheckResult check_browser_scope_identity(const std::string&) {
 }
 
 CheckResult check_browser_scope_tree(const std::string&) {
+    CheckResult result;
+    result.summary = "skipped: POSIX-only check, runs on Linux and macOS";
+    return result;
+}
+
+CheckResult check_browser_dead_executor(const std::string&) {
     CheckResult result;
     result.summary = "skipped: POSIX-only check, runs on Linux and macOS";
     return result;

@@ -53,6 +53,7 @@ const std::vector<Registered>& checks() {
         {"check-browser-scope", check_browser_scope},
         {"check-browser-scope-identity", check_browser_scope_identity},
         {"check-browser-scope-tree", check_browser_scope_tree},
+        {"check-browser-dead-executor", check_browser_dead_executor},
         {"check-rows", check_rows},
         {"check-row-peer", check_row_peer},
         {"check-fetch", check_fetch},

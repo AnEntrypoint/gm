@@ -1,9 +1,13 @@
 #include "gm/host/browser_scope.hpp"
 
+#include <algorithm>
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
+#include <fstream>
+#include <system_error>
 #include <thread>
+#include <utility>
 
 namespace gm::host {
 namespace {
@@ -41,6 +45,22 @@ const char* kTabsCode =
 const char* kCloseCode =
     "let n = 0; if (state.gmRun) { try { const opened = [...(state.gmRunPages || [])].filter((p) => !p.isClosed()); "
     "for (const p of opened) { await p.close(); } n = opened.length; } finally { delete state.gmRun; delete state.gmRunFor; delete state.gmRunView; delete state.gmRunPages; } } return 'GMCLOSED' + n + 'GMCLOSED';";
+
+const char* kOwnedCode =
+    "let ids = []; if (state.gmRun) { for (const p of [...(state.gmRunPages || [])].filter((q) => !q.isClosed())) { "
+    "const s = await state.gmRun.newCDPSession(p); ids.push((await s.send('Target.getTargetInfo')).targetInfo.targetId); await s.detach(); } } "
+    "return 'GMOWNED' + JSON.stringify(ids) + 'GMOWNED';";
+
+std::string recorded_close_code(const std::vector<std::string>& recorded) {
+    std::string ids;
+    for (const std::string& id : recorded) {
+        if (!ids.empty()) ids += ",";
+        ids += json::quote(id);
+    }
+    return "const recorded = [" + ids + "]; let n = 0; const cdp = await browser.newBrowserCDPSession(); "
+           "try { for (const targetId of recorded) { try { await cdp.send('Target.closeTarget', { targetId }); n += 1; } catch (error) { } } } finally { await cdp.detach(); } "
+           "return 'GMCLOSEDIDS' + n + 'GMCLOSEDIDS';";
+}
 
 json::Value failure(std::string message) {
     json::Value reply;
@@ -133,7 +153,7 @@ std::size_t count_of(const std::string& digits) {
 
 }
 
-BrowserScope::BrowserScope(VerbTable& inner) : inner_(inner) {}
+BrowserScope::BrowserScope(VerbTable& inner, std::filesystem::path pages_file) : inner_(inner), pages_file_(std::move(pages_file)) {}
 
 std::vector<VerbInfo> BrowserScope::list() const {
     std::vector<VerbInfo> verbs = inner_.list();
@@ -180,6 +200,7 @@ json::Value BrowserScope::user_execute(const json::Value& args) {
         std::this_thread::sleep_for(std::chrono::milliseconds(kGoneBackoffMs << attempt));
         reply = inner_.call(kExecute, forwarded);
     }
+    if (code.find("newPage") != std::string::npos) record_owned_pages();
     return reply;
 }
 
@@ -214,6 +235,7 @@ json::Value BrowserScope::close_machine(const json::Value& args) {
     json::Value reply = browsers_call(request);
     if (ok_of(reply)) {
         std::lock_guard lock(mutex_);
+        write_recorded_pages({});
         used_ = false;
         last_view_.reset();
         last_count_ = 0;
@@ -247,9 +269,10 @@ json::Value BrowserScope::tabs() {
 }
 
 json::Value BrowserScope::close_run() {
+    const std::vector<std::string> recorded = recorded_pages();
     {
         std::lock_guard lock(mutex_);
-        if (!used_) {
+        if (!used_ && recorded.empty()) {
             json::Value reply;
             reply.set("ok", true);
             reply.set("closedPages", 0);
@@ -267,10 +290,57 @@ json::Value BrowserScope::close_run() {
     last_count_ = 0;
     if (!ok_of(reply)) return failure("this run's browser context was not closed: " + output_of(reply));
     const std::optional<std::string> count = between(output_of(reply), "GMCLOSED");
+    std::size_t closed_pages = count ? count_of(*count) : 0;
+    if (!recorded.empty()) {
+        json::Value recorded_request;
+        recorded_request.set("code", recorded_close_code(recorded));
+        recorded_request.set("timeout", kBrowserTimeoutMs);
+        json::Value recorded_reply = inner_.call(kExecute, recorded_request);
+        if (!ok_of(recorded_reply)) return failure("the pages this run recorded were not closed: " + output_of(recorded_reply));
+        const std::optional<std::string> recorded_count = between(output_of(recorded_reply), "GMCLOSEDIDS");
+        closed_pages += recorded_count ? count_of(*recorded_count) : 0;
+        write_recorded_pages({});
+    }
     json::Value closed;
     closed.set("ok", true);
-    closed.set("closedPages", static_cast<std::uint64_t>(count ? count_of(*count) : 0));
+    closed.set("closedPages", static_cast<std::uint64_t>(closed_pages));
     return closed;
+}
+
+void BrowserScope::record_owned_pages() {
+    json::Value request;
+    request.set("code", kOwnedCode);
+    request.set("timeout", kBrowserTimeoutMs);
+    json::Value reply = inner_.call(kExecute, request);
+    if (!ok_of(reply)) return;
+    const std::optional<std::string> body = between(output_of(reply), "GMOWNED");
+    if (!body) return;
+    auto parsed = json::parse(*body);
+    if (!parsed || !parsed->is_array()) return;
+    std::vector<std::string> ids = recorded_pages();
+    for (const json::Value& id : parsed->as_array()) {
+        if (id.is_string() && std::find(ids.begin(), ids.end(), id.as_string()) == ids.end()) ids.push_back(id.as_string());
+    }
+    write_recorded_pages(ids);
+}
+
+std::vector<std::string> BrowserScope::recorded_pages() const {
+    std::vector<std::string> ids;
+    std::ifstream in(pages_file_);
+    for (std::string line; std::getline(in, line);) {
+        if (!line.empty()) ids.push_back(line);
+    }
+    return ids;
+}
+
+void BrowserScope::write_recorded_pages(const std::vector<std::string>& ids) const {
+    if (ids.empty()) {
+        std::error_code ignored;
+        std::filesystem::remove(pages_file_, ignored);
+        return;
+    }
+    std::ofstream out(pages_file_, std::ios::trunc);
+    for (const std::string& id : ids) out << id << '\n';
 }
 
 }
