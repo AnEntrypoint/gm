@@ -6,6 +6,7 @@
 #include <filesystem>
 #include <memory>
 #include <regex>
+#include <sstream>
 #include <system_error>
 #include <thread>
 
@@ -132,8 +133,11 @@ std::vector<long long> stop_owned(const std::vector<Owned>& owned) {
 std::vector<Owned> serve_tree(const Session& session) { return owned_of(session.descendants()); }
 
 bool main_browser_of(const std::vector<std::string>& command, const std::string& profile) {
+    std::string joined;
+    for (const std::string& part : command) joined += part + " ";
+    std::istringstream text(joined);
     bool ours = false;
-    for (const std::string& word : command) {
+    for (std::string word; text >> word;) {
         if (word.rfind("--type=", 0) == 0) return false;
         if (word == "--user-data-dir=" + profile) ours = true;
     }
@@ -314,7 +318,7 @@ CheckResult check_browser_scope(const std::string& binary) {
 
                     const std::vector<Owned> own = own_browsers(profile);
                     own_note = "own browser processes before close: " + std::to_string(own.size()) + pid_list(own);
-                    expect(!own.empty(), "the run's own browser is not in its serve tree before close: " + own_note);
+                    expect(!own.empty(), "the run's own browser process is not running before close: " + own_note);
                     const json::Value cleanup = run_code(session, "return { undo: await gm.playwriter_execute({ code: " + json::quote(kUndoCode) + " }), sides: await gm.playwriter_execute({ code: " + json::quote(count_code(kSideMarker, false)) + " }), mine: await gm.playwriter_execute({ code: " + json::quote(count_code(kMarker, false)) + " }), peer: await gm.playwriter_execute({ code: " + json::quote(count_code(kPeerMarker, false)) + " }), close: await gm.browser_close_machine({ confirm: true, force: true }) };");
                     if (flag(cleanup, "ok")) {
                         const json::Value both = output_of(cleanup);
