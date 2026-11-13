@@ -271,8 +271,13 @@ CheckResult check_browser_first_open(const std::string& binary) {
             const std::string calls_text = read_text(calls);
             const long long browser_pid = first_number(status_of(launcher, sandbox, adopt_workspace), "\"browser\":\\s*\\{\\s*\"pid\":\\s*([0-9]+)");
             roots.push_back(own(browser_pid));
-            std::string cmdline = browser_pid > 0 ? read_text("/proc/" + std::to_string(browser_pid) + "/cmdline") : std::string();
-            std::replace(cmdline.begin(), cmdline.end(), '\0', ' ');
+            const std::vector<std::string> command = browser_pid > 0 ? proc::command_of(browser_pid) : std::vector<std::string>{};
+            std::string cmdline;
+            for (const std::string& part : command) {
+                if (!cmdline.empty()) cmdline += ' ';
+                cmdline += part;
+            }
+            const bool command_read = !cmdline.empty();
             const bool wrapper_called = calls_text.find("wrapper") != std::string::npos;
             const bool swiftshader = cmdline.find("--use-angle=swiftshader") != std::string::npos;
             summary << "; outside browser pid " << outside_pid << " became project browser pid " << browser_pid << ", wrapper called " << (wrapper_called ? "true" : "false") << ", SwiftShader flags " << (swiftshader ? "true" : "false");
