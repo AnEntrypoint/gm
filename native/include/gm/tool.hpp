@@ -39,6 +39,7 @@ CheckResult check_browser_scope_identity(const std::string& binary);
 CheckResult check_browser_scope_tree(const std::string& binary);
 CheckResult check_browser_dead_executor(const std::string& binary);
 CheckResult check_browser_first_open(const std::string& binary);
+CheckResult check_portable_proc_reads(const std::string& binary);
 CheckResult check_rows(const std::string& binary);
 CheckResult check_row_peer(const std::string& binary);
 CheckResult check_fetch(const std::string& binary);
