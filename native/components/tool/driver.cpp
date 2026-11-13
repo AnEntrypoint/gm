@@ -198,7 +198,7 @@ public:
         int skipped = 0;
         for (const auto& check : checks()) {
             if (check.name == kMutations) {
-                if (!mutations) say("phase-b: " + check.name + " is not run by default: it changes the clock every peer shares; GM_CHECK_MUTATIONS=1 runs it");
+                if (!mutations) say("phase-b: " + check.name + " is not run by default: it runs its own serve with GM_CLOCK_SCALE=0.0167 and rewrites two sources in the shared checkout, then restores them; GM_CHECK_MUTATIONS=1 runs it");
                 continue;
             }
             const std::string key = hash_of(check.name + ":" + fp);
