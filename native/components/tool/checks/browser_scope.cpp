@@ -318,7 +318,12 @@ CheckResult check_browser_scope(const std::string& binary) {
         result.failures.push_back(std::to_string(survivors.size()) + " process(es) started by this check are still alive: " + ids);
     }
     std::error_code ignored;
-    fs::remove_all(sandbox, ignored);
+    if (result.failures.empty()) {
+        fs::remove_all(sandbox, ignored);
+    } else {
+        const fs::path logs = workspace / ".playwriter";
+        result.failures.push_back("the gate log is kept at " + (logs / "gate.log").string() + " and the browser log at " + (logs / "browser.log").string() + "; the sandbox " + sandbox.string() + " is kept with them");
+    }
     const double wall = std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
     result.summary = "browser scope: finish browser key, browser_tabs, playwriter_browsers close, browser_close_machine guard; browser run: " + browser_phase + " (wall " + std::to_string(wall) + " s)";
 #else
