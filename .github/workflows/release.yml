@@ -72,6 +72,19 @@ jobs:
           path: build/${{ matrix.preset }}/native/components/tool/gm-tool
           if-no-files-found: error
           retention-days: 1
+      - name: Chromium for the browser-scope check (macOS)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          dir="$RUNNER_TEMP/playwright-chromium"
+          mkdir -p "$dir" && cd "$dir"
+          npm init -y >/dev/null
+          npm install --no-audit --no-fund playwright-core@1.65.0
+          npx playwright-core install chromium
+          browser=$(PW_DIR="$dir" node -p "require(require('path').join(process.env.PW_DIR, 'node_modules', 'playwright-core')).chromium.executablePath()")
+          test -x "$browser" || { echo "browser path missing: $browser" >&2; exit 1; }
+          echo "PLAYWRITER_BROWSER_PATH=$browser" >> "$GITHUB_ENV"
+          echo "PLAYWRITER_NO_SANDBOX=1" >> "$GITHUB_ENV"
       - name: Chromium for the browser-scope check (linux-arm64)
         if: matrix.target == 'arm64-linux'
         shell: bash
