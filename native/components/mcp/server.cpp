@@ -2577,8 +2577,8 @@ struct Server::State {
         const auto found = skill_file_of(kGmSkillUri);
         const std::string cause = skill_change_.empty() ? "the gm skill has not been read on this connection" : skill_change_;
         const std::string on_disk = found ? found->second.disk : std::string("the gm skill file");
-        return "run_code refused: " + cause + "; read skill://gm/SKILL.md first (resources/read, or ReadMcpResourceTool with server gm, or your file tool on " + on_disk +
-               "). Every run_code is refused until that read is on this connection.";
+        return "run_code refused: " + cause + "; read skill://gm/SKILL.md first with resources/read, ReadMcpResourceTool (server gm) or the gm prompt. The rules are also on disk at " + on_disk +
+               " for a host's file tool, but that file read does not clear this gate. Every run_code is refused until the skill is read on this connection.";
     }
 
     Value invoke(const std::string& name, const Value& args) {

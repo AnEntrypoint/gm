@@ -130,6 +130,10 @@ CheckResult check_no_resource_client(const std::string& binary) {
                 if (error.find("skill://gm/SKILL.md") == std::string::npos || error.find('\n') != std::string::npos)
                     result.failures.push_back(label + " does not name the skill read in one line: " + error);
                 if (error.find("/skills/gm/SKILL.md") == std::string::npos) result.failures.push_back(label + " does not name the skill's path on disk: " + error);
+                if (error.find("your file tool on") != std::string::npos || error.find("does not clear this gate") == std::string::npos)
+                    result.failures.push_back(label + " offers a host file read as a gate route or omits the warning that it does not clear the gate: " + error);
+                if (error.find("resources/read") == std::string::npos || error.find("ReadMcpResourceTool") == std::string::npos || error.find("gm prompt") == std::string::npos)
+                    result.failures.push_back(label + " does not name every read that clears the gate: " + error);
                 const std::string dump = json::dump(rpc);
                 if (dump.size() > kRefusalLimitBytes) result.failures.push_back(label + " is " + std::to_string(dump.size()) + " bytes; it names the read and must not carry the skill");
                 if (count_of(dump, escaped) != 0) result.failures.push_back(label + " embeds the skill text");
@@ -162,7 +166,7 @@ CheckResult check_no_resource_client(const std::string& binary) {
     std::error_code ignored;
     fs::remove_all(scratch, ignored);
     const double wall = std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
-    result.summary = "a client that never reads skill://gm/SKILL.md is refused on every run_code: before and after next_context, and after a worker restart; after resources/read on the connection its run_code runs and gm.read_file returns the whole skill (wall " + std::to_string(wall) + " s)";
+    result.summary = "a client that never reads skill://gm/SKILL.md is refused on every run_code: before and after next_context, and after a worker restart; each refusal names only the routes that clear the gate and warns that a host file read does not; after resources/read on the connection its run_code runs and gm.read_file returns the whole skill (wall " + std::to_string(wall) + " s)";
     return result;
 }
 
