@@ -257,9 +257,13 @@ CheckResult check_browser_scope(const std::string& binary) {
                         result.failures.push_back("browser phase: the page count after finish did not run: " + json::dump(part(after_finish, "error")));
                     } else {
                         const json::Value counted = output_of(after_finish);
-                        expect(returned(part(counted, "mine")) == 0, "the run's page is still open after finish: " + json::dump(counted).substr(0, 300));
-                        if (peer_started) expect(returned(part(counted, "peer")) >= 1, "finish closed the second run's page");
-                        expect(returned(part(counted, "sides")) >= 2, "finish closed a side page the run does not own: " + json::dump(counted).substr(0, 300));
+                        if (!flag(part(counted, "mine"), "ok") || !flag(part(counted, "peer"), "ok") || !flag(part(counted, "sides"), "ok")) {
+                            result.failures.push_back("the counts after finish did not all run, so no page count was read: " + json::dump(counted).substr(0, 300));
+                        } else {
+                            expect(returned(part(counted, "mine")) == 0, "the run's page is still open after finish: " + json::dump(counted).substr(0, 300));
+                            if (peer_started) expect(returned(part(counted, "peer")) >= 1, "finish closed the second run's page");
+                            expect(returned(part(counted, "sides")) >= 2, "finish closed a side page the run does not own: " + json::dump(counted).substr(0, 300));
+                        }
                     }
 
                     if (peer_started) {
@@ -273,17 +277,28 @@ CheckResult check_browser_scope(const std::string& binary) {
                             result.failures.push_back("browser phase: the page count after the second finish did not run: " + json::dump(part(after_peer, "error")));
                         } else {
                             const json::Value counted = output_of(after_peer);
-                            expect(returned(part(counted, "peer")) == 0, "the second run's page is still open after its finish");
-                            expect(returned(part(counted, "sides")) >= 2, "the second run's finish closed a side page the run does not own: " + json::dump(counted).substr(0, 300));
+                            if (!flag(part(counted, "peer"), "ok") || !flag(part(counted, "sides"), "ok")) {
+                                result.failures.push_back("the counts after the second finish did not run, so no page count was read: " + json::dump(counted).substr(0, 300));
+                            } else {
+                                expect(returned(part(counted, "peer")) == 0, "the second run's page is still open after its finish");
+                                expect(returned(part(counted, "sides")) >= 2, "the second run's finish closed a side page the run does not own: " + json::dump(counted).substr(0, 300));
+                            }
                         }
                     }
 
-                    const json::Value cleanup = run_code(session, "return { undo: await gm.playwriter_execute({ code: " + json::quote(kUndoCode) + " }), sides: await gm.playwriter_execute({ code: " + json::quote(count_code(kSideMarker, true)) + " }), mine: await gm.playwriter_execute({ code: " + json::quote(count_code(kMarker, true)) + " }), peer: await gm.playwriter_execute({ code: " + json::quote(count_code(kPeerMarker, true)) + " }), close: await gm.browser_close_machine({ confirm: true, force: true }) };");
+                    const json::Value cleanup = run_code(session, "return { undo: await gm.playwriter_execute({ code: " + json::quote(kUndoCode) + " }), sides: await gm.playwriter_execute({ code: " + json::quote(count_code(kSideMarker, false)) + " }), mine: await gm.playwriter_execute({ code: " + json::quote(count_code(kMarker, false)) + " }), peer: await gm.playwriter_execute({ code: " + json::quote(count_code(kPeerMarker, false)) + " }), close: await gm.browser_close_machine({ confirm: true, force: true }) };");
                     if (flag(cleanup, "ok")) {
                         const json::Value both = output_of(cleanup);
                         expect(flag(part(both, "undo"), "ok"), "the side pages were not undone");
-                        expect(returned(part(both, "sides")) == 0, "the side pages are still open after undo: count " + std::to_string(returned(part(both, "sides"))) + " " + json::dump(part(both, "sides")).substr(0, 300));
-                        expect(returned(part(both, "mine")) == 0 && returned(part(both, "peer")) == 0, "a run's page is still open at cleanup, before the browser is closed: mine " + std::to_string(returned(part(both, "mine"))) + ", peer " + std::to_string(returned(part(both, "peer"))));
+                        const json::Value sides_reply = part(both, "sides");
+                        const json::Value mine_reply = part(both, "mine");
+                        const json::Value peer_reply = part(both, "peer");
+                        if (!flag(sides_reply, "ok") || !flag(mine_reply, "ok") || !flag(peer_reply, "ok")) {
+                            result.failures.push_back("the cleanup counts did not all run, so no page count was read: sides " + json::dump(sides_reply).substr(0, 200) + ", mine " + json::dump(mine_reply).substr(0, 200) + ", peer " + json::dump(peer_reply).substr(0, 200));
+                        } else {
+                            expect(returned(sides_reply) == 0, "the side pages are still open after undo: count " + std::to_string(returned(sides_reply)));
+                            expect(returned(mine_reply) == 0 && returned(peer_reply) == 0, "a run's page is still open at cleanup, before the browser is closed: mine " + std::to_string(returned(mine_reply)) + ", peer " + std::to_string(returned(peer_reply)));
+                        }
                         expect(flag(part(both, "close"), "ok"), "browser_close_machine with confirm did not close the scratch browser");
                     } else {
                         result.failures.push_back("browser phase: the cleanup did not run: " + json::dump(part(cleanup, "error")));
