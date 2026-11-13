@@ -1165,9 +1165,23 @@ struct Server::State {
                 }
                 if (!s().task.empty()) s().start_override = s().task;
                 else s().task = closed_task;
-            } else if (has_task_event) {
-                if (!s().task.empty() && s().task != logged_task) s().start_override = s().task;
-                s().task = logged_task;
+            } else {
+                std::string recorded = logged_task;
+                bool has_recorded = has_task_event;
+                if (!has_task_event) {
+                    std::string meta;
+                    if (read_file(dir / "task.json", meta)) {
+                        auto parsed = json::parse(meta);
+                        if (parsed && parsed->find("task") && parsed->find("task")->is_string()) {
+                            recorded = parsed->find("task")->as_string();
+                            has_recorded = !recorded.empty();
+                        }
+                    }
+                }
+                if (has_recorded) {
+                    if (!s().task.empty() && s().task != recorded) s().start_override = s().task;
+                    s().task = recorded;
+                }
             }
             s().run_started = s().steps > 0;
             s().notice_seq = last_context_seq(history);
