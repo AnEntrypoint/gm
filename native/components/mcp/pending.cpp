@@ -164,6 +164,17 @@ void append_pending(const fs::path& run_dir, const Value& event) {
     generation_changed.notify_all();
 }
 
+void append_to_peers(const fs::path& run_dir, const Value& event) {
+    std::error_code ec;
+    for (const auto& entry : fs::directory_iterator(run_dir.parent_path(), ec)) {
+        if (!entry.is_directory(ec) || entry.path().filename() == run_dir.filename()) continue;
+        std::ifstream owner(entry.path() / "owner");
+        std::string identity;
+        if (!std::getline(owner, identity) || identity.empty() || !process_identity_alive(identity)) continue;
+        append_pending(entry.path(), event);
+    }
+}
+
 PendingTake take_pending(const fs::path& run_dir) {
     PendingTake taken;
     for (const auto& name : abandoned_copies(run_dir)) {
@@ -221,6 +232,7 @@ void enqueue_pending(const RunLog& log, std::string_view kind, std::uint64_t seq
     if (!written || written->empty()) return;
     if (!detail::is_pending_event(kind, written->front())) return;
     detail::append_pending(log.dir(), written->front());
+    if (kind == "row-added") detail::append_to_peers(log.dir(), written->front());
 }
 
 }

@@ -102,4 +102,56 @@ CheckResult check_rows(const std::string& binary) {
     return result;
 }
 
+CheckResult check_row_peer(const std::string& binary) {
+    CheckResult result;
+    const auto started = std::chrono::steady_clock::now();
+    const auto sandbox = make_workspace();
+    const auto workspace = sandbox / "ws";
+    std::filesystem::create_directories(workspace);
+    const auto argv_for = [&](const char* run) {
+        return std::vector<std::string>{binary, "serve", "--workspace", workspace.string(), "--run-dir", (workspace / "runs" / run).string()};
+    };
+    const auto open_session = [](Session& session) {
+        session.rpc("initialize", json::Object{{"protocolVersion", "2025-06-18"}, {"capabilities", json::Object{}},
+                                              {"clientInfo", json::Object{{"name", "gm-tool"}, {"version", "1"}}}});
+        session.notify("notifications/initialized", json::Object{});
+        session.rpc("resources/read", json::Object{{"uri", "skill://gm/SKILL.md"}});
+    };
+    {
+        Session author(argv_for("author"), workspace, sandbox, 180000);
+        Session peer(argv_for("peer"), workspace, sandbox, 180000);
+        if (!author.started() || !peer.started()) {
+            result.failures.push_back("the two serves did not both start from " + binary);
+        } else {
+            open_session(author);
+            open_session(peer);
+            const json::Value opened = tool_json(author, "next_context", json::Object{});
+            const json::Value peer_opened = tool_json(peer, "next_context", json::Object{});
+            if (text_at(opened, "run").empty() || text_at(peer_opened, "run").empty()) {
+                result.failures.push_back("a serve did not open its run: " + json::dump(opened).substr(0, 160) + " / " + json::dump(peer_opened).substr(0, 160));
+            } else {
+                const json::Value added = output_value(tool_json(author, "run_code", json::Object{{"format", "esm"}, {"timeoutMs", 60000}, {"body", "return await gm.prd_add({ title: 'peer row' });"}}));
+                const std::string id = text_at(added, "output");
+                const json::Value heard = tool_json(peer, "next_context", json::Object{{"waitMs", 5000}});
+                const json::Value* pending = value_at(heard, "pending");
+                bool seen = false;
+                if (pending != nullptr && pending->is_array()) {
+                    for (const json::Value& record : pending->as_array()) {
+                        seen = seen || (text_at(record, "kind") == "row-added" && !id.empty() && text_at(record, "row") == id);
+                    }
+                }
+                if (id.empty()) result.failures.push_back("the author's prd_add returned no row id: " + json::dump(added).substr(0, 200));
+                if (!seen) result.failures.push_back("the peer's next_context did not report row " + id + " added by the other serve: " + json::dump(heard).substr(0, 300));
+            }
+        }
+        author.stop();
+        peer.stop();
+    }
+    std::error_code ignored;
+    std::filesystem::remove_all(sandbox, ignored);
+    const double wall = std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
+    result.summary = "a row added by one serve on a workspace is reported by the next_context of a second serve with its own run dir (wall " + std::to_string(wall) + " s)";
+    return result;
+}
+
 }
