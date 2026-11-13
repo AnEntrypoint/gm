@@ -3494,3 +3494,7 @@ Commits this round:
   W3, silence still ends it: extendOnProgress true, timeoutMs 2000, a silent sleep of 30 s. It must end killed with reason idle at about 2000 ms, and its statement must name the quiet window.
   W4, existing bounds: gm-tool phase-b (full set) keeps check-job-bounds (the lifetime path), check-job-wait and check-restart-jobs green.
 - Not in this stretch: installing this build, and relaunching the index compaction with extendOnProgress true. The index run must pass extendOnProgress: true on any long job it starts after the install.
+
+## Round 2026-11-13 (job cap, Phase B on a21f8de: a correction to W1 and a limit found)
+- W1 as written in the entry above is wrong about job_status. Its wait is clamped to the job's timeoutMs plus the ended-event grace (native/components/verbs/job.cpp, the clamp of requested_ms in status). For a job started with extendOnProgress, timeoutMs is a quiet window, so one job_status call returns state running after about the window while the job still runs. W1 is therefore a loop: job_status until the state is not running, with the calls counted.
+- Limit, not changed in this round: a caller of an extendOnProgress job must loop job_status until the state is not running. Next stretch: clamp the wait of an extended job by the verb's wait cap rather than by timeoutMs.
