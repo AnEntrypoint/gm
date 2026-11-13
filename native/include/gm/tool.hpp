@@ -78,6 +78,7 @@ CheckResult check_resources_subscribe(const std::string& binary);
 CheckResult check_startup_attempts(const std::string& binary);
 CheckResult check_repeated_checks(const std::string& binary);
 CheckResult check_owner_identity(const std::string& binary);
+CheckResult check_run_task_kept(const std::string& binary);
 CheckResult check_cut_marker(const std::string& binary);
 CheckResult check_grep_state_scope(const std::string& binary);
 CheckResult check_job_bounds(const std::string& binary);

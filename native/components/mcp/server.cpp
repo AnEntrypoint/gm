@@ -1165,7 +1165,8 @@ struct Server::State {
                 }
                 if (!s().task.empty()) s().start_override = s().task;
                 else s().task = closed_task;
-            } else if (s().task.empty()) {
+            } else if (has_task_event) {
+                if (!s().task.empty() && s().task != logged_task) s().start_override = s().task;
                 s().task = logged_task;
             }
             s().run_started = s().steps > 0;

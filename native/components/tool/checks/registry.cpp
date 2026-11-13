@@ -33,6 +33,7 @@ const std::vector<Registered>& checks() {
         {"check-startup-attempts", check_startup_attempts},
         {"check-repeated-checks", check_repeated_checks},
         {"check-owner-identity", check_owner_identity},
+        {"check-run-task-kept", check_run_task_kept},
         {"check-cut-marker", check_cut_marker},
         {"check-grep-state-scope", check_grep_state_scope},
         {"check-job-bounds", check_job_bounds},
