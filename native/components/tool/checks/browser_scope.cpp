@@ -131,6 +131,29 @@ std::vector<long long> stop_owned(const std::vector<Owned>& owned) {
 
 std::vector<Owned> serve_tree(const Session& session) { return owned_of(session.descendants()); }
 
+bool main_browser_of(const std::vector<std::string>& command, const std::string& profile) {
+    bool ours = false;
+    for (const std::string& word : command) {
+        if (word.rfind("--type=", 0) == 0) return false;
+        if (word == "--user-data-dir=" + profile) ours = true;
+    }
+    return ours;
+}
+
+std::vector<Owned> own_browsers(const Session& session, const std::string& profile) {
+    std::vector<Owned> own;
+    for (const Owned& each : owned_of(session.descendants())) {
+        if (main_browser_of(proc::command_of(each.pid), profile)) own.push_back(each);
+    }
+    return own;
+}
+
+std::string pid_list(const std::vector<Owned>& owned) {
+    std::string text;
+    for (const Owned& each : owned) text += (text.empty() ? " (pids " : ", ") + std::to_string(each.pid);
+    return text.empty() ? text : text + ")";
+}
+
 json::Value install_sandbox(const fs::path& binary, const fs::path& home) {
     const fs::path host = binary.parent_path();
     const fs::path build = host.parent_path().parent_path().parent_path();
@@ -150,6 +173,8 @@ CheckResult check_browser_scope(const std::string& binary) {
     const fs::path sandbox = fs::temp_directory_path() / ("gm-browser-scope-" + std::to_string(stamp));
     const fs::path home = sandbox / "home";
     const fs::path workspace = sandbox / "ws";
+    const std::string profile = (workspace / ".playwriter" / "browser-profile").string();
+    std::string own_note;
     fs::create_directories(home);
     fs::create_directories(workspace);
     auto expect = [&](bool condition, const std::string& text) {
@@ -286,6 +311,9 @@ CheckResult check_browser_scope(const std::string& binary) {
                         }
                     }
 
+                    const std::vector<Owned> own = own_browsers(session, profile);
+                    own_note = "own browser processes before close: " + std::to_string(own.size()) + pid_list(own);
+                    expect(!own.empty(), "the run's own browser is not in its serve tree before close: " + own_note);
                     const json::Value cleanup = run_code(session, "return { undo: await gm.playwriter_execute({ code: " + json::quote(kUndoCode) + " }), sides: await gm.playwriter_execute({ code: " + json::quote(count_code(kSideMarker, false)) + " }), mine: await gm.playwriter_execute({ code: " + json::quote(count_code(kMarker, false)) + " }), peer: await gm.playwriter_execute({ code: " + json::quote(count_code(kPeerMarker, false)) + " }), close: await gm.browser_close_machine({ confirm: true, force: true }) };");
                     if (flag(cleanup, "ok")) {
                         const json::Value both = output_of(cleanup);
@@ -325,7 +353,7 @@ CheckResult check_browser_scope(const std::string& binary) {
         result.failures.push_back("the gate log is kept at " + (logs / "gate.log").string() + " and the browser log at " + (logs / "browser.log").string() + "; the sandbox " + sandbox.string() + " is kept with them");
     }
     const double wall = std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
-    result.summary = "browser scope: finish browser key, browser_tabs, playwriter_browsers close, browser_close_machine guard; browser run: " + browser_phase + " (wall " + std::to_string(wall) + " s)";
+    result.summary = "browser scope: finish browser key, browser_tabs, playwriter_browsers close, browser_close_machine guard; browser run: " + browser_phase + (own_note.empty() ? std::string() : "; " + own_note) + " (wall " + std::to_string(wall) + " s)";
 #else
     result.summary = "not measured: the browser check runs the launcher under a Linux process tree";
 #endif
