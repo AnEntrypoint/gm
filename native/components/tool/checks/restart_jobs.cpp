@@ -236,12 +236,88 @@ CheckResult check_restart_jobs(const std::string& binary) {
     return result;
 }
 
+CheckResult check_job_identity(const std::string& binary) {
+    CheckResult result;
+    const auto started = std::chrono::steady_clock::now();
+    const auto stamp = started.time_since_epoch().count();
+    const fs::path sandbox = fs::temp_directory_path() / ("gm-job-identity-" + std::to_string(stamp));
+    const fs::path workspace = sandbox / "ws";
+    const fs::path run_dir = workspace / "runs" / "check";
+    const fs::path jobs = run_dir / "jobs";
+    fs::create_directories(jobs);
+    const fs::path mcp_config = sandbox / "no-default-mcp.json";
+    std::ofstream(mcp_config) << R"({"mcpServers":{"playwriter":{"disabled":true}}})";
+    proc::SpawnOptions options(sandbox);
+    const auto wrapper = [&](const std::string& name) {
+        return proc::Child::spawn({"/bin/bash", "-c", "(eval \"$1\"); s=$?; echo $s > \"$2\"; exit $s", "gm-job", "sleep 120", (jobs / (name + ".exit")).string()}, options);
+    };
+    auto holder = proc::Child::spawn({"sleep", "120"}, options);
+    auto genuine = wrapper("genuine");
+    auto stale = wrapper("stale");
+    if (!holder || !genuine || !stale) {
+        result.failures.push_back("the three job processes did not start");
+    } else {
+        const double now_ms = std::chrono::duration<double, std::milli>(std::chrono::system_clock::now().time_since_epoch()).count();
+        const auto write_job = [&](const std::string& name, long long pid, const std::string& extra) {
+            const fs::path output = jobs / (name + ".out");
+            std::ofstream(output) << "";
+            std::ofstream(jobs / (name + ".json")) << "{\"job\":\"" << name << "\",\"command\":\"sleep 120\",\"state\":\"running\",\"pid\":" << pid
+                                                   << ",\"startMono\":0,\"startWall\":" << now_ms << ",\"output\":\"" << output.string() << "\",\"timeoutMs\":120000" << extra << "}";
+        };
+        const long long holder_pid = (*holder)->pid();
+        const long long genuine_pid = (*genuine)->pid();
+        const long long stale_pid = (*stale)->pid();
+        write_job("reused", holder_pid, "");
+        write_job("genuine", genuine_pid, "");
+        write_job("stale", stale_pid, ",\"pidStart\":1");
+        const std::vector<std::string> argv{binary, "serve", "--workspace", workspace.string(), "--run-dir", run_dir.string(), "--mcp-config", mcp_config.string()};
+        {
+            Session session(argv, workspace, sandbox, 180000);
+            if (!session.started()) {
+                result.failures.push_back("gm serve did not start from " + binary);
+            } else {
+                session.rpc("initialize", json::Object{{"protocolVersion", "2025-06-18"}, {"capabilities", json::Object{}},
+                                                      {"clientInfo", json::Object{{"name", "gm-job-identity-check"}, {"version", "1"}}}});
+                session.notify("notifications/initialized", json::Object{});
+                session.rpc("resources/read", json::Object{{"uri", "skill://gm/SKILL.md"}});
+                call(session, "next_context", json::Object{});
+                const auto state_of = [&](const std::string& name) {
+                    return text_at(run_code(session, "return await gm.job_status({ job: '" + name + "', waitMs: 0 });"), "state");
+                };
+                const std::string reused = state_of("reused");
+                const std::string genuine_state = state_of("genuine");
+                const std::string stale_state = state_of("stale");
+                if (reused == "running") result.failures.push_back("a pid with no exit file of its own (a reused pid) was adopted on restart");
+                if (genuine_state != "running") result.failures.push_back("a genuine job of this run was not adopted on restart: state " + genuine_state);
+                if (stale_state == "running") result.failures.push_back("a job whose pid start time differs from its record was adopted on restart");
+            }
+            session.stop();
+        }
+        if (!alive(holder_pid)) result.failures.push_back("the restart killed a process whose pid is not the job's (the reused pid)");
+        if (!alive(stale_pid)) result.failures.push_back("the restart killed a process whose start time differs from its job record");
+        (*genuine)->kill();
+        (*stale)->kill();
+        (*holder)->kill();
+    }
+    std::error_code ignored;
+    fs::remove_all(sandbox, ignored);
+    const double wall = std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
+    result.summary = "on restart a job is adopted only when its process runs its own exit file and start time; a reused pid is not adopted and is not signalled (wall " + std::to_string(wall) + " s)";
+    return result;
+}
+
 }
 #else
 
 namespace gm::tool {
 
 CheckResult check_restart_jobs(const std::string&) {
+    CheckResult result;
+    result.summary = "skipped: POSIX-only check, runs on Linux and macOS";
+    return result;
+}
+
+CheckResult check_job_identity(const std::string&) {
     CheckResult result;
     result.summary = "skipped: POSIX-only check, runs on Linux and macOS";
     return result;

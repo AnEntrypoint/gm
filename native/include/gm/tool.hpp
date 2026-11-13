@@ -58,6 +58,7 @@ CheckResult check_mcp_args(const std::string& binary);
 CheckResult check_run_code_budget(const std::string& binary);
 CheckResult check_turn_economy(const std::string& binary);
 CheckResult check_restart_jobs(const std::string& binary);
+CheckResult check_job_identity(const std::string& binary);
 CheckResult check_run_code_progress(const std::string& binary);
 CheckResult check_read_parity(const std::string& binary);
 CheckResult check_protocol_versions(const std::string& binary);

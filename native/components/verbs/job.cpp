@@ -42,6 +42,21 @@ const double max_wait_ms = 100000 * clock_scale();
 constexpr int pid_poll_ms = 100;
 constexpr std::uint64_t ended_event_grace_ms = 250;
 
+#if !defined(_WIN32)
+bool runs_job(long long pid, const std::string& exit_file, const json::Value& status) {
+    const std::vector<std::string> argv = proc::command_of(pid);
+    if (std::find(argv.begin(), argv.end(), exit_file) == argv.end()) return false;
+    const json::Value* start = status.find("pidStart");
+    if (start == nullptr || !start->is_number() || start->as_number() <= 0) return true;
+    return proc::start_time_of(pid) == static_cast<long long>(start->as_number());
+}
+
+bool pid_is_foreign(long long pid, const std::string& exit_file, const json::Value& status) {
+    const bool alive = ::kill(static_cast<pid_t>(pid), 0) == 0 || errno == EPERM;
+    return alive && !runs_job(pid, exit_file, status);
+}
+#endif
+
 bool is_job_name(const json::Value* v) {
     if (v == nullptr || !v->is_string()) return false;
     const std::string& name = v->as_string();
@@ -356,6 +371,7 @@ json::Value JobTable::start(const std::string& name, const std::string& command,
     job->status.set("command", command);
     job->status.set("state", "running");
     job->status.set("pid", spawned.pid);
+    if (const long long start = proc::start_time_of(spawned.pid); start > 0) job->status.set("pidStart", static_cast<double>(start));
     job->status.set("startMono", start_mono);
     job->status.set("startWall", start_wall);
     job->status.set("output", out.string());
@@ -690,7 +706,7 @@ bool JobTable::adopt_orphan(const std::string& name, const json::Value& status) 
     const json::Value* pid = status.find("pid");
     if (pid == nullptr || !pid->is_number()) return false;
     const int id = static_cast<int>(pid->as_number());
-    if (::kill(id, 0) == 0 || errno == EPERM) return adopt_job(name, status);
+    if (::kill(id, 0) == 0 || errno == EPERM) return runs_job(id, exit_file_of(name).string(), status) && adopt_job(name, status);
     auto code = read_exit_code(name);
     if (!code) return false;
     json::Value ended = status;
@@ -794,7 +810,7 @@ void JobTable::stop_orphans() {
 #if defined(_WIN32)
                 proc::run({"taskkill", "/PID", std::to_string(static_cast<long long>(pid->as_number())), "/T", "/F"});
 #else
-                kill_group_now(static_cast<int>(pid->as_number()));
+                if (is_body || !pid_is_foreign(static_cast<long long>(pid->as_number()), exit_file_of(name).string(), *status)) kill_group_now(static_cast<int>(pid->as_number()));
 #endif
             }
         }
