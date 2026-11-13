@@ -23,6 +23,7 @@ constexpr const char* kOffered = "ffff111-9999999999";
 constexpr std::uint64_t kOfferedCommitted = 4102444800;
 constexpr const char* kUpdatedMarker = "-> ffff111-9999999999";
 constexpr const char* kReexecMarker = "re-executing the relay";
+constexpr std::size_t kAnsweredChars = 2000;
 
 #if defined(__aarch64__)
 constexpr const char* kPlatformTarget = "arm64-linux";
@@ -109,6 +110,7 @@ CheckResult check_relay_reexec(const std::string& binary) {
     std::optional<long long> update_after_send;
     std::optional<long long> reexec_after_update;
     std::optional<long long> wait_answered_after_send;
+    std::string answered_with = "null";
     [&] {
         std::error_code ec;
         fs::create_directories(stage, ec);
@@ -212,6 +214,7 @@ CheckResult check_relay_reexec(const std::string& binary) {
         if (updated_at) update_after_send = ms_between(sent_at, *updated_at);
         if (reexec_at && updated_at) reexec_after_update = ms_between(*updated_at, *reexec_at);
         if (held_at) wait_answered_after_send = ms_between(sent_at, *held_at);
+        answered_with = held ? json::dump(*held).substr(0, kAnsweredChars) : std::string("null");
         if (!reexec_at) result.failures.push_back("the relay never said it re-executed");
         if (!(reexec_after_update && *reexec_after_update < kReexecLimitMs))
             result.failures.push_back("the relay re-executed " + or_null(reexec_after_update) + " ms after the update while a " + std::to_string(kWaitMs) +
@@ -244,10 +247,10 @@ CheckResult check_relay_reexec(const std::string& binary) {
                                  or_null(reexec_after_update) + ",\"waitAnsweredAfterSendMs\":" + or_null(wait_answered_after_send) + "}";
     if (result.failures.empty()) {
         result.summary = stamp + ": with a " + std::to_string(kWaitMs) + " ms next_context wait in flight the relay re-executed " + or_null(reexec_after_update) +
-                         " ms after the update, the wait was answered once at " + or_null(wait_answered_after_send) + " ms, and run_code ran on the new relay (wall " +
-                         std::to_string(wall) + " s)";
+                         " ms after the update, the wait was answered once at " + or_null(wait_answered_after_send) + " ms with " + answered_with +
+                         ", and run_code ran on the new relay (wall " + std::to_string(wall) + " s)";
     } else {
-        result.summary = stamp + ": measured " + measured + " (wall " + std::to_string(wall) + " s)";
+        result.summary = stamp + ": measured " + measured + " answered with " + answered_with + " (wall " + std::to_string(wall) + " s)";
     }
     return result;
 #endif
