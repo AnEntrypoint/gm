@@ -295,9 +295,7 @@ CheckResult check_job_identity(const std::string& binary) {
         }
         if (!alive(holder_pid)) result.failures.push_back("the restart killed a process whose pid is not the job's (the reused pid)");
         if (!alive(stale_pid)) result.failures.push_back("the restart killed a process whose start time differs from its job record");
-        (*genuine)->kill();
-        (*stale)->kill();
-        (*holder)->kill();
+        kill_processes(process_tree({holder_pid, genuine_pid, stale_pid}));
     }
     std::error_code ignored;
     fs::remove_all(sandbox, ignored);
