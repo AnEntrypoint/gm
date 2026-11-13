@@ -140,10 +140,11 @@ bool main_browser_of(const std::vector<std::string>& command, const std::string&
     return ours;
 }
 
-std::vector<Owned> own_browsers(const Session& session, const std::string& profile) {
+std::vector<Owned> own_browsers(const std::string& profile) {
     std::vector<Owned> own;
-    for (const Owned& each : owned_of(session.descendants())) {
-        if (main_browser_of(proc::command_of(each.pid), profile)) own.push_back(each);
+    for (const long long pid : processes_mentioning(profile)) {
+        const long long start = proc::start_time_of(pid);
+        if (start > 0 && main_browser_of(proc::command_of(pid), profile)) own.push_back(Owned{pid, start});
     }
     return own;
 }
@@ -311,7 +312,7 @@ CheckResult check_browser_scope(const std::string& binary) {
                         }
                     }
 
-                    const std::vector<Owned> own = own_browsers(session, profile);
+                    const std::vector<Owned> own = own_browsers(profile);
                     own_note = "own browser processes before close: " + std::to_string(own.size()) + pid_list(own);
                     expect(!own.empty(), "the run's own browser is not in its serve tree before close: " + own_note);
                     const json::Value cleanup = run_code(session, "return { undo: await gm.playwriter_execute({ code: " + json::quote(kUndoCode) + " }), sides: await gm.playwriter_execute({ code: " + json::quote(count_code(kSideMarker, false)) + " }), mine: await gm.playwriter_execute({ code: " + json::quote(count_code(kMarker, false)) + " }), peer: await gm.playwriter_execute({ code: " + json::quote(count_code(kPeerMarker, false)) + " }), close: await gm.browser_close_machine({ confirm: true, force: true }) };");
