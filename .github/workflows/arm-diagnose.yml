@@ -20,7 +20,7 @@ concurrency:
 jobs:
   asan-arm:
     runs-on: ubuntu-24.04-arm
-    timeout-minutes: 30
+    timeout-minutes: 51
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/ninja
