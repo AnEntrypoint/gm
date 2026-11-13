@@ -12,7 +12,7 @@ namespace fs = std::filesystem;
 
 }
 
-CheckResult check_witness_windows_cmd(const std::string& binary) {
+CheckResult check_witness_windows_cmd([[maybe_unused]] const std::string& binary) {
     CheckResult result;
 #if !defined(_WIN32)
     result.summary = "skipped: the cmd-only run_shell witness drives cmd.exe and runs on Windows only";
