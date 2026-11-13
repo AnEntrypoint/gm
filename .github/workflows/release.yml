@@ -9,6 +9,10 @@ on:
         description: "Publish the release after the builds; false runs the builds only"
         type: boolean
         default: true
+      checks:
+        description: "gm-tool check names for the narrow witness (space separated); empty runs phase-b"
+        required: false
+        default: ""
 
 permissions:
   contents: write
