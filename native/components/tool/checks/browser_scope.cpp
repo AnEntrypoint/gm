@@ -236,7 +236,7 @@ CheckResult check_browser_scope(const std::string& binary) {
                         const std::regex project_tabs("(\\d+) in the project browser");
                         std::smatch other_match;
                         std::smatch project_match;
-                        expect(flag(part(both, "side"), "ok"), "the side pages did not open");
+                        expect(flag(part(both, "side"), "ok"), "the side pages did not open: " + json::dump(part(both, "side")).substr(0, 600));
                         expect(text.find("tabs: 1 in this run") != std::string::npos, "browser_tabs lost the run page after the side pages: " + text);
                         expect(std::regex_search(text, other_match, other_runs) && std::stoi(other_match[1].str()) >= 1, "browser_tabs did not count the page of another context: " + text);
                         expect(std::regex_search(text, project_match, project_tabs) && std::stoi(project_match[1].str()) >= 1, "browser_tabs did not count the project browser page: " + text);
