@@ -84,6 +84,13 @@ std::vector<long long> engine_processes(const fs::path& workspace) {
     return found;
 }
 
+long long pid_file_value(const fs::path& file) {
+    std::ifstream in(file);
+    long long pid = 0;
+    in >> pid;
+    return pid;
+}
+
 bool contains(const std::vector<long long>& pids, long long pid) {
     for (const long long known : pids) {
         if (known == pid) return true;
@@ -304,10 +311,94 @@ CheckResult check_job_identity(const std::string& binary) {
     return result;
 }
 
+CheckResult check_body_reap(const std::string& binary) {
+    CheckResult result;
+    const auto started = std::chrono::steady_clock::now();
+    const auto stamp = started.time_since_epoch().count();
+    const fs::path sandbox = fs::temp_directory_path() / ("gm-body-reap-" + std::to_string(stamp));
+    const fs::path workspace = sandbox / "ws";
+    fs::create_directories(workspace);
+    constexpr int kKillSettleMs = 3000;
+    constexpr int kReapMs = 10000;
+    const std::string body = "const r = await gm.run_shell({ command: 'echo $$ > leader.pid; sleep 600 & echo $! > orphan.pid; wait', timeoutMs: 900000 }); return r;";
+    long long leader_pid = 0;
+    long long sleep_pid = 0;
+    std::size_t workers_killed = 0;
+    long long reaped_ms = -1;
+    {
+        Session first(binary, workspace, sandbox, 240000);
+        if (!first.started()) {
+            result.failures.push_back("gm serve did not start from " + binary);
+        } else {
+            first.rpc("initialize", json::Object{{"protocolVersion", "2025-06-18"}, {"capabilities", json::Object{}},
+                                                {"clientInfo", json::Object{{"name", "gm-body-reap-check"}, {"version", "1"}}}});
+            first.notify("notifications/initialized", json::Object{});
+            first.rpc("resources/read", json::Object{{"uri", "skill://gm/SKILL.md"}});
+            call(first, "next_context", json::Object{});
+            first.send("tools/call", json::Object{{"name", "run_code"}, {"arguments", json::Object{{"format", "esm"}, {"timeoutMs", 120000}, {"body", body}}}});
+            const auto began = std::chrono::steady_clock::now();
+            while (since_ms(began) < kCallMs) {
+                leader_pid = pid_file_value(workspace / "leader.pid");
+                sleep_pid = pid_file_value(workspace / "orphan.pid");
+                if (alive(leader_pid) && alive(sleep_pid)) break;
+                std::this_thread::sleep_for(std::chrono::milliseconds(50));
+            }
+            if (!(alive(leader_pid) && alive(sleep_pid)))
+                result.failures.push_back("before the worker was killed the body shell " + std::to_string(leader_pid) + " and its sleep " + std::to_string(sleep_pid) + " were not both alive");
+            const auto workers = engine_processes(workspace);
+            workers_killed = workers.size();
+            if (workers.empty()) result.failures.push_back("no worker process of this run was found to kill");
+            kill_processes(workers);
+            const auto killed_at = std::chrono::steady_clock::now();
+            std::vector<long long> survivors = alive_of(workers);
+            while (!survivors.empty() && since_ms(killed_at) < kKillSettleMs) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(50));
+                survivors = alive_of(workers);
+            }
+            if (!survivors.empty()) result.failures.push_back("a worker survived SIGKILL: pid " + std::to_string(survivors.front()));
+            if (!(alive(leader_pid) && alive(sleep_pid)))
+                result.failures.push_back("the body shell and its sleep did not outlive the worker, so the next serve had nothing to reap");
+        }
+        first.stop();
+    }
+    {
+        Session second(binary, workspace, sandbox, 240000);
+        if (!second.started()) {
+            result.failures.push_back("the next serve did not start from " + binary);
+        } else {
+            second.rpc("initialize", json::Object{{"protocolVersion", "2025-06-18"}, {"capabilities", json::Object{}},
+                                                 {"clientInfo", json::Object{{"name", "gm-body-reap-check"}, {"version", "1"}}}});
+            second.notify("notifications/initialized", json::Object{});
+            second.rpc("resources/read", json::Object{{"uri", "skill://gm/SKILL.md"}});
+            call(second, "next_context", json::Object{});
+            const auto reaping = std::chrono::steady_clock::now();
+            while ((alive(leader_pid) || alive(sleep_pid)) && since_ms(reaping) < kReapMs) std::this_thread::sleep_for(std::chrono::milliseconds(50));
+            reaped_ms = since_ms(reaping);
+            if (alive(leader_pid)) result.failures.push_back("after the next serve the body shell " + std::to_string(leader_pid) + " is still alive");
+            if (alive(sleep_pid)) result.failures.push_back("after the next serve the body sleep " + std::to_string(sleep_pid) + " is still alive");
+        }
+        second.stop();
+    }
+    kill_processes(alive_of({leader_pid, sleep_pid}));
+    std::error_code ignored;
+    fs::remove_all(sandbox, ignored);
+    const double wall = std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
+    result.summary = "a worker SIGKILLed while a run_shell body runs leaves the body shell " + std::to_string(leader_pid) + " and its sleep " + std::to_string(sleep_pid) +
+                     " alive; the next serve on the same run reaps both by pid (" + std::to_string(workers_killed) + " worker process(es) killed, reaped within " + std::to_string(reaped_ms) +
+                     " ms; wall " + std::to_string(wall) + " s)";
+    return result;
+}
+
 }
 #else
 
 namespace gm::tool {
+
+CheckResult check_body_reap(const std::string&) {
+    CheckResult result;
+    result.summary = "skipped: POSIX-only check, runs on Linux and macOS";
+    return result;
+}
 
 CheckResult check_restart_jobs(const std::string&) {
     CheckResult result;

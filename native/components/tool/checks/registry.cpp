@@ -5,9 +5,11 @@ namespace gm::tool {
 const std::vector<Registered>& checks() {
     static const std::vector<Registered> all{
         {"check-run-code-budget", check_run_code_budget},
+        {"check-run-code-lifetime", check_run_code_lifetime},
         {"check-turn-economy", check_turn_economy},
         {"check-restart-jobs", check_restart_jobs},
         {"check-job-identity", check_job_identity},
+        {"check-body-reap", check_body_reap},
         {"check-run-code-progress", check_run_code_progress},
         {"check-read-parity", check_read_parity},
         {"check-protocol-versions", check_protocol_versions},

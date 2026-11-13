@@ -164,10 +164,83 @@ CheckResult check_run_code_budget(const std::string& binary) {
     return result;
 }
 
+CheckResult check_run_code_lifetime(const std::string& binary) {
+    CheckResult result;
+    const auto started = std::chrono::steady_clock::now();
+    const auto stamp = started.time_since_epoch().count();
+    const fs::path sandbox = fs::temp_directory_path() / ("gm-run-code-lifetime-" + std::to_string(stamp));
+    const fs::path workspace = sandbox / "ws";
+    fs::create_directories(workspace);
+    constexpr std::int64_t kLifetimeMs = 4000;
+    constexpr std::int64_t kSpinMs = 9000;
+    constexpr std::int64_t kHostMs = 6000;
+    long long spin_ms = -1;
+    long long host_ms = -1;
+    {
+        Session session(binary, workspace, sandbox, 240000, true, {"--job-lifetime-ms", std::to_string(kLifetimeMs)});
+        if (!session.started()) {
+            result.failures.push_back("gm serve did not start from " + binary);
+        } else {
+            session.rpc("initialize", json::Object{{"protocolVersion", "2025-06-18"}, {"capabilities", json::Object{}},
+                                                  {"clientInfo", json::Object{{"name", "gm-run-code-lifetime-check"}, {"version", "1"}}}});
+            session.notify("notifications/initialized", json::Object{});
+            session.rpc("resources/read", json::Object{{"uri", "skill://gm/SKILL.md"}});
+            tool_text(session, "next_context", json::Object{});
+            const auto settle = [&session](const std::string& job) {
+                json::Value status;
+                for (int attempt = 0; attempt < 10; ++attempt) {
+                    status = output_of(tool_json(session, "run_code", json::Object{{"format", "esm"}, {"timeoutMs", 150000},
+                                                                                  {"body", "return await gm.job_status({ job: " + json::quote(job) + ", waitMs: 100000 });"}}));
+                    const std::string state = text_at(status, "state");
+                    if (state != "running" && state != "queued") break;
+                }
+                return status;
+            };
+
+            const auto spin_began = std::chrono::steady_clock::now();
+            const json::Value spin = tool_json(session, "run_code", json::Object{{"format", "esm"}, {"timeoutMs", 1000},
+                                                                                {"body", "const end = Date.now() + " + std::to_string(kSpinMs) + "; while (Date.now() < end) {} return 'spun';"}});
+            const std::string spin_job = text_at(spin, "background");
+            const json::Value spin_status = spin_job.empty() ? json::Value(json::Object{}) : settle(spin_job);
+            spin_ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - spin_began).count();
+            if (spin_job.empty()) result.failures.push_back("the spin body did not move to background: " + json::dump(spin).substr(0, 200));
+            if (!(text_at(spin_status, "state") == "killed" && json::dump(spin_status).find("lifetime") != std::string::npos))
+                result.failures.push_back("the spin body ended " + json::dump(spin_status).substr(0, 240));
+            if (!(spin_ms >= kLifetimeMs - 500 && spin_ms < kSpinMs))
+                result.failures.push_back("the spin body was killed after " + std::to_string(spin_ms) + " ms, not near " + std::to_string(kLifetimeMs) + " ms");
+
+            const auto host_began = std::chrono::steady_clock::now();
+            const json::Value host = tool_json(session, "run_code", json::Object{{"format", "esm"}, {"timeoutMs", 1000},
+                                                                                {"body", "return await gm.run_shell({ command: 'sleep " + std::to_string(kHostMs / 1000) + "; echo done', timeoutMs: 30000 });"}});
+            const std::string host_job = text_at(host, "background");
+            const json::Value host_status = host_job.empty() ? json::Value(json::Object{}) : settle(host_job);
+            host_ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - host_began).count();
+            if (host_job.empty()) result.failures.push_back("the host-call body did not move to background: " + json::dump(host).substr(0, 200));
+            if (!(text_at(host_status, "state") == "exited" && json::dump(host_status).find("done") != std::string::npos))
+                result.failures.push_back("the host-call body ended " + json::dump(host_status).substr(0, 240));
+            if (host_ms < kHostMs) result.failures.push_back("the host-call body finished in " + std::to_string(host_ms) + " ms, before its " + std::to_string(kHostMs) + " ms host call");
+        }
+        session.stop();
+    }
+    std::error_code ignored;
+    fs::remove_all(sandbox, ignored);
+    const double wall = std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
+    result.summary = "a spin body with a " + std::to_string(kLifetimeMs) + " ms job lifetime was killed with reason lifetime after " + std::to_string(spin_ms) +
+                     " ms of wall time; a " + std::to_string(kHostMs) + " ms run_shell host call did not count against the lifetime and returned done after " + std::to_string(host_ms) +
+                     " ms (wall " + std::to_string(wall) + " s)";
+    return result;
+}
+
 }
 #else
 
 namespace gm::tool {
+
+CheckResult check_run_code_lifetime(const std::string&) {
+    CheckResult result;
+    result.summary = "skipped: POSIX-only check, runs on Linux and macOS";
+    return result;
+}
 
 CheckResult check_run_code_budget(const std::string&) {
     CheckResult result;
