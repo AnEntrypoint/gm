@@ -85,7 +85,14 @@ jobs:
           echo "PLAYWRITER_NO_SANDBOX=1" >> "$GITHUB_ENV"
       - name: Test
         shell: bash
-        run: build/${{ matrix.preset }}/native/components/tool/gm-tool phase-b build/${{ matrix.preset }}
+        env:
+          CHECKS: ${{ inputs.checks }}
+        run: |
+          if [ -n "$CHECKS" ]; then
+            build/${{ matrix.preset }}/native/components/tool/gm-tool check build/${{ matrix.preset }}/native/components/host/gm $CHECKS
+          else
+            build/${{ matrix.preset }}/native/components/tool/gm-tool phase-b build/${{ matrix.preset }}
+          fi
       - name: Replay witness
         if: matrix.target == 'x64-linux'
         shell: bash
