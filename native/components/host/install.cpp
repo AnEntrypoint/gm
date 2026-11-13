@@ -159,7 +159,7 @@ std::map<std::string, std::string> tree_marks(const fs::path& root) {
         std::error_code entry_ec;
         if (!it->is_regular_file(entry_ec)) continue;
         marks[it->path().lexically_relative(root).generic_string()] =
-            std::to_string(it->file_size(entry_ec)) + ":" + std::to_string(it->last_write_time(entry_ec).time_since_epoch().count());
+            std::to_string(it->file_size(entry_ec)) + ":" + std::to_string(static_cast<long long>(it->last_write_time(entry_ec).time_since_epoch().count()));
     }
     return marks;
 }
