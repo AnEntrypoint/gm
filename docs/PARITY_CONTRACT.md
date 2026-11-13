@@ -48,7 +48,7 @@ Reply on success: `ok: true, output` (the body's return value), `truncated`, `lo
 Error cases:
 - The body throws: `ok: false`, `error` with the message, then a stack line `at body (<body>:L:C)`.
 - The body does not load (syntax): `ok: false`, `error` starting `the body does not load:`.
-- Every run_code on a connection before the skill was read is refused, `ok: false`, with a one-line error naming skill://gm/SKILL.md; the reply carries no skill text. A resources/read of the skill on the connection lets run_code run.
+- Every run_code on a connection before the skill was read is refused, `ok: false`, with a one-line error naming skill://gm/SKILL.md; the reply carries no skill text. A resources/read of the skill on the connection lets run_code run. A run_code whose first verb is `gm.read_file({ path: 'skill://gm/SKILL.md' })` is the in-band fallback for a host with no resource tool: that verb serves the skill, the read clears the gate, and no other verb runs before it.
 - A call after the run has ended: `ok: false, refused: true`, `error` `refused: run <id> has ended; call next_context to open a new run`.
 
 Witness (W2):

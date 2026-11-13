@@ -55,6 +55,7 @@ CheckResult check_stop_fetch(const std::string& binary);
 CheckResult check_install_switch(const std::string& binary);
 CheckResult check_restart_skill_read(const std::string& binary);
 CheckResult check_no_resource_client(const std::string& binary);
+CheckResult check_skill_read_fallback(const std::string& binary);
 CheckResult check_turn_end_release(const std::string& binary);
 CheckResult check_mcp_args(const std::string& binary);
 CheckResult check_run_code_budget(const std::string& binary);

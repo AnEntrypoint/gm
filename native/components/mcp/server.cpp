@@ -219,10 +219,12 @@ const std::string kResourcesPointer =
 const std::string kSkillPointer =
     "The gm skill holds the rules of a run, the routes for pending events, and the way to hand work to a child "
     "session. Read it when a run starts, and read it again after a compaction. Read skill://gm/SKILL.md with "
-    "ReadMcpResourceTool (server gm), or run the gm prompt (mcp__gm__gm). The host's Skill tool does not list it, so "
-    "do not call it with the Skill tool. The gm-continue skill plans the open rows of gm and hands them to the gm "
-    "skill. Read skill://gm-continue/SKILL.md with ReadMcpResourceTool (server gm), or run the gm-continue prompt "
-    "(mcp__gm__gm-continue). The host's Skill tool does not list it, so do not call it with the Skill tool.";
+    "ReadMcpResourceTool (server gm), or run the gm prompt (mcp__gm__gm). A host with no resource tool can read the "
+    "served skill in band as the first verb of a run_code body: gm.read_file({ path: 'skill://gm/SKILL.md' }) clears "
+    "the gate. The host's Skill tool does not list it, so do not call it with the Skill tool. The gm-continue skill "
+    "plans the open rows of gm and hands them to the gm skill. Read skill://gm-continue/SKILL.md with "
+    "ReadMcpResourceTool (server gm), or run the gm-continue prompt (mcp__gm__gm-continue). The host's Skill tool "
+    "does not list it, so do not call it with the Skill tool.";
 
 const std::string kNextContextDescription =
     "Begin a step. Returns rules, task, witness requirement, the events new since the last step in full, and "
@@ -730,6 +732,7 @@ struct Server::State {
         bool finished = false;
         bool adopted = false;
         bool settled = false;
+        bool skill_bootstrap = false;
         bool stuck = false;
         std::uint64_t reminders = 0;
         std::vector<std::string> started_jobs;
@@ -2567,6 +2570,23 @@ struct Server::State {
     }
 
     Value run_code(const Value& args);
+    bool skill_read() {
+        std::lock_guard guard(mu);
+        return gm_skill_read;
+    }
+    bool body_reads_skill_first(const Value& args) {
+        const Value* body = args.find("body");
+        if (body == nullptr || !body->is_string()) return false;
+        const std::string& text = body->as_string();
+        static const std::regex kFirstVerb(R"(gm\.([A-Za-z_][A-Za-z0-9_]*)\s*\()");
+        std::smatch match;
+        if (!std::regex_search(text, match, kFirstVerb) || match[1].str() != "read_file") return false;
+        const std::size_t open = text.find('(', static_cast<std::size_t>(match.position()));
+        const std::size_t close = text.find(')', open);
+        if (close == std::string::npos) return false;
+        const std::string call = text.substr(open, close - open + 1);
+        return call.find("path") != std::string::npos && call.find(kGmSkillUri) != std::string::npos;
+    }
     bool skill_refusal_due() {
         if (!skill_file_of(kGmSkillUri)) return false;
         skill_refusal_ = skill_refusal_text();
@@ -2578,7 +2598,7 @@ struct Server::State {
         const std::string cause = skill_change_.empty() ? "the gm skill has not been read on this connection" : skill_change_;
         const std::string on_disk = found ? found->second.disk : std::string("the gm skill file");
         return "run_code refused: " + cause + "; read skill://gm/SKILL.md first with resources/read, ReadMcpResourceTool (server gm) or the gm prompt. The rules are also on disk at " + on_disk +
-               " for a host's file tool, but that file read does not clear this gate. Every run_code is refused until the skill is read on this connection.";
+               " for a host's file tool, but that file read does not clear this gate. Every other run_code is refused until the skill is read on this connection; a run_code whose first verb is gm.read_file({ path: 'skill://gm/SKILL.md' }) reads the served skill in band and clears the gate.";
     }
 
     Value invoke(const std::string& name, const Value& args) {
@@ -2682,7 +2702,9 @@ struct Server::State {
             throw RpcError(-32602, "Unknown tool: " + name +
                                        "; the code surface serves next_context, run_code, task_set and finish; call a verb as gm.<name>(args) inside run_code");
         }
-        const bool gated = name == "run_code" && !gm_skill_read && skill_refusal_due();
+        const bool skill_pending = name == "run_code" && !skill_read();
+        const bool bootstrap = skill_pending && body_reads_skill_first(args);
+        const bool gated = skill_pending && !bootstrap && skill_refusal_due();
         if (!gated && !s().run_started && !s().ended && name != "next_context" && name != "finish") {
             note_rule(kStepStartRule, name + " was called before the first next_context of the run");
         }
@@ -3655,6 +3677,11 @@ public:
         if (!gate_->alive || job_->stopped) {
             return object().set("ok", false).set("error", "background run " + job_->name + " was stopped; its verb calls are refused");
         }
+        if (job_->skill_bootstrap && !state_.skill_read()) {
+            const Value* path = args.find("path");
+            const bool served = name == "read_file" && path != nullptr && path->is_string() && path->as_string() == kGmSkillUri;
+            if (!served) return object().set("ok", false).set("error", state_.skill_refusal_text());
+        }
         Server::State::Session& owner = *job_->owner;
         double start = owner.log->now_ms();
         std::optional<std::uint64_t> action;
@@ -3786,6 +3813,7 @@ Value Server::State::run_code(const Value& args) {
             job->controls->js_budget = std::chrono::milliseconds(static_cast<long long>(options.job_lifetime_ms));
             job->body = action;
             job->step = s().steps;
+            job->skill_bootstrap = !skill_read() && body_reads_skill_first(args);
             job->owner = &s();
             job->start_mono = s().log->now_ms();
             job->name = "body-" + std::to_string(action);
@@ -3831,6 +3859,10 @@ Value Server::State::run_code(const Value& args) {
                     started_jobs = job->started_jobs;
                 }
                 if (job->thread.joinable()) job->thread.join();
+                if (job->skill_bootstrap && !skill_read()) {
+                    skill_refusal_due();
+                    return with_seq(object().set("ok", false).set("error", skill_refusal_).set("loads", array()));
+                }
                 settle_started_jobs(started_jobs);
                 if (shell_jobs_open()) ensure_monitor();
                 {

@@ -9,7 +9,7 @@ A multi-step change is built as one batch: all the steps first, then one witness
 
 Three tools are served: next_context, run_code and finish. The work is done in run_code, and finish ends the run with a witness.
 
-This skill is not in the host Skill tool. Read it with ReadMcpResourceTool (server gm, uri skill://gm/SKILL.md), or run the gm prompt (mcp__gm__gm). Read it first in every session, and again after a compaction.
+This skill is not in the host Skill tool. Read it with ReadMcpResourceTool (server gm, uri skill://gm/SKILL.md), or run the gm prompt (mcp__gm__gm). A host with no resource tool reads it in band as the first verb of a run_code body: `await gm.read_file({ path: 'skill://gm/SKILL.md' })` serves the same text and clears the gate. Read it first in every session, and again after a compaction.
 
 ## Phases
 

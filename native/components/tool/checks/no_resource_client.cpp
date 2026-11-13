@@ -170,4 +170,57 @@ CheckResult check_no_resource_client(const std::string& binary) {
     return result;
 }
 
+CheckResult check_skill_read_fallback(const std::string& binary) {
+    CheckResult result;
+    const auto started = std::chrono::steady_clock::now();
+    const auto stamp = started.time_since_epoch().count();
+    const fs::path scratch = fs::temp_directory_path() / ("gm-skill-read-fallback-" + std::to_string(stamp));
+    const fs::path workspace = scratch / "ws";
+    fs::create_directories(workspace);
+    std::ofstream(scratch / "quiet.json") << R"({"mcpServers":{"playwriter":{"disabled":true}}})";
+    const fs::path disk_skill = checkout_skill();
+    if (disk_skill.empty()) {
+        result.failures.push_back("run from the checkout: no skills/gm/SKILL.md in the working directory or its parents");
+        return result;
+    }
+    const std::string disk = read_text(disk_skill);
+    const std::string bootstrap = "const skill = await gm.read_file({ path: 'skill://gm/SKILL.md' }); return skill.output.length;";
+    const std::string fake = "const fake = \"gm.read_file({ path: 'skill://gm/SKILL.md' })\"; return await gm.write_file({ path: 'marker.txt', content: 'written' });";
+    {
+        Session client(binary, workspace, scratch, 180000, true);
+        if (!client.started()) {
+            result.failures.push_back("gm serve did not start from " + binary);
+        } else {
+            client.rpc("initialize", json::Object{{"protocolVersion", "2025-06-18"}, {"capabilities", json::Object{}},
+                                                  {"clientInfo", json::Object{{"name", "skill-read-fallback-check"}, {"version", "1"}}}});
+            client.notify("notifications/initialized", json::Object{});
+            const json::Value opened = tool_json(client, "next_context", json::Object{});
+            if (!flag(opened, "ok", true)) result.failures.push_back("next_context was refused: " + json::dump(opened).substr(0, 200));
+            const json::Value plain = tool_json(client, "run_code", json::Object{{"body", kSample}});
+            if (!flag(plain, "ok", false) || json::dump(plain).find("run_code refused:") == std::string::npos)
+                result.failures.push_back("a plain run_code was not refused before the skill read: " + json::dump(plain).substr(0, 300));
+            const json::Value wrong = tool_json(client, "run_code", json::Object{{"body", "await gm.run_shell({ command: 'true' }); return await gm.read_file({ path: 'skill://gm/SKILL.md' });"}});
+            if (!flag(wrong, "ok", false)) result.failures.push_back("a body with another first verb was not refused: " + json::dump(wrong).substr(0, 300));
+            const json::Value spoof = tool_json(client, "run_code", json::Object{{"body", fake}});
+            if (!flag(spoof, "ok", false) || fs::exists(workspace / "marker.txt"))
+                result.failures.push_back("a body that only quoted the skill read ran a verb before reading the skill: " + json::dump(spoof).substr(0, 300));
+            const json::Value served = tool_json(client, "run_code", json::Object{{"body", bootstrap}});
+            if (!flag(served, "ok", true) || !output_value(served).is_number() || output_value(served).as_number() != static_cast<double>(disk.size()))
+                result.failures.push_back("the in-band skill read did not return the whole served skill: " + json::dump(served).substr(0, 300));
+            const json::Value after = tool_json(client, "run_code", json::Object{{"body", "return 7;"}});
+            if (!flag(after, "ok", true) || !output_value(after).is_number() || output_value(after).as_number() != 7)
+                result.failures.push_back("the gate did not clear for later run_code calls: " + json::dump(after).substr(0, 300));
+            const json::Value logged = tool_json(client, "run_code", json::Object{{"body", "return (await gm.query_log({ last: 40 })).output;"}});
+            if (!contains_text(logged, "skill-loaded") || !contains_text(logged, "read_file") || !contains_text(logged, "skill://gm/SKILL.md"))
+                result.failures.push_back("the run log has no skill-loaded event via read_file: " + json::dump(logged).substr(0, 300));
+        }
+        client.stop();
+    }
+    std::error_code ignored;
+    fs::remove_all(scratch, ignored);
+    const double wall = std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
+    result.summary = "a host with no resource tool is refused on plain bodies and on a body that only quotes the skill read, then reads the served skill in band as the first verb of run_code, clears the gate for later bodies and logs skill-loaded via read_file (wall " + std::to_string(wall) + " s)";
+    return result;
+}
+
 }

@@ -28,6 +28,7 @@ const std::vector<Registered>& checks() {
         {"check-install-switch", check_install_switch},
         {"check-restart-skill-read", check_restart_skill_read},
         {"check-no-resource-client", check_no_resource_client},
+        {"check-skill-read-fallback", check_skill_read_fallback},
         {"check-turn-end-release", check_turn_end_release},
         {"check-mcp-args", check_mcp_args},
         {"check-embedded-runtime", check_embedded_runtime},
