@@ -22,8 +22,11 @@ CheckResult check_lazy_browser(const std::string& binary) {
     auto count_playwriter = [](const std::vector<long long>& pids) {
         std::size_t count = 0;
         for (long long pid : pids) {
-            std::ifstream cmdline("/proc/" + std::to_string(pid) + "/cmdline");
-            std::string text((std::istreambuf_iterator<char>(cmdline)), std::istreambuf_iterator<char>());
+            std::string text;
+            for (const std::string& part : proc::command_of(pid)) {
+                if (!text.empty()) text += ' ';
+                text += part;
+            }
             if (text.find("playwriter") != std::string::npos) ++count;
         }
         return count;
