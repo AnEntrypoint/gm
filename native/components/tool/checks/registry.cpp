@@ -34,6 +34,7 @@ const std::vector<Registered>& checks() {
         {"check-repeated-checks", check_repeated_checks},
         {"check-owner-identity", check_owner_identity},
         {"check-run-task-kept", check_run_task_kept},
+        {"check-first-step-correction", check_first_step_correction},
         {"check-cut-marker", check_cut_marker},
         {"check-grep-state-scope", check_grep_state_scope},
         {"check-job-bounds", check_job_bounds},

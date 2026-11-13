@@ -18,6 +18,35 @@ void open_session(Session& session) {
     session.notify("notifications/initialized", json::Object{});
 }
 
+json::Value first_call(const std::string& binary, const fs::path& workspace, const fs::path& sandbox, const fs::path& run_dir, const std::vector<std::string>& flags, const std::string& task) {
+    std::vector<std::string> argv{binary, "serve", "--workspace", workspace.string(), "--run-dir", run_dir.string()};
+    argv.insert(argv.end(), flags.begin(), flags.end());
+    Session session(argv, workspace, sandbox, 180000);
+    if (!session.started()) return json::Object{{"error", "gm serve did not start from " + binary}};
+    open_session(session);
+    session.rpc("resources/read", json::Object{{"uri", "skill://gm/SKILL.md"}});
+    json::Value reply = tool_json(session, "next_context", json::Object{{"task", task}});
+    session.stop();
+    return reply;
+}
+
+bool open_only(const std::string& binary, const fs::path& workspace, const fs::path& sandbox, const fs::path& run_dir, const std::vector<std::string>& flags) {
+    std::vector<std::string> argv{binary, "serve", "--workspace", workspace.string(), "--run-dir", run_dir.string()};
+    argv.insert(argv.end(), flags.begin(), flags.end());
+    Session session(argv, workspace, sandbox, 180000);
+    if (session.started()) {
+        open_session(session);
+        session.rpc("resources/read", json::Object{{"uri", "skill://gm/SKILL.md"}});
+    }
+    session.stop();
+    return fs::exists(run_dir / "log.jsonl") && fs::exists(run_dir / "task.json");
+}
+
+bool is_refused(const json::Value& reply) {
+    const json::Value* refused = reply.find("refused");
+    return refused != nullptr && refused->is_bool() && refused->as_bool();
+}
+
 }
 
 CheckResult check_owner_identity(const std::string& binary) {
@@ -133,6 +162,47 @@ CheckResult check_run_task_kept(const std::string& binary) {
     fs::remove_all(sandbox, ignored);
     const double wall = std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
     result.summary = "an open run that a new serve reopens keeps its logged task; the --task of the new serve does not replace it (wall " + std::to_string(wall) + " s)";
+    return result;
+}
+
+CheckResult check_first_step_correction(const std::string& binary) {
+    CheckResult result;
+    const auto started = std::chrono::steady_clock::now();
+    const auto stamp = started.time_since_epoch().count();
+    const fs::path sandbox = fs::temp_directory_path() / ("gm-first-step-" + std::to_string(stamp));
+    const fs::path workspace = sandbox / "ws";
+    const fs::path runs = workspace / "runs";
+    fs::create_directories(runs);
+    const std::string opened = "fix";
+    const std::string extended = "fix the parser";
+    const std::string other = "write the docs";
+    const std::vector<std::string> with_task{"--task", opened};
+    const json::Value created_extend = first_call(binary, workspace, sandbox, runs / "created", with_task, extended);
+    if (text_at(created_extend, "task") != extended) result.failures.push_back("a run this connection created did not take a first-step correction that extends its task: " + json::dump(created_extend).substr(0, 240));
+    const json::Value created_other = first_call(binary, workspace, sandbox, runs / "other", with_task, other);
+    if (!is_refused(created_other) || text_at(created_other, "task") == other) result.failures.push_back("a run this connection created took a first-step task that does not extend its task: " + json::dump(created_other).substr(0, 240));
+    const fs::path adopted = runs / "adopted";
+    if (!open_only(binary, workspace, sandbox, adopted, with_task)) {
+        result.failures.push_back("the first serve did not leave the adopted run behind");
+    } else {
+        proc::SpawnOptions options(sandbox);
+        auto holder = proc::Child::spawn({"sleep", "120"}, options);
+        if (!holder) {
+            result.failures.push_back("the owner holder process did not start");
+        } else {
+            {
+                std::ofstream owner(adopted / "owner", std::ios::trunc);
+                owner << (*holder)->pid() << ":1\n";
+            }
+            const json::Value adopted_extend = first_call(binary, workspace, sandbox, adopted, {}, extended);
+            if (!is_refused(adopted_extend)) result.failures.push_back("an adopted run took a first-step correction without owner:true: " + json::dump(adopted_extend).substr(0, 240));
+            (*holder)->kill();
+        }
+    }
+    std::error_code ignored;
+    if (result.failures.empty()) fs::remove_all(sandbox, ignored);
+    const double wall = std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
+    result.summary = "a first-step correction that extends the task of a run this connection created is taken; a replacement on that run and any correction on an adopted run are refused without owner:true (wall " + std::to_string(wall) + " s)";
     return result;
 }
 

@@ -682,6 +682,7 @@ struct Server::State {
         std::vector<std::pair<int, std::string>> rules_open;
         bool run_started = false;
         bool owner_seen = false;
+        bool created = false;
         bool child_seen = false;
         std::string child_task;
         int step_calls = 0;
@@ -1127,6 +1128,7 @@ struct Server::State {
         auto opened = open_run(*fresh, dir, fresh->task);
         if (!opened) return Fail{opened.error()};
         bool resumed = *opened;
+        fresh->created = !resumed;
         session = std::move(fresh);
         std::optional<std::string> closed_at_boot;
         std::vector<Value> history;
@@ -1256,6 +1258,7 @@ struct Server::State {
         auto fresh = std::make_unique<Session>();
         auto opened = open_run(*fresh, next_dir, task);
         if (!opened) throw std::runtime_error(opened.error());
+        fresh->created = true;
         set_owner(next_dir, me);
         set_owner(s().run_dir, me);
         set_successor(s().run_dir, next_dir);
@@ -2294,8 +2297,9 @@ struct Server::State {
         std::string corrected = task_arg && task_arg->is_string() ? trim(task_arg->as_string()) : "";
         const Value* owner_arg = args.find("owner");
         bool owner = owner_arg && owner_arg->is_bool() && owner_arg->as_bool();
-        bool first_step_correction = s().steps == 0 && !s().run_started && !s().child_seen && !s().owner_seen &&
-                                     (s().task.empty() || s().task.find_first_of(" \t\r\n") == std::string::npos);
+        bool first_step_correction = s().created && s().steps == 0 && !s().run_started && !s().child_seen && !s().owner_seen &&
+                                     (s().task.empty() || s().task.find_first_of(" \t\r\n") == std::string::npos) &&
+                                     corrected.compare(0, s().task.size(), s().task) == 0;
         if (!corrected.empty() && !owner && !first_step_correction) {
             return refuse("next_context", args, "a task replacement after the first step needs owner:true; retry with next_context({ task: \"<new task>\", owner: true }), or call gm.task_set({ task: \"<new task>\", owner: true }) from run_code");
         }
