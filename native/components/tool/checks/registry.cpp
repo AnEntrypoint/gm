@@ -52,6 +52,7 @@ const std::vector<Registered>& checks() {
         {"check-spawn-sites", check_spawn_sites},
         {"check-lazy-browser", check_lazy_browser},
         {"check-browser-first-open", check_browser_first_open},
+        {"check-portable-proc-reads", check_portable_proc_reads},
         {"check-browser-scope", check_browser_scope},
         {"check-browser-scope-identity", check_browser_scope_identity},
         {"check-browser-scope-tree", check_browser_scope_tree},
