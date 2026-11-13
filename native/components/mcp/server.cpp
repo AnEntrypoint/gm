@@ -2231,9 +2231,13 @@ struct Server::State {
         reply.set("remaining", remaining_now());
         PendingTake taken = take_pending(s().run_dir);
         if (!taken.records.empty()) {
+            std::set<std::string> ended_shown;
+            if (const Value* ended = notices.find("jobsEnded"); ended && ended->is_array()) {
+                for (const Value& item : ended->as_array()) ended_shown.insert(string_of(item, "job"));
+            }
             Value records = array();
             for (Value& record : taken.records) {
-                if (waiting) attach_job_output(record);
+                if (waiting && !ended_shown.contains(string_of(record, "job"))) attach_job_output(record);
                 records.push(std::move(record));
             }
             reply.set("pending", std::move(records));
