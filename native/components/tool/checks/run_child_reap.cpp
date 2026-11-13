@@ -1,5 +1,7 @@
 #include "gm/tool.hpp"
 
+#if !defined(_WIN32)
+
 #include <chrono>
 #include <filesystem>
 #include <fstream>
@@ -77,3 +79,15 @@ CheckResult check_run_child_reap(const std::string& binary) {
 }
 
 }
+#else
+
+namespace gm::tool {
+
+CheckResult check_run_child_reap(const std::string&) {
+    CheckResult result;
+    result.summary = "skipped (platform: the child reap is POSIX only; it runs on linux and macOS)";
+    return result;
+}
+
+}
+#endif

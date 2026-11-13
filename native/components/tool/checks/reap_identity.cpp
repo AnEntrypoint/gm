@@ -1,5 +1,7 @@
 #include "gm/tool.hpp"
 
+#if !defined(_WIN32)
+
 #include <algorithm>
 #include <chrono>
 #include <cstdlib>
@@ -124,3 +126,15 @@ CheckResult check_reap_identity(const std::string&) {
 }
 
 }
+#else
+
+namespace gm::tool {
+
+CheckResult check_reap_identity(const std::string&) {
+    CheckResult result;
+    result.summary = "skipped (platform: the ledger reap is POSIX only; it runs on linux and macOS)";
+    return result;
+}
+
+}
+#endif
