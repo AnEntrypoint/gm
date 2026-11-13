@@ -49,6 +49,7 @@ const std::vector<Registered>& checks() {
         {"check-browser-first-open", check_browser_first_open},
         {"check-browser-scope", check_browser_scope},
         {"check-browser-scope-identity", check_browser_scope_identity},
+        {"check-browser-scope-tree", check_browser_scope_tree},
         {"check-rows", check_rows},
         {"check-fetch", check_fetch},
         {"check-wiki", check_wiki},

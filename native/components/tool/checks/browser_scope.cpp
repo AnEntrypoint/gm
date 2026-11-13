@@ -4,8 +4,11 @@
 #include <algorithm>
 #include <chrono>
 #include <filesystem>
+#include <fstream>
+#include <iterator>
 #include <memory>
 #include <regex>
+#include <set>
 #include <sstream>
 #include <system_error>
 #include <thread>
@@ -132,12 +135,18 @@ std::vector<long long> stop_owned(const std::vector<Owned>& owned) {
 
 std::vector<Owned> serve_tree(const Session& session) { return owned_of(session.descendants()); }
 
+std::vector<std::string> words_of(const std::vector<std::string>& command) {
+    std::vector<std::string> words;
+    for (const std::string& part : command) {
+        std::istringstream text(part);
+        for (std::string word; text >> word;) words.push_back(word);
+    }
+    return words;
+}
+
 bool main_browser_of(const std::vector<std::string>& command, const std::string& profile) {
-    std::string joined;
-    for (const std::string& part : command) joined += part + " ";
-    std::istringstream text(joined);
     bool ours = false;
-    for (std::string word; text >> word;) {
+    for (const std::string& word : words_of(command)) {
         if (word.rfind("--type=", 0) == 0) return false;
         if (word == "--user-data-dir=" + profile) ours = true;
     }
@@ -157,6 +166,109 @@ std::string pid_list(const std::vector<Owned>& owned) {
     std::string text;
     for (const Owned& each : owned) text += (text.empty() ? " (pids " : ", ") + std::to_string(each.pid);
     return text.empty() ? text : text + ")";
+}
+
+const std::string kUserDataArg = "--user-data-dir=";
+
+bool under(const std::string& path, const fs::path& root) {
+    const std::string base = root.string();
+    return path == base || path.rfind(base + "/", 0) == 0;
+}
+
+std::string environment_of(long long pid, const std::string& key) {
+    std::ifstream file("/proc/" + std::to_string(pid) + "/environ", std::ios::binary);
+    const std::string bytes((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+    const std::string prefix = key + "=";
+    std::size_t at = 0;
+    while (at < bytes.size()) {
+        std::size_t end = bytes.find('\0', at);
+        if (end == std::string::npos) end = bytes.size();
+        const std::string entry = bytes.substr(at, end - at);
+        if (entry.rfind(prefix, 0) == 0) return entry.substr(prefix.size());
+        at = end + 1;
+    }
+    return std::string();
+}
+
+bool gate_command(const std::vector<std::string>& command) {
+    bool entry = false;
+    bool gate = false;
+    for (const std::string& word : words_of(command)) {
+        if (word.substr(word.rfind('/') + 1) == "playwriter-project") entry = true;
+        if (word == "--gate") gate = true;
+    }
+    return entry && gate;
+}
+
+bool chromium_command(const std::vector<std::string>& command, const fs::path& root) {
+    const std::vector<std::string> words = words_of(command);
+    if (words.empty() || words.front().substr(words.front().rfind('/') + 1).find("chrom") == std::string::npos) return false;
+    for (const std::string& word : words) {
+        if (word.rfind(kUserDataArg, 0) == 0 && under(word.substr(kUserDataArg.size()), root)) return true;
+    }
+    return false;
+}
+
+std::set<long long> owner_pids() {
+    std::set<long long> owners;
+    const fs::path owner_root = "/workspace";
+    std::error_code ec;
+    for (const auto& project : fs::directory_iterator(owner_root, ec)) {
+        std::error_code runs_ec;
+        for (const auto& run : fs::directory_iterator(project.path() / "runs", runs_ec)) {
+            std::ifstream file(run.path() / "owner");
+            std::string text;
+            std::getline(file, text);
+            const std::string pid_text = text.substr(0, text.find(':'));
+            if (pid_text.empty() || pid_text.size() > 9 || pid_text.find_first_not_of("0123456789") != std::string::npos) continue;
+            const long long pid = std::stoll(pid_text);
+            if (proc::start_time_of(pid) > 0) owners.insert(pid);
+        }
+    }
+    return owners;
+}
+
+std::vector<long long> roots_under(const fs::path& sandbox, const std::set<long long>& owners) {
+    std::vector<long long> roots;
+    for (const auto& row : proc::process_table()) {
+        if (row.zombie || owners.count(row.pid) != 0) continue;
+        const std::vector<std::string> command = proc::command_of(row.pid);
+        const bool gate = gate_command(command) && under(environment_of(row.pid, "PLAYWRITER_PROJECT_DIR"), sandbox);
+        if (gate || chromium_command(command, sandbox)) roots.push_back(row.pid);
+    }
+    return roots;
+}
+
+std::vector<Owned> run_tree(const fs::path& sandbox, const std::set<long long>& owners) {
+    std::vector<Owned> tree;
+    for (const Owned& each : owned_of(roots_under(sandbox, owners))) {
+        if (owners.count(each.pid) == 0) tree.push_back(each);
+    }
+    return tree;
+}
+
+std::vector<long long> stop_run_tree(const fs::path& sandbox) { return stop_owned(run_tree(sandbox, owner_pids())); }
+
+std::vector<long long> pids_of(const std::vector<Owned>& owned) {
+    std::vector<long long> pids;
+    for (const Owned& each : owned) pids.push_back(each.pid);
+    return pids;
+}
+
+std::size_t gates_among(const std::vector<Owned>& owned) {
+    std::size_t gates = 0;
+    for (const Owned& each : owned) {
+        if (gate_command(proc::command_of(each.pid))) gates += 1;
+    }
+    return gates;
+}
+
+std::string start_gate(const fs::path& launcher, const fs::path& home, const fs::path& workspace) {
+    const auto started = proc::run({"env", "HOME=" + home.string(), "PLAYWRITER_PROJECT_DIR=" + workspace.string(), "PLAYWRITER_TELEMETRY=0", "node", launcher.string(), "start"}, workspace, {}, 120000);
+    if (!started.started || started.exit_code != 0 || started.err.find("browser ready") == std::string::npos) {
+        return (started.err.empty() ? started.out : started.err).substr(0, 300);
+    }
+    return std::string();
 }
 
 json::Value install_sandbox(const fs::path& binary, const fs::path& home) {
@@ -180,6 +292,7 @@ CheckResult check_browser_scope(const std::string& binary) {
     const fs::path workspace = sandbox / "ws";
     const std::string profile = (workspace / ".playwriter" / "browser-profile").string();
     std::string own_note;
+    std::string tree_note;
     fs::create_directories(home);
     fs::create_directories(workspace);
     auto expect = [&](bool condition, const std::string& text) {
@@ -350,6 +463,14 @@ CheckResult check_browser_scope(const std::string& binary) {
         for (const long long pid : survivors) ids += (ids.empty() ? "" : " ") + std::to_string(pid);
         result.failures.push_back(std::to_string(survivors.size()) + " process(es) started by this check are still alive: " + ids);
     }
+    const std::vector<Owned> run_owned = run_tree(sandbox, owner_pids());
+    const std::vector<long long> run_survivors = stop_owned(run_owned);
+    tree_note = "gate and browser tree: " + std::to_string(run_owned.size()) + " process(es) found before the stop";
+    if (!run_survivors.empty()) {
+        std::string ids;
+        for (const long long pid : run_survivors) ids += (ids.empty() ? "" : " ") + std::to_string(pid);
+        result.failures.push_back(std::to_string(run_survivors.size()) + " process(es) of this run's gate and browser tree are still alive: " + ids);
+    }
     std::error_code ignored;
     if (result.failures.empty()) {
         fs::remove_all(sandbox, ignored);
@@ -358,7 +479,7 @@ CheckResult check_browser_scope(const std::string& binary) {
         result.failures.push_back("the gate log is kept at " + (logs / "gate.log").string() + " and the browser log at " + (logs / "browser.log").string() + "; the sandbox " + sandbox.string() + " is kept with them");
     }
     const double wall = std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
-    result.summary = "browser scope: finish browser key, browser_tabs, playwriter_browsers close, browser_close_machine guard; browser run: " + browser_phase + (own_note.empty() ? std::string() : "; " + own_note) + " (wall " + std::to_string(wall) + " s)";
+    result.summary = "browser scope: finish browser key, browser_tabs, playwriter_browsers close, browser_close_machine guard; browser run: " + browser_phase + (own_note.empty() ? std::string() : "; " + own_note) + "; " + tree_note + " (wall " + std::to_string(wall) + " s)";
 #else
     result.summary = "not measured: the browser check runs the launcher under a Linux process tree";
 #endif
@@ -425,6 +546,80 @@ CheckResult check_browser_scope_identity(const std::string& binary) {
     return result;
 }
 
+CheckResult check_browser_scope_tree(const std::string& binary) {
+    CheckResult result;
+#if defined(__linux__)
+    const auto started = std::chrono::steady_clock::now();
+    const auto stamp = started.time_since_epoch().count();
+    const fs::path sandbox = fs::temp_directory_path() / ("gm-browser-scope-tree-" + std::to_string(stamp));
+    const fs::path home = sandbox / "home";
+    const fs::path red = sandbox / "red";
+    const fs::path green = sandbox / "green";
+    const fs::path guarded = sandbox / "guarded";
+    fs::create_directories(home);
+    fs::create_directories(red);
+    fs::create_directories(green);
+    fs::create_directories(guarded);
+    auto expect = [&](bool condition, const std::string& text) {
+        if (!condition) result.failures.push_back(text);
+    };
+    const json::Value installed_reply = install_sandbox(binary, home);
+    expect(flag(installed_reply, "ok"), "the clean install failed: " + json::dump(part(installed_reply, "error")));
+    const fs::path launcher = home / ".gmnew" / "current" / "pw" / "bin" / "playwriter-project";
+    expect(!result.failures.empty() || fs::exists(launcher), "the playwriter launcher from the sandbox install is missing: " + launcher.string());
+    std::size_t red_found = 0;
+    std::size_t green_found = 0;
+    std::size_t guarded_found = 0;
+    if (result.failures.empty()) {
+        const std::string red_error = start_gate(launcher, home, red);
+        expect(red_error.empty(), "the red control's gate did not start: " + red_error);
+        if (red_error.empty()) {
+            const std::vector<Owned> red_tree = run_tree(red, owner_pids());
+            const std::size_t red_gates = gates_among(red_tree);
+            red_found = red_tree.size();
+            expect(red_gates == 1, "the red control found " + std::to_string(red_gates) + " gate(s) in its tree with no stop run, expected 1");
+            expect(!red_tree.empty() && alive_of(pids_of(red_tree)).size() == red_tree.size(), "the red control's gate tree is not all alive with no stop run");
+        }
+        const std::string green_error = start_gate(launcher, home, green);
+        expect(green_error.empty(), "the green gate did not start: " + green_error);
+        if (green_error.empty()) {
+            const std::vector<Owned> green_tree = run_tree(green, owner_pids());
+            const std::size_t green_gates = gates_among(green_tree);
+            green_found = green_tree.size();
+            expect(green_gates == 1, "the green gate tree before the stop has " + std::to_string(green_gates) + " gate(s), expected 1");
+            const std::vector<long long> green_survivors = stop_run_tree(green);
+            expect(green_survivors.empty(), std::to_string(green_survivors.size()) + " process(es) of the green gate tree are still alive after the stop");
+            expect(run_tree(green, owner_pids()).empty(), "the green detection still finds a process of its tree after the stop");
+        }
+        const std::string guarded_error = start_gate(launcher, home, guarded);
+        expect(guarded_error.empty(), "the owner-file control's gate did not start: " + guarded_error);
+        if (guarded_error.empty()) {
+            const std::vector<Owned> guarded_tree = run_tree(guarded, std::set<long long>());
+            std::set<long long> named;
+            for (const Owned& each : guarded_tree) named.insert(each.pid);
+            guarded_found = guarded_tree.size();
+            expect(gates_among(guarded_tree) == 1, "the owner-file control found " + std::to_string(gates_among(guarded_tree)) + " gate(s) with no owner named, expected 1");
+            expect(run_tree(guarded, named).empty(), "a process named by an owner file was still in the stop set");
+            stop_owned(run_tree(guarded, named));
+            expect(alive_of(pids_of(guarded_tree)).size() == guarded_tree.size(), "a process named by an owner file was stopped");
+        }
+    }
+    const std::vector<long long> leftovers = stop_run_tree(sandbox);
+    expect(leftovers.empty(), std::to_string(leftovers.size()) + " process(es) of the check's gate trees were still alive at cleanup");
+    const double wall = std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
+    std::error_code ignored;
+    if (result.failures.empty()) {
+        fs::remove_all(sandbox, ignored);
+        result.summary = "gate tree: the red control's gate was found alive with " + std::to_string(red_found) + " process(es) in its tree and no stop run; the green gate tree of " + std::to_string(green_found) +
+                         " process(es) was stopped by pid and start time, and none was found after the stop; a gate tree of " + std::to_string(guarded_found) +
+                         " process(es) with its pids named by an owner file was not stopped (wall " + std::to_string(wall) + " s)";
+    }
+#else
+    result.summary = "not measured: the gate-tree witness runs under a Linux process tree";
+#endif
+    return result;
+}
+
 }
 #else
 
@@ -437,6 +632,12 @@ CheckResult check_browser_scope(const std::string&) {
 }
 
 CheckResult check_browser_scope_identity(const std::string&) {
+    CheckResult result;
+    result.summary = "skipped: POSIX-only check, runs on Linux and macOS";
+    return result;
+}
+
+CheckResult check_browser_scope_tree(const std::string&) {
     CheckResult result;
     result.summary = "skipped: POSIX-only check, runs on Linux and macOS";
     return result;
