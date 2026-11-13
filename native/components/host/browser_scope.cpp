@@ -13,12 +13,13 @@ constexpr std::size_t kUrlChars = 200;
 constexpr int kBrowserTimeoutMs = 10000;
 
 const char* kOpenRunContext =
-    "{ let home = browser.contexts()[0]; for (let i = 0; !home && i < 100; i += 1) { await new Promise((r) => setTimeout(r, 100)); home = browser.contexts()[0]; } "
-    "if (!home) throw new Error('the browser lists no default context'); "
-    "if (!state.gmPage || state.gmPage.isClosed()) { state.gmProject = home; state.gmPage = home.pages().find((p) => !p.isClosed()) || await home.newPage(); } "
-    "if (!state.gmRun) { state.gmRun = home; state.gmRun.setDefaultTimeout(60000); state.gmRun.setDefaultNavigationTimeout(10000); "
-    "const owned = state.gmRunPages = new Set(); "
-    "state.gmRunView = new Proxy(home, { get(target, key) { if (key === 'newPage') return async (...args) => { const made = await target.newPage(...args); owned.add(made); return made; }; const value = Reflect.get(target, key, target); return typeof value === 'function' ? value.bind(target) : value; } }); } } "
+    "{ const sleep = (ms) => new Promise((done) => setTimeout(done, ms)); "
+    "const live = async () => { let last = null; for (let attempt = 0; attempt < 5; attempt += 1) { for (const c of browser.contexts()) { try { const open = c.pages().find((p) => !p.isClosed()); return { home: c, page: open || await c.newPage() }; } catch (e) { last = e; } } await sleep(200 * 2 ** attempt); } throw last || new Error('the browser lists no context a run can open a page in'); }; "
+    "const gmNewPage = async (first, args) => { let last = null; for (let attempt = 0; attempt < 5; attempt += 1) { const order = [first, ...browser.contexts()].filter((c, i, all) => c && all.indexOf(c) === i); for (const c of order) { try { return await c.newPage(...args); } catch (e) { last = e; } } await sleep(200 * 2 ** attempt); } throw last || new Error('no browser context accepted a new page'); }; "
+    "if (!state.gmPage || state.gmPage.isClosed() || !state.gmProject) { const got = await live(); state.gmProject = got.home; state.gmPage = got.page; } "
+    "if (!state.gmRun || state.gmRunFor !== state.gmProject) { const home = state.gmProject; state.gmRun = home; state.gmRunFor = home; state.gmRun.setDefaultTimeout(60000); state.gmRun.setDefaultNavigationTimeout(10000); "
+    "const owned = state.gmRunPages = state.gmRunPages || new Set(); "
+    "state.gmRunView = new Proxy(home, { get(target, key) { if (key === 'newPage') return async (...args) => { const made = await gmNewPage(state.gmProject, args); owned.add(made); return made; }; const value = Reflect.get(target, key, target); return typeof value === 'function' ? value.bind(target) : value; } }); } } "
     "var page = state.gmPage; context = state.gmRunView; ";
 const char* kTabsCode =
     "const cdp = await browser.newBrowserCDPSession(); const { targetInfos } = await cdp.send('Target.getTargets'); "
@@ -33,7 +34,7 @@ const char* kTabsCode =
     "await cdp.detach(); return 'GMTABS' + JSON.stringify({ rows, counts }) + 'GMTABS';";
 const char* kCloseCode =
     "let n = 0; if (state.gmRun) { try { const opened = [...(state.gmRunPages || [])].filter((p) => !p.isClosed()); "
-    "for (const p of opened) { await p.close(); } n = opened.length; } finally { delete state.gmRun; delete state.gmRunView; delete state.gmRunPages; } } return 'GMCLOSED' + n + 'GMCLOSED';";
+    "for (const p of opened) { await p.close(); } n = opened.length; } finally { delete state.gmRun; delete state.gmRunFor; delete state.gmRunView; delete state.gmRunPages; } } return 'GMCLOSED' + n + 'GMCLOSED';";
 
 json::Value failure(std::string message) {
     json::Value reply;
