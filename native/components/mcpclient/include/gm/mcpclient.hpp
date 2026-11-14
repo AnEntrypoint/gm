@@ -1,5 +1,6 @@
 #pragma once
 
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
@@ -45,7 +46,9 @@ public:
     std::vector<VerbInfo> list() const override;
     json::Value call(std::string_view name, const json::Value& args) override;
     json::Value call_sibling(std::string_view sibling, std::string_view tool, const json::Value& args) override;
+    void wait_for(std::string_view name) const;
     void wait_ready() const;
+    void wait_ready_for(std::chrono::milliseconds budget) const;
     void release_leases(const std::string& reason, bool run_end);
     bool serves(std::string_view name) const;
 

@@ -47,6 +47,8 @@ std::string verb_name(const std::string& server, const std::string& tool) {
     return !name.empty() && name[0] >= '0' && name[0] <= '9' ? "mcp_" + name : name;
 }
 
+std::string verb_prefix(const std::string& server) { return verb_name(server, std::string()); }
+
 std::string short_text(const std::string& text) {
     std::size_t units = 0;
     for (std::size_t at = 0; at < text.size();) {
@@ -109,6 +111,7 @@ struct McpVerbs::Impl {
     bool ready = false;
     std::vector<VerbInfo> verbs;
     std::map<std::string, Route, std::less<>> routes;
+    std::set<std::string> announced_skips;
 
     void announce(std::string_view kind, json::Value fields) const {
         if (emit) emit(kind, std::move(fields));
@@ -165,7 +168,12 @@ struct McpVerbs::Impl {
         }
     }
 
-    void skip(const std::string& server, const std::string& tool, const std::string& verb, const std::string& reason) const {
+    void skip(const std::string& server, const std::string& tool, const std::string& verb, const std::string& reason) {
+        const std::string key = server + ":" + tool + ":" + verb + ":" + reason;
+        {
+            std::lock_guard lock(mutex);
+            if (!announced_skips.insert(key).second) return;
+        }
         json::Value fields;
         fields.set("server", server).set("tool", tool).set("verb", verb).set("reason", reason);
         announce("mcp-tool-skipped", std::move(fields));
@@ -199,6 +207,7 @@ McpVerbs::McpVerbs(Options options) : impl_(std::make_unique<Impl>()) {
         }
         impl_->clients.push_back(std::move(client));
     }
+    impl_->build_routes();
     impl_->starter = std::thread([impl = impl_.get()] { impl->start_all(); });
 }
 
@@ -254,9 +263,31 @@ json::Value McpVerbs::call_sibling(std::string_view sibling, std::string_view to
     return client->call_tool(std::string(tool), args.is_null() ? json::Value(json::Object{}) : args);
 }
 
+void McpVerbs::wait_for(std::string_view name) const {
+    if (impl_->reserved.contains(name)) return;
+    {
+        std::lock_guard lock(impl_->mutex);
+        if (impl_->routes.contains(name)) return;
+        bool downstream = false;
+        for (const std::unique_ptr<StdioClient>& client : impl_->clients) {
+            if (name.starts_with(verb_prefix(client->spec().name))) {
+                downstream = true;
+                break;
+            }
+        }
+        if (!downstream) return;
+    }
+    wait_ready();
+}
+
 void McpVerbs::wait_ready() const {
     std::unique_lock lock(impl_->mutex);
     impl_->ready_changed.wait(lock, [this] { return impl_->ready; });
+}
+
+void McpVerbs::wait_ready_for(std::chrono::milliseconds budget) const {
+    std::unique_lock lock(impl_->mutex);
+    impl_->ready_changed.wait_for(lock, budget, [this] { return impl_->ready; });
 }
 
 }

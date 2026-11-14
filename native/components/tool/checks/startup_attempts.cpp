@@ -4,13 +4,21 @@
 #include <filesystem>
 #include <fstream>
 #include <system_error>
+#include <thread>
 
 namespace gm::tool {
 namespace {
 
 namespace fs = std::filesystem;
 
-constexpr const char* kConfig = R"({"mcpServers":{"playwriter":{"disabled":true},"crashy":{"command":"sh","args":["-c","echo boom-from-crashy >&2; exit 128"],"startupTimeoutMs":20000},"silent":{"command":"sh","args":["-c","sleep 30"],"startupTimeoutMs":2000}}})";
+constexpr const char* kConfig = R"({"mcpServers":{"playwriter":{"disabled":true},"crashy":{"command":"sh","args":["-c","echo boom-from-crashy >&2; exit 128"],"startupTimeoutMs":20000},"silent":{"command":"sh","args":["-c","sleep 30"],"startupTimeoutMs":6000}}})";
+
+constexpr auto kCoreReplyBudget = std::chrono::milliseconds(2000);
+constexpr auto kEventDeadline = std::chrono::seconds(15);
+
+long long elapsed_ms(const std::chrono::steady_clock::time_point& started) {
+    return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - started).count();
+}
 
 std::vector<json::Value> events_of(const json::Value& run) {
     const json::Value output = output_value(run);
@@ -45,6 +53,11 @@ bool failed_containing(const std::vector<json::Value>& events, const std::string
     return false;
 }
 
+bool failures_ready(const std::vector<json::Value>& events) {
+    return failed_with(events, "crashy", "MCP server crashy did not start after 3 attempt(s)") &&
+           failed_with(events, "silent", "MCP server silent did not start after 1 attempt(s): initialize timed out after 6000 ms");
+}
+
 }
 
 CheckResult check_startup_attempts(const std::string& binary) {
@@ -53,6 +66,9 @@ CheckResult check_startup_attempts(const std::string& binary) {
     const auto stamp = started.time_since_epoch().count();
     const fs::path sandbox = fs::temp_directory_path() / ("gm-startup-native-" + std::to_string(stamp));
     const fs::path workspace = sandbox / "ws";
+    long long resource_ms = -1;
+    long long context_ms = -1;
+    long long body_ms = -1;
     fs::create_directories(workspace / ".gm");
     {
         std::ofstream(workspace / ".gm" / "mcp.json") << kConfig;
@@ -63,10 +79,25 @@ CheckResult check_startup_attempts(const std::string& binary) {
             session.rpc("initialize", json::Object{{"protocolVersion", "2025-06-18"}, {"capabilities", json::Object{}},
                                                   {"clientInfo", json::Object{{"name", "startup-check"}, {"version", "1"}}}});
             session.notify("notifications/initialized", json::Object{});
+            const auto resource_started = std::chrono::steady_clock::now();
             session.rpc("resources/read", json::Object{{"uri", "skill://gm/SKILL.md"}});
+            resource_ms = elapsed_ms(resource_started);
+            const auto context_started = std::chrono::steady_clock::now();
             tool_text(session, "next_context", json::Object{{"task", "startup attempts check"}, {"owner", true}});
+            context_ms = elapsed_ms(context_started);
+            const auto body_started = std::chrono::steady_clock::now();
             const json::Value ran = tool_json(session, "run_code", json::Object{{"body", "return await gm.query_log({ kind: \"mcp-server\" });"}});
-            const std::vector<json::Value> events = events_of(ran);
+            body_ms = elapsed_ms(body_started);
+            if (resource_ms > kCoreReplyBudget.count()) result.failures.push_back("resources/read waited " + std::to_string(resource_ms) + " ms for a downstream server");
+            if (context_ms > kCoreReplyBudget.count()) result.failures.push_back("next_context waited " + std::to_string(context_ms) + " ms for a downstream server");
+            if (body_ms > kCoreReplyBudget.count()) result.failures.push_back("run_code waited " + std::to_string(body_ms) + " ms for a downstream server");
+            std::vector<json::Value> events = events_of(ran);
+            const fs::path log = workspace / "runs" / "check" / "log.jsonl";
+            const auto deadline = std::chrono::steady_clock::now() + kEventDeadline;
+            while (!failures_ready(events) && std::chrono::steady_clock::now() < deadline) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                events = run_events(log, "mcp-server");
+            }
             if (events.empty()) result.failures.push_back("native: no mcp-server events were logged: " + json::dump(ran).substr(0, 300));
 
             std::size_t crashy_retrying = 0;
@@ -81,15 +112,15 @@ CheckResult check_startup_attempts(const std::string& binary) {
             if (!failed_with(events, "crashy", "MCP server crashy did not start after 3 attempt(s)")) result.failures.push_back("native: crashy failed after 3 attempts");
             if (!failed_containing(events, "crashy", "stderr: boom-from-crashy")) result.failures.push_back("native: crashy names its stderr tail");
             if (!failed_containing(events, "crashy", "Startup budget 20000 ms (startupTimeoutMs)")) result.failures.push_back("native: crashy names its startup budget");
-            if (!failed_with(events, "silent", "MCP server silent did not start after 1 attempt(s): initialize timed out after 2000 ms")) result.failures.push_back("native: silent is not retried after a timeout");
-            if (!failed_containing(events, "silent", "Startup budget 2000 ms (startupTimeoutMs)")) result.failures.push_back("native: silent names its startup budget");
+            if (!failed_with(events, "silent", "MCP server silent did not start after 1 attempt(s): initialize timed out after 6000 ms")) result.failures.push_back("native: silent is not retried after a timeout");
+            if (!failed_containing(events, "silent", "Startup budget 6000 ms (startupTimeoutMs)")) result.failures.push_back("native: silent names its startup budget");
         }
         session.stop();
     }
     std::error_code ignored;
     fs::remove_all(sandbox, ignored);
     const double wall = std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
-    result.summary = "a server that exits before it answers is retried and each attempt's exit code is named, and a timed-out server names its startup budget (wall " + std::to_string(wall) + " s)";
+    result.summary = "a server that exits before it answers is retried and each attempt's exit code is named, and a timed-out server names its startup budget; gm's own tools answered while a downstream server was starting: resources/read " + std::to_string(resource_ms) + " ms, next_context " + std::to_string(context_ms) + " ms, run_code " + std::to_string(body_ms) + " ms (wall " + std::to_string(wall) + " s)";
     return result;
 }
 

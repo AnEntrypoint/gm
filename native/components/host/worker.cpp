@@ -62,7 +62,7 @@ public:
         return inner_.list();
     }
     json::Value call(std::string_view name, const json::Value& args) override {
-        gate_.wait_ready();
+        gate_.wait_for(name);
         events_.release();
         if (!gate_.serves(name)) {
             if (auto refusal = refuse_unknown_keys(inner_, name, args)) return std::move(*refusal);
@@ -93,6 +93,7 @@ int fail(std::string_view message) {
 }
 
 const auto kTraceStart = std::chrono::steady_clock::now();
+constexpr auto kDownstreamVerbGrace = std::chrono::milliseconds(1000);
 
 void trace_phase(std::string_view phase) {
     if (std::getenv("GMNEW_TRACE_STARTUP") == nullptr) return;
@@ -208,9 +209,10 @@ int run_worker(const HostArgs& args) {
     options.release_leases = [&mcp_verbs](const std::string& reason, bool run_end) { mcp_verbs.release_leases(reason, run_end); };
     options.flush_job_events = [&core] { core.flush_job_events(); };
     options.wait_program = current_executable().string();
-    options.run_body = [&mcp_verbs, &boot_events](VerbTable& verbs, std::string_view body, const std::filesystem::path& root,
-                                                  std::string_view format) {
-        mcp_verbs.wait_ready();
+    auto downstream_grace = std::make_shared<std::once_flag>();
+    options.run_body = [&mcp_verbs, &boot_events, downstream_grace](VerbTable& verbs, std::string_view body, const std::filesystem::path& root,
+                                                                     std::string_view format) {
+        std::call_once(*downstream_grace, [&mcp_verbs] { mcp_verbs.wait_ready_for(kDownstreamVerbGrace); });
         boot_events.release();
         return gm::run_body(verbs, body, root, format);
     };
