@@ -239,7 +239,7 @@ const std::string kNextContextDescription =
     "with child, names that owning run, and another run is refused. compactChildren: true summarizes child run_code "
     "and code-call generations into counts with a seq range and a gm.query_log note, while pending, parent-action, "
     "job, row and recovery events stay full; the default feed is unchanged. task, when set, replaces the run's "
-    "task text; use it in the first step when a host cut the slash-command task to its first word. A later task replacement needs owner:true, from the owning run or from a child context (child: true) alike.";
+    "task text; use it in the first step when a host cut the slash-command task to its first word. A later task replacement needs owner:true, from the owning run or from a child context (child: true) alike. After finish, the successor run inherits the ended run's task, so a new task on its first call needs owner:true.";
 const std::string kFinishDescription =
     "End the run. witness is one string that quotes the evidence you observed. gaps optionally lists, one string "
     "each, what the run did not check; the end event logs them. finish is refused while a background run is running, "
@@ -2315,7 +2315,11 @@ struct Server::State {
                                      (s().task.empty() || s().task.find_first_of(" \t\r\n") == std::string::npos) &&
                                      corrected.compare(0, s().task.size(), s().task) == 0;
         if (!corrected.empty() && !owner && !first_step_correction) {
-            return refuse("next_context", args, "a task replacement after the first step needs owner:true; retry with next_context({ task: \"<new task>\", owner: true }), or call gm.task_set({ task: \"<new task>\", owner: true }) from run_code");
+            std::string reason = "a task replacement after the first step needs owner:true";
+            if (s().steps == 0 && s().task_inherited)
+                reason = "the first next_context after finish opened a successor run that inherited the ended run's task, so a task argument on that call needs owner:true";
+            return refuse("next_context", args,
+                          reason + "; retry with next_context({ task: \"<new task>\", owner: true }), or call gm.task_set({ task: \"<new task>\", owner: true }) from run_code");
         }
         Value audit = object();
         if (task_arg != nullptr) audit.set("task", corrected).set("owner", owner).set("correction", first_step_correction);

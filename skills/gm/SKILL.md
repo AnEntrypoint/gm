@@ -86,7 +86,7 @@ After a compaction, call `next_context({ full: true })` at once and follow the r
 
 ## Task text
 
-A host may cut a slash-command task to its first word. If the task in the run is shorter than the command you were given, pass the whole text in the first step with `next_context({ task })`. After the first step, a replacement needs `owner: true`.
+A host may cut a slash-command task to its first word. If the task in the run is shorter than the command you were given, pass the whole text in the first step with `next_context({ task })`. After the first step, a replacement needs `owner: true`. After `finish`, the first `next_context` opens a successor run that inherits the ended run's task, so a new task on that call needs `owner: true`; `next_context({ task: '<new task>', owner: true })` opens the successor and sets the task in one call.
 
 ## Browser
 

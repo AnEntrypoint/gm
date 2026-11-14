@@ -91,6 +91,7 @@ footer { border-top: 4px solid #000; margin-top: 2em; padding-top: 0.5em; font-s
   <li>The model does the work in one <code>run_code</code> call. Its body is JavaScript with a <code>gm</code> object whose methods are the verbs.</li>
   <li>The model calls <code>finish</code> with a witness: one string quoting the output it actually saw. A finish without a witness is refused.</li>
 </ol>
+<p>After <code>finish</code>, the first <code>next_context</code> opens a successor run that inherits the ended run's task. A different task on that call needs <code>owner: true</code>; one call, <code>next_context({ task: '&lt;new task&gt;', owner: true })</code>, opens the successor and sets its task.</p>
 </section>
 
 <section class="chapter">
