@@ -288,27 +288,64 @@ void dump_number(std::string& out, double n) {
     out.append(buf, res.ptr);
 }
 
+std::size_t utf8_width(unsigned char lead) {
+    if (lead < 0x80) return 1;
+    if (lead >= 0xC2 && lead <= 0xDF) return 2;
+    if (lead >= 0xE0 && lead <= 0xEF) return 3;
+    if (lead >= 0xF0 && lead <= 0xF4) return 4;
+    return 0;
+}
+
+bool utf8_continuation(unsigned char c) { return (c & 0xC0) == 0x80; }
+
+bool utf8_second_fits(unsigned char lead, unsigned char second) {
+    if (lead == 0xE0) return second >= 0xA0 && second <= 0xBF;
+    if (lead == 0xED) return second >= 0x80 && second <= 0x9F;
+    if (lead == 0xF0) return second >= 0x90 && second <= 0xBF;
+    if (lead == 0xF4) return second >= 0x80 && second <= 0x8F;
+    return utf8_continuation(second);
+}
+
 void quote_into(std::string& out, std::string_view s) {
     static const char hex[] = "0123456789abcdef";
     out.push_back('"');
-    for (char ch : s) {
-        unsigned char c = static_cast<unsigned char>(ch);
-        switch (c) {
-            case '"': out += "\\\""; break;
-            case '\\': out += "\\\\"; break;
-            case '\b': out += "\\b"; break;
-            case '\f': out += "\\f"; break;
-            case '\n': out += "\\n"; break;
-            case '\r': out += "\\r"; break;
-            case '\t': out += "\\t"; break;
-            default:
-                if (c < 0x20) {
-                    out += "\\u00";
-                    out.push_back(hex[c >> 4]);
-                    out.push_back(hex[c & 0xF]);
-                } else {
-                    out.push_back(ch);
-                }
+    for (std::size_t at = 0; at < s.size();) {
+        const auto c = static_cast<unsigned char>(s[at]);
+        if (c < 0x80) {
+            switch (c) {
+                case '"': out += "\\\""; break;
+                case '\\': out += "\\\\"; break;
+                case '\b': out += "\\b"; break;
+                case '\f': out += "\\f"; break;
+                case '\n': out += "\\n"; break;
+                case '\r': out += "\\r"; break;
+                case '\t': out += "\\t"; break;
+                default:
+                    if (c < 0x20) {
+                        out += "\\u00";
+                        out.push_back(hex[c >> 4]);
+                        out.push_back(hex[c & 0xF]);
+                    } else {
+                        out.push_back(static_cast<char>(c));
+                    }
+            }
+            ++at;
+            continue;
+        }
+        const std::size_t width = utf8_width(c);
+        std::size_t got = 1;
+        while (width != 0 && got < width && at + got < s.size()) {
+            const auto next = static_cast<unsigned char>(s[at + got]);
+            const bool fits = got == 1 ? utf8_second_fits(c, next) : utf8_continuation(next);
+            if (!fits) break;
+            ++got;
+        }
+        if (width != 0 && got == width) {
+            out.append(s.data() + at, width);
+            at += width;
+        } else {
+            out += "\\ufffd";
+            at += got;
         }
     }
     out.push_back('"');
