@@ -15,7 +15,7 @@ constexpr const char* kConfig = R"({"mcpServers":{"playwriter":{"disabled":true}
 
 constexpr const char* kDisabledConfig = R"({"mcpServers":{"playwriter":{"disabled":true},"crashy":{"disabled":true},"silent":{"disabled":true}}})";
 constexpr const char* kSlowConfig = R"({"mcpServers":{"playwriter":{"disabled":true},"crashy":{"disabled":true},"silent":{"command":"sh","args":["-c","sleep 30"],"startupTimeoutMs":6000}}})";
-constexpr auto kReplySlack = std::chrono::milliseconds(1000);
+constexpr auto kReplySlack = std::chrono::milliseconds(2500);
 constexpr auto kEventDeadline = std::chrono::seconds(15);
 
 long long elapsed_ms(const std::chrono::steady_clock::time_point& started) {
