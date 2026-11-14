@@ -21,6 +21,8 @@ w.dot = await gm.git_add({ paths: ['.'] });
 w.outside = await gm.git_add({ paths: ['../escape.txt'] });
 w.noMessage = await gm.git_commit({ message: '', paths: ['a.txt'] });
 w.badCount = await gm.git_log({ count: 500 });
+w.limit = await gm.git_log({ limit: 5 });
+w.badLimit = await gm.git_log({ limit: 500 });
 w.badRef = await gm.git_checkout({ ref: '-x' });
 await gm.run_shell({ command: 'git checkout -q -b topic' });
 w.branch = await gm.git_branch({});
@@ -76,13 +78,15 @@ CheckResult check_git(const std::string& binary) {
     expect(contains(text, "refused: path is outside the workspace: ../escape.txt"), "git_add accepted a path outside the workspace");
     expect(contains(text, "\"noMessage\":{\"ok\":false,\"error\":\"message must be a non-empty string\""), "git_commit accepted an empty message");
     expect(contains(text, "count must be an integer from 1 to 200"), "git_log accepted a count over 200");
+    expect(contains(text, "\"limit\":{\"ok\":true") && contains(text, "first commit"), "git_log did not accept limit as an alias for count");
+    expect(contains(text, "\"badLimit\":{\"ok\":false,\"error\":\"count must be an integer from 1 to 200\""), "git_log accepted a limit over 200");
     expect(contains(text, "ref must be a branch, tag or commit name"), "git_checkout accepted a ref that starts with a dash");
     expect(contains(text, "* topic"), "git_branch did not mark the topic branch as current");
     expect(contains(text, "refused: git_push sends only main, and the current branch is topic"), "git_push pushed a branch other than main");
     expect(contains(text, "is not inside a git repository"), "a cwd outside a repository was not refused");
     std::error_code ignored;
     std::filesystem::remove_all(sandbox, ignored);
-    result.summary = "add, commit (with its log event), log, show, state, the path, message, count and ref refusals, the push branch guard and the cwd refusal answer as the leaf did";
+    result.summary = "add, commit (with its log event), log, show, state, the limit alias for count, the path, message, count and ref refusals, the push branch guard and the cwd refusal answer as the leaf did";
     return result;
 }
 

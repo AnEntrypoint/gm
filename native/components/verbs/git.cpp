@@ -401,7 +401,9 @@ json::Value run_verb(const std::string& name, const json::Value& args, const fs:
     }
     if (name == "git_log") {
         std::int64_t count = 20;
-        if (const json::Value* c = list_arg("count"); c != nullptr && !c->is_null()) {
+        const json::Value* c = list_arg("count");
+        if (c == nullptr || c->is_null()) c = list_arg("limit");
+        if (c != nullptr && !c->is_null()) {
             if (!c->is_number() || c->as_number() != static_cast<double>(static_cast<std::int64_t>(c->as_number())) || c->as_number() < 1 || c->as_number() > static_cast<double>(kMaxCount))
                 return fail("count must be an integer from 1 to " + std::to_string(kMaxCount));
             count = static_cast<std::int64_t>(c->as_number());
