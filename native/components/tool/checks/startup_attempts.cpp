@@ -13,11 +13,32 @@ namespace fs = std::filesystem;
 
 constexpr const char* kConfig = R"({"mcpServers":{"playwriter":{"disabled":true},"crashy":{"command":"sh","args":["-c","echo boom-from-crashy >&2; exit 128"],"startupTimeoutMs":20000},"silent":{"command":"sh","args":["-c","sleep 30"],"startupTimeoutMs":6000}}})";
 
-constexpr auto kCoreReplyBudget = std::chrono::milliseconds(2000);
+constexpr const char* kDisabledConfig = R"({"mcpServers":{"playwriter":{"disabled":true},"crashy":{"disabled":true},"silent":{"disabled":true}}})";
+constexpr const char* kSlowConfig = R"({"mcpServers":{"playwriter":{"disabled":true},"crashy":{"disabled":true},"silent":{"command":"sh","args":["-c","sleep 30"],"startupTimeoutMs":6000}}})";
+constexpr auto kReplySlack = std::chrono::milliseconds(1000);
 constexpr auto kEventDeadline = std::chrono::seconds(15);
 
 long long elapsed_ms(const std::chrono::steady_clock::time_point& started) {
     return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - started).count();
+}
+
+long long resource_reply_ms(const std::string& binary, const fs::path& sandbox, const std::string& name, const std::string& config) {
+    const fs::path workspace = sandbox / (name + "-ws");
+    const fs::path home = sandbox / (name + "-home");
+    fs::create_directories(workspace / ".gm");
+    fs::create_directories(home);
+    std::ofstream(home / "quiet.json") << config;
+    std::ofstream(workspace / ".gm" / "mcp.json") << config;
+    Session session(binary, workspace, home, 180000, true);
+    if (!session.started()) return -1;
+    session.rpc("initialize", json::Object{{"protocolVersion", "2025-06-18"}, {"capabilities", json::Object{}},
+                                          {"clientInfo", json::Object{{"name", name}, {"version", "1"}}}});
+    session.notify("notifications/initialized", json::Object{});
+    const auto started = std::chrono::steady_clock::now();
+    session.rpc("resources/read", json::Object{{"uri", "skill://gm/SKILL.md"}});
+    const long long ms = elapsed_ms(started);
+    session.stop();
+    return ms;
 }
 
 std::vector<json::Value> events_of(const json::Value& run) {
@@ -70,6 +91,11 @@ CheckResult check_startup_attempts(const std::string& binary) {
     long long context_ms = -1;
     long long body_ms = -1;
     fs::create_directories(workspace / ".gm");
+    const long long baseline_ms = resource_reply_ms(binary, sandbox, "baseline", kDisabledConfig);
+    const long long slow_ms = resource_reply_ms(binary, sandbox, "slow", kSlowConfig);
+    const long long budget_ms = baseline_ms >= 0 ? baseline_ms + kReplySlack.count() : -1;
+    if (budget_ms < 0) result.failures.push_back("the no-downstream baseline session did not answer resources/read");
+    if (slow_ms > budget_ms) result.failures.push_back("an injected downstream startup wait slowed gm's own reply: " + std::to_string(slow_ms) + " ms with a " + std::to_string(budget_ms) + " ms budget");
     {
         std::ofstream(workspace / ".gm" / "mcp.json") << kConfig;
         Session session(binary, workspace, sandbox, 180000, false);
@@ -88,9 +114,9 @@ CheckResult check_startup_attempts(const std::string& binary) {
             const auto body_started = std::chrono::steady_clock::now();
             const json::Value ran = tool_json(session, "run_code", json::Object{{"body", "return await gm.query_log({ kind: \"mcp-server\" });"}});
             body_ms = elapsed_ms(body_started);
-            if (resource_ms > kCoreReplyBudget.count()) result.failures.push_back("resources/read waited " + std::to_string(resource_ms) + " ms for a downstream server");
-            if (context_ms > kCoreReplyBudget.count()) result.failures.push_back("next_context waited " + std::to_string(context_ms) + " ms for a downstream server");
-            if (body_ms > kCoreReplyBudget.count()) result.failures.push_back("run_code waited " + std::to_string(body_ms) + " ms for a downstream server");
+            if (resource_ms > budget_ms) result.failures.push_back("resources/read waited " + std::to_string(resource_ms) + " ms for a downstream server, budget " + std::to_string(budget_ms) + " ms");
+            if (context_ms > budget_ms) result.failures.push_back("next_context waited " + std::to_string(context_ms) + " ms for a downstream server, budget " + std::to_string(budget_ms) + " ms");
+            if (body_ms > budget_ms) result.failures.push_back("run_code waited " + std::to_string(body_ms) + " ms for a downstream server, budget " + std::to_string(budget_ms) + " ms");
             std::vector<json::Value> events = events_of(ran);
             const fs::path log = workspace / "runs" / "check" / "log.jsonl";
             const auto deadline = std::chrono::steady_clock::now() + kEventDeadline;
@@ -120,7 +146,7 @@ CheckResult check_startup_attempts(const std::string& binary) {
     std::error_code ignored;
     fs::remove_all(sandbox, ignored);
     const double wall = std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
-    result.summary = "a server that exits before it answers is retried and each attempt's exit code is named, and a timed-out server names its startup budget; gm's own tools answered while a downstream server was starting: resources/read " + std::to_string(resource_ms) + " ms, next_context " + std::to_string(context_ms) + " ms, run_code " + std::to_string(body_ms) + " ms (wall " + std::to_string(wall) + " s)";
+    result.summary = "a server that exits before it answers is retried and each attempt's exit code is named, and a timed-out server names its startup budget; a no-downstream baseline answered resources/read in " + std::to_string(baseline_ms) + " ms, the budget is baseline plus " + std::to_string(kReplySlack.count()) + " ms, an injected startup wait took " + std::to_string(slow_ms) + " ms, and gm's own tools answered while downstream servers were starting: resources/read " + std::to_string(resource_ms) + " ms, next_context " + std::to_string(context_ms) + " ms, run_code " + std::to_string(body_ms) + " ms (wall " + std::to_string(wall) + " s)";
     return result;
 }
 
