@@ -51,6 +51,12 @@ CheckResult check_read_after_write(const std::string& binary) {
                 "await gm.edit_file({ path: 'f.txt', old: 'v0', new: 'v1' }); const first = await gm.read_file({ path: 'f.txt' }); return JSON.stringify(first);");
             expect(contains(edit, "v1") && !pointer(edit), "edit then read in one body served a stale or pointer read: " + edit.substr(0, 300));
 
+            const std::string aliased = session.body(
+                "await gm.edit_file({ path: 'f.txt', old_string: 'v1', new_string: 'v1a' }); return (await gm.read_file({ path: 'f.txt' })).output;");
+            expect(contains(aliased, "v1a"), "an edit_file with old_string and new_string was not applied: " + aliased.substr(0, 300));
+            const std::string missing = session.body("return JSON.stringify(await gm.edit_file({ path: 'f.txt' }));");
+            expect(contains(missing, "old or old_string"), "edit_file without old or old_string did not name both in its error: " + missing.substr(0, 300));
+
             session.body(kRead);
             session.body(kRead);
             session.body("await gm.run_shell({ command: \"printf v2 > f.txt\" }); return 'written';");

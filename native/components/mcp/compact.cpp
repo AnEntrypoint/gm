@@ -274,7 +274,19 @@ std::optional<Value> tool_record(const Value& event, const Value* action) {
     if (tool == "finish") return finish_record(event, action);
     Value record = result_record(event, action);
     if (tool == "write_file") record.set("args", path_and_sizes(action, {{"content", "bytes"}}));
-    if (tool == "edit_file") record.set("args", path_and_sizes(action, {{"old", "oldBytes"}, {"new", "newBytes"}}));
+    if (tool == "edit_file") {
+        Value args = path_and_sizes(action, {});
+        const Value* input = args_in(action);
+        if (input) {
+            const Value* old_value = input->find("old");
+            if (old_value == nullptr) old_value = input->find("old_string");
+            const Value* new_value = input->find("new");
+            if (new_value == nullptr) new_value = input->find("new_string");
+            if (auto bytes = bytes_of(old_value)) args.set("oldBytes", *bytes);
+            if (auto bytes = bytes_of(new_value)) args.set("newBytes", *bytes);
+        }
+        record.set("args", args);
+    }
     if (tool == "fetch") {
         copy_if(record, event, "source");
         copy_if(record, event, "sourceNew");

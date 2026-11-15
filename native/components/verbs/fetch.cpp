@@ -251,6 +251,11 @@ struct Archive {
     bool created = false;
 };
 
+bool archive_requested(const json::Value& args) {
+    const json::Value* archive = args.find("archive");
+    return archive != nullptr && !archive->is_null() && archive->is_bool() && archive->as_bool();
+}
+
 Archive archive_source(const fs::path& workspace, const std::string& body, const std::string& url) {
     const std::string stored = ascii_escape(body);
     const std::string id = sha256_hex(stored).substr(0, 12);
@@ -368,7 +373,7 @@ std::string percent_decode(const std::string& raw, bool& valid) {
     return out;
 }
 
-json::Value get_data_url(const std::string& url, const json::Value& args, std::uint64_t timeout_ms, std::chrono::steady_clock::time_point deadline) {
+json::Value get_data_url(const fs::path& workspace, const std::string& url, const json::Value& args, std::uint64_t timeout_ms, std::chrono::steady_clock::time_point deadline) {
     const auto comma = url.find(',');
     if (comma == std::string::npos || comma < 5) return error_of("url is not a valid URL");
     const std::string meta = url.substr(5, comma - 5);
@@ -388,8 +393,11 @@ json::Value get_data_url(const std::string& url, const json::Value& args, std::u
     reply.set("bytes", static_cast<std::uint64_t>(utf8_length(body)));
     reply.set("finalUrl", url);
     reply.set("redirects", 0);
-    reply.set("source", "");
-    reply.set("sourceNew", false);
+    if (archive_requested(args)) {
+        const Archive archived = archive_source(workspace, body, url);
+        reply.set("source", archived.id);
+        reply.set("sourceNew", archived.created);
+    }
     reply.set("output", full);
     return reply;
 }
@@ -422,7 +430,8 @@ json::Value get_http(const fs::path& workspace, const fs::path& run_dir, const s
     if (type.find("text/html") != std::string::npos || type.find("application/xhtml") != std::string::npos) text = html_to_text(parsed.body);
     else if (type.empty() || type.rfind("text/", 0) == 0 || type.find("json") != std::string::npos || type.find("xml") != std::string::npos || type.find("javascript") != std::string::npos) text = parsed.body;
     else text = "(binary content not shown: " + type + ")";
-    const Archive archived = archive_source(workspace, parsed.body, final_url);
+    const bool wanting_archive = archive_requested(args);
+    const Archive archived = wanting_archive ? archive_source(workspace, parsed.body, final_url) : Archive{"", false};
     const auto shown = shown_before(text, args, deadline);
     if (!shown) return timed_out(timeout_ms);
     const std::string full = std::to_string(parsed.status) + " " + std::to_string(utf8_length(parsed.body)) + " bytes " + final_url + "\n" + *shown;
@@ -432,8 +441,10 @@ json::Value get_http(const fs::path& workspace, const fs::path& run_dir, const s
     reply.set("bytes", static_cast<std::uint64_t>(utf8_length(parsed.body)));
     reply.set("finalUrl", final_url);
     reply.set("redirects", redirects);
-    reply.set("source", archived.id);
-    reply.set("sourceNew", archived.created);
+    if (wanting_archive) {
+        reply.set("source", archived.id);
+        reply.set("sourceNew", archived.created);
+    }
     if (!capped(text, args)) {
         reply.set("output", full);
         return reply;
@@ -480,6 +491,7 @@ json::Value fetch_call(const json::Value& args, const fs::path& workspace, Locke
         if (!max->is_number() || max->as_number() < 0 || max->as_number() > static_cast<double>(kMaxBodyBytes) || max->as_number() != static_cast<double>(static_cast<std::uint64_t>(max->as_number())))
             return error_of("maxBytes must be an integer from 0 to " + std::to_string(kMaxBodyBytes));
     }
+    if (const json::Value* archive = args.find("archive"); archive != nullptr && !archive->is_null() && !archive->is_bool()) return error_of("archive must be a boolean");
     if (const json::Value* match = args.find("match"); match != nullptr && !match->is_null()) {
         if (!match->is_string() || match->as_string().size() > kMaxMatchChars) return error_of("match must be a string of at most " + std::to_string(kMaxMatchChars) + " characters");
         try {
@@ -498,7 +510,7 @@ json::Value fetch_call(const json::Value& args, const fs::path& workspace, Locke
     int attempt = 0;
     for (;;) {
         ++attempt;
-        json::Value result = data ? get_data_url(url, args, timeout_ms, deadline) : get_http(workspace, run_dir, url, args, timeout_ms, deadline);
+        json::Value result = data ? get_data_url(workspace, url, args, timeout_ms, deadline) : get_http(workspace, run_dir, url, args, timeout_ms, deadline);
         const auto error_type = classify(result);
         if (!error_type) {
             result.set("attempts", attempt);

@@ -13,6 +13,10 @@ namespace {
 const std::string kBody = R"js(
 const out = {};
 out.plain = await gm.fetch({ url: 'data:text/plain,hello%20world' });
+out.beforeHasSources = (await gm.list_dir({ path: '.' })).output.includes('sources');
+out.archive = await gm.fetch({ url: 'data:text/plain,wiki%20source%20text', archive: true });
+out.afterHasSources = (await gm.list_dir({ path: '.' })).output.includes('sources');
+out.archiveBad = await gm.fetch({ url: 'data:text/plain,x', archive: 'yes' });
 out.cut = await gm.fetch({ url: 'data:text/plain,abcdefghij', maxBytes: 4 });
 out.match = await gm.fetch({ url: 'data:text/plain,a%0Ab%0Aa2', match: '^a' });
 const large = await gm.fetch({ url: 'data:text/html,<script>' + 'a'.repeat(120000) + '</script><p>visible</p>' });
@@ -108,9 +112,14 @@ CheckResult check_fetch(const std::string& binary) {
     expect(contains(text, "timeoutMs must be an integer from 1 to 60000"), "timeoutMs 0 was not refused");
     expect(contains(text, "\"attempts\":4") && contains(text, "\"exhausted\":true"), "an unreachable host did not make 4 attempts (1 + 3 retries) and report exhaustion");
     expect(contains(text, "ECONNREFUSED"), "an unreachable host did not report ECONNREFUSED");
+    expect(contains(text, "\"beforeHasSources\":false"), "a plain fetch wrote sources/ into the workspace");
+    expect(contains(text, "\"afterHasSources\":true"), "a fetch with archive: true did not create sources/");
+    expect(contains(text, "\"sourceNew\":true"), "an archived fetch did not report sourceNew");
+    expect(contains(text, "archive must be a boolean"), "archive: yes was not refused as not a boolean");
+    expect(std::filesystem::exists(workspace / "sources" / "index.jsonl"), "an archived fetch did not write sources/index.jsonl");
     std::error_code ignored;
     std::filesystem::remove_all(sandbox, ignored);
-    result.summary = "data URLs return their text, cut and match, large text/html bodies convert without crashing the worker, base64 and bad input are refused, and an unreachable host retries 3 times then reports exhaustion";
+    result.summary = "data URLs return their text, cut and match, large text/html bodies convert without crashing the worker, base64 and bad input are refused, write sources/ only with archive: true, and an unreachable host retries 3 times then reports exhaustion";
     return result;
 }
 
