@@ -1,5 +1,23 @@
 # Pending validation
 
+## Round 2026-11-16 (skill gate per connection, job_status waitMs holds, playwriter path outside the version tree)
+
+Changes, one per item:
+- Skill gate (native/components/mcp/server.cpp skill_refusal_text, kSkillPointer; skills/gm/SKILL.md line 12). The refusal and the skill text now say that the first in-band read, gm.read_file({ path: 'skill://gm/SKILL.md' }) as the first verb of a run_code body, clears the gate for the whole connection and that later bodies do not repeat it. The skill text asks for that one read.
+- job_status waitMs (native/components/verbs/job.cpp JobTable::status). The wait was clamped to timeoutMs + 250 ms, so a waitMs above the job's timeout returned early. It is now clamped only to max_wait_ms. The wait still ends when the job settles.
+- Foreground hold (native/components/mcp/server.cpp LoggedVerbs::call, hold_body, wait_for_body). A job_status with waitMs inside a run_code body holds the body's foreground wait to the waitMs, capped at kForegroundCapMs, so the body is not backgrounded at its timeoutMs while it waits.
+- playwriter launcher (defaults/mcp.json, native/components/host/install.cpp install_playwriter(root), browser_scope.cpp, browser_first_open.cpp, lazy_browser.cpp). The pw tree was installed under current/pw, inside the version directory. A version switch to a build without pw (the update path copies only leaves, skills and defaults) left the launcher path missing: node exited with MODULE_NOT_FOUND. The pw tree now lives at ~/.gmnew/pw, outside every version.
+
+Witness (built binary, scratch HOME or workspace, outputs read):
+- job_status, 20 s job, waitMs 60000, run_code body: state exited, waited_ms 20088; output "done".
+- job_status, 35 s job, waitMs 60000: state exited, waited_ms 35087.
+- run_code timeoutMs 30000, 35 s job, job_status waitMs 60000: foreground returned at 35.1 s, state exited (waited_ms 35075). Before the hold, the body was backgrounded at 30 s.
+- Skill gate: run 1 (read_file of `skill://gm/SKILL.md` first) ok; run 2 {"second":"ran"}; run 3 {"third":"ran"}. No refusal after the read.
+- playwriter before: with a version that has no pw tree, the run log reads "Cannot find module '/tmp/jw/home/.gmnew/current/pw/bin/playwriter-project'" and "MODULE_NOT_FOUND".
+- playwriter after: a fresh gm install into a scratch HOME with the pw tree at ~/.gmnew/pw wrote args ["${HOME}/.gmnew/pw/bin/playwriter-project"]; one playwriter_execute returned "[return value] 1" in 5.2 s, the gate started, and the run log has no MODULE_NOT_FOUND.
+
+Open: the local ~/.gmnew/current/pw tree must be copied to ~/.gmnew/pw before the next gm install on this host, or the install clones pw again (about 900 s for the clone step).
+
 ## Round 2026-11-16 (arm check-cancel-wait, fix forward on e59d2c1): a cancel that lands before the wait starts is honored
 
 Failure. arm-diagnose on 632b328 and on e59d2c1 fails check-cancel-wait in the asan-arm job (the release job passes). On e59d2c1 the run log of the failing cancel says "the call is still running; gm does not stop it", the wait was answered by the job event, and the next next_context waited about 15 s. The job event was delivered to the cancelled wait, so the next call never saw it.

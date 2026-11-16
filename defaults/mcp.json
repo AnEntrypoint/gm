@@ -2,7 +2,7 @@
   "mcpServers": {
     "playwriter": {
       "command": "node",
-      "args": ["${HOME}/.gmnew/current/pw/bin/playwriter-project"],
+      "args": ["${HOME}/.gmnew/pw/bin/playwriter-project"],
       "env": {"PLAYWRITER_TELEMETRY": "0"},
       "ignore": [".playwriter/"],
       "deny": ["reset"],

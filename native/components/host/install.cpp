@@ -121,8 +121,8 @@ std::optional<std::string> playwriter_step(const std::string& what, const std::v
     return std::nullopt;
 }
 
-std::optional<std::string> install_playwriter(const fs::path& current) {
-    const fs::path dir = current / "pw";
+std::optional<std::string> install_playwriter(const fs::path& root) {
+    const fs::path dir = root / "pw";
     const fs::path pin_file = dir / "gm-pin";
     std::ifstream known(pin_file);
     std::string pinned;
@@ -137,11 +137,11 @@ std::optional<std::string> install_playwriter(const fs::path& current) {
     constexpr int kCloneAttempts = 3;
     for (int attempt = 1;; ++attempt) {
         fs::remove_all(dir, ec);
-        const auto cloned = playwriter_step("clone", {"git", "clone", "--quiet", kPlaywriterRepo, dir.string()}, current, 900000, wall);
+        const auto cloned = playwriter_step("clone", {"git", "clone", "--quiet", kPlaywriterRepo, dir.string()}, root, 900000, wall);
         if (!cloned) break;
         if (attempt == kCloneAttempts) return cloned;
     }
-    if (auto error = playwriter_step("checkout", {"git", "-C", dir.string(), "checkout", "--quiet", "--detach", kPlaywriterPin}, current, 120000, wall)) return error;
+    if (auto error = playwriter_step("checkout", {"git", "-C", dir.string(), "checkout", "--quiet", "--detach", kPlaywriterPin}, root, 120000, wall)) return error;
     if (auto error = playwriter_step("npm ci", {"npm", "ci", "--no-audit", "--no-fund"}, dir, 1200000, wall)) return error;
     std::ofstream(pin_file) << kPlaywriterPin << "\n";
     std::string longest;
@@ -267,7 +267,7 @@ int install_local(const HostArgs& args, const fs::path& local) {
         fs::remove_all(stage, ec);
         std::cout << "installed local build " << version << " from " << local.string() << " at " << (current / exe_name("gm")).string() << "\n";
     }
-    if (auto error = install_playwriter(current)) {
+    if (auto error = install_playwriter(*root)) {
         std::cerr << "gm: install: " << *error << "\n";
         return 1;
     }

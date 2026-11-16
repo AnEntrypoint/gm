@@ -592,8 +592,7 @@ json::Value JobTable::status(const json::Value& args) {
         std::unique_lock lock(mutex_);
         auto found = jobs_.find(job_key(name));
         if (found != jobs_.end()) {
-            const double cap = found->second->extend_on_progress ? max_wait_ms : static_cast<double>(found->second->timeout_ms + ended_event_grace_ms);
-            wait_ms = std::clamp(requested_ms, 0.0, cap);
+            wait_ms = std::clamp(requested_ms, 0.0, max_wait_ms);
         }
         if (found != jobs_.end() && !found->second->settled && wait_ms > 0) {
             Job& job = *found->second;

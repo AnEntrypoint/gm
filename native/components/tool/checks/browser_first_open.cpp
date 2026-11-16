@@ -167,7 +167,7 @@ CheckResult check_browser_first_open(const std::string& binary) {
     const fs::path build = host.parent_path().parent_path().parent_path();
     const fs::path source = build.parent_path().parent_path();
     const fs::path installed = sandbox / ".gmnew" / "current" / "gm";
-    const fs::path launcher = sandbox / ".gmnew" / "current" / "pw" / "bin" / "playwriter-project";
+    const fs::path launcher = sandbox / ".gmnew" / "pw" / "bin" / "playwriter-project";
     const std::string chromium = chromium_binary();
     const std::string idle_assignment = "PLAYWRITER_IDLE_MS=" + std::to_string(kIdleMs);
     const std::string browser_assignment = "PLAYWRITER_BROWSER_PATH=" + chromium;

@@ -55,12 +55,12 @@ CheckResult check_lazy_browser(const std::string& binary) {
     };
     const auto install = proc::run({"env", "HOME=" + sandbox.string(), (host / "gm").string(), "install", "--local", build.string(), "--source", source.string()}, sandbox, {}, 900000);
     if (!install.started || install.exit_code != 0) result.failures.push_back("the sandbox install failed: " + (install.err.empty() ? install.out : install.err).substr(0, 400));
-    const fs::path pin_marker = installed.parent_path() / "pw" / "gm-pin";
+    const fs::path pin_marker = sandbox / ".gmnew" / "pw" / "gm-pin";
     std::ifstream pin_in(pin_marker);
     std::string pin_text;
     std::getline(pin_in, pin_text);
     if (pin_text != "df54652") result.failures.push_back("the install did not write the pin marker " + pin_marker.string() + " as df54652 (read '" + pin_text + "')");
-    const fs::path entry = sandbox / ".gmnew" / "current" / "pw" / "bin" / "playwriter-project";
+    const fs::path entry = sandbox / ".gmnew" / "pw" / "bin" / "playwriter-project";
     if (!fs::exists(entry)) result.failures.push_back("the playwriter entry from defaults/mcp.json does not resolve under the install tree: " + entry.string());
     {
         Session session(installed.string(), workspace, sandbox, 180000, false);

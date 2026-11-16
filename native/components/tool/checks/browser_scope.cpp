@@ -574,7 +574,7 @@ CheckResult check_browser_scope_tree(const std::string& binary) {
     };
     const json::Value installed_reply = install_sandbox(binary, home);
     expect(flag(installed_reply, "ok"), "the clean install failed: " + json::dump(part(installed_reply, "error")));
-    const fs::path launcher = home / ".gmnew" / "current" / "pw" / "bin" / "playwriter-project";
+    const fs::path launcher = home / ".gmnew" / "pw" / "bin" / "playwriter-project";
     expect(!result.failures.empty() || fs::exists(launcher), "the playwriter launcher from the sandbox install is missing: " + launcher.string());
     std::size_t red_found = 0;
     std::size_t green_found = 0;

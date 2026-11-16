@@ -221,7 +221,7 @@ const std::string kSkillPointer =
     "session. Read it when a run starts, and read it again after a compaction. Read skill://gm/SKILL.md with "
     "ReadMcpResourceTool (server gm), or run the gm prompt (mcp__gm__gm). A host with no resource tool can read the "
     "served skill in band as the first verb of a run_code body: gm.read_file({ path: 'skill://gm/SKILL.md' }) clears "
-    "the gate. The host's Skill tool does not list it, so do not call it with the Skill tool. The gm-continue skill "
+    "the gate for the whole connection, and later run_code bodies do not repeat it. The host's Skill tool does not list it, so do not call it with the Skill tool. The gm-continue skill "
     "plans the open rows of gm and hands them to the gm skill. Read skill://gm-continue/SKILL.md with "
     "ReadMcpResourceTool (server gm), or run the gm-continue prompt (mcp__gm__gm-continue). The host's Skill tool "
     "does not list it, so do not call it with the Skill tool.";
@@ -737,6 +737,7 @@ struct Server::State {
         std::mutex lock;
         std::condition_variable changed;
         bool finished = false;
+        std::chrono::steady_clock::time_point hold_until{};
         bool adopted = false;
         bool settled = false;
         bool skill_bootstrap = false;
@@ -1807,6 +1808,26 @@ struct Server::State {
             .set("logPath", nullptr);
     }
 
+    void hold_body(const std::shared_ptr<BodyJob>& job, double wait_ms) {
+        std::lock_guard guard(job->lock);
+        const auto until = std::chrono::steady_clock::now() + std::chrono::milliseconds(static_cast<long long>(wait_ms));
+        if (until > job->hold_until) job->hold_until = until;
+        job->changed.notify_all();
+    }
+
+    bool wait_for_body(std::unique_lock<std::mutex>& guard, BodyJob& job, std::chrono::milliseconds budget) {
+        using clock = std::chrono::steady_clock;
+        const auto start = clock::now();
+        const auto ceiling = start + std::chrono::milliseconds(static_cast<long long>(kForegroundCapMs * clock_scale()));
+        const auto deadline = start + budget;
+        while (!job.finished) {
+            const auto target = std::min(ceiling, std::max(deadline, job.hold_until));
+            if (clock::now() >= target) return false;
+            job.changed.wait_until(guard, target, [&] { return job.finished; });
+        }
+        return true;
+    }
+
     bool is_body_job(const Value& args) {
         std::string name = string_of(args, "job");
         if (name.empty()) return false;
@@ -2639,7 +2660,7 @@ struct Server::State {
         const std::string cause = skill_change_.empty() ? "the gm skill has not been read on this connection" : skill_change_;
         const std::string on_disk = found ? found->second.disk : std::string("the gm skill file");
         return "run_code refused: " + cause + "; read skill://gm/SKILL.md first with resources/read, ReadMcpResourceTool (server gm) or the gm prompt. The rules are also on disk at " + on_disk +
-               " for a host's file tool, but that file read does not clear this gate. Every other run_code is refused until the skill is read on this connection; a run_code whose first verb is gm.read_file({ path: 'skill://gm/SKILL.md' }) reads the served skill in band and clears the gate.";
+               " for a host's file tool, but that file read does not clear this gate. Every other run_code is refused until the skill is read on this connection; a run_code whose first verb is gm.read_file({ path: 'skill://gm/SKILL.md' }) reads the served skill in band and clears the gate for the whole connection. That read is the only one needed: later run_code bodies on this connection do not repeat it.";
     }
 
     Value invoke(const std::string& name, const Value& args) {
@@ -3729,6 +3750,12 @@ public:
             const bool served = name == "read_file" && path != nullptr && path->is_string() && path->as_string() == kGmSkillUri;
             if (!served) return object().set("ok", false).set("error", state_.skill_refusal_text());
         }
+        if (name == "job_status") {
+            const json::Value* wait = args.find("waitMs");
+            if (wait != nullptr && wait->is_number() && wait->as_number() > 0) {
+                state_.hold_body(job_, std::min(wait->as_number(), kMaxJobWaitMs * clock_scale()));
+            }
+        }
         Server::State::Session& owner = *job_->owner;
         double start = owner.log->now_ms();
         std::optional<std::uint64_t> action;
@@ -3892,7 +3919,7 @@ Value Server::State::run_code(const Value& args) {
             bool done;
             {
                 std::unique_lock guard(job->lock);
-                done = job->changed.wait_for(guard, std::chrono::milliseconds(static_cast<long long>(budget)), [&] { return job->finished; });
+                done = wait_for_body(guard, *job, std::chrono::milliseconds(static_cast<long long>(budget)));
                 if (!done) {
                     job->adopted = true;
                     job->start_wall = std::chrono::steady_clock::now();
