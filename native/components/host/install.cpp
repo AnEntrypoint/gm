@@ -130,7 +130,21 @@ bool playwriter_hook_landed(const fs::path& dir) {
     std::stringstream launcher_text;
     launcher_text << launcher.rdbuf();
     return source.find("process.env.PLAYWRITER_CHROMIUM_ARGS") != std::string::npos && source.find("...chromiumLaunchArgs(),") != std::string::npos &&
-           source.find("function displayStatus(") != std::string::npos && launcher_text.str().find("chromiumArgsFromEnv()") != std::string::npos;
+           source.find("function displayStatus(") != std::string::npos &&
+           launcher_text.str().find("chromiumArgsFromEnv()") != std::string::npos && launcher_text.str().find("lastBrowserLines") != std::string::npos;
+}
+
+std::optional<std::string> apply_launcher_diffs(const fs::path& root, const fs::path& dir, std::map<std::string, std::int64_t>& wall) {
+    std::vector<fs::path> diffs;
+    std::error_code ec;
+    for (const auto& entry : fs::directory_iterator(root / "current" / "defaults" / "playwriter", ec)) {
+        if (entry.path().extension() == ".diff") diffs.push_back(entry.path());
+    }
+    std::sort(diffs.begin(), diffs.end());
+    for (const auto& diff : diffs) {
+        if (auto error = playwriter_step("launcher patch " + diff.filename().string(), {"git", "-C", dir.string(), "apply", diff.string()}, dir, 120000, wall)) return error;
+    }
+    return std::nullopt;
 }
 
 std::optional<std::string> copy_playwriter_patches(const fs::path& root, const fs::path& dir) {
@@ -172,8 +186,7 @@ std::optional<std::string> install_playwriter(const fs::path& root) {
     }
     if (auto error = copy_playwriter_patches(root, dir)) return error;
     if (auto error = playwriter_step("launcher reset", {"git", "-C", dir.string(), "checkout", "--quiet", "--", "bin/playwriter-project"}, dir, 120000, wall)) return error;
-    if (auto error = playwriter_step("launcher patch", {"git", "-C", dir.string(), "apply", (root / "current" / "defaults" / "playwriter" / "launcher-chromium-args.diff").string()}, dir, 120000, wall))
-        return error;
+    if (auto error = apply_launcher_diffs(root, dir, wall)) return error;
     if (auto error = playwriter_step("npm ci", {"npm", "ci", "--no-audit", "--no-fund"}, dir, 1200000, wall)) return error;
     if (!playwriter_hook_landed(dir)) {
         return "playwriter " + std::string(kPlaywriterPin) + " installed, but " + dir.string() +

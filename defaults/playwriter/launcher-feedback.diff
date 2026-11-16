@@ -1,0 +1,20 @@
+diff --git a/bin/playwriter-project b/bin/playwriter-project
+index cc3e0e3..2171e47 100755
+--- a/bin/playwriter-project
++++ b/bin/playwriter-project
+@@ -903,9 +903,14 @@ function feedbackLines(status, machine) {
+   return [header, ...browserLines(machine, PROJECT)];
+ }
+ 
++let lastBrowserLines = null;
+ async function feedbackText(gatePort) {
+   const [status, machine] = await Promise.all([httpJson(gatePort, '/__pwp/status?pages=0', 1000), listBrowsers()]);
+-  return feedbackLines(status, machine).join('\n');
++  const lines = feedbackLines(status, machine);
++  const browsers = lines.slice(1).join('\n');
++  if (browsers === lastBrowserLines) return lines[0];
++  lastBrowserLines = browsers;
++  return lines.join('\n');
+ }
+ 
+ async function status(json) {
