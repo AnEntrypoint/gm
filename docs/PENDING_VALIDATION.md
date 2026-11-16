@@ -1,5 +1,28 @@
 # Pending validation
 
+## Round 2026-11-16 (arm check-cancel-wait, fix forward on e59d2c1): a cancel that lands before the wait starts is honored
+
+Failure. arm-diagnose on 632b328 and on e59d2c1 fails check-cancel-wait in the asan-arm job (the release job passes). On e59d2c1 the run log of the failing cancel says "the call is still running; gm does not stop it", the wait was answered by the job event, and the next next_context waited about 15 s. The job event was delivered to the cancelled wait, so the next call never saw it.
+
+Server. The cancel handler dropped a cancel for a next_context that had been queued but not yet registered: cancel_wait found no open wait and answered "no call in flight with that id". Reproduced on x86 with a driver that sends the cancel at once after the next_context: before the fix the cancel was dropped (outcome "no call in flight with that id"), and the next call was answered after 12193 ms; after the fix the outcome is "ended the next_context wait; no reply is sent" and the next call is answered after 2204 ms.
+
+Changes (native/components/mcp/server.cpp, commit 4041858):
+- members: pending_calls_ (request id to tool name, filled in dispatch before a tools/call is queued) and early_cancels_ (request ids cancelled before their wait registered).
+- note_pending_call and forget_pending_call: note at dispatch, forget in the pump thread after process() returns; forget also drops the id from early_cancels_ and dropped_replies_.
+- cancel_wait: when no open wait exists for the id, a pending next_context id is recorded in early_cancels_ and its reply is dropped; the outcome text is unchanged.
+- next_context registration: open_waits_ starts cancelled when the id is in early_cancels_ (consumed on registration), and the pending entry becomes "registered" so a later cancel cannot match a finished wait.
+
+Check (native/components/tool/checks/cancel_wait.cpp, commit 4041858 and the commit after it):
+- The cancel is sent only after the wait's next_context action event is in the run log (wait_for_next_context_action), instead of after a fixed 500 ms. The action event is appended after registration, so the wait is open when the cancel is sent.
+- The job runs sleep 20 instead of sleep 2, and the next next_context waits 30000 ms. The old 2 s job could finish before the cancel landed on a slow runner, so the cancel reached a wait that had already been answered.
+- The threshold for the next call's answer is 25000 ms after the cancel.
+- A second leg sends next_context and cancels it at once, then requires the following reply to name that wait and the cancelled wait to produce no reply. This leg exercises the early-cancel path.
+- The failure text names the cancel outcome from the run log.
+
+Witness, this host. release: check-cancel-wait ok 3 of 3, next call answered 20150 ms after the cancel with the job event. ASan (env -u LD_PRELOAD): ok 3 of 3, 20011 to 20110 ms. ASan pinned to one core (taskset -c 0): ok 2 of 2, 20003 and 20107 ms. gdb is not installed on this host, so no gdb loop was run. The arm proof is the arm-diagnose run on the push.
+
+Open. The arm result for the commit that carries this round is not known when this entry is written; the arm run of e59d2c1 is the failing baseline (run 43846831561). If arm still fails on check-cancel-wait, the new failure text names the cancel outcome, which says whether the cancel was dropped, honored, or landed after the wait was answered.
+
 ## Round 2026-11-13 (queue e6b5, install 15ffb90, version ordering): an older published build is kept
 
 Install. 15ffb90 was installed from build/release as the dev stamp 233d802b8a7c-dev. The stamp is the first 12 hex digits of the SHA-256 over the concatenated HEAD:native (e0342aa4c6a9) and HEAD:defaults (5ca42d97249f) tree ids. The install wrote 8791 files (list: /tmp/gm-install-15ffb90-files.txt; output: /tmp/gm-install-15ffb90.out). The link current -> versions/233d802b8a7c-dev. Validation: gm-tool installed ok; check-skill-serve ok; the live gm session's next_context answered ok at step 3, after a restart event "build 2ffcd0bea377-dev -> 233d802b8a7c-dev" (22:40:32Z); its worker's exe is /config/.gmnew/versions/233d802b8a7c-dev/gm-core.

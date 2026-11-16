@@ -64,7 +64,7 @@ CheckResult check_cancel_wait(const std::string& binary) {
             session.notify("notifications/initialized", json::Object{});
             session.rpc("resources/read", json::Object{{"uri", "skill://gm/SKILL.md"}});
             tool_text(session, "next_context", json::Object{});
-            tool_text(session, "run_code", json::Object{{"body", "return await gm.job_start({ job: 'cw-job', command: 'sleep 2; echo done', timeoutMs: 60000 });"}});
+            tool_text(session, "run_code", json::Object{{"body", "return await gm.job_start({ job: 'cw-job', command: 'sleep 20; echo done', timeoutMs: 60000 });"}});
 
             const std::int64_t wait_id = session.send("tools/call", json::Object{{"name", "next_context"}, {"arguments", json::Object{{"waitMs", 30000}}}});
             const fs::path log = workspace / "runs" / "check" / "log.jsonl";
@@ -72,13 +72,13 @@ CheckResult check_cancel_wait(const std::string& binary) {
             if (!started) result.failures.push_back("the wait's next_context never started: no action event for request " + std::to_string(wait_id));
             const auto cancel_at = std::chrono::steady_clock::now();
             session.notify("notifications/cancelled", json::Object{{"requestId", wait_id}, {"reason", "witness gave up"}});
-            const std::int64_t next = session.send("tools/call", json::Object{{"name", "next_context"}, {"arguments", json::Object{{"waitMs", 10000}}}});
-            const auto answered = session.await_reply(next, std::chrono::seconds(20));
+            const std::int64_t next = session.send("tools/call", json::Object{{"name", "next_context"}, {"arguments", json::Object{{"waitMs", 30000}}}});
+            const auto answered = session.await_reply(next, std::chrono::seconds(40));
             if (!answered) {
                 result.failures.push_back("the next next_context was not answered");
             } else {
                 cancel_to_answer_ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - cancel_at).count();
-                if (cancel_to_answer_ms >= 5000) result.failures.push_back("the next call waited " + std::to_string(cancel_to_answer_ms) + " ms after the cancel; expected it answered when the job event came");
+                if (cancel_to_answer_ms >= 25000) result.failures.push_back("the next call waited " + std::to_string(cancel_to_answer_ms) + " ms after the cancel; expected it answered when the 20 s job event came");
                 const json::Value body = content_json(*answered);
                 const json::Value* notice = body.find("previousWaitCancelled");
                 const json::Value* named = notice != nullptr ? notice->find("requestId") : nullptr;
