@@ -37,7 +37,6 @@ Each habit is stated once, with its reason.
 - **Start a build or test that can outlive a turn with gm.job_start, never a shell `&`.** A job records its log, exit code and tail in the run log. A background shell can leave an empty log, and then there is nothing to read.
 - **A job's result is valid only for the tree it started on.** When an edit lands after the job starts, stop the job with gm.job_stop and start one job on the final tree.
 - **A loop tick with nothing to do ends that tick, not the run.** Keep the run's waits open, and handle any pending prompt before a loop is stopped.
-- **Keep the iteration time in view.** Each run records the wall time of every build and check it runs, and names the step that dominates its loop. When one step dominates, shorten it, split it or narrow it in the same run, before the next change.
 - **Prove a change with the narrowest check that can fail for it.** A failing row is rerun alone. The full set runs once before a push. A check that already passed on a tree is not run again on that tree.
 - **Wait for a started job by its PID, with a bounded timeout, in the same turn.** Never sleep to wait, in a shell call or a body. For a process gm did not start, gm.job_status({ pid, waitMs }) waits on it and returns its state; do other reachable work while it runs. A longer wait is one run_code body with waitMs 60000 per call: `let n = 0; for (;;) { n += 1; const r = await gm.job_status({ pid, waitMs: 60000 }); if (r.state !== 'running') return { calls: n, state: r.state }; }`. A body still running at 100 seconds becomes a background run, and its value comes from `gm.job_status({ job, waitMs })` with the job id the call returned. Measured with waitMs 1000 on a 4 s process: 4 calls, one reply, 4.03 s.
 - **Build a reachable ranked item in the pass that ranks it.** Work that waits on a person, a credential or a host is held, and is reported as held.
@@ -51,6 +50,20 @@ Each habit is stated once, with its reason.
 - **A liveness claim is checked by a call that answers.** A pid file alone is not proof that a process is alive, because a reboot reuses pids: a stale pid file made a server look up when it was not. The check is a call to the process, or a pid with its start time, never the pid alone.
 - **An install survives a reboot.** After a reboot, `gm --version` and the served skill must match the checkout's; a mismatch is a stale install and is reported as one.
 - **Name the longest step in each report, and what was done about it.**
+
+## Iteration time
+
+The wall-clock time of one iteration is the measure of a run, so every project keeps its cycle short and visible. Each habit is stated once, with its reason.
+
+- **Measure four times per project.** Record the cold build, the warm build, the time from one file's edit to its test result, and the full time before a push. Shorten the step that dominates first, before any other change, and name that step in the run's report.
+- **Measure the edit-to-test loop apart from the cold build.** When an edit costs about as much as a cold build, the build is not incremental: test the incremental modes the build offers. Check that each flag exists before measuring with it, because a command that exits 1 measures nothing.
+- **Prune caches as part of the build.** Caches grow without bound. The build's own tooling removes entries that have not been touched for two days, so the prune runs with each build and needs no separate step.
+- **Share heavy builds on one host.** Run one heavy build at a time per peer. Before adding parallel work, check the free memory and the swap in use, and limit the concurrent heavy builds on the host. Record the load and the swap in each run's report.
+- **Never gate a witness on host load.** A heavy check gets a budget that does not depend on load, or it runs on a remote host. Record the load on each row. A check that fails only at high load is a load defect, not a pass or a fail: fix its budget or move it, then rerun it.
+- **Stop browsers when their witness ends.** Stop each browser by the PID of the process the run started, because a leaked browser can hold gigabytes of memory.
+- **Wait on a background job by its PID, in one bounded wait.** While the wait holds, other work runs. Never end a turn with a background job unobserved: a build that a turn leaves running is the first wait of the next turn.
+- **Push once, after the witnesses have run.** A push before the witnesses is a breach, and the owner reviews it.
+- **Keep a build ledger per project.** Each build and check adds one line with its wall time, so the cycle time of the project is visible across runs.
 
 ## Rules
 

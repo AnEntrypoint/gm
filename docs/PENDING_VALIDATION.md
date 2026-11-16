@@ -1,5 +1,12 @@
 # Pending validation
 
+## Round 2026-11-16 iteration time (Phase A)
+
+Changes, one per item:
+- Item 1, skills/gm/SKILL.md. The bullet "Keep the iteration time in view" is replaced by a "## Iteration time" section of nine habits: four measures per project (cold build, warm build, one-file edit-to-test, full pre-push), the incremental check, cache pruning in the build's own tooling, one heavy build per peer with load and swap recorded, no witness gated on host load, browsers stopped by PID, one bounded wait by PID with no unobserved job at a turn's end, push once after the witnesses, and a per-project build ledger. Witness: check-skill-serve on the installed binary (the served text carries "## Iteration time" and no longer carries "Keep the iteration time in view"), read after install.
+- Item 2, check-browser-scope. native/components/tool/checks/browser_scope.cpp: count_code waits up to kCountSeconds (60 polls of 1 s, was 10), so a budget no longer shrinks under load. The cleanup counts for side, own and peer pages now wait for zero: they were read at once after an undo whose page close is asynchronous. The summary begins with the host load (1 min) at the start and at the end, and a failing run adds the same load line. Witness: check-browser-scope alone in Phase B, with its load line in the output. The load-independence is by construction: it is not measured under load in this round.
+- Open, measured cycle times. The per-project measures (cold build, warm build, one-file edit-to-test, pre-push) and the gm build ledger are not taken in this round; the skill habit names them, and the first run that builds gm takes them.
+
 ## Round 2026-11-16 install of 8927a6c
 
 - Install. build/release/native/components/host/gm install --local /workspace/gm/build/release --source /workspace/gm, rc 0, 15.9 s. The link /config/.gmnew/current points at versions/8927a6c-1. Installed gm --version: "8927a6c-1 (abf87095763d) 1794835885"; git log -1 %ct for 8927a6c is 1794835885.
