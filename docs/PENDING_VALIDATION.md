@@ -1,5 +1,51 @@
 # Pending validation
 
+## Round 2026-11-16 build speed (cold, no-op, one-file edit)
+
+Method: each row is one run of one build at a time, from a snapshot of the working tree, with GMNEW_VERSION set to HEAD plus -1 and RelWithDebInfo. Cold is configure plus a full build in a fresh build dir. No-op is a second build with nothing changed. Edit touches native/components/host/install.cpp and rebuilds. Wall and CPU seconds come from a child-process timer (user plus system). Load is the 1-minute loadavg before and after each row. Swap-out is the peak `so` column of vmstat over 3 samples; the gate aborts above 20480 KB/s. The host was shared with other agents' cargo builds, so load ran from 4.5 to 30 across rows. Each number is one run.
+
+| label | row | wall s | CPU s | rc | load before to after | swap KB/s peak | config |
+|---|---|---|---|---|---|---|---|
+| c0-baseline | cold | 783.68 | 1880.75 | 0 | 16.67 to 20.80 | 0 | Ninja, pool 3 |
+| c0-baseline | noop | 1.75 | 0.27 | 0 | 20.80 | 0 | |
+| c0-baseline | edit | 15.25 | 15.53 | 0 | 20.80 to 19.78 | 0 | |
+| c1-pool6 | cold | 476.74 | 2228.64 | 0 | 18.41 to 25.19 | 10504 | pool 6 |
+| c2-pool12 | cold | 308.80 | 2101.65 | 0 | 10.67 to 29.91 | 0 | pool 12 |
+| c3-make12 | cold | 287.22 | 1850.24 | 0 | 12.24 to 16.77 | 0 | make -j12, no pool |
+| c4-lld | cold | 431.14 | 1275.56 | 0 | 10.89 to 10.02 | 0 | pool 3, lld (confounded by load) |
+| d0-ninja-j12-pool12 | cold | 169.44 | 1645.90 | 0 | 5.45 to 14.71 | 0 | pool 12, ninja -j12 (control) |
+| d1-lld-pool12 | cold | 157.21 | 1676.04 | 0 | 6.38 to 16.40 | 0 | pool 12, lld |
+| d4-deps-pool12 | cold | 163.51 | 1609.12 | 0 | 6.25 to 17.98 | 0 | pool 12, deps -g0 |
+| e1-make12 | cold | 215.40 | 1680.61 | 0 | 6.73 to 11.19 | 0 | make -j12 |
+| e2-pch-pool12 | cold | 200.50 | 1842.44 | 0 | 7.01 to 25.61 | 0 | pool 12, PCH (C++ only) |
+| g0-ninja-pool12 | cold | 185.71 | 1753.80 | 0 | 8.69 to 16.83 | 0 | pool 12 (control) |
+| g1-lld-pool12 | cold | 118.14 | 1201.55 | 0 | 6.29 to 11.44 | 0 | pool 12, lld |
+| g2-deps-lld | cold | 123.62 | 1197.37 | 0 | 6.94 to 15.84 | 0 | lld, deps -g0 |
+| g3-pch-lld | cold | 126.16 | 1277.38 | 0 | 5.88 to 11.51 | 0 | lld, PCH |
+| f0-final-default | cold | 123.90 | 1314.66 | 0 | 4.54 to 13.07 | 0 | final: pool 12, bfd |
+| f0-final-default | noop | 0.09 | 0.11 | 0 | 13.07 | 0 | |
+| f0-final-default | edit | 6.58 | 7.62 | 0 | 13.07 to 12.42 | 0 | |
+| f1-final-lld | cold | 126.15 | 1382.04 | 0 | 6.45 to 16.64 | 0 | final plus ld.lld on PATH |
+| f1-final-lld | noop | 0.11 | 0.12 | 0 | 16.64 | 0 | |
+| f1-final-lld | edit | 6.45 | 7.38 | 0 | 16.64 to 15.55 | 0 | |
+
+Rows dropped, not in the table's valid set: d2-pch-pool12 (rc 1, PCH applied to the C targets; fixed in the CMake option and re-measured as e2); d3-unity-pool12 and e3-unity-pool12 (rc 1, unity merges anonymous-namespace functions with the same names in gm_host, primitives.cpp, and gm_cxxmcp, so unity needs per-file source edits); e0-ninja-j12-pool12 (rc 1, one cc1plus was ended by SIGTERM from outside the bench, and the no-op then rebuilt the rest; the control was re-measured as g0 and f0). The c5 PCH and c6 unity runs were stopped partway, when round 1 was reordered onto pool 12.
+
+Decisions, by the rule: a candidate counts only when it changes a cold or warm row by 5 percent or more of wall time against its control.
+- Compile pool 12 (kept, now the default): cold 783.68 s at pool 3 (baseline, load 17 to 21) against 308.80 s at pool 12 (load 11 to 30), 185.71 s and 169.44 s for pool-12 controls, and 123.90 s for the final default. Swap-out stayed at 0 in every pool-12 row. Pool 6 measured 476.74 s, so pool 12 is the better of the two.
+- Ninja over make (kept, Ninja is default): ninja -j12 with pool 12 measured 169.44 s cold against make -j12 at 215.40 s, a 21 percent difference at comparable load (5 to 15 against 7 to 11).
+- lld (not kept as a default): ld.lld is not installed here; the only LLVM lld on the host is rustup's rust-lld 23.1.1, which runs through a wrapper on PATH. Three pairs against a control gave -7 percent (d1 against d0), -36 percent (g1 against g0), and +2 percent (f1 against f0), and the warm edit rows did not move (5.5 to 6.6 s). The measured rows do not support a gain, so the build keeps GNU ld.bfd 2.46. Confirmed: f1 has -fuse-ld=lld in 3 link rules, f0 has none.
+- PCH (not kept): 200.50 s against 169.44 s with pool 12 (+18 percent), and 126.16 s against 118.14 s on lld (+7 percent). No gain.
+- Debug info dropped for dependencies (not kept): 163.51 s against 169.44 s (-3.5 percent); on lld 123.62 s against 118.14 s (+4.6 percent). Below 5 percent in both pairs.
+- Unity (not kept): does not compile without source edits (see above).
+- Stop rule: the last candidates tested on the best base (PCH and dependency debug info on lld) changed the cold build by less than 5 percent, so the search stopped.
+
+Longest step now: the final cold build's longest single step is native/components/mcpclient .../third_party/cxxmcp/src/client.cpp.o at 82.9 s (Ninja log), then native/components/mcp/CMakeFiles/gm_mcp.dir/server.cpp.o at 61.6 s. These two set the critical path of the cold build. The warm edit (6.6 s) is one TU compile of install.cpp plus the relinks of gm and gm-core.
+
+Noise caveat: one run per row, and load changed by up to 20 points within a row. Pool 12 is kept on its large margin. The lld and PCH decisions rest on pairs whose results disagree or sit inside the noise, so treat them as not supported rather than disproved.
+
+Bench gate note: the bench waited on load and swap inside a background shell with no wake-up for the caller. A run that ended its turn while the bench slept left no completion record. The fix in this round is to wait on the bench's PID with a bounded tail in the same turn, and the bench records each row as it finishes.
+
 ## Round 2026-11-16 playwriter headed WebGPU sessions (Phase A and local Phase B)
 
 Changes, one per item:
