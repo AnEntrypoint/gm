@@ -130,7 +130,7 @@ bool playwriter_hook_landed(const fs::path& dir) {
     std::stringstream launcher_text;
     launcher_text << launcher.rdbuf();
     return source.find("process.env.PLAYWRITER_CHROMIUM_ARGS") != std::string::npos && source.find("...chromiumLaunchArgs(),") != std::string::npos &&
-           source.find("function displayStatus(") != std::string::npos &&
+           source.find("function displayStatus(") != std::string::npos && source.find("namedByCall") != std::string::npos &&
            launcher_text.str().find("chromiumArgsFromEnv()") != std::string::npos && launcher_text.str().find("lastBrowserLines") != std::string::npos;
 }
 

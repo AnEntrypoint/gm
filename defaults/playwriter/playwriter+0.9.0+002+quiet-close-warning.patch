@@ -1,0 +1,52 @@
+diff --git a/node_modules/playwriter/dist/executor.js b/node_modules/playwriter/dist/executor.js
+index 5c2ad74..a05edfa 100644
+--- a/node_modules/playwriter/dist/executor.js
++++ b/node_modules/playwriter/dist/executor.js
+@@ -581,7 +581,8 @@ export class PlaywrightExecutor {
+     setupPageCloseDetection(page) {
+         page.on('close', () => {
+             const stateKeysForClosedPage = this.stateKeysForPage(page);
+-            if (!this.isConnected || this.suppressPageCloseWarnings || stateKeysForClosedPage.length === 0) {
++            const namedByCall = [...this.activeOutputScopes].some((scope) => stateKeysForClosedPage.some((key) => scope.code?.includes(`state.${key}`)));
++            if (!this.isConnected || this.suppressPageCloseWarnings || namedByCall || stateKeysForClosedPage.length === 0) {
+                 return;
+             }
+             const stateKeyLabel = stateKeysForClosedPage.map((key) => `state.${key}`).join(', ');
+@@ -971,6 +972,7 @@ export class PlaywrightExecutor {
+     async executeInternal(code, timeout) {
+         const consoleLogs = [];
+         const outputScope = this.beginOutputScope();
++        outputScope.code = code;
+         const formatConsoleLogs = (logs, prefix = 'Console output') => {
+             if (logs.length === 0) {
+                 return '';
+diff --git a/node_modules/playwriter/src/executor.ts b/node_modules/playwriter/src/executor.ts
+index 0309cd6..2d5b696 100644
+--- a/node_modules/playwriter/src/executor.ts
++++ b/node_modules/playwriter/src/executor.ts
+@@ -355,6 +355,7 @@ interface OutputEvent {
+ 
+ interface OutputScope {
+   cursor: number
++  code?: string
+ }
+ 
+ export interface ExecutorLogger {
+@@ -776,7 +777,8 @@ export class PlaywrightExecutor {
+   private setupPageCloseDetection(page: Page) {
+     page.on('close', () => {
+       const stateKeysForClosedPage = this.stateKeysForPage(page)
+-      if (!this.isConnected || this.suppressPageCloseWarnings || stateKeysForClosedPage.length === 0) {
++      const namedByCall = [...this.activeOutputScopes].some((scope) => stateKeysForClosedPage.some((key) => scope.code?.includes(`state.${key}`)))
++      if (!this.isConnected || this.suppressPageCloseWarnings || namedByCall || stateKeysForClosedPage.length === 0) {
+         return
+       }
+ 
+@@ -1247,6 +1249,7 @@ export class PlaywrightExecutor {
+   private async executeInternal(code: string, timeout: number): Promise<ExecuteResult> {
+     const consoleLogs: Array<{ method: string; args: any[] }> = []
+     const outputScope = this.beginOutputScope()
++    outputScope.code = code
+ 
+     const formatConsoleLogs = (logs: Array<{ method: string; args: any[] }>, prefix = 'Console output') => {
+       if (logs.length === 0) {
