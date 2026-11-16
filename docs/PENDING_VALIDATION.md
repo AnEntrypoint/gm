@@ -1,5 +1,12 @@
 # Pending validation
 
+## Round 2026-11-16 install of 8927a6c
+
+- Install. build/release/native/components/host/gm install --local /workspace/gm/build/release --source /workspace/gm, rc 0, 15.9 s. The link /config/.gmnew/current points at versions/8927a6c-1. Installed gm --version: "8927a6c-1 (abf87095763d) 1794835885"; git log -1 %ct for 8927a6c is 1794835885.
+- Install validation. check-skill-serve on the installed binary: ok (wall 0.137 s). The connected gm serve (pid 1668628) re-exec'd at 14:30:42Z with the event "build dbe5129-503 -> 8927a6c-1", and the other live serves (pids 1420, 37052, 58582) run /config/.gmnew/versions/8927a6c-1/gm. Live call: run 2026-11-16-14-28-36-335210, run_code actionSeq 13, returned 53 verbs and "8927a6c-1 (abf87095763d) 1794835885".
+- Phase B on 8927a6c (build/release/phase-b.pass names 8927a6cd6b59d1936ccada7c4e7520119b5ab54b): 70 check logs, each ending in ok. Five checks had a first-failure log and then a final ok: check-install-switch (gm install --local failed on the first attempt), check-turn-economy (a pid wait on a live process did not last to the wait cap), parity-contract (W17 and W18 saw the first install fail), check-build-handover, check-skill-read-fallback (the query_log cap dropped the skill-loaded event; query by kind fixed it).
+- dbe5129 uncached, the earlier item: 70 run, 1 failed (check-browser-scope, at host load 62.3). The same check run alone at load 28 passed. The dbe5129 tree has no passing Phase B record of its own; the pass file now names 8927a6c.
+
 ## Round 2026-11-16 (playwriter pin d81a22d with PLAYWRITER_CHROMIUM_ARGS, WebGPU flags, next_context and Monitor rules in the gm skill)
 
 Changes, one per item:
