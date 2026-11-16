@@ -4,6 +4,7 @@
 #include <chrono>
 #include <filesystem>
 #include <fstream>
+#include <iterator>
 #include <system_error>
 #include <thread>
 
@@ -112,6 +113,77 @@ CheckResult check_serve_signal_reason(const std::string& binary) {
 }
 #else
 CheckResult check_serve_signal_reason(const std::string&) {
+    CheckResult result;
+    result.summary = "skipped: POSIX-only check, runs on Linux and macOS";
+    return result;
+}
+#endif
+
+#if !defined(_WIN32)
+namespace {
+
+bool wait_gone(const std::vector<long long>& pids, std::chrono::seconds limit) {
+    const auto began = std::chrono::steady_clock::now();
+    while (!alive_of(pids).empty() && std::chrono::steady_clock::now() - began < limit) std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    return alive_of(pids).empty();
+}
+
+}
+
+CheckResult check_relay_reconnects(const std::string& binary) {
+    CheckResult result;
+    const auto stamp = std::chrono::steady_clock::now().time_since_epoch().count();
+    const auto sandbox = fs::temp_directory_path() / ("gm-relay-reconnect-" + std::to_string(stamp));
+    const fs::path workspace = entry_workspace(sandbox);
+    const fs::path run = sandbox / "run";
+    const std::vector<std::string> argv{fs::absolute(binary).string(), "serve", "--run-dir", run.string()};
+    {
+        Session first(argv, workspace, sandbox, kWatchdogMs);
+        if (!first.started()) {
+            result.failures.push_back("the first serve did not start");
+        } else {
+            first.rpc("initialize", json::Object{{"protocolVersion", "2025-11-25"}, {"capabilities", json::Object{}},
+                                                 {"clientInfo", json::Object{{"name", "gm-relay-reconnect-check"}, {"version", "1"}}}});
+            first.notify("notifications/initialized", json::Object{});
+            const long long relay = first.pid();
+            std::vector<long long> workers;
+            for (const long long pid : first.descendants()) {
+                if (pid != relay) workers.push_back(pid);
+            }
+            ::kill(static_cast<pid_t>(relay), SIGKILL);
+            if (!wait_gone({relay}, std::chrono::seconds(5))) result.failures.push_back("the killed relay " + std::to_string(relay) + " is still alive after SIGKILL");
+            if (!wait_gone(workers, std::chrono::seconds(8))) result.failures.push_back("the worker of the killed relay outlived it by 8 s");
+            first.stop();
+        }
+    }
+    {
+        Session next(argv, workspace, sandbox, kWatchdogMs);
+        if (!next.started()) {
+            result.failures.push_back("a serve started after the killed relay did not start");
+        } else {
+            const json::Value initialized = next.rpc("initialize", json::Object{{"protocolVersion", "2025-11-25"}, {"capabilities", json::Object{}},
+                                                                                {"clientInfo", json::Object{{"name", "gm-relay-reconnect-check"}, {"version", "1"}}}});
+            if (text_at(initialized, "result.serverInfo.name") != "gm") result.failures.push_back("the serve started after the killed relay did not answer as gm: " + json::dump(initialized).substr(0, 240));
+            next.notify("notifications/initialized", json::Object{});
+            const std::vector<std::string> names = tool_names(next.rpc("tools/list", json::Object{}));
+            if (!contains(names, "run_code")) result.failures.push_back("tools/list after the killed relay has no run_code");
+            const json::Value skill = next.rpc("resources/read", json::Object{{"uri", "skill://gm/SKILL.md"}});
+            if (value_at(skill, "result.contents") == nullptr) result.failures.push_back("resources/read after the killed relay did not answer: " + json::dump(skill).substr(0, 240));
+            next.stop();
+        }
+    }
+    std::ifstream in(run / "relay.log");
+    const std::string log((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+    std::size_t starts = 0;
+    for (std::size_t at = log.find("started "); at != std::string::npos; at = log.find("started ", at + 1)) ++starts;
+    if (starts < 2) result.failures.push_back("relay.log in the run dir has " + std::to_string(starts) + " start line(s), expected 2: " + log.substr(0, 240));
+    result.summary = "a serve started after its previous relay was SIGKILLed reconnects in the same run dir: the killed relay's worker ends with it, the next serve answers initialize as gm, lists run_code and reads the skill, and relay.log records both starts";
+    std::error_code ignored;
+    fs::remove_all(sandbox, ignored);
+    return result;
+}
+#else
+CheckResult check_relay_reconnects(const std::string&) {
     CheckResult result;
     result.summary = "skipped: POSIX-only check, runs on Linux and macOS";
     return result;

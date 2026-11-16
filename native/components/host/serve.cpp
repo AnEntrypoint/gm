@@ -5,6 +5,7 @@
 #if defined(_WIN32)
 #include <process.h>
 #else
+#include <fcntl.h>
 #include <unistd.h>
 #endif
 
@@ -28,8 +29,13 @@ std::filesystem::path worker_executable(const std::filesystem::path& install_dir
 std::string relay_process_id() { return gm::mcp::process_identity(); }
 
 #if !defined(_WIN32)
+int relay_log_fd = -1;
+
 void report_stop(int signal) {
     const char* text = signal == SIGTERM ? "gm relay: stopped by SIGTERM\n" : signal == SIGINT ? "gm relay: stopped by SIGINT\n" : "gm relay: stopped by SIGHUP\n";
+    if (relay_log_fd >= 0) {
+        [[maybe_unused]] const ssize_t logged = ::write(relay_log_fd, text, std::strlen(text));
+    }
     [[maybe_unused]] const ssize_t written = ::write(STDERR_FILENO, text, std::strlen(text));
     ::_exit(128 + signal);
 }
@@ -57,8 +63,16 @@ int run_serve(const HostArgs& args) {
         std::cerr << "gm relay: " << run_dir.error() << '\n';
         return 1;
     }
+    const std::filesystem::path run_log = *run_dir / "relay.log";
+    std::error_code dir_ec;
+    std::filesystem::create_directories(*run_dir, dir_ec);
+#if !defined(_WIN32)
+    relay_log_fd = ::open(run_log.c_str(), O_WRONLY | O_APPEND | O_CREAT | O_CLOEXEC, 0644);
+#endif
+    append_run_log(run_log, "started " + relay_process_id());
     const std::filesystem::path install_dir = current_executable().parent_path();
     RelayOptions options;
+    options.run_log = run_log;
     options.worker_argv = {worker_executable(install_dir).string(), "worker"};
     for (std::string& arg : without_flags(args.rest, {"--runs", "--resume", "--run-dir", "--workspace", "--supervised", "--owner", "--resend", "--from-build"}))
         options.worker_argv.push_back(std::move(arg));

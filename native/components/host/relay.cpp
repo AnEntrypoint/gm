@@ -5,6 +5,7 @@
 #include <cerrno>
 #include <cstdio>
 #include <cstring>
+#include <fstream>
 #include <iostream>
 
 #include "gm/clock.hpp"
@@ -167,7 +168,14 @@ Relay::~Relay() {
     if (!gone) host_closed();
 }
 
+void append_run_log(const std::filesystem::path& file, std::string_view message) {
+    if (file.empty()) return;
+    std::ofstream out(file, std::ios::app);
+    out << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() << ' ' << message << '\n';
+}
+
 void Relay::say(std::string_view message) {
+    append_run_log(options_.run_log, message);
     if (options_.say) {
         options_.say(message);
         return;

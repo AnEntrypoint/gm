@@ -40,6 +40,7 @@ struct RelayOptions {
     std::chrono::milliseconds retry_min{1000};
     std::chrono::milliseconds retry_max{30000};
     std::function<void(std::string_view)> say;
+    std::filesystem::path run_log;
     std::vector<std::string> reexec_argv;
     std::optional<json::Value> initialize;
     bool skill_read = false;
@@ -47,6 +48,8 @@ struct RelayOptions {
     std::vector<std::string> resend;
     std::optional<UpdatePolicy> update;
 };
+
+void append_run_log(const std::filesystem::path& file, std::string_view message);
 
 class Relay {
 public:
