@@ -1,0 +1,31 @@
+diff --git a/bin/playwriter-project b/bin/playwriter-project
+index 93ac084..cc3e0e3 100644
+--- a/bin/playwriter-project
++++ b/bin/playwriter-project
+@@ -98,6 +98,13 @@ const gateFailureSince = (from) => {
+   const line = text.split('\n').find((item) => item.includes(marker));
+   return line ? line.slice(line.indexOf(marker) + marker.length) : null;
+ };
++const chromiumArgsFromEnv = () => {
++  const raw = process.env.PLAYWRITER_CHROMIUM_ARGS;
++  if (!raw) return [];
++  const args = JSON.parse(raw);
++  if (!Array.isArray(args) || !args.every((arg) => typeof arg === 'string')) throw new Error('PLAYWRITER_CHROMIUM_ARGS must be a JSON array of strings');
++  return args;
++};
+ const browserFingerprint = () => [process.env.PLAYWRITER_BROWSER_PATH || LINUX_BROWSERS.find((candidate) => fs.existsSync(candidate)) || '', process.env.PLAYWRITER_NO_SANDBOX ? 'no-sandbox' : '', process.env.PLAYWRITER_WEBGPU === '1' ? 'webgpu' : ''].join('|');
+ const isCallerPage = (target) => target.type === 'page' && !target.url.startsWith('about:') && !target.url.startsWith('chrome://') && !target.url.startsWith('devtools://');
+ const playwriterSpawn = (args, options = {}) => spawn(process.execPath, [PLAYWRITER_BIN, ...args], { cwd: PROJECT, ...options });
+@@ -437,9 +444,11 @@ function runGate({ gate, debug }) {
+       '--no-default-browser-check',
+       ...CHROME_TRIMS,
+     ];
+-    if (process.env.PLAYWRITER_WEBGPU !== '1') args.push('--disable-gpu');
++    const chromiumArgs = chromiumArgsFromEnv();
++    if (process.env.PLAYWRITER_WEBGPU !== '1' && chromiumArgs.length === 0) args.push('--disable-gpu');
+     if (process.platform === 'linux' && !process.env.DISPLAY && !process.env.WAYLAND_DISPLAY) args.push('--headless=new');
+     if (process.env.PLAYWRITER_NO_SANDBOX) args.push('--no-sandbox');
++    args.push(...chromiumArgs);
+     args.push('about:blank');
+     fs.appendFileSync(BROWSER_LOG, '');
+     const from = fs.statSync(BROWSER_LOG).size;

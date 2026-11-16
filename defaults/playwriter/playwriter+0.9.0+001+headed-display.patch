@@ -1,0 +1,123 @@
+diff --git a/node_modules/playwriter/dist/executor.js b/node_modules/playwriter/dist/executor.js
+index e0c7251..5c2ad74 100644
+--- a/node_modules/playwriter/dist/executor.js
++++ b/node_modules/playwriter/dist/executor.js
+@@ -317,6 +317,16 @@ export function chromiumLaunchArgs() {
+     }
+     return { args };
+ }
++export function displayStatus(env = process.env, platform = process.platform) {
++    if (platform !== 'linux') return { headed: true, reason: `${platform} draws to its own display` };
++    if (env.WAYLAND_DISPLAY) return { headed: true, reason: `WAYLAND_DISPLAY is ${env.WAYLAND_DISPLAY}` };
++    if (!env.DISPLAY) return { headed: false, reason: 'no display: DISPLAY and WAYLAND_DISPLAY are unset' };
++    const local = /^:(\d+)/.exec(env.DISPLAY);
++    if (!local) return { headed: true, reason: `DISPLAY ${env.DISPLAY} names a remote display` };
++    const socket = `/tmp/.X11-unix/X${local[1]}`;
++    if (!fs.existsSync(socket)) return { headed: false, reason: `no display: DISPLAY ${env.DISPLAY} has no X socket at ${socket}` };
++    return { headed: true, reason: `DISPLAY ${env.DISPLAY} is reachable at ${socket}` };
++}
+ export class PlaywrightExecutor {
+     isConnected = false;
+     browser = null;
+@@ -843,7 +853,7 @@ export class PlaywrightExecutor {
+             const { resolveBrowserExecutablePath } = await import('./browser-config.js');
+             const executablePath = resolveBrowserExecutablePath();
+             const browser = await chromium.launch({
+-                headless: true,
++                headless: !displayStatus().headed,
+                 executablePath,
+                 ...chromiumLaunchArgs(),
+             });
+diff --git a/node_modules/playwriter/src/executor.ts b/node_modules/playwriter/src/executor.ts
+index b9f7196..0309cd6 100644
+--- a/node_modules/playwriter/src/executor.ts
++++ b/node_modules/playwriter/src/executor.ts
+@@ -465,6 +465,17 @@ export function chromiumLaunchArgs(): { args?: string[] } {
+   return { args }
+ }
+ 
++export function displayStatus(env: NodeJS.ProcessEnv = process.env, platform: NodeJS.Platform = process.platform): { headed: boolean; reason: string } {
++  if (platform !== 'linux') return { headed: true, reason: `${platform} draws to its own display` }
++  if (env.WAYLAND_DISPLAY) return { headed: true, reason: `WAYLAND_DISPLAY is ${env.WAYLAND_DISPLAY}` }
++  if (!env.DISPLAY) return { headed: false, reason: 'no display: DISPLAY and WAYLAND_DISPLAY are unset' }
++  const local = /^:(\d+)/.exec(env.DISPLAY)
++  if (!local) return { headed: true, reason: `DISPLAY ${env.DISPLAY} names a remote display` }
++  const socket = `/tmp/.X11-unix/X${local[1]}`
++  if (!fs.existsSync(socket)) return { headed: false, reason: `no display: DISPLAY ${env.DISPLAY} has no X socket at ${socket}` }
++  return { headed: true, reason: `DISPLAY ${env.DISPLAY} is reachable at ${socket}` }
++}
++
+ export class PlaywrightExecutor {
+   private isConnected = false
+   private browser: Browser | null = null
+@@ -1103,7 +1114,7 @@ export class PlaywrightExecutor {
+       const executablePath = resolveBrowserExecutablePath()
+ 
+       const browser = await chromium.launch({
+-        headless: true,
++        headless: !displayStatus().headed,
+         executablePath,
+         ...chromiumLaunchArgs(),
+       })
+diff --git a/node_modules/playwriter/dist/cdp-relay.js b/node_modules/playwriter/dist/cdp-relay.js
+index 17891e8..48a47cb 100644
+--- a/node_modules/playwriter/dist/cdp-relay.js
++++ b/node_modules/playwriter/dist/cdp-relay.js
+@@ -1955,7 +1955,7 @@ export async function startPlayWriterCDPRelayServer({ port = 19988, host = '127.
+         // Resolve cwd with cross-OS awareness: if CLI runs on Windows and relay on
+         // Linux (WSL), translate the Windows path to /mnt/<drive>/... so the sandbox
+         // can actually reach it. See issue #107.
+-        const { resolveSessionCwd } = await import('./executor.js');
++        const { resolveSessionCwd, displayStatus } = await import('./executor.js');
+         const { cwd, warning: cwdWarning } = resolveSessionCwd(body.cwd);
+         if (cwdWarning) {
+             logger?.log(`[session ${sessionId}] ${cwdWarning}`);
+@@ -1964,6 +1964,8 @@ export async function startPlayWriterCDPRelayServer({ port = 19988, host = '127.
+         // Force connection immediately so missing Chrome errors surface at creation time,
+         // not on first execute call.
+         if (body.headless) {
++            const display = displayStatus();
++            logger?.log(`[session ${sessionId}] ${display.headed ? 'headed' : 'headless'}: ${display.reason}`);
+             const manager = await getExecutorManager();
+             const executor = manager.getExecutor({
+                 sessionId,
+@@ -1971,7 +1973,7 @@ export async function startPlayWriterCDPRelayServer({ port = 19988, host = '127.
+                 cdpConfig: { headless: true },
+                 sessionMetadata: {
+                     extensionId: null,
+-                    browser: 'Chrome (Headless)',
++                    browser: `Chrome (${display.headed ? 'Headed' : 'Headless'}: ${display.reason})`,
+                     profile: null,
+                 },
+                 enableCloudScope: true,
+diff --git a/node_modules/playwriter/src/cdp-relay.ts b/node_modules/playwriter/src/cdp-relay.ts
+index fd99f9e..7e9638b 100644
+--- a/node_modules/playwriter/src/cdp-relay.ts
++++ b/node_modules/playwriter/src/cdp-relay.ts
+@@ -2454,7 +2454,7 @@ export async function startPlayWriterCDPRelayServer({
+     // Resolve cwd with cross-OS awareness: if CLI runs on Windows and relay on
+     // Linux (WSL), translate the Windows path to /mnt/<drive>/... so the sandbox
+     // can actually reach it. See issue #107.
+-    const { resolveSessionCwd } = await import('./executor.js')
++    const { resolveSessionCwd, displayStatus } = await import('./executor.js')
+     const { cwd, warning: cwdWarning } = resolveSessionCwd(body.cwd)
+     if (cwdWarning) {
+       logger?.log(`[session ${sessionId}] ${cwdWarning}`)
+@@ -2464,6 +2464,8 @@ export async function startPlayWriterCDPRelayServer({
+     // Force connection immediately so missing Chrome errors surface at creation time,
+     // not on first execute call.
+     if (body.headless) {
++      const display = displayStatus()
++      logger?.log(`[session ${sessionId}] ${display.headed ? 'headed' : 'headless'}: ${display.reason}`)
+       const manager = await getExecutorManager()
+       const executor = manager.getExecutor({
+         sessionId,
+@@ -2471,7 +2473,7 @@ export async function startPlayWriterCDPRelayServer({
+         cdpConfig: { headless: true },
+         sessionMetadata: {
+           extensionId: null,
+-          browser: 'Chrome (Headless)',
++          browser: `Chrome (${display.headed ? 'Headed' : 'Headless'}: ${display.reason})`,
+           profile: null,
+         },
+         enableCloudScope: true,

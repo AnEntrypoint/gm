@@ -5,6 +5,7 @@
 #include <chrono>
 #include <filesystem>
 #include <fstream>
+#include <iterator>
 #include <map>
 #include <regex>
 #include <system_error>
@@ -60,6 +61,14 @@ CheckResult check_lazy_browser(const std::string& binary) {
     std::string pin_text;
     std::getline(pin_in, pin_text);
     if (pin_text != "d81a22d") result.failures.push_back("the install did not write the pin marker " + pin_marker.string() + " as d81a22d (read '" + pin_text + "')");
+    const fs::path executor = sandbox / ".gmnew" / "pw" / "node_modules" / "playwriter" / "dist" / "executor.js";
+    std::ifstream executor_in(executor);
+    const std::string executor_text((std::istreambuf_iterator<char>(executor_in)), std::istreambuf_iterator<char>());
+    if (executor_text.find("process.env.PLAYWRITER_CHROMIUM_ARGS") == std::string::npos || executor_text.find("function displayStatus(") == std::string::npos)
+        result.failures.push_back("the installed executor " + executor.string() + " lacks the PLAYWRITER_CHROMIUM_ARGS hook or the display patch: the pin marker is not proof that the patches landed");
+    std::ifstream launcher_in(sandbox / ".gmnew" / "pw" / "bin" / "playwriter-project");
+    const std::string launcher_text((std::istreambuf_iterator<char>(launcher_in)), std::istreambuf_iterator<char>());
+    if (launcher_text.find("chromiumArgsFromEnv()") == std::string::npos) result.failures.push_back("the installed project launcher does not pass PLAYWRITER_CHROMIUM_ARGS to the browser: launcher patch missing");
     const fs::path entry = sandbox / ".gmnew" / "pw" / "bin" / "playwriter-project";
     if (!fs::exists(entry)) result.failures.push_back("the playwriter entry from defaults/mcp.json does not resolve under the install tree: " + entry.string());
     {

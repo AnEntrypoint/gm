@@ -121,28 +121,63 @@ std::optional<std::string> playwriter_step(const std::string& what, const std::v
     return std::nullopt;
 }
 
+bool playwriter_hook_landed(const fs::path& dir) {
+    std::ifstream in(dir / "node_modules" / "playwriter" / "dist" / "executor.js");
+    std::stringstream text;
+    text << in.rdbuf();
+    const std::string source = text.str();
+    std::ifstream launcher(dir / "bin" / "playwriter-project");
+    std::stringstream launcher_text;
+    launcher_text << launcher.rdbuf();
+    return source.find("process.env.PLAYWRITER_CHROMIUM_ARGS") != std::string::npos && source.find("...chromiumLaunchArgs(),") != std::string::npos &&
+           source.find("function displayStatus(") != std::string::npos && launcher_text.str().find("chromiumArgsFromEnv()") != std::string::npos;
+}
+
+std::optional<std::string> copy_playwriter_patches(const fs::path& root, const fs::path& dir) {
+    const fs::path from = root / "current" / "defaults" / "playwriter";
+    std::error_code ec;
+    if (!fs::is_directory(from, ec)) return "the install has no " + from.string() + ", so the playwriter patches cannot land";
+    for (const auto& entry : fs::directory_iterator(from, ec)) {
+        if (entry.path().extension() != ".patch") continue;
+        fs::copy_file(entry.path(), dir / "patches" / entry.path().filename(), fs::copy_options::overwrite_existing, ec);
+        if (ec) return "cannot copy " + entry.path().string() + " into the playwriter patches: " + ec.message();
+    }
+    return std::nullopt;
+}
+
 std::optional<std::string> install_playwriter(const fs::path& root) {
     const fs::path dir = root / "pw";
     const fs::path pin_file = dir / "gm-pin";
     std::ifstream known(pin_file);
     std::string pinned;
     std::getline(known, pinned);
-    if (pinned == kPlaywriterPin && fs::exists(dir / "bin" / "playwriter-project")) {
-        std::cout << "playwriter " << kPlaywriterPin << " is already in " << dir.string() << "\n";
+    const bool present = pinned == kPlaywriterPin && fs::exists(dir / "bin" / "playwriter-project");
+    if (present && playwriter_hook_landed(dir)) {
+        std::cout << "playwriter " << kPlaywriterPin << " is already in " << dir.string() << " with its hooks\n";
         return std::nullopt;
     }
     std::error_code ec;
     std::map<std::string, std::int64_t> wall;
     const std::int64_t began = wall_ms();
-    constexpr int kCloneAttempts = 3;
-    for (int attempt = 1;; ++attempt) {
-        fs::remove_all(dir, ec);
-        const auto cloned = playwriter_step("clone", {"git", "clone", "--quiet", kPlaywriterRepo, dir.string()}, root, 900000, wall);
-        if (!cloned) break;
-        if (attempt == kCloneAttempts) return cloned;
+    if (!present) {
+        constexpr int kCloneAttempts = 3;
+        for (int attempt = 1;; ++attempt) {
+            fs::remove_all(dir, ec);
+            const auto cloned = playwriter_step("clone", {"git", "clone", "--quiet", kPlaywriterRepo, dir.string()}, root, 900000, wall);
+            if (!cloned) break;
+            if (attempt == kCloneAttempts) return cloned;
+        }
+        if (auto error = playwriter_step("checkout", {"git", "-C", dir.string(), "checkout", "--quiet", "--detach", kPlaywriterPin}, root, 120000, wall)) return error;
     }
-    if (auto error = playwriter_step("checkout", {"git", "-C", dir.string(), "checkout", "--quiet", "--detach", kPlaywriterPin}, root, 120000, wall)) return error;
+    if (auto error = copy_playwriter_patches(root, dir)) return error;
+    if (auto error = playwriter_step("launcher reset", {"git", "-C", dir.string(), "checkout", "--quiet", "--", "bin/playwriter-project"}, dir, 120000, wall)) return error;
+    if (auto error = playwriter_step("launcher patch", {"git", "-C", dir.string(), "apply", (root / "current" / "defaults" / "playwriter" / "launcher-chromium-args.diff").string()}, dir, 120000, wall))
+        return error;
     if (auto error = playwriter_step("npm ci", {"npm", "ci", "--no-audit", "--no-fund"}, dir, 1200000, wall)) return error;
+    if (!playwriter_hook_landed(dir)) {
+        return "playwriter " + std::string(kPlaywriterPin) + " installed, but " + dir.string() +
+               " lacks the PLAYWRITER_CHROMIUM_ARGS hook, the display patch or the launcher patch; npm ci did not apply patches/";
+    }
     std::ofstream(pin_file) << kPlaywriterPin << "\n";
     std::string longest;
     for (const auto& [name, ms] : wall) {
