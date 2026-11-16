@@ -1,3 +1,5 @@
+#include <csignal>
+#include <cstring>
 #include <iostream>
 
 #if defined(_WIN32)
@@ -24,6 +26,14 @@ std::filesystem::path worker_executable(const std::filesystem::path& install_dir
 }
 
 std::string relay_process_id() { return gm::mcp::process_identity(); }
+
+#if !defined(_WIN32)
+void report_stop(int signal) {
+    const char* text = signal == SIGTERM ? "gm relay: stopped by SIGTERM\n" : signal == SIGINT ? "gm relay: stopped by SIGINT\n" : "gm relay: stopped by SIGHUP\n";
+    [[maybe_unused]] const ssize_t written = ::write(STDERR_FILENO, text, std::strlen(text));
+    ::_exit(128 + signal);
+}
+#endif
 
 }
 
@@ -76,6 +86,11 @@ int run_serve(const HostArgs& args) {
     options.build_dir = args.path_or("--build-dir", {});
     options.runtime_roots = {leaves_dir_of(args)};
     options.update = policy_from_environment(install_dir);
+#if !defined(_WIN32)
+    std::signal(SIGHUP, report_stop);
+    std::signal(SIGINT, report_stop);
+    std::signal(SIGTERM, report_stop);
+#endif
     return serve_stdio(std::move(options));
 }
 
