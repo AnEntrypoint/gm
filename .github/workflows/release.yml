@@ -85,8 +85,8 @@ jobs:
           test -x "$browser" || { echo "browser path missing: $browser" >&2; exit 1; }
           echo "PLAYWRITER_BROWSER_PATH=$browser" >> "$GITHUB_ENV"
           echo "PLAYWRITER_NO_SANDBOX=1" >> "$GITHUB_ENV"
-      - name: Chromium for the browser-scope check (linux-arm64)
-        if: matrix.target == 'arm64-linux'
+      - name: Chromium for the browser-scope check (linux)
+        if: runner.os == 'Linux'
         shell: bash
         run: |
           dir="$RUNNER_TEMP/playwright-chromium"
