@@ -137,6 +137,7 @@ std::optional<std::string> copy_playwriter_patches(const fs::path& root, const f
     const fs::path from = root / "current" / "defaults" / "playwriter";
     std::error_code ec;
     if (!fs::is_directory(from, ec)) return "the install has no " + from.string() + ", so the playwriter patches cannot land";
+    fs::create_directories(dir / "patches", ec);
     for (const auto& entry : fs::directory_iterator(from, ec)) {
         if (entry.path().extension() != ".patch") continue;
         fs::copy_file(entry.path(), dir / "patches" / entry.path().filename(), fs::copy_options::overwrite_existing, ec);

@@ -79,7 +79,7 @@ std::string offline_playwriter_path(const fs::path& sandbox) {
     const fs::path offline_bin = sandbox / "offline-bin";
     fs::create_directories(offline_bin);
     write_bytes(offline_bin / "git", "#!/bin/sh\nif [ \"$1\" = clone ]; then for last; do :; done; mkdir -p \"$last\"; fi\nexit 0\n");
-    write_bytes(offline_bin / "npm", "#!/bin/sh\nmkdir -p bin && : > bin/playwriter-project\n");
+    write_bytes(offline_bin / "npm", "#!/bin/sh\nmkdir -p bin node_modules/playwriter/dist && echo 'chromiumArgsFromEnv()' > bin/playwriter-project && printf '%s\\n' 'process.env.PLAYWRITER_CHROMIUM_ARGS' '...chromiumLaunchArgs(),' 'function displayStatus(' > node_modules/playwriter/dist/executor.js\n");
     for (const char* name : {"git", "npm"}) fs::permissions(offline_bin / name, fs::perms::owner_all | fs::perms::group_read | fs::perms::group_exec, fs::perm_options::replace);
     const char* inherited = std::getenv("PATH");
     return "PATH=" + offline_bin.string() + (inherited != nullptr ? ":" + std::string(inherited) : std::string());
