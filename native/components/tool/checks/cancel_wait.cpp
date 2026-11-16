@@ -22,6 +22,18 @@ json::Value content_json(const json::Value& message) {
     return json::Value();
 }
 
+bool wait_for_next_context_action(const fs::path& log, std::int64_t request, std::chrono::milliseconds limit) {
+    const auto deadline = std::chrono::steady_clock::now() + limit;
+    while (std::chrono::steady_clock::now() < deadline) {
+        for (const json::Value& event : run_events(log, "action")) {
+            const json::Value* id = event.find("rpcId");
+            if (text_at(event, "tool") == "next_context" && id != nullptr && id->is_number() && static_cast<std::int64_t>(id->as_number()) == request) return true;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+    return false;
+}
+
 std::size_t job_events(const json::Value& body, const std::string& job) {
     const json::Value* pending = body.find("pending");
     if (pending == nullptr || !pending->is_array()) return 0;
@@ -55,7 +67,9 @@ CheckResult check_cancel_wait(const std::string& binary) {
             tool_text(session, "run_code", json::Object{{"body", "return await gm.job_start({ job: 'cw-job', command: 'sleep 2; echo done', timeoutMs: 60000 });"}});
 
             const std::int64_t wait_id = session.send("tools/call", json::Object{{"name", "next_context"}, {"arguments", json::Object{{"waitMs", 30000}}}});
-            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+            const fs::path log = workspace / "runs" / "check" / "log.jsonl";
+            const bool started = wait_for_next_context_action(log, wait_id, std::chrono::seconds(20));
+            if (!started) result.failures.push_back("the wait's next_context never started: no action event for request " + std::to_string(wait_id));
             const auto cancel_at = std::chrono::steady_clock::now();
             session.notify("notifications/cancelled", json::Object{{"requestId", wait_id}, {"reason", "witness gave up"}});
             const std::int64_t next = session.send("tools/call", json::Object{{"name", "next_context"}, {"arguments", json::Object{{"waitMs", 10000}}}});
@@ -87,18 +101,36 @@ CheckResult check_cancel_wait(const std::string& binary) {
             if (session.await_reply(wait_id, std::chrono::milliseconds(1500))) result.failures.push_back("the cancelled wait was answered; the protocol says no reply");
 
             bool recorded = false;
-            for (const json::Value& event : run_events(workspace / "runs" / "check" / "log.jsonl", "cancel")) {
+            std::string outcomes;
+            for (const json::Value& event : run_events(log, "cancel")) {
                 const json::Value* id = event.find("requestId");
-                if (id != nullptr && id->is_number() && static_cast<std::int64_t>(id->as_number()) == wait_id && text_at(event, "outcome") == "ended the next_context wait; no reply is sent") recorded = true;
+                if (id == nullptr || !id->is_number() || static_cast<std::int64_t>(id->as_number()) != wait_id) continue;
+                outcomes += (outcomes.empty() ? "" : "; ") + text_at(event, "outcome");
+                if (text_at(event, "outcome") == "ended the next_context wait; no reply is sent") recorded = true;
             }
-            if (!recorded) result.failures.push_back("the run log has no cancel for the wait");
+            if (!recorded) result.failures.push_back("the run log has no cancel for the wait; its cancel outcome: " + (outcomes.empty() ? std::string("none") : outcomes));
+
+            const std::int64_t queued_id = session.send("tools/call", json::Object{{"name", "next_context"}, {"arguments", json::Object{{"waitMs", 30000}}}});
+            session.notify("notifications/cancelled", json::Object{{"requestId", queued_id}, {"reason", "cancelled before it started"}});
+            const std::int64_t after_queued = session.send("tools/call", json::Object{{"name", "next_context"}, {"arguments", json::Object{{"waitMs", 3000}}}});
+            const auto queued_answer = session.await_reply(after_queued, std::chrono::seconds(20));
+            if (!queued_answer) {
+                result.failures.push_back("the next_context after a cancel sent before its call started was not answered");
+            } else {
+                const json::Value queued_body = content_json(*queued_answer);
+                const json::Value* queued_notice = queued_body.find("previousWaitCancelled");
+                const json::Value* queued_named = queued_notice != nullptr ? queued_notice->find("requestId") : nullptr;
+                if (queued_named == nullptr || !queued_named->is_number() || static_cast<std::int64_t>(queued_named->as_number()) != queued_id)
+                    result.failures.push_back("the cancel sent before its call started was dropped: the next reply does not name that wait");
+            }
+            if (session.await_reply(queued_id, std::chrono::milliseconds(1500))) result.failures.push_back("the wait cancelled before it started was answered; the protocol says no reply");
         }
         session.stop();
     }
     std::error_code ignored;
     fs::remove_all(sandbox, ignored);
     const double wall = std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
-    result.summary = "cancel at +500 ms of a 30000 ms wait; the next next_context answered " + std::to_string(cancel_to_answer_ms) + " ms after the cancel with the job event (once) and previousWaitCancelled naming the client (wall " + std::to_string(wall) + " s)";
+    result.summary = "cancel once the 30000 ms wait's next_context has started; the next next_context answered " + std::to_string(cancel_to_answer_ms) + " ms after the cancel with the job event (once) and previousWaitCancelled naming the client (wall " + std::to_string(wall) + " s)";
     return result;
 }
 

@@ -768,6 +768,8 @@ struct Server::State {
     Value client_info_ = Value(nullptr);
     std::mutex waits_mu_;
     std::map<std::string, bool> open_waits_;
+    std::map<std::string, std::string> pending_calls_;
+    std::set<std::string> early_cancels_;
     std::set<std::string> dropped_replies_;
     std::optional<Value> cancel_notice_;
     std::atomic<std::uint64_t> body_verb_calls{0};
@@ -2118,12 +2120,39 @@ struct Server::State {
         return found != open_waits_.end() && found->second;
     }
 
+    void note_pending_call(std::string_view line) {
+        auto parsed = json::parse(line);
+        if (!parsed) return;
+        const Value* id = parsed->find("id");
+        const Value* params = parsed->find("params");
+        const Value* name = params ? params->find("name") : nullptr;
+        if (id == nullptr || name == nullptr || !name->is_string()) return;
+        std::lock_guard guard(waits_mu_);
+        pending_calls_[id_key(id)] = name->as_string();
+    }
+
+    void forget_pending_call(std::string_view line) {
+        auto parsed = json::parse(line);
+        if (!parsed || parsed->find("id") == nullptr) return;
+        const std::string key = id_key(parsed->find("id"));
+        std::lock_guard guard(waits_mu_);
+        pending_calls_.erase(key);
+        early_cancels_.erase(key);
+        dropped_replies_.erase(key);
+    }
+
     bool cancel_wait(const Value& request_id, const Value* why) {
         const std::string key = id_key(&request_id);
         std::lock_guard guard(waits_mu_);
         auto found = open_waits_.find(key);
-        if (found == open_waits_.end() || found->second) return false;
-        found->second = true;
+        if (found == open_waits_.end()) {
+            auto queued = pending_calls_.find(key);
+            if (queued == pending_calls_.end() || queued->second != "next_context") return false;
+            early_cancels_.insert(key);
+        } else {
+            if (found->second) return false;
+            found->second = true;
+        }
         dropped_replies_.insert(key);
         cancel_notice_ = object().set("requestId", request_id).set("by", client_info_).set("why", why ? *why : Value(nullptr));
         return true;
@@ -2326,7 +2355,8 @@ struct Server::State {
         const std::string wait_key = s().rpc_id ? id_key(&*s().rpc_id) : std::string();
         {
             std::lock_guard guard(waits_mu_);
-            open_waits_[wait_key] = false;
+            open_waits_[wait_key] = early_cancels_.erase(wait_key) > 0;
+            pending_calls_[wait_key] = "registered";
         }
         Value out = act(
             "next_context", audit,
@@ -3438,6 +3468,7 @@ struct Server::State {
         }
         std::uint64_t ticket = take_ticket();
         if (is_method(line, "tools/call")) {
+            note_pending_call(line);
             enqueue_call(ticket, std::string(line));
             return;
         }
@@ -3469,6 +3500,7 @@ struct Server::State {
                 calls.running += 1;
                 calls.threads.emplace(ticket, std::thread([this, ticket, text = std::move(text)] {
                     process(text, ticket, true);
+                    forget_pending_call(text);
                     {
                         std::lock_guard done(calls.mutex);
                         calls.running -= 1;
