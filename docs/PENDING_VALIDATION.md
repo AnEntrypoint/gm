@@ -1,5 +1,15 @@
 # Pending validation
 
+## Round 2026-11-16 iteration time (Phase B: build, install, live call, push)
+
+- Phase B on cfb6fe1 (build stamp cfb6fe1-1, native tree 85659ecabfd0): gm-tool phase-b build/release, 70 run, 0 failed, wall 240.0 s, load 25.9 on 16 cores, longest check-browser-scope-tree 91.5 s. build/release/phase-b.pass names cfb6fe102f634bcaeeb65331ae2599f6f1271f71. The first Phase B of this round (on f4592c1) had 73 run and 2 failed (check-no-resource-client, check-skill-read-fallback, the skill-length finding above); both pass on cfb6fe1.
+- Build. cmake --build build/release on cfb6fe1 after the reconfigure with -DGMNEW_VERSION=cfb6fe1-1: rc 0, 0 errors, 0 warnings, 32 to 68 s wall, host load 22 to 37, swap in use 7.3 GB of 20 GB at 16:37.
+- Install. gm install --local /workspace/gm/build/release --source /workspace/gm: rc 0, 32.8 s, started 15:00:23Z. The link /config/.gmnew/current points at versions/cfb6fe1-1. gm --version through the link: "cfb6fe1-1 (85659ecabfd0) 1794840920". check-skill-serve on the installed binary: ok (wall 0.090 s).
+- Install validation. gm-tool installed reports stale on one line only: "installed gm reports cfb6fe1-1, the checkout's native tree is 85659ecabfd0-dev". That tool compares the installed version word with the native tree stamp, so a CI-shaped build (-DGMNEW_VERSION=<sha>-1) is always reported stale by it. The skill files compare equal. Open: the install check should accept the CI shape of the same native tree.
+- Live. The serves 1420, 1668628, 37052 and 58582 all run versions/cfb6fe1-1/gm. Run 2026-11-16-15-01-31-2115fd, run_code actionSeq 6: skillLength 19878 (whole, with the Iteration and Memory sections), verbs 53, version "cfb6fe1-1 (85659ecabfd0) 1794840920".
+- Run logs since 15:00:23Z (hyperagent, oscraft, thebird, gm): no job-killed and no error from a peer. The only refusals after the install are on this connection (the skill gate after the re-exec, and a call after the run had ended).
+- Push. gm-tool ship --push did not push. Its gate waits up to 120 minutes for the release and arm-diagnose runs on HEAD to be green, and an unpushed HEAD has no CI runs (gh run list --commit returned []), so the gate cannot pass before the first push. I stopped that process by its PID (1752095) after 41 minutes. origin/main is still 8927a6c. Open, owner decision: how a commit gets its first push when the push gate needs CI on that commit.
+
 ## Round 2026-11-16 iteration time (Phase A)
 
 Changes, one per item:
