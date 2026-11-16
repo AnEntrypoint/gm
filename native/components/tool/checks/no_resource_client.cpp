@@ -210,7 +210,7 @@ CheckResult check_skill_read_fallback(const std::string& binary) {
             const json::Value after = tool_json(client, "run_code", json::Object{{"body", "return 7;"}});
             if (!flag(after, "ok", true) || !output_value(after).is_number() || output_value(after).as_number() != 7)
                 result.failures.push_back("the gate did not clear for later run_code calls: " + json::dump(after).substr(0, 300));
-            const json::Value logged = tool_json(client, "run_code", json::Object{{"body", "return (await gm.query_log({ last: 40 })).output;"}});
+            const json::Value logged = tool_json(client, "run_code", json::Object{{"body", "return (await gm.query_log({ kind: 'skill-loaded', last: 5 })).output;"}});
             if (!contains_text(logged, "skill-loaded") || !contains_text(logged, "read_file") || !contains_text(logged, "skill://gm/SKILL.md"))
                 result.failures.push_back("the run log has no skill-loaded event via read_file: " + json::dump(logged).substr(0, 300));
         }
