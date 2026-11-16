@@ -121,17 +121,34 @@ std::optional<std::string> playwriter_step(const std::string& what, const std::v
     return std::nullopt;
 }
 
-bool playwriter_hook_landed(const fs::path& dir) {
-    std::ifstream in(dir / "node_modules" / "playwriter" / "dist" / "executor.js");
-    std::stringstream text;
-    text << in.rdbuf();
-    const std::string source = text.str();
-    std::ifstream launcher(dir / "bin" / "playwriter-project");
-    std::stringstream launcher_text;
-    launcher_text << launcher.rdbuf();
-    return source.find("process.env.PLAYWRITER_CHROMIUM_ARGS") != std::string::npos && source.find("...chromiumLaunchArgs(),") != std::string::npos &&
-           source.find("function displayStatus(") != std::string::npos && source.find("namedByCall") != std::string::npos &&
-           launcher_text.str().find("chromiumArgsFromEnv()") != std::string::npos && launcher_text.str().find("lastBrowserLines") != std::string::npos;
+struct PlaywriterHook {
+    const char* name;
+    const char* file;
+    const char* needle;
+};
+
+constexpr PlaywriterHook kPlaywriterHooks[] = {
+    {"executor PLAYWRITER_CHROMIUM_ARGS", "node_modules/playwriter/dist/executor.js", "process.env.PLAYWRITER_CHROMIUM_ARGS"},
+    {"executor chromiumLaunchArgs spread", "node_modules/playwriter/dist/executor.js", "...chromiumLaunchArgs(),"},
+    {"executor displayStatus", "node_modules/playwriter/dist/executor.js", "function displayStatus("},
+    {"executor quiet close warning", "node_modules/playwriter/dist/executor.js", "namedByCall"},
+    {"launcher chromiumArgsFromEnv", "bin/playwriter-project", "chromiumArgsFromEnv()"},
+    {"launcher browser listing", "bin/playwriter-project", "lastBrowserLines"},
+};
+
+std::vector<std::string> playwriter_missing_hooks(const fs::path& dir) {
+    std::map<std::string, std::string> sources;
+    std::vector<std::string> missing;
+    for (const PlaywriterHook& hook : kPlaywriterHooks) {
+        if (!sources.count(hook.file)) {
+            std::ifstream in(dir / hook.file);
+            std::stringstream text;
+            text << in.rdbuf();
+            sources[hook.file] = text.str();
+        }
+        if (sources[hook.file].find(hook.needle) == std::string::npos) missing.push_back(std::string(hook.name) + " (" + hook.file + ")");
+    }
+    return missing;
 }
 
 std::optional<std::string> apply_launcher_diffs(const fs::path& root, const fs::path& dir, std::map<std::string, std::int64_t>& wall) {
@@ -167,7 +184,7 @@ std::optional<std::string> install_playwriter(const fs::path& root) {
     std::string pinned;
     std::getline(known, pinned);
     const bool present = pinned == kPlaywriterPin && fs::exists(dir / "bin" / "playwriter-project");
-    if (present && playwriter_hook_landed(dir)) {
+    if (present && playwriter_missing_hooks(dir).empty()) {
         std::cout << "playwriter " << kPlaywriterPin << " is already in " << dir.string() << " with its hooks\n";
         return std::nullopt;
     }
@@ -187,10 +204,14 @@ std::optional<std::string> install_playwriter(const fs::path& root) {
     if (auto error = copy_playwriter_patches(root, dir)) return error;
     if (auto error = playwriter_step("launcher reset", {"git", "-C", dir.string(), "checkout", "--quiet", "--", "bin/playwriter-project"}, dir, 120000, wall)) return error;
     if (auto error = apply_launcher_diffs(root, dir, wall)) return error;
-    if (auto error = playwriter_step("npm ci", {"npm", "ci", "--no-audit", "--no-fund"}, dir, 1200000, wall)) return error;
-    if (!playwriter_hook_landed(dir)) {
-        return "playwriter " + std::string(kPlaywriterPin) + " installed, but " + dir.string() +
-               " lacks the PLAYWRITER_CHROMIUM_ARGS hook, the display patch or the launcher patch; npm ci did not apply patches/";
+    if (auto error = playwriter_step("npm ci", {"npm", "ci", "--ignore-scripts", "--no-audit", "--no-fund"}, dir, 1200000, wall)) return error;
+    if (auto error = playwriter_step("patch-package", {"node", (dir / "node_modules" / "patch-package" / "index.js").string(), "--error-on-fail"}, dir, 300000, wall))
+        return error;
+    const std::vector<std::string> missing = playwriter_missing_hooks(dir);
+    if (!missing.empty()) {
+        std::string names;
+        for (const std::string& hook : missing) names += (names.empty() ? "" : "; ") + hook;
+        return "playwriter " + std::string(kPlaywriterPin) + " installed, but these hooks are missing in " + dir.string() + " after patch-package: " + names;
     }
     std::ofstream(pin_file) << kPlaywriterPin << "\n";
     std::string longest;
