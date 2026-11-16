@@ -1,0 +1,36 @@
+# Honesty and provenance
+
+This skill adapts a real published technique (WFGY, `onestardao/WFGY` on GitHub, created by PSBigBig) rather than inventing an unrelated one from scratch. This file states precisely what was kept, what was changed, and why -- so anyone reading this skill later can tell the difference between "this is how the original technique described itself" and "this is what we changed to make it honestly usable by a text-only agent."
+
+## What direct research into the source confirmed
+
+The full technical basis for every claim below is in `wfgy-core-mechanism.md`. Summary of the load-bearing findings:
+
+- **The shipped reference engine is non-functional by its own maintainers' admission.** The archived SDK engine's `WFGYEngine.run()` ignores its own `input_vec`/`ground_vec` arguments and returns `logits * 0.55` unconditionally -- a hardcoded constant chosen, per the code's own docstring, specifically to make a CI variance-drop test pass. The archive's own README states outright: "It is not a production-ready engine... The core engine file does not implement a full standalone algorithm and should not be interpreted as a complete inference system."
+- **The numeric deltaS score, as used in the project's own plain-text prompt file (the upstream TXT-OS document), is not computed from real embeddings.** No embedding call exists in that usage path. When a model prints "deltaS = 0.42" after being given that file, it is producing a plausible-sounding number based on its own qualitative sense of how big a jump it just made -- not a real cosine-distance measurement. SKILL.md says this plainly: never present a specific decimal as measured unless a real embedding call was made.
+- **No embedding verb is served by the current build.** The gm verb inventory serves no embedding verb, so deltaS in this skill is always a labelled estimate, never a measurement.
+- **The upstream TXT-OS document (the original's actual "how to use this" artifact) contains two patterns this skill deliberately does not reproduce:** a hardcoded auto-running "benchmark demo" that prints fixed, fake GSM8K/TruthfulQA results regardless of any real computation on first contact, and an explicit "System guard" script instructing the model to deflect and reassure rather than engage honestly whenever a user says the system might be fake, a scam, or malware. Both are manipulation patterns, not reasoning-technique content, and including either here would make this skill dishonest in exactly the way its own description promises it will not be.
+- **BBAM (attention modulation) operates on internal transformer attention weights/logits** (`exp(-gamma * sigma(attention))` in the source formulas) that a text-generating agent has no introspective access to during its own generation. There is no way for this skill to actually compute that formula. Rather than omit BBAM, the calling agent is asked to perform the equivalent judgment itself directly -- noticing when its own output has narrowed onto one aspect of a broader task past the point of usefulness, and deliberately widening back out. This is explicitly framed in `SKILL.md` as delegated judgment standing in for a computation this skill cannot perform, not as a claim that real attention weights are being read.
+
+## What was kept, and why it survives honestly
+
+BBMC, BBPF, BBCR, and (in delegated form) BBAM each have a real, concrete *behavioral pattern* underneath their formal notation, independent of whether the underlying numbers are ever actually computed:
+
+- BBMC's real operation is "diff current state against a stated anchor/goal." That comparison is something an agent can genuinely do in plain judgment -- restate the goal, compare current output against it, notice concrete divergence -- without needing a real embedding space to do it in.
+- BBPF's real gate condition is "only proceed down a branch if it measurably moves you toward the goal, and don't let the correction overshoot." Generating multiple real candidate approaches and picking the one that most clearly serves the stated goal is a genuine, checkable discipline, not a numeric one.
+- BBCR's real operation (confirmed directly in the archived SDK's BBCR module) is an actual, working bounded-retry loop: detect an instability condition, reset to a prior state, retry up to a fixed limit (the reference default is 3), then stop and surface rather than looping forever. This is the single most concrete, most honestly portable piece of the entire original mechanism -- it requires no embeddings, no attention introspection, nothing beyond ordinary judgment about "did that attempt actually resolve the problem."
+- BBAM's real operation (rescale a distribution by its own variance/dispersion) is not computable by the agent on itself, but the *symptom it's meant to correct* -- output narrowing onto one over-emphasized aspect of a broader task -- is something an agent can genuinely notice in its own recent output without any real math, which is why it's kept as delegated judgment rather than dropped.
+
+Beyond the four modules, the trend classifier (convergent/recursive/divergent/chaotic, `SKILL.md`) and the broader named-failure-mode taxonomy (`skills/wfgy-method/references/failure-modes.md`, adapted from the upstream ProblemMap documents for hallucination, context drift, entropy collapse, logic collapse, symbolic collapse, memory coherence, agent memory drift and multi-agent chaos) are ported the same way: as vocabulary and checklists for judgment the calling agent performs itself, not as computed statistics.
+
+## What this project added, not part of the original
+
+The durable-lessons mechanism (`.wfgy/lessons.md`, described in the main `SKILL.md`) is this project's own extension, not part of WFGY's documented mechanism. WFGY's own materials do not describe a cross-session, project-local learning file. It is included here because the goal of this skill (per its own description) is to help an agent build up real, accumulated judgment in a given project over time -- the same spirit as WFGY's drift-control discipline, applied across sessions rather than within one, but it should never be cited as something WFGY itself specifies.
+
+## Attribution
+
+WFGY, Wan Fa Gui Yi, and the underlying deltaS/BBMC/BBPF/BBCR/BBAM concepts originate from `onestardao/WFGY` (creator: PSBigBig). This skill is an independent, honesty-first reimplementation of the portable parts of that technique for use by a text-generating coding agent -- not an official WFGY product, not a verbatim copy of any WFGY file, and not endorsed by or affiliated with the original project.
+
+## What this skill is not
+
+It does not compute real embeddings, real cosine similarity, or real attention-weight statistics -- every place the original relies on that computation, this skill hands the equivalent judgment to the calling agent explicitly (see `skills/wfgy-method/references/bbam-narrow-focus.md`). It does not reproduce the original TXT-OS file's scripted demo output or its skepticism-deflection behavior. It is not a site-maintenance or project-specific tool; it carries no assumptions about what project it's applied in.

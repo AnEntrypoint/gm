@@ -59,7 +59,7 @@ struct Skill {
 };
 
 inline const std::vector<std::string>& served_skills() {
-    static const std::vector<std::string> names = {"gm", "gm-continue"};
+    static const std::vector<std::string> names = {"gm", "gm-continue", "wfgy-method", "polaris-protocol", "polaris-goal-compiler"};
     return names;
 }
 
