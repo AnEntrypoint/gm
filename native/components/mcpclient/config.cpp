@@ -127,6 +127,9 @@ std::optional<ServerSpec> server_of(const std::string& name, const json::Value& 
     const json::Value* env = field(spec, "env");
     if (env != nullptr && (!env->is_object() || std::any_of(env->as_object().begin(), env->as_object().end(), [](const auto& m) { return !m.second.is_string(); })))
         return fail("env must be an object of strings");
+    const json::Value* env_defaults = field(spec, "envDefaults");
+    if (env_defaults != nullptr && (!env_defaults->is_object() || std::any_of(env_defaults->as_object().begin(), env_defaults->as_object().end(), [](const auto& m) { return !m.second.is_string(); })))
+        return fail("envDefaults must be an object of strings");
     const json::Value* ignore = field(spec, "ignore");
     if (ignore != nullptr)
         if (auto problem = ignore_problem(*ignore)) return fail(*problem);
@@ -150,6 +153,8 @@ std::optional<ServerSpec> server_of(const std::string& name, const json::Value& 
         for (const json::Value& arg : args->as_array()) server.args.push_back(expand_variables(arg.as_string(), missing));
     if (env != nullptr)
         for (const auto& [key, value] : env->as_object()) server.env.emplace_back(key, expand_variables(value.as_string(), missing));
+    if (env_defaults != nullptr)
+        for (const auto& [key, value] : env_defaults->as_object()) server.env_defaults.emplace_back(key, expand_variables(value.as_string(), missing));
     server.cwd = cwd == nullptr ? workspace : (workspace / expand_variables(cwd->as_string(), missing)).lexically_normal();
     server.timeout_ms = timeout == nullptr ? CALL_MS : static_cast<std::uint64_t>(timeout->as_number());
     server.lazy = lazy != nullptr && lazy->as_bool();

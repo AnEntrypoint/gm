@@ -4,6 +4,10 @@
       "command": "node",
       "args": ["${HOME}/.gmnew/pw/bin/playwriter-project"],
       "env": {"PLAYWRITER_TELEMETRY": "0"},
+      "envDefaults": {
+        "PLAYWRITER_BROWSER_PATH": "/usr/bin/chromium",
+        "PLAYWRITER_CHROMIUM_ARGS": "[\"--enable-unsafe-webgpu\",\"--enable-features=Vulkan\",\"--use-vulkan=swiftshader\",\"--enable-unsafe-swiftshader\"]"
+      },
       "ignore": [".playwriter/"],
       "deny": ["reset"],
       "lazy": true,

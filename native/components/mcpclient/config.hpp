@@ -15,6 +15,7 @@ struct ServerSpec {
     std::string command;
     std::vector<std::string> args;
     std::vector<std::pair<std::string, std::string>> env;
+    std::vector<std::pair<std::string, std::string>> env_defaults;
     std::filesystem::path cwd;
     std::filesystem::path workspace;
     std::uint64_t timeout_ms = 0;
