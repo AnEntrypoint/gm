@@ -53,17 +53,17 @@ Each habit is stated once, with its reason.
 
 ## Iteration time
 
-The wall-clock time of one iteration is the measure of a run, so every project keeps its cycle short and visible. Each habit is stated once, with its reason.
+Iteration time is the measure of a run. Each habit is stated once.
 
-- **Measure four times per project.** Record the cold build, the warm build, the time from one file's edit to its test result, and the full time before a push. Shorten the step that dominates first, before any other change, and name that step in the run's report.
-- **Measure the edit-to-test loop apart from the cold build.** When an edit costs about as much as a cold build, the build is not incremental: test the incremental modes the build offers. Check that each flag exists before measuring with it, because a command that exits 1 measures nothing.
-- **Prune caches as part of the build.** Caches grow without bound. The build's own tooling removes entries that have not been touched for two days, so the prune runs with each build and needs no separate step.
-- **Share heavy builds on one host.** Run one heavy build at a time per peer. Before adding parallel work, check the free memory and the swap in use, and limit the concurrent heavy builds on the host. Record the load and the swap in each run's report.
-- **Never gate a witness on host load.** A heavy check gets a budget that does not depend on load, or it runs on a remote host. Record the load on each row. A check that fails only at high load is a load defect, not a pass or a fail: fix its budget or move it, then rerun it.
-- **Stop browsers when their witness ends.** Stop each browser by the PID of the process the run started, because a leaked browser can hold gigabytes of memory.
-- **Wait on a background job by its PID, in one bounded wait.** While the wait holds, other work runs. Never end a turn with a background job unobserved: a build that a turn leaves running is the first wait of the next turn.
-- **Push once, after the witnesses have run.** A push before the witnesses is a breach, and the owner reviews it.
-- **Keep a build ledger per project.** Each build and check adds one line with its wall time, so the cycle time of the project is visible across runs.
+- **Measure four times per project:** cold build, warm build, one-file edit-to-test, and the full pre-push time. Shorten the dominant step first and name it in the report.
+- **Test the incremental loop apart from the cold build.** If an edit costs about a cold build, the build is not incremental: test its incremental modes, and check each flag exists first, since a command that exits 1 measures nothing.
+- **Prune caches in the build's own tooling.** Entries untouched for two days go, on every build.
+- **Share heavy builds.** One heavy build per peer at a time. Before parallel work, check free memory and swap, and record load and swap in the report.
+- **Never gate a witness on load.** Give heavy checks a load-independent budget or run them remotely. Record the load on each row; a check that fails only at high load is a load defect.
+- **Stop browsers by PID** when their witness ends; a leaked browser can hold gigabytes.
+- **Wait on a job's PID in one bounded wait.** Never end a turn with a background job unobserved; a build left running is the next turn's first wait.
+- **Push once, after the witnesses.** A push before them is a breach for the owner to review.
+- **Keep a build ledger per project:** the wall time of each build and check, one line each.
 
 ## Rules
 
