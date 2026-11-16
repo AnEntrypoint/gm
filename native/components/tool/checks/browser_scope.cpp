@@ -20,6 +20,7 @@ namespace fs = std::filesystem;
 
 constexpr int kSettleMs = 3000;
 constexpr int kPollMs = 50;
+constexpr int kCountSeconds = 60;
 
 const std::string kMarker = "gm-browser-scope-marker";
 const std::string kPeerMarker = "gm-browser-scope-run-b";
@@ -35,7 +36,7 @@ std::string open_code(const std::string& marker) {
 std::string count_code(const std::string& marker, bool wait_for_zero) {
     const std::string count = "n = 0; for (const c of browser.contexts()) for (const p of c.pages()) if (!p.isClosed() && p.url().includes('" + marker + "')) n += 1; ";
     if (!wait_for_zero) return "let n = 0; " + count + "return n;";
-    return "let n = -1; for (let i = 0; i < 10; i += 1) { " + count + "if (n === 0) break; await new Promise((done) => setTimeout(done, 1000)); } return n;";
+    return "let n = -1; for (let i = 0; i < " + std::to_string(kCountSeconds) + "; i += 1) { " + count + "if (n === 0) break; await new Promise((done) => setTimeout(done, 1000)); } return n;";
 }
 
 const json::Value* field(const json::Value& value, const char* key) {
@@ -117,6 +118,13 @@ std::vector<Owned> owned_of(const std::vector<long long>& roots) {
 }
 
 bool still_ours(const Owned& owned) { return owned.start > 0 && proc::start_time_of(owned.pid) == owned.start; }
+
+std::string host_load() {
+    std::ifstream in("/proc/loadavg");
+    std::string one_minute;
+    in >> one_minute;
+    return one_minute.empty() ? "unknown" : one_minute;
+}
 
 std::vector<long long> stop_owned(const std::vector<Owned>& owned) {
     std::vector<long long> stopping;
@@ -295,6 +303,7 @@ CheckResult check_browser_scope(const std::string& binary) {
     CheckResult result;
 #if defined(__linux__)
     const auto started = std::chrono::steady_clock::now();
+    const std::string load_at_start = host_load();
     const auto stamp = started.time_since_epoch().count();
     const fs::path sandbox = fs::temp_directory_path() / ("gm-browser-scope-" + std::to_string(stamp));
     const fs::path home = sandbox / "home";
@@ -441,7 +450,7 @@ CheckResult check_browser_scope(const std::string& binary) {
                     const std::vector<Owned> own = own_browsers(profile);
                     own_note = "own browser processes before close: " + std::to_string(own.size()) + pid_list(own);
                     expect(!own.empty(), "the run's own browser process is not running before close: " + own_note);
-                    const json::Value cleanup = run_code(session, "return { undo: await gm.playwriter_execute({ code: " + json::quote(kUndoCode) + " }), sides: await gm.playwriter_execute({ code: " + json::quote(count_code(kSideMarker, false)) + " }), mine: await gm.playwriter_execute({ code: " + json::quote(count_code(kMarker, false)) + " }), peer: await gm.playwriter_execute({ code: " + json::quote(count_code(kPeerMarker, false)) + " }), close: await gm.browser_close_machine({ confirm: true, force: true }) };");
+                    const json::Value cleanup = run_code(session, "return { undo: await gm.playwriter_execute({ code: " + json::quote(kUndoCode) + " }), sides: await gm.playwriter_execute({ code: " + json::quote(count_code(kSideMarker, true)) + " }), mine: await gm.playwriter_execute({ code: " + json::quote(count_code(kMarker, true)) + " }), peer: await gm.playwriter_execute({ code: " + json::quote(count_code(kPeerMarker, true)) + " }), close: await gm.browser_close_machine({ confirm: true, force: true }) };");
                     if (flag(cleanup, "ok")) {
                         const json::Value both = output_of(cleanup);
                         expect(flag(part(both, "undo"), "ok"), "the side pages were not undone");
@@ -488,7 +497,9 @@ CheckResult check_browser_scope(const std::string& binary) {
         result.failures.push_back("the gate log is kept at " + (logs / "gate.log").string() + " and the browser log at " + (logs / "browser.log").string() + "; the sandbox " + sandbox.string() + " is kept with them");
     }
     const double wall = std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
-    result.summary = "browser scope: finish browser key, browser_tabs, playwriter_browsers close, browser_close_machine guard; browser run: " + browser_phase + (own_note.empty() ? std::string() : "; " + own_note) + "; " + tree_note + " (wall " + std::to_string(wall) + " s)";
+    const std::string load_note = "host load (1 min) " + load_at_start + " at start, " + host_load() + " at end";
+    if (!result.failures.empty()) result.failures.push_back(load_note);
+    result.summary = load_note + "; browser scope: finish browser key, browser_tabs, playwriter_browsers close, browser_close_machine guard; browser run: " + browser_phase + (own_note.empty() ? std::string() : "; " + own_note) + "; " + tree_note + " (wall " + std::to_string(wall) + " s)";
 #else
     result.summary = "not measured: the browser check runs the launcher under a Linux process tree";
 #endif
