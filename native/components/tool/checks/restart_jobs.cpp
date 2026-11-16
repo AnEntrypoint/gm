@@ -16,7 +16,7 @@ namespace {
 namespace fs = std::filesystem;
 
 constexpr const char* kJob = "carry";
-constexpr const char* kJobCommand = "sleep 30; echo done";
+constexpr const char* kJobCommand = "sleep 150; echo done";
 constexpr std::int64_t kCallMs = 90000;
 constexpr std::uint64_t kWatchdogMs = 240000;
 
@@ -149,7 +149,7 @@ CheckResult check_restart_jobs(const std::string& binary) {
             session.rpc("resources/read", json::Object{{"uri", "skill://gm/SKILL.md"}});
             call(session, "next_context", json::Object{});
 
-            const json::Value started_job = run_code(session, "return await gm.job_start({ job: " + json::quote(kJob) + ", command: " + json::quote(kJobCommand) + ", timeoutMs: 120000 });");
+            const json::Value started_job = run_code(session, "return await gm.job_start({ job: " + json::quote(kJob) + ", command: " + json::quote(kJobCommand) + ", timeoutMs: 300000 });");
             const json::Value* ok = value_at(started_job, "ok");
             if (ok == nullptr || !ok->is_bool() || !ok->as_bool()) result.failures.push_back("job_start: " + clip(started_job, 200));
             const json::Value before_status = run_code(session, status_body(0));
@@ -194,7 +194,7 @@ CheckResult check_restart_jobs(const std::string& binary) {
 
             json::Value ended = answered;
             const auto wait_start = std::chrono::steady_clock::now();
-            while (text_at(ended, "state") == "running" && since_ms(wait_start) < 60000) ended = run_code(session, status_body(5000));
+            while (text_at(ended, "state") == "running" && since_ms(wait_start) < 180000) ended = run_code(session, status_body(5000));
             end_ms = since_ms(triggered_at);
             if (text_at(ended, "state") != "exited" || number_or(ended, "exitCode", -1) != 0)
                 result.failures.push_back("the job ended " + clip(ended, 240) + ", expected exited with exitCode 0");
