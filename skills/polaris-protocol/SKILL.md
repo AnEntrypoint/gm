@@ -77,7 +77,7 @@ CLOSED --next atom------------------------------------> COMPILED
 1. You are at `UNCOMPILED`. Dispatch the `polaris-goal-compiler` skill. It returns atoms, gates, and claim ceilings -> `COMPILED`.
 2. For each active atom: ask "complex or routine?"
    - **Routine** -> execute directly -> `VERIFYING`.
-   - **Complex** -> dispatch the `fifth-dimension-engine` skill -> `SHOOTING` -> inspect the route -> `EXECUTING` -> `VERIFYING`.
+   - **Complex** -> dispatch the `fifth-dimension-engine` skill (`skill://fifth-dimension-engine/SKILL.md`) -> `SHOOTING` -> inspect the route -> `EXECUTING` -> `VERIFYING`.
 3. At `VERIFYING`, dispatch the `wfgy-method` skill to check drift and apply the atom's verification gate.
    - Pass + claim ceiling honored -> `CLOSED` -> next atom (back to `COMPILED`).
    - Fail or drift -> BBCR checkpoint, re-compile or re-shoot (back to `COMPILED`).
@@ -93,7 +93,7 @@ CLOSED --next atom------------------------------------> COMPILED
 ## Children (dispatch these)
 
 - `polaris-goal-compiler` -- compile the goal into atoms, gates, claim ceilings.
-- `fifth-dimension-engine` -- shoot a complex atom into a structured route.
+- `fifth-dimension-engine` -- shoot a complex atom into a structured route. Served as `skill://fifth-dimension-engine/SKILL.md` with its `references/`; read it with ReadMcpResourceTool (server gm).
 - `wfgy-method` -- hold drift control across every state.
 
 For the full DAG, integration workflows, and mismatch detection, see the upstream Polaris skills guide.
