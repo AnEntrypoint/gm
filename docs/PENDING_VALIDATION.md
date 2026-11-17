@@ -3940,3 +3940,18 @@ Phase A changes, each committed locally on main. Nothing is pushed in Phase A.
 - Item 4, the gate lease release: no change. gm cannot write the gate's log; the witness requires the "last lease released" line (check-relay-hup-gate).
 - Witnesses to read in the hosted run: asan-arm first run_code and back-to-back mean (budget 100 ms); asan-arm-stackuse result with the detector on; the revert builds in phase-b (check-quickjs-baseline compiles with the reverted server).
 - Phase A verification: no build, witness or gate ran in Phase A.
+
+## Seventh stretch 2026-11-17 (dispatcher queue: the 7433cd6 release failure in check-browser-scope-tree): Phase A
+
+- Hosted facts, release 44065085341 (7433cd6), linux arm64: check-browser-scope-tree FAILED at 8.5 s and 7.2 s (the pool run and the alone rerun), with "a process named by an owner file was still in the stop set". Everything else passed, including witness-windows-tree-kill and check-relay-hup-gate.
+- The suspicion was the asan-arm split (b8865bf) or the quickjs budget (c92f616). Reading the code, neither touches the gate tree: b8865bf is a workflow file and c92f616 changes only check-quickjs-baseline. The check code itself did not change since the last green release, so the failure is not a regression by a changed line.
+- Cause, from the code (not reproduced; no local run was allowed): check-browser-scope-tree takes one snapshot of the owner-file control's gate tree, names those pids, and then expects a second snapshot (run_tree with those pids excluded) to be empty. Chromium starts helper processes after the gate reports "browser ready", so a helper that starts between the two snapshots is not named, and it lands in the stop set. The check then fails although no owner-named process was stopped.
+- Fix (commit cf797f9, native/components/tool/checks/browser_scope.cpp):
+  - settled_tree(sandbox) polls the gate tree every 500 ms until two consecutive snapshots have the same pids (at most 10 s), and the control names the settled set.
+  - A failure lists each process in the stop set with its command text (pid and command, 160 chars), so the next failure shows which process it was.
+  - The witness is not weakened: the owner-named processes must still stay alive, which the check still asserts (alive_of on the settled tree after stop_owned).
+- Not verified: that a helper process starts in that window on the arm64 row. The failure text now names the process if it does not.
+- Witness to read after the hosted run: check-browser-scope-tree on linux arm64, quoted output.
+- Item 2 (asan-arm and asan-arm-stackuse): read after the release is green, no change in this stretch.
+- Item 3, the relay re-exec event on x64: no change, per the dispatcher.
+- Phase A verification: no build, witness or gate ran in Phase A.
