@@ -11,5 +11,6 @@ namespace gm::host {
 
 int run_install_command(const HostArgs& args);
 int run_uninstall_command(const HostArgs& args);
+void prepend_playwriter_bin();
 
 }

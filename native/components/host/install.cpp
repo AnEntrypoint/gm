@@ -177,6 +177,23 @@ std::optional<std::string> copy_playwriter_patches(const fs::path& root, const f
     return std::nullopt;
 }
 
+std::optional<std::string> link_playwriter_command(const fs::path& dir) {
+#if defined(_WIN32)
+    (void)dir;
+    return std::nullopt;
+#else
+    const fs::path target = dir / "node_modules" / "playwriter" / "bin.js";
+    const fs::path link = dir / "bin" / "playwriter";
+    std::error_code ec;
+    if (!fs::exists(target, ec)) return "playwriter's command is missing: " + target.string();
+    fs::remove(link, ec);
+    ec.clear();
+    fs::create_symlink(target, link, ec);
+    if (ec) return "cannot link " + link.string() + " to " + target.string() + ": " + ec.message();
+    return std::nullopt;
+#endif
+}
+
 std::optional<std::string> install_playwriter(const fs::path& root) {
     const fs::path dir = root / "pw";
     const fs::path pin_file = dir / "gm-pin";
@@ -185,6 +202,10 @@ std::optional<std::string> install_playwriter(const fs::path& root) {
     std::getline(known, pinned);
     const bool present = pinned == kPlaywriterPin && fs::exists(dir / "bin" / "playwriter-project");
     if (present && playwriter_missing_hooks(dir).empty()) {
+        std::error_code linked;
+        if (fs::exists(dir / "node_modules" / "playwriter" / "bin.js", linked)) {
+            if (auto error = link_playwriter_command(dir)) return error;
+        }
         std::cout << "playwriter " << kPlaywriterPin << " is already in " << dir.string() << " with its hooks\n";
         return std::nullopt;
     }
@@ -213,6 +234,7 @@ std::optional<std::string> install_playwriter(const fs::path& root) {
         for (const std::string& hook : missing) names += (names.empty() ? "" : "; ") + hook;
         return "playwriter " + std::string(kPlaywriterPin) + " installed, but these hooks are missing in " + dir.string() + " after patch-package: " + names;
     }
+    if (auto error = link_playwriter_command(dir)) return error;
     std::ofstream(pin_file) << kPlaywriterPin << "\n";
     std::string longest;
     for (const auto& [name, ms] : wall) {
@@ -345,6 +367,29 @@ int install_local(const HostArgs& args, const fs::path& local) {
     report_touched(*root, before_marks);
     print_server_entry(args, current / exe_name("gm"));
     return 0;
+}
+
+void prepend_playwriter_bin() {
+    const auto root = install_root();
+    if (!root) return;
+    const fs::path bin = *root / "pw" / "bin";
+    std::error_code ec;
+    if (!fs::is_directory(bin, ec)) return;
+#if defined(_WIN32)
+    constexpr char kSeparator = ';';
+#else
+    constexpr char kSeparator = ':';
+#endif
+    const std::string entry = bin.string();
+    const char* current = std::getenv("PATH");
+    const std::string path = current != nullptr ? current : "";
+    if (path == entry || path.starts_with(entry + kSeparator)) return;
+    const std::string value = path.empty() ? entry : entry + kSeparator + path;
+#if defined(_WIN32)
+    _putenv_s("PATH", value.c_str());
+#else
+    setenv("PATH", value.c_str(), 1);
+#endif
 }
 
 int run_uninstall_command(const HostArgs&) {

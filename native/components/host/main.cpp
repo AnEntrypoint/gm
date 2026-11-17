@@ -67,6 +67,7 @@ int main(int argc, char** argv) {
         std::cerr << "gm " << args.mode << ": " << *error << "; this call changed nothing\n" << kUsage;
         return 2;
     }
+    if (args.mode == "serve" || args.mode == "worker") gm::host::prepend_playwriter_bin();
     if (args.mode == "serve") return gm::host::run_serve(args);
     if (args.mode == "worker") return gm::host::run_worker(args);
     if (args.mode == "doctor") return gm::host::run_doctor(args);
