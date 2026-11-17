@@ -156,6 +156,7 @@ public:
     Session& operator=(const Session&) = delete;
 
     bool started() const { return child_ != nullptr; }
+    bool expired() const { return expired_; }
     std::vector<long long> descendants() const;
     json::Value rpc(const std::string& method, json::Value params);
     std::int64_t send(const std::string& method, json::Value params);
@@ -176,6 +177,7 @@ private:
     std::mutex mutex_;
     std::condition_variable done_cv_;
     bool done_ = false;
+    std::atomic<bool> expired_{false};
     std::thread watchdog_;
     void start(const std::vector<std::string>& argv, const std::filesystem::path& workspace, const std::filesystem::path& home, std::uint64_t watchdog_ms,
                std::vector<std::pair<std::string, std::string>> env = {});

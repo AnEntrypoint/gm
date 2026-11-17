@@ -68,6 +68,7 @@ void Session::start(const std::vector<std::string>& argv, const std::filesystem:
     watchdog_ = std::thread([this, watchdog_ms] {
         std::unique_lock lock(mutex_);
         if (!done_cv_.wait_for(lock, std::chrono::milliseconds(watchdog_ms), [this] { return done_; })) {
+            expired_ = true;
             if (child_) child_->kill();
         }
     });

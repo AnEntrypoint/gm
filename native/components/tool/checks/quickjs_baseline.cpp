@@ -9,6 +9,8 @@
 namespace gm::tool {
 namespace {
 
+constexpr std::uint64_t kWatchdogMs = 600000;
+
 std::chrono::steady_clock::time_point now() { return std::chrono::steady_clock::now(); }
 
 double ms_between(std::chrono::steady_clock::time_point from, std::chrono::steady_clock::time_point to) {
@@ -45,7 +47,7 @@ CheckResult check_quickjs_baseline(const std::string& binary) {
     std::string summary;
     {
         const auto started = now();
-        Session session(binary, workspace, sandbox);
+        Session session(binary, workspace, sandbox, kWatchdogMs);
         if (!session.started()) {
             result.failures.push_back("gm serve did not start from " + binary);
         } else {
@@ -71,7 +73,8 @@ CheckResult check_quickjs_baseline(const std::string& binary) {
                 if (last_line(text) != "1" && !reported_silence) {
                     reported_silence = true;
                     const std::string stderr_text = session.stderr_text();
-                    result.failures.push_back("the worker gave no reply to run_code call " + std::to_string(call) + "; its stderr ends: " +
+                    result.failures.push_back("the worker gave no reply to run_code call " + std::to_string(call) + " (session watchdog expired: " +
+                                              (session.expired() ? "yes" : "no") + "); its stderr ends: " +
                                               (stderr_text.size() > 2000 ? stderr_text.substr(stderr_text.size() - 2000) : stderr_text));
                 }
                 if (call == 10) after_ten_kb = resident_kb(pid);
