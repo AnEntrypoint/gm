@@ -39,6 +39,7 @@ const std::vector<Registered>& checks() {
         {"check-startup-attempts", check_startup_attempts},
         {"check-serve-entry-connects", check_serve_entry_connects},
         {"check-serve-signal-reason", check_serve_signal_reason},
+        {"check-relay-hup-gate", check_relay_hup_gate},
         {"check-relay-reconnects", check_relay_reconnects},
         {"check-shell-playwriter", check_shell_playwriter},
         {"check-update-race", check_update_race},
