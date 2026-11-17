@@ -21,6 +21,8 @@
 
 namespace gm::host {
 
+volatile std::sig_atomic_t stop_signal_received = 0;
+
 namespace {
 
 constexpr std::string_view kHandshakeId = "gm-core-handshake";
@@ -124,6 +126,7 @@ std::string pump_host_stdin(Relay& relay) {
     std::string buffer;
     char chunk[65536];
     for (;;) {
+        if (stop_signal_received != 0) return "the relay was stopped by signal " + std::to_string(stop_signal_received);
         if (buffer.empty()) relay.reexec();
         pollfd input{0, POLLIN, 0};
         if (::poll(&input, 1, 200) < 0) {
@@ -811,7 +814,7 @@ int serve_stdio(RelayOptions options) {
     const std::string reason = pump_host_stdin(relay);
 #endif
     relay.host_closed(reason);
-    return 0;
+    return stop_signal_received != 0 ? 128 + stop_signal_received : 0;
 }
 
 }

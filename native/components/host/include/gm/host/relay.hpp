@@ -2,6 +2,7 @@
 
 #include <chrono>
 #include <condition_variable>
+#include <csignal>
 #include <cstdint>
 #include <filesystem>
 #include <functional>
@@ -22,6 +23,8 @@ namespace gm::host {
 
 using SourceStamp = std::pair<std::filesystem::file_time_type, std::uintmax_t>;
 using SourceStamps = std::map<std::filesystem::path, SourceStamp>;
+
+extern volatile std::sig_atomic_t stop_signal_received;
 
 struct RelayOptions {
     std::vector<std::string> worker_argv;

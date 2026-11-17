@@ -85,7 +85,8 @@ void report_stop(int signal) {
         std::signal(signal, SIG_DFL);
         ::raise(signal);
     }
-    ::_exit(128 + signal);
+    if (crash || stop_signal_received != 0) ::_exit(128 + signal);
+    stop_signal_received = signal;
 }
 #endif
 
