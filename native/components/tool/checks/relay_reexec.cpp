@@ -73,6 +73,17 @@ std::string or_null(std::optional<long long> value) {
     return value ? std::to_string(*value) : std::string("null");
 }
 
+std::string event_kinds(const std::optional<json::Value>& reply) {
+    const json::Value* events = reply ? value_at(*reply, "result.structuredContent.events") : nullptr;
+    if (events == nullptr || !events->is_array()) return "no events array in the reply";
+    std::string kinds;
+    for (const json::Value& event : events->as_array()) {
+        const json::Value* kind = event.find("kind");
+        if (kind != nullptr && kind->is_string()) kinds += (kinds.empty() ? "" : ",") + kind->as_string();
+    }
+    return "events [" + kinds + "]";
+}
+
 struct Marks {
     std::atomic<bool> stop{false};
     std::mutex mutex;
@@ -220,10 +231,10 @@ CheckResult check_relay_reexec(const std::string& binary) {
             result.failures.push_back("the relay re-executed " + or_null(reexec_after_update) + " ms after the update while a " + std::to_string(kWaitMs) +
                                       " ms next_context wait was in flight; the limit is " + std::to_string(kReexecLimitMs) + " ms");
         if (!(reexec_at && held_at && *reexec_at < *held_at))
-            result.failures.push_back("the relay re-executed only after the next_context wait had answered; the wait was answered with " + short_text(held ? json::dump(*held) : std::string("null")));
+            result.failures.push_back("the relay re-executed only after the next_context wait had answered at " + or_null(wait_answered_after_send) + " ms after the send; the reply carried " + event_kinds(held) + ": " + answered_with);
         const json::Value* held_ok = held ? value_at(*held, "result.structuredContent.ok") : nullptr;
         if (!(held_ok && held_ok->is_bool() && held_ok->as_bool()))
-            result.failures.push_back("the held next_context wait was not answered ok across the re-execution: " + short_text(held ? json::dump(*held) : std::string("null")));
+            result.failures.push_back("the held next_context wait was not answered ok across the re-execution: " + event_kinds(held) + ": " + answered_with);
 
         const std::int64_t ran_id = session.send("tools/call", json::Object{{"name", "run_code"}, {"arguments", json::Object{{"body", "return 6 * 7"}}}});
         const auto ran_reply = session.await_reply(ran_id, kReplyWait);
