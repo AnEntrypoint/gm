@@ -1,6 +1,7 @@
 #include "gm/tool.hpp"
 
 #include <chrono>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <sstream>
@@ -82,6 +83,8 @@ CheckResult check_quickjs_baseline(const std::string& binary) {
                 if (call == 10) after_ten_kb = resident_kb(pid);
             }
             const double loop_mean_ms = ms_between(loop_at, now()) / (kCalls - 1);
+            if (const char* budget = std::getenv("GM_BASELINE_MAX_MEAN_MS"); budget != nullptr && loop_mean_ms > std::atof(budget))
+                result.failures.push_back("back-to-back mean " + std::to_string(loop_mean_ms) + " ms per run_code is over the budget of " + budget + " ms");
             const long long after_all_kb = resident_kb(pid);
             double spaced_ms = -1;
             for (int sample = 0; sample < 3; ++sample) {
