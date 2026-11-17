@@ -64,6 +64,7 @@ public:
     void request_restart(std::string reason);
     void reexec();
     bool only_resendable_in_flight() const;
+    std::string hold_reason() const;
 
     std::uint64_t restarts() const;
     std::uint64_t failed_builds() const;
@@ -118,6 +119,7 @@ private:
     bool reexec_pending_ = false;
     std::uint64_t bodies_running_ = 0;
     bool body_wait_said_ = false;
+    bool hold_said_ = false;
     std::string refused_build_;
     std::string handover_reason_;
     std::map<std::string, std::string> inflight_;

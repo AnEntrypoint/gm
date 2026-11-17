@@ -512,6 +512,16 @@ bool Relay::only_resendable_in_flight() const {
     return std::all_of(inflight_.begin(), inflight_.end(), [&](const auto& call) { return resendable_.contains(call.first); });
 }
 
+std::string Relay::hold_reason() const {
+    static const char* const names[] = {"starting", "running", "draining", "restarting", "failed", "stopping"};
+    std::string blocking;
+    for (const auto& [id, method] : inflight_) {
+        if (!resendable_.contains(id)) blocking += (blocking.empty() ? "" : ",") + method;
+    }
+    return std::string("state ") + names[static_cast<std::size_t>(state_)] + ", swapping " + (swapping_ ? "yes" : "no") + ", bodies running " +
+           std::to_string(bodies_running_) + ", calls in flight that are not next_context [" + blocking + "]";
+}
+
 void Relay::reexec() {
 #if !defined(_WIN32)
     Lock lock(mutex_);
@@ -521,6 +531,10 @@ void Relay::reexec() {
         if (calls_settled() && bodies_running_ > 0 && !body_wait_said_) {
             body_wait_said_ = true;
             say("re-executing waits for " + std::to_string(bodies_running_) + " running body job(s); it follows when they end");
+        }
+        if (reexec_pending_ && !hold_said_) {
+            hold_said_ = true;
+            say("re-executing is held: " + hold_reason());
         }
         return;
     }
