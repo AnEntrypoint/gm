@@ -1,5 +1,6 @@
 #include <csignal>
 #include <cstring>
+#include <ctime>
 #include <iostream>
 
 #if defined(_WIN32)
@@ -34,7 +35,23 @@ int relay_log_fd = -1;
 void report_stop(int signal) {
     const char* text = signal == SIGTERM ? "gm relay: stopped by SIGTERM\n" : signal == SIGINT ? "gm relay: stopped by SIGINT\n" : "gm relay: stopped by SIGHUP\n";
     if (relay_log_fd >= 0) {
-        [[maybe_unused]] const ssize_t logged = ::write(relay_log_fd, text, std::strlen(text));
+        timespec now{};
+        ::clock_gettime(CLOCK_REALTIME, &now);
+        unsigned long long ms = static_cast<unsigned long long>(now.tv_sec) * 1000ULL + static_cast<unsigned long long>(now.tv_nsec / 1000000);
+        char line[96];
+        char digits[24];
+        std::size_t count = 0;
+        do {
+            digits[count++] = static_cast<char>('0' + ms % 10);
+            ms /= 10;
+        } while (ms != 0);
+        std::size_t length = 0;
+        while (count > 0) line[length++] = digits[--count];
+        line[length++] = ' ';
+        const std::size_t text_length = std::strlen(text);
+        std::memcpy(line + length, text, text_length);
+        length += text_length;
+        [[maybe_unused]] const ssize_t logged = ::write(relay_log_fd, line, length);
     }
     [[maybe_unused]] const ssize_t written = ::write(STDERR_FILENO, text, std::strlen(text));
     ::_exit(128 + signal);

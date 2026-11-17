@@ -41,6 +41,21 @@ bool contains(const std::vector<std::string>& names, const std::string& wanted) 
     return std::find(names.begin(), names.end(), wanted) != names.end();
 }
 
+std::string stamped_stop_line(const fs::path& workspace, const std::string& wanted) {
+    std::error_code ec;
+    for (const auto& entry : fs::recursive_directory_iterator(workspace / "runs", ec)) {
+        if (entry.path().filename() != "relay.log") continue;
+        std::ifstream in(entry.path());
+        for (std::string line; std::getline(in, line);) {
+            const std::size_t space = line.find(' ');
+            if (space == std::string::npos || space == 0) continue;
+            if (!std::all_of(line.begin(), line.begin() + static_cast<std::ptrdiff_t>(space), [](char c) { return c >= '0' && c <= '9'; })) continue;
+            if (line.substr(space + 1) == wanted) return line;
+        }
+    }
+    return {};
+}
+
 }
 
 CheckResult check_serve_entry_connects(const std::string& binary) {
@@ -103,7 +118,9 @@ CheckResult check_serve_signal_reason(const std::string& binary) {
             const auto drained = std::chrono::steady_clock::now();
             while (!alive_of(orphans).empty() && std::chrono::steady_clock::now() - drained < std::chrono::seconds(5)) std::this_thread::sleep_for(std::chrono::milliseconds(50));
             if (!alive_of(orphans).empty()) result.failures.push_back("the worker outlived the relay's SIGTERM by 5 s");
-            result.summary = "SIGTERM to a serve relay: the relay exits, prints gm relay: stopped by SIGTERM on stderr, and its worker ends with it";
+            if (stamped_stop_line(workspace, "gm relay: stopped by SIGTERM").empty())
+                result.failures.push_back("the run dir's relay.log has no line \"<epoch ms> gm relay: stopped by SIGTERM\"");
+            result.summary = "SIGTERM to a serve relay: the relay exits, prints gm relay: stopped by SIGTERM on stderr and as a timestamped line in the run dir's relay.log, and its worker ends with it";
             session.stop();
         }
     }
