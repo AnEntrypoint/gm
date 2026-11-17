@@ -84,6 +84,13 @@ std::string event_kinds(const std::optional<json::Value>& reply) {
     return "events [" + kinds + "]";
 }
 
+std::string line_with(const std::string& text, const std::string& needle) {
+    const std::size_t at = text.find(needle);
+    if (at == std::string::npos) return "no line with \"" + needle + "\" in the relay's stderr";
+    const std::size_t end = text.find('\n', at);
+    return text.substr(at, end == std::string::npos ? std::string::npos : end - at);
+}
+
 struct Marks {
     std::atomic<bool> stop{false};
     std::mutex mutex;
@@ -231,7 +238,7 @@ CheckResult check_relay_reexec(const std::string& binary) {
             result.failures.push_back("the relay re-executed " + or_null(reexec_after_update) + " ms after the update while a " + std::to_string(kWaitMs) +
                                       " ms next_context wait was in flight; the limit is " + std::to_string(kReexecLimitMs) + " ms");
         if (!(reexec_at && held_at && *reexec_at < *held_at))
-            result.failures.push_back("the relay re-executed only after the next_context wait had answered at " + or_null(wait_answered_after_send) + " ms after the send; the reply carried " + event_kinds(held) + ": " + answered_with);
+            result.failures.push_back("the relay re-executed only after the next_context wait had answered at " + or_null(wait_answered_after_send) + " ms after the send; " + line_with(session.stderr_text(), "re-executing is held") + "; the reply carried " + event_kinds(held) + ": " + answered_with);
         const json::Value* held_ok = held ? value_at(*held, "result.structuredContent.ok") : nullptr;
         if (!(held_ok && held_ok->is_bool() && held_ok->as_bool()))
             result.failures.push_back("the held next_context wait was not answered ok across the re-execution: " + event_kinds(held) + ": " + answered_with);
