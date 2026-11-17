@@ -599,7 +599,7 @@ std::vector<Scenario> scenarios(const Context& context, const fs::path& rules_di
     }});
     list.push_back({"rules notice after successor", {"--run-dir", rules_dir.string()}, [](Client& c, Recorder& ok) {
         const json::Value early = structured(c, "run_code", json::Object{{"body", "return 1"}});
-        ok("run_code before the first next_context carries rule 2", contains(string_of(early.find("rulesNotice")), "rule 2"), brief(early.find("rulesNotice")));
+        ok("run_code before the first next_context on a connection that read the gm skill carries no rule 2 notice", early.find("rulesNotice") == nullptr, brief(early.find("rulesNotice")));
         const json::Value first_step = structured(c, "next_context", json::Object{});
         structured(c, "run_code", json::Object{{"body", "return 2"}});
         structured(c, "finish", json::Object{{"witness", "successor rules notice check"}});
