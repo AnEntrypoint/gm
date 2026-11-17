@@ -470,7 +470,7 @@ std::string quote(const std::string& arg) {
 }
 
 static Outcome run_windows(const std::vector<std::string>& argv, const std::filesystem::path& cwd, std::string_view stdin_text,
-                           std::uint64_t timeout_ms, bool reap_children) {
+                           std::uint64_t timeout_ms, bool reap_children, const std::string& verbatim_line = {}) {
     Outcome outcome;
     if (argv.empty()) return outcome;
     SECURITY_ATTRIBUTES sa{sizeof sa, nullptr, TRUE};
@@ -489,8 +489,10 @@ static Outcome run_windows(const std::vector<std::string>& argv, const std::file
     si.hStdOutput = out_w;
     si.hStdError = err_w;
     PROCESS_INFORMATION pi{};
-    std::string command_line;
-    for (const auto& a : argv) command_line += (command_line.empty() ? "" : " ") + quote(a);
+    std::string command_line = verbatim_line;
+    if (command_line.empty()) {
+        for (const auto& a : argv) command_line += (command_line.empty() ? "" : " ") + quote(a);
+    }
     std::string dir = cwd.string();
     const HANDLE job = CreateJobObjectW(nullptr, nullptr);
     BOOL ok = CreateProcessA(nullptr, command_line.data(), nullptr, nullptr, TRUE,
@@ -587,7 +589,7 @@ Outcome shell(std::string_view command, const std::filesystem::path& cwd, std::u
     const std::string bash = git_bash();
     const bool use_cmd = needs_cmd(command) || bash.empty();
     Outcome outcome = use_cmd
-        ? run_windows({"cmd", "/c", text}, cwd, {}, timeout_ms, true)
+        ? run_windows({"cmd.exe"}, cwd, {}, timeout_ms, true, "cmd.exe /d /s /c \"" + text + "\"")
         : run_windows({bash, "-c", text}, cwd, {}, timeout_ms, true);
     outcome.launcher = use_cmd ? "cmd" : bash;
     return outcome;
