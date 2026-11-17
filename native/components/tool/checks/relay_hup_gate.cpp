@@ -18,16 +18,25 @@ namespace {
 
 namespace fs = std::filesystem;
 
-bool has_exited(long long pid) {
-    if (proc::start_time_of(pid) == 0) return true;
+bool is_zombie(long long pid) {
 #if defined(__linux__)
     std::ifstream stat("/proc/" + std::to_string(pid) + "/stat");
     const std::string text((std::istreambuf_iterator<char>(stat)), std::istreambuf_iterator<char>());
     const std::size_t close = text.rfind(')');
     return close != std::string::npos && close + 2 < text.size() && text[close + 2] == 'Z';
 #else
-    return false;
+    const proc::Outcome state = proc::run({"ps", "-o", "stat=", "-p", std::to_string(pid)}, {}, {}, 5000);
+    return state.out.find('Z') != std::string::npos;
 #endif
+}
+
+bool has_exited(long long pid) {
+    return proc::start_time_of(pid) == 0 || is_zombie(pid);
+}
+
+std::string read_text(const fs::path& file) {
+    std::ifstream in(file);
+    return std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
 }
 
 bool exits_within(long long pid, std::chrono::seconds limit) {
@@ -71,9 +80,16 @@ CheckResult check_relay_hup_gate(const std::string& binary) {
             }
             const long long relay = session.pid();
             if (gate > 0) {
+                const fs::path gate_log = workspace / ".playwriter" / "gate.log";
+                const std::string log_before = read_text(gate_log);
                 if (::kill(static_cast<pid_t>(relay), SIGHUP) != 0) result.failures.push_back("could not send SIGHUP to the relay " + std::to_string(relay));
                 if (!exits_within(relay, std::chrono::seconds(20))) result.failures.push_back("the relay " + std::to_string(relay) + " did not exit within 20 s of SIGHUP");
-                if (!exits_within(gate, std::chrono::seconds(30))) result.failures.push_back("the gate " + std::to_string(gate) + " outlived its relay's SIGHUP by 30 s");
+                const bool gate_gone = exits_within(gate, std::chrono::seconds(30));
+                if (!gate_gone) result.failures.push_back("the gate " + std::to_string(gate) + " outlived its relay's SIGHUP by 30 s");
+                const std::string log_after = read_text(gate_log);
+                const std::string since = log_after.size() >= log_before.size() ? log_after.substr(log_before.size()) : log_after;
+                if (since.find("last lease released") == std::string::npos)
+                    result.failures.push_back("the gate did not log its last lease released after SIGHUP; gate.log since SIGHUP: " + since.substr(0, 400));
             }
             result.summary = "SIGHUP to a serve relay that owns a playwriter gate: the relay exits, and the gate it started exits with it (no gate process left on its port)";
             session.stop();
