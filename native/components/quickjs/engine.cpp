@@ -4,6 +4,13 @@
 #include <exception>
 #include <unordered_map>
 
+#if defined(GM_HAVE_TXIKI)
+#include <condition_variable>
+#include <deque>
+#include <mutex>
+#include <thread>
+#endif
+
 #include "platform.hpp"
 
 #if defined(GM_HAVE_TXIKI)
@@ -226,6 +233,70 @@ constexpr std::string_view embedded_globals_reset = R"JS((function (refreshLoopT
   for (const name of ['alert', 'confirm', 'prompt']) delete globalThis[name];
 }))JS";
 
+class RuntimeStandby {
+public:
+    TJSRuntime* take() {
+        {
+            std::lock_guard lock(mutex_);
+            start_locked();
+            if (ready_ != nullptr) {
+                TJSRuntime* taken = ready_;
+                ready_ = nullptr;
+                changed_.notify_all();
+                return taken;
+            }
+        }
+        return gm_txiki_new();
+    }
+
+    void retire(TJSRuntime* runtime) {
+        std::lock_guard lock(mutex_);
+        start_locked();
+        retired_.push_back(runtime);
+        changed_.notify_all();
+    }
+
+private:
+    void start_locked() {
+        if (started_) return;
+        started_ = true;
+        std::thread([this] { serve(); }).detach();
+    }
+
+    void serve() {
+        std::unique_lock lock(mutex_);
+        for (;;) {
+            changed_.wait(lock, [this] { return !retired_.empty() || (ready_ == nullptr && !failed_); });
+            if (!retired_.empty()) {
+                TJSRuntime* old = retired_.front();
+                retired_.pop_front();
+                lock.unlock();
+                JS_UpdateStackTop(JS_GetRuntime(gm_txiki_context(old)));
+                gm_txiki_free(old);
+                lock.lock();
+                continue;
+            }
+            lock.unlock();
+            TJSRuntime* fresh = gm_txiki_new();
+            lock.lock();
+            if (fresh == nullptr) failed_ = true;
+            else ready_ = fresh;
+        }
+    }
+
+    std::mutex mutex_;
+    std::condition_variable changed_;
+    std::deque<TJSRuntime*> retired_;
+    TJSRuntime* ready_ = nullptr;
+    bool started_ = false;
+    bool failed_ = false;
+};
+
+RuntimeStandby& standby() {
+    static RuntimeStandby* instance = new RuntimeStandby();
+    return *instance;
+}
+
 bool reset_embedded_globals(JSContext* ctx) {
     Scoped reset(ctx, JS_Eval(ctx, embedded_globals_reset.data(), embedded_globals_reset.size(), "<embedded>", JS_EVAL_TYPE_GLOBAL));
     if (JS_IsException(reset.get())) return false;
@@ -250,11 +321,12 @@ bool past_deadline(Session& session) {
 
 Engine::Engine(Session& session) : session_(session) {
 #if defined(GM_HAVE_TXIKI)
-    TJSRuntime* embedded = gm_txiki_new();
+    TJSRuntime* embedded = standby().take();
     if (embedded == nullptr) return;
     embedded_runtime_ = embedded;
     JSContext* ctx = gm_txiki_context(embedded);
     runtime_ = JS_GetRuntime(ctx);
+    JS_UpdateStackTop(runtime_);
     JS_SetInterruptHandler(runtime_, interrupt_on_deadline, &session_);
     JS_SetModuleLoaderFunc(runtime_, nullptr, load_module_from_disk, nullptr);
     remember_session(ctx, &session_);
@@ -277,7 +349,10 @@ Engine::Engine(Session& session) : session_(session) {
 Engine::~Engine() {
     if (context_ != nullptr) forget_session(context_);
 #if defined(GM_HAVE_TXIKI)
-    if (embedded_runtime_ != nullptr) gm_txiki_free(static_cast<TJSRuntime*>(embedded_runtime_));
+    if (embedded_runtime_ != nullptr) {
+        JS_SetInterruptHandler(runtime_, nullptr, nullptr);
+        standby().retire(static_cast<TJSRuntime*>(embedded_runtime_));
+    }
 #else
     if (context_ != nullptr) JS_FreeContext(context_);
     if (runtime_ != nullptr) JS_FreeRuntime(runtime_);

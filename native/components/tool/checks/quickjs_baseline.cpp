@@ -5,6 +5,7 @@
 #include <fstream>
 #include <sstream>
 #include <system_error>
+#include <thread>
 
 namespace gm::tool {
 namespace {
@@ -67,6 +68,7 @@ CheckResult check_quickjs_baseline(const std::string& binary) {
 
             long long after_ten_kb = -1;
             bool reported_silence = false;
+            const auto loop_at = now();
             for (int call = 2; call <= kCalls; ++call) {
                 const std::string text = session.body(body);
                 if (last_line(text) != "1") result.failures.push_back("run_code call " + std::to_string(call) + " did not return 1: " + text.substr(0, 200));
@@ -79,14 +81,29 @@ CheckResult check_quickjs_baseline(const std::string& binary) {
                 }
                 if (call == 10) after_ten_kb = resident_kb(pid);
             }
+            const double loop_mean_ms = ms_between(loop_at, now()) / (kCalls - 1);
             const long long after_all_kb = resident_kb(pid);
+            double spaced_ms = -1;
+            for (int sample = 0; sample < 3; ++sample) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+                const auto spaced_at = now();
+                const std::string spaced = session.body(body);
+                const double took = ms_between(spaced_at, now());
+                if (last_line(spaced) != "1") result.failures.push_back("a run_code 1 s after the previous reply did not return 1: " + spaced.substr(0, 200));
+                if (spaced_ms < 0 || took < spaced_ms) spaced_ms = took;
+            }
+            session.body("globalThis.gmLeak = 1; return 1;");
+            const std::string isolated = session.body("return typeof globalThis.gmLeak === 'undefined' ? 1 : 0;");
+            if (last_line(isolated) != "1") result.failures.push_back("a global set by one run_code body was visible in the next: " + isolated.substr(0, 200));
             if (last_line(first) != "1") result.failures.push_back("the first run_code did not return 1: " + first.substr(0, 200));
             if (pid < 0) result.failures.push_back("no gm-core worker process was found under the session");
             const double per_call_kb = after_ten_kb > 0 && after_all_kb > 0 ? static_cast<double>(after_all_kb - after_ten_kb) / (kCalls - 10) : -1;
             std::ostringstream out;
             out << "start " << start_ms << " ms to the first reply; first run_code " << first_ms << " ms; worker resident memory at rest " << rest_kb
                 << " kB, after 1 run_code " << after_one_kb << " kB, after 10 " << after_ten_kb << " kB, after " << kCalls << " " << after_all_kb
-                << " kB; growth per run_code " << per_call_kb << " kB over calls 11 to " << kCalls;
+                << " kB; growth per run_code " << per_call_kb << " kB over calls 11 to " << kCalls << "; back-to-back mean " << loop_mean_ms
+                << " ms per run_code over calls 2 to " << kCalls << "; fastest of 3 run_code calls sent 1 s after the previous reply " << spaced_ms
+                << " ms; a global set by one body is absent in the next";
             summary = out.str();
         }
         session.stop();
