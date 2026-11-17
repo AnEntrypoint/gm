@@ -266,6 +266,33 @@ std::vector<Owned> run_tree(const fs::path& sandbox, const std::set<long long>& 
 
 std::vector<long long> stop_run_tree(const fs::path& sandbox) { return stop_owned(run_tree(sandbox, owner_pids())); }
 
+std::set<long long> pid_set(const std::vector<Owned>& owned) {
+    std::set<long long> pids;
+    for (const Owned& each : owned) pids.insert(each.pid);
+    return pids;
+}
+
+std::vector<Owned> settled_tree(const fs::path& sandbox) {
+    const auto began = std::chrono::steady_clock::now();
+    std::set<long long> before;
+    for (;;) {
+        std::vector<Owned> current = run_tree(sandbox, std::set<long long>());
+        std::set<long long> pids = pid_set(current);
+        if (pids == before || std::chrono::steady_clock::now() - began > std::chrono::seconds(10)) return current;
+        before = std::move(pids);
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    }
+}
+
+std::string command_text(long long pid) {
+    std::string text;
+    for (const std::string& part : proc::command_of(pid)) {
+        if (!text.empty()) text += ' ';
+        text += part;
+    }
+    return text.substr(0, 160);
+}
+
 std::vector<long long> pids_of(const std::vector<Owned>& owned) {
     std::vector<long long> pids;
     for (const Owned& each : owned) pids.push_back(each.pid);
@@ -614,12 +641,14 @@ CheckResult check_browser_scope_tree(const std::string& binary) {
         const std::string guarded_error = start_gate(launcher, home, guarded);
         expect(guarded_error.empty(), "the owner-file control's gate did not start: " + guarded_error);
         if (guarded_error.empty()) {
-            const std::vector<Owned> guarded_tree = run_tree(guarded, std::set<long long>());
+            const std::vector<Owned> guarded_tree = settled_tree(guarded);
             std::set<long long> named;
             for (const Owned& each : guarded_tree) named.insert(each.pid);
             guarded_found = guarded_tree.size();
             expect(gates_among(guarded_tree) == 1, "the owner-file control found " + std::to_string(gates_among(guarded_tree)) + " gate(s) with no owner named, expected 1");
-            expect(run_tree(guarded, named).empty(), "a process named by an owner file was still in the stop set");
+            std::string unnamed;
+            for (const Owned& each : run_tree(guarded, named)) unnamed += " " + std::to_string(each.pid) + " [" + command_text(each.pid) + "]";
+            expect(unnamed.empty(), "the owner-file control's stop set held processes that the settled snapshot did not name:" + unnamed);
             stop_owned(run_tree(guarded, named));
             expect(alive_of(pids_of(guarded_tree)).size() == guarded_tree.size(), "a process named by an owner file was stopped");
         }
