@@ -26,11 +26,14 @@ CheckResult check_shell_playwriter(const std::string& binary) {
     const fs::path sandbox = fs::temp_directory_path() / ("gm-shell-playwriter-" + std::to_string(stamp));
     const fs::path workspace = sandbox / "ws";
     const fs::path bin = sandbox / ".gmnew" / "pw" / "bin";
+    const fs::path package = sandbox / ".gmnew" / "pw" / "node_modules" / "playwriter";
     fs::create_directories(workspace);
     fs::create_directories(bin);
+    fs::create_directories(package);
     const fs::path command = bin / "playwriter";
-    std::ofstream(command) << "#!/bin/sh\necho gm-witness-playwriter \"$@\"\n";
-    fs::permissions(command, fs::perms::owner_all | fs::perms::group_read | fs::perms::group_exec | fs::perms::others_read | fs::perms::others_exec);
+    const fs::path entry = package / "bin.js";
+    std::ofstream(entry) << "#!/bin/sh\necho gm-witness-playwriter \"$@\"\n";
+    fs::permissions(entry, fs::perms::owner_all | fs::perms::group_read | fs::perms::group_exec | fs::perms::others_read | fs::perms::others_exec);
     {
         Session session(binary, workspace, sandbox, 180000, true);
         if (!session.started()) {
@@ -51,8 +54,11 @@ CheckResult check_shell_playwriter(const std::string& binary) {
                 if (ran.find("gm-witness-playwriter witness") == std::string::npos) result.failures.push_back("playwriter by name in a gm shell printed " + ran + ", expected the witness stub");
                 const std::string job = text_at(out, "job");
                 if (job.find("gm-witness-playwriter job") == std::string::npos) result.failures.push_back("playwriter by name in a gm job printed " + job + ", expected the witness stub");
-                result.summary = "a fresh gm serve with the playwriter bin directory in its install (HOME/.gmnew/pw/bin): command -v playwriter in a run_shell names that directory's playwriter, and playwriter runs by name from a run_shell and from a job";
+                result.summary = "a fresh gm serve on an install whose pw/bin has no playwriter link (as an auto-updated install has) links pw/bin/playwriter to the package's bin.js and puts pw/bin first on PATH: command -v playwriter in a run_shell names that link, and playwriter runs by name from a run_shell and from a job";
             }
+            std::error_code link_ec;
+            if (!fs::is_symlink(command, link_ec) || fs::read_symlink(command, link_ec) != entry)
+                result.failures.push_back("the fresh gm serve did not link " + command.string() + " to the package's " + entry.string());
             session.stop();
         }
     }

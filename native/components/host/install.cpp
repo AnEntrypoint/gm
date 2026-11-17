@@ -375,6 +375,10 @@ void prepend_playwriter_bin() {
     const fs::path bin = *root / "pw" / "bin";
     std::error_code ec;
     if (!fs::is_directory(bin, ec)) return;
+#if !defined(_WIN32)
+    const fs::path package = *root / "pw" / "node_modules" / "playwriter" / "bin.js";
+    if (!fs::exists(fs::symlink_status(bin / "playwriter", ec)) && fs::exists(package, ec)) fs::create_symlink(package, bin / "playwriter", ec);
+#endif
 #if defined(_WIN32)
     constexpr char kSeparator = ';';
 #else
