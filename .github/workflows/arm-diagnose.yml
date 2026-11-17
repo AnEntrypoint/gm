@@ -41,17 +41,17 @@ jobs:
           test -x "$browser" || { echo "browser path missing: $browser" >&2; exit 1; }
           echo "PLAYWRITER_BROWSER_PATH=$browser" >> "$GITHUB_ENV"
           echo "PLAYWRITER_NO_SANDBOX=1" >> "$GITHUB_ENV"
-      - name: Check asan build (conformance, one run)
+      - name: Check asan build (conformance, one run, stack use-after-return detector off for timing)
         shell: bash
         env:
-          ASAN_OPTIONS: halt_on_error=1:abort_on_error=0:print_stacktrace=1:detect_leaks=0
+          ASAN_OPTIONS: halt_on_error=1:abort_on_error=0:print_stacktrace=1:detect_leaks=0:detect_stack_use_after_return=0
+          GM_BASELINE_MAX_MEAN_MS: "100"
           CHECKS: ${{ inputs.checks || 'check-read-parity check-protocol-versions check-relay-reexec check-witness-next-context-replay check-build-handover check-console check-stop-fetch check-restart-skill-read check-no-resource-client check-embedded-runtime check-skill-serve check-resources-subscribe check-startup-attempts check-repeated-checks check-owner-identity check-cut-marker check-grep-state-scope check-job-bounds check-shell-stdin check-cancel-wait check-early-run-code check-read-after-write check-spawn-sites check-rows check-fetch check-wiki check-git check-review check-code-ast check-quickjs-baseline check-install-follows check-skill-reload check-cli-flags check-feed-reference check-restart-jobs check-install-switch' }}
         run: |
           build/asan/native/components/tool/gm-tool check build/asan/native/components/host/gm $(tr ',' ' ' <<< "$CHECKS")
-  asan-arm-fakestack:
+  asan-arm-stackuse:
     runs-on: ubuntu-24.04-arm
-    timeout-minutes: 45
-    continue-on-error: true
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/ninja
@@ -60,12 +60,25 @@ jobs:
         run: |
           cmake --preset asan
           cmake --build build/asan
-      - name: One run of check-quickjs-baseline with ASan stack use-after-return detection off
+      - name: Chromium for the browser-scope check (linux-arm64)
+        shell: bash
+        run: |
+          dir="$RUNNER_TEMP/playwright-chromium"
+          mkdir -p "$dir" && cd "$dir"
+          npm init -y >/dev/null
+          npm install --no-audit --no-fund playwright-core@1.65.0
+          npx playwright-core install --with-deps chromium
+          browser=$(node -p "require('$dir/node_modules/playwright-core').chromium.executablePath()")
+          test -x "$browser" || { echo "browser path missing: $browser" >&2; exit 1; }
+          echo "PLAYWRITER_BROWSER_PATH=$browser" >> "$GITHUB_ENV"
+          echo "PLAYWRITER_NO_SANDBOX=1" >> "$GITHUB_ENV"
+      - name: Check asan build (conformance, one run, stack use-after-return detector on for coverage)
         shell: bash
         env:
-          ASAN_OPTIONS: halt_on_error=1:abort_on_error=0:print_stacktrace=1:detect_leaks=0:detect_stack_use_after_return=0
+          ASAN_OPTIONS: halt_on_error=1:abort_on_error=0:print_stacktrace=1:detect_leaks=0:detect_stack_use_after_return=1
+          CHECKS: ${{ inputs.checks || 'check-read-parity check-protocol-versions check-relay-reexec check-witness-next-context-replay check-build-handover check-console check-stop-fetch check-restart-skill-read check-no-resource-client check-embedded-runtime check-skill-serve check-resources-subscribe check-startup-attempts check-repeated-checks check-owner-identity check-cut-marker check-grep-state-scope check-job-bounds check-shell-stdin check-cancel-wait check-early-run-code check-read-after-write check-spawn-sites check-rows check-fetch check-wiki check-git check-review check-code-ast check-quickjs-baseline check-install-follows check-skill-reload check-cli-flags check-feed-reference check-restart-jobs check-install-switch' }}
         run: |
-          timeout --kill-after=30 900 build/asan/native/components/tool/gm-tool check build/asan/native/components/host/gm check-quickjs-baseline
+          build/asan/native/components/tool/gm-tool check build/asan/native/components/host/gm $(tr ',' ' ' <<< "$CHECKS")
 
   gdb-arm:
     runs-on: ubuntu-24.04-arm
