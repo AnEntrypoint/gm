@@ -49,9 +49,11 @@ int installed_command(const std::filesystem::path& root) {
     const auto version = proc::run({(current / "gm").string(), "--version"}, root, {}, 30000);
     std::istringstream words(version.out);
     std::string live;
-    words >> live;
+    std::string tree;
+    words >> live >> tree;
+    const std::string tree_hash = hashed.out.substr(0, 12);
     std::vector<std::string> stale;
-    if (live != expected) stale.push_back("installed gm reports \"" + live + "\", the checkout's native tree is \"" + expected + "\"");
+    if (live != expected && tree != "(" + tree_hash + ")") stale.push_back("installed gm reports \"" + live + "\", the checkout's native tree is \"" + expected + "\"");
     const auto checkout_files = files_under(root / "skills");
     if (files_under(current / "skills") != checkout_files) stale.push_back("the installed skill files differ from the checkout's");
     for (const fs::path& file : checkout_files) {
