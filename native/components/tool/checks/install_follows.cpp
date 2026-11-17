@@ -84,7 +84,7 @@ if [ "$1" = clone ]; then for last; do :; done; mkdir -p "$last"; exit 0; fi
 case " $* " in *" apply "*) mkdir -p bin && printf '%s\n' 'chromiumArgsFromEnv()' 'lastBrowserLines' >> bin/playwriter-project ;; esac
 exit 0
 )");
-    write_bytes(offline_bin / "npm", "#!/bin/sh\nmkdir -p node_modules/playwriter/dist node_modules/patch-package && cp '" + patch_script + "' node_modules/patch-package/index.js\n");
+    write_bytes(offline_bin / "npm", "#!/bin/sh\nmkdir -p node_modules/playwriter/dist node_modules/patch-package && cp '" + patch_script + "' node_modules/patch-package/index.js && printf '#!/bin/sh\\n' > node_modules/playwriter/bin.js && chmod 755 node_modules/playwriter/bin.js\n");
     write_bytes(offline_bin / "patch-package.js", R"(const fs = require('fs');
 const path = require('path');
 const dist = path.join(process.cwd(), 'node_modules', 'playwriter', 'dist');
