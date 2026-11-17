@@ -28,7 +28,6 @@
 #include "gm/marker.hpp"
 #include "gm/job_text.hpp"
 #include "gm/mcp.hpp"
-#include "reusable_threads.hpp"
 #include "gm/proc.hpp"
 #include "gm/runcode.hpp"
 #include "internal.hpp"
@@ -733,6 +732,7 @@ struct Server::State {
         std::atomic<bool> exited{false};
         std::shared_ptr<gm::BodyControls> controls;
         bool killing = false;
+        bool thread_joined = false;
         std::atomic<int> in_flight{0};
         std::atomic<long long> last_call_ms{0};
         std::mutex lock;
@@ -747,6 +747,7 @@ struct Server::State {
         std::vector<std::string> started_jobs;
         std::optional<Value> value;
         std::string error;
+        std::thread thread;
     };
 
     std::recursive_mutex mu;
@@ -787,15 +788,13 @@ struct Server::State {
         std::set<std::string> inflight;
     } turn;
 
-    ReusableThreads body_threads;
-
     struct Calls {
         std::mutex mutex;
         std::condition_variable changed;
         std::deque<std::pair<std::uint64_t, std::string>> queued;
         int running = 0;
         bool closed = false;
-        ReusableThreads workers;
+        std::map<std::uint64_t, std::thread> threads;
         std::vector<std::uint64_t> finished;
         std::thread pump;
     } calls;
@@ -1646,13 +1645,22 @@ struct Server::State {
     }
 
     bool join_body(const std::shared_ptr<BodyJob>& job) {
+        std::thread thread;
+        {
+            std::lock_guard guard(job->lock);
+            if (job->thread_joined || !job->thread.joinable()) return true;
+            thread = std::move(job->thread);
+            job->thread_joined = true;
+        }
         using namespace std::chrono;
         const auto until = steady_clock::now() + milliseconds(5000);
         while (!job->exited && steady_clock::now() < until) std::this_thread::sleep_for(milliseconds(2));
         if (!job->exited) {
-            std::cerr << "gm: background body " << job->name << " did not stop after its cancel flag\n";
+            std::cerr << "gm: background body " << job->name << " did not stop after its cancel flag; detached\n";
+            thread.detach();
             return false;
         }
+        thread.join();
         return true;
     }
 
@@ -3515,7 +3523,7 @@ struct Server::State {
                 auto [ticket, text] = std::move(calls.queued.front());
                 calls.queued.pop_front();
                 calls.running += 1;
-                calls.workers.run([this, ticket, text = std::move(text)] {
+                calls.threads.emplace(ticket, std::thread([this, ticket, text = std::move(text)] {
                     process(text, ticket, true);
                     forget_pending_call(text);
                     {
@@ -3524,12 +3532,18 @@ struct Server::State {
                         calls.finished.push_back(ticket);
                     }
                     calls.changed.notify_all();
-                });
+                }));
             }
         }
     }
 
     void reap_calls() {
+        for (std::uint64_t ticket : calls.finished) {
+            auto found = calls.threads.find(ticket);
+            if (found == calls.threads.end()) continue;
+            found->second.join();
+            calls.threads.erase(found);
+        }
         calls.finished.clear();
     }
 
@@ -3540,10 +3554,8 @@ struct Server::State {
         }
         calls.changed.notify_all();
         if (calls.pump.joinable()) calls.pump.join();
-        {
-            std::unique_lock guard(calls.mutex);
-            calls.changed.wait(guard, [&] { return calls.running == 0; });
-        }
+        for (auto& [ticket, thread] : calls.threads) thread.join();
+        calls.threads.clear();
         calls.finished.clear();
     }
 
@@ -3825,14 +3837,20 @@ Server::State::~State() {
     auto deadline = steady_clock::now() + kDrain;
     auto still_running = [&] {
         for (const auto& job : jobs) {
-            if (!job->exited) return true;
+            if (job->thread.joinable() && !job->exited) return true;
         }
         return false;
     };
     while (still_running() && steady_clock::now() < deadline) std::this_thread::sleep_for(milliseconds(5));
     for (const auto& job : jobs) {
-        if (job->exited) continue;
-        std::cerr << "gm: background body " << job->name << " did not stop within " << kDrain.count() << " ms of shutdown\n";
+        if (!job->thread.joinable()) continue;
+        if (job->exited) {
+            job->thread.join();
+            continue;
+        }
+        std::cerr << "gm: background body " << job->name << " did not stop within " << kDrain.count()
+                  << " ms of shutdown; detached\n";
+        job->thread.detach();
     }
 }
 
@@ -3886,9 +3904,9 @@ Value Server::State::run_code(const Value& args) {
             }
             auto logged = std::make_shared<LoggedVerbs>(*this, job, gate);
             auto ledger = s().log->dir() / "jobs" / (job->name + ".pids");
-            body_threads.run([this, job, logged, runner = options.run_body, source = body->as_string(), root = options.workspace,
-                              format_name = format == nullptr ? std::string() : std::string(format->as_string()),
-                              shared_gate = gate, ledger] {
+            job->thread = std::thread([this, job, logged, runner = options.run_body, source = body->as_string(), root = options.workspace,
+                                       format_name = format == nullptr ? std::string() : std::string(format->as_string()),
+                                       shared_gate = gate, ledger] {
                 gm::BodyControlsScope controls_scope(job->controls);
                 proc::OwnerScope owner(job->body, ledger);
                 auto outcome = runner(*logged, source, root, format_name);
@@ -3919,7 +3937,7 @@ Value Server::State::run_code(const Value& args) {
                     std::lock_guard guard(job->lock);
                     started_jobs = job->started_jobs;
                 }
-                while (!job->exited) std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                if (job->thread.joinable()) job->thread.join();
                 if (job->skill_bootstrap && !skill_read()) {
                     skill_refusal_due();
                     return with_seq(object().set("ok", false).set("error", skill_refusal_).set("loads", array()));
