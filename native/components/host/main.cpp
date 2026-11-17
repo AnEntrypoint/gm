@@ -12,7 +12,7 @@ namespace {
 
 constexpr std::string_view kUsage =
     "usage: gm serve|worker --workspace <dir> [--runs <dir>] [--run-dir <dir>] [--resume <id>] [--task <file>] "
-    "[--skills <dir>] [--leaves <dir>] [--build-dir <dir>]\n"
+    "[--skills <dir>] [--leaves <dir>] [--build-dir <dir>] [--protocol-2026-07-28 on|off]\n"
     "       gm doctor [--leaves <dir>]\n"
     "       gm update\n"
     "       gm install [--local <build dir> [--source <checkout>]] [--mcp-config <file>]\n"
