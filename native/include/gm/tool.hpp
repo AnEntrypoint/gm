@@ -88,6 +88,7 @@ CheckResult check_serve_entry_connects(const std::string& binary);
 CheckResult check_serve_signal_reason(const std::string& binary);
 CheckResult check_relay_reconnects(const std::string& binary);
 CheckResult check_shell_playwriter(const std::string& binary);
+CheckResult check_update_race(const std::string& binary);
 CheckResult check_repeated_checks(const std::string& binary);
 CheckResult check_owner_identity(const std::string& binary);
 CheckResult check_run_task_kept(const std::string& binary);

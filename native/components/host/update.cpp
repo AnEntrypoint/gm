@@ -517,7 +517,6 @@ UpdateResult current_build(UpdateResult result, const UpdatePolicy& policy, std:
 
 UpdateResult update_once(const UpdatePolicy& policy, UpdateResult result) {
     const fs::path staging = policy.install_dir / kStagingName;
-    const ScopedRemoval cleanup(staging);
 
     UpdateState state = read_update_state(policy.install_dir);
     if (!policy.force && checked_recently(state, now_ms(), policy.interval))
@@ -525,6 +524,7 @@ UpdateResult update_once(const UpdatePolicy& policy, UpdateResult result) {
     if (!acquire_update_lock(policy.install_dir))
         return current_build(std::move(result), policy, "another update is running");
     const ScopedRemoval unlock(policy.install_dir / kLockName);
+    const ScopedRemoval cleanup(staging);
 
     state = read_update_state(policy.install_dir);
     if (!policy.force && checked_recently(state, now_ms(), policy.interval))
