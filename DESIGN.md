@@ -1627,3 +1627,10 @@ Owner instruction: swap the embedded QuickJS-NG engine for an embedded txiki.js 
 ## Bounded run_code output and repeat pointers (2026-11-11)
 
 Inside run_code, a read_file or run_shell result over 6000 characters is cut to its first 4500 and last 1500 characters; the whole text is kept at outputPath, and full: true returns it inline. An identical read_file call with no write verb (write_file, edit_file, fs_op, run_shell) between is answered with a pointer to its step, and fresh: true reads again. The bound keeps 154 of 202 run_shell results from 2026-11-11 whole. The Node tree (src/mcp.mjs) carries the same bound, pointer, descriptions and batching notice; the run_shell handler passes raw through, as native does. Both trees agree on the W23 and W24 bodies (probe: first read 6188 on Node, 6174 native; file dump 4683 on Node, 4671 native).
+
+## Owner decision 3 built: protocol 2026-07-28 behind a flag (2026-11-17)
+
+- Decision (2026-11-06): protocol 2026-07-28 is negotiated behind a capability flag that is off by default, with a witness test, and does not become the default until a client test exists.
+- Built (aecbd8c): the serve and worker flag `--protocol-2026-07-28 on|off`, read by switch_flag (native/components/host/options.cpp) and carried by the relay to its worker and to a re-exec. ServerOptions::protocol_2026_07_28 adds kFlaggedVersion to the versions initialize echoes and to server/discover's supportedVersions, after the 2025 versions. An unknown requested version still answers kAcceptedVersions.front() (2025-11-25), so the flag offers 2026-07-28 without making it the default. Only the version is negotiated; the 2026-07-28 result fields were already served (2026-11-10 decision). Another value than on or off is refused at start.
+- Witness: check-protocol-flag (flag off: 2026-07-28 answered 2025-11-25 and not listed; flag on: echoed and listed; unknown version 2025-11-25; "maybe" refused). The default stays off until a client test exists.
+
