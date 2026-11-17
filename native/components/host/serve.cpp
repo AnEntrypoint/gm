@@ -32,8 +32,35 @@ std::string relay_process_id() { return gm::mcp::process_identity(); }
 #if !defined(_WIN32)
 int relay_log_fd = -1;
 
+struct NamedSignal {
+    int number;
+    const char* text;
+    bool crash;
+};
+
+constexpr NamedSignal kReportedSignals[] = {
+    {SIGHUP, "gm relay: stopped by SIGHUP\n", false},     {SIGINT, "gm relay: stopped by SIGINT\n", false},
+    {SIGTERM, "gm relay: stopped by SIGTERM\n", false},   {SIGQUIT, "gm relay: stopped by SIGQUIT\n", false},
+    {SIGUSR1, "gm relay: stopped by SIGUSR1\n", false},   {SIGALRM, "gm relay: stopped by SIGALRM\n", false},
+    {SIGXCPU, "gm relay: stopped by SIGXCPU\n", false},   {SIGXFSZ, "gm relay: stopped by SIGXFSZ\n", false},
+    {SIGVTALRM, "gm relay: stopped by SIGVTALRM\n", false}, {SIGPROF, "gm relay: stopped by SIGPROF\n", false},
+#if !defined(__SANITIZE_ADDRESS__)
+    {SIGSEGV, "gm relay: crashed with SIGSEGV\n", true},  {SIGBUS, "gm relay: crashed with SIGBUS\n", true},
+    {SIGABRT, "gm relay: crashed with SIGABRT\n", true},  {SIGFPE, "gm relay: crashed with SIGFPE\n", true},
+    {SIGILL, "gm relay: crashed with SIGILL\n", true},    {SIGTRAP, "gm relay: crashed with SIGTRAP\n", true},
+    {SIGSYS, "gm relay: crashed with SIGSYS\n", true},
+#endif
+};
+
 void report_stop(int signal) {
-    const char* text = signal == SIGTERM ? "gm relay: stopped by SIGTERM\n" : signal == SIGINT ? "gm relay: stopped by SIGINT\n" : "gm relay: stopped by SIGHUP\n";
+    const char* text = "gm relay: stopped by a signal\n";
+    bool crash = false;
+    for (const NamedSignal& named : kReportedSignals) {
+        if (named.number == signal) {
+            text = named.text;
+            crash = named.crash;
+        }
+    }
     if (relay_log_fd >= 0) {
         timespec now{};
         ::clock_gettime(CLOCK_REALTIME, &now);
@@ -54,6 +81,10 @@ void report_stop(int signal) {
         [[maybe_unused]] const ssize_t logged = ::write(relay_log_fd, line, length);
     }
     [[maybe_unused]] const ssize_t written = ::write(STDERR_FILENO, text, std::strlen(text));
+    if (crash) {
+        std::signal(signal, SIG_DFL);
+        ::raise(signal);
+    }
     ::_exit(128 + signal);
 }
 #endif
@@ -118,11 +149,11 @@ int run_serve(const HostArgs& args) {
     options.runtime_roots = {leaves_dir_of(args)};
     options.update = policy_from_environment(install_dir);
 #if !defined(_WIN32)
-    std::signal(SIGHUP, report_stop);
-    std::signal(SIGINT, report_stop);
-    std::signal(SIGTERM, report_stop);
+    for (const NamedSignal& named : kReportedSignals) std::signal(named.number, report_stop);
 #endif
-    return serve_stdio(std::move(options));
+    const int code = serve_stdio(std::move(options));
+    append_run_log(run_log, "relay exited with code " + std::to_string(code));
+    return code;
 }
 
 }

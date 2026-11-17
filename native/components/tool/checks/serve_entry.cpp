@@ -199,7 +199,81 @@ CheckResult check_relay_reconnects(const std::string& binary) {
     fs::remove_all(sandbox, ignored);
     return result;
 }
+
+namespace {
+
+std::string read_whole(const fs::path& file) {
+    std::ifstream in(file);
+    return std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+}
+
+constexpr const char* kPeerCloseScript =
+    "init='{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{\"protocolVersion\":\"2025-11-25\",\"capabilities\":{},\"clientInfo\":{\"name\":\"c\",\"version\":\"1\"}}}'\n"
+    "( printf '%s\\n' \"$init\"; i=0; while [ $i -lt 1200 ] && ! grep -q 'write to host stdout failed' \"$2/relay.log\" 2>/dev/null; do sleep 0.1; i=$((i+1)); done ) | \"$1\" serve --run-dir \"$2\" | head -c 0\n"
+    "i=0; while [ $i -lt 300 ] && ! grep -q 'relay exited' \"$2/relay.log\" 2>/dev/null; do sleep 0.1; i=$((i+1)); done\n";
+
+}
+
+CheckResult check_relay_disconnect_reason(const std::string& binary) {
+    CheckResult result;
+    const auto stamp = std::chrono::steady_clock::now().time_since_epoch().count();
+    const auto sandbox = fs::temp_directory_path() / ("gm-relay-disconnect-" + std::to_string(stamp));
+    const fs::path workspace = entry_workspace(sandbox);
+    const std::string gm = fs::absolute(binary).string();
+    const fs::path peer_run = workspace / "runs" / "peer-close";
+    const proc::Outcome peer = proc::run({"env", "HOME=" + sandbox.string(), "sh", "-c", kPeerCloseScript, "sh", gm, peer_run.string()}, workspace, {}, 240000);
+    const std::string peer_log = read_whole(peer_run / "relay.log");
+    if (!peer.started) result.failures.push_back("the peer-close shell did not start");
+    if (peer_log.find("write to host stdout failed: ") == std::string::npos || peer_log.find("the host closed its end of stdout") == std::string::npos)
+        result.failures.push_back("a host that closed the relay's stdout left no write-failure reason in relay.log: " + peer_log.substr(0, 400));
+    if (peer_log.find("host closed the connection (the host closed its end of stdin (end of input") == std::string::npos)
+        result.failures.push_back("the host's stdin close left no reason in relay.log: " + peer_log.substr(0, 400));
+    if (peer_log.find("relay exited with code 0") == std::string::npos) result.failures.push_back("relay.log has no exit line after the peer close: " + peer_log.substr(0, 400));
+    const fs::path eof_run = workspace / "runs" / "stdin-close";
+    {
+        Session session({gm, "serve", "--run-dir", eof_run.string()}, workspace, sandbox, kWatchdogMs);
+        if (!session.started()) {
+            result.failures.push_back("the stdin-close serve did not start");
+        } else {
+            session.rpc("initialize", json::Object{{"protocolVersion", "2025-11-25"}, {"capabilities", json::Object{}},
+                                                   {"clientInfo", json::Object{{"name", "gm-relay-disconnect-check"}, {"version", "1"}}}});
+            const long long relay = session.pid();
+            session.close_input();
+            if (!wait_gone({relay}, std::chrono::seconds(30))) result.failures.push_back("the relay outlived its stdin close by 30 s");
+            session.stop();
+        }
+    }
+    const std::string eof_log = read_whole(eof_run / "relay.log");
+    if (eof_log.find("host closed the connection (the host closed its end of stdin (end of input") == std::string::npos || eof_log.find("relay exited with code 0") == std::string::npos)
+        result.failures.push_back("a stdin close left no reason or exit line in relay.log: " + eof_log.substr(0, 400));
+    const fs::path signal_run = workspace / "runs" / "signal";
+    {
+        Session session({gm, "serve", "--run-dir", signal_run.string()}, workspace, sandbox, kWatchdogMs);
+        if (!session.started()) {
+            result.failures.push_back("the signal serve did not start");
+        } else {
+            session.rpc("initialize", json::Object{{"protocolVersion", "2025-11-25"}, {"capabilities", json::Object{}},
+                                                   {"clientInfo", json::Object{{"name", "gm-relay-disconnect-check"}, {"version", "1"}}}});
+            const long long relay = session.pid();
+            ::kill(static_cast<pid_t>(relay), SIGUSR1);
+            if (!wait_gone({relay}, std::chrono::seconds(10))) result.failures.push_back("the relay outlived SIGUSR1 by 10 s");
+            session.stop();
+        }
+    }
+    if (stamped_stop_line(workspace, "gm relay: stopped by SIGUSR1").empty())
+        result.failures.push_back("SIGUSR1 left no stamped stop line in relay.log: " + read_whole(signal_run / "relay.log").substr(0, 400));
+    result.summary = "relay.log names each forced disconnect: a host that closed the relay's stdout (write to host stdout failed), a host that closed stdin (host closed the connection, end of input, then relay exited with code 0), and SIGUSR1 (a stamped stopped by SIGUSR1 line)";
+    std::error_code ignored;
+    fs::remove_all(sandbox, ignored);
+    return result;
+}
 #else
+CheckResult check_relay_disconnect_reason(const std::string&) {
+    CheckResult result;
+    result.summary = "skipped: POSIX-only check, it uses signals and a shell pipeline";
+    return result;
+}
+
 CheckResult check_relay_reconnects(const std::string&) {
     CheckResult result;
     result.summary = "skipped: POSIX-only check, runs on Linux and macOS";

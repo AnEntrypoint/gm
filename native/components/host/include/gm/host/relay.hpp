@@ -60,7 +60,7 @@ public:
 
     void start();
     void host_line(std::string line);
-    void host_closed();
+    void host_closed(const std::string& reason = "the relay was destroyed with the host still attached");
     void request_restart(std::string reason);
     void reexec();
     bool only_resendable_in_flight() const;

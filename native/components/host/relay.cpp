@@ -1,12 +1,14 @@
 #include "gm/host/relay.hpp"
 
 #include <algorithm>
+#include <atomic>
 #include <chrono>
 #include <cerrno>
 #include <cstdio>
 #include <cstring>
 #include <fstream>
 #include <iostream>
+#include <memory>
 
 #include "gm/clock.hpp"
 #include "gm/proc.hpp"
@@ -118,7 +120,7 @@ std::string last_lines(const std::string& text, std::size_t max_bytes) {
 }
 
 #if !defined(_WIN32)
-void pump_host_stdin(Relay& relay) {
+std::string pump_host_stdin(Relay& relay) {
     std::string buffer;
     char chunk[65536];
     for (;;) {
@@ -126,17 +128,17 @@ void pump_host_stdin(Relay& relay) {
         pollfd input{0, POLLIN, 0};
         if (::poll(&input, 1, 200) < 0) {
             if (errno == EINTR) continue;
-            return;
+            return std::string("poll on host stdin failed: ") + std::strerror(errno);
         }
         if (input.revents == 0) continue;
         const ssize_t count = ::read(0, chunk, sizeof chunk);
         if (count < 0) {
             if (errno == EINTR || errno == EAGAIN) continue;
-            return;
+            return std::string("read from host stdin failed: ") + std::strerror(errno);
         }
         if (count == 0) {
             if (!buffer.empty()) relay.host_line(std::move(buffer));
-            return;
+            return (input.revents & POLLHUP) != 0 ? "the host closed its end of stdin (end of input, hangup)" : "the host closed its end of stdin (end of input)";
         }
         buffer.append(chunk, static_cast<std::size_t>(count));
         for (std::size_t end = buffer.find('\n'); end != std::string::npos; end = buffer.find('\n')) {
@@ -721,13 +723,13 @@ void Relay::control_loop() {
     }
 }
 
-void Relay::host_closed() {
+void Relay::host_closed(const std::string& reason) {
     Lock lock(mutex_);
     if (host_gone_) return;
     host_gone_ = true;
     state_ = State::Stopping;
     changed_.notify_all();
-    say("host closed the connection; ending the worker");
+    say("host closed the connection (" + reason + "); ending the worker");
     lock.unlock();
     if (control_.joinable()) control_.join();
     cancel_download();
@@ -773,10 +775,15 @@ int serve_stdio(RelayOptions options) {
 #if !defined(_WIN32)
     ::signal(SIGPIPE, SIG_IGN);
 #endif
-    Relay relay(std::move(options), [](std::string_view line) {
-        std::fwrite(line.data(), 1, line.size(), stdout);
-        std::fputc('\n', stdout);
-        std::fflush(stdout);
+    const std::filesystem::path run_log = options.run_log;
+    auto write_failed = std::make_shared<std::atomic<bool>>(false);
+    Relay relay(std::move(options), [run_log, write_failed](std::string_view line) {
+        errno = 0;
+        const bool written = std::fwrite(line.data(), 1, line.size(), stdout) == line.size() && std::fputc('\n', stdout) != EOF && std::fflush(stdout) == 0;
+        if (!written && !write_failed->exchange(true)) {
+            const int error = errno;
+            append_run_log(run_log, std::string("write to host stdout failed: ") + (error != 0 ? std::strerror(error) : "short write") + "; the host closed its end of stdout");
+        }
     });
     relay.start();
 #if defined(_WIN32)
@@ -785,10 +792,11 @@ int serve_stdio(RelayOptions options) {
         if (!line.empty() && line.back() == '\r') line.pop_back();
         relay.host_line(std::move(line));
     }
+    const std::string reason = "the host closed its end of stdin (end of input)";
 #else
-    pump_host_stdin(relay);
+    const std::string reason = pump_host_stdin(relay);
 #endif
-    relay.host_closed();
+    relay.host_closed(reason);
     return 0;
 }
 

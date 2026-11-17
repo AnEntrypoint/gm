@@ -90,6 +90,7 @@ CheckResult check_relay_reconnects(const std::string& binary);
 CheckResult check_shell_playwriter(const std::string& binary);
 CheckResult check_update_race(const std::string& binary);
 CheckResult check_installed_stamp(const std::string& binary);
+CheckResult check_relay_disconnect_reason(const std::string& binary);
 std::vector<std::string> install_differences(const std::filesystem::path& root, const std::filesystem::path& current);
 CheckResult check_repeated_checks(const std::string& binary);
 CheckResult check_owner_identity(const std::string& binary);
