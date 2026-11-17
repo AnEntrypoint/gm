@@ -194,7 +194,7 @@ jobs:
           done
       - name: Windows cmd-only run_shell witness
         shell: bash
-        run: build/${{ matrix.preset }}/native/components/tool/gm-tool.exe check "build/${{ matrix.preset }}/native/components/host/gm.exe" witness-windows-cmd
+        run: build/${{ matrix.preset }}/native/components/tool/gm-tool.exe check "build/${{ matrix.preset }}/native/components/host/gm.exe" witness-windows-cmd witness-windows-tree-kill witness-windows-playwriter
       - name: Package
         shell: bash
         run: build/${{ matrix.preset }}/native/components/tool/gm-tool.exe package --target ${{ matrix.target }} --build-dir build/${{ matrix.preset }} --out dist

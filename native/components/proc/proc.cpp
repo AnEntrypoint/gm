@@ -469,8 +469,8 @@ std::string quote(const std::string& arg) {
 
 }
 
-Outcome run(const std::vector<std::string>& argv, const std::filesystem::path& cwd, std::string_view stdin_text,
-            std::uint64_t timeout_ms) {
+static Outcome run_windows(const std::vector<std::string>& argv, const std::filesystem::path& cwd, std::string_view stdin_text,
+                           std::uint64_t timeout_ms, bool reap_children) {
     Outcome outcome;
     if (argv.empty()) return outcome;
     SECURITY_ATTRIBUTES sa{sizeof sa, nullptr, TRUE};
@@ -492,8 +492,9 @@ Outcome run(const std::vector<std::string>& argv, const std::filesystem::path& c
     std::string command_line;
     for (const auto& a : argv) command_line += (command_line.empty() ? "" : " ") + quote(a);
     std::string dir = cwd.string();
+    const HANDLE job = CreateJobObjectW(nullptr, nullptr);
     BOOL ok = CreateProcessA(nullptr, command_line.data(), nullptr, nullptr, TRUE,
-                             static_cast<DWORD>(hidden_creation_flags(CREATE_NEW_PROCESS_GROUP)), nullptr, dir.empty() ? nullptr : dir.c_str(),
+                             static_cast<DWORD>(hidden_creation_flags(CREATE_NEW_PROCESS_GROUP | CREATE_SUSPENDED)), nullptr, dir.empty() ? nullptr : dir.c_str(),
                              &si, &pi);
     CloseHandle(in_r);
     CloseHandle(out_w);
@@ -502,8 +503,11 @@ Outcome run(const std::vector<std::string>& argv, const std::filesystem::path& c
         CloseHandle(in_w);
         CloseHandle(out_r);
         CloseHandle(err_r);
+        if (job != nullptr) CloseHandle(job);
         return outcome;
     }
+    const bool in_job = job != nullptr && AssignProcessToJobObject(job, pi.hProcess) != 0;
+    ResumeThread(pi.hThread);
     outcome.started = true;
     Enrolment enrolled(static_cast<long long>(pi.dwProcessId));
     DWORD wrote = 0;
@@ -517,7 +521,8 @@ Outcome run(const std::vector<std::string>& argv, const std::filesystem::path& c
         outcome.err += read_available(err_r, err_open);
         if (WaitForSingleObject(pi.hProcess, 10) == WAIT_OBJECT_0) break;
         if (timeout_ms > 0 && GetTickCount64() - start >= timeout_ms) {
-            kill_tree(static_cast<long long>(pi.dwProcessId));
+            if (in_job) TerminateJobObject(job, 1);
+            else kill_tree(static_cast<long long>(pi.dwProcessId));
             TerminateProcess(pi.hProcess, 1);
             WaitForSingleObject(pi.hProcess, INFINITE);
             outcome.timed_out = true;
@@ -529,11 +534,18 @@ Outcome run(const std::vector<std::string>& argv, const std::filesystem::path& c
     DWORD code = 0;
     GetExitCodeProcess(pi.hProcess, &code);
     outcome.exit_code = static_cast<int>(code);
+    if (in_job && reap_children) TerminateJobObject(job, 1);
+    if (job != nullptr) CloseHandle(job);
     CloseHandle(pi.hProcess);
     CloseHandle(pi.hThread);
     CloseHandle(out_r);
     CloseHandle(err_r);
     return outcome;
+}
+
+Outcome run(const std::vector<std::string>& argv, const std::filesystem::path& cwd, std::string_view stdin_text,
+            std::uint64_t timeout_ms) {
+    return run_windows(argv, cwd, stdin_text, timeout_ms, false);
 }
 
 bool needs_cmd(std::string_view command) {
@@ -575,8 +587,8 @@ Outcome shell(std::string_view command, const std::filesystem::path& cwd, std::u
     const std::string bash = git_bash();
     const bool use_cmd = needs_cmd(command) || bash.empty();
     Outcome outcome = use_cmd
-        ? run({"cmd", "/c", text}, cwd, {}, timeout_ms)
-        : run({bash, "-c", text}, cwd, {}, timeout_ms);
+        ? run_windows({"cmd", "/c", text}, cwd, {}, timeout_ms, true)
+        : run_windows({bash, "-c", text}, cwd, {}, timeout_ms, true);
     outcome.launcher = use_cmd ? "cmd" : bash;
     return outcome;
 }

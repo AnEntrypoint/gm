@@ -177,10 +177,22 @@ std::optional<std::string> copy_playwriter_patches(const fs::path& root, const f
     return std::nullopt;
 }
 
+#if defined(_WIN32)
+std::optional<std::string> write_playwriter_shims(const fs::path& dir) {
+    const fs::path bin = dir / "bin";
+    std::ofstream cmd(bin / "playwriter.cmd", std::ios::binary | std::ios::trunc);
+    cmd << "@node \"%~dp0..\\node_modules\\playwriter\\bin.js\" %*\r\n";
+    std::ofstream sh(bin / "playwriter", std::ios::binary | std::ios::trunc);
+    sh << "#!/bin/sh\nexec node \"$(dirname \"$0\")/../node_modules/playwriter/bin.js\" \"$@\"\n";
+    if (!cmd || !sh) return "cannot write the playwriter shims in " + bin.string();
+    return std::nullopt;
+}
+#endif
+
 std::optional<std::string> link_playwriter_command(const fs::path& dir) {
 #if defined(_WIN32)
-    (void)dir;
-    return std::nullopt;
+    if (!fs::exists(dir / "node_modules" / "playwriter" / "bin.js")) return "playwriter's command is missing: " + (dir / "node_modules" / "playwriter" / "bin.js").string();
+    return write_playwriter_shims(dir);
 #else
     const fs::path target = dir / "node_modules" / "playwriter" / "bin.js";
     const fs::path link = dir / "bin" / "playwriter";
@@ -375,8 +387,10 @@ void prepend_playwriter_bin() {
     const fs::path bin = *root / "pw" / "bin";
     std::error_code ec;
     if (!fs::is_directory(bin, ec)) return;
-#if !defined(_WIN32)
     const fs::path package = *root / "pw" / "node_modules" / "playwriter" / "bin.js";
+#if defined(_WIN32)
+    if (!fs::exists(bin / "playwriter.cmd", ec) && fs::exists(package, ec)) write_playwriter_shims(*root / "pw");
+#else
     if (!fs::exists(fs::symlink_status(bin / "playwriter", ec)) && fs::exists(package, ec)) fs::create_symlink(package, bin / "playwriter", ec);
 #endif
 #if defined(_WIN32)

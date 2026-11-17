@@ -225,6 +225,7 @@ struct Child::Handles {
     HANDLE input = nullptr;
     HANDLE output = nullptr;
     HANDLE error = nullptr;
+    HANDLE job = nullptr;
 };
 
 namespace {
@@ -338,6 +339,8 @@ deoxidene::Result<std::shared_ptr<Child>, std::string> Child::spawn(const std::v
     std::wstring block = options.env.empty() ? std::wstring() : environment_block(options.env);
     DWORD flags = static_cast<DWORD>(hidden_creation_flags(CREATE_NEW_PROCESS_GROUP | EXTENDED_STARTUPINFO_PRESENT));
     if (!block.empty()) flags |= CREATE_UNICODE_ENVIRONMENT;
+    const HANDLE job = options.own_group ? CreateJobObjectW(nullptr, nullptr) : nullptr;
+    if (job != nullptr) flags |= CREATE_SUSPENDED;
     const BOOL ok = CreateProcessW(nullptr, command.data(), nullptr, nullptr, TRUE, flags,
                                    block.empty() ? nullptr : block.data(), dir.empty() ? nullptr : dir.c_str(),
                                    &startup.StartupInfo, &process);
@@ -349,14 +352,19 @@ deoxidene::Result<std::shared_ptr<Child>, std::string> Child::spawn(const std::v
         CloseHandle(in_write);
         CloseHandle(out_read);
         if (error_read) CloseHandle(error_read);
+        if (job != nullptr) CloseHandle(job);
         return deoxidene::Err<std::string>("cannot start " + argv[0]);
     }
+    const bool in_job = job != nullptr && AssignProcessToJobObject(job, process.hProcess) != 0;
+    if (job != nullptr) ResumeThread(process.hThread);
+    if (job != nullptr && !in_job) CloseHandle(job);
     std::shared_ptr<Child> child(new Child());
     child->handles_ = std::make_unique<Handles>();
     child->handles_->process = process;
     child->handles_->input = in_write;
     child->handles_->output = out_read;
     child->handles_->error = error_read;
+    child->handles_->job = in_job ? job : nullptr;
     child->own_group_ = options.own_group;
     return child;
 }
@@ -369,6 +377,7 @@ Child::~Child() {
         kill();
         wait_for(std::chrono::milliseconds(2000));
     }
+    if (handles_->job) CloseHandle(handles_->job);
     CloseHandle(handles_->process.hThread);
     CloseHandle(handles_->process.hProcess);
 }
@@ -424,7 +433,9 @@ std::optional<std::string> Child::read_error_chunk() {
 }
 
 void Child::kill() {
-    if (!exit_code_) TerminateProcess(handles_->process.hProcess, 137);
+    if (exit_code_) return;
+    if (own_group_ && handles_->job) TerminateJobObject(handles_->job, 137);
+    TerminateProcess(handles_->process.hProcess, 137);
 }
 
 std::optional<int> Child::wait_for(std::chrono::milliseconds timeout) {

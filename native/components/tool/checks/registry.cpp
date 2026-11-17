@@ -24,6 +24,8 @@ const std::vector<Registered>& checks() {
         {"parity-contract", check_parity_contract},
         {"clock-mutations", check_clock_mutations},
         {"witness-windows-cmd", check_witness_windows_cmd},
+        {"witness-windows-tree-kill", check_windows_tree_kill},
+        {"witness-windows-playwriter", check_windows_playwriter},
         {"check-stop-fetch", check_stop_fetch},
         {"check-install-switch", check_install_switch},
         {"check-restart-skill-read", check_restart_skill_read},
