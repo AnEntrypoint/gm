@@ -183,6 +183,9 @@ int run_worker(const HostArgs& args) {
     options.monitor_ms = static_cast<std::uint64_t>(*monitor_ms);
     options.run_dir = *run_dir;
     options.supervised = args.flag("--supervised") == "yes";
+    auto protocol = switch_flag(args, "--protocol-2026-07-28");
+    if (!protocol) return fail(protocol.error());
+    options.protocol_2026_07_28 = *protocol;
     if (auto owner = args.flag("--owner")) options.connection = *owner;
     if (auto reason = args.flag("--restart-reason")) options.restart_reason = *reason;
     options.on_run_open = [&core, &leaves, &boot_events, current_log, current_log_mutex](std::shared_ptr<RunLog> log) {

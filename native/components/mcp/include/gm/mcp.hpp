@@ -31,6 +31,7 @@ struct ServerOptions {
     int max_steps = 50;
     int max_inflight = 8;
     bool supervised = false;
+    bool protocol_2026_07_28 = false;
     std::string connection;
     std::string restart_reason = "restarted without a reason";
     std::string version = GMNEW_MCP_VERSION;

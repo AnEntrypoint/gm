@@ -46,7 +46,7 @@ std::optional<std::string> flag_error_for(const gm::host::HostArgs& args) {
         return flag_error(args.rest,
                           {"workspace", "runs", "run-dir", "resume", "task", "skills", "leaves", "build-dir", "mcp-config",
                            "max-inflight", "max-steps", "stuck-ms", "job-lifetime-ms", "monitor-ms", "handshake",
-                           "skill-read", "resend", "supervised", "owner", "restart-reason", "from-build"},
+                           "skill-read", "resend", "supervised", "owner", "restart-reason", "from-build", "protocol-2026-07-28"},
                           {});
     }
     if (args.mode == "doctor") return flag_error(args.rest, {"leaves"}, {});

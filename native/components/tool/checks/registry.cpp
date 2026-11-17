@@ -42,6 +42,7 @@ const std::vector<Registered>& checks() {
         {"check-update-race", check_update_race},
         {"check-installed-stamp", check_installed_stamp},
         {"check-relay-disconnect-reason", check_relay_disconnect_reason},
+        {"check-protocol-flag", check_protocol_flag},
         {"check-repeated-checks", check_repeated_checks},
         {"check-owner-identity", check_owner_identity},
         {"check-run-task-kept", check_run_task_kept},

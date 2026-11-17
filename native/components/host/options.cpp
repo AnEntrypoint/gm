@@ -116,6 +116,13 @@ deoxidene::Result<int, std::string> positive_int_flag(const HostArgs& args, std:
     return std::stoi(*flag);
 }
 
+deoxidene::Result<bool, std::string> switch_flag(const HostArgs& args, std::string_view name) {
+    const auto flag = args.flag(name);
+    if (!flag || *flag == "off") return false;
+    if (*flag == "on") return true;
+    return deoxidene::Err<std::string>(std::string(name) + " takes on or off, not " + *flag);
+}
+
 std::filesystem::path leaves_dir_of(const HostArgs& args) { return args.path_or("--leaves", install_dir() / "leaves"); }
 
 std::filesystem::path skills_dir_of(const HostArgs& args) { return args.path_or("--skills", install_dir() / "skills"); }

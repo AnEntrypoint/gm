@@ -97,6 +97,10 @@ int run_serve(const HostArgs& args) {
         std::cerr << "gm relay: " << max_inflight.error() << '\n';
         return 1;
     }
+    if (auto protocol = switch_flag(args, "--protocol-2026-07-28"); !protocol) {
+        std::cerr << "gm relay: " << protocol.error() << '\n';
+        return 1;
+    }
     const auto workspace = workspace_of(args);
     if (!std::filesystem::is_directory(workspace)) {
         std::cerr << "gm relay: workspace is not a directory: " << workspace.string() << '\n';

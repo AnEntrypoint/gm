@@ -76,6 +76,7 @@ namespace fs = std::filesystem;
 
 const std::vector<std::string> kSupportedVersions = {"2025-11-25", "2025-06-18"};
 const std::vector<std::string> kAcceptedVersions = {"2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05", "2024-10-07"};
+constexpr const char* kFlaggedVersion = "2026-07-28";
 constexpr const char* kRunMeta = "com.anentrypoint.gmnew/run";
 constexpr const char* kRunSeq = "com.anentrypoint.gmnew/seq";
 constexpr const char* kLogMeta = "com.anentrypoint.gmnew/log";
@@ -3310,7 +3311,8 @@ struct Server::State {
         const Value* asked = params ? params->find("protocolVersion") : nullptr;
         std::string version = kAcceptedVersions.front();
         if (asked && asked->is_string() &&
-            std::find(kAcceptedVersions.begin(), kAcceptedVersions.end(), asked->as_string()) != kAcceptedVersions.end()) {
+            (std::find(kAcceptedVersions.begin(), kAcceptedVersions.end(), asked->as_string()) != kAcceptedVersions.end() ||
+             (options.protocol_2026_07_28 && asked->as_string() == kFlaggedVersion))) {
             version = asked->as_string();
         }
         return object()
@@ -3323,6 +3325,7 @@ struct Server::State {
     Value discover() {
         Value versions = array();
         for (const auto& version : kSupportedVersions) versions.push(version);
+        if (options.protocol_2026_07_28) versions.push(kFlaggedVersion);
         return cacheable(object()
                              .set("resultType", "complete")
                              .set("supportedVersions", std::move(versions))
