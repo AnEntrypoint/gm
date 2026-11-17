@@ -3925,3 +3925,18 @@ Phase A changes, each committed locally on main. Nothing is pushed in Phase A.
 - MCP registration: .mcp.json restored on main with the entry that gm install prints, {"mcpServers":{"gm":{"command":"/config/.gmnew/current/gm","args":["serve"]}}}. The Node launcher through ~/.gm-tools was retired with the Node engine.
 - Build identity: the stamp in gmnew_build_info.hpp is a digest of HEAD:native and HEAD:defaults, so an uncommitted edit does not change it. The install is made after the commit, so the installed identity equals HEAD.
 - Phase A verification: release build passes (cmake --build build/release, exit 0). Witnesses in this round: gm serve initialize, tools/list, resources/read of skill://gm/SKILL.md, next_context, and run_code over stdio. Phase B pending: reinstall after commit, rerun the witnesses on the committed build, then push origin main once as a fast-forward.
+
+## Sixth stretch 2026-11-17 (dispatcher queue: the thread-reuse revert, the asan-arm split, the stackuse coverage): Phase A
+
+- Measured on 46298e5 (arm-diagnose, dispatcher read): asan-arm check-quickjs-baseline ok, first run_code 4050.96 ms, back-to-back mean 4648.61 ms. The thread reuse did not reduce it, so the reuse is reverted and the code is minimal again.
+- Revert of db81636 (the thread pools in mcp/server.cpp and reusable_threads.hpp): git revert, commit 20a8658. The drain and join paths return to joining job->thread and the call threads.
+- Revert of bc03335 (the retired asan-arm-fakestack job): git revert, commit 2c2c902. The job is back in arm-diagnose.yml so the next edit can change it.
+- Item 2, the asan split (commit b8865bf, .github/workflows/arm-diagnose.yml):
+  - asan-arm keeps the conformance run and now sets ASAN_OPTIONS detect_stack_use_after_return=0, so its timing reflects the real per-call cost. Its budget is the number GM_BASELINE_MAX_MEAN_MS=100.
+  - asan-arm-stackuse is a new one-run job (timeout 60 minutes, no continue-on-error): the same checks, the same Chromium setup, ASAN_OPTIONS detect_stack_use_after_return=1, so its coverage is the detector's. It passes or fails the run.
+- Item 2, the budget check (commit c92f616, native/components/tool/checks/quickjs_baseline.cpp): when GM_BASELINE_MAX_MEAN_MS is set, check-quickjs-baseline fails if its back-to-back mean is over that many ms. Unset (the default, and phase-b) it changes nothing.
+- Coverage trade-off, recorded here and in AGENTS.md (commit 205ff9e): the detector-off asan-arm run does not report stack-use-after-return bugs; asan-arm-stackuse does, on the same checks. The trade-off is that asan-arm's timing is the real per-call cost and asan-arm-stackuse's is not.
+- Item 3, the relay re-exec event on x64: no change, per the dispatcher. Still unidentified until the next failure names it.
+- Item 4, the gate lease release: no change. gm cannot write the gate's log; the witness requires the "last lease released" line (check-relay-hup-gate).
+- Witnesses to read in the hosted run: asan-arm first run_code and back-to-back mean (budget 100 ms); asan-arm-stackuse result with the detector on; the revert builds in phase-b (check-quickjs-baseline compiles with the reverted server).
+- Phase A verification: no build, witness or gate ran in Phase A.
