@@ -72,8 +72,10 @@ CheckResult check_windows_tree_kill(const std::string& binary) {
         } else {
             open_session(session, "witness-windows-tree-kill");
             const json::Value control = shell_body(session, quoted + " -n 1 127.0.0.1", 20000);
-            if (text_at(control, "output").find("127.0.0.1") == std::string::npos)
-                result.failures.push_back("the copied ping did not run in the foreground: " + json::dump(control).substr(0, 240));
+            const json::Value* control_exit = control.find("exitCode");
+            const json::Value* control_timed_out = control.find("timedOut");
+            if (control_exit == nullptr || !control_exit->is_number() || control_exit->as_number() != 0 || control_timed_out == nullptr || !control_timed_out->is_bool() || control_timed_out->as_bool())
+                result.failures.push_back("the copied ping did not exit 0 in the foreground: " + json::dump(control).substr(0, 240));
             const json::Value exited = shell_body(session, "start /b \"\" " + quoted + " -n 60 127.0.0.1 >nul", 20000);
             if (!image_gone(image, std::chrono::seconds(10))) {
                 result.failures.push_back("a child started with start /b outlived its run_shell's exit by 10 s: " + json::dump(exited).substr(0, 200));
