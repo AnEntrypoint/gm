@@ -209,7 +209,8 @@ std::string read_whole(const fs::path& file) {
 
 constexpr const char* kPeerCloseScript =
     "init='{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{\"protocolVersion\":\"2025-11-25\",\"capabilities\":{},\"clientInfo\":{\"name\":\"c\",\"version\":\"1\"}}}'\n"
-    "( printf '%s\\n' \"$init\"; i=0; while [ $i -lt 1200 ] && ! grep -q 'write to host stdout failed' \"$2/relay.log\" 2>/dev/null; do sleep 0.1; i=$((i+1)); done ) | \"$1\" serve --run-dir \"$2\" | head -c 0\n"
+    "( while [ ! -e \"$2.reader-closed\" ]; do sleep 0.05; done; printf '%s\\n' \"$init\"; i=0; while [ $i -lt 1200 ] && ! grep -q 'write to host stdout failed' \"$2/relay.log\" 2>/dev/null; do sleep 0.1; i=$((i+1)); done ) | \"$1\" serve --run-dir \"$2\" | "
+    "sh -c 'exec 0<&-; : > \"$1.reader-closed\"; i=0; while [ $i -lt 1200 ] && ! grep -q \"relay exited\" \"$1/relay.log\" 2>/dev/null; do sleep 0.1; i=$((i+1)); done' sh \"$2\"\n"
     "i=0; while [ $i -lt 300 ] && ! grep -q 'relay exited' \"$2/relay.log\" 2>/dev/null; do sleep 0.1; i=$((i+1)); done\n";
 
 }
@@ -221,6 +222,7 @@ CheckResult check_relay_disconnect_reason(const std::string& binary) {
     const fs::path workspace = entry_workspace(sandbox);
     const std::string gm = fs::absolute(binary).string();
     const fs::path peer_run = workspace / "runs" / "peer-close";
+    fs::create_directories(peer_run.parent_path());
     const proc::Outcome peer = proc::run({"env", "HOME=" + sandbox.string(), "sh", "-c", kPeerCloseScript, "sh", gm, peer_run.string()}, workspace, {}, 240000);
     const std::string peer_log = read_whole(peer_run / "relay.log");
     if (!peer.started) result.failures.push_back("the peer-close shell did not start");
