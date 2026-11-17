@@ -2767,7 +2767,8 @@ struct Server::State {
         const bool skill_pending = name == "run_code" && !skill_read();
         const bool bootstrap = skill_pending && body_reads_skill_first(args);
         const bool gated = skill_pending && !bootstrap && skill_refusal_due();
-        if (!gated && !s().run_started && !s().ended && name != "next_context" && name != "finish") {
+        const bool read_on_connection = name == "run_code" && !skill_pending;
+        if (!gated && !read_on_connection && !s().run_started && !s().ended && name != "next_context" && name != "finish") {
             note_rule(kStepStartRule, name + " was called before the first next_context of the run");
         }
         {

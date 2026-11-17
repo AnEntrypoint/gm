@@ -54,8 +54,8 @@ CheckResult check_early_run_code(const std::string& binary) {
                 const json::Value* notice = body.find("rulesNotice");
                 if (ok == nullptr || !ok->is_bool() || !ok->as_bool() || early_value == nullptr || !early_value->is_number() || early_value->as_number() != 1)
                     result.failures.push_back("early call: the body did not run: " + json::dump(body).substr(0, 200));
-                if (notice == nullptr || !notice->is_string() || notice->as_string().find("before the first next_context") == std::string::npos)
-                    result.failures.push_back("early call: the rules notice is missing: " + json::dump(body).substr(0, 200));
+                if (notice != nullptr)
+                    result.failures.push_back("early call: a run_code after this connection's skill read got a rules notice: " + json::dump(*notice).substr(0, 200));
             }
 
             const auto finish_started = std::chrono::steady_clock::now();
@@ -78,7 +78,7 @@ CheckResult check_early_run_code(const std::string& binary) {
     std::error_code ignored;
     fs::remove_all(sandbox, ignored);
     const double wall = std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
-    result.summary = "a run_code sent before the first next_context ran at once in " + std::to_string(elapsed_ms) + " ms, with the rules notice; an early finish ended the run in " +
+    result.summary = "a run_code sent before the first next_context ran at once in " + std::to_string(elapsed_ms) + " ms after this connection's skill read, with no rules notice; an early finish ended the run in " +
                      std::to_string(finish_ms) + " ms (wall " + std::to_string(wall) + " s)";
     return result;
 }
