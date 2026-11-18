@@ -412,6 +412,7 @@ deoxidene::Result<json::Value, std::string> run_body(VerbTable& verbs, std::stri
     session.gm_verb_list = verbs.list();
     session.cancel = &controls->stopped;
     session.console = &controls->console;
+    session.module_root = project_root;
     session.js_budget = controls->js_budget;
     session.deadline_budget = controls->js_budget;
     session.started = std::chrono::steady_clock::now();

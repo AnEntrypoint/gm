@@ -27,6 +27,7 @@ struct Session {
     VerbTable* gm_verbs = nullptr;
     std::vector<VerbInfo> gm_verb_list;
     const HostServices* host = nullptr;
+    std::filesystem::path module_root;
     gm::ConsoleBuffer* console = nullptr;
     Clock::time_point deadline = Clock::time_point::max();
     std::chrono::milliseconds deadline_budget{0};

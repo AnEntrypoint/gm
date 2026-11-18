@@ -79,7 +79,7 @@ std::filesystem::path importer_directory(const char* base_name, void* opaque) {
     const std::filesystem::path base(base_name);
     if (base.is_absolute()) return base.parent_path();
     const auto* session = static_cast<const Session*>(opaque);
-    if (session != nullptr && session->host != nullptr && !session->host->workspace.empty()) return session->host->workspace;
+    if (session != nullptr && !session->module_root.empty()) return session->module_root;
     return std::filesystem::current_path();
 }
 
