@@ -74,7 +74,7 @@ CheckResult check_module_exports(const std::string& binary) {
     }
     std::error_code ignored;
     std::filesystem::remove_all(sandbox, ignored);
-    result.summary = "bare package names resolve from node_modules: exports exact subpath with import and default conditions, exports pattern, main where exports is absent, and an unexported subpath refused; reply: " + reply.substr(0, 200);
+    result.summary = "bare package names resolve from node_modules: exports exact subpath with import and default conditions, exports pattern, main where exports is absent, and an unexported subpath refused";
     return result;
 }
 
