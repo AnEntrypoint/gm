@@ -3955,3 +3955,15 @@ Phase A changes, each committed locally on main. Nothing is pushed in Phase A.
 - Item 2 (asan-arm and asan-arm-stackuse): read after the release is green, no change in this stretch.
 - Item 3, the relay re-exec event on x64: no change, per the dispatcher.
 - Phase A verification: no build, witness or gate ran in Phase A.
+
+## Eighth stretch 2026-11-18 (freddie blocker: package names and exports subpaths in the module loader): Phase A
+
+- Blocker (freddie's report): freddie's agent code imports `@freddie/freddie-runtime/fs-promises`. gm's loader (native/components/quickjs/engine.cpp, load_module_from_disk) read each specifier as a literal path, so a bare package name failed with "could not load module". fx's embedded loader needs the same rule.
+- Change 1 (commit a2c8f1e, native/components/quickjs/resolve.cpp new, engine.cpp, engine.hpp, quickjs CMakeLists):
+  - resolve_module_path resolves a bare specifier by walking node_modules from the importing directory up to the root. The first node_modules/<package> directory is the package.
+  - The package's exports map is read with the import and default conditions: exact subpaths, * patterns (the longest prefix wins), nested condition objects and arrays. main (then main.js, main/index.js, index.js) is used only where exports is absent. A subpath that exports does not list is refused.
+  - Relative and absolute specifiers keep their handling: a relative one is joined to the importer's directory and normalized, as QuickJS did. tjs: and node: names pass through unchanged.
+  - normalize_module_name is installed as the QuickJS normalizer in both Engine constructors, with the session as opaque. The importer directory is the module file's own directory; for a non-file base such as "<body>" it is the session's workspace. A relative specifier from a non-file base now resolves against the workspace, where before it resolved against the process directory.
+  - Not changed: tjs.setImportMap (unused, not the contract); the CommonJS require in runcode.cpp still ignores exports; the package.json imports (#) map is not implemented.
+- Change 2 (commit 3381b96, checks/module_exports.cpp new, registry.cpp, tool.hpp, tool CMakeLists): check-module-exports writes node_modules into a sandbox workspace and runs a body that imports, by name, `@acme/pkg` (exports "." with import), `@acme/pkg/sub` (an exact subpath with require before default: default is chosen), `@acme/pkg/feature/alpha` (an exports pattern), `legacy-pkg` (main, no exports), and `@acme/pkg/hidden` (not exported, must be refused). Expected reply: root-import,sub-default,feature-alpha-import,legacy-main,refused. On the old loader the first import fails with "could not load module".
+- Phase A verification: no build, witness or gate ran in Phase A.
