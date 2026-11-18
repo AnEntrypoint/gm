@@ -78,6 +78,7 @@ const std::vector<Registered>& checks() {
         {"check-review", check_review},
         {"check-code-ast", check_code_ast},
         {"check-quickjs-baseline", check_quickjs_baseline},
+        {"check-module-exports", check_module_exports},
         {"check-install-follows", check_install_follows},
         {"check-skill-reload", check_skill_reload},
         {"check-cli-flags", check_cli_flags},
