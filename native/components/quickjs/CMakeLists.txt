@@ -32,7 +32,7 @@ else()
     target_compile_options(gm_quickjs_ng PRIVATE -funsigned-char -w)
 endif()
 
-add_library(gm_runcode STATIC engine.cpp runcode.cpp leaves.cpp query.cpp platform.cpp)
+add_library(gm_runcode STATIC engine.cpp runcode.cpp leaves.cpp query.cpp platform.cpp resolve.cpp)
 target_link_libraries(gm_runcode PUBLIC gm_json PRIVATE gm_quickjs_ng)
 add_library(gm_leaves ALIAS gm_runcode)
 

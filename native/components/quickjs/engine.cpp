@@ -67,6 +67,33 @@ int interrupt_on_deadline(JSContext*, void* opaque) {
     return deadline_reached(static_cast<Session*>(opaque)) ? 1 : 0;
 }
 
+char* copy_module_name(JSContext* ctx, std::string_view text) {
+    char* out = static_cast<char*>(js_malloc_rt(JS_GetRuntime(ctx), text.size() + 1));
+    if (out == nullptr) return nullptr;
+    std::memcpy(out, text.data(), text.size());
+    out[text.size()] = '\0';
+    return out;
+}
+
+std::filesystem::path importer_directory(const char* base_name, void* opaque) {
+    const std::filesystem::path base(base_name);
+    if (base.is_absolute()) return base.parent_path();
+    const auto* session = static_cast<const Session*>(opaque);
+    if (session != nullptr && session->host != nullptr && !session->host->workspace.empty()) return session->host->workspace;
+    return std::filesystem::current_path();
+}
+
+char* normalize_module_name(JSContext* ctx, const char* base_name, const char* name, void* opaque) {
+    const std::string_view specifier(name);
+    if (specifier.starts_with(embedded_builtin_prefix) || specifier.starts_with(node_builtin_prefix)) return copy_module_name(ctx, specifier);
+    auto resolved = resolve_module_path(importer_directory(base_name, opaque), specifier);
+    if (!resolved) {
+        JS_ThrowReferenceError(ctx, "%s", resolved.error().c_str());
+        return nullptr;
+    }
+    return copy_module_name(ctx, *resolved);
+}
+
 JSModuleDef* load_module_from_disk(JSContext* ctx, const char* module_name, void*) {
 #if defined(GM_HAVE_TXIKI)
     if (std::string_view(module_name).starts_with(embedded_builtin_prefix)) return gm_txiki_load_builtin(ctx, module_name);
@@ -328,7 +355,7 @@ Engine::Engine(Session& session) : session_(session) {
     runtime_ = JS_GetRuntime(ctx);
     JS_UpdateStackTop(runtime_);
     JS_SetInterruptHandler(runtime_, interrupt_on_deadline, &session_);
-    JS_SetModuleLoaderFunc(runtime_, nullptr, load_module_from_disk, nullptr);
+    JS_SetModuleLoaderFunc(runtime_, normalize_module_name, load_module_from_disk, &session_);
     remember_session(ctx, &session_);
     if (reset_embedded_globals(ctx)) {
         context_ = ctx;
@@ -340,7 +367,7 @@ Engine::Engine(Session& session) : session_(session) {
     runtime_ = JS_NewRuntime();
     if (runtime_ == nullptr) return;
     JS_SetInterruptHandler(runtime_, interrupt_on_deadline, &session_);
-    JS_SetModuleLoaderFunc(runtime_, nullptr, load_module_from_disk, nullptr);
+    JS_SetModuleLoaderFunc(runtime_, normalize_module_name, load_module_from_disk, &session_);
     context_ = JS_NewContext(runtime_);
     if (context_ != nullptr) remember_session(context_, &session_);
 #endif
