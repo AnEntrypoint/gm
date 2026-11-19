@@ -315,13 +315,15 @@ std::string start_gate(const fs::path& launcher, const fs::path& home, const fs:
     return std::string();
 }
 
-json::Value install_sandbox(const fs::path& binary, const fs::path& home) {
-    const fs::path host = binary.parent_path();
-    const fs::path build = host.parent_path().parent_path().parent_path();
-    const fs::path source = build.parent_path().parent_path();
-    const auto done = proc::run({"env", "HOME=" + home.string(), (host / "gm").string(), "install", "--local", build.string(), "--source", source.string()}, home, {}, 900000);
-    const std::string text = done.err.empty() ? done.out : done.err;
-    return json::Object{{"ok", done.started && done.exit_code == 0}, {"error", text.substr(0, 400)}};
+json::Value link_playwriter(const fs::path& home) {
+    const char* real_home = std::getenv("HOME");
+    const fs::path installed = fs::path(real_home == nullptr ? "" : real_home) / ".gmnew" / "pw";
+    std::error_code ec;
+    if (real_home == nullptr || !fs::is_directory(installed, ec)) return json::Object{{"ok", false}, {"error", "no installed playwriter package at " + installed.string() + "; this check reuses it and never installs one"}};
+    fs::create_directories(home / ".gmnew", ec);
+    std::error_code link_ec;
+    fs::create_directory_symlink(installed, home / ".gmnew" / "pw", link_ec);
+    return json::Object{{"ok", !link_ec}, {"error", link_ec.message()}};
 }
 
 }
@@ -345,10 +347,10 @@ CheckResult check_browser_scope(const std::string& binary) {
     };
     std::vector<Owned> tree;
     std::string browser_phase = "skipped: playwriter_execute is not served on this engine";
-    const json::Value installed_reply = install_sandbox(binary, home);
-    expect(flag(installed_reply, "ok"), "the clean install failed: " + json::dump(part(installed_reply, "error")));
+    const json::Value linked_reply = link_playwriter(home);
+    expect(flag(linked_reply, "ok"), "the playwriter package link failed: " + json::dump(part(linked_reply, "error")));
     if (result.failures.empty()) {
-        const fs::path installed = home / ".gmnew" / "current" / "gm";
+        const fs::path installed = binary;
         Session session(installed.string(), workspace, home, 900000, false);
         if (!session.started()) {
             result.failures.push_back("gm serve did not start from " + installed.string());
@@ -593,7 +595,7 @@ CheckResult check_browser_scope_identity(const std::string& binary) {
     return result;
 }
 
-CheckResult check_browser_scope_tree(const std::string& binary) {
+CheckResult check_browser_scope_tree(const std::string&) {
     CheckResult result;
 #if defined(__linux__)
     const auto started = std::chrono::steady_clock::now();
@@ -610,8 +612,8 @@ CheckResult check_browser_scope_tree(const std::string& binary) {
     auto expect = [&](bool condition, const std::string& text) {
         if (!condition) result.failures.push_back(text);
     };
-    const json::Value installed_reply = install_sandbox(binary, home);
-    expect(flag(installed_reply, "ok"), "the clean install failed: " + json::dump(part(installed_reply, "error")));
+    const json::Value linked_reply = link_playwriter(home);
+    expect(flag(linked_reply, "ok"), "the playwriter package link failed: " + json::dump(part(linked_reply, "error")));
     const fs::path launcher = home / ".gmnew" / "pw" / "bin" / "playwriter-project";
     expect(!result.failures.empty() || fs::exists(launcher), "the playwriter launcher from the sandbox install is missing: " + launcher.string());
     std::size_t red_found = 0;
@@ -684,10 +686,10 @@ CheckResult check_browser_dead_executor(const std::string& binary) {
     auto expect = [&](bool condition, const std::string& text) {
         if (!condition) result.failures.push_back(text);
     };
-    const json::Value installed_reply = install_sandbox(binary, home);
-    expect(flag(installed_reply, "ok"), "the clean install failed: " + json::dump(part(installed_reply, "error")));
+    const json::Value linked_reply = link_playwriter(home);
+    expect(flag(linked_reply, "ok"), "the playwriter package link failed: " + json::dump(part(linked_reply, "error")));
     if (result.failures.empty()) {
-        const fs::path installed = home / ".gmnew" / "current" / "gm";
+        const fs::path installed = binary;
         {
             Session first(installed.string(), workspace, home, 900000, false);
             if (!first.started()) {

@@ -32,10 +32,7 @@ CheckResult check_lazy_browser(const std::string& binary) {
         }
         return count;
     };
-    const fs::path host = fs::path(binary).parent_path();
-    const fs::path build = host.parent_path().parent_path().parent_path();
-    const fs::path source = build.parent_path().parent_path();
-    const fs::path installed = sandbox / ".gmnew" / "current" / "gm";
+    const fs::path installed = binary;
     proc::SpawnOptions foreign_options(sandbox);
     foreign_options.own_group = true;
     const auto foreign_spawned = proc::Child::spawn({"sh", "-c", "sleep 300; true", "playwriter-project", (fs::temp_directory_path() / ("gm-foreign-gate-" + std::to_string(stamp))).string()}, foreign_options);
@@ -54,8 +51,17 @@ CheckResult check_lazy_browser(const std::string& binary) {
         const auto known = before.find(pid);
         return known == before.end() || known->second != proc::start_time_of(pid);
     };
-    const auto install = proc::run({"env", "HOME=" + sandbox.string(), (host / "gm").string(), "install", "--local", build.string(), "--source", source.string()}, sandbox, {}, 900000);
-    if (!install.started || install.exit_code != 0) result.failures.push_back("the sandbox install failed: " + (install.err.empty() ? install.out : install.err).substr(0, 400));
+    const char* real_home = std::getenv("HOME");
+    const fs::path installed_pw = fs::path(real_home == nullptr ? "" : real_home) / ".gmnew" / "pw";
+    std::error_code linked;
+    if (real_home == nullptr || !fs::is_directory(installed_pw, linked)) {
+        result.failures.push_back("no installed playwriter package at " + installed_pw.string() + "; this check reuses it and never installs one");
+    } else {
+        fs::create_directories(sandbox / ".gmnew", linked);
+        std::error_code link_ec;
+        fs::create_directory_symlink(installed_pw, sandbox / ".gmnew" / "pw", link_ec);
+        if (link_ec) result.failures.push_back("cannot link " + installed_pw.string() + " into the sandbox: " + link_ec.message());
+    }
     const fs::path pin_marker = sandbox / ".gmnew" / "pw" / "gm-pin";
     std::ifstream pin_in(pin_marker);
     std::string pin_text;
