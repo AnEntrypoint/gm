@@ -4101,3 +4101,30 @@ Phase A changes, each committed locally on main. Nothing is pushed in Phase A.
 - docs/GM_FRICTION.md (new): the stable run-level friction ledger in gm. It folds in docstudio's three items with their evidence, each with its status and the commit that closes it: item 1 read_file cut (fixed in 1701723e), item 2 git_commit paths (fixed in 80b1730c), item 3 session start latency (model turn time, no gm change). Witness: the run_code reply that quotes the hint and the git_commit refusal, recorded in the file.
 - Open question unknown-mwnagj0u7712 is closed with the answer: the gm friction list is docstudio docs/GM_FRICTION.md; the dispatch ledger is the orchestrator's in-session ledger and is not a file.
 - Phase A verification: none. Phase B: rebuild, re-witness the two fixes on the committed build, and the gm skill and initialize checks after the push.
+
+## Round 2026-11-19 quality-of-life rows, ranked by measured count
+
+Counts come from the run logs under runs/ and /config/docstudio/runs, and from the two journals under /config/hyperagent/.orch/projects. Each row names its count and run.
+
+1. Host runs Bash for work gm verbs cover: 361 (312 docstudio 21662336, 49 gm 1f671533). Host choice, closed with cause.
+2. Worker restarts during runs: 11. Caused by installs during runs. Closed with cause.
+3. Cut replies with no pointer: 9. Fixed in 1701723e. Closed with commit.
+4. read_file of the same path twice in a run: 8. Cause not verified. Closed with cause after the pointer rule is checked.
+5. Browser errors from playwriter: 7. Gate and lifetime behaviour in AGENTS.md. Closed with cause.
+6. Bad UTF-8 sequence in JSON reply: 4. Fixed in 2ad803a1. Closed with commit.
+7. EISDIR and ENOENT path errors: 4. Absent-path probes expected. Directory case is row 13. Closed with cause.
+8. git commit failure says only exited N: 3. Fixed in this round, see change 2.
+9. status rejected with open, resolved, all: 3. Current rows.cpp accepts pending and completed and names them. Closed with cause.
+10. paths must be a non-empty array: 2. Fixed in 80b1730c. Closed with commit.
+11. A first task after a step that had none was refused: 2. Fixed in this round, see change 1.
+12. Gm skill read twice on one connection: 2. Habit. Closed with cause.
+13. read_file on a directory returns raw EISDIR: 1. Fixed in this round, see change 3.
+14. Run-ended refusal: 2. Message names the next step. Closed with cause.
+15. Unknown argument code to run_code: 1. Refusal already names body. Closed with cause.
+16. Waits returning early while running: 0 measured in 20 waits. Closed with the measurement.
+
+Changes in this round, each committed locally by explicit path:
+- native/components/mcp/server.cpp, first_step_correction: a run with an empty task accepts its first task without owner:true (row 11). Witness: a next_context task set after a run_code step with no task returns ok.
+- native/components/verbs/git.cpp verb_of: a git failure with no exec error names the first line of git's output in the error (row 8). Witness: git_commit with a message and paths that git rejects returns an error with the git reason.
+- native/components/verbs/verbs.cpp read_file: a directory path returns "<path> is a directory; list it with list_dir" (row 13). Witness: read_file on sources/ returns that text.
+- Phase B: rebuild, witness each change above, then one gated push.
