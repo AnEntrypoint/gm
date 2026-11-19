@@ -16,6 +16,7 @@ namespace fs = std::filesystem;
 
 constexpr std::uint64_t kBuildTimeoutMs = 580000;
 constexpr std::uint64_t kCheckTimeoutMs = 300000;
+constexpr std::uint64_t kGateWaitMs = 300000;
 
 struct Mutant {
     std::string name;
@@ -54,6 +55,7 @@ fs::path source_of(const fs::path& build) {
 }
 
 proc::Outcome rebuild(const fs::path& build) {
+    if (!proc::wait_for_gate(kGateWaitMs)) return proc::Outcome{};
     return proc::run({"cmake", "--build", build.string(), "-j", "4"}, {}, {}, kBuildTimeoutMs);
 }
 

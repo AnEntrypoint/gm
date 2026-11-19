@@ -44,6 +44,15 @@ std::vector<std::string> command_of(long long pid);
 long long start_time_of(long long pid);
 long long resident_kb(long long pid);
 
+struct SwapSample {
+    long long in = 0;
+    long long out = 0;
+};
+
+std::optional<SwapSample> parse_vmstat(const std::string& text);
+bool swap_gate_open(const SwapSample& sample);
+bool wait_for_gate(std::uint64_t limit_ms);
+
 unsigned long hidden_creation_flags(unsigned long flags);
 
 #if defined(_WIN32)

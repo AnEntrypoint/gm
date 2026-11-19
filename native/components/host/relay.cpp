@@ -33,6 +33,7 @@ constexpr std::string_view kPausedBeforeAnswer =
 constexpr std::string_view kRestartedBeforeAnswer =
     "the worker restarted before it answered this call; the call may be retried";
 constexpr std::uint64_t kBuildTimeoutMs = 600000;
+constexpr std::uint64_t kGateWaitMs = 300000;
 constexpr std::chrono::milliseconds kUpdateRetryWait{600000};
 
 struct ListKind {
@@ -698,9 +699,17 @@ std::optional<std::string> Relay::sources_changed(const std::vector<std::filesys
 void Relay::rebuild(Lock& lock) {
     if (options_.build_dir.empty()) return;
     lock.unlock();
-    const proc::Outcome outcome = proc::run(
-        {"cmake", "--build", options_.build_dir.string(), "--target", options_.build_target, "gm-core"}, {}, {}, kBuildTimeoutMs);
+    const bool gate_open = proc::wait_for_gate(kGateWaitMs);
+    proc::Outcome outcome;
+    if (gate_open) {
+        outcome = proc::run({"cmake", "--build", options_.build_dir.string(), "--target", options_.build_target, "gm-core"}, {}, {}, kBuildTimeoutMs);
+    }
     lock.lock();
+    if (!gate_open) {
+        ++failed_builds_;
+        say("the swap gate stayed closed for " + std::to_string(kGateWaitMs / 1000) + " s, the build is skipped and the old worker keeps serving");
+        return;
+    }
     if (!outcome.started || outcome.timed_out || outcome.exit_code != 0) {
         ++failed_builds_;
         say("the build failed, the old worker keeps serving: " + last_lines(outcome.out + outcome.err, 1500));
