@@ -1,4 +1,5 @@
 import { appendFileSync, openSync, readSync, closeSync, statSync, readFileSync } from "node:fs";
+import { pathToFileURL } from "node:url";
 
 const SPIKE_KB = 65536;
 const SAMPLE_MS = 1000;
@@ -113,12 +114,14 @@ function witness() {
   return ok ? 0 : 1;
 }
 
-const mode = process.argv[2];
-if (mode === "--witness") {
-  process.exitCode = witness();
-} else if (mode === "sample") {
-  await sample(Number(process.argv[3]), process.argv[4], Number(process.argv[5]), process.argv[6]);
-} else {
-  console.error("usage: node scripts/rss-sampler.mjs --witness | sample <pid> <run-log> <seconds> <out>");
-  process.exitCode = 2;
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  const mode = process.argv[2];
+  if (mode === "--witness") {
+    process.exitCode = witness();
+  } else if (mode === "sample") {
+    await sample(Number(process.argv[3]), process.argv[4], Number(process.argv[5]), process.argv[6]);
+  } else {
+    console.error("usage: node scripts/rss-sampler.mjs --witness | sample <pid> <run-log> <seconds> <out>");
+    process.exitCode = 2;
+  }
 }
