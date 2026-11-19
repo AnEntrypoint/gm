@@ -182,7 +182,6 @@ CheckResult check_browser_tabs_owner(const std::string& binary) {
                        "a later call did not report its one tab at start and end: " + census.substr(0, 300));
             }
 
-            playwriter(alpha, "await browser.close(); return 'browser closed';");
             for (Session* session : {&alpha, &beta}) {
                 const json::Value finished = output_of(run_code(*session, "return { close: await gm.browser_close_run({}) };"));
                 const json::Value* closed = field(finished, "close");
