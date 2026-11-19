@@ -53,7 +53,7 @@ async function workerOf(serverPid) {
   return 0;
 }
 
-const serve = spawn(gmPath, ["serve", "--workspace", ws, "--run-dir", runDir], { stdio: ["pipe", "pipe", "pipe"], cwd: ws });
+const serve = spawn(resolve(gmPath), ["serve", "--workspace", ws, "--run-dir", runDir], { stdio: ["pipe", "pipe", "pipe"], cwd: ws });
 serve.stderr.on("data", (chunk) => appendFileSync(errLog, chunk));
 const waiting = new Map();
 createInterface({ input: serve.stdout }).on("line", (line) => {
