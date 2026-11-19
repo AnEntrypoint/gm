@@ -4499,3 +4499,9 @@ Not changed: the 13 install-running witnesses, the job_start Windows kill, and r
 - Pending Phase B: the vmstat reading (6208 KB/s at the agent's reading, closed), then the witnesses for check-publish-gate and install_follows once each with wall times, then one push of the local commits since 0f9e3bb.
 
 - Correction to the relay line above: the freddie (2326) and oscraft (2812) relays were not waiting for a restart. Both re-executed in place (same PID and start time, exe now 0f9e3bb-1/gm): oscraft's relay log shows the install noticed, the re-exec held while a non-next_context tools/call was in flight, and then "re-executing the relay on the new build". Their workers 945119 (freddie) and 943723 (oscraft) run versions/0f9e3bb-1/gm-core. The re-exec condition stated above (no non-resendable call in flight, no body running, not swapping) is the one that applies.
+
+## Thirty-fifth stretch 2026-11-19 (refusal-wording witness)
+
+- The refusal-wording witness is check-skill-reload (native/components/tool/checks/install_follows.cpp, check_skill_reload, registered as check-skill-reload in registry.cpp). Commit 8716166 said check-install-follows witnesses the text; that was wrong. check-install-follows is unchanged and covers the install and restart only.
+- Mutation: server.cpp skill_refusal_text said "the first verb of your next run_code must be gm.read_file(" and was changed to "read it with gm.read_file(". gm and gm-core were rebuilt. Red: check-skill-reload rc 1, "the refusal does not name the read verb inline" (build 36.7 s, check 10.4 s). Restored with cmp identical; rebuilt; green: rc 0 (build 35.2 s, check 5.8 s).
+- The first mutation run of check-install-follows was green under the mutation, as expected, since that check does not test the refusal text; it is not a red witness for this row.
