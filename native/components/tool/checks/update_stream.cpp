@@ -152,6 +152,11 @@ CheckResult check_update_stream(const std::string& binary) {
             continue;
         }
         states.push_back(name + "=" + *state);
+        if (*state == "dirty") {
+            std::stringstream header;
+            header << std::ifstream(scratch / (name + ".hpp")).rdbuf();
+            if (header.str().find("native/untracked.txt") == std::string::npos) result.failures.push_back(name + ": the stamp header does not name the uncommitted path");
+        }
         if (*state != expected) result.failures.push_back(name + ": the stamp says " + *state + ", expected " + expected);
     }
     std::string checkout_why;
