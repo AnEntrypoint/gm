@@ -74,6 +74,7 @@ const std::vector<Registered>& checks() {
         {"check-phase-b-stubs", check_phase_b_stubs},
         {"check-update-stream", check_update_stream},
         {"check-job-wait-bounded", check_job_wait_bounded},
+        {"check-publish-gate", check_publish_gate},
         {"check-rows", check_rows},
         {"check-row-peer", check_row_peer},
         {"check-fetch", check_fetch},
