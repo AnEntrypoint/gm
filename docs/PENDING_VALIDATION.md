@@ -4586,3 +4586,12 @@ Not changed: the 13 install-running witnesses, the job_start Windows kill, and r
 - Red (per-verb attribution removed, attributeVerbs returns []): rc 1. "attributed to verb nothing of run_code 20"; "check-rss-verbs: FAILED". Restored with cmp against the saved copy; git status showed the script as modified before the restore and the green run after it passed.
 - The sampler run once against a sleep I started (pid 1503582, stopped by pid after the run) and a fixture log with one code-call and one run_code result: V 22:02:22.872Z to 22:02:23.772Z run_shell body 7, and E 22:02:22.272Z to 22:02:23.772Z run_code actionSeq 7.
 - Not yet run on the peer's worker: the window in Phase B.
+
+## Forty-third stretch 2026-11-20 (the RSS spikes against the verbs of their run_code): Phase B
+
+- Window: 23:02:50 to 23:13:04 UTC. It started on a clear reading, vmstat second sample si 552, so 0 KB/s, with the heavy-job check at 0 lines.
+- Witnesses at that reading: check-swap-gate rc 0, wall 0.025 s, "check-swap-gate: ok"; check-publish-gate rc 0, wall 0.010 s, "check-publish-gate: ok".
+- Sampler: started at that reading on pid 1002562 for 597 s, rc 0. The stream has 598 S lines at 1 s spacing, 618 V lines and 311 E lines, and no gone line. Its stream is runs/rss-43/stream.txt, which is not committed.
+- RSS over the run: minimum 760,584 KB, maximum 1,323,648 KB. Eleven steps of 64 MB or more, from 23:04:01 to 23:11:57. Every one reads verb nothing: no logged verb overlaps the step. Each lies in a run_code (results 2108, 2114, 2119, 2126, 2136, 2151, 2159), 47 to 95 s after the run started, and before the run's first logged verb.
+- The gap is not a verb gap of the sampler: run 2137 (result 2151, 23:08:43.5 to 23:10:21.2) has no logged verb for 97 s. Its first logged verb is run_shell at 23:10:20.068, and a generation event sits at 23:10:19.685 in that gap. The step at 23:10:18.657 (+412,448 KB) falls inside it.
+- The mechanism is not established by the log. The log records verbs at their end, so the worker's work in the gap is not visible in it.
