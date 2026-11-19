@@ -3996,3 +3996,23 @@ Phase A changes, each committed locally on main. Nothing is pushed in Phase A.
 - Change 1 (commit ee70ec9, native/components/quickjs/resolve.cpp, engine.cpp, engine.hpp, runcode.cpp): resolve_module_path takes a ModuleSystem (Esm or Cjs). Esm keeps the import condition; Cjs uses the require condition then default. Cjs also tries the CommonJS file extensions (.js, .cjs, .json) and index files, so packages without exports keep loading as before. require() sends each bare specifier to the native resolver through resolvePackage; relative and absolute specifiers keep the JavaScript path. A missing package throws an Error whose text is the resolver's message ("Cannot find package ... imported from ..."), where before it was "Cannot find module".
 - Change 2 (commit 226a381, checks/module_exports.cpp): the body requires @acme/pkg/sub (require condition, cjs/sub.js), a main-only package cjs-pkg, a file-only module file-only.js, and @acme/pkg/hidden, which must be refused. The CommonJS fixtures use module.exports. Expected reply: root-import,sub-default,feature-alpha-import,legacy-main,refused,sub-require,cjs-main,file-only,refused.
 - Phase A verification: no build, witness or gate ran in Phase A.
+
+## Ninth stretch 2026-11-19 (ranked remaining work; top item: require and exports): Phase B
+
+- Build: cmake --build build/release --target gm gm-core gm-tool, exit 0, no warning or error. The candidate reports "cf038127080c-dev (cf038127080c) 1795068844" (build/release/native/components/host/gm; gm-core and gm-tool report the same stamp).
+- Installed binary (not changed; gm install --local was not run, it is an owner item): /config/.gmnew/versions/0e01b5f-521/gm, reported by "gm --version" as "0e01b5f-521 (504b268a0aef) 1794912542". /config/.gmnew/current points to versions/0e01b5f-521. gm is not on PATH. The installed build predates the bare-name resolver (c4a5555), so it cannot resolve package names or require exports.
+- Witnesses on the final candidate (wall time measured per witness by the shell):
+  - check-module-exports: ok, 45 ms. Reply "root-import,sub-default,feature-alpha-import,legacy-main,refused,sub-require,cjs-main,file-only,refused".
+  - check-embedded-runtime: ok, 467 ms (a relative import loads; a native and a leaf verb answer).
+  - check-read-parity: ok, 75 ms.
+  - check-console: ok, 57 ms.
+  - check-early-run-code: ok, 41 ms.
+  - check-run-code-budget: ok, 1706 ms.
+  - check-run-code-lifetime: ok, 10051 ms.
+  - check-run-code-progress: ok, 413 ms.
+  - check-quickjs-baseline: ok, 3220 ms.
+  - parity-contract: ok, 7614 ms (18 of 18).
+- Package-name import from /workspace/freddie (root): now resolves. The body's import of @freddie/freddie-runtime/fs-promises reaches freddie's own runtime error, and after install-txiki the import returns "function,function,function" (wall 198 ms). The root link /workspace/freddie/node_modules/@freddie/freddie-runtime was created outside this session at 2026-11-18 19:54 (a symlink to packages/util/runtime); this stretch did not write to freddie.
+- From /workspace/freddie/apps/cli: "function,function,function" (wall 95 ms).
+- Hosted state: release 44358327958 (c4a5555) failed on the x64 macOS runner queue (see Phase A). Not rerun; it needs the owner's confirmation because a rerun publishes.
+- No defect was found in Phase B. The one control that was not repeated: the pre-change worker, which failed the earlier check, was removed from scratch in the previous stretch, so the new require legs have no measured old-worker control. They fail on the pre-change code by construction (the old require could not read exports).
