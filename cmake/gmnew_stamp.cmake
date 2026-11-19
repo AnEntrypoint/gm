@@ -55,7 +55,7 @@ if(GIT_FOUND AND NOT "${head}" STREQUAL "unknown")
         ERROR_QUIET
         RESULT_VARIABLE head_full_rc)
     execute_process(
-        COMMAND "${GIT_EXECUTABLE}" status --porcelain
+        COMMAND "${GIT_EXECUTABLE}" status --porcelain -- . ":(exclude,literal).ccache"
         WORKING_DIRECTORY "${SOURCE_DIR}"
         OUTPUT_VARIABLE dirty_files
         OUTPUT_STRIP_TRAILING_WHITESPACE

@@ -129,15 +129,19 @@ CheckResult check_update_stream(const std::string& binary) {
     fs::create_directories(scratch, ec);
 
     std::vector<std::string> states;
-    const std::vector<std::string> cases{"clean", "dirty", "unpushed", "clean-at-origin"};
+    const std::vector<std::string> cases{"clean", "dirty", "unpushed", "clean-at-origin", "ccache-only"};
     for (const std::string& name : cases) {
         const fs::path repo = scratch / ("repo-" + name);
-        const std::string expected = name == "clean-at-origin" ? "clean" : name;
+        const std::string expected = name == "clean-at-origin" || name == "ccache-only" ? "clean" : name;
         if (!make_repo(repo, name + ".txt")) {
             result.failures.push_back(name + ": could not create the throwaway repository");
             continue;
         }
         if (name == "dirty") std::ofstream(repo / "native" / "untracked.txt") << "untracked\n";
+        if (name == "ccache-only") {
+            fs::create_directories(repo / ".ccache" / "1a", ec);
+            std::ofstream(repo / ".ccache" / "1a" / "entry") << "cached\n";
+        }
         if (name == "unpushed") {
             std::ofstream(repo / "native" / "second.txt") << "second\n";
             run_git(repo, {"add", "-A"});
