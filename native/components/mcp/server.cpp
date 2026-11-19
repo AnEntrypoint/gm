@@ -2673,7 +2673,7 @@ struct Server::State {
         const auto found = skill_file_of(kGmSkillUri);
         const std::string cause = skill_change_.empty() ? "the gm skill has not been read on this connection" : skill_change_;
         const std::string on_disk = found ? found->second.disk : std::string("the gm skill file");
-        return "run_code refused: " + cause + "; read skill://gm/SKILL.md first with resources/read, ReadMcpResourceTool (server gm) or the gm prompt. The rules are also on disk at " + on_disk +
+        return "run_code refused: " + cause + "; the first verb of your next run_code must be gm.read_file({ path: 'skill://gm/SKILL.md' }), which reads the served skill in band and clears the gate for this connection. Or read it with resources/read, ReadMcpResourceTool (server gm) or the gm prompt. The rules are also on disk at " + on_disk +
                " for a host's file tool, but that file read does not clear this gate. Every other run_code is refused until the skill is read on this connection; a run_code whose first verb is gm.read_file({ path: 'skill://gm/SKILL.md' }) reads the served skill in band and clears the gate for the whole connection. That read is the only one needed: later run_code bodies on this connection do not repeat it.";
     }
 

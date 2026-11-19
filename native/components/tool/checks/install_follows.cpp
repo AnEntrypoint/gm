@@ -309,6 +309,7 @@ CheckResult check_skill_reload(const std::string& binary) {
                 if (changed == nullptr || !changed->as_bool(false)) result.failures.push_back("a real skill edit did not report the skill changed");
             }
             const std::string edited_reply = session.body("return 1;");
+            if (edited_reply.find("first verb of your next run_code must be gm.read_file({ path: 'skill://gm/SKILL.md' })") == std::string::npos) result.failures.push_back("the refusal does not name the read verb inline: " + edited_reply.substr(0, 200));
             if (edited_reply.find("changed since this run read it") == std::string::npos) result.failures.push_back("the next run_code after a real edit was not refused with the changed-skill reason: " + edited_reply.substr(0, 200));
         }
         session.stop();
