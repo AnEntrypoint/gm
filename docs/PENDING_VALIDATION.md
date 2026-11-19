@@ -4229,3 +4229,16 @@ Row 4, same-path read_file repeated in a run.
 - Further changes: none kept. The incremental build time and the CI step were measured; no candidate change has a gain that repeated in this stretch.
 - Not run here: the full phase-b set (CI runs it on each push, through release.yml); the install-testing checks were not rerun because their code did not change.
 - Swap gate: every build and browser launch waited for swap-in at or below 1000 KB/s (checked with vmstat 5 2).
+
+## Fifteenth stretch addendum 2026-11-19: push, re-validation and install on the pushed HEAD
+
+- Push: rejected three times, because origin moved each time (79a6d2e, then beedf7d, 7645274 and 8fdbeed). Each time the local commits were rebased onto origin tip. Conflicts were only in docs/PENDING_VALIDATION.md (both sides kept, origin first) and once in native/components/host/browser_scope.cpp (origin kMinExecuteTimeoutMs kept beside kTabsFile). No force push.
+- Push that landed: 8fdbeed..c8cb36b main -> main (exit 0). origin main is c8cb36b1db4b7e938e66e987e0d6927bfbdf6b9a, equal to the local HEAD.
+- Validation defect in this stretch: a background chain (build, witnesses, push) started before the rebase onto 8fdbeed. It built and ran its witnesses on the tree before that rebase, then pushed c8cb36b, which includes the rebase and the conflict fix. Its results (first-open 40409 ms, scope 10380 ms, tree 12392 ms, dead-executor 5657 ms, lazy 2689 ms, tabs-owner 16810 ms, relay-hup 17900 ms, all exit 0) do not validate the pushed tree, and are not cited as such.
+- Re-validation of the pushed tree c8cb36b (job s5validate, no push): build exit 0, 0 warnings, stamp 1f9b4f780c07-dev. All seven witnesses exit 0: first-open 40298 ms, scope 4365 ms, tree 3918 ms, dead-executor 2845 ms, lazy 2253 ms, tabs-owner 10265 ms, relay-hup 8995 ms. The swap gate waited before the build and each check (swap-in between 858 and 175683 KB/s while the job ran).
+- Install on the pushed HEAD: user-wide install 13654 ms, installed 1f9b4f780c07-dev from build/release.
+  - Result 1, the installed build matches the pushed HEAD: gm-tool installed -> check-installed: ok (the installed build 1f9b4f780c07-dev and its skills equal the validated build and the checkout).
+  - Result 2, the gm skill serves: ReadMcpResourceTool (server gm, skill://gm/SKILL.md) returned the skill text.
+  - Result 3, a live peer succeeds: the gm connection of this session ran run_code after the install and returned ok (actionSeq 223).
+- Warning outside this stretch: native/components/mcp/server.cpp:2367 "suggest parentheses around && within ||" (-Wparentheses) comes from ab9b391, which is in the base 79a6d2e and predates this stretch. Not fixed here.
+- Not pushed: the commit that records this addendum is local and docs-only, so the stamp is unchanged. A push of it would be a second push this stretch; the owner decides.
