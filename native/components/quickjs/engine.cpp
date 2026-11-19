@@ -86,7 +86,7 @@ std::filesystem::path importer_directory(const char* base_name, void* opaque) {
 char* normalize_module_name(JSContext* ctx, const char* base_name, const char* name, void* opaque) {
     const std::string_view specifier(name);
     if (specifier.starts_with(embedded_builtin_prefix) || specifier.starts_with(node_builtin_prefix)) return copy_module_name(ctx, specifier);
-    auto resolved = resolve_module_path(importer_directory(base_name, opaque), specifier);
+    auto resolved = resolve_module_path(importer_directory(base_name, opaque), specifier, ModuleSystem::Esm);
     if (!resolved) {
         JS_ThrowReferenceError(ctx, "%s", resolved.error().c_str());
         return nullptr;

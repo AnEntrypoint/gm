@@ -189,7 +189,7 @@ deoxidene::Result<JSValue, std::string> make_gm(Engine& engine, const std::files
     return gm.take();
 }
 
-constexpr std::string_view require_bootstrap = R"JS((function (readText, root) {
+constexpr std::string_view require_bootstrap = R"JS((function (readText, root, resolvePackage) {
   const cache = new Map();
   const dirOf = (path) => path.slice(0, path.lastIndexOf('/')) || '/';
   const normal = (path) => {
@@ -203,18 +203,9 @@ constexpr std::string_view require_bootstrap = R"JS((function (readText, root) {
   };
   const exists = (path) => readText(path) !== null;
   const asFile = (path) => [path, path + '.js', path + '.cjs', path + '.json', path + '/index.js', path + '/index.cjs', path + '/index.json'].find(exists);
-  const asPackage = (dir) => {
-    const manifest = readText(dir + '/package.json');
-    const main = manifest === null ? undefined : JSON.parse(manifest).main;
-    return (main !== undefined && asFile(normal(dir + '/' + main))) || asFile(dir);
-  };
   const resolve = (spec, base) => {
     if (spec.startsWith('/') || spec.startsWith('./') || spec.startsWith('../')) return asFile(normal(spec.startsWith('/') ? spec : base + '/' + spec));
-    for (let dir = base; ; dir = dirOf(dir)) {
-      const found = asPackage(normal(dir + '/node_modules/' + spec));
-      if (found) return found;
-      if (dir === '/') return undefined;
-    }
+    return resolvePackage(spec, base);
   };
   const load = (file) => {
     if (cache.has(file)) return cache.get(file).exports;
@@ -252,15 +243,25 @@ JSValue read_text_call(JSContext* ctx, JSValueConst, int argc, JSValueConst* arg
     return JS_NewStringLen(ctx, content->data(), content->size());
 }
 
+JSValue resolve_package_call(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv) {
+    if (argc < 2 || !JS_IsString(argv[0]) || !JS_IsString(argv[1])) return JS_NULL;
+    const std::string specifier = engine::to_std_string(ctx, argv[0]);
+    const std::string base = engine::to_std_string(ctx, argv[1]);
+    auto resolved = engine::resolve_module_path(base, specifier, engine::ModuleSystem::Cjs);
+    if (!resolved) return JS_ThrowPlainError(ctx, "%s", resolved.error().c_str());
+    return JS_NewStringLen(ctx, resolved->data(), resolved->size());
+}
+
 deoxidene::Result<JSValue, std::string> make_require(Engine& engine, const std::filesystem::path& project_root) {
     JSContext* ctx = engine.ctx();
     Scoped factory(ctx, JS_Eval(ctx, require_bootstrap.data(), require_bootstrap.size(), "<require>", JS_EVAL_TYPE_GLOBAL));
     if (JS_IsException(factory.get())) return deoxidene::Err<std::string>(engine::take_exception_text(engine));
     Scoped reader(ctx, JS_NewCFunction(ctx, read_text_call, "readText", 1));
+    Scoped resolver(ctx, JS_NewCFunction(ctx, resolve_package_call, "resolvePackage", 2));
     std::string root = project_root.generic_string();
     Scoped root_value(ctx, JS_NewStringLen(ctx, root.data(), root.size()));
-    JSValue factory_args[2] = {reader.get(), root_value.get()};
-    Scoped require(ctx, JS_Call(ctx, factory.get(), JS_UNDEFINED, 2, factory_args));
+    JSValue factory_args[3] = {reader.get(), root_value.get(), resolver.get()};
+    Scoped require(ctx, JS_Call(ctx, factory.get(), JS_UNDEFINED, 3, factory_args));
     if (JS_IsException(require.get())) return deoxidene::Err<std::string>(engine::take_exception_text(engine));
     return require.take();
 }
