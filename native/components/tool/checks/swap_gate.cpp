@@ -2,6 +2,8 @@
 #include "gm/tool.hpp"
 
 #include <chrono>
+#include <fstream>
+#include <sstream>
 #include <string>
 
 namespace gm::tool {
@@ -10,6 +12,8 @@ namespace {
 constexpr const char* kHeader =
     "procs -----------memory---------- ---swap-- -----io---- -system-- -------cpu-------\n"
     " r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st\n";
+constexpr const char* kClockChecks = "native/components/tool/checks/clock_mutations.cpp";
+constexpr const char* kClosedReport = "closed.err = \"the swap gate stayed closed";
 
 }
 
@@ -28,8 +32,16 @@ CheckResult check_swap_gate(const std::string&) {
     if (proc::swap_gate_open({1000, 0}) || proc::swap_gate_open({0, 1000})) result.failures.push_back("1000 KB/s was read as open; the limit is exclusive");
     if (proc::parse_vmstat(kHeader)) result.failures.push_back("a header without a data line parsed as a sample");
     if (proc::parse_vmstat("")) result.failures.push_back("an empty output parsed as a sample");
+    std::ifstream clock(kClockChecks);
+    if (!clock) {
+        result.failures.push_back(std::string(kClockChecks) + " is not at this path; run from the checkout root");
+    } else {
+        std::stringstream clock_text;
+        clock_text << clock.rdbuf();
+        if (clock_text.str().find(kClosedReport) == std::string::npos) result.failures.push_back("clock_mutations does not report a closed swap gate as the rebuild's error");
+    }
     const auto wall = std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
-    result.summary = "vmstat columns si and so are read from the data line; a reading is open only when both are below 1000 KB/s, and a header or empty output is refused (wall " + std::to_string(wall) + " s)";
+    result.summary = "vmstat columns si and so are read from the data line; a reading is open only when both are below 1000 KB/s, a header or empty output is refused, and clock_mutations reports a closed gate as the rebuild's error (wall " + std::to_string(wall) + " s)";
     return result;
 }
 

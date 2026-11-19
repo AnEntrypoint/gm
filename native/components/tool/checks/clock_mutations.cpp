@@ -55,7 +55,11 @@ fs::path source_of(const fs::path& build) {
 }
 
 proc::Outcome rebuild(const fs::path& build) {
-    if (!proc::wait_for_gate(kGateWaitMs)) return proc::Outcome{};
+    if (!proc::wait_for_gate(kGateWaitMs)) {
+        proc::Outcome closed;
+        closed.err = "the swap gate stayed closed for " + std::to_string(kGateWaitMs / 1000) + " s";
+        return closed;
+    }
     return proc::run({"cmake", "--build", build.string(), "-j", "4"}, {}, {}, kBuildTimeoutMs);
 }
 
