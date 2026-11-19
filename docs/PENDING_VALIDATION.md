@@ -4480,3 +4480,12 @@ Not changed: the 13 install-running witnesses, the job_start Windows kill, and r
 - Collider red (term `!shared_gate &&` removed in a finally): check-browser-tabs-owner rc 1, wall 40.58 s, 7 failures. The trace names the closing step: "collider: gate cleanup kills gate 938448 by pid at 37022 ms; alpha: browser_close_run at 39773 ms; beta: browser_close_run at 40526 ms". The failing calls say "the gate for this project stopped during this call". Restored: cmp identical; git diff empty.
 - Collider green (term restored): check-browser-tabs-owner ok, rc 0, wall 11.34 s.
 - The installed build (1f9b4f780c07-dev) predates the --auto flag, so this fix does not reach it until one install of a fixed build, which is the owner's decision.
+
+## Thirty-third stretch 2026-11-19 (auto-update chain start: the install of 0f9e3bb-1)
+
+- Owner approved the install. Built a clean build at 0f9e3bb with -DGMNEW_VERSION=0f9e3bb-1 in build/clean-0f9e3bb (no development tag), then gm install --local /workspace/gm/build/clean-0f9e3bb --source /workspace/gm.
+- Wall times: configure 2.68 s, build 81.97 s, install 10.67 s.
+- Installed build state (build/clean-0f9e3bb header, the installed binary): kBuildVersion 0f9e3bb-1, kBuildHead 0f9e3bb, kBuildState clean, kBuildDirty empty. kBuildCommit ccbf5978f7d1 is the stamp's tree hash of a source directory, not the commit; the update path compares kBuildHead.
+- current -> versions/0f9e3bb-1. The old link 1f9b4f780c07-dev is no longer current; its version directory remains.
+- Peers at the time of the check (exe via /proc/PID/exe): on 0f9e3bb-1 relay and worker: 1718 hyperagent, 2082 thebird, 2194 fx, 2459 gm (this session, which received a handover from 1f9b4f780c07-dev to 0f9e3bb-1), 2593 bevy, 755857 signal. Still on 1f9b4f780c07-dev: relay 2326 with worker 2327 (freddie), relay 2812 with worker 2813 (oscraft). Those relays predate the watch loop, so they re-exec only after a restart; not stopped by this stretch.
+- Not owned here: worker 942528 (gm-core from /workspace/gm/build/release, workspace freddie) under a node parent, 51 s old; left alone.
