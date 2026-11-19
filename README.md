@@ -79,6 +79,46 @@ Setup registers only gm with the host, so the worker is the only thing that star
 - A `notifications/cancelled` for a `run_shell` call kills its process group, and that call gets no answer. A cancel of any other call is logged as `cancel-ignored`, and the call runs on. A `run_shell` call whose `_meta` has a `progressToken` gets `notifications/progress` every 5 seconds, with the elapsed seconds.
 - The repository is pushed publicly to `AnEntrypoint/gm`.
 
+## Tool permissions
+
+Every gm capability is reachable through `run_code`. Each verb (`read_file`, `write_file`, `run_shell`, the `git_*` verbs, `fetch`, `search` and the rest) is a `gm.<verb>(args)` call inside one body. A host can therefore do the same work with its built-in tools or with gm's verbs. We recommend denying the built-in tools (Bash, Read, Edit, MultiEdit, Write, Glob, Grep, WebFetch, WebSearch), so that agents use gm's verbs: they condense output, batch the steps of one change into one body, and land each step in the run log. The built-in tools do none of that.
+
+The settings below allow the gm tools and deny the built-in ones. With `defaultMode` set to `dontAsk`, a tool that is in neither list is refused without a prompt. `Agent` is not in the allow list; add it to `allow` if the host should spawn subagents.
+
+User-wide, for every project (`~/.claude/settings.json`):
+
+```json
+{
+  "permissions": {
+    "defaultMode": "dontAsk",
+    "allow": [
+      "mcp__gm__run_code",
+      "mcp__gm__next_context",
+      "mcp__gm__finish",
+      "ReadMcpResourceTool",
+      "ToolSearch"
+    ],
+    "deny": [
+      "Bash",
+      "Read",
+      "Edit",
+      "MultiEdit",
+      "Write",
+      "Glob",
+      "Grep",
+      "WebFetch",
+      "WebSearch"
+    ]
+  }
+}
+```
+
+Project only, in `<project>/.claude/settings.json`: the same block. Use it when the user-wide block would also apply to projects that do not use gm.
+
+To remove the block, delete the `permissions` object from the file (or only its `defaultMode`, `allow` and `deny` keys), delete the file if it is left as `{}`, and start a new session so the host reads it again.
+
+`gm install` writes no harness settings. It does not read or change `~/.claude/settings.json` or any project `.claude/settings.json`, so the block above is added by hand.
+
 ## Native build
 
     cmake --preset release

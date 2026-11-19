@@ -4320,3 +4320,10 @@ Removing the upper bounds exposed a conversion problem. A user number above the 
 - Witnesses: check-caps-removed adds a run_shell timeoutMs of 10000000000000 (accepted, its output is returned) and a search limit of 1001 (accepted). parity-contract W15 expects the job_status text "with no ceiling"; the old "at most 100000" text described the ceiling that was removed.
 
 Remaining bound added to the list above: native/include/gm/numeric.hpp clock_range_ms = 4000000000000 ms. A timeout above it is clamped to it. Reason: the steady clock counts nanoseconds in a 64-bit integer, and a larger value would overflow when the deadline is computed.
+
+## Sixteenth stretch 2026-11-19 (queue item 2: README tool-permission section): Phase A
+
+- README.md: new section "Tool permissions", before "Native build". It explains the recommendation: every gm capability is reachable through run_code, so denying the host's built-in tools (Bash, Read, Edit, MultiEdit, Write, Glob, Grep, WebFetch, WebSearch) makes agents use gm's verbs, which condense output, batch the steps of one change into one body, and land each step in the run log.
+- The section gives the user-wide block (~/.claude/settings.json, which is /config/.claude/settings.json because HOME is /config) and the project-only block (.claude/settings.json in the repository). Both use defaultMode "dontAsk", an allow list (mcp__gm__run_code, mcp__gm__next_context, mcp__gm__finish, ReadMcpResourceTool, ToolSearch) and a deny list of the built-in tools above. It gives the removal steps, and it states that gm install writes no harness settings.
+- Witness: grep over native/components/host and native/components/tool for a reference to the harness settings directory finds 0 files, which backs the claim that gm install writes no harness settings. The README has no non-ASCII characters (grep count 0).
+- Build: not needed for this change. The stamp hashes the native, src and defaults trees only, so a README change keeps the installed stamp.
