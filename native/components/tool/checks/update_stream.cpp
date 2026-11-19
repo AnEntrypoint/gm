@@ -236,7 +236,7 @@ CheckResult check_update_stream(const std::string& binary) {
             {"assets", json::Object{{kPlatformTarget, json::Value(json::Object{{"file", archive_name}, {"sha256", digest}, {"size", static_cast<std::uint64_t>(size)}, {"version", leg.version}, {"committed", static_cast<std::uint64_t>(leg.committed)}})}}}};
         std::ofstream(published / "manifest.json") << json::dump(manifest);
         const std::string url = "file://" + (published / "manifest.json").string();
-        std::vector<std::string> argv{"env", "GMNEW_UPDATE_URL=" + url, (install / "current" / "gm").string(), "update"};
+        std::vector<std::string> argv{"env", "GMNEW_UPDATE_URL=" + url, "GMNEW_AUTO_UPDATE=1", (install / "current" / "gm").string(), "update"};
         if (leg.automatic) argv.push_back("--auto");
         const proc::Outcome run = proc::run(argv, {}, {}, kRunLimitMs);
         const std::optional<json::Value> reply = reply_of(run.out);
