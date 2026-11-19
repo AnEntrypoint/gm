@@ -4124,7 +4124,7 @@ Counts come from the run logs under runs/ and /config/docstudio/runs, and from t
 16. Waits returning early while running: 0 measured in 20 waits. Closed with the measurement.
 
 Changes in this round, each committed locally by explicit path:
-- native/components/mcp/server.cpp, first_step_correction: a run with an empty task accepts its first task without owner:true (row 11). Witness: a next_context task set after a run_code step with no task returns ok.
+- native/components/mcp/server.cpp, first_step_correction (row 11): committed as eddd8953 and reverted in fa070580. The built binary still refused the first task with no task set, and the cause was not found, so row 11 is blocked and open.
 - native/components/verbs/git.cpp verb_of: a git failure with no exec error names the first line of git's output in the error (row 8). Witness: git_commit with a message and paths that git rejects returns an error with the git reason.
 - native/components/verbs/verbs.cpp read_file: a directory path returns "<path> is a directory; list it with list_dir" (row 13). Witness: read_file on sources/ returns that text.
-- Phase B: rebuild, witness each change above, then one gated push.
+- Phase B: rebuilt; witnessed git_commit cause (99cccb84) and the directory read message (91073176) on build d9fa7619a6fb. One gated push follows.
