@@ -4096,3 +4096,8 @@ Phase A changes, each committed locally on main. Nothing is pushed in Phase A.
 - Swap: si nonzero, so 0 at each sample; no build was started.
 - Push: see the commit that follows this entry.
 - Excluded: gm install --local and the c4a5555 release rerun were not run.
+## Round 2026-11-19 gm friction ledger
+
+- docs/GM_FRICTION.md (new): the stable run-level friction ledger in gm. It folds in docstudio's three items with their evidence, each with its status and the commit that closes it: item 1 read_file cut (fixed in 1701723e), item 2 git_commit paths (fixed in 80b1730c), item 3 session start latency (model turn time, no gm change). Witness: the run_code reply that quotes the hint and the git_commit refusal, recorded in the file.
+- Open question unknown-mwnagj0u7712 is closed with the answer: the gm friction list is docstudio docs/GM_FRICTION.md; the dispatch ledger is the orchestrator's in-session ledger and is not a file.
+- Phase A verification: none. Phase B: rebuild, re-witness the two fixes on the committed build, and the gm skill and initialize checks after the push.
