@@ -24,7 +24,7 @@ namespace {
 
 constexpr std::uint64_t kCheckTimeoutMs = 600000;
 constexpr const char* kMutations = "clock-mutations";
-const std::set<std::string> kExclusive{"check-relay-reexec", "check-browser-scope", "check-lazy-browser", "check-browser-first-open"};
+const std::set<std::string> kExclusive{"check-relay-reexec", "check-browser-scope", "check-lazy-browser", "check-browser-first-open", "check-browser-tabs-owner"};
 
 using Clock = std::chrono::steady_clock;
 
