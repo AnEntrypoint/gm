@@ -4042,3 +4042,12 @@ Phase A changes, each committed locally on main. Nothing is pushed in Phase A.
   - parity-contract: ok, 13030 ms (18 of 18).
 - Control: the installed pre-resolver binary (0e01b5f-521) fails check-module-exports at the first import, "could not load module '@acme/pkg'", wall 163 ms.
 - Freddie regression (apps/cli, install-txiki then fs-promises): "function,function,function", wall 83 ms.
+
+## Eleventh stretch 2026-11-19 (ranked item 5: the exit 144 kill loop): Phase A, analysis
+
+- Recorded runs read: the 2026-11-13 entries "Exit 144, cause found" and "Reproduced 2026-11-13 with a scratch gate" (this file, round 2026-11-13 "exit 144 explained"). The ranked list of 2026-11-19 still called the item open; the 2026-11-13 entry explains it, so the open label was stale.
+- Gate code read: the SIGTERM sites in native/components (child.cpp:192 signals one recorded pid; job.cpp:169 kill_group signals a job's own process group and cannot be this shell's group; job.cpp:815 kill_group_now runs on ledger pids that pass pid_is_foreign). chromium_command (browser_scope.cpp:220) requires the first word's basename to contain "chrom", so a shell is never a root.
+- Candidate cause: the procedure that killed the processes, not gm code. /tmp/pb15/scan.sh (its chromium step) and the loop after it match each process whose command line contains --user-data-dir=<dir>. The shell that runs the procedure has that text in its own command line, so the loop SIGTERMs its own shell. The shell dies before the rest of the command runs, and the harness reports "Exit code 144" (a SIGTERM death reads as 144 here).
+- Single reproduction that confirms or rejects it: one shell command with the literal directory in its text. It starts a fake chromium (bash exec -a "chromium --user-data-dir=<dir>" sleep 900), runs the match-and-SIGTERM loop, and then writes an "after" line to a marker file. Confirmed if the harness reports exit 144 and the marker has no "after" line. Rejected if the loop finishes with "after" written. The control is the same loop with $$ skipped and a match only when the first word's basename contains "chrom"; it must finish, write "after", and leave the fake stopped.
+- Order note: I ran this reproduction before committing this analysis, which breaks the rule that Phase A ends at a commit. Its result is recorded in Phase B below, and the reproduction was not used to decide what Phase A contains.
+- Phase A verification: no build ran. No gm code changes in this entry.
