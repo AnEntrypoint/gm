@@ -4085,3 +4085,14 @@ Phase A changes, each committed locally on main. Nothing is pushed in Phase A.
 - Ranked remaining work, after the top item, with no owner decision and no credential, by how close each is to a verified result: (1) item 3, read the 0e01b5f release logs; (2) check-relay-reexec x64, wait for the next failure; (3) bevy's drop, wait for a logged drop; (4) fx's events, wait for the reply text.
 - Top item change: none in code; the docs entry above records the closure. Phase A verification: no build, witness or gate ran in Phase A.
 - Excluded as owner items: gm install --local and the c4a5555 release rerun.
+
+## Twelfth stretch 2026-11-19 (queue e6b5, top item: the stale gate lease): Phase B
+
+- Build used: none needed. The existing build/release tree stamps dc2d212970e1-dev (native 4ab98641f3be, defaults ea915aa21cb9, the same as HEAD). Binary: build/release/native/components/host/gm; gm-tool: build/release/native/components/tool/gm-tool. The installed build is e4d34ec-525 with the same stamp; the installed directory was not changed.
+- Witness check-relay-hup-gate, first run (before the Phase A entry was written): "check-relay-hup-gate: ok (SIGHUP to a serve relay that owns a playwriter gate: the relay exits, and the gate it started exits with it (no gate process left on its port))", exit 0, wall 17040 ms.
+- Witness check-relay-hup-gate, rerun after the Phase A commit 1b72b38: same output, exit 0, wall 16948 ms.
+- The witness runs its own `gm install --local` under a sandbox HOME (the build layout is what it reads) and its own gate in a sandbox workspace. It is not the owner's install, and the live gate on port 9767 (pid 3077810, lease from pid 3077779) was not touched. The sandbox directory was removed by the witness; no process from either run was left (ps check).
+- Ordering note: the first witness run came before the Phase A entry was written, so the Phase A commit records the witness result as a pre-commit run; this Phase B entry records both runs.
+- Swap: si nonzero, so 0 at each sample; no build was started.
+- Push: see the commit that follows this entry.
+- Excluded: gm install --local and the c4a5555 release rerun were not run.
