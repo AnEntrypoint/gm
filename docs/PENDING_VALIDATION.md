@@ -4459,3 +4459,15 @@ Not changed: the 13 install-running witnesses, the job_start Windows kill, and r
 
 - Agent reading: vmstat 1 2 swap-in 8244 KB/s, swap-out 0 KB/s. Closed. The dispatcher's 52 KB/s at 18:20 is not the governing reading.
 - No red or green leg was run. The fix term is still present; git status shows only the untracked .ccache/.
+
+## Thirty-first stretch 2026-11-19 (seamless auto update): Phase A fix, Phase B pending the gate
+
+- Root cause (one line): the build state is compiled into the binary, and policy_from_environment disables auto-update for any state other than clean, so an installed build from an unpushed HEAD never follows a push, even after the push lands.
+- Path checked: update_once (manifest, asset, switch_version moves the current link), relay update_loop (sets reexec_pending_ after an update), reexec (executes the stable current link, so a relay that restarts lands on the new build), watch_install_loop (re-execs when the link moves). The publish job runs only when every build leg succeeds, so a failing leg also stops the manifest; that is a second gap, not fixed here. The latest manifest was at e252942 when checked.
+- Installed build here: current -> versions/1f9b4f780c07-dev, a build from a commit that is not in this repository and that predates the --auto flag, so it cannot self-update under any commit. One install of a fixed build is needed to start the chain; that is an owner decision.
+- Fix (commit 5fa0eda): an installed build (under versions/) whose state is unpushed follows the release; a dirty build, or any build run from a checkout, still refuses.
+- Witness (commit f3d2af4): check-update-stream expects the installed unpushed automatic leg to switch, and an unpushed build run from a checkout to refuse.
+- Red without the fix: "automatic update, newer commit: the link did not switch to ffff333-7 (link 63c0708bb988-dev, ... status 'auto update off: this build is unpushed: HEAD is not origin/main, so it never replaces itself')" (runs/au-red.log).
+- Green with the fix: check-update-stream ok, wall 0.65 s; automatic leg switched to ffff333-7 which reports itself; checkout unpushed build refused (runs/au-green.log).
+- Mutation (switch step removed, fs::rename(next, current) deleted): forced update leg red, "the link did not switch to ffff333-7" (runs/au-mut.log); file restored, cmp identical, git status clean except .ccache/.
+- Not covered: the live peer's next gm call after the switch (check-relay-reexec skips development builds locally). Its witness needs a clean-at-origin build, i.e. Phase B after the push.
