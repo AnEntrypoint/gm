@@ -176,7 +176,7 @@ constexpr std::size_t kNoticePrdWindow = 5;
 constexpr std::size_t kRowsNamed = 5;
 constexpr double kDefaultBodyTimeoutMs = 100000;
 constexpr double kForegroundCapMs = 100000;
-constexpr double kForegroundWaitMs = 50000;
+constexpr double kForegroundWaitMs = 80000;
 constexpr double kMaxWaitMs = 60000;
 
 template <typename T>
