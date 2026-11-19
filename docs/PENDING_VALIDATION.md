@@ -4448,3 +4448,9 @@ Not changed: the 13 install-running witnesses, the job_start Windows kill, and r
 
 - vmstat 1 2 by the agent: swap-in 2012 KB/s, swap-out 0 KB/s. Closed (the threshold is below 1000 in both directions). The dispatcher reported 88 KB/s at 17:40; the agent's own reading governs, so no red or green leg was run.
 - Pending: the red leg (fix removed, in a finally), then the green leg (fix restored), under one gate sample, with wall times and the trace from the red line.
+
+## Twenty-ninth stretch 2026-11-19 (browser-tabs collider red and green legs): gate closed at the in-script sample
+
+- Agent reading: vmstat 1 2 swap-in 940 KB/s, swap-out 0 KB/s (open at the threshold).
+- The red and green script took its own sample before removing the fix: swap-in 5540 KB/s, swap-out 0. Closed. The script stopped before any change; the fix term is still present, and git status shows only the untracked .ccache/.
+- No red or green line exists for the collider. Pending: the red leg (fix removed in a finally), then the green leg (fix restored), under one gate sample.
