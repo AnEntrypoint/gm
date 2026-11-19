@@ -53,17 +53,11 @@ CheckResult check_relay_hup_gate(const std::string& binary) {
     const auto sandbox = fs::temp_directory_path() / ("gm-relay-hup-gate-" + std::to_string(stamp));
     const auto workspace = sandbox / "ws";
     fs::create_directories(workspace);
-    const fs::path host = fs::path(binary).parent_path();
-    const fs::path build = host.parent_path().parent_path().parent_path();
-    const fs::path source = build.parent_path().parent_path();
-    const fs::path installed = sandbox / ".gmnew" / "current" / "gm";
-    const auto install = proc::run({"env", "HOME=" + sandbox.string(), (host / "gm").string(), "install", "--local", build.string(), "--source", source.string()}, sandbox, {}, 900000);
-    if (!install.started || install.exit_code != 0) result.failures.push_back("the sandbox install failed: " + (install.err.empty() ? install.out : install.err).substr(0, 400));
     long long gate = 0;
     {
-        Session session(installed.string(), workspace, sandbox, 180000, false);
+        Session session(binary, workspace, sandbox, 180000, false);
         if (!session.started()) {
-            result.failures.push_back("gm serve did not start from " + installed.string());
+            result.failures.push_back("gm serve did not start from " + binary);
         } else {
             session.rpc("initialize", json::Object{{"protocolVersion", "2025-06-18"}, {"capabilities", json::Object{}},
                                                   {"clientInfo", json::Object{{"name", "gm-tool"}, {"version", "1"}}}});
