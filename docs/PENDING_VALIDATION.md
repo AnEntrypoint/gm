@@ -4603,3 +4603,12 @@ Not changed: the 13 install-running witnesses, the job_start Windows kill, and r
 - Check: scripts/gap-check.mjs <stream>. For each run_code of 55 s or more it finds the largest verb-free stretch (from the run's V lines), and reports the RSS at its start and end, and the peak. Witness: node scripts/gap-check.mjs --witness. Fixture: a run of 62 s with one read_file at its start and RSS rising 5,000 KB per second from 3 s on. Green: rc 0, "largest verb-free stretch 61000 ms ... RSS 760000 KB -> 1060000 KB (growth 300000 KB, peak 1060000 KB)", "check-gap-stretch: ok".
 - The sampler now tolerates a run log that does not exist yet. Witness check-rss-verbs stays green after the change (rc 0).
 - Not run in Phase A: the driver against a gm serve. That run is the Phase B reproduction, on a gate and heavy-job clear window.
+
+## Forty-fifth stretch 2026-11-20 (the verbless gap on an own worker): Phase B
+
+- Window: 23:31:17 to 23:41:39 UTC, one reading every 30 s. The first start attempt wrote to a log whose directory did not exist yet and exited before its first reading; the second start is the window.
+- Clear start: 23:35:06 UTC, vmstat second sample si 372, so 0 KB/s, heavy check 0 lines. The driver had at least 240 s of the window remaining (371 s).
+- Witnesses at that reading: check-rss-verbs rc 0, 0.054 s; check-gap-stretch rc 0, 0.032 s.
+- Driver: scripts/gap-repro.mjs on its own gm serve (worker pid 1609879, serve pid 1609878, both stopped by PID after the run). The body scripts/gap-body.js ran 60.01 s with its read_file as the first verb and no verb for the rest, and returned gap done. Sampler: 85 s, rc 0, 86 S lines, no gone line.
+- Gap check on runs/gap-44b/stream.txt: largest verb-free stretch 60001 ms, 23:35:06.645 to 23:36:06.646, after read_file, before run end. RSS at the first sample, 13,540 KB at 23:35:06.663, 18 ms after the gap began; 13,956 KB at its end; peak 13,960 KB. From 23:35:08 the RSS is flat at 13,928 to 13,956 KB.
+- Result: not reproduced. A 60 s verbless stretch on a fresh worker grew by 416 KB and then held flat. The gap alone does not grow RSS on a fresh worker. The peer's growth (1.3 GB and higher, on a worker with a long history) is not explained by the gap alone; what the worker had done before the gap is the open variable.
