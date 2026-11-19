@@ -14,6 +14,7 @@
 #include <vector>
 
 #include "core_internal.hpp"
+#include "gm/numeric.hpp"
 #include "gm/proc.hpp"
 
 namespace gm::core {
@@ -344,7 +345,7 @@ json::Value wiki_search(const json::Value& args, const fs::path& workspace) {
     if (const json::Value* kv = args.find("k"); kv != nullptr && !kv->is_null()) {
         if (!kv->is_number() || kv->as_number() != std::floor(kv->as_number()) || kv->as_number() < 1)
             return fail_result("k must be an integer from 1");
-        k = static_cast<int>(kv->as_number());
+        k = gm::saturating_cast<int>(kv->as_number());
     }
     std::vector<std::string> terms;
     for (const auto& term : tokens_of(query_value->as_string()))

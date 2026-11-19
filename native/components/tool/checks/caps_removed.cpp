@@ -78,13 +78,17 @@ CheckResult check_caps_removed(const std::string& binary) {
 
             const std::string shell = json::dump(output_of(run_code(plain, "return { shell: await gm.run_shell({ command: 'echo no-default-timeout' }) };", 60000)));
             expect(shell.find("no-default-timeout") != std::string::npos, "run_shell without timeoutMs did not return its output: " + shell.substr(0, 300));
+            const beyond_clock = json::dump(output_of(run_code(plain, "return { shell: await gm.run_shell({ command: 'echo beyond-clock', timeoutMs: 10000000000000 }) };", 60000)));
+            expect(beyond_clock.find("beyond-clock") != std::string::npos, "a run_shell timeoutMs beyond the clock range did not return its output: " + beyond_clock.substr(0, 300));
+            const searched = json::dump(output_of(run_code(plain, "return { found: await gm.search({ pattern: 'caps-removed-probe', scope: 'all', limit: 1001 }) };", 60000)));
+            expect(searched.find("limit must be") == std::string::npos, "a search limit of 1001 was refused: " + searched.substr(0, 300));
         }
         plain.stop();
         capped.stop();
     }
     fs::remove_all(sandbox);
     const auto wall = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - began).count();
-    result.summary = "no step or inflight limit by default (maxSteps and maxInflight are null, stepsLeft is null), --max-steps 2 is still reported, a run_code timeoutMs of 3600001 and a fetch timeoutMs of 60001 are accepted, and run_shell without a timeout returns its output (wall " +
+    result.summary = "no step or inflight limit by default (maxSteps and maxInflight are null, stepsLeft is null), --max-steps 2 is still reported, a run_code timeoutMs of 3600001 and a fetch timeoutMs of 60001 are accepted, and run_shell without a timeout returns its output, a run_shell timeoutMs beyond the clock range and a search limit of 1001 are accepted (wall " +
                      std::to_string(wall) + " ms)";
     return result;
 }

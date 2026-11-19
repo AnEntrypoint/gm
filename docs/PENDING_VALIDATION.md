@@ -4304,3 +4304,19 @@ Decisions for the owner.
 - Default timeouts removed for run_shell, job_start, git and fetch: a hung command with no timeoutMs now runs until it ends, or until job_stop or the run ends. Confirm this is acceptable.
 
 Interplay checked: the job_status wait ceiling is removed. job_status runs only inside run_code, and the run_code foreground cap (kForegroundCapMs, 100000 ms) still returns the MCP call before the 120 s client limit; a longer wait backgrounds the body, and its value comes from job_status with the job id.
+
+## Sixteenth stretch fix 2026-11-19: saturating conversions after the cap removal
+
+Removing the upper bounds exposed a conversion problem. A user number above the integer range was converted with static_cast, which is undefined behaviour, and a timeout above about 292 years overflows the steady clock's nanosecond count, so a deadline would wrap into the past. Found while running the Phase B witnesses on 2424fae; the witnesses ran on a build that still had the problem, so they are run again on the fixed tree.
+
+- native/include/gm/numeric.hpp (new): saturating_cast<Integer>(double) clamps to the range of Integer; timeout_ms_of(double) clamps to clock_range_ms = 4000000000000 ms (about 126 years), the largest millisecond count the steady clock can add to its current time without overflow. clock_range_ms is a representation bound, not a policy cap; it is kept and recorded below.
+- search/search_impl.cpp: the search limit uses saturating_cast<int>.
+- verbs/wiki.cpp: k uses saturating_cast<int>.
+- verbs/git.cpp: count uses saturating_cast<std::int64_t>.
+- verbs/code_ast.cpp: limit uses saturating_cast<std::size_t>.
+- verbs/fetch.cpp: the timeoutMs validator tests finiteness and whole-number-ness without casting the value; timeout_ms uses timeout_ms_of.
+- verbs/verbs.cpp: the run_shell and job_start timeouts use timeout_ms_of.
+- mcp/server.cpp: the run_code timeoutMs validator tests finiteness and whole-number-ness without casting the value; includes cmath and gm/numeric.hpp.
+- Witnesses: check-caps-removed adds a run_shell timeoutMs of 10000000000000 (accepted, its output is returned) and a search limit of 1001 (accepted). parity-contract W15 expects the job_status text "with no ceiling"; the old "at most 100000" text described the ceiling that was removed.
+
+Remaining bound added to the list above: native/include/gm/numeric.hpp clock_range_ms = 4000000000000 ms. A timeout above it is clamped to it. Reason: the steady clock counts nanoseconds in a 64-bit integer, and a larger value would overflow when the deadline is computed.

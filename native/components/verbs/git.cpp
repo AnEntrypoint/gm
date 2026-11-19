@@ -13,6 +13,7 @@
 #include <vector>
 
 #include "core_internal.hpp"
+#include "gm/numeric.hpp"
 #include "gm/proc.hpp"
 
 namespace gm::core {
@@ -405,7 +406,7 @@ json::Value run_verb(const std::string& name, const json::Value& args, const fs:
         if (c != nullptr && !c->is_null()) {
             if (!c->is_number() || c->as_number() != static_cast<double>(static_cast<std::int64_t>(c->as_number())) || c->as_number() < 1)
                 return fail("count must be an integer from 1");
-            count = static_cast<std::int64_t>(c->as_number());
+            count = gm::saturating_cast<std::int64_t>(c->as_number());
         }
         std::vector<std::string> scope;
         if (const json::Value* p = list_arg("path"); p != nullptr && !p->is_null()) {

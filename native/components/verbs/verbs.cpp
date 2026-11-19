@@ -19,6 +19,7 @@
 #include "core_internal.hpp"
 #include "condense.hpp"
 #include "engine.hpp"
+#include "gm/numeric.hpp"
 #include "gm/proc.hpp"
 
 #if !defined(_WIN32)
@@ -827,7 +828,7 @@ struct CoreVerbs::Impl {
             return failure("command must be a non-empty string");
         }
         double timeout_ms = timeout_of(args);
-        auto timeout = static_cast<std::uint64_t>(timeout_ms);
+        auto timeout = gm::timeout_ms_of(timeout_ms);
 #if defined(_WIN32)
         std::string line = command->as_string();
 #else
@@ -907,7 +908,7 @@ struct CoreVerbs::Impl {
         if (const json::Value* p = args.find("progress"); p != nullptr && p->is_string() && !p->as_string().empty()) progress = p->as_string();
         const json::Value* extend = args.find("extendOnProgress");
         const bool extend_on_progress = extend != nullptr && extend->is_bool() && extend->as_bool();
-        return jobs.start(job->as_string(), command->as_string(), static_cast<std::uint64_t>(timeout_ms), progress, extend_on_progress);
+        return jobs.start(job->as_string(), command->as_string(), gm::timeout_ms_of(timeout_ms), progress, extend_on_progress);
     }
 
     json::Value query_log(const json::Value& args) {

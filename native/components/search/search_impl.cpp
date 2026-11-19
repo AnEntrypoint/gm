@@ -16,6 +16,7 @@
 #include <set>
 #include <sstream>
 
+#include "gm/numeric.hpp"
 #include "gm/proc.hpp"
 
 namespace gm::search {
@@ -546,7 +547,7 @@ std::string Searcher::grep(const json::Value& args) {
     if (const json::Value* given = args.find("limit")) {
         if (!is_whole(*given) || given->as_number() < 1)
             return fail("limit must be an integer from 1");
-        limit = static_cast<int>(given->as_number());
+        limit = gm::saturating_cast<int>(given->as_number());
     }
     bool vendor = false;
     if (const json::Value* given = args.find("vendor")) {

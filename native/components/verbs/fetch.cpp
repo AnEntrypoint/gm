@@ -17,6 +17,7 @@
 #include <thread>
 
 #include "core_internal.hpp"
+#include "gm/numeric.hpp"
 #include "gm/proc.hpp"
 
 namespace gm::core {
@@ -482,9 +483,9 @@ json::Value fetch_call(const json::Value& args, const fs::path& workspace, Locke
     const std::string url = url_value->as_string();
     std::uint64_t timeout_ms = 0;
     if (const json::Value* t = args.find("timeoutMs"); t != nullptr && !t->is_null()) {
-        if (!t->is_number() || t->as_number() != static_cast<double>(static_cast<std::uint64_t>(t->as_number())) || t->as_number() < 1)
+        if (!t->is_number() || !std::isfinite(t->as_number()) || std::floor(t->as_number()) != t->as_number() || t->as_number() < 1)
             return error_of("timeoutMs must be an integer from 1");
-        timeout_ms = static_cast<std::uint64_t>(t->as_number());
+        timeout_ms = gm::timeout_ms_of(t->as_number());
     }
     if (const json::Value* max = args.find("maxBytes"); max != nullptr && !max->is_null()) {
         if (!max->is_number() || max->as_number() < 0 || max->as_number() > static_cast<double>(kMaxBodyBytes) || max->as_number() != static_cast<double>(static_cast<std::uint64_t>(max->as_number())))

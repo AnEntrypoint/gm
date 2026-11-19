@@ -6,6 +6,7 @@
 #endif
 #include <atomic>
 #include <cerrno>
+#include <cmath>
 #include <condition_variable>
 #include <csignal>
 #include <cstdio>
@@ -29,6 +30,7 @@
 #include "gm/marker.hpp"
 #include "gm/job_text.hpp"
 #include "gm/mcp.hpp"
+#include "gm/numeric.hpp"
 #include "gm/proc.hpp"
 #include "gm/runcode.hpp"
 #include "internal.hpp"
@@ -3901,7 +3903,7 @@ Value Server::State::run_code(const Value& args) {
             double budget = kDefaultBodyTimeoutMs * clock_scale();
             if (timeout != nullptr) {
                 double ms = timeout->as_number(-1);
-                if (!timeout->is_number() || ms != static_cast<double>(static_cast<long long>(ms)) || ms < 1) {
+                if (!timeout->is_number() || !std::isfinite(ms) || std::floor(ms) != ms || ms < 1) {
                     return with_seq(object().set("ok", false).set("error", "timeoutMs must be an integer from 1"));
                 }
                 budget = ms;

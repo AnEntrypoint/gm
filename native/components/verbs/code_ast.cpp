@@ -17,6 +17,7 @@
 #include <tree_sitter/api.h>
 
 #include "core_internal.hpp"
+#include "gm/numeric.hpp"
 #include "gm/proc.hpp"
 
 extern "C" {
@@ -345,7 +346,7 @@ json::Value callers(const json::Value& args, const fs::path& root) {
     if (!error.empty()) return failure(error);
     const Scan found = scan(index.files, name->as_string());
     std::string output;
-    const std::size_t shown = limit ? std::min(found.sites.size(), static_cast<std::size_t>(*limit)) : found.sites.size();
+    const std::size_t shown = limit ? std::min(found.sites.size(), gm::saturating_cast<std::size_t>(*limit)) : found.sites.size();
     for (std::size_t i = 0; i < shown; ++i) {
         const Site& site = found.sites[i];
         output += site.rel + ":" + std::to_string(site.line) + " [" + site.kind + "] " + trim(site.text) + "\n";
