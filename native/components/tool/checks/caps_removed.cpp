@@ -78,9 +78,9 @@ CheckResult check_caps_removed(const std::string& binary) {
 
             const std::string shell = json::dump(output_of(run_code(plain, "return { shell: await gm.run_shell({ command: 'echo no-default-timeout' }) };", 60000)));
             expect(shell.find("no-default-timeout") != std::string::npos, "run_shell without timeoutMs did not return its output: " + shell.substr(0, 300));
-            const beyond_clock = json::dump(output_of(run_code(plain, "return { shell: await gm.run_shell({ command: 'echo beyond-clock', timeoutMs: 10000000000000 }) };", 60000)));
+            const std::string beyond_clock = json::dump(output_of(run_code(plain, "return { shell: await gm.run_shell({ command: 'echo beyond-clock', timeoutMs: 10000000000000 }) };", 60000)));
             expect(beyond_clock.find("beyond-clock") != std::string::npos, "a run_shell timeoutMs beyond the clock range did not return its output: " + beyond_clock.substr(0, 300));
-            const searched = json::dump(output_of(run_code(plain, "return { found: await gm.search({ pattern: 'caps-removed-probe', scope: 'all', limit: 1001 }) };", 60000)));
+            const std::string searched = json::dump(output_of(run_code(plain, "return { found: await gm.search({ pattern: 'caps-removed-probe', scope: 'all', limit: 1001 }) };", 60000)));
             expect(searched.find("limit must be") == std::string::npos, "a search limit of 1001 was refused: " + searched.substr(0, 300));
         }
         plain.stop();
