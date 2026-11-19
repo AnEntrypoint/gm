@@ -1,0 +1,9 @@
+id: "unknown-mwnagj0u7712"
+kind: "unknown"
+title: "Where is the dispatch ledger with the gm friction list?"
+body: "The QoL request says to take items from the gm-friction list in the dispatch ledger. gm has no docs/GM_FRICTION.md. docstudio has docs/GM_FRICTION.md on origin/main (three items, handled earlier). Which path or repo is the dispatch ledger?"
+status: "resolved"
+createdAt: "2026-11-19T08:28:54.222Z"
+witnessEvent: 66
+witnessCommit: "b5aa4dcc"
+resolvedAt: "2026-11-19T08:29:30.475Z"
