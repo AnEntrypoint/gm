@@ -4204,3 +4204,28 @@ Row 4, same-path read_file repeated in a run.
 - Gaps: raw browser.newPage() and pages opened from another context are not recorded, so no tab can be closed by browser_close_tab if it was opened that way. A record written by an older binary has no owner line; its tabs show as owner pid 0, not running, until the run writes again.
 - Push: held, as in the thirteenth stretch (release.yml question). Commit: 25a53f8 (code, witness, AGENTS.md); this commit records the entry.
 - Excluded: gm install --local and the c4a5555 release rerun were not run. No process was left running from either witness; the live gate on port 9767 was not touched.
+
+## Fifteenth stretch 2026-11-19 (owner approval: user-wide install, setup-only install removed, release.yml setup step, measured gains)
+
+- Install, user-wide (owner approved). Before: ~/.gmnew/current -> versions/e4d34ec-525. Run: build/release/native/components/host/gm install --local build/release --source /workspace/gm. First run (12269 ms) installed 4aa808d9b2b5-dev, built before b170535 was committed; the stamp is read from the committed HEAD:native and HEAD:defaults trees, so the build carried a stale stamp and gm-tool installed reported it stale. Rebuilt (37487 ms, stamp d0f3cff34bb0-dev) and reinstalled (11305 ms).
+  - Result 1, the installed build matches the checkout: gm-tool installed -> "check-installed: ok (the installed build d0f3cff34bb0-dev and its skills equal the validated build and the checkout)", exit 0. The pushed-HEAD comparison is repeated after the push (see REPORT).
+  - Result 2, the gm skill serves: ReadMcpResourceTool (server gm, skill://gm/SKILL.md) returned the skill text.
+  - Result 3, a live peer's next call succeeds: the gm connection of this session ran a run_code body after the reinstall and returned {"ok":true} at actionSeq 24. Its earlier call (actionSeq 16) carried the handover from 4aa808d9b2b5-dev to d0f3cff34bb0-dev and kept its run; that body failed on my own error (read_file has no .text), not on the install.
+- Setup-only install removed (witness, file, commit). Five witnesses ran gm install --local only to lay down the sandbox playwriter package; each now links the existing ~/.gmnew/pw (the package install placed) and runs the build binary:
+  - check-browser-first-open, browser_first_open.cpp (a956b36).
+  - check-browser-scope, check-browser-scope-tree, check-browser-dead-executor, browser_scope.cpp: install_sandbox becomes link_playwriter; the installed path is the binary (b170535).
+  - check-lazy-browser, lazy_browser.cpp (b170535).
+  - Owner count: eight setup-only and five that test the install. The code shows five setup-only (above) and six install-testing checks: check-install-follows, check-skill-reload (install_follows.cpp), check-install-switch, check-parity-contract, check-cli-flags and check-build-handover (identical install keeps every worker pid). Open for the owner: the count differs, and build-handover is kept because its identical-install leg tests the install.
+- release.yml (a956b36): a step "Playwriter package for the browser checks" runs before Test on the Linux and macOS jobs: gm install --local from the build, then test -f $HOME/.gmnew/pw/bin/playwriter-project. Hosted runners now get the package that phase-b's browser checks link.
+- Witnesses that the removal lists, run on build d0f3cff34bb0-dev with no install (wall by the shell; load recorded by the check):
+  - check-browser-first-open: ok, 41890 ms.
+  - check-browser-scope: ok, 5647 ms (host load 6.76 at start, 6.62 at end).
+  - check-browser-scope-tree: ok, 4838 ms.
+  - check-browser-dead-executor: ok, 3621 ms.
+  - check-lazy-browser: ok, 2669 ms.
+  - Leftover processes: none (ps scan after the five runs).
+- Gain, measured. The install alone takes 4453 ms and 4266 ms in two scratch homes (removed from each install-running witness; scratch homes deleted). The earlier with-install runs (check-browser-scope 41865 ms, tree 20840 ms, dead-executor 35067 ms) were taken while the host was under load (load 17 at the end of the scope run), so they do not show a 36 s install cost and are not a before/after pair. The repeated, kept gain is the install's 4.3 to 4.5 s per witness.
+- Iteration times, measured here: one-file edit to a warm build with the gm, gm-core and gm-tool targets 16613 ms (one warning fix); a native edit to a full warm rebuild 60334 ms (swap-in 858 KB/s at start); the stamp-only rebuild 37487 ms.
+- Further changes: none kept. The incremental build time and the CI step were measured; no candidate change has a gain that repeated in this stretch.
+- Not run here: the full phase-b set (CI runs it on each push, through release.yml); the install-testing checks were not rerun because their code did not change.
+- Swap gate: every build and browser launch waited for swap-in at or below 1000 KB/s (checked with vmstat 5 2).
