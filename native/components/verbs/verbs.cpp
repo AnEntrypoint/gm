@@ -391,6 +391,7 @@ struct CoreVerbs::Impl {
         if (!served) {
             at = locate(path_value);
             if (!at) return refusal("path must be a non-empty string");
+            if (std::filesystem::is_directory(*at)) return failure(path_value->as_string() + " is a directory; list it with list_dir");
         }
         const json::Value* unit_value = present(args, "unit");
         std::string unit = unit_value == nullptr ? "lines" : (unit_value->is_string() ? unit_value->as_string() : "?");
