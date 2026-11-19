@@ -4024,3 +4024,21 @@ Phase A changes, each committed locally on main. Nothing is pushed in Phase A.
 - Change 2 (commit b418711, checks/module_exports.cpp): the workspace package.json holds the imports map (#util with import, require and default targets; #dep as a bare target; #feature/* as a pattern; #hidden-target as a bare target that exports refuses). The body imports and requires them and checks refusal of #nope. Expected reply appends util-import,sub-default,feature-beta,refused,refused,util-require,sub-require,refused to the earlier list.
 - Control (Phase A, measured in Phase B's build): the installed pre-resolver binary fails the check at the first import, with "could not load module '@acme/pkg'".
 - Phase A verification: no witness ran in Phase A except the control above.
+
+## Tenth stretch 2026-11-19 (ranked item 2: the imports (#) map): Phase B
+
+- Build: cmake --build build/release --target gm gm-core gm-tool, exit 0, no warning or error. Candidate version after the Phase A commits: "dc2d212970e1-dev (dc2d212970e1) 1795069547". Installed binary unchanged (0e01b5f-521, gm install --local not run).
+- Failure found in Phase B: none. The wait on the witness script briefly read the previous run's table, because the script truncates its log only when it starts; the table was re-read after the script's PID exited, and that is the table recorded here.
+- Witnesses on the final candidate (wall time per witness):
+  - check-module-exports: ok, 44 ms. Reply for the new imports legs: "util-import,sub-default,feature-beta,refused,refused,util-require,sub-require,refused" (the full reply ends with those eight values after the exports values).
+  - check-embedded-runtime: ok, 436 ms.
+  - check-read-parity: ok, 68 ms.
+  - check-console: ok, 53 ms.
+  - check-early-run-code: ok, 40 ms.
+  - check-run-code-budget: ok, 1702 ms.
+  - check-run-code-lifetime: ok, 10055 ms.
+  - check-run-code-progress: ok, 426 ms.
+  - check-quickjs-baseline: ok, 3280 ms.
+  - parity-contract: ok, 13030 ms (18 of 18).
+- Control: the installed pre-resolver binary (0e01b5f-521) fails check-module-exports at the first import, "could not load module '@acme/pkg'", wall 163 ms.
+- Freddie regression (apps/cli, install-txiki then fs-promises): "function,function,function", wall 83 ms.
