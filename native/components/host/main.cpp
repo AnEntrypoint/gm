@@ -14,7 +14,7 @@ constexpr std::string_view kUsage =
     "usage: gm serve|worker --workspace <dir> [--runs <dir>] [--run-dir <dir>] [--resume <id>] [--task <file>] "
     "[--skills <dir>] [--leaves <dir>] [--build-dir <dir>] [--protocol-2026-07-28 on|off]\n"
     "       gm doctor [--leaves <dir>]\n"
-    "       gm update\n"
+    "       gm update [--auto]\n"
     "       gm install [--local <build dir> [--source <checkout>]] [--mcp-config <file>]\n"
     "       gm uninstall\n"
     "       gm --version\n"
@@ -55,7 +55,8 @@ std::optional<std::string> flag_error_for(const gm::host::HostArgs& args) {
     if (args.mode == "events") return flag_error(args.rest, {"run", "workspace", "dir", "timeout-ms"}, {"wait", "read-clear"});
     if (args.mode == "query") return flag_error(args.rest, {"run", "workspace", "dir", "js"}, {"read-clear"});
     if (args.mode == "stop-run") return flag_error(args.rest, {"dir", "idle-ms"}, {});
-    if (args.mode == "update" || args.mode == "--version") return flag_error(args.rest, {}, {});
+    if (args.mode == "update") return flag_error(args.rest, {}, {"auto"});
+    if (args.mode == "--version") return flag_error(args.rest, {}, {});
     return std::nullopt;
 }
 
@@ -74,7 +75,7 @@ int main(int argc, char** argv) {
     if (args.mode == "events") return gm::host::run_events(args);
     if (args.mode == "query") return gm::host::run_query_command(args);
     if (args.mode == "stop-run") return gm::host::run_stop(args);
-    if (args.mode == "update") return gm::host::run_update_command();
+    if (args.mode == "update") return gm::host::run_update_command(std::find(args.rest.begin(), args.rest.end(), std::string("--auto")) != args.rest.end());
     if (args.mode == "install") return gm::host::run_install_command(args);
     if (args.mode == "uninstall") return gm::host::run_uninstall_command(args);
     if (args.mode == "--version") {

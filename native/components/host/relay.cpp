@@ -615,6 +615,7 @@ bool installed_elsewhere(const UpdatePolicy& policy) {
 void Relay::update_loop() {
     UpdatePolicy policy = *options_.update;
     Lock lock(mutex_);
+    if (!policy.enabled) say("auto update off: " + policy.disabled_reason);
     while (!host_gone_) {
         lock.unlock();
         UpdateResult result;

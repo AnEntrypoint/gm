@@ -15,10 +15,7 @@
 
 namespace gm::host {
 
-inline constexpr bool is_dev_version(std::string_view version) {
-    return version == "dev" ||
-           (version.size() >= 4 && version.substr(version.size() - 4) == "-dev");
-}
+inline constexpr bool build_is_clean() { return kBuildState == "clean"; }
 inline constexpr std::string_view kDefaultUpdateUrl =
     "https://github.com/AnEntrypoint/gm/releases/download/latest/manifest.json";
 inline constexpr std::chrono::minutes kUpdateInterval{15};
@@ -58,6 +55,7 @@ struct UpdatePolicy {
     std::optional<std::int64_t> committed;
     std::chrono::minutes interval = kUpdateInterval;
     bool enabled = true;
+    std::string disabled_reason;
     bool force = false;
     ManifestFetcher fetch = fetch_manifest_over_http;
 };
@@ -101,6 +99,6 @@ std::optional<std::filesystem::path> install_root_of(const std::filesystem::path
 std::string linked_version(const std::filesystem::path& root);
 std::filesystem::path stable_executable(const std::filesystem::path& executable);
 std::optional<std::string> switch_version(const std::filesystem::path& staged_root, const std::filesystem::path& root, const std::string& version);
-int run_update_command();
+int run_update_command(bool automatic);
 
 }

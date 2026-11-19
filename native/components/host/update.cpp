@@ -398,7 +398,14 @@ UpdatePolicy policy_from_environment(const fs::path& install_dir) {
     const char* url = std::getenv("GMNEW_UPDATE_URL");
     if (url != nullptr && *url != '\0') policy.url = url;
     const char* auto_update = std::getenv("GMNEW_AUTO_UPDATE");
-    policy.enabled = !is_dev_version(kBuildVersion) && !(auto_update != nullptr && std::string_view(auto_update) == "0");
+    if (!build_is_clean()) {
+        const std::string_view state = kBuildState;
+        const std::string why = state == "dirty" ? "it has uncommitted changes" : state == "unpushed" ? "HEAD is not origin/main" : "its git state is unknown";
+        policy.disabled_reason = "this build is " + std::string(state) + ": " + why + ", so it never replaces itself";
+    } else if (auto_update != nullptr && std::string_view(auto_update) == "0") {
+        policy.disabled_reason = "GMNEW_AUTO_UPDATE is 0";
+    }
+    policy.enabled = policy.disabled_reason.empty();
     policy.committed = parse_int64(kBuildCommitTime);
     return policy;
 }
@@ -542,6 +549,12 @@ UpdateResult update_once(const UpdatePolicy& policy, UpdateResult result) {
     result.commit = manifest->commit;
     result.ok = true;
     state.etag = reply->etag;
+    if (kBuildHead != "unknown" && manifest->commit.starts_with(kBuildHead)) {
+        state.checked_ms = now_ms();
+        write_update_state(policy.install_dir, state);
+        result.status = "already current";
+        return result;
+    }
 
     const std::string target = target_name();
     const auto asset = manifest->assets.find(target);
@@ -618,10 +631,18 @@ UpdateResult update_now(const UpdatePolicy& policy) {
     }
 }
 
-int run_update_command() {
+int run_update_command(bool automatic) {
     UpdatePolicy policy = policy_from_environment(current_executable().parent_path());
-    policy.force = true;
-    const UpdateResult result = update_now(policy);
+    policy.force = !automatic;
+    UpdateResult result;
+    if (automatic && !policy.enabled) {
+        result.ok = true;
+        result.from = policy.current_version;
+        result.to = policy.current_version;
+        result.status = "auto update off: " + policy.disabled_reason;
+    } else {
+        result = update_now(policy);
+    }
     std::cout << json::dump(result.to_json()) << '\n';
     return result.ok ? 0 : 1;
 }
