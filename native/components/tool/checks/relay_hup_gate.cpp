@@ -4,6 +4,7 @@
 
 #include <chrono>
 #include <csignal>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <iterator>
@@ -53,6 +54,21 @@ CheckResult check_relay_hup_gate(const std::string& binary) {
     const auto sandbox = fs::temp_directory_path() / ("gm-relay-hup-gate-" + std::to_string(stamp));
     const auto workspace = sandbox / "ws";
     fs::create_directories(workspace);
+    const char* home = std::getenv("HOME");
+    const fs::path installed_pw = fs::path(home == nullptr ? "" : home) / ".gmnew" / "pw";
+    std::error_code linked;
+    if (home == nullptr || !fs::is_directory(installed_pw, linked)) {
+        result.failures.push_back("no installed playwriter package at " + installed_pw.string() + "; this witness reuses it and never installs one");
+        fs::remove_all(sandbox, linked);
+        return result;
+    }
+    fs::create_directories(sandbox / ".gmnew");
+    fs::create_directory_symlink(installed_pw, sandbox / ".gmnew" / "pw", linked);
+    if (linked) {
+        result.failures.push_back("cannot link " + installed_pw.string() + " into the sandbox: " + linked.message());
+        fs::remove_all(sandbox, linked);
+        return result;
+    }
     long long gate = 0;
     {
         Session session(binary, workspace, sandbox, 180000, false);
