@@ -4435,3 +4435,11 @@ Not changed: the 13 install-running witnesses, the job_start Windows kill, and r
 - Method decision (made here, not by the owner): the red-without-fix uses a deterministic collider inside check-browser-tabs-owner, not a second timed run. After alpha and beta each have their tabs, the witness starts a third serve on the same workspace and sandbox, takes the gate pid from its first browser call, sends SIGHUP to its relay, waits for the relay to exit within 20 s, and kills the gate by pid if it is still alive after 30 s (the same cleanup check-relay-hup-gate does). Red is expected as "has been closed" in beta's or alpha's next call. The fix is named only after that red trace shows which step closes the browser.
 - Why: the timed concurrent run (1512ef3) did not overlap the collision reliably, so one run can't show the red. A deterministic collider removes the timing.
 - Reopen: when the gate reads swap-in and swap-out both below 1000 KB/s, run the collider witness once without the fix (red) and once with it (green) under one gate sample, with wall times.
+
+## Twenty-seventh stretch 2026-11-19 (check-browser-tabs-owner deterministic collider): code written, gate closed
+
+- The collider (commit with this line): after alpha and beta each have their tab, a third serve starts on the same workspace and sandbox, takes the gate pid from its first browser call, must reach the same gate as alpha, is sent SIGHUP at its relay (exit bounded to 20 s), and the gate is killed by pid if it is still alive after 30 s unless it is the shared gate. The collider's Session stops with the witness.
+- The fix is the term `!shared_gate &&` in the cleanup condition: the collider never kills a gate that alpha and beta hold open. Removing that term is the red leg.
+- Trace: each close the witness can see writes a step with its time in ms (collider SIGHUP, gate cleanup kill, alpha browser_close_tab refused, alpha browser_close_tab own, alpha and beta browser_close_run). A failing run appends the trace as its last failure line.
+- Build: gm-tool builds (build_rc 0, runs/build-collider.log). No red or green run was made in this stretch.
+- Gate reading (Phase B): vmstat 1 2 swap-in 1432 KB/s, swap-out 0 KB/s. Closed. The red and green pair is for the next cycle.
