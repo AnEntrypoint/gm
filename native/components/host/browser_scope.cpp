@@ -14,6 +14,7 @@ namespace {
 
 constexpr const char* kExecute = "playwriter_execute";
 constexpr const char* kBrowsers = "playwriter_browsers";
+constexpr double kMinExecuteTimeoutMs = 1000;
 constexpr std::size_t kTitleChars = 80;
 constexpr std::size_t kUrlChars = 200;
 constexpr int kBrowserTimeoutMs = 10000;
@@ -166,6 +167,9 @@ std::vector<VerbInfo> BrowserScope::list() const {
     verbs.push_back({"browser_close_machine",
                      "Close the whole project browser, with every run's tabs. A separate explicit action that needs confirm true. playwriter_browsers close is run-scoped and never does this.",
                      R"json({"type":"object","properties":{"confirm":{"type":"boolean"},"target":{"type":"string"},"force":{"type":"boolean"}},"required":["confirm"]})json"});
+    verbs.push_back({"playwriter_browsers",
+                     "List the project browser with its browsers and tabs, or close this run's browser context with action close. action defaults to list. close is run-scoped; browser_close_machine closes the whole project browser.",
+                     R"json({"type":"object","properties":{"action":{"type":"string","enum":["list","close"]}}})json"});
     return verbs;
 }
 
@@ -182,6 +186,9 @@ json::Value BrowserScope::user_execute(const json::Value& args) {
     const json::Value* code_arg = args.find("code");
     if (code_arg == nullptr || !code_arg->is_string()) return inner_.call(kExecute, args);
     const std::string code = code_arg->as_string();
+    if (const json::Value* timeout_arg = args.find("timeout"); timeout_arg != nullptr && timeout_arg->is_number() && timeout_arg->as_number() < kMinExecuteTimeoutMs) {
+        return failure("timeout is in milliseconds: " + std::to_string(static_cast<long long>(timeout_arg->as_number())) + " is below 1000; the default is 10000");
+    }
     std::string trimmed = code;
     while (!trimmed.empty() && (trimmed.back() == ';' || trimmed.back() == ' ' || trimmed.back() == '\n' || trimmed.back() == '\t' || trimmed.back() == '\r')) {
         trimmed.pop_back();
@@ -217,6 +224,11 @@ json::Value BrowserScope::browsers_call(const json::Value& args) {
 
 json::Value BrowserScope::browsers(const json::Value& args) {
     const json::Value* action = args.find("action");
+    if (action == nullptr) {
+        json::Value listing = args;
+        listing.set("action", "list");
+        return browsers_call(listing);
+    }
     if (action != nullptr && action->is_string() && action->as_string() == "close") return close_run();
     return browsers_call(args);
 }

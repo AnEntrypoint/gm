@@ -4152,3 +4152,11 @@ Row 4, same-path read_file repeated in a run.
 - docs/GM_FRICTION.md rewritten to list all 19 ranked items with their cause and fix commit.
 - Open: browser error cause (row prd-mwnb4ldzce65). A playwriter probe returned 2, and the gate stopped its browser by PID. The page-removed error was not reproduced.
 - Check 4: the configured command has no GMNEW_AUTO_UPDATE pin (witness in the REPORT).
+
+## Round 2026-11-19 browser error cause (row prd-mwnb4ldzce65)
+
+- Eight browser errors from the run logs, verbatim, in docs/GM_FRICTION.md item 8, with the run, step, verb, reproduction and cause for each. The count was 8, not 7.
+- Fixed: E2 and E7 (timeout in milliseconds). native/components/host/browser_scope.cpp user_execute refuses a timeout below 1000 ms with its unit. Witness: the logged E2 arguments with timeout 120 return "timeout is in milliseconds: 120 is below 1000; the default is 10000".
+- Fixed: E3 (playwriter_browsers with no action, and not listed). browser_scope.cpp browsers() defaults action to list, and list() advertises playwriter_browsers with its action enum. Witness: gm.playwriter_browsers({}) returns the browser list with "action": "list".
+- Reproduced, caused by the caller's app: E4, E5 (locator timeouts, element absent) and E8 (refused connection, port not serving).
+- Not reproduced: E1 and E6 (the global page was removed). Attempts: the logged E1 call in a fresh run; the E6 arguments replayed; a page closed and then referenced; two connections sharing one project browser with one closing its page. The row closes on this measured non-reproduction, with the two log entries named for the next check.
