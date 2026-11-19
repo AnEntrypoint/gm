@@ -91,14 +91,6 @@ std::filesystem::path absolute_path(const std::filesystem::path& file) {
     return file;
 }
 
-void idle_pause(std::chrono::milliseconds duration) {
-    const auto nanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(duration).count();
-    struct timespec pause {};
-    pause.tv_sec = static_cast<time_t>(nanoseconds / 1000000000);
-    pause.tv_nsec = static_cast<long>(nanoseconds % 1000000000);
-    nanosleep(&pause, nullptr);
-}
-
 #else
 
 std::optional<std::string> read_file(const std::filesystem::path& file) {
@@ -140,10 +132,6 @@ std::filesystem::path normal_path(const std::filesystem::path& file) {
 
 std::filesystem::path absolute_path(const std::filesystem::path& file) {
     return std::filesystem::absolute(file);
-}
-
-void idle_pause(std::chrono::milliseconds duration) {
-    std::this_thread::sleep_for(duration);
 }
 
 #endif

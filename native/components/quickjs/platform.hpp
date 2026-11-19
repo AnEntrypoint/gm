@@ -69,6 +69,5 @@ std::vector<std::filesystem::path> regular_files_in(const std::filesystem::path&
 std::filesystem::path join_path(const std::filesystem::path& dir, std::string_view name);
 std::filesystem::path normal_path(const std::filesystem::path& file);
 std::filesystem::path absolute_path(const std::filesystem::path& file);
-void idle_pause(std::chrono::milliseconds duration);
 
 }

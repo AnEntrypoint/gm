@@ -73,6 +73,7 @@ public:
     void drain_jobs();
     bool loop_alive() const;
     void turn_loop();
+    void wait_loop(std::chrono::milliseconds limit);
 
 private:
     Session& session_;

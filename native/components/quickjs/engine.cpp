@@ -22,7 +22,7 @@ namespace {
 
 constexpr std::string_view embedded_builtin_prefix = "tjs:";
 constexpr std::string_view node_builtin_prefix = "node:";
-constexpr std::chrono::milliseconds idle_loop_pause{1};
+constexpr std::chrono::milliseconds idle_loop_limit{100};
 
 platform::SharedMutex& sessions_mutex() {
     static platform::SharedMutex mutex;
@@ -406,6 +406,12 @@ void Engine::turn_loop() {
 #endif
 }
 
+void Engine::wait_loop(std::chrono::milliseconds limit) {
+#if defined(GM_HAVE_TXIKI)
+    gm_txiki_loop_wait(static_cast<TJSRuntime*>(embedded_runtime_), static_cast<int>(limit.count()));
+#endif
+}
+
 std::string to_std_string(JSContext* ctx, JSValueConst value) {
     size_t length = 0;
     const char* text = JS_ToCStringLen(ctx, &length, value);
@@ -510,7 +516,7 @@ Settled settle(Engine& engine, JSValue maybe_promise) {
         if (past_deadline(engine.session())) return {Outcome::Rejected, JS_NewString(ctx, "the call did not finish")};
         engine.turn_loop();
         engine.drain_jobs();
-        if (JS_PromiseState(ctx, promise.get()) == JS_PROMISE_PENDING) platform::idle_pause(idle_loop_pause);
+        if (JS_PromiseState(ctx, promise.get()) == JS_PROMISE_PENDING) engine.wait_loop(idle_loop_limit);
     }
     switch (JS_PromiseState(ctx, promise.get())) {
         case JS_PROMISE_FULFILLED:

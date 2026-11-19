@@ -76,6 +76,7 @@ const std::vector<Registered>& checks() {
         {"check-job-wait-bounded", check_job_wait_bounded},
         {"check-publish-gate", check_publish_gate},
         {"check-swap-gate", check_swap_gate},
+        {"check-idle-cpu", check_idle_cpu},
         {"check-rows", check_rows},
         {"check-row-peer", check_row_peer},
         {"check-fetch", check_fetch},

@@ -2,6 +2,12 @@
 
 #include "private.h"
 
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <poll.h>
+#endif
+
 TJSRuntime *gm_txiki_new(void) {
     TJSRunOptions options;
     TJS_DefaultOptions(&options);
@@ -26,6 +32,18 @@ int gm_txiki_loop_alive(TJSRuntime *runtime) {
 
 void gm_txiki_loop_turn(TJSRuntime *runtime) {
     uv_run(&runtime->loop, UV_RUN_NOWAIT);
+}
+
+void gm_txiki_loop_wait(TJSRuntime *runtime, int limit_ms) {
+    uv_loop_t *loop = &runtime->loop;
+    int timeout = uv_backend_timeout(loop);
+    if (timeout < 0 || timeout > limit_ms) timeout = limit_ms;
+#ifdef _WIN32
+    Sleep((DWORD) timeout);
+#else
+    struct pollfd watch = {uv_backend_fd(loop), POLLIN, 0};
+    poll(&watch, 1, timeout);
+#endif
 }
 
 JSValue gm_txiki_refresh_loop_time(JSContext *ctx, JSValueConst this_value, int argc, JSValueConst *argv) {
