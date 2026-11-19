@@ -2,9 +2,12 @@
 
 #include <algorithm>
 #include <chrono>
+#include <csignal>
 #include <cstdint>
 #include <cstdlib>
 #include <filesystem>
+#include <fstream>
+#include <iterator>
 #include <regex>
 #include <set>
 #include <system_error>
@@ -97,6 +100,28 @@ bool gone(long long pid) {
     return proc::start_time_of(pid) == 0;
 }
 
+bool is_zombie(long long pid) {
+#if defined(__linux__)
+    std::ifstream stat("/proc/" + std::to_string(pid) + "/stat");
+    const std::string text((std::istreambuf_iterator<char>(stat)), std::istreambuf_iterator<char>());
+    const std::size_t close = text.rfind(')');
+    return close != std::string::npos && close + 2 < text.size() && text[close + 2] == 'Z';
+#else
+    const proc::Outcome state = proc::run({"ps", "-o", "stat=", "-p", std::to_string(pid)}, {}, {}, 5000);
+    return state.out.find('Z') != std::string::npos;
+#endif
+}
+
+bool has_exited(long long pid) {
+    return proc::start_time_of(pid) == 0 || is_zombie(pid);
+}
+
+bool exited_within(long long pid, std::chrono::seconds limit) {
+    const auto waited_from = std::chrono::steady_clock::now();
+    while (!has_exited(pid) && std::chrono::steady_clock::now() - waited_from < limit) std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    return has_exited(pid);
+}
+
 }
 
 CheckResult check_browser_tabs_owner(const std::string& binary) {
@@ -108,6 +133,10 @@ CheckResult check_browser_tabs_owner(const std::string& binary) {
     fs::create_directories(workspace);
     auto expect = [&](bool condition, const std::string& text) {
         if (!condition) result.failures.push_back(text);
+    };
+    std::string trace;
+    auto step = [&](const std::string& what) {
+        trace += what + " at " + std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - began).count()) + " ms; ";
     };
     std::error_code ec;
     const char* real_home = std::getenv("HOME");
@@ -121,6 +150,7 @@ CheckResult check_browser_tabs_owner(const std::string& binary) {
     fs::create_directories(sandbox / ".gmnew");
     fs::create_directory_symlink(installed, sandbox / ".gmnew" / "pw", ec);
     long long gate = 0;
+    long long collider_gate = 0;
     {
         Session alpha({binary, "serve", "--workspace", workspace.string(), "--run-dir", (workspace / "runs" / "alpha").string()}, workspace, sandbox, 300000);
         Session beta({binary, "serve", "--workspace", workspace.string(), "--run-dir", (workspace / "runs" / "beta").string()}, workspace, sandbox, 300000);
@@ -148,6 +178,28 @@ CheckResult check_browser_tabs_owner(const std::string& binary) {
             expect(beta_out.find("OPENED 2") != std::string::npos && beta_out.find("at end 2 [") != std::string::npos,
                    "beta's open call did not report its census: " + beta_out.substr(0, 300));
 
+            step("collider: start a third serve on the same workspace and sandbox");
+            Session collider({binary, "serve", "--workspace", workspace.string(), "--run-dir", (workspace / "runs" / "collider").string()}, workspace, sandbox, 300000);
+            expect(collider.started(), "the collider serve did not start from " + binary);
+            if (collider.started()) {
+                connect(collider);
+                const json::Value reached = playwriter(collider, "return 1;");
+                const std::string reached_text = json::dump(reached);
+                std::smatch reached_gate;
+                if (std::regex_search(reached_text, reached_gate, std::regex("gate pid ([0-9]+)"))) collider_gate = std::stoll(reached_gate[1].str());
+                expect(collider_gate == gate, "the collider did not reach the gate " + std::to_string(gate) + ": " + reached_text.substr(0, 300));
+                const long long relay = collider.pid();
+                step("collider: SIGHUP to its relay " + std::to_string(relay));
+                if (::kill(static_cast<pid_t>(relay), SIGHUP) != 0) expect(false, "could not send SIGHUP to the collider relay " + std::to_string(relay));
+                expect(exited_within(relay, std::chrono::seconds(20)), "the collider relay " + std::to_string(relay) + " did not exit within 20 s of SIGHUP");
+                const bool shared_gate = collider_gate == gate;
+                if (!shared_gate && !exited_within(collider_gate, std::chrono::seconds(30))) {
+                    step("collider: gate cleanup kills gate " + std::to_string(collider_gate) + " by pid");
+                    kill_processes(process_tree({collider_gate}));
+                }
+            }
+            collider.stop();
+
             const std::string alpha_text = tabs_text(alpha);
             const std::string beta_text = tabs_text(beta);
             const std::vector<std::string> alpha_ids = own_ids(alpha_text);
@@ -167,9 +219,11 @@ CheckResult check_browser_tabs_owner(const std::string& binary) {
             }
 
             if (alpha_ids.size() == 2 && beta_ids.size() == 2) {
+                step("alpha: browser_close_tab of beta's tab, which must be refused");
                 const json::Value refused = output_of(run_code(alpha, "return { close: await gm.browser_close_tab({ targetId: " + json::quote(beta_ids[0]) + " }) };"));
                 const json::Value* refused_close = field(refused, "close");
                 expect(refused_close != nullptr && !flag_of(*refused_close, "ok"), "alpha closed beta's tab " + beta_ids[0]);
+                step("alpha: browser_close_tab of its own tab");
                 const json::Value closed = output_of(run_code(alpha, "return { close: await gm.browser_close_tab({ targetId: " + json::quote(alpha_ids[0]) + " }) };"));
                 const json::Value* own_close = field(closed, "close");
                 expect(own_close != nullptr && flag_of(*own_close, "ok"), "alpha could not close its own tab " + alpha_ids[0]);
@@ -183,6 +237,7 @@ CheckResult check_browser_tabs_owner(const std::string& binary) {
             }
 
             for (Session* session : {&alpha, &beta}) {
+                step(std::string(session == &alpha ? "alpha" : "beta") + ": browser_close_run");
                 const json::Value finished = output_of(run_code(*session, "return { close: await gm.browser_close_run({}) };"));
                 const json::Value* closed = field(finished, "close");
                 expect(closed != nullptr && flag_of(*closed, "ok"), "browser_close_run did not finish a serve's own tabs: " + json::dump(finished).substr(0, 300));
@@ -200,6 +255,7 @@ CheckResult check_browser_tabs_owner(const std::string& binary) {
             result.failures.push_back("the gate " + std::to_string(gate) + " outlived both serves by 30 s; its tree of " + std::to_string(tree.size()) + " process(es) was stopped by pid");
         }
     }
+    if (!result.failures.empty()) result.failures.push_back("trace: " + trace);
     fs::remove_all(sandbox, ec);
     const auto wall = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - began).count();
     result.summary = "two serves in one project share one browser: each lists only its own tabs by targetId, the other serve's tabs are counted with its run id and pid, a browser_close_tab of another serve's tab is refused, a serve closes its own tab, and each playwriter_execute reports its tabs at start and end (wall " +
