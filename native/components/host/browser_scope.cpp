@@ -5,16 +5,29 @@
 #include <cstddef>
 #include <cstdint>
 #include <fstream>
+#include <set>
+#include <sstream>
 #include <system_error>
 #include <thread>
 #include <utility>
 
+#if defined(_WIN32)
+#include <process.h>
+#else
+#include <unistd.h>
+#endif
+
+#include "gm/proc.hpp"
+
 namespace gm::host {
 namespace {
+
+namespace fs = std::filesystem;
 
 constexpr const char* kExecute = "playwriter_execute";
 constexpr const char* kBrowsers = "playwriter_browsers";
 constexpr double kMinExecuteTimeoutMs = 1000;
+constexpr const char* kTabsFile = "browser-pages.txt";
 constexpr std::size_t kTitleChars = 80;
 constexpr std::size_t kUrlChars = 200;
 constexpr int kBrowserTimeoutMs = 10000;
@@ -32,25 +45,23 @@ const char* kOpenRunContext =
     "const owned = state.gmRunPages = state.gmRunPages || new Set(); "
     "state.gmRunView = new Proxy(home, { get(target, key) { if (key === 'newPage') return async (...args) => { const made = await gmNewPage(state.gmProject, args); owned.add(made); return made; }; const value = Reflect.get(target, key, target); return typeof value === 'function' ? value.bind(target) : value; } }); } } "
     "var page = state.gmPage; context = state.gmRunView; ";
-const char* kTabsCode =
+const char* kPagesCode =
     "const cdp = await browser.newBrowserCDPSession(); const { targetInfos } = await cdp.send('Target.getTargets'); "
-    "const { browserContextIds } = await cdp.send('Target.getBrowserContexts'); const created = new Set(browserContextIds); "
-    "const rows = []; const own = new Set(); const owned = [...(state.gmRunPages || [])].filter((p) => !p.isClosed()); "
-    "if (!state.gmTabIds) { state.gmTabIds = new WeakMap(); state.gmTabSeq = 0; } "
-    "for (const p of owned) { const s = await state.gmRun.newCDPSession(p); own.add((await s.send('Target.getTargetInfo')).targetInfo.targetId); await s.detach(); "
-    "let id = state.gmTabIds.get(p); if (id === undefined) { state.gmTabSeq += 1; id = 't' + state.gmTabSeq; state.gmTabIds.set(p, id); } rows.push({ id, url: p.url(), title: await p.title().catch(() => '') }); } "
-    "const counts = { otherRuns: 0, projectTabs: 0 }; "
-    "for (const t of targetInfos) { if (t.type !== 'page' || own.has(t.targetId)) continue; "
-    "if (created.has(t.browserContextId)) counts.otherRuns += 1; else counts.projectTabs += 1; } "
-    "await cdp.detach(); return 'GMTABS' + JSON.stringify({ rows, counts }) + 'GMTABS';";
+    "const { browserContextIds } = await cdp.send('Target.getBrowserContexts'); await cdp.detach(); "
+    "const pages = targetInfos.filter((t) => t.type === 'page').map((t) => ({ id: t.targetId, url: t.url, title: t.title, context: t.browserContextId })); "
+    "const owned = []; for (const p of [...(state.gmRunPages || [])].filter((q) => !q.isClosed())) { const s = await state.gmRun.newCDPSession(p); owned.push((await s.send('Target.getTargetInfo')).targetInfo.targetId); await s.detach(); } "
+    "return 'GMPAGES' + JSON.stringify({ pages, created: browserContextIds, owned }) + 'GMPAGES';";
 const char* kCloseCode =
     "let n = 0; if (state.gmRun) { try { const opened = [...(state.gmRunPages || [])].filter((p) => !p.isClosed()); "
     "for (const p of opened) { await p.close(); } n = opened.length; } finally { delete state.gmRun; delete state.gmRunFor; delete state.gmRunView; delete state.gmRunPages; } } return 'GMCLOSED' + n + 'GMCLOSED';";
 
-const char* kOwnedCode =
-    "let ids = []; if (state.gmRun) { for (const p of [...(state.gmRunPages || [])].filter((q) => !q.isClosed())) { "
-    "const s = await state.gmRun.newCDPSession(p); ids.push((await s.send('Target.getTargetInfo')).targetInfo.targetId); await s.detach(); } } "
-    "return 'GMOWNED' + JSON.stringify(ids) + 'GMOWNED';";
+std::string close_by_id_code(const std::string& id) {
+    return "const wanted = " + json::quote(id) + "; let n = 0; for (const p of [...(state.gmRunPages || [])].filter((q) => !q.isClosed())) { "
+           "const s = await state.gmRun.newCDPSession(p); const targetId = (await s.send('Target.getTargetInfo')).targetInfo.targetId; await s.detach(); "
+           "if (targetId === wanted) { await p.close(); n += 1; } } "
+           "if (n === 0) { const cdp = await browser.newBrowserCDPSession(); try { await cdp.send('Target.closeTarget', { targetId: wanted }); n += 1; } catch (error) { } finally { await cdp.detach(); } } "
+           "return 'GMCLOSEDIDS' + n + 'GMCLOSEDIDS';";
+}
 
 std::string recorded_close_code(const std::vector<std::string>& recorded) {
     std::string ids;
@@ -104,43 +115,26 @@ std::string string_field(const json::Value& object, std::string_view key) {
     return value != nullptr && value->is_string() ? value->as_string() : std::string();
 }
 
-std::size_t number_field(const json::Value& object, std::string_view key) {
-    const json::Value* value = object.find(key);
-    return value != nullptr && value->is_number() ? static_cast<std::size_t>(value->as_number()) : 0;
+std::vector<std::string> strings_of(const json::Value* value) {
+    std::vector<std::string> out;
+    if (value == nullptr || !value->is_array()) return out;
+    for (const json::Value& item : value->as_array()) {
+        if (item.is_string()) out.push_back(item.as_string());
+    }
+    return out;
 }
 
-std::string render_view(const json::Value& view, std::size_t& count) {
-    const json::Value* rows = view.find("rows");
-    const json::Value* counts = view.find("counts");
-    std::string listed;
-    count = 0;
-    if (rows != nullptr && rows->is_array()) {
-        for (const json::Value& row : rows->as_array()) {
-            count += 1;
-            const std::string id = string_field(row, "id");
-            listed += (count == 1 ? "" : "; ") + std::string("[") + (id.empty() ? std::to_string(count) : id) + "] " +
-                      head_chars(string_field(row, "url"), kUrlChars) + " \"" + head_chars(string_field(row, "title"), kTitleChars) + "\"";
-        }
+std::string join(const std::vector<std::string>& parts, std::string_view separator) {
+    std::string out;
+    for (std::size_t i = 0; i < parts.size(); ++i) {
+        if (i > 0) out += std::string(separator);
+        out += parts[i];
     }
-    std::string text = count == 0 ? std::string("tabs: none in this run")
-                                  : "tabs: " + std::to_string(count) + " in this run, safe to close on finish: " + listed;
-    if (counts != nullptr && counts->is_object()) {
-        const std::size_t other_runs = number_field(*counts, "otherRuns");
-        const std::size_t project_tabs = number_field(*counts, "projectTabs");
-        if (other_runs + project_tabs > 0) {
-            text += "; not this run and not closable by it: " + std::to_string(other_runs) + " in other runs and " +
-                    std::to_string(project_tabs) + " in the project browser";
-        }
-    }
-    return text;
+    return out;
 }
 
-json::Value tabs_reply(std::string state, std::string text) {
-    json::Value reply;
-    reply.set("ok", true);
-    reply.set("state", std::move(state));
-    reply.set("text", std::move(text));
-    return reply;
+bool contains(const std::vector<std::string>& ids, const std::string& id) {
+    return std::find(ids.begin(), ids.end(), id) != ids.end();
 }
 
 std::size_t count_of(const std::string& digits) {
@@ -152,6 +146,130 @@ std::size_t count_of(const std::string& digits) {
     return value;
 }
 
+json::Value tabs_reply(std::string state, std::string text) {
+    json::Value reply;
+    reply.set("ok", true);
+    reply.set("state", std::move(state));
+    reply.set("text", std::move(text));
+    return reply;
+}
+
+long long own_process() {
+#if defined(_WIN32)
+    return static_cast<long long>(_getpid());
+#else
+    return static_cast<long long>(::getpid());
+#endif
+}
+
+struct Owner {
+    long long pid = 0;
+    long long start = 0;
+    std::vector<std::string> ids;
+};
+
+Owner read_owner(const fs::path& file) {
+    Owner owner;
+    std::ifstream in(file);
+    std::string line;
+    for (bool first = true; std::getline(in, line); first = false) {
+        if (line.empty()) continue;
+        if (first && line.starts_with("owner ")) {
+            std::istringstream fields(line.substr(6));
+            fields >> owner.pid >> owner.start;
+            continue;
+        }
+        owner.ids.push_back(line);
+    }
+    return owner;
+}
+
+void write_owner(const fs::path& file, const std::vector<std::string>& ids) {
+    std::error_code ignored;
+    if (ids.empty()) {
+        fs::remove(file, ignored);
+        return;
+    }
+    const long long pid = own_process();
+    fs::path temp = file;
+    temp += ".tmp";
+    {
+        std::ofstream out(temp, std::ios::trunc);
+        out << "owner " << pid << ' ' << proc::start_time_of(pid) << '\n';
+        for (const std::string& id : ids) out << id << '\n';
+    }
+    fs::rename(temp, file, ignored);
+}
+
+bool alive(const Owner& owner) {
+    return owner.pid > 0 && owner.start != 0 && proc::start_time_of(owner.pid) == owner.start;
+}
+
+struct Others {
+    std::size_t tabs = 0;
+    std::size_t project = 0;
+    std::vector<std::string> owners;
+};
+
+Others others_of(const fs::path& pages_file, const BrowserScope::Snapshot& snap, const std::vector<std::string>& own) {
+    Others others;
+    std::set<std::string> claimed(own.begin(), own.end());
+    const fs::path own_dir = pages_file.parent_path();
+    std::error_code ec;
+    std::size_t unowned = 0;
+    for (fs::directory_iterator it(own_dir.parent_path(), ec), end; !ec && it != end; it.increment(ec)) {
+        if (!it->is_directory(ec) || it->path() == own_dir) continue;
+        const Owner owner = read_owner(it->path() / kTabsFile);
+        std::size_t count = 0;
+        for (const BrowserScope::Page& page : snap.pages) {
+            if (!contains(owner.ids, page.id)) continue;
+            count += 1;
+            claimed.insert(page.id);
+        }
+        if (count == 0) continue;
+        others.tabs += count;
+        others.owners.push_back("run " + it->path().filename().string() + " pid " + std::to_string(owner.pid) + (alive(owner) ? " running" : " not running") + ", " +
+                                std::to_string(count) + " tab(s)");
+    }
+    for (const BrowserScope::Page& page : snap.pages) {
+        if (claimed.count(page.id) > 0) continue;
+        if (contains(snap.created, page.context)) {
+            others.tabs += 1;
+            unowned += 1;
+        } else {
+            others.project += 1;
+        }
+    }
+    if (unowned > 0) others.owners.push_back("no owner record, " + std::to_string(unowned) + " tab(s)");
+    return others;
+}
+
+std::string render(const std::vector<BrowserScope::Page>& rows, const Others& others) {
+    std::string text = rows.empty() ? std::string("tabs: none in this run") : "tabs: " + std::to_string(rows.size()) + " in this run, safe to close on finish: ";
+    for (std::size_t i = 0; i < rows.size(); ++i) {
+        const BrowserScope::Page& row = rows[i];
+        text += (i == 0 ? "" : "; ") + std::string("[") + row.id + "] " + head_chars(row.url, kUrlChars) + " \"" + head_chars(row.title, kTitleChars) + "\"";
+    }
+    if (others.tabs + others.project > 0) {
+        text += "; not this run and not closable by it: " + std::to_string(others.tabs) + " in other runs";
+        if (!others.owners.empty()) text += " (" + join(others.owners, "; ") + ")";
+        text += " and " + std::to_string(others.project) + " in the project browser";
+    }
+    return text;
+}
+
+std::string describe(std::string_view when, const BrowserScope::Tally& tally) {
+    if (!tally.known) return std::string(when) + " unavailable";
+    return std::string(when) + " " + std::to_string(tally.ids.size()) + " [" + join(tally.ids, ", ") + "]";
+}
+
+void append_census(json::Value& reply, const BrowserScope::Tally& before, const BrowserScope::Tally& after) {
+    const std::string line = "gm tabs: " + describe("at start", before) + "; " + describe("at end", after);
+    const json::Value* output = reply.find("output");
+    const std::string text = output != nullptr && output->is_string() ? output->as_string() : std::string();
+    reply.set("output", text.empty() ? line : text + "\n" + line);
+}
+
 }
 
 BrowserScope::BrowserScope(VerbTable& inner, std::filesystem::path pages_file) : inner_(inner), pages_file_(std::move(pages_file)) {}
@@ -159,8 +277,11 @@ BrowserScope::BrowserScope(VerbTable& inner, std::filesystem::path pages_file) :
 std::vector<VerbInfo> BrowserScope::list() const {
     std::vector<VerbInfo> verbs = inner_.list();
     verbs.push_back({"browser_tabs",
-                     "The tabs this run opened in its own browser context, listed with url and title, and the other tabs of this project browser counted but not listed. When nothing changed since the last call the reply says unchanged.",
+                     "The tabs this run opened, each with its targetId, and the tabs of other runs counted with the run id and pid that own them. When nothing changed since the last call the reply says unchanged.",
                      R"json({"type":"object","properties":{}})json"});
+    verbs.push_back({"browser_close_tab",
+                     "Close one tab this run opened, by its targetId from browser_tabs. A tab of another run is refused.",
+                     R"json({"type":"object","properties":{"targetId":{"type":"string"}},"required":["targetId"]})json"});
     verbs.push_back({"browser_close_run",
                      "Close this run's browser context and every tab in it. Other runs and other projects are not touched. finish calls it.",
                      R"json({"type":"object","properties":{}})json"});
@@ -177,6 +298,7 @@ json::Value BrowserScope::call(std::string_view name, const json::Value& args) {
     if (name == kExecute) return user_execute(args);
     if (name == kBrowsers) return browsers(args);
     if (name == "browser_tabs") return tabs();
+    if (name == "browser_close_tab") return close_tab(args);
     if (name == "browser_close_run") return close_run();
     if (name == "browser_close_machine") return close_machine(args);
     return inner_.call(name, args);
@@ -198,16 +320,20 @@ json::Value BrowserScope::user_execute(const json::Value& args) {
     const std::string body = single_expression || parenthesized ? "return await (" + trimmed + ");" : code;
     json::Value forwarded = args;
     forwarded.set("code", std::string(kOpenRunContext) + body);
+    bool had_browser = false;
     {
         std::lock_guard lock(mutex_);
+        had_browser = used_;
         used_ = true;
     }
+    const Tally before = had_browser ? census() : Tally{true, {}};
     json::Value reply = inner_.call(kExecute, forwarded);
     for (int attempt = 1; attempt < kGoneAttempts && json::dump(reply).find(kGoneMarker) != std::string::npos; ++attempt) {
         std::this_thread::sleep_for(std::chrono::milliseconds(kGoneBackoffMs << attempt));
         reply = inner_.call(kExecute, forwarded);
     }
-    if (code.find("newPage") != std::string::npos) record_owned_pages();
+    const Tally after = ok_of(reply) ? census() : Tally{};
+    append_census(reply, before, after);
     return reply;
 }
 
@@ -255,29 +381,106 @@ json::Value BrowserScope::close_machine(const json::Value& args) {
     return reply;
 }
 
+BrowserScope::Snapshot BrowserScope::snapshot() {
+    Snapshot snap;
+    json::Value request;
+    request.set("code", kPagesCode);
+    request.set("timeout", kBrowserTimeoutMs);
+    json::Value reply = inner_.call(kExecute, request);
+    if (!ok_of(reply)) {
+        snap.error = output_of(reply);
+        return snap;
+    }
+    const std::optional<std::string> body = between(output_of(reply), "GMPAGES");
+    if (!body) {
+        snap.error = "the browser answer had no tab view";
+        return snap;
+    }
+    auto parsed = json::parse(*body);
+    if (!parsed || !parsed->is_object()) {
+        snap.error = "the tab view was not JSON";
+        return snap;
+    }
+    if (const json::Value* pages = parsed->find("pages"); pages != nullptr && pages->is_array()) {
+        for (const json::Value& row : pages->as_array()) {
+            snap.pages.push_back({string_field(row, "id"), string_field(row, "url"), string_field(row, "title"), string_field(row, "context")});
+        }
+    }
+    snap.created = strings_of(parsed->find("created"));
+    snap.owned = strings_of(parsed->find("owned"));
+    snap.ok = true;
+    return snap;
+}
+
+void BrowserScope::record(const Snapshot& snap) const {
+    const Owner mine = read_owner(pages_file_);
+    std::vector<std::string> candidates = mine.ids;
+    candidates.insert(candidates.end(), snap.owned.begin(), snap.owned.end());
+    std::vector<std::string> keep;
+    for (const std::string& id : candidates) {
+        const bool live = std::any_of(snap.pages.begin(), snap.pages.end(), [&id](const Page& page) { return page.id == id; });
+        if (live && !contains(keep, id)) keep.push_back(id);
+    }
+    write_owner(pages_file_, keep);
+}
+
+BrowserScope::Tally BrowserScope::census() {
+    const Snapshot snap = snapshot();
+    if (!snap.ok) return Tally{};
+    record(snap);
+    return Tally{true, recorded_pages()};
+}
+
 json::Value BrowserScope::tabs() {
     {
         std::lock_guard lock(mutex_);
         if (!used_) return tabs_reply("none", "tabs: none in this run");
     }
-    json::Value request;
-    request.set("code", kTabsCode);
-    request.set("timeout", kBrowserTimeoutMs);
-    json::Value reply = inner_.call(kExecute, request);
-    if (!ok_of(reply)) return tabs_reply("unavailable", "tabs: unavailable: " + head_chars(output_of(reply), kTitleChars));
-    const std::optional<std::string> body = between(output_of(reply), "GMTABS");
-    if (!body) return tabs_reply("unavailable", "tabs: unavailable: the browser answer had no tab view");
-    auto parsed = json::parse(*body);
-    if (!parsed) return tabs_reply("unavailable", "tabs: unavailable: the tab view was not JSON");
-    std::size_t count = 0;
-    const std::string text = render_view(*parsed, count);
+    const Snapshot snap = snapshot();
+    if (!snap.ok) return tabs_reply("unavailable", "tabs: unavailable: " + head_chars(snap.error, kTitleChars));
+    record(snap);
+    const std::vector<std::string> own = recorded_pages();
+    std::vector<Page> rows;
+    for (const std::string& id : own) {
+        for (const Page& page : snap.pages) {
+            if (page.id == id) rows.push_back(page);
+        }
+    }
+    const std::string text = render(rows, others_of(pages_file_, snap, own));
     std::lock_guard lock(mutex_);
     if (last_view_ && *last_view_ == text) {
         return tabs_reply("unchanged", "tabs: unchanged, " + std::to_string(last_count_) + " in this run");
     }
     last_view_ = text;
-    last_count_ = count;
+    last_count_ = rows.size();
     return tabs_reply("changed", text);
+}
+
+json::Value BrowserScope::close_tab(const json::Value& args) {
+    const json::Value* target = args.find("targetId");
+    if (target == nullptr || !target->is_string() || target->as_string().empty()) {
+        return failure("browser_close_tab needs targetId, an id from browser_tabs");
+    }
+    const std::string id = target->as_string();
+    const Snapshot snap = snapshot();
+    if (!snap.ok) return failure("tabs are unavailable: " + head_chars(snap.error, kTitleChars));
+    record(snap);
+    std::vector<std::string> mine = recorded_pages();
+    if (!contains(mine, id)) {
+        return failure("target " + id + " is not a live tab this run opened; browser_close_tab closes only this run's own tabs");
+    }
+    json::Value request;
+    request.set("code", close_by_id_code(id));
+    request.set("timeout", kBrowserTimeoutMs);
+    json::Value reply = inner_.call(kExecute, request);
+    const std::optional<std::string> count = between(output_of(reply), "GMCLOSEDIDS");
+    if (!ok_of(reply) || !count || count_of(*count) != 1) return failure("the tab " + id + " was not closed: " + output_of(reply));
+    mine.erase(std::remove(mine.begin(), mine.end(), id), mine.end());
+    write_recorded_pages(mine);
+    json::Value closed;
+    closed.set("ok", true);
+    closed.set("closed", id);
+    return closed;
 }
 
 json::Value BrowserScope::close_run() {
@@ -319,40 +522,12 @@ json::Value BrowserScope::close_run() {
     return closed;
 }
 
-void BrowserScope::record_owned_pages() {
-    json::Value request;
-    request.set("code", kOwnedCode);
-    request.set("timeout", kBrowserTimeoutMs);
-    json::Value reply = inner_.call(kExecute, request);
-    if (!ok_of(reply)) return;
-    const std::optional<std::string> body = between(output_of(reply), "GMOWNED");
-    if (!body) return;
-    auto parsed = json::parse(*body);
-    if (!parsed || !parsed->is_array()) return;
-    std::vector<std::string> ids = recorded_pages();
-    for (const json::Value& id : parsed->as_array()) {
-        if (id.is_string() && std::find(ids.begin(), ids.end(), id.as_string()) == ids.end()) ids.push_back(id.as_string());
-    }
-    write_recorded_pages(ids);
-}
-
 std::vector<std::string> BrowserScope::recorded_pages() const {
-    std::vector<std::string> ids;
-    std::ifstream in(pages_file_);
-    for (std::string line; std::getline(in, line);) {
-        if (!line.empty()) ids.push_back(line);
-    }
-    return ids;
+    return read_owner(pages_file_).ids;
 }
 
 void BrowserScope::write_recorded_pages(const std::vector<std::string>& ids) const {
-    if (ids.empty()) {
-        std::error_code ignored;
-        std::filesystem::remove(pages_file_, ignored);
-        return;
-    }
-    std::ofstream out(pages_file_, std::ios::trunc);
-    for (const std::string& id : ids) out << id << '\n';
+    write_owner(pages_file_, ids);
 }
 
 }

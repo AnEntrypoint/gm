@@ -14,6 +14,26 @@ namespace gm::host {
 
 class BrowserScope final : public VerbTable {
 public:
+    struct Page {
+        std::string id;
+        std::string url;
+        std::string title;
+        std::string context;
+    };
+
+    struct Snapshot {
+        bool ok = false;
+        std::string error;
+        std::vector<Page> pages;
+        std::vector<std::string> created;
+        std::vector<std::string> owned;
+    };
+
+    struct Tally {
+        bool known = false;
+        std::vector<std::string> ids;
+    };
+
     BrowserScope(VerbTable& inner, std::filesystem::path pages_file);
 
     std::vector<VerbInfo> list() const override;
@@ -26,8 +46,11 @@ private:
     json::Value browsers(const json::Value& args);
     json::Value close_machine(const json::Value& args);
     json::Value tabs();
+    json::Value close_tab(const json::Value& args);
     json::Value close_run();
-    void record_owned_pages();
+    Snapshot snapshot();
+    Tally census();
+    void record(const Snapshot& snap) const;
     std::vector<std::string> recorded_pages() const;
     void write_recorded_pages(const std::vector<std::string>& ids) const;
 
