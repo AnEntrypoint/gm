@@ -24,8 +24,6 @@ namespace {
 
 namespace fs = std::filesystem;
 
-constexpr std::uint64_t kDefaultTimeoutMs = 15000;
-constexpr std::uint64_t kMaxTimeoutMs = 60000;
 constexpr std::uint64_t kMaxBodyBytes = 16777216;
 constexpr std::size_t kMaxMatchChars = 4096;
 constexpr int kRetries = 3;
@@ -403,10 +401,11 @@ json::Value get_data_url(const fs::path& workspace, const std::string& url, cons
 }
 
 json::Value get_http(const fs::path& workspace, const fs::path& run_dir, const std::string& url, const json::Value& args, std::uint64_t timeout_ms, std::chrono::steady_clock::time_point deadline) {
-    const auto left = std::chrono::duration_cast<std::chrono::milliseconds>(deadline - std::chrono::steady_clock::now()).count();
-    if (left < 1) return timed_out(timeout_ms);
+    const bool bounded = deadline != std::chrono::steady_clock::time_point::max();
+    const auto left = bounded ? std::chrono::duration_cast<std::chrono::milliseconds>(deadline - std::chrono::steady_clock::now()).count() : 0;
+    if (bounded && left < 1) return timed_out(timeout_ms);
     char max_time[32];
-    std::snprintf(max_time, sizeof(max_time), "%.3f", static_cast<double>(left) / 1000.0);
+    std::snprintf(max_time, sizeof(max_time), "%.3f", bounded ? static_cast<double>(left) / 1000.0 : 0.0);
     const auto outcome = proc::run({"curl", "-sS", "-L", "--max-redirs", std::to_string(kMaxRedirects), "-i", "--proto", "=http,https", "--proto-redir", "=http,https", "--max-time", max_time, "--max-filesize", std::to_string(kMaxBodyBytes), "-A", "gm-fetch/1", "-H", "accept: text/html,text/plain;q=0.9,*/*;q=0.5", "-w", kMark + "%{url_effective}\n%{num_redirects}", "--url", url}, workspace, {}, static_cast<std::uint64_t>(left) + 5000);
     if (!outcome.started) return error_of("request failed: could not start curl");
     if (outcome.timed_out || outcome.exit_code == 28) return timed_out(timeout_ms);
@@ -481,10 +480,10 @@ json::Value fetch_call(const json::Value& args, const fs::path& workspace, Locke
     const json::Value* url_value = args.find("url");
     if (url_value == nullptr || !url_value->is_string()) return error_of("url must be a string");
     const std::string url = url_value->as_string();
-    std::uint64_t timeout_ms = kDefaultTimeoutMs;
+    std::uint64_t timeout_ms = 0;
     if (const json::Value* t = args.find("timeoutMs"); t != nullptr && !t->is_null()) {
-        if (!t->is_number() || t->as_number() != static_cast<double>(static_cast<std::uint64_t>(t->as_number())) || t->as_number() < 1 || t->as_number() > static_cast<double>(kMaxTimeoutMs))
-            return error_of("timeoutMs must be an integer from 1 to " + std::to_string(kMaxTimeoutMs));
+        if (!t->is_number() || t->as_number() != static_cast<double>(static_cast<std::uint64_t>(t->as_number())) || t->as_number() < 1)
+            return error_of("timeoutMs must be an integer from 1");
         timeout_ms = static_cast<std::uint64_t>(t->as_number());
     }
     if (const json::Value* max = args.find("maxBytes"); max != nullptr && !max->is_null()) {
@@ -506,7 +505,7 @@ json::Value fetch_call(const json::Value& args, const fs::path& workspace, Locke
     const bool web = scheme.rfind("http:", 0) == 0 || scheme.rfind("https:", 0) == 0;
     if (!data && !std::regex_match(url, std::regex(R"(^[a-zA-Z][a-zA-Z0-9+.-]*:\/\/?\S+$)"))) return error_of("url is not a valid URL");
     if (!data && !web) return error_of("url must be an http, https or data URL");
-    const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(timeout_ms);
+    const auto deadline = timeout_ms == 0 ? std::chrono::steady_clock::time_point::max() : std::chrono::steady_clock::now() + std::chrono::milliseconds(timeout_ms);
     int attempt = 0;
     for (;;) {
         ++attempt;

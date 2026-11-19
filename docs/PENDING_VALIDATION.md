@@ -4242,3 +4242,65 @@ Row 4, same-path read_file repeated in a run.
   - Result 3, a live peer succeeds: the gm connection of this session ran run_code after the install and returned ok (actionSeq 223).
 - Warning outside this stretch: native/components/mcp/server.cpp:2367 "suggest parentheses around && within ||" (-Wparentheses) comes from ab9b391, which is in the base 79a6d2e and predates this stretch. Not fixed here.
 - Not pushed: the commit that records this addendum is local and docs-only, so the stamp is unchanged. A push of it would be a second push this stretch; the owner decides.
+
+## Sixteenth stretch 2026-11-19 (queue item 1: remove the default caps): Phase A
+
+Changes, each with the witness that covers it. Witnesses are run in Phase B (see the next section).
+
+- mcp.hpp: max_steps, max_inflight, job_lifetime_ms, stuck_ms and monitor_ms are std::optional and unset by default. notice_ms stays at 180000 ms. Witnesses: check-caps-removed, check-mcp-conformance (step budget handoff now passes --max-steps 50), check-parity-contract W6 (no flag: maxSteps and stepsLeft are null).
+- host options.hpp/options.cpp: optional_positive_int_flag returns no value when the flag is absent. --max-steps, --max-inflight, --stuck-ms, --job-lifetime-ms and --monitor-ms are optional, with no default. Witness: check-caps-removed (serve with --max-steps 2 reports maxSteps 2; a serve with no flag reports maxSteps and stepsLeft null).
+- host worker.cpp and serve.cpp: wiring of the optional values into ServerOptions and CoreVerbsOptions. Witnesses: check-job-bounds, check-run-code-budget.
+- mcp/server.cpp: maxSteps, maxInflight and stepsLeft are null when unset; the step-zero warning, the next_context end check and documented finish act only when max_steps is set; pump_calls has no inflight limit when max_inflight is unset; the monitor waits notice_ms when monitor_ms is unset; the run_code timeoutMs schema has no maximum (minimum 1). Witnesses: check-caps-removed, check-turn-economy, check-run-code-progress, check-mcp-conformance.
+- verbs/job.cpp: the 100000 ms ceiling on job_status waitMs is removed; waitMs waits with no ceiling, and a job timeout of 0 means no deadline (the watcher waits until the job settles). The adopted-job path follows the same rule. Witnesses: check-job-wait (waitMs 120000 in one body), check-job-bounds, check-job-status-cancel, check-restart-jobs.
+- verbs/verbs.cpp: run_shell and job_start have no default timeout (timeout_of returns 0 when timeoutMs is absent). The job_status description no longer states a 100000 ms ceiling. Witnesses: check-caps-removed (run_shell with no timeoutMs returns its output), check-shell-stdin, check-run-child-reap.
+- native/include/gm/job_text.hpp: the kill statement for reason timeout names job_start's timeoutMs, and no longer states a default.
+- verbs/git.cpp: git and gh have no default timeout (0 means none). The log count validator minimum is 1 with no maximum (kMaxCount removed). Witness: check-git.
+- verbs/fetch.cpp: no default timeout and no 60000 ms maximum; timeoutMs must be at least 1. curl max-time is 0 when unbounded. Witnesses: check-fetch, check-fetch-transport, check-caps-removed (timeoutMs 60001 accepted for a data URL).
+- verbs/wiki.cpp: kMaxK removed; k must be at least 1. Witness: check-wiki.
+- verbs/code_ast.cpp: kDefaultLimit, kMaxLimit and kMaxDepth removed; limit is optional (absent means all sites) and must be at least 1; depth must be at least 0. Witness: check-code-ast.
+- verbs/condense.cpp: kMaxChars and kMaxSignals removed, so the condensed output keeps every signal line between head and tail. Witnesses: check-turn-economy (run); no dedicated condense witness was run for this change.
+- search/search_impl.cpp and search.cpp: MAX_LIMIT (1000) removed; limit must be at least 1, and the description says so. Witness: check-search (run in Phase B).
+- Witness files changed: checks/code_ast.cpp, checks/git.cpp, checks/fetch.cpp (messages and expectations for the no-cap behaviour), checks/mcp_conformance.cpp (the two step-budget scenarios pass --max-steps 50), checks/parity_contract.cpp (W6 asserts the no-limit contract).
+- New witness: check-caps-removed (checks/caps_removed.cpp), registered in checks/registry.cpp, include/gm/tool.hpp and components/tool/CMakeLists.txt.
+- Docs: skills/gm/SKILL.md (job wait, run_code budget and fetch timeout sentences) and AGENTS.md (the job wait, the job lifetime and the fetch timeout range) no longer state the removed caps. AGENTS.md is 24802 bytes, under its 30 KB limit.
+
+Kept, with the reason (file, value, reason). These are bounds that remain in the tree after this change.
+
+- native/components/json/json.cpp:13 kMaxDepth = 512: JSON nesting guard, kept at the owner's instruction; a deeper document fails with "nesting too deep" (json.cpp:69).
+- native/components/mcp/server.cpp: kForegroundCapMs = 100000 ms and kDefaultBodyTimeoutMs = 100000 ms (run_code foreground wait; keeps the call under the MCP client's 120 s limit). kMaxWaitMs = 60000 ms (body-side wait). kListTtlMs = 3600000 ms (list TTL). kStartedJobGraceMs = 100 ms. kSingleVerbBodiesBeforeNotice = 3 and kSingleVerbNoticeEvery = 10 (notice cadence). kCompletionCap = 100 (completion values).
+- native/components/mcp/include/gm/mcp.hpp:41 notice_ms = 180000 ms: the reminder cadence and the stuck fallback when stuck_ms is unset (kept because the monitor needs a cadence).
+- server.cpp kOutputCap = 20000 and kOutputPage = 20000 characters; kTailCap = 2000; kTaskPage = 4000; kLoggedReplyChars = 1000; kLogTailBytes = 65536: output paging and log sizes, so a reply stays readable and the run log stays bounded.
+- server.cpp compact.cpp kEventsCap = 20000, kArgCap = 200, kListCap = 10, kFailedHeadChars = 1000, kEventCap = 2000, kEventTextCap = 200, kEventArgsCap = 8, kDigestLines = 2, kCutRefsCap = 4: compact replies for the run log (page sizes, not limits on work).
+- verbs/verbs.cpp: whole_file_cap = 1048576 bytes: read_file without offset or limit returns a whole file only under this size; larger files need offset and limit. Flagged for the owner (see decisions).
+- verbs/verbs.cpp: shell_output_cap = 200000 UTF-16 units: output kept from one run_shell reply; the full output is written to a file and the reply names its path.
+- verbs/verbs.cpp: query_cap = 20000, query_reply_chars = 20000, query_window_events = 1000 (events per js window), query_page_events = 50, list_page = 500: result pages; each reply names how to page further.
+- verbs/verbs.cpp read_file limit maximum 20000 characters: the page size for one read with unit chars.
+- verbs/search: default limit 100 (search result count when limit is absent; a default page size, not a cap); MAX_PATTERN_CHARS = 2000 (pattern length, bounds regex cost); MAX_MATCH_CHARS = 1024 (line cut in matches); MAX_SCAN_BYTES = 268435456 (bytes scanned per search, bounds the time of one search); LIST_TIMEOUT_MS = 30000 (file listing time, git ls-files); OUTPUT_PAGE = 20000; MAX_FILE_BYTES = 1000000 (larger files are skipped).
+- verbs/code_ast.cpp: kDefaultDepth = 2 (default caller depth), kMaxFileBytes = 1000000 (larger files are skipped), kListTimeoutMs = 30000 (git ls-files), kOutputPage = 20000.
+- verbs/wiki.cpp: kDefaultK = 10 (default result count), kMaxFileBytes = 1000000, kListTimeoutMs = 30000, kSnippetChars = 300, kBinaryProbe = 8000, kB = 0.75 (BM25 constant).
+- verbs/review.cpp: kOutputPage = 20000; kGitShowTimeoutMs = 10000 (git show during review).
+- verbs/rows.cpp: git_ok default timeout 15000 ms and the rev-parse and push timeouts of 15000 ms (row git helper; a hung git would block a row write).
+- verbs/fetch.cpp: kMaxBodyBytes = 16777216 (a larger body is refused as EFBIG); kMaxMatchChars = 4096 (regex pattern length); kRetries = 3; kMaxRedirects = 30 (redirect loop guard, ETOOMANYREDIRECTS); kBaseMs = 1000, kCapMs = 16000, kJitter = 0.2 (retry backoff ceiling).
+- verbs/git.cpp: kRetries = 3, kBaseMs = 1000, kCapMs = 16000, kJitter = 0.2 (retry backoff).
+- verbs/condense.cpp: kMinLines = 200 and kMinChars = 16384 (condense thresholds, condense.cpp:10-11); kHeadLines = 20 and kTailLines = 20 (lines kept at each end).
+- quickjs/leaves.cpp:21 leaf_call_deadline = 3600000 ms: deadline of a leaf call (a host call inside a body); the job lifetime is unset by default and is the body budget.
+- native/components/quickjs/engine.cpp: a JS budget of 0 is unbounded (the job lifetime is the only body budget).
+- tool/driver.cpp:25 kCheckTimeoutMs = 600000 ms: the time of one gm-tool check (the driver's own bound; a check that takes longer is killed).
+- host/cli.cpp: kDefaultWaitMs = 3600000 ms (gm wait), kDefaultStopIdleMs = 600000 ms (stop idle), kPollMs = 200, kLockStaleMs = 2000, kLockWaitMs = 5000 (lock waits).
+- host/update.cpp: kManifestTimeoutMs = 90000 ms, kArchiveTimeoutMs = 900000 ms (update download).
+- host/relay.cpp: kBuildTimeoutMs = 600000 ms (relay build), kStartCheckMs = 20000 ms (relay start check).
+- host/browser_scope.cpp: kMinExecuteTimeoutMs = 1000 ms, kBrowserTimeoutMs = 10000 ms, kGoneBackoffMs = 250 ms, kTitleChars = 80, kUrlChars = 200 (browser scope).
+- mcp/pending.cpp:37 kLockWait = 5000 ms; mcp/compact.cpp as above.
+- mcpclient/config.cpp: CALL_MS = 60000 ms (call limit for an external MCP server), STARTUP_MS = 30000 ms, LAUNCHER_STARTUP_MS = 600000 ms; mcpclient/client.cpp: STDERR_BYTES = 2000, ERROR_DRAIN = 1000 ms, EXIT_WAIT = 5000 ms; config.hpp timeout_ms = 0 (no timeout unless the server entry sets one).
+- defaults/mcp.json:15 playwriter "timeoutMs": 300000 ms and :16 "startupTimeoutMs": 600000 ms: the playwriter server entry, a configuration value that the owner may change.
+- proc/proc.cpp and proc/child.cpp: 65536-byte read chunks, poll waits clamped to 1000000 ms (proc.cpp:358) and 2000 ms child waits (I/O and reaping mechanics, not limits on work).
+- gate kAgentsMaxBytes = 30 * 1024 (tool/gate.cpp:16): AGENTS.md size limit checked by the agents-size gate.
+- third_party/cxxmcp/include/cxxmcp/protocol/completion.hpp:116 kMaxValues = 100: the completion value list of the MCP protocol; third_party nlohmann JSON has its own internal limits and gm does not change them.
+
+Decisions for the owner.
+
+- whole_file_cap (1048576 bytes, verbs.cpp:113): kept. A read_file without offset or limit fails for a larger file. Remove it if whole reads of any size are wanted.
+- kMaxDepth = 512 (json.cpp:13): kept, as asked; it protects the JSON parser from deep nesting.
+- Default timeouts removed for run_shell, job_start, git and fetch: a hung command with no timeoutMs now runs until it ends, or until job_stop or the run ends. Confirm this is acceptable.
+
+Interplay checked: the job_status wait ceiling is removed. job_status runs only inside run_code, and the run_code foreground cap (kForegroundCapMs, 100000 ms) still returns the MCP call before the 120 s client limit; a longer wait backgrounds the body, and its value comes from job_status with the job id.

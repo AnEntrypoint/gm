@@ -9,10 +9,8 @@ namespace {
 
 constexpr std::size_t kMinLines = 200;
 constexpr std::size_t kMinChars = 16384;
-constexpr std::size_t kMaxChars = 8000;
 constexpr std::size_t kHeadLines = 20;
 constexpr std::size_t kTailLines = 20;
-constexpr std::size_t kMaxSignals = 40;
 
 const char* const kSignals[] = {"error", "fail", "warn", "pass", "assert", "panic", "fatal", "traceback", "exception", "exit code", "##[error]"};
 
@@ -84,7 +82,7 @@ std::optional<Condensed> condense_output(const std::string& text) {
     const bool middle = tail_start > head_end;
     if (middle) shown.push_back("[gm: ...]");
     std::size_t signals = 0;
-    for (std::size_t i = head_end; i < tail_start && signals < kMaxSignals; ++i) {
+    for (std::size_t i = head_end; i < tail_start; ++i) {
         if (!signal_line(unique[i])) continue;
         shown.push_back(unique[i]);
         ++signals;
@@ -93,7 +91,6 @@ std::optional<Condensed> condense_output(const std::string& text) {
     shown.insert(shown.end(), unique.begin() + static_cast<std::ptrdiff_t>(tail_start), unique.end());
     std::string output;
     for (const std::string& line : shown) { output += line; output.push_back('\n'); }
-    if (output.size() > kMaxChars) output.resize(kMaxChars);
     const std::size_t dropped = raw.size() > head_end + signals + (unique.size() - tail_start) ? raw.size() - head_end - signals - (unique.size() - tail_start) : 0;
     output += "\n[gm: kept " + std::to_string(head_end + signals + (unique.size() - tail_start)) + " of " + std::to_string(unique.size()) + " lines; dropped " + std::to_string(dropped) + "; " + std::to_string(original) + " chars; use raw:true or the job log for the full output]";
     return Condensed{output, original, output.size(), dropped};

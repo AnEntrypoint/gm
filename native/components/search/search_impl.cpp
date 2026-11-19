@@ -33,7 +33,6 @@ constexpr std::size_t OUTPUT_PAGE = 20000;
 constexpr int DEFAULT_K = 10;
 constexpr int MAX_K = 50;
 constexpr int DEFAULT_LIMIT = 100;
-constexpr int MAX_LIMIT = 1000;
 constexpr std::size_t MAX_PATTERN_CHARS = 2000;
 constexpr std::size_t MAX_MATCH_CHARS = 1024;
 constexpr std::size_t MATCH_WINDOW_STEP = MAX_MATCH_CHARS / 2;
@@ -545,8 +544,8 @@ std::string Searcher::grep(const json::Value& args) {
     }
     int limit = DEFAULT_LIMIT;
     if (const json::Value* given = args.find("limit")) {
-        if (!is_whole(*given) || given->as_number() < 1 || given->as_number() > MAX_LIMIT)
-            return fail("limit must be an integer from 1 to " + std::to_string(MAX_LIMIT));
+        if (!is_whole(*given) || given->as_number() < 1)
+            return fail("limit must be an integer from 1");
         limit = static_cast<int>(given->as_number());
     }
     bool vendor = false;

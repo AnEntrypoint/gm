@@ -611,7 +611,7 @@ std::vector<Scenario> scenarios(const Context& context, const fs::path& rules_di
         const json::Value after = structured(c, "run_code", json::Object{{"body", "return 3"}});
         ok("the successor run does not inherit the rule 2 notice", after.find("rulesNotice") == nullptr, brief(after.find("rulesNotice")));
     }});
-    list.push_back({"step budget handoff", {"--run-dir", handoff_dir.string()}, [&context, step_limit_dir](Client& c, Recorder& ok) {
+    list.push_back({"step budget handoff", {"--run-dir", handoff_dir.string(), "--max-steps", "50"}, [&context, step_limit_dir](Client& c, Recorder& ok) {
         json::Value fiftieth = json::Object{};
         json::Value fortyninth = json::Object{};
         for (int step = 1; step <= 50; ++step) {
@@ -632,7 +632,7 @@ std::vector<Scenario> scenarios(const Context& context, const fs::path& rules_di
         if (const json::Value* run = successor.find("run")) detail.set("successor", *run);
         ok("the next next_context opens a different run",
            is_true(successor.find("ok")) && successor.find("run") != nullptr && !same_value(successor.find("run"), fiftieth.find("run")), brief(detail));
-        Client limited(context.argv({"--run-dir", step_limit_dir.string()}), context.workspace, context.home);
+        Client limited(context.argv({"--run-dir", step_limit_dir.string(), "--max-steps", "50"}), context.workspace, context.home);
         limited.open();
         json::Value fiftieth_limited = json::Object{};
         for (int step = 1; step <= 50; ++step) fiftieth_limited = structured(limited, "next_context", json::Object{{"full", true}});

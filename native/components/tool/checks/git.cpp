@@ -77,9 +77,9 @@ CheckResult check_git(const std::string& binary) {
     expect(contains(text, "\"dot\":{\"ok\":false,\"error\":\"refused: \\\".\\\" names the whole workspace"), "git_add accepted \".\" as a path");
     expect(contains(text, "refused: path is outside the workspace: ../escape.txt"), "git_add accepted a path outside the workspace");
     expect(contains(text, "\"noMessage\":{\"ok\":false,\"error\":\"message must be a non-empty string\""), "git_commit accepted an empty message");
-    expect(contains(text, "count must be an integer from 1 to 200"), "git_log accepted a count over 200");
+    expect(!contains(text, "count must be an integer from 1 to 200"), "git_log refused a count over 200 although the count cap was removed");
     expect(contains(text, "\"limit\":{\"ok\":true") && contains(text, "first commit"), "git_log did not accept limit as an alias for count");
-    expect(contains(text, "\"badLimit\":{\"ok\":false,\"error\":\"count must be an integer from 1 to 200\""), "git_log accepted a limit over 200");
+    expect(!contains(text, "\"badLimit\":{\"ok\":false,\"error\":\"count must be an integer from 1 to 200\""), "git_log refused a limit over 200 although the count cap was removed");
     expect(contains(text, "ref must be a branch, tag or commit name"), "git_checkout accepted a ref that starts with a dash");
     expect(contains(text, "* topic"), "git_branch did not mark the topic branch as current");
     expect(contains(text, "refused: git_push sends only main, and the current branch is topic"), "git_push pushed a branch other than main");

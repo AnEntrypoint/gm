@@ -108,12 +108,12 @@ deoxidene::Result<std::string, std::string> task_of(const HostArgs& args) {
     return task;
 }
 
-deoxidene::Result<int, std::string> positive_int_flag(const HostArgs& args, std::string_view name, int fallback) {
+deoxidene::Result<std::optional<int>, std::string> optional_positive_int_flag(const HostArgs& args, std::string_view name) {
     const auto flag = args.flag(name);
-    if (!flag) return fallback;
+    if (!flag) return std::optional<int>{};
     const bool digits = !flag->empty() && flag->size() <= 9 && flag->find_first_not_of("0123456789") == std::string::npos;
     if (!digits || std::stoi(*flag) < 1) return deoxidene::Err<std::string>(std::string(name) + " must be a positive integer");
-    return std::stoi(*flag);
+    return std::optional<int>(std::stoi(*flag));
 }
 
 deoxidene::Result<bool, std::string> switch_flag(const HostArgs& args, std::string_view name) {

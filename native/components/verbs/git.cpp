@@ -20,10 +20,6 @@ namespace {
 
 namespace fs = std::filesystem;
 
-constexpr std::uint64_t kGitTimeoutMs = 120000;
-constexpr std::uint64_t kGhTimeoutMs = 60000;
-constexpr std::uint64_t kCheckTimeoutMs = 15000;
-constexpr std::int64_t kMaxCount = 200;
 constexpr int kRetries = 3;
 constexpr double kBaseMs = 1000;
 constexpr double kCapMs = 16000;
@@ -77,9 +73,9 @@ Exec exec_program(const std::string& program, std::vector<std::string> argv, con
     return reply;
 }
 
-Exec git_in(const fs::path& dir, const std::vector<std::string>& argv, std::uint64_t timeout_ms = kGitTimeoutMs) { return exec_program("git", argv, dir, timeout_ms); }
+Exec git_in(const fs::path& dir, const std::vector<std::string>& argv, std::uint64_t timeout_ms = 0) { return exec_program("git", argv, dir, timeout_ms); }
 
-bool is_repository(const fs::path& dir) { return git_in(dir, {"rev-parse", "--is-inside-work-tree"}, kCheckTimeoutMs).ok; }
+bool is_repository(const fs::path& dir) { return git_in(dir, {"rev-parse", "--is-inside-work-tree"}).ok; }
 
 json::Value verb_of(const std::string& sub, const Exec& result) {
     if (result.ok) {
@@ -96,7 +92,7 @@ json::Value verb_of(const std::string& sub, const Exec& result) {
     return reply;
 }
 
-json::Value git(const fs::path& dir, const std::vector<std::string>& argv, std::uint64_t timeout_ms = kGitTimeoutMs) { return verb_of(argv.front(), git_in(dir, argv, timeout_ms)); }
+json::Value git(const fs::path& dir, const std::vector<std::string>& argv, std::uint64_t timeout_ms = 0) { return verb_of(argv.front(), git_in(dir, argv, timeout_ms)); }
 
 std::optional<std::string> transient_type(const std::string& raw) {
     static const std::regex url(R"([a-z][a-z0-9+.-]*:\/\/\S*)", std::regex::icase);
@@ -196,7 +192,7 @@ std::optional<json::Value> repo_at(const json::Value& args, const fs::path& work
     dir = resolve_path(workspace, cwd->as_string());
     std::error_code ec;
     if (!fs::is_directory(dir, ec)) return fail("no such directory: " + cwd->as_string());
-    const auto inside = git_in(dir, {"rev-parse", "--show-toplevel"}, kCheckTimeoutMs);
+    const auto inside = git_in(dir, {"rev-parse", "--show-toplevel"});
     if (!inside.ok) return fail("cwd " + cwd->as_string() + " is not inside a git repository");
     return std::nullopt;
 }
@@ -287,12 +283,12 @@ json::Value ci_status(const fs::path& dir, const json::Value& args, LockedLog& l
     const std::string repo = str_or(args, "repo", "");
     if (has_repo && !std::regex_match(repo, repo_pattern)) return fail("repo must be owner/name");
     const std::string target = has_sha ? sha : "HEAD";
-    const auto head = git_in(dir, {"rev-parse", "--verify", target + "^{commit}"}, kCheckTimeoutMs);
+    const auto head = git_in(dir, {"rev-parse", "--verify", target + "^{commit}"});
     if (!head.ok) return fail(is_repository(dir) ? "no commit " + target + " in this repository" : "cannot check commit " + target + ": " + dir.string() + " is not a git repository");
     std::string origin_name = repo;
     std::string origin_host;
     if (!has_repo) {
-        const auto url = git_in(dir, {"remote", "get-url", "origin"}, kCheckTimeoutMs);
+        const auto url = git_in(dir, {"remote", "get-url", "origin"});
         std::smatch match;
         const std::string url_text = trimmed(url.output);
         if (!url.ok || !std::regex_match(url_text, match, origin_pattern)) return fail("origin has no owner/name path; pass repo as owner/name");
@@ -306,7 +302,7 @@ json::Value ci_status(const fs::path& dir, const json::Value& args, LockedLog& l
         std::vector<std::string> argv = {"api"};
         if (!origin_host.empty()) argv.insert(argv.end(), {"--hostname", origin_host});
         argv.insert(argv.end(), {"--paginate", "--jq", "(.workflow_runs // []) | map({name, status, conclusion, html_url})", endpoint});
-        const auto reply = exec_program("gh", argv, dir, kGhTimeoutMs);
+        const auto reply = exec_program("gh", argv, dir, 0);
         if (reply.ok) {
             json::Value out;
             out.set("ok", true);
@@ -375,7 +371,7 @@ json::Value run_verb(const std::string& name, const json::Value& args, const fs:
         if (author != nullptr && !author->is_null()) {
             if (!author->is_string() || trimmed(author->as_string()).empty() || author->as_string().find_first_of("<>\r\n") != std::string::npos)
                 return fail("author must be a name without <, > or line breaks; the configured git email is kept");
-            const auto email = git_in(dir, {"config", "user.email"}, kCheckTimeoutMs);
+            const auto email = git_in(dir, {"config", "user.email"});
             if (!email.ok || trimmed(email.output).empty()) return fail("author needs user.email set in this repository");
             author_args.push_back("--author=" + trimmed(author->as_string()) + " <" + trimmed(email.output) + ">");
         }
@@ -385,7 +381,7 @@ json::Value run_verb(const std::string& name, const json::Value& args, const fs:
         argv.insert(argv.end(), paths.begin(), paths.end());
         json::Value result = git(dir, argv);
         if (result.find("ok")->as_bool()) {
-            const auto head = git_in(dir, {"rev-parse", "--short", "HEAD"}, kCheckTimeoutMs);
+            const auto head = git_in(dir, {"rev-parse", "--short", "HEAD"});
             json::Value fields{json::Object{}};
             fields.set("sha", head.ok ? json::Value(trimmed(head.output)) : json::Value(nullptr));
             fields.set("message", message.substr(0, message.find('\n')));
@@ -397,7 +393,7 @@ json::Value run_verb(const std::string& name, const json::Value& args, const fs:
         return result;
     }
     if (name == "git_push") {
-        const auto current = git_in(dir, {"rev-parse", "--abbrev-ref", "HEAD"}, kCheckTimeoutMs);
+        const auto current = git_in(dir, {"rev-parse", "--abbrev-ref", "HEAD"});
         const std::string branch = current.ok ? trimmed(current.output) : "unknown";
         if (branch != "main") return fail("refused: git_push sends only main, and the current branch is " + branch);
         return retrying(log, "git_push", [&] { return git(dir, {"push", "--set-upstream", "origin", "main"}); });
@@ -407,8 +403,8 @@ json::Value run_verb(const std::string& name, const json::Value& args, const fs:
         const json::Value* c = list_arg("count");
         if (c == nullptr || c->is_null()) c = list_arg("limit");
         if (c != nullptr && !c->is_null()) {
-            if (!c->is_number() || c->as_number() != static_cast<double>(static_cast<std::int64_t>(c->as_number())) || c->as_number() < 1 || c->as_number() > static_cast<double>(kMaxCount))
-                return fail("count must be an integer from 1 to " + std::to_string(kMaxCount));
+            if (!c->is_number() || c->as_number() != static_cast<double>(static_cast<std::int64_t>(c->as_number())) || c->as_number() < 1)
+                return fail("count must be an integer from 1");
             count = static_cast<std::int64_t>(c->as_number());
         }
         std::vector<std::string> scope;

@@ -17,8 +17,8 @@ namespace gm {
 
 struct CoreVerbsOptions {
     std::filesystem::path workspace;
-    std::uint64_t job_lifetime_ms = 3600000;
-    std::uint64_t job_stuck_ms = 180000;
+    std::uint64_t job_lifetime_ms = 0;
+    std::uint64_t job_stuck_ms = 0;
     std::function<std::optional<std::string>(const std::string& uri)> serve_skill;
     std::function<void(const RunLog& log, std::string_view kind, std::uint64_t seq)> on_append;
 };

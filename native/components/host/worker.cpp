@@ -108,15 +108,15 @@ int run_worker(const HostArgs& args) {
     const auto workspace = workspace_of(args);
     trace_phase("worker start");
     if (!std::filesystem::is_directory(workspace)) return fail("workspace is not a directory: " + workspace.string());
-    auto max_inflight = positive_int_flag(args, "--max-inflight", mcp::ServerOptions{}.max_inflight);
+    auto max_inflight = optional_positive_int_flag(args, "--max-inflight");
     if (!max_inflight) return fail(max_inflight.error());
-    auto stuck_ms = positive_int_flag(args, "--stuck-ms", static_cast<int>(mcp::ServerOptions{}.stuck_ms));
+    auto stuck_ms = optional_positive_int_flag(args, "--stuck-ms");
     if (!stuck_ms) return fail(stuck_ms.error());
-    auto max_steps = positive_int_flag(args, "--max-steps", mcp::ServerOptions{}.max_steps);
+    auto max_steps = optional_positive_int_flag(args, "--max-steps");
     if (!max_steps) return fail(max_steps.error());
-    auto job_lifetime = positive_int_flag(args, "--job-lifetime-ms", static_cast<int>(mcp::ServerOptions{}.job_lifetime_ms));
+    auto job_lifetime = optional_positive_int_flag(args, "--job-lifetime-ms");
     if (!job_lifetime) return fail(job_lifetime.error());
-    auto monitor_ms = positive_int_flag(args, "--monitor-ms", static_cast<int>(mcp::ServerOptions{}.monitor_ms));
+    auto monitor_ms = optional_positive_int_flag(args, "--monitor-ms");
     if (!monitor_ms) return fail(monitor_ms.error());
     auto task = task_of(args);
     if (!task) return fail(task.error());
@@ -132,8 +132,8 @@ int run_worker(const HostArgs& args) {
     auto serve_skill_hook = std::make_shared<std::function<std::optional<std::string>(const std::string&)>>();
     CoreVerbsOptions core_options;
     core_options.workspace = workspace;
-    core_options.job_stuck_ms = static_cast<std::uint64_t>(*stuck_ms);
-    core_options.job_lifetime_ms = static_cast<std::uint64_t>(*job_lifetime * clock_scale());
+    core_options.job_stuck_ms = (*stuck_ms).transform([](int ms) { return static_cast<std::uint64_t>(ms); }).value_or(0);
+    core_options.job_lifetime_ms = (*job_lifetime).transform([](int ms) { return static_cast<std::uint64_t>(ms * clock_scale()); }).value_or(0);
     core_options.serve_skill = [serve_skill_hook, skills = skills_dir_of(args)](const std::string& uri) {
         return *serve_skill_hook ? (*serve_skill_hook)(uri) : mcp::served_skill_text(skills, uri);
     };
@@ -178,9 +178,9 @@ int run_worker(const HostArgs& args) {
     options.task = *task;
     options.max_inflight = *max_inflight;
     options.max_steps = *max_steps;
-    options.job_lifetime_ms = static_cast<std::uint64_t>(*job_lifetime * clock_scale());
-    options.stuck_ms = static_cast<std::uint64_t>(*stuck_ms);
-    options.monitor_ms = static_cast<std::uint64_t>(*monitor_ms);
+    options.job_lifetime_ms = (*job_lifetime).transform([](int ms) { return static_cast<std::uint64_t>(ms * clock_scale()); });
+    options.stuck_ms = (*stuck_ms).transform([](int ms) { return static_cast<std::uint64_t>(ms); });
+    options.monitor_ms = (*monitor_ms).transform([](int ms) { return static_cast<std::uint64_t>(ms); });
     options.run_dir = *run_dir;
     options.supervised = args.flag("--supervised") == "yes";
     auto protocol = switch_flag(args, "--protocol-2026-07-28");

@@ -28,7 +28,6 @@ constexpr std::uint64_t kListTimeoutMs = 30000;
 constexpr std::size_t kSnippetChars = 300;
 constexpr std::size_t kBinaryProbe = 8000;
 constexpr int kDefaultK = 10;
-constexpr int kMaxK = 50;
 const std::vector<std::string> kRootArgs{"root", "projectPath", "cwd"};
 const std::vector<std::string> kSearchTakes{"query", "k"};
 const std::vector<std::string> kKinds{"ingest", "answer", "lint"};
@@ -343,8 +342,8 @@ json::Value wiki_search(const json::Value& args, const fs::path& workspace) {
     if (query_value == nullptr || !query_value->is_string() || trim_text(query_value->as_string()).empty()) return fail_result("query must be a non-empty string");
     int k = kDefaultK;
     if (const json::Value* kv = args.find("k"); kv != nullptr && !kv->is_null()) {
-        if (!kv->is_number() || kv->as_number() != std::floor(kv->as_number()) || kv->as_number() < 1 || kv->as_number() > kMaxK)
-            return fail_result("k must be an integer from 1 to " + std::to_string(kMaxK));
+        if (!kv->is_number() || kv->as_number() != std::floor(kv->as_number()) || kv->as_number() < 1)
+            return fail_result("k must be an integer from 1");
         k = static_cast<int>(kv->as_number());
     }
     std::vector<std::string> terms;

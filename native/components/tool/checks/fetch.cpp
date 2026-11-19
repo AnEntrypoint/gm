@@ -109,7 +109,7 @@ CheckResult check_fetch(const std::string& binary) {
     expect(contains(text, "\"largehtml\":\"kept\""), "large text/html data URLs did not convert their script block and long comment without crashing the worker");
     expect(contains(text, "base64 data URLs are not supported"), "a base64 data URL was not refused");
     expect(contains(text, "url is not a valid URL"), "an invalid url was not refused");
-    expect(contains(text, "timeoutMs must be an integer from 1 to 60000"), "timeoutMs 0 was not refused");
+    expect(contains(text, "timeoutMs must be an integer from 1"), "timeoutMs 0 was not refused");
     expect(contains(text, "\"attempts\":4") && contains(text, "\"exhausted\":true"), "an unreachable host did not make 4 attempts (1 + 3 retries) and report exhaustion");
     expect(contains(text, "ECONNREFUSED"), "an unreachable host did not report ECONNREFUSED");
     expect(contains(text, "\"beforeHasSources\":false"), "a plain fetch wrote sources/ into the workspace");

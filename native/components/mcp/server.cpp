@@ -17,6 +17,7 @@
 #include <mutex>
 #include <thread>
 #include <iostream>
+#include <limits>
 #include <random>
 #include <regex>
 #include <set>
@@ -174,14 +175,22 @@ constexpr std::size_t kRowsNamed = 5;
 constexpr double kDefaultBodyTimeoutMs = 100000;
 constexpr double kForegroundCapMs = 100000;
 constexpr double kMaxWaitMs = 60000;
-constexpr double kMaxJobWaitMs = kForegroundCapMs;
+
+template <typename T>
+Value limit_value(const std::optional<T>& limit) {
+    return limit ? Value(static_cast<double>(*limit)) : Value(nullptr);
+}
+
+template <typename T>
+Value steps_left_of(const std::optional<int>& max_steps, T steps) {
+    return max_steps ? Value(static_cast<double>(*max_steps) - static_cast<double>(steps)) : Value(nullptr);
+}
 constexpr std::uint64_t kSingleVerbBodiesBeforeNotice = 3;
 constexpr std::uint64_t kSingleVerbNoticeEvery = 10;
 constexpr const char* kBatchNotice = "The last run_code bodies each made one verb call; put a step's calls in one body.";
 constexpr long long kStartedJobGraceMs = 100;
 constexpr std::size_t kCompletionCap = 100;
 constexpr std::size_t kQueueMax = 64;
-constexpr int kMaxTimeoutMs = 3600000;
 constexpr long long kProgressMs = 5000;
 constexpr double kListTtlMs = 3600000;
 constexpr double kVolatileTtlMs = 0;
@@ -265,7 +274,7 @@ std::string run_code_description(const std::string& verb_names) {
            "{ok:false, error} and does not stop the body. The body's return value comes back as JSON. A body still "
            "running after timeoutMs (default 100000; a larger value waits no longer than 100000, so the call returns before the 120 s call limit) becomes a background run: the call returns its "
            "job id at once, job_status with waitMs returns its value, and finish is refused while it runs unless "
-           "stopBackground is true. A wait for a job is one job_status call (waitMs at most 100000; a reply that says running needs another job_status call to keep waiting). One step is one body: read the inputs in one Promise.all, decide in code, act "
+           "stopBackground is true. A wait for a job is one job_status call (waitMs with no ceiling; a reply that says running needs another job_status call to keep waiting). One step is one body: read the inputs in one Promise.all, decide in code, act "
            "with the independent writes in one Promise.all, and verify in the same body. The ten most-used verbs: "
            "read_file({ path, offset?, limit? }), run_shell({ command, timeoutMs? }), write_file({ path, content }), "
            "query_log({ js?, kind?, fromMono?, toMono?, after?, last? }), search({ query, k? }), fetch({ url, "
@@ -297,7 +306,7 @@ const std::map<int, std::string> kRuleText = {{2, "call next_context at the star
 Value str_schema() { return object().set("type", "string"); }
 Value num_schema() { return object().set("type", "number"); }
 Value timeout_schema() {
-    return object().set("type", "integer").set("minimum", 1.0).set("maximum", static_cast<double>(kMaxTimeoutMs));
+    return object().set("type", "integer").set("minimum", 1.0);
 }
 Value bool_schema() { return object().set("type", "boolean"); }
 
@@ -984,8 +993,8 @@ struct Server::State {
             .set("task", task)
             .set("witness", kDefaultWitness)
             .set("workspace", options.workspace.string())
-            .set("maxSteps", options.max_steps)
-            .set("maxInflight", options.max_inflight)
+            .set("maxSteps", limit_value(options.max_steps))
+            .set("maxInflight", limit_value(options.max_inflight))
             .set("createdAt", iso_now());
     }
 
@@ -1224,8 +1233,8 @@ struct Server::State {
             }
             else append("start", object()
                                      .set("mode", "mcp")
-                                     .set("maxSteps", options.max_steps)
-                                     .set("maxInflight", options.max_inflight)
+                                     .set("maxSteps", limit_value(options.max_steps))
+                                     .set("maxInflight", limit_value(options.max_inflight))
                                      .set("taskFrom", trim(options.task).empty() ? "session prompt" : "task file"));
             if (recovery) {
                 append("recovery", *recovery);
@@ -1286,8 +1295,8 @@ struct Server::State {
         s().task_inherited = inherited;
         append("start", object()
                             .set("mode", "mcp")
-                            .set("maxSteps", options.max_steps)
-                            .set("maxInflight", options.max_inflight)
+                            .set("maxSteps", limit_value(options.max_steps))
+                            .set("maxInflight", limit_value(options.max_inflight))
                             .set("taskFrom", task_from));
         if (!task.empty()) append("task", object().set("from", task_from).set("text", task));
         log_tools();
@@ -1409,7 +1418,7 @@ struct Server::State {
         std::string names;
         for (const Row& row : open_rows()) names += names.empty() ? row.id : ", " + row.id;
         std::string stopped = names.empty() ? "" : " Open row(s) at the limit: " + names + ".";
-        return "step limit " + std::to_string(options.max_steps) +
+        return "step limit " + std::to_string(options.max_steps.value_or(0)) +
                " reached and this run ended without a witness;" + stopped +
                " call next_context to open a successor run. To close a run with a witness, "
                "call finish while stepsLeft is 0, before the next next_context call";
@@ -1491,8 +1500,8 @@ struct Server::State {
                     .set("role", "child")
                     .set("run", s().run_id)
                     .set("note", "child of run " + s().run_id + ": the session that opened the run ends it, so a child does not send finish")
-                    .set("stepsLeft", options.max_steps - s().steps)
-                    .set("maxSteps", options.max_steps)
+                    .set("stepsLeft", steps_left_of(options.max_steps, s().steps))
+                    .set("maxSteps", limit_value(options.max_steps))
                     .set("rules", rules)
                     .set("task", task_value())
                     .set("prefixSha", prefix_sha(rules, s().task, served_tools()))
@@ -1677,15 +1686,15 @@ struct Server::State {
             if (!job->adopted) return;
             job->killing = true;
             std::string tail = body_text(*job->owner, job->body, kTailCap);
-            const std::string statement = ::gm::jobs::kill_statement(job->name, reason, 0, options.job_lifetime_ms);
+            const std::string statement = ::gm::jobs::kill_statement(job->name, reason, 0, options.job_lifetime_ms.value_or(0));
             Value killed = object().set("job", job->name).set("reason", reason).set("statement", statement).set("tail", tail);
-            if (reason == "lifetime") killed.set("lifetimeMs", number_of(options.job_lifetime_ms));
+            if (reason == "lifetime") killed.set("lifetimeMs", number_of(options.job_lifetime_ms.value_or(0)));
             append_to(*job->owner, "job-killed", std::move(killed));
         }
         join_body(job);
         std::lock_guard guard(job->lock);
         if (job->settled) return;
-        settle_locked(*job, "killed", object().set("reason", reason).set("statement", ::gm::jobs::kill_statement(job->name, reason, 0, options.job_lifetime_ms)));
+        settle_locked(*job, "killed", object().set("reason", reason).set("statement", ::gm::jobs::kill_statement(job->name, reason, 0, options.job_lifetime_ms.value_or(0))));
     }
 
     std::vector<std::shared_ptr<BodyJob>> body_list() {
@@ -1755,12 +1764,12 @@ struct Server::State {
                 add_cut_run(settled, text, length, s().log->dir(), "value");
                 settle_locked(*job, "exited", std::move(settled));
             } else if (job->controls && job->error.find("JavaScript deadline") != std::string::npos &&
-                       static_cast<std::uint64_t>(job->controls->js_budget.count()) == options.job_lifetime_ms) {
-                const std::string statement = ::gm::jobs::kill_statement(job->name, "lifetime", 0, options.job_lifetime_ms);
+                       static_cast<std::uint64_t>(job->controls->js_budget.count()) == options.job_lifetime_ms.value_or(0)) {
+                const std::string statement = ::gm::jobs::kill_statement(job->name, "lifetime", 0, options.job_lifetime_ms.value_or(0));
                 std::string tail = body_text(*job->owner, job->body, kTailCap);
                 append_to(*job->owner, "job-killed",
                           object().set("job", job->name).set("reason", "lifetime").set("statement", statement).set("tail", tail)
-                              .set("lifetimeMs", number_of(options.job_lifetime_ms)));
+                              .set("lifetimeMs", number_of(options.job_lifetime_ms.value_or(0))));
                 settle_locked(*job, "killed", object().set("reason", "lifetime").set("statement", statement));
             } else {
                 settle_locked(*job, "failed", object().set("error", job->error));
@@ -1773,7 +1782,7 @@ struct Server::State {
         static const std::regex kJobName(R"(^[A-Za-z0-9_-]{1,64}$)");
         std::string name = string_of(args, "job");
         if (!std::regex_match(name, kJobName)) return object().set("ok", false).set("error", "job must be a job name");
-        double wait = std::clamp(args.find("waitMs") ? args.find("waitMs")->as_number(0) : 0.0, 0.0, kMaxJobWaitMs * clock_scale());
+        double wait = std::max(0.0, args.find("waitMs") ? args.find("waitMs")->as_number(0) : 0.0);
         if (auto job = body_named(name); job && wait > 0) {
             std::unique_lock guard(job->lock);
             job->changed.wait_for(guard, std::chrono::milliseconds(static_cast<long long>(wait)), [&] { return job->settled; });
@@ -1968,7 +1977,7 @@ struct Server::State {
         while (true) {
             {
                 std::unique_lock guard(monitor_mutex);
-                monitor_wake.wait_for(guard, std::chrono::milliseconds(options.monitor_ms), [&] { return shutting_down; });
+                monitor_wake.wait_for(guard, std::chrono::milliseconds(options.monitor_ms.value_or(options.notice_ms)), [&] { return shutting_down; });
                 if (shutting_down) break;
             }
             if (!check_bodies() && !shell_jobs_open()) {
@@ -1996,15 +2005,15 @@ struct Server::State {
                 if (!job->adopted || job->settled) continue;
                 any = true;
                 long long now = steady_ms();
-                if (static_cast<std::uint64_t>(now - wall_ms_of(*job)) >= options.job_lifetime_ms) {
+                if (options.job_lifetime_ms && static_cast<std::uint64_t>(now - wall_ms_of(*job)) >= *options.job_lifetime_ms) {
                     expired = true;
                 } else {
                     long long progress = job->in_flight > 0 ? now : std::max(wall_ms_of(*job), job->last_call_ms.load());
                     double since = static_cast<double>(now - progress);
-                    if (!job->stuck && since > static_cast<double>(options.stuck_ms)) {
+                    if (!job->stuck && options.stuck_ms && since > static_cast<double>(*options.stuck_ms)) {
                         job->stuck = true;
                         append_to(*job->owner, "job-stuck", object().set("job", job->name).set("body", number_of(job->body)).set("sinceProgressMs", since));
-                    } else if (job->stuck && since <= static_cast<double>(options.stuck_ms)) {
+                    } else if (job->stuck && (!options.stuck_ms || since <= static_cast<double>(*options.stuck_ms))) {
                         job->stuck = false;
                         append_to(*job->owner, "job-unstuck", object().set("job", job->name).set("body", number_of(job->body)).set("sinceProgressMs", since));
                     }
@@ -2252,9 +2261,9 @@ struct Server::State {
                           .set("ok", true)
                           .set("step", step)
                           .set("run", s().run_id)
-                          .set("stepsLeft", options.max_steps - step)
-                          .set("maxSteps", options.max_steps);
-        if (options.max_steps - step == 0) reply.set("warning", kStepZeroWarning);
+                          .set("stepsLeft", steps_left_of(options.max_steps, step))
+                          .set("maxSteps", limit_value(options.max_steps));
+        if (options.max_steps && *options.max_steps - step == 0) reply.set("warning", kStepZeroWarning);
         if (waiting) {
             reply.set("rulesPath", (s().run_dir / "rules.md").string());
         } else {
@@ -2346,7 +2355,7 @@ struct Server::State {
     }
 
     Value next_context(const Value& args) {
-        if (s().steps >= options.max_steps) {
+        if (options.max_steps && s().steps >= *options.max_steps) {
             s().step_limited = true;
             s().ended = "max_steps";
             Value out = refuse("next_context", object(), step_limit_text());
@@ -2406,7 +2415,7 @@ struct Server::State {
                         .set("unchanged", true)
                         .set("run", s().run_id)
                         .set("steps", number_of(s().steps))
-                        .set("stepsLeft", number_of(options.max_steps - s().steps));
+                        .set("stepsLeft", steps_left_of(options.max_steps, s().steps));
                 }
                 if (!corrected.empty() && corrected != s().task) {
                     s().task = corrected;
@@ -2585,7 +2594,7 @@ struct Server::State {
             }
             return false;
         };
-        bool documented_all = documented != nullptr && s().steps >= options.max_steps;
+        bool documented_all = documented != nullptr && options.max_steps && s().steps >= *options.max_steps;
         for (const Row& row : open) documented_all = documented_all && listed(row.id);
         if (documented != nullptr) {
             for (const Value& entry : documented->as_array()) {
@@ -3512,7 +3521,7 @@ struct Server::State {
     void start_calls() { calls.pump = std::thread([this] { pump_calls(); }); }
 
     void pump_calls() {
-        const int limit = std::max(1, options.max_inflight);
+        const int limit = std::max(1, options.max_inflight.value_or(std::numeric_limits<int>::max()));
         std::unique_lock guard(calls.mutex);
         for (;;) {
             calls.changed.wait(guard, [&] {
@@ -3775,7 +3784,7 @@ public:
         if (name == "job_status") {
             const json::Value* wait = args.find("waitMs");
             if (wait != nullptr && wait->is_number() && wait->as_number() > 0) {
-                state_.hold_body(job_, std::min(wait->as_number(), kMaxJobWaitMs * clock_scale()));
+                state_.hold_body(job_, wait->as_number());
             }
         }
         Server::State::Session& owner = *job_->owner;
@@ -3892,8 +3901,8 @@ Value Server::State::run_code(const Value& args) {
             double budget = kDefaultBodyTimeoutMs * clock_scale();
             if (timeout != nullptr) {
                 double ms = timeout->as_number(-1);
-                if (!timeout->is_number() || ms != static_cast<double>(static_cast<long long>(ms)) || ms < 1 || ms > kMaxTimeoutMs) {
-                    return with_seq(object().set("ok", false).set("error", "timeoutMs must be an integer from 1 to " + std::to_string(kMaxTimeoutMs)));
+                if (!timeout->is_number() || ms != static_cast<double>(static_cast<long long>(ms)) || ms < 1) {
+                    return with_seq(object().set("ok", false).set("error", "timeoutMs must be an integer from 1"));
                 }
                 budget = ms;
             }
@@ -3906,7 +3915,7 @@ Value Server::State::run_code(const Value& args) {
             next_generation();
             auto job = std::make_shared<BodyJob>();
             job->controls = std::make_shared<gm::BodyControls>();
-            job->controls->js_budget = std::chrono::milliseconds(static_cast<long long>(options.job_lifetime_ms));
+            job->controls->js_budget = std::chrono::milliseconds(static_cast<long long>(options.job_lifetime_ms.value_or(0)));
             job->body = action;
             job->step = s().steps;
             job->skill_bootstrap = !skill_read() && body_reads_skill_first(args);

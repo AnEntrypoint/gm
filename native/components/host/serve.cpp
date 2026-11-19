@@ -93,7 +93,7 @@ void report_stop(int signal) {
 }
 
 int run_serve(const HostArgs& args) {
-    auto max_inflight = positive_int_flag(args, "--max-inflight", mcp::ServerOptions{}.max_inflight);
+    auto max_inflight = optional_positive_int_flag(args, "--max-inflight");
     if (!max_inflight) {
         std::cerr << "gm relay: " << max_inflight.error() << '\n';
         return 1;

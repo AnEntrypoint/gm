@@ -11,8 +11,7 @@ inline std::string body_restart_statement(const std::string& name) {
 
 inline std::string kill_statement(const std::string& name, const std::string& reason, std::uint64_t timeout_ms, std::uint64_t lifetime_ms) {
     if (reason == "timeout") {
-        return "job " + name + " stopped: timeout after " + std::to_string(timeout_ms) + " ms. The limit is job_start's timeoutMs (default 300000); pass timeoutMs, up to the job lifetime of " +
-               std::to_string(lifetime_ms) + " ms, or extendOnProgress: true for a job that keeps writing output";
+        return "job " + name + " stopped: timeout after " + std::to_string(timeout_ms) + " ms. The limit is job_start's timeoutMs; pass timeoutMs, or extendOnProgress: true for a job that keeps writing output";
     }
     if (reason == "idle") return "job " + name + " stopped: no output and no progress file change for " + std::to_string(timeout_ms) + " ms; extendOnProgress keeps a job running while it writes";
     if (reason == "lifetime") return "job " + name + " stopped: the job lifetime of " + std::to_string(lifetime_ms) + " ms ended before it finished";

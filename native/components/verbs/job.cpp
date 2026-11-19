@@ -38,9 +38,14 @@ namespace {
 #if !defined(_WIN32)
 constexpr std::uint64_t kill_grace_ms = 500;
 #endif
-const double max_wait_ms = 100000 * clock_scale();
 constexpr int pid_poll_ms = 100;
 constexpr std::uint64_t ended_event_grace_ms = 250;
+
+std::uint64_t bounded_by(std::uint64_t timeout_ms, std::uint64_t lifetime_ms) {
+    if (timeout_ms == 0) return lifetime_ms;
+    if (lifetime_ms == 0) return timeout_ms;
+    return std::min(timeout_ms, lifetime_ms);
+}
 
 #if !defined(_WIN32)
 bool runs_job(long long pid, const std::string& exit_file, const json::Value& status) {
@@ -366,8 +371,8 @@ json::Value JobTable::start(const std::string& name, const std::string& command,
     job->start_file_time = std::filesystem::file_time_type::clock::now();
     if (progress) job->progress = std::filesystem::path(*progress).is_absolute() ? std::filesystem::path(*progress) : workspace_ / *progress;
     job->extend_on_progress = extend_on_progress;
-    const std::uint64_t deadline_ms = extend_on_progress ? timeout_ms : std::min(timeout_ms, lifetime_ms_);
-    job->lifetime_killed = !extend_on_progress && lifetime_ms_ < timeout_ms;
+    const std::uint64_t deadline_ms = extend_on_progress ? timeout_ms : bounded_by(timeout_ms, lifetime_ms_);
+    job->lifetime_killed = !extend_on_progress && lifetime_ms_ != 0 && (timeout_ms == 0 || lifetime_ms_ < timeout_ms);
     job->timeout_ms = deadline_ms;
     job->status.set("job", name);
     job->status.set("command", command);
@@ -418,6 +423,10 @@ json::Value JobTable::start(const std::string& name, const std::string& command,
 
 void JobTable::watch(Job& job, std::uint64_t wait_ms) {
     std::unique_lock lock(mutex_);
+    if (wait_ms == 0) {
+        changed_.wait(lock, [&] { return job.settled; });
+        return;
+    }
     while (!changed_.wait_for(lock, std::chrono::milliseconds(wait_ms), [&] { return job.settled; })) {
         if (job.extend_on_progress) {
             const auto since = std::chrono::duration_cast<std::chrono::milliseconds>(std::filesystem::file_time_type::clock::now() - progress_time(job.start_file_time, job.out, job.progress));
@@ -526,7 +535,7 @@ json::Value JobTable::snapshot(std::uint64_t stuck_ms) {
         auto progress = progress_time(job->start_file_time, job->out, job->progress);
         std::int64_t since_progress_ms = whole_ms(now - progress);
         if (!job->settled) {
-            bool over = since_progress_ms > static_cast<std::int64_t>(stuck_ms);
+            bool over = stuck_ms != 0 && since_progress_ms > static_cast<std::int64_t>(stuck_ms);
             if (over != job->stuck) {
                 job->stuck = over;
                 json::Value change;
@@ -578,7 +587,7 @@ json::Value wait_for_pid(const json::Value& pid_value, double wait_ms) {
 json::Value JobTable::status(const json::Value& args) {
     if (const json::Value* pid_value = present(args, "pid"); pid_value != nullptr && present(args, "job") == nullptr) {
         const json::Value* w = args.find("waitMs");
-        return wait_for_pid(*pid_value, w != nullptr && w->is_number() && std::isfinite(w->as_number()) ? std::clamp(w->as_number(), 0.0, max_wait_ms) : 0.0);
+        return wait_for_pid(*pid_value, w != nullptr && w->is_number() && std::isfinite(w->as_number()) ? std::max(0.0, w->as_number()) : 0.0);
     }
     const json::Value* name_value = args.find("job");
     if (!is_job_name(name_value)) return failure("job must be a job name");
@@ -592,7 +601,7 @@ json::Value JobTable::status(const json::Value& args) {
         std::unique_lock lock(mutex_);
         auto found = jobs_.find(job_key(name));
         if (found != jobs_.end()) {
-            wait_ms = std::clamp(requested_ms, 0.0, max_wait_ms);
+            wait_ms = std::max(0.0, requested_ms);
         }
         if (found != jobs_.end() && !found->second->settled && wait_ms > 0) {
             Job& job = *found->second;
@@ -750,11 +759,11 @@ bool JobTable::adopt_job(const std::string& name, const json::Value& status) {
     job->timeout_ms = timeout_ms;
     const json::Value* extend = status.find("extendOnProgress");
     job->extend_on_progress = extend != nullptr && extend->is_bool() && extend->as_bool();
-    job->lifetime_killed = !job->extend_on_progress && timeout_ms >= lifetime_ms_;
+    job->lifetime_killed = !job->extend_on_progress && lifetime_ms_ != 0 && (timeout_ms == 0 || timeout_ms >= lifetime_ms_);
     double elapsed_ms = 0;
     if (const json::Value* wall = status.find("startWall"); wall != nullptr && wall->is_number()) elapsed_ms = wall_ms_now() - wall->as_number();
     const double left = static_cast<double>(timeout_ms) - elapsed_ms;
-    const std::uint64_t left_ms = left >= 1 ? static_cast<std::uint64_t>(left) : 1;
+    const std::uint64_t left_ms = timeout_ms == 0 ? 0 : left >= 1 ? static_cast<std::uint64_t>(left) : 1;
     Job& ref = *job;
     jobs_.emplace(job_key(name), std::move(job));
     ref.waiter = std::thread([this, &ref] { poll_adopted(ref); });

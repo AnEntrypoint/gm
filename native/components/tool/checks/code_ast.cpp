@@ -57,8 +57,8 @@ CheckResult check_code_ast(const std::string& binary) {
     expect(contains(text, "defines: lib/util.js"), "impact did not list the defining file");
     expect(contains(text, "calls: app.js, broken.js"), "impact did not list the calling files");
     expect(contains(text, "keyword, so it has no callers to list"), "a keyword name was not refused");
-    expect(contains(text, "limit must be an integer from 1 to 1000"), "a limit of 0 was not refused");
-    expect(contains(text, "depth must be an integer from 0 to 5"), "a depth of 9 was not refused");
+    expect(contains(text, "limit must be an integer from 1"), "a limit of 0 was not refused");
+    expect(!contains(text, "depth must be an integer"), "a depth of 9 was refused although the depth cap was removed");
     std::error_code ignored;
     std::filesystem::remove_all(sandbox, ignored);
     result.summary = "callers and impact find a linked import call, a call in a file that does not parse, and a TypeScript call; keywords, a limit of 0 and a depth of 9 are refused";

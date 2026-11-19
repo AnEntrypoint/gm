@@ -213,7 +213,9 @@ void w6(const Context& context, Row& row) {
     const double max_steps = number_of(ctx, "maxSteps");
     row.line = "full reply has " + std::to_string(need.size() - missing.size()) + "/" + std::to_string(need.size()) + " keys; stepsLeft " + std::to_string(steps_left) + " maxSteps " + std::to_string(max_steps);
     row.expect(missing.empty(), "the full next_context reply lacks " + joined(missing, ","));
-    row.expect(max_steps > 0 && steps_left == max_steps - 1, "stepsLeft is not maxSteps - 1 after one step: " + row.line);
+    const json::Value* max_value = value_at(ctx, "maxSteps");
+    const json::Value* left_value = value_at(ctx, "stepsLeft");
+    row.expect(max_value != nullptr && max_value->is_null() && left_value != nullptr && left_value->is_null(), "maxSteps and stepsLeft are not null with no --max-steps flag: " + row.line);
 }
 
 void w7(const Context& context, Row& row) {

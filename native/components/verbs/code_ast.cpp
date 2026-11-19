@@ -32,10 +32,7 @@ namespace fs = std::filesystem;
 constexpr std::size_t kMaxFileBytes = 1000000;
 constexpr std::uint64_t kListTimeoutMs = 30000;
 constexpr std::size_t kOutputPage = 20000;
-constexpr int kDefaultLimit = 100;
-constexpr int kMaxLimit = 1000;
 constexpr int kDefaultDepth = 2;
-constexpr int kMaxDepth = 5;
 const std::set<std::string> kKeywords{"await", "break", "case", "catch", "class", "const", "continue", "debugger", "default", "delete", "do", "else", "enum", "export", "extends", "false", "finally", "for", "function", "if", "import", "in", "instanceof", "let", "new", "null", "return", "static", "super", "switch", "this", "throw", "true", "try", "typeof", "var", "void", "while", "with", "yield"};
 const std::string kNote = "Exact for parsed JavaScript and TypeScript: a call is a call expression whose callee is the name, or a member call .name(). Not resolved: shadowing, aliases and dynamic calls. A file that does not parse cleanly is scanned by lines and marked approximate.";
 const std::regex kLineDef(R"(\b(?:function|class)\s+([A-Za-z_$][\w$]*)|\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=)");
@@ -336,10 +333,10 @@ json::Value callers(const json::Value& args, const fs::path& root) {
     const json::Value* name = args.find("name");
     const std::string bad = bad_name(name);
     if (!bad.empty()) return failure(bad);
-    double limit = kDefaultLimit;
+    std::optional<double> limit;
     if (const json::Value* value = args.find("limit"); value != nullptr) {
-        if (!value->is_number() || std::floor(value->as_number()) != value->as_number() || value->as_number() < 1 || value->as_number() > kMaxLimit) {
-            return failure("limit must be an integer from 1 to " + std::to_string(kMaxLimit));
+        if (!value->is_number() || std::floor(value->as_number()) != value->as_number() || value->as_number() < 1) {
+            return failure("limit must be an integer from 1");
         }
         limit = value->as_number();
     }
@@ -348,7 +345,7 @@ json::Value callers(const json::Value& args, const fs::path& root) {
     if (!error.empty()) return failure(error);
     const Scan found = scan(index.files, name->as_string());
     std::string output;
-    const std::size_t shown = std::min(found.sites.size(), static_cast<std::size_t>(limit));
+    const std::size_t shown = limit ? std::min(found.sites.size(), static_cast<std::size_t>(*limit)) : found.sites.size();
     for (std::size_t i = 0; i < shown; ++i) {
         const Site& site = found.sites[i];
         output += site.rel + ":" + std::to_string(site.line) + " [" + site.kind + "] " + trim(site.text) + "\n";
@@ -363,8 +360,8 @@ json::Value impact(const json::Value& args, const fs::path& root) {
     if (!bad.empty()) return failure(bad);
     double depth = kDefaultDepth;
     if (const json::Value* value = args.find("depth"); value != nullptr) {
-        if (!value->is_number() || std::floor(value->as_number()) != value->as_number() || value->as_number() < 0 || value->as_number() > kMaxDepth) {
-            return failure("depth must be an integer from 0 to " + std::to_string(kMaxDepth));
+        if (!value->is_number() || std::floor(value->as_number()) != value->as_number() || value->as_number() < 0) {
+            return failure("depth must be an integer from 0");
         }
         depth = value->as_number();
     }
