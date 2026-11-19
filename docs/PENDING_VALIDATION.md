@@ -4443,3 +4443,8 @@ Not changed: the 13 install-running witnesses, the job_start Windows kill, and r
 - Trace: each close the witness can see writes a step with its time in ms (collider SIGHUP, gate cleanup kill, alpha browser_close_tab refused, alpha browser_close_tab own, alpha and beta browser_close_run). A failing run appends the trace as its last failure line.
 - Build: gm-tool builds (build_rc 0, runs/build-collider.log). No red or green run was made in this stretch.
 - Gate reading (Phase B): vmstat 1 2 swap-in 1432 KB/s, swap-out 0 KB/s. Closed. The red and green pair is for the next cycle.
+
+## Twenty-eighth stretch 2026-11-19 (browser-tabs collider Phase B): gate closed at the agent's own reading
+
+- vmstat 1 2 by the agent: swap-in 2012 KB/s, swap-out 0 KB/s. Closed (the threshold is below 1000 in both directions). The dispatcher reported 88 KB/s at 17:40; the agent's own reading governs, so no red or green leg was run.
+- Pending: the red leg (fix removed, in a finally), then the green leg (fix restored), under one gate sample, with wall times and the trace from the red line.
