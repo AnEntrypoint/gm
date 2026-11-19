@@ -215,6 +215,20 @@ CheckResult check_update_stream(const std::string& binary) {
         {"automatic update, newer commit", std::string(40, 'e'), offered, *built + kCommitStep, true},
     };
     std::vector<std::string> outcomes;
+    if (checkout_state == std::string("unpushed")) {
+        const fs::path checkout_gm = scratch / "checkout" / "gm";
+        fs::create_directories(checkout_gm.parent_path(), ec);
+        fs::copy_file(binary, checkout_gm, fs::copy_options::overwrite_existing, ec);
+        make_executable(checkout_gm);
+        const proc::Outcome run = proc::run({"env", "GMNEW_UPDATE_URL=file:///nonexistent/manifest.json", "GMNEW_AUTO_UPDATE=1", checkout_gm.string(), "update", "--auto"}, {}, {}, kRunLimitMs);
+        const std::optional<json::Value> reply = reply_of(run.out);
+        if (!reply) {
+            result.failures.push_back("a build run from a checkout printed no JSON reply: " + run.out.substr(0, 200) + run.err.substr(0, 200));
+        } else if (flag_of(*reply, "updated") || text_of(*reply, "status").rfind("auto update off:", 0) != 0) {
+            result.failures.push_back("an unpushed build run from a checkout, not installed, replaced itself (status '" + text_of(*reply, "status") + "')");
+        }
+        outcomes.push_back("an unpushed build run from a checkout is refused");
+    }
     for (std::size_t index = 0; index < legs.size(); ++index) {
         const Leg& leg = legs[index];
         const fs::path root = scratch / ("leg-" + std::to_string(index));
@@ -248,7 +262,7 @@ CheckResult check_update_stream(const std::string& binary) {
         const std::string linked = fs::read_symlink(install / "current", ec).filename().string();
         const std::string reported = first_word(proc::run({(install / "current" / "gm").string(), "--version"}, {}, {}, kStampLimitMs).out);
 
-        if (leg.automatic && checkout_state != std::string("clean")) {
+        if (leg.automatic && checkout_state != std::string("clean") && checkout_state != std::string("unpushed")) {
             if (flag_of(*reply, "updated") || linked != stamp || status.rfind("auto update off:", 0) != 0) result.failures.push_back(std::string(leg.label) + ": a " + *checkout_state + " build replaced itself (status '" + status + "', link " + linked + ")");
             outcomes.push_back("automatic update refused on a " + *checkout_state + " build ('" + status + "')");
             continue;
