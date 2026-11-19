@@ -96,6 +96,11 @@ jobs:
           npx playwright-core install --with-deps chromium
           echo "PLAYWRITER_BROWSER_PATH=$(node -p "require('$dir/node_modules/playwright-core').chromium.executablePath()")" >> "$GITHUB_ENV"
           echo "PLAYWRITER_NO_SANDBOX=1" >> "$GITHUB_ENV"
+      - name: Playwriter package for the browser checks
+        shell: bash
+        run: |
+          build/${{ matrix.preset }}/native/components/host/gm install --local "build/${{ matrix.preset }}" --source "$GITHUB_WORKSPACE"
+          test -f "$HOME/.gmnew/pw/bin/playwriter-project" || { echo "playwriter package missing under $HOME/.gmnew/pw" >&2; exit 1; }
       - name: Test
         shell: bash
         env:

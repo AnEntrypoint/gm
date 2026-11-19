@@ -163,10 +163,6 @@ CheckResult check_browser_first_open(const std::string& binary) {
     const auto adopt_workspace = sandbox / "ws-adopt";
     fs::create_directories(workspace);
     fs::create_directories(adopt_workspace);
-    const fs::path host = fs::path(binary).parent_path();
-    const fs::path build = host.parent_path().parent_path().parent_path();
-    const fs::path source = build.parent_path().parent_path();
-    const fs::path installed = sandbox / ".gmnew" / "current" / "gm";
     const fs::path launcher = sandbox / ".gmnew" / "pw" / "bin" / "playwriter-project";
     const std::string chromium = chromium_binary();
     const std::string idle_assignment = "PLAYWRITER_IDLE_MS=" + std::to_string(kIdleMs);
@@ -184,9 +180,17 @@ CheckResult check_browser_first_open(const std::string& binary) {
     const long long foreign_pid = foreign_gate ? foreign_gate->pid() : 0;
     if (foreign_pid <= 0) failures.push_back("could not start the stand-in gate of another project");
 
-    const auto install = proc::run({"env", "HOME=" + sandbox.string(), (host / "gm").string(), "install", "--local", build.string(), "--source", source.string()}, sandbox, {}, 900000);
-    if (!install.started || install.exit_code != 0) failures.push_back("the sandbox install failed: " + (install.err.empty() ? install.out : install.err).substr(0, 400));
-    if (!fs::exists(launcher)) failures.push_back("the playwriter launcher from the sandbox install is missing: " + launcher.string());
+    const char* real_home = std::getenv("HOME");
+    const fs::path installed_pw = fs::path(real_home == nullptr ? "" : real_home) / ".gmnew" / "pw";
+    std::error_code linked;
+    if (real_home == nullptr || !fs::is_directory(installed_pw, linked)) {
+        failures.push_back("no installed playwriter package at " + installed_pw.string() + "; this check reuses it and never installs one");
+    } else {
+        fs::create_directories(sandbox / ".gmnew");
+        fs::create_directory_symlink(installed_pw, sandbox / ".gmnew" / "pw", linked);
+        if (linked) failures.push_back("cannot link " + installed_pw.string() + " into the sandbox: " + linked.message());
+    }
+    if (!fs::exists(launcher)) failures.push_back("the playwriter launcher is missing under the sandbox HOME: " + launcher.string());
 
     if (failures.empty()) {
         write_ports(workspace, gate_port, debug_port);
@@ -200,9 +204,9 @@ CheckResult check_browser_first_open(const std::string& binary) {
         summary << "start: browser up 8 s after start " << (held ? "true" : "false");
         if (!held) failures.push_back("the browser stopped between start and the first open");
         {
-            Session session(installed.string(), workspace, sandbox, 180000, false, {}, launcher_env);
+            Session session(binary, workspace, sandbox, 180000, false, {}, launcher_env);
             if (!session.started()) {
-                failures.push_back("gm serve did not start from " + installed.string());
+                failures.push_back("gm serve did not start from " + binary);
             } else {
                 init_session(session);
                 const std::string opened = session.body(exec_body(open_code(page_url)));
@@ -226,7 +230,7 @@ CheckResult check_browser_first_open(const std::string& binary) {
         if (!released) failures.push_back("the browser was not released after its page closed and the session ended");
 
         {
-            Session session(installed.string(), workspace, sandbox, 180000, false, {}, launcher_env);
+            Session session(binary, workspace, sandbox, 180000, false, {}, launcher_env);
             if (!session.started()) {
                 failures.push_back("gm serve did not start for the gate-loss scenario");
             } else {
