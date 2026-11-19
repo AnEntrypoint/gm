@@ -4073,3 +4073,15 @@ Phase A changes, each committed locally on main. Nothing is pushed in Phase A.
   - check-quickjs-baseline: ok, 3518 ms.
   - parity-contract: ok, 9933 ms (18 of 18).
 - Installed binary unchanged (0e01b5f-521). gm install --local and the c4a5555 release rerun were not run.
+
+## Twelfth stretch 2026-11-19 (queue e6b5: ranked remaining work; top item: the stale gate lease, pid 2354022): Phase A
+
+- Held items read, with the evidence that would reopen each:
+  - Stale gate pid 2354022 (ninth stretch, item 6): closed by evidence, no code change. The pid is gone. Its gate.log (/workspace/gm/.playwriter/gate.log) has no exit line from 02:11 UTC on 2026-11-17 until the next gate on port 9767 started at 09:32 UTC, so the gate ended without its own exit path (a SIGKILL writes no line; who sent it is not recorded). Its relay (run 2026-11-17-02-11-29-7857f6, started 02:11 UTC) logged only the unstamped "gm relay: stopped by SIGHUP" and tore nothing down. The install directories show the builds in place before that start were bef07db-507 (02:05 local) and older, and 9edef85 (the SIGHUP teardown) was committed at 10:18 +0200. So the relay predates the fix. Witness on HEAD: check-relay-hup-gate ok, 17040 ms, run before this entry was written (ordering noted; the Phase B entry records it). Reopens if a relay on a build that contains 9edef85, stopped by SIGHUP, leaves a gate with a live lease 30 s later.
+  - Item 3 (Windows and macOS rows: the process-group kill, the playwriter PATH prepend, the Windows playwriter link): open, not read this stretch. The next step is gh run view on the 0e01b5f release (44068337926) for those rows. Reopens with a row that fails or is missing from that log.
+  - check-relay-reexec x64 (2026-11-12): held. The latest six runs on origin (checked by conclusion, not by phase-b row) show no failure. Reopens with the next hosted x64 failure, which now names the reply that answered the wait.
+  - Bevy's silent MCP drop (2026-11-16): held. bevy's relay.log is not in this workspace. Reopens with a drop whose relay.log ends at a start, worker or update line with no disconnect reason: that means SIGKILL, the one signal the relay cannot log (90fcc64). A logged reason would name the cause.
+  - fx's "another worker's events twice": held. /workspace/fx/issues.md has no entry for it (grep, 2026-11-19). Reopens with fx's reply text: the run log and the repeated refusal lines, from that run.
+- Ranked remaining work, after the top item, with no owner decision and no credential, by how close each is to a verified result: (1) item 3, read the 0e01b5f release logs; (2) check-relay-reexec x64, wait for the next failure; (3) bevy's drop, wait for a logged drop; (4) fx's events, wait for the reply text.
+- Top item change: none in code; the docs entry above records the closure. Phase A verification: no build, witness or gate ran in Phase A.
+- Excluded as owner items: gm install --local and the c4a5555 release rerun.
