@@ -400,7 +400,7 @@ UpdatePolicy policy_from_environment(const fs::path& install_dir) {
     const char* auto_update = std::getenv("GMNEW_AUTO_UPDATE");
     if (!build_is_clean()) {
         const std::string_view state = kBuildState;
-        const std::string why = state == "dirty" ? "it has uncommitted changes" : state == "unpushed" ? "HEAD is not origin/main" : "its git state is unknown";
+        const std::string why = state == "dirty" ? "it has uncommitted changes (" + std::string(kBuildDirty) + ")" : state == "unpushed" ? std::string("HEAD is not origin/main") : std::string("its git state is unknown");
         policy.disabled_reason = "this build is " + std::string(state) + ": " + why + ", so it never replaces itself";
     } else if (auto_update != nullptr && std::string_view(auto_update) == "0") {
         policy.disabled_reason = "GMNEW_AUTO_UPDATE is 0";
