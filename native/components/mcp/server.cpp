@@ -669,7 +669,8 @@ struct Server::State {
     struct ReadMark {
         int step = 0;
         std::optional<std::uint64_t> action;
-        std::uint64_t writes = 0;
+        std::uintmax_t size = 0;
+        fs::file_time_type mtime{};
     };
 
     struct Session {
@@ -708,7 +709,6 @@ struct Server::State {
         bool own_only = true;
         std::optional<Value> recovery;
         std::string rules_baseline;
-        std::uint64_t writes_seen = 0;
         std::map<std::string, ReadMark> read_marks;
         std::mutex marks_lock;
     };
@@ -2362,7 +2362,8 @@ struct Server::State {
         std::string corrected = task_arg && task_arg->is_string() ? trim(task_arg->as_string()) : "";
         const Value* owner_arg = args.find("owner");
         bool owner = owner_arg && owner_arg->is_bool() && owner_arg->as_bool();
-        bool first_step_correction = s().created && s().steps == 0 && !s().run_started && !s().child_seen && !s().owner_seen &&
+        const bool unset_task = s().created && s().task.empty() && !s().child_seen;
+        bool first_step_correction = unset_task || s().created && s().steps == 0 && !s().run_started && !s().child_seen && !s().owner_seen &&
                                      (s().task.empty() || s().task.find_first_of(" \t\r\n") == std::string::npos) &&
                                      corrected.compare(0, s().task.size(), s().task) == 0;
         if (!corrected.empty() && !owner && !first_step_correction) {
@@ -3614,7 +3615,6 @@ const std::regex kTestCommand(R"((^|[\s|&;(])(test|pytest|jest|vitest|mocha|tsc)
 const std::set<std::string> kBoundedVerbs = {"read_file", "run_shell"};
 const std::set<std::string> kRepeatableVerbs = {"read_file"};
 constexpr std::size_t kReadMarkLimit = 512;
-const std::set<std::string> kWriteVerbs = {"write_file", "edit_file", "fs_op", "run_shell", "job_start", "js", "wiki_write"};
 
 bool flag_set(const Value& args, const char* key) {
     const Value* value = args.find(key);
@@ -3705,31 +3705,48 @@ Value bounded_output(Value result, const Value& args, const fs::path& run_dir, c
     return result;
 }
 
-Value body_call(VerbTable& verbs, const std::string& name, const Value& args, Server::State::Session& owner, int step, std::optional<std::uint64_t> action, const std::function<bool()>& quiet) {
+struct FileStamp {
+    std::uintmax_t size;
+    fs::file_time_type mtime;
+};
+
+std::optional<fs::path> read_target(const Value& args, const fs::path& workspace) {
+    const Value* path = args.find("path");
+    if (path == nullptr || !path->is_string() || path->as_string().starts_with("skill://")) return std::nullopt;
+    const fs::path given(path->as_string());
+    return given.is_absolute() ? given : workspace / given;
+}
+
+std::optional<FileStamp> file_stamp(const fs::path& target) {
+    std::error_code ec;
+    if (!fs::is_regular_file(target, ec)) return std::nullopt;
+    const auto size = fs::file_size(target, ec);
+    if (ec) return std::nullopt;
+    const auto mtime = fs::last_write_time(target, ec);
+    if (ec) return std::nullopt;
+    return FileStamp{size, mtime};
+}
+
+Value body_call(VerbTable& verbs, const std::string& name, const Value& args, Server::State::Session& owner, int step, std::optional<std::uint64_t> action, const std::function<bool()>& quiet, const fs::path& workspace) {
     const std::string key = name + json::dump(args);
-    if (kRepeatableVerbs.contains(name) && !flag_set(args, "fresh") && quiet()) {
+    const std::optional<FileStamp> stamp = kRepeatableVerbs.contains(name) && read_target(args, workspace) ? file_stamp(*read_target(args, workspace)) : std::nullopt;
+    if (stamp && !flag_set(args, "fresh") && quiet()) {
         std::lock_guard guard(owner.marks_lock);
         const auto found = owner.read_marks.find(key);
-        if (found != owner.read_marks.end() && found->second.writes == owner.writes_seen) {
+        if (found != owner.read_marks.end() && found->second.size == stamp->size && found->second.mtime == stamp->mtime) {
             Value reply = object().set("ok", true).set("step", static_cast<double>(found->second.step));
             if (found->second.action) reply.set("action", static_cast<double>(*found->second.action));
             return reply.set("output", gm::marker::pointer_line(found->second.step)).set("pointer", true).set("complete", false);
         }
     }
-    std::uint64_t sampled = 0;
-    {
-        std::lock_guard guard(owner.marks_lock);
-        sampled = owner.writes_seen;
-    }
     const bool before_quiet = quiet();
     Value result = verbs.call(name, args);
     if (kBoundedVerbs.contains(name)) result = bounded_output(std::move(result), args, owner.run_dir, name);
     std::lock_guard guard(owner.marks_lock);
-    if (kRepeatableVerbs.contains(name) && is_ok(result) && before_quiet && quiet()) {
+    if (stamp && is_ok(result) && before_quiet && quiet()) {
         if (owner.read_marks.size() >= kReadMarkLimit && !owner.read_marks.contains(key)) owner.read_marks.clear();
-        owner.read_marks[key] = {step, action, sampled};
+        owner.read_marks[key] = {step, action, stamp->size, stamp->mtime};
     }
-    if (kWriteVerbs.contains(name)) owner.writes_seen += 1;
     return result;
 }
 
@@ -3784,7 +3801,7 @@ public:
             } else if (name == "task_set") {
                 result = state_.task_set(args);
             } else {
-                result = body_call(state_.verbs, name, args, owner, job_->step, action, [&] { return !state_.shell_jobs_open(); });
+                result = body_call(state_.verbs, name, args, owner, job_->step, action, [&] { return !state_.shell_jobs_open(); }, state_.options.workspace);
                 if (name == "job_start" && is_ok(result)) {
                     std::lock_guard job_guard(job_->lock);
                     job_->started_jobs.push_back(Server::State::string_of(args, "job"));

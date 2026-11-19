@@ -4128,3 +4128,19 @@ Changes in this round, each committed locally by explicit path:
 - native/components/verbs/git.cpp verb_of: a git failure with no exec error names the first line of git's output in the error (row 8). Witness: git_commit with a message and paths that git rejects returns an error with the git reason.
 - native/components/verbs/verbs.cpp read_file: a directory path returns "<path> is a directory; list it with list_dir" (row 13). Witness: read_file on sources/ returns that text.
 - Phase B: rebuilt; witnessed git_commit cause (99cccb84) and the directory read message (91073176) on build d9fa7619a6fb. One gated push follows.
+
+## Round 2026-11-19 rows 11 and 4, reopened and closed with their causes
+
+Row 11, first task refused after a step with no task.
+- Cause, from the built worker: server.cpp next_context sets owner_seen on every step, not only on owner calls. The first-step correction required owner_seen false, so any run that had taken one step with no task refused its first task. Probe at the refusal: created=1 task_len=0 child=0 owner=1 steps=1 run_started=1.
+- Fix: unset_task = created && task empty && !child_seen (owner_seen and steps no longer block a run with no task). A replacement of a set task still needs owner, and an adopted run still needs owner.
+- Proof run (built binary d9fa7619a6fb): next_context, then next_context task "beta" returned ok step 2; next_context task "gamma" was refused "a task replacement after the first step needs owner:true". check-first-step-correction: ok.
+- Commit: this round's server.cpp commit.
+
+Row 4, same-path read_file repeated in a run.
+- Measured in the run logs: 9 repeat pairs with no change between by the journal's own counts. 4 were pure repeats with no shell or write between and identical reply size (28730 characters re-sent in total across the five unchanged pairs, including one with a run_shell between). Those runs have 0 pointer replies, so they were written by a build without the pointer rule. 3 pairs changed content (writes, or host Bash outside gm).
+- Cause in the current build: body_call's repeat mark was invalidated by any run_shell, job_start, write or js, through a global write counter, so an unchanged file was re-sent after a shell call. A same-step repeat with no shell already gave the pointer.
+- Fix: a repeat mark stores the file's size and mtime and is valid while both match. A shell call that does not touch the file no longer invalidates it. A changed file still gets fresh content.
+- Proof run (built binary): same step repeat pointer true; repeat across a run_shell pointer true; repeat after a write returns fresh content ("changed\n") with pointer false.
+- Checks: check-read-after-write, check-read-parity, check-repeated-checks, check-first-step-correction all ok.
+- Limit: a file rewritten to the same size within one mtime tick would keep its pointer. Linux mtime resolution is nanoseconds, so this is not expected in practice.
