@@ -257,9 +257,12 @@ public:
         std::sort(longest.begin(), longest.end(), [](const Timing& a, const Timing& b) { return a.wall > b.wall; });
         std::string top;
         for (std::size_t i = 0; i < longest.size() && i < 5; ++i) top += (i ? "; " : "") + longest[i].name + " " + seconds(longest[i].wall);
+        std::string stub_list;
+        for (const auto& name : stubbed_) stub_list += (stub_list.empty() ? "" : ", ") + name;
+        const std::string stubbed_text = stub_list.empty() ? std::string() : " (" + stub_list + ")";
         const double wall = std::chrono::duration<double>(Clock::now() - started).count();
         say("phase-b: checks: " + std::to_string(timings_.size()) + " run, " + std::to_string(failures_.size()) + " failed, " + std::to_string(rescued_.size()) +
-            " passed alone after a pool failure, " + std::to_string(skipped) + " skipped, jobs " + std::to_string(lanes_) + ", load " + one_decimal(load_one()) + " on " +
+            " passed alone after a pool failure, " + std::to_string(skipped) + " skipped, " + std::to_string(stubbed_.size()) + " stubbed" + stubbed_text + ", jobs " + std::to_string(lanes_) + ", load " + one_decimal(load_one()) + " on " +
             std::to_string(cores_) + " cores, wall " + seconds(wall) + "; longest: " + (top.empty() ? "none" : top));
         return failures_.empty() ? 0 : 1;
     }
@@ -303,6 +306,7 @@ private:
             for (const long long pid : leftover) pids += (pids.empty() ? "" : ", ") + std::to_string(pid);
             text += "phase-b: " + job.name + " left " + std::to_string(leftover.size()) + " process(es) alive: " + pids + "\n";
         }
+        const bool stub = ok && phase_b_output_is_stub(outcome.out);
         const fs::path log = logs_ / (safe_label(job.name) + ".log");
         std::ofstream(log, std::ios::binary | std::ios::trunc) << text;
         {
@@ -310,7 +314,9 @@ private:
             timings_.push_back({job.name, wall});
             durations_[job.name] = wall;
             if (ok) {
-                if (!job.key.empty()) {
+                if (stub) {
+                    stubbed_.push_back(job.name);
+                } else if (!job.key.empty()) {
                     cache_[job.name] = job.key;
                     passed_.push_back(job.name);
                 }
@@ -319,7 +325,8 @@ private:
                 failures_.push_back(job.name);
             }
         }
-        if (ok) say("phase-b: " + job.name + " ok " + seconds(wall));
+        if (ok && stub) say("phase-b: " + job.name + " stubbed, not counted as passed " + seconds(wall));
+        else if (ok) say("phase-b: " + job.name + " ok " + seconds(wall));
         else say("phase-b: " + job.name + " FAILED " + seconds(wall) + ", log " + log.string() + "\n" + tail_lines(text, 12));
         return ok;
     }
@@ -365,6 +372,7 @@ private:
     std::vector<Timing> timings_;
     std::vector<std::string> failures_;
     std::vector<std::string> rescued_;
+    std::vector<std::string> stubbed_;
     std::vector<std::string> passed_;
     std::vector<std::string> skipped_;
 };

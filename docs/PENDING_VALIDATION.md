@@ -4337,3 +4337,24 @@ Remaining bound added to the list above: native/include/gm/numeric.hpp clock_ran
 - "gm install writes no harness settings file" matches the install text at README.md line 10. The user makes the change by hand.
 - Witness: node /tmp/s11-readme-json.cjs /workspace/gm/README.md. It parses every json block in the README, checks defaultMode dontAsk, the allow list, the deny list without WebSearch, and the install sentence, and exits 1 on any failure. Expected: 2 json blocks, 0 failures.
 - Build and install: none. The change is docs only; the stamp covers native, src and defaults only.
+
+## Eighteenth stretch 2026-11-19 (ranked item 1: the phase-b driver counted stubs as passes): Phase A
+
+Ranking at the start of this stretch (no owner decision and no credential needed; closeness to a verified result first):
+1. Driver stub defect (driver.cpp:296 and the summary): the phase-b driver counted a row whose output was "ok (skipped: ...)" as a pass and cached it, so the three Windows-only rows and the other stubs read as passed on macOS (hosted release 0e01b5f, "81 run, 0 failed, 0 skipped"). Reachable: a code change with a witness. Reopens with: nothing; this item closes it.
+2. job_start process-group kill on Windows (job.cpp kill_group): not covered by any hosted row, so it needs a new Windows row and a hosted run. Held. Reopens with a Windows hosted log whose witness names job_start's group kill.
+3. The 13 install-running witnesses (cli_flags.cpp, parity_contract.cpp and others, listed in the thirteenth stretch): owner decision, keep as subject or remove as setup. Held. Reopens with the owner's decision.
+4. check-relay-reexec x64 (build ubuntu x64 phase-b, "the relay re-executed only after the next_context wait had answered"): held, no x64 hosted result since. Reopens with a passing or failing x64 hosted log that names the check.
+5. bevy's silent MCP drop (2026-11-16 13:51 UTC): held. Reopens with a new drop whose relay.log ends at a start, worker or update line (relay.log now names every disconnect reason except SIGKILL, 90fcc64).
+6. fx's "another worker's events twice": held. Reopens with fx's reply text (the run log and the repeated refusal lines).
+
+Change in this stretch (native/components/tool/driver.cpp, native/include/gm/tool.hpp):
+- A row whose output contains "ok (skipped" is now a stub. It still passes, so it does not fail the run, but it is not counted as a pass and it is not written to the cache, so it reruns each time. Its line reads "phase-b: <name> stubbed, not counted as passed".
+- The summary line gains "N stubbed (names)" after "skipped". Failures, the rule that fails a non-platform skip ("ok (skipped (" without "not on this platform"), and the cache for other rows are unchanged.
+- phase_b_output_is_stub(output) is an inline function in tool.hpp, so a witness can classify rows the same way the driver does.
+
+Witness, new: check-phase-b-stubs (native/components/tool/checks/phase_b_stubs.cpp, registered in checks/registry.cpp and CMakeLists.txt). It checks five sample rows (three stubs and two passes or failures) and the real check-witness-windows-cmd stub, formatted as the runner formats a row, and expects the stub classification for all stubs and none for the others.
+
+Witness 2, the summary of a full phase-b run on this host: run the driver and read its "phase-b: checks:" line, which must name the stubbed rows (the Windows-only rows on Linux). The full set runs in the Phase B job; its result is quoted with its wall time.
+
+Not changed: the 13 install-running witnesses, the job_start Windows kill, and release.yml.
