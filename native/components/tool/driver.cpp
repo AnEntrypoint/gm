@@ -203,7 +203,8 @@ public:
                 continue;
             }
             const std::string key = hash_of(check.name + ":" + fp);
-            if (cache_[check.name] == key) {
+            const auto cached = cache_.find(check.name);
+            if (cached != cache_.end() && cached->second == key) {
                 ++skipped;
                 skipped_.push_back(check.name);
                 say("phase-b: " + check.name + " skipped, inputs unchanged");
