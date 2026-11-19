@@ -193,6 +193,7 @@ public:
         const bool mutations = mutations_env != nullptr && std::string(mutations_env) == "1";
 
         const std::string fp = fingerprint(root_, gm_, tool_);
+        say("phase-b: fingerprint inputs at start: gm " + stat_of(gm_) + ", tool " + stat_of(tool_) + ", status bytes " + std::to_string(git_output(root_, {"status", "--porcelain", "--untracked-files=no"}).value_or("").size()));
         std::vector<Job> pool;
         std::vector<Job> exclusive;
         int skipped = 0;
@@ -218,6 +219,7 @@ public:
         write_pairs(cache_path_, cache_);
         const auto read_back = read_pairs(cache_path_);
         const std::string fp_after = fingerprint(root_, gm_, tool_);
+        say("phase-b: fingerprint inputs after the run: gm " + stat_of(gm_) + ", tool " + stat_of(tool_) + ", status bytes " + std::to_string(git_output(root_, {"status", "--porcelain", "--untracked-files=no"}).value_or("").size()));
         std::vector<std::string> unstable;
         std::vector<std::string> expected = passed_;
         expected.insert(expected.end(), skipped_.begin(), skipped_.end());
