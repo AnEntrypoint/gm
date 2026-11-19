@@ -4327,3 +4327,13 @@ Remaining bound added to the list above: native/include/gm/numeric.hpp clock_ran
 - The section gives the user-wide block (~/.claude/settings.json, which is /config/.claude/settings.json because HOME is /config) and the project-only block (.claude/settings.json in the repository). Both use defaultMode "dontAsk", an allow list (mcp__gm__run_code, mcp__gm__next_context, mcp__gm__finish, ReadMcpResourceTool, ToolSearch) and a deny list of the built-in tools above. It gives the removal steps, and it states that gm install writes no harness settings.
 - Witness: grep over native/components/host and native/components/tool for a reference to the harness settings directory finds 0 files, which backs the claim that gm install writes no harness settings. The README has no non-ASCII characters (grep count 0).
 - Build: not needed for this change. The stamp hashes the native, src and defaults trees only, so a README change keeps the installed stamp.
+
+## Seventeenth stretch 2026-11-19 (README tool-permission section, revised): Phase A
+
+- README.md "Tool permissions" (line 82): the recommendation names the host's built-in tools it denies (Bash, Read, Write, Edit, MultiEdit, Grep, Glob, WebFetch), and says why: gm's verbs condense output, batch steps and land each step in the run log.
+- Trade-offs written into the section: git and build commands that ran through Bash move to gm.git_* and gm.run_shell inside run_code; a deny in the user-wide file overrides an allow in a project file, so a project re-enables a denied tool by removing it from the user-wide deny list.
+- WebSearch is no longer in the deny list. gm has no web-search verb, so denying it would remove search rather than move it to gm. The user-wide block and the project-only block now each show their full settings, with defaultMode dontAsk, the allow list and the deny list.
+- Removal steps: delete the defaultMode, allow and deny keys under permissions (or the whole permissions object when nothing else is in it), delete the file when it is left as {}, keep any other settings, then start a new session.
+- "gm install writes no harness settings file" matches the install text at README.md line 10. The user makes the change by hand.
+- Witness: node /tmp/s11-readme-json.cjs /workspace/gm/README.md. It parses every json block in the README, checks defaultMode dontAsk, the allow list, the deny list without WebSearch, and the install sentence, and exits 1 on any failure. Expected: 2 json blocks, 0 failures.
+- Build and install: none. The change is docs only; the stamp covers native, src and defaults only.

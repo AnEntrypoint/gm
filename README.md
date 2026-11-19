@@ -81,7 +81,9 @@ Setup registers only gm with the host, so the worker is the only thing that star
 
 ## Tool permissions
 
-Every gm capability is reachable through `run_code`. Each verb (`read_file`, `write_file`, `run_shell`, the `git_*` verbs, `fetch`, `search` and the rest) is a `gm.<verb>(args)` call inside one body. A host can therefore do the same work with its built-in tools or with gm's verbs. We recommend denying the built-in tools (Bash, Read, Edit, MultiEdit, Write, Glob, Grep, WebFetch, WebSearch), so that agents use gm's verbs: they condense output, batch the steps of one change into one body, and land each step in the run log. The built-in tools do none of that.
+Every gm capability is reachable through `run_code`. Each verb (`read_file`, `write_file`, `run_shell`, the `git_*` verbs, `fetch`, `search` and the rest) is a `gm.<verb>(args)` call inside one body. A host can therefore do the same work with its built-in tools or with gm's verbs. We recommend denying the host's built-in tools (Bash, Read, Write, Edit, MultiEdit, Grep, Glob, WebFetch), so that agents use gm's verbs instead: they condense output, batch the steps of one change into one body, and land each step in the run log. The built-in tools do none of that.
+
+Two trade-offs come with this. Git and build commands that ran through Bash move to `gm.git_*` (git) and `gm.run_shell` (builds and tests), and they are written inside `run_code`. WebSearch stays allowed, because gm has no web-search verb to replace it. A deny in the user-wide file also overrides an allow in a project file, so a project cannot re-enable a tool the user-wide file denies; to let one project use a denied built-in tool, remove that tool from the user-wide deny list.
 
 The settings below allow the gm tools and deny the built-in ones. With `defaultMode` set to `dontAsk`, a tool that is in neither list is refused without a prompt. `Agent` is not in the allow list; add it to `allow` if the host should spawn subagents.
 
@@ -101,23 +103,47 @@ User-wide, for every project (`~/.claude/settings.json`):
     "deny": [
       "Bash",
       "Read",
+      "Write",
       "Edit",
       "MultiEdit",
-      "Write",
-      "Glob",
       "Grep",
-      "WebFetch",
-      "WebSearch"
+      "Glob",
+      "WebFetch"
     ]
   }
 }
 ```
 
-Project only, in `<project>/.claude/settings.json`: the same block. Use it when the user-wide block would also apply to projects that do not use gm.
+Project only, in `<project>/.claude/settings.json`, when the settings should apply to one repository and not to every project. Use this block there:
 
-To remove the block, delete the `permissions` object from the file (or only its `defaultMode`, `allow` and `deny` keys), delete the file if it is left as `{}`, and start a new session so the host reads it again.
+```json
+{
+  "permissions": {
+    "defaultMode": "dontAsk",
+    "allow": [
+      "mcp__gm__run_code",
+      "mcp__gm__next_context",
+      "mcp__gm__finish",
+      "ReadMcpResourceTool",
+      "ToolSearch"
+    ],
+    "deny": [
+      "Bash",
+      "Read",
+      "Write",
+      "Edit",
+      "MultiEdit",
+      "Grep",
+      "Glob",
+      "WebFetch"
+    ]
+  }
+}
+```
 
-`gm install` writes no harness settings. It does not read or change `~/.claude/settings.json` or any project `.claude/settings.json`, so the block above is added by hand.
+To remove the settings, edit the file that holds them (`~/.claude/settings.json` or `<project>/.claude/settings.json`): delete the `defaultMode`, `allow` and `deny` keys under `permissions`, or the whole `permissions` object if nothing else is in it, and delete the file if it is left as `{}`. Keep any other settings in the file. Then start a new session, so the host reads the file again.
+
+`gm install` writes no harness settings file. It does not read or change `~/.claude/settings.json` or any project `.claude/settings.json`, so you add the block above by hand, as the install text above says.
 
 ## Native build
 
