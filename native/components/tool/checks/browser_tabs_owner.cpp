@@ -255,6 +255,35 @@ CheckResult check_browser_tabs_owner(const std::string& binary) {
             result.failures.push_back("the gate " + std::to_string(gate) + " outlived both serves by 30 s; its tree of " + std::to_string(tree.size()) + " process(es) was stopped by pid");
         }
     }
+    {
+        const std::string marker = sandbox.string();
+        const auto sandbox_pids = [&] {
+            std::vector<long long> found;
+            for (const auto& row : proc::process_table()) {
+                if (row.zombie) continue;
+                for (const std::string& arg : proc::command_of(row.pid)) {
+                    if (arg.find(marker) != std::string::npos) {
+                        found.push_back(row.pid);
+                        break;
+                    }
+                }
+            }
+            return found;
+        };
+        const std::vector<long long> owned = sandbox_pids();
+        if (!owned.empty()) kill_processes(process_tree(owned));
+        std::vector<long long> left = sandbox_pids();
+        const auto settle = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+        while (!left.empty() && std::chrono::steady_clock::now() < settle) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            left = sandbox_pids();
+        }
+        if (!left.empty()) {
+            std::string pids;
+            for (long long pid : left) pids += (pids.empty() ? "" : ", ") + std::to_string(pid);
+            result.failures.push_back(std::to_string(left.size()) + " process(es) from the sandbox survived the check's cleanup, pids " + pids);
+        }
+    }
     if (!result.failures.empty()) result.failures.push_back("trace: " + trace);
     fs::remove_all(sandbox, ec);
     const auto wall = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - began).count();
