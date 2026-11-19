@@ -398,7 +398,8 @@ UpdatePolicy policy_from_environment(const fs::path& install_dir) {
     const char* url = std::getenv("GMNEW_UPDATE_URL");
     if (url != nullptr && *url != '\0') policy.url = url;
     const char* auto_update = std::getenv("GMNEW_AUTO_UPDATE");
-    if (!build_is_clean()) {
+    const bool installed = install_dir.parent_path().filename() == "versions";
+    if (!build_is_clean() && !(installed && kBuildState == "unpushed")) {
         const std::string_view state = kBuildState;
         const std::string why = state == "dirty" ? "it has uncommitted changes (" + std::string(kBuildDirty) + ")" : state == "unpushed" ? std::string("HEAD is not origin/main") : std::string("its git state is unknown");
         policy.disabled_reason = "this build is " + std::string(state) + ": " + why + ", so it never replaces itself";
