@@ -33,7 +33,7 @@ struct ServerOptions {
     bool supervised = false;
     bool protocol_2026_07_28 = false;
     std::string connection;
-    std::string restart_reason = "restarted without a reason";
+    std::string restart_reason = "resumed an open run without a restart reason";
     std::string version = GMNEW_MCP_VERSION;
     std::uint64_t job_lifetime_ms = 3600000;
     std::uint64_t stuck_ms = 180000;

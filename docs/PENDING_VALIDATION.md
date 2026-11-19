@@ -4144,3 +4144,11 @@ Row 4, same-path read_file repeated in a run.
 - Proof run (built binary): same step repeat pointer true; repeat across a run_shell pointer true; repeat after a write returns fresh content ("changed\n") with pointer false.
 - Checks: check-read-after-write, check-read-parity, check-repeated-checks, check-first-step-correction all ok.
 - Limit: a file rewritten to the same size within one mtime tick would keep its pointer. Linux mtime resolution is nanoseconds, so this is not expected in practice.
+
+## Round 2026-11-19 confirmation pass
+
+- Every ranked row was checked for a measured cause. Measured now on build c8a2244c558c: status pending accepted; unknown argument code refused with the valid names; absent path returns ENOENT with the path; invalid UTF-8 command output returns a replacement character with no JSON error; finish then run_code refused "has ended; call next_context"; the repeated gm skill read followed a rules-notice.
+- Restart events, measured in the run logs: 13 total, 5 build swaps, 2 changed gm-core, 1 failed start, 5 resumed open runs labelled "restarted without a reason". Change: native/components/mcp/include/gm/mcp.hpp default restart_reason now reads "resumed an open run without a restart reason". Witness: a second serve on an open run logs the new reason (Phase B).
+- docs/GM_FRICTION.md rewritten to list all 19 ranked items with their cause and fix commit.
+- Open: browser error cause (row prd-mwnb4ldzce65). A playwriter probe returned 2, and the gate stopped its browser by PID. The page-removed error was not reproduced.
+- Check 4: the configured command has no GMNEW_AUTO_UPDATE pin (witness in the REPORT).
