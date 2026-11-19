@@ -4428,3 +4428,10 @@ Not changed: the 13 install-running witnesses, the job_start Windows kill, and r
 - Hypothesis, not confirmed: check-relay-hup-gate sends SIGHUP to a serve relay and kills the playwriter gate on its port, which the browser-tabs witness needs. The failing pool run (runs/pb-clean.log line 29) overlapped check-relay-hup-gate for 39 s. This run did not show it; the overlap in this run may have been too short.
 - The fix is the schedule (bb9bb00: check-browser-tabs-owner in kExclusive). kExclusive only applies to phase-b, so a check-level run cannot show the schedule directly.
 - Not pushed: the red-without-fix line is not recorded, so the push condition is not met.
+
+## Twenty-sixth stretch 2026-11-19 (check-browser-tabs-owner red without the fix, deterministic collider): gate closed
+
+- Gate reading before the gated pair: vmstat 1 2 swap-in 1472 KB/s, swap-out 0 KB/s. Closed (threshold below 1000 for both). No gated red or green run was made in this stretch.
+- Method decision (made here, not by the owner): the red-without-fix uses a deterministic collider inside check-browser-tabs-owner, not a second timed run. After alpha and beta each have their tabs, the witness starts a third serve on the same workspace and sandbox, takes the gate pid from its first browser call, sends SIGHUP to its relay, waits for the relay to exit within 20 s, and kills the gate by pid if it is still alive after 30 s (the same cleanup check-relay-hup-gate does). Red is expected as "has been closed" in beta's or alpha's next call. The fix is named only after that red trace shows which step closes the browser.
+- Why: the timed concurrent run (1512ef3) did not overlap the collision reliably, so one run can't show the red. A deterministic collider removes the timing.
+- Reopen: when the gate reads swap-in and swap-out both below 1000 KB/s, run the collider witness once without the fix (red) and once with it (green) under one gate sample, with wall times.
