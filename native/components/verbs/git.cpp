@@ -88,7 +88,10 @@ json::Value verb_of(const std::string& sub, const Exec& result) {
     }
     json::Value reply;
     reply.set("ok", false);
-    reply.set("error", result.error ? *result.error : "git " + sub + " exited " + std::to_string(result.exit_code));
+    std::string error = result.error ? *result.error : "git " + sub + " exited " + std::to_string(result.exit_code);
+    const std::string detail = trimmed(result.output);
+    if (!result.error && !detail.empty()) error += ": " + detail.substr(0, detail.find('\n'));
+    reply.set("error", error);
     reply.set("output", trimmed(result.output));
     return reply;
 }
