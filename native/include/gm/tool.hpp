@@ -42,6 +42,7 @@ CheckResult check_browser_tabs_owner(const std::string& binary);
 CheckResult check_caps_removed(const std::string& binary);
 CheckResult check_phase_b_stubs(const std::string& binary);
 CheckResult check_update_stream(const std::string& binary);
+CheckResult check_job_wait_bounded(const std::string& binary);
 inline bool phase_b_output_is_stub(const std::string& output) { return output.find("ok (skipped") != std::string::npos; }
 CheckResult check_browser_first_open(const std::string& binary);
 CheckResult check_portable_proc_reads(const std::string& binary);
