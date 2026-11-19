@@ -76,7 +76,12 @@ function rssOf(pid) {
 }
 
 function readNewLog(path, offset) {
-  const size = statSync(path).size;
+  let size = 0;
+  try {
+    size = statSync(path).size;
+  } catch (err) {
+    return { text: "", offset };
+  }
   if (size <= offset) return { text: "", offset };
   const fd = openSync(path, "r");
   const buffer = Buffer.alloc(size - offset);

@@ -4595,3 +4595,11 @@ Not changed: the 13 install-running witnesses, the job_start Windows kill, and r
 - RSS over the run: minimum 760,584 KB, maximum 1,323,648 KB. Eleven steps of 64 MB or more, from 23:04:01 to 23:11:57. Every one reads verb nothing: no logged verb overlaps the step. Each lies in a run_code (results 2108, 2114, 2119, 2126, 2136, 2151, 2159), 47 to 95 s after the run started, and before the run's first logged verb.
 - The gap is not a verb gap of the sampler: run 2137 (result 2151, 23:08:43.5 to 23:10:21.2) has no logged verb for 97 s. Its first logged verb is run_shell at 23:10:20.068, and a generation event sits at 23:10:19.685 in that gap. The step at 23:10:18.657 (+412,448 KB) falls inside it.
 - The mechanism is not established by the log. The log records verbs at their end, so the worker's work in the gap is not visible in it.
+
+## Forty-fourth stretch 2026-11-20 (the verbless gap on an own worker): Phase A
+
+- Test body: scripts/gap-body.js. It reads skill://gm/SKILL.md (its first verb, which the skill requires), then waits 60 s with no further verb, then returns.
+- Driver: scripts/gap-repro.mjs <gm binary> <body file> <out dir> [seconds]. It starts its own gm serve on a scratch workspace, finds the gm-core worker that serve spawned, starts scripts/rss-sampler.mjs on that worker for the given seconds, sends the body as run_code over JSON-RPC, then runs the check on the stream and stops its serve and worker by PID. It signals only processes it started.
+- Check: scripts/gap-check.mjs <stream>. For each run_code of 55 s or more it finds the largest verb-free stretch (from the run's V lines), and reports the RSS at its start and end, and the peak. Witness: node scripts/gap-check.mjs --witness. Fixture: a run of 62 s with one read_file at its start and RSS rising 5,000 KB per second from 3 s on. Green: rc 0, "largest verb-free stretch 61000 ms ... RSS 760000 KB -> 1060000 KB (growth 300000 KB, peak 1060000 KB)", "check-gap-stretch: ok".
+- The sampler now tolerates a run log that does not exist yet. Witness check-rss-verbs stays green after the change (rc 0).
+- Not run in Phase A: the driver against a gm serve. That run is the Phase B reproduction, on a gate and heavy-job clear window.
