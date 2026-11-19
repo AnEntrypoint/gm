@@ -2362,7 +2362,8 @@ struct Server::State {
         std::string corrected = task_arg && task_arg->is_string() ? trim(task_arg->as_string()) : "";
         const Value* owner_arg = args.find("owner");
         bool owner = owner_arg && owner_arg->is_bool() && owner_arg->as_bool();
-        bool first_step_correction = s().created && s().steps == 0 && !s().run_started && !s().child_seen && !s().owner_seen &&
+        const bool unset_task = s().created && s().task.empty() && !s().child_seen && !s().owner_seen;
+        bool first_step_correction = unset_task || s().created && s().steps == 0 && !s().run_started && !s().child_seen && !s().owner_seen &&
                                      (s().task.empty() || s().task.find_first_of(" \t\r\n") == std::string::npos) &&
                                      corrected.compare(0, s().task.size(), s().task) == 0;
         if (!corrected.empty() && !owner && !first_step_correction) {
