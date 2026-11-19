@@ -69,8 +69,9 @@ std::string recorded_close_code(const std::vector<std::string>& recorded) {
         if (!ids.empty()) ids += ",";
         ids += json::quote(id);
     }
-    return "const recorded = [" + ids + "]; let n = 0; const cdp = await browser.newBrowserCDPSession(); "
-           "try { for (const targetId of recorded) { try { await cdp.send('Target.closeTarget', { targetId }); n += 1; } catch (error) { } } } finally { await cdp.detach(); } "
+    return "const recorded = [" + ids + "]; let n = 0; let cdp; "
+           "try { cdp = await browser.newBrowserCDPSession(); } catch (error) { if (!/has been closed/.test(String(error && error.message))) throw error; return 'GMCLOSEDIDS0GMCLOSEDIDS'; } "
+           "try { for (const targetId of recorded) { try { await cdp.send('Target.closeTarget', { targetId }); n += 1; } catch (error) { } } } finally { await cdp.detach().catch(() => {}); } "
            "return 'GMCLOSEDIDS' + n + 'GMCLOSEDIDS';";
 }
 
