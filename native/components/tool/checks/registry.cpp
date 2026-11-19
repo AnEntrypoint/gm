@@ -72,6 +72,7 @@ const std::vector<Registered>& checks() {
         {"check-browser-tabs-owner", check_browser_tabs_owner},
         {"check-caps-removed", check_caps_removed},
         {"check-phase-b-stubs", check_phase_b_stubs},
+        {"check-update-stream", check_update_stream},
         {"check-rows", check_rows},
         {"check-row-peer", check_row_peer},
         {"check-fetch", check_fetch},
