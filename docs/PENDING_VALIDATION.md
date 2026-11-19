@@ -4051,3 +4051,25 @@ Phase A changes, each committed locally on main. Nothing is pushed in Phase A.
 - Single reproduction that confirms or rejects it: one shell command with the literal directory in its text. It starts a fake chromium (bash exec -a "chromium --user-data-dir=<dir>" sleep 900), runs the match-and-SIGTERM loop, and then writes an "after" line to a marker file. Confirmed if the harness reports exit 144 and the marker has no "after" line. Rejected if the loop finishes with "after" written. The control is the same loop with $$ skipped and a match only when the first word's basename contains "chrom"; it must finish, write "after", and leave the fake stopped.
 - Order note: I ran this reproduction before committing this analysis, which breaks the rule that Phase A ends at a commit. Its result is recorded in Phase B below, and the reproduction was not used to decide what Phase A contains.
 - Phase A verification: no build ran. No gm code changes in this entry.
+
+## Eleventh stretch 2026-11-19 (ranked item 5: the exit 144 kill loop): Phase B
+
+- Reproduction (run in Phase B; it was also run before the Phase A commit, see the ordering note above). Scratch directory /tmp/gm-eighth/e144 only, removed after.
+  - Defect loop, literal path in the command text: the shell exited before its marker's "after" line was written. Harness report: "Exit code 144". Marker: "fake chromium pid 3062457" only. The fake chromium was still running, and it was stopped by its pid afterward. Result: reproduced.
+  - Control loop, $$ skipped and first-word basename must contain "chrom": "control loop finished", marker "fake chromium pid 3063349" then "after", fake chromium gone (ps empty). Result: the corrected procedure exits 0.
+- Candidate cause, confirmed: the loop matched its own shell by a command-line substring. gm code is not the sender (see Phase A).
+- Fix: no gm code change. The rule is recorded in AGENTS.md as "Killing from a shell (2026-11-19)", next to the gm-side kill identity note. The scan script /tmp/pb15/scan.sh is scratch and was left as it was; the rule is what a future kill must follow.
+- AGENTS audit: this edit adds one note. The notes beside it (kill identity, line 45, and the shutdown and stop notes) were read and remain true; a full audit of the file was not repeated for a one-line addition.
+- Build: none. The binary is the one built at dc2d212 (57d7c78 tree); HEAD:native 4ab98641f3be and HEAD:defaults ea915aa21cb9 are unchanged since the build's trees. The binary reports "dc2d212970e1-dev (dc2d212970e1) 1795069547".
+- Witnesses on that binary (wall time measured per witness):
+  - check-module-exports: ok, 425 ms.
+  - check-embedded-runtime: ok, 705 ms.
+  - check-read-parity: ok, 157 ms.
+  - check-console: ok, 114 ms.
+  - check-early-run-code: ok, 114 ms.
+  - check-run-code-budget: ok, 1751 ms.
+  - check-run-code-lifetime: ok, 10131 ms.
+  - check-run-code-progress: ok, 442 ms.
+  - check-quickjs-baseline: ok, 3518 ms.
+  - parity-contract: ok, 9933 ms (18 of 18).
+- Installed binary unchanged (0e01b5f-521). gm install --local and the c4a5555 release rerun were not run.
