@@ -4471,3 +4471,12 @@ Not changed: the 13 install-running witnesses, the job_start Windows kill, and r
 - Green with the fix: check-update-stream ok, wall 0.65 s; automatic leg switched to ffff333-7 which reports itself; checkout unpushed build refused (runs/au-green.log).
 - Mutation (switch step removed, fs::rename(next, current) deleted): forced update leg red, "the link did not switch to ffff333-7" (runs/au-mut.log); file restored, cmp identical, git status clean except .ccache/.
 - Not covered: the live peer's next gm call after the switch (check-relay-reexec skips development builds locally). Its witness needs a clean-at-origin build, i.e. Phase B after the push.
+
+## Thirty-second stretch 2026-11-19 (Phase B: auto-update and collider): gate open
+
+- Heavy jobs before the build: none (ps for cargo, rustc, zig, chromium, cc1plus, clang, ninja, gm-tool, check- found nothing). Gate readings (vmstat 1 2, si/so KB/s): gate-start 536/0; before the collider red 80/0; before the collider green 940/0. All below 1000 in both directions, so the legs are under one gate sample.
+- Auto-update green (committed fix 5fa0eda): check-update-stream ok, rc 0, wall 1.55 s.
+- Auto-update mutation (switch step removed): forced update, newer commit: the link did not switch to ffff333-7 (link ccbf5978f7d1-dev), rc 1, wall 0.66 s. Restored: cmp identical, git status clean except .ccache/.
+- Collider red (term `!shared_gate &&` removed in a finally): check-browser-tabs-owner rc 1, wall 40.58 s, 7 failures. The trace names the closing step: "collider: gate cleanup kills gate 938448 by pid at 37022 ms; alpha: browser_close_run at 39773 ms; beta: browser_close_run at 40526 ms". The failing calls say "the gate for this project stopped during this call". Restored: cmp identical; git diff empty.
+- Collider green (term restored): check-browser-tabs-owner ok, rc 0, wall 11.34 s.
+- The installed build (1f9b4f780c07-dev) predates the --auto flag, so this fix does not reach it until one install of a fixed build, which is the owner's decision.
