@@ -10,7 +10,7 @@ namespace gm::tool {
 namespace {
 
 constexpr std::uint64_t kWatchdogMs = 120000;
-constexpr std::string_view expected = "root-import,sub-default,feature-alpha-import,legacy-main,refused,sub-require,cjs-main,file-only,refused";
+constexpr std::string_view expected = "root-import,sub-default,feature-alpha-import,legacy-main,refused,sub-require,cjs-main,file-only,refused,util-import,sub-default,feature-beta,refused,refused,util-require,sub-require,refused";
 
 constexpr std::string_view probe_body = R"JS(
 const root = await import('@acme/pkg');
@@ -32,7 +32,30 @@ try {
 } catch (err) {
   requireHidden = 'refused';
 }
-return [root.label, sub.label, feature.label, legacy.label, hidden, cjsSub.label, cjsMain.label, single.label, requireHidden].join(',');
+const util = await import('#util');
+const dep = await import('#dep');
+const beta = await import('#feature/beta');
+let mapMissing = 'resolved';
+try {
+  await import('#nope');
+} catch (err) {
+  mapMissing = 'refused';
+}
+let mapHidden = 'resolved';
+try {
+  await import('#hidden-target');
+} catch (err) {
+  mapHidden = 'refused';
+}
+const cjsUtil = require('#util');
+const cjsDep = require('#dep');
+let requireMissing = 'resolved';
+try {
+  require('#nope');
+} catch (err) {
+  requireMissing = 'refused';
+}
+return [root.label, sub.label, feature.label, legacy.label, hidden, cjsSub.label, cjsMain.label, single.label, requireHidden, util.label, dep.label, beta.label, mapMissing, mapHidden, cjsUtil.label, cjsDep.label, requireMissing].join(',');
 )JS";
 
 void write_file(const std::filesystem::path& file, const std::string& text) {
@@ -55,6 +78,10 @@ void write_package(const std::filesystem::path& workspace) {
     write_file(workspace / "node_modules" / "cjs-pkg" / "package.json", R"({"name":"cjs-pkg","version":"1.0.0","main":"./index.js"})");
     write_file(workspace / "node_modules" / "cjs-pkg" / "index.js", "module.exports = { label: 'cjs-main' };\n");
     write_file(workspace / "node_modules" / "file-only.js", "module.exports = { label: 'file-only' };\n");
+    write_file(workspace / "package.json", R"({"name":"app","version":"1.0.0","imports":{"#util":{"import":"./src/util-esm.js","require":"./src/util-cjs.cjs","default":"./src/util-esm.js"},"#dep":"@acme/pkg/sub","#feature/*":"./src/feature/*.js","#hidden-target":"@acme/pkg/hidden"}})");
+    write_file(workspace / "src" / "util-esm.js", "export const label = 'util-import';\n");
+    write_file(workspace / "src" / "util-cjs.cjs", "module.exports = { label: 'util-require' };\n");
+    write_file(workspace / "src" / "feature" / "beta.js", "export const label = 'feature-beta';\n");
 }
 
 }
@@ -86,7 +113,7 @@ CheckResult check_module_exports(const std::string& binary) {
     }
     std::error_code ignored;
     std::filesystem::remove_all(sandbox, ignored);
-    result.summary = "bare package names resolve from node_modules: exports exact subpath with import and default conditions, exports pattern, main where exports is absent, and an unexported subpath refused; require uses the require condition, a main-only package, a file-only module, and refuses an unexported subpath";
+    result.summary = "bare package names resolve from node_modules: exports exact subpath with import and default conditions, exports pattern, main where exports is absent, and an unexported subpath refused; require uses the require condition, a main-only package, a file-only module, and refuses an unexported subpath; the imports (#) map resolves a conditioned target, a bare target, a pattern for import and require, and refuses an unmapped name and a target that exports refuses";
     return result;
 }
 
