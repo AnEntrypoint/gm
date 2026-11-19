@@ -4560,3 +4560,12 @@ Not changed: the 13 install-running witnesses, the job_start Windows kill, and r
 - Unattributed processes, not stopped: 2648 (playwriter-project --gate, ppid 1, started 16:01), 1002589 (npm exec playwriter-project, started 22:07), 1002758 (sh -c playwriter-project, started 22:07), 1002759 (node playwriter-project, started 22:07), 1003538 (node playwriter-project, child of the peer's worker 1002562, started 22:09). None was started in this stretch.
 - Longer window that would show a recurring spike: 60 minutes at 30 s sampling, paired with the run_shell actions in the log. A 1 s sampler during gate-check calls would place a spike inside one call.
 - Relevance: the peer's build predates the fix, so its timer waits poll at about 940 wakeups per second, the defect measured at HEAD in the fortieth stretch. The peer's playwriter-state wake rate of about 320 per second is still unexplained.
+
+## Forty-second stretch 2026-11-20 (a 1-second RSS sampler joined to the run log): Phase A
+
+- Change: scripts/rss-sampler.mjs. The sampler reads VmRSS of one pid from /proc/<pid>/status once per second and appends it to a stream (S lines). It also reads new bytes of a run log and writes each record with a durMs as an E line (start, end, seq, tool). parseStream, attribute and spikes give the join: a step of 64 MB or more between two samples is attributed to every event whose interval overlaps the step.
+- Witness: node scripts/rss-sampler.mjs --witness. Fixture: two events (run_shell 10:00:02 to 10:00:04, run_code 10:00:06 to 10:00:09) and a 1 s status stream with a 549,800 KB step at 10:00:03. Passes only if the spike is attributed to run_shell alone.
+- Green: rc 0. "spikes 1 at 2026-11-19T10:00:03.000Z step 549800 KB attributed to 1 run_shell"; "check-rss-join: ok".
+- Red (join removed: attribute returns []): rc 1. "spikes 1 at 2026-11-19T10:00:03.000Z step 549800 KB attributed to nothing"; "check-rss-join: FAILED". Restored with cmp against the saved copy; git status showed only the new file; green again rc 0.
+- Sampler run once against a sleep process this stretch started (its pid, 1488520, was stopped by pid after the test): 5 s run, 6 S lines at 1 s spacing, and a fixture record appended at 2 s came out as E 22:42:05.367Z to 22:42:06.867Z run_shell.
+- Not yet run on the peer's worker. That run is the Phase B window.
