@@ -179,7 +179,7 @@ CheckResult check_body_reexec(const std::string& binary) {
                 const json::Value* state_value = answer.find("state");
                 const json::Value* value_text = answer.find("value");
                 const bool exited = state_value != nullptr && state_value->is_string() && state_value->as_string() == "exited";
-                const bool valued = value_text != nullptr && value_text->is_string() && value_text->as_string().find("ended") != std::string::npos;
+                const bool valued = value_text != nullptr && ((value_text->is_string() && value_text->as_string().find("ended") != std::string::npos) || (value_text->is_object() && value_text->find("ended") != nullptr));
                 if (!exited || !valued) result.failures.push_back("the body did not finish with its value: " + json::dump(answer).substr(0, 300));
 
                 const auto reexec_deadline = Clock::now() + std::chrono::milliseconds(kReexecLimitMs);
