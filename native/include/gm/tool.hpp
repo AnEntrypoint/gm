@@ -124,6 +124,7 @@ CheckResult check_worker_growth(const std::string& binary);
 CheckResult check_feed_reference(const std::string& binary);
 CheckResult check_job_wait(const std::string& binary);
 CheckResult check_job_status_reply(const std::string& binary);
+CheckResult check_next_context_record(const std::string& binary);
 CheckResult check_job_extended_wait(const std::string& binary);
 CheckResult check_asan_retention(const std::string& binary);
 std::vector<long long> process_tree(const std::vector<long long>& roots);

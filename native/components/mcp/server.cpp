@@ -1376,7 +1376,7 @@ struct Server::State {
     }
 
     template <typename Exec, typename Digest>
-    Value act(const std::string& tool, const Value& args, Exec exec, Digest digest, int ahead = 0) {
+    Value act(const std::string& tool, const Value& args, Exec exec, Digest digest, int ahead = 0, Value extra = object()) {
         int step = s().steps;
         double start = s().log->now_ms();
         in_flight += 1;
@@ -1384,7 +1384,7 @@ struct Server::State {
             std::atomic<int>& count;
             ~Leave() { count -= 1; }
         } leave{in_flight};
-        std::uint64_t action = append("action", action_fields(tool, args, true, ahead));
+        std::uint64_t action = append("action", merge(action_fields(tool, args, true, ahead), extra));
         if (s().rpc_id) s().call_action_seq = action;
         Value result;
         try {
@@ -2363,6 +2363,14 @@ struct Server::State {
         return closed;
     }
 
+    static std::string reply_kind(const Value& r) {
+        if (r.find("cancelled") != nullptr) return "cancelled";
+        if (r.find("unchanged") != nullptr) return "unchanged";
+        if (const Value* ok = r.find("ok"); ok != nullptr && ok->is_bool() && !ok->as_bool()) return "error";
+        if (const Value* progress = r.find("progress"); progress != nullptr && progress->is_string() && progress->as_string().find("no event pending") != std::string::npos) return "no-event";
+        return "step";
+    }
+
     Value next_context(const Value& args) {
         if (options.max_steps && s().steps >= *options.max_steps) {
             s().step_limited = true;
@@ -2399,6 +2407,8 @@ struct Server::State {
             open_waits_[wait_key] = early_cancels_.erase(wait_key) > 0;
             pending_calls_[wait_key] = "registered";
         }
+        Value wait_fields = object();
+        if (wait_arg != nullptr && wait_arg->is_number()) wait_fields.set("waitMs", *wait_arg);
         Value out = act(
             "next_context", audit,
             [&, compact_children, corrected, owner, first_step_correction, wait_key](std::uint64_t) {
@@ -2447,8 +2457,9 @@ struct Server::State {
                 for (const char* key : {"ok", "error", "prefixSha", "total", "progress"}) {
                     if (const Value* v = r.find(key)) d.set(key, *v);
                 }
+                d.set("reply", reply_kind(r));
                 return d;
-            }, 1);
+            }, 1, wait_fields);
         if (out.find("cancelled") == nullptr) {
             std::lock_guard guard(waits_mu_);
             if (cancel_notice_) {
