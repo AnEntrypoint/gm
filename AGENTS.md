@@ -109,8 +109,6 @@ These notes were in comments in native/third_party/txiki/txiki/src and were move
 
 ### mod_channel.c
 
-# mod_channel.c notes (moved from in-file comments)
-
 - The file is the in-process transport for MessagePort, MessageChannel and BroadcastChannel: it provides cross-thread wakeups and structured-clone (de)serialization, while the Web API shape is implemented in JS rather than here.
 - Messages are serialized with JS_WriteObject2, whose buffer is js_malloc'd in the sender runtime, so channel_msg_build copies the bytes into tjs__malloc storage and frees the original because a message may be freed on the receiving thread.
 - Payloads are deserialized with JS_ReadObject2 only in the owner's context (port_dispatch_one and broadcast_dispatch_one).
@@ -197,10 +195,6 @@ The readFile worker fills a TBuf that tbuf_init(NULL, ...) leaves without a runt
 - tjs_process_detach begins closing the uv process handle when runtime teardown runs the TJSHandlePin detach hook (tjs__detach_handles in vm.c), so the handle closes without waiting for GC to finalize the wrapper.
 - A pinned Process holds a JS reference to itself via tjs__handle_pin (which dups the object), so its finalizer can only run after the pin is released on exit or teardown, which the CHECK asserts.
 - uv_spawn leaves the handle on the loop queue (uv__handle_init) even when it fails, so the failure path must uv_close the handle and let uv__close_cb free it instead of freeing it directly.
-
-### mod_sys.c and private.h
-
-# Phase A comment notes: mod_sys.c and private.h (txiki src)
 
 ### mod_sys.c
 - tjs_buffer_is_pinned: a buffer pinned by an in-flight native request is marked immutable by tjs_buf_ref_get in utils.c, and JS_DetachArrayBuffer ignores that flag and would free memory the request still reads, so tjs_detachArrayBuffer must refuse such buffers.
