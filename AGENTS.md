@@ -202,10 +202,10 @@ The readFile worker fills a TBuf that tbuf_init(NULL, ...) leaves without a runt
 
 # Phase A comment notes: mod_sys.c and private.h (txiki src)
 
-## mod_sys.c
+### mod_sys.c
 - tjs_buffer_is_pinned: a buffer pinned by an in-flight native request is marked immutable by tjs_buf_ref_get in utils.c, and JS_DetachArrayBuffer ignores that flag and would free memory the request still reads, so tjs_detachArrayBuffer must refuse such buffers.
 
-## private.h
+### private.h
 - TJSHandlePin: `obj` is a GC-invisible duplicate of the handle wrapper held only while a libuv operation is in flight, and `detach` runs at the start of teardown (tjs__detach_handles in vm.c) so that lws-backed handles only clear their JS callbacks (lws closes them later in lws_context_destroy) while libuv-backed handles begin closing via maybe_close, without touching the pin itself.
 - TJSReqPin: a counted self-pin held while libuv write, shutdown and send requests are in flight, kept separate from the handle read, listen and connect pin.
 - lws log context (TJSRuntime.lws.log_cx): each runtime owns its own lws_log_cx_t because lws refcounts its log context without a lock (that claim is lws behaviour and is not checked in this tree), and TJS_FreeRuntime asserts its refcount is zero (vm.c), so it must outlive every lws context, vhost and wsi of that runtime.
