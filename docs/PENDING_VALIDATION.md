@@ -5086,3 +5086,70 @@ Other commits in this round after the window started: AGENTS.md heading fixes (1
 
 - check-installed-stamp: owner-held for the 806ce7b install. Its witness is unchanged. gm install --local was not run and 806ce7b was not reinstalled.
 
+
+## Round 71: install, the next_context provenance fix, rows 5 and 7, the ranked list (fix c8bfc58, installed c5a352042f0f-dev)
+
+### Install (item 1)
+
+- Before the install, `gm-tool installed` was stale: the installed build was d595173eaec6-dev and the checkout native tree was 20bbb5767f82-dev (/tmp/phase-c-71/installed-pre.log).
+- Install 1, at HEAD 64b904f: `gm install --local build/release --source .` exited 0 and installed 20bbb5767f82-dev (21:48:31 to 21:48:42 UTC). `gm-tool installed`: ok.
+- check-installed-stamp, rerun against that install: ok (the install holds build/release and the checkout skills; the stamp equals the checkout native and defaults tree). This settles the owner-held item from the previous round.
+- Install 2, after the provenance commit c8bfc58: the installer printed "the stamp is unchanged, so the binaries and their processes were kept", and /config/.gmnew/current still pointed to 20bbb5767f82-dev. Cause: the stamp is the SHA of HEAD:native and HEAD:defaults, written at build time, and I had built before committing, so the binary carried the old stamp. The binary differed (sha256 prefix 0562 installed, d2ad build). Rebuilt, then install 3: c5a352042f0f-dev, exit 0. `gm-tool installed` on c5a352042f0f-dev: ok (checkout HEAD c8bfc58).
+- gm defect (routed to the gm worker, not fixed here): the installer keeps the installed binaries when the version stamp matches, even when the build binary differs. Install 2 showed it.
+
+### Journal check, install window 21:48:31 to 21:48:42 UTC (item 1)
+
+Peers busy during the install (relay.log epoch times converted to UTC; log.jsonl events of the run dirs open at the time):
+
+- signal (run 2026-11-20-20-07-00-dacb9f): the install was seen at 21:48:41; the relay re-executed onto 20bbb5767f82-dev at 21:48:46, worker 820028 running. Events in window 8, error or refusal 0.
+- bevy (run 2026-11-20-12-16-00-09eeb8): re-executed onto 20bbb5767f82-dev at 21:48:40, worker 819895 running. Events in window 3, error or refusal 0.
+- thebird (run 2026-11-20-12-15-51-f2347a): re-exec held at 21:48:40 (7 running body jobs), then 21:48:44 "waits for 8 running body job(s)". Still on d595173eaec6-dev at the end of the window. Events in window 3, error or refusal 0. One notice at 21:48:49: "update skipped: the manifest has no build for x64-linux".
+- fx (run 2026-11-20-20-59-20-64690e): re-exec held at 21:48:40 (1 running body job), still held at 21:49:05. Still on d595173eaec6-dev. Events in window 0.
+- Result: no gm error or refusal in any of the four journals across the install window. Two peers (thebird, fx) stayed on the old build because a body job was running; they follow when their jobs end.
+
+### Friction (b): which build produced the silent write_file (item 3)
+
+Probe: a fresh gm serve per installed build, in its own scratch workspace, with `gm.write_file({ path, content, full: true })` and a check for the file. Results in /tmp/phase-c-71/probe2/summary.txt (40 builds, the 20 oldest and the 20 newest in the install history):
+
+- The 20 builds dated 11 November (before 8cfeba6, 2026-11-12 00:09 UTC, which added the unknown-argument refusal): full is ignored, the write succeeds, the file exists, no error.
+- The 20 later builds, including d595173eaec6-dev (the build the workers ran until the install): refused with "refused: unknown argument full; write_file takes path, content", no file.
+- No installed build gave no file and no error. The reported symptom did not come from any installed build with a plain call. The answer I can give: it is not reproduced in the install history, and the one silent behaviour on disk (the November builds) writes the file, so it is not the reported symptom. The run that produced the report is not on disk in a form I could check.
+
+### next_context full: true returning another run's state (item 3)
+
+Reproduced and measured on the real path (gm serve, relay, worker), not a unit test:
+
+- one connection: next_context, run_code, finish with a witness, next_context: the successor run shows only its own events (/tmp/phase-c-71/repro2.out).
+- two live connections in one workspace (A holds a run open, B starts): B's full reply names only B's run (/tmp/phase-c-71/conc-B.out).
+- a resumed run (--run-dir, a second connection): the resumed full reply is 3402 bytes, its own events only (/tmp/phase-c-71/resume-2.out).
+
+What does cross runs: a successor run inherits the closed run's task (task_inherited, taskFrom "closed run <id>" in its start event). My connection's run d08b41 (2026-11-20-20-09-56-d08b41) began with the task of closed run 2026-11-20-17-31-18-146908, an earlier read-only investigation, and its first two replies showed that task as the run's own task, with the provenance only in the start event. The 15,200-byte reply in its log (seq 164) is a plain next_context, and its feed is that run's own events since its previous step (118 events). The full:true call at seq 154 was refused (a task replacement without owner:true), so it returned no state.
+
+Fix (commit c8bfc58): the session keeps task_from, and every context reply carries taskFrom while the task is inherited. Witness: check-next-context-provenance (it finishes a run, then checks that the successor run inherits the task and names the closed run in taskFrom). Red check: provenance-taskfrom (the taskFrom line removed): RED_RC 1 (witness fails: the successor reply does not name the closed run), RESTORED_cmp True, BUILD_RESTORE 0, AFTER_RC 0 (red PIDs in /tmp/phase-a-70/reds/provenance-taskfrom.log).
+
+Limit: I found no events leak across runs, so the fix addresses the inherited-task path only. If the owner saw a different full reply, it is not in the logs I checked.
+
+### Rows 5 and 7 (decided here, reversible)
+
+- Row 5, the six include/deoxidene headers with no in-tree includer: keep. They are the public API of the deoxidene INTERFACE target (CMakeLists.txt:45 to 48). Removing them would break outside consumers in a way a commit cannot undo for them; keeping them costs nothing, and a later removal commit is a single revert.
+- Row 7, the 13 install-running witnesses: keep as subject. They are the only checks of the install and relay behaviour; removing them would drop coverage that the window still runs. Removal can follow as its own commit.
+
+### Ranked remaining work (item 4), in order, and the outcome of each
+
+1. Install the validated build: done (install 3, c5a352042f0f-dev).
+2. next_context provenance, witness and red: done (c8bfc58).
+3. Native surfaces for Freddie's three gap cases: no native gap found. process.exitCode is witnessed by check-process-exit-code; vm.Script by check-vm-script-compile and check-vm-realm; spawn detached by check-txiki-spawn-detached (its red, detached, is in the window). The remaining work is Freddie's adapter (src/txiki.js), to dispatch.
+4. Row 11, job_status value on the live build: checked on the installed build after the push (see the validation section).
+5. Rows 6, 8, 9, 10: held, each with its reason. Row 6 needs a Windows log, row 8 an x64 log, neither is on disk. Row 9: bevy's install-window relay log is clean and shows no MCP drop. Row 10: the phrase "another worker" in fx logs is prose about other workers editing files, not the duplicate-events reply; no such reply is on disk.
+6. Row 12: handed off (oscraft driver and the pw gate); the uncommitted pw work is left alone.
+7. gm installer defect (stamp-equal binaries are kept): routed to the gm worker.
+
+### Phase B window, round 71 (runs/phase-c-71, 22:02 to 22:38 UTC, HEAD c8bfc58, installed c5a352042f0f-dev)
+
+- Clear gate: every stage read vmstat 1 2 (the boot average and the one-second sample, both logged in runs/phase-c-71/window.txt). The window waited at each stage while heavy-jobs was busy with two compiles that are not this session's (fx zig build pid 879954, bevy rustc pid 889935); neither was touched. Each stage proceeded only when the sample had si and so under 1000 KB/s and heavy-jobs clear.
+- Witnesses: 118 of 118 RC 0 (234 RUN lines, each with its PID). This includes check-installed-stamp (RC 0, the install matches the checkout) and check-next-context-provenance (RC 0).
+- Parity probe: RC 0, mismatches 0, unexpectedGaps 0. The numbers moved during the run: shared 819, gaps 3 applied, 1 inactive. The earlier window had shared 796, gaps 4, inactive 1. Freddie has been committing adapter wiring in /workspace/freddie since 23:52 (vm.Script, vm.runInNewContext, child-process.spawn stdio, fs.accessSync, fs.openSync and related, between 23:52 and 00:14), and its parity-cases.js, parity-expected.js and txiki.js had uncommitted edits at the probe. The count therefore belongs to Freddie's tree at that moment; Freddie updates its own expected record.
+- txiki red checks: 9 of 9 RED_RC 1, AFTER_RC 0 (sync_errno, sync_pos, access_case, detached, spawn_stdio, exit_code, port_default, compile_flag, realm_share; red PIDs in runs/phase-c-71/window.txt).
+- gm red checks: 8 of 8 RED_RC 1, RESTORED_cmp True, BUILD_RESTORE 0, AFTER_RC 0 (lazy-cache, friction-a-value, friction-e-killed, friction-c-ok, parity-w6-events, sweep-channel-dispatch, friction-b-generic, provenance-taskfrom). The window reads its own lines from the summary (runs/phase-c-71/reds-gm-summary.txt) and sets ALL from them.
+- Owner-held: check-installed-stamp is no longer owner-held. The install of the validated build (c5a352042f0f-dev) makes it pass.
+
