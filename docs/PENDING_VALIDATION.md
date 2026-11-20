@@ -4944,3 +4944,14 @@ Red check (mutation, witness, restore, cmp, git status): the UV_FS_ACCESS case i
 
 Freddie: fs.promises.access(path, mode) calls the core access(path, mode) for any mode, including F_OK.
 
+
+## Txiki handoff 4: spawn detached (mod_process.c tjs_spawn)
+
+Change: tjs_spawn reads the detached property beside uid and gid, and sets options.flags |= UV_PROCESS_DETACHED when it is truthy (libuv calls setsid in the child on POSIX).
+
+Witness: check-txiki-spawn-detached (native/components/tool/checks/txiki_spawn_detached.cpp). Through core.spawn, two children run sh -c that writes /proc/$$/stat to a file: one with {} and one with { detached: true }. The detached child must be its own session leader (session id equals its pid), the plain child must not be, and the two pids must differ. Output: ok, rc 0.
+
+Red check (mutation, witness, restore, cmp, git status): the UV_PROCESS_DETACHED line is removed from tjs_spawn. Witness: 1 failure (a detached child is not its own session leader), RED_RC=1. Restored and cmp ok; rebuild rc 0; witness again rc 0 with ok.
+
+Freddie: spawn with detached: true reaches the native flag through core.spawn options.
+

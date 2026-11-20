@@ -313,6 +313,15 @@ static JSValue tjs_spawn(JSContext *ctx, JSValue this_val, int argc, JSValue *ar
         }
         JS_FreeValue(ctx, js_uid);
 
+        JSValue js_detached = JS_GetPropertyStr(ctx, arg1, "detached");
+        if (JS_IsException(js_detached)) {
+            goto fail;
+        }
+        if (JS_ToBool(ctx, js_detached)) {
+            options.flags |= UV_PROCESS_DETACHED;
+        }
+        JS_FreeValue(ctx, js_detached);
+
         /* gid */
         JSValue js_gid = JS_GetPropertyStr(ctx, arg1, "gid");
         if (JS_IsException(js_gid)) {

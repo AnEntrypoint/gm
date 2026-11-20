@@ -40,6 +40,7 @@ const std::vector<Registered>& checks() {
         {"check-txiki-sync-errno", check_txiki_sync_errno},
         {"check-txiki-sync-names", check_txiki_sync_names},
         {"check-txiki-fs-access", check_txiki_fs_access},
+        {"check-txiki-spawn-detached", check_txiki_spawn_detached},
         {"check-install-switch", check_install_switch},
         {"check-restart-skill-read", check_restart_skill_read},
         {"check-no-resource-client", check_no_resource_client},
