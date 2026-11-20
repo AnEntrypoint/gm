@@ -4897,3 +4897,15 @@ Witness on the dedup rows (the window run, see the next section): the three new 
 
 Commit: d2a8826 is one commit for rows 1 to 3, because the shared registration (tool.hpp, registry.cpp, CMakeLists.txt) and the verbs headers carry more than one row.
 
+
+## Round 2026-11-20 running-job progress and the run_shell cut (commits 94932ea, 12015f3)
+
+1. job_status of a running job. Repo result (build/release at ac2e74e, probe: a background body that reads the skill and sleeps 6 s, polled 2 s after start): state running, no value key, output "", total 0. A running body has no return value until it returns, and the repo reported no progress either. Fix (94932ea): while the state is running, job_status adds progress, the last kTailCap characters of the body's call trail. output stays value-only, so the item (c) fix is unchanged. Witness check-job-running-progress: state running, value absent with value: true, progress non-empty. Red check: the field name changed to progressOff; the witness failed with progress "" and was restored (cmp), rebuilt and passed.
+   The installed binary (8eb56f1) does not have this change; the install of 806ce7b stays held for the owner, and gm install --local was not run.
+
+2. run_shell long output (commit 12015f3). The cut marker <<<gm-cut omitted=N outputPath=PATH full=true>>> used to sit in the middle of the output, between the head and the tail, and the path was also a key. It now sits on the first line on every cut path: verbs cut_or_condense (the condensed output), verbs cut_shell_output (the page), and the server bounded_output (which keeps the first line when the verbs layer already put one there, and bounds only the rest). The token is unchanged, so write_refusal still refuses cut text.
+   Shape, probe of body run_shell "seq 1 3000" before (ac2e74e): output starts "1" then "2" and so on, and ends with "[gm: kept 40 of 3000 lines; ...]" and "[gm: full output at PATH; page with gm.read_file(...)]"; the path is only in outputPath and the notice. Output 559 characters.
+   Shape after (12015f3): output starts with the <<<gm-cut line (omitted=13618, outputPath=PATH, full=true), then the preview (head 20 lines, the condense gap, tail), ending with the kept trailer. Output 416 characters. Keys are unchanged.
+   Witness check-run-shell-cut-first-line: a long body run_shell (40 lines of 3000 characters) and a condensed one (seq 1 3000) each begin with the cut line, which carries outputPath; the preview is at most 8000 bytes; the outputPath file holds the full output. Red checks: the server bounded_output puts the cut after the preview (2 failures, restored, passes); the verbs cut_or_condense puts the cut after the output (2 failures on the condensed case, restored, passes).
+
+Shared: the existing cut_marker witness still passes (the token is unchanged).
