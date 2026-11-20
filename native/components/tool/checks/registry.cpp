@@ -35,6 +35,7 @@ const std::vector<Registered>& checks() {
         {"check-clock-format", check_clock_format},
         {"check-utf16-units", check_utf16_units},
         {"check-read-binary", check_read_binary},
+        {"check-job-running-progress", check_job_running_progress},
         {"check-install-switch", check_install_switch},
         {"check-restart-skill-read", check_restart_skill_read},
         {"check-no-resource-client", check_no_resource_client},

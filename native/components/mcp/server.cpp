@@ -1833,6 +1833,9 @@ struct Server::State {
         const Value* state = status->find("state");
         if (wait > 0 && state && state->is_string() && state->as_string() == "running")
             reply.set("hint", "the job is still running: call job_status again with waitMs to keep waiting");
+        if (state && state->is_string() && state->as_string() == "running" && status->find("body")) {
+            reply.set("progress", body_text(s(), static_cast<std::uint64_t>(status->find("body")->as_number()), kTailCap));
+        }
         return reply.set("output", js_slice(text, from, end))
             .set("total", number_of(total))
             .set("truncated", from > 0 || end < total)
