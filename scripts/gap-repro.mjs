@@ -20,6 +20,10 @@ writeFileSync(stream, "");
 writeFileSync(errLog, "");
 const body = readFileSync(resolve(bodyPath), "utf8");
 
+function exited(child) {
+  return child.exitCode === null ? once(child, "exit") : Promise.resolve();
+}
+
 function stopUnder(dir) {
   for (const entry of readdirSync("/proc")) {
     if (!/^\d+$/.test(entry) || Number(entry) === process.pid) continue;
@@ -106,8 +110,7 @@ try {
   const text = JSON.stringify(reply).slice(0, 400);
   console.log("body_seconds " + ((Date.now() - started) / 1000).toFixed(2));
   console.log("reply " + text);
-  await once(sampler, "exit");
-  await once(reader, "exit");
+  await Promise.all([exited(sampler), exited(reader)]);
   console.log("reader_exit " + reader.exitCode);
   console.log("sampler_exit " + sampler.exitCode);
 } finally {
