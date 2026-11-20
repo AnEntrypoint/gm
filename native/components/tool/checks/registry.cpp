@@ -37,6 +37,7 @@ const std::vector<Registered>& checks() {
         {"check-read-binary", check_read_binary},
         {"check-job-running-progress", check_job_running_progress},
         {"check-run-shell-cut-first-line", check_run_shell_cut_first_line},
+        {"check-txiki-sync-errno", check_txiki_sync_errno},
         {"check-install-switch", check_install_switch},
         {"check-restart-skill-read", check_restart_skill_read},
         {"check-no-resource-client", check_no_resource_client},

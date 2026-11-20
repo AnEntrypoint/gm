@@ -4909,3 +4909,14 @@ Commit: d2a8826 is one commit for rows 1 to 3, because the shared registration (
    Witness check-run-shell-cut-first-line: a long body run_shell (40 lines of 3000 characters) and a condensed one (seq 1 3000) each begin with the cut line, which carries outputPath; the preview is at most 8000 bytes; the outputPath file holds the full output. Red checks: the server bounded_output puts the cut after the preview (2 failures, restored, passes); the verbs cut_or_condense puts the cut after the output (2 failures on the condensed case, restored, passes).
 
 Shared: the existing cut_marker witness still passes (the token is unchanged).
+
+## Txiki handoff 1: the sync read keeps the errno (vm.c tjs__sync_read_file)
+
+Change: a failed read of syncReadFile throws through tjs_throw_errno(ctx, r) instead of returning undefined, so the thrown error carries the libuv name in code (ENOENT for a missing file). Before, the error path returned JS_UNDEFINED and dropped the errno.
+
+Witness: check-txiki-sync-errno (native/components/tool/checks/txiki_sync_errno.cpp). It calls import("tjs:internal/core") and syncReadFile on a missing path, which must throw with code ENOENT, and on /proc/version, which must return bytes. Output: ok, rc 0.
+
+Red check (mutation, witness, restore, cmp, git status): vm.c error path mutated to return JS_UNDEFINED. Witness: 2 failures (did not throw; no ENOENT code), RED_RC=1. Restored and cmp ok; rebuild rc 0; witness again rc 0 with ok.
+
+Freddie rows that depend on this: the readFileSync error path (freddie 4de978a4 success path already shared; the error mapping to ENOENT/EACCES is the freddie-side step to rerun).
+

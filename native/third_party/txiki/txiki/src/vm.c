@@ -213,7 +213,7 @@ static JSValue tjs__sync_read_file(JSContext *ctx, JSValue this_val, int argc, J
 
     if (r != 0) {
         tbuf_free(&dbuf);
-        return JS_UNDEFINED;
+        return tjs_throw_errno(ctx, r);
     }
 
     JSValue ret = TJS_NewUint8Array(ctx, dbuf.buf, dbuf.size);
