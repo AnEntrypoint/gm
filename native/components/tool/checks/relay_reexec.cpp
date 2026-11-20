@@ -237,7 +237,8 @@ CheckResult check_relay_reexec(const std::string& binary) {
         if (!(reexec_after_update && *reexec_after_update < kReexecLimitMs))
             result.failures.push_back("the relay re-executed " + or_null(reexec_after_update) + " ms after the update while a " + std::to_string(kWaitMs) +
                                       " ms next_context wait was in flight; the limit is " + std::to_string(kReexecLimitMs) + " ms");
-        if (!(reexec_at && held_at && *reexec_at < *held_at))
+        const bool answered_by_resumed_relay = held && json::dump(*held).find("resumed after a restart") != std::string::npos;
+        if (!(reexec_at && (answered_by_resumed_relay || (held_at && *reexec_at < *held_at))))
             result.failures.push_back("the relay re-executed only after the next_context wait had answered at " + or_null(wait_answered_after_send) + " ms after the send; " + line_with(session.stderr_text(), "re-executing is held") + "; the reply carried " + event_kinds(held) + ": " + answered_with);
         const json::Value* held_ok = held ? value_at(*held, "result.structuredContent.ok") : nullptr;
         if (!(held_ok && held_ok->is_bool() && held_ok->as_bool()))
