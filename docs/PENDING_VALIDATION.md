@@ -5019,3 +5019,43 @@ Freddie: vm.runInNewContext(code) on primitive results can use evalInNewRealm; t
 
 Change: check-process-exit-code started gm serve with std::system, which the spawn-site rule (check-spawn-sites) refuses outside the four creation sites. The witness now runs serve through Session and reads the exit status with a new Session::wait_exit, which closes stdin and waits for the child. Witness: check-process-exit-code ok; check-spawn-sites ok (7 process creation calls in 200 files).
 
+
+## Round 70: failing witnesses, comment sweep, friction items a to f
+
+### Item 1, the five failing witnesses: did each predate this round?
+
+Baseline build: the shared checkout was detached at a497fed (the commit before 99362ca), built incrementally into build/release, each witness run with timeout and its PID, then the checkout returned to main and rebuilt. Logs: /tmp/phase-a-70/base and /tmp/phase-a-70/base2.
+
+| witness | at a497fed (before this round) | at main before this round's fixes | state after this round |
+|---|---|---|---|
+| run-code-lifetime | RC 1: the killed body status has no reason | RC 1 | RC 0 (commit 81f4a64: the reason field is in the body status reply) |
+| parity-contract (W6) | RC 1: the full next_context reply lacks events | RC 1 | RC 0 (commit 81f4a64: next_context always carries events) |
+| clock-mutations | RC 1: the mutation text is stale (commit 2424fae removed the default caps) | RC 1 | RC 0 (commit 4922941: mutants retargeted, both caught) |
+| update-stream | RC 0 | RC 0 (this session earlier reported dirty once, not reproduced) | RC 0 |
+| installed-stamp | RC 0 at a497fed | RC 0 on the build of the checkout | owner-held: the install of 806ce7b stays with the owner; the witness is unchanged |
+
+The clock-mutations witness was stale in the source: "job lifetime 60 s" mutated a default that 2424fae removed; "job wait cap 30 s" mutated a job wait cap that 2424fae removed. The mutants now target the lifetime clock (worker.cpp, ×1000, check-run-code-lifetime) and the next_context hold cap (server.cpp kMaxWaitMs, 1 s, check-next-hold-cap).
+
+### Commits, witness and red check per change
+
+- 213c830 txiki: the comments in the six vendored files this round changed are swept; notes in AGENTS.md (invariant 2). Witness: the build and the nine txiki witnesses (all RC 0, in /tmp/phase-a-70/targeted). Red: sweep-channel-dispatch, mutation of the message handler name in mod_channel.c, check-worker-message-channel RED_RC 1, RESTORED cmp ok, AFTER_RC 0.
+- 81f4a64 gm: job_status returns a small settled value inline (2000 characters or fewer, value: false opts out, larger values stay behind value: true with valueChars), the killed-body reason is in the status reply, finish lists the jobs it killed at run end as jobsKilled, and next_context always carries events. Witness: check-friction-jobs RC 0, parity-contract RC 0, check-run-code-lifetime RC 0, check-job-status-reply RC 0, check-job-status-output RC 0. Reds: friction-a-value (inline value forced off) RED_RC 1, friction-e-killed (jobsKilled dropped) RED_RC 1, parity-w6-events RED_RC 1; each RESTORED cmp ok, AFTER_RC 0.
+- 5d5e2e8 gm: run_shell replies ok true for a run that exits non-zero, with its exitCode; the write-side pointer refusal tells the caller to write its output as the content. Witness: check-friction-verbs RC 0 (write_file with full: true is refused, path and content still write, grep exit 1 is ok true with exitCode 1). Red: friction-c-ok (ok forced to exit==0) RED_RC 1, AFTER_RC 0.
+- 5d5e2e8 (same commit, friction b): write_file with an argument it does not take is refused by the generic argument check in native/components/host/composed_verbs.cpp (line 109 before this round). A duplicate check added in verbs.cpp was removed as redundant. Red: friction-b-generic (the generic refusal forced off in composed_verbs.cpp) RED_RC 1, AFTER_RC 0.
+- 8be5481 gm: the first worker writes the tool list of a lazy client to its cache, so a later worker does not start a gate that its owner stopped. Root cause: start_all in mcpclient.cpp starts every client whose tool list is not preloaded, and nothing wrote the mcp-tools cache, so each worker started the lazy playwriter gate again to learn its tools. Witness: check-lazy-cache RC 0 (first worker writes the cache; after a release, a second worker starts no playwriter process and lists playwriter_execute). Red: lazy-cache (the cache write call removed) RED_RC 1, AFTER_RC 0.
+- 4922941 gm: clock-mutations retargets its mutants; check-next-hold-cap holds a next_context to the cap. Witness: check-next-hold-cap RC 0 (a 2 s hold returned after 1002 ms). Red: check-clock-mutations itself: lifetime ×1000 caught by check-run-code-lifetime, hold cap 1 s caught by check-next-hold-cap; sources restored, binary rebuilt, result ok.
+
+### Friction items a to f, the evidence and the fix
+
+- (a) job_status returned no value for a finished body with a small result: the value was only sent with value: true. Fixed in 81f4a64 (inline value for small results). Witness check-friction-jobs.
+- (b) write_file with full: true: the generic argument check refuses it (composed_verbs.cpp). The "no file, no error" symptom was not reproduced on this binary; the refusal is witnessed by check-friction-verbs, with its red on the generic check.
+- (c) run_shell ok false on an expected non-zero exit: fixed in 5d5e2e8. exitCode is still reported.
+- (d) a write-back of a read pointer truncated bevy src/height/mod.rs: the write refusal in native/include/gm/marker.hpp (write_refusal) refuses any content that carries the gm-pointer or gm-cut marker, and check-cut-marker covers it (RC 0 in the targeted run). The 14-line truncation came from a build before the marker fix (see the marker entry earlier in this file); the binary that wrote it was not identified.
+- (e) a background run_shell was killed in bevy Phase B: end_run calls close_jobs("run-ended") when the run finishes, so the job was killed at the end of its run (job-killed reason run-ended, /workspace/bevy/runs/2026-11-15-19-21-06-83d651). Fixed in 81f4a64: finish reports each job it killed as jobsKilled with its reason. Witness check-friction-jobs.
+- (f) the oscraft gate 483422 relaunch: start_all in mcpclient.cpp starts each client whose tool list is not preloaded, on every worker start. The relaunch needed no call because the playwriter tool list was not cached. Fixed in 8be5481: the first worker writes the list, so later workers do not start the gate. Witness check-lazy-cache.
+
+### Still outside this repo
+
+- check-installed-stamp: owner-held for the install of 806ce7b. The witness was not changed.
+- Freddie: process.exitCode, vm.Script and spawn detached still throw the gap messages in freddie src/txiki.js, although the native surface exists (handoffs 6, 8, 4). Wiring them is Freddie's adapter work.
+
