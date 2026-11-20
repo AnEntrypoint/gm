@@ -210,6 +210,7 @@ public:
     std::string body(const std::string& source);
     void stop();
     void close_input();
+    std::optional<int> wait_exit(std::chrono::milliseconds timeout);
 
 private:
     std::shared_ptr<proc::Child> child_;

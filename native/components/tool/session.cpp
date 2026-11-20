@@ -80,6 +80,12 @@ void Session::close_input() {
     if (child_) child_->close_input();
 }
 
+std::optional<int> Session::wait_exit(std::chrono::milliseconds timeout) {
+    if (!child_) return std::nullopt;
+    child_->close_input();
+    return child_->wait_for(timeout);
+}
+
 void Session::stop() {
     {
         std::lock_guard lock(mutex_);

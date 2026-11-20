@@ -5014,3 +5014,8 @@ Red check (mutation, witness, restore, cmp, git status): the new realm is the ho
 
 Freddie: vm.runInNewContext(code) on primitive results can use evalInNewRealm; the object-result form waits on the limit above.
 
+
+## Txiki handoff 6b: check-process-exit-code runs serve through Session (fix to ae9931b)
+
+Change: check-process-exit-code started gm serve with std::system, which the spawn-site rule (check-spawn-sites) refuses outside the four creation sites. The witness now runs serve through Session and reads the exit status with a new Session::wait_exit, which closes stdin and waits for the child. Witness: check-process-exit-code ok; check-spawn-sites ok (7 process creation calls in 200 files).
+
