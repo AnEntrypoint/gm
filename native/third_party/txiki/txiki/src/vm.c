@@ -215,6 +215,47 @@ int tjs_exit_code(void) {
     return tjs__exit_code;
 }
 
+static JSValue tjs__eval_in_new_realm(JSContext *ctx, JSValue this_val, int argc, JSValue *argv) {
+    size_t len;
+    const char *str = JS_ToCStringLen(ctx, &len, argv[0]);
+    if (!str) {
+        return JS_EXCEPTION;
+    }
+
+    JSContext *realm = JS_NewContext(JS_GetRuntime(ctx));
+    if (!realm) {
+        JS_FreeCString(ctx, str);
+        return JS_ThrowOutOfMemory(ctx);
+    }
+
+    JSValue result = JS_Eval(realm, str, len, "<evalInNewRealm>", JS_EVAL_TYPE_GLOBAL);
+    JS_FreeCString(ctx, str);
+    if (JS_IsException(result)) {
+        JSValue exc = JS_GetException(realm);
+        JSValue name = JS_GetPropertyStr(realm, exc, "name");
+        JSValue message = JS_GetPropertyStr(realm, exc, "message");
+        const char *name_str = JS_ToCString(realm, name);
+        const char *message_str = JS_ToCString(realm, message);
+        JSValue err = JS_NewError(ctx);
+        JS_SetPropertyStr(ctx, err, "name", JS_NewString(ctx, name_str ? name_str : "Error"));
+        JS_SetPropertyStr(ctx, err, "message", JS_NewString(ctx, message_str ? message_str : ""));
+        JS_FreeCString(realm, name_str);
+        JS_FreeCString(realm, message_str);
+        JS_FreeValue(realm, name);
+        JS_FreeValue(realm, message);
+        JS_FreeValue(realm, exc);
+        JS_FreeContext(realm);
+        return JS_Throw(ctx, err);
+    }
+
+    const char *out = JS_ToCString(realm, result);
+    JS_FreeValue(realm, result);
+    JSValue ret = JS_NewString(ctx, out ? out : "");
+    JS_FreeCString(realm, out);
+    JS_FreeContext(realm);
+    return ret;
+}
+
 static JSValue tjs__sync_read_file(JSContext *ctx, JSValue this_val, int argc, JSValue *argv) {
     const char *filename = JS_ToCString(ctx, argv[0]);
     if (!filename) {
@@ -315,6 +356,11 @@ static void tjs__bootstrap_core(JSContext *ctx, JSValue ns) {
                               ns,
                               "setExitCode",
                               JS_NewCFunction(ctx, tjs__set_exit_code, "setExitCode", 1),
+                              JS_PROP_C_W_E);
+    JS_DefinePropertyValueStr(ctx,
+                              ns,
+                              "evalInNewRealm",
+                              JS_NewCFunction(ctx, tjs__eval_in_new_realm, "evalInNewRealm", 1),
                               JS_PROP_C_W_E);
     JS_DefinePropertyValueStr(ctx,
                               ns,

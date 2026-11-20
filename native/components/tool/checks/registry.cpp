@@ -45,6 +45,7 @@ const std::vector<Registered>& checks() {
         {"check-process-exit-code", check_process_exit_code},
         {"check-worker-message-channel", check_worker_message_channel},
         {"check-vm-script-compile", check_vm_script_compile},
+        {"check-vm-realm", check_vm_realm},
         {"check-install-switch", check_install_switch},
         {"check-restart-skill-read", check_restart_skill_read},
         {"check-no-resource-client", check_no_resource_client},

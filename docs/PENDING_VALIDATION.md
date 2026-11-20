@@ -5001,3 +5001,16 @@ Red check (mutation, witness, restore, cmp, git status): the JS_EVAL_FLAG_COMPIL
 
 Freddie: vm.Script(code) can call compileScript in its constructor and runCompiledScript in runInThisContext. The filename option is not carried yet (fixed name <vm.Script>).
 
+
+## Txiki handoff 8b: evalInNewRealm, a second realm (vm.c tjs__eval_in_new_realm)
+
+Change: evalInNewRealm(source) makes a fresh context with JS_NewContext on the same runtime, evaluates the source there, and returns its result converted to a string, then frees the context. An error in the new realm is rethrown in the host realm as an Error with the same name and message.
+
+Limit: the result crosses as a string, so an object result does not come back as an object yet; a realm with its own globals and built-ins is what vm.createContext needs, and the object form is the next step for it.
+
+Witness: check-vm-realm (native/components/tool/checks/vm_realm.cpp). typeof Array in the new realm is function; a var set in the new realm does not appear in the host realm; null.x in the new realm throws a TypeError in the host. Output: ok, rc 0.
+
+Red check (mutation, witness, restore, cmp, git status): the new realm is the host context duplicated (JS_DupContext) rather than a fresh JS_NewContext. Witness: 1 failure (a global of the new realm leaked into the host realm: leaked number), RED_RC=1. Restored and cmp ok; rebuild rc 0; witness again rc 0 with ok.
+
+Freddie: vm.runInNewContext(code) on primitive results can use evalInNewRealm; the object-result form waits on the limit above.
+
