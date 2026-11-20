@@ -4920,3 +4920,16 @@ Red check (mutation, witness, restore, cmp, git status): vm.c error path mutated
 
 Freddie rows that depend on this: the readFileSync error path (freddie 4de978a4 success path already shared; the error mapping to ENOENT/EACCES is the freddie-side step to rerun).
 
+
+## Txiki handoff 2: the sync names on the core object (mod_fs.c)
+
+Change: 13 sync variants registered in tjs_fs_funcs on the core namespace (tjs:internal/core), each a uv_fs_* call with a NULL callback that throws through tjs_throw_errno on failure: accessSync, openSync, closeSync, readSync, writeSync (a shared tjs__fs_io_args reads the fd, the Uint8Array range and the position, with -1 for the current position), readdirSync (uv_fs_scandir, names only), readlinkSync, realpathSync, mkdtempSync, unlinkSync, rmSync (unlink, then rmdir when unlink reports EISDIR or EPERM), symlinkSync, and lstatSync, which shares tjs_fs_stat_sync through a magic argument with statSync.
+
+Already present before this change: mkdirSync and statSync (freddie listed 17 names; 2 of them existed). Freddie-side, not native: existsSync is accessSync caught to a boolean, and writeFileSync is openSync, writeSync and closeSync (the encoding step stays in freddie).
+
+Witness: check-txiki-sync-names (native/components/tool/checks/txiki_sync_names.cpp). It runs through import("tjs:internal/core") and checks the file bytes written and read back, readSync with an explicit position, readdirSync, readlinkSync, realpathSync, lstatSync against statSync, accessSync on a missing path (ENOENT), closeSync on a bad fd (EBADF), rmSync of a file and then of its directory, and mkdtempSync filling the template. Output: ok, rc 0.
+
+Red check (mutation, witness, restore, cmp, git status): mod_fs.c tjs__fs_io_args sets the position to -1 in place of the requested position. Witness: 2 failures (readSync with an explicit position did not read three bytes, and did not read from the position), RED_RC=1. Restored and cmp ok; rebuild rc 0; witness again rc 0 with ok.
+
+Note for the next round: the tool surface named in the handoff is the core object, not the public tjs global. The public tjs has stat and lstat but not the sync names.
+

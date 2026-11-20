@@ -988,6 +988,31 @@ static JSValue tjs_file_constructor(JSContext *ctx, JSValue new_target, int argc
     return obj;
 }
 
+static int tjs__fs_arg_int32(JSContext *ctx, int argc, JSValue *argv, int index, int32_t def, int32_t *out) {
+    *out = def;
+    if (argc > index && !JS_IsUndefined(argv[index])) {
+        return JS_ToInt32(ctx, out, argv[index]);
+    }
+    return 0;
+}
+
+static JSValue tjs__fs_sync_done(JSContext *ctx, int r) {
+    if (r < 0) {
+        return tjs_throw_errno(ctx, r);
+    }
+    return JS_UNDEFINED;
+}
+
+static JSValue tjs__fs_sync_text(JSContext *ctx, uv_fs_t *req, int r, const char *text) {
+    if (r < 0) {
+        uv_fs_req_cleanup(req);
+        return tjs_throw_errno(ctx, r);
+    }
+    JSValue ret = JS_NewString(ctx, text);
+    uv_fs_req_cleanup(req);
+    return ret;
+}
+
 static JSValue tjs_fs_stat(JSContext *ctx, JSValue this_val, int argc, JSValue *argv, int magic) {
     const char *path = JS_ToCString(ctx, argv[0]);
     if (!path) {
@@ -1015,14 +1040,14 @@ static JSValue tjs_fs_stat(JSContext *ctx, JSValue this_val, int argc, JSValue *
     return tjs_fsreq_init(ctx, fr, JS_UNDEFINED);
 }
 
-static JSValue tjs_fs_stat_sync(JSContext *ctx, JSValue this_val, int argc, JSValue *argv) {
+static JSValue tjs_fs_stat_sync(JSContext *ctx, JSValue this_val, int argc, JSValue *argv, int magic) {
     const char *path = JS_ToCString(ctx, argv[0]);
     if (!path) {
         return JS_EXCEPTION;
     }
 
     uv_fs_t req;
-    int r = uv_fs_stat(NULL, &req, path, NULL);
+    int r = magic ? uv_fs_lstat(NULL, &req, path, NULL) : uv_fs_stat(NULL, &req, path, NULL);
     JS_FreeCString(ctx, path);
     if (r != 0) {
         uv_fs_req_cleanup(&req);
@@ -1233,6 +1258,263 @@ static JSValue tjs_fs_mkdir_sync(JSContext *ctx, JSValue this_val, int argc, JSV
     }
 
     return JS_UNDEFINED;
+}
+
+static JSValue tjs_fs_access_sync(JSContext *ctx, JSValue this_val, int argc, JSValue *argv) {
+    const char *path = JS_ToCString(ctx, argv[0]);
+    if (!path) {
+        return JS_EXCEPTION;
+    }
+
+    int32_t mode;
+    if (tjs__fs_arg_int32(ctx, argc, argv, 1, F_OK, &mode)) {
+        JS_FreeCString(ctx, path);
+        return JS_EXCEPTION;
+    }
+
+    uv_fs_t req;
+    int r = uv_fs_access(NULL, &req, path, mode, NULL);
+    uv_fs_req_cleanup(&req);
+    JS_FreeCString(ctx, path);
+    return tjs__fs_sync_done(ctx, r);
+}
+
+static JSValue tjs_fs_open_sync(JSContext *ctx, JSValue this_val, int argc, JSValue *argv) {
+    const char *path = JS_ToCString(ctx, argv[0]);
+    if (!path) {
+        return JS_EXCEPTION;
+    }
+
+    size_t len;
+    const char *strflags = JS_ToCStringLen(ctx, &len, argv[1]);
+    if (!strflags) {
+        JS_FreeCString(ctx, path);
+        return JS_EXCEPTION;
+    }
+    int flags = js__uv_open_flags(strflags, len);
+    JS_FreeCString(ctx, strflags);
+
+    int32_t mode;
+    if (tjs__fs_arg_int32(ctx, argc, argv, 2, 0666, &mode)) {
+        JS_FreeCString(ctx, path);
+        return JS_EXCEPTION;
+    }
+
+    uv_fs_t req;
+    int r = uv_fs_open(NULL, &req, path, flags, mode, NULL);
+    uv_fs_req_cleanup(&req);
+    JS_FreeCString(ctx, path);
+    if (r < 0) {
+        return tjs_throw_errno(ctx, r);
+    }
+    return JS_NewInt32(ctx, r);
+}
+
+static JSValue tjs_fs_close_sync(JSContext *ctx, JSValue this_val, int argc, JSValue *argv) {
+    int32_t fd;
+    if (JS_ToInt32(ctx, &fd, argv[0])) {
+        return JS_EXCEPTION;
+    }
+
+    uv_fs_t req;
+    int r = uv_fs_close(NULL, &req, fd, NULL);
+    uv_fs_req_cleanup(&req);
+    return tjs__fs_sync_done(ctx, r);
+}
+
+static int tjs__fs_io_args(JSContext *ctx, int argc, JSValue *argv, uv_file *fd, uv_buf_t *iov, int64_t *pos) {
+    int32_t fd32;
+    if (JS_ToInt32(ctx, &fd32, argv[0])) {
+        return -1;
+    }
+
+    size_t size = 0;
+    uint8_t *buf = JS_GetUint8Array(ctx, &size, argv[1]);
+    if (!buf && JS_HasException(ctx)) {
+        return -1;
+    }
+
+    int64_t offset = 0;
+    int64_t length = (int64_t) size;
+    int64_t position = -1;
+    if (argc > 2 && !JS_IsUndefined(argv[2]) && JS_ToInt64(ctx, &offset, argv[2])) {
+        return -1;
+    }
+    if (argc > 3 && !JS_IsUndefined(argv[3]) && JS_ToInt64(ctx, &length, argv[3])) {
+        return -1;
+    }
+    if (argc > 4 && !JS_IsNull(argv[4]) && !JS_IsUndefined(argv[4]) && JS_ToInt64(ctx, &position, argv[4])) {
+        return -1;
+    }
+    if (offset < 0 || length < 0 || offset > (int64_t) size || length > (int64_t) size - offset) {
+        JS_ThrowRangeError(ctx, "buffer range out of bounds");
+        return -1;
+    }
+
+    *fd = fd32;
+    *iov = uv_buf_init((char *) buf + offset, (unsigned int) length);
+    *pos = position;
+    return 0;
+}
+
+static JSValue tjs_fs_read_sync(JSContext *ctx, JSValue this_val, int argc, JSValue *argv) {
+    uv_file fd;
+    uv_buf_t iov;
+    int64_t position;
+    if (tjs__fs_io_args(ctx, argc, argv, &fd, &iov, &position)) {
+        return JS_EXCEPTION;
+    }
+
+    uv_fs_t req;
+    int r = uv_fs_read(NULL, &req, fd, &iov, 1, position, NULL);
+    uv_fs_req_cleanup(&req);
+    if (r < 0) {
+        return tjs_throw_errno(ctx, r);
+    }
+    return JS_NewInt32(ctx, r);
+}
+
+static JSValue tjs_fs_write_sync(JSContext *ctx, JSValue this_val, int argc, JSValue *argv) {
+    uv_file fd;
+    uv_buf_t iov;
+    int64_t position;
+    if (tjs__fs_io_args(ctx, argc, argv, &fd, &iov, &position)) {
+        return JS_EXCEPTION;
+    }
+
+    uv_fs_t req;
+    int r = uv_fs_write(NULL, &req, fd, &iov, 1, position, NULL);
+    uv_fs_req_cleanup(&req);
+    if (r < 0) {
+        return tjs_throw_errno(ctx, r);
+    }
+    return JS_NewInt32(ctx, r);
+}
+
+static JSValue tjs_fs_readdir_sync(JSContext *ctx, JSValue this_val, int argc, JSValue *argv) {
+    const char *path = JS_ToCString(ctx, argv[0]);
+    if (!path) {
+        return JS_EXCEPTION;
+    }
+
+    uv_fs_t req;
+    int r = uv_fs_scandir(NULL, &req, path, 0, NULL);
+    JS_FreeCString(ctx, path);
+    if (r < 0) {
+        uv_fs_req_cleanup(&req);
+        return tjs_throw_errno(ctx, r);
+    }
+
+    JSValue arr = JS_NewArray(ctx);
+    if (JS_IsException(arr)) {
+        uv_fs_req_cleanup(&req);
+        return arr;
+    }
+
+    uv_dirent_t ent;
+    uint32_t i = 0;
+    while ((r = uv_fs_scandir_next(&req, &ent)) == 0) {
+        JS_SetPropertyUint32(ctx, arr, i++, JS_NewString(ctx, ent.name));
+    }
+    uv_fs_req_cleanup(&req);
+    if (r != UV_EOF) {
+        JS_FreeValue(ctx, arr);
+        return tjs_throw_errno(ctx, r);
+    }
+    return arr;
+}
+
+static JSValue tjs_fs_readlink_sync(JSContext *ctx, JSValue this_val, int argc, JSValue *argv) {
+    const char *path = JS_ToCString(ctx, argv[0]);
+    if (!path) {
+        return JS_EXCEPTION;
+    }
+
+    uv_fs_t req;
+    int r = uv_fs_readlink(NULL, &req, path, NULL);
+    JS_FreeCString(ctx, path);
+    return tjs__fs_sync_text(ctx, &req, r, r < 0 ? NULL : (const char *) req.ptr);
+}
+
+static JSValue tjs_fs_realpath_sync(JSContext *ctx, JSValue this_val, int argc, JSValue *argv) {
+    const char *path = JS_ToCString(ctx, argv[0]);
+    if (!path) {
+        return JS_EXCEPTION;
+    }
+
+    uv_fs_t req;
+    int r = uv_fs_realpath(NULL, &req, path, NULL);
+    JS_FreeCString(ctx, path);
+    return tjs__fs_sync_text(ctx, &req, r, r < 0 ? NULL : (const char *) req.ptr);
+}
+
+static JSValue tjs_fs_mkdtemp_sync(JSContext *ctx, JSValue this_val, int argc, JSValue *argv) {
+    const char *tpl = JS_ToCString(ctx, argv[0]);
+    if (!tpl) {
+        return JS_EXCEPTION;
+    }
+
+    uv_fs_t req;
+    int r = uv_fs_mkdtemp(NULL, &req, tpl, NULL);
+    JS_FreeCString(ctx, tpl);
+    return tjs__fs_sync_text(ctx, &req, r, r < 0 ? NULL : req.path);
+}
+
+static JSValue tjs_fs_unlink_sync(JSContext *ctx, JSValue this_val, int argc, JSValue *argv) {
+    const char *path = JS_ToCString(ctx, argv[0]);
+    if (!path) {
+        return JS_EXCEPTION;
+    }
+
+    uv_fs_t req;
+    int r = uv_fs_unlink(NULL, &req, path, NULL);
+    uv_fs_req_cleanup(&req);
+    JS_FreeCString(ctx, path);
+    return tjs__fs_sync_done(ctx, r);
+}
+
+static JSValue tjs_fs_rm_sync(JSContext *ctx, JSValue this_val, int argc, JSValue *argv) {
+    const char *path = JS_ToCString(ctx, argv[0]);
+    if (!path) {
+        return JS_EXCEPTION;
+    }
+
+    uv_fs_t req;
+    int r = uv_fs_unlink(NULL, &req, path, NULL);
+    uv_fs_req_cleanup(&req);
+    if (r == UV_EISDIR || r == UV_EPERM) {
+        r = uv_fs_rmdir(NULL, &req, path, NULL);
+        uv_fs_req_cleanup(&req);
+    }
+    JS_FreeCString(ctx, path);
+    return tjs__fs_sync_done(ctx, r);
+}
+
+static JSValue tjs_fs_symlink_sync(JSContext *ctx, JSValue this_val, int argc, JSValue *argv) {
+    const char *target = JS_ToCString(ctx, argv[0]);
+    if (!target) {
+        return JS_EXCEPTION;
+    }
+
+    const char *path = JS_ToCString(ctx, argv[1]);
+    if (!path) {
+        JS_FreeCString(ctx, target);
+        return JS_EXCEPTION;
+    }
+
+    int32_t flags;
+    if (tjs__fs_arg_int32(ctx, argc, argv, 2, 0, &flags)) {
+        JS_FreeCString(ctx, target);
+        JS_FreeCString(ctx, path);
+        return JS_EXCEPTION;
+    }
+
+    uv_fs_t req;
+    int r = uv_fs_symlink(NULL, &req, target, path, flags, NULL);
+    uv_fs_req_cleanup(&req);
+    JS_FreeCString(ctx, target);
+    JS_FreeCString(ctx, path);
+    return tjs__fs_sync_done(ctx, r);
 }
 
 static JSValue tjs_fs_copyfile(JSContext *ctx, JSValue this_val, int argc, JSValue *argv) {
@@ -1686,7 +1968,20 @@ static const JSCFunctionListEntry tjs_fs_funcs[] = {
     TJS_CFUNC_DEF("statFs", 1, tjs_fs_statfs),
     /* Internal */
     TJS_CFUNC_DEF("mkdirSync", 2, tjs_fs_mkdir_sync),
-    TJS_CFUNC_DEF("statSync", 1, tjs_fs_stat_sync),
+    TJS_CFUNC_MAGIC_DEF("statSync", 1, tjs_fs_stat_sync, 0),
+    TJS_CFUNC_MAGIC_DEF("lstatSync", 1, tjs_fs_stat_sync, 1),
+    TJS_CFUNC_DEF("accessSync", 2, tjs_fs_access_sync),
+    TJS_CFUNC_DEF("openSync", 3, tjs_fs_open_sync),
+    TJS_CFUNC_DEF("closeSync", 1, tjs_fs_close_sync),
+    TJS_CFUNC_DEF("readSync", 5, tjs_fs_read_sync),
+    TJS_CFUNC_DEF("writeSync", 5, tjs_fs_write_sync),
+    TJS_CFUNC_DEF("readdirSync", 1, tjs_fs_readdir_sync),
+    TJS_CFUNC_DEF("readlinkSync", 1, tjs_fs_readlink_sync),
+    TJS_CFUNC_DEF("realpathSync", 1, tjs_fs_realpath_sync),
+    TJS_CFUNC_DEF("mkdtempSync", 1, tjs_fs_mkdtemp_sync),
+    TJS_CFUNC_DEF("unlinkSync", 1, tjs_fs_unlink_sync),
+    TJS_CFUNC_DEF("rmSync", 1, tjs_fs_rm_sync),
+    TJS_CFUNC_DEF("symlinkSync", 3, tjs_fs_symlink_sync),
 };
 
 void tjs__mod_fs_init(JSContext *ctx, JSValue ns) {
