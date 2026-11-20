@@ -98,7 +98,7 @@ Witness (W8):
 
 ### 2.2 Run log (W10, W13)
 
-`run://<run>/log` returns the run's events, one JSON object per line, the newest 64 KB cut at a line boundary. The first event of a new run has kind `start` and seq 1.
+`run://<run>/log` returns the run's events, one JSON object per line, oldest first, in pages of at most 50 events or 16 KB; _meta.next is the next page uri and is null on the last page. The first event of a new run has kind `start` and seq 1.
 
     gm-tool check <bin> parity-contract
     W10 pass run log first event kind=start seq=1

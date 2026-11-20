@@ -33,6 +33,7 @@
 #include "gm/numeric.hpp"
 #include "gm/proc.hpp"
 #include "gm/runcode.hpp"
+#include "gm/tail.hpp"
 #include "internal.hpp"
 
 #include "gm/proc.hpp"
@@ -170,7 +171,8 @@ void add_cut_run(json::Value& reply, const std::string& text, std::size_t length
 constexpr std::size_t kTailCap = 2000;
 constexpr std::size_t kTaskPage = 4000;
 constexpr std::size_t kLoggedReplyChars = 1000;
-constexpr std::size_t kLogTailBytes = 65536;
+constexpr std::size_t kLogPageEvents = 50;
+constexpr std::size_t kLogPageBytes = 16384;
 constexpr std::size_t kOpenList = 20;
 constexpr std::size_t kNoticePrdWindow = 5;
 constexpr std::size_t kRowsNamed = 5;
@@ -1797,12 +1799,24 @@ struct Server::State {
                            offset_arg->as_number() != static_cast<double>(static_cast<long long>(offset_arg->as_number())))) {
             return object().set("ok", false).set("error", "offset must be a whole number of characters, zero or more");
         }
-        std::string text = body_text(s(), seq_field(*status, "body").value_or(0), std::numeric_limits<std::size_t>::max());
-        std::size_t total = js_length(text);
+        const Value* stored = status->find("value");
+        std::string text;
+        if (stored != nullptr && stored->is_string()) {
+            auto decoded = json::parse(stored->as_string());
+            text = decoded && decoded->is_string() ? decoded->as_string() : stored->as_string();
+        }
+        const std::size_t total = js_length(text);
         const Value* tail_arg = args.find("tail");
-        const std::size_t page = tail_arg && tail_arg->is_number() && tail_arg->as_number() >= 0 ? std::min(static_cast<std::size_t>(tail_arg->as_number()), kOutputPage) : kOutputPage;
-        std::size_t from = offset_arg ? static_cast<std::size_t>(offset_arg->as_number()) : (total > page ? total - page : 0);
-        std::size_t end = std::min(from + page, total);
+        std::size_t from = 0;
+        std::size_t end = std::min(kTailCap, total);
+        if (offset_arg) {
+            from = static_cast<std::size_t>(offset_arg->as_number());
+            end = std::min(from + kTailCap, total);
+        } else if (tail_arg && tail_arg->is_number() && tail_arg->as_number() >= 0) {
+            const auto lines = static_cast<std::size_t>(tail_arg->as_number());
+            from = std::max(total > kOutputPage ? total - kOutputPage : std::size_t{0}, js_length(text.substr(0, gm::tail_lines_start(text, lines))));
+            end = total;
+        }
         if (from > end) from = end;
         static const std::set<std::string> kStatusFields = {"job", "command", "state", "pid", "pidStart", "startMono", "startWall", "timeoutMs", "durMs", "body", "step", "error", "complete"};
         Value reply = object().set("ok", true);
@@ -1825,6 +1839,19 @@ struct Server::State {
             .set("offset", number_of(from))
             .set("next", end < total ? number_of(end) : Value(nullptr))
             .set("logPath", nullptr);
+    }
+
+    Value body_job_stop(const Value& args) {
+        const std::string name = string_of(args, "job");
+        auto job = body_named(name);
+        if (!job) return object().set("ok", false).set("error", "no background run named " + name);
+        stop_body(job, "cancelled");
+        bool settled = false;
+        {
+            std::lock_guard guard(job->lock);
+            settled = job->settled;
+        }
+        return object().set("ok", true).set("job", name).set("state", settled ? "killed" : "stopping").set("reason", "cancelled");
     }
 
     void hold_body(const std::shared_ptr<BodyJob>& job, double wait_ms) {
@@ -2293,7 +2320,11 @@ struct Server::State {
             .set("prefixSha", prefix_sha(rules, s().task, served_tools()))
             .set("total", number_of(total))
             .set("pendingCommands", object().set("wait", "\"" + options.wait_program + "\" events --dir \"" + s().run_dir.string() + "\" --wait"));
-        if (!waiting) reply = merge(std::move(reply), feed_of(at, total, shown, s().sent_feed, compact_children));
+        if (!waiting && s().task.empty()) {
+            s().shown = static_cast<std::uint64_t>(total);
+        } else if (!waiting) {
+            reply = merge(std::move(reply), feed_of(at, total, shown, s().sent_feed, compact_children));
+        }
         if (auto fresh = s().log->read_from(s().checks.seen)) tally_checks(s().checks, *fresh);
         s().checks.seen = s().log->count();
         if (Value checks = checks_of(s().checks); !checks.as_array().empty()) reply.set("checks", std::move(checks));
@@ -2931,7 +2962,7 @@ struct Server::State {
     }
 
     std::optional<Value> read_run(const std::string& uri) {
-        static const std::regex kRunUri(R"(^run://([A-Za-z0-9][A-Za-z0-9_-]*)/(log|witness)$)");
+        static const std::regex kRunUri(R"(^run://([A-Za-z0-9][A-Za-z0-9_-]*)/(log|witness)(?:\?after=([0-9]{1,18})&limit=([0-9]{1,4}))?$)");
         std::smatch match;
         if (!std::regex_match(uri, match, kRunUri)) return std::nullopt;
         fs::path file = s().run_dir.parent_path() / match[1].str() / "log.jsonl";
@@ -2943,18 +2974,33 @@ struct Server::State {
         }
         std::string text;
         read_file(file, text);
-        std::size_t size = text.size();
-        std::size_t at = size > kLogTailBytes ? size - kLogTailBytes : 0;
-        std::size_t start = at;
-        if (at > 0) {
-            std::size_t nl = text.find('\n', at);
-            start = nl == std::string::npos ? size : nl + 1;
+        const std::uint64_t after = match[3].matched ? std::stoull(match[3].str()) : 0;
+        const std::size_t limit = match[4].matched ? std::min<std::size_t>(std::stoul(match[4].str()), kLogPageEvents) : kLogPageEvents;
+        std::string page;
+        std::size_t taken = 0;
+        std::uint64_t last = after;
+        bool more = false;
+        for (std::size_t at = 0; at < text.size();) {
+            const std::size_t nl = text.find('\n', at);
+            const std::size_t next_at = nl == std::string::npos ? text.size() : nl + 1;
+            const std::string line = text.substr(at, next_at - at);
+            at = next_at;
+            std::string body = line;
+            if (!body.empty() && body.back() == '\n') body.pop_back();
+            auto event = json::parse(body);
+            const std::uint64_t seq = event ? seq_field(*event, "seq").value_or(0) : 0;
+            if (seq <= after) continue;
+            if (taken == limit || (taken > 0 && page.size() + line.size() > kLogPageBytes)) {
+                more = true;
+                break;
+            }
+            page += line;
+            taken += 1;
+            last = seq;
         }
-        Value meta = object().set(kLogMeta, object()
-                                                .set("totalBytes", number_of(size))
-                                                .set("fromByte", number_of(start))
-                                                .set("truncated", start > 0));
-        return object().set("uri", uri).set("mimeType", "application/x-ndjson").set("text", text.substr(start)).set("_meta", std::move(meta));
+        Value next = more ? Value("run://" + match[1].str() + "/log?after=" + std::to_string(last) + "&limit=" + std::to_string(limit)) : Value(nullptr);
+        Value meta = object().set(kLogMeta, object().set("totalBytes", number_of(text.size())).set("truncated", more).set("next", std::move(next)));
+        return object().set("uri", uri).set("mimeType", "application/x-ndjson").set("text", page).set("_meta", std::move(meta));
     }
 
     std::optional<std::string> read_skill_for_verb(const std::string& uri) {
@@ -3150,7 +3196,7 @@ struct Server::State {
                       .set("uriTemplate", "run://{run}/log")
                       .set("name", "run-log")
                       .set("title", "Run event log")
-                      .set("description", "A run's event log, one JSON event per line: its newest 64 KB, cut at a line boundary.")
+                      .set("description", "A run's event log, one JSON event per line, oldest first, in pages of up to 50 events or 16 KB. _meta.next is the uri of the next page (run://<id>/log?after=<seq>&limit=<n>) and is null on the last page.")
                       .set("mimeType", "application/x-ndjson"));
         list.push(object()
                       .set("uriTemplate", "run://{run}/witness")
@@ -3832,6 +3878,7 @@ public:
         try {
             bool body_job = (name == "job_status" || name == "job_stop") && state_.is_body_job(args);
             if (body_job && name == "job_status") result = state_.body_job_status(args);
+            else if (body_job && name == "job_stop") result = state_.body_job_stop(args);
             else if (body_job) {
                 result = object().set("ok", false).set("error", Server::State::string_of(args, "job") +
                                                                      " is a background run, not a shell job; finish with stopBackground: true stops it");

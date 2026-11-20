@@ -7,3 +7,4 @@ node_modules/
 .playwriter/
 build/
 .gm/
+.ccache/

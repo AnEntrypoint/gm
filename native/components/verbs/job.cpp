@@ -11,6 +11,7 @@
 #include "core_internal.hpp"
 #include "gm/clock.hpp"
 #include "gm/job_text.hpp"
+#include "gm/tail.hpp"
 #include "gm/proc.hpp"
 
 #if defined(_WIN32)
@@ -644,11 +645,15 @@ json::Value JobTable::status(const json::Value& args) {
     std::size_t length = utf16_length(text);
     const json::Value* tail_value = present(args, "tail");
     if (tail_value != nullptr && (!is_whole_number(tail_value) || tail_value->as_number() < 0)) {
-        return failure("tail must be a whole number of characters, zero or more");
+        return failure("tail must be a whole number of lines, zero or more");
     }
-    const std::size_t page = tail_value != nullptr ? std::min(static_cast<std::size_t>(tail_value->as_number()), static_cast<std::size_t>(output_page)) : output_page;
-    std::size_t from = offset_value != nullptr ? static_cast<std::size_t>(offset_value->as_number())
-                                               : (length > page ? length - page : 0);
+    const std::size_t page = static_cast<std::size_t>(output_page);
+    std::size_t from = length > page ? length - page : 0;
+    if (tail_value != nullptr) {
+        const auto lines = static_cast<std::size_t>(tail_value->as_number());
+        from = std::max(from, utf16_length(text.substr(0, gm::tail_lines_start(text, lines))));
+    }
+    if (offset_value != nullptr) from = static_cast<std::size_t>(offset_value->as_number());
     std::size_t end = std::min(from + page, length);
     reply.set("output", utf16_slice(text, from, end));
     reply.set("total", static_cast<std::uint64_t>(length));

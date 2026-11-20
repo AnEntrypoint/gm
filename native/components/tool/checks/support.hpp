@@ -2,6 +2,7 @@
 
 #include "gm/tool.hpp"
 
+#include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <sstream>
@@ -46,12 +47,24 @@ inline std::vector<long long> children_of(long long pid) {
     return found;
 }
 
-inline void connect(Session& session) {
+inline void start_session(Session& session, const std::string& client) {
     session.rpc("initialize", json::Object{{"protocolVersion", "2025-06-18"}, {"capabilities", json::Object{}},
-                                          {"clientInfo", json::Object{{"name", "gm-tool"}, {"version", "1"}}}});
+                                          {"clientInfo", json::Object{{"name", client}, {"version", "1"}}}});
     session.notify("notifications/initialized", json::Object{});
     session.rpc("resources/read", json::Object{{"uri", "skill://gm/SKILL.md"}});
     tool_json(session, "next_context", json::Object{});
+}
+
+inline void connect(Session& session) {
+    start_session(session, "gm-tool");
+}
+
+inline fs::path fresh_sandbox(const std::string& label) {
+    const auto stamp = std::chrono::steady_clock::now().time_since_epoch().count();
+    const fs::path sandbox = fs::temp_directory_path() / ("gm-" + label + "-" + std::to_string(stamp));
+    fs::create_directories(sandbox / "ws");
+    std::ofstream(sandbox / "quiet.json") << R"({"mcpServers":{"playwriter":{"disabled":true}}})";
+    return sandbox;
 }
 
 }
