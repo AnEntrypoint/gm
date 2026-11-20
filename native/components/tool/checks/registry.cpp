@@ -47,6 +47,7 @@ const std::vector<Registered>& checks() {
         {"check-friction-jobs", check_friction_jobs},
         {"check-lazy-cache", check_lazy_cache},
         {"check-next-hold-cap", check_next_hold_cap},
+        {"check-next-context-provenance", check_next_context_provenance},
         {"check-worker-message-channel", check_worker_message_channel},
         {"check-vm-script-compile", check_vm_script_compile},
         {"check-vm-realm", check_vm_realm},

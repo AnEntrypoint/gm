@@ -699,6 +699,7 @@ struct Server::State {
         std::uint64_t shown = 0;
         std::string task;
         bool task_inherited = false;
+        std::string task_from;
         int steps = 0;
         std::optional<std::string> ended;
         bool step_limited = false;
@@ -1299,6 +1300,7 @@ struct Server::State {
         }
         s().task = task;
         s().task_inherited = inherited;
+        s().task_from = task_from;
         append("start", object()
                             .set("mode", "mcp")
                             .set("maxSteps", limit_value(options.max_steps))
@@ -2324,6 +2326,7 @@ struct Server::State {
             reply.set("rulesPath", (s().run_dir / "rules.md").string());
         } else {
             reply.set("rules", rules).set("task", task_value());
+            if (s().task_inherited) reply.set("taskFrom", s().task_from);
             if (s().task.empty()) {
                 reply.set("taskNotice", "No task yet. The gm skill prompt, with its task argument, gives the task of this run.");
             }

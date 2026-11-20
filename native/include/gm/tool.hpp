@@ -146,6 +146,7 @@ CheckResult check_friction_verbs(const std::string& binary);
 CheckResult check_friction_jobs(const std::string& binary);
 CheckResult check_lazy_cache(const std::string& binary);
 CheckResult check_next_hold_cap(const std::string& binary);
+CheckResult check_next_context_provenance(const std::string& binary);
 CheckResult check_worker_message_channel(const std::string& binary);
 CheckResult check_vm_script_compile(const std::string& binary);
 CheckResult check_vm_realm(const std::string& binary);
