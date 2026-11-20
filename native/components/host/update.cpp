@@ -121,14 +121,20 @@ std::optional<std::int64_t> build_number(std::string_view version) {
     return parse_int64(version.substr(dash + 1));
 }
 
-enum class Order { Newer, Older, Unordered };
+enum class Order { Newer, Same, Older, Unordered };
+
+template <typename T>
+Order order_of(T published, T installed) {
+    if (published > installed) return Order::Newer;
+    return published == installed ? Order::Same : Order::Older;
+}
 
 Order order_against(const UpdatePolicy& policy, const ManifestAsset& asset) {
-    if (policy.committed && asset.committed) return *asset.committed < *policy.committed ? Order::Older : Order::Newer;
+    if (policy.committed && asset.committed) return order_of(*asset.committed, *policy.committed);
     const std::optional<std::int64_t> installed = build_number(policy.current_version);
     const std::optional<std::int64_t> published = build_number(asset.version);
     if (!installed || !published || *installed == 1) return Order::Unordered;
-    return *published < *installed ? Order::Older : Order::Newer;
+    return order_of(*published, *installed);
 }
 
 std::mutex download_mutex;
@@ -563,9 +569,10 @@ UpdateResult update_once(const UpdatePolicy& policy, UpdateResult result) {
     if (order != Order::Newer) {
         state.checked_ms = now_ms();
         write_update_state(policy.install_dir, state);
-        result.status = order == Order::Older
-                            ? "kept " + policy.current_version + ": the published " + asset->second.version + " is older"
-                            : "refused " + policy.current_version + ": the published " + asset->second.version + " cannot be ordered against this build";
+        const std::string published = "the published " + asset->second.version;
+        result.status = order == Order::Unordered
+                            ? "refused " + policy.current_version + ": " + published + " cannot be ordered against this build"
+                            : "kept " + policy.current_version + ": " + published + (order == Order::Older ? " is older" : " is not newer than this build");
         return result;
     }
     const bool asset_unchanged = !state.asset_sha.empty() && lower(state.asset_sha) == lower(asset->second.sha256);

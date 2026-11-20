@@ -38,13 +38,14 @@ struct Leg {
     const char* offered;
     Commit commit;
     const char* expect;
+    const char* reason;
 };
 
 constexpr Leg kLegs[] = {
-    {"older commit, higher serial", "ffff333-99", Commit::Older, "kept"},
-    {"equal commit, lower serial", "ffff333-0", Commit::Equal, "taken"},
-    {"newer commit, lower serial", "ffff333-0", Commit::Newer, "taken"},
-    {"no commit time, serial not numeric", "ffff333-x", Commit::Absent, "refused"},
+    {"older commit, higher serial", "ffff333-99", Commit::Older, "kept", "is older"},
+    {"equal commit, lower serial", "ffff333-0", Commit::Equal, "kept", "is not newer"},
+    {"newer commit, lower serial", "ffff333-0", Commit::Newer, "taken", ""},
+    {"no commit time, serial not numeric", "ffff333-x", Commit::Absent, "refused", "cannot be ordered"},
 };
 
 std::string first_word(const std::string& text) {
@@ -196,8 +197,7 @@ CheckResult check_update_order(const std::string& binary) {
             if (linked != leg.offered) result.failures.push_back(label + ": the install points at " + linked + ", not " + leg.offered);
         } else {
             if (flag_of(*reply, "updated")) result.failures.push_back(label + ": gm update took " + leg.offered + " over " + stamp);
-            const std::string reason = std::string(leg.expect) == "kept" ? "is older" : "cannot be ordered";
-            if (status.find(reason) == std::string::npos) result.failures.push_back(label + ": the update was not reported as refused (" + reason + "): '" + status + "'");
+            if (status.find(leg.reason) == std::string::npos) result.failures.push_back(label + ": the update was not reported as refused (" + leg.reason + "): '" + status + "'");
             if (linked != stamp) result.failures.push_back(label + ": the install points at " + linked + " after " + leg.offered + " was refused; it should stay on " + stamp);
         }
         outcomes.push_back(std::string(leg.expect) + " " + leg.offered + (status.empty() ? std::string{} : " ('" + status + "')"));
