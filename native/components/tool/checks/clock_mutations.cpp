@@ -177,10 +177,10 @@ CheckResult check_clock_mutations(const std::string& binary) {
         return result;
     }
     const std::vector<Mutant> mutants{
-        {"job lifetime 60 s", fs::path("native") / "components" / "mcp" / "include" / "gm" / "mcp.hpp", "std::uint64_t job_lifetime_ms = 3600000;",
-         "std::uint64_t job_lifetime_ms = 60000;", "check-run-code-budget"},
-        {"job wait cap 30 s", fs::path("native") / "components" / "verbs" / "job.cpp", "const double max_wait_ms = 60000 * clock_scale();",
-         "const double max_wait_ms = 30000 * clock_scale();", "check-turn-economy"},
+        {"job lifetime 1000 times longer", fs::path("native") / "components" / "host" / "worker.cpp",
+         "static_cast<std::uint64_t>(ms * clock_scale()); });", "static_cast<std::uint64_t>(ms * clock_scale() * 1000); });", "check-run-code-lifetime"},
+        {"next_context hold cap 1 s", fs::path("native") / "components" / "mcp" / "server.cpp", "constexpr double kMaxWaitMs = 60000;",
+         "constexpr double kMaxWaitMs = 1000;", "check-next-hold-cap"},
     };
     scale_needs_test_clock(binary, result);
     std::vector<std::string> caught;
