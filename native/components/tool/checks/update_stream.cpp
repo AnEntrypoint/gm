@@ -1,4 +1,5 @@
 #include "gm/tool.hpp"
+#include "support.hpp"
 
 #include <cctype>
 #include <chrono>
@@ -13,6 +14,8 @@
 #include <vector>
 
 namespace gm::tool {
+using namespace support;
+
 namespace {
 
 namespace fs = std::filesystem;
@@ -50,11 +53,6 @@ std::optional<std::int64_t> whole_number(const std::string& text) {
 
 bool succeeded(const proc::Outcome& outcome) {
     return outcome.started && !outcome.timed_out && outcome.exit_code == 0;
-}
-
-void make_executable(const fs::path& file) {
-    std::error_code ec;
-    fs::permissions(file, fs::perms::owner_all | fs::perms::group_read | fs::perms::group_exec | fs::perms::others_read | fs::perms::others_exec, fs::perm_options::replace, ec);
 }
 
 bool run_git(const fs::path& dir, const std::vector<std::string>& args) {

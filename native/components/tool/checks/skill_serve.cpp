@@ -1,4 +1,5 @@
 #include "gm/tool.hpp"
+#include "support.hpp"
 
 #include <chrono>
 #include <filesystem>
@@ -8,18 +9,12 @@
 #include <thread>
 
 namespace gm::tool {
+using namespace support;
 namespace {
 
 namespace fs = std::filesystem;
 
 constexpr const char* kSkill = "skill://gm/SKILL.md";
-
-std::string read_text(const fs::path& file) {
-    std::ifstream in(file, std::ios::binary);
-    std::ostringstream text;
-    text << in.rdbuf();
-    return text.str();
-}
 
 std::optional<std::string> read_skill(Session& session) {
     const json::Value reply = session.rpc("resources/read", json::Object{{"uri", kSkill}});

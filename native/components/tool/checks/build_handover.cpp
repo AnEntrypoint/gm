@@ -1,4 +1,5 @@
 #include "gm/tool.hpp"
+#include "support.hpp"
 #if !defined(_WIN32)
 
 #include <algorithm>
@@ -13,6 +14,8 @@
 #include <unistd.h>
 
 namespace gm::tool {
+using support::make_executable;
+
 namespace {
 
 namespace fs = std::filesystem;
@@ -55,11 +58,6 @@ std::string replace_all(std::string text, const std::string& from, const std::st
     }
     out.append(text, start, std::string::npos);
     return out;
-}
-
-void make_executable(const fs::path& file) {
-    std::error_code ec;
-    fs::permissions(file, fs::perms::owner_all | fs::perms::group_read | fs::perms::group_exec | fs::perms::others_read | fs::perms::others_exec, fs::perm_options::replace, ec);
 }
 
 void place(const fs::path& versions, const fs::path& host, const std::string& stamp, const std::string& version, bool patch) {

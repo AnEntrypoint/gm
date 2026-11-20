@@ -1,4 +1,5 @@
 #include "gm/tool.hpp"
+#include "support.hpp"
 
 #include <chrono>
 #include <filesystem>
@@ -7,6 +8,7 @@
 #include <system_error>
 
 namespace gm::tool {
+using namespace support;
 namespace {
 
 namespace fs = std::filesystem;
@@ -30,13 +32,6 @@ std::string repeat_line() {
     std::string text;
     for (int i = 0; i < 500; ++i) text += "line of source text\n";
     return text;
-}
-
-std::string read_text(const fs::path& file) {
-    std::ifstream in(file, std::ios::binary);
-    std::ostringstream text;
-    text << in.rdbuf();
-    return text.str();
 }
 
 std::string text_of(const json::Value& value, const std::string& dotted) {

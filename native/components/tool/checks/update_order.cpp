@@ -1,4 +1,5 @@
 #include "gm/tool.hpp"
+#include "support.hpp"
 
 #include <chrono>
 #include <cstddef>
@@ -13,6 +14,8 @@
 #include <vector>
 
 namespace gm::tool {
+using namespace support;
+
 namespace {
 
 namespace fs = std::filesystem;
@@ -61,11 +64,6 @@ std::optional<std::int64_t> commit_time_of(const std::string& commit) {
     if (!kind || first_word(*kind) != "commit") return std::nullopt;
     const auto logged = git_output(fs::current_path(), {"log", "-1", "--format=%ct", commit});
     return logged ? whole_number(first_word(*logged)) : std::nullopt;
-}
-
-void make_executable(const fs::path& file) {
-    std::error_code ec;
-    fs::permissions(file, fs::perms::owner_all | fs::perms::group_read | fs::perms::group_exec | fs::perms::others_read | fs::perms::others_exec, fs::perm_options::replace, ec);
 }
 
 bool succeeded(const proc::Outcome& outcome) {

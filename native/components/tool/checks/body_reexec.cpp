@@ -1,4 +1,5 @@
 #include "gm/tool.hpp"
+#include "support.hpp"
 
 #include <chrono>
 #include <filesystem>
@@ -11,6 +12,8 @@
 #include <vector>
 
 namespace gm::tool {
+using namespace support;
+
 namespace {
 
 namespace fs = std::filesystem;
@@ -51,16 +54,6 @@ std::string read_bytes(const fs::path& file) {
     return std::string(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());
 }
 
-std::string replace_all(std::string text, const std::string& from, const std::string& to) {
-    for (std::size_t at = text.find(from); at != std::string::npos; at = text.find(from, at + to.size())) text.replace(at, from.size(), to);
-    return text;
-}
-
-void make_executable(const fs::path& file) {
-    std::error_code ec;
-    fs::permissions(file, fs::perms::owner_all | fs::perms::group_read | fs::perms::group_exec | fs::perms::others_read | fs::perms::others_exec, fs::perm_options::replace, ec);
-}
-
 bool stage_build(const fs::path& dir, const fs::path& host, const fs::path& repo, const std::string& from, const std::string& to, std::string& error) {
     std::error_code ec;
     fs::create_directories(dir, ec);
@@ -82,22 +75,6 @@ bool stage_build(const fs::path& dir, const fs::path& host, const fs::path& repo
         }
     }
     return true;
-}
-
-void point(const fs::path& install, const std::string& version) {
-    const fs::path link = install / "current.tmp";
-    std::error_code ec;
-    fs::remove(link, ec);
-    fs::create_directory_symlink(fs::path("versions") / version, link, ec);
-    fs::rename(link, install / "current", ec);
-}
-
-std::vector<long long> children_of(long long pid) {
-    std::vector<long long> found;
-    for (long long child : process_tree({pid})) {
-        if (child != pid) found.push_back(child);
-    }
-    return found;
 }
 
 long long worker_under(long long relay, const std::string& version) {

@@ -1,4 +1,5 @@
 #include "gm/tool.hpp"
+#include "support.hpp"
 
 #include <algorithm>
 #include <chrono>
@@ -12,6 +13,7 @@
 #include <thread>
 
 namespace gm::tool {
+using namespace support;
 namespace {
 
 namespace fs = std::filesystem;
@@ -355,13 +357,6 @@ std::vector<fs::path> files_under(const fs::path& dir) {
         if (entry.is_regular_file(ec)) files.push_back(fs::relative(entry.path(), dir));
     std::sort(files.begin(), files.end());
     return files;
-}
-
-std::string read_text(const fs::path& file) {
-    std::ifstream in(file, std::ios::binary);
-    std::ostringstream text;
-    text << in.rdbuf();
-    return text.str();
 }
 
 void w17_w18(const Context& context, Row& row) {

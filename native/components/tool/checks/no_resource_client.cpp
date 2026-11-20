@@ -1,4 +1,5 @@
 #include "gm/tool.hpp"
+#include "support.hpp"
 
 #include <chrono>
 #include <filesystem>
@@ -8,19 +9,13 @@
 #include <thread>
 
 namespace gm::tool {
+using namespace support;
 namespace {
 
 namespace fs = std::filesystem;
 
 constexpr std::size_t kRefusalLimitBytes = 2000;
 constexpr const char* kSample = "return (await gm.read_file({ path: 'sample.txt', fresh: true })).output;";
-
-std::string read_text(const fs::path& file) {
-    std::ifstream in(file, std::ios::binary);
-    std::ostringstream text;
-    text << in.rdbuf();
-    return text.str();
-}
 
 std::size_t count_of(const std::string& text, const std::string& needle) {
     std::size_t count = 0;

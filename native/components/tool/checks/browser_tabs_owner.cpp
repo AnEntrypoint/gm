@@ -1,4 +1,5 @@
 #include "gm/tool.hpp"
+#include "support.hpp"
 
 #include <algorithm>
 #include <chrono>
@@ -29,6 +30,8 @@ CheckResult check_browser_tabs_owner(const std::string&) {
 #else
 
 namespace gm::tool {
+using namespace support;
+
 namespace {
 
 namespace fs = std::filesystem;
@@ -59,14 +62,6 @@ json::Value output_of(const json::Value& reply) {
     if (!output->is_string()) return *output;
     if (auto parsed = json::parse(output->as_string())) return *parsed;
     return reply;
-}
-
-void connect(Session& session) {
-    session.rpc("initialize", json::Object{{"protocolVersion", "2025-06-18"}, {"capabilities", json::Object{}},
-                                          {"clientInfo", json::Object{{"name", "gm-tool"}, {"version", "1"}}}});
-    session.notify("notifications/initialized", json::Object{});
-    session.rpc("resources/read", json::Object{{"uri", "skill://gm/SKILL.md"}});
-    tool_json(session, "next_context", json::Object{});
 }
 
 std::string open_pages(const std::string& marker) {

@@ -1,4 +1,5 @@
 #include "gm/tool.hpp"
+#include "support.hpp"
 
 #include <algorithm>
 #include <chrono>
@@ -10,18 +11,12 @@
 #include <thread>
 
 namespace gm::tool {
+using namespace support;
 namespace {
 
 namespace fs = std::filesystem;
 
 constexpr std::chrono::milliseconds kSwitchBudget{15000};
-
-std::string read_text(const fs::path& file) {
-    std::ifstream in(file, std::ios::binary);
-    std::ostringstream text;
-    text << in.rdbuf();
-    return text.str();
-}
 
 std::string tail_of(const std::string& text, std::size_t count) {
     return text.size() > count ? text.substr(text.size() - count) : text;

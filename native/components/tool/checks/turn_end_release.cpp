@@ -1,4 +1,5 @@
 #include "gm/tool.hpp"
+#include "support.hpp"
 
 #include <chrono>
 #include <filesystem>
@@ -8,6 +9,7 @@
 #include <thread>
 
 namespace gm::tool {
+using namespace support;
 
 #if defined(_WIN32)
 
@@ -42,13 +44,6 @@ readline.createInterface({ input: process.stdin }).on('line', (line) => {
   }
 }).on('close', () => process.exit(0));
 )JS";
-
-std::string read_text(const fs::path& file) {
-    std::ifstream in(file, std::ios::binary);
-    std::ostringstream text;
-    text << in.rdbuf();
-    return text.str();
-}
 
 std::vector<long long> stub_pids(const fs::path& file) {
     std::vector<long long> pids;

@@ -1,4 +1,5 @@
 #include "gm/tool.hpp"
+#include "support.hpp"
 
 #include <chrono>
 #include <filesystem>
@@ -8,19 +9,13 @@
 #include <thread>
 
 namespace gm::tool {
+using namespace support;
 namespace {
 
 namespace fs = std::filesystem;
 
 constexpr const char* kUri = "skill://gm-continue/SKILL.md";
 constexpr const char* kUpdated = "notifications/resources/updated";
-
-std::string read_text(const fs::path& file) {
-    std::ifstream in(file, std::ios::binary);
-    std::ostringstream text;
-    text << in.rdbuf();
-    return text.str();
-}
 
 std::size_t updates_for(const std::vector<json::Value>& notes, const std::string& uri) {
     std::size_t count = 0;
