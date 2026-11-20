@@ -138,6 +138,7 @@ CheckResult check_job_running_progress(const std::string& binary);
 CheckResult check_run_shell_cut_first_line(const std::string& binary);
 CheckResult check_txiki_sync_errno(const std::string& binary);
 CheckResult check_txiki_sync_names(const std::string& binary);
+CheckResult check_txiki_fs_access(const std::string& binary);
 CheckResult check_job_extended_wait(const std::string& binary);
 CheckResult check_asan_retention(const std::string& binary);
 std::vector<long long> process_tree(const std::vector<long long>& roots);

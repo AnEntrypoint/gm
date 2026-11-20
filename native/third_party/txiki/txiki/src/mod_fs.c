@@ -340,6 +340,7 @@ static void uv__fs_req_cb(uv_fs_t *req) {
             arg = JS_NewString(ctx, fr->req.ptr);
             break;
 
+        case UV_FS_ACCESS:
         case UV_FS_COPYFILE:
         case UV_FS_FDATASYNC:
         case UV_FS_FSYNC:
@@ -1011,6 +1012,34 @@ static JSValue tjs__fs_sync_text(JSContext *ctx, uv_fs_t *req, int r, const char
     JSValue ret = JS_NewString(ctx, text);
     uv_fs_req_cleanup(req);
     return ret;
+}
+
+static JSValue tjs_fs_access(JSContext *ctx, JSValue this_val, int argc, JSValue *argv) {
+    const char *path = JS_ToCString(ctx, argv[0]);
+    if (!path) {
+        return JS_EXCEPTION;
+    }
+
+    int32_t mode;
+    if (tjs__fs_arg_int32(ctx, argc, argv, 1, F_OK, &mode)) {
+        JS_FreeCString(ctx, path);
+        return JS_EXCEPTION;
+    }
+
+    TJSFsReq *fr = js_malloc(ctx, sizeof(*fr));
+    if (!fr) {
+        JS_FreeCString(ctx, path);
+        return JS_EXCEPTION;
+    }
+
+    int r = uv_fs_access(tjs_get_loop(ctx), &fr->req, path, mode, uv__fs_req_cb);
+    JS_FreeCString(ctx, path);
+    if (r != 0) {
+        js_free(ctx, fr);
+        return tjs_throw_errno(ctx, r);
+    }
+
+    return tjs_fsreq_init(ctx, fr, JS_UNDEFINED);
 }
 
 static JSValue tjs_fs_stat(JSContext *ctx, JSValue this_val, int argc, JSValue *argv, int magic) {
@@ -1947,6 +1976,7 @@ static const JSCFunctionListEntry tjs_fs_funcs[] = {
     TJS_CFUNC_DEF("open", 3, tjs_fs_open),
     TJS_CFUNC_MAGIC_DEF("stat", 1, tjs_fs_stat, 0),
     TJS_CFUNC_MAGIC_DEF("lstat", 1, tjs_fs_stat, 1),
+    TJS_CFUNC_DEF("access", 2, tjs_fs_access),
     TJS_CFUNC_DEF("realPath", 1, tjs_fs_realpath),
     TJS_CFUNC_DEF("unlink", 1, tjs_fs_unlink),
     TJS_CFUNC_DEF("rename", 2, tjs_fs_rename),

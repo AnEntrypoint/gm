@@ -4933,3 +4933,14 @@ Red check (mutation, witness, restore, cmp, git status): mod_fs.c tjs__fs_io_arg
 
 Note for the next round: the tool surface named in the handoff is the core object, not the public tjs global. The public tjs has stat and lstat but not the sync names.
 
+
+## Txiki handoff 3: fs.promises.access with a mode (mod_fs.c tjs_fs_access)
+
+Change: tjs_fs_access wraps uv_fs_access in the same async pattern as tjs_fs_stat (a TJSFsReq, tjs_fsreq_init), with the mode read through tjs__fs_arg_int32 (F_OK by default). It is registered as "access" on the core namespace, beside stat and lstat. Also needed, and not in the handoff: the completion switch in uv__fs_req_cb has a default that aborts, so UV_FS_ACCESS is added to the group that resolves undefined. Without that case the worker aborts with exit 134 on every access completion (seen in the first run of the witness).
+
+Witness: check-txiki-fs-access (native/components/tool/checks/txiki_fs_access.cpp). A file made with mode 0644 is checked with X_OK (1), which must reject with EACCES, with R_OK (4), which must resolve, with F_OK (0), which must resolve, and a missing path with F_OK, which must reject with ENOENT. X_OK on a file with no execute bit fails for root too, so the witness does not depend on who runs it. Output: ok, rc 0.
+
+Red check (mutation, witness, restore, cmp, git status): the UV_FS_ACCESS case is removed from uv__fs_req_cb. Witness: the worker aborts on the first access completion (the four access results are null), RED_RC=1. Restored and cmp ok; rebuild rc 0; witness again rc 0 with ok.
+
+Freddie: fs.promises.access(path, mode) calls the core access(path, mode) for any mode, including F_OK.
+
