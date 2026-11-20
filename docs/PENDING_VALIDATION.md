@@ -5163,3 +5163,61 @@ Limit: I found no events leak across runs, so the fix addresses the inherited-ta
 - The 64b904f-571 build serves and runs: a fresh connection read the skill (20272 bytes), next_context and run_code replied, and the finish reached the run log as finished (an end event with the witness). The driver did not receive the finish reply line; the driver is a harness fault, and its processes were stopped by PID.
 - Peers at the last listing: thebird serve 1876 and worker 1877 still on d595173eaec6-dev (held: 8 running body jobs); fx re-executed onto 64b904f-571 at 22:26; signal, bevy, freddie, hyperagent and this session on 64b904f-571 after the updater. Calls to live peer sessions were not made from here.
 - gm defect (routed to the gm worker): the installer keeps binaries when the stamp matches; the updater replaces a local dev install with an older published build when the manifest has one.
+
+## Round 72: the updater, the installer, the stamp, the release failures
+
+Phase A (local only, no push). HEAD at the start: 3f3fe39. Commits are local, as lanmower, with no trailers.
+
+### 1. Updater: a published build that is not newer never replaces an install
+
+- Cause (native/components/host/update.cpp, order_against): the commit-time comparison was `published < installed ? Older : Newer`, so an equal commit time was ordered Newer and replaced the install. The serial fallback had the same gap. Read from the code; not yet matched to the installed build's commit time, which the cycle check below will confirm.
+- Fix: order_of() returns Newer only when strictly greater, Same when equal, Older otherwise. A Same or Older build is skipped: the status reads "kept <version>: the published <v> is older" or "... is not newer than this build", and the relay logs it (relay.cpp: kept and refused statuses go to say()).
+- Witness: check-update-order (native/components/tool/checks/update_order.cpp). Its legs run the updater against an older manifest and an equal one. The equal-commit leg, which used to expect "taken", now expects "kept ... is not newer". Last run: ok, four legs (older kept, equal kept, newer taken, unordered refused).
+- Red check: red-updater-order. Mutation: `return Order::Newer;` as the first line of order_against. Result: BUILD_MUT 0, RED_RC 1 (9 failures, first "older commit, higher serial: gm update took ffff333-99 over cdb9d79df743-dev"), RESTORED_cmp True, BUILD_RESTORE 0, AFTER_RC 0.
+- Live cycle after the reinstall: pending (item 5 of this round; no reinstall was done, see the release section).
+
+### 2. Installer: the same stamp with different binaries replaces them
+
+- Cause (native/components/host/install.cpp, install_local): the keep branch ran whenever current already pointed at the same version name, so a second build with the same stamp kept the first build's binaries.
+- Fix: the keep branch requires gm and gm-core to be byte-equal to the installed ones (same_file). The build id is the binaries: the --version line carries the commit and its commit time, which two builds of one commit share.
+- Witness: check-install-build-id (native/components/tool/checks/install_build_id.cpp). It installs a staged copy of the build, then a copy with probe bytes appended to gm and gm-core (same stamp), and requires current/gm and current/gm-core to be the second copy's bytes. Last run: ok, 9.18 s.
+- Red check: red-install-build-id. Mutation: the same_build condition reduced to `linked_to(current) == version`. Result: BUILD_MUT 0, RED_RC 1 (3 failures: "the install kept the first build's gm after a second build with the same stamp"), RESTORED_cmp True, BUILD_RESTORE 0, AFTER_RC 0.
+
+### 3. Stamp: computed from the tree the build compiled
+
+- Chosen: the stamp is the tree the build compiles, not a refusal on dirty or moved trees. Why: a refusal would block the dirty builds that the install and ledger rounds rely on; a tree stamp names exactly the content compiled, so a build made before a commit cannot carry the older stamp.
+- Cause (cmake/gmnew_stamp.cmake): commit was the SHA256 of `HEAD:native` and `HEAD:defaults`, which ignores uncommitted edits.
+- Fix: read-tree HEAD into a temporary index (`<output>.index`, removed after), git add --all -- native defaults, git write-tree, SHA256 of the tree id, first 12 hex. An attempt with a `:(exclude,literal).ccache` pathspec made git add exit 1, and the stamp fell back to "unknown"; the witness caught it. The pathspec was removed, since .ccache is already gitignored.
+- Witness: check-stamp-tree (native/components/tool/checks/stamp_tree.cpp). It recomputes the tree id with a temporary index and compares the first 12 hex of its SHA256 with the (commit) field of gm --version. Last run: ok, stamp 1d0cc8d3ed38 = tree b16f2f4c95cb2c3ec97a494c6527c7e031d4ee87.
+- Red check: red-stamp-tree. Mutation: cmake/gmnew_stamp.cmake restored from HEAD (the HEAD-based computation). Result: BUILD_MUT 0, RED_RC 1 ("the build stamp c5a352042f0f is not the stamp of the tree it was built from (1d0cc8d3ed38, tree b16f...)"), RESTORED_cmp True, BUILD_RESTORE 0, AFTER_RC 0. The red needs the working tree to differ from HEAD; with a clean tree the two computations agree and the red cannot fire.
+- AGENTS.md line 47 now states the rule. The usage comment was moved there from cmake/gmnew_stamp.cmake (Invariant 2).
+
+### 4. Release failures (pushed HEAD 47b571d, run 44830730143; also runs 44822286140 at 64b904f and 44789133791 at a497fed)
+
+Each failing step was read once with gh (`gh run view --job <id> --log-failed`), saved to /tmp/phase-d-72/.
+
+| run | job | failing witnesses (failing line) | cause | status |
+|---|---|---|---|---|
+| 44830730143 | build (ubuntu-latest, x64-linux-release) 136614716810 | check-relay-reexec: 1 failure: "the relay re-executed only after the next_context wait had answered at 1621 ms after the send; no line with 're-executing is held' in the relay's stderr; the reply carried no events array" | not reproduced: the local dev build skips this check (a dev build never re-execs); CI configures -DGMNEW_VERSION=<sha>-1 | open |
+| 44830730143 | build (macos-latest, x64-macos-release) 136614716550 | check-txiki-sync-errno, check-txiki-spawn-detached, check-txiki-spawn-stdio: "null" answers | sync-errno read /proc/version; detached read /proc/$$/stat (no /proc on macOS). stdio: no /proc read; cause not determined | sync-errno and detached fixed (below); stdio diagnostic added, cause open |
+| 44830730143 | build (macos-latest, arm64-macos-release) 136614716779 | the same three txiki checks | the same | the same |
+| 44822286140 | build (macos-latest, arm64-macos-release) 136585931411 | check-browser-first-open ("there was no gate to stop after the first open"; "the page was not open after the gate restarted") plus the three txiki checks | browser: not diagnosed; txiki: as above | open (browser); txiki as above |
+| 44822286140 | build (macos-latest, x64-macos-release) 136585931730 | the three txiki checks | as above | as above |
+| 44789133791 | build (ubuntu-latest, x64-linux-release) 136471824592 | check-idle-cpu ("playwriter_execute did not return 1"), check-run-code-lifetime, parity-contract, W6 ("the full next_context reply lacks events") | not reproduced locally: check-run-code-lifetime and parity-contract pass on the dev build; check-idle-cpu passes | open |
+| 44789133791 | build (ubuntu-24.04-arm, arm64-linux-release) 136471824371 | check-run-code-lifetime, parity-contract, W6 | not reproduced locally | open |
+| 44789133791 | build (macos-latest, x64-macos-release) 136471824399 | check-run-code-lifetime, parity-contract, W6 | not reproduced locally (no macOS here) | open |
+| 44789133791 | build (macos-latest, arm64-macos-release) 136471824328 | check-browser-tabs-owner ("beta did not list exactly its own two tabs"), check-run-code-lifetime, parity-contract | not diagnosed | open |
+
+Repo-side fixes made in Phase A:
+- check-txiki-sync-errno: the body reads a file it wrote itself, not /proc/version (verified on Linux, the witness is ok).
+- check-txiki-spawn-detached: gated to Linux like update_order is, because the session id comes from /proc/<pid>/stat and macOS has no /proc. On macOS this check is now skipped, so macOS coverage of the detached-session behaviour is lost until a macOS session-id reader exists. Owner decision.
+- check-txiki-sync-errno, check-txiki-spawn-stdio, check-txiki-spawn-detached: when run_code returns no output, the detail now carries the raw reply (`no output: {...}`) instead of `null`. The stdio macOS cause is still unknown; the next macOS run shows the reply.
+
+Held (not repo-side, per the owner): none of the failing lines in these logs is a macOS SDK licence acceptance or a signing secret. Nothing is recorded as held on that basis.
+
+Also in run 44830730143, arm64-linux passed. The release notice "update skipped: the manifest has no build for x64-linux" follows from the x64-linux job failing: the manifest's x64-linux asset is the older 64b904f build.
+
+### Phase B and the push: not run
+
+- The push gate requires every witness to pass. The CI failures listed above are not reproduced locally, and the stdio and browser causes are open, so nothing was pushed. `origin/main` stays at 47b571d.
+- Item 5 (reinstall, cycle check, peer report) is not done: the owner's approval covers the validated build, and this build is not validated until the Linux and macOS jobs pass.
