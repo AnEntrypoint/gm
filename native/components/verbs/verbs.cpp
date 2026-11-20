@@ -883,7 +883,7 @@ struct CoreVerbs::Impl {
             reply.set("launcher", outcome.launcher);
             return bound(reply);
         }
-        reply.set("ok", outcome.exit_code == 0);
+        reply.set("ok", outcome.started && outcome.signal == 0);
         if (outcome.signal != 0) {
             const char* name = proc::signal_name(outcome.signal);
             reply.set("exitCode", nullptr);

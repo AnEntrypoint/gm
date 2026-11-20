@@ -142,6 +142,7 @@ CheckResult check_txiki_fs_access(const std::string& binary);
 CheckResult check_txiki_spawn_detached(const std::string& binary);
 CheckResult check_txiki_spawn_stdio(const std::string& binary);
 CheckResult check_process_exit_code(const std::string& binary);
+CheckResult check_friction_verbs(const std::string& binary);
 CheckResult check_friction_jobs(const std::string& binary);
 CheckResult check_worker_message_channel(const std::string& binary);
 CheckResult check_vm_script_compile(const std::string& binary);

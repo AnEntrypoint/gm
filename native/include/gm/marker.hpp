@@ -29,7 +29,7 @@ inline std::optional<std::string> write_refusal(std::string_view text, std::stri
                ", so call the read with full: true and write that text";
     }
     if (text.find(kPointerMarker) != std::string_view::npos) {
-        return std::string(verb) + " refused: the text is a repeat-read pointer, not file text; call the read again with fresh: true, then write its output with full: true";
+        return std::string(verb) + " refused: the text is a repeat-read pointer, not file text; call the read again with fresh: true, then write its output as the content";
     }
     return std::nullopt;
 }
