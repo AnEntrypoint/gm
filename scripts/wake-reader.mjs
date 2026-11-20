@@ -3,6 +3,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseStream } from "./rss-sampler.mjs";
 
 export const BURST_WAKES = 200;
+export const SAMPLE_MS = 100;
 
 export function parseStatus(text) {
   const voluntary = /^voluntary_ctxt_switches:\s+(\d+)/m.exec(text);
@@ -120,7 +121,7 @@ export async function sample(pid, outPath, seconds) {
       return 0;
     }
     appendFileSync(outPath, ["W", iso(at), tasks.voluntary, tasks.nonvoluntary, tasks.runNs, tasks.slices, tasks.tasks].join(" ") + "\n");
-    next += 1000;
+    next += SAMPLE_MS;
     await new Promise((resolve) => setTimeout(resolve, Math.max(0, next - Date.now())));
   }
   return 0;
@@ -162,7 +163,7 @@ export function report(wakePath, streamPath) {
   const found = bursts(rows, parsed);
   for (const item of found) console.log(describe(item));
   const peak = rows.reduce((m, r) => (r.wakesPerSec > m.wakesPerSec ? r : m), { wakesPerSec: 0 });
-  console.log("wake-report: " + rows.length + " seconds, " + found.length + " bursts above " + BURST_WAKES + " wakes/s, peak " + peak.wakesPerSec.toFixed(1) + " wakes/s");
+  console.log("wake-report: " + rows.length + " rows of " + SAMPLE_MS + " ms, " + found.length + " bursts above " + BURST_WAKES + " wakes/s, peak " + peak.wakesPerSec.toFixed(1) + " wakes/s");
   return 0;
 }
 
@@ -244,10 +245,35 @@ function witness() {
   return ok ? 0 : 1;
 }
 
+function subSecondWitness() {
+  const base = Date.parse("2026-11-19T10:00:00.000Z");
+  const at = (ms) => iso(base + ms);
+  const all = parseStream([
+    "V " + at(0) + " " + at(1000) + " 81 playwriter_execute 80",
+    "V " + at(1000) + " " + at(1191) + " 82 playwriter_execute 80",
+  ].join("\n"));
+  const extra = { 1100: 60, 1200: 30 };
+  const lines = [];
+  let vol = 1000;
+  for (let ms = 0; ms <= 1300; ms += SAMPLE_MS) {
+    if (ms > 0) vol += extra[ms] ?? 5;
+    lines.push("W " + at(ms) + " " + vol + " 0 0 0 1");
+  }
+  const samples = parseWake(lines.join("\n"));
+  const parsed = windowed(all, samples[0].at);
+  const calls = Object.fromEntries(wakesPerCall(rates(samples), parsed).map((c) => [c.seq, c]));
+  const a = calls["81"];
+  const b = calls["82"];
+  const ok = Boolean(a && b) && a.wakes === 50 && b.wakes === 90 && Math.abs(a.seconds - 1) < 1e-9 && Math.abs(b.seconds - 0.2) < 1e-9;
+  console.log("sub-second 81 " + (a ? a.wakes : "none") + " wakes in " + (a ? a.seconds : 0) + " s; 82 " + (b ? b.wakes : "none") + " wakes in " + (b ? b.seconds : 0) + " s");
+  console.log(ok ? "check-subsecond-wakes: ok (the 191 ms call 82 takes the 100 ms rows it covers, 90 wakes, and the 1 s call 81 keeps its 50)" : "check-subsecond-wakes: FAILED");
+  return ok ? 0 : 1;
+}
+
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const [mode, ...args] = process.argv.slice(2);
   if (mode === "--witness") {
-    process.exitCode = witness() | windowWitness() | verbWakesWitness();
+    process.exitCode = witness() | windowWitness() | verbWakesWitness() | subSecondWitness();
   } else if (mode === "sample" && args.length === 3) {
     process.exitCode = await sample(Number(args[0]), args[1], Number(args[2]));
   } else if (mode === "report" && args.length === 2) {
