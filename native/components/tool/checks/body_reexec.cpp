@@ -196,7 +196,7 @@ CheckResult check_body_reexec(const std::string& binary) {
                 if (alive_of({*worker}).empty()) result.failures.push_back("the worker " + std::to_string(*worker) + " ended while the body ran");
 
                 const std::string fetch_source =
-                    "const ended = await gm.job_status({ job: '" + job + "', waitMs: 60000 }); return { state: ended.state, value: ended.value || ended.output };";
+                    "const ended = await gm.job_status({ job: '" + job + "', waitMs: 60000, value: true }); return { state: ended.state, value: ended.value || ended.output };";
                 const json::Value answer = output_value(tool_json(session, "run_code", json::Object{{"body", fetch_source}, {"timeoutMs", static_cast<std::int64_t>(kAnswerLimitMs)}}));
                 answered_ms = ms_since(pointed_at);
                 const json::Value* state_value = answer.find("state");

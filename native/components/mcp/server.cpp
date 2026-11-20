@@ -281,7 +281,7 @@ std::string run_code_description(const std::string& verb_names) {
            "with the independent writes in one Promise.all, and verify in the same body. The ten most-used verbs: "
            "read_file({ path, offset?, limit? }), run_shell({ command, timeoutMs? }), write_file({ path, content }), "
            "query_log({ js?, kind?, fromMono?, toMono?, after?, last? }), search({ query, k? }), fetch({ url, "
-           "timeoutMs? }), job_start({ job, command, timeoutMs? }), job_status({ job, waitMs?, tail?, offset? }), "
+           "timeoutMs? }), job_start({ job, command, timeoutMs? }), job_status({ job, waitMs?, tail?, offset?, value? }), "
            "callers({ name, limit? }), grep({ pattern, root?, mode?, scope?, ignoreCase?, limit?, offset? }). A file written in this run is untracked; grep it with scope: 'all'. finish is not a "
            "verb: end the run with the finish tool. The reply names its own action in actionSeq, the seq of the "
            "run_code action event in the log. A body's console output is not returned; it is logged once per body as a "
@@ -1804,9 +1804,15 @@ struct Server::State {
         std::size_t from = offset_arg ? static_cast<std::size_t>(offset_arg->as_number()) : (total > page ? total - page : 0);
         std::size_t end = std::min(from + page, total);
         if (from > end) from = end;
+        static const std::set<std::string> kStatusFields = {"job", "command", "state", "pid", "pidStart", "startMono", "startWall", "timeoutMs", "durMs", "body", "step", "error", "complete"};
         Value reply = object().set("ok", true);
         for (const json::Member& m : status->as_object()) {
-            if (m.first != "output") reply.set(m.first, m.second);
+            if (kStatusFields.count(m.first)) reply.set(m.first, m.second);
+        }
+        if (const Value* value = status->find("value")) {
+            reply.set("valueChars", number_of(value->is_string() ? js_length(value->as_string()) : json::dump(*value).size()));
+            const Value* want = args.find("value");
+            if (want != nullptr && want->is_bool() && want->as_bool()) reply.set("value", *value);
         }
         reply.set("exitCode", status->find("exitCode") ? *status->find("exitCode") : Value(nullptr));
         reply.set("signal", status->find("signal") ? *status->find("signal") : Value(nullptr));
