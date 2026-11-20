@@ -98,7 +98,7 @@ CheckResult check_restart_skill_read(const std::string& binary) {
             const json::Value refusal = other.rpc("tools/call", json::Object{{"name", "run_code"}, {"arguments", json::Object{{"body", "return 3"}}}});
             auto refused_reply = [](const json::Value& rpc) {
                 const json::Value* structured = value_at(rpc, "result.structuredContent");
-                return structured != nullptr && flag(*structured, "ok", false) && text_at(*structured, "error").find("read skill://gm/SKILL.md") != std::string::npos;
+                return structured != nullptr && flag(*structured, "ok", false) && text_at(*structured, "error").find("skill://gm/SKILL.md") != std::string::npos;
             };
             if (!refused_reply(refusal)) result.failures.push_back("a worker under another host process ran run_code before the skill was read: " + json::dump(refusal).substr(0, 200));
             if (!refused_reply(other.rpc("tools/call", json::Object{{"name", "run_code"}, {"arguments", json::Object{{"body", "return 5"}}}})))

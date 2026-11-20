@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const FRAGMENTS = ['its return value is lost; ', ' verb calls completed before the stop, each in query_log as a code-call after seq '];
 const GATE_FRAGMENTS = [
-  'read skill://gm/SKILL.md first with resources/read, ReadMcpResourceTool (server gm) or the gm prompt',
+  'Or read it with resources/read, ReadMcpResourceTool (server gm) or the gm prompt',
   'but that file read does not clear this gate',
 ];
 const GATE_FORBIDDEN = ['your file tool on '];

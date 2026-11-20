@@ -173,13 +173,18 @@ void w3(const Context& context, Row& row) {
     row.expect(is_false(syntax, "ok") && prefix == "the body does not load: unex", "a syntax error did not reply 'the body does not load: unex...': " + clip(syntax));
 }
 
+bool refusal_names_skill(const json::Value& reply) {
+    const std::string error = text_at(reply, "error");
+    return error.rfind("run_code refused:", 0) == 0 && error.find("skill://gm/SKILL.md") != std::string::npos;
+}
+
 void w4(const Context& context, Row& row) {
     auto session = open_session(context, "w4", row);
     if (!session) return;
     const json::Value first = run_body(*session, "return 1;");
     const json::Value again = run_body(*session, "return 2;");
-    const bool refused = text_at(first, "error").find("read skill://gm/SKILL.md") != std::string::npos;
-    const bool refused_again = text_at(again, "error").find("read skill://gm/SKILL.md") != std::string::npos;
+    const bool refused = refusal_names_skill(first);
+    const bool refused_again = refusal_names_skill(again);
     read_resource(*session, "skill://gm/SKILL.md");
     const json::Value after = run_body(*session, "return 3;");
     row.line = std::string("first refused ") + (refused ? "yes" : "no") + "; second refused " + (refused_again ? "yes" : "no") + "; after the read ok " + (is_true(after, "ok") ? "true" : "false");
