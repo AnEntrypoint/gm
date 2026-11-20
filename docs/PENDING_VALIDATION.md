@@ -4990,3 +4990,14 @@ Red check (mutation, witness, restore, cmp, git status): the no-function branch 
 
 Freddie rows: the worker_threads Worker message contract depends on this; the rows that waited on the channel can be rerun (see the report for the list).
 
+
+## Txiki handoff 8: vm.Script compiles without running (mod_sys.c compileScript)
+
+Change: compileScript(source) evaluates with JS_EVAL_TYPE_GLOBAL | JS_EVAL_FLAG_COMPILE_ONLY, so the source is compiled and nothing runs; a syntax error throws at this call, as Node does at the vm.Script constructor. runCompiledScript(fn) runs the compiled function with JS_EvalFunction on a duplicate of fn, so one compiled script can run more than once.
+
+Witness: check-vm-script-compile (native/components/tool/checks/vm_script_compile.cpp). The compile does not set the global; the first run returns 2 and sets the global to 41; a second run returns 2 again; compiling 1 + throws SyntaxError. Output: ok, rc 0.
+
+Red check (mutation, witness, restore, cmp, git status): the JS_EVAL_FLAG_COMPILE_ONLY flag is removed from compileScript, so the compile runs the script. Witness: 5 failures (compileScript ran the script before it was run, and the rest), RED_RC=1. Restored and cmp ok; rebuild rc 0; witness again rc 0 with ok.
+
+Freddie: vm.Script(code) can call compileScript in its constructor and runCompiledScript in runInThisContext. The filename option is not carried yet (fixed name <vm.Script>).
+

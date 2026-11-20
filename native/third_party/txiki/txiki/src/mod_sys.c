@@ -72,6 +72,21 @@ static JSValue tjs_evalScript(JSContext *ctx, JSValue this_val, int argc, JSValu
     return ret;
 }
 
+static JSValue tjs_compileScript(JSContext *ctx, JSValue this_val, int argc, JSValue *argv) {
+    size_t len;
+    const char *str = JS_ToCStringLen(ctx, &len, argv[0]);
+    if (!str) {
+        return JS_EXCEPTION;
+    }
+    JSValue fn = JS_Eval(ctx, str, len, "<vm.Script>", JS_EVAL_TYPE_GLOBAL | JS_EVAL_FLAG_COMPILE_ONLY);
+    JS_FreeCString(ctx, str);
+    return fn;
+}
+
+static JSValue tjs_runCompiledScript(JSContext *ctx, JSValue this_val, int argc, JSValue *argv) {
+    return JS_EvalFunction(ctx, JS_DupValue(ctx, argv[0]));
+}
+
 static JSValue tjs_print(JSContext *ctx, JSValue this_val, int argc, JSValue *argv, int magic) {
     const char *str;
     size_t len;
@@ -187,6 +202,8 @@ static JSValue tjs_randomUUID(JSContext *ctx, JSValue this_val, int argc, JSValu
 static const JSCFunctionListEntry tjs_sys_funcs[] = {
     TJS_CFUNC_DEF("evalFile", 1, tjs_evalFile),
     TJS_CFUNC_DEF("evalScript", 1, tjs_evalScript),
+    TJS_CFUNC_DEF("compileScript", 1, tjs_compileScript),
+    TJS_CFUNC_DEF("runCompiledScript", 1, tjs_runCompiledScript),
     TJS_CFUNC_DEF("loadScript", 1, tjs_loadScript),
     TJS_CFUNC_DEF("randomUUID", 0, tjs_randomUUID),
     TJS_CFUNC_DEF("runRepl", 0, tjs_runRepl),
