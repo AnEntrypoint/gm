@@ -126,14 +126,53 @@ export async function sample(pid, outPath, seconds) {
   return 0;
 }
 
+export function windowed(parsed, windowStart) {
+  return {
+    samples: parsed.samples,
+    events: parsed.events.filter((e) => e.end >= windowStart),
+    verbs: parsed.verbs.filter((v) => v.end >= windowStart),
+  };
+}
+
 export function report(wakePath, streamPath) {
-  const rows = rates(parseWake(readFileSync(wakePath, "utf8")));
-  const parsed = parseStream(readFileSync(streamPath, "utf8"));
+  const samples = parseWake(readFileSync(wakePath, "utf8"));
+  const rows = rates(samples);
+  const all = parseStream(readFileSync(streamPath, "utf8"));
+  const parsed = windowed(all, samples.length ? samples[0].at : 0);
+  const playwriter = parsed.verbs.filter((v) => v.tool === "playwriter_execute").length;
+  console.log("verb calls inside the window " + parsed.verbs.length + " (playwriter_execute " + playwriter + "), " + (all.verbs.length - parsed.verbs.length) + " from before the window ignored");
   const found = bursts(rows, parsed);
   for (const item of found) console.log(describe(item));
   const peak = rows.reduce((m, r) => (r.wakesPerSec > m.wakesPerSec ? r : m), { wakesPerSec: 0 });
   console.log("wake-report: " + rows.length + " seconds, " + found.length + " bursts above " + BURST_WAKES + " wakes/s, peak " + peak.wakesPerSec.toFixed(1) + " wakes/s");
   return 0;
+}
+
+function windowWitness() {
+  const base = Date.parse("2026-11-19T10:00:00.000Z");
+  const at = (s) => iso(base + s * 1000);
+  const all = parseStream([
+    "E " + at(0) + " " + at(30) + " 60 run_code 59",
+    "V " + at(2) + " " + at(4) + " 61 playwriter_execute 59",
+    "V " + at(14) + " " + at(16) + " 62 playwriter_execute 59",
+  ].join("\n"));
+  const lines = [];
+  let vol = 1000;
+  for (let t = 10; t <= 30; t++) {
+    if (t > 10) vol += t === 15 ? 250 : 5;
+    lines.push("W " + at(t) + " " + vol + " 0 0 0 1");
+  }
+  const samples = parseWake(lines.join("\n"));
+  const parsed = windowed(all, samples[0].at);
+  const rows = rates(samples);
+  const burst = rows.find((r) => r.at === base + 15000);
+  const scope = scopeOf(burst, parsed);
+  const playwriter = parsed.verbs.filter((v) => v.tool === "playwriter_execute");
+  const ok = parsed.verbs.length === 1 && playwriter.length === 1 && playwriter[0].seq === "62" && all.verbs.length - parsed.verbs.length === 1 && scope.kind === "verb" && scope.seq === "62";
+  console.log("verb calls inside the window " + parsed.verbs.length + " (playwriter_execute " + playwriter.length + "), " + (all.verbs.length - parsed.verbs.length) + " from before the window ignored");
+  console.log("burst " + burst.wakesPerSec + " wakes/s at " + at(15) + " attributed to " + scope.kind + " " + scope.seq + " " + scope.tool);
+  console.log(ok ? "check-window-verbs: ok (only the playwriter_execute call inside the window is attributed; the same-length call before it is ignored)" : "check-window-verbs: FAILED");
+  return ok ? 0 : 1;
 }
 
 function witness() {
@@ -172,7 +211,7 @@ function witness() {
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const [mode, ...args] = process.argv.slice(2);
   if (mode === "--witness") {
-    process.exitCode = witness();
+    process.exitCode = witness() | windowWitness();
   } else if (mode === "sample" && args.length === 3) {
     process.exitCode = await sample(Number(args[0]), args[1], Number(args[2]));
   } else if (mode === "report" && args.length === 2) {

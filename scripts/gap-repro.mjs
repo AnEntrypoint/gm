@@ -20,6 +20,25 @@ writeFileSync(stream, "");
 writeFileSync(errLog, "");
 const body = readFileSync(resolve(bodyPath), "utf8");
 
+function stopUnder(dir) {
+  for (const entry of readdirSync("/proc")) {
+    if (!/^\d+$/.test(entry) || Number(entry) === process.pid) continue;
+    let args = "";
+    try {
+      args = readFileSync("/proc/" + entry + "/cmdline", "utf8");
+    } catch (err) {
+      continue;
+    }
+    if (args.includes(dir)) {
+      try {
+        process.kill(Number(entry), "SIGKILL");
+      } catch (err) {
+        continue;
+      }
+    }
+  }
+}
+
 function childrenOf(pid) {
   const found = [];
   for (const entry of readdirSync("/proc")) {
@@ -74,24 +93,30 @@ function call(id, method, params, limitMs) {
 
 let worker = 0;
 let sampler = null;
+let reader = null;
 try {
   await call(1, "initialize", { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "gap-repro", version: "1" } }, 120000);
   serve.stdin.write(JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized", params: {} }) + "\n");
   worker = await workerOf(serve.pid);
   if (!worker) throw new Error("no gm-core worker under serve pid " + serve.pid);
   sampler = spawn(process.execPath, ["scripts/rss-sampler.mjs", "sample", String(worker), join(runDir, "log.jsonl"), String(seconds), stream], { stdio: "inherit" });
+  reader = spawn(process.execPath, ["scripts/wake-reader.mjs", "sample", String(worker), join(root, "wake.txt"), String(seconds)], { stdio: "inherit" });
   const started = Date.now();
   const reply = await call(2, "tools/call", { name: "run_code", arguments: { body } }, (seconds + 240) * 1000);
   const text = JSON.stringify(reply).slice(0, 400);
   console.log("body_seconds " + ((Date.now() - started) / 1000).toFixed(2));
   console.log("reply " + text);
   await once(sampler, "exit");
+  await once(reader, "exit");
+  console.log("reader_exit " + reader.exitCode);
   console.log("sampler_exit " + sampler.exitCode);
 } finally {
   if (worker && existsSync("/proc/" + worker)) process.kill(worker, "SIGTERM");
   serve.kill("SIGTERM");
   await Promise.race([once(serve, "exit"), new Promise((r) => setTimeout(r, 10000))]);
   if (sampler && sampler.exitCode === null) sampler.kill("SIGTERM");
+  if (reader && reader.exitCode === null) reader.kill("SIGTERM");
+  stopUnder(root);
   console.log("stopped_serve_pid " + serve.pid + " worker_pid " + worker);
 }
 try {
