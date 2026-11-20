@@ -115,11 +115,12 @@ static JSValue tjs_isImmutableArrayBuffer(JSContext *ctx, JSValue this_val, int 
     return JS_NewBool(ctx, JS_IsImmutableArrayBuffer(argv[0]) == 1);
 }
 
+static bool tjs_buffer_is_pinned(JSValueConst buf) {
+    return JS_IsImmutableArrayBuffer(buf) == 1;
+}
+
 static JSValue tjs_detachArrayBuffer(JSContext *ctx, JSValue this_val, int argc, JSValue *argv) {
-    /* A buffer pinned by an in-flight native request is marked immutable;
-     * JS_DetachArrayBuffer ignores that flag and would free memory the
-     * request still reads. */
-    if (JS_IsImmutableArrayBuffer(argv[0]) == 1) {
+    if (tjs_buffer_is_pinned(argv[0])) {
         return JS_ThrowTypeError(ctx, "Cannot transfer an immutable ArrayBuffer");
     }
 
@@ -168,11 +169,13 @@ static JSValue tjs_randomUUID(JSContext *ctx, JSValue this_val, int argc, JSValu
         return tjs_throw_errno(ctx, r);
     }
 
-    u[6] &= 15;
-    u[6] |= 64;  // '4x'
+    enum { UUID_VERSION_4 = 0x40, UUID_VARIANT_RFC4122 = 0x80 };
 
-    u[8] &= 63;
-    u[8] |= 128;  // 0b10xxxxxx
+    u[6] &= 0x0f;
+    u[6] |= UUID_VERSION_4;
+
+    u[8] &= 0x3f;
+    u[8] |= UUID_VARIANT_RFC4122;
 
     snprintf(v,
              sizeof(v),
@@ -198,7 +201,6 @@ static JSValue tjs_randomUUID(JSContext *ctx, JSValue this_val, int argc, JSValu
     return JS_NewString(ctx, v);
 }
 
-/* clang-format off */
 static const JSCFunctionListEntry tjs_sys_funcs[] = {
     TJS_CFUNC_DEF("evalFile", 1, tjs_evalFile),
     TJS_CFUNC_DEF("evalScript", 1, tjs_evalScript),
@@ -214,7 +216,6 @@ static const JSCFunctionListEntry tjs_sys_funcs[] = {
     TJS_CFUNC_MAGIC_DEF("stderrPrint", 1, tjs_print, 1),
     TJS_CGETSET_DEF("exePath", tjs_exepath, NULL),
 };
-/* clang-format on */
 
 void tjs__mod_sys_init(JSContext *ctx, JSValue ns) {
     JS_SetPropertyFunctionList(ctx, ns, tjs_sys_funcs, countof(tjs_sys_funcs));

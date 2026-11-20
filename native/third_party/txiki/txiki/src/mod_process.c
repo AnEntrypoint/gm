@@ -53,8 +53,6 @@ static void maybe_close(TJSProcess *p) {
     }
 }
 
-/* Begin closing the handle at teardown (see TJSHandlePin.detach), so it is
- * closed without relying on the GC to collect and finalize the wrapper. */
 static void tjs_process_detach(TJSHandlePin *pin) {
     maybe_close(list_entry(pin, TJSProcess, pin));
 }
@@ -62,8 +60,6 @@ static void tjs_process_detach(TJSHandlePin *pin) {
 static void tjs_process_finalizer(JSRuntime *rt, JSValue val) {
     TJSProcess *p = JS_GetOpaque(val, tjs__class_id_rt(rt, TJS_CLASS_PROCESS));
     if (p) {
-        /* A pinned process holds a ref to itself, so it can't be finalized until
-         * the pin is released (on exit or at teardown). */
         CHECK(JS_IsUndefined(p->pin.obj));
         JS_FreeValueRT(rt, p->onexit);
         p->finalized = true;
@@ -258,7 +254,6 @@ static JSValue tjs_spawn(JSContext *ctx, JSValue this_val, int argc, JSValue *ar
     options.stdio_count = stdio_count;
     options.stdio = stdio;
 
-    /* args */
     JSValue arg0 = argv[0];
 
     if (JS_IsString(arg0)) {
@@ -313,7 +308,6 @@ static JSValue tjs_spawn(JSContext *ctx, JSValue this_val, int argc, JSValue *ar
     JSValue arg1 = argv[1];
 
     if (!JS_IsUndefined(arg1)) {
-        /* env */
         JSValue js_env = JS_GetPropertyStr(ctx, arg1, "env");
         if (JS_IsObject(js_env)) {
             JSPropertyEnum *ptab;
@@ -338,7 +332,7 @@ static JSValue tjs_spawn(JSContext *ctx, JSValue this_val, int argc, JSValue *ar
                 const char *key = JS_AtomToCString(ctx, ptab[i].atom);
                 const char *value = JS_ToCString(ctx, prop);
                 JS_FreeValue(ctx, prop);
-                size_t len = strlen(key) + strlen(value) + 2; /* KEY=VALUE\0 */
+                size_t len = strlen(key) + strlen(value) + sizeof("=");
                 options.env[i] = js_malloc(ctx, len);
                 if (!options.env[i]) {
                     JS_FreeCString(ctx, key);
@@ -355,7 +349,6 @@ static JSValue tjs_spawn(JSContext *ctx, JSValue this_val, int argc, JSValue *ar
         }
         JS_FreeValue(ctx, js_env);
 
-        /* cwd */
         JSValue js_cwd = JS_GetPropertyStr(ctx, arg1, "cwd");
         if (JS_IsException(js_cwd)) {
             goto fail;
@@ -375,7 +368,6 @@ static JSValue tjs_spawn(JSContext *ctx, JSValue this_val, int argc, JSValue *ar
         }
         JS_FreeValue(ctx, js_cwd);
 
-        /* uid */
         JSValue js_uid = JS_GetPropertyStr(ctx, arg1, "uid");
         if (JS_IsException(js_uid)) {
             goto fail;
@@ -400,7 +392,6 @@ static JSValue tjs_spawn(JSContext *ctx, JSValue this_val, int argc, JSValue *ar
         }
         JS_FreeValue(ctx, js_detached);
 
-        /* gid */
         JSValue js_gid = JS_GetPropertyStr(ctx, arg1, "gid");
         if (JS_IsException(js_gid)) {
             goto fail;
@@ -416,7 +407,6 @@ static JSValue tjs_spawn(JSContext *ctx, JSValue this_val, int argc, JSValue *ar
         }
         JS_FreeValue(ctx, js_gid);
 
-        /* stdio */
         JSValue js_stdin = JS_GetPropertyStr(ctx, arg1, "stdin");
         if (!JS_IsException(js_stdin) && !JS_IsUndefined(js_stdin)) {
             uv_stream_t *stream = tjs_pipe_get_stream(ctx, js_stdin);
@@ -483,7 +473,6 @@ static JSValue tjs_spawn(JSContext *ctx, JSValue this_val, int argc, JSValue *ar
             }
         }
 
-        /* onexit */
         JSValue js_onexit = JS_GetPropertyStr(ctx, arg1, "onexit");
         if (!JS_IsFunction(ctx, js_onexit)) {
             JS_FreeValue(ctx, js_onexit);
@@ -501,8 +490,6 @@ static JSValue tjs_spawn(JSContext *ctx, JSValue this_val, int argc, JSValue *ar
     int r = uv_spawn(tjs_get_loop(ctx), &p->process, &options);
     if (r != 0) {
         tjs_throw_errno(ctx, r);
-        /* uv_spawn registers the handle with the loop even when it fails, so it
-         * must be closed (uv__close_cb then frees p), not freed right away. */
         JS_FreeValue(ctx, p->onexit);
         p->onexit = JS_UNDEFINED;
         p->finalized = true;
@@ -555,7 +542,6 @@ static JSValue tjs_exec(JSContext *ctx, JSValue this_val, int argc, JSValue *arg
 
     char **args = NULL;
 
-    /* args */
     JSValue arg0 = argv[0];
 
     if (JS_IsString(arg0)) {

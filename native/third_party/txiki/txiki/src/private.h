@@ -68,34 +68,17 @@ typedef struct {
     JSValue reason;
 } TJSPendingRejection;
 
-/* A native handle's GC-invisible self-pin, embedded in a struct to keep its JS
- * wrapper alive while a libuv operation is in flight. `obj` is a duplicated
- * reference to the wrapper that is deliberately NOT reported to the GC (so the
- * cycle collector can't free the wrapper mid-operation); `link` registers the
- * pin on TJSRuntime.handle_pins so teardown can drop it. `obj` is JS_UNDEFINED
- * (and the pin unlinked) when idle.
- *
- * `detach` quiesces the handle at the start of teardown so it stops running JS
- * during shutdown without a global flag. It must not touch the pin itself. Its
- * job depends on who owns the handle's close: lws-backed handles clear their JS
- * callbacks (lws closes them later, via lws_context_destroy), while libuv-backed
- * handles begin closing (maybe_close), so their close does not depend on the GC
- * collecting the wrapper. See tjs__detach_handles in vm.c. */
 typedef struct TJSHandlePin {
     struct list_head link;
     JSValue obj;
     void (*detach)(struct TJSHandlePin *pin);
 } TJSHandlePin;
 
-/* Counted self-pin held while libuv requests (write, shutdown, send) are in
- * flight on a handle. Separate from the handle's read/listen/connect pin. */
 typedef struct {
     TJSHandlePin pin;
     unsigned int count;
 } TJSReqPin;
 
-/* Native classes. Their JSClassIDs are allocated per runtime (TJSRuntime.class_ids),
- * since each runtime numbers its classes independently. */
 typedef enum {
     TJS_CLASS_HTTPCLIENT,
     TJS_CLASS_HTTPSERVER,
@@ -171,10 +154,6 @@ struct TJSRuntime {
         unsigned int ca_bundle_len;
         uv_async_t keepalive;
         int active_conns;
-        /* Every lws context, vhost and wsi of this runtime binds to it. lws
-         * refcounts its log context without a lock (LWS_MAX_SMP == 1), so
-         * runtimes on different threads must not share lws's global one. It
-         * must outlive all of them: see the assert in TJS_FreeRuntime. */
         lws_log_cx_t log_cx;
     } lws;
     struct {
@@ -195,10 +174,7 @@ struct TJSRuntime {
         JSValue error_event_ctor;
     } builtins;
     struct list_head pending_rejections;
-    /* Self-pins of all active native handles (TJSHandlePin), so teardown can
-     * drop them and let the final GC collect and close the handles. */
     struct list_head handle_pins;
-    /* Pin counts of the ArrayBuffers native requests are using (TJSBufferRef). */
     TJSBufPin *buf_pins;
     JSClassID class_ids[TJS_CLASS__COUNT];
 };
@@ -211,35 +187,18 @@ static inline JSClassID tjs__class_id_rt(JSRuntime *rt, TJSClass c) {
     return ((TJSRuntime *) JS_GetRuntimeOpaque(rt))->class_ids[c];
 }
 
-/* Allocate (in this runtime) and register a native class. Idempotent per runtime.
- * Returns -1 with an exception pending on failure. */
 int tjs__class_register(JSContext *ctx, TJSClass c, const JSClassDef *def);
 
-/* Pin/unpin a native handle's JS wrapper for the duration of an async op, and
- * register/deregister the pin so teardown can release it. Idempotent: pinning an
- * already-pinned handle or unpinning an idle one is a no-op. */
 void tjs__handle_pin(JSContext *ctx, TJSHandlePin *pin, JSValue obj);
 void tjs__handle_unpin(JSContext *ctx, TJSHandlePin *pin);
-/* Count one in-flight request; the first one pins `obj` (borrowed). Call only
- * once libuv has accepted the request. An undefined `obj` only counts. */
 void tjs__req_pin_acquire(JSContext *ctx, TJSReqPin *rp, JSValue obj);
-/* Release one request; the last one unpins, which may finalize the wrapper, so
- * it must be the last thing the request's callback does. */
 void tjs__req_pin_release(JSContext *ctx, TJSReqPin *rp);
-/* Teardown, before the lws context is destroyed: run each registered pin's
- * `detach` hook (no-op for pins without one) so lws-backed wrappers stop
- * dispatching to JS before their close callbacks fire. */
 void tjs__detach_handles(TJSRuntime *qrt);
-/* Teardown: drop every registered self-pin so the objects become collectable. */
 void tjs__release_pins(TJSRuntime *qrt);
 void tjs__free_buf_pins(TJSRuntime *qrt);
 
 void tjs__mod_channel_init(JSContext *ctx, JSValue ns);
 
-/* Worker main-channel bridge (mod_channel.c): a MessageChannel whose two sides
- * are owned by different threads' loops. The parent creates the two mailboxes
- * (each with one reserved ref), wraps a side on each loop with a port, and drops
- * both reserved refs once the ports exist. */
 typedef struct TJSMailbox TJSMailbox;
 bool tjs__channel_mailbox_pair(TJSMailbox **a, TJSMailbox **b);
 JSValue tjs__channel_port_new(JSContext *ctx, TJSMailbox *rx, TJSMailbox *tx);
@@ -297,12 +256,7 @@ uv_stream_t *tjs_pipe_get_stream(JSContext *ctx, JSValue obj);
 void tjs__drain_microtasks(JSContext *ctx);
 void tjs__execute_jobs(JSContext *ctx);
 
-/* Forward an uncaught error from a worker to its parent so the parent's Worker
- * 'error' handler fires. No-op on the main runtime or if the worker has no pipe. */
 void tjs__worker_post_error(JSContext *ctx, JSValueConst error);
-/* Dispatch a cancelable 'error' event at the worker global scope (so self.onerror
- * fires) and, unless the event was canceled, forward it to the parent. No-op on
- * the main runtime. */
 void tjs__worker_handle_uncaught(JSContext *ctx, JSValueConst exc);
 JSModuleDef *tjs__load_builtin(JSContext *ctx, const char *name);
 int tjs__load_file(JSContext *ctx, TBuf *dbuf, const char *filename);
@@ -310,8 +264,6 @@ int tjs_module_attr_checker(JSContext *ctx, void *opaque, JSValueConst attribute
 JSModuleDef *tjs_module_loader(JSContext *ctx, const char *module_name, void *opaque, JSValueConst attributes);
 char *tjs_module_normalizer(JSContext *ctx, const char *base_name, const char *name, void *opaque);
 bool tjs__is_file_url(const char *s);
-/* Convert a file:// URL into a native path. Returns a js_malloc'd string, or
- * NULL with a pending TypeError if the URL can't be mapped to a local path. */
 char *tjs__file_url_to_path(JSContext *ctx, const char *url);
 
 int js_module_set_import_meta(JSContext *ctx, JSValue func_val, bool use_realpath, bool is_main);

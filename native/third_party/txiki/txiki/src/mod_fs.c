@@ -109,8 +109,7 @@ typedef struct {
     JSValue obj;
     TJSPromise result;
     TJSBufferRef buf_ref;
-    /* Per-request storage so concurrent readdir requests don't share a slot. */
-    uv_dirent_t dirent;
+    uv_dirent_t readdir_dirent;
 } TJSFsReq;
 
 typedef struct {
@@ -176,6 +175,13 @@ static JSValue tjs_new_dir(JSContext *ctx, uv_dir_t *dir, const char *path) {
 
 static TJSDir *tjs_dir_get(JSContext *ctx, JSValue obj) {
     return JS_GetOpaque2(ctx, obj, tjs__class_id(ctx, TJS_CLASS_DIR));
+}
+
+static void tjs_dir_clear_reading(JSContext *ctx, JSValue obj) {
+    TJSDir *d = tjs_dir_get(ctx, obj);
+    if (d) {
+        d->reading = false;
+    }
 }
 
 static JSValue tjs_new_dirent(JSContext *ctx, uv_dirent_t *dent) {
@@ -291,13 +297,8 @@ static void uv__fs_req_cb(uv_fs_t *req) {
     TJSDir *d;
     bool is_reject = false;
 
-    /* Clear the reading flag on every readdir completion (success and error)
-     * so the next dir.next() can proceed. */
     if (req->fs_type == UV_FS_READDIR) {
-        d = tjs_dir_get(ctx, fr->obj);
-        if (d) {
-            d->reading = false;
-        }
+        tjs_dir_clear_reading(ctx, fr->obj);
     }
 
     if (req->result < 0) {
@@ -389,7 +390,7 @@ static void uv__fs_req_cb(uv_fs_t *req) {
             arg = JS_NewObjectProto(ctx, JS_NULL);
             JS_DefinePropertyValueStr(ctx, arg, "done", JS_NewBool(ctx, d->done), JS_PROP_C_W_E);
             if (fr->req.result != 0) {
-                JSValue item = tjs_new_dirent(ctx, &fr->dirent);
+                JSValue item = tjs_new_dirent(ctx, &fr->readdir_dirent);
                 JS_DefinePropertyValueStr(ctx, arg, "value", item, JS_PROP_C_W_E);
             }
             break;
@@ -408,23 +409,19 @@ skip:
     js_free(ctx, fr);
 }
 
-/* File functions */
-
 static JSValue tjs_file_rw(JSContext *ctx, JSValue this_val, int argc, JSValue *argv, int magic) {
     TJSFile *f = tjs_file_get(ctx, this_val);
     if (!f) {
         return JS_EXCEPTION;
     }
 
-    /* arg 0: buffer */
     TJSBufferRef buf_ref;
     if (tjs_buf_ref_get(ctx, argv[0], &buf_ref)) {
         return JS_EXCEPTION;
     }
 
-    /* arg 1: position (on the file) */
-    int64_t pos = -1;
-    if (!JS_IsUndefined(argv[1]) && JS_ToInt64(ctx, &pos, argv[1])) {
+    int64_t position = -1;
+    if (!JS_IsUndefined(argv[1]) && JS_ToInt64(ctx, &position, argv[1])) {
         tjs_buf_ref_release(ctx, &buf_ref);
         return JS_EXCEPTION;
     }
@@ -439,9 +436,9 @@ static JSValue tjs_file_rw(JSContext *ctx, JSValue this_val, int argc, JSValue *
 
     int r;
     if (magic) {
-        r = uv_fs_write(tjs_get_loop(ctx), &fr->req, f->fd, &b, 1, pos, uv__fs_req_cb);
+        r = uv_fs_write(tjs_get_loop(ctx), &fr->req, f->fd, &b, 1, position, uv__fs_req_cb);
     } else {
-        r = uv_fs_read(tjs_get_loop(ctx), &fr->req, f->fd, &b, 1, pos, uv__fs_req_cb);
+        r = uv_fs_read(tjs_get_loop(ctx), &fr->req, f->fd, &b, 1, position, uv__fs_req_cb);
     }
     if (r != 0) {
         tjs_buf_ref_release(ctx, &buf_ref);
@@ -618,6 +615,10 @@ static JSValue tjs_file_chown(JSContext *ctx, JSValue this_val, int argc, JSValu
     return tjs_fsreq_init(ctx, fr, this_val);
 }
 
+static double tjs_ms_to_s(double ms) {
+    return ms / 1000;
+}
+
 static JSValue tjs_file_utime(JSContext *ctx, JSValue this_val, int argc, JSValue *argv) {
     TJSFile *f = tjs_file_get(ctx, this_val);
     if (!f) {
@@ -639,8 +640,7 @@ static JSValue tjs_file_utime(JSContext *ctx, JSValue this_val, int argc, JSValu
         return JS_EXCEPTION;
     }
 
-    /* Date.getTime is in ms, convert to seconds. */
-    int r = uv_fs_futime(tjs_get_loop(ctx), &fr->req, f->fd, atime / 1000, mtime / 1000, uv__fs_req_cb);
+    int r = uv_fs_futime(tjs_get_loop(ctx), &fr->req, f->fd, tjs_ms_to_s(atime), tjs_ms_to_s(mtime), uv__fs_req_cb);
     if (r != 0) {
         js_free(ctx, fr);
         return tjs_throw_errno(ctx, r);
@@ -665,8 +665,6 @@ static JSValue tjs_file_path_get(JSContext *ctx, JSValue this_val) {
     }
     return JS_DupValue(ctx, f->path);
 }
-
-/* Dir functions */
 
 static JSValue tjs_dir_close(JSContext *ctx, JSValue this_val, int argc, JSValue *argv) {
     TJSDir *d = tjs_dir_get(ctx, this_val);
@@ -723,8 +721,8 @@ static JSValue tjs_dir_next(JSContext *ctx, JSValue this_val, int argc, JSValue 
         return JS_EXCEPTION;
     }
 
-    memset(&fr->dirent, 0, sizeof(fr->dirent));
-    d->dir->dirents = &fr->dirent;
+    memset(&fr->readdir_dirent, 0, sizeof(fr->readdir_dirent));
+    d->dir->dirents = &fr->readdir_dirent;
     d->dir->nentries = 1;
 
     int r = uv_fs_readdir(tjs_get_loop(ctx), &fr->req, d->dir, uv__fs_req_cb);
@@ -741,8 +739,6 @@ static JSValue tjs_dir_next(JSContext *ctx, JSValue this_val, int argc, JSValue 
 static JSValue tjs_dir_iterator(JSContext *ctx, JSValue this_val, int argc, JSValue *argv) {
     return JS_DupValue(ctx, this_val);
 }
-
-/* DirEnt functions */
 
 static JSValue tjs_dirent_name_get(JSContext *ctx, JSValue this_val) {
     TJSDirEnt *de = tjs_dirent_get(ctx, this_val);
@@ -815,8 +811,6 @@ static JSValue tjs_dirent_issymlink(JSContext *ctx, JSValue this_val) {
     return JS_NewBool(ctx, de->type == UV_DIRENT_LINK);
 }
 
-/* StatResult functions */
-
 static JSValue tjs_stat_isblockdevice(JSContext *ctx, JSValue this_val) {
     TJSStatResult *sr = tjs_stat_get(ctx, this_val);
     if (!sr) {
@@ -887,8 +881,6 @@ static JSValue tjs_stat_issymlink(JSContext *ctx, JSValue this_val) {
 
     return JS_NewBool(ctx, (sr->st_mode & S_IFMT) == S_IFLNK);
 }
-
-/* Module functions */
 
 static int js__uv_open_flags(const char *strflags, size_t len) {
     int flags = 0, read = 0, write = 0;
@@ -1620,11 +1612,6 @@ static void tjs__readfile_after_work_cb(uv_work_t *req, int status) {
         arg = tjs_new_error(ctx, fr->r);
         is_reject = true;
     } else {
-        /* The buffer was allocated with raw (untracked) realloc on the worker
-           thread to avoid a data race on QJS malloc_state. We must copy it
-           into a QJS-tracked allocation here because ArrayBuffer.prototype.transfer
-           calls js_realloc on the backing buffer, which would corrupt malloc_state
-           if the buffer was never tracked. */
         size_t size = fr->dbuf.size;
         if (size == 0) {
             arg = TJS_NewUint8Array(ctx, NULL, 0);
@@ -1776,9 +1763,8 @@ static JSValue tjs_fs_xutime(JSContext *ctx, JSValue this_val, int argc, JSValue
         return JS_EXCEPTION;
     }
 
-    /* Date.getTime is in ms, convert to seconds. */
     int r = (magic == 1 ? uv_fs_lutime
-                        : uv_fs_utime)(tjs_get_loop(ctx), &fr->req, path, atime / 1000, mtime / 1000, uv__fs_req_cb);
+                        : uv_fs_utime)(tjs_get_loop(ctx), &fr->req, path, tjs_ms_to_s(atime), tjs_ms_to_s(mtime), uv__fs_req_cb);
     JS_FreeCString(ctx, path);
     if (r != 0) {
         js_free(ctx, fr);
@@ -1996,7 +1982,6 @@ static const JSCFunctionListEntry tjs_fs_funcs[] = {
     TJS_CFUNC_DEF("link", 2, tjs_fs_link),
     TJS_CFUNC_DEF("symlink", 3, tjs_fs_symlink),
     TJS_CFUNC_DEF("statFs", 1, tjs_fs_statfs),
-    /* Internal */
     TJS_CFUNC_DEF("mkdirSync", 2, tjs_fs_mkdir_sync),
     TJS_CFUNC_MAGIC_DEF("statSync", 1, tjs_fs_stat_sync, 0),
     TJS_CFUNC_MAGIC_DEF("lstatSync", 1, tjs_fs_stat_sync, 1),
@@ -2017,7 +2002,6 @@ static const JSCFunctionListEntry tjs_fs_funcs[] = {
 void tjs__mod_fs_init(JSContext *ctx, JSValue ns) {
     JSValue proto;
 
-    /* File object */
     CHECK_EQ(tjs__class_register(ctx, TJS_CLASS_FILE, &tjs_file_class), 0);
     proto = JS_NewObject(ctx);
     JS_SetPropertyFunctionList(ctx, proto, tjs_file_proto_funcs, countof(tjs_file_proto_funcs));
@@ -2025,19 +2009,16 @@ void tjs__mod_fs_init(JSContext *ctx, JSValue ns) {
     JSValue file_ctor = JS_NewCFunction2(ctx, tjs_file_constructor, "File", 2, JS_CFUNC_constructor, 0);
     JS_DefinePropertyValueStr(ctx, ns, "File", file_ctor, JS_PROP_C_W_E);
 
-    /* Dir object */
     CHECK_EQ(tjs__class_register(ctx, TJS_CLASS_DIR, &tjs_dir_class), 0);
     proto = JS_NewObject(ctx);
     JS_SetPropertyFunctionList(ctx, proto, tjs_dir_proto_funcs, countof(tjs_dir_proto_funcs));
     JS_SetClassProto(ctx, tjs__class_id(ctx, TJS_CLASS_DIR), proto);
 
-    /* DirEnt object */
     CHECK_EQ(tjs__class_register(ctx, TJS_CLASS_DIRENT, &tjs_dirent_class), 0);
     proto = JS_NewObject(ctx);
     JS_SetPropertyFunctionList(ctx, proto, tjs_dirent_proto_funcs, countof(tjs_dirent_proto_funcs));
     JS_SetClassProto(ctx, tjs__class_id(ctx, TJS_CLASS_DIRENT), proto);
 
-    /* StatResult object */
     CHECK_EQ(tjs__class_register(ctx, TJS_CLASS_STAT, &tjs_stat_class), 0);
     proto = JS_NewObject(ctx);
     JS_SetPropertyFunctionList(ctx, proto, tjs_stat_proto_funcs, countof(tjs_stat_proto_funcs));
