@@ -25,7 +25,6 @@ constexpr int kRetries = 3;
 constexpr double kBaseMs = 1000;
 constexpr double kCapMs = 16000;
 constexpr double kJitter = 0.2;
-const std::string kScope = " cwd, when given, is the directory whose repository the verb acts on: absolute, or relative to the workspace root; a directory outside a git repository is refused. Omitted, the workspace is used.";
 
 struct Exec {
     bool ok = false;

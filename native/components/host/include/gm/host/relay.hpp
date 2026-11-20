@@ -70,7 +70,6 @@ public:
     std::string hold_reason() const;
 
     std::uint64_t restarts() const;
-    std::uint64_t failed_builds() const;
     long long worker_pid() const;
     bool running() const;
 
@@ -141,7 +140,6 @@ private:
     bool deferred_restart_ = false;
     bool child_ended_ = false;
     std::uint64_t restarts_ = 0;
-    std::uint64_t failed_builds_ = 0;
 };
 
 int serve_stdio(RelayOptions options);

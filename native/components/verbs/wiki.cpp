@@ -33,7 +33,6 @@ const std::vector<std::string> kRootArgs{"root", "projectPath", "cwd"};
 const std::vector<std::string> kSearchTakes{"query", "k"};
 const std::vector<std::string> kKinds{"ingest", "answer", "lint"};
 const std::set<std::string> kStateDirs{".git", ".gm", ".agentplug", ".agentplug-kv", ".playwriter", "runs", "node_modules", "vendor"};
-const std::string kRootNote = "root (or its aliases projectPath and cwd) names another existing directory to search instead of the workspace; with a root other than the workspace, hits show absolute paths. An unknown argument is refused by name.";
 
 bool page_name(const std::string& text) { return std::regex_match(text, std::regex("^[a-z0-9][a-z0-9-]{0,63}$")); }
 bool source_id(const std::string& text) { return std::regex_match(text, std::regex("^[0-9a-f]{12}$")); }

@@ -706,12 +706,10 @@ void Relay::rebuild(Lock& lock) {
     }
     lock.lock();
     if (!gate_open) {
-        ++failed_builds_;
         say("the swap gate stayed closed for " + std::to_string(kGateWaitMs / 1000) + " s, the build is skipped and the old worker keeps serving");
         return;
     }
     if (!outcome.started || outcome.timed_out || outcome.exit_code != 0) {
-        ++failed_builds_;
         say("the build failed, the old worker keeps serving: " + last_lines(outcome.out + outcome.err, 1500));
     }
 }
@@ -781,11 +779,6 @@ void Relay::host_closed(const std::string& reason) {
 std::uint64_t Relay::restarts() const {
     std::lock_guard lock(mutex_);
     return restarts_;
-}
-
-std::uint64_t Relay::failed_builds() const {
-    std::lock_guard lock(mutex_);
-    return failed_builds_;
 }
 
 long long Relay::worker_pid() const {
