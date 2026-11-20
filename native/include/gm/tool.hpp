@@ -135,6 +135,7 @@ CheckResult check_clock_format(const std::string& binary);
 CheckResult check_utf16_units(const std::string& binary);
 CheckResult check_read_binary(const std::string& binary);
 CheckResult check_job_running_progress(const std::string& binary);
+CheckResult check_run_shell_cut_first_line(const std::string& binary);
 CheckResult check_job_extended_wait(const std::string& binary);
 CheckResult check_asan_retention(const std::string& binary);
 std::vector<long long> process_tree(const std::vector<long long>& roots);

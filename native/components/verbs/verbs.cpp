@@ -89,7 +89,7 @@ json::Value cut_shell_output(json::Value reply, const std::string& text, const s
     const std::size_t total = utf16_length(clean);
     const std::size_t shown = utf16_length(page);
     const std::string path = artifact.find("outputPath")->as_string();
-    reply.set("output", page);
+    reply.set("output", gm::marker::cut_line(total - shown, path) + "\n" + page);
     reply.set("truncated", true);
     reply.set("outputPath", path);
     reply.set("totalChars", static_cast<double>(total));
@@ -847,7 +847,10 @@ struct CoreVerbs::Impl {
             if (!condensed) return cut_shell_output(reply, full, log.dir());
             json::Value artifact = store_artifact(full, log.dir(), "run_shell");
             json::Value shown = reply;
-            shown.set("output", condensed->output + "\n" + artifact.find("notice")->as_string());
+            const std::string where = artifact.find("outputPath")->as_string();
+            const std::size_t kept = condensed->output.size();
+            const std::size_t omitted = condensed->original_chars > kept ? condensed->original_chars - kept : 0;
+            shown.set("output", gm::marker::cut_line(omitted, where) + "\n" + condensed->output);
             shown.set("compressed", true);
             shown.set("originalChars", json::Value(static_cast<double>(condensed->original_chars)));
             shown.set("keptChars", json::Value(static_cast<double>(condensed->output.size())));
