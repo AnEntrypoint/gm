@@ -1,5 +1,5 @@
 import { appendFileSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseStream } from "./rss-sampler.mjs";
 
 export const BURST_WAKES = 200;
@@ -126,6 +126,21 @@ export async function sample(pid, outPath, seconds) {
   return 0;
 }
 
+export function wakesPerCall(rows, parsed) {
+  return parsed.verbs.map((verb) => {
+    let wakes = 0;
+    let seconds = 0;
+    for (const row of rows) {
+      const scope = scopeOf(row, parsed);
+      if (scope.kind !== "verb" || scope.seq !== verb.seq) continue;
+      const span = (row.at - row.prev) / 1000;
+      wakes += row.wakesPerSec * span;
+      seconds += span;
+    }
+    return { seq: verb.seq, tool: verb.tool, run: verb.body, wakes: Math.round(wakes), seconds, perSec: seconds ? wakes / seconds : 0 };
+  });
+}
+
 export function windowed(parsed, windowStart) {
   return {
     samples: parsed.samples,
@@ -141,6 +156,9 @@ export function report(wakePath, streamPath) {
   const parsed = windowed(all, samples.length ? samples[0].at : 0);
   const playwriter = parsed.verbs.filter((v) => v.tool === "playwriter_execute").length;
   console.log("verb calls inside the window " + parsed.verbs.length + " (playwriter_execute " + playwriter + "), " + (all.verbs.length - parsed.verbs.length) + " from before the window ignored");
+  for (const call of wakesPerCall(rows, parsed).filter((c) => c.tool === "playwriter_execute")) {
+    console.log("playwriter_execute " + call.seq + " of run " + call.run + ": " + call.wakes + " wakes in " + call.seconds + " s (" + call.perSec.toFixed(1) + "/s)");
+  }
   const found = bursts(rows, parsed);
   for (const item of found) console.log(describe(item));
   const peak = rows.reduce((m, r) => (r.wakesPerSec > m.wakesPerSec ? r : m), { wakesPerSec: 0 });
@@ -172,6 +190,24 @@ function windowWitness() {
   console.log("verb calls inside the window " + parsed.verbs.length + " (playwriter_execute " + playwriter.length + "), " + (all.verbs.length - parsed.verbs.length) + " from before the window ignored");
   console.log("burst " + burst.wakesPerSec + " wakes/s at " + at(15) + " attributed to " + scope.kind + " " + scope.seq + " " + scope.tool);
   console.log(ok ? "check-window-verbs: ok (only the playwriter_execute call inside the window is attributed; the same-length call before it is ignored)" : "check-window-verbs: FAILED");
+  return ok ? 0 : 1;
+}
+
+const FIXTURE_STREAM = fileURLToPath(new URL("./fixtures/playwriter-verbs-stream.txt", import.meta.url));
+const FIXTURE_WAKE = fileURLToPath(new URL("./fixtures/playwriter-verbs-wake.txt", import.meta.url));
+
+function verbWakesWitness() {
+  const all = parseStream(readFileSync(FIXTURE_STREAM, "utf8"));
+  const samples = parseWake(readFileSync(FIXTURE_WAKE, "utf8"));
+  const parsed = windowed(all, samples[0].at);
+  const rows = rates(samples);
+  const calls = wakesPerCall(rows, parsed).filter((c) => c.tool === "playwriter_execute");
+  const bySeq = Object.fromEntries(calls.map((c) => [c.seq, c]));
+  const before = all.verbs.length - parsed.verbs.length;
+  const ok = calls.length === 2 && before === 1 && bySeq["62"] && bySeq["62"].wakes === 260 && bySeq["62"].seconds === 3 && bySeq["63"] && bySeq["63"].wakes === 15 && bySeq["63"].seconds === 3;
+  for (const c of calls) console.log("playwriter_execute " + c.seq + ": " + c.wakes + " wakes in " + c.seconds + " s (" + c.perSec.toFixed(1) + "/s)");
+  console.log("verb calls before the window ignored " + before);
+  console.log(ok ? "check-verb-wakes: ok (the burst call 62 takes 260 wakes, the quiet call 63 takes 15, and the call before the window is not counted)" : "check-verb-wakes: FAILED");
   return ok ? 0 : 1;
 }
 
@@ -211,7 +247,7 @@ function witness() {
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const [mode, ...args] = process.argv.slice(2);
   if (mode === "--witness") {
-    process.exitCode = witness() | windowWitness();
+    process.exitCode = witness() | windowWitness() | verbWakesWitness();
   } else if (mode === "sample" && args.length === 3) {
     process.exitCode = await sample(Number(args[0]), args[1], Number(args[2]));
   } else if (mode === "report" && args.length === 2) {
