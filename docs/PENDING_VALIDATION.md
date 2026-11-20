@@ -4629,3 +4629,14 @@ Not changed: the 13 install-running witnesses, the job_start Windows kill, and r
 - The check now stops every process whose command line names its own sandbox (the playwriter browser and its crashpad handlers survived the serve stop before this), with kill -KILL on those PIDs, before the sandbox is removed.
 - Witness: gm-tool check build/release/native/components/host/gm check-idle-cpu. Green: check-idle-cpu: ok, rc 0, 42 s; the playwriter reading was 0.00% CPU and 4.5 wakes/s with the body 3.9 s and reply [return value] 1; no process of the sandbox was left behind.
 - Red leg: the link's create_directory_symlink replaced with (void)installed. The check failed with rc 1: playwriter_execute did not return 1, the reply showing playwriter is not running: MCP server playwriter exited with code 1. The earlier red run, before the return-value assertion, passed, which is why that assertion was added. Restored from a copy, cmp ok, the check green again.
+
+## Forty-seventh stretch 2026-11-20 (the peer's wakeups against its verbs, one-second resolution): Phase B
+
+- Window: 00:21:08 to 00:31:25 UTC. The item 4 witness ran first, at the window's start: check-idle-cpu ok, rc 0, 42.07 s, nothing left behind.
+- Clear start: 00:21:54 UTC, vmstat second sample si 48, so 0 KB/s; scripts/heavy-jobs.cjs (bevy 495fff6) HEAVY_JOBS clear. 554 s of the window remained, and the reader ran for 549 s.
+- Reader and sampler on pid 1002562 (the gm-core worker of oscraft, --handshake, not counted as heavy): wake-reader.mjs sample (549 W lines, no G line) and rss-sampler.mjs sample (550 S lines, 688 V, 358 E), both rc 0.
+- Wakes per second over 548 seconds: mean 508.7, median 302.3, p95 1219.8, max 1476.5. 315 seconds were above 200. Voluntary switches averaged 418.5 a second, nonvoluntary 90.2. CPU averaged 65.2%, with a maximum of 100.3%.
+- Attribution of the 315 burst seconds: 298 fell in verb-free stretches of run_code bodies (runs 2413, 2419, 2429, 2434, 2445); 16 in no run or verb; 1 in a job_status verb (2452) at 301 wakes/s.
+- The seconds inside playwriter_execute: none. All 189 playwriter_execute verbs in the stream are from 2026-11-19, before the window, because the sampler reads the run log from its start. The window made no playwriter call, so the wakeups during playwriter_execute are not measured here.
+- RSS of the worker over the window: minimum 331,664 KB, maximum 1,310,056 KB.
+- Reading: the bursts sit in verbless waits inside run_code bodies, at a rate and CPU level that matches the 1 ms settle() poll in 0f9e3bb-542 that 573093f replaces. That is consistent with the timer defect and not proven by this window; the fixed build's verbless timer case reads 0% CPU and 14.5 wakes a second (check-idle-cpu).
