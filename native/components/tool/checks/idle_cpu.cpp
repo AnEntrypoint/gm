@@ -2,6 +2,7 @@
 #include "gm/tool.hpp"
 
 #include <chrono>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <sstream>
@@ -60,6 +61,7 @@ struct Load {
     double serve_wakes = -1;
     double body_seconds = -1;
     std::string reply;
+    bool returned_one = false;
 };
 
 Load load_over(long long pid, long long serve, long long window_ms) {
@@ -92,7 +94,31 @@ Load load_while(Session& session, long long worker, long long serve_pid, const s
     measure.join();
     measured.body_seconds = body_seconds;
     measured.reply = reply.substr(0, 300);
+    measured.returned_one = reply.find("[return value] 1") != std::string::npos;
     return measured;
+}
+
+void link_playwriter(const fs::path& home, std::string& failure) {
+    const char* real_home = std::getenv("HOME");
+    const fs::path installed = fs::path(real_home == nullptr ? "" : real_home) / ".gmnew" / "pw";
+    std::error_code ec;
+    if (real_home == nullptr || !fs::is_directory(installed, ec)) {
+        failure = "no installed playwriter package at " + installed.string() + "; this check reuses it and never installs one";
+        return;
+    }
+    fs::create_directories(home / ".gmnew", ec);
+    fs::create_directory_symlink(installed, home / ".gmnew" / "pw", ec);
+    if (ec) failure = "cannot link " + installed.string() + " into the sandbox: " + ec.message();
+}
+
+void stop_under(const fs::path& sandbox) {
+    std::vector<std::string> argv{"kill", "-KILL"};
+    for (const auto& row : proc::process_table()) {
+        std::string joined;
+        for (const std::string& arg : proc::command_of(row.pid)) joined += arg + " ";
+        if (joined.find(sandbox.string()) != std::string::npos) argv.push_back(std::to_string(row.pid));
+    }
+    if (argv.size() > 2) proc::run(argv, sandbox, {}, 10000);
 }
 
 std::string text_of(const Load& load) {
@@ -107,6 +133,9 @@ CheckResult check_idle_cpu(const std::string& binary) {
     const fs::path workspace = sandbox / "ws";
     std::error_code ec;
     fs::create_directories(workspace, ec);
+    std::string playwriter_failure;
+    link_playwriter(sandbox, playwriter_failure);
+    if (!playwriter_failure.empty()) result.failures.push_back(playwriter_failure);
     {
         Session serve({binary, "serve", "--workspace", workspace.string(), "--run-dir", (workspace / "runs" / "idle").string()}, workspace, sandbox, 300000);
         if (!serve.started()) {
@@ -122,15 +151,20 @@ CheckResult check_idle_cpu(const std::string& binary) {
                 const Load idle = load_over(worker, serve.pid(), kWindowMs);
                 const Load shell = load_while(serve, worker, serve.pid(), "await gm.read_file({ path: 'skill://gm/SKILL.md' }); return await gm.run_shell({ command: 'sleep 12', timeoutMs: 30000 });");
                 const Load timer = load_while(serve, worker, serve.pid(), "await gm.read_file({ path: 'skill://gm/SKILL.md' }); return await new Promise((resolve) => setTimeout(() => resolve('done'), 12000));");
-                result.summary = "worker " + fs::read_symlink("/proc/" + std::to_string(worker) + "/exe", ec).string() + "; worker idle " + text_of(idle) + "; body waiting on run_shell " + text_of(shell) + "; body waiting on a timer " + text_of(timer);
+                const Load playwriter = load_while(serve, worker, serve.pid(), "await gm.read_file({ path: 'skill://gm/SKILL.md' }); return JSON.stringify(await gm.playwriter_execute({ code: 'return 1;' }));");
+                result.summary = "worker " + fs::read_symlink("/proc/" + std::to_string(worker) + "/exe", ec).string() + "; worker idle " + text_of(idle) + "; body waiting on run_shell " + text_of(shell) + "; body waiting on a timer " + text_of(timer) + "; body on playwriter_execute " + text_of(playwriter);
                 if (idle.cpu > kCpuLimitPercent) result.failures.push_back("idle worker used " + std::to_string(idle.cpu) + "% CPU");
                 if (shell.cpu > kCpuLimitPercent) result.failures.push_back("worker waiting on run_shell used " + std::to_string(shell.cpu) + "% CPU");
                 if (timer.cpu > kCpuLimitPercent) result.failures.push_back("worker waiting on a timer used " + std::to_string(timer.cpu) + "% CPU");
                 if (timer.wakes > kWakeLimitPerSecond) result.failures.push_back("worker waiting on a timer woke " + std::to_string(timer.wakes) + " times per second");
+                if (playwriter.cpu > kCpuLimitPercent) result.failures.push_back("worker during playwriter_execute used " + std::to_string(playwriter.cpu) + "% CPU");
+                if (playwriter.wakes > kWakeLimitPerSecond) result.failures.push_back("worker during playwriter_execute woke " + std::to_string(playwriter.wakes) + " times per second");
+                if (!playwriter.returned_one) result.failures.push_back("playwriter_execute did not return 1: " + playwriter.reply);
             }
         }
         serve.stop();
     }
+    stop_under(sandbox);
     fs::remove_all(sandbox, ec);
     if (result.summary.empty()) result.summary = "no measurement";
     if (!result.failures.empty()) result.failures.insert(result.failures.begin(), "readings: " + result.summary);

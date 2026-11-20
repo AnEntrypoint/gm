@@ -4621,3 +4621,11 @@ Not changed: the 13 install-running witnesses, the job_start Windows kill, and r
 - Red leg: attributeVerbs replaced by return []. The burst is then attributed to run 20 run_code, and the check prints check-wake-attribution: FAILED with rc 1. Restored from a copy, cmp ok, the witness green again.
 - Report mode checked on a three-second fixture: one burst line, "in verb 11 read_file of run 50", and the summary line.
 - Not run in Phase A: the reader on a live pid. That is the Phase B reading, on a clear window.
+
+## Forty-seventh stretch 2026-11-20 (the check's playwriter_execute case in its own serve): Phase A
+
+- Cause of the exit 1: the check's Session sets HOME to its empty sandbox, and the playwriter launcher lives under <HOME>/.gmnew/pw, which the sandbox did not have. The fix links the installed package (the real HOME's .gmnew/pw, never installed by the check) into the sandbox, the same link browser_first_open makes, and fails the check with a message if that package is missing.
+- The case is restored: its body is read skill, then return JSON.stringify(await gm.playwriter_execute({ code: 'return 1;' })). It is measured like the timer case: CPU and wakes limits apply, and its reply must contain the return value 1.
+- The check now stops every process whose command line names its own sandbox (the playwriter browser and its crashpad handlers survived the serve stop before this), with kill -KILL on those PIDs, before the sandbox is removed.
+- Witness: gm-tool check build/release/native/components/host/gm check-idle-cpu. Green: check-idle-cpu: ok, rc 0, 42 s; the playwriter reading was 0.00% CPU and 4.5 wakes/s with the body 3.9 s and reply [return value] 1; no process of the sandbox was left behind.
+- Red leg: the link's create_directory_symlink replaced with (void)installed. The check failed with rc 1: playwriter_execute did not return 1, the reply showing playwriter is not running: MCP server playwriter exited with code 1. The earlier red run, before the return-value assertion, passed, which is why that assertion was added. Restored from a copy, cmp ok, the check green again.
