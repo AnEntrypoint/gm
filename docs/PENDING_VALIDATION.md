@@ -4814,3 +4814,14 @@ Not changed: the 13 install-running witnesses, the job_start Windows kill, and r
 - Not witnessed live: the driver's halt path. phase-b refuses a checkout with uncommitted tracked changes and builds the whole tree before any row runs, so a live run needs a committed tree and every row. Two live attempts (pids 155642 and the red run) were refused by that guard, at 11:10:39, before any row ran. The driver wiring was read, not run; the classifier it calls is witnessed above.
 - Gate: clear at reading 4 (10:55:09, gate 48/0 KB/s, heavy-jobs clear) for the build and witnesses; clear again at reading 18 (11:10:39) for the live attempt. Readings in runs/phase-b-halt/readings.txt and runs/phase-b-halt-live/readings.txt.
 - Also witnessed in the window: check-next-context-record ok, rc 0, pid 141389.
+
+## Sixty-third stretch 2026-11-20 (the next reachable item on the ranked list: none reachable by a code change; the reopen conditions re-checked): Phase A
+
+- Ranked list read: the 18th stretch's list (docs/PENDING_VALIDATION.md, Eighteenth stretch 2026-11-19). Item 1 (the phase-b driver stubs) is closed by that stretch's commit. Items 2 to 6 are held, each with a reopen condition. Re-checked now against the evidence on disk:
+  - Item 2, job_start process-group kill on Windows: reopens with a Windows hosted log that names job_start's group kill. No such log on disk; not reachable here.
+  - Item 3, the 13 install-running witnesses: reopens with the owner's decision (keep or remove). Owner decision, not changed.
+  - Item 4, check-relay-reexec on x64: reopens with a passing or failing x64 hosted log that names the check. The newest x64 hosted entries in this ledger predate it; none names check-relay-reexec. Not reachable locally.
+  - Item 5, bevy's silent MCP drop: reopens with a new drop whose relay.log ends at a start, worker or update line. The install window's relay.log for bevy (runs/2026-11-20-08-08-51-34da8a/relay.log, 17 lines) has no disconnect, lost or drop line; its last line is the clean re-exec at 1795169322558 (worker pid 81725). Not reopened.
+  - Item 6, fx's another worker's events twice: reopens with fx's reply text. fx's journal (runs/2026-11-20-08-08-47-710cec/log.jsonl) has 0 "another worker" lines. Not reopened.
+- Result: no item on the list is reachable by a code change with the evidence on disk. The nearest reachable one is item 5 (the window's relay log is clean, so no evidence to act on). The install-window errors from the sixtieth stretch were agent-side, so they add nothing to the list.
+- This stretch changed no code. The driver change of the sixty-second stretch (commit 96be815) is the work done in this window.
