@@ -4873,3 +4873,27 @@ The first next_context witness did not reach the feed gate: an unchanged reply t
 Docs: docs/PARITY_CONTRACT.md and DESIGN.md describe the run log as paged oldest-first (50 events or 16 KB, _meta.next), not the newest 64 KB.
 
 Phase B window (job phaseb-final-2, script /tmp/phase-b-65/window-final.sh, log runs/phase-b-final/window.txt): gate clear at reading 21 (15:51:02, second vmstat sample si 228 so 0, heavy-jobs rc 0, no hot process). ALL=0 at 15:58:56: 21 witness runs (w-ignore, w-halt, w-nextctx-record, five friction checks, thirteen existing checks) and the six build, red, rebuild and after runs all rc 0; the six red checks rc 1 (detected) and each restored with cmp.
+
+## Round 2026-11-20 ranked list rebuilt from source, and the reachable rows taken (commit d2a8826)
+
+Ranked list, rebuilt from current source (the sixty-fifth stretch's list and the open rows it named; the status of each row, and the cause):
+
+| rank | row | status | cause |
+|---|---|---|---|
+| 1 | whole-file binary reads copied in host and tool | taken, d2a8826 | install.cpp:50, update.cpp (read_bytes) and tool/installed.cpp (read_text) now call gm::read_binary (native/include/gm/file.hpp); witness check-read-binary. Kept: host/options.cpp task file (its error branch), host/install.cpp:146 (text mode, which differs from binary on Windows), verbs/job.cpp read_bytes (it converts with to_valid_utf8), tool/gate.cpp, tool/release.cpp and verbs/wiki.cpp (their own error reporting) |
+| 2 | UTC formatting copied in four places | taken, d2a8826 | verbs/core_internal.hpp iso_now, tool/release.cpp utc_now, verbs/verbs.cpp time_iso and host/options.cpp new_run_id now use gm::iso_utc and gm::utc_parts (native/include/gm/clock.hpp, merged after clock_scale); witness check-clock-format; red check prints .000Z |
+| 3 | UTF-16 length copied (js_length in mcp, utf16_length in verbs) | taken, d2a8826 | one gm::utf16_length (native/include/gm/utf16.hpp, the js_length logic); the 36 mcp call sites renamed. Behaviour change for invalid UTF-8 only: a stray lead byte F8 to FF now counts one unit in verbs (it counted two); valid UTF-8 counts are unchanged; witness check-utf16-units |
+| 4 | utf8_head (mcp/server.cpp), utf8_length (verbs/fetch.cpp) | not a duplicate, no change | utf8_head is the only byte-cut helper; utf8_length returns a byte count under a name that reads as units, but it has one definition and nine callers, so it is left as it is (noted for the owner) |
+| 5 | the six include/deoxidene headers with no in-tree includer | blocked on an owner decision | they are the public API of the deoxidene INTERFACE target (CMakeLists.txt:45-48); remove or keep is the owner's call |
+| 6 | job_start process-group kill on Windows | held | needs a Windows hosted row that names the kill; no such log on disk |
+| 7 | the 13 install-running witnesses | blocked on an owner decision | keep as subject or remove as setup |
+| 8 | check-relay-reexec on x64 | held | needs an x64 hosted log that names the check; none on disk |
+| 9 | bevy's silent MCP drop (2026-11-16) | held | no new drop on disk; the install window's relay.log for bevy is clean |
+| 10 | fx's "another worker's events twice" | held | needs fx's reply text; fx's journal has no "another worker" line |
+| 11 | the live gm MCP still returns the body trail for job_status | held: the install | checked with the build binary at d2a8826: job_status of a finished body returns its value ("gamma-value", total 11, valueChars 13); the session's installed binary (8eb56f1) still returns the trail, so the fix is in the repo and not live. The install of 806ce7b stays held for the owner |
+| 12 | oscraft driver rules 4 and the pw gate | handed off | the fourth rule and the re-run-after-live-browser gate belong to oscraft's witness driver and to /config/.gmnew/pw; the owner asked that the uncommitted pw work be left alone |
+
+Witness on the dedup rows (the window run, see the next section): the three new witnesses, their red checks (the clock mutation prints .000Z; the UTF-16 mutation fails two samples; the binary-read mutation appends a byte and fails two assertions), the grep witnesses (no gmtime outside clock.hpp; one utf16_length definition; no js_length), and the existing checks that exercise the converted sites (check-install-follows, check-owner-identity, check-next-context-record).
+
+Commit: d2a8826 is one commit for rows 1 to 3, because the shared registration (tool.hpp, registry.cpp, CMakeLists.txt) and the verbs headers carry more than one row.
+
