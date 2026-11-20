@@ -25,9 +25,9 @@ CheckResult check_next_context_no_task(const std::string& binary) {
         } else {
             started = true;
             support::start_session(session, "check-next-context-no-task");
-            const std::string body = "for (let i = 0; i < 260; i += 1) await gm.read_file({ path: 'skill://gm/SKILL.md' }); return 'filled';";
+            const std::string body = "for (let i = 0; i < 60; i += 1) await gm.read_file({ path: 'skill://gm/SKILL.md' }); await gm.job_start({ job: 'nc-job', command: 'echo ready' }); await gm.job_status({ job: 'nc-job', waitMs: 20000 }); return 'filled';";
             tool_json(session, "run_code", json::Object{{"body", body}});
-            const json::Value reply = tool_json(session, "next_context", json::Object{});
+            const json::Value reply = tool_json(session, "next_context", json::Object{{"full", true}});
             if (const json::Value* list = value_at(reply, "events"); list != nullptr && list->is_array()) events = list->as_array().size();
             bytes = json::dump(reply).size();
         }
