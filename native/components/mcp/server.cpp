@@ -91,6 +91,7 @@ constexpr int kStepStartRule = 2;
 constexpr std::size_t kReplyMemory = 256;
 constexpr std::size_t kOutputCap = 20000;
 constexpr std::size_t kOutputPage = 20000;
+constexpr std::size_t kInlineValueChars = 2000;
 
 std::string artifact_digest(const std::string& text) {
     std::uint64_t hash = 14695981039346656037ull;
@@ -1459,17 +1460,27 @@ struct Server::State {
         return object().set("ok", true).set("task", value.empty() ? Value(nullptr) : Value(value)).set("cleared", value.empty());
     }
 
-    void end_run(const std::string& status, const Value& witness, const std::optional<Value>& gaps) {
+    Value end_run(const std::string& status, const Value& witness, const std::optional<Value>& gaps) {
         s().end_logged = true;
         stop_bodies("run-ended");
+        const std::uint64_t before = s().log->count();
         if (options.close_jobs) options.close_jobs("run-ended");
+        Value killed = array();
+        if (auto fresh = s().log->read_from(before)) {
+            for (const Value& event : *fresh) {
+                if (string_of(event, "kind") == "job-killed")
+                    killed.push(object().set("job", string_of(event, "job")).set("reason", string_of(event, "reason")));
+            }
+        }
         if (options.release_leases) options.release_leases("released when the run ended", true);
         write_summary();
         Value fields = object().set("status", status).set("steps", s().steps).set("witness", witness);
         if (gaps) fields.set("gaps", *gaps);
+        if (killed.as_array().size() > 0) fields.set("jobsKilled", killed);
         append("end", std::move(fields));
         std::error_code ec;
         fs::remove_all(s().run_dir / "code", ec);
+        return killed;
     }
 
     Value child_context(const Value& args) {
@@ -1818,15 +1829,21 @@ struct Server::State {
             end = total;
         }
         if (from > end) from = end;
-        static const std::set<std::string> kStatusFields = {"job", "command", "state", "pid", "pidStart", "startMono", "startWall", "timeoutMs", "durMs", "body", "step", "error", "complete"};
+        static const std::set<std::string> kStatusFields = {"job", "command", "state", "pid", "pidStart", "startMono", "startWall", "timeoutMs", "durMs", "body", "step", "error", "complete", "reason"};
         Value reply = object().set("ok", true);
         for (const json::Member& m : status->as_object()) {
             if (kStatusFields.count(m.first)) reply.set(m.first, m.second);
         }
         if (const Value* value = status->find("value")) {
-            reply.set("valueChars", number_of(value->is_string() ? gm::utf16_length(value->as_string()) : json::dump(*value).size()));
+            const std::size_t value_chars = value->is_string() ? gm::utf16_length(value->as_string()) : json::dump(*value).size();
+            reply.set("valueChars", number_of(value_chars));
             const Value* want = args.find("value");
-            if (want != nullptr && want->is_bool() && want->as_bool()) reply.set("value", *value);
+            const bool inline_value = want != nullptr && want->is_bool() ? want->as_bool() : value_chars <= kInlineValueChars;
+            if (inline_value) {
+                const std::string text = value->is_string() ? value->as_string() : json::dump(*value);
+                const auto parsed = json::parse(text);
+                reply.set("value", parsed ? *parsed : *value);
+            }
         }
         reply.set("exitCode", status->find("exitCode") ? *status->find("exitCode") : Value(nullptr));
         reply.set("signal", status->find("signal") ? *status->find("signal") : Value(nullptr));
@@ -2325,6 +2342,7 @@ struct Server::State {
             .set("pendingCommands", object().set("wait", "\"" + options.wait_program + "\" events --dir \"" + s().run_dir.string() + "\" --wait"));
         if (!waiting && s().task.empty()) {
             s().shown = static_cast<std::uint64_t>(total);
+            reply.set("events", array());
         } else if (!waiting) {
             reply = merge(std::move(reply), feed_of(at, total, shown, s().sent_feed, compact_children));
         }
@@ -2692,7 +2710,8 @@ struct Server::State {
             },
             [](const Value& r) { return r; });
         log_lint();
-        end_run("finished", *out.find("output"), gaps ? std::optional<Value>(*gaps) : std::nullopt);
+        Value killed = end_run("finished", *out.find("output"), gaps ? std::optional<Value>(*gaps) : std::nullopt);
+        if (killed.as_array().size() > 0) out.set("jobsKilled", killed);
         return out;
     }
 
