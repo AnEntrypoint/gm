@@ -4955,3 +4955,14 @@ Red check (mutation, witness, restore, cmp, git status): the UV_PROCESS_DETACHED
 
 Freddie: spawn with detached: true reaches the native flag through core.spawn options.
 
+
+## Txiki handoff 5: stdio entries beyond three (mod_process.c tjs_spawn)
+
+Change: the fixed uv_stdio_container_t stdio[3] is heap-sized from options.stdio (js_mallocz, length at least 3), so an options.stdio array can carry entries for fd 3 and up. fds 0 to 2 keep the named stdin, stdout and stderr properties. Each entry from index 3 is parsed by tjs__spawn_extra_stdio: a pipe or a Pipe object is a UV_CREATE_PIPE with the parent-side stream; "pipe" creates a new Pipe with tjs_new_pipe; "inherit" and "ignore" map to UV_INHERIT_FD (the parent fd of the same number) and UV_IGNORE; null and undefined are UV_IGNORE. The parent-side pipe for each entry is returned as proc.stdio, an array indexed by fd, and only set when the array has entries beyond three, so an existing spawn keeps the same object shape.
+
+Witness: check-txiki-spawn-stdio (native/components/tool/checks/txiki_spawn_stdio.cpp). A child runs printf hello >&3 with stdio [null, null, null, "pipe"]; the parent reads proc.stdio[3] through onread and startRead and gets the five bytes; a spawn with no extra entries has no stdio property. Output: ok, rc 0.
+
+Red check (mutation, witness, restore, cmp, git status): the JS_SetPropertyStr that sets proc.stdio is removed from tjs_spawn. Witness: 3 failures (the byte does not reach stdio[3], stdio is not an array, and the plain spawn check reports null because the body fails), RED_RC=1. Restored and cmp ok; rebuild rc 0; witness again rc 0 with ok. The detached witness (item 4) still passes on the same build.
+
+Freddie: the stdio entries beyond three are options.stdio[3..]; the parent-side pipe is proc.stdio[fd]. Rows that depended on this in handoff 5 are now reachable.
+

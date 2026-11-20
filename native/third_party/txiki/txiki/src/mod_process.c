@@ -145,8 +145,59 @@ static void uv__exit_cb(uv_process_t *handle, int64_t exit_status, int term_sign
     maybe_close(p);
 }
 
+static int tjs__spawn_extra_stdio(JSContext *ctx, JSValue entry, uint32_t index, uv_stdio_container_t *slot, JSValue pipes) {
+    uv_stream_t *stream = tjs_pipe_get_stream(ctx, entry);
+    if (stream) {
+        slot->flags = UV_CREATE_PIPE | UV_READABLE_PIPE | UV_WRITABLE_PIPE;
+        slot->data.stream = stream;
+        return JS_SetPropertyUint32(ctx, pipes, index, JS_DupValue(ctx, entry)) < 0 ? -1 : 0;
+    }
+
+    if (JS_IsString(entry)) {
+        const char *kind = JS_ToCString(ctx, entry);
+        if (!kind) {
+            return -1;
+        }
+        int rc = 0;
+        if (strcmp(kind, "pipe") == 0) {
+            JSValue pipe = tjs_new_pipe(ctx);
+            if (JS_IsException(pipe)) {
+                rc = -1;
+            } else {
+                slot->flags = UV_CREATE_PIPE | UV_READABLE_PIPE | UV_WRITABLE_PIPE;
+                slot->data.stream = tjs_pipe_get_stream(ctx, pipe);
+                rc = JS_SetPropertyUint32(ctx, pipes, index, pipe) < 0 ? -1 : 0;
+            }
+        } else if (strcmp(kind, "inherit") == 0) {
+            slot->flags = UV_INHERIT_FD;
+            slot->data.fd = (int) index;
+            rc = JS_SetPropertyUint32(ctx, pipes, index, JS_NULL) < 0 ? -1 : 0;
+        } else if (strcmp(kind, "ignore") == 0) {
+            slot->flags = UV_IGNORE;
+            rc = JS_SetPropertyUint32(ctx, pipes, index, JS_NULL) < 0 ? -1 : 0;
+        } else {
+            JS_ThrowTypeError(ctx, "stdio entry must be 'pipe', 'inherit', 'ignore', a pipe, or null");
+            rc = -1;
+        }
+        JS_FreeCString(ctx, kind);
+        return rc;
+    }
+
+    if (JS_IsNull(entry) || JS_IsUndefined(entry)) {
+        slot->flags = UV_IGNORE;
+        return JS_SetPropertyUint32(ctx, pipes, index, JS_NULL) < 0 ? -1 : 0;
+    }
+
+    JS_ThrowTypeError(ctx, "stdio entry must be 'pipe', 'inherit', 'ignore', a pipe, or null");
+    return -1;
+}
+
 static JSValue tjs_spawn(JSContext *ctx, JSValue this_val, int argc, JSValue *argv) {
     JSValue ret;
+    uv_stdio_container_t *stdio = NULL;
+    uint32_t stdio_count = 3;
+    JSValue js_stdio_list = JS_UNDEFINED;
+    JSValue stdio_pipes = JS_UNDEFINED;
 
     JSValue obj = JS_NewObjectClass(ctx, tjs__class_id(ctx, TJS_CLASS_PROCESS));
     if (JS_IsException(obj)) {
@@ -170,14 +221,41 @@ static JSValue tjs_spawn(JSContext *ctx, JSValue this_val, int argc, JSValue *ar
 
     options.flags = UV_PROCESS_WINDOWS_FILE_PATH_EXACT_NAME;
 
-    uv_stdio_container_t stdio[3];
+    if (argc > 1 && JS_IsObject(argv[1])) {
+        js_stdio_list = JS_GetPropertyStr(ctx, argv[1], "stdio");
+        if (JS_IsException(js_stdio_list)) {
+            js_stdio_list = JS_UNDEFINED;
+            goto fail;
+        }
+    }
+    if (JS_IsArray(js_stdio_list)) {
+        JSValue js_len = JS_GetPropertyStr(ctx, js_stdio_list, "length");
+        uint32_t len = 0;
+        int bad = JS_IsException(js_len) || JS_ToUint32(ctx, &len, js_len);
+        JS_FreeValue(ctx, js_len);
+        if (bad) {
+            goto fail;
+        }
+        if (len > stdio_count) {
+            stdio_count = len;
+        }
+    }
+    stdio = js_mallocz(ctx, sizeof(*stdio) * stdio_count);
+    if (!stdio) {
+        goto fail;
+    }
+    stdio_pipes = JS_NewArray(ctx);
+    if (JS_IsException(stdio_pipes)) {
+        stdio_pipes = JS_UNDEFINED;
+        goto fail;
+    }
     stdio[0].flags = UV_INHERIT_FD;
     stdio[0].data.fd = STDIN_FILENO;
     stdio[1].flags = UV_INHERIT_FD;
     stdio[1].data.fd = STDOUT_FILENO;
     stdio[2].flags = UV_INHERIT_FD;
     stdio[2].data.fd = STDERR_FILENO;
-    options.stdio_count = 3;
+    options.stdio_count = stdio_count;
     options.stdio = stdio;
 
     /* args */
@@ -396,6 +474,15 @@ static JSValue tjs_spawn(JSContext *ctx, JSValue this_val, int argc, JSValue *ar
         }
         JS_FreeValue(ctx, js_stderr);
 
+        for (uint32_t i = 3; i < stdio_count; i++) {
+            JSValue entry = JS_GetPropertyUint32(ctx, js_stdio_list, i);
+            int rc = tjs__spawn_extra_stdio(ctx, entry, i, &stdio[i], stdio_pipes);
+            JS_FreeValue(ctx, entry);
+            if (rc) {
+                goto fail;
+            }
+        }
+
         /* onexit */
         JSValue js_onexit = JS_GetPropertyStr(ctx, arg1, "onexit");
         if (!JS_IsFunction(ctx, js_onexit)) {
@@ -425,6 +512,10 @@ static JSValue tjs_spawn(JSContext *ctx, JSValue this_val, int argc, JSValue *ar
         goto cleanup;
     }
 
+    if (stdio_count > 3) {
+        JS_SetPropertyStr(ctx, obj, "stdio", stdio_pipes);
+        stdio_pipes = JS_UNDEFINED;
+    }
     JS_SetOpaque(obj, p);
     ret = obj;
     tjs__handle_pin(ctx, &p->pin, obj);
@@ -451,6 +542,9 @@ cleanup:
     if (options.cwd) {
         js_free(ctx, (void *) options.cwd);
     }
+    js_free(ctx, stdio);
+    JS_FreeValue(ctx, js_stdio_list);
+    JS_FreeValue(ctx, stdio_pipes);
 
     return ret;
 }
