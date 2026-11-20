@@ -4852,3 +4852,24 @@ Not changed: the 13 install-running witnesses, the job_start Windows kill, and r
 - Commit 32f7dd2 (14 checks, about 40 lines net removed, one shared checks/support.hpp): read_text (binary mode, 7 identical copies), make_executable (5), replace_all, point and children_of (2 each, the build_handover variants differ and are not touched), and connect (2 identical copies in browser_tabs_owner and caps_removed). Not moved: text-mode read_text, the optional-returning clock_mutations variant, output_of, field and run_code (variants differ). Witness: each of the 14 touched checks run with the pre-change gm-tool (copied to /tmp/phase-b-65/base) and with the new gm-tool, same host binary; exit code and output compared with digit runs masked; all 14 same (W_C_FULL_DONE ALL=0; window log runs/phase-b-65/window.txt). Red check: the shared read_text was changed to return an empty string; check-cut-marker went from exit 0 to exit 1 (RED_C_DETECTED; base pid 185928, new pid 185945); support.hpp was restored from a copy and cmp matched (RESTORED_C cmp_ok); gm-tool was rebuilt and check-cut-marker passed again.
 - Phase B window (job phaseb-65c, script /tmp/phase-b-65/window.sh): gate clear at reading 13 (14:17:40, vmstat second sample si 588 so 0, heavy-jobs rc 0); earlier readings 1 to 12 are in runs/phase-b-65/window.txt. The swapping before the clear was held by oscraft's gm-core worker (pid 2525, cwd /workspace/oscraft) and by signal (pid 1762, cwd /workspace/signal); neither was stopped. Every witness and red check ran under timeout with its PID recorded in window.txt. The window's final status: ALL=0.
 - Install: unchanged. The installed build is still 8eb56f1 and the pushed HEAD is 806ce7b before this push; the install of the new HEAD stays held for the owner.
+
+## Round 2026-11-20 gm friction fixes (commit 919ee53, witness fix 1863623)
+
+Method: each fix has one witness in native/components/tool/checks/, run as gm-tool check <host> <name> under timeout with its PID captured. The red check mutates the one line that carries the fix, rebuilds gm and gm-core, expects the witness to fail, restores the file from a saved copy, checks it with cmp, rebuilds, and expects the witness to pass again. The window script is /tmp/phase-b-65/window-final.sh; its log is runs/phase-b-final/window.txt.
+
+| fix | file | witness | red check (mutation) |
+|---|---|---|---|
+| a. next_context with no task returns a short status | mcp/server.cpp (feed gate) | check-next-context-no-task: a full reply after a finished job replays no events and stays under 8192 bytes | if (false && ...): replays 131 events and 20050 bytes; detected |
+| b. run_shell replies share one key set | verbs/verbs.cpp (bound) | check-run-shell-shape: a plain and a timed-out reply both carry ok, output, truncated, complete, exitCode, signal | drops the complete default; detected |
+| c. job_status of a body returns its value, not the trail | mcp/server.cpp (body_job_status) | check-job-status-output: output is the value, tail: 2 is its last two lines | reads body_text instead of the value; detected |
+| d. job_status tail counts lines | verbs/job.cpp (shell tail) | check-job-status-output: tail: 1 of a shell job is the last line, tail: 2 is the last two | tail as characters; detected |
+| e. job_stop ends a background run | mcp/server.cpp (body_job_stop dispatch) | check-job-stop-body: ok, reason cancelled, state killed | dispatch disabled; detected |
+| f. the run log pages by seq | mcp/server.cpp (read_run) | check-run-log-page: pages of at most 50 events or 16 KB, contiguous from seq 1, _meta.next null on the last page | page cut disabled; detected |
+
+The first next_context witness did not reach the feed gate: an unchanged reply takes no step unless full is set, so it answered from the shortcut and its red check was not detected. It now asks for the full reply after a finished job, and its red check is detected (131 events, 20050 bytes).
+
+.ccache/ is gm's compiler cache, excluded from the stamp by exact path in cmake/gmnew_stamp.cmake (commit 1896dd1). It is listed in .gitignore, so git status stays clean.
+
+Docs: docs/PARITY_CONTRACT.md and DESIGN.md describe the run log as paged oldest-first (50 events or 16 KB, _meta.next), not the newest 64 KB.
+
+Phase B window (job phaseb-final-2, script /tmp/phase-b-65/window-final.sh, log runs/phase-b-final/window.txt): gate clear at reading 21 (15:51:02, second vmstat sample si 228 so 0, heavy-jobs rc 0, no hot process). ALL=0 at 15:58:56: 21 witness runs (w-ignore, w-halt, w-nextctx-record, five friction checks, thirteen existing checks) and the six build, red, rebuild and after runs all rc 0; the six red checks rc 1 (detected) and each restored with cmp.
