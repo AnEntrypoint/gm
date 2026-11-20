@@ -82,6 +82,8 @@ CheckResult check_protocol_versions(const std::string& binary);
 CheckResult check_relay_reexec(const std::string& binary);
 CheckResult check_handover_in_flight(const std::string& binary);
 CheckResult check_update_order(const std::string& binary);
+CheckResult check_stamp_tree(const std::string& binary);
+CheckResult check_install_build_id(const std::string& binary);
 CheckResult check_body_reexec(const std::string& binary);
 CheckResult check_witness_next_context_replay(const std::string& binary);
 CheckResult check_build_handover(const std::string& binary);

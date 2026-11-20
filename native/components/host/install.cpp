@@ -7,6 +7,7 @@
 #include <map>
 #include <vector>
 #include <fstream>
+#include <iterator>
 #include <utility>
 #include <iostream>
 #include <sstream>
@@ -299,6 +300,15 @@ void print_server_entry(const HostArgs& args, const fs::path& exe) {
               << json::dump(root) << "\n";
 }
 
+bool same_file(const fs::path& left, const fs::path& right) {
+    std::error_code ec;
+    if (!fs::is_regular_file(left, ec) || !fs::is_regular_file(right, ec)) return false;
+    if (fs::file_size(left, ec) != fs::file_size(right, ec)) return false;
+    std::ifstream first(left, std::ios::binary);
+    std::ifstream second(right, std::ios::binary);
+    return std::equal(std::istreambuf_iterator<char>(first), std::istreambuf_iterator<char>(), std::istreambuf_iterator<char>(second));
+}
+
 int install_local(const HostArgs& args, const fs::path& local) {
     const fs::path nested = local / "native" / "components" / "host";
     const fs::path host = fs::exists(nested / exe_name("gm")) ? nested : local;
@@ -334,7 +344,9 @@ int install_local(const HostArgs& args, const fs::path& local) {
     }
     const std::string version = *built;
     const fs::path current = *root / "current";
-    if (linked_to(current) == version) {
+    const bool same_build = linked_to(current) == version && same_file(host / exe_name("gm"), current / exe_name("gm")) &&
+                            same_file(host / exe_name("gm-core"), current / exe_name("gm-core"));
+    if (same_build) {
         const std::pair<fs::path, const char*> trees[] = {{host / "skills", "skills"}, {leaves_from, "leaves"}, {defaults_from, "defaults"}};
         for (const auto& [from, name] : trees) {
             if (auto error = refresh_tree(from, current / name)) {
@@ -343,7 +355,7 @@ int install_local(const HostArgs& args, const fs::path& local) {
             }
         }
         std::cout << "installed local build " << version << " from " << local.string() << " at " << (current / exe_name("gm")).string()
-                  << "; the stamp is unchanged, so the binaries and their processes were kept\n";
+                  << "; the build is unchanged, so the binaries and their processes were kept\n";
     } else {
         const fs::path stage = *root / ("stage." + version + ".new");
         fs::remove_all(stage, ec);

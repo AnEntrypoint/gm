@@ -1,4 +1,3 @@
-# Run at build time, every build: cmake -DSOURCE_DIR=<tree> -DOUTPUT=<header> [-DOVERRIDE=<version>] -P gmnew_stamp.cmake
 find_package(Git QUIET)
 set(commit "unknown")
 set(head "unknown")
@@ -24,23 +23,32 @@ if(GIT_FOUND)
     if(committed_rc EQUAL 0 AND "${commit_time}" MATCHES "^[0-9]+$")
         set(committed "${commit_time}")
     endif()
-    set(trees "")
-    set(ok TRUE)
-    foreach(dir native defaults)
-        execute_process(
-            COMMAND "${GIT_EXECUTABLE}" rev-parse "HEAD:${dir}"
-            WORKING_DIRECTORY "${SOURCE_DIR}"
-            OUTPUT_VARIABLE tree
-            OUTPUT_STRIP_TRAILING_WHITESPACE
-            ERROR_QUIET
-            RESULT_VARIABLE tree_rc)
-        if(NOT tree_rc EQUAL 0 OR NOT "${tree}" MATCHES "^[0-9a-f]+$")
-            set(ok FALSE)
-        endif()
-        string(APPEND trees "${tree}")
-    endforeach()
-    if(ok)
-        string(SHA256 digest "${trees}")
+    set(index_file "${OUTPUT}.index")
+    file(REMOVE "${index_file}")
+    set(ENV{GIT_INDEX_FILE} "${index_file}")
+    execute_process(
+        COMMAND "${GIT_EXECUTABLE}" read-tree HEAD
+        WORKING_DIRECTORY "${SOURCE_DIR}"
+        RESULT_VARIABLE read_rc
+        OUTPUT_QUIET
+        ERROR_QUIET)
+    execute_process(
+        COMMAND "${GIT_EXECUTABLE}" add --all -- native defaults
+        WORKING_DIRECTORY "${SOURCE_DIR}"
+        RESULT_VARIABLE add_rc
+        OUTPUT_QUIET
+        ERROR_QUIET)
+    execute_process(
+        COMMAND "${GIT_EXECUTABLE}" write-tree
+        WORKING_DIRECTORY "${SOURCE_DIR}"
+        OUTPUT_VARIABLE tree
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET
+        RESULT_VARIABLE tree_rc)
+    unset(ENV{GIT_INDEX_FILE})
+    file(REMOVE "${index_file}")
+    if(read_rc EQUAL 0 AND add_rc EQUAL 0 AND tree_rc EQUAL 0 AND "${tree}" MATCHES "^[0-9a-f]+$")
+        string(SHA256 digest "${tree}")
         string(SUBSTRING "${digest}" 0 12 commit)
     endif()
 endif()
