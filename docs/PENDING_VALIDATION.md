@@ -5059,3 +5059,30 @@ The clock-mutations witness was stale in the source: "job lifetime 60 s" mutated
 - check-installed-stamp: owner-held for the install of 806ce7b. The witness was not changed.
 - Freddie: process.exitCode, vm.Script and spawn detached still throw the gap messages in freddie src/txiki.js, although the native surface exists (handoffs 6, 8, 4). Wiring them is Freddie's adapter work.
 
+
+### Item 2, parity count 796 against 786 (shared), gaps 4 + 1 against 5
+
+Diff: the fixture set (/workspace/freddie/packages/util/runtime/test/parity-cases.js, sharedCases and gapCases at lines ~2935 to 2952) against the expected record. The expected record (786 shared, 5 gaps, 5/5 applied) is Freddie run 6fe09832 at 18:05. Freddie added shared cases after that run (parseArgs, readFileSync, exec, md4; 19:36 to 20:19), so the fixture now has 796 shared cases. The fixture is the side that is right: it is the current specification, and the 786 record predates ten of its cases. The expected record is wrong and must be updated to 796 shared.
+
+Gap side: four gaps are applied and one is inactive. os.release applies only when /proc/sys/kernel/osrelease reads ENOENT, and this host reads it, so the gap is inactive here by design. The three gaps that still throw (process.exitCode, vm.Script, child-process.spawn with option detached) have a native surface in txiki but Freddie's adapter (src/txiki.js) is not wired to it yet; those are Freddie adapter work.
+
+Probe result against the rebuilt txiki (Phase B window, runs/phase-b-70/parity/out.txt): shared 796, gaps 4, gapAsserted 0, gapInactive 1, mismatches 0, unexpectedGaps 0. Freddie outside this repo: its expected record needs 796 shared, 4 applied and 1 inactive, which I cannot write from here (Freddie repo is read-only for this round).
+
+### Phase B window (one clear-gate window, then a second full window after one witness fix)
+
+Gate: vmstat 1 2 read before each stage (six samples in the window; sample second line si and so were 12 KB/s or less in every sample, and heavy-jobs returned 0 in every sample). A PID-owned bevy worker was running in the other session during the first readings and was not touched.
+
+The first window (runs/phase-b-70, 20:4x to 21:12) ran all 117 registry witnesses. One failed: check-body-reexec. Cause: friction (a) (81f4a64) makes job_status with value: true return the parsed object, and the witness expected the old text. The witness was changed to accept the object shape too (commit 1ca2162); the product change is what friction (a) asks for, and check-friction-jobs already expects the object. The witness was not made to pass by changing the product.
+
+The second window (runs/phase-b-70, 21:25 to 21:38, after 1ca2162, HEAD 9bea7e1) is the one the push rests on:
+- witnesses: 117 of 117 RC 0 (234 RUN lines: each PID and RC pair).
+- parity probe: RC 0, shared 796, gaps 4, gapInactive 1, mismatches 0, unexpectedGaps 0.
+- txiki red checks (sync_errno, sync_pos, access_case, detached, spawn_stdio, exit_code, port_default, compile_flag, realm_share): each RED RC 1 with the mutation, restored, AFTER RC 0. Window result ALL=0.
+- gm red checks (lazy-cache, friction-a-value, friction-e-killed, friction-c-ok, parity-w6-events, sweep-channel-dispatch, friction-b-generic): each RED_RC 1, RESTORED_cmp True, AFTER_RC 0 (read from the tail of /tmp/phase-a-70/reds/summary.txt, which the window appends to). The friction-b-args entry was removed from reds.json: its mutation text belonged to the duplicate check removed from verbs.cpp, so it matched zero times; friction-b-generic is its replacement.
+
+Other commits in this round after the window started: AGENTS.md heading fixes (17bcdb7 and 9bea7e1; the vendored notes section, one heading per file, the notes-file headings removed). No witness reads AGENTS.md (grep of native/components/tool/checks).
+
+### Owner-held
+
+- check-installed-stamp: owner-held for the 806ce7b install. Its witness is unchanged. gm install --local was not run and 806ce7b was not reinstalled.
+
