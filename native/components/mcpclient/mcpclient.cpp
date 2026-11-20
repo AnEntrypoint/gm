@@ -99,6 +99,23 @@ std::optional<std::vector<json::Value>> read_tool_cache(const std::filesystem::p
     return tools->as_array();
 }
 
+void write_tool_cache(const std::filesystem::path& file, const std::vector<json::Value>& tools) {
+    std::error_code ec;
+    std::filesystem::create_directories(file.parent_path(), ec);
+    const std::filesystem::path partial = file.string() + ".partial-" + std::to_string(std::hash<std::thread::id>{}(std::this_thread::get_id()));
+    {
+        std::ofstream out(partial, std::ios::binary | std::ios::trunc);
+        out << json::dump(json::Value(json::Object{{"tools", json::Value(json::Array(tools))}}));
+        out.close();
+        if (!out) {
+            std::filesystem::remove(partial, ec);
+            return;
+        }
+    }
+    std::filesystem::rename(partial, file, ec);
+    if (ec) std::filesystem::remove(partial, ec);
+}
+
 }
 
 struct McpVerbs::Impl {
@@ -112,6 +129,7 @@ struct McpVerbs::Impl {
     std::vector<VerbInfo> verbs;
     std::map<std::string, Route, std::less<>> routes;
     std::set<std::string> announced_skips;
+    std::filesystem::path tool_cache;
 
     void announce(std::string_view kind, json::Value fields) const {
         if (emit) emit(kind, std::move(fields));
@@ -124,12 +142,21 @@ struct McpVerbs::Impl {
             connects.emplace_back([c = client.get()] { c->connect(false); });
         }
         for (std::thread& connect : connects) connect.join();
+        cache_discovered();
         build_routes();
         {
             std::lock_guard lock(mutex);
             ready = true;
         }
         ready_changed.notify_all();
+    }
+
+    void cache_discovered() const {
+        if (tool_cache.empty()) return;
+        for (const std::unique_ptr<StdioClient>& client : clients) {
+            if (client->preloaded() || !client->spec().lazy || client->tools().empty()) continue;
+            write_tool_cache(tool_cache / (client->spec().name + ".json"), client->tools());
+        }
     }
 
     void build_routes() {
@@ -183,6 +210,7 @@ struct McpVerbs::Impl {
 McpVerbs::McpVerbs(Options options) : impl_(std::make_unique<Impl>()) {
     impl_->emit = std::move(options.emit);
     impl_->reserved = std::move(options.reserved);
+    impl_->tool_cache = options.tool_cache;
     ConfigReading reading = read_servers(options.config_files, options.workspace);
     for (const std::string& problem : reading.problems) {
         json::Value fields;

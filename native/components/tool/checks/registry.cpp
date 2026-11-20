@@ -45,6 +45,7 @@ const std::vector<Registered>& checks() {
         {"check-process-exit-code", check_process_exit_code},
         {"check-friction-verbs", check_friction_verbs},
         {"check-friction-jobs", check_friction_jobs},
+        {"check-lazy-cache", check_lazy_cache},
         {"check-worker-message-channel", check_worker_message_channel},
         {"check-vm-script-compile", check_vm_script_compile},
         {"check-vm-realm", check_vm_realm},
