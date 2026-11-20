@@ -13,6 +13,10 @@
 #include "engine.hpp"
 #include "platform.hpp"
 
+#if defined(GM_HAVE_TXIKI)
+#include "txiki_shim.h"
+#endif
+
 namespace gm {
 namespace {
 
@@ -464,6 +468,18 @@ void ConsoleBuffer::add(std::string_view text) {
     }
     lines.emplace_back(text);
     bytes += text.size();
+}
+
+}
+
+namespace gm {
+
+int requested_exit_code() {
+#if defined(GM_HAVE_TXIKI)
+    return gm_txiki_exit_code();
+#else
+    return 0;
+#endif
 }
 
 }

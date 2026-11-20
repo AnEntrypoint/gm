@@ -765,13 +765,16 @@ void Relay::host_closed(const std::string& reason) {
     lock.unlock();
     if (child) {
         child->close_input();
-        if (!child->wait_for(options_.exit_grace)) {
+        std::optional<int> code = child->wait_for(options_.exit_grace);
+        if (!code) {
             child->terminate();
-            if (!child->wait_for(options_.stop_grace)) {
+            code = child->wait_for(options_.stop_grace);
+            if (!code) {
                 child->kill();
-                child->wait_for(std::chrono::milliseconds(2000));
+                code = child->wait_for(std::chrono::milliseconds(2000));
             }
         }
+        worker_code_ = code.value_or(0);
     }
     if (reader_.joinable()) reader_.join();
 }
@@ -817,7 +820,10 @@ int serve_stdio(RelayOptions options) {
     const std::string reason = pump_host_stdin(relay);
 #endif
     relay.host_closed(reason);
-    return stop_signal_received != 0 ? 128 + stop_signal_received : 0;
+    if (stop_signal_received != 0) {
+        return 128 + stop_signal_received;
+    }
+    return relay.worker_exit_code();
 }
 
 }

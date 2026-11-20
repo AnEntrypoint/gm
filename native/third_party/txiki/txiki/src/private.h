@@ -289,6 +289,7 @@ void tjs__mod_posix_socket_init(JSContext *ctx, JSValue ns);
 
 JSValue tjs_new_error(JSContext *ctx, int err);
 JSValue tjs_throw_errno(JSContext *ctx, int err);
+int tjs_exit_code(void);
 
 JSValue tjs_new_pipe(JSContext *ctx);
 uv_stream_t *tjs_pipe_get_stream(JSContext *ctx, JSValue obj);

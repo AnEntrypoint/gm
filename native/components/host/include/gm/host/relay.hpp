@@ -64,6 +64,7 @@ public:
     void start();
     void host_line(std::string line);
     void host_closed(const std::string& reason = "the relay was destroyed with the host still attached");
+    int worker_exit_code() const { return worker_code_; }
     void request_restart(std::string reason);
     void reexec();
     bool only_resendable_in_flight() const;
@@ -113,6 +114,7 @@ private:
     State state_ = State::Starting;
     bool swapping_ = false;
     bool host_gone_ = false;
+    int worker_code_ = 0;
     std::shared_ptr<Child> child_;
     std::thread reader_;
     std::thread control_;

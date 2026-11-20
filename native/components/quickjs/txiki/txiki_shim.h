@@ -17,6 +17,7 @@ void gm_txiki_loop_turn(TJSRuntime *runtime);
 void gm_txiki_loop_wait(TJSRuntime *runtime, int limit_ms);
 JSModuleDef *gm_txiki_load_builtin(JSContext *ctx, const char *module_name);
 JSValue gm_txiki_refresh_loop_time(JSContext *ctx, JSValueConst this_value, int argc, JSValueConst *argv);
+int gm_txiki_exit_code(void);
 
 #ifdef __cplusplus
 }

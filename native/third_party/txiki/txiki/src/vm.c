@@ -200,6 +200,21 @@ static JSValue tjs__js_drain_microtasks(JSContext *ctx, JSValue this_val, int ar
     return JS_UNDEFINED;
 }
 
+static int tjs__exit_code;
+
+static JSValue tjs__set_exit_code(JSContext *ctx, JSValue this_val, int argc, JSValue *argv) {
+    int32_t code;
+    if (JS_ToInt32(ctx, &code, argv[0])) {
+        return JS_EXCEPTION;
+    }
+    tjs__exit_code = code;
+    return JS_UNDEFINED;
+}
+
+int tjs_exit_code(void) {
+    return tjs__exit_code;
+}
+
 static JSValue tjs__sync_read_file(JSContext *ctx, JSValue this_val, int argc, JSValue *argv) {
     const char *filename = JS_ToCString(ctx, argv[0]);
     if (!filename) {
@@ -295,6 +310,11 @@ static void tjs__bootstrap_core(JSContext *ctx, JSValue ns) {
                               ns,
                               "syncReadFile",
                               JS_NewCFunction(ctx, tjs__sync_read_file, "syncReadFile", 1),
+                              JS_PROP_C_W_E);
+    JS_DefinePropertyValueStr(ctx,
+                              ns,
+                              "setExitCode",
+                              JS_NewCFunction(ctx, tjs__set_exit_code, "setExitCode", 1),
                               JS_PROP_C_W_E);
     JS_DefinePropertyValueStr(ctx,
                               ns,

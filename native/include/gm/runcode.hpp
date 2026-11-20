@@ -60,6 +60,8 @@ private:
     BodyControlsPtr previous_;
 };
 
+int requested_exit_code();
+
 deoxidene::Result<json::Value, std::string> run_body(VerbTable& verbs, std::string_view body,
                                                      const std::filesystem::path& project_root, std::string_view format = "cjs",
                                                      BodyControlsPtr controls = nullptr);

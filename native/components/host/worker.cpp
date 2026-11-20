@@ -220,7 +220,8 @@ int run_worker(const HostArgs& args) {
         return gm::run_body(verbs, body, root, format);
     };
     trace_phase("serving");
-    return mcp::serve_stream(std::cin, std::cout, served, std::move(options));
+    const int code = mcp::serve_stream(std::cin, std::cout, served, std::move(options));
+    return code != 0 ? code : requested_exit_code();
 }
 
 int run_doctor(const HostArgs& args) {

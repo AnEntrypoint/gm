@@ -4966,3 +4966,14 @@ Red check (mutation, witness, restore, cmp, git status): the JS_SetPropertyStr t
 
 Freddie: the stdio entries beyond three are options.stdio[3..]; the parent-side pipe is proc.stdio[fd]. Rows that depended on this in handoff 5 are now reachable.
 
+
+## Txiki handoff 6: process.exitCode (vm.c setExitCode, the worker and the relay)
+
+Change: vm.c registers setExitCode on the core namespace beside syncReadFile; it stores the int in a process-wide variable, read by tjs_exit_code(). The shim exposes it as gm_txiki_exit_code(), and gm::requested_exit_code() (runcode.hpp, defined in quickjs/runcode.cpp) returns it, or 0 without txiki. The worker returns that value when its serve loop ends with 0. The relay records the worker process exit status when the host closes (Relay::host_closed) and serve_stdio returns it (worker_exit_code()) unless a signal stopped it.
+
+Correction to the handoff: the JS that sets the code runs in the worker process, not in the relay, so run_serve in serve.cpp cannot read the value itself. The status travels worker to relay to the host exit, and serve.cpp is unchanged.
+
+Witness: check-process-exit-code (native/components/tool/checks/process_exit_code.cpp). It runs the gm serve binary with a JSON-RPC input file, once with a run that calls core.setExitCode(7) and once with a run that does not, and checks the process exit status: 7 and 0, with each run finishing. Output: ok, rc 0.
+
+Red check (mutation, witness, restore, cmp, git status): vm.c setExitCode discards the value. Witness: 1 failure (serve did not exit with the code set by setExitCode: status 0), RED_RC=1. Restored and cmp ok; rebuild rc 0; witness again rc 0 with ok.
+

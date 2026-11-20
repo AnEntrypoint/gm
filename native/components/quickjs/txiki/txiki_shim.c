@@ -8,6 +8,10 @@
 #include <poll.h>
 #endif
 
+int gm_txiki_exit_code(void) {
+    return tjs_exit_code();
+}
+
 TJSRuntime *gm_txiki_new(void) {
     TJSRunOptions options;
     TJS_DefaultOptions(&options);
