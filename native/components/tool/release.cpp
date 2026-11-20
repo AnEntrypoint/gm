@@ -16,6 +16,8 @@
 #include <sstream>
 #include <system_error>
 
+#include "gm/clock.hpp"
+
 namespace gm::tool {
 namespace {
 
@@ -58,20 +60,8 @@ std::string sha256_of(const fs::path& file) {
 }
 
 std::string utc_now() {
-    const auto now = std::chrono::system_clock::now();
-    const auto seconds = std::chrono::system_clock::to_time_t(now);
-    const auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count() % 1000;
-    std::tm utc{};
-#if defined(_WIN32)
-    gmtime_s(&utc, &seconds);
-#else
-    gmtime_r(&seconds, &utc);
-#endif
-    std::ostringstream text;
-    text << std::put_time(&utc, "%Y-%m-%dT%H:%M:%S") << '.' << std::setw(3) << std::setfill('0') << millis << 'Z';
-    return text.str();
+    return gm::iso_utc(std::chrono::system_clock::now());
 }
-
 std::string trimmed(const std::string& text) {
     const auto first = text.find_first_not_of(" \t\r\n");
     if (first == std::string::npos) return {};

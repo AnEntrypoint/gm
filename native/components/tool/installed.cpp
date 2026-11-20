@@ -1,4 +1,5 @@
 #include "gm/tool.hpp"
+#include "gm/file.hpp"
 
 #include <algorithm>
 #include <chrono>
@@ -17,13 +18,6 @@ namespace fs = std::filesystem;
 std::string trimmed(std::string text) {
     while (!text.empty() && (text.back() == '\n' || text.back() == '\r' || text.back() == ' ')) text.pop_back();
     return text;
-}
-
-std::string read_text(const fs::path& file) {
-    std::ifstream in(file, std::ios::binary);
-    std::ostringstream text;
-    text << in.rdbuf();
-    return text.str();
 }
 
 std::vector<fs::path> files_under(const fs::path& dir) {
@@ -56,7 +50,7 @@ std::vector<std::string> install_differences(const std::filesystem::path& root, 
     const auto checkout_files = files_under(root / "skills");
     if (files_under(current / "skills") != checkout_files) stale.push_back("the installed skill files differ from the checkout's");
     for (const fs::path& file : checkout_files) {
-        if (read_text(current / "skills" / file) != read_text(root / "skills" / file)) stale.push_back("installed skills/" + file.string() + " is not the checkout's");
+        if (gm::read_binary(current / "skills" / file) != gm::read_binary(root / "skills" / file)) stale.push_back("installed skills/" + file.string() + " is not the checkout's");
     }
     return stale;
 }

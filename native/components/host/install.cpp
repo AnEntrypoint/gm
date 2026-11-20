@@ -1,4 +1,5 @@
 #include "gm/host/install.hpp"
+#include "gm/file.hpp"
 
 #include <algorithm>
 #include <chrono>
@@ -46,10 +47,7 @@ std::optional<std::map<std::string, std::string>> tree_bytes(const fs::path& roo
     std::map<std::string, std::string> files;
     for (fs::recursive_directory_iterator it(root, ec), end; !ec && it != end; it.increment(ec)) {
         if (!it->is_regular_file(ec)) continue;
-        std::ifstream in(it->path(), std::ios::binary);
-        std::ostringstream text;
-        text << in.rdbuf();
-        files[it->path().lexically_relative(root).generic_string()] = text.str();
+        files[it->path().lexically_relative(root).generic_string()] = gm::read_binary(it->path());
     }
     if (ec) return std::nullopt;
     return files;

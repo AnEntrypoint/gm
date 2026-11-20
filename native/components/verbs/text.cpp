@@ -97,16 +97,6 @@ std::string to_valid_utf8(std::string_view bytes) {
     return out;
 }
 
-std::size_t utf16_length(std::string_view text) {
-    std::size_t units = 0;
-    for (char ch : text) {
-        auto c = static_cast<unsigned char>(ch);
-        if (is_continuation(c)) continue;
-        units += c >= 0xF0 ? 2 : 1;
-    }
-    return units;
-}
-
 std::size_t byte_at_utf16(std::string_view text, std::size_t units) {
     std::size_t counted = 0;
     std::size_t at = 0;

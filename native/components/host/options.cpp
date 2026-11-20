@@ -7,6 +7,7 @@
 #include <sstream>
 #include <system_error>
 
+#include "gm/clock.hpp"
 #include "gm/host/child.hpp"
 
 namespace gm::host {
@@ -46,12 +47,7 @@ std::vector<std::string> without_flags(const std::vector<std::string>& args,
 
 std::string new_run_id() {
     const std::time_t now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-    std::tm utc{};
-#if defined(_WIN32)
-    gmtime_s(&utc, &now);
-#else
-    gmtime_r(&now, &utc);
-#endif
+    const std::tm utc = gm::utc_parts(now);
     char stamp[32];
     std::strftime(stamp, sizeof stamp, "%Y-%m-%d-%H-%M-%S", &utc);
     std::random_device device;

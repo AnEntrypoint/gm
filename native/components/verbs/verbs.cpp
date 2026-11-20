@@ -34,7 +34,6 @@ using core::failure;
 using core::output_page;
 using core::present;
 using core::refusal;
-using core::utf16_length;
 using core::utf16_slice;
 
 std::string artifact_digest(const std::string& text) {
@@ -254,12 +253,7 @@ std::vector<std::size_t> line_starts(std::string_view text) {
 
 std::string time_iso(std::int64_t seconds, std::int64_t millis) {
     std::time_t t = static_cast<std::time_t>(seconds);
-    std::tm parts{};
-#if defined(_WIN32)
-    gmtime_s(&parts, &t);
-#else
-    gmtime_r(&t, &parts);
-#endif
+    const std::tm parts = gm::utc_parts(t);
     char buffer[96];
     std::snprintf(buffer, sizeof buffer, "%04d-%02d-%02dT%02d:%02d:%02d.%03dZ", parts.tm_year + 1900, parts.tm_mon + 1, parts.tm_mday,
                   parts.tm_hour, parts.tm_min, parts.tm_sec, static_cast<int>(millis));

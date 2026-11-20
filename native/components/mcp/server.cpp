@@ -153,8 +153,8 @@ void add_cut_run(json::Value& reply, const std::string& text, std::size_t length
     const OutputArtifact artifact = store_artifact(text, run_dir, "run_code");
     const std::string clean = redact_artifact(text);
     const std::string page = utf8_head(clean, kOutputPage);
-    const std::size_t shown = js_length(page);
-    const std::size_t total = js_length(clean);
+    const std::size_t shown = gm::utf16_length(page);
+    const std::size_t total = gm::utf16_length(clean);
     const std::string path_json = json::dump(json::Value(artifact.path));
     reply.set(key, page);
     reply.set("truncated", true);
@@ -631,7 +631,7 @@ Value logged_for(const std::string& tool, const Value& result) {
     const Value* output = result.find("output");
     if (!kLoggedOutputTools.contains(tool) || output == nullptr) return result;
     const std::string text = output->is_string() ? output->as_string() : json::dump(*output);
-    std::size_t length = js_length(text);
+    std::size_t length = gm::utf16_length(text);
     Value shown = result;
     shown.set("output", text);
     if (length <= kLoggedReplyChars) return shown;
@@ -1581,7 +1581,7 @@ struct Server::State {
     }
 
     static std::string js_suffix(const std::string& text, std::size_t units) {
-        std::size_t length = js_length(text);
+        std::size_t length = gm::utf16_length(text);
         if (length <= units) return text;
         return text.substr(js_prefix(text, length - units).size());
     }
@@ -1764,7 +1764,7 @@ struct Server::State {
         if (job->adopted && !job->settled && !job->killing) {
             if (job->value) {
                 std::string text = json::dump(*job->value);
-                std::size_t length = js_length(text);
+                std::size_t length = gm::utf16_length(text);
                 json::Value settled(json::Object{});
                 add_cut_run(settled, text, length, s().log->dir(), "value");
                 settle_locked(*job, "exited", std::move(settled));
@@ -1805,7 +1805,7 @@ struct Server::State {
             auto decoded = json::parse(stored->as_string());
             text = decoded && decoded->is_string() ? decoded->as_string() : stored->as_string();
         }
-        const std::size_t total = js_length(text);
+        const std::size_t total = gm::utf16_length(text);
         const Value* tail_arg = args.find("tail");
         std::size_t from = 0;
         std::size_t end = std::min(kTailCap, total);
@@ -1814,7 +1814,7 @@ struct Server::State {
             end = std::min(from + kTailCap, total);
         } else if (tail_arg && tail_arg->is_number() && tail_arg->as_number() >= 0) {
             const auto lines = static_cast<std::size_t>(tail_arg->as_number());
-            from = std::max(total > kOutputPage ? total - kOutputPage : std::size_t{0}, js_length(text.substr(0, gm::tail_lines_start(text, lines))));
+            from = std::max(total > kOutputPage ? total - kOutputPage : std::size_t{0}, gm::utf16_length(text.substr(0, gm::tail_lines_start(text, lines))));
             end = total;
         }
         if (from > end) from = end;
@@ -1824,7 +1824,7 @@ struct Server::State {
             if (kStatusFields.count(m.first)) reply.set(m.first, m.second);
         }
         if (const Value* value = status->find("value")) {
-            reply.set("valueChars", number_of(value->is_string() ? js_length(value->as_string()) : json::dump(*value).size()));
+            reply.set("valueChars", number_of(value->is_string() ? gm::utf16_length(value->as_string()) : json::dump(*value).size()));
             const Value* want = args.find("value");
             if (want != nullptr && want->is_bool() && want->as_bool()) reply.set("value", *value);
         }
@@ -2137,7 +2137,7 @@ struct Server::State {
         } else if (!read_file(s().run_dir / "jobs" / (job + ".out"), text)) {
             read_file(s().run_dir / "jobs" / (job + ".log"), text);
         }
-        std::size_t length = js_length(text);
+        std::size_t length = gm::utf16_length(text);
         Value out = object().set("seq", *event.find("seq")).set("job", job);
         for (const char* key : {"state", "exitCode", "signal"}) {
             if (const Value* v = event.find(key)) out.set(key, *v);
@@ -2309,11 +2309,11 @@ struct Server::State {
             }
             if (s().task.size() > kTaskPage) {
                 const std::string head = task_head();
-                reply.set("taskChars", number_of(js_length(s().task)))
+                reply.set("taskChars", number_of(gm::utf16_length(s().task)))
                     .set("taskTruncated", true)
-                    .set("taskNotice", "[gm: the task is " + std::to_string(js_length(s().task)) + " characters; the first " + std::to_string(js_length(head)) +
+                    .set("taskNotice", "[gm: the task is " + std::to_string(gm::utf16_length(s().task)) + " characters; the first " + std::to_string(gm::utf16_length(head)) +
                                            " are shown. Read the rest with gm.query_log({ kind: 'task', last: 1 }) for the task event's seq, then gm.query_log({ seq, field: 'text', offset: " +
-                                           std::to_string(js_length(head)) + ", limit: 20000 }) and read on from next until next is null.]");
+                                           std::to_string(gm::utf16_length(head)) + ", limit: 20000 }) and read on from next until next is null.]");
             }
         }
         reply.set("witness", kDefaultWitness)
@@ -3717,12 +3717,12 @@ struct ShownPart {
 };
 
 ShownPart shown_part(const std::string& text, const std::string& command, const std::string& name) {
-    const std::size_t total = js_length(text);
+    const std::size_t total = gm::utf16_length(text);
     if (name == "run_shell" && std::regex_search(command, kSearchCommand)) {
         std::string head = js_prefix(text, kSearchHeadChars);
         const std::size_t cut = head.rfind('\n');
         if (head.size() < text.size() && cut != std::string::npos) head.resize(cut + 1);
-        return {head, js_length(head)};
+        return {head, gm::utf16_length(head)};
     }
     if (name == "run_shell" && std::regex_search(command, kTestCommand)) {
         const std::vector<std::string> lines = split_lines(text);
@@ -3733,14 +3733,14 @@ ShownPart shown_part(const std::string& text, const std::string& command, const 
         if (!failures.empty()) {
             const std::size_t tail_from = lines.size() > kTestTailLines ? lines.size() - kTestTailLines : 0;
             std::string body = join_lines(failures, 0, failures.size()) + "\n" + std::string(gm::marker::kCutHere) + "\n" + join_lines(lines, tail_from, lines.size());
-            if (js_length(body) > kInlineVerbChars) body = js_prefix(body, kInlineVerbChars);
-            return {body, js_length(body)};
+            if (gm::utf16_length(body) > kInlineVerbChars) body = js_prefix(body, kInlineVerbChars);
+            return {body, gm::utf16_length(body)};
         }
     }
     const std::string head = js_prefix(text, kInlineHeadChars);
-    if (name == "run_shell" && std::regex_search(command, kDumpCommand)) return {head, js_length(head)};
+    if (name == "run_shell" && std::regex_search(command, kDumpCommand)) return {head, gm::utf16_length(head)};
     const std::string tail = text.substr(js_prefix(text, total - kInlineTailChars).size());
-    return {head + "\n" + std::string(gm::marker::kCutHere) + "\n" + tail, js_length(head)};
+    return {head + "\n" + std::string(gm::marker::kCutHere) + "\n" + tail, gm::utf16_length(head)};
 }
 
 Value bounded_output(Value result, const Value& args, const fs::path& run_dir, const std::string& name) {
@@ -3749,7 +3749,7 @@ Value bounded_output(Value result, const Value& args, const fs::path& run_dir, c
     const bool skill_file = name == "read_file" && target != nullptr && target->is_string() && target->as_string().rfind("skill://", 0) == 0;
     if (flag_set(args, "full") || skill_file || output == nullptr || !output->is_string()) return result;
     const std::string text = output->as_string();
-    const std::size_t total = js_length(text);
+    const std::size_t total = gm::utf16_length(text);
     if (total <= kInlineVerbChars) return result;
     std::string path;
     const Value* existing = result.find("outputPath");
@@ -3760,7 +3760,7 @@ Value bounded_output(Value result, const Value& args, const fs::path& run_dir, c
         return value != nullptr && value->is_string() ? value->as_string() : std::string();
     }();
     const ShownPart part = shown_part(text, command, name);
-    const std::size_t shown = js_length(part.body);
+    const std::size_t shown = gm::utf16_length(part.body);
     const std::size_t omitted = total - shown;
     const bool dump = name == "run_shell" && std::regex_search(command, kDumpCommand);
     const std::string range = dump ? "[gm: gm.read_file with offset and limit gives the same lines by range; a repeat of that read gets a pointer]\n" : "";
@@ -4051,7 +4051,7 @@ Value Server::State::run_code(const Value& args) {
                 }
                 if (!job->value) return with_seq(object().set("ok", false).set("error", job->error).set("loads", array()));
                 const std::string text = job->value->is_string() ? job->value->as_string() : json::dump(*job->value);
-                std::size_t length = js_length(text);
+                std::size_t length = gm::utf16_length(text);
                 json::Value result(json::Object{});
                 result.set("ok", true);
                 if ((job->value->is_object() || job->value->is_array() || job->value->is_string()) && length <= kOutputCap) {

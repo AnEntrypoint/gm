@@ -14,6 +14,8 @@
 #include "deoxidene/result.hpp"
 #include "gm/json.hpp"
 
+#include "gm/utf16.hpp"
+
 namespace gm::mcp::detail {
 
 using json::Value;
@@ -23,7 +25,6 @@ inline Value array() { return Value(json::Array{}); }
 inline Value number(double n) { return Value(n); }
 inline Value number_of(std::uint64_t n) { return Value(static_cast<double>(n)); }
 
-std::size_t js_length(std::string_view utf8);
 std::string js_prefix(std::string_view utf8, std::size_t units);
 std::string trim(std::string_view text);
 std::string iso_time(std::filesystem::file_time_type when);

@@ -45,16 +45,16 @@ std::vector<std::string> split_lines(const std::string& text) {
     return lines;
 }
 
-std::size_t cost_of(const Value& v) { return js_length(json::dump(v)) + 1; }
+std::size_t cost_of(const Value& v) { return gm::utf16_length(json::dump(v)) + 1; }
 
 std::string js_suffix(std::string_view text, std::size_t units) {
-    std::size_t length = js_length(text);
+    std::size_t length = gm::utf16_length(text);
     std::size_t skip = length > units ? length - units : 0;
     return std::string(text.substr(js_prefix(text, skip).size()));
 }
 
 std::string head_tail(const std::string& text, std::size_t head, std::size_t tail) {
-    std::size_t length = js_length(text);
+    std::size_t length = gm::utf16_length(text);
     if (length <= head + tail) return text;
     return js_prefix(text, head) + " ...[" + std::to_string(length - head - tail) + " chars cut; " + kFeedReach + "] ..." +
            js_suffix(text, tail);
@@ -140,10 +140,10 @@ Value cut_refs_of(const Value& item) {
     std::size_t omitted = 0;
     std::uint64_t seq = item.find("seq") && item.find("seq")->is_number() ? static_cast<std::uint64_t>(item.find("seq")->as_number()) : 0;
     auto add = [&](const std::string& path, const std::string& text, std::size_t cap) {
-        if (js_length(text) <= cap) return;
+        if (gm::utf16_length(text) <= cap) return;
         if (refs.as_array().size() >= kCutRefsCap) { ++omitted; return; }
-        refs.push(object().set("seq", number_of(seq)).set("path", path).set("chars", number_of(js_length(text)))
-                      .set("cap", number_of(cap)).set("offset", number(0)).set("limit", number_of(js_length(text)))
+        refs.push(object().set("seq", number_of(seq)).set("path", path).set("chars", number_of(gm::utf16_length(text)))
+                      .set("cap", number_of(cap)).set("offset", number(0)).set("limit", number_of(gm::utf16_length(text)))
                       .set("query", Value(kCutRefQuery)));
     };
     for (const char* key : {"output", "error", "witness", "reason", "body", "message", "task"}) {
@@ -180,8 +180,8 @@ Value bounded_item(const Value& item, std::size_t cap = kEventCap) {
         if (const Value* given = item.find("outputChars"); given && given->is_number()) chars = given->as_number();
         else if (auto digest = digest_of(item); digest && digest->is_object()) {
             const Value* bytes = digest->find("bytes");
-            chars = bytes && bytes->is_number() ? bytes->as_number() : static_cast<double>(js_length(output->as_string()));
-        } else chars = static_cast<double>(js_length(output->as_string()));
+            chars = bytes && bytes->is_number() ? bytes->as_number() : static_cast<double>(gm::utf16_length(output->as_string()));
+        } else chars = static_cast<double>(gm::utf16_length(output->as_string()));
         put("outputChars", number(chars));
         if (auto digest = digest_of(item)) {
             Value compact = compact_digest(&*digest);
@@ -189,7 +189,7 @@ Value bounded_item(const Value& item, std::size_t cap = kEventCap) {
         }
     } else {
         std::string text = json::dump(item);
-        put("textChars", number(static_cast<double>(js_length(text))));
+        put("textChars", number(static_cast<double>(gm::utf16_length(text))));
         const Value* kind = item.find("kind");
         if (kind == nullptr || !kind->is_string() || kind->as_string() != "context-reply") {
             put("head", Value(js_prefix(text, kEventHead)));
@@ -460,7 +460,7 @@ Plan plan_fresh(const std::vector<Fresh>& fresh, std::uint64_t last_seq, std::si
 }
 
 std::string clip(const std::string& text, std::size_t cap) {
-    std::size_t length = js_length(text);
+    std::size_t length = gm::utf16_length(text);
     if (length <= cap) return text;
     return js_prefix(text, cap) + " ...[" + std::to_string(length) + " chars]";
 }
@@ -495,8 +495,8 @@ Value output_digest(const std::string& text, bool failed) {
     if (failed) {
         std::size_t shown = 0;
         std::size_t chars = 0;
-        while (shown < lines.size() && (shown == 0 || chars + js_length(lines[shown]) <= kFailedHeadChars)) {
-            chars += js_length(lines[shown]);
+        while (shown < lines.size() && (shown == 0 || chars + gm::utf16_length(lines[shown]) <= kFailedHeadChars)) {
+            chars += gm::utf16_length(lines[shown]);
             shown += 1;
         }
         Value all = array();
@@ -513,7 +513,7 @@ Value args_of(const Value* args) {
     for (const json::Member& m : args->as_object()) {
         if (m.second.is_string()) {
             const std::string& text = m.second.as_string();
-            std::size_t length = js_length(text);
+            std::size_t length = gm::utf16_length(text);
             out.set(m.first, length <= kArgCap ? m.second : object().set("chars", number_of(length)).set("head", clip(text, kArgHead)));
         } else if (m.second.is_array()) {
             std::size_t items = m.second.as_array().size();

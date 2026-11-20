@@ -21,6 +21,9 @@
 #include "gm/log.hpp"
 #include "gm/verbs.hpp"
 
+#include "gm/clock.hpp"
+#include "gm/utf16.hpp"
+
 namespace gm::core {
 
 class LockedLog;
@@ -61,20 +64,8 @@ inline bool is_absolute(const std::string& path) {
 
 
 inline std::string iso_now() {
-    const auto now = std::chrono::system_clock::now();
-    const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count() % 1000;
-    const std::time_t secs = std::chrono::system_clock::to_time_t(now);
-    std::tm utc{};
-#if defined(_WIN32)
-    gmtime_s(&utc, &secs);
-#else
-    gmtime_r(&secs, &utc);
-#endif
-    char buf[48];
-    std::snprintf(buf, sizeof(buf), "%04d-%02d-%02dT%02d:%02d:%02d.%03lldZ", utc.tm_year + 1900, utc.tm_mon + 1, utc.tm_mday, utc.tm_hour, utc.tm_min, utc.tm_sec, static_cast<long long>(ms));
-    return buf;
+    return gm::iso_utc(std::chrono::system_clock::now());
 }
-
 
 bool is_row_verb(std::string_view name);
 const std::vector<VerbInfo>& row_verbs();
@@ -93,7 +84,6 @@ inline constexpr std::size_t output_page = 20000;
 inline constexpr std::size_t tail_cap = 2000;
 
 std::string to_valid_utf8(std::string_view bytes);
-std::size_t utf16_length(std::string_view text);
 std::size_t byte_at_utf16(std::string_view text, std::size_t units);
 std::string utf16_slice(std::string_view text, std::size_t from, std::size_t to);
 std::string utf16_tail(std::string_view text, std::size_t units);

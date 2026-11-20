@@ -1,4 +1,5 @@
 #include "gm/host/update.hpp"
+#include "gm/file.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -95,11 +96,6 @@ std::string failure_of(const std::string& what, const proc::Outcome& outcome) {
     return what + " failed (exit " + std::to_string(outcome.exit_code) + ")" + (detail.empty() ? std::string{} : ": " + detail);
 }
 
-std::string read_bytes(const fs::path& path) {
-    std::ifstream in(path, std::ios::binary);
-    return std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
-}
-
 std::string_view trimmed(std::string_view text) {
     const std::size_t first = text.find_first_not_of(" \t\r\n");
     if (first == std::string_view::npos) return {};
@@ -168,7 +164,7 @@ std::optional<std::string> verify_archive(const fs::path& archive, const Manifes
     if (asset.size != 0 && size != asset.size)
         return "the archive " + asset.file + " is " + std::to_string(size) + " bytes, the manifest says " +
                std::to_string(asset.size);
-    const std::string bytes = read_bytes(archive);
+    const std::string bytes = gm::read_binary(archive);
     if (asset.sha256.empty() || lower(mcp::sha256_hex(bytes)) != lower(asset.sha256))
         return "sha256 of " + asset.file + " does not match the manifest; the installed build is kept";
     return std::nullopt;
@@ -290,14 +286,14 @@ deoxidene::Result<ManifestReply, std::string> fetch_manifest_over_http(const std
     ManifestReply reply;
     reply.not_modified = trimmed(outcome.out) == "304";
     if (reply.not_modified) return reply;
-    reply.body = read_bytes(body);
-    reply.etag = etag_from_headers(read_bytes(headers)).value_or("");
+    reply.body = gm::read_binary(body);
+    reply.etag = etag_from_headers(gm::read_binary(headers)).value_or("");
     return reply;
 }
 
 UpdateState read_update_state(const fs::path& install_dir) {
     UpdateState state;
-    const auto parsed = json::parse(read_bytes(install_dir / kStateName));
+    const auto parsed = json::parse(gm::read_binary(install_dir / kStateName));
     if (!parsed || !parsed->is_object()) return state;
     const json::Value* checked = parsed->find("checked_ms");
     if (checked != nullptr && checked->is_number()) state.checked_ms = static_cast<std::int64_t>(checked->as_number());
