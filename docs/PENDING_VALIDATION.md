@@ -4695,3 +4695,10 @@ Not changed: the 13 install-running witnesses, the job_start Windows kill, and r
 
 - scripts/wake-reader.mjs attributes each wake second to its widest verb call (scopeOf). wakesPerCall sums the wakes of the seconds attributed to each verb call, and report prints one line per playwriter_execute with its wakes, seconds and rate. A second on the boundary counts to the call the reader attributes it to.
 - Fixture: scripts/fixtures/playwriter-verbs-stream.txt and playwriter-verbs-wake.txt (a call before the window, a call with a 250-wake burst, a quiet call). Witness check-verb-wakes: "playwriter_execute 62: 260 wakes in 3 s", "63: 15 wakes in 3 s", the call before the window ignored, ok. Red leg: the per-call sum set to zero, check-verb-wakes FAILED, rc 1. Restored, cmp matched, green rc 0.
+
+## Fifty-first stretch 2026-11-20 (the window with the parity witness; the playwriter run did not start): Phase B
+
+- Window 02:05:24 to 02:15:49, 20 readings every 30 s (vmstat 1 2 second sample as gate; scripts heavy-jobs.cjs at bevy 495fff6, the committed checker). Reading 8 at 02:09:13 cleared: gate si 316 so 0, HEAVY_JOBS clear. Step 1 started there: timeout 900 gm-tool check parity-contract, pid 2066198 as the timeout wrapper.
+- Witness: "parity-contract: ok (18 of 18 parity contract witnesses hold ...)", rc 0 at 02:09:21 (7.65 s). No new chromium was started by this step.
+- Step 2 (the own playwriter wakeup run with its reader, scripts/gap-repro.mjs with playwriter-body) did not start. The driver required at least 150 s left, and no clear reading came with that much time (reading 16 at 02:13:39 had 105 s left, and the gate read 7936 KB/s at that reading). That guard was the driver's own, not a rule of the stretch. Its wakeups per playwriter call are still unmeasured live; the per-call count is witnessed on the fixture only (check-verb-wakes).
+- Busy readings in the window came from other processes: a chromium GPU process and renderer under /tmp/verify (up to 189% CPU), a chromium tracing service, and a find / over the basisu files. None were mine.
