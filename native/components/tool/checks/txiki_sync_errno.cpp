@@ -17,9 +17,10 @@ CheckResult check_txiki_sync_errno(const std::string& binary) {
         } else {
             started = true;
             support::start_session(session, "check-txiki-sync-errno");
-            const std::string body = R"JS(await gm.read_file({ path: 'skill://gm/SKILL.md' }); const core = (await import("tjs:internal/core")).default; let code = null; let threw = false; try { core.syncReadFile("/nonexistent/gm-sync-errno"); } catch (e) { threw = true; code = e.code; } const ok = core.syncReadFile("/proc/version"); return { threw, code, okBytes: ok.length };)JS";
-            const json::Value reply = output_value(tool_json(session, "run_code", json::Object{{"body", body}}));
-            answer = json::dump(reply);
+            const std::string body = R"JS(await gm.read_file({ path: 'skill://gm/SKILL.md' }); const core = (await import("tjs:internal/core")).default; let code = null; let threw = false; try { core.syncReadFile("/nonexistent/gm-sync-errno"); } catch (e) { threw = true; code = e.code; } const okPath = core.mkdtempSync(globalThis.tjs.tmpDir + '/gm-sync-ok-XXXXXX') + '/ok.txt'; const okFd = core.openSync(okPath, 'w', 420); core.writeSync(okFd, new Uint8Array([111, 107]), 0, 2, null); core.closeSync(okFd); const ok = core.syncReadFile(okPath); return { threw, code, okBytes: ok.length };)JS";
+            const json::Value raw = tool_json(session, "run_code", json::Object{{"body", body}});
+            answer = json::dump(output_value(raw));
+            if (answer == "null") answer = "no output: " + json::dump(raw);
         }
     }
     std::error_code ec;
