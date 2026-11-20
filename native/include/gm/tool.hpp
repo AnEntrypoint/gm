@@ -41,6 +41,7 @@ CheckResult check_browser_dead_executor(const std::string& binary);
 CheckResult check_browser_tabs_owner(const std::string& binary);
 CheckResult check_caps_removed(const std::string& binary);
 CheckResult check_phase_b_stubs(const std::string& binary);
+CheckResult check_phase_b_halt(const std::string& binary);
 CheckResult check_update_stream(const std::string& binary);
 CheckResult check_job_wait_bounded(const std::string& binary);
 CheckResult check_publish_gate(const std::string& binary);

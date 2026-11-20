@@ -1,4 +1,5 @@
 #include "gm/tool.hpp"
+#include "gm/phase_b_halt.hpp"
 #if !defined(_WIN32)
 
 #include <algorithm>
@@ -214,7 +215,10 @@ public:
         }
         std::sort(pool.begin(), pool.end(), [this](const Job& a, const Job& b) { return duration_of(a.name) > duration_of(b.name); });
         run_pool(pool);
-        for (const auto& job : exclusive) run_one(job);
+        for (const auto& job : exclusive) {
+            if (halted_.load()) break;
+            run_one(job);
+        }
 
         cache_.erase(kMutations);
         write_pairs(cache_path_, cache_);
@@ -235,7 +239,7 @@ public:
             say("phase-b: cache: a second run skips " + std::to_string(expected.size()) + " of " + std::to_string(expected.size()) + " passing check(s), inputs unchanged");
         }
 
-        if (mutations) run_one({kMutations, ""});
+        if (mutations && !halted_.load()) run_one({kMutations, ""});
 
         const auto after = tree_state(root_);
         std::vector<std::string> touched;
@@ -267,6 +271,14 @@ public:
         say("phase-b: checks: " + std::to_string(timings_.size()) + " run, " + std::to_string(failures_.size()) + " failed, " + std::to_string(rescued_.size()) +
             " passed alone after a pool failure, " + std::to_string(skipped) + " skipped, " + std::to_string(stubbed_.size()) + " stubbed" + stubbed_text + ", jobs " + std::to_string(lanes_) + ", load " + one_decimal(load_one()) + " on " +
             std::to_string(cores_) + " cores, wall " + seconds(wall) + "; longest: " + (top.empty() ? "none" : top));
+        if (halted_.load()) {
+            std::size_t not_run = 0;
+            for (const auto* group : {&pool, &exclusive})
+                for (const auto& job : *group)
+                    if (std::none_of(timings_.begin(), timings_.end(), [&](const Timing& timing) { return timing.name == job.name; })) ++not_run;
+            say("phase-b: STOPPED: " + halt_reason_ + "; " + std::to_string(not_run) + " row(s) did not run; the run is incomplete and nothing after the stop counts as passed");
+            return 2;
+        }
         return failures_.empty() ? 0 : 1;
     }
 
@@ -298,6 +310,7 @@ private:
         const auto leftover = stop_marked(entry);
         std::string text = outcome.out + outcome.err;
         bool ok = outcome.started && outcome.exit_code == 0 && !outcome.timed_out;
+        const bool errored = phase_b_exit_is_error(outcome.started, outcome.timed_out, outcome.exit_code);
         if (outcome.timed_out) text += "phase-b: " + job.name + " timed out after " + std::to_string(kCheckTimeoutMs) + " ms\n";
         if (ok && outcome.out.find("ok (skipped (") != std::string::npos && outcome.out.find("ok (skipped (not on this platform") == std::string::npos) {
             ok = false;
@@ -326,6 +339,7 @@ private:
             } else {
                 cache_.erase(job.name);
                 failures_.push_back(job.name);
+                if (errored && !halted_.exchange(true)) halt_reason_ = job.name + " reported an error (exit 2, no verdict): " + text.substr(0, text.find('\n'));
             }
         }
         if (ok && stub) say("phase-b: " + job.name + " stubbed, not counted as passed " + seconds(wall));
@@ -340,10 +354,11 @@ private:
         const std::size_t count = std::min<std::size_t>(static_cast<std::size_t>(lanes_), jobs.size());
         for (std::size_t lane = 0; lane < count; ++lane)
             lanes.emplace_back([&] {
-                for (std::size_t index = next.fetch_add(1); index < jobs.size(); index = next.fetch_add(1)) run_one(jobs[index]);
+                for (std::size_t index = next.fetch_add(1); index < jobs.size() && !halted_.load(); index = next.fetch_add(1)) run_one(jobs[index]);
             });
         for (auto& lane : lanes) lane.join();
         for (const auto& job : jobs) {
+            if (halted_.load()) break;
             const auto found = std::find(failures_.begin(), failures_.end(), job.name);
             if (found == failures_.end()) continue;
             failures_.erase(found);
@@ -378,6 +393,8 @@ private:
     std::vector<std::string> stubbed_;
     std::vector<std::string> passed_;
     std::vector<std::string> skipped_;
+    std::atomic<bool> halted_{false};
+    std::string halt_reason_;
 };
 
 }

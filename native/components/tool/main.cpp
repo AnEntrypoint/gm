@@ -1,6 +1,7 @@
 #include "gm/tool.hpp"
 
 #include <cstdio>
+#include <exception>
 #include <filesystem>
 #include <string>
 #include <vector>
@@ -44,12 +45,19 @@ int run_checks(const std::vector<std::string>& args) {
         if (!selected(names, check.name)) continue;
         if (names.empty() && check.name == "clock-mutations") continue;
         ++ran;
-        const auto result = check.run(binary);
+        gm::tool::CheckResult result;
+        try {
+            result = check.run(binary);
+        } catch (const std::exception& error) {
+            std::printf("%s: error: %s\n", check.name.c_str(), error.what());
+            status = 2;
+            continue;
+        }
         if (result.failures.empty()) {
             std::printf("%s: ok (%s)\n", check.name.c_str(), result.summary.c_str());
             continue;
         }
-        status = 1;
+        if (status == 0) status = 1;
         std::printf("%s: %zu failure(s)\n", check.name.c_str(), result.failures.size());
         for (const auto& failure : result.failures) std::printf("- %s\n", failure.c_str());
     }
