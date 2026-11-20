@@ -142,6 +142,7 @@ CheckResult check_txiki_fs_access(const std::string& binary);
 CheckResult check_txiki_spawn_detached(const std::string& binary);
 CheckResult check_txiki_spawn_stdio(const std::string& binary);
 CheckResult check_process_exit_code(const std::string& binary);
+CheckResult check_worker_message_channel(const std::string& binary);
 CheckResult check_job_extended_wait(const std::string& binary);
 CheckResult check_asan_retention(const std::string& binary);
 std::vector<long long> process_tree(const std::vector<long long>& roots);

@@ -43,6 +43,7 @@ const std::vector<Registered>& checks() {
         {"check-txiki-spawn-detached", check_txiki_spawn_detached},
         {"check-txiki-spawn-stdio", check_txiki_spawn_stdio},
         {"check-process-exit-code", check_process_exit_code},
+        {"check-worker-message-channel", check_worker_message_channel},
         {"check-install-switch", check_install_switch},
         {"check-restart-skill-read", check_restart_skill_read},
         {"check-no-resource-client", check_no_resource_client},

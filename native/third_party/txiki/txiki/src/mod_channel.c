@@ -656,6 +656,36 @@ static JSValue tjs_port_postmessage(JSContext *ctx, JSValue this_val, int argc, 
 }
 
 /* port.start(deliverFn) */
+static JSValue tjs_port_deliver_default(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv, int magic, JSValue *func_data) {
+    if (argc < 3) {
+        return JS_UNDEFINED;
+    }
+    int kind;
+    if (JS_ToInt32(ctx, &kind, argv[2])) {
+        return JS_EXCEPTION;
+    }
+    const char *handler_name = "onmessage";
+    if (kind == CHANNEL_DELIVER_MESSAGE_ERROR) {
+        handler_name = "onmessageerror";
+    } else if (kind == CHANNEL_DELIVER_ERROR) {
+        handler_name = "onerror";
+    }
+
+    JSValue handler = JS_GetPropertyStr(ctx, func_data[0], handler_name);
+    if (!JS_IsFunction(ctx, handler)) {
+        JS_FreeValue(ctx, handler);
+        return JS_UNDEFINED;
+    }
+
+    JSValue event = JS_NewObject(ctx);
+    JS_SetPropertyStr(ctx, event, "data", JS_DupValue(ctx, argv[0]));
+    JS_SetPropertyStr(ctx, event, "ports", JS_DupValue(ctx, argv[1]));
+    JSValue ret = JS_Call(ctx, handler, func_data[0], 1, &event);
+    JS_FreeValue(ctx, event);
+    JS_FreeValue(ctx, handler);
+    return ret;
+}
+
 static JSValue tjs_port_start(JSContext *ctx, JSValue this_val, int argc, JSValue *argv) {
     TJSPort *p = tjs_port_get(ctx, this_val);
     if (!p) {
@@ -667,7 +697,13 @@ static JSValue tjs_port_start(JSContext *ctx, JSValue this_val, int argc, JSValu
     }
 
     JS_FreeValue(ctx, p->deliver_fn);
-    p->deliver_fn = JS_DupValue(ctx, argv[0]);
+    if (argc > 0 && JS_IsFunction(ctx, argv[0])) {
+        p->deliver_fn = JS_DupValue(ctx, argv[0]);
+    } else {
+        JSValue port_ref = JS_DupValue(ctx, this_val);
+        p->deliver_fn = JS_NewCFunctionData(ctx, tjs_port_deliver_default, 3, 0, 1, &port_ref);
+        JS_FreeValue(ctx, port_ref);
+    }
 
     /* Keep the loop alive now that we are receiving (the async is created,
      * unref'd, in the constructor). */
