@@ -1,3 +1,4 @@
+#include "gm/playwriter_pin.hpp"
 #include "gm/host/install.hpp"
 #include "gm/file.hpp"
 
@@ -105,8 +106,6 @@ int start_check(const fs::path& exe, const std::string& version) {
     return 0;
 }
 
-constexpr const char* kPlaywriterRepo = "https://github.com/AnEntrypoint/pw.git";
-constexpr const char* kPlaywriterPin = "d81a22d";
 
 std::optional<std::string> playwriter_step(const std::string& what, const std::vector<std::string>& argv, const fs::path& cwd, std::uint64_t timeout_ms,
                                            std::map<std::string, std::int64_t>& wall) {
@@ -131,7 +130,7 @@ constexpr PlaywriterHook kPlaywriterHooks[] = {
     {"executor chromiumLaunchArgs spread", "node_modules/playwriter/dist/executor.js", "...chromiumLaunchArgs(),"},
     {"executor displayStatus", "node_modules/playwriter/dist/executor.js", "function displayStatus("},
     {"executor quiet close warning", "node_modules/playwriter/dist/executor.js", "namedByCall"},
-    {"launcher chromiumArgsFromEnv", "bin/playwriter-project", "chromiumArgsFromEnv()"},
+    {"launcher CHROMIUM_ARGS_VARIABLE", "bin/playwriter-project", "CHROMIUM_ARGS_VARIABLE"},
     {"launcher browser listing", "bin/playwriter-project", "lastBrowserLines"},
 };
 
