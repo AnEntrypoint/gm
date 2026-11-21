@@ -94,6 +94,7 @@ CheckResult check_update_checkout(const std::string& binary) {
         return outcome;
     };
     run_git(scratch, {"init", "-q", "--bare", origin.string()}, "could not create the origin");
+    run_git(origin, {"symbolic-ref", "HEAD", "refs/heads/main"}, "could not name the origin's branch");
     run_git(scratch, {"init", "-q", checkout.string()}, "could not create the checkout");
     run_git(checkout, {"symbolic-ref", "HEAD", "refs/heads/main"}, "could not name the checkout's branch");
     run_git(checkout, {"commit", "-q", "--allow-empty", "-m", "base"}, "could not commit the base");
@@ -102,7 +103,7 @@ CheckResult check_update_checkout(const std::string& binary) {
     run_git(checkout, {"fetch", "-q", "origin"}, "could not fetch the base");
     run_git(scratch, {"clone", "-q", origin.string(), other.string()}, "could not clone the origin");
     run_git(other, {"commit", "-q", "--allow-empty", "-m", "ahead"}, "could not commit ahead");
-    run_git(other, {"push", "-q", "origin", "main"}, "could not push ahead");
+    run_git(other, {"push", "-q", "origin", "HEAD:main"}, "could not push ahead");
     if (!result.failures.empty()) return result;
 
     const std::string tracked = first_word_of(run_git(checkout, {"rev-parse", "refs/remotes/origin/main"}, "could not read the tracking ref").out);
