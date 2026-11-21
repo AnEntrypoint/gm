@@ -333,7 +333,7 @@ CheckResult check_browser_scope(const std::string& binary) {
     const auto started = std::chrono::steady_clock::now();
     const std::string load_at_start = host_load();
     const auto stamp = started.time_since_epoch().count();
-    const fs::path sandbox = fs::temp_directory_path() / ("gm-browser-scope-" + std::to_string(stamp));
+    const fs::path sandbox = fs::temp_directory_path() / ("gm-browser-scope-" + std::to_string(stamp % 1000000));
     const fs::path home = sandbox / "home";
     const fs::path workspace = sandbox / "ws";
     const std::string profile = (workspace / ".playwriter" / "browser-profile").string();
@@ -539,7 +539,7 @@ CheckResult check_browser_scope_identity(const std::string& binary) {
 #if defined(__linux__)
     const auto started = std::chrono::steady_clock::now();
     const auto stamp = started.time_since_epoch().count();
-    const fs::path sandbox = fs::temp_directory_path() / ("gm-browser-scope-identity-" + std::to_string(stamp));
+    const fs::path sandbox = fs::temp_directory_path() / ("gm-browser-scope-identity-" + std::to_string(stamp % 1000000));
     const fs::path home = sandbox / "home";
     fs::create_directories(home);
     const fs::path workspace = sandbox / "ws";
@@ -599,7 +599,7 @@ CheckResult check_browser_scope_tree(const std::string&) {
 #if defined(__linux__)
     const auto started = std::chrono::steady_clock::now();
     const auto stamp = started.time_since_epoch().count();
-    const fs::path sandbox = fs::temp_directory_path() / ("gm-browser-scope-tree-" + std::to_string(stamp));
+    const fs::path sandbox = fs::temp_directory_path() / ("gm-browser-scope-tree-" + std::to_string(stamp % 1000000));
     const fs::path home = sandbox / "home";
     const fs::path red = sandbox / "red";
     const fs::path green = sandbox / "green";
@@ -675,7 +675,7 @@ CheckResult check_browser_dead_executor(const std::string& binary) {
 #if !defined(_WIN32)
     const auto started = std::chrono::steady_clock::now();
     const auto stamp = started.time_since_epoch().count();
-    const fs::path sandbox = fs::temp_directory_path() / ("gm-browser-dead-executor-" + std::to_string(stamp));
+    const fs::path sandbox = fs::temp_directory_path() / ("gm-browser-dead-executor-" + std::to_string(stamp % 1000000));
     const fs::path home = sandbox / "home";
     const fs::path workspace = sandbox / "ws";
     const fs::path pages_file = workspace / "runs" / "check" / "browser-pages.txt";

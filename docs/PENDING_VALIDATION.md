@@ -5597,3 +5597,9 @@ All are exports of tjs:internal/core, added by native/components/quickjs/core_ex
 - Witness (Linux, build de39d08 plus this change): gm install --local into the witness home installed playwriter bbcc988 and applied the remaining patches (launcher-feedback.diff, the headed-display and quiet-close patches); check-lazy-browser, check-browser-first-open and check-browser-tabs-owner: ok.
 - Red: none new in gm for the pin; check-lazy-browser fails when the installed marker is not the pin (the old pin was exactly that failure before the witness home was updated).
 - Open: the live gate PID 399506 (cwd /workspace/gm, stale npx copy) is retired by PID after the push and install, with a probe that a project under /workspace gets its own gate and profile from the installed launcher.
+
+### 32. Scratch paths must stay short: the first window at c1fbbf7 failed on it
+
+- Found by the window (runs/phase-b2, stopped by PID after 96 witnesses): check-lazy-browser, check-browser-first-open, check-browser-scope, check-browser-scope-tree and others failed with Chromium's "Socket path too long" (the profile's SingletonSocket limit is about 107 characters). My scratch change in item 27 had made the root /workspace/tmp/gm/window-<pid>/gm-tool-<pid>-<ticks>.
+- Fix: the gm-tool root is /workspace/tmp/gm/g<pid> with no window nesting (window.sh sets TMPDIR to the scratch base itself), and the timestamp in the sandbox names of the browser witnesses and fresh_sandbox is cut to six digits (11 sites). The longest browser sandbox path is now about 106 of 107 characters.
+- Witness: check-lazy-browser, check-browser-first-open, check-browser-scope, check-browser-scope-tree, check-browser-tabs-owner and check-scratch-root, solo with TMPDIR=/workspace/tmp/gm: all ok; nothing left under the scratch base. The window on the final tree is in the next section.

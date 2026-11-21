@@ -24,7 +24,7 @@ constexpr const char* kBody =
 CheckResult check_shell_playwriter(const std::string& binary) {
     CheckResult result;
     const auto stamp = std::chrono::steady_clock::now().time_since_epoch().count();
-    const fs::path sandbox = fs::temp_directory_path() / ("gm-shell-playwriter-" + std::to_string(stamp));
+    const fs::path sandbox = fs::temp_directory_path() / ("gm-shell-playwriter-" + std::to_string(stamp % 1000000));
     const fs::path workspace = sandbox / "ws";
     const fs::path bin = sandbox / ".gmnew" / "pw" / "bin";
     const fs::path package = sandbox / ".gmnew" / "pw" / "node_modules" / "playwriter";

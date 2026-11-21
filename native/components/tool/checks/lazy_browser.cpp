@@ -19,7 +19,7 @@ namespace fs = std::filesystem;
 CheckResult check_lazy_browser(const std::string& binary) {
     CheckResult result;
     const auto stamp = std::chrono::steady_clock::now().time_since_epoch().count();
-    const auto sandbox = fs::temp_directory_path() / ("gm-lazy-browser-" + std::to_string(stamp));
+    const auto sandbox = fs::temp_directory_path() / ("gm-lazy-browser-" + std::to_string(stamp % 1000000));
     const auto workspace = sandbox / "ws";
     fs::create_directories(workspace);
     auto count_playwriter = [](const std::vector<long long>& pids) {
@@ -37,7 +37,7 @@ CheckResult check_lazy_browser(const std::string& binary) {
     const fs::path installed = binary;
     proc::SpawnOptions foreign_options(sandbox);
     foreign_options.own_group = true;
-    const auto foreign_spawned = proc::Child::spawn({"sh", "-c", "sleep 300; true", "playwriter-project", (fs::temp_directory_path() / ("gm-foreign-gate-" + std::to_string(stamp))).string()}, foreign_options);
+    const auto foreign_spawned = proc::Child::spawn({"sh", "-c", "sleep 300; true", "playwriter-project", (fs::temp_directory_path() / ("gm-foreign-gate-" + std::to_string(stamp % 1000000))).string()}, foreign_options);
     const std::shared_ptr<proc::Child> foreign_gate = foreign_spawned ? *foreign_spawned : nullptr;
     if (!foreign_gate) result.failures.push_back("could not start the stand-in gate of another project");
     const long long foreign_pid = foreign_gate ? foreign_gate->pid() : 0;

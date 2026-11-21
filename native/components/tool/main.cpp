@@ -1,6 +1,5 @@
 #include "gm/tool.hpp"
 
-#include <chrono>
 #include <cstdio>
 #include <cstdlib>
 #include <exception>
@@ -34,8 +33,7 @@ class ScratchRoot {
 public:
     ScratchRoot() {
         std::error_code ec;
-        const auto ticks = std::chrono::steady_clock::now().time_since_epoch().count();
-        root_ = std::filesystem::temp_directory_path(ec) / ("gm-tool-" + std::to_string(process_id()) + "-" + std::to_string(ticks));
+        root_ = std::filesystem::temp_directory_path(ec) / ("g" + std::to_string(process_id()));
         std::filesystem::create_directories(root_, ec);
         point_temp_directory_at(root_);
     }

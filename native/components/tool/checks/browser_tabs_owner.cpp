@@ -97,7 +97,7 @@ CheckResult check_browser_tabs_owner(const std::string& binary) {
     CheckResult result;
     const auto began = std::chrono::steady_clock::now();
     const auto stamp = began.time_since_epoch().count();
-    const fs::path sandbox = fs::temp_directory_path() / ("gm-browser-tabs-owner-" + std::to_string(stamp));
+    const fs::path sandbox = fs::temp_directory_path() / ("gm-browser-tabs-owner-" + std::to_string(stamp % 1000000));
     const fs::path workspace = sandbox / "ws";
     fs::create_directories(workspace);
     auto expect = [&](bool condition, const std::string& text) {

@@ -151,7 +151,7 @@ CheckResult check_browser_first_open(const std::string& binary) {
     const int page_port = 19600 + slot;
     const int adopt_gate_port = 19900 + slot;
     const int adopt_debug_port = 20200 + slot;
-    const auto sandbox = fs::temp_directory_path() / ("gm-first-open-" + std::to_string(stamp));
+    const auto sandbox = fs::temp_directory_path() / ("gm-first-open-" + std::to_string(stamp % 1000000));
     const auto workspace = sandbox / "ws";
     const auto adopt_workspace = sandbox / "ws-adopt";
     fs::create_directories(workspace);
@@ -164,7 +164,7 @@ CheckResult check_browser_first_open(const std::string& binary) {
     summary << "Chromium " << (chromium.empty() ? std::string("none") : chromium) << "; ";
     const std::string page_url = "http://127.0.0.1:" + std::to_string(page_port) + "/";
     std::vector<Owned> roots;
-    const fs::path foreign = fs::temp_directory_path() / ("gm-foreign-gate-" + std::to_string(stamp));
+    const fs::path foreign = fs::temp_directory_path() / ("gm-foreign-gate-" + std::to_string(stamp % 1000000));
     fs::create_directories(foreign);
     proc::SpawnOptions foreign_options(foreign);
     foreign_options.own_group = true;

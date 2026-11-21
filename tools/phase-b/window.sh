@@ -7,10 +7,8 @@ HEAVY=${HEAVY_JOBS_CHECK:-/workspace/bevy/scripts/heavy-jobs.cjs}
 LOG=$OUT/window.txt
 rm -rf "$OUT" && mkdir -p "$OUT" && : > "$LOG"
 SCRATCH_BASE=${GM_SCRATCH:-/workspace/tmp/gm}
-SCRATCH=$SCRATCH_BASE/window-$$
-mkdir -p "$SCRATCH"
-trap 'rm -rf "$SCRATCH"' EXIT
-export TMPDIR=$SCRATCH HOME=$SCRATCH_BASE/rel72-home GMNEW_AUTO_UPDATE=0 PLAYWRITER_NO_SANDBOX=1 PLAYWRITER_BROWSER_PATH=/data/cache/bin/chromium
+mkdir -p "$SCRATCH_BASE"
+export TMPDIR=$SCRATCH_BASE HOME=$SCRATCH_BASE/rel72-home GMNEW_AUTO_UPDATE=0 PLAYWRITER_NO_SANDBOX=1 PLAYWRITER_BROWSER_PATH=/data/cache/bin/chromium
 GM_TOOL=$BUILD/native/components/tool/gm-tool
 GM=$BUILD/native/components/host/gm
 FAILED=0

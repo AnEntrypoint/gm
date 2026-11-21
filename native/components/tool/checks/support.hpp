@@ -112,7 +112,7 @@ inline void connect(Session& session) {
 
 inline fs::path fresh_sandbox(const std::string& label) {
     const auto stamp = std::chrono::steady_clock::now().time_since_epoch().count();
-    const fs::path sandbox = fs::temp_directory_path() / ("gm-" + label + "-" + std::to_string(stamp));
+    const fs::path sandbox = fs::temp_directory_path() / ("gm-" + label + "-" + std::to_string(stamp % 1000000));
     fs::create_directories(sandbox / "ws");
     std::ofstream(sandbox / "quiet.json") << R"({"mcpServers":{"playwriter":{"disabled":true}}})";
     return sandbox;
