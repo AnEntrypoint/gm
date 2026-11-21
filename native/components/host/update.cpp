@@ -518,7 +518,7 @@ UpdateResult update_once(const UpdatePolicy& policy, UpdateResult result) {
 
     UpdateState state = read_update_state(policy.install_dir);
     result.manifest = state.manifest;
-    if (!policy.force && checked_recently(state, now_ms(), policy.interval))
+    if (!policy.force && !state.manifest.empty() && checked_recently(state, now_ms(), policy.interval))
         return current_build(std::move(result), policy, "already current");
     if (!acquire_update_lock(policy.install_dir))
         return current_build(std::move(result), policy, "another update is running");
@@ -527,10 +527,10 @@ UpdateResult update_once(const UpdatePolicy& policy, UpdateResult result) {
 
     state = read_update_state(policy.install_dir);
     result.manifest = state.manifest;
-    if (!policy.force && checked_recently(state, now_ms(), policy.interval))
+    if (!policy.force && !state.manifest.empty() && checked_recently(state, now_ms(), policy.interval))
         return current_build(std::move(result), policy, "already current");
 
-    auto reply = policy.fetch(policy.url, state.etag, staging);
+    auto reply = policy.fetch(policy.url, state.manifest.empty() ? std::string() : state.etag, staging);
     if (!reply) return failed(std::move(result), reply.error());
     if (reply->not_modified) {
         state.checked_ms = now_ms();

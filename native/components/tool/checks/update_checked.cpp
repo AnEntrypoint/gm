@@ -112,9 +112,17 @@ CheckResult check_update_checked(const std::string& binary) {
             result.failures.push_back("a second relay on the same install, whose cycle is within the check interval, did not log \"" + expected + "\"; its relay log says: " + tail_of(second));
         }
     }
+    if (result.failures.empty()) {
+        const auto now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+        std::ofstream(install / ".gmnew-update.json") << "{\"checked_ms\":" << now_ms << ",\"etag\":\"\\\"seen\\\"\",\"version\":\"" << version << "\"}";
+        const std::string third = cycle(scratch / "run-fresh");
+        if (third.find(expected) == std::string::npos) {
+            result.failures.push_back("a relay on an install whose state has a recent check and an etag but no manifest version did not log \"" + expected + "\"; its relay log says: " + tail_of(third));
+        }
+    }
     fs::remove_all(scratch, ec);
     if (result.failures.empty()) {
-        result.summary = "a relay with an already-current manifest logs each update cycle as \"" + expected + "\" in its relay.log, and a cycle inside the check interval logs the same manifest version";
+        result.summary = "a relay with an already-current manifest logs each update cycle as \"" + expected + "\" in its relay.log, and a cycle inside the check interval, or on an install that has not recorded a manifest, logs the same manifest version";
     }
     return result;
 }
