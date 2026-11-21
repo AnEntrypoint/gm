@@ -329,6 +329,18 @@
   ]
  },
  {
+  "id": "red-dns-addrconfig",
+  "witness": "check-txiki-core-extras",
+  "file": "native/third_party/txiki/txiki/src/mod_dns.c",
+  "edits": [
+   {
+    "from": "hints.ai_flags = 0;",
+    "to": "hints.ai_flags = AI_ADDRCONFIG | AI_V4MAPPED;",
+    "count": 1
+   }
+  ]
+ },
+ {
   "id": "red-worker-data",
   "witness": "check-txiki-core-extras",
   "file": "native/third_party/txiki/txiki/src/worker.c",
