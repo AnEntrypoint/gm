@@ -5417,3 +5417,19 @@ These in-place reds mutate the tracked file without a commit, and the witness ch
 
 - The macOS failure line is ENOENT at spawn. The belief is that /bin/true is absent on macOS, so the check's child was missing. This is not verified on a macOS host, and the round's Linux witness cannot show it.
 - The check now records each spawn path in its output, so the next macOS run shows which path was spawned and which failed. Until then the cause is believed, not verified.
+
+### 13. Phase B window at ea13be5, through the ticket gate
+
+- Launch: node /workspace/hyperagent/scripts/gate-ticket.cjs run gm -- bash /tmp/phase-d-74/window74.sh. The ticket was granted at 04:20:34 UTC after 5 tickets from other sessions. The script's own gate read is in runs/phase-d-74/window.txt: vmstat second sample si 0, so 0, heavy-jobs clear at 04:20:13 UTC.
+- Build: build/rel-72 at ea13be5-1, kBuildState clean, tree clean, origin shim at ea13be5.
+- Origin guard: the origin ref and FETCH_HEAD were compared before and after every witness and before and after the parity probe, 248 comparisons, 0 changes (ORIGIN_CHANGED 0). The shim was re-anchored to HEAD after 13 reds (SHIM_REANCHOR 13), because the red scripts move it. The first ORIGIN_START line failed with "say: command not found" (the line ran before say was defined); the guard's later lines and every gate read are present.
+- Witnesses: 123 registry witnesses, each under timeout with its PID in window.txt. 123 returned 0. Includes check-update-checkout (ok) and check-update-checked (ok, the earlier in-window failure did not recur).
+- Parity probe: PARITY_RC 0, PARITY_OK.
+- Committed reds (red-commit.sh, each restored with cmp True, HEAD back with 0 changed files): red-turn-economy, red-job-wait-bounded, red-update-checked, red-digest, red-dead-executor, red-browser-first-open, red-relay-reexec, red-collision. All RED_RC 1.
+- In-place reds (red72.py): five spec runs, each RC 0. Their seven rows at the end of /tmp/phase-d-72/reds/summary.txt each show RED_RC 1 and RESTORED_cmp True.
+- Totals: 123 witnesses 123 pass, 8 committed reds 8 fail as intended, 7 in-place rows 7 fail as intended, parity OK, origin changes 0. WINDOW_END ALL=0.
+
+### 14. The live relay's fetch and the sampler
+
+- The 10-minute "fetch origin --quiet" entries in the reflog run from 02:00 to 04:39 and then stop. No source in the current tree or at fb59ddf contains that command (git grep). A 15-minute sampler for git fetch processes started at 05:20 SAST was killed when its call ended, before it logged anything (fetch-watch.txt has no lines). The fetch's source is unidentified.
+- The witness guard (section 10) and the window's origin guard (section 13) would catch a recurrence. The live relay PID 399315 runs build fb59ddf-573 and is not stopped.
