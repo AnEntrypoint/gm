@@ -5603,3 +5603,9 @@ All are exports of tjs:internal/core, added by native/components/quickjs/core_ex
 - Found by the window (runs/phase-b2, stopped by PID after 96 witnesses): check-lazy-browser, check-browser-first-open, check-browser-scope, check-browser-scope-tree and others failed with Chromium's "Socket path too long" (the profile's SingletonSocket limit is about 107 characters). My scratch change in item 27 had made the root /workspace/tmp/gm/window-<pid>/gm-tool-<pid>-<ticks>.
 - Fix: the gm-tool root is /workspace/tmp/gm/g<pid> with no window nesting (window.sh sets TMPDIR to the scratch base itself), and the timestamp in the sandbox names of the browser witnesses and fresh_sandbox is cut to six digits (11 sites). The longest browser sandbox path is now about 106 of 107 characters.
 - Witness: check-lazy-browser, check-browser-first-open, check-browser-scope, check-browser-scope-tree, check-browser-tabs-owner and check-scratch-root, solo with TMPDIR=/workspace/tmp/gm: all ok; nothing left under the scratch base. The window on the final tree is in the next section.
+
+### 33. The build copies skills, leaves and defaults from scratch
+
+- Found by the window at 4e894ba (stopped by PID after 115 witnesses): check-install-follows and check-skill-reload failed in a fresh home with "playwriter bbcc988 installed, but these hooks are missing ... launcher CHROMIUM_ARGS_VARIABLE". Cause: those witnesses install from the host build directory's defaults, and the copy_directory step never deletes, so the launcher-chromium-args.diff removed from defaults/playwriter in item 31 was still in build/*/native/components/host/defaults and was applied on top of the new launcher. A CI build starts clean; a developer build directory does not.
+- Fix: native/components/host/CMakeLists.txt removes the three destination directories before copying them.
+- Witness: check-install-follows and check-skill-reload alone, then the window on the final tree.
