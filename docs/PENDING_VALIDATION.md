@@ -5358,3 +5358,10 @@ The named macOS list after this change (9): check-handover-in-flight check-updat
 ### 7. check-browser-tabs-owner
 
 - The last three macOS runs (44822286140 both macOS jobs, 44830730143 arm64, 44846084565 both) show `ok` (14.9 s, 19.0 s, 51.5 s, 65.7 s). No failing line for it was found in the logs read this round, so no change is made; it stays on the watch list.
+
+### 8. check-turn-economy: the pid wait asks 90 s and must last 85 s
+
+- Found by the window's first run after change 2: the witness asked a pid wait for 150 s and expected at least 45 s back in the body. It passed only because the 80 s clamp returned the call inside the body. With the clamp removed, a 150 s wait is past the 100 s foreground budget, so the body moved to background and the witness read `null`.
+- Change: the wait asks 90 s (inside the foreground budget) and must last at least 85 s, which is past the old 80 s clamp. The message names the requirement.
+- Witness (Linux, release build `4955c86-1`, clean): ok.
+- Red (`/tmp/phase-d-73/mutate-clamp.py`, the 80 s clamp restored in `call`, as a temporary commit): MUT_BUILD_RC 0, kBuildState clean, RED_RC 1: "a pid wait on a live process did not run its full waitMs (90 s asked, past the old 80 s clamp it must last 85 s): null". The reply was `null` under the clamp, so the state check failed on a missing reply. RESTORED_cmp=True, HEAD back at 4955c86 with 0 changed files, AFTER_RC 0.
