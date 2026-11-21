@@ -1,3 +1,4 @@
+#include "gm/artifact.hpp"
 #include <algorithm>
 #include <cctype>
 #include <chrono>
@@ -273,20 +274,8 @@ Archive archive_source(const fs::path& workspace, const std::string& body, const
     return archive;
 }
 
-std::string redact(std::string value) {
-    static const std::vector<std::pair<std::regex, std::string>> patterns = {
-        {std::regex(R"(Bearer\s+[^\s]+)", std::regex::icase), "Bearer [redacted]"},
-        {std::regex(R"(access_token=[^\s&]+)", std::regex::icase), "access_token=[redacted]"},
-        {std::regex(R"(refresh_token=[^\s&]+)", std::regex::icase), "refresh_token=[redacted]"},
-        {std::regex(R"(api_key=[^\s&]+)", std::regex::icase), "api_key=[redacted]"},
-        {std::regex(R"(password=[^\s&]+)", std::regex::icase), "password=[redacted]"},
-    };
-    for (const auto& [pattern, replacement] : patterns) value = std::regex_replace(value, pattern, replacement);
-    return value;
-}
-
 json::Value store_artifact(const fs::path& run_dir, const std::string& value) {
-    const std::string clean = redact(value);
+    const std::string clean = redact_secrets(value);
     const std::string bounded = clean.size() > 20000 ? take_utf8(clean, 10000) + "\n[gm: middle omitted]\n" + clean.substr(clean.size() - 10000) : clean;
     const std::string digest = sha256_hex(bounded).substr(0, 12);
     const fs::path path = run_dir / "outputs" / (digest + "-fetch.txt");

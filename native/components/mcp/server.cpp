@@ -1,3 +1,5 @@
+#include "gm/lines.hpp"
+#include "gm/artifact.hpp"
 #include <algorithm>
 #if defined(_WIN32)
 #include <process.h>
@@ -93,29 +95,6 @@ constexpr std::size_t kOutputCap = 20000;
 constexpr std::size_t kOutputPage = 20000;
 constexpr std::size_t kInlineValueChars = 2000;
 
-std::string artifact_digest(const std::string& text) {
-    std::uint64_t hash = 14695981039346656037ull;
-    for (unsigned char c : text) {
-        hash ^= c;
-        hash *= 1099511628211ull;
-    }
-    char out[17];
-    std::snprintf(out, sizeof(out), "%016llx", static_cast<unsigned long long>(hash));
-    return std::string(out);
-}
-
-std::string redact_artifact(const std::string& text) {
-    const std::vector<std::pair<std::regex, std::string>> patterns = {
-        {std::regex(R"(Bearer\s+[^\s]+)", std::regex::icase), "Bearer [redacted]"},
-        {std::regex(R"(access_token=[^\s&]+)", std::regex::icase), "access_token=[redacted]"},
-        {std::regex(R"(refresh_token=[^\s&]+)", std::regex::icase), "refresh_token=[redacted]"},
-        {std::regex(R"(api_key=[^\s&]+)", std::regex::icase), "api_key=[redacted]"},
-        {std::regex(R"(password=[^\s&]+)", std::regex::icase), "password=[redacted]"},};
-    std::string clean = text;
-    for (const auto& [pattern, replacement] : patterns) clean = std::regex_replace(clean, pattern, replacement);
-    return clean;
-}
-
 struct OutputArtifact {
     std::string path;
     std::string digest;
@@ -124,8 +103,8 @@ struct OutputArtifact {
 };
 
 OutputArtifact store_artifact(const std::string& text, const fs::path& run_dir, const std::string& label) {
-    const std::string clean = redact_artifact(text);
-    const std::string digest = artifact_digest(clean);
+    const std::string clean = redact_secrets(text);
+    const std::string digest = fnv1a_hex(clean);
     const fs::path dir = run_dir / "outputs";
     std::error_code ec;
     fs::create_directories(dir, ec);
@@ -152,7 +131,7 @@ void add_cut_run(json::Value& reply, const std::string& text, std::size_t length
         return;
     }
     const OutputArtifact artifact = store_artifact(text, run_dir, "run_code");
-    const std::string clean = redact_artifact(text);
+    const std::string clean = redact_secrets(text);
     const std::string page = utf8_head(clean, kOutputPage);
     const std::size_t shown = gm::utf16_length(page);
     const std::size_t total = gm::utf16_length(clean);
@@ -606,18 +585,6 @@ Value trace_of(const Value* meta) {
 Value merge(Value into, const Value& from) {
     for (const json::Member& m : from.as_object()) into.set(m.first, m.second);
     return into;
-}
-
-std::vector<std::string> split_lines(const std::string& text) {
-    std::vector<std::string> lines;
-    std::size_t at = 0;
-    while (true) {
-        std::size_t nl = text.find('\n', at);
-        lines.push_back(text.substr(at, nl == std::string::npos ? std::string::npos : nl - at));
-        if (nl == std::string::npos) break;
-        at = nl + 1;
-    }
-    return lines;
 }
 
 bool failed_of(const Value& result) {
@@ -2443,9 +2410,9 @@ struct Server::State {
         const Value* owner_arg = args.find("owner");
         bool owner = owner_arg && owner_arg->is_bool() && owner_arg->as_bool();
         const bool unset_task = s().created && s().task.empty() && !s().child_seen;
-        bool first_step_correction = unset_task || s().created && s().steps == 0 && !s().run_started && !s().child_seen && !s().owner_seen &&
+        bool first_step_correction = unset_task || (s().created && s().steps == 0 && !s().run_started && !s().child_seen && !s().owner_seen &&
                                      (s().task.empty() || s().task.find_first_of(" \t\r\n") == std::string::npos) &&
-                                     corrected.compare(0, s().task.size(), s().task) == 0;
+                                     corrected.compare(0, s().task.size(), s().task) == 0);
         if (!corrected.empty() && !owner && !first_step_correction) {
             std::string reason = "a task replacement after the first step needs owner:true";
             if (s().steps == 0 && s().task_inherited)

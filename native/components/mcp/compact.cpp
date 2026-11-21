@@ -1,3 +1,4 @@
+#include "gm/lines.hpp"
 #include <algorithm>
 #include <cmath>
 #include <initializer_list>
@@ -32,18 +33,6 @@ constexpr const char* kCutRefQuery = "gm.query_log({ seq, field, offset, limit, 
 constexpr const char* kChildReach = "gm.query_log({ after: seqs[0] - 1 }) reaches every event in this range";
 
 const std::set<std::string> kSkip = {"t", "mono", "inFlight", "startMono", "durMs", "actionSeq", "step"};
-
-std::vector<std::string> split_lines(const std::string& text) {
-    std::vector<std::string> lines;
-    std::size_t at = 0;
-    while (true) {
-        std::size_t nl = text.find('\n', at);
-        lines.push_back(text.substr(at, nl == std::string::npos ? std::string::npos : nl - at));
-        if (nl == std::string::npos) break;
-        at = nl + 1;
-    }
-    return lines;
-}
 
 std::size_t cost_of(const Value& v) { return gm::utf16_length(json::dump(v)) + 1; }
 

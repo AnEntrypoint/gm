@@ -1,3 +1,4 @@
+#include "gm/artifact.hpp"
 #include "gm/core_verbs.hpp"
 #include "gm/marker.hpp"
 
@@ -36,32 +37,9 @@ using core::present;
 using core::refusal;
 using core::utf16_slice;
 
-std::string artifact_digest(const std::string& text) {
-    std::uint64_t hash = 14695981039346656037ull;
-    for (unsigned char c : text) {
-        hash ^= c;
-        hash *= 1099511628211ull;
-    }
-    char out[17];
-    std::snprintf(out, sizeof(out), "%016llx", static_cast<unsigned long long>(hash));
-    return std::string(out);
-}
-
-std::string redact_artifact(const std::string& text) {
-    const std::vector<std::pair<std::regex, std::string>> patterns = {
-        {std::regex(R"(Bearer\s+[^\s]+)", std::regex::icase), "Bearer [redacted]"},
-        {std::regex(R"(access_token=[^\s&]+)", std::regex::icase), "access_token=[redacted]"},
-        {std::regex(R"(refresh_token=[^\s&]+)", std::regex::icase), "refresh_token=[redacted]"},
-        {std::regex(R"(api_key=[^\s&]+)", std::regex::icase), "api_key=[redacted]"},
-        {std::regex(R"(password=[^\s&]+)", std::regex::icase), "password=[redacted]"},};
-    std::string clean = text;
-    for (const auto& [pattern, replacement] : patterns) clean = std::regex_replace(clean, pattern, replacement);
-    return clean;
-}
-
 json::Value store_artifact(const std::string& text, const std::filesystem::path& run_dir, const std::string& label) {
-    const std::string clean = redact_artifact(text);
-    const std::string digest = artifact_digest(clean).substr(0, 12);
+    const std::string clean = redact_secrets(text);
+    const std::string digest = fnv1a_hex(clean).substr(0, 12);
     const std::filesystem::path dir = run_dir / "outputs";
     std::error_code ec;
     std::filesystem::create_directories(dir, ec);
@@ -84,7 +62,7 @@ json::Value store_artifact(const std::string& text, const std::filesystem::path&
 json::Value cut_shell_output(json::Value reply, const std::string& text, const std::filesystem::path& run_dir) {
     if (utf16_length(text) <= output_page) return reply;
     const json::Value artifact = store_artifact(text, run_dir, "run_shell");
-    const std::string clean = redact_artifact(text);
+    const std::string clean = redact_secrets(text);
     const std::string page = utf16_slice(clean, 0, output_page);
     const std::size_t total = utf16_length(clean);
     const std::size_t shown = utf16_length(page);
@@ -113,17 +91,6 @@ constexpr std::size_t query_cap = 20000;
 constexpr std::size_t whole_file_cap = 1048576;
 constexpr std::chrono::milliseconds query_js_deadline{5000};
 constexpr std::array<std::string_view, 11> query_args = {"js", "kind", "fromMono", "toMono", "after", "last", "limit", "seq", "field", "offset", "unit"};
-
-std::string digest_hex(const std::string& text) {
-    std::uint64_t hash = 14695981039346656037ull;
-    for (unsigned char c : text) {
-        hash ^= c;
-        hash *= 1099511628211ull;
-    }
-    char out[17];
-    std::snprintf(out, sizeof(out), "%016llx", static_cast<unsigned long long>(hash));
-    return std::string(out);
-}
 
 std::string field_text(const json::Value& event, const std::string& path) {
     const json::Value* value = &event;
@@ -397,7 +364,7 @@ struct CoreVerbs::Impl {
                 const json::Value next_offset = *next;
                 page.set("nextOffset", next_offset);
             }
-            page.set("digest", digest_hex(*text));
+            page.set("digest", fnv1a_hex(*text));
             return page;
         }
         return unit == "chars" ? read_char_page(*at, args) : read_line_page(*at, args);
@@ -423,7 +390,7 @@ struct CoreVerbs::Impl {
         if (present(args, "offset") == nullptr && present(args, "limit") == nullptr) return whole_file_reply(file.text, path, false);
         json::Value reply = char_page(file.text, args, file_size_of(path));
         if (const json::Value* next = reply.find("next")) reply.set("nextOffset", *next);
-        reply.set("digest", digest_hex(file.text));
+        reply.set("digest", fnv1a_hex(file.text));
         return reply;
     }
 
@@ -472,7 +439,7 @@ struct CoreVerbs::Impl {
         reply.set("next", nullptr);
         reply.set("truncated", false);
         reply.set("totalBytes", bytes);
-        reply.set("digest", digest_hex(text));
+        reply.set("digest", fnv1a_hex(text));
         if (lines) reply.set("unit", "lines");
         return reply;
     }
@@ -485,7 +452,7 @@ struct CoreVerbs::Impl {
         if (present(args, "offset") == nullptr && present(args, "limit") == nullptr) return whole_file_reply(file.text, path, true);
         json::Value reply = line_page(file.text, args, file_size_of(path));
         if (const json::Value* next = reply.find("next")) reply.set("nextOffset", *next);
-        reply.set("digest", digest_hex(file.text));
+        reply.set("digest", fnv1a_hex(file.text));
         return reply;
     }
 
