@@ -1,4 +1,5 @@
 #include "gm/tool.hpp"
+#include "support.hpp"
 
 #include <algorithm>
 #include <chrono>
@@ -14,12 +15,7 @@ namespace {
 
 namespace fs = std::filesystem;
 
-constexpr double kClock = 1.0 / 60.0;
 constexpr std::size_t kUnchangedReplyBytes = 1200;
-
-std::int64_t scaled(std::int64_t ms) {
-    return std::max<std::int64_t>(1, static_cast<std::int64_t>(std::llround(static_cast<double>(ms) * kClock)));
-}
 
 std::string seconds_of(std::int64_t ms) {
     char text[32];
@@ -31,28 +27,9 @@ std::string brief(const json::Value& value) {
     return json::dump(value).substr(0, 300);
 }
 
-bool flag(const json::Value& value, const std::string& dotted, bool expected) {
-    const json::Value* found = value_at(value, dotted);
-    return found != nullptr && found->is_bool() && found->as_bool() == expected;
-}
-
-bool absent(const json::Value& value, const std::string& dotted) {
-    return value_at(value, dotted) == nullptr;
-}
-
-bool number_is(const json::Value& value, const std::string& dotted, double expected) {
-    const json::Value* found = value_at(value, dotted);
-    return found != nullptr && found->is_number() && found->as_number() == expected;
-}
-
 bool is_number(const json::Value& value, const std::string& dotted) {
     const json::Value* found = value_at(value, dotted);
     return found != nullptr && found->is_number();
-}
-
-double number_at(const json::Value& value, const std::string& dotted) {
-    const json::Value* found = value_at(value, dotted);
-    return found != nullptr && found->is_number() ? found->as_number() : -1;
 }
 
 bool is_string(const json::Value& value, const std::string& dotted) {

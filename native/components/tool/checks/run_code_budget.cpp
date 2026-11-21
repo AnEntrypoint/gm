@@ -1,4 +1,5 @@
 #include "gm/tool.hpp"
+#include "support.hpp"
 #if !defined(_WIN32)
 
 #include <algorithm>
@@ -15,14 +16,9 @@ namespace {
 
 namespace fs = std::filesystem;
 
-constexpr double kClock = 1.0 / 60.0;
 
 std::string slow_line() {
     return std::string(31, 'a') + "b";
-}
-
-std::int64_t scaled(std::int64_t ms) {
-    return std::max<std::int64_t>(1, static_cast<std::int64_t>(std::llround(static_cast<double>(ms) * kClock)));
 }
 
 struct Timed {
@@ -40,20 +36,6 @@ Timed run_timed(Session& session, const json::Value& args) {
 
 json::Value output_of(const json::Value& reply) {
     return output_value(reply);
-}
-
-bool flag(const json::Value& value, const std::string& dotted, bool expected) {
-    const json::Value* found = value_at(value, dotted);
-    return found != nullptr && found->is_bool() && found->as_bool() == expected;
-}
-
-bool absent(const json::Value& value, const std::string& dotted) {
-    return value_at(value, dotted) == nullptr;
-}
-
-bool number_is(const json::Value& value, const std::string& dotted, double expected) {
-    const json::Value* found = value_at(value, dotted);
-    return found != nullptr && found->is_number() && found->as_number() == expected;
 }
 
 }

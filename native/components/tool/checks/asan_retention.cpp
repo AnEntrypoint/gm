@@ -1,4 +1,5 @@
 #include "gm/tool.hpp"
+#include "support.hpp"
 
 #include <chrono>
 #include <csignal>
@@ -17,13 +18,6 @@ namespace fs = std::filesystem;
 constexpr int kWarm = 100;
 constexpr int kCalls = 400;
 constexpr double kLimitBytesPerCall = 64.0;
-
-long long worker_pid(const Session& session) {
-    for (const long long pid : session.descendants()) {
-        if (proc::process_exe(pid).filename() == "gm-core") return pid;
-    }
-    return -1;
-}
 
 #if defined(_WIN32)
 long long live_bytes(const Session&, long long) {

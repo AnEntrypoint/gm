@@ -1,5 +1,6 @@
 #include "gm/target.hpp"
 #include "gm/tool.hpp"
+#include "support.hpp"
 
 #include <filesystem>
 #include <fstream>
@@ -14,22 +15,6 @@ namespace gm::tool {
 namespace {
 
 namespace fs = std::filesystem;
-
-fs::path checkout_root() {
-    std::error_code ec;
-    for (fs::path dir = fs::current_path(ec); !dir.empty(); dir = dir.parent_path()) {
-        if (fs::exists(dir / "skills" / "gm" / "SKILL.md", ec)) return dir;
-        if (dir == dir.parent_path()) break;
-    }
-    return {};
-}
-
-std::string read_text(const fs::path& file) {
-    std::ifstream in(file, std::ios::binary);
-    std::ostringstream text;
-    text << in.rdbuf();
-    return text.str();
-}
 
 }
 

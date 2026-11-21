@@ -8,7 +8,7 @@ namespace {
 
 namespace fs = std::filesystem;
 
-std::string text_of(const json::Value& value, const char* key) {
+std::string text_or_missing(const json::Value& value, const char* key) {
     const json::Value* found = value_at(value, key);
     return found != nullptr && found->is_string() ? found->as_string() : std::string("<missing>");
 }
@@ -41,9 +41,9 @@ CheckResult check_job_stop_body(const std::string& binary) {
                 const json::Value answer = output_value(tool_json(session, "run_code", json::Object{{"body", stop}}));
                 const json::Value* ok = value_at(answer, "ok");
                 stopped_ok = ok != nullptr && ok->is_bool() && ok->as_bool();
-                reason = text_of(answer, "reason");
-                state = text_of(answer, "state");
-                error = text_of(answer, "error");
+                reason = text_or_missing(answer, "reason");
+                state = text_or_missing(answer, "state");
+                error = text_or_missing(answer, "error");
             }
         }
     }

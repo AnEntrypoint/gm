@@ -13,11 +13,6 @@ namespace {
 
 namespace fs = std::filesystem;
 
-constexpr double kClock = 1.0 / 60.0;
-
-std::int64_t scaled(std::int64_t ms) {
-    return std::max<std::int64_t>(1, static_cast<std::int64_t>(std::llround(static_cast<double>(ms) * kClock)));
-}
 
 }
 

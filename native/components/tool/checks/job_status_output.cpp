@@ -8,7 +8,7 @@ namespace {
 
 namespace fs = std::filesystem;
 
-std::string text_of(const json::Value& value, const char* key) {
+std::string text_or_missing(const json::Value& value, const char* key) {
     const json::Value* found = value_at(value, key);
     return found != nullptr && found->is_string() ? found->as_string() : std::string("<missing>");
 }
@@ -46,13 +46,13 @@ CheckResult check_job_status_output(const std::string& binary) {
                 const std::string job = background->as_string();
                 const std::string poll = "const s = await gm.job_status({ job: '" + job + "', waitMs: 60000 }); const t = await gm.job_status({ job: '" + job + "', waitMs: 1000, tail: 2 }); return { output: s.output, tail: t.output };";
                 const json::Value answer = output_value(tool_json(session, "run_code", json::Object{{"body", poll}}));
-                body_output = text_of(answer, "output");
-                body_tail = text_of(answer, "tail");
+                body_output = text_or_missing(answer, "output");
+                body_tail = text_or_missing(answer, "tail");
             }
             const std::string shell = "await gm.job_start({ job: 'shell-lines', command: 'seq 1 100' }); const one = await gm.job_status({ job: 'shell-lines', waitMs: 60000, tail: 1 }); const two = await gm.job_status({ job: 'shell-lines', waitMs: 1000, tail: 2 }); return { one: one.output, two: two.output };";
             const json::Value shell_answer = output_value(tool_json(session, "run_code", json::Object{{"body", shell}}));
-            shell_tail_one = text_of(shell_answer, "one");
-            shell_tail_two = text_of(shell_answer, "two");
+            shell_tail_one = text_or_missing(shell_answer, "one");
+            shell_tail_two = text_or_missing(shell_answer, "two");
         }
     }
     std::error_code ec;

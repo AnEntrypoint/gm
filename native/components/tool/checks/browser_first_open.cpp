@@ -1,4 +1,5 @@
 #include "gm/tool.hpp"
+#include "support.hpp"
 #if !defined(_WIN32)
 
 #include <algorithm>
@@ -66,13 +67,6 @@ std::string wrapper_script(const fs::path& calls, const std::string& chromium) {
 std::string witness_of(const std::string& text) {
     const auto at = text.find("WITNESS");
     return text.substr(at == std::string::npos ? 0 : at, 400);
-}
-
-std::string read_text(const fs::path& file) {
-    std::ifstream in(file);
-    std::stringstream text;
-    text << in.rdbuf();
-    return text.str();
 }
 
 long long first_number(const std::string& text, const std::string& pattern) {

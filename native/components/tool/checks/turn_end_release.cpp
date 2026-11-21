@@ -55,11 +55,6 @@ std::vector<long long> stub_pids(const fs::path& file) {
     return pids;
 }
 
-bool flag(const json::Value& value, const std::string& key, bool expected) {
-    const json::Value* found = value.is_object() ? value.find(key) : nullptr;
-    return found != nullptr && found->is_bool() && found->as_bool() == expected;
-}
-
 void prepare(Session& session) {
     session.rpc("initialize", json::Object{{"protocolVersion", "2025-06-18"}, {"capabilities", json::Object{}},
                                            {"clientInfo", json::Object{{"name", "turn-end-release-check"}, {"version", "1"}}}});

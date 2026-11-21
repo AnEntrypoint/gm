@@ -1,4 +1,5 @@
 #include "gm/tool.hpp"
+#include "support.hpp"
 #if !defined(_WIN32)
 
 #include <chrono>
@@ -14,11 +15,6 @@ namespace fs = std::filesystem;
 
 constexpr std::chrono::milliseconds kHold{50000};
 constexpr std::chrono::milliseconds kCloseWithin{5000};
-
-bool flag(const json::Value& value, const std::string& dotted, bool expected) {
-    const json::Value* found = value_at(value, dotted);
-    return found != nullptr && found->is_bool() && found->as_bool() == expected;
-}
 
 }
 

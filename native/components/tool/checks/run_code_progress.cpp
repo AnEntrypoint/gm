@@ -1,4 +1,5 @@
 #include "gm/tool.hpp"
+#include "support.hpp"
 
 #include <algorithm>
 #include <chrono>
@@ -14,12 +15,7 @@ namespace {
 
 namespace fs = std::filesystem;
 
-constexpr double kClock = 1.0 / 60.0;
 constexpr const char* kToken = "tick-1";
-
-std::int64_t scaled(std::int64_t ms) {
-    return std::max<std::int64_t>(1, static_cast<std::int64_t>(std::llround(static_cast<double>(ms) * kClock)));
-}
 
 std::string seconds(std::int64_t ms) {
     return std::format("{}", static_cast<double>(ms) / 1000.0);
@@ -30,25 +26,6 @@ struct Timed {
     json::Value reply;
 };
 
-json::Value envelope_of(const json::Value& reply) {
-    const json::Value* result = reply.find("result");
-    const json::Value* content = result ? result->find("content") : nullptr;
-    const json::Value* first = content && content->is_array() && !content->as_array().empty() ? content->as_array().front().find("text") : nullptr;
-    const std::string text = first && first->is_string() ? first->as_string() : json::dump(reply);
-    auto parsed = json::parse(text);
-    if (!parsed) return json::Object{{"ok", false}, {"error", "run_code reply was not JSON: " + text.substr(0, 200)}};
-    json::Value envelope = *parsed;
-    const json::Value* output = envelope.find("output");
-    const bool placeholder = output != nullptr && output->is_string() && output->as_string() == "[the output is the text block after this one]";
-    if (placeholder && content->as_array().size() > 1) {
-        const json::Value* second = content->as_array()[1].find("text");
-        const std::string value = second != nullptr && second->is_string() ? second->as_string() : std::string();
-        if (auto value_json = json::parse(value)) envelope.set("output", *value_json);
-        else envelope.set("output", value);
-    }
-    return envelope;
-}
-
 Timed run_timed(Session& session, const json::Value& args, const std::string& token = {}) {
     const auto began = std::chrono::steady_clock::now();
     json::Object params{{"name", "run_code"}, {"arguments", args}};
@@ -58,15 +35,6 @@ Timed run_timed(Session& session, const json::Value& args, const std::string& to
     timed.reply = envelope_of(reply);
     timed.elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - began).count();
     return timed;
-}
-
-bool flag(const json::Value& value, const std::string& dotted, bool expected) {
-    const json::Value* found = value_at(value, dotted);
-    return found != nullptr && found->is_bool() && found->as_bool() == expected;
-}
-
-bool absent(const json::Value& value, const std::string& dotted) {
-    return value_at(value, dotted) == nullptr;
 }
 
 std::vector<double> progress_of(const std::vector<json::Value>& notes, const std::string& token) {

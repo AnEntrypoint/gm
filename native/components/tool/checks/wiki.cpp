@@ -1,4 +1,5 @@
 #include "gm/tool.hpp"
+#include "support.hpp"
 
 #include <chrono>
 #include <filesystem>
@@ -18,8 +19,6 @@ const hits = await gm.wiki_search({ query: 'brown fox', k: 3 });
 const unknown = await gm.wiki_search({ query: 'fox', extra: 1 });
 return JSON.stringify({ alpha, bad, beta, hits, unknown });
 )js";
-
-bool contains(const std::string& text, const std::string& word) { return text.find(word) != std::string::npos; }
 
 }
 

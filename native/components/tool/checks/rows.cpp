@@ -1,4 +1,5 @@
 #include "gm/tool.hpp"
+#include "support.hpp"
 
 #include <chrono>
 #include <filesystem>
@@ -43,8 +44,6 @@ std::filesystem::path make_workspace() {
     std::filesystem::create_directories(root / "ws");
     return root;
 }
-
-bool contains(const std::string& text, const std::string& word) { return text.find(word) != std::string::npos; }
 
 }
 

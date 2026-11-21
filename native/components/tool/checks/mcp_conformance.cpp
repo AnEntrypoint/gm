@@ -1,4 +1,5 @@
 #include "gm/tool.hpp"
+#include "support.hpp"
 
 #include <algorithm>
 #include <chrono>
@@ -111,8 +112,6 @@ json::Value picked(const json::Value* from, std::initializer_list<std::string_vi
         if (const json::Value* found = at(from, {key})) out.set(std::string(key), *found);
     return out;
 }
-
-bool contains(const std::string& text, std::string_view part) { return text.find(part) != std::string::npos; }
 
 struct Box {
     std::mutex mutex;

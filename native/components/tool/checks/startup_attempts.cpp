@@ -1,4 +1,5 @@
 #include "gm/tool.hpp"
+#include "support.hpp"
 
 #include <chrono>
 #include <filesystem>
@@ -50,10 +51,6 @@ std::vector<json::Value> events_of(const json::Value& run) {
     }
     if (list.is_array()) return list.as_array();
     return {};
-}
-
-bool contains(const std::string& text, const std::string& needle) {
-    return text.find(needle) != std::string::npos;
 }
 
 std::string error_of(const json::Value& event) {

@@ -1,4 +1,5 @@
 #include "gm/tool.hpp"
+#include "support.hpp"
 
 #if !defined(_WIN32)
 
@@ -18,27 +19,6 @@ namespace gm::tool {
 namespace {
 
 namespace fs = std::filesystem;
-
-bool is_zombie(long long pid) {
-#if defined(__linux__)
-    std::ifstream stat("/proc/" + std::to_string(pid) + "/stat");
-    const std::string text((std::istreambuf_iterator<char>(stat)), std::istreambuf_iterator<char>());
-    const std::size_t close = text.rfind(')');
-    return close != std::string::npos && close + 2 < text.size() && text[close + 2] == 'Z';
-#else
-    const proc::Outcome state = proc::run({"ps", "-o", "stat=", "-p", std::to_string(pid)}, {}, {}, 5000);
-    return state.out.find('Z') != std::string::npos;
-#endif
-}
-
-bool has_exited(long long pid) {
-    return proc::start_time_of(pid) == 0 || is_zombie(pid);
-}
-
-std::string read_text(const fs::path& file) {
-    std::ifstream in(file);
-    return std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
-}
 
 bool exits_within(long long pid, std::chrono::seconds limit) {
     const auto began = std::chrono::steady_clock::now();

@@ -1,4 +1,5 @@
 #include "gm/tool.hpp"
+#include "support.hpp"
 
 #include <chrono>
 #include <cstdlib>
@@ -25,7 +26,7 @@ bool write_bytes(const fs::path& file, const std::string& bytes) {
     return static_cast<bool>(out);
 }
 
-std::size_t replace_all(std::string& text, const std::string& from, const std::string& to) {
+std::size_t patch_all(std::string& text, const std::string& from, const std::string& to) {
     std::size_t count = 0;
     for (std::size_t at = text.find(from); at != std::string::npos; at = text.find(from, at + to.size())) {
         text.replace(at, from.size(), to);
@@ -94,13 +95,6 @@ fs.writeFileSync(path.join(dist, 'executor.js'), 'process.env.PLAYWRITER_CHROMIU
     for (const char* name : {"git", "npm"}) fs::permissions(offline_bin / name, fs::perms::owner_all | fs::perms::group_read | fs::perms::group_exec, fs::perm_options::replace);
     const char* inherited = std::getenv("PATH");
     return "PATH=" + offline_bin.string() + (inherited != nullptr ? ":" + std::string(inherited) : std::string());
-}
-
-long long worker_pid(const Session& session) {
-    for (const long long pid : session.descendants()) {
-        if (proc::process_exe(pid).filename() == "gm-core") return pid;
-    }
-    return -1;
 }
 
 std::string running_core(long long pid) {
@@ -178,7 +172,7 @@ CheckResult check_install_follows(const std::string& binary) {
                 const std::string new_stamp = (old_stamp[0] == '0' ? "1" : "0") + old_stamp.substr(1);
                 for (const char* name : {"gm", "gm-core"}) {
                     std::string bytes = read_bytes(host / name);
-                    const std::size_t patched = replace_all(bytes, old_stamp, new_stamp);
+                    const std::size_t patched = patch_all(bytes, old_stamp, new_stamp);
                     if (std::string(name) == "gm" && patched == 0) result.failures.push_back("the build stamp was not found in gm");
                     write_bytes(build_host / name, bytes);
                     fs::permissions(build_host / name, fs::perms::owner_all | fs::perms::group_read | fs::perms::group_exec | fs::perms::others_read | fs::perms::others_exec, fs::perm_options::replace);
@@ -253,8 +247,8 @@ CheckResult check_skill_reload(const std::string& binary) {
         const std::string new_stamp = std::string(1, first) + old_stamp.substr(1);
         std::string gm_bytes = original_gm;
         std::string core_bytes = original_core;
-        const std::size_t patched_gm = replace_all(gm_bytes, old_stamp, new_stamp);
-        replace_all(core_bytes, old_stamp, new_stamp);
+        const std::size_t patched_gm = patch_all(gm_bytes, old_stamp, new_stamp);
+        patch_all(core_bytes, old_stamp, new_stamp);
         if (patched_gm == 0) result.failures.push_back("the build stamp was not found in gm");
         write_bytes(build_host / "gm", gm_bytes);
         write_bytes(build_host / "gm-core", core_bytes);

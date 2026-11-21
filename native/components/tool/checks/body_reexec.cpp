@@ -31,21 +31,6 @@ constexpr const char* kWaitMarker = "re-executing waits for 1 running body job";
 
 const std::string kPlatformTarget = gm::platform_target();
 
-std::string first_word(const std::string& text) {
-    const auto start = text.find_first_not_of(" \t\r\n");
-    if (start == std::string::npos) return {};
-    const auto end = text.find_first_of(" \t\r\n", start);
-    return text.substr(start, end == std::string::npos ? std::string::npos : end - start);
-}
-
-fs::path checkout_root() {
-    for (fs::path dir = fs::current_path();; dir = dir.parent_path()) {
-        std::error_code ec;
-        if (fs::exists(dir / "skills" / "gm" / "SKILL.md", ec)) return dir;
-        if (dir == dir.parent_path()) return {};
-    }
-}
-
 std::string read_bytes(const fs::path& file) {
     std::ifstream in(file, std::ios::binary);
     return std::string(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());

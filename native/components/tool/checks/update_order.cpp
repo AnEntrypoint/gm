@@ -45,43 +45,11 @@ constexpr Leg kLegs[] = {
     {"no commit time, serial not numeric", "ffff333-x", Commit::Absent, "refused", "cannot be ordered"},
 };
 
-std::string first_word(const std::string& text) {
-    const auto start = text.find_first_not_of(" \t\r\n");
-    if (start == std::string::npos) return {};
-    const auto end = text.find_first_of(" \t\r\n", start);
-    return text.substr(start, end == std::string::npos ? std::string::npos : end - start);
-}
-
-std::optional<std::int64_t> whole_number(const std::string& text) {
-    if (text.empty() || text.size() > 18 || text.find_first_not_of("0123456789") != std::string::npos) return std::nullopt;
-    return std::stoll(text);
-}
-
 std::optional<std::int64_t> commit_time_of(const std::string& commit) {
     const auto kind = git_output(fs::current_path(), {"cat-file", "-t", commit});
     if (!kind || first_word(*kind) != "commit") return std::nullopt;
     const auto logged = git_output(fs::current_path(), {"log", "-1", "--format=%ct", commit});
     return logged ? whole_number(first_word(*logged)) : std::nullopt;
-}
-
-bool succeeded(const proc::Outcome& outcome) {
-    return outcome.started && !outcome.timed_out && outcome.exit_code == 0;
-}
-
-std::string text_of(const json::Value& object, const char* key) {
-    const json::Value* value = object.find(key);
-    return value != nullptr && value->is_string() ? value->as_string() : std::string{};
-}
-
-bool flag_of(const json::Value& object, const char* key) {
-    const json::Value* value = object.find(key);
-    return value != nullptr && value->is_bool() && value->as_bool();
-}
-
-std::optional<json::Value> reply_of(const std::string& text) {
-    auto parsed = json::parse(text);
-    if (!parsed || !parsed->is_object()) return std::nullopt;
-    return *parsed;
 }
 
 std::string linked_to(const fs::path& install) {

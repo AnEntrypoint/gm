@@ -1,4 +1,5 @@
 #include "gm/tool.hpp"
+#include "support.hpp"
 
 #include <chrono>
 #include <filesystem>
@@ -92,25 +93,6 @@ std::vector<Probe> probes() {
 std::string probe_body(const std::string& args) {
     return "const r = await gm.read_file({ path: 'fixed.txt'" + args +
            ", full: true, fresh: true }); const out = String(r.output ?? ''); return { ok: r.ok === true, unit: r.unit ?? null, total: r.total ?? null, offset: r.offset ?? null, next: r.next ?? null, nextOffset: r.nextOffset ?? null, truncated: r.truncated ?? null, totalBytes: r.totalBytes ?? null, digest: r.digest ?? null, cutLine: r.cutLine ?? null, hint: r.hint ?? null, notice: r.notice ?? null, outLen: out.length, outHead: out.slice(0, 24), outTail: out.slice(-24) };";
-}
-
-json::Value envelope_of(const json::Value& reply) {
-    const json::Value* result = reply.find("result");
-    const json::Value* content = result ? result->find("content") : nullptr;
-    const json::Value* first = content && content->is_array() && !content->as_array().empty() ? content->as_array().front().find("text") : nullptr;
-    const std::string text = first && first->is_string() ? first->as_string() : json::dump(reply);
-    auto parsed = json::parse(text);
-    if (!parsed) return json::Object{{"ok", false}, {"error", "run_code reply was not JSON: " + text.substr(0, 200)}};
-    json::Value envelope = *parsed;
-    const json::Value* output = envelope.find("output");
-    const bool placeholder = output != nullptr && output->is_string() && output->as_string() == "[the output is the text block after this one]";
-    if (placeholder && content->as_array().size() > 1) {
-        const json::Value* second = content->as_array()[1].find("text");
-        const std::string value = second != nullptr && second->is_string() ? second->as_string() : std::string();
-        if (auto value_json = json::parse(value)) envelope.set("output", *value_json);
-        else envelope.set("output", value);
-    }
-    return envelope;
 }
 
 }

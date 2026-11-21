@@ -1,4 +1,5 @@
 #include "gm/tool.hpp"
+#include "support.hpp"
 
 #include <chrono>
 #include <filesystem>
@@ -26,8 +27,6 @@ const missing = await gm.review_packet({ spec, refs: ['nope.txt'] });
 const join = await gm.review_join({});
 return JSON.stringify({ first, recorded, twice, badVerdict, changed, missing, join });
 )js";
-
-bool contains(const std::string& text, const std::string& word) { return text.find(word) != std::string::npos; }
 
 }
 

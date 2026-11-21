@@ -34,7 +34,7 @@ std::string repeat_line() {
     return text;
 }
 
-std::string text_of(const json::Value& value, const std::string& dotted) {
+std::string text_or_dump(const json::Value& value, const std::string& dotted) {
     const json::Value* found = value_at(value, dotted);
     if (found == nullptr) return {};
     return found->is_string() ? found->as_string() : json::dump(*found);
@@ -76,15 +76,15 @@ CheckResult check_cut_marker(const std::string& binary) {
             if (value_at(r, "bounded") == nullptr) {
                 result.failures.push_back("the body did not return its results: " + json::dump(result_reply).substr(0, 300));
             } else {
-                const std::string output_path = text_of(r, "bounded.outputPath");
+                const std::string output_path = text_or_dump(r, "bounded.outputPath");
                 if (!bool_at(r, "bounded.truncated", true)) result.failures.push_back("a bounded read must say truncated: " + json::dump(*value_at(r, "bounded")).substr(0, 200));
                 if (!bool_at(r, "bounded.complete", false)) result.failures.push_back("a bounded read must say complete: false, in its JSON: " + json::dump(*value_at(r, "bounded")).substr(0, 200));
                 if (output_path.empty()) result.failures.push_back("a bounded read must name its outputPath");
-                const std::string cut_output = text_of(r, "bounded.output");
+                const std::string cut_output = text_or_dump(r, "bounded.output");
                 if (!has(cut_output, "<<<gm-cut omitted=")) result.failures.push_back("the cut must be an unmistakable <<<gm-cut marker, not an ellipsis");
                 if (has(cut_output, "\n...\n")) result.failures.push_back("the cut must not be shaped like content (no ellipsis line)");
                 if (!bool_at(r, "refusedCopy.ok", false)) result.failures.push_back("a write whose content carries the cut marker must be refused: " + json::dump(*value_at(r, "refusedCopy")).substr(0, 200));
-                const std::string refused = text_of(r, "refusedCopy.error");
+                const std::string refused = text_or_dump(r, "refusedCopy.error");
                 if (!has(refused, "outputPath") || !has(refused, "full: true") || (!output_path.empty() && !has(refused, output_path)))
                     result.failures.push_back("the refusal must name outputPath and full: true: " + refused.substr(0, 300));
                 if (has(json::dump(value_at(r, "copyAfterRefusal") != nullptr ? *value_at(r, "copyAfterRefusal") : json::Value()), "\"exists\":true"))
@@ -93,10 +93,10 @@ CheckResult check_cut_marker(const std::string& binary) {
                 if (!(full != nullptr && (bool_at(*full, "complete", true) || bool_at(*full, "truncated", false)))) result.failures.push_back("a full read must not be bounded");
                 if (!bool_at(r, "fullCopy.ok", true)) result.failures.push_back("a write of a full read must succeed: " + json::dump(*value_at(r, "fullCopy")).substr(0, 200));
                 if (!bool_at(r, "pointer.pointer", true) || !bool_at(r, "pointer.complete", false)) result.failures.push_back("a repeat read must answer a pointer that says complete: false: " + json::dump(*value_at(r, "pointer")).substr(0, 200));
-                if (!has(text_of(r, "pointer.output"), "<<<gm-pointer")) result.failures.push_back("the repeat read must answer the pointer marker");
-                if (!bool_at(r, "refusedPointer.ok", false) || !has(text_of(r, "refusedPointer.error"), "fresh: true"))
+                if (!has(text_or_dump(r, "pointer.output"), "<<<gm-pointer")) result.failures.push_back("the repeat read must answer the pointer marker");
+                if (!bool_at(r, "refusedPointer.ok", false) || !has(text_or_dump(r, "refusedPointer.error"), "fresh: true"))
                     result.failures.push_back("a write of a pointer reply must be refused and name fresh: true: " + json::dump(*value_at(r, "refusedPointer")).substr(0, 300));
-                if (!bool_at(r, "refusedEdit.ok", false) || !has(text_of(r, "refusedEdit.error"), "outputPath"))
+                if (!bool_at(r, "refusedEdit.ok", false) || !has(text_or_dump(r, "refusedEdit.error"), "outputPath"))
                     result.failures.push_back("an edit whose new text carries the cut marker must be refused: " + json::dump(*value_at(r, "refusedEdit")).substr(0, 300));
             }
         }

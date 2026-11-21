@@ -1,4 +1,5 @@
 #include "gm/tool.hpp"
+#include "support.hpp"
 
 #include <chrono>
 #include <filesystem>
@@ -11,11 +12,6 @@ namespace fs = std::filesystem;
 
 constexpr const char* kCheck = "check-next-context-record";
 constexpr double kWaitMs = 1000;
-
-double number_at(const json::Value& event, const char* key) {
-    const json::Value* found = event.find(key);
-    return found != nullptr && found->is_number() ? found->as_number() : -1;
-}
 
 const json::Value* result_for(const std::vector<json::Value>& results, const json::Value& action) {
     const double seq = number_at(action, "seq");

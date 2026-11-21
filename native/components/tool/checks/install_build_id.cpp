@@ -17,14 +17,6 @@ namespace fs = std::filesystem;
 using Clock = std::chrono::steady_clock;
 constexpr long long kInstallLimitMs = 300000;
 
-fs::path checkout_root() {
-    std::error_code ec;
-    for (fs::path dir = fs::current_path(ec);; dir = dir.parent_path()) {
-        if (fs::exists(dir / "skills" / "gm" / "SKILL.md", ec)) return dir;
-        if (dir == dir.parent_path()) return {};
-    }
-}
-
 std::string bytes_of(const fs::path& file) {
     std::ifstream in(file, std::ios::binary);
     return std::string(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());

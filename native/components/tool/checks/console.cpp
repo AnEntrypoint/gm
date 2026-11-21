@@ -60,7 +60,7 @@ json::Value events_of(const json::Value& reply) {
     return *inner;
 }
 
-double number_at(const json::Value& value, const std::string& key) {
+double count_at(const json::Value& value, const std::string& key) {
     const json::Value* found = value.find(key);
     return found != nullptr && found->is_number() ? found->as_number() : 0;
 }
@@ -121,8 +121,8 @@ CheckResult check_console(const std::string& binary) {
                 if (!list.empty()) {
                     const json::Value first = list[0];
                     const json::Array lines = lines_of(first);
-                    const double dropped = number_at(first, "dropped");
-                    const double bytes = number_at(first, "bytes");
+                    const double dropped = count_at(first, "dropped");
+                    const double bytes = count_at(first, "bytes");
                     const double total = static_cast<double>(lines.size()) + dropped;
                     if (lines.size() > kLines) result.failures.push_back(label + ": " + std::to_string(lines.size()) + " lines kept, over the " + std::to_string(kLines) + " cap");
                     if (bytes > kBytes) result.failures.push_back(label + ": " + count(bytes) + " bytes kept, over the " + count(kBytes) + " cap");

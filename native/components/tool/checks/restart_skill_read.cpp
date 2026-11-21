@@ -1,4 +1,5 @@
 #include "gm/tool.hpp"
+#include "support.hpp"
 #if !defined(_WIN32)
 
 #include <chrono>
@@ -27,12 +28,7 @@ std::vector<json::Value> restart_events(const fs::path& log) {
     return events;
 }
 
-bool flag(const json::Value& value, const std::string& dotted, bool expected) {
-    const json::Value* found = value_at(value, dotted);
-    return found != nullptr && found->is_bool() && found->as_bool() == expected;
-}
-
-void connect(Session& session) {
+void initialize_only(Session& session) {
     session.rpc("initialize", json::Object{{"protocolVersion", "2025-06-18"}, {"capabilities", json::Object{}},
                                           {"clientInfo", json::Object{{"name", "restart-skill-read-check"}, {"version", "1"}}}});
     session.notify("notifications/initialized", json::Object{});
@@ -65,7 +61,7 @@ CheckResult check_restart_skill_read(const std::string& binary) {
         if (!first.started()) {
             result.failures.push_back("the first worker did not start");
         } else {
-            connect(first);
+            initialize_only(first);
             const json::Value read = first.rpc("resources/read", json::Object{{"uri", kSkill}});
             if (value_at(read, "result.contents") == nullptr) result.failures.push_back("the skill read failed: " + json::dump(read).substr(0, 200));
             tool_json(first, "next_context", json::Object{});
@@ -79,7 +75,7 @@ CheckResult check_restart_skill_read(const std::string& binary) {
         if (!restarted.started()) {
             result.failures.push_back("the restarted worker did not start");
         } else {
-            connect(restarted);
+            initialize_only(restarted);
             const json::Value ran = tool_json(restarted, "run_code", json::Object{{"body", "return 2"}});
             const json::Value* output = value_at(ran, "output");
             if (!flag(ran, "ok", true) || output == nullptr || !output->is_number() || output->as_number() != 2)
@@ -94,7 +90,7 @@ CheckResult check_restart_skill_read(const std::string& binary) {
         if (!other.started()) {
             result.failures.push_back("the worker under another host did not start");
         } else {
-            connect(other);
+            initialize_only(other);
             const json::Value refusal = other.rpc("tools/call", json::Object{{"name", "run_code"}, {"arguments", json::Object{{"body", "return 3"}}}});
             auto refused_reply = [](const json::Value& rpc) {
                 const json::Value* structured = value_at(rpc, "result.structuredContent");

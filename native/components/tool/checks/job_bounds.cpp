@@ -1,4 +1,5 @@
 #include "gm/tool.hpp"
+#include "support.hpp"
 
 #include <chrono>
 #include <filesystem>
@@ -19,11 +20,6 @@ std::string job_body(const std::string& name, const std::string& command, std::i
 
 std::string sleep_command(std::int64_t ms) {
     return "node -e \"setTimeout(() => {}, " + std::to_string(ms) + ")\"";
-}
-
-double number_at(const json::Value& value, const std::string& dotted) {
-    const json::Value* found = value_at(value, dotted);
-    return found != nullptr && found->is_number() ? found->as_number() : -1;
 }
 
 }

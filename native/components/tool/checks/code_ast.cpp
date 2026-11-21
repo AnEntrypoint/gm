@@ -1,4 +1,5 @@
 #include "gm/tool.hpp"
+#include "support.hpp"
 
 #include <chrono>
 #include <filesystem>
@@ -23,8 +24,6 @@ const badLimit = await gm.callers({ name: 'helper', limit: 0 });
 const badDepth = await gm.impact({ name: 'helper', depth: 9 });
 return JSON.stringify({ calls, impact, typed, keyword, badLimit, badDepth });
 )js";
-
-bool contains(const std::string& text, const std::string& word) { return text.find(word) != std::string::npos; }
 
 }
 

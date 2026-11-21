@@ -45,11 +45,6 @@ bool contains_text(const json::Value& value, const std::string& needle) {
     return json::dump(value).find(needle) != std::string::npos;
 }
 
-bool flag(const json::Value& value, const std::string& key, bool expected) {
-    const json::Value* found = value.is_object() ? value.find(key) : nullptr;
-    return found != nullptr && found->is_bool() && found->as_bool() == expected;
-}
-
 json::Value gate_reply(const json::Value& rpc) {
     if (const json::Value* structured = value_at(rpc, "result.structuredContent")) return *structured;
     const json::Value* blocks = value_at(rpc, "result.content");

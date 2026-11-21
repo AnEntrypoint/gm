@@ -1,4 +1,5 @@
 #include "gm/tool.hpp"
+#include "support.hpp"
 
 #include <chrono>
 #include <cstdlib>
@@ -22,17 +23,6 @@ double ms_between(std::chrono::steady_clock::time_point from, std::chrono::stead
 std::string last_line(const std::string& text) {
     const std::size_t newline = text.rfind('\n');
     return newline == std::string::npos ? text : text.substr(newline + 1);
-}
-
-long long worker_pid(const Session& session) {
-    for (const long long pid : session.descendants()) {
-        if (proc::process_exe(pid).filename() == "gm-core") return pid;
-    }
-    return -1;
-}
-
-long long resident_kb(long long pid) {
-    return proc::resident_kb(pid);
 }
 
 }

@@ -16,28 +16,12 @@ namespace {
 
 namespace fs = std::filesystem;
 
-std::string first_word_of(const std::string& text) {
-    std::istringstream in(text);
-    std::string word;
-    in >> word;
-    return word;
-}
-
-fs::path checkout_root() {
-    std::error_code ec;
-    for (fs::path dir = fs::current_path(ec); !dir.empty(); dir = dir.parent_path()) {
-        if (fs::exists(dir / "skills" / "gm" / "SKILL.md", ec)) return dir;
-        if (dir == dir.parent_path()) break;
-    }
-    return {};
-}
-
 }
 
 CheckResult check_update_checked(const std::string& binary) {
     CheckResult result;
     const auto version_run = proc::run({binary, "--version"}, {}, {}, 30000);
-    const std::string version = first_word_of(version_run.out);
+    const std::string version = first_word(version_run.out);
     if (version.empty()) {
         result.failures.push_back("the build prints no version: " + version_run.out.substr(0, 200));
         return result;
@@ -52,7 +36,7 @@ CheckResult check_update_checked(const std::string& binary) {
         return result;
     }
     const auto head_run = proc::run({"git", "rev-parse", "HEAD"}, repo, {}, 30000);
-    const std::string head = first_word_of(head_run.out);
+    const std::string head = first_word(head_run.out);
     if (head.size() != 40) {
         result.failures.push_back("could not read HEAD of the checkout: " + head_run.err.substr(0, 200));
         return result;

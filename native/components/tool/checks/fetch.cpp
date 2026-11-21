@@ -1,4 +1,5 @@
 #include "gm/tool.hpp"
+#include "support.hpp"
 
 #include <chrono>
 #include <filesystem>
@@ -28,8 +29,6 @@ out.timeout = await gm.fetch({ url: 'data:text/plain,x', timeoutMs: 0 });
 out.refused = await gm.fetch({ url: 'http://127.0.0.1:1/' });
 return JSON.stringify(out);
 )js";
-
-bool contains(const std::string& text, const std::string& word) { return text.find(word) != std::string::npos; }
 
 const std::string kServerScript = R"js(
 import { createServer } from 'node:https';

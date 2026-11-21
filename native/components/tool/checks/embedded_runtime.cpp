@@ -1,4 +1,5 @@
 #include "gm/tool.hpp"
+#include "support.hpp"
 
 #include <chrono>
 #include <filesystem>
@@ -24,18 +25,8 @@ json::Value value_of(const json::Value& reply) {
     return output_value(reply);
 }
 
-bool number_is(const json::Value& value, const std::string& dotted, double expected) {
-    const json::Value* found = value_at(value, dotted);
-    return found != nullptr && found->is_number() && found->as_number() == expected;
-}
-
 bool string_is(const json::Value& value, const std::string& dotted, const std::string& expected) {
     return text_at(value, dotted) == expected;
-}
-
-bool flag(const json::Value& value, const std::string& dotted, bool expected) {
-    const json::Value* found = value_at(value, dotted);
-    return found != nullptr && found->is_bool() && found->as_bool() == expected;
 }
 
 }

@@ -14,27 +14,12 @@ namespace fs = std::filesystem;
 using Clock = std::chrono::steady_clock;
 constexpr long long kStampLimitMs = 60000;
 
-fs::path checkout_root() {
-    std::error_code ec;
-    for (fs::path dir = fs::current_path(ec);; dir = dir.parent_path()) {
-        if (fs::exists(dir / "skills" / "gm" / "SKILL.md", ec)) return dir;
-        if (dir == dir.parent_path()) return {};
-    }
-}
-
 std::string commit_of(const std::string& version_line) {
     const auto open = version_line.find('(');
     if (open == std::string::npos) return {};
     const auto close = version_line.find(')', open);
     if (close == std::string::npos) return {};
     return version_line.substr(open + 1, close - open - 1);
-}
-
-std::string first_word(const std::string& text) {
-    std::istringstream words(text);
-    std::string word;
-    words >> word;
-    return word;
 }
 
 struct Index {

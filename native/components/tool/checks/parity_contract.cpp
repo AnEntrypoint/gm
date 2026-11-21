@@ -440,20 +440,12 @@ void w24(const Context& context, Row& row) {
     row.expect(number_of(reply, "output.dumpLen", 1e9) <= 6000 && is_true(reply, "output.dumpPath"), "a raw file dump was not bounded with an outputPath: " + clip(reply));
 }
 
-fs::path find_repo() {
-    for (fs::path dir = fs::current_path();; dir = dir.parent_path()) {
-        std::error_code ec;
-        if (fs::exists(dir / "skills" / "gm" / "SKILL.md", ec)) return dir;
-        if (dir == dir.parent_path()) return {};
-    }
-}
-
 }
 
 CheckResult check_parity_contract(const std::string& binary) {
     CheckResult result;
     const auto started = std::chrono::steady_clock::now();
-    Context context{binary, fs::temp_directory_path() / ("gm-parity-contract-" + std::to_string(started.time_since_epoch().count())), find_repo()};
+    Context context{binary, fs::temp_directory_path() / ("gm-parity-contract-" + std::to_string(started.time_since_epoch().count())), checkout_root()};
     if (context.repo.empty()) {
         result.failures.push_back("run from the checkout: no skills/gm/SKILL.md in the working directory or its parents");
         return result;

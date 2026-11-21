@@ -1,4 +1,5 @@
 #include "gm/tool.hpp"
+#include "support.hpp"
 
 #include <chrono>
 #include <fstream>
@@ -10,8 +11,6 @@ namespace {
 const std::string kRead = "const r = await gm.read_file({ path: 'f.txt' }); return JSON.stringify(r);";
 
 bool pointer(const std::string& text) { return text.find("\"pointer\":true") != std::string::npos; }
-
-bool contains(const std::string& text, const std::string& word) { return text.find(word) != std::string::npos; }
 
 std::filesystem::path make_sandbox() {
     const auto stamp = std::chrono::steady_clock::now().time_since_epoch().count();

@@ -1,4 +1,5 @@
 #include "gm/tool.hpp"
+#include "support.hpp"
 
 #include <chrono>
 #include <cstdlib>
@@ -14,17 +15,6 @@ namespace fs = std::filesystem;
 constexpr int kWarm = 100;
 constexpr int kCalls = 400;
 constexpr long long kLimitKb = 2048;
-
-long long worker_pid(const Session& session) {
-    for (const long long pid : session.descendants()) {
-        if (proc::process_exe(pid).filename() == "gm-core") return pid;
-    }
-    return -1;
-}
-
-long long resident_kb(long long pid) {
-    return proc::resident_kb(pid);
-}
 
 }
 

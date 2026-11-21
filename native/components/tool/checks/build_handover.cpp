@@ -24,17 +24,6 @@ constexpr double kScale = 0.1;
 constexpr const char* kCheck = "build-handover-check";
 constexpr const char* kQuiet = R"({"mcpServers":{"playwriter":{"disabled":true}}})";
 
-std::string read_text(const fs::path& file) {
-    std::ifstream in(file, std::ios::binary);
-    std::ostringstream text;
-    text << in.rdbuf();
-    return text.str();
-}
-
-std::string tail_of(const std::string& text, std::size_t count) {
-    return text.size() > count ? text.substr(text.size() - count) : text;
-}
-
 void scaled_sleep(long long ms) {
     std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<long long>(static_cast<double>(ms) * kScale)));
 }
@@ -45,19 +34,6 @@ std::string stamp_of(const fs::path& gm) {
     std::string first;
     words >> first;
     return first;
-}
-
-std::string replace_all(std::string text, const std::string& from, const std::string& to) {
-    if (from.empty()) return text;
-    std::string out;
-    std::size_t start = 0;
-    for (std::size_t at = text.find(from); at != std::string::npos; at = text.find(from, start)) {
-        out.append(text, start, at - start);
-        out += to;
-        start = at + from.size();
-    }
-    out.append(text, start, std::string::npos);
-    return out;
 }
 
 void place(const fs::path& versions, const fs::path& host, const std::string& stamp, const std::string& version, bool patch) {
@@ -77,14 +53,6 @@ void place(const fs::path& versions, const fs::path& host, const std::string& st
         std::error_code ec;
         fs::copy(host / sub, dir / sub, fs::copy_options::recursive | fs::copy_options::copy_symlinks | fs::copy_options::overwrite_existing, ec);
     }
-}
-
-void point(const fs::path& install, const std::string& version) {
-    const fs::path link = install / ("current." + std::to_string(getpid()));
-    std::error_code ec;
-    fs::remove(link, ec);
-    fs::create_directory_symlink(fs::path("versions") / version, link, ec);
-    fs::rename(link, install / "current", ec);
 }
 
 std::vector<long long> children_of(long long pid) {
@@ -151,11 +119,6 @@ void connect(Session& session, long long ms = 60000) {
     session.notify("notifications/initialized", json::Object{});
 }
 
-bool flag(const json::Value& value, const std::string& dotted, bool expected) {
-    const json::Value* found = value_at(value, dotted);
-    return found != nullptr && found->is_bool() && found->as_bool() == expected;
-}
-
 std::string output_text(const json::Value& value) {
     const json::Value* output = value.find("output");
     if (output == nullptr) return "undefined";
@@ -195,14 +158,6 @@ std::size_t blocks_with(const json::Value& reply, const std::string& text) {
         const json::Value* part = block.find("text");
         return part != nullptr && part->is_string() && part->as_string() == text;
     }));
-}
-
-fs::path find_repo() {
-    for (fs::path dir = fs::current_path();; dir = dir.parent_path()) {
-        std::error_code ec;
-        if (fs::exists(dir / "skills" / "gm" / "SKILL.md", ec)) return dir;
-        if (dir == dir.parent_path()) return {};
-    }
 }
 
 void check_relay_handover(CheckResult& result, Session& relay, const fs::path& install, const fs::path& run_dir, const std::string& stamp, const std::string& second) {
@@ -413,7 +368,7 @@ CheckResult check_build_handover(const std::string& binary) {
     std::error_code exists_ec;
     const fs::path given = fs::absolute(binary);
     const fs::path host = fs::exists(given / "gm", exists_ec) ? given : given.parent_path();
-    const fs::path repo = find_repo();
+    const fs::path repo = checkout_root();
     if (repo.empty()) {
         result.failures.push_back("run from the checkout: no skills/gm/SKILL.md in the working directory or its parents");
         return result;

@@ -33,30 +33,11 @@ std::string short_text(const std::string& text) {
     return text.substr(0, 300);
 }
 
-std::string first_word(const std::string& text) {
-    const auto start = text.find_first_not_of(" \t\r\n");
-    if (start == std::string::npos) return {};
-    const auto end = text.find_first_of(" \t\r\n", start);
-    return text.substr(start, end == std::string::npos ? std::string::npos : end - start);
-}
-
 std::string trimmed(const std::string& text) {
     const auto start = text.find_first_not_of(" \t\r\n");
     if (start == std::string::npos) return {};
     const auto end = text.find_last_not_of(" \t\r\n");
     return text.substr(start, end - start + 1);
-}
-
-bool ends_with(const std::string& text, const std::string& tail) {
-    return text.size() >= tail.size() && text.compare(text.size() - tail.size(), tail.size(), tail) == 0;
-}
-
-fs::path checkout_root() {
-    for (fs::path dir = fs::current_path();; dir = dir.parent_path()) {
-        std::error_code ec;
-        if (fs::exists(dir / "skills" / "gm" / "SKILL.md", ec)) return dir;
-        if (dir == dir.parent_path()) return {};
-    }
 }
 
 std::string iso_now() {

@@ -1,4 +1,5 @@
 #include "gm/tool.hpp"
+#include "support.hpp"
 
 #include <chrono>
 #include <filesystem>
@@ -30,8 +31,6 @@ w.push = await gm.git_push({});
 w.cwdOutside = await gm.git_status({ cwd: '..' });
 return JSON.stringify(w);
 )js";
-
-bool contains(const std::string& text, const std::string& word) { return text.find(word) != std::string::npos; }
 
 }
 
