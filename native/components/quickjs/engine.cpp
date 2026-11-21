@@ -16,7 +16,7 @@
 #if defined(GM_HAVE_TXIKI)
 #include "txiki_shim.h"
 #if defined(GM_HAVE_CORE_EXTRAS)
-#include "core_extras.hpp"
+#include "core_extras_host.hpp"
 #endif
 #endif
 
@@ -361,7 +361,7 @@ Engine::Engine(Session& session) : session_(session) {
     JS_SetModuleLoaderFunc(runtime_, normalize_module_name, load_module_from_disk, &session_);
     remember_session(ctx, &session_);
 #if defined(GM_HAVE_CORE_EXTRAS)
-    core_extras::install(ctx);
+    core_extras::install_with_proc(ctx);
 #endif
     if (reset_embedded_globals(ctx)) {
         context_ = ctx;

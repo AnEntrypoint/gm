@@ -83,7 +83,8 @@ if(GMNEW_TXIKI AND NOT GMNEW_TXIKI_WASI)
     endif()
 
     target_compile_definitions(gm_runcode PRIVATE GM_HAVE_TXIKI GM_HAVE_CORE_EXTRAS)
-    target_sources(gm_runcode PRIVATE core_extras.cpp)
+    target_sources(gm_runcode PRIVATE core_extras_host.cpp ${PROJECT_SOURCE_DIR}/tools/txiki/extras/core_extras.cpp)
+    target_include_directories(gm_runcode PRIVATE ${PROJECT_SOURCE_DIR}/tools/txiki/extras)
     target_link_libraries(gm_runcode PRIVATE gm_txiki gm_proc gm_decoders)
 endif()
 

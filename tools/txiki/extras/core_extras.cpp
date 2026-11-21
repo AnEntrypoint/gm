@@ -12,17 +12,26 @@
 #include <utility>
 #include <vector>
 
-#include "engine.hpp"
-#include "gm/proc.hpp"
-#include "txiki_shim.h"
-
 namespace gm::core_extras {
 namespace {
 
-using engine::Scoped;
+class Scoped {
+public:
+    Scoped(JSContext* ctx, JSValue value) : ctx_(ctx), value_(value) {}
+    Scoped(const Scoped&) = delete;
+    Scoped& operator=(const Scoped&) = delete;
+    ~Scoped() { JS_FreeValue(ctx_, value_); }
+    JSValueConst get() const { return value_; }
+
+private:
+    JSContext* ctx_;
+    JSValue value_;
+};
 
 constexpr std::size_t default_max_buffer = 1024 * 1024;
 constexpr std::size_t decoded_limit = std::size_t{1} << 30;
+
+SpawnSync host_spawn = nullptr;
 
 struct SignalName {
     const char* name;
@@ -140,21 +149,21 @@ JSValue spawn_sync(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv) {
     Scoped shell(ctx, JS_IsObject(options) ? property(ctx, options, "shell") : JS_UNDEFINED);
 
     const std::vector<std::string> command = command_line_of(ctx, argv[0], JS_IsObject(args) ? args : no_args.get(), shell.get());
-    const std::string stdin_text = present(input.get()) ? bytes_or_text_of(ctx, input.get()) : std::string();
-    proc::RunOptions run_options;
-    if (present(cwd.get())) run_options.cwd = text_of(ctx, cwd.get());
-    run_options.env = environment_of(ctx, env.get());
-    run_options.stdin_text = stdin_text;
-    run_options.kill_signal = signal_number_of(ctx, kill_signal.get());
+    SpawnRequest request;
+    request.command = command;
+    if (present(input.get())) request.stdin_text = bytes_or_text_of(ctx, input.get());
+    if (present(cwd.get())) request.cwd = text_of(ctx, cwd.get());
+    request.env = environment_of(ctx, env.get());
+    request.kill_signal = signal_number_of(ctx, kill_signal.get());
     if (present(timeout.get())) {
         std::int64_t milliseconds = 0;
         JS_ToInt64(ctx, &milliseconds, timeout.get());
-        run_options.timeout_ms = milliseconds > 0 ? static_cast<std::uint64_t>(milliseconds) : 0;
+        request.timeout_ms = milliseconds > 0 ? static_cast<std::uint64_t>(milliseconds) : 0;
     }
     std::uint32_t limit = default_max_buffer;
     if (present(max_buffer.get())) JS_ToUint32(ctx, &limit, max_buffer.get());
 
-    proc::Outcome outcome = proc::run(command, run_options);
+    SpawnOutcome outcome = host_spawn(request);
     const bool overflowed = outcome.out.size() > limit || outcome.err.size() > limit;
     if (outcome.out.size() > limit) outcome.out.resize(limit);
     if (outcome.err.size() > limit) outcome.err.resize(limit);
@@ -312,7 +321,8 @@ constexpr Export exports[] = {
 
 }
 
-void install(JSContext* ctx) {
+void install(JSContext* ctx, JSValueConst core, SpawnSync spawn) {
+    host_spawn = spawn;
     JSRuntime* runtime = JS_GetRuntime(ctx);
     if (!JS_IsRegisteredClass(runtime, realm_class_id)) {
         JS_NewClassID(runtime, &realm_class_id);
@@ -321,13 +331,13 @@ void install(JSContext* ctx) {
         definition.finalizer = finalize_realm;
         JS_NewClass(runtime, realm_class_id, &definition);
     }
-    Scoped core(ctx, gm_txiki_core(ctx));
     JS_SetAsyncFrame(ctx, JS_NULL);
     const JSAtom frame_atom = JS_NewAtom(ctx, "asyncFrame");
-    JS_DefinePropertyGetSet(ctx, core.get(), frame_atom, JS_NewCFunction(ctx, get_async_frame, "asyncFrame", 0), JS_NewCFunction(ctx, set_async_frame, "asyncFrame", 1), JS_PROP_CONFIGURABLE | JS_PROP_ENUMERABLE);
+    JS_DefinePropertyGetSet(ctx, core, frame_atom, JS_NewCFunction(ctx, get_async_frame, "asyncFrame", 0), JS_NewCFunction(ctx, set_async_frame, "asyncFrame", 1), JS_PROP_CONFIGURABLE | JS_PROP_ENUMERABLE);
     JS_FreeAtom(ctx, frame_atom);
     for (const Export& entry : exports) {
-        JS_DefinePropertyValueStr(ctx, core.get(), entry.name, JS_NewCFunction(ctx, entry.function, entry.name, entry.length), JS_PROP_C_W_E);
+        if (spawn == nullptr && std::string_view(entry.name) == "spawnSync") continue;
+        JS_DefinePropertyValueStr(ctx, core, entry.name, JS_NewCFunction(ctx, entry.function, entry.name, entry.length), JS_PROP_C_W_E);
     }
 }
 
