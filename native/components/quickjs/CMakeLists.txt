@@ -67,8 +67,9 @@ if(GMNEW_TXIKI AND NOT GMNEW_TXIKI_WASI)
     target_compile_options(gm_txiki PRIVATE -w)
     target_link_libraries(gm_txiki PUBLIC gm_quickjs_ng uv_a)
 
-    target_compile_definitions(gm_runcode PRIVATE GM_HAVE_TXIKI)
-    target_link_libraries(gm_runcode PRIVATE gm_txiki)
+    target_compile_definitions(gm_runcode PRIVATE GM_HAVE_TXIKI GM_HAVE_CORE_EXTRAS)
+    target_sources(gm_runcode PRIVATE core_extras.cpp)
+    target_link_libraries(gm_runcode PRIVATE gm_txiki gm_proc)
 endif()
 
 if(GMNEW_TXIKI_WASI)

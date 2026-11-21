@@ -58,6 +58,10 @@ JSValue gm_txiki_refresh_loop_time(JSContext *ctx, JSValueConst this_value, int 
     return JS_UNDEFINED;
 }
 
+JSValue gm_txiki_core(JSContext *ctx) {
+    return JS_DupValue(ctx, TJS_GetRuntime(ctx)->builtins.internal_core);
+}
+
 JSModuleDef *gm_txiki_load_builtin(JSContext *ctx, const char *module_name) {
     return tjs_module_loader(ctx, module_name, TJS_GetRuntime(ctx), JS_UNDEFINED);
 }

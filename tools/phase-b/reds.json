@@ -219,5 +219,53 @@
     "count": 1
    }
   ]
+ },
+ {
+  "id": "red-spawn-sync-status",
+  "witness": "check-txiki-core-extras",
+  "file": "native/components/quickjs/core_extras.cpp",
+  "edits": [
+   {
+    "from": "JS_NewInt32(ctx, outcome.exit_code)",
+    "to": "JS_NewInt32(ctx, 0)",
+    "count": 1
+   }
+  ]
+ },
+ {
+  "id": "red-spawn-sync-env",
+  "witness": "check-txiki-core-extras",
+  "file": "native/components/proc/proc.cpp",
+  "edits": [
+   {
+    "from": "options.env ? envp.data() : environ",
+    "to": "environ",
+    "count": 1
+   }
+  ]
+ },
+ {
+  "id": "red-vm-sync-back",
+  "witness": "check-txiki-core-extras",
+  "file": "native/components/quickjs/core_extras.cpp",
+  "edits": [
+   {
+    "from": "    copy_enumerable(realm, global.get(), ctx, argv[1]);\n    if (JS_IsException(result)) return JS_Throw(ctx, thrown);",
+    "to": "    if (JS_IsException(result)) return JS_Throw(ctx, thrown);",
+    "count": 1
+   }
+  ]
+ },
+ {
+  "id": "red-async-frame",
+  "witness": "check-txiki-core-extras",
+  "file": "native/third_party/txiki/quickjs/quickjs.c",
+  "edits": [
+   {
+    "from": "ctx->rt->async_frame = js_dup(argv[5]);",
+    "to": "ctx->rt->async_frame = js_dup(outer_frame);",
+    "count": 1
+   }
+  ]
  }
 ]
