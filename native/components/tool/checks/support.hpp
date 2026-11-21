@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <sstream>
@@ -116,6 +117,35 @@ inline fs::path fresh_sandbox(const std::string& label) {
     fs::create_directories(sandbox / "ws");
     std::ofstream(sandbox / "quiet.json") << R"({"mcpServers":{"playwriter":{"disabled":true}}})";
     return sandbox;
+}
+
+inline void write_script(const fs::path& file, const std::string& text) {
+    std::ofstream(file, std::ios::binary) << text;
+}
+
+inline std::vector<std::string> install_argv(const fs::path& home, const fs::path& sandbox, const fs::path& gm, const fs::path& build, const fs::path& repo) {
+    std::vector<std::string> argv{"env", "HOME=" + home.string(), "USERPROFILE=" + home.string()};
+#if !defined(_WIN32)
+    const fs::path offline_bin = sandbox / "offline-bin";
+    std::error_code ec;
+    fs::create_directories(offline_bin, ec);
+    const std::string patch_script = (offline_bin / "patch-package.js").string();
+    write_script(offline_bin / "git", "#!/bin/sh\nif [ \"$1\" = clone ]; then for last; do :; done; mkdir -p \"$last\"; exit 0; fi\ncase \" $* \" in *\" apply \"*) mkdir -p bin && printf '%s\\n' 'CHROMIUM_ARGS_VARIABLE' 'lastBrowserLines' >> bin/playwriter-project ;; esac\nexit 0\n");
+    write_script(offline_bin / "npm", "#!/bin/sh\nmkdir -p node_modules/playwriter/dist node_modules/patch-package && cp '" + patch_script + "' node_modules/patch-package/index.js && printf '#!/bin/sh\\n' > node_modules/playwriter/bin.js && chmod 755 node_modules/playwriter/bin.js\n");
+    write_script(offline_bin / "patch-package.js", "const fs = require('fs');\nconst path = require('path');\nconst dist = path.join(process.cwd(), 'node_modules', 'playwriter', 'dist');\nfs.mkdirSync(dist, { recursive: true });\nfs.writeFileSync(path.join(dist, 'executor.js'), 'process.env.PLAYWRITER_CHROMIUM_ARGS\\n...chromiumLaunchArgs(),\\nfunction displayStatus(\\nnamedByCall\\n');\n");
+    for (const char* name : {"git", "npm"}) fs::permissions(offline_bin / name, fs::perms::owner_all | fs::perms::group_read | fs::perms::group_exec, fs::perm_options::replace, ec);
+    const char* inherited = std::getenv("PATH");
+    argv.push_back("PATH=" + offline_bin.string() + (inherited != nullptr ? ":" + std::string(inherited) : std::string()));
+    argv.push_back("https_proxy=http://127.0.0.1:9");
+    argv.push_back("HTTPS_PROXY=http://127.0.0.1:9");
+#endif
+    argv.insert(argv.end(), {gm.string(), "install", "--local", build.string(), "--source", repo.string()});
+    return argv;
+}
+
+inline std::string failure_text(const proc::Outcome& outcome) {
+    if (outcome.timed_out) return "timed out";
+    return (outcome.err.empty() ? outcome.out : outcome.err).substr(0, 300);
 }
 
 inline std::string stage_install(const fs::path& host, const fs::path& repo, const fs::path& install) {

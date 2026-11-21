@@ -2,7 +2,6 @@
 #include "support.hpp"
 
 #include <chrono>
-#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <sstream>
@@ -76,27 +75,6 @@ std::size_t await_restart(Session& session, const fs::path& log, std::size_t bef
     return count;
 }
 
-std::string offline_playwriter_path(const fs::path& sandbox) {
-    const fs::path offline_bin = sandbox / "offline-bin";
-    fs::create_directories(offline_bin);
-    const std::string patch_script = (offline_bin / "patch-package.js").string();
-    write_bytes(offline_bin / "git", R"(#!/bin/sh
-if [ "$1" = clone ]; then for last; do :; done; mkdir -p "$last"; exit 0; fi
-case " $* " in *" apply "*) mkdir -p bin && printf '%s\n' 'CHROMIUM_ARGS_VARIABLE' 'lastBrowserLines' >> bin/playwriter-project ;; esac
-exit 0
-)");
-    write_bytes(offline_bin / "npm", "#!/bin/sh\nmkdir -p node_modules/playwriter/dist node_modules/patch-package && cp '" + patch_script + "' node_modules/patch-package/index.js && printf '#!/bin/sh\\n' > node_modules/playwriter/bin.js && chmod 755 node_modules/playwriter/bin.js\n");
-    write_bytes(offline_bin / "patch-package.js", R"(const fs = require('fs');
-const path = require('path');
-const dist = path.join(process.cwd(), 'node_modules', 'playwriter', 'dist');
-fs.mkdirSync(dist, { recursive: true });
-fs.writeFileSync(path.join(dist, 'executor.js'), 'process.env.PLAYWRITER_CHROMIUM_ARGS\n...chromiumLaunchArgs(),\nfunction displayStatus(\nnamedByCall\n');
-)");
-    for (const char* name : {"git", "npm"}) fs::permissions(offline_bin / name, fs::perms::owner_all | fs::perms::group_read | fs::perms::group_exec, fs::perm_options::replace);
-    const char* inherited = std::getenv("PATH");
-    return "PATH=" + offline_bin.string() + (inherited != nullptr ? ":" + std::string(inherited) : std::string());
-}
-
 std::string running_core(long long pid) {
     if (pid < 0) return "";
     return proc::process_exe(pid).string();
@@ -133,10 +111,9 @@ CheckResult check_install_follows(const std::string& binary) {
         fs::permissions(build_host / name, fs::perms::owner_all | fs::perms::group_read | fs::perms::group_exec | fs::perms::others_read | fs::perms::others_exec, fs::perm_options::replace);
     }
     write_bytes(home / "quiet.json", R"({"mcpServers":{"playwriter":{"disabled":true}}})");
-    const std::string install_path = offline_playwriter_path(sandbox);
 
     const auto install = [&] {
-        return proc::run({"env", "HOME=" + home.string(), install_path, (build_host / "gm").string(), "install", "--local", build.string(), "--source", tree.string()}, sandbox, {}, 300000);
+        return proc::run(support::install_argv(home, sandbox, build_host / "gm", build, tree), sandbox, {}, 300000);
     };
     const fs::path installed = home / ".gmnew" / "current";
     const fs::path installed_gm = installed / "gm";
@@ -239,7 +216,6 @@ CheckResult check_skill_reload(const std::string& binary) {
     const std::string original_version = version_of(host / "gm");
     const std::string old_stamp = original_version.substr(0, 12);
     write_bytes(home / "quiet.json", R"({"mcpServers":{"playwriter":{"disabled":true}}})");
-    const std::string install_path = offline_playwriter_path(sandbox);
 
     const auto variant = [&](char first) {
         const std::string new_stamp = std::string(1, first) + old_stamp.substr(1);
@@ -254,7 +230,7 @@ CheckResult check_skill_reload(const std::string& binary) {
         fs::permissions(build_host / "gm-core", executable, fs::perm_options::replace);
         fs::remove_all(build_host / "skills");
         fs::copy(tree / "skills", build_host / "skills", fs::copy_options::recursive);
-        const auto done = proc::run({"env", "HOME=" + home.string(), install_path, (build_host / "gm").string(), "install", "--local", build.string(), "--source", tree.string()}, sandbox, {}, 300000);
+        const auto done = proc::run(support::install_argv(home, sandbox, build_host / "gm", build, tree), sandbox, {}, 300000);
         if (!done.started || done.exit_code != 0) result.failures.push_back("an install failed: " + tail(done.out + done.err));
     };
     const fs::path installed = home / ".gmnew" / "current";

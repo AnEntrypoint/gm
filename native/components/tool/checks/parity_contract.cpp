@@ -364,11 +364,11 @@ void w17_w18(const Context& context, Row& row) {
     const fs::path root = home / ".gmnew";
     fs::create_directories(home);
     const auto install = [&] {
-        return proc::run({"env", "HOME=" + home.string(), (host / "gm").string(), "install", "--local", build.string(), "--source", context.repo.string()}, context.repo, {}, 120000);
+        return proc::run(support::install_argv(home, context.sandbox, host / "gm", build, context.repo), context.repo, {}, 120000);
     };
     const auto first = install();
     if (!first.started || first.exit_code != 0) {
-        row.failures.push_back("the first gm install --local failed: " + (first.err.empty() ? first.out : first.err).substr(0, 300));
+        row.failures.push_back("the first gm install --local failed: " + support::failure_text(first));
         return;
     }
     const auto checkout_files = files_under(context.repo / "skills");
@@ -395,7 +395,7 @@ void w17_w18(const Context& context, Row& row) {
     const fs::path previous = fs::read_symlink(root / "previous-older-dev", ec);
     row.line = "install exit " + std::to_string(first.exit_code) + "/" + std::to_string(second.exit_code) + "; current " + current_now.string() + "; previous-older-dev " + previous.string() +
                "; skills equal " + (same ? "true" : "false");
-    row.expect(second.exit_code == 0, "the second install failed: " + (second.err.empty() ? second.out : second.err).substr(0, 300));
+    row.expect(second.exit_code == 0, "the second install failed: " + support::failure_text(second));
     row.expect(current_now == fs::path("versions") / id, "current is not versions/" + id + " after the second install: " + current_now.string());
     row.expect(previous == fs::path("versions") / "older-dev", "previous-older-dev does not link to versions/older-dev: " + previous.string());
 }

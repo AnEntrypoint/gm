@@ -336,11 +336,11 @@ void check_identical_install(CheckResult& result, const fs::path& sandbox, const
     fs::create_directories(home);
     const fs::path build = host.parent_path().parent_path().parent_path();
     const auto install_once = [&] {
-        return proc::run({"env", "HOME=" + home.string(), "USERPROFILE=" + home.string(), (build / "native" / "components" / "host" / "gm").string(), "install", "--local", build.string(), "--source", repo.string()},
+        return proc::run(support::install_argv(home, sandbox, build / "native" / "components" / "host" / "gm", build, repo),
                          repo, {}, 120000);
     };
     const auto first = install_once();
-    if (!first.started || first.exit_code != 0) result.failures.push_back("the first local install should succeed: " + first.err);
+    if (!first.started || first.exit_code != 0) result.failures.push_back("the first local install should succeed: " + support::failure_text(first));
     const fs::path home_workspace = sandbox / "home-ws";
     fs::create_directories(home_workspace);
     Session home_relay({(home / ".gmnew" / "current" / "gm").string(), "serve", "--workspace", home_workspace.string(), "--run-dir", (home_workspace / "runs" / "same").string(), "--mcp-config", quiet.string(),

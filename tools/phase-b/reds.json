@@ -317,6 +317,18 @@
   ]
  },
  {
+  "id": "red-install-offline",
+  "witness": "check-install-switch",
+  "file": "native/components/tool/checks/support.hpp",
+  "edits": [
+   {
+    "from": "argv.push_back(\"PATH=\" + offline_bin.string() + (inherited != nullptr ? \":\" + std::string(inherited) : std::string()));",
+    "to": "argv.push_back(std::string(\"PATH=\") + (inherited != nullptr ? inherited : \"\"));",
+    "count": 1
+   }
+  ]
+ },
+ {
   "id": "red-worker-data",
   "witness": "check-txiki-core-extras",
   "file": "native/third_party/txiki/txiki/src/worker.c",

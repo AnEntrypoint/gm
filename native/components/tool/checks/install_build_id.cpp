@@ -70,18 +70,18 @@ CheckResult check_install_build_id(const std::string& binary) {
     append_probe(second_host / "gm-core");
 
     const auto install = [&](const fs::path& local) {
-        return proc::run({"env", "HOME=" + home.string(), binary, "install", "--local", local.string(), "--source", repo.string()}, repo, {}, kInstallLimitMs);
+        return proc::run(support::install_argv(home, scratch.path, binary, local, repo), repo, {}, kInstallLimitMs);
     };
     const auto one = install(first);
     if (!one.started || one.exit_code != 0) {
-        result.failures.push_back("gm install --local of the first build failed: " + (one.err.empty() ? one.out : one.err).substr(0, 300));
+        result.failures.push_back("gm install --local of the first build failed: " + support::failure_text(one));
         return result;
     }
     const fs::path current = home / ".gmnew" / "current";
     const std::string first_link = fs::read_symlink(current).string();
     const auto two = install(second);
     if (!two.started || two.exit_code != 0) {
-        result.failures.push_back("gm install --local of the second build failed: " + (two.err.empty() ? two.out : two.err).substr(0, 300));
+        result.failures.push_back("gm install --local of the second build failed: " + support::failure_text(two));
         return result;
     }
     if (bytes_of(current / "gm") != bytes_of(second_host / "gm")) result.failures.push_back("the install kept the first build's gm after a second build with the same stamp: " + two.out.substr(0, 200));
