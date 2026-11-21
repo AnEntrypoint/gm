@@ -367,11 +367,11 @@
  {
   "id": "red-serve-exit",
   "witness": "check-serve-exit",
-  "file": "native/components/host/serve.cpp",
+  "file": "native/components/host/options.cpp",
   "edits": [
    {
-    "from": "if (!max_inflight) {",
-    "to": "if (false) {",
+    "from": "std::stoi(*flag) < 1",
+    "to": "std::stoi(*flag) < 0",
     "count": 1
    }
   ]
