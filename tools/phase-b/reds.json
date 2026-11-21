@@ -267,5 +267,29 @@
     "count": 1
    }
   ]
+ },
+ {
+  "id": "red-vendor-file",
+  "witness": "check-txiki-vendor",
+  "file": "native/third_party/txiki/quickjs/LICENSE",
+  "edits": [
+   {
+    "from": "Permission is hereby granted",
+    "to": "Permission is here granted",
+    "count": 1
+   }
+  ]
+ },
+ {
+  "id": "red-vendor-patch-pin",
+  "witness": "check-txiki-vendor",
+  "file": "tools/txiki/pins.json",
+  "edits": [
+   {
+    "from": "d1746723dfb1fa51",
+    "to": "d1746723dfb1fa52",
+    "count": 1
+   }
+  ]
  }
 ]

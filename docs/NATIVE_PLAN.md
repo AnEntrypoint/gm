@@ -51,7 +51,7 @@ Scope: each script tracked in git (`git ls-files`) and each script in the instal
 | `tools/ship.sh` | Runs the gate, refuses trailers, commits by path, `--push` needs a matching `phase-b.pass`. | done: gm-tool ship (item 2c) |
 | `tools/package.mjs`, `tools/release-manifest.mjs`, `tools/prune-release-assets.mjs` | Release packaging and manifest. | gm-tool: release (item 2e) |
 | `tools/prefetch.mjs` | Fetches the release assets for setup. | gm: install (item 2b) |
-| `tools/vendor-txiki.mjs` | Vendors the txiki source. | gm-tool: vendoring (item 2e) |
+| `tools/txiki/vendor.mjs` | Vendors the txiki source. | gm-tool: vendoring (item 2e) |
 | `tools/gm-continue-setup.mjs` | Sets up the gm-continue skill. | gm: install (item 2b) |
 | `tools/spawn.mjs` | Spawns a child session. | gm-tool (item 2e) |
 | `tools/reconnect-check.mjs`, `tools/transcript-usage.mjs`, `tools/measure-*.mjs` (4), `tools/rank-run-waste.mjs` | Measurement and the waste ranking. | gm-tool: measurement (item 2e) |
@@ -64,7 +64,7 @@ Scope: each script tracked in git (`git ls-files`) and each script in the instal
 | `tools/check-build.mjs` | Runs the checks in a pool and rescues pool failures. | gm-tool: check runner (item 2a) |
 | `tools/lib/group.mjs` | Process groups for every spawn, exit sweep. | gm: process-group lifecycle (item 2a, in gm-tool first, then into gm as a shared library) |
 | `tools/lib/gm-stdio.mjs`, `tools/lib/no-playwriter.mjs` | Shared stdio and playwriter-off helpers. | gm-tool (item 2e) |
-| `tools/browser-stubs.mjs`, `tools/check-txiki-wasi-browser.js`, `tools/check-txiki-wasi-browser.html`, `tools/check-txiki-wasi-chromium.mjs`, `tools/check-txiki-wasi.mjs` | Browser and WASI runtime checks. | gm-tool (item 2e) |
+| `tools/txiki/browser-stubs.mjs`, `tools/check-txiki-wasi-browser.js`, `tools/check-txiki-wasi-browser.html`, `tools/check-txiki-wasi-chromium.mjs`, `tools/check-txiki-wasi.mjs` | Browser and WASI runtime checks. | gm-tool (item 2e) |
 | `tools/witness-redaction.mjs` | Redaction witness. | gm-tool (item 2e) |
 
 ## Checks (second tool, one group at a time, item 2e)

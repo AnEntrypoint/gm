@@ -1,0 +1,2700 @@
+--- a/txiki/src/mod_channel.c
++++ b/txiki/src/mod_channel.c
+@@ -22,44 +22,6 @@
+  * THE SOFTWARE.
+  */
+ 
+-/*
+- * In-process messaging core for MessageChannel / MessagePort / BroadcastChannel.
+- *
+- * txiki.js workers are OS threads sharing a single process address space, so
+- * ports and broadcast channels are backed by heap-allocated, thread-safe
+- * endpoints (allocated with the global tjs__malloc, never the per-runtime
+- * js_malloc) rather than by sockets. Each active endpoint owns a uv_async_t on
+- * its owning runtime's loop; posting from any thread appends a serialized
+- * message to the destination's inbox and wakes that loop.
+- *
+- * A MessagePort is two halves: a `TJSMailbox` it receives from (its inbox) and a
+- * ref to the peer's mailbox it sends to. The mailbox is a refcounted, lock-
+- * protected object whose lifetime is decoupled from the port handle, so a sender
+- * on another thread can safely append + wake without racing the receiver's
+- * teardown (the handle owns thread-local resources - a uv_async_t and a JSValue
+- * callback - that must die with its thread). Each mailbox is held by its owner
+- * port and by the peer port; last ref frees it. There is no global lock and no
+- * transfer registry: a transferred port rides inside the message as a pair of
+- * mailbox refs and is reconstructed on the receiving thread.
+- *
+- * The Web API shape (EventTarget, MessageEvent, the MessagePort/MessageChannel/
+- * BroadcastChannel classes) lives in JS under src/js/polyfills. This module only
+- * provides the transport, cross-thread wakeups and structured-clone (de)serialization.
+- *
+- * Cross-thread memory discipline:
+- *   - JS_WriteObject2 serializes in the sender ctx and returns a buffer it
+- *     allocated with js_malloc; that buffer belongs to the sender's runtime and
+- *     must be freed on the sender's thread, but a message can be freed on the
+- *     receiver's thread, so the bytes are copied into a tjs__malloc'd buffer and
+- *     the original js_free'd here. (There is no API to make JS_WriteObject2 write
+- *     into a caller-provided buffer, so the copy is unavoidable.)
+- *   - Deserialize with JS_ReadObject2 in the owner ctx; it only reads the buffer.
+- *   - SharedArrayBuffer refcounts: tjs__sab_dup each SAB on produce. Whether the
+- *     message is delivered or dropped, those produce-time dups are released when
+- *     it is freed; the read path takes its own dups that ride with the
+- *     reconstructed buffers.
+- */
+-
+ #include "mem.h"
+ #include "private.h"
+ #include "tjs.h"
+@@ -73,37 +35,31 @@
+ 
+ static uv_once_t channel_once = UV_ONCE_INIT;
+ 
+-/* The BroadcastChannel registry: every open BroadcastChannel across all threads,
+- * linked through TJSBroadcast.link and guarded by this one lock. */
+-static uv_mutex_t bc_lock;
++static uv_mutex_t broadcast_registry_lock;
+ typedef struct TJSBroadcast TJSBroadcast;
+-static struct list_head bc_list;
++static struct list_head broadcast_registry;
+ 
+ static void channel_global_init(void) {
+-    CHECK_EQ(uv_mutex_init(&bc_lock), 0);
+-    init_list_head(&bc_list);
++    CHECK_EQ(uv_mutex_init(&broadcast_registry_lock), 0);
++    init_list_head(&broadcast_registry);
+ }
+ 
+-/* A transferred port carried inside a message: the two mailbox refs that make up
+- * the port (the one it receives on and the one it sends to). Reconstructed into a
+- * fresh port on delivery. */
+ typedef struct {
+-    TJSMailbox *rx; /* receive side */
+-    TJSMailbox *tx; /* send side (the peer's receive side) */
++    TJSMailbox *recv_mb;
++    TJSMailbox *send_mb;
+ } TJSPortRef;
+ 
+ typedef struct TJSChannelMsg {
+-    struct list_head link; /* inbox queue membership */
+-    void **sabs;           /* tjs__malloc'd list of SAB pointers dup'd at produce time */
+-    int nsabs;
+-    TJSPortRef *ports; /* tjs__malloc'd list of transferred ports carried inline */
++    struct list_head inbox_node;
++    void **dup_sabs;
++    int ndup_sabs;
++    TJSPortRef *ports;
+     int nports;
+-    bool is_error;   /* an error report (worker uncaught error), not a normal message */
+-    size_t data_len; /* length of the serialized payload below */
+-    uint8_t data[];  /* serialized payload, allocated together with the struct */
++    bool is_error;
++    size_t data_len;
++    uint8_t data[];
+ } TJSChannelMsg;
+ 
+-/* Delivery kind handed to the JS deliver callback (message / messageerror / error). */
+ enum {
+     CHANNEL_DELIVER_MESSAGE = 0,
+     CHANNEL_DELIVER_MESSAGE_ERROR,
+@@ -113,22 +69,15 @@
+ static void port_ref_destroy(TJSPortRef *ref);
+ static void port_async_cb(uv_async_t *handle);
+ 
+-/* Release the produce-time SAB dups and forget them, so a subsequent free can't
+- * look at the now-dangling pointers. Idempotent. */
+ static void channel_msg_release_sabs(TJSChannelMsg *m) {
+-    for (int i = 0; i < m->nsabs; i++) {
+-        tjs__sab_free(NULL, m->sabs[i]);
++    for (int i = 0; i < m->ndup_sabs; i++) {
++        tjs__sab_free(NULL, m->dup_sabs[i]);
+     }
+-    tjs__free(m->sabs);
+-    m->sabs = NULL;
+-    m->nsabs = 0;
++    tjs__free(m->dup_sabs);
++    m->dup_sabs = NULL;
++    m->ndup_sabs = 0;
+ }
+ 
+-/* Free a message and everything it still owns. After a successful delivery the
+- * caller has already released the SABs (nsabs reset to 0) and adopted the ports
+- * (nports reset to 0), so this just frees the backing memory; for a message that
+- * is dropped undelivered it also undoes the produce-time SAB dups and reclaims
+- * the in-transit ports. */
+ static void channel_msg_free(TJSChannelMsg *m) {
+     channel_msg_release_sabs(m);
+     for (int i = 0; i < m->nports; i++) {
+@@ -138,8 +87,6 @@
+     tjs__free(m);
+ }
+ 
+-/* Serialize `value` into a message (does not enqueue it, carries no ports).
+- * Returns NULL and sets a pending exception on failure (caller reports it). */
+ static TJSChannelMsg *channel_msg_build(JSContext *ctx, JSValueConst value) {
+     size_t len;
+     int flags = JS_WRITE_OBJ_SAB | JS_WRITE_OBJ_REFERENCE | JS_WRITE_OBJ_STRIP_SOURCE;
+@@ -160,30 +107,25 @@
+     m->data_len = len;
+     js_free(ctx, buf);
+ 
+-    /* Copy the SAB pointer list into the (thread-shared) message and dup each,
+-     * so the buffers survive until the message is consumed or dropped. */
+     if (sab_tab.len > 0) {
+-        m->sabs = tjs__malloc(sizeof(void *) * sab_tab.len);
+-        if (!m->sabs) {
++        m->dup_sabs = tjs__malloc(sizeof(void *) * sab_tab.len);
++        if (!m->dup_sabs) {
+             js_free(ctx, sab_tab.tab);
+             tjs__free(m);
+             JS_ThrowOutOfMemory(ctx);
+             return NULL;
+         }
+         for (int i = 0; i < sab_tab.len; i++) {
+-            m->sabs[i] = sab_tab.tab[i];
++            m->dup_sabs[i] = sab_tab.tab[i];
+             tjs__sab_dup(NULL, sab_tab.tab[i]);
+         }
+-        m->nsabs = sab_tab.len;
++        m->ndup_sabs = sab_tab.len;
+     }
+     js_free(ctx, sab_tab.tab);
+ 
+     return m;
+ }
+ 
+-/* Duplicate a built message: copy the payload and take a fresh produce-time dup
+- * on each SAB. Ports are never duplicated (only one endpoint can receive a
+- * transferred port), so the copy carries none. Returns NULL on OOM. */
+ static TJSChannelMsg *channel_msg_dup(const TJSChannelMsg *src) {
+     TJSChannelMsg *m = tjs__mallocz(sizeof(*m) + src->data_len);
+     if (!m) {
+@@ -191,26 +133,26 @@
+     }
+     memcpy(m->data, src->data, src->data_len);
+     m->data_len = src->data_len;
+-    if (src->nsabs > 0) {
+-        m->sabs = tjs__malloc(sizeof(void *) * src->nsabs);
+-        if (!m->sabs) {
++    if (src->ndup_sabs > 0) {
++        m->dup_sabs = tjs__malloc(sizeof(void *) * src->ndup_sabs);
++        if (!m->dup_sabs) {
+             tjs__free(m);
+             return NULL;
+         }
+-        for (int i = 0; i < src->nsabs; i++) {
+-            m->sabs[i] = src->sabs[i];
+-            tjs__sab_dup(NULL, src->sabs[i]);
++        for (int i = 0; i < src->ndup_sabs; i++) {
++            m->dup_sabs[i] = src->dup_sabs[i];
++            tjs__sab_dup(NULL, src->dup_sabs[i]);
+         }
+-        m->nsabs = src->nsabs;
++        m->ndup_sabs = src->ndup_sabs;
+     }
+     return m;
+ }
+ 
+ struct TJSMailbox {
+-    atomic_int refcount; /* owner port + peer port (+ in-transit); freed at 0 */
++    atomic_int refcount;
+     uv_mutex_t lock;
+-    struct list_head messages; /* inbox (TJSChannelMsg.link) */
+-    TJSPort *owner;            /* the port receiving here (NULL if none/in-transit) */
++    struct list_head messages;
++    TJSPort *receiving_port;
+     bool closed;
+ };
+ 
+@@ -229,31 +171,23 @@
+     atomic_fetch_add(&mb->refcount, 1);
+ }
+ 
+-/* Close the mailbox and drop any buffered messages under a single lock hold, then
+- * free them outside it (freeing a message may close other mailboxes). The owner
+- * is a mailbox's own receiving port or NULL, never another port; clearing it
+- * stops a late cross-thread post from waking a port that is going away. Once
+- * `closed` is set posts are dropped, so the owner is never read again either. */
+ static void mailbox_close(TJSMailbox *mb) {
+     struct list_head drained, *el, *el1;
+     uv_mutex_lock(&mb->lock);
+     mb->closed = true;
+-    mb->owner = NULL;
++    mb->receiving_port = NULL;
+     list_splice_init(&drained, &mb->messages);
+     uv_mutex_unlock(&mb->lock);
+     list_for_each_safe(el, el1, &drained) {
+-        channel_msg_free(list_entry(el, TJSChannelMsg, link));
++        channel_msg_free(list_entry(el, TJSChannelMsg, inbox_node));
+     }
+ }
+ 
+-/* Tear a mailbox down once its last ref is gone. At refcount 0 no other thread
+- * can reference it, so drop anything still buffered without locking, then destroy
+- * the lock and free it. */
+ static void mailbox_destroy(TJSMailbox *mb) {
+     CHECK_EQ(atomic_load(&mb->refcount), 0);
+     struct list_head *el, *el1;
+     list_for_each_safe(el, el1, &mb->messages) {
+-        channel_msg_free(list_entry(el, TJSChannelMsg, link));
++        channel_msg_free(list_entry(el, TJSChannelMsg, inbox_node));
+     }
+     uv_mutex_destroy(&mb->lock);
+     tjs__free(mb);
+@@ -266,19 +200,14 @@
+     mailbox_destroy(mb);
+ }
+ 
+-/* A transferred port that will never be adopted (its message was dropped or
+- * failed to deserialize): close its receive side so the former peer's sends drop,
+- * then release both mailbox refs the message carried. */
+ static void port_ref_destroy(TJSPortRef *ref) {
+-    mailbox_close(ref->rx);
+-    mailbox_unref(ref->rx);
+-    mailbox_unref(ref->tx);
++    mailbox_close(ref->recv_mb);
++    mailbox_unref(ref->recv_mb);
++    mailbox_unref(ref->send_mb);
+ }
+ 
+-/* Port lifecycle. OPEN/STARTED are the live states (can send/receive/transfer);
+- * CLOSED and DETACHED (transferred away) are terminal. */
+ typedef enum {
+-    PORT_OPEN, /* created, not yet start()ed */
++    PORT_UNSTARTED,
+     PORT_STARTED,
+     PORT_CLOSED,
+     PORT_DETACHED,
+@@ -286,11 +215,11 @@
+ 
+ struct TJSPort {
+     JSContext *ctx;
+-    TJSMailbox *rx; /* I receive here (holds one ref) */
+-    TJSMailbox *tx; /* I send here (holds one ref) */
++    TJSMailbox *recv_mb;
++    TJSMailbox *send_mb;
+     uv_async_t async;
+     TJSPortState state;
+-    JSValue deliver_fn; /* JS (data, ports, kind) -> dispatch */
++    JSValue deliver_fn;
+ };
+ 
+ static TJSPort *tjs_port_get(JSContext *ctx, JSValue obj) {
+@@ -298,14 +227,9 @@
+ }
+ 
+ static bool port_is_live(const TJSPort *p) {
+-    return p->state == PORT_OPEN || p->state == PORT_STARTED;
++    return p->state == PORT_UNSTARTED || p->state == PORT_STARTED;
+ }
+ 
+-/* Wrap (rx, tx) as a port handle, taking a fresh ref on each mailbox. The async
+- * handle is created up front (unref'd, so it doesn't keep the loop alive until
+- * start()), which lets libuv's own handle state stand in for a separate "is it
+- * initialized" flag. Failure can only happen before the refs are taken, so there
+- * is nothing to unwind. */
+ static JSValue tjs_new_port(JSContext *ctx, TJSMailbox *rx, TJSMailbox *tx) {
+     JSValue obj = JS_NewObjectClass(ctx, tjs__class_id(ctx, TJS_CLASS_PORT));
+     if (JS_IsException(obj)) {
+@@ -317,9 +241,9 @@
+         return JS_ThrowOutOfMemory(ctx);
+     }
+     p->ctx = ctx;
+-    p->rx = rx;
+-    p->tx = tx;
+-    p->state = PORT_OPEN;
++    p->recv_mb = rx;
++    p->send_mb = tx;
++    p->state = PORT_UNSTARTED;
+     p->deliver_fn = JS_UNDEFINED;
+     mailbox_ref(rx);
+     mailbox_ref(tx);
+@@ -330,31 +254,23 @@
+     return obj;
+ }
+ 
+-/* Reconstruct a transferred port on this thread. The message carries one ref on
+- * each mailbox; the new port takes its own, so we drop the carried refs after. */
+ static JSValue tjs_new_port_from_ref(JSContext *ctx, TJSPortRef *ref) {
+-    JSValue obj = tjs_new_port(ctx, ref->rx, ref->tx);
++    JSValue obj = tjs_new_port(ctx, ref->recv_mb, ref->send_mb);
+     if (JS_IsException(obj)) {
+-        port_ref_destroy(ref); /* couldn't wrap it; don't leak the channel */
++        port_ref_destroy(ref);
+         return obj;
+     }
+-    mailbox_unref(ref->rx);
+-    mailbox_unref(ref->tx);
++    mailbox_unref(ref->recv_mb);
++    mailbox_unref(ref->send_mb);
+     return obj;
+ }
+ 
+-/* Adopt the ports carried in `m` into a fresh JS array, consuming them from the
+- * message. Returns JS_UNDEFINED when the message carries no ports (the JS side
+- * treats that as an empty port list), so no array is allocated in the common
+- * no-transfer case. */
+ static JSValue port_build_ports(JSContext *ctx, TJSChannelMsg *m) {
+     if (m->nports == 0) {
+         return JS_UNDEFINED;
+     }
+     JSValue ports = JS_NewArray(ctx);
+     if (JS_IsException(ports)) {
+-        /* OOM: leave the ports on the message so they are reclaimed when it is
+-         * freed, and deliver with an empty port list. */
+         JS_FreeValue(ctx, JS_GetException(ctx));
+         return JS_UNDEFINED;
+     }
+@@ -362,25 +278,18 @@
+     for (int i = 0; i < m->nports; i++) {
+         JS_SetPropertyUint32(ctx, ports, i, tjs_new_port_from_ref(ctx, &m->ports[i]));
+     }
+-    m->nports = 0; /* adopted; don't reclaim them when the message is freed */
++    m->nports = 0;
+     return ports;
+ }
+ 
+ static void port_dispatch_one(JSContext *ctx, TJSPort *p, TJSChannelMsg *m) {
+     JSSABTab sab_tab = { .tab = NULL, .len = 0 };
+-    /* JS_READ_OBJ_SAB is required to reconstruct any SharedArrayBuffers the payload
+-     * references: the deserializer takes its own ref on each, owned thereafter by
+-     * the reconstructed JS object. sab_tab is only the list of those SABs, so
+-     * freeing the table array releases the list, not the refs. */
+     JSValue data = JS_ReadObject2(ctx, m->data, m->data_len, JS_READ_OBJ_SAB | JS_READ_OBJ_REFERENCE, &sab_tab);
+     js_free(ctx, sab_tab.tab);
+ 
+     JSValue ports;
+     int kind;
+     if (JS_IsException(data)) {
+-        /* The payload can't be reconstructed: deliver a bare 'messageerror'. A
+-         * MessageEvent has no field for the underlying error, so it is dropped
+-         * here; any ports the message carried are reclaimed when it is freed. */
+         JS_FreeValue(ctx, JS_GetException(ctx));
+         data = JS_UNDEFINED;
+         ports = JS_UNDEFINED;
+@@ -390,8 +299,6 @@
+         kind = m->is_error ? CHANNEL_DELIVER_ERROR : CHANNEL_DELIVER_MESSAGE;
+     }
+ 
+-    /* A started port always has a deliver function, and only started ports ever
+-     * reach here (an unstarted port's async is never signalled). */
+     CHECK(JS_IsFunction(ctx, p->deliver_fn));
+     JSValue args[3] = { data, ports, JS_NewInt32(ctx, kind) };
+     tjs_call_handler(ctx, p->deliver_fn, 3, args);
+@@ -403,25 +310,18 @@
+ static void port_drain(TJSPort *p) {
+     JSContext *ctx = p->ctx;
+ 
+-    /* This runs on the owner's loop thread, the only thread that mutates p->state
+-     * or p->rx (start/close/transfer all happen here), and p holds a ref on p->rx
+-     * until it is closed or transferred (both owner-thread operations) - so neither
+-     * can change or be freed under us without a lock. Only the mailbox's message
+-     * list is shared across threads, and that is taken under p->rx->lock below. A
+-     * wake may still arrive after the port was closed/transferred, so bail here. */
+     if (!port_is_live(p)) {
+         return;
+     }
+ 
+     struct list_head inbox, *el, *el1;
+-    uv_mutex_lock(&p->rx->lock);
+-    list_splice_init(&inbox, &p->rx->messages);
+-    uv_mutex_unlock(&p->rx->lock);
++    uv_mutex_lock(&p->recv_mb->lock);
++    list_splice_init(&inbox, &p->recv_mb->messages);
++    uv_mutex_unlock(&p->recv_mb->lock);
+ 
+     list_for_each_safe(el, el1, &inbox) {
+-        TJSChannelMsg *m = list_entry(el, TJSChannelMsg, link);
++        TJSChannelMsg *m = list_entry(el, TJSChannelMsg, inbox_node);
+ 
+-        /* A handler may have closed this port; drop the rest undelivered. */
+         if (!port_is_live(p)) {
+             channel_msg_free(m);
+             continue;
+@@ -444,23 +344,18 @@
+     tjs__free(p);
+ }
+ 
+-/* Detach from both mailboxes: close the receive side (so the peer's future posts
+- * drop) and release both refs. Safe to call once. */
+ static void port_release_mailboxes(TJSPort *p) {
+-    if (p->rx) {
+-        mailbox_close(p->rx);
+-        mailbox_unref(p->rx);
+-        p->rx = NULL;
+-    }
+-    if (p->tx) {
+-        mailbox_unref(p->tx);
+-        p->tx = NULL;
++    if (p->recv_mb) {
++        mailbox_close(p->recv_mb);
++        mailbox_unref(p->recv_mb);
++        p->recv_mb = NULL;
++    }
++    if (p->send_mb) {
++        mailbox_unref(p->send_mb);
++        p->send_mb = NULL;
+     }
+ }
+ 
+-/* close(): detach from the channel and stop keeping the loop alive. The struct
+- * and its async handle are reclaimed by the finalizer (the JS wrapper still holds
+- * this handle), so nothing is freed here. */
+ static void port_do_close(TJSPort *p) {
+     if (!port_is_live(p)) {
+         return;
+@@ -470,24 +365,18 @@
+     uv_unref((uv_handle_t *) &p->async);
+ }
+ 
+-/* Transfer the port out: unbind from its receive side, move both mailbox refs
+- * into `out`, and detach the handle. The (now useless) async handle and the
+- * struct are reclaimed by the finalizer. */
+ static void port_do_transfer(TJSPort *p, TJSPortRef *out) {
+-    uv_mutex_lock(&p->rx->lock);
+-    /* The receive side's owner is this port (if started) or NULL, never another
+-     * port; clear it so the peer's sends won't wake a detached port. */
+-    CHECK(p->rx->owner == p || p->rx->owner == NULL);
+-    p->rx->owner = NULL;
+-    uv_mutex_unlock(&p->rx->lock);
++    uv_mutex_lock(&p->recv_mb->lock);
++    CHECK(p->recv_mb->receiving_port == p || p->recv_mb->receiving_port == NULL);
++    p->recv_mb->receiving_port = NULL;
++    uv_mutex_unlock(&p->recv_mb->lock);
+ 
+-    /* Stop the old owner's async from keeping this loop alive. */
+     uv_unref((uv_handle_t *) &p->async);
+ 
+-    out->rx = p->rx;
+-    out->tx = p->tx;
+-    p->rx = NULL;
+-    p->tx = NULL;
++    out->recv_mb = p->recv_mb;
++    out->send_mb = p->send_mb;
++    p->recv_mb = NULL;
++    p->send_mb = NULL;
+     p->state = PORT_DETACHED;
+ }
+ 
+@@ -502,8 +391,6 @@
+ 
+     port_do_close(p);
+ 
+-    /* The async is always created in the constructor, so it must always be
+-     * closed; the struct is freed in its close callback. */
+     uv_close((uv_handle_t *) &p->async, port_async_close_cb);
+ }
+ 
+@@ -520,21 +407,11 @@
+     .gc_mark = tjs_port_mark,
+ };
+ 
+-/* Post a built message to the peer's inbox and wake its owner. If the peer is
+- * closed the message is dropped (freed) here. A message posted before the peer
+- * calls start() has no owner yet: it stays buffered and start()'s initial wake
+- * flushes it, so a missing owner is not an error. */
+ static void port_post(TJSPort *p, TJSChannelMsg *m) {
+-    TJSMailbox *mb = p->tx;
++    TJSMailbox *mb = p->send_mb;
+ 
+-    /* Guard against a self-referential enqueue: if the message transfers a port
+-     * whose receive mailbox is the destination itself (the sender shipped its own
+-     * entangled partner), the message would land in a mailbox it holds a ref to.
+-     * That mailbox has no owner left - the partner that would drain it is inside
+-     * this very message - so the message is undeliverable and would leak. Drop it;
+-     * this matches a browser discarding a message posted to a disentangled port. */
+     for (int i = 0; i < m->nports; i++) {
+-        if (m->ports[i].rx == mb) {
++        if (m->ports[i].recv_mb == mb) {
+             channel_msg_free(m);
+             return;
+         }
+@@ -546,16 +423,13 @@
+         channel_msg_free(m);
+         return;
+     }
+-    list_add_tail(&m->link, &mb->messages);
+-    if (mb->owner) {
+-        uv_async_send(&mb->owner->async);
++    list_add_tail(&m->inbox_node, &mb->messages);
++    if (mb->receiving_port) {
++        uv_async_send(&mb->receiving_port->async);
+     }
+     uv_mutex_unlock(&mb->lock);
+ }
+ 
+-/* port.postMessage(value, portHandles, buffers)
+- * portHandles: array of native MessagePortHandle objects to transfer.
+- * buffers: array of ArrayBuffers to detach (content already cloned).  */
+ static JSValue tjs_port_postmessage(JSContext *ctx, JSValue this_val, int argc, JSValue *argv) {
+     TJSPort *p = tjs_port_get(ctx, this_val);
+     if (!p) {
+@@ -578,14 +452,11 @@
+         JS_GetLength(ctx, buffers, &nbufs);
+     }
+ 
+-    /* Serialize first so a clone failure transfers nothing. */
+     TJSChannelMsg *m = channel_msg_build(ctx, value);
+     if (!m) {
+-        return JS_EXCEPTION; /* pending exception set by channel_msg_build */
++        return JS_EXCEPTION;
+     }
+ 
+-    /* Allocate the transfer list before moving any port, so an allocation
+-     * failure can't strand a half-transferred port. */
+     if (nports > 0) {
+         m->ports = tjs__malloc(sizeof(TJSPortRef) * nports);
+         if (!m->ports) {
+@@ -594,9 +465,6 @@
+         }
+     }
+ 
+-    /* Snapshot both lists up front: reading an array element can run JS (an
+-     * accessor), and between the immutability check below and the detach no
+-     * JS may run, or it could pin a buffer we are about to free. */
+     int64_t nvals = nports + nbufs;
+     JSValue *vals = NULL;
+     if (nvals > 0) {
+@@ -614,10 +482,6 @@
+     }
+     JSValue *bufs = vals ? vals + nports : NULL;
+ 
+-    /* Serialization can run user code (getters) that starts a native write,
+-     * which pins its buffer by marking it immutable. JS_DetachArrayBuffer
+-     * ignores that flag and would free memory the write still reads, so refuse
+-     * the whole transfer before anything moves. */
+     bool pinned = false;
+     for (int64_t i = 0; i < nbufs; i++) {
+         if (JS_IsImmutableArrayBuffer(bufs[i]) == 1) {
+@@ -655,39 +519,67 @@
+     return JS_UNDEFINED;
+ }
+ 
+-/* port.start(deliverFn) */
++static JSValue tjs_port_deliver_default(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv, int magic, JSValue *func_data) {
++    if (argc < 3) {
++        return JS_UNDEFINED;
++    }
++    int kind;
++    if (JS_ToInt32(ctx, &kind, argv[2])) {
++        return JS_EXCEPTION;
++    }
++    const char *handler_name = "onmessage";
++    if (kind == CHANNEL_DELIVER_MESSAGE_ERROR) {
++        handler_name = "onmessageerror";
++    } else if (kind == CHANNEL_DELIVER_ERROR) {
++        handler_name = "onerror";
++    }
++
++    JSValue handler = JS_GetPropertyStr(ctx, func_data[0], handler_name);
++    if (!JS_IsFunction(ctx, handler)) {
++        JS_FreeValue(ctx, handler);
++        return JS_UNDEFINED;
++    }
++
++    JSValue event = JS_NewObject(ctx);
++    JS_SetPropertyStr(ctx, event, "data", JS_DupValue(ctx, argv[0]));
++    JS_SetPropertyStr(ctx, event, "ports", JS_DupValue(ctx, argv[1]));
++    JSValue ret = JS_Call(ctx, handler, func_data[0], 1, &event);
++    JS_FreeValue(ctx, event);
++    JS_FreeValue(ctx, handler);
++    return ret;
++}
++
+ static JSValue tjs_port_start(JSContext *ctx, JSValue this_val, int argc, JSValue *argv) {
+     TJSPort *p = tjs_port_get(ctx, this_val);
+     if (!p) {
+         return JS_EXCEPTION;
+     }
+-    /* Idempotent, and a no-op on a closed or transferred port. */
+-    if (p->state != PORT_OPEN) {
++    if (p->state != PORT_UNSTARTED) {
+         return JS_UNDEFINED;
+     }
+ 
+     JS_FreeValue(ctx, p->deliver_fn);
+-    p->deliver_fn = JS_DupValue(ctx, argv[0]);
++    if (argc > 0 && JS_IsFunction(ctx, argv[0])) {
++        p->deliver_fn = JS_DupValue(ctx, argv[0]);
++    } else {
++        JSValue port_ref = JS_DupValue(ctx, this_val);
++        p->deliver_fn = JS_NewCFunctionData(ctx, tjs_port_deliver_default, 3, 0, 1, &port_ref);
++        JS_FreeValue(ctx, port_ref);
++    }
+ 
+-    /* Keep the loop alive now that we are receiving (the async is created,
+-     * unref'd, in the constructor). */
+     uv_ref((uv_handle_t *) &p->async);
+ 
+-    /* Become the owner of our receive side; a freshly opened port has none yet. */
+-    uv_mutex_lock(&p->rx->lock);
+-    CHECK_NULL(p->rx->owner);
+-    p->rx->owner = p;
++    uv_mutex_lock(&p->recv_mb->lock);
++    CHECK_NULL(p->recv_mb->receiving_port);
++    p->recv_mb->receiving_port = p;
+     p->state = PORT_STARTED;
+-    uv_mutex_unlock(&p->rx->lock);
++    uv_mutex_unlock(&p->recv_mb->lock);
+ 
+-    /* Wake once to flush anything buffered before start(); a spurious wake with
+-     * an empty inbox is harmless. */
+     uv_async_send(&p->async);
+ 
+     return JS_UNDEFINED;
+ }
+ 
+-/* port.close() */
+ static JSValue tjs_port_close(JSContext *ctx, JSValue this_val, int argc, JSValue *argv) {
+     TJSPort *p = tjs_port_get(ctx, this_val);
+     if (!p) {
+@@ -703,7 +595,6 @@
+     TJS_CFUNC_DEF("close", 0, tjs_port_close),
+ };
+ 
+-/* core.channelNew() -> [handleA, handleB] */
+ static JSValue tjs_channel_new(JSContext *ctx, JSValue this_val, int argc, JSValue *argv) {
+     TJSMailbox *m0 = mailbox_new();
+     TJSMailbox *m1 = mailbox_new();
+@@ -714,21 +605,19 @@
+         if (m1) {
+             mailbox_destroy(m1);
+         }
+-        /* mailbox_new() is a bare allocator that sets no JS exception, so throw
+-         * one here rather than returning JS_EXCEPTION with nothing pending. */
+         return JS_ThrowOutOfMemory(ctx);
+     }
+ 
+-    JSValue a = tjs_new_port(ctx, m0, m1); /* port A: receives on m0, sends to m1 */
++    JSValue a = tjs_new_port(ctx, m0, m1);
+     if (JS_IsException(a)) {
+         mailbox_destroy(m0);
+         mailbox_destroy(m1);
+         return a;
+     }
+ 
+-    JSValue b = tjs_new_port(ctx, m1, m0); /* port B: receives on m1, sends to m0 */
++    JSValue b = tjs_new_port(ctx, m1, m0);
+     if (JS_IsException(b)) {
+-        JS_FreeValue(ctx, a); /* finalizer drops A's refs on m0/m1 */
++        JS_FreeValue(ctx, a);
+         return b;
+     }
+ 
+@@ -738,13 +627,6 @@
+     return arr;
+ }
+ 
+-/* The parent?worker channel is an ordinary MessageChannel whose two sides are
+- * owned by different threads' loops. The parent creates both mailboxes (holding a
+- * reserved ref on each), wraps side 0 on its loop, hands the two mailboxes to the
+- * worker thread which wraps side 1 on its own loop, then drops both reserved refs.
+- * The mailboxes live on through the ports' own refs; if a side fails to wrap,
+- * dropping its reserved ref frees that mailbox. */
+-
+ bool tjs__channel_mailbox_pair(TJSMailbox **a, TJSMailbox **b) {
+     TJSMailbox *m0 = mailbox_new();
+     TJSMailbox *m1 = mailbox_new();
+@@ -757,7 +639,7 @@
+         }
+         return false;
+     }
+-    mailbox_ref(m0); /* reserved refs, held by the caller until both ports exist */
++    mailbox_ref(m0);
+     mailbox_ref(m1);
+     *a = m0;
+     *b = m1;
+@@ -772,8 +654,6 @@
+     mailbox_unref(mb);
+ }
+ 
+-/* Disentangle a worker-channel port and let its loop exit (used on terminate).
+- * The handle stays valid; the finalizer reclaims it. */
+ void tjs__channel_port_close(JSRuntime *rt, JSValue port_handle) {
+     TJSPort *p = JS_GetOpaque(port_handle, tjs__class_id_rt(rt, TJS_CLASS_PORT));
+     if (p) {
+@@ -781,8 +661,6 @@
+     }
+ }
+ 
+-/* Deliver everything already in a started worker-channel port's inbox now,
+- * without waiting for its async wake. No-op unless the port is started. */
+ void tjs__channel_port_flush(JSRuntime *rt, JSValue port_handle) {
+     TJSPort *p = JS_GetOpaque(port_handle, tjs__class_id_rt(rt, TJS_CLASS_PORT));
+     if (p && p->state == PORT_STARTED) {
+@@ -790,8 +668,6 @@
+     }
+ }
+ 
+-/* Stop a worker-channel port from keeping its loop alive, leaving it started:
+- * later posts to the (closed) peer are dropped rather than throwing. */
+ void tjs__channel_port_unref(JSRuntime *rt, JSValue port_handle) {
+     TJSPort *p = JS_GetOpaque(port_handle, tjs__class_id_rt(rt, TJS_CLASS_PORT));
+     if (p) {
+@@ -799,9 +675,6 @@
+     }
+ }
+ 
+-/* Report an error (a worker's uncaught exception) to the peer of `port_handle`.
+- * `error_obj` is a structured-clonable {name, message, stack}. Best-effort: a
+- * failure here must never mask the original error. */
+ void tjs__channel_port_post_error(JSContext *ctx, JSValue port_handle, JSValueConst error_obj) {
+     TJSPort *p = JS_GetOpaque(port_handle, tjs__class_id(ctx, TJS_CLASS_PORT));
+     if (!p || !port_is_live(p)) {
+@@ -821,9 +694,9 @@
+     uv_async_t async;
+     bool closed;
+     JSValue deliver_fn;
+-    uv_mutex_t inbox_lock;     /* guards `messages` (posted from other threads) */
+-    struct list_head messages; /* inbox (TJSChannelMsg.link) */
+-    struct list_head link;     /* bc_list membership; guarded by bc_lock */
++    uv_mutex_t messages_lock;
++    struct list_head messages;
++    struct list_head registry_node;
+     char name[];
+ };
+ 
+@@ -833,9 +706,6 @@
+ 
+ static void broadcast_dispatch_one(JSContext *ctx, TJSBroadcast *bc, TJSChannelMsg *m) {
+     JSSABTab sab_tab = { .tab = NULL, .len = 0 };
+-    /* JS_READ_OBJ_SAB reconstructs any SharedArrayBuffers the payload references,
+-     * with the deserializer taking a ref owned by each reconstructed JS object;
+-     * sab_tab is only their list, so freeing the table array does not touch them. */
+     JSValue data = JS_ReadObject2(ctx, m->data, m->data_len, JS_READ_OBJ_SAB | JS_READ_OBJ_REFERENCE, &sab_tab);
+     js_free(ctx, sab_tab.tab);
+     bool deser_failed = JS_IsException(data);
+@@ -856,12 +726,12 @@
+     CHECK_NOT_NULL(bc);
+ 
+     struct list_head inbox, *el, *el1;
+-    uv_mutex_lock(&bc->inbox_lock);
++    uv_mutex_lock(&bc->messages_lock);
+     list_splice_init(&inbox, &bc->messages);
+-    uv_mutex_unlock(&bc->inbox_lock);
++    uv_mutex_unlock(&bc->messages_lock);
+ 
+     list_for_each_safe(el, el1, &inbox) {
+-        TJSChannelMsg *m = list_entry(el, TJSChannelMsg, link);
++        TJSChannelMsg *m = list_entry(el, TJSChannelMsg, inbox_node);
+         if (bc->closed) {
+             channel_msg_free(m);
+             continue;
+@@ -874,27 +744,26 @@
+ static void broadcast_async_close_cb(uv_handle_t *handle) {
+     TJSBroadcast *bc = handle->data;
+     CHECK_NOT_NULL(bc);
+-    uv_mutex_destroy(&bc->inbox_lock);
++    uv_mutex_destroy(&bc->messages_lock);
+     tjs__free(bc);
+ }
+ 
+-/* Remove from the registry (must not hold bc_lock) and drop buffered messages. */
+ static void broadcast_do_close(TJSBroadcast *bc) {
+     if (bc->closed) {
+         return;
+     }
+     bc->closed = true;
+ 
+-    uv_mutex_lock(&bc_lock);
+-    list_del(&bc->link);
+-    uv_mutex_unlock(&bc_lock);
++    uv_mutex_lock(&broadcast_registry_lock);
++    list_del(&bc->registry_node);
++    uv_mutex_unlock(&broadcast_registry_lock);
+ 
+     struct list_head inbox, *el, *el1;
+-    uv_mutex_lock(&bc->inbox_lock);
++    uv_mutex_lock(&bc->messages_lock);
+     list_splice_init(&inbox, &bc->messages);
+-    uv_mutex_unlock(&bc->inbox_lock);
++    uv_mutex_unlock(&bc->messages_lock);
+     list_for_each_safe(el, el1, &inbox) {
+-        channel_msg_free(list_entry(el, TJSChannelMsg, link));
++        channel_msg_free(list_entry(el, TJSChannelMsg, inbox_node));
+     }
+ }
+ 
+@@ -906,10 +775,6 @@
+     JS_FreeValueRT(rt, bc->deliver_fn);
+     bc->deliver_fn = JS_UNDEFINED;
+     broadcast_do_close(bc);
+-    /* The async is always created in the constructor (before the handle is handed
+-     * to JS), so it must always be closed. broadcast_async_close_cb frees the
+-     * struct and can run after the runtime is torn down, so bc is allocated and
+-     * freed with the raw global allocator (tjs__malloc/tjs__free), never js_malloc. */
+     uv_close((uv_handle_t *) &bc->async, broadcast_async_close_cb);
+ }
+ 
+@@ -926,7 +791,6 @@
+     .gc_mark = tjs_broadcast_mark,
+ };
+ 
+-/* core.broadcastNew(name, deliverFn) -> handle */
+ static JSValue tjs_broadcast_new(JSContext *ctx, JSValue this_val, int argc, JSValue *argv) {
+     uv_once(&channel_once, channel_global_init);
+ 
+@@ -954,25 +818,20 @@
+     bc->deliver_fn = JS_DupValue(ctx, argv[1]);
+     init_list_head(&bc->messages);
+ 
+-    CHECK_EQ(uv_mutex_init(&bc->inbox_lock), 0);
++    CHECK_EQ(uv_mutex_init(&bc->messages_lock), 0);
+ 
+     CHECK_EQ(uv_async_init(tjs_get_loop(ctx), &bc->async, broadcast_async_cb), 0);
+     bc->async.data = bc;
+-    /* An open BroadcastChannel must not, on its own, keep the event loop alive: a
+-     * program that never calls close() must still be able to exit. Keep the async
+-     * unref'd; buffered messages are still delivered while the loop is running for
+-     * other reasons. */
+     uv_unref((uv_handle_t *) &bc->async);
+ 
+-    uv_mutex_lock(&bc_lock);
+-    list_add(&bc->link, &bc_list);
+-    uv_mutex_unlock(&bc_lock);
++    uv_mutex_lock(&broadcast_registry_lock);
++    list_add(&bc->registry_node, &broadcast_registry);
++    uv_mutex_unlock(&broadcast_registry_lock);
+ 
+     JS_SetOpaque(obj, bc);
+     return obj;
+ }
+ 
+-/* handle.postMessage(value) */
+ static JSValue tjs_broadcast_postmessage(JSContext *ctx, JSValue this_val, int argc, JSValue *argv) {
+     TJSBroadcast *sender = tjs_broadcast_get(ctx, this_val);
+     if (!sender) {
+@@ -982,43 +841,37 @@
+         return JS_ThrowTypeError(ctx, "BroadcastChannel is closed");
+     }
+ 
+-    /* Serialize once; deliver an independent copy to every other subscriber. */
+     TJSChannelMsg *src_msg = channel_msg_build(ctx, argv[0]);
+     if (!src_msg) {
+         return JS_EXCEPTION;
+     }
+ 
+-    uv_mutex_lock(&bc_lock);
++    uv_mutex_lock(&broadcast_registry_lock);
+     struct list_head *el;
+-    list_for_each(el, &bc_list) {
+-        TJSBroadcast *bc = list_entry(el, TJSBroadcast, link);
++    list_for_each(el, &broadcast_registry) {
++        TJSBroadcast *bc = list_entry(el, TJSBroadcast, registry_node);
+         if (bc == sender || bc->closed || strcmp(bc->name, sender->name) != 0) {
+             continue;
+         }
+ 
+-        /* An independent copy per target; skip a target we can't allocate for
+-         * rather than deliver a message whose SAB refs lack a matching dup. */
+         TJSChannelMsg *m = channel_msg_dup(src_msg);
+         if (!m) {
+             continue;
+         }
+ 
+-        uv_mutex_lock(&bc->inbox_lock);
+-        list_add_tail(&m->link, &bc->messages);
+-        uv_mutex_unlock(&bc->inbox_lock);
++        uv_mutex_lock(&bc->messages_lock);
++        list_add_tail(&m->inbox_node, &bc->messages);
++        uv_mutex_unlock(&bc->messages_lock);
+ 
+         uv_async_send(&bc->async);
+     }
+-    uv_mutex_unlock(&bc_lock);
++    uv_mutex_unlock(&broadcast_registry_lock);
+ 
+-    /* The source message was never enqueued anywhere; free it (undoing the SAB
+-     * dups it took at build time). */
+     channel_msg_free(src_msg);
+ 
+     return JS_UNDEFINED;
+ }
+ 
+-/* handle.close() */
+ static JSValue tjs_broadcast_close(JSContext *ctx, JSValue this_val, int argc, JSValue *argv) {
+     TJSBroadcast *bc = tjs_broadcast_get(ctx, this_val);
+     if (!bc) {
+@@ -1036,13 +889,11 @@
+ void tjs__mod_channel_init(JSContext *ctx, JSValue ns) {
+     JSValue proto;
+ 
+-    /* MessagePort handle class */
+     CHECK_EQ(tjs__class_register(ctx, TJS_CLASS_PORT, &tjs_port_class), 0);
+     proto = JS_NewObject(ctx);
+     JS_SetPropertyFunctionList(ctx, proto, tjs_port_proto_funcs, countof(tjs_port_proto_funcs));
+     JS_SetClassProto(ctx, tjs__class_id(ctx, TJS_CLASS_PORT), proto);
+ 
+-    /* BroadcastChannel handle class */
+     CHECK_EQ(tjs__class_register(ctx, TJS_CLASS_BROADCAST, &tjs_broadcast_class), 0);
+     proto = JS_NewObject(ctx);
+     JS_SetPropertyFunctionList(ctx, proto, tjs_broadcast_proto_funcs, countof(tjs_broadcast_proto_funcs));
+--- a/txiki/src/mod_fs.c
++++ b/txiki/src/mod_fs.c
+@@ -109,8 +109,7 @@
+     JSValue obj;
+     TJSPromise result;
+     TJSBufferRef buf_ref;
+-    /* Per-request storage so concurrent readdir requests don't share a slot. */
+-    uv_dirent_t dirent;
++    uv_dirent_t readdir_dirent;
+ } TJSFsReq;
+ 
+ typedef struct {
+@@ -178,6 +177,13 @@
+     return JS_GetOpaque2(ctx, obj, tjs__class_id(ctx, TJS_CLASS_DIR));
+ }
+ 
++static void tjs_dir_clear_reading(JSContext *ctx, JSValue obj) {
++    TJSDir *d = tjs_dir_get(ctx, obj);
++    if (d) {
++        d->reading = false;
++    }
++}
++
+ static JSValue tjs_new_dirent(JSContext *ctx, uv_dirent_t *dent) {
+     JSValue obj = JS_NewObjectClass(ctx, tjs__class_id(ctx, TJS_CLASS_DIRENT));
+     if (JS_IsException(obj)) {
+@@ -291,13 +297,8 @@
+     TJSDir *d;
+     bool is_reject = false;
+ 
+-    /* Clear the reading flag on every readdir completion (success and error)
+-     * so the next dir.next() can proceed. */
+     if (req->fs_type == UV_FS_READDIR) {
+-        d = tjs_dir_get(ctx, fr->obj);
+-        if (d) {
+-            d->reading = false;
+-        }
++        tjs_dir_clear_reading(ctx, fr->obj);
+     }
+ 
+     if (req->result < 0) {
+@@ -340,6 +341,7 @@
+             arg = JS_NewString(ctx, fr->req.ptr);
+             break;
+ 
++        case UV_FS_ACCESS:
+         case UV_FS_COPYFILE:
+         case UV_FS_FDATASYNC:
+         case UV_FS_FSYNC:
+@@ -388,7 +390,7 @@
+             arg = JS_NewObjectProto(ctx, JS_NULL);
+             JS_DefinePropertyValueStr(ctx, arg, "done", JS_NewBool(ctx, d->done), JS_PROP_C_W_E);
+             if (fr->req.result != 0) {
+-                JSValue item = tjs_new_dirent(ctx, &fr->dirent);
++                JSValue item = tjs_new_dirent(ctx, &fr->readdir_dirent);
+                 JS_DefinePropertyValueStr(ctx, arg, "value", item, JS_PROP_C_W_E);
+             }
+             break;
+@@ -407,23 +409,19 @@
+     js_free(ctx, fr);
+ }
+ 
+-/* File functions */
+-
+ static JSValue tjs_file_rw(JSContext *ctx, JSValue this_val, int argc, JSValue *argv, int magic) {
+     TJSFile *f = tjs_file_get(ctx, this_val);
+     if (!f) {
+         return JS_EXCEPTION;
+     }
+ 
+-    /* arg 0: buffer */
+     TJSBufferRef buf_ref;
+     if (tjs_buf_ref_get(ctx, argv[0], &buf_ref)) {
+         return JS_EXCEPTION;
+     }
+ 
+-    /* arg 1: position (on the file) */
+-    int64_t pos = -1;
+-    if (!JS_IsUndefined(argv[1]) && JS_ToInt64(ctx, &pos, argv[1])) {
++    int64_t position = -1;
++    if (!JS_IsUndefined(argv[1]) && JS_ToInt64(ctx, &position, argv[1])) {
+         tjs_buf_ref_release(ctx, &buf_ref);
+         return JS_EXCEPTION;
+     }
+@@ -438,9 +436,9 @@
+ 
+     int r;
+     if (magic) {
+-        r = uv_fs_write(tjs_get_loop(ctx), &fr->req, f->fd, &b, 1, pos, uv__fs_req_cb);
++        r = uv_fs_write(tjs_get_loop(ctx), &fr->req, f->fd, &b, 1, position, uv__fs_req_cb);
+     } else {
+-        r = uv_fs_read(tjs_get_loop(ctx), &fr->req, f->fd, &b, 1, pos, uv__fs_req_cb);
++        r = uv_fs_read(tjs_get_loop(ctx), &fr->req, f->fd, &b, 1, position, uv__fs_req_cb);
+     }
+     if (r != 0) {
+         tjs_buf_ref_release(ctx, &buf_ref);
+@@ -617,6 +615,10 @@
+     return tjs_fsreq_init(ctx, fr, this_val);
+ }
+ 
++static double tjs_ms_to_s(double ms) {
++    return ms / 1000;
++}
++
+ static JSValue tjs_file_utime(JSContext *ctx, JSValue this_val, int argc, JSValue *argv) {
+     TJSFile *f = tjs_file_get(ctx, this_val);
+     if (!f) {
+@@ -638,8 +640,7 @@
+         return JS_EXCEPTION;
+     }
+ 
+-    /* Date.getTime is in ms, convert to seconds. */
+-    int r = uv_fs_futime(tjs_get_loop(ctx), &fr->req, f->fd, atime / 1000, mtime / 1000, uv__fs_req_cb);
++    int r = uv_fs_futime(tjs_get_loop(ctx), &fr->req, f->fd, tjs_ms_to_s(atime), tjs_ms_to_s(mtime), uv__fs_req_cb);
+     if (r != 0) {
+         js_free(ctx, fr);
+         return tjs_throw_errno(ctx, r);
+@@ -665,8 +666,6 @@
+     return JS_DupValue(ctx, f->path);
+ }
+ 
+-/* Dir functions */
+-
+ static JSValue tjs_dir_close(JSContext *ctx, JSValue this_val, int argc, JSValue *argv) {
+     TJSDir *d = tjs_dir_get(ctx, this_val);
+     if (!d) {
+@@ -722,8 +721,8 @@
+         return JS_EXCEPTION;
+     }
+ 
+-    memset(&fr->dirent, 0, sizeof(fr->dirent));
+-    d->dir->dirents = &fr->dirent;
++    memset(&fr->readdir_dirent, 0, sizeof(fr->readdir_dirent));
++    d->dir->dirents = &fr->readdir_dirent;
+     d->dir->nentries = 1;
+ 
+     int r = uv_fs_readdir(tjs_get_loop(ctx), &fr->req, d->dir, uv__fs_req_cb);
+@@ -741,8 +740,6 @@
+     return JS_DupValue(ctx, this_val);
+ }
+ 
+-/* DirEnt functions */
+-
+ static JSValue tjs_dirent_name_get(JSContext *ctx, JSValue this_val) {
+     TJSDirEnt *de = tjs_dirent_get(ctx, this_val);
+     if (!de) {
+@@ -814,8 +811,6 @@
+     return JS_NewBool(ctx, de->type == UV_DIRENT_LINK);
+ }
+ 
+-/* StatResult functions */
+-
+ static JSValue tjs_stat_isblockdevice(JSContext *ctx, JSValue this_val) {
+     TJSStatResult *sr = tjs_stat_get(ctx, this_val);
+     if (!sr) {
+@@ -887,8 +882,6 @@
+     return JS_NewBool(ctx, (sr->st_mode & S_IFMT) == S_IFLNK);
+ }
+ 
+-/* Module functions */
+-
+ static int js__uv_open_flags(const char *strflags, size_t len) {
+     int flags = 0, read = 0, write = 0;
+ 
+@@ -988,6 +981,59 @@
+     return obj;
+ }
+ 
++static int tjs__fs_arg_int32(JSContext *ctx, int argc, JSValue *argv, int index, int32_t def, int32_t *out) {
++    *out = def;
++    if (argc > index && !JS_IsUndefined(argv[index])) {
++        return JS_ToInt32(ctx, out, argv[index]);
++    }
++    return 0;
++}
++
++static JSValue tjs__fs_sync_done(JSContext *ctx, int r) {
++    if (r < 0) {
++        return tjs_throw_errno(ctx, r);
++    }
++    return JS_UNDEFINED;
++}
++
++static JSValue tjs__fs_sync_text(JSContext *ctx, uv_fs_t *req, int r, const char *text) {
++    if (r < 0) {
++        uv_fs_req_cleanup(req);
++        return tjs_throw_errno(ctx, r);
++    }
++    JSValue ret = JS_NewString(ctx, text);
++    uv_fs_req_cleanup(req);
++    return ret;
++}
++
++static JSValue tjs_fs_access(JSContext *ctx, JSValue this_val, int argc, JSValue *argv) {
++    const char *path = JS_ToCString(ctx, argv[0]);
++    if (!path) {
++        return JS_EXCEPTION;
++    }
++
++    int32_t mode;
++    if (tjs__fs_arg_int32(ctx, argc, argv, 1, F_OK, &mode)) {
++        JS_FreeCString(ctx, path);
++        return JS_EXCEPTION;
++    }
++
++    TJSFsReq *fr = js_malloc(ctx, sizeof(*fr));
++    if (!fr) {
++        JS_FreeCString(ctx, path);
++        return JS_EXCEPTION;
++    }
++
++    int r = uv_fs_access(tjs_get_loop(ctx), &fr->req, path, mode, uv__fs_req_cb);
++    JS_FreeCString(ctx, path);
++    if (r != 0) {
++        js_free(ctx, fr);
++        return tjs_throw_errno(ctx, r);
++    }
++
++    return tjs_fsreq_init(ctx, fr, JS_UNDEFINED);
++}
++
+ static JSValue tjs_fs_stat(JSContext *ctx, JSValue this_val, int argc, JSValue *argv, int magic) {
+     const char *path = JS_ToCString(ctx, argv[0]);
+     if (!path) {
+@@ -1015,14 +1061,14 @@
+     return tjs_fsreq_init(ctx, fr, JS_UNDEFINED);
+ }
+ 
+-static JSValue tjs_fs_stat_sync(JSContext *ctx, JSValue this_val, int argc, JSValue *argv) {
++static JSValue tjs_fs_stat_sync(JSContext *ctx, JSValue this_val, int argc, JSValue *argv, int magic) {
+     const char *path = JS_ToCString(ctx, argv[0]);
+     if (!path) {
+         return JS_EXCEPTION;
+     }
+ 
+     uv_fs_t req;
+-    int r = uv_fs_stat(NULL, &req, path, NULL);
++    int r = magic ? uv_fs_lstat(NULL, &req, path, NULL) : uv_fs_stat(NULL, &req, path, NULL);
+     JS_FreeCString(ctx, path);
+     if (r != 0) {
+         uv_fs_req_cleanup(&req);
+@@ -1235,6 +1281,263 @@
+     return JS_UNDEFINED;
+ }
+ 
++static JSValue tjs_fs_access_sync(JSContext *ctx, JSValue this_val, int argc, JSValue *argv) {
++    const char *path = JS_ToCString(ctx, argv[0]);
++    if (!path) {
++        return JS_EXCEPTION;
++    }
++
++    int32_t mode;
++    if (tjs__fs_arg_int32(ctx, argc, argv, 1, F_OK, &mode)) {
++        JS_FreeCString(ctx, path);
++        return JS_EXCEPTION;
++    }
++
++    uv_fs_t req;
++    int r = uv_fs_access(NULL, &req, path, mode, NULL);
++    uv_fs_req_cleanup(&req);
++    JS_FreeCString(ctx, path);
++    return tjs__fs_sync_done(ctx, r);
++}
++
++static JSValue tjs_fs_open_sync(JSContext *ctx, JSValue this_val, int argc, JSValue *argv) {
++    const char *path = JS_ToCString(ctx, argv[0]);
++    if (!path) {
++        return JS_EXCEPTION;
++    }
++
++    size_t len;
++    const char *strflags = JS_ToCStringLen(ctx, &len, argv[1]);
++    if (!strflags) {
++        JS_FreeCString(ctx, path);
++        return JS_EXCEPTION;
++    }
++    int flags = js__uv_open_flags(strflags, len);
++    JS_FreeCString(ctx, strflags);
++
++    int32_t mode;
++    if (tjs__fs_arg_int32(ctx, argc, argv, 2, 0666, &mode)) {
++        JS_FreeCString(ctx, path);
++        return JS_EXCEPTION;
++    }
++
++    uv_fs_t req;
++    int r = uv_fs_open(NULL, &req, path, flags, mode, NULL);
++    uv_fs_req_cleanup(&req);
++    JS_FreeCString(ctx, path);
++    if (r < 0) {
++        return tjs_throw_errno(ctx, r);
++    }
++    return JS_NewInt32(ctx, r);
++}
++
++static JSValue tjs_fs_close_sync(JSContext *ctx, JSValue this_val, int argc, JSValue *argv) {
++    int32_t fd;
++    if (JS_ToInt32(ctx, &fd, argv[0])) {
++        return JS_EXCEPTION;
++    }
++
++    uv_fs_t req;
++    int r = uv_fs_close(NULL, &req, fd, NULL);
++    uv_fs_req_cleanup(&req);
++    return tjs__fs_sync_done(ctx, r);
++}
++
++static int tjs__fs_io_args(JSContext *ctx, int argc, JSValue *argv, uv_file *fd, uv_buf_t *iov, int64_t *pos) {
++    int32_t fd32;
++    if (JS_ToInt32(ctx, &fd32, argv[0])) {
++        return -1;
++    }
++
++    size_t size = 0;
++    uint8_t *buf = JS_GetUint8Array(ctx, &size, argv[1]);
++    if (!buf && JS_HasException(ctx)) {
++        return -1;
++    }
++
++    int64_t offset = 0;
++    int64_t length = (int64_t) size;
++    int64_t position = -1;
++    if (argc > 2 && !JS_IsUndefined(argv[2]) && JS_ToInt64(ctx, &offset, argv[2])) {
++        return -1;
++    }
++    if (argc > 3 && !JS_IsUndefined(argv[3]) && JS_ToInt64(ctx, &length, argv[3])) {
++        return -1;
++    }
++    if (argc > 4 && !JS_IsNull(argv[4]) && !JS_IsUndefined(argv[4]) && JS_ToInt64(ctx, &position, argv[4])) {
++        return -1;
++    }
++    if (offset < 0 || length < 0 || offset > (int64_t) size || length > (int64_t) size - offset) {
++        JS_ThrowRangeError(ctx, "buffer range out of bounds");
++        return -1;
++    }
++
++    *fd = fd32;
++    *iov = uv_buf_init((char *) buf + offset, (unsigned int) length);
++    *pos = position;
++    return 0;
++}
++
++static JSValue tjs_fs_read_sync(JSContext *ctx, JSValue this_val, int argc, JSValue *argv) {
++    uv_file fd;
++    uv_buf_t iov;
++    int64_t position;
++    if (tjs__fs_io_args(ctx, argc, argv, &fd, &iov, &position)) {
++        return JS_EXCEPTION;
++    }
++
++    uv_fs_t req;
++    int r = uv_fs_read(NULL, &req, fd, &iov, 1, position, NULL);
++    uv_fs_req_cleanup(&req);
++    if (r < 0) {
++        return tjs_throw_errno(ctx, r);
++    }
++    return JS_NewInt32(ctx, r);
++}
++
++static JSValue tjs_fs_write_sync(JSContext *ctx, JSValue this_val, int argc, JSValue *argv) {
++    uv_file fd;
++    uv_buf_t iov;
++    int64_t position;
++    if (tjs__fs_io_args(ctx, argc, argv, &fd, &iov, &position)) {
++        return JS_EXCEPTION;
++    }
++
++    uv_fs_t req;
++    int r = uv_fs_write(NULL, &req, fd, &iov, 1, position, NULL);
++    uv_fs_req_cleanup(&req);
++    if (r < 0) {
++        return tjs_throw_errno(ctx, r);
++    }
++    return JS_NewInt32(ctx, r);
++}
++
++static JSValue tjs_fs_readdir_sync(JSContext *ctx, JSValue this_val, int argc, JSValue *argv) {
++    const char *path = JS_ToCString(ctx, argv[0]);
++    if (!path) {
++        return JS_EXCEPTION;
++    }
++
++    uv_fs_t req;
++    int r = uv_fs_scandir(NULL, &req, path, 0, NULL);
++    JS_FreeCString(ctx, path);
++    if (r < 0) {
++        uv_fs_req_cleanup(&req);
++        return tjs_throw_errno(ctx, r);
++    }
++
++    JSValue arr = JS_NewArray(ctx);
++    if (JS_IsException(arr)) {
++        uv_fs_req_cleanup(&req);
++        return arr;
++    }
++
++    uv_dirent_t ent;
++    uint32_t i = 0;
++    while ((r = uv_fs_scandir_next(&req, &ent)) == 0) {
++        JS_SetPropertyUint32(ctx, arr, i++, JS_NewString(ctx, ent.name));
++    }
++    uv_fs_req_cleanup(&req);
++    if (r != UV_EOF) {
++        JS_FreeValue(ctx, arr);
++        return tjs_throw_errno(ctx, r);
++    }
++    return arr;
++}
++
++static JSValue tjs_fs_readlink_sync(JSContext *ctx, JSValue this_val, int argc, JSValue *argv) {
++    const char *path = JS_ToCString(ctx, argv[0]);
++    if (!path) {
++        return JS_EXCEPTION;
++    }
++
++    uv_fs_t req;
++    int r = uv_fs_readlink(NULL, &req, path, NULL);
++    JS_FreeCString(ctx, path);
++    return tjs__fs_sync_text(ctx, &req, r, r < 0 ? NULL : (const char *) req.ptr);
++}
++
++static JSValue tjs_fs_realpath_sync(JSContext *ctx, JSValue this_val, int argc, JSValue *argv) {
++    const char *path = JS_ToCString(ctx, argv[0]);
++    if (!path) {
++        return JS_EXCEPTION;
++    }
++
++    uv_fs_t req;
++    int r = uv_fs_realpath(NULL, &req, path, NULL);
++    JS_FreeCString(ctx, path);
++    return tjs__fs_sync_text(ctx, &req, r, r < 0 ? NULL : (const char *) req.ptr);
++}
++
++static JSValue tjs_fs_mkdtemp_sync(JSContext *ctx, JSValue this_val, int argc, JSValue *argv) {
++    const char *tpl = JS_ToCString(ctx, argv[0]);
++    if (!tpl) {
++        return JS_EXCEPTION;
++    }
++
++    uv_fs_t req;
++    int r = uv_fs_mkdtemp(NULL, &req, tpl, NULL);
++    JS_FreeCString(ctx, tpl);
++    return tjs__fs_sync_text(ctx, &req, r, r < 0 ? NULL : req.path);
++}
++
++static JSValue tjs_fs_unlink_sync(JSContext *ctx, JSValue this_val, int argc, JSValue *argv) {
++    const char *path = JS_ToCString(ctx, argv[0]);
++    if (!path) {
++        return JS_EXCEPTION;
++    }
++
++    uv_fs_t req;
++    int r = uv_fs_unlink(NULL, &req, path, NULL);
++    uv_fs_req_cleanup(&req);
++    JS_FreeCString(ctx, path);
++    return tjs__fs_sync_done(ctx, r);
++}
++
++static JSValue tjs_fs_rm_sync(JSContext *ctx, JSValue this_val, int argc, JSValue *argv) {
++    const char *path = JS_ToCString(ctx, argv[0]);
++    if (!path) {
++        return JS_EXCEPTION;
++    }
++
++    uv_fs_t req;
++    int r = uv_fs_unlink(NULL, &req, path, NULL);
++    uv_fs_req_cleanup(&req);
++    if (r == UV_EISDIR || r == UV_EPERM) {
++        r = uv_fs_rmdir(NULL, &req, path, NULL);
++        uv_fs_req_cleanup(&req);
++    }
++    JS_FreeCString(ctx, path);
++    return tjs__fs_sync_done(ctx, r);
++}
++
++static JSValue tjs_fs_symlink_sync(JSContext *ctx, JSValue this_val, int argc, JSValue *argv) {
++    const char *target = JS_ToCString(ctx, argv[0]);
++    if (!target) {
++        return JS_EXCEPTION;
++    }
++
++    const char *path = JS_ToCString(ctx, argv[1]);
++    if (!path) {
++        JS_FreeCString(ctx, target);
++        return JS_EXCEPTION;
++    }
++
++    int32_t flags;
++    if (tjs__fs_arg_int32(ctx, argc, argv, 2, 0, &flags)) {
++        JS_FreeCString(ctx, target);
++        JS_FreeCString(ctx, path);
++        return JS_EXCEPTION;
++    }
++
++    uv_fs_t req;
++    int r = uv_fs_symlink(NULL, &req, target, path, flags, NULL);
++    uv_fs_req_cleanup(&req);
++    JS_FreeCString(ctx, target);
++    JS_FreeCString(ctx, path);
++    return tjs__fs_sync_done(ctx, r);
++}
++
+ static JSValue tjs_fs_copyfile(JSContext *ctx, JSValue this_val, int argc, JSValue *argv) {
+     const char *path = JS_ToCString(ctx, argv[0]);
+     if (!path) {
+@@ -1309,11 +1612,6 @@
+         arg = tjs_new_error(ctx, fr->r);
+         is_reject = true;
+     } else {
+-        /* The buffer was allocated with raw (untracked) realloc on the worker
+-           thread to avoid a data race on QJS malloc_state. We must copy it
+-           into a QJS-tracked allocation here because ArrayBuffer.prototype.transfer
+-           calls js_realloc on the backing buffer, which would corrupt malloc_state
+-           if the buffer was never tracked. */
+         size_t size = fr->dbuf.size;
+         if (size == 0) {
+             arg = TJS_NewUint8Array(ctx, NULL, 0);
+@@ -1465,9 +1763,8 @@
+         return JS_EXCEPTION;
+     }
+ 
+-    /* Date.getTime is in ms, convert to seconds. */
+     int r = (magic == 1 ? uv_fs_lutime
+-                        : uv_fs_utime)(tjs_get_loop(ctx), &fr->req, path, atime / 1000, mtime / 1000, uv__fs_req_cb);
++                        : uv_fs_utime)(tjs_get_loop(ctx), &fr->req, path, tjs_ms_to_s(atime), tjs_ms_to_s(mtime), uv__fs_req_cb);
+     JS_FreeCString(ctx, path);
+     if (r != 0) {
+         js_free(ctx, fr);
+@@ -1665,6 +1962,7 @@
+     TJS_CFUNC_DEF("open", 3, tjs_fs_open),
+     TJS_CFUNC_MAGIC_DEF("stat", 1, tjs_fs_stat, 0),
+     TJS_CFUNC_MAGIC_DEF("lstat", 1, tjs_fs_stat, 1),
++    TJS_CFUNC_DEF("access", 2, tjs_fs_access),
+     TJS_CFUNC_DEF("realPath", 1, tjs_fs_realpath),
+     TJS_CFUNC_DEF("unlink", 1, tjs_fs_unlink),
+     TJS_CFUNC_DEF("rename", 2, tjs_fs_rename),
+@@ -1684,15 +1982,26 @@
+     TJS_CFUNC_DEF("link", 2, tjs_fs_link),
+     TJS_CFUNC_DEF("symlink", 3, tjs_fs_symlink),
+     TJS_CFUNC_DEF("statFs", 1, tjs_fs_statfs),
+-    /* Internal */
+     TJS_CFUNC_DEF("mkdirSync", 2, tjs_fs_mkdir_sync),
+-    TJS_CFUNC_DEF("statSync", 1, tjs_fs_stat_sync),
++    TJS_CFUNC_MAGIC_DEF("statSync", 1, tjs_fs_stat_sync, 0),
++    TJS_CFUNC_MAGIC_DEF("lstatSync", 1, tjs_fs_stat_sync, 1),
++    TJS_CFUNC_DEF("accessSync", 2, tjs_fs_access_sync),
++    TJS_CFUNC_DEF("openSync", 3, tjs_fs_open_sync),
++    TJS_CFUNC_DEF("closeSync", 1, tjs_fs_close_sync),
++    TJS_CFUNC_DEF("readSync", 5, tjs_fs_read_sync),
++    TJS_CFUNC_DEF("writeSync", 5, tjs_fs_write_sync),
++    TJS_CFUNC_DEF("readdirSync", 1, tjs_fs_readdir_sync),
++    TJS_CFUNC_DEF("readlinkSync", 1, tjs_fs_readlink_sync),
++    TJS_CFUNC_DEF("realpathSync", 1, tjs_fs_realpath_sync),
++    TJS_CFUNC_DEF("mkdtempSync", 1, tjs_fs_mkdtemp_sync),
++    TJS_CFUNC_DEF("unlinkSync", 1, tjs_fs_unlink_sync),
++    TJS_CFUNC_DEF("rmSync", 1, tjs_fs_rm_sync),
++    TJS_CFUNC_DEF("symlinkSync", 3, tjs_fs_symlink_sync),
+ };
+ 
+ void tjs__mod_fs_init(JSContext *ctx, JSValue ns) {
+     JSValue proto;
+ 
+-    /* File object */
+     CHECK_EQ(tjs__class_register(ctx, TJS_CLASS_FILE, &tjs_file_class), 0);
+     proto = JS_NewObject(ctx);
+     JS_SetPropertyFunctionList(ctx, proto, tjs_file_proto_funcs, countof(tjs_file_proto_funcs));
+@@ -1700,19 +2009,16 @@
+     JSValue file_ctor = JS_NewCFunction2(ctx, tjs_file_constructor, "File", 2, JS_CFUNC_constructor, 0);
+     JS_DefinePropertyValueStr(ctx, ns, "File", file_ctor, JS_PROP_C_W_E);
+ 
+-    /* Dir object */
+     CHECK_EQ(tjs__class_register(ctx, TJS_CLASS_DIR, &tjs_dir_class), 0);
+     proto = JS_NewObject(ctx);
+     JS_SetPropertyFunctionList(ctx, proto, tjs_dir_proto_funcs, countof(tjs_dir_proto_funcs));
+     JS_SetClassProto(ctx, tjs__class_id(ctx, TJS_CLASS_DIR), proto);
+ 
+-    /* DirEnt object */
+     CHECK_EQ(tjs__class_register(ctx, TJS_CLASS_DIRENT, &tjs_dirent_class), 0);
+     proto = JS_NewObject(ctx);
+     JS_SetPropertyFunctionList(ctx, proto, tjs_dirent_proto_funcs, countof(tjs_dirent_proto_funcs));
+     JS_SetClassProto(ctx, tjs__class_id(ctx, TJS_CLASS_DIRENT), proto);
+ 
+-    /* StatResult object */
+     CHECK_EQ(tjs__class_register(ctx, TJS_CLASS_STAT, &tjs_stat_class), 0);
+     proto = JS_NewObject(ctx);
+     JS_SetPropertyFunctionList(ctx, proto, tjs_stat_proto_funcs, countof(tjs_stat_proto_funcs));
+--- a/txiki/src/mod_process.c
++++ b/txiki/src/mod_process.c
+@@ -53,8 +53,6 @@
+     }
+ }
+ 
+-/* Begin closing the handle at teardown (see TJSHandlePin.detach), so it is
+- * closed without relying on the GC to collect and finalize the wrapper. */
+ static void tjs_process_detach(TJSHandlePin *pin) {
+     maybe_close(list_entry(pin, TJSProcess, pin));
+ }
+@@ -62,8 +60,6 @@
+ static void tjs_process_finalizer(JSRuntime *rt, JSValue val) {
+     TJSProcess *p = JS_GetOpaque(val, tjs__class_id_rt(rt, TJS_CLASS_PROCESS));
+     if (p) {
+-        /* A pinned process holds a ref to itself, so it can't be finalized until
+-         * the pin is released (on exit or at teardown). */
+         CHECK(JS_IsUndefined(p->pin.obj));
+         JS_FreeValueRT(rt, p->onexit);
+         p->finalized = true;
+@@ -145,8 +141,59 @@
+     maybe_close(p);
+ }
+ 
++static int tjs__spawn_extra_stdio(JSContext *ctx, JSValue entry, uint32_t index, uv_stdio_container_t *slot, JSValue pipes) {
++    uv_stream_t *stream = tjs_pipe_get_stream(ctx, entry);
++    if (stream) {
++        slot->flags = UV_CREATE_PIPE | UV_READABLE_PIPE | UV_WRITABLE_PIPE;
++        slot->data.stream = stream;
++        return JS_SetPropertyUint32(ctx, pipes, index, JS_DupValue(ctx, entry)) < 0 ? -1 : 0;
++    }
++
++    if (JS_IsString(entry)) {
++        const char *kind = JS_ToCString(ctx, entry);
++        if (!kind) {
++            return -1;
++        }
++        int rc = 0;
++        if (strcmp(kind, "pipe") == 0) {
++            JSValue pipe = tjs_new_pipe(ctx);
++            if (JS_IsException(pipe)) {
++                rc = -1;
++            } else {
++                slot->flags = UV_CREATE_PIPE | UV_READABLE_PIPE | UV_WRITABLE_PIPE;
++                slot->data.stream = tjs_pipe_get_stream(ctx, pipe);
++                rc = JS_SetPropertyUint32(ctx, pipes, index, pipe) < 0 ? -1 : 0;
++            }
++        } else if (strcmp(kind, "inherit") == 0) {
++            slot->flags = UV_INHERIT_FD;
++            slot->data.fd = (int) index;
++            rc = JS_SetPropertyUint32(ctx, pipes, index, JS_NULL) < 0 ? -1 : 0;
++        } else if (strcmp(kind, "ignore") == 0) {
++            slot->flags = UV_IGNORE;
++            rc = JS_SetPropertyUint32(ctx, pipes, index, JS_NULL) < 0 ? -1 : 0;
++        } else {
++            JS_ThrowTypeError(ctx, "stdio entry must be 'pipe', 'inherit', 'ignore', a pipe, or null");
++            rc = -1;
++        }
++        JS_FreeCString(ctx, kind);
++        return rc;
++    }
++
++    if (JS_IsNull(entry) || JS_IsUndefined(entry)) {
++        slot->flags = UV_IGNORE;
++        return JS_SetPropertyUint32(ctx, pipes, index, JS_NULL) < 0 ? -1 : 0;
++    }
++
++    JS_ThrowTypeError(ctx, "stdio entry must be 'pipe', 'inherit', 'ignore', a pipe, or null");
++    return -1;
++}
++
+ static JSValue tjs_spawn(JSContext *ctx, JSValue this_val, int argc, JSValue *argv) {
+     JSValue ret;
++    uv_stdio_container_t *stdio = NULL;
++    uint32_t stdio_count = 3;
++    JSValue js_stdio_list = JS_UNDEFINED;
++    JSValue stdio_pipes = JS_UNDEFINED;
+ 
+     JSValue obj = JS_NewObjectClass(ctx, tjs__class_id(ctx, TJS_CLASS_PROCESS));
+     if (JS_IsException(obj)) {
+@@ -170,17 +217,43 @@
+ 
+     options.flags = UV_PROCESS_WINDOWS_FILE_PATH_EXACT_NAME;
+ 
+-    uv_stdio_container_t stdio[3];
++    if (argc > 1 && JS_IsObject(argv[1])) {
++        js_stdio_list = JS_GetPropertyStr(ctx, argv[1], "stdio");
++        if (JS_IsException(js_stdio_list)) {
++            js_stdio_list = JS_UNDEFINED;
++            goto fail;
++        }
++    }
++    if (JS_IsArray(js_stdio_list)) {
++        JSValue js_len = JS_GetPropertyStr(ctx, js_stdio_list, "length");
++        uint32_t len = 0;
++        int bad = JS_IsException(js_len) || JS_ToUint32(ctx, &len, js_len);
++        JS_FreeValue(ctx, js_len);
++        if (bad) {
++            goto fail;
++        }
++        if (len > stdio_count) {
++            stdio_count = len;
++        }
++    }
++    stdio = js_mallocz(ctx, sizeof(*stdio) * stdio_count);
++    if (!stdio) {
++        goto fail;
++    }
++    stdio_pipes = JS_NewArray(ctx);
++    if (JS_IsException(stdio_pipes)) {
++        stdio_pipes = JS_UNDEFINED;
++        goto fail;
++    }
+     stdio[0].flags = UV_INHERIT_FD;
+     stdio[0].data.fd = STDIN_FILENO;
+     stdio[1].flags = UV_INHERIT_FD;
+     stdio[1].data.fd = STDOUT_FILENO;
+     stdio[2].flags = UV_INHERIT_FD;
+     stdio[2].data.fd = STDERR_FILENO;
+-    options.stdio_count = 3;
++    options.stdio_count = stdio_count;
+     options.stdio = stdio;
+ 
+-    /* args */
+     JSValue arg0 = argv[0];
+ 
+     if (JS_IsString(arg0)) {
+@@ -235,7 +308,6 @@
+     JSValue arg1 = argv[1];
+ 
+     if (!JS_IsUndefined(arg1)) {
+-        /* env */
+         JSValue js_env = JS_GetPropertyStr(ctx, arg1, "env");
+         if (JS_IsObject(js_env)) {
+             JSPropertyEnum *ptab;
+@@ -260,7 +332,7 @@
+                 const char *key = JS_AtomToCString(ctx, ptab[i].atom);
+                 const char *value = JS_ToCString(ctx, prop);
+                 JS_FreeValue(ctx, prop);
+-                size_t len = strlen(key) + strlen(value) + 2; /* KEY=VALUE\0 */
++                size_t len = strlen(key) + strlen(value) + sizeof("=");
+                 options.env[i] = js_malloc(ctx, len);
+                 if (!options.env[i]) {
+                     JS_FreeCString(ctx, key);
+@@ -277,7 +349,6 @@
+         }
+         JS_FreeValue(ctx, js_env);
+ 
+-        /* cwd */
+         JSValue js_cwd = JS_GetPropertyStr(ctx, arg1, "cwd");
+         if (JS_IsException(js_cwd)) {
+             goto fail;
+@@ -297,7 +368,6 @@
+         }
+         JS_FreeValue(ctx, js_cwd);
+ 
+-        /* uid */
+         JSValue js_uid = JS_GetPropertyStr(ctx, arg1, "uid");
+         if (JS_IsException(js_uid)) {
+             goto fail;
+@@ -313,7 +383,15 @@
+         }
+         JS_FreeValue(ctx, js_uid);
+ 
+-        /* gid */
++        JSValue js_detached = JS_GetPropertyStr(ctx, arg1, "detached");
++        if (JS_IsException(js_detached)) {
++            goto fail;
++        }
++        if (JS_ToBool(ctx, js_detached)) {
++            options.flags |= UV_PROCESS_DETACHED;
++        }
++        JS_FreeValue(ctx, js_detached);
++
+         JSValue js_gid = JS_GetPropertyStr(ctx, arg1, "gid");
+         if (JS_IsException(js_gid)) {
+             goto fail;
+@@ -329,7 +407,6 @@
+         }
+         JS_FreeValue(ctx, js_gid);
+ 
+-        /* stdio */
+         JSValue js_stdin = JS_GetPropertyStr(ctx, arg1, "stdin");
+         if (!JS_IsException(js_stdin) && !JS_IsUndefined(js_stdin)) {
+             uv_stream_t *stream = tjs_pipe_get_stream(ctx, js_stdin);
+@@ -387,7 +464,15 @@
+         }
+         JS_FreeValue(ctx, js_stderr);
+ 
+-        /* onexit */
++        for (uint32_t i = 3; i < stdio_count; i++) {
++            JSValue entry = JS_GetPropertyUint32(ctx, js_stdio_list, i);
++            int rc = tjs__spawn_extra_stdio(ctx, entry, i, &stdio[i], stdio_pipes);
++            JS_FreeValue(ctx, entry);
++            if (rc) {
++                goto fail;
++            }
++        }
++
+         JSValue js_onexit = JS_GetPropertyStr(ctx, arg1, "onexit");
+         if (!JS_IsFunction(ctx, js_onexit)) {
+             JS_FreeValue(ctx, js_onexit);
+@@ -405,8 +490,6 @@
+     int r = uv_spawn(tjs_get_loop(ctx), &p->process, &options);
+     if (r != 0) {
+         tjs_throw_errno(ctx, r);
+-        /* uv_spawn registers the handle with the loop even when it fails, so it
+-         * must be closed (uv__close_cb then frees p), not freed right away. */
+         JS_FreeValue(ctx, p->onexit);
+         p->onexit = JS_UNDEFINED;
+         p->finalized = true;
+@@ -416,6 +499,10 @@
+         goto cleanup;
+     }
+ 
++    if (stdio_count > 3) {
++        JS_SetPropertyStr(ctx, obj, "stdio", stdio_pipes);
++        stdio_pipes = JS_UNDEFINED;
++    }
+     JS_SetOpaque(obj, p);
+     ret = obj;
+     tjs__handle_pin(ctx, &p->pin, obj);
+@@ -442,6 +529,9 @@
+     if (options.cwd) {
+         js_free(ctx, (void *) options.cwd);
+     }
++    js_free(ctx, stdio);
++    JS_FreeValue(ctx, js_stdio_list);
++    JS_FreeValue(ctx, stdio_pipes);
+ 
+     return ret;
+ }
+@@ -452,7 +542,6 @@
+ 
+     char **args = NULL;
+ 
+-    /* args */
+     JSValue arg0 = argv[0];
+ 
+     if (JS_IsString(arg0)) {
+--- a/txiki/src/mod_sys.c
++++ b/txiki/src/mod_sys.c
+@@ -72,6 +72,21 @@
+     return ret;
+ }
+ 
++static JSValue tjs_compileScript(JSContext *ctx, JSValue this_val, int argc, JSValue *argv) {
++    size_t len;
++    const char *str = JS_ToCStringLen(ctx, &len, argv[0]);
++    if (!str) {
++        return JS_EXCEPTION;
++    }
++    JSValue fn = JS_Eval(ctx, str, len, "<vm.Script>", JS_EVAL_TYPE_GLOBAL | JS_EVAL_FLAG_COMPILE_ONLY);
++    JS_FreeCString(ctx, str);
++    return fn;
++}
++
++static JSValue tjs_runCompiledScript(JSContext *ctx, JSValue this_val, int argc, JSValue *argv) {
++    return JS_EvalFunction(ctx, JS_DupValue(ctx, argv[0]));
++}
++
+ static JSValue tjs_print(JSContext *ctx, JSValue this_val, int argc, JSValue *argv, int magic) {
+     const char *str;
+     size_t len;
+@@ -100,11 +115,12 @@
+     return JS_NewBool(ctx, JS_IsImmutableArrayBuffer(argv[0]) == 1);
+ }
+ 
++static bool tjs_buffer_is_pinned(JSValueConst buf) {
++    return JS_IsImmutableArrayBuffer(buf) == 1;
++}
++
+ static JSValue tjs_detachArrayBuffer(JSContext *ctx, JSValue this_val, int argc, JSValue *argv) {
+-    /* A buffer pinned by an in-flight native request is marked immutable;
+-     * JS_DetachArrayBuffer ignores that flag and would free memory the
+-     * request still reads. */
+-    if (JS_IsImmutableArrayBuffer(argv[0]) == 1) {
++    if (tjs_buffer_is_pinned(argv[0])) {
+         return JS_ThrowTypeError(ctx, "Cannot transfer an immutable ArrayBuffer");
+     }
+ 
+@@ -153,11 +169,13 @@
+         return tjs_throw_errno(ctx, r);
+     }
+ 
+-    u[6] &= 15;
+-    u[6] |= 64;  // '4x'
++    enum { UUID_VERSION_4 = 0x40, UUID_VARIANT_RFC4122 = 0x80 };
++
++    u[6] &= 0x0f;
++    u[6] |= UUID_VERSION_4;
+ 
+-    u[8] &= 63;
+-    u[8] |= 128;  // 0b10xxxxxx
++    u[8] &= 0x3f;
++    u[8] |= UUID_VARIANT_RFC4122;
+ 
+     snprintf(v,
+              sizeof(v),
+@@ -183,10 +201,11 @@
+     return JS_NewString(ctx, v);
+ }
+ 
+-/* clang-format off */
+ static const JSCFunctionListEntry tjs_sys_funcs[] = {
+     TJS_CFUNC_DEF("evalFile", 1, tjs_evalFile),
+     TJS_CFUNC_DEF("evalScript", 1, tjs_evalScript),
++    TJS_CFUNC_DEF("compileScript", 1, tjs_compileScript),
++    TJS_CFUNC_DEF("runCompiledScript", 1, tjs_runCompiledScript),
+     TJS_CFUNC_DEF("loadScript", 1, tjs_loadScript),
+     TJS_CFUNC_DEF("randomUUID", 0, tjs_randomUUID),
+     TJS_CFUNC_DEF("runRepl", 0, tjs_runRepl),
+@@ -197,7 +216,6 @@
+     TJS_CFUNC_MAGIC_DEF("stderrPrint", 1, tjs_print, 1),
+     TJS_CGETSET_DEF("exePath", tjs_exepath, NULL),
+ };
+-/* clang-format on */
+ 
+ void tjs__mod_sys_init(JSContext *ctx, JSValue ns) {
+     JS_SetPropertyFunctionList(ctx, ns, tjs_sys_funcs, countof(tjs_sys_funcs));
+--- a/txiki/src/private.h
++++ b/txiki/src/private.h
+@@ -68,34 +68,17 @@
+     JSValue reason;
+ } TJSPendingRejection;
+ 
+-/* A native handle's GC-invisible self-pin, embedded in a struct to keep its JS
+- * wrapper alive while a libuv operation is in flight. `obj` is a duplicated
+- * reference to the wrapper that is deliberately NOT reported to the GC (so the
+- * cycle collector can't free the wrapper mid-operation); `link` registers the
+- * pin on TJSRuntime.handle_pins so teardown can drop it. `obj` is JS_UNDEFINED
+- * (and the pin unlinked) when idle.
+- *
+- * `detach` quiesces the handle at the start of teardown so it stops running JS
+- * during shutdown without a global flag. It must not touch the pin itself. Its
+- * job depends on who owns the handle's close: lws-backed handles clear their JS
+- * callbacks (lws closes them later, via lws_context_destroy), while libuv-backed
+- * handles begin closing (maybe_close), so their close does not depend on the GC
+- * collecting the wrapper. See tjs__detach_handles in vm.c. */
+ typedef struct TJSHandlePin {
+     struct list_head link;
+     JSValue obj;
+     void (*detach)(struct TJSHandlePin *pin);
+ } TJSHandlePin;
+ 
+-/* Counted self-pin held while libuv requests (write, shutdown, send) are in
+- * flight on a handle. Separate from the handle's read/listen/connect pin. */
+ typedef struct {
+     TJSHandlePin pin;
+     unsigned int count;
+ } TJSReqPin;
+ 
+-/* Native classes. Their JSClassIDs are allocated per runtime (TJSRuntime.class_ids),
+- * since each runtime numbers its classes independently. */
+ typedef enum {
+     TJS_CLASS_HTTPCLIENT,
+     TJS_CLASS_HTTPSERVER,
+@@ -171,10 +154,6 @@
+         unsigned int ca_bundle_len;
+         uv_async_t keepalive;
+         int active_conns;
+-        /* Every lws context, vhost and wsi of this runtime binds to it. lws
+-         * refcounts its log context without a lock (LWS_MAX_SMP == 1), so
+-         * runtimes on different threads must not share lws's global one. It
+-         * must outlive all of them: see the assert in TJS_FreeRuntime. */
+         lws_log_cx_t log_cx;
+     } lws;
+     struct {
+@@ -195,10 +174,7 @@
+         JSValue error_event_ctor;
+     } builtins;
+     struct list_head pending_rejections;
+-    /* Self-pins of all active native handles (TJSHandlePin), so teardown can
+-     * drop them and let the final GC collect and close the handles. */
+     struct list_head handle_pins;
+-    /* Pin counts of the ArrayBuffers native requests are using (TJSBufferRef). */
+     TJSBufPin *buf_pins;
+     JSClassID class_ids[TJS_CLASS__COUNT];
+ };
+@@ -211,35 +187,18 @@
+     return ((TJSRuntime *) JS_GetRuntimeOpaque(rt))->class_ids[c];
+ }
+ 
+-/* Allocate (in this runtime) and register a native class. Idempotent per runtime.
+- * Returns -1 with an exception pending on failure. */
+ int tjs__class_register(JSContext *ctx, TJSClass c, const JSClassDef *def);
+ 
+-/* Pin/unpin a native handle's JS wrapper for the duration of an async op, and
+- * register/deregister the pin so teardown can release it. Idempotent: pinning an
+- * already-pinned handle or unpinning an idle one is a no-op. */
+ void tjs__handle_pin(JSContext *ctx, TJSHandlePin *pin, JSValue obj);
+ void tjs__handle_unpin(JSContext *ctx, TJSHandlePin *pin);
+-/* Count one in-flight request; the first one pins `obj` (borrowed). Call only
+- * once libuv has accepted the request. An undefined `obj` only counts. */
+ void tjs__req_pin_acquire(JSContext *ctx, TJSReqPin *rp, JSValue obj);
+-/* Release one request; the last one unpins, which may finalize the wrapper, so
+- * it must be the last thing the request's callback does. */
+ void tjs__req_pin_release(JSContext *ctx, TJSReqPin *rp);
+-/* Teardown, before the lws context is destroyed: run each registered pin's
+- * `detach` hook (no-op for pins without one) so lws-backed wrappers stop
+- * dispatching to JS before their close callbacks fire. */
+ void tjs__detach_handles(TJSRuntime *qrt);
+-/* Teardown: drop every registered self-pin so the objects become collectable. */
+ void tjs__release_pins(TJSRuntime *qrt);
+ void tjs__free_buf_pins(TJSRuntime *qrt);
+ 
+ void tjs__mod_channel_init(JSContext *ctx, JSValue ns);
+ 
+-/* Worker main-channel bridge (mod_channel.c): a MessageChannel whose two sides
+- * are owned by different threads' loops. The parent creates the two mailboxes
+- * (each with one reserved ref), wraps a side on each loop with a port, and drops
+- * both reserved refs once the ports exist. */
+ typedef struct TJSMailbox TJSMailbox;
+ bool tjs__channel_mailbox_pair(TJSMailbox **a, TJSMailbox **b);
+ JSValue tjs__channel_port_new(JSContext *ctx, TJSMailbox *rx, TJSMailbox *tx);
+@@ -289,6 +248,7 @@
+ 
+ JSValue tjs_new_error(JSContext *ctx, int err);
+ JSValue tjs_throw_errno(JSContext *ctx, int err);
++int tjs_exit_code(void);
+ 
+ JSValue tjs_new_pipe(JSContext *ctx);
+ uv_stream_t *tjs_pipe_get_stream(JSContext *ctx, JSValue obj);
+@@ -296,12 +256,7 @@
+ void tjs__drain_microtasks(JSContext *ctx);
+ void tjs__execute_jobs(JSContext *ctx);
+ 
+-/* Forward an uncaught error from a worker to its parent so the parent's Worker
+- * 'error' handler fires. No-op on the main runtime or if the worker has no pipe. */
+ void tjs__worker_post_error(JSContext *ctx, JSValueConst error);
+-/* Dispatch a cancelable 'error' event at the worker global scope (so self.onerror
+- * fires) and, unless the event was canceled, forward it to the parent. No-op on
+- * the main runtime. */
+ void tjs__worker_handle_uncaught(JSContext *ctx, JSValueConst exc);
+ JSModuleDef *tjs__load_builtin(JSContext *ctx, const char *name);
+ int tjs__load_file(JSContext *ctx, TBuf *dbuf, const char *filename);
+@@ -309,8 +264,6 @@
+ JSModuleDef *tjs_module_loader(JSContext *ctx, const char *module_name, void *opaque, JSValueConst attributes);
+ char *tjs_module_normalizer(JSContext *ctx, const char *base_name, const char *name, void *opaque);
+ bool tjs__is_file_url(const char *s);
+-/* Convert a file:// URL into a native path. Returns a js_malloc'd string, or
+- * NULL with a pending TypeError if the URL can't be mapped to a local path. */
+ char *tjs__file_url_to_path(JSContext *ctx, const char *url);
+ 
+ int js_module_set_import_meta(JSContext *ctx, JSValue func_val, bool use_realpath, bool is_main);
+--- a/txiki/src/vm.c
++++ b/txiki/src/vm.c
+@@ -45,8 +45,6 @@
+ #define TJS__DEFAULT_STACK_SIZE (2 * 1024 * 1024)
+ #endif
+ 
+-/* JS malloc functions */
+-
+ static void *tjs__mf_calloc(void *opaque, size_t count, size_t size) {
+     (void) opaque;
+     return tjs__calloc(count, size);
+@@ -68,8 +66,6 @@
+ }
+ 
+ #ifdef TJS_HAVE_WASM
+-/* WAMR allocator wrappers - WAMR uses unsigned int, not size_t. */
+-
+ static void *tjs__wamr_malloc(unsigned int size) {
+     return tjs__malloc(size);
+ }
+@@ -87,10 +83,7 @@
+     .js_malloc_usable_size = tjs__malloc_usable_size,
+ };
+ 
+-/* SharedArrayBuffer functions */
+-
+ typedef struct {
+-    /* 64-bit so that buf is 8-byte aligned, as required by 8-byte typed arrays. */
+     _Atomic(int64_t) ref_count;
+     uint8_t buf[0];
+ } TJSSABHeader;
+@@ -125,7 +118,6 @@
+     .sab_opaque = NULL,
+ };
+ 
+-/* core */
+ extern const uint8_t tjs__core[];
+ extern const uint32_t tjs__core_size;
+ extern const uint8_t tjs__polyfills[];
+@@ -172,10 +164,6 @@
+     return JS_UNDEFINED;
+ }
+ 
+-/* Forward an error to the parent over the worker's message channel (surfaces as
+- * Worker.onerror). No-ops on the main thread. Used by the JS "report the
+- * exception" path when a listener throws and the worker-scope 'error' event was
+- * not canceled. */
+ static JSValue tjs__js_post_worker_error(JSContext *ctx, JSValue this_val, int argc, JSValue *argv) {
+     tjs__worker_post_error(ctx, argv[0]);
+     return JS_UNDEFINED;
+@@ -185,10 +173,6 @@
+     TJSRuntime *qrt = TJS_GetRuntime(ctx);
+     CHECK_NOT_NULL(qrt);
+ 
+-    /* Re-entrancy guard: mirrors the HTML spec's "performing a microtask
+-     * checkpoint" flag.  Without this, draining microtasks inside
+-     * dispatchEvent can cause unbounded nesting of JS_ExecutePendingJob
+-     * when a microtask dispatches another event. */
+     if (qrt->draining_microtasks) {
+         return JS_UNDEFINED;
+     }
+@@ -200,6 +184,62 @@
+     return JS_UNDEFINED;
+ }
+ 
++static int tjs__exit_code;
++
++static JSValue tjs__set_exit_code(JSContext *ctx, JSValue this_val, int argc, JSValue *argv) {
++    int32_t code;
++    if (JS_ToInt32(ctx, &code, argv[0])) {
++        return JS_EXCEPTION;
++    }
++    tjs__exit_code = code;
++    return JS_UNDEFINED;
++}
++
++int tjs_exit_code(void) {
++    return tjs__exit_code;
++}
++
++static JSValue tjs__eval_in_new_realm(JSContext *ctx, JSValue this_val, int argc, JSValue *argv) {
++    size_t len;
++    const char *str = JS_ToCStringLen(ctx, &len, argv[0]);
++    if (!str) {
++        return JS_EXCEPTION;
++    }
++
++    JSContext *realm = JS_NewContext(JS_GetRuntime(ctx));
++    if (!realm) {
++        JS_FreeCString(ctx, str);
++        return JS_ThrowOutOfMemory(ctx);
++    }
++
++    JSValue result = JS_Eval(realm, str, len, "<evalInNewRealm>", JS_EVAL_TYPE_GLOBAL);
++    JS_FreeCString(ctx, str);
++    if (JS_IsException(result)) {
++        JSValue exc = JS_GetException(realm);
++        JSValue name = JS_GetPropertyStr(realm, exc, "name");
++        JSValue message = JS_GetPropertyStr(realm, exc, "message");
++        const char *name_str = JS_ToCString(realm, name);
++        const char *message_str = JS_ToCString(realm, message);
++        JSValue err = JS_NewError(ctx);
++        JS_SetPropertyStr(ctx, err, "name", JS_NewString(ctx, name_str ? name_str : "Error"));
++        JS_SetPropertyStr(ctx, err, "message", JS_NewString(ctx, message_str ? message_str : ""));
++        JS_FreeCString(realm, name_str);
++        JS_FreeCString(realm, message_str);
++        JS_FreeValue(realm, name);
++        JS_FreeValue(realm, message);
++        JS_FreeValue(realm, exc);
++        JS_FreeContext(realm);
++        return JS_Throw(ctx, err);
++    }
++
++    const char *out = JS_ToCString(realm, result);
++    JS_FreeValue(realm, result);
++    JSValue ret = JS_NewString(ctx, out ? out : "");
++    JS_FreeCString(realm, out);
++    JS_FreeContext(realm);
++    return ret;
++}
++
+ static JSValue tjs__sync_read_file(JSContext *ctx, JSValue this_val, int argc, JSValue *argv) {
+     const char *filename = JS_ToCString(ctx, argv[0]);
+     if (!filename) {
+@@ -213,7 +253,7 @@
+ 
+     if (r != 0) {
+         tbuf_free(&dbuf);
+-        return JS_UNDEFINED;
++        return tjs_throw_errno(ctx, r);
+     }
+ 
+     JSValue ret = TJS_NewUint8Array(ctx, dbuf.buf, dbuf.size);
+@@ -275,7 +315,6 @@
+     tjs__mod_posix_socket_init(ctx, ns);
+ #endif
+ 
+-    /* Internal helpers. */
+     JS_DefinePropertyValueStr(ctx,
+                               ns,
+                               "drainMicrotasks",
+@@ -298,6 +337,16 @@
+                               JS_PROP_C_W_E);
+     JS_DefinePropertyValueStr(ctx,
+                               ns,
++                              "setExitCode",
++                              JS_NewCFunction(ctx, tjs__set_exit_code, "setExitCode", 1),
++                              JS_PROP_C_W_E);
++    JS_DefinePropertyValueStr(ctx,
++                              ns,
++                              "evalInNewRealm",
++                              JS_NewCFunction(ctx, tjs__eval_in_new_realm, "evalInNewRealm", 1),
++                              JS_PROP_C_W_E);
++    JS_DefinePropertyValueStr(ctx,
++                              ns,
+                               "setImportMapResolver",
+                               JS_NewCFunction(ctx, tjs__set_import_map_resolver, "setImportMapResolver", 1),
+                               JS_PROP_C_W_E);
+@@ -320,7 +369,6 @@
+     TJSRuntime *qrt = TJS_GetRuntime(ctx);
+     CHECK_NOT_NULL(qrt);
+ 
+-    /* Cleared at the start of teardown; nothing to dispatch to once it's gone. */
+     if (JS_IsUndefined(qrt->builtins.dispatch_event_func)) {
+         return JS_UNDEFINED;
+     }
+@@ -336,15 +384,10 @@
+     TJSRuntime *qrt = TJS_GetRuntime(ctx);
+     CHECK_NOT_NULL(qrt);
+ 
+-    /* error_event_ctor is cleared at the start of teardown - with it gone there
+-     * is no worker scope left to dispatch the 'error' event at. */
+     if (!qrt->is_worker || JS_IsUndefined(qrt->builtins.error_event_ctor)) {
+         return;
+     }
+ 
+-    /* Dispatch a cancelable 'error' ErrorEvent at the worker global scope so
+-     * self.onerror can observe (and, via preventDefault(), suppress propagation
+-     * to) the parent. */
+     JSValue init = JS_NewObject(ctx);
+     JS_SetPropertyStr(ctx, init, "message", JS_ToString(ctx, exc));
+     JS_SetPropertyStr(ctx, init, "error", JS_DupValue(ctx, exc));
+@@ -361,10 +404,8 @@
+     } else {
+         JSValue ret = tjs__dispatch_event(ctx, &event);
+         if (JS_IsException(ret)) {
+-            /* A handler threw: ignore it and forward the original error. */
+             JS_FreeValue(ctx, JS_GetException(ctx));
+         } else {
+-            /* dispatchEvent() returns false when preventDefault() was called. */
+             canceled = !JS_ToBool(ctx, ret);
+         }
+         JS_FreeValue(ctx, ret);
+@@ -386,10 +427,6 @@
+     pr->promise = JS_DupValue(ctx, promise);
+     pr->reason = JS_DupValue(ctx, reason);
+     list_add_tail(&pr->link, &qrt->pending_rejections);
+-    /* The tracker can fire from inside a libuv callback (e.g. when an
+-     * async finally completes during the close phase).  Make sure the loop
+-     * runs at least one more iteration so the check phase can dispatch the
+-     * 'unhandledrejection' event; otherwise the rejection would be lost. */
+     uv__maybe_idle(qrt);
+ }
+ 
+@@ -416,15 +453,8 @@
+     CHECK_NOT_NULL(qrt);
+ 
+     if (!is_handled) {
+-        /* Defer event dispatch: the promise may get a handler attached
+-         * synchronously (e.g. Promise.reject(x).catch(fn)) before the
+-         * current microtask batch completes. Record the rejection and
+-         * process it after all pending jobs have been executed, matching
+-         * browser/Node.js behavior. */
+         tjs__pending_rejections_add(qrt, ctx, promise, reason);
+     } else {
+-        /* The rejection is now handled (e.g. via .catch() or await in
+-         * try/catch). Remove it from the pending list so no event fires. */
+         tjs__pending_rejections_remove(qrt, ctx, promise);
+     }
+ }
+@@ -477,9 +507,6 @@
+ 
+ static uv_once_t tjs__global_once = UV_ONCE_INIT;
+ 
+-/* Process-wide library setup. Runs once, from the first runtime (the main
+- * thread's), before anything can touch mbedtls or lws; Workers' runtimes must
+- * not redo it while other threads are already using those libraries. */
+ static void tjs__global_init(void) {
+ #ifdef _WIN32
+     tjs__mbedtls_threading_init();
+@@ -513,46 +540,35 @@
+     JS_SetRuntimeOpaque(rt, qrt);
+     JS_SetContextOpaque(ctx, qrt);
+ 
+-    /* Set memory limit */
+     JS_SetMemoryLimit(rt, options->mem_limit);
+ 
+-    /* Set stack size */
+     JS_SetMaxStackSize(rt, options->stack_size);
+ 
+-    /* SharedArrayBuffer functions */
+     JS_SetSharedArrayBufferFunctions(rt, &tjs_sf);
+ 
+-    /* Worker support */
+     qrt->is_worker = is_worker;
+     JS_SetCanBlock(rt, is_worker);
+ 
+     CHECK_EQ(uv_loop_init(&qrt->loop), 0);
+ 
+-    /* handle which runs the job queue */
+     CHECK_EQ(uv_prepare_init(&qrt->loop, &qrt->jobs.prepare), 0);
+     qrt->jobs.prepare.data = qrt;
+ 
+-    /* handle to prevent the loop from blocking for i/o when there are pending jobs. */
+     CHECK_EQ(uv_idle_init(&qrt->loop, &qrt->jobs.idle), 0);
+     qrt->jobs.idle.data = qrt;
+ 
+-    /* handle which runs the job queue */
+     CHECK_EQ(uv_check_init(&qrt->loop, &qrt->jobs.check), 0);
+     qrt->jobs.check.data = qrt;
+ 
+-    /* handle for stopping this runtime (also works from another thread) */
+     CHECK_EQ(uv_async_init(&qrt->loop, &qrt->stop, uv__stop), 0);
+     qrt->stop.data = qrt;
+ 
+     tjs__lws_keepalive_init(qrt);
+ 
+-    /* loader for ES modules */
+     JS_SetModuleLoaderFunc2(rt, tjs_module_normalizer, tjs_module_loader, tjs_module_attr_checker, qrt);
+ 
+-    /* unhandled promise rejection tracker */
+     JS_SetHostPromiseRejectionTracker(rt, tjs__promise_rejection_tracker, NULL);
+ 
+-    /* start bootstrap */
+     JSValue global_obj = JS_GetGlobalObject(ctx);
+     JSValue core = JS_NewObjectProto(ctx, JS_NULL);
+ 
+@@ -567,7 +583,6 @@
+     CHECK_EQ(tjs__eval_bytecode(ctx, tjs__polyfills, tjs__polyfills_size, true), 0);
+     CHECK_EQ(tjs__eval_bytecode(ctx, tjs__core, tjs__core_size, true), 0);
+ 
+-    /* Load some builtin references for easy access */
+     qrt->builtins.dispatch_event_func = JS_GetPropertyStr(ctx, global_obj, "dispatchEvent");
+     CHECK_EQ(JS_IsUndefined(qrt->builtins.dispatch_event_func), 0);
+     qrt->builtins.promise_event_ctor = JS_GetPropertyStr(qrt->ctx, global_obj, "PromiseRejectionEvent");
+@@ -575,11 +590,9 @@
+     qrt->builtins.error_event_ctor = JS_GetPropertyStr(qrt->ctx, global_obj, "ErrorEvent");
+     CHECK_EQ(JS_IsUndefined(qrt->builtins.error_event_ctor), 0);
+ 
+-    /* end bootstrap */
+     JS_FreeValue(ctx, global_obj);
+ 
+ #ifdef TJS_HAVE_WASM
+-    /* WASM */
+     RuntimeInitArgs wasm_init_args;
+     memset(&wasm_init_args, 0, sizeof(wasm_init_args));
+     wasm_init_args.mem_alloc_type = Alloc_With_Allocator;
+@@ -591,14 +604,11 @@
+     qrt->wasm_ctx.stack_size = 512 * 1024;
+ #endif
+ 
+-    /* Timers */
+     qrt->timers.timers = NULL;
+     qrt->timers.next_timer = 1;
+ 
+-    /* Pending rejection tracking */
+     init_list_head(&qrt->pending_rejections);
+ 
+-    /* Active native-handle self-pins (for teardown). */
+     init_list_head(&qrt->handle_pins);
+ 
+     return qrt;
+@@ -613,9 +623,6 @@
+ 
+ void tjs__handle_unpin(JSContext *ctx, TJSHandlePin *pin) {
+     if (!JS_IsUndefined(pin->obj)) {
+-        /* Detach and clear the pin *before* releasing the reference: this drop
+-         * can be the last one and finalize the wrapper synchronously, and the
+-         * finalizer asserts the pin is already released. */
+         JSValue obj = pin->obj;
+         list_del(&pin->link);
+         pin->obj = JS_UNDEFINED;
+@@ -629,8 +636,6 @@
+     }
+ }
+ 
+-/* After tjs__release_pins has dropped the pin at teardown, the remaining
+- * releases only decrement the count (unpinning an idle pin is a no-op). */
+ void tjs__req_pin_release(JSContext *ctx, TJSReqPin *rp) {
+     CHECK_GT(rp->count, 0);
+     if (--rp->count == 0) {
+@@ -638,20 +643,6 @@
+     }
+ }
+ 
+-/* Run every registered pin's `detach` hook at the very start of teardown (and
+- * again from the drain, for pins JS registered after this first pass). The
+- * hook quiesces the handle so nothing dispatches into the half-torn-down
+- * runtime, but its exact job differs by who owns the handle's close:
+- *  - lws-backed handles (httpclient, ws): lws owns the close
+- *    (lws_context_destroy, later in teardown), so the hook only clears the JS
+- *    callbacks; the close callback then finds no handler and dispatches nothing.
+- *  - libuv-backed handles: we own the close, so the hook begins it (maybe_close
+- *    -> uv_close). This decouples closing from the GC - the handle is closed
+- *    even if a wrapper turns out to be reachable and survives the teardown GC.
+- *    The wrapper is still pinned here, so its struct is freed later (finalizer,
+- *    once release_pins lets the GC collect it); and its dispatch during the
+- *    post-GC drain is suppressed by the per-object `finalized` flag the
+- *    finalizer sets, so `detach` need not clear libuv callbacks. */
+ void tjs__detach_handles(TJSRuntime *qrt) {
+     struct list_head *el;
+     list_for_each(el, &qrt->handle_pins) {
+@@ -663,12 +654,6 @@
+ }
+ 
+ void tjs__release_pins(TJSRuntime *qrt) {
+-    /* Drop every self-pin so the wrappers become collectable. Lift the whole
+-     * list into a local head first, then release each entry: a wrapper stays
+-     * alive via its own pin until we free it, so the move frees nothing, and the
+-     * release pass no longer walks the shared list - a cascading finalizer that
+-     * touches handle_pins can't corrupt the traversal. This runs again for each
+-     * drain iteration of TJS_FreeRuntime that finds pins JS registered late. */
+     struct list_head pins;
+     list_splice_init(&pins, &qrt->handle_pins);
+     while (!list_empty(&pins)) {
+@@ -680,9 +665,6 @@
+     }
+ }
+ 
+-/* Safe to call again: a fetch / WebSocket / serve during the teardown drain
+- * lazily re-creates the context (tjs__lws_init), which also re-parses
+- * no_proxy. Must not run inside an lws callback (see lws-evlib.c). */
+ static void tjs__lws_teardown(TJSRuntime *qrt) {
+     if (qrt->lws.ctx) {
+         lws_context_destroy(qrt->lws.ctx);
+@@ -704,8 +686,6 @@
+     qrt->lws.ca_bundle_data = NULL;
+ }
+ 
+-/* Repeat the teardown steps of TJS_FreeRuntime, in the same order, for
+- * whatever JS created during the previous drain iteration. */
+ static bool tjs__reap_late_resources(TJSRuntime *qrt) {
+     bool found = false;
+     if (!list_empty(&qrt->handle_pins)) {
+@@ -728,25 +708,10 @@
+ }
+ 
+ void TJS_FreeRuntime(TJSRuntime *qrt) {
+-    /* A worker runtime is freed on the thread that terminated it, not the one
+-     * that created it, and the drain below runs JS. Re-anchor QuickJS's stack
+-     * check on this thread, or every call can fail with a bogus stack overflow. */
+     JS_UpdateStackTop(qrt->rt);
+ 
+-    /* Quiesce every active native handle before dismantling anything else, so no
+-     * handle callback can fire into a half-torn-down runtime: libuv-backed
+-     * handles begin closing (their close no longer waits on the GC collecting
+-     * the wrapper), and lws-backed handles clear their JS callbacks. */
+     tjs__detach_handles(qrt);
+ 
+-    /* Tear down the paths that would run JS in response to teardown activity,
+-     * up front, so nothing below needs a global "are we shutting down" flag:
+-     *  - stop tracking promise rejections (the engine now frees rejected
+-     *    promises itself, and we must not touch pending_rejections);
+-     *  - drop the event-dispatch / worker-error builtins, so the C error and
+-     *    rejection paths (tjs__dispatch_event, tjs__worker_*) find their
+-     *    machinery gone and no-op instead of dispatching into a half-torn-down
+-     *    runtime. */
+     JS_SetHostPromiseRejectionTracker(qrt->rt, NULL, NULL);
+     JS_FreeValue(qrt->ctx, qrt->builtins.dispatch_event_func);
+     qrt->builtins.dispatch_event_func = JS_UNDEFINED;
+@@ -761,56 +726,16 @@
+     JS_FreeValue(qrt->ctx, qrt->builtins.internal_message_pipe);
+     qrt->builtins.internal_message_pipe = JS_UNDEFINED;
+ 
+-    /* Close all core loop handles. */
+     uv_close((uv_handle_t *) &qrt->jobs.prepare, NULL);
+     uv_close((uv_handle_t *) &qrt->jobs.idle, NULL);
+     uv_close((uv_handle_t *) &qrt->jobs.check, NULL);
+     uv_close((uv_handle_t *) &qrt->stop, NULL);
+-    /* An lws context JS re-creates during the drain below only refs/unrefs
+-     * keepalive, which libuv ignores on a closing or closed handle. */
+     uv_close((uv_handle_t *) &qrt->lws.keepalive, NULL);
+ 
+-    /* Destroy all timers */
+     tjs__destroy_timers(qrt);
+ 
+-    /* Destroy lws context. Must happen before freeing the JS engine
+-     * so that any remaining WSI_DESTROY callbacks can release GC refs. */
+     tjs__lws_teardown(qrt);
+ 
+-    /* Drop the GC-invisible self-pins that keep actively reading/listening/
+-     * running native handles alive (set on an abnormal exit, when JS never
+-     * closed them). The handles are already closing (tjs__detach_handles above);
+-     * releasing the pins lets the GC collect the wrappers so their finalizers
+-     * run - freeing each struct once its close completes, and setting the
+-     * `finalized` flag that suppresses dispatch during the drain below. Draining
+-     * the loop here - while the runtime and the shared TLS context are still
+-     * alive - lets the resulting close (and any canceled request) callbacks run
+-     * safely, before anything they might touch is torn down.
+-     *
+-     * Those callbacks still run JS on reachable wrappers (e.g. a canceled write
+-     * rejects its promise), and that JS can create pins, timers or a fresh lws
+-     * context after the steps above already ran. So each iteration first reaps
+-     * whatever the previous one left behind. JS that keeps creating resources
+-     * on every one of the 32 iterations still leaks them; that takes
+-     * adversarial code and is accepted.
+-     *
+-     * A request already running on the threadpool (fs, getaddrinfo,
+-     * uv_queue_work) can't be canceled, and the threadpool thread uses the loop
+-     * and the request struct (which JS owns) until it completes. So while any
+-     * request is in flight, block in UV_RUN_ONCE: its completion wakes the loop,
+-     * and its callback runs while the runtime is still alive. A wait in which
+-     * some request finished and none replaced it doesn't count against the 32
+-     * iterations. One that leaves as many requests in flight as before does:
+-     * the callbacks' JS queued new work (e.g. a `for (;;) await
+-     * crypto.subtle.digest()` loop), or nothing finished yet. Once the 32
+-     * iterations are used up, microtasks stop running, so no JS continuation
+-     * can queue more work and the wait ends when the requests already queued
+-     * finish. Every request on a handle is canceled by the close
+-     * tjs__detach_handles began, so only threadpool work is waited for. The
+-     * price: teardown (worker.terminate(), exit on an uncaught error) blocks
+-     * until running native work finishes, and hangs if it never does (e.g. a
+-     * read from a FIFO with no writer). Freeing memory that a running thread
+-     * still uses is worse. */
+     tjs__release_pins(qrt);
+     JS_RunGC(qrt->rt);
+     int rounds = 0;
+@@ -833,10 +758,8 @@
+         }
+     }
+ 
+-    /* Destroy shared TLS context. */
+     tjs__mod_tls_cleanup(qrt);
+ 
+-    /* Destroy the JS engine. */
+     {
+         struct list_head *el, *el1;
+         list_for_each_safe(el, el1, &qrt->pending_rejections) {
+@@ -848,21 +771,17 @@
+         }
+     }
+     JS_FreeContext(qrt->ctx);
+-    /* Finalizers look up class ids in qrt, so free qrt only after this. */
+     JS_FreeRuntime(qrt->rt);
+ 
+-    /* Requests left uncompleted by an abnormal exit can leave pins behind. */
+     tjs__free_buf_pins(qrt);
+ 
+ #ifdef TJS_HAVE_WASM
+-    /* Destroy WASM runtime. */
+     if (qrt->wasm_ctx.initialized) {
+         wasm_runtime_destroy();
+         qrt->wasm_ctx.initialized = false;
+     }
+ #endif
+ 
+-    /* Cleanup loop. All handles should be closed. */
+     int closed = 0;
+     for (int i = 0; i < 5; i++) {
+         if (uv_loop_close(&qrt->loop) == 0) {
+@@ -880,8 +799,6 @@
+     (void) closed;
+ #endif
+ 
+-    /* Every lws object bound to the runtime's log context is gone: lws
+-     * finalizes them all inside lws_context_destroy (see lws-evlib.c). */
+     assert(qrt->lws.log_cx.refcount == 0);
+ 
+     tjs__free(qrt);
+@@ -893,10 +810,6 @@
+                                            const wchar_t *file,
+                                            unsigned int line,
+                                            uintptr_t reserved) {
+-    /* The default UCRT handler terminates the process (and may pop a Windows
+-     * Error Reporting dialog) when a CRT function receives an invalid
+-     * parameter. Override it with a no-op so the CRT function returns an error
+-     * instead, matching what other CLI runtimes (e.g. Node.js) do. */
+     (void) expression;
+     (void) function;
+     (void) file;
+@@ -916,8 +829,6 @@
+ void TJS_Initialize(int argc, char **argv) {
+     CHECK_EQ(0, uv_replace_allocator(tjs__malloc, tjs__realloc, tjs__calloc, tjs__free));
+ 
+-    /* uv_setup_args only copies argv on Unix (and not at all if that allocation fails), so keep
+-     * our own copy: runtimes created later (e.g. Workers) read it, and the caller may free theirs. */
+     argv = uv_setup_args(argc, argv);
+ 
+     size_t size = (argc + 1) * sizeof(char *);
+@@ -945,15 +856,12 @@
+     _setmode(_fileno(stdout), _O_BINARY);
+     _setmode(_fileno(stderr), _O_BINARY);
+ 
+-    /* Make sure conmsole is set to UTF-8 so our output doesn't get garbled. */
+     tjs__prev_console_output_cp = GetConsoleOutputCP();
+     if (tjs__prev_console_output_cp != 0 && tjs__prev_console_output_cp != CP_UTF8) {
+         SetConsoleOutputCP(CP_UTF8);
+         atexit(tjs__restore_console_output_cp);
+     }
+ 
+-    /* CLI tool: never block on GUI error dialogs. Suppress the WER crash dialog
+-     * and the OS critical-error message box (e.g. device-not-ready). */
+     SetErrorMode(GetErrorMode() | SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX);
+     _set_invalid_parameter_handler(tjs__invalid_parameter_handler);
+ #endif
+@@ -971,13 +879,12 @@
+     return JS_GetContextOpaque(ctx);
+ }
+ 
+-static void uv__idle_cb(uv_idle_t *handle) {
+-    // Noop
++static void uv__idle_noop(uv_idle_t *handle) {
+ }
+ 
+ static void uv__maybe_idle(TJSRuntime *qrt) {
+     if (JS_IsJobPending(qrt->rt) || !list_empty(&qrt->pending_rejections)) {
+-        CHECK_EQ(uv_idle_start(&qrt->jobs.idle, uv__idle_cb), 0);
++        CHECK_EQ(uv_idle_start(&qrt->jobs.idle, uv__idle_noop), 0);
+     } else {
+         CHECK_EQ(uv_idle_stop(&qrt->jobs.idle), 0);
+     }
+@@ -1005,8 +912,6 @@
+         if (err <= 0) {
+             if (err < 0) {
+                 if (qrt->is_worker) {
+-                    /* Report the uncaught error to the parent, then restore the
+-                     * pending exception so it is still dumped to stderr. */
+                     JSValue exc = JS_GetException(ctx1);
+                     tjs__worker_handle_uncaught(ctx1, exc);
+                     JS_Throw(ctx1, exc);
+@@ -1019,13 +924,7 @@
+     }
+ }
+ 
+-void tjs__execute_jobs(JSContext *ctx) {
+-    tjs__drain_microtasks(ctx);
+-
+-    /* Process deferred unhandled promise rejections.
+-     * The rejection tracker defers event dispatch to after all microtasks
+-     * have been processed, so that synchronously-caught rejections
+-     * (e.g. Promise.reject(x).catch(fn)) don't spuriously fire events. */
++static void tjs__process_deferred_rejections(JSContext *ctx) {
+     TJSRuntime *qrt = TJS_GetRuntime(ctx);
+     CHECK_NOT_NULL(qrt);
+     struct list_head *el, *el1;
+@@ -1043,8 +942,6 @@
+ 
+         bool should_abort = false;
+ 
+-        /* User code can break the event constructor (e.g. by overwriting
+-         * globals it uses), so treat that as an unhandled rejection. */
+         if (JS_IsException(event)) {
+             tjs_dump_error(ctx);
+             should_abort = true;
+@@ -1056,7 +953,6 @@
+                 tjs_dump_error(ctx);
+                 should_abort = true;
+             } else if (JS_ToBool(ctx, ret)) {
+-                /* The event wasn't cancelled, abort. */
+                 should_abort = true;
+             }
+ 
+@@ -1065,7 +961,6 @@
+ 
+         if (should_abort) {
+             JSValue reason = pr->reason;
+-            /* Free all pending rejections. */
+             struct list_head *el2, *el3;
+             list_for_each_safe(el2, el3, &qrt->pending_rejections) {
+                 TJSPendingRejection *pr2 = list_entry(el2, TJSPendingRejection, link);
+@@ -1076,10 +971,6 @@
+                 list_del(&pr2->link);
+                 js_free(ctx, pr2);
+             }
+-            /* In a worker, an unhandled rejection that aborts the runtime should
+-             * also reach the parent. The 'unhandledrejection' event was already
+-             * dispatched at the worker global (or could not be constructed), so
+-             * just forward the reason. */
+             if (qrt->is_worker) {
+                 tjs__worker_post_error(ctx, reason);
+             }
+@@ -1095,6 +986,11 @@
+     }
+ }
+ 
++void tjs__execute_jobs(JSContext *ctx) {
++    tjs__drain_microtasks(ctx);
++    tjs__process_deferred_rejections(ctx);
++}
++
+ static void uv__check_cb(uv_check_t *handle) {
+     TJSRuntime *qrt = handle->data;
+     CHECK_NOT_NULL(qrt);
+@@ -1114,9 +1010,6 @@
+     JSValue ret = JS_Eval(ctx, code, strlen(code), "<beforeunload>", JS_EVAL_TYPE_GLOBAL);
+     bool prevented = false;
+ 
+-    /* dispatchEvent reports listener errors itself, so an exception here means
+-     * the dispatch failed (e.g. a broken Event or dispatchEvent). Leave it
+-     * pending so TJS_Run reports it once and exits with an error. */
+     if (!JS_IsException(ret)) {
+         prevented = JS_ToBool(ctx, ret);
+     }
+@@ -1125,7 +1018,6 @@
+     return prevented;
+ }
+ 
+-/* main loop which calls the user JS callbacks */
+ int TJS_Run(TJSRuntime *qrt) {
+     int ret = 0;
+ 
+@@ -1134,11 +1026,9 @@
+     CHECK_EQ(uv_check_start(&qrt->jobs.check, uv__check_cb), 0);
+     uv_unref((uv_handle_t *) &qrt->jobs.check);
+ 
+-    /* Use the async handle to keep the worker alive even when there is nothing to do. */
+     if (!qrt->is_worker) {
+         uv_unref((uv_handle_t *) &qrt->stop);
+ 
+-        /* If we are running the main interpreter, run the entrypoint. */
+         ret = tjs__eval_bytecode(qrt->ctx, tjs__run_main, tjs__run_main_size, true);
+     }
+ 
+@@ -1153,26 +1043,18 @@
+             r = uv_run(&qrt->loop, UV_RUN_DEFAULT);
+         } while (r == 0 && JS_IsJobPending(qrt->rt) && !JS_HasException(qrt->ctx));
+ 
+-        /* Only fire beforeunload for main runtime, not workers. */
+         if (qrt->is_worker) {
+             break;
+         }
+ 
+-        /* A fatal error (unhandled rejection or uncaught exception) stopped the
+-         * loop: skip beforeunload and keep the pending exception for the report
+-         * below. */
+         if (JS_HasException(qrt->ctx)) {
+             break;
+         }
+ 
+-        /* If preventDefault() was not called, exit. */
+         if (!tjs__fire_beforeunload(qrt)) {
+             break;
+         }
+ 
+-        /* preventDefault was called - let the loop deal with any new work
+-         * the handler may have scheduled. If nothing was scheduled,
+-         * uv_run will return immediately and we'd spin forever, so guard. */
+         if (!JS_IsJobPending(qrt->rt) && !uv_loop_alive(&qrt->loop)) {
+             break;
+         }
+@@ -1188,8 +1070,6 @@
+ 
+ void TJS_Stop(TJSRuntime *qrt) {
+     CHECK_NOT_NULL(qrt);
+-    /* TJS_FreeRuntime closes `stop` before its drain runs JS that may land here;
+-     * libuv forbids sending to a closing handle (Windows asserts or re-closes it). */
+     if (!uv_is_closing((uv_handle_t *) &qrt->stop)) {
+         uv_async_send(&qrt->stop);
+     }
+@@ -1240,14 +1120,12 @@
+                               bool use_real_path,
+                               const char *content,
+                               size_t len) {
+-    /* Compile then run to be able to set import.meta */
+     JSValue ret = JS_Eval(ctx, content, len, specifier, JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
+     if (!JS_IsException(ret)) {
+         js_module_set_import_meta(ctx, ret, use_real_path, is_main);
+         ret = JS_EvalFunction(ctx, ret);
+     }
+ 
+-    /* Emit 'load' event. */
+     if (!JS_IsException(ret) && is_main) {
+         static char emit_load[] = "globalThis.dispatchEvent(new Event('load'));";
+         JSValue ret1 = JS_Eval(ctx, emit_load, strlen(emit_load), "<global>", JS_EVAL_TYPE_GLOBAL);
+@@ -1275,7 +1153,6 @@
+ 
+     dbuf_size = dbuf.size;
+ 
+-    /* Add null termination, required by JS_Eval. */
+     tbuf_putc(&dbuf, '\0');
+ 
+     ret = JS_Eval(ctx, (char *) dbuf.buf, dbuf_size - 1, filename, JS_EVAL_TYPE_GLOBAL);
+@@ -1291,8 +1168,6 @@
+     JSValue ret;
+     char *path = NULL;
+ 
+-    /* Use the native path as the module name too, so import.meta and relative
+-     * imports resolve as if the path had been given. */
+     if (tjs__is_file_url(filename)) {
+         path = tjs__file_url_to_path(ctx, filename);
+         if (!path) {
+@@ -1312,7 +1187,6 @@
+ 
+     dbuf_size = dbuf.size;
+ 
+-    /* Add null termination, required by JS_Eval. */
+     tbuf_putc(&dbuf, '\0');
+ 
+     ret = TJS_EvalModuleContent(ctx, filename, is_main, true, (char *) dbuf.buf, dbuf_size - 1);

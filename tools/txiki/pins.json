@@ -1,0 +1,132 @@
+{
+  "txikiVersion": {
+    "major": "26",
+    "minor": "11",
+    "patch": "0",
+    "suffix": ""
+  },
+  "archives": [
+    {
+      "name": "txiki",
+      "label": "txiki.js v26.11.0",
+      "url": "https://codeload.github.com/saghul/txiki.js/legacy.tar.gz/refs/tags/v26.11.0",
+      "sha256": "763025ac98e4d6629f9ebe8396c027ff22966a6322b0dc43e442d45c6d7f8059"
+    },
+    {
+      "name": "libuv",
+      "label": "libuv dd9f081cc55a4d83e2a976848d074f28ee5f34eb",
+      "url": "https://codeload.github.com/libuv/libuv/legacy.tar.gz/dd9f081cc55a4d83e2a976848d074f28ee5f34eb",
+      "sha256": "f5185440ee939936d6375755498b7f07915f747bd9bbfe6ea058a9ee173f88d0"
+    },
+    {
+      "name": "quickjs",
+      "label": "quickjs-ng 7b5f588e0f9b643e2996f291bfc861abeaceddc2",
+      "url": "https://codeload.github.com/quickjs-ng/quickjs/legacy.tar.gz/7b5f588e0f9b643e2996f291bfc861abeaceddc2",
+      "sha256": "f27b2e93647e73f91201e12c4f2ee0c0d07e2f6dc06b539422bf03269d601366"
+    }
+  ],
+  "selections": {
+    "txikiSources": [
+      "vm.c",
+      "timers.c",
+      "utils.c",
+      "modules.c",
+      "error.c",
+      "mem.c",
+      "text-coding.c",
+      "tbuf.c",
+      "builtins.c",
+      "signals.c",
+      "mod_os.c",
+      "mod_sys.c",
+      "mod_fs.c",
+      "mod_streams.c",
+      "worker.c",
+      "eval.c",
+      "url.c",
+      "mod_engine.c",
+      "version.c",
+      "mod_channel.c",
+      "mod_dns.c",
+      "mod_fswatch.c",
+      "mod_process.c",
+      "mod_udp.c",
+      "mod_posix-socket.c"
+    ],
+    "txikiHeadersSkipped": [
+      "cacert.h",
+      "ed25519.h",
+      "mbedtls_config.h",
+      "wasm.h"
+    ],
+    "txikiBundles": [
+      "core/core.c",
+      "core/polyfills.c",
+      "core/run-main.c",
+      "core/worker-bootstrap.c",
+      "internal/home.c",
+      "internal/path.c",
+      "stdlib/assert.c",
+      "stdlib/getopts.c",
+      "stdlib/hashing.c",
+      "stdlib/ipaddr.c",
+      "stdlib/path.c",
+      "stdlib/posix-socket.c",
+      "stdlib/readline.c",
+      "stdlib/utils.c",
+      "stdlib/uuid.c"
+    ],
+    "adaFiles": [
+      "ada.cpp",
+      "ada.h",
+      "ada_c.h"
+    ],
+    "libuvBuildFiles": [
+      "CMakeLists.txt",
+      "configure.ac",
+      "libuv.pc.in",
+      "libuv-static.pc.in"
+    ],
+    "quickjsSources": [
+      "quickjs.c",
+      "dtoa.c",
+      "libregexp.c",
+      "libunicode.c"
+    ],
+    "quickjsHeadersSkipped": [
+      "quickjs-libc.h"
+    ]
+  },
+  "patches": [
+    {
+      "file": "txiki-gm.patch",
+      "sha256": "d1746723dfb1fa51bd130648f7d2b3d09e26b7fe78c0342d490acd3823f4b54e"
+    },
+    {
+      "file": "quickjs-async-frame.patch",
+      "sha256": "72ddac1b9a6d6ecfffd85921e89f8890f4ace026c29c784e7794ce5c82a52386"
+    }
+  ],
+  "browserPort": [
+    {
+      "file": "uv-browser.c",
+      "origin": "thebird b5ec730 scripts/txiki/browser/uv-browser.c",
+      "sha256": "89d228c3fd5ede105029e6c586a903ecb7d8f3ac75841f9e8844ea6ddaa72a50"
+    },
+    {
+      "file": "uv/browser.h",
+      "origin": "thebird b5ec730 scripts/txiki/include/uv/browser.h",
+      "sha256": "feee1d8eee76d0518107be49bceb7d8e8901a7a82d621e00787212d67aba7ccd"
+    },
+    {
+      "file": "txiki-browser.h",
+      "origin": "thebird b5ec730 scripts/txiki/include/txiki-browser.h",
+      "sha256": "d20dec81f14fc2fd01c0a3414bb840bbe34a63f4986b4e944887300fe5fa8c17"
+    },
+    {
+      "file": "stubs.tsv",
+      "origin": "thebird scripts/txiki/stubs.tsv",
+      "sha256": "0531146a3c415fb4b64ff33fa2eede11cfd59e2a8d5d2ce3c653263ee09a8a3d"
+    }
+  ]
+}
