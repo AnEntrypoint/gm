@@ -1,0 +1,223 @@
+[
+ {
+  "id": "red-update-checked",
+  "witness": "check-update-checked",
+  "file": "native/components/host/relay.cpp",
+  "edits": [
+   {
+    "from": "        } else if (policy.enabled) {\n            say(\"update checked: current is \" + result.from + \", manifest is \" + (result.manifest.empty() ? std::string(\"unknown\") : result.manifest));\n        }\n",
+    "to": "        }\n",
+    "count": 1
+   }
+  ]
+ },
+ {
+  "id": "red-digest",
+  "witness": "check-update-stream",
+  "file": "native/components/tool/checks/support.hpp",
+  "edits": [
+   {
+    "from": "            words >> digest;\n            return digest;\n",
+    "to": "            words >> digest;\n            return std::string();\n",
+    "count": 1
+   }
+  ]
+ },
+ {
+  "id": "red-dead-executor",
+  "witness": "check-browser-dead-executor",
+  "file": "native/components/tool/checks/browser_scope.cpp",
+  "edits": [
+   {
+    "from": "number(closed, \"closedPages\") == 1, \"finish on a restarted serve",
+    "to": "number(closed, \"closedPages\") == 2, \"finish on a restarted serve",
+    "count": 1
+   }
+  ]
+ },
+ {
+  "id": "red-browser-first-open",
+  "witness": "check-browser-first-open",
+  "file": "native/components/tool/checks/browser_first_open.cpp",
+  "edits": [
+   {
+    "from": "first_number(status_text, \"\\\"gate\\\":",
+    "to": "first_number(status_text, \"\\\"gatex\\\":",
+    "count": 1
+   }
+  ]
+ },
+ {
+  "id": "red-turn-economy",
+  "witness": "check-turn-economy",
+  "file": "native/components/mcp/server.cpp",
+  "edits": [
+   {
+    "from": "        return dispatch(name_view, args);\n    }\n\n    json::Value dispatch(std::string_view name_view, const json::Value& args) {",
+    "to": "        if (name_view == \"job_status\") {\n            json::Value bounded = args;\n            bounded.set(\"waitMs\", 80000.0);\n            return dispatch(name_view, bounded);\n        }\n        return dispatch(name_view, args);\n    }\n\n    json::Value dispatch(std::string_view name_view, const json::Value& args) {",
+    "count": 1
+   }
+  ]
+ },
+ {
+  "id": "red-job-wait-bounded",
+  "witness": "check-job-wait-bounded",
+  "file": "native/components/mcp/server.cpp",
+  "edits": [
+   {
+    "from": "        return dispatch(name_view, args);\n    }\n\n    json::Value dispatch(std::string_view name_view, const json::Value& args) {",
+    "to": "        if (name_view == \"job_status\") {\n            json::Value bounded = args;\n            bounded.set(\"waitMs\", 80000.0);\n            return dispatch(name_view, bounded);\n        }\n        return dispatch(name_view, args);\n    }\n\n    json::Value dispatch(std::string_view name_view, const json::Value& args) {",
+    "count": 1
+   }
+  ]
+ },
+ {
+  "id": "red-collision",
+  "witness": "check-update-checkout",
+  "file": "native/components/host/relay.cpp",
+  "edits": [
+   {
+    "from": "        UpdateResult result;\n        result.ok = true;\n",
+    "to": "        UpdateResult result;\n        result.ok = true;\n        proc::run({\"git\", \"fetch\", \"-q\", \"origin\"}, {}, {}, 60000);\n",
+    "count": 1
+   }
+  ]
+ },
+ {
+  "id": "red-manifest",
+  "witness": "check-update-checked",
+  "file": "native/components/host/update.cpp",
+  "edits": [
+   {
+    "from": "    result.manifest = state.manifest;\n",
+    "to": "    result.manifest = state.version;\n",
+    "count": 2
+   }
+  ]
+ },
+ {
+  "id": "red-unknown",
+  "witness": "check-update-checked",
+  "file": "native/components/host/update.cpp",
+  "edits": [
+   {
+    "from": "if (!policy.force && !state.manifest.empty() && checked_recently(",
+    "to": "if (!policy.force && checked_recently(",
+    "count": 2
+   },
+   {
+    "from": "state.manifest.empty() ? std::string() : state.etag",
+    "to": "state.etag",
+    "count": 1
+   }
+  ]
+ },
+ {
+  "id": "red-target",
+  "witness": "check-target-names",
+  "file": "native/components/tool/checks/update_stream.cpp",
+  "edits": [
+   {
+    "from": "const std::string kPlatformTarget = gm::platform_target();",
+    "to": "const std::string kPlatformTarget = \"x64-linux\";",
+    "count": 1
+   }
+  ]
+ },
+ {
+  "id": "red-relay-reexec",
+  "witness": "check-relay-reexec",
+  "file": "native/components/host/relay.cpp",
+  "edits": [
+   {
+    "from": "    say(\"re-executing the relay on the new build\");",
+    "to": "    usleep(6000000);\n    say(\"re-executing the relay on the new build\");",
+    "count": 1
+   }
+  ]
+ },
+ {
+  "id": "red-spawn-stdio-path",
+  "witness": "check-txiki-spawn-stdio",
+  "file": "native/components/tool/checks/txiki_spawn_stdio.cpp",
+  "edits": [
+   {
+    "from": "launch(['/bin/sh', '-c', 'exit 0']",
+    "to": "launch(['/nonexistent/gm-spawn-probe']",
+    "count": 1
+   }
+  ]
+ },
+ {
+  "id": "red-job-status-wait",
+  "witness": "check-job-status-wait",
+  "file": "native/components/mcp/server.cpp",
+  "edits": [
+   {
+    "from": "        return dispatch(name_view, args);\n    }\n\n    json::Value dispatch(std::string_view name_view, const json::Value& args) {",
+    "to": "        if (name_view == \"job_status\") {\n            json::Value bounded = args;\n            bounded.set(\"waitMs\", 80000.0);\n            return dispatch(name_view, bounded);\n        }\n        return dispatch(name_view, args);\n    }\n\n    json::Value dispatch(std::string_view name_view, const json::Value& args) {",
+    "count": 1
+   }
+  ]
+ },
+ {
+  "id": "red-spawn-detached",
+  "witness": "check-txiki-spawn-detached",
+  "file": "native/components/tool/checks/txiki_spawn_detached.cpp",
+  "edits": [
+   {
+    "from": "const det = await run('detached', { detached: true });",
+    "to": "const det = await run('detached', { detached: false });",
+    "count": 1
+   }
+  ]
+ },
+ {
+  "id": "red-updater-order",
+  "witness": "check-update-order",
+  "file": "native/components/host/update.cpp",
+  "edits": [
+   {
+    "from": "Order order_against(const UpdatePolicy& policy, const ManifestAsset& asset) {\n",
+    "to": "Order order_against(const UpdatePolicy& policy, const ManifestAsset& asset) {\n    return Order::Newer;\n",
+    "count": 1
+   }
+  ]
+ },
+ {
+  "id": "red-install-build-id",
+  "witness": "check-install-build-id",
+  "file": "native/components/host/install.cpp",
+  "edits": [
+   {
+    "from": "    const bool same_build = linked_to(current) == version && same_file(host / exe_name(\"gm\"), current / exe_name(\"gm\")) &&\n                            same_file(host / exe_name(\"gm-core\"), current / exe_name(\"gm-core\"));\n",
+    "to": "    const bool same_build = linked_to(current) == version;\n",
+    "count": 1
+   }
+  ]
+ },
+ {
+  "id": "red-stamp-tree",
+  "witness": "check-stamp-tree",
+  "file": "cmake/gmnew_stamp.cmake",
+  "edits": [
+   {
+    "from": "--all -- native defaults",
+    "to": "--all --dry-run -- native defaults",
+    "count": 1
+   }
+  ]
+ },
+ {
+  "id": "red-installed-stamp",
+  "witness": "check-installed-stamp",
+  "file": "native/components/tool/installed.cpp",
+  "edits": [
+   {
+    "from": "    const std::string tree_hash = checkout_stamp(root);\n",
+    "to": "    const std::string tree_hash = std::string(12, '0');\n",
+    "count": 1
+   }
+  ]
+ }
+]
