@@ -5346,3 +5346,15 @@ The named macOS list after this change (9): check-handover-in-flight check-updat
 - `PHASE_B_STUBS_LINUX` and `PHASE_B_STUBS_MACOS` are workflow env (named lists, not comments). The build job's Test step tees the phase-b output to `$RUNNER_TEMP/phase-b.log` (pipefail keeps gm-tool's exit code), and a new step `The stubbed checks are the named list` fails when the stubbed set in the summary line differs from the list for the runner.
 - Witness: the step's `run` text, extracted from release.yml, run against real CI logs (`/tmp/phase-d-72/test-stubstep.py`): Linux log of run 44830730143 (4 stubs): RC 0. macOS log of run 44846084565 arm64 (12 stubs): RC 1, the stubbed set listed. The same macOS log with the summary line rewritten to the new named list: RC 0.
 - Red: the real macOS log is the red (RC 1, 12 stubs against the 9 named). A committed mutation is not used here: the step has no build dependency.
+
+### 6. check-browser-first-open (arm64-macos, run 44822286140): diagnostic, cause not yet known
+
+- CI line: `check-browser-first-open: 2 failure(s)`: `there was no gate to stop after the first open`; `the page was not open after the gate restarted: WITNESS open=false pages=[about:blank] contexts=[1] executorIndex=-1` with the status block `gate pid 32993 port 19150 ... browser running pid 32998 (gate), leases 1`.
+- The first line comes from `still_ours(own(gate pid from status --json))` failing: the gate pid parsed from the status JSON is not verified as the same process by its start time. `proc::start_time_of` has a macOS path (sysctl KERN_PROC_PID), so the cause is not confirmed; the status block shows the gate alive at the end of that run, which the identity check should not reject.
+- Change: the failure names the parsed gate pid, its start value, and the first 300 characters of the status text. The next macOS run shows which value is wrong. Status left open.
+- Witness (Linux, release build `079dac3-1`, clean): ok (gate SIGKILL: next call reached the open page true; closed true).
+- Red (`/tmp/phase-d-72/mutate-bfo.py`, the gate key renamed so the pid does not parse): RED_RC 1, "there was no gate to stop after the first open: gate pid 0, start 0; status: {", RESTORED_cmp=True, HEAD back at 079dac3 with 0 changed files, AFTER_RC 0.
+
+### 7. check-browser-tabs-owner
+
+- The last three macOS runs (44822286140 both macOS jobs, 44830730143 arm64, 44846084565 both) show `ok` (14.9 s, 19.0 s, 51.5 s, 65.7 s). No failing line for it was found in the logs read this round, so no change is made; it stays on the watch list.
