@@ -293,6 +293,30 @@
   ]
  },
  {
+  "id": "red-vendor-extras-pin",
+  "witness": "check-txiki-vendor",
+  "file": "tools/txiki/pins.json",
+  "edits": [
+   {
+    "from": "60a9b67e8b8364d8",
+    "to": "60a9b67e8b8364d0",
+    "count": 1
+   }
+  ]
+ },
+ {
+  "id": "red-extras-gm-include",
+  "witness": "check-txiki-extras-standalone",
+  "file": "tools/txiki/extras/core_extras.cpp",
+  "edits": [
+   {
+    "from": "#include \"core_extras.hpp\"\n",
+    "to": "#include \"core_extras.hpp\"\n#include \"gm/proc.hpp\"\n",
+    "count": 1
+   }
+  ]
+ },
+ {
   "id": "red-worker-data",
   "witness": "check-txiki-core-extras",
   "file": "native/third_party/txiki/txiki/src/worker.c",

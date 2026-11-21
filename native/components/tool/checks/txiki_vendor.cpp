@@ -54,7 +54,7 @@ CheckResult check_txiki_vendor(const std::string&) {
         return result;
     }
     const std::string version = support::read_text(vendored / "VERSION.txt");
-    for (const char* group : {"archives", "patches"}) {
+    for (const char* group : {"archives", "patches", "hostExtras"}) {
         const json::Value* entries = pins->find(group);
         if (entries == nullptr || !entries->is_array()) {
             result.failures.push_back(std::string("pins.json has no ") + group);
@@ -63,13 +63,14 @@ CheckResult check_txiki_vendor(const std::string&) {
         for (const json::Value& entry : entries->as_array()) {
             const std::string pinned = text_at(entry, "sha256");
             if (std::string(group) == "archives" && !support::contains(version, pinned)) result.failures.push_back("VERSION.txt does not name the pinned archive " + text_at(entry, "name"));
-            if (std::string(group) == "patches") {
-                const std::string actual = support::file_sha256(root / "tools" / "txiki" / "patches" / text_at(entry, "file"));
-                if (actual != pinned) result.failures.push_back("patch " + text_at(entry, "file") + " has sha256 " + actual + ", the pin says " + pinned);
+            if (std::string(group) != "archives") {
+                const char* directory = std::string(group) == "patches" ? "patches" : "extras";
+                const std::string actual = support::file_sha256(root / "tools" / "txiki" / directory / text_at(entry, "file"));
+                if (actual != pinned) result.failures.push_back(std::string(group) + " " + text_at(entry, "file") + " has sha256 " + actual + ", the pin says " + pinned);
             }
         }
     }
-    if (result.failures.empty()) result.summary = std::to_string(recorded) + " vendored files match native/third_party/txiki/MANIFEST.sha256, none is missing or extra, and the archive and patch pins agree with VERSION.txt and the patch files";
+    if (result.failures.empty()) result.summary = std::to_string(recorded) + " vendored files match native/third_party/txiki/MANIFEST.sha256, none is missing or extra, and the archive pins agree with VERSION.txt, and the patch and host extras pins agree with their files";
     return result;
 }
 

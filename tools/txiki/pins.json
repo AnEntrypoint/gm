@@ -196,6 +196,16 @@
       ]
     }
   ],
+  "hostExtras": [
+    {
+      "file": "core_extras.cpp",
+      "sha256": "4654d2654b9b6d6b947cfd1211971d4284d3e7ed449c0ccec1474bfede19cf3a"
+    },
+    {
+      "file": "core_extras.hpp",
+      "sha256": "60a9b67e8b8364d8ffa993f13f5794ff2f363aecb0fb4bc441cae8327b14da01"
+    }
+  ],
   "patches": [
     {
       "file": "txiki-gm.patch",

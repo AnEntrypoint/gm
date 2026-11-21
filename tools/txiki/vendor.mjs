@@ -10,6 +10,7 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const PINS = JSON.parse(readFileSync(join(HERE, 'pins.json'), 'utf8'));
 const SELECT = PINS.selections;
 const PATCH_DIR = join(HERE, 'patches');
+const EXTRAS_DIR = join(HERE, 'extras');
 const MANIFEST = 'MANIFEST.sha256';
 const GENERATED = ['txiki', 'libuv', 'quickjs', ...new Set(PINS.extras.map((entry) => entry.to.split('/')[0])), 'VERSION.txt', MANIFEST];
 const LICENSE_NAME = /^(LICENSE|LICENSE-.*|COPYING)(\.txt|\.md)?$/i;
@@ -26,6 +27,7 @@ const options = (() => {
     glue: given.includes('--glue') ? resolve(valueOf('--glue')) : null,
     browser: given.includes('--browser'),
     verify: given.includes('--verify'),
+    extras: given.includes('--extras') ? resolve(valueOf('--extras')) : null,
   };
 })();
 
@@ -154,7 +156,18 @@ function versionText(counts, target) {
   ].join('\n');
 }
 
-if (options.verify) {
+function copyHostExtras(to) {
+  mkdirSync(to, { recursive: true });
+  for (const entry of PINS.hostExtras) {
+    mustMatch('extras/' + entry.file, sha256Of(join(EXTRAS_DIR, entry.file)), entry.sha256);
+    cpSync(join(EXTRAS_DIR, entry.file), join(to, entry.file));
+  }
+  console.log('vendor-txiki: wrote ' + PINS.hostExtras.length + ' host extras under ' + relative(process.cwd(), to));
+}
+
+if (options.extras) {
+  copyHostExtras(options.extras);
+} else if (options.verify) {
   verify(options.target);
 } else {
   for (const patch of PINS.patches) mustMatch('patch ' + patch.file, sha256Of(join(PATCH_DIR, patch.file)), patch.sha256);
