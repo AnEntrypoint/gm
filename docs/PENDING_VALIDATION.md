@@ -5305,3 +5305,12 @@ Commits this part (local, lanmower, no trailers): 6d73245 (txiki detached), 57ca
 - Change: `call` forwards `job_status` unchanged; the constant is removed. New check `check-job-status-wait` (`native/components/tool/checks/job_status_wait.cpp`): a 1 s job returns exited in about 1 s, and a `waitMs` of 84000 on a running job takes at least 83000 ms and reports running.
 - Witness (Linux, build/rel-72): ok, "84 s asked, 84001 ms taken", "1007 ms for a job that ends at once".
 - Red (`/tmp/phase-d-72/specs-a2.json`): the 80 s clamp restored in `call`. BUILD_MUT=0 RED_RC=1 ("returned after 80000 ms"), RESTORED_cmp=True, BUILD_RESTORE=0, AFTER_RC=0.
+
+### 3. the updater logs every cycle that changes nothing
+
+- Cause: `Relay::update_loop` logged only errors, `kept`, `refused` and `updated`. A cycle that ended `already current` (manifest commit is this build's HEAD, a 304, a recent check, or an unchanged asset) logged nothing, so the relay log could not show that a cycle ran.
+- Change: `UpdateResult` gains `manifest` (the published version read this cycle, or the last one read from the update state). `Relay::update_loop` logs `update checked: current is <from>, manifest is <manifest>` when the policy is enabled and the cycle changed nothing; the `kept`, `refused`, `updated` and `update skipped` lines are unchanged. The check is guarded by `policy.enabled`, so a disabled policy (which runs an empty cycle every 2 s) logs nothing new.
+- New check `check-update-checked` (`native/components/tool/checks/update_checked.cpp`, registered; no Linux-only dependency, so it runs on macOS too): starts `serve` with a `file://` manifest whose commit is HEAD and version is `ffff444-5`, and waits up to 60 s for `update checked: current is <version of the build>, manifest is ffff444-5` in the run's `relay.log`. Skipped on a development build, as relay_reexec is.
+- Witness (Linux, release build `5534b49-1`, state clean): ok, "update checked: current is 5534b49-1, manifest is ffff444-5".
+- Red (script `/tmp/phase-d-72/red-commit.sh` with `mutate-updated-line.py`: the branch removed, as a temporary commit): MUT_CFG_RC 0, kBuildState clean, RED_RC 1 ("no relay.log line ... within 60 s; the relay log says: ... started"). RESTORED_cmp=True, HEAD back at 5534b49 with 0 changed files, RESTORE_BUILD_RC 0, AFTER_RC 0.
+- Note: a build whose policy is disabled (unpushed HEAD, dirty tree) logs no cycle line, by design; the witness runs on a clean build.
