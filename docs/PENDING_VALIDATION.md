@@ -5501,3 +5501,7 @@ In /tmp/phase-d-74/window74.sh the ORIGIN_START line ran before say() existed. /
 - Witness (Linux, release build f8a0f2f-1, clean): ok; check-update-checked now runs a third relay on an install whose state has a recent check and an etag but no manifest. Red (/tmp/phase-d-74/mutate-unknown.py, both guards restored, temporary commit): RED_RC 1, the third relay logs no line. RESTORED_cmp=True, HEAD back at f8a0f2f, 0 changed files, AFTER_RC 0.
 - f8a0f2f was made after the window, so it has not been through a window; it is not pushed.
 - Release run 44874352458 (push d6030f6), read at 06:28:50 UTC: in_progress. Windows x64 and arm64, Linux x64 and arm64, and macOS arm64 (136755639969): success. macOS x64 (136755639950): in progress.
+
+### 23. The release run for d6030f6
+
+Read at 06:37:05 UTC after a bounded wait: run 44874352458 completed, conclusion success. All six build jobs (Linux x64 and arm64, macOS x64 136755639950 and arm64 136755639969, Windows x64 and arm64) and publish: success. No failing job. check-update-stream and check-relay-reexec now pass on macOS, which confirms the target derivation (section 17).
