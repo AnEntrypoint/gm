@@ -35,6 +35,21 @@ steps.legacyAll = (await gm.prd_list({ status: 'all' })).output;
 steps.unknownOpen = (await gm.unknown_list({ status: 'open' })).output;
 steps.badStatus = (await gm.prd_list({ status: 'bogus' })).error;
 steps.noTitle = (await gm.prd_add({})).error;
+const probe = await gm.prd_add({ title: 'receipt probe' });
+const probeId = String(probe.output);
+const probeReceipt = await gm.prd_receipt({ id: probeId, witness: 'delivered sha', commit: 'abcdef0' });
+const probeFile = String((await gm.read_file({ path: 'work/rows/' + probeId + '.yml' })).output);
+const probeList = String((await gm.prd_list({ status: 'all' })).output);
+const probeClose = await gm.stat_file({ path: 'closes/' + probeId + '.txt' });
+steps.receiptRow = { ok: probeReceipt.ok === true, receipts: probeFile.includes('receipts'), witness: probeFile.includes('delivered sha'), commit: probeFile.includes('abcdef0'), count: probeList.includes('[receipts:1]'), noClose: probeClose.ok === false };
+const kept = await gm.prd_add({ title: 'refute probe', body: 'status: refuted\nverdict: needs-design\nnotes: keep me' });
+const keptId = String(kept.output);
+const keptRefuted = await gm.prd_refute({ id: keptId, reason: 'needs design', verdict: 'needs-design', notes: 'preserve this note', witness: 'receipt' });
+const keptRefutedList = String((await gm.prd_list({ status: 'refuted' })).output);
+const keptReopened = await gm.prd_reopen({ id: keptId, from: 'refuted', reason: 'design ready' });
+const keptOpenList = String((await gm.prd_list({ status: 'open' })).output);
+const keptFile = String((await gm.read_file({ path: 'work/rows/' + keptId + '.yml' })).output);
+steps.reopenedRow = { refuted: keptRefuted.ok === true, listedRefuted: keptRefutedList.includes(keptId), reopened: keptReopened.ok === true, listedOpen: keptOpenList.includes(keptId), status: keptFile.includes('status: "open"'), notes: keptFile.includes('preserve this note'), verdict: keptFile.includes('needs-design'), witness: keptFile.includes('receipt') };
 return JSON.stringify(steps);
 )js";
 
@@ -92,9 +107,11 @@ CheckResult check_rows(const std::string& binary) {
     expect(contains(text, "\"unknownOpen\":\"") && !contains(text, "\"unknownOpen\":\"legacy-no-kind"), "unknown_list open claimed a legacy work item");
     expect(contains(text, "\"badStatus\":\"") && contains(text, "status must be one of"), "prd_list accepted an unknown status");
     expect(contains(text, "\"noTitle\":\"title must be a non-empty string\""), "prd_add accepted a missing title");
+    expect(contains(text, "\"receiptRow\":{\"ok\":true,\"receipts\":true,\"witness\":true,\"commit\":true,\"count\":true,\"noClose\":true}"), "a receipt did not keep the row open with its witness, its commit and one receipt, or it wrote a close record");
+    expect(contains(text, "\"reopenedRow\":{\"refuted\":true,\"listedRefuted\":true,\"reopened\":true,\"listedOpen\":true,\"status\":true,\"notes\":true,\"verdict\":true,\"witness\":true}"), "a refuted row did not reopen with its status open and its notes, verdict and witness kept");
     expect(std::filesystem::exists(workspace / "closes"), "prd_resolve wrote no closes record");
     std::error_code ignored;
-    result.summary = "add, list, park, reopen, receipt, refute, delete, resolve and the question verbs answer as the leaf did";
+    result.summary = "add, list, park, reopen, receipt, refute, delete, resolve and the question verbs answer as the leaf did, a receipt keeps the row open with its witness and commit and no close record, and a refuted row reopens with its status, notes, verdict and witness kept";
     std::filesystem::remove_all(sandbox, ignored);
     return result;
 }

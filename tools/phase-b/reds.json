@@ -341,6 +341,18 @@
   ]
  },
  {
+  "id": "red-row-notes",
+  "witness": "check-rows",
+  "file": "native/components/verbs/rows.cpp",
+  "edits": [
+   {
+    "from": "{\"verdict\", \"notes\", \"witness\"}",
+    "to": "{\"verdict\", \"witness\"}",
+    "count": 1
+   }
+  ]
+ },
+ {
   "id": "red-worker-data",
   "witness": "check-txiki-core-extras",
   "file": "native/third_party/txiki/txiki/src/worker.c",
