@@ -5340,3 +5340,9 @@ The named macOS list after this change (9): check-handover-in-flight check-updat
 - Red (`/tmp/phase-d-72/mutate-digest.py`, helper returns an empty digest; check-update-stream): BUILD_MUT 0, RED_RC 1 ("could not hash the archive or read HEAD of the checkout"), RESTORED_cmp=True, HEAD back at a996adc, AFTER_RC 0.
 - Red (`/tmp/phase-d-72/mutate-dead.py`, expected closedPages 2; check-browser-dead-executor): RED_RC 1 ("finish on a restarted serve did not close the page the dead executor opened: {ok:true,closedPages:1}"), RESTORED_cmp=True, AFTER_RC 0.
 - The macOS result of the three enabled checks is for the next macOS run; it is not verified here.
+
+### 5. the stubbed checks: a named list, enforced in release.yml
+
+- `PHASE_B_STUBS_LINUX` and `PHASE_B_STUBS_MACOS` are workflow env (named lists, not comments). The build job's Test step tees the phase-b output to `$RUNNER_TEMP/phase-b.log` (pipefail keeps gm-tool's exit code), and a new step `The stubbed checks are the named list` fails when the stubbed set in the summary line differs from the list for the runner.
+- Witness: the step's `run` text, extracted from release.yml, run against real CI logs (`/tmp/phase-d-72/test-stubstep.py`): Linux log of run 44830730143 (4 stubs): RC 0. macOS log of run 44846084565 arm64 (12 stubs): RC 1, the stubbed set listed. The same macOS log with the summary line rewritten to the new named list: RC 0.
+- Red: the real macOS log is the red (RC 1, 12 stubs against the 9 named). A committed mutation is not used here: the step has no build dependency.

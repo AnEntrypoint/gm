@@ -20,6 +20,8 @@ permissions:
 env:
   RELEASE_REPO: AnEntrypoint/gm
   GMNEW_AUTO_UPDATE: "0"
+  PHASE_B_STUBS_LINUX: "check-asan-retention witness-windows-cmd witness-windows-tree-kill witness-windows-playwriter"
+  PHASE_B_STUBS_MACOS: "check-handover-in-flight check-update-order check-stamp-tree check-install-build-id check-body-reexec check-asan-retention witness-windows-cmd witness-windows-tree-kill witness-windows-playwriter"
 
 jobs:
   build:
@@ -109,8 +111,20 @@ jobs:
           if [ -n "$CHECKS" ]; then
             build/${{ matrix.preset }}/native/components/tool/gm-tool check build/${{ matrix.preset }}/native/components/host/gm $CHECKS
           else
-            build/${{ matrix.preset }}/native/components/tool/gm-tool phase-b build/${{ matrix.preset }}
+            build/${{ matrix.preset }}/native/components/tool/gm-tool phase-b build/${{ matrix.preset }} | tee "$RUNNER_TEMP/phase-b.log"
           fi
+      - name: The stubbed checks are the named list
+        if: inputs.checks == ''
+        shell: bash
+        run: |
+          if [ "$RUNNER_OS" = macOS ]; then expected="$PHASE_B_STUBS_MACOS"; else expected="$PHASE_B_STUBS_LINUX"; fi
+          got=$(grep -o 'stubbed ([^)]*)' "$RUNNER_TEMP/phase-b.log" | tail -n 1 | sed 's/^stubbed (//; s/)$//; s/, /\n/g' | sort | tr '\n' ' ' || true)
+          want=$(printf '%s\n' $expected | sort | tr '\n' ' ')
+          if [ "$got" != "$want" ]; then
+            echo "stubbed checks [$got] differ from the named list [$want]"
+            exit 1
+          fi
+          echo "stubbed checks match the named list: [$want]"
       - name: Replay witness
         if: matrix.target == 'x64-linux'
         shell: bash
