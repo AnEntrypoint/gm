@@ -15,11 +15,6 @@ namespace {
 
 namespace fs = std::filesystem;
 
-std::string trimmed(std::string text) {
-    while (!text.empty() && (text.back() == '\n' || text.back() == '\r' || text.back() == ' ')) text.pop_back();
-    return text;
-}
-
 std::vector<fs::path> files_under(const fs::path& dir) {
     std::vector<fs::path> files;
     std::error_code ec;
@@ -32,13 +27,24 @@ std::vector<fs::path> files_under(const fs::path& dir) {
 
 }
 
+std::string checkout_stamp(const std::filesystem::path& root) {
+    const fs::path index = fs::temp_directory_path() / ("gm-checkout-stamp-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()) + ".index");
+    const std::string env = "GIT_INDEX_FILE=" + index.string();
+    const auto read = proc::run({"env", env, "git", "read-tree", "HEAD"}, root, {}, 120000);
+    const auto add = proc::run({"env", env, "git", "add", "--all", "--", "native", "defaults"}, root, {}, 120000);
+    const auto write = proc::run({"env", env, "git", "write-tree"}, root, {}, 120000);
+    std::error_code ec;
+    fs::remove(index, ec);
+    if (!read.started || read.exit_code != 0 || !add.started || add.exit_code != 0 || !write.started || write.exit_code != 0) return {};
+    std::istringstream words(write.out);
+    std::string tree;
+    words >> tree;
+    const auto digest = proc::run({"sh", "-c", "printf %s " + tree + " | sha256sum"}, root, {}, 30000);
+    return digest.out.substr(0, 12);
+}
+
 std::vector<std::string> install_differences(const std::filesystem::path& root, const std::filesystem::path& current) {
-    std::string trees;
-    for (const char* dir : {"native", "defaults"}) {
-        trees += trimmed(git_output(root, {"rev-parse", std::string("HEAD:") + dir}).value_or(std::string()));
-    }
-    const auto hashed = proc::run({"sha256sum"}, root, trees, 30000);
-    const std::string tree_hash = hashed.out.substr(0, 12);
+    const std::string tree_hash = checkout_stamp(root);
     const std::string expected = tree_hash + "-dev";
     const auto version = proc::run({(current / "gm").string(), "--version"}, root, {}, 30000);
     std::istringstream words(version.out);
