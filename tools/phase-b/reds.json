@@ -353,6 +353,42 @@
   ]
  },
  {
+  "id": "red-redaction-password",
+  "witness": "check-redaction",
+  "file": "native/components/log/log.cpp",
+  "edits": [
+   {
+    "from": "\"apikey\", \"password\"};",
+    "to": "\"apikey\"};",
+    "count": 1
+   }
+  ]
+ },
+ {
+  "id": "red-serve-exit",
+  "witness": "check-serve-exit",
+  "file": "native/components/host/serve.cpp",
+  "edits": [
+   {
+    "from": "if (!max_inflight) {",
+    "to": "if (false) {",
+    "count": 1
+   }
+  ]
+ },
+ {
+  "id": "red-inflight-cap",
+  "witness": "check-inflight-cap",
+  "file": "native/components/mcp/server.cpp",
+  "edits": [
+   {
+    "from": "const int limit = std::max(1, options.max_inflight.value_or(std::numeric_limits<int>::max()));",
+    "to": "const int limit = std::numeric_limits<int>::max();",
+    "count": 1
+   }
+  ]
+ },
+ {
   "id": "red-worker-data",
   "witness": "check-txiki-core-extras",
   "file": "native/third_party/txiki/txiki/src/worker.c",
