@@ -80,4 +80,20 @@ inline fs::path fresh_sandbox(const std::string& label) {
     return sandbox;
 }
 
+inline std::string stage_install(const fs::path& host, const fs::path& repo, const fs::path& install) {
+    std::error_code ec;
+    fs::create_directories(install, ec);
+    for (const char* name : {"gm", "gm-core"}) {
+        fs::copy_file(host / name, install / name, fs::copy_options::overwrite_existing, ec);
+        if (ec) return std::string("could not stage ") + name + ": " + ec.message();
+    }
+    for (const char* name : {"leaves", "skills", "defaults"}) {
+        const fs::path from = fs::exists(host / name) ? host / name : repo / (std::string(name) == "leaves" ? "native/leaves" : name);
+        fs::copy(from, install / name, fs::copy_options::recursive | fs::copy_options::overwrite_existing, ec);
+        if (ec) return std::string("could not stage ") + name + ": " + ec.message();
+    }
+    return {};
 }
+
+}
+

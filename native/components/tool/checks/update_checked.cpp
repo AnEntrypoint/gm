@@ -1,5 +1,6 @@
 #include "gm/proc.hpp"
 #include "gm/tool.hpp"
+#include "support.hpp"
 
 #include <chrono>
 #include <filesystem>
@@ -77,22 +78,10 @@ CheckResult check_update_checked(const std::string& binary) {
     fs::create_directories(install, ec);
     fs::create_directories(home, ec);
     fs::create_directories(workspace, ec);
-    for (const char* name : {"gm", "gm-core"}) {
-        fs::copy_file(host / name, install / name, fs::copy_options::overwrite_existing, ec);
-        if (ec) {
-            result.failures.push_back(std::string("could not stage ") + name + ": " + ec.message());
-            fs::remove_all(scratch, ec);
-            return result;
-        }
-    }
-    for (const char* name : {"leaves", "skills", "defaults"}) {
-        const fs::path from = fs::exists(host / name) ? host / name : repo / (std::string(name) == "leaves" ? "native/leaves" : name);
-        fs::copy(from, install / name, fs::copy_options::recursive | fs::copy_options::overwrite_existing, ec);
-        if (ec) {
-            result.failures.push_back(std::string("could not stage ") + name + ": " + ec.message());
-            fs::remove_all(scratch, ec);
-            return result;
-        }
+    if (const std::string error = support::stage_install(host, repo, install); !error.empty()) {
+        result.failures.push_back(error);
+        fs::remove_all(scratch, ec);
+        return result;
     }
     const json::Value manifest = json::Object{
         {"version", offered},
