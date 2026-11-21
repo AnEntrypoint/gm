@@ -1179,6 +1179,8 @@ typedef enum JSPromiseHookType {
 typedef void JSPromiseHook(JSContext *ctx, JSPromiseHookType type,
                            JSValueConst promise, JSValueConst parent_promise,
                            void *opaque);
+JS_EXTERN void JS_SetAsyncFrame(JSContext *ctx, JSValueConst frame);
+JS_EXTERN JSValue JS_GetAsyncFrame(JSContext *ctx);
 JS_EXTERN void JS_SetPromiseHook(JSRuntime *rt, JSPromiseHook promise_hook,
                                  void *opaque);
 
