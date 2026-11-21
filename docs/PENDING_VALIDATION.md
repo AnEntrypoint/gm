@@ -5692,3 +5692,9 @@ Ranked open work:
 
 - phase-b7 (tree 0373a4b, with the G10 patch): 131 of 131 witnesses ok, but the parity probe failed (PARITY_FAILED): freddie's own corpus, run against the build, reported one mismatch, "dns.promises.lookup of localhost for family 4 lists only loopback entries of family 4", because the fix made tjs.lookup return ::1 and freddie's adapter does not pass the family. I stopped the window by PID in its reds phase (29 processes, tree clean afterwards), reverted the G10 commit (a98321d) and asked the dispatcher to relay the one-line adapter change to freddie. Not pushed.
 - phase-b8 (tree cbab313): queued about 2 h 20 min behind bevy, signal and thebird windows, ran 22:56:08 to 23:39:08 UTC (43 min). 131 of 131 witnesses ok (the three new native checks, check-redaction, check-serve-exit and check-inflight-cap, among them), parity ok (PARITY_RC=0, PARITY_OK), 36 of 36 reds failed as they must (the new red-row-notes, red-redaction-password, red-serve-exit and red-inflight-cap among them), HEAD_END cbab313, working tree clean, no rerun of any row.
+
+### 41. G10 re-applied (revert of a98321d)
+
+- Condition met: freddie 9f0f8307 (on freddie's origin/main and in the /workspace/freddie checkout the parity probe reads) passes the family to tjs.lookup, so family 6 works and family 4 stays IPv4-only.
+- Commit 2db01da is git revert of a98321d: the dns-flags patch in the shared pins, the 21st check-txiki-core-extras case (::1 and 127.0.0.1 resolve) and red-dns-addrconfig, all back together. The revert applied with no conflict.
+- Witness: check-txiki-core-extras and check-txiki-vendor alone, then one window whose parity probe runs freddie's localhost family 4 and family 6 cases against this build. Results in item 42.
