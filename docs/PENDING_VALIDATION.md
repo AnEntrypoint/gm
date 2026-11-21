@@ -5448,8 +5448,8 @@ These in-place reds mutate the tracked file without a commit, and the witness ch
 
 ### 16. The release run at 05:12:59 UTC, and its failing lines
 
-- Run 44868218617 (push a015bda) was still in_progress. Jobs: Linux x64 and arm64, Windows x64 and arm64: success. macOS arm64: failure. macOS x64: in progress.
-- macOS arm64 job 136736607158 (log via gh api repos/AnEntrypoint/gm/actions/jobs/136736607158/logs, saved to /tmp/phase-d-74/macos-arm64-job.log):
+- Run 44868218617 (push a015bda) was still in_progress. Jobs: Linux x64 and arm64, Windows x64 and arm64: success. macOS (x64, job 136736607158): failure at this read. macOS arm64 (136736607218): failure. See section 18.
+- macOS x64 job 136736607158 (labelled arm64 here by mistake; corrected in section 17) (log via gh api repos/AnEntrypoint/gm/actions/jobs/136736607158/logs, saved to /tmp/phase-d-74/macos-arm64-job.log):
   - check-txiki-spawn-stdio: ok (0.3 s). This is the first macOS run with the /bin/sh change, and it passes. That is consistent with the /bin/true belief, not proof of it.
   - check-update-stream: FAILED, 2 failures: "the manifest has no build for x64-macos".
   - check-relay-reexec: FAILED, 5 failures: the same "the manifest has no build for x64-macos", so the relay never re-executed.
@@ -5457,3 +5457,26 @@ These in-place reds mutate the tracked file without a commit, and the witness ch
   - Totals: 123 run, 2 failed, 0 passed alone after a pool failure, 9 stubbed (the named list), wall 902 s.
 - Cause of the two failures: both witnesses hard-code kPlatformTarget = "x64-linux" (native/components/tool/checks/update_stream.cpp:31 and relay_reexec.cpp:32). The updater asks the manifest for the platform's target, which is x64-macos on this host. These are fixture defects in the newly enabled checks, not product failures. The fix (derive the target name from the platform, as the updater does) is local work; it is not pushed.
 - The updater line from the live relay (section 15) carries the defect described there.
+
+### 17. One derivation of the manifest target name
+
+- Cause of the macOS failures in section 16: five witnesses (update_stream, relay_reexec, update_order, handover_in_flight, body_reexec) hard-coded x64-linux or arm64-linux. Both macOS jobs (x64-macos 136736607158, arm64-macos 136736607218) failed check-update-stream and check-relay-reexec with "the manifest has no build for <target>". Section 16 called job 136736607158 arm64; it is x64-macos. The arm64 job 136736607218 fails the same two checks.
+- Change (c249f88): native/include/gm/target.hpp holds the six manifest keys (kTargets), target_key(os, arch) and platform_target(). update.cpp target_name, release.cpp's expected list and the five witnesses use it. New witness check-target-names.
+- Witness (Linux, release build c249f88-1, clean): ok. It feeds the six OS and architecture pairs through target_key and compares each to its manifest key, checks that riscv and an unknown OS give "unknown", and scans update.cpp, release.cpp and every checks/*.cpp for a quoted target literal and for gm::platform_target() in the five witnesses. check-update-stream and check-relay-reexec pass on Linux with the derived value.
+- Red (/tmp/phase-d-74/mutate-literal.py, the literal "x64-linux" restored in update_stream.cpp, temporary commit): MUT_BUILD_RC 0, kBuildState clean, RED_RC 1, "update_stream.cpp names the target \"x64-linux\" as a literal; use gm::platform_target()". RESTORED_cmp=True, HEAD back at c249f88 with 0 changed files, AFTER_RC 0.
+- Open: the macOS result for check-update-stream and check-relay-reexec comes only from the next release run.
+
+### 18. The second status read of run 44868218617
+
+At 05:24:21 UTC: completed, conclusion failure. Linux x64 and arm64, Windows x64 and arm64: success. macOS x64 (136736607158) and macOS arm64 (136736607218): failure; publish: success. Each macOS job fails check-update-stream (2 failures) and check-relay-reexec (5 failures), all from "the manifest has no build for x64-macos" or "arm64-macos". check-txiki-spawn-stdio, check-browser-first-open and check-browser-tabs-owner pass on both. Each job reports 123 run, 2 failed, 9 stubbed.
+
+### 19. Open: the source of the "fetch origin --quiet" entries
+
+- Seen: refs/remotes/origin/main reflog entries "fetch origin --quiet: forced-update" about every 10 minutes from 02:00 to 04:39 on 2026-11-21, then none (checked again after 05:15).
+- Ruled out: the relay update path (update.cpp runs curl for the manifest and no git; git grep at fb59ddf finds no fetch there); any "origin --quiet" fetch in the current tree or at fb59ddf (git grep); the repository's git hooks (/config/.githooks has pre-commit and pre-push only); crontab and user timers (none); a git process during a 60-second sample at 05:2x (none seen). A 15-minute sampler was killed with its call and logged nothing.
+- Not ruled out: a peer session's script outside this tree. build-follow/hyperagent watch (PID 244710, cwd /workspace/hyperagent) was running; I found no evidence that it fetches this checkout.
+- Guard: check-update-checkout (section 10) and the window's origin guard (section 13).
+
+### 20. The window script defines say first
+
+In /tmp/phase-d-74/window74.sh the ORIGIN_START line ran before say() existed. /tmp/phase-d-74/window75.sh (generated by make-window75.py from window74.sh) defines say right after ALL=0, writes to runs/phase-d-75, and adds red-manifest and red-target to the committed reds.
