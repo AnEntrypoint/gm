@@ -5221,3 +5221,53 @@ Also in run 44830730143, arm64-linux passed. The release notice "update skipped:
 
 - The push gate requires every witness to pass. The CI failures listed above are not reproduced locally, and the stdio and browser causes are open, so nothing was pushed. `origin/main` stays at 47b571d.
 - Item 5 (reinstall, cycle check, peer report) is not done: the owner's approval covers the validated build, and this build is not validated until the Linux and macOS jobs pass.
+
+
+## Round 72, continued: the release configuration, the CI-only failures, the push
+
+Commits this part (local, lanmower, no trailers): 6d73245 (txiki detached), 57ca50e (relay-reexec witness), fc1197b (installed stamp). Each red check is run on build/rel-72, the release configuration, with GMNEW_VERSION=<short HEAD>-1 and GMNEW_AUTO_UPDATE=0; the Test env is HOME=/tmp/rel72-home (a sandbox install), PLAYWRITER_NO_SANDBOX=1, PLAYWRITER_BROWSER_PATH=/data/cache/bin/chromium.
+
+### A. check-txiki-spawn-detached: portable reader (macOS coverage kept)
+
+- Change (native/components/tool/checks/txiki_spawn_detached.cpp, commit 6d73245): the child runs `exec python3 -c "import os; print(os.getsid(0))"` into its file, so the printed session id is the pid's own session on Linux and macOS; the /proc read and the Linux-only gate are removed.
+- Witness: check-txiki-spawn-detached, ok on the dev and the release builds.
+- Red check (red-spawn-detached, harness red72.py): mutation `{ detached: true }` -> `{ detached: false }`. Result: BUILD_MUT 0, RED_RC 1 (1 failure), RESTORED_cmp True, BUILD_RESTORE 0, AFTER_RC 0.
+
+### B. check-relay-reexec on the release configuration
+
+- Reproduction (CI command line: `gm-tool check <gm> $CHECKS`, CHECKS='check-relay-reexec', env as above): on the release build at 6d73245-1 the check failed with 5 failures; the relay never reported the update. Cause: the release build records kBuildState "unpushed" (origin/main 47b571d, HEAD 6d73245), so policy_from_environment disables auto-update (update.cpp:407). That is correct for an unpushed build. To reproduce the CI state, the local remote-tracking ref was set to HEAD (`git update-ref refs/remotes/origin/main HEAD`) before each release build; the state then reads "clean". This is a local shim for the repro only; the git push updates the ref itself.
+- With state clean: the check passed 6 of 6 runs (the first before the fix, then 5 in a row); re-exec 40 to 160 ms after the update.
+- The CI failure at 47b571d (job 136614716810) read: "the relay re-executed only after the next_context wait had answered at 1621 ms ... the reply carried no events array". The saved reply has `recovery` ("This run resumed after a restart, at last seq 7"), which only the re-executed relay can produce. So the re-exec did happen before the answer; the witness ordered two timestamps taken on different threads: reexec_at from a 20 ms poll of stderr, held_at after the main thread processed the reply. Under load they inverted.
+- Fix (witness, commit 57ca50e): the order holds when the held answer is the resumed relay's own reply ("resumed after a restart"); the clock order remains the fallback.
+- Witness: check-relay-reexec ok on the release build (fc1197b-1: re-exec 80 ms after the update, the wait answered at 1.8 s).
+- Red check (red-relay-reexec, scripts /tmp/phase-d-72/red-relay.sh, mutate-relay.py): the mutation inserts `usleep(6000000);` before `say("re-executing the relay on the new build")` in native/components/host/relay.cpp. The mutation is committed as a temporary local commit, so the release build is clean, then reset away. Result: BUILD_MUT 0 with kBuildState clean, RED_RC 1 ("re-executed 6215 ms after the update while a 45000 ms next_context wait was in flight; the limit is 5000 ms"), RESTORED_cmp True, the temporary commit dropped (HEAD back to fc1197b, git status 0), AFTER_RC 0.
+- Note: a first red attempt with a `inflight_.empty()` mutation passed (re-exec 2.9 s after the update, inside the 5 s limit), so that is not a red for this witness; the delay mutation is.
+- Not reproduced: the clock inversion itself. In 5 release runs the re-exec marker came first each time.
+
+### C. check-run-code-lifetime, parity-contract (W6), check-idle-cpu on the release configuration
+
+- Reproduction: each failing check run alone with the CI command line on the release build passed (run-code-lifetime ok, parity-contract ok 18 of 18, idle-cpu ok). The full CI Test command `gm-tool phase-b build/rel-72` with the same env ran 120 checks; these three passed in that run too. So the release configuration alone does not reproduce them on this host.
+- What the CI logs show (kept in /tmp/phase-d-72/*.log): run-code-lifetime: the job status of the spin body reads state "killed" with no reason ("the spin body ended {..."state":"killed"...}"). Read in server.cpp: a lifetime kill sets the reason on the adopted path (line ~1791) and in stop_body (line ~1715), but stop_body returns before settling a non-adopted job, so that job's kill can settle without the reason. This is a product inconsistency, not yet fixed or reproduced; open.
+- parity-contract W6: "the full next_context reply lacks events". events is set only when the run has a task (feed_of, server.cpp ~2350) or the task is empty; a run that inherits a task from a sandbox run dir could differ. Not reproduced; open.
+- check-idle-cpu: CI's playwriter_execute returned an empty output (the reply had the placeholder and no second block). Local playwright-core 1.65.0 (CI's Chromium 158) would not download here: the download stalled at 30%, so it was stopped by PID (1124762 and its parents). The local run used the system Chromium 155 (/data/cache/bin/chromium). Open: the next CI run decides it.
+
+### D. Regression found by phase-b on the release build: check-installed-stamp
+
+- Cause: installed.cpp computed the expected stamp from HEAD:native and HEAD:defaults, the algorithm item 3 replaced. The witness reported "the checkout's native tree is 1a6e66c2cd73-dev" against the installed 57ca50e-1.
+- Fix (commit fc1197b): checkout_stamp() in installed.cpp (declared in tool.hpp) computes the stamp as cmake does: read-tree HEAD into a temporary index, add native and defaults, write-tree, sha256 of the tree id, 12 hex.
+- Witness: check-installed-stamp ok on the release build (fc1197b-1).
+- Red check (red-installed-stamp, harness red72.py, REDB=build/rel-72): mutation `checkout_stamp(root)` -> `std::string(12, '0')`. Result: BUILD_MUT 0, RED_RC 1 ("the checkout's native tree is 000000000000-dev"), RESTORED_cmp True, BUILD_RESTORE 0, AFTER_RC 0.
+
+### E. Phase-b on the release build (CI command line, env as above)
+
+- `gm-tool phase-b build/rel-72`: 120 checks run; before the fix in D, 1 check failed (check-installed-stamp, twice in the FAILED lines); the run reported a check changed tracked files (the uncommitted edits of D), and nothing was marked.
+- The four checks from the CI logs of this round passed in that run: parity-contract, check-idle-cpu, check-run-code-lifetime, check-relay-reexec (after B).
+
+### F. macOS-only items (open, not pushed on)
+
+- check-txiki-spawn-stdio on macOS: the detail now prints `no output: {...}` with the raw run_code reply (commit dee263e). The next macOS run shows the reply.
+- check-browser-first-open, check-browser-tabs-owner (arm64-macos): no change; open. Their CI details are in /tmp/phase-d-72/.
+
+### G. The push gate for this round
+
+- Gate: every witness and red check run in the Phase B window passes, including the release reproductions. The window and the push are recorded below.
