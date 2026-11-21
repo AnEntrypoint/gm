@@ -1,3 +1,4 @@
+#include "gm/target.hpp"
 #include "gm/host/update.hpp"
 #include "gm/file.hpp"
 
@@ -215,21 +216,7 @@ json::Value UpdateResult::to_json() const {
 }
 
 std::string target_name() {
-#if defined(_WIN32)
-    const char* os = "windows";
-#elif defined(__APPLE__)
-    const char* os = "macos";
-#else
-    const char* os = "linux";
-#endif
-#if defined(__x86_64__) || defined(_M_X64)
-    const char* arch = "x64";
-#elif defined(__aarch64__) || defined(_M_ARM64)
-    const char* arch = "arm64";
-#else
-    const char* arch = "unknown";
-#endif
-    return std::string(arch) + "-" + os;
+    return gm::platform_target();
 }
 
 std::string executable_name() {

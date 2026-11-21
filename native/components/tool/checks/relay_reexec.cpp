@@ -1,3 +1,4 @@
+#include "gm/target.hpp"
 #include "gm/tool.hpp"
 #include "support.hpp"
 
@@ -26,11 +27,7 @@ constexpr const char* kUpdatedMarker = "-> ffff111-9999999999";
 constexpr const char* kReexecMarker = "re-executing the relay";
 constexpr std::size_t kAnsweredChars = 2000;
 
-#if defined(__aarch64__)
-constexpr const char* kPlatformTarget = "arm64-linux";
-#else
-constexpr const char* kPlatformTarget = "x64-linux";
-#endif
+const std::string kPlatformTarget = gm::platform_target();
 
 std::string short_text(const std::string& text) {
     return text.substr(0, 300);

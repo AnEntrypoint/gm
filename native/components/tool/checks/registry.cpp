@@ -124,6 +124,7 @@ const std::vector<Registered>& checks() {
         {"check-job-status-wait", check_job_status_wait},
         {"check-update-checked", check_update_checked},
         {"check-update-checkout", check_update_checkout},
+        {"check-target-names", check_target_names},
         {"check-next-context-record", check_next_context_record},
         {"check-job-extended-wait", check_job_extended_wait},
         {"check-asan-retention", check_asan_retention},

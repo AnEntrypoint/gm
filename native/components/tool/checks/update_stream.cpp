@@ -1,3 +1,4 @@
+#include "gm/target.hpp"
 #include "gm/tool.hpp"
 #include "support.hpp"
 
@@ -25,11 +26,7 @@ constexpr long long kRunLimitMs = 60000;
 constexpr long long kStampLimitMs = 30000;
 constexpr std::int64_t kCommitStep = 1000;
 
-#if defined(__aarch64__)
-constexpr const char* kPlatformTarget = "arm64-linux";
-#else
-constexpr const char* kPlatformTarget = "x64-linux";
-#endif
+const std::string kPlatformTarget = gm::platform_target();
 
 struct Scratch {
     fs::path path;

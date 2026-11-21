@@ -1,3 +1,4 @@
+#include "gm/target.hpp"
 #include "gm/tool.hpp"
 
 #include <algorithm>
@@ -185,7 +186,7 @@ int release_manifest_command(const std::vector<std::string>& args) {
     }
 
     const std::regex target_pattern(R"((x64|arm64)-(linux|macos|windows))");
-    const std::vector<std::string> expected{"x64-linux", "arm64-linux", "x64-macos", "arm64-macos", "x64-windows", "arm64-windows"};
+    const std::vector<std::string> expected(gm::kTargets.begin(), gm::kTargets.end());
     json::Object assets;
     std::vector<std::string> sums;
     std::vector<std::string> rows;

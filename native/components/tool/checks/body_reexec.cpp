@@ -1,3 +1,4 @@
+#include "gm/target.hpp"
 #include "gm/tool.hpp"
 #include "support.hpp"
 
@@ -28,11 +29,7 @@ constexpr long long kWorkerLimitMs = 15000;
 constexpr const char* kReexecMarker = "re-executing the relay on the new build";
 constexpr const char* kWaitMarker = "re-executing waits for 1 running body job";
 
-#if defined(__aarch64__)
-constexpr const char* kPlatformTarget = "arm64-linux";
-#else
-constexpr const char* kPlatformTarget = "x64-linux";
-#endif
+const std::string kPlatformTarget = gm::platform_target();
 
 std::string first_word(const std::string& text) {
     const auto start = text.find_first_not_of(" \t\r\n");
