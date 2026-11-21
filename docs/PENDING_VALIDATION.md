@@ -1329,6 +1329,8 @@ Stale entries closed by code already on main (checked this pass):
 - rows.mjs commit message: src/rows.mjs:196 checks isRepository before naming "no commit X in the repository", so a non-repository root gets its own message (rank 4 of the old table).
 - f80cd46 leaf assertion: tools/check-run-code-budget.mjs requires `leaf.reply.background === undefined && status === 200` in the foreground (rank 5 of the old table).
 
+Superseded: item 39 holds the current status of G1 to G6 below.
+
 Open gaps, each with its cause:
 
 | # | Gap | Cause | Status |
@@ -5657,3 +5659,30 @@ What was missing in item 29 for fx: the exports lived in a C++ file that include
 - Ticket queued about 1 h 5 min behind fx and signal windows; window 18:53:19 to 19:37:51 UTC (about 44 min).
 - Witnesses: 128 of 128 ok, WITNESSES_DONE FAILED=0 (check-install-switch, install-build-id, parity-contract, build-handover, install-follows and skill-reload among them). Reds: 32 of 32 failed as they must, REDS_DONE FAILED=0, including red-install-offline. HEAD_END 0a3cc1b, working tree clean, origin-ref guard ORIGIN_SAME around the witnesses that read it.
 - Every row passed in this one window, with no rerun of any row.
+
+### 39. Ranked remaining work for gm, and what this stretch closed
+
+Read again before ranking: /workspace/hyperagent/specs/fx-freddie-txiki.md (gm owns the shared vendor step and the txiki gaps freddie's parity runs name; fx owns the host interface, networking, the HTTP and WebSocket server and the build of the engine; freddie owns its adapter) and freddie's ranked table at bd3279da (rows 1 to 10).
+
+Closed here, each a Phase A commit with its witness and red, all needing nothing from fx:
+- G10 tjs.lookup: mod_dns.c passed AI_ADDRCONFIG | AI_V4MAPPED to getaddrinfo. On a host whose only IPv6 address is the loopback, glibc then refuses an IPv6 literal with EAI_ADDRFAMILY (reproduced here: ::1 with family 0). Node's default is no flags. Patch tools/txiki/patches/txiki-dns-flags.patch in the shared pins (vendor run reproduced the tree byte for byte plus one VERSION line). Witness: a 21st case of check-txiki-core-extras (::1 resolves, 127.0.0.1 resolves). Red: red-dns-addrconfig, which is red only on a host without a global IPv6 address, as this one is. Hostname lookups still follow the host's resolver; getent here lists only 127.0.0.1 for localhost, so a hostname returning ::1 is the host's choice, not a gap.
+- Coverage that only Node scripts held, now native and in the window: check-redaction (eight secret shapes in the run log and the output artifacts; red-redaction-password), check-serve-exit (relay exit codes and messages for --max-inflight and --task, a missing workspace, and the valid flags; red-serve-exit), check-inflight-cap (an explicit --max-inflight 2 holds the third of three bodies, and no cap starts all three; red-inflight-cap), and two probes folded into check-rows (a receipt keeps the row open with its witness, commit and no close record; a refuted row reopens with notes, verdict and witness kept; red-row-notes). The Node check-inflight asserted a default cap of 8 that the caps-removed change took out, so it could only fail.
+- Removed as dead: tools/check-inflight.mjs, check-relay-exit.mjs, check-prd-receipt.mjs, check-prd-refuted-reopen.mjs, witness-redaction.mjs, tools/lib (three files nothing imported any more), tools/prefetch.mjs (a second copy of the pw pin, stuck at ebbba11 while the pin is bbcc988 in playwriter_pin.hpp) and the tracked .gm-new/mcp.json (pw#54466df through npx, read by nothing). Historical mentions in DESIGN.md, docs/NATIVE_PLAN.md, closes/ and work/ are records and stay.
+- Lines: Node witnesses and helpers removed 770 (tools/*.mjs 653 plus lib 127 less the one kept), native witnesses added 266 (redaction.cpp 74, serve_exit.cpp 64, inflight_cap.cpp 88, rows.cpp +26, txiki_core_extras.cpp +4 and the dns patch 13).
+
+The old gap rows G1 to G6 above (budget leaf, Windows CMD, Node replay, Node budget, shell-job lifetime, fx row) are from the Node era; their status now: G2 closed (release.yml has no continue-on-error), G3 closed (release.yml runs the native replay witness check-witness-next-context-replay), G4 obsolete (the Node run_code is gone), G6 is a row in fx's workspace and fx's to resolve. G1 and G5 stay open with the owner (below).
+
+Ranked open work:
+
+| rank | item | what closes it | whose |
+|---|---|---|---|
+| 1 | fx links the shared extras: freddie's rows 1, 2, 3, 5, 6 and 9 (spawnSync, vm contexts, AsyncLocalStorage, zstd, brotli, workerData) read "blocked on gm" until fx's engine has them | fx runs node tools/txiki/vendor.mjs and the --extras step, compiles core_extras.cpp with the pinned decoders, supplies its blocking spawn (or null), calls install; freddie's parity rows are the witness | waits on fx's host (recipe in item 35; nothing more for gm to build) |
+| 2 | G6 http.createServer with upgrade | the HTTP/1.1 parser and upgrade handling on tjs.listen and the adapter's streams, over fx's host sockets | waits on fx's host and freddie's adapter |
+| 3 | G8 inspector.Session | the one use is Runtime.evaluate; an adapter-side session over evaluation needs nothing from gm; a real inspector endpoint in QuickJS is a large addition and nothing in the spec asks for it | owner decision (adapter-side or a real endpoint) |
+| 4 | G9 module.stripTypeScriptTypes | a TypeScript stripper, which is a dependency choice as freddie's table says | owner decision |
+| 5 | The shared C++ (core_extras.cpp, the dns patch, the new native witnesses) has been built and witnessed on Linux only | one hosted release.yml run after the push shows the macOS and Windows builds (the witnesses that drive POSIX serve skip on Windows by design) | gm, checked once after the push |
+| 6 | Old G1: the budget check's catastrophic-regex probe measured up to 233 s on macOS x64 against a 400 s window | timings from one macOS CI run, then a window that scales or a deterministic probe | gm, waits on that CI run |
+| 7 | Old G5: shell-job lifetime equals the job_start cap so the lifetime reason is unreachable for shell jobs | a decision whether shell jobs get their own lifetime | owner decision |
+| 8 | tools/spawn.mjs (a spawn.co client with the owner's token path), tools/transcript-usage.mjs (reads /config/.claude/projects), tools/check-txiki-wasi-browser.{js,html} (a browser witness that needs a display) | keep or remove | owner decision; the browser witness also waits on a playwriter session with a display |
+| 9 | About 58 stream-* and 2 cwd-* directories in /workspace/tmp/gm that no gm source creates (names with six random characters, files such as readable-encoding.txt and marker.txt) | the session that owns them removes them | not gm's; reported to the dispatcher |
+| 10 | Simplification slice 3: research/ (16 files) and tasks/rewrite (17 files) are design notes with no code reference except DESIGN.md | a keep or fold decision per file, then deletion of what the record already holds | gm, no dependency; the rows data in work/ and closes/ is live and stays |
