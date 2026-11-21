@@ -236,11 +236,13 @@ CheckResult check_browser_first_open(const std::string& binary) {
             } else {
                 init_session(session);
                 session.body(exec_body(open_code(page_url)));
-                const Owned gate = own(first_number(status_of(launcher, sandbox, workspace), "\"gate\":\\s*\\{\\s*\"pid\":\\s*([0-9]+)"));
+                const std::string status_text = status_of(launcher, sandbox, workspace);
+                const long long gate_pid = first_number(status_text, "\"gate\":\\s*\\{\\s*\"pid\":\\s*([0-9]+)");
+                const Owned gate = own(gate_pid);
                 if (still_ours(gate)) {
                     ::kill(static_cast<pid_t>(gate.pid), SIGKILL);
                 } else {
-                    failures.push_back("there was no gate to stop after the first open");
+                    failures.push_back("there was no gate to stop after the first open: gate pid " + std::to_string(gate_pid) + ", start " + std::to_string(gate.start) + "; status: " + status_text.substr(0, 300));
                 }
                 std::this_thread::sleep_for(std::chrono::seconds(2));
                 const std::string after = session.body(exec_body(check_code(page_url)));
