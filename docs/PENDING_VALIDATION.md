@@ -5491,3 +5491,13 @@ In /tmp/phase-d-74/window74.sh the ORIGIN_START line ran before say() existed. /
 - Committed reds, all RED_RC 1 with RESTORED_cmp True: turn-economy, job-wait-bounded, update-checked, digest, dead-executor, browser-first-open, relay-reexec, collision, manifest, target.
 - In-place reds: five spec runs, each RC 0; their rows at the end of /tmp/phase-d-72/reds/summary.txt each show RED_RC 1.
 - WINDOW_END ALL=0.
+
+### 22. Push, reinstall at d6030f6, and the updater line
+
+- Push: git push origin main, "a015bda..d6030f6  main -> main", exit 0. git ls-remote origin main: d6030f654fa4e83b35f7fd184b30ee1de780a323 refs/heads/main. Commits since a015bda (5): all lanmower.
+- Install: gm install --local with HOME=/config, exit 0; current -> versions/d6030f6-1; check-installed-stamp ok.
+- The old session relay (399315) ended with SIGHUP at 05:40 UTC when its session closed; this session's relay (PID 1854642, run dir runs/2026-11-21-05-20-41-fdf140) re-executed on d6030f6-1 and logged, at 1795241548187: "update checked: current is d6030f6-1, manifest is unknown", and at 1795242400404 the same. Before the reinstall it logged "manifest is a015bda-1" (the installed version, the 2efb7c5 fix not yet installed).
+- Defect found: a fresh install records no manifest version, and its next cycles return early (checked_recently) or on a 304 and never parse a manifest, so the line stays unknown. Fix f8a0f2f, local, not pushed: with no manifest version recorded, the cycle skips the early return and sends no etag, so one full fetch fills it.
+- Witness (Linux, release build f8a0f2f-1, clean): ok; check-update-checked now runs a third relay on an install whose state has a recent check and an etag but no manifest. Red (/tmp/phase-d-74/mutate-unknown.py, both guards restored, temporary commit): RED_RC 1, the third relay logs no line. RESTORED_cmp=True, HEAD back at f8a0f2f, 0 changed files, AFTER_RC 0.
+- f8a0f2f was made after the window, so it has not been through a window; it is not pushed.
+- Release run 44874352458 (push d6030f6), read at 06:28:50 UTC: in_progress. Windows x64 and arm64, Linux x64 and arm64, and macOS arm64 (136755639969): success. macOS x64 (136755639950): in progress.
