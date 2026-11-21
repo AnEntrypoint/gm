@@ -5609,3 +5609,9 @@ All are exports of tjs:internal/core, added by native/components/quickjs/core_ex
 - Found by the window at 4e894ba (stopped by PID after 115 witnesses): check-install-follows and check-skill-reload failed with "playwriter bbcc988 installed, but these hooks are missing ... launcher CHROMIUM_ARGS_VARIABLE". Cause: both witnesses install against an offline fake playwriter whose fake git apply appends the old hook needle chromiumArgsFromEnv() to the launcher, and item 31 had changed the hook needle in install.cpp to CHROMIUM_ARGS_VARIABLE. Fix: native/components/tool/checks/install_follows.cpp (the fixture is shared) appends the new needle.
 - Also found: the host build directory's defaults copy never deleted a file removed from the source, so build/*/native/components/host/defaults still held the deleted launcher-chromium-args.diff. native/components/host/CMakeLists.txt now removes skills, leaves and defaults in the build directory before copying them. This was not the cause of the two failures (the witnesses read the checkout's defaults), but a developer build directory could install a removed patch.
 - Witness: check-install-follows and check-skill-reload alone, both ok (wall 6.5 s and 5.2 s); the window on the final tree follows.
+
+### 34. Window phase-b4 on f104a8f
+
+- Two earlier windows were stopped by PID and discarded: phase-b2 (Chromium socket path too long, items 32) and phase-b3 (the offline playwriter fixture carried the old hook needle, item 33). Neither was pushed.
+- phase-b4, one ticket through the gate (queued about 56 min behind peers, ran about 40 min): 127 of 127 witnesses ok, parity probe ok (check-read-parity), 29 of 29 committed reds failed as they must, origin-ref guard ORIGIN_SAME around every witness that reads it, working tree clean at HEAD_END f104a8f.
+- Scratch: every gm-tool run left nothing under its TMPDIR (check-scratch-root and its red).
