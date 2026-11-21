@@ -5636,3 +5636,10 @@ What was missing in item 29 for fx: the exports lived in a C++ file that include
 - Edit rule: changing either extras file needs its pins.json sha256 updated, the same as a patch.
 - Not done and named for fx: fx's blocking spawn function and the build.zig lines; freddie's row statuses ("blocked on gm") become reachable only after fx links the file.
 - Line ledger of this item: core_extras.cpp 334 to 344 lines (the seam and a local Scoped), core_extras.hpp 9 to 34, new core_extras_host.cpp 44, new txiki_extras_standalone.cpp 42, vendor.mjs +14, pins.json one section; the old C++ in the engine directory is gone.
+
+### 36. Window phase-b5 on 61b4222
+
+- Ticket queued about 43 minutes, window about 50 minutes (16:31:55 to 17:21:23).
+- Witnesses: 128 ran (127 plus the new check-txiki-extras-standalone); 127 ok and one failed: check-install-switch, "gm install --local failed:" with empty output. The row started 16:40:51 and ended at 16:42:51, exactly the 120000 ms limit of its install call (install_switch.cpp), while the host load average was above 6 and the install fetches pw bbcc988 from GitHub and runs npm ci. No code change touched the install path. Rerun alone on the same tree and build (HEAD 61b4222, kBuildState clean): ok in 11 s wall, the link moved from versions/61b4222-1 to switched-dev in 2506 ms. It is recorded as a load flake of the 120 s limit, not a defect; a follow-up (a limit that scales, or the pw install out of this witness) is left for a later stretch because an edit now would invalidate this window.
+- Reds: 31 of 31 failed as they must, including the three new ones (red-vendor-extras-pin, red-extras-gm-include, and the five moved to tools/txiki/extras/core_extras.cpp).
+- Tree clean at HEAD_END 61b4222, origin-ref guard ORIGIN_SAME around every witness that reads it.
