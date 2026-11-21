@@ -45,6 +45,12 @@ const Case cases[] = {
     {"a context throws what its code throws",
      "const realm = core.vmCreateContext(); try { core.vmRunInContext(realm, {}, 'throw new Error(\"boom\")', 'c.js'); return 'no throw'; } catch (error) { return error.message; }",
      R"("boom")"},
+    {"a worker reads the workerData its constructor was given, with nested values",
+     "const worker = new core.Worker('worker-data.mjs', 'self.postMessage(globalThis.workerData)', { workerData: { n: 1, list: [1, 2, 3], nested: { ok: true } } }); const pipe = worker.messagePipe; const got = await new Promise((resolve) => { pipe.onmessage = (event) => resolve(event.data); pipe.start(); }); worker.terminate(); return got;",
+     R"({"n":1,"list":[1,2,3],"nested":{"ok":true}})"},
+    {"a worker started without workerData sees none",
+     "const worker = new core.Worker('no-data.mjs', 'self.postMessage(typeof globalThis.workerData)'); const pipe = worker.messagePipe; const got = await new Promise((resolve) => { pipe.onmessage = (event) => resolve(event.data); pipe.start(); }); worker.terminate(); return got;",
+     R"("undefined")"},
     {"the async frame survives awaits, timers and promise chains, and stays apart between concurrent runs",
      "const run = (frame, fn) => { const previous = core.asyncFrame; core.asyncFrame = frame; try { return fn(); } finally { core.asyncFrame = previous; } }; const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms)); const both = await Promise.all([run('A', async () => { await pause(20); await null; return core.asyncFrame; }), run('B', async () => { await pause(5); return core.asyncFrame; }), run('C', () => Promise.resolve().then(() => core.asyncFrame))]); return { both, after: core.asyncFrame };",
      R"({"both":["A","B","C"],"after":null})"},
@@ -70,7 +76,7 @@ CheckResult check_txiki_core_extras(const std::string& binary) {
     }
     std::error_code ec;
     std::filesystem::remove_all(sandbox, ec);
-    if (result.failures.empty()) result.summary = std::to_string(sizeof(cases) / sizeof(cases[0])) + " cases on the core binding: spawnSync, vm contexts and async frames";
+    if (result.failures.empty()) result.summary = std::to_string(sizeof(cases) / sizeof(cases[0])) + " cases on the core binding: spawnSync, vm contexts, async frames and workerData";
     return result;
 }
 

@@ -94,6 +94,8 @@ typedef struct {
     TJSMailbox *tx; /* worker's send side */
     uv_sem_t *sem;
     TJSRuntime *wrt;
+    const uint8_t *data;
+    size_t data_len;
     uv_async_t *exit_async; /* parent's, signalled when the worker's loop ends */
 } worker_data_t;
 
@@ -199,6 +201,16 @@ static void worker_entry(void *arg) {
     /* Load and eval the specifier when the loop runs. */
     JSValue specifier = JS_NewString(ctx, wd->specifier);
     JSValue source = wd->source ? JS_NewString(ctx, wd->source) : JS_UNDEFINED;
+    if (wd->data) {
+        JSValue data = JS_ReadObject(ctx, wd->data, wd->data_len, 0);
+        if (JS_IsException(data)) {
+            JS_FreeValue(ctx, JS_GetException(ctx));
+        } else {
+            JSValue global = JS_GetGlobalObject(ctx);
+            JS_DefinePropertyValueStr(ctx, global, "workerData", data, JS_PROP_CONFIGURABLE | JS_PROP_WRITABLE);
+            JS_FreeValue(ctx, global);
+        }
+    }
     JSValue args[2] = { specifier, source };
 
     CHECK_EQ(JS_EnqueueJob(ctx, worker_eval, 2, (JSValue *) &args), 0);
@@ -352,8 +364,24 @@ static JSValue tjs_worker_constructor(JSContext *ctx, JSValue new_target, int ar
         return JS_EXCEPTION;
     }
 
+    uint8_t *data = NULL;
+    size_t data_len = 0;
+    if (argc > 2 && JS_IsObject(argv[2])) {
+        JSValue value = JS_GetPropertyStr(ctx, argv[2], "workerData");
+        if (!JS_IsUndefined(value)) {
+            data = JS_WriteObject(ctx, &data_len, value, 0);
+            if (!data) {
+                JS_FreeValue(ctx, value);
+                JS_FreeCString(ctx, specifier);
+                return JS_EXCEPTION;
+            }
+        }
+        JS_FreeValue(ctx, value);
+    }
+
     TJSMailbox *m0, *m1;
     if (!tjs__channel_mailbox_pair(&m0, &m1)) {
+        js_free(ctx, data);
         JS_FreeCString(ctx, specifier);
         return JS_ThrowOutOfMemory(ctx);
     }
@@ -362,6 +390,7 @@ static JSValue tjs_worker_constructor(JSContext *ctx, JSValue new_target, int ar
     if (JS_IsException(obj)) {
         tjs__channel_mailbox_unref(m0);
         tjs__channel_mailbox_unref(m1);
+        js_free(ctx, data);
         JS_FreeCString(ctx, specifier);
         return JS_EXCEPTION;
     }
@@ -385,6 +414,8 @@ static JSValue tjs_worker_constructor(JSContext *ctx, JSValue new_target, int ar
                                   .ca_bundle_path = qrt->lws.ca_bundle_path,
                                   .sem = &sem,
                                   .wrt = NULL,
+                                  .data = data,
+                                  .data_len = data_len,
                                   .exit_async = &w->exit_async };
 
     CHECK_EQ(uv_thread_create(&w->tid, worker_entry, (void *) &worker_data), 0);
@@ -397,6 +428,7 @@ static JSValue tjs_worker_constructor(JSContext *ctx, JSValue new_target, int ar
     tjs__channel_mailbox_unref(m0);
     tjs__channel_mailbox_unref(m1);
 
+    js_free(ctx, data);
     JS_FreeCString(ctx, specifier);
     JS_FreeCString(ctx, source);
 

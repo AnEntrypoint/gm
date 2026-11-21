@@ -103,6 +103,10 @@
       "sha256": "d1746723dfb1fa51bd130648f7d2b3d09e26b7fe78c0342d490acd3823f4b54e"
     },
     {
+      "file": "txiki-worker-data.patch",
+      "sha256": "259982c156eaeffc45a8af8681a4610c3a4a4f7527b0f48fa06823fdada307c7"
+    },
+    {
       "file": "quickjs-async-frame.patch",
       "sha256": "72ddac1b9a6d6ecfffd85921e89f8890f4ace026c29c784e7794ce5c82a52386"
     }

@@ -291,5 +291,17 @@
     "count": 1
    }
   ]
+ },
+ {
+  "id": "red-worker-data",
+  "witness": "check-txiki-core-extras",
+  "file": "native/third_party/txiki/txiki/src/worker.c",
+  "edits": [
+   {
+    "from": "                                  .data = data,\n",
+    "to": "                                  .data = NULL,\n",
+    "count": 1
+   }
+  ]
  }
 ]
