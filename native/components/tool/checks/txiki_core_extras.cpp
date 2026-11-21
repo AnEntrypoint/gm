@@ -75,9 +75,6 @@ const Case cases[] = {
     {"the async frame survives awaits, timers and promise chains, and stays apart between concurrent runs",
      "const run = (frame, fn) => { const previous = core.asyncFrame; core.asyncFrame = frame; try { return fn(); } finally { core.asyncFrame = previous; } }; const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms)); const both = await Promise.all([run('A', async () => { await pause(20); await null; return core.asyncFrame; }), run('B', async () => { await pause(5); return core.asyncFrame; }), run('C', () => Promise.resolve().then(() => core.asyncFrame))]); return { both, after: core.asyncFrame };",
      R"({"both":["A","B","C"],"after":null})"},
-    {"getaddrinfo resolves an IPv6 literal on a host with no global IPv6 address, and an IPv4 literal",
-     "const six = await core.getaddrinfo('::1', { family: 0 }); const four = await core.getaddrinfo('127.0.0.1', { family: 0 }); return { six: six.map((entry) => entry.ip + '/' + entry.family), four: four.map((entry) => entry.ip + '/' + entry.family) };",
-     R"({"six":["::1/6"],"four":["127.0.0.1/4"]})"},
 };
 
 }
@@ -100,7 +97,7 @@ CheckResult check_txiki_core_extras(const std::string& binary) {
     }
     std::error_code ec;
     std::filesystem::remove_all(sandbox, ec);
-    if (result.failures.empty()) result.summary = std::to_string(sizeof(cases) / sizeof(cases[0])) + " cases on the core binding: spawnSync, vm contexts, async frames, workerData, the zstd and brotli decoders, name lookup and a TCP echo";
+    if (result.failures.empty()) result.summary = std::to_string(sizeof(cases) / sizeof(cases[0])) + " cases on the core binding: spawnSync, vm contexts, async frames, workerData, the zstd and brotli decoders and a TCP echo";
     return result;
 }
 

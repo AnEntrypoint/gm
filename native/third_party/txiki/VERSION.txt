@@ -16,7 +16,6 @@ sha256: 10973f4b4199eafa1d5735ef661ddb2ec2f97319ee9fd1824d4aabe08cff5265
 patch: tools/txiki/patches/txiki-gm.patch, sha256: d1746723dfb1fa51bd130648f7d2b3d09e26b7fe78c0342d490acd3823f4b54e
 patch: tools/txiki/patches/txiki-worker-data.patch, sha256: 259982c156eaeffc45a8af8681a4610c3a4a4f7527b0f48fa06823fdada307c7
 patch: tools/txiki/patches/quickjs-async-frame.patch, sha256: 72ddac1b9a6d6ecfffd85921e89f8890f4ace026c29c784e7794ce5c82a52386
-patch: tools/txiki/patches/txiki-dns-flags.patch, sha256: 491faccc88ae5b5f652608d3a6dfd2749ecfcc207dabf4793cdc79cb5870d503
 browser port: thebird b5ec730 scripts/txiki/browser/uv-browser.c, copied to browser/uv-browser.c, sha256: 89d228c3fd5ede105029e6c586a903ecb7d8f3ac75841f9e8844ea6ddaa72a50
 browser port: thebird b5ec730 scripts/txiki/include/uv/browser.h, copied to browser/uv/browser.h, sha256: feee1d8eee76d0518107be49bceb7d8e8901a7a82d621e00787212d67aba7ccd
 browser port: thebird b5ec730 scripts/txiki/include/txiki-browser.h, copied to browser/txiki-browser.h, sha256: d20dec81f14fc2fd01c0a3414bb840bbe34a63f4986b4e944887300fe5fa8c17
