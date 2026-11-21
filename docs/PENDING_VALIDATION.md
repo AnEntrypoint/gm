@@ -5551,3 +5551,11 @@ Proof: the window in section 25.
 - Reds: 18 from tools/phase-b/reds.json run by red.py as committed mutations; each MUT_BUILD_RC 0, RED_RC 1, RESTORED_cmp True, TREE_CLEAN True, AFTER_RC 0. The seven that used to run in place now run committed, including red-stamp-tree with its new mutation.
 - Longest step: the queue for the ticket (about 90 min); the window itself ran 08:30 to 09:07 (37 min), its longest witness check-restart-jobs.
 - WINDOW_END FAILED=0, ticket RC 0.
+
+### 26. Push, reinstall at b8dc8b5, the updater line, and the pw item
+
+- Push: git push origin main, "d6030f6..b8dc8b5  main -> main", exit 0. git ls-remote origin main: b8dc8b5678fccfb44c9d81ab03c124baf7eaac53 refs/heads/main. Commits since d6030f6: 11, all lanmower.
+- Install: gm install --local with HOME=/config, exit 0; current -> versions/b8dc8b5-1; gm --version b8dc8b5-1 equals the build at the pushed HEAD; check-installed-stamp ok.
+- Updater line from the relay log of this session (runs/2026-11-21-05-20-41-fdf140/relay.log): after the re-exec "update checked: current is b8dc8b5-1, manifest is unknown" (first cycle, before any manifest was fetched); the next cycle, 1795252953518: "update checked: current is b8dc8b5-1, manifest is d6030f6-575", which is the published manifest. The state file holds manifest d6030f6-575 and the etag.
+- Release run 44888039968 (push b8dc8b5) at 09:25:47 UTC: in progress. Linux x64 and arm64, Windows x64 and arm64, macOS arm64: success. macOS x64: in progress.
+- pw (/workspace/pw, commit 791fd2f, local, not pushed): see that repo's docs/PENDING_VALIDATION.md. Waiting on a pw push: the pin of pw in defaults/mcp.json, and the retirement of gate PID 399506. Neither was done.
