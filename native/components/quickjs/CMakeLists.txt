@@ -67,9 +67,24 @@ if(GMNEW_TXIKI AND NOT GMNEW_TXIKI_WASI)
     target_compile_options(gm_txiki PRIVATE -w)
     target_link_libraries(gm_txiki PUBLIC gm_quickjs_ng uv_a)
 
+    file(GLOB GMNEW_DECODER_SOURCES
+        ${GMNEW_TXIKI_ROOT}/zstd/lib/common/*.c ${GMNEW_TXIKI_ROOT}/zstd/lib/decompress/*.c
+        ${GMNEW_TXIKI_ROOT}/brotli/c/common/*.c ${GMNEW_TXIKI_ROOT}/brotli/c/dec/*.c)
+    list(FILTER GMNEW_DECODER_SOURCES EXCLUDE REGEX "/(pool|threading)\\.c$")
+    add_library(gm_decoders STATIC ${GMNEW_DECODER_SOURCES})
+    set_target_properties(gm_decoders PROPERTIES C_STANDARD 11 C_EXTENSIONS ON C_VISIBILITY_PRESET hidden)
+    target_include_directories(gm_decoders SYSTEM PUBLIC ${GMNEW_TXIKI_ROOT}/zstd/lib ${GMNEW_TXIKI_ROOT}/brotli/c/include)
+    target_include_directories(gm_decoders SYSTEM PRIVATE ${GMNEW_TXIKI_ROOT}/zstd/lib/common ${GMNEW_TXIKI_ROOT}/zstd/lib/decompress ${GMNEW_TXIKI_ROOT}/brotli/c/common)
+    target_compile_definitions(gm_decoders PRIVATE ZSTD_DISABLE_ASM)
+    if(MSVC)
+        target_compile_options(gm_decoders PRIVATE /w)
+    else()
+        target_compile_options(gm_decoders PRIVATE -w)
+    endif()
+
     target_compile_definitions(gm_runcode PRIVATE GM_HAVE_TXIKI GM_HAVE_CORE_EXTRAS)
     target_sources(gm_runcode PRIVATE core_extras.cpp)
-    target_link_libraries(gm_runcode PRIVATE gm_txiki gm_proc)
+    target_link_libraries(gm_runcode PRIVATE gm_txiki gm_proc gm_decoders)
 endif()
 
 if(GMNEW_TXIKI_WASI)

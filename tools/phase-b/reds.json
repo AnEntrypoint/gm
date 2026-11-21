@@ -303,5 +303,41 @@
     "count": 1
    }
   ]
+ },
+ {
+  "id": "red-zstd-output",
+  "witness": "check-txiki-core-extras",
+  "file": "native/components/quickjs/core_extras.cpp",
+  "edits": [
+   {
+    "from": "        decoded.append(chunk.data(), output.pos);\n",
+    "to": "        decoded.append(chunk.data(), output.pos > 1 ? output.pos - 1 : output.pos);\n",
+    "count": 1
+   }
+  ]
+ },
+ {
+  "id": "red-zstd-truncated",
+  "witness": "check-txiki-core-extras",
+  "file": "native/components/quickjs/core_extras.cpp",
+  "edits": [
+   {
+    "from": "    if (pending != 0) return JS_ThrowPlainError(ctx, \"zstd: the frame is truncated\");\n",
+    "to": "",
+    "count": 1
+   }
+  ]
+ },
+ {
+  "id": "red-brotli-truncated",
+  "witness": "check-txiki-core-extras",
+  "file": "native/components/quickjs/core_extras.cpp",
+  "edits": [
+   {
+    "from": "        if (result == BROTLI_DECODER_RESULT_NEEDS_MORE_INPUT) return JS_ThrowPlainError(ctx, \"brotli: the stream is truncated\");\n",
+    "to": "        if (result == BROTLI_DECODER_RESULT_NEEDS_MORE_INPUT) break;\n",
+    "count": 1
+   }
+  ]
  }
 ]

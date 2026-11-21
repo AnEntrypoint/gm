@@ -1,8 +1,12 @@
 #include "core_extras.hpp"
 
+#include <brotli/decode.h>
+#include <zstd.h>
+
 #include <csignal>
 #include <cstdint>
 #include <filesystem>
+#include <memory>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -18,6 +22,7 @@ namespace {
 using engine::Scoped;
 
 constexpr std::size_t default_max_buffer = 1024 * 1024;
+constexpr std::size_t decoded_limit = std::size_t{1} << 30;
 
 struct SignalName {
     const char* name;
@@ -175,6 +180,59 @@ JSValue spawn_sync(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv) {
     return result;
 }
 
+const std::uint8_t* input_bytes(JSContext* ctx, JSValueConst value, std::size_t& size) {
+    if (const std::uint8_t* typed = JS_GetUint8Array(ctx, &size, value)) return typed;
+    JS_FreeValue(ctx, JS_GetException(ctx));
+    return JS_GetArrayBuffer(ctx, &size, value);
+}
+
+JSValue decoded_bytes(JSContext* ctx, const std::string& decoded) {
+    return JS_NewUint8ArrayCopy(ctx, reinterpret_cast<const std::uint8_t*>(decoded.data()), decoded.size());
+}
+
+JSValue zstd_decompress(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv) {
+    std::size_t size = 0;
+    const std::uint8_t* data = argc > 0 ? input_bytes(ctx, argv[0], size) : nullptr;
+    if (data == nullptr || size == 0) return JS_ThrowTypeError(ctx, "zstdDecompress needs the bytes of a frame");
+    const std::unique_ptr<ZSTD_DCtx, decltype(&ZSTD_freeDCtx)> context(ZSTD_createDCtx(), ZSTD_freeDCtx);
+    std::string decoded;
+    std::vector<char> chunk(ZSTD_DStreamOutSize());
+    ZSTD_inBuffer input{data, size, 0};
+    std::size_t pending = 0;
+    for (;;) {
+        ZSTD_outBuffer output{chunk.data(), chunk.size(), 0};
+        pending = ZSTD_decompressStream(context.get(), &output, &input);
+        if (ZSTD_isError(pending)) return JS_ThrowPlainError(ctx, "zstd: %s", ZSTD_getErrorName(pending));
+        decoded.append(chunk.data(), output.pos);
+        if (decoded.size() > decoded_limit) return JS_ThrowRangeError(ctx, "zstd: the output is larger than %zu bytes", decoded_limit);
+        if (input.pos == input.size && output.pos < output.size) break;
+    }
+    if (pending != 0) return JS_ThrowPlainError(ctx, "zstd: the frame is truncated");
+    return decoded_bytes(ctx, decoded);
+}
+
+JSValue brotli_decompress(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv) {
+    std::size_t size = 0;
+    const std::uint8_t* data = argc > 0 ? input_bytes(ctx, argv[0], size) : nullptr;
+    if (data == nullptr || size == 0) return JS_ThrowTypeError(ctx, "brotliDecompress needs the bytes of a stream");
+    const std::unique_ptr<BrotliDecoderState, decltype(&BrotliDecoderDestroyInstance)> state(BrotliDecoderCreateInstance(nullptr, nullptr, nullptr), BrotliDecoderDestroyInstance);
+    std::string decoded;
+    std::vector<std::uint8_t> chunk(1 << 16);
+    const std::uint8_t* next_in = data;
+    std::size_t available_in = size;
+    for (;;) {
+        std::size_t available_out = chunk.size();
+        std::uint8_t* next_out = chunk.data();
+        const BrotliDecoderResult result = BrotliDecoderDecompressStream(state.get(), &available_in, &next_in, &available_out, &next_out, nullptr);
+        decoded.append(reinterpret_cast<const char*>(chunk.data()), chunk.size() - available_out);
+        if (decoded.size() > decoded_limit) return JS_ThrowRangeError(ctx, "brotli: the output is larger than %zu bytes", decoded_limit);
+        if (result == BROTLI_DECODER_RESULT_SUCCESS) break;
+        if (result == BROTLI_DECODER_RESULT_ERROR) return JS_ThrowPlainError(ctx, "brotli: %s", BrotliDecoderErrorString(BrotliDecoderGetErrorCode(state.get())));
+        if (result == BROTLI_DECODER_RESULT_NEEDS_MORE_INPUT) return JS_ThrowPlainError(ctx, "brotli: the stream is truncated");
+    }
+    return decoded_bytes(ctx, decoded);
+}
+
 JSClassID realm_class_id = 0;
 
 void finalize_realm(JSRuntime*, JSValue value) {
@@ -246,6 +304,8 @@ struct Export {
 
 constexpr Export exports[] = {
     {"spawnSync", spawn_sync, 3},
+    {"zstdDecompress", zstd_decompress, 1},
+    {"brotliDecompress", brotli_decompress, 1},
     {"vmCreateContext", create_realm, 0},
     {"vmRunInContext", run_in_realm, 4},
 };

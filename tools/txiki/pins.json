@@ -23,6 +23,18 @@
       "label": "quickjs-ng 7b5f588e0f9b643e2996f291bfc861abeaceddc2",
       "url": "https://codeload.github.com/quickjs-ng/quickjs/legacy.tar.gz/7b5f588e0f9b643e2996f291bfc861abeaceddc2",
       "sha256": "f27b2e93647e73f91201e12c4f2ee0c0d07e2f6dc06b539422bf03269d601366"
+    },
+    {
+      "name": "zstd",
+      "label": "zstd v1.5.7",
+      "url": "https://codeload.github.com/facebook/zstd/legacy.tar.gz/refs/tags/v1.5.7",
+      "sha256": "9b70bbc1f5750dd895765e376e78811f3c47065cc1c782c09f4bcea5d137c7d0"
+    },
+    {
+      "name": "brotli",
+      "label": "brotli v1.1.0",
+      "url": "https://codeload.github.com/google/brotli/legacy.tar.gz/refs/tags/v1.1.0",
+      "sha256": "10973f4b4199eafa1d5735ef661ddb2ec2f97319ee9fd1824d4aabe08cff5265"
     }
   ],
   "selections": {
@@ -97,6 +109,93 @@
       "quickjs-libc.h"
     ]
   },
+  "extras": [
+    {
+      "archive": "zstd",
+      "from": "lib/common",
+      "to": "zstd/lib/common",
+      "files": [
+        "debug.c",
+        "debug.h",
+        "entropy_common.c",
+        "error_private.c",
+        "error_private.h",
+        "fse_decompress.c",
+        "zstd_common.c",
+        "xxhash.c",
+        "xxhash.h",
+        "allocations.h",
+        "bits.h",
+        "bitstream.h",
+        "compiler.h",
+        "cpu.h",
+        "fse.h",
+        "huf.h",
+        "mem.h",
+        "portability_macros.h",
+        "zstd_deps.h",
+        "zstd_internal.h",
+        "zstd_trace.h",
+        "pool.h",
+        "threading.h"
+      ]
+    },
+    {
+      "archive": "zstd",
+      "from": "lib/decompress",
+      "to": "zstd/lib/decompress",
+      "match": "\\.(c|h)$"
+    },
+    {
+      "archive": "zstd",
+      "from": "lib",
+      "to": "zstd/lib",
+      "files": [
+        "zstd.h",
+        "zstd_errors.h"
+      ]
+    },
+    {
+      "archive": "zstd",
+      "from": ".",
+      "to": "zstd",
+      "files": [
+        "LICENSE",
+        "COPYING"
+      ]
+    },
+    {
+      "archive": "brotli",
+      "from": "c/common",
+      "to": "brotli/c/common",
+      "match": "\\.(c|h)$"
+    },
+    {
+      "archive": "brotli",
+      "from": "c/dec",
+      "to": "brotli/c/dec",
+      "match": "\\.(c|h)$"
+    },
+    {
+      "archive": "brotli",
+      "from": "c/include/brotli",
+      "to": "brotli/c/include/brotli",
+      "files": [
+        "decode.h",
+        "types.h",
+        "port.h",
+        "shared_dictionary.h"
+      ]
+    },
+    {
+      "archive": "brotli",
+      "from": ".",
+      "to": "brotli",
+      "files": [
+        "LICENSE"
+      ]
+    }
+  ],
   "patches": [
     {
       "file": "txiki-gm.patch",

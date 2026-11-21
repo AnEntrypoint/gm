@@ -11,7 +11,7 @@ const PINS = JSON.parse(readFileSync(join(HERE, 'pins.json'), 'utf8'));
 const SELECT = PINS.selections;
 const PATCH_DIR = join(HERE, 'patches');
 const MANIFEST = 'MANIFEST.sha256';
-const GENERATED = ['txiki', 'libuv', 'quickjs', 'VERSION.txt', MANIFEST];
+const GENERATED = ['txiki', 'libuv', 'quickjs', ...new Set(PINS.extras.map((entry) => entry.to.split('/')[0])), 'VERSION.txt', MANIFEST];
 const LICENSE_NAME = /^(LICENSE|LICENSE-.*|COPYING)(\.txt|\.md)?$/i;
 const TEXT_SOURCE = /\.(c|h|cpp|hpp|txt|md|in|ac)$|^LICENSE/i;
 const ASCII_FOR = new Map(
@@ -112,6 +112,10 @@ function copyAll(trees, target) {
   add(copyTree(trees.libuv, join(target, 'libuv'), (name) => name.startsWith('include/') || name.startsWith('src/') || (topLevel(name) && (LICENSE_NAME.test(name) || SELECT.libuvBuildFiles.includes(name)))));
   const quickjsSkipped = new Set(SELECT.quickjsHeadersSkipped);
   add(copyTree(trees.quickjs, join(target, 'quickjs'), (name) => topLevel(name) && (SELECT.quickjsSources.includes(name) || (name.endsWith('.h') && !quickjsSkipped.has(name)) || LICENSE_NAME.test(name))));
+  for (const entry of PINS.extras) {
+    const wanted = (name) => entry.files?.includes(name) || (entry.match !== undefined && new RegExp(entry.match).test(name));
+    add(copyTree(join(trees[entry.archive], entry.from), join(target, entry.to), (name) => topLevel(name) && wanted(name)));
+  }
   for (const source of SELECT.txikiSources) if (!existsSync(join(target, 'txiki', 'src', source))) throw new Error('the txiki archive has no src/' + source);
   for (const bundle of SELECT.txikiBundles) if (!existsSync(join(target, 'txiki', 'src', 'bundles', 'c', bundle))) throw new Error('the txiki archive has no bundle ' + bundle);
   for (const source of SELECT.quickjsSources) if (!existsSync(join(target, 'quickjs', source))) throw new Error('the quickjs-ng archive has no ' + source);
@@ -142,6 +146,7 @@ function versionText(counts, target) {
     'written by: node tools/txiki/vendor.mjs (downloads each archive, checks its sha256, copies the selections in tools/txiki/pins.json, applies the patches, writes ' + MANIFEST + ')',
     'txiki files: src/*.h except ' + SELECT.txikiHeadersSkipped.join(', ') + '; src/{' + SELECT.txikiSources.join(', ') + '}; src/bundles/c/{' + SELECT.txikiBundles.join(', ') + '}; deps/ada/{' + SELECT.adaFiles.join(', ') + '}; LICENSE; src/version.h is version.h.in with ' + PINS.txikiVersion.major + '.' + PINS.txikiVersion.minor + '.' + PINS.txikiVersion.patch + ' filled in.',
     'txiki files left out: the modules that need libwebsockets, mbedtls, wamr, libffi, sqlite3, miniz or mimalloc (httpclient, httpserver, ws, tls, webcrypto, hashing, wasm, ffi, sqlite3, miniz), the CLI, and the JavaScript sources of the bundles. The host answers their entry points.',
+    ...PINS.extras.map((entry) => 'extra files: ' + entry.archive + '/' + entry.from + ' to ' + entry.to + ': ' + (entry.files ? entry.files.join(', ') : 'every file matching ' + entry.match)),
     'libuv files: include/, src/, CMakeLists.txt, configure.ac (the build file reads the version from it), the two .pc.in files it configures, and the licence files.',
     'quickjs-ng files: ' + SELECT.quickjsSources.join(', ') + ', every top-level header except ' + SELECT.quickjsHeadersSkipped.join(', ') + ', and LICENSE.',
     'ASCII-normalized: ' + counts.replaced + ' non-ASCII characters in comments and licence text are written as plain ASCII. The tool refuses a non-ASCII character outside a comment in a source file, so no code changed.',
