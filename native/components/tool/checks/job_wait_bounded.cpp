@@ -34,14 +34,15 @@ CheckResult check_job_wait_bounded(const std::string& binary) {
             if (start.empty()) result.failures.push_back("job_start did not answer");
 
             const auto waited_at = std::chrono::steady_clock::now();
-            const json::Value waiting = output_value(tool_json(session, "run_code", json::Object{{"body", "return await gm.job_status({ job: 'jbw-job', waitMs: 600000 });"}}));
+            const json::Value waiting = output_value(tool_json(session, "run_code", json::Object{{"body", "return await gm.job_status({ job: 'jbw-job', waitMs: 90000 });"}}));
             const double waited = std::chrono::duration<double>(std::chrono::steady_clock::now() - waited_at).count();
             const std::string state = text_at(waiting, "state");
-            if (state != "running") result.failures.push_back("a job_status wait longer than the foreground cap did not answer inside its body with state running: " + json::dump(waiting).substr(0, 240));
+            if (state != "running") result.failures.push_back("a job_status wait of 90 s on a running job did not answer inside its body with state running: " + json::dump(waiting).substr(0, 240));
+            if (waited < 85.0) result.failures.push_back("a job_status wait of 90 s on a running job returned after " + std::to_string(waited) + " s; it must run its full time");
             if (text_at(waiting, "hint").find("job_status again") == std::string::npos) result.failures.push_back("the running reply does not say to call job_status again: " + json::dump(waiting).substr(0, 240));
 
             tool_text(session, "run_code", json::Object{{"body", "return await gm.job_stop({ job: 'jbw-job' });"}});
-            result.summary = "a job_status wait of 600000 ms inside run_code answered state " + state + " with a hint after " + std::to_string(waited) + " s, inside its own body";
+            result.summary = "a job_status wait of 90 s inside run_code answered state " + state + " with a hint after " + std::to_string(waited) + " s, inside its own body";
         }
         session.stop();
     }
