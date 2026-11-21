@@ -5314,3 +5314,29 @@ Commits this part (local, lanmower, no trailers): 6d73245 (txiki detached), 57ca
 - Witness (Linux, release build `5534b49-1`, state clean): ok, "update checked: current is 5534b49-1, manifest is ffff444-5".
 - Red (script `/tmp/phase-d-72/red-commit.sh` with `mutate-updated-line.py`: the branch removed, as a temporary commit): MUT_CFG_RC 0, kBuildState clean, RED_RC 1 ("no relay.log line ... within 60 s; the relay log says: ... started"). RESTORED_cmp=True, HEAD back at 5534b49 with 0 changed files, RESTORE_BUILD_RC 0, AFTER_RC 0.
 - Note: a build whose policy is disabled (unpushed HEAD, dirty tree) logs no cycle line, by design; the witness runs on a clean build.
+
+### 4. the stubbed checks on macOS (run 44846084565: "12 stubbed")
+
+Each stub's reason, from its own skip summary or guard:
+
+| check | before | after | reason |
+| --- | --- | --- | --- |
+| check-update-stream | stubbed | runs | was `#if !__linux__`, staged with `sha256sum`; now `#if _WIN32` and `support::file_sha256` (sha256sum, else shasum -a 256) |
+| check-relay-reexec | stubbed | runs | was `#if !__linux__` (its "linux archive" wording), digest from `sha256sum`; now `#if _WIN32` and `support::file_sha256` |
+| check-browser-dead-executor | stubbed | runs | was `#if __linux__` in its body; no Linux-only call in the body; now `#if !_WIN32` |
+| check-handover-in-flight | stubbed | stubbed | reads `/proc` (fifo archive and worker watch), Linux only |
+| check-body-reexec | stubbed | stubbed | watches `/proc` for the worker, Linux only |
+| check-update-order | stubbed | stubbed | owner decision: logic-level, covered by the Linux jobs; it stages with `tar` and `sha256sum` |
+| check-stamp-tree | stubbed | stubbed | owner decision: logic-level, covered by the Linux jobs; hashes the tree with `sha256sum` |
+| check-install-build-id | stubbed | stubbed | owner decision: logic-level, covered by the Linux jobs; copies binaries and installs them |
+| check-asan-retention | stubbed | stubbed | needs an ASan build with GMNEW_ASAN_PROBE=1, not the standard build |
+| witness-windows-cmd | stubbed | stubbed | Windows only |
+| witness-windows-tree-kill | stubbed | stubbed | Windows only |
+| witness-windows-playwriter | stubbed | stubbed | Windows only |
+
+The named macOS list after this change (9): check-handover-in-flight check-update-order check-stamp-tree check-install-build-id check-body-reexec check-asan-retention witness-windows-cmd witness-windows-tree-kill witness-windows-playwriter. It goes in `.github/workflows/release.yml` (change 5).
+
+- Witness (Linux, release build `a996adc-1`, state clean): check-update-stream ok (forced update, newer commit: link switched to ffff333-7, which reports itself; same commit: already current); check-relay-reexec ok (the relay re-executed 140 ms after the update, the held wait was answered once); check-browser-dead-executor ok (wall 8.65 s).
+- Red (`/tmp/phase-d-72/mutate-digest.py`, helper returns an empty digest; check-update-stream): BUILD_MUT 0, RED_RC 1 ("could not hash the archive or read HEAD of the checkout"), RESTORED_cmp=True, HEAD back at a996adc, AFTER_RC 0.
+- Red (`/tmp/phase-d-72/mutate-dead.py`, expected closedPages 2; check-browser-dead-executor): RED_RC 1 ("finish on a restarted serve did not close the page the dead executor opened: {ok:true,closedPages:1}"), RESTORED_cmp=True, AFTER_RC 0.
+- The macOS result of the three enabled checks is for the next macOS run; it is not verified here.
