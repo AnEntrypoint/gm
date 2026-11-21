@@ -5445,3 +5445,15 @@ These in-place reds mutate the tracked file without a commit, and the witness ch
 - Witness (Linux, release build 2efb7c5-1, clean): ok. The first relay logs "manifest is ffff444-5"; a second relay on the same install, inside the check interval, logs the same value.
 - Red (/tmp/phase-d-74/mutate-manifest.py: both reads changed back to state.version, temporary commit): MUT_BUILD_RC 0, kBuildState clean, RED_RC 1, the second relay's line is missing. RESTORED_cmp=True, HEAD back at 2efb7c5 with 0 changed files, AFTER_RC 0.
 - Open: the 2efb7c5 fix needs a push and a reinstall to take effect; the owner decides.
+
+### 16. The release run at 05:12:59 UTC, and its failing lines
+
+- Run 44868218617 (push a015bda) was still in_progress. Jobs: Linux x64 and arm64, Windows x64 and arm64: success. macOS arm64: failure. macOS x64: in progress.
+- macOS arm64 job 136736607158 (log via gh api repos/AnEntrypoint/gm/actions/jobs/136736607158/logs, saved to /tmp/phase-d-74/macos-arm64-job.log):
+  - check-txiki-spawn-stdio: ok (0.3 s). This is the first macOS run with the /bin/sh change, and it passes. That is consistent with the /bin/true belief, not proof of it.
+  - check-update-stream: FAILED, 2 failures: "the manifest has no build for x64-macos".
+  - check-relay-reexec: FAILED, 5 failures: the same "the manifest has no build for x64-macos", so the relay never re-executed.
+  - check-browser-first-open: ok (51.0 s). check-browser-tabs-owner: ok (48.7 s).
+  - Totals: 123 run, 2 failed, 0 passed alone after a pool failure, 9 stubbed (the named list), wall 902 s.
+- Cause of the two failures: both witnesses hard-code kPlatformTarget = "x64-linux" (native/components/tool/checks/update_stream.cpp:31 and relay_reexec.cpp:32). The updater asks the manifest for the platform's target, which is x64-macos on this host. These are fixture defects in the newly enabled checks, not product failures. The fix (derive the target name from the platform, as the updater does) is local work; it is not pushed.
+- The updater line from the live relay (section 15) carries the defect described there.
