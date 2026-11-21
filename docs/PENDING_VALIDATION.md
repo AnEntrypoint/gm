@@ -5271,3 +5271,20 @@ Commits this part (local, lanmower, no trailers): 6d73245 (txiki detached), 57ca
 ### G. The push gate for this round
 
 - Gate: every witness and red check run in the Phase B window passes, including the release reproductions. The window and the push are recorded below.
+
+
+### Phase B window, round 72 (runs/phase-d-72, 00:25 to 00:46 UTC; HEAD 0437f4b; build/rel-72 is the release configuration, GMNEW_VERSION=0437f4b-1, state clean)
+
+- Clear gate: `vmstat 1 2` read first, both samples logged in runs/phase-d-72/window.txt. Attempts at 00:25:58 and 00:26:30 to 00:27:35 were busy (another worker's zig compile, heavy-jobs rc 1; si up to 211936 KB/s). CLEAR at 00:28:07: boot si 3259 so 4217, sample si 200 so 0, heavy-jobs clear (rc 0).
+- Witnesses: every registry witness, 120 run, 120 RC 0, each run under `timeout 900` with its PID in window.txt. The release build includes the fixes of this round: check-installed-stamp, check-relay-reexec, check-txiki-spawn-detached, check-update-order, check-install-build-id, check-stamp-tree, check-txiki-sync-errno, check-txiki-spawn-stdio.
+- Parity probe: the window's parity stage ran with HOME=/tmp/rel72-home and failed on the one case that reads HOME (child-process.spawn without env inherits HOME: got /tmp/rel72-home, expected /config). That is my window environment, not a gm defect. The probe was re-run once with HOME=/config under timeout with its PID (runs/phase-d-72/parity-config), after a vmstat sample (si 164, so 0): mismatches 0, unexpectedGaps 0, RC 0.
+- Red checks (each under timeout with PIDs; restore compared with cmp):
+  - red-spawn-detached (native/components/tool/checks/txiki_spawn_detached.cpp, detached: false): RED_RC 1, RESTORED_cmp True, BUILD_RESTORE 0, AFTER_RC 0.
+  - red-updater-order (update.cpp, order_against returns Newer): RED_RC 1, RESTORED_cmp True, BUILD_RESTORE 0, AFTER_RC 0.
+  - red-install-build-id (install.cpp, same-build test by version name only): RED_RC 1, RESTORED_cmp True, BUILD_RESTORE 0, AFTER_RC 0.
+  - red-stamp-tree (cmake/gmnew_stamp.cmake restored from 3f3fe39, the HEAD-based stamp): RED_RC 1, RESTORED_cmp True, BUILD_RESTORE 0, AFTER_RC 0.
+  - red-installed-stamp (installed.cpp, checkout_stamp replaced by zeros): RED_RC 1, RESTORED_cmp True, BUILD_RESTORE 0, AFTER_RC 0.
+  - red-relay-reexec (relay.cpp, usleep(6000000) before the re-exec marker; committed as a temporary commit so the build state is clean, then reset): RED_RC 1 ("the relay re-executed 6148 ms after the update while a 45000 ms next_context wait was in flight; the limit is 5000 ms"), RESTORED_cmp True, the temporary commit dropped (HEAD 0437f4b, git status 0), AFTER_RC 0.
+- The window's own ALL flag was 1 from two script defects, checked by hand as above: the parity grep escaping, and the red count, which counted the earlier rows of the shared reds/summary.txt.
+- Not rerun in this window: the round 70 and 71 red checks (txiki and gm sets). They ran on earlier builds; their results stand in the earlier sections.
+- Git after the window: 0 changed files, HEAD 0437f4b.
