@@ -5390,3 +5390,30 @@ The named macOS list after this change (9): check-handover-in-flight check-updat
 - Concurrent cause seen: the live session relay (gm serve PID 399315, build fb59ddf-573) runs `git fetch origin` in this shared checkout and forces refs/remotes/origin/main to fb59ddf. It did this during the window and reset the origin shim the window relies on.
 - Red-update-checked is a real red when run solo: mutated relay gives "no relay.log line ... current is 7c07d1e-1" (RED_RC 1), restored exactly, witness passes again.
 - Status: open. The push rule (every witness passed) is not met, so nothing is pushed in this round.
+
+### 10. check-update-checkout: a relay with a git checkout as its workspace leaves the checkout's refs and FETCH_HEAD alone
+
+- Why: a live relay (gm serve PID 399315) and the origin shim in this shared checkout kept diverging, and the shim was reset by origin fetches. The fix is a guard: the update cycle must never touch the checkout's refs or FETCH_HEAD.
+- What the source does: the update path in native/components/host/update.cpp fetches the manifest with curl into the install's staging directory and runs no git command. The relay's cwd is the checkout (Session spawns with the workspace as cwd), so a git call added there would fetch into the checkout.
+- Change: the witness builds a scratch origin, a checkout with origin one commit ahead, and runs install/gm serve on the checkout with a file:// manifest. It waits for "update checked: current is <v>, manifest is ffff444-5" and compares for-each-ref and FETCH_HEAD bytes before and after. Scratch is removed.
+- Commits: d2dac27 (checks: stage_install in support, shared by the update checks, a refactor of check-update-checked), f2550c7 (the witness, registry, declaration, CMake), f095c2d (the origin names main and the clone pushes HEAD to it, a fix to the witness's own setup).
+- Witness (Linux, release build f095c2d-1, clean): ok, "origin one commit ahead of its origin/main".
+- Red (/tmp/phase-d-73/mutate-collision.py, a bare "git fetch -q origin" in the relay's update loop as a temporary commit): MUT_BUILD_RC 0, kBuildState clean, RED_RC 1, "an update cycle changed the checkout's refs or FETCH_HEAD: before [refs/heads/main cc44d81...]". RESTORED_cmp=True, HEAD back at f095c2d with 0 changed files, AFTER_RC 0.
+- Not changed by this item: no code in the current update path ran git, so the guard passes without a code fix. The live relay runs the older build fb59ddf-573, whose source (git grep at fb59ddf) also has no "fetch origin --quiet". The fetch that moved the origin ref in the reflog is 10 minutes apart from 02:00 to 04:39, in the form "fetch origin --quiet", and has not recurred since 04:39. Its source is still unidentified; see the window entry for the sampler result.
+
+### 11. In-place reds, per spec, this round
+
+Rows 21 to 31 of /tmp/phase-d-72/reds/summary.txt, appended by the window that ran to WINDOW_END (the in-place phase, 02:51 to 03:08). Each row: BUILD_MUT 0, RED_RC 1, RESTORED_cmp True, AFTER_RC 0.
+
+- red-spawn-stdio-path (spec a1): RED_RC 1
+- red-job-status-wait (spec a2): RED_RC 1
+- red-spawn-detached (spec item1): RED_RC 1
+- red-updater-order, red-install-build-id, red-stamp-tree (spec round72a): RED_RC 1 each
+- red-installed-stamp (spec stamp): RED_RC 1
+
+These in-place reds mutate the tracked file without a commit, and the witness checks a dirty tree. The result still counts because the mutated source is compiled and the witness fails on the mutation; the committed reds in each entry above are the stronger evidence.
+
+### 12. The txiki spawn-stdio macOS cause is not verified
+
+- The macOS failure line is ENOENT at spawn. The belief is that /bin/true is absent on macOS, so the check's child was missing. This is not verified on a macOS host, and the round's Linux witness cannot show it.
+- The check now records each spawn path in its output, so the next macOS run shows which path was spawned and which failed. Until then the cause is believed, not verified.
