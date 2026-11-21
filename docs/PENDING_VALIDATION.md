@@ -5372,3 +5372,21 @@ The named macOS list after this change (9): check-handover-in-flight check-updat
 - Change: the wait asks 90 s and must last at least 85 s; the check's summary says so. (Committed as 24116ad, amended once to correct the summary text before any build used it.)
 - Witness (Linux, 24116ad-1, clean): ok ("a job_status wait of 90 s inside run_code answered state running with a hint after 90.005022 s, inside its own body").
 - Red (`/tmp/phase-d-73/mutate-clamp.py`, the 80 s clamp restored as a temporary commit): MUT_BUILD_RC 0, kBuildState clean, RED_RC 1 ("a job_status wait of 90 s on a running job returned after 80.004405 s; it must run its full time"). RESTORED_cmp=True, HEAD back at 24116ad with 0 changed files, AFTER_RC 0.
+
+## Round 73, Phase B window at 3954ef5
+
+- Gate: `vmstat 1 2` read first. Second sample si 44, so 0 (both under 1000 KB/s); `heavy-jobs` clear at 02:35:55 UTC. Log: runs/phase-d-73/vmstat-gate.txt, runs/phase-d-73/heavy-gate.txt.
+- Build: `build/rel-72` at 3954ef5-1, kBuildState clean, tree clean, origin shim at 3954ef5.
+- Witnesses: 122 registry witnesses under `timeout` with PIDs logged (runs/phase-d-73/window.txt). 121 returned 0. 1 failed: check-update-checked (see below).
+- Parity probe (`HOME=/config`, rpc-until.py): PARITY_RC 0, verdict PARITY_OK (mismatches 0, unexpectedGaps 0).
+- Committed reds (red-commit.sh, each restored with cmp True and HEAD back with 0 changed files): red-turn-economy, red-job-wait-bounded, red-update-checked, red-digest, red-dead-executor, red-browser-first-open, red-relay-reexec. All RED_RC 1.
+- In-place reds (red72.py): run, results in /tmp/phase-d-72/reds/summary.txt; not re-read per spec in this round.
+
+### Open: check-update-checked failed once in the window
+
+- The window's run: "no relay.log line update checked: current is 3954ef5-1 within 60 s". The relay log showed only "started" and "worker running".
+- Not reproduced: solo runs of the same witness passed 6 of 6 on a quiet tree (the first solo run and five repeats), each logging the line within milliseconds.
+- Ruled out: a missing curl (curl exists at /usr/bin/curl); a stale manifest (the manifest's commit matches HEAD at each solo run); a timed-out fetch (the line appears in 8 ms when the relay runs with stdin held open).
+- Concurrent cause seen: the live session relay (gm serve PID 399315, build fb59ddf-573) runs `git fetch origin` in this shared checkout and forces refs/remotes/origin/main to fb59ddf. It did this during the window and reset the origin shim the window relies on.
+- Red-update-checked is a real red when run solo: mutated relay gives "no relay.log line ... current is 7c07d1e-1" (RED_RC 1), restored exactly, witness passes again.
+- Status: open. The push rule (every witness passed) is not met, so nothing is pushed in this round.
