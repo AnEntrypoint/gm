@@ -373,7 +373,10 @@ int install_local(const HostArgs& args, const fs::path& local) {
                 return 1;
             }
         }
-        write_update_state(stage / "new", UpdateState{wall_ms(), "", version, ""});
+        UpdateState state;
+        state.checked_ms = wall_ms();
+        state.version = version;
+        write_update_state(stage / "new", state);
         if (auto error = switch_version(stage / "new", *root, version)) {
             std::cerr << "gm: install: " << *error << "\n";
             return 1;
