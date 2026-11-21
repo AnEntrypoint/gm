@@ -128,6 +128,7 @@ CheckResult check_worker_growth(const std::string& binary);
 CheckResult check_feed_reference(const std::string& binary);
 CheckResult check_job_wait(const std::string& binary);
 CheckResult check_job_status_reply(const std::string& binary);
+CheckResult check_job_status_wait(const std::string& binary);
 CheckResult check_next_context_record(const std::string& binary);
 CheckResult check_run_shell_shape(const std::string& binary);
 CheckResult check_next_context_no_task(const std::string& binary);

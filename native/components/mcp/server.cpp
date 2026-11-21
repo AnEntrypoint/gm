@@ -179,7 +179,6 @@ constexpr std::size_t kNoticePrdWindow = 5;
 constexpr std::size_t kRowsNamed = 5;
 constexpr double kDefaultBodyTimeoutMs = 100000;
 constexpr double kForegroundCapMs = 100000;
-constexpr double kForegroundWaitMs = 80000;
 constexpr double kMaxWaitMs = 60000;
 
 template <typename T>
@@ -3864,11 +3863,7 @@ public:
     }
 
     json::Value call(std::string_view name_view, const json::Value& args) override {
-        const Value* wait = args.find("waitMs");
-        if (name_view != "job_status" || wait == nullptr || !wait->is_number() || wait->as_number() <= kForegroundWaitMs * clock_scale()) return dispatch(name_view, args);
-        Value bounded = args;
-        bounded.set("waitMs", kForegroundWaitMs * clock_scale());
-        return dispatch(name_view, bounded);
+        return dispatch(name_view, args);
     }
 
     json::Value dispatch(std::string_view name_view, const json::Value& args) {

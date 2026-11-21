@@ -5298,3 +5298,10 @@ Commits this part (local, lanmower, no trailers): 6d73245 (txiki detached), 57ca
 - Change: both children spawn `/bin/sh` (present on Linux and macOS): `printf hello >&3` and `exit 0`. The body records every spawn in `spawned`, and catches a thrown spawn error into `{ error, spawned }`, so a failure names the path that failed.
 - Witness: `gm-tool check build/rel-72/native/components/host/gm check-txiki-spawn-stdio` on Linux: ok.
 - Red (`/tmp/phase-d-72/specs-a1.json`): plain spawn path replaced by `/nonexistent/gm-spawn-probe`. BUILD_MUT=0 RED_RC=1, the reply lists `spawned` `["/bin/sh -c printf hello >&3","/nonexistent/gm-spawn-probe"]` with ENOENT. RESTORED_cmp=True, BUILD_RESTORE=0, AFTER_RC=0. git status before this commit: 1 changed file (this change).
+
+### 2. job_status waitMs runs its full time
+
+- Cause: `JobTable` waits its full `waitMs`, but `LoggedVerbs::call` in `native/components/mcp/server.cpp` clamped every `job_status` wait inside a body to `kForegroundWaitMs` (80 s) and returned early, while the tool description says "waitMs with no ceiling". A run_code body still has its own foreground budget (100 s, `kForegroundCapMs`); a body past it moves to background as before, so a single wait is full time up to that budget.
+- Change: `call` forwards `job_status` unchanged; the constant is removed. New check `check-job-status-wait` (`native/components/tool/checks/job_status_wait.cpp`): a 1 s job returns exited in about 1 s, and a `waitMs` of 84000 on a running job takes at least 83000 ms and reports running.
+- Witness (Linux, build/rel-72): ok, "84 s asked, 84001 ms taken", "1007 ms for a job that ends at once".
+- Red (`/tmp/phase-d-72/specs-a2.json`): the 80 s clamp restored in `call`. BUILD_MUT=0 RED_RC=1 ("returned after 80000 ms"), RESTORED_cmp=True, BUILD_RESTORE=0, AFTER_RC=0.
