@@ -1,10 +1,19 @@
 #include "gm/tool.hpp"
 
+#include <chrono>
 #include <cstdio>
+#include <cstdlib>
 #include <exception>
 #include <filesystem>
 #include <string>
+#include <system_error>
 #include <vector>
+
+#if defined(_WIN32)
+#include <process.h>
+#else
+#include <unistd.h>
+#endif
 
 namespace {
 
@@ -20,6 +29,45 @@ int usage() {
                stderr);
     return 2;
 }
+
+class ScratchRoot {
+public:
+    ScratchRoot() {
+        std::error_code ec;
+        const auto ticks = std::chrono::steady_clock::now().time_since_epoch().count();
+        root_ = std::filesystem::temp_directory_path(ec) / ("gm-tool-" + std::to_string(process_id()) + "-" + std::to_string(ticks));
+        std::filesystem::create_directories(root_, ec);
+        point_temp_directory_at(root_);
+    }
+
+    ~ScratchRoot() {
+        std::error_code ec;
+        std::filesystem::remove_all(root_, ec);
+    }
+
+    ScratchRoot(const ScratchRoot&) = delete;
+    ScratchRoot& operator=(const ScratchRoot&) = delete;
+
+private:
+    static int process_id() {
+#if defined(_WIN32)
+        return _getpid();
+#else
+        return getpid();
+#endif
+    }
+
+    static void point_temp_directory_at(const std::filesystem::path& root) {
+#if defined(_WIN32)
+        _putenv_s("TMP", root.string().c_str());
+        _putenv_s("TEMP", root.string().c_str());
+#else
+        setenv("TMPDIR", root.c_str(), 1);
+#endif
+    }
+
+    std::filesystem::path root_;
+};
 
 bool selected(const std::vector<std::string>& names, const std::string& name) {
     if (names.empty()) return true;
@@ -37,6 +85,7 @@ std::filesystem::path checkout_root() {
 
 int run_checks(const std::vector<std::string>& args) {
     if (args.size() < 2) return usage();
+    const ScratchRoot scratch;
     const std::string binary = std::filesystem::absolute(args[1]).string();
     const std::vector<std::string> names(args.begin() + 2, args.end());
     int status = 0;

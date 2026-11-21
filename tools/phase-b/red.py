@@ -11,7 +11,8 @@ BUILD = os.environ.get("RED_BUILD", "build/rel-72")
 PRESET = os.environ.get("RED_PRESET", "x64-linux-release")
 LOGS = pathlib.Path(os.environ.get("RED_LOGS", "/tmp/red-logs"))
 GIT_ENV = {**os.environ, "HOME": "/config"}
-WITNESS_ENV = {**os.environ, "HOME": "/tmp/rel72-home", "GMNEW_AUTO_UPDATE": "0"}
+SCRATCH_BASE = os.environ.get("GM_SCRATCH", "/workspace/tmp/gm")
+WITNESS_ENV = {**os.environ, "HOME": SCRATCH_BASE + "/rel72-home", "GMNEW_AUTO_UPDATE": "0"}
 GM_TOOL = BUILD + "/native/components/tool/gm-tool"
 GM = BUILD + "/native/components/host/gm"
 
