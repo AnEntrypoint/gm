@@ -5288,3 +5288,13 @@ Commits this part (local, lanmower, no trailers): 6d73245 (txiki detached), 57ca
 - The window's own ALL flag was 1 from two script defects, checked by hand as above: the parity grep escaping, and the red count, which counted the earlier rows of the shared reds/summary.txt.
 - Not rerun in this window: the round 70 and 71 red checks (txiki and gm sets). They ran on earlier builds; their results stand in the earlier sections.
 - Git after the window: 0 changed files, HEAD 0437f4b.
+
+
+## Round 73
+
+### 1. check-txiki-spawn-stdio: portable spawns, path reported (macOS ENOENT)
+
+- CI cause: arm64-macos (run 44846084565, job 136666002783) and x64-macos (job 136666002729) both fail `check-txiki-spawn-stdio: 3 failure(s)` with `ENOENT: no such file or directory at spawn (native)`. The plain spawn named `/bin/true`. I believe macOS ships `true` only as `/usr/bin/true`, not `/bin/true`; not verified on a macOS host here, the next macOS run's `spawned` list will confirm.
+- Change: both children spawn `/bin/sh` (present on Linux and macOS): `printf hello >&3` and `exit 0`. The body records every spawn in `spawned`, and catches a thrown spawn error into `{ error, spawned }`, so a failure names the path that failed.
+- Witness: `gm-tool check build/rel-72/native/components/host/gm check-txiki-spawn-stdio` on Linux: ok.
+- Red (`/tmp/phase-d-72/specs-a1.json`): plain spawn path replaced by `/nonexistent/gm-spawn-probe`. BUILD_MUT=0 RED_RC=1, the reply lists `spawned` `["/bin/sh -c printf hello >&3","/nonexistent/gm-spawn-probe"]` with ENOENT. RESTORED_cmp=True, BUILD_RESTORE=0, AFTER_RC=0. git status before this commit: 1 changed file (this change).
