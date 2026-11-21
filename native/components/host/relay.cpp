@@ -640,6 +640,8 @@ void Relay::update_loop() {
             reexec_pending_ = true;
 #endif
             changed_.notify_all();
+        } else if (policy.enabled) {
+            say("update checked: current is " + result.from + ", manifest is " + (result.manifest.empty() ? std::string("unknown") : result.manifest));
         }
         const auto deadline = std::chrono::steady_clock::now() + wait;
         changed_.wait_until(lock, deadline, [&] { return host_gone_; });

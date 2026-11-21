@@ -529,6 +529,7 @@ UpdateResult update_once(const UpdatePolicy& policy, UpdateResult result) {
     const fs::path staging = policy.install_dir / kStagingName;
 
     UpdateState state = read_update_state(policy.install_dir);
+    result.manifest = state.version;
     if (!policy.force && checked_recently(state, now_ms(), policy.interval))
         return current_build(std::move(result), policy, "already current");
     if (!acquire_update_lock(policy.install_dir))
@@ -550,6 +551,7 @@ UpdateResult update_once(const UpdatePolicy& policy, UpdateResult result) {
     auto manifest = parse_manifest(reply->body);
     if (!manifest) return failed(std::move(result), manifest.error());
     result.commit = manifest->commit;
+    result.manifest = manifest->version;
     result.ok = true;
     state.etag = reply->etag;
     if (kBuildHead != "unknown" && manifest->commit.starts_with(kBuildHead)) {

@@ -73,6 +73,7 @@ struct UpdateResult {
     std::string from;
     std::string to;
     std::string commit;
+    std::string manifest;
     std::string status;
     std::string error;
 
