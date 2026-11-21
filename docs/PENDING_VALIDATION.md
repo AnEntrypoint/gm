@@ -5540,3 +5540,14 @@ Kept on purpose (different behaviour, renamed so they no longer look like duplic
 Not done yet in this pass (candidates, not judged): tools/*.mjs (1131 lines of Node witnesses referenced only from docs), research/ and tasks/rewrite (notes), the remaining witness variants with different bodies (output_of, call, brief, open_session, run_code), and the product areas verbs, mcp, host and the txiki shims beyond the duplicates found.
 
 Proof: the window in section 25.
+
+### 25. Phase B window at 4f69096, through the ticket gate (tools/phase-b/window.sh)
+
+- Launch: gate-ticket.cjs run gm -- bash tools/phase-b/window.sh runs/phase-b (ticket PID 2037516, window PID 2193833). Queued about 1 h 30 min behind other sessions. Gate reads: 08:30:39 si 1020 (not clear, waited), 08:31:12 si 20 so 0, heavy-jobs clear.
+- Build: build/rel-72 at 4f69096-1, kBuildState clean, tree clean.
+- Origin guard: 250 comparisons, 0 changes. ORIGIN_START logged: ref 4f69096, fetch_head 37a7a3c12ba0db55.
+- Witnesses: 124 under timeout with PIDs; 124 returned 0 (same count as before the pass).
+- Parity (HOME=/config): PARITY_OK.
+- Reds: 18 from tools/phase-b/reds.json run by red.py as committed mutations; each MUT_BUILD_RC 0, RED_RC 1, RESTORED_cmp True, TREE_CLEAN True, AFTER_RC 0. The seven that used to run in place now run committed, including red-stamp-tree with its new mutation.
+- Longest step: the queue for the ticket (about 90 min); the window itself ran 08:30 to 09:07 (37 min), its longest witness check-restart-jobs.
+- WINDOW_END FAILED=0, ticket RC 0.
