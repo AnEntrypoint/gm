@@ -5433,3 +5433,15 @@ These in-place reds mutate the tracked file without a commit, and the witness ch
 
 - The 10-minute "fetch origin --quiet" entries in the reflog run from 02:00 to 04:39 and then stop. No source in the current tree or at fb59ddf contains that command (git grep). A 15-minute sampler for git fetch processes started at 05:20 SAST was killed when its call ended, before it logged anything (fetch-watch.txt has no lines). The fetch's source is unidentified.
 - The witness guard (section 10) and the window's origin guard (section 13) would catch a recurrence. The live relay PID 399315 runs build fb59ddf-573 and is not stopped.
+
+### 15. Push, reinstall and the live updater line at a015bda
+
+- Push: git push origin main, output "fb59ddf..a015bda  main -> main", exit 0. git ls-remote origin main: a015bdaa9d8ba3425d81949bb8679c2eccc9226a refs/heads/main. The pre-push hook passed: 19 commits, all lanmower, no blocked address.
+- Build at a015bda-1, kBuildState clean. Install: gm install --local /workspace/gm/build/rel-72 --source /workspace/gm, with HOME=/config, exit 0; /config/.gmnew/current -> versions/a015bda-1.
+- Validate: gm-tool check /config/.gmnew/current/gm check-installed-stamp: ok, STAMP_RC 0.
+- The live session relay (PID 399315) re-executed on the new build at 04:53:24 UTC. Its relay.log line, the one cycle after re-exec, is: "update checked: current is a015bda-1, manifest is a015bda-1" (1795236804946).
+- That manifest value is wrong. The published manifest (https://github.com/AnEntrypoint/gm/releases/download/latest/manifest.json) says fb59ddf-573. The value came from state.version, the installed build's version: result.manifest was set from state.version at the start of update_once and was only overwritten when a manifest body was parsed. A cycle that returns early (checked_recently) or sees a 304 keeps the installed version. This is a defect in my round 73 line (5534b49).
+- Fix, local only: 2efb7c5 "update: the update check reports the manifest version it last saw, and check-update-checked runs a second cycle inside the interval". The state file now keeps manifest (the last parsed manifest version); the cycle reports it. Not pushed: the owner's push-once rule is spent, so the installed build (a015bda-1) still shows the wrong value until a second push is approved.
+- Witness (Linux, release build 2efb7c5-1, clean): ok. The first relay logs "manifest is ffff444-5"; a second relay on the same install, inside the check interval, logs the same value.
+- Red (/tmp/phase-d-74/mutate-manifest.py: both reads changed back to state.version, temporary commit): MUT_BUILD_RC 0, kBuildState clean, RED_RC 1, the second relay's line is missing. RESTORED_cmp=True, HEAD back at 2efb7c5 with 0 changed files, AFTER_RC 0.
+- Open: the 2efb7c5 fix needs a push and a reinstall to take effect; the owner decides.
