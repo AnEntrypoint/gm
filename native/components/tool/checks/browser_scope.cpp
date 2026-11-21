@@ -673,7 +673,7 @@ CheckResult check_browser_scope_tree(const std::string&) {
 
 CheckResult check_browser_dead_executor(const std::string& binary) {
     CheckResult result;
-#if defined(__linux__)
+#if !defined(_WIN32)
     const auto started = std::chrono::steady_clock::now();
     const auto stamp = started.time_since_epoch().count();
     const fs::path sandbox = fs::temp_directory_path() / ("gm-browser-dead-executor-" + std::to_string(stamp));
@@ -725,7 +725,7 @@ CheckResult check_browser_dead_executor(const std::string& binary) {
     const double wall = std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
     result.summary = "a page opened by a serve whose executor then went away is closed by browser_close_run on a restarted serve of the same run (wall " + std::to_string(wall) + " s)";
 #else
-    result.summary = "skipped: the dead-executor browser check runs on Linux";
+    result.summary = "skipped: the dead-executor browser check runs on POSIX";
 #endif
     (void)binary;
     return result;

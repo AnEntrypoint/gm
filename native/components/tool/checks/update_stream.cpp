@@ -110,8 +110,8 @@ std::optional<json::Value> reply_of(const std::string& text) {
 
 CheckResult check_update_stream(const std::string& binary) {
     CheckResult result;
-#if !defined(__linux__)
-    result.summary = "skipped (not on this platform: the check stages a release archive with tar and sha256sum)";
+#if defined(_WIN32)
+    result.summary = "skipped (not on this platform: the check stages a POSIX release archive)";
     return result;
 #else
     const auto started = Clock::now();
@@ -192,7 +192,7 @@ CheckResult check_update_stream(const std::string& binary) {
         result.failures.push_back("could not pack the release archive " + archive.string());
         return result;
     }
-    const std::string digest = first_word(proc::run({"sha256sum", archive.string()}, {}, {}, kRunLimitMs).out);
+    const std::string digest = support::file_sha256(archive);
     const std::uintmax_t size = fs::file_size(archive, ec);
     const std::string head_full = first_word(proc::run({"git", "rev-parse", "HEAD"}, cwd, {}, kRunLimitMs).out);
     if (digest.empty() || ec || head_full.size() != 40) {

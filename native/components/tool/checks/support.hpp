@@ -14,6 +14,19 @@ namespace gm::tool::support {
 
 namespace fs = std::filesystem;
 
+inline std::string file_sha256(const fs::path& file) {
+    for (const std::vector<std::string>& argv : {std::vector<std::string>{"sha256sum", file.string()}, std::vector<std::string>{"shasum", "-a", "256", file.string()}}) {
+        const proc::Outcome run = proc::run(argv, {}, {}, 60000);
+        if (run.started && run.exit_code == 0) {
+            std::istringstream words(run.out);
+            std::string digest;
+            words >> digest;
+            return digest;
+        }
+    }
+    return {};
+}
+
 inline std::string read_text(const fs::path& file) {
     std::ifstream in(file, std::ios::binary);
     std::ostringstream text;

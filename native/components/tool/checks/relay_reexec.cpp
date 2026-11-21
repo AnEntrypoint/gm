@@ -1,4 +1,5 @@
 #include "gm/tool.hpp"
+#include "support.hpp"
 
 #include <atomic>
 #include <chrono>
@@ -102,8 +103,8 @@ struct Marks {
 
 CheckResult check_relay_reexec(const std::string& binary) {
     CheckResult result;
-#if !defined(__linux__)
-    result.summary = "skipped (not on this platform: the check packs a linux archive; the relay does not re-execute on win32)";
+#if defined(_WIN32)
+    result.summary = "skipped (not on this platform: the relay does not re-execute on win32)";
     return result;
 #else
     const auto started = Clock::now();
@@ -155,10 +156,9 @@ CheckResult check_relay_reexec(const std::string& binary) {
             result.failures.push_back("tar failed: " + packed.err);
             return;
         }
-        const auto summed = proc::run({"sha256sum", (published / archive_name).string()}, published, {}, 60000);
-        const std::string digest = first_word(summed.out);
-        if (!summed.started || summed.exit_code != 0 || digest.size() != 64) {
-            result.failures.push_back("sha256sum failed: " + summed.err);
+        const std::string digest = support::file_sha256(published / archive_name);
+        if (digest.size() != 64) {
+            result.failures.push_back("could not hash " + (published / archive_name).string());
             return;
         }
         const auto size = fs::file_size(published / archive_name, ec);
