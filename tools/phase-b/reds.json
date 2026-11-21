@@ -202,8 +202,8 @@
   "file": "cmake/gmnew_stamp.cmake",
   "edits": [
    {
-    "from": "--all -- native defaults",
-    "to": "--all --dry-run -- native defaults",
+    "from": "string(SHA256 digest \"${tree}\")",
+    "to": "string(SHA256 digest \"${tree}x\")",
     "count": 1
    }
   ]
