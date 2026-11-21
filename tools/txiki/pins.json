@@ -218,6 +218,10 @@
     {
       "file": "quickjs-async-frame.patch",
       "sha256": "72ddac1b9a6d6ecfffd85921e89f8890f4ace026c29c784e7794ce5c82a52386"
+    },
+    {
+      "file": "txiki-dns-flags.patch",
+      "sha256": "491faccc88ae5b5f652608d3a6dfd2749ecfcc207dabf4793cdc79cb5870d503"
     }
   ],
   "browserPort": [
