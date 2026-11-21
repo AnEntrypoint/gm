@@ -5651,3 +5651,9 @@ What was missing in item 29 for fx: the exports lived in a C++ file that include
 - Fix of the cause: none of these witnesses tests the playwriter install, so none should perform it. support::install_argv runs the install with the offline git, npm and patch-package of the old install-follows fixture (one shared copy now, moved out of install_follows.cpp) and with https_proxy pointing at a closed port, so a real network access fails in under a second with its reason instead of hanging; support::failure_text names a timeout. The timeout values are unchanged. The one witness that does install pw for real is check-lazy-browser.
 - Red: red-install-offline replaces the fixture PATH with the real PATH; check-install-switch then fails at once with "playwriter clone failed: Failed to connect to github.com port 443 via 127.0.0.1".
 - Witnesses (alone, this tree, HOME as the window): check-install-switch ok in 3 s (11 s before), check-install-build-id 2 s, parity-contract 7 s (18 of 18), check-build-handover 12 s, check-install-follows 6 s, check-skill-reload 6 s. Windows is unchanged: the fixture is POSIX-only and the real install stays there.
+
+### 38. Window phase-b6 on 0a3cc1b
+
+- Ticket queued about 1 h 5 min behind fx and signal windows; window 18:53:19 to 19:37:51 UTC (about 44 min).
+- Witnesses: 128 of 128 ok, WITNESSES_DONE FAILED=0 (check-install-switch, install-build-id, parity-contract, build-handover, install-follows and skill-reload among them). Reds: 32 of 32 failed as they must, REDS_DONE FAILED=0, including red-install-offline. HEAD_END 0a3cc1b, working tree clean, origin-ref guard ORIGIN_SAME around the witnesses that read it.
+- Every row passed in this one window, with no rerun of any row.
