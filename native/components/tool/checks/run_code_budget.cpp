@@ -66,11 +66,7 @@ CheckResult check_run_code_budget(const std::string& binary) {
             if (!session.started()) {
                 result.failures.push_back("gm serve did not start from " + binary);
             } else {
-                session.rpc("initialize", json::Object{{"protocolVersion", "2025-06-18"}, {"capabilities", json::Object{}},
-                                                      {"clientInfo", json::Object{{"name", "gm-budget-check"}, {"version", "1"}}}});
-                session.notify("notifications/initialized", json::Object{});
-                session.rpc("resources/read", json::Object{{"uri", "skill://gm/SKILL.md"}});
-                tool_json(session, "next_context", json::Object{});
+                start_session(session, "gm-budget-check");
                 const std::string port = std::to_string(server.port());
                 const std::string capped_body = "const end = Date.now() + " + std::to_string(scaled(115000)) + "; let n = 0; while (Date.now() < end) { n += 1; } return { spun: n > 0 };";
                 const std::string spin_body = "const end = Date.now() + " + std::to_string(scaled(65000)) + "; let n = 0; while (Date.now() < end) { n += 1; } return { spun: n > 0 };";
@@ -163,11 +159,7 @@ CheckResult check_run_code_lifetime(const std::string& binary) {
         if (!session.started()) {
             result.failures.push_back("gm serve did not start from " + binary);
         } else {
-            session.rpc("initialize", json::Object{{"protocolVersion", "2025-06-18"}, {"capabilities", json::Object{}},
-                                                  {"clientInfo", json::Object{{"name", "gm-run-code-lifetime-check"}, {"version", "1"}}}});
-            session.notify("notifications/initialized", json::Object{});
-            session.rpc("resources/read", json::Object{{"uri", "skill://gm/SKILL.md"}});
-            tool_text(session, "next_context", json::Object{});
+            start_session(session, "gm-run-code-lifetime-check");
             const auto settle = [&session](const std::string& job) {
                 json::Value status;
                 for (int attempt = 0; attempt < 10; ++attempt) {

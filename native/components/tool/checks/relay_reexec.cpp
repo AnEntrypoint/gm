@@ -191,9 +191,7 @@ CheckResult check_relay_reexec(const std::string& binary) {
             return marks.reexec;
         };
 
-        session.rpc("initialize", json::Object{{"protocolVersion", "2025-06-18"}, {"capabilities", json::Object{}},
-                                              {"clientInfo", json::Object{{"name", "relay-reexec-check"}, {"version", "1"}}}});
-        session.notify("notifications/initialized", json::Object{});
+        initialize_session(session, "relay-reexec-check");
         session.send("resources/read", json::Object{{"uri", "skill://gm/SKILL.md"}});
         session.send("tools/call", json::Object{{"name", "next_context"}, {"arguments", json::Object{}}});
         const std::int64_t held_id = session.send("tools/call", json::Object{{"name", "next_context"}, {"arguments", json::Object{{"waitMs", kWaitMs}}}});

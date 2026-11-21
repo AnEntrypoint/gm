@@ -1,4 +1,5 @@
 #include "gm/tool.hpp"
+#include "support.hpp"
 
 #include <chrono>
 #include <filesystem>
@@ -31,11 +32,7 @@ CheckResult check_job_wait(const std::string& binary) {
         if (!session.started()) {
             result.failures.push_back("gm serve did not start from " + binary);
         } else {
-            session.rpc("initialize", json::Object{{"protocolVersion", "2025-06-18"}, {"capabilities", json::Object{}},
-                                                  {"clientInfo", json::Object{{"name", "check-job-wait"}, {"version", "1"}}}});
-            session.notify("notifications/initialized", json::Object{});
-            session.rpc("resources/read", json::Object{{"uri", "skill://gm/SKILL.md"}});
-            tool_text(session, "next_context", json::Object{});
+            start_session(session, "check-job-wait");
             const std::string source =
                 "const began = Date.now(); await gm.job_start({ job: 'wait', command: 'sleep " + std::to_string(kJobSeconds) + "; echo done', timeoutMs: 120000 }); "
                 "const ended = await gm.job_status({ job: 'wait', waitMs: 120000 }); "
@@ -80,11 +77,7 @@ CheckResult check_job_extended_wait(const std::string& binary) {
         if (!session.started()) {
             result.failures.push_back("gm serve did not start from " + binary);
         } else {
-            session.rpc("initialize", json::Object{{"protocolVersion", "2025-06-18"}, {"capabilities", json::Object{}},
-                                                  {"clientInfo", json::Object{{"name", "check-job-extended-wait"}, {"version", "1"}}}});
-            session.notify("notifications/initialized", json::Object{});
-            session.rpc("resources/read", json::Object{{"uri", "skill://gm/SKILL.md"}});
-            tool_text(session, "next_context", json::Object{});
+            start_session(session, "check-job-extended-wait");
             const std::string source =
                 "const began = Date.now(); const started = await gm.job_start({ job: 'extended', command: 'for i in 1 2 3 4 5 6 7 8 9 10; do echo $i; sleep 0.5; done', timeoutMs: 2000, extendOnProgress: true }); "
                 "const ended = await gm.job_status({ job: 'extended', waitMs: 60000 }); "

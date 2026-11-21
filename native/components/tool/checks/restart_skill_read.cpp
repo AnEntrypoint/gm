@@ -29,9 +29,7 @@ std::vector<json::Value> restart_events(const fs::path& log) {
 }
 
 void initialize_only(Session& session) {
-    session.rpc("initialize", json::Object{{"protocolVersion", "2025-06-18"}, {"capabilities", json::Object{}},
-                                          {"clientInfo", json::Object{{"name", "restart-skill-read-check"}, {"version", "1"}}}});
-    session.notify("notifications/initialized", json::Object{});
+    initialize_session(session, "restart-skill-read-check");
 }
 
 }

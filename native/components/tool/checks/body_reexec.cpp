@@ -124,9 +124,7 @@ CheckResult check_body_reexec(const std::string& binary) {
         if (!session.started()) {
             result.failures.push_back("the relay did not start from " + (install / "current" / "gm").string());
         } else {
-            session.rpc("initialize", json::Object{{"protocolVersion", "2025-06-18"}, {"capabilities", json::Object{}},
-                                                  {"clientInfo", json::Object{{"name", "check-body-reexec"}, {"version", "1"}}}});
-            session.notify("notifications/initialized", json::Object{});
+            initialize_session(session, "check-body-reexec");
             session.rpc("resources/read", json::Object{{"uri", "skill://gm/SKILL.md"}});
 
             const json::Value started_body = tool_json(session, "run_code", json::Object{{"body", body_source}, {"timeoutMs", 1000}});

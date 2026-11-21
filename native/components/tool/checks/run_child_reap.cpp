@@ -1,4 +1,5 @@
 #include "gm/tool.hpp"
+#include "support.hpp"
 
 #if !defined(_WIN32)
 
@@ -43,11 +44,7 @@ CheckResult check_run_child_reap(const std::string& binary) {
         if (!session.started()) {
             result.failures.push_back("gm serve did not start from " + binary);
         } else {
-            session.rpc("initialize", json::Object{{"protocolVersion", "2025-06-18"}, {"capabilities", json::Object{}},
-                                                  {"clientInfo", json::Object{{"name", "check-run-child-reap"}, {"version", "1"}}}});
-            session.notify("notifications/initialized", json::Object{});
-            session.rpc("resources/read", json::Object{{"uri", "skill://gm/SKILL.md"}});
-            tool_text(session, "next_context", json::Object{});
+            start_session(session, "check-run-child-reap");
             const json::Value reply = tool_json(session, "run_code", json::Object{{"format", "esm"}, {"timeoutMs", 60000}, {"body", kBody}});
             const json::Value out = output_value(reply);
             child = recorded_pid(workspace / "child.pid");

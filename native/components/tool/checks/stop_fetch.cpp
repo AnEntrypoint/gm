@@ -36,11 +36,7 @@ CheckResult check_stop_fetch(const std::string& binary) {
             if (!session.started()) {
                 result.failures.push_back("gm serve did not start from " + binary);
             } else {
-                session.rpc("initialize", json::Object{{"protocolVersion", "2025-06-18"}, {"capabilities", json::Object{}},
-                                                      {"clientInfo", json::Object{{"name", "gm-stop-fetch-check"}, {"version", "1"}}}});
-                session.notify("notifications/initialized", json::Object{});
-                session.rpc("resources/read", json::Object{{"uri", "skill://gm/SKILL.md"}});
-                tool_json(session, "next_context", json::Object{});
+                start_session(session, "gm-stop-fetch-check");
                 const std::string body = "return await gm.fetch({ url: 'http://127.0.0.1:" + std::to_string(server.port()) + "/', timeoutMs: 60000 });";
                 const json::Value started_reply = tool_json(session, "run_code", json::Object{{"format", "esm"}, {"timeoutMs", 1000}, {"body", body}});
                 if (value_at(started_reply, "background") == nullptr)

@@ -1,4 +1,5 @@
 #include "gm/tool.hpp"
+#include "support.hpp"
 
 #include <chrono>
 #include <filesystem>
@@ -33,9 +34,7 @@ CheckResult check_early_run_code(const std::string& binary) {
         if (!session.started()) {
             result.failures.push_back("gm serve did not start from " + binary);
         } else {
-            session.rpc("initialize", json::Object{{"protocolVersion", "2025-06-18"}, {"capabilities", json::Object{}},
-                                                  {"clientInfo", json::Object{{"name", "check-early-run-code"}, {"version", "1"}}}});
-            session.notify("notifications/initialized", json::Object{});
+            initialize_session(session, "check-early-run-code");
             session.rpc("resources/read", json::Object{{"uri", "skill://gm/SKILL.md"}});
 
             const auto early_started = std::chrono::steady_clock::now();

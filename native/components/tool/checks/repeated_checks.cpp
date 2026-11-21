@@ -1,4 +1,5 @@
 #include "gm/tool.hpp"
+#include "support.hpp"
 
 #include <chrono>
 #include <filesystem>
@@ -54,11 +55,7 @@ CheckResult check_repeated_checks(const std::string& binary) {
         if (!session.started()) {
             result.failures.push_back("gm serve did not start from " + binary);
         } else {
-            session.rpc("initialize", json::Object{{"protocolVersion", "2025-06-18"}, {"capabilities", json::Object{}},
-                                                  {"clientInfo", json::Object{{"name", "repeated-checks-check"}, {"version", "1"}}}});
-            session.notify("notifications/initialized", json::Object{});
-            session.rpc("resources/read", json::Object{{"uri", "skill://gm/SKILL.md"}});
-            tool_text(session, "next_context", json::Object{});
+            start_session(session, "repeated-checks-check");
 
             const std::string ran_body = "for (let i = 0; i < 3; i += 1) await gm.run_shell({ command: " + json::quote(kRepeated) + " }); await gm.run_shell({ command: " + json::quote(kOnce) + " }); return 'ran';";
             const json::Value ran_reply = tool_json(session, "run_code", json::Object{{"body", ran_body}});

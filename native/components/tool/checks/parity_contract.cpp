@@ -46,9 +46,7 @@ std::unique_ptr<Session> open_session(const Context& context, const std::string&
         row.failures.push_back("gm serve did not start from " + context.binary);
         return nullptr;
     }
-    session->rpc("initialize", json::Object{{"protocolVersion", "2025-06-18"}, {"capabilities", json::Object{}},
-                                           {"clientInfo", json::Object{{"name", "parity-contract"}, {"version", "1"}}}});
-    session->notify("notifications/initialized", json::Object{});
+    initialize_session(*session, "parity-contract");
     return session;
 }
 

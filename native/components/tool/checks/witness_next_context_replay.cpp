@@ -1,4 +1,5 @@
 #include "gm/tool.hpp"
+#include "support.hpp"
 
 #include <chrono>
 #include <filesystem>
@@ -57,9 +58,7 @@ CheckResult check_witness_next_context_replay(const std::string& binary) {
         if (!session.started()) {
             result.failures.push_back("gm serve did not start from " + binary);
         } else {
-            session.rpc("initialize", json::Object{{"protocolVersion", "2025-06-18"}, {"capabilities", json::Object{}},
-                                                  {"clientInfo", json::Object{{"name", "gm-replay-check"}, {"version", "1"}}}});
-            session.notify("notifications/initialized", json::Object{});
+            initialize_session(session, "gm-replay-check");
             session.rpc("resources/read", json::Object{{"uri", "skill://gm/SKILL.md"}});
             const json::Value first = tool_json(session, "next_context", json::Object{{"task", brief}});
             const json::Value closed = tool_json(session, "finish", json::Object{{"witness", "replay witness: the first run closed with its brief"}});

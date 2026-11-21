@@ -109,8 +109,7 @@ std::string status_of(const fs::path& launcher, const fs::path& home, const fs::
 }
 
 void init_session(Session& session) {
-    session.rpc("initialize", json::Object{{"protocolVersion", "2025-06-18"}, {"capabilities", json::Object{}}, {"clientInfo", json::Object{{"name", "gm-tool"}, {"version", "1"}}}});
-    session.notify("notifications/initialized", json::Object{});
+    initialize_session(session, "gm-tool");
     session.rpc("resources/read", json::Object{{"uri", "skill://gm/SKILL.md"}});
     session.rpc("tools/call", json::Object{{"name", "next_context"}, {"arguments", json::Object{}}});
 }

@@ -1,5 +1,6 @@
 #include "gm/proc.hpp"
 #include "gm/tool.hpp"
+#include "support.hpp"
 
 #include <chrono>
 #include <cstdlib>
@@ -141,8 +142,7 @@ CheckResult check_idle_cpu(const std::string& binary) {
         if (!serve.started()) {
             result.failures.push_back("a gm serve did not start from " + binary);
         } else {
-            serve.rpc("initialize", json::Object{{"protocolVersion", "2025-06-18"}, {"capabilities", json::Object{}}, {"clientInfo", json::Object{{"name", "gm-tool"}, {"version", "1"}}}});
-            serve.notify("notifications/initialized", json::Object{});
+            initialize_session(serve, "gm-tool");
             serve.body("return 1;");
             const long long worker = worker_of(serve.pid());
             if (worker == 0) {

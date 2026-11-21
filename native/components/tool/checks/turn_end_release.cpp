@@ -56,11 +56,7 @@ std::vector<long long> stub_pids(const fs::path& file) {
 }
 
 void prepare(Session& session) {
-    session.rpc("initialize", json::Object{{"protocolVersion", "2025-06-18"}, {"capabilities", json::Object{}},
-                                           {"clientInfo", json::Object{{"name", "turn-end-release-check"}, {"version", "1"}}}});
-    session.notify("notifications/initialized", json::Object{});
-    session.rpc("resources/read", json::Object{{"uri", "skill://gm/SKILL.md"}});
-    tool_json(session, "next_context", json::Object{});
+    start_session(session, "turn-end-release-check");
 }
 
 json::Value call_stub(Session& session) {

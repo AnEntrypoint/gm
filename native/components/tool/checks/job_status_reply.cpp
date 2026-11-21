@@ -1,4 +1,5 @@
 #include "gm/tool.hpp"
+#include "support.hpp"
 
 #include <chrono>
 #include <filesystem>
@@ -32,11 +33,7 @@ CheckResult check_job_status_reply(const std::string& binary) {
         if (!session.started()) {
             result.failures.push_back("gm serve did not start from " + binary);
         } else {
-            session.rpc("initialize", json::Object{{"protocolVersion", "2025-06-18"}, {"capabilities", json::Object{}},
-                                                  {"clientInfo", json::Object{{"name", "check-job-status-reply"}, {"version", "1"}}}});
-            session.notify("notifications/initialized", json::Object{});
-            session.rpc("resources/read", json::Object{{"uri", "skill://gm/SKILL.md"}});
-            tool_text(session, "next_context", json::Object{});
+            start_session(session, "check-job-status-reply");
             const std::string body = "await new Promise((resolve) => setTimeout(resolve, 2000)); return 'ended ' + 'x'.repeat(" + std::to_string(kValueChars) + ");";
             const json::Value started_body = tool_json(session, "run_code", json::Object{{"body", body}, {"timeoutMs", 1000}});
             const json::Value* background = started_body.find("background");

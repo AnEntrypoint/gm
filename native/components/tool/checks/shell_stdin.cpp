@@ -1,4 +1,5 @@
 #include "gm/tool.hpp"
+#include "support.hpp"
 
 #include <chrono>
 #include <filesystem>
@@ -39,9 +40,7 @@ CheckResult check_shell_stdin(const std::string& binary) {
         if (!session.started()) {
             result.failures.push_back("gm serve did not start from " + binary);
         } else {
-            session.rpc("initialize", json::Object{{"protocolVersion", "2025-06-18"}, {"capabilities", json::Object{}},
-                                                  {"clientInfo", json::Object{{"name", "gm-stdin-check"}, {"version", "1"}}}});
-            session.notify("notifications/initialized", json::Object{});
+            initialize_session(session, "gm-stdin-check");
             session.rpc("resources/read", json::Object{{"uri", "skill://gm/SKILL.md"}});
             const auto run_started = std::chrono::steady_clock::now();
             const json::Value reply = tool_json(session, "run_code", json::Object{{"format", "esm"}, {"timeoutMs", 60000}, {"body", kBody}});

@@ -136,9 +136,7 @@ CheckResult check_handover_in_flight(const std::string& binary) {
         if (!session.started()) {
             result.failures.push_back("the relay did not start from " + (install / "current" / "gm").string());
         } else {
-            session.rpc("initialize", json::Object{{"protocolVersion", "2025-06-18"}, {"capabilities", json::Object{}},
-                                                  {"clientInfo", json::Object{{"name", "handover-in-flight-check"}, {"version", "1"}}}});
-            session.notify("notifications/initialized", json::Object{});
+            initialize_session(session, "handover-in-flight-check");
 
             const auto download_deadline = Clock::now() + std::chrono::milliseconds(kDownloadWaitMs);
             while (download.empty() && Clock::now() < download_deadline) {

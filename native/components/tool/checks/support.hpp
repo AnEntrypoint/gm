@@ -94,10 +94,14 @@ inline std::vector<long long> children_of(long long pid) {
     return found;
 }
 
-inline void start_session(Session& session, const std::string& client) {
+inline void initialize_session(Session& session, const std::string& client) {
     session.rpc("initialize", json::Object{{"protocolVersion", "2025-06-18"}, {"capabilities", json::Object{}},
                                           {"clientInfo", json::Object{{"name", client}, {"version", "1"}}}});
     session.notify("notifications/initialized", json::Object{});
+}
+
+inline void start_session(Session& session, const std::string& client) {
+    initialize_session(session, client);
     session.rpc("resources/read", json::Object{{"uri", "skill://gm/SKILL.md"}});
     tool_json(session, "next_context", json::Object{});
 }

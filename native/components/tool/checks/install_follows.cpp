@@ -152,9 +152,7 @@ CheckResult check_install_follows(const std::string& binary) {
             Session session(installed_gm.string(), workspace, home);
             if (!session.started()) result.failures.push_back("the installed gm did not start");
             if (session.started()) {
-                session.rpc("initialize", json::Object{{"protocolVersion", "2025-06-18"}, {"capabilities", json::Object{}},
-                                                      {"clientInfo", json::Object{{"name", "gm-tool"}, {"version", "1"}}}});
-                session.notify("notifications/initialized", json::Object{});
+                initialize_session(session, "gm-tool");
                 session.rpc("tools/call", json::Object{{"name", "next_context"}, {"arguments", json::Object{}}});
                 const long long first_pid = worker_pid(session);
                 const std::string first_exe = running_core(first_pid);
@@ -266,9 +264,7 @@ CheckResult check_skill_reload(const std::string& binary) {
         Session session(installed / "gm", workspace, home);
         if (!session.started()) result.failures.push_back("the installed gm did not start");
         if (session.started()) {
-            session.rpc("initialize", json::Object{{"protocolVersion", "2025-06-18"}, {"capabilities", json::Object{}},
-                                                  {"clientInfo", json::Object{{"name", "gm-tool"}, {"version", "1"}}}});
-            session.notify("notifications/initialized", json::Object{});
+            initialize_session(session, "gm-tool");
             session.rpc("resources/read", json::Object{{"uri", "skill://gm/SKILL.md"}});
             session.rpc("tools/call", json::Object{{"name", "next_context"}, {"arguments", json::Object{}}});
             const auto reads = log.empty() ? std::string() : read_bytes(log);

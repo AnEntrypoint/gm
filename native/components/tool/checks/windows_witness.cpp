@@ -1,4 +1,5 @@
 #include "gm/tool.hpp"
+#include "support.hpp"
 
 #include <chrono>
 #include <cstdlib>
@@ -23,9 +24,7 @@ fs::path windows_sandbox(const std::string& prefix) {
 }
 
 void open_session(Session& session, const std::string& client) {
-    session.rpc("initialize", json::Object{{"protocolVersion", "2025-06-18"}, {"capabilities", json::Object{}},
-                                          {"clientInfo", json::Object{{"name", client}, {"version", "1"}}}});
-    session.notify("notifications/initialized", json::Object{});
+    initialize_session(session, client);
     session.rpc("resources/read", json::Object{{"uri", "skill://gm/SKILL.md"}});
 }
 

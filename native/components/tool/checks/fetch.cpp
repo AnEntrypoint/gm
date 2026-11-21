@@ -90,9 +90,7 @@ CheckResult check_fetch(const std::string& binary) {
         Session session(binary, workspace, sandbox);
         if (!session.started()) result.failures.push_back("gm serve did not start from " + binary);
         if (session.started()) {
-            session.rpc("initialize", json::Object{{"protocolVersion", "2025-06-18"}, {"capabilities", json::Object{}},
-                                                  {"clientInfo", json::Object{{"name", "gm-tool"}, {"version", "1"}}}});
-            session.notify("notifications/initialized", json::Object{});
+            initialize_session(session, "gm-tool");
             session.rpc("resources/read", json::Object{{"uri", "skill://gm/SKILL.md"}});
             session.rpc("tools/call", json::Object{{"name", "next_context"}, {"arguments", json::Object{}}});
             text = session.body(kBody);
@@ -156,9 +154,7 @@ CheckResult check_fetch_transport(const std::string& binary) {
         Session session(binary, workspace, sandbox, 240000, true, {}, std::vector<std::pair<std::string, std::string>>{{"CURL_CA_BUNDLE", cert.string()}});
         if (!session.started()) result.failures.push_back("gm serve did not start from " + binary);
         if (session.started()) {
-            session.rpc("initialize", json::Object{{"protocolVersion", "2025-06-18"}, {"capabilities", json::Object{}},
-                                                  {"clientInfo", json::Object{{"name", "gm-tool"}, {"version", "1"}}}});
-            session.notify("notifications/initialized", json::Object{});
+            initialize_session(session, "gm-tool");
             session.rpc("resources/read", json::Object{{"uri", "skill://gm/SKILL.md"}});
             session.rpc("tools/call", json::Object{{"name", "next_context"}, {"arguments", json::Object{}}});
             text = session.body(transport_body("https://127.0.0.1:" + port));

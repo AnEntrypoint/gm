@@ -1,4 +1,5 @@
 #include "gm/tool.hpp"
+#include "support.hpp"
 
 #include <chrono>
 #include <filesystem>
@@ -31,11 +32,7 @@ CheckResult check_witness_windows_cmd([[maybe_unused]] const std::string& binary
         if (!session.started()) {
             result.failures.push_back("gm serve did not start from " + binary);
         } else {
-            session.rpc("initialize", json::Object{{"protocolVersion", "2025-06-18"}, {"capabilities", json::Object{}},
-                                                  {"clientInfo", json::Object{{"name", "gm-windows-cmd-witness"}, {"version", "1"}}}});
-            session.notify("notifications/initialized", json::Object{});
-            session.rpc("resources/read", json::Object{{"uri", "skill://gm/SKILL.md"}});
-            tool_json(session, "next_context", json::Object{});
+            start_session(session, "gm-windows-cmd-witness");
             const json::Value control_reply = tool_json(session, "run_code", json::Object{{"format", "esm"}, {"body", "return await gm.run_shell({ command: \"" + control + "\" });"}});
             const json::Value cmd_reply = tool_json(session, "run_code", json::Object{{"format", "esm"}, {"body", "return await gm.run_shell({ command: \"" + cmd_only + "\" });"}});
             const json::Value cmd_value = output_value(cmd_reply);

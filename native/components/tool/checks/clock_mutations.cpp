@@ -1,4 +1,5 @@
 #include "gm/tool.hpp"
+#include "support.hpp"
 
 #include <chrono>
 #include <cstdlib>
@@ -26,7 +27,7 @@ struct Mutant {
     std::string check;
 };
 
-std::optional<std::string> read_text(const fs::path& path) {
+std::optional<std::string> read_if_exists(const fs::path& path) {
     std::ifstream in(path, std::ios::binary);
     if (!in) return std::nullopt;
     return std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
@@ -88,7 +89,7 @@ public:
     ~SourceRestorer() {
         bool restored_any = false;
         for (const auto& kept : kept_) {
-            const auto now = read_text(kept.path);
+            const auto now = read_if_exists(kept.path);
             if (!now || *now != kept.text) {
                 if (!write_text(kept.path, kept.text)) result_.failures.push_back("could not restore " + kept.path.string());
             }
@@ -145,11 +146,7 @@ void scale_needs_test_clock(const std::string& binary, CheckResult& result) {
         if (!session.started()) {
             result.failures.push_back("gm serve did not start from " + binary);
         } else {
-            session.rpc("initialize", json::Object{{"protocolVersion", "2025-06-18"}, {"capabilities", json::Object{}},
-                                                  {"clientInfo", json::Object{{"name", "clock-mutations"}, {"version", "1"}}}});
-            session.notify("notifications/initialized", json::Object{});
-            session.rpc("resources/read", json::Object{{"uri", "skill://gm/SKILL.md"}});
-            tool_text(session, "next_context", json::Object{});
+            start_session(session, "clock-mutations");
             const json::Value body = tool_json(session, "run_code",
                                                json::Object{{"format", "esm"}, {"body", "const end = Date.now() + 2000; while (Date.now() < end) {} return { spun: true };"}});
             const json::Value* ok = body.find("ok");
@@ -188,7 +185,7 @@ CheckResult check_clock_mutations(const std::string& binary) {
         SourceRestorer restorer(build, result);
         for (const auto& mutant : mutants) {
             const fs::path file = source / mutant.relative;
-            const auto text = read_text(file);
+            const auto text = read_if_exists(file);
             const std::size_t at = text ? text->find(mutant.from) : std::string::npos;
             if (at == std::string::npos) {
                 result.failures.push_back(mutant.name + ": the source text to mutate is not in " + file.string());

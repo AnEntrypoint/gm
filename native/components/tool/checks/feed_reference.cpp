@@ -1,4 +1,5 @@
 #include "gm/tool.hpp"
+#include "support.hpp"
 
 #include <chrono>
 #include <filesystem>
@@ -28,11 +29,7 @@ CheckResult check_feed_reference(const std::string& binary) {
         if (!session.started()) {
             result.failures.push_back("gm serve did not start from " + binary);
         } else {
-            session.rpc("initialize", json::Object{{"protocolVersion", "2025-06-18"}, {"capabilities", json::Object{}},
-                                                  {"clientInfo", json::Object{{"name", "check-feed-reference"}, {"version", "1"}}}});
-            session.notify("notifications/initialized", json::Object{});
-            session.rpc("resources/read", json::Object{{"uri", "skill://gm/SKILL.md"}});
-            tool_text(session, "next_context", json::Object{});
+            start_session(session, "check-feed-reference");
             for (int n = 1; n <= 3; ++n) session.body("return " + json::quote(mark(n)) + ";");
             session.body("return await gm.job_start({ job: 'feed-job', command: 'sleep 30', timeoutMs: 60000 });");
             session.body("return await gm.job_stop({ job: 'feed-job' });");

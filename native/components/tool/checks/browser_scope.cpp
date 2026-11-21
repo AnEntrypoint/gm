@@ -1,4 +1,5 @@
 #include "gm/tool.hpp"
+#include "support.hpp"
 #if !defined(_WIN32)
 
 #include <algorithm>
@@ -96,10 +97,8 @@ json::Value output_of(const json::Value& reply) {
     return output;
 }
 
-void connect(Session& session) {
-    session.rpc("initialize", json::Object{{"protocolVersion", "2025-06-18"}, {"capabilities", json::Object{}},
-                                          {"clientInfo", json::Object{{"name", "gm-tool"}, {"version", "1"}}}});
-    session.notify("notifications/initialized", json::Object{});
+void connect_and_read_skill(Session& session) {
+    initialize_session(session, "gm-tool");
     session.rpc("resources/read", json::Object{{"uri", "skill://gm/SKILL.md"}});
 }
 
@@ -355,7 +354,7 @@ CheckResult check_browser_scope(const std::string& binary) {
         if (!session.started()) {
             result.failures.push_back("gm serve did not start from " + installed.string());
         } else {
-            connect(session);
+            connect_and_read_skill(session);
             const json::Value first = tool_json(session, "next_context", json::Object{});
             expect(flag(first, "ok"), "next_context did not start");
             const json::Value* tabs_field = field(first, "tabs");
@@ -401,7 +400,7 @@ CheckResult check_browser_scope(const std::string& binary) {
                     if (!peer_started) {
                         result.failures.push_back("browser phase: the second run did not start from " + installed.string());
                     } else {
-                        connect(peer);
+                        connect_and_read_skill(peer);
                         expect(flag(tool_json(peer, "next_context", json::Object{}), "ok"), "the second run's next_context did not start");
                         const json::Value peer_opened = run_code(peer, "return { exec: await gm.playwriter_execute({ code: " + json::quote(open_code(kPeerMarker)) + " }), tabs: await gm.browser_tabs({}) };");
                         if (!flag(peer_opened, "ok")) {
@@ -559,7 +558,7 @@ CheckResult check_browser_scope_identity(const std::string& binary) {
     } else if (!session.started()) {
         result.failures.push_back("gm serve did not start from " + binary);
     } else {
-        connect(session);
+        connect_and_read_skill(session);
         const long long reused_pid = reused->pid();
         const long long foreign_pid = foreign->pid();
         const std::vector<Owned> served = serve_tree(session);
@@ -695,7 +694,7 @@ CheckResult check_browser_dead_executor(const std::string& binary) {
             if (!first.started()) {
                 result.failures.push_back("gm serve did not start from " + installed.string());
             } else {
-                connect(first);
+                connect_and_read_skill(first);
                 tool_json(first, "next_context", json::Object{});
                 const json::Value opened = output_of(run_code(first, "return { exec: await gm.playwriter_execute({ code: " + json::quote(open_code(dead_marker)) + " }) };"));
                 const json::Value exec = part(opened, "exec");
@@ -709,7 +708,7 @@ CheckResult check_browser_dead_executor(const std::string& binary) {
             if (!second.started()) {
                 result.failures.push_back("the restarted serve did not start from " + installed.string());
             } else {
-                connect(second);
+                connect_and_read_skill(second);
                 tool_json(second, "next_context", json::Object{});
                 const json::Value closed = output_of(run_code(second, "return await gm.browser_close_run({});"));
                 expect(flag(closed, "ok") && number(closed, "closedPages") == 1, "finish on a restarted serve did not close the page the dead executor opened: " + json::dump(closed).substr(0, 300));

@@ -1,4 +1,5 @@
 #include "gm/tool.hpp"
+#include "support.hpp"
 
 #include <chrono>
 #include <filesystem>
@@ -13,9 +14,7 @@ namespace fs = std::filesystem;
 constexpr const char* kCheck = "owner-identity-check";
 
 void open_session(Session& session) {
-    session.rpc("initialize", json::Object{{"protocolVersion", "2025-06-18"}, {"capabilities", json::Object{}},
-                                          {"clientInfo", json::Object{{"name", kCheck}, {"version", "1"}}}});
-    session.notify("notifications/initialized", json::Object{});
+    initialize_session(session, kCheck);
 }
 
 json::Value first_call(const std::string& binary, const fs::path& workspace, const fs::path& sandbox, const fs::path& run_dir, const std::vector<std::string>& flags, const std::string& task) {

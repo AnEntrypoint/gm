@@ -112,9 +112,7 @@ CheckResult check_read_parity(const std::string& binary) {
         if (!session.started()) {
             result.failures.push_back("gm serve did not start from " + binary);
         } else {
-            session.rpc("initialize", json::Object{{"protocolVersion", "2025-06-18"}, {"capabilities", json::Object{}},
-                                                  {"clientInfo", json::Object{{"name", "gm-read-parity-check"}, {"version", "1"}}}});
-            session.notify("notifications/initialized", json::Object{});
+            initialize_session(session, "gm-read-parity-check");
             session.rpc("resources/read", json::Object{{"uri", "skill://gm/SKILL.md"}});
             for (const Probe& probe : all) {
                 const std::int64_t id = session.send("tools/call", json::Object{{"name", "run_code"},

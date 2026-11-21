@@ -63,11 +63,7 @@ CheckResult check_cut_marker(const std::string& binary) {
         if (!session.started()) {
             result.failures.push_back("gm serve did not start from " + binary);
         } else {
-            session.rpc("initialize", json::Object{{"protocolVersion", "2025-06-18"}, {"capabilities", json::Object{}},
-                                                  {"clientInfo", json::Object{{"name", "check-cut-marker"}, {"version", "1"}}}});
-            session.notify("notifications/initialized", json::Object{});
-            session.rpc("resources/read", json::Object{{"uri", "skill://gm/SKILL.md"}});
-            tool_text(session, "next_context", json::Object{});
+            start_session(session, "check-cut-marker");
             const json::Value result_reply = tool_json(session, "run_code", json::Object{{"body", kBody}});
             const json::Value r = output_value(result_reply);
 

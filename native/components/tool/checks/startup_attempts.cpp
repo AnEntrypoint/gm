@@ -32,9 +32,7 @@ long long resource_reply_ms(const std::string& binary, const fs::path& sandbox, 
     std::ofstream(workspace / ".gm" / "mcp.json") << config;
     Session session(binary, workspace, home, 180000, true);
     if (!session.started()) return -1;
-    session.rpc("initialize", json::Object{{"protocolVersion", "2025-06-18"}, {"capabilities", json::Object{}},
-                                          {"clientInfo", json::Object{{"name", name}, {"version", "1"}}}});
-    session.notify("notifications/initialized", json::Object{});
+    initialize_session(session, name);
     const auto started = std::chrono::steady_clock::now();
     session.rpc("resources/read", json::Object{{"uri", "skill://gm/SKILL.md"}});
     const long long ms = elapsed_ms(started);
@@ -99,9 +97,7 @@ CheckResult check_startup_attempts(const std::string& binary) {
         if (!session.started()) {
             result.failures.push_back("gm serve did not start from " + binary);
         } else {
-            session.rpc("initialize", json::Object{{"protocolVersion", "2025-06-18"}, {"capabilities", json::Object{}},
-                                                  {"clientInfo", json::Object{{"name", "startup-check"}, {"version", "1"}}}});
-            session.notify("notifications/initialized", json::Object{});
+            initialize_session(session, "startup-check");
             const auto resource_started = std::chrono::steady_clock::now();
             session.rpc("resources/read", json::Object{{"uri", "skill://gm/SKILL.md"}});
             resource_ms = elapsed_ms(resource_started);

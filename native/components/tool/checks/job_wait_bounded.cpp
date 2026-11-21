@@ -1,4 +1,5 @@
 #include "gm/tool.hpp"
+#include "support.hpp"
 
 #include <chrono>
 #include <filesystem>
@@ -25,11 +26,7 @@ CheckResult check_job_wait_bounded(const std::string& binary) {
         if (!session.started()) {
             result.failures.push_back("gm serve did not start from " + binary);
         } else {
-            session.rpc("initialize", json::Object{{"protocolVersion", "2025-06-18"}, {"capabilities", json::Object{}},
-                                                  {"clientInfo", json::Object{{"name", kCheck}, {"version", "1"}}}});
-            session.notify("notifications/initialized", json::Object{});
-            session.rpc("resources/read", json::Object{{"uri", "skill://gm/SKILL.md"}});
-            tool_text(session, "next_context", json::Object{});
+            start_session(session, kCheck);
             const std::string start = tool_text(session, "run_code", json::Object{{"body", "return await gm.job_start({ job: 'jbw-job', command: 'sleep 110; echo done', timeoutMs: 200000 });"}});
             if (start.empty()) result.failures.push_back("job_start did not answer");
 

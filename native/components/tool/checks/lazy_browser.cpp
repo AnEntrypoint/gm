@@ -1,4 +1,5 @@
 #include "gm/tool.hpp"
+#include "support.hpp"
 #if !defined(_WIN32)
 
 #include <algorithm>
@@ -82,9 +83,7 @@ CheckResult check_lazy_browser(const std::string& binary) {
         if (!session.started()) {
             result.failures.push_back("gm serve did not start from " + installed.string());
         } else {
-            session.rpc("initialize", json::Object{{"protocolVersion", "2025-06-18"}, {"capabilities", json::Object{}},
-                                                  {"clientInfo", json::Object{{"name", "gm-tool"}, {"version", "1"}}}});
-            session.notify("notifications/initialized", json::Object{});
+            initialize_session(session, "gm-tool");
             session.rpc("resources/read", json::Object{{"uri", "skill://gm/SKILL.md"}});
             session.rpc("tools/call", json::Object{{"name", "next_context"}, {"arguments", json::Object{}}});
             const std::size_t at_start = count_playwriter(session.descendants());

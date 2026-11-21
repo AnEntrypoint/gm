@@ -1,4 +1,5 @@
 #include "gm/tool.hpp"
+#include "support.hpp"
 
 #include <chrono>
 #include <cstddef>
@@ -106,9 +107,7 @@ CheckResult check_console(const std::string& binary) {
             result.failures.push_back("gm serve did not start from " + binary);
         } else {
             try {
-                session.rpc("initialize", json::Object{{"protocolVersion", "2025-06-18"}, {"capabilities", json::Object{}},
-                                                      {"clientInfo", json::Object{{"name", "console-check"}, {"version", "1"}}}});
-                session.notify("notifications/initialized", json::Object{});
+                initialize_session(session, "console-check");
                 session.rpc("resources/read", json::Object{{"uri", "skill://gm/SKILL.md"}});
                 tool_json(session, "next_context", json::Object{{"task", "console check"}});
                 const json::Value flood = run(session, kFlood);

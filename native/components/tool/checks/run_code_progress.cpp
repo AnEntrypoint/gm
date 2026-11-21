@@ -67,9 +67,7 @@ CheckResult check_run_code_progress(const std::string& binary) {
         if (!session.started()) {
             result.failures.push_back("gm serve did not start from " + binary);
         } else {
-            session.rpc("initialize", json::Object{{"protocolVersion", "2025-06-18"}, {"capabilities", json::Object{}},
-                                                  {"clientInfo", json::Object{{"name", "gm-progress-check"}, {"version", "1"}}}});
-            session.notify("notifications/initialized", json::Object{});
+            initialize_session(session, "gm-progress-check");
             session.rpc("resources/read", json::Object{{"uri", "skill://gm/SKILL.md"}});
 
             const std::string tick_body = "return await gm.run_shell({ command: 'sleep " + seconds(scaled(15000)) + "; echo ticked', timeoutMs: 20000 });";

@@ -1,4 +1,5 @@
 #include "gm/tool.hpp"
+#include "support.hpp"
 
 #include <chrono>
 #include <filesystem>
@@ -57,9 +58,7 @@ CheckResult check_grep_state_scope(const std::string& binary) {
         if (!session.started()) {
             result.failures.push_back("gm serve did not start from " + binary);
         } else {
-            session.rpc("initialize", json::Object{{"protocolVersion", "2025-06-18"}, {"capabilities", json::Object{}},
-                                                  {"clientInfo", json::Object{{"name", "grep-state-scope-check"}, {"version", "1"}}}});
-            session.notify("notifications/initialized", json::Object{});
+            initialize_session(session, "grep-state-scope-check");
             session.rpc("resources/read", json::Object{{"uri", "skill://gm/SKILL.md"}});
             tool_text(session, "next_context", json::Object{{"task", "grep state scope check"}});
             const std::string token = kToken;

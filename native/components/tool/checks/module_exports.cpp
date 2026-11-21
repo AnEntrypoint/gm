@@ -1,4 +1,5 @@
 #include "gm/tool.hpp"
+#include "support.hpp"
 
 #include <chrono>
 #include <filesystem>
@@ -98,9 +99,7 @@ CheckResult check_module_exports(const std::string& binary) {
         if (!session.started()) {
             result.failures.push_back("gm serve did not start from " + binary);
         } else {
-            session.rpc("initialize", json::Object{{"protocolVersion", "2025-06-18"}, {"capabilities", json::Object{}},
-                                                  {"clientInfo", json::Object{{"name", "gm-tool"}, {"version", "1"}}}});
-            session.notify("notifications/initialized", json::Object{});
+            initialize_session(session, "gm-tool");
             session.rpc("resources/read", json::Object{{"uri", "skill://gm/SKILL.md"}});
             session.rpc("tools/call", json::Object{{"name", "next_context"}, {"arguments", json::Object{}}});
             reply = session.body(std::string(probe_body));

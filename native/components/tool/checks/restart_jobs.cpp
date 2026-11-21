@@ -1,4 +1,5 @@
 #include "gm/tool.hpp"
+#include "support.hpp"
 #if !defined(_WIN32)
 
 #include <chrono>
@@ -143,9 +144,7 @@ CheckResult check_restart_jobs(const std::string& binary) {
         if (!session.started()) {
             result.failures.push_back("gm serve did not start from " + copied.string());
         } else {
-            session.rpc("initialize", json::Object{{"protocolVersion", "2025-06-18"}, {"capabilities", json::Object{}},
-                                                  {"clientInfo", json::Object{{"name", "gm-restart-jobs-check"}, {"version", "1"}}}});
-            session.notify("notifications/initialized", json::Object{});
+            initialize_session(session, "gm-restart-jobs-check");
             session.rpc("resources/read", json::Object{{"uri", "skill://gm/SKILL.md"}});
             call(session, "next_context", json::Object{});
 
@@ -283,9 +282,7 @@ CheckResult check_job_identity(const std::string& binary) {
             if (!session.started()) {
                 result.failures.push_back("gm serve did not start from " + binary);
             } else {
-                session.rpc("initialize", json::Object{{"protocolVersion", "2025-06-18"}, {"capabilities", json::Object{}},
-                                                      {"clientInfo", json::Object{{"name", "gm-job-identity-check"}, {"version", "1"}}}});
-                session.notify("notifications/initialized", json::Object{});
+                initialize_session(session, "gm-job-identity-check");
                 session.rpc("resources/read", json::Object{{"uri", "skill://gm/SKILL.md"}});
                 call(session, "next_context", json::Object{});
                 const auto state_of = [&](const std::string& name) {
@@ -330,9 +327,7 @@ CheckResult check_body_reap(const std::string& binary) {
         if (!first.started()) {
             result.failures.push_back("gm serve did not start from " + binary);
         } else {
-            first.rpc("initialize", json::Object{{"protocolVersion", "2025-06-18"}, {"capabilities", json::Object{}},
-                                                {"clientInfo", json::Object{{"name", "gm-body-reap-check"}, {"version", "1"}}}});
-            first.notify("notifications/initialized", json::Object{});
+            initialize_session(first, "gm-body-reap-check");
             first.rpc("resources/read", json::Object{{"uri", "skill://gm/SKILL.md"}});
             call(first, "next_context", json::Object{});
             first.send("tools/call", json::Object{{"name", "run_code"}, {"arguments", json::Object{{"format", "esm"}, {"timeoutMs", 120000}, {"body", body}}}});
@@ -366,9 +361,7 @@ CheckResult check_body_reap(const std::string& binary) {
         if (!second.started()) {
             result.failures.push_back("the next serve did not start from " + binary);
         } else {
-            second.rpc("initialize", json::Object{{"protocolVersion", "2025-06-18"}, {"capabilities", json::Object{}},
-                                                 {"clientInfo", json::Object{{"name", "gm-body-reap-check"}, {"version", "1"}}}});
-            second.notify("notifications/initialized", json::Object{});
+            initialize_session(second, "gm-body-reap-check");
             second.rpc("resources/read", json::Object{{"uri", "skill://gm/SKILL.md"}});
             call(second, "next_context", json::Object{});
             const auto reaping = std::chrono::steady_clock::now();

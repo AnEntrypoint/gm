@@ -181,9 +181,7 @@ CheckResult check_skill_read_fallback(const std::string& binary) {
         if (!client.started()) {
             result.failures.push_back("gm serve did not start from " + binary);
         } else {
-            client.rpc("initialize", json::Object{{"protocolVersion", "2025-06-18"}, {"capabilities", json::Object{}},
-                                                  {"clientInfo", json::Object{{"name", "skill-read-fallback-check"}, {"version", "1"}}}});
-            client.notify("notifications/initialized", json::Object{});
+            initialize_session(client, "skill-read-fallback-check");
             const json::Value opened = tool_json(client, "next_context", json::Object{});
             if (!flag(opened, "ok", true)) result.failures.push_back("next_context was refused: " + json::dump(opened).substr(0, 200));
             const json::Value plain = tool_json(client, "run_code", json::Object{{"body", kSample}});

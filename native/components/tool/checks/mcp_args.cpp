@@ -1,4 +1,5 @@
 #include "gm/tool.hpp"
+#include "support.hpp"
 
 #include <chrono>
 #include <filesystem>
@@ -40,11 +41,7 @@ readline.createInterface({ input: process.stdin }).on('line', (line) => {
 )JS";
 
 void prepare(Session& session) {
-    session.rpc("initialize", json::Object{{"protocolVersion", "2025-06-18"}, {"capabilities", json::Object{}},
-                                           {"clientInfo", json::Object{{"name", "mcp-args-check"}, {"version", "1"}}}});
-    session.notify("notifications/initialized", json::Object{});
-    session.rpc("resources/read", json::Object{{"uri", "skill://gm/SKILL.md"}});
-    tool_json(session, "next_context", json::Object{});
+    start_session(session, "mcp-args-check");
 }
 
 }
