@@ -69,6 +69,9 @@ const Case cases[] = {
     {"brotli refuses a corrupt stream and a truncated one",
      "const attempt = (value) => { try { core.brotliDecompress(hex(value)); return 'decoded'; } catch (error) { return error.message.split(':')[0]; } }; return [attempt('1ba755a02c92c7b9afc528b483975468744d6696c626cff0f42aecad415ce6f2eae4c0e17b6d6990475407ca384f596a0808b7a79e0d2112db915003f0df47f5b7ef1c6fdf85c7085630366869d7d5456b1601'), attempt('1ba700a02c92c7b9afc528b483975468744d6696c626cff0f42aecad415ce6f2eae4c0e17b6d6990475407ca384f596a0808b7a79e0d2112db915003f0df47f5b7ef1c6fdf85c70856')];",
      R"(["brotli","brotli"])"},
+    {"tjs.listen serves a TCP connection on port 0: accept, read, write and close",
+     "const net = globalThis.tjs; const server = await net.listen('tcp', '127.0.0.1', 0); const opened = await server.opened; const accepting = opened.readable.getReader(); const served = accepting.read().then(async ({ value: socket }) => { const connection = await socket.opened; const received = await connection.readable.getReader().read(); const writer = connection.writable.getWriter(); await writer.write(received.value); await writer.close(); }); const client = await net.connect('tcp', '127.0.0.1', opened.localPort); const link = await client.opened; const writer = link.writable.getWriter(); await writer.write(new TextEncoder().encode('ping')); const reply = await link.readable.getReader().read(); await served; client.close(); server.close(); return { port: opened.localPort > 0, echoed: text(reply.value) };",
+     R"({"port":true,"echoed":"ping"})"},
     {"the async frame survives awaits, timers and promise chains, and stays apart between concurrent runs",
      "const run = (frame, fn) => { const previous = core.asyncFrame; core.asyncFrame = frame; try { return fn(); } finally { core.asyncFrame = previous; } }; const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms)); const both = await Promise.all([run('A', async () => { await pause(20); await null; return core.asyncFrame; }), run('B', async () => { await pause(5); return core.asyncFrame; }), run('C', () => Promise.resolve().then(() => core.asyncFrame))]); return { both, after: core.asyncFrame };",
      R"({"both":["A","B","C"],"after":null})"},
@@ -94,7 +97,7 @@ CheckResult check_txiki_core_extras(const std::string& binary) {
     }
     std::error_code ec;
     std::filesystem::remove_all(sandbox, ec);
-    if (result.failures.empty()) result.summary = std::to_string(sizeof(cases) / sizeof(cases[0])) + " cases on the core binding: spawnSync, vm contexts, async frames, workerData and the zstd and brotli decoders";
+    if (result.failures.empty()) result.summary = std::to_string(sizeof(cases) / sizeof(cases[0])) + " cases on the core binding: spawnSync, vm contexts, async frames, workerData, the zstd and brotli decoders and a TCP echo";
     return result;
 }
 

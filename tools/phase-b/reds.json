@@ -339,5 +339,17 @@
     "count": 1
    }
   ]
+ },
+ {
+  "id": "red-scratch-root",
+  "witness": "check-scratch-root",
+  "file": "native/components/tool/main.cpp",
+  "edits": [
+   {
+    "from": "        std::filesystem::remove_all(root_, ec);\n",
+    "to": "",
+    "count": 1
+   }
+  ]
  }
 ]
