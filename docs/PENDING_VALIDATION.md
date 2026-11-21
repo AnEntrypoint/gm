@@ -5505,3 +5505,38 @@ In /tmp/phase-d-74/window74.sh the ORIGIN_START line ran before say() existed. /
 ### 23. The release run for d6030f6
 
 Read at 06:37:05 UTC after a bounded wait: run 44874352458 completed, conclusion success. All six build jobs (Linux x64 and arm64, macOS x64 136755639950 and arm64 136755639969, Windows x64 and arm64) and publish: success. No failing job. check-update-stream and check-relay-reexec now pass on macOS, which confirms the target derivation (section 17).
+
+### 24. Simplification pass, slice 1 (owner directive: YAGNI and dedup)
+
+Lines added and removed against the pushed d6030f6, by area (code only, docs excluded; git diff --numstat):
+
+| Area | Added | Removed |
+|---|---|---|
+| witnesses (native/components/tool/checks) | 312 | 896 |
+| native/include (checks.def 124 lines added, the matching declarations removed from tool.hpp, target/artifact/lines headers) | 183 | 124 |
+| include/deoxidene (six headers no file includes) | 0 | 386 |
+| mcp (server.cpp, compact.cpp) | 8 | 52 |
+| verbs (verbs.cpp, fetch.cpp) | 10 | 54 |
+| search | 2 | 11 |
+| host (install.cpp, update.cpp) and tool (non-checks) | 9 | 5 |
+| tools/phase-b (the window and the reds, moved from /tmp into the repo) | 426 | 0 |
+| total | 950 | 1528 |
+
+The 950 includes f8a0f2f (the manifest fix, not pushed until this window) and the new tools. Net -578 lines.
+
+Merges (each has one implementation now):
+- Witness helpers: contains, first_word, checkout_root, flag, flag_of, text_of, number_at, read_text, replace_all (the version that tolerates an empty needle), point, worker_pid, find_repo, is_zombie, has_exited, tail_of, scaled with kClock, and 12 more exact duplicates, all in support.hpp.
+- The MCP handshake: initialize_session and start_session replace the inline sequence in 62 places.
+- The registry: checks.def (124 lines) generates both the declarations in tool.hpp and the table in registry.cpp; the check sources are a CMake glob (109 files, none unlisted).
+- The window and the reds: tools/phase-b/window.sh (generates its witness list from checks.def), red.py and reds.json (18 reds, each a list of exact replacements with expected match counts) replace 11 mutate scripts, 6 spec files, red-commit.sh, red-relay.sh, red72.py and a generated window script in /tmp. red.py refuses to run on a dirty tree. The seven reds that ran in place now run as committed mutations; red-stamp-tree needed a new mutation (the old one was a historical file version that only fails on a dirty tree) and was run on its own: RED_RC 1, restored, tree clean.
+- Product code: gm/artifact.hpp (FNV-1a digest, secret redaction) replaces four digest functions and three redaction lists in the server, the verbs, fetch and search; gm/lines.hpp replaces two split_lines copies.
+
+Deleted: six deoxidene headers (arena, containers, jobs, ownership, parse, pool; grep for the names finds no include).
+
+Fixed on the way: install.cpp built UpdateState from four positional values, which silently shifted when the manifest field was added; it now sets fields by name. The -Wparentheses warning in server.cpp (first_step_correction) now has explicit parentheses. The build has no warnings.
+
+Kept on purpose (different behaviour, renamed so they no longer look like duplicates): install_follows patch_all (patches in place, returns a count), restart_skill_read initialize_only, browser_scope connect_and_read_skill, clock_mutations read_if_exists, console count_at, cut_marker text_or_dump, job_status_output and job_stop_body text_or_missing, search split_lines (strips a trailing carriage return).
+
+Not done yet in this pass (candidates, not judged): tools/*.mjs (1131 lines of Node witnesses referenced only from docs), research/ and tasks/rewrite (notes), the remaining witness variants with different bodies (output_of, call, brief, open_session, run_code), and the product areas verbs, mcp, host and the txiki shims beyond the duplicates found.
+
+Proof: the window in section 25.
