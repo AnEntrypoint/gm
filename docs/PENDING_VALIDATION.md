@@ -5365,3 +5365,10 @@ The named macOS list after this change (9): check-handover-in-flight check-updat
 - Change: the wait asks 90 s (inside the foreground budget) and must last at least 85 s, which is past the old 80 s clamp. The message names the requirement.
 - Witness (Linux, release build `4955c86-1`, clean): ok.
 - Red (`/tmp/phase-d-73/mutate-clamp.py`, the 80 s clamp restored in `call`, as a temporary commit): MUT_BUILD_RC 0, kBuildState clean, RED_RC 1: "a pid wait on a live process did not run its full waitMs (90 s asked, past the old 80 s clamp it must last 85 s): null". The reply was `null` under the clamp, so the state check failed on a missing reply. RESTORED_cmp=True, HEAD back at 4955c86 with 0 changed files, AFTER_RC 0.
+
+### 9. check-job-wait-bounded: the 90 s wait runs its full time
+
+- Found by the window: the witness asked a 600 s job_status wait and expected a running reply inside the body, which only the old 80 s clamp produced. With the clamp gone, a 600 s wait exceeds the 100 s foreground budget and goes to background.
+- Change: the wait asks 90 s and must last at least 85 s; the check's summary says so. (Committed as 24116ad, amended once to correct the summary text before any build used it.)
+- Witness (Linux, 24116ad-1, clean): ok ("a job_status wait of 90 s inside run_code answered state running with a hint after 90.005022 s, inside its own body").
+- Red (`/tmp/phase-d-73/mutate-clamp.py`, the 80 s clamp restored as a temporary commit): MUT_BUILD_RC 0, kBuildState clean, RED_RC 1 ("a job_status wait of 90 s on a running job returned after 80.004405 s; it must run its full time"). RESTORED_cmp=True, HEAD back at 24116ad with 0 changed files, AFTER_RC 0.
