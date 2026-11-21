@@ -28,6 +28,18 @@ extern char** environ;
 
 namespace gm::proc {
 
+namespace {
+
+RunOptions plain_options(const std::filesystem::path& cwd, std::string_view stdin_text, std::uint64_t timeout_ms) {
+    RunOptions options;
+    options.cwd = cwd;
+    options.stdin_text = stdin_text;
+    options.timeout_ms = timeout_ms;
+    return options;
+}
+
+}
+
 unsigned long hidden_creation_flags(unsigned long flags) {
 #if defined(_WIN32)
     return flags | CREATE_NO_WINDOW;
@@ -287,8 +299,10 @@ bool make_pipe(Fd& read_end, Fd& write_end) {
 
 }
 
-static Outcome run_impl(const std::vector<std::string>& argv, const std::filesystem::path& cwd, std::string_view stdin_text,
-                        std::uint64_t timeout_ms, bool reap_children) {
+static Outcome run_impl(const std::vector<std::string>& argv, const RunOptions& options, bool reap_children) {
+    const std::filesystem::path& cwd = options.cwd;
+    const std::string_view stdin_text = options.stdin_text;
+    const std::uint64_t timeout_ms = options.timeout_ms;
     Outcome outcome;
     if (argv.empty()) return outcome;
 
@@ -315,12 +329,18 @@ static Outcome run_impl(const std::vector<std::string>& argv, const std::filesys
     int rc;
     const std::string dir = cwd.string();
     if (!dir.empty()) posix_spawn_file_actions_addchdir_np(&actions, dir.c_str());
-    rc = posix_spawnp(&pid, args[0], &actions, &attr, args.data(), environ);
+    std::vector<char*> envp;
+    if (options.env) {
+        for (const auto& line : *options.env) envp.push_back(const_cast<char*>(line.c_str()));
+        envp.push_back(nullptr);
+    }
+    rc = posix_spawnp(&pid, args[0], &actions, &attr, args.data(), options.env ? envp.data() : environ);
     posix_spawn_file_actions_destroy(&actions);
     posix_spawnattr_destroy(&attr);
     if (rc != 0) return outcome;
 
     outcome.started = true;
+    outcome.pid = static_cast<long long>(pid);
     Enrolment enrolled(static_cast<long long>(pid));
     in_read.close();
     out_write.close();
@@ -351,7 +371,7 @@ static Outcome run_impl(const std::vector<std::string>& argv, const std::filesys
         if (timeout_ms > 0) {
             auto left = std::chrono::duration_cast<std::chrono::milliseconds>(deadline - Clock::now()).count();
             if (left <= 0) {
-                ::kill(-pid, SIGKILL);
+                ::kill(-pid, options.kill_signal > 0 ? options.kill_signal : SIGKILL);
                 outcome.timed_out = true;
                 break;
             }
@@ -396,6 +416,14 @@ static Outcome run_impl(const std::vector<std::string>& argv, const std::filesys
     err_read.close();
     in_write.close();
 
+    if (outcome.timed_out && options.kill_signal > 0 && options.kill_signal != SIGKILL) {
+        const auto grace = Clock::now() + std::chrono::seconds(2);
+        for (info.si_pid = 0; Clock::now() < grace && info.si_pid != pid; ::usleep(10000)) {
+            info.si_pid = 0;
+            ::waitid(P_PID, pid, &info, WEXITED | WNOHANG | WNOWAIT);
+        }
+        ::kill(-pid, SIGKILL);
+    }
     while (::waitid(P_PID, pid, &info, WEXITED | WNOWAIT) < 0 && errno == EINTR) {}
     if (reap_children) ::kill(-pid, SIGKILL);
     while (::waitpid(pid, &status, 0) < 0 && errno == EINTR) {}
@@ -407,14 +435,18 @@ static Outcome run_impl(const std::vector<std::string>& argv, const std::filesys
     return outcome;
 }
 
+Outcome run(const std::vector<std::string>& argv, const RunOptions& options) {
+    return run_impl(argv, options, false);
+}
+
 Outcome run(const std::vector<std::string>& argv, const std::filesystem::path& cwd, std::string_view stdin_text,
             std::uint64_t timeout_ms) {
-    return run_impl(argv, cwd, stdin_text, timeout_ms, false);
+    return run_impl(argv, plain_options(cwd, stdin_text, timeout_ms), false);
 }
 
 Outcome shell(std::string_view command, const std::filesystem::path& cwd, std::uint64_t timeout_ms) {
     const std::string sh = std::filesystem::exists("/bin/bash") ? "/bin/bash" : "/bin/sh";
-    Outcome outcome = run_impl({sh, "-c", std::string(command)}, cwd, {}, timeout_ms, true);
+    Outcome outcome = run_impl({sh, "-c", std::string(command)}, plain_options(cwd, {}, timeout_ms), true);
     outcome.launcher = sh;
     return outcome;
 }
@@ -469,8 +501,10 @@ std::string quote(const std::string& arg) {
 
 }
 
-static Outcome run_windows(const std::vector<std::string>& argv, const std::filesystem::path& cwd, std::string_view stdin_text,
-                           std::uint64_t timeout_ms, bool reap_children, const std::string& verbatim_line = {}) {
+static Outcome run_windows(const std::vector<std::string>& argv, const RunOptions& options, bool reap_children, const std::string& verbatim_line = {}) {
+    const std::filesystem::path& cwd = options.cwd;
+    const std::string_view stdin_text = options.stdin_text;
+    const std::uint64_t timeout_ms = options.timeout_ms;
     Outcome outcome;
     if (argv.empty()) return outcome;
     SECURITY_ATTRIBUTES sa{sizeof sa, nullptr, TRUE};
@@ -494,9 +528,14 @@ static Outcome run_windows(const std::vector<std::string>& argv, const std::file
         for (const auto& a : argv) command_line += (command_line.empty() ? "" : " ") + quote(a);
     }
     std::string dir = cwd.string();
+    std::string environment_block;
+    if (options.env) {
+        for (const auto& line : *options.env) environment_block.append(line).push_back('\0');
+        environment_block.push_back('\0');
+    }
     const HANDLE job = CreateJobObjectW(nullptr, nullptr);
     BOOL ok = CreateProcessA(nullptr, command_line.data(), nullptr, nullptr, TRUE,
-                             static_cast<DWORD>(hidden_creation_flags(CREATE_NEW_PROCESS_GROUP | CREATE_SUSPENDED)), nullptr, dir.empty() ? nullptr : dir.c_str(),
+                             static_cast<DWORD>(hidden_creation_flags(CREATE_NEW_PROCESS_GROUP | CREATE_SUSPENDED)), options.env ? environment_block.data() : nullptr, dir.empty() ? nullptr : dir.c_str(),
                              &si, &pi);
     CloseHandle(in_r);
     CloseHandle(out_w);
@@ -511,6 +550,7 @@ static Outcome run_windows(const std::vector<std::string>& argv, const std::file
     const bool in_job = job != nullptr && AssignProcessToJobObject(job, pi.hProcess) != 0;
     ResumeThread(pi.hThread);
     outcome.started = true;
+    outcome.pid = static_cast<long long>(pi.dwProcessId);
     Enrolment enrolled(static_cast<long long>(pi.dwProcessId));
     DWORD wrote = 0;
     if (!stdin_text.empty()) WriteFile(in_w, stdin_text.data(), static_cast<DWORD>(stdin_text.size()), &wrote, nullptr);
@@ -545,9 +585,13 @@ static Outcome run_windows(const std::vector<std::string>& argv, const std::file
     return outcome;
 }
 
+Outcome run(const std::vector<std::string>& argv, const RunOptions& options) {
+    return run_windows(argv, options, false);
+}
+
 Outcome run(const std::vector<std::string>& argv, const std::filesystem::path& cwd, std::string_view stdin_text,
             std::uint64_t timeout_ms) {
-    return run_windows(argv, cwd, stdin_text, timeout_ms, false);
+    return run_windows(argv, plain_options(cwd, stdin_text, timeout_ms), false);
 }
 
 bool needs_cmd(std::string_view command) {
@@ -589,8 +633,8 @@ Outcome shell(std::string_view command, const std::filesystem::path& cwd, std::u
     const std::string bash = git_bash();
     const bool use_cmd = needs_cmd(command) || bash.empty();
     Outcome outcome = use_cmd
-        ? run_windows({"cmd.exe"}, cwd, {}, timeout_ms, true, "cmd.exe /d /s /c \"" + text + "\"")
-        : run_windows({bash, "-c", text}, cwd, {}, timeout_ms, true);
+        ? run_windows({"cmd.exe"}, plain_options(cwd, {}, timeout_ms), true, "cmd.exe /d /s /c \"" + text + "\"")
+        : run_windows({bash, "-c", text}, plain_options(cwd, {}, timeout_ms), true);
     outcome.launcher = use_cmd ? "cmd" : bash;
     return outcome;
 }

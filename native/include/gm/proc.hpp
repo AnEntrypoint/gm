@@ -19,11 +19,22 @@ struct Outcome {
     bool started = false;
     int exit_code = -1;
     int signal = 0;
+    long long pid = 0;
     bool timed_out = false;
     std::string out;
     std::string err;
     std::string launcher;
 };
+
+struct RunOptions {
+    std::filesystem::path cwd;
+    std::optional<std::vector<std::string>> env;
+    std::string_view stdin_text;
+    std::uint64_t timeout_ms = 0;
+    int kill_signal = 0;
+};
+
+Outcome run(const std::vector<std::string>& argv, const RunOptions& options);
 
 Outcome run(const std::vector<std::string>& argv, const std::filesystem::path& cwd = {},
             std::string_view stdin_text = {}, std::uint64_t timeout_ms = 0);
