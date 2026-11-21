@@ -305,13 +305,14 @@ UpdateState read_update_state(const fs::path& install_dir) {
     if (checked != nullptr && checked->is_number()) state.checked_ms = static_cast<std::int64_t>(checked->as_number());
     state.etag = text_member(*parsed, "etag");
     state.version = text_member(*parsed, "version");
+    state.manifest = text_member(*parsed, "manifest");
     state.asset_sha = text_member(*parsed, "assetSha");
     return state;
 }
 
 bool write_update_state(const fs::path& install_dir, const UpdateState& state) {
     json::Value out(json::Object{});
-    out.set("checked_ms", state.checked_ms).set("etag", state.etag).set("version", state.version).set("assetSha", state.asset_sha);
+    out.set("checked_ms", state.checked_ms).set("etag", state.etag).set("version", state.version).set("manifest", state.manifest).set("assetSha", state.asset_sha);
     const fs::path target = install_dir / kStateName;
     const fs::path temp = install_dir / (std::string(kStateName) + ".tmp");
     {
@@ -529,7 +530,7 @@ UpdateResult update_once(const UpdatePolicy& policy, UpdateResult result) {
     const fs::path staging = policy.install_dir / kStagingName;
 
     UpdateState state = read_update_state(policy.install_dir);
-    result.manifest = state.version;
+    result.manifest = state.manifest;
     if (!policy.force && checked_recently(state, now_ms(), policy.interval))
         return current_build(std::move(result), policy, "already current");
     if (!acquire_update_lock(policy.install_dir))
@@ -538,6 +539,7 @@ UpdateResult update_once(const UpdatePolicy& policy, UpdateResult result) {
     const ScopedRemoval cleanup(staging);
 
     state = read_update_state(policy.install_dir);
+    result.manifest = state.manifest;
     if (!policy.force && checked_recently(state, now_ms(), policy.interval))
         return current_build(std::move(result), policy, "already current");
 
@@ -552,6 +554,7 @@ UpdateResult update_once(const UpdatePolicy& policy, UpdateResult result) {
     if (!manifest) return failed(std::move(result), manifest.error());
     result.commit = manifest->commit;
     result.manifest = manifest->version;
+    state.manifest = manifest->version;
     result.ok = true;
     state.etag = reply->etag;
     if (kBuildHead != "unknown" && manifest->commit.starts_with(kBuildHead)) {

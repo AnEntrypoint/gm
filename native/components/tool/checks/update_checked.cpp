@@ -23,13 +23,6 @@ std::string first_word_of(const std::string& text) {
     return word;
 }
 
-std::string read_text(const fs::path& path) {
-    std::ifstream in(path, std::ios::binary);
-    std::stringstream text;
-    text << in.rdbuf();
-    return text.str();
-}
-
 fs::path checkout_root() {
     std::error_code ec;
     for (fs::path dir = fs::current_path(ec); !dir.empty(); dir = dir.parent_path()) {
@@ -74,10 +67,7 @@ CheckResult check_update_checked(const std::string& binary) {
     const fs::path workspace = scratch / "ws";
     const std::string offered = "ffff444-5";
     std::error_code ec;
-    fs::create_directories(published, ec);
-    fs::create_directories(install, ec);
-    fs::create_directories(home, ec);
-    fs::create_directories(workspace, ec);
+    for (const fs::path& dir : {published, install, home, workspace}) fs::create_directories(dir, ec);
     if (const std::string error = support::stage_install(host, repo, install); !error.empty()) {
         result.failures.push_back(error);
         fs::remove_all(scratch, ec);
@@ -95,28 +85,37 @@ CheckResult check_update_checked(const std::string& binary) {
 
     const std::string manifest_url = "file://" + (published / "manifest.json").string();
     const std::string expected = "update checked: current is " + version + ", manifest is " + offered;
-    std::string log;
-    bool seen = false;
-    {
+    const auto cycle = [&](const fs::path& run_dir) {
+        std::string log;
         Session session(std::vector<std::string>{"env", "-u", "GMNEW_AUTO_UPDATE", "GMNEW_UPDATE_URL=" + manifest_url, (install / "gm").string(), "serve",
-                                                 "--workspace", workspace.string(), "--run-dir", (workspace / "run").string(), "--mcp-config", quiet.string()},
+                                                 "--workspace", workspace.string(), "--run-dir", run_dir.string(), "--mcp-config", quiet.string()},
                         workspace, home, 120000);
         if (!session.started()) {
             result.failures.push_back("the installed gm did not start from " + (install / "gm").string());
-        } else {
-            const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(60);
-            while (!seen && std::chrono::steady_clock::now() < deadline) {
-                log = read_text(workspace / "run" / "relay.log");
-                seen = log.find(expected) != std::string::npos;
-                if (!seen) std::this_thread::sleep_for(std::chrono::milliseconds(500));
-            }
+            return log;
+        }
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(60);
+        while (log.find(expected) == std::string::npos && std::chrono::steady_clock::now() < deadline) {
+            log = support::read_text(run_dir / "relay.log");
+            if (log.find(expected) == std::string::npos) std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        }
+        return log;
+    };
+    const auto tail_of = [](const std::string& log) { return log.substr(log.size() > 400 ? log.size() - 400 : 0); };
+    const std::string first = cycle(scratch / "run");
+    if (result.failures.empty() && first.find(expected) == std::string::npos) {
+        result.failures.push_back("no relay.log line \"" + expected + "\" within 60 s; the relay log says: " + tail_of(first));
+    }
+    if (result.failures.empty()) {
+        const std::string second = cycle(scratch / "run-again");
+        if (second.find(expected) == std::string::npos) {
+            result.failures.push_back("a second relay on the same install, whose cycle is within the check interval, did not log \"" + expected + "\"; its relay log says: " + tail_of(second));
         }
     }
     fs::remove_all(scratch, ec);
-    if (!seen && result.failures.empty()) {
-        result.failures.push_back("no relay.log line \"" + expected + "\" within 60 s; the relay log says: " + log.substr(log.size() > 400 ? log.size() - 400 : 0));
+    if (result.failures.empty()) {
+        result.summary = "a relay with an already-current manifest logs each update cycle as \"" + expected + "\" in its relay.log, and a cycle inside the check interval logs the same manifest version";
     }
-    if (result.failures.empty()) result.summary = "a relay with an already-current manifest logs each update cycle as \"" + expected + "\" in its relay.log";
     return result;
 }
 

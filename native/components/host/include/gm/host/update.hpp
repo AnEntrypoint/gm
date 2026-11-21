@@ -64,6 +64,7 @@ struct UpdateState {
     std::int64_t checked_ms = 0;
     std::string etag;
     std::string version;
+    std::string manifest;
     std::string asset_sha;
 };
 
