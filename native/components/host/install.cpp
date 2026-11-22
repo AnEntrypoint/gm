@@ -132,6 +132,7 @@ constexpr PlaywriterHook kPlaywriterHooks[] = {
     {"executor quiet close warning", "node_modules/playwriter/dist/executor.js", "namedByCall"},
     {"launcher CHROMIUM_ARGS_VARIABLE", "bin/playwriter-project", "CHROMIUM_ARGS_VARIABLE"},
     {"launcher browser listing", "bin/playwriter-project", "lastBrowserLines"},
+    {"launcher blank-tab grace", "bin/playwriter-project", "BLANK_GRACE_MS"},
 };
 
 std::vector<std::string> playwriter_missing_hooks(const fs::path& dir) {

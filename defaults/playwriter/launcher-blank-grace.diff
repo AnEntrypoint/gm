@@ -1,0 +1,32 @@
+diff --git a/bin/playwriter-project b/bin/playwriter-project
+index edf371e..ef6e266 100755
+--- a/bin/playwriter-project
++++ b/bin/playwriter-project
+@@ -22,6 +22,8 @@ const PLAYWRITER_BIN = path.join(PLAYWRITER_DIR, 'bin.js');
+ const HOST = '127.0.0.1';
+ const IDLE_MS = Number(process.env.PLAYWRITER_IDLE_MS) || 300000;
+ const GRACE_MS = 5000;
++const BLANK_GRACE_MS = 20000;
++const blankSince = new Map();
+ const CHROME_TRIMS = [
+   '--disable-extensions',
+   '--disable-background-networking',
+@@ -760,8 +762,17 @@ function runGate({ gate, debug }) {
+   const closeBlankTabs = async () => {
+     const pages = ((await httpJson(debug, '/json/list', 3000)) ?? []).filter((target) => target.type === 'page');
+     const blank = pages.filter((page) => page.url === 'about:blank');
++    const now = Date.now();
++    for (const id of [...blankSince.keys()]) {
++      if (!blank.some((page) => page.id === id)) blankSince.delete(id);
++    }
++    for (const page of blank) {
++      if (!blankSince.has(page.id)) blankSince.set(page.id, now);
++    }
+     if (pages.length > blank.length && blank.length > 0) {
+-      for (const page of blank) await httpGet(debug, `/json/close/${page.id}`, 3000);
++      for (const page of blank) {
++        if (now - blankSince.get(page.id) >= BLANK_GRACE_MS) await httpGet(debug, `/json/close/${page.id}`, 3000);
++      }
+     }
+   };
+ 
