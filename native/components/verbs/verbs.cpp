@@ -358,6 +358,7 @@ struct CoreVerbs::Impl {
             auto text = options.serve_skill ? options.serve_skill(uri) : std::nullopt;
             if (!text) return failure("no served skill file has the uri " + uri);
             if (auto problem = unit == "chars" ? char_args_problem(args) : line_args_problem(args)) return failure(*problem);
+            if (unit == "lines" && present(args, "offset") == nullptr && present(args, "limit") == nullptr) return whole_file_reply(*text, text->size(), true);
             json::Value page = unit == "chars" ? char_page(*text, args, text->size()) : line_page(*text, args, text->size());
             if (unit == "chars") page.set("unit", "chars");
             if (const json::Value* next = page.find("next")) {
@@ -387,7 +388,7 @@ struct CoreVerbs::Impl {
         if (auto problem = char_args_problem(args)) return failure(*problem);
         auto file = core::read_text(path, "stat");
         if (!file.ok) return failure(file.error);
-        if (present(args, "offset") == nullptr && present(args, "limit") == nullptr) return whole_file_reply(file.text, path, false);
+        if (present(args, "offset") == nullptr && present(args, "limit") == nullptr) return whole_file_reply(file.text, file_size_of(path), false);
         json::Value reply = char_page(file.text, args, file_size_of(path));
         if (const json::Value* next = reply.find("next")) reply.set("nextOffset", *next);
         reply.set("digest", fnv1a_hex(file.text));
@@ -425,8 +426,7 @@ struct CoreVerbs::Impl {
         return std::nullopt;
     }
 
-    json::Value whole_file_reply(const std::string& text, const std::filesystem::path& path, bool lines) {
-        const std::uint64_t bytes = file_size_of(path);
+    json::Value whole_file_reply(const std::string& text, std::uint64_t bytes, bool lines) {
         if (bytes > whole_file_cap) {
             return failure("file is " + std::to_string(bytes) + " bytes, over the " + std::to_string(whole_file_cap) +
                            "-byte whole-file read; page it with offset and limit, and read on from next until next is null");
@@ -449,7 +449,7 @@ struct CoreVerbs::Impl {
         if (auto problem = line_args_problem(args)) return failure(*problem);
         auto file = core::read_text(path, "stat");
         if (!file.ok) return failure(file.error);
-        if (present(args, "offset") == nullptr && present(args, "limit") == nullptr) return whole_file_reply(file.text, path, true);
+        if (present(args, "offset") == nullptr && present(args, "limit") == nullptr) return whole_file_reply(file.text, file_size_of(path), true);
         json::Value reply = line_page(file.text, args, file_size_of(path));
         if (const json::Value* next = reply.find("next")) reply.set("nextOffset", *next);
         reply.set("digest", fnv1a_hex(file.text));

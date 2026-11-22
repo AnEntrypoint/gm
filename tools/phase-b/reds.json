@@ -425,6 +425,18 @@
   ]
  },
  {
+  "id": "red-skill-whole-read",
+  "witness": "check-skill-read-fallback",
+  "file": "native/components/verbs/verbs.cpp",
+  "edits": [
+   {
+    "from": "if (unit == \"lines\" && present(args, \"offset\") == nullptr && present(args, \"limit\") == nullptr) return whole_file_reply(*text, text->size(), true);",
+    "to": "if (false) return whole_file_reply(*text, text->size(), true);",
+    "count": 1
+   }
+  ]
+ },
+ {
   "id": "red-worker-data",
   "witness": "check-txiki-core-extras",
   "file": "native/third_party/txiki/txiki/src/worker.c",
