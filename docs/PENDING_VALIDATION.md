@@ -5698,3 +5698,8 @@ Ranked open work:
 - Condition met: freddie 9f0f8307 (on freddie's origin/main and in the /workspace/freddie checkout the parity probe reads) passes the family to tjs.lookup, so family 6 works and family 4 stays IPv4-only.
 - Commit 2db01da is git revert of a98321d: the dns-flags patch in the shared pins, the 21st check-txiki-core-extras case (::1 and 127.0.0.1 resolve) and red-dns-addrconfig, all back together. The revert applied with no conflict.
 - Witness: check-txiki-core-extras and check-txiki-vendor alone, then one window whose parity probe runs freddie's localhost family 4 and family 6 cases against this build. Results in item 42.
+
+### 42. Window phase-b9 on cb20435: G10 in the build
+
+- Queued about 2 h 15 min behind fx, bevy and signal windows; ran 01:40:20 to 02:33:59 UTC (54 min). 131 of 131 witnesses ok, parity ok (PARITY_RC=0, PARITY_OK, mismatches 0, unexpectedGaps 0), 37 of 37 reds failed as they must, including red-dns-addrconfig. HEAD_END cb20435, working tree clean, no rerun of any row.
+- The parity probe ran freddie's corpus at freddie 9f0f8307, which includes the localhost family 4 case (parity-cases.js:3076) that failed in phase-b7 and the family 6 cases (lines 3080 to 3083: an IPv6 literal, localhost for family 6, and family 6 given as a number). None is a mismatch or an unexpected gap.
