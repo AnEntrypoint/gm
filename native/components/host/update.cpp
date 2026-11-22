@@ -212,7 +212,22 @@ json::Value UpdateResult::to_json() const {
     out.set("ok", ok).set("updated", updated).set("from", from).set("to", to).set("commit", commit).set("target", target_name());
     if (!status.empty()) out.set("status", status);
     if (!error.empty()) out.set("error", error);
+    if (!pruned.empty()) out.set("pruned", pruned);
     return out;
+}
+
+std::string describe_prune(const PruneResult& pruned) {
+    std::string text;
+    if (!pruned.removed.empty()) {
+        text = "pruned " + std::to_string(pruned.removed.size()) + " old version(s), freed " + std::to_string(pruned.bytes) + " bytes:";
+        for (const std::string& name : pruned.removed) text += " " + name;
+    }
+    if (!pruned.in_use.empty()) {
+        text += (text.empty() ? "" : "; ") + std::string("kept because a process uses or holds them:");
+        for (const std::string& name : pruned.in_use) text += " " + name;
+    }
+    if (!pruned.skipped.empty()) text += (text.empty() ? "" : "; ") + std::string("pruning skipped: ") + pruned.skipped;
+    return text;
 }
 
 std::string target_name() {
@@ -458,7 +473,7 @@ fs::path stable_executable(const fs::path& executable) {
     return *root / kCurrentName / executable.filename();
 }
 
-std::optional<std::string> switch_version(const fs::path& staged_root, const fs::path& root, const std::string& version) {
+std::optional<std::string> switch_version(const fs::path& staged_root, const fs::path& root, const std::string& version, PruneResult* pruned) {
     if (!plain_file_name(version)) return "the version " + version + " is not a file name";
     const fs::path versions = root / "versions";
     const fs::path target = versions / version;
@@ -495,6 +510,8 @@ std::optional<std::string> switch_version(const fs::path& staged_root, const fs:
     if (ec) return "cannot link " + next.string() + ": " + ec.message();
     fs::rename(next, current, ec);
     if (ec) return "cannot switch " + current.string() + ": " + ec.message();
+    const PruneResult result = prune_versions(root, version, previous);
+    if (pruned != nullptr) *pruned = result;
     return std::nullopt;
 }
 
@@ -585,8 +602,10 @@ UpdateResult update_once(const UpdatePolicy& policy, UpdateResult result) {
     if (auto error = unpack(archive, unpacked)) return failed(std::move(result), *error);
     fs::path installed = policy.install_dir;
     if (const auto root = install_root_of(policy.install_dir)) {
-        if (auto error = switch_version(unpacked / ("gmnew-" + target), *root, asset->second.version))
+        PruneResult pruned;
+        if (auto error = switch_version(unpacked / ("gmnew-" + target), *root, asset->second.version, &pruned))
             return failed(std::move(result), *error);
+        result.pruned = describe_prune(pruned);
         installed = *root / "versions" / asset->second.version;
     } else if (auto error = install_staged(unpacked / ("gmnew-" + target), policy.install_dir)) {
         return failed(std::move(result), *error);

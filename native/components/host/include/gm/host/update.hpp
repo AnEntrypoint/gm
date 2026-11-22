@@ -77,6 +77,7 @@ struct UpdateResult {
     std::string manifest;
     std::string status;
     std::string error;
+    std::string pruned;
 
     json::Value to_json() const;
 };
@@ -100,7 +101,16 @@ std::optional<std::string> install_staged(const std::filesystem::path& staged_ro
 std::optional<std::filesystem::path> install_root_of(const std::filesystem::path& version_dir);
 std::string linked_version(const std::filesystem::path& root);
 std::filesystem::path stable_executable(const std::filesystem::path& executable);
-std::optional<std::string> switch_version(const std::filesystem::path& staged_root, const std::filesystem::path& root, const std::string& version);
+struct PruneResult {
+    std::vector<std::string> removed;
+    std::vector<std::string> in_use;
+    std::uintmax_t bytes = 0;
+    std::string skipped;
+};
+
+PruneResult prune_versions(const std::filesystem::path& root, const std::string& current, const std::string& previous);
+std::optional<std::string> switch_version(const std::filesystem::path& staged_root, const std::filesystem::path& root, const std::string& version, PruneResult* pruned = nullptr);
+std::string describe_prune(const PruneResult& pruned);
 int run_update_command(bool automatic);
 
 }

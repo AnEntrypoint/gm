@@ -377,12 +377,14 @@ int install_local(const HostArgs& args, const fs::path& local) {
         state.checked_ms = wall_ms();
         state.version = version;
         write_update_state(stage / "new", state);
-        if (auto error = switch_version(stage / "new", *root, version)) {
+        PruneResult pruned;
+        if (auto error = switch_version(stage / "new", *root, version, &pruned)) {
             std::cerr << "gm: install: " << *error << "\n";
             return 1;
         }
         fs::remove_all(stage, ec);
         std::cout << "installed local build " << version << " from " << local.string() << " at " << (current / exe_name("gm")).string() << "\n";
+        if (const std::string text = describe_prune(pruned); !text.empty()) std::cout << text << "\n";
     }
     if (auto error = install_playwriter(*root)) {
         std::cerr << "gm: install: " << *error << "\n";
