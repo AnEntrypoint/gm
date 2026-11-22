@@ -5036,7 +5036,7 @@ Baseline build: the shared checkout was detached at a497fed (the commit before 9
 | update-stream | RC 0 | RC 0 (this session earlier reported dirty once, not reproduced) | RC 0 |
 | installed-stamp | RC 0 at a497fed | RC 0 on the build of the checkout | owner-held: the install of 806ce7b stays with the owner; the witness is unchanged |
 
-The clock-mutations witness was stale in the source: "job lifetime 60 s" mutated a default that 2424fae removed; "job wait cap 30 s" mutated a job wait cap that 2424fae removed. The mutants now target the lifetime clock (worker.cpp, ×1000, check-run-code-lifetime) and the next_context hold cap (server.cpp kMaxWaitMs, 1 s, check-next-hold-cap).
+The clock-mutations witness was stale in the source: "job lifetime 60 s" mutated a default that 2424fae removed; "job wait cap 30 s" mutated a job wait cap that 2424fae removed. The mutants now target the lifetime clock (worker.cpp, x1000, check-run-code-lifetime) and the next_context hold cap (server.cpp kMaxWaitMs, 1 s, check-next-hold-cap).
 
 ### Commits, witness and red check per change
 
@@ -5045,7 +5045,7 @@ The clock-mutations witness was stale in the source: "job lifetime 60 s" mutated
 - 5d5e2e8 gm: run_shell replies ok true for a run that exits non-zero, with its exitCode; the write-side pointer refusal tells the caller to write its output as the content. Witness: check-friction-verbs RC 0 (write_file with full: true is refused, path and content still write, grep exit 1 is ok true with exitCode 1). Red: friction-c-ok (ok forced to exit==0) RED_RC 1, AFTER_RC 0.
 - 5d5e2e8 (same commit, friction b): write_file with an argument it does not take is refused by the generic argument check in native/components/host/composed_verbs.cpp (line 109 before this round). A duplicate check added in verbs.cpp was removed as redundant. Red: friction-b-generic (the generic refusal forced off in composed_verbs.cpp) RED_RC 1, AFTER_RC 0.
 - 8be5481 gm: the first worker writes the tool list of a lazy client to its cache, so a later worker does not start a gate that its owner stopped. Root cause: start_all in mcpclient.cpp starts every client whose tool list is not preloaded, and nothing wrote the mcp-tools cache, so each worker started the lazy playwriter gate again to learn its tools. Witness: check-lazy-cache RC 0 (first worker writes the cache; after a release, a second worker starts no playwriter process and lists playwriter_execute). Red: lazy-cache (the cache write call removed) RED_RC 1, AFTER_RC 0.
-- 4922941 gm: clock-mutations retargets its mutants; check-next-hold-cap holds a next_context to the cap. Witness: check-next-hold-cap RC 0 (a 2 s hold returned after 1002 ms). Red: check-clock-mutations itself: lifetime ×1000 caught by check-run-code-lifetime, hold cap 1 s caught by check-next-hold-cap; sources restored, binary rebuilt, result ok.
+- 4922941 gm: clock-mutations retargets its mutants; check-next-hold-cap holds a next_context to the cap. Witness: check-next-hold-cap RC 0 (a 2 s hold returned after 1002 ms). Red: check-clock-mutations itself: lifetime x1000 caught by check-run-code-lifetime, hold cap 1 s caught by check-next-hold-cap; sources restored, binary rebuilt, result ok.
 
 ### Friction items a to f, the evidence and the fix
 
