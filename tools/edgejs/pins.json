@@ -1,0 +1,20 @@
+{
+  "edgejs": {
+    "repo": "wasmerio/edgejs",
+    "commit": "57af3635598b30ab50fa163328c1ece5d373dc91",
+    "path": ".",
+    "sha256": "9921ef1470b9719f2b87a5e09e4bf7e7c50ce0ddd7f03fcf029d2948650ede24"
+  },
+  "napi": {
+    "repo": "wasmerio/napi",
+    "commit": "f33cd8afc9f2628d5379d8fbd84074794d5827bd",
+    "path": "napi",
+    "sha256": "e7a1c7a3991a7ffa00274c89a077c405a86dead71c7f43f3604d4b2ea2898d68"
+  },
+  "quickjs": {
+    "repo": "wasmerio/quickjs",
+    "commit": "fcf1604905689e8f878ba300f2ede419a94df38e",
+    "path": "napi/quickjs/deps/quickjs",
+    "sha256": "d385ae084f25d176084270e68b2fd22c5ab8d0b3c6f8dc8f5f386a867d25e79b"
+  }
+}
