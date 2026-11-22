@@ -14,6 +14,17 @@ GM=$BUILD/native/components/host/gm
 FAILED=0
 
 say() { echo "$*" | tee -a "$LOG"; }
+part_is() { [ "${PART:-all}" = all ] || [ "$PART" = "$1" ]; }
+
+if [ "${PART:-all}" = build ]; then
+  git update-ref refs/remotes/origin/main HEAD
+  cmake --preset x64-linux-release -B "$BUILD" -DGMNEW_VERSION="$(git rev-parse --short=7 HEAD)-1" > "$OUT/build.log" 2>&1 && cmake --build "$BUILD" -j3 >> "$OUT/build.log" 2>&1
+  code=$?
+  say "BUILD_END rc=$code head=$(git rev-parse --short HEAD)"
+  say "PART_DONE $code"
+  exit $code
+fi
+
 fetch_head_digest() { sha256sum .git/FETCH_HEAD 2>/dev/null | cut -c1-16; }
 ORIGIN_EXPECT=$(git rev-parse refs/remotes/origin/main)
 FETCH_HEAD_EXPECT=$(fetch_head_digest)
@@ -68,26 +79,37 @@ for _ in $(seq 60); do
 done
 [ $clear -eq 1 ] || { say "NOT_CLEAR"; exit 3; }
 say "CLEAR"
-$GM install --local "$BUILD" --source "$PWD" > "$OUT/home-install.txt" 2>&1 || { FAILED=1; say "FAILED home-install"; }
+if part_is witnesses; then
+  $GM install --local "$BUILD" --source "$PWD" > "$OUT/home-install.txt" 2>&1 || { FAILED=1; say "FAILED home-install"; }
 
-say "WITNESSES"
-for name in $(sed -n 's/^CHECK("\([^"]*\)".*/\1/p' native/include/gm/checks.def); do
-  step "w-$name" "$GM_TOOL" check "$GM" "$name" || { FAILED=1; say "FAILED w-$name"; }
-done
-say "WITNESSES_DONE FAILED=$FAILED"
+  say "WITNESSES"
+  for name in $(sed -n 's/^CHECK("\([^"]*\)".*/\1/p' native/include/gm/checks.def); do
+    step "w-$name" "$GM_TOOL" check "$GM" "$name" || { FAILED=1; say "FAILED w-$name"; }
+  done
+  say "WITNESSES_DONE FAILED=$FAILED"
 
-mkdir -p "$OUT/parity/ws"
-guard "before parity"
-HOME=/config timeout 900 python3 $PB/rpc-until.py "$GM" "$OUT/parity/ws" $PB/parity-body.js "$OUT/parity/out.txt" > "$OUT/parity/probe.txt" 2>&1
-say "PARITY_RC=$?"
-guard "after parity"
-python3 -I $PB/parity-verdict.py "$OUT/parity/out.txt" && say "PARITY_OK" || { FAILED=1; say "PARITY_FAILED"; }
+  mkdir -p "$OUT/parity/ws"
+  guard "before parity"
+  HOME=/config timeout 900 python3 $PB/rpc-until.py "$GM" "$OUT/parity/ws" $PB/parity-body.js "$OUT/parity/out.txt" > "$OUT/parity/probe.txt" 2>&1
+  say "PARITY_RC=$?"
+  guard "after parity"
+  python3 -I $PB/parity-verdict.py "$OUT/parity/out.txt" && say "PARITY_OK" || { FAILED=1; say "PARITY_FAILED"; }
+fi
 
-say "REDS"
-for id in $(python3 $PB/red.py ids); do
-  RED_LOGS=$OUT/reds step "red-$id" python3 $PB/red.py "$id" || { FAILED=1; say "FAILED red-$id"; }
-done
-say "REDS_DONE FAILED=$FAILED"
+if part_is reds1 || part_is reds2 || [ "${PART:-all}" = all ]; then
+  ids=$(python3 $PB/red.py ids)
+  half=$(( ($(echo $ids | wc -w) + 1) / 2 ))
+  case "${PART:-all}" in
+    reds1) ids=$(echo $ids | tr ' ' '\n' | head -n "$half");;
+    reds2) ids=$(echo $ids | tr ' ' '\n' | tail -n +$((half + 1)));;
+  esac
+  say "REDS"
+  for id in $ids; do
+    RED_LOGS=$OUT/reds step "red-$id" python3 $PB/red.py "$id" || { FAILED=1; say "FAILED red-$id"; }
+  done
+  say "REDS_DONE FAILED=$FAILED"
+fi
 say "HEAD_END $(git rev-parse --short HEAD) changes=$(git status --short | wc -l)"
 say "WINDOW_END FAILED=$FAILED t=$(date -u +%T)"
+say "PART_DONE $FAILED"
 exit $FAILED
