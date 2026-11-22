@@ -6,6 +6,7 @@
       "env": {"PLAYWRITER_TELEMETRY": "0"},
       "envDefaults": {
         "PLAYWRITER_BROWSER_PATH": "/usr/bin/chromium",
+        "PLAYWRITER_IDLE_MS": "28800000",
         "PLAYWRITER_CHROMIUM_ARGS": "[\"--enable-unsafe-webgpu\",\"--enable-features=Vulkan\",\"--use-vulkan=swiftshader\",\"--enable-unsafe-swiftshader\"]"
       },
       "ignore": [".playwriter/"],
