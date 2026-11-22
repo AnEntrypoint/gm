@@ -351,8 +351,8 @@ void check_identical_install(CheckResult& result, const fs::path& sandbox, const
     const auto workers_before = children_of(home_relay.pid());
     if (workers_before.empty()) result.failures.push_back("the home relay should have a worker before the identical install");
     const auto again = install_once();
-    if (!again.started || again.exit_code != 0) result.failures.push_back("the identical install should succeed: " + again.err);
-    if (again.out.find("the binaries and their processes were kept") == std::string::npos) result.failures.push_back("the identical install should keep the binaries: " + again.out);
+    if (!again.started || again.exit_code != 0) result.failures.push_back("the identical install should succeed: " + support::failure_text(again) + " (started " + (again.started ? "yes" : "no") + ", exit " + std::to_string(again.exit_code) + ", timed out " + (again.timed_out ? "yes" : "no") + ")");
+    if (again.out.find("the binaries and their processes were kept") == std::string::npos) result.failures.push_back("the identical install should keep the binaries: " + (again.timed_out ? std::string("timed out") : again.out.substr(0, 300)));
     scaled_sleep(3000);
     const auto workers_after = children_of(home_relay.pid());
     if (workers_after != workers_before)

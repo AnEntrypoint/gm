@@ -3,6 +3,7 @@
 #include "gm/file.hpp"
 
 #include <algorithm>
+#include <cstring>
 #include <chrono>
 #include <cstdlib>
 #include <map>
@@ -300,13 +301,23 @@ void print_server_entry(const HostArgs& args, const fs::path& exe) {
               << json::dump(root) << "\n";
 }
 
+constexpr std::size_t kCompareBlock = 1 << 20;
+
 bool same_file(const fs::path& left, const fs::path& right) {
     std::error_code ec;
     if (!fs::is_regular_file(left, ec) || !fs::is_regular_file(right, ec)) return false;
     if (fs::file_size(left, ec) != fs::file_size(right, ec)) return false;
     std::ifstream first(left, std::ios::binary);
     std::ifstream second(right, std::ios::binary);
-    return std::equal(std::istreambuf_iterator<char>(first), std::istreambuf_iterator<char>(), std::istreambuf_iterator<char>(second));
+    std::vector<char> one(kCompareBlock);
+    std::vector<char> two(kCompareBlock);
+    for (;;) {
+        first.read(one.data(), static_cast<std::streamsize>(one.size()));
+        second.read(two.data(), static_cast<std::streamsize>(two.size()));
+        const std::streamsize count = first.gcount();
+        if (count != second.gcount() || std::memcmp(one.data(), two.data(), static_cast<std::size_t>(count)) != 0) return false;
+        if (count == 0) return true;
+    }
 }
 
 int install_local(const HostArgs& args, const fs::path& local) {
