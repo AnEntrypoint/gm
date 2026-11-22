@@ -401,6 +401,30 @@
   ]
  },
  {
+  "id": "red-run-code-data",
+  "witness": "check-retry-hints",
+  "file": "native/components/quickjs/runcode.cpp",
+  "edits": [
+   {
+    "from": "JSValue call_args[4] = {gm_value.get(), require_value.get(), JS_UNDEFINED, data.get()};",
+    "to": "JSValue call_args[4] = {gm_value.get(), require_value.get(), JS_UNDEFINED, JS_UNDEFINED};",
+    "count": 1
+   }
+  ]
+ },
+ {
+  "id": "red-cut-full-hint",
+  "witness": "check-retry-hints",
+  "file": "native/components/mcp/server.cpp",
+  "edits": [
+   {
+    "from": "\"[gm: the same run_shell with full: true returns the whole output in one reply]\\n\"",
+    "to": "\"[gm: gm.read_file with offset and limit gives the same lines by range; a repeat of that read gets a pointer]\\n\"",
+    "count": 1
+   }
+  ]
+ },
+ {
   "id": "red-worker-data",
   "witness": "check-txiki-core-extras",
   "file": "native/third_party/txiki/txiki/src/worker.c",

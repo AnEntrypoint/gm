@@ -69,6 +69,18 @@ std::string load_error(const std::string& text, std::string_view body, std::size
     return message + " (line " + std::to_string(body_line) + ", column " + std::to_string(column) + ")";
 }
 
+std::string with_data_hint(std::string message, std::string_view body) {
+    constexpr std::string_view hint = "; text that holds backticks or ${ belongs in run_code's data argument, read in the body as data.<name>";
+    const bool unloadable = message.starts_with("the body does not load") && (body.find('`') != std::string_view::npos || body.find("${") != std::string_view::npos);
+    bool interpolated = false;
+    if (const std::size_t undefined = message.find(" is not defined"); undefined != std::string::npos && undefined > 0) {
+        const std::size_t space = message.rfind(' ', undefined - 1);
+        const std::size_t start = space == std::string::npos ? 0 : space + 1;
+        interpolated = undefined > start && body.find("${" + message.substr(start, undefined - start)) != std::string_view::npos;
+    }
+    return unloadable || interpolated ? message + std::string(hint) : message;
+}
+
 std::optional<std::string> read_text(const fs::path& path) {
     return platform::read_file(path);
 }
@@ -377,7 +389,7 @@ deoxidene::Result<ModuleSplit, std::string> split_module_body(std::string_view b
 
 deoxidene::Result<JSValue, std::string> load_script_body(Engine& engine, std::string_view body) {
     JSContext* ctx = engine.ctx();
-    std::string source = "(async function body(gm, require, tjs) {\n";
+    std::string source = "(async function body(gm, require, tjs, data) {\n";
     source.append(body);
     source.append("\n})");
     JSValue function = JS_Eval(ctx, source.c_str(), source.size(), "<body>", JS_EVAL_TYPE_GLOBAL);
@@ -390,7 +402,7 @@ deoxidene::Result<JSValue, std::string> load_module_body(Engine& engine, std::st
     JSContext* ctx = engine.ctx();
     auto split = split_module_body(body, project_root);
     if (!split) return Fail("the body does not load: " + split.error());
-    const std::string source = split->imports + "\nexport default async function body(gm, require, tjs) {\n" + split->code + "\n}\n";
+    const std::string source = split->imports + "\nexport default async function body(gm, require, tjs, data) {\n" + split->code + "\n}\n";
     const std::size_t head = count_newlines(split->imports) + 2;
     Scoped compiled(ctx, JS_Eval(ctx, source.c_str(), source.size(), "<body>", JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY));
     if (JS_IsException(compiled.get())) return Fail(load_error(engine::take_exception_text(engine), body, head, split->removed_lines));
@@ -438,13 +450,14 @@ deoxidene::Result<json::Value, std::string> run_body(VerbTable& verbs, std::stri
         if (split && !split->imports.empty()) return Fail("refused: a CommonJS body cannot use a static import; use format esm");
     }
     auto loaded = esm ? load_module_body(engine, body, project_root) : load_script_body(engine, body);
-    if (!loaded) return Fail(loaded.error());
+    if (!loaded) return Fail(with_data_hint(loaded.error(), body));
     Scoped function(ctx, *loaded);
 
-    JSValue call_args[2] = {gm_value.get(), require_value.get()};
-    engine::Settled settled = engine::settle(engine, JS_Call(ctx, function.get(), JS_UNDEFINED, 2, call_args));
+    Scoped data(ctx, controls->data_json.empty() ? JS_UNDEFINED : JS_ParseJSON(ctx, controls->data_json.c_str(), controls->data_json.size(), "<data>"));
+    JSValue call_args[4] = {gm_value.get(), require_value.get(), JS_UNDEFINED, data.get()};
+    engine::Settled settled = engine::settle(engine, JS_Call(ctx, function.get(), JS_UNDEFINED, 4, call_args));
     Scoped value(ctx, settled.value);
-    if (settled.outcome == engine::Outcome::Rejected) return Fail(engine::deadline_or(engine, engine::error_text(ctx, value.get())));
+    if (settled.outcome == engine::Outcome::Rejected) return Fail(with_data_hint(engine::deadline_or(engine, engine::error_text(ctx, value.get())), body));
     if (settled.outcome == engine::Outcome::Pending) return Fail("the body stopped before it returned");
 
     auto converted = engine::js_to_json(ctx, value.get());

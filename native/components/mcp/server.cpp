@@ -242,7 +242,7 @@ const std::string kFinishDescription =
     "with a reason, and finish proceeds while those rows stay open.";
 
 std::string run_code_description(const std::string& verb_names) {
-    return "Run a JavaScript body in the project. The body is an ES module when format is esm and CommonJS when format is cjs. "
+    return "Run a JavaScript body in the project. Text that holds backticks or ${ (a script, a template, a shell command) goes in data, any JSON value, which the body reads as data. The body is an ES module when format is esm and CommonJS when format is cjs. "
            "Left out, format follows the project's package.json type (type module is esm, anything else is cjs). "
            "A CommonJS body loads with require() and cannot use a static import. Static imports (single or multi-line) load "
            "ES modules, and require() loads CommonJS; each project file loads in its own format (.mjs is ES module, .cjs is "
@@ -393,7 +393,7 @@ Value code_tools(const VerbTable& verbs) {
     Value run_code = object()
                          .set("name", "run_code")
                          .set("description", run_code_description(names))
-                         .set("inputSchema", object_schema(object().set("body", str_schema()).set("timeoutMs", timeout_schema()).set("format", format), {"body"}));
+                         .set("inputSchema", object_schema(object().set("body", str_schema()).set("timeoutMs", timeout_schema()).set("format", format).set("data", object()), {"body"}));
     Value next_out = object_schema(object()
                                        .set("ok", bool_schema())
                                        .set("refused", bool_schema())
@@ -3757,7 +3757,7 @@ Value bounded_output(Value result, const Value& args, const fs::path& run_dir, c
     const std::size_t shown = gm::utf16_length(part.body);
     const std::size_t omitted = total - shown;
     const bool dump = name == "run_shell" && std::regex_search(command, kDumpCommand);
-    const std::string range = dump ? "[gm: gm.read_file with offset and limit gives the same lines by range; a repeat of that read gets a pointer]\n" : "";
+    const std::string range = dump ? "[gm: the same run_shell with full: true returns the whole output in one reply]\n" : "";
     const std::string cut = lead ? text.substr(0, lead_end) : gm::marker::cut_line(omitted, path);
     std::string body = part.body;
     if (const std::size_t at = body.find(gm::marker::kCutHere); at != std::string::npos) body.erase(at, gm::marker::kCutHere.size());
@@ -3767,7 +3767,7 @@ Value bounded_output(Value result, const Value& args, const fs::path& run_dir, c
     result.set("outputPath", path);
     result.set("totalChars", static_cast<double>(total));
     result.set("omittedChars", static_cast<double>(omitted));
-    result.set("hint", name == "read_file" ? std::string("this reply is cut; gm.read_file with full: true returns the whole text, or read_file with offset and limit pages it") : std::string("this reply is cut; outputPath holds the whole text, and read_file with offset and limit pages it"));
+    result.set("hint", name == "read_file" ? std::string("this reply is cut; gm.read_file with full: true returns the whole text, or read_file with offset and limit pages it") : std::string("this reply is cut; the same call with full: true returns the whole text in one reply, and outputPath holds it"));
     result.set("lines", static_cast<double>(split_lines(text).size()));
     result.set("next", static_cast<double>(part.next));
     return result;
@@ -3945,14 +3945,14 @@ Server::State::~State() {
 }
 
 Value Server::State::run_code(const Value& args) {
-    static const std::vector<std::string> kProperties = {"body", "timeoutMs", "format"};
+    static const std::vector<std::string> kProperties = {"body", "timeoutMs", "format", "data"};
     std::string unknown;
     for (const json::Member& m : args.as_object()) {
         if (std::find(kProperties.begin(), kProperties.end(), m.first) == kProperties.end()) {
             unknown += unknown.empty() ? m.first : ", " + m.first;
         }
     }
-    if (!unknown.empty()) return refuse("run_code", args, "unknown argument " + unknown + "; run_code takes body, timeoutMs, format");
+    if (!unknown.empty()) return refuse("run_code", args, "unknown argument " + unknown + "; run_code takes body, timeoutMs, format, data");
     return act(
         "run_code", args,
         [&](std::uint64_t action) {
@@ -3980,6 +3980,7 @@ Value Server::State::run_code(const Value& args) {
             auto job = std::make_shared<BodyJob>();
             job->controls = std::make_shared<gm::BodyControls>();
             job->controls->js_budget = std::chrono::milliseconds(static_cast<long long>(options.job_lifetime_ms.value_or(0)));
+            if (const Value* data = args.find("data")) job->controls->data_json = json::dump(*data);
             job->body = action;
             job->step = s().steps;
             job->skill_bootstrap = !skill_read() && body_reads_skill_first(args);

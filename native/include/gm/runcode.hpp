@@ -33,6 +33,7 @@ struct BodyControls {
     std::atomic<bool> stopped{false};
     std::chrono::milliseconds js_budget{3600000};
     ConsoleBuffer console;
+    std::string data_json;
 };
 
 using BodyControlsPtr = std::shared_ptr<BodyControls>;
