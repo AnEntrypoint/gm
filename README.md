@@ -9,15 +9,11 @@ Install the latest release, once per machine, on Linux, macOS or Windows (x64 or
     tar -xzf gmnew-<target>.tar.gz
     ./gmnew-<target>/gm install --local ./gmnew-<target>
 
-Optional, for playwriter (AnEntrypoint/pw), which needs Node 22 or later:
+The install also places playwriter (AnEntrypoint/pw) under `~/.gmnew/pw` at the commit pinned in `native/include/gm/playwriter_pin.hpp`: it clones the repository, applies gm's patches, and runs `npm ci` and patch-package. So the install needs git, Node 22 or later, npm and network access to GitHub, and it fails when that step fails. The worker starts playwriter itself from the default entry in `defaults/mcp.json`, so nothing registers playwriter with your MCP client. In a Linux container where Chromium's sandbox is blocked, see the playwriter entry below.
 
-    npx -y add-mcp "npx -y github:AnEntrypoint/pw" -n playwriter --all -g -y
+To give the worker an MCP server config of your own, add `--mcp-config <path>`. On Windows, unzip the `.zip` and run `gm.exe install --local <dir>` the same way. A second install of the same build rewrites nothing and keeps the running processes.
 
-Use `-a claude-code` in place of `--all` for one agent. In a Linux container, add `--env PLAYWRITER_NO_SANDBOX=1`.
-
-To register gm with a playwriter config, add `--mcp-config <path>`. On Windows, unzip the `.zip` and run `gm.exe install --local <dir>` the same way. A second install of the same build rewrites nothing and keeps the running processes. Node and npm are not needed.
-
-To build from a checkout (CMake and Ninja, no Node, no npm), run `cmake --preset release && cmake --build build/release`, then install the build with `build/release/native/components/host/gm install --local build/release --source .`. The commit gate, Phase B and shipping are `build/release/native/components/tool/gm-tool gate`, `... phase-b` and `... ship`.
+To build from a checkout (CMake and Ninja; the build needs no Node and no npm, but the install step does), run `cmake --preset release && cmake --build build/release`, then install the build with `build/release/native/components/host/gm install --local build/release --source .`. The commit gate, Phase B and shipping are `build/release/native/components/tool/gm-tool gate`, `... phase-b` and `... ship`.
 
 Each build is versioned as `gmnew-<version>-<target>.tar.gz` (`.zip` on Windows), and the manifest is uploaded last, so an install never mixes two builds. The last three builds stay on `latest`. A push publishes every target that built; a target that failed keeps the build it had, and the run summary names it.
 
@@ -47,7 +43,7 @@ The gm skill also serves `skills/gm/WORKFLOWS.md` as `skill://gm/WORKFLOWS.md`, 
 
 The worker is also an MCP client. It starts the MCP servers that its config names, and adds each of their tools to `gm` inside `run_code` as `gm.<server>_<tool>(args)`, beside the native verbs. `gm.verbs()` and run_code's description list them. run_code's description also names `gm.try(fn)`, which wraps a call that may throw and returns its value or `{ ok: false, error }` as data. The config is three files in the `mcpServers` shape of `.mcp.json`, read in this order. A later entry with the same name replaces the earlier one whole:
 
-1. `defaults/mcp.json` in the checkout. It is required, and a missing file is logged as an `mcp-config` problem. It starts playwriter, as `npx -y -p github:AnEntrypoint/pw#bbcc988 playwriter-project` (the commit is pinned in that file), with `PLAYWRITER_TELEMETRY=0` in its environment, which turns off playwriter's anonymous usage stats, and with `"ignore": [".playwriter/"]`. Each server starts with `PLAYWRITER_PROJECT_DIR` set to the run's workspace unless its entry sets that variable, so each project root gets its own playwriter gate, Chrome and profile at `<root>/.playwriter/browser-profile`. The `pw` package declares `engines` `node >=22`, the same floor setup enforces. A failed start gives its reason in the stderr of the `mcp-server` failed event.
+1. `defaults/mcp.json` in the checkout. It is required, and a missing file is logged as an `mcp-config` problem. It starts playwriter as `node ${HOME}/.gmnew/pw/bin/playwriter-project`, the launcher of the playwriter install that `gm install` places at the pinned commit, with `PLAYWRITER_TELEMETRY=0` in its environment, which turns off playwriter's anonymous usage stats, and with `"ignore": [".playwriter/"]`. Each server starts with `PLAYWRITER_PROJECT_DIR` set to the run's workspace unless its entry sets that variable, so each project root gets its own playwriter gate, Chrome and profile at `<root>/.playwriter/browser-profile`. The `pw` package declares `engines` `node >=22`; the install does not check the Node version. A failed start gives its reason in the stderr of the `mcp-server` failed event.
 2. `.gm/mcp.json` in the workspace, if it exists.
 3. The file that `--mcp-config <file>` names, if given. It is required.
 
@@ -57,7 +53,7 @@ A layer that sets `"disabled": true` for a name removes that server, so `{"mcpSe
 
 A Linux container where Chromium's sandbox is blocked makes the browser refuse to start, with `no usable sandbox`. The default entry does not set `PLAYWRITER_NO_SANDBOX`, because that turns off Chromium's sandbox on every machine that runs the default. On the Ubuntu container this work runs in, `/usr/bin/chromium` is a wrapper that adds `--no-sandbox`, so the default starts there without the flag. Where Chromium is not wrapped that way, set it in a layer, restating the whole playwriter entry:
 
-    {"mcpServers":{"playwriter":{"command":"npx","args":["-y","-p","github:AnEntrypoint/pw#bbcc988","playwriter-project"],"env":{"PLAYWRITER_TELEMETRY":"0","PLAYWRITER_NO_SANDBOX":"1"},"ignore":[".playwriter/"],"startupTimeoutMs":600000}}}
+    {"mcpServers":{"playwriter":{"command":"node","args":["${HOME}/.gmnew/pw/bin/playwriter-project"],"env":{"PLAYWRITER_TELEMETRY":"0","PLAYWRITER_NO_SANDBOX":"1"},"envDefaults":{"PLAYWRITER_BROWSER_PATH":"/usr/bin/chromium","PLAYWRITER_IDLE_MS":"28800000","PLAYWRITER_CHROMIUM_ARGS":"[\"--enable-unsafe-webgpu\",\"--enable-features=Vulkan\",\"--use-vulkan=swiftshader\",\"--enable-unsafe-swiftshader\"]"},"ignore":[".playwriter/"],"deny":["reset"],"lazy":true,"releaseAtRunEnd":false,"timeoutMs":300000,"startupTimeoutMs":600000}}}
 
 Setup registers only gm with the host, so the worker is the only thing that starts playwriter.
 
