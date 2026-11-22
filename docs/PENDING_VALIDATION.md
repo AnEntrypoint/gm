@@ -5800,3 +5800,8 @@ Ranked open work:
 - Fix: a served skill read with no offset or limit returns the whole text, as a plain file does (whole_file_reply takes the byte count instead of a path). Witnesses alone on this tree: check-no-resource-client, check-skill-read-fallback, check-skill-serve, check-cut-marker, check-read-parity, check-read-after-write, parity-contract all ok. Red: red-skill-whole-read.
 - edgejs build parts (gm-edgejs): all three ran and succeeded; the numbers are in docs/edgejs-spike.md.
 - Also: window.sh now installs the build into the witness home before the witnesses, because the relay of a witness session re-executes through that home install and serves its skills; a home install older than the checkout served the old skill to every witness that reads it.
+
+### 48. Window phase-b12 on 7b60a79
+
+- After the reboot the six local commits were rebased onto origin/main (28 commits from another session: ship --push, version pruning, installer block compare); the only conflict was the append-only ledger, resolved by keeping both sides. One window on that tree, queued detached through the gate (empty): ran to 19:59:38 UTC, 138 of 138 witnesses ok (check-no-resource-client and check-skill-read-fallback now pass), parity ok, every red failed as it must (REDS_DONE FAILED=0), HEAD_END 7b60a79, tree clean. It covers the six commits: edgejs spike (three), run_code data and the cut hints, the whole served-skill read, and window.sh's home install.
+- The edgejs build part 1 was rerun after the reboot from the pin and reproduced the same binary size (docs/edgejs-spike.md).
