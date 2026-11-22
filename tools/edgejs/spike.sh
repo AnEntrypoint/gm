@@ -6,6 +6,7 @@ SRC=$WORK/src
 BUILD=$WORK/build
 JOBS=${EDGEJS_JOBS:-2}
 PART_SECONDS=${EDGEJS_PART_SECONDS:-1500}
+EDGE=${EDGEJS_BIN:-$BUILD/edge}
 MEASURE="python3 -I $HERE/measure.py"
 
 pinned() { python3 -I -c 'import json, sys; pins = json.load(open(sys.argv[1])); [print(name, p["repo"], p["commit"], p["path"], p["sha256"] or "-") for name, p in pins.items()]' "$HERE/pins.json"; }
@@ -37,21 +38,21 @@ build() {
 }
 
 outputs() {
-  ls -l "$BUILD/edge"
+  ls -l "$EDGE"
   find "$BUILD" -name '*.a' -printf '%s %P\n' | sort -n | tail -n 25
   du -sh "$BUILD"
-  "$BUILD/edge" --version || true
+  "$EDGE" --version || true
 }
 
 startup() {
-  for run in 1 2 3; do $MEASURE "startup-$run" "$BUILD/edge" -e '0'; done
-  $MEASURE startup-console "$BUILD/edge" -e 'console.log(process.version, Object.keys(process.versions).join(","))'
+  for run in 1 2 3; do $MEASURE "startup-$run" "$EDGE" -e '0'; done
+  $MEASURE startup-console "$EDGE" -e 'console.log(process.version, Object.keys(process.versions).join(","))'
 }
 
 smoke() {
-  gcc -O2 -shared -fPIC -I "$SRC/include" "$HERE/smoke/host.c" -o "$WORK/host.node"
+  gcc -O2 -shared -fPIC -I "$SRC/napi/include" "$HERE/smoke/host.c" -o "$WORK/host.node"
   cp "$HERE/smoke/smoke.mjs" "$WORK/smoke.mjs"
-  (cd "$WORK" && $MEASURE smoke "$BUILD/edge" smoke.mjs)
+  (cd "$WORK" && $MEASURE smoke "$EDGE" smoke.mjs)
 }
 
 "$@"

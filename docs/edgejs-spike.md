@@ -24,15 +24,21 @@ Findings from the files:
 
 | question | how it is measured | answer |
 |---|---|---|
-| Does edgejs build natively here with the smallest engine (quickjs)? | spike.sh configure, then spike.sh build in ticketed parts under 30 minutes | pending the window |
+| Does edgejs build natively here with the smallest engine (quickjs)? | spike.sh configure, then spike.sh build in ticketed parts under 30 minutes (queued: gm-edgejs tickets 1072948, 1073570, 1074264, results in /workspace/tmp/gm/edgejs/part1.log to part3.log) | pending the build; the prebuilt binaries answer the run-time questions without it |
 | Build time | sum of the measured parts (tools/edgejs/measure.py wall time) | pending |
 | Peak memory | measure.py: peak summed resident memory of the build process tree, and the largest single process | pending |
 | Output size | spike.sh outputs: size of edge, the static libraries, the build tree | pending |
 | Does a static library come out for an embedder? | the .a files the build leaves (edge_runtime and its parts) | pending |
-| Engine options | the files above | bundled-v8, quickjs, imports; quickjs built here |
-| Start-up time and resident memory | spike.sh startup: edge -e 0 three times, measure.py wall and peak resident memory | pending |
-| Host function through N-API | spike.sh smoke: a C addon (tools/edgejs/smoke/host.c) exporting sum, loaded with createRequire from a module on disk | pending |
-| node:fs, node:net, node:child_process, node:sqlite and fetch | the same smoke module: a temp file written and read back, a TCP echo on 127.0.0.1, spawnSync of /bin/sh, an in-memory DatabaseSync, fetch from a local node:http server | pending |
+| Engine options | the files above, and the published nightlies | bundled-v8, quickjs, imports. Published Linux x64 nightlies exist for two: edge-linux-amd64.zip (V8, release 0.2.5-v8-nightly, 51,942,193 bytes) and edge-quickjs-linux-amd64.zip (QuickJS, 0.2.5-nightly, 54,439,138 bytes) in wasmerio/edgejs-nightlies; the installer at edgejs.org/install fetches the V8 one |
+| Start-up time and resident memory | spike.sh startup with EDGEJS_BIN set to the prebuilt edge: edge -e 0 three times | V8 prebuilt (v24.13.2-pre, 157,751,848-byte bin/edge, dynamically linked against libc, libm, libstdc++ and libgcc only): 0.213, 0.210 and 0.215 s wall; 57.8 to 60.9 MiB peak resident (ru_maxrss). QuickJS prebuilt: pending its download |
+| Host function through N-API | spike.sh smoke: a C addon (tools/edgejs/smoke/host.c, built with gcc against napi/include) exporting sum, loaded with createRequire from a module on disk | V8 prebuilt: works, sum(40, 2) returned 42; edge exports napi_* to the addon. QuickJS prebuilt: pending |
+| node:fs, node:net, node:child_process, node:sqlite and fetch | the same smoke module: a temp file written and read back, a TCP echo on 127.0.0.1, spawnSync of /bin/sh, an in-memory DatabaseSync, fetch from a local node:http server | V8 prebuilt: fs ok, net ok (echo), child_process ok (status 3, stdout child), fetch ok (200, body fetched /probe); node:sqlite fails: lib/sqlite.js is internalBinding('sqlite') and src/binding_registry/binding_list.h registers no sqlite binding, so the module is empty and DatabaseSync is not a constructor ("Cannot convert undefined or null to object"). The whole smoke run: 0.422 s wall, 76.1 MiB peak resident |
 | Is the build reproducible from the pin? | fetch from pins.json and build from that tree only | fetch witnessed above; build pending |
 
 Not answered by the gm spike: the fx permission-gate question (fx's part), the browser package (thebird's part) and the parity count (freddie's part).
+
+## What the binary answers and what only the build answers
+
+- Answered by the published V8 binary (above): start-up time, resident memory, the N-API host function, fs, net, child_process, fetch, and that sqlite is missing in this tree.
+- Answered only by the build: whether a static library comes out for an embedder, build time, peak build memory, and the output size per engine. The prebuilt zips carry bin/edge, bin/edgeenv and a node shim only, no library.
+- For fx and freddie now: sqlite needs a host module or a vendored sqlite binding; the embedding entry points in src/edge_runtime.h (EdgeRunScriptFile, EdgeRunScriptSourceWithLoop on a napi_env) and the N-API addon route both exist; Node's permission binding is in the registry (internalBinding permission), which is one of the gate options fx is testing.
