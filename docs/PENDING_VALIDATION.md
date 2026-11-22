@@ -5805,3 +5805,7 @@ Ranked open work:
 
 - After the reboot the six local commits were rebased onto origin/main (28 commits from another session: ship --push, version pruning, installer block compare); the only conflict was the append-only ledger, resolved by keeping both sides. One window on that tree, queued detached through the gate (empty): ran to 19:59:38 UTC, 138 of 138 witnesses ok (check-no-resource-client and check-skill-read-fallback now pass), parity ok, every red failed as it must (REDS_DONE FAILED=0), HEAD_END 7b60a79, tree clean. It covers the six commits: edgejs spike (three), run_code data and the cut hints, the whole served-skill read, and window.sh's home install.
 - The edgejs build part 1 was rerun after the reboot from the pin and reproduced the same binary size (docs/edgejs-spike.md).
+
+### 49. edgejs build parts 2 and 3 stopped
+
+- gm-edgejs-part2 and gm-edgejs-part3 (gate tickets 3918 and 3993, queued after the reboot) were stopped by their PIDs on the dispatcher's decision, because they only repeat the outputs, start-up and smoke measurements that part 1 and the first run already recorded in docs/edgejs-spike.md, and part 1 itself (the build) was reproduced after the reboot. Their log files /workspace/tmp/gm/edgejs/part2.log and part3.log stay empty by design. The edgejs numbers are final; the build is not rerun.
