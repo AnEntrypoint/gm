@@ -4095,8 +4095,6 @@ void Server::accept(std::string_view line) { state_->accept(line); }
 void Server::dispatch(std::string_view line) { state_->dispatch(line); }
 void Server::drain() { state_->drain_calls(); }
 void Server::input_ended() { state_->input_ended(); }
-std::string Server::run_id() const { return state_->session->run_id; }
-std::filesystem::path Server::run_dir() const { return state_->session->run_dir; }
 
 int serve_stream(std::istream& in, std::ostream& out, VerbTable& verbs, ServerOptions options) {
     auto server = Server::open(verbs, std::move(options), [&out](std::string_view line) {

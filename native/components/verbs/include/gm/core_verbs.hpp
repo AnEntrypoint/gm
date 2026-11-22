@@ -25,7 +25,6 @@ struct CoreVerbsOptions {
 
 class CoreVerbs : public VerbTable {
 public:
-    CoreVerbs(CoreVerbsOptions options, RunLog& log);
     explicit CoreVerbs(CoreVerbsOptions options);
     ~CoreVerbs() override;
 

@@ -70,10 +70,6 @@ public:
     bool only_resendable_in_flight() const;
     std::string hold_reason() const;
 
-    std::uint64_t restarts() const;
-    long long worker_pid() const;
-    bool running() const;
-
 private:
     enum class State { Starting, Running, Draining, Restarting, Failed, Stopping };
     using Lock = std::unique_lock<std::mutex>;
@@ -141,7 +137,6 @@ private:
     SourceStamps build_stamps_;
     bool deferred_restart_ = false;
     bool child_ended_ = false;
-    std::uint64_t restarts_ = 0;
 };
 
 int serve_stdio(RelayOptions options);

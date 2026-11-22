@@ -499,7 +499,6 @@ void Relay::restart(Lock& lock, const std::string& reason) {
         return;
     }
     mark_running(lock);
-    ++restarts_;
     announce_changes(lock);
     for (const std::string& line : replay) send_to_worker(lock, line);
     flush_held(lock);
@@ -779,21 +778,6 @@ void Relay::host_closed(const std::string& reason) {
         worker_code_ = code.value_or(0);
     }
     if (reader_.joinable()) reader_.join();
-}
-
-std::uint64_t Relay::restarts() const {
-    std::lock_guard lock(mutex_);
-    return restarts_;
-}
-
-long long Relay::worker_pid() const {
-    std::lock_guard lock(mutex_);
-    return child_ ? child_->pid() : -1;
-}
-
-bool Relay::running() const {
-    std::lock_guard lock(mutex_);
-    return state_ == State::Running;
 }
 
 int serve_stdio(RelayOptions options) {

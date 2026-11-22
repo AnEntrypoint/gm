@@ -311,10 +311,10 @@ std::uint64_t seq_of(const json::Value& event) {
 }
 
 struct CoreVerbs::Impl {
-    Impl(CoreVerbsOptions opts, std::shared_ptr<RunLog> run_log)
+    explicit Impl(CoreVerbsOptions opts)
         : options(std::move(opts)),
           root(resolve_root(options.workspace)),
-          log(std::move(run_log), options.on_append),
+          log(nullptr, options.on_append),
           jobs(root, log, options.job_lifetime_ms) {}
 
     static std::filesystem::path resolve_root(const std::filesystem::path& workspace) {
@@ -1013,12 +1013,7 @@ struct CoreVerbs::Impl {
     core::JobTable jobs;
 };
 
-CoreVerbs::CoreVerbs(CoreVerbsOptions options, RunLog& log)
-    : impl_(std::make_unique<Impl>(std::move(options), std::shared_ptr<RunLog>(std::shared_ptr<void>{}, &log))) {
-    impl_->jobs.stop_orphans();
-}
-
-CoreVerbs::CoreVerbs(CoreVerbsOptions options) : impl_(std::make_unique<Impl>(std::move(options), nullptr)) {}
+CoreVerbs::CoreVerbs(CoreVerbsOptions options) : impl_(std::make_unique<Impl>(std::move(options))) {}
 
 void CoreVerbs::bind_run(std::shared_ptr<RunLog> log) {
     impl_->log.bind(std::move(log));

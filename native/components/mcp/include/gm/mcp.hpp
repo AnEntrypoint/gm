@@ -62,8 +62,6 @@ public:
     void dispatch(std::string_view line);
     void drain();
     void input_ended();
-    std::string run_id() const;
-    std::filesystem::path run_dir() const;
 
     struct State;
 
