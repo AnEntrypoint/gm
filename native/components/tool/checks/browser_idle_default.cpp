@@ -79,7 +79,7 @@ Case run_case(const std::string& binary, const std::string& label, const std::ve
         }
         session.stop();
     }
-    std::this_thread::sleep_for(std::chrono::milliseconds(scaled(quiet_ms)));
+    std::this_thread::sleep_for(std::chrono::milliseconds(quiet_ms));
     const auto status = proc::run({"env", "HOME=" + sandbox.string(), "PLAYWRITER_PROJECT_DIR=" + workspace.string(), "node", launcher.string(), "status"}, workspace, {}, 60000);
     outcome.status = status.out + status.err;
     outcome.gate_log = read_text(workspace / ".playwriter" / "gate.log");
