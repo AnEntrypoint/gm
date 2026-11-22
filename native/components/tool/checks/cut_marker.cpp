@@ -25,7 +25,8 @@ constexpr const char* kBody = R"JS(
   const pointer = await gm.read_file({ path: 'small.txt' });
   const refusedPointer = await gm.write_file({ path: 'pointer.txt', content: pointer.output });
   const refusedEdit = await gm.edit_file({ path: 'copy.txt', old: 'line of source text', new: bounded.output });
-  return { bounded: { truncated: bounded.truncated, complete: bounded.complete, outputPath: bounded.outputPath, chars: String(bounded.output).length, output: bounded.output }, refusedCopy, copyAfterRefusal, full: { truncated: full.truncated, complete: full.complete }, fullCopy, pointer: { pointer: pointer.pointer, complete: pointer.complete, output: pointer.output }, refusedPointer, refusedEdit };
+  const quoted = await gm.write_file({ path: 'quoted.txt', content: 'a cut starts with <' + '<<gm-cut and a pointer with <' + '<<gm-pointer, quoted as text' });
+  return { quoted, bounded: { truncated: bounded.truncated, complete: bounded.complete, outputPath: bounded.outputPath, chars: String(bounded.output).length, output: bounded.output }, refusedCopy, copyAfterRefusal, full: { truncated: full.truncated, complete: full.complete }, fullCopy, pointer: { pointer: pointer.pointer, complete: pointer.complete, output: pointer.output }, refusedPointer, refusedEdit };
 )JS";
 
 std::string repeat_line() {
@@ -79,6 +80,7 @@ CheckResult check_cut_marker(const std::string& binary) {
                 const std::string cut_output = text_or_dump(r, "bounded.output");
                 if (!has(cut_output, "<<<gm-cut omitted=")) result.failures.push_back("the cut must be an unmistakable <<<gm-cut marker, not an ellipsis");
                 if (has(cut_output, "\n...\n")) result.failures.push_back("the cut must not be shaped like content (no ellipsis line)");
+                if (!bool_at(r, "quoted.ok", true)) result.failures.push_back("a write that only quotes the start of a marker must succeed: " + json::dump(*value_at(r, "quoted")).substr(0, 200));
                 if (!bool_at(r, "refusedCopy.ok", false)) result.failures.push_back("a write whose content carries the cut marker must be refused: " + json::dump(*value_at(r, "refusedCopy")).substr(0, 200));
                 const std::string refused = text_or_dump(r, "refusedCopy.error");
                 if (!has(refused, "outputPath") || !has(refused, "full: true") || (!output_path.empty() && !has(refused, output_path)))
@@ -101,7 +103,7 @@ CheckResult check_cut_marker(const std::string& binary) {
     std::error_code ignored;
     fs::remove_all(sandbox, ignored);
     const double wall = std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
-    result.summary = "a bounded read says truncated and complete false with an outputPath and a <<<gm-cut marker; a write or edit carrying the cut is refused naming outputPath and full: true, and nothing reaches disk; a repeat read answers a <<<gm-pointer that is refused as file text and names fresh: true; a full read writes (wall " +
+    result.summary = "a bounded read says truncated and complete false with an outputPath and a <<<gm-cut marker; a write or edit carrying the cut is refused naming outputPath and full: true, and nothing reaches disk; a repeat read answers a <<<gm-pointer that is refused as file text and names fresh: true; a full read writes, and text that only quotes the start of a marker is written (wall " +
                      std::to_string(wall) + " s)";
     return result;
 }

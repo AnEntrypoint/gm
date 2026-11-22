@@ -19,16 +19,44 @@ inline std::string pointer_line(std::uint64_t step) {
     return std::string(kPointerMarker) + " step=" + std::to_string(step) + " fresh=true>>>";
 }
 
+inline bool expect(std::string_view text, std::size_t& at, std::string_view part) {
+    if (text.substr(at, part.size()) != part) return false;
+    at += part.size();
+    return true;
+}
+
+inline bool digits(std::string_view text, std::size_t& at) {
+    const std::size_t begin = at;
+    while (at < text.size() && text[at] >= '0' && text[at] <= '9') ++at;
+    return at > begin;
+}
+
+inline std::optional<std::string> cut_path(std::string_view text) {
+    for (std::size_t at = text.find(kCutMarker); at != std::string_view::npos; at = text.find(kCutMarker, at + 1)) {
+        std::size_t cursor = at + kCutMarker.size();
+        if (!expect(text, cursor, " omitted=") || !digits(text, cursor) || !expect(text, cursor, " outputPath=")) continue;
+        const std::size_t end = text.find(" full=true>>>", cursor);
+        const std::size_t newline = text.find('\n', cursor);
+        if (end == std::string_view::npos || (newline != std::string_view::npos && newline < end)) continue;
+        return std::string(text.substr(cursor, end - cursor));
+    }
+    return std::nullopt;
+}
+
+inline bool has_pointer(std::string_view text) {
+    for (std::size_t at = text.find(kPointerMarker); at != std::string_view::npos; at = text.find(kPointerMarker, at + 1)) {
+        std::size_t cursor = at + kPointerMarker.size();
+        if (expect(text, cursor, " step=") && digits(text, cursor) && expect(text, cursor, " fresh=true>>>")) return true;
+    }
+    return false;
+}
+
 inline std::optional<std::string> write_refusal(std::string_view text, std::string_view verb) {
-    const std::size_t cut = text.find(kCutMarker);
-    if (cut != std::string_view::npos) {
-        const std::size_t key = text.find("outputPath=", cut);
-        const std::size_t end = key == std::string_view::npos ? key : text.find(" full=", key);
-        const std::string path = end == std::string_view::npos ? std::string("(not in the marker)") : std::string(text.substr(key + 11, end - key - 11));
-        return std::string(verb) + " refused: the text holds a cut from a bounded reply, not file text; the whole text is at outputPath " + path +
+    if (const std::optional<std::string> path = cut_path(text)) {
+        return std::string(verb) + " refused: the text holds a cut from a bounded reply, not file text; the whole text is at outputPath " + *path +
                ", so call the read with full: true and write that text";
     }
-    if (text.find(kPointerMarker) != std::string_view::npos) {
+    if (has_pointer(text)) {
         return std::string(verb) + " refused: the text is a repeat-read pointer, not file text; call the read again with fresh: true, then write its output as the content";
     }
     return std::nullopt;

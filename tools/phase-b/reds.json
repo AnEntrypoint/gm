@@ -437,6 +437,18 @@
   ]
  },
  {
+  "id": "red-marker-shape",
+  "witness": "check-cut-marker",
+  "file": "native/include/gm/marker.hpp",
+  "edits": [
+   {
+    "from": "if (!expect(text, cursor, \" omitted=\") || !digits(text, cursor) || !expect(text, cursor, \" outputPath=\")) continue;",
+    "to": "if (!expect(text, cursor, \" omitted=\") || !digits(text, cursor) || !expect(text, cursor, \" outputPath=\")) return std::string(\"quoted\");",
+    "count": 1
+   }
+  ]
+ },
+ {
   "id": "red-worker-data",
   "witness": "check-txiki-core-extras",
   "file": "native/third_party/txiki/txiki/src/worker.c",
