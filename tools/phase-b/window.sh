@@ -68,6 +68,7 @@ for _ in $(seq 60); do
 done
 [ $clear -eq 1 ] || { say "NOT_CLEAR"; exit 3; }
 say "CLEAR"
+$GM install --local "$BUILD" --source "$PWD" > "$OUT/home-install.txt" 2>&1 || { FAILED=1; say "FAILED home-install"; }
 
 say "WITNESSES"
 for name in $(sed -n 's/^CHECK("\([^"]*\)".*/\1/p' native/include/gm/checks.def); do
