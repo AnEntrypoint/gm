@@ -138,6 +138,7 @@ std::vector<GateCheck> run_gate(const std::filesystem::path& root);
 int gate_command(const std::filesystem::path& root);
 int phase_b_command(const std::filesystem::path& root, const std::filesystem::path& build);
 int ship_command(const std::filesystem::path& root, const std::vector<std::string>& args);
+int ship_push(const std::filesystem::path& root);
 int installed_command(const std::filesystem::path& root);
 int package_command(const std::filesystem::path& root, const std::vector<std::string>& args);
 int release_manifest_command(const std::vector<std::string>& args);
