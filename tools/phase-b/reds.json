@@ -389,6 +389,18 @@
   ]
  },
  {
+  "id": "red-dead-symbol",
+  "witness": "check-dead-symbols",
+  "file": "native/components/host/relay.cpp",
+  "edits": [
+   {
+    "from": "int serve_stdio(RelayOptions options) {",
+    "to": "long long relay_probe_nobody_calls() { return 7; }\n\nint serve_stdio(RelayOptions options) {",
+    "count": 1
+   }
+  ]
+ },
+ {
   "id": "red-worker-data",
   "witness": "check-txiki-core-extras",
   "file": "native/third_party/txiki/txiki/src/worker.c",
