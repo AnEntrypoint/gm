@@ -42,7 +42,7 @@ How to change this project. Project facts are in AGENTS.md, and decisions with t
 ## Commit and push
 
 - Commit with `build/release/native/components/tool/gm-tool ship "<subject>" <explicit paths>`. It stages those paths, runs the gate, and commits on main only when the gate passes. A commit never pushes.
-- Push once per Phase B: `gm-tool phase-b` reconfigures, builds, runs check-build and the parity contract, and records the HEAD that passed; then `gm-tool ship --push` pushes only if that record names HEAD.
+- Push once per Phase B with `gm-tool ship --push`. It refuses off main, with a dirty tracked tree, with a red gate, and when origin/main moved. It runs Phase B on a tar copy of HEAD (a clean build with no origin/main ref, so the update rows can run), writes build/release/phase-b.pass naming HEAD and its tree id, pushes, and then reports the release and arm-diagnose runs of the pushed commit, exiting 1 if they are red. `gm-tool phase-b` alone runs the same set on the checkout you stand in.
 - End of a stretch: `build/release/native/components/tool/gm-tool repos --strict` checks the repo gm is working in (its cwd checkout) for uncommitted files and commits ahead of origin, and exits 1 when it is not clean and pushed. Commit and push that work with ship; other repos are not checked.
 - Author lanmower. The subject states the change. No trailers of any kind.
 - Work on main. Do not create branches or worktrees.
