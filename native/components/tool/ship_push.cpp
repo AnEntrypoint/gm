@@ -22,6 +22,7 @@ namespace fs = std::filesystem;
 namespace {
 
 constexpr int kDefaultCiWaitMinutes = 120;
+constexpr std::uintmax_t kMinFreeGb = 4;
 
 proc::Outcome run_in(const fs::path& dir, const std::vector<std::string>& argv, std::uint64_t timeout_ms = 0) {
     return proc::run(argv, dir, {}, timeout_ms);
@@ -70,7 +71,22 @@ bool make_copy(const fs::path& root, const fs::path& copy, const std::string& co
            succeeded(run_in(copy, {"git", "-c", "user.name=gm-tool", "-c", "user.email=gm-tool@localhost", "commit", "-q", "-m", "tar copy of " + commit}));
 }
 
+bool enough_space(const fs::path& where) {
+    const char* floor_env = std::getenv("GM_SHIP_MIN_FREE_GB");
+    const std::uintmax_t floor_gb = floor_env != nullptr && *floor_env != '\0' ? static_cast<std::uintmax_t>(std::atoll(floor_env)) : kMinFreeGb;
+    std::error_code ec;
+    const auto space = fs::space(where, ec);
+    if (ec) return true;
+    const std::uintmax_t free_gb = space.available / (1024ULL * 1024ULL * 1024ULL);
+    if (free_gb >= floor_gb) return true;
+    std::printf("refused: Phase B on a copy builds about 2 GB and needs %ju GB free in %s, which has %ju GB; free space or set TMPDIR; nothing pushed\n", static_cast<std::uintmax_t>(floor_gb), where.string().c_str(), static_cast<std::uintmax_t>(free_gb));
+    return false;
+}
+
 bool phase_b_on_copy(const fs::path& root, const std::string& commit) {
+    const char* seam = std::getenv("GM_SHIP_PHASE_B");
+    const bool seamed = seam != nullptr && *seam != '\0';
+    if (!seamed && !enough_space(fs::temp_directory_path())) return false;
     const fs::path copy = fs::temp_directory_path() / ("gm-ship-" + commit.substr(0, 8) + "-" + std::to_string(GM_PID));
     std::printf("phase-b: building and running Phase B on a tar copy of HEAD %s at %s\n", commit.c_str(), copy.string().c_str());
     if (!make_copy(root, copy, commit)) {
@@ -78,8 +94,7 @@ bool phase_b_on_copy(const fs::path& root, const std::string& commit) {
         return false;
     }
     bool ok = false;
-    const char* seam = std::getenv("GM_SHIP_PHASE_B");
-    if (seam != nullptr && *seam != '\0') {
+    if (seamed) {
         const auto outcome = run_in(copy, {"sh", "-c", seam});
         ok = succeeded(outcome);
         std::printf("phase-b: GM_SHIP_PHASE_B ran in the copy and %s\n", ok ? "passed" : "failed");
