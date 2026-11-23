@@ -1,0 +1,77 @@
+diff --git a/bin/playwriter-project b/bin/playwriter-project
+index 66aa70d..00e59ab 100755
+--- a/bin/playwriter-project
++++ b/bin/playwriter-project
+@@ -383,6 +383,7 @@ function runGate({ gate, debug }) {
+   let browser = null;
+   let starting = null;
+   let stopping = null;
++  let lastStartFailure = null;
+   const sockets = new Set();
+   let everLeased = false;
+   let graceTimer = null;
+@@ -404,7 +405,7 @@ function runGate({ gate, debug }) {
+   const fail = (res, error) => {
+     if (res.headersSent) return res.destroy();
+     res.writeHead(503, { 'content-type': 'text/plain' });
+-    res.end(error.message);
++    res.end(startReason(error.message));
+   };
+   const clean = (headers) => Object.fromEntries(Object.entries(headers).filter(([key]) => !HOP_BY_HOP.includes(key)));
+ 
+@@ -425,6 +426,7 @@ function runGate({ gate, debug }) {
+         source: browser?.source ?? null,
+         adopted: browser?.adopted ?? false,
+         warning: browser?.warning ?? null,
++        lastStartFailure,
+       },
+       leases: leaseHolders.size,
+       leaseHolders: [...leaseHolders.values()],
+@@ -529,8 +531,10 @@ function runGate({ gate, debug }) {
+       else await startChrome();
+       chromeUp = true;
+       missedProbes = 0;
++      lastStartFailure = null;
+     })().catch((error) => {
+       log(`browser start failed: ${error.message}`);
++      lastStartFailure = startReason(error.message);
+       throw error;
+     }).finally(() => {
+       starting = null;
+@@ -756,7 +760,7 @@ function runGate({ gate, debug }) {
+         req.url = req.url.replace(/^\/devtools\/browser\/[^/?]*/, browserPath);
+         proxyUpgrade(req, socket, head);
+       })
+-      .catch((error) => socket.end(`HTTP/1.1 503 Service Unavailable\r\nConnection: close\r\n\r\n${error.message}`));
++      .catch((error) => socket.end(`HTTP/1.1 503 Service Unavailable\r\nConnection: close\r\n\r\n${startReason(error.message)}`));
+   });
+ 
+   const closeBlankTabs = async () => {
+@@ -910,10 +914,26 @@ async function acquireLease(port) {
+   }
+ }
+ 
++const START_REASON_CHARS = 600;
++const START_REASON_HEAD_CHARS = 200;
++function startReason(message) {
++  const text = String(message)
++    .replace(/\s+/g, ' ')
++    .split(PROJECT + '/').join('<project>/')
++    .replace(/\b[a-z][a-z0-9+.-]*:\/\/[^\s'"|]+/gi, '<url>')
++    .replace(/(?<![\w>])\/[^\s'"|]+/g, '<path>')
++    .replace(/\b([A-Za-z_-]*(?:KEY|TOKEN|SECRET|PASSWORD|PASSWD|AUTH|COOKIE|CREDENTIAL)[A-Za-z_-]*)\s*[=:]\s*\S+/gi, '$1=<redacted>')
++    .replace(/\bBearer\s+\S+/gi, 'Bearer <redacted>')
++    .replace(/\b[A-Za-z0-9_-]{32,}\b/g, '<token>');
++  if (text.length <= START_REASON_CHARS) return text;
++  return text.slice(0, START_REASON_HEAD_CHARS) + ' ... ' + text.slice(-(START_REASON_CHARS - START_REASON_HEAD_CHARS));
++}
++
+ function gateHeader(status) {
+   const { browser: b, gate, debugPort, leases } = status;
+   const adopted = b.adopted ? `, ADOPTED: ${b.warning}` : '';
+-  return `playwriter-project ${status.project}: gate pid ${gate.pid} port ${gate.port}, debug port ${debugPort}, browser ${b.running ? 'running' : 'stopped'} pid ${b.pid ?? '-'} (${b.source ?? 'none'})${adopted}, leases ${leases}`;
++  const failed = b.lastStartFailure && !b.running ? `, last browser start failed: ${b.lastStartFailure}` : '';
++  return `playwriter-project ${status.project}: gate pid ${gate.pid} port ${gate.port}, debug port ${debugPort}, browser ${b.running ? 'running' : 'stopped'} pid ${b.pid ?? '-'} (${b.source ?? 'none'})${adopted}, leases ${leases}${failed}`;
+ }
+ 
+ function feedbackLines(status, machine) {

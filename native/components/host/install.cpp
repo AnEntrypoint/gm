@@ -135,6 +135,8 @@ constexpr PlaywriterHook kPlaywriterHooks[] = {
     {"launcher browser listing", "bin/playwriter-project", "lastBrowserLines"},
     {"launcher listing ignores the scan time", "bin/playwriter-project", "SCAN_TIME_PATTERN"},
     {"launcher fixed-wait hint", "bin/playwriter-project", "WAIT_HINT_MS"},
+    {"launcher start reason", "bin/playwriter-project", "START_REASON_CHARS"},
+    {"launcher sanitized 503 text", "bin/playwriter-project", "res.end(startReason(error.message))"},
     {"launcher blank-tab grace", "bin/playwriter-project", "BLANK_GRACE_MS"},
 };
 
