@@ -51,7 +51,7 @@ jobs:
           build/asan/native/components/tool/gm-tool check build/asan/native/components/host/gm $(tr ',' ' ' <<< "$CHECKS")
   asan-arm-stackuse:
     runs-on: ubuntu-24.04-arm
-    timeout-minutes: 60
+    timeout-minutes: 80
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/ninja

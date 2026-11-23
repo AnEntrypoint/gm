@@ -1,5 +1,6 @@
 #include "gm/tool.hpp"
 
+#include <chrono>
 #include <cstdio>
 #include <cstdlib>
 #include <exception>
@@ -97,20 +98,25 @@ int run_checks(const std::vector<std::string>& args) {
         if (names.empty() && check.name == "clock-mutations") continue;
         ++ran;
         gm::tool::CheckResult result;
+        const auto began = std::chrono::steady_clock::now();
         try {
             result = check.run(binary);
         } catch (const std::exception& error) {
             std::printf("%s: error: %s\n", check.name.c_str(), error.what());
+            std::fflush(stdout);
             status = 2;
             continue;
         }
+        std::fprintf(stderr, "%s: took %.1f s\n", check.name.c_str(), std::chrono::duration<double>(std::chrono::steady_clock::now() - began).count());
         if (result.failures.empty()) {
             std::printf("%s: ok (%s)\n", check.name.c_str(), result.summary.c_str());
+            std::fflush(stdout);
             continue;
         }
         if (status == 0) status = 1;
         std::printf("%s: %zu failure(s)\n", check.name.c_str(), result.failures.size());
         for (const auto& failure : result.failures) std::printf("- %s\n", failure.c_str());
+        std::fflush(stdout);
     }
     if (ran == 0) {
         std::fputs("gm-tool: no check matched\n", stderr);
