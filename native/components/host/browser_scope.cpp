@@ -32,6 +32,8 @@ constexpr std::size_t kTitleChars = 80;
 constexpr std::size_t kUrlChars = 200;
 constexpr int kBrowserTimeoutMs = 10000;
 constexpr const char* kGoneMarker = "gm-browser-gone-before-body";
+constexpr const char* kConnectFailure = "browserType.connectOverCDP:";
+constexpr const char* kBodyFrame = ".playwriter-eval.js";
 constexpr int kGoneAttempts = 5;
 constexpr int kGoneBackoffMs = 250;
 
@@ -305,6 +307,11 @@ json::Value BrowserScope::call(std::string_view name, const json::Value& args) {
     return inner_.call(name, args);
 }
 
+static bool failed_before_body(const std::string& reply) {
+    if (reply.find(kGoneMarker) != std::string::npos) return true;
+    return reply.find(kConnectFailure) != std::string::npos && reply.find(kBodyFrame) == std::string::npos;
+}
+
 json::Value BrowserScope::user_execute(const json::Value& args) {
     const json::Value* code_arg = args.find("code");
     if (code_arg == nullptr || !code_arg->is_string()) return inner_.call(kExecute, args);
@@ -329,7 +336,7 @@ json::Value BrowserScope::user_execute(const json::Value& args) {
     }
     const Tally before = had_browser ? census() : Tally{true, {}};
     json::Value reply = inner_.call(kExecute, forwarded);
-    for (int attempt = 1; attempt < kGoneAttempts && json::dump(reply).find(kGoneMarker) != std::string::npos; ++attempt) {
+    for (int attempt = 1; attempt < kGoneAttempts && failed_before_body(json::dump(reply)); ++attempt) {
         std::this_thread::sleep_for(std::chrono::milliseconds(kGoneBackoffMs << attempt));
         reply = inner_.call(kExecute, forwarded);
     }
