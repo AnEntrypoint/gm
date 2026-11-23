@@ -66,6 +66,11 @@ inline bool contains(std::string_view text, std::string_view part) {
     return text.find(part) != std::string_view::npos;
 }
 
+inline std::string cause_of(const std::string& reply, std::size_t limit = 1500) {
+    const std::size_t error = reply.find("Error executing code");
+    return reply.substr(error == std::string::npos ? 0 : error, limit);
+}
+
 inline std::string replace_all(std::string text, const std::string& from, const std::string& to) {
     if (from.empty()) return text;
     std::string out;

@@ -74,7 +74,7 @@ Case run_case(const std::string& binary, const std::string& label, const std::ve
             const std::size_t line_end = own_line == std::string::npos ? std::string::npos : opened.find("leases", own_line);
             const std::string line = line_end == std::string::npos ? std::string() : opened.substr(own_line, line_end - own_line);
             for (auto it = std::sregex_iterator(line.begin(), line.end(), launched); it != std::sregex_iterator(); ++it) reported.push_back(std::stoll((*it)[1].str()));
-            if (opened.find("opened") == std::string::npos) outcome.failures.push_back(label + ": a page did not open through the launcher: " + opened.substr(0, 1500));
+            if (opened.find("opened") == std::string::npos) outcome.failures.push_back(label + ": a page did not open through the launcher: " + cause_of(opened));
             mine = session.descendants();
         }
         session.stop();

@@ -64,7 +64,7 @@ CheckResult check_browser_blank_grace(const std::string& binary) {
             const std::string line = line_end == std::string::npos ? std::string() : created.substr(own_line, line_end - own_line);
             const std::regex launched("(?:gate pid|browser running pid) ([0-9]+)");
             for (auto it = std::sregex_iterator(line.begin(), line.end(), launched); it != std::sregex_iterator(); ++it) reported.push_back(std::stoll((*it)[1].str()));
-            if (created.find("READY about:blank") == std::string::npos) result.failures.push_back("the blank page was not created beside a real page: " + created.substr(0, 300));
+            if (created.find("READY about:blank") == std::string::npos) result.failures.push_back("the blank page was not created beside a real page: " + cause_of(created));
             std::this_thread::sleep_for(std::chrono::milliseconds(kQuietMs));
             const std::string probed = session.body(kProbe);
             if (probed.find("BLANK KEPT") == std::string::npos)

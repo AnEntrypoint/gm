@@ -205,12 +205,12 @@ CheckResult check_browser_first_open(const std::string& binary) {
                 const std::string opened = session.body(exec_body(open_code(page_url)));
                 const bool coi = opened.find("WITNESS coi=true") != std::string::npos;
                 summary << "; first open crossOriginIsolated " << (coi ? "true" : "false");
-                if (!coi) failures.push_back("the first open did not show a crossOriginIsolated page: " + opened.substr(0, 300));
+                if (!coi) failures.push_back("the first open did not show a crossOriginIsolated page: " + cause_of(opened));
                 std::this_thread::sleep_for(std::chrono::seconds(20));
                 const std::string after = session.body(exec_body(check_code(page_url)));
                 const bool still = after.find("WITNESS open=true coi=true") != std::string::npos;
                 summary << "; still open and crossOriginIsolated after 20 s " << (still ? "true" : "false");
-                if (!still) failures.push_back("the page was not open and crossOriginIsolated 20 s after the first open: " + after.substr(0, 300));
+                if (!still) failures.push_back("the page was not open and crossOriginIsolated 20 s after the first open: " + cause_of(after));
                 const std::string closed = session.body(exec_body(close_code(page_url)));
                 const bool did_close = closed.find("WITNESS closed=true") != std::string::npos;
                 summary << "; closed " << (did_close ? "true" : "false");
@@ -242,7 +242,7 @@ CheckResult check_browser_first_open(const std::string& binary) {
                 const bool reached = after.find("WITNESS open=true coi=true") != std::string::npos;
                 summary << "; gate SIGKILL: next call reached the open page " << (reached ? "true" : "false");
                 if (after.find("ECONNREFUSED") != std::string::npos) {
-                    failures.push_back("the call after the gate loss reached a stale endpoint: " + after.substr(0, 300));
+                    failures.push_back("the call after the gate loss reached a stale endpoint: " + cause_of(after));
                 } else if (!reached) {
                     failures.push_back("the page was not open after the gate restarted: " + witness_of(after));
                 }

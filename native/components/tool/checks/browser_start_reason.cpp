@@ -93,8 +93,7 @@ CheckResult check_browser_start_reason(const std::string& binary) {
             const std::string opened = session.body(kOpenPage);
             auto expect = [&](bool condition, const std::string& what) {
                 if (condition) return;
-                const std::size_t shown = opened.find("Error executing code");
-                result.failures.push_back(what + ": " + opened.substr(shown == std::string::npos ? 0 : shown, 1500));
+                result.failures.push_back(what + ": " + cause_of(opened));
             };
             expect(opened.find("last browser start failed: ") != std::string::npos, "the reply of a call whose browser exits on start does not carry the start failure");
             expect(opened.find("exited (7)") != std::string::npos, "the reply does not carry the browser's exit status");
