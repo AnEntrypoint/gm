@@ -28,6 +28,17 @@ w.badRef = await gm.git_checkout({ ref: '-x' });
 await gm.run_shell({ command: 'git checkout -q -b topic' });
 w.branch = await gm.git_branch({});
 w.push = await gm.git_push({});
+await gm.run_shell({ command: 'git checkout -q main' });
+w.gateRed = await gm.git_push({ gate: 'echo gate-says-no; exit 3' });
+w.afterRed = await gm.run_shell({ command: 'test -z "$(git --git-dir=../remote.git rev-parse -q --verify main)" && echo REMOTE-EMPTY || echo REMOTE-HAS-MAIN' });
+await gm.write_file({ path: 'a.txt', content: 'dirty\n' });
+w.gateDirty = await gm.git_push({ gate: 'true' });
+await gm.run_shell({ command: 'git checkout -q -- a.txt' });
+w.gateMutates = await gm.git_push({ gate: 'echo x >> a.txt' });
+await gm.run_shell({ command: 'git checkout -q -- a.txt' });
+w.gateEmpty = await gm.git_push({ gate: '' });
+w.gateGreen = await gm.git_push({ gate: 'echo checks-ok' });
+w.afterGreen = await gm.run_shell({ command: 'test "$(git rev-parse HEAD)" = "$(git --git-dir=../remote.git rev-parse main)" && echo REMOTE-MATCHES || echo REMOTE-DIFFERS' });
 w.cwdOutside = await gm.git_status({ cwd: '..' });
 return JSON.stringify(w);
 )js";
@@ -41,6 +52,8 @@ CheckResult check_git(const std::string& binary) {
     const auto workspace = sandbox / "ws";
     std::filesystem::create_directories(workspace);
     proc::run({"git", "init", "-q", "-b", "main"}, workspace);
+    proc::run({"git", "init", "-q", "--bare", "-b", "main", (sandbox / "remote.git").string()}, sandbox);
+    proc::run({"git", "remote", "add", "origin", "../remote.git"}, workspace);
     proc::run({"git", "config", "user.name", "lanmower"}, workspace);
     proc::run({"git", "config", "user.email", "lanmower@users.noreply.github.com"}, workspace);
     std::string text;
@@ -81,9 +94,14 @@ CheckResult check_git(const std::string& binary) {
     expect(contains(text, "* topic"), "git_branch did not mark the topic branch as current");
     expect(contains(text, "refused: git_push sends only main, and the current branch is topic"), "git_push pushed a branch other than main");
     expect(contains(text, "is not inside a git repository"), "a cwd outside a repository was not refused");
+    expect(contains(text, "refused: the gate exited 3 after") && contains(text, "gate-says-no") && contains(text, "REMOTE-EMPTY"), "a gate that exits 3 did not refuse the push with its output, or main reached the remote");
+    expect(contains(text, "tracked changes are uncommitted, so the gate would not check what is pushed"), "a push with an uncommitted tracked change was not refused before the gate ran");
+    expect(contains(text, "the gate changed HEAD or a tracked file"), "a gate that changes a tracked file did not refuse the push");
+    expect(contains(text, "gate must be a non-empty command string"), "an empty gate was accepted");
+    expect(contains(text, "the gate passed in") && contains(text, "REMOTE-MATCHES"), "a passing gate did not push main with its note");
     std::error_code ignored;
     std::filesystem::remove_all(sandbox, ignored);
-    result.summary = "add, commit (with its log event), log, show, state, the limit alias for count, the path, message, count and ref refusals, the push branch guard and the cwd refusal answer as the leaf did";
+    result.summary = "add, commit (with its log event), log, show, state, the limit alias for count, the path, message, count and ref refusals, the push branch guard, the cwd refusal and the push gate (a red gate, an uncommitted tracked change, a gate that edits a file and an empty gate refuse and a green gate pushes) answer as the leaf did";
     return result;
 }
 

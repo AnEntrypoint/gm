@@ -396,7 +396,34 @@ json::Value run_verb(const std::string& name, const json::Value& args, const fs:
         const auto current = git_in(dir, {"rev-parse", "--abbrev-ref", "HEAD"});
         const std::string branch = current.ok ? trimmed(current.output) : "unknown";
         if (branch != "main") return fail("refused: git_push sends only main, and the current branch is " + branch);
-        return retrying(log, "git_push", [&] { return git(dir, {"push", "--set-upstream", "origin", "main"}); });
+        const json::Value* gate_arg = list_arg("gate");
+        const bool gated = gate_arg != nullptr && !gate_arg->is_null();
+        std::string gate_note;
+        if (gated) {
+            if (!gate_arg->is_string() || trimmed(gate_arg->as_string()).empty()) return fail("gate must be a non-empty command string");
+            const auto unsaved = git_in(dir, {"status", "--porcelain", "--untracked-files=no"});
+            if (!unsaved.ok || !trimmed(unsaved.output).empty()) return fail("refused: tracked changes are uncommitted, so the gate would not check what is pushed; commit them first; nothing pushed");
+            const json::Value* limit = list_arg("gateTimeoutMs");
+            const std::uint64_t timeout_ms = limit != nullptr && limit->is_number() && limit->as_number() >= 1 ? gm::saturating_cast<std::uint64_t>(limit->as_number()) : 3600000;
+            const auto tip = trimmed(git_in(dir, {"rev-parse", "HEAD"}).output);
+            const auto began = std::chrono::steady_clock::now();
+            const auto gated_run = proc::shell(gate_arg->as_string(), dir, timeout_ms);
+            const double seconds = std::chrono::duration<double>(std::chrono::steady_clock::now() - began).count();
+            char taken[32];
+            std::snprintf(taken, sizeof taken, "%.1f", seconds);
+            const std::string tail = trimmed(gated_run.out + gated_run.err);
+            const std::string shown = tail.size() > 1500 ? tail.substr(tail.size() - 1500) : tail;
+            if (!gated_run.started) return fail("refused: the gate could not start; nothing pushed");
+            if (gated_run.timed_out) return fail("refused: the gate timed out after " + std::to_string(timeout_ms) + " ms; nothing pushed");
+            if (gated_run.exit_code != 0) return fail("refused: the gate exited " + std::to_string(gated_run.exit_code) + " after " + taken + " s; nothing pushed: " + shown);
+            const auto after = git_in(dir, {"status", "--porcelain", "--untracked-files=no"});
+            if (trimmed(git_in(dir, {"rev-parse", "HEAD"}).output) != tip || !after.ok || !trimmed(after.output).empty())
+                return fail("refused: the gate changed HEAD or a tracked file, so what it checked is not what would be pushed; nothing pushed");
+            gate_note = std::string("the gate passed in ") + taken + " s at " + tip.substr(0, 12);
+        }
+        json::Value pushed = retrying(log, "git_push", [&] { return git(dir, {"push", "--set-upstream", "origin", "main"}); });
+        if (gated && pushed.find("ok") != nullptr && pushed.find("ok")->as_bool()) pushed.set("gate", gate_note);
+        return pushed;
     }
     if (name == "git_log") {
         std::int64_t count = 20;
