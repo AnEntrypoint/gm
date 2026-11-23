@@ -5829,3 +5829,9 @@ Ranked open work:
 - Reproduced on Linux with a curl wrapper that takes 300 ms off the fetch's --max-time: before, two runs failed with "the server held the fetch for 833 ms but the leaf returned after 720 ms"; plain runs and runs pinned to 1 to 3 CPUs passed, so the cause is the margin, not CPU load.
 - Fix: the leaf's timeoutMs is scaled(300000), 5000 ms, against the same 833 ms hold. With the same wrapper two runs pass, and a plain run passes.
 - Red: red-leaf-window caps the --max-time handed to curl at 500 ms in verbs/fetch.cpp; the leaf then ends before the hold and the check fails. It runs in the window's reds.
+
+### 53. The edgejs swap is closed for gm; the leaf window is proven
+
+- Decision (specs/edgejs-swap.md, Decision server side, 2026-11-23): edgejs is go behind a flag for fx only. The shared vendor step (stage 1) and the gm swap (stage 2) are not started; gm keeps txiki. Items 45 to 49 (the spike, its build parts and the stopped parts 2 and 3) are closed by it, and the "edgejs closes the freddie rows" line of item 50 no longer holds: those rows stay unbuilt on gm.
+- Removed: tools/edgejs (spike.sh, measure.py, pins.json, smoke/), tracked and referenced by no code, check, workflow or skill, only by docs/edgejs-spike.md and the dated ledger. Kept: docs/edgejs-spike.md, the evidence of the spike; the pins and scripts are recoverable from git (6885e7e and after).
+- Window b14 on 1dc34a3 (leaf window and red-leaf-window): build rc 0, witnesses ok, 21 and 21 reds each failed their witness as they must, red-leaf-window among them, HEAD_END 1dc34a3 changes=0 in both halves.
