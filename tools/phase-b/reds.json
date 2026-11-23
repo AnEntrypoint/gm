@@ -507,5 +507,17 @@
     "count": 1
    }
   ]
+ },
+ {
+  "id": "red-leaf-window",
+  "witness": "check-run-code-budget",
+  "file": "native/components/verbs/fetch.cpp",
+  "edits": [
+   {
+    "from": "bounded ? static_cast<double>(left) / 1000.0 : 0.0",
+    "to": "bounded ? static_cast<double>(left < 500 ? left : 500) / 1000.0 : 0.0",
+    "count": 1
+   }
+  ]
  }
 ]

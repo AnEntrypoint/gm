@@ -70,7 +70,7 @@ CheckResult check_run_code_budget(const std::string& binary) {
                 const std::string port = std::to_string(server.port());
                 const std::string capped_body = "const end = Date.now() + " + std::to_string(scaled(115000)) + "; let n = 0; while (Date.now() < end) { n += 1; } return { spun: n > 0 };";
                 const std::string spin_body = "const end = Date.now() + " + std::to_string(scaled(65000)) + "; let n = 0; while (Date.now() < end) { n += 1; } return { spun: n > 0 };";
-                const std::string leaf_body = "return await gm.fetch({ url: 'http://127.0.0.1:" + port + "/', timeoutMs: " + std::to_string(scaled(60000)) + " });";
+                const std::string leaf_body = "return await gm.fetch({ url: 'http://127.0.0.1:" + port + "/', timeoutMs: " + std::to_string(scaled(300000)) + " });";
                 const std::string match_body = "return await gm.fetch({ url: 'http://127.0.0.1:" + port + "/fast', match: '(a+)+$', timeoutMs: " + std::to_string(fetch_ms) + " });";
                 const std::string timeout_body = "return await gm.fetch({ url: 'http://127.0.0.1:" + port + "/', timeoutMs: " + std::to_string(fetch_ms) + " });";
                 auto spin = std::async(std::launch::async, [&] {
