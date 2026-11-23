@@ -20,6 +20,13 @@ const std::map<std::string, std::set<std::string>> kAllowed{
     {"native/components/host/relay.cpp", {"execv"}},
 };
 
+bool may_create_process(const std::string& line) {
+    if (line.find('(') == std::string::npos) return false;
+    for (const char* part : {"Create", "spawn", "exec", "fork", "system", "popen", "Shell", "WinExec"})
+        if (line.find(part) != std::string::npos) return true;
+    return false;
+}
+
 bool skipped(const std::string& rel) { return rel.find("third_party/") != std::string::npos || rel.find("vendor/") != std::string::npos; }
 
 std::string checkout_of(const fs::path& start) {
@@ -49,6 +56,7 @@ CheckResult check_spawn_sites(const std::string&) {
         std::vector<std::string> lines;
         for (std::string line; std::getline(in, line);) lines.push_back(line);
         for (std::size_t i = 0; i < lines.size(); ++i) {
+            if (!may_create_process(lines[i])) continue;
             std::smatch match;
             std::string rest = lines[i];
             while (std::regex_search(rest, match, kCreation)) {
