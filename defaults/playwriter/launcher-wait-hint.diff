@@ -1,0 +1,52 @@
+diff --git a/bin/playwriter-project b/bin/playwriter-project
+index d71280c..66aa70d 100755
+--- a/bin/playwriter-project
++++ b/bin/playwriter-project
+@@ -922,6 +922,18 @@ function feedbackLines(status, machine) {
+ }
+ 
+ const SCAN_TIME_PATTERN = / \(scan \d+ ms\)/;
++const WAIT_HINT_MS = 5000;
++let waitHinted = false;
++function waitHint(msg) {
++  const code = msg.method === 'tools/call' ? msg.params?.arguments?.code : null;
++  if (waitHinted || typeof code !== 'string') return '';
++  let slept = 0;
++  for (const match of code.matchAll(/waitForTimeout\(\s*(\d+)\s*\)/g)) slept += Number(match[1]);
++  if (slept < WAIT_HINT_MS) return '';
++  waitHinted = true;
++  return `this call slept ${slept} ms in waitForTimeout. page.waitForFunction(() => document.body.innerText.includes('text'), null, { timeout: 30000 }) or locator.waitFor() returns as soon as the page is ready, so the call ends early when it is.`;
++}
++
+ let lastBrowserLines = null;
+ async function feedbackText(gatePort) {
+   const [status, machine] = await Promise.all([httpJson(gatePort, '/__pwp/status?pages=0', 1000), listBrowsers()]);
+@@ -1061,8 +1073,9 @@ function proxyMcp(ports, direct) {
+     out = out.then(task).catch((error) => console.error(`playwriter-project: feedback failed: ${error.message}`));
+   };
+   const write = (msg) => queue(() => process.stdout.write(`${JSON.stringify(msg)}\n`));
+-  const answer = (msg) => queue(async () => {
++  const answer = (msg, ticket) => queue(async () => {
+     msg.result.content.push({ type: 'text', text: await feedbackText(ports.gate) });
++    if (ticket.hint) msg.result.content.push({ type: 'text', text: ticket.hint });
+     process.stdout.write(`${JSON.stringify(msg)}\n`);
+   });
+   const answerBrowsers = (msg) => queue(async () => {
+@@ -1149,7 +1162,7 @@ function proxyMcp(ports, direct) {
+     const entry = msg?.id === undefined ? undefined : takePending(msg.id);
+     if (entry?.method === 'tools/call') {
+       callDone(entry.ticket);
+-      if (Array.isArray(msg.result?.content)) return answer(msg);
++      if (Array.isArray(msg.result?.content)) return answer(msg, entry.ticket);
+     }
+     queue(() => process.stdout.write(`${line}\n`));
+   });
+@@ -1206,7 +1219,7 @@ function proxyMcp(ports, direct) {
+     if (msg.method === 'notifications/initialized') return;
+     if (msg.method === 'tools/list' && msg.id !== undefined) return write({ jsonrpc: '2.0', id: msg.id, result: { tools: [...MCP_TOOLS.tools, BROWSERS_TOOL] } });
+     if (msg.method === 'tools/call' && msg.params?.name === 'browsers' && msg.id !== undefined) return answerBrowsers(msg);
+-    const ticket = { counted: false, socket: null };
++    const ticket = { counted: false, socket: null, hint: waitHint(msg) };
+     if (msg.id !== undefined) pending.set(JSON.stringify(msg.id), { method: msg.method, ticket });
+     forward(line, msg, ticket);
+   });

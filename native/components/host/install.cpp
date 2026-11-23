@@ -133,6 +133,8 @@ constexpr PlaywriterHook kPlaywriterHooks[] = {
     {"executor quiet close warning", "node_modules/playwriter/dist/executor.js", "namedByCall"},
     {"launcher CHROMIUM_ARGS_VARIABLE", "bin/playwriter-project", "CHROMIUM_ARGS_VARIABLE"},
     {"launcher browser listing", "bin/playwriter-project", "lastBrowserLines"},
+    {"launcher listing ignores the scan time", "bin/playwriter-project", "SCAN_TIME_PATTERN"},
+    {"launcher fixed-wait hint", "bin/playwriter-project", "WAIT_HINT_MS"},
     {"launcher blank-tab grace", "bin/playwriter-project", "BLANK_GRACE_MS"},
 };
 
@@ -149,6 +151,11 @@ std::vector<std::string> playwriter_missing_hooks(const fs::path& dir) {
         if (sources[hook.file].find(hook.needle) == std::string::npos) missing.push_back(std::string(hook.name) + " (" + hook.file + ")");
     }
     return missing;
+}
+
+bool only_launcher_missing(const std::vector<std::string>& missing) {
+    const std::string tail = " (bin/playwriter-project)";
+    return !missing.empty() && std::all_of(missing.begin(), missing.end(), [&](const std::string& name) { return name.size() >= tail.size() && name.compare(name.size() - tail.size(), tail.size(), tail) == 0; });
 }
 
 std::optional<std::string> apply_launcher_diffs(const fs::path& root, const fs::path& dir, std::map<std::string, std::int64_t>& wall) {
@@ -213,7 +220,19 @@ std::optional<std::string> install_playwriter(const fs::path& root) {
     std::string pinned;
     std::getline(known, pinned);
     const bool present = pinned == kPlaywriterPin && fs::exists(dir / "bin" / "playwriter-project");
-    if (present && playwriter_missing_hooks(dir).empty()) {
+    const std::vector<std::string> stale = present ? playwriter_missing_hooks(dir) : std::vector<std::string>{};
+    std::error_code installed_ec;
+    if (present && only_launcher_missing(stale) && fs::exists(dir / "node_modules" / "playwriter" / "bin.js", installed_ec)) {
+        std::map<std::string, std::int64_t> refresh_wall;
+        if (auto error = copy_playwriter_patches(root, dir)) return error;
+        if (auto error = playwriter_step("launcher reset", {"git", "-C", dir.string(), "checkout", "--quiet", "--", "bin/playwriter-project"}, dir, 120000, refresh_wall)) return error;
+        if (auto error = apply_launcher_diffs(root, dir, refresh_wall)) return error;
+        const std::vector<std::string> still = playwriter_missing_hooks(dir);
+        if (!still.empty()) return "the launcher in " + dir.string() + " still lacks " + still.front() + " after the patches were applied again";
+        std::cout << "playwriter " << kPlaywriterPin << " launcher patches refreshed in " << dir.string() << ", node_modules untouched\n";
+        return std::nullopt;
+    }
+    if (present && stale.empty()) {
         std::error_code linked;
         if (fs::exists(dir / "node_modules" / "playwriter" / "bin.js", linked)) {
             if (auto error = link_playwriter_command(dir)) return error;
