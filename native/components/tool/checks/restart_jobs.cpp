@@ -17,7 +17,7 @@ namespace {
 namespace fs = std::filesystem;
 
 constexpr const char* kJob = "carry";
-constexpr const char* kJobCommand = "sleep 150; echo done";
+constexpr const char* kReleaseName = "release-carry";
 constexpr std::int64_t kCallMs = 90000;
 constexpr std::uint64_t kWatchdogMs = 240000;
 
@@ -148,7 +148,8 @@ CheckResult check_restart_jobs(const std::string& binary) {
             session.rpc("resources/read", json::Object{{"uri", "skill://gm/SKILL.md"}});
             call(session, "next_context", json::Object{});
 
-            const json::Value started_job = run_code(session, "return await gm.job_start({ job: " + json::quote(kJob) + ", command: " + json::quote(kJobCommand) + ", timeoutMs: 300000 });");
+            const std::string job_command = "until [ -e '" + (sandbox / kReleaseName).string() + "' ]; do sleep 0.2; done; echo done";
+            const json::Value started_job = run_code(session, "return await gm.job_start({ job: " + json::quote(kJob) + ", command: " + json::quote(job_command) + ", timeoutMs: 300000 });");
             const json::Value* ok = value_at(started_job, "ok");
             if (ok == nullptr || !ok->is_bool() || !ok->as_bool()) result.failures.push_back("job_start: " + clip(started_job, 200));
             const json::Value before_status = run_code(session, status_body(0));
@@ -191,6 +192,7 @@ CheckResult check_restart_jobs(const std::string& binary) {
                 result.failures.push_back("after the restart job_status reports " + (state != nullptr ? json::dump(*state) : std::string("undefined")) + ", expected running");
             }
 
+            std::ofstream(sandbox / kReleaseName) << "go\n";
             json::Value ended = answered;
             const auto wait_start = std::chrono::steady_clock::now();
             while (text_at(ended, "state") == "running" && since_ms(wait_start) < 180000) ended = run_code(session, status_body(5000));
