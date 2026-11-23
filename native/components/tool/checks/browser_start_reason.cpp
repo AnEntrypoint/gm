@@ -2,6 +2,7 @@
 #include "support.hpp"
 #if !defined(_WIN32)
 
+#include <algorithm>
 #include <chrono>
 #include <filesystem>
 #include <fstream>
@@ -82,6 +83,7 @@ CheckResult check_browser_start_reason(const std::string& binary) {
         return known == before.end() || known->second != proc::start_time_of(pid);
     };
     std::vector<long long> mine;
+    std::size_t reason_chars = 0;
     {
         Session session(binary, workspace, sandbox, 180000, false, {}, {{"PLAYWRITER_BROWSER_PATH", wrapper.string()}, {"PLAYWRITER_NO_SANDBOX", "1"}});
         if (!session.started()) {
@@ -102,7 +104,10 @@ CheckResult check_browser_start_reason(const std::string& binary) {
             for (const char* secret : {"otherproject", "sk-secret-abc123", "hunter2", "zzz9", "qqq"})
                 expect(opened.find(secret) == std::string::npos, std::string("the reply carries ") + secret + ", which came from another project's path or a credential in the browser's stderr");
             const std::size_t at = opened.find("last browser start failed: ");
-            const std::size_t end = at == std::string::npos ? std::string::npos : opened.find_first_of("\"\n", at);
+            const std::size_t quote = at == std::string::npos ? std::string::npos : opened.find_first_of("\"\n", at);
+            const std::size_t escaped = at == std::string::npos ? std::string::npos : opened.find("\\n", at);
+            const std::size_t end = std::min(quote, escaped);
+            if (at != std::string::npos && end != std::string::npos) reason_chars = end - at;
             if (at != std::string::npos && end != std::string::npos && end - at > 800) result.failures.push_back("the start failure in the reply is " + std::to_string(end - at) + " characters, over the 800 bound");
             mine = session.descendants();
         }
@@ -119,7 +124,7 @@ CheckResult check_browser_start_reason(const std::string& binary) {
     const auto survivors = alive_of(stopped);
     if (!survivors.empty()) result.failures.push_back(std::to_string(survivors.size()) + " process(es) started by this check are still alive");
     fs::remove_all(sandbox, ec);
-    if (result.failures.empty()) result.summary = "a browser that exits on start leaves its exit status and its last stderr lines in the reply of the failed call, bounded to 800 characters, with other projects' paths, URLs and credentials removed";
+    if (result.failures.empty()) result.summary = "a browser that exits on start leaves its exit status and its last stderr lines in the reply of the failed call, bounded to 800 characters (" + std::to_string(reason_chars) + " seen), with other projects' paths, URLs and credentials removed";
     return result;
 }
 
