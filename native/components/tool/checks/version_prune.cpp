@@ -45,7 +45,7 @@ bool make_sandbox(const std::string& binary, Sandbox& box, std::string& why) {
     return true;
 }
 
-proc::Outcome install(const Sandbox& box) { return proc::run(support::install_argv(box.home, box.scratch, box.host / "gm", box.build, box.repo), box.repo, {}, 120000); }
+proc::Outcome install(const Sandbox& box) { return proc::run(support::install_argv(box.home, box.host / "gm", box.build, box.repo), box.repo, {}, 120000); }
 
 bool first_install(Sandbox& box, std::string& why) {
     const auto installed = install(box);

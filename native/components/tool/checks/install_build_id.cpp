@@ -70,7 +70,7 @@ CheckResult check_install_build_id(const std::string& binary) {
     append_probe(second_host / "gm-core");
 
     const auto install = [&](const fs::path& local) {
-        return proc::run(support::install_argv(home, scratch.path, binary, local, repo), repo, {}, kInstallLimitMs);
+        return proc::run(support::install_argv(home, binary, local, repo), repo, {}, kInstallLimitMs);
     };
     const auto one = install(first);
     if (!one.started || one.exit_code != 0) {

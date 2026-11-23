@@ -69,7 +69,7 @@ CheckResult check_install_switch(const std::string& binary) {
     std::string first;
     long long switched_ms = -1;
     {
-        const auto installed = proc::run(support::install_argv(home, scratch, host / "gm", build, repo), repo, {}, 120000);
+        const auto installed = proc::run(support::install_argv(home, host / "gm", build, repo), repo, {}, 120000);
         if (!installed.started || installed.exit_code != 0) {
             result.failures.push_back("gm install --local failed: " + support::failure_text(installed));
         } else {

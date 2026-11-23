@@ -364,7 +364,7 @@ void w17_w18(const Context& context, Row& row) {
     const fs::path root = home / ".gmnew";
     fs::create_directories(home);
     const auto install = [&] {
-        return proc::run(support::install_argv(home, context.sandbox, host / "gm", build, context.repo), context.repo, {}, 120000);
+        return proc::run(support::install_argv(home, host / "gm", build, context.repo), context.repo, {}, 120000);
     };
     const auto first = install();
     if (!first.started || first.exit_code != 0) {

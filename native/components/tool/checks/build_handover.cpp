@@ -336,7 +336,7 @@ void check_identical_install(CheckResult& result, const fs::path& sandbox, const
     fs::create_directories(home);
     const fs::path build = host.parent_path().parent_path().parent_path();
     const auto install_once = [&] {
-        return proc::run(support::install_argv(home, sandbox, build / "native" / "components" / "host" / "gm", build, repo),
+        return proc::run(support::install_argv(home, build / "native" / "components" / "host" / "gm", build, repo),
                          repo, {}, 120000);
     };
     const auto first = install_once();

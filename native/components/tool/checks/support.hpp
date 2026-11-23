@@ -7,7 +7,9 @@
 #include <cmath>
 #include <cstdlib>
 #include <filesystem>
+#include <fcntl.h>
 #include <fstream>
+#include <unistd.h>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -124,14 +126,20 @@ inline fs::path fresh_sandbox(const std::string& label) {
     return sandbox;
 }
 
+#if !defined(_WIN32)
 inline void write_script(const fs::path& file, const std::string& text) {
-    std::ofstream(file, std::ios::binary) << text;
+    const int fd = ::open(file.c_str(), O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0644);
+    if (fd < 0) return;
+    const bool whole = ::write(fd, text.data(), text.size()) == static_cast<ssize_t>(text.size());
+    ::close(fd);
+    if (!whole) ::unlink(file.c_str());
 }
+#endif
 
-inline std::vector<std::string> install_argv(const fs::path& home, const fs::path& sandbox, const fs::path& gm, const fs::path& build, const fs::path& repo) {
+inline std::vector<std::string> install_argv(const fs::path& home, const fs::path& gm, const fs::path& build, const fs::path& repo) {
     std::vector<std::string> argv{"env", "HOME=" + home.string(), "USERPROFILE=" + home.string()};
 #if !defined(_WIN32)
-    const fs::path offline_bin = sandbox / "offline-bin";
+    const fs::path offline_bin = home / "offline-bin";
     std::error_code ec;
     fs::create_directories(offline_bin, ec);
     const std::string patch_script = (offline_bin / "patch-package.js").string();

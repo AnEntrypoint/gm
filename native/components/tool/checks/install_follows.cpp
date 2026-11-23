@@ -113,7 +113,7 @@ CheckResult check_install_follows(const std::string& binary) {
     write_bytes(home / "quiet.json", R"({"mcpServers":{"playwriter":{"disabled":true}}})");
 
     const auto install = [&] {
-        return proc::run(support::install_argv(home, sandbox, build_host / "gm", build, tree), sandbox, {}, 300000);
+        return proc::run(support::install_argv(home, build_host / "gm", build, tree), sandbox, {}, 300000);
     };
     const fs::path installed = home / ".gmnew" / "current";
     const fs::path installed_gm = installed / "gm";
@@ -230,7 +230,7 @@ CheckResult check_skill_reload(const std::string& binary) {
         fs::permissions(build_host / "gm-core", executable, fs::perm_options::replace);
         fs::remove_all(build_host / "skills");
         fs::copy(tree / "skills", build_host / "skills", fs::copy_options::recursive);
-        const auto done = proc::run(support::install_argv(home, sandbox, build_host / "gm", build, tree), sandbox, {}, 300000);
+        const auto done = proc::run(support::install_argv(home, build_host / "gm", build, tree), sandbox, {}, 300000);
         if (!done.started || done.exit_code != 0) result.failures.push_back("an install failed: " + tail(done.out + done.err));
     };
     const fs::path installed = home / ".gmnew" / "current";

@@ -43,7 +43,7 @@ CheckResult check_launcher_refresh(const std::string& binary) {
     const fs::path home = scratch / "home";
     std::error_code ec;
     fs::create_directories(home, ec);
-    auto install = [&] { return proc::run(support::install_argv(home, scratch, host / "gm", build, repo), repo, {}, 120000); };
+    auto install = [&] { return proc::run(support::install_argv(home, host / "gm", build, repo), repo, {}, 120000); };
     auto expect = [&](bool condition, const std::string& what) {
         if (!condition) result.failures.push_back(what);
     };
