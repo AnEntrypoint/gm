@@ -189,7 +189,7 @@ public:
         const char* jobs_env = std::getenv("GM_CHECK_JOBS");
         const unsigned cores = std::max(1u, std::thread::hardware_concurrency());
         cores_ = cores;
-        lanes_ = jobs_env != nullptr ? std::max(1, std::atoi(jobs_env)) : std::max(1, static_cast<int>(std::min(6u, cores / 2)));
+        lanes_ = jobs_env != nullptr ? std::max(1, std::atoi(jobs_env)) : std::max(1, static_cast<int>(std::min(6u, (cores + 1) / 2)));
         const char* mutations_env = std::getenv("GM_CHECK_MUTATIONS");
         const bool mutations = mutations_env != nullptr && std::string(mutations_env) == "1";
 

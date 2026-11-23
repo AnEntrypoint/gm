@@ -85,6 +85,15 @@ std::string text_of(const json::Value* value) {
 
 }
 
+bool translated_by_rosetta() {
+    const auto asked = proc::run({"sysctl", "-n", "sysctl.proc_translated"});
+    return asked.started && asked.exit_code == 0 && trimmed(asked.out) == "1";
+}
+
+double seconds_since(const std::chrono::steady_clock::time_point& began) {
+    return std::chrono::duration<double>(std::chrono::steady_clock::now() - began).count();
+}
+
 int package_command(const fs::path& root, const std::vector<std::string>& args) {
     const auto values = options(args);
     const std::string target = option(values, "target");
@@ -108,13 +117,23 @@ int package_command(const fs::path& root, const std::vector<std::string>& args) 
     const fs::path stage = out / name;
     fs::remove_all(stage);
     fs::create_directories(stage);
+    const bool macos = ends_with(target, "-macos");
+    const std::vector<std::string> native_prefix = macos && translated_by_rosetta() ? std::vector<std::string>{"arch", "-arm64"} : std::vector<std::string>{};
+    std::cerr << "gm-tool package: " << (native_prefix.empty() ? "tools run as they are" : "tools run natively through arch -arm64, because this process is translated by Rosetta") << "\n";
     for (const auto& exe : executables) {
+        const auto began = std::chrono::steady_clock::now();
         fs::copy_file(host / exe, stage / exe, fs::copy_options::overwrite_existing);
         if (windows) continue;
-        std::vector<std::string> strip{"strip"};
-        if (ends_with(target, "-macos")) strip.push_back("-x");
+        std::vector<std::string> strip = native_prefix;
+        strip.push_back("strip");
+        if (macos) strip.push_back("-x");
         strip.push_back((stage / exe).string());
-        const auto stripped = proc::run(strip);
+        auto stripped = proc::run(strip);
+        if (!native_prefix.empty() && (!stripped.started || stripped.exit_code != 0)) {
+            strip.erase(strip.begin(), strip.begin() + static_cast<std::ptrdiff_t>(native_prefix.size()));
+            stripped = proc::run(strip);
+        }
+        std::cerr << "gm-tool package: copy and strip " << exe << " took " << seconds_since(began) << " s\n";
         if (!stripped.started) {
             std::cerr << "gm-tool package: strip not found on PATH; install binutils (linux) or the Xcode command line tools (macos)\n";
             return 1;
@@ -129,14 +148,18 @@ int package_command(const fs::path& root, const std::vector<std::string>& args) 
 
     const fs::path archive = out / (windows ? name + ".zip" : name + ".tar.gz");
     fs::remove(archive);
-    const proc::Outcome packed = windows
+    const auto packing_began = std::chrono::steady_clock::now();
+    const std::string tar_line = "tar -czf '" + archive.string() + "' -C '" + out.string() + "' '" + name + "'";
+    proc::Outcome packed = windows
         ? proc::run({"powershell", "-NoProfile", "-NonInteractive", "-Command",
                      "Add-Type -AssemblyName System.IO.Compression.FileSystem; [System.IO.Compression.ZipFile]::CreateFromDirectory('" + stage.string() + "', '" + archive.string() + "', 'Optimal', $true)"})
-        : proc::shell("COPYFILE_DISABLE=1 tar -czf '" + archive.string() + "' -C '" + out.string() + "' '" + name + "'");
+        : proc::shell(std::string("COPYFILE_DISABLE=1 ") + (native_prefix.empty() ? "" : "arch -arm64 ") + tar_line);
+    if (!windows && !native_prefix.empty() && (!packed.started || packed.exit_code != 0)) packed = proc::shell("COPYFILE_DISABLE=1 " + tar_line);
     if (!packed.started || packed.exit_code != 0) {
         std::cerr << "gm-tool package: archive failed: " << (packed.err.empty() ? packed.out : packed.err) << "\n";
         return packed.exit_code > 0 ? packed.exit_code : 1;
     }
+    std::cerr << "gm-tool package: archive took " << seconds_since(packing_began) << " s\n";
     fs::remove_all(stage);
     std::cout << archive.string() << "\n";
     return 0;

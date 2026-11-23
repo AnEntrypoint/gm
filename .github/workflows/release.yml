@@ -42,12 +42,13 @@ jobs:
             target: x64-macos
             ccache: true
             extra: -DCMAKE_OSX_ARCHITECTURES=x86_64
+            minutes: 45
           - os: macos-latest
             preset: arm64-macos-release
             target: arm64-macos
             ccache: true
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
+    timeout-minutes: ${{ matrix.minutes || 30 }}
     steps:
       - uses: actions/checkout@v4
       - name: Version
