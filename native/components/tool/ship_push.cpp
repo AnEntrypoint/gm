@@ -1,5 +1,6 @@
 #include "gm/tool.hpp"
 
+#include <algorithm>
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
@@ -21,7 +22,8 @@ namespace gm::tool {
 namespace fs = std::filesystem;
 namespace {
 
-constexpr int kDefaultCiWaitMinutes = 120;
+constexpr int kDefaultCiWaitMinutes = 0;
+constexpr int kRunIdSettleSeconds = 30;
 constexpr std::uintmax_t kMinFreeGb = 4;
 
 proc::Outcome run_in(const fs::path& dir, const std::vector<std::string>& argv, std::uint64_t timeout_ms = 0) {
@@ -126,24 +128,25 @@ struct CiReport {
 
 CiReport ci_report(const fs::path& root, const std::string& sha) {
     CiReport report;
-    const auto reply = run_in(root, {"gh", "run", "list", "--commit", sha, "--limit", "30", "--json", "name,status,conclusion", "--jq", ".[] | .name + \" \" + .status + \" \" + .conclusion"}, 120000);
+    const auto reply = run_in(root, {"gh", "run", "list", "--commit", sha, "--limit", "30", "--json", "name,status,conclusion,databaseId", "--jq", ".[] | .name + \" \" + .status + \" \" + (.databaseId | tostring) + \" \" + .conclusion"}, 120000);
     if (!succeeded(reply)) {
         report.detail = "gh run list failed: " + reply.err.substr(0, 200);
         return report;
     }
     std::map<std::string, std::pair<std::string, std::string>> newest;
+    std::map<std::string, std::string> ids;
     std::istringstream lines(reply.out);
     std::string line;
     while (std::getline(lines, line)) {
         std::istringstream words(line);
-        std::string name, status, conclusion;
-        words >> name >> status >> conclusion;
-        newest.emplace(name, std::make_pair(status, conclusion));
+        std::string name, status, id, conclusion;
+        words >> name >> status >> id >> conclusion;
+        if (newest.emplace(name, std::make_pair(status, conclusion)).second) ids[name] = id;
     }
     report.state = CiState::green;
     for (const char* name : {"release", "arm-diagnose"}) {
         const auto found = newest.find(name);
-        const std::string shown = found == newest.end() ? "no run yet" : found->second.first + (found->second.second.empty() ? "" : " " + found->second.second);
+        const std::string shown = found == newest.end() ? "no run yet" : "run " + ids[name] + " " + found->second.first + (found->second.second.empty() ? "" : " " + found->second.second);
         report.detail += (report.detail.empty() ? "" : "; ") + std::string(name) + " " + shown;
         if (found == newest.end() || found->second.first != "completed") {
             if (report.state == CiState::green) report.state = CiState::pending;
@@ -155,7 +158,8 @@ CiReport ci_report(const fs::path& root, const std::string& sha) {
 }
 
 int ci_after_push(const fs::path& root, const std::string& sha) {
-    const std::string url = git_line(root, {"remote", "get-url", "origin"});
+    const char* seam_url = std::getenv("GM_SHIP_CI_ORIGIN_URL");
+    const std::string url = seam_url != nullptr && *seam_url != '\0' ? std::string(seam_url) : git_line(root, {"remote", "get-url", "origin"});
     if (url.find("github.com") == std::string::npos) {
         std::printf("CI: not applicable: origin is not a GitHub remote (%s)\n", url.c_str());
         return 0;
@@ -166,7 +170,12 @@ int ci_after_push(const fs::path& root, const std::string& sha) {
     }
     const char* wait_env = std::getenv("GM_SHIP_CI_WAIT_MINUTES");
     const int minutes = wait_env != nullptr && *wait_env != '\0' ? std::atoi(wait_env) : kDefaultCiWaitMinutes;
-    const auto deadline = std::chrono::steady_clock::now() + std::chrono::minutes(minutes);
+    const char* poll_env = std::getenv("GM_SHIP_CI_POLL_SECONDS");
+    const int poll_seconds = poll_env != nullptr && *poll_env != '\0' ? std::max(1, std::atoi(poll_env)) : (minutes > 0 ? 60 : 5);
+    const std::string reading = "gh run list --commit " + sha + " --json name,status,conclusion,databaseId";
+    const auto began = std::chrono::steady_clock::now();
+    const auto deadline = began + std::chrono::minutes(minutes);
+    const auto settle = began + std::chrono::seconds(kRunIdSettleSeconds);
     for (;;) {
         const CiReport report = ci_report(root, sha);
         if (report.state == CiState::green) {
@@ -178,14 +187,18 @@ int ci_after_push(const fs::path& root, const std::string& sha) {
             return 1;
         }
         if (report.state == CiState::unknown) {
-            std::printf("CI: could not be read on %s: %s\n", sha.c_str(), report.detail.c_str());
+            std::printf("CI: could not be read on %s: %s; read it with: %s\n", sha.c_str(), report.detail.c_str(), reading.c_str());
             return 2;
         }
-        if (std::chrono::steady_clock::now() >= deadline) {
-            std::printf("CI: not confirmed on %s within %d minutes: %s\n", sha.c_str(), minutes, report.detail.c_str());
+        const bool runs_missing = report.detail.find("no run yet") != std::string::npos;
+        const auto now = std::chrono::steady_clock::now();
+        const bool waiting = now < deadline || (runs_missing && now < settle);
+        if (!waiting) {
+            if (minutes > 0) std::printf("CI: unconfirmed on %s after %d minutes: %s; read it with: %s\n", sha.c_str(), minutes, report.detail.c_str(), reading.c_str());
+            else std::printf("CI: unconfirmed on %s, not waited for (GM_SHIP_CI_WAIT_MINUTES=n waits): %s; read it with: %s\n", sha.c_str(), report.detail.c_str(), reading.c_str());
             return 2;
         }
-        std::this_thread::sleep_for(std::chrono::seconds(60));
+        std::this_thread::sleep_for(std::chrono::seconds(poll_seconds));
     }
 }
 
