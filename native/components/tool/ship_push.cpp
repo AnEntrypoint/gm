@@ -86,8 +86,11 @@ bool enough_space(const fs::path& where) {
 bool phase_b_on_copy(const fs::path& root, const std::string& commit) {
     const char* seam = std::getenv("GM_SHIP_PHASE_B");
     const bool seamed = seam != nullptr && *seam != '\0';
+    const std::size_t swept = sweep_dead_scratch(fs::temp_directory_path());
+    if (swept != 0) std::printf("phase-b: removed %zu leftover scratch director%s of runs that ended without cleaning up\n", swept, swept == 1 ? "y" : "ies");
     if (!seamed && !enough_space(fs::temp_directory_path())) return false;
     const fs::path copy = fs::temp_directory_path() / ("gm-ship-" + commit.substr(0, 8) + "-" + std::to_string(GM_PID));
+    std::ofstream(copy.string() + kShipCopyMarkerSuffix) << GM_PID << "\n";
     std::printf("phase-b: building and running Phase B on a tar copy of HEAD %s at %s\n", commit.c_str(), copy.string().c_str());
     if (!make_copy(root, copy, commit)) {
         std::puts("phase-b: could not make the tar copy of HEAD");
@@ -107,6 +110,7 @@ bool phase_b_on_copy(const fs::path& root, const std::string& commit) {
     std::error_code ec;
     if (ok) {
         fs::remove_all(copy, ec);
+        fs::remove(copy.string() + kShipCopyMarkerSuffix, ec);
     } else {
         std::printf("phase-b: the copy is kept at %s; logs in %s\n", copy.string().c_str(), (copy / "build" / "release" / "phase-b-logs").string().c_str());
     }

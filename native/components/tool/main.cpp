@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <exception>
 #include <filesystem>
+#include <fstream>
 #include <string>
 #include <system_error>
 #include <vector>
@@ -33,8 +34,11 @@ class ScratchRoot {
 public:
     ScratchRoot() {
         std::error_code ec;
-        root_ = std::filesystem::temp_directory_path(ec) / ("g" + std::to_string(process_id()));
+        const std::filesystem::path real_temp = std::filesystem::temp_directory_path(ec);
+        gm::tool::sweep_dead_scratch(real_temp);
+        root_ = real_temp / ("g" + std::to_string(process_id()));
         std::filesystem::create_directories(root_, ec);
+        std::ofstream(root_ / gm::tool::kScratchMarker) << process_id() << "\n";
         point_temp_directory_at(root_);
     }
 
