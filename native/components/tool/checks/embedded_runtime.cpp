@@ -1,6 +1,7 @@
 #include "gm/tool.hpp"
 #include "support.hpp"
 
+#include <algorithm>
 #include <chrono>
 #include <filesystem>
 #include <fstream>
@@ -12,7 +13,7 @@ namespace {
 namespace fs = std::filesystem;
 
 constexpr std::int64_t kTimerMs = 300;
-constexpr std::int64_t kClockGranularityMs = 1;
+constexpr std::int64_t kEarlyTicks = 3;
 constexpr int kFreshRuntimes = 20;
 
 json::Value run(Session& session, const std::string& body, const std::string& format = "") {
@@ -40,6 +41,7 @@ CheckResult check_embedded_runtime(const std::string& binary) {
     fs::create_directories(workspace);
     std::ofstream(workspace / "helper.mjs") << "export const doubled = (n) => n * 2;\n";
     long long timer_waited = -1;
+    long long clock_tick = -1;
     long long ms_per_body = -1;
     bool skipped = false;
     {
@@ -65,12 +67,15 @@ CheckResult check_embedded_runtime(const std::string& binary) {
                     if (!string_is(globals, "url", "function") || !string_is(globals, "encoder", "function")) result.failures.push_back("the web globals of the embedded runtime are missing: " + json::dump(globals).substr(0, 300));
                     if (!string_is(globals, "hostApi", "undefined") || !string_is(globals, "alert", "undefined")) result.failures.push_back("a body can name the embedded runtime's own host API: " + json::dump(globals).substr(0, 300));
 
-                    const json::Value timed_reply = run(session, "const began = Date.now(); const value = await new Promise((done) => setTimeout(() => done('fired'), " + std::to_string(kTimerMs) + ")); return { value, waited: Date.now() - began };");
+                    const json::Value timed_reply = run(session, "let tick = Infinity; for (let i = 0; i < 20; i++) { const a = Date.now(); let b = a; while (b === a) b = Date.now(); tick = Math.min(tick, b - a); } const began = Date.now(); const value = await new Promise((done) => setTimeout(() => done('fired'), " + std::to_string(kTimerMs) + ")); return { value, waited: Date.now() - began, tick };");
                     const json::Value timed = value_of(timed_reply);
                     const json::Value* waited = value_at(timed, "waited");
                     if (waited != nullptr && waited->is_number()) timer_waited = static_cast<long long>(waited->as_number());
-                    if (!string_is(timed, "value", "fired") || timer_waited < kTimerMs - kClockGranularityMs)
-                        result.failures.push_back("a body awaiting a " + std::to_string(kTimerMs) + " ms timer did not get its value after the wait: " + json::dump(timed_reply).substr(0, 300));
+                    const json::Value* tick = value_at(timed, "tick");
+                    if (tick != nullptr && tick->is_number()) clock_tick = static_cast<long long>(tick->as_number());
+                    const long long early_bound = kEarlyTicks * std::max<long long>(clock_tick, 1);
+                    if (!string_is(timed, "value", "fired") || clock_tick < 1 || timer_waited < kTimerMs - early_bound)
+                        result.failures.push_back("a body awaiting a " + std::to_string(kTimerMs) + " ms timer did not get its value after the wait (measured clock tick " + std::to_string(clock_tick) + " ms, so at most " + std::to_string(early_bound) + " ms early is allowed): " + json::dump(timed_reply).substr(0, 300));
 
                     const json::Value parsed_reply = run(session, "const url = new URL('https://example.org:8443/a/b?x=1#frag'); return { host: url.host, path: url.pathname, x: url.searchParams.get('x'), bytes: new TextEncoder().encode('gm').length };");
                     const json::Value parsed = value_of(parsed_reply);
@@ -110,7 +115,7 @@ CheckResult check_embedded_runtime(const std::string& binary) {
     if (skipped) {
         result.summary = "skipped: this build has no embedded txiki runtime, setTimeout is undefined; it is built where GMNEW_TXIKI is ON";
     } else {
-        result.summary = "a body awaited a " + std::to_string(kTimerMs) + " ms timer for " + std::to_string(timer_waited) + " ms; URL and TextEncoder work; a body cannot name the runtime's own host API; console output stays off the protocol stream; a relative import loads; a native verb and a leaf verb both answer; a body that never settles ends with an error; " +
+        result.summary = "a body awaited a " + std::to_string(kTimerMs) + " ms timer for " + std::to_string(timer_waited) + " ms with a clock tick of " + std::to_string(clock_tick) + " ms; URL and TextEncoder work; a body cannot name the runtime's own host API; console output stays off the protocol stream; a relative import loads; a native verb and a leaf verb both answer; a body that never settles ends with an error; " +
                          std::to_string(ms_per_body) + " ms per fresh body (wall " + std::to_string(wall) + " s)";
     }
     return result;
