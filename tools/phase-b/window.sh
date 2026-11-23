@@ -20,6 +20,7 @@ if [ "${PART:-all}" = build ]; then
   git update-ref refs/remotes/origin/main HEAD
   cmake --preset x64-linux-release -B "$BUILD" -DGMNEW_VERSION="$(git rev-parse --short=7 HEAD)-1" > "$OUT/build.log" 2>&1 && cmake --build "$BUILD" -j3 >> "$OUT/build.log" 2>&1
   code=$?
+  ninja -C "$BUILD" -t cleandead >> "$OUT/build.log" 2>&1
   say "BUILD_END rc=$code head=$(git rev-parse --short HEAD)"
   say "PART_DONE $code"
   exit $code

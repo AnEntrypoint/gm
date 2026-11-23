@@ -5920,3 +5920,11 @@ Ranked open work:
 - Witness (Phase A, local): incremental build of build/rel-72 (BUILD_RC 0, gate ticket gm-lines-alias-quick), then gm-tool check check-grep-state-scope ok, with the new case named file, mode lines (mode: lines, scope all, a state-directory file) reading the token.
 - Red, for the window: restore the content-only test in search_impl.cpp; the new check case then fails with "the lines alias did not search the file".
 - Not pushed: this rides the next Phase B window with the rest of the local commits.
+
+### 56. check-dead-symbols failed on a stale object in the reused build directory
+
+- Phase B b15 on 331017e: build rc 0; witnesses 137 of 138 ok, parity ok; w-check-dead-symbols failed with "gm::host::run_turn_end ... is dropped by the linker and its name appears only where it is declared and defined".
+- Cause: build/release (reused across windows) still held native/components/host/CMakeFiles/gm_host.dir/turn_end.cpp.o from a November build; its source was deleted in 9efeb37, build.ninja no longer names it (grep count 0), and the object still carries run_turn_end, so the name appeared outside the source.
+- Fix, local: ninja -C build/release -t cleandead removed exactly that one file (CLEAN_RC 0, "Cleaning... 1 files"). Re-run alone: check-dead-symbols ok, 186 objects, none dead (gate ticket gm-dead-symbols, DEAD_RC 0, DONE rc=0).
+- Prevention, tools/phase-b/window.sh: the build part runs ninja -t cleandead after each build, so a reused build directory cannot carry an orphan into the witnesses.
+- Not run in b15: reds1 and reds2 (the chain stopped at witnesses). They are due before the push as Phase B's red checks; they were not part of this fix's scope.
