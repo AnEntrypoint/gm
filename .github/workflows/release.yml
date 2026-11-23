@@ -114,6 +114,14 @@ jobs:
           else
             build/${{ matrix.preset }}/native/components/tool/gm-tool phase-b build/${{ matrix.preset }} | tee "$RUNNER_TEMP/phase-b.log"
           fi
+      - name: Phase B logs of a failed run
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase-b-logs-${{ matrix.target }}
+          path: build/${{ matrix.preset }}/phase-b-logs
+          if-no-files-found: ignore
+          retention-days: 5
       - name: The stubbed checks are the named list
         if: inputs.checks == ''
         shell: bash
