@@ -6,9 +6,9 @@ on:
   workflow_dispatch:
     inputs:
       checks:
-        description: "gm-tool check names for the asan job (space separated)"
+        description: "gm-tool check names for the asan jobs (space separated); empty runs the asan-arm list, and the stackuse shards of .github/asan-checks.txt; a given list runs in shard 1 only"
         required: false
-        default: "check-read-parity check-protocol-versions check-relay-reexec check-witness-next-context-replay check-build-handover check-console check-stop-fetch check-restart-skill-read check-no-resource-client check-embedded-runtime check-skill-serve check-resources-subscribe check-startup-attempts check-repeated-checks check-owner-identity check-cut-marker check-grep-state-scope check-job-bounds check-shell-stdin check-cancel-wait check-early-run-code check-read-after-write check-spawn-sites check-rows check-fetch check-wiki check-git check-review check-code-ast check-quickjs-baseline check-install-follows check-skill-reload check-cli-flags check-feed-reference check-restart-jobs check-install-switch"
+        default: ""
 
 permissions:
   contents: read
@@ -51,7 +51,11 @@ jobs:
           build/asan/native/components/tool/gm-tool check build/asan/native/components/host/gm $(tr ',' ' ' <<< "$CHECKS")
   asan-arm-stackuse:
     runs-on: ubuntu-24.04-arm
-    timeout-minutes: 80
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/ninja
@@ -72,12 +76,16 @@ jobs:
           test -x "$browser" || { echo "browser path missing: $browser" >&2; exit 1; }
           echo "PLAYWRITER_BROWSER_PATH=$browser" >> "$GITHUB_ENV"
           echo "PLAYWRITER_NO_SANDBOX=1" >> "$GITHUB_ENV"
-      - name: Check asan build (conformance, one run, stack use-after-return detector on for coverage)
+      - name: Check asan build (conformance, one run, stack use-after-return detector on for coverage, shard ${{ matrix.shard }} of 2)
+        if: inputs.checks == '' || matrix.shard == 1
         shell: bash
         env:
           ASAN_OPTIONS: halt_on_error=1:abort_on_error=0:print_stacktrace=1:detect_leaks=0:detect_stack_use_after_return=1
-          CHECKS: ${{ inputs.checks || 'check-read-parity check-protocol-versions check-relay-reexec check-witness-next-context-replay check-build-handover check-console check-stop-fetch check-restart-skill-read check-no-resource-client check-embedded-runtime check-skill-serve check-resources-subscribe check-startup-attempts check-repeated-checks check-owner-identity check-cut-marker check-grep-state-scope check-job-bounds check-shell-stdin check-cancel-wait check-early-run-code check-read-after-write check-spawn-sites check-rows check-fetch check-wiki check-git check-review check-code-ast check-quickjs-baseline check-install-follows check-skill-reload check-cli-flags check-feed-reference check-restart-jobs check-install-switch' }}
+          CHECKS: ${{ inputs.checks }}
+          SHARD: ${{ matrix.shard }}
         run: |
+          if [ -z "$CHECKS" ]; then CHECKS=$(awk -v s="$SHARD" '$1 == s { print $2 }' .github/asan-checks.txt); fi
+          test -n "$CHECKS" || { echo "no checks for shard $SHARD"; exit 1; }
           build/asan/native/components/tool/gm-tool check build/asan/native/components/host/gm $(tr ',' ' ' <<< "$CHECKS")
 
   gdb-arm:
