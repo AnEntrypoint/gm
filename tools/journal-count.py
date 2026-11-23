@@ -2,7 +2,7 @@
 import collections, json, os, sys
 
 ROOTS = sys.argv[1:] or ['/workspace/gm', '/workspace/oscraft', '/workspace/bevy', '/workspace/thebird']
-DAYS = ('2026-11-21', '2026-11-22')
+DAYS = ('2026-11-21', '2026-11-22', '2026-11-23')
 CUT = '<<<' + 'gm-cut'
 
 
