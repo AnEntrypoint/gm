@@ -75,6 +75,10 @@ CheckResult check_grep_state_scope(const std::string& binary) {
                 if (text_of(value_at(*whole, "output")).find(token) != std::string::npos)
                     result.failures.push_back("whole root, scope all: the state directory is searched by a whole-root scan, which the documented skip forbids");
             }
+            if (const auto lines = grep_body(session, "named file, mode lines", "return await gm.grep({ pattern: '" + token + "', path: '.gm/witness-out/aloop.log', mode: 'lines', scope: 'all', limit: 20 });", result.failures)) {
+                if (text_of(value_at(*lines, "output")).find(token + " witnessed") == std::string::npos)
+                    result.failures.push_back("named file, mode lines: the lines alias did not search the file: " + json::dump(*lines).substr(0, 300));
+            }
             if (const auto plain = grep_body(session, "named file, default scope", "return await gm.grep({ pattern: '" + token + "', path: '.gm/witness-out/aloop.log', limit: 20 });", result.failures)) {
                 if (flag_ok(*plain) || text_of(value_at(*plain, "output")).find(token) != std::string::npos)
                     result.failures.push_back("named file, default scope: expected a refusal, got " + json::dump(*plain).substr(0, 300));

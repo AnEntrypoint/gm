@@ -5912,3 +5912,11 @@ Ranked open work:
   - write_file refused for holding a whole cut marker: 32 across bevy, gm and fx; the refusal is correct, the peers copied a cut reply into a file.
   - grep mode must be one of literal, regex, word: 12 in gm. A refusal, not a crash.
 - Nothing in the four days shows a slow gm verb (no durMs over 60 s).
+
+### 55. grep accepts mode lines (journal defect, bevy and gm refusals)
+
+- Defect: gm.grep refused mode lines with "mode must be one of literal, regex, word" (12 gm refusals in the four days, peers use lines as the line-printing mode). The verb already maps content to literal, the same meaning.
+- Change: native/components/search/search_impl.cpp maps lines to literal beside content. No new mode, no output change, no owner decision.
+- Witness (Phase A, local): incremental build of build/rel-72 (BUILD_RC 0, gate ticket gm-lines-alias-quick), then gm-tool check check-grep-state-scope ok, with the new case named file, mode lines (mode: lines, scope all, a state-directory file) reading the token.
+- Red, for the window: restore the content-only test in search_impl.cpp; the new check case then fails with "the lines alias did not search the file".
+- Not pushed: this rides the next Phase B window with the rest of the local commits.

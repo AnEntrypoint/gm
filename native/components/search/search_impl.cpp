@@ -525,7 +525,7 @@ std::string Searcher::grep(const json::Value& args) {
     std::string mode = "literal";
     if (const json::Value* given = args.find("mode")) {
         mode = given->is_string() ? given->as_string() : "";
-        if (mode == "content") mode = "literal";
+        if (mode == "content" || mode == "lines") mode = "literal";
         if (mode != "literal" && mode != "regex" && mode != "word") return fail("mode must be one of literal, regex, word");
     }
     bool all = false;
