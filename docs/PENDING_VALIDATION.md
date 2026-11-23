@@ -5928,3 +5928,10 @@ Ranked open work:
 - Fix, local: ninja -C build/release -t cleandead removed exactly that one file (CLEAN_RC 0, "Cleaning... 1 files"). Re-run alone: check-dead-symbols ok, 186 objects, none dead (gate ticket gm-dead-symbols, DEAD_RC 0, DONE rc=0).
 - Prevention, tools/phase-b/window.sh: the build part runs ninja -t cleandead after each build, so a reused build directory cannot carry an orphan into the witnesses.
 - Not run in b15: reds1 and reds2 (the chain stopped at witnesses). They are due before the push as Phase B's red checks; they were not part of this fix's scope.
+
+### 57. parity-contract failed with an empty clone detail, then passed alone
+
+- Phase B b16 on 6c8438d (origin d2216f8 rebased under 3 local commits): build rc 0; witnesses 137 of 138 ok, parity ok; w-parity-contract failed with "the first gm install --local failed: playwriter clone failed: " (no text after the colon). Witnesses stopped there, reds not run.
+- Cause, traced: install.cpp playwriter_step reports proc::run's err, then out. proc::run returns with started false and both empty when posix_spawnp (or a pipe) fails (proc.cpp, the rc != 0 return). The three clone attempts (kCloneAttempts 3) all failed that way, so the spawn of git did not start in three tries while the host was loaded (about 4 GB free, other peers' windows running). The stub git on the offline PATH was not reached.
+- Run alone, same binary, same environment (gate ticket gm-pc-debug, RC 0, 18 of 18 parity witnesses hold, 7.3 s): the witness is intermittent under host load; the spawn failure itself was not reproduced.
+- Fix, local: playwriter_step names the program when it did not start ("could not start git"), so the next failure names its cause instead of an empty detail. The success path is unchanged.

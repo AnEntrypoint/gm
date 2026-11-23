@@ -114,7 +114,7 @@ std::optional<std::string> playwriter_step(const std::string& what, const std::v
     const auto outcome = proc::run(argv, cwd, {}, timeout_ms);
     wall[what] = wall_ms() - began;
     if (!outcome.started || outcome.timed_out || outcome.exit_code != 0) {
-        const std::string detail = outcome.timed_out ? std::string("timed out") : outcome.err.empty() ? outcome.out : outcome.err;
+        const std::string detail = outcome.timed_out ? std::string("timed out") : !outcome.started ? "could not start " + argv.front() : outcome.err.empty() ? outcome.out : outcome.err;
         return "playwriter " + what + " failed: " + detail.substr(0, 400);
     }
     return std::nullopt;
